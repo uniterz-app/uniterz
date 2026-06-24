@@ -80,6 +80,11 @@ type UseUserStatsContext = {
    * useProfile の handle→uid 解決と並行させてウォーターフォールを短縮する。
    */
   routeKey?: string | null;
+  /**
+   * グループランキング由来の先読みサマリー（期間集計）を無視し、
+   * API の WC/NBA 全体スタッツのみ表示する。
+   */
+  skipPrimedStatsCache?: boolean;
 };
 
 /** ランキング行から成績サマリー + ティア用順位を先読み（プロフィール初回の即時描画用） */
@@ -152,11 +157,15 @@ function statsCacheKey(
   return `${uid}:${rankingLeague}:${safeWcStage ?? "-"}`;
 }
 
-function readValidCache(key: string): CacheEntry | null {
+function readValidCache(
+  key: string,
+  opts?: { skipPrimedOnly?: boolean }
+): CacheEntry | null {
   const cached = statsCache.get(key);
   if (!cached) return null;
   if (Date.now() - cached.at >= CACHE_TTL_MS) return null;
   if (cached.summary == null) return null;
+  if (opts?.skipPrimedOnly && cached.metricValueDeltas == null) return null;
   return cached;
 }
 
@@ -236,6 +245,16 @@ async function fetchProfilePhase(
 
 /** handle/uid のいずれでも phase を取得し、resolvedUid 起点でキャッシュへ投入する先行取得 */
 const bootstrapInflight = new Map<string, Promise<string | null>>();
+
+/** グループランキング等 — 全体スタッツを API から先読み（期間集計の行キャッシュは使わない） */
+export function prefetchProfileStatsFromRoute(
+  routeKey: string,
+  context: { rankingLeague: RankingLeagueSource; wcStage?: WcRankingStage }
+): void {
+  const safeKey = routeKey.trim();
+  if (!safeKey) return;
+  void bootstrapStatsByRouteKey(safeKey, context.rankingLeague, context.wcStage);
+}
 
 async function bootstrapStatsByRouteKey(
   routeKey: string,
@@ -354,35 +373,49 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
   const wcStage = context?.wcStage;
   const prefetchOtherLeague = context?.prefetchOtherLeague !== false;
   const routeKey = context?.routeKey ?? null;
+  const skipPrimedStatsCache = context?.skipPrimedStatsCache === true;
+  const cacheReadOpts = skipPrimedStatsCache ? { skipPrimedOnly: true as const } : undefined;
   const cacheKey = uid ? statsCacheKey(uid, rankingLeague, wcStage) : "";
 
   const [loading, setLoading] = useState(() => {
     if (!uid) return false;
-    return readValidCache(statsCacheKey(uid, rankingLeague, wcStage)) == null;
+    return readValidCache(statsCacheKey(uid, rankingLeague, wcStage), cacheReadOpts) == null;
   });
   const [summary, setSummary] = useState<SummaryForCardsV2 | null>(() => {
     if (!uid) return null;
-    return readValidCache(statsCacheKey(uid, rankingLeague, wcStage))?.summary ?? null;
+    return (
+      readValidCache(statsCacheKey(uid, rankingLeague, wcStage), cacheReadOpts)?.summary ??
+      null
+    );
   });
   const [summaryRanks, setSummaryRanks] = useState<SummaryRanksV2 | null>(() => {
     if (!uid) return null;
-    return readValidCache(statsCacheKey(uid, rankingLeague, wcStage))?.summaryRanks ?? null;
+    return (
+      readValidCache(statsCacheKey(uid, rankingLeague, wcStage), cacheReadOpts)
+        ?.summaryRanks ?? null
+    );
   });
   const [metricValueDeltas, setMetricValueDeltas] =
     useState<MyRankMetricValueDeltas | null>(() => {
       if (!uid) return null;
       return (
-        readValidCache(statsCacheKey(uid, rankingLeague, wcStage))
+        readValidCache(statsCacheKey(uid, rankingLeague, wcStage), cacheReadOpts)
           ?.metricValueDeltas ?? null
       );
     });
   const [stats, setStats] = useState<Record<string, unknown> | null>(() => {
     if (!uid) return null;
-    return readValidCache(statsCacheKey(uid, rankingLeague, wcStage))?.stats ?? null;
+    return (
+      readValidCache(statsCacheKey(uid, rankingLeague, wcStage), cacheReadOpts)?.stats ??
+      null
+    );
   });
   const [dailyTrend, setDailyTrend] = useState<ProfileDailyTrendRow[] | null>(() => {
     if (!uid) return null;
-    return readValidCache(statsCacheKey(uid, rankingLeague, wcStage))?.dailyTrend ?? null;
+    return (
+      readValidCache(statsCacheKey(uid, rankingLeague, wcStage), cacheReadOpts)
+        ?.dailyTrend ?? null
+    );
   });
 
   const activeFetchKeyRef = useRef<string>("");
@@ -399,7 +432,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
       return;
     }
 
-    const cached = readValidCache(cacheKey);
+    const cached = readValidCache(cacheKey, cacheReadOpts);
     if (cached) {
       applyCacheEntry(cached, {
         setStats,
@@ -412,7 +445,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
       return;
     }
     setLoading(true);
-  }, [cacheKey, uid]);
+  }, [cacheKey, cacheReadOpts, uid]);
 
   /**
    * uid 未解決でも handle/uid（routeKey）でサマリーを先行取得し、resolvedUid 起点で
@@ -501,7 +534,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
     }
 
     async function run() {
-      const cached = readValidCache(cacheKey);
+      const cached = readValidCache(cacheKey, cacheReadOpts);
       if (cached) {
         if (cancelled) return;
         applyCacheEntry(cached, setters);
@@ -557,7 +590,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, rankingLeague, wcStage, uid]);
+  }, [cacheKey, cacheReadOpts, rankingLeague, wcStage, uid]);
 
   const statsLoading = loading;
 

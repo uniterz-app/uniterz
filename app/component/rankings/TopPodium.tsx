@@ -19,6 +19,7 @@ import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
+import { prefetchProfileStatsFromRoute } from "@/app/component/profile/useUserStatsV2";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -126,14 +127,23 @@ export default function TopPodium({
   const warmProfileRoute = useCallback(
     (profileKey: string, row: RankingRowWithCountry, href: string, rank: number) => {
       markRankingsCountUpIntroPlayed();
-      primeProfileCacheFromRankingRow(profileKey, row, statsContext, {
-        metric,
-        rank,
-        participantCount,
-      });
+      primeProfileCacheFromRankingRow(
+        profileKey,
+        row,
+        statsContext,
+        {
+          metric,
+          rank,
+          participantCount,
+        },
+        { skipStatsPrime: !!groupReturnGroupId }
+      );
+      if (groupReturnGroupId) {
+        prefetchProfileStatsFromRoute(profileKey, statsContext);
+      }
       router.prefetch(href);
     },
-    [metric, participantCount, router, statsContext]
+    [groupReturnGroupId, metric, participantCount, router, statsContext]
   );
 
   if (!r1) return null;

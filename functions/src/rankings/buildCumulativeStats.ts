@@ -1,19 +1,13 @@
 // functions/src/rankings/buildCumulativeStats.ts
+// 日次バッチ加算は廃止。cumulative_stats を user_stats_v2_daily の合計と照合・修復する。
 
-import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
-import {
-  readDailyWcStageBuckets,
-  WC_RANKING_STAGES,
-} from "./dailyWcStageBuckets";
-import { safeRankMetricNum } from "./safeRankMetricNum";
+import { getFirestore, FieldPath } from "firebase-admin/firestore";
+import { reconcileCumulativeStatsForUid } from "./cumulativeFromDaily";
 
 function db() {
   return getFirestore();
 }
 
-/* =========================================================
- * JST utils
- * =======================================================*/
 function toDateKeyJST(d: Date) {
   const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
   const y = j.getUTCFullYear();
@@ -26,50 +20,11 @@ function getTodayJST() {
   return toDateKeyJST(new Date());
 }
 
-type RankingTotals = {
-  totalPosts: number;
-  totalWins: number;
-  totalPoints: number;
-  totalUpset: number;
-  totalPrecision: number;
-  totalGoalScorerHits: number;
-  winRate: number;
-};
-
-function addRankingTotals(
-  base: Omit<RankingTotals, "winRate">,
-  inc: {
-    posts?: number;
-    wins?: number;
-    pointsSumV3?: number;
-    upsetPointsSum?: number;
-    scorePrecisionSum?: number;
-    exactHitCount?: number;
-    goalScorerHitCount?: number;
-    /** WC 累積: totalPrecision に exactHitCount を載せる */
-    precisionFromExactHits?: boolean;
-  }
-): Omit<RankingTotals, "winRate"> {
-  const precisionInc = inc.precisionFromExactHits
-    ? safeRankMetricNum(inc.exactHitCount)
-    : safeRankMetricNum(inc.scorePrecisionSum);
-  return {
-    totalPosts: safeRankMetricNum(base.totalPosts) + safeRankMetricNum(inc.posts),
-    totalWins: safeRankMetricNum(base.totalWins) + safeRankMetricNum(inc.wins),
-    totalPoints:
-      safeRankMetricNum(base.totalPoints) + safeRankMetricNum(inc.pointsSumV3),
-    totalUpset:
-      safeRankMetricNum(base.totalUpset) + safeRankMetricNum(inc.upsetPointsSum),
-    totalPrecision: safeRankMetricNum(base.totalPrecision) + precisionInc,
-    totalGoalScorerHits:
-      safeRankMetricNum(base.totalGoalScorerHits) +
-      safeRankMetricNum(inc.goalScorerHitCount),
-  };
-}
-
-/* =========================================================
- * Main
- * =======================================================*/
+/**
+ * 当日に日次が動いたユーザーの cumulative_stats を日次合計と照合する。
+ * 確定時インクリメント（cumulativeLiveUpdates）との二重計上は、
+ * 「加算」ではなく「日次から再計算して上書き」するため起きない。
+ */
 export async function buildCumulativeStats() {
   const dateKey = getTodayJST();
   const firestore = db();
@@ -78,275 +33,7 @@ export async function buildCumulativeStats() {
   let updated = 0;
   let skipped = 0;
   let scanned = 0;
-
-  const processDoc = async (
-    doc: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>
-  ) => {
-    const data = doc.data();
-    const uid = doc.id.split("_")[0];
-    if (!uid) return { updated: false };
-
-    const statsAll = data.all;
-    if (!statsAll) return { updated: false };
-
-    /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
-    const statsRanking = data.ranking ?? data.all;
-    const statsByPhase = data.rankingByPhase ?? {};
-    const statsByPlayoffRound = data.rankingByPlayoffRound ?? {};
-    const statsByWcStage = readDailyWcStageBuckets(
-      data as Record<string, unknown>
-    );
-
-    const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
-    const userRef = firestore.doc(`users/${uid}`);
-
-    return firestore.runTransaction(async (tx) => {
-      const [cumulativeSnap, userSnap] = await Promise.all([
-        tx.get(cumulativeRef),
-        tx.get(userRef),
-      ]);
-
-      const lastAggregatedDate =
-        cumulativeSnap.get("lastAggregatedDate") ?? null;
-
-      if (lastAggregatedDate === dateKey) {
-        return { updated: false };
-      }
-
-      const user = userSnap.exists ? userSnap.data()! : {};
-
-      /* =========================
-       * 累積値（プロフィール = 全試合）
-       * =======================*/
-      const prevPosts = cumulativeSnap.get("totalPosts") ?? 0;
-      const prevWins = cumulativeSnap.get("totalWins") ?? 0;
-      const prevPoints = cumulativeSnap.get("totalPoints") ?? 0;
-      const prevUpset = cumulativeSnap.get("totalUpset") ?? 0;
-      const prevPrecision = cumulativeSnap.get("totalPrecision") ?? 0;
-
-      const addPosts = statsAll.posts ?? 0;
-      const addWins = statsAll.wins ?? 0;
-      const addPoints = statsAll.pointsSumV3 ?? 0;
-      const addUpset = statsAll.upsetPointsSum ?? 0;
-      const addPrecision = statsAll.scorePrecisionSum ?? 0;
-
-      const nextPosts = prevPosts + addPosts;
-      const nextWins = prevWins + addWins;
-      const nextPoints = prevPoints + addPoints;
-      const nextUpset = prevUpset + addUpset;
-      const nextPrecision = prevPrecision + addPrecision;
-
-      const winRate = nextPosts > 0 ? nextWins / nextPosts : 0;
-
-      /* =========================
-       * ランキング用累積（プレーイン除外など）
-       * ranking 未保存時はプロフィール累積でブートストラップ（二重計上防止）
-       * =======================*/
-      const prevR = cumulativeSnap.get("ranking") as
-        | {
-            totalPosts?: number;
-            totalWins?: number;
-            totalPoints?: number;
-            totalUpset?: number;
-            totalPrecision?: number;
-          }
-        | undefined;
-
-      const bootPosts =
-        prevR?.totalPosts != null ? prevR.totalPosts : prevPosts;
-      const bootWins = prevR?.totalWins != null ? prevR.totalWins : prevWins;
-      const bootPoints =
-        prevR?.totalPoints != null ? prevR.totalPoints : prevPoints;
-      const bootUpset = prevR?.totalUpset != null ? prevR.totalUpset : prevUpset;
-      const bootPrecision =
-        prevR?.totalPrecision != null ? prevR.totalPrecision : prevPrecision;
-
-      const addRPosts = statsRanking.posts ?? 0;
-      const addRWins = statsRanking.wins ?? 0;
-      const addRPoints = statsRanking.pointsSumV3 ?? 0;
-      const addRUpset = statsRanking.upsetPointsSum ?? 0;
-      const addRPrecision = statsRanking.scorePrecisionSum ?? 0;
-
-      const nextRPosts = bootPosts + addRPosts;
-      const nextRWins = bootWins + addRWins;
-      const nextRPoints = bootPoints + addRPoints;
-      const nextRUpset = bootUpset + addRUpset;
-      const nextRPrecision = bootPrecision + addRPrecision;
-      const winRateRanking = nextRPosts > 0 ? nextRWins / nextRPosts : 0;
-
-      /* =========================
-       * フェーズ別ランキング累積（play_in / playoffs）
-       * =======================*/
-      const prevByPhase = (cumulativeSnap.get("rankingByPhase") ??
-        {}) as Record<string, RankingTotals | undefined>;
-      const prevPlayIn = prevByPhase.play_in ?? {
-        totalPosts: 0,
-        totalWins: 0,
-        totalPoints: 0,
-        totalUpset: 0,
-        totalPrecision: 0,
-        totalGoalScorerHits: 0,
-        winRate: 0,
-      };
-      const prevPlayoffs = prevByPhase.playoffs ?? {
-        totalPosts: 0,
-        totalWins: 0,
-        totalPoints: 0,
-        totalUpset: 0,
-        totalPrecision: 0,
-        totalGoalScorerHits: 0,
-        winRate: 0,
-      };
-
-      const nextPlayInRaw = addRankingTotals(prevPlayIn, {
-        posts: statsByPhase.play_in?.posts ?? 0,
-        wins: statsByPhase.play_in?.wins ?? 0,
-        pointsSumV3: statsByPhase.play_in?.pointsSumV3 ?? 0,
-        upsetPointsSum: statsByPhase.play_in?.upsetPointsSum ?? 0,
-        scorePrecisionSum: statsByPhase.play_in?.scorePrecisionSum ?? 0,
-        goalScorerHitCount: statsByPhase.play_in?.goalScorerHitCount ?? 0,
-      });
-      const nextPlayoffsRaw = addRankingTotals(prevPlayoffs, {
-        posts: statsByPhase.playoffs?.posts ?? 0,
-        wins: statsByPhase.playoffs?.wins ?? 0,
-        pointsSumV3: statsByPhase.playoffs?.pointsSumV3 ?? 0,
-        upsetPointsSum: statsByPhase.playoffs?.upsetPointsSum ?? 0,
-        scorePrecisionSum: statsByPhase.playoffs?.scorePrecisionSum ?? 0,
-        goalScorerHitCount: statsByPhase.playoffs?.goalScorerHitCount ?? 0,
-      });
-
-      const nextPlayIn: RankingTotals = {
-        ...nextPlayInRaw,
-        winRate:
-          nextPlayInRaw.totalPosts > 0
-            ? nextPlayInRaw.totalWins / nextPlayInRaw.totalPosts
-            : 0,
-      };
-      const nextPlayoffs: RankingTotals = {
-        ...nextPlayoffsRaw,
-        winRate:
-          nextPlayoffsRaw.totalPosts > 0
-            ? nextPlayoffsRaw.totalWins / nextPlayoffsRaw.totalPosts
-            : 0,
-      };
-
-      /* =========================
-       * プレーオフラウンド別ランキング累積（r1 / r2 / cf / finals）
-       * =======================*/
-      const prevByRound = (cumulativeSnap.get("rankingByPlayoffRound") ??
-        {}) as Record<string, RankingTotals | undefined>;
-      const roundKeys = ["r1", "r2", "cf", "finals"] as const;
-      const nextByRound: Record<string, RankingTotals> = {};
-      for (const rk of roundKeys) {
-        const prevRound = prevByRound[rk] ?? {
-          totalPosts: 0,
-          totalWins: 0,
-          totalPoints: 0,
-          totalUpset: 0,
-          totalPrecision: 0,
-          totalGoalScorerHits: 0,
-          winRate: 0,
-        };
-        const nextRoundRaw = addRankingTotals(prevRound, {
-          posts: statsByPlayoffRound[rk]?.posts ?? 0,
-          wins: statsByPlayoffRound[rk]?.wins ?? 0,
-          pointsSumV3: statsByPlayoffRound[rk]?.pointsSumV3 ?? 0,
-          upsetPointsSum: statsByPlayoffRound[rk]?.upsetPointsSum ?? 0,
-          scorePrecisionSum: statsByPlayoffRound[rk]?.scorePrecisionSum ?? 0,
-          goalScorerHitCount:
-            statsByPlayoffRound[rk]?.goalScorerHitCount ?? 0,
-        });
-        nextByRound[rk] = {
-          ...nextRoundRaw,
-          winRate:
-            nextRoundRaw.totalPosts > 0
-              ? nextRoundRaw.totalWins / nextRoundRaw.totalPosts
-              : 0,
-        };
-      }
-
-      /* =========================
-       * World Cup ステージ別（overall / qualifying / main）
-       * =======================*/
-      const prevByWc = (cumulativeSnap.get("rankingByWcStage") ??
-        {}) as Record<string, RankingTotals | undefined>;
-      const nextByWc: Record<string, RankingTotals> = {};
-      for (const wk of WC_RANKING_STAGES) {
-        const prevW = prevByWc[wk] ?? {
-          totalPosts: 0,
-          totalWins: 0,
-          totalPoints: 0,
-          totalUpset: 0,
-          totalPrecision: 0,
-          totalGoalScorerHits: 0,
-          winRate: 0,
-        };
-        const src = statsByWcStage[wk];
-        const num = (v: unknown) => {
-          const n = typeof v === "number" ? v : Number(v);
-          return Number.isFinite(n) ? n : 0;
-        };
-        const nextWRaw = addRankingTotals(prevW, {
-          posts: num(src?.posts),
-          wins: num(src?.wins),
-          pointsSumV3: num(src?.pointsSumV3),
-          upsetPointsSum: num(src?.upsetPointsSum),
-          exactHitCount: num(src?.exactHitCount),
-          goalScorerHitCount: num(src?.goalScorerHitCount),
-          precisionFromExactHits: true,
-        });
-        nextByWc[wk] = {
-          ...nextWRaw,
-          winRate:
-            nextWRaw.totalPosts > 0
-              ? nextWRaw.totalWins / nextWRaw.totalPosts
-              : 0,
-        };
-      }
-
-      tx.set(
-        cumulativeRef,
-        {
-          uid,
-
-          displayName: user.displayName ?? "user",
-          handle: user.handle ?? null,
-          photoURL: user.photoURL ?? null,
-          countryCode: user.countryCode ?? null,
-          plan: user.plan === "pro" ? "pro" : "free",
-
-          totalPosts: nextPosts,
-          totalWins: nextWins,
-
-          totalPoints: nextPoints,
-          totalUpset: nextUpset,
-          totalPrecision: nextPrecision,
-          winRate,
-
-          ranking: {
-            totalPosts: nextRPosts,
-            totalWins: nextRWins,
-            totalPoints: nextRPoints,
-            totalUpset: nextRUpset,
-            totalPrecision: nextRPrecision,
-            winRate: winRateRanking,
-          },
-          rankingByPhase: {
-            play_in: nextPlayIn,
-            playoffs: nextPlayoffs,
-          },
-          rankingByPlayoffRound: nextByRound,
-          rankingByWcStage: nextByWc,
-
-          lastAggregatedDate: dateKey,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      return { updated: true };
-    });
-  };
+  const reconciledUids = new Set<string>();
 
   let cursor:
     | FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>
@@ -366,9 +53,25 @@ export async function buildCumulativeStats() {
     scanned += pageSnap.size;
     cursor = pageSnap.docs[pageSnap.docs.length - 1];
 
-    for (let i = 0; i < pageSnap.docs.length; i += CONCURRENCY) {
-      const chunk = pageSnap.docs.slice(i, i + CONCURRENCY);
-      const chunkResults = await Promise.all(chunk.map((d) => processDoc(d)));
+    const uids = [
+      ...new Set(
+        pageSnap.docs
+          .map((d) => d.id.split("_")[0])
+          .filter((uid): uid is string => !!uid)
+      ),
+    ].filter((uid) => !reconciledUids.has(uid));
+
+    for (const uid of uids) {
+      reconciledUids.add(uid);
+    }
+
+    for (let i = 0; i < uids.length; i += CONCURRENCY) {
+      const chunk = uids.slice(i, i + CONCURRENCY);
+      const chunkResults = await Promise.all(
+        chunk.map((uid) =>
+          reconcileCumulativeStatsForUid(firestore, uid, dateKey)
+        )
+      );
       chunkResults.forEach((r) => {
         if (r.updated) updated++;
         else skipped++;
@@ -381,5 +84,7 @@ export async function buildCumulativeStats() {
     scanned,
     updated,
     skipped,
+    reconciledUsers: reconciledUids.size,
+    mode: "reconcile" as const,
   };
 }

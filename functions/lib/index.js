@@ -100,7 +100,8 @@ exports.updateTeamRankingsDaily = (0, scheduler_1.onSchedule)({ schedule: "0 16 
     await (0, runTeamRankingsCron_1.runTeamRankingsCronIfNbaGamesToday)();
 });
 /* ============================================================================
- * Cumulative Stats (15:40) — JST 当日に NBA / WC 試合がある日
+ * Cumulative Stats reconcile (15:40) — JST 当日に NBA / WC 試合がある日
+ * 確定時インクリメントの照合。日次合計と不一致なら cumulative_stats を上書き修復。
  * ==========================================================================*/
 exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({
     schedule: "40 15 * * *",

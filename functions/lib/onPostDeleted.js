@@ -4,6 +4,48 @@ exports.onPostDeletedV2 = void 0;
 // functions/src/onPostDeletedV2.ts
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
+const cumulativeFromDaily_1 = require("./rankings/cumulativeFromDaily");
+function normalizeSeasonPhase(v) {
+    if (v === "play_in" || v === "playoffs")
+        return v;
+    return null;
+}
+function normalizeSeasonRound(v) {
+    if (v === "r1" || v === "r2" || v === "cf" || v === "finals")
+        return v;
+    return null;
+}
+function normalizeLeague(raw) {
+    if (!raw)
+        return null;
+    const v = String(raw).trim().toLowerCase();
+    if (v === "wc" || v === "fifa")
+        return "wc";
+    if (v === "nba")
+        return "nba";
+    return v || null;
+}
+function buildDeleteContribution(before, stats) {
+    var _a, _b, _c, _d;
+    const leagueKey = normalizeLeague(typeof before.league === "string" ? before.league : null);
+    const isWc = leagueKey === "wc";
+    const wcStageRaw = before.wcStage;
+    const wcStage = wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
+    return {
+        forRanking: stats.countedForRanking !== false,
+        phaseKey: normalizeSeasonPhase(before.seasonPhase),
+        roundKey: normalizeSeasonRound(before.seasonRound),
+        leagueKey,
+        isWc,
+        wcStage,
+        isWin: stats.isWin === true,
+        points: Number((_a = stats.pointsV3) !== null && _a !== void 0 ? _a : 0),
+        upsetPoints: Number((_b = stats.upsetPoints) !== null && _b !== void 0 ? _b : 0),
+        scorePrecision: Number((_c = stats.scorePrecision) !== null && _c !== void 0 ? _c : 0),
+        exactHit: stats.exactMatch === true,
+        goalScorerHit: Number((_d = stats.goalScorerBonus) !== null && _d !== void 0 ? _d : 0) > 0,
+    };
+}
 function teamIdFromSide(side) {
     if (!side || typeof side !== "object")
         return null;
@@ -50,11 +92,16 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     const dateKey = `${yyyy}-${mm}-${dd}`;
     const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(snap.id);
+    const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
+    const userRef = db.doc(`users/${uid}`);
     if (!stats) {
         await db.runTransaction(async (tx) => {
             var _a;
             const dailySnap = await tx.get(dailyRef);
             if (!dailySnap.exists)
+                return;
+            const markerSnap = await tx.get(markerRef);
+            if (!markerSnap.exists)
                 return;
             const dec = {
                 posts: firestore_2.FieldValue.increment(-1),
@@ -65,6 +112,22 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             if (leagueKey) {
                 tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
             }
+            const userSnap = await tx.get(userRef);
+            const user = userSnap.exists ? userSnap.data() : {};
+            (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, {
+                forRanking: true,
+                phaseKey: null,
+                roundKey: null,
+                leagueKey: normalizeLeague(typeof before.league === "string" ? before.league : null),
+                isWc: false,
+                wcStage: null,
+                isWin: false,
+                points: 0,
+                upsetPoints: 0,
+                scorePrecision: 0,
+                exactHit: false,
+                goalScorerHit: false,
+            }, -1);
             tx.delete(markerRef);
         });
         return;
@@ -87,6 +150,8 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         if (!dailySnap.exists)
             return;
         const markerSnap = await tx.get(markerRef);
+        if (!markerSnap.exists)
+            return;
         const marker = markerSnap.data();
         const dec = {
             posts: firestore_2.FieldValue.increment(-1),
@@ -117,6 +182,9 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
                 tx.set(dailyRef, teamDecrementFields(teamId, dec), { merge: true });
             }
         }
+        const userSnap = await tx.get(userRef);
+        const user = userSnap.exists ? userSnap.data() : {};
+        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, buildDeleteContribution(before, stats), -1);
         tx.delete(markerRef);
     });
 });

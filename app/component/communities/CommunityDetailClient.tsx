@@ -39,7 +39,6 @@ export default function CommunityDetailClient({
             language={language}
             variant={variant}
             headerBanner="wide_when_image"
-            showBackLink
           />
         </div>
         )}

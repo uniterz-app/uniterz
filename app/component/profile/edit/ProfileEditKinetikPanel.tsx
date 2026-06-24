@@ -428,6 +428,42 @@ function getKinetikMetricCopy(isJa: boolean) {
   };
 }
 
+function MetricsGridSkeleton({ layout }: { layout: "web" | "mobile" }) {
+  return (
+    <div
+      className={[
+        "grid grid-cols-2 gap-2 p-2",
+        layout === "web" ? "gap-3 p-3" : "",
+      ].join(" ")}
+      aria-busy
+      aria-label="Loading stats"
+    >
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          className={[
+            "relative border border-white/10 bg-transparent",
+            layout === "web" ? "p-4 md:p-5" : "p-3.5",
+          ].join(" ")}
+        >
+          <div
+            className={[
+              "skeleton-scan rounded-none bg-white/10",
+              layout === "web" ? "h-3 w-20" : "h-2.5 w-16",
+            ].join(" ")}
+          />
+          <div
+            className={[
+              "skeleton-scan mt-3 rounded-none bg-white/10",
+              layout === "web" ? "h-8 w-28" : "h-7 w-24",
+            ].join(" ")}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type Props = {
   layout: "web" | "mobile";
   identity?: ProfileEditTronIdentity;
@@ -461,6 +497,8 @@ type Props = {
   rankingLeague?: RankingLeagueSource;
   /** 他人プロフィールではメトリクスカードのモーションを抑える（連勝 FX は維持） */
   visualEffects?: ProfileVisualEffects;
+  /** スタッツ API 取得中 — メトリクス欄のみスケルトン表示 */
+  statsPending?: boolean;
 };
 
 export default function ProfileEditKinetikPanel({
@@ -488,6 +526,7 @@ export default function ProfileEditKinetikPanel({
   metricValueDeltas = null,
   rankingLeague = "nba",
   visualEffects = "full",
+  statsPending = false,
 }: Props) {
   const isJa = language === "ja";
   const isWcProfile = rankingLeague === "worldcup";
@@ -685,6 +724,12 @@ export default function ProfileEditKinetikPanel({
     </div>
   );
 
+  const metricsContent = statsPending ? (
+    <MetricsGridSkeleton layout={layout} />
+  ) : (
+    metricsGrid
+  );
+
   const menuButton =
     canOpenMenu ? (
       <button
@@ -847,7 +892,7 @@ export default function ProfileEditKinetikPanel({
           <div className="profile-edit-kinetik-layout-web__main flex min-w-0 flex-col px-6 py-7 md:px-7 md:py-8">
             <div className="overflow-hidden border border-white/10 bg-transparent">
               {metricsScopeHeader}
-              {metricsGrid}
+              {metricsContent}
             </div>
           </div>
         </div>
@@ -915,7 +960,7 @@ export default function ProfileEditKinetikPanel({
       {/* 主要メトリクス */}
       <div className="mt-3 overflow-hidden border border-white/10 bg-transparent">
         {metricsScopeHeader}
-        {metricsGrid}
+        {metricsContent}
       </div>
 
       <footer className="profile-edit-kinetik-footer mt-4 pt-3">

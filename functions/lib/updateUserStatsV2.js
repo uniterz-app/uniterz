@@ -4,6 +4,7 @@ exports.applyPostToUserStatsV2 = applyPostToUserStatsV2;
 exports.getStatsForDateRangeV2 = getStatsForDateRangeV2;
 // functions/src/updateUserStatsV2.ts
 const firestore_1 = require("firebase-admin/firestore");
+const cumulativeFromDaily_1 = require("./rankings/cumulativeFromDaily");
 function shouldCountForRanking(v) {
     return v !== false;
 }
@@ -18,7 +19,24 @@ function normalizeSeasonRound(v) {
     return v === "r1" || v === "r2" || v === "cf" || v === "finals" ? v : null;
 }
 const db = () => (0, firestore_1.getFirestore)();
-const LEAGUES = ["bj", "j1", "nba", "pl", "wc"];
+function buildPostCumulativeContribution(opts) {
+    var _a, _b, _c;
+    const leagueKey = normalizeLeague(opts.league);
+    return {
+        forRanking: shouldCountForRanking(opts.countsForRanking),
+        phaseKey: normalizeSeasonPhase(opts.seasonPhase),
+        roundKey: normalizeSeasonRound(opts.seasonRound),
+        leagueKey,
+        isWc: leagueKey === "wc",
+        wcStage: (_a = opts.wcStage) !== null && _a !== void 0 ? _a : null,
+        isWin: opts.isWin,
+        points: opts.points,
+        upsetPoints: opts.upsetPoints,
+        scorePrecision: opts.scorePrecision,
+        exactHit: (_b = opts.exactHit) !== null && _b !== void 0 ? _b : false,
+        goalScorerHit: (_c = opts.goalScorerHit) !== null && _c !== void 0 ? _c : false,
+    };
+}
 /* =========================================================
  * Utils
  * =======================================================*/
@@ -98,12 +116,16 @@ async function applyPostToUserStatsV2(opts) {
     const isWc = leagueKey === "wc";
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(postId);
+    const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
+    const userRef = db().doc(`users/${uid}`);
     const userStatsRef = db().doc(`user_stats_v2/${uid}`);
     await db().runTransaction(async (tx) => {
         var _a;
         const marker = await tx.get(markerRef);
         if (marker.exists)
             return;
+        const userSnap = await tx.get(userRef);
+        const user = userSnap.exists ? userSnap.data() : {};
         const inc = {
             posts: firestore_1.FieldValue.increment(1),
             wins: firestore_1.FieldValue.increment(isWin ? 1 : 0),
@@ -157,6 +179,19 @@ async function applyPostToUserStatsV2(opts) {
             upsetOpportunityCount: hadUpsetGame ? 1 : 0,
             countedForRanking: forRanking,
         });
+        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, buildPostCumulativeContribution({
+            countsForRanking,
+            seasonPhase,
+            seasonRound,
+            league,
+            isWin,
+            points,
+            upsetPoints,
+            scorePrecision,
+            exactHit,
+            goalScorerHit,
+            wcStage,
+        }));
     });
 }
 /* =========================================================

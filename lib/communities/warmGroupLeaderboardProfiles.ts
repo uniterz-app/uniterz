@@ -1,4 +1,5 @@
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
+import { prefetchProfileStatsFromRoute } from "@/app/component/profile/useUserStatsV2";
 import type { CommunityGroupLeaderboardRow } from "@/app/component/communities/communityGroupDetailCache";
 import type { CommunityMetric } from "@/lib/communities/types";
 import {
@@ -38,11 +39,18 @@ export function warmGroupLeaderboardProfiles(
       wcStage: statsLeague.wcStage,
       groupId,
     });
-    primeProfileCacheFromRankingRow(profileKey, row, statsLeague, {
-      metric: mobileMetric,
-      rank,
-      participantCount,
-    });
+    primeProfileCacheFromRankingRow(
+      profileKey,
+      row,
+      statsLeague,
+      {
+        metric: mobileMetric,
+        rank,
+        participantCount,
+      },
+      { skipStatsPrime: true }
+    );
+    prefetchProfileStatsFromRoute(profileKey, statsLeague);
     router.prefetch(href);
   }
 }
