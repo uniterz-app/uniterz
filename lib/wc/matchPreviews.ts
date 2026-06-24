@@ -617,6 +617,98 @@ const WC_MATCH_PREVIEWS: Record<string, WcMatchPreviewCopy> = {
       "With all four teams still alive, this result heavily shapes New Zealand v Belgium. Egypt win and top the group; Iran win and qualify on their own; a draw sends Egypt through with Iran waiting on the other fixture. Egypt are favoured but Iran’s defensive resilience makes this far from straightforward.",
     ],
   },
+  "wc-2026-L-pan-eng": {
+    ja: [
+      "L組の最終戦で、イングランドはすでにかなり有利な立場にいます。初戦でクロアチアに4-2で勝利し、2戦目ではガーナと0-0。勝点4でグループ首位に立っています。勝てば首位通過。引き分けでも勝点5となり、2位以内は確定します。",
+      "ただ、2戦目のガーナ戦は内容的に少し重い試合でした。イングランドはボールを持つ時間は長かったものの、ガーナの守備ブロックを崩し切れませんでした。終盤には決定機もありましたが決め切れず、クロアチア戦で見せた攻撃の勢いを継続できたとは言いにくい試合でした。",
+      "パナマはガーナに0-1、クロアチアにも0-1で連敗し、すでに敗退が決まっています。ただ、2試合とも大敗ではなく、強豪相手に粘りは見せました。クロアチア戦でも前半にチャンスを作り、組織的な守備と速い攻撃で相手を苦しめています。最後の試合で初勝点、初得点を狙うモチベーションはあるはずです。",
+      "イングランドにとっては、首位通過を決めるだけでなく、決勝トーナメント前に攻撃の流れを取り戻したい試合です。パナマは低く守ってくる可能性が高く、ガーナ戦と似た構図になるかもしれません。イングランドが早い時間に先制できれば楽になりますが、0-0の時間が長引くと、また攻撃の停滞感が出る可能性があります。",
+    ],
+    en: [
+      "England hold a strong hand in Group L’s final matchday: 4–2 over Croatia and 0–0 with Ghana for four points and the group lead. Win and they top the group; a draw also secures a top-two finish on five points.",
+      "The Ghana game was laboured. England had long spells in possession but could not break a compact block, missed late chances and failed to carry the attacking momentum from the Croatia win.",
+      "Panama have lost 1–0 to Ghana and Croatia and are eliminated, but neither was a rout — they competed against stronger sides and created first-half chances against Croatia with organised defending and quick attacks. Motivation for a first World Cup goal and win remains.",
+      "England want to secure first place and rediscover attacking rhythm before the knockouts. Panama may sit low in a Ghana-like shape; an early England goal eases the path, but a long 0–0 risks another sluggish display.",
+    ],
+  },
+  "wc-2026-L-hrv-gha": {
+    ja: [
+      "この試合は、L組で一番重要な直接対決です。ガーナは初戦でパナマに1-0で勝利し、2戦目でイングランドと0-0。勝点4で2位につけています。クロアチアは初戦でイングランドに2-4で敗れましたが、2戦目でパナマに1-0で勝利。勝点3で最終戦を迎えます。",
+      "ガーナは引き分け以上で2位以内が確定します。勝てばもちろん突破、引き分けでも勝点5となり、クロアチアを上回ります。一方のクロアチアは、2位通過を狙うなら勝利が必要です。引き分けだと勝点4止まりで、ガーナに届きません。3位通過の可能性は残りますが、自力で2位を取るには勝つしかありません。",
+      "ガーナはここまで2試合で無失点です。パナマ戦を1-0で勝ち切り、イングランド戦ではかなり強固な守備ブロックを作りました。イングランドに多くボールを持たれても、最後のところで体を張り続けました。攻撃ではカウンターがポイントになります。",
+      "クロアチアはパナマ戦で勝点3を取りましたが、内容はかなり苦しみました。ブディミルのゴールで勝ち切ったものの、前半はパナマにチャンスを作られ、ダリッチ監督も集中力やプレッシャーへの対応を課題に挙げています。モドリッチは代表200試合出場を達成しましたが、チーム全体としてはまだ流れが安定していません。",
+      "この試合は、クロアチアがボールを持つ展開になりやすいですが、ガーナは守ってカウンターに出る形で十分戦えます。クロアチアが焦って攻撃を急ぐと、ガーナの速攻を受ける。ガーナは引き分けでもいい立場ですが、受けに回りすぎるとクロアチアの経験値に押し込まれる可能性があります。2位通過をかけた、かなり緊張感のある試合です。",
+    ],
+    en: [
+      "Group L’s decisive head-to-head: Ghana beat Panama 1–0 and drew 0–0 with England for four points and second place; Croatia lost 4–2 to England but beat Panama 1–0, arriving on three.",
+      "Ghana secure a top-two finish with a point — a win or draw takes them to five above Croatia. Croatia need a win for second; a draw leaves them on four behind Ghana, with third still possible but not automatic second.",
+      "Ghana are unbeaten without conceding: 1–0 against Panama and a resilient block against England despite long spells without the ball. Counter-attacks are their weapon.",
+      "Croatia took three points against Panama but struggled — Bruno Petković’s winner came after Panama created chances in the first half, and Zlatko Dalić flagged concentration under pressure. Luka Modrić reached 200 caps but the team rhythm is still uneven.",
+      "Croatia may dominate the ball but Ghana can defend and break. Rush the attack and Ghana punish on the counter; sit too deep and Croatia’s experience may pin them back. A tense runner-up decider.",
+    ],
+  },
+  "wc-2026-K-col-prt": {
+    ja: [
+      "K組の首位争いが、コロンビア対ポルトガルです。コロンビアは初戦でウズベキスタンに3-1、2戦目でDRコンゴに1-0で勝利。勝点6で、すでにラウンド32進出を決めています。ポルトガルは初戦でDRコンゴと1-1、2戦目でウズベキスタンに5-0で大勝し、勝点4で2位につけています。",
+      "コロンビアは引き分け以上で首位通過です。負けても勝点6で2位以内は確定しています。ポルトガルは勝てば勝点7で首位通過、引き分けでも勝点5となり2位以内が確定します。負けた場合でも勝点4で3位以上は残りますが、DRコンゴがウズベキスタンに大勝すると、得失点差次第で2位を脅かされる可能性があります。",
+      "コロンビアはここまで非常に安定しています。ウズベキスタン戦では攻撃力を見せ、DRコンゴ戦では苦しみながらもダニエル・ムニョスのゴールで勝ち切りました。ハメス・ロドリゲス、ルイス・ディアス、ジョン・アリアスがチャンスを作り、最後にサイドバックのムニョスが決める形は、攻撃の幅を感じさせます。守備でも2戦目を無失点で終えたことは大きいです。",
+      "ポルトガルは初戦のDRコンゴ戦では先制しながら1-1に追いつかれ、内容も不安定でした。ただ、2戦目のウズベキスタン戦では5-0で一気に立て直しました。クリスティアーノ・ロナウドは2得点し、史上初めて6大会連続でW杯得点を記録。ヌーノ・メンデスやラファエル・レオンも絡み、チームとしても初戦より判断と配置が改善されました。",
+      "この試合は、コロンビアの組織的な攻撃と、ポルトガルの個の破壊力のぶつかり合いになります。コロンビアは無理に勝ちに行く必要はありませんが、首位通過のためには試合をコントロールしたい。ポルトガルは勝てば首位なので、どこかでリスクをかける必要があります。ロナウドの決定力、ディアスの突破、両チームのサイド攻防が大きな見どころです。",
+    ],
+    en: [
+      "Group K’s summit clash: Colombia beat Uzbekistan 3–1 and DR Congo 1–0 for six points and a round-of-32 place; Portugal drew 1–1 with DR Congo then thrashed Uzbekistan 5–0 for four points in second.",
+      "Colombia top the group with a point and stay in the top two even if they lose. Portugal win and they reach seven for first; a draw secures second on five. Defeat leaves four and third place, though a heavy DR Congo win could threaten second on goal difference.",
+      "Colombia have been stable: attacking flair against Uzbekistan and Daniel Muñoz’s winner after a hard game against DR Congo. James Rodríguez, Luis Díaz and Jhon Arias create chances with width from the full-back; a clean sheet in round two matters defensively.",
+      "Portugal were shaky in a 1–1 opener against DR Congo but reset with a 5–0 over Uzbekistan. Cristiano Ronaldo scored twice for goals in six straight World Cups; Nuno Mendes and Rafael Leão improved decisions and structure from game one.",
+      "Organised Colombia attack meets Portuguese individual threat. Colombia need not force a win but want control for first place; Portugal must take risks to top the group. Ronaldo’s finishing, Díaz’s dribbling and wide battles are the key watches.",
+    ],
+  },
+  "wc-2026-K-cod-uzb": {
+    ja: [
+      "DRコンゴは、突破の可能性を残すために勝利が必要な試合です。初戦でポルトガルと1-1、2戦目でコロンビアに0-1。勝点1で最終戦を迎えます。勝てば勝点4となり、3位通過の可能性を大きく残します。さらに、ポルトガルがコロンビアに敗れた場合、ポルトガルと勝点4で並ぶ可能性があります。両者の直接対決は1-1なので、その場合は得失点差などの勝負になります。",
+      "一方のウズベキスタンは、コロンビアに1-3、ポルトガルに0-5で連敗。ポルトガル戦の大敗で敗退が決まっています。したがって、この試合は突破争いではなく、大会初勝利、初勝点、そして初出場国として意地を見せる試合になります。ここまで守備の強度、試合の入り、失点後の立て直しに大きな課題が出ています。",
+      "DRコンゴはポルトガル戦で粘りを見せ、ヨアン・ウィサが得点しました。コロンビア戦でも敗れはしたものの、GKムパシの好守もあり、簡単には崩れませんでした。守備とカウンターの形はあるチームです。問題は、勝ちが必要な試合でどこまで自分たちから攻撃できるかです。",
+      "この試合は、DRコンゴが主導権を握る時間を増やせるかがポイントになります。守って耐えるだけでは勝点3に届きません。ウズベキスタンは敗退が決まっているため、失うものがない状態で前に出てくる可能性もあります。DRコンゴはその勢いを受けすぎず、早い時間に先制して試合を落ち着かせたいところです。後半まで0-0が続くと、焦りからかなりオープンな展開になる可能性があります。",
+    ],
+    en: [
+      "DR Congo need a win to keep advancement hopes alive: 1–1 with Portugal and 0–1 to Colombia on one point. Victory reaches four and boosts third-place chances; if Portugal lose to Colombia, Congo could tie Portugal on four with goal difference deciding after their 1–1 draw.",
+      "Uzbekistan lost 3–1 to Colombia and 5–0 to Portugal and are out. This is about a first World Cup win and pride as debutants — defensive strength, starts and recovery after conceding have been major issues.",
+      "DR Congo showed resilience against Portugal with Yoane Wissa scoring and Lionel Mpasi kept them competitive against Colombia. They can defend and counter; the question is how much they attack when three points are required.",
+      "DR Congo must increase time on the ball — survival alone will not deliver three points. Eliminated Uzbekistan may push forward with nothing to lose; Congo want an early goal to settle matters before late nerves open the game.",
+    ],
+  },
+  "wc-2026-J-jor-arg": {
+    ja: [
+      "アルゼンチンはここまでアルジェリアに3-0、オーストリアに2-0で連勝。勝点6で、すでにJ組首位通過を決めています。リオネル・メッシは2試合で全5得点を記録し、オーストリア戦ではW杯通算得点記録も更新。王者らしいスタートを切っています。",
+      "ヨルダンは初戦でオーストリアに1-3、2戦目でアルジェリアに1-2で敗れ、勝点0。すでに敗退が決まっています。ただ、初出場国として2試合とも得点は取っており、一方的に崩れたわけではありません。最後の試合で、王者アルゼンチン相手にどこまで自分たちの爪痕を残せるかがテーマになります。",
+      "アルゼンチンにとっては順位をかけた試合ではありません。首位通過が決まっているため、主力のコンディション管理が大きなポイントになります。特にメッシはオーストリア戦後に疲労感にも触れており、決勝トーナメントを考えると無理をさせる必要はありません。スカローニ監督がどこまでローテーションするかが注目です。",
+      "ヨルダンは守備的に入る時間が長くなるはずですが、ただ守るだけでは押し込まれ続けます。アルゼンチンが主力を温存しても、控え組にもアピールの場になるため、強度が落ちるとは限りません。ヨルダンとしては、セットプレーやカウンターで少ないチャンスを活かしたい試合です。",
+      "この試合は、アルゼンチンがどれだけ余裕を持って勝ち切るか、あるいは主力を休ませながらチームの形を維持できるかが見どころです。ヨルダンにとっては敗退決定後の一戦ですが、王者相手に戦える貴重な機会です。試合の意味は順位よりも、両チームが次に何を残すかにあります。",
+    ],
+    en: [
+      "Argentina have won 3–0 against Algeria and 2–0 against Austria for six points and a secured Group J summit. Lionel Messi has all five team goals across two games and broke the World Cup scoring record against Austria — a champion’s start.",
+      "Jordan lost 3–1 to Austria and 2–1 to Algeria on zero points and are eliminated, but scored in both games as debutants without collapsing. The theme is what mark they leave against the holders.",
+      "Table position is settled for Argentina — managing key players is the priority. Messi mentioned fatigue after Austria and need not be overworked before the knockouts; how far Lionel Scaloni rotates is the watch.",
+      "Jordan will spend long periods defending but cannot only absorb pressure. Even if Argentina rest stars, substitutes want to impress and intensity may not drop. Set pieces and counters are Jordan’s route to rare chances.",
+      "Can Argentina win comfortably or maintain shape while resting starters? For Jordan it is a prized shot at the champions after elimination — the meaning lies beyond the table in what each side carries forward.",
+    ],
+  },
+  "wc-2026-J-dza-aut": {
+    ja: [
+      "J組で最も重要なのが、アルジェリア対オーストリアです。アルゼンチンが首位通過を決め、ヨルダンが敗退しているため、この試合は2位通過をかけた直接対決になります。オーストリアは初戦でヨルダンに3-1で勝利し、2戦目でアルゼンチンに0-2で敗戦。勝点3です。アルジェリアは初戦でアルゼンチンに0-3で敗れましたが、2戦目でヨルダンに2-1と勝利。こちらも勝点3です。",
+      "勝った方が勝点6となり、2位通過が決まります。引き分けの場合は両チーム勝点4。直接対決も引き分けとなるため得失点差に進みます。現時点ではオーストリアが得失点差0、アルジェリアが-2なので、引き分けならオーストリアが2位に入ります。つまり、アルジェリアは2位通過を狙うなら勝利が必要です。",
+      "オーストリアは初戦でヨルダンに勝ったものの、内容は簡単ではありませんでした。アルゼンチン戦ではメッシに2得点を許して敗戦。ラングニック監督のチームらしく、強度と組織力はありますが、相手の個の質に対してどこまで耐えられるかは課題として残りました。この試合では引き分けでも2位に入れるため、試合運びのうまさが問われます。",
+      "アルジェリアは初戦でアルゼンチンに敗れた後、2戦目でヨルダンに逆転勝利して踏みとどまりました。リヤド・マフレズが先発復帰して攻撃に関わり、セットプレーから同点に追いつき、終盤にアミン・グイリが決勝点を決めました。大会復帰の中で、ここで勝てば決勝トーナメント進出です。",
+      "この試合は、状況的にはオーストリアが有利です。引き分けでいい立場にあり、得失点差でも上にいます。ただ、受けに回りすぎるとアルジェリアの勢いを助ける可能性があります。アルジェリアは勝つしかないため、後半にリスクを上げてくるはずです。オーストリアがその時間を耐えるのか、アルジェリアが勝負を決めるのか。J組2位を決める、かなり分かりやすい直接対決です。",
+    ],
+    en: [
+      "Group J’s key fixture is Algeria v Austria with Argentina through and Jordan out — a head-to-head for second. Austria beat Jordan 3–1 and lost 2–0 to Argentina on three points; Algeria lost 3–0 to Argentina then beat Jordan 2–1, also on three.",
+      "The winner reaches six and finishes second. A draw leaves both on four and goal difference decides — Austria are level on zero, Algeria −2, so Austria take second on a draw. Algeria need a win to chase second.",
+      "Austria beat Jordan but it was not straightforward; Messi scored twice against them in defeat. Ralf Rangnick’s side have intensity and structure but still question whether they can match top individual quality. A draw secures second, so game management matters.",
+      "Algeria bounced back from Argentina with a comeback win over Jordan — Riyad Mahrez returned to influence attack, equalised from a set piece and Amine Gouiri scored the winner. Win here and they reach the knockouts on their return.",
+      "Austria hold the edge with a draw enough and superior goal difference, but sitting too deep could feed Algerian momentum. Algeria must gamble late; whether Austria hold or Algeria strike decides Group J’s runner-up in a clear decider.",
+    ],
+  },
 };
 
 export function hasWcMatchPreview(gameId: string): boolean {
