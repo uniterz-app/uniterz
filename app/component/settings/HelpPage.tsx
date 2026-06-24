@@ -157,6 +157,16 @@ function ScoringLogicAnswerJa() {
             <span className="font-semibold text-emerald-300">連勝ボーナス</span>
             ：3〜4連勝 +1点、5〜6連勝 +2点、7連勝以上 +3点（2連勝以下は0点）。
           </p>
+          <p className="pt-1 font-semibold text-white/92">ワールドカップ（同時キックオフ）</p>
+          <p>
+            同じキックオフ時刻の試合は
+            <span className="font-semibold text-cyan-300">1グループ</span>
+            として連勝を判定します。グループ内で
+            <span className="font-semibold text-emerald-300">投稿した試合がすべて的中</span>
+            なら試合数ぶん連勝が伸び、
+            <span className="font-semibold text-red-300">1つでも外れると連勝は0</span>
+            になります（未投稿の試合は対象外）。
+          </p>
           <p>
             <span className="font-semibold text-emerald-300">アップセットボーナス</span>
             ：あなたの予想が少数派で的中し、かつ試合がアップセットだった場合

@@ -345,6 +345,278 @@ const WC_MATCH_PREVIEWS: Record<string, WcMatchPreviewCopy> = {
       "Watch Colombia’s wide play against DR Congo’s defensive block. Colombia will use width through Díaz; DR Congo will sit, absorb and counter into space.",
     ],
   },
+  "wc-2026-B-che-can": {
+    ja: [
+      "B組の最終戦で最も大きな意味を持つのが、スイス対カナダです。両チームともここまで勝点4。カナダは初戦でボスニア・ヘルツェゴビナと1-1で引き分けたあと、2戦目でカタールに6-0と大勝しました。スイスも初戦でカタールと1-1、2戦目でボスニア・ヘルツェゴビナに4-1で勝利。どちらも突破に近い位置にいて、この直接対決はB組首位を決める試合になります。",
+      "カナダは勝てばもちろん首位通過。引き分けでもスイスと勝点5で並び、得失点差で上回るため首位通過が決まります。スイスも引き分け以上なら勝点5となり、ラウンド32進出は確定。つまり両チームにとって最低限の目標は勝点1ですが、首位通過を考えるとスイスは勝ちに行く必要があります。",
+      "カナダの注目点は、6-0で見せた攻撃の勢いをスイス相手にも出せるかです。ただし、そのカタール戦でイスマエル・コネが負傷しており、中盤の強度や前進力には影響が出ます。ホーム開催国としての勢いはありますが、前がかりになりすぎるとスイスのカウンターや試合運びに飲まれる危険があります。",
+      "スイスはボスニア戦で終盤に一気に試合を壊しました。途中出場の若手も結果を出していて、先発だけでなく交代策でも勝負できるチームです。カナダが序盤から勢いで押し込むのか、それともスイスが経験値と守備の安定感で試合を落ち着かせるのか。B組の首位通過、そして決勝トーナメントの山にも影響する重要な一戦です。",
+    ],
+    en: [
+      "The biggest Group B fixture on the final matchday is Switzerland against Canada. Both sit on four points. Canada drew 1–1 with Bosnia and Herzegovina then thrashed Qatar 6–0; Switzerland drew 1–1 with Qatar and beat Bosnia 4–1. Both are close to the knockouts and this head-to-head decides who tops the group.",
+      "Canada win and they top the group outright. A draw also sends Canada through on goal difference at five points alongside Switzerland. Switzerland need only a point for five and a round-of-32 place, so both sides want at least one point — but Switzerland must chase the win to top the group.",
+      "Canada’s question is whether they can carry the attacking momentum from the 6–0 into this game. Ismaël Koné was injured in the Qatar match, which weakens midfield drive. Home support helps, but overcommitting risks being picked off by Swiss counters and game management.",
+      "Switzerland blew the game open late against Bosnia, with substitutes contributing — they can win from the bench as well as the XI. Will Canada push early or will Switzerland settle matters with experience and defensive stability? A pivotal game for the group summit and the knockout bracket.",
+    ],
+  },
+  "wc-2026-B-bih-qat": {
+    ja: [
+      "この試合は、両チームとも勝利が必要な試合です。ボスニア・ヘルツェゴビナは初戦でカナダと1-1。悪くない入りでしたが、2戦目のスイス戦では1-4で敗れました。カタールも初戦でスイスと1-1と健闘しましたが、2戦目はカナダに0-6で大敗。両チームとも勝点1で最終戦を迎えます。",
+      "勝ったチームは勝点4になり、3位通過の可能性を残します。さらに、スイス対カナダで敗者が出れば、そのチームも勝点4で並ぶ可能性があります。つまり単なる3位争いではなく、条件次第では2位争いにも絡む試合です。ただし引き分けなら両チーム勝点2止まりとなり、突破はかなり厳しくなります。",
+      "ボスニアはジェコを中心に、前線の高さとフィジカルを使って押し込みたい試合です。スイス戦では終盤に崩れましたが、カナダ戦では先制して勝点1を取っています。内容がまったく悪いわけではなく、勝負どころで耐えられるか、そしてリードした時間をどう管理するかが課題です。",
+      "カタールはまず守備の立て直しが必要です。カナダ戦の0-6はかなり重い敗戦で、さらにHomam AhmedとAssim Madiboが退場。Madiboのタックルでカナダのコネが骨折するなど、チームとしても精神的に難しい状況にあります。前半に失点するとまた崩れる可能性があるので、まずは試合を壊さないこと。逆にボスニアは、早い時間に先制できれば一気に優位に立てます。",
+    ],
+    en: [
+      "Both sides need a win. Bosnia and Herzegovina drew 1–1 with Canada in round one but lost 4–1 to Switzerland in round two. Qatar drew 1–1 with Switzerland then were hammered 6–0 by Canada. Both arrive on one point for the final matchday.",
+      "The winner reaches four points and keeps third-place hopes alive — and if Switzerland v Canada produces a loser, that side could also finish on four, so this is not only a third-place scrap but potentially a second-place race. A draw leaves both on two and makes advancement very unlikely.",
+      "Bosnia will push high through Edin Džeko, using physical presence up front. They collapsed late against Switzerland but scored first against Canada, so the performance is not hopeless — the test is holding firm in key moments and managing a lead.",
+      "Qatar must rebuild defensively after the 6–0 loss; Homam Ahmed and Assim Madibo are suspended, and Madibo’s tackle broke Ismaël Koné’s leg, leaving a difficult mood in the camp. Conceding early could trigger another collapse, so staying compact is priority. Bosnia can seize control with an early goal.",
+    ],
+  },
+  "wc-2026-C-sct-bra": {
+    ja: [
+      "ブラジルはここまでモロッコと1-1、ハイチに3-0。勝点4でグループ首位に立っています。一方のスコットランドはハイチに1-0で勝利したあと、モロッコに0-1で敗戦。勝点3で、まだ突破の可能性は十分にあります。この試合で勝点を取れるかどうかが、スコットランドにとって歴史的な決勝トーナメント進出に直結します。",
+      "ブラジルは勝てば突破確定。さらにモロッコの結果を上回る、または同じ結果で終えれば首位通過が見えてきます。ただし、この試合を落とすとスコットランドに勝点で抜かれるため、ブラジルにとっても完全な安全圏ではありません。初戦のモロッコ戦ではやや不安定な部分もありましたが、ハイチ戦ではマテウス・クーニャが2得点、ヴィニシウスも得点して、攻撃面は上向いています。",
+      "気になるのはコンディション面です。ラフィーニャはハイチ戦で負傷し、スコットランド戦は欠場見込み。ネイマールは出場可能な状態ですが、アンチェロッティ監督が実際に使うかはまだ読みにくい状況です。決勝トーナメントを見据えながら、どこまで主力を使うかも注目点になります。",
+      "スコットランドは、ブラジルにボールを持たれる時間が長くなるのは避けられません。だからこそ、ロバートソン、マクトミネイ、マッギンを中心に、球際、セカンドボール、セットプレーでどこまで対抗できるかが重要です。勝てば2位以内が見える。引き分けでも3位通過争いではかなり大きな勝点1になります。スコットランドにとっては守るだけではなく、どこかで勝負に出る必要がある試合です。",
+    ],
+    en: [
+      "Brazil drew 1–1 with Morocco and beat Haiti 3–0 for four points and the group lead. Scotland beat Haiti 1–0 then lost 1–0 to Morocco, sitting on three with a real path to the knockouts. Points here could decide a historic Scotland appearance in the round of 32.",
+      "Brazil win and they are through, and they can top the group depending on Morocco’s result. Lose and Scotland can overtake them on points, so Brazil are not entirely safe. They were slightly uneven against Morocco but Matheus Cunha scored twice and Vinícius Júnior also netted against Haiti — the attack is trending up.",
+      "Fitness is the worry. Raphinha is injured after the Haiti game and expected to miss Scotland. Neymar is available but whether Carlo Ancelotti starts him remains unclear as he balances the knockout stage ahead.",
+      "Scotland will concede possession to Brazil, so Andy Robertson, Scott McTominay and John McGinn must compete in duels, second balls and set pieces. A win opens second place; even a draw is a valuable point in the third-place race. Scotland cannot only defend — they must take a risk somewhere.",
+    ],
+  },
+  "wc-2026-C-mar-hti": {
+    ja: [
+      "モロッコはここまでかなり良い位置にいます。初戦でブラジルと1-1、2戦目でスコットランドに1-0で勝利。勝点4で、ハイチに勝てば勝点7となり、ラウンド32進出はほぼ確実です。さらにブラジルがスコットランド戦で勝ち切れなければ、首位通過の可能性もあります。",
+      "ただし、モロッコは内容の良さに対して得点数は多くありません。ブラジル戦もスコットランド戦も1得点止まり。守備は安定していますが、相手を押し込んだときにどうやってゴールをこじ開けるかは課題です。特にハイチは敗退が決まっているため、低い位置で守り、カウンターとセットプレーに絞ってくる可能性があります。",
+      "ハイチはスコットランドに0-1、ブラジルに0-3で連敗し、すでに敗退が決まっています。ただ、失うものがないチームはやりにくい相手です。ハイチにとっては大会初勝点を狙う試合であり、モロッコが焦れば焦るほど守りやすくなります。",
+      "モロッコの注目点は、勝たなければいけない空気の中で冷静に崩せるかです。サイドから単調にクロスを入れるだけになると、ハイチにも耐える時間を与えてしまいます。中央のコンビネーション、ミドルシュート、セットプレーをうまく混ぜながら、早い時間に先制できるか。首位通過まで狙えるモロッコにとって、取りこぼしは避けたい試合です。",
+    ],
+    en: [
+      "Morocco are in a strong position: 1–1 with Brazil and 1–0 over Scotland for four points. Beat Haiti and they reach seven and are virtually through; if Brazil fail to beat Scotland, topping the group is also possible.",
+      "Yet Morocco have not scored heavily despite good performances — one goal in each of the Brazil and Scotland games. Defence is stable but breaking down a block when dominating remains the challenge. Haiti are already eliminated and may sit low, counter and lean on set pieces.",
+      "Haiti lost 1–0 to Scotland and 3–0 to Brazil and are out, but teams with nothing to lose are awkward. Haiti will chase a first World Cup win; the more Morocco rush, the easier it is to defend.",
+      "Morocco must stay calm under pressure to unlock Haiti. Repetitive wide crosses give Haiti time to survive — mix central combinations, shots from distance and set pieces, and score early. A slip-up is costly for a side still eyeing the group summit.",
+    ],
+  },
+  "wc-2026-A-cze-mex": {
+    ja: [
+      "メキシコはここまで南アフリカに2-0、韓国に1-0で連勝。勝点6で、すでにA組首位通過を決めています。2試合無失点で堅く勝ってきた一方、攻撃面は圧倒的というより効率的。アギーレ監督も韓国戦の内容について改善の余地を認めており、決勝トーナメント前に攻撃の流れをもう少し良くしたい試合でもあります。",
+      "一方のチェコは、韓国に1-2で敗れ、南アフリカとは1-1。勝点1で最終戦を迎えます。チェコは勝てば勝点4になり、2位通過の可能性も3位通過の可能性も残ります。韓国が南アフリカに勝てば、チェコは勝利でA組2位に浮上できます。韓国が引き分けた場合は韓国とチェコが勝点4で並びますが、直接対決で韓国がチェコに勝っているため、チェコは3位になります。南アフリカが韓国に勝った場合は、チェコと南アフリカが勝点4で並び、両者の直接対決は1-1なので、得失点差などの勝負になります。",
+      "つまりチェコにとっては、単に生き残るためではなく、2位通過まで狙える試合です。メキシコが首位確定でローテーションする可能性があるため、チェコにとってはチャンスもあります。",
+      "チェコの武器は高さです。パトリック・シック、トマーシュ・ソウチェク、ラディスラフ・クレイチーを使ったセットプレーやクロスは、メキシコにとって厄介です。メキシコは消化試合のような入り方をすると危険です。チェコは最初から勝ちに来るので、メキシコのローテーション組が試合に入りきれないと、前半から押し込まれる可能性があります。",
+    ],
+    en: [
+      "Mexico have won 2–0 against South Africa and 1–0 against Korea Republic for six points and a secured group summit. Two clean sheets show solidity rather than overwhelming attack, and Javier Aguirre has acknowledged room to improve before the knockouts.",
+      "The Czech Republic lost 2–1 to Korea and drew 1–1 with South Africa, arriving on one point. Win and they reach four with second- or third-place chances alive. If Korea beat South Africa, a Czech win takes them second; if Korea draw, Korea finish above the Czechs on head-to-head at four points; if South Africa beat Korea, the Czechs and South Africa could both finish on four with goal difference deciding after their 1–1 draw.",
+      "So the Czechs are not only surviving — second place is realistic. Mexico may rotate with qualification secured, which opens a window for the Czechs.",
+      "Height is the Czech weapon: Patrik Schick, Tomáš Souček and Ladislav Krejčí on set pieces and crosses trouble Mexico. A casual approach from Mexico is risky; the Czechs will come to win, and if a rotated side fails to settle they could be pinned back early.",
+    ],
+  },
+  "wc-2026-A-zaf-kor": {
+    ja: [
+      "この試合は、A組の2位争いに大きく関わる直接対決です。韓国はチェコに2-1で勝利し、メキシコには0-1で敗戦。勝点3で最終戦を迎えます。南アフリカはメキシコに0-2で敗れ、チェコとは1-1。勝点1なので、突破のためには勝利が必要です。",
+      "韓国は勝てば勝点6で2位通過が確定します。引き分けでも勝点4になり、チェコがメキシコに勝って勝点4で並んだとしても、直接対決で韓国がチェコに勝っているため、2位を守れます。つまり韓国は引き分け以上で2位通過です。",
+      "南アフリカは勝てば勝点4になり、突破の可能性を残します。ただし、勝てば無条件で2位確定ではありません。チェコがメキシコに勝つと、南アフリカとチェコが勝点4で並びます。両者の直接対決は1-1なので、その場合は得失点差などで順位が決まります。だから南アフリカは、ただ勝つだけでなく、できれば得失点差も意識したい試合になります。",
+      "韓国は引き分けでもいい立場ですが、受けに回りすぎると危険です。南アフリカは勝つしかないため、どこかで必ずリスクをかけてきます。韓国としては、守るだけではなく、相手が前に出てきたところをカウンターで仕留めたい試合です。",
+      "南アフリカは初戦のメキシコ戦で守備的に入りすぎましたが、チェコ戦では後半に攻撃の人数を増やして改善しました。ただし、テボホ・モコエナが累積警告で出場停止、テンバ・ズワネも出場停止。中盤の質と経験が落ちるのは大きな不安です。状況は韓国が有利ですが、南アフリカが後半に勝負をかける展開になれば、試合は一気にオープンになる可能性があります。",
+    ],
+    en: [
+      "A direct Group A clash that shapes the race for second. Korea Republic beat the Czech Republic 2–1 and lost 1–0 to Mexico, sitting on three points. South Africa lost 2–0 to Mexico and drew 1–1 with the Czechs on one point — they need a win to stay alive.",
+      "Korea win and they finish second on six points. A draw also secures second on four even if the Czechs beat Mexico, thanks to head-to-head superiority over the Czechs. In short, a point is enough for Korea to advance in second.",
+      "South Africa win and they reach four with a path through, but not automatically second. If the Czechs beat Mexico, South Africa and the Czechs both finish on four and goal difference decides after their 1–1 draw — so South Africa want goals as well as the win.",
+      "Korea can afford a draw but sitting too deep is dangerous. South Africa must gamble somewhere; Korea should punish transitions when opponents push forward rather than only defending.",
+      "South Africa were too defensive against Mexico but added numbers in attack late against the Czechs. Teboho Mokoena and Themba Zwane are suspended, weakening midfield quality and experience. Korea hold the edge, but if South Africa throw caution away in the second half the game could open up quickly.",
+    ],
+  },
+  "wc-2026-E-ecu-deu": {
+    ja: [
+      "ドイツはここまでキュラソーに7-1、コートジボワールに2-1で連勝。勝点6で、すでにE組首位通過を決めています。今大会は同勝点の場合に直接対決が得失点差より優先されるため、最終戦でドイツが敗れ、コートジボワールが勝って勝点6で並んでも、直接対決で勝っているドイツが上に立ちます。",
+      "そのためドイツにとって、この試合は順位をかけた試合ではありません。ただし、完全な消化試合でもありません。決勝トーナメントに向けて強度を落とさず、ここまでの流れを維持できるかがテーマになります。ドイツは大会前から含めて連勝を続けており、ナーゲルスマン監督としても、勝ち癖を切らさずにラウンド32へ入りたい試合です。",
+      "一方のエクアドルはかなり苦しい状況です。初戦でコートジボワールに0-1で敗れ、2戦目はキュラソーと0-0。南米予選2位、19試合無敗で大会に入ったチームが、ここまで2試合無得点です。突破のためには、まずドイツに勝って勝点4にする必要があります。ただし、コートジボワールがキュラソーに引き分け以上なら、エクアドルは直接対決でコートジボワールに敗れているため2位には届きません。その場合は3位通過争いに回ります。2位を狙うには、エクアドルが勝ち、かつコートジボワールが敗れる展開が必要です。",
+      "注目点は、エクアドルがどこまで前に出るかです。勝利が必要な試合ですが、無理にラインを上げるとドイツのカウンターを受けます。逆に慎重になりすぎると、ここまでの2試合と同じように得点が遠くなります。ドイツはニコ・シュロッターベックが足首の負傷で大会終了となり、アントニオ・リュディガーがジョナタン・ターと組む見込みです。首位通過が決まっているドイツにとっては、守備ラインの再確認もこの試合の大きなポイントになります。",
+    ],
+    en: [
+      "Germany have beaten Curaçao 7–1 and Côte d’Ivoire 2–1 for six points and a secured Group E summit. At this tournament, head-to-head record beats goal difference on equal points — so even if Germany lose here and Côte d’Ivoire win to finish level on six, Germany stay above them on the direct result.",
+      "So this is not a game about table position for Germany, but not a pure dead rubber either. The theme is maintaining intensity and momentum into the knockouts without dropping off. Germany have been winning through the pre-tournament run and Julian Nagelsmann will want that habit intact heading into the round of 32.",
+      "Ecuador are in a tough spot: 0–1 to Côte d’Ivoire and 0–0 with Curaçao, goalless in two games after arriving unbeaten through 19 qualifiers. They must beat Germany to reach four points, but if Côte d’Ivoire draw or beat Curaçao, Ecuador cannot finish second on head-to-head. Second place needs an Ecuador win plus a Côte d’Ivoire defeat.",
+      "Watch how far Ecuador push forward. They need a win but a high line invites German counters; too cautious and goals stay distant as in the first two games. Nico Schlotterbeck is out with an ankle injury, with Antonio Rüdiger expected to partner Jonathan Tah — a chance for Germany to reset the back line even with qualification secured.",
+    ],
+  },
+  "wc-2026-E-cuw-civ": {
+    ja: [
+      "コートジボワールは初戦でエクアドルに1-0で勝利し、2戦目ではドイツ相手に先制しながら1-2で逆転負け。勝点3で最終戦を迎えます。ドイツの首位通過が決まっているため、この試合の最大のテーマはコートジボワールが2位を確定できるかどうかです。",
+      "コートジボワールは引き分け以上で2位通過が決まります。仮にエクアドルがドイツに勝って勝点4で並んでも、コートジボワールは直接対決でエクアドルに勝っているため上に立ちます。つまり、この試合で最低限必要なのは勝点1です。ただし、負けると勝点3のままになり、エクアドルがドイツに勝てば2位から落ちるため、完全に守りに入れる状況ではありません。",
+      "キュラソーは初戦でドイツに1-7と大敗しましたが、2戦目ではエクアドルを0-0で止めました。大会最小国としての出場で、初戦は力の差を見せられましたが、2戦目で守備を立て直したことは評価できます。37歳GKエロイ・ルームの好守もあり、簡単には崩れないチームに修正してきました。",
+      "この試合のポイントは、コートジボワールが主導権を握る側で冷静に戦えるかです。ドイツ戦のように格上へ挑む試合ではなく、今度は勝ち切る、あるいは最低でも引き分けで終えることを求められる試合になります。キュラソーは低く守って、カウンターとセットプレーでワンチャンスを狙うはずです。コートジボワールは早い時間に点を取れないと、時間の経過とともに焦りが出る可能性があります。",
+    ],
+    en: [
+      "Côte d’Ivoire beat Ecuador 1–0 then led Germany before losing 2–1, arriving on three points. With Germany’s summit secured, the main theme is whether Côte d’Ivoire can lock in second place.",
+      "A draw is enough for second. Even if Ecuador beat Germany to finish level on four, Côte d’Ivoire win the head-to-head. So one point is the minimum — but defeat leaves them on three and vulnerable if Ecuador beat Germany, so they cannot sit in a pure low block.",
+      "Curaçao lost 7–1 to Germany but held Ecuador 0–0 in round two. The smallest nation at the tournament were overpowered in the opener but rebuilt defensively, with 37-year-old goalkeeper Eloy Room in strong form.",
+      "The axis is whether Côte d’Ivoire control the game calmly as favourites. Unlike chasing Germany, they must win or at least draw. Curaçao will sit deep and hunt one chance on counters and set pieces; if Côte d’Ivoire fail to score early, nerves may grow as time passes.",
+    ],
+  },
+  "wc-2026-F-tun-nld": {
+    ja: [
+      "オランダは初戦で日本と2-2で引き分けたあと、2戦目でスウェーデンに5-1と大勝しました。勝点4、得失点差+4で日本と並んでいますが、総得点で日本を上回ってF組首位に立っています。チュニジア戦で勝てば突破は確定。首位通過については、日本対スウェーデンの結果と得失点差、総得点次第になります。",
+      "チュニジアはスウェーデンに1-5、日本に0-4。2試合で9失点し、すでに敗退が決まっています。途中でエルベ・ルナール監督が入ったものの、日本戦でも守備の立て直しはできませんでした。失うものはない状態なので、最後に意地を見せる試合になりますが、守備の不安はかなり大きいです。",
+      "オランダの注目点は、どこまで得点を取りに行くかです。日本と首位を争う可能性があるため、ただ勝つだけでなく、点差や総得点も重要になります。スウェーデン戦ではブライアン・ブロビーが2得点し、CFとして大きくアピールしました。一方で、メンフィス・デパイは太ももの問題でまだ先発しておらず、コンディション管理が続いています。",
+      "オランダにとっては、勝ち方まで問われる試合です。早い時間に先制できれば大量得点の流れも作れますが、チュニジアに0-0の時間を長く与えると、試合は少し重くなります。決勝トーナメントを見据えた主力管理と、首位通過を狙うための得点ペース。そのバランスがこの試合の見どころになります。",
+    ],
+    en: [
+      "The Netherlands drew 2–2 with Japan then thrashed Sweden 5–1 for four points and +4 goal difference. They lead Group F on goals scored over Japan. Beat Tunisia and they are through; topping the group depends on Japan v Sweden plus goal difference and goals scored.",
+      "Tunisia lost 5–1 to Sweden and 4–0 to Japan, conceding nine in two games and already eliminated. Hervé Renard took over mid-tournament but the defence did not recover against Japan. They have nothing to lose but the defensive doubts are severe.",
+      "The Netherlands must decide how hard to chase goals. With Japan competing for first, margin and goals scored matter as well as the win. Brian Brobbey scored twice against Sweden; Memphis Depay has yet to start due to a thigh issue and fitness management continues.",
+      "How they win matters. An early lead can open a rout; a long 0–0 makes the game heavy. Balancing squad management for the knockouts against the scoring pace needed to top the group is the story here.",
+    ],
+  },
+  "wc-2026-F-jpn-swe": {
+    ja: [
+      "日本は初戦でオランダと2-2、2戦目でチュニジアに4-0。勝点4、得失点差+4でオランダと並んでいます。スウェーデン戦は、引き分け以上で2位以内が確定します。日本が引き分ければ勝点5となり、スウェーデンは勝点4止まり。チュニジアはすでに敗退しているため、日本は少なくとも2位以内に入ります。勝てば突破確定で、オランダの結果次第では首位通過も狙えます。",
+      "スウェーデンは初戦でチュニジアに5-1と大勝しましたが、2戦目ではオランダに1-5で大敗しました。攻撃力と守備の不安定さが、はっきり出た2試合です。勝点3なので、日本に勝てば勝点6となり、2位以内での突破が決まります。一方で、引き分けだと勝点4で3位に回り、3位上位枠に入れるかを待つ形になります。",
+      "日本の最大のポイントは、アレクサンデル・イサクとヴィクトル・ギェケレシュの2トップをどう抑えるかです。単純な高さだけではなく、裏抜け、ポストプレー、セカンドボール回収があり、CBだけで完結する守備では対応しきれません。中盤の戻り、奪われた直後の切り替え、サイドからのクロス対応が重要になります。",
+      "日本は森保監督がここまで26人中22人を起用しており、ローテーションの幅も見せています。チュニジア戦では攻撃面の形も良く、得点力にも手応えがありました。ただ、スウェーデンは前線の個の力が強く、日本がボールを持てていても、一発でゴール前まで運ばれる怖さがあります。",
+      "この試合は、F組で最も重い直接対決です。日本は引き分け以上で2位以内が決まる一方、スウェーデンは勝たないと2位以内が厳しい。日本が試合をコントロールするのか、スウェーデンが前線の破壊力で流れを変えるのか。先制点の意味がかなり大きい試合になります。",
+    ],
+    en: [
+      "Japan drew 2–2 with the Netherlands and beat Tunisia 4–0 for four points and +4 goal difference alongside the Dutch. A draw against Sweden secures a top-two finish — Japan would reach five while Sweden stay on four with Tunisia eliminated. Win and Japan are through, with first place still possible depending on the Netherlands.",
+      "Sweden thrashed Tunisia 5–1 but lost 5–1 to the Netherlands, showing both firepower and defensive fragility. On three points, they need a win for six and a guaranteed top-two place; a draw leaves them third and waiting on the best-third-place race.",
+      "Japan’s biggest task is containing Alexander Isak and Viktor Gyökeres. It is not only height — runs in behind, hold-up play and second balls mean centre-backs alone cannot solve it. Midfield recovery, immediate transitions after losing the ball and wide defending against crosses will be critical.",
+      "Hajime Moriyasu has used 22 of 26 players, showing rotation depth. Tunisia brought good attacking shape and scoring confidence, but Sweden’s front line can reach the box in one move even when Japan have the ball.",
+      "Group F’s heaviest head-to-head: Japan need only a point for the top two while Sweden must win. Will Japan control the tempo or will Sweden’s strikers swing it? The first goal carries enormous weight.",
+    ],
+  },
+  "wc-2026-D-tur-usa": {
+    ja: [
+      "アメリカは初戦でパラグアイに4-1、2戦目でオーストラリアに2-0で勝利。勝点6で、すでにD組首位通過を決めています。トルコはオーストラリアに0-2、パラグアイに0-1で連敗し、無得点のまま敗退が決定しました。今大会の直接対決優先ルールの影響もあり、この試合は組の順位に大きな影響を与えないカードになっています。",
+      "ただ、アメリカにとって意味がない試合ではありません。決勝トーナメントに向けて、勢いを維持しながら、出場停止リスクと負傷リスクを避けることがテーマになります。バログン、タイラー・アダムス、クリス・リチャーズ、アントニー・ロビンソンが警告を抱えており、ポチェッティーノ監督は主力を休ませる可能性があります。クリスチャン・プリシッチもふくらはぎの問題から復帰途上で、無理をさせるかどうかは慎重に判断されるはずです。",
+      "トルコは大会初得点と初勝点を狙う試合です。若いチームとして期待されていましたが、ここまで2試合無得点で敗退。最後にどれだけ前向きな内容を残せるかがテーマになります。アメリカがローテーションするなら、トルコにもチャンスはあります。",
+      "一方で、アメリカの控え組にとってもこの試合はアピールの場です。主力が休んでも強度が落ちるとは限りません。アメリカは2002年大会で、すでに突破に近い状況からポーランドに敗れた経験もあり、消化試合のような入り方は避けたいはずです。トルコが意地を見せるのか、アメリカが首位通過チームらしく締めるのか。順位以上に、決勝トーナメントへ入る空気を左右する試合です。",
+    ],
+    en: [
+      "The United States beat Paraguay 4–1 and Australia 2–0 for six points and a secured Group D summit. Turkey lost 0–2 to Australia and 0–1 to Paraguay, goalless and eliminated. With head-to-head prioritised at this tournament, the fixture barely shifts the table.",
+      "It is not meaningless for the US. The theme is keeping momentum while avoiding suspensions and injuries. Folarin Balogun, Tyler Adams, Chris Richards and Antonee Robinson are on yellow cards and Mauricio Pochettino may rest key players. Christian Pulisic is still returning from a calf issue and minutes will be managed carefully.",
+      "Turkey chase a first World Cup goal and win. A young side arrived with expectation but leave goalless; the question is what positive impression they can leave. US rotation could open a window.",
+      "US substitutes also want to impress — depth does not guarantee a drop in intensity. The US remember losing to Poland in 2002 when already close to advancing and will avoid a casual start. Turkey’s pride against a group winner setting knockout tone is the subplot beyond the table.",
+    ],
+  },
+  "wc-2026-D-pry-aus": {
+    ja: [
+      "D組で最も重要なのが、パラグアイ対オーストラリアです。オーストラリアは初戦でトルコに2-0で勝利したあと、アメリカに0-2で敗戦。パラグアイは初戦でアメリカに1-4と大敗しましたが、2戦目でトルコに1-0で勝利しました。両チームとも勝点3で最終戦を迎えます。",
+      "この試合は、実質的なD組2位決定戦です。オーストラリアは引き分けで2位通過が決まります。引き分けなら両チーム勝点4で並び、直接対決も引き分けになりますが、得失点差でオーストラリアが上に立ちます。現状の得失点差はオーストラリアが0、パラグアイが-2で、引き分けならこの差は変わりません。",
+      "一方のパラグアイは、2位通過を狙うなら勝利が必要です。引き分けなら勝点4で3位となり、3位上位8チームに入れるかを待つ形になります。負けると勝点3のままで、突破はかなり苦しくなります。状況としてはオーストラリアが有利ですが、パラグアイには勝つしかない明確さがあります。",
+      "パラグアイはトルコ戦で10人になりながら1-0で勝ち切りました。粘り強さは見せましたが、ミゲル・アルミロンが退場処分を受け、このオーストラリア戦には出場できません。攻撃の推進力をどう補うかは大きな課題です。アルミロン不在で、パラグアイがどれだけ前に出られるかが試合の流れを左右します。",
+      "オーストラリアはアメリカ戦で前半に崩れ、メンバー選択にも批判が出ました。ネストリ・イランクンダやコナー・メトカーフをどう使うかは注目点です。引き分けでいい状況ですが、最初から守りに入るとパラグアイの球際と勢いに押し込まれる可能性があります。",
+      "この試合のポイントは、オーストラリアが引き分けでいい立場をどう使うかです。受け身になりすぎると危ない。逆に、パラグアイが前に出てきたところをカウンターで仕留められれば、一気に試合を決められます。パラグアイは後半にリスクを上げる展開になるはずなので、その時間帯をどう耐えるか、あるいはどう突くかが最大の見どころになります。",
+    ],
+    en: [
+      "The biggest Group D fixture is Paraguay v Australia. Australia beat Turkey 2–0 then lost 2–0 to the US; Paraguay lost 4–1 to the US but beat Turkey 1–0. Both arrive on three points.",
+      "This is effectively the Group D runner-up decider. Australia advance in second with a draw — both would finish on four with a head-to-head draw, but Australia’s superior goal difference (+0 v −2) keeps them above Paraguay.",
+      "Paraguay need a win to chase second. A draw leaves them third on four and waiting on the best-third-place slots; defeat on three makes advancement very unlikely. Australia hold the advantage but Paraguay’s task is clear.",
+      "Paraguay won 1–0 against Turkey with ten men, showing grit, but Miguel Almirón is suspended after a red card. Replacing his drive in attack is a major problem — how far Paraguay push without him shapes the game.",
+      "Australia collapsed early against the US and faced selection criticism. How Graham Arnold uses Nestory Irankunda and Connor Metcalfe is worth watching. A draw suits them but sitting in from the start risks being overrun by Paraguay’s duels and momentum.",
+      "The axis is how Australia use a favourable draw position. Sitting too deep is dangerous; counters when Paraguay push can settle the match. Paraguay will raise risk in the second half — how Australia survive or strike in that phase is the key watch.",
+    ],
+  },
+  "wc-2026-I-nor-fra": {
+    ja: [
+      "I組の最終戦で最も注目されるのが、ノルウェー対フランスです。両チームともここまで2連勝で勝点6。すでにラウンド32進出は決めていますが、この試合はI組の首位を決める直接対決になります。",
+      "フランスは初戦でセネガルに3-1、2戦目でイラクに3-0で勝利。ムバッペがイラク戦で2得点し、今大会でも中心として存在感を見せています。デンベレも得点に絡み、オリーズ、バルコラ、ドゥエなど周囲の攻撃陣も厚い。過去2大会で決勝に進んだチームらしく、個人能力だけでなく、前線の選択肢の多さが大きな強みです。",
+      "ノルウェーはイラクに4-1、セネガルに3-2で勝利。ハーランドが2試合連続2得点で、ここまで4得点。ノルウェーとしては久々のW杯で決勝トーナメント進出を決め、勢いはかなりあります。ただ、2試合で3失点しているため、守備面にはまだ不安があります。",
+      "この試合は、勝った方が首位通過です。引き分けの場合は、直接対決も引き分けとなるため得失点差に進みます。現時点でフランスは得失点差+5、ノルウェーは+4なので、引き分けならフランスが首位通過になります。つまりノルウェーは首位を取るには勝利が必要です。",
+      "注目点は、ノルウェーがハーランドまでどうボールを届けるかです。フランス相手に押し込まれる時間が長くなると、ハーランドが孤立する可能性があります。一方のフランスは、無理に勝ちに行かなくても首位を取れる立場です。主力をどこまで使うか、試合をどこまで管理するかも見どころになります。ムバッペ対ハーランドという構図だけでなく、チームとしての完成度の差も見える一戦です。",
+    ],
+    en: [
+      "The headline Group I final matchday fixture is Norway v France. Both have won twice for six points and are already through, but this head-to-head decides who tops the group.",
+      "France beat Senegal 3–1 and Iraq 3–0. Kylian Mbappé scored twice against Iraq and remains the focal point, with Ousmane Dembélé among the scorers and depth around Bradley Barcola and Warren Zaïre-Emery. Like a side that reached the last two finals, their strength is options up front as much as individual quality.",
+      "Norway beat Iraq 4–1 and Senegal 3–2. Erling Haaland has scored twice in both games for four goals total. Momentum is strong after ending a long World Cup drought, but three conceded in two games leave defensive doubts.",
+      "The winner tops the group. A draw goes to goal difference — France are +5 and Norway +4, so France would finish first on a draw. Norway need a win for the summit.",
+      "Watch how Norway feed Haaland. Long spells pinned back could isolate him. France can top the group without forcing the issue — how many starters they use and how they manage the game matters. Beyond Mbappé v Haaland, this may expose the gap in team completeness.",
+    ],
+  },
+  "wc-2026-I-sen-irq": {
+    ja: [
+      "セネガルとイラクは、どちらもここまで2連敗です。セネガルはフランスに1-3、ノルウェーに2-3で敗戦。イラクはノルウェーに1-4、フランスに0-3で敗れました。両チームとも勝点0ですが、3位上位8チームが突破できる大会形式のため、まだ完全に終わったわけではありません。",
+      "この試合は、勝った方だけが3位通過争いに残る試合です。勝てば勝点3。2位以内はすでにフランスとノルウェーが決めているため届きませんが、3位上位枠に入る可能性は残ります。逆に引き分け以下なら、勝点1以下となり、突破はかなり厳しくなります。",
+      "セネガルは2試合とも敗れていますが、ノルウェー戦では3-2まで持ち込みました。攻撃面では可能性を見せています。ただ、フランス戦でもノルウェー戦でも守備のミスが失点に直結しており、クーリバリを中心とした守備陣がどこまで立て直せるかが重要になります。勝利が必要な試合なので前に出る必要はありますが、リスク管理を間違えるとまた失点が重くなります。",
+      "イラクは初戦でハーランド、2戦目でムバッペと、世界トップクラスのストライカーに連続でやられました。相手が強かったとはいえ、2試合で7失点は重いです。ただ、セネガル戦はフランスやノルウェーほど一方的に押し込まれる試合ではないはずです。守るだけでは勝点3に届かないため、どこかで攻撃に人数をかける必要があります。",
+      "この試合は、どちらが先にメンタルを立て直せるかです。戦力的にはセネガルが上ですが、2連敗の流れを引きずると危ない。イラクは守備を整えながら、少ないチャンスを決め切る必要があります。勝った方だけが3位通過の可能性を残す、かなりはっきりした試合です。",
+    ],
+    en: [
+      "Senegal and Iraq have both lost twice. Senegal fell 3–1 to France and 3–2 to Norway; Iraq lost 4–1 to Norway and 3–0 to France. Both are on zero points, but with eight best third-placed teams advancing, neither is fully out.",
+      "Only the winner stays alive in the third-place race. Three points are enough for a best-third-place shot — second is already settled by France and Norway. A draw or defeat leaves one point or fewer and makes advancement very unlikely.",
+      "Senegal lost both games but pushed Norway to 3–2, showing attacking potential. Defensive errors cost them against France and Norway; Kalidou Koulibaly’s back line must stabilise. They must push forward for a win but poor risk management could mean more costly concessions.",
+      "Iraq faced Haaland then Mbappé and conceded seven in two — understandable opponents, but heavy. Senegal should be less one-sided than France or Norway; sitting back will not deliver three points, so they must commit numbers forward at some stage.",
+      "The axis is who resets mentally first. Senegal are stronger on paper but two defeats carry weight. Iraq must organise defensively and finish sparse chances. A clear knockout for third-place hopes.",
+    ],
+  },
+  "wc-2026-H-ury-esp": {
+    ja: [
+      "H組はまだ複雑です。スペインはカーボベルデと0-0、サウジアラビアに4-0で勝利して勝点4。ウルグアイはサウジアラビアと1-1、カーボベルデと2-2で勝点2。スペインは引き分け以上で2位以内が確定し、勝てば首位通過に大きく近づきます。一方のウルグアイは勝てば勝点5となり、2位以内が確定します。",
+      "スペインは初戦のカーボベルデ戦では崩し切れず、かなり重い入りになりました。ただ、2戦目のサウジアラビア戦では4-0で快勝。初戦で見えた停滞感をどこまで払拭できているかを確認する試合でもあります。ボール保持で主導権を握れるチームですが、相手が強度高く前から来たときに、どれだけテンポよく剥がせるかがポイントになります。",
+      "ウルグアイはここまで2試合とも引き分けです。サウジアラビア戦もカーボベルデ戦も、勝ち切れなかったことが響いています。ビエルサ監督のチームらしく、前からの圧力と運動量はありますが、試合を支配しても勝点3に変え切れていません。スペイン相手には、ただ激しく行くだけでなく、奪った後の質が必要になります。",
+      "この試合の注目点は、スペインの保持に対して、ウルグアイがどこまで圧力をかけられるかです。スペインがテンポよくボールを動かせば、ウルグアイは走らされる時間が長くなります。逆にウルグアイが前線からはめ込めれば、スペインの若いサイドや中盤にプレッシャーをかけられます。スペインにとっては2位以内を確定させる試合。ウルグアイにとっては、勝って自力で突破を決めたい試合です。",
+    ],
+    en: [
+      "Group H remains complicated. Spain drew 0–0 with Cape Verde and beat Saudi Arabia 4–0 for four points; Uruguay drew 1–1 with Saudi Arabia and 2–2 with Cape Verde on two. Spain secure a top-two finish with a point and move close to first with a win; Uruguay reach five and guarantee the top two with victory.",
+      "Spain could not break down Cape Verde in a heavy opener but thrashed Saudi Arabia 4–0 in round two — a chance to show how much of that sluggish start is gone. They dominate possession but must unpick high pressing at tempo when opponents step forward.",
+      "Uruguay have drawn both games, failing to convert control into three points against Saudi Arabia and Cape Verde. Marcelo Bielsa’s side press and run hard but need quality after winning the ball against Spain, not only intensity.",
+      "Watch how far Uruguay can press Spain’s possession. Quick Spanish circulation forces long running spells; trap Spain high and Uruguay can stress young full-backs and midfield. Spain want to lock up the top two; Uruguay want to qualify on their own terms with a win.",
+    ],
+  },
+  "wc-2026-H-cpv-sau": {
+    ja: [
+      "カーボベルデは初出場ながら、ここまで大きな存在感を見せています。初戦でスペインと0-0、2戦目でウルグアイと2-2。勝点2で最終戦を迎えます。サウジアラビアはウルグアイと1-1で引き分けたあと、スペインに0-4で敗戦。勝点1で、突破のためには勝利が必要です。",
+      "カーボベルデは勝てば勝点5となり、2位以内が確定します。スペイン対ウルグアイの結果に関係なく、少なくとも2位以内に入れるため、自力で突破を決められる試合です。引き分けでも勝点3となり、3位通過の可能性は残りますが、他会場の結果待ちになります。",
+      "サウジアラビアは勝てば勝点4。スペイン対ウルグアイの結果次第で、2位通過の可能性も3位通過の可能性も残ります。特にスペインがウルグアイに勝つ、またはスペインとウルグアイが引き分ける場合、サウジアラビアが勝てば2位に入れる可能性があります。ただし、ウルグアイがスペインに勝つと、スペインとサウジアラビアが勝点4で並びます。その場合は直接対決でスペインがサウジアラビアに勝っているため、サウジアラビアは3位になります。",
+      "この試合は、カーボベルデが夢を現実に変えられるかがテーマです。初出場でスペインとウルグアイから勝点を取った流れは大きいですが、最後に勝ち切れるかは別の話です。サウジアラビアは勝つしかないため、試合は徐々にオープンになる可能性があります。",
+      "カーボベルデは冷静に守りながら、カウンターを刺せるか。サウジアラビアはスペイン戦の0-4から立て直し、前に出ながらも守備のバランスを崩さずに戦えるか。H組の2位争い、3位争いに直結する試合です。",
+    ],
+    en: [
+      "Debutants Cape Verde have made a major impact: 0–0 with Spain and 2–2 with Uruguay for two points. Saudi Arabia drew 1–1 with Uruguay then lost 4–0 to Spain on one point and need a win to stay alive.",
+      "Cape Verde win and they reach five and secure a top-two finish regardless of Spain v Uruguay — qualification in their own hands. A draw takes them to three and leaves third-place hopes dependent on other results.",
+      "Saudi Arabia win and they reach four with second- or third-place chances depending on Spain v Uruguay. If Spain beat or draw Uruguay, a Saudi win could mean second; if Uruguay beat Spain, Saudi finish third on head-to-head behind Spain at four points.",
+      "Can Cape Verde turn the dream into reality? Points off Spain and Uruguay are historic, but finishing the job is another step. Saudi must attack and the game may open up over time.",
+      "Cape Verde need calm defending and sharp counters; Saudi must rebuild after the 4–0 loss and push without losing defensive balance. Directly shapes the Group H race for second and third.",
+    ],
+  },
+  "wc-2026-G-nzl-bel": {
+    ja: [
+      "G組は4チームすべてに突破の可能性が残っています。ニュージーランドは初戦でイランと2-2、2戦目でエジプトに1-3で敗れて勝点1。ベルギーはエジプトと1-1、イランと0-0で勝点2。どちらも勝利が必要な試合ですが、特にベルギーにとっては、勝てば2位以内が確定する試合です。",
+      "ベルギーは勝てば勝点5となり、エジプト対イランの結果に関係なく、少なくとも2位以内に入ります。ただし、引き分けだと勝点3で、他会場の結果待ちになります。負ければ勝点2のままで、突破はかなり厳しくなります。タレントを考えれば、ここまで2試合で1得点というのはかなり物足りない内容です。",
+      "ベルギーはエジプト戦で1-1、イラン戦で0-0。主導権を握る時間はありましたが、最後の決定力が足りていません。イラン戦ではナタン・ヌゴイが退場しており、守備面の調整も必要になります。攻撃陣のタレント差はありますが、ここまでの2試合を見る限り、簡単に勝ち切れる保証はありません。",
+      "ニュージーランドはイラン戦で2得点し、攻撃面では可能性を見せました。エジプト戦でも先制しましたが、後半に逆転されて1-3で敗戦。勝ち切る、守り切るという部分に課題があります。ベルギー相手にボールを持たれる時間は長くなるはずなので、守備の集中とカウンターの精度が重要になります。",
+      "ニュージーランドも勝てば勝点4となり、突破の可能性を大きく残します。エジプトがイランに勝つ、またはエジプトとイランが引き分ける場合、ニュージーランドは勝利で2位に入れる可能性があります。ただし、イランがエジプトに勝った場合は、エジプトとニュージーランドが勝点4で並び、直接対決でエジプトがニュージーランドに勝っているため、ニュージーランドは3位になります。",
+      "この試合は、ベルギーが実力通りに押し切れるかが最大のテーマです。ベルギーは勝てば2位以内確定。ニュージーランドは勝てば生き残る。状況としてはベルギーが有利ですが、ここまでの停滞を考えると、早い時間に点を取れないと試合は重くなります。",
+    ],
+    en: [
+      "All four Group G teams can still advance. New Zealand drew 2–2 with Iran and lost 3–1 to Egypt on one point; Belgium drew 1–1 with Egypt and 0–0 with Iran on two. Both need a win, but Belgium secure a top-two finish with victory.",
+      "Belgium win and they reach five and are at least second regardless of Egypt v Iran. A draw leaves them on three waiting on other results; defeat on two makes advancement very hard. One goal in two games is underwhelming for their talent.",
+      "Belgium drew 1–1 with Egypt and 0–0 with Iran, controlling spells without enough cutting edge. Nathan Ngoy’s red against Iran forces defensive reshuffling. Attack looks stronger on paper but two games offer no guarantee of an easy win.",
+      "New Zealand scored twice against Iran and led Egypt before a 3–1 reverse — finishing and protecting leads remain issues. They will concede possession to Belgium and need concentration and counter precision.",
+      "A New Zealand win reaches four with advancement chances — they could finish second if Egypt beat or draw Iran, but lose the head-to-head to Egypt if Iran beat Egypt and both finish on four.",
+      "The theme is whether Belgium finally impose their quality. Belgium win and the top two are secured; New Zealand win and they survive. Belgium are favourites but slow starts could make the game heavy.",
+    ],
+  },
+  "wc-2026-G-egy-irn": {
+    ja: [
+      "G組のもう一つの試合、エジプト対イランもかなり重要です。エジプトはベルギーと1-1、ニュージーランドに3-1で勝利して勝点4。G組首位に立っています。イランはニュージーランドと2-2、ベルギーと0-0で勝点2。エジプトは引き分け以上で2位以内が確定し、勝てば首位通過が決まります。イランは勝てば勝点5となり、自力で突破できます。",
+      "エジプトはニュージーランド戦でW杯初勝利を挙げました。サラーが得点とアシストで違いを作り、後半に試合をひっくり返しました。初戦のベルギー戦でも勝点1を取っており、ここまでの内容はかなり安定しています。サラーへの依存はありますが、ジコやトレゼゲも絡み、攻撃に複数のルートが出てきたことは大きいです。",
+      "イランはここまで負けていません。ニュージーランド戦では2-2、ベルギー戦では0-0。特にベルギー戦ではGKベイランヴァンドの好守もあり、強豪相手に勝点1を取りました。守備の粘りはある一方で、勝たなければ2位以内が難しくなるため、この試合ではどこかで前に出る必要があります。",
+      "この試合のポイントは、エジプトが引き分けでもいい状況をどう使うかです。無理に前に出る必要はありませんが、受けに回りすぎるとイランの勢いを助けます。イランは守備の粘りを保ちながら、どのタイミングで勝負をかけるか。エジプトはサラーを中心に、相手が前に出た裏を突けるか。",
+      "G組は4チームすべてに可能性があるため、この試合の結果はニュージーランド対ベルギーにも大きく影響します。エジプトは勝てば首位通過。イランは勝てば自力突破。引き分けならエジプトは突破確定、イランは他会場次第。状況はエジプトが有利ですが、イランの守備の粘りを考えると、簡単な試合にはなりません。",
+    ],
+    en: [
+      "Egypt v Iran is equally pivotal in Group G. Egypt drew 1–1 with Belgium and beat New Zealand 3–1 to lead on four points; Iran drew 2–2 with New Zealand and 0–0 with Belgium on two. Egypt secure the top two with a point and clinch first with a win; Iran reach five and qualify outright with victory.",
+      "Egypt earned their first World Cup win against New Zealand as Mohamed Salah scored and assisted in a second-half turnaround. A point off Belgium in the opener makes their run stable. Salah remains central but Jiko and David Trezeguet add routes beyond him.",
+      "Iran are unbeaten: 2–2 with New Zealand and 0–0 with Belgium, with Alireza Beiranvand strong against the Belgians. They defend stubbornly but must push forward somewhere to reach the top two.",
+      "The axis is how Egypt use a position where a draw is acceptable. They need not overcommit but sitting too deep feeds Iranian momentum. Iran must choose when to gamble; Egypt want to punish space behind Salah when Iran step forward.",
+      "With all four teams still alive, this result heavily shapes New Zealand v Belgium. Egypt win and top the group; Iran win and qualify on their own; a draw sends Egypt through with Iran waiting on the other fixture. Egypt are favoured but Iran’s defensive resilience makes this far from straightforward.",
+    ],
+  },
 };
 
 export function hasWcMatchPreview(gameId: string): boolean {

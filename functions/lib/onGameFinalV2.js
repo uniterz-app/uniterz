@@ -64,12 +64,15 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     };
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();
+    let wcSlotRescore = null;
     if (becameFinal) {
-        streakResultMap = await (0, updateUserStreak_1.updateUserStreak)({
+        const streakOutcome = await (0, updateUserStreak_1.updateUserStreak)({
             db: firestore,
             gameId,
             settlementGame,
         });
+        streakResultMap = streakOutcome.streakResultMap;
+        wcSlotRescore = streakOutcome.wcSlotRescore;
         if ((0, teamStandingsSeasonPhase_1.countsTowardRegularSeasonTeamStats)(game.seasonPhase)) {
             await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
                 db: firestore,

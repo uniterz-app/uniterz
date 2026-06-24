@@ -402,6 +402,15 @@ const ko: Messages = {
     closeOverlay: "닫기",
     kickoffAt: "경기 시간",
     broadcasters: "중계",
+    wcConcurrentStreak: {
+      tag: "WIN STREAK",
+      title: "Concurrent kickoff streak rules",
+      lead:
+        "On Jun 25 (Thu), multiple World Cup matches kick off at the same time. Win streaks are evaluated per kickoff-time group.",
+      bullets:
+        "Matches with the same kickoff time are judged together as one group.\n[Example: Jun 25 at 19:00 JST] Japan vs Sweden and Tunisia vs Netherlands both kick off at this time. They form one group.\nIf you post predictions for both matches and both are correct → your streak grows by 2 (e.g. from 3 to 5).\nIf you miss even one posted match in the group → your streak resets to 0.\nMatches you did not post are not counted (if you only posted one of the two, only that match is judged).\nWin-streak bonuses (3+ wins) are applied to each correct match score.",
+      cta: "Got it",
+    },
   },
   pro: {
     viewAllData: "Pro로 전체 데이터 보기",

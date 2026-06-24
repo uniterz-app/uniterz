@@ -53,12 +53,6 @@ import {
   predictOverlayPanel,
   predictOverlayRoot,
 } from "@/lib/predict/predictPageMotion";
-import {
-  markFootballScoringChangeSeen,
-  readFootballScoringChangeSeen,
-} from "@/lib/predict/footballScoringChangeSeen";
-import { leagueScoringSport } from "@/lib/scoring/leagueScoringSport";
-import FootballScoringChangeModal from "@/app/component/predict/FootballScoringChangeModal";
 
 export type GameItemRaw = any;
 
@@ -182,11 +176,6 @@ export default function ScheduleList({
   const [teamRecordMap, setTeamRecordMap] = useState<Record<string, TeamRecord>>(
     {}
   );
-  const [footballScoringChangeOpen, setFootballScoringChangeOpen] =
-    useState(false);
-  const [footballScoringChangeLeague, setFootballScoringChangeLeague] =
-    useState<string | undefined>(undefined);
-  const pendingOpenGameIdRef = useRef<string | null>(null);
 
   const propsList = useMemo<MatchCardProps[]>(() => {
     const list = games ?? [];
@@ -340,31 +329,10 @@ export default function ScheduleList({
 
   const open = useCallback(
     (gameId: string) => {
-      const gid = String(gameId);
-      const game = propsList.find((p) => String(p.id) === gid);
-      const isFootball =
-        game != null && leagueScoringSport(game.league) === "football";
-      const hasPost = Boolean(myPostMap[gid]);
-
-      if (isFootball && !hasPost && !readFootballScoringChangeSeen()) {
-        pendingOpenGameIdRef.current = gid;
-        setFootballScoringChangeLeague(game?.league);
-        setFootballScoringChangeOpen(true);
-        return;
-      }
-
-      openOverlayDirect(gid);
+      openOverlayDirect(String(gameId));
     },
-    [propsList, myPostMap, openOverlayDirect]
+    [openOverlayDirect]
   );
-
-  const handleFootballScoringChangeClose = useCallback(() => {
-    markFootballScoringChangeSeen();
-    setFootballScoringChangeOpen(false);
-    const gid = pendingOpenGameIdRef.current;
-    pendingOpenGameIdRef.current = null;
-    if (gid) openOverlayDirect(gid);
-  }, [openOverlayDirect]);
 
   const close = useCallback(() => {
     const closingId = openGameId;
@@ -948,14 +916,6 @@ export default function ScheduleList({
 
   return (
     <>
-      <FootballScoringChangeModal
-        open={footballScoringChangeOpen}
-        language={language}
-        league={footballScoringChangeLeague}
-        displaySize={isMobile ? "mobile" : "web"}
-        onClose={handleFootballScoringChangeClose}
-      />
-
       <LayoutGroup id="schedule-list">
         <ScheduleSharedTransitionLayout data-vt-nonce={vtListTransitionNonce}>
           <div className={openGameId ? "pointer-events-none" : ""}>
