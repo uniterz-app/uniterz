@@ -105,6 +105,31 @@ function tierDescription(
   return TIER_LABEL[tier];
 }
 
+/** タグタップ時に表示する説明文 */
+export function getKinetikRankBadgeExplanation(
+  badge: KinetikRankBadgeResult,
+  language: "ja" | "en"
+): string {
+  const pct =
+    badge.topPercent ??
+    (badge.tier !== "rising" ? TIER_TOP_PERCENT[badge.tier] ?? null : null);
+
+  if (badge.tier === "rising") {
+    return language === "ja"
+      ? `${badge.label}\n前回のランキング更新（日本時間16:00）から5位以上順位を上げたときに付与されます。\n${badge.description}`
+      : `${badge.label}\nAwarded when you climb at least 5 places since the last ranking update (16:00 JST).\n${badge.description}`;
+  }
+
+  if (language === "ja") {
+    const pctLine =
+      pct != null ? `総合得点ランキングの上位${pct}%以内です。` : "";
+    return `${badge.label}\n${pctLine}日本時間16:00に更新される累積ランキングの順位に基づく称号です。`;
+  }
+
+  const pctLine = pct != null ? `You are in the top ${pct}% of total points.` : "";
+  return `${badge.label}\n${pctLine} Based on the cumulative ranking updated daily at 16:00 JST.`.trim();
+}
+
 function buildResult(
   tier: KinetikRankBadgeTier,
   language: "ja" | "en",

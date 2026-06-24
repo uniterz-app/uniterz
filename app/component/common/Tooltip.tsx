@@ -3,39 +3,63 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
+export type TooltipPlacement = "above" | "below" | "auto";
+
+const TOOLTIP_WIDTH = 260;
+const TOOLTIP_GAP = 10;
+const TOOLTIP_ESTIMATED_HEIGHT = 110;
+
+function resolvePlacement(
+  anchorRect: DOMRect,
+  placement: TooltipPlacement
+): "above" | "below" {
+  if (placement === "above") return "above";
+  if (placement === "below") return "below";
+
+  const spaceAbove = anchorRect.top - TOOLTIP_GAP;
+  const spaceBelow =
+    window.innerHeight - anchorRect.bottom - TOOLTIP_GAP;
+
+  if (spaceAbove >= TOOLTIP_ESTIMATED_HEIGHT) return "above";
+  if (spaceBelow >= TOOLTIP_ESTIMATED_HEIGHT) return "below";
+  return spaceBelow > spaceAbove ? "below" : "above";
+}
+
 export default function Tooltip({
   anchorRect,
   message,
   onClose,
+  placement = "auto",
 }: {
   anchorRect: DOMRect | null;
   message: string;
   onClose: () => void;
+  placement?: TooltipPlacement;
 }) {
   if (!anchorRect || typeof document === "undefined") return null;
 
-  const width = 260;
-
-  // 画面幅（ビューポート基準。アンカーは getBoundingClientRect 済み）
   const sw = window.innerWidth;
+  const resolved = resolvePlacement(anchorRect, placement);
 
-  /** アンカー中心に合わせた left（px）。はみ出し時は端に寄せる */
   const centerX = anchorRect.left + anchorRect.width / 2;
-  let leftPx = centerX - width / 2;
-  leftPx = Math.max(12, Math.min(leftPx, sw - width - 12));
+  let leftPx = centerX - TOOLTIP_WIDTH / 2;
+  leftPx = Math.max(12, Math.min(leftPx, sw - TOOLTIP_WIDTH - 12));
 
-  /** アイコン直上：transform 祖先の外に portal するので fixed＝ビューポートと一致 */
-  const topPx = anchorRect.top;
+  const topPx =
+    resolved === "above" ? anchorRect.top : anchorRect.bottom;
+  const transform =
+    resolved === "above"
+      ? `translateY(calc(-100% - ${TOOLTIP_GAP}px))`
+      : `translateY(${TOOLTIP_GAP}px)`;
 
-  // 外側クリックで閉じる（capture=true が重要）
   useEffect(() => {
     function handler(e: MouseEvent) {
       const box = document.getElementById("tooltip-box");
-      if (box && box.contains(e.target as Node)) return; // 内側クリックは無視
+      if (box && box.contains(e.target as Node)) return;
       onClose();
     }
 
-    window.addEventListener("click", handler, true); // ← ★ 重要
+    window.addEventListener("click", handler, true);
     return () => window.removeEventListener("click", handler, true);
   }, [onClose]);
 
@@ -45,27 +69,35 @@ export default function Tooltip({
       style={{
         left: leftPx,
         top: topPx,
-        width,
-        /** 吹き出し下端をアンカー上端の少し上に（従来の top-60 固定よりアンカーに密着） */
-        transform: "translateY(calc(-100% - 10px))",
+        width: TOOLTIP_WIDTH,
+        transform,
       }}
-      onClick={(e) => e.stopPropagation()} // tooltip 外へのバブリングを防ぐ
+      onClick={(e) => e.stopPropagation()}
     >
-      {/* 吹き出し本体 */}
       <div
         id="tooltip-box"
-        className="relative bg-gray-800 text-white text-[13px] rounded-lg p-3 shadow-xl"
+        className="relative rounded-lg bg-gray-800 p-3 text-[13px] text-white shadow-xl"
       >
-        <div className="whitespace-pre-line leading-relaxed">{message}</div>
+        <div className="leading-relaxed whitespace-pre-line">{message}</div>
 
-        {/* ▼ 三角形 */}
         <div
-          className="absolute left-[50%] -bottom-2 w-0 h-0 -translate-x-1/2"
-          style={{
-            borderLeft: "7px solid transparent",
-            borderRight: "7px solid transparent",
-            borderTop: "7px solid #1f2937",
-          }}
+          className={[
+            "absolute left-[50%] h-0 w-0 -translate-x-1/2",
+            resolved === "above" ? "-bottom-2" : "-top-2",
+          ].join(" ")}
+          style={
+            resolved === "above"
+              ? {
+                  borderLeft: "7px solid transparent",
+                  borderRight: "7px solid transparent",
+                  borderTop: "7px solid #1f2937",
+                }
+              : {
+                  borderLeft: "7px solid transparent",
+                  borderRight: "7px solid transparent",
+                  borderBottom: "7px solid #1f2937",
+                }
+          }
         />
       </div>
     </div>,

@@ -1,11 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import Tooltip from "@/app/component/common/Tooltip";
 import type { KinetikRankBadgeResult } from "./kinetikRankBadge";
+import { getKinetikRankBadgeExplanation } from "./kinetikRankBadge";
 import {
   formatKinetikWinStreakLabel,
   getKinetikStreakTier,
+  getKinetikWinStreakExplanation,
 } from "./kinetikStreakFx";
 import { nameOxanium } from "@/lib/fonts";
 
@@ -31,12 +34,14 @@ function SlantTab({
   children,
   delay = 0,
   className,
-  title,
+  explanation,
+  onPress,
 }: {
   children: ReactNode;
   delay?: number;
   className: string;
-  title?: string;
+  explanation: string;
+  onPress: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   const reduceMotion = useReducedMotion() === true;
 
@@ -51,9 +56,18 @@ function SlantTab({
         ease: [0.22, 1, 0.36, 1],
       }}
     >
-      <div className={className} title={title}>
+      <button
+        type="button"
+        className={[
+          className,
+          "appearance-none cursor-pointer transition hover:brightness-110",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050508]",
+        ].join(" ")}
+        aria-label={explanation.split("\n")[0]}
+        onClick={onPress}
+      >
         {children}
-      </div>
+      </button>
     </motion.div>
   );
 }
@@ -67,6 +81,25 @@ export default function ProfileEditKinetikHeaderTabs({
 }: Props) {
   const streakTier = getKinetikStreakTier(winStreak);
   const streakLabel = formatKinetikWinStreakLabel(winStreak, language);
+  const rankExplanation = rankBadge
+    ? getKinetikRankBadgeExplanation(rankBadge, language)
+    : null;
+  const streakExplanation = streakLabel
+    ? getKinetikWinStreakExplanation(winStreak, language)
+    : null;
+  const [tooltip, setTooltip] = useState<{
+    rect: DOMRect;
+    message: string;
+  } | null>(null);
+
+  const openTooltip = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>, message: string) => {
+      e.stopPropagation();
+      const rect = e.currentTarget.getBoundingClientRect();
+      setTooltip({ rect, message });
+    },
+    []
+  );
 
   if (!rankBadge && !streakLabel) return null;
 
@@ -74,60 +107,75 @@ export default function ProfileEditKinetikHeaderTabs({
   const textSize = compact ? "text-[9px]" : "text-[10px]";
 
   return (
-    <div
-      className={[
-        "profile-edit-kinetik-header-tabs flex gap-1.5",
-        stack
-          ? "w-full flex-col items-stretch"
-          : "flex-wrap items-stretch",
-      ].join(" ")}
-    >
-      {rankBadge ? (
-        <SlantTab
-          delay={0.06}
-          title={rankBadge.description}
-          className={[
-            "profile-edit-kinetik-slant-tab profile-edit-kinetik-slant-tab--filled",
-            `profile-edit-kinetik-slant-tab--rank-${rankBadge.tier}`,
-            tabPad,
-          ].join(" ")}
-        >
-          <SlantTabScan />
-          <span
+    <>
+      <div
+        className={[
+          "profile-edit-kinetik-header-tabs flex gap-1.5",
+          stack
+            ? "w-full flex-col items-stretch"
+            : "flex-wrap items-stretch",
+        ].join(" ")}
+      >
+        {rankBadge && rankExplanation ? (
+          <SlantTab
+            delay={0.06}
+            explanation={rankExplanation}
+            onPress={(e) => openTooltip(e, rankExplanation)}
             className={[
-              nameOxanium.className,
-              "profile-edit-kinetik-slant-tab__label uppercase tracking-[0.14em]",
-              textSize,
+              "profile-edit-kinetik-slant-tab profile-edit-kinetik-slant-tab--filled",
+              `profile-edit-kinetik-slant-tab--rank-${rankBadge.tier}`,
+              tabPad,
             ].join(" ")}
           >
-            {rankBadge.label}
-          </span>
-        </SlantTab>
-      ) : null}
+            <SlantTabScan />
+            <span
+              className={[
+                nameOxanium.className,
+                "profile-edit-kinetik-slant-tab__label uppercase tracking-[0.14em]",
+                textSize,
+              ].join(" ")}
+            >
+              {rankBadge.label}
+            </span>
+          </SlantTab>
+        ) : null}
 
-      {streakLabel ? (
-        <SlantTab
-          delay={0.16}
-          className={[
-            "profile-edit-kinetik-slant-tab profile-edit-kinetik-slant-tab--outline",
-            streakTier > 0
-              ? `profile-edit-kinetik-slant-tab--streak-${streakTier}`
-              : "",
-            tabPad,
-          ].join(" ")}
-        >
-          <span
+        {streakLabel && streakExplanation ? (
+          <SlantTab
+            delay={0.16}
+            explanation={streakExplanation}
+            onPress={(e) => openTooltip(e, streakExplanation)}
             className={[
-              nameOxanium.className,
-              "profile-edit-kinetik-slant-tab__label",
-              textSize,
-              language === "en" ? "uppercase tracking-[0.14em]" : "tracking-[0.08em]",
+              "profile-edit-kinetik-slant-tab profile-edit-kinetik-slant-tab--outline",
+              streakTier > 0
+                ? `profile-edit-kinetik-slant-tab--streak-${streakTier}`
+                : "",
+              tabPad,
             ].join(" ")}
           >
-            {streakLabel}
-          </span>
-        </SlantTab>
+            <span
+              className={[
+                nameOxanium.className,
+                "profile-edit-kinetik-slant-tab__label",
+                textSize,
+                language === "en"
+                  ? "uppercase tracking-[0.14em]"
+                  : "tracking-[0.08em]",
+              ].join(" ")}
+            >
+              {streakLabel}
+            </span>
+          </SlantTab>
+        ) : null}
+      </div>
+
+      {tooltip ? (
+        <Tooltip
+          anchorRect={tooltip.rect}
+          message={tooltip.message}
+          onClose={() => setTooltip(null)}
+        />
       ) : null}
-    </div>
+    </>
   );
 }

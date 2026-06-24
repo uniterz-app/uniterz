@@ -24,9 +24,10 @@ export function formatListMetricDayDelta(
   }
 
   if (metric === "exactHits") {
+    if (delta <= 0) return null;
     const n = Math.round(abs);
     if (n === 0) return null;
-    return `${sign}${n}`;
+    return `+${n}`;
   }
 
   const formatted = abs.toFixed(1);

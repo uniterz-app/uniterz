@@ -24,7 +24,11 @@ export function formatMetricDayDeltaLabel(
   if (metricKey === "totalScore" || metricKey === "winRate") {
     return delta === 0 ? "0" : `${sign}${Math.round(abs)}`;
   }
-  if (metricKey === "exactHits" || opts?.integer) {
+  if (metricKey === "exactHits") {
+    if (delta <= 0) return "0";
+    return `+${Math.round(abs)}`;
+  }
+  if (opts?.integer) {
     return delta === 0 ? "0" : `${sign}${Math.round(abs)}`;
   }
   return delta === 0 ? "0.0" : `${sign}${abs.toFixed(1)}`;
@@ -45,6 +49,7 @@ export function dayDeltaLabelForMetric(
           : "winRate";
   const raw = deltas[field];
   if (raw == null || !Number.isFinite(raw) || raw === 0) return null;
+  if (metricKey === "exactHits" && raw < 0) return null;
   return formatMetricDayDeltaLabel(metricKey, raw, {
     integer: metricKey === "exactHits",
   });

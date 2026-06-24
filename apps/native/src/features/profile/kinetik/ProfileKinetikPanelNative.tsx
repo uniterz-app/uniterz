@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
+  Alert,
   Image,
   Platform,
   Pressable,
@@ -22,7 +23,9 @@ import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStre
 import {
   formatKinetikWinStreakLabel,
   getKinetikStreakTier,
+  getKinetikWinStreakExplanation,
 } from "../../../../../../app/component/profile/edit/kinetikStreakFx";
+import { getKinetikRankBadgeExplanation } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
 import { formatMetricDecimals } from "../../../../../../lib/format/metricDecimals";
 import { formatProfileMemberSince } from "../../../../../../lib/profile/formatProfileMemberSince";
 import {
@@ -209,15 +212,17 @@ function KinetikSlantTabNative({
   variant,
   rankTier,
   streakTier,
-  title,
+  explanation,
   language,
+  onPress,
 }: {
   label: string;
   variant: "filled" | "outline";
   rankTier?: KinetikRankBadgeTier;
   streakTier?: 1 | 2 | 3 | 4;
-  title?: string;
+  explanation?: string;
   language: "ja" | "en";
+  onPress?: () => void;
 }) {
   const rankTheme = rankTier ? KINETIK_SLANT_TAB_RANK[rankTier] : null;
   const streakTheme = streakTier ? KINETIK_SLANT_TAB_STREAK[streakTier] : null;
@@ -231,10 +236,15 @@ function KinetikSlantTabNative({
   const textColor = filled ? (rankTheme?.fillText ?? "#050508") : accent;
 
   return (
-    <View style={styles.slantTabOuter}>
-      <View
-        accessibilityLabel={title}
-        style={[
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={explanation ?? label}
+      style={({ pressed }) => [pressed && onPress ? { opacity: 0.88 } : null]}
+    >
+      <View style={styles.slantTabOuter}>
+        <View
+          style={[
           styles.slantTab,
           filled
             ? {
@@ -274,6 +284,7 @@ function KinetikSlantTabNative({
         </Text>
       </View>
     </View>
+    </Pressable>
   );
 }
 
@@ -291,6 +302,14 @@ function KinetikHeaderTabsNative({
 
   const streakTier = getKinetikStreakTier(winStreak);
 
+  const showTagExplanation = useCallback(
+    (message: string) => {
+      const [title, ...rest] = message.split("\n");
+      Alert.alert(title, rest.join("\n").trim() || undefined);
+    },
+    []
+  );
+
   return (
     <View style={styles.headerTabs}>
       {rankBadge ? (
@@ -298,8 +317,13 @@ function KinetikHeaderTabsNative({
           label={rankBadge.label}
           variant="filled"
           rankTier={rankBadge.tier}
-          title={rankBadge.description}
+          explanation={getKinetikRankBadgeExplanation(rankBadge, language)}
           language={language}
+          onPress={() =>
+            showTagExplanation(
+              getKinetikRankBadgeExplanation(rankBadge, language)
+            )
+          }
         />
       ) : null}
       {streakLabel ? (
@@ -307,7 +331,13 @@ function KinetikHeaderTabsNative({
           label={streakLabel}
           variant="outline"
           streakTier={streakTier > 0 ? streakTier : undefined}
+          explanation={getKinetikWinStreakExplanation(winStreak, language)}
           language={language}
+          onPress={() =>
+            showTagExplanation(
+              getKinetikWinStreakExplanation(winStreak, language)
+            )
+          }
         />
       ) : null}
     </View>
@@ -705,7 +735,10 @@ export default function ProfileKinetikPanelNative({
                   : `${formatProfileMetricDayDelta("scorePrecision", metricValueDeltas?.totalPrecision)} ${metricCopy.ptsUnit}`
                 : null
             }
-            dayDeltaTone={profileMetricDeltaTone(metricValueDeltas?.totalPrecision ?? null)}
+            dayDeltaTone={profileMetricDeltaTone(
+              metricValueDeltas?.totalPrecision ?? null,
+              { positiveOnly: isWcProfile }
+            )}
           />
           <KinetikMetricCardNative
             label={isJa ? "アップセット" : "UPSET"}
