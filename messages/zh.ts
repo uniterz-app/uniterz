@@ -250,6 +250,7 @@ const zh: Messages = {
     playIn: "Play-In",
     finalLabel: "已确定",
     openRanking: "查看排名",
+    backToSlotList: "返回槽位列表",
     competingOn: "竞争项目",
     owner: "群主",
     member: "成员",

@@ -250,6 +250,7 @@ const ko: Messages = {
     playIn: "Play-In",
     finalLabel: "확정",
     openRanking: "랭킹 보기",
+    backToSlotList: "슬롯 목록으로 돌아가기",
     competingOn: "경쟁 항목",
     owner: "소유자",
     member: "멤버",

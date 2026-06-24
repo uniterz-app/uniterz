@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -175,8 +175,31 @@ export default function CommunityGroupOverlay({
                   "shadow-[0_14px_36px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.12)]",
                 ].join(" ")}
               >
+                <div className="flex shrink-0 items-center border-b border-cyan-400/20 px-3 py-2.5 pr-14">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!endConfirmOpen) onClose();
+                    }}
+                    className={[
+                      "inline-flex min-w-0 items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-300/90 underline-offset-2",
+                      isMobile ? "" : "transition hover:text-cyan-100 hover:underline",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <ArrowLeft
+                      className="h-3.5 w-3.5 shrink-0"
+                      strokeWidth={2.4}
+                      aria-hidden
+                    />
+                    <span className="truncate">{m.rankings.backToSlotList}</span>
+                  </button>
+                </div>
                 <CommunityGroupDetailView
                   inOverlay
+                  inOverlayBackBar
                   groupId={groupId}
                   listPreview={listPreview}
                   language={language}

@@ -253,6 +253,7 @@ const ar: Messages = {
     playIn: "Play-In",
     finalLabel: "نهائي",
     openRanking: "عرض التصنيف",
+    backToSlotList: "العودة إلى قائمة الفتحات",
     competingOn: "المنافسة على",
     owner: "المالك",
     member: "عضو",

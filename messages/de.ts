@@ -253,6 +253,7 @@ const de: Messages = {
     playIn: "Play-In",
     finalLabel: "Endgültig",
     openRanking: "Ranking ansehen",
+    backToSlotList: "Zurück zur Slot-Liste",
     competingOn: "Wettbewerb in",
     owner: "Besitzer",
     member: "Mitglied",

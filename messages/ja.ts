@@ -251,6 +251,7 @@ const ja = {
     playIn: "Play-In",
     finalLabel: "確定",
     openRanking: "ランキングを見る",
+    backToSlotList: "スロット一覧に戻る",
     competingOn: "競争項目",
     owner: "オーナー",
     member: "メンバー",

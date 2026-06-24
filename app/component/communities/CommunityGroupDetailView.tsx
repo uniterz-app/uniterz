@@ -66,6 +66,8 @@ export type CommunityGroupDetailViewProps = {
   onExitAction?: () => void;
   /** ScheduleList 予想オーバーレイ内表示 */
   inOverlay?: boolean;
+  /** オーバーレイ上部に戻るバーがあるときは true（サムネと被らない） */
+  inOverlayBackBar?: boolean;
   /** 一覧からの即時表示用（API 待ちの間） */
   listPreview?: CommunityGroupListPreview | null;
   /** グループ終了確認モーダルを開く（オーバーレイ側で表示） */
@@ -83,6 +85,7 @@ export default function CommunityGroupDetailView({
   onClose,
   onExitAction,
   inOverlay = false,
+  inOverlayBackBar = false,
   listPreview = null,
   onRequestEndGroup,
   className = "",
@@ -405,7 +408,7 @@ export default function CommunityGroupDetailView({
       <div
       className={[
         `relative flex flex-col ${jp.className}`,
-        inOverlay ? "pt-12" : "min-h-0 flex-1",
+        inOverlay ? (inOverlayBackBar ? "" : "pt-12") : "min-h-0 flex-1",
         className,
       ]
         .filter(Boolean)
