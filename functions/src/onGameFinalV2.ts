@@ -8,6 +8,7 @@ import { upsetJudge } from "./upsetJudge";
 import { finalizePost } from "./finalizePost";
 import { aggregateGamePointsDistributionFromPostsSnap } from "./aggregateGamePointsDistribution";
 import { updateUserStreak } from "./updateUserStreak";
+import { rescoreEarlierWcSlotPosts } from "./wc/wcSlotStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
 import { notifyGameFinalPush } from "./notifications/notifyPushEvents";
@@ -86,13 +87,16 @@ export const onGameFinalV2 = onDocumentWritten(
 
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();
+    let wcSlotRescore: { perUserPerGameActive: Map<string, Map<string, number>> } | null = null;
 
     if (becameFinal) {
-      streakResultMap = await updateUserStreak({
+      const streakOutcome = await updateUserStreak({
         db: firestore,
         gameId,
         settlementGame,
       });
+      streakResultMap = streakOutcome.streakResultMap;
+      wcSlotRescore = streakOutcome.wcSlotRescore;
 
       if (countsTowardRegularSeasonTeamStats(game.seasonPhase)) {
         await updateTeamSeasonRecord({
@@ -201,6 +205,14 @@ export const onGameFinalV2 = onDocumentWritten(
 
       await batch.commit();
       await Promise.all(userUpdateTasks);
+    }
+
+    if (wcSlotRescore) {
+      await rescoreEarlierWcSlotPosts(
+        firestore,
+        gameId,
+        wcSlotRescore.perUserPerGameActive
+      );
     }
 
     const pointsDistribution = aggregateGamePointsDistributionFromPostsSnap({

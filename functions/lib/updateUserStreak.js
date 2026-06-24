@@ -6,6 +6,8 @@ exports.updateUserStreak = updateUserStreak;
 const firestore_1 = require("firebase-admin/firestore");
 const predictionWin_1 = require("./predictionWin");
 const settlementGame_1 = require("./settlementGame");
+const wcSlotStreak_1 = require("./wc/wcSlotStreak");
+const updateUserStreakInternals_1 = require("./updateUserStreakInternals");
 /**
  * games/{gameId}: set `suppressStreakIncrementV2: true` to skip all streak writes for that game (no stats updates, no per-user markers).
  * Typical use: after the first streak apply, flip this on before re-finalizing to avoid a second increment.
@@ -35,27 +37,6 @@ function migrateStreakBySport(snap) {
         maxFootball: 0,
     };
 }
-function streakResultFromUserSnap(uid, didWin, snap, settlementGame) {
-    var _a;
-    const migrated = migrateStreakBySport(snap);
-    const sport = (0, settlementGame_1.leagueToSport)(settlementGame.league);
-    const current = sport === "football" ? migrated.football : migrated.basketball;
-    const maxWin = sport === "football" ? migrated.maxFootball : migrated.maxBasketball;
-    const activeWinStreak = current > 0 ? current : 0;
-    const maxLose = (_a = snap.get("maxLoseStreak")) !== null && _a !== void 0 ? _a : 0;
-    return {
-        uid,
-        didWin,
-        currentStreak: current,
-        activeWinStreak,
-        maxWinStreak: maxWin,
-        maxLoseStreak: maxLose,
-    };
-}
-/** 試合ごとの連勝反映済み（onGameFinalV2再実行時の二重加算防止） */
-function streakApplyMarkerRef(db, gameId, uid) {
-    return db.doc(`games/${gameId}/streak_apply_v2/${uid}`);
-}
 async function updateUserStreak({ db, gameId, settlementGame, }) {
     const postsSnap = await db
         .collection("posts")
@@ -76,25 +57,46 @@ async function updateUserStreak({ db, gameId, settlementGame, }) {
     const gameSnap = await db.doc(`games/${gameId}`).get();
     const suppressStreakForGame = gameSnap.get(exports.SUPPRESS_STREAK_INCREMENT_V2_FIELD) === true;
     if (suppressStreakForGame) {
+        const sportKey = (0, settlementGame_1.leagueToSport)(settlementGame.league);
         const entries = [...userResult.entries()];
         await Promise.all(entries.map(async ([uid, didWin]) => {
             const snap = await db.doc(`user_stats_v2/${uid}`).get();
-            updatedMap.set(uid, streakResultFromUserSnap(uid, didWin, snap, settlementGame));
+            updatedMap.set(uid, (0, updateUserStreakInternals_1.streakResultFromUserSnap)(uid, didWin, snap, sportKey));
         }));
-        return updatedMap;
+        return { streakResultMap: updatedMap, wcSlotRescore: null };
     }
     const sportKey = (0, settlementGame_1.leagueToSport)(settlementGame.league);
+    /** WC: 同時キックオフスロット単位で連勝を一括反映 */
+    if (sportKey === "football" && (0, wcSlotStreak_1.isWcLeague)(settlementGame.league)) {
+        const kickoffMs = (0, wcSlotStreak_1.resolveTriggerKickoffMs)(gameSnap);
+        if (kickoffMs != null) {
+            const { resultMap, perUserPerGameActive, slotCompleted } = await (0, wcSlotStreak_1.applyWcSlotStreakWhenComplete)(db, gameId, kickoffMs, userResult);
+            for (const [uid, base] of resultMap) {
+                const active = (0, wcSlotStreak_1.wcSlotActiveForUser)(perUserPerGameActive, uid, gameId, base.activeWinStreak);
+                updatedMap.set(uid, Object.assign(Object.assign({}, base), { activeWinStreak: active }));
+            }
+            return {
+                streakResultMap: updatedMap,
+                wcSlotRescore: slotCompleted
+                    ? { perUserPerGameActive }
+                    : null,
+            };
+        }
+        const deferred = await (0, wcSlotStreak_1.wcSlotStreakDeferredMap)(db, userResult);
+        deferred.forEach((v, k) => updatedMap.set(k, v));
+        return { streakResultMap: updatedMap, wcSlotRescore: null };
+    }
     for (const [uid, didWin] of userResult.entries()) {
         const userRef = db.doc(`user_stats_v2/${uid}`);
         const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
         const publicUserRef = db.doc(`users/${uid}`);
-        const markerRef = streakApplyMarkerRef(db, gameId, uid);
+        const markerRef = (0, updateUserStreakInternals_1.streakApplyMarkerRef)(db, gameId, uid);
         const updated = await db.runTransaction(async (tx) => {
             var _a;
             const markerSnap = await tx.get(markerRef);
             if (markerSnap.exists) {
                 const snap = await tx.get(userRef);
-                return streakResultFromUserSnap(uid, didWin, snap, settlementGame);
+                return (0, updateUserStreakInternals_1.streakResultFromUserSnap)(uid, didWin, snap, sportKey);
             }
             const snap = await tx.get(userRef);
             let maxLose = (_a = snap.get("maxLoseStreak")) !== null && _a !== void 0 ? _a : 0;
@@ -180,6 +182,6 @@ async function updateUserStreak({ db, gameId, settlementGame, }) {
         });
         updatedMap.set(uid, updated);
     }
-    return updatedMap;
+    return { streakResultMap: updatedMap, wcSlotRescore: null };
 }
 //# sourceMappingURL=updateUserStreak.js.map
