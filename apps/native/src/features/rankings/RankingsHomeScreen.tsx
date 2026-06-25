@@ -244,7 +244,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         </View>
 
         <View style={styles.section}>
-          {rankingsLeague === "nba" || rankingsLeague === "wc" ? (
+          {rankingsLeague === "nba" ? (
             <RankingsCategoryTabsNative
               category={category}
               onChange={setCategory}
