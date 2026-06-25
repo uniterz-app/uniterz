@@ -1,6 +1,9 @@
 /**
  * audit-wc-streak-drift と同じキックオフ順ロジックで、ずれている投稿を一括修正する。
  *
+ * 注意: 同時キックオフスロット（2試合以上同時）には使わないこと。
+ *       その場合は scripts/fix-wc-slot-streak-posts.ts を使う。
+ *
  * 使い方:
  *   npx tsx scripts/fix-wc-streak-drift-all.ts --dry-run \
  *     --game-ids=wc-2026-K-prt-cod,wc-2026-L-eng-hrv,wc-2026-L-gha-pan,wc-2026-K-uzb-col

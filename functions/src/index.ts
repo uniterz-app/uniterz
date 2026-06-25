@@ -26,6 +26,7 @@ export { onGameFinalV2 } from "./onGameFinalV2";
 export { rescorePlayoffBrackets } from "./playoff-bracket/rescorePlayoffBrackets";
 export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
 export { onPlayoffBracketRescoreTaskCreated } from "./playoff-bracket/onPlayoffBracketRescoreTaskCreated";
+export { onWcBracketRescoreTaskCreated } from "./wc-bracket/onWcBracketRescoreTaskCreated";
 export { rebuildPlayoffBracketMarket } from "./playoff-bracket/rebuildPlayoffBracketMarket";
 export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
 export { backfillCumulativeStatsFromDailyHttp } from "./rankings/backfillCumulativeStatsFromDaily";

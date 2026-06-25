@@ -21,6 +21,7 @@ import {
   resolveActualOutcomeForUpset,
   type SettlementGameInput,
 } from "./settlementGame";
+import { maybeUpdateWcBracketOnKnockoutFinal } from "./wc-bracket/onKnockoutGameFinal";
 
 const db = () => getFirestore();
 
@@ -279,6 +280,27 @@ export const onGameFinalV2 = onDocumentWritten(
         });
       } catch (err) {
         console.error("[onGameFinalV2] push notify failed", err);
+      }
+
+      try {
+        await maybeUpdateWcBracketOnKnockoutFinal(firestore, {
+          gameId,
+          season:
+            typeof after.season === "string" ? after.season : null,
+          league: game.league,
+          knockout: game.knockout === true,
+          homeTeamId: game.homeTeamId,
+          awayTeamId: game.awayTeamId,
+          homeScore: game.homeScore,
+          awayScore: game.awayScore,
+          advancingTeamId: game.advancingTeamId,
+          wcKnockoutMatchId:
+            typeof after.wcKnockoutMatchId === "string"
+              ? after.wcKnockoutMatchId
+              : null,
+        });
+      } catch (err) {
+        console.error("[onGameFinalV2] wc bracket survivor update failed", err);
       }
     }
   }

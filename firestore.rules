@@ -9,6 +9,12 @@ service cloud.firestore {
         && request.auth.uid == "S6r5KyS9XcXds3Pm7koLzzELrvs2";
     }
 
+    /** WC knockout bracket — sync with lib/wc/wc-knockout-config submissionClosesAtIso (M73 kickoff). */
+    function wcBracketSubmissionOpenForSeason(season) {
+      return season != "2025-26"
+        || request.time < timestamp.date(2026, 6, 28) + duration.time(19, 0, 0, 0);
+    }
+
     /** Playoff bracket submission deadline (request.time is UTC). 2026-04-19 02:00 JST = 2026-04-18 17:00 UTC. Sync with lib/playoff-bracket-config submissionClosesAtIso. */
     function playoffBracketSubmissionOpenForSeason(season) {
       return season != "2026"
@@ -267,6 +273,32 @@ service cloud.firestore {
 
     // Chunked rescore queue — Cloud Functions のみ（Admin SDK）
     match /playoffBracketRescoreTasks/{taskId} {
+      allow read, write: if false;
+    }
+
+    // ========================================================================
+    // WC ノックアウトブラケット予想 — lib/wc/wc-bracket-firestore.ts
+    // ========================================================================
+    match /wcBracketResults/{season} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /wcBrackets/{docId} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.season is string
+        && request.resource.data.bracket is map
+        && request.resource.data.isSubmitted == true
+        && docId == request.resource.data.season + '_' + request.auth.uid
+        && wcBracketSubmissionOpenForSeason(request.resource.data.season);
+
+      allow update, delete: if false;
+    }
+
+    match /wcBracketRescoreTasks/{taskId} {
       allow read, write: if false;
     }
 

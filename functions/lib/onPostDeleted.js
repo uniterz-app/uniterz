@@ -26,7 +26,7 @@ function normalizeLeague(raw) {
     return v || null;
 }
 function buildDeleteContribution(before, stats) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f;
     const leagueKey = normalizeLeague(typeof before.league === "string" ? before.league : null);
     const isWc = leagueKey === "wc";
     const wcStageRaw = before.wcStage;
@@ -44,6 +44,8 @@ function buildDeleteContribution(before, stats) {
         scorePrecision: Number((_c = stats.scorePrecision) !== null && _c !== void 0 ? _c : 0),
         exactHit: stats.exactMatch === true,
         goalScorerHit: Number((_d = stats.goalScorerBonus) !== null && _d !== void 0 ? _d : 0) > 0,
+        upsetBonus: Number((_e = stats.upsetBonus) !== null && _e !== void 0 ? _e : 0),
+        streakBonus: Number((_f = stats.streakBonus) !== null && _f !== void 0 ? _f : 0),
     };
 }
 function teamIdFromSide(side) {
@@ -127,6 +129,8 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
                 scorePrecision: 0,
                 exactHit: false,
                 goalScorerHit: false,
+                upsetBonus: 0,
+                streakBonus: 0,
             }, -1);
             tx.delete(markerRef);
         });

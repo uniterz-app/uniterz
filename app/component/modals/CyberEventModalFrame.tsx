@@ -17,6 +17,10 @@ type Props = {
   confirmLabel: string;
   closeAriaLabel: string;
   onClose: () => void;
+  /** 省略時は onClose と同じ */
+  onConfirm?: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
   monoClassName: string;
 };
 
@@ -74,8 +78,12 @@ export default function CyberEventModalFrame({
   confirmLabel,
   closeAriaLabel,
   onClose,
+  onConfirm,
+  secondaryLabel,
+  onSecondary,
   monoClassName,
 }: Props) {
+  const handleConfirm = onConfirm ?? onClose;
   return (
     <div
       className="relative w-[min(420px,94vw)]"
@@ -151,17 +159,40 @@ export default function CyberEventModalFrame({
             {body}
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-6 w-full px-3 py-2.5 text-sm font-bold tracking-[0.08em] text-[#041018] transition-[filter] hover:brightness-110"
-            style={{
-              background: CYAN,
-              boxShadow: `0 0 24px ${CYAN}88, 0 0 40px ${CYAN}33`,
-            }}
+          <div
+            className={[
+              "mt-6",
+              secondaryLabel ? "grid grid-cols-2 gap-2.5" : "",
+            ].join(" ")}
           >
-            {confirmLabel}
-          </button>
+            {secondaryLabel ? (
+              <button
+                type="button"
+                onClick={onSecondary ?? onClose}
+                className="px-3 py-2.5 text-sm font-bold tracking-[0.06em] text-cyan-200/90 transition-colors hover:text-cyan-50"
+                style={{
+                  border: `1px solid ${CYAN}44`,
+                  background: `${CYAN}08`,
+                }}
+              >
+                {secondaryLabel}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleConfirm}
+              className={[
+                "px-3 py-2.5 text-sm font-bold tracking-[0.08em] text-[#041018] transition-[filter] hover:brightness-110",
+                secondaryLabel ? "" : "w-full",
+              ].join(" ")}
+              style={{
+                background: CYAN,
+                boxShadow: `0 0 24px ${CYAN}88, 0 0 40px ${CYAN}33`,
+              }}
+            >
+              {confirmLabel}
+            </button>
+          </div>
         </div>
       </div>
     </div>

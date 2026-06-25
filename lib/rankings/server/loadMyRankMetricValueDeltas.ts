@@ -92,6 +92,28 @@ function wcDailyBucketFromDoc(
     {}) as Record<string, unknown>;
 }
 
+function safeNum(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** WC 当日の加算分（前日比フォールバック — cumulative が遅延した場合） */
+async function wcTodayPointsFromDaily(
+  uid: string,
+  wcStage: WcRankingStage
+): Promise<number | null> {
+  const adminDb = getAdminDb();
+  const todayKey = dateKeyJST();
+  const snap = await adminDb
+    .doc(`user_stats_v2_daily/${uid}_${todayKey}`)
+    .get();
+  if (!snap.exists) return null;
+  const data = snap.data() as Record<string, unknown>;
+  const pts = safeNum(wcDailyBucketFromDoc(data, wcStage).pointsSumV3);
+  if (pts <= 0) return null;
+  return pts;
+}
+
 /** WC 完全的中の前日比 — 当日 daily の exactHitCount（history の旧スコア精度を使わない） */
 async function wcExactHitDayDeltaFromDaily(
   uid: string,
@@ -125,6 +147,26 @@ async function loadPriorHistoryDoc(uid: string) {
   return null;
 }
 
+export type PriorSnapshotMetrics = SnapshotMetricValues;
+
+export async function loadPriorSnapshotMetrics(
+  uid: string,
+  opts: {
+    phase: RankingPhase;
+    round: PlayoffRoundKey;
+    wcStage: WcRankingStage | null;
+    rankingLeague: RankingLeagueSource;
+  }
+): Promise<PriorSnapshotMetrics | null> {
+  const priorDoc = await loadPriorHistoryDoc(uid);
+  return pickPriorValues(priorDoc ?? undefined, {
+    phase: opts.phase,
+    round: opts.round,
+    wcStage: opts.wcStage ?? "overall",
+    rankingLeague: opts.rankingLeague,
+  });
+}
+
 /**
  * rankSnapshotHistory の前日 metricValues と現在の myRow を比較。
  * cron が metricValues を書き込んだ doc がある場合のみ非 null を返す（追加 Function クエリなし）。
@@ -137,17 +179,16 @@ export async function loadMyRankMetricValueDeltas(
     round: PlayoffRoundKey;
     wcStage: WcRankingStage | null;
     rankingLeague: RankingLeagueSource;
+    /** route 側で先に読んだ prior を渡すと二重 read を避けられる */
+    priorMetrics?: PriorSnapshotMetrics | null;
   }
 ): Promise<MyRankMetricValueDeltas | null> {
   if (!current) return null;
 
-  const priorDoc = await loadPriorHistoryDoc(uid);
-  const prior = pickPriorValues(priorDoc ?? undefined, {
-    phase: opts.phase,
-    round: opts.round,
-    wcStage: opts.wcStage ?? "overall",
-    rankingLeague: opts.rankingLeague,
-  });
+  const prior =
+    opts.priorMetrics !== undefined
+      ? opts.priorMetrics
+      : await loadPriorSnapshotMetrics(uid, opts);
   if (!prior) return null;
 
   const pts = current.totalPoints ?? 0;
@@ -161,8 +202,20 @@ export async function loadMyRankMetricValueDeltas(
       ? await wcExactHitDayDeltaFromDaily(uid, opts.wcStage ?? "overall")
       : deltaOrNull(prec, prior.totalPrecision);
 
+  let totalPointsDelta = deltaOrNull(pts, prior.totalPoints);
+  if (
+    opts.rankingLeague === "worldcup" &&
+    totalPointsDelta == null &&
+    prior.totalPoints !== undefined
+  ) {
+    totalPointsDelta = await wcTodayPointsFromDaily(
+      uid,
+      opts.wcStage ?? "overall"
+    );
+  }
+
   const deltas: MyRankMetricValueDeltas = {
-    totalPoints: deltaOrNull(pts, prior.totalPoints),
+    totalPoints: totalPointsDelta,
     totalPrecision: totalPrecisionDelta,
     totalUpset: deltaOrNull(upset, prior.totalUpset),
     winRate: deltaOrNull(winPct, priorWinPct),

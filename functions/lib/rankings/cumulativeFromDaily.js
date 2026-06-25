@@ -82,6 +82,8 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
     const goalScorer = contrib.goalScorerHit ? s : 0;
     const wcExact = contrib.isWc && contrib.exactHit ? s : 0;
     const nbaPrecision = contrib.isWc ? 0 : contrib.scorePrecision * s;
+    const upsetBonus = (0, safeRankMetricNum_1.safeRankMetricNum)(contrib.upsetBonus) * s;
+    const streakBonus = (0, safeRankMetricNum_1.safeRankMetricNum)(contrib.streakBonus) * s;
     const out = {
         totalPosts: firestore_1.FieldValue.increment(posts),
         totalWins: firestore_1.FieldValue.increment(wins),
@@ -89,6 +91,10 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
         totalUpset: firestore_1.FieldValue.increment(upset),
         totalPrecision: firestore_1.FieldValue.increment(profilePrecision),
     };
+    if (upsetBonus !== 0)
+        out.upsetBonusSum = firestore_1.FieldValue.increment(upsetBonus);
+    if (streakBonus !== 0)
+        out.streakBonusSum = firestore_1.FieldValue.increment(streakBonus);
     if (!contrib.forRanking)
         return out;
     out["ranking.totalPosts"] = firestore_1.FieldValue.increment(posts);
@@ -96,6 +102,20 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
     out["ranking.totalPoints"] = firestore_1.FieldValue.increment(points);
     out["ranking.totalUpset"] = firestore_1.FieldValue.increment(upset);
     out["ranking.totalPrecision"] = firestore_1.FieldValue.increment(nbaPrecision);
+    if (upsetBonus !== 0) {
+        out["ranking.upsetBonusSum"] = firestore_1.FieldValue.increment(upsetBonus);
+    }
+    if (streakBonus !== 0) {
+        out["ranking.streakBonusSum"] = firestore_1.FieldValue.increment(streakBonus);
+    }
+    const applyBonusToPath = (path) => {
+        if (upsetBonus !== 0) {
+            out[`${path}.upsetBonusSum`] = firestore_1.FieldValue.increment(upsetBonus);
+        }
+        if (streakBonus !== 0) {
+            out[`${path}.streakBonusSum`] = firestore_1.FieldValue.increment(streakBonus);
+        }
+    };
     if (contrib.phaseKey === "play_in") {
         const p = "rankingByPhase.play_in";
         out[`${p}.totalPosts`] = firestore_1.FieldValue.increment(posts);
@@ -104,6 +124,7 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
         out[`${p}.totalUpset`] = firestore_1.FieldValue.increment(upset);
         out[`${p}.totalPrecision`] = firestore_1.FieldValue.increment(nbaPrecision);
         out[`${p}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
+        applyBonusToPath(p);
     }
     if (contrib.phaseKey === "playoffs") {
         const p = "rankingByPhase.playoffs";
@@ -113,6 +134,7 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
         out[`${p}.totalUpset`] = firestore_1.FieldValue.increment(upset);
         out[`${p}.totalPrecision`] = firestore_1.FieldValue.increment(nbaPrecision);
         out[`${p}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
+        applyBonusToPath(p);
         if (contrib.roundKey) {
             const r = `rankingByPlayoffRound.${contrib.roundKey}`;
             out[`${r}.totalPosts`] = firestore_1.FieldValue.increment(posts);
@@ -121,6 +143,7 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
             out[`${r}.totalUpset`] = firestore_1.FieldValue.increment(upset);
             out[`${r}.totalPrecision`] = firestore_1.FieldValue.increment(nbaPrecision);
             out[`${r}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
+            applyBonusToPath(r);
         }
     }
     if (contrib.isWc && contrib.forRanking) {
@@ -137,6 +160,7 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
             out[`${w}.totalUpset`] = firestore_1.FieldValue.increment(upset);
             out[`${w}.totalPrecision`] = firestore_1.FieldValue.increment(wcExact);
             out[`${w}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
+            applyBonusToPath(w);
         }
     }
     return out;

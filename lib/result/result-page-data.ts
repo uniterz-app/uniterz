@@ -6,6 +6,7 @@ import {
   TIMEZONE_JST,
   getZonedYMD,
 } from "@/lib/time/zonedTime";
+import { compareResultPostsForDayList } from "@/lib/result/resultPostDaySort";
 
 /** リザルト一覧のリーグタブ（ワールドカップ / NBA） */
 export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.WC, LEAGUES.NBA] as const;
@@ -183,14 +184,8 @@ export function groupPostsByResultDay(
   const days = Array.from(dayMap.values()).sort((a, b) => b.dateMs - a.dateMs);
 
   days.forEach((day) => {
-    /** 同一日付内: キックオフが遅い試合を上、早い試合を下 */
-    const byKickoffOrder = (a: PostWithMillis, b: PostWithMillis): number => {
-      const ae = a.startAtMillis ?? a.createdAtMillis ?? 0;
-      const be = b.startAtMillis ?? b.createdAtMillis ?? 0;
-      return be - ae;
-    };
-    day.pending.sort(byKickoffOrder);
-    day.final.sort(byKickoffOrder);
+    day.pending.sort(compareResultPostsForDayList);
+    day.final.sort(compareResultPostsForDayList);
   });
 
   return days;

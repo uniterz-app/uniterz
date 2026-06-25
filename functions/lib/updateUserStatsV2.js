@@ -35,6 +35,8 @@ function buildPostCumulativeContribution(opts) {
         scorePrecision: opts.scorePrecision,
         exactHit: (_b = opts.exactHit) !== null && _b !== void 0 ? _b : false,
         goalScorerHit: (_c = opts.goalScorerHit) !== null && _c !== void 0 ? _c : false,
+        upsetBonus: opts.upsetBonus,
+        streakBonus: opts.streakBonus,
     };
 }
 /* =========================================================
@@ -191,6 +193,8 @@ async function applyPostToUserStatsV2(opts) {
             exactHit,
             goalScorerHit,
             wcStage,
+            upsetBonus,
+            streakBonus,
         }));
     });
 }

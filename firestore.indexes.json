@@ -120,6 +120,32 @@
       ]
     },
     {
+      "collectionGroup": "wcBrackets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "season", "order": "ASCENDING" },
+        { "fieldPath": "isSubmitted", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "wcBrackets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "season", "order": "ASCENDING" },
+        { "fieldPath": "alive", "order": "DESCENDING" },
+        { "fieldPath": "survivedRounds", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "wcBrackets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "season", "order": "ASCENDING" },
+        { "fieldPath": "survivalRankKey", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "badges",
       "queryScope": "COLLECTION_GROUP",
       "fields": [{ "fieldPath": "badgeId", "order": "ASCENDING" }]

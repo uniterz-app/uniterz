@@ -34,6 +34,7 @@ import type { MainTabParamList } from "../../navigation/types";
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
+import WcBracketLeaderboardSectionNative from "./WcBracketLeaderboardSectionNative";
 import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
 import WcRankingStageTabsNative from "./WcRankingStageTabsNative";
 import RankingsDrawerMenuNative from "./RankingsDrawerMenuNative";
@@ -243,7 +244,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         </View>
 
         <View style={styles.section}>
-          {rankingsLeague === "nba" ? (
+          {rankingsLeague === "nba" || rankingsLeague === "wc" ? (
             <RankingsCategoryTabsNative
               category={category}
               onChange={setCategory}
@@ -256,7 +257,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               {rankingsLeague === "nba" ? (
                 <PlayoffRoundTabsNative round={round} onChange={setRound} language={language} />
               ) : null}
-              {rankingsLeague === "wc" ? (
+              {rankingsLeague === "wc" && category === "playoffs" ? (
                 <WcRankingStageTabsNative
                   stage={wcStage}
                   onChange={setWcStage}
@@ -296,7 +297,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         </View>
 
         {category === "bracket" ? (
-          <BracketLeaderboardSectionNative language={language} />
+          rankingsLeague === "wc" ? (
+            <WcBracketLeaderboardSectionNative language={language} />
+          ) : (
+            <BracketLeaderboardSectionNative language={language} />
+          )
         ) : null}
 
         {category === "playoffs" ? (

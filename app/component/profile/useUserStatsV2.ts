@@ -51,6 +51,8 @@ export type SummaryRanksV2 = {
 };
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+/** この時間内に API 取得済みなら背景再取得をスキップ */
+const BACKGROUND_REFRESH_MS = 30_000;
 
 /** カード数値 + ティアタグ用スナップショット（Firestore、Functions 不要） */
 const PARTS_SUMMARY = "phase";
@@ -230,6 +232,7 @@ async function fetchProfilePhase(
   const qs = buildStatsQuery(uid, PARTS_SUMMARY, rankingLeague, wcStage);
   const res = await fetch(`/api/profile/user-stats?${qs.toString()}`, {
     method: "GET",
+    cache: "no-store",
   });
   const json = await res.json();
   if (!res.ok || !json?.ok) {
@@ -270,14 +273,16 @@ async function bootstrapStatsByRouteKey(
   if (existing) return existing;
 
   const promise = (async () => {
-    const qs = new URLSearchParams({ parts: PARTS_SUMMARY, phase: "playoffs" });
+    const qs = new URLSearchParams({ parts: PARTS_SUMMARY, phase: "playoffs", refresh: "1" });
     /** uid 形式ならそのまま uid 解決、それ以外は handle 解決（サーバーで resolveUidByHandleCached） */
     if (looksLikeFirestoreUid(safeKey)) qs.set("uid", safeKey);
     else qs.set("handle", safeKey);
     if (rankingLeague) qs.set("league", rankingLeague);
     if (safeWcStage) qs.set("wcStage", safeWcStage);
 
-    const res = await fetch(`/api/profile/user-stats?${qs.toString()}`);
+    const res = await fetch(`/api/profile/user-stats?${qs.toString()}`, {
+      cache: "no-store",
+    });
     const json = await res.json();
     if (!res.ok || !json?.ok) return null;
     const resolvedUid =
@@ -314,6 +319,7 @@ async function fetchProfileRanks(
   const qs = buildStatsQuery(uid, PARTS_RANKS, rankingLeague, wcStage);
   const res = await fetch(`/api/profile/user-stats?${qs.toString()}`, {
     method: "GET",
+    cache: "no-store",
   });
   const json = await res.json();
   if (!res.ok || !json?.ok) return null;
@@ -329,6 +335,7 @@ async function fetchTrendIntoCache(
   const qs = buildStatsQuery(uid, PARTS_TREND, rankingLeague, wcStage);
   const res = await fetch(`/api/profile/user-stats?${qs.toString()}`, {
     method: "GET",
+    cache: "no-store",
   });
   const json = await res.json();
   if (!res.ok || !json?.ok) return;
@@ -374,7 +381,9 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
   const prefetchOtherLeague = context?.prefetchOtherLeague !== false;
   const routeKey = context?.routeKey ?? null;
   const skipPrimedStatsCache = context?.skipPrimedStatsCache === true;
-  const cacheReadOpts = skipPrimedStatsCache ? { skipPrimedOnly: true as const } : undefined;
+  const cacheReadOpts = skipPrimedStatsCache
+    ? { skipPrimedOnly: true as const }
+    : undefined;
   const cacheKey = uid ? statsCacheKey(uid, rankingLeague, wcStage) : "";
 
   const [loading, setLoading] = useState(() => {
@@ -538,9 +547,13 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
       if (cached) {
         if (cancelled) return;
         applyCacheEntry(cached, setters);
+        const cacheAge = Date.now() - cached.at;
+        const needsRefresh =
+          cached.metricValueDeltas == null ||
+          cacheAge >= BACKGROUND_REFRESH_MS;
+        if (needsRefresh) void refreshPrimedPhase(safeUid);
         if (cached.dailyTrend == null) void ensureTrend(safeUid);
-        if (cached.metricValueDeltas == null) void refreshPrimedPhase(safeUid);
-        else void ensureRanks(safeUid);
+        else if (cached.summaryRanks == null) void ensureRanks(safeUid);
         return;
       }
 
@@ -591,6 +604,35 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
       cancelled = true;
     };
   }, [cacheKey, cacheReadOpts, rankingLeague, wcStage, uid]);
+
+  /** タブ復帰時もサマリーを再取得（確定直後のプロフィール閲覧向け） */
+  useEffect(() => {
+    if (!uid || !cacheKey) return;
+
+    const safeUid = uid;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      void (async () => {
+        const phaseResult = await fetchProfilePhase(safeUid, rankingLeague, wcStage);
+        if (!phaseResult.summary) return;
+        mergeCacheEntry(cacheKey, {
+          summary: phaseResult.summary,
+          metricValueDeltas: phaseResult.metricValueDeltas,
+          ...(phaseResult.summaryRanks != null
+            ? { summaryRanks: phaseResult.summaryRanks }
+            : {}),
+        });
+        setSummary(phaseResult.summary);
+        setMetricValueDeltas(phaseResult.metricValueDeltas);
+        if (phaseResult.summaryRanks != null) {
+          setSummaryRanks(phaseResult.summaryRanks);
+        }
+      })();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [cacheKey, rankingLeague, uid, wcStage]);
 
   const statsLoading = loading;
 
