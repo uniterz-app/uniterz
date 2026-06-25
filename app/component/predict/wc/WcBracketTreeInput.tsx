@@ -195,8 +195,8 @@ export default function WcBracketTreeInput({
   }, []);
 
   const viewScale = wrapWidth ? wrapWidth / WC_TREE_DESIGN_W : 1;
-  const crownPad = WC_TREE_CHAMPION_CARD_LABEL_OVERHANG * viewScale;
-  const scaledHeight = WC_TREE_DESIGN_H * viewScale + crownPad + 8;
+  const crownPad = WC_TREE_CHAMPION_CARD_LABEL_OVERHANG * viewScale * 0.88;
+  const scaledHeight = WC_TREE_DESIGN_H * viewScale + crownPad + 2;
 
   const pickedCount = useMemo(
     () =>
@@ -355,7 +355,7 @@ export default function WcBracketTreeInput({
             width: WC_TREE_DESIGN_W,
             height: WC_TREE_DESIGN_H,
             transform: `translateX(-50%) scale(${viewScale})`,
-            marginTop: crownPad,
+            marginTop: Math.max(2, crownPad * 0.92),
           }}
         >
           <svg

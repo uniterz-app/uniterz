@@ -97,12 +97,7 @@ export default function WcBracketInputMobile({
       </div>
 
       {isComplete ? (
-        <div className="relative z-20 mt-4 border-t border-white/10 px-2 pt-4">
-          <div className="mb-2 px-1 text-center">
-            <p className="text-[12px] font-semibold text-white/90">
-              {isJa ? "あなたのトーナメント表" : "Your bracket"}
-            </p>
-          </div>
+        <div className="relative z-20 mt-3 border-t border-white/10 px-2 pt-2">
           <WcBracketTreeInput
             bracket={bracket}
             advancement={advancement}

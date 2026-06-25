@@ -8,7 +8,6 @@ import { Undo2 } from "lucide-react";
 
 import { nameBebas, jp } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
-import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -25,8 +24,7 @@ import {
 } from "@/lib/wc/wc-bracket-firestore";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import { isWcBracketComplete } from "@/lib/wc/wc-knockout-bracket";
-import { useWcBracketResults } from "@/lib/wc/useWcBracketResults";
-import WcFullBracketMobile from "@/app/component/predict/wc/WcFullBracketMobile";
+import WcBracketTreeInput from "@/app/component/predict/wc/WcBracketTreeInput";
 import WcBracketInputMobile from "@/app/component/predict/wc/WcBracketInputMobile";
 import WcBracketStartPromptModal from "@/app/component/predict/wc/WcBracketStartPromptModal";
 import { WC_DEMO_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-demo-advancement";
@@ -56,7 +54,7 @@ export default function WcBracketLeaderboardSection({
   const season = propSeason ?? WC_KNOCKOUT_SEASON;
   const submissionOpen = isWcKnockoutBracketSubmissionOpen(season);
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
-  const { loading, error, rows, myRow, totalCount, refetch } =
+  const { loading, error, rows, myRow, refetch } =
     useWcBracketLeaderboard({
       season,
       uid,
@@ -138,13 +136,6 @@ export default function WcBracketLeaderboardSection({
   const [overlayBracket, setOverlayBracket] = useState<WcBracketState | null>(
     null
   );
-  const [overlayFirstMiss, setOverlayFirstMiss] = useState<
-    WcBracketLeaderboardRow["firstMissMatchId"] | null
-  >(null);
-
-  const { winners: officialWinners } = useWcBracketResults(season, {
-    enabled: !savedLoading && (hasSubmitted || selectedRow !== null),
-  });
 
   const [overlayPortalReady, setOverlayPortalReady] = useState(false);
   const overlayScrollRef = useRef<HTMLDivElement>(null);
@@ -200,12 +191,10 @@ export default function WcBracketLeaderboardSection({
     async (row: WcBracketLeaderboardRow) => {
       setBracketLoading(true);
       setOverlayBracket(null);
-      setOverlayFirstMiss(row.firstMissMatchId);
       try {
         const doc = await loadWcBracket(row.uid, season);
         if (doc?.bracket) {
           setOverlayBracket(doc.bracket);
-          setOverlayFirstMiss(doc.firstMissMatchId ?? row.firstMissMatchId);
         }
       } catch (e) {
         console.error("failed to load wc bracket", e);
@@ -228,7 +217,6 @@ export default function WcBracketLeaderboardSection({
   const closeDetail = useCallback(() => {
     setSelectedRow(null);
     setOverlayBracket(null);
-    setOverlayFirstMiss(null);
   }, []);
 
   const openProfileFromSheet = useCallback(
@@ -279,32 +267,17 @@ export default function WcBracketLeaderboardSection({
     }
   }, [uid, draftBracket, season, refetch, isJa, submissionOpen]);
 
-  const titleDisplay = useScrambleDecode("WC BRACKET", true);
-
   const titleBlock = (
-    <div className="text-center">
-      <h1
-        className={[
-          "text-[30px] leading-none tracking-[0.04em] sm:text-[34px]",
-          nameBebas.className,
-        ].join(" ")}
-        style={{
-          color: "#38bdf8",
-          textShadow:
-            "0 0 8px rgba(56,189,248,0.35), 0 0 18px rgba(56,189,248,0.25), 0 0 34px rgba(56,189,248,0.15)",
-        }}
-      >
-        {titleDisplay}
-      </h1>
+    <div className="px-1 text-center">
       <p
         className={[
-          "mt-1 text-[11px] text-white/60 sm:text-[12px]",
+          "text-[12px] leading-relaxed text-white/72 sm:text-[13px]",
           jp.className,
         ].join(" ")}
       >
         {isJa
-          ? "サバイバー方式 — 的中した枝だけ残る"
-          : "Survivor bracket — hits only remain visible"}
+          ? "外れたブラケットから脱落"
+          : "Miss a pick, you're out"}
       </p>
     </div>
   );
@@ -319,22 +292,17 @@ export default function WcBracketLeaderboardSection({
   const leaderboardBody = (
     <>
       {myRow && hasSubmitted ? (
-        <div className="space-y-2 pt-0.5">
+        <div className="pt-0.5">
           <WcBracketUserCard
             row={myRow}
-            totalCount={totalCount}
             language={language}
             onClick={() => openDetail(myRow)}
+            onEditClick={
+              canReeditBracket && !inputOverlayOpen
+                ? () => setInputPageOpen(true)
+                : undefined
+            }
           />
-          {canReeditBracket && !inputOverlayOpen ? (
-            <button
-              type="button"
-              onClick={() => setInputPageOpen(true)}
-              className="w-full rounded-xl border border-cyan-400/35 bg-[#0a1528]/90 px-4 py-2.5 text-[13px] font-bold tracking-[0.04em] text-cyan-100 shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition hover:border-cyan-300/55 hover:bg-[#0f1d38]/95 active:scale-[0.99]"
-            >
-              {isJa ? "ブラケットを編集" : "Edit bracket"}
-            </button>
-          ) : null}
         </div>
       ) : null}
       {titleBlock}
@@ -374,7 +342,6 @@ export default function WcBracketLeaderboardSection({
             >
               <WcBracketUserCard
                 row={row}
-                totalCount={totalCount}
                 language={language}
                 onClick={() => openDetail(row)}
               />
@@ -556,7 +523,7 @@ export default function WcBracketLeaderboardSection({
 
                     <div
                       ref={overlayScrollRef}
-                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-4 pb-bottom-nav"
+                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pt-1 pb-bottom-nav"
                     >
                       {bracketLoading ? (
                         <div className="flex items-center justify-center py-16">
@@ -566,13 +533,13 @@ export default function WcBracketLeaderboardSection({
                         </div>
                       ) : overlayBracket ? (
                         <>
-                          <WcFullBracketMobile
-                            bracket={overlayBracket}
-                            officialWinners={officialWinners}
-                            firstMissMatchId={overlayFirstMiss}
-                            language={language}
-                            showGlassShell={false}
-                          />
+                          <div className="relative z-20 border-t border-white/10 px-2 pt-1">
+                            <WcBracketTreeInput
+                              bracket={overlayBracket}
+                              advancement={WC_DEMO_KNOCKOUT_ADVANCEMENT}
+                              language={language}
+                            />
+                          </div>
                           {isMobile ? (
                             <div className="mt-6 flex w-full justify-end px-3 pb-2">
                               <button

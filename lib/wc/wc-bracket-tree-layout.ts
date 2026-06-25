@@ -121,7 +121,7 @@ export const WC_TREE_CHAMPION_CARD_W = 120;
 export const WC_TREE_CHAMPION_CARD_H = 54;
 /** 王冠 + CHAMPION ラベル（カード上にはみ出す高さ） */
 export const WC_TREE_CHAMPION_CARD_LABEL_OVERHANG = 38;
-export const WC_TREE_PODIUM_CARD_TOP_Y = 36;
+export const WC_TREE_PODIUM_CARD_TOP_Y = 28;
 /** SF→決勝の縦線が到達する Y（カード下端） */
 export const WC_TREE_PODIUM_CONNECTOR_Y =
   WC_TREE_PODIUM_CARD_TOP_Y + WC_TREE_CHAMPION_CARD_H;

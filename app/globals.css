@@ -5292,3 +5292,52 @@ body::before {
   background: rgba(255, 255, 255, 0.06);
 }
 
+/* WC ブラケット — リーダーボード行（黒地 + シアン外枠） */
+button.wc-bracket-user-card,
+div.wc-bracket-user-card {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.5px solid #00f5ff;
+  background: #000000;
+  box-shadow:
+    0 0 6px rgba(0, 245, 255, 0.28),
+    0 0 12px rgba(0, 245, 255, 0.1),
+    inset 0 1px 0 rgba(0, 245, 255, 0.28);
+}
+
+button.wc-bracket-user-card--out,
+div.wc-bracket-user-card--out {
+  border: 1.5px solid rgba(255, 255, 255, 0.34);
+  background: #050505;
+  box-shadow:
+    0 0 4px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+button.wc-bracket-user-card--interactive,
+div.wc-bracket-user-card--interactive {
+  cursor: default;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+button.wc-bracket-user-card--interactive:hover,
+div.wc-bracket-user-card--interactive:hover {
+  border-color: #4dfbff;
+  background: #020608;
+  box-shadow:
+    0 0 8px rgba(0, 245, 255, 0.38),
+    0 0 16px rgba(0, 245, 255, 0.14),
+    inset 0 1px 0 rgba(0, 245, 255, 0.35);
+}
+
+button.wc-bracket-user-card--interactive:active,
+div.wc-bracket-user-card--interactive:active {
+  transform: scale(0.995);
+}

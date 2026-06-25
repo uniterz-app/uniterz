@@ -108,14 +108,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "season", "order": "ASCENDING" },
-        { "fieldPath": "__name__", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "playoffBrackets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "season", "order": "ASCENDING" },
         { "fieldPath": "totalScore", "order": "DESCENDING" }
       ]
     },
@@ -144,11 +136,6 @@
         { "fieldPath": "season", "order": "ASCENDING" },
         { "fieldPath": "survivalRankKey", "order": "DESCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "badges",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [{ "fieldPath": "badgeId", "order": "ASCENDING" }]
     }
   ],
   "fieldOverrides": []
