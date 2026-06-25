@@ -8,9 +8,9 @@ import {
 } from "react-native-reanimated";
 import {
   RANKINGS_CROWN_DURATION_MS,
-  RANKINGS_CROWN_DELAY_MS,
   RANKINGS_CROWN_FROM_SCALE,
   RANKINGS_CROWN_FROM_Y,
+  rankingsCrownDelayMs,
   rankingsCrownEase,
 } from "./rankingsMotion";
 
@@ -35,22 +35,23 @@ export function useRankingsCrownEntrance(
     opacity.value = 0;
     translateY.value = RANKINGS_CROWN_FROM_Y;
     scale.value = RANKINGS_CROWN_FROM_SCALE;
+    const crownDelayMs = rankingsCrownDelayMs();
     opacity.value = withDelay(
-      RANKINGS_CROWN_DELAY_MS,
+      crownDelayMs,
       withTiming(1, {
         duration: RANKINGS_CROWN_DURATION_MS,
         easing: rankingsCrownEase,
       })
     );
     translateY.value = withDelay(
-      RANKINGS_CROWN_DELAY_MS,
+      crownDelayMs,
       withTiming(0, {
         duration: RANKINGS_CROWN_DURATION_MS,
         easing: rankingsCrownEase,
       })
     );
     scale.value = withDelay(
-      RANKINGS_CROWN_DELAY_MS,
+      crownDelayMs,
       withTiming(1, {
         duration: RANKINGS_CROWN_DURATION_MS,
         easing: rankingsCrownEase,
