@@ -5341,3 +5341,25 @@ button.wc-bracket-user-card--interactive:active,
 div.wc-bracket-user-card--interactive:active {
   transform: scale(0.995);
 }
+
+/* WC チャンピオンカード — 国旗を内包するサイバー枠 */
+.wc-champion-card {
+  border: 1.5px solid rgba(0, 245, 255, 0.82);
+  background:
+    linear-gradient(180deg, rgba(0, 245, 255, 0.1) 0%, rgba(0, 0, 0, 0.92) 38%),
+    #030508;
+  box-shadow:
+    0 0 10px rgba(0, 245, 255, 0.38),
+    0 0 22px rgba(0, 245, 255, 0.14),
+    inset 0 0 0 1px rgba(0, 245, 255, 0.22),
+    inset 0 1px 0 rgba(0, 245, 255, 0.35);
+}
+
+.wc-champion-card__inner {
+  width: 96px;
+  height: 64px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.22),
+    inset 0 0 18px rgba(0, 245, 255, 0.08);
+}

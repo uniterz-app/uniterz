@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import CountryFlag from "@/app/component/games/CountryFlag";
 import type { WcBracketPredictMatchId } from "@/lib/wc/wc-knockout-bracket";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
-import { WC_BRACKET_PREDICT_MATCH_IDS } from "@/lib/wc/wc-knockout-bracket";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
 import { getWcTreeSfFinalistSlots } from "@/lib/wc/wc-knockout-bracket-utils";
 import { buildWcInputMatchView } from "@/lib/wc/wc-bracket-input-display";
@@ -25,9 +23,6 @@ import {
   WC_TREE_CHAMPION_CARD_LABEL_OVERHANG,
   WC_TREE_PODIUM_CARD_TOP_Y,
   WC_TREE_PODIUM_CONNECTOR_Y,
-  WC_TREE_PODIUM_FLAG_H,
-  WC_TREE_PODIUM_FLAG_W,
-  WC_TREE_PODIUM_WINNER_Y,
   wcTreeConnectorMidX,
   wcTreeQfY,
   wcTreeR16Y,
@@ -42,7 +37,7 @@ import {
 import WcBracketTreeFlagPair, {
   WcBracketTreeWinnerFlag,
 } from "@/app/component/predict/wc/WcBracketTreeFlagPair";
-import ChampionCard from "@/app/component/predict/shared/ChampionCardMobile";
+import WcChampionCard from "@/app/component/predict/wc/WcChampionCard";
 import type { Language } from "@/lib/i18n/language";
 
 type Props = {
@@ -145,34 +140,6 @@ function WinnerFlagAt({
   );
 }
 
-function AdvanceFlag({
-  teamId,
-  x,
-  y,
-  large = false,
-}: {
-  teamId: string;
-  x: number;
-  y: number;
-  large?: boolean;
-}) {
-  const w = large ? WC_TREE_PODIUM_FLAG_W : WC_TREE_FLAG_W;
-  const h = large ? WC_TREE_PODIUM_FLAG_H : WC_TREE_FLAG_H;
-
-  return (
-    <div
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[2px]"
-      style={{ left: x, top: y, width: w, height: h }}
-    >
-      <CountryFlag
-        teamId={teamId}
-        variant="inline"
-        className="block! h-full! w-full! ring-0!"
-      />
-    </div>
-  );
-}
-
 /** トーナメント表（表示専用・国旗のみ） */
 export default function WcBracketTreeInput({
   bracket,
@@ -180,7 +147,6 @@ export default function WcBracketTreeInput({
   language = "ja",
   className = "",
 }: Props) {
-  const isJa = language === "ja";
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [wrapWidth, setWrapWidth] = useState(0);
 
@@ -197,14 +163,6 @@ export default function WcBracketTreeInput({
   const viewScale = wrapWidth ? wrapWidth / WC_TREE_DESIGN_W : 1;
   const crownPad = WC_TREE_CHAMPION_CARD_LABEL_OVERHANG * viewScale * 0.88;
   const scaledHeight = WC_TREE_DESIGN_H * viewScale + crownPad + 2;
-
-  const pickedCount = useMemo(
-    () =>
-      WC_BRACKET_PREDICT_MATCH_IDS.filter((id) =>
-        Boolean(bracket[id]?.winner?.trim())
-      ).length,
-    [bracket]
-  );
 
   const leftR32 = wcLeftR32MatchIds();
   const rightR32 = wcRightR32MatchIds();
@@ -434,25 +392,9 @@ export default function WcBracketTreeInput({
                 top: WC_TREE_PODIUM_CARD_TOP_Y,
               }}
             >
-              <ChampionCard teamId={champion} league="wc" hitStatus="none" />
+              <WcChampionCard teamId={champion} />
             </div>
           ) : null}
-
-          {champion ? (
-            <AdvanceFlag
-              teamId={champion}
-              x={WC_TREE_COL.center}
-              y={WC_TREE_PODIUM_WINNER_Y}
-              large
-            />
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-1 flex justify-center px-1">
-        <div className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-0.5 text-[11px] font-bold text-emerald-200">
-          {pickedCount}/{WC_BRACKET_PREDICT_MATCH_IDS.length}
-          {isJa ? " 試合" : " picks"}
         </div>
       </div>
     </div>
