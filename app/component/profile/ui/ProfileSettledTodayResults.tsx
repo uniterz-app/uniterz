@@ -24,7 +24,7 @@ type Props = {
 };
 
 /** モバイルプロフィールで「今日の確定」に載せる上限（Safari のメモリ対策） */
-const MOBILE_SETTLED_TODAY_MAX = 4;
+const MOBILE_SETTLED_TODAY_MAX = 6;
 
 export default function ProfileSettledTodayResults({
   uid,
