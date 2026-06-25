@@ -269,7 +269,7 @@ export default function MobileRankingsPage() {
           </div>
 
           <div className="space-y-0.5">
-            {rankingLeague === "nba" || rankingLeague === "worldcup" ? (
+            {rankingLeague === "nba" ? (
               <RankingsCategoryTabs
                 category={category}
                 onChange={setCategory}
