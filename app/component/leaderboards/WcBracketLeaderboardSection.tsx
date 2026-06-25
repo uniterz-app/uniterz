@@ -18,6 +18,7 @@ import useWcBracketLeaderboard, {
   type WcBracketLeaderboardRow,
 } from "@/lib/leaderboards/useWcBracketLeaderboard";
 import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
+import { isWcKnockoutBracketSubmissionOpen } from "@/lib/wc/wc-knockout-config";
 import {
   createWcBracket,
   loadWcBracket,
@@ -53,6 +54,7 @@ export default function WcBracketLeaderboardSection({
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const season = propSeason ?? WC_KNOCKOUT_SEASON;
+  const submissionOpen = isWcKnockoutBracketSubmissionOpen(season);
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
   const { loading, error, rows, myRow, totalCount, refetch } =
     useWcBracketLeaderboard({
@@ -115,7 +117,7 @@ export default function WcBracketLeaderboardSection({
   const { language } = useUserLanguage(uid);
   const isJa = language === "ja";
 
-  const showInputGate = !savedLoading && !hasSubmitted;
+  const showInputGate = submissionOpen && !savedLoading && !hasSubmitted;
 
   useEffect(() => {
     if (!showInputGate) {
@@ -247,6 +249,7 @@ export default function WcBracketLeaderboardSection({
   );
 
   const handleSubmitConfirm = useCallback(async () => {
+    if (!submissionOpen) return;
     if (!uid) {
       setSubmitError(isJa ? "ログインが必要です" : "Sign in required");
       return;
@@ -273,7 +276,7 @@ export default function WcBracketLeaderboardSection({
     } finally {
       setSubmitting(false);
     }
-  }, [uid, draftBracket, season, refetch, isJa]);
+  }, [uid, draftBracket, season, refetch, isJa, submissionOpen]);
 
   const titleDisplay = useScrambleDecode("WC BRACKET", true);
 
