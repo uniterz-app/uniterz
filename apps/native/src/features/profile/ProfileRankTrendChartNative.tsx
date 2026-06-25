@@ -2,14 +2,9 @@
  * Web `ProfilePlayoffRankTrendChart`（Ranking Progress）に準拠。
  */
 import { useMemo, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  LayoutChangeEvent,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+  LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Canvas, Circle, Group, Path, Skia } from "@shopify/react-native-skia";
@@ -394,7 +389,7 @@ export default function ProfileRankTrendChartNative({
     trendSummary.currentRank >= 1 &&
     trendSummary.currentRank <= 20;
 
-  const openInfo = () => Alert.alert(title, chartInfoTooltipMsg);
+  const openInfo = () => cyberAlert(title, chartInfoTooltipMsg);
 
   if (rowW <= 0) {
     return (

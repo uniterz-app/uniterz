@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Alert,
-  Linking,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
+  Linking, Platform, Pressable, StyleSheet, Switch, Text, View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -126,7 +120,7 @@ export default function NotificationSettingsScreenNative() {
       const token = await registerNativePushTokenFlow();
       await refreshPermission();
       if (!token && permission !== "granted") {
-        Alert.alert(
+        cyberAlert(
           "",
           isJa
             ? "通知を許可できませんでした。システム設定から変更できます。"
@@ -142,7 +136,7 @@ export default function NotificationSettingsScreenNative() {
     try {
       await Linking.openSettings();
     } catch {
-      Alert.alert(
+      cyberAlert(
         "",
         isJa ? "設定アプリを開けませんでした。" : "Could not open settings."
       );

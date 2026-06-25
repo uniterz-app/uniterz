@@ -60,6 +60,7 @@ import {
   canDismissResultListPostNow,
   flattenResultDayGroups,
   isFinalResultPost,
+  mergeResultDayPostsByKickoff,
   pruneDismissedResultListPostIds,
   RESULT_LIST_LEAGUE_TABS,
   RESULT_POSTS_MAX_CACHED,

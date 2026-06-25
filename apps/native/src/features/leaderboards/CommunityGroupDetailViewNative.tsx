@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { Language } from "../../../../../lib/i18n/language";
@@ -116,7 +111,7 @@ export default function CommunityGroupDetailViewNative({
     const entry = await fetchCommunityGroupDetail(groupId, getIdToken);
     if (!entry) {
       if (!cached && !listPreview) {
-        Alert.alert("", language === "en" ? "Load failed." : "読み込みに失敗しました。");
+        cyberAlert("", language === "en" ? "Load failed." : "読み込みに失敗しました。");
       }
       setLoadingDetail(false);
       setLoadingRows(false);
@@ -174,7 +169,7 @@ export default function CommunityGroupDetailViewNative({
     const code = summary?.inviteCode;
     if (!code) return;
     const ok = await copyTextNative(code);
-    Alert.alert(
+    cyberAlert(
       "",
       ok
         ? language === "en"
@@ -200,7 +195,7 @@ export default function CommunityGroupDetailViewNative({
   }, [summary?.inviteCode, summary?.name, language, t.shareInvite]);
 
   const onLeave = useCallback(async () => {
-    Alert.alert(
+    cyberAlert(
       "",
       language === "en" ? "Leave this group?" : "このグループから退会しますか？",
       [
@@ -218,10 +213,10 @@ export default function CommunityGroupDetailViewNative({
               });
               const json = await res.json().catch(() => ({}));
               if (!res.ok || !json?.ok) {
-                Alert.alert("", String(json?.error ?? "failed"));
+                cyberAlert("", String(json?.error ?? "failed"));
                 return;
               }
-              Alert.alert("", language === "en" ? "Left group." : "退会しました。");
+              cyberAlert("", language === "en" ? "Left group." : "退会しました。");
               invalidateCommunityGroupDetail(groupId);
               onExitAction?.();
             })();

@@ -1,16 +1,8 @@
 /** Web グループ編集 — 名前・説明・ヘッダー画像 */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -117,7 +109,7 @@ export default function CommunityEditGroupModalNative({
   const pickImage = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("", language === "en" ? "Photo access is required." : "写真へのアクセスが必要です。");
+      cyberAlert("", language === "en" ? "Photo access is required." : "写真へのアクセスが必要です。");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -164,10 +156,10 @@ export default function CommunityEditGroupModalNative({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        Alert.alert("", String(json?.error ?? t.failed));
+        cyberAlert("", String(json?.error ?? t.failed));
         return;
       }
-      Alert.alert("", t.saved);
+      cyberAlert("", t.saved);
       onSaved();
       onClose();
     } finally {

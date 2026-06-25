@@ -46,6 +46,21 @@ export default function PredictOverlayActionFabNative({
 
   if (!hasFlyout) return null;
 
+  // 予想前など close のみ — ハンバーガーではなく × だけ
+  if (hasClose && !hasShare && !hasEdit) {
+    return (
+      <View style={styles.root} pointerEvents="box-none">
+        <CyberChamferButtonNative
+          size="xs"
+          embedded
+          variant="close"
+          onPress={() => onClose?.()}
+          accessibilityLabel={closeLabel}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root} pointerEvents="box-none">
       <CornerMenuClusterNative

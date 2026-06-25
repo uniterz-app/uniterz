@@ -1,11 +1,7 @@
 import { useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Pressable, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigation } from "@react-navigation/native";
@@ -26,14 +22,14 @@ export default function LoginScreenNative() {
     if (submitting) return;
     const normalized = email.trim().toLowerCase();
     if (!normalized || !password) {
-      Alert.alert("Missing input", "Please enter both email and password.");
+      cyberAlert("Missing input", "Please enter both email and password.");
       return;
     }
     setSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, normalized, password);
     } catch (e) {
-      Alert.alert("Authentication error", mapAuthErrorMessage(e, "login"));
+      cyberAlert("Authentication error", mapAuthErrorMessage(e, "login"));
     } finally {
       setSubmitting(false);
     }

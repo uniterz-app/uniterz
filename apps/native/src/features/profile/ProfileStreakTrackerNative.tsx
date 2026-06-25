@@ -2,14 +2,9 @@
  * Web `StreakTrackerCard`（Last20 Tracker）に準拠したネイティブ版。
  */
 import { useMemo, useState, type ReactNode } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  LayoutChangeEvent,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+  LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { STREAK_TRACKER_LAST_N, type StreakTrackerPointNative } from "./useNativeStreakTracker";
@@ -151,7 +146,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   const halfH = PLOT_H / 2;
   const blockH = Math.max(2, (halfH - (maxAbs - 1) * BLOCK_GAP_PX) / maxAbs);
 
-  const openInfo = () => Alert.alert(title, subtitle);
+  const openInfo = () => cyberAlert(title, subtitle);
 
   if (loading) {
     return (

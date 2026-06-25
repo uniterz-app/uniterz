@@ -1,12 +1,7 @@
 import { useState } from "react";
+import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
@@ -53,11 +48,11 @@ export default function ProfilePasswordScreenNative() {
     const user = auth.currentUser;
     if (!user?.email) return;
     if (next.length < 6) {
-      Alert.alert("", labels.minLen);
+      cyberAlert("", labels.minLen);
       return;
     }
     if (next !== confirm) {
-      Alert.alert("", labels.mismatch);
+      cyberAlert("", labels.mismatch);
       return;
     }
     setSaving(true);
@@ -65,10 +60,10 @@ export default function ProfilePasswordScreenNative() {
       const cred = EmailAuthProvider.credential(user.email, current);
       await reauthenticateWithCredential(user, cred);
       await updatePassword(user, next);
-      Alert.alert("", labels.ok);
+      cyberAlert("", labels.ok);
       navigation.goBack();
     } catch {
-      Alert.alert("", labels.err);
+      cyberAlert("", labels.err);
     } finally {
       setSaving(false);
     }

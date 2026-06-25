@@ -1,22 +1,17 @@
 /**
- * wc-2026-L-pan-hrv（パナマ 0–1 クロアチア）の goalScorers を Firestore に投入。
+ * wc-2026-B-che-can（スイス 2–1 カナダ）の goalScorers を Firestore に投入。
  *
  * 得点:
- *   54' アンテ・ブディミル（クロアチア）
+ *   46'  ルベン・バルガス（スイス）— che-vargas
+ *   57'  ヨハン・マンザンビ（スイス）— che-manzambi
+ *   76'  プロミス・デイビッド（カナダ）— can-david-2
  *
  * 前提: プロジェクトルートに service-account.json または serviceAccount.json
  *
- *   npx tsx scripts/set-wc-goal-scorers-pan-hrv.ts --dry-run
- *   npx tsx scripts/set-wc-goal-scorers-pan-hrv.ts
- *   npx tsx scripts/set-wc-goal-scorers-pan-hrv.ts --with-score
- *   npx tsx scripts/set-wc-goal-scorers-pan-hrv.ts --with-score --resettle
- *   npx tsx scripts/set-wc-goal-scorers-pan-hrv.ts --force
- *
- * オプション:
- *   --dry-run     書き込まず内容を表示
- *   --with-score  homeScore/awayScore/final/status も更新（0–1 確定）
- *   --resettle    精算済み投稿のゴールスコアラーボーナスを再計算（試合が final のとき）
- *   --force       既存 goalScorers があっても上書き
+ *   npx tsx scripts/set-wc-goal-scorers-che-can.ts --dry-run
+ *   npx tsx scripts/set-wc-goal-scorers-che-can.ts --with-score
+ *   npx tsx scripts/set-wc-goal-scorers-che-can.ts --with-score --resettle
+ *   npx tsx scripts/set-wc-goal-scorers-che-can.ts --force
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -30,10 +25,12 @@ import { resettleWcGoalScorerBonusesForGame } from "@/lib/wc/resettleGoalScorerB
 
 const admin = adminPkg as typeof import("firebase-admin");
 
-const DEFAULT_GAME_ID = "wc-2026-L-pan-hrv";
+const DEFAULT_GAME_ID = "wc-2026-B-che-can";
 
 const GOAL_SCORERS: WcGameGoalScorer[] = [
-  { playerId: "hrv-budimir", teamId: "wc-hrv", minute: 54 },
+  { playerId: "che-vargas", teamId: "wc-che", minute: 46 },
+  { playerId: "che-manzambi", teamId: "wc-che", minute: 57 },
+  { playerId: "can-david-2", teamId: "wc-can", minute: 76 },
 ];
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -133,18 +130,18 @@ function payloadFromScorers(scorers: WcGameGoalScorer[]) {
   };
 
   if (WITH_SCORE) {
-    patch.homeScore = 0;
+    patch.homeScore = 2;
     patch.awayScore = 1;
     patch.final = true;
     patch.status = "final";
-    patch.score = { home: 0, away: 1 };
+    patch.score = { home: 2, away: 1 };
     patch.pushNotifiedFinalAt = FieldValue.delete();
   }
 
   console.log("home:", homeTeamId, "away:", awayTeamId);
   console.log("goalScorers:", JSON.stringify(goalScorersPayload, null, 2));
   if (WITH_SCORE) {
-    console.log("score: 0 - 1, final: true");
+    console.log("score: 2 - 1, final: true");
   }
 
   if (!DRY_RUN) {
@@ -175,7 +172,7 @@ function payloadFromScorers(scorers: WcGameGoalScorer[]) {
   if (DRY_RUN) {
     console.log("\n本番反映:");
     console.log(
-      "  npx tsx scripts/set-wc-goal-scorers-pan-hrv.ts --with-score --resettle --force"
+      "  npx tsx scripts/set-wc-goal-scorers-che-can.ts --with-score --resettle"
     );
   }
 

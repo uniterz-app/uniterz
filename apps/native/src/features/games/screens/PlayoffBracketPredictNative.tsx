@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+  Modal, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
@@ -199,19 +194,19 @@ export default function PlayoffBracketPredictNative() {
 
   function handleOpenSubmitModal() {
     if (!fUser?.uid) {
-      Alert.alert("", t.alertLoginRequired);
+      cyberAlert("", t.alertLoginRequired);
       return;
     }
     if (!allowSubmission) {
-      Alert.alert("", t.alertSubmissionLockedBySeeding);
+      cyberAlert("", t.alertSubmissionLockedBySeeding);
       return;
     }
     if (pastDeadline) {
-      Alert.alert("", t.alertSubmissionClosedByDeadline);
+      cyberAlert("", t.alertSubmissionClosedByDeadline);
       return;
     }
 
-    Alert.alert(t.submitTitle, `${t.submitLine1}\n${t.submitLine2}\n${t.submitLine3}`, [
+    cyberAlert(t.submitTitle, `${t.submitLine1}\n${t.submitLine2}\n${t.submitLine3}`, [
       { text: t.submitCancel, style: "cancel" },
       { text: t.submitConfirm, onPress: () => void handleSubmit() },
     ]);
@@ -220,11 +215,11 @@ export default function PlayoffBracketPredictNative() {
   async function handleSubmit() {
     if (!fUser?.uid || !isComplete || submitting) return;
     if (!allowSubmission) {
-      Alert.alert("", t.alertSubmissionLockedBySeeding);
+      cyberAlert("", t.alertSubmissionLockedBySeeding);
       return;
     }
     if (pastDeadline) {
-      Alert.alert("", t.alertSubmissionClosedByDeadline);
+      cyberAlert("", t.alertSubmissionClosedByDeadline);
       return;
     }
 
@@ -232,17 +227,17 @@ export default function PlayoffBracketPredictNative() {
       setSubmitting(true);
       const existing = await loadPlayoffBracket(fUser.uid, season);
       if (existing) {
-        Alert.alert("", t.alertAlreadySubmitted);
+        cyberAlert("", t.alertAlreadySubmitted);
         setHasSubmittedBracket(true);
         return;
       }
 
       await createPlayoffBracket(fUser.uid, bracket, season);
       setHasSubmittedBracket(true);
-      Alert.alert("", t.alertSubmittedOk);
+      cyberAlert("", t.alertSubmittedOk);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.alertSubmitFailed;
-      Alert.alert("", msg);
+      cyberAlert("", msg);
     } finally {
       setSubmitting(false);
     }

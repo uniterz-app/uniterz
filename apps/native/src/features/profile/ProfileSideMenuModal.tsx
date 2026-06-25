@@ -2,18 +2,9 @@
  * Web `SideMenuDrawer` + `SettingsMenu`（モバイル相当）に準拠したサイドメニュー。
  */
 import { useEffect, useRef, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Animated,
-  Dimensions,
-  Easing,
-  Linking,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+  Animated, Dimensions, Easing, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { signOut } from "firebase/auth";
@@ -184,7 +175,7 @@ export default function ProfileSideMenuModal({
 
   function web(path: string) {
     if (!apiBase) {
-      Alert.alert("", labels.needBase);
+      cyberAlert("", labels.needBase);
       return;
     }
     openUrl(`${apiBase}${path}`);

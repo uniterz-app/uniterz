@@ -1,14 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Alert,
-  Image,
-  Platform,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-  type ViewStyle,
+  Image, Platform, Pressable, Share, StyleSheet, Text, View, type ViewStyle,
 } from "react-native";
 import type { ProfileEditKinetikStats } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import type { ProfileEditTronIdentity } from "../../../../../../app/component/profile/edit/profileEditTronTypes";
@@ -305,7 +298,7 @@ function KinetikHeaderTabsNative({
   const showTagExplanation = useCallback(
     (message: string) => {
       const [title, ...rest] = message.split("\n");
-      Alert.alert(title, rest.join("\n").trim() || undefined);
+      cyberAlert(title, rest.join("\n").trim() || undefined);
     },
     []
   );

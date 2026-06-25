@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  type LayoutChangeEvent,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+  type LayoutChangeEvent, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
@@ -355,7 +347,7 @@ export function PredictMatchPreview({
         appBaseUrl: getShareAppOrigin(),
       });
       if (shareOutcome === "failed") {
-        Alert.alert("", resultCopy.shareResultCardFailed);
+        cyberAlert("", resultCopy.shareResultCardFailed);
       }
     } finally {
       setSharing(false);
@@ -958,7 +950,21 @@ export default function PredictModal({
       setLayersVisible(true);
       setExitingUi(false);
       closeAnimLockRef.current = false;
+      if (closeAnimTimerRef.current) {
+        clearTimeout(closeAnimTimerRef.current);
+        closeAnimTimerRef.current = null;
+      }
+      return;
     }
+    // 送信成功など親が即 visible=false — 透明 Modal がタッチを吸い続けるのを防ぐ
+    setLayersVisible(false);
+    setExitingUi(false);
+    closeAnimLockRef.current = false;
+    if (closeAnimTimerRef.current) {
+      clearTimeout(closeAnimTimerRef.current);
+      closeAnimTimerRef.current = null;
+    }
+    Keyboard.dismiss();
   }, [visible]);
 
   useEffect(() => {
@@ -1085,7 +1091,11 @@ export default function PredictModal({
       onRequestClose={scheduleCloseAfterExitAnimation}
     >
       {modalChromeVisible ? (
-        <View style={s.root} key="predict-modal-mounted">
+        <View
+          style={s.root}
+          key="predict-modal-mounted"
+          pointerEvents={layersVisible ? "auto" : "none"}
+        >
           {layersVisible ? (
             <>
           <Animated.View

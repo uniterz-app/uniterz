@@ -3,9 +3,9 @@
  * リザルト一覧からその場でスコア修正できるようにする。
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { cyberAlert } from "../../components/cyberAlert";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import CyberGlassToastModal from "../../components/CyberGlassToastModal";
 import { Timestamp, doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import {
@@ -40,6 +40,7 @@ import {
   PredictionApiError,
   updatePredictionPostApi,
 } from "../games/submitPredictionApi";
+import { scheduleAfterPredictModalDismissed } from "../games/scheduleAfterPredictModalDismissed";
 import {
   readEditModeHintShown,
   writeEditModeHintShown,
@@ -179,11 +180,6 @@ export default function ResultPredictEditModal({
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
   const [predictSubmitting, setPredictSubmitting] = useState(false);
-  /** 予想更新成功のカスタムオーバーレイ（システム Alert の代わり） */
-  const [postUpdateSuccess, setPostUpdateSuccess] = useState<{
-    title: string;
-    message: string;
-  } | null>(null);
 
   const resetLocalForm = useCallback(() => {
     setPredictToolsTab(null);
@@ -200,7 +196,6 @@ export default function ResultPredictEditModal({
       resetLocalForm();
       return;
     }
-    setPostUpdateSuccess(null);
     const gameId =
       typeof post.gameId === "string" && post.gameId.length > 0 ? post.gameId : null;
     if (!gameId) {
@@ -248,7 +243,7 @@ export default function ResultPredictEditModal({
       try {
         const hintSeen = await readEditModeHintShown();
         if (!hintSeen) {
-          Alert.alert(t.editModeTitle, t.editModeBody);
+          cyberAlert(t.editModeTitle, t.editModeBody);
           await writeEditModeHintShown();
         }
       } catch {
@@ -563,11 +558,11 @@ export default function ResultPredictEditModal({
   const handleSubmit = useCallback(async () => {
     if (!game || !fUser || !post) return;
     if (scoreHome.trim() === "" || scoreAway.trim() === "") {
-      Alert.alert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
+      cyberAlert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
       return;
     }
     if (!winner) {
-      Alert.alert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
+      cyberAlert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
       return;
     }
     const homeNum = Number(scoreHome);
@@ -578,33 +573,33 @@ export default function ResultPredictEditModal({
       homeNum < 0 ||
       awayNum < 0
     ) {
-      Alert.alert(t.invalidInputTitle, t.invalidScoreBody);
+      cyberAlert(t.invalidInputTitle, t.invalidScoreBody);
       return;
     }
     if (!isSoccerPredict && winner === "draw") {
-      Alert.alert(t.invalidInputTitle, t.invalidDrawLeagueBody);
+      cyberAlert(t.invalidInputTitle, t.invalidDrawLeagueBody);
       return;
     }
     if (winner === "home" && homeNum <= awayNum) {
-      Alert.alert(t.invalidInputTitle, t.invalidHomeWinBody);
+      cyberAlert(t.invalidInputTitle, t.invalidHomeWinBody);
       return;
     }
     if (winner === "away" && awayNum <= homeNum) {
-      Alert.alert(t.invalidInputTitle, t.invalidAwayWinBody);
+      cyberAlert(t.invalidInputTitle, t.invalidAwayWinBody);
       return;
     }
     if (winner === "draw" && homeNum !== awayNum) {
-      Alert.alert(t.invalidInputTitle, t.invalidDrawScoreBody);
+      cyberAlert(t.invalidInputTitle, t.invalidDrawScoreBody);
       return;
     }
 
     if (!isPostPredictionEditableForViewer(post, fUser?.uid)) {
-      Alert.alert(t.submitLockedTitle, t.submitLockedBody);
+      cyberAlert(t.submitLockedTitle, t.submitLockedBody);
       return;
     }
 
     if (!getUniterzApiBaseUrl()) {
-      Alert.alert(t.apiBaseMissingTitle, t.apiBaseMissingBody);
+      cyberAlert(t.apiBaseMissingTitle, t.apiBaseMissingBody);
       return;
     }
 
@@ -617,11 +612,13 @@ export default function ResultPredictEditModal({
       });
       await AsyncStorage.removeItem(draftStorageKey(fUser.uid, String(game.id ?? "")));
       await onUpdated();
-      setPostUpdateSuccess({
-        title: language === "en" ? "Done" : "完了",
-        message: language === "en" ? "Prediction updated." : "予想を更新しました。",
-      });
       handleClose();
+      scheduleAfterPredictModalDismissed(() => {
+        cyberAlert(
+          language === "en" ? "Done" : "完了",
+          language === "en" ? "Prediction updated." : "予想を更新しました。"
+        );
+      });
     } catch (err) {
       const msg =
         err instanceof PredictionApiError
@@ -629,7 +626,7 @@ export default function ResultPredictEditModal({
           : language === "en"
             ? "Could not update."
             : "更新に失敗しました。";
-      Alert.alert(language === "en" ? "Error" : "エラー", msg);
+      cyberAlert(language === "en" ? "Error" : "エラー", msg);
     } finally {
       setPredictSubmitting(false);
     }
@@ -685,20 +682,10 @@ export default function ResultPredictEditModal({
       </Modal>
     ) : null;
 
-  const dismissPostSuccess = useCallback(() => {
-    setPostUpdateSuccess(null);
-  }, []);
-
   return (
     <>
       {loadingOverlay}
       {errorOverlay}
-      <CyberGlassToastModal
-        visible={postUpdateSuccess != null}
-        title={postUpdateSuccess?.title ?? ""}
-        message={postUpdateSuccess?.message ?? ""}
-        onDismiss={dismissPostSuccess}
-      />
       <PredictModal
         visible={predictModalVisible}
         matchPreview={predictModalMatchPreview}

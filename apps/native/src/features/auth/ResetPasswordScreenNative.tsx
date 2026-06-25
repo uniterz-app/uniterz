@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput } from "react-native";
+import { cyberAlert } from "../../components/cyberAlert";
+import { Pressable, StyleSheet, Text, TextInput } from "react-native";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,19 +17,19 @@ export default function ResetPasswordScreenNative() {
   async function handleReset() {
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
-      Alert.alert("Missing input", "Please enter your email address.");
+      cyberAlert("Missing input", "Please enter your email address.");
       return;
     }
     setSubmitting(true);
     try {
       await sendPasswordResetEmail(auth, normalized);
-      Alert.alert(
+      cyberAlert(
         "Reset link sent",
         "If this email is registered, we sent a reset link."
       );
       navigation.navigate("Login");
     } catch {
-      Alert.alert(
+      cyberAlert(
         "Reset link sent",
         "If this email is registered, we sent a reset link."
       );

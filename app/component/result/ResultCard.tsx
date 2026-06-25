@@ -16,7 +16,7 @@ import { resultCardFlyoutButtonClasses } from "@/lib/ui/cyberMenuButton";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
-import { splitTeamNameByLeague, joinTeamNameLines } from "@/lib/team-name-split";
+import { splitTeamNameByLeague, splitWcCountryNameForMobileList } from "@/lib/team-name-split";
 import {
   getTeamPrimaryColor,
   getTeamJerseyPrimaryColor,
@@ -93,6 +93,35 @@ export type ResultCardPresentationProps = Props & {
   /** 3D テーブル配置時など、一覧の日付グループと揃えたラベルを出す */
   listDateLabel?: string;
 };
+
+/** Web 試合カード `renderWcMobileDenseTeamName` と同じ — 長い WC 国名のみ 2 行 */
+function renderWcResultTeamName(
+  fullName: string,
+  textClass: string,
+  fontStyle: React.CSSProperties
+) {
+  const split = splitWcCountryNameForMobileList(fullName.trim().toUpperCase());
+  if (!split.singleLine) {
+    return (
+      <>
+        <span className={`block font-bold ${textClass}`} style={fontStyle}>
+          {split.line1}
+        </span>
+        <span className={`block font-bold ${textClass}`} style={fontStyle}>
+          {split.line2}
+        </span>
+      </>
+    );
+  }
+  return (
+    <span
+      className={`block whitespace-nowrap font-bold ${textClass}`}
+      style={fontStyle}
+    >
+      {split.text}
+    </span>
+  );
+}
 
 function ResultCardPresentationImpl({
   post,
@@ -592,12 +621,11 @@ function ResultCardPresentationImpl({
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
                 >
-                  <span
-                    className={`block max-w-full whitespace-nowrap font-bold ${wcNameTextClass}`}
-                    style={displayTeamNameFont}
-                  >
-                    {joinTeamNameLines(homeL1, homeL2)}
-                  </span>
+                  {renderWcResultTeamName(
+                    post.home?.name ?? "",
+                    wcNameTextClass,
+                    displayTeamNameFont
+                  )}
                 </div>
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
@@ -668,12 +696,11 @@ function ResultCardPresentationImpl({
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
                 >
-                  <span
-                    className={`block whitespace-nowrap font-bold ${wcNameTextClass}`}
-                    style={displayTeamNameFont}
-                  >
-                    {joinTeamNameLines(homeL1, homeL2)}
-                  </span>
+                  {renderWcResultTeamName(
+                    post.home?.name ?? "",
+                    wcNameTextClass,
+                    displayTeamNameFont
+                  )}
                 </div>
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
@@ -725,12 +752,11 @@ function ResultCardPresentationImpl({
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
                 >
-                  <span
-                    className={`block max-w-full whitespace-nowrap font-bold ${wcNameTextClass}`}
-                    style={displayTeamNameFont}
-                  >
-                    {joinTeamNameLines(awayL1, awayL2)}
-                  </span>
+                  {renderWcResultTeamName(
+                    post.away?.name ?? "",
+                    wcNameTextClass,
+                    displayTeamNameFont
+                  )}
                 </div>
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
@@ -801,12 +827,11 @@ function ResultCardPresentationImpl({
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
                 >
-                  <span
-                    className={`block whitespace-nowrap font-bold ${wcNameTextClass}`}
-                    style={displayTeamNameFont}
-                  >
-                    {joinTeamNameLines(awayL1, awayL2)}
-                  </span>
+                  {renderWcResultTeamName(
+                    post.away?.name ?? "",
+                    wcNameTextClass,
+                    displayTeamNameFont
+                  )}
                 </div>
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore

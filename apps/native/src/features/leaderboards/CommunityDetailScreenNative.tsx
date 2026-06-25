@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { cyberAlert } from "../../components/cyberAlert";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -49,11 +50,11 @@ export default function CommunityDetailScreenNative() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        Alert.alert("", String(json?.error ?? "failed"));
+        cyberAlert("", String(json?.error ?? "failed"));
         return;
       }
       setEndConfirmOpen(false);
-      Alert.alert("", language === "en" ? "Group ended." : "グループを終了しました。");
+      cyberAlert("", language === "en" ? "Group ended." : "グループを終了しました。");
       invalidateCommunityGroupDetail(groupId);
       navigation.goBack();
     } finally {

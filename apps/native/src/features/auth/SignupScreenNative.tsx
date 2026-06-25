@@ -1,11 +1,7 @@
 import { useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Pressable, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
@@ -27,11 +23,11 @@ export default function SignupScreenNative() {
     if (submitting) return;
     const normalized = email.trim().toLowerCase();
     if (!normalized || !password) {
-      Alert.alert("Missing input", "Please enter both email and password.");
+      cyberAlert("Missing input", "Please enter both email and password.");
       return;
     }
     if (password.length < 6) {
-      Alert.alert("Missing input", "Password must be at least 6 characters.");
+      cyberAlert("Missing input", "Password must be at least 6 characters.");
       return;
     }
     setSubmitting(true);
@@ -49,7 +45,7 @@ export default function SignupScreenNative() {
         { merge: true }
       );
     } catch (e) {
-      Alert.alert("Authentication error", mapAuthErrorMessage(e, "signup"));
+      cyberAlert("Authentication error", mapAuthErrorMessage(e, "signup"));
     } finally {
       setSubmitting(false);
     }

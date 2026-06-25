@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
@@ -103,37 +98,37 @@ export default function GamePredictScreenNative() {
   async function handleSubmit() {
     if (!game || !fUser?.uid) return;
     if (locked) {
-      Alert.alert(t.submitLockedTitle, t.submitLockedBody);
+      cyberAlert(t.submitLockedTitle, t.submitLockedBody);
       return;
     }
     if (!winner) {
-      Alert.alert(t.missingWinnerTitle, t.missingWinnerBody);
+      cyberAlert(t.missingWinnerTitle, t.missingWinnerBody);
       return;
     }
     if (scoreHome.trim() === "" || scoreAway.trim() === "") {
-      Alert.alert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
+      cyberAlert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
       return;
     }
     const h = Number(scoreHome);
     const a = Number(scoreAway);
     if (!Number.isFinite(h) || !Number.isFinite(a)) {
-      Alert.alert(t.invalidInputTitle, t.invalidScoreBody);
+      cyberAlert(t.invalidInputTitle, t.invalidScoreBody);
       return;
     }
     if (!isSoccer && winner === "draw") {
-      Alert.alert(t.invalidInputTitle, t.invalidDrawLeagueBody);
+      cyberAlert(t.invalidInputTitle, t.invalidDrawLeagueBody);
       return;
     }
     if (winner === "home" && h <= a) {
-      Alert.alert(t.invalidInputTitle, t.invalidHomeWinBody);
+      cyberAlert(t.invalidInputTitle, t.invalidHomeWinBody);
       return;
     }
     if (winner === "away" && a <= h) {
-      Alert.alert(t.invalidInputTitle, t.invalidAwayWinBody);
+      cyberAlert(t.invalidInputTitle, t.invalidAwayWinBody);
       return;
     }
     if (winner === "draw" && h !== a) {
-      Alert.alert(t.invalidInputTitle, t.invalidDrawScoreBody);
+      cyberAlert(t.invalidInputTitle, t.invalidDrawScoreBody);
       return;
     }
 
@@ -145,7 +140,7 @@ export default function GamePredictScreenNative() {
           scoreHome: h,
           scoreAway: a,
         });
-        Alert.alert("", t.updateDoneOnly);
+        cyberAlert("", t.updateDoneOnly);
       } else {
         await createPredictionPostApi({
           gameId,
@@ -153,7 +148,7 @@ export default function GamePredictScreenNative() {
           scoreHome: h,
           scoreAway: a,
         });
-        Alert.alert("", t.postDoneOnly);
+        cyberAlert("", t.postDoneOnly);
       }
       navigation.goBack();
     } catch (e) {
@@ -163,7 +158,7 @@ export default function GamePredictScreenNative() {
           : e instanceof Error
             ? e.message
             : t.postErrorBody;
-      Alert.alert(t.postErrorTitle, msg);
+      cyberAlert(t.postErrorTitle, msg);
     } finally {
       setSubmitting(false);
     }
