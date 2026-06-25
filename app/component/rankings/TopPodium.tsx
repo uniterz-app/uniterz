@@ -30,6 +30,11 @@ import {
 } from "@/app/component/rankings/CyberRankingListParts";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
 import { markRankingsCountUpIntroPlayed } from "@/lib/rankings/rankingsCountUpIntro";
+import {
+  podiumCrownDelayS,
+  podiumEntranceStepForRank,
+  podiumFirstPlaceGlowDelayS,
+} from "@/lib/rankings/podiumEntrance";
 
 export default function TopPodium({
   rows,
@@ -183,8 +188,26 @@ export default function TopPodium({
               variants={cardVariants}
               initial={motionOn ? "hidden" : "show"}
               animate="show"
-              custom={rank - 1}
+              custom={podiumEntranceStepForRank(rank)}
+              className="relative"
             >
+              {rank === 1 && motionOn ? (
+                <motion.div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-20"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 0.9, 0.42] }}
+                  transition={{
+                    delay: podiumFirstPlaceGlowDelayS(),
+                    duration: 0.72,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  style={{
+                    boxShadow:
+                      "inset 0 0 36px rgba(184,255,60,0.28), 0 0 28px rgba(255,214,90,0.22)",
+                  }}
+                />
+              ) : null}
               <Link
                 href={profileHref}
                 className="relative block"
@@ -228,7 +251,7 @@ export default function TopPodium({
                         transition={
                           motionOn
                             ? {
-                                delay: 0.48,
+                                delay: podiumCrownDelayS(),
                                 duration: 0.45,
                                 ease: [0.22, 1, 0.36, 1],
                               }

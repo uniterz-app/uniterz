@@ -1,7 +1,7 @@
 // app/component/common/SideMenuDrawer.tsx
 "use client";
 
-import React, { type ReactNode } from "react";
+import React, { type ReactNode, useEffect } from "react";
 import cn from "clsx";
 import { CyberSideMenuFrame } from "@/app/component/common/CyberSideMenuFrame";
 import SettingsMenu from "@/app/component/settings/SettingsMenu";
@@ -31,6 +31,20 @@ export default function SideMenuDrawer({
   children,
 }: SideMenuDrawerProps) {
   const isMobile = variant === "mobile";
+  const panelHeight = "min(92dvh, calc(100dvh - 2rem))";
+
+  useEffect(() => {
+    if (!open) return;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+    };
+  }, [open]);
+
   return (
     <>
       <style>{`
@@ -49,7 +63,7 @@ export default function SideMenuDrawer({
       `}</style>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/55 backdrop-blur-[3px] transition-opacity duration-250",
+          "fixed inset-0 z-40 touch-none bg-black/55 backdrop-blur-[3px] transition-opacity duration-250",
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
@@ -57,7 +71,7 @@ export default function SideMenuDrawer({
 
       <div
         className={cn(
-          "fixed left-0 top-0 z-50 flex max-h-[100dvh] flex-col py-4 pl-0 pr-3 sm:py-5 sm:pr-5",
+          "fixed left-0 top-0 z-50 flex h-[100dvh] max-h-[100dvh] flex-col py-4 pl-0 pr-3 sm:py-5 sm:pr-5",
           "transition-transform duration-300 ease-out",
           open ? (isMobile ? "-translate-x-4" : "-translate-x-2") : "-translate-x-full"
         )}
@@ -65,7 +79,7 @@ export default function SideMenuDrawer({
         <div
           className={cn(
             CYBER_SIDE_MENU_PANEL_CLASS,
-            "cyber-card relative max-h-[min(92dvh,calc(100dvh-3rem))] min-h-0 overflow-y-auto overflow-x-hidden",
+            "cyber-card relative flex min-h-0 flex-col overflow-hidden",
             isMobile
               ? "w-[46vw] min-w-[260px] max-w-[300px] -ml-2"
               : "w-[min(368px,32vw)]"
@@ -73,13 +87,15 @@ export default function SideMenuDrawer({
           style={{
             clipPath: CYBER_SIDE_MENU_CLIP,
             borderRadius: 0,
+            height: panelHeight,
+            maxHeight: panelHeight,
             animation: open
               ? "sideMenuPanelIn 0.32s cubic-bezier(0.2, 0.9, 0.2, 1) both"
               : undefined,
           }}
         >
           <CyberSideMenuFrame />
-          <div className="relative z-10">
+          <div className="relative z-10 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
             {children ?? (
               <SettingsMenu
                 onRequestCloseMenu={onClose}

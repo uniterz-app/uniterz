@@ -343,6 +343,37 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
+function ProfileKinetikIdentityIdChip({
+  systemId,
+  shareLabel,
+  shareCopiedLabel,
+  shareCopied,
+  onShare,
+}: {
+  systemId: string;
+  shareLabel: string;
+  shareCopiedLabel: string;
+  shareCopied: boolean;
+  onShare: () => void;
+}) {
+  if (!systemId) return null;
+
+  return (
+    <button
+      type="button"
+      className={[
+        "profile-edit-kinetik-footer-ref mt-1 inline-block max-w-full truncate transition",
+        "hover:text-white/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30",
+      ].join(" ")}
+      onClick={onShare}
+      aria-label={shareLabel}
+      title={shareCopied ? shareCopiedLabel : shareLabel}
+    >
+      {shareCopied ? shareCopiedLabel : `ID: ${systemId}`}
+    </button>
+  );
+}
+
 function ProfileKinetikIdentityMetaRow({
   memberSinceLabel,
   countryCode,
@@ -597,6 +628,7 @@ export default function ProfileEditKinetikPanel({
     activeRankDenominator >= 1;
   const metricsSectionTitle =
     metricsTitle ?? "WORLD CUP // GROUP STAGE STATS";
+  const flagIso = countryCode?.trim().toUpperCase() || null;
 
   const dayDeltaTitle = metricCopy.dayDeltaTitle;
   const winRateDelta = formatProfileMetricDayDelta(
@@ -924,7 +956,7 @@ export default function ProfileEditKinetikPanel({
         />
         <div className="profile-edit-kinetik-header__meta min-w-0 flex-1">
           <div className="mb-2">{tierTagsRowMobile}</div>
-          <div className="flex min-w-0 items-center gap-1.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <h2
               className={[
                 nameOxanium.className,
@@ -933,10 +965,25 @@ export default function ProfileEditKinetikPanel({
             >
               {identity.displayName}
             </h2>
+            {flagIso ? (
+              <CountryFlag
+                iso2={flagIso}
+                variant="profileInline"
+                decorative
+                alt={flagIso}
+              />
+            ) : null}
             {isPro ? (
               <ProCyberBadge compact ariaLabel={metricCopy.proMember} />
             ) : null}
           </div>
+          <ProfileKinetikIdentityIdChip
+            systemId={identity.systemId}
+            shareLabel={metricCopy.shareProfile}
+            shareCopiedLabel={metricCopy.shareCopied}
+            shareCopied={shareCopied}
+            onShare={handleShareProfile}
+          />
           {bio?.trim() ? (
             <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-white/50">
               {bio.trim()}
@@ -964,17 +1011,13 @@ export default function ProfileEditKinetikPanel({
         {metricsContent}
       </div>
 
-      <footer className="profile-edit-kinetik-footer mt-4 pt-3">
-        <ProfileKinetikIdentityMetaRow
-          memberSinceLabel={memberSinceLabel}
-          countryCode={countryCode}
-          systemId={identity.systemId}
-          shareLabel={metricCopy.shareProfile}
-          shareCopiedLabel={metricCopy.shareCopied}
-          shareCopied={shareCopied}
-          onShare={handleShareProfile}
-        />
-      </footer>
+      {memberSinceLabel ? (
+        <footer className="profile-edit-kinetik-footer mt-4 pt-3">
+          <p className="profile-edit-kinetik-footer-ref inline-block max-w-full truncate">
+            {memberSinceLabel}
+          </p>
+        </footer>
+      ) : null}
     </ProfileKinetikPanelFrame>
   );
 }

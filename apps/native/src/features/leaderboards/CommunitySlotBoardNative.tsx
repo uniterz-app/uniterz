@@ -91,7 +91,7 @@ function SlotCardImageBackgroundNative({
 
   return (
     <View
-      style={StyleSheet.absoluteFill}
+      style={styles.slotImageLayer}
       pointerEvents="none"
       onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
     >
@@ -180,32 +180,36 @@ function GroupFilledSlotNative({
         communityPressableFilledStyle(pressed),
       ]}
     >
-      <SlotCardImageBackgroundNative
-        headerImageUrl={g.headerImageUrl}
-        headerImagePositionY={g.headerImagePositionY}
-        isOwner={isOwner}
-      />
-      <View
-        style={[
-          styles.filledAccent,
-          isOwner ? styles.filledAccentOwner : styles.filledAccentMember,
-        ]}
-      />
-      <View style={styles.filledInner}>
-        <View style={styles.slotTopRow}>
-          <RoleBadgeNative isOwner={isOwner} label={isOwner ? labels.owner : labels.member} />
-        </View>
-        <Text style={styles.groupName} numberOfLines={1}>
-          {g.name}
-        </Text>
-        <Text style={styles.groupMeta} numberOfLines={2}>
-          {competition}
-        </Text>
-        {(g.memberPreviews?.length ?? 0) > 0 ? (
-          <View style={styles.metaRow}>
-            <CommunityMemberAvatarStackNative previews={g.memberPreviews ?? []} size={28} />
+      <View style={styles.filledClip}>
+        <SlotCardImageBackgroundNative
+          headerImageUrl={g.headerImageUrl}
+          headerImagePositionY={g.headerImagePositionY}
+          isOwner={isOwner}
+        />
+        <View style={styles.filledRow}>
+          <View
+            style={[
+              styles.filledAccent,
+              isOwner ? styles.filledAccentOwner : styles.filledAccentMember,
+            ]}
+          />
+          <View style={styles.filledInner}>
+            <View style={styles.slotTopRow}>
+              <RoleBadgeNative isOwner={isOwner} label={isOwner ? labels.owner : labels.member} />
+            </View>
+            <Text style={styles.groupName} numberOfLines={1}>
+              {g.name}
+            </Text>
+            <Text style={styles.groupMeta} numberOfLines={2}>
+              {competition}
+            </Text>
+            {(g.memberPreviews?.length ?? 0) > 0 ? (
+              <View style={styles.metaRow}>
+                <CommunityMemberAvatarStackNative previews={g.memberPreviews ?? []} size={28} />
+              </View>
+            ) : null}
           </View>
-        ) : null}
+        </View>
       </View>
     </Pressable>
   );
@@ -465,9 +469,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filledSlot: {
+    width: "100%",
     overflow: "hidden",
     backgroundColor: "rgba(2,8,18,0.72)",
     borderWidth: 1,
+  },
+  filledClip: {
+    width: "100%",
+    overflow: "hidden",
+    position: "relative",
+  },
+  filledRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    position: "relative",
+    zIndex: 2,
   },
   filledSlotWithImage: {
     backgroundColor: COMMUNITY_GROUP_SLOT_CARD_BG,
@@ -479,31 +495,19 @@ const styles = StyleSheet.create({
     borderColor: "rgba(34,211,238,0.16)",
   },
   filledAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
     width: 3,
+    flexShrink: 0,
     zIndex: 3,
   },
   filledAccentOwner: {
     backgroundColor: "rgba(251,191,36,0.85)",
-    shadowColor: "#fbbf24",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
   },
   filledAccentMember: {
     backgroundColor: CRT_CYAN,
-    shadowColor: CRT_CYAN,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
   },
   filledInner: {
-    position: "relative",
-    zIndex: 2,
     flex: 1,
+    minWidth: 0,
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -630,6 +634,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: "rgba(251,191,36,0.95)",
+  },
+  slotImageLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
   },
   loadingSlot: {
     minHeight: 72,

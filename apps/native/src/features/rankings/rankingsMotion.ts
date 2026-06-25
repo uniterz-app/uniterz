@@ -1,4 +1,5 @@
 import { Easing } from "react-native-reanimated";
+import { podiumEntranceStepForRank } from "../../../../../lib/rankings/podiumEntrance";
 
 /** Web `TopPodium` cardVariants（Native は体感速度優先で短縮） */
 export const RANKINGS_PODIUM_CARD_DELAY_BASE_MS = 50;
@@ -6,8 +7,13 @@ export const RANKINGS_PODIUM_CARD_DELAY_STEP_MS = 45;
 export const RANKINGS_PODIUM_CARD_DURATION_MS = 280;
 export const RANKINGS_PODIUM_CARD_FROM_Y = 8;
 
-/** Web TopPodium Crown motion */
-export const RANKINGS_CROWN_DELAY_MS = 120;
+/** Web TopPodium Crown motion — 1位カード（最後）の後 */
+export function rankingsCrownDelayMs(): number {
+  return (
+    rankingsPodiumCardDelayMs(podiumEntranceStepForRank(1)) + 90
+  );
+}
+
 export const RANKINGS_CROWN_DURATION_MS = 200;
 export const RANKINGS_CROWN_FROM_Y = 3;
 export const RANKINGS_CROWN_FROM_SCALE = 0.94;
