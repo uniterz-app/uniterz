@@ -6,6 +6,7 @@ import {
   WC_KNOCKOUT_SEASON,
 } from "@/lib/wc/wc-knockout-bracket";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
+import { isWcKnockoutBracketSubmissionOpen } from "@/lib/wc/wc-knockout-config";
 import { wcSurvivalRankKey } from "@/lib/wc/wc-bracket-survival-rank";
 
 export type WcBracketDoc = {
@@ -39,6 +40,9 @@ export async function createWcBracket(
   bracket: WcBracketState,
   season = WC_KNOCKOUT_SEASON
 ) {
+  if (!isWcKnockoutBracketSubmissionOpen(season)) {
+    throw new Error("Bracket submission is closed");
+  }
   const ref = doc(db, "wcBrackets", getWcBracketDocId(uid, season));
 
   await setDoc(ref, {

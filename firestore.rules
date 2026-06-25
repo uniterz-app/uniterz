@@ -9,10 +9,9 @@ service cloud.firestore {
         && request.auth.uid == "S6r5KyS9XcXds3Pm7koLzzELrvs2";
     }
 
-    /** WC knockout bracket — sync with lib/wc/wc-knockout-config submissionClosesAtIso (M73 kickoff). */
+    /** WC knockout bracket — sync with lib/wc/wc-knockout-config allowSubmission */
     function wcBracketSubmissionOpenForSeason(season) {
-      return season != "2025-26"
-        || request.time < timestamp.date(2026, 6, 28) + duration.time(19, 0, 0, 0);
+      return season != "2025-26";
     }
 
     /** Playoff bracket submission deadline (request.time is UTC). 2026-04-19 02:00 JST = 2026-04-18 17:00 UTC. Sync with lib/playoff-bracket-config submissionClosesAtIso. */
