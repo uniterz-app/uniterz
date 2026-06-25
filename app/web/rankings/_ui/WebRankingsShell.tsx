@@ -42,7 +42,9 @@ import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeaderboardSection";
+import WcBracketLeaderboardSection from "@/app/component/leaderboards/WcBracketLeaderboardSection";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
+import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -264,7 +266,7 @@ export default function WebRankingsShell() {
           <div className="h-10 w-10 shrink-0" aria-hidden />
         </div>
         <div className="space-y-0.5">
-          {rankingLeague === "nba" ? (
+          {rankingLeague === "nba" || rankingLeague === "worldcup" ? (
             <RankingsCategoryTabs
               category={category}
               onChange={setCategory}
@@ -280,7 +282,7 @@ export default function WebRankingsShell() {
             />
           ) : null}
 
-          {rankingLeague === "worldcup" ? (
+          {rankingLeague === "worldcup" && category === "playoffs" ? (
             <WcRankingStageTabs
               stage={wcStage}
               onChange={setWcStage}
@@ -346,7 +348,11 @@ export default function WebRankingsShell() {
 
         {category === "bracket" ? (
           <div className="mx-auto w-full max-w-[960px]">
-            <BracketLeaderboardSection season={season} />
+            {rankingLeague === "worldcup" ? (
+              <WcBracketLeaderboardSection season={WC_KNOCKOUT_SEASON} />
+            ) : (
+              <BracketLeaderboardSection season={season} />
+            )}
           </div>
         ) : rankingHasNoEntries ? (
           <div

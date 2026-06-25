@@ -1601,7 +1601,7 @@ export default function ResultListWithOverlay({
         {visibleGrouped.map((day) => {
           const pendingShown = day.pending;
           const finalShown = day.final;
-          // 未確定（試合前〜得点未確定）を上、試合確定済みを下（各バケット内の順は groupPostsByResultDay に従う）
+          // 未確定（試合前〜得点未確定）を上、試合確定済みを下（各バケット内: キックオフ降順、同時刻は連勝降順）
           const displayPosts = [...pendingShown, ...finalShown];
           const isSingleWebCard = !isMobile && displayPosts.length === 1;
           const dayPts = dayPointsHeaderForList(

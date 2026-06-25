@@ -1,0 +1,9 @@
+{
+  "homeScore": 1,
+  "awayScore": 2,
+  "scorers": [
+    { "playerId": "jor-al-rashdan", "teamId": "wc-jor", "minute": 36 },
+    { "playerId": "dza-benbouali", "teamId": "wc-dza", "minute": 69 },
+    { "playerId": "dza-gouiri", "teamId": "wc-dza", "minute": 82 }
+  ]
+}

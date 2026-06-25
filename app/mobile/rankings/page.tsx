@@ -54,7 +54,9 @@ import {
   isMobileMetricParam,
 } from "@/lib/navigation/rankingsProfileFrom";
 import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeaderboardSection";
+import WcBracketLeaderboardSection from "@/app/component/leaderboards/WcBracketLeaderboardSection";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
+import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
@@ -267,7 +269,7 @@ export default function MobileRankingsPage() {
           </div>
 
           <div className="space-y-0.5">
-            {rankingLeague === "nba" ? (
+            {rankingLeague === "nba" || rankingLeague === "worldcup" ? (
               <RankingsCategoryTabs
                 category={category}
                 onChange={setCategory}
@@ -283,7 +285,7 @@ export default function MobileRankingsPage() {
               />
             ) : null}
 
-            {rankingLeague === "worldcup" ? (
+            {rankingLeague === "worldcup" && category === "playoffs" ? (
               <WcRankingStageTabs
                 stage={wcStage}
                 onChange={setWcStage}
@@ -361,7 +363,11 @@ export default function MobileRankingsPage() {
 
         {category === "bracket" ? (
           <div className="px-2 pb-bottom-nav pt-2">
-            <BracketLeaderboardSection season={season} />
+            {rankingLeague === "worldcup" ? (
+              <WcBracketLeaderboardSection season={WC_KNOCKOUT_SEASON} />
+            ) : (
+              <BracketLeaderboardSection season={season} />
+            )}
           </div>
         ) : rankingHasNoEntries ? (
           <div

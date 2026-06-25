@@ -118,6 +118,8 @@ function buildPostCumulativeContribution(
     | "exactHit"
     | "goalScorerHit"
     | "wcStage"
+    | "upsetBonus"
+    | "streakBonus"
   >
 ): PostCumulativeContribution {
   const leagueKey = normalizeLeague(opts.league);
@@ -134,6 +136,8 @@ function buildPostCumulativeContribution(
     scorePrecision: opts.scorePrecision,
     exactHit: opts.exactHit ?? false,
     goalScorerHit: opts.goalScorerHit ?? false,
+    upsetBonus: opts.upsetBonus,
+    streakBonus: opts.streakBonus,
   };
 }
 
@@ -378,6 +382,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         exactHit,
         goalScorerHit,
         wcStage,
+        upsetBonus,
+        streakBonus,
       })
     );
   });

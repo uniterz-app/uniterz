@@ -52,6 +52,8 @@ function buildDeleteContribution(
     scorePrecision: Number(stats.scorePrecision ?? 0),
     exactHit: stats.exactMatch === true,
     goalScorerHit: Number(stats.goalScorerBonus ?? 0) > 0,
+    upsetBonus: Number(stats.upsetBonus ?? 0),
+    streakBonus: Number(stats.streakBonus ?? 0),
   };
 }
 
@@ -158,6 +160,8 @@ export const onPostDeletedV2 = onDocumentDeleted(
             scorePrecision: 0,
             exactHit: false,
             goalScorerHit: false,
+            upsetBonus: 0,
+            streakBonus: 0,
           },
           -1
         );

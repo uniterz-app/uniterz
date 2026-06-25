@@ -30,6 +30,7 @@ export type NativeProfileStatsState = {
 };
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const BACKGROUND_REFRESH_MS = 30_000;
 
 type CacheEntry = {
   at: number;
@@ -231,10 +232,34 @@ export function useNativeProfileStats(
       }
     }
 
+    async function refreshPhaseInBackground() {
+      try {
+        const phase = await fetchProfileUserStats(targetUid, "phase", ctx);
+        if (cancelled || !phase.summary) return;
+        mergeCacheEntry(cacheKey, {
+          summary: phase.summary,
+          summaryRanks: phase.summaryRanks,
+          metricValueDeltas: phase.metricValueDeltas,
+        });
+        setState((prev) => ({
+          ...prev,
+          summary: phase.summary,
+          summaryRanks: phase.summaryRanks ?? prev.summaryRanks,
+          metricValueDeltas: phase.metricValueDeltas ?? prev.metricValueDeltas,
+        }));
+      } catch {
+        /* 背景更新失敗はキャッシュ表示を維持 */
+      }
+    }
+
     async function run() {
       const cached = readValidCache(cacheKey);
       if (cached) {
         applyCacheToState(cached, setState);
+        const needsRefresh =
+          cached.metricValueDeltas == null ||
+          Date.now() - cached.at >= BACKGROUND_REFRESH_MS;
+        if (needsRefresh) void refreshPhaseInBackground();
         if (cached.dailyTrend == null || cached.rankTrend == null) {
           void ensureCharts();
         }

@@ -2,7 +2,6 @@
 // ロールアップキャッシュで Firestore read を抑える
 
 import { NextResponse } from "next/server";
-import { FieldPath } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
   buildWindowCacheForUserFromSnapshots,
@@ -10,6 +9,11 @@ import {
 } from "@/lib/profile/buildUserStatsWindowCache";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
+import {
+  resolveWcProfileSummaryLive,
+  resolveNbaProfileSummaryLive,
+  type ProfileSummaryForCards,
+} from "@/lib/profile/resolveLiveProfileSummary";
 import {
   buildDailyTrendFromDailySnaps,
   mergeDailyTrendWithSnap,
@@ -21,9 +25,11 @@ import {
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
-import { loadMyRankMetricValueDeltas } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
+import {
+  loadMyRankMetricValueDeltas,
+  loadPriorSnapshotMetrics,
+} from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
-import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
 import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
@@ -34,24 +40,7 @@ type RankingPhase = "play_in" | "playoffs";
 
 const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend", "ranks"];
 
-type SummaryForCards = {
-  posts: number;
-  fullPosts: number;
-  recent3Posts: number;
-  wins: number;
-  winRate: number;
-  scorePrecisionSum: number;
-  upsetPointsSum: number;
-  pointsSumV3: number;
-  upsetChanceCount: number;
-  upsetHitCount: number;
-  upsetBonusSum: number;
-  streakBonusSum: number;
-  basePointsSum: number;
-  activeWinStreak?: number;
-  /** WC overall（=football）のライブ最大連勝 */
-  maxWinStreak?: number;
-};
+type SummaryForCards = ProfileSummaryForCards;
 
 type SummaryRanks = {
   totalPrecision: number | null;
@@ -73,162 +62,6 @@ function safeNum(v: unknown): number {
 
 function parsePhase(raw: string | null): RankingPhase {
   return raw === "play_in" ? "play_in" : "playoffs";
-}
-
-function summaryFromPhaseRanking(
-  cumulative: Record<string, unknown> | null,
-  phase: RankingPhase
-): SummaryForCards {
-  const byPhase = ((cumulative?.rankingByPhase as Record<string, unknown>) ??
-    {}) as Record<string, Record<string, unknown> | undefined>;
-  const r = byPhase[phase] ?? {};
-  const posts = safeInt(r.totalPosts);
-  const wins = safeInt(r.totalWins);
-  const pointsSumV3 = safeNum(r.totalPoints);
-  const upsetPointsSum = safeNum(r.totalUpset);
-  const scorePrecisionSum = safeNum(r.totalPrecision);
-  const upsetBonusSum = safeNum(r.upsetBonusSum);
-  const streakBonusSum = safeNum(r.streakBonusSum);
-  const basePointsSum = Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum);
-  return {
-    posts,
-    fullPosts: posts,
-    recent3Posts: 0,
-    wins,
-    winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum,
-    upsetPointsSum,
-    pointsSumV3,
-    upsetChanceCount: safeInt(r.upsetOpportunityCount),
-    upsetHitCount: safeInt(r.upsetHitCount),
-    upsetBonusSum,
-    streakBonusSum,
-    basePointsSum,
-    activeWinStreak: safeInt(r.activeWinStreak),
-  };
-}
-
-function hasPhaseBonusFields(
-  cumulative: Record<string, unknown> | null,
-  phase: RankingPhase
-): boolean {
-  const byPhase = ((cumulative?.rankingByPhase as Record<string, unknown>) ??
-    {}) as Record<string, Record<string, unknown> | undefined>;
-  const r = byPhase[phase] ?? {};
-  return (
-    Object.prototype.hasOwnProperty.call(r, "upsetBonusSum") &&
-    Object.prototype.hasOwnProperty.call(r, "streakBonusSum")
-  );
-}
-
-/** WC ステージ別 — cumulative_stats.rankingByWcStage（1 doc read、日次全件スキャンより高速） */
-function summaryFromWcCumulativeStage(
-  cumulative: Record<string, unknown> | null,
-  wcStage: WcRankingStage
-): SummaryForCards | null {
-  const block = (
-    cumulative?.rankingByWcStage as
-      | Record<string, Record<string, unknown>>
-      | undefined
-  )?.[wcStage];
-  if (!block || typeof block !== "object") return null;
-
-  const posts = safeInt(block.totalPosts);
-  if (posts <= 0) return null;
-
-  const wins = safeInt(block.totalWins);
-  const pointsSumV3 = safeNum(block.totalPoints);
-  const upsetPointsSum = safeNum(block.totalUpset);
-  const scorePrecisionSum = safeNum(block.totalPrecision);
-  const upsetBonusSum = safeNum(block.upsetBonusSum);
-  const streakBonusSum = safeNum(block.streakBonusSum);
-  const winRateRaw = safeNum(block.winRate);
-
-  return {
-    posts,
-    fullPosts: posts,
-    recent3Posts: 0,
-    wins,
-    winRate: posts > 0 ? wins / posts : winRateRaw <= 1 ? winRateRaw : winRateRaw / 100,
-    scorePrecisionSum,
-    upsetPointsSum,
-    pointsSumV3,
-    upsetChanceCount: safeInt(block.upsetOpportunityCount),
-    upsetHitCount: safeInt(block.upsetHitCount),
-    upsetBonusSum,
-    streakBonusSum,
-    basePointsSum: Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum),
-    activeWinStreak: safeInt(block.activeWinStreak),
-  };
-}
-
-async function summaryFromDailyPhaseFallback(
-  adminDb: ReturnType<typeof getAdminDb>,
-  uid: string,
-  phase: RankingPhase,
-  wcStage?: WcRankingStage
-): Promise<SummaryForCards> {
-  const start = `${uid}_`;
-  const end = `${uid}_\uf8ff`;
-  const snap = await adminDb
-    .collection("user_stats_v2_daily")
-    .where(FieldPath.documentId(), ">=", start)
-    .where(FieldPath.documentId(), "<=", end)
-    .get();
-
-  let posts = 0;
-  let wins = 0;
-  let scorePrecisionSum = 0;
-  let upsetPointsSum = 0;
-  let pointsSumV3 = 0;
-  let upsetChanceCount = 0;
-  let upsetHitCount = 0;
-  let upsetBonusSum = 0;
-  let streakBonusSum = 0;
-
-  for (const d of snap.docs) {
-    const data = d.data() as Record<string, unknown>;
-    const byPhase = (data.rankingByPhase ?? {}) as Record<string, unknown>;
-    const leagues = (data.leagues ?? {}) as Record<string, unknown>;
-    const row = wcStage
-      ? (() => {
-          const stageBucket = readDailyWcStageBucket(data, wcStage);
-          if (Number(stageBucket.posts ?? 0) > 0) {
-            return stageBucket as Record<string, unknown>;
-          }
-          return ((wcStage === "overall" ? leagues.wc : null) ??
-            {}) as Record<string, unknown>;
-        })()
-      : ((byPhase[phase] ?? {}) as Record<string, unknown>);
-    posts += safeInt(row.posts);
-    wins += safeInt(row.wins);
-    scorePrecisionSum += wcStage
-      ? safeInt(row.exactHitCount)
-      : safeNum(row.scorePrecisionSum);
-    upsetPointsSum += safeNum(row.upsetPointsSum);
-    pointsSumV3 += safeNum(row.pointsSumV3);
-    upsetChanceCount += safeInt(row.upsetOpportunityCount);
-    upsetHitCount += safeInt(row.upsetHitCount);
-    upsetBonusSum += safeNum(row.upsetBonusSum);
-    streakBonusSum += safeNum(row.streakBonusSum);
-  }
-
-  return {
-    posts,
-    fullPosts: posts,
-    recent3Posts: 0,
-    wins,
-    winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum,
-    upsetPointsSum,
-    pointsSumV3,
-    upsetChanceCount,
-    upsetHitCount,
-    upsetBonusSum,
-    streakBonusSum,
-    basePointsSum: Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum),
-    activeWinStreak: 0,
-  };
 }
 
 async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>, uid: string) {
@@ -416,20 +249,22 @@ export async function GET(req: Request) {
     let summary: SummaryForCards | null = null;
     let metricValueDeltas: MyRankMetricValueDeltas | null = null;
     if (wantPhase) {
+      const deltaOpts = {
+        phase,
+        round: "overall" as const,
+        wcStage: rankingLeague === "worldcup" ? (wcStage ?? "overall") : null,
+        rankingLeague,
+      };
+      const priorMetrics = await loadPriorSnapshotMetrics(uid, deltaOpts);
+
       if (rankingLeague === "worldcup" && wcStage) {
-        summary = summaryFromWcCumulativeStage(
+        summary = await resolveWcProfileSummaryLive(
+          adminDb,
+          uid,
+          wcStage,
           cumulative as Record<string, unknown> | null,
-          wcStage
+          priorMetrics
         );
-        if (!summary) {
-          /** cumulative 未集計ユーザー向けフォールバック */
-          summary = await summaryFromDailyPhaseFallback(
-            adminDb,
-            uid,
-            phase,
-            wcStage
-          );
-        }
         /**
          * WC（football）の現在連勝・最大連勝は updateUserStreak が試合確定時に
          * user_stats_v2 へライブ保存している。WC は football 唯一なので
@@ -460,13 +295,13 @@ export async function GET(req: Request) {
           }
         }
       } else {
-        summary = summaryFromPhaseRanking(
+        summary = await resolveNbaProfileSummaryLive(
+          adminDb,
+          uid,
+          phase,
           cumulative as Record<string, unknown> | null,
-          phase
+          priorMetrics
         );
-        if (!hasPhaseBonusFields(cumulative as Record<string, unknown> | null, phase)) {
-          summary = await summaryFromDailyPhaseFallback(adminDb, uid, phase);
-        }
       }
 
       if (summary) {
@@ -481,10 +316,8 @@ export async function GET(req: Request) {
             winRate: winRatePct,
           },
           {
-            phase,
-            round: "overall",
-            wcStage: rankingLeague === "worldcup" ? (wcStage ?? "overall") : null,
-            rankingLeague,
+            ...deltaOpts,
+            priorMetrics,
           }
         );
       }

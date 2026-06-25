@@ -10,6 +10,7 @@ import {
   resolveKickoffMsFromFields,
   type WcKickoffSlotGameOutcome,
 } from "./wcKickoffSlot";
+import { replayFootballEntryBeforeKickoff } from "./wcSlotStreakEntry";
 
 type SlotGameDoc = {
   id: string;
@@ -83,11 +84,61 @@ export async function loadWcGamesInKickoffSlot(
     .where("startAtJst", "==", toTimestamp(kickoffMs))
     .get();
 
-  return snap.docs.map((doc) => ({
+  const games = snap.docs.map((doc) => ({
     id: doc.id,
     final: doc.get("final") === true,
     data: doc.data(),
   }));
+
+  return refreshSlotGamesFinal(db, games);
+}
+
+async function refreshSlotGamesFinal(
+  db: FirebaseFirestore.Firestore,
+  slotGames: SlotGameDoc[]
+): Promise<SlotGameDoc[]> {
+  if (slotGames.length === 0) return slotGames;
+
+  return Promise.all(
+    slotGames.map(async (game) => {
+      const snap = await db.doc(`games/${game.id}`).get();
+      if (!snap.exists) return game;
+      return {
+        id: game.id,
+        final: snap.get("final") === true,
+        data: snap.data()!,
+      };
+    })
+  );
+}
+
+function activeForTriggerGame(
+  slotOutcome: ReturnType<typeof computeWcSlotStreakOutcome>,
+  triggerGameId: string
+): number {
+  return (
+    slotOutcome.perGameActiveWinStreak.get(triggerGameId) ??
+    slotOutcome.finalActiveWinStreak
+  );
+}
+
+function resultFromSlotOutcome(
+  uid: string,
+  didWin: boolean,
+  snap: FirebaseFirestore.DocumentSnapshot,
+  slotOutcome: ReturnType<typeof computeWcSlotStreakOutcome>,
+  triggerGameId: string
+): UpdatedUserStreakResult {
+  const maxF = migrateMaxFootball(snap);
+  const maxLose = snap.get("maxLoseStreak") ?? 0;
+  return {
+    uid,
+    didWin,
+    currentStreak: slotOutcome.finalCurF,
+    activeWinStreak: activeForTriggerGame(slotOutcome, triggerGameId),
+    maxWinStreak: Math.max(maxF, slotOutcome.finalActiveWinStreak),
+    maxLoseStreak: maxLose,
+  };
 }
 
 function buildSettlementGame(
@@ -241,8 +292,17 @@ async function applyDailyStreakDeltas(
   uid: string,
   dailyDeltas: Map<string, { dPoints: number; dStreakBonus: number; wcStage: string | null }>
 ) {
+  const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
+  let cumulativeDPoints = 0;
+  let cumulativeDStreakBonus = 0;
+  const wcStageIncrements = new Map<string, { dPoints: number; dStreakBonus: number }>();
+
   for (const [dateKey, { dPoints, dStreakBonus, wcStage }] of dailyDeltas) {
     if (dPoints === 0 && dStreakBonus === 0) continue;
+
+    cumulativeDPoints += dPoints;
+    cumulativeDStreakBonus += dStreakBonus;
+
     const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const inc: Record<string, FirebaseFirestore.FieldValue> = {};
     if (dPoints !== 0) inc.pointsSumV3 = FieldValue.increment(dPoints);
@@ -259,9 +319,42 @@ async function applyDailyStreakDeltas(
         ...(wcStage === "qualifying" ? { qualifying: inc } : {}),
         ...(wcStage === "main" ? { main: inc } : {}),
       };
+      for (const stage of ["overall", wcStage]) {
+        const prev = wcStageIncrements.get(stage) ?? { dPoints: 0, dStreakBonus: 0 };
+        wcStageIncrements.set(stage, {
+          dPoints: prev.dPoints + dPoints,
+          dStreakBonus: prev.dStreakBonus + dStreakBonus,
+        });
+      }
     }
     await dailyRef.set(patch, { merge: true });
   }
+
+  if (cumulativeDPoints === 0 && cumulativeDStreakBonus === 0) return;
+
+  const cumulativePatch: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+    cumulativeLiveUpdates: true,
+  };
+  if (cumulativeDPoints !== 0) {
+    cumulativePatch.totalPoints = FieldValue.increment(cumulativeDPoints);
+    cumulativePatch["ranking.totalPoints"] = FieldValue.increment(cumulativeDPoints);
+  }
+  if (cumulativeDStreakBonus !== 0) {
+    cumulativePatch.streakBonusSum = FieldValue.increment(cumulativeDStreakBonus);
+    cumulativePatch["ranking.streakBonusSum"] =
+      FieldValue.increment(cumulativeDStreakBonus);
+  }
+  for (const [stage, { dPoints, dStreakBonus }] of wcStageIncrements) {
+    const w = `rankingByWcStage.${stage}`;
+    if (dPoints !== 0) {
+      cumulativePatch[`${w}.totalPoints`] = FieldValue.increment(dPoints);
+    }
+    if (dStreakBonus !== 0) {
+      cumulativePatch[`${w}.streakBonusSum`] = FieldValue.increment(dStreakBonus);
+    }
+  }
+  await cumulativeRef.set(cumulativePatch, { merge: true });
 }
 
 export type WcSlotStreakApplyResult = {
@@ -283,8 +376,10 @@ export async function applyWcSlotStreakWhenComplete(
 ): Promise<WcSlotStreakApplyResult> {
   const slotGames = await loadWcGamesInKickoffSlot(db, kickoffMs);
   const slotGameIds = slotGames.map((g) => g.id);
+  const isConcurrentSlot = slotGameIds.length >= 2;
   const allFinal =
     slotGames.length > 0 && slotGames.every((g) => g.final);
+  const excludeGameIds = new Set(slotGameIds);
 
   const resultMap = new Map<string, UpdatedUserStreakResult>();
   const perUserPerGameActive = new Map<string, Map<string, number>>();
@@ -305,20 +400,24 @@ export async function applyWcSlotStreakWhenComplete(
     const outcomes = userOutcomes.get(uid) ?? [];
     const didWin = triggerUserResult.get(uid) ?? outcomes.find((o) => o.gameId === triggerGameId)?.didWin ?? false;
 
-    const markerRef = streakApplyMarkerRef(db, triggerGameId, uid);
-    const markerSnap = await markerRef.get();
-    if (markerSnap.exists) {
-      const snap = await db.doc(`user_stats_v2/${uid}`).get();
-      resultMap.set(uid, deferredResultFromSnap(uid, didWin, snap));
-      continue;
-    }
+    const entryCurF = await replayFootballEntryBeforeKickoff(
+      db,
+      uid,
+      kickoffMs,
+      excludeGameIds
+    );
+    const slotOutcome = computeWcSlotStreakOutcome(entryCurF, outcomes);
+    perUserPerGameActive.set(uid, slotOutcome.perGameActiveWinStreak);
 
     const anySlotMarker = await Promise.all(
       slotGameIds.map((gid) => streakApplyMarkerRef(db, gid, uid).get())
     );
     if (anySlotMarker.some((s) => s.exists)) {
       const snap = await db.doc(`user_stats_v2/${uid}`).get();
-      resultMap.set(uid, deferredResultFromSnap(uid, didWin, snap));
+      resultMap.set(
+        uid,
+        resultFromSlotOutcome(uid, didWin, snap, slotOutcome, triggerGameId)
+      );
       continue;
     }
 
@@ -327,13 +426,17 @@ export async function applyWcSlotStreakWhenComplete(
     const publicUserRef = db.doc(`users/${uid}`);
 
     const updated = await db.runTransaction(async (tx) => {
+      for (const gid of slotGameIds) {
+        const markerSnap = await tx.get(streakApplyMarkerRef(db, gid, uid));
+        if (markerSnap.exists) {
+          return { alreadyApplied: true as const };
+        }
+      }
+
       const snap = await tx.get(userRef);
-      const entryCurF = migrateEntryCurF(snap);
       let maxF = migrateMaxFootball(snap);
       let maxLose = snap.get("maxLoseStreak") ?? 0;
       const bb = migrateBasketballState(snap);
-
-      const slotOutcome = computeWcSlotStreakOutcome(entryCurF, outcomes);
       const curF = slotOutcome.finalCurF;
       if (slotOutcome.finalActiveWinStreak > maxF) {
         maxF = slotOutcome.finalActiveWinStreak;
@@ -396,6 +499,7 @@ export async function applyWcSlotStreakWhenComplete(
       }
 
       return {
+        alreadyApplied: false as const,
         uid,
         didWin,
         currentStreak: curF,
@@ -406,12 +510,20 @@ export async function applyWcSlotStreakWhenComplete(
       };
     });
 
-    perUserPerGameActive.set(uid, updated.perGame);
+    if (updated.alreadyApplied) {
+      const snap = await db.doc(`user_stats_v2/${uid}`).get();
+      resultMap.set(
+        uid,
+        resultFromSlotOutcome(uid, didWin, snap, slotOutcome, triggerGameId)
+      );
+      continue;
+    }
+
     resultMap.set(uid, {
       uid: updated.uid,
       didWin: updated.didWin,
       currentStreak: updated.currentStreak,
-      activeWinStreak: updated.activeWinStreak,
+      activeWinStreak: activeForTriggerGame(slotOutcome, triggerGameId),
       maxWinStreak: updated.maxWinStreak,
       maxLoseStreak: updated.maxLoseStreak,
     });
@@ -426,7 +538,7 @@ export async function applyWcSlotStreakWhenComplete(
   return {
     resultMap,
     perUserPerGameActive,
-    slotCompleted: perUserPerGameActive.size > 0,
+    slotCompleted: isConcurrentSlot && perUserPerGameActive.size > 0,
   };
 }
 

@@ -1,0 +1,8 @@
+{
+  "homeScore": 2,
+  "awayScore": 0,
+  "scorers": [
+    { "playerId": "arg-messi", "teamId": "wc-arg", "minute": 38 },
+    { "playerId": "arg-messi", "teamId": "wc-arg", "minute": 95 }
+  ]
+}

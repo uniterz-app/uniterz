@@ -21,6 +21,7 @@ import {
   mapDocToPostWithMillis,
   type PostWithMillis,
 } from "@/lib/result/result-page-data";
+import { sortResultPostsForDisplay } from "@/lib/result/resultPostDaySort";
 import { getDayRangeInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 const IN_QUERY_CHUNK = 30;
@@ -68,6 +69,10 @@ export function filterSettledTodayForScope(
 
   out.sort((a, b) => b.settledAtMs - a.settledAtMs);
   return out;
+}
+
+function sortSettledTodayPosts(posts: PostWithMillis[]): PostWithMillis[] {
+  return sortResultPostsForDisplay(posts);
 }
 
 function settledRowFromPost(post: PostWithMillis): SettledPostRow | null {
@@ -118,7 +123,9 @@ async function loadProfileSettledTodayResultPostsFallback(
   const todayRows = filterSettledTodayForScope(rows, ctx);
   const ids = todayRows.map((r) => r.postId);
   const posts = await fetchPostsByIds(ids);
-  return posts.filter((p) => p.status === "final" && p.settledAtMillis != null);
+  return sortSettledTodayPosts(
+    posts.filter((p) => p.status === "final" && p.settledAtMillis != null)
+  );
 }
 
 /**
@@ -156,7 +163,7 @@ export async function loadProfileSettledTodayResultPosts(
   const todayRows = filterSettledTodayForScope(enrichedRows, ctx);
   const visibleIds = new Set(todayRows.map((row) => row.postId));
 
-  return posts
-    .filter((post) => visibleIds.has(post.id))
-    .sort((a, b) => (b.settledAtMillis ?? 0) - (a.settledAtMillis ?? 0));
+  return sortSettledTodayPosts(
+    posts.filter((post) => visibleIds.has(post.id))
+  );
 }
