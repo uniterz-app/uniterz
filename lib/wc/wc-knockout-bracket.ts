@@ -269,7 +269,8 @@ export const WC_KNOCKOUT_MATCHES: readonly WcKnockoutMatchDef[] = [
     feedsFrom: [],
     home: gw("J"),
     away: gr("H"),
-    display: { half: "right", r32Index: 5 },
+    // r32Index 6 — M87 より下。M95(M86×M88) のペア用（85/87 は隣接させる）
+    display: { half: "right", r32Index: 6 },
   },
   {
     id: "M87",
@@ -277,7 +278,8 @@ export const WC_KNOCKOUT_MATCHES: readonly WcKnockoutMatchDef[] = [
     feedsFrom: [],
     home: gw("K"),
     away: t3(["D", "E", "I", "J", "L"], "3DEIJL"),
-    display: { half: "right", r32Index: 6 },
+    // r32Index 5 — M85 の直下。M96(M85×M87) のペア用
+    display: { half: "right", r32Index: 5 },
   },
   {
     id: "M88",

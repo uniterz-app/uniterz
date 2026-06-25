@@ -76,8 +76,8 @@ export default function WcBracketStartPromptModal({
                 </p>
                 <p className="text-cyan-300/75">
                   {isJa
-                    ? "あとから変更はできません"
-                    : "You cannot change your bracket after submitting."}
+                    ? "締切までは予想を変更できます"
+                    : "You can edit your picks before the deadline"}
                 </p>
               </div>
             }

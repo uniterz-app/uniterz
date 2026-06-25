@@ -12,7 +12,7 @@ import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import SubmitBracketModal from "@/app/component/common/SubmitBracketModal";
+import WcBracketSubmitModal from "@/app/component/predict/wc/WcBracketSubmitModal";
 import WcBracketUserCard from "./WcBracketUserCard";
 import useWcBracketLeaderboard, {
   type WcBracketLeaderboardRow,
@@ -20,7 +20,7 @@ import useWcBracketLeaderboard, {
 import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
 import { isWcKnockoutBracketSubmissionOpen } from "@/lib/wc/wc-knockout-config";
 import {
-  createWcBracket,
+  saveWcBracket,
   loadWcBracket,
 } from "@/lib/wc/wc-bracket-firestore";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
@@ -118,11 +118,12 @@ export default function WcBracketLeaderboardSection({
   const isJa = language === "ja";
 
   const showInputGate = submissionOpen && !savedLoading && !hasSubmitted;
+  const canReeditBracket = submissionOpen && !savedLoading && hasSubmitted;
+  const inputOverlayOpen = inputPageOpen && submissionOpen && !savedLoading;
 
   useEffect(() => {
     if (!showInputGate) {
       setSubmissionPromptOpen(false);
-      setInputPageOpen(false);
       return;
     }
     if (!inputPageOpen) {
@@ -259,7 +260,7 @@ export default function WcBracketLeaderboardSection({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await createWcBracket(uid, draftBracket, season);
+      await saveWcBracket(uid, draftBracket, season);
       setHasSubmitted(true);
       setSubmitOpen(false);
       setInputPageOpen(false);
@@ -310,15 +311,30 @@ export default function WcBracketLeaderboardSection({
 
   const listBusy = loading || savedLoading;
 
+  const listRows =
+    myRow && hasSubmitted
+      ? rows.filter((row) => row.uid !== myRow.uid)
+      : rows;
+
   const leaderboardBody = (
     <>
       {myRow && hasSubmitted ? (
-        <div className="pt-0.5">
+        <div className="space-y-2 pt-0.5">
           <WcBracketUserCard
             row={myRow}
             totalCount={totalCount}
             language={language}
+            onClick={() => openDetail(myRow)}
           />
+          {canReeditBracket && !inputOverlayOpen ? (
+            <button
+              type="button"
+              onClick={() => setInputPageOpen(true)}
+              className="w-full rounded-xl border border-cyan-400/35 bg-[#0a1528]/90 px-4 py-2.5 text-[13px] font-bold tracking-[0.04em] text-cyan-100 shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition hover:border-cyan-300/55 hover:bg-[#0f1d38]/95 active:scale-[0.99]"
+            >
+              {isJa ? "ブラケットを編集" : "Edit bracket"}
+            </button>
+          ) : null}
         </div>
       ) : null}
       {titleBlock}
@@ -328,7 +344,7 @@ export default function WcBracketLeaderboardSection({
         </div>
       ) : error ? (
         <div className="py-16 text-center text-white/60">{error}</div>
-      ) : rows.length === 0 ? (
+      ) : listRows.length === 0 && !(myRow && hasSubmitted) ? (
         <div
           role="status"
           className="flex min-h-[min(50dvh,480px)] flex-col items-center justify-center px-4 text-center"
@@ -345,7 +361,7 @@ export default function WcBracketLeaderboardSection({
         </div>
       ) : (
         <div className="space-y-2 pb-bottom-nav pt-2">
-          {rows.map((row, index) => (
+          {listRows.map((row, index) => (
             <motion.div
               key={row.uid}
               initial={{ opacity: 0, y: 14 }}
@@ -398,96 +414,105 @@ export default function WcBracketLeaderboardSection({
       </div>
 
       {overlayPortalReady && showInputGate ? (
-        <>
-          <WcBracketStartPromptModal
-            open={submissionPromptOpen}
-            language={language}
-            onClose={() => setSubmissionPromptOpen(false)}
-            onStart={() => {
-              setSubmissionPromptOpen(false);
-              setInputPageOpen(true);
-            }}
-          />
-
-          {inputPageOpen
-            ? createPortal(
-                <motion.div
-                  key="wc-bracket-input-page"
-                  className="fixed inset-0 z-99990 flex flex-col"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <div
-                    className="absolute inset-0 bg-black/25 backdrop-blur-[2px]"
-                    aria-hidden
-                  />
-                  <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-                    <div className="shrink-0 border-b border-white/10 bg-[#050b14]/88 px-4 py-3 backdrop-blur-xl">
-                      <div className="flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInputPageOpen(false);
-                            setSubmissionPromptOpen(false);
-                          }}
-                          className="text-[12px] font-medium text-white/55 transition hover:text-white/80"
-                        >
-                          {isJa ? "← 戻る" : "← Back"}
-                        </button>
-                        <p className="text-center text-[13px] font-semibold text-white">
-                          {isJa ? "ブラケット入力" : "Bracket picks"}
-                        </p>
-                        <span className="w-10" aria-hidden />
-                      </div>
-                      <p className="mt-1 text-center text-[11px] text-white/55">
-                        {isJa
-                          ? "ラウンドごとに勝者を選んでください"
-                          : "Pick winners round by round"}
-                      </p>
-                      {submitError ? (
-                        <p className="mt-2 text-center text-[11px] text-red-300">
-                          {submitError}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div
-                      ref={inputScrollRef}
-                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-bottom-nav"
-                    >
-                      <WcBracketInputMobile
-                        bracket={draftBracket}
-                        advancement={WC_DEMO_KNOCKOUT_ADVANCEMENT}
-                        onBracketChange={setDraftBracket}
-                        onSubmitClick={() => setSubmitOpen(true)}
-                        language={language}
-                        submitDisabled={!uid || submitting}
-                        submitLabel={
-                          !uid
-                            ? isJa
-                              ? "ログインして提出"
-                              : "Sign in to submit"
-                            : undefined
-                        }
-                      />
-                    </div>
-                  </div>
-                </motion.div>,
-                document.body
-              )
-            : null}
-        </>
+        <WcBracketStartPromptModal
+          open={submissionPromptOpen}
+          language={language}
+          onClose={() => setSubmissionPromptOpen(false)}
+          onStart={() => {
+            setSubmissionPromptOpen(false);
+            setInputPageOpen(true);
+          }}
+        />
       ) : null}
 
-      <SubmitBracketModal
-        open={submitOpen}
-        onClose={() => {
-          if (submitting) return;
-          setSubmitOpen(false);
-        }}
-        onConfirm={() => void handleSubmitConfirm()}
-        loading={submitting}
-      />
+      {overlayPortalReady && inputOverlayOpen
+        ? createPortal(
+            <motion.div
+              key="wc-bracket-input-page"
+              className="fixed inset-0 z-99990 flex flex-col"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div
+                className="absolute inset-0 bg-black/20 backdrop-blur-xl backdrop-saturate-150"
+                aria-hidden
+              />
+              <div className="relative z-10 flex min-h-0 flex-1 flex-col bg-transparent">
+                <div className="shrink-0 border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputPageOpen(false);
+                        if (showInputGate) {
+                          setSubmissionPromptOpen(false);
+                        }
+                      }}
+                      className="text-[12px] font-medium text-white/55 transition hover:text-white/80"
+                    >
+                      {isJa ? "← 戻る" : "← Back"}
+                    </button>
+                    <p className="text-center text-[13px] font-semibold text-white">
+                      {hasSubmitted
+                        ? isJa
+                          ? "ブラケット編集"
+                          : "Edit bracket"
+                        : isJa
+                          ? "ブラケット入力"
+                          : "Bracket picks"}
+                    </p>
+                    <span className="w-10" aria-hidden />
+                  </div>
+                  <p className="mt-1 text-center text-[11px] text-white/55">
+                    {isJa
+                      ? "ラウンドごとに勝者を選んでください"
+                      : "Pick winners round by round"}
+                  </p>
+                  {submitError ? (
+                    <p className="mt-2 text-center text-[11px] text-red-300">
+                      {submitError}
+                    </p>
+                  ) : null}
+                </div>
+                <div
+                  ref={inputScrollRef}
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-bottom-nav"
+                >
+                  <WcBracketInputMobile
+                    bracket={draftBracket}
+                    advancement={WC_DEMO_KNOCKOUT_ADVANCEMENT}
+                    onBracketChange={setDraftBracket}
+                    onSubmitClick={() => setSubmitOpen(true)}
+                    language={language}
+                    submitDisabled={!uid || submitting}
+                    submitButtonLabel={
+                      hasSubmitted ? "BRACKET UPDATE" : undefined
+                    }
+                  />
+                </div>
+              </div>
+            </motion.div>,
+            document.body
+          )
+        : null}
+
+      {overlayPortalReady
+        ? createPortal(
+            <WcBracketSubmitModal
+              open={submitOpen}
+              isResubmit={hasSubmitted}
+              language={language}
+              loading={submitting}
+              onClose={() => {
+                if (submitting) return;
+                setSubmitOpen(false);
+              }}
+              onConfirm={() => void handleSubmitConfirm()}
+            />,
+            document.body
+          )
+        : null}
 
       {overlayPortalReady
         ? createPortal(

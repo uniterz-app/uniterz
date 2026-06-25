@@ -8,6 +8,7 @@ import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import {
   type WcMatchHitStatus,
   getWcMatchHitStatus,
+  resolveWcTeamQualLabel,
   shouldShowWcSurvivorPick,
 } from "@/lib/wc/wc-knockout-bracket-utils";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
@@ -61,9 +62,17 @@ export function getWcMatchContestants(
   if (def.feedsFrom.length === 2) {
     const a = bracket[def.feedsFrom[0] as WcBracketPredictMatchId]?.winner?.trim() ?? null;
     const b = bracket[def.feedsFrom[1] as WcBracketPredictMatchId]?.winner?.trim() ?? null;
+    const qual = (teamId: string | null) =>
+      teamId && advancement ? resolveWcTeamQualLabel(teamId, advancement) : "";
     return [
-      { teamId: a, label: a ? "" : `W${def.feedsFrom[0].slice(1)}` },
-      { teamId: b, label: b ? "" : `W${def.feedsFrom[1].slice(1)}` },
+      {
+        teamId: a,
+        label: a ? qual(a) : `W${def.feedsFrom[0].slice(1)}`,
+      },
+      {
+        teamId: b,
+        label: b ? qual(b) : `W${def.feedsFrom[1].slice(1)}`,
+      },
     ];
   }
 
@@ -112,7 +121,7 @@ export function buildWcMatchCardViews(
       matchId,
       role,
       teamId,
-      label: teamId ? "" : label,
+      label: teamId ? (label || (advancement ? resolveWcTeamQualLabel(teamId, advancement) : "")) : label,
       visible: true,
       hitStatus: isPickedWinner ? slotHit : "pending",
       isPickedWinner,

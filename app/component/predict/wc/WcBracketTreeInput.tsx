@@ -6,12 +6,13 @@ import type { WcBracketPredictMatchId } from "@/lib/wc/wc-knockout-bracket";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import { WC_BRACKET_PREDICT_MATCH_IDS } from "@/lib/wc/wc-knockout-bracket";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
+import { getWcTreeSfFinalistSlots } from "@/lib/wc/wc-knockout-bracket-utils";
 import { buildWcInputMatchView } from "@/lib/wc/wc-bracket-input-display";
 import {
   WC_BRACKET_LEFT_QF,
   WC_BRACKET_LEFT_R16,
   WC_BRACKET_RIGHT_QF,
-  WC_BRACKET_RIGHT_R16,
+  WC_BRACKET_RIGHT_R16_TREE,
   wcLeftR32MatchIds,
   wcRightR32MatchIds,
 } from "@/lib/wc/wc-bracket-layout";
@@ -19,21 +20,29 @@ import {
   WC_TREE_COL,
   WC_TREE_DESIGN_H,
   WC_TREE_DESIGN_W,
-  WC_TREE_PODIUM_RUNNER_Y,
-  WC_TREE_PODIUM_TROPHY_Y,
+  WC_TREE_FLAG_H,
+  WC_TREE_FLAG_W,
+  WC_TREE_CHAMPION_CARD_LABEL_OVERHANG,
+  WC_TREE_PODIUM_CARD_TOP_Y,
+  WC_TREE_PODIUM_CONNECTOR_Y,
+  WC_TREE_PODIUM_FLAG_H,
+  WC_TREE_PODIUM_FLAG_W,
   WC_TREE_PODIUM_WINNER_Y,
-  wcTreeCenterBridgeX,
   wcTreeConnectorMidX,
   wcTreeQfY,
   wcTreeR16Y,
   wcTreeR32Y,
   wcTreeSfY,
-  wcTreeSlotCenterY,
-  wcTreeSlotEntryX,
+  wcTreeSingleFlagCenterY,
+  wcTreeSlotBetweenFlagsY,
+  wcTreeSlotEntryEdgeX,
   wcTreeSlotExitX,
   wcTreeSlotX,
 } from "@/lib/wc/wc-bracket-tree-layout";
-import WcBracketTreeFlagPair from "@/app/component/predict/wc/WcBracketTreeFlagPair";
+import WcBracketTreeFlagPair, {
+  WcBracketTreeWinnerFlag,
+} from "@/app/component/predict/wc/WcBracketTreeFlagPair";
+import ChampionCard from "@/app/component/predict/shared/ChampionCardMobile";
 import type { Language } from "@/lib/i18n/language";
 
 type Props = {
@@ -43,45 +52,76 @@ type Props = {
   className?: string;
 };
 
-function buildLeftBracketPath(
-  exitX: number,
-  entryX: number,
-  yTop: number,
-  yBottom: number,
+function buildForkPath(
+  side: "left" | "right",
+  fromCol: number,
+  toCol: number,
+  yA: number,
+  yB: number,
   endY: number
 ) {
-  const start1Y = wcTreeSlotCenterY(yTop);
-  const start2Y = wcTreeSlotCenterY(yBottom);
-  const midX = wcTreeConnectorMidX("left", exitX, entryX);
+  const exitX = wcTreeSlotExitX(side, fromCol);
+  const entryX = wcTreeSlotEntryEdgeX(side, toCol);
+  const midX = wcTreeConnectorMidX(side, exitX, entryX);
 
   return `
-    M ${exitX} ${start1Y} H ${midX} V ${endY} H ${entryX}
-    M ${exitX} ${start2Y} H ${midX} V ${endY} H ${entryX}
+    M ${exitX} ${yA} H ${midX} V ${endY} H ${entryX}
+    M ${exitX} ${yB} H ${midX} V ${endY} H ${entryX}
   `;
 }
 
-function buildRightBracketPath(
-  exitX: number,
-  entryX: number,
+function buildPairToSinglePath(
+  side: "left" | "right",
+  fromCol: number,
+  toCol: number,
   yTop: number,
   yBottom: number,
-  endY: number
+  yNext: number
 ) {
-  const start1Y = wcTreeSlotCenterY(yTop);
-  const start2Y = wcTreeSlotCenterY(yBottom);
-  const midX = wcTreeConnectorMidX("right", exitX, entryX);
+  const endY = wcTreeSingleFlagCenterY(yNext);
+  return buildForkPath(
+    side,
+    fromCol,
+    toCol,
+    wcTreeSlotBetweenFlagsY(yTop),
+    wcTreeSlotBetweenFlagsY(yBottom),
+    endY
+  );
+}
+
+function buildSingleToSinglePath(
+  side: "left" | "right",
+  fromCol: number,
+  toCol: number,
+  yTop: number,
+  yBottom: number,
+  yNext: number
+) {
+  const endY = wcTreeSingleFlagCenterY(yNext);
+  return buildForkPath(
+    side,
+    fromCol,
+    toCol,
+    wcTreeSingleFlagCenterY(yTop),
+    wcTreeSingleFlagCenterY(yBottom),
+    endY
+  );
+}
+
+/** 左右 SF の内側を横線でつなぎ、中点から決勝へ縦線（T 字） */
+function buildSfFinalTPath(sfY: number, finalCenterY: number) {
+  const leftInnerX = wcTreeSlotExitX("left", WC_TREE_COL.leftSF);
+  const rightInnerX = wcTreeSlotExitX("right", WC_TREE_COL.rightSF);
+  const joinX = (leftInnerX + rightInnerX) / 2;
+  const sfCY = wcTreeSingleFlagCenterY(sfY);
 
   return `
-    M ${exitX} ${start1Y} H ${midX} V ${endY} H ${entryX}
-    M ${exitX} ${start2Y} H ${midX} V ${endY} H ${entryX}
+    M ${leftInnerX} ${sfCY} H ${rightInnerX}
+    M ${joinX} ${sfCY} V ${finalCenterY}
   `;
 }
 
-function singleHPath(startX: number, endX: number, y: number) {
-  return `M ${startX} ${y} H ${endX}`;
-}
-
-function FlagPairAt({
+function WinnerFlagAt({
   matchId,
   x,
   y,
@@ -95,15 +135,12 @@ function FlagPairAt({
   advancement: WcKnockoutAdvancement;
 }) {
   const view = buildWcInputMatchView(matchId, bracket, advancement);
-  const home = view?.home ?? { teamId: null, label: "" };
-  const away = view?.away ?? { teamId: null, label: "" };
-  const picked = view?.pickedWinner ?? null;
-
-  if (!home.teamId && !away.teamId) return null;
+  const winner = view?.pickedWinner?.trim() ?? null;
+  if (!winner) return null;
 
   return (
-    <div className="absolute" style={{ left: x, top: y }}>
-      <WcBracketTreeFlagPair home={home} away={away} pickedWinner={picked} />
+    <div className="absolute z-10" style={{ left: x, top: y }}>
+      <WcBracketTreeWinnerFlag teamId={winner} />
     </div>
   );
 }
@@ -119,15 +156,18 @@ function AdvanceFlag({
   y: number;
   large?: boolean;
 }) {
+  const w = large ? WC_TREE_PODIUM_FLAG_W : WC_TREE_FLAG_W;
+  const h = large ? WC_TREE_PODIUM_FLAG_H : WC_TREE_FLAG_H;
+
   return (
     <div
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2"
-      style={{ left: x, top: y }}
+      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[2px]"
+      style={{ left: x, top: y, width: w, height: h }}
     >
       <CountryFlag
         teamId={teamId}
-        className={large ? "aspect-4/3 w-9" : "aspect-4/3 w-8"}
         variant="inline"
+        className="block! h-full! w-full! ring-0!"
       />
     </div>
   );
@@ -155,7 +195,8 @@ export default function WcBracketTreeInput({
   }, []);
 
   const viewScale = wrapWidth ? wrapWidth / WC_TREE_DESIGN_W : 1;
-  const scaledHeight = WC_TREE_DESIGN_H * viewScale + 8;
+  const crownPad = WC_TREE_CHAMPION_CARD_LABEL_OVERHANG * viewScale;
+  const scaledHeight = WC_TREE_DESIGN_H * viewScale + crownPad + 8;
 
   const pickedCount = useMemo(
     () =>
@@ -167,127 +208,132 @@ export default function WcBracketTreeInput({
 
   const leftR32 = wcLeftR32MatchIds();
   const rightR32 = wcRightR32MatchIds();
-  const leftSfY = wcTreeSfY();
-  const rightSfY = wcTreeSfY();
-
-  const finalView = buildWcInputMatchView("M104", bracket, advancement);
+  const sfY = wcTreeSfY();
+  const sfFinalists = getWcTreeSfFinalistSlots(bracket);
   const champion = bracket.M104?.winner?.trim() ?? null;
-  const homeFinalist = finalView?.home.teamId ?? null;
-  const awayFinalist = finalView?.away.teamId ?? null;
-  const runnerUp =
-    champion && homeFinalist && awayFinalist
-      ? champion === homeFinalist
-        ? awayFinalist
-        : homeFinalist
-      : null;
-
-  const winnerPodiumTeam = champion ?? homeFinalist;
-  const runnerPodiumTeam = champion ? runnerUp : awayFinalist;
 
   const paths = useMemo(() => {
     const paths: string[] = [];
 
-    const pushPair = (
+    const pushPairToSingle = (
+      side: "left" | "right",
       fromCol: number,
       toCol: number,
       yTop: number,
       yBottom: number,
-      yNext: number,
-      side: "left" | "right"
+      yNext: number
     ) => {
-      const exitX = wcTreeSlotExitX(side, fromCol);
-      const entryX = wcTreeSlotEntryX(side, toCol);
-      const endY = wcTreeSlotCenterY(yNext);
+      paths.push(
+        buildPairToSinglePath(side, fromCol, toCol, yTop, yBottom, yNext)
+      );
+    };
 
-      if (side === "left") {
-        paths.push(
-          buildLeftBracketPath(exitX, entryX, yTop, yBottom, endY)
-        );
-      } else {
-        paths.push(
-          buildRightBracketPath(exitX, entryX, yTop, yBottom, endY)
-        );
-      }
+    const pushSingleToSingle = (
+      side: "left" | "right",
+      fromCol: number,
+      toCol: number,
+      yTop: number,
+      yBottom: number,
+      yNext: number
+    ) => {
+      paths.push(
+        buildSingleToSinglePath(side, fromCol, toCol, yTop, yBottom, yNext)
+      );
     };
 
     for (let i = 0; i < 4; i++) {
       const yNext = wcTreeR16Y(i);
-      pushPair(
+      pushPairToSingle(
+        "left",
         WC_TREE_COL.leftR32,
         WC_TREE_COL.leftR16,
         wcTreeR32Y(i * 2),
         wcTreeR32Y(i * 2 + 1),
-        yNext,
-        "left"
+        yNext
       );
-      pushPair(
+      pushPairToSingle(
+        "right",
         WC_TREE_COL.rightR32,
         WC_TREE_COL.rightR16,
         wcTreeR32Y(i * 2),
         wcTreeR32Y(i * 2 + 1),
-        yNext,
-        "right"
+        yNext
       );
     }
 
     for (let i = 0; i < 2; i++) {
       const yNext = wcTreeQfY(i);
-      pushPair(
+      pushSingleToSingle(
+        "left",
         WC_TREE_COL.leftR16,
         WC_TREE_COL.leftQF,
         wcTreeR16Y(i * 2),
         wcTreeR16Y(i * 2 + 1),
-        yNext,
-        "left"
+        yNext
       );
-      pushPair(
+      pushSingleToSingle(
+        "right",
         WC_TREE_COL.rightR16,
         WC_TREE_COL.rightQF,
         wcTreeR16Y(i * 2),
         wcTreeR16Y(i * 2 + 1),
-        yNext,
-        "right"
+        yNext
       );
     }
 
-    pushPair(
+    // ベスト4: 左山 → 左 SF、右山 → 右 SF（各 QF 2 枚から合流）
+    pushSingleToSingle(
+      "left",
       WC_TREE_COL.leftQF,
       WC_TREE_COL.leftSF,
       wcTreeQfY(0),
       wcTreeQfY(1),
-      leftSfY,
-      "left"
+      sfY
     );
-    pushPair(
+    pushSingleToSingle(
+      "right",
       WC_TREE_COL.rightQF,
       WC_TREE_COL.rightSF,
       wcTreeQfY(0),
       wcTreeQfY(1),
-      rightSfY,
-      "right"
+      sfY
     );
 
-    const sfMidY = wcTreeSlotCenterY(leftSfY);
-    const leftBridgeX = wcTreeCenterBridgeX("left", WC_TREE_COL.leftSF);
-    const rightBridgeX = wcTreeCenterBridgeX("right", WC_TREE_COL.rightSF);
-
-    paths.push(
-      singleHPath(wcTreeSlotExitX("left", WC_TREE_COL.leftSF), leftBridgeX, sfMidY)
-    );
-    paths.push(
-      singleHPath(wcTreeSlotExitX("right", WC_TREE_COL.rightSF), rightBridgeX, sfMidY)
-    );
+    paths.push(buildSfFinalTPath(sfY, WC_TREE_PODIUM_CONNECTOR_Y));
 
     return paths;
-  }, [leftSfY, rightSfY]);
+  }, [sfY]);
 
-  const renderMatch = (
+  const renderR32Match = (
+    matchId: WcBracketPredictMatchId,
+    side: "left" | "right",
+    col: number,
+    y: number
+  ) => {
+    const view = buildWcInputMatchView(matchId, bracket, advancement);
+    const home = view?.home ?? { teamId: null, label: "" };
+    const away = view?.away ?? { teamId: null, label: "" };
+    const picked = view?.pickedWinner ?? null;
+    if (!home.teamId && !away.teamId) return null;
+
+    return (
+      <div
+        key={matchId}
+        className="absolute z-10"
+        style={{ left: wcTreeSlotX(side, col), top: y }}
+      >
+        <WcBracketTreeFlagPair home={home} away={away} pickedWinner={picked} />
+      </div>
+    );
+  };
+
+  const renderWinnerMatch = (
     matchId: WcBracketPredictMatchId,
     side: "left" | "right",
     col: number,
     y: number
   ) => (
-    <FlagPairAt
+    <WinnerFlagAt
       key={matchId}
       matchId={matchId}
       x={wcTreeSlotX(side, col)}
@@ -300,7 +346,7 @@ export default function WcBracketTreeInput({
   return (
     <div ref={wrapRef} className={["w-full", className].filter(Boolean).join(" ")}>
       <div
-        className="relative mx-auto w-full overflow-hidden"
+        className="relative mx-auto w-full overflow-visible"
         style={{ height: scaledHeight }}
       >
         <div
@@ -309,10 +355,11 @@ export default function WcBracketTreeInput({
             width: WC_TREE_DESIGN_W,
             height: WC_TREE_DESIGN_H,
             transform: `translateX(-50%) scale(${viewScale})`,
+            marginTop: crownPad,
           }}
         >
           <svg
-            className="pointer-events-none absolute inset-0"
+            className="pointer-events-none absolute inset-0 z-0"
             width={WC_TREE_DESIGN_W}
             height={WC_TREE_DESIGN_H}
             aria-hidden
@@ -330,53 +377,72 @@ export default function WcBracketTreeInput({
           </svg>
 
           {leftR32.map((matchId, i) =>
-            renderMatch(matchId, "left", WC_TREE_COL.leftR32, wcTreeR32Y(i))
+            renderR32Match(matchId, "left", WC_TREE_COL.leftR32, wcTreeR32Y(i))
           )}
           {rightR32.map((matchId, i) =>
-            renderMatch(matchId, "right", WC_TREE_COL.rightR32, wcTreeR32Y(i))
+            renderR32Match(matchId, "right", WC_TREE_COL.rightR32, wcTreeR32Y(i))
           )}
           {WC_BRACKET_LEFT_R16.map((matchId, i) =>
-            renderMatch(matchId, "left", WC_TREE_COL.leftR16, wcTreeR16Y(i))
+            renderWinnerMatch(
+              matchId,
+              "left",
+              WC_TREE_COL.leftR16,
+              wcTreeR16Y(i)
+            )
           )}
-          {WC_BRACKET_RIGHT_R16.map((matchId, i) =>
-            renderMatch(matchId, "right", WC_TREE_COL.rightR16, wcTreeR16Y(i))
+          {WC_BRACKET_RIGHT_R16_TREE.map((matchId, i) =>
+            renderWinnerMatch(
+              matchId,
+              "right",
+              WC_TREE_COL.rightR16,
+              wcTreeR16Y(i)
+            )
           )}
           {WC_BRACKET_LEFT_QF.map((matchId, i) =>
-            renderMatch(matchId, "left", WC_TREE_COL.leftQF, wcTreeQfY(i))
+            renderWinnerMatch(matchId, "left", WC_TREE_COL.leftQF, wcTreeQfY(i))
           )}
           {WC_BRACKET_RIGHT_QF.map((matchId, i) =>
-            renderMatch(matchId, "right", WC_TREE_COL.rightQF, wcTreeQfY(i))
+            renderWinnerMatch(
+              matchId,
+              "right",
+              WC_TREE_COL.rightQF,
+              wcTreeQfY(i)
+            )
           )}
-          {renderMatch("M101", "left", WC_TREE_COL.leftSF, leftSfY)}
-          {renderMatch("M102", "right", WC_TREE_COL.rightSF, rightSfY)}
-
-          {winnerPodiumTeam ? (
-            <AdvanceFlag
-              teamId={winnerPodiumTeam}
-              x={WC_TREE_COL.center}
-              y={WC_TREE_PODIUM_WINNER_Y}
-              large
-            />
+          {sfFinalists.left ? (
+            <div
+              className="absolute z-10"
+              style={{ left: wcTreeSlotX("left", WC_TREE_COL.leftSF), top: sfY }}
+            >
+              <WcBracketTreeWinnerFlag teamId={sfFinalists.left} />
+            </div>
+          ) : null}
+          {sfFinalists.right ? (
+            <div
+              className="absolute z-10"
+              style={{ left: wcTreeSlotX("right", WC_TREE_COL.rightSF), top: sfY }}
+            >
+              <WcBracketTreeWinnerFlag teamId={sfFinalists.right} />
+            </div>
           ) : null}
 
-          <div
-            className="pointer-events-none absolute z-20 flex items-center justify-center text-[22px] drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-            style={{
-              left: WC_TREE_COL.center - 11,
-              top: WC_TREE_PODIUM_TROPHY_Y,
-              width: 22,
-              height: 22,
-            }}
-            aria-hidden
-          >
-            🏆
-          </div>
+          {champion ? (
+            <div
+              className="absolute z-20 -translate-x-1/2"
+              style={{
+                left: WC_TREE_COL.center,
+                top: WC_TREE_PODIUM_CARD_TOP_Y,
+              }}
+            >
+              <ChampionCard teamId={champion} league="wc" hitStatus="none" />
+            </div>
+          ) : null}
 
-          {runnerPodiumTeam ? (
+          {champion ? (
             <AdvanceFlag
-              teamId={runnerPodiumTeam}
+              teamId={champion}
               x={WC_TREE_COL.center}
-              y={WC_TREE_PODIUM_RUNNER_Y}
+              y={WC_TREE_PODIUM_WINNER_Y}
               large
             />
           ) : null}

@@ -5048,3 +5048,247 @@ body::before {
     opacity: 0.72;
   }
 }
+
+/* WC ブラケット提出ボタン — 角切り HUD */
+.wc-bracket-submit-btn {
+  --wc-submit-cut: 14px;
+  --wc-submit-cyan: #00ffcc;
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  padding: 16px 22px 18px;
+  border: 1px solid var(--wc-submit-cyan);
+  background: #000;
+  color: var(--wc-submit-cyan);
+  clip-path: polygon(
+    0% 0%,
+    calc(100% - var(--wc-submit-cut)) 0%,
+    100% var(--wc-submit-cut),
+    100% 100%,
+    var(--wc-submit-cut) 100%,
+    0% calc(100% - var(--wc-submit-cut))
+  );
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.wc-bracket-submit-btn:hover:not(:disabled) {
+  border-color: #36ffe0;
+  box-shadow:
+    0 0 16px rgba(0, 255, 204, 0.28),
+    inset 0 0 24px rgba(0, 255, 204, 0.05);
+}
+
+.wc-bracket-submit-btn:active:not(:disabled) {
+  transform: scale(0.995);
+}
+
+.wc-bracket-submit-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+  border-color: rgba(0, 255, 204, 0.35);
+}
+
+.wc-bracket-submit-btn__label {
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wc-submit-cyan);
+  text-shadow: 0 0 10px rgba(0, 255, 204, 0.42);
+}
+
+.wc-bracket-submit-btn__tick-left {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 7px;
+  height: 2px;
+  transform: translateY(-50%);
+  background: #ff9900;
+  box-shadow: 0 0 8px rgba(255, 153, 0, 0.9);
+}
+
+.wc-bracket-submit-btn__tick-top {
+  position: absolute;
+  top: 0;
+  right: 22px;
+  width: 14px;
+  height: 2px;
+  background: #a020f0;
+  box-shadow: 0 0 6px rgba(160, 32, 240, 0.7);
+}
+
+.wc-bracket-submit-btn__code {
+  position: absolute;
+  right: 12px;
+  bottom: 7px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #ff9900;
+  text-shadow: 0 0 6px rgba(255, 153, 0, 0.5);
+}
+
+/* WC ブラケット入力カード — サイバー HUD 2 行 */
+.wc-bracket-match-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #06080c;
+}
+
+.wc-bracket-match-row {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.wc-bracket-match-row--compact {
+  gap: 10px;
+  padding: 14px 14px 14px 0;
+}
+
+.wc-bracket-match-row:not(.wc-bracket-match-row--compact) {
+  padding: 16px 18px 16px 0;
+}
+
+.wc-bracket-match-row--pickable {
+  cursor: pointer;
+}
+
+.wc-bracket-match-row--pickable:hover:not(.wc-bracket-match-row--selected) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.wc-bracket-match-row--pickable:active:not(.wc-bracket-match-row--selected) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.wc-bracket-match-row--dim {
+  opacity: 0.42;
+}
+
+.wc-bracket-match-row--selected {
+  background: rgba(57, 255, 126, 0.055);
+}
+
+.wc-bracket-match-row__bar {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 5px;
+  background: #39ff7e;
+  box-shadow:
+    0 0 8px rgba(57, 255, 126, 0.75),
+    0 0 16px rgba(57, 255, 126, 0.28);
+}
+
+.wc-bracket-match-row__bar-spacer {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 5px;
+}
+
+.wc-bracket-match-row__qual {
+  flex-shrink: 0;
+  width: 32px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.34);
+  text-align: center;
+}
+
+.wc-bracket-match-row--compact .wc-bracket-match-row__qual {
+  width: 30px;
+  font-size: 12px;
+}
+
+.wc-bracket-match-row__flag {
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.wc-bracket-match-row__flag--compact {
+  width: 30px;
+  height: 22px;
+}
+
+.wc-bracket-match-row__flag:not(.wc-bracket-match-row__flag--compact) {
+  width: 34px;
+  height: 25px;
+}
+
+.wc-bracket-match-row__flag-placeholder {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.wc-bracket-match-row__flag-placeholder--compact {
+  width: 30px;
+  height: 22px;
+}
+
+.wc-bracket-match-row__flag-placeholder:not(.wc-bracket-match-row__flag-placeholder--compact) {
+  width: 34px;
+  height: 25px;
+}
+
+.wc-bracket-match-row__name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.wc-bracket-match-row--compact .wc-bracket-match-row__name {
+  font-size: 13px;
+  letter-spacing: 0.07em;
+}
+
+.wc-bracket-match-row--selected .wc-bracket-match-row__name {
+  color: #39ff7e;
+  text-shadow: 0 0 10px rgba(57, 255, 126, 0.28);
+}
+
+.wc-bracket-match-card__divider {
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+

@@ -6,8 +6,13 @@
 import {
   WC_BRACKET_PREDICT_MATCH_IDS,
   WC_KNOCKOUT_MATCHES,
+  getWcKnockoutMatch,
   listWcR32MatchesForDisplay,
 } from "../lib/wc/wc-knockout-bracket";
+import {
+  WC_BRACKET_LEFT_R16,
+  WC_BRACKET_RIGHT_R16,
+} from "../lib/wc/wc-bracket-layout";
 import { WC_THIRD_PLACE_ANNEX_C } from "../lib/wc/wc-knockout-third-place-annex-data";
 
 let ok = true;
@@ -35,6 +40,33 @@ for (const half of ["left", "right"] as const) {
     fail(`${half} r32Index must be 0..7, got ${sorted.join()}`);
   }
 }
+
+function assertR16FeedersAdjacent(
+  r32Ids: readonly string[],
+  r16Ids: readonly string[],
+  label: string
+) {
+  for (const r16Id of r16Ids) {
+    const def = getWcKnockoutMatch(r16Id as never);
+    if (!def || def.feedsFrom.length !== 2) continue;
+    const ia = r32Ids.indexOf(def.feedsFrom[0]);
+    const ib = r32Ids.indexOf(def.feedsFrom[1]);
+    if (ia < 0 || ib < 0) {
+      fail(`${label} ${r16Id}: feeder not in R32 list`);
+      continue;
+    }
+    if (Math.abs(ia - ib) !== 1) {
+      fail(
+        `${label} ${r16Id}: feeders ${def.feedsFrom.join("/")} not adjacent in display order (indices ${ia},${ib})`
+      );
+    }
+  }
+}
+
+const leftR32Ids = left.map((m) => m.id);
+const rightR32Ids = right.map((m) => m.id);
+assertR16FeedersAdjacent(leftR32Ids, WC_BRACKET_LEFT_R16, "left");
+assertR16FeedersAdjacent(rightR32Ids, WC_BRACKET_RIGHT_R16, "right");
 
 for (const m of WC_KNOCKOUT_MATCHES) {
   for (const parent of m.feedsFrom) {

@@ -20,23 +20,48 @@ type Props = {
 function FlagDot({
   teamId,
   selected = false,
+  dimmed = false,
 }: {
   teamId: string;
   selected?: boolean;
+  dimmed?: boolean;
 }) {
   return (
-    <CountryFlag
-      teamId={teamId}
+    <div
       className={[
-        "aspect-4/3 shrink-0 w-8",
-        selected ? "ring-2 ring-cyan-400/90 rounded-[2px]" : "",
-      ].join(" ")}
-      variant="inline"
-    />
+        "shrink-0 overflow-hidden rounded-[2px]",
+        selected ? "ring-2 ring-inset ring-cyan-400/90" : "",
+        dimmed ? "opacity-35" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={{ width: WC_TREE_FLAG_W, height: WC_TREE_FLAG_H }}
+    >
+      <CountryFlag
+        teamId={teamId}
+        variant="inline"
+        className="block! h-full! w-full! ring-0!"
+      />
+    </div>
   );
 }
 
 export { WC_TREE_SLOT_W as WC_TREE_FLAG_PAIR_W, WC_TREE_SLOT_H as WC_TREE_FLAG_PAIR_H };
+
+export function WcBracketTreeWinnerFlag({ teamId }: { teamId: string }) {
+  return (
+    <div
+      className="shrink-0 overflow-hidden rounded-[2px] ring-2 ring-inset ring-cyan-400/90"
+      style={{ width: WC_TREE_FLAG_W, height: WC_TREE_FLAG_H }}
+    >
+      <CountryFlag
+        teamId={teamId}
+        variant="inline"
+        className="block! h-full! w-full! ring-0!"
+      />
+    </div>
+  );
+}
 
 export default function WcBracketTreeFlagPair({
   home,
@@ -55,17 +80,6 @@ export default function WcBracketTreeFlagPair({
     );
   }
 
-  if (pickedWinner) {
-    return (
-      <div
-        className="flex items-center justify-center"
-        style={{ width: WC_TREE_SLOT_W, height: WC_TREE_SLOT_H }}
-      >
-        <FlagDot teamId={pickedWinner} selected />
-      </div>
-    );
-  }
-
   return (
     <div
       className="flex flex-col items-center"
@@ -76,7 +90,11 @@ export default function WcBracketTreeFlagPair({
       }}
     >
       {home.teamId ? (
-        <FlagDot teamId={home.teamId} />
+        <FlagDot
+          teamId={home.teamId}
+          selected={pickedWinner === home.teamId}
+          dimmed={Boolean(pickedWinner && pickedWinner !== home.teamId)}
+        />
       ) : (
         <span
           className="block shrink-0"
@@ -85,7 +103,11 @@ export default function WcBracketTreeFlagPair({
         />
       )}
       {away.teamId ? (
-        <FlagDot teamId={away.teamId} />
+        <FlagDot
+          teamId={away.teamId}
+          selected={pickedWinner === away.teamId}
+          dimmed={Boolean(pickedWinner && pickedWinner !== away.teamId)}
+        />
       ) : (
         <span
           className="block shrink-0"

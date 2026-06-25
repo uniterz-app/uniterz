@@ -266,7 +266,7 @@ export default function WebRankingsShell() {
           <div className="h-10 w-10 shrink-0" aria-hidden />
         </div>
         <div className="space-y-0.5">
-          {rankingLeague === "nba" ? (
+          {rankingLeague === "nba" || rankingLeague === "worldcup" ? (
             <RankingsCategoryTabs
               category={category}
               onChange={setCategory}

@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import { alfa, jp } from "@/lib/fonts";
 import type { WcBracketLeaderboardRow } from "@/lib/leaderboards/useWcBracketLeaderboard";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
   ProCyberBadge,
@@ -18,43 +18,17 @@ type Props = {
   onClick?: () => void;
 };
 
-function textOnPrimary(hex: string): "#ffffff" | "#0f172a" {
-  const h = hex.replace(/^#/, "");
-  if (h.length !== 6) return "#ffffff";
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-  if ([r, g, b].some((n) => Number.isNaN(n))) return "#ffffff";
-  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return lum > 0.72 ? "#0f172a" : "#ffffff";
-}
-
-function ChampionPickBadge({
-  code,
-  language,
-}: {
-  code: string;
-  language: Language;
-}) {
-  const teamId = `wc-${code.toLowerCase()}`;
-  const bg = getTeamPrimaryColor("wc", teamId) ?? "#1d4ed8";
-  const label = code.trim().toUpperCase().slice(0, 3);
-  const fg = textOnPrimary(bg);
-
+function ChampionFlag({ teamId }: { teamId: string }) {
   return (
     <span
-      className={[
-        "inline-flex h-[15px] shrink-0 items-center justify-center rounded-[4px] px-1 text-[9px] font-black leading-none tracking-[0.05em] sm:h-[18px] sm:rounded-[5px] sm:px-1.5 sm:text-[10px]",
-        alfa.className,
-      ].join(" ")}
-      style={{ backgroundColor: bg, color: fg }}
-      title={
-        language === "en"
-          ? `Predicted champion: ${label}`
-          : `優勝予想: ${label}`
-      }
+      className="inline-flex h-[18px] w-[26px] shrink-0 overflow-hidden rounded-[2px] ring-1 ring-white/20 sm:h-5 sm:w-[30px]"
+      title={teamId}
     >
-      {label}
+      <CountryFlag
+        teamId={teamId}
+        variant="inline"
+        className="block! h-full! w-full! ring-0!"
+      />
     </span>
   );
 }
@@ -82,6 +56,7 @@ export default function WcBracketUserCard({
   const displayName = row.displayName || "User";
   const initial = displayName.charAt(0).toUpperCase();
   const handle = row.handle ?? null;
+  const championTeamId = row.championTeamId?.trim() || null;
   const baseCardClass =
     "relative overflow-hidden rounded-none border px-3 py-2";
 
@@ -124,7 +99,7 @@ export default function WcBracketUserCard({
         </div>
 
         <div className="min-w-0">
-          <div className="flex min-w-0 max-w-full items-center gap-1 overflow-hidden">
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden">
             <div
               className={[
                 "min-w-0 truncate font-black text-[14px] leading-tight text-white",
@@ -133,9 +108,7 @@ export default function WcBracketUserCard({
             >
               {displayName}
             </div>
-            {row.championPick ? (
-              <ChampionPickBadge code={row.championPick} language={language} />
-            ) : null}
+            {championTeamId ? <ChampionFlag teamId={championTeamId} /> : null}
             {isPro ? (
               <ProCyberBadge
                 {...proBadgeStaticMotion}

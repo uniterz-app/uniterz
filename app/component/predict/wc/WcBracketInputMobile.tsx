@@ -12,13 +12,11 @@ import {
   WC_BRACKET_INPUT_PHASES,
   type WcBracketInputPhase,
   firstIncompleteWcBracketPhase,
-  isWcBracketPhaseComplete,
-  wcBracketPhaseIndex,
 } from "@/lib/wc/wc-bracket-input-phases";
 import WcBracketRoundTabs from "@/app/component/predict/wc/WcBracketRoundTabs";
 import WcBracketSplitRoundView from "@/app/component/predict/wc/WcBracketSplitRoundView";
 import WcBracketTreeInput from "@/app/component/predict/wc/WcBracketTreeInput";
-import { PLAYOFF_BRACKET_PANEL } from "@/lib/ui/matchOverlayGlass";
+import WcBracketSubmitButton from "@/app/component/predict/wc/WcBracketSubmitButton";
 import type { Language } from "@/lib/i18n/language";
 
 type Props = {
@@ -28,6 +26,8 @@ type Props = {
   onSubmitClick: () => void;
   language?: Language;
   submitDisabled?: boolean;
+  submitButtonLabel?: string;
+  /** @deprecated 文言は常に submit */
   submitLabel?: string;
   className?: string;
 };
@@ -39,7 +39,7 @@ export default function WcBracketInputMobile({
   onSubmitClick,
   language = "ja",
   submitDisabled = false,
-  submitLabel,
+  submitButtonLabel,
   className = "",
 }: Props) {
   const isJa = language === "ja";
@@ -54,10 +54,11 @@ export default function WcBracketInputMobile({
     [bracket, onBracketChange]
   );
 
-  const phaseComplete = isWcBracketPhaseComplete(activePhase, bracket);
+  const handlePromotePhase = useCallback((next: WcBracketInputPhase) => {
+    setActivePhase(next);
+  }, []);
+
   const isComplete = isWcBracketComplete(bracket);
-  const phaseIdx = wcBracketPhaseIndex(activePhase);
-  const nextPhase = WC_BRACKET_INPUT_PHASES[phaseIdx + 1];
 
   const pickedTotal = useMemo(
     () =>
@@ -70,15 +71,8 @@ export default function WcBracketInputMobile({
     [bracket]
   );
 
-  const ctaLabel =
-    submitLabel ?? (isJa ? "ブラケットを提出する" : "Submit bracket");
-
   return (
-    <div
-      className={[PLAYOFF_BRACKET_PANEL, "relative w-full pb-4", className]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <div className={["relative w-full bg-transparent pb-4", className].join(" ")}>
       <div className="relative z-20 flex justify-end px-3 pb-1 pt-2">
         <span className="text-[11px] font-semibold tabular-nums text-white/50">
           {pickedTotal}/31
@@ -91,13 +85,14 @@ export default function WcBracketInputMobile({
         onChange={setActivePhase}
       />
 
-      <div className="relative z-20 overflow-x-hidden px-1">
+      <div className="relative z-20 overflow-x-hidden">
         <WcBracketSplitRoundView
           activePhase={activePhase}
           bracket={bracket}
           advancement={advancement}
           language={language}
           onPick={pickWinner}
+          onPromotePhase={handlePromotePhase}
         />
       </div>
 
@@ -116,34 +111,13 @@ export default function WcBracketInputMobile({
         </div>
       ) : null}
 
-      {(phaseComplete && nextPhase && !isComplete) || isComplete ? (
-        <div className="sticky bottom-0 z-30 mt-4 border-t border-white/10 bg-[#050b14]/92 px-4 py-3 backdrop-blur-md">
-          {phaseComplete && nextPhase && !isComplete ? (
-            <button
-              type="button"
-              onClick={() => setActivePhase(nextPhase.id)}
-              className="w-full rounded-xl bg-[#163a5f] py-3.5 text-sm font-bold text-white transition hover:bg-[#1d4c78] active:scale-[0.99]"
-            >
-              {isJa ? "次へ" : "Next"}
-            </button>
-          ) : null}
-
-          {isComplete ? (
-            <button
-              type="button"
-              disabled={submitDisabled}
-              onClick={onSubmitClick}
-              className={[
-                "w-full rounded-xl py-3.5 text-sm font-bold text-white transition",
-                phaseComplete && nextPhase ? "mt-2" : "",
-                submitDisabled
-                  ? "cursor-not-allowed bg-white/15 text-white/50"
-                  : "bg-cyan-500 text-[#041018] hover:brightness-110 active:scale-[0.99]",
-              ].join(" ")}
-            >
-              {ctaLabel}
-            </button>
-          ) : null}
+      {isComplete ? (
+        <div className="sticky bottom-0 z-30 mt-4 border-t border-white/10 bg-black/25 px-4 py-3 backdrop-blur-xl">
+          <WcBracketSubmitButton
+            disabled={submitDisabled}
+            onClick={onSubmitClick}
+            label={submitButtonLabel}
+          />
         </div>
       ) : null}
     </div>

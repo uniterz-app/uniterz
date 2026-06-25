@@ -19,7 +19,7 @@ export const WC_KNOCKOUT_BRACKET_CONFIGS: Record<string, WcKnockoutBracketConfig
        * TODO: ノックアウト試合 seed 確定後に startAtJst と同期させる。
        */
       submissionClosesAtIso: "2026-06-28T12:00:00-07:00",
-      allowSubmission: false,
+      allowSubmission: true,
     },
   };
 

@@ -15,8 +15,8 @@ import {
   WC_BRACKET_DESIGN_W,
   WC_BRACKET_LEFT_QF,
   WC_BRACKET_LEFT_R16,
+  WC_BRACKET_RIGHT_R16_TREE,
   WC_BRACKET_RIGHT_QF,
-  WC_BRACKET_RIGHT_R16,
   WC_BRACKET_SLOT_GAP,
   wcQfY,
   wcR16Y,
@@ -205,7 +205,7 @@ export default function WcFullBracketMobile({
             "left"
           )}
           {renderRound(
-            WC_BRACKET_RIGHT_R16,
+            WC_BRACKET_RIGHT_R16_TREE,
             WC_BRACKET_COL_X.rightR16,
             wcR16Y,
             "right"
