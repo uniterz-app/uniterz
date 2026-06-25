@@ -28,7 +28,7 @@ export default function MaintenanceOverlay() {
         <h1 className="text-xl font-bold mb-4">メンテナンス中</h1>
 
         <p className="text-sm opacity-90 leading-relaxed">
-          ランキング機能に不具合が発生しているため、現在メンテナンス中です。
+          現在、サービスを一時停止してメンテナンスを行っています。
           <br />
           復旧までしばらくお待ちください。
           <br />
@@ -36,7 +36,7 @@ export default function MaintenanceOverlay() {
         </p>
 
         <p className="mt-5 text-xs opacity-60 leading-relaxed">
-          Rankings are temporarily unavailable due to maintenance.
+          The app is temporarily unavailable for maintenance.
           <br />
           Please check back later.
         </p>
