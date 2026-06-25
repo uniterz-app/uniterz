@@ -68,6 +68,13 @@ export function computeTopPercentile(
   return (safeRank / safeDenom) * 100;
 }
 
+/** 上位%表示 — 小数第3位まで（末尾ゼロは省略） */
+export function formatKinetikTopPercent(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  const rounded = Math.round(value * 1000) / 1000;
+  return rounded.toFixed(3).replace(/\.?0+$/, "");
+}
+
 export function getKinetikRankBadgeTierFromTopPercent(
   topPercent: number
 ): Exclude<KinetikRankBadgeTier, "rising"> | null {
@@ -97,11 +104,12 @@ function tierDescription(
   }
 
   const pct = topPercent ?? TIER_TOP_PERCENT[tier] ?? null;
+  const pctLabel = pct != null ? formatKinetikTopPercent(pct) : null;
   if (language === "ja") {
-    if (pct != null) return `総合得点 上位${pct}%`;
+    if (pctLabel != null) return `総合得点 上位${pctLabel}%`;
     return TIER_LABEL[tier];
   }
-  if (pct != null) return `Top ${pct}% total points`;
+  if (pctLabel != null) return `Top ${pctLabel}% total points`;
   return TIER_LABEL[tier];
 }
 
@@ -116,18 +124,37 @@ export function getKinetikRankBadgeExplanation(
 
   if (badge.tier === "rising") {
     return language === "ja"
-      ? `${badge.label}\n前回のランキング更新（日本時間16:00）から5位以上順位を上げたときに付与されます。\n${badge.description}`
-      : `${badge.label}\nAwarded when you climb at least 5 places since the last ranking update (16:00 JST).\n${badge.description}`;
+      ? `${badge.label}\n\n前回のランキング更新（日本時間 16:00）から 5 位以上順位を上げたときに付与されます。\n\n${badge.description}`
+      : `${badge.label}\n\nAwarded when you climb at least 5 places since the last ranking update (16:00 JST).\n\n${badge.description}`;
   }
+
+  const pctLabel = pct != null ? formatKinetikTopPercent(pct) : null;
 
   if (language === "ja") {
     const pctLine =
-      pct != null ? `総合得点ランキングの上位${pct}%以内です。` : "";
-    return `${badge.label}\n${pctLine}日本時間16:00に更新される累積ランキングの順位に基づく称号です。`;
+      pctLabel != null
+        ? `総合得点ランキングの上位 ${pctLabel}% 以内`
+        : "";
+    const body = [
+      pctLine,
+      "日本時間 16:00 に更新される累積ランキングの順位に基づく称号です。",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    return `${badge.label}\n${body}`;
   }
 
-  const pctLine = pct != null ? `You are in the top ${pct}% of total points.` : "";
-  return `${badge.label}\n${pctLine} Based on the cumulative ranking updated daily at 16:00 JST.`.trim();
+  const pctLine =
+    pctLabel != null
+      ? `You are in the top ${pctLabel}% of total points.`
+      : "";
+  const body = [
+    pctLine,
+    "Based on the cumulative ranking updated daily at 16:00 JST.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  return `${badge.label}\n${body}`;
 }
 
 function buildResult(

@@ -4614,6 +4614,71 @@ body::before {
   opacity: 0.9;
 }
 
+/* CyberTooltip — 軽い入場・グリッチ・スキャン */
+@keyframes cyber-tooltip-scan-sweep {
+  0% {
+    transform: translateX(-140%);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateX(340%);
+    opacity: 0;
+  }
+}
+
+@keyframes cyber-tooltip-title-glitch-a {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate(-1.5px, 1.5px);
+  }
+  48% {
+    opacity: 0.68;
+    transform: translate(-2px, 1px);
+  }
+}
+
+@keyframes cyber-tooltip-title-glitch-b {
+  0%,
+  100% {
+    opacity: 0.24;
+    transform: translate(1px, -1px);
+  }
+  52% {
+    opacity: 0.36;
+    transform: translate(1.5px, -1.5px);
+  }
+}
+
+@keyframes cyber-tooltip-title-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px var(--cyber-tooltip-accent, #22d3ee));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px var(--cyber-tooltip-accent, #22d3ee));
+  }
+}
+
+.cyber-tooltip-scan-sweep {
+  animation: cyber-tooltip-scan-sweep 1.1s ease-out 0.08s 1 both;
+}
+
+.cyber-tooltip-title-glitch-a {
+  animation: cyber-tooltip-title-glitch-a 2.6s ease-in-out infinite;
+}
+
+.cyber-tooltip-title-glitch-b {
+  animation: cyber-tooltip-title-glitch-b 2.6s ease-in-out infinite;
+}
+
+.cyber-tooltip-title-glow {
+  animation: cyber-tooltip-title-glow 2.4s ease-in-out infinite;
+}
+
 @keyframes kinetik-streak-rib-pulse {
   0%,
   100% {
