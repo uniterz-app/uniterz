@@ -116,13 +116,17 @@ export function wcTreeBottomSfY(): number {
   return wcTreeSfY();
 }
 
-/** チャンピオンカード — 国旗を内包 */
-export const WC_TREE_CHAMPION_CARD_W = 128;
-export const WC_TREE_CHAMPION_CARD_H = 76;
-/** 王冠 + CHAMPION ラベル（カード上にはみ出す高さ） */
-export const WC_TREE_CHAMPION_CARD_LABEL_OVERHANG = 38;
-export const WC_TREE_PODIUM_CARD_TOP_Y = 28;
-/** SF→決勝の縦線が到達する Y（カード下端） */
+/** チャンピオン — 国旗のみ（外枠なし） */
+export const WC_TREE_CHAMPION_CARD_W = 134;
+export const WC_TREE_CHAMPION_CARD_H = 90;
+/** @deprecated 外枠廃止。CARD_W/H と同一 */
+export const WC_TREE_CHAMPION_CARD_INNER_W = WC_TREE_CHAMPION_CARD_W;
+export const WC_TREE_CHAMPION_CARD_INNER_H = WC_TREE_CHAMPION_CARD_H;
+/** 王冠（国旗上にはみ出す高さ） */
+export const WC_TREE_CHAMPION_CARD_LABEL_OVERHANG = 28;
+/** 国旗ボックス上端 Y（王冠ラベルはこれより上にはみ出す） */
+export const WC_TREE_PODIUM_CARD_TOP_Y = 168;
+/** SF→決勝の縦線が到達する Y（国旗下端） */
 export const WC_TREE_PODIUM_CONNECTOR_Y =
   WC_TREE_PODIUM_CARD_TOP_Y + WC_TREE_CHAMPION_CARD_H;
 

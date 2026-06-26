@@ -5342,24 +5342,267 @@ div.wc-bracket-user-card--interactive:active {
   transform: scale(0.995);
 }
 
-/* WC チャンピオンカード — 国旗を内包するサイバー枠 */
-.wc-champion-card {
-  border: 1.5px solid rgba(0, 245, 255, 0.82);
-  background:
-    linear-gradient(180deg, rgba(0, 245, 255, 0.1) 0%, rgba(0, 0, 0, 0.92) 38%),
-    #030508;
-  box-shadow:
-    0 0 10px rgba(0, 245, 255, 0.38),
-    0 0 22px rgba(0, 245, 255, 0.14),
-    inset 0 0 0 1px rgba(0, 245, 255, 0.22),
-    inset 0 1px 0 rgba(0, 245, 255, 0.35);
+/* WC チャンピオン — 国旗のみ（外枠なし） */
+.wc-champion-card__flag {
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.22);
 }
 
-.wc-champion-card__inner {
-  width: 96px;
-  height: 64px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 0 14px rgba(0, 245, 255, 0.22),
-    inset 0 0 18px rgba(0, 245, 255, 0.08);
+.wc-champion-card__flag-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.06);
+}
+
+/* WC ブラケットツリー — 背景（参考 HUD・中央円なし） */
+.wc-bracket-tree-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.wc-bracket-tree-bg__base {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    #03343f 0%,
+    #044a52 14%,
+    #055a5e 32%,
+    #0d6b42 58%,
+    #3f7f0f 78%,
+    #6faa12 92%,
+    #84cc16 100%
+  );
+}
+
+.wc-bracket-tree-bg__mist {
+  position: absolute;
+  pointer-events: none;
+}
+
+.wc-bracket-tree-bg__mist--top {
+  top: -8%;
+  left: 50%;
+  width: 115%;
+  height: 42%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse 82% 78% at 50% 0%,
+    rgba(165, 243, 252, 0.42) 0%,
+    rgba(34, 211, 238, 0.2) 34%,
+    transparent 72%
+  );
+  filter: blur(28px);
+}
+
+/* 中央の強いライムグロー（円形 HUD の代わり） */
+.wc-bracket-tree-bg__mist--core {
+  top: 28%;
+  left: 50%;
+  width: 108%;
+  height: 52%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse 72% 64% at 50% 54%,
+    rgba(217, 249, 157, 0.72) 0%,
+    rgba(163, 230, 53, 0.48) 24%,
+    rgba(101, 163, 13, 0.22) 48%,
+    transparent 74%
+  );
+  filter: blur(38px);
+}
+
+.wc-bracket-tree-bg__mist--bottom {
+  bottom: -14%;
+  left: 50%;
+  width: 120%;
+  height: 48%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse 80% 72% at 50% 88%,
+    rgba(190, 242, 100, 0.55) 0%,
+    rgba(132, 204, 22, 0.28) 38%,
+    transparent 72%
+  );
+  filter: blur(32px);
+}
+
+.wc-bracket-tree-bg__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 92% 88% at 50% 48%, transparent 42%, rgba(2, 20, 22, 0.55) 100%),
+    linear-gradient(180deg, rgba(2, 28, 34, 0.42) 0%, transparent 22%, transparent 78%, rgba(8, 32, 10, 0.38) 100%);
+  pointer-events: none;
+}
+
+.wc-bracket-tree-bg__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.34;
+  background-image:
+    linear-gradient(rgba(190, 242, 100, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 232, 249, 0.16) 1px, transparent 1px);
+  background-size: 18px 18px;
+  mask-image: radial-gradient(
+    ellipse 88% 78% at 50% 52%,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+}
+
+.wc-bracket-tree-bg__arcs {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px rgba(103, 232, 249, 0.45))
+    drop-shadow(0 0 16px rgba(163, 230, 53, 0.35));
+  opacity: 0.88;
+}
+
+.wc-bracket-tree-bg__top {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 18px;
+  pointer-events: none;
+}
+
+.wc-bracket-tree-bg__top-line {
+  flex: 1;
+  max-width: 108px;
+  height: 1px;
+  margin-top: 14px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(103, 232, 249, 0.15) 12%,
+    rgba(165, 243, 252, 0.72) 50%,
+    rgba(103, 232, 249, 0.15) 88%,
+    transparent 100%
+  );
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.45);
+}
+
+.wc-bracket-tree-bg__top-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.wc-bracket-tree-bg__title {
+  font-size: clamp(18px, 5.2vw, 24px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.28em;
+  color: rgba(236, 254, 255, 0.92);
+  text-shadow:
+    0 0 12px rgba(103, 232, 249, 0.85),
+    0 0 28px rgba(34, 211, 238, 0.45);
+}
+
+.wc-bracket-tree-bg__sub {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: rgba(165, 243, 252, 0.78);
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+}
+
+.wc-bracket-tree-bg__bottom {
+  position: absolute;
+  bottom: 12px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.wc-bracket-tree-bg__bottom-row {
+  display: grid;
+  grid-template-columns: 84px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.wc-bracket-tree-bg__label {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: rgba(190, 242, 100, 0.52);
+}
+
+.wc-bracket-tree-bg__label--active {
+  color: rgba(165, 243, 252, 0.88);
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.45);
+}
+
+.wc-bracket-tree-bg__meter {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 1px;
+  background: rgba(2, 32, 28, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.12);
+}
+
+.wc-bracket-tree-bg__meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgba(132, 204, 22, 0.55) 0%,
+    rgba(190, 242, 100, 0.95) 100%
+  );
+  box-shadow: 0 0 10px rgba(163, 230, 53, 0.65);
+}
+
+.wc-bracket-tree-bg__meter-fill--cyan {
+  background: linear-gradient(
+    90deg,
+    rgba(34, 211, 238, 0.45) 0%,
+    rgba(165, 243, 252, 0.95) 100%
+  );
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.55);
+}
+
+.wc-bracket-tree-bg__pct {
+  font-size: 8px;
+  text-align: right;
+  letter-spacing: 0.08em;
+  color: rgba(224, 255, 251, 0.62);
+}
+
+/* WC ブラケットツリー — 勝ち上がり接続線（サイバーグリーン） */
+.wc-bracket-tree-line__glow {
+  fill: none;
+  stroke: rgba(52, 211, 153, 0.32);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.wc-bracket-tree-line__core {
+  fill: none;
+  stroke: rgba(110, 231, 183, 0.78);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
 }

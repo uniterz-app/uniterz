@@ -37,6 +37,7 @@ import {
 import WcBracketTreeFlagPair, {
   WcBracketTreeWinnerFlag,
 } from "@/app/component/predict/wc/WcBracketTreeFlagPair";
+import WcBracketTreeBackground from "@/app/component/predict/wc/WcBracketTreeBackground";
 import WcChampionCard from "@/app/component/predict/wc/WcChampionCard";
 import type { Language } from "@/lib/i18n/language";
 
@@ -302,9 +303,15 @@ export default function WcBracketTreeInput({
   );
 
   return (
-    <div ref={wrapRef} className={["w-full", className].filter(Boolean).join(" ")}>
+    <div
+      ref={wrapRef}
+      className={["relative w-full overflow-hidden rounded-xl", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <WcBracketTreeBackground />
       <div
-        className="relative mx-auto w-full overflow-visible"
+        className="relative z-10 mx-auto w-full overflow-visible"
         style={{ height: scaledHeight }}
       >
         <div
@@ -323,14 +330,10 @@ export default function WcBracketTreeInput({
             aria-hidden
           >
             {paths.map((d, i) => (
-              <path
-                key={i}
-                d={d}
-                fill="none"
-                stroke="rgba(0,245,255,0.22)"
-                strokeWidth={1}
-                vectorEffect="non-scaling-stroke"
-              />
+              <g key={i}>
+                <path className="wc-bracket-tree-line__glow" d={d} />
+                <path className="wc-bracket-tree-line__core" d={d} />
+              </g>
             ))}
           </svg>
 
