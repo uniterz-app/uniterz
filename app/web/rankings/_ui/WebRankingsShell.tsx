@@ -270,6 +270,7 @@ export default function WebRankingsShell() {
             <RankingsCategoryTabs
               category={category}
               onChange={setCategory}
+              league={rankingLeague}
             />
           ) : null}
 

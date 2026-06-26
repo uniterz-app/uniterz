@@ -45,14 +45,17 @@ export function RankingsCategoryTabsNative({
   category,
   onChange,
   language,
+  league = "nba",
 }: {
   category: "playoffs" | "bracket";
   onChange: (value: "playoffs" | "bracket") => void;
   language: RankingsLanguage;
+  league?: "nba" | "wc";
 }) {
   const t = rankingsTexts(language);
+  const playoffsLabel = league === "wc" ? t.worldCup : t.playoffs;
   const items = [
-    { key: "playoffs" as const, label: t.playoffs },
+    { key: "playoffs" as const, label: playoffsLabel },
     { key: "bracket" as const, label: t.bracket },
   ];
   return (

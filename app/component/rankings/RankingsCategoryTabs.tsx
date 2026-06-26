@@ -11,17 +11,22 @@ export type { RankingsCategory } from "@/app/component/rankings/RankingsCategory
 type Props = {
   category: RankingsCategory;
   onChange: (next: RankingsCategory) => void;
+  /** WC ランキングでは Playoffs タブを WORLD CUP 表記にする */
+  league?: "nba" | "worldcup";
 };
 
 export default function RankingsCategoryTabs({
   category,
   onChange,
+  league = "nba",
 }: Props) {
+  const playoffsLabel = league === "worldcup" ? "WORLD CUP" : "Playoffs";
+
   return (
     <CyberSlantedTabBar fill aria-label="Ranking category">
       <CyberSlantedTab
         role="tab"
-        label="Playoffs"
+        label={playoffsLabel}
         active={category === "playoffs"}
         onClick={() => onChange("playoffs")}
       />

@@ -29,6 +29,7 @@ type TabProps = {
   onPress: () => void;
   compact?: boolean;
   fill?: boolean;
+  fontWeight?: "500" | "600" | "700";
   accessibilityRole?: "tab";
   accessibilityState?: { selected?: boolean };
 };
@@ -50,6 +51,7 @@ export function CyberSlantedTabNative({
   onPress,
   compact = false,
   fill = false,
+  fontWeight = "700",
   accessibilityRole,
   accessibilityState,
 }: TabProps) {
@@ -123,6 +125,7 @@ export function CyberSlantedTabNative({
             textAnimStyle,
             {
               fontSize,
+              fontWeight,
               lineHeight: Math.round(fontSize * 1.1),
               letterSpacing: jaLabel ? 0.4 : 1.1,
               transform: [{ skewX: "14deg" }],

@@ -249,6 +249,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               category={category}
               onChange={setCategory}
               language={language}
+              league={rankingsLeague}
             />
           ) : null}
 

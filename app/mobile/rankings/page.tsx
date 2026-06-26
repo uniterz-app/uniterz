@@ -273,6 +273,7 @@ export default function MobileRankingsPage() {
               <RankingsCategoryTabs
                 category={category}
                 onChange={setCategory}
+                league={rankingLeague}
               />
             ) : null}
 

@@ -27,6 +27,10 @@ import { isWcBracketComplete } from "@/lib/wc/wc-knockout-bracket";
 import WcBracketTreeInput from "@/app/component/predict/wc/WcBracketTreeInput";
 import WcBracketInputMobile from "@/app/component/predict/wc/WcBracketInputMobile";
 import WcBracketStartPromptModal from "@/app/component/predict/wc/WcBracketStartPromptModal";
+import WcBracketViewTabs, {
+  type WcBracketViewMode,
+} from "@/app/component/leaderboards/WcBracketViewTabs";
+import WcBracketMarket from "@/app/component/predict/market/WcBracketMarket";
 import { WC_DEMO_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-demo-advancement";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
@@ -68,6 +72,7 @@ export default function WcBracketLeaderboardSection({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submissionPromptOpen, setSubmissionPromptOpen] = useState(false);
   const [inputPageOpen, setInputPageOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<WcBracketViewMode>("survivor");
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -267,7 +272,14 @@ export default function WcBracketLeaderboardSection({
     }
   }, [uid, draftBracket, season, refetch, isJa, submissionOpen]);
 
-  const titleBlock = (
+  const listBusy = loading || savedLoading;
+
+  const listRows =
+    myRow && hasSubmitted
+      ? rows.filter((row) => row.uid !== myRow.uid)
+      : rows;
+
+  const survivorTitleBlock = (
     <div className="px-1 text-center">
       <p
         className={[
@@ -282,72 +294,83 @@ export default function WcBracketLeaderboardSection({
     </div>
   );
 
-  const listBusy = loading || savedLoading;
+  const myCardBlock =
+    myRow && hasSubmitted ? (
+      <div className="pt-0.5">
+        <WcBracketUserCard
+          row={myRow}
+          language={language}
+          onClick={() => openDetail(myRow)}
+          onEditClick={
+            canReeditBracket && !inputOverlayOpen
+              ? () => setInputPageOpen(true)
+              : undefined
+          }
+        />
+      </div>
+    ) : null;
 
-  const listRows =
-    myRow && hasSubmitted
-      ? rows.filter((row) => row.uid !== myRow.uid)
-      : rows;
+  const survivorListBody =
+    listBusy ? (
+      <div className="flex items-center justify-center py-16">
+        <CandleChartLoader label={isJa ? "読み込み中" : "Loading"} />
+      </div>
+    ) : error ? (
+      <div className="py-16 text-center text-white/60">{error}</div>
+    ) : listRows.length === 0 && !(myRow && hasSubmitted) ? (
+      <div
+        role="status"
+        className="flex min-h-[min(50dvh,480px)] flex-col items-center justify-center px-4 text-center"
+      >
+        <p
+          className={[
+            nameBebas.className,
+            "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+          ].join(" ")}
+          style={cyberNoDataLabelStyle}
+        >
+          NO DATA
+        </p>
+      </div>
+    ) : (
+      <div className="space-y-2 pb-bottom-nav pt-2">
+        {listRows.map((row, index) => (
+          <motion.div
+            key={row.uid}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: CARD_DURATION,
+              delay: cardDelay(index),
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            <WcBracketUserCard
+              row={row}
+              language={language}
+              onClick={() => openDetail(row)}
+            />
+          </motion.div>
+        ))}
+      </div>
+    );
 
   const leaderboardBody = (
     <>
-      {myRow && hasSubmitted ? (
-        <div className="pt-0.5">
-          <WcBracketUserCard
-            row={myRow}
-            language={language}
-            onClick={() => openDetail(myRow)}
-            onEditClick={
-              canReeditBracket && !inputOverlayOpen
-                ? () => setInputPageOpen(true)
-                : undefined
-            }
-          />
-        </div>
-      ) : null}
-      {titleBlock}
-      {listBusy ? (
-        <div className="flex items-center justify-center py-16">
-          <CandleChartLoader label={isJa ? "読み込み中" : "Loading"} />
-        </div>
-      ) : error ? (
-        <div className="py-16 text-center text-white/60">{error}</div>
-      ) : listRows.length === 0 && !(myRow && hasSubmitted) ? (
-        <div
-          role="status"
-          className="flex min-h-[min(50dvh,480px)] flex-col items-center justify-center px-4 text-center"
-        >
-          <p
-            className={[
-              nameBebas.className,
-              "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
-            ].join(" ")}
-            style={cyberNoDataLabelStyle}
-          >
-            NO DATA
-          </p>
-        </div>
+      {myCardBlock}
+      <div className="pt-1">
+        <WcBracketViewTabs
+          mode={viewMode}
+          onChange={setViewMode}
+        />
+      </div>
+      {viewMode === "survivor" ? (
+        <>
+          {survivorTitleBlock}
+          {survivorListBody}
+        </>
       ) : (
-        <div className="space-y-2 pb-bottom-nav pt-2">
-          {listRows.map((row, index) => (
-            <motion.div
-              key={row.uid}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: CARD_DURATION,
-                delay: cardDelay(index),
-                ease: [0.22, 1, 0.36, 1],
-              }}
-            >
-              <WcBracketUserCard
-                row={row}
-                language={language}
-                onClick={() => openDetail(row)}
-              />
-            </motion.div>
-          ))}
-        </div>
+        <WcBracketMarket season={season} language={language} />
       )}
     </>
   );
