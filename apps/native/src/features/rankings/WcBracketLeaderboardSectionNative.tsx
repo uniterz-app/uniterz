@@ -140,7 +140,7 @@ export default function WcBracketLeaderboardSectionNative({
       .map(([teamId, count]) => ({
         teamId,
         name:
-          teamIdToCountryName(teamId, language) ??
+          teamIdToCountryName(teamId, "en") ??
           teamId.replace(/^wc-/, "").toUpperCase(),
         count,
         pct: Math.round((count / total) * 100),

@@ -59,13 +59,13 @@ export default function CountryFlag({
   variant = "default",
 }: Props) {
   const country = teamId ? teamIdToWcCountry(teamId) : null;
-  const iso2 =
-    iso2Prop?.toLowerCase() ?? country?.iso2.toLowerCase() ?? null;
+  const flagCode =
+    iso2Prop?.toLowerCase() ?? country?.flag.toLowerCase() ?? null;
   const countryName = decorative
     ? ""
     : alt ??
       (iso2Prop
-        ? iso2 ?? "Country flag"
+        ? flagCode ?? "Country flag"
         : teamIdToCountryName(teamId, "en") ?? "Country flag");
 
   const outerStyle: CSSProperties =
@@ -84,7 +84,7 @@ export default function CountryFlag({
         ? "rounded-[2px]"
         : "rounded-md";
 
-  if (!iso2) {
+  if (!flagCode) {
     return (
       <span
         aria-hidden
@@ -115,7 +115,7 @@ export default function CountryFlag({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/flags/4x3/${iso2}.svg`}
+          src={`/flags/4x3/${flagCode}.svg`}
           alt={decorative ? "" : countryName}
           draggable={false}
           loading="lazy"
@@ -142,7 +142,7 @@ export default function CountryFlag({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/flags/4x3/${iso2}.svg`}
+          src={`/flags/4x3/${flagCode}.svg`}
           alt={decorative ? "" : countryName}
           draggable={false}
           loading="lazy"
@@ -181,7 +181,7 @@ export default function CountryFlag({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`/flags/4x3/${iso2}.svg`}
+        src={`/flags/4x3/${flagCode}.svg`}
         alt={decorative ? "" : countryName}
         draggable={false}
         loading="lazy"

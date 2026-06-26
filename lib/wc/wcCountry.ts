@@ -183,22 +183,62 @@ export function lookupWcTeamIdByCountryName(
  */
 export const WC_COUNTRY_ISO3_LIST = Object.keys(WC_COUNTRIES);
 
+const WC_ISO3_BY_ISO2_OR_FLAG: Record<string, string> = (() => {
+  const out: Record<string, string> = {};
+  for (const iso3 of Object.keys(WC_COUNTRIES)) {
+    const c = WC_COUNTRIES[iso3];
+    out[c.iso2.toLowerCase()] = iso3;
+    out[c.flag.toLowerCase()] = iso3;
+    out[iso3.toLowerCase()] = iso3;
+  }
+  return out;
+})();
+
+function wcIso3FromLooseTeamKey(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+
+  if (t.startsWith("wc-")) {
+    const iso3 = t.slice(3).toLowerCase();
+    return WC_COUNTRIES[iso3] ? iso3 : null;
+  }
+
+  if (/^[a-z]{3}$/i.test(t)) {
+    const iso3 = t.toLowerCase();
+    return WC_COUNTRIES[iso3] ? iso3 : null;
+  }
+
+  const viaIso2 = WC_ISO3_BY_ISO2_OR_FLAG[t.toLowerCase()];
+  if (viaIso2) return viaIso2;
+
+  const viaName = lookupWcTeamIdByCountryName(t);
+  if (viaName?.startsWith("wc-")) {
+    const iso3 = viaName.slice(3);
+    return WC_COUNTRIES[iso3] ? iso3 : null;
+  }
+
+  return null;
+}
+
+/**
+ * 各種表記を `wc-{iso3}` に正規化（解決不能なら null）。
+ */
+export function coerceWcTeamId(
+  raw: string | null | undefined
+): string | null {
+  const iso3 = raw ? wcIso3FromLooseTeamKey(raw) : null;
+  return iso3 ? `wc-${iso3}` : null;
+}
+
 /**
  * teamId（"wc-jpn" 形式）を WcCountry に解決する。
- * 知らない国 / フォーマット外は null。
+ * ISO2（jp / gb-eng）・国名・iso3 単体にも対応。
  */
 export function teamIdToWcCountry(
   teamId: string | null | undefined
 ): WcCountry | null {
-  if (!teamId) return null;
-  const normalized = teamId.startsWith("wc-")
-    ? `wc-${teamId.slice(3).toLowerCase()}`
-    : /^[a-z]{3}$/i.test(teamId)
-      ? `wc-${teamId.toLowerCase()}`
-      : null;
-  if (!normalized) return null;
-  const iso3 = normalized.slice(3);
-  return WC_COUNTRIES[iso3] ?? null;
+  const iso3 = teamId ? wcIso3FromLooseTeamKey(teamId) : null;
+  return iso3 ? (WC_COUNTRIES[iso3] ?? null) : null;
 }
 
 /**

@@ -29,6 +29,21 @@ export type WcKnockoutAdvancement = {
   advancingThirdPlaceGroups: readonly WcGroupCode[];
 };
 
+/** FIFA 表記ラベル（1F / 2A / 3B）から teamId を引く */
+export function resolveWcQualLabelToTeamId(
+  label: string,
+  advancement: WcKnockoutAdvancement
+): string | null {
+  const m = label.trim().match(/^([123])([A-L])$/);
+  if (!m) return null;
+  const rank = m[1];
+  const group = m[2] as WcGroupCode;
+  if (rank === "1") return advancement.groupWinners[group]?.trim() || null;
+  if (rank === "2") return advancement.groupRunnersUp[group]?.trim() || null;
+  if (rank === "3") return advancement.groupThirdPlaces[group]?.trim() || null;
+  return null;
+}
+
 /** グループ順位ラベル（FIFA 表記: 1F = F組1位, 2A = A組2位, 3B = B組3位） */
 export function resolveWcTeamQualLabel(
   teamId: string,

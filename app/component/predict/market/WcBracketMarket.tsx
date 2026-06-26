@@ -1,17 +1,16 @@
 "use client";
 
-import { Trophy, TrendingUp } from "lucide-react";
+import { Swords, Trophy, TrendingUp } from "lucide-react";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import WcBracketChampionMarket from "@/app/component/predict/market/WcBracketChampionMarket";
+import WcBracketMatchupMarket from "@/app/component/predict/market/WcBracketMatchupMarket";
 import WcBracketTeamProgressMarket from "@/app/component/predict/market/WcBracketTeamProgressMarket";
 import useWcBracketMarket from "@/lib/leaderboards/useWcBracketMarket";
-import { nameBebas } from "@/lib/fonts";
+import { alfa, nameBebas } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
-import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 type Props = {
   season: string;
@@ -52,26 +51,31 @@ export default function WcBracketMarket({ season, language }: Props) {
 
   return (
     <div className="space-y-3 pb-bottom-nav pt-1">
-      <div className={`${CYBER_GLASS_PANEL} px-4 py-3 text-center text-white`}>
-        <div
-          className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
-          style={PROFILE_SHELL_GRID_STYLE}
-          aria-hidden
-        />
-        <div className="relative z-1">
-          <p className="text-[11px] tracking-[0.2em] text-white/55">
+      <div className="wc-bracket-user-card relative px-4 py-3 text-center text-white">
+        <div className="relative z-10">
+          <p className="text-[10px] font-semibold tracking-[0.22em] text-white/50">
             {isJa ? "提出ブラケット" : "SUBMITTED BRACKETS"}
           </p>
-          <p className="mt-1 text-3xl font-black tabular-nums text-cyan-300">
+          <p
+            className={[
+              "mt-1 text-[32px] font-black tabular-nums leading-none text-[#00F5FF]",
+              alfa.className,
+            ].join(" ")}
+          >
             {market.totalEntries}
           </p>
         </div>
       </div>
 
-      <section className="p-0">
-        <div className="mb-2 flex items-center justify-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-300" />
-          <h2 className="text-base font-bold">
+      <section className="space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-300/90" strokeWidth={2.2} />
+          <h2
+            className={[
+              nameBebas.className,
+              "text-[15px] tracking-[0.1em] text-white/90",
+            ].join(" ")}
+          >
             {m.predict.championPredictions}
           </h2>
         </div>
@@ -84,8 +88,34 @@ export default function WcBracketMarket({ season, language }: Props) {
 
       <section className="space-y-2">
         <div className="flex items-center justify-center gap-2">
-          <TrendingUp className="h-5 w-5 text-emerald-300" />
-          <h2 className="text-base font-bold">
+          <Swords className="h-4 w-4 text-cyan-300/90" strokeWidth={2.2} />
+          <h2
+            className={[
+              nameBebas.className,
+              "text-[15px] tracking-[0.1em] text-white/90",
+            ].join(" ")}
+          >
+            {isJa ? "対戦予想" : "MATCH PREDICTIONS"}
+          </h2>
+        </div>
+        <WcBracketMatchupMarket
+          entries={market.matchupMarkets}
+          language={language}
+        />
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <TrendingUp
+            className="h-4 w-4 text-[#00F5FF]/90"
+            strokeWidth={2.2}
+          />
+          <h2
+            className={[
+              nameBebas.className,
+              "text-[15px] tracking-[0.1em] text-white/90",
+            ].join(" ")}
+          >
             {m.predict.advancementPredictions}
           </h2>
         </div>

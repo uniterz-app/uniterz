@@ -1,14 +1,10 @@
-import { lookupWcTeamIdByCountryName } from "@/lib/wc/wcCountry";
+import { coerceWcTeamId, lookupWcTeamIdByCountryName } from "@/lib/wc/wcCountry";
 
-/** "wc-JPN" / "jpn" / "wc-jpn" を "wc-jpn" に正規化 */
+/** "wc-JPN" / "jpn" / "jp" / 国名などを "wc-jpn" に正規化 */
 export function normalizeWcTeamId(
   raw: string | null | undefined
 ): string | null {
-  if (!raw?.trim()) return null;
-  const t = raw.trim();
-  if (t.startsWith("wc-")) return `wc-${t.slice(3).toLowerCase()}`;
-  if (/^[a-z]{3}$/i.test(t)) return `wc-${t.toLowerCase()}`;
-  return null;
+  return coerceWcTeamId(raw);
 }
 
 type WcSideLike = {
