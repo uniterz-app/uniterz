@@ -101,8 +101,7 @@ export default function RankingCard({
         metric,
         rank,
         participantCount,
-      },
-      { skipStatsPrime: !!groupReturnGroupId }
+      }
     );
     if (groupReturnGroupId) {
       prefetchProfileStatsFromRoute(profileKey, statsContext);

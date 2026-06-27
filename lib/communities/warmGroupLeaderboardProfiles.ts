@@ -47,8 +47,7 @@ export function warmGroupLeaderboardProfiles(
         metric: mobileMetric,
         rank,
         participantCount,
-      },
-      { skipStatsPrime: true }
+      }
     );
     prefetchProfileStatsFromRoute(profileKey, statsLeague);
     router.prefetch(href);
