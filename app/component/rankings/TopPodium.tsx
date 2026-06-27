@@ -140,8 +140,7 @@ export default function TopPodium({
           metric,
           rank,
           participantCount,
-        },
-        { skipStatsPrime: !!groupReturnGroupId }
+        }
       );
       if (groupReturnGroupId) {
         prefetchProfileStatsFromRoute(profileKey, statsContext);
