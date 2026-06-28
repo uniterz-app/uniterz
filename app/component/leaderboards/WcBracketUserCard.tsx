@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { Pencil, Trophy } from "lucide-react";
 import CountryFlag from "@/app/component/games/CountryFlag";
+import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import { alfa, jp } from "@/lib/fonts";
 import type { WcBracketLeaderboardRow } from "@/lib/leaderboards/useWcBracketLeaderboard";
 import {
@@ -52,7 +52,6 @@ export default function WcBracketUserCard({
   const isPro = row.plan === "pro";
   const avatarUrl = row.photoURL ?? null;
   const displayName = row.displayName || "User";
-  const initial = displayName.charAt(0).toUpperCase();
   const championTeamId = row.championTeamId?.trim() || null;
   const shellClass = [
     "wc-bracket-user-card",
@@ -79,25 +78,13 @@ export default function WcBracketUserCard({
               />
             </>
           ) : null}
-          <div className="relative z-2 h-9 w-9 overflow-hidden rounded-full border border-white/20 bg-black">
-            {avatarUrl ? (
-              <Image
-                src={avatarUrl}
-                alt=""
-                fill
-                sizes="36px"
-                className="object-cover"
-              />
-            ) : (
-              <div
-                className={[
-                  "grid h-full w-full place-items-center font-black text-[15px] text-white/50",
-                  alfa.className,
-                ].join(" ")}
-              >
-                {initial}
-              </div>
-            )}
+          <div className="relative z-2 h-9 w-9 overflow-hidden rounded-full border border-white/20">
+            <RankingsAvatarCircle
+              photoURL={avatarUrl}
+              displayName={displayName}
+              boxClassName="h-full w-full"
+              imageLoading="lazy"
+            />
           </div>
         </div>
 
