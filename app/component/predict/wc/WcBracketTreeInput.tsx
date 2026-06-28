@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { WcBracketPredictMatchId } from "@/lib/wc/wc-knockout-bracket";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
@@ -53,6 +53,15 @@ const ALL_WINNER_NODES: readonly WcBracketPredictMatchId[] = [
   WC_TREE_RIGHT_SF,
 ];
 
+/** 1 つの path 文字列に複数 M がある場合、サブパスごとに分割（WebKit 描画崩れ防止） */
+function splitSvgSubpaths(d: string): string[] {
+  return d
+    .trim()
+    .split(/\s*(?=M\s)/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
 /** トーナメント表（表示専用・国旗のみ） */
 export default function WcBracketTreeInput({
   bracket,
@@ -67,7 +76,7 @@ export default function WcBracketTreeInput({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [wrapWidth, setWrapWidth] = useState(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = wrapRef.current;
     if (!node) return;
     const update = () => setWrapWidth(node.clientWidth);
@@ -82,7 +91,8 @@ export default function WcBracketTreeInput({
 
   const viewScale = wrapWidth ? wrapWidth / WC_TREE_DESIGN_W : 1;
   const crownPad = WC_TREE_CHAMPION_CARD_LABEL_OVERHANG * viewScale * 0.88;
-  const scaledHeight = WC_TREE_DESIGN_H * viewScale + crownPad + 2;
+  const treeTopPad = WC_TREE_HUD_HEADER_H + Math.max(2, crownPad * 0.92);
+  const scaledHeight = WC_TREE_DESIGN_H * viewScale + treeTopPad + 2;
 
   const champion = bracket.M104?.winner?.trim() ?? null;
 
@@ -136,36 +146,49 @@ export default function WcBracketTreeInput({
   return (
     <div
       ref={wrapRef}
-      className={["relative w-full overflow-hidden rounded-xl", className]
+      className={["wc-bracket-tree-shell relative w-full", className]
         .filter(Boolean)
         .join(" ")}
     >
-      <WcBracketTreeBackground />
-      <div
-        className="relative z-10 mx-auto w-full overflow-visible"
-        style={{ height: scaledHeight }}
-      >
+      <div className="wc-bracket-tree-shell__inner overflow-hidden">
+        <WcBracketTreeBackground />
         <div
-          className="absolute left-1/2 origin-top"
-          style={{
-            width: WC_TREE_DESIGN_W,
-            height: WC_TREE_DESIGN_H,
-            transform: `translateX(-50%) scale(${viewScale})`,
-            marginTop: Math.max(2, crownPad * 0.92),
-          }}
+          className="relative z-10 mx-auto w-full overflow-visible"
+          style={{ height: scaledHeight }}
         >
+          <div
+            className="absolute left-1/2 origin-top"
+            style={{
+              width: WC_TREE_DESIGN_W,
+              height: WC_TREE_DESIGN_H,
+              transform: `translateX(-50%) scale(${viewScale})`,
+              marginTop: treeTopPad,
+            }}
+          >
           <svg
             className="pointer-events-none absolute inset-0 z-0"
             width={WC_TREE_DESIGN_W}
             height={WC_TREE_DESIGN_H}
             aria-hidden
           >
-            {paths.map((d, i) => (
-              <g key={i}>
-                <path className="wc-bracket-tree-line__glow" d={d} />
-                <path className="wc-bracket-tree-line__core" d={d} />
-              </g>
-            ))}
+            {paths.flatMap((d, pathIndex) =>
+              splitSvgSubpaths(d).map((segment, segIndex) => (
+                <g key={`${pathIndex}-${segIndex}`}>
+                  <path
+                    d={segment}
+                    fill="none"
+                    stroke="rgba(52, 211, 153, 0.28)"
+                    strokeWidth={2.5}
+                  />
+                  <path
+                    d={segment}
+                    fill="none"
+                    stroke="rgba(110, 231, 183, 0.78)"
+                    strokeWidth={1}
+                  />
+                </g>
+              ))
+            )}
           </svg>
 
           {ALL_R32.map(renderR32Match)}
@@ -182,6 +205,7 @@ export default function WcBracketTreeInput({
               <WcChampionCard teamId={champion} />
             </div>
           ) : null}
+          </div>
         </div>
       </div>
     </div>
