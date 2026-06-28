@@ -36,7 +36,7 @@ export function useProfileStreakTracker(
   useEffect(() => {
     if (!uid) {
       setPoints([]);
-      setLoading(false);
+      setLoading(true);
       return;
     }
 

@@ -141,7 +141,11 @@ export default function StreakTrackerCard({
     margin: "0px 0px -8% 0px",
   });
 
-  const { points, loading } = useProfileStreakTracker(uid, profileStatsContext);
+  const { points, loading: streakLoading } = useProfileStreakTracker(
+    uid,
+    profileStatsContext
+  );
+  const loading = streakLoading || !uid;
 
   const maxAbs = useMemo(() => streakChartLayoutMaxAbs(points), [points]);
   const ticks = useMemo(() => buildYTicks(maxAbs), [maxAbs]);

@@ -30,6 +30,7 @@ export function computeAllScopeMetrics(
   for (const row of rows) {
     const input = {
       league: row.league,
+      gameId: row.gameId,
       seasonPhase: row.seasonPhase,
       wcStage: row.wcStage,
     };
@@ -59,6 +60,7 @@ export function filterPostsForScope(
       !postMatchesProfileStreakScope(
         {
           league: row.league,
+          gameId: row.gameId,
           seasonPhase: row.seasonPhase,
           wcStage: row.wcStage,
         },

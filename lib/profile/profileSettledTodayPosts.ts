@@ -159,7 +159,7 @@ export async function loadProfileSettledTodayResultPosts(
   const rowCandidates = posts
     .map(settledRowFromPost)
     .filter((row): row is SettledPostRow => row != null);
-  const enrichedRows = await enrichSettledPostsFromGames(rowCandidates);
+  const enrichedRows = await enrichSettledPostsFromGames(rowCandidates, db);
   const todayRows = filterSettledTodayForScope(enrichedRows, ctx);
   const visibleIds = new Set(todayRows.map((row) => row.postId));
 
