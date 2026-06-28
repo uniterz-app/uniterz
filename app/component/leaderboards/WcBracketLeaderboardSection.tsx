@@ -24,7 +24,7 @@ import {
 } from "@/lib/wc/wc-bracket-firestore";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import { isWcBracketComplete } from "@/lib/wc/wc-knockout-bracket";
-import WcFullBracketMobile from "@/app/component/predict/wc/WcFullBracketMobile";
+import WcBracketTreeInput from "@/app/component/predict/wc/WcBracketTreeInput";
 import WcBracketInputMobile from "@/app/component/predict/wc/WcBracketInputMobile";
 import WcBracketStartPromptModal from "@/app/component/predict/wc/WcBracketStartPromptModal";
 import WcBracketViewTabs, {
@@ -132,6 +132,13 @@ export default function WcBracketLeaderboardSection({
   const showInputGate = submissionOpen && !savedLoading && !hasSubmitted;
   const canReeditBracket = submissionOpen && !savedLoading && hasSubmitted;
   const inputOverlayOpen = inputPageOpen && submissionOpen && !savedLoading;
+
+  // 未提出でゲートが開いたら、提出ボタンを介さず予想モーダルを直接表示
+  useEffect(() => {
+    if (showInputGate && !inputPageOpen) {
+      setSubmissionPromptOpen(true);
+    }
+  }, [showInputGate, inputPageOpen]);
 
   useEffect(() => {
     if (searchParams.get(RANKINGS_WC_BRACKET_INPUT_PARAM) !== "1") return;
@@ -407,15 +414,12 @@ export default function WcBracketLeaderboardSection({
         </div>
 
         {showInputGate && !submissionPromptOpen && !inputPageOpen ? (
-          <div className="pointer-events-auto absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 justify-center px-6">
-            <button
-              type="button"
-              onClick={() => setSubmissionPromptOpen(true)}
-              className="rounded-xl border border-cyan-400/35 bg-[#0a1528]/90 px-6 py-3.5 text-sm font-bold text-cyan-100 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur-md transition hover:border-cyan-300/55 hover:bg-[#0f1d38]/95 active:scale-[0.99]"
-            >
-              {isJa ? "ブラケットを提出する" : "Submit bracket"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setSubmissionPromptOpen(true)}
+            className="absolute inset-0 z-20 cursor-pointer"
+            aria-label={isJa ? "ブラケットを予想する" : "Predict the bracket"}
+          />
         ) : null}
       </div>
 
@@ -494,7 +498,13 @@ export default function WcBracketLeaderboardSection({
                     language={language}
                     submitDisabled={!uid || submitting}
                     submitButtonLabel={
-                      hasSubmitted ? "BRACKET UPDATE" : undefined
+                      hasSubmitted
+                        ? isJa
+                          ? "更新する"
+                          : "Update"
+                        : isJa
+                          ? "提出する"
+                          : "Submit"
                     }
                   />
                 </div>
@@ -574,15 +584,11 @@ export default function WcBracketLeaderboardSection({
                       ) : overlayBracket ? (
                         <>
                           <div className="relative z-20 border-t border-white/10 px-2 pt-1">
-                            <WcFullBracketMobile
+                            <WcBracketTreeInput
                               bracket={overlayBracket}
                               advancement={knockoutAdvancement}
                               officialWinners={officialWinners}
-                              firstMissMatchId={
-                                selectedRow.firstMissMatchId ?? null
-                              }
                               language={language}
-                              showGlassShell={false}
                             />
                           </div>
                           {isMobile ? (

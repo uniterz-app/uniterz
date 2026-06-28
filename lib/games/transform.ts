@@ -15,6 +15,7 @@ import {
 } from "@/lib/games/playoffSeriesUi";
 import { resolveWcBroadcastLabels } from "@/lib/wc/wcBroadcastLabels";
 import { normalizeWcGameGoalScorers } from "@/lib/wc/goalScorer";
+import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
 
 /** プレーオフ：Firestore に seriesStanding が無いときの既定（0-0） */
 const PLAYOFF_SERIES_STANDING_FALLBACK = { homeWins: 0, awayWins: 0 } as const;
@@ -306,6 +307,10 @@ export type GameDoc = {
   season?: unknown;
   venue?: string;
   roundLabel?: string;
+  /** WC: ノックアウトステージ（R32 以降）か */
+  knockout?: boolean;
+  /** WC: ステージ（qualifying / main） */
+  wcStage?: string;
   startAtJst?: any;
   startAt?: any;
   status?: any;
@@ -466,6 +471,12 @@ export function toMatchCardProps(
     seasonPhase,
     venue: raw?.venue ?? "",
     roundLabel: roundLabelStr,
+    knockout: isWcKnockoutGame({
+      league,
+      knockout: raw?.knockout ?? null,
+      roundLabel: roundLabelStr,
+      wcStage: raw?.wcStage ?? null,
+    }),
     broadcastLabels:
       league === "wc" ? resolveWcBroadcastLabels(id, raw) : [],
     startAtJst,

@@ -292,6 +292,7 @@ const zh: Messages = {
     streakBonusLabel: "连胜奖励",
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
+    wcPkWinnerLabel: "PK winner",
     scorePrecisionLabel: "比分精度",
     upsetPointsLabel: "冷门得分",
     totalPointsLabel: "总得分",

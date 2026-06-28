@@ -42,6 +42,8 @@ import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
+  useWcPkWinnerResult,
+  WcPkWinnerResultRow,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
 import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
@@ -149,6 +151,7 @@ function ResultCardPresentationImpl({
   const m = t(language);
   const isEn = language === "en";
   const wcGoalScorer = useWcGoalScorerResult(post);
+  const wcPkWinner = useWcPkWinnerResult(post);
 
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
@@ -946,6 +949,14 @@ function ResultCardPresentationImpl({
             : "space-y-1",
         ].join(" ")}
       >
+        {wcPkWinner ? (
+          <WcPkWinnerResultRow
+            label={m.results.wcPkWinnerLabel}
+            info={wcPkWinner}
+            compact={isMobile}
+          />
+        ) : null}
+
         {wcGoalScorer ? (
           <WcGoalScorerResultRow
             label={m.results.wcGoalScorerLabel}
@@ -960,7 +971,7 @@ function ResultCardPresentationImpl({
             language={language}
             isMobile={isMobile}
             ratingBarsImmediate={ratingBarsImmediate}
-            rowIndexOffset={wcGoalScorer ? 1 : 0}
+            rowIndexOffset={(wcGoalScorer ? 1 : 0) + (wcPkWinner ? 1 : 0)}
             animationsOff={visualEffectsLite}
           />
         )}

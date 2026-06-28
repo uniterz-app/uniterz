@@ -39,6 +39,8 @@ export function warmGroupLeaderboardProfiles(
       wcStage: statsLeague.wcStage,
       groupId,
     });
+    // グループ由来は「期間集計」値のため共有スタッツキャッシュには prime せず、
+    // 全期間スタッツは API から先読みする
     primeProfileCacheFromRankingRow(
       profileKey,
       row,
@@ -47,7 +49,8 @@ export function warmGroupLeaderboardProfiles(
         metric: mobileMetric,
         rank,
         participantCount,
-      }
+      },
+      { skipStatsPrime: true }
     );
     prefetchProfileStatsFromRoute(profileKey, statsLeague);
     router.prefetch(href);

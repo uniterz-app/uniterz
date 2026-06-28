@@ -1,12 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import CountryFlag from "@/app/component/games/CountryFlag";
-import {
-  CyberSlantedTab,
-  CyberSlantedTabBar,
-} from "@/app/component/rankings/CyberSlantedTab";
 import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -14,10 +10,6 @@ import { pickCountForTeam } from "@/lib/wc/wc-bracket-market-aggregate";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
 import { resolveWcQualLabelToTeamId } from "@/lib/wc/wc-knockout-bracket-utils";
 import { coerceWcTeamId, teamIdToCountryName } from "@/lib/wc/wcCountry";
-import {
-  WC_BRACKET_INPUT_PHASES,
-  type WcBracketInputPhase,
-} from "@/lib/wc/wc-bracket-input-phases";
 import type { WcMatchupMarketEntry } from "@/lib/wc/wc-bracket-market-aggregate";
 
 type Props = {
@@ -84,7 +76,7 @@ function FlagBadge({
     return (
       <span className="inline-flex h-9 w-12 overflow-hidden rounded-[2px] ring-1 ring-white/20 sm:h-10 sm:w-14">
         <CountryFlag
-          teamId={flagTeamId(teamId)}
+          teamId={teamId}
           variant="inline"
           className="block! h-full! w-full! ring-0!"
         />
@@ -217,15 +209,14 @@ export default function WcBracketMatchupMarket({
   language = "ja",
 }: Props) {
   const m = t(language);
-  const isJa = language === "ja";
-  const [phase, setPhase] = useState<WcBracketInputPhase>("R32");
 
+  // 対戦予想は R32 のみ表示（R16 以降は出さない）
   const phaseEntries = useMemo(
-    () => entries.filter((entry) => entry.phase === phase),
-    [entries, phase]
+    () => entries.filter((entry) => entry.phase === "R32"),
+    [entries]
   );
 
-  if (entries.length === 0) {
+  if (phaseEntries.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-white/55">{m.common.noData}</p>
     );
@@ -233,36 +224,16 @@ export default function WcBracketMatchupMarket({
 
   return (
     <div className="space-y-2">
-      <CyberSlantedTabBar fill aria-label="Matchup round">
-        {WC_BRACKET_INPUT_PHASES.map((phaseDef) => (
-          <CyberSlantedTab
-            key={phaseDef.id}
-            role="tab"
-            label={phaseDef.tabLabel}
-            active={phaseDef.id === phase}
-            onClick={() => setPhase(phaseDef.id)}
-            compact
-            fontWeight={600}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {phaseEntries.map((entry, index) => (
+          <MatchupCard
+            key={entry.matchId}
+            entry={entry}
+            index={index}
+            advancement={advancement}
           />
         ))}
-      </CyberSlantedTabBar>
-
-      {phaseEntries.length === 0 ? (
-        <p className="py-8 text-center text-sm text-white/55">
-          {isJa ? "このラウンドのデータはありません" : "No data for this round"}
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {phaseEntries.map((entry, index) => (
-            <MatchupCard
-              key={entry.matchId}
-              entry={entry}
-              index={index}
-              advancement={advancement}
-            />
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

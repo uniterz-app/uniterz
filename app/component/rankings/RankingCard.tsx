@@ -93,6 +93,8 @@ export default function RankingCard({
 
   const warmProfileRoute = useCallback(() => {
     markRankingsCountUpIntroPlayed();
+    // グループランキング行は「期間集計」値のため、共有スタッツキャッシュには prime せず
+    // 全期間スタッツは API から先読みする（プロフィールは全期間を表示）
     primeProfileCacheFromRankingRow(
       profileKey,
       r,
@@ -101,7 +103,8 @@ export default function RankingCard({
         metric,
         rank,
         participantCount,
-      }
+      },
+      groupReturnGroupId ? { skipStatsPrime: true } : undefined
     );
     if (groupReturnGroupId) {
       prefetchProfileStatsFromRoute(profileKey, statsContext);

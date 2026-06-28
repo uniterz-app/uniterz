@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags";
 import { resolveWcStageFromGame } from "@/lib/wc/resolveWcStage";
+import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
 import { normalizeLeague, type League } from "@/lib/leagues";
 import {
   normalizeWcGoalScorerPick,
@@ -230,6 +231,23 @@ export async function POST(req: Request) {
       if (!v.ok) {
         return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
       }
+    }
+
+    // ノックアウトは「引き分け」結果を予想できない（同点スコア自体は PK 決着として許可し、
+    // 勝者は進出側＝home/away として記録する）
+    if (
+      isWcKnockoutGame({
+        league,
+        knockout: (g as { knockout?: boolean }).knockout ?? null,
+        roundLabel: (g as { roundLabel?: string }).roundLabel ?? null,
+        wcStage: (g as { wcStage?: string }).wcStage ?? null,
+      }) &&
+      parsed.prediction.winner === "draw"
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "draw result not allowed in knockout stage" },
+        { status: 400 }
+      );
     }
 
     const prediction: PredictionPayloadV2 = {

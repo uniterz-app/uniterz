@@ -10,6 +10,8 @@ import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { RESULT_STAT_ROW_GRID_DEFAULT } from "@/lib/result/resultStatRowGrid";
 import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
+  useWcPkWinnerResult,
+  WcPkWinnerResultRow,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import {
@@ -55,6 +57,7 @@ function ResultStatsCard({
 }: Props) {
   const m = t(language);
   const wcGoalScorer = useWcGoalScorerResult(post);
+  const wcPkWinner = useWcPkWinnerResult(post);
 
   const fmt1 = (v: number) => (Number.isFinite(v) ? v.toFixed(1) : "--");
 
@@ -173,6 +176,13 @@ function ResultStatsCard({
       </div>
 
       <div className="space-y-1">
+        {wcPkWinner ? (
+          <WcPkWinnerResultRow
+            label={m.results.wcPkWinnerLabel}
+            info={wcPkWinner}
+          />
+        ) : null}
+
         {wcGoalScorer ? (
           <WcGoalScorerResultRow
             label={m.results.wcGoalScorerLabel}
@@ -185,7 +195,8 @@ function ResultStatsCard({
           const ratio = cap > 0 ? clamp01(r.value / cap) : 0;
           const display =
             r.format != null ? r.format(r.value) : String(r.value);
-          const rowIndex = wcGoalScorer ? index + 1 : index;
+          const rowIndex =
+            index + (wcGoalScorer ? 1 : 0) + (wcPkWinner ? 1 : 0);
 
           return (
             <div

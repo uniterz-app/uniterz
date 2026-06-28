@@ -102,11 +102,6 @@ export default function WcBracketSubmitModal({
                     ? "ノックアウト全31試合の予想を確定します。"
                     : "Your picks for all 31 knockout matches will be saved."}
                 </p>
-                <p>
-                  {isJa
-                    ? "サバイバー方式 — 外した枝から先は表示されません。"
-                    : "Survivor mode — branches after your first miss are hidden."}
-                </p>
                 <p className="text-cyan-300/75">
                   {isJa
                     ? "締切までは何度でも予想を変更できます。"

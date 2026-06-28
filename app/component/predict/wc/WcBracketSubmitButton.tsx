@@ -1,5 +1,7 @@
 "use client";
 
+import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
+
 type Props = {
   disabled?: boolean;
   onClick: () => void;
@@ -7,26 +9,29 @@ type Props = {
   label?: string;
 };
 
-/** WC ブラケット提出 — 角切りサイバー HUD ボタン */
+/** WC ブラケット提出 — ゲームページの「予想をする」CTA と同デザイン */
 export default function WcBracketSubmitButton({
   disabled = false,
   onClick,
   className = "",
-  label = "BRACKET SUBMIT",
+  label = "提出する",
 }: Props) {
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={["wc-bracket-submit-btn", className].filter(Boolean).join(" ")}
+      className={[
+        "grid w-full place-items-center font-bold text-white",
+        "h-12 text-[15px] px-2 transition-all duration-200",
+        "active:scale-[0.985]",
+        MATCH_LIST_CYBER_CTA_CLASS,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <span className="wc-bracket-submit-btn__tick-left" aria-hidden />
-      <span className="wc-bracket-submit-btn__tick-top" aria-hidden />
-      <span className="wc-bracket-submit-btn__label">{label}</span>
-      <span className="wc-bracket-submit-btn__code" aria-hidden>
-        R-77
-      </span>
+      {label}
     </button>
   );
 }

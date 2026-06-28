@@ -53,7 +53,6 @@ export default function WcBracketUserCard({
   const avatarUrl = row.photoURL ?? null;
   const displayName = row.displayName || "User";
   const initial = displayName.charAt(0).toUpperCase();
-  const handle = row.handle ?? null;
   const championTeamId = row.championTeamId?.trim() || null;
   const shellClass = [
     "wc-bracket-user-card",
@@ -120,11 +119,6 @@ export default function WcBracketUserCard({
               />
             ) : null}
           </div>
-          {handle ? (
-            <div className="truncate text-[11px] leading-tight text-white/50">
-              @{handle}
-            </div>
-          ) : null}
         </div>
       </div>
 

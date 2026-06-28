@@ -15,6 +15,8 @@ import { CYBER_TAB_CYAN } from "@/app/component/rankings/CyberSlantedTab";
 type Props = {
   gameId: string;
   league: League;
+  /** WC ノックアウト等：引き分けを母数からも表示からも除外する */
+  knockout?: boolean;
   status: Status;
   score: { home: number; away: number } | null;
   fallbackMarketBias?: MarketBiasFallback | null;
@@ -389,6 +391,7 @@ function resolveWinningMarketKeys(
 export default function MatchCardOverlayMarketBar({
   gameId,
   league,
+  knockout = false,
   status,
   score,
   fallbackMarketBias,
@@ -402,11 +405,19 @@ export default function MatchCardOverlayMarketBar({
 }: Props) {
   const m = t(language);
   const { isSoccer, total, homePct, awayPct, drawPct, fromFallback } =
-    useGameMarketDistribution(gameId, league, fallbackMarketBias);
+    useGameMarketDistribution(gameId, league, fallbackMarketBias, {
+      excludeDraw: knockout,
+    });
+
+  // ノックアウトでは引き分けの棒・スタッツ・ハイライトを出さない
+  const drawEnabled = isSoccer && !knockout;
 
   const { barHome, barDraw, barAway, highlightedKeys, segmentKinds } =
     useMemo(() => {
-      const sum = Math.max(1e-6, homePct + awayPct + (isSoccer ? drawPct : 0));
+      const sum = Math.max(
+        1e-6,
+        homePct + awayPct + (drawEnabled ? drawPct : 0)
+      );
       const bh = (homePct / sum) * 100;
       const bd = (drawPct / sum) * 100;
       const ba = (awayPct / sum) * 100;
@@ -414,10 +425,10 @@ export default function MatchCardOverlayMarketBar({
         barHome: bh,
         barDraw: bd,
         barAway: ba,
-        highlightedKeys: resolveWinningMarketKeys(status, score, isSoccer),
-        segmentKinds: buildSegmentKinds(bh, bd, ba, isSoccer),
+        highlightedKeys: resolveWinningMarketKeys(status, score, drawEnabled),
+        segmentKinds: buildSegmentKinds(bh, bd, ba, drawEnabled),
       };
-    }, [awayPct, drawPct, homePct, isSoccer, score, status]);
+    }, [awayPct, drawPct, homePct, drawEnabled, score, status]);
 
   const hasData =
     total > 0 ||
@@ -492,7 +503,7 @@ export default function MatchCardOverlayMarketBar({
           barHome={barHome}
           barDraw={barDraw}
           barAway={barAway}
-          isSoccer={isSoccer}
+          isSoccer={drawEnabled}
           homeColor={homeColor}
           awayColor={awayColor}
           compact={compact}
@@ -503,7 +514,7 @@ export default function MatchCardOverlayMarketBar({
       <div
         className={[
           "mt-1 grid gap-2",
-          isSoccer ? "grid-cols-3" : "grid-cols-2",
+          drawEnabled ? "grid-cols-3" : "grid-cols-2",
           compact ? "gap-1" : "md:gap-2",
         ].join(" ")}
       >
@@ -516,7 +527,7 @@ export default function MatchCardOverlayMarketBar({
           compact={compact}
           isHighlighted={highlightedKeys.has("home")}
         />
-        {isSoccer ? (
+        {drawEnabled ? (
           <StatBox
             label={m.predict.draw}
             pct={drawPct}

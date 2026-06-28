@@ -18,6 +18,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { normalizeLeague } from "@/lib/leagues";
+import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
 import NbaPostseasonMatchupPanel, {
@@ -33,6 +34,7 @@ import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
 import WcMatchPreviewPanel from "@/app/component/predict/wc/WcMatchPreviewPanel";
 import { hasWcMatchPreview } from "@/lib/wc/matchPreviews";
 import WcGoalScorerPicker from "@/app/component/predict/wc/WcGoalScorerPicker";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import {
   isWcGoalScorerPickValidForPredictedScore,
   type WcGoalScorerPick,
@@ -227,6 +229,8 @@ export default function PredictionFormV2({
   }, [game.startAtJst]);
 
   const [winner, setWinner] = useState<Winner | null>(null);
+  /** ノックアウトで同点（PK 決着）を予想したときに勝ち上がる側 */
+  const [pkWinner, setPkWinner] = useState<"home" | "away" | null>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
   const [goalScorerPick, setGoalScorerPick] = useState<WcGoalScorerPick | null>(
@@ -268,6 +272,16 @@ export default function PredictionFormV2({
   const isWc = game.league === "wc";
   const showWcMatchPreview = isWc && hasWcMatchPreview(gameId);
   const isSoccer = game.league === "pl" || game.league === "j1" || isWc;
+  /** WC ノックアウト：引き分け「結果」は存在しない（同点は PK 決着）ため市場表示から引き分けを除外 */
+  const isKnockout = isWcKnockoutGame(game);
+  /** 引き分けを許可するサッカー試合か（グループリーグ・リーグ戦のみ） */
+  const drawAllowed = isSoccer && !isKnockout;
+  /** ノックアウトで同点スコアを入力中（＝PK 決着の予想）か */
+  const knockoutScoreTie =
+    isKnockout &&
+    scoreHome !== "" &&
+    scoreAway !== "" &&
+    Number(scoreHome) === Number(scoreAway);
   // WC は Standings タブ（グループ順位 + FIFA ランク）を常に出す
   const showStandings = game.league === "nba" || isWc;
   /** Playoffs / Play-In: 直接対決 / 市場 / 詳細スタッツの3タブ（順位表タブなし） */
@@ -327,13 +341,13 @@ export default function PredictionFormV2({
     const total =
       postDistribution.home +
       postDistribution.away +
-      (isSoccer ? postDistribution.draw : 0);
+      (drawAllowed ? postDistribution.draw : 0);
     if (total <= 0) return;
     onMarketDistributionChange({
       homePct: (postDistribution.home / total) * 100,
       awayPct: (postDistribution.away / total) * 100,
     });
-  }, [postDistribution, isSoccer, onMarketDistributionChange]);
+  }, [postDistribution, drawAllowed, onMarketDistributionChange]);
 
   useEffect(() => {
     onStandingsOpenChange?.(toolsTab === "standings");
@@ -390,13 +404,19 @@ export default function PredictionFormV2({
       return;
     }
 
-    if (isSoccer && h === a) {
+    if (drawAllowed && h === a) {
       setWinner("draw");
       return;
     }
 
+    // ノックアウトの同点は PK 決着：選んだ勝ち上がり側を勝者にする（未選択なら送信不可）
+    if (isKnockout && h === a) {
+      setWinner(pkWinner);
+      return;
+    }
+
     setWinner(null);
-  }, [scoreHome, scoreAway, isSoccer]);
+  }, [scoreHome, scoreAway, drawAllowed, isKnockout, pkWinner]);
 
   const isGameStarted = useMemo(
     () => isMatchStartedForPredict(game),
@@ -634,6 +654,13 @@ export default function PredictionFormV2({
       setScoreAway(String(pred.score.away));
       setGoalScorerPick(pred.goalScorer ?? null);
       setWinner(pred.winner);
+      // ノックアウトで同点（PK 決着）の既存予想は勝ち上がり側を復元
+      if (
+        pred.score.home === pred.score.away &&
+        (pred.winner === "home" || pred.winner === "away")
+      ) {
+        setPkWinner(pred.winner);
+      }
       setShowScoreEdit(true);
     },
     []
@@ -779,17 +806,31 @@ export default function PredictionFormV2({
       return;
     }
 
-    if (winner === "home" && h <= a) {
-      alert(m.predict.enterValidScores);
+    const isPkTie = isKnockout && h === a;
+
+    if (isPkTie && !pkWinner) {
+      alert(
+        language === "ja"
+          ? "同点予想のため、PKで勝ち上がるチームを選んでください。"
+          : "Pick which team advances on penalties."
+      );
       return;
     }
-    if (winner === "away" && a <= h) {
-      alert(m.predict.enterValidScores);
-      return;
-    }
-    if (isSoccer && winner === "draw" && h !== a) {
-      alert(m.predict.enterValidScores);
-      return;
+
+    // PK 決着（同点）以外は、勝者とスコアの整合性を確認する
+    if (!isPkTie) {
+      if (winner === "home" && h <= a) {
+        alert(m.predict.enterValidScores);
+        return;
+      }
+      if (winner === "away" && a <= h) {
+        alert(m.predict.enterValidScores);
+        return;
+      }
+      if (drawAllowed && winner === "draw" && h !== a) {
+        alert(m.predict.enterValidScores);
+        return;
+      }
     }
 
     try {
@@ -847,6 +888,7 @@ export default function PredictionFormV2({
         });
         setShowScoreEdit(false);
         setWinner(null);
+        setPkWinner(null);
         setScoreHome("");
         setScoreAway("");
         setGoalScorerPick(null);
@@ -903,6 +945,7 @@ export default function PredictionFormV2({
       onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
 
       setWinner(null);
+      setPkWinner(null);
       setScoreHome("");
       setScoreAway("");
       setGoalScorerPick(null);
@@ -1367,6 +1410,7 @@ export default function PredictionFormV2({
             <GamePredictionDistribution
               gameId={gameId}
               league={game.league}
+              knockout={isKnockout}
               homeName={homeSafe.name}
               awayName={awaySafe.name}
               homeColor={homeMarketColor}
@@ -1513,7 +1557,38 @@ export default function PredictionFormV2({
               />
               <div className="relative z-1 min-w-0 pr-9 text-sm font-semibold text-white/88">
                 {m.predict.scorePrediction}
+                {isKnockout ? (
+                  <span className="ml-0.5 align-super text-[10px] font-bold text-amber-300/90">
+                    *
+                  </span>
+                ) : null}
               </div>
+
+              {isKnockout ? (
+                <div className="relative z-1 -mt-2 space-y-1">
+                  <div className="text-xs font-medium leading-relaxed text-amber-300/80">
+                    {language === "ja"
+                      ? "* 同点予想は PK 戦で決着。勝ち上がるチームを選んでください（採点は PK 前のスコアで判定）。"
+                      : "* A level score goes to penalties — pick who advances (scored on the pre-penalty result)."}
+                  </div>
+                  <div className="rounded-lg border border-amber-300/15 bg-amber-300/[0.06] px-2.5 py-1.5 text-[11px] leading-relaxed text-white/70">
+                    {language === "ja" ? (
+                      <>
+                        <span className="font-semibold text-amber-200/90">例）</span>{" "}
+                        「1-1・{homeLabel}が PK 勝ち」と予想 → 実際も同点で{" "}
+                        {homeLabel}が進出すれば満点。進出チームを外すとスコアが合っていても 0 点。
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-amber-200/90">e.g.</span>{" "}
+                        Predict “1-1, {homeLabel} win on pens” → full marks if it
+                        ends level and {homeLabel} advance. Pick the wrong team to
+                        advance and it’s 0, even with the right score.
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="relative z-1 grid grid-cols-2 gap-3">
                 <div>
@@ -1550,6 +1625,59 @@ export default function PredictionFormV2({
                   />
                 </div>
               </div>
+
+              {knockoutScoreTie ? (
+                <div className="relative z-1 space-y-2">
+                  <div className="text-sm font-semibold text-amber-300/90">
+                    {language === "ja"
+                      ? "PK戦で勝ち上がるチーム"
+                      : "Who advances on penalties?"}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(
+                      [
+                        {
+                          side: "home" as const,
+                          label: homeLabel,
+                          teamId: game.home?.teamId,
+                        },
+                        {
+                          side: "away" as const,
+                          label: awayLabel,
+                          teamId: game.away?.teamId,
+                        },
+                      ]
+                    ).map(({ side, label, teamId }) => {
+                      const active = pkWinner === side;
+                      return (
+                        <button
+                          key={side}
+                          type="button"
+                          onClick={() => setPkWinner(side)}
+                          aria-pressed={active}
+                          aria-label={label}
+                          className={[
+                            "flex h-12 items-center justify-center rounded-xl border transition-all duration-200",
+                            active
+                              ? "border-amber-300/70 bg-amber-300/15 shadow-[0_0_12px_rgba(252,211,77,0.25)]"
+                              : "border-white/12 bg-white/[0.04] hover:bg-white/[0.08]",
+                          ].join(" ")}
+                        >
+                          <CountryFlag
+                            teamId={teamId}
+                            alt={label}
+                            className={[
+                              "aspect-[4/3] w-9",
+                              active ? "" : "opacity-85",
+                            ].join(" ")}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               {showScoreEdit && effectivePostId ? (
                 <button
                   type="button"
@@ -1558,6 +1686,7 @@ export default function PredictionFormV2({
                     setScoreHome("");
                     setScoreAway("");
                     setWinner(null);
+                    setPkWinner(null);
                     setGoalScorerPick(null);
                   }}
                   className="mt-2 w-full text-center text-xs font-medium text-white/55 underline-offset-2 hover:text-white/80 hover:underline"

@@ -139,6 +139,8 @@ export type MatchCardProps = {
   seasonPhase?: "regular" | "play_in" | "playoffs" | null;
   venue?: string;
   roundLabel?: string;
+  /** WC：ノックアウトステージ（R32 以降）か。引き分け予想・市場の引き分け表示を抑止する */
+  knockout?: boolean;
   /** WC：仕切り線上に表示する放送媒体（複数可） */
   broadcastLabels?: string[];
   startAtJst: Date | null;
@@ -413,6 +415,7 @@ function MatchCardView({
   league,
   venue,
   roundLabel,
+  knockout = false,
   broadcastLabels = [],
   startAtJst,
   status,
@@ -2243,6 +2246,7 @@ return (
           <MatchCardOverlayMarketBar
             gameId={String(id)}
             league={league}
+            knockout={knockout}
             status={status}
             score={score}
             language={language}
