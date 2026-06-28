@@ -38,6 +38,7 @@ import {
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { ProfileVisualEffects } from "@/lib/profile/profileVisualEffects";
+import type { ProfileKinetikMetricsSection } from "@/lib/profile/profileKinetikMetricsSection";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -530,6 +531,8 @@ type Props = {
   visualEffects?: ProfileVisualEffects;
   /** スタッツ API 取得中 — メトリクス欄のみスケルトン表示 */
   statsPending?: boolean;
+  /** WC: ノックアウト（上）+ グループ（下）の縦積み */
+  stackedMetricsSections?: ProfileKinetikMetricsSection[];
 };
 
 export default function ProfileEditKinetikPanel({
@@ -558,6 +561,7 @@ export default function ProfileEditKinetikPanel({
   rankingLeague = "nba",
   visualEffects = "full",
   statsPending = false,
+  stackedMetricsSections,
 }: Props) {
   const isJa = language === "ja";
   const isWcProfile = rankingLeague === "worldcup";
@@ -607,158 +611,203 @@ export default function ProfileEditKinetikPanel({
     rankBadge,
   });
 
-  const winRateFootnote = isJa
-    ? `投稿 ${stats.posts} · 的中 ${stats.hits}`
-    : `${stats.hits} hits · ${stats.posts} posts`;
-
-  const winSegs = kinetikWinRateSegs(stats.winRate);
-  const ptsSegs = kinetikTotalPointsRankSegs(
-    activeTotalPointsRank,
-    activeRankDenominator
-  );
-  const totalPointsRankLabel =
-    activeTotalPointsRank != null
-      ? isJa
-        ? `${activeTotalPointsRank}位`
-        : `#${activeTotalPointsRank}`
-      : undefined;
-  const ptsSegmentsReady =
-    activeRankDenominator != null &&
-    Number.isFinite(activeRankDenominator) &&
-    activeRankDenominator >= 1;
-  const metricsSectionTitle =
-    metricsTitle ?? "WORLD CUP // GROUP STAGE STATS";
+  const wcStackedActive =
+    isWcProfile &&
+    stackedMetricsSections != null &&
+    stackedMetricsSections.length > 0;
+  const metricsSectionTitle = wcStackedActive
+    ? "WORLD CUP // STATS"
+    : metricsTitle ?? "WORLD CUP // GROUP STAGE STATS";
   const flagIso = countryCode?.trim().toUpperCase() || null;
 
   const dayDeltaTitle = metricCopy.dayDeltaTitle;
-  const winRateDelta = formatProfileMetricDayDelta(
-    "winRate",
-    metricValueDeltas?.winRate
-  );
-  const totalPointsDelta = formatProfileMetricDayDelta(
-    "totalPoints",
-    metricValueDeltas?.totalPoints
-  );
-  const precisionDelta = formatProfileMetricDayDelta(
-    "scorePrecision",
-    metricValueDeltas?.totalPrecision,
-    { integer: isWcProfile }
-  );
-  const upsetDelta = formatProfileMetricDayDelta(
-    "upset",
-    metricValueDeltas?.totalUpset
-  );
 
-  const metricsGrid = (
-    <div
-      className={[
-        "grid grid-cols-2 gap-2 p-2",
-        layout === "web" ? "gap-3 p-3" : "",
-      ].join(" ")}
-    >
-      <MetricCard
-        label={isJa ? "勝率" : "WIN RATE"}
-        value={`${formatMetricDecimals(stats.winRate, 1)}%`}
-        footnote={winRateFootnote}
-        accent="green"
-        filledSegs={winSegs}
-        layout={layout}
-        delay={0.04}
-        unitHint={metricCopy.winRateUnitHint}
-        tooltip={metricCopy.winRateTooltip}
-        dayDelta={winRateDelta}
-        dayDeltaTitle={dayDeltaTitle}
-        dayDeltaTone={profileMetricDeltaTone(metricValueDeltas?.winRate ?? null)}
-        reduceUiMotion={reduceUiMotion}
-      />
-      <MetricCard
-        label={isJa ? "総合得点" : "TOTAL PTS"}
-        value={stats.totalPoints.toLocaleString()}
-        rankLabel={totalPointsRankLabel}
-        accent="magenta"
-        filledSegs={ptsSegs}
-        layout={layout}
-        delay={0.08}
-        segmentsReady={ptsSegmentsReady}
-        rankBelowSegBar
-        unit={metricCopy.ptsUnit}
-        unitHint={metricCopy.cumulativeUnitHint}
-        tooltip={metricCopy.totalPointsTooltip}
-        dayDelta={
-          totalPointsDelta
-            ? `${totalPointsDelta} ${metricCopy.ptsUnit}`
-            : null
-        }
-        dayDeltaTitle={dayDeltaTitle}
-        dayDeltaTone={profileMetricDeltaTone(
-          metricValueDeltas?.totalPoints ?? null
-        )}
-        reduceUiMotion={reduceUiMotion}
-      />
-      <MetricCard
-        label={
-          isWcProfile
-            ? isJa
-              ? "完全的中"
-              : "EXACT HITS"
-            : isJa
-              ? "スコア精度"
-              : "PRECISION"
-        }
-        value={
-          isWcProfile
-            ? String(Math.max(0, Math.round(stats.scorePrecision)))
-            : formatMetricDecimals(stats.scorePrecision, 1)
-        }
-        accent="cyan"
-        filledSegs={0}
-        layout={layout}
-        delay={0.12}
-        showSegBar={false}
-        unit={isWcProfile ? metricCopy.matchUnit : metricCopy.ptsUnit}
-        unitHint={metricCopy.cumulativeUnitHint}
-        tooltip={
-          isWcProfile
-            ? metricCopy.exactHitTooltip
-            : metricCopy.scorePrecisionTooltip
-        }
-        dayDelta={
-          precisionDelta
-            ? isWcProfile
-              ? `${precisionDelta} ${metricCopy.matchUnit}`
-              : `${precisionDelta} ${metricCopy.ptsUnit}`
-            : null
-        }
-        dayDeltaTitle={dayDeltaTitle}
-        dayDeltaTone={profileMetricDeltaTone(
-          metricValueDeltas?.totalPrecision ?? null,
-          { positiveOnly: isWcProfile }
-        )}
-        reduceUiMotion={reduceUiMotion}
-      />
-      <MetricCard
-        label={isJa ? "アップセット" : "UPSET"}
-        value={formatMetricDecimals(stats.upset, 1)}
-        accent="red"
-        filledSegs={0}
-        layout={layout}
-        delay={0.16}
-        showSegBar={false}
-        unit={metricCopy.ptsUnit}
-        unitHint={metricCopy.cumulativeUnitHint}
-        tooltip={metricCopy.upsetTooltip}
-        dayDelta={upsetDelta ? `${upsetDelta} ${metricCopy.ptsUnit}` : null}
-        dayDeltaTitle={dayDeltaTitle}
-        dayDeltaTone={profileMetricDeltaTone(
-          metricValueDeltas?.totalUpset ?? null
-        )}
-        reduceUiMotion={reduceUiMotion}
-      />
-    </div>
-  );
+  const renderMetricsGrid = (
+    sectionStats: ProfileEditKinetikStats,
+    sectionDeltas: MyRankMetricValueDeltas | null,
+    sectionRank: {
+      totalPointsRank: number | null;
+      totalPointsRankDenominator: number | null;
+    }
+  ) => {
+    const sectionWinRateFootnote = isJa
+      ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
+      : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
+    const sectionWinSegs = kinetikWinRateSegs(sectionStats.winRate);
+    const sectionPtsSegs = kinetikTotalPointsRankSegs(
+      sectionRank.totalPointsRank,
+      sectionRank.totalPointsRankDenominator
+    );
+    const sectionTotalPointsRankLabel =
+      sectionRank.totalPointsRank != null
+        ? isJa
+          ? `${sectionRank.totalPointsRank}位`
+          : `#${sectionRank.totalPointsRank}`
+        : undefined;
+    const sectionPtsSegmentsReady =
+      sectionRank.totalPointsRankDenominator != null &&
+      Number.isFinite(sectionRank.totalPointsRankDenominator) &&
+      sectionRank.totalPointsRankDenominator >= 1;
+    const sectionWinRateDelta = formatProfileMetricDayDelta(
+      "winRate",
+      sectionDeltas?.winRate
+    );
+    const sectionTotalPointsDelta = formatProfileMetricDayDelta(
+      "totalPoints",
+      sectionDeltas?.totalPoints
+    );
+    const sectionPrecisionDelta = formatProfileMetricDayDelta(
+      "scorePrecision",
+      sectionDeltas?.totalPrecision,
+      { integer: isWcProfile }
+    );
+    const sectionUpsetDelta = formatProfileMetricDayDelta(
+      "upset",
+      sectionDeltas?.totalUpset
+    );
+
+    return (
+      <div
+        className={[
+          "grid grid-cols-2 gap-2 p-2",
+          layout === "web" ? "gap-3 p-3" : "",
+        ].join(" ")}
+      >
+        <MetricCard
+          label={isJa ? "勝率" : "WIN RATE"}
+          value={`${formatMetricDecimals(sectionStats.winRate, 1)}%`}
+          footnote={sectionWinRateFootnote}
+          accent="green"
+          filledSegs={sectionWinSegs}
+          layout={layout}
+          delay={0.04}
+          unitHint={metricCopy.winRateUnitHint}
+          tooltip={metricCopy.winRateTooltip}
+          dayDelta={sectionWinRateDelta}
+          dayDeltaTitle={dayDeltaTitle}
+          dayDeltaTone={profileMetricDeltaTone(sectionDeltas?.winRate ?? null)}
+          reduceUiMotion={reduceUiMotion}
+        />
+        <MetricCard
+          label={isJa ? "総合得点" : "TOTAL PTS"}
+          value={sectionStats.totalPoints.toLocaleString()}
+          rankLabel={sectionTotalPointsRankLabel}
+          accent="magenta"
+          filledSegs={sectionPtsSegs}
+          layout={layout}
+          delay={0.08}
+          segmentsReady={sectionPtsSegmentsReady}
+          rankBelowSegBar
+          unit={metricCopy.ptsUnit}
+          unitHint={metricCopy.cumulativeUnitHint}
+          tooltip={metricCopy.totalPointsTooltip}
+          dayDelta={
+            sectionTotalPointsDelta
+              ? `${sectionTotalPointsDelta} ${metricCopy.ptsUnit}`
+              : null
+          }
+          dayDeltaTitle={dayDeltaTitle}
+          dayDeltaTone={profileMetricDeltaTone(
+            sectionDeltas?.totalPoints ?? null
+          )}
+          reduceUiMotion={reduceUiMotion}
+        />
+        <MetricCard
+          label={
+            isWcProfile
+              ? isJa
+                ? "完全的中"
+                : "EXACT HITS"
+              : isJa
+                ? "スコア精度"
+                : "PRECISION"
+          }
+          value={
+            isWcProfile
+              ? String(Math.max(0, Math.round(sectionStats.scorePrecision)))
+              : formatMetricDecimals(sectionStats.scorePrecision, 1)
+          }
+          accent="cyan"
+          filledSegs={0}
+          layout={layout}
+          delay={0.12}
+          showSegBar={false}
+          unit={isWcProfile ? metricCopy.matchUnit : metricCopy.ptsUnit}
+          unitHint={metricCopy.cumulativeUnitHint}
+          tooltip={
+            isWcProfile
+              ? metricCopy.exactHitTooltip
+              : metricCopy.scorePrecisionTooltip
+          }
+          dayDelta={
+            sectionPrecisionDelta
+              ? isWcProfile
+                ? `${sectionPrecisionDelta} ${metricCopy.matchUnit}`
+                : `${sectionPrecisionDelta} ${metricCopy.ptsUnit}`
+              : null
+          }
+          dayDeltaTitle={dayDeltaTitle}
+          dayDeltaTone={profileMetricDeltaTone(
+            sectionDeltas?.totalPrecision ?? null,
+            { positiveOnly: isWcProfile }
+          )}
+          reduceUiMotion={reduceUiMotion}
+        />
+        <MetricCard
+          label={isJa ? "アップセット" : "UPSET"}
+          value={formatMetricDecimals(sectionStats.upset, 1)}
+          accent="red"
+          filledSegs={0}
+          layout={layout}
+          delay={0.16}
+          showSegBar={false}
+          unit={metricCopy.ptsUnit}
+          unitHint={metricCopy.cumulativeUnitHint}
+          tooltip={metricCopy.upsetTooltip}
+          dayDelta={
+            sectionUpsetDelta ? `${sectionUpsetDelta} ${metricCopy.ptsUnit}` : null
+          }
+          dayDeltaTitle={dayDeltaTitle}
+          dayDeltaTone={profileMetricDeltaTone(
+            sectionDeltas?.totalUpset ?? null
+          )}
+          reduceUiMotion={reduceUiMotion}
+        />
+      </div>
+    );
+  };
+
+  const metricsGrid = renderMetricsGrid(stats, metricValueDeltas, {
+    totalPointsRank: activeTotalPointsRank,
+    totalPointsRankDenominator: activeRankDenominator,
+  });
 
   const metricsContent = statsPending ? (
     <MetricsGridSkeleton layout={layout} />
+  ) : wcStackedActive ? (
+    <div className="divide-y divide-white/8">
+      {stackedMetricsSections!.map((section) => (
+        <div key={section.title}>
+          <div className="border-b border-white/8 px-2 py-1.5">
+            <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
+              {section.title}
+            </ProfileEditKinetikGlitchTitle>
+            <div className="mt-1.5">
+              <ProfileEditKinetikHeaderTabs
+                rankBadge={section.rankBadge}
+                winStreak={section.winStreak}
+                language={language}
+                compact={layout === "mobile"}
+              />
+            </div>
+          </div>
+          {renderMetricsGrid(section.stats, section.metricValueDeltas, {
+            totalPointsRank: section.totalPointsRank,
+            totalPointsRankDenominator: section.totalPointsRankDenominator,
+          })}
+        </div>
+      ))}
+    </div>
   ) : (
     metricsGrid
   );
@@ -829,7 +878,7 @@ export default function ProfileEditKinetikPanel({
     </div>
   );
 
-  const tierTagsOnly = (
+  const tierTagsOnly = wcStackedActive ? null : (
     <ProfileEditKinetikHeaderTabs
       rankBadge={rankBadge}
       winStreak={activeWinStreak}
@@ -838,7 +887,13 @@ export default function ProfileEditKinetikPanel({
     />
   );
 
-  const tierTagsRowMobile = (
+  const tierTagsRowMobile = wcStackedActive ? (
+    menuButton ? (
+      <div className="profile-edit-kinetik-header-bar flex w-full justify-end">
+        {menuButton}
+      </div>
+    ) : null
+  ) : (
     <div className="profile-edit-kinetik-header-bar flex w-full items-stretch gap-2">
       <div className="min-w-0 flex-1">{tierTagsOnly}</div>
       {menuButton}
@@ -884,7 +939,9 @@ export default function ProfileEditKinetikPanel({
                   align="center"
                 />
               </div>
-              <div className="mt-3 w-full">{tierTagsOnly}</div>
+              {tierTagsOnly ? (
+                <div className="mt-3 w-full">{tierTagsOnly}</div>
+              ) : null}
               <div
                 className={[
                   "mt-3 flex min-w-0 items-center gap-2",
@@ -955,7 +1012,9 @@ export default function ProfileEditKinetikPanel({
           editable={editable}
         />
         <div className="profile-edit-kinetik-header__meta min-w-0 flex-1">
-          <div className="mb-2">{tierTagsRowMobile}</div>
+          {tierTagsRowMobile ? (
+            <div className="mb-2">{tierTagsRowMobile}</div>
+          ) : null}
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <h2
               className={[

@@ -4,6 +4,7 @@ import type { Profile } from "../../../../../../app/component/profile/useProfile
 import { mapProfileToKinetikPanel } from "../../../../../../lib/profile/mapProfileToKinetikPanel";
 import type { ProfileStatsStreakContext } from "../../../../../../lib/profile/profileStreakScope";
 import type { MyRankMetricValueDeltas } from "../../../../../../lib/rankings/myRankMetricValueDeltas";
+import type { ProfileKinetikMetricsSection } from "../../../../../../lib/profile/profileKinetikMetricsSection";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "../profileApi";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import { BlocksPulseLoader } from "../../../components/BlocksPulseLoader";
@@ -31,6 +32,8 @@ export type ProfileKinetikHeroNativeProps = {
   badges?: ResolvedBadgeNative[];
   onBadgePress?: (badge: ResolvedBadgeNative) => void;
   style?: ViewStyle;
+  wcStackedMetricsSections?: ProfileKinetikMetricsSection[];
+  wcStackedStatsLoading?: boolean;
 };
 
 export default function ProfileKinetikHeroNative({
@@ -55,6 +58,8 @@ export default function ProfileKinetikHeroNative({
   badges = [],
   onBadgePress,
   style,
+  wcStackedMetricsSections,
+  wcStackedStatsLoading = false,
 }: ProfileKinetikHeroNativeProps) {
   const mapped = useMemo(() => {
     const profile: Profile = {
@@ -114,7 +119,12 @@ export default function ProfileKinetikHeroNative({
       winStreak,
   ]);
 
-  if (statsLoading && !summary) {
+  if (
+    (statsLoading && !summary) ||
+    (profileStatsContext.rankingLeague === "worldcup" &&
+      wcStackedStatsLoading &&
+      !wcStackedMetricsSections?.length)
+  ) {
     return (
       <View style={[styles.loadingShell, style]}>
         <BlocksPulseLoader />
@@ -122,20 +132,28 @@ export default function ProfileKinetikHeroNative({
     );
   }
 
+  const isWcStacked =
+    profileStatsContext.rankingLeague === "worldcup" &&
+    (wcStackedMetricsSections?.length ?? 0) > 0;
+  const headerSection = isWcStacked ? wcStackedMetricsSections![0] : null;
+
   return (
     <ProfileKinetikPanelNative
       style={style}
       identity={mapped.identity}
-      stats={mapped.stats}
+      stats={headerSection?.stats ?? mapped.stats}
       language={language}
       bio={bio}
       countryCode={countryCode}
       memberSinceMs={memberSinceMs}
       isPro={plan === "pro"}
-      winStreak={mapped.winStreak}
-      totalPointsRank={mapped.totalPointsRank}
-      totalPointsRankDenominator={mapped.totalPointsRankDenominator}
-      rankDeltaPlaces={mapped.rankDeltaPlaces}
+      winStreak={headerSection?.winStreak ?? mapped.winStreak}
+      totalPointsRank={headerSection?.totalPointsRank ?? mapped.totalPointsRank}
+      totalPointsRankDenominator={
+        headerSection?.totalPointsRankDenominator ??
+        mapped.totalPointsRankDenominator
+      }
+      rankDeltaPlaces={headerSection?.rankDeltaPlaces ?? mapped.rankDeltaPlaces}
       metricsTitle={mapped.metricsTitle}
       canOpenMenu={isMe}
       onOpenMenu={isMe ? onOpenMenu : undefined}
@@ -144,8 +162,13 @@ export default function ProfileKinetikHeroNative({
       badges={badges}
       onBadgePress={onBadgePress}
       shareHandle={handle}
-      metricValueDeltas={metricValueDeltas}
+      metricValueDeltas={
+        headerSection?.metricValueDeltas ?? metricValueDeltas
+      }
       rankingLeague={profileStatsContext.rankingLeague}
+      stackedMetricsSections={
+        isWcStacked ? wcStackedMetricsSections : undefined
+      }
     />
   );
 }

@@ -5,6 +5,14 @@ import {
   resolveKickoffMsFromFields,
   type WcKickoffSlotGameOutcome,
 } from "./wcKickoffSlot";
+import { resolveWcStageFromGame } from "./resolveWcStage";
+
+type WcReplayPost = {
+  gameId: string;
+  isWin: boolean;
+  kickoffMs: number;
+  wcStage?: "qualifying" | "main" | null;
+};
 
 type TimelineUnit =
   | { kind: "single"; gameId: string; isWin: boolean }
@@ -19,11 +27,7 @@ function entryActiveFootball(curF: number): number {
 }
 
 function buildTimelineUnits(
-  posts: ReadonlyArray<{
-    gameId: string;
-    isWin: boolean;
-    kickoffMs: number;
-  }>,
+  posts: ReadonlyArray<WcReplayPost>,
   gamesByKickoff: ReadonlyMap<number, string[]>
 ): TimelineUnit[] {
   const byKickoff = new Map<number, Map<string, boolean>>();
@@ -110,12 +114,13 @@ async function getWcGamesByKickoff(
   return wcGamesByKickoffCache;
 }
 
-/** 同スロット試合を除き、キックオフ前までの football 連勝をリプレイする */
+/** 同スロット試合を除き、キックオフ前までの football 連勝をリプレイする（wcStage 指定時は同ステージのみ） */
 export async function replayFootballEntryBeforeKickoff(
   db: FirebaseFirestore.Firestore,
   uid: string,
   beforeKickoffMs: number,
-  excludeGameIds: ReadonlySet<string>
+  excludeGameIds: ReadonlySet<string>,
+  wcStage?: "qualifying" | "main" | null
 ): Promise<number> {
   const postsSnap = await db
     .collection("posts")
@@ -125,8 +130,7 @@ export async function replayFootballEntryBeforeKickoff(
     .get();
 
   const gamesByKickoff = await getWcGamesByKickoff(db);
-  const replayPosts: { gameId: string; isWin: boolean; kickoffMs: number }[] =
-    [];
+  const replayPosts: WcReplayPost[] = [];
 
   for (const doc of postsSnap.docs) {
     const p = doc.data();
@@ -136,13 +140,27 @@ export async function replayFootballEntryBeforeKickoff(
     const gameSnap = await db.doc(`games/${gameId}`).get();
     if (!gameSnap.exists || gameSnap.get("final") !== true) continue;
 
-    const kickoffMs = resolveKickoffMsFromFields(gameSnap.data());
+    const gameData = gameSnap.data()!;
+    const kickoffMs = resolveKickoffMsFromFields(gameData);
     if (kickoffMs == null || kickoffMs >= beforeKickoffMs) continue;
+
+    const gameStage = resolveWcStageFromGame({
+      knockout: gameData.knockout === true,
+      roundLabel:
+        typeof gameData.roundLabel === "string" ? gameData.roundLabel : null,
+      wcStage: typeof gameData.wcStage === "string" ? gameData.wcStage : null,
+    });
+    if (wcStage && gameStage && gameStage !== wcStage) continue;
 
     const stats = (p.stats ?? {}) as Record<string, unknown>;
     if (typeof stats.isWin !== "boolean") continue;
 
-    replayPosts.push({ gameId, isWin: stats.isWin, kickoffMs });
+    replayPosts.push({
+      gameId,
+      isWin: stats.isWin,
+      kickoffMs,
+      wcStage: gameStage,
+    });
   }
 
   const units = buildTimelineUnits(replayPosts, gamesByKickoff);

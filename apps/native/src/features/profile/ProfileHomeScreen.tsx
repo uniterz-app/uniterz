@@ -35,6 +35,7 @@ import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
 import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
 import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
+import ProfileWcStackedRankTrendChartsNative from "./ProfileWcStackedRankTrendChartsNative";
 import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
@@ -54,6 +55,8 @@ import {
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
 import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
+import { useProfileKinetikWcStackedStats } from "../../../../../lib/profile/useProfileKinetikWcStackedStats";
+import { useProfileWcStackedRankTrend } from "../../../../../lib/profile/useProfileWcStackedRankTrend";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -336,6 +339,27 @@ export default function ProfileHomeScreen({
       };
     });
   }, []);
+
+  const { sections: wcStackedMetricsSections, loading: wcStackedStatsLoading } =
+    useProfileKinetikWcStackedStats(
+      targetUid,
+      profileStatsContext.rankingLeague === "worldcup",
+      currentStreak,
+      getUniterzApiBaseUrl() || undefined
+    );
+
+  const wcRankTrendApiBase = getUniterzApiBaseUrl() || undefined;
+  const {
+    sections: wcRankTrendSections,
+    loading: wcRankTrendLoading,
+  } = useProfileWcStackedRankTrend(
+    targetUid,
+    tab === "overview" &&
+      !!targetUid &&
+      authReady &&
+      profileStatsContext.rankingLeague === "worldcup",
+    wcRankTrendApiBase
+  );
 
   /** Web ヒーロー2行目に近づける：ハンドル優先、無ければメール（UID の一部は誤解を招くので避ける） */
   const secondaryIdLine =
@@ -701,11 +725,21 @@ export default function ProfileHomeScreen({
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
         <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
-          <ProfileRankTrendChartNative
-            data={statsBundle.rankTrend}
-            loading={statsBundle.chartsLoading && statsBundle.rankTrend.length === 0}
-            language={language}
-          />
+          {profileStatsContext.rankingLeague === "worldcup" ? (
+            <ProfileWcStackedRankTrendChartsNative
+              sections={wcRankTrendSections}
+              loading={wcRankTrendLoading}
+              language={language}
+            />
+          ) : (
+            <ProfileRankTrendChartNative
+              data={statsBundle.rankTrend}
+              loading={
+                statsBundle.chartsLoading && statsBundle.rankTrend.length === 0
+              }
+              language={language}
+            />
+          )}
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
         <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
@@ -810,6 +844,8 @@ export default function ProfileHomeScreen({
         isMe={isMe}
         onOpenMenu={() => setMenuOpen(true)}
         onToggleMetricsScope={onToggleMetricsScope}
+        wcStackedMetricsSections={wcStackedMetricsSections ?? undefined}
+        wcStackedStatsLoading={wcStackedStatsLoading}
         menuUnreadCount={menuUnreadCount}
         badges={resolvedBadges}
         onBadgePress={(badge) => {

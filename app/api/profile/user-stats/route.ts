@@ -293,6 +293,32 @@ export async function GET(req: Request) {
           } catch {
             /* ライブ連勝が取れなくてもサマリー自体は返す */
           }
+        } else if (
+          (wcStage === "qualifying" || wcStage === "main") &&
+          summary
+        ) {
+          try {
+            const usSnap = await adminDb
+              .collection("user_stats_v2")
+              .doc(uid)
+              .get();
+            const us = usSnap.exists
+              ? (usSnap.data() as Record<string, unknown>)
+              : {};
+            const byStage = (us.activeWinStreakByWcStage ?? {}) as Record<
+              string,
+              unknown
+            >;
+            const live = safeInt(byStage[wcStage]);
+            summary.activeWinStreak = live;
+            const maxByStage = (us.maxWinStreakByWcStage ?? {}) as Record<
+              string,
+              unknown
+            >;
+            summary.maxWinStreak = safeInt(maxByStage[wcStage]);
+          } catch {
+            /* 同上 */
+          }
         }
       } else {
         summary = await resolveNbaProfileSummaryLive(

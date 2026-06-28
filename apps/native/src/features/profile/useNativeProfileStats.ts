@@ -87,13 +87,23 @@ function mergeCacheEntry(key: string, patch: Partial<CacheEntry>) {
   });
 }
 
+function chartsPending(
+  cached: CacheEntry,
+  rankingLeague: RankingLeagueSource
+): boolean {
+  if (cached.dailyTrend == null) return true;
+  if (rankingLeague === "worldcup") return false;
+  return cached.rankTrend == null;
+}
+
 function applyCacheToState(
   cached: CacheEntry,
+  rankingLeague: RankingLeagueSource,
   setState: Dispatch<SetStateAction<NativeProfileStatsState>>
 ) {
   setState({
     loading: false,
-    chartsLoading: cached.dailyTrend == null || cached.rankTrend == null,
+    chartsLoading: chartsPending(cached, rankingLeague),
     summary: cached.summary,
     summaryRanks: cached.summaryRanks,
     metricValueDeltas: cached.metricValueDeltas,
@@ -127,7 +137,7 @@ export function useNativeProfileStats(
     }
     return {
       loading: false,
-      chartsLoading: cached.dailyTrend == null || cached.rankTrend == null,
+      chartsLoading: chartsPending(cached, rankingLeague),
       summary: cached.summary,
       summaryRanks: cached.summaryRanks,
       metricValueDeltas: cached.metricValueDeltas,
@@ -157,7 +167,7 @@ export function useNativeProfileStats(
     }
     const cached = readValidCache(cacheKey);
     if (cached) {
-      applyCacheToState(cached, setState);
+      applyCacheToState(cached, rankingLeague, setState);
       return;
     }
     setState({ ...idleState, loading: true });
@@ -181,7 +191,8 @@ export function useNativeProfileStats(
       setState((prev) => ({ ...prev, chartsLoading: true }));
 
       const needTrend = cached.dailyTrend == null;
-      const needRankTrend = cached.rankTrend == null;
+      const needRankTrend =
+        cached.rankTrend == null && rankingLeague !== "worldcup";
       const needStats = cached.stats == null;
 
       try {
@@ -255,12 +266,12 @@ export function useNativeProfileStats(
     async function run() {
       const cached = readValidCache(cacheKey);
       if (cached) {
-        applyCacheToState(cached, setState);
+        applyCacheToState(cached, rankingLeague, setState);
         const needsRefresh =
           cached.metricValueDeltas == null ||
           Date.now() - cached.at >= BACKGROUND_REFRESH_MS;
         if (needsRefresh) void refreshPhaseInBackground();
-        if (cached.dailyTrend == null || cached.rankTrend == null) {
+        if (cached.dailyTrend == null || chartsPending(cached, rankingLeague)) {
           void ensureCharts();
         }
         return;

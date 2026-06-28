@@ -86,7 +86,7 @@ export default function MobileRankingsPage() {
     useState<RankingLeagueSource>("worldcup");
   const phase: RankingPhase = "playoffs";
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
-  const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
+  const [wcStage, setWcStage] = useState<WcRankingStage>("main");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const season = useMemo(() => getCurrentPlayoffSeason(), []);
   const effectiveRound: PlayoffRoundKey =

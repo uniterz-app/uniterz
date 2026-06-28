@@ -180,6 +180,22 @@ function activeFootballStreak(d: any): number {
   return typeof signed === "number" && signed > 0 ? signed : 0;
 }
 
+function activeFootballStreakForWcStage(
+  d: Record<string, unknown>,
+  wcStage: WcRankingStage
+): number {
+  if (wcStage === "qualifying" || wcStage === "main") {
+    const byStage = (d.activeWinStreakByWcStage ?? {}) as Record<string, unknown>;
+    const live = byStage[wcStage];
+    if (typeof live === "number" && live > 0) return live;
+    const nested = (
+      d.rankingByWcStage as Record<string, Record<string, unknown>> | undefined
+    )?.[wcStage]?.activeWinStreak;
+    if (typeof nested === "number" && nested > 0) return nested;
+  }
+  return activeFootballStreak(d);
+}
+
 type UserRankingSnaps = {
   mySnap: DocumentSnapshot | null;
   histSnap: DocumentSnapshot | null;
@@ -367,7 +383,7 @@ function buildMyRowFromStats(
   }
 ): RankingRow {
   const streak = opts.wcStage
-    ? activeFootballStreak(me)
+    ? activeFootballStreakForWcStage(me, opts.wcStage)
     : activeBasketballStreak(me);
 
   return {

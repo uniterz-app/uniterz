@@ -6,8 +6,13 @@ import type {
 } from "./types";
 import { dateKeysFromStartToTodayJST } from "./dateRange";
 import { aggregateFromDailyTeams } from "./groupStatsTeams";
-import { resolveRankingStartDateKey } from "./rankingStartDate";
+import {
+  resolveRankingStartDateKey,
+  timestampToMs,
+} from "./rankingStartDate";
+import { normalizeLeague } from "@/lib/leagues";
 import { readDailyWcStageBuckets } from "@/lib/rankings/dailyWcStageBuckets";
+import { TIMEZONE_JST, parseDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 export type MemberAgg = {
   totalPosts: number;
@@ -130,6 +135,144 @@ async function aggregateFromDaily(
   return map;
 }
 
+function mergeMemberAggs(
+  into: Map<string, MemberAgg>,
+  from: Map<string, MemberAgg>
+): Map<string, MemberAgg> {
+  for (const [uid, agg] of from) {
+    const cur = into.get(uid) ?? emptyAgg();
+    into.set(uid, {
+      totalPosts: cur.totalPosts + agg.totalPosts,
+      totalWins: cur.totalWins + agg.totalWins,
+      totalPoints: cur.totalPoints + agg.totalPoints,
+      totalPrecision: cur.totalPrecision + agg.totalPrecision,
+      totalUpset: cur.totalUpset + agg.totalUpset,
+    });
+  }
+  return into;
+}
+
+function markerCountsSince(
+  marker: Record<string, unknown>,
+  sinceMs: number
+): boolean {
+  const atMs = timestampToMs(marker.at);
+  if (atMs == null) return true;
+  return atMs >= sinceMs;
+}
+
+function markerCountsForLeague(
+  marker: Record<string, unknown>,
+  league: CommunityLeague
+): boolean {
+  if (marker.countedForRanking === false) return false;
+  if (league === "all") return true;
+  const raw = marker.league;
+  if (raw == null) return false;
+  return normalizeLeague(raw) === league;
+}
+
+/** 開始日のみ: applied_posts から sinceMs 以降を合算（daily バケットと同等のリーグ条件） */
+async function aggregateFromAppliedPostsSince(
+  db: Firestore,
+  uids: string[],
+  dateKey: string,
+  league: CommunityLeague,
+  sinceMs: number
+): Promise<Map<string, MemberAgg>> {
+  const map = new Map<string, MemberAgg>();
+  for (const uid of uids) map.set(uid, emptyAgg());
+  if (uids.length === 0) return map;
+
+  await Promise.all(
+    uids.map(async (uid) => {
+      const agg = map.get(uid);
+      if (!agg) return;
+      const snap = await db
+        .collection(`user_stats_v2_daily/${uid}_${dateKey}/applied_posts`)
+        .get();
+      for (const doc of snap.docs) {
+        const marker = doc.data() as Record<string, unknown>;
+        if (!markerCountsSince(marker, sinceMs)) continue;
+        if (!markerCountsForLeague(marker, league)) continue;
+        addBucketToAgg(agg, marker);
+      }
+    })
+  );
+
+  return map;
+}
+
+async function aggregateFromDailyRange(
+  db: Firestore,
+  uids: string[],
+  dateKeys: string[],
+  league: CommunityLeague,
+  rankingTeamIds: string[],
+  firstDaySinceMs?: number | null
+): Promise<Map<string, MemberAgg>> {
+  if (dateKeys.length === 0) {
+    const map = new Map<string, MemberAgg>();
+    for (const uid of uids) map.set(uid, emptyAgg());
+    return map;
+  }
+
+  const teamFilterActive = rankingTeamIds.length > 0;
+  const [firstKey, ...restKeys] = dateKeys;
+  const dayStartMs =
+    parseDateKeyInTimeZone(firstKey, TIMEZONE_JST)?.getTime() ?? 0;
+  const usePartialStartDay =
+    firstDaySinceMs != null && firstDaySinceMs > dayStartMs + 1000;
+
+  if (!usePartialStartDay) {
+    return teamFilterActive
+      ? aggregateFromDailyTeams(
+          db,
+          uids,
+          dateKeys,
+          league,
+          rankingTeamIds
+        )
+      : aggregateFromDaily(db, uids, dateKeys, league);
+  }
+
+  const map = new Map<string, MemberAgg>();
+  for (const uid of uids) map.set(uid, emptyAgg());
+
+  const partial = teamFilterActive
+    ? await aggregateFromDailyTeams(
+        db,
+        uids,
+        [firstKey],
+        league,
+        rankingTeamIds,
+        firstDaySinceMs
+      )
+    : await aggregateFromAppliedPostsSince(
+        db,
+        uids,
+        firstKey,
+        league,
+        firstDaySinceMs!
+      );
+  mergeMemberAggs(map, partial);
+
+  if (restKeys.length > 0) {
+    const rest = teamFilterActive
+      ? await aggregateFromDailyTeams(
+          db,
+          uids,
+          restKeys,
+          league,
+          rankingTeamIds
+        )
+      : await aggregateFromDaily(db, uids, restKeys, league);
+    mergeMemberAggs(map, rest);
+  }
+
+  return map;
+}
+
 export type CumulativeRow = {
   uid: string;
   displayName: string;
@@ -218,7 +361,8 @@ export async function buildMemberLeaderboard(
   _period: CommunityPeriodType,
   league: CommunityLeague = "all",
   rankingStartDateKey?: string | null,
-  rankingTeamIds: string[] = []
+  rankingTeamIds: string[] = [],
+  rankingStartAtMs?: number | null
 ): Promise<
   {
     uid: string;
@@ -268,19 +412,18 @@ export async function buildMemberLeaderboard(
 
   const startKey = rankingStartDateKey ?? resolveRankingStartDateKey(undefined);
   const dateKeys = dateKeysFromStartToTodayJST(startKey);
-  const teamFilterActive = rankingTeamIds.length > 0;
+  const firstDaySinceMs = rankingStartAtMs ?? null;
   const dailyAgg =
     metric === "activeWinStreak"
       ? new Map(uids.map((uid) => [uid, emptyAgg()] as const))
-      : teamFilterActive
-        ? await aggregateFromDailyTeams(
-            db,
-            uids,
-            dateKeys,
-            league,
-            rankingTeamIds
-          )
-        : await aggregateFromDaily(db, uids, dateKeys, league);
+      : await aggregateFromDailyRange(
+          db,
+          uids,
+          dateKeys,
+          league,
+          rankingTeamIds,
+          firstDaySinceMs
+        );
 
   const rows = uids.map((uid) => {
     const c = cumulativeByUid.get(uid) ?? null;

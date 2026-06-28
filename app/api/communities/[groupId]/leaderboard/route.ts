@@ -9,7 +9,7 @@ import {
 } from "@/lib/communities/types";
 import { buildMemberLeaderboard } from "@/lib/communities/groupStats";
 import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
-import { resolveRankingStartDateKey } from "@/lib/communities/rankingStartDate";
+import { resolveRankingStartDateKey, resolveRankingStartAtMs } from "@/lib/communities/rankingStartDate";
 import {
   getCachedLeaderboardResponse,
   setCachedLeaderboardResponse,
@@ -44,6 +44,7 @@ export async function GET(req: Request, ctx: Ctx) {
     const rankingLeague = parseCommunityLeague(d.rankingLeague);
     const rankingTeamIds = readRankingTeamIds(d);
     const rankingStartDateKey = resolveRankingStartDateKey(d);
+    const rankingStartAtMs = resolveRankingStartAtMs(d);
     const snapshotSlotKey = getLeaderboardSnapshotSlotKeyJst();
 
     const members = await adminDb
@@ -62,6 +63,7 @@ export async function GET(req: Request, ctx: Ctx) {
       rankingTeamIds,
       periodType,
       rankingStartDateKey,
+      rankingStartAtMs,
       memberCount: memberUids.length,
       topMemberUidSample: memberUidSample,
     } as const;
@@ -84,6 +86,7 @@ export async function GET(req: Request, ctx: Ctx) {
       sameTeamIds(snapshot.rankingTeamIds, rankingTeamIds) &&
       snapshot.periodType === periodType &&
       snapshot.rankingStartDateKey === rankingStartDateKey &&
+      snapshot.rankingStartAtMs === rankingStartAtMs &&
       snapshot.memberCount === memberUids.length
     ) {
       const myRowFromSnapshot =
@@ -107,7 +110,8 @@ export async function GET(req: Request, ctx: Ctx) {
       periodType,
       rankingLeague,
       rankingStartDateKey,
-      rankingTeamIds
+      rankingTeamIds,
+      rankingStartAtMs
     );
 
     const ranked = rows.map((r, i) => ({
@@ -145,6 +149,7 @@ export async function GET(req: Request, ctx: Ctx) {
       rankingTeamIds,
       periodType,
       rankingStartDateKey,
+      rankingStartAtMs,
       memberCount: memberUids.length,
       rows: ranked,
       builtAtMs: Date.now(),

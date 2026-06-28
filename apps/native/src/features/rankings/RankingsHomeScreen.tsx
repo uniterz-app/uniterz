@@ -75,7 +75,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
   const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("wc");
-  const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
+  const [wcStage, setWcStage] = useState<WcRankingStage>("main");
 
   const wcStageForHook: WcRankingStage | null =
     category === "playoffs" && rankingsLeague === "wc" ? wcStage : null;

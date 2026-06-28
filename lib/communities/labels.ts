@@ -56,7 +56,7 @@ export function periodLabel(p: CommunityPeriodType, lang: Language): string {
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** 集計期間の表示値（グループ作成日 = rankingStartDateKey） */
+/** 集計期間の表示値（グループ作成日。集計は作成時刻以降） */
 export function communityRankingPeriodValue(
   rankingStartDateKey: string | null | undefined,
   lang: Language
