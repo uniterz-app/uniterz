@@ -5218,9 +5218,9 @@ div.wc-bracket-user-card {
   border: 1.5px solid #00f5ff;
   background: #000000;
   box-shadow:
-    0 0 6px rgba(0, 245, 255, 0.28),
-    0 0 12px rgba(0, 245, 255, 0.1),
-    inset 0 1px 0 rgba(0, 245, 255, 0.28);
+    0 0 4px rgba(0, 245, 255, 0.16),
+    0 0 8px rgba(0, 245, 255, 0.06),
+    inset 0 1px 0 rgba(0, 245, 255, 0.22);
 }
 
 button.wc-bracket-user-card--out,
@@ -5246,9 +5246,9 @@ div.wc-bracket-user-card--interactive:hover {
   border-color: #4dfbff;
   background: #020608;
   box-shadow:
-    0 0 8px rgba(0, 245, 255, 0.38),
-    0 0 16px rgba(0, 245, 255, 0.14),
-    inset 0 1px 0 rgba(0, 245, 255, 0.35);
+    0 0 5px rgba(0, 245, 255, 0.22),
+    0 0 10px rgba(0, 245, 255, 0.08),
+    inset 0 1px 0 rgba(0, 245, 255, 0.28);
 }
 
 button.wc-bracket-user-card--interactive:active,
