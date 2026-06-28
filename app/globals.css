@@ -5358,10 +5358,12 @@ div.wc-bracket-user-card--interactive:active {
   transform: scale(1.06);
 }
 
-/* WC ブラケットツリー — 外枠のみ（角切り） */
+/* WC ブラケットツリー — 外枠（角切り・padding で border を clip-path から切らない） */
 .wc-bracket-tree-shell {
   position: relative;
   isolation: isolate;
+  padding: 1px;
+  background: rgba(34, 211, 238, 0.52);
   clip-path: polygon(
     10px 0%,
     100% 0%,
@@ -5370,8 +5372,21 @@ div.wc-bracket-user-card--interactive:active {
     0% 100%,
     0% 10px
   );
-  border: 1px solid rgba(34, 211, 238, 0.45);
-  box-shadow: 0 0 18px rgba(34, 211, 238, 0.12);
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.16);
+}
+
+.wc-bracket-tree-shell__inner {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  clip-path: polygon(
+    9px 0%,
+    100% 0%,
+    100% calc(100% - 9px),
+    calc(100% - 9px) 100%,
+    0% 100%,
+    0% 9px
+  );
 }
 
 /* WC ブラケットツリー — 背景（参考 HUD・中央円なし） */
@@ -5471,13 +5486,15 @@ div.wc-bracket-user-card--interactive:active {
 
 .wc-bracket-tree-bg__top {
   position: absolute;
-  top: 4px;
+  top: 0;
   left: 0;
   right: 0;
+  z-index: 15;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   gap: 14px;
+  height: 44px;
   padding: 0 18px;
   pointer-events: none;
 }
@@ -5486,7 +5503,7 @@ div.wc-bracket-user-card--interactive:active {
   flex: 1;
   max-width: 108px;
   height: 1px;
-  margin-top: 8px;
+  margin-top: 0;
   background: linear-gradient(
     90deg,
     transparent 0%,

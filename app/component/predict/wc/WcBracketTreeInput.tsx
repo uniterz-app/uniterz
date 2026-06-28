@@ -22,6 +22,7 @@ import {
   WC_TREE_FLAG_H,
   WC_TREE_FLAG_W,
   WC_TREE_CHAMPION_CARD_LABEL_OVERHANG,
+  WC_TREE_HUD_HEADER_H,
   WC_TREE_PODIUM_CARD_TOP_Y,
   WC_TREE_PODIUM_CONNECTOR_Y,
   wcTreeConnectorMidX,
@@ -185,7 +186,8 @@ export default function WcBracketTreeInput({
   const viewScale =
     wrapWidth > 0 ? wrapWidth / WC_TREE_DESIGN_W : 360 / WC_TREE_DESIGN_W;
   const crownPad = WC_TREE_CHAMPION_CARD_LABEL_OVERHANG * viewScale * 0.88;
-  const scaledHeight = WC_TREE_DESIGN_H * viewScale + crownPad + 2;
+  const treeTopPad = WC_TREE_HUD_HEADER_H + Math.max(2, crownPad * 0.92);
+  const scaledHeight = WC_TREE_DESIGN_H * viewScale + treeTopPad + 2;
 
   const leftR32 = wcLeftR32MatchIds();
   const rightR32 = wcRightR32MatchIds();
@@ -333,24 +335,25 @@ export default function WcBracketTreeInput({
   return (
     <div
       ref={wrapRef}
-      className={["wc-bracket-tree-shell relative w-full overflow-hidden", className]
+      className={["wc-bracket-tree-shell relative w-full", className]
         .filter(Boolean)
         .join(" ")}
     >
-      <WcBracketTreeBackground />
-      <div
-        className="relative z-10 mx-auto w-full overflow-visible"
-        style={{ height: scaledHeight }}
-      >
+      <div className="wc-bracket-tree-shell__inner overflow-hidden">
+        <WcBracketTreeBackground />
         <div
-          className="absolute left-1/2 origin-top"
-          style={{
-            width: WC_TREE_DESIGN_W,
-            height: WC_TREE_DESIGN_H,
-            transform: `translateX(-50%) scale(${viewScale})`,
-            marginTop: Math.max(2, crownPad * 0.92),
-          }}
+          className="relative z-10 mx-auto w-full overflow-visible"
+          style={{ height: scaledHeight }}
         >
+          <div
+            className="absolute left-1/2 origin-top"
+            style={{
+              width: WC_TREE_DESIGN_W,
+              height: WC_TREE_DESIGN_H,
+              transform: `translateX(-50%) scale(${viewScale})`,
+              marginTop: treeTopPad,
+            }}
+          >
           <svg
             className="pointer-events-none absolute inset-0 z-0"
             width={WC_TREE_DESIGN_W}
@@ -438,6 +441,7 @@ export default function WcBracketTreeInput({
               <WcChampionCard teamId={champion} />
             </div>
           ) : null}
+          </div>
         </div>
       </div>
     </div>

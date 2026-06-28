@@ -139,6 +139,16 @@ export default function WcBracketLeaderboardSection({
   const inputOverlayOpen = inputPageOpen && submissionOpen && !savedLoading;
 
   useEffect(() => {
+    if (!showInputGate) {
+      setSubmissionPromptOpen(false);
+      return;
+    }
+    if (!inputPageOpen) {
+      setSubmissionPromptOpen(true);
+    }
+  }, [showInputGate, inputPageOpen]);
+
+  useEffect(() => {
     if (searchParams.get(RANKINGS_WC_BRACKET_INPUT_PARAM) !== "1") return;
     if (!submissionOpen || savedLoading || hasSubmitted) return;
     setInputPageOpen(true);
@@ -560,9 +570,9 @@ export default function WcBracketLeaderboardSection({
                   >
                     <div
                       ref={overlayScrollRef}
-                      className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-auto px-1 pb-bottom-nav [-webkit-overflow-scrolling:touch]"
+                      className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-auto px-3 pb-bottom-nav [-webkit-overflow-scrolling:touch]"
                     >
-                      <div className="flex justify-end px-3 pb-1 pt-2">
+                      <div className="flex justify-end pb-1 pt-2">
                         <button
                           type="button"
                           onClick={closeDetail}
@@ -580,7 +590,7 @@ export default function WcBracketLeaderboardSection({
                           />
                         </button>
                       </div>
-                      <div className="px-4 pb-3 pt-0.5">
+                      <div className="pb-3 pt-0.5">
                         <WcBracketUserCard
                           row={selectedRow}
                           language={language}
@@ -595,7 +605,7 @@ export default function WcBracketLeaderboardSection({
                           />
                         </div>
                       ) : overlayBracket ? (
-                        <div className="relative z-20 px-2 pb-4">
+                        <div className="relative z-20 pb-4">
                           <WcBracketTreeInput
                             bracket={overlayBracket}
                             advancement={knockoutAdvancement}
