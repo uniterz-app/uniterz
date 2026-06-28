@@ -210,7 +210,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     (profile as { currentStreak?: number }).currentStreak ?? 0
   );
 
-  const chartsReady = !resolvedUid || !statsLoading;
+  const chartsReady = Boolean(resolvedUid);
   const chartsSectionRef = useRef<HTMLDivElement>(null);
   const chartsNearView = useInView(chartsSectionRef, {
     once: true,
@@ -335,7 +335,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 )}
               </div>
               ) : null}
-              {chartsInView && overviewStage >= 3 ? (
+              {chartsInView && overviewStage >= 3 && resolvedUid ? (
               <div className="min-w-0 overflow-hidden">
                 <StreakTrackerCardLazy
                   uid={resolvedUid}

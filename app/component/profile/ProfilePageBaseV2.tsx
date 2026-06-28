@@ -17,9 +17,6 @@ import { useProfileScopedStreak } from "@/lib/profile/useProfileScopedStreak";
 import {
   RANKINGS_TAB_LEAGUE_PARAM,
   RANKINGS_TAB_WC_STAGE_PARAM,
-  PROFILE_FROM_PARAM,
-  PROFILE_FROM_GROUP_VALUE,
-  PROFILE_FROM_COMMUNITY_VALUE,
 } from "@/lib/navigation/rankingsProfileFrom";
 import {
   isRankingLeagueSource,
@@ -68,21 +65,11 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     };
   }, [sp]);
 
-  // グループランキング由来の遷移は、行に入っている「グループ作成日からの期間集計」を
-  // プロフィールに出さず、リーグ/ステージの全期間スタッツ（WC は大会通算）を表示する
-  const fromGroup = useMemo(() => {
-    const from = sp.get(PROFILE_FROM_PARAM);
-    return (
-      from === PROFILE_FROM_GROUP_VALUE || from === PROFILE_FROM_COMMUNITY_VALUE
-    );
-  }, [sp]);
-
   const { stats, summary, summaryRanks, metricValueDeltas, statsLoading, dailyTrend } =
     useUserStatsV2(targetUid, {
       ...profileStatsContext,
       prefetchOtherLeague: false,
       routeKey: handle,
-      skipPrimedStatsCache: fromGroup,
     });
 
   const scopedStreak = useProfileScopedStreak(targetUid, profileStatsContext);

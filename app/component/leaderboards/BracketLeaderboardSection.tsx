@@ -27,8 +27,7 @@ import PlayoffFullBracketWeb from "@/app/component/predict/PlayoffFullBracketWeb
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
-import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
-import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
+import { warmBracketLeaderboardProfile } from "@/lib/leaderboards/warmBracketLeaderboardProfile";
 
 type Props = {
   season?: string;
@@ -151,12 +150,29 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     [season]
   );
 
+  const warmProfileForRow = useCallback(
+    (row: BracketLeaderboardRow) => {
+      const base = isMobile ? "/mobile" : "/web";
+      return warmBracketLeaderboardProfile({
+        router,
+        pathname: pathname ?? "",
+        base,
+        row,
+        totalCount,
+        league: "nba",
+        rankingsCategory: "bracket",
+      });
+    },
+    [isMobile, pathname, router, totalCount]
+  );
+
   const openDetail = useCallback(
     (row: BracketLeaderboardRow) => {
+      warmProfileForRow(row);
       setSelectedRow(row);
       loadBracketForUser(row.uid);
     },
-    [loadBracketForUser]
+    [loadBracketForUser, warmProfileForRow]
   );
 
   const closeDetail = useCallback(() => {
@@ -167,20 +183,11 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
 
   const openProfileFromSheet = useCallback(
     (row: BracketLeaderboardRow) => {
-      const handleOrUid = profilePathKeyFromRow(row);
-      const base = isMobile ? "/mobile" : "/web";
-      const href = profileHrefWithRankingsReturn(
-        pathname,
-        base,
-        handleOrUid,
-        {
-          metric: "totalScore",
-          phase: "playoffs",
-        }
-      );
+      const href = warmProfileForRow(row);
+      closeDetail();
       router.push(href);
     },
-    [isMobile, pathname, router]
+    [closeDetail, router, warmProfileForRow]
   );
 
   const PlayoffBracket = isMobile ? PlayoffFullBracketMobile : PlayoffFullBracketWeb;

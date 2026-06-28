@@ -1,4 +1,4 @@
-import { normalizeLeague } from "@/lib/leagues";
+import { resolvePostListLeague } from "@/lib/leagues";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import {
   isGameWcStage,
@@ -31,6 +31,7 @@ export function resolveProfileStreakScopeKey(
 
 export type SettledPostStreakInput = {
   league?: unknown;
+  gameId?: unknown;
   seasonPhase?: unknown;
   wcStage?: unknown;
 };
@@ -46,7 +47,11 @@ function normalizeSeasonPhase(v: unknown): string | null {
  * play_in / regular が明示されていなければプレーオフ扱い（当時はプレーオフ期の投稿想定）。
  */
 function matchesNbaPlayoffsStreak(post: SettledPostStreakInput): boolean {
-  if (normalizeLeague(post.league) !== "nba") return false;
+  if (
+    resolvePostListLeague({ league: post.league, gameId: post.gameId }) !== "nba"
+  ) {
+    return false;
+  }
   const phase = normalizeSeasonPhase(post.seasonPhase);
   if (phase === "playoffs") return true;
   if (phase === "play_in" || phase === "regular") return false;
@@ -58,7 +63,10 @@ export function postMatchesProfileStreakScope(
   post: SettledPostStreakInput,
   scope: ProfileStreakScopeKey
 ): boolean {
-  const league = normalizeLeague(post.league);
+  const league = resolvePostListLeague({
+    league: post.league,
+    gameId: post.gameId,
+  });
   if (scope === "nba:playoffs") {
     return matchesNbaPlayoffsStreak(post);
   }

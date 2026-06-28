@@ -256,7 +256,24 @@ export function prefetchProfileStatsFromRoute(
 ): void {
   const safeKey = routeKey.trim();
   if (!safeKey) return;
-  void bootstrapStatsByRouteKey(safeKey, context.rankingLeague, context.wcStage);
+  void (async () => {
+    const resolvedUid = await bootstrapStatsByRouteKey(
+      safeKey,
+      context.rankingLeague,
+      context.wcStage
+    );
+    if (!resolvedUid) return;
+    const key = statsCacheKey(resolvedUid, context.rankingLeague, context.wcStage);
+    const cached = statsCache.get(key);
+    if (cached?.dailyTrend == null) {
+      await fetchTrendIntoCache(
+        resolvedUid,
+        key,
+        context.rankingLeague,
+        context.wcStage
+      );
+    }
+  })();
 }
 
 async function bootstrapStatsByRouteKey(

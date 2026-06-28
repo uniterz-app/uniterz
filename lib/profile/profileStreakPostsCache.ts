@@ -9,6 +9,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { resolvePostListLeague } from "@/lib/leagues";
 import { enrichSettledPostsFromGames } from "@/lib/profile/enrichSettledPostsFromGames";
 import {
   computeAllScopeMetrics,
@@ -20,7 +21,7 @@ export { computeAllScopeMetrics, type SettledPostRow } from "@/lib/profile/profi
 const FETCH_LIMIT = 400;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 /** ゲーム補完ロジック変更時に bump */
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 type CacheEntry = {
   at: number;
@@ -59,7 +60,10 @@ function parseRows(
       gameId: typeof data.gameId === "string" ? data.gameId : null,
       settledAtMs: ms,
       isWin: iw,
-      league: data.league,
+      league: resolvePostListLeague({
+        league: data.league,
+        gameId: data.gameId,
+      }),
       seasonPhase: data.seasonPhase,
       wcStage: data.wcStage,
     });
@@ -87,7 +91,7 @@ export async function loadProfileSettledPosts(
     );
     const snap = await getDocs(q);
     const parsed = parseRows(snap.docs);
-    const rows = await enrichSettledPostsFromGames(parsed);
+    const rows = await enrichSettledPostsFromGames(parsed, db);
     cache.set(key, { at: Date.now(), rows });
     inflight.delete(key);
     return rows;

@@ -39,8 +39,7 @@ import WcBracketMarket from "@/app/component/predict/market/WcBracketMarket";
 import { useWcKnockoutAdvancement } from "@/lib/wc/useWcKnockoutAdvancement";
 import { useWcBracketResults } from "@/lib/wc/useWcBracketResults";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
-import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
+import { warmBracketLeaderboardProfile } from "@/lib/leaderboards/warmBracketLeaderboardProfile";
 import {
   RANKINGS_WC_BRACKET_INPUT_PARAM,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -69,7 +68,7 @@ export default function WcBracketLeaderboardSection({
   const { advancement: knockoutAdvancement } = useWcKnockoutAdvancement(season);
   const submissionOpen = isWcKnockoutBracketSubmissionOpen(season);
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
-  const { loading, error, rows, myRow, refetch } =
+  const { loading, error, rows, myRow, totalCount, refetch } =
     useWcBracketLeaderboard({
       season,
       uid,
@@ -248,13 +247,31 @@ export default function WcBracketLeaderboardSection({
     [season]
   );
 
+  const warmProfileForRow = useCallback(
+    (row: WcBracketLeaderboardRow) => {
+      const base = isMobile ? "/mobile" : "/web";
+      return warmBracketLeaderboardProfile({
+        router,
+        pathname: pathname ?? "",
+        base,
+        row,
+        totalCount: totalCount || rows.length,
+        league: "worldcup",
+        wcStage: "overall",
+        rankingsCategory: "bracket",
+      });
+    },
+    [isMobile, pathname, router, rows.length, totalCount]
+  );
+
   const openDetail = useCallback(
     (row: WcBracketLeaderboardRow) => {
       if (showInputGate) return;
+      warmProfileForRow(row);
       setSelectedRow(row);
       void loadBracketForUser(row);
     },
-    [loadBracketForUser, showInputGate]
+    [loadBracketForUser, showInputGate, warmProfileForRow]
   );
 
   const closeDetail = useCallback(() => {
@@ -264,20 +281,11 @@ export default function WcBracketLeaderboardSection({
 
   const openProfileFromSheet = useCallback(
     (row: WcBracketLeaderboardRow) => {
-      const handleOrUid = profilePathKeyFromRow(row);
-      const base = isMobile ? "/mobile" : "/web";
-      const href = profileHrefWithRankingsReturn(
-        pathname,
-        base,
-        handleOrUid,
-        {
-          metric: "totalScore",
-          phase: "playoffs",
-        }
-      );
+      const href = warmProfileForRow(row);
+      closeDetail();
       router.push(href);
     },
-    [isMobile, pathname, router]
+    [closeDetail, router, warmProfileForRow]
   );
 
   const handleSubmitConfirm = useCallback(async () => {

@@ -207,7 +207,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     (profile as { currentStreak?: number }).currentStreak ?? 0
   );
 
-  const chartsReady = !resolvedUid || !statsLoading;
+  const chartsReady = Boolean(resolvedUid);
   const overviewStage = useProfileOverviewStage(chartsReady, {
     instant: visualEffectsLite,
   });
@@ -318,7 +318,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                 )}
               </div>
               ) : null}
-              {overviewStage >= 3 ? (
+              {overviewStage >= 3 && resolvedUid ? (
               <div className="min-w-0 overflow-hidden">
                 <StreakTrackerCardLazy
                   uid={resolvedUid}
