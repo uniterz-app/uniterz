@@ -59,6 +59,7 @@ import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeade
 import WcBracketLeaderboardSection from "@/app/component/leaderboards/WcBracketLeaderboardSection";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
+import { useWcBracketSubmitted } from "@/lib/wc/useWcBracketSubmitted";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
@@ -99,6 +100,10 @@ export default function MobileRankingsPage() {
     () => visibleMetricsForLeague(rankingLeague),
     [rankingLeague]
   );
+
+  /** WC ブラケット未入力なら Bracket タブに ! を表示 */
+  const { shouldPromptInput: wcBracketNeedsInput } =
+    useWcBracketSubmitted(WC_KNOCKOUT_SEASON);
 
   /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric / rankRound を反映 */
   useLayoutEffect(() => {
@@ -280,6 +285,9 @@ export default function MobileRankingsPage() {
                 category={category}
                 onChange={setCategory}
                 league={rankingLeague}
+                bracketAlert={
+                  rankingLeague === "worldcup" && wcBracketNeedsInput
+                }
               />
             ) : null}
 

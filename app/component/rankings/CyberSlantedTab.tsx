@@ -20,6 +20,8 @@ type CyberSlantedTabProps = {
   /** role="tab" 用 */
   role?: "tab";
   "aria-selected"?: boolean;
+  /** タブ内右上に表示する装飾バッジ（例: 未入力アラートの ! ） */
+  badge?: ReactNode;
 };
 
 export function CyberSlantedTab({
@@ -30,6 +32,7 @@ export function CyberSlantedTab({
   fontWeight = 700,
   role,
   "aria-selected": ariaSelected,
+  badge,
 }: CyberSlantedTabProps) {
   const fill = useContext(CyberSlantedTabFillContext);
   const jaLabel = hasJaScript(label);
@@ -69,13 +72,17 @@ export function CyberSlantedTab({
       ) : null}
       <span
         className={[
-          "relative z-1 block",
-          fill ? "w-full truncate text-center" : "",
-          jaLabel ? "" : "uppercase",
+          "relative z-1 flex items-center justify-center gap-1",
+          fill ? "w-full" : "",
         ].join(" ")}
         style={{ transform: "skewX(14deg)" }}
       >
-        {label}
+        <span className={[fill ? "truncate" : "", jaLabel ? "" : "uppercase"].join(" ")}>
+          {label}
+        </span>
+        {badge ? (
+          <span className="pointer-events-none shrink-0">{badge}</span>
+        ) : null}
       </span>
     </button>
   );
