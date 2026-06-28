@@ -5,10 +5,10 @@
  */
 
 import type { WcKnockoutMatchId } from "@/lib/wc/wc-knockout-bracket";
-import {
-  lookupWcTeamDisplay,
-  wcTeamIdFromIso3,
-} from "@/lib/wc/wc-team-display";
+import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
+import { WC_2026_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-advancement-2026";
+import type { WcGroupCode } from "@/lib/wc/groups";
+import { wcTeamIdFromIso3 } from "@/lib/wc/wc-team-display";
 
 export type WcR32ConfirmedMatch = {
   matchId: WcKnockoutMatchId;
@@ -139,24 +139,45 @@ const R32_CONFIRMED_BY_MATCH_ID = new Map(
   WC_2026_R32_CONFIRMED_MATCHES.map((m) => [m.matchId, m])
 );
 
+function wcQualLabelForTeam(
+  teamId: string,
+  advancement: WcKnockoutAdvancement
+): string {
+  const id = teamId.trim();
+  if (!id) return "";
+
+  for (const group of Object.keys(advancement.groupWinners) as WcGroupCode[]) {
+    if (advancement.groupWinners[group] === id) return `1${group}`;
+  }
+  for (const group of Object.keys(advancement.groupRunnersUp) as WcGroupCode[]) {
+    if (advancement.groupRunnersUp[group] === id) return `2${group}`;
+  }
+  for (const group of Object.keys(advancement.groupThirdPlaces) as WcGroupCode[]) {
+    if (advancement.groupThirdPlaces[group] === id) return `3${group}`;
+  }
+
+  return "";
+}
+
 /** R32 確定対戦カード（advancement / Firestore より優先） */
 export function resolveWcR32ConfirmedParticipants(
-  matchId: WcKnockoutMatchId
+  matchId: WcKnockoutMatchId,
+  advancement: WcKnockoutAdvancement = WC_2026_KNOCKOUT_ADVANCEMENT
 ): [{ teamId: string; label: string }, { teamId: string; label: string }] | null {
   const m = R32_CONFIRMED_BY_MATCH_ID.get(matchId);
   if (!m) return null;
 
-  const homeNames = lookupWcTeamDisplay(m.homeIso3);
-  const awayNames = lookupWcTeamDisplay(m.awayIso3);
+  const homeId = wcTeamIdFromIso3(m.homeIso3);
+  const awayId = wcTeamIdFromIso3(m.awayIso3);
 
   return [
     {
-      teamId: wcTeamIdFromIso3(m.homeIso3),
-      label: homeNames?.en ?? m.homeIso3,
+      teamId: homeId,
+      label: wcQualLabelForTeam(homeId, advancement),
     },
     {
-      teamId: wcTeamIdFromIso3(m.awayIso3),
-      label: awayNames?.en ?? m.awayIso3,
+      teamId: awayId,
+      label: wcQualLabelForTeam(awayId, advancement),
     },
   ];
 }
