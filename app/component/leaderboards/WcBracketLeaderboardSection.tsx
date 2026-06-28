@@ -29,7 +29,7 @@ import {
 } from "@/lib/wc/wc-bracket-firestore";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import { isWcBracketComplete } from "@/lib/wc/wc-knockout-bracket";
-import WcFullBracketMobile from "@/app/component/predict/wc/WcFullBracketMobile";
+import WcBracketTreeInput from "@/app/component/predict/wc/WcBracketTreeInput";
 import WcBracketInputMobile from "@/app/component/predict/wc/WcBracketInputMobile";
 import WcBracketStartPromptModal from "@/app/component/predict/wc/WcBracketStartPromptModal";
 import WcBracketViewTabs, {
@@ -596,15 +596,11 @@ export default function WcBracketLeaderboardSection({
                         </div>
                       ) : overlayBracket ? (
                         <div className="relative z-20 px-2 pb-4">
-                          <WcFullBracketMobile
+                          <WcBracketTreeInput
                             bracket={overlayBracket}
                             advancement={knockoutAdvancement}
                             officialWinners={officialWinners}
-                            firstMissMatchId={
-                              selectedRow.firstMissMatchId ?? null
-                            }
                             language={language}
-                            showGlassShell={false}
                           />
                         </div>
                       ) : (
