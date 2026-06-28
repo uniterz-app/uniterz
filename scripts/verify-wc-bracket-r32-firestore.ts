@@ -55,7 +55,11 @@ const SEASON = "2025-26";
 
     const resolved = resolveWcMatchParticipants(m.matchId, {}, adv);
     const [rh, ra] = resolved ?? [null, null];
-    const display = getWcMatchContestants(m.matchId, {}, adv);
+    const display = getWcMatchContestants(
+      m.matchId as Parameters<typeof getWcMatchContestants>[0],
+      {},
+      adv
+    );
 
     const expectHome = `wc-${m.homeIso3}`;
     const expectAway = `wc-${m.awayIso3}`;

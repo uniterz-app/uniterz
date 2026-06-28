@@ -115,5 +115,5 @@ export function resolveKinetikCyberTooltipTheme(
     >;
     return STREAK_THEMES[tier] ?? KINETIK_CYBER_TOOLTIP_DEFAULT;
   }
-  return RANK_THEMES[key] ?? KINETIK_CYBER_TOOLTIP_DEFAULT;
+  return RANK_THEMES[key as KinetikRankBadgeTier] ?? KINETIK_CYBER_TOOLTIP_DEFAULT;
 }
