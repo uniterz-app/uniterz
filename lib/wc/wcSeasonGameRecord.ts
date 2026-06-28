@@ -5,6 +5,8 @@ export type WcSeasonGameRecord = WcStandingGame & {
   id: string;
   startAtMs: number | null;
   roundLabel: string | null;
+  knockout?: boolean | null;
+  wcStage?: string | null;
 };
 
 export type WcTeamPastResultRow = {

@@ -1,33 +1,37 @@
 import type { ReactNode } from "react";
 import { Text, View, type TextStyle, type ViewStyle } from "react-native";
 import { MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
-import { formatWcDrawPotLabel, getWcDrawPot, resolveWcDrawPotColor } from "../../../../../lib/wc/drawPots";
+import { resolveWcTeamFlagMeta } from "../../../../../lib/wc/wcTeamFlagMeta";
 
 type Props = {
   teamId: string | null | undefined;
   children: ReactNode;
+  knockout?: boolean;
 };
 
-/** 国旗の上 — 抽選ポット（Pot 1 など）+ 国旗 */
-export default function WcTeamFlagWithMetaNative({ teamId, children }: Props) {
-  const pot = getWcDrawPot(teamId);
-  const potLabel = pot != null ? formatWcDrawPotLabel(pot) : null;
-  const potColor = pot != null ? resolveWcDrawPotColor(pot) : null;
+export default function WcTeamFlagWithMetaNative({
+  teamId,
+  children,
+  knockout = false,
+}: Props) {
+  const meta = resolveWcTeamFlagMeta(teamId, { knockout });
 
   return (
     <View style={styles.stack}>
-      <View style={styles.potSlot}>
-        {potLabel && potColor ? (
+      <View style={styles.metaSlot}>
+        {meta ? (
           <Text
             style={[
-              styles.potText,
-              {
-                color: potColor.nativeColor,
-                textShadowColor: potColor.nativeTextShadowColor,
-              },
+              styles.metaText,
+              meta.kind === "pot"
+                ? {
+                    color: meta.potColor.nativeColor,
+                    textShadowColor: meta.potColor.nativeTextShadowColor,
+                  }
+                : styles.qualText,
             ]}
           >
-            {potLabel}
+            {meta.label}
           </Text>
         ) : null}
       </View>
@@ -40,19 +44,22 @@ const styles = {
   stack: {
     alignItems: "center",
   } satisfies ViewStyle,
-  /** Pot ラベル有無で国旗の縦位置がズレないよう高さを確保 */
-  potSlot: {
+  metaSlot: {
     minHeight: 13,
     marginBottom: 1,
     justifyContent: "flex-end",
     alignItems: "center",
   } satisfies ViewStyle,
-  potText: {
+  metaText: {
     fontSize: 11,
     fontWeight: "900",
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontVariant: ["tabular-nums"],
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
+  } satisfies TextStyle,
+  qualText: {
+    color: "rgba(207,250,254,0.88)",
+    textShadowColor: "rgba(34, 211, 238, 0.35)",
   } satisfies TextStyle,
 };

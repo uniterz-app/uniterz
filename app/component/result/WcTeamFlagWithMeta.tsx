@@ -2,36 +2,38 @@
 
 import CountryFlag from "@/app/component/games/CountryFlag";
 import { matchScoreClass } from "@/lib/fonts";
-import { formatWcDrawPotLabel, getWcDrawPot, resolveWcDrawPotColor } from "@/lib/wc/drawPots";
+import { resolveWcTeamFlagMeta } from "@/lib/wc/wcTeamFlagMeta";
 
 type Props = {
   teamId: string | null | undefined;
   compact?: boolean;
   flagClassName?: string;
+  /** ノックアウトステージ — Pot の代わりに 1F / 2D などを表示 */
+  knockout?: boolean;
 };
 
-/** 国旗の上 — 抽選ポット（Pot 1 など）+ 国旗 */
 export default function WcTeamFlagWithMeta({
   teamId,
   compact = false,
   flagClassName,
+  knockout = false,
 }: Props) {
-  const pot = getWcDrawPot(teamId);
-  const potLabel = pot != null ? formatWcDrawPotLabel(pot) : null;
-  const potColor = pot != null ? resolveWcDrawPotColor(pot) : null;
+  const meta = resolveWcTeamFlagMeta(teamId, { knockout });
 
   return (
     <div className="flex flex-col items-center">
-      {potLabel && potColor ? (
+      {meta ? (
         <span
           className={[
             matchScoreClass,
-            potColor.webClassName,
+            meta.kind === "pot"
+              ? meta.potColor.webClassName
+              : "text-cyan-100/88",
             "mb-0.5",
             compact ? "text-[10px]" : "text-[11px] md:text-[15px]",
           ].join(" ")}
         >
-          {potLabel}
+          {meta.label}
         </span>
       ) : null}
       <CountryFlag teamId={teamId} className={flagClassName} />

@@ -6,6 +6,94 @@ import {
 import { getWcGroupForTeam, type WcGroupCode } from "@/lib/wc/groups";
 import type { Language } from "@/lib/i18n/language";
 import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
+import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+import { resolveFrozenWc2026GroupStageStanding, resolveOfficialWc2026GroupStageRank } from "@/lib/wc/wc2026GroupStageFrozenRecords";
+import type { TeamRecordLine } from "@/lib/teamRecordDisplay";
+
+export type WcStandingGameMeta = WcStandingGame & {
+  roundLabel?: string | null;
+  knockout?: boolean | null;
+  wcStage?: string | null;
+};
+
+/** グループリーグ試合のみ（ノックアウトの結果は除外） */
+export function filterWcGroupStageGames<T extends WcStandingGameMeta>(
+  games: readonly T[]
+): T[] {
+  return games.filter(
+    (g) =>
+      !isWcKnockoutGame({
+        league: "wc",
+        knockout: g.knockout ?? null,
+        roundLabel: g.roundLabel ?? null,
+        wcStage: g.wcStage ?? null,
+      })
+  );
+}
+
+function resolveWcGroupStandingForTeamInGroup(
+  teamId: string,
+  games: readonly WcStandingGame[] | null | undefined
+): WcGroupStandingEntry | null {
+  const group = getWcGroupForTeam(teamId);
+  if (!group) return null;
+  const rows = computeGroupStandings(group.teamIds, games ?? []);
+  const entry = pickStandingEntry(teamId, group.teamIds, rows);
+  if (!entry) return null;
+  const officialRank = resolveOfficialWc2026GroupStageRank(teamId);
+  return officialRank == null ? entry : { ...entry, rank: officialRank };
+}
+
+export function toWcGroupStandingEntryFromTeamRecord(
+  record: TeamRecordLine | null | undefined,
+  teamId?: string | null
+): WcGroupStandingEntry | null {
+  if (!record) return null;
+  const officialRank = resolveOfficialWc2026GroupStageRank(teamId);
+  const rank = officialRank ?? record.rank;
+  if (rank == null || !Number.isFinite(rank) || rank <= 0) return null;
+  return {
+    wins: Number(record.wins ?? 0),
+    draws: Number(record.draws ?? 0),
+    losses: Number(record.losses ?? 0),
+    rank: Math.trunc(rank),
+  };
+}
+
+/** ノックアウト試合カード — teams 戦績 or 確定スナップショットを即表示 */
+export function resolveWcGroupStageStandingForKnockoutDisplay(
+  teamId: string | null | undefined,
+  record?: TeamRecordLine | null
+): WcGroupStandingEntry | null {
+  return (
+    toWcGroupStandingEntryFromTeamRecord(record, teamId) ??
+    resolveFrozenWc2026GroupStageStanding(teamId) ??
+    null
+  );
+}
+
+export function resolveWcGroupStageStandingForTeam(
+  teamId: string | null | undefined,
+  games: readonly WcStandingGameMeta[] | null | undefined
+): WcGroupStandingEntry | null {
+  const id = normalizeWcTeamId(teamId) ?? teamId?.trim() ?? "";
+  if (!id) return null;
+  const frozen = resolveFrozenWc2026GroupStageStanding(id);
+  const filtered = filterWcGroupStageGames(games ?? []);
+  if (filtered.length === 0) return frozen;
+  const fromGames = resolveWcGroupStandingForTeamInGroup(id, filtered);
+  return fromGames ?? frozen;
+}
+
+/** グループステージの勝敗・順位のみ（ノックアウト試合は集計に含めない） */
+export function resolveWcGroupStageStandingsForMatch(
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined,
+  games: readonly WcStandingGameMeta[] | null | undefined
+): WcGroupStandingsForMatch {
+  const filtered = filterWcGroupStageGames(games ?? []);
+  return resolveWcGroupStandingsForMatch(homeTeamId, awayTeamId, filtered);
+}
 
 export type WcGroupStandingEntry = {
   wins: number;
@@ -57,7 +145,7 @@ function pickStandingEntry(
   return toEntry(row, index + 1);
 }
 
-/** グループ内順位・勝敗分（試合データ未取得時は 0-0-0 + 暫定順位） */
+/** グループ内順位・勝敗分（ホーム・アウェイは各グループを個別に解決） */
 export function resolveWcGroupStandingsForMatch(
   homeTeamId: string | null | undefined,
   awayTeamId: string | null | undefined,
@@ -65,24 +153,15 @@ export function resolveWcGroupStandingsForMatch(
 ): WcGroupStandingsForMatch {
   const homeId = normalizeWcTeamId(homeTeamId) ?? homeTeamId?.trim() ?? "";
   const awayId = normalizeWcTeamId(awayTeamId) ?? awayTeamId?.trim() ?? "";
-  const group =
-    (homeId ? getWcGroupForTeam(homeId) : null) ??
-    (awayId ? getWcGroupForTeam(awayId) : null);
-  if (!group) {
-    return {
-      homeRank: null,
-      awayRank: null,
-      homeStanding: null,
-      awayStanding: null,
-    };
-  }
+  const gameList = games ?? [];
 
-  const rows = computeGroupStandings(group.teamIds, games ?? []);
   const homeStanding = homeId
-    ? pickStandingEntry(homeId, group.teamIds, rows)
+    ? resolveWcGroupStandingForTeamInGroup(homeId, gameList) ??
+      resolveFrozenWc2026GroupStageStanding(homeId)
     : null;
   const awayStanding = awayId
-    ? pickStandingEntry(awayId, group.teamIds, rows)
+    ? resolveWcGroupStandingForTeamInGroup(awayId, gameList) ??
+      resolveFrozenWc2026GroupStageStanding(awayId)
     : null;
 
   return {

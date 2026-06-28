@@ -9,6 +9,9 @@ import {
 } from "@/lib/wc/wcSeasonGamesCache";
 import {
   resolveWcGroupStandingsForMatch,
+  resolveWcGroupStageStandingsForMatch,
+  resolveWcGroupStageStandingForTeam,
+  type WcGroupStandingEntry,
   type WcGroupStandingsForMatch,
 } from "@/lib/wc/wcGroupStandingRank";
 
@@ -44,5 +47,47 @@ export function useWcGroupStandingRanks(
   return useMemo(
     () => resolveWcGroupStandingsForMatch(homeTeamId, awayTeamId, games),
     [homeTeamId, awayTeamId, games]
+  );
+}
+
+/** ノックアウト用 — グループリーグの勝敗・順位のみ */
+export function useWcGroupStageStandingsForMatch(
+  db: Firestore,
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined,
+  season: string | null | undefined = WC_DEFAULT_SEASON
+): WcGroupStandingsForMatch {
+  const games = useSyncExternalStore(
+    (onStoreChange) => {
+      if (!season) return () => {};
+      return subscribeWcSeasonGames(db, season, onStoreChange);
+    },
+    () => readWcSeasonGamesSnapshot(season),
+    () => EMPTY_WC_STANDING_GAMES
+  );
+
+  return useMemo(
+    () => resolveWcGroupStageStandingsForMatch(homeTeamId, awayTeamId, games),
+    [homeTeamId, awayTeamId, games]
+  );
+}
+
+export function useWcGroupStageStandingForTeam(
+  db: Firestore,
+  teamId: string | null | undefined,
+  season: string | null | undefined = WC_DEFAULT_SEASON
+): WcGroupStandingEntry | null {
+  const games = useSyncExternalStore(
+    (onStoreChange) => {
+      if (!season) return () => {};
+      return subscribeWcSeasonGames(db, season, onStoreChange);
+    },
+    () => readWcSeasonGamesSnapshot(season),
+    () => EMPTY_WC_STANDING_GAMES
+  );
+
+  return useMemo(
+    () => resolveWcGroupStageStandingForTeam(teamId, games),
+    [teamId, games]
   );
 }

@@ -29,6 +29,8 @@ import WcGoalScorerResultRowNative from "../results/WcGoalScorerResultRowNative"
 import ResultOutcomeBadgesNative from "../results/ResultOutcomeBadgesNative";
 import ResultStatRatingBarNative from "../results/ResultStatRatingBarNative";
 import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
+import WcGroupStandingRecordLineNative from "../results/WcGroupStandingRecordLineNative";
+import { resolveWcGroupStageStandingForKnockoutDisplay } from "../../../../../lib/wc/wcGroupStandingRank";
 import {
   formatTeamRecordLabelNative,
   useTeamRecordLineNative,
@@ -164,6 +166,8 @@ export type PredictModalMatchPreview = {
   leagueRaw: unknown;
   homeSide: unknown;
   awaySide: unknown;
+  knockout?: boolean;
+  season?: string | null;
 };
 
 export type PredictOverlayMarketBarProps = {
@@ -274,6 +278,7 @@ export function PredictMatchPreview({
   const [sharing, setSharing] = useState(false);
   const resultCopy = i18nT(language).results;
   const { centerBlock, seriesPair } = data;
+  const isKnockout = data.knockout === true;
   const homeC = data.homePalette.primary;
   const awayC = data.awayPalette.primary;
   const homeTeamId = rawTeamIdFromGameSide(data.homeSide);
@@ -304,6 +309,26 @@ export function PredictMatchPreview({
     awayTeamId,
     data.leagueRaw,
     awayRecordLine
+  );
+  const homeGroupStanding = useMemo(
+    () =>
+      isKnockout && isWcLeague
+        ? resolveWcGroupStageStandingForKnockoutDisplay(
+            homeTeamId,
+            homeRecordLine
+          )
+        : null,
+    [isKnockout, isWcLeague, homeTeamId, homeRecordLine]
+  );
+  const awayGroupStanding = useMemo(
+    () =>
+      isKnockout && isWcLeague
+        ? resolveWcGroupStageStandingForKnockoutDisplay(
+            awayTeamId,
+            awayRecordLine
+          )
+        : null,
+    [isKnockout, isWcLeague, awayTeamId, awayRecordLine]
   );
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
   const canShare = Boolean(myPostId && (mergedFinal || mergedPrediction));
@@ -384,7 +409,10 @@ export function PredictMatchPreview({
               <Text style={s.matchPreviewSideTag}>HOME</Text>
             ) : null}
             <View style={s.matchPreviewJersey}>
-              <WcTeamFlagWithMetaNative teamId={isWcLeague ? homeTeamId : null}>
+              <WcTeamFlagWithMetaNative
+                teamId={isWcLeague ? homeTeamId : null}
+                knockout={isKnockout}
+              >
                 <MatchTeamMarkNative
                   leagueRaw={data.leagueRaw}
                   side={data.homeSide}
@@ -406,7 +434,13 @@ export function PredictMatchPreview({
                 {data.homeCompact}
               </Text>
             )}
-            {isWcLeague ? (
+            {isWcLeague && isKnockout ? (
+              <WcGroupStandingRecordLineNative
+                standing={homeGroupStanding}
+                language={language}
+                textStyle={s.matchPreviewRecordBracket}
+              />
+            ) : isWcLeague ? (
               <Text style={s.matchPreviewRecordBracket}>{homeWcRecordLabel}</Text>
             ) : data.homeRecord ? (
               <Text style={s.matchPreviewRecord}>{data.homeRecord}</Text>
@@ -525,7 +559,10 @@ export function PredictMatchPreview({
               <Text style={s.matchPreviewSideTag}>AWAY</Text>
             ) : null}
             <View style={s.matchPreviewJersey}>
-              <WcTeamFlagWithMetaNative teamId={isWcLeague ? awayTeamId : null}>
+              <WcTeamFlagWithMetaNative
+                teamId={isWcLeague ? awayTeamId : null}
+                knockout={isKnockout}
+              >
                 <MatchTeamMarkNative
                   leagueRaw={data.leagueRaw}
                   side={data.awaySide}
@@ -547,7 +584,13 @@ export function PredictMatchPreview({
                 {data.awayCompact}
               </Text>
             )}
-            {isWcLeague ? (
+            {isWcLeague && isKnockout ? (
+              <WcGroupStandingRecordLineNative
+                standing={awayGroupStanding}
+                language={language}
+                textStyle={s.matchPreviewRecordBracket}
+              />
+            ) : isWcLeague ? (
               <Text style={s.matchPreviewRecordBracket}>{awayWcRecordLabel}</Text>
             ) : data.awayRecord ? (
               <Text style={s.matchPreviewRecord}>{data.awayRecord}</Text>
