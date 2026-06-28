@@ -16,6 +16,7 @@ import { Info } from "lucide-react";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
 import styles from "./profileChartInfoFaq.module.css";
 import { isProfileChartAnimationOff } from "@/lib/profile/profileVisualEffects";
 
@@ -35,6 +36,12 @@ type Props = {
   rechartsAfterEntrance?: boolean;
   loading?: boolean;
   visualEffectsLite?: boolean;
+  /** WC 2段積み時のステージ見出し */
+  sectionTitle?: string;
+  /** 下段チャート — メインタイトルをコンパクト表示 */
+  stackedSecondary?: boolean;
+  /** グループステージ確定 — 更新なしの説明 */
+  frozen?: boolean;
 };
 
 const LINE = "#22d3ee";
@@ -160,11 +167,18 @@ export default function ProfilePlayoffRankTrendChart({
   rechartsAfterEntrance = false,
   loading = false,
   visualEffectsLite = false,
+  sectionTitle,
+  stackedSecondary = false,
+  frozen = false,
 }: Props) {
   const msg = t(language);
   const chartAnimationsOff = isProfileChartAnimationOff(visualEffectsLite);
   const title = msg.profile.rankingProgress;
-  const subtitle = msg.profile.rankingProgressDesc;
+  const subtitle = frozen
+    ? language === "ja"
+      ? "グループステージ終了 — 最終スナップショット"
+      : "Group stage complete — final snapshot"
+    : msg.profile.rankingProgressDesc;
   /** Info 用（サブタイトルと同じ文言のみ。他 UI は従来のまま） */
   const chartInfoTooltipMsg = subtitle;
   const emptyHint = msg.profile.rankingProgressNoData;
@@ -370,11 +384,21 @@ export default function ProfilePlayoffRankTrendChart({
       <div className="relative z-20 px-1 pt-0.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
+            {sectionTitle ? (
+              <div className="mb-1 border-b border-white/8 pb-1.5">
+                <ProfileEditKinetikGlitchTitle compact>
+                  {sectionTitle}
+                </ProfileEditKinetikGlitchTitle>
+              </div>
+            ) : null}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <p
                 className={[
                   nameRajdhani.className,
-                  "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
+                  "font-semibold tracking-wide text-white/95",
+                  stackedSecondary
+                    ? "text-base sm:text-lg"
+                    : "text-lg sm:text-[1.72rem]",
                 ].join(" ")}
               >
                 {title}

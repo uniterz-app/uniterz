@@ -29,6 +29,7 @@ export type LeaderboardSnapshot = {
   rankingTeamIds: string[];
   periodType: CommunityPeriodType;
   rankingStartDateKey: string;
+  rankingStartAtMs: number;
   memberCount: number;
   rows: RankedRow[];
   builtAtMs: number;
@@ -88,6 +89,7 @@ export async function readLeaderboardSnapshot(
     rankingTeamIds: readRankingTeamIds(d),
     periodType: String(d.periodType ?? "from_now") as CommunityPeriodType,
     rankingStartDateKey: String(d.rankingStartDateKey ?? ""),
+    rankingStartAtMs: Number(d.rankingStartAtMs ?? 0),
     memberCount: Number(d.memberCount ?? 0),
     rows,
     builtAtMs: Number(d.builtAtMs ?? 0),
@@ -107,6 +109,7 @@ export async function writeLeaderboardSnapshot(
       rankingTeamIds: snapshot.rankingTeamIds,
       periodType: snapshot.periodType,
       rankingStartDateKey: snapshot.rankingStartDateKey,
+      rankingStartAtMs: snapshot.rankingStartAtMs,
       memberCount: snapshot.memberCount,
       rows: snapshot.rows,
       builtAtMs: snapshot.builtAtMs,

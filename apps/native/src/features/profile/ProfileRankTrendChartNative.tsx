@@ -75,6 +75,9 @@ type Props = {
   data: RankPlayoffTrendPointNative[];
   loading?: boolean;
   language: "ja" | "en";
+  sectionTitle?: string;
+  stackedSecondary?: boolean;
+  frozen?: boolean;
 };
 
 function yearsInRows(rows: RankPlayoffTrendPointNative[]): Set<number> {
@@ -231,6 +234,9 @@ export default function ProfileRankTrendChartNative({
   data,
   loading,
   language,
+  sectionTitle,
+  stackedSecondary = false,
+  frozen = false,
 }: Props) {
   const [rowW, setRowW] = useState(0);
   const isJa = language === "ja";
@@ -378,7 +384,13 @@ export default function ProfileRankTrendChartNative({
   );
 
   const title = "Ranking Progress";
-  const subtitle = isJa ? "最新10件のランキングの変動を表示" : "Shows ranking changes over recent snapshots";
+  const subtitle = frozen
+    ? isJa
+      ? "グループステージ終了 — 最終スナップショット"
+      : "Group stage complete — final snapshot"
+    : isJa
+      ? "最新10件のランキングの変動を表示"
+      : "Shows ranking changes over recent snapshots";
   const chartInfoTooltipMsg = subtitle;
   const emptyHint = isJa
     ? "ランキングの日次スナップショットが溜まると表示されます"
@@ -401,6 +413,8 @@ export default function ProfileRankTrendChartNative({
               subtitle={subtitle}
               onInfoPress={openInfo}
               isJa={isJa}
+              sectionTitle={sectionTitle}
+              stackedSecondary={stackedSecondary}
             />
             <View style={{ height: CHART_H + 80 }} />
           </View>
@@ -419,6 +433,8 @@ export default function ProfileRankTrendChartNative({
               subtitle={subtitle}
               onInfoPress={openInfo}
               isJa={isJa}
+              sectionTitle={sectionTitle}
+              stackedSecondary={stackedSecondary}
             />
             <View style={[styles.chartArea, { height: CHART_H }]}>
               <BlocksPulseLoader pixelScale={0.85} showLabel={false} />
@@ -439,6 +455,8 @@ export default function ProfileRankTrendChartNative({
               subtitle={subtitle}
               onInfoPress={openInfo}
               isJa={isJa}
+              sectionTitle={sectionTitle}
+              stackedSecondary={stackedSecondary}
             />
             <View style={[styles.chartArea, { height: CHART_H }]}>
               <Text style={styles.noData}>NO DATA</Text>
@@ -459,6 +477,8 @@ export default function ProfileRankTrendChartNative({
             subtitle={subtitle}
             onInfoPress={openInfo}
             isJa={isJa}
+            sectionTitle={sectionTitle}
+            stackedSecondary={stackedSecondary}
             currentRank={trendSummary.currentRank}
             currentRankIsTop20={currentRankIsTop20}
           />
@@ -670,6 +690,8 @@ function ChartHeader({
   subtitle,
   onInfoPress,
   isJa,
+  sectionTitle,
+  stackedSecondary = false,
   currentRank,
   currentRankIsTop20,
 }: {
@@ -677,15 +699,31 @@ function ChartHeader({
   subtitle: string;
   onInfoPress: () => void;
   isJa: boolean;
+  sectionTitle?: string;
+  stackedSecondary?: boolean;
   currentRank?: number | null;
   currentRankIsTop20?: boolean;
 }) {
   return (
     <>
+      {sectionTitle ? (
+        <View style={styles.sectionTitleWrap}>
+          <Text style={styles.sectionTitle} numberOfLines={2}>
+            {sectionTitle}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.headerRow}>
         <View style={styles.headerMain}>
           <View style={styles.titleRow}>
-            <Text style={styles.cardTitle}>{title}</Text>
+            <Text
+              style={[
+                styles.cardTitle,
+                stackedSecondary ? styles.cardTitleCompact : undefined,
+              ]}
+            >
+              {title}
+            </Text>
             <Pressable onPress={onInfoPress} hitSlop={10} accessibilityRole="button">
               <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
             </Pressable>
@@ -773,7 +811,28 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 2,
   },
+  sectionTitleWrap: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 2,
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.62)",
+    textTransform: "uppercase",
+    fontFamily: Platform.select({
+      ios: "Oxanium_700Bold",
+      android: "Oxanium_700Bold",
+      default: "sans-serif",
+    }),
+  },
   cardTitle: profileOverviewChartTitleStyle,
+  cardTitleCompact: {
+    fontSize: 16,
+  },
   subtitle: {
     ...profileOverviewChartSubtitleStyle,
     marginTop: 6,

@@ -280,12 +280,27 @@ async function applyDailyStreakDeltas(db, uid, dailyDeltas) {
  * 先に決済済み投稿の再採点は onGameFinalV2 から rescoreEarlierWcSlotPosts を呼ぶ。
  */
 async function applyWcSlotStreakWhenComplete(db, triggerGameId, kickoffMs, triggerUserResult) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     const slotGames = await loadWcGamesInKickoffSlot(db, kickoffMs);
     const slotGameIds = slotGames.map((g) => g.id);
     const isConcurrentSlot = slotGameIds.length >= 2;
     const allFinal = slotGames.length > 0 && slotGames.every((g) => g.final);
     const excludeGameIds = new Set(slotGameIds);
+    const triggerGameDoc = (_a = slotGames.find((g) => g.id === triggerGameId)) !== null && _a !== void 0 ? _a : slotGames[0];
+    const triggerWcStage = triggerGameDoc
+        ? (0, resolveWcStage_1.resolveWcStageFromGame)({
+            knockout: triggerGameDoc.data.knockout === true,
+            roundLabel: typeof triggerGameDoc.data.roundLabel === "string"
+                ? triggerGameDoc.data.roundLabel
+                : null,
+            wcStage: typeof triggerGameDoc.data.wcStage === "string"
+                ? triggerGameDoc.data.wcStage
+                : null,
+        })
+        : null;
+    const stageKey = triggerWcStage === "qualifying" || triggerWcStage === "main"
+        ? triggerWcStage
+        : null;
     const resultMap = new Map();
     const perUserPerGameActive = new Map();
     if (!allFinal) {
@@ -299,11 +314,19 @@ async function applyWcSlotStreakWhenComplete(db, triggerGameId, kickoffMs, trigg
         ...triggerUserResult.keys(),
     ]);
     for (const uid of uids) {
-        const outcomes = (_a = userOutcomes.get(uid)) !== null && _a !== void 0 ? _a : [];
-        const didWin = (_d = (_b = triggerUserResult.get(uid)) !== null && _b !== void 0 ? _b : (_c = outcomes.find((o) => o.gameId === triggerGameId)) === null || _c === void 0 ? void 0 : _c.didWin) !== null && _d !== void 0 ? _d : false;
-        const entryCurF = await (0, wcSlotStreakEntry_1.replayFootballEntryBeforeKickoff)(db, uid, kickoffMs, excludeGameIds);
-        const slotOutcome = (0, wcKickoffSlot_1.computeWcSlotStreakOutcome)(entryCurF, outcomes);
-        perUserPerGameActive.set(uid, slotOutcome.perGameActiveWinStreak);
+        const outcomes = (_b = userOutcomes.get(uid)) !== null && _b !== void 0 ? _b : [];
+        const didWin = (_e = (_c = triggerUserResult.get(uid)) !== null && _c !== void 0 ? _c : (_d = outcomes.find((o) => o.gameId === triggerGameId)) === null || _d === void 0 ? void 0 : _d.didWin) !== null && _e !== void 0 ? _e : false;
+        const entryOverall = await (0, wcSlotStreakEntry_1.replayFootballEntryBeforeKickoff)(db, uid, kickoffMs, excludeGameIds);
+        const entryStage = stageKey
+            ? await (0, wcSlotStreakEntry_1.replayFootballEntryBeforeKickoff)(db, uid, kickoffMs, excludeGameIds, stageKey)
+            : entryOverall;
+        const slotOutcome = (0, wcKickoffSlot_1.computeWcSlotStreakOutcome)(entryOverall, outcomes);
+        const slotOutcomeStage = stageKey
+            ? (0, wcKickoffSlot_1.computeWcSlotStreakOutcome)(entryStage, outcomes)
+            : slotOutcome;
+        perUserPerGameActive.set(uid, stageKey
+            ? slotOutcomeStage.perGameActiveWinStreak
+            : slotOutcome.perGameActiveWinStreak);
         const anySlotMarker = await Promise.all(slotGameIds.map((gid) => (0, updateUserStreakInternals_1.streakApplyMarkerRef)(db, gid, uid).get()));
         if (anySlotMarker.some((s) => s.exists)) {
             const snap = await db.doc(`user_stats_v2/${uid}`).get();
@@ -314,7 +337,7 @@ async function applyWcSlotStreakWhenComplete(db, triggerGameId, kickoffMs, trigg
         const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
         const publicUserRef = db.doc(`users/${uid}`);
         const updated = await db.runTransaction(async (tx) => {
-            var _a;
+            var _a, _b, _c;
             for (const gid of slotGameIds) {
                 const markerSnap = await tx.get((0, updateUserStreakInternals_1.streakApplyMarkerRef)(db, gid, uid));
                 if (markerSnap.exists) {
@@ -353,15 +376,26 @@ async function applyWcSlotStreakWhenComplete(db, triggerGameId, kickoffMs, trigg
                 maxStreak: bb.maxBasketball,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });
-            tx.set(cumulativeRef, {
-                streakBySport: { basketball: bb.basketball, football: curF },
-                currentStreak: bb.basketball,
-                streakFootball: curF,
-                activeWinStreak,
+            tx.set(cumulativeRef, Object.assign({ streakBySport: { basketball: bb.basketball, football: curF }, currentStreak: bb.basketball, streakFootball: curF, activeWinStreak,
                 activeWinStreakBasketball,
-                activeWinStreakFootball,
-                updatedAt: firestore_1.FieldValue.serverTimestamp(),
-            }, { merge: true });
+                activeWinStreakFootball, updatedAt: firestore_1.FieldValue.serverTimestamp() }, (stageKey
+                ? {
+                    [`rankingByWcStage.${stageKey}.activeWinStreak`]: slotOutcomeStage.finalActiveWinStreak,
+                }
+                : {})), { merge: true });
+            if (stageKey) {
+                const stageCurF = slotOutcomeStage.finalCurF;
+                const stageActive = slotOutcomeStage.finalActiveWinStreak;
+                const maxByWcStage = ((_b = snap.get("maxWinStreakByWcStage")) !== null && _b !== void 0 ? _b : {});
+                let maxStage = Number((_c = maxByWcStage[stageKey]) !== null && _c !== void 0 ? _c : 0);
+                if (stageActive > maxStage)
+                    maxStage = stageActive;
+                tx.set(userRef, {
+                    streakByWcStage: { [stageKey]: stageCurF },
+                    activeWinStreakByWcStage: { [stageKey]: stageActive },
+                    maxWinStreakByWcStage: { [stageKey]: maxStage },
+                }, { merge: true });
+            }
             for (const gid of slotGameIds) {
                 tx.set((0, updateUserStreakInternals_1.streakApplyMarkerRef)(db, gid, uid), {
                     appliedAt: firestore_1.FieldValue.serverTimestamp(),

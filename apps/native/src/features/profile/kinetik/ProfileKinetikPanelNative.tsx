@@ -27,6 +27,7 @@ import {
 } from "../../../../../../lib/profile/formatProfileMetricDelta";
 import type { MyRankMetricValueDeltas } from "../../../../../../lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "../../../../../../lib/rankings/rankingLeagueSource";
+import type { ProfileKinetikMetricsSection } from "../../../../../../lib/profile/profileKinetikMetricsSection";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import { buildProfileShareUrl } from "../../../../../../lib/share/shareAppUrls";
@@ -473,6 +474,8 @@ export type ProfileKinetikPanelNativeProps = {
   shareHandle?: string;
   metricValueDeltas?: MyRankMetricValueDeltas | null;
   rankingLeague?: RankingLeagueSource;
+  stackedMetricsSections?: ProfileKinetikMetricsSection[];
+  statsPending?: boolean;
   style?: ViewStyle;
 };
 
@@ -498,6 +501,8 @@ export default function ProfileKinetikPanelNative({
   shareHandle,
   metricValueDeltas = null,
   rankingLeague = "nba",
+  stackedMetricsSections,
+  statsPending = false,
   style,
 }: ProfileKinetikPanelNativeProps) {
   const isJa = language === "ja";
@@ -551,21 +556,6 @@ export default function ProfileKinetikPanelNative({
     }
   }, [identity.displayName, language, shareTargetHandle]);
 
-  const winRateFootnote = isJa
-    ? `投稿 ${stats.posts} · 的中 ${stats.hits}`
-    : `${stats.hits} hits · ${stats.posts} posts`;
-
-  const totalPointsRankLabel =
-    activeTotalPointsRank != null
-      ? isJa
-        ? `${activeTotalPointsRank}位`
-        : `#${activeTotalPointsRank}`
-      : undefined;
-  const ptsSegmentsReady =
-    activeRankDenominator != null &&
-    Number.isFinite(activeRankDenominator) &&
-    activeRankDenominator >= 1;
-
   const metricCopy = useMemo(
     () => ({
       ptsUnit: "pts",
@@ -575,6 +565,121 @@ export default function ProfileKinetikPanelNative({
     }),
     [isJa]
   );
+
+  const wcStackedActive =
+    isWcProfile &&
+    stackedMetricsSections != null &&
+    stackedMetricsSections.length > 0;
+  const metricsHeaderTitle = wcStackedActive
+    ? "WORLD CUP // STATS"
+    : metricsTitle;
+
+  const renderMetricsGrid = (
+    sectionStats: ProfileEditKinetikStats,
+    sectionDeltas: MyRankMetricValueDeltas | null,
+    sectionRank: {
+      totalPointsRank: number | null;
+      totalPointsRankDenominator: number | null;
+    }
+  ) => {
+    const sectionWinRateFootnote = isJa
+      ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
+      : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
+    const sectionTotalPointsRankLabel =
+      sectionRank.totalPointsRank != null
+        ? isJa
+          ? `${sectionRank.totalPointsRank}位`
+          : `#${sectionRank.totalPointsRank}`
+        : undefined;
+    const sectionPtsSegmentsReady =
+      sectionRank.totalPointsRankDenominator != null &&
+      Number.isFinite(sectionRank.totalPointsRankDenominator) &&
+      sectionRank.totalPointsRankDenominator >= 1;
+
+    return (
+      <View style={styles.metricsGrid}>
+        <KinetikMetricCardNative
+          label={isJa ? "勝率" : "WIN RATE"}
+          value={`${formatMetricDecimals(sectionStats.winRate, 1)}%`}
+          footnote={sectionWinRateFootnote}
+          accent="green"
+          filledSegs={kinetikWinRateSegs(sectionStats.winRate)}
+          unitHint={metricCopy.winRateUnitHint}
+          dayDelta={formatProfileMetricDayDelta("winRate", sectionDeltas?.winRate)}
+          dayDeltaTone={profileMetricDeltaTone(sectionDeltas?.winRate ?? null)}
+        />
+        <KinetikMetricCardNative
+          label={isJa ? "総合得点" : "TOTAL PTS"}
+          value={sectionStats.totalPoints.toLocaleString()}
+          rankLabel={sectionTotalPointsRankLabel}
+          accent="magenta"
+          filledSegs={kinetikTotalPointsRankSegs(
+            sectionRank.totalPointsRank,
+            sectionRank.totalPointsRankDenominator
+          )}
+          segmentsReady={sectionPtsSegmentsReady}
+          rankBelowSegBar
+          unit={metricCopy.ptsUnit}
+          unitHint={metricCopy.cumulativeUnitHint}
+          dayDelta={
+            formatProfileMetricDayDelta("totalPoints", sectionDeltas?.totalPoints)
+              ? `${formatProfileMetricDayDelta("totalPoints", sectionDeltas?.totalPoints)} ${metricCopy.ptsUnit}`
+              : null
+          }
+          dayDeltaTone={profileMetricDeltaTone(sectionDeltas?.totalPoints ?? null)}
+        />
+        <KinetikMetricCardNative
+          label={
+            isWcProfile
+              ? isJa
+                ? "完全的中"
+                : "EXACT HITS"
+              : isJa
+                ? "スコア精度"
+                : "PRECISION"
+          }
+          value={
+            isWcProfile
+              ? String(Math.max(0, Math.round(sectionStats.scorePrecision)))
+              : formatMetricDecimals(sectionStats.scorePrecision, 1)
+          }
+          accent="cyan"
+          showSegBar={false}
+          compact
+          unit={isWcProfile ? metricCopy.matchUnit : metricCopy.ptsUnit}
+          unitHint={metricCopy.cumulativeUnitHint}
+          dayDelta={
+            formatProfileMetricDayDelta("scorePrecision", sectionDeltas?.totalPrecision, {
+              integer: isWcProfile,
+            })
+              ? isWcProfile
+                ? `${formatProfileMetricDayDelta("scorePrecision", sectionDeltas?.totalPrecision, { integer: true })} ${metricCopy.matchUnit}`
+                : `${formatProfileMetricDayDelta("scorePrecision", sectionDeltas?.totalPrecision)} ${metricCopy.ptsUnit}`
+              : null
+          }
+          dayDeltaTone={profileMetricDeltaTone(
+            sectionDeltas?.totalPrecision ?? null,
+            { positiveOnly: isWcProfile }
+          )}
+        />
+        <KinetikMetricCardNative
+          label={isJa ? "アップセット" : "UPSET"}
+          value={formatMetricDecimals(sectionStats.upset, 1)}
+          accent="red"
+          showSegBar={false}
+          compact
+          unit={metricCopy.ptsUnit}
+          unitHint={metricCopy.cumulativeUnitHint}
+          dayDelta={
+            formatProfileMetricDayDelta("upset", sectionDeltas?.totalUpset)
+              ? `${formatProfileMetricDayDelta("upset", sectionDeltas?.totalUpset)} ${metricCopy.ptsUnit}`
+              : null
+          }
+          dayDeltaTone={profileMetricDeltaTone(sectionDeltas?.totalUpset ?? null)}
+        />
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.frameOuter, { borderColor: panelBorder }, style]}>
@@ -588,14 +693,16 @@ export default function ProfileKinetikPanelNative({
         />
         <View style={styles.headerMeta}>
           <KinetikHeaderHatch />
-          <View style={styles.headerTabsRow}>
-            <View style={styles.headerTabsFlex}>
-              <KinetikHeaderTabsNative
-                rankBadge={rankBadge}
-                winStreak={activeWinStreak}
-                language={language}
-              />
-            </View>
+          <View style={[styles.headerTabsRow, wcStackedActive && styles.headerTabsRowEnd]}>
+            {!wcStackedActive ? (
+              <View style={styles.headerTabsFlex}>
+                <KinetikHeaderTabsNative
+                  rankBadge={rankBadge}
+                  winStreak={activeWinStreak}
+                  language={language}
+                />
+              </View>
+            ) : null}
             {canOpenMenu ? (
               <CyberMenuButton
                 size="md"
@@ -658,7 +765,7 @@ export default function ProfileKinetikPanelNative({
               </Pressable>
               <Pressable style={styles.metricsTitlePress} onPress={onToggleMetricsScope}>
                 <Text style={styles.metricsTitle} numberOfLines={1}>
-                  {metricsTitle}
+                  {metricsHeaderTitle}
                 </Text>
               </Pressable>
               <Pressable onPress={onToggleMetricsScope} hitSlop={8}>
@@ -667,88 +774,44 @@ export default function ProfileKinetikPanelNative({
             </>
           ) : (
             <Text style={styles.metricsTitle} numberOfLines={1}>
-              {metricsTitle}
+              {metricsHeaderTitle}
             </Text>
           )}
         </View>
-        <View style={styles.metricsGrid}>
-          <KinetikMetricCardNative
-            label={isJa ? "勝率" : "WIN RATE"}
-            value={`${formatMetricDecimals(stats.winRate, 1)}%`}
-            footnote={winRateFootnote}
-            accent="green"
-            filledSegs={kinetikWinRateSegs(stats.winRate)}
-            unitHint={metricCopy.winRateUnitHint}
-            dayDelta={formatProfileMetricDayDelta("winRate", metricValueDeltas?.winRate)}
-            dayDeltaTone={profileMetricDeltaTone(metricValueDeltas?.winRate ?? null)}
-          />
-          <KinetikMetricCardNative
-            label={isJa ? "総合得点" : "TOTAL PTS"}
-            value={stats.totalPoints.toLocaleString()}
-            rankLabel={totalPointsRankLabel}
-            accent="magenta"
-            filledSegs={kinetikTotalPointsRankSegs(activeTotalPointsRank, activeRankDenominator)}
-            segmentsReady={ptsSegmentsReady}
-            rankBelowSegBar
-            unit={metricCopy.ptsUnit}
-            unitHint={metricCopy.cumulativeUnitHint}
-            dayDelta={
-              formatProfileMetricDayDelta("totalPoints", metricValueDeltas?.totalPoints)
-                ? `${formatProfileMetricDayDelta("totalPoints", metricValueDeltas?.totalPoints)} ${metricCopy.ptsUnit}`
-                : null
-            }
-            dayDeltaTone={profileMetricDeltaTone(metricValueDeltas?.totalPoints ?? null)}
-          />
-          <KinetikMetricCardNative
-            label={
-              isWcProfile
-                ? isJa
-                  ? "完全的中"
-                  : "EXACT HITS"
-                : isJa
-                  ? "スコア精度"
-                  : "PRECISION"
-            }
-            value={
-              isWcProfile
-                ? String(Math.max(0, Math.round(stats.scorePrecision)))
-                : formatMetricDecimals(stats.scorePrecision, 1)
-            }
-            accent="cyan"
-            showSegBar={false}
-            compact
-            unit={isWcProfile ? metricCopy.matchUnit : metricCopy.ptsUnit}
-            unitHint={metricCopy.cumulativeUnitHint}
-            dayDelta={
-              formatProfileMetricDayDelta("scorePrecision", metricValueDeltas?.totalPrecision, {
-                integer: isWcProfile,
-              })
-                ? isWcProfile
-                  ? `${formatProfileMetricDayDelta("scorePrecision", metricValueDeltas?.totalPrecision, { integer: true })} ${metricCopy.matchUnit}`
-                  : `${formatProfileMetricDayDelta("scorePrecision", metricValueDeltas?.totalPrecision)} ${metricCopy.ptsUnit}`
-                : null
-            }
-            dayDeltaTone={profileMetricDeltaTone(
-              metricValueDeltas?.totalPrecision ?? null,
-              { positiveOnly: isWcProfile }
-            )}
-          />
-          <KinetikMetricCardNative
-            label={isJa ? "アップセット" : "UPSET"}
-            value={formatMetricDecimals(stats.upset, 1)}
-            accent="red"
-            showSegBar={false}
-            compact
-            unit={metricCopy.ptsUnit}
-            unitHint={metricCopy.cumulativeUnitHint}
-            dayDelta={
-              formatProfileMetricDayDelta("upset", metricValueDeltas?.totalUpset)
-                ? `${formatProfileMetricDayDelta("upset", metricValueDeltas?.totalUpset)} ${metricCopy.ptsUnit}`
-                : null
-            }
-            dayDeltaTone={profileMetricDeltaTone(metricValueDeltas?.totalUpset ?? null)}
-          />
-        </View>
+        {statsPending ? (
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricsSkeleton} />
+            <View style={styles.metricsSkeleton} />
+            <View style={styles.metricsSkeleton} />
+            <View style={styles.metricsSkeleton} />
+          </View>
+        ) : wcStackedActive ? (
+          <View>
+            {stackedMetricsSections!.map((section) => (
+              <View key={section.title}>
+                <View style={styles.metricsSubHeader}>
+                  <Text style={styles.metricsSubTitle} numberOfLines={2}>
+                    {section.title}
+                  </Text>
+                  <KinetikHeaderTabsNative
+                    rankBadge={section.rankBadge}
+                    winStreak={section.winStreak}
+                    language={language}
+                  />
+                </View>
+                {renderMetricsGrid(section.stats, section.metricValueDeltas, {
+                  totalPointsRank: section.totalPointsRank,
+                  totalPointsRankDenominator: section.totalPointsRankDenominator,
+                })}
+              </View>
+            ))}
+          </View>
+        ) : (
+          renderMetricsGrid(stats, metricValueDeltas, {
+            totalPointsRank: activeTotalPointsRank,
+            totalPointsRankDenominator: activeRankDenominator,
+          })
+        )}
       </View>
 
       <KinetikFooterNative memberSinceLabel={memberSinceLabel} />
@@ -784,6 +847,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(168, 255, 42, 0.12)",
   },
   headerTabsRow: { flexDirection: "row", alignItems: "stretch", gap: 8, marginBottom: 2 },
+  headerTabsRowEnd: { justifyContent: "flex-end" },
   headerTabsFlex: { flex: 1, minWidth: 0, overflow: "visible" },
   headerTabs: { flexDirection: "row", flexWrap: "wrap", gap: 5, alignItems: "center" },
   slantTabOuter: {
@@ -944,6 +1008,25 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     color: "rgba(255,255,255,0.72)",
     textTransform: "uppercase",
+  },
+  metricsSubHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  metricsSubTitle: {
+    fontFamily: OXANIUM_BOLD,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.62)",
+    textTransform: "uppercase",
+  },
+  metricsSkeleton: {
+    width: "47%",
+    flexGrow: 1,
+    minHeight: 76,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   scopeChevron: { color: "rgba(255,255,255,0.35)", fontSize: 10, paddingHorizontal: 2 },
   metricsGrid: {

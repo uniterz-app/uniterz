@@ -75,8 +75,37 @@ function testEntryBeforeKickoff() {
   assert.equal(entry, 3);
 }
 
+function testStageIsolation() {
+  const gamesByKickoff = buildWcGamesByKickoff([
+    { gameId: "grp", kickoffMs: 100, league: "wc" },
+    { gameId: "ko", kickoffMs: 200, league: "wc" },
+  ]);
+
+  const posts = [
+    { gameId: "grp", isWin: true, kickoffMs: 100, wcStage: "qualifying" as const },
+    { gameId: "ko", isWin: true, kickoffMs: 200, wcStage: "main" as const },
+  ];
+
+  const knockoutEntry = replayFootballActiveBeforeKickoff(
+    posts,
+    gamesByKickoff,
+    200,
+    "main"
+  );
+  assert.equal(knockoutEntry, 0);
+
+  const groupEntry = replayFootballActiveBeforeKickoff(
+    posts,
+    gamesByKickoff,
+    200,
+    "qualifying"
+  );
+  assert.equal(groupEntry, 1);
+}
+
 testComputeAllWin();
 testComputeAnyLoss();
 testReplayTwoSlots();
 testEntryBeforeKickoff();
+testStageIsolation();
 console.log("✅ wcSlotStreakReplay tests passed");

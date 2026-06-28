@@ -47,6 +47,7 @@ function makeCacheKey(params: {
   rankingTeamIds: string[];
   periodType: CommunityPeriodType;
   rankingStartDateKey: string;
+  rankingStartAtMs: number;
   memberCount: number;
   topMemberUidSample: string;
 }) {
@@ -57,6 +58,7 @@ function makeCacheKey(params: {
     teamIdsKey(params.rankingTeamIds),
     params.periodType,
     params.rankingStartDateKey,
+    params.rankingStartAtMs,
     params.memberCount,
     params.topMemberUidSample,
   ].join("|");
@@ -69,6 +71,7 @@ export function getCachedLeaderboardResponse(params: {
   rankingTeamIds: string[];
   periodType: CommunityPeriodType;
   rankingStartDateKey: string;
+  rankingStartAtMs: number;
   memberCount: number;
   topMemberUidSample: string;
 }): LeaderboardResponsePayload | null {
@@ -90,6 +93,7 @@ export function setCachedLeaderboardResponse(
     rankingTeamIds: string[];
     periodType: CommunityPeriodType;
     rankingStartDateKey: string;
+    rankingStartAtMs: number;
     memberCount: number;
     topMemberUidSample: string;
   },

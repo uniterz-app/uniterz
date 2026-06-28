@@ -84,6 +84,16 @@ const ProfilePlayoffRankTrendChartLazy = dynamic(
   }
 );
 
+const ProfileWcStackedRankTrendChartsLazy = dynamic(
+  () => import("@/app/component/profile/ui/ProfileWcStackedRankTrendCharts"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[240px] rounded-2xl bg-white/5" aria-hidden />
+    ),
+  }
+);
+
 import ProfileKinetikHero from "./ui/ProfileKinetikHero";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
@@ -96,6 +106,7 @@ import {
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
 import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useProfilePlayoffRankTrend } from "@/lib/profile/useProfilePlayoffRankTrend";
+import { useProfileWcStackedRankTrend } from "@/lib/profile/useProfileWcStackedRankTrend";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -153,10 +164,15 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
   const { chartRows: rankPlayoffTrendRows, loading: rankTrendLoading } =
     useProfilePlayoffRankTrend(resolvedUid, {
-      enabled: fetchOverviewExtras,
+      enabled: fetchOverviewExtras && rankingLeague !== "worldcup",
       rankingLeague,
       wcStage: props.profileStatsContext.wcStage,
     });
+
+  const {
+    sections: wcRankTrendSections,
+    loading: wcRankTrendLoading,
+  } = useProfileWcStackedRankTrend(resolvedUid, fetchOverviewExtras && rankingLeague === "worldcup");
 
   const {
     loading: playoffBracketLoading,
@@ -238,6 +254,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         isMe={isMe}
         onOpenMenu={() => setDrawerOpen(true)}
         onToggleMetricsScope={onToggleStatsLeague}
+        wcStackedMetricsSections={props.wcStackedMetricsSections}
+        wcStackedStatsLoading={props.wcStackedStatsLoading}
         menuUnreadCount={isMe ? menuUnreadCount : 0}
         badges={resolvedBadges}
         onBadgeClick={(badge) => {
@@ -283,12 +301,21 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               ) : null}
               {overviewStage >= 2 ? (
               <div className="min-w-0 overflow-hidden pt-0">
-                <ProfilePlayoffRankTrendChartLazy
-                  data={rankPlayoffTrendRows}
-                  loading={rankTrendLoading}
-                  language={language}
-                  visualEffectsLite={visualEffectsLite}
-                />
+                {rankingLeague === "worldcup" ? (
+                  <ProfileWcStackedRankTrendChartsLazy
+                    sections={wcRankTrendSections}
+                    loading={wcRankTrendLoading}
+                    language={language}
+                    visualEffectsLite={visualEffectsLite}
+                  />
+                ) : (
+                  <ProfilePlayoffRankTrendChartLazy
+                    data={rankPlayoffTrendRows}
+                    loading={rankTrendLoading}
+                    language={language}
+                    visualEffectsLite={visualEffectsLite}
+                  />
+                )}
               </div>
               ) : null}
               {overviewStage >= 3 ? (

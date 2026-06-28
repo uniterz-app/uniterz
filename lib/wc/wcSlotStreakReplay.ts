@@ -13,6 +13,7 @@ export type WcSlotReplayPost = {
   gameId: string;
   isWin: boolean;
   kickoffMs: number;
+  wcStage?: "qualifying" | "main" | null;
 };
 
 export type WcSlotReplayGame = {
@@ -123,9 +124,14 @@ export function buildWcGamesByKickoff(
 export function replayFootballActiveBeforeKickoff(
   posts: ReadonlyArray<WcSlotReplayPost>,
   gamesByKickoff: ReadonlyMap<number, string[]>,
-  beforeKickoffMs: number
+  beforeKickoffMs: number,
+  wcStage?: "qualifying" | "main" | null
 ): number {
-  const filtered = posts.filter((p) => p.kickoffMs < beforeKickoffMs);
+  const filtered = posts.filter((p) => {
+    if (p.kickoffMs >= beforeKickoffMs) return false;
+    if (wcStage && p.wcStage && p.wcStage !== wcStage) return false;
+    return true;
+  });
   const units = buildTimelineUnits(filtered, gamesByKickoff);
   return replayFootballStreakWithSlots(units).activeWinStreakFootball;
 }

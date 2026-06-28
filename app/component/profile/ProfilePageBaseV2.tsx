@@ -26,6 +26,8 @@ import {
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { useProfileKinetikWcStackedStats } from "@/lib/profile/useProfileKinetikWcStackedStats";
+import type { ProfileKinetikMetricsSection } from "@/lib/profile/profileKinetikMetricsSection";
 
 type Props = { handle: string; variant?: "web" | "mobile" };
 
@@ -85,6 +87,13 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 
   const scopedStreak = useProfileScopedStreak(targetUid, profileStatsContext);
 
+  const { sections: wcStackedMetricsSections, loading: wcStackedStatsLoading } =
+    useProfileKinetikWcStackedStats(
+      targetUid,
+      profileStatsContext.rankingLeague === "worldcup",
+      Math.max(0, Math.floor(scopedStreak.currentStreak))
+    );
+
   /**
    * WC 全体（overall）の連勝は updateUserStreak が試合確定時に保存するライブ値を
    * サーバー API（summary）経由で採用する。投稿スキャンの待ち時間なしで即時表示でき、
@@ -96,6 +105,18 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     (profileStatsContext.wcStage ?? "overall") === "overall";
 
   const effectiveStreak = useMemo(() => {
+    if (
+      profileStatsContext.rankingLeague === "worldcup" &&
+      wcStackedMetricsSections?.[0]
+    ) {
+      return {
+        currentStreak: wcStackedMetricsSections[0].winStreak,
+        maxWinStreak: Math.max(
+          wcStackedMetricsSections[0].winStreak,
+          wcStackedMetricsSections[1]?.winStreak ?? 0
+        ),
+      };
+    }
     if (useLiveOverallStreak && summary) {
       return {
         currentStreak: Math.max(0, Math.floor(summary.activeWinStreak ?? 0)),
@@ -107,6 +128,8 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
       maxWinStreak: Math.max(0, Math.floor(scopedStreak.maxWinStreak)),
     };
   }, [
+    profileStatsContext.rankingLeague,
+    wcStackedMetricsSections,
     useLiveOverallStreak,
     summary,
     scopedStreak.currentStreak,
@@ -192,6 +215,8 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     profileDailyTrendSeed: dailyTrend,
     profileStatsContext,
     onToggleStatsLeague,
+    wcStackedMetricsSections: wcStackedMetricsSections ?? undefined,
+    wcStackedStatsLoading,
   };
 
   return variant === "web" ? (
@@ -221,4 +246,6 @@ export type ProfileViewPropsV2 = {
     wcStage?: WcRankingStage;
   };
   onToggleStatsLeague: () => void;
+  wcStackedMetricsSections?: ProfileKinetikMetricsSection[];
+  wcStackedStatsLoading?: boolean;
 };

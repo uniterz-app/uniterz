@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import {
@@ -27,7 +27,7 @@ import {
   sanitizeHeaderImageUrl,
 } from "@/lib/communities/validate";
 import { DEFAULT_HEADER_IMAGE_POSITION_Y } from "@/lib/communities/headerImagePosition";
-import { getTodayKeyInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,7 +68,12 @@ export async function POST(req: Request) {
       periodType
     ));
 
-    const rankingStartDateKey = getTodayKeyInTimeZone(TIMEZONE_JST);
+    const rankingStartInstant = new Date();
+    const rankingStartAt = Timestamp.fromDate(rankingStartInstant);
+    const rankingStartDateKey = toDateKeyInTimeZone(
+      rankingStartInstant,
+      TIMEZONE_JST
+    );
 
     const plan = await getEffectivePlan(adminDb, uid);
     const maxOwned = maxOwnedGroupsForPlan(plan);
@@ -114,6 +119,7 @@ export async function POST(req: Request) {
         rankingLeague,
         rankingTeamIds,
         rankingStartDateKey,
+        rankingStartAt,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });

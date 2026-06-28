@@ -17,6 +17,7 @@ import type { ResolvedBadge } from "@/lib/profile/useProfileBadges";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { ProfileVisualEffects } from "@/lib/profile/profileVisualEffects";
+import type { ProfileKinetikMetricsSection } from "@/lib/profile/profileKinetikMetricsSection";
 
 type Props = {
   layout: "web" | "mobile";
@@ -35,6 +36,8 @@ type Props = {
   badges?: ResolvedBadge[];
   onBadgeClick?: (badge: ResolvedBadge) => void;
   visualEffects?: ProfileVisualEffects;
+  wcStackedMetricsSections?: ProfileKinetikMetricsSection[];
+  wcStackedStatsLoading?: boolean;
 };
 
 export default function ProfileKinetikHero({
@@ -54,6 +57,8 @@ export default function ProfileKinetikHero({
   badges = [],
   onBadgeClick,
   visualEffects = "full",
+  wcStackedMetricsSections,
+  wcStackedStatsLoading = false,
 }: Props) {
   const mapped = useMemo(
     () =>
@@ -69,7 +74,16 @@ export default function ProfileKinetikHero({
 
   const kinetikLanguage = toKinetikPanelLanguage(language);
 
-  const statsPending = statsLoading && summary == null;
+  const isWcStacked =
+    profileStatsContext.rankingLeague === "worldcup" &&
+    (wcStackedMetricsSections?.length ?? 0) > 0;
+  const headerSection = isWcStacked ? wcStackedMetricsSections![0] : null;
+
+  const statsPending =
+    (statsLoading && summary == null) ||
+    (profileStatsContext.rankingLeague === "worldcup" &&
+      wcStackedStatsLoading &&
+      !wcStackedMetricsSections?.length);
 
   return (
     <div
@@ -81,13 +95,23 @@ export default function ProfileKinetikHero({
         layout={layout}
         language={kinetikLanguage}
         identity={mapped.identity}
-        stats={mapped.stats}
-        winStreak={mapped.winStreak}
-        totalPointsRank={mapped.totalPointsRank}
-        totalPointsRankDenominator={mapped.totalPointsRankDenominator}
-        rankDeltaPlaces={mapped.rankDeltaPlaces}
+        stats={headerSection?.stats ?? mapped.stats}
+        winStreak={headerSection?.winStreak ?? mapped.winStreak}
+        totalPointsRank={
+          headerSection?.totalPointsRank ?? mapped.totalPointsRank
+        }
+        totalPointsRankDenominator={
+          headerSection?.totalPointsRankDenominator ??
+          mapped.totalPointsRankDenominator
+        }
+        rankDeltaPlaces={
+          headerSection?.rankDeltaPlaces ?? mapped.rankDeltaPlaces
+        }
         metricsTitle={mapped.metricsTitle}
         statsPending={statsPending}
+        stackedMetricsSections={
+          isWcStacked ? wcStackedMetricsSections : undefined
+        }
         editable={isMe}
         canOpenMenu={isMe}
         onOpenMenu={isMe ? onOpenMenu : undefined}
@@ -100,7 +124,9 @@ export default function ProfileKinetikHero({
         memberSinceMs={profile.memberSinceMs}
         isPro={profile.plan === "pro"}
         shareHandle={profile.handle}
-        metricValueDeltas={metricValueDeltas}
+        metricValueDeltas={
+          headerSection?.metricValueDeltas ?? metricValueDeltas
+        }
         rankingLeague={profileStatsContext.rankingLeague}
         visualEffects={visualEffects}
       />

@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.replayFootballEntryBeforeKickoff = replayFootballEntryBeforeKickoff;
 exports.clearWcGamesByKickoffCacheForTests = clearWcGamesByKickoffCacheForTests;
 const wcKickoffSlot_1 = require("./wcKickoffSlot");
+const resolveWcStage_1 = require("./resolveWcStage");
 function entryActiveFootball(curF) {
     return curF > 0 ? curF : 0;
 }
@@ -75,8 +76,8 @@ async function getWcGamesByKickoff(db) {
     }
     return wcGamesByKickoffCache;
 }
-/** 同スロット試合を除き、キックオフ前までの football 連勝をリプレイする */
-async function replayFootballEntryBeforeKickoff(db, uid, beforeKickoffMs, excludeGameIds) {
+/** 同スロット試合を除き、キックオフ前までの football 連勝をリプレイする（wcStage 指定時は同ステージのみ） */
+async function replayFootballEntryBeforeKickoff(db, uid, beforeKickoffMs, excludeGameIds, wcStage) {
     var _a, _b;
     const postsSnap = await db
         .collection("posts")
@@ -94,13 +95,26 @@ async function replayFootballEntryBeforeKickoff(db, uid, beforeKickoffMs, exclud
         const gameSnap = await db.doc(`games/${gameId}`).get();
         if (!gameSnap.exists || gameSnap.get("final") !== true)
             continue;
-        const kickoffMs = (0, wcKickoffSlot_1.resolveKickoffMsFromFields)(gameSnap.data());
+        const gameData = gameSnap.data();
+        const kickoffMs = (0, wcKickoffSlot_1.resolveKickoffMsFromFields)(gameData);
         if (kickoffMs == null || kickoffMs >= beforeKickoffMs)
+            continue;
+        const gameStage = (0, resolveWcStage_1.resolveWcStageFromGame)({
+            knockout: gameData.knockout === true,
+            roundLabel: typeof gameData.roundLabel === "string" ? gameData.roundLabel : null,
+            wcStage: typeof gameData.wcStage === "string" ? gameData.wcStage : null,
+        });
+        if (wcStage && gameStage && gameStage !== wcStage)
             continue;
         const stats = ((_b = p.stats) !== null && _b !== void 0 ? _b : {});
         if (typeof stats.isWin !== "boolean")
             continue;
-        replayPosts.push({ gameId, isWin: stats.isWin, kickoffMs });
+        replayPosts.push({
+            gameId,
+            isWin: stats.isWin,
+            kickoffMs,
+            wcStage: gameStage,
+        });
     }
     const units = buildTimelineUnits(replayPosts, gamesByKickoff);
     return replayFootballStreakWithSlots(units);

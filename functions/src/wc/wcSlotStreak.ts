@@ -381,6 +381,26 @@ export async function applyWcSlotStreakWhenComplete(
     slotGames.length > 0 && slotGames.every((g) => g.final);
   const excludeGameIds = new Set(slotGameIds);
 
+  const triggerGameDoc =
+    slotGames.find((g) => g.id === triggerGameId) ?? slotGames[0];
+  const triggerWcStage = triggerGameDoc
+    ? resolveWcStageFromGame({
+        knockout: triggerGameDoc.data.knockout === true,
+        roundLabel:
+          typeof triggerGameDoc.data.roundLabel === "string"
+            ? triggerGameDoc.data.roundLabel
+            : null,
+        wcStage:
+          typeof triggerGameDoc.data.wcStage === "string"
+            ? triggerGameDoc.data.wcStage
+            : null,
+      })
+    : null;
+  const stageKey =
+    triggerWcStage === "qualifying" || triggerWcStage === "main"
+      ? triggerWcStage
+      : null;
+
   const resultMap = new Map<string, UpdatedUserStreakResult>();
   const perUserPerGameActive = new Map<string, Map<string, number>>();
 
@@ -400,14 +420,31 @@ export async function applyWcSlotStreakWhenComplete(
     const outcomes = userOutcomes.get(uid) ?? [];
     const didWin = triggerUserResult.get(uid) ?? outcomes.find((o) => o.gameId === triggerGameId)?.didWin ?? false;
 
-    const entryCurF = await replayFootballEntryBeforeKickoff(
+    const entryOverall = await replayFootballEntryBeforeKickoff(
       db,
       uid,
       kickoffMs,
       excludeGameIds
     );
-    const slotOutcome = computeWcSlotStreakOutcome(entryCurF, outcomes);
-    perUserPerGameActive.set(uid, slotOutcome.perGameActiveWinStreak);
+    const entryStage = stageKey
+      ? await replayFootballEntryBeforeKickoff(
+          db,
+          uid,
+          kickoffMs,
+          excludeGameIds,
+          stageKey
+        )
+      : entryOverall;
+    const slotOutcome = computeWcSlotStreakOutcome(entryOverall, outcomes);
+    const slotOutcomeStage = stageKey
+      ? computeWcSlotStreakOutcome(entryStage, outcomes)
+      : slotOutcome;
+    perUserPerGameActive.set(
+      uid,
+      stageKey
+        ? slotOutcomeStage.perGameActiveWinStreak
+        : slotOutcome.perGameActiveWinStreak
+    );
 
     const anySlotMarker = await Promise.all(
       slotGameIds.map((gid) => streakApplyMarkerRef(db, gid, uid).get())
@@ -487,9 +524,36 @@ export async function applyWcSlotStreakWhenComplete(
           activeWinStreakBasketball,
           activeWinStreakFootball,
           updatedAt: FieldValue.serverTimestamp(),
+          ...(stageKey
+            ? {
+                [`rankingByWcStage.${stageKey}.activeWinStreak`]:
+                  slotOutcomeStage.finalActiveWinStreak,
+              }
+            : {}),
         },
         { merge: true }
       );
+
+      if (stageKey) {
+        const stageCurF = slotOutcomeStage.finalCurF;
+        const stageActive = slotOutcomeStage.finalActiveWinStreak;
+        const maxByWcStage = (snap.get("maxWinStreakByWcStage") ?? {}) as Record<
+          string,
+          number
+        >;
+        let maxStage = Number(maxByWcStage[stageKey] ?? 0);
+        if (stageActive > maxStage) maxStage = stageActive;
+
+        tx.set(
+          userRef,
+          {
+            streakByWcStage: { [stageKey]: stageCurF },
+            activeWinStreakByWcStage: { [stageKey]: stageActive },
+            maxWinStreakByWcStage: { [stageKey]: maxStage },
+          },
+          { merge: true }
+        );
+      }
 
       for (const gid of slotGameIds) {
         tx.set(streakApplyMarkerRef(db, gid, uid), {
