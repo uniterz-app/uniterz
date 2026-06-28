@@ -84,7 +84,6 @@ const ProfilePlayoffRankTrendChartLazy = dynamic(
   }
 );
 
-import Tabs from "./ui/Tabs";
 import ProfileKinetikHero from "./ui/ProfileKinetikHero";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/mobile/badges/BadgeDetailModal";
@@ -119,7 +118,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     history.scrollRestoration = "manual";
   }, []);
 
-  const { profile, tab, setTab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
+  const { profile, tab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
   const rankingLeague = props.profileStatsContext.rankingLeague;
   const onToggleStatsLeague = props.onToggleStatsLeague;
@@ -258,11 +257,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         visualEffects={visualEffects}
       />
 
-      <div className="mt-4 flex items-center justify-between">
-        <Tabs value={tab} onChange={setTab} />
-      </div>
-
-      <div className="mt-1">
+      <div className="mt-4">
         {tab === "overview" ? (
           <>
             {resolvedUid ? (
