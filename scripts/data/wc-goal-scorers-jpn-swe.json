@@ -1,0 +1,8 @@
+{
+  "homeScore": 1,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "jpn-maeda", "teamId": "wc-jpn", "minute": 56 },
+    { "playerId": "swe-elanga", "teamId": "wc-swe", "minute": 62 }
+  ]
+}

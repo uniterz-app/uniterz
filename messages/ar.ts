@@ -296,6 +296,7 @@ const ar: Messages = {
     streakBonusLabel: "مكافأة السلسلة",
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
+    wcPkWinnerLabel: "PK winner",
     scorePrecisionLabel: "دقة النتيجة",
     upsetPointsLabel: "نقاط المفاجأة",
     totalPointsLabel: "إجمالي النقاط",

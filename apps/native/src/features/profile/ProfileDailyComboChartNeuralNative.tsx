@@ -2,13 +2,9 @@
  * Web `ProfileDailyComboChartNeural` の React Native 移植（mobile / compact レイアウト）。
  */
 import { useEffect, useMemo, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
+  Pressable, StyleSheet, Text, useWindowDimensions, View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
@@ -299,7 +295,7 @@ export default function ProfileDailyComboChartNeuralNative({
   const svgHeight = (screenW * H) / W;
 
   const openChartInfo = () => {
-    Alert.alert(copy.title, copy.chartInfo);
+    cyberAlert(copy.title, copy.chartInfo);
   };
 
   return (

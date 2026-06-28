@@ -1,22 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  UIManager,
-  View,
+  ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, UIManager, View,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -63,7 +51,6 @@ import {
   isProfileGamblingTermsError,
   profileGamblingTermsUserMessage,
 } from "../../../../../lib/profile/profileGamblingTerms";
-import CyberGlassToastModal from "../../components/CyberGlassToastModal";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
 import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
@@ -234,11 +221,6 @@ export default function ProfileHomeScreen({
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [countryModalOpen, setCountryModalOpen] = useState(false);
   /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
-  const [saveSuccessToast, setSaveSuccessToast] = useState<{
-    title: string;
-    body: string;
-  } | null>(null);
-
   const isJa = language === "ja";
 
   const renderExternalBackNav = () =>
@@ -533,16 +515,16 @@ export default function ProfileHomeScreen({
       ImagePicker = await import("expo-image-picker");
     } catch (e: unknown) {
       if (isImagePickerNativeMissingError(e)) {
-        Alert.alert(t.imagePickerNativeTitle, t.imagePickerNativeHint);
+        cyberAlert(t.imagePickerNativeTitle, t.imagePickerNativeHint);
       } else {
-        Alert.alert(t.saveErrorTitle, t.uploadAvatarFail);
+        cyberAlert(t.saveErrorTitle, t.uploadAvatarFail);
       }
       return;
     }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert(t.pickPhotoTitle, t.pickPhotoDenied);
+        cyberAlert(t.pickPhotoTitle, t.pickPhotoDenied);
         return;
       }
       // iOS で allowsEditing + fetch().blob() の組み合わせが落ちることがあるため、
@@ -575,10 +557,10 @@ export default function ProfileHomeScreen({
       setAvatarUrl(url);
     } catch (e: unknown) {
       if (isImagePickerNativeMissingError(e)) {
-        Alert.alert(t.imagePickerNativeTitle, t.imagePickerNativeHint);
+        cyberAlert(t.imagePickerNativeTitle, t.imagePickerNativeHint);
       } else {
         const detail = e instanceof Error ? e.message : String(e);
-        Alert.alert(t.saveErrorTitle, `${t.uploadAvatarFail}\n\n${detail}`);
+        cyberAlert(t.saveErrorTitle, `${t.uploadAvatarFail}\n\n${detail}`);
       }
     } finally {
       setUploadingAvatar(false);
@@ -591,14 +573,14 @@ export default function ProfileHomeScreen({
     const safeBio = bio.trim();
     const safePhoto = avatarUrl.trim();
     if (safeName.length > 50) {
-      Alert.alert(t.invalidTitle, t.invalidName);
+      cyberAlert(t.invalidTitle, t.invalidName);
       return;
     }
     try {
       assertProfileTextsFreeOfGamblingTerms(safeName, safeBio);
     } catch (e: unknown) {
       if (!isProfileGamblingTermsError(e)) throw e;
-      Alert.alert(t.invalidTitle, profileGamblingTermsUserMessage(language));
+      cyberAlert(t.invalidTitle, profileGamblingTermsUserMessage(language));
       return;
     }
     setSaving(true);
@@ -623,10 +605,10 @@ export default function ProfileHomeScreen({
       );
       onSaved?.();
       setSettingsOpen(false);
-      setSaveSuccessToast({ title: t.savedTitle, body: t.savedBody });
+      cyberAlert(t.savedTitle, t.savedBody);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t.saveErrorBody;
-      Alert.alert(t.saveErrorTitle, msg);
+      cyberAlert(t.saveErrorTitle, msg);
     } finally {
       setSaving(false);
     }
@@ -1166,12 +1148,6 @@ export default function ProfileHomeScreen({
         setBadgeModalOpen(false);
         setSelectedBadge(null);
       }}
-    />
-    <CyberGlassToastModal
-      visible={saveSuccessToast != null}
-      title={saveSuccessToast?.title ?? ""}
-      message={saveSuccessToast?.body ?? ""}
-      onDismiss={() => setSaveSuccessToast(null)}
     />
     </View>
   );

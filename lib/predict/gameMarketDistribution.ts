@@ -56,9 +56,12 @@ export async function fetchGamePredictionCounts(
 export function computeGameMarketPcts(
   counts: GamePredictionCounts,
   isSoccer: boolean,
-  fallback?: MarketBiasFallback | null
+  fallback?: MarketBiasFallback | null,
+  options?: { excludeDraw?: boolean }
 ): GameMarketPcts {
-  const total = isSoccer
+  // ノックアウト等、引き分けが存在しない試合では引き分けを母数から除外する
+  const drawEnabled = isSoccer && !options?.excludeDraw;
+  const total = drawEnabled
     ? counts.homeCount + counts.awayCount + counts.drawCount
     : counts.homeCount + counts.awayCount;
 
@@ -68,7 +71,7 @@ export function computeGameMarketPcts(
       fromFallback: false,
       homePct: (counts.homeCount / total) * 100,
       awayPct: (counts.awayCount / total) * 100,
-      drawPct: isSoccer ? (counts.drawCount / total) * 100 : 0,
+      drawPct: drawEnabled ? (counts.drawCount / total) * 100 : 0,
     };
   }
 

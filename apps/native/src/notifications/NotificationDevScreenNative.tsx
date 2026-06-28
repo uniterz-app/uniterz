@@ -2,14 +2,10 @@
  * __DEV__ 専用 — OS プッシュ 3 種 + タブドットの動作確認
  */
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { cyberAlert } from "../components/cyberAlert";
+import { previewCyberAlerts } from "../components/previewCyberAlerts";
 import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -126,14 +122,14 @@ export default function NotificationDevScreenNative() {
     try {
       const granted = await ensureNotificationPermission();
       await refreshStatus();
-      Alert.alert(
+      cyberAlert(
         granted ? "通知を許可しました" : "通知が拒否されました",
         granted
           ? "① などのボタンでテストできます。"
           : "設定 → 通知 → native →「通知を許可」を ON にしてください。"
       );
     } catch (e) {
-      Alert.alert("エラー", String(e));
+      cyberAlert("エラー", String(e));
     } finally {
       setBusy(false);
     }
@@ -141,7 +137,7 @@ export default function NotificationDevScreenNative() {
 
   const runRegisterToken = async () => {
     if (!Device.isDevice) {
-      Alert.alert(
+      cyberAlert(
         "シミュレーター",
         "Push Token は実機のみ取得できます。\nローカル通知テストは「通知を許可」だけで OK です。"
       );
@@ -152,12 +148,12 @@ export default function NotificationDevScreenNative() {
       const t = await registerNativePushTokenFlow();
       setToken(t);
       await refreshStatus();
-      Alert.alert(
+      cyberAlert(
         t ? "Token 取得 OK" : "Token 未取得",
         t ? `${t.slice(0, 40)}…` : "通知権限を確認してください。"
       );
     } catch (e) {
-      Alert.alert("エラー", String(e));
+      cyberAlert("エラー", String(e));
     } finally {
       setBusy(false);
     }
@@ -174,29 +170,29 @@ export default function NotificationDevScreenNative() {
         delaySeconds,
       });
       if (result === "no_module") {
-        Alert.alert("通知モジュールなし", "dev-client の再ビルドが必要です。");
+        cyberAlert("通知モジュールなし", "dev-client の再ビルドが必要です。");
         return;
       }
       if (result === "denied") {
-        Alert.alert(
+        cyberAlert(
           "通知がオフです",
           "シミュレーター: 設定 → 通知 → native → 「通知を許可」を ON にしてください。"
         );
         return;
       }
       if (delaySeconds > 0) {
-        Alert.alert(
+        cyberAlert(
           `${delaySeconds}秒後に通知`,
           "今すぐ Cmd+Shift+H でホームに戻るか、ロックしてください。\nロック画面 or 通知センターに表示されます。"
         );
         return;
       }
-      Alert.alert(
+      cyberAlert(
         "通知を送りました",
         "アプリを開いたまま → 画面上部のバナーを探してください。\n\nロック画面に出したい場合は「3秒後（ロック確認）」ボタンを使ってください。"
       );
     } catch (e) {
-      Alert.alert("送信失敗", String(e));
+      cyberAlert("送信失敗", String(e));
     } finally {
       setBusy(false);
     }
@@ -205,7 +201,7 @@ export default function NotificationDevScreenNative() {
   const resetRankingBadge = async () => {
     if (!uid) return;
     await AsyncStorage.removeItem(`uniterz:navSeen:rankingUpdatedAtMs:v1:${uid}`);
-    Alert.alert("完了", "Rankings ドット用の既読をリセットしました。\nFirestore に更新があればドットが付きます。");
+    cyberAlert("完了", "Rankings ドット用の既読をリセットしました。\nFirestore に更新があればドットが付きます。");
   };
 
   const resetResultBadge = async () => {
@@ -214,12 +210,12 @@ export default function NotificationDevScreenNative() {
       `uniterz:navSeen:resultSettledAtMs:v1:${uid}`,
       "0"
     );
-    Alert.alert("完了", "Result ドット用の既読をリセットしました。\n未確定の settled 投稿があればドットが付きます。");
+    cyberAlert("完了", "Result ドット用の既読をリセットしました。\n未確定の settled 投稿があればドットが付きます。");
   };
 
   const resetLeaderboardsBadge = async () => {
     await AsyncStorage.removeItem(LEADERBOARDS_INTRO_KEY);
-    Alert.alert("完了", "Leaderboards イントロ既読をリセットしました。\nLeaderboards タブにシアンドットが付くはずです。");
+    cyberAlert("完了", "Leaderboards イントロ既読をリセットしました。\nLeaderboards タブにシアンドットが付くはずです。");
   };
 
   if (!__DEV__) {
@@ -240,6 +236,16 @@ export default function NotificationDevScreenNative() {
           実機 + dev-client ビルド推奨。シミュレータでは Token 取得不可のことがあります。
         </Text>
 
+        <Section title="Cyber Alert プレビュー">
+          <Text style={styles.hint}>
+            角切り cyber モーダル（成功 / エラー / 情報 / 確認）を順に表示します。
+          </Text>
+          <DevButton
+            label="4 パターンをプレビュー"
+            onPress={() => previewCyberAlerts("ja")}
+          />
+        </Section>
+
         <Section title="登録状態">
           <Row label="端末" value={Device.isDevice ? "実機" : "シミュレータ"} />
           <Row label="権限" value={permission} />
@@ -253,7 +259,7 @@ export default function NotificationDevScreenNative() {
               <DevButton
                 label="Token コピー"
                 onPress={() => void copyTextNative(token).then((ok) => {
-                  if (ok) Alert.alert("コピーしました", "Expo Push Tool に貼り付けてください。");
+                  if (ok) cyberAlert("コピーしました", "Expo Push Tool に貼り付けてください。");
                 })}
               />
             ) : null}

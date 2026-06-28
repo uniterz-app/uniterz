@@ -2,17 +2,21 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Undo2 } from "lucide-react";
+import { X } from "lucide-react";
 
 import { nameBebas, jp } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
-import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
+import {
+  CYBER_MENU_ICON_CLASS,
+  CYBER_MENU_ICON_STROKE,
+  cyberChamferButtonClasses,
+} from "@/lib/ui/cyberMenuButton";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import SubmitBracketModal from "@/app/component/common/SubmitBracketModal";
+import WcBracketSubmitModal from "@/app/component/predict/wc/WcBracketSubmitModal";
 import WcBracketUserCard from "./WcBracketUserCard";
 import useWcBracketLeaderboard, {
   type WcBracketLeaderboardRow,
@@ -20,19 +24,26 @@ import useWcBracketLeaderboard, {
 import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
 import { isWcKnockoutBracketSubmissionOpen } from "@/lib/wc/wc-knockout-config";
 import {
-  createWcBracket,
+  saveWcBracket,
   loadWcBracket,
 } from "@/lib/wc/wc-bracket-firestore";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import { isWcBracketComplete } from "@/lib/wc/wc-knockout-bracket";
-import { useWcBracketResults } from "@/lib/wc/useWcBracketResults";
-import WcFullBracketMobile from "@/app/component/predict/wc/WcFullBracketMobile";
+import WcBracketTreeInput from "@/app/component/predict/wc/WcBracketTreeInput";
 import WcBracketInputMobile from "@/app/component/predict/wc/WcBracketInputMobile";
 import WcBracketStartPromptModal from "@/app/component/predict/wc/WcBracketStartPromptModal";
-import { WC_DEMO_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-demo-advancement";
+import WcBracketViewTabs, {
+  type WcBracketViewMode,
+} from "@/app/component/leaderboards/WcBracketViewTabs";
+import WcBracketMarket from "@/app/component/predict/market/WcBracketMarket";
+import { useWcKnockoutAdvancement } from "@/lib/wc/useWcKnockoutAdvancement";
+import { useWcBracketResults } from "@/lib/wc/useWcBracketResults";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
+import {
+  RANKINGS_WC_BRACKET_INPUT_PARAM,
+} from "@/lib/navigation/rankingsProfileFrom";
 
 type Props = {
   season?: string;
@@ -50,13 +61,15 @@ export default function WcBracketLeaderboardSection({
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isMobile =
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const season = propSeason ?? WC_KNOCKOUT_SEASON;
+  const { advancement: knockoutAdvancement } = useWcKnockoutAdvancement(season);
   const submissionOpen = isWcKnockoutBracketSubmissionOpen(season);
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
-  const { loading, error, rows, myRow, totalCount, refetch } =
+  const { loading, error, rows, myRow, refetch } =
     useWcBracketLeaderboard({
       season,
       uid,
@@ -70,6 +83,10 @@ export default function WcBracketLeaderboardSection({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submissionPromptOpen, setSubmissionPromptOpen] = useState(false);
   const [inputPageOpen, setInputPageOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<WcBracketViewMode>("survivor");
+  const { winners: officialWinners } = useWcBracketResults(season, {
+    pollIntervalMs: viewMode === "survivor" ? 30_000 : 0,
+  });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -118,17 +135,42 @@ export default function WcBracketLeaderboardSection({
   const isJa = language === "ja";
 
   const showInputGate = submissionOpen && !savedLoading && !hasSubmitted;
+  const canReeditBracket = submissionOpen && !savedLoading && hasSubmitted;
+  const inputOverlayOpen = inputPageOpen && submissionOpen && !savedLoading;
+
+  // 未提出でゲートが開いたら、提出ボタンを介さず予想モーダルを直接表示
+  useEffect(() => {
+    if (showInputGate && !inputPageOpen) {
+      setSubmissionPromptOpen(true);
+    }
+  }, [showInputGate, inputPageOpen]);
 
   useEffect(() => {
     if (!showInputGate) {
       setSubmissionPromptOpen(false);
-      setInputPageOpen(false);
       return;
     }
     if (!inputPageOpen) {
       setSubmissionPromptOpen(true);
     }
   }, [showInputGate, inputPageOpen]);
+
+  useEffect(() => {
+    if (searchParams.get(RANKINGS_WC_BRACKET_INPUT_PARAM) !== "1") return;
+    if (!submissionOpen || savedLoading || hasSubmitted) return;
+    setInputPageOpen(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete(RANKINGS_WC_BRACKET_INPUT_PARAM);
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [
+    searchParams,
+    submissionOpen,
+    savedLoading,
+    hasSubmitted,
+    pathname,
+    router,
+  ]);
 
   const [selectedRow, setSelectedRow] = useState<WcBracketLeaderboardRow | null>(
     null
@@ -137,13 +179,6 @@ export default function WcBracketLeaderboardSection({
   const [overlayBracket, setOverlayBracket] = useState<WcBracketState | null>(
     null
   );
-  const [overlayFirstMiss, setOverlayFirstMiss] = useState<
-    WcBracketLeaderboardRow["firstMissMatchId"] | null
-  >(null);
-
-  const { winners: officialWinners } = useWcBracketResults(season, {
-    enabled: !savedLoading && (hasSubmitted || selectedRow !== null),
-  });
 
   const [overlayPortalReady, setOverlayPortalReady] = useState(false);
   const overlayScrollRef = useRef<HTMLDivElement>(null);
@@ -199,12 +234,10 @@ export default function WcBracketLeaderboardSection({
     async (row: WcBracketLeaderboardRow) => {
       setBracketLoading(true);
       setOverlayBracket(null);
-      setOverlayFirstMiss(row.firstMissMatchId);
       try {
         const doc = await loadWcBracket(row.uid, season);
         if (doc?.bracket) {
           setOverlayBracket(doc.bracket);
-          setOverlayFirstMiss(doc.firstMissMatchId ?? row.firstMissMatchId);
         }
       } catch (e) {
         console.error("failed to load wc bracket", e);
@@ -227,7 +260,6 @@ export default function WcBracketLeaderboardSection({
   const closeDetail = useCallback(() => {
     setSelectedRow(null);
     setOverlayBracket(null);
-    setOverlayFirstMiss(null);
   }, []);
 
   const openProfileFromSheet = useCallback(
@@ -259,7 +291,7 @@ export default function WcBracketLeaderboardSection({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await createWcBracket(uid, draftBracket, season);
+      await saveWcBracket(uid, draftBracket, season);
       setHasSubmitted(true);
       setSubmitOpen(false);
       setInputPageOpen(false);
@@ -278,93 +310,105 @@ export default function WcBracketLeaderboardSection({
     }
   }, [uid, draftBracket, season, refetch, isJa, submissionOpen]);
 
-  const titleDisplay = useScrambleDecode("WC BRACKET", true);
+  const listBusy = loading || savedLoading;
 
-  const titleBlock = (
-    <div className="text-center">
-      <h1
-        className={[
-          "text-[30px] leading-none tracking-[0.04em] sm:text-[34px]",
-          nameBebas.className,
-        ].join(" ")}
-        style={{
-          color: "#38bdf8",
-          textShadow:
-            "0 0 8px rgba(56,189,248,0.35), 0 0 18px rgba(56,189,248,0.25), 0 0 34px rgba(56,189,248,0.15)",
-        }}
-      >
-        {titleDisplay}
-      </h1>
+  const listRows =
+    myRow && hasSubmitted
+      ? rows.filter((row) => row.uid !== myRow.uid)
+      : rows;
+
+  const survivorTitleBlock = (
+    <div className="px-1 text-center">
       <p
         className={[
-          "mt-1 text-[11px] text-white/60 sm:text-[12px]",
+          "text-[12px] leading-relaxed text-white/72 sm:text-[13px]",
           jp.className,
         ].join(" ")}
       >
         {isJa
-          ? "サバイバー方式 — 的中した枝だけ残る"
-          : "Survivor bracket — hits only remain visible"}
+          ? "外れたブラケットから脱落"
+          : "Miss a pick, you're out"}
       </p>
     </div>
   );
 
-  const listBusy = loading || savedLoading;
+  const myCardBlock =
+    myRow && hasSubmitted ? (
+      <div className="pt-0.5">
+        <WcBracketUserCard
+          row={myRow}
+          language={language}
+          onClick={() => openDetail(myRow)}
+          onEditClick={
+            canReeditBracket && !inputOverlayOpen
+              ? () => setInputPageOpen(true)
+              : undefined
+          }
+        />
+      </div>
+    ) : null;
+
+  const survivorListBody =
+    listBusy ? (
+      <div className="flex items-center justify-center py-16">
+        <CandleChartLoader label={isJa ? "読み込み中" : "Loading"} />
+      </div>
+    ) : error ? (
+      <div className="py-16 text-center text-white/60">{error}</div>
+    ) : listRows.length === 0 && !(myRow && hasSubmitted) ? (
+      <div
+        role="status"
+        className="flex min-h-[min(50dvh,480px)] flex-col items-center justify-center px-4 text-center"
+      >
+        <p
+          className={[
+            nameBebas.className,
+            "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+          ].join(" ")}
+          style={cyberNoDataLabelStyle}
+        >
+          NO DATA
+        </p>
+      </div>
+    ) : (
+      <div className="space-y-2 pb-bottom-nav pt-2">
+        {listRows.map((row, index) => (
+          <motion.div
+            key={row.uid}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: CARD_DURATION,
+              delay: cardDelay(index),
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            <WcBracketUserCard
+              row={row}
+              language={language}
+              onClick={() => openDetail(row)}
+            />
+          </motion.div>
+        ))}
+      </div>
+    );
 
   const leaderboardBody = (
     <>
-      {myRow && hasSubmitted ? (
-        <div className="pt-0.5">
-          <WcBracketUserCard
-            row={myRow}
-            totalCount={totalCount}
-            language={language}
-          />
-        </div>
-      ) : null}
-      {titleBlock}
-      {listBusy ? (
-        <div className="flex items-center justify-center py-16">
-          <CandleChartLoader label={isJa ? "読み込み中" : "Loading"} />
-        </div>
-      ) : error ? (
-        <div className="py-16 text-center text-white/60">{error}</div>
-      ) : rows.length === 0 ? (
-        <div
-          role="status"
-          className="flex min-h-[min(50dvh,480px)] flex-col items-center justify-center px-4 text-center"
-        >
-          <p
-            className={[
-              nameBebas.className,
-              "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
-            ].join(" ")}
-            style={cyberNoDataLabelStyle}
-          >
-            NO DATA
-          </p>
-        </div>
+      {myCardBlock}
+      <div className="pt-1">
+        <WcBracketViewTabs
+          mode={viewMode}
+          onChange={setViewMode}
+        />
+      </div>
+      {viewMode === "survivor" ? (
+        <>
+          {survivorTitleBlock}
+          {survivorListBody}
+        </>
       ) : (
-        <div className="space-y-2 pb-bottom-nav pt-2">
-          {rows.map((row, index) => (
-            <motion.div
-              key={row.uid}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: CARD_DURATION,
-                delay: cardDelay(index),
-                ease: [0.22, 1, 0.36, 1],
-              }}
-            >
-              <WcBracketUserCard
-                row={row}
-                totalCount={totalCount}
-                language={language}
-                onClick={() => openDetail(row)}
-              />
-            </motion.div>
-          ))}
-        </div>
+        <WcBracketMarket season={season} language={language} />
       )}
     </>
   );
@@ -385,109 +429,122 @@ export default function WcBracketLeaderboardSection({
         </div>
 
         {showInputGate && !submissionPromptOpen && !inputPageOpen ? (
-          <div className="pointer-events-auto absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 justify-center px-6">
-            <button
-              type="button"
-              onClick={() => setSubmissionPromptOpen(true)}
-              className="rounded-xl border border-cyan-400/35 bg-[#0a1528]/90 px-6 py-3.5 text-sm font-bold text-cyan-100 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur-md transition hover:border-cyan-300/55 hover:bg-[#0f1d38]/95 active:scale-[0.99]"
-            >
-              {isJa ? "ブラケットを提出する" : "Submit bracket"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setSubmissionPromptOpen(true)}
+            className="absolute inset-0 z-20 cursor-pointer"
+            aria-label={isJa ? "ブラケットを予想する" : "Predict the bracket"}
+          />
         ) : null}
       </div>
 
       {overlayPortalReady && showInputGate ? (
-        <>
-          <WcBracketStartPromptModal
-            open={submissionPromptOpen}
-            language={language}
-            onClose={() => setSubmissionPromptOpen(false)}
-            onStart={() => {
-              setSubmissionPromptOpen(false);
-              setInputPageOpen(true);
-            }}
-          />
-
-          {inputPageOpen
-            ? createPortal(
-                <motion.div
-                  key="wc-bracket-input-page"
-                  className="fixed inset-0 z-99990 flex flex-col"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <div
-                    className="absolute inset-0 bg-black/25 backdrop-blur-[2px]"
-                    aria-hidden
-                  />
-                  <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-                    <div className="shrink-0 border-b border-white/10 bg-[#050b14]/88 px-4 py-3 backdrop-blur-xl">
-                      <div className="flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInputPageOpen(false);
-                            setSubmissionPromptOpen(false);
-                          }}
-                          className="text-[12px] font-medium text-white/55 transition hover:text-white/80"
-                        >
-                          {isJa ? "← 戻る" : "← Back"}
-                        </button>
-                        <p className="text-center text-[13px] font-semibold text-white">
-                          {isJa ? "ブラケット入力" : "Bracket picks"}
-                        </p>
-                        <span className="w-10" aria-hidden />
-                      </div>
-                      <p className="mt-1 text-center text-[11px] text-white/55">
-                        {isJa
-                          ? "ラウンドごとに勝者を選んでください"
-                          : "Pick winners round by round"}
-                      </p>
-                      {submitError ? (
-                        <p className="mt-2 text-center text-[11px] text-red-300">
-                          {submitError}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div
-                      ref={inputScrollRef}
-                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-bottom-nav"
-                    >
-                      <WcBracketInputMobile
-                        bracket={draftBracket}
-                        advancement={WC_DEMO_KNOCKOUT_ADVANCEMENT}
-                        onBracketChange={setDraftBracket}
-                        onSubmitClick={() => setSubmitOpen(true)}
-                        language={language}
-                        submitDisabled={!uid || submitting}
-                        submitLabel={
-                          !uid
-                            ? isJa
-                              ? "ログインして提出"
-                              : "Sign in to submit"
-                            : undefined
-                        }
-                      />
-                    </div>
-                  </div>
-                </motion.div>,
-                document.body
-              )
-            : null}
-        </>
+        <WcBracketStartPromptModal
+          open={submissionPromptOpen}
+          language={language}
+          season={season}
+          onClose={() => setSubmissionPromptOpen(false)}
+          onStart={() => {
+            setSubmissionPromptOpen(false);
+            setInputPageOpen(true);
+          }}
+        />
       ) : null}
 
-      <SubmitBracketModal
-        open={submitOpen}
-        onClose={() => {
-          if (submitting) return;
-          setSubmitOpen(false);
-        }}
-        onConfirm={() => void handleSubmitConfirm()}
-        loading={submitting}
-      />
+      {overlayPortalReady && inputOverlayOpen
+        ? createPortal(
+            <motion.div
+              key="wc-bracket-input-page"
+              className="fixed inset-0 z-99990 flex flex-col"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div
+                className="absolute inset-0 bg-black/20 backdrop-blur-xl backdrop-saturate-150"
+                aria-hidden
+              />
+              <div className="relative z-10 flex min-h-0 flex-1 flex-col bg-transparent">
+                <div className="shrink-0 border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputPageOpen(false);
+                        if (showInputGate) {
+                          setSubmissionPromptOpen(false);
+                        }
+                      }}
+                      className="text-[12px] font-medium text-white/55 transition hover:text-white/80"
+                    >
+                      {isJa ? "← 戻る" : "← Back"}
+                    </button>
+                    <p className="text-center text-[13px] font-semibold text-white">
+                      {hasSubmitted
+                        ? isJa
+                          ? "ブラケット編集"
+                          : "Edit bracket"
+                        : isJa
+                          ? "ブラケット入力"
+                          : "Bracket picks"}
+                    </p>
+                    <span className="w-10" aria-hidden />
+                  </div>
+                  <p className="mt-1 text-center text-[11px] text-white/55">
+                    {isJa
+                      ? "ラウンドごとに勝者を選んでください"
+                      : "Pick winners round by round"}
+                  </p>
+                  {submitError ? (
+                    <p className="mt-2 text-center text-[11px] text-red-300">
+                      {submitError}
+                    </p>
+                  ) : null}
+                </div>
+                <div
+                  ref={inputScrollRef}
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-bottom-nav"
+                >
+                  <WcBracketInputMobile
+                    bracket={draftBracket}
+                    advancement={knockoutAdvancement}
+                    onBracketChange={setDraftBracket}
+                    onSubmitClick={() => setSubmitOpen(true)}
+                    language={language}
+                    submitDisabled={!uid || submitting}
+                    submitButtonLabel={
+                      hasSubmitted
+                        ? isJa
+                          ? "更新する"
+                          : "Update"
+                        : isJa
+                          ? "提出する"
+                          : "Submit"
+                    }
+                  />
+                </div>
+              </div>
+            </motion.div>,
+            document.body
+          )
+        : null}
+
+      {overlayPortalReady
+        ? createPortal(
+            <WcBracketSubmitModal
+              open={submitOpen}
+              isResubmit={hasSubmitted}
+              language={language}
+              loading={submitting}
+              onClose={() => {
+                if (submitting) return;
+                setSubmitOpen(false);
+              }}
+              onConfirm={() => void handleSubmitConfirm()}
+            />,
+            document.body
+          )
+        : null}
 
       {overlayPortalReady
         ? createPortal(
@@ -495,7 +552,7 @@ export default function WcBracketLeaderboardSection({
               {selectedRow && !showInputGate && (
                 <motion.div
                   key="wc-bracket-detail-overlay"
-                  className="fixed inset-0 z-99999 flex flex-col"
+                  className="fixed inset-0 z-99999 flex min-h-0 flex-col"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -511,7 +568,7 @@ export default function WcBracketLeaderboardSection({
                   />
 
                   <motion.div
-                    className="relative z-10 flex h-full max-h-dvh flex-col rounded-t-2xl bg-transparent pb-4"
+                    className="relative z-10 flex h-full min-h-0 max-h-dvh flex-col overflow-hidden rounded-t-2xl bg-transparent pb-4"
                     initial={{ y: "100%" }}
                     animate={{ y: 0 }}
                     exit={{ y: "100%" }}
@@ -521,18 +578,36 @@ export default function WcBracketLeaderboardSection({
                       stiffness: 300,
                     }}
                   >
-                    <div className="sticky top-0 z-10 shrink-0 border-b border-white/12 bg-black/25 px-4 py-3 backdrop-blur-md">
-                      <WcBracketUserCard
-                        row={selectedRow}
-                        language={language}
-                        onClick={() => openProfileFromSheet(selectedRow)}
-                      />
-                    </div>
-
                     <div
                       ref={overlayScrollRef}
-                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-4 pb-bottom-nav"
+                      className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-auto px-3 pb-bottom-nav [-webkit-overflow-scrolling:touch]"
                     >
+                      <div className="flex justify-end pb-1 pt-2">
+                        <button
+                          type="button"
+                          onClick={closeDetail}
+                          aria-label={isJa ? "閉じる" : "Close"}
+                          className={cyberChamferButtonClasses(
+                            "sm",
+                            "close",
+                            "h-9 w-9 shadow-[0_0_16px_rgba(0,245,255,0.18)]"
+                          )}
+                        >
+                          <X
+                            className={CYBER_MENU_ICON_CLASS.sm}
+                            strokeWidth={CYBER_MENU_ICON_STROKE}
+                            aria-hidden
+                          />
+                        </button>
+                      </div>
+                      <div className="pb-3 pt-0.5">
+                        <WcBracketUserCard
+                          row={selectedRow}
+                          language={language}
+                          onClick={() => openProfileFromSheet(selectedRow)}
+                        />
+                      </div>
+
                       {bracketLoading ? (
                         <div className="flex items-center justify-center py-16">
                           <CandleChartLoader
@@ -541,13 +616,14 @@ export default function WcBracketLeaderboardSection({
                         </div>
                       ) : overlayBracket ? (
                         <>
-                          <WcFullBracketMobile
-                            bracket={overlayBracket}
-                            officialWinners={officialWinners}
-                            firstMissMatchId={overlayFirstMiss}
-                            language={language}
-                            showGlassShell={false}
-                          />
+                          <div className="relative z-20 border-t border-white/10 px-2 pt-1">
+                            <WcBracketTreeInput
+                              bracket={overlayBracket}
+                              advancement={knockoutAdvancement}
+                              officialWinners={officialWinners}
+                              language={language}
+                            />
+                          </div>
                           {isMobile ? (
                             <div className="mt-6 flex w-full justify-end px-3 pb-2">
                               <button
@@ -579,31 +655,6 @@ export default function WcBracketLeaderboardSection({
                       )}
                     </div>
                   </motion.div>
-
-                  {!isMobile ? (
-                    <button
-                      type="button"
-                      onClick={closeDetail}
-                      aria-label={isJa ? "閉じる" : "Close"}
-                      className={[
-                        "pointer-events-auto fixed z-100000 inline-flex items-center justify-center",
-                        "rounded-full border-2 border-white bg-black/45 p-4 text-white",
-                        "shadow-lg shadow-black/35 backdrop-blur-md",
-                        "transition hover:border-white/90 hover:bg-black/55 active:scale-[0.99]",
-                      ].join(" ")}
-                      style={{
-                        bottom: "var(--bottom-nav-clearance)",
-                        right: "max(1.5rem, env(safe-area-inset-right, 0px))",
-                      }}
-                    >
-                      <Undo2
-                        className="shrink-0"
-                        size={28}
-                        strokeWidth={2.6}
-                        aria-hidden
-                      />
-                    </button>
-                  ) : null}
                 </motion.div>
               )}
             </AnimatePresence>,

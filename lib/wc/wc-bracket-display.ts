@@ -1,16 +1,20 @@
 import {
   type WcBracketPredictMatchId,
-  type WcKnockoutFeedSlot,
   getWcKnockoutMatch,
   listWcR32MatchesForDisplay,
 } from "@/lib/wc/wc-knockout-bracket";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import {
   type WcMatchHitStatus,
+  type WcResolveParticipantsOptions,
+  type WcResolvedParticipant,
   getWcMatchHitStatus,
+  resolveWcMatchParticipants,
+  resolveWcTeamQualLabel,
   shouldShowWcSurvivorPick,
 } from "@/lib/wc/wc-knockout-bracket-utils";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
+import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
 
 export type WcBracketCardView = {
   matchId: WcBracketPredictMatchId;
@@ -22,33 +26,21 @@ export type WcBracketCardView = {
   isPickedWinner: boolean;
 };
 
-function resolveFeedLabel(slot: WcKnockoutFeedSlot): string {
-  return slot.label;
-}
-
-function resolveFeedTeamId(
-  slot: WcKnockoutFeedSlot,
-  bracket: WcBracketState,
-  advancement: WcKnockoutAdvancement | null | undefined
-): string | null {
-  if (slot.kind === "winner_feed") {
-    const parentId = slot.matchId as WcBracketPredictMatchId;
-    return bracket[parentId]?.winner?.trim() ?? null;
-  }
-  if (!advancement) return null;
-  if (slot.kind === "group_winner") {
-    return advancement.groupWinners[slot.group] ?? null;
-  }
-  if (slot.kind === "group_runner_up") {
-    return advancement.groupRunnersUp[slot.group] ?? null;
-  }
-  return null;
+function toContestantSlot(
+  participant: WcResolvedParticipant | null
+): { teamId: string | null; label: string } {
+  const teamId = participant?.teamId?.trim() || null;
+  return {
+    teamId,
+    label: participant?.label?.trim() || "?",
+  };
 }
 
 export function getWcMatchContestants(
   matchId: WcBracketPredictMatchId,
   bracket: WcBracketState,
-  advancement?: WcKnockoutAdvancement | null
+  advancement?: WcKnockoutAdvancement | null,
+  participantOptions?: WcResolveParticipantsOptions
 ): [{ teamId: string | null; label: string }, { teamId: string | null; label: string }] {
   const def = getWcKnockoutMatch(matchId);
   if (!def) {
@@ -58,25 +50,43 @@ export function getWcMatchContestants(
     ];
   }
 
-  if (def.feedsFrom.length === 2) {
-    const a = bracket[def.feedsFrom[0] as WcBracketPredictMatchId]?.winner?.trim() ?? null;
-    const b = bracket[def.feedsFrom[1] as WcBracketPredictMatchId]?.winner?.trim() ?? null;
+  if (!advancement) {
+    if (def.feedsFrom.length === 2) {
+      const a =
+        bracket[def.feedsFrom[0] as WcBracketPredictMatchId]?.winner?.trim() ?? null;
+      const b =
+        bracket[def.feedsFrom[1] as WcBracketPredictMatchId]?.winner?.trim() ?? null;
+      return [
+        {
+          teamId: a,
+          label: a ? a : `W${def.feedsFrom[0].slice(1)}`,
+        },
+        {
+          teamId: b,
+          label: b ? b : `W${def.feedsFrom[1].slice(1)}`,
+        },
+      ];
+    }
     return [
-      { teamId: a, label: a ? "" : `W${def.feedsFrom[0].slice(1)}` },
-      { teamId: b, label: b ? "" : `W${def.feedsFrom[1].slice(1)}` },
+      { teamId: null, label: "?" },
+      { teamId: null, label: "?" },
     ];
   }
 
-  return [
-    {
-      teamId: resolveFeedTeamId(def.home, bracket, advancement),
-      label: resolveFeedLabel(def.home),
-    },
-    {
-      teamId: resolveFeedTeamId(def.away, bracket, advancement),
-      label: resolveFeedLabel(def.away),
-    },
-  ];
+  const resolved = resolveWcMatchParticipants(
+    matchId,
+    bracket,
+    advancement,
+    participantOptions
+  );
+  if (!resolved) {
+    return [
+      { teamId: null, label: "?" },
+      { teamId: null, label: "?" },
+    ];
+  }
+
+  return [toContestantSlot(resolved[0]), toContestantSlot(resolved[1])];
 }
 
 export function buildWcMatchCardViews(
@@ -90,7 +100,15 @@ export function buildWcMatchCardViews(
   const visible = shouldShowWcSurvivorPick(matchId, hitStatus, firstMissMatchId);
   if (!visible) return [];
 
-  const [home, away] = getWcMatchContestants(matchId, bracket, advancement);
+  const [home, away] = getWcMatchContestants(
+    matchId,
+    bracket,
+    advancement,
+    {
+      officialWinners,
+      preferOfficialFeeders: true,
+    }
+  );
   const picked = bracket[matchId]?.winner?.trim() ?? null;
   const official = officialWinners[matchId]?.trim() ?? null;
 
@@ -112,7 +130,7 @@ export function buildWcMatchCardViews(
       matchId,
       role,
       teamId,
-      label: teamId ? "" : label,
+      label: teamId ? (label || (advancement ? resolveWcTeamQualLabel(teamId, advancement) : "")) : label,
       visible: true,
       hitStatus: isPickedWinner ? slotHit : "pending",
       isPickedWinner,

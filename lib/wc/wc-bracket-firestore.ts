@@ -1,5 +1,11 @@
 import { db } from "@/lib/firebase";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 import type { WcBracketPredictMatchId } from "@/lib/wc/wc-knockout-bracket";
 import {
   getWcBracketChampionPick,
@@ -35,7 +41,7 @@ export async function loadWcBracket(uid: string, season = WC_KNOCKOUT_SEASON) {
   return snap.data() as WcBracketDoc;
 }
 
-export async function createWcBracket(
+export async function saveWcBracket(
   uid: string,
   bracket: WcBracketState,
   season = WC_KNOCKOUT_SEASON
@@ -44,12 +50,23 @@ export async function createWcBracket(
     throw new Error("Bracket submission is closed");
   }
   const ref = doc(db, "wcBrackets", getWcBracketDocId(uid, season));
+  const championPick = getWcBracketChampionPick(bracket);
+  const existing = await getDoc(ref);
+
+  if (existing.exists()) {
+    await updateDoc(ref, {
+      bracket,
+      championPick,
+      submittedAt: serverTimestamp(),
+    });
+    return;
+  }
 
   await setDoc(ref, {
     uid,
     season,
     bracket,
-    championPick: getWcBracketChampionPick(bracket),
+    championPick,
     isSubmitted: true,
     submittedAt: serverTimestamp(),
     alive: true,
@@ -63,6 +80,9 @@ export async function createWcBracket(
     hitByMatch: {},
   } satisfies WcBracketDoc);
 }
+
+/** @deprecated Prefer saveWcBracket */
+export const createWcBracket = saveWcBracket;
 
 export type WcBracketResultsDoc = {
   season: string;

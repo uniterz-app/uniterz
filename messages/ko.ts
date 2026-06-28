@@ -292,6 +292,7 @@ const ko: Messages = {
     streakBonusLabel: "연승 보너스",
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
+    wcPkWinnerLabel: "PK winner",
     scorePrecisionLabel: "점수 정확도",
     upsetPointsLabel: "이변 득점",
     totalPointsLabel: "총 득점",

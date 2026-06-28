@@ -1,17 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Animated,
-  Dimensions,
-  Easing,
-  Keyboard,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableWithoutFeedback,
-  View,
+  Animated, Dimensions, Easing, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View,
 } from "react-native";
 import {
   createUserWithEmailAndPassword,
@@ -158,7 +148,7 @@ export default function AuthEntryScreen() {
   async function handleResetPassword() {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
-      Alert.alert("Missing input", "Please enter your email address.");
+      cyberAlert("Missing input", "Please enter your email address.");
       return;
     }
     try {
@@ -168,35 +158,35 @@ export default function AuthEntryScreen() {
           setTimeout(() => reject(new Error("timeout")), 10000)
         ),
       ]);
-      Alert.alert(
+      cyberAlert(
         "Reset link sent",
         "If this email is registered, we sent a reset link. Check spam if you don't see it."
       );
     } catch (e: any) {
       const code = e?.code as string | undefined;
       if (e?.message === "timeout") {
-        Alert.alert(
+        cyberAlert(
           "Request timed out",
           "In DevTools -> Network, check identitytoolkit / sendOobCode."
         );
         return;
       }
       if (code === "auth/user-not-found" || code === "auth/invalid-email") {
-        Alert.alert(
+        cyberAlert(
           "Reset link sent",
           "If this email is registered, we sent a reset link. Check spam if you don't see it."
         );
         return;
       }
       if (code === "auth/too-many-requests") {
-        Alert.alert("Error", "Too many attempts. Please try again later.");
+        cyberAlert("Error", "Too many attempts. Please try again later.");
         return;
       }
       if (code === "auth/network-request-failed") {
-        Alert.alert("Error", "Network error. Check your connection.");
+        cyberAlert("Error", "Network error. Check your connection.");
         return;
       }
-      Alert.alert("Error", "Failed to send. Please try again in a moment.");
+      cyberAlert("Error", "Failed to send. Please try again in a moment.");
     }
   }
 
@@ -205,14 +195,14 @@ export default function AuthEntryScreen() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      Alert.alert(
+      cyberAlert(
         "Missing input",
         "Please enter both email and password."
       );
       return;
     }
     if (mode === "signup" && password.length < 6) {
-      Alert.alert(
+      cyberAlert(
         "Missing input",
         "Password must be at least 6 characters."
       );
@@ -242,7 +232,7 @@ export default function AuthEntryScreen() {
         );
       }
     } catch (error: unknown) {
-      Alert.alert(
+      cyberAlert(
         "Authentication error",
         mapAuthErrorMessage(error, mode)
       );

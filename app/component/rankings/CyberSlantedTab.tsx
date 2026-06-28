@@ -16,6 +16,7 @@ type CyberSlantedTabProps = {
   active: boolean;
   onClick: () => void;
   compact?: boolean;
+  fontWeight?: number;
   /** role="tab" 用 */
   role?: "tab";
   "aria-selected"?: boolean;
@@ -26,6 +27,7 @@ export function CyberSlantedTab({
   active,
   onClick,
   compact = false,
+  fontWeight = 700,
   role,
   "aria-selected": ariaSelected,
 }: CyberSlantedTabProps) {
@@ -54,7 +56,7 @@ export function CyberSlantedTab({
       style={{
         transform: "skewX(-14deg)",
         fontSize,
-        fontWeight: 700,
+        fontWeight,
         letterSpacing: jaLabel ? "0.06em" : "0.14em",
         color: active ? "#050508" : CYBER_TAB_CYAN,
         background: active ? CYBER_TAB_CYAN : "transparent",

@@ -16,6 +16,8 @@ import {
 type Props = {
   gameId: string;
   league: "nba" | "bj" | "j1" | "pl" | "wc";
+  /** WC ノックアウト等：引き分けを母数からも表示からも除外する */
+  knockout?: boolean;
   homeName: string;
   awayName: string;
   homeColor: string;
@@ -92,6 +94,7 @@ function buildFallbackSegments(
 export default function GamePredictionDistribution({
   gameId,
   league,
+  knockout = false,
   homeName,
   awayName,
   homeColor,
@@ -119,7 +122,8 @@ export default function GamePredictionDistribution({
   const awayCount = distribution.away;
   const drawCount = distribution.draw;
 
-  const isSoccer = league === "j1" || league === "pl" || league === "wc";
+  const isSoccer =
+    (league === "j1" || league === "pl" || league === "wc") && !knockout;
   const total = homeCount + awayCount + (isSoccer ? drawCount : 0);
   const sumFb =
     (fallbackMarketBias?.homePct ?? 0) + (fallbackMarketBias?.awayPct ?? 0);

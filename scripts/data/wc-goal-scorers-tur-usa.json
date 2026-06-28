@@ -1,0 +1,11 @@
+{
+  "homeScore": 3,
+  "awayScore": 2,
+  "scorers": [
+    { "playerId": "usa-trusty", "teamId": "wc-usa", "minute": 3 },
+    { "playerId": "tur-guler", "teamId": "wc-tur", "minute": 10 },
+    { "playerId": "tur-y-lmaz", "teamId": "wc-tur", "minute": 31 },
+    { "playerId": "usa-berhalter", "teamId": "wc-usa", "minute": 49 },
+    { "playerId": "tur-ayhan", "teamId": "wc-tur", "minute": 98 }
+  ]
+}

@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { GamesStackParamList } from "../../navigation/types";
 import { GestureDetector } from "react-native-gesture-handler";
 import {
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+  Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import Animated, { useReducedMotion } from "react-native-reanimated";
@@ -89,6 +84,7 @@ import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
+import { scheduleAfterPredictModalDismissed } from "./scheduleAfterPredictModalDismissed";
 import GameCardList from "./GameCardList";
 import {
   resolveNativeSeriesLabel,
@@ -1271,7 +1267,7 @@ export default function GamesHomeScreen({
         try {
           const hintSeen = await readEditModeHintShown();
           if (!hintSeen) {
-            Alert.alert(t.editModeTitle, t.editModeBody);
+            cyberAlert(t.editModeTitle, t.editModeBody);
             await writeEditModeHintShown();
           }
         } catch {
@@ -1408,11 +1404,11 @@ export default function GamesHomeScreen({
       return;
     }
     if (scoreHome.trim() === "" || scoreAway.trim() === "") {
-      Alert.alert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
+      cyberAlert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
       return;
     }
     if (!winner) {
-      Alert.alert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
+      cyberAlert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
       return;
     }
     const homeNum = Number(scoreHome);
@@ -1423,40 +1419,40 @@ export default function GamesHomeScreen({
       homeNum < 0 ||
       awayNum < 0
     ) {
-      Alert.alert(t.invalidInputTitle, t.invalidScoreBody);
+      cyberAlert(t.invalidInputTitle, t.invalidScoreBody);
       return;
     }
     if (!isSoccerPredict && winner === "draw") {
-      Alert.alert(t.invalidInputTitle, t.invalidDrawLeagueBody);
+      cyberAlert(t.invalidInputTitle, t.invalidDrawLeagueBody);
       return;
     }
     if (winner === "home" && homeNum <= awayNum) {
-      Alert.alert(t.invalidInputTitle, t.invalidHomeWinBody);
+      cyberAlert(t.invalidInputTitle, t.invalidHomeWinBody);
       return;
     }
     if (winner === "away" && awayNum <= homeNum) {
-      Alert.alert(t.invalidInputTitle, t.invalidAwayWinBody);
+      cyberAlert(t.invalidInputTitle, t.invalidAwayWinBody);
       return;
     }
     if (winner === "draw" && homeNum !== awayNum) {
-      Alert.alert(t.invalidInputTitle, t.invalidDrawScoreBody);
+      cyberAlert(t.invalidInputTitle, t.invalidDrawScoreBody);
       return;
     }
 
     const gameId = String(selectedGame.id ?? "");
     if (!gameId) {
-      Alert.alert(t.submitErrorTitle, t.submitNoGameIdBody);
+      cyberAlert(t.submitErrorTitle, t.submitNoGameIdBody);
       return;
     }
 
     const startAt = resolveGameStartAt(selectedGame);
     if (isGameStarted(selectedGame)) {
-      Alert.alert(t.submitLockedTitle, t.submitLockedBody);
+      cyberAlert(t.submitLockedTitle, t.submitLockedBody);
       return;
     }
 
     if (!getUniterzApiBaseUrl()) {
-      Alert.alert(t.apiBaseMissingTitle, t.apiBaseMissingBody);
+      cyberAlert(t.apiBaseMissingTitle, t.apiBaseMissingBody);
       return;
     }
 
@@ -1513,6 +1509,18 @@ export default function GamesHomeScreen({
       const currentLeague = String(selectedGame.league ?? "");
       const nextPredictedIds = new Set(predictedGameIds);
       nextPredictedIds.add(gameId);
+      const nextGame =
+        !isEditing
+          ? findNextUnpredictedGame(
+              gameId,
+              currentLeague,
+              games,
+              nextPredictedIds
+            )
+          : null;
+      const skipNextModal =
+        !isEditing ? await readPredictNextGameModalSkip() : false;
+
       setPredictedGameIds(nextPredictedIds);
       setMyPredictionsReloadNonce((prev) => prev + 1);
       if (fUser?.uid) {
@@ -1527,28 +1535,21 @@ export default function GamesHomeScreen({
       setIsPredictModalOpen(false);
       setSelectedGame(null);
 
-      if (isEditing) {
-        Alert.alert(t.updateDone, t.updateDoneOnly);
-      } else {
-        const skipNextModal = await readPredictNextGameModalSkip();
-        const nextGame = findNextUnpredictedGame(
-          gameId,
-          currentLeague,
-          games,
-          nextPredictedIds
-        );
-        if (skipNextModal) {
-          Alert.alert(t.postDone, t.postDoneOnly);
+      scheduleAfterPredictModalDismissed(() => {
+        if (isEditing) {
+          cyberAlert(t.updateDone, t.updateDoneOnly);
+        } else if (skipNextModal) {
+          cyberAlert(t.postDone, t.postDoneOnly);
         } else if (nextGame) {
           setNextGameAfterPost(nextGame);
         } else {
-          Alert.alert(t.postDone, t.postDoneOnly);
+          cyberAlert(t.postDone, t.postDoneOnly);
         }
-      }
+      });
     } catch (error: unknown) {
       const msg =
         error instanceof Error ? error.message : t.postErrorBody;
-      Alert.alert(t.postErrorTitle, msg);
+      cyberAlert(t.postErrorTitle, msg);
     } finally {
       setPredictSubmitting(false);
     }

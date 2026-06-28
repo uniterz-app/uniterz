@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
@@ -127,11 +121,11 @@ export default function ContactScreenNative({
 
   async function handleSubmit() {
     if (message.trim().length < 10) {
-      Alert.alert("", labels.needMsg);
+      cyberAlert("", labels.needMsg);
       return;
     }
     if (!API_BASE) {
-      Alert.alert("", labels.needApi);
+      cyberAlert("", labels.needApi);
       return;
     }
     setSubmitting(true);
@@ -156,7 +150,7 @@ export default function ContactScreenNative({
       if (!res.ok) throw new Error("failed");
       setSubmitted(true);
     } catch {
-      Alert.alert("", labels.err);
+      cyberAlert("", labels.err);
     } finally {
       setSubmitting(false);
     }

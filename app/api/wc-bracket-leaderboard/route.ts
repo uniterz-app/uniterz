@@ -25,7 +25,8 @@ export type WcBracketLeaderboardRow = {
   alive: boolean;
   survivedRounds: number;
   firstMissMatchId: WcBracketPredictMatchId | null;
-  championPick: string | null;
+  championPick?: string | null;
+  championTeamId?: string | null;
 };
 
 type ApiResponse = {
@@ -98,6 +99,7 @@ function parseBracketDoc(data: FirebaseFirestore.DocumentData) {
       typeof data.survivalRankKey === "number" && Number.isFinite(data.survivalRankKey)
         ? data.survivalRankKey
         : wcSurvivalRankKey(survival),
+    championTeamId: rawChampion,
     championPick: championDisplayCode(rawChampion),
   };
 }
@@ -240,6 +242,7 @@ export async function GET(req: Request) {
         survivedRounds: b.survival.survivedRounds,
         firstMissMatchId: b.survival.firstMissMatchId,
         championPick: b.championPick,
+        championTeamId: b.championTeamId,
       };
     });
 
@@ -289,6 +292,7 @@ export async function GET(req: Request) {
             survivedRounds: parsed.survival.survivedRounds,
             firstMissMatchId: parsed.survival.firstMissMatchId,
             championPick: parsed.championPick,
+            championTeamId: parsed.championTeamId,
           };
         }
       }

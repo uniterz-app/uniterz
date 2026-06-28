@@ -21,6 +21,8 @@ type Props = {
   onConfirm?: () => void;
   secondaryLabel?: string;
   onSecondary?: () => void;
+  confirmLoading?: boolean;
+  confirmDisabled?: boolean;
   monoClassName: string;
 };
 
@@ -81,9 +83,12 @@ export default function CyberEventModalFrame({
   onConfirm,
   secondaryLabel,
   onSecondary,
+  confirmLoading = false,
+  confirmDisabled = false,
   monoClassName,
 }: Props) {
   const handleConfirm = onConfirm ?? onClose;
+  const confirmBlocked = confirmLoading || confirmDisabled;
   return (
     <div
       className="relative w-[min(420px,94vw)]"
@@ -181,8 +186,9 @@ export default function CyberEventModalFrame({
             <button
               type="button"
               onClick={handleConfirm}
+              disabled={confirmBlocked}
               className={[
-                "px-3 py-2.5 text-sm font-bold tracking-[0.08em] text-[#041018] transition-[filter] hover:brightness-110",
+                "px-3 py-2.5 text-sm font-bold tracking-[0.08em] text-[#041018] transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50",
                 secondaryLabel ? "" : "w-full",
               ].join(" ")}
               style={{

@@ -2,9 +2,13 @@
 
 import { useCallback, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import Tooltip from "@/app/component/common/Tooltip";
+import CyberTooltip from "@/app/component/common/CyberTooltip";
 import type { KinetikRankBadgeResult } from "./kinetikRankBadge";
 import { getKinetikRankBadgeExplanation } from "./kinetikRankBadge";
+import {
+  resolveKinetikCyberTooltipTheme,
+  type KinetikSlantTabThemeKey,
+} from "./kinetikSlantTabTheme";
 import {
   formatKinetikWinStreakLabel,
   getKinetikStreakTier,
@@ -90,13 +94,18 @@ export default function ProfileEditKinetikHeaderTabs({
   const [tooltip, setTooltip] = useState<{
     rect: DOMRect;
     message: string;
+    themeKey: KinetikSlantTabThemeKey;
   } | null>(null);
 
   const openTooltip = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>, message: string) => {
+    (
+      e: React.MouseEvent<HTMLButtonElement>,
+      message: string,
+      themeKey: KinetikSlantTabThemeKey
+    ) => {
       e.stopPropagation();
       const rect = e.currentTarget.getBoundingClientRect();
-      setTooltip({ rect, message });
+      setTooltip({ rect, message, themeKey });
     },
     []
   );
@@ -120,7 +129,7 @@ export default function ProfileEditKinetikHeaderTabs({
           <SlantTab
             delay={0.06}
             explanation={rankExplanation}
-            onPress={(e) => openTooltip(e, rankExplanation)}
+            onPress={(e) => openTooltip(e, rankExplanation, rankBadge.tier)}
             className={[
               "profile-edit-kinetik-slant-tab profile-edit-kinetik-slant-tab--filled",
               `profile-edit-kinetik-slant-tab--rank-${rankBadge.tier}`,
@@ -144,7 +153,9 @@ export default function ProfileEditKinetikHeaderTabs({
           <SlantTab
             delay={0.16}
             explanation={streakExplanation}
-            onPress={(e) => openTooltip(e, streakExplanation)}
+            onPress={(e) =>
+              openTooltip(e, streakExplanation, `streak-${streakTier}`)
+            }
             className={[
               "profile-edit-kinetik-slant-tab profile-edit-kinetik-slant-tab--outline",
               streakTier > 0
@@ -170,9 +181,10 @@ export default function ProfileEditKinetikHeaderTabs({
       </div>
 
       {tooltip ? (
-        <Tooltip
+        <CyberTooltip
           anchorRect={tooltip.rect}
           message={tooltip.message}
+          theme={resolveKinetikCyberTooltipTheme(tooltip.themeKey)}
           onClose={() => setTooltip(null)}
         />
       ) : null}

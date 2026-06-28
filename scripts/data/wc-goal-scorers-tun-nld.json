@@ -1,0 +1,10 @@
+{
+  "homeScore": 1,
+  "awayScore": 3,
+  "scorers": [
+    { "playerId": "tun-skhiri", "teamId": "wc-tun", "minute": 3, "ownGoal": true },
+    { "playerId": "nld-brobbey", "teamId": "wc-nld", "minute": 7 },
+    { "playerId": "tun-mastouri", "teamId": "wc-tun", "minute": 54 },
+    { "playerId": "nld-hecke", "teamId": "wc-nld", "minute": 62 }
+  ]
+}

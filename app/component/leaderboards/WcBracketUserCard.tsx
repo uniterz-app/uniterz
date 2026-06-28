@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { Pencil, Trophy } from "lucide-react";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import { alfa, jp } from "@/lib/fonts";
 import type { WcBracketLeaderboardRow } from "@/lib/leaderboards/useWcBracketLeaderboard";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
-import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
   ProCyberBadge,
   proBadgeStaticMotion,
@@ -13,80 +13,58 @@ import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   row: WcBracketLeaderboardRow;
-  totalCount?: number;
   language?: Language;
   onClick?: () => void;
+  /** 自分の行 — ALIVE 右に編集アイコン */
+  onEditClick?: () => void;
 };
 
-function textOnPrimary(hex: string): "#ffffff" | "#0f172a" {
-  const h = hex.replace(/^#/, "");
-  if (h.length !== 6) return "#ffffff";
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-  if ([r, g, b].some((n) => Number.isNaN(n))) return "#ffffff";
-  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return lum > 0.72 ? "#0f172a" : "#ffffff";
-}
-
-function ChampionPickBadge({
-  code,
-  language,
-}: {
-  code: string;
-  language: Language;
-}) {
-  const teamId = `wc-${code.toLowerCase()}`;
-  const bg = getTeamPrimaryColor("wc", teamId) ?? "#1d4ed8";
-  const label = code.trim().toUpperCase().slice(0, 3);
-  const fg = textOnPrimary(bg);
-
+function ChampionFlag({ teamId, large = false }: { teamId: string; large?: boolean }) {
   return (
     <span
       className={[
-        "inline-flex h-[15px] shrink-0 items-center justify-center rounded-[4px] px-1 text-[9px] font-black leading-none tracking-[0.05em] sm:h-[18px] sm:rounded-[5px] sm:px-1.5 sm:text-[10px]",
-        alfa.className,
+        "inline-flex shrink-0 overflow-hidden rounded-[2px] ring-1 ring-white/20",
+        large ? "h-7 w-10 sm:h-8 sm:w-[46px]" : "h-[18px] w-[26px] sm:h-5 sm:w-[30px]",
       ].join(" ")}
-      style={{ backgroundColor: bg, color: fg }}
-      title={
-        language === "en"
-          ? `Predicted champion: ${label}`
-          : `優勝予想: ${label}`
-      }
+      title={teamId}
     >
-      {label}
+      <CountryFlag
+        teamId={teamId}
+        variant="inline"
+        className="block! h-full! w-full! ring-0!"
+      />
     </span>
   );
 }
 
-function survivalLabel(row: WcBracketLeaderboardRow, language: Language) {
-  if (row.alive) {
-    return language === "ja" ? "生存中" : "ALIVE";
-  }
-  if (row.firstMissMatchId) {
-    return language === "ja"
-      ? `${row.firstMissMatchId} で脱落`
-      : `OUT ${row.firstMissMatchId}`;
-  }
-  return language === "ja" ? "脱落" : "OUT";
+function statusLabel(row: WcBracketLeaderboardRow) {
+  if (row.alive) return "ALIVE";
+  if (row.firstMissMatchId) return `OUT ${row.firstMissMatchId}`;
+  return "OUT";
 }
 
 export default function WcBracketUserCard({
   row,
-  totalCount = 0,
   language = "ja",
   onClick,
+  onEditClick,
 }: Props) {
   const isPro = row.plan === "pro";
   const avatarUrl = row.photoURL ?? null;
   const displayName = row.displayName || "User";
   const initial = displayName.charAt(0).toUpperCase();
-  const handle = row.handle ?? null;
-  const baseCardClass =
-    "relative overflow-hidden rounded-none border px-3 py-2";
+  const championTeamId = row.championTeamId?.trim() || null;
+  const shellClass = [
+    "wc-bracket-user-card",
+    "relative px-3 py-2.5",
+    row.alive ? "" : "wc-bracket-user-card--out",
+    onClick || onEditClick ? "wc-bracket-user-card--interactive" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  const content = (
-    <div className="relative z-10 flex items-center justify-between">
+  const mainBody = (
+    <>
       <div className="flex min-w-0 items-center gap-2">
         <div className="relative h-9 w-9 shrink-0">
           {isPro ? (
@@ -124,7 +102,7 @@ export default function WcBracketUserCard({
         </div>
 
         <div className="min-w-0">
-          <div className="flex min-w-0 max-w-full items-center gap-1 overflow-hidden">
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden">
             <div
               className={[
                 "min-w-0 truncate font-black text-[14px] leading-tight text-white",
@@ -133,9 +111,6 @@ export default function WcBracketUserCard({
             >
               {displayName}
             </div>
-            {row.championPick ? (
-              <ChampionPickBadge code={row.championPick} language={language} />
-            ) : null}
             {isPro ? (
               <ProCyberBadge
                 {...proBadgeStaticMotion}
@@ -144,80 +119,72 @@ export default function WcBracketUserCard({
               />
             ) : null}
           </div>
-          {handle ? (
-            <div className="truncate text-[11px] leading-tight text-white/50">
-              @{handle}
-            </div>
-          ) : null}
         </div>
       </div>
 
-      <div className="flex flex-col items-center justify-center px-1">
-        <div className="text-[8px] tracking-wider text-white/40">RANK</div>
-        <div
-          className={["font-black leading-none text-white", alfa.className].join(
-            " "
-          )}
-          style={{ fontSize: 20 }}
-        >
-          #{row.rank}
-          {totalCount > 0 ? (
-            <span className="ml-1 align-baseline text-[10px] text-white/55">
-              /{totalCount}
-            </span>
-          ) : null}
-        </div>
+      <div className="flex shrink-0 items-center gap-1.5 px-2">
+        <Trophy
+          className="h-4 w-4 shrink-0 text-amber-300/85"
+          strokeWidth={2.2}
+          aria-hidden
+        />
+        {championTeamId ? (
+          <ChampionFlag teamId={championTeamId} large />
+        ) : (
+          <span
+            className="inline-flex h-7 w-10 items-center justify-center rounded-[2px] border border-dashed border-white/15 bg-white/3 text-[9px] font-bold tracking-wider text-white/25 sm:h-8 sm:w-[46px]"
+            aria-hidden
+          >
+            —
+          </span>
+        )}
       </div>
-
-      <div className="flex flex-col items-end pl-1">
-        <div
-          className={[
-            "font-black tabular-nums leading-none",
-            row.alive ? "text-cyan-300" : "text-white/75",
-            alfa.className,
-          ].join(" ")}
-          style={{ fontSize: 14 }}
-        >
-          {survivalLabel(row, language)}
-        </div>
-        <div className="text-[10px] text-white/45">
-          {language === "ja"
-            ? `R${row.survivedRounds}`
-            : `Round ${row.survivedRounds}`}
-        </div>
-      </div>
-    </div>
+    </>
   );
 
-  const shellStyle = {
-    background:
-      "linear-gradient(160deg, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.035) 44%, rgba(8,13,24,0.55) 100%)",
-    borderColor: row.alive ? "rgba(34,211,238,0.28)" : "rgba(255,255,255,0.16)",
-    boxShadow:
-      "0 8px 22px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(255,255,255,0.05)",
-  };
-
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
+  const statusBlock = (
+    <div className="flex shrink-0 items-center gap-1.5 pl-1">
+      <span
         className={[
-          baseCardClass,
-          "w-full text-left transition hover:bg-white/5 active:scale-[0.99]",
+          "font-black tabular-nums leading-none tracking-[0.08em]",
+          row.alive ? "text-[#00F5FF]" : "text-white/45",
+          alfa.className,
         ].join(" ")}
-        style={shellStyle}
+        style={{ fontSize: 14 }}
       >
-        <ShellGridOverlay roundedClassName="rounded-none" />
-        {content}
-      </button>
-    );
-  }
-
-  return (
-    <div className={baseCardClass} style={shellStyle}>
-      <ShellGridOverlay roundedClassName="rounded-none" />
-      {content}
+        {statusLabel(row)}
+      </span>
+      {onEditClick ? (
+        <button
+          type="button"
+          onClick={onEditClick}
+          className="flex size-7 shrink-0 items-center justify-center border border-cyan-400/35 bg-cyan-400/8 text-cyan-200/90 transition hover:border-cyan-300/55 hover:bg-cyan-400/14 active:scale-95"
+          aria-label={language === "ja" ? "ブラケットを編集" : "Edit bracket"}
+        >
+          <Pencil className="size-3.5" aria-hidden />
+        </button>
+      ) : null}
     </div>
   );
+
+  const content = (
+    <div className="relative z-10 flex items-center justify-between gap-1">
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className="flex min-w-0 flex-1 items-center justify-between gap-1 text-left"
+        >
+          {mainBody}
+        </button>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-1">
+          {mainBody}
+        </div>
+      )}
+      {statusBlock}
+    </div>
+  );
+
+  return <div className={shellClass}>{content}</div>;
 }

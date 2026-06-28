@@ -11,6 +11,7 @@ import {
   normalizeWcGoalScorerPick,
 } from "@/lib/wc/goalScorer";
 import { getWcSquadPlayer } from "@/lib/wc/squads";
+import { teamIdToCountryName } from "@/lib/wc/wcCountry";
 import {
   RESULT_STAT_ROW_GRID_COMPACT,
   RESULT_STAT_ROW_GRID_DEFAULT,
@@ -76,6 +77,56 @@ export function useWcGoalScorerResult(
   }, [post]);
 }
 
+export type WcPkWinnerResultInfo = {
+  teamId: string;
+  teamName: string;
+  /** 試合確定前は null */
+  hit: boolean | null;
+};
+
+/**
+ * ノックアウトで「同点（PK 決着）＋勝ち上がり側 home/away」を予想したときの PK 勝者情報。
+ * 同点スコアで winner が home/away なのは PK 予想に限られるため、それを検出キーにする。
+ */
+export function useWcPkWinnerResult(
+  post: PredictionPostV2
+): WcPkWinnerResultInfo | null {
+  return useMemo(() => {
+    if (normalizeLeague(post.league) !== "wc") return null;
+
+    const pred = post.prediction;
+    const score = pred?.score;
+    const winner = pred?.winner;
+    if (!score) return null;
+    if (winner !== "home" && winner !== "away") return null;
+    if (score.home !== score.away) return null;
+
+    const teamId = winner === "home" ? post.home?.teamId : post.away?.teamId;
+    if (!teamId) return null;
+
+    const teamName =
+      teamIdToCountryName(teamId, "en") ??
+      (winner === "home" ? post.home?.name : post.away?.name) ??
+      teamId.replace(/^wc-/, "").toUpperCase();
+
+    const isFinal =
+      isFinalResultPost(post as PostWithMillis) ||
+      post.status === "final" ||
+      post.game?.status === "final";
+
+    if (!isFinal) {
+      return { teamId, teamName, hit: null };
+    }
+
+    const winnerCorrect = post.stats?.pointsV3Detail?.winnerCorrect;
+    return {
+      teamId,
+      teamName,
+      hit: typeof winnerCorrect === "boolean" ? winnerCorrect : null,
+    };
+  }, [post]);
+}
+
 type RowProps = {
   label: string;
   info: WcGoalScorerResultInfo;
@@ -135,6 +186,93 @@ export default function WcGoalScorerResultRow({
           ].join(" ")}
         >
           {info.playerName}
+        </span>
+      </div>
+
+      <div className="flex min-w-0 justify-end">
+        {info.hit === true ? (
+          <Check
+            className={[
+              "text-emerald-400",
+              compact ? "h-[18px] w-[18px]" : "h-5 w-5",
+            ].join(" ")}
+            strokeWidth={2.5}
+            aria-label="correct"
+          />
+        ) : info.hit === false ? (
+          <X
+            className={[
+              "text-rose-400",
+              compact ? "h-[18px] w-[18px]" : "h-5 w-5",
+            ].join(" ")}
+            strokeWidth={2.5}
+            aria-label="incorrect"
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+type PkRowProps = {
+  label: string;
+  info: WcPkWinnerResultInfo;
+  compact?: boolean;
+  cyberValue?: boolean;
+};
+
+/** PK 決着予想時の「PK で勝つチーム」行（得点者行の上に表示） */
+export function WcPkWinnerResultRow({
+  label,
+  info,
+  compact = false,
+  cyberValue = false,
+}: PkRowProps) {
+  const flagClass = compact ? "h-3 w-[1.05rem]" : "h-3.5 w-[1.2rem]";
+  const nameLeadingClass = compact ? "leading-[12px]" : "leading-[14px]";
+
+  return (
+    <div
+      className={[
+        compact ? RESULT_STAT_ROW_GRID_COMPACT : RESULT_STAT_ROW_GRID_DEFAULT,
+        compact ? "py-1" : "py-1.5",
+      ].join(" ")}
+    >
+      <div className="min-w-0">
+        <span
+          className={
+            compact
+              ? "block truncate whitespace-nowrap text-[10px] font-semibold leading-snug text-white"
+              : "truncate text-[12px] font-semibold leading-snug text-white sm:text-[13px]"
+          }
+        >
+          {label}
+        </span>
+      </div>
+
+      <div
+        className={[
+          "flex min-w-0 items-center gap-1 font-medium text-white/85",
+          cyberValue ? "predict-overlay-goal-box px-2 py-1" : "",
+          compact ? "text-[10px]" : "text-[12px] sm:text-[13px]",
+        ].join(" ")}
+      >
+        <CountryFlag
+          teamId={info.teamId}
+          variant="inline"
+          decorative
+          className={[
+            "block aspect-[4/3] shrink-0 self-center",
+            flagClass,
+          ].join(" ")}
+        />
+        <span
+          className={[
+            "min-w-0 truncate font-semibold text-white/92",
+            nameLeadingClass,
+          ].join(" ")}
+        >
+          {info.teamName}
         </span>
       </div>
 

@@ -14,11 +14,19 @@ import {
   getWcKnockoutMatch,
 } from "@/lib/wc/wc-knockout-bracket";
 import { resolveThirdPlaceTeamForWinnerSlot } from "@/lib/wc/wc-knockout-third-place";
+import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
+
+export type WcResolveParticipantsOptions = {
+  officialWinners?: WcOfficialWinners | null;
+  /** true のとき winner_feed は公式勝者を優先（R16+ 表示用） */
+  preferOfficialFeeders?: boolean;
+};
 
 export type WcResolvedParticipant = {
+  /** 未確定の winner_feed などは空文字 */
   teamId: string;
   label: string;
-  source: "group" | "third_place" | "bracket_pick";
+  source: "group" | "third_place" | "bracket_pick" | "official";
 };
 
 export type WcKnockoutAdvancement = {
@@ -27,6 +35,42 @@ export type WcKnockoutAdvancement = {
   groupThirdPlaces: Partial<Record<WcGroupCode, string>>;
   advancingThirdPlaceGroups: readonly WcGroupCode[];
 };
+
+/** FIFA 表記ラベル（1F / 2A / 3B）から teamId を引く */
+export function resolveWcQualLabelToTeamId(
+  label: string,
+  advancement: WcKnockoutAdvancement
+): string | null {
+  const m = label.trim().match(/^([123])([A-L])$/);
+  if (!m) return null;
+  const rank = m[1];
+  const group = m[2] as WcGroupCode;
+  if (rank === "1") return advancement.groupWinners[group]?.trim() || null;
+  if (rank === "2") return advancement.groupRunnersUp[group]?.trim() || null;
+  if (rank === "3") return advancement.groupThirdPlaces[group]?.trim() || null;
+  return null;
+}
+
+/** グループ順位ラベル（FIFA 表記: 1F = F組1位, 2A = A組2位, 3B = B組3位） */
+export function resolveWcTeamQualLabel(
+  teamId: string,
+  advancement: WcKnockoutAdvancement
+): string {
+  const id = teamId.trim();
+  if (!id) return "";
+
+  for (const group of Object.keys(advancement.groupWinners) as WcGroupCode[]) {
+    if (advancement.groupWinners[group] === id) return `1${group}`;
+  }
+  for (const group of Object.keys(advancement.groupRunnersUp) as WcGroupCode[]) {
+    if (advancement.groupRunnersUp[group] === id) return `2${group}`;
+  }
+  for (const group of Object.keys(advancement.groupThirdPlaces) as WcGroupCode[]) {
+    if (advancement.groupThirdPlaces[group] === id) return `3${group}`;
+  }
+
+  return "";
+}
 
 function teamIdFromGroupSlot(
   advancement: WcKnockoutAdvancement,
@@ -62,17 +106,56 @@ function teamIdFromThirdPlaceSlot(
   };
 }
 
-function teamIdFromWinnerFeed(
+function resolveWcFeederParticipant(
   bracket: WcBracketState,
-  slot: Extract<WcKnockoutFeedSlot, { kind: "winner_feed" }>
-): WcResolvedParticipant | null {
-  const pick = bracket[slot.matchId as WcBracketPredictMatchId];
-  if (!pick?.winner?.trim()) return null;
+  feederMatchId: WcKnockoutMatchId,
+  advancement: WcKnockoutAdvancement,
+  options?: WcResolveParticipantsOptions
+): WcResolvedParticipant {
+  const preferOfficial = options?.preferOfficialFeeders === true;
+  const official =
+    options?.officialWinners?.[
+      feederMatchId as WcBracketPredictMatchId
+    ]?.trim() ?? "";
+
+  if (preferOfficial && official) {
+    return {
+      teamId: official,
+      label:
+        resolveWcTeamQualLabel(official, advancement) ||
+        `W${feederMatchId.slice(1)}`,
+      source: "official",
+    };
+  }
+
+  const winner =
+    bracket[feederMatchId as WcBracketPredictMatchId]?.winner?.trim() ?? "";
+  if (winner) {
+    return {
+      teamId: winner,
+      label: resolveWcTeamQualLabel(winner, advancement),
+      source: "bracket_pick",
+    };
+  }
   return {
-    teamId: pick.winner.trim(),
-    label: slot.label,
+    teamId: "",
+    label: `W${feederMatchId.slice(1)}`,
     source: "bracket_pick",
   };
+}
+
+function teamIdFromWinnerFeed(
+  bracket: WcBracketState,
+  slot: Extract<WcKnockoutFeedSlot, { kind: "winner_feed" }>,
+  advancement: WcKnockoutAdvancement,
+  options?: WcResolveParticipantsOptions
+): WcResolvedParticipant {
+  return resolveWcFeederParticipant(
+    bracket,
+    slot.matchId,
+    advancement,
+    options
+  );
 }
 
 function winnerGroupForMatch(
@@ -86,10 +169,29 @@ function winnerGroupForMatch(
 export function resolveWcMatchParticipants(
   matchId: WcKnockoutMatchId,
   bracket: WcBracketState,
-  advancement: WcKnockoutAdvancement
+  advancement: WcKnockoutAdvancement,
+  options?: WcResolveParticipantsOptions
 ): [WcResolvedParticipant | null, WcResolvedParticipant | null] | null {
   const def = getWcKnockoutMatch(matchId);
   if (!def) return null;
+
+  /** R16 以降 — feedsFrom 順が home / away と一致（M85–M88 → M95/M96 など） */
+  if (def.feedsFrom.length === 2) {
+    return [
+      resolveWcFeederParticipant(
+        bracket,
+        def.feedsFrom[0],
+        advancement,
+        options
+      ),
+      resolveWcFeederParticipant(
+        bracket,
+        def.feedsFrom[1],
+        advancement,
+        options
+      ),
+    ];
+  }
 
   const winnerGroup = winnerGroupForMatch(def);
 
@@ -103,7 +205,7 @@ export function resolveWcMatchParticipants(
       case "best_third":
         return teamIdFromThirdPlaceSlot(advancement, slot, winnerGroup);
       case "winner_feed":
-        return teamIdFromWinnerFeed(bracket, slot);
+        return teamIdFromWinnerFeed(bracket, slot, advancement, options);
       default:
         return null;
     }
@@ -294,6 +396,79 @@ export function evaluateWcBracketSurvivalForMatch(
     status,
     survival,
   };
+}
+
+function wcSfWinnerBracketHalf(
+  matchId: "M101" | "M102",
+  winner: string,
+  bracket: WcBracketState
+): "left" | "right" | null {
+  const w97 = bracket.M97?.winner?.trim() ?? "";
+  const w98 = bracket.M98?.winner?.trim() ?? "";
+  const w99 = bracket.M99?.winner?.trim() ?? "";
+  const w100 = bracket.M100?.winner?.trim() ?? "";
+
+  if (matchId === "M101") {
+    if (w97 && winner === w97) return "left";
+    if (w98 && winner === w98) return "right";
+    return null;
+  }
+
+  if (w99 && winner === w99) return "left";
+  if (w100 && winner === w100) return "right";
+  return null;
+}
+
+/**
+ * トーナメント表の左右 SF スロットに載せる決勝進出チーム。
+ * 左山・右山のどちらから来たかで配置（M101/M102 の試合番号では固定しない）。
+ */
+export function getWcTreeSfFinalistSlots(bracket: WcBracketState): {
+  left: string | null;
+  right: string | null;
+} {
+  const w101 = bracket.M101?.winner?.trim() ?? "";
+  const w102 = bracket.M102?.winner?.trim() ?? "";
+
+  const entries: { team: string; half: "left" | "right" }[] = [];
+
+  if (w101) {
+    const half = wcSfWinnerBracketHalf("M101", w101, bracket);
+    if (half) entries.push({ team: w101, half });
+  }
+  if (w102) {
+    const half = wcSfWinnerBracketHalf("M102", w102, bracket);
+    if (half) entries.push({ team: w102, half });
+  }
+
+  let left: string | null = null;
+  let right: string | null = null;
+
+  for (const entry of entries) {
+    if (entry.half === "left" && !left) left = entry.team;
+    else if (entry.half === "right" && !right) right = entry.team;
+  }
+
+  // 両方同じ山から決勝進出した場合は M101 左・M102 右にフォールバック
+  if (w101 && w102 && (!left || !right)) {
+    return { left: w101, right: w102 };
+  }
+
+  // 片方だけ決まっている場合
+  if (w101 && !w102) {
+    const half = wcSfWinnerBracketHalf("M101", w101, bracket);
+    if (half === "left") return { left: w101, right: null };
+    if (half === "right") return { left: null, right: w101 };
+    return { left: w101, right: null };
+  }
+  if (w102 && !w101) {
+    const half = wcSfWinnerBracketHalf("M102", w102, bracket);
+    if (half === "left") return { left: w102, right: null };
+    if (half === "right") return { left: null, right: w102 };
+    return { left: null, right: w102 };
+  }
+
+  return { left, right };
 }
 
 export { WC_KNOCKOUT_BRACKET_STRUCTURE };

@@ -128,6 +128,37 @@ export function isFinalResultPost(post: PostWithMillis): boolean {
   return post.status === "final" && !!post.settledAtMillis;
 }
 
+export function resultPostKickoffMillis(post: PostWithMillis): number {
+  return post.startAtMillis ?? post.createdAtMillis ?? 0;
+}
+
+/** 試合カード `compareGamesByKickoffAsc` と同系のタイブレーク用 ID（gameId 優先） */
+export function resultPostTieBreakId(post: PostWithMillis): string {
+  const gameId = post.gameId;
+  if (typeof gameId === "string" && gameId.length > 0) return gameId;
+  return post.id;
+}
+
+/**
+ * 同一日付内: 試合一覧（早い→上）の逆 — 遅いキックオフを上、早いを下。
+ * キックオフ同時刻は試合カードの id 昇順を反転（gameId 優先）。
+ */
+export function compareResultPostsByKickoffDesc(
+  a: PostWithMillis,
+  b: PostWithMillis
+): number {
+  const diff = resultPostKickoffMillis(b) - resultPostKickoffMillis(a);
+  if (diff !== 0) return diff;
+  return resultPostTieBreakId(b).localeCompare(resultPostTieBreakId(a), "en");
+}
+
+/** pending / final をキックオフ降順で1列に並べる（一覧表示用） */
+export function mergeResultDayPostsByKickoff(
+  day: Pick<ResultDayGroup, "pending" | "final">
+): PostWithMillis[] {
+  return [...day.pending, ...day.final].sort(compareResultPostsByKickoffDesc);
+}
+
 /** Firestore 行から PostWithMillis を組み立て */
 export function mapDocToPostWithMillis(id: string, raw: unknown): PostWithMillis {
   const r = raw as Record<string, unknown>;
@@ -299,8 +330,7 @@ export function flattenResultDayGroups(
 ): PostWithMillis[] {
   const out: PostWithMillis[] = [];
   for (const day of groups) {
-    for (const p of day.pending) out.push(p);
-    for (const p of day.final) out.push(p);
+    out.push(...mergeResultDayPostsByKickoff(day));
   }
   return out;
 }

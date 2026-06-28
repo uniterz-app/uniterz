@@ -18,6 +18,7 @@ export function rankingsTexts(language: RankingsLanguage) {
     scheduleInfoToggle: m.scheduleInfoToggle,
     /** Web `RankingsCategoryTabs` と同じ表記 */
     playoffs: "Playoffs",
+    worldCup: "WORLD CUP",
     bracket: "Bracket",
     bracketSoon:
       language === "ja"

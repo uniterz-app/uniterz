@@ -42,4 +42,4 @@ export const PREDICT_OVERLAY_FORM_PANEL = "predict-overlay-cyber-form";
 
 /** プレイオフブラケット外枠（スケジュールの予想オーバーレイ背後に近い透明＋ブラー） */
 export const PLAYOFF_BRACKET_PANEL =
-  "rounded-[24px] border border-white/12 bg-black/35 backdrop-blur-md shadow-[0_14px_34px_rgba(0,0,0,0.42)]";
+  "rounded-[24px] border border-white/8 bg-black/64 backdrop-blur-md shadow-[0_14px_34px_rgba(0,0,0,0.62)]";

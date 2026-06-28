@@ -19,11 +19,13 @@ const EMPTY_COUNTS: GamePredictionCounts = {
 export function useGameMarketDistribution(
   gameId: string | null | undefined,
   league: League | string,
-  fallbackMarketBias?: MarketBiasFallback | null
+  fallbackMarketBias?: MarketBiasFallback | null,
+  options?: { excludeDraw?: boolean }
 ) {
   const [counts, setCounts] = useState<GamePredictionCounts>(EMPTY_COUNTS);
   const [loading, setLoading] = useState(true);
 
+  const excludeDraw = options?.excludeDraw ?? false;
   const isSoccer = isSoccerMarketLeague(league);
 
   useEffect(() => {
@@ -56,8 +58,11 @@ export function useGameMarketDistribution(
   }, [gameId]);
 
   const market = useMemo(
-    () => computeGameMarketPcts(counts, isSoccer, fallbackMarketBias),
-    [counts, fallbackMarketBias, isSoccer]
+    () =>
+      computeGameMarketPcts(counts, isSoccer, fallbackMarketBias, {
+        excludeDraw,
+      }),
+    [counts, fallbackMarketBias, isSoccer, excludeDraw]
   );
 
   return {

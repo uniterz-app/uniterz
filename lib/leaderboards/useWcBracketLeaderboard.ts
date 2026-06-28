@@ -15,6 +15,7 @@ export type WcBracketLeaderboardRow = {
   survivedRounds: number;
   firstMissMatchId: WcBracketPredictMatchId | null;
   championPick?: string | null;
+  championTeamId?: string | null;
 };
 
 type ApiResponse = {

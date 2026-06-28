@@ -137,6 +137,8 @@ function payloadFromScorers(scorers: WcGameGoalScorer[]) {
     patch.awayScore = 1;
     patch.final = true;
     patch.status = "final";
+    patch.score = { home: 0, away: 1 };
+    patch.pushNotifiedFinalAt = FieldValue.delete();
   }
 
   console.log("home:", homeTeamId, "away:", awayTeamId);

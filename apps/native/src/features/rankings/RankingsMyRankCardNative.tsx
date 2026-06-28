@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { cyberAlert } from "../../components/cyberAlert";
+import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
 import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
@@ -187,7 +188,7 @@ export function MyRankCardNative({
         appBaseUrl: getShareAppOrigin(),
       });
       if (result === "failed") {
-        Alert.alert("", t.shareRankCardFailed);
+        cyberAlert("", t.shareRankCardFailed);
       }
     } finally {
       setSharing(false);

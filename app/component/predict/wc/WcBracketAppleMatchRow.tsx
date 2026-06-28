@@ -1,6 +1,5 @@
 "use client";
 
-import { Check } from "lucide-react";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import type { WcBracketPredictMatchId } from "@/lib/wc/wc-knockout-bracket";
 import { teamIdToCountryName } from "@/lib/wc/wcCountry";
@@ -14,18 +13,8 @@ type Props = {
   onPick: (matchId: WcBracketPredictMatchId, teamId: string) => void;
 };
 
-function slotRankClass(label: string, compact?: boolean) {
-  const len = label.length;
-  if (compact) {
-    const width = len > 5 ? "w-9" : len > 3 ? "w-7" : "w-5";
-    const size =
-      len <= 2 ? "text-[9px]" : len <= 4 ? "text-[8px]" : "text-[7px] leading-none";
-    return `${width} ${size}`;
-  }
-  const width = len > 5 ? "w-10" : len > 3 ? "w-8" : "w-6";
-  const size =
-    len <= 2 ? "text-[10px]" : len <= 4 ? "text-[9px]" : "text-[8px] leading-none";
-  return `${width} ${size}`;
+function isWinnerFeedLabel(label: string): boolean {
+  return /^W\d+$/.test(label.trim()) || /^RU\d+$/.test(label.trim());
 }
 
 function TeamRow({
@@ -45,57 +34,60 @@ function TeamRow({
   compact?: boolean;
   onPick?: () => void;
 }) {
-  const display = name || "—";
-  const flagSize = compact ? "h-5 w-5" : "h-7 w-7";
-  const textSize = compact ? "text-[11px]" : "text-[14px]";
-  const pad = compact ? "gap-1.5 px-2 py-2" : "gap-2.5 px-4 py-3";
+  const display = (name || "—").toUpperCase();
   const qual = label.trim();
+  const showQual = Boolean(qual && !isWinnerFeedLabel(qual));
+
+  const rowClass = [
+    "wc-bracket-match-row",
+    compact ? "wc-bracket-match-row--compact" : "",
+    selected ? "wc-bracket-match-row--selected" : "",
+    pickable ? "wc-bracket-match-row--pickable" : "wc-bracket-match-row--dim",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const inner = (
     <>
-      {qual ? (
+      {selected ? (
+        <span className="wc-bracket-match-row__bar" aria-hidden />
+      ) : (
+        <span className="wc-bracket-match-row__bar-spacer" aria-hidden />
+      )}
+
+      {showQual ? (
+        <span className="wc-bracket-match-row__qual">{qual}</span>
+      ) : (
+        <span className="wc-bracket-match-row__qual" aria-hidden />
+      )}
+
+      {teamId ? (
         <span
           className={[
-            "shrink-0 text-center font-bold tabular-nums text-white/42",
-            slotRankClass(qual, compact),
+            "wc-bracket-match-row__flag",
+            compact ? "wc-bracket-match-row__flag--compact" : "",
           ].join(" ")}
         >
-          {qual}
+          <CountryFlag
+            teamId={teamId}
+            variant="inline"
+            className="block! h-full! w-full! ring-0!"
+          />
         </span>
-      ) : null}
-      {teamId ? (
-        <CountryFlag
-          teamId={teamId}
-          variant="inline"
-          className={`${flagSize} shrink-0 w-auto! aspect-square rounded-[2px]`}
-        />
       ) : (
         <span
-          className={`${flagSize} shrink-0 rounded-[2px] bg-white/8`}
-          aria-hidden
-        />
+          className={[
+            "wc-bracket-match-row__flag-placeholder",
+            compact ? "wc-bracket-match-row__flag-placeholder--compact" : "",
+          ].join(" ")}
+        >
+          {qual || "—"}
+        </span>
       )}
-      <span
-        className={`min-w-0 flex-1 truncate text-left font-medium text-white/92 ${textSize}`}
-      >
-        {display}
-      </span>
-      {selected ? (
-        <Check
-          className={compact ? "h-3 w-3 shrink-0 text-cyan-400" : "h-4 w-4 shrink-0 text-cyan-400"}
-          strokeWidth={3}
-        />
-      ) : (
-        <span className={compact ? "w-3 shrink-0" : "w-4 shrink-0"} aria-hidden />
-      )}
+
+      <span className="wc-bracket-match-row__name">{display}</span>
     </>
   );
-
-  const rowClass = [
-    `flex min-w-0 w-full items-center ${pad} transition`,
-    selected ? "bg-cyan-400/10" : "hover:bg-white/4",
-    pickable ? "cursor-pointer active:bg-cyan-400/14" : "opacity-45",
-  ].join(" ");
 
   if (pickable && teamId && onPick) {
     return (
@@ -115,22 +107,21 @@ export default function WcBracketAppleMatchRow({
   onPick,
 }: Props) {
   const homeName = match.home.teamId
-    ? (teamIdToCountryName(match.home.teamId, language) ?? "—")
-    : "—";
+    ? (teamIdToCountryName(match.home.teamId, language) ??
+      match.home.label ??
+      "—")
+    : match.home.label || "—";
   const awayName = match.away.teamId
-    ? (teamIdToCountryName(match.away.teamId, language) ?? "—")
-    : "—";
+    ? (teamIdToCountryName(match.away.teamId, language) ??
+      match.away.label ??
+      "—")
+    : match.away.label || "—";
 
   const picked = match.pickedWinner;
   const pickable = match.ready;
 
   return (
-    <div
-      className={[
-        "min-w-0 overflow-hidden rounded-xl border border-white/8 bg-white/6",
-        compact ? "rounded-lg" : "rounded-2xl",
-      ].join(" ")}
-    >
+    <div className="wc-bracket-match-card">
       <TeamRow
         teamId={match.home.teamId}
         label={match.home.label}
@@ -146,7 +137,7 @@ export default function WcBracketAppleMatchRow({
             : undefined
         }
       />
-      <div className="h-px shrink-0 bg-white/7" aria-hidden />
+      <div className="wc-bracket-match-card__divider" aria-hidden />
       <TeamRow
         teamId={match.away.teamId}
         label={match.away.label}

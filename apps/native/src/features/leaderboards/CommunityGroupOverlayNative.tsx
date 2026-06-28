@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { cyberAlert } from "../../components/cyberAlert";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
@@ -54,11 +55,11 @@ export default function CommunityGroupOverlayNative({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        Alert.alert("", String(json?.error ?? "failed"));
+        cyberAlert("", String(json?.error ?? "failed"));
         return;
       }
       setEndConfirmOpen(false);
-      Alert.alert("", language === "en" ? "Group ended." : "グループを終了しました。");
+      cyberAlert("", language === "en" ? "Group ended." : "グループを終了しました。");
       invalidateCommunityGroupDetail(groupId);
       onRefreshList?.();
       onClose();

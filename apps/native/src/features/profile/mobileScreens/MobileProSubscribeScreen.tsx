@@ -2,7 +2,8 @@
  * Web `app/mobile/pro/subscribe/page.tsx` に相当。
  */
 import { useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { cyberAlert } from "../../../components/cyberAlert";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "./MobilePageShell";
 import { useNativeIap } from "../../billing/useNativeIap";
@@ -68,7 +69,7 @@ export default function MobileProSubscribeScreen({ language, onClose, onSuccess 
   async function handlePurchase() {
     const ok = await purchase(plan);
     if (ok) {
-      Alert.alert(isJa ? "完了" : "Success", isJa ? "Pro プランが有効になりました。" : "Pro plan activated.");
+      cyberAlert(isJa ? "完了" : "Success", isJa ? "Pro プランが有効になりました。" : "Pro plan activated.");
       onSuccess?.(plan);
     }
   }

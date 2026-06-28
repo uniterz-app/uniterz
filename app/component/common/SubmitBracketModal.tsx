@@ -9,6 +9,8 @@ type SubmitBracketModalProps = {
   onClose: () => void;
   onConfirm: () => void;
   loading?: boolean;
+  /** 入力オーバーレイより前面に出す（WC ブラケット提出など） */
+  overlayClassName?: string;
 };
 
 export default function SubmitBracketModal({
@@ -16,6 +18,7 @@ export default function SubmitBracketModal({
   onClose,
   onConfirm,
   loading = false,
+  overlayClassName = "",
 }: SubmitBracketModalProps) {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
@@ -24,7 +27,14 @@ export default function SubmitBracketModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-200 flex items-center justify-center px-4">
+    <div
+      className={[
+        "fixed inset-0 z-200 flex items-center justify-center px-4",
+        overlayClassName,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <button
         type="button"
         aria-label="Close modal"

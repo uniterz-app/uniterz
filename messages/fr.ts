@@ -296,6 +296,7 @@ const fr: Messages = {
     streakBonusLabel: "Bonus de série",
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
+    wcPkWinnerLabel: "PK winner",
     scorePrecisionLabel: "Précision du score",
     upsetPointsLabel: "Points surprise",
     totalPointsLabel: "Points totaux",

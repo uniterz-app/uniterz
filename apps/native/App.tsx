@@ -18,6 +18,7 @@ import { navigationRef } from "./src/navigation/navigationRef";
 import { useNativeShareDeepLinks } from "./src/navigation/useNativeShareDeepLinks";
 import AppShellNative from "./src/components/AppShellNative";
 import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
+import CyberAlertProvider from "./src/components/CyberAlertProvider";
 import { NATIVE_PAGE_SURFACE_COLOR } from "./src/features/background/nativeBackgroundPalette";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
 
@@ -48,6 +49,7 @@ export default function App() {
         <MaintenanceGateNative>
         <FirebaseUserProvider>
           <NativeLanguageProvider>
+          <CyberAlertProvider>
           <AppShellNative>
             <NavigationContainer
               ref={navigationRef}
@@ -73,6 +75,7 @@ export default function App() {
               <StatusBar style="light" />
             </NavigationContainer>
           </AppShellNative>
+          </CyberAlertProvider>
           </NativeLanguageProvider>
         </FirebaseUserProvider>
         </MaintenanceGateNative>

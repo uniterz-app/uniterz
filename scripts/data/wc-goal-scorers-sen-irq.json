@@ -1,0 +1,11 @@
+{
+  "homeScore": 5,
+  "awayScore": 0,
+  "scorers": [
+    { "playerId": "sen-diarra", "teamId": "wc-sen", "minute": 4 },
+    { "playerId": "sen-sarr-3", "teamId": "wc-sen", "minute": 56 },
+    { "playerId": "sen-gueye-2", "teamId": "wc-sen", "minute": 59 },
+    { "playerId": "sen-gueye-2", "teamId": "wc-sen", "minute": 71 },
+    { "playerId": "sen-ndiaye-2", "teamId": "wc-sen", "minute": 82 }
+  ]
+}

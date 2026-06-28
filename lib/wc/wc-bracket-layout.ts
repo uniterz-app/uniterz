@@ -39,11 +39,22 @@ export const WC_BRACKET_LEFT_R16: readonly WcBracketPredictMatchId[] = [
   "M91",
   "M92",
 ];
+/** 右 R16 — 試合番号順（入力タブ・スコアリング） */
 export const WC_BRACKET_RIGHT_R16: readonly WcBracketPredictMatchId[] = [
   "M93",
   "M94",
   "M95",
   "M96",
+];
+/**
+ * 右 R16 — 縦ブラケット描画順（隣接 R32 ペアと一致）。
+ * M94←81/82, M93←83/84, M96←85/87, M95←86/88
+ */
+export const WC_BRACKET_RIGHT_R16_TREE: readonly WcBracketPredictMatchId[] = [
+  "M94",
+  "M93",
+  "M96",
+  "M95",
 ];
 export const WC_BRACKET_LEFT_QF: readonly WcBracketPredictMatchId[] = [
   "M97",

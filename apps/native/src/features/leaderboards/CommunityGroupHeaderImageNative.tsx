@@ -1,14 +1,8 @@
 /** グループヘッダー画像 — オーナーは変更・削除・位置調整が可能 */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  PanResponder,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+  ActivityIndicator, Image, PanResponder, Pressable, StyleSheet, Text, View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -181,14 +175,14 @@ export default function CommunityGroupHeaderImageNative({
         communityApiUrl
       );
       if (!result.ok) {
-        Alert.alert("", result.error || t.failed);
+        cyberAlert("", result.error || t.failed);
         return false;
       }
       onUpdated({
         headerImageUrl: result.group.headerImageUrl,
         headerImagePositionY: result.group.headerImagePositionY,
       });
-      if (message) Alert.alert("", message);
+      if (message) cyberAlert("", message);
       return true;
     },
     [fUser, getIdToken, groupId, name, description, onUpdated, t]
@@ -226,7 +220,7 @@ export default function CommunityGroupHeaderImageNative({
     if (!editable || busy) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("", t.photoRequired);
+      cyberAlert("", t.photoRequired);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -247,7 +241,7 @@ export default function CommunityGroupHeaderImageNative({
       });
       setMenuOpen(false);
     } catch {
-      Alert.alert("", t.failed);
+      cyberAlert("", t.failed);
     } finally {
       setBusy(false);
     }
@@ -277,7 +271,7 @@ export default function CommunityGroupHeaderImageNative({
       const ok = await commitPatch({ headerImageUrl: url, headerImagePositionY: positionY }, t.saved);
       if (ok) clearPending();
     } catch {
-      Alert.alert("", t.failed);
+      cyberAlert("", t.failed);
     } finally {
       setBusy(false);
     }
@@ -285,7 +279,7 @@ export default function CommunityGroupHeaderImageNative({
 
   const confirmRemove = useCallback(() => {
     if (!editable || busy || !headerImageUrl) return;
-    Alert.alert(
+    cyberAlert(
       "",
       language === "en" ? "Remove header image?" : "ヘッダー画像を削除しますか？",
       [

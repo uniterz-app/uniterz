@@ -2,7 +2,8 @@
  * サイドメニューから開くフルスクリーン in-app ページ群。
  */
 import { useMemo } from "react";
-import { Alert, Linking, Modal, Platform, StyleSheet, Text, View } from "react-native";
+import { cyberAlert } from "../../../components/cyberAlert";
+import { Linking, Modal, Platform, StyleSheet, Text, View } from "react-native";
 import type { ProfileMobileOverlayKind } from "./profileMobileOverlayTypes";
 import MobileBadgesScreen from "./MobileBadgesScreen";
 import MobileAnnouncementsScreen from "./MobileAnnouncementsScreen";
@@ -40,7 +41,7 @@ export default function ProfileMobileStackModal({
   const openWebPath = useMemo(
     () => (path: string) => {
       if (!apiBase) {
-        Alert.alert("", language === "ja" ? "Web URL が未設定です。" : "Web URL is not configured.");
+        cyberAlert("", language === "ja" ? "Web URL が未設定です。" : "Web URL is not configured.");
         return;
       }
       void Linking.openURL(`${apiBase.replace(/\/$/, "")}${path}`).catch(() => {});

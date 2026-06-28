@@ -132,6 +132,7 @@ export default function TopPodium({
   const warmProfileRoute = useCallback(
     (profileKey: string, row: RankingRowWithCountry, href: string, rank: number) => {
       markRankingsCountUpIntroPlayed();
+      // グループランキング行は「期間集計」値のため共有キャッシュには prime しない
       primeProfileCacheFromRankingRow(
         profileKey,
         row,
@@ -140,7 +141,8 @@ export default function TopPodium({
           metric,
           rank,
           participantCount,
-        }
+        },
+        groupReturnGroupId ? { skipStatsPrime: true } : undefined
       );
       if (groupReturnGroupId) {
         prefetchProfileStatsFromRoute(profileKey, statsContext);

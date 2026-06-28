@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { cyberAlert } from "../../components/cyberAlert";
+import { StyleSheet, Text, View } from "react-native";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
 import { MAX_MEMBERS_PER_GROUP } from "../../../../../lib/communities/limitValues";
@@ -336,7 +337,7 @@ export default function RankingsCommunityPanelNative({
         return;
       }
       closeJoinPreview();
-      Alert.alert("", m.community.joinedGroup);
+      cyberAlert("", m.community.joinedGroup);
       void fetchList();
     } finally {
       setJoinBusy(false);
@@ -346,7 +347,7 @@ export default function RankingsCommunityPanelNative({
   const onPasteJoin = useCallback(async (): Promise<string | null> => {
     const pasted = await pasteTextNative();
     if (!pasted) {
-      Alert.alert("", language === "en" ? "Could not read clipboard." : "クリップボードを読み取れませんでした。");
+      cyberAlert("", language === "en" ? "Could not read clipboard." : "クリップボードを読み取れませんでした。");
     }
     return pasted;
   }, [language]);

@@ -296,6 +296,7 @@ const de: Messages = {
     streakBonusLabel: "Serienbonus",
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
+    wcPkWinnerLabel: "PK winner",
     scorePrecisionLabel: "Ergebnisgenauigkeit",
     upsetPointsLabel: "Überraschungspunkte",
     totalPointsLabel: "Gesamtpunkte",

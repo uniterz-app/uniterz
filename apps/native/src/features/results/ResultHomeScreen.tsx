@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Platform,
-  Pressable,
-  RefreshControl,
-  SectionList,
-  StyleSheet,
-  Text,
-  View,
-  type LayoutChangeEvent,
-  type ViewStyle,
+  Platform, Pressable, RefreshControl, SectionList, StyleSheet, Text, View, type LayoutChangeEvent, type ViewStyle,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -36,8 +28,9 @@ import {
   MATCH_CARD_SCORE_FONT,
 } from "../games/matchCardTypography";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
+import { toCompactTeamName } from "../games/gameCardDisplayUtils";
 import type { PostWithMillis, ResultDayGroup } from "./nativeResultModel";
-import { canDismissResultListPostNow } from "./nativeResultModel";
+import { canDismissResultListPostNow, mergeResultDayPostsByKickoff } from "./nativeResultModel";
 import ResultListFiltersNative, {
   type ResultFilterState,
 } from "./ResultListFiltersNative";
@@ -98,6 +91,7 @@ import {
 } from "./useResultHomeEntrance";
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
+import WcTeamNameMobileNative from "../games/WcTeamNameMobileNative";
 import {
   formatTeamRecordLabelNative,
   useTeamRecordLineNative,
@@ -571,6 +565,12 @@ function ResultPostCard({
   const [awayL1, awayL2] = splitTeamNameByLeague(leagueKey, away?.name ?? "");
   const homeName = getMobileTeamName(leagueKey, home?.name ?? "", homeL1, homeL2);
   const awayName = getMobileTeamName(leagueKey, away?.name ?? "", awayL1, awayL2);
+  const homeCompact = isWcCard
+    ? toCompactTeamName(leagueKey, home?.name ?? "")
+    : homeName;
+  const awayCompact = isWcCard
+    ? toCompactTeamName(leagueKey, away?.name ?? "")
+    : awayName;
 
   const ph = pred?.score?.home;
   const pa = pred?.score?.away;
@@ -610,7 +610,7 @@ function ResultPostCard({
         appBaseUrl: getShareAppOrigin(),
       });
       if (shareOutcome === "failed") {
-        Alert.alert("", resultCopy.shareResultCardFailed);
+        cyberAlert("", resultCopy.shareResultCardFailed);
       }
     } finally {
       setSharing(false);
@@ -872,12 +872,18 @@ function ResultPostCard({
                   )}
                 </Animated.View>
                 <Animated.View style={entrance.homeTeamLabelStyle}>
-                  <Text
-                    style={[styles.teamName, isWcCard && styles.teamNameWc]}
-                    numberOfLines={1}
-                  >
-                    {homeName}
-                  </Text>
+                  {isWcCard ? (
+                    <WcTeamNameMobileNative
+                      name={homeCompact}
+                      fit
+                      containerStyle={styles.teamNameWcWrap}
+                      style={[styles.teamName, styles.teamNameWc]}
+                    />
+                  ) : (
+                    <Text style={styles.teamName} numberOfLines={1}>
+                      {homeName}
+                    </Text>
+                  )}
                 </Animated.View>
                 {isWcCard ? (
                   <Text style={styles.teamRecordText}>{homeWcRecordLabel}</Text>
@@ -909,12 +915,18 @@ function ResultPostCard({
                   )}
                 </Animated.View>
                 <Animated.View style={entrance.awayTeamLabelStyle}>
-                  <Text
-                    style={[styles.teamName, isWcCard && styles.teamNameWc]}
-                    numberOfLines={1}
-                  >
-                    {awayName}
-                  </Text>
+                  {isWcCard ? (
+                    <WcTeamNameMobileNative
+                      name={awayCompact}
+                      fit
+                      containerStyle={styles.teamNameWcWrap}
+                      style={[styles.teamName, styles.teamNameWc]}
+                    />
+                  ) : (
+                    <Text style={styles.teamName} numberOfLines={1}>
+                      {awayName}
+                    </Text>
+                  )}
                 </Animated.View>
                 {isWcCard ? (
                   <Text style={styles.teamRecordText}>{awayWcRecordLabel}</Text>
@@ -1198,7 +1210,7 @@ export default function ResultHomeScreen({
   const sections: SectionT[] = useMemo(() => {
     let baseFlatIndex = 0;
     return filteredGrouped.map((g: ResultDayGroup) => {
-      const data = [...g.pending, ...g.final];
+      const data = mergeResultDayPostsByKickoff(g);
       const section: SectionT = {
         title: g.dateLabel,
         dateLabel: g.dateLabel,
@@ -1328,7 +1340,7 @@ export default function ResultHomeScreen({
           : language === "en"
             ? "Could not delete."
             : "削除に失敗しました。";
-      Alert.alert(language === "en" ? "Error" : "エラー", msg);
+      cyberAlert(language === "en" ? "Error" : "エラー", msg);
     } finally {
       deleteSubmittingRef.current = false;
       setDeleteInProgress(false);
@@ -1906,7 +1918,7 @@ const styles = StyleSheet.create({
   },
   wcTeamStack: {
     alignItems: "center",
-    width: 67,
+    width: 88,
   },
   centerScoreOverlay: {
     position: "absolute",
@@ -1928,11 +1940,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     width: "100%",
   },
+  teamNameWcWrap: {
+    width: 88,
+    minHeight: 34,
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
   teamNameWc: {
-    width: 67,
+    width: 88,
+    maxWidth: 88,
     alignSelf: "center",
-    fontSize: 15,
-    letterSpacing: 1.04,
+    fontSize: 13,
+    lineHeight: 15,
+    paddingTop: 0,
+    letterSpacing: 0.35,
+    textTransform: "uppercase",
+    includeFontPadding: false,
   },
   teamRecordText: {
     fontSize: 11,

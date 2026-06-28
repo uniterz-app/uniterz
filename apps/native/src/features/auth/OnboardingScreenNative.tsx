@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
@@ -72,7 +67,7 @@ export default function OnboardingScreenNative() {
         );
       }
     } catch (e) {
-      Alert.alert("Error", "プロフィールの保存に失敗しました。");
+      cyberAlert("Error", "プロフィールの保存に失敗しました。");
     } finally {
       setSaving(false);
     }

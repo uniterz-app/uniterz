@@ -1,15 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
+import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -132,7 +124,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
   const pickImage = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("", language === "en" ? "Photo access is required." : "写真へのアクセスが必要です。");
+      cyberAlert("", language === "en" ? "Photo access is required." : "写真へのアクセスが必要です。");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -177,7 +169,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        Alert.alert("", String(json?.error ?? (language === "en" ? "Create failed." : "作成に失敗しました。")));
+        cyberAlert("", String(json?.error ?? (language === "en" ? "Create failed." : "作成に失敗しました。")));
         return;
       }
       const created = json.group as CreatedCommunityGroup | undefined;

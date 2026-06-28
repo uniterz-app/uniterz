@@ -7,6 +7,7 @@ import type {
 import { dateKeysFromStartToTodayJST } from "./dateRange";
 import { aggregateFromDailyTeams } from "./groupStatsTeams";
 import { resolveRankingStartDateKey } from "./rankingStartDate";
+import { readDailyWcStageBuckets } from "@/lib/rankings/dailyWcStageBuckets";
 
 export type MemberAgg = {
   totalPosts: number;
@@ -65,6 +66,21 @@ function dailyBucket(
     const all = data.all;
     return all && typeof all === "object"
       ? (all as Record<string, unknown>)
+      : undefined;
+  }
+  /**
+   * WC: プロフィール（rankingByWcStage.overall）と同じバケットを使う。
+   * leagues.wc はランキング対象外投稿も含むため 1〜2 点ずれることがある。
+   */
+  if (league === "wc") {
+    const overall = readDailyWcStageBuckets(data).overall;
+    if (Number(overall.posts ?? 0) > 0) {
+      return overall as Record<string, unknown>;
+    }
+    const leagues = data.leagues as Record<string, unknown> | undefined;
+    const legacy = leagues?.wc;
+    return legacy && typeof legacy === "object"
+      ? (legacy as Record<string, unknown>)
       : undefined;
   }
   const leagues = data.leagues as Record<string, unknown> | undefined;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, Alert } from "react-native";
+import { cyberAlert } from "../../components/cyberAlert";
+import { Platform } from "react-native";
 import {
   initConnection,
   endConnection,
@@ -81,7 +82,7 @@ export function useNativeIap() {
         pendingResolveRef.current?.(true);
       } catch {
         pendingResolveRef.current?.(false);
-        Alert.alert("購入エラー", "購入の検証に失敗しました。");
+        cyberAlert("購入エラー", "購入の検証に失敗しました。");
       } finally {
         pendingResolveRef.current = null;
         setPurchasing(false);
@@ -98,7 +99,7 @@ export function useNativeIap() {
       pendingResolveRef.current?.(false);
       pendingResolveRef.current = null;
       setPurchasing(false);
-      Alert.alert("購入エラー", "購入処理に失敗しました。");
+      cyberAlert("購入エラー", "購入処理に失敗しました。");
     });
 
     return () => {
@@ -123,7 +124,7 @@ export function useNativeIap() {
         });
       } catch {
         setPurchasing(false);
-        Alert.alert("購入エラー", "購入処理に失敗しました。");
+        cyberAlert("購入エラー", "購入処理に失敗しました。");
         return false;
       }
     },
@@ -139,16 +140,16 @@ export function useNativeIap() {
         SKU_LIST.includes(p.productId as (typeof SKU_LIST)[number])
       );
       if (valid.length === 0) {
-        Alert.alert("", "復元可能な購入がありません。");
+        cyberAlert("", "復元可能な購入がありません。");
         return false;
       }
       for (const p of valid) {
         await verifyOnServer(p);
       }
-      Alert.alert("", "購入を復元しました。");
+      cyberAlert("", "購入を復元しました。");
       return true;
     } catch {
-      Alert.alert("エラー", "復元に失敗しました。");
+      cyberAlert("エラー", "復元に失敗しました。");
       return false;
     } finally {
       setPurchasing(false);

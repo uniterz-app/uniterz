@@ -8,6 +8,7 @@ import {
   validateWcGoalScorerPickForGame,
   type WcGoalScorerPick,
 } from "@/lib/wc/goalScorer";
+import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
 import { FieldValue } from "firebase-admin/firestore";
 
 /* ========= 認証 ========= */
@@ -116,7 +117,8 @@ type PredictionPatch = {
 
 function parsePredictionPatch(
   raw: unknown,
-  league: unknown
+  league: unknown,
+  knockout: boolean
 ): { ok: true; prediction: PredictionPatch; rawGoalScorer: unknown } | { ok: false; error: string } {
   const soccer = isSoccerLeague(league);
   const p = (raw as any)?.prediction ?? raw;
@@ -135,6 +137,25 @@ function parsePredictionPatch(
     away < 0
   )
     return { ok: false, error: "score invalid" };
+
+  if (knockout) {
+    // ノックアウト: 引き分け結果は不可。同点スコアは PK 決着として許可（勝者は進出側）
+    if (winner === "draw")
+      return { ok: false, error: "draw result not allowed in knockout stage" };
+    if (winner === "home" && home < away)
+      return { ok: false, error: "home advance requires home score >= away" };
+    if (winner === "away" && away < home)
+      return { ok: false, error: "away advance requires away score >= home" };
+    return {
+      ok: true,
+      prediction: {
+        winner: winner as "home" | "away" | "draw",
+        score: { home, away },
+      },
+      rawGoalScorer: (p as any).goalScorer,
+    };
+  }
+
   if (!soccer && winner === "draw")
     return { ok: false, error: "draw not allowed for this league" };
   if (winner === "home" && home <= away)
@@ -180,14 +201,6 @@ export async function PATCH(req: NextRequest, ctx: any) {
       return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
 
     if (body.prediction != null) {
-      const parsed = parsePredictionPatch(body.prediction, data.league);
-      if (!parsed.ok) {
-        return NextResponse.json(
-          { ok: false, error: parsed.error },
-          { status: 400 }
-        );
-      }
-
       const league = String(data.league ?? "").toLowerCase();
       const gameSnap = await getAdminDb()
         .collection("games")
@@ -196,6 +209,21 @@ export async function PATCH(req: NextRequest, ctx: any) {
       const g = gameSnap.exists ? gameSnap.data() : null;
       const homeTeamId = g?.home?.teamId ?? g?.homeTeamId ?? data.home?.teamId ?? null;
       const awayTeamId = g?.away?.teamId ?? g?.awayTeamId ?? data.away?.teamId ?? null;
+
+      const isKnockout = isWcKnockoutGame({
+        league,
+        knockout: g?.knockout ?? null,
+        roundLabel: g?.roundLabel ?? null,
+        wcStage: g?.wcStage ?? data.wcStage ?? null,
+      });
+
+      const parsed = parsePredictionPatch(body.prediction, data.league, isKnockout);
+      if (!parsed.ok) {
+        return NextResponse.json(
+          { ok: false, error: parsed.error },
+          { status: 400 }
+        );
+      }
 
       const rawGoalScorer = parsed.rawGoalScorer;
       const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);

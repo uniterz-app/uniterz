@@ -4614,6 +4614,71 @@ body::before {
   opacity: 0.9;
 }
 
+/* CyberTooltip — 軽い入場・グリッチ・スキャン */
+@keyframes cyber-tooltip-scan-sweep {
+  0% {
+    transform: translateX(-140%);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateX(340%);
+    opacity: 0;
+  }
+}
+
+@keyframes cyber-tooltip-title-glitch-a {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate(-1.5px, 1.5px);
+  }
+  48% {
+    opacity: 0.68;
+    transform: translate(-2px, 1px);
+  }
+}
+
+@keyframes cyber-tooltip-title-glitch-b {
+  0%,
+  100% {
+    opacity: 0.24;
+    transform: translate(1px, -1px);
+  }
+  52% {
+    opacity: 0.36;
+    transform: translate(1.5px, -1.5px);
+  }
+}
+
+@keyframes cyber-tooltip-title-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px var(--cyber-tooltip-accent, #22d3ee));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px var(--cyber-tooltip-accent, #22d3ee));
+  }
+}
+
+.cyber-tooltip-scan-sweep {
+  animation: cyber-tooltip-scan-sweep 1.1s ease-out 0.08s 1 both;
+}
+
+.cyber-tooltip-title-glitch-a {
+  animation: cyber-tooltip-title-glitch-a 2.6s ease-in-out infinite;
+}
+
+.cyber-tooltip-title-glitch-b {
+  animation: cyber-tooltip-title-glitch-b 2.6s ease-in-out infinite;
+}
+
+.cyber-tooltip-title-glow {
+  animation: cyber-tooltip-title-glow 2.4s ease-in-out infinite;
+}
+
 @keyframes kinetik-streak-rib-pulse {
   0%,
   100% {
@@ -4982,4 +5047,457 @@ body::before {
     .profile-edit-kinetik-avatar__rib::after {
     opacity: 0.72;
   }
+}
+
+/* WC ブラケット提出ボタン — 角切り HUD */
+/* WC ブラケット入力カード — サイバー HUD 2 行 */
+.wc-bracket-match-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #06080c;
+}
+
+.wc-bracket-match-row {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.wc-bracket-match-row--compact {
+  gap: 10px;
+  padding: 14px 14px 14px 0;
+}
+
+.wc-bracket-match-row:not(.wc-bracket-match-row--compact) {
+  padding: 16px 18px 16px 0;
+}
+
+.wc-bracket-match-row--pickable {
+  cursor: pointer;
+}
+
+.wc-bracket-match-row--pickable:hover:not(.wc-bracket-match-row--selected) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.wc-bracket-match-row--pickable:active:not(.wc-bracket-match-row--selected) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.wc-bracket-match-row--dim {
+  opacity: 0.42;
+}
+
+.wc-bracket-match-row--selected {
+  background: rgba(57, 255, 126, 0.055);
+}
+
+.wc-bracket-match-row__bar {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 5px;
+  background: #39ff7e;
+  box-shadow:
+    0 0 8px rgba(57, 255, 126, 0.75),
+    0 0 16px rgba(57, 255, 126, 0.28);
+}
+
+.wc-bracket-match-row__bar-spacer {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 5px;
+}
+
+.wc-bracket-match-row__qual {
+  flex-shrink: 0;
+  width: 32px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.34);
+  text-align: center;
+}
+
+.wc-bracket-match-row--compact .wc-bracket-match-row__qual {
+  width: 30px;
+  font-size: 12px;
+}
+
+.wc-bracket-match-row__flag {
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.wc-bracket-match-row__flag--compact {
+  width: 30px;
+  height: 22px;
+}
+
+.wc-bracket-match-row__flag:not(.wc-bracket-match-row__flag--compact) {
+  width: 34px;
+  height: 25px;
+}
+
+.wc-bracket-match-row__flag-placeholder {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.wc-bracket-match-row__flag-placeholder--compact {
+  width: 30px;
+  height: 22px;
+}
+
+.wc-bracket-match-row__flag-placeholder:not(.wc-bracket-match-row__flag-placeholder--compact) {
+  width: 34px;
+  height: 25px;
+}
+
+.wc-bracket-match-row__name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.wc-bracket-match-row--compact .wc-bracket-match-row__name {
+  font-size: 13px;
+  letter-spacing: 0.07em;
+}
+
+.wc-bracket-match-row--selected .wc-bracket-match-row__name {
+  color: #39ff7e;
+  text-shadow: 0 0 10px rgba(57, 255, 126, 0.28);
+}
+
+.wc-bracket-match-card__divider {
+  height: 1px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* WC ブラケット — リーダーボード行（黒地 + シアン外枠） */
+button.wc-bracket-user-card,
+div.wc-bracket-user-card {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.5px solid #00f5ff;
+  background: #000000;
+  box-shadow:
+    0 0 6px rgba(0, 245, 255, 0.28),
+    0 0 12px rgba(0, 245, 255, 0.1),
+    inset 0 1px 0 rgba(0, 245, 255, 0.28);
+}
+
+button.wc-bracket-user-card--out,
+div.wc-bracket-user-card--out {
+  border: 1.5px solid rgba(255, 255, 255, 0.34);
+  background: #050505;
+  box-shadow:
+    0 0 4px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+button.wc-bracket-user-card--interactive,
+div.wc-bracket-user-card--interactive {
+  cursor: default;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+button.wc-bracket-user-card--interactive:hover,
+div.wc-bracket-user-card--interactive:hover {
+  border-color: #4dfbff;
+  background: #020608;
+  box-shadow:
+    0 0 8px rgba(0, 245, 255, 0.38),
+    0 0 16px rgba(0, 245, 255, 0.14),
+    inset 0 1px 0 rgba(0, 245, 255, 0.35);
+}
+
+button.wc-bracket-user-card--interactive:active,
+div.wc-bracket-user-card--interactive:active {
+  transform: scale(0.995);
+}
+
+/* WC チャンピオン — 国旗のみ（外枠なし） */
+.wc-champion-card__flag {
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.22);
+}
+
+.wc-champion-card__flag-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.06);
+}
+
+/* WC ブラケットツリー — 外枠（角切り・padding で border を clip-path から切らない） */
+.wc-bracket-tree-shell {
+  position: relative;
+  isolation: isolate;
+  padding: 1px;
+  background: rgba(34, 211, 238, 0.52);
+  clip-path: polygon(
+    10px 0%,
+    100% 0%,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0% 100%,
+    0% 10px
+  );
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.16);
+}
+
+.wc-bracket-tree-shell__inner {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  clip-path: polygon(
+    9px 0%,
+    100% 0%,
+    100% calc(100% - 9px),
+    calc(100% - 9px) 100%,
+    0% 100%,
+    0% 9px
+  );
+}
+
+/* WC ブラケットツリー — 背景（参考 HUD・中央円なし） */
+.wc-bracket-tree-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+/* ディープスペースの黒（ほぼ漆黒・微かな紺/紫） */
+.wc-bracket-tree-bg__base {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, #0a0a1a 0%, #04040c 46%, #010104 100%),
+    #010104;
+}
+
+/* 星雲（faint nebula clouds） */
+.wc-bracket-tree-bg__nebula {
+  position: absolute;
+  pointer-events: none;
+}
+
+.wc-bracket-tree-bg__nebula--violet {
+  top: -10%;
+  left: 50%;
+  width: 130%;
+  height: 60%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse 70% 64% at 38% 22%,
+    rgba(124, 58, 237, 0.22) 0%,
+    rgba(79, 70, 229, 0.1) 38%,
+    transparent 70%
+  );
+  filter: blur(46px);
+}
+
+.wc-bracket-tree-bg__nebula--teal {
+  bottom: -14%;
+  left: 50%;
+  width: 130%;
+  height: 60%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse 72% 62% at 64% 82%,
+    rgba(13, 148, 136, 0.2) 0%,
+    rgba(8, 145, 178, 0.1) 40%,
+    transparent 72%
+  );
+  filter: blur(52px);
+}
+
+/* 中央のごく淡いコアグロー */
+.wc-bracket-tree-bg__nebula--core {
+  top: 50%;
+  left: 50%;
+  width: 96%;
+  height: 56%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse 60% 56% at 50% 50%,
+    rgba(99, 102, 241, 0.12) 0%,
+    rgba(56, 189, 248, 0.06) 42%,
+    transparent 74%
+  );
+  filter: blur(40px);
+}
+
+/* 星空レイヤー（多重 radial-gradient のドット） */
+.wc-bracket-tree-bg__stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: repeat;
+}
+
+/* 遠い小さな星（密・淡い・ゆっくり瞬き） */
+.wc-bracket-tree-bg__stars--far {
+  background-image:
+    radial-gradient(1px 1px at 12px 24px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 64px 88px, rgba(186, 230, 253, 0.6), transparent),
+    radial-gradient(1px 1px at 130px 40px, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 180px 120px, rgba(221, 214, 254, 0.6), transparent),
+    radial-gradient(1px 1px at 30px 160px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 110px 190px, rgba(255, 255, 255, 0.6), transparent);
+  background-size: 220px 220px;
+  opacity: 0.7;
+  animation: wc-tree-twinkle 5.5s ease-in-out infinite;
+}
+
+/* 中間の星（中程度・やや明るい） */
+.wc-bracket-tree-bg__stars--mid {
+  background-image:
+    radial-gradient(1.4px 1.4px at 48px 60px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1.4px 1.4px at 150px 30px, rgba(191, 219, 254, 0.85), transparent),
+    radial-gradient(1.4px 1.4px at 200px 150px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1.4px 1.4px at 90px 220px, rgba(224, 231, 255, 0.8), transparent),
+    radial-gradient(1.4px 1.4px at 260px 100px, rgba(255, 255, 255, 0.78), transparent);
+  background-size: 320px 300px;
+  opacity: 0.85;
+  animation: wc-tree-twinkle 7s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+/* 近い明るい星（疎・グロー付き） */
+.wc-bracket-tree-bg__stars--near {
+  background-image:
+    radial-gradient(2px 2px at 70px 90px, rgba(255, 255, 255, 1), transparent),
+    radial-gradient(2px 2px at 320px 60px, rgba(199, 210, 254, 0.95), transparent),
+    radial-gradient(2px 2px at 240px 280px, rgba(255, 255, 255, 0.95), transparent),
+    radial-gradient(2px 2px at 30px 330px, rgba(186, 230, 253, 0.9), transparent);
+  background-size: 440px 420px;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.5));
+  animation: wc-tree-twinkle 4.5s ease-in-out infinite;
+  animation-delay: -1s;
+}
+
+@keyframes wc-tree-twinkle {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wc-bracket-tree-bg__stars {
+    animation: none;
+  }
+}
+
+/* 端を漆黒に沈めるビネット */
+.wc-bracket-tree-bg__vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 96% 92% at 50% 48%, transparent 30%, rgba(1, 1, 4, 0.92) 100%),
+    linear-gradient(180deg, rgba(1, 1, 4, 0.7) 0%, transparent 20%, transparent 80%, rgba(1, 1, 4, 0.7) 100%);
+}
+
+/* 上部ヘッダー（UNITERZ / ROUND OF 32 BRACKET） */
+.wc-bracket-tree-bg__header {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.wc-bracket-tree-bg__brand {
+  font-family: var(--font-auth-condensed), "Bebas Neue", ui-sans-serif, sans-serif;
+  font-size: clamp(30px, 8.5vw, 42px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.26em;
+  /* letter-spacing で右に寄る分を視覚的に中央へ */
+  text-indent: 0.26em;
+  color: rgba(244, 244, 255, 0.96);
+  text-shadow:
+    0 0 12px rgba(165, 180, 252, 0.7),
+    0 0 30px rgba(99, 102, 241, 0.45);
+}
+
+.wc-bracket-tree-bg__heading {
+  font-size: clamp(9px, 2.8vw, 11px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: rgba(186, 230, 253, 0.7);
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+/* WC ブラケットツリー — 勝ち上がり接続線（サイバーグリーン） */
+.wc-bracket-tree-line__glow {
+  fill: none;
+  stroke: rgba(52, 211, 153, 0.32);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.wc-bracket-tree-line__core {
+  fill: none;
+  stroke: rgba(110, 231, 183, 0.78);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
 }

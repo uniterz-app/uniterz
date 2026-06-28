@@ -294,6 +294,7 @@ const ja = {
     streakBonusLabel: "連勝ボーナス",
     goalScorerBonusLabel: "得点者ボーナス",
     wcGoalScorerLabel: "ゴールする選手",
+    wcPkWinnerLabel: "PKで勝つチーム",
     scorePrecisionLabel: "スコア精度",
     upsetPointsLabel: "アップセット",
     totalPointsLabel: "総合得点",

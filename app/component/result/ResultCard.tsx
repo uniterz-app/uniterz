@@ -16,7 +16,7 @@ import { resultCardFlyoutButtonClasses } from "@/lib/ui/cyberMenuButton";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
-import { splitTeamNameByLeague, joinTeamNameLines } from "@/lib/team-name-split";
+import { splitTeamNameByLeague, splitWcCountryNameForMobileList } from "@/lib/team-name-split";
 import {
   getTeamPrimaryColor,
   getTeamJerseyPrimaryColor,
@@ -42,6 +42,8 @@ import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
+  useWcPkWinnerResult,
+  WcPkWinnerResultRow,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
 import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
@@ -94,6 +96,35 @@ export type ResultCardPresentationProps = Props & {
   listDateLabel?: string;
 };
 
+/** Web 試合カード `renderWcMobileDenseTeamName` と同じ — 長い WC 国名のみ 2 行 */
+function renderWcResultTeamName(
+  fullName: string,
+  textClass: string,
+  fontStyle: React.CSSProperties
+) {
+  const split = splitWcCountryNameForMobileList(fullName.trim().toUpperCase());
+  if (!split.singleLine) {
+    return (
+      <>
+        <span className={`block font-bold ${textClass}`} style={fontStyle}>
+          {split.line1}
+        </span>
+        <span className={`block font-bold ${textClass}`} style={fontStyle}>
+          {split.line2}
+        </span>
+      </>
+    );
+  }
+  return (
+    <span
+      className={`block whitespace-nowrap font-bold ${textClass}`}
+      style={fontStyle}
+    >
+      {split.text}
+    </span>
+  );
+}
+
 function ResultCardPresentationImpl({
   post,
   href,
@@ -120,6 +151,7 @@ function ResultCardPresentationImpl({
   const m = t(language);
   const isEn = language === "en";
   const wcGoalScorer = useWcGoalScorerResult(post);
+  const wcPkWinner = useWcPkWinnerResult(post);
 
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
@@ -592,12 +624,11 @@ function ResultCardPresentationImpl({
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
                 >
-                  <span
-                    className={`block max-w-full whitespace-nowrap font-bold ${wcNameTextClass}`}
-                    style={displayTeamNameFont}
-                  >
-                    {joinTeamNameLines(homeL1, homeL2)}
-                  </span>
+                  {renderWcResultTeamName(
+                    post.home?.name ?? "",
+                    wcNameTextClass,
+                    displayTeamNameFont
+                  )}
                 </div>
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
@@ -668,12 +699,11 @@ function ResultCardPresentationImpl({
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
                 >
-                  <span
-                    className={`block whitespace-nowrap font-bold ${wcNameTextClass}`}
-                    style={displayTeamNameFont}
-                  >
-                    {joinTeamNameLines(homeL1, homeL2)}
-                  </span>
+                  {renderWcResultTeamName(
+                    post.home?.name ?? "",
+                    wcNameTextClass,
+                    displayTeamNameFont
+                  )}
                 </div>
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
@@ -725,12 +755,11 @@ function ResultCardPresentationImpl({
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
                 >
-                  <span
-                    className={`block max-w-full whitespace-nowrap font-bold ${wcNameTextClass}`}
-                    style={displayTeamNameFont}
-                  >
-                    {joinTeamNameLines(awayL1, awayL2)}
-                  </span>
+                  {renderWcResultTeamName(
+                    post.away?.name ?? "",
+                    wcNameTextClass,
+                    displayTeamNameFont
+                  )}
                 </div>
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
@@ -801,12 +830,11 @@ function ResultCardPresentationImpl({
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
                 >
-                  <span
-                    className={`block whitespace-nowrap font-bold ${wcNameTextClass}`}
-                    style={displayTeamNameFont}
-                  >
-                    {joinTeamNameLines(awayL1, awayL2)}
-                  </span>
+                  {renderWcResultTeamName(
+                    post.away?.name ?? "",
+                    wcNameTextClass,
+                    displayTeamNameFont
+                  )}
                 </div>
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
@@ -921,6 +949,14 @@ function ResultCardPresentationImpl({
             : "space-y-1",
         ].join(" ")}
       >
+        {wcPkWinner ? (
+          <WcPkWinnerResultRow
+            label={m.results.wcPkWinnerLabel}
+            info={wcPkWinner}
+            compact={isMobile}
+          />
+        ) : null}
+
         {wcGoalScorer ? (
           <WcGoalScorerResultRow
             label={m.results.wcGoalScorerLabel}
@@ -935,7 +971,7 @@ function ResultCardPresentationImpl({
             language={language}
             isMobile={isMobile}
             ratingBarsImmediate={ratingBarsImmediate}
-            rowIndexOffset={wcGoalScorer ? 1 : 0}
+            rowIndexOffset={(wcGoalScorer ? 1 : 0) + (wcPkWinner ? 1 : 0)}
             animationsOff={visualEffectsLite}
           />
         )}
