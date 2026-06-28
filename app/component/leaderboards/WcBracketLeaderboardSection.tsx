@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Undo2 } from "lucide-react";
 
@@ -24,17 +24,21 @@ import {
 } from "@/lib/wc/wc-bracket-firestore";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import { isWcBracketComplete } from "@/lib/wc/wc-knockout-bracket";
-import WcBracketTreeInput from "@/app/component/predict/wc/WcBracketTreeInput";
+import WcFullBracketMobile from "@/app/component/predict/wc/WcFullBracketMobile";
 import WcBracketInputMobile from "@/app/component/predict/wc/WcBracketInputMobile";
 import WcBracketStartPromptModal from "@/app/component/predict/wc/WcBracketStartPromptModal";
 import WcBracketViewTabs, {
   type WcBracketViewMode,
 } from "@/app/component/leaderboards/WcBracketViewTabs";
 import WcBracketMarket from "@/app/component/predict/market/WcBracketMarket";
-import { WC_DEMO_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-demo-advancement";
+import { useWcKnockoutAdvancement } from "@/lib/wc/useWcKnockoutAdvancement";
+import { useWcBracketResults } from "@/lib/wc/useWcBracketResults";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
+import {
+  RANKINGS_WC_BRACKET_INPUT_PARAM,
+} from "@/lib/navigation/rankingsProfileFrom";
 
 type Props = {
   season?: string;
@@ -52,10 +56,12 @@ export default function WcBracketLeaderboardSection({
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isMobile =
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const season = propSeason ?? WC_KNOCKOUT_SEASON;
+  const { advancement: knockoutAdvancement } = useWcKnockoutAdvancement(season);
   const submissionOpen = isWcKnockoutBracketSubmissionOpen(season);
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
   const { loading, error, rows, myRow, refetch } =
@@ -73,6 +79,9 @@ export default function WcBracketLeaderboardSection({
   const [submissionPromptOpen, setSubmissionPromptOpen] = useState(false);
   const [inputPageOpen, setInputPageOpen] = useState(false);
   const [viewMode, setViewMode] = useState<WcBracketViewMode>("survivor");
+  const { winners: officialWinners } = useWcBracketResults(season, {
+    pollIntervalMs: viewMode === "survivor" ? 30_000 : 0,
+  });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -125,14 +134,21 @@ export default function WcBracketLeaderboardSection({
   const inputOverlayOpen = inputPageOpen && submissionOpen && !savedLoading;
 
   useEffect(() => {
-    if (!showInputGate) {
-      setSubmissionPromptOpen(false);
-      return;
-    }
-    if (!inputPageOpen) {
-      setSubmissionPromptOpen(true);
-    }
-  }, [showInputGate, inputPageOpen]);
+    if (searchParams.get(RANKINGS_WC_BRACKET_INPUT_PARAM) !== "1") return;
+    if (!submissionOpen || savedLoading || hasSubmitted) return;
+    setInputPageOpen(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete(RANKINGS_WC_BRACKET_INPUT_PARAM);
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [
+    searchParams,
+    submissionOpen,
+    savedLoading,
+    hasSubmitted,
+    pathname,
+    router,
+  ]);
 
   const [selectedRow, setSelectedRow] = useState<WcBracketLeaderboardRow | null>(
     null
@@ -407,6 +423,7 @@ export default function WcBracketLeaderboardSection({
         <WcBracketStartPromptModal
           open={submissionPromptOpen}
           language={language}
+          season={season}
           onClose={() => setSubmissionPromptOpen(false)}
           onStart={() => {
             setSubmissionPromptOpen(false);
@@ -471,7 +488,7 @@ export default function WcBracketLeaderboardSection({
                 >
                   <WcBracketInputMobile
                     bracket={draftBracket}
-                    advancement={WC_DEMO_KNOCKOUT_ADVANCEMENT}
+                    advancement={knockoutAdvancement}
                     onBracketChange={setDraftBracket}
                     onSubmitClick={() => setSubmitOpen(true)}
                     language={language}
@@ -557,10 +574,15 @@ export default function WcBracketLeaderboardSection({
                       ) : overlayBracket ? (
                         <>
                           <div className="relative z-20 border-t border-white/10 px-2 pt-1">
-                            <WcBracketTreeInput
+                            <WcFullBracketMobile
                               bracket={overlayBracket}
-                              advancement={WC_DEMO_KNOCKOUT_ADVANCEMENT}
+                              advancement={knockoutAdvancement}
+                              officialWinners={officialWinners}
+                              firstMissMatchId={
+                                selectedRow.firstMissMatchId ?? null
+                              }
                               language={language}
+                              showGlassShell={false}
                             />
                           </div>
                           {isMobile ? (

@@ -6,6 +6,8 @@ import {
   aggregateWcBracketMarketFromBrackets,
   type WcBracketMarketData,
 } from "@/lib/wc/wc-bracket-market-aggregate";
+import { loadWcKnockoutAdvancement } from "@/lib/wc/wc-knockout-advancement-server";
+import { loadWcOfficialWinners } from "@/lib/wc/wc-bracket-results-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,7 +45,14 @@ export async function GET(req: Request) {
       brackets.push(bracket);
     }
 
-    const market = aggregateWcBracketMarketFromBrackets(brackets, season);
+    const advancement = await loadWcKnockoutAdvancement(season);
+    const officialWinners = await loadWcOfficialWinners(season);
+    const market = aggregateWcBracketMarketFromBrackets(
+      brackets,
+      season,
+      advancement,
+      officialWinners
+    );
 
     return NextResponse.json(
       { ok: true, market } satisfies ApiResponse,

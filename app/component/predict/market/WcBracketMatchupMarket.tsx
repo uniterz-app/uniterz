@@ -11,7 +11,7 @@ import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { pickCountForTeam } from "@/lib/wc/wc-bracket-market-aggregate";
-import { WC_DEMO_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-demo-advancement";
+import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
 import { resolveWcQualLabelToTeamId } from "@/lib/wc/wc-knockout-bracket-utils";
 import { coerceWcTeamId, teamIdToCountryName } from "@/lib/wc/wcCountry";
 import {
@@ -22,6 +22,7 @@ import type { WcMatchupMarketEntry } from "@/lib/wc/wc-bracket-market-aggregate"
 
 type Props = {
   entries: WcMatchupMarketEntry[];
+  advancement: WcKnockoutAdvancement;
   language?: Language;
 };
 
@@ -34,11 +35,12 @@ function percent(count: number, total: number) {
 
 function teamDisplayName(
   teamId: string | null,
-  fallbackLabel: string
+  fallbackLabel: string,
+  advancement: WcKnockoutAdvancement
 ): string {
   const resolvedId =
     (teamId ? coerceWcTeamId(teamId) ?? teamId : null) ??
-    resolveWcQualLabelToTeamId(fallbackLabel, WC_DEMO_KNOCKOUT_ADVANCEMENT);
+    resolveWcQualLabelToTeamId(fallbackLabel, advancement);
   const id = resolvedId ? coerceWcTeamId(resolvedId) ?? resolvedId : null;
   if (id) {
     return (
@@ -51,11 +53,12 @@ function teamDisplayName(
 
 function flagTeamId(
   teamId: string | null,
-  fallbackLabel: string
+  fallbackLabel: string,
+  advancement: WcKnockoutAdvancement
 ): string | null {
   const resolved =
     (teamId ? coerceWcTeamId(teamId) ?? teamId : null) ??
-    resolveWcQualLabelToTeamId(fallbackLabel, WC_DEMO_KNOCKOUT_ADVANCEMENT);
+    resolveWcQualLabelToTeamId(fallbackLabel, advancement);
   if (!resolved) return null;
   return coerceWcTeamId(resolved) ?? resolved;
 }
@@ -79,7 +82,7 @@ function FlagBadge({
 }) {
   if (teamId) {
     return (
-      <span className="inline-flex h-7 w-10 overflow-hidden rounded-[2px] ring-1 ring-white/20 sm:h-8 sm:w-11">
+      <span className="inline-flex h-9 w-12 overflow-hidden rounded-[2px] ring-1 ring-white/20 sm:h-10 sm:w-14">
         <CountryFlag
           teamId={flagTeamId(teamId)}
           variant="inline"
@@ -89,7 +92,7 @@ function FlagBadge({
     );
   }
   return (
-    <span className="inline-flex h-7 w-10 items-center justify-center rounded-[2px] border border-dashed border-white/20 bg-white/4 text-[8px] font-bold tracking-wider text-white/35 sm:h-8 sm:w-11">
+    <span className="inline-flex h-9 w-12 items-center justify-center rounded-[2px] border border-dashed border-white/20 bg-white/4 text-[8px] font-bold tracking-wider text-white/35 sm:h-10 sm:w-14">
       {label.slice(0, 4)}
     </span>
   );
@@ -116,15 +119,17 @@ function DuelSplitBar({ pctA, pctB }: { pctA: number; pctB: number }) {
 function MatchupCard({
   entry,
   index,
+  advancement,
 }: {
   entry: WcMatchupMarketEntry;
   index: number;
+  advancement: WcKnockoutAdvancement;
 }) {
-  const homeName = teamDisplayName(entry.homeTeamId, entry.homeLabel);
-  const awayName = teamDisplayName(entry.awayTeamId, entry.awayLabel);
+  const homeName = teamDisplayName(entry.homeTeamId, entry.homeLabel, advancement);
+  const awayName = teamDisplayName(entry.awayTeamId, entry.awayLabel, advancement);
 
-  const homeId = flagTeamId(entry.homeTeamId, entry.homeLabel);
-  const awayId = flagTeamId(entry.awayTeamId, entry.awayLabel);
+  const homeId = flagTeamId(entry.homeTeamId, entry.homeLabel, advancement);
+  const awayId = flagTeamId(entry.awayTeamId, entry.awayLabel, advancement);
 
   const countA = pickCountForTeam(entry.winnerPickCounts, homeId);
   const countB = pickCountForTeam(entry.winnerPickCounts, awayId);
@@ -208,6 +213,7 @@ function MatchupCard({
 
 export default function WcBracketMatchupMarket({
   entries,
+  advancement,
   language = "ja",
 }: Props) {
   const m = t(language);
@@ -248,7 +254,12 @@ export default function WcBracketMatchupMarket({
       ) : (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {phaseEntries.map((entry, index) => (
-            <MatchupCard key={entry.matchId} entry={entry} index={index} />
+            <MatchupCard
+              key={entry.matchId}
+              entry={entry}
+              index={index}
+              advancement={advancement}
+            />
           ))}
         </div>
       )}

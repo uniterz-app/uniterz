@@ -14,12 +14,19 @@ import {
   getWcKnockoutMatch,
 } from "@/lib/wc/wc-knockout-bracket";
 import { resolveThirdPlaceTeamForWinnerSlot } from "@/lib/wc/wc-knockout-third-place";
+import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
+
+export type WcResolveParticipantsOptions = {
+  officialWinners?: WcOfficialWinners | null;
+  /** true のとき winner_feed は公式勝者を優先（R16+ 表示用） */
+  preferOfficialFeeders?: boolean;
+};
 
 export type WcResolvedParticipant = {
   /** 未確定の winner_feed などは空文字 */
   teamId: string;
   label: string;
-  source: "group" | "third_place" | "bracket_pick";
+  source: "group" | "third_place" | "bracket_pick" | "official";
 };
 
 export type WcKnockoutAdvancement = {
@@ -102,8 +109,25 @@ function teamIdFromThirdPlaceSlot(
 function resolveWcFeederParticipant(
   bracket: WcBracketState,
   feederMatchId: WcKnockoutMatchId,
-  advancement: WcKnockoutAdvancement
+  advancement: WcKnockoutAdvancement,
+  options?: WcResolveParticipantsOptions
 ): WcResolvedParticipant {
+  const preferOfficial = options?.preferOfficialFeeders === true;
+  const official =
+    options?.officialWinners?.[
+      feederMatchId as WcBracketPredictMatchId
+    ]?.trim() ?? "";
+
+  if (preferOfficial && official) {
+    return {
+      teamId: official,
+      label:
+        resolveWcTeamQualLabel(official, advancement) ||
+        `W${feederMatchId.slice(1)}`,
+      source: "official",
+    };
+  }
+
   const winner =
     bracket[feederMatchId as WcBracketPredictMatchId]?.winner?.trim() ?? "";
   if (winner) {
@@ -123,9 +147,15 @@ function resolveWcFeederParticipant(
 function teamIdFromWinnerFeed(
   bracket: WcBracketState,
   slot: Extract<WcKnockoutFeedSlot, { kind: "winner_feed" }>,
-  advancement: WcKnockoutAdvancement
+  advancement: WcKnockoutAdvancement,
+  options?: WcResolveParticipantsOptions
 ): WcResolvedParticipant {
-  return resolveWcFeederParticipant(bracket, slot.matchId, advancement);
+  return resolveWcFeederParticipant(
+    bracket,
+    slot.matchId,
+    advancement,
+    options
+  );
 }
 
 function winnerGroupForMatch(
@@ -139,7 +169,8 @@ function winnerGroupForMatch(
 export function resolveWcMatchParticipants(
   matchId: WcKnockoutMatchId,
   bracket: WcBracketState,
-  advancement: WcKnockoutAdvancement
+  advancement: WcKnockoutAdvancement,
+  options?: WcResolveParticipantsOptions
 ): [WcResolvedParticipant | null, WcResolvedParticipant | null] | null {
   const def = getWcKnockoutMatch(matchId);
   if (!def) return null;
@@ -147,8 +178,18 @@ export function resolveWcMatchParticipants(
   /** R16 以降 — feedsFrom 順が home / away と一致（M85–M88 → M95/M96 など） */
   if (def.feedsFrom.length === 2) {
     return [
-      resolveWcFeederParticipant(bracket, def.feedsFrom[0], advancement),
-      resolveWcFeederParticipant(bracket, def.feedsFrom[1], advancement),
+      resolveWcFeederParticipant(
+        bracket,
+        def.feedsFrom[0],
+        advancement,
+        options
+      ),
+      resolveWcFeederParticipant(
+        bracket,
+        def.feedsFrom[1],
+        advancement,
+        options
+      ),
     ];
   }
 
@@ -164,7 +205,7 @@ export function resolveWcMatchParticipants(
       case "best_third":
         return teamIdFromThirdPlaceSlot(advancement, slot, winnerGroup);
       case "winner_feed":
-        return teamIdFromWinnerFeed(bracket, slot, advancement);
+        return teamIdFromWinnerFeed(bracket, slot, advancement, options);
       default:
         return null;
     }

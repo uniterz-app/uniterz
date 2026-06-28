@@ -6,12 +6,15 @@ import {
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import {
   type WcMatchHitStatus,
+  type WcResolveParticipantsOptions,
+  type WcResolvedParticipant,
   getWcMatchHitStatus,
   resolveWcMatchParticipants,
   resolveWcTeamQualLabel,
   shouldShowWcSurvivorPick,
 } from "@/lib/wc/wc-knockout-bracket-utils";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
+import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
 
 export type WcBracketCardView = {
   matchId: WcBracketPredictMatchId;
@@ -24,7 +27,7 @@ export type WcBracketCardView = {
 };
 
 function toContestantSlot(
-  participant: ReturnType<typeof resolveWcMatchParticipants>[0]
+  participant: WcResolvedParticipant | null
 ): { teamId: string | null; label: string } {
   const teamId = participant?.teamId?.trim() || null;
   return {
@@ -36,7 +39,8 @@ function toContestantSlot(
 export function getWcMatchContestants(
   matchId: WcBracketPredictMatchId,
   bracket: WcBracketState,
-  advancement?: WcKnockoutAdvancement | null
+  advancement?: WcKnockoutAdvancement | null,
+  participantOptions?: WcResolveParticipantsOptions
 ): [{ teamId: string | null; label: string }, { teamId: string | null; label: string }] {
   const def = getWcKnockoutMatch(matchId);
   if (!def) {
@@ -69,7 +73,12 @@ export function getWcMatchContestants(
     ];
   }
 
-  const resolved = resolveWcMatchParticipants(matchId, bracket, advancement);
+  const resolved = resolveWcMatchParticipants(
+    matchId,
+    bracket,
+    advancement,
+    participantOptions
+  );
   if (!resolved) {
     return [
       { teamId: null, label: "?" },
@@ -91,7 +100,15 @@ export function buildWcMatchCardViews(
   const visible = shouldShowWcSurvivorPick(matchId, hitStatus, firstMissMatchId);
   if (!visible) return [];
 
-  const [home, away] = getWcMatchContestants(matchId, bracket, advancement);
+  const [home, away] = getWcMatchContestants(
+    matchId,
+    bracket,
+    advancement,
+    {
+      officialWinners,
+      preferOfficialFeeders: true,
+    }
+  );
   const picked = bracket[matchId]?.winner?.trim() ?? null;
   const official = officialWinners[matchId]?.trim() ?? null;
 

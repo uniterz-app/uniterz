@@ -6,8 +6,9 @@ import {
   getWcKnockoutRound,
 } from "@/lib/wc/wc-knockout-bracket";
 import { getWcMatchContestants } from "@/lib/wc/wc-bracket-display";
-import { WC_DEMO_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-demo-advancement";
+import { WC_2026_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-advancement-2026";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
+import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
 import {
   WC_BRACKET_INPUT_PHASES,
   type WcBracketInputPhase,
@@ -104,12 +105,14 @@ function resolveDisplayContestants(
   matchId: WcBracketPredictMatchId,
   consensusBracket: WcBracketState,
   advancement: WcKnockoutAdvancement,
-  pairings: Iterable<MatchupVariant>
+  pairings: Iterable<MatchupVariant>,
+  officialWinners: WcOfficialWinners = {}
 ) {
   const [home, away] = getWcMatchContestants(
     matchId,
     consensusBracket,
-    advancement
+    advancement,
+    { officialWinners, preferOfficialFeeders: true }
   );
   let homeTeamId = canonicalTeamKey(home.teamId);
   let awayTeamId = canonicalTeamKey(away.teamId);
@@ -174,7 +177,15 @@ function contestantIds(
   };
 }
 
-function buildMatchupMarkets(brackets: WcBracketState[]): WcMatchupMarketEntry[] {
+function buildMatchupMarkets(
+  brackets: WcBracketState[],
+  advancement: WcKnockoutAdvancement,
+  officialWinners: WcOfficialWinners = {}
+): WcMatchupMarketEntry[] {
+  const participantOptions = {
+    officialWinners,
+    preferOfficialFeeders: true as const,
+  };
   type MatchAcc = {
     total: number;
     winnerPickCounts: WcMarketCountMap;
@@ -191,7 +202,8 @@ function buildMatchupMarkets(brackets: WcBracketState[]): WcMatchupMarketEntry[]
       const [home, away] = getWcMatchContestants(
         matchId,
         bracket,
-        WC_DEMO_KNOCKOUT_ADVANCEMENT
+        advancement,
+        participantOptions
       );
       const ids = contestantIds(home.teamId, away.teamId);
       const pairKey = makeVariantKey(matchId, ids.homeTeamId, ids.awayTeamId);
@@ -233,8 +245,9 @@ function buildMatchupMarkets(brackets: WcBracketState[]): WcMatchupMarketEntry[]
         resolveDisplayContestants(
           matchId,
           consensusBracket,
-          WC_DEMO_KNOCKOUT_ADVANCEMENT,
-          acc.pairings.values()
+          advancement,
+          acc.pairings.values(),
+          officialWinners
         );
 
       entries.push({
@@ -254,7 +267,9 @@ function buildMatchupMarkets(brackets: WcBracketState[]): WcMatchupMarketEntry[]
 
 export function aggregateWcBracketMarketFromBrackets(
   brackets: WcBracketState[],
-  season: string
+  season: string,
+  advancement: WcKnockoutAdvancement = WC_2026_KNOCKOUT_ADVANCEMENT,
+  officialWinners: WcOfficialWinners = {}
 ): WcBracketMarketData {
   const championPickCounts: WcMarketCountMap = {};
   const teamProgressMarkets: WcTeamProgressMap = {
@@ -281,7 +296,7 @@ export function aggregateWcBracketMarketFromBrackets(
     season,
     totalEntries: brackets.length,
     championPickCounts,
-    matchupMarkets: buildMatchupMarkets(brackets),
+    matchupMarkets: buildMatchupMarkets(brackets, advancement, officialWinners),
     teamProgressMarkets,
   };
 }

@@ -6,6 +6,7 @@ import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
 import { getWcTreeSfFinalistSlots } from "@/lib/wc/wc-knockout-bracket-utils";
 import { buildWcInputMatchView } from "@/lib/wc/wc-bracket-input-display";
+import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
 import {
   WC_BRACKET_LEFT_QF,
   WC_BRACKET_LEFT_R16,
@@ -44,6 +45,8 @@ import type { Language } from "@/lib/i18n/language";
 type Props = {
   bracket: WcBracketState;
   advancement: WcKnockoutAdvancement;
+  /** 指定時は R16+ フィーダーを公式勝者で解決（サバイバー表示用） */
+  officialWinners?: WcOfficialWinners;
   language?: Language;
   className?: string;
 };
@@ -123,14 +126,19 @@ function WinnerFlagAt({
   y,
   bracket,
   advancement,
+  officialWinners,
 }: {
   matchId: WcBracketPredictMatchId;
   x: number;
   y: number;
   bracket: WcBracketState;
   advancement: WcKnockoutAdvancement;
+  officialWinners?: WcOfficialWinners;
 }) {
-  const view = buildWcInputMatchView(matchId, bracket, advancement);
+  const view = buildWcInputMatchView(matchId, bracket, advancement, {
+    officialWinners,
+    preferOfficialFeeders: Boolean(officialWinners),
+  });
   const winner = view?.pickedWinner?.trim() ?? null;
   if (!winner) return null;
 
@@ -145,9 +153,13 @@ function WinnerFlagAt({
 export default function WcBracketTreeInput({
   bracket,
   advancement,
+  officialWinners,
   language = "ja",
   className = "",
 }: Props) {
+  const participantOptions = officialWinners
+    ? { officialWinners, preferOfficialFeeders: true as const }
+    : undefined;
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [wrapWidth, setWrapWidth] = useState(0);
 
@@ -269,7 +281,12 @@ export default function WcBracketTreeInput({
     col: number,
     y: number
   ) => {
-    const view = buildWcInputMatchView(matchId, bracket, advancement);
+    const view = buildWcInputMatchView(
+      matchId,
+      bracket,
+      advancement,
+      participantOptions
+    );
     const home = view?.home ?? { teamId: null, label: "" };
     const away = view?.away ?? { teamId: null, label: "" };
     const picked = view?.pickedWinner ?? null;
@@ -299,6 +316,7 @@ export default function WcBracketTreeInput({
       y={y}
       bracket={bracket}
       advancement={advancement}
+      officialWinners={officialWinners}
     />
   );
 

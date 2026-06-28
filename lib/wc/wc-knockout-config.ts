@@ -2,6 +2,8 @@
  * WC ブラケット予想 — シーズン設定
  */
 
+import type { Language } from "@/lib/i18n/language";
+
 export type WcKnockoutBracketConfig = {
   season: string;
   /** 提出締切（ノックアウト第 1 試合キックオフ）。確定後に更新する */
@@ -52,4 +54,30 @@ export function isWcKnockoutBracketSubmissionOpen(
   nowMs = Date.now()
 ): boolean {
   return !isWcKnockoutBracketSubmissionPastDeadline(season, nowMs);
+}
+
+/** モーダル・告知用 — 提出締切の表示ラベル（JST / ET） */
+export function formatWcBracketSubmissionDeadline(
+  season: string,
+  language: Language
+): string | null {
+  const iso = getWcKnockoutBracketConfig(season).submissionClosesAtIso;
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return null;
+
+  const isJa = language === "ja";
+  const timeZone = isJa ? "Asia/Tokyo" : "America/New_York";
+  const formatted = d.toLocaleString(isJa ? "ja-JP" : "en-US", {
+    timeZone,
+    year: "numeric",
+    month: isJa ? "long" : "short",
+    day: "numeric",
+    weekday: isJa ? "short" : undefined,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  return isJa ? `${formatted}（JST）` : `${formatted} ET`;
 }

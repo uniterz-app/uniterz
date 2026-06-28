@@ -34,8 +34,10 @@ import {
   RANKINGS_TAB_METRIC_PARAM,
   RANKINGS_TAB_ROUND_PARAM,
   RANKINGS_TAB_WC_STAGE_PARAM,
+  RANKINGS_TAB_CATEGORY_PARAM,
   WEB_RANKINGS_SCROLL_KEY,
   isMobileMetricParam,
+  isRankingsCategoryParam,
 } from "@/lib/navigation/rankingsProfileFrom";
 import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
@@ -117,9 +119,13 @@ export default function WebRankingsShell() {
     const r = searchParams.get(RANKINGS_TAB_ROUND_PARAM);
     if (isPlayoffRoundKey(r)) setRound(r);
     const league = searchParams.get(RANKINGS_TAB_LEAGUE_PARAM);
+    const cat = searchParams.get(RANKINGS_TAB_CATEGORY_PARAM);
+    if (isRankingsCategoryParam(cat)) setCategory(cat);
     if (isRankingLeagueSource(league)) {
       setRankingLeague(league);
-      if (league === "worldcup") setCategory("playoffs");
+      if (league === "worldcup" && !isRankingsCategoryParam(cat)) {
+        setCategory("playoffs");
+      }
     }
     const stage = searchParams.get(RANKINGS_TAB_WC_STAGE_PARAM);
     if (isWcRankingStage(stage)) setWcStage(stage);

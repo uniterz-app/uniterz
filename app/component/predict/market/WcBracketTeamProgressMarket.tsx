@@ -138,7 +138,7 @@ function TeamCard({
     >
       <div className="relative z-10">
         <div className="flex flex-col items-center gap-1.5 text-center">
-          <span className="inline-flex h-8 w-11 overflow-hidden rounded-[2px] ring-1 ring-white/20 sm:h-9 sm:w-12">
+          <span className="inline-flex h-10 w-14 overflow-hidden rounded-[2px] ring-1 ring-white/20 sm:h-11 sm:w-[3.5rem]">
             <CountryFlag
               teamId={row.teamId}
               variant="inline"

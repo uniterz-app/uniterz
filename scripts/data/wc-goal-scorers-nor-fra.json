@@ -1,0 +1,11 @@
+{
+  "homeScore": 1,
+  "awayScore": 4,
+  "scorers": [
+    { "playerId": "fra-dembele", "teamId": "wc-fra", "minute": 7 },
+    { "playerId": "fra-dembele", "teamId": "wc-fra", "minute": 20 },
+    { "playerId": "nor-aasgaard", "teamId": "wc-nor", "minute": 21 },
+    { "playerId": "fra-dembele", "teamId": "wc-fra", "minute": 32 },
+    { "playerId": "fra-doue", "teamId": "wc-fra", "minute": 94 }
+  ]
+}

@@ -280,7 +280,12 @@ service cloud.firestore {
     // WC ノックアウトブラケット予想 — lib/wc/wc-bracket-firestore.ts
     // ========================================================================
     match /wcBracketResults/{season} {
-      allow read: if request.auth != null;
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /wcKnockoutAdvancement/{season} {
+      allow read: if true;
       allow write: if false;
     }
 

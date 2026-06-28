@@ -27,13 +27,17 @@ import WcBracketCard, {
 } from "@/app/component/predict/wc/WcBracketCard";
 import { PLAYOFF_BRACKET_PANEL } from "@/lib/ui/matchOverlayGlass";
 import type { Language } from "@/lib/i18n/language";
+import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
+import WcBracketHitLegend from "@/app/component/predict/wc/WcBracketHitLegend";
 
 export type WcFullBracketMobileProps = {
   bracket: WcBracketState;
+  advancement: WcKnockoutAdvancement;
   officialWinners: Partial<Record<WcBracketPredictMatchId, string>>;
   firstMissMatchId?: WcBracketPredictMatchId | null;
   language?: Language;
   showGlassShell?: boolean;
+  showHitLegend?: boolean;
   className?: string;
 };
 
@@ -72,10 +76,12 @@ function MatchPairAt({
 
 export default function WcFullBracketMobile({
   bracket,
+  advancement,
   officialWinners,
   firstMissMatchId: firstMissProp,
   language = "ja",
   showGlassShell = true,
+  showHitLegend = true,
   className = "",
 }: WcFullBracketMobileProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -101,12 +107,26 @@ export default function WcFullBracketMobile({
   const scaledHeight = WC_BRACKET_DESIGN_H * viewScale + WC_BRACKET_CARD_H;
 
   const leftR32 = useMemo(
-    () => buildWcR32CardViews("left", bracket, officialWinners, firstMissMatchId),
-    [bracket, officialWinners, firstMissMatchId]
+    () =>
+      buildWcR32CardViews(
+        "left",
+        bracket,
+        officialWinners,
+        firstMissMatchId,
+        advancement
+      ),
+    [bracket, officialWinners, firstMissMatchId, advancement]
   );
   const rightR32 = useMemo(
-    () => buildWcR32CardViews("right", bracket, officialWinners, firstMissMatchId),
-    [bracket, officialWinners, firstMissMatchId]
+    () =>
+      buildWcR32CardViews(
+        "right",
+        bracket,
+        officialWinners,
+        firstMissMatchId,
+        advancement
+      ),
+    [bracket, officialWinners, firstMissMatchId, advancement]
   );
 
   const renderRound = (
@@ -124,7 +144,8 @@ export default function WcFullBracketMobile({
           matchId,
           bracket,
           officialWinners,
-          firstMissMatchId
+          firstMissMatchId,
+          advancement
         )}
         side={side}
       />
@@ -134,7 +155,8 @@ export default function WcFullBracketMobile({
     "M104",
     bracket,
     officialWinners,
-    firstMissMatchId
+    firstMissMatchId,
+    advancement
   );
 
   return (
@@ -165,6 +187,9 @@ export default function WcFullBracketMobile({
                 ? `Out at ${firstMissMatchId}`
                 : "Bracket"}
         </div>
+        {showHitLegend ? (
+          <WcBracketHitLegend language={language} compact className="mt-2" />
+        ) : null}
       </div>
 
       <div

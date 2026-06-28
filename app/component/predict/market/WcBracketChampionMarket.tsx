@@ -91,7 +91,7 @@ export default function WcBracketChampionMarket({
                   >
                     {index + 1}
                   </span>
-                  <span className="inline-flex h-5 w-[30px] shrink-0 overflow-hidden rounded-[2px] ring-1 ring-white/20">
+                  <span className="inline-flex h-7 w-[42px] shrink-0 overflow-hidden rounded-[2px] ring-1 ring-white/20 sm:h-8 sm:w-12">
                     <CountryFlag
                       teamId={row.teamId}
                       variant="inline"

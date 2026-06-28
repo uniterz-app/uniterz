@@ -7,6 +7,7 @@ import WcBracketChampionMarket from "@/app/component/predict/market/WcBracketCha
 import WcBracketMatchupMarket from "@/app/component/predict/market/WcBracketMatchupMarket";
 import WcBracketTeamProgressMarket from "@/app/component/predict/market/WcBracketTeamProgressMarket";
 import useWcBracketMarket from "@/lib/leaderboards/useWcBracketMarket";
+import { useWcKnockoutAdvancement } from "@/lib/wc/useWcKnockoutAdvancement";
 import { alfa, nameBebas } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import type { Language } from "@/lib/i18n/language";
@@ -19,6 +20,7 @@ type Props = {
 
 export default function WcBracketMarket({ season, language }: Props) {
   const { loading, market } = useWcBracketMarket({ season });
+  const { advancement } = useWcKnockoutAdvancement(season);
   const m = t(language);
   const isJa = language === "ja";
 
@@ -100,6 +102,7 @@ export default function WcBracketMarket({ season, language }: Props) {
         </div>
         <WcBracketMatchupMarket
           entries={market.matchupMarkets}
+          advancement={advancement}
           language={language}
         />
       </section>

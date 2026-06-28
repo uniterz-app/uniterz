@@ -3,16 +3,17 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { WcBracketPredictMatchId } from "@/lib/wc/wc-knockout-bracket";
 import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
+import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
+import { parseWcOfficialWinnersDoc } from "@/lib/wc/wc-bracket-results-types";
 
-export type WcOfficialWinners = Partial<
-  Record<WcBracketPredictMatchId, string>
->;
+export type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
 
 type Options = {
   /** false のとき Firestore を叩かない（入力モーダル中など） */
   enabled?: boolean;
+  /** 0 以外なら getDoc を定期再取得（ノックアウト中の survivor 更新用） */
+  pollIntervalMs?: number;
 };
 
 /**
@@ -23,7 +24,7 @@ export function useWcBracketResults(
   season = WC_KNOCKOUT_SEASON,
   options: Options = {}
 ) {
-  const { enabled = true } = options;
+  const { enabled = true, pollIntervalMs = 0 } = options;
   const [winners, setWinners] = useState<WcOfficialWinners>({});
   const [ready, setReady] = useState(false);
 
@@ -41,10 +42,7 @@ export function useWcBracketResults(
       try {
         const snap = await getDoc(ref);
         if (cancelled) return;
-        const w = snap.data()?.winners;
-        setWinners(
-          w && typeof w === "object" ? (w as WcOfficialWinners) : {}
-        );
+        setWinners(parseWcOfficialWinnersDoc(snap.data()));
       } catch (e) {
         if (!cancelled) {
           console.warn("wcBracketResults load failed", e);
@@ -56,10 +54,19 @@ export function useWcBracketResults(
     }
 
     void load();
+
+    let timer: ReturnType<typeof setInterval> | undefined;
+    if (pollIntervalMs > 0) {
+      timer = setInterval(() => {
+        void load();
+      }, pollIntervalMs);
+    }
+
     return () => {
       cancelled = true;
+      if (timer) clearInterval(timer);
     };
-  }, [season, enabled]);
+  }, [season, enabled, pollIntervalMs]);
 
   return { winners, ready };
 }

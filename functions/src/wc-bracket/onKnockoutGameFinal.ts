@@ -6,6 +6,7 @@ import {
   resolveKnockoutWinnerTeamId,
   resolveWcKnockoutMatchIdFromGame,
 } from "./resolveKnockoutWinner";
+import { maybeCreateChildKnockoutGames } from "./createChildKnockoutGames";
 
 export type KnockoutGameFinalInput = {
   gameId: string;
@@ -24,11 +25,17 @@ export type KnockoutGameFinalInput = {
  * WC ノックアウト試合が final になったとき:
  * 1. wcBracketResults に当該試合の勝者を追記
  * 2. 全提出ブラケットの survivor 再評価キューを投入
+ * 3. 両親が確定した子試合を games に自動生成（Phase 3）
  */
 export async function maybeUpdateWcBracketOnKnockoutFinal(
   db: Firestore,
   game: KnockoutGameFinalInput
-): Promise<{ updated: boolean; matchId?: string; winnerTeamId?: string }> {
+): Promise<{
+  updated: boolean;
+  matchId?: string;
+  winnerTeamId?: string;
+  childGamesCreated?: string[];
+}> {
   if (String(game.league ?? "").trim().toLowerCase() !== "wc") {
     return { updated: false };
   }
@@ -59,6 +66,8 @@ export async function maybeUpdateWcBracketOnKnockoutFinal(
   const season = String(game.season ?? WC_KNOCKOUT_BRACKET_SEASON).trim();
   const resultsRef = db.collection("wcBracketResults").doc(season);
 
+  let mergedWinners: Record<string, string> = {};
+
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(resultsRef);
     const prev = (snap.data()?.winners ?? {}) as Record<string, string>;
@@ -68,14 +77,15 @@ export async function maybeUpdateWcBracketOnKnockoutFinal(
         `[wc-bracket] winners.${matchId} overwrite ${existing} → ${winnerTeamId}`
       );
     }
+    mergedWinners = {
+      ...prev,
+      [matchId]: winnerTeamId,
+    };
     tx.set(
       resultsRef,
       {
         season,
-        winners: {
-          ...prev,
-          [matchId]: winnerTeamId,
-        },
+        winners: mergedWinners,
         lastMatchId: matchId,
         lastGameId: game.gameId,
         updatedAt: FieldValue.serverTimestamp(),
@@ -86,9 +96,31 @@ export async function maybeUpdateWcBracketOnKnockoutFinal(
 
   await enqueueWcBracketRescoreChain(db, season);
 
+  let childGamesCreated: string[] = [];
+  try {
+    childGamesCreated = await maybeCreateChildKnockoutGames(db, {
+      season,
+      finishedMatchId: matchId,
+      winners: mergedWinners,
+    });
+  } catch (err) {
+    console.error(
+      `[wc-bracket] child game creation failed after ${matchId}`,
+      err
+    );
+  }
+
   console.log(
-    `[wc-bracket] ${matchId} final via game ${game.gameId} → winner ${winnerTeamId}`
+    `[wc-bracket] ${matchId} final via game ${game.gameId} → winner ${winnerTeamId}` +
+      (childGamesCreated.length
+        ? `; child games: ${childGamesCreated.join(", ")}`
+        : "")
   );
 
-  return { updated: true, matchId, winnerTeamId };
+  return {
+    updated: true,
+    matchId,
+    winnerTeamId,
+    childGamesCreated,
+  };
 }

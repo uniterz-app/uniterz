@@ -30,6 +30,10 @@ export const RANKINGS_TAB_ROUND_PARAM = "rankRound";
 export const RANKINGS_TAB_LEAGUE_PARAM = "rankLeague";
 /** WORLD CUP のステージ（overall/qualifying/main） */
 export const RANKINGS_TAB_WC_STAGE_PARAM = "rankWcStage";
+/** プレーオフ / ブラケット タブ */
+export const RANKINGS_TAB_CATEGORY_PARAM = "rankCategory";
+/** WC ブラケット入力オーバーレイを開く（rankCategory=bracket と併用） */
+export const RANKINGS_WC_BRACKET_INPUT_PARAM = "wcBracketInput";
 
 const SESSION_KEY = "uniterz.rankingsTabReturn.v1";
 
@@ -167,6 +171,31 @@ export function buildRankingsPathQuery(sp: URLSearchParams): string {
   if (isRankingLeagueSource(league)) q.set(RANKINGS_TAB_LEAGUE_PARAM, league);
   if (isWcRankingStage(wcStage)) q.set(RANKINGS_TAB_WC_STAGE_PARAM, wcStage);
   return q.toString();
+}
+
+export type RankingsCategoryParam = "playoffs" | "bracket";
+
+export function isRankingsCategoryParam(
+  v: unknown
+): v is RankingsCategoryParam {
+  return v === "playoffs" || v === "bracket";
+}
+
+/** WC ブラケットタブ（＋任意で入力オーバーレイ）へのディープリンク */
+export function buildWcBracketRankingsHref(
+  pathname: string | null,
+  options?: { openInput?: boolean }
+): string {
+  const base = pathname?.startsWith("/web")
+    ? "/web/rankings"
+    : "/mobile/rankings";
+  const q = new URLSearchParams();
+  q.set(RANKINGS_TAB_LEAGUE_PARAM, "worldcup");
+  q.set(RANKINGS_TAB_CATEGORY_PARAM, "bracket");
+  if (options?.openInput) {
+    q.set(RANKINGS_WC_BRACKET_INPUT_PARAM, "1");
+  }
+  return `${base}?${q.toString()}`;
 }
 
 /** プロフィールからグループ内ランキング（オーバーレイ）へ戻る URL */
