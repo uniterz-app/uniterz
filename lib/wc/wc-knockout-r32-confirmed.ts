@@ -104,7 +104,7 @@ export const WC_2026_R32_CONFIRMED_MATCHES: readonly WcR32ConfirmedMatch[] = [
   {
     matchId: "M85",
     homeIso3: "che",
-    awayIso3: "irn",
+    awayIso3: "dza",
     startAtIso: "2026-07-02T20:00:00-07:00",
     venue: "Vancouver",
   },
