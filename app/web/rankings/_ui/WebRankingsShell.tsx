@@ -47,6 +47,7 @@ import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeade
 import WcBracketLeaderboardSection from "@/app/component/leaderboards/WcBracketLeaderboardSection";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
+import { useWcBracketSubmitted } from "@/lib/wc/useWcBracketSubmitted";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -81,6 +82,10 @@ export default function WebRankingsShell() {
     category === "playoffs" && rankingLeague === "worldcup"
       ? wcStage
       : null;
+
+  /** WC ブラケット未入力なら Bracket タブに ! を表示 */
+  const { shouldPromptInput: wcBracketNeedsInput } =
+    useWcBracketSubmitted(WC_KNOCKOUT_SEASON);
   const {
     listReady,
     metricReady,
@@ -277,6 +282,9 @@ export default function WebRankingsShell() {
               category={category}
               onChange={setCategory}
               league={rankingLeague}
+              bracketAlert={
+                rankingLeague === "worldcup" && wcBracketNeedsInput
+              }
             />
           ) : null}
 

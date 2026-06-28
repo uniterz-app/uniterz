@@ -32,6 +32,8 @@ import WcTeamProfilePanel from "@/app/component/predict/wc/WcTeamProfilePanel";
 import WcPastResultsPanel from "@/app/component/predict/wc/WcPastResultsPanel";
 import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
 import WcMatchPreviewPanel from "@/app/component/predict/wc/WcMatchPreviewPanel";
+import WcKnockoutChallengeModal from "@/app/component/predict/wc/WcKnockoutChallengeModal";
+import { useWcKnockoutChallengePrompt } from "@/lib/wc/useWcKnockoutChallengePrompt";
 import { hasWcMatchPreview } from "@/lib/wc/matchPreviews";
 import WcGoalScorerPicker from "@/app/component/predict/wc/WcGoalScorerPicker";
 import CountryFlag from "@/app/component/games/CountryFlag";
@@ -276,6 +278,8 @@ export default function PredictionFormV2({
   const isKnockout = isWcKnockoutGame(game);
   /** 引き分けを許可するサッカー試合か（グループリーグ・リーグ戦のみ） */
   const drawAllowed = isSoccer && !isKnockout;
+  /** ノックアウト予想フローで UNITERZ ノックアウトチャレンジ告知を生涯1回表示 */
+  const knockoutChallengePrompt = useWcKnockoutChallengePrompt(isKnockout);
   /** ノックアウトで同点スコアを入力中（＝PK 決着の予想）か */
   const knockoutScoreTie =
     isKnockout &&
@@ -1741,6 +1745,11 @@ export default function PredictionFormV2({
       </div>
     </motion.div>
     {nextModal}
+    <WcKnockoutChallengeModal
+      open={knockoutChallengePrompt.open}
+      language={language}
+      onClose={knockoutChallengePrompt.dismiss}
+    />
     </>
   );
 }

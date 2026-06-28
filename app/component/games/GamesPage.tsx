@@ -100,8 +100,19 @@ function findInitialGameDay(params: {
   stateSelected: Date | null;
   todayKey: string;
   timeZone: string;
+  /** 全試合 final の日キー（初期位置の自動選定でスキップ対象） */
+  allFinalDayKeys?: Set<string>;
+  /** ユーザー/URL 由来の選択が無い純初期表示か（true のとき全 final 日をスキップ） */
+  preferUpcoming?: boolean;
 }): Date | null {
-  const { gameDays, stateSelected, todayKey, timeZone } = params;
+  const {
+    gameDays,
+    stateSelected,
+    todayKey,
+    timeZone,
+    allFinalDayKeys,
+    preferUpcoming,
+  } = params;
 
   if (!gameDays.length) return null;
 
@@ -121,6 +132,16 @@ function findInitialGameDay(params: {
   }
 
   const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
+
+  // 純初期表示では「今日以降」かつ「全試合 final ではない」最初の日を優先。
+  // 当日が全試合終了していたら、次に試合がある日へ初期位置をずらす。
+  if (preferUpcoming && allFinalDayKeys) {
+    const upcoming = sorted.find((d) => {
+      const key = toDateKeyInTimeZone(d, timeZone);
+      return key >= todayKey && !allFinalDayKeys.has(key);
+    });
+    if (upcoming) return upcoming;
+  }
 
   return (
     sorted.find((d) => toDateKeyInTimeZone(d, timeZone) >= todayKey) ??
@@ -359,6 +380,41 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     dayTimeZone,
   ]);
 
+  /** 取得済みウィンドウから「その日の試合が全部 final」な日キーを算出（フィルタ反映） */
+  const allFinalDayKeys = useMemo(() => {
+    const needTeam = teamFilterIds.length > 0;
+    const needMargin = marginMin != null || marginMax != null;
+    const counts = new Map<string, { total: number; final: number }>();
+    for (const g of monthRows) {
+      const game = g as Record<string, unknown>;
+      if (needTeam && !passesTeamFilterRow(game)) continue;
+      if (needMargin && !gameMatchesMarginBounds(game, marginMin, marginMax)) {
+        continue;
+      }
+      const dk = gameRowStartDateKeyInTimeZone(
+        game as { startAtJst?: unknown },
+        dayTimeZone
+      );
+      if (!dk) continue;
+      const c = counts.get(dk) ?? { total: 0, final: 0 };
+      c.total += 1;
+      if (isFinalGameRow(game)) c.final += 1;
+      counts.set(dk, c);
+    }
+    const set = new Set<string>();
+    for (const [dk, c] of counts) {
+      if (c.total > 0 && c.final === c.total) set.add(dk);
+    }
+    return set;
+  }, [
+    monthRows,
+    teamFilterIds.length,
+    passesTeamFilterRow,
+    marginMin,
+    marginMax,
+    dayTimeZone,
+  ]);
+
   /* =========================
      初期選択日を render 中に確定
   ========================= */
@@ -367,11 +423,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!gameDaysForStrip.length) {
       return stored;
     }
+    const stateSelected = stored ?? initialDateParamDay;
     return findInitialGameDay({
       gameDays: gameDaysForStrip,
-      stateSelected: stored ?? initialDateParamDay,
+      stateSelected,
       todayKey,
       timeZone: dayTimeZone,
+      allFinalDayKeys,
+      // ユーザー操作・URL date が無い純初期表示のときだけ全 final 日をスキップ
+      preferUpcoming: !stateSelected,
     });
   }, [
     gameDaysForStrip,
@@ -380,6 +440,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     todayKey,
     dayTimeZone,
     initialDateParamDay,
+    allFinalDayKeys,
   ]);
 
   /* =========================
