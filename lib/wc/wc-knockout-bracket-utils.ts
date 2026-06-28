@@ -14,6 +14,7 @@ import {
   getWcKnockoutMatch,
 } from "@/lib/wc/wc-knockout-bracket";
 import { resolveThirdPlaceTeamForWinnerSlot } from "@/lib/wc/wc-knockout-third-place";
+import { resolveWcR32ConfirmedParticipants } from "@/lib/wc/wc-knockout-r32-confirmed";
 import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
 
 export type WcResolveParticipantsOptions = {
@@ -174,6 +175,16 @@ export function resolveWcMatchParticipants(
 ): [WcResolvedParticipant | null, WcResolvedParticipant | null] | null {
   const def = getWcKnockoutMatch(matchId);
   if (!def) return null;
+
+  if (def.round === "R32" && def.feedsFrom.length === 0) {
+    const confirmed = resolveWcR32ConfirmedParticipants(matchId);
+    if (confirmed) {
+      return [
+        { teamId: confirmed[0].teamId, label: confirmed[0].label, source: "group" },
+        { teamId: confirmed[1].teamId, label: confirmed[1].label, source: "group" },
+      ];
+    }
+  }
 
   /** R16 以降 — feedsFrom 順が home / away と一致（M85–M88 → M95/M96 など） */
   if (def.feedsFrom.length === 2) {

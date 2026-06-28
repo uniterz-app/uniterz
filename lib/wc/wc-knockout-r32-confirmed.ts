@@ -5,6 +5,10 @@
  */
 
 import type { WcKnockoutMatchId } from "@/lib/wc/wc-knockout-bracket";
+import {
+  lookupWcTeamDisplay,
+  wcTeamIdFromIso3,
+} from "@/lib/wc/wc-team-display";
 
 export type WcR32ConfirmedMatch = {
   matchId: WcKnockoutMatchId;
@@ -130,6 +134,32 @@ export const WC_2026_R32_CONFIRMED_MATCHES: readonly WcR32ConfirmedMatch[] = [
     venue: "Arlington",
   },
 ] as const;
+
+const R32_CONFIRMED_BY_MATCH_ID = new Map(
+  WC_2026_R32_CONFIRMED_MATCHES.map((m) => [m.matchId, m])
+);
+
+/** R32 確定対戦カード（advancement / Firestore より優先） */
+export function resolveWcR32ConfirmedParticipants(
+  matchId: WcKnockoutMatchId
+): [{ teamId: string; label: string }, { teamId: string; label: string }] | null {
+  const m = R32_CONFIRMED_BY_MATCH_ID.get(matchId);
+  if (!m) return null;
+
+  const homeNames = lookupWcTeamDisplay(m.homeIso3);
+  const awayNames = lookupWcTeamDisplay(m.awayIso3);
+
+  return [
+    {
+      teamId: wcTeamIdFromIso3(m.homeIso3),
+      label: homeNames?.en ?? m.homeIso3,
+    },
+    {
+      teamId: wcTeamIdFromIso3(m.awayIso3),
+      label: awayNames?.en ?? m.awayIso3,
+    },
+  ];
+}
 
 export function wcKnockoutGameId(
   matchId: WcKnockoutMatchId,
