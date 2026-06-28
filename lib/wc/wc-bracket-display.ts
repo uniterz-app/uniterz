@@ -15,6 +15,7 @@ import {
 } from "@/lib/wc/wc-knockout-bracket-utils";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
 import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
+import { resolveWcR32ConfirmedParticipants } from "@/lib/wc/wc-knockout-r32-confirmed";
 
 export type WcBracketCardView = {
   matchId: WcBracketPredictMatchId;
@@ -48,6 +49,11 @@ export function getWcMatchContestants(
       { teamId: null, label: "?" },
       { teamId: null, label: "?" },
     ];
+  }
+
+  if (def.round === "R32") {
+    const confirmed = resolveWcR32ConfirmedParticipants(matchId);
+    if (confirmed) return confirmed;
   }
 
   if (!advancement) {

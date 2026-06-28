@@ -49,7 +49,7 @@ export const WC_2026_GROUP_STANDINGS = {
     D: t("pry"),
     E: t("ecu"),
     F: t("swe"),
-    G: t("irn"),
+    G: t("dza"),
     H: t("sau"),
     I: t("sen"),
     J: t("jor"),
