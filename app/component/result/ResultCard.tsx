@@ -48,6 +48,13 @@ import WcGoalScorerResultRow, {
 import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
 import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
 import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
+import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
+import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+import { db } from "@/lib/firebase";
+import {
+  useWcGroupStageStandingsForMatch,
+  WC_DEFAULT_SEASON,
+} from "@/lib/wc/useWcGroupStandingRanks";
 import TeamRecordLineFromFirestore from "@/app/component/result/TeamRecordLineFromFirestore";
 import { nameBebas } from "@/lib/fonts";
 import { resolveWcGroupCodeLabel } from "@/lib/wc/wcGroupStandingRank";
@@ -155,6 +162,19 @@ function ResultCardPresentationImpl({
 
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
+  const postStageMeta = post as PredictionPostV2 & {
+    wcStage?: string | null;
+    roundLabel?: string | null;
+    knockout?: boolean | null;
+  };
+  const isWcKnockout =
+    isWc &&
+    isWcKnockoutGame({
+      league: post.league,
+      wcStage: postStageMeta.wcStage,
+      roundLabel: postStageMeta.roundLabel,
+      knockout: postStageMeta.knockout,
+    });
   const displayTeamNameFont = isWc
     ? wcBracketMarketTeamTypography(isMobile)
     : teamNameFont;
@@ -225,6 +245,12 @@ function ResultCardPresentationImpl({
     post.away,
     post.game?.away,
     post.away?.name
+  );
+  const wcGroupStageStandings = useWcGroupStageStandingsForMatch(
+    db,
+    isWcKnockout ? wcHomeTeamId : null,
+    isWcKnockout ? wcAwayTeamId : null,
+    WC_DEFAULT_SEASON
   );
 
   const wcMatchGoalScorers = useMemo(() => {
@@ -620,6 +646,7 @@ function ResultCardPresentationImpl({
                   teamId={wcHomeTeamId}
                   compact={mobileScheduleDense}
                   flagClassName={wcFlagClassName}
+                  knockout={isWcKnockout}
                 />
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
@@ -630,6 +657,15 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
+                {isWcKnockout ? (
+                <div className={`${wcNameWidthClass} text-center`}>
+                  <WcGroupStandingRecordLine
+                    standing={wcGroupStageStandings.homeStanding}
+                    language={language}
+                    compact={mobileScheduleDense || isMobile}
+                  />
+                </div>
+                ) : (
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
                     teamId={wcHomeTeamId}
@@ -638,6 +674,7 @@ function ResultCardPresentationImpl({
                     compact={mobileScheduleDense || isMobile}
                   />
                 </div>
+                )}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -695,6 +732,7 @@ function ResultCardPresentationImpl({
                 <WcTeamFlagWithMeta
                   teamId={wcHomeTeamId}
                   flagClassName={wcFlagClassName}
+                  knockout={isWcKnockout}
                 />
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
@@ -705,6 +743,14 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
+                {isWcKnockout ? (
+                <div className={`${wcNameWidthClass} text-center`}>
+                  <WcGroupStandingRecordLine
+                    standing={wcGroupStageStandings.homeStanding}
+                    language={language}
+                  />
+                </div>
+                ) : (
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
                     teamId={wcHomeTeamId}
@@ -712,6 +758,7 @@ function ResultCardPresentationImpl({
                     language={language}
                   />
                 </div>
+                )}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -751,6 +798,7 @@ function ResultCardPresentationImpl({
                   teamId={wcAwayTeamId}
                   compact={mobileScheduleDense}
                   flagClassName={wcFlagClassName}
+                  knockout={isWcKnockout}
                 />
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
@@ -761,6 +809,15 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
+                {isWcKnockout ? (
+                <div className={`${wcNameWidthClass} text-center`}>
+                  <WcGroupStandingRecordLine
+                    standing={wcGroupStageStandings.awayStanding}
+                    language={language}
+                    compact={mobileScheduleDense || isMobile}
+                  />
+                </div>
+                ) : (
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
                     teamId={wcAwayTeamId}
@@ -769,6 +826,7 @@ function ResultCardPresentationImpl({
                     compact={mobileScheduleDense || isMobile}
                   />
                 </div>
+                )}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -826,6 +884,7 @@ function ResultCardPresentationImpl({
                 <WcTeamFlagWithMeta
                   teamId={wcAwayTeamId}
                   flagClassName={wcFlagClassName}
+                  knockout={isWcKnockout}
                 />
                 <div
                   className={`${nameMt} ${wcNameWidthClass} text-center leading-tight`}
@@ -836,6 +895,14 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
+                {isWcKnockout ? (
+                <div className={`${wcNameWidthClass} text-center`}>
+                  <WcGroupStandingRecordLine
+                    standing={wcGroupStageStandings.awayStanding}
+                    language={language}
+                  />
+                </div>
+                ) : (
                 <div className={`${wcNameWidthClass} text-center`}>
                   <TeamRecordLineFromFirestore
                     teamId={wcAwayTeamId}
@@ -843,6 +910,7 @@ function ResultCardPresentationImpl({
                     language={language}
                   />
                 </div>
+                )}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}

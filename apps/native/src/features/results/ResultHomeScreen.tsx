@@ -22,6 +22,9 @@ import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
+import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
+import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
+import { resolveWcGroupStageStandingForKnockoutDisplay } from "../../../../../lib/wc/wcGroupStandingRank";
 import {
   MATCH_CARD_DISPLAY_FONT,
   MATCH_CARD_METRIC_FONT,
@@ -516,6 +519,19 @@ function ResultPostCard({
     gameId: post.gameId,
   });
   const isWcCard = leagueKey === "wc";
+  const postStageMeta = post as PostWithMillis & {
+    wcStage?: string | null;
+    roundLabel?: string | null;
+    knockout?: boolean | null;
+  };
+  const isWcKnockout =
+    isWcCard &&
+    isWcKnockoutGame({
+      league: post.league,
+      wcStage: postStageMeta.wcStage,
+      roundLabel: postStageMeta.roundLabel,
+      knockout: postStageMeta.knockout,
+    });
   const isBasketballCard = leagueKey === "nba" || leagueKey === "bj";
   const listScoreDensity = isBasketballCard ? "listBasketball" : "list";
   const pillText = LEAGUE_LABEL[leagueKey] ?? leagueKey.toUpperCase();
@@ -539,6 +555,20 @@ function ResultPostCard({
     away?.teamId,
     leagueKey,
     awayRecordLine
+  );
+  const homeGroupStanding = useMemo(
+    () =>
+      isWcKnockout
+        ? resolveWcGroupStageStandingForKnockoutDisplay(home?.teamId, homeRecordLine)
+        : null,
+    [isWcKnockout, home?.teamId, homeRecordLine]
+  );
+  const awayGroupStanding = useMemo(
+    () =>
+      isWcKnockout
+        ? resolveWcGroupStageStandingForKnockoutDisplay(away?.teamId, awayRecordLine)
+        : null,
+    [isWcKnockout, away?.teamId, awayRecordLine]
   );
   const wcGroupCodeLabel = useMemo(
     () =>
@@ -860,7 +890,7 @@ function ResultPostCard({
                   ]}
                 >
                   {isWcCard ? (
-                    <WcTeamFlagWithMetaNative teamId={home?.teamId}>
+                    <WcTeamFlagWithMetaNative teamId={home?.teamId} knockout={isWcKnockout}>
                       <CountryFlagNative teamId={home?.teamId} variant="result" />
                     </WcTeamFlagWithMetaNative>
                   ) : (
@@ -885,7 +915,13 @@ function ResultPostCard({
                     </Text>
                   )}
                 </Animated.View>
-                {isWcCard ? (
+                {isWcCard && isWcKnockout ? (
+                  <WcGroupStandingRecordLineNative
+                    standing={homeGroupStanding}
+                    language={language}
+                    textStyle={styles.teamRecordText}
+                  />
+                ) : isWcCard ? (
                   <Text style={styles.teamRecordText}>{homeWcRecordLabel}</Text>
                 ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
@@ -903,7 +939,7 @@ function ResultPostCard({
                   ]}
                 >
                   {isWcCard ? (
-                    <WcTeamFlagWithMetaNative teamId={away?.teamId}>
+                    <WcTeamFlagWithMetaNative teamId={away?.teamId} knockout={isWcKnockout}>
                       <CountryFlagNative teamId={away?.teamId} variant="result" />
                     </WcTeamFlagWithMetaNative>
                   ) : (
@@ -928,7 +964,13 @@ function ResultPostCard({
                     </Text>
                   )}
                 </Animated.View>
-                {isWcCard ? (
+                {isWcCard && isWcKnockout ? (
+                  <WcGroupStandingRecordLineNative
+                    standing={awayGroupStanding}
+                    language={language}
+                    textStyle={styles.teamRecordText}
+                  />
+                ) : isWcCard ? (
                   <Text style={styles.teamRecordText}>{awayWcRecordLabel}</Text>
                 ) : null}
                 {wcMatchGoalScorers.length > 0 ? (

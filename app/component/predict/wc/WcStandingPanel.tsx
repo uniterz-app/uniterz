@@ -6,9 +6,11 @@ import {
   computeGroupStandings,
   type WcStandingRow,
 } from "@/lib/wc/computeGroupStandings";
-import { getWcGroupForTeam } from "@/lib/wc/groups";
+import { getWcGroupForTeam, type WcGroupDef } from "@/lib/wc/groups";
 import { getWcTeamProfile } from "@/lib/wc/teams";
 import { useWcSeasonGames } from "@/lib/wc/useWcSeasonGames";
+import { filterWcGroupStageGames } from "@/lib/wc/wcGroupStandingRank";
+import { orderGroupStandingsByOfficialWc2026Rank } from "@/lib/wc/wc2026GroupStageFrozenRecords";
 import { teamIdToCountryName } from "@/lib/wc/wcCountry";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
@@ -24,6 +26,18 @@ type Props = {
 
 const DEFAULT_SEASON = "2025-26";
 
+function resolveStandingGroups(
+  homeTeamId: string,
+  awayTeamId: string
+): WcGroupDef[] {
+  const homeGroup = getWcGroupForTeam(homeTeamId);
+  const awayGroup = getWcGroupForTeam(awayTeamId);
+  const groups: WcGroupDef[] = [];
+  if (homeGroup) groups.push(homeGroup);
+  if (awayGroup && awayGroup.code !== homeGroup?.code) groups.push(awayGroup);
+  return groups;
+}
+
 export default function WcStandingPanel({
   homeTeamId,
   awayTeamId,
@@ -33,19 +47,26 @@ export default function WcStandingPanel({
 }: Props) {
   const m = t(language);
   const effectiveSeason = season ?? DEFAULT_SEASON;
-  const group = useMemo(() => {
-    return (
-      getWcGroupForTeam(homeTeamId) ?? getWcGroupForTeam(awayTeamId) ?? null
-    );
-  }, [homeTeamId, awayTeamId]);
+  const groups = useMemo(
+    () => resolveStandingGroups(homeTeamId, awayTeamId),
+    [homeTeamId, awayTeamId]
+  );
 
   const { games, loading, error } = useWcSeasonGames(effectiveSeason);
+  const groupStageGames = useMemo(
+    () => (games ? filterWcGroupStageGames(games) : null),
+    [games]
+  );
 
-  const rows: WcStandingRow[] | null = useMemo(() => {
-    if (!group) return null;
-    if (games == null) return null;
-    return computeGroupStandings(group.teamIds, games);
-  }, [group, games]);
+  const rowsByGroup = useMemo(() => {
+    if (!groupStageGames) return null;
+    return groups.map((group) => ({
+      group,
+      rows: orderGroupStandingsByOfficialWc2026Rank(
+        computeGroupStandings(group.teamIds, groupStageGames)
+      ),
+    }));
+  }, [groups, groupStageGames]);
 
   const highlightSet = useMemo(
     () => new Set([homeTeamId, awayTeamId]),
@@ -56,33 +77,41 @@ export default function WcStandingPanel({
 
   return (
     <div className={web ? "space-y-4" : "space-y-3"}>
-      {/* グループ順位表 */}
-      <section>
-        <SectionTitle isMobile={isMobile}>
-          {group
-            ? `${m.wc.group} ${group.code}`
-            : m.predict.groupStandings}
-        </SectionTitle>
-
-        {!group ? (
+      {groups.length === 0 ? (
+        <section>
+          <SectionTitle isMobile={isMobile}>
+            {m.predict.groupStandings}
+          </SectionTitle>
           <EmptyNote isMobile={isMobile}>
             {m.predict.standingsNotAvailable}
           </EmptyNote>
-        ) : loading || rows == null ? (
-          <SkeletonTable isMobile={isMobile} />
-        ) : error ? (
-          <EmptyNote isMobile={isMobile}>
-            {m.predict.standingsLoadFailed}
-          </EmptyNote>
-        ) : (
-          <StandingsTable
-            rows={rows}
-            highlightSet={highlightSet}
-            language={language}
-            isMobile={isMobile}
-          />
-        )}
-      </section>
+        </section>
+      ) : (
+        groups.map((group) => {
+          const entry = rowsByGroup?.find((r) => r.group.code === group.code);
+          return (
+            <section key={group.code}>
+              <SectionTitle isMobile={isMobile}>
+                {`${m.wc.group} ${group.code}`}
+              </SectionTitle>
+              {loading || entry == null ? (
+                <SkeletonTable isMobile={isMobile} />
+              ) : error ? (
+                <EmptyNote isMobile={isMobile}>
+                  {m.predict.standingsLoadFailed}
+                </EmptyNote>
+              ) : (
+                <StandingsTable
+                  rows={entry.rows}
+                  highlightSet={highlightSet}
+                  language={language}
+                  isMobile={isMobile}
+                />
+              )}
+            </section>
+          );
+        })
+      )}
 
       {/* FIFA ランク比較 */}
       <section>

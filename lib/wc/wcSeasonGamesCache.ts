@@ -81,6 +81,8 @@ function parseWcStandingGames(snap: QuerySnapshot): {
       status,
       startAtMs: startAt?.getTime() ?? null,
       roundLabel: roundLabel || null,
+      knockout: data.knockout === true ? true : data.knockout === false ? false : null,
+      wcStage: typeof data.wcStage === "string" ? data.wcStage : null,
     });
   });
   return {

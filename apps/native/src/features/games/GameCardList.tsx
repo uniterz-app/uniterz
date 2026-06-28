@@ -2,7 +2,11 @@ import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type 
 import { memo, useMemo } from "react";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
+import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
 import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
+import WcGroupStandingRecordLineNative from "../results/WcGroupStandingRecordLineNative";
+import { resolveWcGroupStageStandingForKnockoutDisplay } from "../../../../../lib/wc/wcGroupStandingRank";
+import type { TeamRecordSnapshot } from "./teamRecordDisplay";
 import CountryFlagNative from "./CountryFlagNative";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
@@ -52,6 +56,8 @@ type GameCardListProps = {
   ) => { home: number; away: number } | null;
   /** チーム名下の (W-L) / (W-D-L) 行。モバイル Web の homeRecord/awayRecord 相当 */
   getTeamRecordLabel?: (side: unknown, leagueRaw?: unknown) => string | null;
+  /** WC 戦績マップ（ScheduleList の teamRecordMap 相当） */
+  teamRecordById?: Readonly<Record<string, TeamRecordSnapshot>>;
   resolveTeamJerseyPalette: (
     leagueRaw: unknown,
     side: unknown,
@@ -87,6 +93,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
     resolveSeriesLabel,
     resolveSeriesPair,
     getTeamRecordLabel = () => null,
+    teamRecordById = {},
     resolveTeamJerseyPalette,
     enteringAnimationEnabled,
     entranceVariant,
@@ -117,12 +124,38 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   const centerBlock = getGameCardCenterBlock(game);
   const roundLabelRaw = game.roundLabel;
   const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
+  const isKnockout = isWcKnockoutGame({
+    league: game.league,
+    knockout: game.knockout === true ? true : game.knockout === false ? false : null,
+    roundLabel,
+    wcStage: typeof game.wcStage === "string" ? game.wcStage : null,
+  });
   const seriesLabel = resolveSeriesLabel(game);
   const seriesPair = resolveSeriesPair(game);
   const homeRecordLabel = getTeamRecordLabel(game.home, game.league);
   const awayRecordLabel = getTeamRecordLabel(game.away, game.league);
   const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
   const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
+  const homeKnockoutStanding = useMemo(
+    () =>
+      isKnockout
+        ? resolveWcGroupStageStandingForKnockoutDisplay(
+            homeTeamId,
+            homeTeamId ? teamRecordById[homeTeamId] ?? null : null
+          )
+        : null,
+    [isKnockout, homeTeamId, teamRecordById]
+  );
+  const awayKnockoutStanding = useMemo(
+    () =>
+      isKnockout
+        ? resolveWcGroupStageStandingForKnockoutDisplay(
+            awayTeamId,
+            awayTeamId ? teamRecordById[awayTeamId] ?? null : null
+          )
+        : null,
+    [isKnockout, awayTeamId, teamRecordById]
+  );
   const ctaLabel =
     status === "final"
       ? t.final
@@ -207,7 +240,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                     {showSideLabels ? <Text style={styles.sideLabel}>HOME</Text> : null}
                     <Animated.View style={ent.homeJerseyStyle}>
                       {isWcCard ? (
-                        <WcTeamFlagWithMetaNative teamId={homeTeamId}>
+                        <WcTeamFlagWithMetaNative teamId={homeTeamId} knockout={isKnockout}>
                           <View style={styles.teamMarkFlag}>
                             <CountryFlagNative teamId={homeTeamId} variant="card" />
                           </View>
@@ -236,7 +269,17 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                         {homeCompact}
                       </Text>
                     )}
-                    <Text style={styles.teamRecordText}>{homeRecordLabel ?? "(0-0-0)"}</Text>
+                    {isWcCard && isKnockout ? (
+                      <WcGroupStandingRecordLineNative
+                        standing={homeKnockoutStanding}
+                        language={language}
+                        textStyle={styles.teamRecordText}
+                      />
+                    ) : !isKnockout ? (
+                      <Text style={styles.teamRecordText}>
+                        {homeRecordLabel ?? "(0-0-0)"}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
 
@@ -333,7 +376,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                     {showSideLabels ? <Text style={styles.sideLabel}>AWAY</Text> : null}
                     <Animated.View style={ent.awayJerseyStyle}>
                       {isWcCard ? (
-                        <WcTeamFlagWithMetaNative teamId={awayTeamId}>
+                        <WcTeamFlagWithMetaNative teamId={awayTeamId} knockout={isKnockout}>
                           <View style={styles.teamMarkFlag}>
                             <CountryFlagNative teamId={awayTeamId} variant="card" />
                           </View>
@@ -362,7 +405,17 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                         {awayCompact}
                       </Text>
                     )}
-                    <Text style={styles.teamRecordText}>{awayRecordLabel ?? "(0-0-0)"}</Text>
+                    {isWcCard && isKnockout ? (
+                      <WcGroupStandingRecordLineNative
+                        standing={awayKnockoutStanding}
+                        language={language}
+                        textStyle={styles.teamRecordText}
+                      />
+                    ) : !isKnockout ? (
+                      <Text style={styles.teamRecordText}>
+                        {awayRecordLabel ?? "(0-0-0)"}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
               </View>

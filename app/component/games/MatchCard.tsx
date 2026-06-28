@@ -54,6 +54,8 @@ import {
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
 import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
+import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
+import { resolveWcGroupStageStandingForKnockoutDisplay } from "@/lib/wc/wcGroupStandingRank";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
@@ -426,6 +428,7 @@ function MatchCardView({
   liveMeta,
   finalMeta,
   seasonPhase = null,
+  season = null,
   viewPredictionHref,
   makePredictionHref,
   dense = false,
@@ -477,6 +480,20 @@ function MatchCardView({
     resultPost?.game?.away,
     resultPost?.away?.name,
     away.name
+  );
+  const wcKnockoutHomeStanding = useMemo(
+    () =>
+      league === "wc" && knockout
+        ? resolveWcGroupStageStandingForKnockoutDisplay(wcHomeTeamId, homeRecord)
+        : null,
+    [league, knockout, wcHomeTeamId, homeRecord]
+  );
+  const wcKnockoutAwayStanding = useMemo(
+    () =>
+      league === "wc" && knockout
+        ? resolveWcGroupStageStandingForKnockoutDisplay(wcAwayTeamId, awayRecord)
+        : null,
+    [league, knockout, wcAwayTeamId, awayRecord]
   );
 
   const [navigating, setNavigating] = useState(false);
@@ -1672,6 +1689,7 @@ return (
       teamId={wcHomeTeamId}
       compact={mobileDense || isMobile}
       flagClassName={teamMarkSizeFlag}
+      knockout={knockout}
     />
   ) : Icon === Jersey ? (
     <HalftoneJerseyMark
@@ -1771,7 +1789,7 @@ return (
   )}
 </div>
 
-  {/* 戦績・順位：総合得点などと同じ Oxanium（下のリーグ線用の下パディングのみ） */}
+  {/* 戦績・順位：ノックアウトはグループステージのみ */}
 <div
   className={[
     "mc-record text-center text-[11px] leading-none md:text-[15px]",
@@ -1779,7 +1797,15 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  <RecordWithRank r={homeRecord} league={league} />
+  {league === "wc" && knockout ? (
+    <WcGroupStandingRecordLine
+      standing={wcKnockoutHomeStanding}
+      language={language}
+      compact={mobileDense || isMobile}
+    />
+  ) : (
+    <RecordWithRank r={homeRecord} league={league} />
+  )}
 </div>
   </div>
 
@@ -1942,6 +1968,7 @@ return (
       teamId={wcAwayTeamId}
       compact={mobileDense || isMobile}
       flagClassName={teamMarkSizeFlag}
+      knockout={knockout}
     />
   ) : Icon === Jersey ? (
     <HalftoneJerseyMark
@@ -2048,7 +2075,15 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  <RecordWithRank r={awayRecord} league={league} />
+  {league === "wc" && knockout ? (
+    <WcGroupStandingRecordLine
+      standing={wcKnockoutAwayStanding}
+      language={language}
+      compact={mobileDense || isMobile}
+    />
+  ) : (
+    <RecordWithRank r={awayRecord} league={league} />
+  )}
 </div>
   </div>
 

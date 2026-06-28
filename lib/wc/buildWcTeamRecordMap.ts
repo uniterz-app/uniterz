@@ -1,5 +1,6 @@
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
 import type { TeamRecordLine } from "@/lib/teamRecordDisplay";
+import { resolveOfficialWc2026GroupStageRank } from "@/lib/wc/wc2026GroupStageFrozenRecords";
 
 type WcTeamRow = {
   id: string;
@@ -43,11 +44,12 @@ export function buildWcTeamRecordMap(
       return a.id.localeCompare(b.id);
     });
     sorted.forEach((row, index) => {
+      const officialRank = resolveOfficialWc2026GroupStageRank(row.id);
       out[row.id] = {
         wins: row.wins,
         draws: row.draws,
         losses: row.losses,
-        rank: index + 1,
+        rank: officialRank ?? index + 1,
       };
     });
   }

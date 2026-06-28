@@ -96,6 +96,8 @@ import {
   preferredLeagueToGamesLeague,
 } from "../../../../../lib/user/preferredLeague";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
+import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
+import { WC_DEFAULT_SEASON } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import {
   isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
@@ -621,6 +623,13 @@ export default function GamesHomeScreen({
       leagueRaw: g.league,
       homeSide: g.home,
       awaySide: g.away,
+      knockout: isWcKnockoutGame({
+        league: g.league,
+        knockout: g.knockout === true ? true : g.knockout === false ? false : null,
+        roundLabel,
+        wcStage: typeof g.wcStage === "string" ? g.wcStage : null,
+      }),
+      season: typeof g.season === "string" ? g.season : WC_DEFAULT_SEASON,
     };
   }, [selectedGame, language, formatSideRecord, peerGamesForSeries]);
   const formatGameDateMs = useCallback(
@@ -1709,6 +1718,7 @@ export default function GamesHomeScreen({
             resolveSeriesLabel={resolveSeriesLabelForList}
             resolveSeriesPair={resolveSeriesPairForList}
             getTeamRecordLabel={formatSideRecord}
+            teamRecordById={teamRecordById}
             resolveTeamJerseyPalette={resolveTeamJerseyPalette}
           />
         </Animated.View>

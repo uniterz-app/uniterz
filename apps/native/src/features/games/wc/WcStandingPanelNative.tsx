@@ -5,14 +5,32 @@ import {
   computeGroupStandings,
   type WcStandingRow,
 } from "../../../../../../lib/wc/computeGroupStandings";
-import { getWcGroupForTeam } from "../../../../../../lib/wc/groups";
+import { getWcGroupForTeam, type WcGroupDef } from "../../../../../../lib/wc/groups";
 import { getWcTeamProfile } from "../../../../../../lib/wc/teams";
+import { filterWcGroupStageGames } from "../../../../../../lib/wc/wcGroupStandingRank";
+import { orderGroupStandingsByOfficialWc2026Rank } from "../../../../../../lib/wc/wc2026GroupStageFrozenRecords";
 import { teamIdToCountryName } from "../../../../../../lib/wc/wcCountry";
 import CountryFlagNative from "../CountryFlagNative";
 import type { GamesLanguage, GamesTexts } from "../gamesI18n";
 import { useWcSeasonGamesNative } from "./useWcSeasonGamesNative";
 
 const DEFAULT_SEASON = "2025-26";
+
+function resolveStandingGroups(
+  homeTeamId: string,
+  awayTeamId: string
+): WcGroupDef[] {
+  const homeGroup = getWcGroupForTeam(homeTeamId);
+  const awayGroup = getWcGroupForTeam(awayTeamId);
+  const groups: WcGroupDef[] = [];
+  if (homeGroup) groups.push(homeGroup);
+  if (awayGroup && awayGroup.code !== homeGroup?.code) groups.push(awayGroup);
+  return groups;
+}
+
+function SectionTitleNative({ children }: { children: string }) {
+  return <Text style={styles.sectionTitle}>{children}</Text>;
+}
 
 type Props = {
   homeTeamId: string;
@@ -27,10 +45,6 @@ function formatGoalDiff(n: number): string {
   return String(n);
 }
 
-function SectionTitleNative({ children }: { children: string }) {
-  return <Text style={styles.sectionTitle}>{children}</Text>;
-}
-
 /** Web `WcStandingPanel` 相当（モバイル） */
 export default function WcStandingPanelNative({
   homeTeamId,
@@ -40,15 +54,24 @@ export default function WcStandingPanelNative({
   t,
 }: Props) {
   const effectiveSeason = season ?? DEFAULT_SEASON;
-  const group = useMemo(
-    () => getWcGroupForTeam(homeTeamId) ?? getWcGroupForTeam(awayTeamId) ?? null,
+  const groups = useMemo(
+    () => resolveStandingGroups(homeTeamId, awayTeamId),
     [homeTeamId, awayTeamId]
   );
   const { games, loading, error } = useWcSeasonGamesNative(effectiveSeason);
-  const rows: WcStandingRow[] | null = useMemo(() => {
-    if (!group || games == null) return null;
-    return computeGroupStandings(group.teamIds, games);
-  }, [group, games]);
+  const groupStageGames = useMemo(
+    () => (games ? filterWcGroupStageGames(games) : null),
+    [games]
+  );
+  const rowsByGroup = useMemo(() => {
+    if (!groupStageGames) return null;
+    return groups.map((group) => ({
+      group,
+      rows: orderGroupStandingsByOfficialWc2026Rank(
+        computeGroupStandings(group.teamIds, groupStageGames)
+      ),
+    }));
+  }, [groups, groupStageGames]);
   const highlightSet = useMemo(
     () => new Set([homeTeamId, awayTeamId]),
     [homeTeamId, awayTeamId]
@@ -57,84 +80,103 @@ export default function WcStandingPanelNative({
 
   return (
     <View style={styles.root}>
-      <View style={styles.section}>
-        <SectionTitleNative>
-          {group ? `${t.wcGroup} ${group.code}` : t.groupStandings}
-        </SectionTitleNative>
-        {!group ? (
+      {groups.length === 0 ? (
+        <View style={styles.section}>
+          <SectionTitleNative>{t.groupStandings}</SectionTitleNative>
           <Text style={styles.note}>{t.standingsNotAvailable}</Text>
-        ) : loading || rows == null ? (
-          <View style={styles.skeletonShell}>
-            {[0, 1, 2, 3].map((i) => (
-              <SkeletonScanNative key={i} style={styles.skeletonRow} />
-            ))}
-          </View>
-        ) : error ? (
-          <Text style={styles.note}>{t.standingsLoadFailed}</Text>
-        ) : (
-          <View style={styles.tableShell}>
-            <View style={styles.tableHeader}>
-              <Text style={styles.thRank}>#</Text>
-              <View style={styles.thTeamCell}>
-                <Text style={styles.thTeam}>{t.teamLabel}</Text>
-              </View>
-              <View style={styles.statsGroup}>
-                <Text style={[styles.thStat, styles.thStatPlayed]}>P</Text>
-                <Text style={styles.thStat}>W</Text>
-                <Text style={styles.thStat}>D</Text>
-                <Text style={styles.thStat}>L</Text>
-                <Text style={styles.thStat}>GD</Text>
-                <Text style={[styles.thStat, styles.thPts]}>{t.wcPoints}</Text>
-              </View>
-            </View>
-            {rows.map((row, idx) => {
-              const highlighted = highlightSet.has(row.teamId);
-              const name =
-                teamIdToCountryName(row.teamId, locale === "ja" ? "ja" : "en") ??
-                row.teamId;
-              return (
-                <View
-                  key={row.teamId}
-                  style={[styles.tableRow, highlighted && styles.tableRowHighlight]}
-                >
-                  <Text style={styles.tdRank}>{idx + 1}</Text>
-                  <View style={styles.tdTeam}>
-                    <CountryFlagNative teamId={row.teamId} variant="inline" />
-                    <Text
-                      style={[
-                        styles.teamName,
-                        highlighted && styles.teamNameHighlight,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {name}
-                    </Text>
-                  </View>
-                  <View style={styles.statsGroup}>
-                    <Text style={[styles.tdStat, styles.tdStatPlayed]}>{row.played}</Text>
-                    <Text style={styles.tdStat}>{row.wins}</Text>
-                    <Text style={styles.tdStat}>{row.draws}</Text>
-                    <Text style={styles.tdStat}>{row.losses}</Text>
-                    <Text
-                      style={[
-                        styles.tdStat,
-                        row.goalDiff > 0
-                          ? styles.tdGdPositive
-                          : row.goalDiff < 0
-                            ? styles.tdGdNegative
-                            : styles.tdGdNeutral,
-                      ]}
-                    >
-                      {formatGoalDiff(row.goalDiff)}
-                    </Text>
-                    <Text style={[styles.tdStat, styles.tdPts]}>{row.points}</Text>
-                  </View>
+        </View>
+      ) : (
+        groups.map((group) => {
+          const entry = rowsByGroup?.find((r) => r.group.code === group.code);
+          return (
+            <View key={group.code} style={styles.section}>
+              <SectionTitleNative>
+                {`${t.wcGroup} ${group.code}`}
+              </SectionTitleNative>
+              {loading || entry == null ? (
+                <View style={styles.skeletonShell}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <SkeletonScanNative key={i} style={styles.skeletonRow} />
+                  ))}
                 </View>
-              );
-            })}
-          </View>
-        )}
-      </View>
+              ) : error ? (
+                <Text style={styles.note}>{t.standingsLoadFailed}</Text>
+              ) : (
+                <View style={styles.tableShell}>
+                  <View style={styles.tableHeader}>
+                    <Text style={styles.thRank}>#</Text>
+                    <View style={styles.thTeamCell}>
+                      <Text style={styles.thTeam}>{t.teamLabel}</Text>
+                    </View>
+                    <View style={styles.statsGroup}>
+                      <Text style={[styles.thStat, styles.thStatPlayed]}>P</Text>
+                      <Text style={styles.thStat}>W</Text>
+                      <Text style={styles.thStat}>D</Text>
+                      <Text style={styles.thStat}>L</Text>
+                      <Text style={styles.thStat}>GD</Text>
+                      <Text style={[styles.thStat, styles.thPts]}>{t.wcPoints}</Text>
+                    </View>
+                  </View>
+                  {entry.rows.map((row, idx) => {
+                    const highlighted = highlightSet.has(row.teamId);
+                    const name =
+                      teamIdToCountryName(
+                        row.teamId,
+                        locale === "ja" ? "ja" : "en"
+                      ) ?? row.teamId;
+                    return (
+                      <View
+                        key={row.teamId}
+                        style={[
+                          styles.tableRow,
+                          highlighted && styles.tableRowHighlight,
+                        ]}
+                      >
+                        <Text style={styles.tdRank}>{idx + 1}</Text>
+                        <View style={styles.tdTeam}>
+                          <CountryFlagNative teamId={row.teamId} variant="inline" />
+                          <Text
+                            style={[
+                              styles.teamName,
+                              highlighted && styles.teamNameHighlight,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {name}
+                          </Text>
+                        </View>
+                        <View style={styles.statsGroup}>
+                          <Text style={[styles.tdStat, styles.tdStatPlayed]}>
+                            {row.played}
+                          </Text>
+                          <Text style={styles.tdStat}>{row.wins}</Text>
+                          <Text style={styles.tdStat}>{row.draws}</Text>
+                          <Text style={styles.tdStat}>{row.losses}</Text>
+                          <Text
+                            style={[
+                              styles.tdStat,
+                              row.goalDiff > 0
+                                ? styles.tdGdPositive
+                                : row.goalDiff < 0
+                                  ? styles.tdGdNegative
+                                  : styles.tdGdNeutral,
+                            ]}
+                          >
+                            {formatGoalDiff(row.goalDiff)}
+                          </Text>
+                          <Text style={[styles.tdStat, styles.tdPts]}>
+                            {row.points}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          );
+        })
+      )}
 
       <View style={styles.section}>
         <SectionTitleNative>{t.fifaRanking}</SectionTitleNative>
