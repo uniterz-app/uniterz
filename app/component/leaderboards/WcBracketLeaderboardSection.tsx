@@ -4,10 +4,15 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Undo2 } from "lucide-react";
+import { X } from "lucide-react";
 
 import { nameBebas, jp } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import {
+  CYBER_MENU_ICON_CLASS,
+  CYBER_MENU_ICON_STROKE,
+  cyberChamferButtonClasses,
+} from "@/lib/ui/cyberMenuButton";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -527,7 +532,7 @@ export default function WcBracketLeaderboardSection({
               {selectedRow && !showInputGate && (
                 <motion.div
                   key="wc-bracket-detail-overlay"
-                  className="fixed inset-0 z-99999 flex flex-col"
+                  className="fixed inset-0 z-99999 flex min-h-0 flex-col"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -543,7 +548,7 @@ export default function WcBracketLeaderboardSection({
                   />
 
                   <motion.div
-                    className="relative z-10 flex h-full max-h-dvh flex-col rounded-t-2xl bg-transparent pb-4"
+                    className="relative z-10 flex h-full min-h-0 max-h-dvh flex-col overflow-hidden rounded-t-2xl bg-transparent pb-4"
                     initial={{ y: "100%" }}
                     animate={{ y: 0 }}
                     exit={{ y: "100%" }}
@@ -553,18 +558,36 @@ export default function WcBracketLeaderboardSection({
                       stiffness: 300,
                     }}
                   >
-                    <div className="sticky top-0 z-10 shrink-0 border-b border-white/12 bg-black/25 px-4 py-3 backdrop-blur-md">
-                      <WcBracketUserCard
-                        row={selectedRow}
-                        language={language}
-                        onClick={() => openProfileFromSheet(selectedRow)}
-                      />
-                    </div>
-
                     <div
                       ref={overlayScrollRef}
-                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pt-1 pb-bottom-nav"
+                      className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-auto px-1 pb-bottom-nav [-webkit-overflow-scrolling:touch]"
                     >
+                      <div className="flex justify-end px-3 pb-1 pt-2">
+                        <button
+                          type="button"
+                          onClick={closeDetail}
+                          aria-label={isJa ? "閉じる" : "Close"}
+                          className={cyberChamferButtonClasses(
+                            "sm",
+                            "close",
+                            "h-9 w-9 shadow-[0_0_16px_rgba(0,245,255,0.18)]"
+                          )}
+                        >
+                          <X
+                            className={CYBER_MENU_ICON_CLASS.sm}
+                            strokeWidth={CYBER_MENU_ICON_STROKE}
+                            aria-hidden
+                          />
+                        </button>
+                      </div>
+                      <div className="px-4 pb-3 pt-0.5">
+                        <WcBracketUserCard
+                          row={selectedRow}
+                          language={language}
+                          onClick={() => openProfileFromSheet(selectedRow)}
+                        />
+                      </div>
+
                       {bracketLoading ? (
                         <div className="flex items-center justify-center py-16">
                           <CandleChartLoader
@@ -572,41 +595,18 @@ export default function WcBracketLeaderboardSection({
                           />
                         </div>
                       ) : overlayBracket ? (
-                        <>
-                          <div className="relative z-20 border-t border-white/10 px-2 pt-1">
-                            <WcFullBracketMobile
-                              bracket={overlayBracket}
-                              advancement={knockoutAdvancement}
-                              officialWinners={officialWinners}
-                              firstMissMatchId={
-                                selectedRow.firstMissMatchId ?? null
-                              }
-                              language={language}
-                              showGlassShell={false}
-                            />
-                          </div>
-                          {isMobile ? (
-                            <div className="mt-6 flex w-full justify-end px-3 pb-2">
-                              <button
-                                type="button"
-                                onClick={closeDetail}
-                                aria-label={isJa ? "閉じる" : "Close"}
-                                className={[
-                                  "inline-flex items-center justify-center rounded-full border-2 border-white",
-                                  "bg-black/50 p-2.5 text-white",
-                                  "backdrop-blur-md transition hover:border-white/90 hover:bg-black/60 active:scale-[0.99]",
-                                ].join(" ")}
-                              >
-                                <Undo2
-                                  className="shrink-0"
-                                  size={17}
-                                  strokeWidth={2.4}
-                                  aria-hidden
-                                />
-                              </button>
-                            </div>
-                          ) : null}
-                        </>
+                        <div className="relative z-20 px-2 pb-4">
+                          <WcFullBracketMobile
+                            bracket={overlayBracket}
+                            advancement={knockoutAdvancement}
+                            officialWinners={officialWinners}
+                            firstMissMatchId={
+                              selectedRow.firstMissMatchId ?? null
+                            }
+                            language={language}
+                            showGlassShell={false}
+                          />
+                        </div>
                       ) : (
                         <div className="py-16 text-center text-white/60">
                           {isJa
@@ -616,31 +616,6 @@ export default function WcBracketLeaderboardSection({
                       )}
                     </div>
                   </motion.div>
-
-                  {!isMobile ? (
-                    <button
-                      type="button"
-                      onClick={closeDetail}
-                      aria-label={isJa ? "閉じる" : "Close"}
-                      className={[
-                        "pointer-events-auto fixed z-100000 inline-flex items-center justify-center",
-                        "rounded-full border-2 border-white bg-black/45 p-4 text-white",
-                        "shadow-lg shadow-black/35 backdrop-blur-md",
-                        "transition hover:border-white/90 hover:bg-black/55 active:scale-[0.99]",
-                      ].join(" ")}
-                      style={{
-                        bottom: "var(--bottom-nav-clearance)",
-                        right: "max(1.5rem, env(safe-area-inset-right, 0px))",
-                      }}
-                    >
-                      <Undo2
-                        className="shrink-0"
-                        size={28}
-                        strokeWidth={2.6}
-                        aria-hidden
-                      />
-                    </button>
-                  ) : null}
                 </motion.div>
               )}
             </AnimatePresence>,

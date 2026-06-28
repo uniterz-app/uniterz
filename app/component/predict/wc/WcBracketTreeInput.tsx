@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { WcBracketPredictMatchId } from "@/lib/wc/wc-knockout-bracket";
 import type { WcBracketState } from "@/lib/wc/wc-knockout-bracket";
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
@@ -149,6 +149,15 @@ function WinnerFlagAt({
   );
 }
 
+/** 1 つの path 文字列に複数 M がある場合、サブパスごとに分割（WebKit 描画崩れ防止） */
+function splitSvgSubpaths(d: string): string[] {
+  return d
+    .trim()
+    .split(/\s*(?=M\s)/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
 /** トーナメント表（表示専用・国旗のみ） */
 export default function WcBracketTreeInput({
   bracket,
@@ -163,7 +172,7 @@ export default function WcBracketTreeInput({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [wrapWidth, setWrapWidth] = useState(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = wrapRef.current;
     if (!node) return;
     const update = () => setWrapWidth(node.clientWidth);
@@ -173,7 +182,8 @@ export default function WcBracketTreeInput({
     return () => ro.disconnect();
   }, []);
 
-  const viewScale = wrapWidth ? wrapWidth / WC_TREE_DESIGN_W : 1;
+  const viewScale =
+    wrapWidth > 0 ? wrapWidth / WC_TREE_DESIGN_W : 360 / WC_TREE_DESIGN_W;
   const crownPad = WC_TREE_CHAMPION_CARD_LABEL_OVERHANG * viewScale * 0.88;
   const scaledHeight = WC_TREE_DESIGN_H * viewScale + crownPad + 2;
 
@@ -323,7 +333,7 @@ export default function WcBracketTreeInput({
   return (
     <div
       ref={wrapRef}
-      className={["relative w-full overflow-hidden rounded-xl", className]
+      className={["wc-bracket-tree-shell relative w-full overflow-hidden", className]
         .filter(Boolean)
         .join(" ")}
     >
@@ -347,12 +357,24 @@ export default function WcBracketTreeInput({
             height={WC_TREE_DESIGN_H}
             aria-hidden
           >
-            {paths.map((d, i) => (
-              <g key={i}>
-                <path className="wc-bracket-tree-line__glow" d={d} />
-                <path className="wc-bracket-tree-line__core" d={d} />
-              </g>
-            ))}
+            {paths.flatMap((d, pathIndex) =>
+              splitSvgSubpaths(d).map((segment, segIndex) => (
+                <g key={`${pathIndex}-${segIndex}`}>
+                  <path
+                    d={segment}
+                    fill="none"
+                    stroke="rgba(52, 211, 153, 0.28)"
+                    strokeWidth={2.5}
+                  />
+                  <path
+                    d={segment}
+                    fill="none"
+                    stroke="rgba(110, 231, 183, 0.78)"
+                    strokeWidth={1}
+                  />
+                </g>
+              ))
+            )}
           </svg>
 
           {leftR32.map((matchId, i) =>

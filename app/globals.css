@@ -5358,6 +5358,22 @@ div.wc-bracket-user-card--interactive:active {
   transform: scale(1.06);
 }
 
+/* WC ブラケットツリー — 外枠のみ（角切り） */
+.wc-bracket-tree-shell {
+  position: relative;
+  isolation: isolate;
+  clip-path: polygon(
+    10px 0%,
+    100% 0%,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0% 100%,
+    0% 10px
+  );
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.12);
+}
+
 /* WC ブラケットツリー — 背景（参考 HUD・中央円なし） */
 .wc-bracket-tree-bg {
   position: absolute;
@@ -5442,21 +5458,6 @@ div.wc-bracket-user-card--interactive:active {
   pointer-events: none;
 }
 
-.wc-bracket-tree-bg__grid {
-  position: absolute;
-  inset: 0;
-  opacity: 0.34;
-  background-image:
-    linear-gradient(rgba(190, 242, 100, 0.22) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(103, 232, 249, 0.16) 1px, transparent 1px);
-  background-size: 18px 18px;
-  mask-image: radial-gradient(
-    ellipse 88% 78% at 50% 52%,
-    rgba(0, 0, 0, 0.95) 0%,
-    rgba(0, 0, 0, 0.35) 100%
-  );
-}
-
 .wc-bracket-tree-bg__arcs {
   position: absolute;
   inset: 0;
@@ -5470,7 +5471,7 @@ div.wc-bracket-user-card--interactive:active {
 
 .wc-bracket-tree-bg__top {
   position: absolute;
-  top: 14px;
+  top: 4px;
   left: 0;
   right: 0;
   display: flex;
@@ -5485,7 +5486,7 @@ div.wc-bracket-user-card--interactive:active {
   flex: 1;
   max-width: 108px;
   height: 1px;
-  margin-top: 14px;
+  margin-top: 8px;
   background: linear-gradient(
     90deg,
     transparent 0%,
@@ -5507,10 +5508,10 @@ div.wc-bracket-user-card--interactive:active {
 }
 
 .wc-bracket-tree-bg__title {
-  font-size: clamp(18px, 5.2vw, 24px);
+  font-size: clamp(16px, 4.6vw, 22px);
   font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.18em;
   color: rgba(236, 254, 255, 0.92);
   text-shadow:
     0 0 12px rgba(103, 232, 249, 0.85),
@@ -5522,87 +5523,4 @@ div.wc-bracket-user-card--interactive:active {
   letter-spacing: 0.22em;
   color: rgba(165, 243, 252, 0.78);
   text-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
-}
-
-.wc-bracket-tree-bg__bottom {
-  position: absolute;
-  bottom: 12px;
-  left: 14px;
-  right: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  pointer-events: none;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  text-transform: uppercase;
-}
-
-.wc-bracket-tree-bg__bottom-row {
-  display: grid;
-  grid-template-columns: 84px 1fr 34px;
-  align-items: center;
-  gap: 8px;
-}
-
-.wc-bracket-tree-bg__label {
-  font-size: 8px;
-  letter-spacing: 0.14em;
-  color: rgba(190, 242, 100, 0.52);
-}
-
-.wc-bracket-tree-bg__label--active {
-  color: rgba(165, 243, 252, 0.88);
-  text-shadow: 0 0 8px rgba(34, 211, 238, 0.45);
-}
-
-.wc-bracket-tree-bg__meter {
-  position: relative;
-  height: 3px;
-  overflow: hidden;
-  border-radius: 1px;
-  background: rgba(2, 32, 28, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.12);
-}
-
-.wc-bracket-tree-bg__meter-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(
-    90deg,
-    rgba(132, 204, 22, 0.55) 0%,
-    rgba(190, 242, 100, 0.95) 100%
-  );
-  box-shadow: 0 0 10px rgba(163, 230, 53, 0.65);
-}
-
-.wc-bracket-tree-bg__meter-fill--cyan {
-  background: linear-gradient(
-    90deg,
-    rgba(34, 211, 238, 0.45) 0%,
-    rgba(165, 243, 252, 0.95) 100%
-  );
-  box-shadow: 0 0 10px rgba(34, 211, 238, 0.55);
-}
-
-.wc-bracket-tree-bg__pct {
-  font-size: 8px;
-  text-align: right;
-  letter-spacing: 0.08em;
-  color: rgba(224, 255, 251, 0.62);
-}
-
-/* WC ブラケットツリー — 勝ち上がり接続線（サイバーグリーン） */
-.wc-bracket-tree-line__glow {
-  fill: none;
-  stroke: rgba(52, 211, 153, 0.32);
-  stroke-width: 2px;
-  vector-effect: non-scaling-stroke;
-}
-
-.wc-bracket-tree-line__core {
-  fill: none;
-  stroke: rgba(110, 231, 183, 0.78);
-  stroke-width: 1px;
-  vector-effect: non-scaling-stroke;
 }

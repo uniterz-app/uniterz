@@ -7,7 +7,6 @@ export default function WcBracketTreeBackground() {
       <div className="wc-bracket-tree-bg__mist wc-bracket-tree-bg__mist--core" />
       <div className="wc-bracket-tree-bg__mist wc-bracket-tree-bg__mist--bottom" />
       <div className="wc-bracket-tree-bg__vignette" />
-      <div className="wc-bracket-tree-bg__grid" />
 
       <svg
         className="wc-bracket-tree-bg__arcs"
@@ -52,39 +51,9 @@ export default function WcBracketTreeBackground() {
       <div className="wc-bracket-tree-bg__top">
         <div className="wc-bracket-tree-bg__top-line" />
         <div className="wc-bracket-tree-bg__top-copy">
-          <span className="wc-bracket-tree-bg__title">GRID</span>
-          <span className="wc-bracket-tree-bg__sub">SYSTEM REVISION 4.0.2</span>
+          <span className="wc-bracket-tree-bg__title">KNOCKOUT STAGE</span>
         </div>
         <div className="wc-bracket-tree-bg__top-line" />
-      </div>
-
-      <div className="wc-bracket-tree-bg__bottom">
-        <div className="wc-bracket-tree-bg__bottom-row">
-          <span className="wc-bracket-tree-bg__label">SUCCESS</span>
-          <span className="wc-bracket-tree-bg__meter">
-            <span className="wc-bracket-tree-bg__meter-fill" style={{ width: "82%" }} />
-          </span>
-          <span className="wc-bracket-tree-bg__pct">82%</span>
-        </div>
-        <div className="wc-bracket-tree-bg__bottom-row">
-          <span className="wc-bracket-tree-bg__label wc-bracket-tree-bg__label--active">
-            READY
-          </span>
-          <span className="wc-bracket-tree-bg__meter">
-            <span
-              className="wc-bracket-tree-bg__meter-fill wc-bracket-tree-bg__meter-fill--cyan"
-              style={{ width: "64%" }}
-            />
-          </span>
-          <span className="wc-bracket-tree-bg__pct">64%</span>
-        </div>
-        <div className="wc-bracket-tree-bg__bottom-row">
-          <span className="wc-bracket-tree-bg__label">RESILIENCE</span>
-          <span className="wc-bracket-tree-bg__meter">
-            <span className="wc-bracket-tree-bg__meter-fill" style={{ width: "91%" }} />
-          </span>
-          <span className="wc-bracket-tree-bg__pct">91%</span>
-        </div>
       </div>
     </div>
   );
