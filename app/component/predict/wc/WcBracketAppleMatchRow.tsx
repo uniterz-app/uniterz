@@ -5,6 +5,17 @@ import type { WcBracketPredictMatchId } from "@/lib/wc/wc-knockout-bracket";
 import { teamIdToCountryName } from "@/lib/wc/wcCountry";
 import type { Language } from "@/lib/i18n/language";
 import type { WcInputMatchView } from "@/lib/wc/wc-bracket-input-display";
+import {
+  WC_BRACKET_MATCH_CARD_CLASS,
+  WC_BRACKET_MATCH_CARD_DIVIDER_CLASS,
+  WC_BRACKET_MATCH_ROW_BAR_CLASS,
+  WC_BRACKET_MATCH_ROW_BAR_SPACER_CLASS,
+  wcBracketMatchRowClass,
+  wcBracketMatchRowFlagClass,
+  wcBracketMatchRowFlagPlaceholderClass,
+  wcBracketMatchRowNameClass,
+  wcBracketMatchRowQualClass,
+} from "@/app/component/predict/wc/wcBracketMatchRowClasses";
 
 type Props = {
   match: WcInputMatchView;
@@ -38,54 +49,39 @@ function TeamRow({
   const qual = label.trim();
   const showQual = Boolean(qual && !isWinnerFeedLabel(qual));
 
-  const rowClass = [
-    "wc-bracket-match-row",
-    compact ? "wc-bracket-match-row--compact" : "",
-    selected ? "wc-bracket-match-row--selected" : "",
-    pickable ? "wc-bracket-match-row--pickable" : "wc-bracket-match-row--dim",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const rowClass = wcBracketMatchRowClass({ compact, selected, pickable });
 
   const inner = (
     <>
       {selected ? (
-        <span className="wc-bracket-match-row__bar" aria-hidden />
+        <span className={WC_BRACKET_MATCH_ROW_BAR_CLASS} aria-hidden />
       ) : (
-        <span className="wc-bracket-match-row__bar-spacer" aria-hidden />
+        <span className={WC_BRACKET_MATCH_ROW_BAR_SPACER_CLASS} aria-hidden />
       )}
 
       {showQual ? (
-        <span className="wc-bracket-match-row__qual">{qual}</span>
+        <span className={wcBracketMatchRowQualClass(compact)}>{qual}</span>
       ) : (
-        <span className="wc-bracket-match-row__qual" aria-hidden />
+        <span className={wcBracketMatchRowQualClass(compact)} aria-hidden />
       )}
 
       {teamId ? (
-        <span
-          className={[
-            "wc-bracket-match-row__flag",
-            compact ? "wc-bracket-match-row__flag--compact" : "",
-          ].join(" ")}
-        >
+        <span className={wcBracketMatchRowFlagClass(compact)}>
           <CountryFlag
             teamId={teamId}
             variant="inline"
-            className="block! h-full! w-full! ring-0!"
+            className="block h-full w-full ring-0"
           />
         </span>
       ) : (
-        <span
-          className={[
-            "wc-bracket-match-row__flag-placeholder",
-            compact ? "wc-bracket-match-row__flag-placeholder--compact" : "",
-          ].join(" ")}
-        >
+        <span className={wcBracketMatchRowFlagPlaceholderClass(compact)}>
           {qual || "—"}
         </span>
       )}
 
-      <span className="wc-bracket-match-row__name">{display}</span>
+      <span className={wcBracketMatchRowNameClass({ compact, selected })}>
+        {display}
+      </span>
     </>
   );
 
@@ -107,12 +103,12 @@ export default function WcBracketAppleMatchRow({
   onPick,
 }: Props) {
   const homeName = match.home.teamId
-    ? (teamIdToCountryName(match.home.teamId, language) ??
+    ? (teamIdToCountryName(match.home.teamId, "en") ??
       match.home.label ??
       "—")
     : match.home.label || "—";
   const awayName = match.away.teamId
-    ? (teamIdToCountryName(match.away.teamId, language) ??
+    ? (teamIdToCountryName(match.away.teamId, "en") ??
       match.away.label ??
       "—")
     : match.away.label || "—";
@@ -121,7 +117,7 @@ export default function WcBracketAppleMatchRow({
   const pickable = match.ready;
 
   return (
-    <div className="wc-bracket-match-card">
+    <div className={WC_BRACKET_MATCH_CARD_CLASS}>
       <TeamRow
         teamId={match.home.teamId}
         label={match.home.label}
@@ -137,7 +133,7 @@ export default function WcBracketAppleMatchRow({
             : undefined
         }
       />
-      <div className="wc-bracket-match-card__divider" aria-hidden />
+      <div className={WC_BRACKET_MATCH_CARD_DIVIDER_CLASS} aria-hidden />
       <TeamRow
         teamId={match.away.teamId}
         label={match.away.label}

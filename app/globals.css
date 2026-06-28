@@ -5064,7 +5064,7 @@ body::before {
   min-width: 0;
   width: 100%;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   border: 0;
   background: transparent;
   text-align: left;
@@ -5074,7 +5074,7 @@ body::before {
 }
 
 .wc-bracket-match-row--compact {
-  gap: 10px;
+  gap: 4px;
   padding: 14px 14px 14px 0;
 }
 
@@ -5120,18 +5120,19 @@ body::before {
 
 .wc-bracket-match-row__qual {
   flex-shrink: 0;
-  width: 32px;
+  width: 22px;
+  padding-left: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.34);
-  text-align: center;
+  text-align: left;
 }
 
 .wc-bracket-match-row--compact .wc-bracket-match-row__qual {
-  width: 30px;
-  font-size: 12px;
+  width: 22px;
+  font-size: 11px;
 }
 
 .wc-bracket-match-row__flag {
@@ -5180,17 +5181,18 @@ body::before {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  padding-left: 6px;
+  font-family: "Bebas Neue", sans-serif;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .wc-bracket-match-row--compact .wc-bracket-match-row__name {
-  font-size: 13px;
-  letter-spacing: 0.07em;
+  font-size: 15px;
+  letter-spacing: 0.08em;
 }
 
 .wc-bracket-match-row--selected .wc-bracket-match-row__name {

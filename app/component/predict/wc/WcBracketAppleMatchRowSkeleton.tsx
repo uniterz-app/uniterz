@@ -1,35 +1,42 @@
 "use client";
 
+import {
+  WC_BRACKET_MATCH_CARD_CLASS,
+  WC_BRACKET_MATCH_CARD_DIVIDER_CLASS,
+  WC_BRACKET_MATCH_ROW_BAR_SPACER_CLASS,
+  wcBracketMatchRowClass,
+  wcBracketMatchRowFlagPlaceholderClass,
+  wcBracketMatchRowNameClass,
+  wcBracketMatchRowQualClass,
+} from "@/app/component/predict/wc/wcBracketMatchRowClasses";
+
 type Props = {
   compact?: boolean;
 };
 
 function TeamRowSkeleton({ compact }: { compact?: boolean }) {
   return (
-    <div
-      className={[
-        "wc-bracket-match-row",
-        compact ? "wc-bracket-match-row--compact" : "",
-      ].join(" ")}
-    >
-      <span className="wc-bracket-match-row__bar-spacer" aria-hidden />
+    <div className={wcBracketMatchRowClass({ compact })}>
+      <span className={WC_BRACKET_MATCH_ROW_BAR_SPACER_CLASS} aria-hidden />
       <span
         className={[
-          "wc-bracket-match-row__qual skeleton-scan rounded-sm bg-white/10",
+          wcBracketMatchRowQualClass(compact),
+          "skeleton-scan rounded-sm bg-white/10",
           compact ? "h-3" : "h-3.5",
         ].join(" ")}
         aria-hidden
       />
       <span
         className={[
-          "wc-bracket-match-row__flag-placeholder skeleton-scan bg-white/10",
-          compact ? "wc-bracket-match-row__flag-placeholder--compact" : "",
+          wcBracketMatchRowFlagPlaceholderClass(compact),
+          "skeleton-scan bg-white/10",
         ].join(" ")}
         aria-hidden
       />
       <span
         className={[
-          "wc-bracket-match-row__name skeleton-scan rounded-sm bg-white/10",
+          wcBracketMatchRowNameClass({ compact }),
+          "skeleton-scan rounded-sm bg-white/10",
           compact ? "h-3 max-w-[68%]" : "h-3.5 max-w-[72%]",
         ].join(" ")}
         aria-hidden
@@ -39,11 +46,13 @@ function TeamRowSkeleton({ compact }: { compact?: boolean }) {
 }
 
 /** `WcBracketAppleMatchRow` compact 相当のプレースホルダ */
-export default function WcBracketAppleMatchRowSkeleton({ compact = false }: Props) {
+export default function WcBracketAppleMatchRowSkeleton({
+  compact = false,
+}: Props) {
   return (
-    <div className="wc-bracket-match-card" aria-hidden>
+    <div className={WC_BRACKET_MATCH_CARD_CLASS} aria-hidden>
       <TeamRowSkeleton compact={compact} />
-      <div className="wc-bracket-match-card__divider" aria-hidden />
+      <div className={WC_BRACKET_MATCH_CARD_DIVIDER_CLASS} aria-hidden />
       <TeamRowSkeleton compact={compact} />
     </div>
   );

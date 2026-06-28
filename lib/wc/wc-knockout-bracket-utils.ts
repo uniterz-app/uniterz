@@ -177,7 +177,7 @@ export function resolveWcMatchParticipants(
   if (!def) return null;
 
   if (def.round === "R32" && def.feedsFrom.length === 0) {
-    const confirmed = resolveWcR32ConfirmedParticipants(matchId);
+    const confirmed = resolveWcR32ConfirmedParticipants(matchId, advancement);
     if (confirmed) {
       return [
         { teamId: confirmed[0].teamId, label: confirmed[0].label, source: "group" },

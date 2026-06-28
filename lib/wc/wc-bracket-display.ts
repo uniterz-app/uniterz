@@ -16,6 +16,7 @@ import {
 import type { WcKnockoutAdvancement } from "@/lib/wc/wc-knockout-bracket-utils";
 import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
 import { resolveWcR32ConfirmedParticipants } from "@/lib/wc/wc-knockout-r32-confirmed";
+import { WC_2026_KNOCKOUT_ADVANCEMENT } from "@/lib/wc/wc-knockout-advancement-2026";
 
 export type WcBracketCardView = {
   matchId: WcBracketPredictMatchId;
@@ -52,7 +53,10 @@ export function getWcMatchContestants(
   }
 
   if (def.round === "R32") {
-    const confirmed = resolveWcR32ConfirmedParticipants(matchId);
+    const confirmed = resolveWcR32ConfirmedParticipants(
+      matchId,
+      advancement ?? WC_2026_KNOCKOUT_ADVANCEMENT
+    );
     if (confirmed) return confirmed;
   }
 
