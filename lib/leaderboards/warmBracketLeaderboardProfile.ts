@@ -30,7 +30,6 @@ function bracketRowToRankingRow(row: BracketProfileRow): RankingRowWithCountry {
     handle: row.handle ?? "",
     photoURL: row.photoURL ?? undefined,
     plan: row.plan,
-    rank: row.rank,
     posts: 0,
     streak,
     totalScore,
