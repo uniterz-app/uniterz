@@ -22,6 +22,7 @@ import {
   lookupWcTeamDisplay,
   wcTeamIdFromIso3,
 } from "../lib/wc/wc-team-display";
+import { lookupWcBroadcastLabels } from "../lib/wc/wcBroadcastLabels";
 
 const admin = adminPkg;
 const dryRun = process.argv.includes("--dry-run");
@@ -107,6 +108,7 @@ function validateConfirmedMatches() {
     const home = isoToTeamRef(m.homeIso3);
     const away = isoToTeamRef(m.awayIso3);
     const startAt = Timestamp.fromDate(new Date(m.startAtIso));
+    const broadcastLabels = lookupWcBroadcastLabels(id);
 
     batch.set(
       db.collection("games").doc(id),
@@ -122,6 +124,7 @@ function validateConfirmedMatches() {
         wcStage: "main",
         knockout: true,
         wcKnockoutMatchId: m.matchId,
+        ...(broadcastLabels.length > 0 ? { broadcastLabels } : {}),
         home,
         away,
         homeTeamId: home.teamId,

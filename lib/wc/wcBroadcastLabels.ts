@@ -1,10 +1,10 @@
 /**
- * WC 2026 グループステージ（72試合）の日本向け放送媒体。
- * 全試合 DAZN ライブ配信 + 地上波（NHK / 日本テレビ / フジテレビ）があれば追加。
+ * WC 2026（グループ72 + ノックアウト32）の日本向け放送媒体。
+ * 全試合 DAZN ライブ配信 + 地上波（NHK / 日本テレビ / フジテレビ / NHK BS）があれば追加。
  * Firestore games.broadcastLabels が無いときのフォールバック。
  *
- * 地上波割当: NHK・日本テレビ・フジテレビ公式発表を ABEMA TIMES 一覧で照合
- * https://times.abema.tv/articles/-/10243707 （2026-06 時点）
+ * グループ: ABEMA TIMES 一覧で照合 https://times.abema.tv/articles/-/10243707
+ * ノックアウト: Goal.com 番組表 + 各局公式（2026-06 時点）
  */
 const DAZN_ONLY = ["DAZN"] as const;
 
@@ -108,6 +108,44 @@ export const WC_BROADCAST_LABELS: Record<string, string[]> = {
   "wc-2026-L-pan-hrv": labels("フジテレビ"),
   "wc-2026-L-pan-eng": [...DAZN_ONLY],
   "wc-2026-L-hrv-gha": [...DAZN_ONLY],
+
+  // Knockout — Round of 32 (M73–M88)
+  // 地上波割当: Goal.com 番組表 / 各局公式（2026-06 時点）
+  // https://www.goal.com/jp/%E3%83%AA%E3%82%B9%E3%83%88/2026-world-cup-all-tv-guide/blt70f25e7f12788cd5
+  "wc-2026-ko-M73": labels("NHK"), // 南アフリカ vs カナダ
+  "wc-2026-ko-M74": [...DAZN_ONLY], // ドイツ vs パラグアイ（BSP4K 録画のみ）
+  "wc-2026-ko-M75": labels("NHK"), // オランダ vs モロッコ
+  "wc-2026-ko-M76": labels("フジテレビ", "NHK BS"), // ブラジル vs 日本
+  "wc-2026-ko-M77": labels("フジテレビ"), // フランス vs スウェーデン
+  "wc-2026-ko-M78": labels("日本テレビ"), // コートジボワール vs ノルウェー
+  "wc-2026-ko-M79": labels("NHK"), // メキシコ vs エクアドル
+  "wc-2026-ko-M80": labels("フジテレビ"), // イングランド vs DRコンゴ
+  "wc-2026-ko-M81": labels("NHK"), // アメリカ vs ボスニア
+  "wc-2026-ko-M82": labels("NHK"), // ベルギー vs セネガル
+  "wc-2026-ko-M83": labels("日本テレビ"), // ポルトガル vs クロアチア
+  "wc-2026-ko-M84": labels("NHK"), // スペイン vs オーストリア
+  "wc-2026-ko-M85": labels("NHK"), // スイス vs アルジェリア（Eテレ→総合）
+  "wc-2026-ko-M86": labels("日本テレビ"), // アルゼンチン vs カーボベルデ
+  "wc-2026-ko-M87": [...DAZN_ONLY], // コロンビア vs ガーナ（BSP4K 録画のみ）
+  "wc-2026-ko-M88": labels("NHK"), // オーストラリア vs エジプト
+
+  // Knockout — Round of 16 以降（試合枠固定・対戦カードはブラケット依存）
+  "wc-2026-ko-M89": [...DAZN_ONLY],
+  "wc-2026-ko-M90": labels("日本テレビ"),
+  "wc-2026-ko-M91": [...DAZN_ONLY],
+  "wc-2026-ko-M92": [...DAZN_ONLY],
+  "wc-2026-ko-M93": labels("日本テレビ"),
+  "wc-2026-ko-M94": [...DAZN_ONLY],
+  "wc-2026-ko-M95": [...DAZN_ONLY],
+  "wc-2026-ko-M96": [...DAZN_ONLY],
+  "wc-2026-ko-M97": [...DAZN_ONLY],
+  "wc-2026-ko-M98": [...DAZN_ONLY],
+  "wc-2026-ko-M99": [...DAZN_ONLY],
+  "wc-2026-ko-M100": [...DAZN_ONLY],
+  "wc-2026-ko-M101": [...DAZN_ONLY],
+  "wc-2026-ko-M102": [...DAZN_ONLY],
+  "wc-2026-ko-M103": labels("NHK"), // 3位決定戦（予想対象外）
+  "wc-2026-ko-M104": labels("NHK"), // 決勝
 };
 
 function normalizeBroadcastLabels(raw: unknown): string[] {
