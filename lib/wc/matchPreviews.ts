@@ -7,6 +7,26 @@ type WcMatchPreviewCopy = {
 
 /** gameId → 試合展望（第2節以降は順次追加） */
 const WC_MATCH_PREVIEWS: Record<string, WcMatchPreviewCopy> = {
+  "wc-2026-ko-M73": {
+    ja: [
+      "南アフリカ対カナダは、どちらにとっても初めてのワールドカップ決勝トーナメントです。",
+      "グループステージの内容を見ると、完成度ではカナダの方が上に見えます。初戦はボスニア・ヘルツェゴビナと引き分け、2戦目はカタールに6-0で大勝。ワールドカップ初勝利をかなり派手な形で飾りました。ただ、最終戦のスイス戦では1-2で敗戦。グループ首位通過のチャンスを逃していて、試合の入り方や守備の安定感にはまだ不安があります。",
+      "南アフリカは、グループステージの中で評価を上げたチームです。初戦のメキシコ戦は0-2で敗れましたが、チェコ戦では1-1。最後の韓国戦では、前から出る姿勢とカウンターが機能し、1-0で勝利しました。この勝利で初の決勝トーナメント進出を決めています。",
+      "試合のポイントは、カナダのプレスに南アフリカがどう対応するかです。カナダはボールを失った瞬間に前から奪い返しに来るチームで、南アフリカが自陣でミスをすると一気にピンチになります。特にアルフォンソ・デイヴィスが戻る見込みなので、カナダの左サイドの推進力はかなり上がるはずです。",
+      "一方で、南アフリカにも勝ち筋はあります。韓国戦のように守備で耐えながら、奪った後に素早く縦へ出せれば、カナダの背後を突くチャンスはあります。さらにテボホ・モコエナが出場停止から戻るため、中盤の強度と配球は改善されます。",
+      "ただし、テンバ・ズワネは引き続き出場停止です。南アフリカは攻撃を落ち着かせる選手を欠くため、カナダの圧力を受けた時にボールを保持できるかが課題になります。",
+      "全体としては、カナダが前から押し込み、南アフリカが耐えてカウンターを狙う構図になりそうです。カナダは個の推進力とプレスで上回る一方、南アフリカは韓国戦で見せた集中力と一発のカウンターをどこまで再現できるか。そこがこの試合の見どころになります。",
+    ],
+    en: [
+      "South Africa against Canada is a first-ever World Cup knockout tie for both nations.",
+      "On group-stage evidence, Canada look the more complete side. They drew 1–1 with Bosnia and Herzegovina in the opener, then thrashed Qatar 6–0 for a flamboyant first World Cup win. But they lost 1–2 to Switzerland in the final game, missing the chance to top the group, and doubts remain about how they start matches and their defensive stability.",
+      "South Africa are a team that grew in stature during the group stage. They lost the opener 0–2 to Mexico, drew 1–1 with the Czech Republic, then beat Korea Republic 1–0 in the final game as their pressing and counter-attacks clicked — a win that sealed a first-ever knockout appearance.",
+      "The key to the match is how South Africa cope with Canada’s press. Canada hunt the ball back the instant they lose it, so a South African mistake in their own half can quickly become a crisis. With Alphonso Davies expected back, Canada’s left-sided thrust should rise sharply.",
+      "South Africa do have a route to victory. If they endure defensively as they did against Korea and break quickly after winning the ball, there are chances to get in behind Canada. The return of Teboho Mokoena from suspension should also improve midfield intensity and distribution.",
+      "However, Themba Zwane remains suspended. Lacking a player to calm the attack, South Africa’s challenge is whether they can keep the ball under Canadian pressure.",
+      "Overall, expect Canada to push high while South Africa absorb and counter. Canada hold the edge in individual thrust and pressing; the watch is how far South Africa can reproduce the concentration and one-shot counters they showed against Korea.",
+    ],
+  },
   "wc-2026-A-cze-zaf": {
     ja: [
       "A組の敗者同士。チェコは韓国に1-2、南アフリカはメキシコに0-2で敗れており、ここで負けると3位通過争いでもかなり厳しくなる。特にチェコは最終節がメキシコ戦のため、この試合で勝点3が欲しい。",
