@@ -154,7 +154,11 @@ export default function ProfileEditKinetikHeaderTabs({
             delay={0.16}
             explanation={streakExplanation}
             onPress={(e) =>
-              openTooltip(e, streakExplanation, `streak-${streakTier}`)
+              openTooltip(
+                e,
+                streakExplanation,
+                `streak-${streakTier}` as KinetikSlantTabThemeKey
+              )
             }
             className={[
               "profile-edit-kinetik-slant-tab profile-edit-kinetik-slant-tab--outline",
