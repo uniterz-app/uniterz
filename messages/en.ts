@@ -424,6 +424,14 @@ const en: Messages = {
         "Matches with the same kickoff time are judged together as one group.\n[Example: Jun 25 at 19:00 JST] Japan vs Sweden and Tunisia vs Netherlands both kick off at this time. They form one group.\nIf you post predictions for both matches and both are correct → your streak grows by 2 (e.g. from 3 to 5).\nIf you miss even one posted match in the group → your streak resets to 0.\nMatches you did not post are not counted (if you only posted one of the two, only that match is judged).\nWin-streak bonuses (3+ wins) are applied to each correct match score.",
       cta: "Got it",
     },
+    wcKnockoutStreakReset: {
+      tag: "WIN STREAK",
+      title: "Win streaks in the knockout stage",
+      lead:
+        "The group stage and knockout stage are separate phases, so your win streak does not carry over.",
+      bullets: "In the knockout stage, your win streak starts from 0.",
+      cta: "Got it",
+    },
   },
 
   pro: {

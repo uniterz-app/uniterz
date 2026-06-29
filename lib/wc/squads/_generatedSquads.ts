@@ -112,6 +112,7 @@ export const WC_GENERATED_SQUADS: Record<string, WcTeamSquad["squad"]> = {
     { id: "bel-raskin", name: "Nicolas Raskin", pos: "MF", club: "Rangers" },
     { id: "bel-onana", name: "Amadou Onana", pos: "MF", club: "Aston Villa" },
     { id: "bel-ngoy", name: "Nathan Ngoy", pos: "DF", club: "Lille" },
+    { id: "bel-doku", name: "Jérémy Doku", pos: "FW", club: "Manchester City" },
     { id: "bel-fernandez-pardo", name: "Matias Fernandez-Pardo", pos: "FW", club: "Lille" },
   ],
   bih: [
@@ -819,6 +820,8 @@ export const WC_GENERATED_SQUADS: Record<string, WcTeamSquad["squad"]> = {
     { id: "mar-mazraoui", name: "Noussair Mazraoui", pos: "DF", club: "Manchester United" },
     { id: "mar-amrabat", name: "Sofyan Amrabat", pos: "MF", club: "Real Betis" },
     { id: "mar-aguerd", name: "Nayef Aguerd", pos: "DF", club: "Marseille" },
+    { id: "mar-saiss", name: "Romain Saïss", pos: "DF", club: "Panathinaikos" },
+    { id: "mar-en-nesyri", name: "Youssef En-Nesyri", pos: "FW", club: "Fenerbahçe" },
     { id: "mar-bouaddi", name: "Ayyoub Bouaddi", pos: "MF", club: "Lille" },
     { id: "mar-talbi", name: "Chemsdine Talbi", pos: "MF", club: "Sunderland" },
     { id: "mar-ounahi", name: "Azzedine Ounahi", pos: "MF", club: "Girona" },
