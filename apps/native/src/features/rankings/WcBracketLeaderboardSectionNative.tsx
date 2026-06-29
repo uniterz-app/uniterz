@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,24 +9,16 @@ import {
 import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { WC_KNOCKOUT_SEASON } from "../../../../../lib/wc/wc-knockout-bracket";
+import type { WcBracketLeaderboardRow } from "@/lib/leaderboards/useWcBracketLeaderboard";
 import type { WcBracketMarketData } from "../../../../../lib/wc/wc-bracket-market-aggregate";
 import { teamIdToCountryName } from "../../../../../lib/wc/wcCountry";
+import WcBracketDetailOverlayNative from "../games/wc/bracket/WcBracketDetailOverlayNative";
+import WcBracketUserCardNative from "../games/wc/bracket/WcBracketUserCardNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "./CyberSlantedTabNative";
 import { colors, fonts } from "../../theme/tokens";
-
-type WcBracketLeaderboardRow = {
-  uid: string;
-  displayName: string;
-  handle: string | null;
-  rank: number;
-  alive: boolean;
-  survivedRounds: number;
-  firstMissMatchId: string | null;
-  championPick?: string | null;
-};
 
 type WcBracketViewMode = "survivor" | "market";
 
@@ -50,6 +41,9 @@ export default function WcBracketLeaderboardSectionNative({
   const [totalCount, setTotalCount] = useState(0);
   const [marketLoading, setMarketLoading] = useState(false);
   const [market, setMarket] = useState<WcBracketMarketData | null>(null);
+  const [selectedRow, setSelectedRow] = useState<WcBracketLeaderboardRow | null>(
+    null
+  );
 
   const fetchRows = useCallback(async () => {
     const base = getUniterzApiBaseUrl();
@@ -146,54 +140,15 @@ export default function WcBracketLeaderboardSectionNative({
         pct: Math.round((count / total) * 100),
       }))
       .sort((a, b) => b.count - a.count);
-  }, [market, language]);
+  }, [market]);
 
-  const renderCard = (row: WcBracketLeaderboardRow, highlight = false) => {
-    const status = row.alive
-      ? isJa
-        ? "生存中"
-        : "ALIVE"
-      : row.firstMissMatchId
-        ? isJa
-          ? `${row.firstMissMatchId} で脱落`
-          : `OUT ${row.firstMissMatchId}`
-        : isJa
-          ? "脱落"
-          : "OUT";
+  const openDetail = useCallback((row: WcBracketLeaderboardRow) => {
+    setSelectedRow(row);
+  }, []);
 
-    return (
-      <View
-        key={row.uid}
-        style={[styles.card, highlight && styles.cardMine]}
-      >
-        <View style={styles.cardTop}>
-          <Text style={styles.rank}>
-            #{row.rank}
-            {totalCount > 0 ? (
-              <Text style={styles.rankTotal}> /{totalCount}</Text>
-            ) : null}
-          </Text>
-          {row.championPick ? (
-            <Text style={styles.champion}>{row.championPick}</Text>
-          ) : null}
-        </View>
-        <Text style={styles.name} numberOfLines={1}>
-          {row.displayName}
-        </Text>
-        {row.handle ? (
-          <Text style={styles.handle} numberOfLines={1}>
-            @{row.handle}
-          </Text>
-        ) : null}
-        <Text style={[styles.status, row.alive && styles.statusAlive]}>
-          {status}
-        </Text>
-        <Text style={styles.rounds}>
-          {isJa ? `R${row.survivedRounds}` : `Round ${row.survivedRounds}`}
-        </Text>
-      </View>
-    );
-  };
+  const closeDetail = useCallback(() => {
+    setSelectedRow(null);
+  }, []);
 
   const viewTabs = (
     <CyberSlantedTabBarNative fill>
@@ -226,16 +181,19 @@ export default function WcBracketLeaderboardSectionNative({
     return (
       <View style={styles.center}>
         <Text style={styles.error}>{error}</Text>
-        <Pressable onPress={() => void fetchRows()} style={styles.retry}>
-          <Text style={styles.retryText}>{isJa ? "再試行" : "Retry"}</Text>
-        </Pressable>
       </View>
     );
   }
 
   return (
     <View style={styles.root}>
-      {myRow ? renderCard(myRow, true) : null}
+      {myRow ? (
+        <WcBracketUserCardNative
+          row={myRow}
+          language={language}
+          onPress={() => openDetail(myRow)}
+        />
+      ) : null}
       <View style={styles.tabsWrap}>{viewTabs}</View>
 
       {viewMode === "survivor" ? (
@@ -254,7 +212,14 @@ export default function WcBracketLeaderboardSectionNative({
               contentContainerStyle={styles.list}
               showsVerticalScrollIndicator={false}
             >
-              {listRows.map((row) => renderCard(row))}
+              {listRows.map((row) => (
+                <WcBracketUserCardNative
+                  key={row.uid}
+                  row={row}
+                  language={language}
+                  onPress={() => openDetail(row)}
+                />
+              ))}
             </ScrollView>
           )}
         </>
@@ -291,6 +256,14 @@ export default function WcBracketLeaderboardSectionNative({
           ))}
         </ScrollView>
       )}
+
+      <WcBracketDetailOverlayNative
+        visible={selectedRow != null}
+        row={selectedRow}
+        season={season}
+        language={language}
+        onClose={closeDetail}
+      />
     </View>
   );
 }
@@ -311,48 +284,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  card: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.glassCardBg,
-  },
-  cardMine: {
-    borderColor: "rgba(34,211,238,0.45)",
-  },
-  cardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  rank: {
-    color: colors.accentCyan,
-    fontFamily: fonts.metric,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  rankTotal: { fontSize: 11, color: colors.textMuted },
-  champion: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  name: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  handle: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  status: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-    marginTop: 6,
-  },
-  statusAlive: { color: colors.accentCyan },
-  rounds: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   noData: {
     color: colors.textMuted,
     fontFamily: fonts.metric,
@@ -360,15 +291,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   error: { color: colors.textSecondary, textAlign: "center", paddingHorizontal: 16 },
-  retry: {
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  retryText: { color: colors.accentCyan, fontWeight: "600" },
   marketCountLabel: {
     color: colors.textMuted,
     fontSize: 11,

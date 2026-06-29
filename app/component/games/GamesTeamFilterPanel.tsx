@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, CircleHelp, X } from "lucide-react";
 import cn from "clsx";
 import {
   CYBER_FILTER_PANEL_CLASS,
@@ -14,6 +14,12 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
+import CountryFlag from "@/app/component/games/CountryFlag";
+import { teamIdToWcCountry } from "@/lib/wc/wcCountry";
+import {
+  gamesFilterHelpButtonLabel,
+  gamesFilterHelpParagraphs,
+} from "@/lib/games/gamesFilterHelp";
 
 type Props = {
   teams: ScheduleTeamOption[];
@@ -46,6 +52,18 @@ function parseMarginDraft(s: string): number | null {
 
 const OVERLAY_Z = 1000000;
 
+function FilterTeamFlag({ teamId }: { teamId: string }) {
+  if (!teamIdToWcCountry(teamId)) return null;
+  return (
+    <CountryFlag
+      teamId={teamId}
+      variant="inline"
+      decorative
+      className="shrink-0"
+    />
+  );
+}
+
 /** Framer Motion の transform が Tailwind の translate を上書きしないよう、中央寄せは motion で行う */
 const DESKTOP_CENTER_MOTION = { x: "-50%", y: "-50%" } as const;
 
@@ -74,6 +92,7 @@ export default function GamesTeamFilterPanel({
       ? "text-xs"
       : "text-sm";
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [q, setQ] = useState("");
   const [mounted, setMounted] = useState(false);
   const [draftMarginMin, setDraftMarginMin] = useState("");
@@ -85,6 +104,7 @@ export default function GamesTeamFilterPanel({
 
   useEffect(() => {
     if (open) setQ("");
+    else setHelpOpen(false);
   }, [open]);
 
   useEffect(() => {
@@ -143,30 +163,17 @@ export default function GamesTeamFilterPanel({
   const marginFilterActive = marginMin != null || marginMax != null;
   const labelShort = m.games.filter;
 
-  const filterHelpText = useMemo(() => {
-    if (activeCount === 0) {
-      return language === "ja"
-        ? "チームは選ばなくても、下の点差だけで絞れます（任意で最大2チーム）。点差は上下どちらか空欄ならその側は制限なし。未開始の試合はそのまま表示されます。"
-        : "Team filter is optional—you can use only the score margin below. Up to 2 teams if you want. Empty min/max side = no bound on that side. Scheduled games stay visible.";
-    }
-    if (activeCount === 1) {
-      const n = teams.find((t) => t.id === selectedIds[0])?.name ?? selectedIds[0];
-      return language === "ja"
-        ? `「${n}」が出る試合を表示しています。`
-        : `Showing games that include ${n}.`;
-    }
-    const [id1, id2] = selectedIds;
-    const n1 = teams.find((t) => t.id === id1)?.name ?? id1;
-    const n2 = teams.find((t) => t.id === id2)?.name ?? id2;
-    if (matchMode === "h2h") {
-      return language === "ja"
-        ? `「${n1}」対「${n2}」の試合だけを表示しています。`
-        : `Showing only games between ${n1} and ${n2}.`;
-    }
-    return language === "ja"
-      ? `「${n1}」または「${n2}」のどちらかが出る試合を表示しています（他チームとの対戦も含みます）。`
-      : `Showing games where ${n1} or ${n2} plays—including games vs other teams.`;
-  }, [activeCount, selectedIds, teams, matchMode, language]);
+  const helpParagraphs = useMemo(
+    () =>
+      gamesFilterHelpParagraphs({
+        language,
+        selectedIds,
+        teams,
+        matchMode,
+      }),
+    [language, selectedIds, teams, matchMode],
+  );
+  const helpButtonLabel = gamesFilterHelpButtonLabel(language);
 
   const overlay = (
     <AnimatePresence>
@@ -237,86 +244,66 @@ export default function GamesTeamFilterPanel({
             </div>
           )}
 
-          <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 pb-3 pt-3 md:px-5 md:pt-4">
-            <div>
-              <h2
-                id="games-team-filter-title"
-                className="text-[15px] font-bold tracking-wide text-white/95 md:text-base"
-                style={tabFont}
-              >
-                {m.games.filterSchedule}
-              </h2>
-              <p className="mt-1 max-w-[min(100%,340px)] text-[11px] leading-relaxed text-white/45 md:text-xs">
-                {filterHelpText}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/80 transition hover:bg-white/10"
-              aria-label={m.common.close}
-            >
-              <X size={18} strokeWidth={2.2} />
-            </button>
-          </div>
-
-          <div className="border-b border-white/[0.06] px-4 py-2.5 md:px-5">
-            <p
-              className="mb-2 text-[10px] font-medium uppercase tracking-wide text-white/40"
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pb-3 pt-3 md:px-5 md:pt-4">
+            <h2
+              id="games-team-filter-title"
+              className="min-w-0 flex-1 text-[15px] font-bold tracking-wide text-white/95 md:text-base"
               style={tabFont}
             >
-              {m.games.marginRange}
-            </p>
-            <p className="mb-2 text-[10px] leading-relaxed text-white/38">
-              {language === "ja"
-                ? "得点差（大きい方の差）が、左の数以上かつ右の数以下の試合に絞ります（両方入れたとき）。例: 8 と 12 → 8〜12点差のみ。"
-                : "|Home − Away| must be ≥ min and ≤ max (inclusive). Example: min 8, max 12 → wins by 8–12 points."}
-            </p>
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="flex min-w-[5.5rem] flex-1 flex-col gap-1">
-                <span className="text-[10px] text-white/45" style={tabFont}>
-                  {m.games.marginMin}
-                </span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={200}
-                  step={1}
-                  value={draftMarginMin}
-                  onChange={(e) => setDraftMarginMin(e.target.value)}
-                  onBlur={commitMargins}
-                  placeholder="—"
-                  className={cn(
-                    "w-full rounded-lg border border-white/12 bg-black/40 px-2 py-2 text-white/90 outline-none focus:border-cyan-400/40",
-                    filterInputTextClass,
-                  )}
-                  style={tabFont}
-                />
-              </label>
-              <label className="flex min-w-[5.5rem] flex-1 flex-col gap-1">
-                <span className="text-[10px] text-white/45" style={tabFont}>
-                  {m.games.marginMax}
-                </span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={200}
-                  step={1}
-                  value={draftMarginMax}
-                  onChange={(e) => setDraftMarginMax(e.target.value)}
-                  onBlur={commitMargins}
-                  placeholder="—"
-                  className={cn(
-                    "w-full rounded-lg border border-white/12 bg-black/40 px-2 py-2 text-white/90 outline-none focus:border-cyan-400/40",
-                    filterInputTextClass,
-                  )}
-                  style={tabFont}
-                />
-              </label>
+              {m.games.filterSchedule}
+            </h2>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setHelpOpen((v) => !v)}
+                aria-expanded={helpOpen}
+                aria-controls="games-team-filter-help"
+                className={cn(
+                  "inline-flex h-9 items-center gap-1 rounded-full border px-2.5 text-[11px] font-semibold transition md:text-xs",
+                  helpOpen
+                    ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
+                    : "border-white/12 bg-white/[0.06] text-white/75 hover:bg-white/10 hover:text-white/90",
+                )}
+                style={tabFont}
+              >
+                <CircleHelp size={15} strokeWidth={2.2} aria-hidden />
+                <span>{helpButtonLabel}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/80 transition hover:bg-white/10"
+                aria-label={m.common.close}
+              >
+                <X size={18} strokeWidth={2.2} />
+              </button>
             </div>
           </div>
+
+          <AnimatePresence initial={false}>
+            {helpOpen ? (
+              <motion.div
+                id="games-team-filter-help"
+                key="games-filter-help"
+                initial={reduceMotion ? false : { height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.18 }}
+                className="overflow-hidden border-b border-white/[0.06]"
+              >
+                <div className="space-y-2 px-4 py-3 md:px-5">
+                  {helpParagraphs.map((paragraph) => (
+                    <p
+                      key={paragraph}
+                      className="text-[11px] leading-relaxed text-white/45 md:text-xs"
+                    >
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
 
           {activeCount > 0 && (
             <div className="flex flex-wrap gap-2 border-b border-white/[0.06] px-4 py-2.5 md:px-5">
@@ -330,6 +317,7 @@ export default function GamesTeamFilterPanel({
                     className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/35 bg-cyan-500/15 px-2.5 py-1 text-[11px] font-medium text-cyan-100/95 transition hover:bg-cyan-500/25"
                     style={tabFont}
                   >
+                    <FilterTeamFlag teamId={id} />
                     <span className="max-w-[200px] truncate">{name}</span>
                     <X size={12} className="opacity-70" aria-hidden />
                   </button>
@@ -438,6 +426,7 @@ export default function GamesTeamFilterPanel({
                     >
                       {sel ? "✓" : ""}
                     </span>
+                    <FilterTeamFlag teamId={t.id} />
                     <span
                       className={cn(
                         "min-w-0 flex-1 truncate",
@@ -456,6 +445,59 @@ export default function GamesTeamFilterPanel({
                   {m.games.noTeamMatch}
                 </p>
               )}
+            </div>
+          </div>
+
+          <div className="border-t border-white/[0.06] px-4 py-2.5 md:px-5">
+            <p
+              className="mb-2 text-[10px] font-medium uppercase tracking-wide text-white/40"
+              style={tabFont}
+            >
+              {m.games.marginRange}
+            </p>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex min-w-[5.5rem] flex-1 flex-col gap-1">
+                <span className="text-[10px] text-white/45" style={tabFont}>
+                  {m.games.marginMin}
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={200}
+                  step={1}
+                  value={draftMarginMin}
+                  onChange={(e) => setDraftMarginMin(e.target.value)}
+                  onBlur={commitMargins}
+                  placeholder="—"
+                  className={cn(
+                    "w-full rounded-lg border border-white/12 bg-black/40 px-2 py-2 text-white/90 outline-none focus:border-cyan-400/40",
+                    filterInputTextClass,
+                  )}
+                  style={tabFont}
+                />
+              </label>
+              <label className="flex min-w-[5.5rem] flex-1 flex-col gap-1">
+                <span className="text-[10px] text-white/45" style={tabFont}>
+                  {m.games.marginMax}
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={200}
+                  step={1}
+                  value={draftMarginMax}
+                  onChange={(e) => setDraftMarginMax(e.target.value)}
+                  onBlur={commitMargins}
+                  placeholder="—"
+                  className={cn(
+                    "w-full rounded-lg border border-white/12 bg-black/40 px-2 py-2 text-white/90 outline-none focus:border-cyan-400/40",
+                    filterInputTextClass,
+                  )}
+                  style={tabFont}
+                />
+              </label>
             </div>
           </div>
 
