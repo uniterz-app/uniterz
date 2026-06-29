@@ -23,6 +23,8 @@ type ApiResponse = {
   season?: string;
   count?: number;
   totalCount?: number;
+  /** 提出済みブラケットのうち生存中（alive）の人数 */
+  aliveCount?: number;
   rows?: WcBracketLeaderboardRow[];
   myRow?: WcBracketLeaderboardRow | null;
   hasMore?: boolean;
@@ -51,6 +53,7 @@ export default function useWcBracketLeaderboard(params: Params = {}) {
   const [rows, setRows] = useState<WcBracketLeaderboardRow[]>([]);
   const [myRow, setMyRow] = useState<WcBracketLeaderboardRow | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [aliveCount, setAliveCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -72,6 +75,7 @@ export default function useWcBracketLeaderboard(params: Params = {}) {
         setRows([]);
         setMyRow(null);
         setTotalCount(0);
+        setAliveCount(0);
         setError(null);
         setHasMore(false);
         setNextCursor(null);
@@ -83,6 +87,7 @@ export default function useWcBracketLeaderboard(params: Params = {}) {
         setRows([]);
         setMyRow(null);
         setTotalCount(0);
+        setAliveCount(0);
         setError("invalid season");
         setHasMore(false);
         setNextCursor(null);
@@ -116,6 +121,11 @@ export default function useWcBracketLeaderboard(params: Params = {}) {
             ? Math.max(0, Math.floor(json.totalCount))
             : 0
         );
+        setAliveCount(
+          typeof json.aliveCount === "number" && Number.isFinite(json.aliveCount)
+            ? Math.max(0, Math.floor(json.aliveCount))
+            : 0
+        );
         setHasMore(Boolean(json.hasMore));
         setNextCursor(json.nextCursor ?? null);
         setError(null);
@@ -124,6 +134,7 @@ export default function useWcBracketLeaderboard(params: Params = {}) {
         setRows([]);
         setMyRow(null);
         setTotalCount(0);
+        setAliveCount(0);
         setHasMore(false);
         setNextCursor(null);
         setError(
@@ -193,6 +204,7 @@ export default function useWcBracketLeaderboard(params: Params = {}) {
     rows,
     myRow,
     totalCount,
+    aliveCount,
     hasMore,
     loadMore,
     refetch,

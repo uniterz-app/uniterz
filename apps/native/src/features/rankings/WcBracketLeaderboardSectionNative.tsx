@@ -39,6 +39,7 @@ export default function WcBracketLeaderboardSectionNative({
   const [rows, setRows] = useState<WcBracketLeaderboardRow[]>([]);
   const [myRow, setMyRow] = useState<WcBracketLeaderboardRow | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [aliveCount, setAliveCount] = useState(0);
   const [marketLoading, setMarketLoading] = useState(false);
   const [market, setMarket] = useState<WcBracketMarketData | null>(null);
   const [selectedRow, setSelectedRow] = useState<WcBracketLeaderboardRow | null>(
@@ -72,6 +73,7 @@ export default function WcBracketLeaderboardSectionNative({
         rows?: WcBracketLeaderboardRow[];
         myRow?: WcBracketLeaderboardRow | null;
         totalCount?: number;
+        aliveCount?: number;
       };
       if (!res.ok || !json.ok) {
         throw new Error(json.error ?? "fetch failed");
@@ -80,6 +82,9 @@ export default function WcBracketLeaderboardSectionNative({
       setMyRow(json.myRow ?? null);
       setTotalCount(
         typeof json.totalCount === "number" ? json.totalCount : 0
+      );
+      setAliveCount(
+        typeof json.aliveCount === "number" ? json.aliveCount : 0
       );
     } catch (e: unknown) {
       setRows([]);
@@ -198,6 +203,13 @@ export default function WcBracketLeaderboardSectionNative({
 
       {viewMode === "survivor" ? (
         <>
+          {totalCount > 0 ? (
+            <Text style={styles.survivorStats}>
+              {isJa
+                ? `${totalCount}人提出 · ${aliveCount}人が生存中`
+                : `${totalCount} submitted · ${aliveCount} alive`}
+            </Text>
+          ) : null}
           <Text style={styles.subtitle}>
             {isJa
               ? "外れたブラケットから脱落"
@@ -271,6 +283,13 @@ export default function WcBracketLeaderboardSectionNative({
 const styles = StyleSheet.create({
   root: { gap: 10, paddingVertical: 8 },
   tabsWrap: { marginTop: 2 },
+  survivorStats: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 18,
+  },
   subtitle: {
     color: colors.textSecondary,
     fontSize: 12,

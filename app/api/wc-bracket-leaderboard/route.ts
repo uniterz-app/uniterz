@@ -34,6 +34,8 @@ type ApiResponse = {
   season?: string;
   count?: number;
   totalCount?: number;
+  /** 提出済みブラケットのうち生存中（alive）の人数 */
+  aliveCount?: number;
   rows?: WcBracketLeaderboardRow[];
   myRow?: WcBracketLeaderboardRow | null;
   hasMore?: boolean;
@@ -69,6 +71,27 @@ function championDisplayCode(teamId: string | null): string | null {
   const c = teamIdToWcCountry(teamId);
   if (c?.iso2) return c.iso2.toUpperCase().replace("GB-", "");
   return teamId.replace(/^wc-/, "").toUpperCase().slice(0, 3);
+}
+
+async function countSubmittedBracketSurvival(
+  adminDb: ReturnType<typeof getAdminDb>,
+  season: string
+): Promise<{ submittedCount: number; aliveCount: number }> {
+  const snap = await adminDb
+    .collection("wcBrackets")
+    .where("season", "==", season)
+    .select("isSubmitted", "alive")
+    .get();
+
+  let submittedCount = 0;
+  let aliveCount = 0;
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    if (data.isSubmitted === false) continue;
+    submittedCount += 1;
+    if (data.alive === true) aliveCount += 1;
+  }
+  return { submittedCount, aliveCount };
 }
 
 function parseBracketDoc(data: FirebaseFirestore.DocumentData) {
@@ -168,8 +191,11 @@ export async function GET(req: Request) {
       .orderBy("alive", "desc")
       .orderBy("survivedRounds", "desc");
 
-    const totalCountSnap = await baseQuery.count().get();
-    const totalCount = totalCountSnap.data().count;
+    const { submittedCount, aliveCount } = await countSubmittedBracketSurvival(
+      adminDb,
+      season
+    );
+    const totalCount = submittedCount;
 
     let query = baseQuery.limit(fetchCap);
     if (cursorSnap) {
@@ -304,6 +330,7 @@ export async function GET(req: Request) {
         season,
         count: rows.length,
         totalCount,
+        aliveCount,
         rows,
         myRow,
         hasMore,
