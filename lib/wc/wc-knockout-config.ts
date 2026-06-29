@@ -56,6 +56,14 @@ export function isWcKnockoutBracketSubmissionOpen(
   return !isWcKnockoutBracketSubmissionPastDeadline(season, nowMs);
 }
 
+/** ノックアウトステージ開始（R32 第1試合キックオフ以降） */
+export function isWcKnockoutStageStarted(
+  season: string,
+  nowMs = Date.now()
+): boolean {
+  return isWcKnockoutBracketSubmissionPastDeadline(season, nowMs);
+}
+
 /** モーダル・告知用 — 提出締切の表示ラベル（JST / ET） */
 export function formatWcBracketSubmissionDeadline(
   season: string,

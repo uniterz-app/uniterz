@@ -12,8 +12,7 @@ import AppProviders from "@/app/AppProviders";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import EventGate from "@/app/component/common/EventGate";
-import WcConcurrentStreakGate from "@/app/component/common/WcConcurrentStreakGate";
-import WcBracketStartPromptGate from "@/app/component/common/WcBracketStartPromptGate";
+import WcKnockoutStreakResetGate from "@/app/component/common/WcKnockoutStreakResetGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 import { APP_MAINTENANCE_MODE } from "@/lib/app/maintenanceMode";
 import AppChrome from "@/app/component/AppChrome";
@@ -63,8 +62,7 @@ export default function RootLayout({
             <SplashGlbPreload />
             <AppPageBackground />
             <EventGate />
-            <WcConcurrentStreakGate />
-            <WcBracketStartPromptGate />
+            <WcKnockoutStreakResetGate />
 
             <AppContentShell>
               <AppProviders>

@@ -1,17 +1,17 @@
-// Source: FIFA confirmed starting XIs (2026 World Cup group stage, matchday 1)
+// Source: FIFA confirmed starting XIs (group stage) + R32 predicted XIs (Jun 2026)
 // https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026
 
 import type { RawSourceLineup } from "./goalLineups";
 
-/** 試合終了チームの実際のスタメン（予想ではなく確定 XI） */
+/** 試合予想・確定スタメン（MATCH_LINEUPS が synthesis より優先） */
 export const MATCH_LINEUPS: RawSourceLineup[] = [
-  // Group A — Mexico 2–0 South Africa (Jun 11)
+  // Group A — Mexico (R32 predicted vs Ecuador)
   {
     iso3: "mex",
     formation: "4-3-3",
     players: [
       "Rangel", "Reyes", "Montes", "Vásquez", "Gallardo",
-      "Lira", "Fidalgo", "Gutiérrez", "Alvarado", "Jiménez", "Quiñones",
+      "Fidalgo", "Lira", "Gutiérrez", "Alvarado", "Jiménez", "Quiñones",
     ],
   },
   {
@@ -48,12 +48,13 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Millar", "Eustáquio", "Koné", "Buchanan", "David", "Oluwaseyi",
     ],
   },
+  // Group B — Bosnia (R32 predicted vs USA)
   {
     iso3: "bih",
     formation: "4-4-2",
     players: [
-      "Vasilj", "Kolašinac", "Katić", "Muharemović", "Dedić",
-      "Memić", "Bašić", "Tahirović", "Bajraktarević", "Demirović", "Lukić",
+      "Vasilj", "Dedić", "Katić", "Muharemović", "Kolašinac",
+      "Bajraktarević", "Bašić", "Tahirović", "Memić", "Demirović", "Džeko",
     ],
   },
   // Group B — Qatar 1–1 Switzerland (Jun 13)
@@ -69,25 +70,25 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
     iso3: "che",
     formation: "4-3-3",
     players: [
-      "Kobel", "Rodriguez", "Akanji", "Elvedi", "Zakaria",
-      "Freuler", "Xhaka", "Aebischer", "Vargas", "Embolo", "Ndoye",
+      "Kobel", "Zakaria", "Elvedi", "Akanji", "Rodriguez",
+      "Aebischer", "Xhaka", "Freuler", "Vargas", "Embolo", "Ndoye",
     ],
   },
-  // Group C — Brazil 1–1 Morocco (Jun 13)
+  // Group C — Brazil (R32 predicted vs Japan)
   {
     iso3: "bra",
-    formation: "4-4-2",
+    formation: "4-2-3-1",
     players: [
-      "Alisson", "Douglas Santos", "Marquinhos", "Gabriel", "Ibañez",
-      "Vinícius Júnior", "Casemiro", "Bruno Guimarães", "Paquetá", "Igor Thiago", "Raphinha",
+      "Alisson", "Danilo", "Marquinhos", "Gabriel", "Douglas Santos",
+      "Casemiro", "Guimarães", "Rayan", "Paquetá", "Vinícius", "Cunha",
     ],
   },
   {
     iso3: "mar",
     formation: "4-2-3-1",
     players: [
-      "Bounou", "Mazraoui", "Diop", "Riad", "Hakimi",
-      "El Aynaoui", "Bouaddi", "El Khannouss", "Ounahi", "Brahim Díaz", "Saibari",
+      "Bounou", "Hakimi", "Aguerd", "Saïss", "Mazraoui",
+      "Amrabat", "Ounahi", "Brahim Díaz", "El Khannouss", "Rahimi", "En-Nesyri",
     ],
   },
   // Group C — Haiti 0–1 Scotland (Jun 13)
@@ -107,30 +108,30 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "McGinn", "McTominay", "Ferguson", "Gannon-Doak", "Shankland", "Adams",
     ],
   },
-  // Group D — USA 4–1 Paraguay (Jun 12)
+  // Group D — USA (R32 predicted vs Bosnia)
   {
     iso3: "usa",
     formation: "3-4-2-1",
     players: [
-      "Freese", "Ream", "Richards", "Freeman", "Robinson",
-      "Adams", "Tillman", "Dest", "McKennie", "Pulisic", "Balogun",
+      "Freese", "Freeman", "Richards", "Ream", "Robinson",
+      "Tillman", "Adams", "McKennie", "Dest", "Balogun", "Pulisic",
     ],
   },
   {
     iso3: "pry",
-    formation: "4-3-3",
+    formation: "4-4-2",
     players: [
-      "Gill", "Alonso", "Alderete", "Gómez", "Cáceres",
-      "Diego Gómez", "Cubas", "Bobadilla", "Almirón", "Sanabria", "Enciso",
+      "Gill", "Cáceres", "Gustavo Gómez", "Alderete", "Alonso",
+      "Diego Gómez", "Cubas", "Bobadilla", "Almirón", "Enciso", "Sanabria",
     ],
   },
-  // Group D — Australia 2–0 Turkey (Jun 13)
+  // Group D — Australia (R32 predicted vs Egypt)
   {
     iso3: "aus",
-    formation: "3-5-2",
+    formation: "5-4-1",
     players: [
-      "Beach", "Circati", "Souttar", "Burgess", "Bos",
-      "Okon-Engstler", "Metcalfe", "O'Neill", "Italiano", "Irankunda", "Touré",
+      "Beach", "Italiano", "Circati", "Souttar", "Burgess", "Bos",
+      "Irankunda", "O'Neill", "Metcalfe", "Okon-Engstler", "Touré",
     ],
   },
   {
@@ -141,13 +142,13 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Çalhanoğlu", "Yüksek", "Yılmaz", "Kökçü", "Güler", "Aktürkoğlu",
     ],
   },
-  // Group E — Germany 7–1 Curaçao (Jun 14)
+  // Group E — Germany (R32 predicted vs Paraguay)
   {
     iso3: "deu",
-    formation: "3-4-3",
+    formation: "4-2-3-1",
     players: [
-      "Neuer", "Kimmich", "Tah", "Schlotterbeck", "Brown",
-      "Pavlović", "Musiala", "Nmecha", "Wirtz", "Havertz", "Sané",
+      "Neuer", "Kimmich", "Tah", "Rüdiger", "Brown",
+      "Nmecha", "Pavlović", "Sané", "Musiala", "Wirtz", "Havertz",
     ],
   },
   {
@@ -158,48 +159,47 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Leandro Bacuna", "Comenencia", "Chong", "Juninho Bacuna", "Locadia", "Hansen",
     ],
   },
-  // Group E — Ivory Coast 1–0 Ecuador (Jun 14)
+  // Group E — Ivory Coast (R32 predicted vs Norway)
   {
     iso3: "civ",
     formation: "4-3-3",
     players: [
-      "Fofana", "Konan", "Singo", "Agbadou", "Doué",
-      "Seko Fofana", "Kessié", "Touré", "Wahi", "Pépé", "Diomande",
+      "Fofana", "Doué", "Kossounou", "Agbadou", "Konan",
+      "Kessié", "Sangaré", "Oulaï", "Amad", "Bonny", "Diomandé",
     ],
   },
   {
     iso3: "ecu",
     formation: "4-3-3",
     players: [
-      "Galíndez", "Hincapié", "Pacho", "Ordóñez", "Franco",
-      "Vite", "Moisés Caicedo", "Minda", "Plata", "Enner Valencia", "Yeboah",
+      "Galíndez", "Franco", "Ordóñez", "Pacho", "Hincapié",
+      "Vite", "Caicedo", "Castillo", "Yeboah", "Valencia", "Angulo",
     ],
   },
-  // Group F — Netherlands 2–2 Japan (Jun 14)
+  // Group F — Netherlands (R32 predicted vs Morocco)
   {
     iso3: "nld",
     formation: "4-3-3",
     players: [
-      "Verbruggen", "van de Ven", "van Hecke", "van Dijk", "Dumfries",
-      "de Jong", "Gravenberch", "Reijnders", "Gakpo", "Malen", "Summerville",
+      "Verbruggen", "Dumfries", "Van Hecke", "Van Dijk", "Aké",
+      "Gravenberch", "De Jong", "Reijnders", "Malen", "Brobbey", "Gakpo",
     ],
   },
   {
     iso3: "jpn",
-    formation: "3-4-3",
-    // 対オランダは久保が先発→75'に負傷交代で小川。以降の表示は小川をRWに
+    formation: "3-4-2-1",
     players: [
-      "Suzuki", "Watanabe", "Taniguchi", "Itō", "Nakamura",
-      "Sano", "Kamada", "Dōan", "Maeda", "Ueda", "Ogawa",
+      "Suzuki", "Tomiyasu", "Taniguchi", "Itō", "Dōan",
+      "Sano", "Tanaka", "Nakamura", "Maeda", "Kamada", "Ueda",
     ],
   },
-  // Group F — Sweden 5–1 Tunisia (Jun 14)
+  // Group F — Sweden (R32 predicted vs France)
   {
     iso3: "swe",
-    formation: "3-4-3",
+    formation: "3-4-2-1",
     players: [
-      "Nordfeldt", "Lagerbielke", "Hien", "Lindelöf", "Gudmundsson",
-      "Karlström", "Ayari", "Bernhardsson", "Nygren", "Isak", "Gyökeres",
+      "Nordfeldt", "Hien", "Lindelöf", "Lagerbielke", "Bernhardsson",
+      "Karlström", "Ayari", "Gudmundsson", "Nygren", "Isak", "Gyökeres",
     ],
   },
   {
@@ -210,21 +210,21 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Khedira", "Skhiri", "Mejbri", "Saad", "Ben Slimane",
     ],
   },
-  // Group G — Belgium vs Iran (Jun 21, MD2 — CBS predicted XI)
+  // Group G — Belgium (R32 predicted vs Senegal)
   {
     iso3: "bel",
     formation: "4-2-3-1",
     players: [
       "Courtois", "Meunier", "Ngoy", "Mechele", "Castagne",
-      "Onana", "Tielemans", "Trossard", "De Bruyne", "Fernandez-Pardo", "De Ketelaere",
+      "Onana", "Tielemans", "Doku", "De Bruyne", "Trossard", "Lukaku",
     ],
   },
   {
     iso3: "egy",
-    formation: "4-2-3-1",
+    formation: "3-4-1-2",
     players: [
-      "Shobeir", "Hany", "Ibrahim", "Fathy", "Fatouh",
-      "Attia", "Lasheen", "Ziko", "Salah", "Ashour", "Marmoush",
+      "Shobeir", "Hany", "Ibrahim", "Fathi", "Fatouh",
+      "Zizo", "Lasheen", "Attia", "Ashour", "Salah", "Marmoush",
     ],
   },
   // Group G — Iran 2–2 New Zealand (Jun 15)
@@ -244,13 +244,13 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Singh", "Bell", "Stamenić", "Just", "Wood", "McCowatt",
     ],
   },
-  // Group H — Spain vs Saudi Arabia (Jun 21, MD2)
+  // Group H — Spain (R32 predicted vs Austria)
   {
     iso3: "esp",
     formation: "4-3-3",
     players: [
-      "Simón", "Porro", "Cubarsí", "Laporte", "Cucurella",
-      "Rodri", "Pedri", "Olmo", "Baena", "Oyarzabal", "Yamal",
+      "Unai Simón", "Llorente", "Cubarsí", "Laporte", "Cucurella",
+      "Fabián Ruiz", "Rodri", "Pedri", "Ferran Torres", "Oyarzabal", "Nico Williams",
     ],
   },
   {
@@ -261,13 +261,13 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Al-Harbi", "Nasser Al-Dawsari", "Al-Juwayr", "Al-Khaibari", "Al-Buraikan", "Salem Al-Dawsari",
     ],
   },
-  // Group H — Cape Verde (Jun 15 vs Spain, MD1 — ury-cpv 待ち)
+  // Group H — Cape Verde (R32 predicted vs Argentina)
   {
     iso3: "cpv",
-    formation: "4-3-3",
+    formation: "4-2-3-1",
     players: [
-      "Vozinha", "Moreira", "Lopes", "Diney", "Lopes Cabral",
-      "Pina", "Laros Duarte", "Monteiro", "Mendes", "Livramento", "Jovane Cabral",
+      "Vozinha", "Moreira", "Pico", "Diney", "Lopes Cabral",
+      "Monteiro", "Pina", "Jovane Cabral", "Duarte", "Mendes", "Livramento",
     ],
   },
   // Group H — Uruguay (Jun 15 vs Saudi Arabia, MD1 — ury-cpv 待ち)
@@ -279,21 +279,21 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Valverde", "Ugarte", "Bentancur", "M. Araújo", "Viñas", "Núñez",
     ],
   },
-  // Group I — France 3–1 Senegal (Jun 16)
+  // Group I — France (R32 predicted vs Sweden)
   {
     iso3: "fra",
     formation: "4-2-3-1",
     players: [
-      "Maignan", "Koundé", "Upamecano", "Saliba", "Théo Hernandez",
-      "Tchouaméni", "Rabiot", "Olise", "Dembélé", "Doué", "Mbappé",
+      "Maignan", "Koundé", "Upamecano", "Lacroix", "T. Hernández",
+      "Tchouaméni", "Rabiot", "Dembélé", "Olise", "Doué", "Mbappé",
     ],
   },
   {
     iso3: "sen",
-    formation: "4-3-3",
+    formation: "4-2-3-1",
     players: [
-      "Mendy", "Diatta", "Koulibaly", "Niakhaté", "El Hadji Malick Diouf",
-      "Lamine Camara", "Idrissa Gueye", "Pape Gueye", "Ismaïla Sarr", "Nicolas Jackson", "Sadio Mané",
+      "Diaw", "Diatta", "Koulibaly", "Niakhaté", "Diouf",
+      "Camara", "I. Gueye", "Sarr", "P. Gueye", "Mané", "Jackson",
     ],
   },
   // Group I — Iraq 1–4 Norway (Jun 16)
@@ -305,38 +305,39 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Bayesh", "Ismail", "Al-Ammari", "Jasim", "Hussein", "Al-Hamadi",
     ],
   },
+  // Group I — Norway (R32 predicted vs Ivory Coast)
   {
     iso3: "nor",
     formation: "4-3-3",
     players: [
       "Nyland", "Ryerson", "Ajer", "Heggem", "Wolfe",
-      "Berge", "Ødegaard", "Aursnes", "Sørloth", "Haaland", "Nusa",
+      "Ødegaard", "Berge", "Berg", "Sørloth", "Haaland", "Nusa",
     ],
   },
-  // Group J — Argentina 3–0 Algeria (Jun 16)
+  // Group J — Argentina (R32 predicted vs Cape Verde)
   {
     iso3: "arg",
     formation: "4-3-3",
     players: [
-      "Emiliano Martínez", "Montiel", "Romero", "Lisandro Martínez", "Medina",
-      "De Paul", "Mac Allister", "Fernández", "Almada", "Messi", "Lautaro Martínez",
+      "E. Martínez", "Molina", "Romero", "L. Martínez", "Medina",
+      "De Paul", "Mac Allister", "Enzo", "Almada", "Messi", "Lautaro Martínez",
     ],
   },
   {
     iso3: "dza",
-    formation: "4-3-3",
+    formation: "4-2-3-1",
     players: [
-      "Zidane", "Belghali", "Mandi", "Bensebaini", "Ait-Nouri",
-      "Boudaoui", "Maza", "Bentaleb", "Moussa", "Gouiri", "Chaibi",
+      "Zidane", "Belghali", "Mandi", "Bensebaini", "Aït-Nouri",
+      "Boudaoui", "Aouar", "Mahrez", "Maza", "Chaibi", "Gouiri",
     ],
   },
-  // Group J — Austria vs Jordan (Jun 16)
+  // Group J — Austria (R32 predicted vs Spain)
   {
     iso3: "aut",
     formation: "4-2-3-1",
     players: [
       "Schlager", "Posch", "Lienhart", "Alaba", "Mwene",
-      "Laimer", "Seiwald", "Schmid", "X. Schlager", "Sabitzer", "Kalajdžić",
+      "Seiwald", "X. Schlager", "Schmid", "Sabitzer", "Laimer", "Kalajdžić",
     ],
   },
   {
@@ -347,38 +348,38 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Abu Taha", "Al-Rashdan", "Al-Rawabdeh", "Al-Taamari", "Olwan", "Al-Fakhouri",
     ],
   },
-  // Group K — Portugal 1–1 DR Congo (Jun 17)
+  // Group K — Portugal (R32 predicted vs Croatia)
   {
     iso3: "prt",
-    formation: "4-2-3-1",
+    formation: "4-3-3",
     players: [
-      "Costa", "Cancelo", "Araújo", "Veiga", "Mendes",
-      "Neves", "Vitinha", "Bernardo Silva", "Bruno Fernandes", "Neto", "Ronaldo",
+      "Diogo Costa", "Cancelo", "Inácio", "Rúben Dias", "Nuno Mendes",
+      "Vitinha", "João Neves", "Bruno Fernandes", "Neto", "Ronaldo", "Leão",
     ],
   },
   {
     iso3: "cod",
-    formation: "5-3-2",
+    formation: "4-2-3-1",
     players: [
-      "Mpasi", "Wan-Bissaka", "Kapuadi", "Tuanzebe", "Mbemba", "Masuaku",
-      "Mukau", "Moutoussamy", "Kayembe", "Wissa", "Bakambu",
+      "Mpasi", "Wan-Bissaka", "Mbemba", "Tuanzebe", "Masuaku",
+      "Mukau", "Moutoussamy", "Wissa", "Kakuta", "Mbuku", "Bakambu",
     ],
   },
-  // Group K — England 4–2 Croatia (Jun 17)
+  // Group K — England (R32 predicted vs DR Congo)
   {
     iso3: "eng",
     formation: "4-2-3-1",
     players: [
-      "Pickford", "James", "Konsa", "Stones", "O'Reilly",
-      "Anderson", "Rice", "Madueke", "Bellingham", "Gordon", "Kane",
+      "Pickford", "James", "Guéhi", "Konsa", "O'Reilly",
+      "Anderson", "Rice", "Saka", "Rogers", "Gordon", "Kane",
     ],
   },
   {
     iso3: "hrv",
     formation: "4-2-3-1",
     players: [
-      "Livakovic", "Sutalo", "Vuskovic", "Gvardiol", "Stanisic",
-      "Modric", "Pasalic", "Perisic", "Sucic", "Baturina", "Musa",
+      "Livaković", "Stanišić", "Vušković", "Šutalo", "Gvardiol",
+      "Modrić", "Kovačić", "Baturina", "Kramarić", "Perišić", "Budimir",
     ],
   },
   // Group L — Uzbekistan 1–3 Colombia (Jun 17)
@@ -390,21 +391,21 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Mozgovoy", "Shukurov", "Nasrullaev", "Urunov", "Fayzullaev", "Shomurodov",
     ],
   },
+  // Group L — Colombia (R32 predicted vs Ghana)
   {
     iso3: "col",
     formation: "4-2-3-1",
     players: [
-      "Vargas", "Munoz", "Sanchez", "Lucumi", "Mojica",
-      "Lerma", "Puerta", "Arias", "Rodriguez", "Diaz", "Suarez",
+      "Vargas", "Muñoz", "Sánchez", "Lucumí", "Mojica",
+      "Lerma", "Ríos", "Arias", "James Rodríguez", "Luis Díaz", "Luis Suárez",
     ],
   },
-  // Group L — Ghana 1–1 Panama (Jun 17)
   {
     iso3: "gha",
-    formation: "4-4-2",
+    formation: "3-4-3",
     players: [
-      "Ati-Zigi", "Senaya", "Adjetey", "Opoku", "Mensah",
-      "Semenyo", "Owusu", "Yirenkyi", "Nuamah", "Sulemana", "Ayew",
+      "Asare", "Seidu", "Oppong", "Adjetey", "Yirenkyi",
+      "Partey", "Sibo", "Mensah", "Fatawu", "Semenyo", "Iñaki Williams",
     ],
   },
   {

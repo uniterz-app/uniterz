@@ -6,21 +6,35 @@ import {
   Text,
   View,
 } from "react-native";
-import { resolveWcConcurrentStreakCopy } from "../../../../../lib/wc/wcConcurrentStreakNotice";
+import {
+  resolveWcConcurrentStreakCopy,
+  type WcConcurrentStreakCopy,
+} from "../../../../../lib/wc/wcConcurrentStreakNotice";
+import { resolveWcKnockoutStreakResetCopy } from "../../../../../lib/wc/wcKnockoutStreakResetNotice";
 import type { GamesLanguage } from "./gamesI18n";
+
+export type WcStreakNoticeKind = "concurrentKickoff" | "knockoutStreakReset";
 
 type Props = {
   visible: boolean;
   language: GamesLanguage;
   onClose: () => void;
+  noticeKind?: WcStreakNoticeKind;
+  copy?: WcConcurrentStreakCopy;
 };
 
 export default function WcConcurrentStreakModalNative({
   visible,
   language,
   onClose,
+  noticeKind = "concurrentKickoff",
+  copy,
 }: Props) {
-  const copy = resolveWcConcurrentStreakCopy(language);
+  const resolvedCopy =
+    copy ??
+    (noticeKind === "knockoutStreakReset"
+      ? resolveWcKnockoutStreakResetCopy(language)
+      : resolveWcConcurrentStreakCopy(language));
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -29,19 +43,19 @@ export default function WcConcurrentStreakModalNative({
           style={StyleSheet.absoluteFillObject}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel={copy.cta}
+          accessibilityLabel={resolvedCopy.cta}
         />
         <View style={styles.card}>
-          <Text style={styles.tag}>{copy.tag}</Text>
-          <Text style={styles.title}>{copy.title}</Text>
-          <Text style={styles.lead}>{copy.lead}</Text>
+          <Text style={styles.tag}>{resolvedCopy.tag}</Text>
+          <Text style={styles.title}>{resolvedCopy.title}</Text>
+          <Text style={styles.lead}>{resolvedCopy.lead}</Text>
           <View style={styles.divider} />
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {copy.bullets.map((line) => (
+            {resolvedCopy.bullets.map((line) => (
               <View key={line} style={styles.bulletRow}>
                 <Text style={styles.bullet}>•</Text>
                 <Text style={styles.bulletText}>{line}</Text>
@@ -53,7 +67,7 @@ export default function WcConcurrentStreakModalNative({
             style={({ pressed }) => [styles.ctaBtn, pressed && styles.ctaBtnPressed]}
             accessibilityRole="button"
           >
-            <Text style={styles.ctaText}>{copy.cta}</Text>
+            <Text style={styles.ctaText}>{resolvedCopy.cta}</Text>
           </Pressable>
         </View>
       </View>
