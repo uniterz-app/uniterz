@@ -14,9 +14,14 @@ import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, spacing } from "../../theme/tokens";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
-import type { TeamFilterMatchMode } from "../../../../../lib/games/gameTeamFilter";
 import type { ScheduleTeamOption } from "./useScheduleTeamsNative";
 import type { GamesFilterState } from "./applyNativeGamesFilter";
+import CountryFlagNative from "./CountryFlagNative";
+import { teamIdToWcCountry } from "../../../../../lib/wc/wcCountry";
+import {
+  gamesFilterHelpButtonLabel,
+  gamesFilterHelpParagraphs,
+} from "../../../../../lib/games/gamesFilterHelp";
 
 type Props = {
   visible: boolean;
@@ -35,34 +40,9 @@ function parseMarginDraft(s: string): number | null {
   return n;
 }
 
-function filterHelpText(
-  language: "ja" | "en",
-  selectedIds: string[],
-  teams: ScheduleTeamOption[],
-  matchMode: TeamFilterMatchMode
-): string {
-  if (selectedIds.length === 0) {
-    return language === "ja"
-      ? "チームは選ばなくても、下の点差だけで絞れます（任意で最大2チーム）。点差は上下どちらか空欄ならその側は制限なし。未開始の試合はそのまま表示されます。"
-      : "Team filter is optional—you can use only the score margin below. Up to 2 teams if you want. Empty min/max side = no bound on that side. Scheduled games stay visible.";
-  }
-  if (selectedIds.length === 1) {
-    const n = teams.find((t) => t.id === selectedIds[0])?.name ?? selectedIds[0];
-    return language === "ja"
-      ? `「${n}」が出る試合を表示しています。`
-      : `Showing games that include ${n}.`;
-  }
-  const [id1, id2] = selectedIds;
-  const n1 = teams.find((t) => t.id === id1)?.name ?? id1;
-  const n2 = teams.find((t) => t.id === id2)?.name ?? id2;
-  if (matchMode === "h2h") {
-    return language === "ja"
-      ? `「${n1}」対「${n2}」の試合だけを表示しています。`
-      : `Showing only games between ${n1} and ${n2}.`;
-  }
-  return language === "ja"
-    ? `「${n1}」または「${n2}」のどちらかが出る試合を表示しています（他チームとの対戦も含みます）。`
-    : `Showing games where ${n1} or ${n2} plays—including games vs other teams.`;
+function FilterTeamFlagNative({ teamId }: { teamId: string }) {
+  if (!teamIdToWcCountry(teamId)) return null;
+  return <CountryFlagNative teamId={teamId} variant="inline" />;
 }
 
 /** Web `GamesTeamFilterPanel` compact / layoutMobile 相当 */
@@ -77,11 +57,14 @@ export default function GamesTeamFilterPanelNative({
   const isJa = language === "ja";
   const [state, setState] = useState(initial);
   const [q, setQ] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setState(initial);
       setQ("");
+    } else {
+      setHelpOpen(false);
     }
   }, [visible, initial]);
 
@@ -107,16 +90,23 @@ export default function GamesTeamFilterPanelNative({
   const marginActive =
     parseMarginDraft(state.marginMin) != null || parseMarginDraft(state.marginMax) != null;
 
-  const help = filterHelpText(language, state.selectedTeamIds, teams, state.matchMode);
+  const helpParagraphs = useMemo(
+    () =>
+      gamesFilterHelpParagraphs({
+        language,
+        selectedIds: state.selectedTeamIds,
+        teams,
+        matchMode: state.matchMode,
+      }),
+    [language, state.selectedTeamIds, state.matchMode, teams]
+  );
+  const helpButtonLabel = gamesFilterHelpButtonLabel(language);
 
   const labels = {
-    title: isJa ? "スケジュールを絞り込む" : "Filter schedule",
-    marginRange: isJa ? "得点差" : "Score margin",
-    marginMin: isJa ? "最小" : "Min",
-    marginMax: isJa ? "最大" : "Max",
-    marginHint: isJa
-      ? "得点差（大きい方の差）が、左の数以上かつ右の数以下の試合に絞ります（両方入れたとき）。"
-      : "|Home − Away| must be ≥ min and ≤ max (inclusive).",
+    title: isJa ? "試合一覧の絞り込み" : "Filter schedule",
+    marginRange: isJa ? "点差の幅" : "Score margin",
+    marginMin: isJa ? "以上" : "Min",
+    marginMax: isJa ? "以下" : "Max",
     matchScope: isJa ? "対戦の範囲" : "Match scope",
     eitherTeam: isJa ? "どちらかが出る試合" : "Either team",
     h2hOnly: isJa ? "直接対決のみ" : "Head-to-head only",
@@ -174,48 +164,44 @@ export default function GamesTeamFilterPanelNative({
           </View>
 
           <View style={styles.headerRow}>
-            <View style={styles.headerTextCol}>
-              <Text style={styles.title}>{labels.title}</Text>
-              <Text style={styles.help}>{help}</Text>
+            <Text style={styles.title}>{labels.title}</Text>
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={() => setHelpOpen((v) => !v)}
+                style={[styles.helpBtn, helpOpen && styles.helpBtnActive]}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: helpOpen }}
+                accessibilityLabel={helpButtonLabel}
+              >
+                <MaterialCommunityIcons
+                  name="help-circle-outline"
+                  size={15}
+                  color={helpOpen ? "rgba(207,250,254,0.95)" : "rgba(255,255,255,0.75)"}
+                />
+                <Text style={[styles.helpBtnText, helpOpen && styles.helpBtnTextActive]}>
+                  {helpButtonLabel}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={onClose}
+                style={styles.closeBtn}
+                accessibilityRole="button"
+                accessibilityLabel={labels.close}
+              >
+                <MaterialCommunityIcons name="close" size={18} color="rgba(255,255,255,0.85)" />
+              </Pressable>
             </View>
-            <Pressable
-              onPress={onClose}
-              style={styles.closeBtn}
-              accessibilityRole="button"
-              accessibilityLabel={labels.close}
-            >
-              <MaterialCommunityIcons name="close" size={18} color="rgba(255,255,255,0.85)" />
-            </Pressable>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionKicker}>{labels.marginRange}</Text>
-            <Text style={styles.sectionHint}>{labels.marginHint}</Text>
-            <View style={styles.marginRow}>
-              <View style={styles.marginField}>
-                <Text style={styles.marginLabel}>{labels.marginMin}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={state.marginMin}
-                  onChangeText={(v) => setState((s) => ({ ...s, marginMin: v }))}
-                  keyboardType="number-pad"
-                  placeholder="—"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.marginField}>
-                <Text style={styles.marginLabel}>{labels.marginMax}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={state.marginMax}
-                  onChangeText={(v) => setState((s) => ({ ...s, marginMax: v }))}
-                  keyboardType="number-pad"
-                  placeholder="—"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
+          {helpOpen ? (
+            <View style={styles.helpPanel}>
+              {helpParagraphs.map((paragraph) => (
+                <Text key={paragraph} style={styles.helpParagraph}>
+                  {paragraph}
+                </Text>
+              ))}
             </View>
-          </View>
+          ) : null}
 
           {state.selectedTeamIds.length > 0 ? (
             <View style={styles.chipRow}>
@@ -227,6 +213,7 @@ export default function GamesTeamFilterPanelNative({
                     style={styles.selectedChip}
                     onPress={() => toggleTeam(id)}
                   >
+                    <FilterTeamFlagNative teamId={id} />
                     <Text style={styles.selectedChipText} numberOfLines={1}>
                       {name}
                     </Text>
@@ -295,6 +282,7 @@ export default function GamesTeamFilterPanelNative({
                   <View style={[styles.teamCheck, sel && styles.teamCheckSelected]}>
                     {sel ? <Text style={styles.teamCheckMark}>✓</Text> : null}
                   </View>
+                  <FilterTeamFlagNative teamId={team.id} />
                   <Text
                     style={[styles.teamName, sel && styles.teamNameSelected]}
                     numberOfLines={1}
@@ -308,6 +296,34 @@ export default function GamesTeamFilterPanelNative({
               <Text style={styles.emptyTeams}>{labels.noTeamMatch}</Text>
             ) : null}
           </ScrollView>
+
+          <View style={styles.marginSection}>
+            <Text style={styles.sectionKicker}>{labels.marginRange}</Text>
+            <View style={styles.marginRow}>
+              <View style={styles.marginField}>
+                <Text style={styles.marginLabel}>{labels.marginMin}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={state.marginMin}
+                  onChangeText={(v) => setState((s) => ({ ...s, marginMin: v }))}
+                  keyboardType="number-pad"
+                  placeholder="—"
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+              <View style={styles.marginField}>
+                <Text style={styles.marginLabel}>{labels.marginMax}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={state.marginMax}
+                  onChangeText={(v) => setState((s) => ({ ...s, marginMax: v }))}
+                  keyboardType="number-pad"
+                  placeholder="—"
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+            </View>
+          </View>
 
           <View style={styles.footer}>
             <Pressable
@@ -367,21 +383,59 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
     paddingHorizontal: spacing.md,
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(255,255,255,0.1)",
   },
-  headerTextCol: { flex: 1, minWidth: 0, gap: 4 },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
   title: {
+    flex: 1,
+    minWidth: 0,
     color: "rgba(255,255,255,0.95)",
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
-  help: {
+  helpBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 36,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 10,
+  },
+  helpBtnActive: {
+    borderColor: "rgba(34,211,238,0.4)",
+    backgroundColor: "rgba(34,211,238,0.15)",
+  },
+  helpBtnText: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  helpBtnTextActive: {
+    color: "rgba(207,250,254,0.95)",
+  },
+  helpPanel: {
+    gap: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  helpParagraph: {
     color: "rgba(255,255,255,0.45)",
     fontSize: 11,
     lineHeight: 16,
@@ -403,17 +457,19 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.06)",
     gap: 6,
   },
+  marginSection: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.06)",
+    gap: 6,
+  },
   sectionKicker: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 10,
     fontWeight: "600",
     letterSpacing: 0.8,
     textTransform: "uppercase",
-  },
-  sectionHint: {
-    color: "rgba(255,255,255,0.38)",
-    fontSize: 10,
-    lineHeight: 14,
   },
   marginRow: { flexDirection: "row", gap: 8 },
   marginField: { flex: 1, gap: 4 },

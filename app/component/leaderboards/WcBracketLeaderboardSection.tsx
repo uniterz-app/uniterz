@@ -68,7 +68,7 @@ export default function WcBracketLeaderboardSection({
   const { advancement: knockoutAdvancement } = useWcKnockoutAdvancement(season);
   const submissionOpen = isWcKnockoutBracketSubmissionOpen(season);
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
-  const { loading, error, rows, myRow, totalCount, refetch } =
+  const { loading, error, rows, myRow, totalCount, aliveCount, refetch } =
     useWcBracketLeaderboard({
       season,
       uid,
@@ -326,7 +326,19 @@ export default function WcBracketLeaderboardSection({
       : rows;
 
   const survivorTitleBlock = (
-    <div className="px-1 text-center">
+    <div className="space-y-1 px-1 text-center">
+      {totalCount > 0 ? (
+        <p
+          className={[
+            "text-[13px] font-semibold leading-snug text-white/88 sm:text-[14px]",
+            jp.className,
+          ].join(" ")}
+        >
+          {isJa
+            ? `${totalCount}人提出 · ${aliveCount}人が生存中`
+            : `${totalCount} submitted · ${aliveCount} alive`}
+        </p>
+      ) : null}
       <p
         className={[
           "text-[12px] leading-relaxed text-white/72 sm:text-[13px]",

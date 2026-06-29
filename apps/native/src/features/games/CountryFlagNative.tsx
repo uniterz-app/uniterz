@@ -10,7 +10,10 @@ export type CountryFlagVariant =
   | "clubInline"
   | "fifaInline"
   | "overlay"
-  | "result";
+  | "result"
+  | "bracketTree"
+  | "bracketCardChampion"
+  | "bracketChampion";
 
 /** Web `MatchCard` / `PredictNextGameModal` の国旗枠サイズに合わせた 4:3 系 */
 const VARIANT_SIZE: Record<CountryFlagVariant, { width: number; height: number }> =
@@ -28,6 +31,12 @@ const VARIANT_SIZE: Record<CountryFlagVariant, { width: number; height: number }
     fifaInline: { width: 32, height: 24 },
     /** リザルト詳細（Web `MobileResultMatchHeader` `h-[3rem] w-[4.2rem]`） */
     result: { width: 67, height: 48 },
+    /** WC ブラケットツリー R32 国旗（`WC_TREE_FLAG_W/H`） */
+    bracketTree: { width: 54, height: 40 },
+    /** WC ブラケットユーザーカード優勝国旗 */
+    bracketCardChampion: { width: 40, height: 28 },
+    /** WC ブラケットツリー優勝国旗（`WC_TREE_CHAMPION_CARD_W/H`） */
+    bracketChampion: { width: 134, height: 90 },
   };
 
 type CountryFlagNativeProps = {
@@ -46,11 +55,15 @@ export default function CountryFlagNative({
 }: CountryFlagNativeProps) {
   const { width, height } = VARIANT_SIZE[variant];
   const borderRadius =
-    variant === "inline" || variant === "clubInline"
-      ? 1
-      : variant === "fifaInline"
-        ? 3
-        : 6;
+    variant === "bracketChampion" ||
+    variant === "bracketTree" ||
+    variant === "bracketCardChampion"
+      ? 2
+      : variant === "inline" || variant === "clubInline"
+        ? 1
+        : variant === "fifaInline"
+          ? 3
+          : 6;
   const uri = iso2 ? flagImageUriFromIso2(iso2) : wcFlagImageUri(teamId);
   const countryName =
     accessibilityLabel ?? teamIdToCountryName(teamId, "en") ?? "Country flag";
