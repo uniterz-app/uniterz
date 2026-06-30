@@ -34,6 +34,7 @@ import {
   resolveGameStartAt,
   resolveGameStatus,
   resolveGameTeamName,
+  resolvePkScore,
 } from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import { auth, db } from "../../lib/firebase";
@@ -207,7 +208,14 @@ function getGameCardCenterBlock(
     const sub = `${language === "en" ? "Final" : "試合終了"}${
       ot ? " (OT)" : ""
     }`;
-    return { variant: "score", home: score.home, away: score.away, subLine: sub };
+    const pkScore = resolvePkScore(game);
+    return {
+      variant: "score",
+      home: score.home,
+      away: score.away,
+      subLine: sub,
+      pkScore,
+    };
   }
   if (liveUi) {
     const meta = resolveGameLiveMeta(game);
@@ -1198,6 +1206,7 @@ export default function GamesHomeScreen({
       homeTeamId: homeSide?.teamId ?? null,
       awayTeamId: awaySide?.teamId ?? null,
       finalOt: resolveFinalMetaOt(selectedGame),
+      pkScore: resolvePkScore(selectedGame),
     });
   }, [selectedGame, selectedLeague, language, myPredictionByGameId]);
 
@@ -2776,6 +2785,15 @@ const styles = StyleSheet.create({
   centerSublineWc: {
     fontSize: 11,
     opacity: 0.8,
+  },
+  centerPkSubline: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 10,
+    lineHeight: 12,
+    textAlign: "center",
+    includeFontPadding: false,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontWeight: "600",
   },
   liveMetaText: {
     color: "#a8dbff",

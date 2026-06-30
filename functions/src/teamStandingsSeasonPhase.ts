@@ -12,3 +12,10 @@ export function countsTowardRegularSeasonTeamStats(phase: unknown): boolean {
 export function countsTowardPlayoffTeamStats(phase: unknown): boolean {
   return phase === "playoffs";
 }
+
+/**
+ * WC ノックアウトなど、teams の通算 wins / losses / draws に含めない試合。
+ */
+export function isExemptFromTeamSeasonRecord(knockout: unknown): boolean {
+  return knockout === true;
+}

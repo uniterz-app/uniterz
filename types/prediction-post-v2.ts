@@ -61,6 +61,9 @@ export type PredictionPostV2 = {
     ownGoal?: boolean;
   }> | null;
 
+  /** PK 戦の本数（finalizePost で games.pkScore からコピー） */
+  pkScore?: { home: number; away: number } | null;
+
   /* ------------------------
      Market Meta（finalizePostで保存）
   ------------------------ */
@@ -78,6 +81,7 @@ export type PredictionPostV2 = {
     away: string;
     status: "scheduled" | "live" | "final";
     finalScore?: { home: number; away: number };
+    pkScore?: { home: number; away: number };
   } | null;
 
   /* ------------------------

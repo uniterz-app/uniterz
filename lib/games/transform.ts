@@ -13,6 +13,7 @@ import {
   isPlayoffStyleGameCard,
   type SeriesStanding,
 } from "@/lib/games/playoffSeriesUi";
+import { resolvePkScore } from "@/lib/games/pkScore";
 import { resolveWcBroadcastLabels } from "@/lib/wc/wcBroadcastLabels";
 import { normalizeWcGameGoalScorers } from "@/lib/wc/goalScorer";
 import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
@@ -355,6 +356,8 @@ export type GameDoc = {
   broadcastLabel?: string | null;
   /** WC：試合の実得点者（リザルト未投稿の一覧カード表示にも使用） */
   goalScorers?: unknown;
+  /** PK 戦の本数（規定・延長スコアとは別） */
+  pkScore?: { home?: number; away?: number } | null;
 };
 
 /** MatchCardProps へ整形 */
@@ -383,6 +386,7 @@ export function toMatchCardProps(
   // スコア補完
   // --------------------------------------------------------
   const score = getResolvedGameScore(raw as Record<string, unknown>);
+  const pkScore = resolvePkScore(raw as Record<string, unknown>);
   const seasonPhase = normalizeSeasonPhase(raw?.seasonPhase);
   const roundLabelStr = raw?.roundLabel ?? "";
   const parsedSeries = parseSeriesStandingFromRaw(
@@ -484,6 +488,7 @@ export function toMatchCardProps(
     home,
     away,
     score,
+    pkScore,
     seriesStanding,
     liveMeta,
     finalMeta,

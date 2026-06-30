@@ -77,6 +77,47 @@ export function resolveGameScore(
   return null;
 }
 
+export function resolvePkScore(
+  raw: Record<string, unknown>
+): { home: number; away: number } | null {
+  const pk = raw.pkScore as { home?: unknown; away?: unknown } | undefined;
+  if (pk && pk.home != null && pk.away != null) {
+    const home = Number(pk.home);
+    const away = Number(pk.away);
+    if (Number.isFinite(home) && Number.isFinite(away)) {
+      return { home, away };
+    }
+  }
+
+  const pkHome = raw.pkHomeScore;
+  const pkAway = raw.pkAwayScore;
+  if (pkHome != null && pkAway != null) {
+    const home = Number(pkHome);
+    const away = Number(pkAway);
+    if (Number.isFinite(home) && Number.isFinite(away)) {
+      return { home, away };
+    }
+  }
+
+  return null;
+}
+
+export function formatPkResultSubLine(
+  pk: { home: number; away: number } | null | undefined
+): string | null {
+  if (!pk) return null;
+  return `PK ${pk.home}-${pk.away}`;
+}
+
+export function resolvePkShootoutWinnerSide(
+  pk: { home: number; away: number } | null | undefined
+): "home" | "away" | null {
+  if (!pk) return null;
+  if (pk.home > pk.away) return "home";
+  if (pk.away > pk.home) return "away";
+  return null;
+}
+
 export function resolveGameTeamName(
   side: unknown,
   fallback: unknown,

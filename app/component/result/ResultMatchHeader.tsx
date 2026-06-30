@@ -34,6 +34,8 @@ import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
+import MatchPkResultLine from "@/app/component/games/MatchPkResultLine";
+import { resolvePkScoreFromResultPost } from "@/lib/games/pkScore";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 
@@ -184,6 +186,7 @@ function ResultMatchHeader({
     typeof post.result?.away === "number";
   const finalHome = hasFinal ? post.result!.home : null;
   const finalAway = hasFinal ? post.result!.away : null;
+  const pkScore = resolvePkScoreFromResultPost(post as Record<string, unknown>);
 
   const matchDate = post.startAtMillis
     ? (() => {
@@ -375,6 +378,13 @@ function ResultMatchHeader({
                 away={finalAway}
                 className="text-sm font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] sm:text-base"
               />
+              {pkScore ? (
+                <MatchPkResultLine
+                  pkScore={pkScore}
+                  density="overlay"
+                  className="mt-1"
+                />
+              ) : null}
             </div>
           ) : null}
         </div>

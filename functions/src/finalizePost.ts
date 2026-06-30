@@ -76,10 +76,29 @@ export async function finalizePost({
       )
     : [];
 
+  const pkScoreRaw = game?.pkScore;
+  const pkScore =
+    pkScoreRaw &&
+    typeof pkScoreRaw === "object" &&
+    pkScoreRaw.home != null &&
+    pkScoreRaw.away != null
+      ? {
+          home: Number(pkScoreRaw.home),
+          away: Number(pkScoreRaw.away),
+        }
+      : null;
+  const pkScorePatch =
+    pkScore &&
+    Number.isFinite(pkScore.home) &&
+    Number.isFinite(pkScore.away)
+      ? { pkScore }
+      : {};
+
   batch.update(postDoc.ref, {
     result: final,
 
     ...(isWc ? { matchGoalScorers } : {}),
+    ...pkScorePatch,
 
     marketMeta: {
       majoritySide: market.majoritySide,

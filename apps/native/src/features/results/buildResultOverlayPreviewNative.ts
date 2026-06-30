@@ -6,6 +6,7 @@ import {
   resolveGameStartAt,
   resolveGameStatus,
   resolveGameTeamName,
+  resolvePkScore,
 } from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import type { GameCardCenterBlock } from "../games/gameCardCenterTypes";
@@ -111,7 +112,14 @@ function getGameCardCenterBlock(
   if (status === "final" && score) {
     const ot = resolveFinalMetaOt(game);
     const sub = `${language === "en" ? "Final" : "試合終了"}${ot ? " (OT)" : ""}`;
-    return { variant: "score", home: score.home, away: score.away, subLine: sub };
+    const pkScore = resolvePkScore(game);
+    return {
+      variant: "score",
+      home: score.home,
+      away: score.away,
+      subLine: sub,
+      pkScore,
+    };
   }
   if (liveUi) {
     return { variant: "liveMark" };
@@ -228,6 +236,7 @@ export function buildResultOverlayMergedFinal(
     homeTeamId: homeSide?.teamId,
     awayTeamId: awaySide?.teamId,
     finalOt: resolveFinalMetaOt(game),
+    pkScore: resolvePkScore(game),
   });
 }
 

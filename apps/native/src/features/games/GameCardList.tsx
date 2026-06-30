@@ -12,6 +12,7 @@ import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { LiveMarkPill } from "./LiveMarkPill";
+import MatchPkResultLineNative from "./MatchPkResultLineNative";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import MatchListCyberClipNative from "./MatchListCyberClipNative";
 import { WcBroadcastNamesNative } from "./WcBroadcastNamesNative";
@@ -357,6 +358,13 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                         >
                           {centerBlock.subLine}
                         </Text>
+                      ) : null}
+                      {centerBlock.variant === "score" && centerBlock.pkScore ? (
+                        <MatchPkResultLineNative
+                          pkScore={centerBlock.pkScore}
+                          density="card"
+                          wc={isWcCard}
+                        />
                       ) : null}
                       {seriesPair != null ? (
                         <PlayoffSeriesScoreInline

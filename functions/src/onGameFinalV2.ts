@@ -15,6 +15,7 @@ import { notifyGameFinalPush } from "./notifications/notifyPushEvents";
 import {
   countsTowardPlayoffTeamStats,
   countsTowardRegularSeasonTeamStats,
+  isExemptFromTeamSeasonRecord,
 } from "./teamStandingsSeasonPhase";
 import {
   leagueToSport,
@@ -99,7 +100,12 @@ export const onGameFinalV2 = onDocumentWritten(
       streakResultMap = streakOutcome.streakResultMap;
       wcSlotRescore = streakOutcome.wcSlotRescore;
 
-      if (countsTowardRegularSeasonTeamStats(game.seasonPhase)) {
+      const skipTeamSeasonRecord = isExemptFromTeamSeasonRecord(game.knockout);
+
+      if (
+        !skipTeamSeasonRecord &&
+        countsTowardRegularSeasonTeamStats(game.seasonPhase)
+      ) {
         await updateTeamSeasonRecord({
           db: firestore,
           league: game.league,
@@ -125,7 +131,10 @@ export const onGameFinalV2 = onDocumentWritten(
         });
       }
 
-      if (countsTowardPlayoffTeamStats(game.seasonPhase)) {
+      if (
+        !skipTeamSeasonRecord &&
+        countsTowardPlayoffTeamStats(game.seasonPhase)
+      ) {
         await updateTeamSeasonRecord({
           db: firestore,
           league: game.league,

@@ -29,6 +29,11 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import type { ResultPlatform } from "@/lib/result/result-platform";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
+import MatchPkResultLine from "@/app/component/games/MatchPkResultLine";
+import {
+  resolvePkScoreFromResultPost,
+  type PkScore,
+} from "@/lib/games/pkScore";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
@@ -48,14 +53,7 @@ import WcGoalScorerResultRow, {
 import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
 import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
 import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
-import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
 import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
-import { db } from "@/lib/firebase";
-import {
-  useWcGroupStageStandingsForMatch,
-  WC_DEFAULT_SEASON,
-} from "@/lib/wc/useWcGroupStandingRanks";
-import TeamRecordLineFromFirestore from "@/app/component/result/TeamRecordLineFromFirestore";
 import { nameBebas } from "@/lib/fonts";
 import { resolveWcGroupCodeLabel } from "@/lib/wc/wcGroupStandingRank";
 import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
@@ -93,6 +91,8 @@ type Props = {
   visualEffectsLite?: boolean;
   /** 枠走査光（一覧では false 推奨 — GPU 負荷） */
   showFrameSweep?: boolean;
+  /** games から補完した PK 戦スコア（投稿に未保存のとき） */
+  pkScore?: PkScore | null;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -151,6 +151,7 @@ function ResultCardPresentationImpl({
   embedded = false,
   visualEffectsLite = false,
   showFrameSweep = false,
+  pkScore: pkScoreProp = null,
 }: ResultCardPresentationProps) {
   const clock = useResultCardClockMs(cardClockMs);
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
@@ -235,6 +236,8 @@ function ResultCardPresentationImpl({
     typeof post.result?.away === "number";
   const finalHome = hasFinal ? post.result!.home : null;
   const finalAway = hasFinal ? post.result!.away : null;
+  const pkScore =
+    pkScoreProp ?? resolvePkScoreFromResultPost(post as Record<string, unknown>);
 
   const wcHomeTeamId = resolveWcTeamId(
     post.home,
@@ -245,12 +248,6 @@ function ResultCardPresentationImpl({
     post.away,
     post.game?.away,
     post.away?.name
-  );
-  const wcGroupStageStandings = useWcGroupStageStandingsForMatch(
-    db,
-    isWcKnockout ? wcHomeTeamId : null,
-    isWcKnockout ? wcAwayTeamId : null,
-    WC_DEFAULT_SEASON
   );
 
   const wcMatchGoalScorers = useMemo(() => {
@@ -294,7 +291,7 @@ function ResultCardPresentationImpl({
     : isMobile
       ? "mt-2"
       : "mt-1.5";
-  /** WC: 国旗幅に合わせて国名・順位を中央揃え（MatchCard と同じ） */
+  /** WC: 国旗幅に合わせて国名を中央揃え（MatchCard と同じ） */
   const wcFlagClassName = mobileScheduleDense
     ? "h-[3rem] w-[4.5rem] shrink-0 md:h-[3.7rem] md:w-[5.5rem]"
     : "h-[3.2rem] w-[4.75rem] shrink-0 md:h-[4.2rem] md:w-[6.25rem]";
@@ -657,24 +654,6 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
-                {isWcKnockout ? (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <WcGroupStandingRecordLine
-                    standing={wcGroupStageStandings.homeStanding}
-                    language={language}
-                    compact={mobileScheduleDense || isMobile}
-                  />
-                </div>
-                ) : (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <TeamRecordLineFromFirestore
-                    teamId={wcHomeTeamId}
-                    league={normalizedLeague}
-                    language={language}
-                    compact={mobileScheduleDense || isMobile}
-                  />
-                </div>
-                )}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -743,22 +722,6 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
-                {isWcKnockout ? (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <WcGroupStandingRecordLine
-                    standing={wcGroupStageStandings.homeStanding}
-                    language={language}
-                  />
-                </div>
-                ) : (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <TeamRecordLineFromFirestore
-                    teamId={wcHomeTeamId}
-                    league={normalizedLeague}
-                    language={language}
-                  />
-                </div>
-                )}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -809,24 +772,6 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
-                {isWcKnockout ? (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <WcGroupStandingRecordLine
-                    standing={wcGroupStageStandings.awayStanding}
-                    language={language}
-                    compact={mobileScheduleDense || isMobile}
-                  />
-                </div>
-                ) : (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <TeamRecordLineFromFirestore
-                    teamId={wcAwayTeamId}
-                    league={normalizedLeague}
-                    language={language}
-                    compact={mobileScheduleDense || isMobile}
-                  />
-                </div>
-                )}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -895,22 +840,6 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
-                {isWcKnockout ? (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <WcGroupStandingRecordLine
-                    standing={wcGroupStageStandings.awayStanding}
-                    language={language}
-                  />
-                </div>
-                ) : (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <TeamRecordLineFromFirestore
-                    teamId={wcAwayTeamId}
-                    league={normalizedLeague}
-                    language={language}
-                  />
-                </div>
-                )}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -993,6 +922,13 @@ function ResultCardPresentationImpl({
                   ? "text-[10px] font-bold leading-tight"
                   : "text-base font-bold md:text-lg",
               ].join(" ")}
+            />
+          ) : null}
+          {hasFinal && pkScore ? (
+            <MatchPkResultLine
+              pkScore={pkScore}
+              density="card"
+              className={isMobile ? "mt-0.5" : "mt-1"}
             />
           ) : null}
         </div>

@@ -111,6 +111,7 @@ import {
   scheduleSharedBoundsVtName,
   scheduleSharedContentVtName,
 } from "@/lib/games/scheduleSharedTransitionKeys";
+import MatchPkResultLine from "@/app/component/games/MatchPkResultLine";
 
 
 
@@ -150,6 +151,8 @@ export type MatchCardProps = {
   home: TeamSide;
   away: TeamSide;
   score: { home: number; away: number } | null;
+  /** PK 戦の本数（規定・延長スコアとは別） */
+  pkScore?: { home: number; away: number } | null;
   /** プレーオフ系：シリーズのホーム先勝数（未設定時は null） */
   seriesStanding?: SeriesStanding | null;
   liveMeta: { period: string; runningTime?: string } | null;
@@ -424,6 +427,7 @@ function MatchCardView({
   home,
   away,
   score,
+  pkScore = null,
   seriesStanding = null,
   liveMeta,
   finalMeta,
@@ -882,7 +886,8 @@ const mergedPreKickoffScoreClass = [
   "text-cyan-50 drop-shadow-[0_0_22px_rgba(34,211,238,0.38)]",
 ].join(" ");
 
-let center: React.ReactNode = overlayCenterMode ? (
+
+  let center: React.ReactNode = overlayCenterMode ? (
   status === "final" && score ? (
     <div
       className={
@@ -915,6 +920,9 @@ let center: React.ReactNode = overlayCenterMode ? (
           {m.games.finalLabel}
           {finalMeta?.ot ? " (OT)" : ""}
         </div>
+      ) : null}
+      {pkScore ? (
+        <MatchPkResultLine pkScore={pkScore} density="overlay" />
       ) : null}
       {renderOverlayPredictScore()}
     </div>
@@ -1061,6 +1069,9 @@ let center: React.ReactNode = overlayCenterMode ? (
             {m.games.finalLabel}
             {finalMeta?.ot ? " (OT)" : ""}
           </div>
+        ) : null}
+        {pkScore ? (
+          <MatchPkResultLine pkScore={pkScore} density="card" />
         ) : null}
       </div>
     );

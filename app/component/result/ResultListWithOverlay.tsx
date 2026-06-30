@@ -90,6 +90,10 @@ import {
 } from "@/lib/result/resultCyberMotion";
 import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
+import {
+  resolveResultPostPkScore,
+  useResultPostsPkScores,
+} from "@/lib/games/useResultPostsPkScores";
 import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
@@ -768,6 +772,13 @@ export default function ResultListWithOverlay({
       ),
     [visibleGrouped]
   );
+
+  const visiblePostsFlat = useMemo(
+    () =>
+      visibleGrouped.flatMap((day) => [...day.pending, ...day.final]),
+    [visibleGrouped]
+  );
+  const pkFromGames = useResultPostsPkScores(visiblePostsFlat);
 
   const selectedPost = useMemo(() => {
     if (!openPostId) return null;
@@ -1643,6 +1654,7 @@ export default function ResultListWithOverlay({
                 const card = (
                   <ResultCard
                     post={post}
+                    pkScore={resolveResultPostPkScore(post, pkFromGames)}
                     onOpen={open}
                     language={language}
                     platform={platform}

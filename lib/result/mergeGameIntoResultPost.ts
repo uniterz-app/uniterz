@@ -1,4 +1,5 @@
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
+import type { PkScore } from "@/lib/games/pkScore";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
 
@@ -34,6 +35,7 @@ export function mergeGameIntoResultPost(
       name: game.away.name,
       teamId: awayTeamId,
     },
+    pkScore: (game.pkScore ?? post.pkScore ?? null) as PkScore | null,
     game: {
       league: game.league,
       home: homeTeamId,
@@ -44,6 +46,7 @@ export function mergeGameIntoResultPost(
         : post.game?.finalScore
           ? { finalScore: post.game.finalScore }
           : {}),
+      ...(game.pkScore ? { pkScore: game.pkScore } : post.game?.pkScore ? { pkScore: post.game.pkScore } : {}),
     },
   };
 }
