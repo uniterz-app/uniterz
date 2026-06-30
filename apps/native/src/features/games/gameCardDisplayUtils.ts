@@ -6,6 +6,7 @@ import {
   resolveGameScore,
   resolveGameStartAt,
   resolveGameStatus,
+  resolvePkScore,
 } from "@uniterz/shared";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import type { SupportedLeague } from "./useTodayGames";
@@ -67,7 +68,14 @@ export function getGameCardCenterBlock(
   if (status === "final" && score) {
     const ot = resolveFinalMetaOt(game);
     const sub = `${language === "en" ? "Final" : "試合終了"}${ot ? " (OT)" : ""}`;
-    return { variant: "score", home: score.home, away: score.away, subLine: sub };
+    const pkScore = resolvePkScore(game);
+    return {
+      variant: "score",
+      home: score.home,
+      away: score.away,
+      subLine: sub,
+      pkScore,
+    };
   }
   if (liveUi) {
     const meta = resolveGameLiveMeta(game);

@@ -20,6 +20,7 @@ import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import { LiveMarkPill } from "./LiveMarkPill";
+import MatchPkResultLineNative from "./MatchPkResultLineNative";
 import {
   liveMarkPillCyberBase,
   liveMarkTextCyberBase,
@@ -461,6 +462,13 @@ export function PredictMatchPreview({
                 <Text style={s.matchPreviewSub} numberOfLines={1}>
                   {mergedFinal.finalLabel}
                 </Text>
+                {mergedFinal.pkScore ? (
+                  <MatchPkResultLineNative
+                    pkScore={mergedFinal.pkScore}
+                    density="overlay"
+                    wc={isWcLeague}
+                  />
+                ) : null}
                 <Text style={s.matchPreviewOverlayPredictRow} numberOfLines={1}>
                   <Text style={s.matchPreviewOverlayPredictNum}>
                     {mergedFinal.predictedScore.home}
@@ -499,6 +507,13 @@ export function PredictMatchPreview({
                   <Text style={s.matchPreviewSub} numberOfLines={2}>
                     {centerBlock.subLine}
                   </Text>
+                ) : null}
+                {centerBlock.pkScore ? (
+                  <MatchPkResultLineNative
+                    pkScore={centerBlock.pkScore}
+                    density="overlay"
+                    wc={isWcLeague}
+                  />
                 ) : null}
                 {seriesPair != null ? (
                   <View style={s.matchPreviewSeriesRow}>
@@ -2348,6 +2363,16 @@ const s = StyleSheet.create({
     textAlign: "center",
     marginTop: 2,
     letterSpacing: 0.4,
+  },
+  matchPreviewPkSub: {
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 9,
+    lineHeight: 12,
+    color: "rgba(255,255,255,0.68)",
+    textAlign: "center",
+    marginTop: 1,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
   matchPreviewSeries: {
     fontFamily: MATCH_CARD_METRIC_FONT,

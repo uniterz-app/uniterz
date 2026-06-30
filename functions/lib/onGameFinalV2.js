@@ -75,7 +75,9 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         });
         streakResultMap = streakOutcome.streakResultMap;
         wcSlotRescore = streakOutcome.wcSlotRescore;
-        if ((0, teamStandingsSeasonPhase_1.countsTowardRegularSeasonTeamStats)(game.seasonPhase)) {
+        const skipTeamSeasonRecord = (0, teamStandingsSeasonPhase_1.isExemptFromTeamSeasonRecord)(game.knockout);
+        if (!skipTeamSeasonRecord &&
+            (0, teamStandingsSeasonPhase_1.countsTowardRegularSeasonTeamStats)(game.seasonPhase)) {
             await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
                 db: firestore,
                 league: game.league,
@@ -96,7 +98,8 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
                 target: "regular",
             });
         }
-        if ((0, teamStandingsSeasonPhase_1.countsTowardPlayoffTeamStats)(game.seasonPhase)) {
+        if (!skipTeamSeasonRecord &&
+            (0, teamStandingsSeasonPhase_1.countsTowardPlayoffTeamStats)(game.seasonPhase)) {
             await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
                 db: firestore,
                 league: game.league,

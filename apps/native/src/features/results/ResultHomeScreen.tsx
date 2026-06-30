@@ -23,11 +23,8 @@ import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
-import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
-import { resolveWcGroupStageStandingForKnockoutDisplay } from "../../../../../lib/wc/wcGroupStandingRank";
 import {
   MATCH_CARD_DISPLAY_FONT,
-  MATCH_CARD_METRIC_FONT,
   MATCH_CARD_SCORE_FONT,
 } from "../games/matchCardTypography";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
@@ -81,6 +78,12 @@ import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
 import ResultPerfectCyberFrameNative from "./ResultPerfectCyberFrameNative";
 import ResultStreakCyberFrameNative from "./ResultStreakCyberFrameNative";
 import ResultMatchScoreLineNative from "./ResultMatchScoreLineNative";
+import MatchPkResultLineNative from "../games/MatchPkResultLineNative";
+import {
+  resolveResultPostPkScore,
+  useResultPostsPkScores,
+} from "../../../../../lib/games/useResultPostsPkScores";
+import { resolvePkScoreFromResultPost } from "../../../../../lib/games/pkScore";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultGlassShellNative from "./ResultGlassShellNative";
 import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
@@ -95,10 +98,6 @@ import {
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
 import WcTeamNameMobileNative from "../games/WcTeamNameMobileNative";
-import {
-  formatTeamRecordLabelNative,
-  useTeamRecordLineNative,
-} from "../games/useTeamRecordLineNative";
 import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
@@ -438,6 +437,7 @@ function ResultPostCard({
   onOpenDetail,
   onRequestDeleteConfirm,
   onRequestPredictEdit,
+  pkScore: pkScoreProp = null,
 }: {
   post: PostWithMillis;
   language: "ja" | "en";
@@ -454,6 +454,7 @@ function ResultPostCard({
   onRequestDeleteConfirm: (post: PostWithMillis) => void;
   /** Web `onRequestPredictEdit`（未接続時はペンを出さない） */
   onRequestPredictEdit?: (post: PostWithMillis) => void;
+  pkScore?: { home: number; away: number } | null;
 }) {
   const isEn = language === "en";
   const resultCopy = i18nT(language).results;
@@ -538,38 +539,6 @@ function ResultPostCard({
 
   const home = post.home as { name?: string; teamId?: string } | undefined;
   const away = post.away as { name?: string; teamId?: string } | undefined;
-  const homeRecordLine = useTeamRecordLineNative(
-    isWcCard ? home?.teamId : null,
-    leagueKey
-  );
-  const awayRecordLine = useTeamRecordLineNative(
-    isWcCard ? away?.teamId : null,
-    leagueKey
-  );
-  const homeWcRecordLabel = formatTeamRecordLabelNative(
-    home?.teamId,
-    leagueKey,
-    homeRecordLine
-  );
-  const awayWcRecordLabel = formatTeamRecordLabelNative(
-    away?.teamId,
-    leagueKey,
-    awayRecordLine
-  );
-  const homeGroupStanding = useMemo(
-    () =>
-      isWcKnockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(home?.teamId, homeRecordLine)
-        : null,
-    [isWcKnockout, home?.teamId, homeRecordLine]
-  );
-  const awayGroupStanding = useMemo(
-    () =>
-      isWcKnockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(away?.teamId, awayRecordLine)
-        : null,
-    [isWcKnockout, away?.teamId, awayRecordLine]
-  );
   const wcGroupCodeLabel = useMemo(
     () =>
       isWcCard
@@ -609,6 +578,8 @@ function ResultPostCard({
   const rh = result?.home;
   const ra = result?.away;
   const hasFinal = typeof rh === "number" && typeof ra === "number";
+  const pkScore =
+    pkScoreProp ?? resolvePkScoreFromResultPost(post as Record<string, unknown>);
   const showShareInMenu = canShare;
 
   const shareLinkUrl = useMemo(
@@ -915,15 +886,6 @@ function ResultPostCard({
                     </Text>
                   )}
                 </Animated.View>
-                {isWcCard && isWcKnockout ? (
-                  <WcGroupStandingRecordLineNative
-                    standing={homeGroupStanding}
-                    language={language}
-                    textStyle={styles.teamRecordText}
-                  />
-                ) : isWcCard ? (
-                  <Text style={styles.teamRecordText}>{homeWcRecordLabel}</Text>
-                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
                     scorers={wcMatchGoalScorers}
@@ -964,15 +926,6 @@ function ResultPostCard({
                     </Text>
                   )}
                 </Animated.View>
-                {isWcCard && isWcKnockout ? (
-                  <WcGroupStandingRecordLineNative
-                    standing={awayGroupStanding}
-                    language={language}
-                    textStyle={styles.teamRecordText}
-                  />
-                ) : isWcCard ? (
-                  <Text style={styles.teamRecordText}>{awayWcRecordLabel}</Text>
-                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
                     scorers={wcMatchGoalScorers}
@@ -1014,6 +967,13 @@ function ResultPostCard({
                     variant="final"
                     density={listScoreDensity}
                   />
+                  {pkScore ? (
+                    <MatchPkResultLineNative
+                      pkScore={pkScore}
+                      density="card"
+                      wc={isWcCard}
+                    />
+                  ) : null}
                 </Animated.View>
               ) : null}
             </View>
@@ -1266,6 +1226,12 @@ export default function ResultHomeScreen({
     });
   }, [filteredGrouped]);
 
+  const visiblePostsFlat = useMemo(
+    () => sections.flatMap((s) => s.data),
+    [sections]
+  );
+  const pkFromGames = useResultPostsPkScores(visiblePostsFlat);
+
   /** 初回マウント時のみ一覧入場を有効化（スクロールで遅延マウントされた日付帯は除外） */
   const entranceArmed = useResultEntranceArmed();
   const [initialSectionIdSet, setInitialSectionIdSet] = useState<Set<string> | null>(null);
@@ -1464,6 +1430,7 @@ export default function ResultHomeScreen({
           renderItem={({ item, index, section }) => (
             <ResultPostCard
               post={item}
+              pkScore={resolveResultPostPkScore(item, pkFromGames)}
               language={language}
               nowMs={listNowTick}
               viewerUid={uid}
@@ -1997,15 +1964,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     letterSpacing: 0.35,
     textTransform: "uppercase",
-    includeFontPadding: false,
-  },
-  teamRecordText: {
-    fontSize: 11,
-    fontWeight: "700",
-    fontFamily: MATCH_CARD_METRIC_FONT,
-    color: "rgba(255,255,255,0.85)",
-    fontVariant: ["tabular-nums"],
-    textAlign: "center",
     includeFontPadding: false,
   },
   predictedScoreFallback: {

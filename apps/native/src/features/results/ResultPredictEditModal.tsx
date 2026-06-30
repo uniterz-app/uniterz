@@ -13,6 +13,7 @@ import {
   resolveGameStartAt,
   resolveGameStatus,
   resolveGameTeamName,
+  resolvePkScore,
 } from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import PredictModal, {
@@ -525,6 +526,7 @@ export default function ResultPredictEditModal({
       homeTeamId: homeSide?.teamId,
       awayTeamId: awaySide?.teamId,
       finalOt: resolveFinalMetaOt(game),
+      pkScore: resolvePkScore(game),
     });
   }, [game, post, selectedLeague, language]);
 
@@ -765,7 +767,14 @@ function getGameCardCenterBlock(
     const sub = `${language === "en" ? "Final" : "試合終了"}${
       ot ? " (OT)" : ""
     }`;
-    return { variant: "score", home: score.home, away: score.away, subLine: sub };
+    const pkScore = resolvePkScore(game);
+    return {
+      variant: "score",
+      home: score.home,
+      away: score.away,
+      subLine: sub,
+      pkScore,
+    };
   }
   if (liveUi) {
     return { variant: "liveMark" };

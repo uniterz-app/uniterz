@@ -10,6 +10,7 @@ import {
   type WcGoalScorerPostLike,
   type WcGoalScorerResultInfo,
 } from "../results/useWcGoalScorerResultNative";
+import type { PkScore } from "../../../../../lib/games/pkScore";
 
 export type PredictModalResultStatRow = {
   key: "scorePrecision" | "upsetPoints" | "pointsV3";
@@ -25,6 +26,7 @@ export type PredictModalMergedFinalPreview = {
   finalScore: { home: number; away: number };
   predictedScore: { home: number; away: number };
   finalLabel: string;
+  pkScore?: PkScore | null;
   badge: ResultCardBadge;
   outcomeBadge: ResultOutcomeOnlyBadge;
   showStreakBadge: boolean;
@@ -71,6 +73,7 @@ type BuildParams = {
   homeTeamId?: string | null;
   awayTeamId?: string | null;
   finalOt?: boolean;
+  pkScore?: PkScore | null;
 };
 
 /** Web `MatchCard` overlay + `ResultStatsRows` 相当の試合終了・予想済みプレビュー */
@@ -87,6 +90,7 @@ export function buildPredictModalMergedFinalPreview(
     homeTeamId,
     awayTeamId,
     finalOt = false,
+    pkScore = null,
   } = params;
   const isEn = language === "en";
 
@@ -171,6 +175,7 @@ export function buildPredictModalMergedFinalPreview(
     finalScore,
     predictedScore,
     finalLabel,
+    pkScore,
     badge,
     outcomeBadge,
     showStreakBadge,
