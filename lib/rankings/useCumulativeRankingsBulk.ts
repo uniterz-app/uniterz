@@ -400,6 +400,7 @@ export function useCumulativeRankingsBulk(
   useEffect(() => {
     const onInvalidate = () => {
       const seq = ++invalidateSeqRef.current;
+      clearBulkCacheScope(phase, round, wcStage);
       void (async () => {
         const uid = auth.currentUser?.uid ?? null;
         try {
