@@ -20,10 +20,12 @@ import {
   mergePersonalRankPrefetch,
   needsPersonalRankPrefetch,
 } from "@/lib/rankings/rankingBulkMetrics";
+import { isNewerSnapshotGeneration } from "@/lib/rankings/rankingSnapshotGeneration";
 
 type BulkFetchResult = {
   byMetric: Record<string, BulkMetricPayload>;
   myMetricValueDeltas: MyRankMetricValueDeltas | null;
+  snapshotGeneration: string | null;
 };
 
 export const INITIAL_RANKING_METRICS = "totalPoints";
@@ -58,6 +60,7 @@ type BulkCacheEntry = {
   bundles: Record<string, BulkMetricPayload>;
   deltas: MyRankMetricValueDeltas | null;
   appliedUid: string;
+  snapshotGeneration: string | null;
 };
 
 const bulkCache = new Map<string, BulkCacheEntry>();
@@ -94,6 +97,30 @@ function writeBulkCache(
     ...entry,
     at: Date.now(),
   });
+}
+
+function clearBulkCacheScope(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): void {
+  const prefix = `${phase}:${round}:${wcStage ?? "-"}:`;
+  for (const key of bulkCache.keys()) {
+    if (key.startsWith(prefix)) bulkCache.delete(key);
+  }
+}
+
+function readScopeSnapshotGeneration(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): string | null {
+  for (const key of bulkCache.keys()) {
+    if (!key.startsWith(`${phase}:${round}:${wcStage ?? "-"}:`)) continue;
+    const gen = bulkCache.get(key)?.snapshotGeneration;
+    if (gen) return gen;
+  }
+  return null;
 }
 
 function emptyBulkMetric(): BulkMetricPayload {
@@ -217,12 +244,48 @@ async function fetchBulkMetrics(
   const json = await res.json();
   if (!json?.ok || !json?.byMetric) return null;
   if (wcStage != null && json.wcStage !== wcStage) return null;
+  const snapshotGeneration =
+    typeof json.snapshotGeneration === "string"
+      ? json.snapshotGeneration
+      : null;
   return {
     byMetric: json.byMetric as Record<string, BulkMetricPayload>,
     myMetricValueDeltas:
       (json.myMetricValueDeltas as MyRankMetricValueDeltas | null | undefined) ??
       null,
+    snapshotGeneration,
   };
+}
+
+/** スナップショット世代が進んでいたらスコープキャッシュを捨て、必要なら全指標を再取得 */
+async function resolveBulkFetch(
+  metrics: string,
+  uid: string | null,
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null,
+  opts?: { personalOnly?: boolean }
+): Promise<BulkFetchResult | null> {
+  const partial = await fetchBulkMetrics(
+    metrics,
+    uid,
+    phase,
+    round,
+    wcStage,
+    opts
+  );
+  if (!partial || opts?.personalOnly) return partial;
+
+  const scopeGen = readScopeSnapshotGeneration(phase, round, wcStage);
+  if (!isNewerSnapshotGeneration(partial.snapshotGeneration, scopeGen)) {
+    return partial;
+  }
+
+  clearBulkCacheScope(phase, round, wcStage);
+  const allMetrics = refetchAllMetrics(wcStage);
+  if (metrics === allMetrics) return partial;
+
+  return fetchBulkMetrics(allMetrics, uid, phase, round, wcStage, opts);
 }
 
 function applyBulkResult(
@@ -232,6 +295,7 @@ function applyBulkResult(
   bundles: Record<string, BulkMetricPayload>;
   deltas: MyRankMetricValueDeltas | null;
   appliedUid: string;
+  snapshotGeneration: string | null;
 } {
   const merged = mergeMetricBundles(null, partial.byMetric);
   const bundles =
@@ -241,6 +305,7 @@ function applyBulkResult(
     bundles,
     deltas: partial.myMetricValueDeltas,
     appliedUid: uid ?? ANON_KEY,
+    snapshotGeneration: partial.snapshotGeneration,
   };
 }
 
@@ -272,7 +337,7 @@ export function prefetchCumulativeRankingsList(
   if (inflightListKeys.has(inflightKey)) return;
   inflightListKeys.add(inflightKey);
 
-  void fetchBulkMetrics(INITIAL_RANKING_METRICS, null, phase, round, wcStage)
+  void resolveBulkFetch(INITIAL_RANKING_METRICS, null, phase, round, wcStage)
     .then((partial) => {
       if (!partial) return;
       const applied = applyBulkResult(partial, null);
@@ -280,6 +345,7 @@ export function prefetchCumulativeRankingsList(
         bundles: applied.bundles,
         deltas: applied.deltas,
         appliedUid: ANON_KEY,
+        snapshotGeneration: applied.snapshotGeneration,
       });
     })
     .finally(() => {
@@ -337,7 +403,7 @@ export function useCumulativeRankingsBulk(
       void (async () => {
         const uid = auth.currentUser?.uid ?? null;
         try {
-          const partial = await fetchBulkMetrics(
+          const partial = await resolveBulkFetch(
             refetchAllMetrics(wcStage),
             uid,
             phase,
@@ -353,6 +419,7 @@ export function useCumulativeRankingsBulk(
             bundles: applied.bundles,
             deltas: applied.deltas,
             appliedUid: applied.appliedUid,
+            snapshotGeneration: applied.snapshotGeneration,
           });
         } catch {
           if (seq !== invalidateSeqRef.current) return;
@@ -424,6 +491,7 @@ export function useCumulativeRankingsBulk(
           bundles: merged,
           deltas: partial.myMetricValueDeltas ?? null,
           appliedUid: uid,
+          snapshotGeneration: partial.snapshotGeneration,
         });
         return merged;
       });
@@ -459,6 +527,7 @@ export function useCumulativeRankingsBulk(
             bundles: merged,
             deltas: ranks.myMetricValueDeltas ?? myMetricValueDeltas,
             appliedUid: uid,
+            snapshotGeneration: ranks.snapshotGeneration,
           });
           return merged;
         });
@@ -477,7 +546,7 @@ export function useCumulativeRankingsBulk(
       const inflightKey = listInflightKey(phase, round, wcStage);
       inflightListKeys.add(inflightKey);
       try {
-        const partial = await fetchBulkMetrics(
+        const partial = await resolveBulkFetch(
           INITIAL_RANKING_METRICS,
           null,
           phase,
@@ -493,6 +562,7 @@ export function useCumulativeRankingsBulk(
             bundles: applied.bundles,
             deltas: null,
             appliedUid: ANON_KEY,
+            snapshotGeneration: applied.snapshotGeneration,
           });
         } else {
           const fallback = mergeMetricBundles(null, {
@@ -503,6 +573,7 @@ export function useCumulativeRankingsBulk(
             bundles: fallback,
             deltas: null,
             appliedUid: ANON_KEY,
+            snapshotGeneration: null,
           });
         }
       } catch {
@@ -521,7 +592,7 @@ export function useCumulativeRankingsBulk(
 
     const runPersonalFetch = async (uid: string, seq: number) => {
       try {
-        const partial = await fetchBulkMetrics(
+        const partial = await resolveBulkFetch(
           INITIAL_RANKING_METRICS,
           uid,
           phase,
@@ -572,6 +643,8 @@ export function useCumulativeRankingsBulk(
       setMyMetricValueDeltas(applied.deltas);
       setAppliedTotalPointsUid(ANON_KEY);
       setLoading(false);
+      const seq = ++listFetchSeqRef.current;
+      void runListFetch(seq);
     } else {
       setByMetric(null);
       setMyMetricValueDeltas(null);
@@ -646,7 +719,7 @@ export function useCumulativeRankingsBulk(
       const genAtStart = phaseRoundGenRef.current;
       const seq = ++metricReqSeqRef.current;
       try {
-        const partial = await fetchBulkMetrics(
+        const partial = await resolveBulkFetch(
           metric,
           fetchUid,
           phase,
@@ -666,6 +739,7 @@ export function useCumulativeRankingsBulk(
               bundles: merged,
               deltas: partial.myMetricValueDeltas ?? myMetricValueDeltas,
               appliedUid: fetchUid ?? ANON_KEY,
+              snapshotGeneration: partial.snapshotGeneration,
             });
             return merged;
           });
@@ -686,6 +760,11 @@ export function useCumulativeRankingsBulk(
               bundles: merged,
               deltas: myMetricValueDeltas,
               appliedUid: fetchUid ?? ANON_KEY,
+              snapshotGeneration: readScopeSnapshotGeneration(
+                phase,
+                round,
+                wcStage
+              ),
             });
             return merged;
           });

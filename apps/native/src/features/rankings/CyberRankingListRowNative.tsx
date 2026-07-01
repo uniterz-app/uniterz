@@ -25,7 +25,6 @@ import { RankingsAvatarNative } from "./RankingsAvatarAndTabs";
 import { CyberRankNumberNative } from "./CyberRankNumberNative";
 import { RankDeltaBadgeNative } from "./RankingsRankDeltaBadge";
 import { RankFirstBorderEdgeScanNative } from "./RankFirstBorderEdgeScanNative";
-import { rankingFlagImageUri } from "./rankingFlagUri";
 import { METRIC_FONT, RANKING_SCORE_FONT, rankingNameFont, rankingTagFont } from "./rankingsUiTheme";
 import { useRankingsCrownEntrance } from "./useRankingsCrownEntrance";
 

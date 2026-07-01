@@ -10,6 +10,7 @@ const buildCumulativeRankingSnapshot_1 = require("./buildCumulativeRankingSnapsh
 const readSnapshotRanksFromCumulative_1 = require("./readSnapshotRanksFromCumulative");
 const safeRankMetricNum_1 = require("./safeRankMetricNum");
 const wcRankingStage_1 = require("./wcRankingStage");
+const activeFootballStreakForWcStage_1 = require("./activeFootballStreakForWcStage");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
@@ -107,24 +108,6 @@ function activeBasketballStreak(d) {
     var _a, _b, _c, _d, _e;
     const signed = (_e = (_d = (_c = (_a = d.activeWinStreakBasketball) !== null && _a !== void 0 ? _a : (_b = d.streakBySport) === null || _b === void 0 ? void 0 : _b.basketball) !== null && _c !== void 0 ? _c : d.currentStreak) !== null && _d !== void 0 ? _d : d.activeWinStreak) !== null && _e !== void 0 ? _e : 0;
     return typeof signed === "number" && signed > 0 ? signed : 0;
-}
-function activeFootballStreak(d) {
-    var _a, _b, _c, _d;
-    const signed = (_d = (_c = (_a = d.activeWinStreakFootball) !== null && _a !== void 0 ? _a : (_b = d.streakBySport) === null || _b === void 0 ? void 0 : _b.football) !== null && _c !== void 0 ? _c : d.streakFootball) !== null && _d !== void 0 ? _d : 0;
-    return typeof signed === "number" && signed > 0 ? signed : 0;
-}
-function activeFootballStreakForWcStage(d, wcStage) {
-    var _a, _b, _c;
-    if (wcStage === "qualifying" || wcStage === "main") {
-        const byStage = ((_a = d.activeWinStreakByWcStage) !== null && _a !== void 0 ? _a : {});
-        const live = byStage[wcStage];
-        if (typeof live === "number" && live > 0)
-            return live;
-        const nested = (_c = (_b = d.rankingByWcStage) === null || _b === void 0 ? void 0 : _b[wcStage]) === null || _c === void 0 ? void 0 : _c.activeWinStreak;
-        if (typeof nested === "number" && nested > 0)
-            return nested;
-    }
-    return activeFootballStreak(d);
 }
 const EMPTY_USER_SNAPS = { mySnap: null, histSnap: null };
 async function loadLatestHistSnapForUid(uid) {
@@ -253,7 +236,7 @@ function readPriorRankFromHist(histSnap, metric, phase, round, wcStage) {
 function buildMyRowFromStats(uid, me, rk, opts) {
     var _a, _b, _c, _d, _e, _f, _g;
     const streak = opts.wcStage
-        ? activeFootballStreakForWcStage(me, opts.wcStage)
+        ? (0, activeFootballStreakForWcStage_1.activeFootballStreakForWcStage)(me, opts.wcStage)
         : activeBasketballStreak(me);
     return {
         uid,

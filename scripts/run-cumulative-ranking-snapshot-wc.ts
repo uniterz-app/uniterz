@@ -48,10 +48,38 @@ const WC_METRICS = [
   "totalGoalScorerHits",
 ] as const;
 
+const STREAK_ALL = process.argv.includes("--streak-all");
+
 (async () => {
-  console.log("=== run buildCumulativeRankingSnapshot (WC only) ===\n");
-  const result = await buildCumulativeRankingSnapshot({ scope: "wc" });
+  console.log("=== run buildCumulativeRankingSnapshot (WC only) ===");
+  if (STREAK_ALL) {
+    console.log("(streak-all: 当日確定フィルタなしで連勝 Top20 を生成)\n");
+  }
+  const result = await buildCumulativeRankingSnapshot({
+    scope: "wc",
+    streakAllEligible: STREAK_ALL,
+  });
   console.log("result:", result);
+
+  const revalidateUrl = process.env.REVALIDATE_CUMULATIVE_RANKING_URL?.trim();
+  const revalidateSecret = process.env.INTERNAL_REVALIDATE_SECRET?.trim();
+  if (revalidateUrl && revalidateSecret) {
+    console.log("\n--- revalidate Next.js cache ---");
+    try {
+      const res = await fetch(revalidateUrl, {
+        method: "POST",
+        headers: { "x-revalidate-token": revalidateSecret },
+      });
+      const body = await res.text();
+      console.log(res.ok ? `ok: ${body}` : `failed ${res.status}: ${body}`);
+    } catch (e) {
+      console.warn("revalidate error:", e);
+    }
+  } else {
+    console.log(
+      "\n(skip revalidate — set REVALIDATE_CUMULATIVE_RANKING_URL + INTERNAL_REVALIDATE_SECRET)"
+    );
+  }
 
   const db = admin.firestore();
   console.log("\n--- WC snapshots ---");
@@ -75,7 +103,10 @@ const WC_METRICS = [
       console.log(
         `${id}: totalCount=${d.totalCount} rows=${rows.length}` +
           (rows[0]
-            ? ` #1=${rows[0].displayName ?? rows[0].uid}`
+            ? ` #1=${rows[0].displayName ?? rows[0].uid}` +
+              (metric === "activeWinStreak"
+                ? ` streak=${rows[0].activeWinStreak ?? "?"}`
+                : "")
             : "")
       );
     }
