@@ -18,6 +18,7 @@ import {
 } from "@/lib/rankings/server/readSnapshotRanksFromCumulative";
 import { minPostsForWinRate } from "@/lib/rankings/winRateMinPosts";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { activeFootballStreakForWcStage } from "@/lib/rankings/activeFootballStreakForWcStage";
 
 type RankMetric = BulkRankingMetric;
 
@@ -72,7 +73,7 @@ function readWcSlice(
     totalPrecision: Number(block.totalPrecision ?? 0),
     totalUpset: Number(block.totalUpset ?? 0),
     totalGoalScorerHits: Number(block.totalGoalScorerHits ?? 0),
-    activeWinStreak: activeFootballStreak(data),
+    activeWinStreak: activeFootballStreakForWcStage(data, stage),
   };
 }
 
@@ -135,15 +136,6 @@ function activeBasketballStreak(data: Record<string, unknown>): number {
     (data.streakBySport as Record<string, unknown> | undefined)?.basketball ??
     data.currentStreak ??
     data.activeWinStreak ??
-    0;
-  return typeof signed === "number" && signed > 0 ? signed : 0;
-}
-
-function activeFootballStreak(data: Record<string, unknown>): number {
-  const signed =
-    data.activeWinStreakFootball ??
-    (data.streakBySport as Record<string, unknown> | undefined)?.football ??
-    data.streakFootball ??
     0;
   return typeof signed === "number" && signed > 0 ? signed : 0;
 }

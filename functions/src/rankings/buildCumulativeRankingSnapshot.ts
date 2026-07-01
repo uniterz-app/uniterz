@@ -3,6 +3,7 @@
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { safeRankMetricNum } from "./safeRankMetricNum";
 import { minPostsForWcWinRate, type WcRankingStage } from "./wcRankingStage";
+import { activeFootballStreakForWcStage } from "./activeFootballStreakForWcStage";
 import {
   isActiveWinStreakRankingEligible,
   loadAuthorUidsSettledToday,
@@ -45,6 +46,8 @@ function filterRowsForMetricEligibility(
     phase?: RankingPhase;
     round?: "overall" | PlayoffRoundKey;
     postedTodayUids?: Set<string>;
+    /** 手動スナップショット: 当日確定フィルタなし（連勝>0 のみ） */
+    streakAllEligible?: boolean;
   }
 ): BaseRow[] {
   if (metric === "winRate") {
@@ -59,15 +62,20 @@ function filterRowsForMetricEligibility(
         minPostsForWinRate(opts.phase ?? "playoffs", opts.round ?? "overall")
     );
   }
-  if (metric === "activeWinStreak" && opts.postedTodayUids) {
-    // JST 16:00 スナップショット: 当日確定投稿者かつ連勝>0 のみ
-    return baseRows.filter((row) =>
-      isActiveWinStreakRankingEligible(
-        row.uid,
-        row.activeWinStreak ?? 0,
-        opts.postedTodayUids!
-      )
-    );
+  if (metric === "activeWinStreak") {
+    if (opts.streakAllEligible) {
+      return baseRows.filter((row) => (row.activeWinStreak ?? 0) > 0);
+    }
+    if (opts.postedTodayUids) {
+      // JST 16:00 スナップショット: 当日確定投稿者かつ連勝>0 のみ
+      return baseRows.filter((row) =>
+        isActiveWinStreakRankingEligible(
+          row.uid,
+          row.activeWinStreak ?? 0,
+          opts.postedTodayUids!
+        )
+      );
+    }
   }
   return baseRows;
 }
@@ -217,15 +225,6 @@ function activeBasketballStreak(d: any): number {
     d.streakBySport?.basketball ??
     d.currentStreak ??
     d.activeWinStreak ??
-    0;
-  return typeof signed === "number" && signed > 0 ? signed : 0;
-}
-
-function activeFootballStreak(d: any): number {
-  const signed =
-    d.activeWinStreakFootball ??
-    d.streakBySport?.football ??
-    d.streakFootball ??
     0;
   return typeof signed === "number" && signed > 0 ? signed : 0;
 }
@@ -712,7 +711,7 @@ export async function loadWcStageTop20RowsLive(
         totalPrecision: rr?.totalPrecision ?? 0,
         totalUpset: rr?.totalUpset ?? 0,
         totalGoalScorerHits: safeRankMetricNum(rr?.totalGoalScorerHits),
-        activeWinStreak: activeFootballStreak(d),
+        activeWinStreak: activeFootballStreakForWcStage(d, stage),
       };
     })
     .filter((row) => (row.totalPosts ?? 0) > 0);
@@ -744,6 +743,11 @@ export type BuildCumulativeRankingSnapshotScope = "all" | "wc";
 export type BuildCumulativeRankingSnapshotOptions = {
   /** `wc` = World Cup のみ（NBA snapshotRanks / 一覧は触らない） */
   scope?: BuildCumulativeRankingSnapshotScope;
+  /**
+   * 手動実行向け: 連勝ランキングは「当日確定」条件を外し、連勝>0 のみで Top20 を作る。
+   * 本番 Cron では指定しないこと。
+   */
+  streakAllEligible?: boolean;
 };
 
 export async function buildCumulativeRankingSnapshot(
@@ -751,6 +755,7 @@ export async function buildCumulativeRankingSnapshot(
 ) {
   const scope = options.scope ?? "all";
   const wcOnly = scope === "wc";
+  const streakAllEligible = options.streakAllEligible === true;
 
   const snap = await db().collection("cumulative_stats").get();
 
@@ -813,7 +818,11 @@ export async function buildCumulativeRankingSnapshot(
         phase,
         round: "overall",
         postedTodayUids:
-          metric === "activeWinStreak" ? nbaSettledTodayUids : undefined,
+          metric === "activeWinStreak" && !streakAllEligible
+            ? nbaSettledTodayUids
+            : undefined,
+        streakAllEligible:
+          metric === "activeWinStreak" ? streakAllEligible : undefined,
       });
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
@@ -892,7 +901,11 @@ export async function buildCumulativeRankingSnapshot(
         phase: "playoffs",
         round,
         postedTodayUids:
-          metric === "activeWinStreak" ? nbaSettledTodayUids : undefined,
+          metric === "activeWinStreak" && !streakAllEligible
+            ? nbaSettledTodayUids
+            : undefined,
+        streakAllEligible:
+          metric === "activeWinStreak" ? streakAllEligible : undefined,
       });
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
@@ -957,7 +970,7 @@ export async function buildCumulativeRankingSnapshot(
           totalPrecision: rr?.totalPrecision ?? 0,
           totalUpset: rr?.totalUpset ?? 0,
           totalGoalScorerHits: safeRankMetricNum(rr?.totalGoalScorerHits),
-          activeWinStreak: activeFootballStreak(d),
+          activeWinStreak: activeFootballStreakForWcStage(d, stage),
         };
       })
       .filter((row) => (row.totalPosts ?? 0) > 0);
@@ -966,7 +979,11 @@ export async function buildCumulativeRankingSnapshot(
       const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
         wcStage: stage,
         postedTodayUids:
-          metric === "activeWinStreak" ? wcSettledTodayUids : undefined,
+          metric === "activeWinStreak" && !streakAllEligible
+            ? wcSettledTodayUids
+            : undefined,
+        streakAllEligible:
+          metric === "activeWinStreak" ? streakAllEligible : undefined,
       });
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
@@ -1216,6 +1233,30 @@ export async function buildCumulativeRankingSnapshot(
   }
   await flush();
 
+  const generationMs = Date.now();
+  const generationPatch: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (wcOnly) {
+    generationPatch.wc = {
+      updatedAtMs: generationMs,
+      rankDeltaBasisDateKey: yesterdayKey,
+    };
+  } else {
+    generationPatch.wc = {
+      updatedAtMs: generationMs,
+      rankDeltaBasisDateKey: yesterdayKey,
+    };
+    generationPatch.nba = {
+      updatedAtMs: generationMs,
+      rankDeltaBasisDateKey: yesterdayKey,
+    };
+  }
+  await db()
+    .collection("cumulative_ranking_snapshots")
+    .doc("_generation")
+    .set(generationPatch, { merge: true });
+
   const todayPredictorUids = await loadUidsWhoPredictedOnDateJst(dateKey);
 
   return {
@@ -1226,6 +1267,7 @@ export async function buildCumulativeRankingSnapshot(
     wcRanksWritten: rankByUidWc.size,
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,
+    snapshotGenerationMs: generationMs,
     notifiedUids: todayPredictorUids,
   };
 }

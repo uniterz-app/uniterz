@@ -42,7 +42,22 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
     const matchGoalScorers = isWc
         ? (0, matchGoalScorersDisplay_1.buildPostMatchGoalScorersFromGame)(game.goalScorers, game.homeTeamId, game.awayTeamId)
         : [];
-    batch.update(postDoc.ref, Object.assign(Object.assign({ result: final }, (isWc ? { matchGoalScorers } : {})), { marketMeta: {
+    const pkScoreRaw = game === null || game === void 0 ? void 0 : game.pkScore;
+    const pkScore = pkScoreRaw &&
+        typeof pkScoreRaw === "object" &&
+        pkScoreRaw.home != null &&
+        pkScoreRaw.away != null
+        ? {
+            home: Number(pkScoreRaw.home),
+            away: Number(pkScoreRaw.away),
+        }
+        : null;
+    const pkScorePatch = pkScore &&
+        Number.isFinite(pkScore.home) &&
+        Number.isFinite(pkScore.away)
+        ? { pkScore }
+        : {};
+    batch.update(postDoc.ref, Object.assign(Object.assign(Object.assign({ result: final }, (isWc ? { matchGoalScorers } : {})), pkScorePatch), { marketMeta: {
             majoritySide: market.majoritySide,
             majorityRatio: market.majorityRatio,
         }, stats: {

@@ -10,6 +10,7 @@ import {
   isMetricListBundleLoaded,
   mergePersonalRankPrefetch,
 } from "../../../../../lib/rankings/rankingBulkMetrics";
+import { isNewerSnapshotGeneration } from "../../../../../lib/rankings/rankingSnapshotGeneration";
 
 export type BulkMetricPayload = {
   ok: boolean;
@@ -20,8 +21,57 @@ export type BulkMetricPayload = {
   myRankDeltaPlaces: number | null;
 };
 
+type BulkFetchResult = {
+  byMetric: Record<string, BulkMetricPayload>;
+  snapshotGeneration: string | null;
+};
+
 const ANON_KEY = "__anon__";
-const PRIMARY_METRICS = "totalPoints";
+const INITIAL_RANKING_METRICS = "totalPoints";
+const DEFERRED_RANKING_METRICS_NBA = [
+  "totalPrecision",
+  "totalUpset",
+] as const;
+const DEFERRED_RANKING_METRICS_WC = [
+  "totalExactHits",
+  "totalUpset",
+] as const;
+
+const scopeSnapshotGeneration = new Map<string, string>();
+
+function scopeKey(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): string {
+  return `${phase}:${round}:${wcStage ?? "-"}`;
+}
+
+function readScopeSnapshotGeneration(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): string | null {
+  return scopeSnapshotGeneration.get(scopeKey(phase, round, wcStage)) ?? null;
+}
+
+function writeScopeSnapshotGeneration(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null,
+  generation: string | null
+): void {
+  if (!generation) return;
+  scopeSnapshotGeneration.set(scopeKey(phase, round, wcStage), generation);
+}
+
+function clearScopeSnapshotGeneration(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): void {
+  scopeSnapshotGeneration.delete(scopeKey(phase, round, wcStage));
+}
 
 function emptyBulkMetric(): BulkMetricPayload {
   return {
@@ -108,7 +158,7 @@ async function fetchBulkMetrics(
   round: PlayoffRoundKey,
   wcStage: WcRankingStage | null,
   opts?: { personalOnly?: boolean }
-): Promise<Record<string, BulkMetricPayload> | null> {
+): Promise<BulkFetchResult | null> {
   const base = getUniterzApiBaseUrl();
   if (!base) return null;
 
@@ -121,16 +171,91 @@ async function fetchBulkMetrics(
   if (opts?.personalOnly) params.set("personalOnly", "1");
 
   const res = await fetch(`${base}/api/cumulative-ranking/bulk?${params.toString()}`, {
-    cache: opts?.personalOnly ? "no-store" : "no-store",
+    cache: "no-store",
   });
   const json = (await res.json()) as {
     ok?: boolean;
     byMetric?: Record<string, BulkMetricPayload>;
     wcStage?: WcRankingStage;
+    snapshotGeneration?: string;
   };
   if (!json?.ok || !json.byMetric) return null;
   if (wcStage != null && json.wcStage !== wcStage) return null;
-  return json.byMetric;
+  const snapshotGeneration =
+    typeof json.snapshotGeneration === "string"
+      ? json.snapshotGeneration
+      : null;
+  return { byMetric: json.byMetric, snapshotGeneration };
+}
+
+async function resolveBulkFetch(
+  metrics: string,
+  uid: string | null,
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null,
+  opts?: { personalOnly?: boolean }
+): Promise<BulkFetchResult | null> {
+  const partial = await fetchBulkMetrics(
+    metrics,
+    uid,
+    phase,
+    round,
+    wcStage,
+    opts
+  );
+  if (!partial || opts?.personalOnly) {
+    if (partial?.snapshotGeneration) {
+      writeScopeSnapshotGeneration(
+        phase,
+        round,
+        wcStage,
+        partial.snapshotGeneration
+      );
+    }
+    return partial;
+  }
+
+  const cachedGen = readScopeSnapshotGeneration(phase, round, wcStage);
+  if (!isNewerSnapshotGeneration(partial.snapshotGeneration, cachedGen)) {
+    writeScopeSnapshotGeneration(
+      phase,
+      round,
+      wcStage,
+      partial.snapshotGeneration
+    );
+    return partial;
+  }
+
+  clearScopeSnapshotGeneration(phase, round, wcStage);
+  const allMetrics = allRankingMetricsParam(wcStage);
+  if (metrics === allMetrics) {
+    writeScopeSnapshotGeneration(
+      phase,
+      round,
+      wcStage,
+      partial.snapshotGeneration
+    );
+    return partial;
+  }
+
+  const refreshed = await fetchBulkMetrics(
+    allMetrics,
+    uid,
+    phase,
+    round,
+    wcStage,
+    opts
+  );
+  if (refreshed?.snapshotGeneration) {
+    writeScopeSnapshotGeneration(
+      phase,
+      round,
+      wcStage,
+      refreshed.snapshotGeneration
+    );
+  }
+  return refreshed;
 }
 
 export function useNativeCumulativeRankingsBulk(
@@ -162,7 +287,13 @@ export function useNativeCumulativeRankingsBulk(
           { personalOnly: true }
         );
         if (prefetchGen !== phaseRoundGenRef.current || !ranks) return;
-        setByMetric((prev) => mergePersonalRankPrefetch(prev, ranks));
+        setByMetric((prev) => mergePersonalRankPrefetch(prev, ranks.byMetric));
+        writeScopeSnapshotGeneration(
+          phase,
+          round,
+          wcStage,
+          ranks.snapshotGeneration
+        );
       })();
     },
     [phase, round, wcStage]
@@ -179,10 +310,16 @@ export function useNativeCumulativeRankingsBulk(
     void (async () => {
       const g = ++mountPrimaryGenRef.current;
       try {
-        const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase, round, wcStage);
+        const partial = await resolveBulkFetch(
+          INITIAL_RANKING_METRICS,
+          null,
+          phase,
+          round,
+          wcStage
+        );
         if (cancelled || g !== mountPrimaryGenRef.current) return;
         if (partial) {
-          applyAnonListToState(setByMetric, setAppliedTotalPointsUid, partial);
+          applyAnonListToState(setByMetric, setAppliedTotalPointsUid, partial.byMetric);
         } else {
           applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
             totalPoints: emptyBulkMetric(),
@@ -209,10 +346,16 @@ export function useNativeCumulativeRankingsBulk(
         const g = ++mountPrimaryGenRef.current;
         void (async () => {
           try {
-            const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase, round, wcStage);
+            const partial = await resolveBulkFetch(
+              INITIAL_RANKING_METRICS,
+              null,
+              phase,
+              round,
+              wcStage
+            );
             if (cancelled || g !== mountPrimaryGenRef.current) return;
             if (partial) {
-              applyAnonListToState(setByMetric, setAppliedTotalPointsUid, partial);
+              applyAnonListToState(setByMetric, setAppliedTotalPointsUid, partial.byMetric);
             } else {
               applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
                 totalPoints: emptyBulkMetric(),
@@ -231,10 +374,16 @@ export function useNativeCumulativeRankingsBulk(
       const uq = ++uidPrimarySeqRef.current;
       void (async () => {
         try {
-          const partial = await fetchBulkMetrics(PRIMARY_METRICS, uid, phase, round, wcStage);
+          const partial = await resolveBulkFetch(
+            INITIAL_RANKING_METRICS,
+            uid,
+            phase,
+            round,
+            wcStage
+          );
           if (cancelled || uq !== uidPrimarySeqRef.current) return;
           if (partial) {
-            setByMetric((prev) => mergeMetricBundles(prev, partial));
+            setByMetric((prev) => mergeMetricBundles(prev, partial.byMetric));
             setAppliedTotalPointsUid(uid);
             schedulePersonalRankPrefetch(uid);
           } else {
@@ -270,11 +419,17 @@ export function useNativeCumulativeRankingsBulk(
       const genAtStart = phaseRoundGenRef.current;
       const seq = ++metricReqSeqRef.current;
       try {
-        const partial = await fetchBulkMetrics(metric, uidForMetric, phase, round, wcStage);
+        const partial = await resolveBulkFetch(
+          metric,
+          uidForMetric,
+          phase,
+          round,
+          wcStage
+        );
         if (genAtStart !== phaseRoundGenRef.current) return;
         if (seq !== metricReqSeqRef.current) return;
         if (partial) {
-          setByMetric((prev) => mergeMetricBundles(prev, partial));
+          setByMetric((prev) => mergeMetricBundles(prev, partial.byMetric));
         } else {
           setByMetric((prev) => mergeMetricBundles(prev, { [metric]: emptyBulkMetric() }));
         }
@@ -289,6 +444,28 @@ export function useNativeCumulativeRankingsBulk(
   const listReady = byMetric?.totalPoints != null;
   const personalPending =
     myUid != null && appliedTotalPointsUid != null && appliedTotalPointsUid !== myUid;
+
+  useEffect(() => {
+    if (!listReady || loading) return;
+
+    let cancelled = false;
+    const loadDeferred = () => {
+      if (cancelled) return;
+      const deferred = wcStage
+        ? DEFERRED_RANKING_METRICS_WC
+        : DEFERRED_RANKING_METRICS_NBA;
+      for (const metric of deferred) {
+        void ensureMetric(metric);
+      }
+    };
+
+    const timeoutId = setTimeout(loadDeferred, 1200);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [listReady, loading, wcStage, ensureMetric]);
 
   return {
     loading,

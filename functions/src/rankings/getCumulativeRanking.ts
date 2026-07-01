@@ -17,6 +17,7 @@ import type { WcRankingStage } from "./wcRankingStage";
 import { readStoredRankFromUser as readStoredRankFromCumulativeDoc } from "./readSnapshotRanksFromCumulative";
 import { safeRankMetricNum } from "./safeRankMetricNum";
 import { isWcRankingStage, minPostsForWcWinRate } from "./wcRankingStage";
+import { activeFootballStreakForWcStage } from "./activeFootballStreakForWcStage";
 
 function db() {
   return getFirestore();
@@ -169,31 +170,6 @@ function activeBasketballStreak(d: any): number {
     d.activeWinStreak ??
     0;
   return typeof signed === "number" && signed > 0 ? signed : 0;
-}
-
-function activeFootballStreak(d: any): number {
-  const signed =
-    d.activeWinStreakFootball ??
-    d.streakBySport?.football ??
-    d.streakFootball ??
-    0;
-  return typeof signed === "number" && signed > 0 ? signed : 0;
-}
-
-function activeFootballStreakForWcStage(
-  d: Record<string, unknown>,
-  wcStage: WcRankingStage
-): number {
-  if (wcStage === "qualifying" || wcStage === "main") {
-    const byStage = (d.activeWinStreakByWcStage ?? {}) as Record<string, unknown>;
-    const live = byStage[wcStage];
-    if (typeof live === "number" && live > 0) return live;
-    const nested = (
-      d.rankingByWcStage as Record<string, Record<string, unknown>> | undefined
-    )?.[wcStage]?.activeWinStreak;
-    if (typeof nested === "number" && nested > 0) return nested;
-  }
-  return activeFootballStreak(d);
 }
 
 type UserRankingSnaps = {

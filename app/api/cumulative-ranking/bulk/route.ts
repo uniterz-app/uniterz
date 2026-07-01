@@ -25,6 +25,7 @@ import {
   isWcRankingStage,
   type WcRankingStage,
 } from "@/lib/rankings/wcRankingStage";
+import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
 
 export const runtime = "nodejs";
 
@@ -92,7 +93,7 @@ const getCachedBulk = unstable_cache(
     phase: RankingPhase,
     round: PlayoffRoundKey,
     wcStageKey: string,
-    dayKey: string
+    snapshotGenerationKey: string
   ) => {
     const uid = uidKey === "__anon__" ? undefined : uidKey;
     const parts = metricsKey
@@ -107,11 +108,10 @@ const getCachedBulk = unstable_cache(
         : isWcRankingStage(wcStageKey)
           ? wcStageKey
           : null;
-    // dayKey は unstable_cache のキー分離用（当日中は同一キーで再利用）
-    void dayKey;
+    void snapshotGenerationKey;
     return fetchBulkFromFunctions(uid, metrics, phase, round, wcStage);
   },
-  ["cumulative-ranking-bulk-v11"],
+  ["cumulative-ranking-bulk-v13"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -139,7 +139,9 @@ export async function GET(req: Request) {
       ? rawRound
       : "overall";
     const metricsKey = metricsToKey(metricsList);
-    const todayKey = dateKeyJST();
+    const snapshotGeneration =
+      (await loadRankingSnapshotGenerationKey(wcStage)) ??
+      `fallback:${dateKeyJST()}`;
 
     /** YOUR RANK 用 — Firestore snapshotRanks のみ（Functions / 一覧キャッシュ不要） */
     if (personalOnly) {
@@ -157,7 +159,7 @@ export async function GET(req: Request) {
         wcStage
       );
       return NextResponse.json(
-        { ok: true, wcStage, byMetric: personal, myMetricValueDeltas: null },
+        { ok: true, wcStage, snapshotGeneration, byMetric: personal, myMetricValueDeltas: null },
         {
           status: 200,
           headers: {
@@ -188,7 +190,7 @@ export async function GET(req: Request) {
       phase,
       round,
       wcStageCacheKey(wcStage),
-      todayKey
+      snapshotGeneration
     );
 
     const data =
@@ -241,7 +243,7 @@ export async function GET(req: Request) {
       : `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
     return NextResponse.json(
-      { ...data, wcStage, myMetricValueDeltas },
+      { ...data, wcStage, snapshotGeneration, myMetricValueDeltas },
       {
         status: 200,
         headers: { "Cache-Control": cacheControl },
