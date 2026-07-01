@@ -30,19 +30,20 @@ function FlagDot({
     <View
       style={[
         styles.flagWrap,
-        selected && styles.flagSelected,
         dimmed && styles.flagDimmed,
       ]}
     >
       <CountryFlagNative teamId={teamId} variant="bracketTree" />
+      {selected ? <View style={styles.flagRingInset} pointerEvents="none" /> : null}
     </View>
   );
 }
 
 export function WcBracketTreeWinnerFlagNative({ teamId }: { teamId: string }) {
   return (
-    <View style={[styles.flagWrap, styles.flagSelected]}>
+    <View style={styles.flagWrap}>
       <CountryFlagNative teamId={teamId} variant="bracketTree" />
+      <View style={styles.flagRingInset} pointerEvents="none" />
     </View>
   );
 }
@@ -61,11 +62,13 @@ export default function WcBracketTreeFlagPairNative({
   return (
     <View style={styles.slot}>
       {home.teamId ? (
-        <FlagDot
-          teamId={home.teamId}
-          selected={pickedWinner === home.teamId}
-          dimmed={Boolean(pickedWinner && pickedWinner !== home.teamId)}
-        />
+        <View style={styles.homeFlag}>
+          <FlagDot
+            teamId={home.teamId}
+            selected={pickedWinner === home.teamId}
+            dimmed={Boolean(pickedWinner && pickedWinner !== home.teamId)}
+          />
+        </View>
       ) : (
         <View style={styles.flagSpacer} />
       )}
@@ -87,7 +90,9 @@ const styles = StyleSheet.create({
     width: WC_TREE_SLOT_W,
     height: WC_TREE_SLOT_H,
     alignItems: "center",
-    gap: WC_TREE_FLAG_GAP,
+  },
+  homeFlag: {
+    marginBottom: WC_TREE_FLAG_GAP,
   },
   emptySlot: {
     width: WC_TREE_SLOT_W,
@@ -95,6 +100,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(34,211,238,0.15)",
+    borderRadius: 2,
   },
   flagWrap: {
     width: WC_TREE_FLAG_W,
@@ -102,7 +108,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderRadius: 2,
   },
-  flagSelected: {
+  flagRingInset: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 2,
     borderWidth: 2,
     borderColor: "rgba(34,211,238,0.9)",
   },

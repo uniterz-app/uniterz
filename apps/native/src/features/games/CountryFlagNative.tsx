@@ -46,6 +46,21 @@ type CountryFlagNativeProps = {
   accessibilityLabel?: string;
 };
 
+/** Web `CountryFlag variant=inline` + `ring-0` 相当（枠線・影なし） */
+const FRAMELESS_VARIANTS = new Set<CountryFlagVariant>([
+  "bracketTree",
+  "bracketChampion",
+]);
+
+function outerStyleFor(variant: CountryFlagVariant, borderRadius: number) {
+  const { width, height } = VARIANT_SIZE[variant];
+  const base = { width, height, borderRadius };
+  if (FRAMELESS_VARIANTS.has(variant)) {
+    return [styles.framelessOuter, base];
+  }
+  return [styles.outer, base];
+}
+
 /** WC 試合カード・予想モーダル用の国旗（Web `CountryFlag` 相当） */
 export default function CountryFlagNative({
   teamId,
@@ -67,23 +82,39 @@ export default function CountryFlagNative({
   const uri = iso2 ? flagImageUriFromIso2(iso2) : wcFlagImageUri(teamId);
   const countryName =
     accessibilityLabel ?? teamIdToCountryName(teamId, "en") ?? "Country flag";
+  const frameless = FRAMELESS_VARIANTS.has(variant);
 
   if (!uri) {
     return (
       <View
-        style={[styles.placeholder, { width, height, borderRadius }]}
+        style={[
+          frameless ? styles.framelessPlaceholder : styles.placeholder,
+          { width, height, borderRadius },
+        ]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       />
     );
   }
 
+  const resizeMode =
+    variant === "bracketTree" ? ("stretch" as const) : ("cover" as const);
+
   return (
-    <View style={[styles.outer, { width, height, borderRadius }]}>
+    <View style={outerStyleFor(variant, borderRadius)}>
       <Image
         source={{ uri }}
-        style={{ width, height }}
-        resizeMode="cover"
+        style={
+          variant === "bracketChampion"
+            ? {
+                width: width * 1.06,
+                height: height * 1.06,
+                marginLeft: -(width * 0.03),
+                marginTop: -(height * 0.03),
+              }
+            : { width, height }
+        }
+        resizeMode={resizeMode}
         accessibilityLabel={countryName}
       />
     </View>
@@ -102,8 +133,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  framelessOuter: {
+    overflow: "hidden",
+    backgroundColor: "transparent",
+  },
   placeholder: {
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 6,
+  },
+  framelessPlaceholder: {
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
 });

@@ -71,4 +71,5 @@ export const KINETIK_SLANT_TAB_STREAK: Record<
   4: { accent: "#f87171", glow: "rgba(248, 113, 113, 0.38)" },
 };
 
-export const KINETIK_SLANT_TAB_ROW_H = 22;
+/** Web `.profile-edit-kinetik-card--compact` の `--kinetik-tab-row-h: 26px` */
+export const KINETIK_SLANT_TAB_ROW_H = 26;

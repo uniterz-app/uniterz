@@ -14,6 +14,7 @@ import {
 import { db } from "../../lib/firebase";
 import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
 import { parseUserProfileFields } from "../../../../../lib/profile/parseUserProfileFields";
+import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 
 export type NativeProfileByHandleState = {
   loading: boolean;
@@ -28,6 +29,7 @@ export type NativeProfileByHandleState = {
   plan: "free" | "pro";
   currentStreak: number;
   maxStreak: number;
+  memberSinceMs: number | null;
 };
 
 const idleState: NativeProfileByHandleState = {
@@ -43,6 +45,7 @@ const idleState: NativeProfileByHandleState = {
   plan: "free",
   currentStreak: 0,
   maxStreak: 0,
+  memberSinceMs: null,
 };
 
 async function fetchUserDocByRouteKey(
@@ -104,6 +107,7 @@ function mapUserDoc(
       typeof data.maxStreak === "number" && Number.isFinite(data.maxStreak)
         ? Math.max(0, Math.floor(data.maxStreak))
         : 0,
+    memberSinceMs: parseMemberSinceMs(data),
   };
 }
 

@@ -4053,6 +4053,25 @@ body::before {
   padding-top: 0;
 }
 
+.profile-edit-kinetik-header__meta--stacked {
+  position: relative;
+  display: flex;
+  min-height: var(--kav-size);
+  flex-direction: column;
+  justify-content: center;
+}
+
+.profile-edit-kinetik-header__menu-float {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+}
+
+.profile-edit-kinetik-header__identity--menu {
+  padding-right: 40px;
+}
+
 .profile-edit-kinetik-avatar-column {
   display: flex;
   flex-direction: column;

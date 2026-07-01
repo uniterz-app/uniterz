@@ -1,8 +1,16 @@
 /**
- * Web `ProfileWcStackedRankTrendCharts` 相当 — WC 時はノックアウト上・グループ下。
+ * Web `ProfileWcStackedRankTrendCharts` 相当 — WC 時はノックアウト／グループをタブ切替。
  */
+import { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet } from "react-native";
+import type { WcKinetikStackedStage } from "../../../../../lib/profile/profileKinetikMetricsSection";
+import { PROFILE_WC_STACKED_STAGE_TAB_ORDER } from "../../../../../lib/profile/profileWcStackedStageTabs";
 import type { ProfileRankTrendSection } from "../../../../../lib/profile/useProfileWcStackedRankTrend";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../rankings/CyberSlantedTabNative";
+import { rankingsTexts } from "../rankings/rankingsTexts";
 import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
 import { spacing } from "../../theme/tokens";
 
@@ -17,6 +25,24 @@ export default function ProfileWcStackedRankTrendChartsNative({
   loading,
   language,
 }: Props) {
+  const [activeStage, setActiveStage] = useState<WcKinetikStackedStage>("main");
+  const t = rankingsTexts(language);
+
+  const availableStages = useMemo(
+    () =>
+      PROFILE_WC_STACKED_STAGE_TAB_ORDER.filter((stage) =>
+        sections.some((s) => s.wcStage === stage)
+      ),
+    [sections]
+  );
+
+  useEffect(() => {
+    if (availableStages.length === 0) return;
+    setActiveStage((prev) =>
+      availableStages.includes(prev) ? prev : availableStages[0]!
+    );
+  }, [availableStages]);
+
   if (loading && sections.length === 0) {
     return (
       <ProfileRankTrendChartNative data={[]} loading language={language} />
@@ -33,31 +59,49 @@ export default function ProfileWcStackedRankTrendChartsNative({
     );
   }
 
-  const showSectionTitles = sections.length > 1;
+  const showStageTabs = availableStages.length > 1;
+  const activeSection =
+    sections.find((s) => s.wcStage === activeStage) ?? sections[0]!;
 
   return (
-    <View style={styles.stack}>
-      {sections.map((section, index) => (
-        <View key={section.wcStage} style={index > 0 ? styles.gap : undefined}>
-          <ProfileRankTrendChartNative
-            data={section.chartRows}
-            loading={false}
-            language={language}
-            sectionTitle={showSectionTitles ? section.title : undefined}
-            stackedSecondary={index > 0}
-            frozen={section.frozen}
-          />
+    <View style={styles.root}>
+      {showStageTabs ? (
+        <View style={styles.tabBarWrap}>
+          <CyberSlantedTabBarNative fill>
+            {availableStages.map((stage) => (
+              <CyberSlantedTabNative
+                key={stage}
+                label={stage === "main" ? t.stageKnockout : t.stageGroup}
+                active={activeStage === stage}
+                fill
+                compact
+                onPress={() => setActiveStage(stage)}
+              />
+            ))}
+          </CyberSlantedTabBarNative>
         </View>
-      ))}
+      ) : null}
+      <ProfileRankTrendChartNative
+        key={activeSection.wcStage}
+        data={activeSection.chartRows}
+        loading={false}
+        language={language}
+        sectionTitle={showStageTabs ? undefined : activeSection.title}
+        frozen={activeSection.frozen}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stack: {
+  root: {
     gap: spacing.sm,
+    overflow: "visible",
   },
-  gap: {
-    marginTop: spacing.sm,
+  /** skew タブの右端はみ出し用 */
+  tabBarWrap: {
+    overflow: "visible",
+    paddingHorizontal: 10,
+    marginBottom: spacing.xs,
   },
 });

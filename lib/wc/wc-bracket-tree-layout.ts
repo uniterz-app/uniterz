@@ -213,8 +213,8 @@ export const WC_TREE_CHAMPION_CARD_H = 90;
 /** @deprecated 外枠廃止。CARD_W/H と同一 */
 export const WC_TREE_CHAMPION_CARD_INNER_W = WC_TREE_CHAMPION_CARD_W;
 export const WC_TREE_CHAMPION_CARD_INNER_H = WC_TREE_CHAMPION_CARD_H;
-/** HUD タイトル帯（KNOCKOUT STAGE）— ツリー描画の上余白 */
-export const WC_TREE_HUD_HEADER_H = 44;
+/** HUD タイトル帯（UNITERZ / ROUND OF 32）— ツリー描画の上余白 */
+export const WC_TREE_HUD_HEADER_H = 74;
 
 /** 王冠（国旗上にはみ出す高さ） */
 export const WC_TREE_CHAMPION_CARD_LABEL_OVERHANG = 28;

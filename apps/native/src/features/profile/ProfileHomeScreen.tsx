@@ -57,6 +57,7 @@ import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profi
 import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
 import { useProfileKinetikWcStackedStats } from "../../../../../lib/profile/useProfileKinetikWcStackedStats";
 import { useProfileWcStackedRankTrend } from "../../../../../lib/profile/useProfileWcStackedRankTrend";
+import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -218,6 +219,7 @@ export default function ProfileHomeScreen({
   const [language, setLanguage] = useState<"ja" | "en">("ja");
   const [countryCode, setCountryCode] = useState("");
   const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [memberSinceMs, setMemberSinceMs] = useState<number | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -484,6 +486,7 @@ export default function ProfileHomeScreen({
         setLanguage(data?.language === "en" ? "en" : "ja");
         setCountryCode(typeof data?.countryCode === "string" ? data.countryCode : "");
         setPlan(data?.plan === "pro" ? "pro" : "free");
+        setMemberSinceMs(data ? parseMemberSinceMs(data as Record<string, unknown>) : null);
       } finally {
         if (!alive) return;
         setProfileLoading(false);
@@ -512,6 +515,7 @@ export default function ProfileHomeScreen({
     setLanguage(profileByHandle.language);
     setCountryCode(profileByHandle.countryCode);
     setPlan(profileByHandle.plan);
+    setMemberSinceMs(profileByHandle.memberSinceMs);
     setProfileLoading(false);
   }, [isPublicProfileView, profileByHandle]);
 
@@ -703,7 +707,7 @@ export default function ProfileHomeScreen({
       );
     }
 
-    const entranceKey = `${targetUid ?? ""}-${profileStatsContext.rankingLeague}-${profileStatsContext.wcStage ?? "overall"}-${statsBundle.summary?.posts ?? 0}-${dailyTrendChart.chartData.length}`;
+    const entranceKey = `${targetUid ?? ""}-${statsBundle.summary?.posts ?? 0}-${dailyTrendChart.chartData.length}`;
 
     return (
       <View style={styles.overviewBlock}>
@@ -835,6 +839,7 @@ export default function ProfileHomeScreen({
         countryCode={countryCode}
         plan={currentIsProView ? "pro" : plan}
         language={language}
+        memberSinceMs={memberSinceMs}
         summary={statsBundle.summary}
         summaryRanks={statsBundle.summaryRanks}
         profileStatsContext={profileStatsContext}

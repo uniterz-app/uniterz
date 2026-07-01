@@ -24,6 +24,8 @@ import {
 } from "./profileOverviewChartShell";
 import { streakChartLayoutMaxAbs } from "../../../../../lib/profile/streakTrackerChartLayout";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
+import ProfileStreakPlotGridNative from "./ProfileStreakPlotGridNative";
 
 type Props = {
   points: StreakTrackerPointNative[];
@@ -157,7 +159,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
               <View style={styles.titleWithInfo}>
                 <Text style={styles.title}>{title}</Text>
                 <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
-                  <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
+                  <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
                 </Pressable>
               </View>
               <Text style={styles.subtitle}>{subtitle}</Text>
@@ -198,7 +200,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
             <View style={styles.titleWithInfo}>
               <Text style={styles.title}>{title}</Text>
               <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
-                <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
+                <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
               </Pressable>
             </View>
             <Text style={styles.subtitle}>{subtitle}</Text>
@@ -247,9 +249,14 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
               <View style={styles.plotNoScrollWrap}>
                 <View style={{ width: plotChartW, minHeight: PLOT_H + 18 }}>
                   <View style={[styles.plotScrollInner, { width: plotChartW, height: PLOT_H }]}>
-                    <View
-                      pointerEvents="none"
-                      style={[styles.plotZeroLine, { top: halfH - 0.5 }]}
+                    <ProfileStreakPlotGridNative
+                      width={plotChartW}
+                      height={PLOT_H}
+                      ticks={ticks}
+                      maxAbs={maxAbs}
+                      columnCount={n}
+                      colW={colW}
+                      colGap={COL_GAP}
                     />
                     <View style={[styles.columnsOverlay, { gap: COL_GAP }]}>
                       {points.map((p) => (
@@ -297,21 +304,31 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
         <View style={profileOverviewChartStatsWrapStyle}>
           <View style={profileOverviewChartStatsGridStyle}>
             <View style={[profileOverviewChartStatCellStyle, profileOverviewChartStatCellBorderRStyle]}>
-              <Text style={profileOverviewChartStatLabelMutedStyle}>{statWinLabel}</Text>
+              <Text style={[profileOverviewChartStatLabelMutedStyle, styles.statWinLabel]}>
+                {statWinLabel}
+              </Text>
               <View style={profileOverviewChartStatValueRowStyle}>
-                <Text style={profileOverviewChartStatValueMutedStyle}>{stats.maxWinStreak}</Text>
+                <Text style={[profileOverviewChartStatValueMutedStyle, styles.statWinValue]}>
+                  {stats.maxWinStreak}
+                </Text>
               </View>
             </View>
             <View style={[profileOverviewChartStatCellStyle, profileOverviewChartStatCellBorderRStyle]}>
-              <Text style={profileOverviewChartStatLabelMutedStyle}>{statLossLabel}</Text>
+              <Text style={[profileOverviewChartStatLabelMutedStyle, styles.statLossLabel]}>
+                {statLossLabel}
+              </Text>
               <View style={profileOverviewChartStatValueRowStyle}>
-                <Text style={profileOverviewChartStatValueMutedStyle}>{stats.maxLossStreak}</Text>
+                <Text style={[profileOverviewChartStatValueMutedStyle, styles.statLossValue]}>
+                  {stats.maxLossStreak}
+                </Text>
               </View>
             </View>
             <View style={profileOverviewChartStatCellStyle}>
               <Text style={profileOverviewChartStatLabelMutedStyle}>{statRecordLabel}</Text>
               <View style={profileOverviewChartStatValueRowStyle}>
-                <Text style={profileOverviewChartStatValueMutedStyle}>{statRecordValue}</Text>
+                <Text style={[profileOverviewChartStatValueMutedStyle, styles.statRecordValue]}>
+                  {statRecordValue}
+                </Text>
               </View>
             </View>
           </View>
@@ -321,9 +338,9 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   );
 }
 
-/** チャート領域（背景透明・格子オーバーレイなし） */
+/** チャート領域 — cyber ガラス面 + プロット内方眼 */
 function ChartGlassShell({ children }: { children: ReactNode }) {
-  return <View style={styles.chartShellTransparent}>{children}</View>;
+  return <View style={styles.chartShellCyber}>{children}</View>;
 }
 
 function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => void }) {
@@ -331,7 +348,7 @@ function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => v
     <View style={styles.titleWithInfo}>
       <Text style={styles.title}>{title}</Text>
       <Pressable onPress={onInfoPress} hitSlop={10}>
-        <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
+        <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
       </Pressable>
     </View>
   );
@@ -380,19 +397,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   badgeWin: {
-    backgroundColor: "rgba(251,191,36,0.14)",
+    backgroundColor: "rgba(168, 255, 42, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(253,224,71,0.22)",
+    borderColor: "rgba(168, 255, 42, 0.32)",
+    ...Platform.select({
+      ios: {
+        shadowColor: PROFILE_CHART_CYBER.limeGlow,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 10,
+      },
+      android: { elevation: 2 },
+      default: {},
+    }),
   },
   badgeLoss: {
-    backgroundColor: "rgba(244,63,94,0.14)",
+    backgroundColor: "rgba(255, 43, 214, 0.1)",
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.24)",
+    borderColor: "rgba(255, 43, 214, 0.28)",
+    ...Platform.select({
+      ios: {
+        shadowColor: PROFILE_CHART_CYBER.magentaGlow,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 10,
+      },
+      android: { elevation: 2 },
+      default: {},
+    }),
   },
   badgeFlat: {
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(0, 245, 255, 0.06)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(0, 245, 255, 0.18)",
   },
   badgeNum: {
     fontSize: 22,
@@ -404,18 +441,25 @@ const styles = StyleSheet.create({
       default: "sans-serif",
     }),
   },
-  badgeNumWin: { color: "rgba(253,230,138,0.98)" },
-  badgeNumLoss: { color: "rgba(254,205,211,0.98)" },
-  badgeNumFlat: { color: "rgba(248,250,252,0.95)" },
+  badgeNumWin: { color: PROFILE_CHART_CYBER.limeBright },
+  badgeNumLoss: { color: PROFILE_CHART_CYBER.magenta },
+  badgeNumFlat: { color: PROFILE_CHART_CYBER.cyan },
   badgeCaption: {
     marginTop: 4,
     fontSize: 9,
-    color: "rgba(148,163,184,0.88)",
+    color: PROFILE_CHART_CYBER.tick,
     textAlign: "center",
     maxWidth: 72,
   },
-  chartShellTransparent: {
-    backgroundColor: "transparent",
+  chartShellCyber: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: PROFILE_CHART_CYBER.glassBorder,
+    backgroundColor: PROFILE_CHART_CYBER.glassBg,
+    overflow: "hidden",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    position: "relative",
   },
   chartShellLoadingInner: {
     minHeight: 204,
@@ -441,7 +485,7 @@ const styles = StyleSheet.create({
     right: 2,
     fontSize: 9,
     lineHeight: 12,
-    color: "rgba(148,163,184,0.9)",
+    color: PROFILE_CHART_CYBER.tick,
     fontVariant: ["tabular-nums"],
   },
   plotFlex: {
@@ -457,6 +501,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     borderRadius: 8,
+    backgroundColor: "rgba(0, 6, 12, 0.35)",
   },
   columnsOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -470,17 +515,7 @@ const styles = StyleSheet.create({
   plotColumn: {
     width: "100%",
     position: "relative",
-    overflow: "hidden",
-    borderRadius: 8,
-  },
-  /** Web `absolute left-0 right-0 top-1/2 z-2 h-px bg-cyan-200/45` に相当（全幅の 0 ライン） */
-  plotZeroLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(165,243,252,0.45)",
-    zIndex: 2,
+    overflow: "visible",
   },
   upperHalf: {
     position: "absolute",
@@ -509,31 +544,29 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   blockWin: {
-    /** Web `bg-emerald-400/92` + `shadow-[0_0_6px_rgba(52,211,153,0.22)]` */
-    backgroundColor: "rgba(52,211,153,0.92)",
-    shadowColor: "rgba(52,211,153,0.22)",
+    backgroundColor: PROFILE_CHART_CYBER.limeBlock,
+    shadowColor: PROFILE_CHART_CYBER.limeBlockGlow,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   blockLoss: {
-    /** Web `bg-rose-400/92` + `shadow-[0_0_6px_rgba(251,113,133,0.18)]` */
-    backgroundColor: "rgba(251,113,133,0.92)",
-    shadowColor: "rgba(251,113,133,0.18)",
+    backgroundColor: PROFILE_CHART_CYBER.lossBlock,
+    shadowColor: PROFILE_CHART_CYBER.lossBlockGlow,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  /** Web ストリーク 0: `bg-white/22` のピル（0 ライン付近） */
+  /** ストリーク 0 — シアンのピル */
   flatDot: {
     marginTop: -2,
     height: 4,
     width: "65%",
     maxWidth: 12,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(0, 245, 255, 0.35)",
     alignSelf: "center",
   },
   xLabelRow: {
@@ -549,7 +582,7 @@ const styles = StyleSheet.create({
   },
   xLabel: {
     fontSize: 8,
-    color: "rgba(100,116,139,0.95)",
+    color: PROFILE_CHART_CYBER.tick,
     fontVariant: ["tabular-nums"],
   },
   muted: {
@@ -566,4 +599,9 @@ const styles = StyleSheet.create({
   noDataHint: {
     ...profileOverviewChartEmptyHintStyle,
   },
+  statWinLabel: { color: "rgba(168, 255, 42, 0.72)" },
+  statWinValue: { color: PROFILE_CHART_CYBER.statPositive },
+  statLossLabel: { color: "rgba(255, 43, 214, 0.72)" },
+  statLossValue: { color: PROFILE_CHART_CYBER.statNegative },
+  statRecordValue: { color: PROFILE_CHART_CYBER.statNeutral },
 });

@@ -21,6 +21,7 @@ import {
   parseUserProfileFields,
   profileDisplayFromUser,
 } from "@/lib/profile/parseUserProfileFields";
+import { parseMemberSinceMs } from "@/lib/profile/parseMemberSinceMs";
 import type { RankingRowWithCountry, MobileMetric } from "@/app/component/rankings/_data/mockRows";
 
 export type Profile = {
@@ -51,24 +52,6 @@ type UserState = {
 type Counts = {
   posts: number;
 };
-
-function parseMemberSinceMs(data: Record<string, unknown>): number | null {
-  const createdAt = data.createdAt;
-  if (createdAt && typeof createdAt === "object") {
-    const ts = createdAt as { toMillis?: () => number; seconds?: number };
-    if (typeof ts.toMillis === "function") {
-      const ms = ts.toMillis();
-      return Number.isFinite(ms) ? ms : null;
-    }
-    if (typeof ts.seconds === "number" && Number.isFinite(ts.seconds)) {
-      return ts.seconds * 1000;
-    }
-  }
-  if (typeof createdAt === "number" && Number.isFinite(createdAt)) {
-    return createdAt;
-  }
-  return null;
-}
 
 function parseCountryCode(data: Record<string, unknown>): string | null {
   const raw = data.countryCode;

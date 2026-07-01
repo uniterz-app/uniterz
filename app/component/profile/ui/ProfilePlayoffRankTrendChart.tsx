@@ -15,6 +15,7 @@ import { t } from "@/lib/i18n/t";
 import { Info } from "lucide-react";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
 import styles from "./profileChartInfoFaq.module.css";
@@ -44,8 +45,8 @@ type Props = {
   frozen?: boolean;
 };
 
-const LINE = "#22d3ee";
-const LINE_GLOW = "rgba(34, 211, 238, 0.45)";
+const LINE = PROFILE_CHART_CYBER.cyan;
+const LINE_GLOW = PROFILE_CHART_CYBER.cyanSoft;
 const DOT_REVEAL_MS = 480;
 const TREND_THEME: Record<
   TrendState,
@@ -57,22 +58,22 @@ const TREND_THEME: Record<
   }
 > = {
   up: {
-    stroke: "#34d399",
-    fill: "rgba(2, 28, 20, 0.92)",
-    glowNormal: "rgba(52, 211, 153, 0.35)",
-    glowHover: "rgba(52, 211, 153, 0.62)",
+    stroke: PROFILE_CHART_CYBER.lime,
+    fill: PROFILE_CHART_CYBER.limeFill,
+    glowNormal: PROFILE_CHART_CYBER.limeGlow,
+    glowHover: "rgba(168, 255, 42, 0.62)",
   },
   down: {
-    stroke: "#fb7185",
-    fill: "rgba(36, 7, 17, 0.92)",
-    glowNormal: "rgba(251, 113, 133, 0.35)",
-    glowHover: "rgba(251, 113, 133, 0.62)",
+    stroke: PROFILE_CHART_CYBER.magenta,
+    fill: PROFILE_CHART_CYBER.magentaFill,
+    glowNormal: PROFILE_CHART_CYBER.magentaGlow,
+    glowHover: "rgba(255, 43, 214, 0.62)",
   },
   flat: {
     stroke: LINE,
     fill: "rgba(5,8,20,0.92)",
     glowNormal: LINE_GLOW,
-    glowHover: "rgba(34, 211, 238, 0.65)",
+    glowHover: "rgba(0, 245, 255, 0.65)",
   },
 };
 
@@ -422,7 +423,7 @@ export default function ProfilePlayoffRankTrendChart({
               <span
                 className={[
                   "block text-[9px] leading-tight sm:text-[11px]",
-                  currentRankIsTop20 ? "text-amber-200/90" : "text-cyan-100/72",
+                  currentRankIsTop20 ? "text-[#fcd34d]/90" : "text-[#00F5FF]/72",
                 ].join(" ")}
               >
                 {msg.profile.currentRank}
@@ -432,7 +433,7 @@ export default function ProfilePlayoffRankTrendChart({
                   "mt-0.5 block leading-none",
                   resultStatsMetricNumClass,
                   isDesktop ? "text-3xl sm:text-[2.35rem]" : "text-2xl",
-                  currentRankIsTop20 ? "text-amber-300" : "text-cyan-100",
+                  currentRankIsTop20 ? "text-[#fcd34d]" : "text-[#00F5FF]",
                 ].join(" ")}
               >
                 {trendSummary.currentRank}
@@ -440,7 +441,10 @@ export default function ProfilePlayoffRankTrendChart({
             </div>
           ) : null}
         </div>
-        <p className="mt-1.5 max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[14px]">
+        <p
+          className="mt-1.5 max-w-[520px] text-xs leading-relaxed sm:text-[14px]"
+          style={{ color: PROFILE_CHART_CYBER.subtitle }}
+        >
           {subtitle}
         </p>
       </div>
@@ -474,16 +478,18 @@ export default function ProfilePlayoffRankTrendChart({
                 margin={{ top: 22, right: 22, left: 14, bottom: 8 }}
               >
                 <CartesianGrid
-                  stroke="rgba(148,163,184,0.12)"
-                  strokeDasharray="3 3"
-                  vertical={false}
+                  stroke={PROFILE_CHART_CYBER.cyanGridStrong}
+                  strokeDasharray="0"
+                  vertical
+                  horizontal
+                  syncWithTicks
                 />
                 <XAxis
                   dataKey="dateKey"
                   tickFormatter={(v) =>
                     formatAxisDate(String(v), language, showYearOnXAxis)
                   }
-                  tick={{ fontSize: axisTickFontSize, fill: "rgba(148,163,184,0.9)" }}
+                  tick={{ fontSize: axisTickFontSize, fill: PROFILE_CHART_CYBER.tick }}
                   tickLine={false}
                   axisLine={false}
                   interval={xAxisInterval}
@@ -501,7 +507,7 @@ export default function ProfilePlayoffRankTrendChart({
                   ticks={yTicks}
                   padding={{ top: 18, bottom: 0 }}
                   allowDecimals={false}
-                  tick={{ fontSize: axisTickFontSize, fill: "rgba(148,163,184,0.85)" }}
+                  tick={{ fontSize: axisTickFontSize, fill: PROFILE_CHART_CYBER.tick }}
                   tickLine={false}
                   axisLine={false}
                   width={28}
@@ -509,7 +515,7 @@ export default function ProfilePlayoffRankTrendChart({
                     value: msg.profile.rank,
                     angle: -90,
                     position: "insideLeft",
-                    style: { fill: "rgba(148,163,184,0.55)", fontSize: axisLabelFontSize },
+                    style: { fill: PROFILE_CHART_CYBER.tick, fontSize: axisLabelFontSize },
                   }}
                 />
                 <Tooltip cursor={false} content={() => null} wrapperStyle={{ display: "none" }} />
@@ -530,6 +536,22 @@ export default function ProfilePlayoffRankTrendChart({
                       );
                     }}
                     activeDot={false}
+                    isAnimationActive={false}
+                  />
+                )}
+                {showLineLayer && (
+                  <Line
+                    key={`line-glow-${lineLayerKey}`}
+                    type="monotone"
+                    dataKey="rank"
+                    stroke={LINE_GLOW}
+                    strokeWidth={5}
+                    dot={false}
+                    activeDot={false}
+                    style={{
+                      opacity: linePaintReady ? 0.38 : 0,
+                      transition: "opacity 120ms linear",
+                    }}
                     isAnimationActive={false}
                   />
                 )}
@@ -571,11 +593,13 @@ export default function ProfilePlayoffRankTrendChart({
         >
           <div
             className={[
-              "rounded-lg border border-cyan-300/25 bg-white/[0.06] px-2.5 py-2",
-              "backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
-              "ring-1 ring-inset ring-cyan-400/15",
+              "border px-2.5 py-2",
               isDesktop ? "px-3 py-2.5" : "",
             ].join(" ")}
+            style={{
+              borderColor: PROFILE_CHART_CYBER.frame,
+              backgroundColor: "rgba(0, 8, 14, 0.42)",
+            }}
           >
             <div
               className={[
@@ -590,10 +614,10 @@ export default function ProfilePlayoffRankTrendChart({
                     trendSummary.bestJump == null
                       ? "text-white/55"
                       : trendSummary.bestJump > 0
-                        ? "text-emerald-300"
+                        ? "text-[#a8ff2a]"
                         : trendSummary.bestJump < 0
-                          ? "text-rose-300"
-                          : "text-cyan-200",
+                          ? "text-[#ff2bd6]"
+                          : "text-[#00F5FF]",
                     language !== "ja"
                       ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                       : "text-[9px] font-medium",
@@ -608,16 +632,16 @@ export default function ProfilePlayoffRankTrendChart({
                     trendSummary.bestJump == null
                       ? "text-white/65"
                       : trendSummary.bestJump > 0
-                        ? "text-emerald-300"
+                        ? "text-[#a8ff2a]"
                         : trendSummary.bestJump < 0
-                          ? "text-rose-300"
-                          : "text-cyan-200",
+                          ? "text-[#ff2bd6]"
+                          : "text-[#00F5FF]",
                   ].join(" ")}
                 >
                   {trendSummary.bestJump != null ? `+${trendSummary.bestJump}` : "—"}
                 </p>
               </div>
-              <span className="text-center text-cyan-100/30">|</span>
+              <span className="text-center text-white/20">|</span>
               <div className="px-1 py-0.5 text-center">
                 <p
                   className={[
@@ -625,10 +649,10 @@ export default function ProfilePlayoffRankTrendChart({
                     trendSummary.worstDrop == null
                       ? "text-white/55"
                       : trendSummary.worstDrop > 0
-                        ? "text-emerald-300"
+                        ? "text-[#a8ff2a]"
                         : trendSummary.worstDrop < 0
-                          ? "text-rose-300"
-                          : "text-cyan-200",
+                          ? "text-[#ff2bd6]"
+                          : "text-[#00F5FF]",
                     language !== "ja"
                       ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                       : "text-[9px] font-medium",
@@ -643,16 +667,16 @@ export default function ProfilePlayoffRankTrendChart({
                     trendSummary.worstDrop == null
                       ? "text-white/65"
                       : trendSummary.worstDrop > 0
-                        ? "text-emerald-300"
+                        ? "text-[#a8ff2a]"
                         : trendSummary.worstDrop < 0
-                          ? "text-rose-300"
-                          : "text-cyan-200",
+                          ? "text-[#ff2bd6]"
+                          : "text-[#00F5FF]",
                   ].join(" ")}
                 >
                   {trendSummary.worstDrop != null ? trendSummary.worstDrop : "—"}
                 </p>
               </div>
-              <span className="text-center text-cyan-100/30">|</span>
+              <span className="text-center text-white/20">|</span>
               <div className="px-1 py-0.5 text-center">
                 <p
                   className={[
@@ -660,10 +684,10 @@ export default function ProfilePlayoffRankTrendChart({
                     trendSummary.netDelta == null
                       ? "text-white/55"
                       : trendSummary.netDelta > 0
-                        ? "text-emerald-300"
+                        ? "text-[#a8ff2a]"
                         : trendSummary.netDelta < 0
-                          ? "text-rose-300"
-                          : "text-cyan-200",
+                          ? "text-[#ff2bd6]"
+                          : "text-[#00F5FF]",
                     language !== "ja"
                       ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                       : "text-[9px] font-medium",
@@ -678,10 +702,10 @@ export default function ProfilePlayoffRankTrendChart({
                     trendSummary.netDelta == null
                       ? "text-white/65"
                       : trendSummary.netDelta > 0
-                        ? "text-emerald-300"
+                        ? "text-[#a8ff2a]"
                         : trendSummary.netDelta < 0
-                          ? "text-rose-300"
-                          : "text-cyan-200",
+                          ? "text-[#ff2bd6]"
+                          : "text-[#00F5FF]",
                   ].join(" ")}
                 >
                   {trendSummary.netDelta == null

@@ -6,23 +6,30 @@ type Props = {
   badges: ResolvedBadge[];
   layout: "web" | "mobile";
   onBadgeClick?: (badge: ResolvedBadge) => void;
+  /** 名前行に横並びで入れる */
+  inline?: boolean;
 };
 
 export default function ProfileEditKinetikBadgeRow({
   badges,
   layout,
   onBadgeClick,
+  inline = false,
 }: Props) {
-  const slot =
-    layout === "mobile"
+  const slot = inline
+    ? layout === "mobile"
+      ? "h-9 w-9 sm:h-10 sm:w-10"
+      : "h-10 w-10 sm:h-11 sm:w-11"
+    : layout === "mobile"
       ? "h-11 w-11 sm:h-12 sm:w-12"
       : "h-14 w-14 sm:h-[56px] sm:w-[56px] md:h-[60px] md:w-[60px]";
 
   return (
     <div
       className={[
-        "profile-edit-kinetik-badge-row flex min-h-11 flex-wrap content-start gap-1.5 sm:min-h-12",
-        badges.length === 0 ? "items-center" : "",
+        "profile-edit-kinetik-badge-row flex flex-wrap content-start gap-1.5",
+        inline ? "min-h-0 items-center" : "min-h-11 sm:min-h-12",
+        badges.length === 0 && !inline ? "items-center" : "",
       ].join(" ")}
     >
       {badges.length > 0 ? (

@@ -4,7 +4,7 @@
  */
 export const PROFILE_SHELL_GRID_NATIVE = {
   cellPx: 22,
-  stroke: "rgba(148, 163, 184, 0.28)",
+  stroke: "rgba(0, 245, 255, 0.14)",
   strokeWidth: 1,
   layerOpacity: 0.72,
 } as const;
