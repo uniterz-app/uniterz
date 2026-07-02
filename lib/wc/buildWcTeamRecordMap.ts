@@ -1,6 +1,9 @@
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
 import type { TeamRecordLine } from "@/lib/teamRecordDisplay";
-import { resolveOfficialWc2026GroupStageRank } from "@/lib/wc/wc2026GroupStageFrozenRecords";
+import {
+  resolveWcTeamRecordLineForDisplay,
+  WC_2026_GROUP_STAGE_FROZEN,
+} from "@/lib/wc/wc2026GroupStageFrozenRecords";
 
 type WcTeamRow = {
   id: string;
@@ -44,14 +47,26 @@ export function buildWcTeamRecordMap(
       return a.id.localeCompare(b.id);
     });
     sorted.forEach((row, index) => {
-      const officialRank = resolveOfficialWc2026GroupStageRank(row.id);
-      out[row.id] = {
+      out[row.id] = resolveWcTeamRecordLineForDisplay(row.id, {
         wins: row.wins,
         draws: row.draws,
         losses: row.losses,
-        rank: officialRank ?? index + 1,
+        rank: index + 1,
+      }) ?? {
+        wins: row.wins,
+        draws: row.draws,
+        losses: row.losses,
+        rank: index + 1,
       };
     });
   }
+
+  for (const teamId of Object.keys(WC_2026_GROUP_STAGE_FROZEN)) {
+    if (!out[teamId]) {
+      const merged = resolveWcTeamRecordLineForDisplay(teamId, null);
+      if (merged) out[teamId] = merged;
+    }
+  }
+
   return out;
 }

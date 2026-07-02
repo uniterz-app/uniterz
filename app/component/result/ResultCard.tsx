@@ -50,14 +50,13 @@ import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
 import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
 import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
 import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
-import { db } from "@/lib/firebase";
+import { useTeamRecordLine } from "@/lib/hooks/useTeamRecordLine";
 import {
-  useWcGroupStageStandingsForMatch,
-  WC_DEFAULT_SEASON,
-} from "@/lib/wc/useWcGroupStandingRanks";
-import TeamRecordLineFromFirestore from "@/app/component/result/TeamRecordLineFromFirestore";
+  resolveWcGroupCodeLabel,
+  resolveWcGroupStageStandingForKnockoutDisplay,
+  resolveWcResultCardGroupStanding,
+} from "@/lib/wc/wcGroupStandingRank";
 import { nameBebas } from "@/lib/fonts";
-import { resolveWcGroupCodeLabel } from "@/lib/wc/wcGroupStandingRank";
 import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
 export type ResultCardOpenAnchor = { clientX: number; clientY: number };
 
@@ -246,12 +245,26 @@ function ResultCardPresentationImpl({
     post.game?.away,
     post.away?.name
   );
-  const wcGroupStageStandings = useWcGroupStageStandingsForMatch(
-    db,
-    isWcKnockout ? wcHomeTeamId : null,
-    isWcKnockout ? wcAwayTeamId : null,
-    WC_DEFAULT_SEASON
+  const wcHomeRecordLine = useTeamRecordLine(
+    isWc ? wcHomeTeamId : null,
+    normalizedLeague
   );
+  const wcAwayRecordLine = useTeamRecordLine(
+    isWc ? wcAwayTeamId : null,
+    normalizedLeague
+  );
+  const wcHomeGroupStanding = useMemo(() => {
+    if (!isWc) return null;
+    return isWcKnockout
+      ? resolveWcGroupStageStandingForKnockoutDisplay(wcHomeTeamId, wcHomeRecordLine)
+      : resolveWcResultCardGroupStanding(wcHomeTeamId, wcHomeRecordLine);
+  }, [isWc, isWcKnockout, wcHomeTeamId, wcHomeRecordLine]);
+  const wcAwayGroupStanding = useMemo(() => {
+    if (!isWc) return null;
+    return isWcKnockout
+      ? resolveWcGroupStageStandingForKnockoutDisplay(wcAwayTeamId, wcAwayRecordLine)
+      : resolveWcResultCardGroupStanding(wcAwayTeamId, wcAwayRecordLine);
+  }, [isWc, isWcKnockout, wcAwayTeamId, wcAwayRecordLine]);
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWc || !hasFinal) return [];
@@ -657,24 +670,15 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
-                {isWcKnockout ? (
+                {isWc && wcHomeGroupStanding ? (
                 <div className={`${wcNameWidthClass} text-center`}>
                   <WcGroupStandingRecordLine
-                    standing={wcGroupStageStandings.homeStanding}
+                    standing={wcHomeGroupStanding}
                     language={language}
                     compact={mobileScheduleDense || isMobile}
                   />
                 </div>
-                ) : (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <TeamRecordLineFromFirestore
-                    teamId={wcHomeTeamId}
-                    league={normalizedLeague}
-                    language={language}
-                    compact={mobileScheduleDense || isMobile}
-                  />
-                </div>
-                )}
+                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -743,22 +747,14 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
-                {isWcKnockout ? (
+                {isWc && wcHomeGroupStanding ? (
                 <div className={`${wcNameWidthClass} text-center`}>
                   <WcGroupStandingRecordLine
-                    standing={wcGroupStageStandings.homeStanding}
+                    standing={wcHomeGroupStanding}
                     language={language}
                   />
                 </div>
-                ) : (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <TeamRecordLineFromFirestore
-                    teamId={wcHomeTeamId}
-                    league={normalizedLeague}
-                    language={language}
-                  />
-                </div>
-                )}
+                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -809,24 +805,15 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
-                {isWcKnockout ? (
+                {isWc && wcAwayGroupStanding ? (
                 <div className={`${wcNameWidthClass} text-center`}>
                   <WcGroupStandingRecordLine
-                    standing={wcGroupStageStandings.awayStanding}
+                    standing={wcAwayGroupStanding}
                     language={language}
                     compact={mobileScheduleDense || isMobile}
                   />
                 </div>
-                ) : (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <TeamRecordLineFromFirestore
-                    teamId={wcAwayTeamId}
-                    league={normalizedLeague}
-                    language={language}
-                    compact={mobileScheduleDense || isMobile}
-                  />
-                </div>
-                )}
+                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}
@@ -895,22 +882,14 @@ function ResultCardPresentationImpl({
                     displayTeamNameFont
                   )}
                 </div>
-                {isWcKnockout ? (
+                {isWc && wcAwayGroupStanding ? (
                 <div className={`${wcNameWidthClass} text-center`}>
                   <WcGroupStandingRecordLine
-                    standing={wcGroupStageStandings.awayStanding}
+                    standing={wcAwayGroupStanding}
                     language={language}
                   />
                 </div>
-                ) : (
-                <div className={`${wcNameWidthClass} text-center`}>
-                  <TeamRecordLineFromFirestore
-                    teamId={wcAwayTeamId}
-                    league={normalizedLeague}
-                    language={language}
-                  />
-                </div>
-                )}
+                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumn
                     scorers={wcMatchGoalScorers}

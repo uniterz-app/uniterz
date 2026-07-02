@@ -24,7 +24,11 @@ import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
 import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
-import { resolveWcGroupStageStandingForKnockoutDisplay } from "../../../../../lib/wc/wcGroupStandingRank";
+import {
+  resolveWcGroupStageStandingForKnockoutDisplay,
+  resolveWcResultCardGroupStanding,
+  resolveWcGroupCodeLabel,
+} from "../../../../../lib/wc/wcGroupStandingRank";
 import {
   MATCH_CARD_DISPLAY_FONT,
   MATCH_CARD_METRIC_FONT,
@@ -95,11 +99,7 @@ import {
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
 import WcTeamNameMobileNative from "../games/WcTeamNameMobileNative";
-import {
-  formatTeamRecordLabelNative,
-  useTeamRecordLineNative,
-} from "../games/useTeamRecordLineNative";
-import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
+import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
@@ -546,30 +546,18 @@ function ResultPostCard({
     isWcCard ? away?.teamId : null,
     leagueKey
   );
-  const homeWcRecordLabel = formatTeamRecordLabelNative(
-    home?.teamId,
-    leagueKey,
-    homeRecordLine
-  );
-  const awayWcRecordLabel = formatTeamRecordLabelNative(
-    away?.teamId,
-    leagueKey,
-    awayRecordLine
-  );
-  const homeGroupStanding = useMemo(
-    () =>
-      isWcKnockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(home?.teamId, homeRecordLine)
-        : null,
-    [isWcKnockout, home?.teamId, homeRecordLine]
-  );
-  const awayGroupStanding = useMemo(
-    () =>
-      isWcKnockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(away?.teamId, awayRecordLine)
-        : null,
-    [isWcKnockout, away?.teamId, awayRecordLine]
-  );
+  const homeGroupStanding = useMemo(() => {
+    if (!isWcCard) return null;
+    return isWcKnockout
+      ? resolveWcGroupStageStandingForKnockoutDisplay(home?.teamId, homeRecordLine)
+      : resolveWcResultCardGroupStanding(home?.teamId, homeRecordLine);
+  }, [isWcCard, isWcKnockout, home?.teamId, homeRecordLine]);
+  const awayGroupStanding = useMemo(() => {
+    if (!isWcCard) return null;
+    return isWcKnockout
+      ? resolveWcGroupStageStandingForKnockoutDisplay(away?.teamId, awayRecordLine)
+      : resolveWcResultCardGroupStanding(away?.teamId, awayRecordLine);
+  }, [isWcCard, isWcKnockout, away?.teamId, awayRecordLine]);
   const wcGroupCodeLabel = useMemo(
     () =>
       isWcCard
@@ -915,14 +903,12 @@ function ResultPostCard({
                     </Text>
                   )}
                 </Animated.View>
-                {isWcCard && isWcKnockout ? (
+                {isWcCard && homeGroupStanding ? (
                   <WcGroupStandingRecordLineNative
                     standing={homeGroupStanding}
                     language={language}
                     textStyle={styles.teamRecordText}
                   />
-                ) : isWcCard ? (
-                  <Text style={styles.teamRecordText}>{homeWcRecordLabel}</Text>
                 ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
@@ -964,14 +950,12 @@ function ResultPostCard({
                     </Text>
                   )}
                 </Animated.View>
-                {isWcCard && isWcKnockout ? (
+                {isWcCard && awayGroupStanding ? (
                   <WcGroupStandingRecordLineNative
                     standing={awayGroupStanding}
                     language={language}
                     textStyle={styles.teamRecordText}
                   />
-                ) : isWcCard ? (
-                  <Text style={styles.teamRecordText}>{awayWcRecordLabel}</Text>
                 ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
