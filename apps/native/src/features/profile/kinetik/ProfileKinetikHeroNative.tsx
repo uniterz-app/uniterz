@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { StyleSheet, View, type ViewStyle } from "react-native";
+import type { ViewStyle } from "react-native";
 import type { Profile } from "../../../../../../app/component/profile/useProfile";
 import { mapProfileToKinetikPanel } from "../../../../../../lib/profile/mapProfileToKinetikPanel";
 import type { ProfileStatsStreakContext } from "../../../../../../lib/profile/profileStreakScope";
@@ -7,7 +7,6 @@ import type { MyRankMetricValueDeltas } from "../../../../../../lib/rankings/myR
 import type { ProfileKinetikMetricsSection } from "../../../../../../lib/profile/profileKinetikMetricsSection";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "../profileApi";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
-import { BlocksPulseLoader } from "../../../components/BlocksPulseLoader";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
 
 export type ProfileKinetikHeroNativeProps = {
@@ -119,18 +118,11 @@ export default function ProfileKinetikHeroNative({
       winStreak,
   ]);
 
-  if (
+  const statsPending =
     (statsLoading && !summary) ||
     (profileStatsContext.rankingLeague === "worldcup" &&
       wcStackedStatsLoading &&
-      !wcStackedMetricsSections?.length)
-  ) {
-    return (
-      <View style={[styles.loadingShell, style]}>
-        <BlocksPulseLoader />
-      </View>
-    );
-  }
+      !wcStackedMetricsSections?.length);
 
   const isWcStacked =
     profileStatsContext.rankingLeague === "worldcup" &&
@@ -169,17 +161,7 @@ export default function ProfileKinetikHeroNative({
       stackedMetricsSections={
         isWcStacked ? wcStackedMetricsSections : undefined
       }
+      statsPending={statsPending}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  loadingShell: {
-    minHeight: 280,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    marginBottom: 12,
-  },
-});

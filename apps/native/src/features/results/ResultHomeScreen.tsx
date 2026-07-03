@@ -23,6 +23,12 @@ import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
+import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
+import {
+  resolveWcGroupStageStandingForKnockoutDisplay,
+  resolveWcResultCardGroupStanding,
+  resolveWcGroupCodeLabel,
+} from "../../../../../lib/wc/wcGroupStandingRank";
 import {
   MATCH_CARD_DISPLAY_FONT,
   MATCH_CARD_SCORE_FONT,
@@ -98,7 +104,7 @@ import {
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
 import WcTeamNameMobileNative from "../games/WcTeamNameMobileNative";
-import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
+import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
@@ -539,6 +545,26 @@ function ResultPostCard({
 
   const home = post.home as { name?: string; teamId?: string } | undefined;
   const away = post.away as { name?: string; teamId?: string } | undefined;
+  const homeRecordLine = useTeamRecordLineNative(
+    isWcCard ? home?.teamId : null,
+    leagueKey
+  );
+  const awayRecordLine = useTeamRecordLineNative(
+    isWcCard ? away?.teamId : null,
+    leagueKey
+  );
+  const homeGroupStanding = useMemo(() => {
+    if (!isWcCard) return null;
+    return isWcKnockout
+      ? resolveWcGroupStageStandingForKnockoutDisplay(home?.teamId, homeRecordLine)
+      : resolveWcResultCardGroupStanding(home?.teamId, homeRecordLine);
+  }, [isWcCard, isWcKnockout, home?.teamId, homeRecordLine]);
+  const awayGroupStanding = useMemo(() => {
+    if (!isWcCard) return null;
+    return isWcKnockout
+      ? resolveWcGroupStageStandingForKnockoutDisplay(away?.teamId, awayRecordLine)
+      : resolveWcResultCardGroupStanding(away?.teamId, awayRecordLine);
+  }, [isWcCard, isWcKnockout, away?.teamId, awayRecordLine]);
   const wcGroupCodeLabel = useMemo(
     () =>
       isWcCard
@@ -886,6 +912,13 @@ function ResultPostCard({
                     </Text>
                   )}
                 </Animated.View>
+                {isWcCard && homeGroupStanding ? (
+                  <WcGroupStandingRecordLineNative
+                    standing={homeGroupStanding}
+                    language={language}
+                    textStyle={styles.teamRecordText}
+                  />
+                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
                     scorers={wcMatchGoalScorers}
@@ -926,6 +959,13 @@ function ResultPostCard({
                     </Text>
                   )}
                 </Animated.View>
+                {isWcCard && awayGroupStanding ? (
+                  <WcGroupStandingRecordLineNative
+                    standing={awayGroupStanding}
+                    language={language}
+                    textStyle={styles.teamRecordText}
+                  />
+                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
                     scorers={wcMatchGoalScorers}

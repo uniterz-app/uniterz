@@ -9,6 +9,7 @@ import {
 import { nbaRegularSeasonWinsLosses } from "../../../../../lib/nbaRegularSeasonRecord";
 import { fetchWcTeamRecordMap } from "../../../../../lib/wc/wcTeamRecordsCache";
 import { normalizeWcTeamId } from "../../../../../lib/wc/resolveWcTeamId";
+import { resolveWcTeamRecordLineForDisplay } from "../../../../../lib/wc/wc2026GroupStageFrozenRecords";
 
 export function useTeamRecordLineNative(
   teamId: string | null | undefined,
@@ -30,7 +31,8 @@ export function useTeamRecordLineNative(
       if (isWc) {
         const wcMap = await fetchWcTeamRecordMap(db);
         if (!alive) return;
-        setRecord(wcMap[teamId] ?? null);
+        const id = normalizeWcTeamId(teamId) ?? teamId;
+        setRecord(resolveWcTeamRecordLineForDisplay(id, wcMap[id] ?? null));
         return;
       }
 
@@ -82,7 +84,11 @@ export function formatTeamRecordLabelNative(
   leagueRaw: string | null | undefined,
   record: TeamRecordLine | null
 ): string {
-  if (record) return formatTeamRecordWithRank(record, leagueRaw);
   const league = String(leagueRaw ?? "").toLowerCase();
+  const resolved =
+    league === "wc" || normalizeWcTeamId(teamId)
+      ? resolveWcTeamRecordLineForDisplay(teamId, record)
+      : record;
+  if (resolved) return formatTeamRecordWithRank(resolved, leagueRaw);
   return league === "wc" || league === "j1" || league === "pl" ? "(0-0-0)" : "(0-0)";
 }

@@ -1,18 +1,20 @@
 import { Platform, type TextStyle, type ViewStyle } from "react-native";
 import { METRIC_FONT, RANKING_NAME_FONT_EN } from "../rankings/rankingsUiTheme";
 
+import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
+
 /** Web mobile `text-lg` / 各チャート見出し */
 export const profileOverviewChartTitleStyle: TextStyle = {
-  color: "rgba(248,250,252,0.95)",
+  color: "rgba(248,250,252,0.96)",
   fontSize: 18,
   fontWeight: "600",
-  letterSpacing: 0.4,
+  letterSpacing: 0.5,
   fontFamily: RANKING_NAME_FONT_EN,
 };
 
 /** Web `text-[11px]` サブタイトル */
 export const profileOverviewChartSubtitleStyle: TextStyle = {
-  color: "rgba(148,163,184,0.85)",
+  color: PROFILE_CHART_CYBER.subtitle,
   fontSize: 11,
   lineHeight: 15,
 };
@@ -55,7 +57,7 @@ export const profileOverviewChartEmptyHintStyle: TextStyle = {
 };
 
 /** デイリーコンボチャート下部スタッツの枠線色 */
-export const PROFILE_OVERVIEW_CHART_FRAME_COLOR = "rgba(255, 255, 255, 0.22)";
+export const PROFILE_OVERVIEW_CHART_FRAME_COLOR = PROFILE_CHART_CYBER.frame;
 
 /** チャート下部スタッツグリッド（Daily Combo 準拠） */
 export const profileOverviewChartStatsWrapStyle: ViewStyle = {
@@ -65,8 +67,8 @@ export const profileOverviewChartStatsWrapStyle: ViewStyle = {
 export const profileOverviewChartStatsGridStyle: ViewStyle = {
   flexDirection: "row",
   borderWidth: 1,
-  borderColor: PROFILE_OVERVIEW_CHART_FRAME_COLOR,
-  backgroundColor: "transparent",
+  borderColor: PROFILE_CHART_CYBER.frame,
+  backgroundColor: "rgba(0, 8, 14, 0.42)",
 };
 
 export const profileOverviewChartStatCellStyle: ViewStyle = {
@@ -78,7 +80,7 @@ export const profileOverviewChartStatCellStyle: ViewStyle = {
 
 export const profileOverviewChartStatCellBorderRStyle: ViewStyle = {
   borderRightWidth: 1,
-  borderRightColor: PROFILE_OVERVIEW_CHART_FRAME_COLOR,
+  borderRightColor: PROFILE_CHART_CYBER.frameDim,
 };
 
 export const profileOverviewChartStatLabelMutedStyle: TextStyle = {
@@ -110,8 +112,8 @@ export const PROFILE_OVERVIEW_CHART_GRID_OPACITY = 0.36;
 export const profileOverviewChartShellStyle: ViewStyle = {
   borderRadius: 4,
   borderWidth: 1,
-  borderColor: "rgba(255, 255, 255, 0.22)",
-  backgroundColor: "transparent",
+  borderColor: PROFILE_CHART_CYBER.frame,
+  backgroundColor: "rgba(0, 6, 12, 0.28)",
   overflow: "hidden",
   padding: 12,
 };

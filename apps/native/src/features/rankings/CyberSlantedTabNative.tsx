@@ -96,6 +96,7 @@ export function CyberSlantedTabNative({
       onPress={onPress}
       style={({ pressed }) => [
         fill ? styles.tabOuterFill : styles.tabOuter,
+        active ? styles.tabActiveShadow : null,
         pressed ? styles.tabPressed : null,
       ]}
     >
@@ -111,7 +112,6 @@ export function CyberSlantedTabNative({
               ? styles.tabFillDefault
               : null,
           tabAnimStyle,
-          active ? styles.tabActiveShadow : null,
         ]}
       >
         <Animated.View pointerEvents="none" style={[styles.scanOverlay, scanAnimStyle]}>
@@ -208,6 +208,7 @@ const styles = StyleSheet.create({
   },
   tabOuter: {
     alignSelf: "flex-start",
+    overflow: "visible",
   },
   tabOuterFill: {
     flexGrow: 1,
@@ -215,6 +216,7 @@ const styles = StyleSheet.create({
     flexBasis: 0,
     minWidth: 0,
     alignSelf: "stretch",
+    overflow: "visible",
   },
   tabSkew: {
     position: "relative",
@@ -240,11 +242,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  tabInactive: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: CYBER_TAB_CYAN,
-  },
+  /** Web `box-shadow: 0 0 18px rgba(0,245,255,0.45)` — 外側 Pressable に付与 */
   tabActiveShadow: {
     ...Platform.select({
       ios: {
@@ -253,7 +251,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 1,
         shadowRadius: 18,
       },
-      android: { elevation: 4 },
+      android: { elevation: 0 },
       default: {},
     }),
   },

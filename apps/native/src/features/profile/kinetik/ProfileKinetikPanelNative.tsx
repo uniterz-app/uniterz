@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
   Image, Platform, Pressable, Share, StyleSheet, Text, View, type ViewStyle,
@@ -13,6 +13,7 @@ import {
   type KinetikRankBadgeTier,
 } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
 import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStreakNative";
+import { KINETIK_AVATAR_MOBILE } from "./kinetikAvatarNativeMetrics";
 import {
   formatKinetikWinStreakLabel,
   getKinetikStreakTier,
@@ -27,7 +28,16 @@ import {
 } from "../../../../../../lib/profile/formatProfileMetricDelta";
 import type { MyRankMetricValueDeltas } from "../../../../../../lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "../../../../../../lib/rankings/rankingLeagueSource";
-import type { ProfileKinetikMetricsSection } from "../../../../../../lib/profile/profileKinetikMetricsSection";
+import type {
+  ProfileKinetikMetricsSection,
+  WcKinetikStackedStage,
+} from "../../../../../../lib/profile/profileKinetikMetricsSection";
+import { PROFILE_WC_STACKED_STAGE_TAB_ORDER } from "../../../../../../lib/profile/profileWcStackedStageTabs";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../../rankings/CyberSlantedTabNative";
+import { rankingsTexts } from "../../rankings/rankingsTexts";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import { buildProfileShareUrl } from "../../../../../../lib/share/shareAppUrls";
@@ -44,6 +54,8 @@ import {
 
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
+/** `CyberMenuButton` md（36px）+ 余白 */
+const HEADER_MENU_CLEARANCE = 40;
 
 function kinetikWinRateSegs(winRate: number): number {
   return Math.round((Math.min(100, Math.max(0, winRate)) / 100) * 5);
@@ -189,13 +201,29 @@ function KinetikMetricCardNative({
   );
 }
 
-function SlantTabScanNative({ filled = false }: { filled?: boolean }) {
-  const step = filled ? 2 : 3;
-  const count = filled ? 7 : 10;
+/** Web `.profile-edit-kinetik-slant-tab__scan` — 2px 透明 + 1px 線の 3px 周期 */
+const SLANT_TAB_SCAN_STEP = 3;
+const SLANT_TAB_SCAN_START = 2;
+
+function slantTabScanLineCount(height: number): number {
+  return Math.max(
+    0,
+    Math.floor((height - SLANT_TAB_SCAN_START - 1) / SLANT_TAB_SCAN_STEP) + 1
+  );
+}
+
+function SlantTabScanNative() {
+  const count = slantTabScanLineCount(KINETIK_SLANT_TAB_ROW_H);
   return (
     <View style={styles.slantTabScan} pointerEvents="none">
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={[styles.slantTabScanLine, { top: i * step }]} />
+      {Array.from({ length: count }, (_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.slantTabScanLine,
+            { top: SLANT_TAB_SCAN_START + i * SLANT_TAB_SCAN_STEP },
+          ]}
+        />
       ))}
     </View>
   );
@@ -229,6 +257,17 @@ function KinetikSlantTabNative({
     : (streakTheme?.glow ?? "rgba(204, 255, 0, 0.35)");
   const textColor = filled ? (rankTheme?.fillText ?? "#050508") : accent;
 
+  const glowShadowStyle = Platform.select({
+    ios: {
+      shadowColor: glow,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 1,
+      shadowRadius: filled ? 16 : 10,
+    },
+    android: { elevation: 0 },
+    default: {},
+  });
+
   return (
     <Pressable
       onPress={onPress}
@@ -236,34 +275,23 @@ function KinetikSlantTabNative({
       accessibilityLabel={explanation ?? label}
       style={({ pressed }) => [pressed && onPress ? { opacity: 0.88 } : null]}
     >
-      <View style={styles.slantTabOuter}>
+      <View style={[styles.slantTabOuter, glowShadowStyle]}>
         <View
           style={[
           styles.slantTab,
           filled
             ? {
                 backgroundColor: accent,
-                borderWidth: 1,
-                borderColor: "rgba(0,0,0,0.32)",
-                shadowColor: glow,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.88,
-                shadowRadius: 5,
-                elevation: 3,
+                borderWidth: 0,
               }
             : {
-                backgroundColor: "rgba(0,0,0,0.18)",
+                backgroundColor: "transparent",
                 borderWidth: 1,
                 borderColor: accent,
-                shadowColor: glow,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.55,
-                shadowRadius: 4,
-                elevation: 2,
               },
         ]}
       >
-        {filled ? <SlantTabScanNative filled /> : null}
+        {filled ? <SlantTabScanNative /> : null}
         <Text
           style={[
             styles.slantTabText,
@@ -357,20 +385,22 @@ function KinetikHeaderHatch() {
 function KinetikBadgeRowNative({
   badges,
   onBadgePress,
+  inline = false,
 }: {
   badges: ResolvedBadgeNative[];
   onBadgePress?: (badge: ResolvedBadgeNative) => void;
+  inline?: boolean;
 }) {
   if (badges.length === 0) {
-    return <View style={styles.badgeRowEmpty} />;
+    return inline ? null : <View style={styles.badgeRowEmpty} />;
   }
 
   return (
-    <View style={styles.badgeRow}>
+    <View style={inline ? styles.badgeRowInline : styles.badgeRow}>
       {badges.slice(0, 10).map((badge) => (
         <Pressable
           key={badge.id}
-          style={styles.badgeThumb}
+          style={[styles.badgeThumb, inline ? styles.badgeThumbInline : null]}
           onPress={() => onBadgePress?.(badge)}
           accessibilityRole="button"
           accessibilityLabel={badge.title}
@@ -570,9 +600,31 @@ export default function ProfileKinetikPanelNative({
     isWcProfile &&
     stackedMetricsSections != null &&
     stackedMetricsSections.length > 0;
-  const metricsHeaderTitle = wcStackedActive
+  const metricsHeaderTitle = isWcProfile
     ? "WORLD CUP // STATS"
     : metricsTitle;
+  const stageTabTexts = rankingsTexts(language);
+
+  const [wcStackedStage, setWcStackedStage] =
+    useState<WcKinetikStackedStage>("main");
+  const wcStackedAvailableStages = useMemo(
+    () =>
+      PROFILE_WC_STACKED_STAGE_TAB_ORDER.filter((stage) =>
+        stackedMetricsSections?.some((section) => section.wcStage === stage)
+      ),
+    [stackedMetricsSections]
+  );
+  useEffect(() => {
+    if (wcStackedAvailableStages.length === 0) return;
+    setWcStackedStage((prev) =>
+      wcStackedAvailableStages.includes(prev) ? prev : wcStackedAvailableStages[0]!
+    );
+  }, [wcStackedAvailableStages]);
+  const showWcStackedStageTabs = wcStackedAvailableStages.length > 1;
+  const activeWcStackedSection =
+    stackedMetricsSections?.find((section) => section.wcStage === wcStackedStage) ??
+    stackedMetricsSections?.[0] ??
+    null;
 
   const renderMetricsGrid = (
     sectionStats: ProfileEditKinetikStats,
@@ -693,17 +745,8 @@ export default function ProfileKinetikPanelNative({
         />
         <View style={styles.headerMeta}>
           <KinetikHeaderHatch />
-          <View style={[styles.headerTabsRow, wcStackedActive && styles.headerTabsRowEnd]}>
-            {!wcStackedActive ? (
-              <View style={styles.headerTabsFlex}>
-                <KinetikHeaderTabsNative
-                  rankBadge={rankBadge}
-                  winStreak={activeWinStreak}
-                  language={language}
-                />
-              </View>
-            ) : null}
-            {canOpenMenu ? (
+          {canOpenMenu ? (
+            <View style={styles.headerMenuAnchor}>
               <CyberMenuButton
                 size="md"
                 onPress={() => onOpenMenu?.()}
@@ -718,39 +761,46 @@ export default function ProfileKinetikPanelNative({
                   ) : null
                 }
               />
-            ) : null}
-          </View>
-          <View style={styles.nameRow}>
-            <Text style={styles.displayName} numberOfLines={1}>
-              {identity.displayName}
-            </Text>
-            {profileFlagUri ? (
-              <View style={styles.nameInlineFlagWrap} accessibilityLabel={countryCode ?? undefined}>
-                <Image
-                  source={{ uri: profileFlagUri }}
-                  style={styles.nameInlineFlag}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : null}
-            {isPro ? (
-              <View style={styles.proPill}>
-                <Text style={styles.proPillText}>PRO</Text>
-              </View>
-            ) : null}
-          </View>
-          <KinetikIdentityIdChipNative
-            idLabel={profileIdLabel}
-            shareCopied={shareCopied}
-            copiedLabel={shareCopiedLabel}
-            shareLabel={shareProfileLabel}
-            onShare={handleShareProfile}
-          />
-          {bio?.trim() ? (
-            <Text style={styles.bio} numberOfLines={3}>
-              {bio.trim()}
-            </Text>
+            </View>
           ) : null}
+          <View
+            style={[
+              styles.headerIdentity,
+              canOpenMenu ? styles.headerIdentityWithMenu : null,
+            ]}
+          >
+            <View style={styles.nameRow}>
+              <Text style={styles.displayName} numberOfLines={1}>
+                {identity.displayName}
+              </Text>
+              {profileFlagUri ? (
+                <View style={styles.nameInlineFlagWrap} accessibilityLabel={countryCode ?? undefined}>
+                  <Image
+                    source={{ uri: profileFlagUri }}
+                    style={styles.nameInlineFlag}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : null}
+              {isPro ? (
+                <View style={styles.proPill}>
+                  <Text style={styles.proPillText}>PRO</Text>
+                </View>
+              ) : null}
+            </View>
+            <KinetikIdentityIdChipNative
+              idLabel={profileIdLabel}
+              shareCopied={shareCopied}
+              copiedLabel={shareCopiedLabel}
+              shareLabel={shareProfileLabel}
+              onShare={handleShareProfile}
+            />
+            {bio?.trim() ? (
+              <Text style={styles.bio} numberOfLines={3}>
+                {bio.trim()}
+              </Text>
+            ) : null}
+          </View>
         </View>
       </View>
 
@@ -785,32 +835,66 @@ export default function ProfileKinetikPanelNative({
             <View style={styles.metricsSkeleton} />
             <View style={styles.metricsSkeleton} />
           </View>
-        ) : wcStackedActive ? (
+        ) : wcStackedActive && activeWcStackedSection ? (
           <View>
-            {stackedMetricsSections!.map((section) => (
-              <View key={section.title}>
-                <View style={styles.metricsSubHeader}>
-                  <Text style={styles.metricsSubTitle} numberOfLines={2}>
-                    {section.title}
-                  </Text>
-                  <KinetikHeaderTabsNative
-                    rankBadge={section.rankBadge}
-                    winStreak={section.winStreak}
-                    language={language}
-                  />
-                </View>
-                {renderMetricsGrid(section.stats, section.metricValueDeltas, {
-                  totalPointsRank: section.totalPointsRank,
-                  totalPointsRankDenominator: section.totalPointsRankDenominator,
-                })}
+            {showWcStackedStageTabs ? (
+              <View style={styles.metricsStageTabWrap}>
+                <CyberSlantedTabBarNative fill>
+                  {wcStackedAvailableStages.map((stage) => (
+                    <CyberSlantedTabNative
+                      key={stage}
+                      label={
+                        stage === "main"
+                          ? stageTabTexts.stageKnockout
+                          : stageTabTexts.stageGroup
+                      }
+                      active={wcStackedStage === stage}
+                      fill
+                      compact
+                      onPress={() => setWcStackedStage(stage)}
+                    />
+                  ))}
+                </CyberSlantedTabBarNative>
               </View>
-            ))}
+            ) : null}
+            <View>
+              <View style={styles.metricsSubHeader}>
+                {!showWcStackedStageTabs ? (
+                  <Text style={styles.metricsSubTitle} numberOfLines={2}>
+                    {activeWcStackedSection.title}
+                  </Text>
+                ) : null}
+                <KinetikHeaderTabsNative
+                  rankBadge={activeWcStackedSection.rankBadge}
+                  winStreak={activeWcStackedSection.winStreak}
+                  language={language}
+                />
+              </View>
+              {renderMetricsGrid(
+                activeWcStackedSection.stats,
+                activeWcStackedSection.metricValueDeltas,
+                {
+                  totalPointsRank: activeWcStackedSection.totalPointsRank,
+                  totalPointsRankDenominator:
+                    activeWcStackedSection.totalPointsRankDenominator,
+                }
+              )}
+            </View>
           </View>
         ) : (
-          renderMetricsGrid(stats, metricValueDeltas, {
-            totalPointsRank: activeTotalPointsRank,
-            totalPointsRankDenominator: activeRankDenominator,
-          })
+          <View>
+            <View style={styles.metricsSubHeader}>
+              <KinetikHeaderTabsNative
+                rankBadge={rankBadge}
+                winStreak={activeWinStreak}
+                language={language}
+              />
+            </View>
+            {renderMetricsGrid(stats, metricValueDeltas, {
+              totalPointsRank: activeTotalPointsRank,
+              totalPointsRankDenominator: activeRankDenominator,
+            })}
+          </View>
         )}
       </View>
 
@@ -826,10 +910,29 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     backgroundColor: "transparent",
-    overflow: "hidden",
+    overflow: "visible",
   },
-  headerRow: { flexDirection: "row", gap: 16, alignItems: "flex-start" },
-  headerMeta: { flex: 1, minWidth: 0, position: "relative", overflow: "visible" },
+  headerRow: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
+  headerMeta: {
+    flex: 1,
+    minWidth: 0,
+    position: "relative",
+    overflow: "visible",
+    minHeight: KINETIK_AVATAR_MOBILE.size,
+    justifyContent: "center",
+  },
+  headerMenuAnchor: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    zIndex: 3,
+  },
+  headerIdentity: {
+    minWidth: 0,
+  },
+  headerIdentityWithMenu: {
+    paddingRight: HEADER_MENU_CLEARANCE,
+  },
   headerHatch: {
     position: "absolute",
     top: 0,
@@ -921,7 +1024,7 @@ const styles = StyleSheet.create({
   identityIdPress: {
     alignSelf: "flex-start",
     maxWidth: "100%",
-    marginTop: 4,
+    marginTop: 2,
   },
   identityIdRef: {
     paddingTop: 4,
@@ -933,10 +1036,12 @@ const styles = StyleSheet.create({
   displayName: {
     flexShrink: 1,
     fontFamily: OXANIUM_EXTRA,
-    fontSize: 17,
+    fontSize: 16,
+    lineHeight: 20,
     fontStyle: "italic",
     color: "#f8fafc",
     letterSpacing: -0.3,
+    includeFontPadding: false,
   },
   proPill: {
     borderWidth: 1,
@@ -952,7 +1057,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   bio: {
-    marginTop: 6,
+    marginTop: 4,
     fontSize: 12,
     lineHeight: 17,
     color: "rgba(255,255,255,0.5)",
@@ -971,12 +1076,22 @@ const styles = StyleSheet.create({
   },
   menuBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 14, minHeight: 44 },
+  badgeRowInline: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    alignItems: "center",
+  },
   badgeRowEmpty: { marginTop: 8, minHeight: 4 },
   badgeThumb: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+  },
+  badgeThumbInline: {
+    width: 36,
+    height: 36,
   },
   badgeImg: { width: "100%", height: "100%" },
   badgeFallbackText: {
@@ -1021,6 +1136,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: "rgba(255,255,255,0.62)",
     textTransform: "uppercase",
+  },
+  /** skew タブのはみ出し用 */
+  metricsStageTabWrap: {
+    overflow: "visible",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.08)",
   },
   metricsSkeleton: {
     width: "47%",

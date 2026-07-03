@@ -9,6 +9,7 @@ import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDe
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export type ProfileKinetikMetricsSection = {
+  wcStage: WcKinetikStackedStage;
   title: string;
   stats: ProfileEditKinetikStats;
   metricValueDeltas: MyRankMetricValueDeltas | null;
@@ -56,6 +57,7 @@ export function buildProfileKinetikMetricsSection(
   );
 
   return {
+    wcStage,
     title: getProfileKinetikMetricsTitleForWcStage(wcStage),
     stats: {
       winRate: winRatePct,
