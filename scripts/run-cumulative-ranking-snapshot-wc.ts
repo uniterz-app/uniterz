@@ -30,6 +30,7 @@ const { buildCumulativeRankingSnapshot } = require(
 ) as {
   buildCumulativeRankingSnapshot: (opts?: {
     scope?: "all" | "wc";
+    streakAllEligible?: boolean;
   }) => Promise<{
     ok: boolean;
     scope: string;
