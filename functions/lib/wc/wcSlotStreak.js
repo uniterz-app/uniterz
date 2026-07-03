@@ -381,6 +381,9 @@ async function applyWcSlotStreakWhenComplete(db, triggerGameId, kickoffMs, trigg
                 activeWinStreakFootball, updatedAt: firestore_1.FieldValue.serverTimestamp() }, (stageKey
                 ? {
                     [`rankingByWcStage.${stageKey}.activeWinStreak`]: slotOutcomeStage.finalActiveWinStreak,
+                    activeWinStreakByWcStage: {
+                        [stageKey]: slotOutcomeStage.finalActiveWinStreak,
+                    },
                 }
                 : {})), { merge: true });
             if (stageKey) {

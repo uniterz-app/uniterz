@@ -528,6 +528,9 @@ export async function applyWcSlotStreakWhenComplete(
             ? {
                 [`rankingByWcStage.${stageKey}.activeWinStreak`]:
                   slotOutcomeStage.finalActiveWinStreak,
+                activeWinStreakByWcStage: {
+                  [stageKey]: slotOutcomeStage.finalActiveWinStreak,
+                },
               }
             : {}),
         },

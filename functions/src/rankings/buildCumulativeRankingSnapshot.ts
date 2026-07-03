@@ -7,6 +7,7 @@ import { activeFootballStreakForWcStage } from "./activeFootballStreakForWcStage
 import {
   isActiveWinStreakRankingEligible,
   loadAuthorUidsSettledToday,
+  loadAuthorUidsSettledTodayForWcStage,
 } from "./activeWinStreakRanking";
 import { loadUidsWhoPredictedOnDateJst } from "../notifications/loadUidsWhoPredictedOnDateJst";
 
@@ -759,10 +760,19 @@ export async function buildCumulativeRankingSnapshot(
 
   const snap = await db().collection("cumulative_stats").get();
 
-  const [wcSettledTodayUids, nbaSettledTodayUids] = await Promise.all([
-    loadAuthorUidsSettledToday("wc"),
-    loadAuthorUidsSettledToday("nba"),
-  ]);
+  const [wcSettledTodayUids, wcQualifyingSettledTodayUids, wcMainSettledTodayUids, nbaSettledTodayUids] =
+    await Promise.all([
+      loadAuthorUidsSettledToday("wc"),
+      loadAuthorUidsSettledTodayForWcStage("qualifying"),
+      loadAuthorUidsSettledTodayForWcStage("main"),
+      loadAuthorUidsSettledToday("nba"),
+    ]);
+
+  function wcStreakSettledTodayUids(stage: WcRankingStage): Set<string> {
+    if (stage === "qualifying") return wcQualifyingSettledTodayUids;
+    if (stage === "main") return wcMainSettledTodayUids;
+    return wcSettledTodayUids;
+  }
 
   const rankByUid = new Map<
     string,
@@ -980,7 +990,7 @@ export async function buildCumulativeRankingSnapshot(
         wcStage: stage,
         postedTodayUids:
           metric === "activeWinStreak" && !streakAllEligible
-            ? wcSettledTodayUids
+            ? wcStreakSettledTodayUids(stage)
             : undefined,
         streakAllEligible:
           metric === "activeWinStreak" ? streakAllEligible : undefined,

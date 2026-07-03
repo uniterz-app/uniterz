@@ -557,10 +557,19 @@ async function buildCumulativeRankingSnapshot(options = {}) {
     const wcOnly = scope === "wc";
     const streakAllEligible = options.streakAllEligible === true;
     const snap = await db().collection("cumulative_stats").get();
-    const [wcSettledTodayUids, nbaSettledTodayUids] = await Promise.all([
+    const [wcSettledTodayUids, wcQualifyingSettledTodayUids, wcMainSettledTodayUids, nbaSettledTodayUids] = await Promise.all([
         (0, activeWinStreakRanking_1.loadAuthorUidsSettledToday)("wc"),
+        (0, activeWinStreakRanking_1.loadAuthorUidsSettledTodayForWcStage)("qualifying"),
+        (0, activeWinStreakRanking_1.loadAuthorUidsSettledTodayForWcStage)("main"),
         (0, activeWinStreakRanking_1.loadAuthorUidsSettledToday)("nba"),
     ]);
+    function wcStreakSettledTodayUids(stage) {
+        if (stage === "qualifying")
+            return wcQualifyingSettledTodayUids;
+        if (stage === "main")
+            return wcMainSettledTodayUids;
+        return wcSettledTodayUids;
+    }
     const rankByUid = new Map();
     function ensure(uid) {
         if (!rankByUid.has(uid)) {
@@ -731,7 +740,7 @@ async function buildCumulativeRankingSnapshot(options = {}) {
             const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
                 wcStage: stage,
                 postedTodayUids: metric === "activeWinStreak" && !streakAllEligible
-                    ? wcSettledTodayUids
+                    ? wcStreakSettledTodayUids(stage)
                     : undefined,
                 streakAllEligible: metric === "activeWinStreak" ? streakAllEligible : undefined,
             });
