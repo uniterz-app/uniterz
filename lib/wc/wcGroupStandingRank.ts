@@ -7,7 +7,11 @@ import { getWcGroupForTeam, type WcGroupCode } from "@/lib/wc/groups";
 import type { Language } from "@/lib/i18n/language";
 import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
 import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
-import { resolveFrozenWc2026GroupStageStanding, resolveOfficialWc2026GroupStageRank } from "@/lib/wc/wc2026GroupStageFrozenRecords";
+import {
+  resolveFrozenWc2026GroupStageStanding,
+  resolveOfficialWc2026GroupStageRank,
+  resolveWcTeamRecordLineForDisplay,
+} from "@/lib/wc/wc2026GroupStageFrozenRecords";
 import type { TeamRecordLine } from "@/lib/teamRecordDisplay";
 
 export type WcStandingGameMeta = WcStandingGame & {
@@ -40,6 +44,7 @@ function resolveWcGroupStandingForTeamInGroup(
   const rows = computeGroupStandings(group.teamIds, games ?? []);
   const entry = pickStandingEntry(teamId, group.teamIds, rows);
   if (!entry) return null;
+  if (entry.wins === 0 && entry.draws === 0 && entry.losses === 0) return null;
   const officialRank = resolveOfficialWc2026GroupStageRank(teamId);
   return officialRank == null ? entry : { ...entry, rank: officialRank };
 }
@@ -48,28 +53,34 @@ export function toWcGroupStandingEntryFromTeamRecord(
   record: TeamRecordLine | null | undefined,
   teamId?: string | null
 ): WcGroupStandingEntry | null {
-  if (!record) return null;
-  const officialRank = resolveOfficialWc2026GroupStageRank(teamId);
-  const rank = officialRank ?? record.rank;
-  if (rank == null || !Number.isFinite(rank) || rank <= 0) return null;
-  return {
-    wins: Number(record.wins ?? 0),
-    draws: Number(record.draws ?? 0),
-    losses: Number(record.losses ?? 0),
-    rank: Math.trunc(rank),
+  const merged = resolveWcTeamRecordLineForDisplay(teamId, record);
+  if (!merged?.rank || !Number.isFinite(merged.rank) || merged.rank <= 0) return null;
+  const entry: WcGroupStandingEntry = {
+    wins: Number(merged.wins ?? 0),
+    draws: Number(merged.draws ?? 0),
+    losses: Number(merged.losses ?? 0),
+    rank: Math.trunc(merged.rank),
   };
+  if (entry.wins === 0 && entry.draws === 0 && entry.losses === 0) {
+    return resolveFrozenWc2026GroupStageStanding(teamId) ?? entry;
+  }
+  return entry;
 }
 
-/** ノックアウト試合カード — teams 戦績 or 確定スナップショットを即表示 */
+/** ノックアウト試合カード — 確定スナップショット優先 */
 export function resolveWcGroupStageStandingForKnockoutDisplay(
   teamId: string | null | undefined,
   record?: TeamRecordLine | null
 ): WcGroupStandingEntry | null {
-  return (
-    toWcGroupStandingEntryFromTeamRecord(record, teamId) ??
-    resolveFrozenWc2026GroupStageStanding(teamId) ??
-    null
-  );
+  const frozen = resolveFrozenWc2026GroupStageStanding(teamId);
+  const fromRecord = toWcGroupStandingEntryFromTeamRecord(record, teamId);
+  if (
+    fromRecord &&
+    (fromRecord.wins > 0 || fromRecord.draws > 0 || fromRecord.losses > 0)
+  ) {
+    return fromRecord;
+  }
+  return frozen ?? fromRecord;
 }
 
 export function resolveWcGroupStageStandingForTeam(
@@ -140,7 +151,7 @@ function pickStandingEntry(
   if (index < 0) return null;
   const row = rows[index]!;
   if (row.played <= 0) {
-    return { wins: 0, draws: 0, losses: 0, rank: index + 1 };
+    return null;
   }
   return toEntry(row, index + 1);
 }
@@ -207,6 +218,37 @@ function formatEnglishOrdinal(n: number): string {
     default:
       return `${n}th`;
   }
+}
+
+/** リザルトカード国旗下 — 確定スナップショット優先 */
+export function resolveWcResultCardGroupStanding(
+  teamId: string | null | undefined,
+  record?: TeamRecordLine | null,
+  games?: readonly WcStandingGameMeta[] | null
+): WcGroupStandingEntry | null {
+  const id = normalizeWcTeamId(teamId) ?? teamId?.trim() ?? "";
+  if (!id) return null;
+
+  const frozen = resolveFrozenWc2026GroupStageStanding(id);
+  const fromGames = games?.length
+    ? resolveWcGroupStageStandingForTeam(id, games)
+    : null;
+  if (
+    fromGames &&
+    (fromGames.wins > 0 || fromGames.draws > 0 || fromGames.losses > 0)
+  ) {
+    return fromGames;
+  }
+
+  const fromRecord = toWcGroupStandingEntryFromTeamRecord(record, id);
+  if (
+    fromRecord &&
+    (fromRecord.wins > 0 || fromRecord.draws > 0 || fromRecord.losses > 0)
+  ) {
+    return fromRecord;
+  }
+
+  return frozen ?? fromRecord ?? fromGames;
 }
 
 /** 国旗下 — 勝敗分 + グループ順位（例: (1-0-2) 4th） */

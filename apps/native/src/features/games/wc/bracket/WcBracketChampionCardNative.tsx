@@ -33,11 +33,11 @@ const styles = StyleSheet.create({
   wrap: {
     width: WC_TREE_CHAMPION_CARD_W,
     alignItems: "center",
-    paddingTop: 26,
   },
   crownWrap: {
     position: "absolute",
-    top: 0,
+    bottom: WC_TREE_CHAMPION_CARD_H,
+    marginBottom: 5,
     alignSelf: "center",
     zIndex: 2,
   },

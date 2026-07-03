@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { m, useInView, useReducedMotion } from "framer-motion";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
-import { CYBER_GLASS_FILL, CYBER_GLASS_SHADOW } from "@/lib/ui/matchOverlayGlass";
 import { streakChartLayoutMaxAbs } from "@/lib/profile/streakTrackerChartLayout";
 import {
   useProfileStreakTracker,
@@ -16,8 +15,10 @@ import { t } from "@/lib/i18n/t";
 import { jp, nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
+import ProfileStreakPlotGrid from "@/app/component/profile/ui/ProfileStreakPlotGrid";
 import { useCountUp } from "@/lib/hooks/useCountUp";
-import { BarChart3, Info, TrendingDown, TrendingUp } from "lucide-react";
+import { Info } from "lucide-react";
 import styles from "./profileChartInfoFaq.module.css";
 import {
   isProfileChartAnimationOff,
@@ -113,13 +114,10 @@ function streakSizes(layout: Layout) {
   };
 }
 
-const CHART_GRID_STYLE: CSSProperties = {
-  backgroundImage: `
-    linear-gradient(rgba(148,163,184,0.22) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148,163,184,0.22) 1px, transparent 1px)
-  `,
-  backgroundSize: "18px 18px",
-};
+const STREAK_WIN_BLOCK_CLASS =
+  "w-[82%] shrink-0 rounded-[2px] bg-[rgba(168,255,42,0.9)] shadow-[0_0_8px_rgba(168,255,42,0.35)]";
+const STREAK_LOSS_BLOCK_CLASS =
+  "w-[82%] shrink-0 rounded-[2px] bg-[rgba(251,113,133,0.9)] shadow-[0_0_8px_rgba(255,43,214,0.3)]";
 
 export default function StreakTrackerCard({
   uid,
@@ -262,6 +260,13 @@ export default function StreakTrackerCard({
   const statRecordLabel = msg.profile.last20TrackerSubtitle.replace("{n}", String(STREAK_TRACKER_LAST_N));
   const statRecordValue = `${stats.wins}-${stats.losses}`;
 
+  const plotHeightPx = layout === "web" ? 228 : 184;
+  const plotWidthPx = Math.max(
+    points.length * S.minWidthPerCol,
+    layout === "web" ? 160 : 100
+  );
+  const plotColGapPx = layout === "web" ? 4 : 2;
+
   return (
     <ProfileKinetikPanelFrame className={S.outerPad}>
       <div className="relative z-1">
@@ -295,10 +300,11 @@ export default function StreakTrackerCard({
             <p
               className={[
                 language === "ja" ? jp.className : "",
-                "mt-1.5 max-w-[560px] text-xs leading-relaxed text-slate-400 sm:text-[14px]",
+                "mt-1.5 max-w-[560px] text-xs leading-relaxed sm:text-[14px]",
               ]
                 .filter(Boolean)
                 .join(" ")}
+              style={{ color: PROFILE_CHART_CYBER.subtitle }}
             >
               {subtitle}
             </p>
@@ -319,11 +325,11 @@ export default function StreakTrackerCard({
                     className={[
                       "pointer-events-none absolute inset-0 rounded-full",
                       lastStreak > 0 &&
-                        "bg-amber-400/14 ring-1 ring-inset ring-amber-300/18",
+                        "bg-[rgba(168,255,42,0.12)] ring-1 ring-inset ring-[rgba(168,255,42,0.32)] shadow-[0_0_10px_rgba(168,255,42,0.35)]",
                       lastStreak < 0 &&
-                        "bg-rose-500/14 ring-1 ring-inset ring-rose-400/18",
+                        "bg-[rgba(255,43,214,0.1)] ring-1 ring-inset ring-[rgba(255,43,214,0.28)] shadow-[0_0_10px_rgba(255,43,214,0.3)]",
                       lastStreak === 0 &&
-                        "bg-white/[0.07] ring-1 ring-inset ring-white/12",
+                        "bg-[rgba(0,245,255,0.06)] ring-1 ring-inset ring-[rgba(0,245,255,0.18)]",
                     ]
                       .filter(Boolean)
                       .join(" ")}
@@ -348,9 +354,9 @@ export default function StreakTrackerCard({
                     "relative z-1",
                     resultStatsMetricNumClass,
                     S.headerValue,
-                    lastStreak > 0 && "text-amber-200",
-                    lastStreak < 0 && "text-rose-200",
-                    lastStreak === 0 && "text-white/95",
+                    lastStreak > 0 && "text-[#ccff00]",
+                    lastStreak < 0 && "text-[#ff2bd6]",
+                    lastStreak === 0 && "text-[#00F5FF]",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -361,12 +367,13 @@ export default function StreakTrackerCard({
             </div>
             <span
               className={[
-                "mt-1 max-w-36 leading-tight text-slate-400",
+                "mt-1 max-w-36 leading-tight",
                 S.headerCaption,
                 language === "ja" ? jp.className : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
+              style={{ color: PROFILE_CHART_CYBER.tick }}
             >
               {caption}
             </span>
@@ -375,13 +382,12 @@ export default function StreakTrackerCard({
 
         <div
           ref={chartSectionRef}
-          className={`relative z-0 overflow-hidden rounded-2xl border border-white/10 ${CYBER_GLASS_FILL} ${CYBER_GLASS_SHADOW} ${S.chartBorder}`}
+          className={`relative z-0 overflow-hidden rounded-lg border ${S.chartBorder}`}
+          style={{
+            borderColor: PROFILE_CHART_CYBER.glassBorder,
+            backgroundColor: PROFILE_CHART_CYBER.glassBg,
+          }}
         >
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.52]"
-            style={CHART_GRID_STYLE}
-            aria-hidden
-          />
           <div className="relative z-1">
             {loading ? (
               <div className={`grid place-items-center ${S.loadingEmptyH}`}>
@@ -425,7 +431,8 @@ export default function StreakTrackerCard({
                   {ticks.map((t) => (
                     <span
                       key={t}
-                      className={`tabular-nums text-slate-400 ${S.tick}`}
+                      className={`tabular-nums ${S.tick}`}
+                      style={{ color: PROFILE_CHART_CYBER.tick }}
                     >
                       {formatTick(t)}
                     </span>
@@ -439,23 +446,34 @@ export default function StreakTrackerCard({
                       minWidth: `${Math.max(points.length * S.minWidthPerCol, layout === "web" ? 160 : 100)}px`,
                     }}
                   >
-                    <div className={`relative ${S.plotH} shrink-0`}>
+                    <div
+                      className={`relative overflow-hidden rounded-lg ${S.plotH} shrink-0`}
+                      style={{ backgroundColor: "rgba(0, 6, 12, 0.35)" }}
+                    >
                       <m.div
-                        className="pointer-events-none absolute left-0 right-0 top-1/2 z-2 h-px -translate-y-1/2 bg-cyan-200/45"
+                        className="pointer-events-none absolute inset-0 z-1"
                         initial={false}
                         animate={
                           axesReady
-                            ? { scaleX: 1, opacity: 1 }
-                            : { scaleX: 0, opacity: 0 }
+                            ? { opacity: 1 }
+                            : { opacity: 0 }
                         }
-                        style={{ transformOrigin: "50% 50%" }}
                         transition={{
-                          duration: 0.55,
-                          delay: 0.18,
+                          duration: 0.62,
                           ease: [0.22, 1, 0.36, 1],
                         }}
                         aria-hidden
-                      />
+                      >
+                        <ProfileStreakPlotGrid
+                          plotWidth={plotWidthPx}
+                          plotHeight={plotHeightPx}
+                          ticks={ticks}
+                          maxAbs={maxAbs}
+                          columnCount={points.length}
+                          colGap={plotColGapPx}
+                          evenColumns
+                        />
+                      </m.div>
 
                       {staticChart ? (
                         <div
@@ -537,8 +555,8 @@ export default function StreakTrackerCard({
                               className={[
                                 "tabular-nums",
                                 S.indexLbl,
-                                "text-slate-500",
                               ].join(" ")}
+                              style={{ color: PROFILE_CHART_CYBER.tick }}
                               initial={false}
                               animate={axesReady ? { opacity: 1 } : { opacity: 0 }}
                               transition={{
@@ -575,82 +593,81 @@ export default function StreakTrackerCard({
           >
             <div
               className={[
-                "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3",
-                language === "ja" ? jp.className : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+                "border px-2.5 py-2",
+                layout === "web" ? "px-3 py-2.5" : "",
+              ].join(" ")}
+              style={{
+                borderColor: PROFILE_CHART_CYBER.frame,
+                backgroundColor: "rgba(0, 8, 14, 0.42)",
+              }}
             >
-              <div className="order-1 flex min-h-13 items-center justify-between gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] px-3 py-2.5 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <TrendingUp
-                    className="h-4 w-4 shrink-0 text-emerald-300 sm:h-5 sm:w-5"
-                    strokeWidth={2.25}
-                    aria-hidden
-                  />
-                  <span
+              <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1.5">
+                <div className="px-1 py-0.5 text-center">
+                  <p
                     className={[
-                      "min-w-0 leading-tight text-emerald-100/90",
+                      "leading-tight",
                       language !== "ja"
-                        ? "text-[10px] font-semibold uppercase tracking-[0.14em]"
-                        : "text-[11px] font-medium",
+                        ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
+                        : "text-[9px] font-medium",
                     ].join(" ")}
+                    style={{ color: "rgba(168, 255, 42, 0.72)" }}
                   >
                     {statWinLabel}
-                  </span>
-                </div>
-                <div
-                  className={`shrink-0 text-3xl leading-none text-emerald-200 sm:text-4xl ${resultStatsMetricNumClass}`}
-                >
-                  {stats.maxWinStreak}
-                </div>
-              </div>
-              <div className="order-2 flex min-h-13 items-center justify-between gap-2 rounded-xl border border-rose-400/25 bg-rose-500/[0.07] px-3 py-2.5 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <TrendingDown
-                    className="h-4 w-4 shrink-0 text-rose-300 sm:h-5 sm:w-5"
-                    strokeWidth={2.25}
-                    aria-hidden
-                  />
-                  <span
+                  </p>
+                  <p
                     className={[
-                      "min-w-0 leading-tight text-rose-100/90",
-                      language !== "ja"
-                        ? "text-[10px] font-semibold uppercase tracking-[0.14em]"
-                        : "text-[11px] font-medium",
+                      resultStatsMetricNumClass,
+                      "mt-1 leading-none text-[1.25rem] sm:text-4xl",
                     ].join(" ")}
+                    style={{ color: PROFILE_CHART_CYBER.statPositive }}
+                  >
+                    {stats.maxWinStreak}
+                  </p>
+                </div>
+                <span className="text-center text-white/20">|</span>
+                <div className="px-1 py-0.5 text-center">
+                  <p
+                    className={[
+                      "leading-tight",
+                      language !== "ja"
+                        ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
+                        : "text-[9px] font-medium",
+                    ].join(" ")}
+                    style={{ color: "rgba(255, 43, 214, 0.72)" }}
                   >
                     {statLossLabel}
-                  </span>
-                </div>
-                <div
-                  className={`shrink-0 text-3xl leading-none text-rose-200 sm:text-4xl ${resultStatsMetricNumClass}`}
-                >
-                  {stats.maxLossStreak}
-                </div>
-              </div>
-              <div className="order-3 col-span-2 flex min-h-13 items-center justify-between gap-2 rounded-xl border border-sky-400/20 bg-sky-500/6 px-3 py-2.5 sm:col-span-1 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <BarChart3
-                    className="h-4 w-4 shrink-0 text-sky-300 sm:h-5 sm:w-5"
-                    strokeWidth={2.25}
-                    aria-hidden
-                  />
-                  <span
+                  </p>
+                  <p
                     className={[
-                      "min-w-0 leading-tight text-slate-200/90",
+                      resultStatsMetricNumClass,
+                      "mt-1 leading-none text-[1.25rem] sm:text-4xl",
+                    ].join(" ")}
+                    style={{ color: PROFILE_CHART_CYBER.statNegative }}
+                  >
+                    {stats.maxLossStreak}
+                  </p>
+                </div>
+                <span className="text-center text-white/20">|</span>
+                <div className="px-1 py-0.5 text-center">
+                  <p
+                    className={[
+                      "leading-tight text-white/55",
                       language !== "ja"
-                        ? "text-[10px] font-semibold uppercase tracking-[0.14em]"
-                        : "text-[11px] font-medium",
+                        ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
+                        : "text-[9px] font-medium",
                     ].join(" ")}
                   >
                     {statRecordLabel}
-                  </span>
-                </div>
-                <div
-                  className={`shrink-0 text-3xl leading-none text-white/95 sm:text-4xl ${resultStatsMetricNumClass}`}
-                >
-                  {statRecordValue}
+                  </p>
+                  <p
+                    className={[
+                      resultStatsMetricNumClass,
+                      "mt-1 leading-none text-[1.25rem] sm:text-4xl",
+                    ].join(" ")}
+                    style={{ color: PROFILE_CHART_CYBER.statNeutral }}
+                  >
+                    {statRecordValue}
+                  </p>
                 </div>
               </div>
             </div>
@@ -739,7 +756,7 @@ function StreakColumn({
             mode === "animate" ? (
               <m.div
                 key={i}
-                className={`w-[82%] shrink-0 rounded-[2px] bg-emerald-400/92 shadow-[0_0_6px_rgba(52,211,153,0.22)] ${maxW}`}
+                className={`${STREAK_WIN_BLOCK_CLASS} ${maxW}`}
                 style={{
                   height: hExpr,
                   transformOrigin: "bottom center",
@@ -751,7 +768,7 @@ function StreakColumn({
             ) : (
               <div
                 key={i}
-                className={`w-[82%] shrink-0 rounded-[2px] bg-emerald-400/92 shadow-[0_0_6px_rgba(52,211,153,0.22)] ${maxW}`}
+                className={`${STREAK_WIN_BLOCK_CLASS} ${maxW}`}
                 style={{ height: hExpr }}
               />
             )
@@ -764,7 +781,7 @@ function StreakColumn({
             mode === "animate" ? (
               <m.div
                 key={i}
-                className={`w-[82%] shrink-0 rounded-[2px] bg-rose-400/92 shadow-[0_0_6px_rgba(251,113,133,0.18)] ${maxW}`}
+                className={`${STREAK_LOSS_BLOCK_CLASS} ${maxW}`}
                 style={{
                   height: hExpr,
                   transformOrigin: "top center",
@@ -776,13 +793,13 @@ function StreakColumn({
             ) : (
               <div
                 key={i}
-                className={`w-[82%] shrink-0 rounded-[2px] bg-rose-400/92 shadow-[0_0_6px_rgba(251,113,133,0.18)] ${maxW}`}
+                className={`${STREAK_LOSS_BLOCK_CLASS} ${maxW}`}
                 style={{ height: hExpr }}
               />
             )
           )}
         {s === 0 && (
-          <div className="absolute left-1/2 top-0 h-1 w-[65%] max-w-[12px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/22 sm:max-w-[14px]" />
+          <div className="absolute left-1/2 top-0 h-1 w-[65%] max-w-[12px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(0,245,255,0.35)] sm:max-w-[14px]" />
         )}
       </div>
     </div>

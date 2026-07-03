@@ -1,3 +1,4 @@
+import type { TeamRecordLine } from "@/lib/teamRecordDisplay";
 import type { WcGroupStandingEntry } from "@/lib/wc/wcGroupStandingRank";
 import { getWcGroupByCode, type WcGroupCode } from "@/lib/wc/groups";
 import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
@@ -113,6 +114,50 @@ export function resolveFrozenWc2026GroupStageStanding(
   const entry = WC_2026_GROUP_STAGE_FROZEN[id];
   if (!entry) return null;
   return withOfficialWc2026GroupRank(id, entry);
+}
+
+function isAllZeroWdl(record: TeamRecordLine): boolean {
+  return (
+    Number(record.wins ?? 0) === 0 &&
+    Number(record.draws ?? 0) === 0 &&
+    Number(record.losses ?? 0) === 0
+  );
+}
+
+/** Firestore 戦績が空・0-0-0 のとき確定スナップショットで補完 */
+export function resolveWcTeamRecordLineForDisplay(
+  teamId: string | null | undefined,
+  fromFirestore?: TeamRecordLine | null
+): TeamRecordLine | null {
+  const id = normalizeWcTeamId(teamId) ?? teamId?.trim() ?? "";
+  if (!id) return null;
+
+  const frozen = resolveFrozenWc2026GroupStageStanding(id);
+  const officialRank = resolveOfficialWc2026GroupStageRank(id);
+
+  if (!fromFirestore) {
+    if (!frozen) return null;
+    return {
+      wins: frozen.wins,
+      draws: frozen.draws,
+      losses: frozen.losses,
+      rank: officialRank ?? frozen.rank,
+    };
+  }
+
+  if (isAllZeroWdl(fromFirestore) && frozen) {
+    return {
+      wins: frozen.wins,
+      draws: frozen.draws,
+      losses: frozen.losses,
+      rank: officialRank ?? fromFirestore.rank ?? frozen.rank,
+    };
+  }
+
+  return {
+    ...fromFirestore,
+    rank: officialRank ?? fromFirestore.rank,
+  };
 }
 
 /** 確定順位で並べ替え（同勝点のタイブレーク誤差を補正） */

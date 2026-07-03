@@ -24,9 +24,11 @@ import {
   profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
+import ProfileRankPlotGridNative from "./ProfileRankPlotGridNative";
 
-const LINE = "#22d3ee";
-const LINE_GLOW = "rgba(34, 211, 238, 0.45)";
+const LINE = PROFILE_CHART_CYBER.cyan;
+const LINE_GLOW = PROFILE_CHART_CYBER.cyanSoft;
 
 type TrendState = "up" | "down" | "flat";
 
@@ -39,24 +41,25 @@ const TREND_THEME: Record<
   }
 > = {
   up: {
-    stroke: "#34d399",
-    fill: "rgba(2, 28, 20, 0.94)",
-    glowRing: "rgba(52, 211, 153, 0.45)",
+    stroke: PROFILE_CHART_CYBER.lime,
+    fill: PROFILE_CHART_CYBER.limeFill,
+    glowRing: PROFILE_CHART_CYBER.limeGlow,
   },
   down: {
-    stroke: "#fb7185",
-    fill: "rgba(36, 7, 17, 0.94)",
-    glowRing: "rgba(251, 113, 133, 0.45)",
+    stroke: PROFILE_CHART_CYBER.magenta,
+    fill: PROFILE_CHART_CYBER.magentaFill,
+    glowRing: PROFILE_CHART_CYBER.magentaGlow,
   },
   flat: {
     stroke: LINE,
-    fill: "rgba(5,8,20,0.94)",
+    fill: "rgba(5, 8, 20, 0.94)",
     glowRing: LINE_GLOW,
   },
 };
 
-/** 左 Y 軸ラベルなし（順位はドット内表示） */
-const LEFT_AXIS_W = 0;
+/** Web YAxis `width={28}` + 縦ラベル余白 */
+const LEFT_AXIS_W = 36;
+const Y_TICK_CENTER_OFFSET = 5;
 const PAD_R = 22;
 const PAD_T = 22;
 const PAD_B = 32;
@@ -103,29 +106,6 @@ function formatAxisDate(dateKey: string, lang: "ja" | "en", showYear: boolean): 
     month: "numeric",
     day: "numeric",
   }).format(d);
-}
-
-function horizontalDashedSegments(
-  y: number,
-  width: number,
-  dash: number,
-  gap: number
-): ReturnType<typeof Skia.Path.Make>[] {
-  const paths: ReturnType<typeof Skia.Path.Make>[] = [];
-  let x = 0;
-  let draw = true;
-  while (x < width - 1e-6) {
-    const len = Math.min(draw ? dash : gap, width - x);
-    if (draw && len > 0.5) {
-      const p = Skia.Path.Make();
-      p.moveTo(x, y);
-      p.lineTo(x + len, y);
-      paths.push(p);
-    }
-    x += len;
-    draw = !draw;
-  }
-  return paths;
 }
 
 /** 小さめの丸に順位桁数に応じたラベル */
@@ -295,7 +275,6 @@ export default function ProfileRankTrendChartNative({
     if (n === 0) {
       return {
         linePath: Skia.Path.Make(),
-        gridPaths: [] as ReturnType<typeof Skia.Path.Make>[],
         dots: [] as Array<{
           x: number;
           y: number;
@@ -306,6 +285,10 @@ export default function ProfileRankTrendChartNative({
           fontSize: number;
         }>,
         yTicks: [] as number[],
+        horizontalYs: [] as number[],
+        verticalXs: [] as number[],
+        plotTop: PAD_T + Y_AXIS_TOP_PAD,
+        plotBottom: PAD_T + PLOT_H,
         lo: 1,
         hi: 2,
       };
@@ -369,13 +352,22 @@ export default function ProfileRankTrendChartNative({
 
     const linePath = buildMonotoneLinePath(dots);
 
-    const gridPaths: ReturnType<typeof Skia.Path.Make>[] = [];
-    for (const tick of yTicks) {
-      const gy = rankToY(tick);
-      gridPaths.push(...horizontalDashedSegments(gy, plotInnerW, 3, 3));
-    }
+    const plotTop = PAD_T + Y_AXIS_TOP_PAD;
+    const plotBottom = PAD_T + PLOT_H;
+    const horizontalYs = yTicks.map((tick) => rankToY(tick));
+    const verticalXs = dots.map((d) => d.x);
 
-    return { linePath, gridPaths, dots, yTicks, lo, hi };
+    return {
+      linePath,
+      dots,
+      yTicks,
+      horizontalYs,
+      verticalXs,
+      plotTop,
+      plotBottom,
+      lo,
+      hi,
+    };
   }, [chartRows, plotInnerW]);
 
   const xAxisLabels = useMemo(
@@ -483,92 +475,126 @@ export default function ProfileRankTrendChartNative({
             currentRankIsTop20={currentRankIsTop20}
           />
 
-          <View style={styles.chartRow}>
-            <View style={styles.plotColumn}>
-              <View style={{ width: plotInnerW, height: CHART_H }}>
-                <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <Group>
-                    {model.gridPaths.map((gp, idx) => (
-                      <Path
-                        key={`g-${idx}`}
-                        path={gp}
-                        style="stroke"
-                        strokeWidth={1}
-                        color="rgba(148,163,184,0.12)"
-                      />
-                    ))}
-                    {chartRows.length > 1 ? (
-                      <Path path={model.linePath} style="stroke" strokeWidth={2} color={LINE} />
-                    ) : null}
-                    {model.dots.map((d, idx) => {
-                      const theme = TREND_THEME[d.trend];
-                      return (
-                        <Group key={`dot-${idx}`}>
-                          <Circle
-                            cx={d.x}
-                            cy={d.y}
-                            r={d.rDot + MOBILE_DOT_GLOW_EXTRA}
-                            color={theme.glowRing}
-                            style="stroke"
-                            strokeWidth={MOBILE_DOT_GLOW_STROKE}
-                            opacity={0.7}
-                          />
-                          <Circle cx={d.x} cy={d.y} r={d.rDot} color={theme.fill} />
-                          <Circle
-                            cx={d.x}
-                            cy={d.y}
-                            r={d.rDot}
-                            color={theme.stroke}
-                            style="stroke"
-                            strokeWidth={MOBILE_DOT_STROKE}
-                          />
-                        </Group>
-                      );
-                    })}
-                  </Group>
-                </Canvas>
-
-                {model.dots.map((d, idx) => (
-                  <Text
-                    key={`lbl-${idx}`}
-                    style={[
-                      styles.rankInCircle,
-                      {
-                        left: d.x - d.labelW / 2,
-                        top: d.y - d.fontSize * 0.5,
-                        width: d.labelW,
-                        fontSize: d.fontSize,
-                      },
-                    ]}
-                    pointerEvents="none"
-                    numberOfLines={1}
-                  >
-                    {d.rank}
-                  </Text>
-                ))}
-              </View>
-
-              <View style={[styles.xAxisRow, { width: plotInnerW }]}>
-                {xAxisLabels.map((label) => {
-                  const row = chartRows[label.index];
-                  if (!row) return null;
+          <View style={styles.chartGlassShell}>
+            <View style={styles.chartRow}>
+              <View style={[styles.yAxis, { height: CHART_H }]}>
+                <Text style={styles.yAxisRankLabel} pointerEvents="none">
+                  {isJa ? "ランク" : "Rank"}
+                </Text>
+                {model.yTicks.map((tick) => {
+                  const yCenter =
+                    PAD_T +
+                    Y_AXIS_TOP_PAD +
+                    ((tick - model.lo) / (model.hi - model.lo)) *
+                      (PLOT_H - Y_AXIS_TOP_PAD);
+                  const top = Math.max(0, Math.min(CHART_H - 12, yCenter - Y_TICK_CENTER_OFFSET));
                   return (
-                    <Text
-                      key={row.dateKey}
-                      style={[
-                        styles.xTick,
-                        {
-                          position: "absolute",
-                          left: label.centerX - label.width / 2,
-                          width: label.width,
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {formatAxisDate(row.dateKey, language, showYearOnXAxis)}
+                    <Text key={`yt-${tick}`} style={[styles.yTick, { top }]}>
+                      {tick}
                     </Text>
                   );
                 })}
+              </View>
+
+              <View style={styles.plotColumn}>
+                <View
+                  style={[
+                    styles.plotSurface,
+                    { width: plotInnerW, height: CHART_H },
+                  ]}
+                >
+                  <ProfileRankPlotGridNative
+                    width={plotInnerW}
+                    height={CHART_H}
+                    horizontalYs={model.horizontalYs}
+                    verticalXs={model.verticalXs}
+                    plotTop={model.plotTop}
+                    plotBottom={model.plotBottom}
+                  />
+                  <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+                    <Group>
+                      {chartRows.length > 1 ? (
+                        <>
+                          <Path
+                            path={model.linePath}
+                            style="stroke"
+                            strokeWidth={5}
+                            color={LINE_GLOW}
+                            opacity={0.38}
+                          />
+                          <Path path={model.linePath} style="stroke" strokeWidth={2} color={LINE} />
+                        </>
+                      ) : null}
+                      {model.dots.map((d, idx) => {
+                        const theme = TREND_THEME[d.trend];
+                        return (
+                          <Group key={`dot-${idx}`}>
+                            <Circle
+                              cx={d.x}
+                              cy={d.y}
+                              r={d.rDot + MOBILE_DOT_GLOW_EXTRA}
+                              color={theme.glowRing}
+                              style="stroke"
+                              strokeWidth={MOBILE_DOT_GLOW_STROKE}
+                              opacity={0.7}
+                            />
+                            <Circle cx={d.x} cy={d.y} r={d.rDot} color={theme.fill} />
+                            <Circle
+                              cx={d.x}
+                              cy={d.y}
+                              r={d.rDot}
+                              color={theme.stroke}
+                              style="stroke"
+                              strokeWidth={MOBILE_DOT_STROKE}
+                            />
+                          </Group>
+                        );
+                      })}
+                    </Group>
+                  </Canvas>
+
+                  {model.dots.map((d, idx) => (
+                    <Text
+                      key={`lbl-${idx}`}
+                      style={[
+                        styles.rankInCircle,
+                        {
+                          left: d.x - d.labelW / 2,
+                          top: d.y - d.fontSize * 0.5,
+                          width: d.labelW,
+                          fontSize: d.fontSize,
+                        },
+                      ]}
+                      pointerEvents="none"
+                      numberOfLines={1}
+                    >
+                      {d.rank}
+                    </Text>
+                  ))}
+                </View>
+
+                <View style={[styles.xAxisRow, { width: plotInnerW }]}>
+                  {xAxisLabels.map((label) => {
+                    const row = chartRows[label.index];
+                    if (!row) return null;
+                    return (
+                      <Text
+                        key={row.dateKey}
+                        style={[
+                          styles.xTick,
+                          {
+                            position: "absolute",
+                            left: label.centerX - label.width / 2,
+                            width: label.width,
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {formatAxisDate(row.dateKey, language, showYearOnXAxis)}
+                      </Text>
+                    );
+                  })}
+                </View>
               </View>
             </View>
           </View>
@@ -725,7 +751,7 @@ function ChartHeader({
               {title}
             </Text>
             <Pressable onPress={onInfoPress} hitSlop={10} accessibilityRole="button">
-              <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
+              <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
             </Pressable>
           </View>
         </View>
@@ -774,26 +800,44 @@ const styles = StyleSheet.create({
   },
   currentRankLabel: {
     fontSize: 9,
-    color: "rgba(207,250,254,0.72)",
+    color: PROFILE_CHART_CYBER.cyanMuted,
     textAlign: "center",
     marginBottom: 2,
+    letterSpacing: 0.4,
   },
   currentRankLabelGold: {
-    color: "rgba(253,230,138,0.9)",
+    color: PROFILE_CHART_CYBER.goldMuted,
   },
   currentRankNum: {
     fontSize: 28,
     fontWeight: "700",
-    color: "rgba(207,250,254,0.98)",
+    color: PROFILE_CHART_CYBER.cyan,
     fontVariant: ["tabular-nums"],
     fontFamily: Platform.select({
       ios: "Oxanium_700Bold",
       android: "Oxanium_700Bold",
       default: "sans-serif",
     }),
+    ...Platform.select({
+      ios: {
+        textShadowColor: PROFILE_CHART_CYBER.cyanSoft,
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 10,
+      },
+      android: {},
+      default: {},
+    }),
   },
   currentRankNumGold: {
-    color: "rgba(252,211,77,0.98)",
+    color: PROFILE_CHART_CYBER.gold,
+    ...Platform.select({
+      ios: {
+        textShadowColor: PROFILE_CHART_CYBER.goldGlow,
+        textShadowRadius: 12,
+      },
+      android: {},
+      default: {},
+    }),
   },
   headerRow: {
     flexDirection: "row",
@@ -840,14 +884,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
     maxWidth: 520,
   },
-  chartRow: {
-    alignItems: "flex-start",
+  chartGlassShell: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: PROFILE_CHART_CYBER.glassBorder,
+    backgroundColor: PROFILE_CHART_CYBER.glassBg,
+    overflow: "hidden",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     marginTop: 4,
   },
+  chartRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  yAxis: {
+    width: LEFT_AXIS_W,
+    position: "relative",
+    paddingRight: 4,
+    flexShrink: 0,
+  },
+  yAxisRankLabel: {
+    position: "absolute",
+    left: -4,
+    top: CHART_H * 0.38,
+    width: 36,
+    fontSize: 8,
+    letterSpacing: 0.6,
+    color: PROFILE_CHART_CYBER.tick,
+    transform: [{ rotate: "-90deg" }],
+    textAlign: "center",
+  },
+  yTick: {
+    position: "absolute",
+    right: 2,
+    fontSize: 9,
+    lineHeight: 12,
+    color: PROFILE_CHART_CYBER.tick,
+    fontVariant: ["tabular-nums"],
+  },
   plotColumn: {
-    width: "100%",
+    flex: 1,
     minWidth: 0,
     alignItems: "center",
+  },
+  plotSurface: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 8,
+    backgroundColor: PROFILE_CHART_CYBER.rankPlotInnerBg,
   },
   xAxisRow: {
     position: "relative",
@@ -858,7 +943,7 @@ const styles = StyleSheet.create({
   xTick: {
     textAlign: "center",
     fontSize: 9,
-    color: "rgba(148,163,184,0.88)",
+    color: PROFILE_CHART_CYBER.tick,
     fontVariant: ["tabular-nums"],
   },
   rankInCircle: {
@@ -887,7 +972,7 @@ const styles = StyleSheet.create({
     color: "rgba(248,250,252,0.55)",
   },
   statsMuted: { color: "rgba(248,250,252,0.55)" },
-  statsGreen: { color: "rgba(110,231,183,0.95)" },
-  statsRose: { color: "rgba(251,113,133,0.95)" },
-  statsCyan: { color: "rgba(103,232,249,0.9)" },
+  statsGreen: { color: PROFILE_CHART_CYBER.statPositive },
+  statsRose: { color: PROFILE_CHART_CYBER.statNegative },
+  statsCyan: { color: PROFILE_CHART_CYBER.statNeutral },
 });

@@ -7,6 +7,7 @@ import { footballWinsLossesDraws, type TeamRecordLine } from "@/lib/teamRecordDi
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import { fetchWcTeamRecordMap } from "@/lib/wc/wcTeamRecordsCache";
 import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
+import { resolveWcTeamRecordLineForDisplay } from "@/lib/wc/wc2026GroupStageFrozenRecords";
 
 /** teams/{teamId} から戦績行を取得（WC はグループ内順位付きキャッシュを使用） */
 export function useTeamRecordLine(
@@ -29,7 +30,8 @@ export function useTeamRecordLine(
       if (isWc) {
         const wcMap = await fetchWcTeamRecordMap(db);
         if (!alive) return;
-        setRecord(wcMap[teamId] ?? null);
+        const id = normalizeWcTeamId(teamId) ?? teamId;
+        setRecord(resolveWcTeamRecordLineForDisplay(id, wcMap[id] ?? null));
         return;
       }
 

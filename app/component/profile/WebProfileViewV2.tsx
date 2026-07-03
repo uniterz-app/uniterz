@@ -300,7 +300,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               </div>
               ) : null}
               {overviewStage >= 2 ? (
-              <div className="min-w-0 overflow-hidden pt-0">
+              <div className="min-w-0 overflow-visible pt-0">
                 {rankingLeague === "worldcup" ? (
                   <ProfileWcStackedRankTrendChartsLazy
                     sections={wcRankTrendSections}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Menu } from "lucide-react";
 import {
   CYBER_MENU_ICON_CLASS,
@@ -38,7 +38,19 @@ import {
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { ProfileVisualEffects } from "@/lib/profile/profileVisualEffects";
-import type { ProfileKinetikMetricsSection } from "@/lib/profile/profileKinetikMetricsSection";
+import type {
+  ProfileKinetikMetricsSection,
+  WcKinetikStackedStage,
+} from "@/lib/profile/profileKinetikMetricsSection";
+import {
+  PROFILE_WC_STACKED_STAGE_TAB_ORDER,
+  profileWcStackedStageTabLabel,
+  profileWcStackedStageTabsLabel,
+} from "@/lib/profile/profileWcStackedStageTabs";
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+} from "@/app/component/rankings/CyberSlantedTab";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -615,9 +627,30 @@ export default function ProfileEditKinetikPanel({
     isWcProfile &&
     stackedMetricsSections != null &&
     stackedMetricsSections.length > 0;
-  const metricsSectionTitle = wcStackedActive
+  const metricsSectionTitle = isWcProfile
     ? "WORLD CUP // STATS"
     : metricsTitle ?? "WORLD CUP // GROUP STAGE STATS";
+
+  const [wcStackedStage, setWcStackedStage] =
+    useState<WcKinetikStackedStage>("main");
+  const wcStackedAvailableStages = useMemo(
+    () =>
+      PROFILE_WC_STACKED_STAGE_TAB_ORDER.filter((stage) =>
+        stackedMetricsSections?.some((section) => section.wcStage === stage)
+      ),
+    [stackedMetricsSections]
+  );
+  useEffect(() => {
+    if (wcStackedAvailableStages.length === 0) return;
+    setWcStackedStage((prev) =>
+      wcStackedAvailableStages.includes(prev) ? prev : wcStackedAvailableStages[0]!
+    );
+  }, [wcStackedAvailableStages]);
+  const showWcStackedStageTabs = wcStackedAvailableStages.length > 1;
+  const activeWcStackedSection =
+    stackedMetricsSections?.find((section) => section.wcStage === wcStackedStage) ??
+    stackedMetricsSections?.[0] ??
+    null;
   const flagIso = countryCode?.trim().toUpperCase() || null;
 
   const dayDeltaTitle = metricCopy.dayDeltaTitle;
@@ -784,32 +817,66 @@ export default function ProfileEditKinetikPanel({
 
   const metricsContent = statsPending ? (
     <MetricsGridSkeleton layout={layout} />
-  ) : wcStackedActive ? (
-    <div className="divide-y divide-white/8">
-      {stackedMetricsSections!.map((section) => (
-        <div key={section.title}>
-          <div className="border-b border-white/8 px-2 py-1.5">
-            <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
-              {section.title}
-            </ProfileEditKinetikGlitchTitle>
-            <div className="mt-1.5">
-              <ProfileEditKinetikHeaderTabs
-                rankBadge={section.rankBadge}
-                winStreak={section.winStreak}
-                language={language}
-                compact={layout === "mobile"}
+  ) : wcStackedActive && activeWcStackedSection ? (
+    <div>
+      {showWcStackedStageTabs ? (
+        <div className="overflow-visible border-b border-white/8 px-2.5 py-2">
+          <CyberSlantedTabBar
+            fill
+            aria-label={profileWcStackedStageTabsLabel(language)}
+          >
+            {wcStackedAvailableStages.map((stage) => (
+              <CyberSlantedTab
+                key={stage}
+                role="tab"
+                label={profileWcStackedStageTabLabel(stage, language)}
+                active={wcStackedStage === stage}
+                onClick={() => setWcStackedStage(stage)}
+                compact
               />
-            </div>
-          </div>
-          {renderMetricsGrid(section.stats, section.metricValueDeltas, {
-            totalPointsRank: section.totalPointsRank,
-            totalPointsRankDenominator: section.totalPointsRankDenominator,
-          })}
+            ))}
+          </CyberSlantedTabBar>
         </div>
-      ))}
+      ) : null}
+      <div>
+        <div className="border-b border-white/8 px-2 py-1.5">
+          {!showWcStackedStageTabs ? (
+            <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
+              {activeWcStackedSection.title}
+            </ProfileEditKinetikGlitchTitle>
+          ) : null}
+          <div className={showWcStackedStageTabs ? undefined : "mt-1.5"}>
+            <ProfileEditKinetikHeaderTabs
+              rankBadge={activeWcStackedSection.rankBadge}
+              winStreak={activeWcStackedSection.winStreak}
+              language={language}
+              compact={layout === "mobile"}
+            />
+          </div>
+        </div>
+        {renderMetricsGrid(
+          activeWcStackedSection.stats,
+          activeWcStackedSection.metricValueDeltas,
+          {
+            totalPointsRank: activeWcStackedSection.totalPointsRank,
+            totalPointsRankDenominator:
+              activeWcStackedSection.totalPointsRankDenominator,
+          }
+        )}
+      </div>
     </div>
   ) : (
-    metricsGrid
+    <div>
+      <div className="border-b border-white/8 px-2 py-1.5">
+        <ProfileEditKinetikHeaderTabs
+          rankBadge={rankBadge}
+          winStreak={activeWinStreak}
+          language={language}
+          compact={layout === "mobile"}
+        />
+      </div>
+      {metricsGrid}
+    </div>
   );
 
   const menuButton =
@@ -839,6 +906,12 @@ export default function ProfileEditKinetikPanel({
         ) : null}
       </button>
     ) : null;
+
+  const tierTagsRowMobile = menuButton ? (
+    <div className="profile-edit-kinetik-header-bar flex w-full justify-end">
+      {menuButton}
+    </div>
+  ) : null;
 
   const metricsScopeHeader = (
     <div className="flex items-center gap-2 border-b border-white/8 px-2 py-1.5">
@@ -875,28 +948,6 @@ export default function ProfileEditKinetikPanel({
           {metricsSectionTitle}
         </ProfileEditKinetikGlitchTitle>
       )}
-    </div>
-  );
-
-  const tierTagsOnly = wcStackedActive ? null : (
-    <ProfileEditKinetikHeaderTabs
-      rankBadge={rankBadge}
-      winStreak={activeWinStreak}
-      language={language}
-      compact={layout === "mobile"}
-    />
-  );
-
-  const tierTagsRowMobile = wcStackedActive ? (
-    menuButton ? (
-      <div className="profile-edit-kinetik-header-bar flex w-full justify-end">
-        {menuButton}
-      </div>
-    ) : null
-  ) : (
-    <div className="profile-edit-kinetik-header-bar flex w-full items-stretch gap-2">
-      <div className="min-w-0 flex-1">{tierTagsOnly}</div>
-      {menuButton}
     </div>
   );
 
@@ -939,9 +990,6 @@ export default function ProfileEditKinetikPanel({
                   align="center"
                 />
               </div>
-              {tierTagsOnly ? (
-                <div className="mt-3 w-full">{tierTagsOnly}</div>
-              ) : null}
               <div
                 className={[
                   "mt-3 flex min-w-0 items-center gap-2",
@@ -1001,7 +1049,7 @@ export default function ProfileEditKinetikPanel({
         .join(" ")}
     >
       {/* ヘッダー */}
-      <div className="profile-edit-kinetik-header relative flex gap-4">
+      <div className="profile-edit-kinetik-header relative flex gap-3 sm:gap-4">
         <ProfileEditKinetikAvatarWithStreak
           variant={KINETIK_STREAK_VARIANT}
           streak={activeWinStreak}
@@ -1011,43 +1059,54 @@ export default function ProfileEditKinetikPanel({
           displayName={identity.displayName}
           editable={editable}
         />
-        <div className="profile-edit-kinetik-header__meta min-w-0 flex-1">
+        <div className="profile-edit-kinetik-header__meta profile-edit-kinetik-header__meta--stacked min-w-0 flex-1">
           {tierTagsRowMobile ? (
-            <div className="mb-2">{tierTagsRowMobile}</div>
+            <div className="profile-edit-kinetik-header__menu-float">
+              {tierTagsRowMobile}
+            </div>
           ) : null}
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <h2
-              className={[
-                nameOxanium.className,
-                "min-w-0 truncate text-[16px] leading-tight font-bold italic tracking-tight text-white sm:text-[18px]",
-              ].join(" ")}
-            >
-              {identity.displayName}
-            </h2>
-            {flagIso ? (
-              <CountryFlag
-                iso2={flagIso}
-                variant="profileInline"
-                decorative
-                alt={flagIso}
-              />
-            ) : null}
-            {isPro ? (
-              <ProCyberBadge compact ariaLabel={metricCopy.proMember} />
+          <div
+            className={[
+              "profile-edit-kinetik-header__identity",
+              tierTagsRowMobile ? "profile-edit-kinetik-header__identity--menu" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <h2
+                className={[
+                  nameOxanium.className,
+                  "min-w-0 truncate text-[16px] leading-tight font-bold italic tracking-tight text-white sm:text-[18px]",
+                ].join(" ")}
+              >
+                {identity.displayName}
+              </h2>
+              {flagIso ? (
+                <CountryFlag
+                  iso2={flagIso}
+                  variant="profileInline"
+                  decorative
+                  alt={flagIso}
+                />
+              ) : null}
+              {isPro ? (
+                <ProCyberBadge compact ariaLabel={metricCopy.proMember} />
+              ) : null}
+            </div>
+            <ProfileKinetikIdentityIdChip
+              systemId={identity.systemId}
+              shareLabel={metricCopy.shareProfile}
+              shareCopiedLabel={metricCopy.shareCopied}
+              shareCopied={shareCopied}
+              onShare={handleShareProfile}
+            />
+            {bio?.trim() ? (
+              <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-white/50">
+                {bio.trim()}
+              </p>
             ) : null}
           </div>
-          <ProfileKinetikIdentityIdChip
-            systemId={identity.systemId}
-            shareLabel={metricCopy.shareProfile}
-            shareCopiedLabel={metricCopy.shareCopied}
-            shareCopied={shareCopied}
-            onShare={handleShareProfile}
-          />
-          {bio?.trim() ? (
-            <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-white/50">
-              {bio.trim()}
-            </p>
-          ) : null}
         </div>
         <div
           className="profile-edit-kinetik-hatch pointer-events-none absolute top-0 right-0 h-16 w-24 opacity-40"
@@ -1055,7 +1114,7 @@ export default function ProfileEditKinetikPanel({
         />
       </div>
 
-      {/* バッジ行（旧: WORLD CUP タイトル行） */}
+      {/* 達成バッジ行 */}
       <div className="mt-4">
         <ProfileEditKinetikBadgeRow
           badges={badges}
