@@ -377,13 +377,82 @@ export function aggregatedCumulativeMatchesDoc(
   );
 }
 
+function signedActiveWinStreak(raw: unknown): number {
+  return typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : 0;
+}
+
+export type WcStageStreakSnapshot = {
+  activeWinStreakFootball: number;
+  activeWinStreakByWcStage: { qualifying: number; main: number };
+};
+
+/** user_stats_v2 / cumulative_stats から WC ステージ別連勝を読む */
+export function readWcStageStreakSnapshot(
+  data: Record<string, unknown> | undefined
+): WcStageStreakSnapshot | null {
+  if (!data) return null;
+  const sb = data.streakBySport as { football?: number } | undefined;
+  const footballSigned =
+    data.activeWinStreakFootball ??
+    sb?.football ??
+    data.streakFootball ??
+    0;
+  const byStage = (data.activeWinStreakByWcStage ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const rbs = (data.rankingByWcStage ?? {}) as Record<
+    string,
+    { activeWinStreak?: unknown }
+  >;
+  const qualifying =
+    signedActiveWinStreak(byStage.qualifying) ||
+    signedActiveWinStreak(rbs.qualifying?.activeWinStreak);
+  const main =
+    signedActiveWinStreak(byStage.main) ||
+    signedActiveWinStreak(rbs.main?.activeWinStreak);
+  const activeWinStreakFootball = signedActiveWinStreak(footballSigned);
+  if (
+    activeWinStreakFootball === 0 &&
+    qualifying === 0 &&
+    main === 0
+  ) {
+    return null;
+  }
+  return {
+    activeWinStreakFootball,
+    activeWinStreakByWcStage: { qualifying, main },
+  };
+}
+
+/** reconcile が rankingByWcStage を上書きしても WC 連勝フィールドを残す */
+export function applyWcStageStreakToCumulativePayload(
+  payload: Record<string, unknown>,
+  streak: WcStageStreakSnapshot
+): void {
+  payload.activeWinStreakFootball = streak.activeWinStreakFootball;
+  payload.activeWinStreak = streak.activeWinStreakFootball;
+  payload.activeWinStreakByWcStage = streak.activeWinStreakByWcStage;
+
+  const rbs = payload.rankingByWcStage as Record<
+    string,
+    Record<string, unknown>
+  >;
+  for (const stage of ["qualifying", "main"] as const) {
+    const block = rbs[stage];
+    if (!block) continue;
+    block.activeWinStreak = streak.activeWinStreakByWcStage[stage];
+  }
+}
+
 export function cumulativePayloadFromAggregate(
   uid: string,
   user: Record<string, unknown>,
   agg: AggregatedCumulative,
-  lastReconciledDateKey: string
+  lastReconciledDateKey: string,
+  wcStageStreak?: WcStageStreakSnapshot | null
 ): Record<string, unknown> {
-  return {
+  const payload: Record<string, unknown> = {
     uid,
     displayName: user.displayName ?? "user",
     handle: user.handle ?? null,
@@ -407,6 +476,10 @@ export function cumulativePayloadFromAggregate(
     lastReconciledDateKey,
     updatedAt: FieldValue.serverTimestamp(),
   };
+  if (wcStageStreak) {
+    applyWcStageStreakToCumulativePayload(payload, wcStageStreak);
+  }
+  return payload;
 }
 
 export async function fetchAllDailyDocsForUid(
@@ -434,22 +507,36 @@ export async function reconcileCumulativeStatsForUid(
   const agg = aggregateCumulativeFromDailyData(dailyDocs);
   const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
   const userRef = db.doc(`users/${uid}`);
-  const [cumulativeSnap, userSnap] = await Promise.all([
+  const userStatsRef = db.doc(`user_stats_v2/${uid}`);
+  const [cumulativeSnap, userSnap, userStatsSnap] = await Promise.all([
     cumulativeRef.get(),
     userRef.get(),
+    userStatsRef.get(),
   ]);
 
   const user = userSnap.exists ? userSnap.data()! : {};
   const current = cumulativeSnap.exists
     ? (cumulativeSnap.data() as Record<string, unknown>)
     : undefined;
+  const wcStageStreak =
+    readWcStageStreakSnapshot(
+      userStatsSnap.exists
+        ? (userStatsSnap.data() as Record<string, unknown>)
+        : undefined
+    ) ?? readWcStageStreakSnapshot(current);
 
   if (aggregatedCumulativeMatchesDoc(agg, current)) {
     return { updated: false, reason: "unchanged" };
   }
 
   await cumulativeRef.set(
-    cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey),
+    cumulativePayloadFromAggregate(
+      uid,
+      user,
+      agg,
+      lastReconciledDateKey,
+      wcStageStreak
+    ),
     { merge: true }
   );
   return { updated: true, reason: "ok" };
