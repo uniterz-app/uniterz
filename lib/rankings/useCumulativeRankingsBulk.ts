@@ -782,6 +782,11 @@ export function useCumulativeRankingsBulk(
             bundles: merged,
             deltas: myMetricValueDeltas,
             appliedUid: fetchUid ?? ANON_KEY,
+            snapshotGeneration: readScopeSnapshotGeneration(
+              phase,
+              round,
+              wcStage
+            ),
           });
           return merged;
         });
