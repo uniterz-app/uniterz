@@ -1394,6 +1394,7 @@ export default function PredictionFormV2({
                     awayName={awaySafe.name}
                     language={language}
                     isMobile={isMobile}
+                    gameId={gameId}
                   />
                 ) : (
                   <GameTeamStats
@@ -1710,6 +1711,7 @@ export default function PredictionFormV2({
                   onChange={setGoalScorerPick}
                   language={language}
                   isMobile={isMobile}
+                  gameId={gameId}
                 />
               ) : null}
             </motion.div>

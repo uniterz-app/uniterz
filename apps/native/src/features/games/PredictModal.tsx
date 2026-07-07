@@ -1323,6 +1323,7 @@ export default function PredictModal({
                             awayName={predictAwayTeamLabel}
                             language={language}
                             t={t}
+                            gameId={predictData.gameId}
                           />
                         ) : (
                           <Text style={s.predictToolsPanelSub}>{t.predictTabDataSoon}</Text>
@@ -1544,6 +1545,7 @@ export default function PredictModal({
                               onChange={setGoalScorerPick}
                               language={language}
                               t={t}
+                              gameId={predictData?.gameId}
                             />
                           ) : null}
                           {isSoccerPredict && !isWcLeague ? (
@@ -1603,6 +1605,7 @@ export default function PredictModal({
                               onChange={setGoalScorerPick}
                               language={language}
                               t={t}
+                              gameId={predictData?.gameId}
                             />
                           ) : null}
                           {isSoccerPredict && !isWcLeague ? (

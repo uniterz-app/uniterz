@@ -31,6 +31,7 @@ type Props = {
   onChange: (next: WcGoalScorerPick | null) => void;
   language: Language;
   isMobile?: boolean;
+  gameId?: string | null;
 };
 
 type TeamColumnProps = {
@@ -262,6 +263,7 @@ export default function WcGoalScorerPicker({
   onChange,
   language,
   isMobile = false,
+  gameId,
 }: Props) {
   const m = t(language);
   const { goalCounts } = useWcTournamentGoalCounts();
@@ -291,14 +293,14 @@ export default function WcGoalScorerPicker({
           ? {
               teamId: homeTeamId,
               label: homeLabel,
-              sections: buildGoalScorerSquadSections(homeSquad, homeTeamId),
+              sections: buildGoalScorerSquadSections(homeSquad, homeTeamId, gameId),
             }
           : null,
         awayTeamId && eligibleTeamIds.includes(awayTeamId)
           ? {
               teamId: awayTeamId,
               label: awayLabel,
-              sections: buildGoalScorerSquadSections(awaySquad, awayTeamId),
+              sections: buildGoalScorerSquadSections(awaySquad, awayTeamId, gameId),
             }
           : null,
       ].filter(Boolean) as Array<{
@@ -314,6 +316,7 @@ export default function WcGoalScorerPicker({
       homeSquad,
       awaySquad,
       eligibleTeamIds,
+      gameId,
     ]
   );
 

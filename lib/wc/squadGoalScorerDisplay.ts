@@ -16,8 +16,11 @@ export type GoalScorerSquadRow = {
   isStarter: boolean;
 };
 
-export function starterPlayerIdsForTeam(teamId: string): Set<string> {
-  const lineup = getWcPredictedLineup(teamId);
+export function starterPlayerIdsForTeam(
+  teamId: string,
+  gameId?: string | null,
+): Set<string> {
+  const lineup = getWcPredictedLineup(teamId, { gameId });
   if (!lineup?.slots?.length) return new Set();
   return new Set(lineup.slots.map((s) => s.playerId));
 }
@@ -46,9 +49,10 @@ export type GoalScorerSquadSections = {
 /** 得点者ピッカー用 — [スタメン FW→GK] | [ベンチ FW→GK] */
 export function buildGoalScorerSquadSections(
   squad: WcSquadPlayer[],
-  teamId: string
+  teamId: string,
+  gameId?: string | null,
 ): GoalScorerSquadSections {
-  const starterIds = starterPlayerIdsForTeam(teamId);
+  const starterIds = starterPlayerIdsForTeam(teamId, gameId);
   const hasLineupSplit = starterIds.size > 0;
 
   const rows = squad.map((player) => ({
