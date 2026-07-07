@@ -14,6 +14,8 @@ type Props = {
   language: Language;
   isMobile: boolean;
   className?: string;
+  /** QF 以降は R16 スナップショットを参照 */
+  gameId?: string | null;
 };
 
 const CYBER = {
@@ -128,11 +130,13 @@ export default function WcFormationPanel({
   language,
   isMobile,
   className,
+  gameId,
 }: Props) {
   if (!hasWcSquadData(teamId)) return null;
 
-  const lineup = getWcResolvedLineup(teamId);
-  const predicted = getWcPredictedLineup(teamId);
+  const lineupContext = { gameId };
+  const lineup = getWcResolvedLineup(teamId, lineupContext);
+  const predicted = getWcPredictedLineup(teamId, lineupContext);
   if (!lineup?.length || !predicted) return null;
 
   const m = t(language);

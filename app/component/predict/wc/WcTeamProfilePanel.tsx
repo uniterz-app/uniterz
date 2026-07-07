@@ -30,6 +30,7 @@ type Props = {
   awayName: string;
   language: Language;
   isMobile: boolean;
+  gameId?: string | null;
 };
 
 type TeamSide = "home" | "away";
@@ -41,6 +42,7 @@ export default function WcTeamProfilePanel({
   awayName,
   language,
   isMobile,
+  gameId,
 }: Props) {
   const [side, setSide] = useState<TeamSide>("home");
 
@@ -98,6 +100,7 @@ export default function WcTeamProfilePanel({
             fallbackName={activeName}
             language={language}
             isMobile={isMobile}
+            gameId={gameId}
           />
         </div>
       </div>
@@ -111,6 +114,7 @@ export default function WcTeamProfilePanel({
       homeName={homeName}
       awayName={awayName}
       language={language}
+      gameId={gameId}
     />
   );
 }
@@ -122,15 +126,17 @@ function WebSyncedTeamGrid({
   homeName,
   awayName,
   language,
+  gameId,
 }: {
   homeTeamId: string;
   awayTeamId: string;
   homeName: string;
   awayName: string;
   language: Language;
+  gameId?: string | null;
 }) {
-  const home = getTeamProfileSections(homeTeamId, homeName, language, false);
-  const away = getTeamProfileSections(awayTeamId, awayName, language, false);
+  const home = getTeamProfileSections(homeTeamId, homeName, language, false, gameId);
+  const away = getTeamProfileSections(awayTeamId, awayName, language, false, gameId);
 
   const rows: Array<{ key: string; home: ReactNode; away: ReactNode }> = [
     { key: "header", home: home.header, away: away.header },
@@ -166,6 +172,7 @@ function getTeamProfileSections(
   fallbackName: string,
   language: Language,
   isMobile: boolean,
+  gameId?: string | null,
 ) {
   const m = t(language);
   const profile = getWcTeamProfile(teamId);
@@ -221,6 +228,7 @@ function getTeamProfileSections(
         language={language}
         isMobile={isMobile}
         className="!mt-0"
+        gameId={gameId}
       />
     ),
     keyPlayers: (
@@ -239,13 +247,21 @@ function TeamCard({
   fallbackName,
   language,
   isMobile,
+  gameId,
 }: {
   teamId: string;
   fallbackName: string;
   language: Language;
   isMobile: boolean;
+  gameId?: string | null;
 }) {
-  const sections = getTeamProfileSections(teamId, fallbackName, language, isMobile);
+  const sections = getTeamProfileSections(
+    teamId,
+    fallbackName,
+    language,
+    isMobile,
+    gameId,
+  );
 
   return (
     <div className="min-w-0 space-y-3">

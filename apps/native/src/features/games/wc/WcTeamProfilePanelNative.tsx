@@ -28,6 +28,7 @@ type Props = {
   awayName: string;
   language: GamesLanguage;
   t: GamesTexts;
+  gameId?: string | null;
 };
 
 type TeamSide = "home" | "away";
@@ -37,11 +38,13 @@ function TeamCardNative({
   fallbackName,
   language,
   t,
+  gameId,
 }: {
   teamId: string;
   fallbackName: string;
   language: GamesLanguage;
   t: GamesTexts;
+  gameId?: string | null;
 }) {
   const profile = getWcTeamProfile(teamId);
   const displayName =
@@ -117,7 +120,7 @@ function TeamCardNative({
           />
         ) : null}
       </View>
-      <WcFormationPanelNative teamId={teamId} t={t} />
+      <WcFormationPanelNative teamId={teamId} t={t} gameId={gameId} />
       <KeyPlayersNative players={keyPlayers} language={language} t={t} />
     </View>
   );
@@ -295,6 +298,7 @@ export default function WcTeamProfilePanelNative({
   awayName,
   language,
   t,
+  gameId,
 }: Props) {
   const [side, setSide] = useState<TeamSide>("home");
 
@@ -341,6 +345,7 @@ export default function WcTeamProfilePanelNative({
         fallbackName={activeName}
         language={language}
         t={t}
+        gameId={gameId}
       />
     </View>
   );

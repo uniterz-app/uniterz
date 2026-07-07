@@ -29,6 +29,7 @@ type Props = {
   onChange: (next: WcGoalScorerPick | null) => void;
   language: GamesLanguage;
   t: GamesTexts;
+  gameId?: string | null;
 };
 
 function PlayerRowButton({
@@ -201,6 +202,7 @@ export default function WcGoalScorerPickerNative({
   value,
   onChange,
   t,
+  gameId,
 }: Props) {
   const { goalCounts } = useNativeWcTournamentGoalCounts();
   const homeSquad = useMemo(
@@ -224,14 +226,14 @@ export default function WcGoalScorerPickerNative({
           ? {
               teamId: homeTeamId,
               label: homeLabel,
-              sections: buildGoalScorerSquadSections(homeSquad, homeTeamId),
+              sections: buildGoalScorerSquadSections(homeSquad, homeTeamId, gameId),
             }
           : null,
         awayTeamId && eligibleTeamIds.includes(awayTeamId)
           ? {
               teamId: awayTeamId,
               label: awayLabel,
-              sections: buildGoalScorerSquadSections(awaySquad, awayTeamId),
+              sections: buildGoalScorerSquadSections(awaySquad, awayTeamId, gameId),
             }
           : null,
       ].filter(Boolean) as Array<{
@@ -239,7 +241,7 @@ export default function WcGoalScorerPickerNative({
         label: string;
         sections: GoalScorerSquadSections;
       }>,
-    [homeTeamId, awayTeamId, homeLabel, awayLabel, homeSquad, awaySquad, eligibleTeamIds]
+    [homeTeamId, awayTeamId, homeLabel, awayLabel, homeSquad, awaySquad, eligibleTeamIds, gameId]
   );
 
   useEffect(() => {

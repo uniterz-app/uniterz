@@ -28,6 +28,7 @@ import type { GamesTexts } from "../gamesI18n";
 type Props = {
   teamId: string;
   t: GamesTexts;
+  gameId?: string | null;
 };
 
 /** Web `WcFormationPanel` CYBER と同一 */
@@ -540,16 +541,21 @@ function PlayerMarkerNative({
 }
 
 /** Web `WcFormationPanel` 相当（モバイル `isMobile`） */
-export default function WcFormationPanelNative({ teamId, t }: Props) {
+export default function WcFormationPanelNative({ teamId, t, gameId }: Props) {
   const [pitchSize, setPitchSize] = useState<PitchSize>({ width: 0, height: 0 });
   const surfaceId = `wc-pitch-${teamId}`;
 
+  const lineupContext = useMemo(() => ({ gameId }), [gameId]);
+
   const lineup = useMemo(() => {
     if (!hasWcSquadData(teamId)) return null;
-    return getWcResolvedLineup(teamId);
-  }, [teamId]);
+    return getWcResolvedLineup(teamId, lineupContext);
+  }, [teamId, lineupContext]);
 
-  const predicted = useMemo(() => getWcPredictedLineup(teamId), [teamId]);
+  const predicted = useMemo(
+    () => getWcPredictedLineup(teamId, lineupContext),
+    [teamId, lineupContext],
+  );
 
   const labelLayouts = useMemo(() => {
     if (!lineup?.length) return null;
