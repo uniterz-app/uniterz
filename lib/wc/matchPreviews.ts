@@ -659,6 +659,60 @@ const WC_MATCH_PREVIEWS: Record<string, WcMatchPreviewCopy> = {
       "France hold a slight overall edge, but Morocco are not a clear underdog — Bounou, Hakimi, Ounahi and Brahim Díaz know how to win knockouts. France win by scoring early and not letting Morocco grow; Morocco win by surviving the first half and pushing France’s left through Hakimi and Ounahi.",
     ],
   },
+  "wc-2026-ko-M98": {
+    ja: [
+      "スペイン対ベルギーは、今大会でもかなり質の高い準々決勝です。スペインはここまで無失点で勝ち上がっていて、守備の安定感とボール保持の完成度は大会トップクラスです。一方のベルギーも、アメリカ戦で4-1と一気に攻撃力を見せました。単純な勢いだけなら、ベルギーもかなり怖い存在です。",
+      "スペインはポルトガルに1-0勝利。派手なスコアではありませんが、相手に大きな決定機を作らせず、最後にメリーノのゴールで勝ち切りました。ロドリを中心に中盤で試合を落ち着かせ、ボールを失ってもすぐに回収できる。トーナメントで一番崩れにくいチームの一つです。",
+      "ベルギーはアメリカに4-1勝利。デ・ケテラーレが2点を取り、ドクやルカクも絡んで、かなり攻撃の迫力が出ました。これまでのベルギーは少し重さもありましたが、アメリカ戦では前線の個の強さとカウンターの鋭さがかなり出ていました。",
+      "この試合のポイントは、スペインの保持に対してベルギーがどこで奪うかです。スペインにロドリ、ペドリ、ヤマルを自由に使われると、ベルギーは長い時間押し込まれます。ただ、スペインが高い位置で失えば、ドクの縦突破、デ・ケテラーレの運び、ルカクのフィニッシュで一気にゴールまで行ける。ベルギーはボールを持つ時間より、奪った後の質が重要になります。",
+      "スペイン側の鍵は、ベルギーのカウンターを受けない失い方です。ヤマルやニコ・ウィリアムズがサイドで仕掛けるのは強みですが、その背後を使われると危ない。スペインが勝つなら、ボールを握るだけでなく、失った直後にドクやルカクへの出口を消せるかが大事です。",
+      "総合的にはスペインがやや有利です。守備の安定感、中盤の支配力、試合をコントロールする力では上回っています。ただ、ベルギーは一発の破壊力がある。スペインが先制すればかなり優位ですが、ベルギーが先にカウンターで刺すと、一気に試合の空気は変わります。",
+    ],
+    en: [
+      "Spain v Belgium is one of the quarter-finals’ highest-quality ties. Spain have advanced without conceding — defensive stability and possession quality rank among the tournament’s best. Belgium also showed real attacking force with a 4–1 win over the United States. On pure momentum alone, Belgium are a genuinely frightening opponent.",
+      "Spain beat Portugal 1–0 — not a flashy scoreline, but they denied major chances and Mikel Merino settled it late. Rodri calms the midfield and they recover the ball instantly after losing it — one of the hardest teams to break in the knockout phase.",
+      "Belgium beat the United States 4–1 — Charles De Ketelaere scored twice with Jérémy Doku and Romelu Lukaku involved in a much sharper attack. Belgium had looked a little heavy earlier in the tournament; against the USA their front-line quality and counter speed were far more visible.",
+      "The key is where Belgium win the ball against Spain’s possession. If Rodri, Pedri and Lamine Yamal operate freely, Belgium face long spells pinned back. Yet if Spain lose the ball high, Doku’s vertical runs, De Ketelaere’s carrying and Lukaku’s finishing can reach goal in one move. Belgium care less about time on the ball than quality after winning it.",
+      "Spain must lose the ball in ways that do not invite counters. Yamal and Nico Williams attacking wide is a strength, but space in behind is dangerous. To win, Spain need more than possession — they must kill Doku and Lukaku’s outlets the moment they turn over.",
+      "Overall Spain hold a slight edge in defensive stability, midfield control and game management. Belgium carry one-shot destruction, though — an early Spain goal tilts the tie heavily; a Belgian counter first flips the atmosphere entirely.",
+    ],
+  },
+  "wc-2026-ko-M99": {
+    ja: [
+      "ノルウェー対イングランドは、今大会の流れを考えるとかなり面白いカードです。ノルウェーはブラジルを倒して初のベスト8。イングランドはメキシコとの激闘を10人で耐え切って勝ち上がりました。どちらも勢いがありますが、試合の構図はかなりはっきりしています。",
+      "ノルウェーはブラジルに2-1勝利。ハーランドが終盤に2点を取り、ブラジルを一気に沈めました。ブラジルに押し込まれる時間もありましたが、最後まで耐えて、少ないチャンスをハーランドの質で仕留めた。これはノルウェーにとってかなり大きな自信になります。",
+      "イングランドはメキシコに3-2勝利。ベリンガムが前半に2点、後半にケインがPKを決めましたが、その後に退場者を出して、最後はかなり苦しい展開でした。それでもアステカの空気の中で逃げ切ったのは大きいです。内容が完璧ではなくても、ケインとベリンガムで試合を動かせるのがイングランドの強さです。",
+      "最大のポイントは、ハーランド対イングランドCBです。ノルウェーは多くのチャンスを作らなくてもいい。ウーデゴールが一度前を向き、ハーランドが一度背後やボックス内で優位を取れば、それだけで得点になります。イングランドはハーランドを1対1で止めるというより、ウーデゴールに前を向かせない守備が重要になります。",
+      "逆にイングランドは、ノルウェーの中盤を押し下げたい。ケインが下がって受け、ベリンガムが前向きに入っていく形が出れば、ノルウェーの守備はかなり難しくなります。さらにサカが右サイドで1対1を作れれば、ノルウェーはハーランドへのカウンターだけでは耐えきれなくなる。",
+      "総合力ではイングランドが少し上です。ただ、ノルウェーはもう普通の伏兵ではありません。ブラジルを倒したことで、守って耐えてハーランドで仕留める勝ち筋に確信を持っています。イングランドが勝つなら、ウーデゴールへの配球を切り、ハーランドを孤立させること。ノルウェーが勝つなら、耐える時間を長くしながら、ハーランドに最低2、3回は良い形で届けられるかが鍵です。",
+    ],
+    en: [
+      "Norway v England is a fascinating quarter-final given how this tournament has unfolded. Norway beat Brazil to reach a first-ever quarter-final; England survived a brutal Mexico tie with ten men. Both arrive with momentum, yet the tactical picture is fairly clear.",
+      "Norway beat Brazil 2–1 — Erling Haaland scored twice late to sink Brazil. They endured long spells pinned back but held on and converted limited chances through Haaland’s quality. That should give Norway major confidence.",
+      "England beat Mexico 3–2 — Jude Bellingham scored twice in the first half and Harry Kane converted a penalty in the second, then a red card made the finish gruelling. Escaping the Azteca atmosphere still matters; England are not perfect, but Kane and Bellingham can still swing games.",
+      "Haaland against England’s centre-backs is the headline. Norway need not fashion many chances — one forward-facing Martin Ødegaard pass and one Haaland run behind or edge inside the box can be enough. England must deny Ødegaard forward time more than win isolated 1v1 duels against Haaland.",
+      "England want to push Norway’s midfield back — Kane dropping to receive and Bellingham arriving forward makes Norway’s defending far harder. If Bukayo Saka wins 1v1s on the right, Norway cannot survive on Haaland counters alone.",
+      "Overall England hold a slight edge, but Norway are no ordinary underdog — beating Brazil has convinced them they can absorb and finish through Haaland. England win by cutting Ødegaard’s supply and isolating Haaland; Norway win by extending survival time and feeding Haaland two or three good looks.",
+    ],
+  },
+  "wc-2026-ko-M100": {
+    ja: [
+      "アルゼンチン対スイスは、名前だけならアルゼンチン有利ですが、かなり危険な試合です。アルゼンチンはエジプト戦で0-2から逆転して勝ち上がりましたが、内容的には不安も残しました。一方のスイスはコロンビアをPKで倒し、守備の粘りとトーナメントのしぶとさを見せています。",
+      "アルゼンチンはエジプトに3-2勝利。終盤に一気に3点を奪って逆転しましたが、2点を先行されたこと自体はかなり大きな警告です。メッシを中心に最後の局面の質はまだ高い。ただ、ノックアウトに入ってからは、試合を完全に支配し切れているわけではありません。",
+      "スイスはコロンビアに0-0からPK勝ち。派手な試合ではありませんでしたが、相手の勢いを受け止め、最後まで崩れませんでした。シャカを中心に中盤でリズムを作り、守備では中央を簡単に空けない。強豪相手でも試合をロースコアに持ち込めるのがスイスの強みです。",
+      "この試合のポイントは、アルゼンチンがスイスのブロックをどう動かすかです。スイスは中央を締めるのがうまいので、メッシがライン間で受けるスペースを簡単には与えません。アルゼンチンはメッシだけに頼らず、サイドの幅、アルバレスやラウタロの背後への動き、マック・アリスターやエンソの飛び出しで守備を動かしたい。",
+      "スイス側は、試合を荒らさず、自分たちのテンポに持ち込むことが重要です。前半を0-0で進められれば、アルゼンチンには焦りが出ます。そこからセットプレー、シャカの展開、サイドからのクロスで1点を狙う。スイスは大量にチャンスを作るチームではありませんが、試合を長引かせる力はかなりあります。",
+      "総合力ではアルゼンチン有利です。メッシの決定力、終盤の勝負強さ、個の質では上回っています。ただ、スイスはかなり嫌な相手です。アルゼンチンが早めに先制できれば一気に楽になりますが、0-0の時間が長くなるとスイスの土俵になります。アルゼンチンが勝つなら、メッシの周りを孤立させず、複数のルートで崩すこと。スイスが勝つなら、前半を耐えて、試合をPK戦まで見える展開に持ち込めるかが鍵です。",
+    ],
+    en: [
+      "Argentina v Switzerland looks like an Argentina favourite on paper, but it is a dangerous tie. Argentina came from 0–2 down to beat Egypt, yet doubts remain in the performance; Switzerland beat Colombia on penalties, showing defensive stubbornness and knockout grit.",
+      "Argentina beat Egypt 3–2 — three late goals turned it around, but falling two behind was a serious warning. Lionel Messi still drives quality in the final third, yet Argentina have not fully dominated games since the knockouts began.",
+      "Switzerland beat Colombia 0–0 on penalties — not flashy, but they absorbed Colombian momentum without collapsing. Granit Xhaka sets midfield rhythm and they rarely leave the centre open; dragging elite opponents into low-scoring games is their trademark.",
+      "Can Argentina move Switzerland’s block? The Swiss compress the middle and will not easily grant Messi space between the lines. Argentina must not rely on Messi alone — width, runs behind from Julián Álvarez and Lautaro Martínez, and bursts from Alexis Mac Allister and Enzo Fernández should shift the defence.",
+      "Switzerland must avoid chaos and impose their tempo. A 0–0 first half breeds Argentine anxiety — then set pieces, Xhaka’s distribution and crosses from wide can hunt one goal. Switzerland do not create in volume, but they extend games expertly.",
+      "Overall Argentina hold the edge in Messi’s finishing, late-game nerve and individual quality. Switzerland are an awkward opponent, though — an early Argentine goal eases everything; long 0–0 spells become Swiss territory. Argentina win by attacking through multiple routes without isolating Messi; Switzerland win by surviving the first half and dragging the tie toward penalties.",
+    ],
+  },
   "wc-2026-A-cze-zaf": {
     ja: [
       "A組の敗者同士。チェコは韓国に1-2、南アフリカはメキシコに0-2で敗れており、ここで負けると3位通過争いでもかなり厳しくなる。特にチェコは最終節がメキシコ戦のため、この試合で勝点3が欲しい。",
