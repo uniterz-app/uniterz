@@ -1,0 +1,24 @@
+.profile-plan-pro-mobile-bg-showcase-page {
+  overflow-x: clip;
+}
+
+.profile-plan-pro-mobile-bg-showcase-frame {
+  overflow: visible;
+}
+
+.profile-plan-pro-mobile-bg-showcase-row {
+  scroll-margin-top: 7rem;
+}
+
+.profile-plan-pro-mobile-bg-showcase-free .profile-plan-pro-bg,
+.profile-plan-pro-mobile-bg-showcase-free .profile-plan-pro-ambient,
+.profile-plan-pro-mobile-bg-showcase-free .profile-plan-pro-frame-sweep,
+.profile-plan-pro-mobile-bg-showcase-free .profile-plan-pro-frame-inner,
+.profile-plan-pro-mobile-bg-showcase-free .profile-plan-pro-frame-rail,
+.profile-plan-pro-mobile-bg-showcase-free .profile-plan-pro-frame-edge {
+  display: none !important;
+}
+
+.profile-plan-pro-mobile-bg-showcase-free .profile-plan-pro-display-name {
+  text-shadow: none !important;
+}

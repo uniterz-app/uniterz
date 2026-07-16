@@ -12,13 +12,13 @@ export type RankingsTitleCyberVariant =
   | "scan-pulse";
 
 const CHROME_GRADIENT_HARD =
-  "linear-gradient(180deg, #F0FEFF 0%, #9CF6FF 28%, #00F5FF 46%, #00F5FF 48%, #00A8B8 52%, #00CFE0 68%, #7AEEF8 100%)";
+  "linear-gradient(180deg, #F5FEFF 0%, #BFF8FF 24%, #67E8F9 43%, #12C8D6 50%, #0EA5B7 64%, #7DDDEA 100%)";
 
 const CHROME_GRADIENT_SOFT =
   "linear-gradient(180deg, #CFFAFE 0%, #00F5FF 38%, #06B6D4 68%, #A5F3FC 100%)";
 
 const CYAN_TITLE_GLOW =
-  "drop-shadow(0 0 10px rgba(0,245,255,0.55)) drop-shadow(0 0 22px rgba(0,245,255,0.28))";
+  "drop-shadow(0 1px 2px rgba(0,10,18,0.85)) drop-shadow(0 0 6px rgba(34,211,238,0.28)) drop-shadow(0 0 14px rgba(14,165,233,0.14))";
 
 function chromeTextStyle(hard = true): CSSProperties {
   return {

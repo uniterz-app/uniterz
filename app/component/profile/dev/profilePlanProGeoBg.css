@@ -1,0 +1,241 @@
+/* PRO 背景 — 平面幾何学パターン（3D なし） */
+
+.profile-plan-pro-bg__geo-base {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    168deg,
+    var(--geo-base-a, #050810) 0%,
+    var(--geo-base-b, #070d16) 48%,
+    var(--geo-base-c, #030508) 100%
+  );
+}
+
+.profile-plan-pro-bg__geo-pattern {
+  position: absolute;
+  inset: -12%;
+  opacity: var(--geo-pattern-opacity, 0.55);
+  /* 縦方向の切れ目を出さないようマスクを緩める */
+  mask-image: radial-gradient(ellipse 95% 92% at 50% 48%, black 12%, transparent 88%);
+  will-change: transform, opacity;
+}
+
+.profile-plan-pro-bg__geo-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--geo-glow-opacity, 0.45);
+  background: var(--geo-glow, none);
+}
+
+.profile-plan-pro-bg__vignette--geo {
+  background: radial-gradient(
+    ellipse 90% 80% at 50% 46%,
+    transparent 10%,
+    rgba(2, 4, 8, 0.82) 100%
+  );
+}
+
+@keyframes profile-plan-pro-geo-drift {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(var(--geo-drift-x, 24px), var(--geo-drift-y, 18px));
+  }
+}
+
+@keyframes profile-plan-pro-geo-pulse {
+  0%,
+  100% {
+    opacity: var(--geo-pattern-opacity, 0.55);
+  }
+  50% {
+    opacity: calc(var(--geo-pattern-opacity, 0.55) * 1.35);
+  }
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__geo-pattern {
+  animation:
+    profile-plan-pro-geo-drift var(--geo-drift-duration, 28s) linear infinite,
+    profile-plan-pro-geo-pulse var(--geo-pulse-duration, 6s) ease-in-out infinite;
+}
+
+/* —— Lattice Grid —— */
+.profile-plan-pro-bg--geo-lattice {
+  --geo-line: rgba(34, 211, 238, 0.1);
+  --geo-line-bold: rgba(34, 211, 238, 0.16);
+  --geo-drift-x: 28px;
+  --geo-drift-y: 28px;
+}
+
+.profile-plan-pro-bg--geo-lattice .profile-plan-pro-bg__geo-pattern {
+  background-image:
+    linear-gradient(var(--geo-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--geo-line) 1px, transparent 1px),
+    linear-gradient(var(--geo-line-bold) 1px, transparent 1px),
+    linear-gradient(90deg, var(--geo-line-bold) 1px, transparent 1px);
+  background-size:
+    22px 22px,
+    22px 22px,
+    110px 110px,
+    110px 110px;
+}
+
+.profile-plan-pro-bg--geo-lattice .profile-plan-pro-bg__geo-glow {
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 38%,
+    rgba(34, 211, 238, 0.12) 0%,
+    transparent 68%
+  );
+}
+
+/* —— Diamond Quilt —— */
+.profile-plan-pro-bg--geo-diamond {
+  --geo-line: rgba(167, 139, 250, 0.11);
+  --geo-line-alt: rgba(34, 211, 238, 0.09);
+  --geo-drift-x: 20px;
+  --geo-drift-y: -20px;
+}
+
+.profile-plan-pro-bg--geo-diamond .profile-plan-pro-bg__geo-pattern {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 14px,
+      var(--geo-line) 14px,
+      var(--geo-line) 15px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 14px,
+      var(--geo-line-alt) 14px,
+      var(--geo-line-alt) 15px
+    );
+}
+
+.profile-plan-pro-bg--geo-diamond .profile-plan-pro-bg__geo-glow {
+  background: conic-gradient(
+    from 0deg at 50% 45%,
+    rgba(34, 211, 238, 0.08),
+    rgba(167, 139, 250, 0.1),
+    rgba(34, 211, 238, 0.06),
+    rgba(167, 139, 250, 0.08)
+  );
+  opacity: 0.35;
+}
+
+/* —— Triangle Mesh —— */
+.profile-plan-pro-bg--geo-triangle {
+  --geo-line: rgba(79, 247, 244, 0.1);
+  --geo-drift-x: 32px;
+  --geo-drift-y: 0px;
+  --geo-drift-duration: 36s;
+}
+
+.profile-plan-pro-bg--geo-triangle .profile-plan-pro-bg__geo-pattern {
+  background-image:
+    repeating-linear-gradient(
+      60deg,
+      transparent,
+      transparent 18px,
+      var(--geo-line) 18px,
+      var(--geo-line) 19px
+    ),
+    repeating-linear-gradient(
+      -60deg,
+      transparent,
+      transparent 18px,
+      rgba(34, 211, 238, 0.07) 18px,
+      rgba(34, 211, 238, 0.07) 19px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 31px,
+      rgba(167, 139, 250, 0.06) 31px,
+      rgba(167, 139, 250, 0.06) 32px
+    );
+}
+
+/* —— Hex Honeycomb —— */
+.profile-plan-pro-bg--geo-hex {
+  --geo-drift-x: 26px;
+  --geo-drift-y: 15px;
+  --geo-drift-duration: 32s;
+}
+
+.profile-plan-pro-bg--geo-hex .profile-plan-pro-bg__geo-pattern {
+  --geo-hex-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cg fill='none' stroke='rgba(34,211,238,0.14)' stroke-width='1'%3E%3Cpath d='M28 1 L54 16 L54 46 L28 61 L2 46 L2 16 Z'/%3E%3Cpath d='M28 51 L54 66 L54 96 L28 111 L2 96 L2 66 Z' transform='translate(0,-50)'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: var(--geo-hex-svg);
+  background-size: 56px 100px;
+}
+
+.profile-plan-pro-bg--geo-hex .profile-plan-pro-bg__geo-glow {
+  background: radial-gradient(
+    circle at 62% 32%,
+    rgba(34, 211, 238, 0.14) 0%,
+    transparent 52%
+  );
+}
+
+/* —— Cross Hatch —— */
+.profile-plan-pro-bg--geo-crosshatch {
+  --geo-line: rgba(34, 211, 238, 0.09);
+  --geo-drift-x: 16px;
+  --geo-drift-y: 16px;
+  --geo-pulse-duration: 8s;
+}
+
+.profile-plan-pro-bg--geo-crosshatch .profile-plan-pro-bg__geo-pattern {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      var(--geo-line) 8px,
+      var(--geo-line) 9px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      rgba(167, 139, 250, 0.07) 8px,
+      rgba(167, 139, 250, 0.07) 9px
+    );
+  background-size: 18px 18px;
+}
+
+/* —— Dot Stipple —— */
+.profile-plan-pro-bg--geo-stipple {
+  --geo-drift-x: 12px;
+  --geo-drift-y: 10px;
+  --geo-drift-duration: 40s;
+}
+
+.profile-plan-pro-bg--geo-stipple .profile-plan-pro-bg__geo-pattern {
+  background-image:
+    radial-gradient(circle, rgba(34, 211, 238, 0.22) 1px, transparent 1px),
+    radial-gradient(circle, rgba(167, 139, 250, 0.16) 1px, transparent 1px);
+  background-size:
+    20px 20px,
+    20px 20px;
+  background-position:
+    0 0,
+    10px 10px;
+}
+
+.profile-plan-pro-bg--geo-stipple .profile-plan-pro-bg__geo-glow {
+  background: radial-gradient(
+    ellipse 80% 60% at 48% 42%,
+    rgba(34, 211, 238, 0.1) 0%,
+    transparent 70%
+  );
+}
+
+/* —— Swatch —— */
+.profile-plan-pro-geo-swatch .profile-plan-pro-bg {
+  border-radius: inherit;
+}

@@ -81,7 +81,16 @@ async function scheduleLocalPushPreview(input: {
       data,
       sound: "default",
     },
-    trigger: delay > 0 ? { type: "timeInterval", seconds: delay, repeats: false } : null,
+    trigger:
+      delay > 0
+        ? ({
+            type: "timeInterval",
+            seconds: delay,
+            repeats: false,
+          } as Parameters<
+            typeof Notifications.scheduleNotificationAsync
+          >[0]["trigger"])
+        : null,
   });
   return "ok";
 }
@@ -298,10 +307,6 @@ export default function NotificationDevScreenNative() {
         <Section title="タブドット（アプリ内）">
           <Row label="Rankings" value={badges.showRankingBadge ? "● 表示中" : "なし"} />
           <Row label="Result" value={badges.showResultBadge ? "● 表示中" : "なし"} />
-          <Row
-            label="Leaderboards"
-            value={badges.showLeaderboardsBadge ? "● 表示中" : "なし"}
-          />
           <Text style={styles.hint}>
             下部タブのアイコン右上にシアン色の丸。タブを開くと消えます。
           </Text>

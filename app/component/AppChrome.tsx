@@ -10,6 +10,7 @@ export default function AppChrome() {
   const shouldHideAll =
     pathname.startsWith("/dev/my-rank-free-pro-preview") ||
     pathname === "/" ||
+    pathname.startsWith("/dev") ||
     pathname === "/lp" ||
     pathname === "/lp-v2" ||
     pathname === "/mobile/lp" ||

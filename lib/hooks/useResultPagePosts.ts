@@ -25,6 +25,7 @@ import { useResultLeagueFlags } from "@/lib/hooks/useResultLeagueFlags";
 import {
   groupPostsByResultDay,
   mapDocToPostWithMillis,
+  isFinalResultPost,
   RESULT_POSTS_MAX_CACHED,
   RESULT_TAB_PAGE_SIZE,
   type PostWithMillis,
@@ -245,6 +246,31 @@ export function useResultPagePosts(
     void loadPage({ reset: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, uid, league, fetchEnabled]);
+
+  /** タブ復帰時に再取得 */
+  useEffect(() => {
+    if (!authReady || !uid || !fetchEnabled) return;
+    if (typeof document === "undefined") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void loadPage({ reset: true });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady, uid, league, fetchEnabled]);
+
+  const hasPendingSettlement = useMemo(
+    () => posts.some((p) => !isFinalResultPost(p)),
+    [posts]
+  );
+
+  /** 未精算カードがある間は定期再取得 */
+  useEffect(() => {
+    if (!authReady || !uid || !fetchEnabled || !hasPendingSettlement) return;
+    const id = setInterval(() => void loadPage({ reset: true }), 20_000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady, uid, league, fetchEnabled, hasPendingSettlement]);
 
   useEffect(() => {
     if (!authReady || !uid || !fetchEnabled) return;

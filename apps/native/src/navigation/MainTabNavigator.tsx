@@ -11,6 +11,7 @@ import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
 import {
   DEFAULT_HEADER_WORDMARK,
   resolveHeaderWordmarkFromMainTab,
+  type HeaderWordmark,
 } from "../../../../lib/ui/headerWordmark";
 import {
   GamesStackScreen,
@@ -24,7 +25,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function resolveTabWordmark(
   state: NavigationState | PartialState<NavigationState> | undefined
-): string {
+): HeaderWordmark {
   const routeName = state?.routes[state.index ?? 0]?.name;
   return resolveHeaderWordmarkFromMainTab(routeName);
 }

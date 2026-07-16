@@ -1,0 +1,136 @@
+/**
+ * /dev/profile-plan-pro-layout-showcase
+ */
+
+.profile-plan-pro-layout-showcase-page {
+  overflow-x: clip;
+}
+
+.profile-plan-pro-layout-showcase-frame {
+  background: rgba(3, 8, 13, 0.55);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(34, 211, 238, 0.1),
+    0 0 64px rgba(167, 139, 250, 0.08);
+}
+
+.profile-plan-pro-layout-showcase-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 16px;
+}
+
+.profile-plan-pro-layout-showcase-card--cyber {
+  border-color: rgba(34, 211, 238, 0.14);
+  background: linear-gradient(
+    165deg,
+    rgba(8, 18, 32, 0.55) 0%,
+    rgba(2, 6, 12, 0.35) 100%
+  );
+}
+
+.profile-plan-pro-layout-showcase-card--cyber::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.02) 0,
+    rgba(255, 255, 255, 0.02) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.35;
+  border-radius: inherit;
+}
+
+.profile-plan-pro-layout-showcase-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 本番カード内 — メトリクス案の cyber 強化 */
+.profile-plan-pro-layout-showcase .profile-plan-pro-metrics-embedded {
+  position: relative;
+  isolation: isolate;
+}
+
+.profile-plan-pro-layout-showcase .profile-plan-pro-metrics-embedded::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(34, 211, 238, 0.03) 0,
+    rgba(34, 211, 238, 0.03) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+}
+
+.profile-plan-pro-layout-showcase .pro-metric-variant--bento .pro-metric-variant__card {
+  box-shadow:
+    0 0 24px var(--mv-accent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.profile-plan-pro-layout-showcase .pro-metric-variant--slant .pro-metric-variant__slant-card {
+  box-shadow:
+    -6px 6px 0 rgba(0, 0, 0, 0.45),
+    0 0 22px var(--mv-accent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.profile-plan-pro-layout-showcase .pro-metric-variant--orbit .pro-metric-variant__orbit-hub {
+  animation: profile-plan-pro-orbit-pulse 4s ease-in-out infinite;
+}
+
+@keyframes profile-plan-pro-orbit-pulse {
+  0%,
+  100% {
+    opacity: 0.82;
+    filter: brightness(0.95);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+}
+
+.profile-plan-pro-layout-showcase .pro-metric-variant--orbit .pro-metric-variant__orbit-ring {
+  border-color: rgba(34, 211, 238, 0.42);
+  box-shadow:
+    0 0 24px rgba(34, 211, 238, 0.22),
+    inset 0 0 20px rgba(167, 139, 250, 0.12);
+}
+
+.profile-plan-pro-layout-showcase .pro-metric-variant--ribbon .pro-metric-variant__ribbon-row {
+  box-shadow: none;
+}
+
+.profile-plan-pro-layout-showcase .pro-metric-variant--terminal {
+  border-color: rgba(34, 211, 238, 0.32);
+  box-shadow:
+    inset 0 0 32px rgba(34, 211, 238, 0.06),
+    0 0 28px rgba(167, 139, 250, 0.08);
+}
+
+.profile-plan-pro-layout-showcase .pro-metric-variant--terminal .pro-metric-variant__terminal-body {
+  background: linear-gradient(
+    180deg,
+    rgba(34, 211, 238, 0.04) 0%,
+    transparent 28%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-plan-pro-layout-showcase .pro-metric-variant--orbit .pro-metric-variant__orbit-hub {
+    animation: none;
+  }
+}

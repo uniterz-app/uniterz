@@ -356,6 +356,10 @@ export type GameDoc = {
   broadcastLabel?: string | null;
   /** WC：試合の実得点者（リザルト未投稿の一覧カード表示にも使用） */
   goalScorers?: unknown;
+  /** 規定＋延長終了スコア（PK 前） */
+  regulationEtScore?: { home?: number; away?: number } | null;
+  /** ノックアウト PK 進出側 teamId */
+  advancingTeamId?: string | null;
   /** PK 戦の本数（規定・延長スコアとは別） */
   pkScore?: { home?: number; away?: number } | null;
 };

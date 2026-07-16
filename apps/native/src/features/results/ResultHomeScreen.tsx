@@ -3,7 +3,7 @@ import { cyberAlert } from "../../components/cyberAlert";
 import {
   Platform, Pressable, RefreshControl, SectionList, StyleSheet, Text, View, type LayoutChangeEvent, type ViewStyle,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList } from "../../navigation/types";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
@@ -827,36 +827,14 @@ function ResultPostCard({
         {(leagueKey !== "nba" && leagueKey !== "wc") ? (
         <View style={styles.cardBadgeOverlay} pointerEvents="none">
           <Animated.View style={[styles.cardBadgeLeague, entrance.subBadgesStyle]}>
-            {pauseListFx || !(leagueKey === "nba" || leagueKey === "wc") ? (
-              <View
-                style={[
-                  styles.leaguePill,
-                  { backgroundColor: LEAGUE_PILL_BG[leagueKey] ?? "#334155" },
-                ]}
-              >
-                <Text style={styles.leaguePillText}>{pillText}</Text>
-              </View>
-            ) : (
-              <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
-            )}
-          </Animated.View>
-          <Animated.View
-            style={[
-              styles.cardBadgeOutcome,
-              hasCornerActions && styles.cardBadgeOutcomeWithFab,
-              entrance.hitMissBadgeStyle,
-            ]}
-          >
-            <ResultOutcomeBadgesNative
-              badge={badge}
-              outcomeBadge={outcomeBadge}
-              showStreakBadge={showStreakBadge}
-              stackBadges={stackBadges}
-              streakBadge={streakBadge}
-              activeWinStreak={activeWinStreak}
-              showLiveMark={showLiveMark}
-              hitBadgeSubtle
-            />
+            <View
+              style={[
+                styles.leaguePill,
+                { backgroundColor: LEAGUE_PILL_BG[leagueKey] ?? "#334155" },
+              ]}
+            >
+              <Text style={styles.leaguePillText}>{pillText}</Text>
+            </View>
           </Animated.View>
         </View>
         ) : null}
@@ -1217,6 +1195,25 @@ export default function ResultHomeScreen({
       league: leagueTab,
       enabled: leagueTab !== null,
     });
+
+  /** タブを開くたびに再取得（精算直後の pending 表示を残さない） */
+  useFocusEffect(
+    useCallback(() => {
+      void refreshPosts();
+    }, [refreshPosts])
+  );
+
+  const hasPendingSettlement = useMemo(
+    () => grouped.some((g) => g.pending.length > 0),
+    [grouped]
+  );
+
+  /** 未精算カードがある間は定期再取得（Cloud Functions 精算完了を待つ） */
+  useEffect(() => {
+    if (!hasPendingSettlement) return;
+    const id = setInterval(() => void refreshPosts(), 20_000);
+    return () => clearInterval(id);
+  }, [hasPendingSettlement, refreshPosts]);
 
   const [resultFilters, setResultFilters] = useState<ResultFilterState>({
     ...DEFAULT_RESULT_LIST_FILTERS,

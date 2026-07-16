@@ -293,22 +293,23 @@ export function PredictMatchPreview({
   const goalScorerInfo =
     mergedFinal?.wcGoalScorer ??
     (wcGoalScorer ? { ...wcGoalScorer, hit: null as boolean | null } : null);
+  const leagueRaw = String(data.leagueRaw ?? "");
   const homeRecordLine = useTeamRecordLineNative(
     isWcLeague ? homeTeamId : null,
-    data.leagueRaw
+    leagueRaw
   );
   const awayRecordLine = useTeamRecordLineNative(
     isWcLeague ? awayTeamId : null,
-    data.leagueRaw
+    leagueRaw
   );
   const homeWcRecordLabel = formatTeamRecordLabelNative(
     homeTeamId,
-    data.leagueRaw,
+    leagueRaw,
     homeRecordLine
   );
   const awayWcRecordLabel = formatTeamRecordLabelNative(
     awayTeamId,
-    data.leagueRaw,
+    leagueRaw,
     awayRecordLine
   );
   const homeGroupStanding = useMemo(
@@ -469,6 +470,9 @@ export function PredictMatchPreview({
                     wc={isWcLeague}
                   />
                 ) : null}
+                <Text style={s.matchPreviewOverlayPredictKicker} numberOfLines={1}>
+                  {t.myPrediction}
+                </Text>
                 <Text style={s.matchPreviewOverlayPredictRow} numberOfLines={1}>
                   <Text style={s.matchPreviewOverlayPredictNum}>
                     {mergedFinal.predictedScore.home}
@@ -2168,8 +2172,46 @@ const s = StyleSheet.create({
     paddingTop: 0,
   },
   matchPreviewOverlayPredictRow: {
-    marginTop: 2,
+    marginTop: 0,
     textAlign: "center",
+  },
+  matchPreviewOverlayPredictKicker: {
+    marginTop: 2,
+    fontSize: 8,
+    fontWeight: "600",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.45)",
+    textAlign: "center",
+  },
+  matchPreviewPkRow: {
+    marginTop: 1,
+    textAlign: "center",
+  },
+  matchPreviewPkLabel: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "rgba(251,191,36,0.85)",
+  },
+  matchPreviewPkNum: {
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    color: "rgba(251,191,36,0.95)",
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    textShadowColor: "rgba(251,191,36,0.28)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  matchPreviewPkDash: {
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    color: "rgba(251,191,36,0.8)",
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700",
   },
   matchPreviewOverlayPredictNum: {
     fontFamily: MATCH_CARD_SCORE_FONT,

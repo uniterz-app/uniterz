@@ -1,0 +1,106 @@
+/* PRO 背景 — 六角レイアウト比較 */
+
+/* 六角レイアウトは 1 枚をパネルにぴったり合わせる（四隅まで見せる）
+   - inset:0 で SVG の四隅 = パネルの四隅
+   - 縁フェードマスクは外す（四隅の内容が消えないように）
+   - 動きは opacity のみ（縁が欠けない） */
+.profile-plan-pro-bg[class*="geo-hex-layout"] .profile-plan-pro-bg__geo-pattern {
+  inset: 0;
+  mask-image: none;
+  -webkit-mask-image: none;
+  animation: none;
+}
+
+.profile-plan-pro-bg__geo-pattern--depth {
+  opacity: 0.28;
+}
+
+.profile-plan-pro-bg__geo-pattern--hex {
+  opacity: 0.88;
+}
+
+.profile-plan-pro-hex-swatch .profile-plan-pro-bg {
+  border-radius: inherit;
+}
+
+/* スウォッチは全体（四隅含む）を表示 — クロップせず引き伸ばし */
+.profile-plan-pro-hex-swatch .profile-plan-pro-bg__geo-pattern {
+  background-size: 100% 100% !important;
+}
+
+/* 全レイアウト共通のグロー */
+.profile-plan-pro-bg[class*="geo-hex-layout"] .profile-plan-pro-bg__geo-glow {
+  background: radial-gradient(
+    circle at 55% 36%,
+    rgba(34, 211, 238, 0.14) 0%,
+    transparent 58%
+  );
+}
+
+/* 四隅が消えないようビネットを弱める */
+.profile-plan-pro-bg[class*="geo-hex-layout"] .profile-plan-pro-bg__vignette--geo {
+  background: radial-gradient(
+    ellipse 100% 96% at 50% 50%,
+    transparent 66%,
+    rgba(2, 4, 8, 0.42) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate[class*="geo-hex-layout"]
+  .profile-plan-pro-bg__geo-pattern--hex {
+  animation: profile-plan-pro-hex-layout-pulse 7s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate[class*="geo-hex-layout"]
+  .profile-plan-pro-bg__geo-pattern--depth {
+  animation: profile-plan-pro-hex-layout-pulse-depth 9s ease-in-out infinite reverse;
+}
+
+@keyframes profile-plan-pro-hex-layout-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes profile-plan-pro-hex-layout-pulse-depth {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.34;
+  }
+}
+
+/* レイアウト別グロー微調整 */
+.profile-plan-pro-bg--geo-hex-layout-radial .profile-plan-pro-bg__geo-glow {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(34, 211, 238, 0.14) 0%,
+    transparent 62%
+  );
+}
+
+.profile-plan-pro-bg--geo-hex-layout-corners .profile-plan-pro-bg__geo-glow,
+.profile-plan-pro-bg--geo-hex-layout-corners-l .profile-plan-pro-bg__geo-glow,
+.profile-plan-pro-bg--geo-hex-layout-corners-quad .profile-plan-pro-bg__geo-glow {
+  background:
+    radial-gradient(circle at 8% 8%, rgba(34, 211, 238, 0.14) 0%, transparent 42%),
+    radial-gradient(circle at 92% 8%, rgba(167, 139, 250, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 8% 92%, rgba(6, 182, 212, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 92% 92%, rgba(34, 211, 238, 0.12) 0%, transparent 42%);
+}
+
+.profile-plan-pro-bg--geo-hex-layout-spine .profile-plan-pro-bg__geo-glow {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(6, 182, 212, 0.14),
+    transparent
+  );
+  opacity: 0.6;
+}

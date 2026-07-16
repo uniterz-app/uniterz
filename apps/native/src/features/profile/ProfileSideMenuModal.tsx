@@ -85,6 +85,12 @@ export default function ProfileSideMenuModal({
   const isAdmin = uid != null && uid === ADMIN_UID;
 
   useEffect(() => {
+    if (!visible) {
+      setLogoutOpen(false);
+    }
+  }, [visible]);
+
+  useEffect(() => {
     if (visible) {
       Animated.parallel([
         Animated.timing(backdropOpacity, {
@@ -202,10 +208,14 @@ export default function ProfileSideMenuModal({
     onOpenInApp(page);
   }
 
-  function confirmLogout() {
+  async function confirmLogout() {
     setLogoutOpen(false);
     onClose();
-    void signOut(auth);
+    try {
+      await signOut(auth);
+    } catch {
+      cyberAlert("", isJa ? "ログアウトに失敗しました。" : "Failed to log out.");
+    }
   }
 
   return (
@@ -215,7 +225,13 @@ export default function ProfileSideMenuModal({
         animationType="none"
         transparent
         statusBarTranslucent
-        onRequestClose={onClose}
+        onRequestClose={() => {
+          if (logoutOpen) {
+            setLogoutOpen(false);
+            return;
+          }
+          onClose();
+        }}
       >
         <View style={styles.root} pointerEvents="box-none">
           <Animated.View style={[styles.backdropWrap, { opacity: backdropOpacity }]}>
@@ -445,15 +461,16 @@ export default function ProfileSideMenuModal({
               </CyberSideMenuPanelNative>
             </Pressable>
           </Animated.View>
+
+          <LogoutConfirmModalNative
+            embedded
+            open={logoutOpen}
+            onClose={() => setLogoutOpen(false)}
+            onConfirm={() => void confirmLogout()}
+            language={language}
+          />
         </View>
       </Modal>
-
-      <LogoutConfirmModalNative
-        open={logoutOpen}
-        onClose={() => setLogoutOpen(false)}
-        onConfirm={confirmLogout}
-        language={language}
-      />
     </>
   );
 }

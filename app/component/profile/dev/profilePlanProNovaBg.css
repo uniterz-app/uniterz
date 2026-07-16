@@ -1,0 +1,597 @@
+/* PRO 背景 — 新世代 Nova FX（dev / 次回候補） */
+
+.profile-plan-pro-bg__nova-base {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    165deg,
+    var(--nova-base-a, #050810) 0%,
+    var(--nova-base-b, #030508) 55%,
+    var(--nova-base-c, #020204) 100%
+  );
+}
+
+.profile-plan-pro-bg__nova-grid {
+  position: absolute;
+  inset: -20%;
+  display: none;
+  opacity: var(--nova-grid-opacity, 0.35);
+  background-image:
+    linear-gradient(var(--nova-grid-color, rgba(34, 211, 238, 0.12)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--nova-grid-color, rgba(34, 211, 238, 0.12)) 1px, transparent 1px);
+  background-size: var(--nova-grid-size, 28px 28px);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 45%, black 15%, transparent 72%);
+}
+
+.profile-plan-pro-bg__nova-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(var(--nova-orb-blur, 36px));
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.profile-plan-pro-bg__nova-orb--a {
+  top: var(--nova-a-top, -18%);
+  left: var(--nova-a-left, -12%);
+  width: var(--nova-a-size, 72%);
+  height: var(--nova-a-size, 62%);
+  background: radial-gradient(ellipse at center, var(--nova-glow-a, rgba(34, 211, 238, 0.5)) 0%, transparent 70%);
+}
+
+.profile-plan-pro-bg__nova-orb--b {
+  top: var(--nova-b-top, 28%);
+  right: var(--nova-b-right, -18%);
+  width: var(--nova-b-size, 68%);
+  height: var(--nova-b-size, 54%);
+  background: radial-gradient(ellipse at center, var(--nova-glow-b, rgba(167, 139, 250, 0.45)) 0%, transparent 72%);
+}
+
+.profile-plan-pro-bg__nova-orb--c {
+  bottom: var(--nova-c-bottom, -22%);
+  left: var(--nova-c-left, 8%);
+  width: var(--nova-c-size, 78%);
+  height: var(--nova-c-size, 50%);
+  background: radial-gradient(ellipse at center, var(--nova-glow-c, rgba(79, 247, 244, 0.32)) 0%, transparent 74%);
+}
+
+.profile-plan-pro-bg__nova-fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--nova-fx-opacity, 0.85);
+}
+
+.profile-plan-pro-bg__nova-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--nova-overlay-opacity, 0.6);
+  background: var(--nova-overlay, none);
+}
+
+.profile-plan-pro-bg__vignette--nova {
+  background: radial-gradient(
+    ellipse 88% 78% at 50% 46%,
+    transparent 12%,
+    var(--nova-vignette, rgba(2, 4, 8, 0.78)) 100%
+  );
+}
+
+/* ── Neural Mesh ── */
+.profile-plan-pro-bg--nova-neural {
+  --nova-glow-a: rgba(34, 211, 238, 0.55);
+  --nova-glow-b: rgba(124, 92, 255, 0.48);
+  --nova-grid-color: rgba(34, 211, 238, 0.18);
+  --nova-grid-size: 22px 22px;
+}
+
+.profile-plan-pro-bg--nova-neural .profile-plan-pro-bg__nova-grid {
+  display: block;
+}
+
+.profile-plan-pro-bg--nova-neural .profile-plan-pro-bg__nova-fx {
+  background-image:
+    radial-gradient(circle at 18% 32%, rgba(34, 211, 238, 0.85) 0 2px, transparent 3px),
+    radial-gradient(circle at 42% 58%, rgba(167, 139, 250, 0.8) 0 2px, transparent 3px),
+    radial-gradient(circle at 68% 28%, rgba(79, 247, 244, 0.75) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 62%, rgba(34, 211, 238, 0.7) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 55% 78%, rgba(124, 92, 255, 0.65) 0 2px, transparent 3px),
+    linear-gradient(115deg, transparent 48%, rgba(34, 211, 238, 0.22) 49%, rgba(34, 211, 238, 0.22) 51%, transparent 52%),
+    linear-gradient(65deg, transparent 58%, rgba(167, 139, 250, 0.16) 59%, rgba(167, 139, 250, 0.16) 61%, transparent 62%);
+  background-size: 100% 100%;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 48%, black 20%, transparent 75%);
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-neural .profile-plan-pro-bg__nova-fx {
+  animation: profile-plan-pro-nova-neural-pulse 3.6s ease-in-out infinite;
+}
+
+/* ── Holo Scan ── */
+.profile-plan-pro-bg--nova-scan {
+  --nova-base-a: #030712;
+  --nova-glow-a: rgba(6, 182, 212, 0.35);
+  --nova-glow-b: rgba(34, 211, 238, 0.28);
+}
+
+.profile-plan-pro-bg--nova-scan .profile-plan-pro-bg__nova-fx {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(34, 211, 238, 0.04) 3px,
+      rgba(34, 211, 238, 0.04) 4px
+    ),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      transparent 42%,
+      rgba(34, 211, 238, 0.55) 49%,
+      rgba(236, 254, 255, 0.75) 50%,
+      rgba(34, 211, 238, 0.55) 51%,
+      transparent 58%,
+      transparent 100%
+    );
+  background-size: 100% 100%, 100% 220%;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-scan .profile-plan-pro-bg__nova-fx {
+  animation: profile-plan-pro-nova-scan-sweep 3.8s linear infinite;
+}
+
+.profile-plan-pro-bg--nova-scan .profile-plan-pro-bg__nova-overlay {
+  --nova-overlay: linear-gradient(180deg, rgba(6, 182, 212, 0.08) 0%, transparent 40%);
+  --nova-overlay-opacity: 0.9;
+}
+
+/* ── Data Cascade ── */
+.profile-plan-pro-bg--nova-cascade {
+  --nova-glow-a: rgba(8, 145, 178, 0.42);
+  --nova-glow-b: rgba(99, 102, 241, 0.38);
+}
+
+.profile-plan-pro-bg--nova-cascade .profile-plan-pro-bg__nova-fx {
+  background-image:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 8px,
+      rgba(34, 211, 238, 0.35) 8px,
+      rgba(34, 211, 238, 0.35) 9px,
+      transparent 9px,
+      transparent 18px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 14px,
+      rgba(167, 139, 250, 0.28) 14px,
+      rgba(167, 139, 250, 0.28) 15px,
+      transparent 15px,
+      transparent 28px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 6px,
+      rgba(79, 247, 244, 0.22) 6px,
+      rgba(79, 247, 244, 0.22) 7px,
+      transparent 7px,
+      transparent 16px
+    );
+  background-size: 18% 140%, 14% 180%, 22% 120%;
+  background-position: 12% 0, 48% 0, 78% 0;
+  mask-image: linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%);
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-cascade .profile-plan-pro-bg__nova-fx {
+  animation: profile-plan-pro-nova-cascade-fall 2.4s linear infinite;
+}
+
+/* ── Plasma Core ── */
+.profile-plan-pro-bg--nova-plasma {
+  --nova-glow-a: rgba(240, 171, 252, 0.52);
+  --nova-glow-b: rgba(124, 58, 237, 0.48);
+  --nova-glow-c: rgba(34, 211, 238, 0.38);
+  --nova-orb-blur: 42px;
+}
+
+.profile-plan-pro-bg--nova-plasma .profile-plan-pro-bg__nova-fx {
+  background: radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.06) 0%, transparent 38%);
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-plasma .profile-plan-pro-bg__nova-orb--a {
+  animation: profile-plan-pro-nova-plasma-a 5.5s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-plasma .profile-plan-pro-bg__nova-orb--b {
+  animation: profile-plan-pro-nova-plasma-b 7s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-plasma .profile-plan-pro-bg__nova-orb--c {
+  animation: profile-plan-pro-nova-plasma-c 4.8s ease-in-out infinite;
+}
+
+/* ── Shockwave ── */
+.profile-plan-pro-bg--nova-shockwave {
+  --nova-glow-a: rgba(34, 211, 238, 0.35);
+  --nova-glow-b: rgba(167, 139, 250, 0.28);
+}
+
+.profile-plan-pro-bg--nova-shockwave .profile-plan-pro-bg__nova-fx {
+  background:
+    radial-gradient(circle at 35% 42%, transparent 0%, transparent 18%, rgba(34, 211, 238, 0.35) 19%, transparent 20%),
+    radial-gradient(circle at 35% 42%, transparent 0%, transparent 28%, rgba(34, 211, 238, 0.22) 29%, transparent 30%),
+    radial-gradient(circle at 35% 42%, transparent 0%, transparent 38%, rgba(34, 211, 238, 0.12) 39%, transparent 40%),
+    radial-gradient(circle at 72% 58%, transparent 0%, transparent 16%, rgba(167, 139, 250, 0.32) 17%, transparent 18%),
+    radial-gradient(circle at 72% 58%, transparent 0%, transparent 26%, rgba(167, 139, 250, 0.18) 27%, transparent 28%);
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-shockwave .profile-plan-pro-bg__nova-fx {
+  animation: profile-plan-pro-nova-shockwave-expand 4.2s ease-out infinite;
+}
+
+/* ── Crystal Facet ── */
+.profile-plan-pro-bg--nova-facet {
+  --nova-base-a: #080512;
+  --nova-glow-a: rgba(34, 211, 238, 0.38);
+  --nova-glow-b: rgba(236, 72, 153, 0.32);
+}
+
+.profile-plan-pro-bg--nova-facet .profile-plan-pro-bg__nova-fx {
+  top: 50%;
+  left: 50%;
+  width: 140%;
+  height: 140%;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(34, 211, 238, 0.45) 0deg,
+    rgba(167, 139, 250, 0.35) 60deg,
+    rgba(236, 72, 153, 0.32) 120deg,
+    rgba(79, 247, 244, 0.38) 180deg,
+    rgba(124, 92, 255, 0.35) 240deg,
+    rgba(34, 211, 238, 0.45) 360deg
+  );
+  mask-image: radial-gradient(ellipse 55% 50% at 50% 50%, black 10%, transparent 68%);
+  opacity: 0.55;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-facet .profile-plan-pro-bg__nova-fx {
+  animation: profile-plan-pro-nova-facet-spin 14s linear infinite;
+}
+
+/* ── Field Lines ── */
+.profile-plan-pro-bg--nova-field {
+  --nova-glow-a: rgba(103, 232, 249, 0.4);
+  --nova-glow-b: rgba(34, 211, 238, 0.32);
+}
+
+.profile-plan-pro-bg--nova-field .profile-plan-pro-bg__nova-fx {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 240' preserveAspectRatio='none'%3E%3Cpath d='M0 120 Q100 40 200 120 T400 120' fill='none' stroke='rgba(34,211,238,0.35)' stroke-width='1.2'/%3E%3Cpath d='M0 140 Q120 200 240 140 T400 140' fill='none' stroke='rgba(167,139,250,0.28)' stroke-width='1'/%3E%3Cpath d='M0 90 Q80 150 160 90 T320 90 T400 90' fill='none' stroke='rgba(79,247,244,0.22)' stroke-width='0.9'/%3E%3Cpath d='M0 160 Q140 80 280 160 T400 160' fill='none' stroke='rgba(34,211,238,0.2)' stroke-width='0.8'/%3E%3C/svg%3E");
+  background-size: 120% 100%;
+  background-repeat: repeat-x;
+  mask-image: radial-gradient(ellipse 92% 78% at 50% 50%, black 18%, transparent 72%);
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-field .profile-plan-pro-bg__nova-fx {
+  animation: profile-plan-pro-nova-field-flow 8s ease-in-out infinite;
+}
+
+/* ── Corner Bloom ── */
+.profile-plan-pro-bg--nova-bloom {
+  --nova-glow-a: rgba(34, 211, 238, 0.48);
+  --nova-glow-b: rgba(192, 132, 252, 0.42);
+  --nova-glow-c: rgba(79, 247, 244, 0.28);
+}
+
+.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--a {
+  top: -25%;
+  left: -25%;
+  width: 55%;
+  height: 55%;
+}
+
+.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--b {
+  top: auto;
+  bottom: -25%;
+  right: -25%;
+  left: auto;
+  width: 58%;
+  height: 58%;
+}
+
+.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--c {
+  top: -20%;
+  right: -20%;
+  left: auto;
+  bottom: auto;
+  width: 45%;
+  height: 45%;
+}
+
+.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-fx {
+  background:
+    radial-gradient(circle at 0% 100%, rgba(124, 92, 255, 0.28) 0%, transparent 42%),
+    radial-gradient(circle at 100% 0%, rgba(34, 211, 238, 0.22) 0%, transparent 38%);
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--a {
+  animation: profile-plan-pro-nova-bloom-a 4.5s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--b {
+  animation: profile-plan-pro-nova-bloom-b 5.2s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--c {
+  animation: profile-plan-pro-nova-bloom-c 3.8s ease-in-out infinite;
+}
+
+/* ── 共通オーブドリフト ── */
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--a {
+  animation: profile-plan-pro-nova-drift-a 9s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--b {
+  animation: profile-plan-pro-nova-drift-b 11s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--c {
+  animation: profile-plan-pro-nova-drift-c 8s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-plasma .profile-plan-pro-bg__nova-orb--a {
+  animation: profile-plan-pro-nova-plasma-a 5.5s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-plasma .profile-plan-pro-bg__nova-orb--b {
+  animation: profile-plan-pro-nova-plasma-b 7s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-plasma .profile-plan-pro-bg__nova-orb--c {
+  animation: profile-plan-pro-nova-plasma-c 4.8s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--a {
+  animation: profile-plan-pro-nova-bloom-a 4.5s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--b {
+  animation: profile-plan-pro-nova-bloom-b 5.2s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-bloom .profile-plan-pro-bg__nova-orb--c {
+  animation: profile-plan-pro-nova-bloom-c 3.8s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-neural .profile-plan-pro-bg__nova-orb--a,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-neural .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-neural .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-scan .profile-plan-pro-bg__nova-orb--a,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-scan .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-scan .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-cascade .profile-plan-pro-bg__nova-orb--a,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-cascade .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-cascade .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-shockwave .profile-plan-pro-bg__nova-orb--a,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-shockwave .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-shockwave .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-facet .profile-plan-pro-bg__nova-orb--a,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-facet .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-facet .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-field .profile-plan-pro-bg__nova-orb--a,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-field .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-field .profile-plan-pro-bg__nova-orb--c {
+  animation: profile-plan-pro-nova-drift-a 9s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-neural .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-scan .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-cascade .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-shockwave .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-facet .profile-plan-pro-bg__nova-orb--b,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-field .profile-plan-pro-bg__nova-orb--b {
+  animation: profile-plan-pro-nova-drift-b 11s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-neural .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-scan .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-cascade .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-shockwave .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-facet .profile-plan-pro-bg__nova-orb--c,
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-field .profile-plan-pro-bg__nova-orb--c {
+  animation: profile-plan-pro-nova-drift-c 8s ease-in-out infinite;
+}
+
+/* ── Keyframes ── */
+@keyframes profile-plan-pro-nova-drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.78;
+  }
+  50% {
+    transform: translate(4%, 3%) scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes profile-plan-pro-nova-drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.02);
+    opacity: 0.72;
+  }
+  50% {
+    transform: translate(-3%, 2%) scale(0.94);
+    opacity: 0.95;
+  }
+}
+
+@keyframes profile-plan-pro-nova-drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.96);
+    opacity: 0.68;
+  }
+  50% {
+    transform: translate(2%, -2%) scale(1.06);
+    opacity: 0.88;
+  }
+}
+
+@keyframes profile-plan-pro-nova-neural-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.15);
+  }
+}
+
+@keyframes profile-plan-pro-nova-scan-sweep {
+  from {
+    background-position: 0 0, 0 -120%;
+  }
+  to {
+    background-position: 0 0, 0 120%;
+  }
+}
+
+@keyframes profile-plan-pro-nova-cascade-fall {
+  from {
+    background-position: 12% 0, 48% 0, 78% 0;
+  }
+  to {
+    background-position: 12% 140%, 48% 180%, 78% 120%;
+  }
+}
+
+@keyframes profile-plan-pro-nova-plasma-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(8%, -4%) scale(1.12) rotate(8deg);
+  }
+  66% {
+    transform: translate(-4%, 6%) scale(0.92) rotate(-5deg);
+  }
+}
+
+@keyframes profile-plan-pro-nova-plasma-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.04);
+  }
+  50% {
+    transform: translate(-6%, 4%) scale(0.88);
+  }
+}
+
+@keyframes profile-plan-pro-nova-plasma-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.94);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate(5%, -3%) scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes profile-plan-pro-nova-shockwave-expand {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.35;
+  }
+  40% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes profile-plan-pro-nova-facet-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes profile-plan-pro-nova-field-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.75;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 1;
+  }
+}
+
+@keyframes profile-plan-pro-nova-bloom-a {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes profile-plan-pro-nova-bloom-b {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes profile-plan-pro-nova-bloom-c {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.88;
+    transform: scale(1.08);
+  }
+}
+
+.profile-plan-pro-bg--mobile-boost.profile-plan-pro-bg[class*="nova-"] .profile-plan-pro-bg__nova-orb {
+  filter: blur(calc(var(--nova-orb-blur, 36px) * 0.72)) brightness(1.22) saturate(1.12);
+}
+
+.profile-plan-pro-bg--mobile-boost.profile-plan-pro-bg[class*="nova-"] .profile-plan-pro-bg__vignette--nova {
+  opacity: 0.52;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--a,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--b,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--c,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-fx,
+  .profile-plan-pro-bg--animate.profile-plan-pro-bg--nova-facet .profile-plan-pro-bg__nova-fx {
+    animation: none !important;
+  }
+}

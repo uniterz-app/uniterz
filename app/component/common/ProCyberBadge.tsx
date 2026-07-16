@@ -14,6 +14,8 @@ type Props = ProCyberBadgeMotionProps & {
   ariaLabel: string;
   /** ランキング一覧などでサイズを一段小さく */
   compact?: boolean;
+  /** プロフィールカード — compact より一段大きく */
+  premium?: boolean;
 };
 
 const MARK_SIZE = 64;
@@ -168,18 +170,24 @@ export function ProCyberBadge({
   animate,
   transition,
   compact = false,
+  premium = false,
 }: Props) {
   const rid = useId().replace(/[^a-zA-Z0-9-_]/g, "x");
 
-  const tagClass = compact
-    ? "relative inline-flex h-6 items-center gap-0.5 px-0.5 py-px sm:px-1"
-    : "relative inline-flex h-7 items-center gap-0.5 px-1 py-0.5";
+  // compact: 一覧用 / premium: プロフィールカード用（HEAD のラグジュアリー UI + サイズ段）
+  const tagClass = premium
+    ? "relative inline-flex h-8 items-center gap-0.5 px-1 py-0.5"
+    : compact
+      ? "relative inline-flex h-6 items-center gap-0.5 px-0.5 py-px sm:px-1"
+      : "relative inline-flex h-7 items-center gap-0.5 px-1 py-0.5";
   const bracketClass =
     "pointer-events-none absolute inset-0 h-full w-full overflow-visible";
-  const markClass = compact
-    ? "relative z-[1] h-[12px] w-[12px] shrink-0 sm:h-[13px] sm:w-[13px]"
-    : "relative z-[1] h-[15px] w-[15px] shrink-0";
-  const wordSize = compact ? "8px" : "9px";
+  const markClass = premium
+    ? "relative z-[1] h-[17px] w-[17px] shrink-0"
+    : compact
+      ? "relative z-[1] h-[12px] w-[12px] shrink-0 sm:h-[13px] sm:w-[13px]"
+      : "relative z-[1] h-[15px] w-[15px] shrink-0";
+  const wordSize = premium ? "10px" : compact ? "8px" : "9px";
 
   return (
     <motion.span

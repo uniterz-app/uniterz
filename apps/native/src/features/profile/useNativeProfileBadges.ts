@@ -140,11 +140,12 @@ export function useNativeProfileBadges(targetUid: string | undefined) {
       .map((ub) => {
         const master = masterBadges.find((m) => m.id === ub.badgeId);
         if (!master) return null;
+        const icon = resolveUniterzAssetUrl(master.icon);
         return {
           ...master,
-          icon: resolveUniterzAssetUrl(master.icon),
+          ...(icon ? { icon } : {}),
           grantedAt: ub.grantedAt,
-        };
+        } satisfies ResolvedBadgeNative;
       })
       .filter((b): b is ResolvedBadgeNative => b !== null);
   }, [userBadges, masterBadges]);

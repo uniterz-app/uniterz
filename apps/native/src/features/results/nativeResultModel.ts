@@ -7,6 +7,7 @@ import {
   getZonedYMD,
 } from "../../../../../lib/time/zonedTime";
 import { compareResultPostsForDayList } from "../../../../../lib/result/resultPostDaySort";
+import type { PostWithMillis as LibPostWithMillis } from "../../../../../lib/result/result-page-data";
 export type PostWithMillis = Record<string, unknown> & {
   id: string;
   createdAtMillis?: number | null;
@@ -211,8 +212,12 @@ export function groupPostsByResultDay(
   const days = Array.from(dayMap.values()).sort((a, b) => b.dateMs - a.dateMs);
 
   days.forEach((day) => {
-    day.pending.sort(compareResultPostsForDayList);
-    day.final.sort(compareResultPostsForDayList);
+    day.pending.sort((a, b) =>
+      compareResultPostsForDayList(a as LibPostWithMillis, b as LibPostWithMillis)
+    );
+    day.final.sort((a, b) =>
+      compareResultPostsForDayList(a as LibPostWithMillis, b as LibPostWithMillis)
+    );
   });
 
   return days;

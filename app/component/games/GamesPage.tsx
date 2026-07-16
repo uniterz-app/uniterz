@@ -293,8 +293,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!searchParams.has("team_mode")) return;
     const params = new URLSearchParams(searchParams.toString());
     params.delete("team_mode");
-    router.replace(`?${params.toString()}`, { scroll: false });
-  }, [teamFilterIds.length, searchParams, router]);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [teamFilterIds.length, searchParams, router, pathname]);
 
   const setTeamFilterIds = useCallback(
     (next: string[]) => {
@@ -302,10 +303,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       const s = serializeTeamFilterParam(next);
       if (s) params.set("team", s);
       else params.delete("team");
-      if (next.length < 2) params.delete("team_mode");
-      router.replace(`?${params.toString()}`, { scroll: false });
+      if (next.length !== 2) params.delete("team_mode");
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, searchParams],
+    [router, searchParams, pathname],
   );
 
   const setTeamFilterMatchMode = useCallback(
@@ -316,9 +318,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       } else {
         params.delete("team_mode");
       }
-      router.replace(`?${params.toString()}`, { scroll: false });
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, searchParams, teamFilterIds.length],
+    [router, searchParams, teamFilterIds.length, pathname],
   );
 
   const setMarginMinMax = useCallback(
@@ -329,9 +332,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       else params.set("margin_min", String(nextMin));
       if (nextMax == null) params.delete("margin_max");
       else params.set("margin_max", String(nextMax));
-      router.replace(`?${params.toString()}`, { scroll: false });
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, searchParams],
+    [router, searchParams, pathname],
   );
 
   const clearAllTeamAndMarginFilters = useCallback(() => {
@@ -341,8 +345,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     params.delete("margin");
     params.delete("margin_min");
     params.delete("margin_max");
-    router.replace(`?${params.toString()}`, { scroll: false });
-  }, [router, searchParams]);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [router, searchParams, pathname]);
 
   const passesTeamFilterRow = useCallback(
     (game: Record<string, unknown>) => {
@@ -1004,7 +1009,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const renderLeagueTitle = () => (
     <motion.div
-      className="flex min-w-0 justify-center"
+      className="pointer-events-none flex min-w-0 max-w-full justify-center overflow-hidden [&_*]:pointer-events-none"
       initial={webGamesMotion ? { opacity: 0 } : false}
       animate={
         webGamesMotion ? { opacity: [0, 1, 0.55, 1] } : { opacity: 1 }

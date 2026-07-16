@@ -1,14 +1,14 @@
 /**
  * 試合一覧の「チームで絞り込み」用。
  * Firestore games の home / away（文字列 or { name, teamId }）と照合する。
- * URL は最大2チーム（区切りは | 。単一IDのみの旧URLも解釈する）。
+ * URL は | 区切りで複数チーム ID（単一IDのみの旧URLも解釈する）。
  */
 
 export type TeamNameById = Record<string, string>;
 
 export const TEAM_FILTER_SEP = "|";
 
-/** クエリ team= の値を最大2件のユニークIDにパース */
+/** クエリ team= の値をユニーク ID 配列にパース */
 export function parseTeamFilterParam(
   param: string | null | undefined,
 ): string[] {
@@ -22,14 +22,14 @@ export function parseTeamFilterParam(
           .map((s) => s.trim())
           .filter(Boolean),
       ),
-    ].slice(0, 2);
+    ];
   }
   return [raw];
 }
 
-/** 最大2件を | 結合。空なら null */
+/** 選択 ID を | 結合。空なら null */
 export function serializeTeamFilterParam(ids: string[]): string | null {
-  const u = [...new Set(ids.filter(Boolean))].slice(0, 2);
+  const u = [...new Set(ids.filter(Boolean))];
   if (!u.length) return null;
   return u.join(TEAM_FILTER_SEP);
 }
@@ -58,7 +58,7 @@ export function gameInvolvesTeam(
   return false;
 }
 
-/** いずれかのチームが出る試合（最大2チームは OR） */
+/** いずれかのチームが出る試合（複数チームは OR） */
 export function gameInvolvesAnyTeam(
   game: Record<string, unknown>,
   teamIds: string[],

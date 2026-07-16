@@ -692,10 +692,18 @@ export default function ProfileHomeScreen({
       );
     }
     if (statsBundle.error) {
+      const isTimeout =
+        /timed out|timeout|network request failed/i.test(statsBundle.error);
       return (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{statsBundle.error}</Text>
-          <Text style={styles.warnText}>{t.apiMissing}</Text>
+          <Text style={styles.warnText}>
+            {isTimeout
+              ? isJa
+                ? "Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL がシミュレータなら http://127.0.0.1:3000 になっているか確認してください。"
+                : "Check that Next.js (npm run dev) is running and EXPO_PUBLIC_UNITERZ_API_BASE_URL is http://127.0.0.1:3000 for the iOS Simulator."
+              : t.apiMissing}
+          </Text>
         </View>
       );
     }
@@ -1356,25 +1364,6 @@ const styles = StyleSheet.create({
       android: "Oxanium_800ExtraBold",
       default: "sans-serif",
     }),
-  },
-  proPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: "rgba(124,92,255,0.35)",
-    borderWidth: 1,
-    borderColor: "rgba(167,139,250,0.45)",
-  },
-  proPillText: {
-    color: "rgba(248,250,252,0.95)",
-    fontSize: 10,
-    fontWeight: "800",
-    fontFamily: Platform.select({
-      ios: "BebasNeue_400Regular",
-      android: "BebasNeue_400Regular",
-      default: "sans-serif",
-    }),
-    letterSpacing: 1.2,
   },
   streakPill: {
     paddingHorizontal: 8,

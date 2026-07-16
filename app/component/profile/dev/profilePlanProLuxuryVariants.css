@@ -1,0 +1,187 @@
+/* PRO 豪華化案 — profile-plan-pro-luxury--* （showcase / dev） */
+
+/* ── 案1: Border Sweep 強化 ── */
+.profile-plan-pro-luxury--sweep .profile-plan-pro-frame-sweep {
+  padding: 3px;
+  opacity: 1;
+  background: conic-gradient(
+    from var(--profile-plan-pro-sweep-angle),
+    transparent 0deg 236deg,
+    rgba(34, 211, 238, 0.35) 252deg,
+    rgba(236, 254, 255, 1) 270deg,
+    rgba(167, 139, 250, 0.88) 286deg,
+    rgba(34, 211, 238, 0.42) 302deg,
+    transparent 318deg 360deg
+  );
+}
+
+.profile-plan-pro-luxury--sweep .profile-plan-pro-frame-rail {
+  opacity: 1;
+  box-shadow:
+    0 0 12px rgba(34, 211, 238, 0.35),
+    inset 0 0 8px rgba(167, 139, 250, 0.18);
+}
+
+.profile-plan-pro-luxury--sweep .profile-plan-pro-bg--animate ~ .profile-plan-pro-frame-sweep {
+  animation-duration: 3.4s;
+}
+
+/* ── 案2: Header Deck ── */
+.profile-plan-pro-luxury--header-deck .profile-edit-kinetik-header,
+.profile-plan-pro-luxury--header-deck .profile-edit-kinetik-layout-web__side {
+  position: relative;
+}
+
+.profile-plan-pro-luxury--header-deck .profile-edit-kinetik-header::before,
+.profile-plan-pro-luxury--header-deck .profile-edit-kinetik-layout-web__side::before {
+  content: "";
+  position: absolute;
+  inset: -6px -10px 0;
+  pointer-events: none;
+  z-index: 0;
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  background: linear-gradient(
+    128deg,
+    rgba(34, 211, 238, 0.14) 0%,
+    rgba(167, 139, 250, 0.08) 52%,
+    rgba(34, 211, 238, 0.05) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 20px rgba(34, 211, 238, 0.1);
+}
+
+.profile-plan-pro-luxury--header-deck .profile-edit-kinetik-header > *,
+.profile-plan-pro-luxury--header-deck .profile-edit-kinetik-layout-web__side > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── 案3: Name Gradient ── */
+.profile-plan-pro-luxury--name-gradient .profile-plan-pro-display-name {
+  background: linear-gradient(
+    128deg,
+    #67e8f9 0%,
+    #a78bfa 55%,
+    #ecfeff 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.38))
+    drop-shadow(0 0 14px rgba(167, 139, 250, 0.22));
+}
+
+/* ── 案4: Unified Glass メトリクス ── */
+.profile-plan-pro-luxury--unified-glass .profile-plan-pro-metric-card {
+  border-color: rgba(34, 211, 238, 0.22) !important;
+  background: linear-gradient(
+    155deg,
+    rgba(8, 20, 34, 0.9) 0%,
+    rgba(5, 12, 22, 0.82) 100%
+  ) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(34, 211, 238, 0.08),
+    0 6px 20px rgba(0, 0, 0, 0.42),
+    0 0 16px rgba(34, 211, 238, 0.1) !important;
+}
+
+.profile-plan-pro-luxury--unified-glass .profile-plan-pro-metric-card__value {
+  filter: drop-shadow(0 0 6px var(--metric-accent-glow, rgba(34, 211, 238, 0.32)));
+}
+
+/* ── 案5: Depth Separation ── */
+.profile-plan-pro-luxury--depth-separation .profile-plan-pro-frame-inner {
+  background: linear-gradient(
+    180deg,
+    rgba(3, 8, 14, 0.52) 0%,
+    rgba(3, 8, 14, 0.68) 38%,
+    rgba(2, 6, 12, 0.78) 100%
+  );
+  backdrop-filter: blur(3px);
+  box-shadow: inset 0 0 48px rgba(0, 0, 0, 0.35);
+}
+
+.profile-plan-pro-luxury--depth-separation .profile-plan-pro-ambient {
+  opacity: 0.55;
+}
+
+/* ── 案6: Avatar Pedestal ── */
+.profile-plan-pro-luxury--avatar-pedestal .profile-edit-kinetik-avatar-wrap {
+  position: relative;
+}
+
+.profile-plan-pro-luxury--avatar-pedestal .profile-edit-kinetik-avatar-wrap::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  z-index: 0;
+  width: 78%;
+  height: 12px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(34, 211, 238, 0.5) 0%,
+    rgba(167, 139, 250, 0.22) 45%,
+    transparent 72%
+  );
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.38);
+}
+
+.profile-plan-pro-luxury--avatar-pedestal .profile-edit-kinetik-avatar {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── 案7: Scope Stage ── */
+.profile-plan-pro-luxury--scope-stage .profile-edit-kinetik-metrics-scope-header--picker {
+  margin-inline: -2px;
+  padding: 10px 6px 11px;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  background: linear-gradient(
+    180deg,
+    rgba(34, 211, 238, 0.1) 0%,
+    rgba(4, 10, 18, 0.55) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.28),
+    0 0 16px rgba(34, 211, 238, 0.08);
+}
+
+.profile-plan-pro-luxury--scope-stage
+  .profile-edit-kinetik-metrics-scope-title--breath {
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.28);
+}
+
+/* ── 案8: Streak Frame（連勝 accent 強調） ── */
+.profile-plan-pro-luxury--streak-frame.profile-kinetik-panel--plan-pro {
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 1px color-mix(in srgb, var(--kinetik-frame-strong) 45%, transparent),
+    0 0 36px color-mix(in srgb, var(--kinetik-frame-strong) 38%, transparent),
+    0 0 64px color-mix(in srgb, var(--kinetik-frame-dim) 28%, transparent),
+    0 0 88px rgba(34, 211, 238, 0.18),
+    0 0 112px rgba(167, 139, 250, 0.12);
+}
+
+.profile-plan-pro-luxury--streak-frame .profile-plan-pro-frame-corner {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.55))
+    drop-shadow(0 0 22px rgba(167, 139, 250, 0.35));
+}
+
+.profile-plan-pro-luxury--streak-frame .profile-plan-pro-frame-sweep {
+  padding: 3px;
+  opacity: 0.95;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-plan-pro-luxury--sweep .profile-plan-pro-bg--animate ~ .profile-plan-pro-frame-sweep {
+    animation: none;
+  }
+}

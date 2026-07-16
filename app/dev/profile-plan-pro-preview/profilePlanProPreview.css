@@ -1,0 +1,36 @@
+/**
+ * /dev/profile-plan-pro-preview
+ */
+
+.profile-plan-pro-preview-page {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+/* PRO glow / sweep が下端で切れないよう余白を確保 */
+.profile-plan-pro-preview-page .profile-kinetik-panel,
+.profile-plan-pro-preview-page .profile-edit-kinetik-card {
+  margin-bottom: 12px;
+}
+
+.profile-plan-pro-preview-pro,
+.profile-plan-pro-preview-free {
+  overflow: visible;
+  padding-bottom: 8px;
+}
+
+.profile-plan-pro-preview-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.profile-plan-pro-preview-free .profile-kinetik-panel--plan-pro,
+.profile-plan-pro-preview-free .profile-plan-pro-bg {
+  display: none !important;
+}
+
+.profile-plan-pro-preview-free .profile-plan-pro-display-name {
+  text-shadow: none !important;
+}

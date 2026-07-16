@@ -258,11 +258,13 @@ function StreakFxOverlays({
 export default function ProfileKinetikAvatarWithStreakNative({
   streak,
   accentKey = "default",
+  isPlanPro = false,
   photoURL,
   displayName,
 }: {
   streak: number;
   accentKey?: KinetikMenuAccentKey;
+  isPlanPro?: boolean;
   photoURL?: string | null;
   displayName: string;
 }) {
@@ -271,7 +273,7 @@ export default function ProfileKinetikAvatarWithStreakNative({
   const colors = resolveKinetikAvatarColors({
     streakActive,
     streakTier,
-    accentKey,
+    accentKey: !streakActive && isPlanPro ? "plan-pro" : accentKey,
   });
 
   return (

@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Image, Platform, Pressable, Share, StyleSheet, Text, View, type ViewStyle,
+  Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, type StyleProp, type ViewStyle,
 } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import type { ProfileEditKinetikStats } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import type { ProfileEditTronIdentity } from "../../../../../../app/component/profile/edit/profileEditTronTypes";
 import {
@@ -12,7 +22,13 @@ import {
   type KinetikRankBadgeResult,
   type KinetikRankBadgeTier,
 } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
-import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStreakNative";
+import {
+  proBridgeBadgeEnterDelayMs,
+  proBridgeBadgeFloatDelayMs,
+  resolveProBridgeBadgeLayout,
+  shouldProBridgeBadgeNudgeScroll,
+  shouldProBridgeBadgeScroll,
+} from "../../../../../../lib/profile/profileBadgeBridgeLayout";
 import { KINETIK_AVATAR_MOBILE } from "./kinetikAvatarNativeMetrics";
 import {
   formatKinetikWinStreakLabel,
@@ -32,6 +48,10 @@ import type {
   ProfileKinetikMetricsSection,
   WcKinetikStackedStage,
 } from "../../../../../../lib/profile/profileKinetikMetricsSection";
+import {
+  KINETIK_UPSET_METRIC_LABEL,
+  kinetikMetricLabelUsesLatinUppercase,
+} from "../../../../../../lib/profile/kinetikMetricDisplay";
 import { PROFILE_WC_STACKED_STAGE_TAB_ORDER } from "../../../../../../lib/profile/profileWcStackedStageTabs";
 import {
   CyberSlantedTabBarNative,
@@ -49,8 +69,14 @@ import {
   KINETIK_SLANT_TAB_ROW_H,
   KINETIK_SLANT_TAB_STREAK,
   kinetikPanelBorderColor,
+  kinetikPlanProFrameTheme,
   type KinetikMetricAccent,
 } from "./profileKinetikNativeTheme";
+import ProCyberBadgeNative from "./ProCyberBadgeNative";
+import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStreakNative";
+import ProfilePlanProBackgroundNative from "./ProfilePlanProBackgroundNative";
+import { LinearGradient } from "expo-linear-gradient";
+import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../../lib/profile/profilePlanProBgVariants";
 
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
@@ -85,14 +111,16 @@ function KinetikSegBar({
   filled,
   total = 5,
   accent,
+  isPlanPro = false,
 }: {
   filled: number;
   total?: number;
   accent: KinetikMetricAccent;
+  isPlanPro?: boolean;
 }) {
   const colors = KINETIK_METRIC_ACCENT[accent];
   return (
-    <View style={styles.segRow}>
+    <View style={[styles.segRow, isPlanPro ? styles.segRowPlanPro : null]}>
       {Array.from({ length: total }).map((_, i) => {
         const lit = i < filled;
         return (
@@ -100,11 +128,12 @@ function KinetikSegBar({
             key={i}
             style={[
               styles.seg,
+              isPlanPro && styles.segPlanPro,
               {
                 backgroundColor: lit ? colors.fill : "rgba(255,255,255,0.08)",
                 shadowColor: lit ? colors.glow : "transparent",
                 shadowOpacity: lit ? 1 : 0,
-                shadowRadius: lit ? 6 : 0,
+                shadowRadius: lit ? (isPlanPro ? 10 : 6) : 0,
               },
             ]}
           />
@@ -112,6 +141,67 @@ function KinetikSegBar({
       })}
     </View>
   );
+}
+
+function metricValuePlanProAccentStyle(
+  accent: KinetikMetricAccent
+): { color: string; textShadowColor: string; textShadowRadius: number } {
+  switch (accent) {
+    case "green":
+      return {
+        color: "#a8ff2a",
+        textShadowColor: "rgba(168,255,42,0.5)",
+        textShadowRadius: 10,
+      };
+    case "magenta":
+      return {
+        color: "#ff2bd6",
+        textShadowColor: "rgba(255,43,214,0.45)",
+        textShadowRadius: 10,
+      };
+    case "cyan":
+      return {
+        color: "#22d3ee",
+        textShadowColor: "rgba(34,211,238,0.5)",
+        textShadowRadius: 10,
+      };
+    case "red":
+      return {
+        color: "#f87171",
+        textShadowColor: "rgba(248,113,113,0.45)",
+        textShadowRadius: 10,
+      };
+    default:
+      return {
+        color: "#f8fafc",
+        textShadowColor: "rgba(34,211,238,0.4)",
+        textShadowRadius: 8,
+      };
+  }
+}
+
+function metricLabelPlanProAccentStyle(
+  accent: KinetikMetricAccent
+): { color: string } {
+  const value = metricValuePlanProAccentStyle(accent);
+  return { color: value.color };
+}
+
+function metricCardPlanProAccentStyle(
+  accent: KinetikMetricAccent
+): ViewStyle | undefined {
+  switch (accent) {
+    case "green":
+      return styles.metricCardPlanProGreen;
+    case "magenta":
+      return styles.metricCardPlanProMagenta;
+    case "cyan":
+      return styles.metricCardPlanProCyan;
+    case "red":
+      return styles.metricCardPlanProRed;
+    default:
+      return undefined;
+  }
 }
 
 function KinetikMetricCardNative({
@@ -129,6 +219,8 @@ function KinetikMetricCardNative({
   dayDeltaTone,
   rankBelowSegBar = false,
   compact = false,
+  isPlanPro = false,
+  language = "ja",
 }: {
   label: string;
   value: string;
@@ -144,32 +236,101 @@ function KinetikMetricCardNative({
   dayDeltaTone?: "up" | "down" | null;
   rankBelowSegBar?: boolean;
   compact?: boolean;
+  isPlanPro?: boolean;
+  language?: "ja" | "en";
 }) {
   const colors = KINETIK_METRIC_ACCENT[accent];
   const valueHasUnit = value.includes("%");
+  const labelLatinUpper = kinetikMetricLabelUsesLatinUppercase(label);
   const rankBadge =
     rankLabel && segmentsReady ? (
-      <Text style={[styles.metricRankBadge, rankBelowSegBar && styles.metricRankBelow]}>
-        {rankLabel}
-      </Text>
+      <View
+        style={[
+          styles.metricRankBadge,
+          rankBelowSegBar && styles.metricRankBelow,
+          isPlanPro && styles.metricRankBadgePlanPro,
+        ]}
+      >
+        <Text
+          style={[
+            styles.metricRankBadgeText,
+            isPlanPro && styles.metricRankBadgeTextPlanPro,
+          ]}
+        >
+          {rankLabel}
+        </Text>
+      </View>
     ) : null;
 
   return (
-    <View style={[styles.metricCard, compact && styles.metricCardCompact]}>
+    <View
+      style={[
+        styles.metricCard,
+        compact && styles.metricCardCompact,
+        isPlanPro && styles.metricCardPlanPro,
+        isPlanPro ? metricCardPlanProAccentStyle(accent) : undefined,
+      ]}
+    >
+      {isPlanPro ? (
+        <>
+          <View style={styles.metricCardCornerTl} pointerEvents="none" />
+          <View style={styles.metricCardCornerBr} pointerEvents="none" />
+        </>
+      ) : null}
       <View
         style={[
           styles.metricAccentBar,
           compact && styles.metricAccentBarCompact,
+          isPlanPro && styles.metricAccentBarPlanPro,
           { backgroundColor: colors.line, shadowColor: colors.glow },
         ]}
       />
       <View style={styles.metricLabelRow}>
-        <Text style={styles.metricLabel}>{label}</Text>
-        {unitHint ? <Text style={styles.metricUnitHint}>{unitHint}</Text> : null}
+        <Text
+          style={[
+            styles.metricLabel,
+            labelLatinUpper ? styles.metricLabelLatin : styles.metricLabelCjk,
+            isPlanPro ? styles.metricLabelPlanPro : null,
+            isPlanPro ? metricLabelPlanProAccentStyle(accent) : null,
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+        {unitHint ? (
+          <Text
+            style={[
+              styles.metricUnitHint,
+              isPlanPro ? styles.metricUnitHintPlanPro : null,
+              isPlanPro ? metricLabelPlanProAccentStyle(accent) : null,
+            ]}
+            numberOfLines={1}
+          >
+            {unitHint}
+          </Text>
+        ) : null}
       </View>
       <View style={[styles.metricValueRow, compact && styles.metricValueRowCompact]}>
-        <Text style={styles.metricValue}>{value}</Text>
-        {unit && !valueHasUnit ? <Text style={styles.metricUnit}>{unit}</Text> : null}
+        <Text
+          style={[
+            styles.metricValue,
+            isPlanPro ? styles.metricValuePlanPro : null,
+            isPlanPro ? metricValuePlanProAccentStyle(accent) : null,
+          ]}
+        >
+          {value}
+        </Text>
+        {unit && !valueHasUnit ? (
+          <Text
+            style={[
+              styles.metricUnit,
+              isPlanPro ? styles.metricUnitPlanPro : null,
+              isPlanPro ? metricLabelPlanProAccentStyle(accent) : null,
+            ]}
+          >
+            {unit}
+          </Text>
+        ) : null}
         {dayDelta ? (
           <Text
             style={[
@@ -189,14 +350,29 @@ function KinetikMetricCardNative({
       {showSegBar ? (
         <View style={styles.metricSegWrap}>
           {segmentsReady ? (
-            <KinetikSegBar filled={filledSegs} accent={accent} />
+            <KinetikSegBar filled={filledSegs} accent={accent} isPlanPro={isPlanPro} />
           ) : (
             <View style={styles.metricSegPlaceholder} />
           )}
         </View>
       ) : null}
       {rankBelowSegBar ? <View style={styles.metricRankWrap}>{rankBadge}</View> : null}
-      {footnote ? <Text style={styles.metricFootnote}>{footnote}</Text> : null}
+      {footnote ? (
+        <Text
+          style={[
+            styles.metricFootnote,
+            isPlanPro ? styles.metricFootnotePlanPro : null,
+            isPlanPro
+              ? {
+                  borderLeftColor: metricValuePlanProAccentStyle(accent).color,
+                  color: "rgba(255,255,255,0.74)",
+                }
+              : null,
+          ]}
+        >
+          {footnote}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -352,7 +528,9 @@ function KinetikHeaderTabsNative({
         <KinetikSlantTabNative
           label={streakLabel}
           variant="outline"
-          streakTier={streakTier > 0 ? streakTier : undefined}
+          streakTier={
+            streakTier > 0 ? (streakTier as 1 | 2 | 3 | 4) : undefined
+          }
           explanation={getKinetikWinStreakExplanation(winStreak, language)}
           language={language}
           onPress={() =>
@@ -382,38 +560,209 @@ function KinetikHeaderHatch() {
   );
 }
 
+const PRO_BRIDGE_FLOAT_PHASE_STAGGER = 5;
+const PRO_BRIDGE_BADGE_GAP = 10;
+
+function KinetikBadgeProBridgeWrapNative({
+  index,
+  children,
+}: {
+  index: number;
+  children: ReactNode;
+}) {
+  const reduceMotion = useReducedMotion();
+  const enter = useSharedValue(reduceMotion ? 1 : 0);
+  const floatY = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      enter.value = 1;
+      floatY.value = 0;
+      return;
+    }
+
+    const enterDelayMs = proBridgeBadgeEnterDelayMs(index);
+    const floatDelayMs =
+      proBridgeBadgeFloatDelayMs(index) + (index % PRO_BRIDGE_FLOAT_PHASE_STAGGER) * 80;
+
+    enter.value = withDelay(
+      enterDelayMs,
+      withTiming(1, { duration: 580, easing: Easing.out(Easing.cubic) })
+    );
+    floatY.value = withDelay(
+      floatDelayMs,
+      withRepeat(
+        withSequence(
+          withTiming(-6, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1700, easing: Easing.inOut(Easing.sin) })
+        ),
+        -1,
+        false
+      )
+    );
+  }, [enter, floatY, index, reduceMotion]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const enterT = enter.value;
+    return {
+      opacity: enterT,
+      transform: [
+        { translateX: (1 - enterT) * -18 },
+        { translateY: (1 - enterT) * 10 + floatY.value },
+        { scale: 0.86 + enterT * 0.14 },
+      ],
+    };
+  });
+
+  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
+}
+
+function proBridgeRowStyle(layout: ReturnType<typeof resolveProBridgeBadgeLayout>) {
+  switch (layout) {
+    case "one":
+    case "two":
+    case "three":
+    case "four":
+      return styles.badgeRowProBridgeCentered;
+    default:
+      return styles.badgeRowProBridgeScroll;
+  }
+}
+
+function proBridgeRowGap(layout: ReturnType<typeof resolveProBridgeBadgeLayout>): number {
+  switch (layout) {
+    case "two":
+      return 14;
+    case "three":
+      return 12;
+    case "four":
+      return 10;
+    default:
+      return PRO_BRIDGE_BADGE_GAP;
+  }
+}
+
+/** 5 個時 — 約 4.35 個分の幅で軽くスライド */
+const PRO_BRIDGE_NUDGE_WIDTH = Math.round(60 * 4.35 + PRO_BRIDGE_BADGE_GAP * 4);
+
+function KinetikBadgeFloatWrapNative({
+  index,
+  children,
+}: {
+  index: number;
+  children: ReactNode;
+}) {
+  return (
+    <KinetikBadgeProBridgeWrapNative index={index}>{children}</KinetikBadgeProBridgeWrapNative>
+  );
+}
+
 function KinetikBadgeRowNative({
   badges,
   onBadgePress,
   inline = false,
+  variant = "default",
 }: {
   badges: ResolvedBadgeNative[];
   onBadgePress?: (badge: ResolvedBadgeNative) => void;
   inline?: boolean;
+  variant?: "default" | "proBridge";
 }) {
   if (badges.length === 0) {
     return inline ? null : <View style={styles.badgeRowEmpty} />;
   }
 
-  return (
-    <View style={inline ? styles.badgeRowInline : styles.badgeRow}>
-      {badges.slice(0, 10).map((badge) => (
-        <Pressable
-          key={badge.id}
-          style={[styles.badgeThumb, inline ? styles.badgeThumbInline : null]}
-          onPress={() => onBadgePress?.(badge)}
-          accessibilityRole="button"
-          accessibilityLabel={badge.title}
+  const isProBridge = variant === "proBridge";
+
+  const badgeItems = badges.slice(0, 10).map((badge, index) => {
+    const thumb = (
+      <Pressable
+        style={[
+          styles.badgeThumb,
+          inline ? styles.badgeThumbInline : null,
+          isProBridge ? styles.badgeThumbProBridge : null,
+        ]}
+        onPress={() => onBadgePress?.(badge)}
+        accessibilityRole="button"
+        accessibilityLabel={badge.title}
+      >
+        {badge.icon ? (
+          <Image source={{ uri: badge.icon }} style={styles.badgeImg} resizeMode="contain" />
+        ) : (
+          <Text style={styles.badgeFallbackText} numberOfLines={2}>
+            {badge.title}
+          </Text>
+        )}
+      </Pressable>
+    );
+
+    if (!isProBridge) {
+      return <View key={badge.id}>{thumb}</View>;
+    }
+
+    return (
+      <KinetikBadgeFloatWrapNative key={badge.id} index={index}>
+        {thumb}
+      </KinetikBadgeFloatWrapNative>
+    );
+  });
+
+  if (isProBridge) {
+    const badgeCount = badges.length;
+    const layoutMode = resolveProBridgeBadgeLayout(badgeCount);
+    const useScroll = shouldProBridgeBadgeScroll(badgeCount);
+    const nudgeScroll = shouldProBridgeBadgeNudgeScroll(badgeCount);
+    const rowGap = proBridgeRowGap(layoutMode);
+
+    if (!useScroll) {
+      return (
+        <View style={styles.badgeScrollProBridgeWrap}>
+          <View style={[proBridgeRowStyle(layoutMode), { gap: rowGap }]}>
+            {badgeItems}
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.badgeScrollProBridgeWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[
+            styles.badgeScrollProBridge,
+            nudgeScroll ? { maxWidth: PRO_BRIDGE_NUDGE_WIDTH } : null,
+          ]}
+          contentContainerStyle={[styles.badgeRowProBridgeScroll, { gap: rowGap }]}
+          nestedScrollEnabled
         >
-          {badge.icon ? (
-            <Image source={{ uri: badge.icon }} style={styles.badgeImg} resizeMode="contain" />
-          ) : (
-            <Text style={styles.badgeFallbackText} numberOfLines={2}>
-              {badge.title}
-            </Text>
-          )}
-        </Pressable>
-      ))}
+          {badgeItems}
+        </ScrollView>
+        <LinearGradient
+          colors={["rgba(3,8,13,0.96)", "rgba(3,8,13,0)"]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.badgeScrollFadeLeft}
+          pointerEvents="none"
+        />
+        <LinearGradient
+          colors={["rgba(3,8,13,0)", "rgba(3,8,13,0.96)"]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.badgeScrollFadeRight}
+          pointerEvents="none"
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        inline ? styles.badgeRowInline : styles.badgeRow,
+      ]}
+    >
+      {badgeItems}
     </View>
   );
 }
@@ -430,7 +779,7 @@ function KinetikFooterRef({
   style,
 }: {
   children: ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   return <View style={[styles.footerRef, style]}>{children}</View>;
 }
@@ -441,12 +790,18 @@ function KinetikIdentityIdChipNative({
   copiedLabel,
   shareLabel,
   onShare,
+  pressableStyle,
+  footerRefStyle,
+  compact = false,
 }: {
   idLabel: string;
   shareCopied: boolean;
   copiedLabel: string;
   shareLabel: string;
   onShare: () => void;
+  pressableStyle?: ViewStyle;
+  footerRefStyle?: ViewStyle;
+  compact?: boolean;
 }) {
   if (!idLabel) return null;
 
@@ -455,14 +810,62 @@ function KinetikIdentityIdChipNative({
       onPress={onShare}
       accessibilityRole="button"
       accessibilityLabel={shareLabel}
-      style={styles.identityIdPress}
+      style={[styles.identityIdPress, pressableStyle]}
     >
-      <KinetikFooterRef style={styles.identityIdRef}>
-        <Text style={styles.footerRefText} numberOfLines={1}>
+      <KinetikFooterRef
+        style={[
+          compact ? styles.footerRefIdentity : styles.identityIdRef,
+          footerRefStyle,
+        ]}
+      >
+        <Text
+          style={compact ? styles.footerRefTextIdentity : styles.footerRefText}
+          numberOfLines={compact ? undefined : 1}
+          ellipsizeMode={compact ? undefined : "tail"}
+        >
           {shareCopied ? copiedLabel : `ID: ${idLabel}`}
         </Text>
       </KinetikFooterRef>
     </Pressable>
+  );
+}
+
+function KinetikIdentityJoinIdRowNative({
+  memberSinceLabel,
+  idLabel,
+  shareCopied,
+  copiedLabel,
+  shareLabel,
+  onShare,
+}: {
+  memberSinceLabel: string | null;
+  idLabel: string;
+  shareCopied: boolean;
+  copiedLabel: string;
+  shareLabel: string;
+  onShare: () => void;
+}) {
+  if (!memberSinceLabel && !idLabel) return null;
+
+  return (
+    <View style={styles.identityJoinIdRow}>
+      {memberSinceLabel ? (
+        <KinetikFooterRef style={[styles.footerRefIdentity, styles.footerRefJoin]}>
+          <Text style={styles.footerRefTextIdentity}>{memberSinceLabel}</Text>
+        </KinetikFooterRef>
+      ) : (
+        <View style={styles.identityJoinIdSpacer} />
+      )}
+      <KinetikIdentityIdChipNative
+        idLabel={idLabel}
+        shareCopied={shareCopied}
+        copiedLabel={copiedLabel}
+        shareLabel={shareLabel}
+        onShare={onShare}
+        pressableStyle={styles.identityIdPressInline}
+        compact
+      />
+    </View>
   );
 }
 
@@ -479,6 +882,63 @@ function KinetikFooterNative({ memberSinceLabel }: { memberSinceLabel: string | 
         </KinetikFooterRef>
       </View>
     </View>
+  );
+}
+
+function MetricsScopeArrowNative({
+  direction,
+  planPro = false,
+}: {
+  direction: "left" | "right";
+  planPro?: boolean;
+}) {
+  const color = planPro ? "#67e8f9" : "#00f5ff";
+  return (
+    <View
+      style={[
+        styles.scopeArrowBase,
+        direction === "left"
+          ? { borderRightWidth: 8, borderRightColor: color }
+          : { borderLeftWidth: 8, borderLeftColor: color },
+        styles.scopeArrowGlow,
+      ]}
+    />
+  );
+}
+
+function MetricsScopeTitleBreathingNative({
+  children,
+  animate,
+}: {
+  children: string;
+  animate: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  const opacity = useSharedValue(0.85);
+
+  useEffect(() => {
+    if (!animate || reduceMotion) {
+      opacity.value = 0.88;
+      return;
+    }
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.96, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.76, { duration: 1800, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, [animate, opacity, reduceMotion]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.Text style={[styles.metricsTitle, animatedStyle]} numberOfLines={1}>
+      {children}
+    </Animated.Text>
   );
 }
 
@@ -560,7 +1020,11 @@ export default function ProfileKinetikPanelNative({
     totalPointsRank: activeTotalPointsRank,
     rankBadge,
   });
+  const proFrameTheme = isPro ? kinetikPlanProFrameTheme(profileAccent) : null;
   const panelBorder = kinetikPanelBorderColor(profileAccent);
+  const reduceMotion = useReducedMotion();
+  const animatePlanProBg = isPro && reduceMotion !== true;
+  const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
   const shareTargetHandle = shareHandle?.trim() || identity.handle?.trim() || "";
   const profileFlagUri = countryCode?.trim()
@@ -601,8 +1065,8 @@ export default function ProfileKinetikPanelNative({
     stackedMetricsSections != null &&
     stackedMetricsSections.length > 0;
   const metricsHeaderTitle = isWcProfile
-    ? "WORLD CUP // STATS"
-    : metricsTitle;
+    ? metricsTitle ?? "WORLD CUP // STATS"
+    : metricsTitle ?? "NBA // PLAYOFFS STATS";
   const stageTabTexts = rankingsTexts(language);
 
   const [wcStackedStage, setWcStackedStage] =
@@ -649,7 +1113,7 @@ export default function ProfileKinetikPanelNative({
       sectionRank.totalPointsRankDenominator >= 1;
 
     return (
-      <View style={styles.metricsGrid}>
+      <View style={[styles.metricsGrid, isPro ? styles.metricsGridPlanPro : null]}>
         <KinetikMetricCardNative
           label={isJa ? "勝率" : "WIN RATE"}
           value={`${formatMetricDecimals(sectionStats.winRate, 1)}%`}
@@ -659,6 +1123,7 @@ export default function ProfileKinetikPanelNative({
           unitHint={metricCopy.winRateUnitHint}
           dayDelta={formatProfileMetricDayDelta("winRate", sectionDeltas?.winRate)}
           dayDeltaTone={profileMetricDeltaTone(sectionDeltas?.winRate ?? null)}
+          isPlanPro={isPro}
         />
         <KinetikMetricCardNative
           label={isJa ? "総合得点" : "TOTAL PTS"}
@@ -679,6 +1144,8 @@ export default function ProfileKinetikPanelNative({
               : null
           }
           dayDeltaTone={profileMetricDeltaTone(sectionDeltas?.totalPoints ?? null)}
+          isPlanPro={isPro}
+          language={language}
         />
         <KinetikMetricCardNative
           label={
@@ -713,9 +1180,10 @@ export default function ProfileKinetikPanelNative({
             sectionDeltas?.totalPrecision ?? null,
             { positiveOnly: isWcProfile }
           )}
+          isPlanPro={isPro}
         />
         <KinetikMetricCardNative
-          label={isJa ? "アップセット" : "UPSET"}
+          label={KINETIK_UPSET_METRIC_LABEL}
           value={formatMetricDecimals(sectionStats.upset, 1)}
           accent="red"
           showSegBar={false}
@@ -728,98 +1196,182 @@ export default function ProfileKinetikPanelNative({
               : null
           }
           dayDeltaTone={profileMetricDeltaTone(sectionDeltas?.totalUpset ?? null)}
+          isPlanPro={isPro}
         />
       </View>
     );
   };
 
   return (
-    <View style={[styles.frameOuter, { borderColor: panelBorder }, style]}>
-
-      <View style={styles.headerRow}>
-        <ProfileKinetikAvatarWithStreakNative
-          photoURL={identity.photoURL}
-          displayName={identity.displayName}
-          streak={activeWinStreak}
-          accentKey={menuAccent}
+    <View
+      style={[
+        styles.frameOuter,
+        { borderColor: panelBorder },
+        isPro && proFrameTheme
+          ? {
+              shadowColor: proFrameTheme.strong,
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.48,
+              shadowRadius: 28,
+              elevation: 10,
+            }
+          : null,
+        isPro ? styles.frameOuterPlanPro : null,
+        style,
+      ]}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setFrameSize({ width, height });
+      }}
+    >
+      {isPro && frameSize.width > 0 ? (
+        <ProfilePlanProBackgroundNative
+          width={frameSize.width}
+          height={frameSize.height}
+          animate={animatePlanProBg}
+          variant={PROFILE_PLAN_PRO_BG_DEFAULT}
+          profileAccent={profileAccent}
+          accentReady={!statsPending}
         />
-        <View style={styles.headerMeta}>
-          <KinetikHeaderHatch />
-          {canOpenMenu ? (
-            <View style={styles.headerMenuAnchor}>
-              <CyberMenuButton
-                size="md"
-                onPress={() => onOpenMenu?.()}
-                accessibilityLabel={isJa ? "メニュー" : "Menu"}
-                badge={
-                  menuUnreadCount > 0 ? (
-                    <View style={styles.menuBadge}>
-                      <Text style={styles.menuBadgeText}>
-                        {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
-                      </Text>
-                    </View>
-                  ) : null
-                }
+      ) : null}
+
+      {isPro && PROFILE_PLAN_PRO_BG_DEFAULT !== "atmos" ? (
+        <LinearGradient
+          colors={[
+            "rgba(34,211,238,0.2)",
+            "rgba(34,211,238,0.04)",
+            "transparent",
+            "rgba(167,139,250,0.08)",
+          ]}
+          locations={[0, 0.28, 0.62, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.planProAmbient}
+          pointerEvents="none"
+        />
+      ) : null}
+
+      <View style={styles.headerBlock}>
+        <View style={styles.headerRow}>
+          <ProfileKinetikAvatarWithStreakNative
+            photoURL={identity.photoURL}
+            displayName={identity.displayName}
+            streak={activeWinStreak}
+            accentKey={menuAccent}
+            isPlanPro={isPro}
+          />
+          <View style={styles.headerMeta}>
+            <KinetikHeaderHatch />
+            {canOpenMenu ? (
+              <View style={styles.headerMenuAnchor}>
+                <CyberMenuButton
+                  size="md"
+                  onPress={() => onOpenMenu?.()}
+                  accessibilityLabel={isJa ? "メニュー" : "Menu"}
+                  badge={
+                    menuUnreadCount > 0 ? (
+                      <View style={styles.menuBadge}>
+                        <Text style={styles.menuBadgeText}>
+                          {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
+                        </Text>
+                      </View>
+                    ) : null
+                  }
+                />
+              </View>
+            ) : null}
+            <View
+              style={[
+                styles.headerIdentity,
+                canOpenMenu ? styles.headerIdentityWithMenu : null,
+              ]}
+            >
+              <View style={styles.nameRow}>
+                <Text
+                  style={[styles.displayName, isPro ? styles.displayNamePro : null]}
+                  numberOfLines={1}
+                >
+                  {identity.displayName}
+                </Text>
+                {profileFlagUri ? (
+                  <View
+                    style={styles.nameInlineFlagWrap}
+                    accessibilityLabel={countryCode ?? undefined}
+                  >
+                    <Image
+                      source={{ uri: profileFlagUri }}
+                      style={styles.nameInlineFlag}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ) : null}
+                {isPro ? <ProCyberBadgeNative premium /> : null}
+              </View>
+              <KinetikIdentityJoinIdRowNative
+                memberSinceLabel={memberSinceLabel}
+                idLabel={profileIdLabel}
+                shareCopied={shareCopied}
+                copiedLabel={shareCopiedLabel}
+                shareLabel={shareProfileLabel}
+                onShare={handleShareProfile}
               />
             </View>
-          ) : null}
-          <View
-            style={[
-              styles.headerIdentity,
-              canOpenMenu ? styles.headerIdentityWithMenu : null,
-            ]}
-          >
-            <View style={styles.nameRow}>
-              <Text style={styles.displayName} numberOfLines={1}>
-                {identity.displayName}
-              </Text>
-              {profileFlagUri ? (
-                <View style={styles.nameInlineFlagWrap} accessibilityLabel={countryCode ?? undefined}>
-                  <Image
-                    source={{ uri: profileFlagUri }}
-                    style={styles.nameInlineFlag}
-                    resizeMode="cover"
-                  />
-                </View>
-              ) : null}
-              {isPro ? (
-                <View style={styles.proPill}>
-                  <Text style={styles.proPillText}>PRO</Text>
-                </View>
-              ) : null}
-            </View>
-            <KinetikIdentityIdChipNative
-              idLabel={profileIdLabel}
-              shareCopied={shareCopied}
-              copiedLabel={shareCopiedLabel}
-              shareLabel={shareProfileLabel}
-              onShare={handleShareProfile}
-            />
-            {bio?.trim() ? (
-              <Text style={styles.bio} numberOfLines={3}>
-                {bio.trim()}
-              </Text>
-            ) : null}
           </View>
         </View>
+        {bio?.trim() ? (
+          <Text style={styles.headerBio} numberOfLines={3}>
+            {bio.trim()}
+          </Text>
+        ) : null}
       </View>
 
-      <KinetikBadgeRowNative badges={badges} onBadgePress={onBadgePress} />
+      {isPro ? (
+        <View
+          style={[
+            styles.badgeBridgePro,
+            badges.length === 0 ? styles.badgeBridgeProEmpty : null,
+          ]}
+          pointerEvents={badges.length === 0 ? "none" : "auto"}
+        >
+          {badges.length > 0 ? (
+            <KinetikBadgeRowNative
+              badges={badges}
+              onBadgePress={onBadgePress}
+              variant="proBridge"
+            />
+          ) : null}
+        </View>
+      ) : (
+        <KinetikBadgeRowNative badges={badges} onBadgePress={onBadgePress} />
+      )}
 
-      <View style={styles.metricsPanel}>
-        <View style={styles.metricsHeader}>
+      <View style={[styles.metricsPanel, isPro ? styles.metricsPanelPlanPro : null]}>
+        <View
+          style={[
+            styles.metricsHeader,
+            onToggleMetricsScope ? styles.metricsHeaderPicker : null,
+          ]}
+        >
           {onToggleMetricsScope ? (
             <>
-              <Pressable onPress={onToggleMetricsScope} hitSlop={8}>
-                <Text style={styles.scopeChevron}>◀</Text>
+              <Pressable
+                style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
+                onPress={onToggleMetricsScope}
+                hitSlop={8}
+              >
+                <MetricsScopeArrowNative direction="left" planPro={isPro} />
               </Pressable>
-              <Pressable style={styles.metricsTitlePress} onPress={onToggleMetricsScope}>
-                <Text style={styles.metricsTitle} numberOfLines={1}>
+              <Pressable style={styles.metricsTitlePressPicker} onPress={onToggleMetricsScope}>
+                <MetricsScopeTitleBreathingNative animate>
                   {metricsHeaderTitle}
-                </Text>
+                </MetricsScopeTitleBreathingNative>
               </Pressable>
-              <Pressable onPress={onToggleMetricsScope} hitSlop={8}>
-                <Text style={styles.scopeChevron}>▶</Text>
+              <Pressable
+                style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
+                onPress={onToggleMetricsScope}
+                hitSlop={8}
+              >
+                <MetricsScopeArrowNative direction="right" planPro={isPro} />
               </Pressable>
             </>
           ) : (
@@ -838,7 +1390,7 @@ export default function ProfileKinetikPanelNative({
         ) : wcStackedActive && activeWcStackedSection ? (
           <View>
             {showWcStackedStageTabs ? (
-              <View style={styles.metricsStageTabWrap}>
+              <View style={[styles.metricsStageTabWrap, isPro ? styles.metricsDividerPlanPro : null]}>
                 <CyberSlantedTabBarNative fill>
                   {wcStackedAvailableStages.map((stage) => (
                     <CyberSlantedTabNative
@@ -858,7 +1410,7 @@ export default function ProfileKinetikPanelNative({
               </View>
             ) : null}
             <View>
-              <View style={styles.metricsSubHeader}>
+              <View style={[styles.metricsSubHeader, isPro ? styles.metricsDividerPlanPro : null]}>
                 {!showWcStackedStageTabs ? (
                   <Text style={styles.metricsSubTitle} numberOfLines={2}>
                     {activeWcStackedSection.title}
@@ -883,7 +1435,7 @@ export default function ProfileKinetikPanelNative({
           </View>
         ) : (
           <View>
-            <View style={styles.metricsSubHeader}>
+            <View style={[styles.metricsSubHeader, isPro ? styles.metricsDividerPlanPro : null]}>
               <KinetikHeaderTabsNative
                 rankBadge={rankBadge}
                 winStreak={activeWinStreak}
@@ -898,7 +1450,6 @@ export default function ProfileKinetikPanelNative({
         )}
       </View>
 
-      <KinetikFooterNative memberSinceLabel={memberSinceLabel} />
     </View>
   );
 }
@@ -910,7 +1461,57 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     backgroundColor: "transparent",
-    overflow: "visible",
+    overflow: "hidden",
+  },
+  frameOuterPlanPro: {
+    backgroundColor: "rgba(3,8,13,0.14)",
+    minHeight: 520,
+    flexDirection: "column",
+  },
+  planProAmbient: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
+  planProFrameInner: {
+    ...StyleSheet.absoluteFillObject,
+    top: 5,
+    left: 5,
+    right: 5,
+    bottom: 5,
+    borderWidth: 1.5,
+    zIndex: 2,
+    backgroundColor: "rgba(34,211,238,0.03)",
+  },
+  planProFrameEdgeTop: {
+    position: "absolute",
+    top: 0,
+    left: "8%",
+    right: "8%",
+    height: 2,
+    zIndex: 2,
+    shadowColor: "#22d3ee",
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+  },
+  planProFrameRail: {
+    position: "absolute",
+    top: "10%",
+    bottom: "10%",
+    width: 2,
+    opacity: 0.72,
+    zIndex: 2,
+    shadowColor: "#22d3ee",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+  },
+  planProFrameRailLeft: {
+    left: 7,
+  },
+  planProFrameRailRight: {
+    right: 7,
+  },
+  headerBlock: {
+    width: "100%",
   },
   headerRow: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   headerMeta: {
@@ -1026,6 +1627,26 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     marginTop: 2,
   },
+  identityIdPressInline: {
+    alignSelf: "flex-end",
+    marginTop: 0,
+    flexShrink: 0,
+  },
+  identityJoinIdRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 4,
+    width: "100%",
+    marginTop: 2,
+  },
+  identityJoinIdSpacer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  footerRefJoin: {
+    flexShrink: 0,
+  },
   identityIdRef: {
     paddingTop: 4,
     paddingRight: 10,
@@ -1033,8 +1654,27 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
     minHeight: 22,
   },
+  footerRefIdentity: {
+    paddingTop: 4,
+    paddingRight: 6,
+    paddingBottom: 4,
+    paddingLeft: 5,
+    minHeight: 20,
+  },
+  footerRefTextIdentity: {
+    fontFamily: FOOTER_REF_FONT,
+    fontSize: 8,
+    fontWeight: "500",
+    letterSpacing: 0.45,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.42)",
+    lineHeight: 10,
+    fontVariant: ["tabular-nums"],
+  },
   displayName: {
     flexShrink: 1,
+    alignSelf: "flex-start",
+    maxWidth: "100%",
     fontFamily: OXANIUM_EXTRA,
     fontSize: 16,
     lineHeight: 20,
@@ -1043,21 +1683,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     includeFontPadding: false,
   },
-  proPill: {
-    borderWidth: 1,
-    borderColor: "rgba(255,43,214,0.55)",
-    backgroundColor: "rgba(255,43,214,0.12)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  displayNamePro: {
+    textShadowColor: "rgba(34, 211, 238, 0.55)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
-  proPillText: {
-    fontFamily: OXANIUM_BOLD,
-    fontSize: 9,
-    color: "#ff2bd6",
-    letterSpacing: 1,
-  },
-  bio: {
-    marginTop: 4,
+  headerBio: {
+    marginTop: 12,
     fontSize: 12,
     lineHeight: 17,
     color: "rgba(255,255,255,0.5)",
@@ -1076,6 +1708,44 @@ const styles = StyleSheet.create({
   },
   menuBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 14, minHeight: 44 },
+  badgeRowProBridge: { marginTop: 0, gap: 10 },
+  badgeScrollProBridgeWrap: {
+    position: "relative",
+    alignSelf: "stretch",
+  },
+  badgeScrollProBridge: {
+    alignSelf: "stretch",
+    flexGrow: 1,
+    overflow: "visible",
+  },
+  badgeScrollFadeLeft: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 6,
+    width: 28,
+    zIndex: 2,
+  },
+  badgeScrollFadeRight: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 6,
+    width: 28,
+    zIndex: 2,
+  },
+  badgeRowProBridgeCentered: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    width: "100%",
+    paddingBottom: 6,
+  },
+  badgeRowProBridgeScroll: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingBottom: 6,
+  },
   badgeRowInline: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1083,11 +1753,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   badgeRowEmpty: { marginTop: 8, minHeight: 4 },
+  badgeBridgePro: {
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: 60,
+    marginHorizontal: -16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    zIndex: 1,
+    justifyContent: "flex-start",
+  },
+  badgeBridgeProEmpty: {
+    minHeight: 48,
+  },
   badgeThumb: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+  },
+  badgeThumbProBridge: {
+    width: 60,
+    height: 60,
   },
   badgeThumbInline: {
     width: 36,
@@ -1102,33 +1789,44 @@ const styles = StyleSheet.create({
   },
   metricsPanel: {
     marginTop: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
     overflow: "hidden",
   },
+  metricsPanelPlanPro: {
+    marginTop: 0,
+  },
   metricsHeader: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.08)",
+    justifyContent: "center",
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
-  metricsTitlePress: { flex: 1, minWidth: 0 },
+  metricsHeaderPicker: {
+    position: "relative",
+    minHeight: 32,
+  },
+  metricsTitlePressPicker: {
+    width: "100%",
+    minWidth: 0,
+    alignItems: "center",
+    paddingHorizontal: 36,
+  },
   metricsTitle: {
-    flex: 1,
+    width: "100%",
     fontFamily: OXANIUM_BOLD,
     fontSize: 10,
     letterSpacing: 1.4,
     color: "rgba(255,255,255,0.72)",
     textTransform: "uppercase",
+    textAlign: "center",
   },
   metricsSubHeader: {
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: 8,
     paddingVertical: 6,
+  },
+  metricsDividerPlanPro: {
+    borderBottomWidth: 0,
   },
   metricsSubTitle: {
     fontFamily: OXANIUM_BOLD,
@@ -1151,12 +1849,43 @@ const styles = StyleSheet.create({
     minHeight: 76,
     backgroundColor: "rgba(255,255,255,0.06)",
   },
-  scopeChevron: { color: "rgba(255,255,255,0.35)", fontSize: 10, paddingHorizontal: 2 },
+  scopeArrowBase: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 5,
+    borderBottomWidth: 5,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+  },
+  scopeArrowGlow: {
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.75,
+    shadowRadius: 6,
+  },
+  scopeNavBtn: {
+    position: "absolute",
+    top: "50%",
+    marginTop: -14,
+    minHeight: 28,
+    minWidth: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scopeNavBtnLeft: {
+    left: 6,
+  },
+  scopeNavBtnRight: {
+    right: 6,
+  },
   metricsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     padding: 10,
     gap: 10,
+  },
+  metricsGridPlanPro: {
+    backgroundColor: "rgba(34,211,238,0.04)",
   },
   metricCard: {
     width: "47%",
@@ -1172,6 +1901,87 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
+  metricCardPlanPro: {
+    backgroundColor: "rgba(10,24,40,0.58)",
+    borderColor: "rgba(34,211,238,0.28)",
+    shadowColor: "#22d3ee",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 24,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  metricCardPlanProGreen: {
+    borderColor: "rgba(168,255,42,0.32)",
+    shadowColor: "#a8ff2a",
+    shadowOpacity: 0.26,
+  },
+  metricCardPlanProMagenta: {
+    borderColor: "rgba(255,43,214,0.3)",
+    shadowColor: "#ff2bd6",
+    shadowOpacity: 0.24,
+  },
+  metricCardPlanProCyan: {
+    borderColor: "rgba(34,211,238,0.34)",
+    shadowOpacity: 0.3,
+  },
+  metricCardPlanProRed: {
+    borderColor: "rgba(248,113,113,0.3)",
+    shadowColor: "#f87171",
+    shadowOpacity: 0.24,
+  },
+  metricCardCornerTl: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 14,
+    height: 14,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderColor: "rgba(34,211,238,0.72)",
+    zIndex: 1,
+  },
+  metricCardCornerBr: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 14,
+    height: 14,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: "rgba(167,139,250,0.58)",
+    zIndex: 1,
+  },
+  metricAccentBarPlanPro: {
+    width: 4,
+    borderRadius: 2,
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+  },
+  metricLabelPlanPro: {
+    fontWeight: "700",
+  },
+  metricUnitHintPlanPro: {
+    opacity: 0.72,
+  },
+  metricUnitPlanPro: {
+    opacity: 0.78,
+  },
+  metricFootnotePlanPro: {
+    borderLeftWidth: 2,
+    paddingLeft: 8,
+    marginLeft: 2,
+    opacity: 0.88,
+  },
+  metricValuePlanPro: {
+    fontWeight: "800",
+    textShadowOffset: { width: 0, height: 0 },
+  },
+  metricRankBadgePlanPro: {
+    borderColor: "rgba(34,211,238,0.38)",
+    backgroundColor: "rgba(34,211,238,0.1)",
+    color: "rgba(34,211,238,0.95)",
+  },
   metricAccentBar: {
     position: "absolute",
     left: 0,
@@ -1186,13 +1996,28 @@ const styles = StyleSheet.create({
     top: 10,
     bottom: 10,
   },
-  metricLabelRow: { flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 10 },
+  metricLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingLeft: 10,
+    paddingRight: 4,
+    minWidth: 0,
+  },
   metricLabel: {
     fontFamily: OXANIUM_BOLD,
     fontSize: 10,
-    letterSpacing: 1.3,
+    flexShrink: 1,
+    minWidth: 0,
     color: "rgba(255,255,255,0.62)",
     textTransform: "uppercase",
+  },
+  metricLabelLatin: {
+    letterSpacing: 1.3,
+  },
+  metricLabelCjk: {
+    letterSpacing: 0.4,
+    textTransform: "none",
   },
   metricUnitHint: {
     fontFamily: OXANIUM_BOLD,
@@ -1200,6 +2025,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.38)",
     letterSpacing: 0.6,
     textTransform: "uppercase",
+    flexShrink: 0,
   },
   metricValueRow: {
     flexDirection: "row",
@@ -1234,22 +2060,29 @@ const styles = StyleSheet.create({
   metricDeltaUp: { color: "#a8ff2a" },
   metricDeltaDown: { color: "rgba(255,255,255,0.42)" },
   metricRankBadge: {
-    fontFamily: OXANIUM_BOLD,
-    fontSize: 10,
-    color: "rgba(255,255,255,0.55)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
     paddingHorizontal: 6,
     paddingVertical: 2,
-    letterSpacing: 0.8,
     marginBottom: 2,
+  },
+  metricRankBadgeText: {
+    fontFamily: OXANIUM_BOLD,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.55)",
+    letterSpacing: 0.8,
+  },
+  metricRankBadgeTextPlanPro: {
+    color: "rgba(34,211,238,0.95)",
   },
   metricRankBelow: { alignSelf: "flex-start" },
   metricRankWrap: { paddingLeft: 10, marginTop: 10 },
   metricSegWrap: { marginTop: 10, paddingLeft: 10 },
   metricSegPlaceholder: { height: 6 },
   segRow: { flexDirection: "row", gap: 3 },
+  segRowPlanPro: { gap: 4 },
   seg: { flex: 1, height: 6 },
+  segPlanPro: { height: 7, borderRadius: 2 },
   metricFootnote: {
     marginTop: 8,
     paddingLeft: 10,

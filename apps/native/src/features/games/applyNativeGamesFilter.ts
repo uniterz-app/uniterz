@@ -8,7 +8,7 @@ import { sortGamesByKickoffAsc } from "../../../../../lib/games/sortGamesByKicko
 import type { NativeGameRow } from "./useTodayGames";
 
 export type GamesFilterState = {
-  /** 最大2件のチーム doc ID */
+  /** 選択中のチーム doc ID */
   selectedTeamIds: string[];
   matchMode: TeamFilterMatchMode;
   marginMin: string;
@@ -31,7 +31,7 @@ export function applyNativeGamesFilter(
 ): NativeGameRow[] {
   let list = games;
 
-  const teamIds = filter.selectedTeamIds.filter(Boolean).slice(0, 2);
+  const teamIds = filter.selectedTeamIds.filter(Boolean);
   if (teamIds.length > 0) {
     list = list.filter((game) => {
       const row = game as Record<string, unknown>;

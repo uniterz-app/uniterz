@@ -24,17 +24,17 @@ const styles = StyleSheet.create({
     fontFamily: RANKING_TITLE_FONT,
     fontSize: 18,
     letterSpacing: 6,
-    color: "#9CF6FF",
+    color: "#BFF8FF",
     ...Platform.select({
       ios: {
-        textShadowColor: "rgba(0,245,255,0.55)",
+        textShadowColor: "rgba(34,211,238,0.28)",
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
+        textShadowRadius: 6,
       },
       android: {
-        textShadowColor: "rgba(0,245,255,0.45)",
+        textShadowColor: "rgba(34,211,238,0.24)",
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8,
+        textShadowRadius: 5,
       },
       default: {},
     }),

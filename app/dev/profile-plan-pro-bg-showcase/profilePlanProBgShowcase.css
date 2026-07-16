@@ -1,0 +1,40 @@
+.profile-plan-pro-bg-showcase-page {
+  overflow-x: hidden;
+}
+
+.profile-plan-pro-bg-showcase-card {
+  min-width: 0;
+}
+
+.profile-plan-pro-bg-showcase-pro .profile-edit-kinetik-card {
+  overflow: hidden;
+}
+
+.profile-plan-pro-bg-showcase-frame {
+  isolation: isolate;
+}
+
+/* スウォッチ — 背景だけ見せるコンパクト枠 */
+.profile-plan-pro-bg-swatch {
+  position: relative;
+  min-height: 120px;
+  background: #060809;
+  isolation: isolate;
+}
+
+.profile-plan-pro-bg-swatch .profile-plan-pro-bg {
+  border-radius: inherit;
+}
+
+.profile-plan-pro-bg-swatch .profile-kinetik-frame-corner {
+  z-index: 2;
+}
+
+.profile-plan-pro-bg-swatch__label {
+  background: linear-gradient(
+    to top,
+    rgba(3, 8, 13, 0.92) 0%,
+    rgba(3, 8, 13, 0.55) 55%,
+    transparent 100%
+  );
+}

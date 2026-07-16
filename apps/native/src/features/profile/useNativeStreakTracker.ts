@@ -38,6 +38,7 @@ export function useNativeStreakTracker(
     let alive = true;
 
     async function run() {
+      if (!uid) return;
       setLoading(true);
       try {
         const rows = await loadProfileSettledPosts(uid);

@@ -56,18 +56,24 @@ export function gamesHeaderMobileShellClass(): string {
   return "relative flex w-full flex-col gap-1";
 }
 
-/** モバイル：タイトル行（左右ボタンは absolute） */
+/** モバイル：タイトル行（flex — 左右ボタンとタイトルの重なり防止） */
 export function gamesHeaderMobileTitleRowClass(): string {
-  return `relative w-full ${GAMES_HEADER_CONTROL_H}`;
+  return `relative flex w-full items-center gap-1.5 px-2 ${GAMES_HEADER_CONTROL_H}`;
 }
 
-/** リーグ名：画面水平中央 */
+/** リーグ名：中央（モバイルは flex 子、デスクトップは absolute） */
 export function gamesHeaderTitleCenterClass(isMobile: boolean): string {
+  if (isMobile) {
+    return [
+      "pointer-events-none z-10 min-w-0 flex-1 overflow-hidden",
+      "[&_*]:pointer-events-none",
+      "text-center leading-none",
+    ].join(" ");
+  }
   return [
     "pointer-events-none absolute left-1/2 top-1/2 z-10",
-    isMobile
-      ? "w-max max-w-[calc(100vw-11rem)]"
-      : "w-max max-w-[calc(100%-11rem)]",
+    "w-max max-w-[calc(100%-13rem)]",
+    "[&_*]:pointer-events-none",
     "-translate-x-1/2 -translate-y-1/2",
     "text-center leading-none",
   ].join(" ");
@@ -75,14 +81,14 @@ export function gamesHeaderTitleCenterClass(isMobile: boolean): string {
 
 export function gamesHeaderMobileSideLeftClass(): string {
   return [
-    "absolute left-2 top-0 z-20 flex items-start",
+    "z-20 flex shrink-0 items-center",
     GAMES_HEADER_CONTROL_H,
   ].join(" ");
 }
 
 export function gamesHeaderMobileSideRightClass(): string {
   return [
-    "absolute right-2 top-0 z-20 flex items-start justify-end gap-1.5",
+    "z-30 flex shrink-0 items-center justify-end gap-1.5",
     GAMES_HEADER_CONTROL_H,
   ].join(" ");
 }
@@ -119,7 +125,7 @@ export function gamesHeaderDesktopSideLeftClass(): string {
 
 export function gamesHeaderDesktopSideRightClass(): string {
   return [
-    "absolute right-2 top-0 z-20 flex items-start justify-end gap-1.5",
+    "absolute right-2 top-0 z-30 flex items-start justify-end gap-1.5",
     GAMES_HEADER_CONTROL_H_LG,
   ].join(" ");
 }
@@ -144,7 +150,7 @@ export function gamesHeaderActionsSlotClass(isMobile: boolean): string {
 /** 絞り込み用 motion ラッパー（上寄せ・クリック領域はボタン幅のみ） */
 export function gamesHeaderFilterWrapClass(isMobile = true): string {
   return [
-    "relative z-20 flex w-fit shrink-0 items-start self-start pointer-events-auto touch-manipulation -translate-y-px",
+    "relative z-30 flex w-fit shrink-0 items-start self-start pointer-events-auto touch-manipulation -translate-y-px",
     gamesHeaderControlHeightClass(isMobile),
   ].join(" ");
 }

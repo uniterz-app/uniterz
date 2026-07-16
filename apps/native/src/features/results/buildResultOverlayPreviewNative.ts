@@ -38,7 +38,11 @@ function resolveOverlayGameSide(
   const resolvedId = resolveWcTeamId(
     base as { teamId?: string; name?: string },
     postSide?.teamId,
-    postGameSide as { teamId?: string; name?: string } | undefined,
+    postGameSide && typeof postGameSide === "object"
+      ? (postGameSide as { teamId?: string }).teamId
+      : typeof postGameSide === "string"
+        ? postGameSide
+        : undefined,
     postSide?.name
   );
   if (resolvedId) return { ...base, teamId: resolvedId };

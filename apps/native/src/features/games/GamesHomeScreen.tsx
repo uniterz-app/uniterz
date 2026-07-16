@@ -2795,6 +2795,7 @@ const styles = StyleSheet.create({
     fontFamily: MATCH_CARD_DISPLAY_FONT,
     fontWeight: "600",
   },
+  },
   liveMetaText: {
     color: "#a8dbff",
     fontSize: 10,

@@ -5,6 +5,12 @@
  * flag-icons の CSS には依存しない。 */
 
 @import "tailwindcss";
+@import "./component/profile/dev/profilePlanProMoodBg.css";
+@import "./component/profile/dev/profilePlanProNovaBg.css";
+@import "./component/profile/dev/profilePlanProGeoBg.css";
+@import "./component/profile/dev/profilePlanProHexBg.css";
+@import "./component/profile/dev/profilePlanProAtmosBg.css";
+@import "./component/profile/dev/profilePlanProScaleBg.css";
 
 @theme {
   /* EntrySplash / SplashWrapper のローディング位置用（取り込みブランチの mt-27 と整合） */
@@ -1177,7 +1183,6 @@
 }
 
 .cyber-filter-panel {
-  position: relative;
   overflow: hidden;
   clip-path: polygon(
     12px 0%,
@@ -1217,6 +1222,583 @@
     transparent 100%
   );
   pointer-events: none;
+}
+
+/* 試合絞り込みモーダル — 方眼・角切り・セクション見出し */
+.games-filter-panel-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.games-filter-panel-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0, 245, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.05) 1px, transparent 1px);
+  background-size: 14px 14px;
+  mask-image: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.35) 72%,
+    transparent 100%
+  );
+}
+
+.games-filter-panel--sheet {
+  clip-path: polygon(
+    18px 0%,
+    calc(100% - 18px) 0%,
+    100% 18px,
+    100% 100%,
+    0% 100%,
+    0% 18px
+  );
+  border-bottom: none;
+}
+
+.games-filter-kicker {
+  margin-bottom: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(34, 211, 238, 0.58);
+  text-shadow: 0 0 12px rgba(0, 245, 255, 0.25);
+}
+
+.games-filter-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(0, 245, 255, 0.14);
+  padding: 14px 16px 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.07) 0%,
+    transparent 100%
+  );
+}
+
+.games-filter-icon-btn {
+  display: inline-flex;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0 0.625rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+  clip-path: polygon(
+    6px 0%,
+    calc(100% - 6px) 0%,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    0% calc(100% - 6px),
+    0% 6px
+  );
+}
+
+.games-filter-icon-btn:hover {
+  border-color: rgba(0, 245, 255, 0.28);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.games-filter-icon-btn--active {
+  border-color: rgba(0, 245, 255, 0.38);
+  background: rgba(0, 245, 255, 0.1);
+  color: rgba(224, 252, 255, 0.95);
+  box-shadow: 0 0 14px rgba(0, 245, 255, 0.12);
+}
+
+.games-filter-icon-btn--square {
+  width: 2.25rem;
+  padding: 0;
+}
+
+.games-filter-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.82);
+}
+
+.games-filter-section-label::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  background: rgba(0, 245, 255, 0.75);
+  box-shadow: 0 0 8px rgba(0, 245, 255, 0.45);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.games-filter-search {
+  width: 100%;
+  border: 1px solid rgba(0, 245, 255, 0.16);
+  border-radius: 0;
+  clip-path: none;
+  background: rgba(0, 0, 0, 0.36);
+  padding: 0.375rem 0.625rem 0.375rem 2rem;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.games-filter-search::placeholder {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.games-filter-search:focus {
+  border-color: rgba(0, 245, 255, 0.38);
+  background: rgba(0, 0, 0, 0.52);
+  box-shadow: 0 0 18px rgba(0, 245, 255, 0.1);
+}
+
+.games-filter-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.5rem 0.625rem;
+  color: rgba(255, 255, 255, 0.9);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  clip-path: polygon(
+    6px 0%,
+    calc(100% - 6px) 0%,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    0% calc(100% - 6px),
+    0% 6px
+  );
+}
+
+.games-filter-input:focus {
+  border-color: rgba(0, 245, 255, 0.35);
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.08);
+}
+
+/* 点差の幅 — ガラス面 */
+.games-filter-margin-glass {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid rgba(0, 245, 255, 0.16);
+  border-radius: 0;
+  clip-path: none;
+  background:
+    linear-gradient(
+      168deg,
+      rgba(255, 255, 255, 0.055) 0%,
+      rgba(255, 255, 255, 0.018) 100%
+    ),
+    rgba(0, 245, 255, 0.025);
+  backdrop-filter: blur(10px) saturate(145%);
+  -webkit-backdrop-filter: blur(10px) saturate(145%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+.games-filter-margin-glass::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 245, 255, 0.32) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.games-filter-margin-wrap {
+  padding: 0.375rem 0.5rem;
+}
+
+.games-filter-margin-inline {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.games-filter-margin-kicker {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding-bottom: 0.3125rem;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.82);
+  white-space: nowrap;
+}
+
+.games-filter-margin-kicker-mark {
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  background: rgba(0, 245, 255, 0.75);
+  box-shadow: 0 0 8px rgba(0, 245, 255, 0.45);
+  transform: rotate(45deg);
+}
+
+.games-filter-margin-fields {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: 0.375rem;
+}
+
+.games-filter-margin-field {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.games-filter-margin-field > span {
+  font-size: 9px;
+  line-height: 1;
+  color: rgba(165, 243, 252, 0.5);
+}
+
+.games-filter-input--glass {
+  border-color: rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  clip-path: none;
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 0.3125rem 0.5rem;
+}
+
+.games-filter-input--glass:focus {
+  border-color: rgba(0, 245, 255, 0.42);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 16px rgba(0, 245, 255, 0.14);
+}
+
+.games-filter-team-search-primary {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.games-filter-team-search-head {
+  padding: 0.5rem 0.5rem 0.375rem;
+}
+
+.games-filter-team-search-head .games-filter-section-label {
+  margin-bottom: 0.375rem;
+}
+
+.games-filter-team-search-primary--dual .games-filter-team-search-head {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+.games-filter-team-search-primary--dual .games-filter-team-search-head .games-filter-section-label {
+  margin-bottom: 0.375rem;
+}
+
+.games-filter-team-search-list {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 0.5rem 0.5rem;
+}
+
+.games-filter-team-search-primary--dual .games-filter-team-search-list {
+  min-height: min(36dvh, 320px);
+}
+
+.games-filter-selection-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border-bottom: 1px solid rgba(0, 245, 255, 0.1);
+  padding: 0.5rem 0.5rem 0.4375rem;
+}
+
+.games-filter-selection-bar--dual {
+  gap: 0.3125rem;
+  padding-bottom: 0.375rem;
+}
+
+.games-filter-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.games-filter-scope-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+}
+
+.games-filter-scope-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.78);
+}
+
+.games-filter-seg-track--compact {
+  padding: 0.125rem;
+}
+
+.games-filter-seg-btn--compact {
+  min-height: 2rem;
+  padding: 0.3125rem 0.4375rem;
+  font-size: 10px;
+}
+
+.games-filter-margin-wrap--dual {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.games-filter-margin-wrap--dual .games-filter-margin-glass {
+  padding: 0.3125rem 0.4375rem;
+}
+
+.games-filter-margin-wrap--dual .games-filter-input--glass {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.games-filter-team-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  clip-path: none;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.games-filter-team-row:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.games-filter-team-row--selected {
+  border-color: rgba(0, 245, 255, 0.38);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 245, 255, 0.16) 0%,
+    rgba(0, 245, 255, 0.03) 58%,
+    transparent 100%
+  );
+  box-shadow:
+    inset 3px 0 0 rgba(0, 245, 255, 0.55),
+    0 0 16px rgba(0, 245, 255, 0.08);
+}
+
+.games-filter-team-row:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.games-filter-check {
+  display: flex;
+  height: 1.25rem;
+  width: 1.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  clip-path: none;
+  font-size: 10px;
+  font-weight: 700;
+  color: transparent;
+}
+
+.games-filter-check--on {
+  border-color: rgba(0, 245, 255, 0.5);
+  background: rgba(0, 245, 255, 0.18);
+  color: rgba(224, 252, 255, 0.98);
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
+}
+
+.games-filter-seg-track {
+  display: flex;
+  gap: 0.375rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.25rem;
+  clip-path: polygon(
+    8px 0%,
+    calc(100% - 8px) 0%,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0% calc(100% - 8px),
+    0% 8px
+  );
+}
+
+.games-filter-seg-btn {
+  min-height: 2.25rem;
+  flex: 1;
+  padding: 0.5rem 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+  clip-path: polygon(
+    5px 0%,
+    calc(100% - 5px) 0%,
+    100% 5px,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    5px 100%,
+    0% calc(100% - 5px),
+    0% 5px
+  );
+}
+
+.games-filter-seg-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.games-filter-seg-btn--active {
+  border: 1px solid rgba(0, 245, 255, 0.32);
+  background: rgba(0, 245, 255, 0.14);
+  color: rgba(224, 252, 255, 0.96);
+  box-shadow: 0 0 14px rgba(0, 245, 255, 0.1);
+}
+
+.games-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid rgba(0, 245, 255, 0.32);
+  border-radius: 0;
+  clip-path: none;
+  background: rgba(0, 245, 255, 0.1);
+  padding: 0.25rem 0.625rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(224, 252, 255, 0.94);
+  transition: background 0.18s ease;
+}
+
+.games-filter-chip:hover {
+  background: rgba(0, 245, 255, 0.18);
+}
+
+.games-filter-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-top: 1px solid rgba(0, 245, 255, 0.12);
+  padding: 0.75rem 1rem;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 245, 255, 0.04) 0%,
+    transparent 100%
+  );
+}
+
+.games-filter-clear-btn {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.5rem 0.75rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
+  clip-path: polygon(
+    6px 0%,
+    calc(100% - 6px) 0%,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    0% calc(100% - 6px),
+    0% 6px
+  );
+}
+
+.games-filter-clear-btn:enabled:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.games-filter-clear-btn:disabled {
+  opacity: 0.35;
+}
+
+.games-filter-done-btn {
+  min-width: 6.5rem;
+  padding: 0.5rem 1.125rem;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 /* 予想オーバーレイ — 送信 CTA（角切り・シアングロー） */
@@ -3985,8 +4567,8 @@ body::before {
   border: 1px solid var(--kinetik-frame);
 }
 
-.profile-kinetik-panel > :not(.profile-kinetik-frame-corner),
-.profile-edit-kinetik-card > :not(.profile-kinetik-frame-corner) {
+.profile-kinetik-panel > :not(.profile-kinetik-frame-corner):not(.profile-plan-pro-bg):not(.profile-plan-pro-ambient):not(.profile-plan-pro-frame-sweep):not(.profile-plan-pro-frame-inner):not(.profile-plan-pro-frame-rail):not(.profile-plan-pro-frame-edge),
+.profile-edit-kinetik-card > :not(.profile-kinetik-frame-corner):not(.profile-plan-pro-bg):not(.profile-plan-pro-ambient):not(.profile-plan-pro-frame-sweep):not(.profile-plan-pro-frame-inner):not(.profile-plan-pro-frame-rail):not(.profile-plan-pro-frame-edge) {
   position: relative;
   z-index: 1;
 }
@@ -4113,6 +4695,2473 @@ body::before {
   --kinetik-frame-dim: rgba(248, 113, 113, 0.22);
 }
 
+/* PRO プラン加入 — 課金ステータス（ランク tier accent-pro とは別レイヤー） */
+.profile-kinetik-panel--plan-pro,
+.profile-edit-kinetik-card.profile-kinetik-panel--plan-pro {
+  overflow: hidden;
+  background: rgba(3, 8, 13, 0.48);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.5),
+    0 0 0 1px var(--kinetik-frame),
+    0 0 28px color-mix(in srgb, var(--kinetik-frame-strong) 32%, transparent),
+    0 0 56px color-mix(in srgb, var(--kinetik-frame-dim) 24%, transparent),
+    0 0 72px rgba(34, 211, 238, 0.14),
+    0 0 96px rgba(167, 139, 250, 0.1);
+}
+
+.profile-plan-pro-ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 62% 32% at 50% -12%, rgba(34, 211, 238, 0.07) 0%, transparent 62%),
+    radial-gradient(ellipse 58% 42% at 92% 92%, rgba(167, 139, 250, 0.14) 0%, transparent 68%),
+    radial-gradient(ellipse 48% 36% at 8% 78%, rgba(34, 211, 238, 0.08) 0%, transparent 62%);
+}
+
+.profile-kinetik-panel--plan-pro::before,
+.profile-edit-kinetik-card.profile-kinetik-panel--plan-pro::before {
+  border-color: var(--kinetik-frame);
+}
+
+.profile-kinetik-panel--plan-pro .profile-kinetik-frame-corner,
+.profile-edit-kinetik-card.profile-kinetik-panel--plan-pro .profile-kinetik-frame-corner {
+  border-color: var(--kinetik-frame-strong);
+}
+
+/* PRO 枠 — HUD 強化（色は accent / 連勝 tier に追従） */
+.profile-kinetik-panel--plan-pro,
+.profile-edit-kinetik-card.profile-kinetik-panel--plan-pro {
+  --kinetik-frame-corner: 26px;
+}
+
+.profile-plan-pro-frame-corner {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(
+      0 0 10px color-mix(in srgb, var(--kinetik-frame-strong) 72%, transparent)
+    )
+    drop-shadow(0 0 18px rgba(34, 211, 238, 0.35))
+    drop-shadow(0 0 28px rgba(167, 139, 250, 0.22));
+}
+
+@property --profile-plan-pro-sweep-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.profile-plan-pro-frame-sweep {
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--profile-plan-pro-sweep-angle),
+    transparent 0deg 248deg,
+    rgba(34, 211, 238, 0.22) 262deg,
+    rgba(236, 254, 255, 0.92) 278deg,
+    rgba(167, 139, 250, 0.72) 292deg,
+    rgba(34, 211, 238, 0.28) 306deg,
+    transparent 322deg 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.profile-plan-pro-bg--animate ~ .profile-plan-pro-frame-sweep {
+  animation: profile-plan-pro-sweep-spin 4.8s linear infinite;
+}
+
+@keyframes profile-plan-pro-sweep-spin {
+  to {
+    --profile-plan-pro-sweep-angle: 360deg;
+  }
+}
+
+.profile-plan-pro-frame-inner {
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  z-index: 2;
+  border: 1.5px solid color-mix(in srgb, var(--kinetik-frame) 72%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kinetik-frame-strong) 14%, transparent) 0%,
+    transparent 18%,
+    transparent 82%,
+    color-mix(in srgb, var(--kinetik-frame-dim) 16%, transparent) 100%
+  );
+  box-shadow:
+    inset 0 0 32px color-mix(in srgb, var(--kinetik-frame-strong) 10%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--kinetik-frame-strong) 18%, transparent);
+}
+
+.profile-plan-pro-frame-rail {
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  width: 2px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--kinetik-frame-strong) 55%, transparent) 32%,
+    color-mix(in srgb, var(--kinetik-frame-dim) 42%, transparent) 68%,
+    transparent 100%
+  );
+  box-shadow: 0 0 14px color-mix(in srgb, var(--kinetik-frame-strong) 32%, transparent);
+}
+
+.profile-plan-pro-frame-rail--left {
+  left: 7px;
+}
+
+.profile-plan-pro-frame-rail--right {
+  right: 7px;
+}
+
+.profile-plan-pro-frame-edge--top {
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--kinetik-frame-strong) 55%, #22d3ee) 42%,
+    color-mix(in srgb, var(--kinetik-frame-strong) 75%, #ecfeff) 50%,
+    color-mix(in srgb, var(--kinetik-frame-strong) 55%, #a78bfa) 58%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--kinetik-frame-strong) 48%, transparent),
+    0 0 28px rgba(34, 211, 238, 0.22);
+}
+
+/* ── PRO Mobile ステージ — 背景 FX を見せる縦レイアウト ── */
+.profile-plan-pro--mobile-stage.profile-edit-kinetik-card--compact {
+  background: rgba(3, 8, 13, 0.14);
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.profile-plan-pro--mobile-stage .profile-plan-pro-ambient {
+  opacity: 0.55;
+}
+
+.profile-plan-pro--mobile-stage .profile-plan-pro-frame-inner {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kinetik-frame-strong) 6%, transparent) 0%,
+    transparent 22%,
+    transparent 78%,
+    color-mix(in srgb, var(--kinetik-frame-dim) 8%, transparent) 100%
+  );
+  border-color: color-mix(in srgb, var(--kinetik-frame) 48%, transparent);
+  box-shadow:
+    inset 0 0 24px color-mix(in srgb, var(--kinetik-frame-strong) 6%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--kinetik-frame-strong) 10%, transparent);
+}
+
+.profile-edit-kinetik-mobile-hero {
+  position: relative;
+  z-index: 1;
+  margin: -12px -12px 0;
+  padding: 14px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.profile-edit-kinetik-mobile-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 420px;
+  flex-direction: column;
+}
+
+.profile-edit-kinetik-card--pro-mobile {
+  --profile-pro-mobile-pad-x: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .profile-edit-kinetik-card--pro-mobile {
+    --profile-pro-mobile-pad-x: 1rem;
+  }
+}
+
+.profile-plan-pro--mobile-stage .profile-edit-kinetik-badge-bridge {
+  margin-inline: calc(-1 * var(--profile-pro-mobile-pad-x));
+  width: calc(100% + 2 * var(--profile-pro-mobile-pad-x));
+  padding-inline: 0;
+  padding-block: 8px 12px;
+}
+
+.profile-edit-kinetik-badge-bridge {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 60px;
+  padding: 8px 4px 12px;
+}
+
+.profile-edit-kinetik-badge-bridge--empty {
+  pointer-events: none;
+}
+
+.profile-edit-kinetik-badge-row--pro-bridge {
+  gap: 10px;
+}
+
+.profile-edit-kinetik-badge-row-scroll--pro-bridge-static {
+  overflow: visible;
+  padding-bottom: 6px;
+}
+
+.profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-one,
+.profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-two,
+.profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-three,
+.profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-four {
+  width: 100%;
+  justify-content: center;
+}
+
+.profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-two {
+  gap: 14px;
+}
+
+.profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-three {
+  gap: 12px;
+}
+
+.profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-four {
+  gap: 10px;
+}
+
+.profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-scroll {
+  width: max-content;
+  flex-wrap: nowrap;
+}
+
+.profile-edit-kinetik-badge-row-scroll--pro-bridge-nudge {
+  max-width: calc(
+    var(--badge-pro-bridge-size) * 4.35 + var(--badge-pro-bridge-gap) * 4
+  );
+}
+
+.profile-edit-kinetik-badge-row-scroll--pro-bridge-nudge
+  .profile-edit-kinetik-badge-row--count-scroll {
+  padding-right: 10px;
+}
+
+.profile-edit-kinetik-badge-row-scroll--pro-bridge {
+  --badge-pro-bridge-visible: 5;
+  --badge-pro-bridge-size: 3.5rem;
+  --badge-pro-bridge-gap: 10px;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  padding-bottom: 6px;
+}
+
+.profile-edit-kinetik-badge-row-scroll--pro-bridge::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .profile-edit-kinetik-badge-row-scroll--pro-bridge {
+    --badge-pro-bridge-size: 4rem;
+  }
+}
+
+.profile-edit-kinetik-badge-row-scroll--pro-bridge.profile-edit-kinetik-badge-row-scroll--web {
+  --badge-pro-bridge-size: 4rem;
+}
+
+@media (min-width: 640px) {
+  .profile-edit-kinetik-badge-row-scroll--pro-bridge.profile-edit-kinetik-badge-row-scroll--web {
+    --badge-pro-bridge-size: 4.5rem;
+  }
+}
+
+.profile-edit-kinetik-badge-row-scroll--pro-bridge.profile-edit-kinetik-badge-row-scroll--overflow {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+}
+
+.profile-edit-kinetik-badge-row--pro-bridge .profile-edit-kinetik-badge-float {
+  scroll-snap-align: start;
+}
+
+@keyframes profile-kinetik-badge-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(-18px, 10px, 0) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.profile-edit-kinetik-badge-enter-wrap {
+  opacity: 0;
+  animation: profile-kinetik-badge-enter 580ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes profile-kinetik-badge-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+.profile-edit-kinetik-badge-float {
+  will-change: transform;
+}
+
+.profile-edit-kinetik-badge-row--pro-bridge .profile-edit-kinetik-badge-float {
+  animation: profile-kinetik-badge-float 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 6px 14px rgba(34, 211, 238, 0.22));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-edit-kinetik-badge-enter-wrap {
+    opacity: 1;
+    animation: none;
+  }
+
+  .profile-edit-kinetik-badge-row--pro-bridge .profile-edit-kinetik-badge-float {
+    animation: none;
+    filter: none;
+  }
+}
+
+.profile-plan-pro--mobile-stage.profile-edit-kinetik-card--pro-mobile {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-edit-kinetik-mobile-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* 上だけ軽く落として可読性を確保。下は透明のまま背景と繋ぐ */
+  background: linear-gradient(
+    180deg,
+    rgba(3, 8, 13, 0.24) 0%,
+    rgba(3, 8, 13, 0.06) 42%,
+    transparent 68%
+  );
+}
+
+.profile-edit-kinetik-mobile-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-edit-kinetik-header__bio--pro-mobile {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-edit-kinetik-mobile-metrics {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  background: transparent;
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.profile-plan-pro--mobile-stage .profile-plan-pro-metric-card {
+  background: linear-gradient(
+    155deg,
+    rgba(10, 24, 40, 0.58) 0%,
+    rgba(5, 14, 26, 0.42) 48%,
+    rgba(4, 10, 20, 0.52) 100%
+  );
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(34, 211, 238, 0.1),
+    0 6px 20px rgba(0, 0, 0, 0.38),
+    0 0 20px rgba(34, 211, 238, 0.1);
+}
+
+.profile-plan-pro--mobile-stage .profile-plan-pro-metrics-grid {
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-plan-pro--mobile-stage .profile-plan-pro-metrics-grid::before {
+  display: none;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__vignette {
+  opacity: 0.42;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__base-depth {
+  opacity: 0.72;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__tunnel-floor {
+  height: 92%;
+  bottom: -2%;
+  filter: brightness(1.45) saturate(1.25);
+  opacity: 0.95;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__hex-depth-floor {
+  filter: brightness(1.35) saturate(1.2);
+  opacity: 0.72;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__iso-floor {
+  filter: brightness(1.4) saturate(1.2);
+  opacity: 0.85;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__circuit-floor {
+  filter: brightness(1.35) saturate(1.15);
+  opacity: 0.88;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__wire-cage-wrap {
+  transform: scale(1.08) translateY(-6%);
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__starfield-layer--near {
+  opacity: 0.95;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__sonar-ring {
+  opacity: 0.85;
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__wormhole--outer,
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__wormhole--inner {
+  filter: brightness(1.3);
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__shaft--b {
+  opacity: 0.95;
+  filter: brightness(1.25);
+}
+
+.profile-plan-pro-bg--mobile-boost .profile-plan-pro-bg__cloud {
+  filter: blur(24px) brightness(1.2);
+  opacity: 0.95;
+}
+
+/* PRO メトリクス — 種目ピッカー（矢印のみ TRON ネオン） */
+.profile-edit-kinetik-metrics-scope-header {
+  position: relative;
+  isolation: isolate;
+}
+
+.profile-edit-kinetik-metrics-scope-header--static,
+.profile-edit-kinetik-metrics-scope-header--picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+}
+
+.profile-edit-kinetik-metrics-scope-header--picker {
+  position: relative;
+  min-height: 2rem;
+}
+
+.profile-edit-kinetik-metrics-scope-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    filter 0.2s ease;
+}
+
+.profile-edit-kinetik-metrics-scope-nav--prev {
+  left: 8px;
+}
+
+.profile-edit-kinetik-metrics-scope-nav--next {
+  right: 8px;
+}
+
+.profile-edit-kinetik-metrics-scope-nav:hover {
+  transform: translateY(-50%) scale(1.1);
+  filter: drop-shadow(0 0 8px rgba(0, 245, 255, 0.75));
+}
+
+.profile-edit-kinetik-metrics-scope-nav:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.profile-edit-kinetik-metrics-scope-arrow {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transition: filter 0.2s ease;
+}
+
+.profile-edit-kinetik-metrics-scope-arrow--left {
+  border-right: 8px solid #00f5ff;
+  filter:
+    drop-shadow(0 0 3px #00f5ff)
+    drop-shadow(0 0 8px rgba(0, 245, 255, 0.55));
+}
+
+.profile-edit-kinetik-metrics-scope-arrow--right {
+  border-left: 8px solid #00f5ff;
+  filter:
+    drop-shadow(0 0 3px #00f5ff)
+    drop-shadow(0 0 8px rgba(0, 245, 255, 0.55));
+}
+
+.profile-edit-kinetik-metrics-scope-header--pro .profile-edit-kinetik-metrics-scope-arrow--left {
+  border-right-color: #67e8f9;
+}
+
+.profile-edit-kinetik-metrics-scope-header--pro .profile-edit-kinetik-metrics-scope-arrow--right {
+  border-left-color: #67e8f9;
+}
+
+.profile-edit-kinetik-metrics-scope-title {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 2px 2.25rem;
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.profile-edit-kinetik-metrics-scope-title--static {
+  width: 100%;
+  cursor: default;
+}
+
+.profile-edit-kinetik-metrics-scope-title:hover {
+  opacity: 0.9;
+}
+
+.profile-edit-kinetik-metrics-scope-title--breath {
+  animation: profile-edit-kinetik-metrics-scope-title-breath 3.6s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-metrics-scope-title--breath:hover {
+  animation: none;
+}
+
+.profile-edit-kinetik-metrics-scope-header--pro
+  .profile-edit-kinetik-metrics-scope-title--breath {
+  animation-name: profile-edit-kinetik-metrics-scope-title-breath-pro;
+}
+
+@keyframes profile-edit-kinetik-metrics-scope-title-breath {
+  0%,
+  100% {
+    opacity: 0.76;
+  }
+  50% {
+    opacity: 0.96;
+  }
+}
+
+@keyframes profile-edit-kinetik-metrics-scope-title-breath-pro {
+  0%,
+  100% {
+    opacity: 0.78;
+    filter: drop-shadow(0 0 0 rgba(0, 245, 255, 0));
+  }
+  50% {
+    opacity: 0.98;
+    filter: drop-shadow(0 0 6px rgba(0, 245, 255, 0.22));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-edit-kinetik-metrics-scope-title--breath {
+    animation: none;
+  }
+}
+
+.profile-plan-pro-metrics-grid {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(34, 211, 238, 0.04) 0%,
+    transparent 22%,
+    transparent 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(34, 211, 238, 0.12);
+}
+
+.profile-plan-pro-metrics-grid::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(34, 211, 238, 0.45) 42%,
+    rgba(167, 139, 250, 0.35) 58%,
+    transparent 100%
+  );
+}
+
+/* PRO メトリクスカード — 2×2 形維持・ガラス HUD 強化 */
+.profile-plan-pro-metric-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  --metric-accent-solid: #22d3ee;
+  background: linear-gradient(
+    155deg,
+    rgba(10, 24, 40, 0.92) 0%,
+    rgba(5, 14, 26, 0.78) 48%,
+    rgba(4, 10, 20, 0.86) 100%
+  );
+  border-color: rgba(34, 211, 238, 0.28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 0 0 1px rgba(34, 211, 238, 0.12),
+    0 8px 26px rgba(0, 0, 0, 0.48),
+    0 0 24px rgba(34, 211, 238, 0.12),
+    0 0 40px rgba(167, 139, 250, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.profile-plan-pro-metric-card__sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    118deg,
+    rgba(255, 255, 255, 0.09) 0%,
+    transparent 34%,
+    transparent 66%,
+    rgba(167, 139, 250, 0.05) 100%
+  );
+  opacity: 0.65;
+}
+
+.profile-plan-pro-metric-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid rgba(34, 211, 238, 0.72);
+  border-left: 2px solid rgba(34, 211, 238, 0.72);
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.45));
+  pointer-events: none;
+}
+
+.profile-plan-pro-metric-card::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-right: 2px solid rgba(167, 139, 250, 0.58);
+  border-bottom: 2px solid rgba(167, 139, 250, 0.58);
+  filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.35));
+  pointer-events: none;
+}
+
+.profile-plan-pro-metric-card__bar {
+  z-index: 1;
+  border-radius: 2px;
+  box-shadow:
+    0 0 4px color-mix(in srgb, currentColor 55%, transparent),
+    0 0 10px color-mix(in srgb, currentColor 22%, transparent) !important;
+}
+
+.profile-plan-pro-metric-card__value {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 0 3px var(--metric-accent-glow, rgba(34, 211, 238, 0.22)));
+}
+
+.profile-plan-pro-metric-card--green {
+  --metric-accent-glow: rgba(168, 255, 42, 0.28);
+  border-color: rgba(168, 255, 42, 0.32) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 8px 26px rgba(0, 0, 0, 0.48),
+    0 0 18px rgba(168, 255, 42, 0.1);
+}
+
+.profile-plan-pro-metric-card--magenta {
+  --metric-accent-glow: rgba(255, 43, 214, 0.26);
+  border-color: rgba(255, 43, 214, 0.3) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 8px 26px rgba(0, 0, 0, 0.48),
+    0 0 18px rgba(255, 43, 214, 0.1);
+}
+
+.profile-plan-pro-metric-card--cyan {
+  --metric-accent-glow: rgba(34, 211, 238, 0.28);
+  border-color: rgba(34, 211, 238, 0.34) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 8px 26px rgba(0, 0, 0, 0.48),
+    0 0 18px rgba(34, 211, 238, 0.12);
+}
+
+.profile-plan-pro-metric-card--red {
+  --metric-accent-glow: rgba(248, 113, 113, 0.26);
+  border-color: rgba(248, 113, 113, 0.3) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 8px 26px rgba(0, 0, 0, 0.48),
+    0 0 18px rgba(248, 113, 113, 0.1);
+}
+
+.profile-plan-pro-metric-card .profile-plan-pro-metric-rank {
+  position: relative;
+  z-index: 1;
+  border-color: rgba(34, 211, 238, 0.38);
+  background: rgba(34, 211, 238, 0.1);
+  color: rgba(34, 211, 238, 0.95);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.18);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+/* PRO メトリクス — 中身（ラベル・数値・バー・補足） */
+.profile-plan-pro-metric-card__label {
+  color: color-mix(in srgb, var(--metric-accent-solid) 72%, white) !important;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--metric-accent-solid) 14%, transparent);
+}
+
+.profile-plan-pro-metric-card__unit-hint {
+  color: color-mix(in srgb, var(--metric-accent-solid) 42%, rgba(255, 255, 255, 0.35)) !important;
+}
+
+.profile-plan-pro-metric-card__value {
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  filter: drop-shadow(0 0 3px var(--metric-accent-glow, rgba(34, 211, 238, 0.22)));
+}
+
+.profile-plan-pro-metric-card__unit {
+  color: color-mix(in srgb, var(--metric-accent-solid) 55%, rgba(255, 255, 255, 0.4)) !important;
+}
+
+.profile-plan-pro-metric-card__footnote {
+  border-left: 2px solid color-mix(in srgb, var(--metric-accent-solid) 65%, transparent);
+  padding-left: 8px;
+  margin-left: 2px;
+  color: rgba(255, 255, 255, 0.74) !important;
+}
+
+.profile-plan-pro-metric-card__seg {
+  border-radius: 2px;
+}
+
+.profile-plan-pro-metric-card__info {
+  border: 1px solid rgba(34, 211, 238, 0.35) !important;
+  background: rgba(34, 211, 238, 0.08) !important;
+  color: rgba(34, 211, 238, 0.85) !important;
+  border-radius: 999px;
+}
+
+.profile-plan-pro-metric-card__info svg {
+  color: rgba(34, 211, 238, 0.9);
+}
+
+/* PRO 背景 — オーロラのみ */
+.profile-plan-pro-bg {
+  z-index: 0;
+  border-radius: inherit;
+}
+
+.profile-plan-pro-bg__wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(34, 211, 238, 0.07) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(167, 139, 250, 0.06) 100%
+  );
+}
+
+.profile-plan-pro-bg__aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(22px);
+  will-change: opacity, transform;
+  mix-blend-mode: screen;
+}
+
+.profile-plan-pro-bg__aurora--cyan {
+  top: -14%;
+  left: -8%;
+  width: 82%;
+  height: 66%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(34, 211, 238, 0.42),
+    transparent 68%
+  );
+}
+
+.profile-plan-pro-bg__aurora--purple {
+  right: -10%;
+  bottom: -16%;
+  width: 76%;
+  height: 62%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(167, 139, 250, 0.36),
+    transparent 70%
+  );
+}
+
+.profile-plan-pro-bg__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 110% 90% at 50% 48%,
+    transparent 52%,
+    rgba(3, 8, 13, 0.38) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__aurora--cyan {
+  animation: profile-plan-pro-aurora-pulse 5s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__aurora--purple {
+  animation: profile-plan-pro-aurora-pulse 5s ease-in-out infinite reverse;
+  animation-delay: -1.6s;
+}
+
+@keyframes profile-plan-pro-aurora-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__aurora--cyan,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__aurora--purple {
+    animation: none;
+  }
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__holo-sheen,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__mesh,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__grain,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__prism--tl,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__prism--br {
+    animation: none;
+  }
+}
+
+/* ── Holo: 斜めシマー（Cybercore.css 参考） ── */
+.profile-plan-pro-bg__holo-sheen {
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(
+    115deg,
+    transparent 28%,
+    rgba(34, 211, 238, 0.1) 42%,
+    rgba(167, 139, 250, 0.14) 50%,
+    rgba(34, 211, 238, 0.1) 58%,
+    transparent 72%
+  );
+  background-size: 220% 220%;
+  mix-blend-mode: screen;
+  will-change: background-position;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__holo-sheen {
+  animation: profile-plan-pro-holo-sweep 7s ease-in-out infinite;
+}
+
+@keyframes profile-plan-pro-holo-sweep {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.75;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 1;
+  }
+}
+
+/* ── Grain: フィルムグレイン（SysUI / Cybercore noise 参考） ── */
+.profile-plan-pro-bg__wash--dim {
+  opacity: 0.7;
+}
+
+.profile-plan-pro-bg__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.profile-plan-pro-bg__aurora--faint {
+  top: -10%;
+  right: -6%;
+  left: auto;
+  width: 70%;
+  height: 55%;
+  opacity: 0.55;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__grain {
+  animation: profile-plan-pro-grain-pulse 4s ease-in-out infinite;
+}
+
+@keyframes profile-plan-pro-grain-pulse {
+  0%,
+  100% {
+    opacity: 0.07;
+  }
+  50% {
+    opacity: 0.11;
+  }
+}
+
+/* ── Prism: 色収差グロー（SysUI chromatic 参考） ── */
+.profile-plan-pro-bg__prism {
+  position: absolute;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: blur(18px);
+}
+
+.profile-plan-pro-bg__prism--tl {
+  top: -8%;
+  left: -6%;
+  width: 52%;
+  height: 48%;
+  background: radial-gradient(
+    ellipse at 0% 0%,
+    rgba(255, 60, 120, 0.22) 0%,
+    rgba(34, 211, 238, 0.12) 38%,
+    transparent 72%
+  );
+}
+
+.profile-plan-pro-bg__prism--br {
+  right: -8%;
+  bottom: -10%;
+  width: 54%;
+  height: 50%;
+  background: radial-gradient(
+    ellipse at 100% 100%,
+    rgba(34, 211, 238, 0.24) 0%,
+    rgba(167, 139, 250, 0.16) 42%,
+    transparent 74%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__prism--tl {
+  animation: profile-plan-pro-prism-pulse 6s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__prism--br {
+  animation: profile-plan-pro-prism-pulse 6s ease-in-out infinite reverse;
+  animation-delay: -2s;
+}
+
+@keyframes profile-plan-pro-prism-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+/* ── Mesh: ぼかしブロブ（glass HUD 系） ── */
+.profile-plan-pro-bg__mesh {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(36px);
+  mix-blend-mode: screen;
+  will-change: opacity, transform;
+}
+
+.profile-plan-pro-bg__mesh--cyan {
+  top: -18%;
+  left: -12%;
+  width: 78%;
+  height: 58%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(34, 211, 238, 0.38),
+    transparent 70%
+  );
+}
+
+.profile-plan-pro-bg__mesh--purple {
+  top: 28%;
+  right: -14%;
+  width: 62%;
+  height: 52%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(139, 92, 246, 0.32),
+    transparent 72%
+  );
+}
+
+.profile-plan-pro-bg__mesh--magenta {
+  bottom: -12%;
+  left: 18%;
+  width: 58%;
+  height: 44%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(217, 70, 239, 0.22),
+    transparent 74%
+  );
+}
+
+.profile-plan-pro-bg__vignette--soft {
+  background: radial-gradient(
+    ellipse 120% 100% at 50% 50%,
+    transparent 58%,
+    rgba(3, 8, 13, 0.28) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__mesh--cyan {
+  animation: profile-plan-pro-mesh-drift 8s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__mesh--purple {
+  animation: profile-plan-pro-mesh-drift 8s ease-in-out infinite reverse;
+  animation-delay: -2.4s;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__mesh--magenta {
+  animation: profile-plan-pro-mesh-drift 8s ease-in-out infinite;
+  animation-delay: -4.8s;
+}
+
+@keyframes profile-plan-pro-mesh-drift {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(2%, -3%) scale(1.08);
+  }
+}
+
+/* ── 奥行き共通ベース ── */
+.profile-plan-pro-bg__base-depth {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 82% 48% at 50% 14%, rgba(34, 211, 238, 0.16) 0%, transparent 62%),
+    radial-gradient(ellipse 42% 32% at 88% 88%, rgba(167, 139, 250, 0.12) 0%, transparent 68%),
+    linear-gradient(180deg, #050c14 0%, #030508 55%, #020305 100%);
+}
+
+/* ── Tunnel: 透視グリッド ── */
+.profile-plan-pro-bg__tunnel-wrap {
+  position: absolute;
+  inset: 0;
+  perspective: 240px;
+  overflow: hidden;
+}
+
+.profile-plan-pro-bg__tunnel-floor {
+  position: absolute;
+  bottom: -6%;
+  left: -28%;
+  right: -28%;
+  height: 78%;
+  transform-origin: 50% 100%;
+  transform: rotateX(72deg);
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.52) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.32) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 92% 100% at 50% 100%, black 0%, transparent 82%);
+}
+
+.profile-plan-pro-bg__tunnel-fog {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(3, 8, 13, 0.08) 0%,
+    transparent 42%,
+    rgba(3, 8, 13, 0.22) 100%
+  );
+}
+
+.profile-plan-pro-bg__vignette--tunnel {
+  background: radial-gradient(
+    ellipse 72% 56% at 50% 58%,
+    transparent 8%,
+    rgba(2, 4, 8, 0.58) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__tunnel-floor {
+  animation: profile-plan-pro-tunnel-flow 5s linear infinite;
+}
+
+@keyframes profile-plan-pro-tunnel-flow {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 28px;
+  }
+}
+
+/* ── Parallax: 遠・中・近 3層 ── */
+.profile-plan-pro-bg__layer {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.profile-plan-pro-bg__layer--far {
+  top: -22%;
+  left: -18%;
+  width: 95%;
+  height: 72%;
+  filter: blur(32px);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(34, 211, 238, 0.28) 0%,
+    transparent 72%
+  );
+}
+
+.profile-plan-pro-bg__layer--mid {
+  top: 18%;
+  right: -22%;
+  width: 72%;
+  height: 58%;
+  filter: blur(18px);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(124, 92, 255, 0.32) 0%,
+    transparent 74%
+  );
+}
+
+.profile-plan-pro-bg__layer--near {
+  bottom: -8%;
+  left: 8%;
+  width: 48%;
+  height: 38%;
+  filter: blur(6px);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(79, 247, 244, 0.42) 0%,
+    transparent 70%
+  );
+}
+
+.profile-plan-pro-bg__vignette--parallax {
+  background: radial-gradient(
+    ellipse 100% 88% at 50% 42%,
+    transparent 35%,
+    rgba(2, 4, 8, 0.62) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__layer--far {
+  animation: profile-plan-pro-layer-far 12s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__layer--mid {
+  animation: profile-plan-pro-layer-mid 8s ease-in-out infinite reverse;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__layer--near {
+  animation: profile-plan-pro-layer-near 5s ease-in-out infinite;
+}
+
+@keyframes profile-plan-pro-layer-far {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate(4%, 2%) scale(1.08);
+    opacity: 0.9;
+  }
+}
+
+@keyframes profile-plan-pro-layer-mid {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-5%, -3%) scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes profile-plan-pro-layer-near {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate(6%, -5%) scale(1.14);
+    opacity: 1;
+  }
+}
+
+/* ── Depth Field: 奥行き別パーティクル ── */
+.profile-plan-pro-bg__dots {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+}
+
+.profile-plan-pro-bg__dots--far {
+  opacity: 0.35;
+  background-image: radial-gradient(
+    circle,
+    rgba(34, 211, 238, 0.5) 0 0.6px,
+    transparent 0.7px
+  );
+  background-size: 42px 48px;
+}
+
+.profile-plan-pro-bg__dots--mid {
+  opacity: 0.5;
+  background-image: radial-gradient(
+    circle,
+    rgba(124, 92, 255, 0.65) 0 1px,
+    transparent 1.1px
+  );
+  background-size: 36px 40px;
+  background-position: 12px 8px;
+}
+
+.profile-plan-pro-bg__dots--near {
+  opacity: 0.7;
+  background-image: radial-gradient(
+    circle,
+    rgba(79, 247, 244, 0.9) 0 1.4px,
+    transparent 1.6px
+  );
+  background-size: 28px 32px;
+  background-position: 6px 14px;
+}
+
+.profile-plan-pro-bg__vignette--depth {
+  background: radial-gradient(
+    ellipse 95% 80% at 50% 45%,
+    transparent 30%,
+    rgba(2, 4, 8, 0.68) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__dots--far {
+  animation: profile-plan-pro-dots-far 14s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__dots--mid {
+  animation: profile-plan-pro-dots-mid 9s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__dots--near {
+  animation: profile-plan-pro-dots-near 5.5s linear infinite;
+}
+
+@keyframes profile-plan-pro-dots-far {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(24px);
+  }
+}
+
+@keyframes profile-plan-pro-dots-mid {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(36px);
+  }
+}
+
+@keyframes profile-plan-pro-dots-near {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(52px);
+  }
+}
+
+/* ── Sonar: 同心円レーダー ── */
+.profile-plan-pro-bg__sonar-ring {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.profile-plan-pro-bg__sonar-ring--1 {
+  width: 130%;
+  height: 130%;
+}
+
+.profile-plan-pro-bg__sonar-ring--2 {
+  width: 95%;
+  height: 95%;
+  opacity: 0.75;
+}
+
+.profile-plan-pro-bg__sonar-ring--3 {
+  width: 62%;
+  height: 62%;
+  opacity: 0.55;
+}
+
+.profile-plan-pro-bg__sonar-ring--4 {
+  width: 32%;
+  height: 32%;
+  opacity: 0.4;
+  border-color: rgba(124, 92, 255, 0.35);
+}
+
+.profile-plan-pro-bg__sonar-sweep {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 140%;
+  height: 140%;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 220deg at 50% 50%,
+    transparent 0deg,
+    rgba(34, 211, 238, 0.2) 24deg,
+    transparent 48deg
+  );
+  mask-image: radial-gradient(circle at 50% 50%, black 0%, transparent 74%);
+}
+
+.profile-plan-pro-bg__vignette--sonar {
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 52%,
+    transparent 18%,
+    rgba(2, 4, 8, 0.72) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__sonar-sweep {
+  animation: profile-plan-pro-sonar-spin 6s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__sonar-ring--1 {
+  animation: profile-plan-pro-sonar-pulse 6s ease-in-out infinite;
+}
+
+@keyframes profile-plan-pro-sonar-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes profile-plan-pro-sonar-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+
+/* ── Orbit: 軌道リング ── */
+.profile-plan-pro-bg__orbit {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 50%;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.profile-plan-pro-bg__orbit--a {
+  width: 110%;
+  height: 38%;
+  margin-left: -55%;
+  margin-top: -19%;
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.12);
+}
+
+.profile-plan-pro-bg__orbit--b {
+  width: 82%;
+  height: 28%;
+  margin-left: -41%;
+  margin-top: -14%;
+  border-color: rgba(124, 92, 255, 0.32);
+  opacity: 0.8;
+}
+
+.profile-plan-pro-bg__orbit--c {
+  width: 56%;
+  height: 18%;
+  margin-left: -28%;
+  margin-top: -9%;
+  opacity: 0.6;
+}
+
+.profile-plan-pro-bg__orbit-core {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: rgba(79, 247, 244, 0.9);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.75);
+}
+
+.profile-plan-pro-bg__vignette--orbit {
+  background: radial-gradient(
+    ellipse 90% 75% at 50% 48%,
+    transparent 22%,
+    rgba(2, 4, 8, 0.7) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__orbit--a {
+  animation: profile-plan-pro-orbit-a 12s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__orbit--b {
+  animation: profile-plan-pro-orbit-b 12s linear infinite reverse;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__orbit--c {
+  animation: profile-plan-pro-orbit-c 12s linear infinite;
+}
+
+@keyframes profile-plan-pro-orbit-a {
+  from {
+    transform: rotateX(68deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(68deg) rotateZ(360deg);
+  }
+}
+
+@keyframes profile-plan-pro-orbit-b {
+  from {
+    transform: rotateX(72deg) rotateZ(30deg);
+  }
+  to {
+    transform: rotateX(72deg) rotateZ(390deg);
+  }
+}
+
+@keyframes profile-plan-pro-orbit-c {
+  from {
+    transform: rotateX(75deg) rotateZ(-20deg);
+  }
+  to {
+    transform: rotateX(75deg) rotateZ(340deg);
+  }
+}
+
+/* ── Light Shaft: 光芒 ── */
+.profile-plan-pro-bg__shaft {
+  position: absolute;
+  top: -20%;
+  bottom: 0;
+  width: 22%;
+  opacity: 0.45;
+  background: linear-gradient(
+    180deg,
+    rgba(34, 211, 238, 0.45) 0%,
+    rgba(34, 211, 238, 0.12) 35%,
+    transparent 72%
+  );
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  transform-origin: 50% 0%;
+}
+
+.profile-plan-pro-bg__shaft--a {
+  left: 22%;
+  transform: skewX(-8deg);
+}
+
+.profile-plan-pro-bg__shaft--b {
+  left: 42%;
+  width: 28%;
+  opacity: 0.65;
+  transform: skewX(0deg);
+}
+
+.profile-plan-pro-bg__shaft--c {
+  right: 18%;
+  transform: skewX(10deg);
+}
+
+.profile-plan-pro-bg__vignette--shaft {
+  background: radial-gradient(
+    ellipse 85% 70% at 50% 30%,
+    transparent 25%,
+    rgba(2, 4, 8, 0.65) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__shaft--a {
+  animation: profile-plan-pro-shaft-a 7s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__shaft--b {
+  animation: profile-plan-pro-shaft-b 5s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__shaft--c {
+  animation: profile-plan-pro-shaft-c 6.5s ease-in-out infinite;
+}
+
+@keyframes profile-plan-pro-shaft-a {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes profile-plan-pro-shaft-b {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes profile-plan-pro-shaft-c {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ── Stack: ガラス積層 ── */
+.profile-plan-pro-bg__stack {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(34, 211, 238, 0.45) 20%,
+    rgba(124, 92, 255, 0.35) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
+}
+
+.profile-plan-pro-bg__stack--1 {
+  top: 28%;
+  opacity: 0.35;
+  transform: scaleX(0.75);
+}
+
+.profile-plan-pro-bg__stack--2 {
+  top: 42%;
+  opacity: 0.5;
+  transform: scaleX(0.88);
+}
+
+.profile-plan-pro-bg__stack--3 {
+  top: 56%;
+  opacity: 0.68;
+  transform: scaleX(0.96);
+}
+
+.profile-plan-pro-bg__stack--4 {
+  top: 70%;
+  opacity: 0.85;
+  transform: scaleX(1);
+}
+
+.profile-plan-pro-bg__vignette--stack {
+  background: linear-gradient(
+    180deg,
+    rgba(2, 4, 8, 0.35) 0%,
+    transparent 35%,
+    rgba(2, 4, 8, 0.55) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__stack--1 {
+  animation: profile-plan-pro-stack-drift 10s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__stack--2 {
+  animation: profile-plan-pro-stack-drift 10s ease-in-out infinite reverse;
+  animation-delay: -2s;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__stack--3 {
+  animation: profile-plan-pro-stack-drift 10s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__stack--4 {
+  animation: profile-plan-pro-stack-drift 10s ease-in-out infinite reverse;
+  animation-delay: -6s;
+}
+
+@keyframes profile-plan-pro-stack-drift {
+  0%,
+  100% {
+    transform: scaleX(var(--stack-scale, 1)) translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleX(var(--stack-scale, 1)) translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.profile-plan-pro-bg__stack--1 {
+  --stack-scale: 0.75;
+}
+
+.profile-plan-pro-bg__stack--2 {
+  --stack-scale: 0.88;
+}
+
+.profile-plan-pro-bg__stack--3 {
+  --stack-scale: 0.96;
+}
+
+.profile-plan-pro-bg__stack--4 {
+  --stack-scale: 1;
+}
+
+/* ── Wormhole: 螺旋渦 ── */
+.profile-plan-pro-bg__wormhole {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.profile-plan-pro-bg__wormhole--outer {
+  width: 160%;
+  height: 160%;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(34, 211, 238, 0.06) 0deg 8deg,
+    transparent 8deg 16deg
+  );
+  mask-image: radial-gradient(circle at 50% 50%, black 15%, transparent 72%);
+  opacity: 0.7;
+}
+
+.profile-plan-pro-bg__wormhole--inner {
+  width: 90%;
+  height: 90%;
+  background: repeating-conic-gradient(
+    from 30deg at 50% 50%,
+    rgba(124, 92, 255, 0.1) 0deg 6deg,
+    transparent 6deg 12deg
+  );
+  mask-image: radial-gradient(circle at 50% 50%, black 5%, transparent 58%);
+  opacity: 0.85;
+}
+
+.profile-plan-pro-bg__wormhole-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18%;
+  height: 18%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(79, 247, 244, 0.55) 0%,
+    rgba(34, 211, 238, 0.2) 45%,
+    transparent 72%
+  );
+  box-shadow: 0 0 28px rgba(34, 211, 238, 0.35);
+}
+
+.profile-plan-pro-bg__vignette--wormhole {
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 12%,
+    rgba(2, 4, 8, 0.78) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__wormhole--outer {
+  animation: profile-plan-pro-wormhole-spin 8s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__wormhole--inner {
+  animation: profile-plan-pro-wormhole-spin 8s linear infinite reverse;
+}
+
+@keyframes profile-plan-pro-wormhole-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* ── Hex Depth: 六角透視 ── */
+.profile-plan-pro-bg__hex-depth-wrap {
+  position: absolute;
+  inset: 0;
+  perspective: 220px;
+  overflow: hidden;
+}
+
+.profile-plan-pro-bg__hex-depth-floor {
+  position: absolute;
+  bottom: -4%;
+  left: -30%;
+  right: -30%;
+  height: 80%;
+  transform-origin: 50% 100%;
+  transform: rotateX(74deg);
+  opacity: 0.55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 0 L56 16 L56 50 L28 66 L0 50 L0 16 Z' fill='none' stroke='rgba(34,211,238,0.45)' stroke-width='1'/%3E%3Cpath d='M28 34 L56 50 L56 84 L28 100 L0 84 L0 50 Z' fill='none' stroke='rgba(34,211,238,0.3)' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: 40px 72px;
+  mask-image: radial-gradient(ellipse 90% 100% at 50% 100%, black 0%, transparent 88%);
+}
+
+.profile-plan-pro-bg__hex-depth-horizon {
+  position: absolute;
+  top: 34%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(124, 92, 255, 0.5), transparent);
+  box-shadow: 0 0 14px rgba(124, 92, 255, 0.35);
+}
+
+.profile-plan-pro-bg__vignette--hex {
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 60%,
+    transparent 8%,
+    rgba(2, 4, 8, 0.76) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__hex-depth-floor {
+  animation: profile-plan-pro-hex-flow 5.5s linear infinite;
+}
+
+@keyframes profile-plan-pro-hex-flow {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 72px;
+  }
+}
+
+/* ── Starfield: 星間ワープ ── */
+.profile-plan-pro-bg__starfield {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.profile-plan-pro-bg__starfield-layer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 220%;
+  height: 220%;
+  margin-left: -110%;
+  margin-top: -110%;
+  background-image: radial-gradient(circle, rgba(200, 245, 255, 0.95) 0.6px, transparent 0.6px);
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+.profile-plan-pro-bg__starfield-layer--far {
+  background-size: 52px 52px;
+  opacity: 0.35;
+}
+
+.profile-plan-pro-bg__starfield-layer--mid {
+  background-size: 34px 34px;
+  opacity: 0.55;
+}
+
+.profile-plan-pro-bg__starfield-layer--near {
+  background-size: 18px 18px;
+  opacity: 0.82;
+}
+
+.profile-plan-pro-bg__vignette--starfield {
+  background: radial-gradient(
+    ellipse 68% 58% at 50% 52%,
+    transparent 6%,
+    rgba(2, 4, 8, 0.72) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__starfield-layer--far {
+  animation: profile-plan-pro-starfield-warp 3.5s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__starfield-layer--mid {
+  animation: profile-plan-pro-starfield-warp 2.2s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__starfield-layer--near {
+  animation: profile-plan-pro-starfield-warp 1.4s linear infinite;
+}
+
+@keyframes profile-plan-pro-starfield-warp {
+  0% {
+    transform: scale(0.25);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* ── Isometric: 菱形グリッド ── */
+.profile-plan-pro-bg__iso-wrap {
+  position: absolute;
+  inset: 0;
+  perspective: 260px;
+  overflow: hidden;
+}
+
+.profile-plan-pro-bg__iso-floor {
+  position: absolute;
+  bottom: -8%;
+  left: -35%;
+  right: -35%;
+  height: 82%;
+  transform-origin: 50% 100%;
+  transform: rotateX(68deg) rotateZ(45deg);
+  background-image:
+    linear-gradient(135deg, rgba(34, 211, 238, 0.42) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(124, 92, 255, 0.28) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 94% 100% at 50% 100%, black 0%, transparent 86%);
+}
+
+.profile-plan-pro-bg__iso-horizon {
+  position: absolute;
+  top: 38%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.45), transparent);
+}
+
+.profile-plan-pro-bg__vignette--iso {
+  background: radial-gradient(
+    ellipse 72% 58% at 50% 62%,
+    transparent 8%,
+    rgba(2, 4, 8, 0.78) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__iso-floor {
+  animation: profile-plan-pro-iso-flow 6s linear infinite;
+}
+
+@keyframes profile-plan-pro-iso-flow {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 32px 32px;
+  }
+}
+
+/* ── Topography: 等高線 ── */
+.profile-plan-pro-bg__topo-wrap {
+  position: absolute;
+  inset: 0;
+  perspective: 280px;
+  overflow: hidden;
+}
+
+.profile-plan-pro-bg__topo-ring {
+  position: absolute;
+  left: 50%;
+  border: 1px solid rgba(34, 211, 238, 0.38);
+  border-radius: 50%;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) rotateX(68deg);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.12);
+}
+
+.profile-plan-pro-bg__topo-ring--1 {
+  bottom: 8%;
+  width: 140%;
+  height: 42%;
+  opacity: 0.28;
+  border-color: rgba(124, 92, 255, 0.32);
+}
+
+.profile-plan-pro-bg__topo-ring--2 {
+  bottom: 16%;
+  width: 118%;
+  height: 36%;
+  opacity: 0.38;
+}
+
+.profile-plan-pro-bg__topo-ring--3 {
+  bottom: 24%;
+  width: 96%;
+  height: 30%;
+  opacity: 0.48;
+}
+
+.profile-plan-pro-bg__topo-ring--4 {
+  bottom: 32%;
+  width: 74%;
+  height: 24%;
+  opacity: 0.58;
+}
+
+.profile-plan-pro-bg__topo-ring--5 {
+  bottom: 40%;
+  width: 52%;
+  height: 18%;
+  opacity: 0.68;
+}
+
+.profile-plan-pro-bg__vignette--topo {
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 58%,
+    transparent 10%,
+    rgba(2, 4, 8, 0.8) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__topo-ring--1 {
+  animation: profile-plan-pro-topo-drift 10s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__topo-ring--3 {
+  animation: profile-plan-pro-topo-drift 10s ease-in-out infinite reverse;
+}
+
+@keyframes profile-plan-pro-topo-drift {
+  0%,
+  100% {
+    transform: translateX(-50%) rotateX(68deg) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) rotateX(68deg) scale(1.04);
+  }
+}
+
+/* ── Wire Cage: ワイヤ球体 ── */
+.profile-plan-pro-bg__wire-cage-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 420px;
+}
+
+.profile-plan-pro-bg__wire-cage {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  border: 1px solid rgba(34, 211, 238, 0.42);
+  border-radius: 50%;
+  transform-style: preserve-3d;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.15);
+}
+
+.profile-plan-pro-bg__wire-cage--a {
+  width: 78%;
+  height: 38%;
+  margin-left: -39%;
+  margin-top: -19%;
+  transform: rotateX(72deg);
+}
+
+.profile-plan-pro-bg__wire-cage--b {
+  width: 62%;
+  height: 62%;
+  margin-left: -31%;
+  margin-top: -31%;
+  transform: rotateY(58deg);
+  border-color: rgba(124, 92, 255, 0.38);
+}
+
+.profile-plan-pro-bg__wire-cage--c {
+  width: 48%;
+  height: 48%;
+  margin-left: -24%;
+  margin-top: -24%;
+  transform: rotateX(28deg) rotateY(42deg);
+  border-color: rgba(79, 247, 244, 0.35);
+}
+
+.profile-plan-pro-bg__wire-cage-core {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: rgba(34, 211, 238, 0.85);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.65);
+}
+
+.profile-plan-pro-bg__vignette--wire {
+  background: radial-gradient(
+    ellipse 62% 52% at 50% 54%,
+    transparent 12%,
+    rgba(2, 4, 8, 0.82) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__wire-cage--a {
+  animation: profile-plan-pro-wire-spin-a 14s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__wire-cage--b {
+  animation: profile-plan-pro-wire-spin-b 14s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__wire-cage--c {
+  animation: profile-plan-pro-wire-spin-c 14s linear infinite;
+}
+
+@keyframes profile-plan-pro-wire-spin-a {
+  from {
+    transform: rotateX(72deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(72deg) rotateZ(360deg);
+  }
+}
+
+@keyframes profile-plan-pro-wire-spin-b {
+  from {
+    transform: rotateY(58deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateY(58deg) rotateZ(-360deg);
+  }
+}
+
+@keyframes profile-plan-pro-wire-spin-c {
+  from {
+    transform: rotateX(28deg) rotateY(42deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(28deg) rotateY(42deg) rotateZ(360deg);
+  }
+}
+
+/* ── Circuit: 基板透視 ── */
+.profile-plan-pro-bg__circuit-wrap {
+  position: absolute;
+  inset: 0;
+  perspective: 250px;
+  overflow: hidden;
+}
+
+.profile-plan-pro-bg__circuit-floor {
+  position: absolute;
+  bottom: -4%;
+  left: -32%;
+  right: -32%;
+  height: 76%;
+  transform-origin: 50% 100%;
+  transform: rotateX(76deg);
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.14) 1px, transparent 1px),
+    radial-gradient(circle at 20% 30%, rgba(124, 92, 255, 0.35) 2px, transparent 2px),
+    radial-gradient(circle at 68% 55%, rgba(34, 211, 238, 0.45) 2px, transparent 2px),
+    radial-gradient(circle at 42% 78%, rgba(255, 43, 214, 0.28) 2px, transparent 2px);
+  background-size:
+    36px 36px,
+    36px 36px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  mask-image: radial-gradient(ellipse 92% 100% at 50% 100%, black 0%, transparent 84%);
+}
+
+.profile-plan-pro-bg__circuit-node {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(34, 211, 238, 0.9);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.55);
+}
+
+.profile-plan-pro-bg__circuit-node--1 {
+  left: 22%;
+  bottom: 28%;
+}
+
+.profile-plan-pro-bg__circuit-node--2 {
+  left: 58%;
+  bottom: 22%;
+  background: rgba(124, 92, 255, 0.9);
+  box-shadow: 0 0 12px rgba(124, 92, 255, 0.5);
+}
+
+.profile-plan-pro-bg__circuit-node--3 {
+  left: 74%;
+  bottom: 34%;
+  background: rgba(255, 43, 214, 0.85);
+  box-shadow: 0 0 12px rgba(255, 43, 214, 0.45);
+}
+
+.profile-plan-pro-bg__vignette--circuit {
+  background: radial-gradient(
+    ellipse 70% 56% at 50% 60%,
+    transparent 8%,
+    rgba(2, 4, 8, 0.78) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__circuit-floor {
+  animation: profile-plan-pro-circuit-flow 4.5s linear infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__circuit-node {
+  animation: profile-plan-pro-circuit-pulse 2.4s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__circuit-node--2 {
+  animation-delay: 0.6s;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__circuit-node--3 {
+  animation-delay: 1.2s;
+}
+
+@keyframes profile-plan-pro-circuit-flow {
+  from {
+    background-position:
+      0 0,
+      0 0,
+      0 0,
+      0 0,
+      0 0;
+  }
+  to {
+    background-position:
+      0 36px,
+      0 36px,
+      0 0,
+      0 0,
+      0 0;
+  }
+}
+
+@keyframes profile-plan-pro-circuit-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* ── Volume Cloud: 体積光 ── */
+.profile-plan-pro-bg__cloud {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(28px);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.profile-plan-pro-bg__cloud--a {
+  top: -18%;
+  left: -12%;
+  width: 72%;
+  height: 58%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(34, 211, 238, 0.42) 0%,
+    transparent 72%
+  );
+}
+
+.profile-plan-pro-bg__cloud--b {
+  top: 22%;
+  right: -18%;
+  width: 68%;
+  height: 52%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(124, 92, 255, 0.38) 0%,
+    transparent 74%
+  );
+}
+
+.profile-plan-pro-bg__cloud--c {
+  bottom: -22%;
+  left: 10%;
+  width: 78%;
+  height: 48%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 43, 214, 0.22) 0%,
+    transparent 76%
+  );
+}
+
+.profile-plan-pro-bg__vignette--cloud {
+  background: radial-gradient(
+    ellipse 80% 68% at 50% 50%,
+    transparent 18%,
+    rgba(2, 4, 8, 0.68) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__cloud--a {
+  animation: profile-plan-pro-cloud-drift-a 9s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__cloud--b {
+  animation: profile-plan-pro-cloud-drift-b 11s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__cloud--c {
+  animation: profile-plan-pro-cloud-drift-c 8s ease-in-out infinite;
+}
+
+@keyframes profile-plan-pro-cloud-drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate(6%, 4%) scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes profile-plan-pro-cloud-drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.02);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-5%, 3%) scale(0.96);
+    opacity: 0.95;
+  }
+}
+
+@keyframes profile-plan-pro-cloud-drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.98);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate(4%, -3%) scale(1.06);
+    opacity: 0.88;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__tunnel-floor,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__layer--far,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__layer--mid,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__layer--near,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__dots--far,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__dots--mid,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__dots--near,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__sonar-sweep,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__sonar-ring--1,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__orbit--a,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__orbit--b,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__orbit--c,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__shaft--a,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__shaft--b,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__shaft--c,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__stack--1,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__stack--2,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__stack--3,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__stack--4,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__wormhole--outer,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__wormhole--inner,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__hex-depth-floor,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__starfield-layer--far,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__starfield-layer--mid,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__starfield-layer--near,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__iso-floor,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__topo-ring--1,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__topo-ring--3,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__wire-cage--a,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__wire-cage--b,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__wire-cage--c,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__circuit-floor,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__circuit-node,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__cloud--a,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__cloud--b,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__cloud--c,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__mood-blob--a,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__mood-blob--b,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__mood-blob--c,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__mood-overlay,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__mood-grain,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--a,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--b,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-orb--c,
+  .profile-plan-pro-bg--animate .profile-plan-pro-bg__nova-fx,
+  .profile-plan-pro-bg--animate ~ .profile-plan-pro-frame-sweep {
+    animation: none;
+  }
+}
+
+.profile-plan-pro-display-name {
+  overflow: visible;
+  vertical-align: middle;
+  filter:
+    drop-shadow(0 0 1px rgba(34, 211, 238, 0.9))
+    drop-shadow(0 0 5px rgba(34, 211, 238, 0.38))
+    drop-shadow(0 0 12px rgba(167, 139, 250, 0.22));
+}
+
 .profile-kinetik-panel--compact,
 .profile-edit-kinetik-card--compact {
   --kinetik-frame-corner: 14px;
@@ -4215,6 +7264,10 @@ body::before {
   padding-right: 40px;
 }
 
+.profile-edit-kinetik-header__bio {
+  width: 100%;
+}
+
 .profile-edit-kinetik-avatar-column {
   display: flex;
   flex-direction: column;
@@ -4237,6 +7290,31 @@ body::before {
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.42);
   line-height: 1;
+}
+
+.profile-edit-kinetik-footer-ref--identity {
+  padding: 4px 6px 5px 5px;
+  font-size: 8px;
+  letter-spacing: 0.045em;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 640px) {
+  .profile-edit-kinetik-footer-ref--identity {
+    padding: 5px 7px 6px 6px;
+    font-size: 8.5px;
+    letter-spacing: 0.05em;
+  }
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-footer-ref--identity {
+  padding: 5px 8px 6px 7px;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+.profile-edit-kinetik-identity-meta {
+  max-width: 100%;
 }
 
 .profile-edit-kinetik-footer {
@@ -5076,6 +8154,13 @@ body::before {
   --kav-green-soft: rgba(255, 255, 255, 0.38);
   --kav-green-mid: rgba(255, 255, 255, 0.24);
   --kav-green-dim: rgba(255, 255, 255, 0.08);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-plan-pro .profile-edit-kinetik-avatar {
+  --kav-green: #22d3ee;
+  --kav-green-soft: rgba(34, 211, 238, 0.52);
+  --kav-green-mid: rgba(34, 211, 238, 0.38);
+  --kav-green-dim: rgba(167, 139, 250, 0.14);
 }
 
 .profile-edit-kinetik-streak-march {

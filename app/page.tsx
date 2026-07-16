@@ -37,8 +37,15 @@ export default function Page() {
       setHandle(h);
       setHandleResolved(true);
     })();
+
+    // Firestore が応答しないときもスプラッシュを抜ける
+    const fallback = setTimeout(() => {
+      if (!cancelled) setHandleResolved(true);
+    }, 6000);
+
     return () => {
       cancelled = true;
+      clearTimeout(fallback);
     };
   }, [fUser]);
 

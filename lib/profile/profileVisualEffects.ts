@@ -19,3 +19,8 @@ export function isProfileChartAnimationOff(
 ): boolean {
   return PROFILE_CHART_ANIMATIONS_OFF || visualEffectsLite;
 }
+
+/** PRO カード枠 sweep — 他人プロフィールでも envy 演出を維持 */
+export function showProfilePlanProEffects(isTargetPro: boolean): boolean {
+  return isTargetPro;
+}

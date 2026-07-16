@@ -1,0 +1,349 @@
+/* PRO 背景 — 色味・雰囲気ムード（dev / 次世代候補） */
+
+.profile-plan-pro-bg__mood-base {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    165deg,
+    var(--mood-base-a, #0a0a12) 0%,
+    var(--mood-base-b, #050508) 55%,
+    var(--mood-base-c, #020204) 100%
+  );
+}
+
+.profile-plan-pro-bg__mood-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(var(--mood-blur, 32px));
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+
+.profile-plan-pro-bg__mood-blob--a {
+  top: var(--mood-a-top, -20%);
+  left: var(--mood-a-left, -15%);
+  width: var(--mood-a-size, 78%);
+  height: var(--mood-a-size, 68%);
+  background: radial-gradient(
+    ellipse at center,
+    var(--mood-glow-a, rgba(255, 255, 255, 0.4)) 0%,
+    transparent 70%
+  );
+}
+
+.profile-plan-pro-bg__mood-blob--b {
+  top: var(--mood-b-top, 30%);
+  right: var(--mood-b-right, -20%);
+  width: var(--mood-b-size, 72%);
+  height: var(--mood-b-size, 58%);
+  background: radial-gradient(
+    ellipse at center,
+    var(--mood-glow-b, rgba(255, 255, 255, 0.35)) 0%,
+    transparent 72%
+  );
+}
+
+.profile-plan-pro-bg__mood-blob--c {
+  bottom: var(--mood-c-bottom, -25%);
+  left: var(--mood-c-left, 5%);
+  width: var(--mood-c-size, 85%);
+  height: var(--mood-c-size, 55%);
+  background: radial-gradient(
+    ellipse at center,
+    var(--mood-glow-c, rgba(255, 255, 255, 0.28)) 0%,
+    transparent 74%
+  );
+}
+
+.profile-plan-pro-bg__mood-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--mood-overlay-opacity, 0.55);
+  background: var(--mood-overlay, none);
+}
+
+.profile-plan-pro-bg__mood-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+.profile-plan-pro-bg__vignette--mood {
+  background: radial-gradient(
+    ellipse var(--mood-vignette-w, 88%) var(--mood-vignette-h, 78%) at 50% 46%,
+    transparent var(--mood-vignette-inner, 14%),
+    var(--mood-vignette-color, rgba(2, 2, 6, 0.72)) 100%
+  );
+}
+
+/* ── Synth Sunset ── */
+.profile-plan-pro-bg--mood-sunset {
+  --mood-base-a: #1a0810;
+  --mood-base-b: #120818;
+  --mood-base-c: #0a0510;
+  --mood-glow-a: rgba(249, 115, 22, 0.52);
+  --mood-glow-b: rgba(251, 113, 133, 0.48);
+  --mood-glow-c: rgba(124, 58, 237, 0.32);
+  --mood-vignette-color: rgba(10, 4, 12, 0.65);
+}
+
+.profile-plan-pro-bg--mood-sunset .profile-plan-pro-bg__mood-overlay {
+  --mood-overlay: linear-gradient(
+    180deg,
+    rgba(251, 146, 60, 0.12) 0%,
+    transparent 35%,
+    rgba(124, 58, 237, 0.08) 100%
+  );
+}
+
+/* ── Crimson Ember ── */
+.profile-plan-pro-bg--mood-ember {
+  --mood-base-a: #1a0505;
+  --mood-base-b: #120303;
+  --mood-base-c: #080101;
+  --mood-glow-a: rgba(220, 38, 38, 0.55);
+  --mood-glow-b: rgba(234, 88, 12, 0.42);
+  --mood-glow-c: rgba(127, 29, 29, 0.38);
+  --mood-blur: 28px;
+}
+
+.profile-plan-pro-bg--mood-ember .profile-plan-pro-bg__mood-overlay {
+  --mood-overlay: repeating-radial-gradient(
+    circle at 50% 80%,
+    rgba(234, 88, 12, 0.08) 0px,
+    transparent 24px
+  );
+  --mood-overlay-opacity: 0.85;
+}
+
+/* ── Frost Arctic ── */
+.profile-plan-pro-bg--mood-arctic {
+  --mood-base-a: #0c1929;
+  --mood-base-b: #0a1420;
+  --mood-base-c: #060d14;
+  --mood-glow-a: rgba(186, 230, 253, 0.42);
+  --mood-glow-b: rgba(56, 189, 248, 0.38);
+  --mood-glow-c: rgba(148, 163, 184, 0.22);
+  --mood-blur: 36px;
+  --mood-vignette-color: rgba(6, 12, 20, 0.68);
+}
+
+.profile-plan-pro-bg--mood-arctic .profile-plan-pro-bg__mood-overlay {
+  --mood-overlay: linear-gradient(
+    180deg,
+    rgba(224, 242, 254, 0.08) 0%,
+    transparent 40%,
+    rgba(56, 189, 248, 0.06) 100%
+  );
+}
+
+/* ── Acid Toxic ── */
+.profile-plan-pro-bg--mood-toxic {
+  --mood-base-a: #0a1408;
+  --mood-base-b: #061006;
+  --mood-base-c: #030804;
+  --mood-glow-a: rgba(132, 204, 22, 0.5);
+  --mood-glow-b: rgba(34, 197, 94, 0.42);
+  --mood-glow-c: rgba(163, 230, 53, 0.28);
+  --mood-blur: 26px;
+}
+
+.profile-plan-pro-bg--mood-toxic .profile-plan-pro-bg__mood-overlay {
+  --mood-overlay: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(132, 204, 22, 0.04) 3px,
+    rgba(132, 204, 22, 0.04) 4px
+  );
+  --mood-overlay-opacity: 1;
+}
+
+/* ── Neon District ── */
+.profile-plan-pro-bg--mood-neon-pink {
+  --mood-base-a: #140818;
+  --mood-base-b: #0c0510;
+  --mood-base-c: #060208;
+  --mood-glow-a: rgba(236, 72, 153, 0.55);
+  --mood-glow-b: rgba(217, 70, 239, 0.48);
+  --mood-glow-c: rgba(99, 102, 241, 0.32);
+}
+
+.profile-plan-pro-bg--mood-neon-pink .profile-plan-pro-bg__mood-overlay {
+  --mood-overlay: linear-gradient(
+    135deg,
+    rgba(236, 72, 153, 0.1) 0%,
+    transparent 50%,
+    rgba(99, 102, 241, 0.08) 100%
+  );
+}
+
+/* ── Abyss Glow ── */
+.profile-plan-pro-bg--mood-deep-sea {
+  --mood-base-a: #041018;
+  --mood-base-b: #020a10;
+  --mood-base-c: #010608;
+  --mood-glow-a: rgba(6, 182, 212, 0.45);
+  --mood-glow-b: rgba(14, 116, 144, 0.38);
+  --mood-glow-c: rgba(30, 58, 95, 0.42);
+  --mood-blur: 34px;
+  --mood-vignette-inner: 8%;
+}
+
+.profile-plan-pro-bg--mood-deep-sea .profile-plan-pro-bg__mood-overlay {
+  --mood-overlay: radial-gradient(
+    ellipse 60% 40% at 50% 70%,
+    rgba(6, 182, 212, 0.15) 0%,
+    transparent 70%
+  );
+}
+
+/* ── Heat Scan ── */
+.profile-plan-pro-bg--mood-infrared {
+  --mood-base-a: #120404;
+  --mood-base-b: #0a0202;
+  --mood-base-c: #050101;
+  --mood-glow-a: rgba(239, 68, 68, 0.5);
+  --mood-glow-b: rgba(249, 115, 22, 0.48);
+  --mood-glow-c: rgba(254, 240, 138, 0.22);
+  --mood-blur: 22px;
+}
+
+.profile-plan-pro-bg--mood-infrared .profile-plan-pro-bg__mood-overlay {
+  --mood-overlay: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 8px,
+    rgba(249, 115, 22, 0.06) 8px,
+    rgba(249, 115, 22, 0.06) 9px
+  );
+  --mood-overlay-opacity: 0.9;
+}
+
+/* ── Twilight Mist ── */
+.profile-plan-pro-bg--mood-lavender {
+  --mood-base-a: #100818;
+  --mood-base-b: #0c0614;
+  --mood-base-c: #080410;
+  --mood-glow-a: rgba(196, 181, 253, 0.42);
+  --mood-glow-b: rgba(167, 139, 250, 0.38);
+  --mood-glow-c: rgba(99, 102, 241, 0.28);
+  --mood-blur: 38px;
+  --mood-vignette-color: rgba(8, 4, 16, 0.62);
+}
+
+.profile-plan-pro-bg--mood-lavender .profile-plan-pro-bg__mood-overlay {
+  --mood-overlay: linear-gradient(
+    180deg,
+    rgba(196, 181, 253, 0.1) 0%,
+    transparent 45%,
+    rgba(49, 46, 129, 0.12) 100%
+  );
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__mood-blob--a {
+  animation: profile-plan-pro-mood-drift-a 9s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__mood-blob--b {
+  animation: profile-plan-pro-mood-drift-b 11s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate .profile-plan-pro-bg__mood-blob--c {
+  animation: profile-plan-pro-mood-drift-c 8s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--mood-ember .profile-plan-pro-bg__mood-blob--a {
+  animation: profile-plan-pro-mood-ember-flicker 3.2s ease-in-out infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--mood-infrared .profile-plan-pro-bg__mood-overlay {
+  animation: profile-plan-pro-mood-scan 4s linear infinite;
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--mood-arctic .profile-plan-pro-bg__mood-grain {
+  animation: profile-plan-pro-mood-shimmer 6s ease-in-out infinite;
+}
+
+@keyframes profile-plan-pro-mood-drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.82;
+  }
+  50% {
+    transform: translate(5%, 4%) scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes profile-plan-pro-mood-drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.02);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate(-4%, 3%) scale(0.94);
+    opacity: 0.98;
+  }
+}
+
+@keyframes profile-plan-pro-mood-drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.96);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(3%, -2%) scale(1.08);
+    opacity: 0.92;
+  }
+}
+
+@keyframes profile-plan-pro-mood-ember-flicker {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  55% {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes profile-plan-pro-mood-scan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 36px;
+  }
+}
+
+@keyframes profile-plan-pro-mood-shimmer {
+  0%,
+  100% {
+    opacity: 0.08;
+  }
+  50% {
+    opacity: 0.18;
+  }
+}
+
+.profile-plan-pro-bg--mobile-boost.profile-plan-pro-bg[class*="mood-"] .profile-plan-pro-bg__mood-blob {
+  filter: blur(calc(var(--mood-blur, 32px) * 0.75)) brightness(1.25) saturate(1.15);
+}
+
+.profile-plan-pro-bg--mobile-boost.profile-plan-pro-bg[class*="mood-"] .profile-plan-pro-bg__vignette--mood {
+  opacity: 0.55;
+}

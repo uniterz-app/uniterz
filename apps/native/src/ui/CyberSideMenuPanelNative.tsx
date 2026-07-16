@@ -1,12 +1,12 @@
 import { ReactNode } from "react";
-import { Platform, StyleSheet, View, ViewStyle } from "react-native";
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { CYBER_SIDE_MENU_PANEL } from "./cyberSideMenuNative";
 import CyberSideMenuFrameNative from "./CyberSideMenuFrameNative";
 
 type Props = {
   children: ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 /** Web `cyber-side-menu-panel` + `CyberSideMenuFrame` ラッパー */

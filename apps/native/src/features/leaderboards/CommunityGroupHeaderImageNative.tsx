@@ -86,7 +86,7 @@ export default function CommunityGroupHeaderImageNative({
               height: headerImageNativeImageHeight(bannerHeight, scale),
               marginTop: headerImageNativeMarginTop(bannerHeight, positionY, scale),
             },
-          ] as const,
+          ],
         };
       }
 
@@ -99,14 +99,14 @@ export default function CommunityGroupHeaderImageNative({
               height: headerImageNativeImageHeight(bannerHeight, scale),
               marginTop: headerImageNativeMarginTop(bannerHeight, positionY, scale),
             },
-          ] as const,
+          ],
         };
       }
 
       const y = sanitizeHeaderImagePositionY(positionY);
       const needsAdjust = y !== DEFAULT_HEADER_IMAGE_POSITION_Y;
       if (!needsAdjust) {
-        return { imageStyle: styles.bannerImageHeroCover as const };
+        return { imageStyle: styles.bannerImageHeroCover };
       }
 
       const scale = HEADER_IMAGE_NATIVE_HERO_ADJUST_SCALE;
@@ -117,7 +117,7 @@ export default function CommunityGroupHeaderImageNative({
             height: headerImageNativeImageHeight(bannerHeight, scale),
             top: headerImageNativeMarginTop(bannerHeight, y, scale),
           },
-        ] as const,
+        ],
       };
     },
     [bannerHeight, cardImageHeightScale, heroEditorHeightScale, isHero]

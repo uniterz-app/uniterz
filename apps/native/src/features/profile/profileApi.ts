@@ -366,7 +366,10 @@ export async function fetchDailyTrendFirestoreFallback(
     const snap = await getDocs(q);
     const rows: ProfileDailyTrendRow[] = [];
     for (const docSnap of snap.docs) {
-      const row = dailyTrendRowFromDailySnap(docSnap, trendCtx);
+      const row = dailyTrendRowFromDailySnap(
+        docSnap as unknown as Parameters<typeof dailyTrendRowFromDailySnap>[0],
+        trendCtx
+      );
       if (row && isChartRenderableDailyTrendRow(row)) rows.push(row);
     }
     rows.sort((a, b) => a.date.localeCompare(b.date));
@@ -383,7 +386,10 @@ export async function fetchDailyTrendFirestoreFallback(
       keys.map((dateKey) => getDoc(doc(db, "user_stats_v2_daily", `${uid}_${dateKey}`)))
     );
     return normalizeProfileDailyTrendRows(
-      buildDailyTrendFromDailySnaps(snaps, trendCtx)
+      buildDailyTrendFromDailySnaps(
+        snaps as unknown as Parameters<typeof buildDailyTrendFromDailySnaps>[0],
+        trendCtx
+      )
     );
   } catch (e) {
     if (__DEV__) {

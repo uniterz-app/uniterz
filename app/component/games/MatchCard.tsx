@@ -74,6 +74,7 @@ import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import {
+  matchScoreClass,
   matchVsLabelClass,
   nameOxanium,
   resultStatsMetricNumClass,
@@ -862,14 +863,47 @@ const overlayPredictScoreClass = isMobile
     ? "text-sm font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-base"
     : "text-base font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-lg";
 
+const overlayPkScoreClass = isMobile
+  ? "text-[10px] font-bold leading-tight text-amber-200 drop-shadow-[0_0_10px_rgba(251,191,36,0.28)]"
+  : "text-[11px] font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-xs";
+
+const overlayPredictKickerClass =
+  "text-[8px] font-semibold uppercase tracking-[0.14em] text-white/45 md:text-[9px]";
+
 const renderOverlayPredictScore = () => {
   if (!showMergedResult || !predictedScore) return null;
   return (
-    <MatchScoreLine
-      home={predictedScore.home}
-      away={predictedScore.away}
-      className={overlayPredictScoreClass}
-    />
+    <>
+      <div
+        className={["mt-0.5 text-center", overlayPredictKickerClass].join(" ")}
+        style={teamNameFont}
+      >
+        {language === "ja" ? "あなたの予想" : "Your prediction"}
+      </div>
+      <MatchScoreLine
+        home={predictedScore.home}
+        away={predictedScore.away}
+        className={overlayPredictScoreClass}
+      />
+    </>
+  );
+};
+
+const renderOverlayPkScore = () => {
+  if (!pkScore) return null;
+  return (
+    <div
+      className={[
+        "mt-0.5 flex items-baseline justify-center gap-1",
+        matchScoreClass,
+        overlayPkScoreClass,
+      ].join(" ")}
+    >
+      <span className="shrink-0 text-[0.92em] opacity-90">PK</span>
+      <span className="shrink-0 tabular-nums">{pkScore.home}</span>
+      <span className="shrink-0 opacity-70">–</span>
+      <span className="shrink-0 tabular-nums">{pkScore.away}</span>
+    </div>
   );
 };
 

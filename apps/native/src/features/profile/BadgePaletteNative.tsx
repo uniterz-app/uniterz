@@ -3,7 +3,7 @@
  */
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
+import type { ResolvedBadgeNative } from "./useNativeProfileBadges";
 
 const COLS = 4;
 const GAP = 10;

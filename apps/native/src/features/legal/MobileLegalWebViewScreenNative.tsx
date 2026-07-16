@@ -67,7 +67,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     opacity: 0.01,
-    width: 1,
-    height: 1,
   },
 });

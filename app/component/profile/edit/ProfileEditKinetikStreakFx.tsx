@@ -88,6 +88,7 @@ export function ProfileEditKinetikAvatarWithStreak({
   variant,
   streak,
   accentKey = "default",
+  isPlanPro = false,
   photoURL,
   displayName,
   editable,
@@ -96,6 +97,8 @@ export function ProfileEditKinetikAvatarWithStreak({
   streak: number;
   /** 連勝なし時: メニューbtn と同じ順位/ティア色 */
   accentKey?: KinetikMenuAccentKey;
+  /** PRO 加入かつ連勝なし — シアン accent */
+  isPlanPro?: boolean;
   photoURL?: string | null;
   displayName: string;
   editable?: boolean;
@@ -109,7 +112,9 @@ export function ProfileEditKinetikAvatarWithStreak({
         `profile-edit-kinetik-avatar-wrap--${variant}`,
         `profile-edit-kinetik-avatar-wrap--tier-${streakTier}`,
       ]
-    : [`profile-edit-kinetik-avatar-wrap--accent-${accentKey}`];
+    : isPlanPro
+      ? ["profile-edit-kinetik-avatar-wrap--accent-plan-pro"]
+      : [`profile-edit-kinetik-avatar-wrap--accent-${accentKey}`];
 
   return (
     <div className="profile-edit-kinetik-avatar-column shrink-0">

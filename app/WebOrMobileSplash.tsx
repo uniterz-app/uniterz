@@ -47,6 +47,15 @@ export default function WebOrMobileSplash({
     );
   }
 
+  // dev プレビューは Auth 待ちせず即表示
+  if (pathname?.startsWith("/dev")) {
+    return (
+      <div id="app-root" className="relative isolate min-h-0">
+        {children}
+      </div>
+    );
+  }
+
   if (isWeb) {
     return (
       <AuthGate platform="web">
