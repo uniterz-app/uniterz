@@ -1,18 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.maybeUpdateWcBracketOnKnockoutFinal = maybeUpdateWcBracketOnKnockoutFinal;
-const firestore_1 = require("firebase-admin/firestore");
 const wcKnockoutMatchIds_1 = require("./wcKnockoutMatchIds");
-const wcBracketRescoreChunked_1 = require("./wcBracketRescoreChunked");
 const resolveKnockoutWinner_1 = require("./resolveKnockoutWinner");
+const resolveKnockoutLoser_1 = require("./resolveKnockoutLoser");
 const createChildKnockoutGames_1 = require("./createChildKnockoutGames");
+const wcFirestoreWriteDeps_1 = require("./wcFirestoreWriteDeps");
 /**
- * WC ノックアウト試合が final になったとき:
+ * WC ノックアウト試合が final になったとき（onGameFinalV2 / 管理スクリプト）:
  * 1. wcBracketResults に当該試合の勝者を追記
- * 2. 全提出ブラケットの survivor 再評価キューを投入
- * 3. 両親が確定した子試合を games に自動生成（Phase 3）
+ * 2. 両親が確定した子試合を games に自動生成
+ *
+ * ユーザー提出ブラケットの survivor 再採点は廃止（2026-07）。
  */
-async function maybeUpdateWcBracketOnKnockoutFinal(db, game) {
+async function maybeUpdateWcBracketOnKnockoutFinal(db, game, writeDeps = (0, wcFirestoreWriteDeps_1.defaultWcFirestoreWriteDeps)()) {
     var _a, _b;
     if (String((_a = game.league) !== null && _a !== void 0 ? _a : "").trim().toLowerCase() !== "wc") {
         return { updated: false };
@@ -30,27 +31,43 @@ async function maybeUpdateWcBracketOnKnockoutFinal(db, game) {
         console.warn(`[wc-bracket] skip game ${game.gameId} (${matchId}): no winner teamId`);
         return { updated: false };
     }
+    const loserTeamId = (0, resolveKnockoutLoser_1.resolveKnockoutLoserTeamId)({
+        homeTeamId: game.homeTeamId,
+        awayTeamId: game.awayTeamId,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        advancingTeamId: game.advancingTeamId,
+        knockout: game.knockout === true,
+        final: true,
+    });
     const season = String((_b = game.season) !== null && _b !== void 0 ? _b : wcKnockoutMatchIds_1.WC_KNOCKOUT_BRACKET_SEASON).trim();
     const resultsRef = db.collection("wcBracketResults").doc(season);
     let mergedWinners = {};
+    let mergedLosers = {};
     await db.runTransaction(async (tx) => {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         const snap = await tx.get(resultsRef);
-        const prev = ((_b = (_a = snap.data()) === null || _a === void 0 ? void 0 : _a.winners) !== null && _b !== void 0 ? _b : {});
-        const existing = (_c = prev[matchId]) === null || _c === void 0 ? void 0 : _c.trim();
+        const prev = (_a = snap.data()) !== null && _a !== void 0 ? _a : {};
+        const prevWinners = ((_b = prev.winners) !== null && _b !== void 0 ? _b : {});
+        const prevLosers = ((_c = prev.losers) !== null && _c !== void 0 ? _c : {});
+        const existing = (_d = prevWinners[matchId]) === null || _d === void 0 ? void 0 : _d.trim();
         if (existing && existing !== winnerTeamId) {
             console.warn(`[wc-bracket] winners.${matchId} overwrite ${existing} → ${winnerTeamId}`);
         }
-        mergedWinners = Object.assign(Object.assign({}, prev), { [matchId]: winnerTeamId });
+        mergedWinners = Object.assign(Object.assign({}, prevWinners), { [matchId]: winnerTeamId });
+        mergedLosers = Object.assign({}, prevLosers);
+        if (loserTeamId) {
+            mergedLosers[matchId] = loserTeamId;
+        }
         tx.set(resultsRef, {
             season,
             winners: mergedWinners,
+            losers: mergedLosers,
             lastMatchId: matchId,
             lastGameId: game.gameId,
-            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            updatedAt: writeDeps.serverTimestamp(),
         }, { merge: true });
     });
-    await (0, wcBracketRescoreChunked_1.enqueueWcBracketRescoreChain)(db, season);
     let childGamesCreated = [];
     try {
         childGamesCreated = await (0, createChildKnockoutGames_1.maybeCreateChildKnockoutGames)(db, {

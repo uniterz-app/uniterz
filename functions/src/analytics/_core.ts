@@ -22,8 +22,9 @@ export async function dailyAnalyticsCore() {
     await db.collectionGroup("posts").where("createdAt", ">=", startTs).get()
   ).size;
 
-  // ---- ③ 累計ユーザー ----
-  const totalUsers = (await db.collection("users").get()).size;
+  // ---- ③ 累計ユーザー（count 集約 — 全件 read より安価） ----
+  const totalUsersSnap = await db.collection("users").count().get();
+  const totalUsers = totalUsersSnap.data().count;
 
   const payload = {
     newUsers,

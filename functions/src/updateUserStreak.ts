@@ -5,15 +5,6 @@ import { predictionWin } from "./predictionWin";
 import type { SettlementGameInput } from "./settlementGame";
 import { leagueToSport } from "./settlementGame";
 import {
-  applyWcSlotStreakWhenComplete,
-  isWcLeague,
-  resolveTriggerKickoffMs,
-  rescoreEarlierWcSlotPosts,
-  wcSlotActiveForUser,
-  wcSlotStreakDeferredMap,
-  type WcSlotStreakApplyResult,
-} from "./wc/wcSlotStreak";
-import {
   streakApplyMarkerRef,
   streakResultFromUserSnap,
 } from "./updateUserStreakInternals";
@@ -74,25 +65,25 @@ function migrateStreakBySport(
   };
 }
 
-export type UpdateUserStreakOutcome = {
-  streakResultMap: Map<string, UpdatedUserStreakResult>;
-  wcSlotRescore: Pick<WcSlotStreakApplyResult, "perUserPerGameActive"> | null;
-};
-
 export async function updateUserStreak({
   db,
   gameId,
   settlementGame,
+  postsSnap: postsSnapInput,
 }: {
   db: FirebaseFirestore.Firestore;
   gameId: string;
   settlementGame: SettlementGameInput;
-}): Promise<UpdateUserStreakOutcome> {
-  const postsSnap = await db
-    .collection("posts")
-    .where("gameId", "==", gameId)
-    .where("schemaVersion", "==", 2)
-    .get();
+  /** fetchGameContext で取得済みの posts — 省略時のみ再クエリ */
+  postsSnap?: FirebaseFirestore.QuerySnapshot;
+}): Promise<Map<string, UpdatedUserStreakResult>> {
+  const postsSnap =
+    postsSnapInput ??
+    (await db
+      .collection("posts")
+      .where("gameId", "==", gameId)
+      .where("schemaVersion", "==", 2)
+      .get());
 
   const userResult = new Map<string, boolean>();
 
@@ -111,8 +102,9 @@ export async function updateUserStreak({
   const suppressStreakForGame =
     gameSnap.get(SUPPRESS_STREAK_INCREMENT_V2_FIELD) === true;
 
+  const sportKey = leagueToSport(settlementGame.league);
+
   if (suppressStreakForGame) {
-    const sportKey = leagueToSport(settlementGame.league);
     const entries = [...userResult.entries()];
     await Promise.all(
       entries.map(async ([uid, didWin]) => {
@@ -123,46 +115,7 @@ export async function updateUserStreak({
         );
       })
     );
-    return { streakResultMap: updatedMap, wcSlotRescore: null };
-  }
-
-  const sportKey = leagueToSport(settlementGame.league);
-
-  /** WC: 同時キックオフスロット単位で連勝を一括反映 */
-  if (sportKey === "football" && isWcLeague(settlementGame.league)) {
-    const kickoffMs = resolveTriggerKickoffMs(gameSnap);
-    if (kickoffMs != null) {
-      const { resultMap, perUserPerGameActive, slotCompleted } =
-        await applyWcSlotStreakWhenComplete(
-          db,
-          gameId,
-          kickoffMs,
-          userResult
-        );
-
-      for (const [uid, base] of resultMap) {
-        const active = wcSlotActiveForUser(
-          perUserPerGameActive,
-          uid,
-          gameId,
-          base.activeWinStreak
-        );
-        updatedMap.set(uid, {
-          ...base,
-          activeWinStreak: active,
-        });
-      }
-      return {
-        streakResultMap: updatedMap,
-        wcSlotRescore: slotCompleted
-          ? { perUserPerGameActive }
-          : null,
-      };
-    }
-
-    const deferred = await wcSlotStreakDeferredMap(db, userResult);
-    deferred.forEach((v, k) => updatedMap.set(k, v));
-    return { streakResultMap: updatedMap, wcSlotRescore: null };
+    return updatedMap;
   }
 
   for (const [uid, didWin] of userResult.entries()) {
@@ -284,5 +237,5 @@ export async function updateUserStreak({
     updatedMap.set(uid, updated);
   }
 
-  return { streakResultMap: updatedMap, wcSlotRescore: null };
+  return updatedMap;
 }

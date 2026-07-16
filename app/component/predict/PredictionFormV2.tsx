@@ -63,6 +63,11 @@ import {
 } from "@/lib/ui/predictOverlayCyber";
 import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
+import PredictTimingAdviceLine from "@/app/component/predict/PredictTimingAdviceLine";
+import PredictProInfoPanel from "@/app/component/predict/PredictProInfoPanel";
+import PredictOverlayScoreFields from "@/app/component/predict/PredictOverlayScoreFields";
+import { usePredictTimingAdvice } from "@/lib/predict/usePredictTimingAdvice";
+import { usePredictProInfo } from "@/lib/predict/usePredictProInfo";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
@@ -126,6 +131,10 @@ type Props = {
   onPredictEditEnd?: () => void;
   /** 親の predict-overlay-cyber-form 一枚に内包するとき（内側のフォーム面を出さない） */
   overlayUnifiedForm?: boolean;
+  /** オーバーレイ: MatchCard から渡すホーム戦績（Pro Info チーム文脈用） */
+  overlayHomeRecord?: MatchCardProps["homeRecord"];
+  /** オーバーレイ: MatchCard から渡すアウェイ戦績（Pro Info チーム文脈用） */
+  overlayAwayRecord?: MatchCardProps["awayRecord"];
 };
 
 type Winner = "home" | "away" | "draw";
@@ -211,6 +220,8 @@ export default function PredictionFormV2({
   predictEditTriggerNonce = 0,
   onPredictEditEnd,
   overlayUnifiedForm = false,
+  overlayHomeRecord,
+  overlayAwayRecord,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -276,6 +287,22 @@ export default function PredictionFormV2({
   const isSoccer = game.league === "pl" || game.league === "j1" || isWc;
   /** WC ノックアウト：引き分け「結果」は存在しない（同点は PK 決着）ため市場表示から引き分けを除外 */
   const isKnockout = isWcKnockoutGame(game);
+  const timingAdvice = usePredictTimingAdvice({
+    uid: auth.currentUser?.uid,
+    game,
+    language,
+    isKnockout,
+    enabled: !inOverlay,
+  });
+  const { data: proInfo, isPro: isProUser } = usePredictProInfo({
+    uid: auth.currentUser?.uid,
+    game,
+    language,
+    homeRecord: overlayHomeRecord,
+    awayRecord: overlayAwayRecord,
+    enabled: inOverlay,
+  });
+  const showOverlayProInfo = inOverlay && isProUser && proInfo != null;
   /** 引き分けを許可するサッカー試合か（グループリーグ・リーグ戦のみ） */
   const drawAllowed = isSoccer && !isKnockout;
   /** ノックアウト予想フローで UNITERZ ノックアウトチャレンジ告知を生涯1回表示 */
@@ -1144,6 +1171,12 @@ export default function PredictionFormV2({
           </motion.div>
         ) : null}
 
+        {showOverlayProInfo ? (
+          <motion.div {...fadeUpMotionProps}>
+            <PredictProInfoPanel data={proInfo} language={language} />
+          </motion.div>
+        ) : null}
+
         <motion.div
           {...fadeUpMotionProps}
           className={
@@ -1569,6 +1602,13 @@ export default function PredictionFormV2({
                 ) : null}
               </div>
 
+              {timingAdvice && !showOverlayProInfo ? (
+                <PredictTimingAdviceLine
+                  advice={timingAdvice}
+                  language={language}
+                />
+              ) : null}
+
               {isKnockout ? (
                 <div className="relative z-1 -mt-2 space-y-1">
                   <div className="text-xs font-medium leading-relaxed text-amber-300/80">
@@ -1595,41 +1635,60 @@ export default function PredictionFormV2({
                 </div>
               ) : null}
 
-              <div className="relative z-1 grid grid-cols-2 gap-3">
-                <div>
-                  <div
-                    className="mb-2 text-sm font-bold text-white/88"
-                    style={predictTeamNameTy}
-                  >
-                    {homeLabel}
+              {overlayEmbedded ? (
+                <PredictOverlayScoreFields
+                  home={{
+                    label: homeLabel,
+                    teamId: game.home?.teamId,
+                    value: scoreHome,
+                    onChange: setScoreHome,
+                    placeholder: m.predict.scorePlaceholder,
+                  }}
+                  away={{
+                    label: awayLabel,
+                    teamId: game.away?.teamId,
+                    value: scoreAway,
+                    onChange: setScoreAway,
+                    placeholder: m.predict.scorePlaceholder,
+                  }}
+                />
+              ) : (
+                <div className="relative z-1 grid grid-cols-2 gap-3">
+                  <div>
+                    <div
+                      className="mb-2 text-sm font-bold text-white/88"
+                      style={predictTeamNameTy}
+                    >
+                      {homeLabel}
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      className={scoreInputClass}
+                      placeholder={m.predict.scorePlaceholder}
+                      value={scoreHome}
+                      onChange={(e) => setScoreHome(e.target.value)}
+                    />
                   </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    className={scoreInputClass}
-                    placeholder={m.predict.scorePlaceholder}
-                    value={scoreHome}
-                    onChange={(e) => setScoreHome(e.target.value)}
-                  />
-                </div>
 
-                <div>
-                  <div
-                    className="mb-2 text-sm font-bold text-white/88"
-                    style={predictTeamNameTy}
-                  >
-                    {awayLabel}
+                  <div>
+                    <div
+                      className="mb-2 text-sm font-bold text-white/88"
+                      style={predictTeamNameTy}
+                    >
+                      {awayLabel}
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      className={scoreInputClass}
+                      placeholder={m.predict.scorePlaceholder}
+                      value={scoreAway}
+                      onChange={(e) => setScoreAway(e.target.value)}
+                    />
                   </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    className={scoreInputClass}
-                    placeholder={m.predict.scorePlaceholder}
-                    value={scoreAway}
-                    onChange={(e) => setScoreAway(e.target.value)}
-                  />
                 </div>
-              </div>
+              )}
 
               {knockoutScoreTie ? (
                 <div className="relative z-1 space-y-2">

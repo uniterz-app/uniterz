@@ -64,6 +64,9 @@ import {
   getMyMetricValue,
 } from "@/lib/rankings/rankingsPageShared";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
+import type { RankingApiRow } from "@/lib/rankings/rankingTransform";
+import { buildRankTierGapHint } from "@/lib/rankings/rankTierMilestone";
+import { buildRankGapPageHref } from "@/lib/rankings/buildRankGapPageHref";
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
@@ -239,6 +242,45 @@ export default function WebRankingsShell() {
     rankingListCount,
   });
 
+  const myTotalPoints =
+    typeof myStatsRow?.totalPoints === "number" ? myStatsRow.totalPoints : 0;
+
+  const totalPointsRows = useMemo(
+    () =>
+      Array.isArray(byMetric?.totalPoints?.rows)
+        ? (
+            byMetric.totalPoints.rows as Array<
+              RankingApiRow & { rank?: number }
+            >
+          ).map((row, index) => ({
+            rank:
+              typeof row.rank === "number" && Number.isFinite(row.rank)
+                ? Math.floor(row.rank)
+                : index + 1,
+            totalPoints: row.totalPoints,
+          }))
+        : [],
+    [byMetric?.totalPoints?.rows]
+  );
+
+  const rankTierGap = useMemo(() => {
+    if (myRank == null || myRank < 1 || rankingHasNoEntries) return null;
+    return buildRankTierGapHint({
+      currentRank: myRank,
+      myTotalPoints,
+      cutoffRows: totalPointsRows,
+    });
+  }, [myRank, myTotalPoints, rankingHasNoEntries, totalPointsRows]);
+
+  const gapHref = useMemo(() => {
+    if (sessionUser.plan !== "pro") return null;
+    return buildRankGapPageHref("/web/rankings/gap", {
+      rankingLeague,
+      round: effectiveRound,
+      wcStage: wcStageForHook,
+    });
+  }, [sessionUser.plan, rankingLeague, effectiveRound, wcStageForHook]);
+
   const pageKey = buildRankingsPageKey({
     phase,
     effectiveRound,
@@ -319,6 +361,9 @@ export default function WebRankingsShell() {
               animateRank={!skipCountUp}
               language={language}
               isPro={sessionUser.plan === "pro"}
+              displayTier={sessionUser.plan === "pro" ? "pro" : undefined}
+              rankTierGap={sessionUser.plan === "pro" ? rankTierGap : null}
+              gapHref={gapHref}
               mobileWide
               layout="web"
               rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}

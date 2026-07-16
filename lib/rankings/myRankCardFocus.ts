@@ -56,15 +56,15 @@ export function myRankCardAccent(tone: MyRankCardFrameTone): MyRankCardAccent {
 
 export function computeMyRankTopPercent(
   rank: number,
-  totalEntries: number
+  totalEntries: number,
+  options?: { showMax?: number | null }
 ): string | null {
   if (totalEntries <= 0 || rank < 1) return null;
   const pct = (rank / totalEntries) * 100;
-  if (pct > MY_RANK_TOP_PERCENT_SHOW_MAX) return null;
-  const clamped = Math.min(
-    MY_RANK_TOP_PERCENT_SHOW_MAX,
-    Math.max(0.1, pct)
-  );
+  const showMax = options?.showMax ?? MY_RANK_TOP_PERCENT_SHOW_MAX;
+  if (showMax != null && pct > showMax) return null;
+  const clampCap = showMax ?? pct;
+  const clamped = Math.min(clampCap, Math.max(0.1, pct));
   return clamped < 10 ? clamped.toFixed(1) : String(Math.round(clamped));
 }
 

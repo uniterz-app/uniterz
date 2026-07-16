@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.finalizePost = finalizePost;
 const firestore_1 = require("firebase-admin/firestore");
 const updateUserStatsV2_1 = require("./updateUserStatsV2");
-const buildUserStatsWindowCache_1 = require("./stats/buildUserStatsWindowCache");
 const computePostSettlement_1 = require("./computePostSettlement");
 const matchGoalScorersDisplay_1 = require("./wc/matchGoalScorersDisplay");
 const resolveWcStage_1 = require("./wc/resolveWcStage");
@@ -120,6 +119,6 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         wcStage: resolvedWcStage,
         homeTeamId: (_k = (_h = game.homeTeamId) !== null && _h !== void 0 ? _h : (_j = p.home) === null || _j === void 0 ? void 0 : _j.teamId) !== null && _k !== void 0 ? _k : null,
         awayTeamId: (_o = (_l = game.awayTeamId) !== null && _l !== void 0 ? _l : (_m = p.away) === null || _m === void 0 ? void 0 : _m.teamId) !== null && _o !== void 0 ? _o : null,
-    }).then(() => (0, buildUserStatsWindowCache_1.buildWindowCacheForUser)(uid)));
+    }));
 }
 //# sourceMappingURL=finalizePost.js.map

@@ -32,6 +32,10 @@ function normalizeGame(after, gameId) {
         regulationEtScore: (_h = after === null || after === void 0 ? void 0 : after.regulationEtScore) !== null && _h !== void 0 ? _h : null,
         advancingTeamId: (_j = after === null || after === void 0 ? void 0 : after.advancingTeamId) !== null && _j !== void 0 ? _j : null,
         knockout: (after === null || after === void 0 ? void 0 : after.knockout) === true,
+        season: typeof (after === null || after === void 0 ? void 0 : after.season) === "string" ? after.season : null,
+        wcKnockoutMatchId: typeof (after === null || after === void 0 ? void 0 : after.wcKnockoutMatchId) === "string"
+            ? after.wcKnockoutMatchId
+            : null,
         wcStage: (0, resolveWcStage_1.resolveWcStageFromGame)({
             knockout: (after === null || after === void 0 ? void 0 : after.knockout) === true,
             roundLabel: (_k = after === null || after === void 0 ? void 0 : after.roundLabel) !== null && _k !== void 0 ? _k : null,

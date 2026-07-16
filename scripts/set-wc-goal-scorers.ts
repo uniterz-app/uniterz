@@ -24,6 +24,8 @@
  *   --dry-run      書き込まず内容を表示
  *   --resettle     終了済み試合の精算済み投稿を再計算
  *   --force        既存 goalScorers があっても上書き
+ *   --advancing-team-id=wc-xxx  ノックアウト PK 勝者（--with-score 時）
+ *   --bracket-chain  final 後に wcBracketResults 更新・子試合生成（明示時のみ・再採点なし）
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -35,6 +37,7 @@ import {
   type WcGameGoalScorer,
 } from "@/lib/wc/goalScorer";
 import { resettleWcGoalScorerBonusesForGame } from "@/lib/wc/resettleGoalScorerBonus";
+import { finalizeWcKnockoutFromScript } from "./lib/finalizeWcKnockoutFromScript";
 
 const admin = adminPkg as typeof import("firebase-admin");
 
@@ -42,6 +45,7 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const WITH_SCORE = process.argv.includes("--with-score");
 const RESETTLE = process.argv.includes("--resettle");
 const FORCE = process.argv.includes("--force");
+const BRACKET_CHAIN = process.argv.includes("--bracket-chain");
 
 function argValue(prefix: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(prefix));
@@ -53,6 +57,7 @@ const FILE_PATH = argValue("--file=");
 const SCORERS_JSON = argValue("--scorers=");
 const HOME_SCORE_ARG = argValue("--home-score=");
 const AWAY_SCORE_ARG = argValue("--away-score=");
+const ADVANCING_TEAM_ID = argValue("--advancing-team-id=");
 
 if (!GAME_ID) {
   console.error("--game-id=wc-2026-... が必須です");
@@ -269,6 +274,9 @@ function parseScoreArg(raw: string | undefined): number | undefined {
     patch.awayScore = awayScore;
     patch.final = true;
     patch.status = "final";
+    if (ADVANCING_TEAM_ID) {
+      patch.advancingTeamId = ADVANCING_TEAM_ID;
+    }
   }
 
   console.log("home:", homeTeamId, "away:", awayTeamId);
@@ -280,6 +288,19 @@ function parseScoreArg(raw: string | undefined): number | undefined {
   if (!DRY_RUN) {
     await ref.set(patch, { merge: true });
     console.log("\n✓ games ドキュメントを更新しました");
+  }
+
+  const shouldBracketChain = BRACKET_CHAIN && data.knockout === true;
+  if (shouldBracketChain) {
+    const mergedGame = { ...data, ...patch };
+    await finalizeWcKnockoutFromScript(db, {
+      gameId: GAME_ID,
+      data: mergedGame,
+      advancingTeamId: ADVANCING_TEAM_ID ?? null,
+      dryRun: DRY_RUN,
+    });
+  } else if (BRACKET_CHAIN && WITH_SCORE && data.knockout !== true) {
+    console.log("\n⚠ --bracket-chain は knockout 試合のみ対象です");
   }
 
   const shouldResettle =

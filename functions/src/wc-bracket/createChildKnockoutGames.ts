@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase-admin/firestore";
 import type { Firestore } from "firebase-admin/firestore";
 import {
   getWcKnockoutChildMatchDef,
@@ -140,7 +139,7 @@ async function maybeCreateOneChildGame(
 
   const schedule = WC_KNOCKOUT_SCHEDULE_2026[childMatchId];
   const startAt = schedule?.startAtIso
-    ? Timestamp.fromDate(new Date(schedule.startAtIso))
+    ? new Date(schedule.startAtIso)
     : null;
 
   const payload: Record<string, unknown> = {
@@ -168,7 +167,7 @@ async function maybeCreateOneChildGame(
     finalMeta: null,
     goalScorers: [],
     autoCreatedFrom: "wc-knockout-parent-final",
-    autoCreatedAt: Timestamp.now(),
+    autoCreatedAt: new Date(),
   };
 
   if (startAt) {

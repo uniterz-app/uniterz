@@ -136,6 +136,13 @@
         { "fieldPath": "season", "order": "ASCENDING" },
         { "fieldPath": "survivalRankKey", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "rankSnapshotHistory",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "dateKey", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

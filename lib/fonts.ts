@@ -2,6 +2,7 @@
 
 import {
   Alfa_Slab_One,
+  Michroma,
   Montserrat,
   Noto_Sans_JP,
   Oxanium,
@@ -37,6 +38,24 @@ const matchVsMontserrat = Montserrat({
 });
 
 export const matchVsLabelClass = matchVsMontserrat.className;
+
+/** PRO バッジ — Eurostile（未インストール時は Michroma で Web フォールバック） */
+const proBadgeEurostileFallback = Michroma({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
+
+export const proBadgeWordClass = proBadgeEurostileFallback.className;
+
+export const proBadgeWordFamily = [
+  '"Eurostile"',
+  '"Eurostile Extended"',
+  '"Eurostile Next"',
+  '"Eurostile Next LT Pro"',
+  proBadgeEurostileFallback.style.fontFamily,
+  "sans-serif",
+].join(", ");
 
 /** 試合カード・リザルトのスコア（VS と同じ Montserrat Black Italic） */
 export const matchScoreClass = [

@@ -1,0 +1,8 @@
+{
+  "homeScore": 0,
+  "awayScore": 0,
+  "regulationEtScore": { "home": 0, "away": 0 },
+  "pkScore": { "home": 4, "away": 3 },
+  "advancingTeamId": "wc-che",
+  "scorers": []
+}

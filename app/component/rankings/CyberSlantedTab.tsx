@@ -9,6 +9,21 @@ import {
 
 export const CYBER_TAB_CYAN = "#00F5FF";
 
+export type CyberSlantedTabTheme = {
+  accent: string;
+  inactiveText?: string;
+  activeText?: string;
+  activeShadow?: string;
+  inactiveBorder?: string;
+};
+
+const DEFAULT_TAB_THEME: CyberSlantedTabTheme = {
+  accent: CYBER_TAB_CYAN,
+  inactiveText: CYBER_TAB_CYAN,
+  activeText: "#050508",
+  activeShadow: "0 0 18px rgba(0,245,255,0.45)",
+};
+
 const CyberSlantedTabFillContext = createContext(false);
 
 type CyberSlantedTabProps = {
@@ -17,6 +32,7 @@ type CyberSlantedTabProps = {
   onClick: () => void;
   compact?: boolean;
   fontWeight?: number;
+  theme?: CyberSlantedTabTheme;
   /** role="tab" 用 */
   role?: "tab";
   "aria-selected"?: boolean;
@@ -30,6 +46,7 @@ export function CyberSlantedTab({
   onClick,
   compact = false,
   fontWeight = 700,
+  theme = DEFAULT_TAB_THEME,
   role,
   "aria-selected": ariaSelected,
   badge,
@@ -37,6 +54,11 @@ export function CyberSlantedTab({
   const fill = useContext(CyberSlantedTabFillContext);
   const jaLabel = hasJaScript(label);
   const fontSize = rankingFontSizePx(compact ? 9 : 10, label);
+  const inactiveText = theme.inactiveText ?? theme.accent;
+  const activeText = theme.activeText ?? "#050508";
+  const activeShadow =
+    theme.activeShadow ?? "0 0 18px rgba(0,245,255,0.45)";
+  const inactiveBorder = theme.inactiveBorder ?? theme.accent;
 
   return (
     <button
@@ -61,10 +83,10 @@ export function CyberSlantedTab({
         fontSize,
         fontWeight,
         letterSpacing: jaLabel ? "0.06em" : "0.14em",
-        color: active ? "#050508" : CYBER_TAB_CYAN,
-        background: active ? CYBER_TAB_CYAN : "transparent",
-        border: active ? "none" : `1px solid ${CYBER_TAB_CYAN}`,
-        boxShadow: active ? "0 0 18px rgba(0,245,255,0.45)" : "none",
+        color: active ? activeText : inactiveText,
+        background: active ? theme.accent : "transparent",
+        border: active ? "none" : `1px solid ${inactiveBorder}`,
+        boxShadow: active ? activeShadow : "none",
       }}
     >
       {active ? (

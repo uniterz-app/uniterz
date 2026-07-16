@@ -27,6 +27,10 @@ export type NormalizedGame = {
   regulationEtScore?: { home: number; away: number } | null;
   advancingTeamId?: string | null;
   knockout?: boolean;
+  /** Firestore games.season（WC ブラケット結果 doc id 用） */
+  season?: string | null;
+  /** WC knockout 試合 ID（M97 など） */
+  wcKnockoutMatchId?: string | null;
   /** World Cup（league=wc）のステージ */
   wcStage?: "qualifying" | "main" | null;
   /** WC: 得点者リスト */
@@ -78,6 +82,11 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
     regulationEtScore: after?.regulationEtScore ?? null,
     advancingTeamId: after?.advancingTeamId ?? null,
     knockout: after?.knockout === true,
+    season: typeof after?.season === "string" ? after.season : null,
+    wcKnockoutMatchId:
+      typeof after?.wcKnockoutMatchId === "string"
+        ? after.wcKnockoutMatchId
+        : null,
     wcStage: resolveWcStageFromGame({
       knockout: after?.knockout === true,
       roundLabel: after?.roundLabel ?? null,

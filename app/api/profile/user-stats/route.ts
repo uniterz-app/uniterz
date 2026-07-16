@@ -3,10 +3,6 @@
 
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import {
-  buildWindowCacheForUserFromSnapshots,
-  isWindowCacheStale,
-} from "@/lib/profile/buildUserStatsWindowCache";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import {
@@ -16,7 +12,6 @@ import {
 } from "@/lib/profile/resolveLiveProfileSummary";
 import {
   buildDailyTrendFromDailySnaps,
-  mergeDailyTrendWithSnap,
   resolveProfileDailyTrendContext,
 } from "@/lib/profile/userStatsV2ProfileRollup";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
@@ -78,45 +73,6 @@ async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>,
   return keys.map((dateKey) => byId.get(`${uid}_${dateKey}`)!);
 }
 
-function windowCacheHasProfileRollup(w: Record<string, unknown> | null | undefined): boolean {
-  if (!w) return false;
-  if (typeof w.recent3Posts !== "number") return false;
-  if (!Array.isArray(w.dailyTrend)) return false;
-  const s7 = w["7d"];
-  const s30 = w["30d"];
-  return (
-    s7 != null &&
-    typeof s7 === "object" &&
-    s30 != null &&
-    typeof s30 === "object"
-  );
-}
-
-/** `dailyTrend` が空または未配列（キャッシュ欠落・旧形式） */
-function dailyTrendFromCacheEmpty(
-  w: Record<string, unknown> | null | undefined
-): boolean {
-  if (!w) return true;
-  const raw = w.dailyTrend;
-  return !Array.isArray(raw) || raw.length === 0;
-}
-
-/**
- * 7d / 30d に投稿が載っているのに `dailyTrend` が空 → ウィンドウだけ先にできた古いキャッシュ等。
- * Web は `user_stats_v2_daily` を直読するためグラフが出るが、API 経路だけ空になるのを防ぐ。
- */
-function windowRollupShowsPosts(w: Record<string, unknown>): boolean {
-  for (const key of ["7d", "30d"] as const) {
-    const o = w[key];
-    if (o != null && typeof o === "object") {
-      const r = o as Record<string, unknown>;
-      const posts = safeInt(r.posts ?? r.fullPosts ?? r.totalPosts);
-      if (posts > 0) return true;
-    }
-  }
-  return false;
-}
-
 function parsePartsParam(raw: string | null): Set<StatsPart> | null {
   if (raw == null) return null;
   const trimmed = raw.trim();
@@ -134,7 +90,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const uidParam = searchParams.get("uid")?.trim() ?? "";
     const handleParam = searchParams.get("handle")?.trim() ?? "";
-    const forceRefresh = searchParams.get("refresh") === "1";
     const phase = parsePhase(searchParams.get("phase"));
     const rawLeague = searchParams.get("league");
     const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
@@ -173,7 +128,7 @@ export async function GET(req: Request) {
     const wantStats = parts.has("stats");
     const wantPhase = parts.has("phase");
     const wantRanks = parts.has("ranks");
-    const wantWindow = parts.has("trend");
+    const wantTrend = parts.has("trend");
 
     const statsSnap = wantStats
       ? await adminDb.collection("user_stats_v2").doc(uid).get()
@@ -182,68 +137,20 @@ export async function GET(req: Request) {
       wantPhase || wantRanks
         ? await adminDb.collection("cumulative_stats").doc(uid).get()
         : null;
-    const windowSnap = wantWindow
-      ? await adminDb.collection("user_stats_v2_window_cache").doc(uid).get()
-      : null;
 
     const stats = statsSnap?.exists ? statsSnap.data() : null;
     const cumulative = cumulativeSnap?.exists ? cumulativeSnap.data() : null;
-
-    const windowData = windowSnap?.exists ? windowSnap.data() : null;
-    const updatedAt = windowData?.updatedAt;
-    const stale = !windowData || isWindowCacheStale(updatedAt);
-    const wObj = windowData as Record<string, unknown> | null | undefined;
-    const missingRollup = !windowCacheHasProfileRollup(wObj);
-    const cacheTrendIncomplete =
-      wantWindow &&
-      !!wObj &&
-      windowCacheHasProfileRollup(wObj) &&
-      dailyTrendFromCacheEmpty(wObj) &&
-      windowRollupShowsPosts(wObj);
-    const needRebuild =
-      wantWindow &&
-      (forceRefresh || stale || missingRollup || cacheTrendIncomplete);
 
     const dailyTrendCtx = resolveProfileDailyTrendContext(
       rankingLeague,
       wcStage
     );
-    /** WC は window_cache の dailyTrend（NBA 合算）を使わず日次スナップショットから組み立てる */
-    const wcStageSpecificTrend = rankingLeague === "worldcup";
 
     let dailyTrend: ProfileDailyTrendRow[] = [];
 
-    if (wantWindow) {
-      let last30Snaps: Awaited<ReturnType<typeof fetchLast30DailySnapshots>> | null =
-        null;
-
-      if (wcStageSpecificTrend || needRebuild) {
-        last30Snaps = await fetchLast30DailySnapshots(adminDb, uid);
-      }
-
-      if (wcStageSpecificTrend && last30Snaps) {
-        dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx);
-      } else if (needRebuild && last30Snaps) {
-        try {
-          await buildWindowCacheForUserFromSnapshots(adminDb, uid, last30Snaps);
-        } catch (e) {
-          console.warn("[profile/user-stats] window cache rebuild failed:", e);
-        }
-        dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx);
-      } else if (!wcStageSpecificTrend) {
-        const w = windowData as Record<string, unknown>;
-        const raw = w.dailyTrend;
-        dailyTrend = Array.isArray(raw) ? (raw as ProfileDailyTrendRow[]) : [];
-      }
-
-      const todayKeys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 1);
-      const todayKey = todayKeys[0];
-      if (todayKey) {
-        const todaySnap = await adminDb
-          .doc(`user_stats_v2_daily/${uid}_${todayKey}`)
-          .get();
-        dailyTrend = mergeDailyTrendWithSnap(dailyTrend, todaySnap, dailyTrendCtx);
-      }
+    if (wantTrend) {
+      const last30Snaps = await fetchLast30DailySnapshots(adminDb, uid);
+      dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx);
     }
 
     let summary: SummaryForCards | null = null;
@@ -373,7 +280,7 @@ export async function GET(req: Request) {
     if (summary) body.summary = summary;
     if (metricValueDeltas) body.metricValueDeltas = metricValueDeltas;
     if (summaryRanks) body.summaryRanks = summaryRanks;
-    if (parts.has("trend") && wantWindow) body.dailyTrend = dailyTrend;
+    if (wantTrend) body.dailyTrend = dailyTrend;
 
     return NextResponse.json(body);
   } catch (e: unknown) {

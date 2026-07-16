@@ -14,11 +14,19 @@ export function getYesterdayDateKeyJST(now: Date = new Date()): string {
 }
 
 export function subtractOneDayFromDateKeyJST(dateKey: string): string {
+  return subtractDaysFromDateKeyJST(dateKey, 1);
+}
+
+export function subtractDaysFromDateKeyJST(
+  dateKey: string,
+  days: number
+): string {
   const [y, m, d] = dateKey.split("-").map(Number);
-  const prev = new Date(Date.UTC(y, m - 1, d - 1));
-  const yy = prev.getUTCFullYear();
-  const mm = String(prev.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(prev.getUTCDate()).padStart(2, "0");
+  const base = new Date(Date.UTC(y, m - 1, d));
+  base.setUTCDate(base.getUTCDate() - Math.max(0, Math.floor(days)));
+  const yy = base.getUTCFullYear();
+  const mm = String(base.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(base.getUTCDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
 }
 

@@ -6,6 +6,10 @@ import {
   type WcBracketState,
   type WcOfficialWinners,
 } from "./scoreWcBracketSurvival";
+import {
+  defaultWcFirestoreWriteDeps,
+  type WcFirestoreWriteDeps,
+} from "./wcFirestoreWriteDeps";
 
 export const WC_BRACKET_RESCORE_PAGE_SIZE = 250;
 export const WC_BRACKET_RESCORE_TASKS = "wcBracketRescoreTasks";
@@ -13,14 +17,15 @@ const BATCH_COMMIT_MAX = 400;
 
 export async function enqueueWcBracketRescoreChain(
   db: Firestore,
-  season: string
+  season: string,
+  writeDeps: WcFirestoreWriteDeps = defaultWcFirestoreWriteDeps()
 ): Promise<void> {
   const s = season.trim();
   if (!s) return;
   await db.collection(WC_BRACKET_RESCORE_TASKS).add({
     season: s,
     startAfterDocId: null,
-    enqueuedAt: FieldValue.serverTimestamp(),
+    enqueuedAt: writeDeps.serverTimestamp(),
   });
 }
 

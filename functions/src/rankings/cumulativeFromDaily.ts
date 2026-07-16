@@ -12,6 +12,10 @@ import {
   WC_RANKING_STAGES,
 } from "./dailyWcStageBuckets";
 import { safeRankMetricNum } from "./safeRankMetricNum";
+import {
+  CUMULATIVE_RANKING_TOTAL_POSTS_FIELD,
+  rankingTotalPostsFromAggregate,
+} from "./cumulativeSnapshotIndex";
 
 export type RankingTotals = {
   totalPosts: number;
@@ -157,6 +161,8 @@ export function buildCumulativeIncrementFields(
   if (streakBonus !== 0) out.streakBonusSum = FieldValue.increment(streakBonus);
 
   if (!contrib.forRanking) return out;
+
+  out[CUMULATIVE_RANKING_TOTAL_POSTS_FIELD] = FieldValue.increment(posts);
 
   out["ranking.totalPosts"] = FieldValue.increment(posts);
   out["ranking.totalWins"] = FieldValue.increment(wins);
@@ -471,6 +477,8 @@ export function cumulativePayloadFromAggregate(
     rankingByPhase: agg.rankingByPhase,
     rankingByPlayoffRound: agg.rankingByPlayoffRound,
     rankingByWcStage: agg.rankingByWcStage,
+
+    ...rankingTotalPostsFromAggregate(agg.ranking.totalPosts),
 
     cumulativeLiveUpdates: true,
     lastReconciledDateKey,

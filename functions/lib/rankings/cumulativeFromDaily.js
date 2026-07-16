@@ -15,6 +15,7 @@ exports.reconcileCumulativeStatsForUid = reconcileCumulativeStatsForUid;
 const firestore_1 = require("firebase-admin/firestore");
 const dailyWcStageBuckets_1 = require("./dailyWcStageBuckets");
 const safeRankMetricNum_1 = require("./safeRankMetricNum");
+const cumulativeSnapshotIndex_1 = require("./cumulativeSnapshotIndex");
 function emptyRankingTotals() {
     return {
         totalPosts: 0,
@@ -99,6 +100,7 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
         out.streakBonusSum = firestore_1.FieldValue.increment(streakBonus);
     if (!contrib.forRanking)
         return out;
+    out[cumulativeSnapshotIndex_1.CUMULATIVE_RANKING_TOTAL_POSTS_FIELD] = firestore_1.FieldValue.increment(posts);
     out["ranking.totalPosts"] = firestore_1.FieldValue.increment(posts);
     out["ranking.totalWins"] = firestore_1.FieldValue.increment(wins);
     out["ranking.totalPoints"] = firestore_1.FieldValue.increment(points);
@@ -283,27 +285,7 @@ function applyWcStageStreakToCumulativePayload(payload, streak) {
 }
 function cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey, wcStageStreak) {
     var _a, _b, _c, _d;
-    const payload = {
-        uid,
-        displayName: (_a = user.displayName) !== null && _a !== void 0 ? _a : "user",
-        handle: (_b = user.handle) !== null && _b !== void 0 ? _b : null,
-        photoURL: (_c = user.photoURL) !== null && _c !== void 0 ? _c : null,
-        countryCode: (_d = user.countryCode) !== null && _d !== void 0 ? _d : null,
-        plan: user.plan === "pro" ? "pro" : "free",
-        totalPosts: agg.profile.totalPosts,
-        totalWins: agg.profile.totalWins,
-        totalPoints: agg.profile.totalPoints,
-        totalUpset: agg.profile.totalUpset,
-        totalPrecision: agg.profile.totalPrecision,
-        winRate: agg.profile.winRate,
-        ranking: agg.ranking,
-        rankingByPhase: agg.rankingByPhase,
-        rankingByPlayoffRound: agg.rankingByPlayoffRound,
-        rankingByWcStage: agg.rankingByWcStage,
-        cumulativeLiveUpdates: true,
-        lastReconciledDateKey,
-        updatedAt: firestore_1.FieldValue.serverTimestamp(),
-    };
+    const payload = Object.assign(Object.assign({ uid, displayName: (_a = user.displayName) !== null && _a !== void 0 ? _a : "user", handle: (_b = user.handle) !== null && _b !== void 0 ? _b : null, photoURL: (_c = user.photoURL) !== null && _c !== void 0 ? _c : null, countryCode: (_d = user.countryCode) !== null && _d !== void 0 ? _d : null, plan: user.plan === "pro" ? "pro" : "free", totalPosts: agg.profile.totalPosts, totalWins: agg.profile.totalWins, totalPoints: agg.profile.totalPoints, totalUpset: agg.profile.totalUpset, totalPrecision: agg.profile.totalPrecision, winRate: agg.profile.winRate, ranking: agg.ranking, rankingByPhase: agg.rankingByPhase, rankingByPlayoffRound: agg.rankingByPlayoffRound, rankingByWcStage: agg.rankingByWcStage }, (0, cumulativeSnapshotIndex_1.rankingTotalPostsFromAggregate)(agg.ranking.totalPosts)), { cumulativeLiveUpdates: true, lastReconciledDateKey, updatedAt: firestore_1.FieldValue.serverTimestamp() });
     if (wcStageStreak) {
         applyWcStageStreakToCumulativePayload(payload, wcStageStreak);
     }

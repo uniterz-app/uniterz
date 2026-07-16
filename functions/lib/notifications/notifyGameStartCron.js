@@ -4,7 +4,7 @@ exports.runNotifyGameStartCron = runNotifyGameStartCron;
 const firestore_1 = require("firebase-admin/firestore");
 const sendExpoPush_1 = require("./sendExpoPush");
 const pushNotificationCopy_1 = require("./pushNotificationCopy");
-const LOOKAHEAD_MS = 15 * 60 * 1000;
+const LOOKAHEAD_MS = 20 * 60 * 1000;
 async function runNotifyGameStartCron() {
     const firestore = (0, firestore_1.getFirestore)();
     const now = new Date();

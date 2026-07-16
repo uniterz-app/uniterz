@@ -40,7 +40,17 @@
     "badges:pocf:grant-test": "tsx scripts/grant-po-2026-cf-badges-test.ts",
     "badges:pocf:revoke-test": "tsx scripts/revoke-po-2026-cf-test-grants.ts",
     "badges:pocf:grant:dry": "DRY_RUN=1 tsx scripts/grant-po-2026-cf-total-points-badges.ts",
-    "badges:pocf:grant": "tsx scripts/grant-po-2026-cf-total-points-badges.ts"
+    "badges:pocf:grant": "tsx scripts/grant-po-2026-cf-total-points-badges.ts",
+    "badges:poall:seed": "tsx scripts/seed-po-2026-all-badges.ts",
+    "badges:poall:grant-test": "tsx scripts/grant-po-2026-all-badges-test.ts",
+    "badges:poall:revoke-test": "tsx scripts/revoke-po-2026-all-test-grants.ts",
+    "badges:poall:grant:dry": "DRY_RUN=1 tsx scripts/grant-po-2026-all-total-points-badges.ts",
+    "badges:poall:grant": "tsx scripts/grant-po-2026-all-total-points-badges.ts",
+    "badges:wcgp:seed": "tsx scripts/seed-wc-2026-gp-badges.ts",
+    "badges:wcgp:grant-test": "tsx scripts/grant-wc-2026-gp-badges-test.ts",
+    "badges:wcgp:revoke-test": "tsx scripts/revoke-wc-2026-gp-test-grants.ts",
+    "badges:wcgp:grant:dry": "DRY_RUN=1 tsx scripts/grant-wc-2026-gp-total-points-badges.ts",
+    "badges:wcgp:grant": "tsx scripts/grant-wc-2026-gp-total-points-badges.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

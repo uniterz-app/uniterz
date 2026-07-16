@@ -774,6 +774,16 @@ export default function ScheduleList({
                 user={{ name: "You" }}
                 embedded
                 inOverlay
+                overlayHomeRecord={
+                  selectedProps.home?.teamId
+                    ? teamRecordMap[selectedProps.home.teamId] ?? null
+                    : null
+                }
+                overlayAwayRecord={
+                  selectedProps.away?.teamId
+                    ? teamRecordMap[selectedProps.away.teamId] ?? null
+                    : null
+                }
                 predictEditTriggerNonce={predictEditTriggerNonce}
                 overlayExistingPostId={
                   myPostMap[String(selectedProps.id)] ?? null

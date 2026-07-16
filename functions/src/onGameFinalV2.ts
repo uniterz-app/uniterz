@@ -8,10 +8,10 @@ import { upsetJudge } from "./upsetJudge";
 import { finalizePost } from "./finalizePost";
 import { aggregateGamePointsDistributionFromPostsSnap } from "./aggregateGamePointsDistribution";
 import { updateUserStreak } from "./updateUserStreak";
-import { rescoreEarlierWcSlotPosts } from "./wc/wcSlotStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
 import { notifyGameFinalPush } from "./notifications/notifyPushEvents";
+import { maybeUpdateWcBracketOnKnockoutFinal } from "./wc-bracket/onKnockoutGameFinal";
 import {
   countsTowardPlayoffTeamStats,
   countsTowardRegularSeasonTeamStats,
@@ -22,7 +22,6 @@ import {
   resolveActualOutcomeForUpset,
   type SettlementGameInput,
 } from "./settlementGame";
-import { maybeUpdateWcBracketOnKnockoutFinal } from "./wc-bracket/onKnockoutGameFinal";
 
 const db = () => getFirestore();
 
@@ -89,16 +88,14 @@ export const onGameFinalV2 = onDocumentWritten(
 
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();
-    let wcSlotRescore: { perUserPerGameActive: Map<string, Map<string, number>> } | null = null;
 
     if (becameFinal) {
-      const streakOutcome = await updateUserStreak({
+      streakResultMap = await updateUserStreak({
         db: firestore,
         gameId,
         settlementGame,
+        postsSnap,
       });
-      streakResultMap = streakOutcome.streakResultMap;
-      wcSlotRescore = streakOutcome.wcSlotRescore;
 
       const skipTeamSeasonRecord = isExemptFromTeamSeasonRecord(game.knockout);
 
@@ -217,14 +214,6 @@ export const onGameFinalV2 = onDocumentWritten(
       await Promise.all(userUpdateTasks);
     }
 
-    if (wcSlotRescore) {
-      await rescoreEarlierWcSlotPosts(
-        firestore,
-        gameId,
-        wcSlotRescore.perUserPerGameActive
-      );
-    }
-
     const pointsDistribution = aggregateGamePointsDistributionFromPostsSnap({
       postsSnap,
       game: settlementGame,
@@ -269,16 +258,34 @@ export const onGameFinalV2 = onDocumentWritten(
 
     await firestore.doc(`games/${gameId}`).set(gamePatch, { merge: true });
 
-    if (becameFinal) {
-      await firestore.doc("trend_jobs/users").set(
-        {
-          needsRebuild: true,
-          requestedAt: FieldValue.serverTimestamp(),
+    if (becameFinal && game.knockout === true) {
+      try {
+        const bracket = await maybeUpdateWcBracketOnKnockoutFinal(firestore, {
           gameId,
-        },
-        { merge: true }
-      );
+          season: typeof game.season === "string" ? game.season : null,
+          league: game.league,
+          knockout: true,
+          homeTeamId: game.homeTeamId,
+          awayTeamId: game.awayTeamId,
+          homeScore: game.homeScore,
+          awayScore: game.awayScore,
+          advancingTeamId: game.advancingTeamId ?? null,
+          wcKnockoutMatchId:
+            typeof game.wcKnockoutMatchId === "string"
+              ? game.wcKnockoutMatchId
+              : null,
+        });
+        if (bracket.childGamesCreated?.length) {
+          console.log(
+            `[onGameFinalV2] knockout child games: ${bracket.childGamesCreated.join(", ")}`
+          );
+        }
+      } catch (err) {
+        console.error("[onGameFinalV2] wc bracket chain failed", err);
+      }
+    }
 
+    if (becameFinal) {
       try {
         await notifyGameFinalPush({
           gameId,
@@ -289,27 +296,6 @@ export const onGameFinalV2 = onDocumentWritten(
         });
       } catch (err) {
         console.error("[onGameFinalV2] push notify failed", err);
-      }
-
-      try {
-        await maybeUpdateWcBracketOnKnockoutFinal(firestore, {
-          gameId,
-          season:
-            typeof after.season === "string" ? after.season : null,
-          league: game.league,
-          knockout: game.knockout === true,
-          homeTeamId: game.homeTeamId,
-          awayTeamId: game.awayTeamId,
-          homeScore: game.homeScore,
-          awayScore: game.awayScore,
-          advancingTeamId: game.advancingTeamId,
-          wcKnockoutMatchId:
-            typeof after.wcKnockoutMatchId === "string"
-              ? after.wcKnockoutMatchId
-              : null,
-        });
-      } catch (err) {
-        console.error("[onGameFinalV2] wc bracket survivor update failed", err);
       }
     }
   }

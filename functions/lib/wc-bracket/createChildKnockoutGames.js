@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.maybeCreateChildKnockoutGames = maybeCreateChildKnockoutGames;
-const firestore_1 = require("firebase-admin/firestore");
 const wcKnockoutBracketStructure_1 = require("./wcKnockoutBracketStructure");
 const wcKnockoutSchedule2026_1 = require("./wcKnockoutSchedule2026");
 const resolveKnockoutLoser_1 = require("./resolveKnockoutLoser");
@@ -83,7 +82,7 @@ async function maybeCreateOneChildGame(db, season, childMatchId, winners, teamCa
     }
     const schedule = wcKnockoutSchedule2026_1.WC_KNOCKOUT_SCHEDULE_2026[childMatchId];
     const startAt = (schedule === null || schedule === void 0 ? void 0 : schedule.startAtIso)
-        ? firestore_1.Timestamp.fromDate(new Date(schedule.startAtIso))
+        ? new Date(schedule.startAtIso)
         : null;
     const payload = {
         id: gameId,
@@ -110,7 +109,7 @@ async function maybeCreateOneChildGame(db, season, childMatchId, winners, teamCa
         finalMeta: null,
         goalScorers: [],
         autoCreatedFrom: "wc-knockout-parent-final",
-        autoCreatedAt: firestore_1.Timestamp.now(),
+        autoCreatedAt: new Date(),
     };
     if (startAt) {
         payload.startAt = startAt;

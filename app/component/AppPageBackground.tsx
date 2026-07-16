@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import GamesPageBackground from "@/app/component/games/GamesPageBackground";
 import MobileStaticPageBackground from "@/app/component/games/MobileStaticPageBackground";
 import { usePreferStaticPageBackground } from "@/lib/perf/usePreferStaticPageBackground";
@@ -8,11 +9,18 @@ import { usePreferStaticPageBackground } from "@/lib/perf/usePreferStaticPageBac
  * アプリ全体で1インスタンスのサイバー背景。
  * ルート layout に置き、ページ遷移でアンマウントされない。
  *
- * - デスクトップ / 大画面: フルオーロラ + モート
+ * - /web/*: 静止背景（アニメオフ）
+ * - /dev/*: 静止背景（プレビュー用）
  * - iPhone Safari / モバイル Chrome / /mobile/*: 静止背景（発熱対策）
+ * - その他デスクトップ: フルオーロラ + モート
  */
 export default function AppPageBackground() {
+  const pathname = usePathname() ?? "";
   const preferStatic = usePreferStaticPageBackground();
+
+  if (pathname.startsWith("/dev/my-rank-free-pro-preview")) {
+    return null;
+  }
 
   if (preferStatic) {
     return <MobileStaticPageBackground />;

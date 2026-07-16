@@ -6,7 +6,7 @@ import {
 } from "./sendExpoPush";
 import { resolveGameMatchupCopy } from "./pushNotificationCopy";
 
-const LOOKAHEAD_MS = 15 * 60 * 1000;
+const LOOKAHEAD_MS = 20 * 60 * 1000;
 
 export async function runNotifyGameStartCron(): Promise<void> {
   const firestore = getFirestore();

@@ -76,6 +76,35 @@ export function CyberRankNumber({
   );
 }
 
+/** 順位以外の数値 — フォントは子要素任せでスキャンラインだけ重ねる */
+export function CyberScanlineText({
+  children,
+  className,
+  subtle = true,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** true = 順位数字より控えめなスキャンライン */
+  subtle?: boolean;
+}) {
+  return (
+    <span className="cyber-rank-num relative inline-block">
+      <span className={["relative z-[1] block", className].filter(Boolean).join(" ")}>
+        {children}
+      </span>
+      <span
+        aria-hidden
+        className={[
+          "cyber-rank-num__scan pointer-events-none",
+          subtle ? "cyber-rank-num__scan--subtle" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      />
+    </span>
+  );
+}
+
 const rankHudNumClass = summaryMetricNumClass;
 
 function cyberScoreColor(rank: number): string {

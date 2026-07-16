@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.backfillStreakApplyMarkersHttp = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.backfillCumulativeStatsFromDailyHttp = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onWcBracketRescoreTaskCreated = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.backfillStreakApplyMarkersHttp = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildMonthlyLeaderboardSnapshotCron = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.backfillCumulativeStatsFromDailyHttp = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onWcBracketRescoreTaskCreated = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -50,7 +50,6 @@ const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
 // ★追加
 const buildMonthlyLeaderboardSnapshot_1 = require("./leaderboards/buildMonthlyLeaderboardSnapshot");
 const jstLeaderboardMonth_1 = require("./leaderboards/jstLeaderboardMonth");
-const buildUserStatsWindowCache_1 = require("./stats/buildUserStatsWindowCache");
 // ===============================
 // V2 Core
 // ===============================
@@ -159,9 +158,9 @@ exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ sched
     }
 });
 /* ============================================================================
- * Game start push (5 min) — 15 分以内に開始する試合の予想者へ
+ * Game start push (10 min) — 15 分以内に開始する試合の予想者へ
  * ==========================================================================*/
-exports.notifyGameStartPushCron = (0, scheduler_1.onSchedule)({ schedule: "*/5 * * * *", timeZone: "Asia/Tokyo" }, async () => {
+exports.notifyGameStartPushCron = (0, scheduler_1.onSchedule)({ schedule: "*/10 * * * *", timeZone: "Asia/Tokyo" }, async () => {
     try {
         await (0, notifyGameStartCron_1.runNotifyGameStartCron)();
     }
@@ -179,14 +178,6 @@ exports.buildMonthlyLeaderboardSnapshotCron = (0, scheduler_1.onSchedule)({ sche
     for (const league of LEAGUES) {
         await (0, buildMonthlyLeaderboardSnapshot_1.buildMonthlyLeaderboardSnapshot)({ league, month });
     }
-});
-/* ============================================================================
- * User Stats Window Cache（7d/30d ロールアップ）
- * 毎日 05:00 にプリウォーム
- * ==========================================================================*/
-exports.buildUserStatsWindowCacheCron = (0, scheduler_1.onSchedule)({ schedule: "0 5 * * *", timeZone: "Asia/Tokyo" }, async () => {
-    const { ok, err } = await (0, buildUserStatsWindowCache_1.buildAllUsersWindowCache)();
-    console.log(`[buildUserStatsWindowCacheCron] ok=${ok} err=${err}`);
 });
 /* ============================================================================
  * Analytics

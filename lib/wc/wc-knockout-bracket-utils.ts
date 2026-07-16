@@ -19,6 +19,7 @@ import type { WcOfficialWinners } from "@/lib/wc/wc-bracket-results-types";
 
 export type WcResolveParticipantsOptions = {
   officialWinners?: WcOfficialWinners | null;
+  officialLosers?: import("@/lib/wc/wc-bracket-results-types").WcOfficialLosers | null;
   /** true のとき winner_feed は公式勝者を優先（R16+ 表示用） */
   preferOfficialFeeders?: boolean;
 };
@@ -145,6 +146,32 @@ function resolveWcFeederParticipant(
   };
 }
 
+function resolveWcFeederLoserParticipant(
+  feederMatchId: WcKnockoutMatchId,
+  advancement: WcKnockoutAdvancement,
+  options?: WcResolveParticipantsOptions
+): WcResolvedParticipant {
+  const preferOfficial = options?.preferOfficialFeeders === true;
+  const officialLoser =
+    options?.officialLosers?.[feederMatchId]?.trim() ?? "";
+
+  if (preferOfficial && officialLoser) {
+    return {
+      teamId: officialLoser,
+      label:
+        resolveWcTeamQualLabel(officialLoser, advancement) ||
+        `RU${feederMatchId.slice(1)}`,
+      source: "official",
+    };
+  }
+
+  return {
+    teamId: "",
+    label: `RU${feederMatchId.slice(1)}`,
+    source: "official",
+  };
+}
+
 function teamIdFromWinnerFeed(
   bracket: WcBracketState,
   slot: Extract<WcKnockoutFeedSlot, { kind: "winner_feed" }>,
@@ -175,6 +202,13 @@ export function resolveWcMatchParticipants(
 ): [WcResolvedParticipant | null, WcResolvedParticipant | null] | null {
   const def = getWcKnockoutMatch(matchId);
   if (!def) return null;
+
+  if (def.round === "THIRD" && def.feedsFrom.length === 2) {
+    return [
+      resolveWcFeederLoserParticipant(def.feedsFrom[0], advancement, options),
+      resolveWcFeederLoserParticipant(def.feedsFrom[1], advancement, options),
+    ];
+  }
 
   if (def.round === "R32" && def.feedsFrom.length === 0) {
     const confirmed = resolveWcR32ConfirmedParticipants(matchId, advancement);
@@ -217,6 +251,12 @@ export function resolveWcMatchParticipants(
         return teamIdFromThirdPlaceSlot(advancement, slot, winnerGroup);
       case "winner_feed":
         return teamIdFromWinnerFeed(bracket, slot, advancement, options);
+      case "runner_up_feed":
+        return resolveWcFeederLoserParticipant(
+          slot.matchId,
+          advancement,
+          options
+        );
       default:
         return null;
     }

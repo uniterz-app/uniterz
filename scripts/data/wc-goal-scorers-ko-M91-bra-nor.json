@@ -1,0 +1,9 @@
+{
+  "homeScore": 1,
+  "awayScore": 2,
+  "scorers": [
+    { "playerId": "nor-haaland", "teamId": "wc-nor", "minute": 79 },
+    { "playerId": "nor-haaland", "teamId": "wc-nor", "minute": 90 },
+    { "playerId": "bra-neymar", "teamId": "wc-bra", "minute": "90+10" }
+  ]
+}

@@ -5,17 +5,18 @@ exports.enqueueWcBracketRescoreChain = enqueueWcBracketRescoreChain;
 exports.processWcBracketRescorePage = processWcBracketRescorePage;
 const firestore_1 = require("firebase-admin/firestore");
 const scoreWcBracketSurvival_1 = require("./scoreWcBracketSurvival");
+const wcFirestoreWriteDeps_1 = require("./wcFirestoreWriteDeps");
 exports.WC_BRACKET_RESCORE_PAGE_SIZE = 250;
 exports.WC_BRACKET_RESCORE_TASKS = "wcBracketRescoreTasks";
 const BATCH_COMMIT_MAX = 400;
-async function enqueueWcBracketRescoreChain(db, season) {
+async function enqueueWcBracketRescoreChain(db, season, writeDeps = (0, wcFirestoreWriteDeps_1.defaultWcFirestoreWriteDeps)()) {
     const s = season.trim();
     if (!s)
         return;
     await db.collection(exports.WC_BRACKET_RESCORE_TASKS).add({
         season: s,
         startAfterDocId: null,
-        enqueuedAt: firestore_1.FieldValue.serverTimestamp(),
+        enqueuedAt: writeDeps.serverTimestamp(),
     });
 }
 async function processWcBracketRescorePage(db, season, startAfterDocId) {

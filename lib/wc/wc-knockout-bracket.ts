@@ -109,6 +109,12 @@ export type WcKnockoutFeedSlot =
       kind: "winner_feed";
       matchId: WcKnockoutMatchId;
       label: string;
+    }
+  | {
+      /** 3位決定戦 — 親試合の敗者 */
+      kind: "runner_up_feed";
+      matchId: WcKnockoutMatchId;
+      label: string;
     };
 
 export type WcKnockoutMatchDef = {
@@ -399,8 +405,8 @@ export const WC_KNOCKOUT_MATCHES: readonly WcKnockoutMatchDef[] = [
     id: "M103",
     round: "THIRD",
     feedsFrom: ["M101", "M102"],
-    home: { kind: "winner_feed", matchId: "M101", label: "RU101" },
-    away: { kind: "winner_feed", matchId: "M102", label: "RU102" },
+    home: { kind: "runner_up_feed", matchId: "M101", label: "RU101" },
+    away: { kind: "runner_up_feed", matchId: "M102", label: "RU102" },
   },
 
   // —— Final ——

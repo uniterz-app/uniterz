@@ -1,6 +1,5 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
-import { buildWindowCacheForUser } from "./stats/buildUserStatsWindowCache";
 import { computePostSettlement } from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
 import { buildPostMatchGoalScorersFromGame } from "./wc/matchGoalScorersDisplay";
@@ -184,6 +183,6 @@ export async function finalizePost({
       wcStage: resolvedWcStage,
       homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
       awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
-    }).then(() => buildWindowCacheForUser(uid))
+    })
   );
 }

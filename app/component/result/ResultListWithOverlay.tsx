@@ -2250,6 +2250,8 @@ export default function ResultListWithOverlay({
                             embedded
                             inOverlay
                             overlayUnifiedForm
+                            overlayHomeRecord={overlayMatchCardRecords.homeRecord}
+                            overlayAwayRecord={overlayMatchCardRecords.awayRecord}
                             overlayExistingPostId={predictOverlay.post.id}
                             predictEditTriggerNonce={predictEditTriggerNonce}
                             onExistingResultPostChange={setOverlayResultPost}

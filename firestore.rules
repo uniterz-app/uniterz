@@ -363,11 +363,5 @@ service cloud.firestore {
         && (!('ts' in request.resource.data) || request.resource.data.ts is number);
       allow read, update, delete: if false;
     }
-
-    // trend_cache（集計キャッシュ）
-    match /trend_cache/{docId} {
-      allow read: if true;
-      allow write: if false;
-    }
   }
 }

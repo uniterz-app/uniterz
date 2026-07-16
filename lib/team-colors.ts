@@ -114,6 +114,64 @@ export function getTeamJerseyPrimaryColor(
   return getTeamPrimaryColor(league, teamId);
 }
 
+/**
+ * UI 枠・バッジ用。ネオン黄（Lakers/Warriors 等）を落ち着いたゴールドへ抑える。
+ * ジャージ mark 本体には使わず、枠線・テキストアクセント向け。
+ */
+export function softenTeamUiColor(hex: string): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return hex;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return hex;
+
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  // 緑が強く乗るネオン黄は HSL 明度では拾えないため相対輝度で判定
+  const lum =
+    0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === r / 255) h = ((g / 255 - b / 255) / d + (g < b ? 6 : 0)) * 60;
+    else if (max === g / 255) h = ((b / 255 - r / 255) / d + 2) * 60;
+    else h = ((r / 255 - g / 255) / d + 4) * 60;
+  }
+
+  const yellowish = h >= 35 && h <= 100;
+  // 明るすぎる黄・ライムのみ（紫・シアン等は除外）
+  if (!yellowish || lum < 0.55) return hex;
+
+  // ネオンライム（Lakers / Warriors jersey）→ 落ち着いたゴールドへ置換
+  if (b < 50 && g > 220 && r > 180) {
+    return "#C5A817";
+  }
+
+  // 目標: 落ち着いたゴールド（輝度 ~0.44）
+  const targetLum = 0.44;
+  const factor = Math.min(1, Math.max(0.38, targetLum / lum));
+  const nr = Math.round(r * factor);
+  const ng = Math.round(g * factor * 0.95);
+  const nb = Math.round(Math.min(b * factor + 18, Math.min(nr, ng) * 0.4));
+  const toHex = (n: number) =>
+    Math.min(255, Math.max(0, n)).toString(16).padStart(2, "0");
+  return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
+}
+
+/** カード枠・セクションアクセント用（ジャージ mark は getTeamJerseyPrimaryColor のまま） */
+export function getTeamUiAccentColor(
+  league: League,
+  teamId: string | null | undefined
+): string {
+  return softenTeamUiColor(getTeamJerseyPrimaryColor(league, teamId));
+}
+
 /** ユニフォーム canvas の2色目（通常はチーム secondary、上記セットのチームは jersey primary と同色） */
 export function getTeamJerseySecondaryColor(
   league: League,

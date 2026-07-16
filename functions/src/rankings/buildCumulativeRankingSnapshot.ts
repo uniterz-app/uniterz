@@ -9,7 +9,16 @@ import {
   loadAuthorUidsSettledToday,
   loadAuthorUidsSettledTodayForWcStage,
 } from "./activeWinStreakRanking";
-import { loadUidsWhoPredictedOnDateJst } from "../notifications/loadUidsWhoPredictedOnDateJst";
+import { loadUidsWhoPredictedOnDateFromDaily } from "../notifications/loadUidsWhoPredictedOnDateFromDaily";
+import {
+  cumulativeStatsDocsToMap,
+  loadCumulativeStatsForRankingSnapshot,
+} from "./cumulativeSnapshotIndex";
+import {
+  buildRankGapCohortBandSnapshot,
+  readRankGapStatsSlice,
+  type GapStatsReadContext,
+} from "./readRankGapStatsSlice";
 
 /* =========================================================
  * Firestore
@@ -310,11 +319,31 @@ type SnapshotRow = BaseRow & {
   metricValueDelta?: number | null;
 };
 
+function gapCohortTop20Payload(
+  metric: Metric,
+  statsByUid: Map<string, Record<string, unknown>>,
+  rows: Array<{ uid: string }>,
+  context: GapStatsReadContext
+): Record<string, unknown> {
+  if (metric !== "totalPoints") return {};
+  const slices = [];
+  for (const row of rows) {
+    const slice = readRankGapStatsSlice(statsByUid.get(row.uid), context);
+    if (slice && slice.posts > 0) slices.push(slice);
+  }
+  const band = buildRankGapCohortBandSnapshot(slices);
+  return band ? { gapCohortTop20: band } : {};
+}
+
 type SnapshotMetricValues = {
   totalPoints: number;
   totalPrecision: number;
   totalUpset: number;
   winRate: number;
+  exactHitCount: number;
+  upsetBonusSum: number;
+  streakBonusSum: number;
+  goalScorerBonusSum: number;
 };
 
 type HistoryMetricValuesBlock = {
@@ -331,6 +360,10 @@ function toSnapshotMetricValues(r: {
   totalPoints?: number;
   totalPrecision?: number;
   totalUpset?: number;
+  exactHitCount?: number;
+  upsetBonusSum?: number;
+  streakBonusSum?: number;
+  goalScorerBonusSum?: number;
 }): SnapshotMetricValues {
   const tp = r.totalPosts ?? 0;
   const tw = r.totalWins ?? 0;
@@ -339,6 +372,10 @@ function toSnapshotMetricValues(r: {
     totalPrecision: r.totalPrecision ?? 0,
     totalUpset: r.totalUpset ?? 0,
     winRate: tp > 0 ? tw / tp : (r.winRate ?? 0),
+    exactHitCount: r.exactHitCount ?? r.totalPrecision ?? 0,
+    upsetBonusSum: r.upsetBonusSum ?? r.totalUpset ?? 0,
+    streakBonusSum: r.streakBonusSum ?? 0,
+    goalScorerBonusSum: r.goalScorerBonusSum ?? 0,
   };
 }
 
@@ -758,7 +795,8 @@ export async function buildCumulativeRankingSnapshot(
   const wcOnly = scope === "wc";
   const streakAllEligible = options.streakAllEligible === true;
 
-  const snap = await db().collection("cumulative_stats").get();
+  const snap = await loadCumulativeStatsForRankingSnapshot(db());
+  const statsByUid = cumulativeStatsDocsToMap(snap);
 
   const [wcSettledTodayUids, wcQualifyingSettledTodayUids, wcMainSettledTodayUids, nbaSettledTodayUids] =
     await Promise.all([
@@ -1068,6 +1106,10 @@ export async function buildCumulativeRankingSnapshot(
           totalCount,
           updatedAt: FieldValue.serverTimestamp(),
           rankDeltaBasisDateKey: yesterdayKey,
+          ...gapCohortTop20Payload(metric, statsByUid, enriched, {
+            kind: "phase",
+            phase,
+          }),
         },
         { merge: true }
       );
@@ -1106,6 +1148,10 @@ export async function buildCumulativeRankingSnapshot(
           totalCount,
           updatedAt: FieldValue.serverTimestamp(),
           rankDeltaBasisDateKey: yesterdayKey,
+          ...gapCohortTop20Payload(metric, statsByUid, enriched, {
+            kind: "round",
+            round,
+          }),
         },
         { merge: true }
       );
@@ -1145,6 +1191,10 @@ export async function buildCumulativeRankingSnapshot(
           totalCount,
           updatedAt: FieldValue.serverTimestamp(),
           rankDeltaBasisDateKey: yesterdayKey,
+          ...gapCohortTop20Payload(metric, statsByUid, enriched, {
+            kind: "wc",
+            stage,
+          }),
         },
         { merge: true }
       );
@@ -1168,8 +1218,11 @@ export async function buildCumulativeRankingSnapshot(
     : new Set<string>([...rankByUid.keys(), ...rankByUidWc.keys()]);
   const metricValuesByUid = new Map<string, HistoryMetricValuesBlock>();
   if (!wcOnly) {
-    for (const doc of snap.docs) {
-      metricValuesByUid.set(doc.id, buildMetricValuesBlock(doc.data()));
+    for (const uid of historyUids) {
+      const docData = statsByUid.get(uid);
+      if (docData) {
+        metricValuesByUid.set(uid, buildMetricValuesBlock(docData));
+      }
     }
   }
 
@@ -1267,7 +1320,7 @@ export async function buildCumulativeRankingSnapshot(
     .doc("_generation")
     .set(generationPatch, { merge: true });
 
-  const todayPredictorUids = await loadUidsWhoPredictedOnDateJst(dateKey);
+  const todayPredictorUids = await loadUidsWhoPredictedOnDateFromDaily(dateKey);
 
   return {
     ok: true,

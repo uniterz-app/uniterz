@@ -1,0 +1,9 @@
+{
+  "homeScore": 1,
+  "awayScore": 2,
+  "goalScorers": [
+    { "playerId": "eng-gordon", "teamId": "wc-eng", "minute": 55 },
+    { "playerId": "arg-fernandez", "teamId": "wc-arg", "minute": 85 },
+    { "playerId": "arg-martinez-2", "teamId": "wc-arg", "minute": 92 }
+  ]
+}

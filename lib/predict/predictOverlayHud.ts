@@ -11,6 +11,16 @@ export const PREDICT_HUD_SHELL_CLASS = [
   "shadow-[0_20px_52px_rgba(0,0,0,0.58),0_0_28px_rgba(34,211,238,0.09),inset_0_1px_0_rgba(34,211,238,0.2)]",
 ].join(" ");
 
+/** Pro 予想オーバーレイ — HUD 外枠（ゴールドアクセント。MatchCard / フォームはシアン維持） */
+export const PREDICT_HUD_PRO_HAIRLINE = "rgba(212,175,90,0.24)";
+
+export const PREDICT_HUD_PRO_SHELL_CLASS = [
+  "relative w-full overflow-hidden",
+  "border border-amber-300/30",
+  "bg-[linear-gradient(165deg,rgba(18,16,12,0.94)_0%,rgba(8,10,16,0.97)_52%,rgba(5,9,16,0.99)_100%)]",
+  "shadow-[0_20px_52px_rgba(0,0,0,0.58),0_0_28px_rgba(212,175,90,0.1),inset_0_1px_0_rgba(212,175,90,0.18)]",
+].join(" ");
+
 export const PREDICT_HUD_PANEL_CLASS =
   "relative w-full overflow-hidden border border-cyan-400/20 bg-[rgba(7,12,22,0.58)] px-4 py-3.5";
 

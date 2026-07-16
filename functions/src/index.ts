@@ -17,7 +17,6 @@ import { notifyRankingUpdatedPush } from "./notifications/notifyPushEvents";
 // ★追加
 import { buildMonthlyLeaderboardSnapshot } from "./leaderboards/buildMonthlyLeaderboardSnapshot";
 import { getLeaderboardLatestMonthKey } from "./leaderboards/jstLeaderboardMonth";
-import { buildAllUsersWindowCache } from "./stats/buildUserStatsWindowCache";
 
 // ===============================
 // V2 Core
@@ -147,11 +146,11 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 );
 
 /* ============================================================================
- * Game start push (5 min) — 15 分以内に開始する試合の予想者へ
+ * Game start push (10 min) — 15 分以内に開始する試合の予想者へ
  * ==========================================================================*/
 
 export const notifyGameStartPushCron = onSchedule(
-  { schedule: "*/5 * * * *", timeZone: "Asia/Tokyo" },
+  { schedule: "*/10 * * * *", timeZone: "Asia/Tokyo" },
   async () => {
     try {
       await runNotifyGameStartCron();
@@ -176,19 +175,6 @@ export const buildMonthlyLeaderboardSnapshotCron = onSchedule(
     for (const league of LEAGUES) {
       await buildMonthlyLeaderboardSnapshot({ league, month });
     }
-  }
-);
-
-/* ============================================================================
- * User Stats Window Cache（7d/30d ロールアップ）
- * 毎日 05:00 にプリウォーム
- * ==========================================================================*/
-
-export const buildUserStatsWindowCacheCron = onSchedule(
-  { schedule: "0 5 * * *", timeZone: "Asia/Tokyo" },
-  async () => {
-    const { ok, err } = await buildAllUsersWindowCache();
-    console.log(`[buildUserStatsWindowCacheCron] ok=${ok} err=${err}`);
   }
 );
 
