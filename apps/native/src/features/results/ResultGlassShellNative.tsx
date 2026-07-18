@@ -1,16 +1,19 @@
 /**
  * Web `ResultGlassShell` + `.result-hit-cyber-clip` 相当。
+ * 塗りはモバイル `RESULT_GLASS_FILL_MOBILE`（白半透明グラデ + blur）に準拠。
  * 角切りは Skia clip（ページ色の角マスクは使わない）。
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
   type LayoutChangeEvent,
+  Platform,
   type StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
 } from "react-native";
 import Animated, { type AnimatedStyle } from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 import {
   Canvas,
   Group,
@@ -25,14 +28,13 @@ import {
   RESULT_HIT_CYBER_CLIP_CUT,
   resultHitCyberClipPathD,
 } from "./resultHitCyberClipPath";
-import { MatchListCyberGridSkia } from "../games/matchListCyberGridSkia";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 
-const GLASS_BASE = {
-  colors: ["rgba(18,22,32,0.78)", "rgba(10,13,22,0.72)", "rgba(8,11,18,0.76)"],
-  locations: [0, 0.5, 1],
-} as const;
-
-const GLASS_SHEEN = {
+/**
+ * Web `RESULT_GLASS_FILL_MOBILE`
+ * `bg-[linear-gradient(172deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.035)_45%,rgba(255,255,255,0.015)_100%)]`
+ */
+const GLASS_FILL_MOBILE = {
   colors: [
     "rgba(255,255,255,0.08)",
     "rgba(255,255,255,0.035)",
@@ -40,6 +42,9 @@ const GLASS_SHEEN = {
   ],
   locations: [0, 0.45, 1],
 } as const;
+
+/** blur が弱い端末向けの下地（日付帯 `resultDayStripPanelNative.panel` と同系） */
+const GLASS_UNDERLAY = "rgba(8,11,18,0.48)";
 
 type Props = {
   children: ReactNode;
@@ -51,7 +56,7 @@ type Props = {
   strokeOpacityStyle?: StyleProp<AnimatedStyle<ViewStyle>>;
   /** 枠線幅 px（hit / 連勝 / upset / perfect は 3） */
   strokeWidth?: number;
-  /** 方眼を描かない（統合オーバーレイ内セクション用） */
+  /** 互換用（Web ガラス面に方眼はないため常に無視） */
   hideGrid?: boolean;
 };
 
@@ -63,14 +68,20 @@ function makeSkiaPath(width: number, height: number) {
 
 function GlassFillFallback() {
   return (
-    <LinearGradient
-      pointerEvents="none"
-      colors={[...GLASS_BASE.colors]}
-      locations={[...GLASS_BASE.locations]}
-      start={{ x: 0.15, y: 0 }}
-      end={{ x: 0.85, y: 1 }}
-      style={StyleSheet.absoluteFillObject}
-    />
+    <>
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: GLASS_UNDERLAY }]}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[...GLASS_FILL_MOBILE.colors]}
+        locations={[...GLASS_FILL_MOBILE.locations]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+    </>
   );
 }
 
@@ -82,7 +93,7 @@ export default function ResultGlassShellNative({
   overflowVisible = false,
   strokeOpacityStyle,
   strokeWidth = 1,
-  hideGrid = false,
+  hideGrid: _hideGrid = false,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
 
@@ -116,6 +127,15 @@ export default function ResultGlassShellNative({
           hasSize ? { width: size.w, height: size.h } : styles.shellMeasuring,
         ]}
       >
+        {(Platform.OS === "ios" || Platform.OS === "android") && (
+          <BlurView
+            intensity={Platform.OS === "ios" ? 28 : 16}
+            tint="dark"
+            {...nativeBlurViewExtraProps()}
+            style={styles.glassBlur}
+          />
+        )}
+
         {hasSize && skiaPath ? (
           <Canvas
             style={{
@@ -128,23 +148,19 @@ export default function ResultGlassShellNative({
             pointerEvents="none"
           >
             <Group clip={skiaPath}>
-              {!hideGrid ? (
-                <MatchListCyberGridSkia width={size.w} height={size.h} />
-              ) : null}
-              <Rect x={0} y={0} width={size.w} height={size.h}>
-                <SkiaLinearGradient
-                  start={vec(size.w * 0.15, 0)}
-                  end={vec(size.w * 0.85, size.h)}
-                  colors={[...GLASS_BASE.colors]}
-                  positions={[...GLASS_BASE.locations]}
-                />
-              </Rect>
+              <Rect
+                x={0}
+                y={0}
+                width={size.w}
+                height={size.h}
+                color={GLASS_UNDERLAY}
+              />
               <Rect x={0} y={0} width={size.w} height={size.h}>
                 <SkiaLinearGradient
                   start={vec(size.w * 0.1, 0)}
                   end={vec(size.w * 0.9, size.h)}
-                  colors={[...GLASS_SHEEN.colors]}
-                  positions={[...GLASS_SHEEN.locations]}
+                  colors={[...GLASS_FILL_MOBILE.colors]}
+                  positions={[...GLASS_FILL_MOBILE.locations]}
                 />
               </Rect>
             </Group>
@@ -222,6 +238,10 @@ const styles = StyleSheet.create({
   },
   shellOverflowVisible: {
     overflow: "visible",
+  },
+  glassBlur: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
   },
   content: {
     position: "relative",

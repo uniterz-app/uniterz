@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  type LayoutChangeEvent, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { colors, spacing } from "../../theme/tokens";
 import {
   MOBILE_RESULT_STAT_LABEL_W,
@@ -44,15 +43,19 @@ import PredictOverlayMatchCardShellNative from "./PredictOverlayMatchCardShellNa
 import WcStandingPanelNative from "./wc/WcStandingPanelNative";
 import WcPastResultsPanelNative from "./wc/WcPastResultsPanelNative";
 import WcTeamProfilePanelNative from "./wc/WcTeamProfilePanelNative";
+import PredictProBriefPanelNative from "./predict/PredictProBriefPanelNative";
+import NbaInjuryReportPanelNative from "./predict/NbaInjuryReportPanelNative";
+import NbaTeamStatsPanelNative from "./predict/NbaTeamStatsPanelNative";
+import NbaRosterPanelNative from "./predict/NbaRosterPanelNative";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../rankings/CyberSlantedTabNative";
+import { resolvePredictTimingMocksForGame } from "../../../../../lib/predict/resolvePredictTimingMocksForGame";
+import { injuryStatusByPlayerId } from "../../../../../lib/predict/nbaInjuryReport";
 import type { WcGoalScorerPick } from "../../../../../lib/wc/goalScorer";
 import { hasWcMatchPreview } from "../../../../../lib/wc/matchPreviews";
 import type { PredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
-import {
-  MODAL_PREVIEW_GRID_LAYER_OPACITY,
-  MODAL_PREVIEW_GRID_LINE_COLOR,
-  shellGridHorizontalLineTopsCentered,
-  shellGridVerticalLineLeftsCentered,
-} from "./matchCardShellGrid";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
   predictModalBackdropEnter,
@@ -85,21 +88,6 @@ import {
   MATCH_CARD_METRIC_FONT,
   MATCH_CARD_SCORE_FONT,
 } from "./matchCardTypography";
-
-/** #RRGGBB → rgba（カラー帯用） */
-function hexToRgba(hex: string, alpha: number): string {
-  const h = hex.replace("#", "").trim();
-  if (h.length === 6) {
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
-      return `rgba(${r},${g},${b},${alpha})`;
-    }
-  }
-  return `rgba(255,255,255,${alpha})`;
-}
-
 
 function ToolPanelGridOverlay() {
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -152,6 +140,17 @@ export type PredictModalWcGoalScorer = {
 };
 
 /** 予想モーダル最上段：試合一覧の MatchCard 相当（Web オーバーレイと同順） */
+export type PredictToolsTab =
+  | null
+  | "h2h"
+  | "market"
+  | "stats"
+  | "preview"
+  | "results"
+  | "standings"
+  | "injuries"
+  | "roster";
+
 export type PredictModalMatchPreview = {
   roundLabel: string | null;
   homeCompact: string;
@@ -184,56 +183,6 @@ export type PredictOverlayMarketBarProps = {
   compact?: boolean;
   userPredictionWinner?: "home" | "away" | "draw" | null;
 };
-
-/** 一覧カードと同じ: 中央基準の 24px 方眼 */
-function MatchPreviewGridOverlay() {
-  const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
-  const verticalLineLeftPx = useMemo(
-    () => shellGridVerticalLineLeftsCentered(gridSize.width),
-    [gridSize.width]
-  );
-  const horizontalLineTopsPx = useMemo(
-    () => shellGridHorizontalLineTopsCentered(gridSize.height),
-    [gridSize.height]
-  );
-  function handleLayout(event: LayoutChangeEvent) {
-    const { width, height } = event.nativeEvent.layout;
-    if (
-      Math.abs(width - gridSize.width) < 0.5 &&
-      Math.abs(height - gridSize.height) < 0.5
-    ) {
-      return;
-    }
-    setGridSize({ width, height });
-  }
-  return (
-    <View pointerEvents="none" style={s.previewGridOverlay} onLayout={handleLayout}>
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, { opacity: MODAL_PREVIEW_GRID_LAYER_OPACITY }]}
-      >
-        {verticalLineLeftPx.map((leftPx) => (
-          <View
-            key={`v-${leftPx}`}
-            style={[
-              s.previewGridLineV,
-              { left: leftPx, backgroundColor: MODAL_PREVIEW_GRID_LINE_COLOR },
-            ]}
-          />
-        ))}
-        {horizontalLineTopsPx.map((topPx) => (
-          <View
-            key={`h-${topPx}`}
-            style={[
-              s.previewGridLineH,
-              { top: topPx, backgroundColor: MODAL_PREVIEW_GRID_LINE_COLOR },
-            ]}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
 
 export function PredictMatchPreview({
   data,
@@ -280,8 +229,6 @@ export function PredictMatchPreview({
   const resultCopy = i18nT(language).results;
   const { centerBlock, seriesPair } = data;
   const isKnockout = data.knockout === true;
-  const homeC = data.homePalette.primary;
-  const awayC = data.awayPalette.primary;
   const homeTeamId = rawTeamIdFromGameSide(data.homeSide);
   const awayTeamId = rawTeamIdFromGameSide(data.awaySide);
   const showOverlayVs =
@@ -698,88 +645,16 @@ export function PredictMatchPreview({
   return (
     <View style={s.matchPreviewWrap}>
       <View ref={captureRef} collapsable={false}>
-      {isWcLeague ? (
+      {/** Web: `overlayUnifiedForm` 時は親フォーム面のみ。それ以外は `.predict-overlay-cyber-card` */}
+      {overlayUnifiedForm ? (
+        previewBody
+      ) : (
         <PredictOverlayMatchCardShellNative
           resultBadge={mergedFinal?.badge ?? null}
           activeWinStreak={mergedFinal?.activeWinStreak ?? 0}
-          overlayUnifiedForm={overlayUnifiedForm}
         >
           {previewBody}
         </PredictOverlayMatchCardShellNative>
-      ) : overlayUnifiedForm ? (
-        previewBody
-      ) : (
-        <View style={s.matchPreviewShell}>
-          <View pointerEvents="none" style={s.matchPreviewGridUnderlay}>
-            <MatchPreviewGridOverlay />
-          </View>
-          <View pointerEvents="none" style={s.matchPreviewGradientPlatter}>
-            <LinearGradient
-              pointerEvents="none"
-              colors={[
-                "rgba(14,18,28,0.92)",
-                "rgba(10,13,22,0.86)",
-                "rgba(7,10,17,0.92)",
-              ]}
-              locations={[0, 0.52, 1]}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-              <LinearGradient
-                colors={[
-                  hexToRgba(homeC, 0.4),
-                  hexToRgba(homeC, 0.12),
-                  "rgba(0,0,0,0)",
-                ]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 0.75, y: 0.5 }}
-                style={s.matchPreviewBiasLeft}
-              />
-              <LinearGradient
-                colors={[
-                  "rgba(0,0,0,0)",
-                  hexToRgba(awayC, 0.12),
-                  hexToRgba(awayC, 0.4),
-                ]}
-                start={{ x: 0.25, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={s.matchPreviewBiasRight}
-              />
-            </View>
-            <LinearGradient
-              pointerEvents="none"
-              colors={[
-                "rgba(255,255,255,0.018)",
-                "rgba(255,255,255,0.004)",
-                "rgba(255,255,255,0)",
-              ]}
-              locations={[0, 0.24, 1]}
-              style={s.matchPreviewLayerTopGlow}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={[
-                "rgba(255,255,255,0.018)",
-                "rgba(255,255,255,0.008)",
-                "rgba(255,255,255,0)",
-              ]}
-              locations={[0, 0.6, 1]}
-              style={s.matchPreviewLayerGlassFog}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={[
-                "rgba(255,255,255,0.012)",
-                "rgba(255,255,255,0.003)",
-                "rgba(255,255,255,0)",
-              ]}
-              locations={[0, 0.2, 1]}
-              style={s.matchPreviewLayerShine}
-            />
-            <View pointerEvents="none" style={s.matchPreviewGlowOverlay} />
-          </View>
-          {previewBody}
-        </View>
       )}
       </View>
       {mergedFinal?.badge || mergedFinal?.streakBadge ? (
@@ -823,8 +698,8 @@ type PredictModalProps = {
   t: GamesTexts;
   predictHomeTeamLabel: string;
   predictAwayTeamLabel: string;
-  predictToolsTab: null | "h2h" | "market" | "stats" | "preview" | "results" | "standings";
-  setPredictToolsTab: (value: null | "h2h" | "market" | "stats" | "preview" | "results" | "standings") => void;
+  predictToolsTab: PredictToolsTab;
+  setPredictToolsTab: (value: PredictToolsTab) => void;
   winner: "home" | "away" | "draw" | null;
   isSoccerPredict: boolean;
   scoreAway: string;
@@ -866,6 +741,8 @@ type PredictModalProps = {
   overlayUnifiedForm?: boolean;
   /** 自分の投稿 ID（共有キャプチャ用） */
   myPostId?: string | null;
+  /** Pro プラン — NBA Predict Timing UI（Pro Insight / 同帯バー） */
+  isProUser?: boolean;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -966,6 +843,7 @@ export default function PredictModal({
   mergedFinalPreview = null,
   overlayUnifiedForm = false,
   myPostId = null,
+  isProUser = false,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
 
@@ -990,7 +868,15 @@ export default function PredictModal({
 
   /** 直接対決／市場／詳細スタッツ：タップでパネルを開閉 */
   function handleToolTabPress(
-    tab: "h2h" | "market" | "stats" | "preview" | "results" | "standings"
+    tab:
+      | "h2h"
+      | "market"
+      | "stats"
+      | "preview"
+      | "results"
+      | "standings"
+      | "injuries"
+      | "roster"
   ) {
     if (predictToolsTab === tab) setPredictToolsTab(null);
     else setPredictToolsTab(tab);
@@ -1081,6 +967,32 @@ export default function PredictModal({
     isWcLeague && predictData?.gameId && hasWcMatchPreview(predictData.gameId)
   );
   const hideMarketTab = Boolean(overlayMarketBar);
+  const showNbaPredictTimingOverlay =
+    hideMarketTab && predictData?.league === "nba" && !isWcLeague;
+  const nbaTimingMocks = useMemo(() => {
+    if (!showNbaPredictTimingOverlay || !matchPreview) return null;
+    const homeTeamId = rawTeamIdFromGameSide(matchPreview.homeSide) ?? "";
+    const awayTeamId = rawTeamIdFromGameSide(matchPreview.awaySide) ?? "";
+    if (!homeTeamId || !awayTeamId) return null;
+    return resolvePredictTimingMocksForGame({
+      homeTeamId,
+      awayTeamId,
+      homeTeamName: predictHomeTeamLabel || matchPreview.homeCompact,
+      awayTeamName: predictAwayTeamLabel || matchPreview.awayCompact,
+    });
+  }, [
+    showNbaPredictTimingOverlay,
+    matchPreview,
+    predictHomeTeamLabel,
+    predictAwayTeamLabel,
+  ]);
+  const nbaInjuryByPlayerId = useMemo(
+    () =>
+      nbaTimingMocks
+        ? injuryStatusByPlayerId(nbaTimingMocks.injuryReport)
+        : {},
+    [nbaTimingMocks]
+  );
   const showWcOverlayTabs = isWcLeague && hideMarketTab;
   const overlayCenterMode = hideMarketTab;
   const showOverlayScheduleMeta =
@@ -1112,6 +1024,19 @@ export default function PredictModal({
       setPredictToolsTab(null);
     }
   }, [showWcMatchPreview, predictToolsTab, setPredictToolsTab]);
+
+  useEffect(() => {
+    if (!showNbaPredictTimingOverlay) return;
+    if (
+      predictToolsTab === "h2h" ||
+      predictToolsTab === "market" ||
+      predictToolsTab === "preview" ||
+      predictToolsTab === "results" ||
+      predictToolsTab === "standings"
+    ) {
+      setPredictToolsTab(null);
+    }
+  }, [showNbaPredictTimingOverlay, predictToolsTab, setPredictToolsTab]);
 
   const showScoreInputBlock =
     !spectatorStartedNoPost &&
@@ -1236,7 +1161,48 @@ export default function PredictModal({
                       />
                     </Animated.View>
                   ) : null}
+                  {showNbaPredictTimingOverlay && isProUser && nbaTimingMocks ? (
+                    <PredictProBriefPanelNative
+                      brief={nbaTimingMocks.proBrief}
+                      language={language}
+                      homeTeamId={
+                        rawTeamIdFromGameSide(matchPreview?.homeSide) ?? ""
+                      }
+                      awayTeamId={
+                        rawTeamIdFromGameSide(matchPreview?.awaySide) ?? ""
+                      }
+                      homeTeamName={predictHomeTeamLabel || matchPreview?.homeCompact || "HOME"}
+                      awayTeamName={predictAwayTeamLabel || matchPreview?.awayCompact || "AWAY"}
+                    />
+                  ) : null}
               <View>
+                {showNbaPredictTimingOverlay ? (
+                  <View style={s.nbaTimingTabShell}>
+                    <CyberSlantedTabBarNative fill>
+                      <CyberSlantedTabNative
+                        label={t.predictInjuries}
+                        active={predictToolsTab === "injuries"}
+                        onPress={() => handleToolTabPress("injuries")}
+                        compact
+                        fontWeight="700"
+                      />
+                      <CyberSlantedTabNative
+                        label={t.predictTeamStats}
+                        active={predictToolsTab === "stats"}
+                        onPress={() => handleToolTabPress("stats")}
+                        compact
+                        fontWeight="700"
+                      />
+                      <CyberSlantedTabNative
+                        label={t.predictRoster}
+                        active={predictToolsTab === "roster"}
+                        onPress={() => handleToolTabPress("roster")}
+                        compact
+                        fontWeight="700"
+                      />
+                    </CyberSlantedTabBarNative>
+                  </View>
+                ) : (
                 <PredictOverlayChamferedFrameNative
                   cut={PREDICT_OVERLAY_CYBER_DECK_CUT}
                   gradientColors={["rgba(4,8,14,0.9)", "rgba(4,8,14,0.9)"]}
@@ -1303,6 +1269,7 @@ export default function PredictModal({
                   </>
                 )}
                 </PredictOverlayChamferedFrameNative>
+                )}
               </View>
 
               {predictToolsTab ? (
@@ -1311,7 +1278,27 @@ export default function PredictModal({
                   entering={toolPanelIn}
                 >
                   <GlassPanel variant="tool" showGrid={false}>
-                    {predictToolsTab === "stats" && showWcOverlayTabs ? (
+                    {showNbaPredictTimingOverlay && nbaTimingMocks ? (
+                      <View style={s.predictToolsPanelBody}>
+                        {predictToolsTab === "injuries" ? (
+                          <NbaInjuryReportPanelNative
+                            report={nbaTimingMocks.injuryReport}
+                            language={language}
+                          />
+                        ) : predictToolsTab === "stats" ? (
+                          <NbaTeamStatsPanelNative
+                            data={nbaTimingMocks.teamStats}
+                            isPro={isProUser}
+                            language={language}
+                          />
+                        ) : predictToolsTab === "roster" ? (
+                          <NbaRosterPanelNative
+                            report={nbaTimingMocks.roster}
+                            injuryById={nbaInjuryByPlayerId}
+                          />
+                        ) : null}
+                      </View>
+                    ) : predictToolsTab === "stats" && showWcOverlayTabs ? (
                       <>
                         <Text style={s.predictToolsPanelKicker}>{t.teamProfile}</Text>
                         <View style={s.predictToolsPanelBody}>
@@ -1403,9 +1390,15 @@ export default function PredictModal({
                             tab={
                               predictToolsTab === "preview" ||
                               predictToolsTab === "results" ||
-                              predictToolsTab === "standings"
+                              predictToolsTab === "standings" ||
+                              predictToolsTab === "injuries" ||
+                              predictToolsTab === "roster"
                                 ? "stats"
-                                : predictToolsTab
+                                : predictToolsTab === "h2h" ||
+                                    predictToolsTab === "market" ||
+                                    predictToolsTab === "stats"
+                                  ? predictToolsTab
+                                  : "stats"
                             }
                             language={predictData.language}
                             t={t}
@@ -1499,19 +1492,17 @@ export default function PredictModal({
                       <Animated.View entering={scoreBlockEnter}>
                         {overlayUnifiedForm ? (
                           <View style={s.predictScoreFormPanel}>
-                          {isWcLeague ? (
-                            <PredictionScoringRulesChipNative
-                              language={language}
-                              league="wc"
-                              accessibilityLabel={t.scoringRulesChip}
-                              closeLabel={t.close}
-                              rulesFootNote={t.rulesFootNote}
-                            />
-                          ) : null}
+                          <PredictionScoringRulesChipNative
+                            language={language}
+                            league={isWcLeague ? "wc" : "nba"}
+                            accessibilityLabel={t.scoringRulesChip}
+                            closeLabel={t.close}
+                            rulesFootNote={t.rulesFootNote}
+                          />
                           <Text
                             style={[
                               s.predictSectionTitle,
-                              isWcLeague && s.predictSectionTitleWithChip,
+                              s.predictSectionTitleWithChip,
                             ]}
                           >
                             {t.scorePredictTitle}
@@ -1559,19 +1550,17 @@ export default function PredictModal({
                         ) : (
                         <PredictOverlayCyberFormPanelNative>
                           <View style={s.predictScoreFormPanel}>
-                          {isWcLeague ? (
-                            <PredictionScoringRulesChipNative
-                              language={language}
-                              league="wc"
-                              accessibilityLabel={t.scoringRulesChip}
-                              closeLabel={t.close}
-                              rulesFootNote={t.rulesFootNote}
-                            />
-                          ) : null}
+                          <PredictionScoringRulesChipNative
+                            language={language}
+                            league={isWcLeague ? "wc" : "nba"}
+                            accessibilityLabel={t.scoringRulesChip}
+                            closeLabel={t.close}
+                            rulesFootNote={t.rulesFootNote}
+                          />
                           <Text
                             style={[
                               s.predictSectionTitle,
-                              isWcLeague && s.predictSectionTitleWithChip,
+                              s.predictSectionTitleWithChip,
                             ]}
                           >
                             {t.scorePredictTitle}
@@ -1702,6 +1691,13 @@ const s = StyleSheet.create({
     flexDirection: "row",
     minHeight: 40,
     overflow: "hidden",
+  },
+  nbaTimingTabShell: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(34,211,238,0.22)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "rgba(4,8,14,0.72)",
   },
   /** モバイル: h-9, rounded-xl, text-xs, font-semibold, border + bg */
   predictToolTab: {
@@ -1950,44 +1946,7 @@ const s = StyleSheet.create({
     overflow: "visible",
     marginTop: 4,
   },
-  /** モーダル最上段の試合プレビュー（Web MatchCard の左右カラー帯・グリッドに寄せる） */
-  /** シェルは overflow:hidden。StatBox は通常フローで高さを確保する */
-  matchPreviewShell: {
-    position: "relative",
-    width: "100%",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    overflow: "hidden",
-  },
-  /** 一覧 `cardGridUnderlay` 相当: 方眼はこの下層だけ */
-  matchPreviewGridUnderlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-    borderRadius: 15,
-    overflow: "hidden",
-  },
-  /** 方眼の上に全面敷き（シェルの padding は付けない。付けると余白に方眼だけ出る） */
-  matchPreviewGradientPlatter: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-    borderRadius: 15,
-    overflow: "hidden",
-  },
-  matchPreviewLayerTopGlow: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  matchPreviewLayerGlassFog: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  matchPreviewLayerShine: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  matchPreviewGlowOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "transparent",
-  },
-  /** ラウンド名・3 カラム。背景は透過のまま、上の platter を見せる */
+  /** ラウンド名・3 カラム（背景は `PredictOverlayMatchCardShellNative`） */
   matchPreviewPaddedContent: {
     position: "relative",
     zIndex: 2,
@@ -1999,37 +1958,6 @@ const s = StyleSheet.create({
   matchPreviewMarketBarWrap: {
     marginTop: 2,
     paddingBottom: 4,
-  },
-  matchPreviewBiasLeft: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: "58%",
-  },
-  matchPreviewBiasRight: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: "58%",
-  },
-  previewGridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 15,
-    overflow: "hidden",
-  },
-  previewGridLineV: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 1,
-  },
-  previewGridLineH: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
   },
   /** Web overlay `text-xl` + `bracketMarketTeamTypography` */
   matchPreviewRoundPadded: {

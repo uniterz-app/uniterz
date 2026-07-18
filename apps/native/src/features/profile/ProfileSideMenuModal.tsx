@@ -49,7 +49,8 @@ type Props = {
     | "notifications"
     | "featureRequest"
     | "electronicNotice"
-    | "notificationDev") => void;
+    | "notificationDev"
+    | "seasonPreview") => void;
 };
 
 const PANEL_W = Math.min(300, Math.max(260, Math.round(Dimensions.get("window").width * 0.46)));
@@ -203,6 +204,7 @@ export default function ProfileSideMenuModal({
       | "featureRequest"
       | "electronicNotice"
       | "notificationDev"
+      | "seasonPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -443,6 +445,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("notificationDev")}
                         >
                           通知テスト
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="trophy-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("seasonPreview")}
+                        >
+                          シーズン予想プレビュー
                         </SideMenuItemButtonNative>
                       </View>
                     </>

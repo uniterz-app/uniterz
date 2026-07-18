@@ -1,5 +1,8 @@
-import { useEffect } from "react";
-import type { ReactNode } from "react";
+/**
+ * Web `CyberSlantedTab` / `CyberSlantedTabBar` 相当。
+ * `fill` は Web と同じく Bar → Context → 各 Tab に伝播する。
+ */
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, View, type ViewStyle } from "react-native";
 import Animated, {
   Easing,
@@ -23,11 +26,14 @@ const TAB_TRANSITION_MS = 200;
 const SCAN_LINE_STEP = 3;
 const SCAN_LINE_COUNT = 18;
 
+const CyberSlantedTabFillContext = createContext(false);
+
 type TabProps = {
   label: string;
   active: boolean;
   onPress: () => void;
   compact?: boolean;
+  /** 省略時は親 `CyberSlantedTabBarNative` の fill を使う */
   fill?: boolean;
   fontWeight?: "500" | "600" | "700";
   accessibilityRole?: "tab";
@@ -50,11 +56,13 @@ export function CyberSlantedTabNative({
   active,
   onPress,
   compact = false,
-  fill = false,
+  fill: fillProp,
   fontWeight = "700",
   accessibilityRole,
   accessibilityState,
 }: TabProps) {
+  const fillFromBar = useContext(CyberSlantedTabFillContext);
+  const fill = fillProp ?? fillFromBar;
   const reduceMotion = useReducedMotion() ?? false;
   const jaLabel = hasJaScript(label);
   const fontSize = rankingFontSizePx(compact ? 9 : 10, label);
@@ -147,19 +155,22 @@ export function CyberSlantedTabBarNative({
   style,
 }: {
   children: ReactNode;
+  /** 子タブを均等幅で横いっぱいに並べる（Web と同仕様） */
   fill?: boolean;
   gridColumns?: 3;
   style?: ViewStyle;
 }) {
   return (
-    <View
-      style={[
-        gridColumns === 3 ? styles.barGrid3 : fill ? styles.barFill : styles.barScroll,
-        style,
-      ]}
-    >
-      {children}
-    </View>
+    <CyberSlantedTabFillContext.Provider value={fill}>
+      <View
+        style={[
+          gridColumns === 3 ? styles.barGrid3 : fill ? styles.barFill : styles.barScroll,
+          style,
+        ]}
+      >
+        {children}
+      </View>
+    </CyberSlantedTabFillContext.Provider>
   );
 }
 
@@ -179,7 +190,7 @@ const styles = StyleSheet.create({
     gap: 8,
     width: "100%",
     paddingBottom: 2,
-    alignItems: "center",
+    alignItems: "stretch",
   },
   barScroll: {
     flexDirection: "row",
@@ -229,6 +240,7 @@ const styles = StyleSheet.create({
   },
   tabSkewFill: {
     width: "100%",
+    flex: 1,
   },
   tabFillDefault: {
     paddingHorizontal: 8,

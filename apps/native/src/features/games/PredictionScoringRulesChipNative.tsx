@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import type { GamesLanguage } from "./gamesI18n";
 import WcScoringRulesNative from "./wc/WcScoringRulesNative";
+import PredictionScoringRulesBodyNative from "./PredictionScoringRulesBodyNative";
 
 type Props = {
   language: GamesLanguage;
@@ -65,11 +66,7 @@ export default function PredictionScoringRulesChipNative({
               {league === "wc" ? (
                 <WcScoringRulesNative language={language} variant="modal" />
               ) : (
-                <Text style={styles.fallback}>
-                  {language === "en"
-                    ? "Full scoring rules are available on the Uniterz web app."
-                    : "得点の詳細は Web 版を参照してください。"}
-                </Text>
+                <PredictionScoringRulesBodyNative language={language} />
               )}
               {rulesFootNote ? (
                 <Text style={styles.footnote}>{rulesFootNote}</Text>

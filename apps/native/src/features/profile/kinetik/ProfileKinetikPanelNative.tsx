@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -107,6 +108,18 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
+/** Web `color-mix(in srgb, accent X%, white)` の近似 */
+function mixAccentWithWhite(hex: string, accentRatio: number): string {
+  const h = hex.replace("#", "").trim();
+  if (h.length !== 6) return hex;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  if (![r, g, b].every(Number.isFinite)) return hex;
+  const t = 1 - accentRatio;
+  return `rgb(${Math.round(r * accentRatio + 255 * t)},${Math.round(g * accentRatio + 255 * t)},${Math.round(b * accentRatio + 255 * t)})`;
+}
+
 function KinetikSegBar({
   filled,
   total = 5,
@@ -132,8 +145,10 @@ function KinetikSegBar({
               {
                 backgroundColor: lit ? colors.fill : "rgba(255,255,255,0.08)",
                 shadowColor: lit ? colors.glow : "transparent",
-                shadowOpacity: lit ? 1 : 0,
-                shadowRadius: lit ? (isPlanPro ? 10 : 6) : 0,
+                /** Web: `0 0 10px glow` / `0 0 6px glow` — RN は不透明度を抑えて同程度に */
+                shadowOpacity: lit ? (isPlanPro ? 0.55 : 0.7) : 0,
+                shadowRadius: lit ? (isPlanPro ? 5 : 4) : 0,
+                shadowOffset: { width: 0, height: 0 },
               },
             ]}
           />
@@ -143,48 +158,58 @@ function KinetikSegBar({
   );
 }
 
+/** Web `profile-plan-pro-metric-card__value` の drop-shadow(0 0 3px …) 相当 */
 function metricValuePlanProAccentStyle(
   accent: KinetikMetricAccent
 ): { color: string; textShadowColor: string; textShadowRadius: number } {
-  switch (accent) {
-    case "green":
-      return {
-        color: "#a8ff2a",
-        textShadowColor: "rgba(168,255,42,0.5)",
-        textShadowRadius: 10,
-      };
-    case "magenta":
-      return {
-        color: "#ff2bd6",
-        textShadowColor: "rgba(255,43,214,0.45)",
-        textShadowRadius: 10,
-      };
-    case "cyan":
-      return {
-        color: "#22d3ee",
-        textShadowColor: "rgba(34,211,238,0.5)",
-        textShadowRadius: 10,
-      };
-    case "red":
-      return {
-        color: "#f87171",
-        textShadowColor: "rgba(248,113,113,0.45)",
-        textShadowRadius: 10,
-      };
-    default:
-      return {
-        color: "#f8fafc",
-        textShadowColor: "rgba(34,211,238,0.4)",
-        textShadowRadius: 8,
-      };
-  }
+  const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#f8fafc";
+  const glow =
+    accent === "green"
+      ? "rgba(168,255,42,0.22)"
+      : accent === "magenta"
+        ? "rgba(255,43,214,0.2)"
+        : accent === "red"
+          ? "rgba(248,113,113,0.2)"
+          : "rgba(34,211,238,0.22)";
+  return {
+    color: line,
+    textShadowColor: glow,
+    textShadowRadius: 2,
+  };
 }
 
+/** Web `profile-plan-pro-metric-card__label` — accent 72% + white */
 function metricLabelPlanProAccentStyle(
   accent: KinetikMetricAccent
+): {
+  color: string;
+  textShadowColor: string;
+  textShadowOffset: { width: number; height: number };
+  textShadowRadius: number;
+} {
+  const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#22d3ee";
+  return {
+    color: mixAccentWithWhite(line, 0.72),
+    textShadowColor: "rgba(255,255,255,0.08)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 3,
+  };
+}
+
+/** Web `profile-plan-pro-metric-card__unit-hint` — accent 42% + white/35 */
+function metricUnitHintPlanProAccentStyle(
+  accent: KinetikMetricAccent
 ): { color: string } {
-  const value = metricValuePlanProAccentStyle(accent);
-  return { color: value.color };
+  const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#22d3ee";
+  return { color: mixAccentWithWhite(line, 0.42) };
+}
+
+/** Web `profile-plan-pro-metric-card__unit` — accent 55% + white/40 */
+function metricUnitPlanProAccentStyle(
+  accent: KinetikMetricAccent
+): { color: string } {
+  const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#22d3ee";
+  return { color: mixAccentWithWhite(line, 0.55) };
 }
 
 function metricCardPlanProAccentStyle(
@@ -273,6 +298,31 @@ function KinetikMetricCardNative({
     >
       {isPlanPro ? (
         <>
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              "rgba(10,24,40,0.92)",
+              "rgba(5,14,26,0.78)",
+              "rgba(4,10,20,0.86)",
+            ]}
+            locations={[0, 0.48, 1]}
+            start={{ x: 0.15, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={styles.metricCardPlanProFill}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              "rgba(255,255,255,0.09)",
+              "transparent",
+              "transparent",
+              "rgba(167,139,250,0.05)",
+            ]}
+            locations={[0, 0.34, 0.66, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.metricCardPlanProSheen}
+          />
           <View style={styles.metricCardCornerTl} pointerEvents="none" />
           <View style={styles.metricCardCornerBr} pointerEvents="none" />
         </>
@@ -282,7 +332,13 @@ function KinetikMetricCardNative({
           styles.metricAccentBar,
           compact && styles.metricAccentBarCompact,
           isPlanPro && styles.metricAccentBarPlanPro,
-          { backgroundColor: colors.line, shadowColor: colors.glow },
+          {
+            backgroundColor: colors.line,
+            shadowColor: colors.glow,
+            shadowOpacity: isPlanPro ? 0.45 : 1,
+            shadowRadius: isPlanPro ? 4 : 8,
+            shadowOffset: { width: 0, height: 0 },
+          },
         ]}
       />
       <View style={styles.metricLabelRow}>
@@ -302,7 +358,7 @@ function KinetikMetricCardNative({
             style={[
               styles.metricUnitHint,
               isPlanPro ? styles.metricUnitHintPlanPro : null,
-              isPlanPro ? metricLabelPlanProAccentStyle(accent) : null,
+              isPlanPro ? metricUnitHintPlanProAccentStyle(accent) : null,
             ]}
             numberOfLines={1}
           >
@@ -325,7 +381,7 @@ function KinetikMetricCardNative({
             style={[
               styles.metricUnit,
               isPlanPro ? styles.metricUnitPlanPro : null,
-              isPlanPro ? metricLabelPlanProAccentStyle(accent) : null,
+              isPlanPro ? metricUnitPlanProAccentStyle(accent) : null,
             ]}
           >
             {unit}
@@ -562,7 +618,15 @@ function KinetikHeaderHatch() {
 
 const PRO_BRIDGE_FLOAT_PHASE_STAGGER = 5;
 const PRO_BRIDGE_BADGE_GAP = 10;
+/** Web `profile-kinetik-badge-enter` — cubic-bezier(0.22, 1, 0.36, 1) */
+const BADGE_ENTER_EASE = Easing.bezier(0.22, 1, 0.36, 1);
+/** Web `profile-kinetik-badge-float` 3.4s の片道 */
+const BADGE_FLOAT_HALF_MS = 1700;
 
+/**
+ * Web と同じく入場ラッパーとフロート本体を分離する。
+ * 同一 transform に合成すると入場後も scale/translate が干渉して動きが崩れる。
+ */
 function KinetikBadgeProBridgeWrapNative({
   index,
   children,
@@ -575,6 +639,9 @@ function KinetikBadgeProBridgeWrapNative({
   const floatY = useSharedValue(0);
 
   useEffect(() => {
+    cancelAnimation(enter);
+    cancelAnimation(floatY);
+
     if (reduceMotion) {
       enter.value = 1;
       floatY.value = 0;
@@ -585,36 +652,50 @@ function KinetikBadgeProBridgeWrapNative({
     const floatDelayMs =
       proBridgeBadgeFloatDelayMs(index) + (index % PRO_BRIDGE_FLOAT_PHASE_STAGGER) * 80;
 
+    enter.value = 0;
+    floatY.value = 0;
+
     enter.value = withDelay(
       enterDelayMs,
-      withTiming(1, { duration: 580, easing: Easing.out(Easing.cubic) })
+      withTiming(1, { duration: 580, easing: BADGE_ENTER_EASE })
     );
+    /** Web: `animation: profile-kinetik-badge-float 3.4s ease-in-out infinite` */
     floatY.value = withDelay(
       floatDelayMs,
       withRepeat(
-        withSequence(
-          withTiming(-6, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: 1700, easing: Easing.inOut(Easing.sin) })
-        ),
+        withTiming(-6, { duration: BADGE_FLOAT_HALF_MS, easing: Easing.inOut(Easing.ease) }),
         -1,
-        false
+        true
       )
     );
+
+    return () => {
+      cancelAnimation(enter);
+      cancelAnimation(floatY);
+    };
   }, [enter, floatY, index, reduceMotion]);
 
-  const animatedStyle = useAnimatedStyle(() => {
+  const enterStyle = useAnimatedStyle(() => {
     const enterT = enter.value;
     return {
       opacity: enterT,
       transform: [
         { translateX: (1 - enterT) * -18 },
-        { translateY: (1 - enterT) * 10 + floatY.value },
+        { translateY: (1 - enterT) * 10 },
         { scale: 0.86 + enterT * 0.14 },
       ],
     };
   });
 
-  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
+  const floatStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: floatY.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.badgeEnterWrap, enterStyle]}>
+      <Animated.View style={[styles.badgeFloatWrap, floatStyle]}>{children}</Animated.View>
+    </Animated.View>
+  );
 }
 
 function proBridgeRowStyle(layout: ReturnType<typeof resolveProBridgeBadgeLayout>) {
@@ -1210,10 +1291,10 @@ export default function ProfileKinetikPanelNative({
         isPro && proFrameTheme
           ? {
               shadowColor: proFrameTheme.strong,
-              shadowOffset: { width: 0, height: 10 },
-              shadowOpacity: 0.48,
-              shadowRadius: 28,
-              elevation: 10,
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.28,
+              shadowRadius: 18,
+              elevation: 6,
             }
           : null,
         isPro ? styles.frameOuterPlanPro : null,
@@ -1238,10 +1319,10 @@ export default function ProfileKinetikPanelNative({
       {isPro && PROFILE_PLAN_PRO_BG_DEFAULT !== "atmos" ? (
         <LinearGradient
           colors={[
-            "rgba(34,211,238,0.2)",
-            "rgba(34,211,238,0.04)",
+            "rgba(34,211,238,0.1)",
+            "rgba(34,211,238,0.02)",
             "transparent",
-            "rgba(167,139,250,0.08)",
+            "rgba(167,139,250,0.04)",
           ]}
           locations={[0, 0.28, 0.62, 1]}
           start={{ x: 0.5, y: 0 }}
@@ -1762,9 +1843,20 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     zIndex: 1,
     justifyContent: "flex-start",
+    overflow: "visible",
   },
   badgeBridgeProEmpty: {
     minHeight: 48,
+  },
+  /** Web `.profile-edit-kinetik-badge-enter-wrap` */
+  badgeEnterWrap: {
+    flexShrink: 0,
+    overflow: "visible",
+  },
+  /** Web `.profile-edit-kinetik-badge-float` */
+  badgeFloatWrap: {
+    flexShrink: 0,
+    overflow: "visible",
   },
   badgeThumb: {
     width: 44,
@@ -1902,33 +1994,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   metricCardPlanPro: {
-    backgroundColor: "rgba(10,24,40,0.58)",
+    /** 塗りは `metricCardPlanProFill`。影は Web の落ち影（黒）優先 */
+    backgroundColor: "transparent",
     borderColor: "rgba(34,211,238,0.28)",
-    shadowColor: "#22d3ee",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowOpacity: 0.48,
+    shadowRadius: 13,
+    elevation: 5,
     overflow: "hidden",
+  },
+  metricCardPlanProFill: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  /** Web `.profile-plan-pro-metric-card__sheen` */
+  metricCardPlanProSheen: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+    opacity: 0.65,
   },
   metricCardPlanProGreen: {
     borderColor: "rgba(168,255,42,0.32)",
-    shadowColor: "#a8ff2a",
-    shadowOpacity: 0.26,
   },
   metricCardPlanProMagenta: {
     borderColor: "rgba(255,43,214,0.3)",
-    shadowColor: "#ff2bd6",
-    shadowOpacity: 0.24,
   },
   metricCardPlanProCyan: {
     borderColor: "rgba(34,211,238,0.34)",
-    shadowOpacity: 0.3,
   },
   metricCardPlanProRed: {
     borderColor: "rgba(248,113,113,0.3)",
-    shadowColor: "#f87171",
-    shadowOpacity: 0.24,
   },
   metricCardCornerTl: {
     position: "absolute",
@@ -1955,17 +2051,17 @@ const styles = StyleSheet.create({
   metricAccentBarPlanPro: {
     width: 4,
     borderRadius: 2,
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
+    zIndex: 1,
   },
   metricLabelPlanPro: {
     fontWeight: "700",
+    zIndex: 1,
   },
   metricUnitHintPlanPro: {
-    opacity: 0.72,
+    opacity: 0.85,
   },
   metricUnitPlanPro: {
-    opacity: 0.78,
+    opacity: 0.9,
   },
   metricFootnotePlanPro: {
     borderLeftWidth: 2,
@@ -1974,13 +2070,17 @@ const styles = StyleSheet.create({
     opacity: 0.88,
   },
   metricValuePlanPro: {
-    fontWeight: "800",
+    fontWeight: "700",
     textShadowOffset: { width: 0, height: 0 },
+    zIndex: 1,
   },
   metricRankBadgePlanPro: {
     borderColor: "rgba(34,211,238,0.38)",
     backgroundColor: "rgba(34,211,238,0.1)",
-    color: "rgba(34,211,238,0.95)",
+    shadowColor: "#22d3ee",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
   },
   metricAccentBar: {
     position: "absolute",
@@ -1991,6 +2091,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 8,
+    zIndex: 1,
   },
   metricAccentBarCompact: {
     top: 10,
@@ -2003,6 +2104,7 @@ const styles = StyleSheet.create({
     paddingLeft: 10,
     paddingRight: 4,
     minWidth: 0,
+    zIndex: 1,
   },
   metricLabel: {
     fontFamily: OXANIUM_BOLD,
@@ -2034,6 +2136,7 @@ const styles = StyleSheet.create({
     gap: 5,
     marginTop: 8,
     paddingLeft: 10,
+    zIndex: 1,
   },
   metricValueRowCompact: {
     marginTop: 6,
@@ -2082,7 +2185,7 @@ const styles = StyleSheet.create({
   segRow: { flexDirection: "row", gap: 3 },
   segRowPlanPro: { gap: 4 },
   seg: { flex: 1, height: 6 },
-  segPlanPro: { height: 7, borderRadius: 2 },
+  segPlanPro: { height: 6, borderRadius: 2 },
   metricFootnote: {
     marginTop: 8,
     paddingLeft: 10,

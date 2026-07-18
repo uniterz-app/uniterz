@@ -15,6 +15,7 @@ import type { ProfileKinetikMetricsSection } from "@/lib/profile/profileKinetikM
 import { getProfileKinetikMetricsTitleForWcStage } from "@/lib/profile/profileKinetikMetricsSection";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { ResolvedBadge } from "@/lib/profile/useProfileBadges";
+import { PROFILE_PLAN_PRO_BG_DEFAULT } from "@/lib/profile/profilePlanProBgVariants";
 import "./profilePlanProPreview.css";
 
 const PREVIEW_SHOWCASE_LINKS = [
@@ -153,7 +154,7 @@ function PreviewCard({
         layout={layout}
         {...panelProps}
         isPro={isPro}
-        planProBgVariant="atmos"
+        planProBgVariant={isPro ? PROFILE_PLAN_PRO_BG_DEFAULT : undefined}
       />
     </div>
   );
@@ -242,7 +243,8 @@ export default function ProfilePlanProPreviewPage() {
           PRO プロフィールカード
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-white/55">
-          本番相当のモック（WC グループステージ・ANALYST・配布バッジ10個・横スライド・atmos 背景）
+          本番相当のモック（WC グループステージ・ANALYST・配布バッジ10個・横スライド・Atmos
+          背景）
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">

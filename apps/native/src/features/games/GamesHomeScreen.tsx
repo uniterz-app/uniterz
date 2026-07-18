@@ -59,7 +59,9 @@ import PredictModal, {
   type PredictModalMatchPreview,
   type PredictModalScheduleMeta,
   type PredictModalWcGoalScorer,
+  type PredictToolsTab,
 } from "./PredictModal";
+import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
 import { buildPredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
 import {
   createPredictionPostApi,
@@ -433,6 +435,7 @@ export default function GamesHomeScreen({
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
+  const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
   const [filterOpen, setFilterOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showWcTabBadge, setShowWcTabBadge] = useState(false);
@@ -463,9 +466,7 @@ export default function GamesHomeScreen({
     unknown
   > | null>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
-  const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats" | "preview" | "results" | "standings"
-  >(null);
+  const [predictToolsTab, setPredictToolsTab] = useState<PredictToolsTab>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
   const [goalScorerPick, setGoalScorerPick] = useState<WcGoalScorerPick | null>(null);
@@ -1805,6 +1806,7 @@ export default function GamesHomeScreen({
         setGoalScorerPick={setGoalScorerPick}
         mergedFinalPreview={predictMergedFinalPreview}
         myPostId={selectedGameId ? myPostIdByGameId[selectedGameId] ?? null : null}
+        isProUser={isProUser}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
         <PredictNextGameNativeModal
@@ -2794,7 +2796,6 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     fontFamily: MATCH_CARD_DISPLAY_FONT,
     fontWeight: "600",
-  },
   },
   liveMetaText: {
     color: "#a8dbff",

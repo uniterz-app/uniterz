@@ -14,6 +14,9 @@ export type PostWithMillis = Record<string, unknown> & {
   settledAtMillis?: number | null;
   startAtMillis?: number | null;
   status?: string;
+  // PK 補完（useResultPostsPkScores の PostLike）向けに明示。Record 経由だと weak-type 判定で弾かれるため
+  gameId?: string | null;
+  result?: { home?: unknown; away?: unknown } | null;
 };
 
 export type ResultDayGroup = {

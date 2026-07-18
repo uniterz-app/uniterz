@@ -144,7 +144,7 @@ function KinetikSegBar({
             animate="visible"
             className={[
               "min-w-0 flex-1",
-              isPlanPro ? "profile-plan-pro-metric-card__seg h-[7px]" : "h-[5px]",
+              isPlanPro ? "profile-plan-pro-metric-card__seg h-[5px]" : "h-[5px]",
             ].join(" ")}
             style={{
               transformOrigin: "left center",

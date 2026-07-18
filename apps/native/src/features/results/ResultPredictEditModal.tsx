@@ -19,7 +19,9 @@ import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import PredictModal, {
   type PredictModalMatchPreview,
   type PredictModalScheduleMeta,
+  type PredictToolsTab,
 } from "../games/PredictModal";
+import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
 import { buildPredictModalMergedFinalPreview } from "../games/buildPredictModalMergedFinal";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
 import {
@@ -169,14 +171,13 @@ export default function ResultPredictEditModal({
   onUpdated,
 }: Props) {
   const { fUser } = useFirebaseUser();
+  const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
   const t = useMemo(() => getGamesTexts(language), [language]);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [game, setGame] = useState<Record<string, unknown> | null>(null);
 
-  const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats" | "preview" | "results" | "standings"
-  >(null);
+  const [predictToolsTab, setPredictToolsTab] = useState<PredictToolsTab>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
@@ -717,6 +718,7 @@ export default function ResultPredictEditModal({
         language={language}
         overlayUnifiedForm
         myPostId={post?.id ?? null}
+        isProUser={isProUser}
       />
     </>
   );

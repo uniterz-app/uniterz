@@ -64,10 +64,19 @@ import {
 import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
 import PredictTimingAdviceLine from "@/app/component/predict/PredictTimingAdviceLine";
-import PredictProInfoPanel from "@/app/component/predict/PredictProInfoPanel";
+import PredictProBriefPanel from "@/app/component/predict/PredictProBriefPanel";
+import NbaInjuryReportPanel from "@/app/component/predict/NbaInjuryReportPanel";
+import NbaTeamStatsPanel from "@/app/component/predict/NbaTeamStatsPanel";
+import NbaRosterPanel from "@/app/component/predict/NbaRosterPanel";
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+} from "@/app/component/rankings/CyberSlantedTab";
 import PredictOverlayScoreFields from "@/app/component/predict/PredictOverlayScoreFields";
 import { usePredictTimingAdvice } from "@/lib/predict/usePredictTimingAdvice";
-import { usePredictProInfo } from "@/lib/predict/usePredictProInfo";
+import { useUserPlan } from "@/hooks/useUserPlan";
+import { resolvePredictTimingMocksForGame } from "@/lib/predict/resolvePredictTimingMocksForGame";
+import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
@@ -251,7 +260,15 @@ export default function PredictionFormV2({
   );
   const [submitting, setSubmitting] = useState(false);
   const [toolsTab, setToolsTab] = useState<
-    null | "stats" | "market" | "standings" | "h2h" | "preview" | "results"
+    | null
+    | "stats"
+    | "market"
+    | "standings"
+    | "h2h"
+    | "preview"
+    | "results"
+    | "injuries"
+    | "roster"
   >(null);
   const [marketChartKey, setMarketChartKey] = useState(0);
   /** Games オーバーレイ: 投稿後モーダル用の次試合 */
@@ -294,15 +311,30 @@ export default function PredictionFormV2({
     isKnockout,
     enabled: !inOverlay,
   });
-  const { data: proInfo, isPro: isProUser } = usePredictProInfo({
-    uid: auth.currentUser?.uid,
-    game,
-    language,
-    homeRecord: overlayHomeRecord,
-    awayRecord: overlayAwayRecord,
-    enabled: inOverlay,
-  });
-  const showOverlayProInfo = inOverlay && isProUser && proInfo != null;
+  const { isPro: isProUser } = useUserPlan(auth.currentUser?.uid);
+  /** NBA オーバーレイ: `/dev/predict-timing-preview` 相当（Injury / Stats / Roster + Pro Insight） */
+  const showNbaPredictTimingOverlay =
+    Boolean(embedded && inOverlay) && game.league === "nba";
+  const nbaTimingMocks = useMemo(() => {
+    if (!showNbaPredictTimingOverlay) return null;
+    const homeTeamId = game.home?.teamId ?? "";
+    const awayTeamId = game.away?.teamId ?? "";
+    if (!homeTeamId || !awayTeamId) return null;
+    return resolvePredictTimingMocksForGame({
+      homeTeamId,
+      awayTeamId,
+      homeTeamName: game.home?.name ?? "Home",
+      awayTeamName: game.away?.name ?? "Away",
+    });
+  }, [
+    showNbaPredictTimingOverlay,
+    game.home?.teamId,
+    game.away?.teamId,
+    game.home?.name,
+    game.away?.name,
+  ]);
+  const showOverlayProInsight =
+    showNbaPredictTimingOverlay && isProUser && nbaTimingMocks != null;
   /** 引き分けを許可するサッカー試合か（グループリーグ・リーグ戦のみ） */
   const drawAllowed = isSoccer && !isKnockout;
   /** ノックアウト予想フローで UNITERZ ノックアウトチャレンジ告知を生涯1回表示 */
@@ -676,6 +708,19 @@ export default function PredictionFormV2({
       setToolsTab(null);
     }
   }, [hideMarketTab, toolsTab]);
+
+  useEffect(() => {
+    if (!showNbaPredictTimingOverlay) return;
+    if (
+      toolsTab === "h2h" ||
+      toolsTab === "market" ||
+      toolsTab === "standings" ||
+      toolsTab === "preview" ||
+      toolsTab === "results"
+    ) {
+      setToolsTab(null);
+    }
+  }, [showNbaPredictTimingOverlay, toolsTab]);
 
   const openPredictEditFromResultCard = useCallback(
     (post: PredictionPostV2) => {
@@ -1171,12 +1216,90 @@ export default function PredictionFormV2({
           </motion.div>
         ) : null}
 
-        {showOverlayProInfo ? (
+        {showOverlayProInsight && nbaTimingMocks ? (
           <motion.div {...fadeUpMotionProps}>
-            <PredictProInfoPanel data={proInfo} language={language} />
+            <PredictProBriefPanel
+              brief={nbaTimingMocks.proBrief}
+              language={language}
+              homeTeamId={game.home?.teamId ?? ""}
+              awayTeamId={game.away?.teamId ?? ""}
+              homeTeamName={
+                language === "en" && game.home?.teamId
+                  ? (NBA_TEAM_NAME_BY_ID[game.home.teamId] ?? homeSafe.name)
+                  : homeSafe.name
+              }
+              awayTeamName={
+                language === "en" && game.away?.teamId
+                  ? (NBA_TEAM_NAME_BY_ID[game.away.teamId] ?? awaySafe.name)
+                  : awaySafe.name
+              }
+            />
           </motion.div>
         ) : null}
 
+        {showNbaPredictTimingOverlay ? (
+          <motion.div
+            {...fadeUpMotionProps}
+            className="relative z-[2] border-t border-cyan-400/20 px-3 py-2.5"
+          >
+            <CyberSlantedTabBar fill aria-label="Predict tools">
+              <CyberSlantedTab
+                role="tab"
+                label={m.predict.injuries}
+                active={toolsTab === "injuries"}
+                onClick={() =>
+                  setToolsTab((t) => (t === "injuries" ? null : "injuries"))
+                }
+                compact
+                fontWeight={900}
+              />
+              <CyberSlantedTab
+                role="tab"
+                label={m.predict.teamStats}
+                active={toolsTab === "stats"}
+                onClick={() =>
+                  setToolsTab((t) => (t === "stats" ? null : "stats"))
+                }
+                compact
+                fontWeight={900}
+              />
+              <CyberSlantedTab
+                role="tab"
+                label={m.predict.rosterTab}
+                active={toolsTab === "roster"}
+                onClick={() =>
+                  setToolsTab((t) => (t === "roster" ? null : "roster"))
+                }
+                compact
+                fontWeight={900}
+              />
+            </CyberSlantedTabBar>
+
+            {nbaTimingMocks &&
+            (toolsTab === "injuries" ||
+              toolsTab === "stats" ||
+              toolsTab === "roster") ? (
+              <div className="mt-2.5 min-h-[7.5rem]">
+                {toolsTab === "injuries" ? (
+                  <NbaInjuryReportPanel
+                    report={nbaTimingMocks.injuryReport}
+                    language={language}
+                  />
+                ) : toolsTab === "stats" ? (
+                  <NbaTeamStatsPanel
+                    data={nbaTimingMocks.teamStats}
+                    isPro={isProUser}
+                  />
+                ) : (
+                  <NbaRosterPanel
+                    report={nbaTimingMocks.roster}
+                    injuryReport={nbaTimingMocks.injuryReport}
+                  />
+                )}
+              </div>
+            ) : null}
+          </motion.div>
+        ) : (
         <motion.div
           {...fadeUpMotionProps}
           className={
@@ -1336,8 +1459,9 @@ export default function PredictionFormV2({
             </span>
           </button>
         </motion.div>
+        )}
 
-        {toolsTab === "h2h" && isNbaPostseasonTools && (
+        {toolsTab === "h2h" && isNbaPostseasonTools && !showNbaPredictTimingOverlay && (
           <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
             <div className="relative z-1">
               <div
@@ -1396,7 +1520,7 @@ export default function PredictionFormV2({
           </motion.div>
         )}
 
-        {toolsTab === "stats" && (
+        {toolsTab === "stats" && !showNbaPredictTimingOverlay && (
           <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
             <div className="relative z-1">
               <div
@@ -1602,7 +1726,7 @@ export default function PredictionFormV2({
                 ) : null}
               </div>
 
-              {timingAdvice && !showOverlayProInfo ? (
+              {timingAdvice && !showOverlayProInsight ? (
                 <PredictTimingAdviceLine
                   advice={timingAdvice}
                   language={language}

@@ -60,27 +60,27 @@ function GlowOverlays() {
       <LinearGradient
         pointerEvents="none"
         colors={[
-          "rgba(0,220,255,0.18)",
+          "rgba(0,220,255,0.22)",
           "rgba(0,0,0,0)",
-          "rgba(140,80,255,0.12)",
+          "rgba(180,70,220,0.16)",
         ]}
-        locations={[0, 0.5, 1]}
+        locations={[0, 0.48, 1]}
         start={{ x: 0.12, y: 0.08 }}
         end={{ x: 0.92, y: 0.45 }}
         style={StyleSheet.absoluteFillObject}
       />
       <LinearGradient
         pointerEvents="none"
-        colors={["#061f26", "#041418", "#020a0e"]}
-        locations={[0, 0.45, 1]}
+        colors={["#061f26", "#041418", "#0a0614", "#020a0e"]}
+        locations={[0, 0.4, 0.72, 1]}
         style={StyleSheet.absoluteFillObject}
       />
       <LinearGradient
         pointerEvents="none"
-        colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.12)", "rgba(0,0,0,0.55)"]}
-        locations={[0, 0.65, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        colors={["rgba(0,0,0,0)", "rgba(255,120,60,0.04)", "rgba(0,0,0,0.5)"]}
+        locations={[0, 0.55, 1]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
     </>

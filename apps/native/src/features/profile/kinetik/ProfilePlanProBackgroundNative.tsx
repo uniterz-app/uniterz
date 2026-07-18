@@ -36,6 +36,16 @@ import {
 import type { KinetikProfileAccentKey } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
 import { isProfilePlanProMoodBgVariant } from "../../../../../../lib/profile/profilePlanProMoodBgVariants";
 import { isProfilePlanProNovaBgVariant } from "../../../../../../lib/profile/profilePlanProNovaBgVariants";
+import {
+  getProfilePlanProScaleHudItems,
+  getProfilePlanProScaleSkinItems,
+  PROFILE_PLAN_PRO_SCALE_CANVAS,
+  type ProfilePlanProScaleDrawItem,
+} from "../../../../../../lib/profile/profilePlanProScalePattern";
+import {
+  isProfilePlanProScaleBgVariant,
+  type ProfilePlanProScaleBgVariant,
+} from "../../../../../../lib/profile/profilePlanProScaleBgVariants";
 import { PROFILE_PLAN_PRO_BG } from "../../../../../../lib/profile/profilePlanVisual";
 
 type Props = {
@@ -429,6 +439,100 @@ function MoodLayers({
   );
 }
 
+/** Web `scale-*` 相当 — 爬虫類鱗 + 微細 HUD */
+function ScaleLayers({
+  variant,
+  shouldAnimate,
+}: {
+  variant: ProfilePlanProScaleBgVariant;
+  shouldAnimate: boolean;
+}) {
+  const skin = getProfilePlanProScaleSkinItems(variant);
+  const hud = getProfilePlanProScaleHudItems(variant);
+  const enter = useSharedValue(shouldAnimate ? 0 : 1);
+
+  useEffect(() => {
+    if (!shouldAnimate) {
+      cancelAnimation(enter);
+      enter.value = 1;
+      return;
+    }
+    enter.value = 0;
+    enter.value = withTiming(1, {
+      duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
+      easing: Easing.out(Easing.cubic),
+    });
+    return () => cancelAnimation(enter);
+  }, [enter, shouldAnimate, variant]);
+
+  const layerStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      {
+        scale:
+          PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom +
+          enter.value * (1 - PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom),
+      },
+      {
+        translateY: (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
+      },
+    ],
+  }));
+
+  const renderItems = (items: ProfilePlanProScaleDrawItem[], keyPrefix: string) =>
+    items.map((item, i) => {
+      const key = `${keyPrefix}-${i}`;
+      if (item.t === "path") {
+        return (
+          <Path
+            key={key}
+            d={item.d}
+            fill={item.fill}
+            stroke={item.stroke}
+            strokeWidth={item.strokeWidth}
+          />
+        );
+      }
+      if (item.t === "line") {
+        return (
+          <Line
+            key={key}
+            x1={item.x1}
+            y1={item.y1}
+            x2={item.x2}
+            y2={item.y2}
+            stroke={item.stroke}
+            strokeWidth={item.strokeWidth}
+          />
+        );
+      }
+      return (
+        <Circle
+          key={key}
+          cx={item.cx}
+          cy={item.cy}
+          r={item.r}
+          fill={item.fill}
+        />
+      );
+    });
+
+  return (
+    <Animated.View style={[StyleSheet.absoluteFillObject, layerStyle]}>
+      <Svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${PROFILE_PLAN_PRO_SCALE_CANVAS.width} ${PROFILE_PLAN_PRO_SCALE_CANVAS.height}`}
+        preserveAspectRatio="none"
+        pointerEvents="none"
+      >
+        {renderItems(skin, "skin")}
+        {renderItems(hud, "hud")}
+      </Svg>
+    </Animated.View>
+  );
+}
+
 /** Web `atmos` 相当 — 図形だけ（accent 連動・入場は1回のみ） */
 function AtmosLayers({
   accent,
@@ -803,6 +907,7 @@ export default function ProfilePlanProBackgroundNative({
   const isDepth = isProfilePlanProDepthVariant(variant);
   const isMood = isProfilePlanProMoodBgVariant(variant);
   const isNova = isProfilePlanProNovaBgVariant(variant);
+  const isScale = isProfilePlanProScaleBgVariant(variant);
   const isHexLayout = isProfilePlanProHexBgVariant(variant);
   const isGeo = isProfilePlanProGeoBgVariant(variant) && !isHexLayout;
   const useTunnel =
@@ -832,6 +937,14 @@ export default function ProfilePlanProBackgroundNative({
           shouldAnimate={shouldAnimate}
           accentReady={accentReady}
         />
+      </View>
+    );
+  }
+
+  if (isScale) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <ScaleLayers variant={variant} shouldAnimate={shouldAnimate} />
       </View>
     );
   }

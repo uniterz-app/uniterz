@@ -361,7 +361,7 @@ export default function WebRankingsShell() {
               animateRank={!skipCountUp}
               language={language}
               isPro={sessionUser.plan === "pro"}
-              displayTier={sessionUser.plan === "pro" ? "pro" : undefined}
+              displayTier={sessionUser.plan === "pro" ? "pro" : "free"}
               rankTierGap={sessionUser.plan === "pro" ? rankTierGap : null}
               gapHref={gapHref}
               mobileWide

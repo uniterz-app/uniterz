@@ -17,6 +17,7 @@ import {
   isMyRankMiniMetricsReady,
 } from "../../../../../lib/rankings/buildMyRankMiniMetrics";
 import { resolveMyRankForCard, getMyMetricValue, computeWinRateMinPosts } from "../../../../../lib/rankings/rankingsPageShared";
+import { buildRankTierGapHint } from "../../../../../lib/rankings/rankTierMilestone";
 import { sortRankingRowsByMetric } from "../../../../../lib/rankings/sortRankingRows";
 import {
   visibleMetricsForLeague,
@@ -56,6 +57,7 @@ import {
 } from "./RankingsUiParts";
 import type { MyRankCardShareState } from "./RankingsMyRankCardNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
+import RankGapModalNative from "./RankGapModalNative";
 
 type Props = {
   bottomReserveY: number;
@@ -73,6 +75,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [gapOpen, setGapOpen] = useState(false);
   const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
   const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("wc");
   const [wcStage, setWcStage] = useState<WcRankingStage>("main");
@@ -197,6 +200,30 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const cardBarsReady = isMyRankMiniMetricsReady(byMetric, rankingLeagueSource);
   const pageTitle = rankingsLeague === "wc" ? t.titleWorldCup : t.title;
 
+  const myTotalPoints =
+    typeof myStatsRow?.totalPoints === "number" ? myStatsRow.totalPoints : 0;
+  const totalPointsRows = useMemo(() => {
+    const src = byMetric?.totalPoints?.rows as RankingRow[] | undefined;
+    return Array.isArray(src)
+      ? src.map((row, index) => ({
+          rank:
+            typeof row.rank === "number" && Number.isFinite(row.rank)
+              ? Math.floor(row.rank)
+              : index + 1,
+          totalPoints: row.totalPoints,
+        }))
+      : [];
+  }, [byMetric?.totalPoints?.rows]);
+
+  const rankTierGap = useMemo(() => {
+    if (myRank == null || myRank < 1 || rankingHasNoEntries) return null;
+    return buildRankTierGapHint({
+      currentRank: myRank,
+      myTotalPoints,
+      cutoffRows: totalPointsRows,
+    });
+  }, [myRank, myTotalPoints, rankingHasNoEntries, totalPointsRows]);
+
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
   const listEntranceKey = `${rankingsLeague}-${category}-${metric}-${wcStage}-${round}`;
@@ -278,6 +305,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 loading={!listReady}
                 statsScramble={listReady && personalPending}
                 isPro={user.plan === "pro"}
+                displayTier={user.plan === "pro" ? "pro" : "free"}
                 rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
                 totalEntries={rankingHasNoEntries ? null : rankingListCount}
                 miniMetrics={myMiniMetrics}
@@ -292,6 +320,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 mobileWide
                 leagueLabel={rankingsLeague === "wc" ? "WORLD CUP" : "NBA"}
                 onShareStateChange={setRankShare}
+                rankTierGap={user.plan === "pro" ? rankTierGap : null}
+                gapHref={user.plan === "pro" ? "gap" : null}
+                onOpenGap={() => setGapOpen(true)}
               />
             </>
           ) : null}
@@ -374,6 +405,16 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           language={language}
         />
       </SideMenuDrawerNative>
+
+      <RankGapModalNative
+        visible={gapOpen}
+        onClose={() => setGapOpen(false)}
+        language={language}
+        currentRank={rankingHasNoEntries ? null : myRank}
+        myTotalPoints={myTotalPoints}
+        totalEntries={rankingHasNoEntries ? null : rankingListCount}
+        rankTierGap={rankTierGap}
+      />
     </View>
   );
 }

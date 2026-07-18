@@ -193,13 +193,13 @@
 
 | 機能 | UI | 本番 `PredictionFormV2` | 実データ | 備考 |
 |---|---|---|---|---|
-| Injury Report | ✅ | ❌ | ❌（API 契約後） | mock。ゲート A + B。**モバイルはイニシャル四角非表示** |
-| Team Stats（SEASON / L10・順位セグ・L10 W/L） | ✅ | ❌ | ❌ | mock。ゲート A + B |
-| Roster | ✅ | ❌ | ❌ | mock。ゲート A + B |
-| Pro Insight（MATCHUP / SCHEDULE / CONTEXT） | ✅ | ❌ | ❌ | `PredictProBriefPanel`。旧 `PredictProInfoPanel` が本番に残存 |
+| Injury Report | ✅ | ✅（NBA オーバーレイ · mock） | ❌（API 契約後） | ゲート B で実データ |
+| Team Stats（SEASON / L10・順位セグ・L10 W/L） | ✅ | ✅（NBA オーバーレイ · mock） | ❌ | Pro のみ #順位 |
+| Roster | ✅ | ✅（NBA オーバーレイ · mock） | ❌ | |
+| Pro Insight（MATCHUP / SCHEDULE / CONTEXT） | ✅ | ✅ `PredictProBriefPanel`（mock） | ❌ | 旧 `PredictProInfoPanel` はオーバーレイから外した |
 | スコア入力（斜め HUD） | ✅ | △ オーバーレイのみ新UI | — | `PredictOverlayScoreFields`。スタンドアロンは旧入力のまま |
 | Timing advice 1行 | UI ✅ / パイプライン未 | △ | context_cache 未 | 詳細は `docs/pro-subscription-plan.md` |
-| Free / Pro ゲート（タブ・Insight） | プレビュー切替のみ | ❌ | — | 課金 entitlement と一体 |
+| Free / Pro ゲート（タブ・Insight） | プレビュー切替のみ | ✅ entitlement | — | Insight・同帯・#順位は Pro |
 
 **鉄則（確認済み）:** Pro Insight は Pay-for-Insight。採点倍率・推奨予想などの **Pay to Win はしない**。
 
@@ -209,7 +209,7 @@
 
 | 機能 | プレビュー | 本番配線 | データ |
 |---|---|---|---|
-| My Rank Free / Pro カード | http://localhost:3000/dev/my-rank-free-pro-preview | ❌（`displayTier` / `isPro` 等） | Progress・ギャップ等は設計済・接続段階 |
+| My Rank Free / Pro カード | http://localhost:3000/dev/my-rank-free-pro-preview | ✅ `displayTier`（mobile/web rankings + Native） | Progress・ギャップ等は設計済・接続段階 |
 | Gap + Shadow（同一ページ） | http://localhost:3000/dev/rank-gap-preview | △ `/mobile/rankings/gap` 等あり、完成度要確認 | Gap/Shadow API・キャッシュは一部あり |
 
 詳細フェーズは `docs/pro-subscription-plan.md` の Phase 1–4 を参照。
@@ -220,9 +220,9 @@
 
 ### ゲート A（7/20 WC 後・UI 本番反映）
 
-- [ ] 予想オーバーレイに Injury / Team Stats / Roster / Pro Insight を本番配置（feature flag 推奨）
-- [ ] 旧 `PredictProInfoPanel` → `PredictProBriefPanel` 切替方針の実行
-- [ ] My Rank Pro 表示・Gap/Shadow 入口の本番揃え
+- [x] 予想オーバーレイに Injury / Team Stats / Roster / Pro Insight を本番配置（Web `PredictionFormV2` + Native `PredictModal` · mock）
+- [x] 旧 `PredictProInfoPanel` → `PredictProBriefPanel` 切替（NBA オーバーレイ）
+- [x] My Rank Pro 表示（`displayTier` Free/Pro · Web + Native）
 - [ ] シーズン順位予想の本番ページ（締切日時はゲート C 待ちでもページ枠は可）
 - [ ] アワード予想の本番ページ枠
 

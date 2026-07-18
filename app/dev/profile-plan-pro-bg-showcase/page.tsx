@@ -162,8 +162,8 @@ export default function ProfilePlanProBgShowcasePage() {
           PRO プロフィール背景 — 全 {PROFILE_PLAN_PRO_BG_VARIANTS.length} 案
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/55">
-          奥行き・3D・平面を並列比較。NEW 追加案（Star Warp / Isometric / Topo など）含む。
-          本番デフォルト: <strong className="text-cyan-300/80">Void Tunnel</strong>
+          本番デフォルトは <strong className="text-cyan-300/80">Atmos</strong>
+          。奥行き・3D・平面を並列比較。NEW 追加案含む。
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
