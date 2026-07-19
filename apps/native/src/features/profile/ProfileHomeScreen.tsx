@@ -1187,6 +1187,7 @@ export default function ProfileHomeScreen({
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
+        else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
       }}
     />
     <ProfileBadgeDetailModal

@@ -47,5 +47,7 @@ export function rankingsTexts(language: RankingsLanguage) {
     metricTabsLabel: m.metricTabsLabel,
     shareMyRank: m.shareMyRank,
     shareRankCardFailed: m.shareRankCardFailed,
+    rankingProgressNoData: t(lang).profile.rankingProgressNoData,
+    rankGapViewGap: m.rankGap.viewGap,
   };
 }

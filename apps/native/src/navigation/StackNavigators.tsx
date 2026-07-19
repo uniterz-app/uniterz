@@ -49,6 +49,8 @@ import {
   AnnouncementsScreenWrapper,
   PlanStatusScreenWrapper,
   ProSubscribeScreenWrapper,
+  ProSubscribePreviewScreenWrapper,
+  SeasonPredictPreviewScreenWrapper,
 } from "../features/profile/screens/ProfileStackWrappers";
 import NativeStackBackdrop from "../components/NativeStackBackdrop";
 
@@ -170,6 +172,8 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="AnnouncementDetail" component={AnnouncementDetailScreenNative} />
       <ProfileStack.Screen name="PlanStatus" component={PlanStatusScreenWrapper} />
       <ProfileStack.Screen name="ProSubscribe" component={ProSubscribeScreenWrapper} />
+      <ProfileStack.Screen name="ProSubscribePreview" component={ProSubscribePreviewScreenWrapper} />
+      <ProfileStack.Screen name="SeasonPredictPreview" component={SeasonPredictPreviewScreenWrapper} />
       <ProfileStack.Screen name="ProSuccess" component={ProSuccessScreenNative} />
       <ProfileStack.Screen name="PlanChange" component={PlanChangeScreenNative} />
       <ProfileStack.Screen name="PlanChangeComplete" component={PlanChangeCompleteScreenNative} />

@@ -1986,6 +1986,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     width: "100%",
   },
+  teamRecordText: {
+    marginTop: 2,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    color: "rgba(248,250,252,0.6)",
+    textAlign: "center",
+  },
   teamNameWcWrap: {
     width: 88,
     minHeight: 34,

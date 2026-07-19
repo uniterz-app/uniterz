@@ -238,19 +238,6 @@ function armorScalePath(cx: number, cy: number, w: number, h: number): string {
   ].join(" ");
 }
 
-/** キール（中央稜線）付き鱗 */
-function keeledRidge(
-  cx: number,
-  cy: number,
-  h: number,
-  stroke: string,
-  op: number
-): string {
-  const y1 = cy - h * 0.28;
-  const y2 = cy + h * 0.42;
-  return `<line x1="${cx.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="0.55"/>`;
-}
-
 type ScaleKind = "organic" | "diamond" | "armor" | "keeled" | "patchy";
 
 function variantKind(id: ProfilePlanProScaleBgVariant): ScaleKind {
@@ -279,7 +266,49 @@ function variantKind(id: ProfilePlanProScaleBgVariant): ScaleKind {
   }
 }
 
-function buildSparseScaleSvg(variant: ProfilePlanProScaleBgVariant): string {
+/** Native / Web 共通の描画要素 */
+export type ProfilePlanProScaleDrawItem =
+  | {
+      t: "path";
+      d: string;
+      fill: string;
+      stroke: string;
+      strokeWidth: number;
+    }
+  | {
+      t: "line";
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      stroke: string;
+      strokeWidth: number;
+    }
+  | {
+      t: "circle";
+      cx: number;
+      cy: number;
+      r: number;
+      fill: string;
+    };
+
+function itemsToSvgMarkup(items: ProfilePlanProScaleDrawItem[]): string {
+  return items
+    .map((item) => {
+      if (item.t === "path") {
+        return `<path d="${item.d}" fill="${item.fill}" stroke="${item.stroke}" stroke-width="${item.strokeWidth}"/>`;
+      }
+      if (item.t === "line") {
+        return `<line x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}" stroke="${item.stroke}" stroke-width="${item.strokeWidth}"/>`;
+      }
+      return `<circle cx="${item.cx}" cy="${item.cy}" r="${item.r}" fill="${item.fill}"/>`;
+    })
+    .join("");
+}
+
+function buildSparseScaleItems(
+  variant: ProfilePlanProScaleBgVariant
+): ProfilePlanProScaleDrawItem[] {
   const palette = PALETTES[variant];
   activeOpacityMul = palette.opacityMul ?? 1;
   try {
@@ -292,14 +321,13 @@ function buildSparseScaleSvg(variant: ProfilePlanProScaleBgVariant): string {
 function buildSparseScaleSvgInner(
   variant: ProfilePlanProScaleBgVariant,
   palette: ScalePalette
-): string {
+): ProfilePlanProScaleDrawItem[] {
   const kind = variantKind(variant);
-  const paths: string[] = [];
+  const items: ProfilePlanProScaleDrawItem[] = [];
   const densityMul = palette.densityMul ?? 1;
   const fillBoost = palette.fillBoost ?? 1;
   const strokeBoost = palette.strokeBoost ?? 1;
 
-  // マンバは細かい平滑鱗、アナコンダは大判
   const colStep =
     variant === "scale-mamba"
       ? 15
@@ -342,10 +370,8 @@ function buildSparseScaleSvgInner(
 
       const sizeJitter = 0.72 + hash01(col * 1.7, row * 0.9) * 0.55;
 
-      // キングコブラ: 横バンドで琥珀／黒を切替
       const bandOn =
         variant === "scale-king" && Math.floor(cy / 28) % 2 === 0;
-      // ダイヤモンドバック / ガブーン: 大きな菱形ハイライト帯
       const diamondMark =
         (variant === "scale-diamondback" || variant === "scale-gaboon") &&
         hash01(col * 0.5, row * 0.5) > 0.55;
@@ -380,7 +406,7 @@ function buildSparseScaleSvgInner(
       const fillOp = scaleOp(
         (0.035 + hash01(col * 0.4, row * 1.2) * 0.08) * fillBoost
       );
-      const sw = (0.55 + hash01(col + 2, row + 4) * 0.75).toFixed(2);
+      const sw = Number((0.55 + hash01(col + 2, row + 4) * 0.75).toFixed(2));
 
       let d: string;
       let ww: number;
@@ -404,9 +430,13 @@ function buildSparseScaleSvgInner(
         d = organicScalePath(cx, cy, ww, hh);
       }
 
-      paths.push(
-        `<path d="${d}" fill="rgba(${fillRgb},${fillOp.toFixed(3)})" stroke="rgba(${strokeRgb},${op.toFixed(3)})" stroke-width="${sw}"/>`
-      );
+      items.push({
+        t: "path",
+        d,
+        fill: `rgba(${fillRgb},${fillOp.toFixed(3)})`,
+        stroke: `rgba(${strokeRgb},${op.toFixed(3)})`,
+        strokeWidth: sw,
+      });
 
       if (
         (kind === "keeled" ||
@@ -416,108 +446,194 @@ function buildSparseScaleSvgInner(
         palette.ridge
       ) {
         if (hash01(col + 7, row + 1) > 0.35) {
-          paths.push(
-            keeledRidge(cx, cy, hh, palette.ridge, scaleOp(op * 1.4))
-          );
+          const ridgeOp = scaleOp(op * 1.4);
+          items.push({
+            t: "line",
+            x1: cx,
+            y1: cy - hh * 0.28,
+            x2: cx,
+            y2: cy + hh * 0.42,
+            stroke: `rgba(${palette.ridge},${ridgeOp.toFixed(3)})`,
+            strokeWidth: 0.55,
+          });
         }
       }
 
-      // マンバ: 平滑鱗の薄いハイライト縁
       if (variant === "scale-mamba" && hash01(col * 2.2, row * 3.1) > 0.7) {
-        paths.push(
-          `<path d="${organicScalePath(cx, cy - 0.8, ww * 0.72, hh * 0.55)}" fill="none" stroke="rgba(203,213,225,${scaleOp(0.14).toFixed(3)})" stroke-width="0.4"/>`
-        );
+        items.push({
+          t: "path",
+          d: organicScalePath(cx, cy - 0.8, ww * 0.72, hh * 0.55),
+          fill: "none",
+          stroke: `rgba(203,213,225,${scaleOp(0.14).toFixed(3)})`,
+          strokeWidth: 0.4,
+        });
       }
 
       if (variant === "scale-biolume" && hash01(col * 4, row * 5) > 0.72) {
         const glow =
           palette.strokes[Math.floor(hash01(col, row) * palette.strokes.length)]!;
-        paths.push(
-          `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(1.2 + hash01(col, row) * 1.4).toFixed(1)}" fill="rgba(${glow},${scaleOp(0.22).toFixed(3)})"/>`
-        );
+        items.push({
+          t: "circle",
+          cx,
+          cy,
+          r: 1.2 + hash01(col, row) * 1.4,
+          fill: `rgba(${glow},${scaleOp(0.22).toFixed(3)})`,
+        });
       }
 
       if (kind === "patchy" && hash01(col * 5.5, row * 3.2) > 0.78) {
         const hx = cx + 4;
         const hy = cy - 3;
-        paths.push(
-          `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="${palette.hudSecondary}${scaleOp(0.28)})" stroke-width="0.6"/>` +
-            `<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="0.9" fill="${palette.hudPrimary}${scaleOp(0.35)})"/>`
-        );
+        items.push({
+          t: "line",
+          x1: cx,
+          y1: cy,
+          x2: hx,
+          y2: hy,
+          stroke: `${palette.hudSecondary}${scaleOp(0.28)})`,
+          strokeWidth: 0.6,
+        });
+        items.push({
+          t: "circle",
+          cx: hx,
+          cy: hy,
+          r: 0.9,
+          fill: `${palette.hudPrimary}${scaleOp(0.35)})`,
+        });
       }
     }
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height="${CANVAS_H}" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" preserveAspectRatio="none">${paths.join("")}</svg>`;
+  return items;
 }
 
-function plusMark(cx: number, cy: number, s: number, op: number, strokePrefix: string): string {
-  return (
-    `<line x1="${(cx - s).toFixed(1)}" y1="${cy}" x2="${(cx + s).toFixed(1)}" y2="${cy}" stroke="${strokePrefix}${op})" stroke-width="0.8"/>` +
-    `<line x1="${cx}" y1="${(cy - s).toFixed(1)}" x2="${cx}" y2="${(cy + s).toFixed(1)}" stroke="${strokePrefix}${op})" stroke-width="0.8"/>`
-  );
+function buildSparseScaleSvg(variant: ProfilePlanProScaleBgVariant): string {
+  const markup = itemsToSvgMarkup(buildSparseScaleItems(variant));
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height="${CANVAS_H}" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" preserveAspectRatio="none">${markup}</svg>`;
 }
 
-function tickRow(
-  x: number,
-  y: number,
-  count: number,
-  gap: number,
-  len: number,
-  op: number,
-  strokePrefix: string
-): string {
-  const t: string[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const tx = x + i * gap;
-    const tl = i % 4 === 0 ? len * 1.8 : len;
-    t.push(
-      `<line x1="${tx.toFixed(1)}" y1="${y}" x2="${tx.toFixed(1)}" y2="${(y + tl).toFixed(1)}" stroke="${strokePrefix}${op})" stroke-width="0.8"/>`
-    );
-  }
-  return t.join("");
-}
+function buildHudItems(
+  variant: ProfilePlanProScaleBgVariant
+): ProfilePlanProScaleDrawItem[] {
+  const palette = PALETTES[variant];
+  const { hudPrimary, hudSecondary } = palette;
+  activeOpacityMul = palette.opacityMul ?? 1;
+  const items: ProfilePlanProScaleDrawItem[] = [];
 
-function dotGrid(
-  x0: number,
-  y0: number,
-  w: number,
-  h: number,
-  gap: number,
-  op: number,
-  fillPrefix: string
-): string {
-  const dots: string[] = [];
-  for (let y = y0; y <= y0 + h; y += gap) {
-    for (let x = x0; x <= x0 + w; x += gap) {
-      dots.push(
-        `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="0.7" fill="${fillPrefix}${op})"/>`
-      );
+  const pushDots = (
+    x0: number,
+    y0: number,
+    w: number,
+    h: number,
+    gap: number,
+    op: number,
+    fillPrefix: string
+  ) => {
+    for (let y = y0; y <= y0 + h; y += gap) {
+      for (let x = x0; x <= x0 + w; x += gap) {
+        items.push({
+          t: "circle",
+          cx: x,
+          cy: y,
+          r: 0.7,
+          fill: `${fillPrefix}${op})`,
+        });
+      }
     }
-  }
-  return dots.join("");
+  };
+
+  const pushTicks = (
+    x: number,
+    y: number,
+    count: number,
+    gap: number,
+    len: number,
+    op: number,
+    strokePrefix: string
+  ) => {
+    for (let i = 0; i < count; i += 1) {
+      const tx = x + i * gap;
+      const tl = i % 4 === 0 ? len * 1.8 : len;
+      items.push({
+        t: "line",
+        x1: tx,
+        y1: y,
+        x2: tx,
+        y2: y + tl,
+        stroke: `${strokePrefix}${op})`,
+        strokeWidth: 0.8,
+      });
+    }
+  };
+
+  const pushPlus = (
+    cx: number,
+    cy: number,
+    s: number,
+    op: number,
+    strokePrefix: string
+  ) => {
+    items.push({
+      t: "line",
+      x1: cx - s,
+      y1: cy,
+      x2: cx + s,
+      y2: cy,
+      stroke: `${strokePrefix}${op})`,
+      strokeWidth: 0.8,
+    });
+    items.push({
+      t: "line",
+      x1: cx,
+      y1: cy - s,
+      x2: cx,
+      y2: cy + s,
+      stroke: `${strokePrefix}${op})`,
+      strokeWidth: 0.8,
+    });
+  };
+
+  pushDots(210, 20, 70, 34, 8, scaleOp(0.12), hudPrimary);
+  pushTicks(196, 66, 12, 7.5, 3, scaleOp(0.22), hudSecondary);
+  pushPlus(276, 40, 3, scaleOp(0.3), hudPrimary);
+  pushPlus(288, 190, 2.6, scaleOp(0.26), hudPrimary);
+  pushTicks(286, 150, 8, 6, 2.4, scaleOp(0.18), hudSecondary);
+  pushDots(24, 372, 60, 40, 9, scaleOp(0.1), hudPrimary);
+  pushTicks(150, 420, 16, 6, 2.2, scaleOp(0.16), hudSecondary);
+  pushPlus(280, 400, 3, scaleOp(0.24), hudPrimary);
+
+  activeOpacityMul = 1;
+  return items;
 }
 
 function buildHudSvg(variant: ProfilePlanProScaleBgVariant): string {
-  const palette = PALETTES[variant];
-  activeOpacityMul = palette.opacityMul ?? 1;
-  try {
-    const { hudPrimary, hudSecondary } = palette;
-    const g: string[] = [];
+  const markup = itemsToSvgMarkup(buildHudItems(variant));
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height="${CANVAS_H}" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" preserveAspectRatio="none">${markup}</svg>`;
+}
 
-    g.push(dotGrid(210, 20, 70, 34, 8, scaleOp(0.12), hudPrimary));
-    g.push(tickRow(196, 66, 12, 7.5, 3, scaleOp(0.22), hudSecondary));
-    g.push(plusMark(276, 40, 3, scaleOp(0.3), hudPrimary));
-    g.push(plusMark(288, 190, 2.6, scaleOp(0.26), hudPrimary));
-    g.push(tickRow(286, 150, 8, 6, 2.4, scaleOp(0.18), hudSecondary));
-    g.push(dotGrid(24, 372, 60, 40, 9, scaleOp(0.1), hudPrimary));
-    g.push(tickRow(150, 420, 16, 6, 2.2, scaleOp(0.16), hudSecondary));
-    g.push(plusMark(280, 400, 3, scaleOp(0.24), hudPrimary));
+const skinItemsCache = new Map<string, ProfilePlanProScaleDrawItem[]>();
+const hudItemsCache = new Map<string, ProfilePlanProScaleDrawItem[]>();
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height="${CANVAS_H}" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" preserveAspectRatio="none">${g.join("")}</svg>`;
-  } finally {
-    activeOpacityMul = 1;
-  }
+/** Native 描画用 — 疎な爬虫類鱗 */
+export function getProfilePlanProScaleSkinItems(
+  variant: ProfilePlanProScaleBgVariant
+): ProfilePlanProScaleDrawItem[] {
+  const hit = skinItemsCache.get(variant);
+  if (hit) return hit;
+  const items = buildSparseScaleItems(variant);
+  skinItemsCache.set(variant, items);
+  return items;
+}
+
+/** Native 描画用 — 微細 HUD */
+export function getProfilePlanProScaleHudItems(
+  variant: ProfilePlanProScaleBgVariant
+): ProfilePlanProScaleDrawItem[] {
+  const hit = hudItemsCache.get(variant);
+  if (hit) return hit;
+  const items = buildHudItems(variant);
+  hudItemsCache.set(variant, items);
+  return items;
 }
 
 /** 疎な爬虫類鱗レイヤー（atmos 配置） */

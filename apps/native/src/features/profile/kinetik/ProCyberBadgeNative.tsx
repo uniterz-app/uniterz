@@ -1,4 +1,20 @@
-import Svg, { Defs, FeDropShadow, FeMerge, FeMergeNode, Filter, G, LinearGradient, Path, RadialGradient, Stop, Text } from "react-native-svg";
+/**
+ * Web `ProCyberBadge`（premium）相当 — ゴールド菱形マーク + PRO ワード。
+ */
+import { StyleSheet, Text, View } from "react-native";
+import Svg, {
+  Defs,
+  FeDropShadow,
+  FeMerge,
+  FeMergeNode,
+  Filter,
+  G,
+  LinearGradient,
+  Path,
+  Polygon,
+  RadialGradient,
+  Stop,
+} from "react-native-svg";
 
 type Props = {
   /** プロフィールカード用 — 一段大 */
@@ -6,37 +22,54 @@ type Props = {
   compact?: boolean;
 };
 
-const HEX_D = "M8 10 L48 10 L52 30 L48 50 L8 50 L4 30 Z";
+const PRO_GOLD = {
+  bright: "#f4df9a",
+  mid: "#d4af5a",
+  deep: "#a67c28",
+};
 
-/** Web `ProCyberBadge` 相当 */
-export default function ProCyberBadgeNative({
-  premium = false,
-  compact = false,
-}: Props) {
-  const w = premium ? 38 : compact ? 31 : 40;
-  const h = premium ? 44 : compact ? 36 : 44;
-  const fontSize = premium ? 14 : compact ? 11.5 : 13.5;
-  const glow1 = premium ? 1.45 : 1.05;
-  const glow2 = premium ? 2.85 : 2.1;
-
+/** Web `ProLuxuryDiamondMark` の viewBox 64 菱形 */
+function ProLuxuryDiamondMarkNative({ size }: { size: number }) {
   return (
-    <Svg width={w} height={h} viewBox="0 0 56 60" accessibilityLabel="PRO">
+    <Svg width={size} height={size} viewBox="0 0 64 64" accessibilityElementsHidden>
       <Defs>
-        <LinearGradient id="proHexMetal" x1="4" y1="4" x2="52" y2="56" gradientUnits="userSpaceOnUse">
-          <Stop offset="0" stopColor="#e2e8f0" />
-          <Stop offset="0.22" stopColor="#94a3b8" />
-          <Stop offset="0.5" stopColor="#475569" />
-          <Stop offset="0.78" stopColor="#cbd5e1" />
-          <Stop offset="1" stopColor="#64748b" />
+        <LinearGradient id="proGold" x1="0.08" y1="0.06" x2="0.92" y2="0.94">
+          <Stop offset="0%" stopColor="#fff8e8" />
+          <Stop offset="18%" stopColor="#f3d98a" />
+          <Stop offset="42%" stopColor="#c89a3a" />
+          <Stop offset="68%" stopColor="#f0cc72" />
+          <Stop offset="88%" stopColor="#9a7128" />
+          <Stop offset="100%" stopColor="#6f5218" />
         </LinearGradient>
-        <RadialGradient id="proHexInner" cx="0.5" cy="0.42" r="0.72" gradientUnits="objectBoundingBox">
-          <Stop offset="0%" stopColor="#0f172a" />
-          <Stop offset="55%" stopColor="#050a12" />
-          <Stop offset="100%" stopColor="#020308" />
+        <LinearGradient id="proGoldDim" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0%" stopColor="#e8c66e" />
+          <Stop offset="100%" stopColor="#7a5a1c" />
+        </LinearGradient>
+        <RadialGradient id="proFrameFill" cx="0.28" cy="0.22" rx="0.78" ry="0.78">
+          <Stop offset="0%" stopColor="#565660" />
+          <Stop offset="38%" stopColor="#2a2a32" />
+          <Stop offset="72%" stopColor="#121218" />
+          <Stop offset="100%" stopColor="#060608" />
         </RadialGradient>
-        <Filter id="proHexGlow" x="-25%" y="-22%" width="145%" height="140%">
-          <FeDropShadow dx="0" dy="0" stdDeviation={glow1} floodColor="#22d3ee" floodOpacity={premium ? 0.62 : 0.5} />
-          <FeDropShadow dx="0" dy="0" stdDeviation={glow2} floodColor="#a78bfa" floodOpacity={premium ? 0.28 : 0.2} />
+        <LinearGradient id="proFacetHi" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0%" stopColor="#fff9ee" />
+          <Stop offset="28%" stopColor="#efd080" />
+          <Stop offset="72%" stopColor="#c4933c" />
+          <Stop offset="100%" stopColor="#8f6820" />
+        </LinearGradient>
+        <LinearGradient id="proFacetMid" x1="1" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor="#3a3a44" />
+          <Stop offset="55%" stopColor="#1c1c22" />
+          <Stop offset="100%" stopColor="#0a0a0e" />
+        </LinearGradient>
+        <LinearGradient id="proFacetDark" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0%" stopColor="#242428" />
+          <Stop offset="45%" stopColor="#101014" />
+          <Stop offset="100%" stopColor="#000000" />
+        </LinearGradient>
+        <Filter id="proMarkGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <FeDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodColor="#000000" floodOpacity={0.55} />
+          <FeDropShadow dx="0" dy="0" stdDeviation="0.6" floodColor="#d4af5a" floodOpacity={0.12} />
           <FeMerge>
             <FeMergeNode />
             <FeMergeNode />
@@ -44,38 +77,137 @@ export default function ProCyberBadgeNative({
           </FeMerge>
         </Filter>
       </Defs>
-      <G filter="url(#proHexGlow)">
+      <G filter="url(#proMarkGlow)">
         <Path
-          d={HEX_D}
-          fill="url(#proHexInner)"
-          stroke="url(#proHexMetal)"
-          strokeWidth={2.15}
+          d="M32,5 L59,32 L32,59 L5,32 Z M32,11.5 L52.5,32 L32,52.5 L11.5,32 Z"
+          fill="url(#proFrameFill)"
+          fillRule="evenodd"
+        />
+        <Path
+          d="M32,5 L59,32 L32,59 L5,32 Z"
+          fill="none"
+          stroke="url(#proGold)"
+          strokeWidth={1.65}
           strokeLinejoin="miter"
         />
         <Path
-          d={HEX_D}
+          d="M32,11.5 L52.5,32 L32,52.5 L11.5,32 Z"
           fill="none"
-          stroke="#22d3ee"
-          strokeWidth={0.55}
-          strokeOpacity={0.75}
-          transform="translate(28, 30) scale(0.9) translate(-28, -30)"
+          stroke="url(#proGoldDim)"
+          strokeWidth={1.15}
+          strokeLinejoin="miter"
         />
+        <Polygon points="32,14.5 14,32 32,32" fill="url(#proFacetHi)" />
+        <Polygon points="32,14.5 32,32 50,32" fill="url(#proFacetMid)" />
+        <Polygon points="50,32 32,32 32,49.5" fill="url(#proFacetDark)" />
+        <Polygon points="32,49.5 32,32 14,32" fill="url(#proFacetMid)" />
+        <Path d="M32,14.5 L36.5,18.5 L32,22.5 L27.5,18.5 Z" fill="#fffdf6" opacity={0.22} />
       </G>
-      <Text
-        x={28}
-        y={29}
-        textAnchor="middle"
-        alignmentBaseline="middle"
-        fill="#ecfeff"
-        stroke="#0c4a6e"
-        strokeWidth={0.2}
-        fontFamily="monospace"
-        fontSize={fontSize}
-        fontWeight="800"
-        letterSpacing={1.4}
-      >
-        PRO
-      </Text>
     </Svg>
   );
 }
+
+/** Web `ProCornerBracketFrame` 相当 */
+function ProCornerBracketFrameNative() {
+  return (
+    <Svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 62 18"
+      preserveAspectRatio="none"
+      style={StyleSheet.absoluteFillObject}
+      pointerEvents="none"
+    >
+      <Defs>
+        <LinearGradient id="proBracketGold" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0%" stopColor="#fff4d4" />
+          <Stop offset="22%" stopColor="#e8c66a" />
+          <Stop offset="55%" stopColor="#c89a3a" />
+          <Stop offset="82%" stopColor="#f0cc72" />
+          <Stop offset="100%" stopColor="#8f6820" />
+        </LinearGradient>
+      </Defs>
+      <Path
+        d="M 46 0.5 L 1 0.5 L 1 12.5"
+        fill="none"
+        stroke="url(#proBracketGold)"
+        strokeWidth={0.95}
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
+      <Path
+        d="M 16 17.5 L 61 17.5 L 61 5.5"
+        fill="none"
+        stroke="url(#proBracketGold)"
+        strokeWidth={0.95}
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
+    </Svg>
+  );
+}
+
+export default function ProCyberBadgeNative({
+  premium = false,
+  compact = false,
+}: Props) {
+  const markSize = premium ? 17 : compact ? 12 : 15;
+  const wordSize = premium ? 10 : compact ? 8 : 9;
+  const height = premium ? 32 : compact ? 24 : 28;
+
+  return (
+    <View
+      style={[
+        styles.tag,
+        { height },
+        premium ? styles.tagPremium : compact ? styles.tagCompact : null,
+      ]}
+      accessibilityLabel="PRO"
+    >
+      <View style={styles.bracketLayer} pointerEvents="none">
+        <ProCornerBracketFrameNative />
+      </View>
+      <ProLuxuryDiamondMarkNative size={markSize} />
+      <Text
+        style={[styles.word, { fontSize: wordSize }]}
+        maxFontSizeMultiplier={1.1}
+      >
+        PRO
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  tag: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    flexShrink: 0,
+    overflow: "visible",
+  },
+  tagPremium: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  tagCompact: {
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+  },
+  /** 親サイズ確定後に枠を載せる（% SVG の初期レイアウトジャンプを防ぐ） */
+  bracketLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  word: {
+    fontFamily: "Oxanium_700Bold",
+    fontWeight: "400",
+    letterSpacing: 0.8,
+    color: PRO_GOLD.mid,
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 1, height: 0 },
+    textShadowRadius: 0,
+  },
+});

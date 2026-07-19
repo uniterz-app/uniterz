@@ -55,9 +55,10 @@ type Props = {
   language: "ja" | "en";
   onClose: () => void;
   onSuccess?: (plan: Plan) => void;
+  onOpenPreview?: () => void;
 };
 
-export default function MobileProSubscribeScreen({ language, onClose, onSuccess }: Props) {
+export default function MobileProSubscribeScreen({ language, onClose, onSuccess, onOpenPreview }: Props) {
   const isJa = language === "ja";
   const [plan, setPlan] = useState<Plan>("monthly");
   const features = isJa ? FEATURES_JA : FEATURES_EN;
@@ -166,6 +167,14 @@ export default function MobileProSubscribeScreen({ language, onClose, onSuccess 
         <Pressable onPress={() => void restore()} style={styles.restoreBtn}>
           <Text style={styles.restoreTxt}>{isJa ? "購入を復元" : "Restore Purchases"}</Text>
         </Pressable>
+
+        {onOpenPreview ? (
+          <Pressable onPress={onOpenPreview} style={styles.previewBtn}>
+            <Text style={styles.previewTxt}>
+              {isJa ? "新プラン（Weekly / Season）を見る" : "See new plans (Weekly / Season)"}
+            </Text>
+          </Pressable>
+        ) : null}
 
         <Text style={styles.disclaimer}>
           {isJa
@@ -287,6 +296,15 @@ const styles = StyleSheet.create({
   ctaTxt: { fontSize: 16, fontWeight: "800", color: "#fff" },
   restoreBtn: { alignItems: "center", paddingVertical: 8, marginBottom: 8 },
   restoreTxt: { fontSize: 13, color: "rgba(34,211,238,0.85)", fontWeight: "600" },
+  previewBtn: {
+    alignItems: "center",
+    paddingVertical: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(240,204,114,0.4)",
+    borderRadius: 2,
+  },
+  previewTxt: { fontSize: 12, color: "rgba(240,204,114,0.9)", fontWeight: "700", letterSpacing: 0.6 },
   disclaimer: { fontSize: 11, color: "rgba(248,250,252,0.5)", textAlign: "center", marginBottom: 8 },
   micro: { fontSize: 10, color: "rgba(248,250,252,0.4)", textAlign: "center", marginBottom: 8 },
   featRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },

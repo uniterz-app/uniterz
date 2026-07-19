@@ -36,7 +36,7 @@ export type ProfilePlanProBgVariant =
   | ProfilePlanProBeastBgVariant
   | ProfilePlanProFormBgVariant;
 
-/** 本番 PRO プロフィール背景 — 確定: Void Tunnel */
+/** 本番 PRO プロフィール背景 — 確定: Atmos（疎な六角 + 微細 HUD） */
 export const PROFILE_PLAN_PRO_BG_DEFAULT: ProfilePlanProBgVariant = "atmos";
 
 export type ProfilePlanProBgVariantMeta = {
@@ -55,6 +55,14 @@ export const PROFILE_PLAN_PRO_BG_VARIANTS: ProfilePlanProBgVariantMeta[] = [
     label: "Atmos Nebula",
     tag: "宇宙霧",
     description: "青紫ネビュラ＋疎な六角＋微細HUD。奥行きのある高級サイバー。",
+    depth: true,
+  },
+  {
+    id: "scale-mamba",
+    label: "Black Mamba",
+    tag: "マンバ",
+    description:
+      "ガンメタル〜オリーブの平滑鱗＋微細 HUD。爬虫類スキン候補（dev）。",
     depth: true,
     isNew: true,
   },

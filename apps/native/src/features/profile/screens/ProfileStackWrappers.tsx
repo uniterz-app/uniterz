@@ -8,6 +8,8 @@ import MobileBadgesScreen from "../mobileScreens/MobileBadgesScreen";
 import MobileAnnouncementsScreen from "../mobileScreens/MobileAnnouncementsScreen";
 import MobilePlanStatusScreen from "../mobileScreens/MobilePlanStatusScreen";
 import MobileProSubscribeScreen from "../mobileScreens/MobileProSubscribeScreen";
+import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNative";
+import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -69,6 +71,31 @@ export function ProSubscribeScreenWrapper() {
       language={language}
       onClose={() => navigation.goBack()}
       onSuccess={(plan) => navigation.navigate("ProSuccess", { plan })}
+      onOpenPreview={() => navigation.navigate("ProSubscribePreview")}
+    />
+  );
+}
+
+export function ProSubscribePreviewScreenWrapper() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ProSubscribePreviewNative
+      language={language}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function SeasonPredictPreviewScreenWrapper() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <SeasonPredictPreviewScreenNative
+      language={language}
+      onClose={() => navigation.goBack()}
     />
   );
 }

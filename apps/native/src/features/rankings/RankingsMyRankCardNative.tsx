@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
 import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
+import {
+  formatRankTierGapForHud,
+  type RankTierGapHint,
+} from "../../../../../lib/rankings/rankTierMilestone";
+import {
+  resolveMyRankProgressSnapshotLimit,
+  type MyRankProgressPoint,
+} from "../../../../../lib/rankings/myRankRankingProgress";
+import MyRankRankingProgressNative from "./MyRankRankingProgressNative";
 import {
   computeMyRankTopPercent,
   deriveMyRankListAvgRow,
@@ -79,6 +88,7 @@ export function MyRankCardNative({
   loading,
   statsScramble,
   isPro,
+  displayTier,
   rankDeltaPlaces,
   language,
   miniMetrics,
@@ -88,6 +98,10 @@ export function MyRankCardNative({
   mobileWide = false,
   cardResetKey,
   onShareStateChange,
+  rankTierGap = null,
+  gapHref = null,
+  onOpenGap,
+  rankProgress,
 }: {
   rank: number | null;
   metric: MobileMetric;
@@ -99,6 +113,8 @@ export function MyRankCardNative({
   loading?: boolean;
   statsScramble?: boolean;
   isPro?: boolean;
+  /** Web `displayTier` — Free / Pro UI ゲート */
+  displayTier?: "free" | "pro";
   rankDeltaPlaces?: number | null;
   language: RankingsLanguage;
   miniMetrics?: MyRankMiniMetric[];
@@ -110,9 +126,24 @@ export function MyRankCardNative({
   /** Web `mobileWide` — 親 padding 内でカード幅をリストと揃える */
   mobileWide?: boolean;
   onShareStateChange?: (state: MyRankCardShareState) => void;
+  /** Pro のみ — 次順位帯までの総合得点差（totalScore タブ時） */
+  rankTierGap?: RankTierGapHint | null;
+  /** Pro — Gap 画面リンクの有無（href の代わりに存在判定に使用） */
+  gapHref?: string | null;
+  /** Pro — Gap 画面への遷移コールバック */
+  onOpenGap?: () => void;
+  /** Ranking Progress 用スナップショット（未蓄積時は NO DATA） */
+  rankProgress?: MyRankProgressPoint[] | null;
 }) {
   const t = rankingsTexts(language);
-  const frameTone = resolveMyRankFrameTone(rankDeltaPlaces);
+  const freeTier = displayTier === "free";
+  const proTier = displayTier === "pro";
+  const showProBadge = Boolean(isPro) && !freeTier;
+  // Web: displayTier 指定時は順位デルタで枠色を変えない（Free/Pro は基準トーン）
+  const frameTone = resolveMyRankFrameTone(
+    displayTier != null ? null : rankDeltaPlaces
+  );
+  const displayRankDelta = displayTier != null ? null : rankDeltaPlaces;
   const accent = myRankCardAccent(frameTone);
   const metricAccent = rankingMetricAccent(metric);
   const segAccent = {
@@ -140,8 +171,14 @@ export function MyRankCardNative({
       : null;
 
   const topPercent =
-    !loading && rank != null && typeof totalEntries === "number" && totalEntries > 0
-      ? computeMyRankTopPercent(rank, totalEntries)
+    !loading &&
+    !freeTier &&
+    rank != null &&
+    typeof totalEntries === "number" &&
+    totalEntries > 0
+      ? computeMyRankTopPercent(rank, totalEntries, {
+          showMax: proTier ? null : undefined,
+        })
       : null;
   const topPercentLabel =
     topPercent != null ? t.topPercent.replace("{n}", topPercent) : null;
@@ -149,6 +186,25 @@ export function MyRankCardNative({
   const posts =
     typeof totalPosts === "number" ? totalPosts : (statsSource?.totalPosts ?? 0);
   const avgRow = deriveMyRankListAvgRow(statsSource);
+
+  const rankTierGapHud =
+    metric === "totalScore" && rankTierGap
+      ? formatRankTierGapForHud(rankTierGap, language === "en" ? "en" : "ja")
+      : null;
+  const showRankTierGapHud = proTier && rankTierGapHud != null;
+  const showGapLink =
+    proTier &&
+    metric === "totalScore" &&
+    typeof gapHref === "string" &&
+    gapHref.length > 0;
+
+  const showRankMetaInline = freeTier && displayTier != null;
+  const showRankingProgress = displayTier != null || rankProgress !== undefined;
+  const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
+    displayTier,
+    isPro,
+  });
+  const progressPoints = rankProgress ?? [];
 
   const metricValueDisplay = (() => {
     if (loading || statsPending) return "···";
@@ -207,7 +263,7 @@ export function MyRankCardNative({
     <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
       <View style={styles.myRankCaptureWrap}>
         <View ref={captureRef} collapsable={false}>
-          <MyRankCardFrameNative tone={frameTone}>
+          <MyRankCardFrameNative tone={frameTone} proSpec={proTier}>
         <LinearGradient
           pointerEvents="none"
           colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)", "transparent"]}
@@ -238,7 +294,7 @@ export function MyRankCardNative({
                 <Text style={styles.myRankEntries}>/ {entriesDisplay}</Text>
               ) : null}
               {!loading && !statsPending && rank != null ? (
-                <RankDeltaBadgeNative delta={rankDeltaPlaces} size="md" />
+                <RankDeltaBadgeNative delta={displayRankDelta} size="md" />
               ) : null}
             </View>
           </View>
@@ -263,12 +319,30 @@ export function MyRankCardNative({
                       {displayName.trim()}
                     </Text>
                   ) : null}
-                  {isPro ? (
+                  {showProBadge ? (
                     <View style={styles.proBadgeWrap}>
                       <Text style={styles.proBadgeInner}>PRO</Text>
                     </View>
                   ) : null}
                 </View>
+                {showRankTierGapHud && rankTierGapHud ? (
+                  <Text style={myRankLocalStyles.tierGapText} numberOfLines={1}>
+                    {rankTierGapHud.segments.map((seg, i) => (
+                      <Text
+                        key={i}
+                        style={seg.tone === "tier" ? myRankLocalStyles.tierGapGold : null}
+                      >
+                        {seg.text}
+                      </Text>
+                    ))}
+                  </Text>
+                ) : showRankMetaInline ? (
+                  <RankMetaStripNative
+                    posts={posts}
+                    metric={metric}
+                    avgRow={avgRow}
+                  />
+                ) : null}
               </View>
               <View style={styles.myRankHudCol}>
                 <Text style={[styles.myRankHudLabel, { color: metricAccent.labelDim }]}>
@@ -291,12 +365,14 @@ export function MyRankCardNative({
               </View>
             </View>
 
-            <RankMetaStripNative
-              topPercentLabel={topPercentLabel}
-              posts={posts}
-              metric={metric}
-              avgRow={avgRow}
-            />
+            {showRankMetaInline ? null : (
+              <RankMetaStripNative
+                topPercentLabel={topPercentLabel}
+                posts={posts}
+                metric={metric}
+                avgRow={avgRow}
+              />
+            )}
 
             <View style={styles.myRankSegWrap}>
               <CyberSlantedSegBarNative
@@ -311,9 +387,33 @@ export function MyRankCardNative({
           </View>
         </View>
 
+        {showRankingProgress ? (
+          <MyRankRankingProgressNative
+            points={progressPoints}
+            maxSnapshots={progressSnapshotLimit}
+            loading={loading}
+            language={language === "en" ? "en" : "ja"}
+            emptyHint={t.rankingProgressNoData}
+          />
+        ) : null}
+
+        {showGapLink ? (
+          <View style={myRankLocalStyles.gapLinkWrap}>
+            <Pressable
+              onPress={onOpenGap}
+              accessibilityRole="button"
+              style={myRankLocalStyles.gapLink}
+            >
+              <Text style={myRankLocalStyles.gapLinkText} numberOfLines={1}>
+                ◈ {t.rankGapViewGap}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.myRankFooter}>
           <Text style={styles.myRankFooterText} numberOfLines={1}>
-            UNITERZ
+            {proTier || (isPro && !freeTier) ? "UNITERZ/PRO" : "UNITERZ"}
             {leagueDisplay ? ` · ${leagueDisplay}` : ""}
             {` · ${MY_RANK_METRIC_HUD_LABEL[metric]}`}
             {` // ${serialDateKey}`}
@@ -326,3 +426,40 @@ export function MyRankCardNative({
     </View>
   );
 }
+
+const myRankLocalStyles = StyleSheet.create({
+  tierGapText: {
+    marginTop: 3,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(140,240,255,0.88)",
+    fontVariant: ["tabular-nums"],
+    fontFamily: "Oxanium_700Bold",
+  },
+  tierGapGold: {
+    color: "#FFD65A",
+  },
+  gapLinkWrap: {
+    paddingHorizontal: 10,
+    paddingTop: 8,
+  },
+  gapLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(252,211,77,0.25)",
+    backgroundColor: "rgba(251,191,36,0.08)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  gapLinkText: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(254,243,199,0.9)",
+    fontFamily: "Oxanium_700Bold",
+  },
+});

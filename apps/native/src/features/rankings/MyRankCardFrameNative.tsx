@@ -19,26 +19,48 @@ export function resolveMyRankFrameTone(
 export function MyRankCardFrameNative({
   children,
   tone = "up",
+  proSpec = false,
   style,
 }: {
   children: ReactNode;
   tone?: MyRankCardFrameTone;
+  /** Web `proSpec` — Pro 枠（ゴールド寄りコーナー） */
+  proSpec?: boolean;
   style?: ViewStyle;
 }) {
   const accent = myRankCardAccent(tone);
-  const corner = accent.primary;
+  const corner = proSpec ? "#f5d78e" : accent.primary;
 
   return (
-    <View style={[styles.frame, style]}>
+    <View
+      style={[
+        styles.frame,
+        proSpec ? styles.frameProSpec : null,
+        style,
+      ]}
+    >
       <LinearGradient
         pointerEvents="none"
-        colors={["rgba(14,16,22,0.98)", "rgba(9,11,16,0.99)", "rgba(6,7,10,1)"]}
+        colors={
+          proSpec
+            ? ["rgba(22,18,10,0.98)", "rgba(12,10,8,0.99)", "rgba(8,7,5,1)"]
+            : ["rgba(14,16,22,0.98)", "rgba(9,11,16,0.99)", "rgba(6,7,10,1)"]
+        }
         locations={[0, 0.52, 1]}
         start={{ x: 0.1, y: 0 }}
         end={{ x: 0.9, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      <View pointerEvents="none" style={[styles.edge, { borderColor: accent.hairline }]} />
+      {proSpec ? (
+        <View pointerEvents="none" style={styles.proAmbient} />
+      ) : null}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.edge,
+          { borderColor: proSpec ? "rgba(245,215,142,0.35)" : accent.hairline },
+        ]}
+      />
       <View pointerEvents="none" style={[styles.cornerTl, { borderColor: corner }]}>
         <Text style={[styles.cornerPlus, { color: corner }]}>+</Text>
       </View>
@@ -57,6 +79,13 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
+  },
+  frameProSpec: {
+    borderColor: "rgba(245,215,142,0.28)",
+  },
+  proAmbient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(245,215,142,0.04)",
   },
   edge: {
     ...StyleSheet.absoluteFillObject,

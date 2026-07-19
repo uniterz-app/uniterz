@@ -11,14 +11,15 @@ export const KINETIK_RED = "#ff4757";
 
 export type KinetikMetricAccent = "green" | "magenta" | "cyan" | "red";
 
+/** Web `ProfileEditKinetikPanel` ACCENT.glow（0.35）に準拠 */
 export const KINETIK_METRIC_ACCENT: Record<
   KinetikMetricAccent,
   { line: string; fill: string; glow: string }
 > = {
-  green: { line: KINETIK_GREEN, fill: KINETIK_GREEN, glow: "rgba(168,255,42,0.18)" },
-  magenta: { line: KINETIK_MAGENTA, fill: KINETIK_MAGENTA, glow: "rgba(255,43,214,0.18)" },
-  cyan: { line: KINETIK_CYAN, fill: KINETIK_CYAN, glow: "rgba(34,211,238,0.18)" },
-  red: { line: KINETIK_RED, fill: KINETIK_RED, glow: "rgba(255,71,87,0.18)" },
+  green: { line: KINETIK_GREEN, fill: KINETIK_GREEN, glow: "rgba(168,255,42,0.35)" },
+  magenta: { line: KINETIK_MAGENTA, fill: KINETIK_MAGENTA, glow: "rgba(255,43,214,0.35)" },
+  cyan: { line: KINETIK_CYAN, fill: KINETIK_CYAN, glow: "rgba(34,211,238,0.35)" },
+  red: { line: KINETIK_RED, fill: KINETIK_RED, glow: "rgba(255,71,87,0.35)" },
 };
 
 /** Web `--kinetik-frame`（`profile-kinetik-panel--accent-*`）と同値 */
