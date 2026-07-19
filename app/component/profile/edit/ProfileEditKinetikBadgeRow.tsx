@@ -70,7 +70,11 @@ export default function ProfileEditKinetikBadgeRow({
               PRO_BRIDGE_COUNT_CLASS[proBridgeLayout],
             ].join(" ")
           : "flex-wrap",
-        inline ? "min-h-0 items-center" : isProBridge ? "min-h-14 sm:min-h-16" : "min-h-11 sm:min-h-12",
+        inline
+          ? "min-h-0 items-center"
+          : isProBridge
+            ? "min-h-[4.5rem] items-start sm:min-h-[5rem]"
+            : "min-h-11 sm:min-h-12",
         badges.length === 0 && !inline ? "items-center" : "",
       ].join(" ")}
     >

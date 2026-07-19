@@ -151,7 +151,7 @@ function KinetikSegBar({
               background: lit ? colors.fill : "rgba(255,255,255,0.08)",
               boxShadow: lit
                 ? isPlanPro
-                  ? `0 0 10px ${colors.glow}, inset 0 1px 0 rgba(255,255,255,0.35)`
+                  ? `0 0 8px color-mix(in srgb, ${colors.glow} 40%, transparent), inset 0 1px 0 rgba(255,255,255,0.28)`
                   : `0 0 6px ${colors.glow}`
                 : undefined,
             }}
@@ -255,7 +255,12 @@ function MetricCard({
           "absolute top-3 bottom-3 left-0",
           isPlanPro ? "profile-plan-pro-metric-card__bar w-[4px]" : "w-[2px]",
         ].join(" ")}
-        style={{ background: colors.line, boxShadow: `0 0 8px ${colors.glow}` }}
+        style={{
+          background: colors.line,
+          boxShadow: isPlanPro
+            ? `0 0 10px color-mix(in srgb, ${colors.glow} 45%, transparent)`
+            : `0 0 8px ${colors.glow}`,
+        }}
         aria-hidden
       />
       {isPlanPro ? (
@@ -1194,7 +1199,7 @@ export default function ProfileEditKinetikPanel({
                 </p>
               ) : null}
               {badges.length > 0 ? (
-                <div className="mt-3 w-full">
+                <div className="profile-edit-kinetik-badge-bridge mt-3 w-full overflow-visible">
                   <ProfileEditKinetikBadgeRow
                     badges={badges}
                     layout={layout}

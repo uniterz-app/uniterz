@@ -1,12 +1,7 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { RANK_SNAPSHOT_HISTORY_SUBCOL } from "@/lib/rankings/rankingPhase";
-import {
-  getYesterdayDateKeyJST,
-  RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
-  subtractOneDayFromDateKeyJST,
-} from "@/lib/rankings/rankSnapshotDate";
+import { loadMostRecentPriorRankSnapshotHistory } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import type {
   BulkMetricPayload,
   BulkRankingMetric,
@@ -133,19 +128,8 @@ function readStoredRank(
 async function loadPriorHistoryBlock(
   uid: string
 ): Promise<Record<string, unknown> | null> {
-  let key = getYesterdayDateKeyJST();
-  const adminDb = getAdminDb();
-  for (let i = 0; i < RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS; i++) {
-    const snap = await adminDb
-      .collection("cumulative_stats")
-      .doc(uid)
-      .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
-      .doc(key)
-      .get();
-    if (snap.exists) return (snap.data() ?? {}) as Record<string, unknown>;
-    key = subtractOneDayFromDateKeyJST(key);
-  }
-  return null;
+  const prior = await loadMostRecentPriorRankSnapshotHistory(uid);
+  return prior?.data ?? null;
 }
 
 function readPriorRankFromHist(

@@ -447,6 +447,8 @@ export default function GamesHomeScreen({
   });
   const mainScrollRef = useRef<ScrollView | null>(null);
   const didInitPreferredLeagueRef = useRef(false);
+  /** preferredLeague（と表示名・言語）確定まで games フェッチを止める */
+  const [preferredLeagueReady, setPreferredLeagueReady] = useState(false);
   const skipAutoAdvanceRef = useRef(false);
   const suppressAutoAdvanceForTodayRef = useRef(false);
   const [selectedGame, setSelectedGame] = useState<Record<string, unknown> | null>(
@@ -505,9 +507,10 @@ export default function GamesHomeScreen({
     setSelectedLeague,
     goPrevDay,
     goNextDay,
-  } = useTodayGames();
+  } = useTodayGames({ enabled: preferredLeagueReady });
   /** データ未取得時のみスケルトン（キャッシュ表示中は裏更新でもスケルトンに戻さない） */
-  const showInitialSkeleton = loading && !hasWindowData;
+  const showInitialSkeleton =
+    (!preferredLeagueReady || loading) && !hasWindowData;
   const reduceMotion = useReducedMotion() ?? false;
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
@@ -541,6 +544,7 @@ export default function GamesHomeScreen({
     const uid = fUser?.uid ?? null;
     if (!uid) {
       didInitPreferredLeagueRef.current = true;
+      setPreferredLeagueReady(true);
       return;
     }
 
@@ -549,26 +553,42 @@ export default function GamesHomeScreen({
       try {
         const snap = await getDoc(doc(db, "users", uid));
         if (cancelled) return;
-        const preferred = parsePreferredLeague(
-          snap.exists() ? snap.data()?.preferredLeague : null
-        );
+        const row = snap.exists()
+          ? (snap.data() as {
+              preferredLeague?: unknown;
+              displayName?: unknown;
+              language?: unknown;
+            })
+          : undefined;
+        const preferred = parsePreferredLeague(row?.preferredLeague ?? null);
         if (preferred) {
           const gamesLeague = preferredLeagueToGamesLeague(preferred);
           if (gamesLeague === "nba" || gamesLeague === "wc") {
             setSelectedLeague(gamesLeague);
           }
         }
+        const name =
+          typeof row?.displayName === "string" ? row.displayName.trim() : "";
+        setUserDisplayName(name || (fUser?.displayName ?? ""));
+        setLanguage(row?.language === "en" ? "en" : "ja");
       } catch {
         // Web と同じく、取得できない場合は画面既定のリーグを使う。
+        if (!cancelled) {
+          setUserDisplayName(fUser?.displayName ?? "");
+          setLanguage("ja");
+        }
       } finally {
-        if (!cancelled) didInitPreferredLeagueRef.current = true;
+        if (!cancelled) {
+          didInitPreferredLeagueRef.current = true;
+          setPreferredLeagueReady(true);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [authStatus, fUser?.uid, setSelectedLeague]);
+  }, [authStatus, fUser?.uid, fUser?.displayName, setSelectedLeague]);
 
   useEffect(() => {
     void readWcGamesTabAnnouncementSeenNative().then((seen) => {
@@ -941,34 +961,6 @@ export default function GamesHomeScreen({
       alive = false;
     };
   }, [fUser, gameIdSet, myPredictionsReloadNonce]);
-
-  useEffect(() => {
-    let alive = true;
-    async function loadUserName() {
-      if (!fUser?.uid) {
-        setUserDisplayName("");
-        return;
-      }
-      try {
-        const snap = await getDoc(doc(db, "users", fUser.uid));
-        if (!alive) return;
-        const row = snap.data() as
-          | { displayName?: unknown; language?: unknown }
-          | undefined;
-        const name = typeof row?.displayName === "string" ? row.displayName.trim() : "";
-        setUserDisplayName(name || (fUser.displayName ?? ""));
-        setLanguage(row?.language === "en" ? "en" : "ja");
-      } catch {
-        if (!alive) return;
-        setUserDisplayName(fUser.displayName ?? "");
-        setLanguage("ja");
-      }
-    }
-    void loadUserName();
-    return () => {
-      alive = false;
-    };
-  }, [fUser?.uid, fUser?.displayName, myPredictionsReloadNonce]);
 
   const t = useMemo(() => getGamesTexts(language), [language]);
 

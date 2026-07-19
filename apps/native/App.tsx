@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { useFonts } from "expo-font";
+import { useFonts, loadAsync as loadFontAsync } from "expo-font";
 import { Oxanium_700Bold, Oxanium_800ExtraBold } from "@expo-google-fonts/oxanium";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import { Montserrat_900Black_Italic } from "@expo-google-fonts/montserrat";
@@ -25,6 +25,7 @@ import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
 ensureNativeSplashHeld();
 
 export default function App() {
+  /** 起動ゲートは見出し系のみ。日本語本文フォントは後追いで読み込む */
   const [fontsLoaded] = useFonts({
     BebasNeue_400Regular,
     Montserrat_900Black_Italic,
@@ -32,12 +33,18 @@ export default function App() {
     Oxanium_800ExtraBold,
     AlfaSlabOne_400Regular,
     Rajdhani_700Bold,
-    NotoSansJP_700Bold,
   });
 
   useEffect(() => {
     ensureNativeSplashHeld();
   }, []);
+
+  useEffect(() => {
+    if (!fontsLoaded) return;
+    void loadFontAsync({ NotoSansJP_700Bold }).catch(() => {
+      /* 未ロード時はシステムフォントにフォールバック */
+    });
+  }, [fontsLoaded]);
 
   useNativeShareDeepLinks();
 

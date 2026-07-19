@@ -308,6 +308,13 @@ export async function fetchProfileUserStatsAll(
   return parseUserStatsJson(json);
 }
 
+function isTransientUserStatsError(message: string, status: number): boolean {
+  if (status === 502 || status === 503 || status === 504) return true;
+  return /UNAVAILABLE|ECONNRESET|ECONNREFUSED|DEADLINE_EXCEEDED|RST_STREAM|socket hang up/i.test(
+    message
+  );
+}
+
 /** Web `/api/profile/user-stats` と同一クエリ（parts 指定） */
 export async function fetchProfileUserStats(
   uid: string,
@@ -325,15 +332,41 @@ export async function fetchProfileUserStats(
     throw new Error("EXPO_PUBLIC_UNITERZ_API_BASE_URL が未設定です。");
   }
   const qs = buildProfileStatsQuery(uid, parts, ctx);
-  const res = await fetch(`${base}/api/profile/user-stats?${qs.toString()}`, {
-    method: "GET",
-    cache: "no-store",
-  });
-  const json = (await res.json()) as Record<string, unknown>;
-  if (!res.ok || json.ok !== true) {
-    throw new Error(typeof json.error === "string" ? json.error : "user-stats failed");
+  const url = `${base}/api/profile/user-stats?${qs.toString()}`;
+  const maxAttempts = 3;
+  let lastError = "user-stats failed";
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        cache: "no-store",
+      });
+      const json = (await res.json()) as Record<string, unknown>;
+      if (res.ok && json.ok === true) {
+        return parseUserStatsJson(json);
+      }
+      lastError =
+        typeof json.error === "string" ? json.error : "user-stats failed";
+      if (
+        attempt < maxAttempts - 1 &&
+        isTransientUserStatsError(lastError, res.status)
+      ) {
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(lastError);
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "user-stats failed";
+      const canRetry =
+        attempt < maxAttempts - 1 &&
+        isTransientUserStatsError(lastError, 503);
+      if (!canRetry) throw e instanceof Error ? e : new Error(lastError);
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+    }
   }
-  return parseUserStatsJson(json);
+
+  throw new Error(lastError);
 }
 
 /**

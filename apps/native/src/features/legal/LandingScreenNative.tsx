@@ -146,6 +146,10 @@ export default function LandingScreenNative() {
   /** 地平線の光 — 中央から左右へ伸びる */
   const horizon = useRef(new Animated.Value(0)).current;
   const horizonGlow = useRef(new Animated.Value(0)).current;
+  /** 入場後の線の脈動・コア点滅・横走りシマー */
+  const horizonPulse = useRef(new Animated.Value(0)).current;
+  const horizonCorePulse = useRef(new Animated.Value(0)).current;
+  const horizonShimmer = useRef(new Animated.Value(0)).current;
   /** ブランドが地平から立ち上がる */
   const brandOpacity = useRef(new Animated.Value(0)).current;
   const brandY = useRef(new Animated.Value(28)).current;
@@ -377,14 +381,115 @@ export default function LandingScreenNative() {
     return () => clearTimeout(t);
   }, [brandBreath]);
 
+  /** 地平線 — ゆっくり脈動＋中央コア＋光が横に走る */
+  useEffect(() => {
+    let pulseLoop: Animated.CompositeAnimation | null = null;
+    let shimmerLoop: Animated.CompositeAnimation | null = null;
+    const t = setTimeout(() => {
+      pulseLoop = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(horizonPulse, {
+              toValue: 1,
+              duration: 2400,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(horizonCorePulse, {
+              toValue: 1,
+              duration: 2400,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(horizonPulse, {
+              toValue: 0,
+              duration: 2400,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(horizonCorePulse, {
+              toValue: 0,
+              duration: 2400,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      );
+      shimmerLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(horizonShimmer, {
+            toValue: 1,
+            duration: 4200,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(horizonShimmer, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      horizonShimmer.setValue(0);
+      pulseLoop.start();
+      shimmerLoop.start();
+    }, 1600);
+    return () => {
+      clearTimeout(t);
+      pulseLoop?.stop();
+      shimmerLoop?.stop();
+    };
+  }, [horizonCorePulse, horizonPulse, horizonShimmer]);
+
   const blockShiftY = -windowHeight * 0.045;
   const horizonScaleX = horizon.interpolate({
     inputRange: [0, 1],
     outputRange: [0.02, 1],
   });
-  const horizonGlowOpacity = horizonGlow.interpolate({
+  const horizonLineOpacity = Animated.multiply(
+    horizonGlow.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 0.88],
+    }),
+    horizonPulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.58, 1],
+    })
+  );
+  const horizonCoreOpacity = Animated.multiply(
+    horizonGlow.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+    }),
+    horizonCorePulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.55, 1],
+    })
+  );
+  const horizonCoreScale = horizonCorePulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 0.7],
+    outputRange: [1, 1.55],
+  });
+  const horizonBloomOpacity = Animated.multiply(
+    horizonGlow.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 0.55],
+    }),
+    horizonCorePulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.35, 1],
+    })
+  );
+  const horizonBloomScale = horizonCorePulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.85],
+  });
+  const horizonShimmerX = horizonShimmer.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-140, 140],
   });
   const brandGlowOpacity = brandBreath.interpolate({
     inputRange: [0, 1],
@@ -463,15 +568,18 @@ export default function LandingScreenNative() {
                 <Animated.View
                   style={[
                     styles.horizonLineWrap,
-                    { opacity: horizonGlowOpacity, transform: [{ scaleX: horizonScaleX }] },
+                    {
+                      opacity: horizonLineOpacity,
+                      transform: [{ scaleX: horizonScaleX }],
+                    },
                   ]}
                 >
                   <LinearGradient
                     colors={[
                       "transparent",
-                      "rgba(160,245,255,0.45)",
+                      "rgba(160,245,255,0.4)",
                       "rgba(255,255,255,0.95)",
-                      "rgba(160,245,255,0.45)",
+                      "rgba(160,245,255,0.4)",
                       "transparent",
                     ]}
                     locations={[0, 0.28, 0.5, 0.72, 1]}
@@ -479,10 +587,47 @@ export default function LandingScreenNative() {
                     end={{ x: 1, y: 0.5 }}
                     style={styles.horizonLine}
                   />
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.horizonShimmer,
+                      { transform: [{ translateX: horizonShimmerX }] },
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[
+                        "transparent",
+                        "rgba(255,255,255,0.55)",
+                        "rgba(160,245,255,0.85)",
+                        "rgba(255,255,255,0.55)",
+                        "transparent",
+                      ]}
+                      locations={[0, 0.3, 0.5, 0.7, 1]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  </Animated.View>
                 </Animated.View>
                 <Animated.View
                   pointerEvents="none"
-                  style={[styles.horizonCore, { opacity: horizonGlowOpacity }]}
+                  style={[
+                    styles.horizonBloom,
+                    {
+                      opacity: horizonBloomOpacity,
+                      transform: [{ scale: horizonBloomScale }],
+                    },
+                  ]}
+                />
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.horizonCore,
+                    {
+                      opacity: horizonCoreOpacity,
+                      transform: [{ scale: horizonCoreScale }],
+                    },
+                  ]}
                 />
               </View>
 
@@ -585,30 +730,49 @@ const styles = StyleSheet.create({
   horizonSlot: {
     width: "78%",
     maxWidth: 280,
-    height: 16,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
+    overflow: "visible",
   },
   horizonLineWrap: {
     width: "100%",
-    height: 1.5,
+    height: 2,
     justifyContent: "center",
+    overflow: "hidden",
   },
   horizonLine: {
     width: "100%",
     height: 1.5,
   },
-  horizonCore: {
+  horizonShimmer: {
     position: "absolute",
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    shadowColor: "rgba(120,240,255,1)",
+    width: 56,
+    height: 3,
+    alignSelf: "center",
+  },
+  horizonBloom: {
+    position: "absolute",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(120,240,255,0.22)",
+    shadowColor: "rgba(120,240,255,0.9)",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 6,
+    shadowRadius: 12,
+  },
+  horizonCore: {
+    position: "absolute",
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    shadowColor: "rgba(160,245,255,1)",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
   },
   whisper: {
     marginTop: 2,

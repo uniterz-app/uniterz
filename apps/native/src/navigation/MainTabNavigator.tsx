@@ -63,6 +63,8 @@ export default function MainTabNavigator() {
               tabBarShowLabel: false,
               tabBarStyle: { display: "none" },
               sceneStyle: { backgroundColor: "transparent" },
+              lazy: true,
+              freezeOnBlur: true,
             }}
             initialRouteName="GamesTab"
           >

@@ -4914,6 +4914,7 @@ body::before {
   margin-inline: calc(-1 * var(--profile-pro-mobile-pad-x));
   width: calc(100% + 2 * var(--profile-pro-mobile-pad-x));
   padding-inline: 0;
+  /* float 振幅分は enter-wrap 側。ブリッジは通常の縦余白のみ */
   padding-block: 8px 12px;
 }
 
@@ -4924,8 +4925,9 @@ body::before {
   flex: 1 1 auto;
   flex-direction: column;
   justify-content: flex-start;
-  min-height: 60px;
+  min-height: calc(60px + 14px);
   padding: 8px 4px 12px;
+  overflow: visible;
 }
 
 .profile-edit-kinetik-badge-bridge--empty {
@@ -4934,11 +4936,8 @@ body::before {
 
 .profile-edit-kinetik-badge-row--pro-bridge {
   gap: 10px;
-}
-
-.profile-edit-kinetik-badge-row-scroll--pro-bridge-static {
   overflow: visible;
-  padding-bottom: 6px;
+  align-items: flex-start;
 }
 
 .profile-edit-kinetik-badge-row--pro-bridge.profile-edit-kinetik-badge-row--count-one,
@@ -4984,8 +4983,9 @@ body::before {
   position: relative;
   width: 100%;
   max-width: 100%;
+  /* overflow-x が visible 以外だと overflow-y:visible は auto 扱いになり縦が切れる */
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   scroll-snap-type: x proximity;
@@ -4994,6 +4994,15 @@ body::before {
 
 .profile-edit-kinetik-badge-row-scroll--pro-bridge::-webkit-scrollbar {
   display: none;
+}
+
+/**
+ * 件数少なめ（横スクロール不要）— 後勝ちで overflow:visible を取り戻す。
+ * これがないと盾型バッジの float(-6px) 先端が縦方向で見切れる。
+ */
+.profile-edit-kinetik-badge-row-scroll--pro-bridge.profile-edit-kinetik-badge-row-scroll--pro-bridge-static {
+  overflow: visible;
+  padding-bottom: 6px;
 }
 
 @media (min-width: 640px) {
@@ -5036,6 +5045,15 @@ body::before {
   opacity: 0;
   animation: profile-kinetik-badge-enter 580ms cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: transform, opacity;
+}
+
+/**
+ * PRO ブリッジのみ float（-6px）。
+ * 横スクロール時は親が縦もクリップするため、振幅＋バッファを上パディングで確保。
+ */
+.profile-edit-kinetik-badge-row--pro-bridge .profile-edit-kinetik-badge-enter-wrap {
+  padding-top: 14px;
+  overflow: visible;
 }
 
 @keyframes profile-kinetik-badge-float {
@@ -5116,11 +5134,10 @@ body::before {
     rgba(4, 10, 20, 0.52) 100%
   );
   backdrop-filter: blur(14px);
+  border-color: rgba(255, 255, 255, 0.07) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 0 0 1px rgba(34, 211, 238, 0.1),
-    0 6px 20px rgba(0, 0, 0, 0.38),
-    0 0 20px rgba(34, 211, 238, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 .profile-plan-pro--mobile-stage .profile-plan-pro-metrics-grid {
@@ -5366,7 +5383,7 @@ body::before {
   );
 }
 
-/* PRO メトリクスカード — 2×2 形維持・ガラス HUD 強化 */
+/* PRO メトリクスカード — 外周の色枠グローは出さない（左バー＋角だけ光らせる） */
 .profile-plan-pro-metric-card {
   position: relative;
   overflow: hidden;
@@ -5378,13 +5395,10 @@ body::before {
     rgba(5, 14, 26, 0.78) 48%,
     rgba(4, 10, 20, 0.86) 100%
   );
-  border-color: rgba(34, 211, 238, 0.28) !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 0 0 1px rgba(34, 211, 238, 0.12),
-    0 8px 26px rgba(0, 0, 0, 0.48),
-    0 0 24px rgba(34, 211, 238, 0.12),
-    0 0 40px rgba(167, 139, 250, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(12px);
 }
 
@@ -5409,11 +5423,11 @@ body::before {
   top: 0;
   left: 0;
   z-index: 1;
-  width: 14px;
-  height: 14px;
-  border-top: 2px solid rgba(34, 211, 238, 0.72);
-  border-left: 2px solid rgba(34, 211, 238, 0.72);
-  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.45));
+  width: 12px;
+  height: 12px;
+  border-top: 1.5px solid rgba(34, 211, 238, 0.34);
+  border-left: 1.5px solid rgba(34, 211, 238, 0.34);
+  filter: none;
   pointer-events: none;
 }
 
@@ -5423,71 +5437,68 @@ body::before {
   right: 0;
   bottom: 0;
   z-index: 1;
-  width: 14px;
-  height: 14px;
-  border-right: 2px solid rgba(167, 139, 250, 0.58);
-  border-bottom: 2px solid rgba(167, 139, 250, 0.58);
-  filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.35));
+  width: 12px;
+  height: 12px;
+  border-right: 1.5px solid rgba(167, 139, 250, 0.28);
+  border-bottom: 1.5px solid rgba(167, 139, 250, 0.28);
+  filter: none;
   pointer-events: none;
 }
 
 .profile-plan-pro-metric-card__bar {
   z-index: 1;
   border-radius: 2px;
+  /* 左バーだけ自然ににじませる（外周枠は光らせない） */
   box-shadow:
-    0 0 4px color-mix(in srgb, currentColor 55%, transparent),
-    0 0 10px color-mix(in srgb, currentColor 22%, transparent) !important;
+    0 0 10px color-mix(in srgb, currentColor 36%, transparent),
+    0 0 18px color-mix(in srgb, currentColor 14%, transparent) !important;
 }
 
 .profile-plan-pro-metric-card__value {
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 0 3px var(--metric-accent-glow, rgba(34, 211, 238, 0.22)));
+  filter: drop-shadow(0 0 3px var(--metric-accent-glow, rgba(34, 211, 238, 0.12)));
 }
 
 .profile-plan-pro-metric-card--green {
-  --metric-accent-glow: rgba(168, 255, 42, 0.28);
-  border-color: rgba(168, 255, 42, 0.32) !important;
+  --metric-accent-glow: rgba(168, 255, 42, 0.14);
+  border-color: rgba(255, 255, 255, 0.07) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 8px 26px rgba(0, 0, 0, 0.48),
-    0 0 18px rgba(168, 255, 42, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
 .profile-plan-pro-metric-card--magenta {
-  --metric-accent-glow: rgba(255, 43, 214, 0.26);
-  border-color: rgba(255, 43, 214, 0.3) !important;
+  --metric-accent-glow: rgba(255, 43, 214, 0.12);
+  border-color: rgba(255, 255, 255, 0.07) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 8px 26px rgba(0, 0, 0, 0.48),
-    0 0 18px rgba(255, 43, 214, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
 .profile-plan-pro-metric-card--cyan {
-  --metric-accent-glow: rgba(34, 211, 238, 0.28);
-  border-color: rgba(34, 211, 238, 0.34) !important;
+  --metric-accent-glow: rgba(34, 211, 238, 0.12);
+  border-color: rgba(255, 255, 255, 0.07) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 8px 26px rgba(0, 0, 0, 0.48),
-    0 0 18px rgba(34, 211, 238, 0.12);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
 .profile-plan-pro-metric-card--red {
-  --metric-accent-glow: rgba(248, 113, 113, 0.26);
-  border-color: rgba(248, 113, 113, 0.3) !important;
+  --metric-accent-glow: rgba(248, 113, 113, 0.12);
+  border-color: rgba(255, 255, 255, 0.07) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 8px 26px rgba(0, 0, 0, 0.48),
-    0 0 18px rgba(248, 113, 113, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
 .profile-plan-pro-metric-card .profile-plan-pro-metric-rank {
   position: relative;
   z-index: 1;
-  border-color: rgba(34, 211, 238, 0.38);
-  background: rgba(34, 211, 238, 0.1);
-  color: rgba(34, 211, 238, 0.95);
-  box-shadow: 0 0 12px rgba(34, 211, 238, 0.18);
+  border-color: rgba(34, 211, 238, 0.28);
+  background: rgba(34, 211, 238, 0.08);
+  color: rgba(34, 211, 238, 0.92);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.08);
   font-weight: 700;
   letter-spacing: 0.1em;
 }

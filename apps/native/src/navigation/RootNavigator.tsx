@@ -11,7 +11,6 @@ import ResetPasswordScreenNative from "../features/auth/ResetPasswordScreenNativ
 import OnboardingScreenNative from "../features/auth/OnboardingScreenNative";
 import AuthEntryScreen from "../features/auth/AuthEntryScreen";
 import LandingScreenNative from "../features/legal/LandingScreenNative";
-import { prefetchRankingsLogoGlb } from "../features/rankings/rankingsLogoGlbCache";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -20,8 +19,8 @@ const transparentStack = {
   headerShown: false,
   contentStyle: { backgroundColor: "transparent" as const },
   animation: "fade" as const,
-  detachInactiveScreens: false,
-  freezeOnBlur: false,
+  detachInactiveScreens: true,
+  freezeOnBlur: true,
 };
 
 function AuthNavigator() {
@@ -63,10 +62,6 @@ export default function RootNavigator() {
   const { status, fUser } = useFirebaseUser();
   const needsOnboarding = useNeedsOnboarding(fUser?.uid);
   const isAuthed = status === "ready" && !!fUser;
-
-  useEffect(() => {
-    if (isAuthed) prefetchRankingsLogoGlb();
-  }, [isAuthed]);
 
   if (status === "loading" || (isAuthed && needsOnboarding === null)) {
     /** 認証・プロフィール判定中はネイティブスプラッシュのまま（Landing の一瞬フラッシュを防ぐ） */

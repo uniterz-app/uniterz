@@ -4,7 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
-  ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, UIManager, View,
+  ActivityIndicator, Image, InteractionManager, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, UIManager, View,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -289,6 +289,19 @@ export default function ProfileHomeScreen({
   });
 
   const authReady = status === "ready";
+  /** カード用 phase を先に出し、チャート群は最初の描画後に起動する */
+  const [profileHeavyReady, setProfileHeavyReady] = useState(false);
+  useEffect(() => {
+    if (!authReady || !targetUid) {
+      setProfileHeavyReady(false);
+      return;
+    }
+    const task = InteractionManager.runAfterInteractions(() => {
+      setProfileHeavyReady(true);
+    });
+    return () => task.cancel();
+  }, [authReady, targetUid]);
+
   const statsBundle = useNativeProfileStats(
     targetUid,
     !!targetUid,
@@ -296,7 +309,8 @@ export default function ProfileHomeScreen({
     authReady
   );
   const dailyTrendChart = useNativeProfileDailyTrendChart(targetUid, {
-    enabled: tab === "overview" && !!targetUid && authReady,
+    enabled:
+      profileHeavyReady && tab === "overview" && !!targetUid && authReady,
     seedRows:
       statsBundle.dailyTrend.length > 0 ? statsBundle.dailyTrend : undefined,
     rankingLeague: profileStatsContext.rankingLeague,
@@ -305,7 +319,7 @@ export default function ProfileHomeScreen({
   });
   const streakBundle = useNativeStreakTracker(
     targetUid,
-    tab === "overview" && !!targetUid && authReady,
+    profileHeavyReady && tab === "overview" && !!targetUid && authReady,
     profileStatsContext
   );
 
@@ -345,7 +359,7 @@ export default function ProfileHomeScreen({
   const { sections: wcStackedMetricsSections, loading: wcStackedStatsLoading } =
     useProfileKinetikWcStackedStats(
       targetUid,
-      profileStatsContext.rankingLeague === "worldcup",
+      profileHeavyReady && profileStatsContext.rankingLeague === "worldcup",
       currentStreak,
       getUniterzApiBaseUrl() || undefined
     );
@@ -356,7 +370,8 @@ export default function ProfileHomeScreen({
     loading: wcRankTrendLoading,
   } = useProfileWcStackedRankTrend(
     targetUid,
-    tab === "overview" &&
+    profileHeavyReady &&
+      tab === "overview" &&
       !!targetUid &&
       authReady &&
       profileStatsContext.rankingLeague === "worldcup",
@@ -694,15 +709,23 @@ export default function ProfileHomeScreen({
     if (statsBundle.error) {
       const isTimeout =
         /timed out|timeout|network request failed/i.test(statsBundle.error);
+      const isFirestoreTransient =
+        /UNAVAILABLE|ECONNRESET|ECONNREFUSED|DEADLINE_EXCEEDED|RST_STREAM/i.test(
+          statsBundle.error
+        );
       return (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{statsBundle.error}</Text>
           <Text style={styles.warnText}>
-            {isTimeout
+            {isFirestoreTransient
               ? isJa
-                ? "Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL がシミュレータなら http://127.0.0.1:3000 になっているか確認してください。"
-                : "Check that Next.js (npm run dev) is running and EXPO_PUBLIC_UNITERZ_API_BASE_URL is http://127.0.0.1:3000 for the iOS Simulator."
-              : t.apiMissing}
+                ? "Firestore への接続が一時的に切れました。しばらくしてから画面を引き下げて再読み込みしてください。"
+                : "Firestore connection dropped temporarily. Pull to refresh in a moment."
+              : isTimeout
+                ? isJa
+                  ? "Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL がシミュレータなら http://127.0.0.1:3000 になっているか確認してください。"
+                  : "Check that Next.js (npm run dev) is running and EXPO_PUBLIC_UNITERZ_API_BASE_URL is http://127.0.0.1:3000 for the iOS Simulator."
+                : t.apiMissing}
           </Text>
         </View>
       );

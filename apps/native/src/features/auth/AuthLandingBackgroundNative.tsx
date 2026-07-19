@@ -1,157 +1,77 @@
 /**
- * 起動 Landing 専用背景 — Web `WireframeBg` 相当（パース地形 + グロー + モート）。
- * 3D ロゴは使わない。
+ * 起動 Landing / Auth 専用背景。
+ * グリッドは使わず、奥行きのあるシネマティックな光だけで構成する（軽量・静的）。
  */
-import { useEffect, useMemo } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
-import { Canvas, Line } from "@shopify/react-native-skia";
-import RisingMotesLayerNative from "../background/RisingMotesLayerNative";
-
-const GRID_STEP = 52;
-const GRID_H = "rgba(80,220,220,0.22)";
-const GRID_V = "rgba(80,220,220,0.13)";
-
-function usePerspectiveWireframe(width: number, height: number) {
-  return useMemo(() => {
-    if (width <= 0 || height <= 0) return null;
-    const gridW = width * 2.4;
-    const gridH = height * 1.6;
-    const nodes = [];
-    let i = 0;
-    for (let x = 0; x <= gridW; x += GRID_STEP) {
-      nodes.push(
-        <Line
-          key={`v${i}`}
-          p1={{ x, y: 0 }}
-          p2={{ x, y: gridH }}
-          color={GRID_V}
-          strokeWidth={1}
-        />
-      );
-      i += 1;
-    }
-    for (let y = 0; y <= gridH; y += GRID_STEP) {
-      nodes.push(
-        <Line
-          key={`h${i}`}
-          p1={{ x: 0, y }}
-          p2={{ x: gridW, y }}
-          color={GRID_H}
-          strokeWidth={1}
-        />
-      );
-      i += 1;
-    }
-    return { nodes, gridW, gridH };
-  }, [width, height]);
-}
-
-function GlowOverlays() {
-  return (
-    <>
-      <LinearGradient
-        pointerEvents="none"
-        colors={[
-          "rgba(0,220,255,0.22)",
-          "rgba(0,0,0,0)",
-          "rgba(180,70,220,0.16)",
-        ]}
-        locations={[0, 0.48, 1]}
-        start={{ x: 0.12, y: 0.08 }}
-        end={{ x: 0.92, y: 0.45 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <LinearGradient
-        pointerEvents="none"
-        colors={["#061f26", "#041418", "#0a0614", "#020a0e"]}
-        locations={[0, 0.4, 0.72, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <LinearGradient
-        pointerEvents="none"
-        colors={["rgba(0,0,0,0)", "rgba(255,120,60,0.04)", "rgba(0,0,0,0.5)"]}
-        locations={[0, 0.55, 1]}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-    </>
-  );
-}
 
 export default function AuthLandingBackgroundNative() {
-  const { width, height } = useWindowDimensions();
-  const wireframe = usePerspectiveWireframe(width, height);
-  const drift = useSharedValue(0);
-  const reveal = useSharedValue(0);
-
-  useEffect(() => {
-    reveal.value = withTiming(1, {
-      duration: 720,
-      easing: Easing.out(Easing.cubic),
-    });
-    drift.value = withRepeat(
-      withTiming(GRID_STEP, { duration: 14000, easing: Easing.linear }),
-      -1,
-      false
-    );
-  }, [drift, reveal]);
-
-  const wireframeStyle = useAnimatedStyle(() => ({
-    opacity: reveal.value * 0.92,
-    transform: [
-      { perspective: 820 },
-      { rotateX: "68deg" },
-      { translateY: -height * 0.22 + drift.value + (1 - reveal.value) * 28 },
-    ],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: reveal.value,
-  }));
-
-  if (width <= 0 || height <= 0) return null;
-
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      <Animated.View style={[StyleSheet.absoluteFillObject, glowStyle]}>
-        <GlowOverlays />
-      </Animated.View>
+    <View style={styles.root} pointerEvents="none">
+      {/* ベース — 上シアン寄り → 下に沈む深紫 */}
+      <LinearGradient
+        colors={["#04161c", "#061018", "#0a0814", "#03060a"]}
+        locations={[0, 0.38, 0.72, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
 
-      {wireframe ? (
-        <Animated.View
-          style={[
-            styles.wireframeWrap,
-            {
-              width: wireframe.gridW,
-              height: wireframe.gridH,
-              left: -width * 0.7,
-              top: height * 0.28,
-            },
-            wireframeStyle,
-          ]}
-        >
-          <Canvas style={{ width: wireframe.gridW, height: wireframe.gridH }}>
-            {wireframe.nodes}
-          </Canvas>
-        </Animated.View>
-      ) : null}
+      {/* 左上の柔らかいフィールド光 */}
+      <LinearGradient
+        colors={[
+          "rgba(34,211,238,0.22)",
+          "rgba(34,211,238,0.06)",
+          "transparent",
+        ]}
+        locations={[0, 0.42, 1]}
+        start={{ x: 0.05, y: 0 }}
+        end={{ x: 0.75, y: 0.62 }}
+        style={StyleSheet.absoluteFillObject}
+      />
 
-      <RisingMotesLayerNative lite />
+      {/* 右下のバイオレット・アンビエント */}
+      <LinearGradient
+        colors={[
+          "transparent",
+          "rgba(124,58,237,0.1)",
+          "rgba(88,28,135,0.18)",
+        ]}
+        locations={[0.35, 0.72, 1]}
+        start={{ x: 0.2, y: 0.2 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* 中央やや下のホライズン帯 — フィールド感 */}
+      <LinearGradient
+        colors={[
+          "transparent",
+          "rgba(45,212,191,0.07)",
+          "transparent",
+        ]}
+        locations={[0.28, 0.52, 0.78]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* 上下ヴィネットでロゴ／CTA を浮かせる */}
+      <LinearGradient
+        colors={[
+          "rgba(0,0,0,0.35)",
+          "transparent",
+          "transparent",
+          "rgba(0,0,0,0.55)",
+        ]}
+        locations={[0, 0.22, 0.62, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wireframeWrap: {
-    position: "absolute",
+  root: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#03060a",
   },
 });

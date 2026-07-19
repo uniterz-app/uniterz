@@ -21,7 +21,8 @@ const DEFAULT_TAB_THEME: CyberSlantedTabTheme = {
   accent: CYBER_TAB_CYAN,
   inactiveText: CYBER_TAB_CYAN,
   activeText: "#050508",
-  activeShadow: "0 0 18px rgba(0,245,255,0.45)",
+  /** 外周ハローを抑え、面の中に留まる薄い光に */
+  activeShadow: "0 0 10px rgba(0,245,255,0.14)",
 };
 
 const CyberSlantedTabFillContext = createContext(false);
@@ -57,7 +58,7 @@ export function CyberSlantedTab({
   const inactiveText = theme.inactiveText ?? theme.accent;
   const activeText = theme.activeText ?? "#050508";
   const activeShadow =
-    theme.activeShadow ?? "0 0 18px rgba(0,245,255,0.45)";
+    theme.activeShadow ?? "0 0 10px rgba(0,245,255,0.14)";
   const inactiveBorder = theme.inactiveBorder ?? theme.accent;
 
   return (

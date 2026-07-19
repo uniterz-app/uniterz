@@ -3,7 +3,7 @@
  * `fill` は Web と同じく Bar → Context → 各 Tab に伝播する。
  */
 import { createContext, useContext, useEffect, type ReactNode } from "react";
-import { Platform, Pressable, StyleSheet, View, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, View, type ViewStyle } from "react-native";
 import Animated, {
   Easing,
   interpolateColor,
@@ -97,6 +97,14 @@ export function CyberSlantedTabNative({
     color: interpolateColor(progress.value, [0, 1], [CYBER_TAB_CYAN, TAB_ACTIVE_TEXT]),
   }));
 
+  const skewPad = compact
+    ? fill
+      ? styles.tabFillCompact
+      : styles.tabCompact
+    : fill
+      ? styles.tabFillDefault
+      : null;
+
   return (
     <Pressable
       accessibilityRole={accessibilityRole}
@@ -104,21 +112,24 @@ export function CyberSlantedTabNative({
       onPress={onPress}
       style={({ pressed }) => [
         fill ? styles.tabOuterFill : styles.tabOuter,
-        active ? styles.tabActiveShadow : null,
         pressed ? styles.tabPressed : null,
       ]}
     >
+      {/**
+       * RN の View shadow は矩形のままなので、斜めタブだと「枠で光る」感じになる。
+       * 同じ skew の淡い面を重ねて、形に沿ったにじみにする。
+       */}
+      {active ? (
+        <>
+          <View pointerEvents="none" style={styles.tabGlowOuter} />
+          <View pointerEvents="none" style={styles.tabGlowInner} />
+        </>
+      ) : null}
       <Animated.View
         style={[
           styles.tabSkew,
           fill ? styles.tabSkewFill : null,
-          compact
-            ? fill
-              ? styles.tabFillCompact
-              : styles.tabCompact
-            : fill
-              ? styles.tabFillDefault
-              : null,
+          skewPad,
           tabAnimStyle,
         ]}
       >
@@ -231,6 +242,7 @@ const styles = StyleSheet.create({
   },
   tabSkew: {
     position: "relative",
+    zIndex: 1,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -254,18 +266,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  /** Web `box-shadow: 0 0 18px rgba(0,245,255,0.45)` — 外側 Pressable に付与 */
-  tabActiveShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgba(0,245,255,0.45)",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 18,
-      },
-      android: { elevation: 0 },
-      default: {},
-    }),
+  /** 斜めに揃えた薄いにじみ（枠光りに見えないよう低濃度） */
+  tabGlowOuter: {
+    position: "absolute",
+    zIndex: 0,
+    top: -6,
+    right: 0,
+    bottom: -6,
+    left: 0,
+    backgroundColor: "rgba(0,245,255,0.06)",
+    transform: [{ skewX: "-14deg" }],
+  },
+  tabGlowInner: {
+    position: "absolute",
+    zIndex: 0,
+    top: -1,
+    right: 6,
+    bottom: -1,
+    left: 6,
+    backgroundColor: "rgba(0,245,255,0.1)",
+    transform: [{ skewX: "-14deg" }],
   },
   tabPressed: {
     opacity: 0.92,

@@ -1,15 +1,9 @@
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
-import {
-  dateKeyJST,
-  getYesterdayDateKeyJST,
-  RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
-  subtractOneDayFromDateKeyJST,
-} from "@/lib/rankings/rankSnapshotDate";
+import { loadMostRecentPriorRankSnapshotHistory } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
+import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { RANK_SNAPSHOT_HISTORY_SUBCOL } from "@/lib/rankings/rankingPhase";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
 
@@ -120,22 +114,6 @@ async function wcExactHitDayDeltaFromDaily(
   return inc;
 }
 
-async function loadPriorHistoryDoc(uid: string) {
-  const adminDb = getAdminDb();
-  let key = getYesterdayDateKeyJST();
-  for (let i = 0; i < RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS; i++) {
-    const snap = await adminDb
-      .collection("cumulative_stats")
-      .doc(uid)
-      .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
-      .doc(key)
-      .get();
-    if (snap.exists) return snap.data() as HistoryDoc;
-    key = subtractOneDayFromDateKeyJST(key);
-  }
-  return null;
-}
-
 export type PriorSnapshotMetrics = SnapshotMetricValues;
 
 export async function loadPriorSnapshotMetrics(
@@ -145,8 +123,8 @@ export async function loadPriorSnapshotMetrics(
     rankingLeague: RankingLeagueSource;
   }
 ): Promise<PriorSnapshotMetrics | null> {
-  const priorDoc = await loadPriorHistoryDoc(uid);
-  return pickPriorValues(priorDoc ?? undefined, {
+  const prior = await loadMostRecentPriorRankSnapshotHistory(uid);
+  return pickPriorValues((prior?.data as HistoryDoc | undefined) ?? undefined, {
     wcStage: opts.wcStage ?? "overall",
     rankingLeague: opts.rankingLeague,
   });

@@ -145,9 +145,9 @@ function KinetikSegBar({
               {
                 backgroundColor: lit ? colors.fill : "rgba(255,255,255,0.08)",
                 shadowColor: lit ? colors.glow : "transparent",
-                /** Web: `0 0 10px glow` / `0 0 6px glow` — RN は不透明度を抑えて同程度に */
-                shadowOpacity: lit ? (isPlanPro ? 0.55 : 0.7) : 0,
-                shadowRadius: lit ? (isPlanPro ? 5 : 4) : 0,
+                /** 枠光りを避け、薄くにじませる */
+                shadowOpacity: lit ? (isPlanPro ? 0.28 : 0.55) : 0,
+                shadowRadius: lit ? (isPlanPro ? 6 : 4) : 0,
                 shadowOffset: { width: 0, height: 0 },
               },
             ]}
@@ -165,16 +165,16 @@ function metricValuePlanProAccentStyle(
   const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#f8fafc";
   const glow =
     accent === "green"
-      ? "rgba(168,255,42,0.22)"
+      ? "rgba(168,255,42,0.14)"
       : accent === "magenta"
-        ? "rgba(255,43,214,0.2)"
+        ? "rgba(255,43,214,0.12)"
         : accent === "red"
-          ? "rgba(248,113,113,0.2)"
-          : "rgba(34,211,238,0.22)";
+          ? "rgba(248,113,113,0.12)"
+          : "rgba(34,211,238,0.14)";
   return {
     color: line,
     textShadowColor: glow,
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   };
 }
 
@@ -335,8 +335,9 @@ function KinetikMetricCardNative({
           {
             backgroundColor: colors.line,
             shadowColor: colors.glow,
-            shadowOpacity: isPlanPro ? 0.45 : 1,
-            shadowRadius: isPlanPro ? 4 : 8,
+            /** 左バーのにじみだけ。カード外周は影を付けない */
+            shadowOpacity: isPlanPro ? 0.38 : 0.7,
+            shadowRadius: isPlanPro ? 9 : 8,
             shadowOffset: { width: 0, height: 0 },
           },
         ]}
@@ -622,6 +623,9 @@ const PRO_BRIDGE_BADGE_GAP = 10;
 const BADGE_ENTER_EASE = Easing.bezier(0.22, 1, 0.36, 1);
 /** Web `profile-kinetik-badge-float` 3.4s の片道 */
 const BADGE_FLOAT_HALF_MS = 1700;
+/** Web float 振幅（-6px）＋盾型など先端が枠いっぱいのバッジ用バッファ */
+const BADGE_FLOAT_TRAVEL_PX = 6;
+const BADGE_FLOAT_TOP_CLEARANCE_PX = BADGE_FLOAT_TRAVEL_PX + 8;
 
 /**
  * Web と同じく入場ラッパーとフロート本体を分離する。
@@ -663,7 +667,10 @@ function KinetikBadgeProBridgeWrapNative({
     floatY.value = withDelay(
       floatDelayMs,
       withRepeat(
-        withTiming(-6, { duration: BADGE_FLOAT_HALF_MS, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-BADGE_FLOAT_TRAVEL_PX, {
+          duration: BADGE_FLOAT_HALF_MS,
+          easing: Easing.inOut(Easing.ease),
+        }),
         -1,
         true
       )
@@ -1793,6 +1800,7 @@ const styles = StyleSheet.create({
   badgeScrollProBridgeWrap: {
     position: "relative",
     alignSelf: "stretch",
+    overflow: "visible",
   },
   badgeScrollProBridge: {
     alignSelf: "stretch",
@@ -1837,7 +1845,7 @@ const styles = StyleSheet.create({
   badgeBridgePro: {
     flexGrow: 1,
     flexShrink: 1,
-    minHeight: 60,
+    minHeight: 60 + BADGE_FLOAT_TOP_CLEARANCE_PX,
     marginHorizontal: -16,
     paddingTop: 8,
     paddingBottom: 12,
@@ -1848,10 +1856,15 @@ const styles = StyleSheet.create({
   badgeBridgeProEmpty: {
     minHeight: 48,
   },
-  /** Web `.profile-edit-kinetik-badge-enter-wrap` */
+  /**
+   * Web `.profile-edit-kinetik-badge-enter-wrap`
+   * 上パディングで float 振幅分を確保し、盾型など枠いっぱいの形でも見切れないようにする。
+   * （親 `frameOuter` は overflow:hidden のため、レイアウト内に余白を持つ必要がある）
+   */
   badgeEnterWrap: {
     flexShrink: 0,
     overflow: "visible",
+    paddingTop: BADGE_FLOAT_TOP_CLEARANCE_PX,
   },
   /** Web `.profile-edit-kinetik-badge-float` */
   badgeFloatWrap: {
@@ -1863,10 +1876,12 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "visible",
   },
   badgeThumbProBridge: {
     width: 60,
     height: 60,
+    overflow: "visible",
   },
   badgeThumbInline: {
     width: 36,
@@ -1994,14 +2009,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   metricCardPlanPro: {
-    /** 塗りは `metricCardPlanProFill`。影は Web の落ち影（黒）優先 */
+    /** 塗りは Fill。色付き外周枠は出さず、黒落ち影のみ */
     backgroundColor: "transparent",
-    borderColor: "rgba(34,211,238,0.28)",
+    borderColor: "rgba(255,255,255,0.07)",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.48,
-    shadowRadius: 13,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.42,
+    shadowRadius: 12,
+    elevation: 3,
     overflow: "hidden",
   },
   metricCardPlanProFill: {
@@ -2012,40 +2027,40 @@ const styles = StyleSheet.create({
   metricCardPlanProSheen: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
-    opacity: 0.65,
+    opacity: 0.45,
   },
   metricCardPlanProGreen: {
-    borderColor: "rgba(168,255,42,0.32)",
+    borderColor: "rgba(255,255,255,0.07)",
   },
   metricCardPlanProMagenta: {
-    borderColor: "rgba(255,43,214,0.3)",
+    borderColor: "rgba(255,255,255,0.07)",
   },
   metricCardPlanProCyan: {
-    borderColor: "rgba(34,211,238,0.34)",
+    borderColor: "rgba(255,255,255,0.07)",
   },
   metricCardPlanProRed: {
-    borderColor: "rgba(248,113,113,0.3)",
+    borderColor: "rgba(255,255,255,0.07)",
   },
   metricCardCornerTl: {
     position: "absolute",
     top: 0,
     left: 0,
-    width: 14,
-    height: 14,
-    borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderColor: "rgba(34,211,238,0.72)",
+    width: 12,
+    height: 12,
+    borderTopWidth: 1.5,
+    borderLeftWidth: 1.5,
+    borderColor: "rgba(34,211,238,0.32)",
     zIndex: 1,
   },
   metricCardCornerBr: {
     position: "absolute",
     right: 0,
     bottom: 0,
-    width: 14,
-    height: 14,
-    borderRightWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: "rgba(167,139,250,0.58)",
+    width: 12,
+    height: 12,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 1.5,
+    borderColor: "rgba(167,139,250,0.26)",
     zIndex: 1,
   },
   metricAccentBarPlanPro: {
@@ -2075,12 +2090,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   metricRankBadgePlanPro: {
-    borderColor: "rgba(34,211,238,0.38)",
-    backgroundColor: "rgba(34,211,238,0.1)",
+    borderColor: "rgba(34,211,238,0.28)",
+    backgroundColor: "rgba(34,211,238,0.08)",
     shadowColor: "#22d3ee",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
   },
   metricAccentBar: {
     position: "absolute",
