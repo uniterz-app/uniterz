@@ -9,7 +9,7 @@ import {
   cyberRankPalette,
   CYBER_LIST_CYAN,
 } from "@/lib/rankings/cyberRankVisual";
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { RankFirstBorderEdgeScan } from "@/app/component/rankings/RankFirstBorderEdgeScan";
 import {
@@ -17,6 +17,10 @@ import {
   rankingFontSizePx,
 } from "@/lib/rankings/rankingJaTextSize";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
+import RankingListProSkinFx, {
+  type RankingListProSkinIntensity,
+} from "@/app/component/rankings/RankingListProSkinFx";
+import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import {
   formatListMetricDayDelta,
   listRowAvgText,
@@ -265,6 +269,8 @@ export function CyberRankingListRow({
   scoreLayout = "stack",
   subtleShell = false,
   showFirstPlaceFrame = false,
+  proSkinVariant = null,
+  proSkinIntensity = "medium",
 }: {
   rank: number;
   displayName: string;
@@ -287,6 +293,9 @@ export function CyberRankingListRow({
   subtleShell?: boolean;
   /** subtle シェルでも 1 位の EDGE SCAN 枠を表示（グループ詳細ランキング等） */
   showFirstPlaceFrame?: boolean;
+  /** Pro Skin — 実パターンを行背景に（未指定時は従来） */
+  proSkinVariant?: ProfilePlanProBgVariant | null;
+  proSkinIntensity?: RankingListProSkinIntensity;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame =
@@ -339,6 +348,10 @@ export function CyberRankingListRow({
     </span>
   ) : null;
 
+  const baseBg = subtleShell
+    ? "rgba(255,255,255,0.02)"
+    : "linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 42%, rgba(0,0,0,0.12) 100%)";
+
   return (
     <article
       className={[
@@ -346,19 +359,23 @@ export function CyberRankingListRow({
         compact ? "min-h-[56px]" : isWebScore ? "min-h-[82px]" : "min-h-[72px]",
       ].join(" ")}
       style={{
-        background: subtleShell
-          ? "rgba(255,255,255,0.02)"
-          : "linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 42%, rgba(0,0,0,0.12) 100%)",
+        background: proSkinVariant ? "transparent" : baseBg,
         borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}
     >
+      {proSkinVariant ? (
+        <RankingListProSkinFx
+          variant={proSkinVariant}
+          intensity={proSkinIntensity}
+        />
+      ) : null}
       {firstFrame ? <RankFirstBorderEdgeScan /> : null}
 
       <span
         aria-hidden
         className={[
           "w-[3px] shrink-0",
-          firstFrame ? "relative z-10" : "",
+          firstFrame || proSkinVariant ? "relative z-10" : "",
         ].join(" ")}
         style={{
           background: palette.accent,
@@ -369,7 +386,7 @@ export function CyberRankingListRow({
       <div
         className={[
           "flex min-w-0 flex-1 items-center",
-          firstFrame ? "relative z-10" : "",
+          firstFrame || proSkinVariant ? "relative z-10" : "",
           compact ? "gap-2 px-2 py-2" : "gap-3 px-3 py-2.5 sm:gap-4 sm:px-4",
         ].join(" ")}
       >

@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
-import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
-import type { RankingRowWithCountry } from "../../../../../app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
+import type { RankingRowWithCountry } from "../../../../../lib/rankings/rankingMetrics";
 import { getCountryCode } from "../../../../../lib/rankings/country";
 import { metricNum } from "../../../../../lib/rankings/metric";
 import { type RankingsLanguage } from "./rankingsTexts";

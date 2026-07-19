@@ -91,16 +91,19 @@ export function buildMyRankMiniMetrics(
   ];
 }
 
-/** 4 指標バーのリーダー行がすべて揃ったか（PTS / PREC / UPSET の max 計算用） */
+/** 4 指標バーのリーダー行がすべて揃ったか（PTS / PREC|SCORER / UPSET の max 計算用） */
 export function isMyRankMiniMetricsReady(
   byMetric?: Record<string, { rows?: unknown[] } | undefined> | null,
   rankingLeague: "nba" | "worldcup" = "nba"
 ): boolean {
+  if (!Array.isArray(byMetric?.totalPoints?.rows)) return false;
+  if (!Array.isArray(byMetric?.totalUpset?.rows)) return false;
   const precKey =
     rankingLeague === "worldcup" ? "totalExactHits" : "totalPrecision";
+  if (Array.isArray(byMetric?.[precKey]?.rows)) return true;
+  // NBA Weekly/Monthly: precision の代わりに goalScorerHits
   return (
-    Array.isArray(byMetric?.totalPoints?.rows) &&
-    Array.isArray(byMetric?.[precKey]?.rows) &&
-    Array.isArray(byMetric?.totalUpset?.rows)
+    rankingLeague === "nba" &&
+    Array.isArray(byMetric?.totalGoalScorerHits?.rows)
   );
 }

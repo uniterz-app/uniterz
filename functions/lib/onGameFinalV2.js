@@ -62,6 +62,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         advancingTeamId: (_f = game.advancingTeamId) !== null && _f !== void 0 ? _f : null,
         knockout: game.knockout === true,
         goalScorers: game.goalScorers,
+        leadingScorers: game.leadingScorers,
     };
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();

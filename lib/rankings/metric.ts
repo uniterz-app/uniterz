@@ -1,7 +1,7 @@
 import type {
   MobileMetric,
   RankingRowWithCountry,
-} from "../../app/component/rankings/_data/mockRows";
+} from "./rankingMetrics";
 import { formatMetricDecimals, roundMetricDecimals } from "../format/metricDecimals";
 
 export function metricNum(r: RankingRowWithCountry, metric: MobileMetric) {

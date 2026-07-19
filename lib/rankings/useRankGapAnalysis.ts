@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
 import type { Language } from "@/lib/i18n/language";
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { RankGapAnalysis } from "@/lib/rankings/rankGapAnalysis";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
@@ -17,8 +15,6 @@ type State =
 export function useRankGapAnalysis(input: {
   enabled?: boolean;
   rankingLeague: RankingLeagueSource;
-  phase: RankingPhase;
-  round: PlayoffRoundKey;
   wcStage: WcRankingStage | null;
   language: Language;
 }) {
@@ -36,8 +32,6 @@ export function useRankGapAnalysis(input: {
       const token = await user.getIdToken();
       const params = new URLSearchParams({
         league: input.rankingLeague,
-        phase: input.phase,
-        round: input.round,
         lang: input.language,
       });
       if (input.wcStage) params.set("wcStage", input.wcStage);
@@ -67,9 +61,7 @@ export function useRankGapAnalysis(input: {
   }, [
     input.enabled,
     input.language,
-    input.phase,
     input.rankingLeague,
-    input.round,
     input.wcStage,
   ]);
 

@@ -10,7 +10,7 @@ import {
 import {
   type MobileMetric,
   type RankingRowWithCountry,
-} from "@/app/component/rankings/_data/mockRows";
+} from "@/lib/rankings/rankingMetrics";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
@@ -20,7 +20,6 @@ import MyRankCard from "@/app/component/rankings/MyRankCard";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
-import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import WcRankingStageTabs from "@/app/component/rankings/WcRankingStageTabs";
 import RankingsCategoryTabs, {
   type RankingsCategory,
@@ -32,13 +31,12 @@ import {
   type RankingApiRow,
   toMobileRows,
 } from "@/lib/rankings/rankingTransform";
-import type { RankingRow } from "@/lib/rankings/useRanking";
-import { buildMyRankMiniMetrics, isMyRankMiniMetricsReady } from "@/lib/rankings/buildMyRankMiniMetrics";
+import type { RankingRow } from "@/lib/rankings/cumulativeRankingRow";
+import { buildMyRankMiniMetrics } from "@/lib/rankings/buildMyRankMiniMetrics";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { t } from "@/lib/i18n/t";
@@ -49,15 +47,13 @@ import { useSearchParams } from "next/navigation";
 import {
   RANKINGS_TAB_LEAGUE_PARAM,
   RANKINGS_TAB_METRIC_PARAM,
-  RANKINGS_TAB_ROUND_PARAM,
   RANKINGS_TAB_WC_STAGE_PARAM,
   RANKINGS_TAB_CATEGORY_PARAM,
+  RANKINGS_TAB_PERIOD_PARAM,
   isMobileMetricParam,
   isRankingsCategoryParam,
 } from "@/lib/navigation/rankingsProfileFrom";
-import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeaderboardSection";
 import WcBracketLeaderboardSection from "@/app/component/leaderboards/WcBracketLeaderboardSection";
-import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
 import { useWcBracketSubmitted } from "@/lib/wc/useWcBracketSubmitted";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
@@ -77,7 +73,15 @@ import { sortRankingRowsByMetric } from "@/lib/rankings/sortRankingRows";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import { visibleMetricsForLeague, buildRankingTabMetrics } from "@/lib/rankings/wcVisibleMetrics";
 import { buildRankTierGapHint } from "@/lib/rankings/rankTierMilestone";
-import { buildRankGapPageHref } from "@/lib/rankings/buildRankGapPageHref";
+import { useMyRankProgress } from "@/lib/rankings/useMyRankProgress";
+import RankingsPeriodTabs from "@/app/component/rankings/RankingsPeriodTabs";
+import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
+import {
+  isRankingPeriod,
+  periodWinRateMinPosts,
+  type RankingPeriod,
+} from "@/lib/rankings/rankingPeriod";
+import { usePeriodRankingsBulk } from "@/lib/rankings/usePeriodRankingsBulk";
 
 export default function MobileRankingsPage() {
   const searchParams = useSearchParams();
@@ -87,14 +91,18 @@ export default function MobileRankingsPage() {
   const [rankingLeague, setRankingLeague] =
     useState<RankingLeagueSource>("worldcup");
   const phase: RankingPhase = "playoffs";
-  const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [wcStage, setWcStage] = useState<WcRankingStage>("main");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
-  const season = useMemo(() => getCurrentPlayoffSeason(), []);
-  const effectiveRound: PlayoffRoundKey =
-    rankingLeague === "worldcup" ? "overall" : round;
+  const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("season");
+  /** 過去期間ラベル（null = 現在期間） */
+  const [periodLabel, setPeriodLabel] = useState<string | null>(null);
+  /** NBA はシーズン制に移行 — ラウンド概念なし */
+  const effectiveRound: PlayoffRoundKey = "overall";
+  /** NBA は Bracket カテゴリ廃止 — 常に playoffs（=ランキング本体） */
+  const effectiveCategory: RankingsCategory =
+    rankingLeague === "nba" ? "playoffs" : category;
   const wcStageForHook: WcRankingStage | null =
-    category === "playoffs" && rankingLeague === "worldcup"
+    effectiveCategory === "playoffs" && rankingLeague === "worldcup"
       ? wcStage
       : null;
 
@@ -107,12 +115,10 @@ export default function MobileRankingsPage() {
   const { shouldPromptInput: wcBracketNeedsInput } =
     useWcBracketSubmitted(WC_KNOCKOUT_SEASON);
 
-  /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric / rankRound を反映 */
+  /** プロフィールの「ランキングに戻る」で付いた rankMetric / rankLeague などを反映 */
   useLayoutEffect(() => {
     const m = searchParams.get(RANKINGS_TAB_METRIC_PARAM);
     if (isMobileMetricParam(m)) setMetric(m);
-    const r = searchParams.get(RANKINGS_TAB_ROUND_PARAM);
-    if (isPlayoffRoundKey(r)) setRound(r);
     const league = searchParams.get(RANKINGS_TAB_LEAGUE_PARAM);
     const cat = searchParams.get(RANKINGS_TAB_CATEGORY_PARAM);
     if (isRankingsCategoryParam(cat)) setCategory(cat);
@@ -124,6 +130,8 @@ export default function MobileRankingsPage() {
     }
     const stage = searchParams.get(RANKINGS_TAB_WC_STAGE_PARAM);
     if (isWcRankingStage(stage)) setWcStage(stage);
+    const period = searchParams.get(RANKINGS_TAB_PERIOD_PARAM);
+    if (isRankingPeriod(period)) setRankingPeriod(period);
   }, [searchParams]);
 
   useApplyPreferredRankingLeague(fUser?.uid, searchParams, setRankingLeague, () =>
@@ -136,13 +144,45 @@ export default function MobileRankingsPage() {
     }
   }, [metric, visibleMetrics]);
 
+  useEffect(() => {
+    if (rankingLeague !== "nba" && rankingPeriod !== "season") {
+      setRankingPeriod("season");
+    }
+  }, [rankingLeague, rankingPeriod]);
+
   const metricItems = useMemo(
     () => buildRankingTabMetrics(rankingLeague),
     [rankingLeague]
   );
 
-  const { listReady, personalPending, myUid, byMetric, myMetricValueDeltas, ensureMetric } =
-    useCumulativeRankingsBulk(phase, effectiveRound, wcStageForHook);
+  const usePeriodBoard =
+    rankingLeague === "nba" && rankingPeriod !== "season";
+
+  const seasonBulk = useCumulativeRankingsBulk(
+    phase,
+    effectiveRound,
+    wcStageForHook
+  );
+  const periodBulk = usePeriodRankingsBulk(
+    usePeriodBoard
+      ? (rankingPeriod as Exclude<RankingPeriod, "season">)
+      : null,
+    periodLabel
+  );
+
+  /** 期間タブ・リーグを切り替えたら過去ラベル選択をリセット */
+  useEffect(() => {
+    setPeriodLabel(null);
+  }, [rankingPeriod, rankingLeague]);
+
+  const {
+    listReady,
+    personalPending,
+    myUid,
+    byMetric,
+    myMetricValueDeltas,
+    ensureMetric,
+  } = usePeriodBoard ? periodBulk : seasonBulk;
 
   const { user: sessionUser } = useRankingSessionUser(myUid);
   const language = sessionUser.language;
@@ -193,7 +233,11 @@ export default function MobileRankingsPage() {
   );
   /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
   const precApiKey =
-    rankingLeague === "worldcup" ? "totalExactHits" : "totalPrecision";
+    rankingLeague === "worldcup"
+      ? "totalExactHits"
+      : usePeriodBoard
+        ? "totalGoalScorerHits"
+        : "totalPrecision";
   const myMiniMetrics = useMemo(
     () =>
       buildMyRankMiniMetrics(
@@ -212,20 +256,16 @@ export default function MobileRankingsPage() {
       byMetric?.totalPoints?.rows,
       byMetric?.totalExactHits?.rows,
       byMetric?.totalPrecision?.rows,
+      byMetric?.totalGoalScorerHits?.rows,
       byMetric?.totalUpset?.rows,
       rankingLeague,
       precApiKey,
     ]
   );
 
-  const cardBarsReady = isMyRankMiniMetricsReady(byMetric, rankingLeague);
-
-  const winRateMinPosts = computeWinRateMinPosts(
-    rankingLeague,
-    phase,
-    effectiveRound,
-    wcStage
-  );
+  const winRateMinPosts = usePeriodBoard
+    ? periodWinRateMinPosts(rankingPeriod as Exclude<RankingPeriod, "season">)
+    : computeWinRateMinPosts(rankingLeague, wcStage);
 
   const metricReady = bundle != null;
   const listContentReady = computeRankingListContentReady({
@@ -270,22 +310,36 @@ export default function MobileRankingsPage() {
     });
   }, [myRank, myTotalPoints, rankingHasNoEntries, totalPointsRows]);
 
-  const gapHref = useMemo(() => {
-    if (sessionUser.plan !== "pro") return null;
-    return buildRankGapPageHref("/mobile/rankings/gap", {
+  /**
+   * Ranking Progress（日次順位推移）。
+   * NBA: Season ボードで free(3件)/pro(10件) とも表示。Weekly/Monthly は日次履歴が
+   * 累計順位のため非表示。WC: 既存挙動を変えないよう pro のみ。
+   */
+  const myRankCardTier: "free" | "pro" | undefined =
+    sessionUser.plan === "pro"
+      ? "pro"
+      : rankingLeague === "nba"
+        ? "free"
+        : undefined;
+  const rankProgressHidden =
+    rankingLeague === "nba" && rankingPeriod !== "season";
+  const rankProgressEnabled =
+    effectiveCategory === "playoffs" &&
+    !rankProgressHidden &&
+    (rankingLeague === "nba" || sessionUser.plan === "pro");
+  const { points: myRankProgressPoints, loading: myRankProgressLoading } =
+    useMyRankProgress({
+      uid: myUid,
+      enabled: rankProgressEnabled,
       rankingLeague,
-      round: effectiveRound,
       wcStage: wcStageForHook,
     });
-  }, [sessionUser.plan, rankingLeague, effectiveRound, wcStageForHook]);
 
   const pageKey = buildRankingsPageKey({
-    phase,
-    effectiveRound,
     metric,
     rankingLeague,
     wcStage,
-  });
+  }) + `:${rankingPeriod}`;
   const prefersReducedMotion = useReducedMotion();
   const { skipCountUp, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
@@ -321,22 +375,29 @@ export default function MobileRankingsPage() {
           </div>
 
           <div className="space-y-0.5">
-            {rankingLeague === "nba" || rankingLeague === "worldcup" ? (
+            {rankingLeague === "worldcup" ? (
               <RankingsCategoryTabs
                 category={category}
                 onChange={setCategory}
                 league={rankingLeague}
-                bracketAlert={
-                  rankingLeague === "worldcup" && wcBracketNeedsInput
-                }
+                bracketAlert={wcBracketNeedsInput}
               />
             ) : null}
 
-            {rankingLeague === "nba" && category === "playoffs" ? (
-              <PlayoffRoundTabs
-                round={round}
-                onChange={setRound}
-                isMobile
+            {rankingLeague === "nba" ? (
+              <RankingsPeriodTabs
+                period={rankingPeriod}
+                onChange={setRankingPeriod}
+                language={language}
+              />
+            ) : null}
+
+            {usePeriodBoard ? (
+              <RankingsPeriodLabelNav
+                period={rankingPeriod as Exclude<RankingPeriod, "season">}
+                activeLabel={periodBulk.activeLabel}
+                availableLabels={periodBulk.availableLabels}
+                onChange={setPeriodLabel}
                 language={language}
               />
             ) : null}
@@ -350,7 +411,7 @@ export default function MobileRankingsPage() {
               />
             ) : null}
 
-            {category === "playoffs" ? (
+            {effectiveCategory === "playoffs" ? (
               <MyRankCard
                 rank={rankingHasNoEntries ? null : myRank}
                 metric={metric}
@@ -367,9 +428,15 @@ export default function MobileRankingsPage() {
                 animateRank={!skipCountUp}
                 language={language}
                 isPro={sessionUser.plan === "pro"}
-                displayTier={sessionUser.plan === "pro" ? "pro" : undefined}
+                displayTier={myRankCardTier}
                 rankTierGap={sessionUser.plan === "pro" ? rankTierGap : null}
-                gapHref={gapHref}
+                rankProgress={
+                  rankProgressEnabled ? (myRankProgressPoints ?? []) : undefined
+                }
+                rankProgressLoading={
+                  rankProgressEnabled && myRankProgressLoading
+                }
+                hideRankProgress={rankProgressHidden}
                 mobileWide
                 rankDeltaPlaces={
                   rankingHasNoEntries ? null : myRankDeltaPlaces
@@ -382,7 +449,6 @@ export default function MobileRankingsPage() {
                 streak={myRawRow?.activeWinStreak ?? null}
                 countryCode={countryCode}
                 miniMetrics={myMiniMetrics}
-                barsReady={cardBarsReady}
                 cardResetKey={pageKey}
                 leagueLabel={
                   rankingLeague === "worldcup" ? "WORLD CUP" : "NBA"
@@ -392,13 +458,14 @@ export default function MobileRankingsPage() {
             ) : null}
           </div>
 
-          {category === "playoffs" ? (
+          {effectiveCategory === "playoffs" ? (
             <>
               <RankingsMetricRow
                 metrics={metricItems}
                 metric={metric}
                 setMetric={setMetric}
                 language={language}
+                rankingLeague={rankingLeague}
                 gridColumns={rankingLeague === "worldcup" ? 3 : undefined}
                 compactMobile
               />
@@ -416,17 +483,13 @@ export default function MobileRankingsPage() {
           ) : null}
         </div>
 
-        {category === "playoffs" && !listContentReady && (
+        {effectiveCategory === "playoffs" && !listContentReady && (
           <CandleChartLoader className="px-3 pt-2" label={m.common.loading} />
         )}
 
-        {category === "bracket" ? (
+        {effectiveCategory === "bracket" ? (
           <div className="px-2 pb-bottom-nav pt-2">
-            {rankingLeague === "worldcup" ? (
-              <WcBracketLeaderboardSection season={WC_KNOCKOUT_SEASON} />
-            ) : (
-              <BracketLeaderboardSection season={season} />
-            )}
+            <WcBracketLeaderboardSection season={WC_KNOCKOUT_SEASON} />
           </div>
         ) : rankingHasNoEntries ? (
           <div

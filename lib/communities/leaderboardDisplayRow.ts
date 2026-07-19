@@ -3,7 +3,7 @@ import type { CommunityGroupLeaderboardRow } from "@/app/component/communities/c
 import type {
   MobileMetric,
   RankingRowWithCountry,
-} from "@/app/component/rankings/_data/mockRows";
+} from "@/lib/rankings/rankingMetrics";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 

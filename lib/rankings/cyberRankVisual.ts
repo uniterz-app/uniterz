@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { Language } from "@/lib/i18n/language";
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import { t } from "@/lib/i18n/t";
 import { streakShortLabel, upsetShortLabel } from "@/lib/i18n/rankings";
 

@@ -1,7 +1,6 @@
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
 import { prefetchProfileStatsFromRoute } from "@/app/component/profile/useUserStatsV2";
-import type { RankingRowWithCountry } from "@/app/component/rankings/_data/mockRows";
-import type { BracketLeaderboardRow } from "@/lib/leaderboards/useBracketLeaderboard";
+import type { RankingRowWithCountry } from "@/lib/rankings/rankingMetrics";
 import type { WcBracketLeaderboardRow } from "@/lib/leaderboards/useWcBracketLeaderboard";
 import {
   profileHrefWithRankingsReturn,
@@ -12,7 +11,7 @@ import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
-type BracketProfileRow = BracketLeaderboardRow | WcBracketLeaderboardRow;
+type BracketProfileRow = WcBracketLeaderboardRow;
 
 function bracketRowToRankingRow(row: BracketProfileRow): RankingRowWithCountry {
   const totalScore =

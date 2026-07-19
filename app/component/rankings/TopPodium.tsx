@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { useCallback, useEffect, useMemo } from "react";
 import { Crown } from "lucide-react";
-import type { MobileMetric, RankingRowWithCountry } from "./_data/mockRows";
+import type { MobileMetric, RankingRowWithCountry } from "@/lib/rankings/rankingMetrics";
 import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";

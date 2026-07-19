@@ -1,9 +1,7 @@
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
-import type { RankingRow } from "@/lib/rankings/useRanking";
+import type { RankingRow } from "@/lib/rankings/cumulativeRankingRow";
 import { minPostsForWinRate } from "@/lib/rankings/winRateMinPosts";
 
 function safeRank(v: unknown): number | null {
@@ -89,7 +87,14 @@ export function getMyMetricValue(
   if (metric === "upsetScore") return row.totalUpset ?? 0;
 
   if (metric === "winRate") {
-    const raw = row.winRate ?? 0;
+    const posts = row.totalPosts ?? 0;
+    const wins = row.totalWins ?? 0;
+    const raw =
+      typeof row.winRate === "number" && Number.isFinite(row.winRate)
+        ? row.winRate
+        : posts > 0
+          ? wins / posts
+          : 0;
     return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
   }
 
@@ -101,25 +106,21 @@ export function getMyMetricValue(
 /** 勝率ランキングの最低投稿数 */
 export function computeWinRateMinPosts(
   rankingLeague: RankingLeagueSource,
-  phase: RankingPhase,
-  round: PlayoffRoundKey,
   wcStage?: WcRankingStage | null
 ): number {
-  return minPostsForWinRate({ rankingLeague, phase, round, wcStage });
+  return minPostsForWinRate({ rankingLeague, wcStage });
 }
 
 export function buildRankingsPageKey(input: {
-  phase: RankingPhase;
-  effectiveRound: PlayoffRoundKey;
   metric: MobileMetric;
   rankingLeague: RankingLeagueSource;
   wcStage?: WcRankingStage | null;
 }): string {
-  const { phase, effectiveRound, metric, rankingLeague, wcStage } = input;
+  const { metric, rankingLeague, wcStage } = input;
   if (rankingLeague === "worldcup") {
-    return `${phase}-${effectiveRound}-${wcStage ?? "overall"}-${metric}`;
+    return `wc-${wcStage ?? "overall"}-${metric}`;
   }
-  return `${phase}-${effectiveRound}-${metric}`;
+  return `nba-${metric}`;
 }
 
 export function computeRankingListContentReady(input: {

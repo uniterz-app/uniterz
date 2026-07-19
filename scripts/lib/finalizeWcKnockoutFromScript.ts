@@ -12,7 +12,8 @@ import type { Firestore } from "firebase-admin/firestore";
 import adminPkg from "firebase-admin";
 import { resolveKnockoutWinnerTeamId } from "../../functions/lib/wc-bracket/resolveKnockoutWinner.js";
 import { maybeUpdateWcBracketOnKnockoutFinal } from "../../functions/lib/wc-bracket/onKnockoutGameFinal.js";
-import type { WcFirestoreWriteDeps } from "../../functions/lib/wc-bracket/wcFirestoreWriteDeps.js";
+// 型のみ利用のためビルド成果物（functions/lib）ではなくソースから import
+import type { WcFirestoreWriteDeps } from "../../functions/src/wc-bracket/wcFirestoreWriteDeps";
 
 const admin = adminPkg as typeof import("firebase-admin");
 

@@ -5,6 +5,7 @@ import { calcPointsFootball } from "./footballTotalScore";
 import type { SettlementGameInput } from "./settlementGame";
 import { leagueToSport } from "./settlementGame";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
+import { calcNbaTopScorerBonus } from "./nbaTopScorerBonus";
 import { calcWcGoalScorerBonus } from "./wcGoalScorerBonus";
 
 function lerpByRange(
@@ -111,6 +112,7 @@ export function computePostSettlement({
   game: SettlementGameInput & {
     countsForRanking?: boolean;
     goalScorers?: unknown;
+    leadingScorers?: unknown;
   };
   market: {
     majoritySide: string;
@@ -183,15 +185,14 @@ export function computePostSettlement({
 
   const streakBonus = calcStreakBonus(activeWinStreak);
 
-  const goalScorerBonus = calcWcGoalScorerBonus(
-    game.league,
-    p.prediction,
-    game.goalScorers,
-    {
-      homeTeamId: game.homeTeamId,
-      awayTeamId: game.awayTeamId,
-    }
-  );
+  const leagueKey = String(game.league ?? "").toLowerCase();
+  const goalScorerBonus =
+    leagueKey === "nba"
+      ? calcNbaTopScorerBonus(game.league, p.prediction, game.leadingScorers)
+      : calcWcGoalScorerBonus(game.league, p.prediction, game.goalScorers, {
+          homeTeamId: game.homeTeamId,
+          awayTeamId: game.awayTeamId,
+        });
 
   const totalPoints =
     baseScore.basePoints + upsetBonus + streakBonus + goalScorerBonus;

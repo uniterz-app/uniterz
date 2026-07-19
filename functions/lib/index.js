@@ -34,63 +34,44 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.backfillStreakApplyMarkersHttp = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildMonthlyLeaderboardSnapshotCron = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.backfillCumulativeStatsFromDailyHttp = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onWcBracketRescoreTaskCreated = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.dailyAnalytics = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onWcBracketRescoreTaskCreated = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
-const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-admin/firestore");
 const firebase_1 = require("./firebase");
-const _core_1 = require("./analytics/_core");
 const functions = __importStar(require("firebase-functions"));
 const buildCumulativeStats_1 = require("./rankings/buildCumulativeStats");
 const buildCumulativeRankingSnapshot_1 = require("./rankings/buildCumulativeRankingSnapshot");
+const buildNbaPeriodRankingSnapshots_1 = require("./rankings/buildNbaPeriodRankingSnapshots");
 const hasRankingAggregationScheduledJstToday_1 = require("./schedule/hasRankingAggregationScheduledJstToday");
 const notifyGameStartCron_1 = require("./notifications/notifyGameStartCron");
 const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
-// ★追加
-const buildMonthlyLeaderboardSnapshot_1 = require("./leaderboards/buildMonthlyLeaderboardSnapshot");
-const jstLeaderboardMonth_1 = require("./leaderboards/jstLeaderboardMonth");
 // ===============================
 // V2 Core
 // ===============================
 var onGameFinalV2_1 = require("./onGameFinalV2");
 Object.defineProperty(exports, "onGameFinalV2", { enumerable: true, get: function () { return onGameFinalV2_1.onGameFinalV2; } });
-var rescorePlayoffBrackets_1 = require("./playoff-bracket/rescorePlayoffBrackets");
-Object.defineProperty(exports, "rescorePlayoffBrackets", { enumerable: true, get: function () { return rescorePlayoffBrackets_1.rescorePlayoffBrackets; } });
 var onPlayoffResultsWrite_1 = require("./playoff-bracket/onPlayoffResultsWrite");
 Object.defineProperty(exports, "onPlayoffResultsWrite", { enumerable: true, get: function () { return onPlayoffResultsWrite_1.onPlayoffResultsWrite; } });
 var onPlayoffBracketRescoreTaskCreated_1 = require("./playoff-bracket/onPlayoffBracketRescoreTaskCreated");
 Object.defineProperty(exports, "onPlayoffBracketRescoreTaskCreated", { enumerable: true, get: function () { return onPlayoffBracketRescoreTaskCreated_1.onPlayoffBracketRescoreTaskCreated; } });
 var onWcBracketRescoreTaskCreated_1 = require("./wc-bracket/onWcBracketRescoreTaskCreated");
 Object.defineProperty(exports, "onWcBracketRescoreTaskCreated", { enumerable: true, get: function () { return onWcBracketRescoreTaskCreated_1.onWcBracketRescoreTaskCreated; } });
-var rebuildPlayoffBracketMarket_1 = require("./playoff-bracket/rebuildPlayoffBracketMarket");
-Object.defineProperty(exports, "rebuildPlayoffBracketMarket", { enumerable: true, get: function () { return rebuildPlayoffBracketMarket_1.rebuildPlayoffBracketMarket; } });
 var getCumulativeRanking_1 = require("./rankings/getCumulativeRanking");
 Object.defineProperty(exports, "getCumulativeRanking", { enumerable: true, get: function () { return getCumulativeRanking_1.getCumulativeRanking; } });
-var backfillCumulativeStatsFromDaily_1 = require("./rankings/backfillCumulativeStatsFromDaily");
-Object.defineProperty(exports, "backfillCumulativeStatsFromDailyHttp", { enumerable: true, get: function () { return backfillCumulativeStatsFromDaily_1.backfillCumulativeStatsFromDailyHttp; } });
-var getMonthlyLeaderboard_1 = require("./leaderboards/getMonthlyLeaderboard");
-Object.defineProperty(exports, "getMonthlyLeaderboard", { enumerable: true, get: function () { return getMonthlyLeaderboard_1.getMonthlyLeaderboard; } });
-var monthly_1 = require("./leaderboards/monthly");
-Object.defineProperty(exports, "rebuildMonthlyLeaderboardsCron", { enumerable: true, get: function () { return monthly_1.rebuildMonthlyLeaderboardsCron; } });
-Object.defineProperty(exports, "rebuildMonthlyLeaderboardsHttp", { enumerable: true, get: function () { return monthly_1.rebuildMonthlyLeaderboardsHttp; } });
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 var expireProUsers_1 = require("./triggers/expireProUsers");
 Object.defineProperty(exports, "expireProUsers", { enumerable: true, get: function () { return expireProUsers_1.expireProUsers; } });
 // 🔥 ユーザー月次スタッツ（Pro用）
 var rebuildUserMonthlyStatsV2_1 = require("./stats/rebuildUserMonthlyStatsV2");
-Object.defineProperty(exports, "rebuildUserMonthlyStatsV2", { enumerable: true, get: function () { return rebuildUserMonthlyStatsV2_1.rebuildUserMonthlyStatsV2; } });
 Object.defineProperty(exports, "rebuildUserMonthlyStatsMonthCronV2", { enumerable: true, get: function () { return rebuildUserMonthlyStatsV2_1.rebuildUserMonthlyStatsMonthCronV2; } });
 // ===============================
 // Global
 // ===============================
 (0, options_1.setGlobalOptions)({ region: "asia-northeast1", maxInstances: 10 });
-const db = firebase_1.admin.firestore();
 /* ============================================================================
  * posts
  * ==========================================================================*/
-var onPostCreated_1 = require("./onPostCreated");
-Object.defineProperty(exports, "onPostCreatedV2", { enumerable: true, get: function () { return onPostCreated_1.onPostCreatedV2; } });
 var onPostDeleted_1 = require("./onPostDeleted");
 Object.defineProperty(exports, "onPostDeletedV2", { enumerable: true, get: function () { return onPostDeleted_1.onPostDeletedV2; } });
 /* ============================================================================
@@ -127,6 +108,13 @@ exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ sched
         return;
     }
     const snapshotResult = await (0, buildCumulativeRankingSnapshot_1.buildCumulativeRankingSnapshot)();
+    // NBA Weekly / Monthly の期間スナップショット（過去期間のアーカイブ兼用）
+    try {
+        await (0, buildNbaPeriodRankingSnapshots_1.buildNbaPeriodRankingSnapshots)();
+    }
+    catch (err) {
+        console.error("[buildCumulativeRankingSnapshotCron] period snapshots failed", err);
+    }
     const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
     const token = process.env.INTERNAL_REVALIDATE_SECRET;
     if (!revalidateUrl || !token) {
@@ -169,43 +157,10 @@ exports.notifyGameStartPushCron = (0, scheduler_1.onSchedule)({ schedule: "*/10 
     }
 });
 /* ============================================================================
- * Monthly Leaderboard Snapshot（★追加）
- * 毎月1日 04:05 → 前月分を確定
- * ==========================================================================*/
-exports.buildMonthlyLeaderboardSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "0 4 1 * *", timeZone: "Asia/Tokyo" }, async () => {
-    const month = (0, jstLeaderboardMonth_1.getLeaderboardLatestMonthKey)();
-    const LEAGUES = ["nba", "j1", "bj"];
-    for (const league of LEAGUES) {
-        await (0, buildMonthlyLeaderboardSnapshot_1.buildMonthlyLeaderboardSnapshot)({ league, month });
-    }
-});
-/* ============================================================================
  * Analytics
  * ==========================================================================*/
 var daily_1 = require("./analytics/daily");
 Object.defineProperty(exports, "dailyAnalytics", { enumerable: true, get: function () { return daily_1.dailyAnalytics; } });
-var runDaily_1 = require("./analytics/runDaily");
-Object.defineProperty(exports, "runDailyAnalytics", { enumerable: true, get: function () { return runDaily_1.runDailyAnalytics; } });
-var fixUserStats_1 = require("./fixUserStats");
-Object.defineProperty(exports, "fixUserStats", { enumerable: true, get: function () { return fixUserStats_1.fixUserStats; } });
-var backfillStreakApplyMarkers_1 = require("./backfillStreakApplyMarkers");
-Object.defineProperty(exports, "backfillStreakApplyMarkersHttp", { enumerable: true, get: function () { return backfillStreakApplyMarkers_1.backfillStreakApplyMarkersHttp; } });
-/* ============================================================================
- * Debug
- * ==========================================================================*/
-var listUserStats_1 = require("./debug/listUserStats");
-Object.defineProperty(exports, "listUserStatsIds", { enumerable: true, get: function () { return listUserStats_1.listUserStatsIds; } });
-var xmasNba20251226_1 = require("./debug/xmasNba20251226");
-Object.defineProperty(exports, "xmasNba20251226", { enumerable: true, get: function () { return xmasNba20251226_1.xmasNba20251226; } });
-exports.runDailyAnalyticsHttp = (0, https_1.onRequest)(async (_req, res) => {
-    try {
-        const result = await (0, _core_1.dailyAnalyticsCore)();
-        res.status(200).json({ ok: true, result });
-    }
-    catch (err) {
-        res.status(500).json({ ok: false, error: String(err) });
-    }
-});
 exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
     const db = firebase_1.admin.firestore();
     await db.collection("users").doc(user.uid).set({

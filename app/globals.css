@@ -5,12 +5,15 @@
  * flag-icons の CSS には依存しない。 */
 
 @import "tailwindcss";
-@import "./component/profile/dev/profilePlanProMoodBg.css";
-@import "./component/profile/dev/profilePlanProNovaBg.css";
-@import "./component/profile/dev/profilePlanProGeoBg.css";
-@import "./component/profile/dev/profilePlanProHexBg.css";
-@import "./component/profile/dev/profilePlanProAtmosBg.css";
-@import "./component/profile/dev/profilePlanProScaleBg.css";
+@import "./component/profile/pro/profilePlanProMoodBg.css";
+@import "./component/profile/pro/profilePlanProNovaBg.css";
+@import "./component/profile/pro/profilePlanProGeoBg.css";
+@import "./component/profile/pro/profilePlanProHexBg.css";
+@import "./component/profile/pro/profilePlanProAtmosBg.css";
+@import "./component/profile/pro/profilePlanProScaleBg.css";
+@import "./component/profile/pro/profilePlanProBeastBg.css";
+@import "./component/profile/pro/profilePlanProFormBg.css";
+/* turbopack css cache bust 2026-07-17f */
 
 @theme {
   /* EntrySplash / SplashWrapper のローディング位置用（取り込みブランチの mt-27 と整合） */
@@ -4779,7 +4782,8 @@ body::before {
 }
 
 .profile-plan-pro-bg--animate ~ .profile-plan-pro-frame-sweep {
-  animation: profile-plan-pro-sweep-spin 4.8s linear infinite;
+  /* 常時スイープ廃止 — 入場は背景レイヤーの SparseEnter のみ */
+  animation: none;
 }
 
 @keyframes profile-plan-pro-sweep-spin {

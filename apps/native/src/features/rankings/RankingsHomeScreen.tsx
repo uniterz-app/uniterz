@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import {
   type MobileMetric,
-} from "../../../../../app/component/rankings/_data/mockRows";
-import type { RankingRowWithCountry } from "../../../../../app/component/rankings/_data/mockRows";
+} from "../../../../../lib/rankings/rankingMetrics";
+import type { RankingRowWithCountry } from "../../../../../lib/rankings/rankingMetrics";
 import {
   buildMyRankMiniMetrics,
   isMyRankMiniMetricsReady,
@@ -163,8 +163,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   const winRateMinPosts = computeWinRateMinPosts(
     rankingsLeague === "wc" ? "worldcup" : "nba",
-    "playoffs",
-    round,
     wcStageForHook
   );
   const rankingHasNoEntries =

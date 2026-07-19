@@ -1,6 +1,7 @@
 "use strict";
 // functions/src/rankings/getCumulativeRanking.ts
 // ランキング一覧は cumulative_ranking_snapshots をそのまま返す。
+// NBA は現行シーズン（s<key>_<metric>）、WC はステージ別（wc_<stage>_<metric>）。
 // 自分の順位は snapshotRanks / 一覧行の rank を参照（live count しない）。
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getCumulativeRanking = void 0;
@@ -11,15 +12,9 @@ const readSnapshotRanksFromCumulative_1 = require("./readSnapshotRanksFromCumula
 const safeRankMetricNum_1 = require("./safeRankMetricNum");
 const wcRankingStage_1 = require("./wcRankingStage");
 const activeFootballStreakForWcStage_1 = require("./activeFootballStreakForWcStage");
+const nbaSeason_1 = require("./nbaSeason");
 function db() {
     return (0, firestore_1.getFirestore)();
-}
-const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
-function minPostsForWinRate(phase, round) {
-    if (phase === "playoffs" && (round === "overall" || round === "r1")) {
-        return 20;
-    }
-    return MIN_POSTS_FOR_WIN_RATE_BASE;
 }
 function isMetric(v) {
     return (v === "winRate" ||
@@ -30,53 +25,10 @@ function isMetric(v) {
         v === "activeWinStreak" ||
         v === "totalGoalScorerHits");
 }
-function isRankingPhase(v) {
-    return v === "play_in" || v === "playoffs";
-}
-function isPlayoffRoundKey(v) {
-    return (v === "overall" || v === "r1" || v === "r2" || v === "cf" || v === "finals");
-}
-function rankingSlice(d, phase, round = "overall") {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
-    if (phase === "playoffs" && round !== "overall") {
-        const byRound = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
-        if (byRound && typeof byRound === "object") {
-            const tp = (_b = byRound.totalPosts) !== null && _b !== void 0 ? _b : 0;
-            const tw = (_c = byRound.totalWins) !== null && _c !== void 0 ? _c : 0;
-            return {
-                totalPosts: tp,
-                totalWins: tw,
-                winRate: tp > 0 ? tw / tp : (_d = byRound.winRate) !== null && _d !== void 0 ? _d : 0,
-                totalPoints: (_e = byRound.totalPoints) !== null && _e !== void 0 ? _e : 0,
-                totalPrecision: (_f = byRound.totalPrecision) !== null && _f !== void 0 ? _f : 0,
-                totalUpset: (_g = byRound.totalUpset) !== null && _g !== void 0 ? _g : 0,
-                totalGoalScorerHits: (_h = byRound.totalGoalScorerHits) !== null && _h !== void 0 ? _h : 0,
-            };
-        }
-    }
-    const byPhase = (_j = d.rankingByPhase) === null || _j === void 0 ? void 0 : _j[phase];
-    if (byPhase && typeof byPhase === "object") {
-        const tp = (_k = byPhase.totalPosts) !== null && _k !== void 0 ? _k : 0;
-        const tw = (_l = byPhase.totalWins) !== null && _l !== void 0 ? _l : 0;
-        return {
-            totalPosts: tp,
-            totalWins: tw,
-            winRate: tp > 0 ? tw / tp : (_m = byPhase.winRate) !== null && _m !== void 0 ? _m : 0,
-            totalPoints: (_o = byPhase.totalPoints) !== null && _o !== void 0 ? _o : 0,
-            totalPrecision: (_p = byPhase.totalPrecision) !== null && _p !== void 0 ? _p : 0,
-            totalUpset: (_q = byPhase.totalUpset) !== null && _q !== void 0 ? _q : 0,
-            totalGoalScorerHits: (_r = byPhase.totalGoalScorerHits) !== null && _r !== void 0 ? _r : 0,
-        };
-    }
-    return {
-        totalPosts: 0,
-        totalWins: 0,
-        winRate: 0,
-        totalPoints: 0,
-        totalPrecision: 0,
-        totalUpset: 0,
-        totalGoalScorerHits: 0,
-    };
+function activeBasketballStreak(d) {
+    var _a, _b, _c, _d, _e;
+    const signed = (_e = (_d = (_c = (_a = d.activeWinStreakBasketball) !== null && _a !== void 0 ? _a : (_b = d.streakBySport) === null || _b === void 0 ? void 0 : _b.basketball) !== null && _c !== void 0 ? _c : d.currentStreak) !== null && _d !== void 0 ? _d : d.activeWinStreak) !== null && _e !== void 0 ? _e : 0;
+    return typeof signed === "number" && signed > 0 ? signed : 0;
 }
 function rankingSliceWc(d, stage) {
     var _a, _b, _c, _d, _e, _f, _g, _h;
@@ -103,11 +55,6 @@ function rankingSliceWc(d, stage) {
         totalUpset: (_g = block.totalUpset) !== null && _g !== void 0 ? _g : 0,
         totalGoalScorerHits: (_h = block.totalGoalScorerHits) !== null && _h !== void 0 ? _h : 0,
     };
-}
-function activeBasketballStreak(d) {
-    var _a, _b, _c, _d, _e;
-    const signed = (_e = (_d = (_c = (_a = d.activeWinStreakBasketball) !== null && _a !== void 0 ? _a : (_b = d.streakBySport) === null || _b === void 0 ? void 0 : _b.basketball) !== null && _c !== void 0 ? _c : d.currentStreak) !== null && _d !== void 0 ? _d : d.activeWinStreak) !== null && _e !== void 0 ? _e : 0;
-    return typeof signed === "number" && signed > 0 ? signed : 0;
 }
 const EMPTY_USER_SNAPS = { mySnap: null, histSnap: null };
 async function loadLatestHistSnapForUid(uid) {
@@ -217,21 +164,22 @@ function normalizeSnapshotRows(rows, metric) {
     }
     return sortSnapshotRows(out, metric);
 }
-function readStoredRankFromUser(me, metric, phase, round, wcStage) {
-    return (0, readSnapshotRanksFromCumulative_1.readStoredRankFromUser)(me, metric, phase, round, wcStage);
+function minPostsForMetric(metric, wcStage) {
+    if (metric !== "winRate")
+        return 1;
+    return wcStage
+        ? (0, wcRankingStage_1.minPostsForWcWinRate)(wcStage)
+        : buildCumulativeRankingSnapshot_1.NBA_SEASON_WIN_RATE_MIN_POSTS;
 }
-function readPriorRankFromHist(histSnap, metric, phase, round, wcStage) {
-    var _a, _b, _c, _d, _e;
+function readPriorRankFromHist(histSnap, metric, wcStage) {
+    var _a, _b, _c, _d;
     if (!(histSnap === null || histSnap === void 0 ? void 0 : histSnap.exists))
         return undefined;
     const hd = histSnap.data();
     if (wcStage) {
         return (_b = (_a = hd.wc) === null || _a === void 0 ? void 0 : _a[wcStage]) === null || _b === void 0 ? void 0 : _b[metric];
     }
-    if (phase === "playoffs" && round !== "overall") {
-        return (_d = (_c = hd.playoffRounds) === null || _c === void 0 ? void 0 : _c[round]) === null || _d === void 0 ? void 0 : _d[metric];
-    }
-    return (_e = hd[phase]) === null || _e === void 0 ? void 0 : _e[metric];
+    return (_d = (_c = hd.seasons) === null || _c === void 0 ? void 0 : _c[nbaSeason_1.CURRENT_NBA_SEASON_KEY]) === null || _d === void 0 ? void 0 : _d[metric];
 }
 function buildMyRowFromStats(uid, me, rk, opts) {
     var _a, _b, _c, _d, _e, _f, _g;
@@ -258,7 +206,7 @@ function buildMyRowFromStats(uid, me, rk, opts) {
         rankDeltaPlaces: opts.myRankDeltaPlaces,
     };
 }
-async function personalRankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage) {
+async function personalRankingPayloadForMetric(metric, uid, snaps, wcStage) {
     var _a, _b;
     if (!((_a = snaps.mySnap) === null || _a === void 0 ? void 0 : _a.exists)) {
         return {
@@ -272,13 +220,8 @@ async function personalRankingPayloadForMetric(metric, phase, round, uid, snaps,
     const me = snaps.mySnap.data();
     const rk = wcStage
         ? rankingSliceWc(me, wcStage)
-        : rankingSlice(me, phase, round);
-    const minPosts = metric === "winRate"
-        ? wcStage
-            ? (0, wcRankingStage_1.minPostsForWcWinRate)(wcStage)
-            : minPostsForWinRate(phase, round)
-        : 1;
-    if (((_b = rk.totalPosts) !== null && _b !== void 0 ? _b : 0) < minPosts) {
+        : (0, buildCumulativeRankingSnapshot_1.nbaSeasonRankingSlice)(me);
+    if (((_b = rk.totalPosts) !== null && _b !== void 0 ? _b : 0) < minPostsForMetric(metric, wcStage !== null && wcStage !== void 0 ? wcStage : null)) {
         return {
             count: 0,
             rows: [],
@@ -287,8 +230,8 @@ async function personalRankingPayloadForMetric(metric, phase, round, uid, snaps,
             myRankDeltaPlaces: null,
         };
     }
-    const myRank = readStoredRankFromUser(me, metric, phase, round, wcStage !== null && wcStage !== void 0 ? wcStage : null);
-    const myRankDeltaPlaces = rankDeltaPlacesFromHist(snaps.histSnap, myRank, readPriorRankFromHist(snaps.histSnap, metric, phase, round, wcStage !== null && wcStage !== void 0 ? wcStage : null));
+    const myRank = (0, readSnapshotRanksFromCumulative_1.readStoredRankFromUser)(me, metric, wcStage !== null && wcStage !== void 0 ? wcStage : null);
+    const myRankDeltaPlaces = rankDeltaPlacesFromHist(snaps.histSnap, myRank, readPriorRankFromHist(snaps.histSnap, metric, wcStage !== null && wcStage !== void 0 ? wcStage : null));
     const myRow = buildMyRowFromStats(uid, me, rk, {
         wcStage: wcStage !== null && wcStage !== void 0 ? wcStage : null,
         metric,
@@ -303,16 +246,14 @@ async function personalRankingPayloadForMetric(metric, phase, round, uid, snaps,
         myRankDeltaPlaces,
     };
 }
-async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage, personalOnly = false) {
+async function rankingPayloadForMetric(metric, uid, snaps, wcStage, personalOnly = false) {
     var _a, _b, _c, _d, _e;
     if (personalOnly && uid) {
-        return personalRankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage);
+        return personalRankingPayloadForMetric(metric, uid, snaps, wcStage);
     }
     const snapshotDocId = wcStage
         ? `wc_${wcStage}_${metric}`
-        : round === "overall"
-            ? `${phase}_${metric}`
-            : `${phase}_${round}_${metric}`;
+        : (0, nbaSeason_1.nbaSeasonSnapshotDocId)(nbaSeason_1.CURRENT_NBA_SEASON_KEY, metric);
     const snapDoc = await db()
         .collection("cumulative_ranking_snapshots")
         .doc(snapshotDocId)
@@ -327,18 +268,10 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
     let totalCount = readSnapshotTotalCount(snapData, rows.length);
     /** スナップショット未生成時のみ live フォールバック */
     /** 連勝は 16:00 スナップショットのみ（live フォールバックなし） */
-    if (rows.length === 0 && wcStage && metric !== "activeWinStreak") {
-        const live = await (0, buildCumulativeRankingSnapshot_1.loadWcStageTop20RowsLive)(wcStage, metric);
-        rows = normalizeSnapshotRows(live.rows, metric);
-        totalCount = live.totalCount;
-    }
-    if (rows.length === 0 &&
-        metric !== "activeWinStreak" &&
-        !wcStage &&
-        phase === "playoffs" &&
-        round !== "overall" &&
-        (round === "r1" || round === "r2" || round === "cf" || round === "finals")) {
-        const live = await (0, buildCumulativeRankingSnapshot_1.loadPlayoffRoundTop20RowsLive)(round, metric);
+    if (rows.length === 0 && metric !== "activeWinStreak") {
+        const live = wcStage
+            ? await (0, buildCumulativeRankingSnapshot_1.loadWcStageTop20RowsLive)(wcStage, metric)
+            : await (0, buildCumulativeRankingSnapshot_1.loadNbaSeasonTop20RowsLive)(metric);
         rows = normalizeSnapshotRows(live.rows, metric);
         totalCount = live.totalCount;
     }
@@ -349,13 +282,8 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
         const me = snaps.mySnap.data();
         const rk = wcStage
             ? rankingSliceWc(me, wcStage)
-            : rankingSlice(me, phase, round);
-        const minPosts = metric === "winRate"
-            ? wcStage
-                ? (0, wcRankingStage_1.minPostsForWcWinRate)(wcStage)
-                : minPostsForWinRate(phase, round)
-            : 1;
-        if (((_d = rk.totalPosts) !== null && _d !== void 0 ? _d : 0) < minPosts) {
+            : (0, buildCumulativeRankingSnapshot_1.nbaSeasonRankingSlice)(me);
+        if (((_d = rk.totalPosts) !== null && _d !== void 0 ? _d : 0) < minPostsForMetric(metric, wcStage !== null && wcStage !== void 0 ? wcStage : null)) {
             return {
                 count: resolveParticipantCount(totalCount, null),
                 rows,
@@ -370,8 +298,8 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
             myRankDeltaPlaces = (_e = listRow.rankDeltaPlaces) !== null && _e !== void 0 ? _e : null;
         }
         else {
-            myRank = readStoredRankFromUser(me, metric, phase, round, wcStage !== null && wcStage !== void 0 ? wcStage : null);
-            myRankDeltaPlaces = rankDeltaPlacesFromHist(snaps.histSnap, myRank, readPriorRankFromHist(snaps.histSnap, metric, phase, round, wcStage !== null && wcStage !== void 0 ? wcStage : null));
+            myRank = (0, readSnapshotRanksFromCumulative_1.readStoredRankFromUser)(me, metric, wcStage !== null && wcStage !== void 0 ? wcStage : null);
+            myRankDeltaPlaces = rankDeltaPlacesFromHist(snaps.histSnap, myRank, readPriorRankFromHist(snaps.histSnap, metric, wcStage !== null && wcStage !== void 0 ? wcStage : null));
         }
         myRow = buildMyRowFromStats(uid, me, rk, {
             wcStage: wcStage !== null && wcStage !== void 0 ? wcStage : null,
@@ -392,12 +320,8 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
     var _a;
     try {
         const uid = req.query.uid;
-        const rawPhase = req.query.phase;
-        const phase = isRankingPhase(rawPhase) ? rawPhase : "playoffs";
-        const rawRound = req.query.round;
-        const round = isPlayoffRoundKey(rawRound)
-            ? rawRound
-            : "overall";
+        // phase / round パラメータは旧 UI 互換のため受け取るが無視する
+        // （NBA は常に現行シーズン s<key>_<metric> を返す）。
         const rawWcStage = req.query.wcStage;
         const wcStage = (0, wcRankingStage_1.isWcRankingStage)(rawWcStage) ? rawWcStage : null;
         const bulkMetrics = parseMetricsParam(req.query.metrics);
@@ -405,14 +329,13 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
         if (bulkMetrics) {
             const snaps = uid ? await loadUserRankingSnaps(uid) : EMPTY_USER_SNAPS;
             const byMetric = {};
-            const payloads = await Promise.all(bulkMetrics.map((m) => rankingPayloadForMetric(m, phase, round, uid, snaps, wcStage, personalOnly)));
+            const payloads = await Promise.all(bulkMetrics.map((m) => rankingPayloadForMetric(m, uid, snaps, wcStage, personalOnly)));
             bulkMetrics.forEach((m, i) => {
                 byMetric[m] = payloads[i];
             });
             res.status(200).json({
                 ok: true,
-                phase,
-                round,
+                seasonKey: wcStage ? null : nbaSeason_1.CURRENT_NBA_SEASON_KEY,
                 wcStage,
                 byMetric,
             });
@@ -421,12 +344,11 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
         const rawMetric = req.query.metric;
         const metric = isMetric(rawMetric) ? rawMetric : "totalPoints";
         const snaps = uid ? await loadUserRankingSnaps(uid) : EMPTY_USER_SNAPS;
-        const payload = await rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage, personalOnly);
+        const payload = await rankingPayloadForMetric(metric, uid, snaps, wcStage, personalOnly);
         res.status(200).json({
             ok: true,
             metric,
-            phase,
-            round,
+            seasonKey: wcStage ? null : nbaSeason_1.CURRENT_NBA_SEASON_KEY,
             wcStage,
             count: payload.count,
             rows: payload.rows,

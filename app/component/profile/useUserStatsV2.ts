@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { RankingRowWithCountry } from "@/app/component/rankings/_data/mockRows";
+import type { RankingRowWithCountry } from "@/lib/rankings/rankingMetrics";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";

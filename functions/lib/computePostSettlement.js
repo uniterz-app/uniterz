@@ -6,6 +6,7 @@ const calcUpsetPoints_1 = require("./calcUpsetPoints");
 const calcStreakBonus_1 = require("./calcStreakBonus");
 const footballTotalScore_1 = require("./footballTotalScore");
 const settlementGame_1 = require("./settlementGame");
+const nbaTopScorerBonus_1 = require("./nbaTopScorerBonus");
 const wcGoalScorerBonus_1 = require("./wcGoalScorerBonus");
 function lerpByRange(value, min, max, start, end) {
     if (value <= min)
@@ -70,7 +71,7 @@ function calcPointsV3({ predHome, predAway, finalHome, finalAway, }) {
  * 分布集計では settled 済み投稿も含めて呼ぶ。
  */
 function computePostSettlement({ p, game, market, hadUpsetGame, streakResultMap, }) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const final = { home: game.homeScore, away: game.awayScore };
     const settlementGame = {
         homeScore: game.homeScore,
@@ -122,10 +123,13 @@ function computePostSettlement({ p, game, market, hadUpsetGame, streakResultMap,
         ? p.stats.pointsV3Detail.activeWinStreak
         : 0);
     const streakBonus = (0, calcStreakBonus_1.calcStreakBonus)(activeWinStreak);
-    const goalScorerBonus = (0, wcGoalScorerBonus_1.calcWcGoalScorerBonus)(game.league, p.prediction, game.goalScorers, {
-        homeTeamId: game.homeTeamId,
-        awayTeamId: game.awayTeamId,
-    });
+    const leagueKey = String((_h = game.league) !== null && _h !== void 0 ? _h : "").toLowerCase();
+    const goalScorerBonus = leagueKey === "nba"
+        ? (0, nbaTopScorerBonus_1.calcNbaTopScorerBonus)(game.league, p.prediction, game.leadingScorers)
+        : (0, wcGoalScorerBonus_1.calcWcGoalScorerBonus)(game.league, p.prediction, game.goalScorers, {
+            homeTeamId: game.homeTeamId,
+            awayTeamId: game.awayTeamId,
+        });
     const totalPoints = baseScore.basePoints + upsetBonus + streakBonus + goalScorerBonus;
     return {
         totalPoints,

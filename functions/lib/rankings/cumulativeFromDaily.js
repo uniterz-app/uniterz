@@ -120,8 +120,8 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
             out[`${path}.streakBonusSum`] = firestore_1.FieldValue.increment(streakBonus);
         }
     };
-    if (contrib.phaseKey === "play_in") {
-        const p = "rankingByPhase.play_in";
+    if (contrib.nbaSeasonKey) {
+        const p = `rankingBySeason.${contrib.nbaSeasonKey}`;
         out[`${p}.totalPosts`] = firestore_1.FieldValue.increment(posts);
         out[`${p}.totalWins`] = firestore_1.FieldValue.increment(wins);
         out[`${p}.totalPoints`] = firestore_1.FieldValue.increment(points);
@@ -129,26 +129,6 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
         out[`${p}.totalPrecision`] = firestore_1.FieldValue.increment(nbaPrecision);
         out[`${p}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
         applyBonusToPath(p);
-    }
-    if (contrib.phaseKey === "playoffs") {
-        const p = "rankingByPhase.playoffs";
-        out[`${p}.totalPosts`] = firestore_1.FieldValue.increment(posts);
-        out[`${p}.totalWins`] = firestore_1.FieldValue.increment(wins);
-        out[`${p}.totalPoints`] = firestore_1.FieldValue.increment(points);
-        out[`${p}.totalUpset`] = firestore_1.FieldValue.increment(upset);
-        out[`${p}.totalPrecision`] = firestore_1.FieldValue.increment(nbaPrecision);
-        out[`${p}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
-        applyBonusToPath(p);
-        if (contrib.roundKey) {
-            const r = `rankingByPlayoffRound.${contrib.roundKey}`;
-            out[`${r}.totalPosts`] = firestore_1.FieldValue.increment(posts);
-            out[`${r}.totalWins`] = firestore_1.FieldValue.increment(wins);
-            out[`${r}.totalPoints`] = firestore_1.FieldValue.increment(points);
-            out[`${r}.totalUpset`] = firestore_1.FieldValue.increment(upset);
-            out[`${r}.totalPrecision`] = firestore_1.FieldValue.increment(nbaPrecision);
-            out[`${r}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
-            applyBonusToPath(r);
-        }
     }
     if (contrib.isWc && contrib.forRanking) {
         const stages = ["overall"];
@@ -177,14 +157,7 @@ function aggregateCumulativeFromDailyData(dailyDocs) {
     var _a, _b, _c;
     let profile = emptyRankingTotals();
     let ranking = emptyRankingTotals();
-    let playIn = emptyRankingTotals();
-    let playoffs = emptyRankingTotals();
-    const byRound = {
-        r1: emptyRankingTotals(),
-        r2: emptyRankingTotals(),
-        cf: emptyRankingTotals(),
-        finals: emptyRankingTotals(),
-    };
+    const bySeason = new Map();
     const byWc = {
         overall: emptyRankingTotals(),
         qualifying: emptyRankingTotals(),
@@ -194,31 +167,25 @@ function aggregateCumulativeFromDailyData(dailyDocs) {
         profile = addRankingTotals(profile, bucketToInc(data.all));
         const rankBucket = (_a = data.ranking) !== null && _a !== void 0 ? _a : data.all;
         ranking = addRankingTotals(ranking, bucketToInc(rankBucket));
-        const byPhase = ((_b = data.rankingByPhase) !== null && _b !== void 0 ? _b : {});
-        playIn = addRankingTotals(playIn, bucketToInc(byPhase.play_in));
-        playoffs = addRankingTotals(playoffs, bucketToInc(byPhase.playoffs));
-        const byPlayoffRound = ((_c = data.rankingByPlayoffRound) !== null && _c !== void 0 ? _c : {});
-        for (const rk of ["r1", "r2", "cf", "finals"]) {
-            byRound[rk] = addRankingTotals(byRound[rk], bucketToInc(byPlayoffRound[rk]));
+        const bySeasonBuckets = ((_b = data.rankingBySeason) !== null && _b !== void 0 ? _b : {});
+        for (const [seasonKey, bucket] of Object.entries(bySeasonBuckets)) {
+            if (!bucket || typeof bucket !== "object")
+                continue;
+            bySeason.set(seasonKey, addRankingTotals((_c = bySeason.get(seasonKey)) !== null && _c !== void 0 ? _c : emptyRankingTotals(), bucketToInc(bucket)));
         }
         const wcBuckets = (0, dailyWcStageBuckets_1.readDailyWcStageBuckets)(data);
         for (const wk of dailyWcStageBuckets_1.WC_RANKING_STAGES) {
             byWc[wk] = addRankingTotals(byWc[wk], bucketToInc(wcBuckets[wk], { precisionFromExactHits: true }));
         }
     }
+    const rankingBySeason = {};
+    for (const [seasonKey, totals] of bySeason) {
+        rankingBySeason[seasonKey] = withWinRate(totals);
+    }
     return {
         profile: withWinRate(profile),
         ranking: withWinRate(ranking),
-        rankingByPhase: {
-            play_in: withWinRate(playIn),
-            playoffs: withWinRate(playoffs),
-        },
-        rankingByPlayoffRound: {
-            r1: withWinRate(byRound.r1),
-            r2: withWinRate(byRound.r2),
-            cf: withWinRate(byRound.cf),
-            finals: withWinRate(byRound.finals),
-        },
+        rankingBySeason,
         rankingByWcStage: {
             overall: withWinRate(byWc.overall),
             qualifying: withWinRate(byWc.qualifying),
@@ -285,7 +252,7 @@ function applyWcStageStreakToCumulativePayload(payload, streak) {
 }
 function cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey, wcStageStreak) {
     var _a, _b, _c, _d;
-    const payload = Object.assign(Object.assign({ uid, displayName: (_a = user.displayName) !== null && _a !== void 0 ? _a : "user", handle: (_b = user.handle) !== null && _b !== void 0 ? _b : null, photoURL: (_c = user.photoURL) !== null && _c !== void 0 ? _c : null, countryCode: (_d = user.countryCode) !== null && _d !== void 0 ? _d : null, plan: user.plan === "pro" ? "pro" : "free", totalPosts: agg.profile.totalPosts, totalWins: agg.profile.totalWins, totalPoints: agg.profile.totalPoints, totalUpset: agg.profile.totalUpset, totalPrecision: agg.profile.totalPrecision, winRate: agg.profile.winRate, ranking: agg.ranking, rankingByPhase: agg.rankingByPhase, rankingByPlayoffRound: agg.rankingByPlayoffRound, rankingByWcStage: agg.rankingByWcStage }, (0, cumulativeSnapshotIndex_1.rankingTotalPostsFromAggregate)(agg.ranking.totalPosts)), { cumulativeLiveUpdates: true, lastReconciledDateKey, updatedAt: firestore_1.FieldValue.serverTimestamp() });
+    const payload = Object.assign(Object.assign({ uid, displayName: (_a = user.displayName) !== null && _a !== void 0 ? _a : "user", handle: (_b = user.handle) !== null && _b !== void 0 ? _b : null, photoURL: (_c = user.photoURL) !== null && _c !== void 0 ? _c : null, countryCode: (_d = user.countryCode) !== null && _d !== void 0 ? _d : null, plan: user.plan === "pro" ? "pro" : "free", totalPosts: agg.profile.totalPosts, totalWins: agg.profile.totalWins, totalPoints: agg.profile.totalPoints, totalUpset: agg.profile.totalUpset, totalPrecision: agg.profile.totalPrecision, winRate: agg.profile.winRate, ranking: agg.ranking, rankingBySeason: agg.rankingBySeason, rankingByWcStage: agg.rankingByWcStage }, (0, cumulativeSnapshotIndex_1.rankingTotalPostsFromAggregate)(agg.ranking.totalPosts)), { cumulativeLiveUpdates: true, lastReconciledDateKey, updatedAt: firestore_1.FieldValue.serverTimestamp() });
     if (wcStageStreak) {
         applyWcStageStreakToCumulativePayload(payload, wcStageStreak);
     }

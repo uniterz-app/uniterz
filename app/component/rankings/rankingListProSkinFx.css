@@ -1,0 +1,111 @@
+/* ランキング行 — プロフィール同系パターンを cover で裁ち落とし（タイルなし） */
+
+.ranking-list-pro-skin-fx {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ranking-list-pro-skin-fx__layer {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  /* プロフィール縦長柄の右〜下寄りを見せる（左の名前エリアは相対的に空く） */
+  background-position: 72% 45%;
+  background-size: cover;
+}
+
+.ranking-list-pro-skin-fx__skin {
+  opacity: 0.58;
+  filter: contrast(1.02) saturate(0.92) brightness(0.98);
+}
+
+.ranking-list-pro-skin-fx__hud {
+  opacity: 0.26;
+  mix-blend-mode: screen;
+  background-position: 78% 40%;
+  background-size: cover;
+}
+
+.ranking-list-pro-skin-fx__hud--atmos {
+  opacity: 0.2;
+  mix-blend-mode: soft-light;
+}
+
+.ranking-list-pro-skin-fx__atmos-tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 45%,
+    rgba(34, 211, 238, 0.12) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx__atmos-tint--parallax {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 42%,
+    rgba(99, 102, 241, 0.14) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx__wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 10, 16, 0.82) 0%,
+    rgba(5, 10, 16, 0.6) 48%,
+    rgba(5, 10, 16, 0.44) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx--subtle .ranking-list-pro-skin-fx__skin {
+  opacity: 0.48;
+  filter: contrast(1) saturate(0.85) brightness(0.97);
+}
+
+.ranking-list-pro-skin-fx--subtle .ranking-list-pro-skin-fx__wash {
+  background: linear-gradient(
+    90deg,
+    rgba(5, 10, 16, 0.86) 0%,
+    rgba(5, 10, 16, 0.68) 48%,
+    rgba(5, 10, 16, 0.54) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx--medium .ranking-list-pro-skin-fx__skin {
+  opacity: 0.7;
+  filter: contrast(1.06) saturate(1.02) brightness(1);
+}
+
+.ranking-list-pro-skin-fx--medium .ranking-list-pro-skin-fx__hud {
+  opacity: 0.34;
+}
+
+.ranking-list-pro-skin-fx--medium .ranking-list-pro-skin-fx__wash {
+  background: linear-gradient(
+    90deg,
+    rgba(5, 10, 16, 0.72) 0%,
+    rgba(5, 10, 16, 0.48) 50%,
+    rgba(5, 10, 16, 0.32) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx[class*="--scale-"] .ranking-list-pro-skin-fx__layer {
+  background-position: 68% 38%;
+  background-size: cover;
+}
+
+.ranking-list-pro-skin-fx[class*="--beast-"] .ranking-list-pro-skin-fx__layer {
+  background-position: 70% 42%;
+}
+
+.ranking-list-pro-skin-fx[class*="--form-"] .ranking-list-pro-skin-fx__layer {
+  background-position: 65% 40%;
+}

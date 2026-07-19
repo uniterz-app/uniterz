@@ -19,7 +19,21 @@
 | 2 | **プランは 3 種** | 方針 ✅ / UI ✅ | **Weekly / Monthly / Season Pass**（価格・特典は仮） |
 | 3 | **プラン内容の見せ方** | ✅ プレビュー | 説明文リスト。デモUIは無し（1週間お試しで体験） |
 | 4 | **課金成功後の画面** | ✅ プレビュー | 模擬購入後に成功パネル。戻って再選択可 |
-| 5 | **課金まわりの導線一式** | △ | プレビュー内のみ。本番入口・IAP/Stripe 未接続 |
+| 5 | **課金まわりの導線一式** | △ UI導線のみ | 本番 `/mobile/pro/subscribe` · 成功 → `/mobile/pro/skin` → マイページ。**Stripe/IAP・plan 更新は未接続** |
+
+#### 0.1.c Pro Skin 本番導線（UI のみ · 2026-07-17）
+
+| # | 項目 | 状態 | メモ |
+|---|---|---|---|
+| 1 | **サブスク成功 → スキンピッカー** | ✅ UI | `ProSubscribePreview` 成功 CTA → `/mobile/pro/skin` |
+| 2 | **スキン選択・保存** | ✅ UI | `ProfilePlanProSkinPicker` production · `POST /api/me/pro-skin`（**Pro 判定なし・暫定**） |
+| 3 | **マイページ反映** | ✅ UI | `planProBgVariant` をプロフィールカードに表示（**plan 未更新でも反映**） |
+| 4 | **サイドメニュー** | ✅ UI | 「Pro Skin」→ `/mobile/pro/skin` |
+| 5 | **ランキングリスト反映** | ✅ UI | Top リスト `RankingCard` · Medium · `mergeUserPlans*` で `planProBgVariant` 付与 |
+| 6 | **Pro 限定ガード** | ⏳ 後回し | Stripe/IAP 接続後に `plan === "pro"` でガード復帰 |
+
+本番ルート: `/mobile/pro/subscribe` · `/mobile/pro/skin`（web は `/web/pro/...`）  
+プレビューは進行中の参照先のみ維持（探索済みショーケースは 2026-07-18 に削除。§7 参照）。
 
 既存の参考: `app/mobile/pro/subscribe/page.tsx` · `docs/pro-subscription-plan.md`
 
@@ -42,7 +56,7 @@
 | **Shadow（ライバル帯）** | 先週同じ順位帯だった人との今週の差が分かる | 匿名の同帯比較。個人の予想は非公開。**Monthly / Season のみ**（Weekly には含めない） |
 | **My Rank Pro** | 自分の位置がはっきり見える | TOP%、次の帯までの点数、進捗グラフが広がる |
 | **Pro バッジ** | Pro だと分かる印 | プロフィールやランキングに表示 |
-| **プロフィールのデザイン** | 見た目が Pro 向けに変わる | プロフィールカードのラグジュアリー化 |
+| **Pro Skin** | プロフィールカードの背景スキンを選べる | 採用 18 種ピッカー（`/mobile/profile-plan-pro-bg-picker-preview`） |
 | **週次 / 月次レポート** | 振り返りが届く | 週：帯の動きの要約／月：自分の傾向のまとめ |
 
 **プラン差の言い方**
@@ -56,7 +70,7 @@
 2. Shadow — 同帯ライバルとの今週比較（Monthly〜）  
 3. My Rank Pro — TOP% と次の目標まで  
 4. Pro バッジ — プロフィール／ランキング表示  
-5. プロフィールのデザイン — Pro 向けの見た目  
+5. Pro Skin — プロフィールカードの背景スキン  
 6. レポート — 週／月の振り返り  
 
 （Gap は保留）
@@ -81,7 +95,7 @@
 
 - 主CTA: **7日間無料で試す**
 - サブ（Weekly）: お試し後は週額 ¥280。期間中の解約で課金なし。
-- サブ（Monthly）: お試し後は月額 ¥600。期間中の解約で課金なし。
+- サブ（Monthly）: お試し後は月額 ¥780。期間中の解約で課金なし。
 - モーダル見出し: **お試しの前に**
 - モーダル要点（短文のみ・機能一覧なし）: 7日間無料 / 期間中解約で課金なし / お試し後は選んだプランへ自動切替 / Weekly⇔Monthly はいつでも変更可
 - 成功画面: **Pro お試し開始**（7日間）
@@ -97,8 +111,28 @@
 
 | # | 項目 | 状態 | メモ |
 |---|---|---|---|
-| 6 | **ランキングを Weekly + Monthly に** | ❌ | いまの累計に加え、週次・月次ランキング軸 |
+| 6 | **ランキングを Weekly + Monthly に** | ✅ NBA タブ再構成済み | NBA は **Weekly / Monthly / Season + 指標タブのみ**（Playoffs/Bracket カテゴリタブ・1st/2nd 等ラウンドタブは廃止。mobile/web とも）。WC は従来どおり（WORLD CUP/Bracket + ステージタブ）。Season はシーズンキー式（`rankingBySeason["2026-27"]` + `s2026-27_*` snapshot）で毎年リセット不要 |
 | 7 | **月間レポートに Weekly レポートを足す** | ❌ | 既存の月次 Pro Stats に加え、週次レポート |
+
+#### NBA ランキング指標（確定）
+
+| 指標 | キー | メモ |
+|---|---|---|
+| 総合得点 | `totalScore` | 維持 |
+| 勝率 | `winRate` | 維持 |
+| アップセット | `upsetScore` | 維持 |
+| 最多得点者的中 | `goalScorerHits` | **新規（NBA）**。連勝・スコア精度は NBA タブから外す |
+
+#### NBA 最多得点者予想（確定）
+
+- **対象:** 試合ごとの最多得点者（その試合で最も得点した選手）
+- **ボーナス:** 的中 **+2**（WC 得点者と同じ）
+- **同点トップ:** 複数人いる場合はいずれも的中対象
+- **保存:** `prediction.goalScorer = { playerId, teamId }`（WC と同形）
+- **確定データ:** `games.leadingScorers`（候補は `games.topScorerCandidates`）
+- **Admin:** `/api/admin/nba-top-scorers`
+- **Preview:** `/mobile/nba-top-scorer-preview`
+- **残:** 実ボックススコア自動投入（ゲート B / NBA API）
 
 関連: Pro 計画の「週次 Shadow サマリー / 月次 Pro Stats」（`pro-subscription-plan.md`）
 
@@ -106,8 +140,13 @@
 
 | # | 項目 | 状態 | メモ |
 |---|---|---|---|
-| 8 | **ライブ中の表示** | ❌ | 試合カード上のライブ状態の見せ方 |
-| 9 | **ライブ試合カード → ライブスタッツ** | ❌ | ライブ中のカードを押すとライブスタッツが表示される |
+| 8 | **ライブ中の表示** | ✅ 本番配線済み | NBA カード限定。オーバーレイ（`ScheduleList`）に `LiveGameStatsPanel` を表示。プレビュー: `/mobile/live-game-stats-preview` |
+| 9 | **ライブ試合カード → ライブスタッツ** | ✅ 本番配線済み | Team / Box Score タブ。Roster UI 準拠のボックス（away 初期折りたたみ）。ヘッダーは実カード準拠の縦積み。**データ ingest は残**（下記） |
+
+- **本番データフロー:** 外部データ → `PATCH /api/admin/nba-live-stats`（`games/{id}.liveStats` に保存）→ クライアントは `GET /api/games/live-stats?gameId=` で取得。ライブ中は 30 秒ポーリング（`useLiveGameStats`）、final で停止。`liveStats` 未登録の試合はパネル非表示。
+- **残:** ライブ中の実データ自動投入（ゲート B / NBA API → admin ingest への接続）
+
+関連: `LiveGameStatsPanel` · `LiveGameTeamStatsPanel` · `LiveGameBoxScorePanel` · `lib/games/liveGameStats.ts` · `lib/games/useLiveGameStats.ts`
 
 ### 0.4 Pro Stats / 招待
 
@@ -191,15 +230,17 @@
 
 プレビュー: http://localhost:3000/dev/predict-timing-preview
 
+> 2026-07-18: **NBA は本番 `PredictionFormV2` に新4タブ配線済み**（`NbaPredictToolsTabs` = Insight(PRO) / Injury / Team Stats / Roster、常時表示）。旧ツールタブ（Team Stats / Market / Standings / H2H）・`NbaPostseasonMatchupPanel`・旧 `PredictProInfoPanel`（NBA 分）は削除。データ未投入タブは「データ準備中」表示 → ゲート B で実データ接続。
+
 | 機能 | UI | 本番 `PredictionFormV2` | 実データ | 備考 |
 |---|---|---|---|---|
-| Injury Report | ✅ | ❌ | ❌（API 契約後） | mock。ゲート A + B。**モバイルはイニシャル四角非表示** |
-| Team Stats（SEASON / L10・順位セグ・L10 W/L） | ✅ | ❌ | ❌ | mock。ゲート A + B |
-| Roster | ✅ | ❌ | ❌ | mock。ゲート A + B |
-| Pro Insight（MATCHUP / SCHEDULE / CONTEXT） | ✅ | ❌ | ❌ | `PredictProBriefPanel`。旧 `PredictProInfoPanel` が本番に残存 |
+| Injury Report | ✅ | ✅ タブ配線済み（NBA） | ❌（API 契約後） | データ null → 準備中表示。**モバイルはイニシャル四角非表示** |
+| Team Stats（SEASON / L10・順位セグ・L10 W/L） | ✅ | ✅ タブ配線済み（NBA） | ❌ | 同上 |
+| Roster | ✅ | ✅ タブ配線済み（NBA） | ❌ | 同上 |
+| Pro Insight（MATCHUP / SCHEDULE / CONTEXT） | ✅ | ✅ タブ配線済み（NBA・PRO バッジ） | ❌ | `PredictProBriefPanel`。非 Pro はロック文言。旧 `PredictProInfoPanel` は WC/他リーグのみ残存 |
 | スコア入力（斜め HUD） | ✅ | △ オーバーレイのみ新UI | — | `PredictOverlayScoreFields`。スタンドアロンは旧入力のまま |
 | Timing advice 1行 | UI ✅ / パイプライン未 | △ | context_cache 未 | 詳細は `docs/pro-subscription-plan.md` |
-| Free / Pro ゲート（タブ・Insight） | プレビュー切替のみ | ❌ | — | 課金 entitlement と一体 |
+| Free / Pro ゲート（タブ・Insight） | △ Insight のみ `isPro` でロック | ✅ | — | `useUserPlan` 判定。課金 entitlement 接続後そのまま有効 |
 
 **鉄則（確認済み）:** Pro Insight は Pay-for-Insight。採点倍率・推奨予想などの **Pay to Win はしない**。
 
@@ -209,8 +250,8 @@
 
 | 機能 | プレビュー | 本番配線 | データ |
 |---|---|---|---|
-| My Rank Free / Pro カード | http://localhost:3000/dev/my-rank-free-pro-preview | ❌（`displayTier` / `isPro` 等） | Progress・ギャップ等は設計済・接続段階 |
-| Gap + Shadow（同一ページ） | http://localhost:3000/dev/rank-gap-preview | △ `/mobile/rankings/gap` 等あり、完成度要確認 | Gap/Shadow API・キャッシュは一部あり |
+| My Rank Free / Pro カード | http://localhost:3000/dev/my-rank-free-pro-preview | ✅ 2026-07-18（mobile / web） | NBA: free/pro とも `displayTier` 適用 + Ranking Progress 実データ（`rankSnapshotHistory` → `/api/profile/rank-playoff-trend` → `useMyRankProgress`）。Weekly/Monthly ボードはプログレス非表示（`hideRankProgress`）。WC は pro のみ従来どおり + progress 実データ化 |
+| Gap + Shadow（同一ページ） | http://localhost:3000/dev/rank-gap-preview | ⏸ **保留（2026-07-18 ユーザー判断・まだ入れない）** | Gap/Shadow API・キャッシュは一部あり。着手時に完成度監査から |
 
 詳細フェーズは `docs/pro-subscription-plan.md` の Phase 1–4 を参照。
 
@@ -220,9 +261,9 @@
 
 ### ゲート A（7/20 WC 後・UI 本番反映）
 
-- [ ] 予想オーバーレイに Injury / Team Stats / Roster / Pro Insight を本番配置（feature flag 推奨）
-- [ ] 旧 `PredictProInfoPanel` → `PredictProBriefPanel` 切替方針の実行
-- [ ] My Rank Pro 表示・Gap/Shadow 入口の本番揃え
+- [x] 予想オーバーレイに Injury / Team Stats / Roster / Pro Insight を本番配置（2026-07-18 · NBA は `NbaPredictToolsTabs` 常時タブ）
+- [x] 旧 `PredictProInfoPanel` → `PredictProBriefPanel` 切替方針の実行（NBA 完了。WC/他リーグは旧パネル継続 → WC 終了後に判断）
+- [x] My Rank Free/Pro カードの本番揃え（2026-07-18 · mobile/web。Gap/Shadow ページ本体は**保留**、Pro の入口リンクのみ既存） 
 - [ ] シーズン順位予想の本番ページ（締切日時はゲート C 待ちでもページ枠は可）
 - [ ] アワード予想の本番ページ枠
 
@@ -260,7 +301,9 @@
 | アワード UI | `app/component/predict/season/NbaSeasonAwardsPredictPanel.tsx` |
 | 提出後ビュー | `NbaSeasonStandingsViewPanel` / `NbaSeasonAwardsViewPanel` |
 | オーバーレイ preview | `/mobile/predict-timing-preview` |
-| Pro 課金導線 preview | `/mobile/pro-subscribe-preview` · `ProSubscribePreview` |
+| Pro 課金導線 preview | `/mobile/pro-subscribe-preview` → **本番** `/mobile/pro/subscribe` · `ProSubscribePreview` |
+| Pro Skin ピッカー（本番） | `/mobile/pro/skin` · `ProfilePlanProSkinPicker` production |
+| Pro Skin ピッカー（dev） | `/mobile/profile-plan-pro-bg-picker-preview` |
 | Pro 計画（設計の本編） | `docs/pro-subscription-plan.md` |
 
 ---
@@ -269,6 +312,27 @@
 
 | 日付 | 内容 |
 |---|---|
+| 2026-07-18 | **26-27 シーズンキー移行 + ランキング大掃除**: ① 25-26 の `cumulative_ranking_snapshots` 全 52 doc を `cumulative_ranking_snapshots_archive/2025-26-playoffs/docs/` にコピー済み（`scripts/archive-cumulative-ranking-snapshots-2025-26.ts` 実行済み。`cumulative_stats` は温存 → バッジ影響なし）。② NBA 累計は `rankingBySeason["2026-27"]` バケットに精算加算（daily も同キー）、スナップショットは `s2026-27_<metric>` doc、snapshotRanks/履歴は `seasons.<key>` ブロック。Ranking Progress（trend API）もシーズンキーで絞り込み、7月の旧順位が混入しない。③ 削除: ラウンド別集計（`rankingByPlayoffRound`）・play_in 配管・NBA Bracket リーダーボード・旧 Monthly リーダーボード（cron/API/UI）・`useRanking` + `/api/cumulative-ranking` 単発版・Gap/Shadow の日次データ収集（`gapCohorts`。UI/API はライブ read で継続）。④ 一発運用スクリプト多数を `scripts/archive/` へ移動（tsconfig から除外） |
+| 2026-07-18 | **NBA ランキングタブ再構成（シーズン制）**: NBA は Weekly / Monthly / Season + 指標タブのみに。Playoffs/Bracket カテゴリタブ・ラウンドタブ（1st/2nd/CF/Finals）を mobile/web から削除（`PlayoffRoundTabs` 削除、NBA Bracket リーダーボード導線廃止）。web にも期間タブ + `usePeriodRankingsBulk` 配線。サイドメニュー表記を「NBA プレーオフ」→「NBA」へ。**残**: 新シーズン開始時の Season 累計リセット |
+| 2026-07-18 | **My Rank Free/Pro カード本番配線**（mobile/web）: NBA は free=`displayTier:"free"`（Progress 3件）/ pro（10件・TOP%・Tier Gap）。Progress は `rankSnapshotHistory` 実データ（`useMyRankProgress` + 既存 trend API）。Weekly/Monthly は Progress 非表示。**Gap/Shadow ページはユーザー判断で保留** |
+| 2026-07-18 | **NBA 予想フォーム新4タブ本番化**: `NbaPredictToolsTabs`（Insight PRO / Injury / Team Stats / Roster 常時表示・データ未投入は準備中表示）。旧ツールタブ（Team Stats / Market / Standings / H2H）・`NbaPostseasonMatchupPanel` 配線・旧 `PredictProInfoPanel`（NBA 分）を削除。i18n 3キー ×9ロケール追加 |
+| 2026-07-18 | **探索済みプレビュー 29 ページ削除**: Pro スキン全ラウンド・ランキング見た目実験・単発実験（cyber-bg-lab / event-modal / profile-v2 等）。残存: 課金・シーズン予想・predict-timing・rank 系・top-scorer・live-stats・bg-picker・ハブ。本番依存 CSS は `profile/pro` / `rankings` へ移設済み |
+| 2026-07-18 | **ライブ試合スタッツ 本番配線**: NBA カード（live/final）タップ → オーバーレイに Team / Box Score。`liveStats` ingest（admin API）+ 公開 GET + 30 秒ポーリング |
+| 2026-07-18 | **NBA Season / Weekly / Monthly ランキング**: 期間タブ + `/api/period-ranking/bulk`（日次集計）。Season は既存累計 |
+| 2026-07-18 | **ライブ試合スタッツ プレビュー**: カードタップ → Team / Box Score。FINAL 対応。API 差し替え前提 mock |
+| 2026-07-17 | **NBA 最多得点者予想**: 試合ごとトップスコアラー・+2・`goalScorerHits` 指標。候補/確定は admin API。ボックススコア自動投入は未 |
+| 2026-07-17 | **NBA ランキング指標**: 総合 / 勝率 / アップセット / 最多得点者（連勝・スコア精度を外す） |
+| 2026-07-17 | **ランキングリスト × Pro Skin**: Top リストに Medium で本番配線（`planProBgVariant` merge） |
+| 2026-07-17 | **Pro Skin 本番 UI 導線**: subscribe → skin picker → save → mypage。Stripe/plan ガードは未接続 |
+| 2026-07-17 | Pro Skin 採用18のユーザー向けカテゴリ: サイバー2 / 爬虫類8 / 獣皮2 / 素材4 / 幾何学2（No.順も更新） |
+| 2026-07-17 | PRO 背景採用を 18 に整理: Hex Veil / Isometric Cubes 採用、Void Ripple 不採用（Form 他は候補外） |
+| 2026-07-17 | PRO 背景 Form 幾何 16 案を採用候補に追加（Hex Veil 〜 Isometric Cubes） |
+| 2026-07-17 | PRO 背景 Beast 採用 10: Panther / Crocodile / Drake / Viper / Shark / Carbon / Titanium / Chevron / Circuit Lace / Void Ripple |
+| 2026-07-17 | PRO 背景第5R: Monogram Grid 〜 Void Ripple（ブランド・幾何・結線 +8） |
+| 2026-07-17 | PRO 背景第4R: Carbon Weave 〜 Holographic Silk（素材・金属・布 +8） |
+| 2026-07-17 | PRO 背景第3R: Golden Viper 〜 Turtle Armor（beast 系 +8） |
+| 2026-07-17 | PRO 背景第2R: Midnight Panther 〜 Obsidian Marble（beast 系 8 案）ショーケース追加 |
+| 2026-07-17 | PRO 背景採用候補: Light Shaft / Volume Cloud / Aurora / Mesh Blob を不採用（残り7） |
 | 2026-07-16 | **§0 次の作業キュー**を追加（課金導線 3 プラン / 週次・月次ランキング・レポート / ライブスタッツ / Pro Stats 整備 / 招待ページ） |
 | 2026-07-16 | Pro 課金プレビュー追加（3プラン → 模擬購入 → 成功）。`/mobile/pro-subscribe-preview` |
 | 2026-07-16 | 課金ページ説明文を §0.1.a に確定ドラフト（Insight / Gap / Shadow / My Rank / レポート） |

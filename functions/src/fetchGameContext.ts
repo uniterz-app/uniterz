@@ -35,6 +35,8 @@ export type NormalizedGame = {
   wcStage?: "qualifying" | "main" | null;
   /** WC: 得点者リスト */
   goalScorers?: unknown;
+  /** NBA: 最多得点者 */
+  leadingScorers?: unknown;
 };
 
 export type GameContext = {
@@ -93,6 +95,7 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
       wcStage: after?.wcStage ?? null,
     }),
     goalScorers: after?.goalScorers ?? null,
+    leadingScorers: after?.leadingScorers ?? null,
   };
 }
 

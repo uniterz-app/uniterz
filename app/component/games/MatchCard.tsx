@@ -224,6 +224,8 @@ homeRecord?: {
   language?: Language;
   /** WC：試合の実得点者（一覧カード表示用） */
   goalScorers?: WcGameGoalScorer[] | null;
+  /** NBA: 最多得点者予想の候補選手 */
+  topScorerCandidates?: import("@/lib/nba/topScorer").NbaTopScorerCandidate[] | null;
 };
 
 

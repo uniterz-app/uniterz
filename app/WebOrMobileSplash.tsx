@@ -47,8 +47,12 @@ export default function WebOrMobileSplash({
     );
   }
 
-  // dev プレビューは Auth 待ちせず即表示
-  if (pathname?.startsWith("/dev")) {
+  // dev / mobile プレビューは Auth 待ちせず即表示
+  if (
+    pathname?.startsWith("/dev") ||
+    pathname?.startsWith("/mobile/profile-plan-pro-") ||
+    pathname === "/mobile/pro-subscribe-preview"
+  ) {
     return (
       <div id="app-root" className="relative isolate min-h-0">
         {children}

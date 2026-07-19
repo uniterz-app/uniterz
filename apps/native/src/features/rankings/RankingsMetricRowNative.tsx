@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
 import type { Language } from "../../../../../lib/i18n/language";
 import {
   metricLabel as webMetricLabel,

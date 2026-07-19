@@ -53,6 +53,12 @@ import {
   predictOverlayPanel,
   predictOverlayRoot,
 } from "@/lib/predict/predictPageMotion";
+import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
+
+const LiveGameStatsPanel = dynamic(
+  () => import("./live/LiveGameStatsPanel"),
+  { loading: () => null, ssr: false }
+);
 
 export type GameItemRaw = any;
 
@@ -223,6 +229,17 @@ export default function ScheduleList({
     if (!openGameId) return null;
     return propsList.find((p) => String(p.id) === String(openGameId)) ?? null;
   }, [propsList, openGameId]);
+
+  /** NBA のライブ中/終了カードのみ、オーバーレイにチームスタッツ + ボックススコアを出す */
+  const liveStatsEnabled = Boolean(
+    openGameId &&
+      selectedProps?.league === "nba" &&
+      (selectedProps?.status === "live" || selectedProps?.status === "final")
+  );
+  const { report: liveStatsReport } = useLiveGameStats(
+    liveStatsEnabled && openGameId ? String(openGameId) : null,
+    liveStatsEnabled
+  );
 
   const reduceMotion = useReducedMotion();
   /** デスクトップ Web／モバイル Web ともネイティブ試合一覧に揃えて入場スタッガーを有効化 */
@@ -766,6 +783,20 @@ export default function ScheduleList({
                   }
                 />
               </motion.div>
+
+              {liveStatsReport ? (
+                <motion.div
+                  className="mt-4"
+                  variants={
+                    overlayMotionEnabled ? predictOverlayCard : undefined
+                  }
+                >
+                  <LiveGameStatsPanel
+                    report={liveStatsReport}
+                    language={language}
+                  />
+                </motion.div>
+              ) : null}
 
               <PredictionFormV2
                 key={String(openGameId)}

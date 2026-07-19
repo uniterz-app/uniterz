@@ -1,4 +1,4 @@
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { isRankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
@@ -32,6 +32,8 @@ export const RANKINGS_TAB_LEAGUE_PARAM = "rankLeague";
 export const RANKINGS_TAB_WC_STAGE_PARAM = "rankWcStage";
 /** プレーオフ / ブラケット タブ */
 export const RANKINGS_TAB_CATEGORY_PARAM = "rankCategory";
+/** NBA: Season / Weekly / Monthly */
+export const RANKINGS_TAB_PERIOD_PARAM = "rankPeriod";
 /** WC ブラケット入力オーバーレイを開く（rankCategory=bracket と併用） */
 export const RANKINGS_WC_BRACKET_INPUT_PARAM = "wcBracketInput";
 

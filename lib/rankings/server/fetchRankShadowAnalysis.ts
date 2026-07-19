@@ -1,6 +1,4 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import {
   readTotalPointsRankFromHistoryDoc,
@@ -236,8 +234,6 @@ async function loadUserProfiles(
 async function computeRankShadowAnalysisLive(input: {
   uid: string;
   rankingLeague: RankingLeagueSource;
-  phase: RankingPhase;
-  round: PlayoffRoundKey;
   wcStage: WcRankingStage | null;
   language: Language;
 }): Promise<RankShadowAnalysis | { ok: false; reason: string }> {
@@ -250,8 +246,6 @@ async function computeRankShadowAnalysisLive(input: {
 
   const context: RankHistoryContext & { rankingLeague: RankingLeagueSource } = {
     rankingLeague: input.rankingLeague,
-    phase: input.phase,
-    round: input.round,
     wcStage: input.wcStage,
   };
 
@@ -262,8 +256,6 @@ async function computeRankShadowAnalysisLive(input: {
   const bulk = await fetchBulkFromFunctions(
     input.uid,
     ["totalPoints"],
-    input.phase,
-    input.round,
     input.wcStage
   );
   const bundle = bulk.byMetric.totalPoints;
@@ -309,8 +301,6 @@ async function computeRankShadowAnalysisLive(input: {
 
   const selfSlice = readRankGapStatsSlice(cumulativeByUid.get(input.uid), {
     rankingLeague: input.rankingLeague,
-    phase: input.phase,
-    round: input.round,
     wcStage: input.wcStage,
   });
   if (!selfSlice || selfSlice.posts <= 0) {
@@ -336,8 +326,6 @@ async function computeRankShadowAnalysisLive(input: {
     const cumulative = cumulativeByUid.get(member.uid);
     const slice = readRankGapStatsSlice(cumulative, {
       rankingLeague: input.rankingLeague,
-      phase: input.phase,
-      round: input.round,
       wcStage: input.wcStage,
     });
     if (!slice || slice.posts <= 0) continue;
@@ -378,8 +366,6 @@ async function computeRankShadowAnalysisLive(input: {
 export async function fetchRankShadowAnalysis(input: {
   uid: string;
   rankingLeague: RankingLeagueSource;
-  phase: RankingPhase;
-  round: PlayoffRoundKey;
   wcStage: WcRankingStage | null;
   language: Language;
 }): Promise<RankShadowAnalysis | { ok: false; reason: string }> {
@@ -389,8 +375,6 @@ export async function fetchRankShadowAnalysis(input: {
   const cacheId = buildRankShadowCacheId({
     weekStartDateKey,
     rankingLeague: input.rankingLeague,
-    phase: input.phase,
-    round: input.round,
     wcStage: input.wcStage,
     language: input.language,
   });

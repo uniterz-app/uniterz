@@ -11,6 +11,8 @@ export default function AppChrome() {
     pathname.startsWith("/dev/my-rank-free-pro-preview") ||
     pathname === "/" ||
     pathname.startsWith("/dev") ||
+    pathname.startsWith("/mobile/profile-plan-pro-") ||
+    pathname === "/mobile/pro-subscribe-preview" ||
     pathname === "/lp" ||
     pathname === "/lp-v2" ||
     pathname === "/mobile/lp" ||

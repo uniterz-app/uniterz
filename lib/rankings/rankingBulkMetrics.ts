@@ -1,7 +1,7 @@
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const REFETCH_ALL_METRICS_NBA =
-  "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
+  "totalPoints,totalUpset,winRate,totalGoalScorerHits";
 
 export const REFETCH_ALL_METRICS_WC =
   "totalPoints,totalExactHits,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";

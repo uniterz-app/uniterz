@@ -53,10 +53,10 @@ const CORE_FEATURES: readonly ProSubscribePreviewFeature[] = [
     detailEn: "A Pro badge on your profile and rankings.",
   },
   {
-    titleJa: "プロフィールのデザイン",
-    titleEn: "Pro profile look",
-    detailJa: "プロフィールカードが Pro 向けの見た目に変わる",
-    detailEn: "Your profile card gets the Pro visual treatment.",
+    titleJa: "Pro Skin",
+    titleEn: "Pro Skin",
+    detailJa: "プロフィールカードの背景スキンを選べる",
+    detailEn: "Choose a background skin for your profile card.",
   },
 ];
 
@@ -110,8 +110,8 @@ export const PRO_SUBSCRIBE_PREVIEW_PLANS: readonly ProSubscribePreviewPlan[] = [
     id: "monthly",
     labelJa: "Monthly",
     labelEn: "Monthly",
-    priceJa: "¥600",
-    priceEn: "¥600",
+    priceJa: "¥780",
+    priceEn: "¥780",
     periodJa: "/ 月",
     periodEn: "/ month",
     badgeJa: "7日無料",

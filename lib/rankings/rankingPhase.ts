@@ -1,23 +1,14 @@
-export type RankingPhase = "play_in" | "playoffs";
-
-export const RANKING_PHASES: RankingPhase[] = ["play_in", "playoffs"];
-
 /**
- * Cloud Function `buildCumulativeRankingSnapshot` が日次で更新するフェーズ。
- * プレーイン終了後は `playoffs` のみ更新し、プレーインは Firestore 上の最終スナップショットをそのまま表示する。
- * （functions の `SNAPSHOT_BUILD_PHASES` と同期すること）
+ * NBA ランキングは 26-27 以降シーズンキー（lib/rankings/nbaSeason.ts）で管理する。
+ * `playoffs` は旧 UI 互換のための唯一のフェーズ値（= NBA 現行シーズンボード）。
  */
-export const RANKING_SNAPSHOT_BUILD_PHASES: RankingPhase[] = ["playoffs"];
+export type RankingPhase = "playoffs";
 
-export function isRankingSnapshotBuiltDailyForPhase(
-  phase: RankingPhase
-): boolean {
-  return RANKING_SNAPSHOT_BUILD_PHASES.includes(phase);
-}
+export const RANKING_PHASES: RankingPhase[] = ["playoffs"];
 
 /** Matches Functions: cumulative_stats/{uid}/rankSnapshotHistory/{yyyy-mm-dd} */
 export const RANK_SNAPSHOT_HISTORY_SUBCOL = "rankSnapshotHistory" as const;
 
 export function isRankingPhase(v: string | null | undefined): v is RankingPhase {
-  return v === "play_in" || v === "playoffs";
+  return v === "playoffs";
 }

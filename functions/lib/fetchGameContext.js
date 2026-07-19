@@ -12,7 +12,7 @@ function normalizePlayoffRoundKey(v) {
     return s === "r1" || s === "r2" || s === "cf" || s === "finals" ? s : null;
 }
 function normalizeGame(after, gameId) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
     const seasonPhase = (_a = after === null || after === void 0 ? void 0 : after.seasonPhase) !== null && _a !== void 0 ? _a : null;
     return {
         id: gameId,
@@ -42,6 +42,7 @@ function normalizeGame(after, gameId) {
             wcStage: (_l = after === null || after === void 0 ? void 0 : after.wcStage) !== null && _l !== void 0 ? _l : null,
         }),
         goalScorers: (_m = after === null || after === void 0 ? void 0 : after.goalScorers) !== null && _m !== void 0 ? _m : null,
+        leadingScorers: (_o = after === null || after === void 0 ? void 0 : after.leadingScorers) !== null && _o !== void 0 ? _o : null,
     };
 }
 /* =========================

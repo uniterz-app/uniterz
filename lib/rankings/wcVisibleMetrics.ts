@@ -1,5 +1,5 @@
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
-import { METRICS } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
+import { METRICS } from "@/lib/rankings/rankingMetrics";
 
 /** WORLD CUP 用の指標一覧 */
 export const WC_VISIBLE_METRICS: MobileMetric[] = [
@@ -15,9 +15,8 @@ export const WC_VISIBLE_METRICS: MobileMetric[] = [
 export const NBA_VISIBLE_METRICS: MobileMetric[] = [
   "totalScore",
   "winRate",
-  "marginPrecision",
   "upsetScore",
-  "streak",
+  "goalScorerHits",
 ];
 
 export function visibleMetricsForLeague(
@@ -35,6 +34,9 @@ export function buildRankingTabMetrics(
   const keys = visibleMetricsForLeague(rankingLeague);
   return keys.map((key) => {
     const found = METRICS.find((m) => m.key === key);
+    if (rankingLeague === "nba" && key === "goalScorerHits") {
+      return { key, label: "最多得点者的中" };
+    }
     return found ?? { key, label: key };
   });
 }

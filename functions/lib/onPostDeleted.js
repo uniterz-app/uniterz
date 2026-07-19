@@ -5,16 +5,7 @@ exports.onPostDeletedV2 = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
 const cumulativeFromDaily_1 = require("./rankings/cumulativeFromDaily");
-function normalizeSeasonPhase(v) {
-    if (v === "play_in" || v === "playoffs")
-        return v;
-    return null;
-}
-function normalizeSeasonRound(v) {
-    if (v === "r1" || v === "r2" || v === "cf" || v === "finals")
-        return v;
-    return null;
-}
+const nbaSeason_1 = require("./rankings/nbaSeason");
 function normalizeLeague(raw) {
     if (!raw)
         return null;
@@ -25,16 +16,21 @@ function normalizeLeague(raw) {
         return "nba";
     return v || null;
 }
-function buildDeleteContribution(before, stats) {
+function nbaSeasonKeyForDelete(leagueKey, forRanking, startAt) {
+    if (!forRanking || leagueKey !== "nba" || !startAt)
+        return null;
+    return (0, nbaSeason_1.nbaSeasonKeyFromDateJST)(startAt.toDate());
+}
+function buildDeleteContribution(before, stats, startAt) {
     var _a, _b, _c, _d, _e, _f;
     const leagueKey = normalizeLeague(typeof before.league === "string" ? before.league : null);
     const isWc = leagueKey === "wc";
     const wcStageRaw = before.wcStage;
     const wcStage = wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
+    const forRanking = stats.countedForRanking !== false;
     return {
-        forRanking: stats.countedForRanking !== false,
-        phaseKey: normalizeSeasonPhase(before.seasonPhase),
-        roundKey: normalizeSeasonRound(before.seasonRound),
+        forRanking,
+        nbaSeasonKey: nbaSeasonKeyForDelete(leagueKey, forRanking, startAt),
         leagueKey,
         isWc,
         wcStage,
@@ -118,8 +114,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             const user = userSnap.exists ? userSnap.data() : {};
             (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, {
                 forRanking: true,
-                phaseKey: null,
-                roundKey: null,
+                nbaSeasonKey: null,
                 leagueKey: normalizeLeague(typeof before.league === "string" ? before.league : null),
                 isWc: false,
                 wcStage: null,
@@ -175,6 +170,10 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         if (countRank) {
             tx.set(dailyRef, { ranking: dec }, { merge: true });
         }
+        const seasonKey = nbaSeasonKeyForDelete(normalizeLeague(typeof before.league === "string" ? before.league : null), countRank, startAt);
+        if (seasonKey) {
+            tx.set(dailyRef, { rankingBySeason: { [seasonKey]: dec } }, { merge: true });
+        }
         const leagueKeyInner = (_a = before.league) !== null && _a !== void 0 ? _a : null;
         if (leagueKeyInner) {
             tx.set(dailyRef, { leagues: { [leagueKeyInner]: dec } }, { merge: true });
@@ -188,7 +187,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         }
         const userSnap = await tx.get(userRef);
         const user = userSnap.exists ? userSnap.data() : {};
-        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, buildDeleteContribution(before, stats), -1);
+        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, buildDeleteContribution(before, stats, startAt), -1);
         tx.delete(markerRef);
     });
 });

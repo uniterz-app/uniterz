@@ -31,7 +31,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type StatsPart = "stats" | "phase" | "trend" | "ranks";
-type RankingPhase = "play_in" | "playoffs";
 
 const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend", "ranks"];
 
@@ -53,10 +52,6 @@ function safeInt(v: unknown): number {
 function safeNum(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : 0;
-}
-
-function parsePhase(raw: string | null): RankingPhase {
-  return raw === "play_in" ? "play_in" : "playoffs";
 }
 
 async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>, uid: string) {
@@ -90,7 +85,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const uidParam = searchParams.get("uid")?.trim() ?? "";
     const handleParam = searchParams.get("handle")?.trim() ?? "";
-    const phase = parsePhase(searchParams.get("phase"));
     const rawLeague = searchParams.get("league");
     const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
       ? rawLeague
@@ -157,8 +151,6 @@ export async function GET(req: Request) {
     let metricValueDeltas: MyRankMetricValueDeltas | null = null;
     if (wantPhase) {
       const deltaOpts = {
-        phase,
-        round: "overall" as const,
         wcStage: rankingLeague === "worldcup" ? (wcStage ?? "overall") : null,
         rankingLeague,
       };
@@ -231,7 +223,6 @@ export async function GET(req: Request) {
         summary = await resolveNbaProfileSummaryLive(
           adminDb,
           uid,
-          phase,
           cumulative as Record<string, unknown> | null,
           priorMetrics
         );
@@ -261,7 +252,6 @@ export async function GET(req: Request) {
     if (wantRanks || wantPhase) {
       summaryRanks = await fetchProfileSummaryRanks(
         uid,
-        phase,
         rankingLeague === "worldcup" ? wcStage : undefined,
         cumulative as Record<string, unknown> | null | undefined
       );
@@ -271,7 +261,6 @@ export async function GET(req: Request) {
       ok: true,
       resolvedUid: uid,
       parts: [...parts],
-      phase,
       rankingLeague,
       wcStage: wcStage ?? null,
     };

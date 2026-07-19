@@ -3,7 +3,7 @@ import { cyberAlert } from "../../components/cyberAlert";
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
-import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
 import {
   computeMyRankTopPercent,

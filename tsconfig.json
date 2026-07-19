@@ -39,6 +39,7 @@
     "node_modules",
     "functions",
     "apps/native",
-    "uniterz-native"
+    "uniterz-native",
+    "scripts/archive"
   ]
 }

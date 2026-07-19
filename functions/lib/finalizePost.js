@@ -7,7 +7,7 @@ const computePostSettlement_1 = require("./computePostSettlement");
 const matchGoalScorersDisplay_1 = require("./wc/matchGoalScorersDisplay");
 const resolveWcStage_1 = require("./wc/resolveWcStage");
 async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
     const p = postDoc.data();
     if (p.settledAt)
         return;
@@ -25,6 +25,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             knockout: game.knockout,
             countsForRanking: game.countsForRanking,
             goalScorers: game.goalScorers,
+            leadingScorers: game.leadingScorers,
         },
         market,
         hadUpsetGame,
@@ -114,11 +115,9 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         exactHit: isWc && Boolean(baseScore.exactMatch),
         points: totalPoints,
         countsForRanking,
-        seasonPhase: (_f = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _f !== void 0 ? _f : null,
-        seasonRound: (_g = game === null || game === void 0 ? void 0 : game.seasonRound) !== null && _g !== void 0 ? _g : null,
         wcStage: resolvedWcStage,
-        homeTeamId: (_k = (_h = game.homeTeamId) !== null && _h !== void 0 ? _h : (_j = p.home) === null || _j === void 0 ? void 0 : _j.teamId) !== null && _k !== void 0 ? _k : null,
-        awayTeamId: (_o = (_l = game.awayTeamId) !== null && _l !== void 0 ? _l : (_m = p.away) === null || _m === void 0 ? void 0 : _m.teamId) !== null && _o !== void 0 ? _o : null,
+        homeTeamId: (_h = (_f = game.homeTeamId) !== null && _f !== void 0 ? _f : (_g = p.home) === null || _g === void 0 ? void 0 : _g.teamId) !== null && _h !== void 0 ? _h : null,
+        awayTeamId: (_l = (_j = game.awayTeamId) !== null && _j !== void 0 ? _j : (_k = p.away) === null || _k === void 0 ? void 0 : _k.teamId) !== null && _l !== void 0 ? _l : null,
     }));
 }
 //# sourceMappingURL=finalizePost.js.map

@@ -5,20 +5,7 @@ import {
   applyCumulativeIncrementInTransaction,
   type PostCumulativeContribution,
 } from "./rankings/cumulativeFromDaily";
-
-function normalizeSeasonPhase(
-  v: unknown
-): "play_in" | "playoffs" | null {
-  if (v === "play_in" || v === "playoffs") return v;
-  return null;
-}
-
-function normalizeSeasonRound(
-  v: unknown
-): "r1" | "r2" | "cf" | "finals" | null {
-  if (v === "r1" || v === "r2" || v === "cf" || v === "finals") return v;
-  return null;
-}
+import { nbaSeasonKeyFromDateJST } from "./rankings/nbaSeason";
 
 function normalizeLeague(raw?: string | null): string | null {
   if (!raw) return null;
@@ -28,9 +15,19 @@ function normalizeLeague(raw?: string | null): string | null {
   return v || null;
 }
 
+function nbaSeasonKeyForDelete(
+  leagueKey: string | null,
+  forRanking: boolean,
+  startAt: Timestamp | undefined
+): string | null {
+  if (!forRanking || leagueKey !== "nba" || !startAt) return null;
+  return nbaSeasonKeyFromDateJST(startAt.toDate());
+}
+
 function buildDeleteContribution(
   before: Record<string, unknown>,
-  stats: Record<string, unknown>
+  stats: Record<string, unknown>,
+  startAt: Timestamp | undefined
 ): PostCumulativeContribution {
   const leagueKey = normalizeLeague(
     typeof before.league === "string" ? before.league : null
@@ -39,10 +36,10 @@ function buildDeleteContribution(
   const wcStageRaw = before.wcStage;
   const wcStage =
     wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
+  const forRanking = stats.countedForRanking !== false;
   return {
-    forRanking: stats.countedForRanking !== false,
-    phaseKey: normalizeSeasonPhase(before.seasonPhase),
-    roundKey: normalizeSeasonRound(before.seasonRound),
+    forRanking,
+    nbaSeasonKey: nbaSeasonKeyForDelete(leagueKey, forRanking, startAt),
     leagueKey,
     isWc,
     wcStage,
@@ -147,8 +144,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
           uid,
           {
             forRanking: true,
-            phaseKey: null,
-            roundKey: null,
+            nbaSeasonKey: null,
             leagueKey: normalizeLeague(
               typeof before.league === "string" ? before.league : null
             ),
@@ -221,6 +217,19 @@ export const onPostDeletedV2 = onDocumentDeleted(
         tx.set(dailyRef, { ranking: dec }, { merge: true });
       }
 
+      const seasonKey = nbaSeasonKeyForDelete(
+        normalizeLeague(typeof before.league === "string" ? before.league : null),
+        countRank,
+        startAt
+      );
+      if (seasonKey) {
+        tx.set(
+          dailyRef,
+          { rankingBySeason: { [seasonKey]: dec } },
+          { merge: true }
+        );
+      }
+
       const leagueKeyInner = before.league ?? null;
       if (leagueKeyInner) {
         tx.set(dailyRef, { leagues: { [leagueKeyInner]: dec } }, { merge: true });
@@ -249,7 +258,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
         cumulativeRef,
         user,
         uid,
-        buildDeleteContribution(before, stats),
+        buildDeleteContribution(before, stats, startAt),
         -1
       );
 

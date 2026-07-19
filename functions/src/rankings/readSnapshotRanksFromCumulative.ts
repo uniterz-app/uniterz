@@ -1,4 +1,5 @@
 import type { WcRankingStage } from "./wcRankingStage";
+import { CURRENT_NBA_SEASON_KEY } from "./nbaSeason";
 
 type Metric =
   | "winRate"
@@ -9,15 +10,10 @@ type Metric =
   | "activeWinStreak"
   | "totalGoalScorerHits";
 
-type RankingPhase = "play_in" | "playoffs";
-type PlayoffRoundKey = "overall" | "r1" | "r2" | "cf" | "finals";
-
 type MetricRankMap = Partial<Record<Metric, unknown>>;
 
 type SnapshotRanksRoot = {
-  play_in?: MetricRankMap;
-  playoffs?: MetricRankMap;
-  playoffRounds?: Partial<Record<PlayoffRoundKey, MetricRankMap>>;
+  seasons?: Partial<Record<string, MetricRankMap>>;
   wc?: Partial<Record<WcRankingStage, MetricRankMap>>;
 };
 
@@ -41,16 +37,9 @@ export function readSnapshotRanksRoot(
   const nested = data.snapshotRanks as Record<string, unknown> | undefined;
 
   return {
-    play_in: pickBlock(nested?.play_in, data["snapshotRanks.play_in"]) as
-      | MetricRankMap
+    seasons: pickBlock(nested?.seasons, data["snapshotRanks.seasons"]) as
+      | Partial<Record<string, MetricRankMap>>
       | undefined,
-    playoffs: pickBlock(nested?.playoffs, data["snapshotRanks.playoffs"]) as
-      | MetricRankMap
-      | undefined,
-    playoffRounds: pickBlock(
-      nested?.playoffRounds,
-      data["snapshotRanks.playoffRounds"]
-    ) as Partial<Record<PlayoffRoundKey, MetricRankMap>> | undefined,
     wc: pickBlock(nested?.wc, data["snapshotRanks.wc"]) as
       | Partial<Record<WcRankingStage, MetricRankMap>>
       | undefined,
@@ -84,8 +73,6 @@ export function coerceRankInt(v: unknown): number | null {
 export function readStoredRankFromUser(
   me: Record<string, unknown>,
   metric: Metric,
-  phase: RankingPhase,
-  round: PlayoffRoundKey,
   wcStage: WcRankingStage | null
 ): number | null {
   const snapshotRanks = readSnapshotRanksRoot(me);
@@ -96,10 +83,8 @@ export function readStoredRankFromUser(
     if (metric === "totalExactHits" && raw == null) {
       raw = snapshotRanks.wc?.[wcStage]?.totalPrecision;
     }
-  } else if (phase === "playoffs" && round !== "overall") {
-    raw = snapshotRanks.playoffRounds?.[round]?.[metric];
   } else {
-    raw = snapshotRanks[phase]?.[metric];
+    raw = snapshotRanks.seasons?.[CURRENT_NBA_SEASON_KEY]?.[metric];
   }
 
   return typeof raw === "number" && Number.isFinite(raw) && raw >= 1

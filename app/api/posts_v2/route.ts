@@ -7,6 +7,11 @@ import { resolveWcStageFromGame } from "@/lib/wc/resolveWcStage";
 import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
 import { normalizeLeague, type League } from "@/lib/leagues";
 import {
+  normalizeNbaTopScorerCandidates,
+  normalizeNbaTopScorerPick,
+  validateNbaTopScorerPickForGame,
+} from "@/lib/nba/topScorer";
+import {
   normalizeWcGoalScorerPick,
   validateWcGoalScorerPickForGame,
   type WcGoalScorerPick,
@@ -209,27 +214,43 @@ export async function POST(req: Request) {
       (g.awayTeamId as string | undefined) ??
       null;
     const goalScorerPick = normalizeWcGoalScorerPick(parsed.rawGoalScorer);
-    if (league === "wc" && parsed.rawGoalScorer != null && !goalScorerPick) {
+    const allowsGoalScorer = league === "wc" || league === "nba";
+    if (allowsGoalScorer && parsed.rawGoalScorer != null && !goalScorerPick) {
       return NextResponse.json(
         { ok: false, error: "goalScorer invalid" },
         { status: 400 }
       );
     }
-    if (league !== "wc" && goalScorerPick) {
+    if (!allowsGoalScorer && goalScorerPick) {
       return NextResponse.json(
-        { ok: false, error: "goalScorer only allowed for wc" },
+        { ok: false, error: "goalScorer only allowed for wc or nba" },
         { status: 400 }
       );
     }
     if (goalScorerPick) {
-      const v = validateWcGoalScorerPickForGame(
-        goalScorerPick,
-        homeTeamId,
-        awayTeamId,
-        parsed.prediction.score
-      );
-      if (!v.ok) {
-        return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+      if (league === "nba") {
+        const candidates = normalizeNbaTopScorerCandidates(
+          (g as { topScorerCandidates?: unknown }).topScorerCandidates
+        );
+        const v = validateNbaTopScorerPickForGame(
+          goalScorerPick,
+          homeTeamId,
+          awayTeamId,
+          candidates.length > 0 ? candidates : null
+        );
+        if (!v.ok) {
+          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+        }
+      } else {
+        const v = validateWcGoalScorerPickForGame(
+          goalScorerPick,
+          homeTeamId,
+          awayTeamId,
+          parsed.prediction.score
+        );
+        if (!v.ok) {
+          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+        }
       }
     }
 

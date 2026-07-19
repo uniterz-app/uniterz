@@ -154,7 +154,8 @@ function InjuryStatusCard({
   const tone = injuryStatusTone(row.status);
   const colors = TONE[tone];
   const expected = (row.returnDate ?? "—").toUpperCase();
-  const detail = injuryDetailLabel(row, language);
+  // 負傷詳細の翻訳辞書は ja のみ。他言語は英語表記にフォールバック
+  const detail = injuryDetailLabel(row, language === "ja" ? "ja" : "en");
   const name = playerCardName(row.player);
   const initials = playerInitials(row.player);
   const statusText = injuryStatusLabel(row.status);

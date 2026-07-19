@@ -11,7 +11,7 @@ import { useMemo, useState } from "react";
 import MyRankCard, {
   type MyRankMiniMetric,
 } from "@/app/component/rankings/MyRankCard";
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import { jp, nameOxanium } from "@/lib/fonts";
 
 import {
@@ -167,7 +167,6 @@ export default function MyRankFreeProPreviewPage() {
     streak: null,
     countryCode: "JP",
     miniMetrics: MOCK_MINI,
-    barsReady: true,
     cardResetKey: metric,
     leagueLabel: "NBA",
     statsSource: {

@@ -30,6 +30,11 @@ const LINKS = [
     note: "Insight / Injury / Stats / Roster",
   },
   {
+    href: "/mobile/live-game-stats-preview",
+    title: "ライブ試合スタッツ",
+    note: "Team Stats / Box Score（mock）",
+  },
+  {
     href: "/mobile/my-rank-free-pro-preview",
     title: "My Rank Free / Pro",
     note: "カード比較",

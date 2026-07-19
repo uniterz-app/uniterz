@@ -1,17 +1,14 @@
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export type RankHistoryContext = {
   rankingLeague: RankingLeagueSource;
-  phase: RankingPhase;
-  round: PlayoffRoundKey;
   wcStage: WcRankingStage | null;
 };
 
-/** rankSnapshotHistory doc から totalPoints 順位を読む */
+/** rankSnapshotHistory doc から totalPoints 順位を読む（NBA は現行シーズンのみ） */
 export function readTotalPointsRankFromHistoryDoc(
   data: Record<string, unknown> | null | undefined,
   context: RankHistoryContext
@@ -24,20 +21,12 @@ export function readTotalPointsRankFromHistoryDoc(
     return coerceTotalPointsRank(wc?.[stage]?.totalPoints);
   }
 
-  if (context.phase === "playoffs" && context.round !== "overall") {
-    const rounds = data.playoffRounds as
-      | Record<string, Record<string, unknown>>
-      | undefined;
-    return coerceTotalPointsRank(rounds?.[context.round]?.totalPoints);
-  }
-
-  if (context.phase === "play_in") {
-    const playIn = data.play_in as Record<string, unknown> | undefined;
-    return coerceTotalPointsRank(playIn?.totalPoints);
-  }
-
-  const playoffs = data.playoffs as Record<string, unknown> | undefined;
-  return coerceTotalPointsRank(playoffs?.totalPoints);
+  const seasons = data.seasons as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  return coerceTotalPointsRank(
+    seasons?.[CURRENT_NBA_SEASON_KEY]?.totalPoints
+  );
 }
 
 /** cumulative_stats の snapshotRanks から現在の totalPoints 順位 */
@@ -57,18 +46,10 @@ export function readTotalPointsRankFromSnapshotRanks(
     return coerceTotalPointsRank(wc?.[stage]?.totalPoints);
   }
 
-  if (context.phase === "playoffs" && context.round !== "overall") {
-    const rounds = snapshotRanks.playoffRounds as
-      | Record<string, Record<string, unknown>>
-      | undefined;
-    return coerceTotalPointsRank(rounds?.[context.round]?.totalPoints);
-  }
-
-  if (context.phase === "play_in") {
-    const playIn = snapshotRanks.play_in as Record<string, unknown> | undefined;
-    return coerceTotalPointsRank(playIn?.totalPoints);
-  }
-
-  const playoffs = snapshotRanks.playoffs as Record<string, unknown> | undefined;
-  return coerceTotalPointsRank(playoffs?.totalPoints);
+  const seasons = snapshotRanks.seasons as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  return coerceTotalPointsRank(
+    seasons?.[CURRENT_NBA_SEASON_KEY]?.totalPoints
+  );
 }

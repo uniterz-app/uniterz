@@ -1,4 +1,4 @@
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { MyRankCardFrameTone } from "@/app/component/rankings/MyRankCardFrame";
 import { RANKINGS_CYAN } from "@/lib/rankings/rankingsCyberTheme";
 

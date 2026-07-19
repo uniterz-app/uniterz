@@ -15,6 +15,7 @@ import {
 } from "@/lib/games/playoffSeriesUi";
 import { resolvePkScore } from "@/lib/games/pkScore";
 import { resolveWcBroadcastLabels } from "@/lib/wc/wcBroadcastLabels";
+import { normalizeNbaTopScorerCandidates } from "@/lib/nba/topScorer";
 import { normalizeWcGameGoalScorers } from "@/lib/wc/goalScorer";
 import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
 
@@ -513,6 +514,12 @@ export function toMatchCardProps(
             homeTeamId: home.teamId,
             awayTeamId: away.teamId,
           })
+        : undefined,
+    topScorerCandidates:
+      league === "nba"
+        ? normalizeNbaTopScorerCandidates(
+            (raw as { topScorerCandidates?: unknown })?.topScorerCandidates
+          )
         : undefined,
   };
 }

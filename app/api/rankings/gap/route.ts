@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { normalizeLanguage, type Language } from "@/lib/i18n/language";
-import { isPlayoffRoundKey, type PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
 import {
   assertProUser,
   fetchRankGapAnalysis,
@@ -42,14 +40,6 @@ export async function GET(req: Request) {
       ? rawLeague
       : "worldcup";
 
-    const rawPhase = searchParams.get("phase");
-    const phase: RankingPhase = isRankingPhase(rawPhase) ? rawPhase : "playoffs";
-
-    const rawRound = searchParams.get("round");
-    const round: PlayoffRoundKey = isPlayoffRoundKey(rawRound)
-      ? rawRound
-      : "overall";
-
     const rawWcStage = searchParams.get("wcStage");
     const wcStage: WcRankingStage | null =
       rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
@@ -65,8 +55,6 @@ export async function GET(req: Request) {
     const analysis = await fetchRankGapAnalysis({
       uid,
       rankingLeague,
-      phase,
-      round,
       wcStage,
       language,
     });

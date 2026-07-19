@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { jp, nameOxanium, summaryMetricNumClass } from "@/lib/fonts";
 import { CyberRankNumber } from "@/app/component/rankings/CyberRankingListParts";
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
@@ -31,7 +30,6 @@ import {
   MyRankCardFrame,
   resolveMyRankCardFrameTone,
 } from "@/app/component/rankings/MyRankCardFrame";
-import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
 import { listRowAvgText } from "@/lib/rankings/listRowMetricMeta";
 import {
   computeMyRankTopPercent,
@@ -79,7 +77,6 @@ type Props = {
   countryCode?: string | null;
   miniMetrics?: MyRankMiniMetric[];
   leagueLabel?: string;
-  barsReady?: boolean;
   cardResetKey?: string;
   layout?: "mobile" | "web";
   /** false = 順位数字のカウントアップを省略 */
@@ -100,8 +97,10 @@ type Props = {
    * 未指定かつ displayTier も無いときはプログレス非表示（本番後方互換）。
    */
   rankProgress?: MyRankProgressPoint[] | null;
-  /** Pro — Gap 画面へのリンク（totalScore タブ時のみ表示） */
-  gapHref?: string | null;
+  /** rankProgress 取得中（カード本体は表示済みでもチャートだけ待つ） */
+  rankProgressLoading?: boolean;
+  /** Weekly / Monthly 等、日次順位履歴が意味を持たないボードでプログレスを隠す */
+  hideRankProgress?: boolean;
 };
 
 type CardLayout = NonNullable<Props["layout"]>;
@@ -492,7 +491,6 @@ export default function MyRankCard({
   countryCode = null,
   miniMetrics,
   leagueLabel,
-  barsReady = true,
   cardResetKey,
   layout = "mobile",
   animateRank = true,
@@ -501,7 +499,8 @@ export default function MyRankCard({
   rankTierGap = null,
   disableMotion = false,
   rankProgress,
-  gapHref = null,
+  rankProgressLoading = false,
+  hideRankProgress = false,
 }: Props) {
   const ui = LAYOUT[layout];
   const m = t(language);
@@ -549,29 +548,12 @@ export default function MyRankCard({
     return () => clearTimeout(id);
   }, [shouldFlash, rank]);
 
-  const [segEnter, setSegEnter] = useState(false);
-  useEffect(() => {
-    if (!ready || !barsReady) {
-      setSegEnter(false);
-      return;
-    }
-    setSegEnter(true);
-  }, [ready, barsReady, cardResetKey]);
-
   const selectedMini = useMemo(
     () => miniMetrics?.find((mt) => mt.key === metric),
     [miniMetrics, metric]
   );
 
   const metricAccent = rankingMetricAccent(metric);
-  const segAccent = useMemo(
-    () => ({
-      border: accent.primary,
-      glow: accent.glow,
-      bg: accent.dim,
-    }),
-    [accent]
-  );
 
   const rankVisualMuted = loading || statsPending || rank == null;
   const rankVisualValue = rankVisualMuted
@@ -650,7 +632,6 @@ export default function MyRankCard({
     accent.primary
   );
 
-  const segPct = selectedMini?.pct ?? 0;
   const metaSize = layout === "web" ? 13 : 11;
   const topPercentLabel =
     topPercent != null
@@ -666,13 +647,11 @@ export default function MyRankCard({
       : null;
 
   const showRankTierGapHud = proTier && rankTierGapHud != null;
-  const showGapLink =
-    proTier && metric === "totalScore" && typeof gapHref === "string" && gapHref.length > 0;
   const gapTextSize = layout === "web" ? "11px" : "10px";
   const showRankMetaInline = freeTier && displayTier != null;
 
   const showRankingProgress =
-    displayTier != null || rankProgress !== undefined;
+    !hideRankProgress && (displayTier != null || rankProgress !== undefined);
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
@@ -887,13 +866,16 @@ export default function MyRankCard({
                       {showProBadge ? (
                         <ProCyberBadge
                           {...proBadgeStaticMotion}
-                          compact
+                          /* mobile は標準サイズ（枠・マーク・PRO とも一回り大きく） */
+                          compact={layout === "web"}
                           ariaLabel={m.common.proMember}
                         />
                       ) : freeTier && displayTier != null ? (
                         <span
                           className={[
-                            PRO_BADGE_COMPACT_SPACER_CLASS,
+                            layout === "web"
+                              ? PRO_BADGE_COMPACT_SPACER_CLASS
+                              : "inline-flex h-[18px] w-[34px] shrink-0",
                             "invisible",
                           ].join(" ")}
                           aria-hidden
@@ -944,18 +926,6 @@ export default function MyRankCard({
                 metaSize={metaSize}
               />
             )}
-
-            <div className="mt-2.5">
-              <CyberSlantedSegBar
-                pct={segPct}
-                segments={12}
-                compact
-                enter={segEnter && !statsPending}
-                forceStatic={disableMotion}
-                accent={segAccent}
-                maxWidthClass="max-w-full"
-              />
-            </div>
           </div>
         </div>
 
@@ -963,25 +933,10 @@ export default function MyRankCard({
           <MyRankRankingProgress
             points={progressPoints}
             maxSnapshots={progressSnapshotLimit}
-            loading={loading}
+            loading={loading || rankProgressLoading}
             language={language}
             layout={layout}
           />
-        ) : null}
-
-        {showGapLink ? (
-          <div className="px-2.5 pt-2">
-            <Link
-              href={gapHref!}
-              className={[
-                nameOxanium.className,
-                "flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300/25 bg-amber-400/8 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100/90 transition hover:border-amber-200/40 hover:bg-amber-400/14",
-              ].join(" ")}
-            >
-              <span aria-hidden>◈</span>
-              {m.rankings.rankGap.viewGap}
-            </Link>
-          </div>
         ) : null}
 
         <MyRankCardFooter

@@ -5,11 +5,6 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import {
-  isPlayoffRoundKey,
-  type PlayoffRoundKey,
-} from "@/lib/rankings/playoffRound";
-import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
-import {
   fetchBulkFromFunctions,
   type BulkRankingMetric,
 } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
@@ -26,15 +21,15 @@ import {
   type WcRankingStage,
 } from "@/lib/rankings/wcRankingStage";
 import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
+import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 
 export const runtime = "nodejs";
 
 const BULK_METRICS = [
   "totalPoints",
-  "totalPrecision",
   "totalUpset",
-  "activeWinStreak",
   "winRate",
+  "totalGoalScorerHits",
 ] as const satisfies readonly BulkRankingMetric[];
 
 const WC_BULK_METRICS = [
@@ -90,8 +85,6 @@ const getCachedBulk = unstable_cache(
   async (
     uidKey: string,
     metricsKey: string,
-    phase: RankingPhase,
-    round: PlayoffRoundKey,
     wcStageKey: string,
     snapshotGenerationKey: string
   ) => {
@@ -109,9 +102,9 @@ const getCachedBulk = unstable_cache(
           ? wcStageKey
           : null;
     void snapshotGenerationKey;
-    return fetchBulkFromFunctions(uid, metrics, phase, round, wcStage);
+    return fetchBulkFromFunctions(uid, metrics, wcStage);
   },
-  ["cumulative-ranking-bulk-v13"],
+  ["cumulative-ranking-bulk-v14"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -130,14 +123,6 @@ export async function GET(req: Request) {
       ? rawWcStage
       : null;
     const metricsList = parseMetricsParam(searchParams.get("metrics"), wcStage);
-    const rawPhase = searchParams.get("phase");
-    const phase: RankingPhase = isRankingPhase(rawPhase)
-      ? rawPhase
-      : "playoffs";
-    const rawRound = searchParams.get("round");
-    const round: PlayoffRoundKey = isPlayoffRoundKey(rawRound)
-      ? rawRound
-      : "overall";
     const metricsKey = metricsToKey(metricsList);
     const snapshotGeneration =
       (await loadRankingSnapshotGenerationKey(wcStage)) ??
@@ -154,10 +139,9 @@ export async function GET(req: Request) {
       const personal = await loadPersonalBulkOverlayFromFirestore(
         uid,
         metricsList,
-        phase,
-        round,
         wcStage
       );
+      await mergeUserPlansIntoBulkByMetric(personal);
       return NextResponse.json(
         { ok: true, wcStage, snapshotGeneration, byMetric: personal, myMetricValueDeltas: null },
         {
@@ -187,8 +171,6 @@ export async function GET(req: Request) {
     const listSource = await getCachedBulk(
       "__anon__",
       metricsKey,
-      phase,
-      round,
       wcStageCacheKey(wcStage),
       snapshotGeneration
     );
@@ -198,12 +180,13 @@ export async function GET(req: Request) {
         ? structuredClone(listSource)
         : (JSON.parse(JSON.stringify(listSource)) as typeof listSource);
 
+    // plan / country / Pro Skin を users から上書き（スナップショット古さ・スキン変更に追従）
+    await mergeUserPlansIntoBulkByMetric(data.byMetric);
+
     if (uid) {
       const personal = await loadPersonalBulkOverlayFromFirestore(
         uid,
         metricsList,
-        phase,
-        round,
         wcStage
       );
       mergePersonalIntoBulkByMetric(
@@ -226,8 +209,6 @@ export async function GET(req: Request) {
           winRate?: number;
         },
         {
-          phase,
-          round,
           wcStage,
           rankingLeague: isRankingLeagueSource(searchParams.get("league"))
             ? (searchParams.get("league") as RankingLeagueSource)

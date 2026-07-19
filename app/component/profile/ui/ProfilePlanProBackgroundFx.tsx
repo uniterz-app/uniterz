@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import type { CSSProperties, ReactNode } from "react";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_BG_DEFAULT } from "@/lib/profile/profilePlanProBgVariants";
 import type { KinetikProfileAccentKey } from "@/app/component/profile/edit/kinetikRankBadge";
@@ -18,6 +19,16 @@ import {
 } from "@/lib/profile/profilePlanProHexBgVariants";
 import { isProfilePlanProMoodBgVariant } from "@/lib/profile/profilePlanProMoodBgVariants";
 import { isProfilePlanProNovaBgVariant } from "@/lib/profile/profilePlanProNovaBgVariants";
+import { isProfilePlanProBeastBgVariant } from "@/lib/profile/profilePlanProBeastBgVariants";
+import {
+  getProfilePlanProBeastHudUrl,
+  getProfilePlanProBeastSkinUrl,
+} from "@/lib/profile/profilePlanProBeastPattern";
+import { isProfilePlanProFormBgVariant } from "@/lib/profile/profilePlanProFormBgVariants";
+import {
+  getProfilePlanProFormHudUrl,
+  getProfilePlanProFormSkinUrl,
+} from "@/lib/profile/profilePlanProFormPattern";
 import { isProfilePlanProScaleBgVariant } from "@/lib/profile/profilePlanProScaleBgVariants";
 import {
   getProfilePlanProScaleHudUrl,
@@ -39,6 +50,46 @@ type Props = {
 };
 
 const ATMOS_ENTER_EASE = [0.22, 0.61, 0.36, 1] as const;
+
+/** パターン層 — 初回のみまばらに浮き出し（ループなし）
+ * filter は使わない（background-image の SVG データ URL と相性が悪く、絵柄が消えることがある） */
+function SparseEnterLayer({
+  animate,
+  delayMs = 0,
+  className,
+  style,
+  children,
+}: {
+  animate: boolean;
+  delayMs?: number;
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+}) {
+  const reduceMotion = useReducedMotion();
+  const shouldEnter = animate && reduceMotion !== true;
+
+  return (
+    <motion.div
+      className={className}
+      style={style}
+      initial={
+        shouldEnter
+          ? { opacity: 0, y: 10, scale: 0.96 }
+          : false
+      }
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{
+        duration: 0.88,
+        delay: shouldEnter ? delayMs / 1000 : 0,
+        ease: ATMOS_ENTER_EASE,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 
 function DepthVignette({ className = "" }: { className?: string }) {
   return <div className={`profile-plan-pro-bg__vignette ${className}`.trim()} aria-hidden />;
@@ -114,13 +165,22 @@ export default function ProfilePlanProBackgroundFx({
   profileAccent = "default",
   accentReady = true,
 }: Props) {
+  const isScale = isProfilePlanProScaleBgVariant(variant);
+  const isBeast = isProfilePlanProBeastBgVariant(variant);
+  const isForm = isProfilePlanProFormBgVariant(variant);
+  // 常時ループ用 --animate は使わない（枠スイープ含む無限アニメを止める）。
+  // 入場は SparseEnterLayer / AtmosEnterLayers の 1 回のみ。
   const rootClass = [
     "profile-plan-pro-bg",
     `profile-plan-pro-bg--${variant}`,
+    isScale ? "profile-plan-pro-bg--scale" : "",
+    isBeast ? "profile-plan-pro-bg--beast" : "",
+    isForm ? "profile-plan-pro-bg--form" : "",
     mobileBoost ? "profile-plan-pro-bg--mobile-boost" : "",
     web ? "profile-plan-pro-bg--web" : "",
     "pointer-events-none absolute inset-0 overflow-hidden",
-    animate ? "profile-plan-pro-bg--animate" : "profile-plan-pro-bg--static",
+    "profile-plan-pro-bg--static",
+    animate ? "profile-plan-pro-bg--enter" : "",
   ].join(" ");
 
   if (variant === "atmos") {
@@ -213,13 +273,55 @@ export default function ProfilePlanProBackgroundFx({
   if (isProfilePlanProScaleBgVariant(variant)) {
     return (
       <div className={rootClass} aria-hidden>
-        <div
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
           className="profile-plan-pro-bg__scale-skin"
           style={{ backgroundImage: getProfilePlanProScaleSkinUrl(variant) }}
         />
-        <div
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={180}
           className="profile-plan-pro-bg__scale-hud"
           style={{ backgroundImage: getProfilePlanProScaleHudUrl(variant) }}
+        />
+      </div>
+    );
+  }
+
+  if (isProfilePlanProBeastBgVariant(variant)) {
+    return (
+      <div className={rootClass} aria-hidden>
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
+          className="profile-plan-pro-bg__beast-skin"
+          style={{ backgroundImage: getProfilePlanProBeastSkinUrl(variant) }}
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={180}
+          className="profile-plan-pro-bg__beast-hud"
+          style={{ backgroundImage: getProfilePlanProBeastHudUrl(variant) }}
+        />
+      </div>
+    );
+  }
+
+  if (isProfilePlanProFormBgVariant(variant)) {
+    return (
+      <div className={rootClass} aria-hidden>
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
+          className="profile-plan-pro-bg__form-skin"
+          style={{ backgroundImage: getProfilePlanProFormSkinUrl(variant) }}
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={180}
+          className="profile-plan-pro-bg__form-hud"
+          style={{ backgroundImage: getProfilePlanProFormHudUrl(variant) }}
         />
       </div>
     );
@@ -242,9 +344,21 @@ export default function ProfilePlanProBackgroundFx({
     return (
       <div className={rootClass} aria-hidden>
         <div className="profile-plan-pro-bg__base-depth" />
-        <div className="profile-plan-pro-bg__layer profile-plan-pro-bg__layer--far" />
-        <div className="profile-plan-pro-bg__layer profile-plan-pro-bg__layer--mid" />
-        <div className="profile-plan-pro-bg__layer profile-plan-pro-bg__layer--near" />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={0}
+          className="profile-plan-pro-bg__layer profile-plan-pro-bg__layer--far"
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={120}
+          className="profile-plan-pro-bg__layer profile-plan-pro-bg__layer--mid"
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={240}
+          className="profile-plan-pro-bg__layer profile-plan-pro-bg__layer--near"
+        />
         <DepthVignette className="profile-plan-pro-bg__vignette--parallax" />
       </div>
     );
@@ -293,9 +407,21 @@ export default function ProfilePlanProBackgroundFx({
     return (
       <div className={rootClass} aria-hidden>
         <div className="profile-plan-pro-bg__base-depth" />
-        <div className="profile-plan-pro-bg__shaft profile-plan-pro-bg__shaft--a" />
-        <div className="profile-plan-pro-bg__shaft profile-plan-pro-bg__shaft--b" />
-        <div className="profile-plan-pro-bg__shaft profile-plan-pro-bg__shaft--c" />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={0}
+          className="profile-plan-pro-bg__shaft profile-plan-pro-bg__shaft--a"
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={140}
+          className="profile-plan-pro-bg__shaft profile-plan-pro-bg__shaft--b"
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={280}
+          className="profile-plan-pro-bg__shaft profile-plan-pro-bg__shaft--c"
+        />
         <DepthVignette className="profile-plan-pro-bg__vignette--shaft" />
       </div>
     );
@@ -416,9 +542,21 @@ export default function ProfilePlanProBackgroundFx({
     return (
       <div className={rootClass} aria-hidden>
         <div className="profile-plan-pro-bg__base-depth" />
-        <div className="profile-plan-pro-bg__cloud profile-plan-pro-bg__cloud--a" />
-        <div className="profile-plan-pro-bg__cloud profile-plan-pro-bg__cloud--b" />
-        <div className="profile-plan-pro-bg__cloud profile-plan-pro-bg__cloud--c" />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={0}
+          className="profile-plan-pro-bg__cloud profile-plan-pro-bg__cloud--a"
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={130}
+          className="profile-plan-pro-bg__cloud profile-plan-pro-bg__cloud--b"
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={260}
+          className="profile-plan-pro-bg__cloud profile-plan-pro-bg__cloud--c"
+        />
         <DepthVignette className="profile-plan-pro-bg__vignette--cloud" />
       </div>
     );
@@ -459,19 +597,40 @@ export default function ProfilePlanProBackgroundFx({
   if (variant === "mesh") {
     return (
       <div className={rootClass} aria-hidden>
-        <div className="profile-plan-pro-bg__mesh profile-plan-pro-bg__mesh--cyan" />
-        <div className="profile-plan-pro-bg__mesh profile-plan-pro-bg__mesh--purple" />
-        <div className="profile-plan-pro-bg__mesh profile-plan-pro-bg__mesh--magenta" />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={0}
+          className="profile-plan-pro-bg__mesh profile-plan-pro-bg__mesh--cyan"
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={150}
+          className="profile-plan-pro-bg__mesh profile-plan-pro-bg__mesh--purple"
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={300}
+          className="profile-plan-pro-bg__mesh profile-plan-pro-bg__mesh--magenta"
+        />
         <DepthVignette className="profile-plan-pro-bg__vignette--soft" />
       </div>
     );
   }
 
+  // aurora（デフォルト）
   return (
     <div className={rootClass} aria-hidden>
       <div className="profile-plan-pro-bg__wash" />
-      <div className="profile-plan-pro-bg__aurora profile-plan-pro-bg__aurora--cyan" />
-      <div className="profile-plan-pro-bg__aurora profile-plan-pro-bg__aurora--purple" />
+      <SparseEnterLayer
+        animate={animate}
+        delayMs={40}
+        className="profile-plan-pro-bg__aurora profile-plan-pro-bg__aurora--cyan"
+      />
+      <SparseEnterLayer
+        animate={animate}
+        delayMs={200}
+        className="profile-plan-pro-bg__aurora profile-plan-pro-bg__aurora--purple"
+      />
       <DepthVignette />
     </div>
   );

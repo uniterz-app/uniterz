@@ -19,12 +19,12 @@ const CANVAS_W_WEB = 960;
 const CANVAS_H_WEB = 380;
 
 /** 図形全体の不透明度スケール（個数は変えず弱める） */
-export const PROFILE_PLAN_PRO_ATMOS_OPACITY_SCALE = 0.55;
+export const PROFILE_PLAN_PRO_ATMOS_OPACITY_SCALE = 1.28;
 /** Web 横長 — 引き伸ばしで薄く見える分を補う */
-export const PROFILE_PLAN_PRO_ATMOS_OPACITY_SCALE_WEB = 0.78;
+export const PROFILE_PLAN_PRO_ATMOS_OPACITY_SCALE_WEB = 1.4;
 
 function scaleShapeOpacity(raw: number, scale = PROFILE_PLAN_PRO_ATMOS_OPACITY_SCALE): number {
-  return Math.round(raw * scale * 1000) / 1000;
+  return Math.min(1, Math.round(raw * scale * 1000) / 1000);
 }
 
 /** 六角 1 個分の stroke-opacity（決定論的） */
@@ -33,8 +33,8 @@ function hexStrokeOpacity(
   row: number,
   opacityScale = PROFILE_PLAN_PRO_ATMOS_OPACITY_SCALE
 ): number {
-  let op = 0.045 + hash01(col * 0.6 + 7, row * 1.3 + 2) * 0.08;
-  if (hash01(col + 5, row + 9) > 0.86) op += 0.15;
+  let op = 0.07 + hash01(col * 0.6 + 7, row * 1.3 + 2) * 0.11;
+  if (hash01(col + 5, row + 9) > 0.86) op += 0.18;
   return scaleShapeOpacity(op, opacityScale);
 }
 
@@ -231,7 +231,7 @@ export function getProfilePlanProAtmosHexUrl(
   accent: KinetikProfileAccentKey = "default"
 ): string {
   const palette = getAtmosShapePalette(accent);
-  return cachedUrl(`${accent}:hex:mobile`, () =>
+  return cachedUrl(`${accent}:hex:mobile:v4`, () =>
     buildSparseHexSvg(CANVAS_W, CANVAS_H, densityAt, palette.hexStrokes)
   );
 }
@@ -241,7 +241,7 @@ export function getProfilePlanProAtmosHudUrl(
   accent: KinetikProfileAccentKey = "default"
 ): string {
   const palette = getAtmosShapePalette(accent);
-  return cachedUrl(`${accent}:hud:mobile`, () => buildHudSvg(palette));
+  return cachedUrl(`${accent}:hud:mobile:v4`, () => buildHudSvg(palette));
 }
 
 /** 疎な六角レイヤー（Web 横長） */
@@ -249,7 +249,7 @@ export function getProfilePlanProAtmosHexUrlWeb(
   accent: KinetikProfileAccentKey = "default"
 ): string {
   const palette = getAtmosShapePalette(accent);
-  return cachedUrl(`${accent}:hex:web:v2`, () =>
+  return cachedUrl(`${accent}:hex:web:v4`, () =>
     buildSparseHexSvg(
       CANVAS_W_WEB,
       CANVAS_H_WEB,
@@ -265,7 +265,7 @@ export function getProfilePlanProAtmosHudUrlWeb(
   accent: KinetikProfileAccentKey = "default"
 ): string {
   const palette = getAtmosShapePalette(accent);
-  return cachedUrl(`${accent}:hud:web:v2`, () => buildHudSvgWeb(palette));
+  return cachedUrl(`${accent}:hud:web:v4`, () => buildHudSvgWeb(palette));
 }
 
 /** 六角セル配列（Native の SVG 描画用） */

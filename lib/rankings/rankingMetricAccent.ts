@@ -1,4 +1,4 @@
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 
 export type RankingMetricAccent = {
   label: string;

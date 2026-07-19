@@ -22,7 +22,9 @@ import {
   profileDisplayFromUser,
 } from "@/lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "@/lib/profile/parseMemberSinceMs";
-import type { RankingRowWithCountry, MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { RankingRowWithCountry, MobileMetric } from "@/lib/rankings/rankingMetrics";
+import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
 
 export type Profile = {
   displayName: string;
@@ -33,6 +35,7 @@ export type Profile = {
   currentStreak: number;
   maxStreak: number;
   plan: "free" | "pro";
+  planProBgVariant: ProfilePlanProBgVariant;
   countryCode: string | null;
   memberSinceMs: number | null;
 };
@@ -45,6 +48,7 @@ type UserState = {
   currentStreak?: number;
   maxStreak?: number;
   plan?: "free" | "pro";
+  planProBgVariant?: ProfilePlanProBgVariant;
   countryCode?: string | null;
   memberSinceMs?: number | null;
 } | null;
@@ -80,6 +84,10 @@ const initialLoadState: ProfileLoadState = {
 
 const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 const profileCache = new Map<string, { at: number; state: ProfileLoadState }>();
+
+export function invalidateAllProfileCache(): void {
+  profileCache.clear();
+}
 
 function normalizeProfileCacheKey(key: string): string {
   return decodeURIComponent(key).trim().toLowerCase();
@@ -252,6 +260,7 @@ export function useProfile(handle: string) {
               typeof d.currentStreak === "number" ? d.currentStreak : 0,
             maxStreak: typeof d.maxStreak === "number" ? d.maxStreak : 0,
             plan,
+            planProBgVariant: parseUserPlanProBgVariant(d.planProBgVariant),
             countryCode: parseCountryCode(d),
             memberSinceMs: parseMemberSinceMs(d),
           },
@@ -290,6 +299,7 @@ export function useProfile(handle: string) {
       currentStreak: u.currentStreak ?? 0,
       maxStreak: u.maxStreak ?? 0,
       plan: u.plan ?? "free",
+      planProBgVariant: u.planProBgVariant ?? parseUserPlanProBgVariant(undefined),
       countryCode: u.countryCode ?? null,
       memberSinceMs: u.memberSinceMs ?? null,
     };

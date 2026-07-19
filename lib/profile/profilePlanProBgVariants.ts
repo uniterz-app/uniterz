@@ -1,5 +1,7 @@
 /** PRO カード背景バリエーション */
 
+import type { ProfilePlanProBeastBgVariant } from "./profilePlanProBeastBgVariants";
+import type { ProfilePlanProFormBgVariant } from "./profilePlanProFormBgVariants";
 import type { ProfilePlanProGeoBgVariant } from "./profilePlanProGeoBgVariants";
 import type { ProfilePlanProMoodBgVariant } from "./profilePlanProMoodBgVariants";
 import type { ProfilePlanProNovaBgVariant } from "./profilePlanProNovaBgVariants";
@@ -30,7 +32,9 @@ export type ProfilePlanProBgVariant =
   | ProfilePlanProMoodBgVariant
   | ProfilePlanProNovaBgVariant
   | ProfilePlanProGeoBgVariant
-  | ProfilePlanProScaleBgVariant;
+  | ProfilePlanProScaleBgVariant
+  | ProfilePlanProBeastBgVariant
+  | ProfilePlanProFormBgVariant;
 
 /** 本番 PRO プロフィール背景 — 確定: Void Tunnel */
 export const PROFILE_PLAN_PRO_BG_DEFAULT: ProfilePlanProBgVariant = "atmos";

@@ -1,60 +1,42 @@
 // functions/src/index.ts
 
 import { setGlobalOptions } from "firebase-functions/v2/options";
-import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { FieldValue } from "firebase-admin/firestore";
 import { admin } from "./firebase";
-import { dailyAnalyticsCore } from "./analytics/_core";
 import * as functions from "firebase-functions";
 
 import { buildCumulativeStats } from "./rankings/buildCumulativeStats";
 import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankingSnapshot";
+import { buildNbaPeriodRankingSnapshots } from "./rankings/buildNbaPeriodRankingSnapshots";
 import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAggregationScheduledJstToday";
 import { runNotifyGameStartCron } from "./notifications/notifyGameStartCron";
 import { notifyRankingUpdatedPush } from "./notifications/notifyPushEvents";
-
-// ★追加
-import { buildMonthlyLeaderboardSnapshot } from "./leaderboards/buildMonthlyLeaderboardSnapshot";
-import { getLeaderboardLatestMonthKey } from "./leaderboards/jstLeaderboardMonth";
 
 // ===============================
 // V2 Core
 // ===============================
 export { onGameFinalV2 } from "./onGameFinalV2";
-export { rescorePlayoffBrackets } from "./playoff-bracket/rescorePlayoffBrackets";
 export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
 export { onPlayoffBracketRescoreTaskCreated } from "./playoff-bracket/onPlayoffBracketRescoreTaskCreated";
 export { onWcBracketRescoreTaskCreated } from "./wc-bracket/onWcBracketRescoreTaskCreated";
-export { rebuildPlayoffBracketMarket } from "./playoff-bracket/rebuildPlayoffBracketMarket";
 export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
-export { backfillCumulativeStatsFromDailyHttp } from "./rankings/backfillCumulativeStatsFromDaily";
-export { getMonthlyLeaderboard } from "./leaderboards/getMonthlyLeaderboard";
-export {
-  rebuildMonthlyLeaderboardsCron,
-  rebuildMonthlyLeaderboardsHttp,
-} from "./leaderboards/monthly";
 
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 export { expireProUsers } from "./triggers/expireProUsers";
 
 // 🔥 ユーザー月次スタッツ（Pro用）
-export {
-  rebuildUserMonthlyStatsV2,
-  rebuildUserMonthlyStatsMonthCronV2,
-} from "./stats/rebuildUserMonthlyStatsV2";
+export { rebuildUserMonthlyStatsMonthCronV2 } from "./stats/rebuildUserMonthlyStatsV2";
 
 // ===============================
 // Global
 // ===============================
 setGlobalOptions({ region: "asia-northeast1", maxInstances: 10 });
-const db = admin.firestore();
 
 /* ============================================================================
  * posts
  * ==========================================================================*/
 
-export { onPostCreatedV2 } from "./onPostCreated";
 export { onPostDeletedV2 } from "./onPostDeleted";
 
 /* ============================================================================
@@ -108,6 +90,17 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
       return;
     }
     const snapshotResult = await buildCumulativeRankingSnapshot();
+
+    // NBA Weekly / Monthly の期間スナップショット（過去期間のアーカイブ兼用）
+    try {
+      await buildNbaPeriodRankingSnapshots();
+    } catch (err) {
+      console.error(
+        "[buildCumulativeRankingSnapshotCron] period snapshots failed",
+        err
+      );
+    }
+
     const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
     const token = process.env.INTERNAL_REVALIDATE_SECRET;
     if (!revalidateUrl || !token) {
@@ -161,48 +154,10 @@ export const notifyGameStartPushCron = onSchedule(
 );
 
 /* ============================================================================
- * Monthly Leaderboard Snapshot（★追加）
- * 毎月1日 04:05 → 前月分を確定
- * ==========================================================================*/
-
-export const buildMonthlyLeaderboardSnapshotCron = onSchedule(
-  { schedule: "0 4 1 * *", timeZone: "Asia/Tokyo" },
-  async () => {
-    const month = getLeaderboardLatestMonthKey();
-
-    const LEAGUES = ["nba", "j1", "bj"];
-
-    for (const league of LEAGUES) {
-      await buildMonthlyLeaderboardSnapshot({ league, month });
-    }
-  }
-);
-
-/* ============================================================================
  * Analytics
  * ==========================================================================*/
 
 export { dailyAnalytics } from "./analytics/daily";
-export { runDailyAnalytics } from "./analytics/runDaily";
-
-export { fixUserStats } from "./fixUserStats";
-export { backfillStreakApplyMarkersHttp } from "./backfillStreakApplyMarkers";
-
-/* ============================================================================
- * Debug
- * ==========================================================================*/
-
-export { listUserStatsIds } from "./debug/listUserStats";
-export { xmasNba20251226 } from "./debug/xmasNba20251226";
-
-export const runDailyAnalyticsHttp = onRequest(async (_req, res) => {
-  try {
-    const result = await dailyAnalyticsCore();
-    res.status(200).json({ ok: true, result });
-  } catch (err: any) {
-    res.status(500).json({ ok: false, error: String(err) });
-  }
-});
 
 export const onUserCreate = functions.auth.user().onCreate(async (user) => {
   const db = admin.firestore();

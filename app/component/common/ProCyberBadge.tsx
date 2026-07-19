@@ -174,20 +174,21 @@ export function ProCyberBadge({
 }: Props) {
   const rid = useId().replace(/[^a-zA-Z0-9-_]/g, "x");
 
-  // compact: 一覧用 / premium: プロフィールカード用（HEAD のラグジュアリー UI + サイズ段）
+  // compact: 一覧用 / premium: プロフィールカード用 — 枠に対して中身も比例縮小
   const tagClass = premium
-    ? "relative inline-flex h-8 items-center gap-0.5 px-1 py-0.5"
+    ? "relative inline-flex h-[14px] items-center gap-[2px] px-[3px]"
     : compact
-      ? "relative inline-flex h-6 items-center gap-0.5 px-0.5 py-px sm:px-1"
-      : "relative inline-flex h-7 items-center gap-0.5 px-1 py-0.5";
+      ? "relative inline-flex h-[13px] items-center gap-[2px] px-[2.5px] sm:h-[14px] sm:px-[3px]"
+      : "relative inline-flex h-[18px] items-center gap-[3px] px-[4px]";
   const bracketClass =
     "pointer-events-none absolute inset-0 h-full w-full overflow-visible";
   const markClass = premium
-    ? "relative z-[1] h-[17px] w-[17px] shrink-0"
+    ? "relative z-[1] h-[7px] w-[7px] shrink-0"
     : compact
-      ? "relative z-[1] h-[12px] w-[12px] shrink-0 sm:h-[13px] sm:w-[13px]"
-      : "relative z-[1] h-[15px] w-[15px] shrink-0";
-  const wordSize = premium ? "10px" : compact ? "8px" : "9px";
+      ? "relative z-[1] h-[6.5px] w-[6.5px] shrink-0 sm:h-[7px] sm:w-[7px]"
+      : "relative z-[1] h-[9px] w-[9px] shrink-0";
+  const wordSize = premium ? "5.5px" : compact ? "5.5px" : "7px";
+  const bracketStroke = premium || compact ? 1.35 : 0.95;
 
   return (
     <motion.span
@@ -200,7 +201,12 @@ export function ProCyberBadge({
       transition={transition}
       aria-label={ariaLabel}
     >
-      <ProCornerBracketFrame className={bracketClass} idPrefix={rid} />
+      <ProCornerBracketFrame
+        className={bracketClass}
+        idPrefix={rid}
+        strokeWidth={bracketStroke}
+        vectorEffect="non-scaling-stroke"
+      />
 
       <ProLuxuryDiamondMark className={markClass} idPrefix={rid} />
 
@@ -210,14 +216,14 @@ export function ProCyberBadge({
           fontFamily: proBadgeWordFamily,
           fontSize: wordSize,
           fontWeight: 400,
-          letterSpacing: "0.08em",
+          letterSpacing: premium || compact ? "0.04em" : "0.07em",
           color: PRO_GOLD.mid,
           backgroundImage: `linear-gradient(180deg, ${PRO_GOLD.bright} 0%, ${PRO_GOLD.mid} 48%, ${PRO_GOLD.deep} 100%)`,
           WebkitBackgroundClip: "text",
           backgroundClip: "text",
           WebkitTextFillColor: "transparent",
           textShadow: "none",
-          filter: "drop-shadow(1px 0 0 rgba(0,0,0,0.35))",
+          filter: "drop-shadow(0.5px 0 0 rgba(0,0,0,0.4))",
         }}
         aria-hidden
       >
@@ -236,4 +242,4 @@ export const proBadgeStaticMotion: ProCyberBadgeMotionProps = {
 
 /** Free 行のレイアウト揃え用スペーサー幅（compact） */
 export const PRO_BADGE_COMPACT_SPACER_CLASS =
-  "inline-flex h-6 w-[36px] shrink-0 sm:w-[38px]";
+  "inline-flex h-[13px] w-[26px] shrink-0 sm:h-[14px] sm:w-[28px]";

@@ -8,7 +8,7 @@ import type { ProfilePlanProScaleBgVariant } from "./profilePlanProScaleBgVarian
 const CANVAS_W = 300;
 const CANVAS_H = 430;
 
-export const PROFILE_PLAN_PRO_SCALE_OPACITY_SCALE = 0.62;
+export const PROFILE_PLAN_PRO_SCALE_OPACITY_SCALE = 0.95;
 
 type ScalePalette = {
   strokes: readonly string[];
@@ -22,38 +22,43 @@ type ScalePalette = {
   fillBoost?: number;
   /** ストロークを少し強く */
   strokeBoost?: number;
+  /** 採用候補など — 全体の追加ブースト */
+  opacityMul?: number;
 };
 
 const PALETTES: Record<ProfilePlanProScaleBgVariant, ScalePalette> = {
   "scale-mamba": {
     // ブラックマンバ — 実際は銃鉄色〜オリーブグレーの平滑鱗
-    strokes: ["71,85,105", "100,116,139", "148,163,184", "82,94,72"],
-    fills: ["15,23,42", "30,41,59", "24,32,28"],
-    hudPrimary: "rgba(148,163,184,",
+    strokes: ["100,116,139", "148,163,184", "203,213,225", "82,94,72"],
+    fills: ["30,41,59", "51,65,85", "24,32,28"],
+    hudPrimary: "rgba(203,213,225,",
     hudSecondary: "rgba(56,189,248,",
-    densityMul: 1.15,
-    fillBoost: 1.8,
-    strokeBoost: 1.25,
+    densityMul: 1.2,
+    fillBoost: 2.2,
+    strokeBoost: 1.65,
+    opacityMul: 1.45,
   },
   "scale-king": {
     // キングコブラ — 黒＋琥珀バンド
-    strokes: ["180,83,9", "245,158,11", "251,191,36", "41,37,36"],
-    fills: ["28,25,23", "69,26,3", "120,53,15"],
+    strokes: ["245,158,11", "251,191,36", "217,119,6", "41,37,36"],
+    fills: ["69,26,3", "120,53,15", "28,25,23"],
     hudPrimary: "rgba(251,191,36,",
-    hudSecondary: "rgba(180,83,9,",
-    densityMul: 1.05,
-    fillBoost: 1.5,
-    strokeBoost: 1.2,
+    hudSecondary: "rgba(245,158,11,",
+    densityMul: 1.12,
+    fillBoost: 1.65,
+    strokeBoost: 1.28,
+    opacityMul: 1.08,
   },
   "scale-diamondback": {
-    strokes: ["168,162,158", "120,113,108", "87,83,78", "214,211,209"],
-    fills: ["41,37,36", "68,64,60", "28,25,23"],
-    hudPrimary: "rgba(214,211,209,",
-    hudSecondary: "rgba(168,162,158,",
-    ridge: "231,229,228",
-    densityMul: 1.1,
-    fillBoost: 1.6,
-    strokeBoost: 1.15,
+    strokes: ["214,211,209", "168,162,158", "120,113,108", "231,229,228"],
+    fills: ["68,64,60", "41,37,36", "28,25,23"],
+    hudPrimary: "rgba(231,229,228,",
+    hudSecondary: "rgba(214,211,209,",
+    ridge: "245,245,244",
+    densityMul: 1.18,
+    fillBoost: 1.7,
+    strokeBoost: 1.25,
+    opacityMul: 1.08,
   },
   "scale-anaconda": {
     strokes: ["77,124,15", "101,163,13", "54,83,20", "163,230,53"],
@@ -85,10 +90,14 @@ const PALETTES: Record<ProfilePlanProScaleBgVariant, ScalePalette> = {
     strokeBoost: 1.2,
   },
   "scale-python": {
-    strokes: ["34,211,238", "6,182,212", "103,232,249"],
-    fills: ["8,47,73", "14,116,144"],
-    hudPrimary: "rgba(34,211,238,",
-    hudSecondary: "rgba(103,232,249,",
+    strokes: ["34,211,238", "103,232,249", "6,182,212", "165,243,252"],
+    fills: ["14,116,144", "8,47,73", "22,78,99"],
+    hudPrimary: "rgba(103,232,249,",
+    hudSecondary: "rgba(34,211,238,",
+    densityMul: 1.15,
+    fillBoost: 1.7,
+    strokeBoost: 1.35,
+    opacityMul: 1.12,
   },
   "scale-gecko": {
     strokes: ["52,211,153", "16,185,129", "110,231,183"],
@@ -103,11 +112,15 @@ const PALETTES: Record<ProfilePlanProScaleBgVariant, ScalePalette> = {
     hudSecondary: "rgba(192,132,252,",
   },
   "scale-dragon": {
-    strokes: ["245,158,11", "251,191,36", "234,88,12"],
-    fills: ["120,53,15", "69,26,3"],
+    strokes: ["245,158,11", "251,191,36", "217,119,6", "180,83,9"],
+    fills: ["67,20,7", "120,53,15", "41,12,4"],
     hudPrimary: "rgba(251,191,36,",
     hudSecondary: "rgba(245,158,11,",
     ridge: "251,191,36",
+    densityMul: 1.18,
+    fillBoost: 2.25,
+    strokeBoost: 1.75,
+    opacityMul: 1.45,
   },
   "scale-viper": {
     strokes: ["132,204,22", "163,230,53", "74,222,128"],
@@ -142,8 +155,14 @@ function hash01(a: number, b: number): number {
   return n - Math.floor(n);
 }
 
+let activeOpacityMul = 1;
+
 function scaleOp(raw: number): number {
-  return Math.round(raw * PROFILE_PLAN_PRO_SCALE_OPACITY_SCALE * 1000) / 1000;
+  return Math.min(
+    1,
+    Math.round(raw * PROFILE_PLAN_PRO_SCALE_OPACITY_SCALE * activeOpacityMul * 1000) /
+      1000
+  );
 }
 
 /** atmos と同系 — 右・下・隅に寄せ、中央は空ける */
@@ -262,6 +281,18 @@ function variantKind(id: ProfilePlanProScaleBgVariant): ScaleKind {
 
 function buildSparseScaleSvg(variant: ProfilePlanProScaleBgVariant): string {
   const palette = PALETTES[variant];
+  activeOpacityMul = palette.opacityMul ?? 1;
+  try {
+    return buildSparseScaleSvgInner(variant, palette);
+  } finally {
+    activeOpacityMul = 1;
+  }
+}
+
+function buildSparseScaleSvgInner(
+  variant: ProfilePlanProScaleBgVariant,
+  palette: ScalePalette
+): string {
   const kind = variantKind(variant);
   const paths: string[] = [];
   const densityMul = palette.densityMul ?? 1;
@@ -468,33 +499,39 @@ function dotGrid(
 }
 
 function buildHudSvg(variant: ProfilePlanProScaleBgVariant): string {
-  const { hudPrimary, hudSecondary } = PALETTES[variant];
-  const g: string[] = [];
+  const palette = PALETTES[variant];
+  activeOpacityMul = palette.opacityMul ?? 1;
+  try {
+    const { hudPrimary, hudSecondary } = palette;
+    const g: string[] = [];
 
-  g.push(dotGrid(210, 20, 70, 34, 8, scaleOp(0.12), hudPrimary));
-  g.push(tickRow(196, 66, 12, 7.5, 3, scaleOp(0.22), hudSecondary));
-  g.push(plusMark(276, 40, 3, scaleOp(0.3), hudPrimary));
-  g.push(plusMark(288, 190, 2.6, scaleOp(0.26), hudPrimary));
-  g.push(tickRow(286, 150, 8, 6, 2.4, scaleOp(0.18), hudSecondary));
-  g.push(dotGrid(24, 372, 60, 40, 9, scaleOp(0.1), hudPrimary));
-  g.push(tickRow(150, 420, 16, 6, 2.2, scaleOp(0.16), hudSecondary));
-  g.push(plusMark(280, 400, 3, scaleOp(0.24), hudPrimary));
+    g.push(dotGrid(210, 20, 70, 34, 8, scaleOp(0.12), hudPrimary));
+    g.push(tickRow(196, 66, 12, 7.5, 3, scaleOp(0.22), hudSecondary));
+    g.push(plusMark(276, 40, 3, scaleOp(0.3), hudPrimary));
+    g.push(plusMark(288, 190, 2.6, scaleOp(0.26), hudPrimary));
+    g.push(tickRow(286, 150, 8, 6, 2.4, scaleOp(0.18), hudSecondary));
+    g.push(dotGrid(24, 372, 60, 40, 9, scaleOp(0.1), hudPrimary));
+    g.push(tickRow(150, 420, 16, 6, 2.2, scaleOp(0.16), hudSecondary));
+    g.push(plusMark(280, 400, 3, scaleOp(0.24), hudPrimary));
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height="${CANVAS_H}" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" preserveAspectRatio="none">${g.join("")}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height="${CANVAS_H}" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" preserveAspectRatio="none">${g.join("")}</svg>`;
+  } finally {
+    activeOpacityMul = 1;
+  }
 }
 
 /** 疎な爬虫類鱗レイヤー（atmos 配置） */
 export function getProfilePlanProScaleSkinUrl(
   variant: ProfilePlanProScaleBgVariant
 ): string {
-  return cachedUrl(`scale:skin:${variant}:v3`, () => buildSparseScaleSvg(variant));
+  return cachedUrl(`scale:skin:${variant}:v7`, () => buildSparseScaleSvg(variant));
 }
 
 /** 微細 HUD（atmos と同配置） */
 export function getProfilePlanProScaleHudUrl(
   variant: ProfilePlanProScaleBgVariant
 ): string {
-  return cachedUrl(`scale:hud:${variant}:v3`, () => buildHudSvg(variant));
+  return cachedUrl(`scale:hud:${variant}:v7`, () => buildHudSvg(variant));
 }
 
 export const PROFILE_PLAN_PRO_SCALE_CANVAS = {

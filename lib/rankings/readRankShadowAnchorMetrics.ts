@@ -2,8 +2,7 @@
  * Shadow 週次比較 — rankSnapshotHistory のアンカー日 metricValues を読む。
  */
 
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { RankGapStatsSlice } from "@/lib/rankings/readRankGapBonusSlice";
 import type { RankHistoryContext } from "@/lib/rankings/readRankFromSnapshotHistory";
@@ -28,9 +27,7 @@ type SnapshotMetricValues = {
 };
 
 type HistoryMetricValuesBlock = {
-  play_in?: SnapshotMetricValues;
-  playoffs?: SnapshotMetricValues;
-  playoffRounds?: Partial<Record<PlayoffRoundKey, SnapshotMetricValues>>;
+  seasons?: Partial<Record<string, SnapshotMetricValues>>;
   wc?: Partial<Record<WcRankingStage, SnapshotMetricValues>>;
 };
 
@@ -43,8 +40,6 @@ function pickSnapshotMetricValues(
   block: HistoryMetricValuesBlock | undefined,
   context: {
     rankingLeague: RankingLeagueSource;
-    phase: RankingPhase;
-    round: PlayoffRoundKey;
     wcStage: WcRankingStage;
   }
 ): SnapshotMetricValues | null {
@@ -52,13 +47,7 @@ function pickSnapshotMetricValues(
   if (context.rankingLeague === "worldcup") {
     return block.wc?.[context.wcStage] ?? null;
   }
-  if (context.phase === "playoffs" && context.round !== "overall") {
-    return block.playoffRounds?.[context.round] ?? null;
-  }
-  if (context.phase === "play_in") {
-    return block.play_in ?? null;
-  }
-  return block.playoffs ?? null;
+  return block.seasons?.[CURRENT_NBA_SEASON_KEY] ?? null;
 }
 
 export function readRankShadowAnchorMetrics(
@@ -68,8 +57,6 @@ export function readRankShadowAnchorMetrics(
   const mv = doc?.metricValues as HistoryMetricValuesBlock | undefined;
   const picked = pickSnapshotMetricValues(mv, {
     rankingLeague: context.rankingLeague,
-    phase: context.phase,
-    round: context.round,
     wcStage: context.wcStage ?? "overall",
   });
   if (!picked) return null;

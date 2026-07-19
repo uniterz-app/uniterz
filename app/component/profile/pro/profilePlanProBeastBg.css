@@ -1,0 +1,116 @@
+/* PRO 背景 — 獣皮 / 宝石 / 大理石
+ * atmos・scale と同じく図形レイヤーのみ（ベース色・重いグローなし） */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--beast) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast) .profile-plan-pro-ambient {
+  display: none;
+}
+
+.profile-plan-pro-bg__beast-skin {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.profile-plan-pro-bg__beast-hud {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* モチーフ別の微調整 */
+.profile-plan-pro-bg--beast-crocodile .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.06) saturate(1.08);
+}
+
+.profile-plan-pro-bg--beast-drake .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08) saturate(1.14);
+}
+
+.profile-plan-pro-bg--beast-diamond .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.1) saturate(1.1);
+}
+
+.profile-plan-pro-bg--beast-marble .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.05) saturate(1.12);
+}
+
+.profile-plan-pro-bg--beast-tiger .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.12);
+}
+
+.profile-plan-pro-bg--beast-viper .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.06) saturate(1.15);
+}
+
+.profile-plan-pro-bg--beast-shark .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08);
+}
+
+.profile-plan-pro-bg--beast-scorpion .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08) saturate(1.12);
+}
+
+.profile-plan-pro-bg--beast-beetle .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.1) saturate(1.2);
+}
+
+.profile-plan-pro-bg--beast-turtle .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.05) saturate(1.08);
+}
+
+.profile-plan-pro-bg--beast-carbon .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.1);
+}
+
+.profile-plan-pro-bg--beast-damascus .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08) saturate(0.95);
+}
+
+.profile-plan-pro-bg--beast-titanium .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.12);
+}
+
+.profile-plan-pro-bg--beast-chrome .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.1) saturate(1.05);
+}
+
+.profile-plan-pro-bg--beast-kintsugi .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.06) saturate(1.15);
+}
+
+.profile-plan-pro-bg--beast-meteorite .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08) saturate(0.92);
+}
+
+.profile-plan-pro-bg--beast-holosilk .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.05) saturate(1.25);
+}
+
+.profile-plan-pro-bg--beast-monogram .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08) saturate(1.1);
+}
+
+.profile-plan-pro-bg--beast-damier .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.1) saturate(1.08);
+}
+
+.profile-plan-pro-bg--beast-crown .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.06) saturate(1.15);
+}
+
+.profile-plan-pro-bg--beast-circuitlace .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.05) saturate(1.2);
+}
+
+.profile-plan-pro-bg--beast-ripple .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08) saturate(0.95);
+}

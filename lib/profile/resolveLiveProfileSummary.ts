@@ -6,8 +6,8 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export type ProfileSummaryForCards = {
@@ -162,13 +162,13 @@ export function summaryFromWcCumulativeStage(
   };
 }
 
-export function summaryFromPhaseRanking(
-  cumulative: Record<string, unknown> | null,
-  phase: RankingPhase
+/** NBA 現行シーズン（rankingBySeason.<key>）のサマリー */
+export function summaryFromSeasonRanking(
+  cumulative: Record<string, unknown> | null
 ): ProfileSummaryForCards {
-  const byPhase = ((cumulative?.rankingByPhase as Record<string, unknown>) ??
+  const bySeason = ((cumulative?.rankingBySeason as Record<string, unknown>) ??
     {}) as Record<string, Record<string, unknown> | undefined>;
-  const r = byPhase[phase] ?? {};
+  const r = bySeason[CURRENT_NBA_SEASON_KEY] ?? {};
   const posts = safeInt(r.totalPosts);
   const wins = safeInt(r.totalWins);
   const pointsSumV3 = safeNum(r.totalPoints);
@@ -212,11 +212,10 @@ function pickWcDailyRow(
 }
 
 function pickNbaDailyRow(
-  data: Record<string, unknown>,
-  phase: RankingPhase
+  data: Record<string, unknown>
 ): Record<string, unknown> {
-  const byPhase = (data.rankingByPhase ?? {}) as Record<string, unknown>;
-  return (byPhase[phase] ?? {}) as Record<string, unknown>;
+  const bySeason = (data.rankingBySeason ?? {}) as Record<string, unknown>;
+  return (bySeason[CURRENT_NBA_SEASON_KEY] ?? {}) as Record<string, unknown>;
 }
 
 async function fetchTodayDailyDoc(db: Firestore, uid: string) {
@@ -266,15 +265,14 @@ export async function resolveWcProfileSummaryLive(
 export async function resolveNbaProfileSummaryLive(
   db: Firestore,
   uid: string,
-  phase: RankingPhase,
   cumulative: Record<string, unknown> | null,
   prior: PriorSnapshotMetrics | null | undefined
 ): Promise<ProfileSummaryForCards> {
-  const base = summaryFromPhaseRanking(cumulative, phase);
+  const base = summaryFromSeasonRanking(cumulative);
   const todayData = await fetchTodayDailyDoc(db, uid);
   if (!todayData) return base;
 
-  const todayRow = pickNbaDailyRow(todayData, phase);
+  const todayRow = pickNbaDailyRow(todayData);
   if (safeInt(todayRow.posts) <= 0) return base;
   if (base.posts <= 0) return summaryFromDailyRow(todayRow, false);
 

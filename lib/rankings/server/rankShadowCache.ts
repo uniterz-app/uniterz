@@ -1,7 +1,6 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import type { Language } from "@/lib/i18n/language";
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { RankShadowAnalysis } from "@/lib/rankings/rankShadowAnalysis";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
@@ -22,30 +21,29 @@ export type RankShadowCacheDoc = {
 export function buildRankShadowCacheId(input: {
   weekStartDateKey: string;
   rankingLeague: RankingLeagueSource;
-  phase: RankingPhase;
-  round: PlayoffRoundKey;
   wcStage: WcRankingStage | null;
   language: Language;
 }): string {
   const wc = input.wcStage ?? "none";
+  const scope =
+    input.rankingLeague === "worldcup" ? wc : CURRENT_NBA_SEASON_KEY;
   return [
     input.weekStartDateKey,
     input.rankingLeague,
-    input.phase,
-    input.round,
-    wc,
+    scope,
     input.language,
   ].join("_");
 }
 
 export function buildRankShadowContextKey(input: {
   rankingLeague: RankingLeagueSource;
-  phase: RankingPhase;
-  round: PlayoffRoundKey;
   wcStage: WcRankingStage | null;
 }): string {
-  const wc = input.wcStage ?? "none";
-  return [input.rankingLeague, input.phase, input.round, wc].join("_");
+  const scope =
+    input.rankingLeague === "worldcup"
+      ? (input.wcStage ?? "none")
+      : CURRENT_NBA_SEASON_KEY;
+  return [input.rankingLeague, scope].join("_");
 }
 
 export async function readRankShadowCache(input: {

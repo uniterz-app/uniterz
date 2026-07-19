@@ -1,6 +1,5 @@
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import {
@@ -22,9 +21,7 @@ type SnapshotMetricValues = {
 };
 
 type HistoryMetricValuesBlock = {
-  play_in?: SnapshotMetricValues;
-  playoffs?: SnapshotMetricValues;
-  playoffRounds?: Partial<Record<PlayoffRoundKey, SnapshotMetricValues>>;
+  seasons?: Partial<Record<string, SnapshotMetricValues>>;
   wc?: Partial<Record<WcRankingStage, SnapshotMetricValues>>;
 };
 
@@ -42,8 +39,6 @@ type CurrentRow = {
 function pickPriorValues(
   doc: HistoryDoc | undefined,
   opts: {
-    phase: RankingPhase;
-    round: PlayoffRoundKey;
     wcStage: WcRankingStage;
     rankingLeague: RankingLeagueSource;
   }
@@ -53,13 +48,7 @@ function pickPriorValues(
   if (opts.rankingLeague === "worldcup") {
     return mv.wc?.[opts.wcStage] ?? null;
   }
-  if (opts.phase === "playoffs" && opts.round !== "overall") {
-    return mv.playoffRounds?.[opts.round] ?? null;
-  }
-  if (opts.phase === "play_in") {
-    return mv.play_in ?? null;
-  }
-  return mv.playoffs ?? null;
+  return mv.seasons?.[CURRENT_NBA_SEASON_KEY] ?? null;
 }
 
 function winRateAsPct(raw: number | undefined): number {
@@ -152,16 +141,12 @@ export type PriorSnapshotMetrics = SnapshotMetricValues;
 export async function loadPriorSnapshotMetrics(
   uid: string,
   opts: {
-    phase: RankingPhase;
-    round: PlayoffRoundKey;
     wcStage: WcRankingStage | null;
     rankingLeague: RankingLeagueSource;
   }
 ): Promise<PriorSnapshotMetrics | null> {
   const priorDoc = await loadPriorHistoryDoc(uid);
   return pickPriorValues(priorDoc ?? undefined, {
-    phase: opts.phase,
-    round: opts.round,
     wcStage: opts.wcStage ?? "overall",
     rankingLeague: opts.rankingLeague,
   });
@@ -175,8 +160,6 @@ export async function loadMyRankMetricValueDeltas(
   uid: string,
   current: CurrentRow | null | undefined,
   opts: {
-    phase: RankingPhase;
-    round: PlayoffRoundKey;
     wcStage: WcRankingStage | null;
     rankingLeague: RankingLeagueSource;
     /** route 側で先に読んだ prior を渡すと二重 read を避けられる */

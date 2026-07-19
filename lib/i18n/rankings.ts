@@ -1,8 +1,12 @@
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 
-export function metricLabel(metric: MobileMetric, lang: Language): string {
+export function metricLabel(
+  metric: MobileMetric,
+  lang: Language,
+  rankingLeague?: "nba" | "worldcup"
+): string {
   const m = t(lang).rankings;
   if (metric === "totalScore") return m.totalScore;
   if (metric === "winRate") return m.winRate;
@@ -10,7 +14,10 @@ export function metricLabel(metric: MobileMetric, lang: Language): string {
   if (metric === "exactHits") return m.exactHits;
   if (metric === "upsetScore") return m.upsetScore;
   if (metric === "streak") return m.winStreak;
-  if (metric === "goalScorerHits") return m.goalScorerHits;
+  if (metric === "goalScorerHits") {
+    if (rankingLeague === "nba" && m.topScorerHits) return m.topScorerHits;
+    return m.goalScorerHits;
+  }
   return "";
 }
 

@@ -5,14 +5,18 @@
  * 決済・IAP 未接続。UI ブラッシュアップ用。
  */
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
+import { CyberScanlineText } from "@/app/component/rankings/CyberRankingListParts";
 import {
   PRO_SUBSCRIBE_PREVIEW_PLANS,
   proSubscribePreviewPlanById,
   type ProSubscribePreviewPlan,
   type ProSubscribePreviewPlanId,
 } from "@/lib/pro/proSubscribePreviewPlans";
+import { PRO_SKIN_PATH } from "@/lib/pro/proSkinRoutes";
 import { jp, nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 
@@ -28,26 +32,92 @@ function trialAvailableFor(planId: ProSubscribePreviewPlanId): boolean {
   return planId === "weekly" || planId === "monthly";
 }
 
+/** プラン別アクセント（EAST ラベル風スキャンライン） */
+const PLAN_ACCENT: Record<
+  ProSubscribePreviewPlanId,
+  { fill: string; border: string; glow: string; softBg: string }
+> = {
+  weekly: {
+    fill: "#00F5FF",
+    border: "rgba(0,245,255,0.45)",
+    glow: "rgba(0,245,255,0.22)",
+    softBg: "rgba(0,245,255,0.08)",
+  },
+  monthly: {
+    fill: "#B8FF3C",
+    border: "rgba(184,255,60,0.45)",
+    glow: "rgba(184,255,60,0.2)",
+    softBg: "rgba(184,255,60,0.08)",
+  },
+  season: {
+    fill: "#FF8A1A",
+    border: "rgba(255,138,26,0.5)",
+    glow: "rgba(255,138,26,0.22)",
+    softBg: "rgba(255,138,26,0.09)",
+  },
+};
+
+function PlanScanLabel({
+  label,
+  accent,
+}: {
+  label: string;
+  accent: string;
+}) {
+  return (
+    <span
+      className={[
+        nameOxanium.className,
+        "relative inline-flex h-[18px] items-center overflow-hidden px-1.5",
+        "text-[9px] font-black uppercase leading-none tracking-[0.12em] text-[#050508]",
+      ].join(" ")}
+      style={{
+        background: accent,
+        boxShadow: `0 0 8px ${accent}44`,
+      }}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 1.5px, rgba(0,0,0,0.16) 1.5px, rgba(0,0,0,0.16) 2.5px)",
+        }}
+      />
+      <span className="relative z-[1]">{label}</span>
+    </span>
+  );
+}
+
 export default function ProSubscribePreview({
   language = "ja",
   className,
 }: Props) {
+  const pathname = usePathname() ?? "";
+  const skinPickerHref = pathname.startsWith("/web")
+    ? PRO_SKIN_PATH.web
+    : PRO_SKIN_PATH.mobile;
   const ja = language === "ja";
-  const [planId, setPlanId] = useState<ProSubscribePreviewPlanId>("monthly");
+  const [planId, setPlanId] = useState<ProSubscribePreviewPlanId | null>(null);
   const [phase, setPhase] = useState<Phase>("plans");
   const [checkoutKind, setCheckoutKind] = useState<CheckoutKind>("paid");
   const [trialModalOpen, setTrialModalOpen] = useState(false);
-  const selected = proSubscribePreviewPlanById(planId);
-  const trialAvailable = trialAvailableFor(planId);
+  const selected = planId ? proSubscribePreviewPlanById(planId) : null;
+  const trialAvailable = planId ? trialAvailableFor(planId) : false;
+
+  function togglePlan(id: ProSubscribePreviewPlanId) {
+    setPlanId((prev) => (prev === id ? null : id));
+  }
 
   function startPaid() {
-    if (phase === "purchasing") return;
+    if (!planId || phase === "purchasing") return;
     setCheckoutKind("paid");
     setPhase("purchasing");
     window.setTimeout(() => setPhase("success"), 900);
   }
 
   function confirmTrialFromModal() {
+    if (!planId) return;
     setTrialModalOpen(false);
     setCheckoutKind("trial");
     setPhase("purchasing");
@@ -56,11 +126,12 @@ export default function ProSubscribePreview({
 
   function reset() {
     setPhase("plans");
+    setPlanId(null);
     setCheckoutKind("paid");
     setTrialModalOpen(false);
   }
 
-  if (phase === "success") {
+  if (phase === "success" && selected && planId) {
     return (
       <div className={["w-full", className].filter(Boolean).join(" ")}>
         <SuccessPanel
@@ -70,19 +141,21 @@ export default function ProSubscribePreview({
           price={ja ? selected.priceJa : selected.priceEn}
           period={ja ? selected.periodJa : selected.periodEn}
           trial={checkoutKind === "trial"}
+          skinPickerHref={skinPickerHref}
           onAgain={reset}
         />
       </div>
     );
   }
 
-  const afterTrialPriceLine = ja
-    ? planId === "weekly"
-      ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
-      : "お試し後は月額 ¥600。期間中の解約で課金なし。"
-    : planId === "weekly"
-      ? "Then ¥280/week. Cancel during trial — no charge."
-      : "Then ¥600/month. Cancel during trial — no charge.";
+  const afterTrialPriceLine =
+    planId === "weekly"
+      ? ja
+        ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
+        : "Then ¥280/week. Cancel during trial — no charge."
+      : ja
+        ? "お試し後は月額 ¥780。期間中の解約で課金なし。"
+        : "Then ¥780/month. Cancel during trial — no charge.";
 
   return (
     <div className={["relative w-full", className].filter(Boolean).join(" ")}>
@@ -108,115 +181,167 @@ export default function ProSubscribePreview({
           </h1>
           <p className={[jp.className, "mt-2 text-[12px] leading-relaxed text-white/50"].join(" ")}>
             {ja
-              ? "プランを選んで、できることと価格を確認。プレビューでは購入／お試しをシミュレートします。"
-              : "Pick a plan, review perks & price. Preview simulates purchase / trial."}
+              ? "プランをタップして、できることを確認。もう一度タップで閉じます。"
+              : "Tap a plan to see what’s included. Tap again to close."}
           </p>
         </header>
 
-        <div className="grid gap-2.5 sm:grid-cols-3">
+        {/* モバイル縦並び: タップでそのカード直下に機能が開閉 */}
+        <div className="flex flex-col gap-2.5">
           {PRO_SUBSCRIBE_PREVIEW_PLANS.map((plan) => {
             const on = planId === plan.id;
+            const accent = PLAN_ACCENT[plan.id];
             return (
-              <button
-                key={plan.id}
-                type="button"
-                onClick={() => setPlanId(plan.id)}
-                className={[
-                  "relative rounded-[2px] border px-3 py-3 text-left transition",
-                  on
-                    ? "border-amber-300/70 bg-amber-300/[0.12] shadow-[inset_0_1px_0_rgba(244,223,154,0.2)]"
-                    : "border-white/12 bg-white/[0.03] hover:border-white/22",
-                ].join(" ")}
-              >
-                {(plan.badgeJa || plan.recommended) && (
-                  <span
+              <div key={plan.id} className="flex flex-col">
+                <button
+                  type="button"
+                  aria-expanded={on}
+                  onClick={() => togglePlan(plan.id)}
+                  className={[
+                    "relative rounded-[2px] border px-3 py-3.5 text-left transition",
+                    on ? "" : "bg-white/[0.03] active:brightness-110",
+                  ].join(" ")}
+                  style={
+                    on
+                      ? {
+                          borderColor: accent.border,
+                          background: accent.softBg,
+                          boxShadow: `inset 0 1px 0 ${accent.fill}33, 0 0 18px ${accent.glow}`,
+                        }
+                      : {
+                          borderColor: accent.border,
+                          background: "rgba(255,255,255,0.03)",
+                        }
+                  }
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <PlanScanLabel
+                      label={ja ? plan.labelJa : plan.labelEn}
+                      accent={accent.fill}
+                    />
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {(plan.badgeJa || plan.recommended) && (
+                        <span
+                          className={[
+                            nameOxanium.className,
+                            "inline-flex h-[18px] items-center rounded-[2px] px-1.5 text-[8px] font-extrabold uppercase leading-none tracking-[0.08em]",
+                            plan.badgeJa === "7日無料"
+                              ? "text-[#120e08]"
+                              : "border border-white/20 bg-black/40 text-white/70",
+                          ].join(" ")}
+                          style={
+                            plan.badgeJa === "7日無料"
+                              ? { background: accent.fill }
+                              : undefined
+                          }
+                        >
+                          {ja ? plan.badgeJa : plan.badgeEn}
+                        </span>
+                      )}
+                      <span
+                        className={[
+                          nameOxanium.className,
+                          "text-[12px] font-black leading-none transition",
+                          on ? "rotate-180" : "text-white/35",
+                        ].join(" ")}
+                        style={on ? { color: accent.fill } : undefined}
+                        aria-hidden
+                      >
+                        ▾
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex items-baseline gap-1.5">
+                    <CyberScanlineText
+                      subtle={false}
+                      className={[
+                        nameOxanium.className,
+                        "text-[22px] font-black tabular-nums leading-none text-white",
+                      ].join(" ")}
+                    >
+                      {ja ? plan.priceJa : plan.priceEn}
+                    </CyberScanlineText>
+                    <span
+                      className={[
+                        nameOxanium.className,
+                        "text-[10px] font-bold tracking-wide text-white/45",
+                      ].join(" ")}
+                    >
+                      {ja ? plan.periodJa : plan.periodEn}
+                    </span>
+                  </div>
+                  <p
                     className={[
-                      nameOxanium.className,
-                      "absolute right-2 top-2 rounded-[2px] px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.08em]",
-                      plan.recommended || plan.badgeJa === "7日無料"
-                        ? "bg-amber-300 text-[#120e08]"
-                        : "border border-white/20 bg-black/40 text-white/70",
+                      jp.className,
+                      "mt-2 text-[11px] leading-snug text-white/45",
                     ].join(" ")}
                   >
-                    {ja ? plan.badgeJa : plan.badgeEn}
-                  </span>
-                )}
-                <p
-                  className={[
-                    nameOxanium.className,
-                    "text-[10px] font-bold uppercase tracking-[0.16em]",
-                    on ? "text-amber-100/90" : "text-white/45",
-                  ].join(" ")}
-                >
-                  {ja ? plan.labelJa : plan.labelEn}
-                </p>
-                <p
-                  className={[
-                    nameOxanium.className,
-                    "mt-2 text-[22px] font-black tabular-nums leading-none",
-                    on ? "text-white" : "text-white/85",
-                  ].join(" ")}
-                >
-                  {ja ? plan.priceJa : plan.priceEn}
-                  <span className="ml-1 text-[10px] font-bold tracking-wide text-white/45">
-                    {ja ? plan.periodJa : plan.periodEn}
-                  </span>
-                </p>
-                <p className={[jp.className, "mt-2 text-[11px] leading-snug text-white/45"].join(" ")}>
-                  {ja ? plan.blurbJa : plan.blurbEn}
-                </p>
+                    {ja ? plan.blurbJa : plan.blurbEn}
+                  </p>
+                </button>
+
                 {on ? (
-                  <span
-                    className={[
-                      nameOxanium.className,
-                      "mt-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-300 text-[11px] font-black text-[#120e08]",
-                    ].join(" ")}
+                  <section
+                    className="mt-0 border border-t-0 bg-black/35 px-3 py-3"
+                    style={{ borderColor: accent.border }}
+                    aria-label={ja ? "このプランでできること" : "Included"}
                   >
-                    ✓
-                  </span>
+                    <p
+                      className={[
+                        nameOxanium.className,
+                        "mb-2.5 text-[9px] font-extrabold uppercase tracking-[0.16em]",
+                      ].join(" ")}
+                      style={{ color: accent.fill }}
+                    >
+                      {ja ? "このプランでできること" : "Included"}
+                    </p>
+                    <ul className="space-y-2.5">
+                      {plan.features.map((f) => (
+                        <li key={f.titleEn} className="flex items-start gap-2">
+                          <span
+                            className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{ background: accent.fill }}
+                          />
+                          <div className="min-w-0">
+                            <p
+                              className={[
+                                nameOxanium.className,
+                                "text-[11px] font-extrabold tracking-[0.04em] text-white/90",
+                              ].join(" ")}
+                            >
+                              {ja ? f.titleJa : f.titleEn}
+                            </p>
+                            <p
+                              className={[
+                                jp.className,
+                                "mt-0.5 text-[11px] leading-snug text-white/50",
+                              ].join(" ")}
+                            >
+                              {ja ? f.detailJa : f.detailEn}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 ) : null}
-              </button>
+              </div>
             );
           })}
         </div>
 
-        <section className="mt-4 border border-white/10 bg-black/25 px-3 py-3">
+        {!selected ? (
           <p
             className={[
-              nameOxanium.className,
-              "mb-2.5 text-[9px] font-extrabold uppercase tracking-[0.16em] text-amber-200/75",
+              jp.className,
+              "mt-5 text-center text-[12px] leading-relaxed text-white/40",
             ].join(" ")}
           >
-            {ja ? "このプランでできること" : "Included"}
+            {ja
+              ? "プランを選ぶと、お試し／購入ボタンが表示されます。"
+              : "Select a plan to continue."}
           </p>
-          <ul className="space-y-2.5">
-            {selected.features.map((f) => (
-              <li key={f.titleEn} className="flex items-start gap-2">
-                <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" />
-                <div className="min-w-0">
-                  <p
-                    className={[
-                      nameOxanium.className,
-                      "text-[11px] font-extrabold tracking-[0.04em] text-white/90",
-                    ].join(" ")}
-                  >
-                    {ja ? f.titleJa : f.titleEn}
-                  </p>
-                  <p
-                    className={[
-                      jp.className,
-                      "mt-0.5 text-[11px] leading-snug text-white/50",
-                    ].join(" ")}
-                  >
-                    {ja ? f.detailJa : f.detailEn}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {trialAvailable ? (
+        ) : trialAvailable ? (
           <div className="mt-5 space-y-2">
             <button
               type="button"
@@ -238,7 +363,12 @@ export default function ProSubscribePreview({
                   ? "7日間無料で試す"
                   : "Start 7-day free trial"}
             </button>
-            <p className={[jp.className, "text-center text-[11px] leading-relaxed text-white/50"].join(" ")}>
+            <p
+              className={[
+                jp.className,
+                "text-center text-[11px] leading-relaxed text-white/50",
+              ].join(" ")}
+            >
               {afterTrialPriceLine}
             </p>
             <button
@@ -291,7 +421,7 @@ export default function ProSubscribePreview({
         )}
       </div>
 
-      {trialModalOpen ? (
+      {trialModalOpen && selected ? (
         <TrialExplainModal
           ja={ja}
           plan={selected}
@@ -400,6 +530,11 @@ function TrialExplainModal({
   );
 }
 
+/** 成功カード — Uniterz サイバー HUD（シアン／エレクトリック） */
+const SUCCESS_CYBER = {
+  cyanGrid: "rgba(0,245,255,0.45)",
+} as const;
+
 function SuccessPanel({
   ja,
   planId,
@@ -407,6 +542,7 @@ function SuccessPanel({
   price,
   period,
   trial,
+  skinPickerHref,
   onAgain,
 }: {
   ja: boolean;
@@ -415,6 +551,7 @@ function SuccessPanel({
   price: string;
   period: string;
   trial: boolean;
+  skinPickerHref: string;
   onAgain: () => void;
 }) {
   const started = new Date().toLocaleDateString(ja ? "ja-JP" : "en-US", {
@@ -437,50 +574,68 @@ function SuccessPanel({
     : "Upgrade to Pro";
 
   const statusLine = trial
-    ? ja
-      ? `PRO // 7DAY_TRIAL // ${planLabel.toUpperCase()}`
-      : `PRO // 7DAY_TRIAL // ${planLabel.toUpperCase()}`
-    : `PRO // ACTIVE // ${planLabel.toUpperCase()}`;
+    ? `7DAY_TRIAL // ${planLabel.toUpperCase()}`
+    : `ACTIVE // ${planLabel.toUpperCase()}`;
 
   return (
     <div className="flex w-full flex-col items-center px-1 py-2">
       <div className="mb-4 flex items-center gap-2.5">
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-[#f0cc72] text-[13px] font-black text-[#120e08]">
+        <span
+          className={[
+            "grid h-7 w-7 place-items-center rounded-full text-[13px] font-black",
+            "bg-[#00F5FF] text-[#050508]",
+            "shadow-[0_0_14px_rgba(0,245,255,0.45)]",
+          ].join(" ")}
+        >
           ✓
         </span>
         <h2
           className={[
             nameOxanium.className,
-            "text-[17px] font-extrabold uppercase tracking-[0.14em] text-white",
+            "text-[17px] font-extrabold uppercase tracking-[0.14em] text-cyan-50",
           ].join(" ")}
         >
           {title}
         </h2>
       </div>
 
-      {/* Offset gold plate + white tactical frame（参照: 二重枠 + 外側 L ブラケット） */}
+      {/* 上=白ヘッダー / サイド=シアン オフセット＋Lブラケット */}
       <div className="relative w-full max-w-[22.5rem] pb-[7px] pr-[7px] pt-2 pl-2">
-        {/* Outer L brackets — gold, sitting outside the white border */}
         <span
           aria-hidden
-          className="pointer-events-none absolute left-0 top-0 z-20 h-[18px] w-[18px] border-l-[3px] border-t-[3px] border-[#e8f200]"
+          className="pointer-events-none absolute left-0 top-0 z-20 h-[18px] w-[18px] border-l-[3px] border-t-[3px] border-[#00F5FF] shadow-[0_0_10px_rgba(0,245,255,0.35)]"
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute bottom-0 right-0 z-20 h-[18px] w-[18px] border-b-[3px] border-r-[3px] border-[#e8f200]"
+          className="pointer-events-none absolute bottom-0 right-0 z-20 h-[18px] w-[18px] border-b-[3px] border-r-[3px] border-[#00F5FF] shadow-[0_0_10px_rgba(0,245,255,0.35)]"
         />
 
-        {/* Offset accent plate */}
+        {/* Side accent — cyan offset plate */}
         <div
           aria-hidden
-          className="absolute bottom-0 right-0 top-2 left-2 z-0 bg-[#e8f200]"
+          className="absolute bottom-0 right-0 top-2 left-2 z-0 bg-[#00F5FF]"
+          style={{ boxShadow: "0 0 28px rgba(0,245,255,0.28)" }}
         />
 
-        {/* Main white-border card */}
-        <div className="relative z-10 border-[2.5px] border-white bg-[#050505]">
-          {/* Header strip */}
-          <div className="flex items-stretch border-b-[2.5px] border-white bg-white">
-            <div className="min-w-0 flex-1 px-3 py-2.5">
+        {/* Main frame — white border */}
+        <div
+          className="relative z-10 border-[2.5px] border-white bg-[#04080f]"
+          style={{
+            boxShadow:
+              "0 0 24px rgba(34,211,238,0.14), inset 0 1px 0 rgba(255,255,255,0.1)",
+          }}
+        >
+          {/* Top — white header bar + scanlines（CyberSlantedTab と同型） */}
+          <div className="relative flex items-stretch overflow-hidden border-b-[2.5px] border-white bg-white">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 3px)",
+              }}
+            />
+            <div className="relative z-[1] min-w-0 flex-1 px-3 py-2.5">
               <p
                 className={[
                   nameOxanium.className,
@@ -495,13 +650,13 @@ function SuccessPanel({
                   "mt-0.5 text-[18px] font-black uppercase leading-none tracking-[0.08em] text-black",
                 ].join(" ")}
               >
-                {trial ? (ja ? "TRIAL ON" : "TRIAL ON") : "PRO ON"}
+                {trial ? "TRIAL ON" : "PRO ON"}
               </p>
             </div>
             <div
               className={[
                 nameOxanium.className,
-                "flex shrink-0 flex-col justify-center border-l-[2.5px] border-black/15 px-2.5 py-2 text-right text-[8px] font-bold uppercase leading-tight tracking-[0.06em] text-black/70",
+                "relative z-[1] flex shrink-0 flex-col justify-center border-l-[2.5px] border-black/15 px-2.5 py-2 text-right text-[8px] font-bold uppercase leading-tight tracking-[0.06em] text-black/70",
               ].join(" ")}
             >
               <span>PLAN: {planLabel.toUpperCase()}</span>
@@ -511,33 +666,45 @@ function SuccessPanel({
             </div>
           </div>
 
-          {/* Body */}
           <div className="relative px-3 pb-3 pt-4">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 opacity-[0.22]"
+              className="pointer-events-none absolute inset-0 opacity-[0.28]"
               style={{
-                backgroundImage:
-                  "radial-gradient(rgba(232,242,0,0.55) 0.55px, transparent 0.55px)",
+                backgroundImage: `radial-gradient(${SUCCESS_CYBER.cyanGrid} 0.55px, transparent 0.55px)`,
                 backgroundSize: "7px 7px",
               }}
             />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse 80% 55% at 50% 18%, rgba(0,245,255,0.1), transparent 70%)",
+              }}
+            />
 
-            <div className="relative mx-auto flex max-w-[15rem] flex-col items-center gap-2.5 border border-white/20 bg-black/80 px-3 py-5">
+            <div
+              className="relative mx-auto flex max-w-[15rem] flex-col items-center gap-2.5 border border-cyan-400/35 bg-[rgba(4,10,18,0.88)] px-3 py-5"
+              style={{
+                boxShadow:
+                  "inset 0 0 24px rgba(0,245,255,0.06), 0 0 18px rgba(34,211,238,0.08)",
+              }}
+            >
               <ProCyberBadge ariaLabel="UNITERZ Pro" compact />
               <p
                 className={[
                   nameOxanium.className,
-                  "text-[20px] font-semibold tracking-[0.22em] text-white",
+                  "text-[20px] font-semibold tracking-[0.22em] text-cyan-50",
                 ].join(" ")}
               >
                 UNITERZ
               </p>
-              <div className="h-px w-14 bg-[#e8f200]" />
+              <div className="h-px w-14 bg-[#00F5FF] shadow-[0_0_8px_rgba(0,245,255,0.55)]" />
               <p
                 className={[
                   nameOxanium.className,
-                  "text-center text-[10px] font-bold uppercase tracking-[0.1em] text-white/75",
+                  "text-center text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-100/70",
                 ].join(" ")}
               >
                 {statusLine}
@@ -545,7 +712,8 @@ function SuccessPanel({
               <p
                 className={[
                   nameOxanium.className,
-                  "text-[12px] font-black tabular-nums tracking-[0.04em] text-[#e8f200]",
+                  "text-[12px] font-black tabular-nums tracking-[0.04em] text-[#00F5FF]",
+                  "drop-shadow-[0_0_8px_rgba(0,245,255,0.35)]",
                 ].join(" ")}
               >
                 {trial ? (ja ? "無料 → その後 " : "FREE → THEN ") : ""}
@@ -554,18 +722,11 @@ function SuccessPanel({
               </p>
             </div>
 
-            {/* Meta rows */}
-            <div className="relative mt-3 space-y-1.5 border-t border-[#e8f200]/35 pt-3">
+            <div className="relative mt-3 space-y-1.5 border-t border-cyan-400/30 pt-3">
               {trial ? (
                 <>
-                  <MetaRow
-                    label={ja ? "START" : "START"}
-                    value={started}
-                  />
-                  <MetaRow
-                    label={ja ? "ENDS" : "ENDS"}
-                    value={trialEndLabel}
-                  />
+                  <MetaRow label="START" value={started} />
+                  <MetaRow label="ENDS" value={trialEndLabel} />
                   <MetaRow
                     label="CHARGE"
                     value={ja ? "期間中解約で課金なし" : "Cancel in trial = ¥0"}
@@ -580,23 +741,24 @@ function SuccessPanel({
             </div>
 
             <div className="relative mt-3 grid gap-2">
-              <button
-                type="button"
+              <Link
+                href={skinPickerHref}
                 className={[
                   nameOxanium.className,
-                  "w-full border-2 border-white bg-transparent py-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white",
-                  "transition hover:bg-white hover:text-black active:scale-[0.99]",
+                  "flex w-full items-center justify-center border-2 border-[#00F5FF] bg-transparent py-3 text-center text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#00F5FF]",
+                  "shadow-[0_0_16px_rgba(0,245,255,0.18)]",
+                  "transition hover:bg-[#00F5FF] hover:text-[#050508] hover:shadow-[0_0_22px_rgba(0,245,255,0.4)] active:scale-[0.99]",
                 ].join(" ")}
               >
-                {ja ? "Pro データを見る" : "View Pro data"}
-              </button>
+                {ja ? "Pro Skinを試す" : "Try Pro Skin"}
+              </Link>
               <button
                 type="button"
                 onClick={onAgain}
                 className={[
                   nameOxanium.className,
-                  "w-full border border-white/35 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/55",
-                  "transition hover:border-white/60 hover:text-white/85",
+                  "w-full border border-cyan-400/35 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100/50",
+                  "transition hover:border-cyan-300/60 hover:text-cyan-100/85",
                 ].join(" ")}
               >
                 {ja ? "プラン選択に戻る" : "Back to plans"}
@@ -606,7 +768,7 @@ function SuccessPanel({
             <p
               className={[
                 nameOxanium.className,
-                "relative mt-2.5 text-center text-[8px] font-bold uppercase tracking-[0.12em] text-white/30",
+                "relative mt-2.5 text-center text-[8px] font-bold uppercase tracking-[0.12em] text-cyan-400/35",
               ].join(" ")}
             >
               SYS_LOG · PREVIEW_MOCK · NO_CHARGE
@@ -624,7 +786,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
       <span
         className={[
           nameOxanium.className,
-          "shrink-0 text-[9px] font-bold uppercase tracking-[0.14em] text-white/40",
+          "shrink-0 text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-200/40",
         ].join(" ")}
       >
         {label}
@@ -632,7 +794,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
       <span
         className={[
           nameOxanium.className,
-          "min-w-0 text-right text-[11px] font-bold uppercase tracking-[0.04em] text-[#e8f200]",
+          "min-w-0 text-right text-[11px] font-bold uppercase tracking-[0.04em] text-[#00F5FF]",
         ].join(" ")}
       >
         {value}

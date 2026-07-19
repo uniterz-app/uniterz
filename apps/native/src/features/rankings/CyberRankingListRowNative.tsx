@@ -2,7 +2,7 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native
 import Animated from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
 import { cyberScoreGlowLayers } from "../../../../../lib/rankings/cyberGlyphGlowLayers";
 import {

@@ -1,7 +1,7 @@
 import type {
   MobileMetric,
   RankingRowWithCountry,
-} from "@/app/component/rankings/_data/mockRows";
+} from "@/lib/rankings/rankingMetrics";
 
 /** モバイル指標キー → cumulative API の metric クエリ値 */
 export const API_METRIC_BY_MOBILE: Record<MobileMetric, string> = {
@@ -22,6 +22,7 @@ export type RankingApiRow = {
   plan?: string | null;
   totalPosts?: number;
   totalWins?: number;
+  winRate?: number;
   totalPoints?: number;
   totalPrecision?: number;
   totalExactHits?: number;
@@ -34,6 +35,8 @@ export type RankingApiRow = {
   rankDeltaPlaces?: number | null;
   /** 選択指標の前日比（スナップショット行のみ） */
   metricValueDelta?: number | null;
+  /** Pro Skin（users.planProBgVariant） */
+  planProBgVariant?: string | null;
 };
 
 export function toApiMetric(metric: MobileMetric) {
@@ -62,6 +65,10 @@ export function toMobileRows(
         "User",
       photoURL: row.photoURL ?? undefined,
       plan: row.plan === "pro" ? "pro" : "free",
+      planProBgVariant:
+        row.plan === "pro" && typeof row.planProBgVariant === "string"
+          ? row.planProBgVariant
+          : undefined,
 
       totalScore: totalPoints,
       avgTotalScore: totalPosts > 0 ? totalPoints / totalPosts : 0,

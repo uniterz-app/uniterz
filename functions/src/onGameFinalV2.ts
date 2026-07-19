@@ -84,6 +84,7 @@ export const onGameFinalV2 = onDocumentWritten(
       advancingTeamId: game.advancingTeamId ?? null,
       knockout: game.knockout === true,
       goalScorers: game.goalScorers,
+      leadingScorers: game.leadingScorers,
     };
 
     /* ===== ② streak / team stats ===== */

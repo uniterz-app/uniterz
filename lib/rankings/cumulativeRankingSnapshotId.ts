@@ -1,18 +1,15 @@
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  nbaSeasonSnapshotDocId,
+} from "@/lib/rankings/nbaSeason";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export function resolveCumulativeRankingSnapshotDocId(input: {
-  phase: RankingPhase;
-  round: PlayoffRoundKey;
   metric: string;
   wcStage: WcRankingStage | null;
 }): string {
   if (input.wcStage) {
     return `wc_${input.wcStage}_${input.metric}`;
   }
-  if (input.round === "overall") {
-    return `${input.phase}_${input.metric}`;
-  }
-  return `${input.phase}_${input.round}_${input.metric}`;
+  return nbaSeasonSnapshotDocId(CURRENT_NBA_SEASON_KEY, input.metric);
 }

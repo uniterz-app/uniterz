@@ -1,6 +1,6 @@
 "use client";
 
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { Language } from "@/lib/i18n/language";
 import { metricLabel, upsetShortLabel } from "@/lib/i18n/rankings";
 import { t } from "@/lib/i18n/t";
@@ -17,14 +17,19 @@ type Props = {
   metric: MobileMetric;
   setMetric: (v: MobileMetric) => void;
   language?: Language;
+  rankingLeague?: "nba" | "worldcup";
   gridColumns?: 3;
   /** @deprecated モバイルも斜めタブに統一 */
   compactMobile?: boolean;
 };
 
-function formatLabel(key: MobileMetric, lang: Language) {
+function formatLabel(
+  key: MobileMetric,
+  lang: Language,
+  rankingLeague?: "nba" | "worldcup"
+) {
   if (key === "upsetScore") return upsetShortLabel(lang);
-  return metricLabel(key, lang);
+  return metricLabel(key, lang, rankingLeague);
 }
 
 export default function RankingsMetricRow({
@@ -32,6 +37,7 @@ export default function RankingsMetricRow({
   metric,
   setMetric,
   language = "ja",
+  rankingLeague,
   gridColumns,
 }: Props) {
   const reduceMotion = useReducedMotion();
@@ -61,7 +67,7 @@ export default function RankingsMetricRow({
           <CyberSlantedTab
             key={item.key}
             role="tab"
-            label={formatLabel(item.key, language)}
+            label={formatLabel(item.key, language, rankingLeague)}
             active={item.key === metric}
             onClick={() => setMetric(item.key)}
             compact

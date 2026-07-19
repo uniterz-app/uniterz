@@ -1,8 +1,8 @@
 import { useId } from "react";
 import { Image, Platform, StyleSheet, View } from "react-native";
 import Svg, { Defs, Path, Pattern, Rect } from "react-native-svg";
-import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
-import type { RankingRowWithCountry } from "../../../../../app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
+import type { RankingRowWithCountry } from "../../../../../lib/rankings/rankingMetrics";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { rankingFlagImageUri } from "./rankingFlagUri";

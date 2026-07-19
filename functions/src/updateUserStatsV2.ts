@@ -4,6 +4,7 @@ import {
   applyCumulativeIncrementInTransaction,
   type PostCumulativeContribution,
 } from "./rankings/cumulativeFromDaily";
+import { nbaSeasonKeyFromDateJST } from "./rankings/nbaSeason";
 
 /* =========================================================
  * 型
@@ -73,10 +74,6 @@ type ApplyOptsV2 = {
 
   /** false のとき（例: プレーイン）はランキング用日次・累積に含めない。未設定は従来どおり true */
   countsForRanking?: boolean;
-  /** シーズンフェーズ別ランキング集計用 */
-  seasonPhase?: "regular" | "play_in" | "playoffs" | null;
-  /** プレーオフラウンド別ランキング集計用 */
-  seasonRound?: "r1" | "r2" | "cf" | "finals" | null;
   /** World Cup（league=wc）: 予選 / 本戦。overall は常に別途加算 */
   wcStage?: "qualifying" | "main" | null;
   /** 試合のホーム / アウェイ teamId（teams.* バケット用） */
@@ -88,18 +85,14 @@ function shouldCountForRanking(v: boolean | undefined) {
   return v !== false;
 }
 
-function normalizeSeasonPhase(
-  v: ApplyOptsV2["seasonPhase"]
-): "play_in" | "playoffs" | null {
-  if (!v) return null;
-  return v === "play_in" || v === "playoffs" ? v : null;
-}
-
-function normalizeSeasonRound(
-  v: ApplyOptsV2["seasonRound"]
-): "r1" | "r2" | "cf" | "finals" | null {
-  if (!v) return null;
-  return v === "r1" || v === "r2" || v === "cf" || v === "finals" ? v : null;
+/** NBA ランキング対象投稿だけシーズンバケット（rankingBySeason.<key>）に積む */
+function resolveNbaSeasonKey(
+  leagueKey: string | null,
+  forRanking: boolean,
+  startAt: Timestamp
+): string | null {
+  if (!forRanking || leagueKey !== "nba") return null;
+  return nbaSeasonKeyFromDateJST(startAt.toDate());
 }
 
 const db = () => getFirestore();
@@ -108,9 +101,8 @@ function buildPostCumulativeContribution(
   opts: Pick<
     ApplyOptsV2,
     | "countsForRanking"
-    | "seasonPhase"
-    | "seasonRound"
     | "league"
+    | "startAt"
     | "isWin"
     | "points"
     | "upsetPoints"
@@ -123,10 +115,10 @@ function buildPostCumulativeContribution(
   >
 ): PostCumulativeContribution {
   const leagueKey = normalizeLeague(opts.league);
+  const forRanking = shouldCountForRanking(opts.countsForRanking);
   return {
-    forRanking: shouldCountForRanking(opts.countsForRanking),
-    phaseKey: normalizeSeasonPhase(opts.seasonPhase),
-    roundKey: normalizeSeasonRound(opts.seasonRound),
+    forRanking,
+    nbaSeasonKey: resolveNbaSeasonKey(leagueKey, forRanking, opts.startAt),
     leagueKey,
     isWc: leagueKey === "wc",
     wcStage: opts.wcStage ?? null,
@@ -249,20 +241,17 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     goalScorerHit = false,
     exactHit = false,
     countsForRanking,
-    seasonPhase,
-    seasonRound,
     wcStage,
     homeTeamId,
     awayTeamId,
   } = opts;
 
   const forRanking = shouldCountForRanking(countsForRanking);
-  const phaseKey = normalizeSeasonPhase(seasonPhase);
-  const roundKey = normalizeSeasonRound(seasonRound);
 
   const dateKey = toDateKeyJST(startAt);
   const leagueKey = normalizeLeague(league);
   const isWc = leagueKey === "wc";
+  const nbaSeasonKey = resolveNbaSeasonKey(leagueKey, forRanking, startAt);
 
   const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
   const markerRef = dailyRef.collection("applied_posts").doc(postId);
@@ -304,10 +293,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       updatedAt: FieldValue.serverTimestamp(),
       all: inc,
       ...(forRanking ? { ranking: inc } : {}),
-      ...(phaseKey ? { rankingByPhase: { [phaseKey]: inc } } : {}),
-      ...(forRanking && phaseKey === "playoffs" && roundKey
-        ? { rankingByPlayoffRound: { [roundKey]: inc } }
-        : {}),
+      ...(nbaSeasonKey ? { rankingBySeason: { [nbaSeasonKey]: inc } } : {}),
     };
 
     if (forRanking && leagueKey === "wc") {
@@ -372,9 +358,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       uid,
       buildPostCumulativeContribution({
         countsForRanking,
-        seasonPhase,
-        seasonRound,
         league,
+        startAt,
         isWin,
         points,
         upsetPoints,

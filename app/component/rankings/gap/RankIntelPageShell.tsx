@@ -10,12 +10,10 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import { useRankGapAnalysis } from "@/lib/rankings/useRankGapAnalysis";
 import { useRankShadowAnalysis } from "@/lib/rankings/useRankShadowAnalysis";
-import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
 import {
   RANKINGS_TAB_LEAGUE_PARAM,
-  RANKINGS_TAB_ROUND_PARAM,
   RANKINGS_TAB_WC_STAGE_PARAM,
 } from "@/lib/navigation/rankingsProfileFrom";
 import {
@@ -46,11 +44,6 @@ export default function RankIntelPageShell({
     return isRankingLeagueSource(raw) ? raw : "worldcup";
   }, [searchParams]);
 
-  const round = useMemo(() => {
-    const raw = searchParams.get(RANKINGS_TAB_ROUND_PARAM);
-    return isPlayoffRoundKey(raw) ? raw : "overall";
-  }, [searchParams]);
-
   const wcStage = useMemo(() => {
     const raw = searchParams.get(RANKINGS_TAB_WC_STAGE_PARAM);
     if (isWcRankingStage(raw)) return raw;
@@ -63,8 +56,6 @@ export default function RankIntelPageShell({
   const gap = useRankGapAnalysis({
     enabled: enabled && activeTab === "gap",
     rankingLeague,
-    phase: "playoffs",
-    round,
     wcStage,
     language: sessionUser.language,
   });
@@ -72,8 +63,6 @@ export default function RankIntelPageShell({
   const shadow = useRankShadowAnalysis({
     enabled: enabled && activeTab === "shadow",
     rankingLeague,
-    phase: "playoffs",
-    round,
     wcStage,
     language: sessionUser.language,
   });

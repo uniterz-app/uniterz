@@ -19,6 +19,7 @@ import {
   Users,
   Mail,
   Award,
+  Sparkles,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -38,6 +39,7 @@ import {
   markNavigatedFromSideMenu,
   clearSideMenuOrigin,
 } from "@/lib/navigation/sideMenuReturnNav";
+import { PRO_SKIN_PATH } from "@/lib/pro/proSkinRoutes";
 
 type Variant = "mobile" | "web";
 type SettingsMenuProps = {
@@ -209,6 +211,17 @@ export default function SettingsMenu({
             }
           >
             <span className={cn(isEn && "uppercase")}>{m.settings.planStatus}</span>
+          </SideMenuItemButton>
+          <SideMenuItemButton
+            icon={Sparkles}
+            labelStyle={menuLabelFont}
+            onClick={() =>
+              pushFromMenu(
+                resolvedVariant === "web" ? PRO_SKIN_PATH.web : PRO_SKIN_PATH.mobile
+              )
+            }
+          >
+            <span className={cn(isEn && "uppercase")}>{m.settings.proSkin}</span>
           </SideMenuItemButton>
         </div>
 

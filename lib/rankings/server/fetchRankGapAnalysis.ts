@@ -1,7 +1,5 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { resolveCumulativeRankingSnapshotDocId } from "@/lib/rankings/cumulativeRankingSnapshotId";
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import {
   computeRankGapAnalysis,
@@ -77,8 +75,6 @@ async function loadCohortSlicesLive(input: {
   cohortUids: string[];
   context: {
     rankingLeague: RankingLeagueSource;
-    phase: RankingPhase;
-    round: PlayoffRoundKey;
     wcStage: WcRankingStage | null;
   };
 }): Promise<RankGapStatsSlice[]> {
@@ -90,8 +86,6 @@ async function loadCohortSlicesLive(input: {
   for (const cohortUid of input.cohortUids) {
     const slice = readRankGapStatsSlice(cumulativeByUid.get(cohortUid), {
       rankingLeague: input.context.rankingLeague,
-      phase: input.context.phase,
-      round: input.context.round,
       wcStage: input.context.wcStage,
     });
     if (slice && slice.posts > 0) cohortSlices.push(slice);
@@ -102,8 +96,6 @@ async function loadCohortSlicesLive(input: {
 export async function fetchRankGapAnalysis(input: {
   uid: string;
   rankingLeague: RankingLeagueSource;
-  phase: RankingPhase;
-  round: PlayoffRoundKey;
   wcStage: WcRankingStage | null;
   language: Language;
 }): Promise<RankGapAnalysis | { ok: false; reason: string }> {
@@ -116,16 +108,12 @@ export async function fetchRankGapAnalysis(input: {
 
   const context = {
     rankingLeague: input.rankingLeague,
-    phase: input.phase,
-    round: input.round,
     wcStage: input.wcStage,
   };
 
   const bulk = await fetchBulkFromFunctions(
     input.uid,
     ["totalPoints"],
-    input.phase,
-    input.round,
     input.wcStage
   );
   const bundle = bulk.byMetric.totalPoints;
@@ -161,8 +149,6 @@ export async function fetchRankGapAnalysis(input: {
   }
 
   const snapshotDocId = resolveCumulativeRankingSnapshotDocId({
-    phase: input.phase,
-    round: input.round,
     metric: "totalPoints",
     wcStage: input.wcStage,
   });

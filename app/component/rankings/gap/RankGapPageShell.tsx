@@ -7,12 +7,10 @@ import RankGapView from "@/app/component/rankings/gap/RankGapView";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import { useRankGapAnalysis } from "@/lib/rankings/useRankGapAnalysis";
-import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
 import {
   RANKINGS_TAB_LEAGUE_PARAM,
-  RANKINGS_TAB_ROUND_PARAM,
   RANKINGS_TAB_WC_STAGE_PARAM,
 } from "@/lib/navigation/rankingsProfileFrom";
 
@@ -30,11 +28,6 @@ export default function RankGapPageShell({
     return isRankingLeagueSource(raw) ? raw : "worldcup";
   }, [searchParams]);
 
-  const round = useMemo(() => {
-    const raw = searchParams.get(RANKINGS_TAB_ROUND_PARAM);
-    return isPlayoffRoundKey(raw) ? raw : "overall";
-  }, [searchParams]);
-
   const wcStage = useMemo(() => {
     const raw = searchParams.get(RANKINGS_TAB_WC_STAGE_PARAM);
     if (isWcRankingStage(raw)) return raw;
@@ -44,8 +37,6 @@ export default function RankGapPageShell({
   const { analysis, loading, errorCode, reload } = useRankGapAnalysis({
     enabled: !!fUser?.uid && sessionUser.plan === "pro",
     rankingLeague,
-    phase: "playoffs",
-    round,
     wcStage,
     language: sessionUser.language,
   });

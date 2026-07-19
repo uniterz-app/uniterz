@@ -51,6 +51,7 @@ export async function finalizePost({
       knockout: game.knockout,
       countsForRanking: game.countsForRanking,
       goalScorers: game.goalScorers,
+      leadingScorers: game.leadingScorers,
     },
     market,
     hadUpsetGame,
@@ -178,8 +179,6 @@ export async function finalizePost({
 
       points: totalPoints,
       countsForRanking,
-      seasonPhase: game?.seasonPhase ?? null,
-      seasonRound: game?.seasonRound ?? null,
       wcStage: resolvedWcStage,
       homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
       awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,

@@ -43,14 +43,9 @@ function FrameCorners({ isPlanPro = false }: { isPlanPro?: boolean }) {
   );
 }
 
-/** PRO 枠 — 環境光・スイープのみ（内側ボーダー・レール・上辺線は廃止） */
+/** PRO 枠 — 環境光のみ（枠スイープの常時アニメは廃止） */
 function ProFrameDecor() {
-  return (
-    <>
-      <span className="profile-plan-pro-ambient" aria-hidden />
-      <span className="profile-plan-pro-frame-sweep" aria-hidden />
-    </>
-  );
+  return <span className="profile-plan-pro-ambient" aria-hidden />;
 }
 
 const ProfileKinetikPanelFrame = forwardRef<HTMLElement, Props>(

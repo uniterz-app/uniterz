@@ -1,4 +1,6 @@
 // functions/src/rankings/buildCumulativeRankingSnapshot.ts
+// NBA はシーズンキー付きスライス（rankingBySeason.<key>）から s<key>_<metric> doc を、
+// WC はステージ別スライスから wc_<stage>_<metric> doc を日次で作る。
 
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { safeRankMetricNum } from "./safeRankMetricNum";
@@ -15,10 +17,9 @@ import {
   loadCumulativeStatsForRankingSnapshot,
 } from "./cumulativeSnapshotIndex";
 import {
-  buildRankGapCohortBandSnapshot,
-  readRankGapStatsSlice,
-  type GapStatsReadContext,
-} from "./readRankGapStatsSlice";
+  CURRENT_NBA_SEASON_KEY,
+  nbaSeasonSnapshotDocId,
+} from "./nbaSeason";
 
 /* =========================================================
  * Firestore
@@ -38,23 +39,14 @@ type Metric =
 
 const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
 
-function minPostsForWinRate(
-  phase: RankingPhase,
-  round: "overall" | PlayoffRoundKey
-): number {
-  if (phase === "playoffs" && (round === "overall" || round === "r1")) {
-    return 20;
-  }
-  return MIN_POSTS_FOR_WIN_RATE_BASE;
-}
+/** NBA シーズン勝率ランキングの最低投稿数（Next の minPostsForWinRate と同期） */
+export const NBA_SEASON_WIN_RATE_MIN_POSTS = 20;
 
 function filterRowsForMetricEligibility(
   baseRows: BaseRow[],
   metric: Metric,
   opts: {
     wcStage?: WcRankingStage | null;
-    phase?: RankingPhase;
-    round?: "overall" | PlayoffRoundKey;
     postedTodayUids?: Set<string>;
     /** 手動スナップショット: 当日確定フィルタなし（連勝>0 のみ） */
     streakAllEligible?: boolean;
@@ -69,7 +61,7 @@ function filterRowsForMetricEligibility(
     return baseRows.filter(
       (row) =>
         (row.totalPosts ?? 0) >=
-        minPostsForWinRate(opts.phase ?? "playoffs", opts.round ?? "overall")
+        Math.max(NBA_SEASON_WIN_RATE_MIN_POSTS, MIN_POSTS_FOR_WIN_RATE_BASE)
     );
   }
   if (metric === "activeWinStreak") {
@@ -93,9 +85,8 @@ function filterRowsForMetricEligibility(
 const METRICS: Metric[] = [
   "totalPoints",
   "winRate",
-  "totalPrecision",
   "totalUpset",
-  "activeWinStreak",
+  "totalGoalScorerHits",
 ];
 
 /** World Cup 専用（完全的中は totalExactHits、得点者的中は totalGoalScorerHits） */
@@ -108,20 +99,11 @@ const WC_METRICS: Metric[] = [
   "totalGoalScorerHits",
 ];
 
-type RankingPhase = "play_in" | "playoffs";
-type PlayoffRoundKey = "r1" | "r2" | "cf" | "finals";
-const PLAYOFF_ROUND_KEYS: PlayoffRoundKey[] = ["r1", "r2", "cf", "finals"];
 const WC_RANKING_STAGES: readonly WcRankingStage[] = [
   "overall",
   "qualifying",
   "main",
 ];
-
-/**
- * 日次スナップショットで再計算・書き込みするフェーズ。プレーイン終了後は確定表示のため除外する。
- * Next の `RANKING_SNAPSHOT_BUILD_PHASES` と同期すること。
- */
-export const SNAPSHOT_BUILD_PHASES: RankingPhase[] = ["playoffs"];
 
 /** Client: list cumulative_stats/{uid}/rankSnapshotHistory ordered by dateKey. */
 export const RANK_SNAPSHOT_HISTORY_SUBCOL = "rankSnapshotHistory";
@@ -165,68 +147,53 @@ export const RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = 30;
 /* =========================================================
  * Utils
  * =======================================================*/
-/** Leaderboard slice: prefer `rankingByPhase[phase]` when `phase` is set. */
-function rankingSlice(d: any, phase?: RankingPhase) {
-  if (phase) {
-    const byPhase = d.rankingByPhase?.[phase];
-    if (byPhase && typeof byPhase === "object") {
-      const tp = byPhase.totalPosts ?? 0;
-      const tw = byPhase.totalWins ?? 0;
-      return {
-        totalPosts: tp,
-        totalWins: tw,
-        winRate: tp > 0 ? tw / tp : byPhase.winRate ?? 0,
-        totalPoints: byPhase.totalPoints ?? 0,
-        totalPrecision: byPhase.totalPrecision ?? 0,
-        totalUpset: byPhase.totalUpset ?? 0,
-        totalGoalScorerHits: byPhase.totalGoalScorerHits ?? 0,
-      };
-    }
-    return {
-      totalPosts: 0,
-      totalWins: 0,
-      winRate: 0,
-      totalPoints: 0,
-      totalPrecision: 0,
-      totalUpset: 0,
-      totalGoalScorerHits: 0,
-    };
-  }
-  const rk = d.ranking;
-  if (rk && typeof rk === "object") {
-    const tp = rk.totalPosts ?? 0;
-    const tw = rk.totalWins ?? 0;
-    return {
-      totalPosts: tp,
-      totalWins: tw,
-      winRate: tp > 0 ? tw / tp : rk.winRate ?? 0,
-      totalPoints: rk.totalPoints ?? 0,
-      totalPrecision: rk.totalPrecision ?? 0,
-      totalUpset: rk.totalUpset ?? 0,
-      totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
-    };
-  }
-  const totalPosts = d.totalPosts ?? 0;
-  const totalWins = d.totalWins ?? 0;
+
+type RankingSliceTotals = {
+  totalPosts: number;
+  totalWins: number;
+  winRate: number;
+  totalPoints: number;
+  totalPrecision: number;
+  totalUpset: number;
+  totalGoalScorerHits: number;
+};
+
+const EMPTY_SLICE: RankingSliceTotals = {
+  totalPosts: 0,
+  totalWins: 0,
+  winRate: 0,
+  totalPoints: 0,
+  totalPrecision: 0,
+  totalUpset: 0,
+  totalGoalScorerHits: 0,
+};
+
+function sliceFromBucket(
+  rr: Record<string, unknown> | undefined | null
+): RankingSliceTotals {
+  if (!rr || typeof rr !== "object") return { ...EMPTY_SLICE };
+  const tp = Number(rr.totalPosts ?? 0);
+  const tw = Number(rr.totalWins ?? 0);
   return {
-    totalPosts,
-    totalWins,
-    winRate: d.winRate ?? 0,
-    totalPoints: d.totalPoints ?? 0,
-    totalPrecision: d.totalPrecision ?? 0,
-    totalUpset: d.totalUpset ?? 0,
-    totalGoalScorerHits: d.totalGoalScorerHits ?? 0,
+    totalPosts: tp,
+    totalWins: tw,
+    winRate: tp > 0 ? tw / tp : Number(rr.winRate ?? 0),
+    totalPoints: Number(rr.totalPoints ?? 0),
+    totalPrecision: Number(rr.totalPrecision ?? 0),
+    totalUpset: Number(rr.totalUpset ?? 0),
+    totalGoalScorerHits: safeRankMetricNum(rr.totalGoalScorerHits),
   };
 }
 
-function getValue(d: any, metric: Metric, phase: RankingPhase) {
-  if (metric === "activeWinStreak") return d.activeWinStreak ?? 0;
-  const r = rankingSlice(d, phase);
-  if (metric === "winRate") return r.winRate ?? 0;
-  if (metric === "totalPoints") return r.totalPoints ?? 0;
-  if (metric === "totalPrecision") return r.totalPrecision ?? 0;
-  if (metric === "totalGoalScorerHits") return r.totalGoalScorerHits ?? 0;
-  return r.totalUpset ?? 0;
+/** NBA 現行シーズンのスライス（rankingBySeason.<CURRENT_NBA_SEASON_KEY>） */
+export function nbaSeasonRankingSlice(
+  d: Record<string, unknown>,
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
+): RankingSliceTotals {
+  const bySeason = d.rankingBySeason as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  return sliceFromBucket(bySeason?.[seasonKey]);
 }
 
 function activeBasketballStreak(d: any): number {
@@ -305,11 +272,9 @@ type PhaseRankMap = Partial<Record<Metric, number>>;
 
 type WcRankBlock = Partial<Record<WcRankingStage, PhaseRankMap>>;
 
-/** rankSnapshotHistory / snapshotRanks 用（ラウンド別は playoffs のみ） */
+/** rankSnapshotHistory / snapshotRanks 用 */
 type PriorRankBlock = {
-  play_in: PhaseRankMap;
-  playoffs: PhaseRankMap;
-  playoffRounds: Partial<Record<PlayoffRoundKey, PhaseRankMap>>;
+  seasons: Partial<Record<string, PhaseRankMap>>;
   wc?: WcRankBlock;
 };
 
@@ -318,22 +283,6 @@ type SnapshotRow = BaseRow & {
   rankDeltaPlaces: number | null;
   metricValueDelta?: number | null;
 };
-
-function gapCohortTop20Payload(
-  metric: Metric,
-  statsByUid: Map<string, Record<string, unknown>>,
-  rows: Array<{ uid: string }>,
-  context: GapStatsReadContext
-): Record<string, unknown> {
-  if (metric !== "totalPoints") return {};
-  const slices = [];
-  for (const row of rows) {
-    const slice = readRankGapStatsSlice(statsByUid.get(row.uid), context);
-    if (slice && slice.posts > 0) slices.push(slice);
-  }
-  const band = buildRankGapCohortBandSnapshot(slices);
-  return band ? { gapCohortTop20: band } : {};
-}
 
 type SnapshotMetricValues = {
   totalPoints: number;
@@ -347,9 +296,7 @@ type SnapshotMetricValues = {
 };
 
 type HistoryMetricValuesBlock = {
-  play_in: SnapshotMetricValues;
-  playoffs: SnapshotMetricValues;
-  playoffRounds: Partial<Record<PlayoffRoundKey, SnapshotMetricValues>>;
+  seasons: Partial<Record<string, SnapshotMetricValues>>;
   wc: Partial<Record<WcRankingStage, SnapshotMetricValues>>;
 };
 
@@ -380,24 +327,15 @@ function toSnapshotMetricValues(r: {
 }
 
 function buildMetricValuesBlock(d: Record<string, unknown>): HistoryMetricValuesBlock {
-  const playoffRounds: Partial<
-    Record<PlayoffRoundKey, SnapshotMetricValues>
-  > = {};
-  for (const round of PLAYOFF_ROUND_KEYS) {
-    const rr = (d.rankingByPlayoffRound as Record<string, unknown> | undefined)?.[
-      round
-    ] as
-      | {
-          totalPosts?: number;
-          totalWins?: number;
-          winRate?: number;
-          totalPoints?: number;
-          totalPrecision?: number;
-          totalUpset?: number;
-        }
-      | undefined;
-    if ((rr?.totalPosts ?? 0) > 0) {
-      playoffRounds[round] = toSnapshotMetricValues(rr);
+  const seasons: Partial<Record<string, SnapshotMetricValues>> = {};
+  const bySeason = (d.rankingBySeason ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  for (const [seasonKey, bucket] of Object.entries(bySeason)) {
+    const slice = sliceFromBucket(bucket);
+    if (slice.totalPosts > 0) {
+      seasons[seasonKey] = toSnapshotMetricValues(slice);
     }
   }
 
@@ -420,12 +358,7 @@ function buildMetricValuesBlock(d: Record<string, unknown>): HistoryMetricValues
     }
   }
 
-  return {
-    play_in: toSnapshotMetricValues(rankingSlice(d, "play_in")),
-    playoffs: toSnapshotMetricValues(rankingSlice(d, "playoffs")),
-    playoffRounds,
-    wc,
-  };
+  return { seasons, wc };
 }
 
 function computeRankDeltaPlaces(
@@ -441,18 +374,14 @@ function computeRankDeltaPlaces(
 function pickPriorMetricValues(
   block: HistoryMetricValuesBlock | null | undefined,
   opts:
-    | { kind: "phase"; phase: RankingPhase }
-    | { kind: "round"; round: PlayoffRoundKey }
+    | { kind: "season"; seasonKey: string }
     | { kind: "wc"; stage: WcRankingStage }
 ): SnapshotMetricValues | null {
   if (!block) return null;
   if (opts.kind === "wc") {
     return block.wc?.[opts.stage] ?? null;
   }
-  if (opts.kind === "round") {
-    return block.playoffRounds?.[opts.round] ?? null;
-  }
-  return block[opts.phase] ?? null;
+  return block.seasons?.[opts.seasonKey] ?? null;
 }
 
 function metricValueFromRow(row: BaseRow, metric: Metric): number | null {
@@ -537,16 +466,13 @@ async function fetchLatestPriorRankMapsForUids(
         if (!pending.has(uid)) return;
         if (s.exists) {
           const d = s.data() as {
-            play_in?: PhaseRankMap;
-            playoffs?: PhaseRankMap;
-            playoffRounds?: Partial<Record<PlayoffRoundKey, PhaseRankMap>>;
+            seasons?: Partial<Record<string, PhaseRankMap>>;
             wc?: WcRankBlock;
           };
           out.set(uid, {
-            play_in: (d?.play_in ?? {}) as PhaseRankMap,
-            playoffs: (d?.playoffs ?? {}) as PhaseRankMap,
-            playoffRounds: (d?.playoffRounds ??
-              {}) as Partial<Record<PlayoffRoundKey, PhaseRankMap>>,
+            seasons: (d?.seasons ?? {}) as Partial<
+              Record<string, PhaseRankMap>
+            >,
             wc: (d?.wc ?? {}) as WcRankBlock,
           });
           pending.delete(uid);
@@ -610,18 +536,18 @@ async function fetchLatestPriorMetricValuesForUids(
 
 /**
  * 日次スナップショット doc が無い/空のとき、getCumulativeRanking が一覧を出せるよう
- * cumulative_stats からラウンド別 Top20 をその場で算出する。
+ * cumulative_stats からその場で Top20 を算出する。
  */
 export type LiveTop20Payload = {
   rows: SnapshotRow[];
-  /** 指標・ラウンドの対象参加者数（Top20 ではない） */
+  /** 指標の対象参加者数（Top20 ではない） */
   totalCount: number;
   /** 全参加者の順位（Top20 外 uid の myRank 用） */
   rankByUid: Map<string, number>;
 };
 
-export async function loadPlayoffRoundTop20RowsLive(
-  round: PlayoffRoundKey,
+/** NBA 現行シーズンの live フォールバック */
+export async function loadNbaSeasonTop20RowsLive(
   metric: Metric,
   postedTodayUids?: Set<string>
 ): Promise<LiveTop20Payload> {
@@ -629,58 +555,7 @@ export async function loadPlayoffRoundTop20RowsLive(
   const baseRows: BaseRow[] = snap.docs
     .map((doc) => {
       const d = doc.data();
-      const rr = d.rankingByPlayoffRound?.[round];
-      const tp = rr?.totalPosts ?? 0;
-      const tw = rr?.totalWins ?? 0;
-      return {
-        uid: doc.id,
-        displayName: d.displayName ?? "user",
-        handle: d.handle ?? null,
-        photoURL: d.photoURL ?? null,
-        countryCode: d.countryCode ?? null,
-        plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
-        totalPosts: tp,
-        totalWins: tw,
-        winRate: tp > 0 ? tw / tp : rr?.winRate ?? 0,
-        totalPoints: rr?.totalPoints ?? 0,
-        totalPrecision: rr?.totalPrecision ?? 0,
-        totalUpset: rr?.totalUpset ?? 0,
-        totalGoalScorerHits: safeRankMetricNum(rr?.totalGoalScorerHits),
-        activeWinStreak: activeBasketballStreak(d),
-      };
-    })
-    .filter((row) => (row.totalPosts ?? 0) > 0);
-
-  const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-    phase: "playoffs",
-    round,
-    postedTodayUids: postedTodayUids,
-  });
-  const sortedFull = [...eligibleRows].sort((a, b) =>
-    cmpSortRows(a, b, metric)
-  );
-  const ranks = assignCompetitionRanks(sortedFull, metric);
-  return {
-    totalCount: sortedFull.length,
-    rankByUid: ranks,
-    rows: sortedFull.slice(0, 20).map((row) => ({
-      ...row,
-      rank: ranks.get(row.uid) ?? 0,
-      rankDeltaPlaces: null,
-    })),
-  };
-}
-
-export async function loadNbaPhaseTop20RowsLive(
-  phase: RankingPhase,
-  metric: Metric,
-  postedTodayUids?: Set<string>
-): Promise<LiveTop20Payload> {
-  const snap = await db().collection("cumulative_stats").get();
-  const baseRows: BaseRow[] = snap.docs
-    .map((doc) => {
-      const d = doc.data();
-      const r = rankingSlice(d, phase);
+      const r = nbaSeasonRankingSlice(d);
       return {
         uid: doc.id,
         displayName: d.displayName ?? "user",
@@ -694,15 +569,13 @@ export async function loadNbaPhaseTop20RowsLive(
         totalPoints: r.totalPoints,
         totalPrecision: r.totalPrecision,
         totalUpset: r.totalUpset,
-        totalGoalScorerHits: 0,
+        totalGoalScorerHits: r.totalGoalScorerHits,
         activeWinStreak: activeBasketballStreak(d),
       };
     })
     .filter((row) => (row.totalPosts ?? 0) > 0);
 
   const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-    phase,
-    round: "overall",
     postedTodayUids: postedTodayUids,
   });
   const sortedFull = [...eligibleRows].sort((a, b) =>
@@ -794,6 +667,7 @@ export async function buildCumulativeRankingSnapshot(
   const scope = options.scope ?? "all";
   const wcOnly = scope === "wc";
   const streakAllEligible = options.streakAllEligible === true;
+  const seasonKey = CURRENT_NBA_SEASON_KEY;
 
   const snap = await loadCumulativeStatsForRankingSnapshot(db());
   const statsByUid = cumulativeStatsDocsToMap(snap);
@@ -812,33 +686,29 @@ export async function buildCumulativeRankingSnapshot(
     return wcSettledTodayUids;
   }
 
-  const rankByUid = new Map<
-    string,
-    { play_in: PhaseRankMap; playoffs: PhaseRankMap }
-  >();
+  /** uid → 現行シーズンの指標別順位 */
+  const rankByUidSeason = new Map<string, PhaseRankMap>();
 
-  function ensure(uid: string) {
-    if (!rankByUid.has(uid)) {
-      rankByUid.set(uid, { play_in: {}, playoffs: {} });
+  function ensureSeason(uid: string) {
+    if (!rankByUidSeason.has(uid)) {
+      rankByUidSeason.set(uid, {});
     }
-    return rankByUid.get(uid)!;
+    return rankByUidSeason.get(uid)!;
   }
 
   type Top20Job = {
-    phase: RankingPhase;
     metric: Metric;
     rows: Array<BaseRow & { rank: number }>;
     totalCount: number;
   };
-  const top20Jobs: Top20Job[] = [];
+  const seasonTop20Jobs: Top20Job[] = [];
   const topUidSet = new Set<string>();
 
   if (!wcOnly) {
-  for (const phase of SNAPSHOT_BUILD_PHASES) {
     const baseRows: BaseRow[] = snap.docs
       .map((doc) => {
         const d = doc.data();
-        const r = rankingSlice(d, phase);
+        const r = nbaSeasonRankingSlice(d, seasonKey);
 
         return {
           uid: doc.id,
@@ -855,7 +725,7 @@ export async function buildCumulativeRankingSnapshot(
           totalPoints: r.totalPoints,
           totalPrecision: r.totalPrecision,
           totalUpset: r.totalUpset,
-          totalGoalScorerHits: 0,
+          totalGoalScorerHits: r.totalGoalScorerHits,
           activeWinStreak: activeBasketballStreak(d),
         };
       })
@@ -863,8 +733,6 @@ export async function buildCumulativeRankingSnapshot(
 
     for (const metric of METRICS) {
       const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-        phase,
-        round: "overall",
         postedTodayUids:
           metric === "activeWinStreak" && !streakAllEligible
             ? nbaSettledTodayUids
@@ -878,7 +746,7 @@ export async function buildCumulativeRankingSnapshot(
       const ranks = assignCompetitionRanks(sortedFull, metric);
 
       for (const [uid, rank] of ranks) {
-        ensure(uid)[phase][metric] = rank;
+        ensureSeason(uid)[metric] = rank;
       }
 
       const top20 = sortedFull.slice(0, 20).map((row) => ({
@@ -888,97 +756,12 @@ export async function buildCumulativeRankingSnapshot(
       for (const r of top20) {
         topUidSet.add(r.uid);
       }
-      top20Jobs.push({
-        phase,
+      seasonTop20Jobs.push({
         metric,
         rows: top20,
         totalCount: sortedFull.length,
       });
     }
-  }
-  }
-
-  type RoundTop20Job = {
-    round: PlayoffRoundKey;
-    metric: Metric;
-    rows: Array<BaseRow & { rank: number }>;
-    totalCount: number;
-  };
-  const roundTop20Jobs: RoundTop20Job[] = [];
-  const rankByUidPlayoffRound = new Map<
-    string,
-    Partial<Record<PlayoffRoundKey, PhaseRankMap>>
-  >();
-
-  if (!wcOnly) {
-  function ensurePlayoffRound(uid: string) {
-    if (!rankByUidPlayoffRound.has(uid)) {
-      rankByUidPlayoffRound.set(uid, {});
-    }
-    return rankByUidPlayoffRound.get(uid)!;
-  }
-
-  for (const round of PLAYOFF_ROUND_KEYS) {
-    const baseRows: BaseRow[] = snap.docs
-      .map((doc) => {
-        const d = doc.data();
-        const rr = d.rankingByPlayoffRound?.[round];
-        const tp = rr?.totalPosts ?? 0;
-        const tw = rr?.totalWins ?? 0;
-        return {
-          uid: doc.id,
-          displayName: d.displayName ?? "user",
-          handle: d.handle ?? null,
-          photoURL: d.photoURL ?? null,
-          countryCode: d.countryCode ?? null,
-          plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
-          totalPosts: tp,
-          totalWins: tw,
-          winRate: tp > 0 ? tw / tp : rr?.winRate ?? 0,
-          totalPoints: rr?.totalPoints ?? 0,
-          totalPrecision: rr?.totalPrecision ?? 0,
-          totalUpset: rr?.totalUpset ?? 0,
-          totalGoalScorerHits: safeRankMetricNum(rr?.totalGoalScorerHits),
-          activeWinStreak: activeBasketballStreak(d),
-        };
-      })
-      .filter((row) => (row.totalPosts ?? 0) > 0);
-
-    for (const metric of METRICS) {
-      const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-        phase: "playoffs",
-        round,
-        postedTodayUids:
-          metric === "activeWinStreak" && !streakAllEligible
-            ? nbaSettledTodayUids
-            : undefined,
-        streakAllEligible:
-          metric === "activeWinStreak" ? streakAllEligible : undefined,
-      });
-      const sortedFull = [...eligibleRows].sort((a, b) =>
-        cmpSortRows(a, b, metric)
-      );
-      const ranks = assignCompetitionRanks(sortedFull, metric);
-      for (const [uid, rank] of ranks) {
-        const slot = ensurePlayoffRound(uid);
-        if (!slot[round]) slot[round] = {};
-        slot[round]![metric] = rank;
-      }
-      const top20 = sortedFull.slice(0, 20).map((row) => ({
-        ...row,
-        rank: ranks.get(row.uid) ?? 0,
-      }));
-      for (const r of top20) {
-        topUidSet.add(r.uid);
-      }
-      roundTop20Jobs.push({
-        round,
-        metric,
-        rows: top20,
-        totalCount: sortedFull.length,
-      });
-    }
-  }
   }
 
   type WcTop20Job = {
@@ -1074,88 +857,43 @@ export async function buildCumulativeRankingSnapshot(
   ]);
 
   if (!wcOnly) {
-  for (const { phase, metric, rows, totalCount } of top20Jobs) {
-    const enriched: SnapshotRow[] = rows.map((row) => {
-      const prevBlock = prevByUid.get(row.uid);
-      const prevRaw = prevBlock?.[phase]?.[metric];
-      const prevRank =
-        typeof prevRaw === "number" &&
-        Number.isFinite(prevRaw) &&
-        prevRaw >= 1
-          ? Math.floor(prevRaw)
-          : null;
-      const priorMetrics = pickPriorMetricValues(
-        priorMetricByUid.get(row.uid),
-        { kind: "phase", phase }
-      );
-      return {
-        ...row,
-        rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
-        metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics),
-      };
-    });
+    for (const { metric, rows, totalCount } of seasonTop20Jobs) {
+      const enriched: SnapshotRow[] = rows.map((row) => {
+        const prevBlock = prevByUid.get(row.uid);
+        const prevRaw = prevBlock?.seasons?.[seasonKey]?.[metric];
+        const prevRank =
+          typeof prevRaw === "number" &&
+          Number.isFinite(prevRaw) &&
+          prevRaw >= 1
+            ? Math.floor(prevRaw)
+            : null;
+        const priorMetrics = pickPriorMetricValues(
+          priorMetricByUid.get(row.uid),
+          { kind: "season", seasonKey }
+        );
+        return {
+          ...row,
+          rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
+          metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics),
+        };
+      });
 
-    await db()
-      .collection("cumulative_ranking_snapshots")
-      .doc(`${phase}_${metric}`)
-      .set(
-        {
-          phase,
-          metric,
-          rows: enriched,
-          totalCount,
-          updatedAt: FieldValue.serverTimestamp(),
-          rankDeltaBasisDateKey: yesterdayKey,
-          ...gapCohortTop20Payload(metric, statsByUid, enriched, {
-            kind: "phase",
-            phase,
-          }),
-        },
-        { merge: true }
-      );
-  }
-
-  for (const { round, metric, rows, totalCount } of roundTop20Jobs) {
-    const enriched: SnapshotRow[] = rows.map((row) => {
-      const prevBlock = prevByUid.get(row.uid);
-      const prevRaw = prevBlock?.playoffRounds?.[round]?.[metric];
-      const prevRank =
-        typeof prevRaw === "number" &&
-        Number.isFinite(prevRaw) &&
-        prevRaw >= 1
-          ? Math.floor(prevRaw)
-          : null;
-      const priorMetrics = pickPriorMetricValues(
-        priorMetricByUid.get(row.uid),
-        { kind: "round", round }
-      );
-      return {
-        ...row,
-        rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
-        metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics),
-      };
-    });
-
-    await db()
-      .collection("cumulative_ranking_snapshots")
-      .doc(`playoffs_${round}_${metric}`)
-      .set(
-        {
-          phase: "playoffs",
-          round,
-          metric,
-          rows: enriched,
-          totalCount,
-          updatedAt: FieldValue.serverTimestamp(),
-          rankDeltaBasisDateKey: yesterdayKey,
-          ...gapCohortTop20Payload(metric, statsByUid, enriched, {
-            kind: "round",
-            round,
-          }),
-        },
-        { merge: true }
-      );
-  }
+      await db()
+        .collection("cumulative_ranking_snapshots")
+        .doc(nbaSeasonSnapshotDocId(seasonKey, metric))
+        .set(
+          {
+            kind: "nbaSeason",
+            seasonKey,
+            metric,
+            rows: enriched,
+            totalCount,
+            updatedAt: FieldValue.serverTimestamp(),
+            rankDeltaBasisDateKey: yesterdayKey,
+          },
+          { merge: true }
+        );
+    }
   }
 
   for (const { stage, metric, rows, totalCount } of wcTop20Jobs) {
@@ -1191,10 +929,6 @@ export async function buildCumulativeRankingSnapshot(
           totalCount,
           updatedAt: FieldValue.serverTimestamp(),
           rankDeltaBasisDateKey: yesterdayKey,
-          ...gapCohortTop20Payload(metric, statsByUid, enriched, {
-            kind: "wc",
-            stage,
-          }),
         },
         { merge: true }
       );
@@ -1215,7 +949,7 @@ export async function buildCumulativeRankingSnapshot(
 
   const historyUids = wcOnly
     ? new Set<string>(rankByUidWc.keys())
-    : new Set<string>([...rankByUid.keys(), ...rankByUidWc.keys()]);
+    : new Set<string>([...rankByUidSeason.keys(), ...rankByUidWc.keys()]);
   const metricValuesByUid = new Map<string, HistoryMetricValuesBlock>();
   if (!wcOnly) {
     for (const uid of historyUids) {
@@ -1257,18 +991,15 @@ export async function buildCumulativeRankingSnapshot(
       continue;
     }
 
-    const per = rankByUid.get(uid) ?? { play_in: {}, playoffs: {} };
-    const playoffRounds = rankByUidPlayoffRound.get(uid) ?? {};
+    const seasonRanks = rankByUidSeason.get(uid) ?? {};
     /**
-     * merge のネストは play_in を消さないよう、更新するフィールドだけドットパスで書く。
-     * （プレーインは SNAPSHOT_BUILD_PHASES 外のため per.play_in は空のまま）
+     * merge のネストで他シーズンを消さないよう、更新するシーズンだけドットパスで書く。
      */
     batch.set(
       firestore.doc(`cumulative_stats/${uid}`),
       {
         "snapshotRanks.updatedAt": FieldValue.serverTimestamp(),
-        "snapshotRanks.playoffs": per.playoffs,
-        "snapshotRanks.playoffRounds": playoffRounds,
+        [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks,
         "snapshotRanks.wc": wc,
       },
       { merge: true }
@@ -1281,8 +1012,7 @@ export async function buildCumulativeRankingSnapshot(
         .doc(dateKey),
       {
         dateKey,
-        playoffs: per.playoffs,
-        playoffRounds,
+        seasons: { [seasonKey]: seasonRanks },
         wc,
         metricValues: metricValuesByUid.get(uid),
         writtenAt: FieldValue.serverTimestamp(),
@@ -1325,8 +1055,9 @@ export async function buildCumulativeRankingSnapshot(
   return {
     ok: true,
     scope,
+    seasonKey,
     metrics: wcOnly ? WC_METRICS.length : METRICS.length,
-    ranksWritten: wcOnly ? rankByUidWc.size : rankByUid.size,
+    ranksWritten: wcOnly ? rankByUidWc.size : rankByUidSeason.size,
     wcRanksWritten: rankByUidWc.size,
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,

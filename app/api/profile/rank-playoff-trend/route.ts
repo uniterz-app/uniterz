@@ -3,7 +3,7 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
-import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
   isRankingLeagueSource,
   type RankingLeagueSource,
@@ -22,8 +22,7 @@ export type RankPlayoffTrendPoint = {
 };
 
 type HistoryDoc = {
-  play_in?: Record<string, unknown>;
-  playoffs?: Record<string, unknown>;
+  seasons?: Partial<Record<string, Record<string, unknown>>>;
   wc?: Partial<Record<WcRankingStage, Record<string, unknown>>>;
 };
 
@@ -31,7 +30,6 @@ function rankFromHistoryDoc(
   data: HistoryDoc | undefined,
   opts: {
     rankingLeague: RankingLeagueSource;
-    phase: RankingPhase;
     wcStage: WcRankingStage;
   }
 ): number | null {
@@ -40,25 +38,22 @@ function rankFromHistoryDoc(
     const block = data.wc?.[opts.wcStage];
     return coerceTotalPointsRank(block?.totalPoints);
   }
-  const raw =
-    opts.phase === "play_in" ? data.play_in?.totalPoints : data.playoffs?.totalPoints;
-  return coerceTotalPointsRank(raw);
+  // NBA は現行シーズンの seasons ブロックのみ（旧シーズンの順位は混ぜない）
+  return coerceTotalPointsRank(
+    data.seasons?.[CURRENT_NBA_SEASON_KEY]?.totalPoints
+  );
 }
 
 /**
  * cumulative_stats/{uid}/rankSnapshotHistory の各 snapshot doc から
  * 総合得点順位の推移を返す。
- * NBA: ?phase=play_in|playoffs
+ * NBA: 現行シーズン（seasons.<CURRENT_NBA_SEASON_KEY>）固定
  * WC: ?league=worldcup&wcStage=overall|qualifying|main
  */
 export async function GET(req: Request) {
   try {
     const adminDb = getAdminDb();
     const { searchParams } = new URL(req.url);
-    const rawPhase = searchParams.get("phase")?.trim() ?? "";
-    const phase: RankingPhase = isRankingPhase(rawPhase)
-      ? rawPhase
-      : "playoffs";
     const rawLeague = searchParams.get("league");
     const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
       ? rawLeague
@@ -99,7 +94,6 @@ export async function GET(req: Request) {
       const data = d.data as HistoryDoc;
       const rank = rankFromHistoryDoc(data, {
         rankingLeague,
-        phase,
         wcStage,
       });
       if (rank != null) {
@@ -112,7 +106,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       ok: true,
       resolvedUid,
-      phase,
+      seasonKey: rankingLeague === "worldcup" ? null : CURRENT_NBA_SEASON_KEY,
       rankingLeague,
       wcStage: rankingLeague === "worldcup" ? wcStage : null,
       points,

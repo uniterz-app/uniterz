@@ -1,4 +1,6 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
+import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 
 type RowLike = Record<string, unknown> & { uid?: string };
 
@@ -30,7 +32,7 @@ function pickUserDisplayName(data: {
   return h;
 }
 
-/** users ドキュメントから plan と（存在する場合のみ）国旗用 countryCode を取り出す */
+/** users ドキュメントから plan / country / Pro Skin などを取り出す */
 type UserMergeFields = {
   plan: "free" | "pro";
   /** ドキュメントがあるときだけ付与。未設定は Functions の行をそのまま使う */
@@ -38,6 +40,8 @@ type UserMergeFields = {
   handle?: string;
   displayName?: string;
   photoURL?: string | null;
+  /** Pro のときのみ。採用スキン（未設定はデフォルト） */
+  planProBgVariant?: ProfilePlanProBgVariant;
 };
 
 function planFromUserDoc(data: { plan?: string } | undefined): "free" | "pro" {
@@ -51,6 +55,22 @@ function countryFromUserDoc(data: { countryCode?: unknown } | undefined): string
     return raw.trim().slice(0, 8);
   }
   return null;
+}
+
+function applyMergeFieldsToRow(r: RowLike, f: UserMergeFields): RowLike {
+  const next: RowLike = { ...r, plan: f.plan };
+  if ("countryCode" in f) {
+    next.countryCode = f.countryCode;
+  }
+  if (f.handle) next.handle = f.handle;
+  if (f.displayName) next.displayName = f.displayName;
+  if (f.photoURL) next.photoURL = f.photoURL;
+  if (f.plan === "pro" && f.planProBgVariant) {
+    next.planProBgVariant = f.planProBgVariant;
+  } else {
+    delete next.planProBgVariant;
+  }
+  return next;
 }
 
 /** Firestore users をバッチ取得して uid → plan / countryCode（1 回の getAll で両方） */
@@ -80,9 +100,11 @@ async function loadUserMergeFieldsByUid(
         handle?: string;
         displayName?: string;
         photoURL?: string | null;
+        planProBgVariant?: unknown;
       };
+      const plan = planFromUserDoc(data);
       out.set(id, {
-        plan: planFromUserDoc(data),
+        plan,
         countryCode: countryFromUserDoc(data),
         handle: pickUserHandle(data),
         displayName: pickUserDisplayName(data),
@@ -90,6 +112,10 @@ async function loadUserMergeFieldsByUid(
           typeof data.photoURL === "string" && data.photoURL.trim()
             ? data.photoURL.trim()
             : null,
+        planProBgVariant:
+          plan === "pro"
+            ? parseUserPlanProBgVariant(data.planProBgVariant)
+            : undefined,
       });
     });
   }
@@ -146,28 +172,14 @@ function applyUserMergeFieldsToBulk(
         if (typeof uid !== "string" || !uid) return row;
         const f = fieldsByUid.get(uid);
         if (f === undefined) return row;
-        const next: RowLike = { ...r, plan: f.plan };
-        if ("countryCode" in f) {
-          next.countryCode = f.countryCode;
-        }
-        if (f.handle) next.handle = f.handle;
-        if (f.displayName) next.displayName = f.displayName;
-        if (f.photoURL) next.photoURL = f.photoURL;
-        return next;
+        return applyMergeFieldsToRow(r, f);
       });
     }
     if (bundle.myRow && typeof (bundle.myRow as RowLike).uid === "string") {
       const m = bundle.myRow as RowLike;
       const f = fieldsByUid.get(m.uid as string);
       if (f !== undefined) {
-        const next: RowLike = { ...m, plan: f.plan };
-        if ("countryCode" in f) {
-          next.countryCode = f.countryCode;
-        }
-        if (f.handle) next.handle = f.handle;
-        if (f.displayName) next.displayName = f.displayName;
-        if (f.photoURL) next.photoURL = f.photoURL;
-        bundle.myRow = next;
+        bundle.myRow = applyMergeFieldsToRow(m, f);
       }
     }
   }
@@ -194,28 +206,14 @@ export async function mergeUserPlansIntoSingleRanking(body: {
     if (typeof uid !== "string" || !uid) return row;
     const f = fieldsByUid.get(uid);
     if (f === undefined) return row;
-    const next: RowLike = { ...r, plan: f.plan };
-    if ("countryCode" in f) {
-      next.countryCode = f.countryCode;
-    }
-    if (f.handle) next.handle = f.handle;
-    if (f.displayName) next.displayName = f.displayName;
-    if (f.photoURL) next.photoURL = f.photoURL;
-    return next;
+    return applyMergeFieldsToRow(r, f);
   });
 
   if (body.myRow && typeof (body.myRow as RowLike).uid === "string") {
     const m = body.myRow as RowLike;
     const f = fieldsByUid.get(m.uid as string);
     if (f !== undefined) {
-      const next: RowLike = { ...m, plan: f.plan };
-      if ("countryCode" in f) {
-        next.countryCode = f.countryCode;
-      }
-      if (f.handle) next.handle = f.handle;
-      if (f.displayName) next.displayName = f.displayName;
-      if (f.photoURL) next.photoURL = f.photoURL;
-      body.myRow = next;
+      body.myRow = applyMergeFieldsToRow(m, f);
     }
   }
 }

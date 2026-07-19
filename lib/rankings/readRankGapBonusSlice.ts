@@ -2,8 +2,7 @@
  * Gap 分析 — cumulative_stats からランキング文脈の得点分解を読む。
  */
 
-import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
@@ -66,8 +65,6 @@ export function readRankGapStatsSlice(
   cumulative: Record<string, unknown> | null | undefined,
   context: {
     rankingLeague: RankingLeagueSource;
-    phase: RankingPhase;
-    round: PlayoffRoundKey;
     wcStage: WcRankingStage | null;
   }
 ): RankGapStatsSlice | null {
@@ -83,21 +80,11 @@ export function readRankGapStatsSlice(
     return sliceFromBlock(block, { wcStage: true });
   }
 
-  if (context.phase === "playoffs" && context.round !== "overall") {
-    const block = (
-      cumulative.rankingByPlayoffRound as
-        | Record<string, Record<string, unknown>>
-        | undefined
-    )?.[context.round];
-    const fromRound = sliceFromBlock(block, { wcStage: false });
-    if (fromRound) return fromRound;
-  }
-
   const block = (
-    cumulative.rankingByPhase as
+    cumulative.rankingBySeason as
       | Record<string, Record<string, unknown>>
       | undefined
-  )?.[context.phase];
+  )?.[CURRENT_NBA_SEASON_KEY];
   return sliceFromBlock(block, { wcStage: false });
 }
 

@@ -4,6 +4,11 @@ export const runtime = "nodejs";
 import { NextResponse, NextRequest } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import {
+  normalizeNbaTopScorerCandidates,
+  normalizeNbaTopScorerPick,
+  validateNbaTopScorerPickForGame,
+} from "@/lib/nba/topScorer";
+import {
   normalizeWcGoalScorerPick,
   validateWcGoalScorerPickForGame,
   type WcGoalScorerPick,
@@ -228,14 +233,15 @@ export async function PATCH(req: NextRequest, ctx: any) {
       const rawGoalScorer = parsed.rawGoalScorer;
       const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);
       const predRaw = body.prediction;
+      const allowsGoalScorer = league === "wc" || league === "nba";
       const hasGoalScorerField =
-        league === "wc" &&
+        allowsGoalScorer &&
         predRaw !== null &&
         typeof predRaw === "object" &&
         "goalScorer" in (predRaw as object);
 
       if (
-        league === "wc" &&
+        allowsGoalScorer &&
         rawGoalScorer != null &&
         rawGoalScorer !== undefined &&
         !goalScorerPick
@@ -245,21 +251,36 @@ export async function PATCH(req: NextRequest, ctx: any) {
           { status: 400 }
         );
       }
-      if (league !== "wc" && goalScorerPick) {
+      if (!allowsGoalScorer && goalScorerPick) {
         return NextResponse.json(
-          { ok: false, error: "goalScorer only allowed for wc" },
+          { ok: false, error: "goalScorer only allowed for wc or nba" },
           { status: 400 }
         );
       }
       if (goalScorerPick) {
-        const v = validateWcGoalScorerPickForGame(
-          goalScorerPick,
-          homeTeamId,
-          awayTeamId,
-          parsed.prediction.score
-        );
-        if (!v.ok) {
-          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+        if (league === "nba") {
+          const candidates = normalizeNbaTopScorerCandidates(
+            g?.topScorerCandidates
+          );
+          const v = validateNbaTopScorerPickForGame(
+            goalScorerPick,
+            homeTeamId,
+            awayTeamId,
+            candidates.length > 0 ? candidates : null
+          );
+          if (!v.ok) {
+            return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+          }
+        } else {
+          const v = validateWcGoalScorerPickForGame(
+            goalScorerPick,
+            homeTeamId,
+            awayTeamId,
+            parsed.prediction.score
+          );
+          if (!v.ok) {
+            return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+          }
         }
       }
 
@@ -268,7 +289,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         updatedAt: FieldValue.serverTimestamp(),
       };
 
-      if (league === "wc" && hasGoalScorerField) {
+      if (allowsGoalScorer && hasGoalScorerField) {
         if (goalScorerPick) {
           prediction.goalScorer = goalScorerPick;
           updates.prediction = prediction;
