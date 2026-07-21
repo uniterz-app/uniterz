@@ -14,7 +14,11 @@ import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import EventGate from "@/app/component/common/EventGate";
 import WcKnockoutStreakResetGate from "@/app/component/common/WcKnockoutStreakResetGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
-import { APP_MAINTENANCE_MODE } from "@/lib/app/maintenanceMode";
+import NbaSeasonRestartMaintenanceOverlay from "@/app/component/common/NbaSeasonRestartMaintenanceOverlay";
+import {
+  APP_MAINTENANCE_MODE,
+  APP_NBA_SEASON_RESTART_OVERLAY,
+} from "@/lib/app/maintenanceMode";
 import AppChrome from "@/app/component/AppChrome";
 import AppContentShell from "@/app/component/AppContentShell";
 import AppPageBackground from "@/app/component/AppPageBackground";
@@ -43,6 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const maintenance = APP_MAINTENANCE_MODE;
+  const seasonRestartOverlay = APP_NBA_SEASON_RESTART_OVERLAY;
 
   return (
     <html lang="ja">
@@ -57,6 +62,8 @@ export default function RootLayout({
       >
         {maintenance ? (
           <MaintenanceOverlay />
+        ) : seasonRestartOverlay ? (
+          <NbaSeasonRestartMaintenanceOverlay />
         ) : (
           <>
             <SplashGlbPreload />
