@@ -360,7 +360,7 @@ export default function ProfilePlanProSkinPicker({
         <p className="mt-1.5 text-sm leading-relaxed text-white/50">
           {isProduction
             ? "Pick a skin for your profile card. Tap a thumbnail to preview, then apply."
-            : `Browse ${PROFILE_PLAN_PRO_ADOPTED_BG.length} skin thumbnails in a 2×9 catalog. Tap a thumbnail to open the full profile card preview.`}
+            : `Browse ${PROFILE_PLAN_PRO_ADOPTED_BG.length} skin thumbnails. Tap a thumbnail to open the full profile card preview.`}
         </p>
         {!isProduction ? (
           <div className="mt-2.5 flex flex-wrap gap-3 text-[11px]">

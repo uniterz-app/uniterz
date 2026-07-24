@@ -41,39 +41,38 @@
 
 > 次ステップ: ~~説明文~~ · ~~デモUIなし~~ · **7日無料トライアル**（§0.1.b）→ プレビュー反映済み（文言）。決済接続は別。
 
-**Pro 全体（1行）**
+**Pro 全体（1行）** — 正は [`pro-subscription-plan.md`](pro-subscription-plan.md) §0（2026-07-23 更新）
 
-- JA: 順位の理由が分かり、同じ帯の人と比べて、次の予想で何を意識すればいいかが分かる。
-- EN: See why you rank where you do, compare with your band, and know what to focus on next.
-- 補足（小さく）: 他人の予想内容は見せません。
+- JA: 予想を助け、自分を分析し、毎週開く理由があり、課金者として目立てる。
+- EN: Better picks, clearer self-analysis, a reason to open weekly, and Pro status that shows.
+- 補足（小さく）: 他人の予想内容は見せません。勝者は断言しません。
 
 **機能説明（表示名 + 一言 + 補足）**
 
 | 表示名 | 一言 | 補足 |
 |---|---|---|
-| **Pro Insight（試合前の読み）** | この試合で見るべきポイントが分かる | マッチアップ・日程・状況を短く整理 |
-| ~~Gap（差の構造）~~ | — | **課金コピーから一旦除外**（迷い中。実装・文言は保留） |
-| **Shadow（ライバル帯）** | 先週同じ順位帯だった人との今週の差が分かる | 匿名の同帯比較。個人の予想は非公開。**Monthly / Season のみ**（Weekly には含めない） |
+| **PRO INSIGHT** | この試合の重要結論が 3〜5 個分かる | 要約 + MATCHUP / RECENT / INJURY / SCHEDULE / UPSET。重要度で選出 |
+| **直前アラート** | 予想を見直すべき変化だけ届く | 欠場・重要先発変更・締切・Insight 更新。開始通知だけでは弱い |
+| **週次 / 月次レポート** | 振り返りが届く | 週＝競争の実況 / 月＝自分の分析。Stats タブは廃止 |
 | **My Rank Pro** | 自分の位置がはっきり見える | TOP%、次の帯までの点数、進捗グラフが広がる |
-| **Pro バッジ** | Pro だと分かる印 | プロフィールやランキングに表示 |
-| **Pro Skin** | プロフィールカードの背景スキンを選べる | 採用 18 種ピッカー（`/mobile/profile-plan-pro-bg-picker-preview`） |
-| **週次 / 月次レポート** | 振り返りが届く | 週：帯の動きの要約／月：自分の傾向のまとめ |
+| **Pro バッジ** | Pro だと分かる印 | プロフィールやランキングに表示（Skin とは別） |
+| **Pro Skin** | 背景スキンで個性を出せる | 通常 18 種 + Achievement Skin。プロフィール＋ランキング行 |
+
+~~Gap~~ / ~~Shadow~~ — **V1 では提供しない**（計画書 §0）。
 
 **プラン差の言い方**
 
-- 機能は同じ Pro が基本。違うのは **期間と価格**。ただし **Shadow は Monthly / Season のみ**（Weekly は体験向けで軽め）。
+- 機能は同じ Pro が基本。違うのは **期間と価格**。
 - **7日間無料トライアル** → §0.1.b（**Weekly / Monthly**。Season は対象外）。
 
 **課金リスト用の短い並び（共通）**
 
-1. Pro Insight — 試合前に見るべきポイント  
-2. Shadow — 同帯ライバルとの今週比較（Monthly〜）  
-3. My Rank Pro — TOP% と次の目標まで  
-4. Pro バッジ — プロフィール／ランキング表示  
-5. Pro Skin — プロフィールカードの背景スキン  
-6. レポート — 週／月の振り返り  
-
-（Gap は保留）
+1. PRO INSIGHT — 試合の重要結論 3〜5  
+2. 直前アラート — 見直すべき変化だけ  
+3. 週次 / 月次レポート — 競争の実況と自己分析  
+4. My Rank Pro — TOP% と次の目標まで  
+5. Pro バッジ — プロフィール／ランキング表示  
+6. Pro Skin — 背景スキン（Achievement 含む）
 
 #### 0.1.b 7日間無料トライアル（確定ドラフト · 2026-07-16）
 
@@ -83,7 +82,7 @@
 |---|---|
 | 期間 | **7日間**無料 |
 | 対象プラン | **Weekly / Monthly**（Season Pass は対象外） |
-| お試し中の機能 | **選んだプラン相当**（Weekly なら Shadow なし。Monthly なら Shadow・月次レポートあり） |
+| お試し中の機能 | **選んだプラン相当の Pro 機能一式**（Insight / アラート / レポート / Skin。Shadow・Gap は V1 対象外） |
 | 回数 | **アカウント（＋ iOS は Apple ID）あたり初回のみ** |
 | お試し後 | 解約しなければ **選んだプランに自動更新**（Weekly→週額 / Monthly→月額） |
 | プラン切替 | お試し中・課金後とも、ストア／管理画面から **Weekly ⇔ Monthly** を変更可（次回更新から反映。詳細は Apple/Stripe 仕様に合わせる） |
@@ -112,7 +111,7 @@
 | # | 項目 | 状態 | メモ |
 |---|---|---|---|
 | 6 | **ランキングを Weekly + Monthly に** | ✅ NBA タブ再構成済み | NBA は **Weekly / Monthly / Season + 指標タブのみ**（Playoffs/Bracket カテゴリタブ・1st/2nd 等ラウンドタブは廃止。mobile/web とも）。WC は従来どおり（WORLD CUP/Bracket + ステージタブ）。Season はシーズンキー式（`rankingBySeason["2026-27"]` + `s2026-27_*` snapshot）で毎年リセット不要 |
-| 7 | **月間レポートに Weekly レポートを足す** | ❌ | 既存の月次 Pro Stats に加え、週次レポート |
+| 7 | **週次 / 月次レポート** | V1 完成形確定（2026-07-23） | 週次=結果→部門→順位変動→ライバル→診断 / 月次=表紙→数字→レーダー6軸→クセ→相性→ハイライト→来月分析。**Stats 廃止→Report 一本化**・Pro のみ・NBA のみ。詳細: `pro-subscription-plan.md` §3–4 |
 
 #### NBA ランキング指標（確定）
 
@@ -134,7 +133,7 @@
 - **Preview:** `/mobile/nba-top-scorer-preview`
 - **残:** 実ボックススコア自動投入（ゲート B / NBA API）
 
-関連: Pro 計画の「週次 Shadow サマリー / 月次 Pro Stats」（`pro-subscription-plan.md`）
+関連: Pro 計画の「週次 / 月次レポート」「PRO INSIGHT」「直前アラート」（`pro-subscription-plan.md` §1–4）
 
 ### 0.3 ライブ中の体験
 
@@ -148,12 +147,12 @@
 
 関連: `LiveGameStatsPanel` · `LiveGameTeamStatsPanel` · `LiveGameBoxScorePanel` · `lib/games/liveGameStats.ts` · `lib/games/useLiveGameStats.ts`
 
-### 0.4 Pro Stats / 招待
+### 0.4 レポート統合 / 直前アラート / 招待
 
 | # | 項目 | 状態 | メモ |
 |---|---|---|---|
-| 10 | **Pro Stats UI ブラッシュアップ** | ❌ | いまあるものの見た目調整 |
-| 11 | **Pro Stats の要否選定・機能追加** | ❌ | 何が必要か / いらないかの選択、不足機能の追加 |
+| 10 | **Pro Stats → 月次レポート統合** | V1 方針確定 | Stats タブ廃止。カード群は月次レポートへ再構成（`pro-subscription-plan.md` §4） |
+| 11 | **試合直前アラート** | V1 方針確定 | 欠場・重要先発・締切・Insight 更新。開始通知は Free 程度（同 §2） |
 | 12 | **招待ページ** | ❌ | 自分が何人招待したかが分かるページ |
 
 ### 進め方メモ
@@ -312,6 +311,7 @@
 
 | 日付 | 内容 |
 |---|---|
+| 2026-07-23 | **Pro Plan 煮詰め反映**: `pro-subscription-plan.md` を正として全面更新。§0.1.a 課金コピーを Insight/アラート/レポート/Skin 中心に差し替え。Shadow・Gap は V1 外。週次・月次 V1 完成形・Achievement Skin・直前アラートを計画書へ |
 | 2026-07-18 | **26-27 シーズンキー移行 + ランキング大掃除**: ① 25-26 の `cumulative_ranking_snapshots` 全 52 doc を `cumulative_ranking_snapshots_archive/2025-26-playoffs/docs/` にコピー済み（`scripts/archive-cumulative-ranking-snapshots-2025-26.ts` 実行済み。`cumulative_stats` は温存 → バッジ影響なし）。② NBA 累計は `rankingBySeason["2026-27"]` バケットに精算加算（daily も同キー）、スナップショットは `s2026-27_<metric>` doc、snapshotRanks/履歴は `seasons.<key>` ブロック。Ranking Progress（trend API）もシーズンキーで絞り込み、7月の旧順位が混入しない。③ 削除: ラウンド別集計（`rankingByPlayoffRound`）・play_in 配管・NBA Bracket リーダーボード・旧 Monthly リーダーボード（cron/API/UI）・`useRanking` + `/api/cumulative-ranking` 単発版・Gap/Shadow の日次データ収集（`gapCohorts`。UI/API はライブ read で継続）。④ 一発運用スクリプト多数を `scripts/archive/` へ移動（tsconfig から除外） |
 | 2026-07-18 | **NBA ランキングタブ再構成（シーズン制）**: NBA は Weekly / Monthly / Season + 指標タブのみに。Playoffs/Bracket カテゴリタブ・ラウンドタブ（1st/2nd/CF/Finals）を mobile/web から削除（`PlayoffRoundTabs` 削除、NBA Bracket リーダーボード導線廃止）。web にも期間タブ + `usePeriodRankingsBulk` 配線。サイドメニュー表記を「NBA プレーオフ」→「NBA」へ。**残**: 新シーズン開始時の Season 累計リセット |
 | 2026-07-18 | **My Rank Free/Pro カード本番配線**（mobile/web）: NBA は free=`displayTier:"free"`（Progress 3件）/ pro（10件・TOP%・Tier Gap）。Progress は `rankSnapshotHistory` 実データ（`useMyRankProgress` + 既存 trend API）。Weekly/Monthly は Progress 非表示。**Gap/Shadow ページはユーザー判断で保留** |

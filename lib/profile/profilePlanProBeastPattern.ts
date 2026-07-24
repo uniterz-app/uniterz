@@ -252,6 +252,70 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
     hudSecondary: "rgba(59,130,246,",
     opacityMul: 1.8,
   },
+  "beast-eclipse": {
+    strokes: ["185,28,28", "220,38,38", "153,27,27", "239,68,68"],
+    fills: ["40,8,8", "60,12,12", "24,4,4"],
+    accent: ["252,165,165", "248,113,113"],
+    hudPrimary: "rgba(248,113,113,",
+    hudSecondary: "rgba(220,38,38,",
+    opacityMul: 1.65,
+  },
+  "beast-blackiron": {
+    strokes: ["127,29,29", "185,28,28", "69,10,10", "153,27,27"],
+    fills: ["24,12,12", "36,16,16", "12,6,6"],
+    accent: ["239,68,68", "252,165,165"],
+    hudPrimary: "rgba(239,68,68,",
+    hudSecondary: "rgba(127,29,29,",
+    opacityMul: 1.85,
+  },
+  "beast-bloodrift": {
+    strokes: ["220,38,38", "239,68,68", "185,28,28", "153,27,27"],
+    fills: ["36,8,8", "52,12,12", "20,4,4"],
+    accent: ["254,202,202", "252,165,165"],
+    hudPrimary: "rgba(252,165,165,",
+    hudSecondary: "rgba(239,68,68,",
+    opacityMul: 1.7,
+  },
+  "beast-inkhatch": {
+    strokes: ["185,28,28", "153,27,27", "127,29,29", "220,38,38"],
+    fills: ["28,8,8", "40,12,12", "16,4,4"],
+    accent: ["248,113,113", "239,68,68"],
+    hudPrimary: "rgba(220,38,38,",
+    hudSecondary: "rgba(153,27,27,",
+    opacityMul: 1.9,
+  },
+  "beast-fangrow": {
+    strokes: ["220,38,38", "185,28,28", "239,68,68", "127,29,29"],
+    fills: ["40,10,10", "56,14,14", "24,6,6"],
+    accent: ["252,165,165", "248,113,113"],
+    hudPrimary: "rgba(248,113,113,",
+    hudSecondary: "rgba(185,28,28,",
+    opacityMul: 1.7,
+  },
+  "beast-inkswirl": {
+    strokes: ["185,28,28", "220,38,38", "153,27,27", "127,29,29"],
+    fills: ["32,8,8", "48,12,12", "18,4,4"],
+    accent: ["239,68,68", "252,165,165"],
+    hudPrimary: "rgba(239,68,68,",
+    hudSecondary: "rgba(153,27,27,",
+    opacityMul: 1.75,
+  },
+  "beast-jagarmor": {
+    strokes: ["153,27,27", "185,28,28", "127,29,29", "220,38,38"],
+    fills: ["28,10,10", "44,14,14", "16,6,6"],
+    accent: ["248,113,113", "239,68,68"],
+    hudPrimary: "rgba(185,28,28,",
+    hudSecondary: "rgba(127,29,29,",
+    opacityMul: 1.65,
+  },
+  "beast-crimsonveil": {
+    strokes: ["127,29,29", "153,27,27", "185,28,28", "69,10,10"],
+    fills: ["20,6,6", "32,10,10", "12,4,4"],
+    accent: ["239,68,68", "252,165,165"],
+    hudPrimary: "rgba(239,68,68,",
+    hudSecondary: "rgba(127,29,29,",
+    opacityMul: 1.95,
+  },
 };
 
 function hash01(a: number, b: number): number {
@@ -2343,6 +2407,502 @@ function buildRipple(p: BeastPalette): string {
   return wrapSvg(parts.join(""));
 }
 
+/* ─── Crimson Eclipse: tiled crescent / eclipse motif ─── */
+
+function buildEclipse(p: BeastPalette): string {
+  const parts: string[] = [];
+  const colStep = 22;
+  const rowStep = 20;
+  const cols = Math.ceil(CANVAS_W / colStep) + 2;
+  const rows = Math.ceil(CANVAS_H / rowStep) + 2;
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const cx = col * colStep + (row % 2) * (colStep * 0.5);
+      const cy = row * rowStep;
+      const nx = cx / CANVAS_W;
+      const ny = cy / CANVAS_H;
+      if (hash01(col + 1.3, row + 2.1) > densityAt(nx, ny) * 0.95) continue;
+
+      const r = 5.5 + hash01(col, row) * 3.2;
+      const rot = ((hash01(col, row + 3) - 0.5) * 50).toFixed(1);
+      const stroke = pick(p.strokes, col, row);
+      const fill = pick(p.fills, col + 1, row);
+      const op = beastOp(0.12 + hash01(col, row + 4) * 0.14);
+      const fillOp = beastOp(0.05 + hash01(col, row + 5) * 0.08);
+
+      // crescent = outer disk + offset cut disk (as arc pair)
+      const a0 = -1.15 + hash01(col, row + 6) * 0.25;
+      const a1 = a0 + Math.PI * 1.55;
+      const ox = Math.cos(a0 + Math.PI / 2) * r * 0.35;
+      const oy = Math.sin(a0 + Math.PI / 2) * r * 0.35;
+
+      parts.push(
+        `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${rot})">` +
+          `<circle cx="0" cy="0" r="${r.toFixed(1)}" fill="rgba(${fill},${fillOp.toFixed(3)})" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="0.85"/>` +
+          `<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="${(r * 0.78).toFixed(1)}" fill="rgba(2,1,1,${beastOp(0.55).toFixed(3)})"/>` +
+          `<path d="M${(Math.cos(a0) * r).toFixed(1)} ${(Math.sin(a0) * r).toFixed(1)} A${r.toFixed(1)} ${r.toFixed(1)} 0 1 1 ${(Math.cos(a1) * r).toFixed(1)} ${(Math.sin(a1) * r).toFixed(1)}" fill="none" stroke="rgba(${pick(p.accent, col, row)},${beastOp(0.16).toFixed(3)})" stroke-width="0.55" stroke-linecap="round"/>` +
+          `</g>`
+      );
+
+      // tiny corona tick on every other motif
+      if (hash01(col, row + 8) > 0.55) {
+        const tickA = hash01(col, row + 9) * Math.PI * 2;
+        parts.push(
+          `<line x1="${(cx + Math.cos(tickA) * r * 0.9).toFixed(1)}" y1="${(cy + Math.sin(tickA) * r * 0.9).toFixed(1)}" x2="${(cx + Math.cos(tickA) * r * 1.45).toFixed(1)}" y2="${(cy + Math.sin(tickA) * r * 1.45).toFixed(1)}" stroke="rgba(${pick(p.accent, row, col)},${beastOp(0.1).toFixed(3)})" stroke-width="0.4"/>`
+        );
+      }
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Chained Iron: hatch + chains + jagged plates + eye slits ─── */
+
+function buildBlackIron(p: BeastPalette): string {
+  const parts: string[] = [];
+
+  // Dense manga-like crosshatch base
+  const gap = 6.5;
+  for (let i = -15; i < 70; i += 1) {
+    const segs = 7;
+    for (let s = 0; s < segs; s += 1) {
+      const t0 = s / segs;
+      const t1 = (s + 1) / segs;
+      // /
+      {
+        const x0 = i * gap;
+        const ax = x0 + CANVAS_H * 0.5 * t0;
+        const ay = CANVAS_H * t0;
+        const bx = x0 + CANVAS_H * 0.5 * t1;
+        const by = CANVAS_H * t1;
+        const mx = (ax + bx) / 2 / CANVAS_W;
+        const my = (ay + by) / 2 / CANVAS_H;
+        if (mx >= -0.05 && mx <= 1.05 && hash01(i + s * 0.1, 1.1) <= densityAt(mx, my) * 0.92) {
+          parts.push(
+            `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="rgba(${pick(p.strokes, i, s)},${beastOp(0.055).toFixed(3)})" stroke-width="0.4"/>`
+          );
+        }
+      }
+      // \
+      {
+        const x0 = i * gap + 2.5;
+        const ax = x0 + CANVAS_H * 0.5 * t0;
+        const ay = CANVAS_H * (1 - t0);
+        const bx = x0 + CANVAS_H * 0.5 * t1;
+        const by = CANVAS_H * (1 - t1);
+        const mx = (ax + bx) / 2 / CANVAS_W;
+        const my = (ay + by) / 2 / CANVAS_H;
+        if (mx >= -0.05 && mx <= 1.05 && hash01(i + s * 0.2, 2.2) <= densityAt(mx, my) * 0.88) {
+          parts.push(
+            `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="rgba(${pick(p.fills, i, s)},${beastOp(0.05).toFixed(3)})" stroke-width="0.35"/>`
+          );
+        }
+      }
+    }
+  }
+
+  // Heavy overlapping chain links
+  const step = 16;
+  for (let row = 0; row < 30; row += 1) {
+    for (let col = 0; col < 22; col += 1) {
+      const cx = col * step + (row % 2) * (step * 0.5);
+      const cy = row * step * 0.68;
+      const nx = cx / CANVAS_W;
+      const ny = cy / CANVAS_H;
+      if (hash01(col + 0.4, row + 1.1) > densityAt(nx, ny) * 0.9) continue;
+
+      const rx = 6.5 + hash01(col, row) * 3;
+      const ry = 4.5 + hash01(col + 1, row) * 2.2;
+      const rot = row % 2 === 0 ? -8 : 18;
+      const stroke = pick(p.strokes, col, row);
+      const op = beastOp(0.12 + hash01(col, row) * 0.12);
+
+      parts.push(
+        `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="1.05" transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`
+      );
+      if (hash01(col, row + 4) > 0.45) {
+        parts.push(
+          `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(rx * 0.55).toFixed(1)}" ry="${(ry * 0.45).toFixed(1)}" fill="none" stroke="rgba(${pick(p.accent, col, row)},${beastOp(0.1).toFixed(3)})" stroke-width="0.45" transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`
+        );
+      }
+    }
+  }
+
+  // Jagged armor shards
+  for (let i = 0; i < 28; i += 1) {
+    const nx = 0.34 + hash01(i * 2.1, 1.4) * 0.7;
+    const ny = hash01(i * 1.7, 3.5);
+    if (hash01(i + 1, 0.6) > densityAt(nx, ny) * 0.8) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const s = 7 + hash01(i, 4) * 12;
+    const rot = ((hash01(i, 5) - 0.5) * 40).toFixed(1);
+    const pts = [
+      `0,${(-s * 0.7).toFixed(1)}`,
+      `${(s * 0.55).toFixed(1)},${(-s * 0.15).toFixed(1)}`,
+      `${(s * 0.35).toFixed(1)},${(s * 0.55).toFixed(1)}`,
+      `0,${(s * 0.35).toFixed(1)}`,
+      `${(-s * 0.4).toFixed(1)},${(s * 0.5).toFixed(1)}`,
+      `${(-s * 0.55).toFixed(1)},${(-s * 0.1).toFixed(1)}`,
+    ].join(" ");
+    parts.push(
+      `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${rot})">` +
+        `<polygon points="${pts}" fill="rgba(${pick(p.fills, i, 1)},${beastOp(0.07).toFixed(3)})" stroke="rgba(${pick(p.strokes, i, 2)},${beastOp(0.14).toFixed(3)})" stroke-width="0.75"/>` +
+        `</g>`
+    );
+  }
+
+  // Sparse red eye slits
+  for (let i = 0; i < 14; i += 1) {
+    const nx = 0.4 + hash01(i * 2.4, 1.2) * 0.58;
+    const ny = hash01(i * 1.9, 3.1);
+    if (hash01(i, 0.35) > densityAt(nx, ny) * 0.75) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const w = 4 + hash01(i, 5) * 5;
+    parts.push(
+      `<line x1="${(cx - w).toFixed(1)}" y1="${cy.toFixed(1)}" x2="${(cx + w).toFixed(1)}" y2="${cy.toFixed(1)}" stroke="rgba(${pick(p.accent, i, 1)},${beastOp(0.22).toFixed(3)})" stroke-width="${(1.1 + hash01(i, 6) * 0.8).toFixed(2)}" stroke-linecap="round"/>`
+    );
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Blood Rift: repeating scar / X lattice motif ─── */
+
+function buildBloodRift(p: BeastPalette): string {
+  const parts: string[] = [];
+  const colStep = 20;
+  const rowStep = 18;
+  const cols = Math.ceil(CANVAS_W / colStep) + 2;
+  const rows = Math.ceil(CANVAS_H / rowStep) + 2;
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const cx = col * colStep + (row % 2) * (colStep * 0.5);
+      const cy = row * rowStep;
+      const nx = cx / CANVAS_W;
+      const ny = cy / CANVAS_H;
+      if (hash01(col + 2.2, row + 1.4) > densityAt(nx, ny) * 0.96) continue;
+
+      const s = 6 + hash01(col, row) * 3.5;
+      const rot = ((hash01(col, row + 2) - 0.5) * 24).toFixed(1);
+      const stroke = pick(p.strokes, col, row);
+      const op = beastOp(0.12 + hash01(col, row + 3) * 0.14);
+      const sw = (0.55 + hash01(col, row + 4) * 0.45).toFixed(2);
+
+      parts.push(
+        `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${rot})">` +
+          `<line x1="${(-s).toFixed(1)}" y1="${(-s * 0.55).toFixed(1)}" x2="${s.toFixed(1)}" y2="${(s * 0.55).toFixed(1)}" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="${sw}" stroke-linecap="round"/>` +
+          `<line x1="${(-s).toFixed(1)}" y1="${(s * 0.55).toFixed(1)}" x2="${s.toFixed(1)}" y2="${(-s * 0.55).toFixed(1)}" stroke="rgba(${pick(p.strokes, col + 1, row)},${op.toFixed(3)})" stroke-width="${sw}" stroke-linecap="round"/>` +
+          `</g>`
+      );
+
+      if (hash01(col, row + 6) > 0.4) {
+        const d = s * 1.15;
+        parts.push(
+          `<path d="M${cx.toFixed(1)} ${(cy - d).toFixed(1)} L${(cx + d * 0.7).toFixed(1)} ${cy.toFixed(1)} L${cx.toFixed(1)} ${(cy + d).toFixed(1)} L${(cx - d * 0.7).toFixed(1)} ${cy.toFixed(1)} Z" fill="none" stroke="rgba(${pick(p.fills, col, row)},${beastOp(0.08).toFixed(3)})" stroke-width="0.4"/>`
+        );
+      }
+
+      if (hash01(col, row + 8) > 0.5) {
+        parts.push(
+          `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(0.9 + hash01(col, row + 9) * 0.6).toFixed(1)}" fill="rgba(${pick(p.accent, col, row)},${beastOp(0.14).toFixed(3)})"/>`
+        );
+      }
+    }
+  }
+
+  const gap = 11;
+  for (let i = -10; i < 55; i += 1) {
+    const x0 = i * gap;
+    const segs = 6;
+    for (let s = 0; s < segs; s += 1) {
+      const t0 = s / segs;
+      const t1 = (s + 1) / segs;
+      const ax = x0 + CANVAS_H * 0.45 * t0;
+      const ay = CANVAS_H * t0;
+      const bx = x0 + CANVAS_H * 0.45 * t1;
+      const by = CANVAS_H * t1;
+      const mx = (ax + bx) / 2 / CANVAS_W;
+      const my = (ay + by) / 2 / CANVAS_H;
+      if (mx < -0.05 || mx > 1.05) continue;
+      if (hash01(i + s * 0.1, 3.3) > densityAt(mx, my) * 0.85) continue;
+      parts.push(
+        `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="rgba(${pick(p.strokes, i, s)},${beastOp(0.05).toFixed(3)})" stroke-width="0.35"/>`
+      );
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Ink Hatch: dense manga cross-hatching only ─── */
+
+function buildInkHatch(p: BeastPalette): string {
+  const parts: string[] = [];
+  const gap = 5.2;
+
+  for (let i = -18; i < 85; i += 1) {
+    const segs = 9;
+    for (let s = 0; s < segs; s += 1) {
+      const t0 = s / segs;
+      const t1 = (s + 1) / segs;
+      const x0 = i * gap;
+      const ax = x0 + CANVAS_H * 0.52 * t0;
+      const ay = CANVAS_H * t0;
+      const bx = x0 + CANVAS_H * 0.52 * t1;
+      const by = CANVAS_H * t1;
+      const mx = (ax + bx) / 2 / CANVAS_W;
+      const my = (ay + by) / 2 / CANVAS_H;
+      if (mx < -0.05 || mx > 1.05) continue;
+      if (hash01(i + s * 0.08, 1.2) > densityAt(mx, my) * 1.0) continue;
+      const sw = hash01(i, s) > 0.7 ? 0.7 : 0.4;
+      parts.push(
+        `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="rgba(${pick(p.strokes, i, s)},${beastOp(0.07 + hash01(i, s) * 0.08).toFixed(3)})" stroke-width="${sw}"/>`
+      );
+    }
+  }
+
+  for (let i = -18; i < 85; i += 1) {
+    const segs = 9;
+    for (let s = 0; s < segs; s += 1) {
+      const t0 = s / segs;
+      const t1 = (s + 1) / segs;
+      const x0 = i * gap + 2.4;
+      const ax = x0 + CANVAS_H * 0.52 * t0;
+      const ay = CANVAS_H * (1 - t0);
+      const bx = x0 + CANVAS_H * 0.52 * t1;
+      const by = CANVAS_H * (1 - t1);
+      const mx = (ax + bx) / 2 / CANVAS_W;
+      const my = (ay + by) / 2 / CANVAS_H;
+      if (mx < -0.05 || mx > 1.05) continue;
+      if (hash01(i + s * 0.11, 2.4) > densityAt(mx, my) * 0.95) continue;
+      parts.push(
+        `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="rgba(${pick(p.strokes, i + 3, s)},${beastOp(0.055 + hash01(s, i) * 0.07).toFixed(3)})" stroke-width="0.35"/>`
+      );
+    }
+  }
+
+  // stipple clusters
+  for (let i = 0; i < 60; i += 1) {
+    const nx = 0.36 + hash01(i * 2.2, 1.5) * 0.68;
+    const ny = hash01(i * 1.8, 3.6);
+    if (hash01(i, 0.4) > densityAt(nx, ny) * 0.85) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const n = 3 + Math.floor(hash01(i, 5) * 4);
+    for (let k = 0; k < n; k += 1) {
+      const ox = (hash01(i, k + 6) - 0.5) * 6;
+      const oy = (hash01(i, k + 8) - 0.5) * 6;
+      parts.push(
+        `<circle cx="${(cx + ox).toFixed(1)}" cy="${(cy + oy).toFixed(1)}" r="0.55" fill="rgba(${pick(p.accent, i, k)},${beastOp(0.1).toFixed(3)})"/>`
+      );
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Fang Row: stacked triangular serrations ─── */
+
+function buildFangRow(p: BeastPalette): string {
+  const parts: string[] = [];
+  const rowStep = 13;
+  const rows = Math.ceil(CANVAS_H / rowStep) + 2;
+
+  for (let row = 0; row < rows; row += 1) {
+    const y = row * rowStep;
+    const flip = row % 2 === 0 ? 1 : -1;
+    const colStep = 11 + (row % 3);
+    const cols = Math.ceil(CANVAS_W / colStep) + 3;
+    for (let col = 0; col < cols; col += 1) {
+      const cx = col * colStep + (row % 2) * (colStep * 0.5);
+      const nx = cx / CANVAS_W;
+      const ny = y / CANVAS_H;
+      if (hash01(col + row * 0.15, 2.1) > densityAt(nx, ny) * 0.95) continue;
+
+      const h = 7 + hash01(col, row) * 6;
+      const w = 4.5 + hash01(col + 1, row) * 3;
+      const tipY = y + flip * h;
+      const stroke = pick(p.strokes, col, row);
+      const fill = pick(p.fills, col, row);
+      const op = beastOp(0.12 + hash01(col, row) * 0.12);
+
+      parts.push(
+        `<path d="M${(cx - w).toFixed(1)} ${y.toFixed(1)} L${cx.toFixed(1)} ${tipY.toFixed(1)} L${(cx + w).toFixed(1)} ${y.toFixed(1)} Z" fill="rgba(${fill},${beastOp(0.06).toFixed(3)})" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="0.7" stroke-linejoin="round"/>`
+      );
+
+      if (hash01(col, row + 5) > 0.65) {
+        parts.push(
+          `<line x1="${cx.toFixed(1)}" y1="${(y + flip * 1.2).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${(tipY - flip * 1.5).toFixed(1)}" stroke="rgba(${pick(p.accent, col, row)},${beastOp(0.12).toFixed(3)})" stroke-width="0.4"/>`
+        );
+      }
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Void Swirl: organic ink / fur swirls ─── */
+
+function buildInkSwirl(p: BeastPalette): string {
+  const parts: string[] = [];
+
+  for (let i = 0; i < 42; i += 1) {
+    const nx = 0.32 + hash01(i * 1.9, 1.3) * 0.72;
+    const ny = hash01(i * 2.1, 3.4);
+    if (hash01(i + 1, 0.5) > densityAt(nx, ny) * 0.92) continue;
+
+    const x0 = nx * CANVAS_W;
+    const y0 = ny * CANVAS_H;
+    const span = 28 + hash01(i, 4) * 55;
+    const fold = 8 + hash01(i, 5) * 22;
+    const ang = -0.5 + (hash01(i, 6) - 0.5) * 1.4;
+    const cos = Math.cos(ang);
+    const sin = Math.sin(ang);
+
+    const c1x = x0 + cos * span * 0.28 - sin * fold;
+    const c1y = y0 + sin * span * 0.28 + cos * fold;
+    const c2x = x0 + cos * span * 0.72 + sin * fold * 0.7;
+    const c2y = y0 + sin * span * 0.72 - cos * fold * 0.7;
+    const x3 = x0 + cos * span;
+    const y3 = y0 + sin * span;
+
+    const stroke = pick(p.strokes, i, 1);
+    const op = beastOp(0.1 + hash01(i, 7) * 0.12);
+    const sw = (0.7 + hash01(i, 8) * 1.4).toFixed(2);
+
+    parts.push(
+      `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${x3.toFixed(1)} ${y3.toFixed(1)}" fill="none" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="${sw}" stroke-linecap="round"/>`
+    );
+
+    // parallel fur strands
+    const strands = 2 + Math.floor(hash01(i, 9) * 3);
+    for (let k = 0; k < strands; k += 1) {
+      const off = (k - strands / 2) * 1.6;
+      const ox = -sin * off;
+      const oy = cos * off;
+      parts.push(
+        `<path d="M${(x0 + ox).toFixed(1)} ${(y0 + oy).toFixed(1)} C${(c1x + ox).toFixed(1)} ${(c1y + oy).toFixed(1)} ${(c2x + ox * 0.5).toFixed(1)} ${(c2y + oy * 0.5).toFixed(1)} ${(x3 + ox * 0.2).toFixed(1)} ${(y3 + oy * 0.2).toFixed(1)}" fill="none" stroke="rgba(${pick(p.strokes, i, k)},${beastOp(0.05).toFixed(3)})" stroke-width="0.4" stroke-linecap="round"/>`
+      );
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Jagged Plate: pointed overlapping armor panels ─── */
+
+function buildJagArmor(p: BeastPalette): string {
+  const parts: string[] = [];
+  const colStep = 17;
+  const rowStep = 15;
+  const cols = Math.ceil(CANVAS_W / colStep) + 2;
+  const rows = Math.ceil(CANVAS_H / rowStep) + 2;
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const cx = col * colStep + (row % 2) * (colStep * 0.5);
+      const cy = row * rowStep;
+      const nx = cx / CANVAS_W;
+      const ny = cy / CANVAS_H;
+      if (hash01(col + 1.1, row + 2.3) > densityAt(nx, ny) * 0.96) continue;
+
+      const s = 8 + hash01(col, row) * 5;
+      const rot = ((hash01(col, row + 2) - 0.5) * 18).toFixed(1);
+      const pts = [
+        `0,${(-s).toFixed(1)}`,
+        `${(s * 0.7).toFixed(1)},${(-s * 0.2).toFixed(1)}`,
+        `${(s * 0.45).toFixed(1)},${(s * 0.75).toFixed(1)}`,
+        `0,${(s * 0.4).toFixed(1)}`,
+        `${(-s * 0.5).toFixed(1)},${(s * 0.7).toFixed(1)}`,
+        `${(-s * 0.7).toFixed(1)},${(-s * 0.15).toFixed(1)}`,
+      ].join(" ");
+
+      parts.push(
+        `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${rot})">` +
+          `<polygon points="${pts}" fill="rgba(${pick(p.fills, col, row)},${beastOp(0.08).toFixed(3)})" stroke="rgba(${pick(p.strokes, col, row)},${beastOp(0.13 + hash01(col, row) * 0.1).toFixed(3)})" stroke-width="0.85"/>` +
+          `<line x1="0" y1="${(-s * 0.55).toFixed(1)}" x2="0" y2="${(s * 0.15).toFixed(1)}" stroke="rgba(${pick(p.accent, col, row)},${beastOp(0.1).toFixed(3)})" stroke-width="0.45"/>` +
+          `</g>`
+      );
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Crimson Veil: fine hatch + glowing red eye slits ─── */
+
+function buildCrimsonVeil(p: BeastPalette): string {
+  const parts: string[] = [];
+  const gap = 4.8;
+
+  for (let i = -16; i < 90; i += 1) {
+    const segs = 10;
+    for (let s = 0; s < segs; s += 1) {
+      const t0 = s / segs;
+      const t1 = (s + 1) / segs;
+      const x0 = i * gap;
+      const ax = x0 + CANVAS_H * 0.5 * t0;
+      const ay = CANVAS_H * t0;
+      const bx = x0 + CANVAS_H * 0.5 * t1;
+      const by = CANVAS_H * t1;
+      const mx = (ax + bx) / 2 / CANVAS_W;
+      const my = (ay + by) / 2 / CANVAS_H;
+      if (mx < -0.05 || mx > 1.05) continue;
+      if (hash01(i * 0.5 + s, 1.5) > densityAt(mx, my) * 1.02) continue;
+      parts.push(
+        `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="rgba(${pick(p.strokes, i, s)},${beastOp(0.06).toFixed(3)})" stroke-width="0.35"/>`
+      );
+    }
+  }
+
+  for (let i = -16; i < 90; i += 1) {
+    const segs = 10;
+    for (let s = 0; s < segs; s += 1) {
+      const t0 = s / segs;
+      const t1 = (s + 1) / segs;
+      const x0 = i * gap + 2.1;
+      const ax = x0 + CANVAS_H * 0.5 * t0;
+      const ay = CANVAS_H * (1 - t0);
+      const bx = x0 + CANVAS_H * 0.5 * t1;
+      const by = CANVAS_H * (1 - t1);
+      const mx = (ax + bx) / 2 / CANVAS_W;
+      const my = (ay + by) / 2 / CANVAS_H;
+      if (mx < -0.05 || mx > 1.05) continue;
+      if (hash01(i * 0.4 + s, 2.6) > densityAt(mx, my) * 0.98) continue;
+      parts.push(
+        `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="rgba(${pick(p.fills, i, s)},${beastOp(0.045).toFixed(3)})" stroke-width="0.3"/>`
+      );
+    }
+  }
+
+  // Floating crimson eye slits — the main accent
+  for (let i = 0; i < 22; i += 1) {
+    const nx = 0.38 + hash01(i * 2.3, 1.1) * 0.62;
+    const ny = hash01(i * 1.85, 3.2);
+    if (hash01(i, 0.3) > densityAt(nx, ny) * 0.88) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const w = 5 + hash01(i, 4) * 8;
+    const thick = 1.2 + hash01(i, 5) * 1.4;
+    parts.push(
+      `<line x1="${(cx - w).toFixed(1)}" y1="${cy.toFixed(1)}" x2="${(cx + w).toFixed(1)}" y2="${cy.toFixed(1)}" stroke="rgba(${pick(p.accent, i, 1)},${beastOp(0.28).toFixed(3)})" stroke-width="${thick.toFixed(2)}" stroke-linecap="round"/>`
+    );
+    // faint twin slit below
+    if (hash01(i, 6) > 0.55) {
+      parts.push(
+        `<line x1="${(cx - w * 0.55).toFixed(1)}" y1="${(cy + 3.2).toFixed(1)}" x2="${(cx + w * 0.55).toFixed(1)}" y2="${(cy + 3.2).toFixed(1)}" stroke="rgba(${pick(p.accent, i, 2)},${beastOp(0.14).toFixed(3)})" stroke-width="0.7" stroke-linecap="round"/>`
+      );
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
 /* ─── HUD (shared placement with scale) ─── */
 
 function plusMark(cx: number, cy: number, s: number, op: number, strokePrefix: string): string {
@@ -2477,6 +3037,22 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
         return buildCircuitLace(p);
       case "beast-ripple":
         return buildRipple(p);
+      case "beast-eclipse":
+        return buildEclipse(p);
+      case "beast-blackiron":
+        return buildBlackIron(p);
+      case "beast-bloodrift":
+        return buildBloodRift(p);
+      case "beast-inkhatch":
+        return buildInkHatch(p);
+      case "beast-fangrow":
+        return buildFangRow(p);
+      case "beast-inkswirl":
+        return buildInkSwirl(p);
+      case "beast-jagarmor":
+        return buildJagArmor(p);
+      case "beast-crimsonveil":
+        return buildCrimsonVeil(p);
       default:
         return wrapSvg("");
     }
@@ -2489,14 +3065,14 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
 export function getProfilePlanProBeastSkinUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:skin:${variant}:v8`, () => buildSkinSvg(variant));
+  return cachedUrl(`beast:skin:${variant}:v10`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD */
 export function getProfilePlanProBeastHudUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:hud:${variant}:v8`, () => buildHudSvg(variant));
+  return cachedUrl(`beast:hud:${variant}:v10`, () => buildHudSvg(variant));
 }
 
 export const PROFILE_PLAN_PRO_BEAST_CANVAS = {

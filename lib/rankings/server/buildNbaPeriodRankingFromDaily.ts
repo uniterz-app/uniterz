@@ -137,7 +137,8 @@ export type PeriodBulkMetricPayload = {
   count: number;
   myRank: number | null;
   myRow: (RankingApiRow & { rank: number }) | null;
-  myRankDeltaPlaces: null;
+  /** 前日スナップショット比。ライブ集計フォールバック時は null */
+  myRankDeltaPlaces: number | null;
 };
 
 export async function buildNbaPeriodRankingBulk(opts: {

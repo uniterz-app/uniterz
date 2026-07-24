@@ -69,6 +69,8 @@ type SnapshotRow = {
   activeWinStreak: number;
   winRate: number;
   rank: number;
+  /** 前日スナップショット比の順位変動（+ = 上昇）。期間初日・新規参加者は null */
+  rankDeltaPlaces: number | null;
 };
 
 function emptyAgg(): Agg {
@@ -111,7 +113,7 @@ function uidFromDailyDocId(docId: string, dateKey: string): string | null {
 }
 
 function metricValue(
-  row: Omit<SnapshotRow, "rank">,
+  row: Omit<SnapshotRow, "rank" | "rankDeltaPlaces">,
   metric: PeriodMetric
 ): number {
   if (metric === "winRate") return row.winRate;
@@ -128,10 +130,65 @@ export function periodSnapshotDocId(
   return `nba_${period}_${label}_${metric}`;
 }
 
-async function buildOne(range: NbaPeriodRange): Promise<void> {
+/** 順位変動の基準となる前日順位マップ（期間内に前日 doc が無ければ null） */
+type PrevRankBasis = {
+  prevRanks: Record<string, number> | null;
+  prevDateKey: string | null;
+};
+
+/**
+ * 既存 doc から順位変動の基準を決める。
+ * - 前日以前に書かれた doc → その ranks を基準にする
+ * - 当日すでに書かれた doc（cron 再実行）→ 基準を動かさず既存の prevRanks を引き継ぐ
+ * - doc なし（期間リセット直後）→ 基準なし = 変動非表示
+ */
+function resolvePrevRankBasis(
+  existing: FirebaseFirestore.DocumentSnapshot,
+  todayKey: string
+): PrevRankBasis {
+  if (!existing.exists) return { prevRanks: null, prevDateKey: null };
+  const data = existing.data() ?? {};
+  const snapshotDateKey =
+    typeof data.snapshotDateKey === "string" ? data.snapshotDateKey : null;
+  if (snapshotDateKey === todayKey) {
+    const prev = data.prevRanks;
+    return {
+      prevRanks:
+        prev && typeof prev === "object"
+          ? (prev as Record<string, number>)
+          : null,
+      prevDateKey:
+        typeof data.prevDateKey === "string" ? data.prevDateKey : null,
+    };
+  }
+  const ranks = data.ranks;
+  return {
+    prevRanks:
+      ranks && typeof ranks === "object"
+        ? (ranks as Record<string, number>)
+        : null,
+    prevDateKey: snapshotDateKey,
+  };
+}
+
+async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> {
   const firestore = db();
   const minPosts = periodMinPosts(range.period);
   const winRateMin = periodWinRateMinPosts(range.period);
+
+  const metricRefs = PERIOD_METRICS.map((metric) =>
+    firestore
+      .collection("period_ranking_snapshots")
+      .doc(periodSnapshotDocId(range.period, range.labelKey, metric))
+  );
+  const existingSnaps = await firestore.getAll(...metricRefs);
+  const prevBasisByMetric = new Map<PeriodMetric, PrevRankBasis>();
+  PERIOD_METRICS.forEach((metric, i) => {
+    prevBasisByMetric.set(
+      metric,
+      resolvePrevRankBasis(existingSnaps[i], todayKey)
+    );
+  });
 
   const statsSnap = await firestore
     .collection("user_stats_v2_daily")
@@ -186,7 +243,7 @@ async function buildOne(range: NbaPeriodRange): Promise<void> {
     }
   }
 
-  const baseRows: Array<Omit<SnapshotRow, "rank">> = uids.map((uid) => {
+  const baseRows: Array<Omit<SnapshotRow, "rank" | "rankDeltaPlaces">> = uids.map((uid) => {
     const agg = aggByUid.get(uid)!;
     const profile = profileByUid.get(uid);
     return {
@@ -208,7 +265,7 @@ async function buildOne(range: NbaPeriodRange): Promise<void> {
   });
 
   const batch = firestore.batch();
-  for (const metric of PERIOD_METRICS) {
+  PERIOD_METRICS.forEach((metric, metricIndex) => {
     const eligible =
       metric === "winRate"
         ? baseRows.filter((r) => r.totalPosts >= winRateMin)
@@ -223,6 +280,11 @@ async function buildOne(range: NbaPeriodRange): Promise<void> {
       return b.totalPoints - a.totalPoints;
     });
 
+    const basis = prevBasisByMetric.get(metric) ?? {
+      prevRanks: null,
+      prevDateKey: null,
+    };
+
     // 同値は同順位
     const ranks: Record<string, number> = {};
     let lastVal: number | null = null;
@@ -234,13 +296,20 @@ async function buildOne(range: NbaPeriodRange): Promise<void> {
       lastVal = v;
       lastRank = rank;
       ranks[row.uid] = rank;
-      if (rankedRows.length < TOP_ROWS) rankedRows.push({ ...row, rank });
+      if (rankedRows.length < TOP_ROWS) {
+        const prevRank = basis.prevRanks?.[row.uid];
+        rankedRows.push({
+          ...row,
+          rank,
+          rankDeltaPlaces:
+            typeof prevRank === "number" && Number.isFinite(prevRank)
+              ? prevRank - rank
+              : null,
+        });
+      }
     });
 
-    const ref = firestore
-      .collection("period_ranking_snapshots")
-      .doc(periodSnapshotDocId(range.period, range.labelKey, metric));
-    batch.set(ref, {
+    batch.set(metricRefs[metricIndex], {
       league: "nba",
       period: range.period,
       periodKey: `nba_${range.period}`,
@@ -250,9 +319,13 @@ async function buildOne(range: NbaPeriodRange): Promise<void> {
       count: sorted.length,
       rows: rankedRows,
       ranks,
+      // 圏外ユーザーの変動計算・翌日の基準引き継ぎ用
+      prevRanks: basis.prevRanks,
+      prevDateKey: basis.prevDateKey,
+      snapshotDateKey: todayKey,
       updatedAt: FieldValue.serverTimestamp(),
     });
-  }
+  });
   await batch.commit();
 
   console.log(
@@ -286,7 +359,7 @@ export async function buildNbaPeriodRankingSnapshots(
 
   for (const range of targets) {
     try {
-      await buildOne(range);
+      await buildOne(range, todayKey);
     } catch (err) {
       console.error(
         `[buildNbaPeriodRankingSnapshots] failed ${range.period} ${range.labelKey}`,

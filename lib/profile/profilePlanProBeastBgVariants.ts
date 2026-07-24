@@ -32,7 +32,15 @@ export type ProfilePlanProBeastBgVariant =
   | "beast-crown"
   | "beast-constellation"
   | "beast-circuitlace"
-  | "beast-ripple";
+  | "beast-ripple"
+  | "beast-eclipse"
+  | "beast-blackiron"
+  | "beast-bloodrift"
+  | "beast-inkhatch"
+  | "beast-fangrow"
+  | "beast-inkswirl"
+  | "beast-jagarmor"
+  | "beast-crimsonveil";
 
 export type ProfilePlanProBeastBgMeta = {
   id: ProfilePlanProBeastBgVariant;
@@ -331,6 +339,78 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     swatch:
       "linear-gradient(148deg, #02060c, #0a1528 45%, #1e3a5f55 65%, #010408)",
   },
+  {
+    id: "beast-eclipse",
+    label: "Crimson Eclipse",
+    tag: "紅蝕",
+    description:
+      "欠けた蝕モチーフの反復模様。黒×深紅。小さな三日月が並ぶパターン。",
+    swatch:
+      "linear-gradient(155deg, #050102, #1a0408 35%, #7f1d1d66 52%, #dc262655 68%, #020101)",
+  },
+  {
+    id: "beast-blackiron",
+    label: "Chained Iron",
+    tag: "鎖甲",
+    description:
+      "鎖リンク・インクハッチ・ギザギザ装甲の重ね模様。黒×赤の目スリット。",
+    swatch:
+      "linear-gradient(148deg, #030202, #141010 40%, #450a0a55 55%, #991b1b44 70%, #010101)",
+  },
+  {
+    id: "beast-bloodrift",
+    label: "Blood Rift",
+    tag: "血裂",
+    description:
+      "斜めの裂傷マークを格子状に並べた模様。黒×クリムゾンのクロスハッチ。",
+    swatch:
+      "linear-gradient(150deg, #040101, #120404 38%, #7f1d1d66 55%, #ef444455 72%, #020101)",
+  },
+  {
+    id: "beast-inkhatch",
+    label: "Ink Hatch",
+    tag: "墨線",
+    description:
+      "マンガ風の密なクロスハッチ。黒×深紅の細い線だけで作るテクスチャ。",
+    swatch:
+      "linear-gradient(152deg, #020101, #120404 42%, #7f1d1d44 60%, #010101)",
+  },
+  {
+    id: "beast-fangrow",
+    label: "Fang Row",
+    tag: "牙列",
+    description:
+      "三角の牙を段状に並べた模様。黒×赤。鋭いセレーションの反復。",
+    swatch:
+      "linear-gradient(148deg, #040101, #1a0606 40%, #991b1b55 58%, #020101)",
+  },
+  {
+    id: "beast-inkswirl",
+    label: "Void Swirl",
+    tag: "渦墨",
+    description:
+      "獣の毛皮や煙のような渦状の筆線。黒×深紅。有機的なインクの流れ。",
+    swatch:
+      "linear-gradient(160deg, #030101, #140404 38%, #b91c1c44 55%, #020101)",
+  },
+  {
+    id: "beast-jagarmor",
+    label: "Jagged Plate",
+    tag: "裂甲",
+    description:
+      "ギザギザの装甲パネルを重ねた模様。黒×血赤の縁。尖ったプレート。",
+    swatch:
+      "linear-gradient(145deg, #020101, #161010 42%, #7f1d1d55 62%, #010101)",
+  },
+  {
+    id: "beast-crimsonveil",
+    label: "Crimson Veil",
+    tag: "紅幕",
+    description:
+      "細密ハッチの上に赤い目スリットが点在。黒地に赤の視線だけが浮かぶ。",
+    swatch:
+      "linear-gradient(150deg, #010101, #0c0404 45%, #dc262655 70%, #020101)",
+  },
 ];
 
 /** Round 3 のみ（比較ナビ用） */
@@ -367,6 +447,18 @@ export const PROFILE_PLAN_PRO_BEAST_BG_ROUND5: ProfilePlanProBeastBgVariant[] = 
   "beast-constellation",
   "beast-circuitlace",
   "beast-ripple",
+];
+
+/** Round 6 — ダークファンタジー（赤×黒）候補 */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND6: ProfilePlanProBeastBgVariant[] = [
+  "beast-eclipse",
+  "beast-bloodrift",
+  "beast-blackiron",
+  "beast-inkhatch",
+  "beast-fangrow",
+  "beast-inkswirl",
+  "beast-jagarmor",
+  "beast-crimsonveil",
 ];
 
 export const PROFILE_PLAN_PRO_BEAST_BG_DEFAULT: ProfilePlanProBeastBgVariant =

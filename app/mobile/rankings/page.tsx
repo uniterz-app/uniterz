@@ -233,11 +233,7 @@ export default function MobileRankingsPage() {
   );
   /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
   const precApiKey =
-    rankingLeague === "worldcup"
-      ? "totalExactHits"
-      : usePeriodBoard
-        ? "totalGoalScorerHits"
-        : "totalPrecision";
+    rankingLeague === "worldcup" ? "totalExactHits" : "totalGoalScorerHits";
   const myMiniMetrics = useMemo(
     () =>
       buildMyRankMiniMetrics(
@@ -255,7 +251,6 @@ export default function MobileRankingsPage() {
       myMetricValueDeltas,
       byMetric?.totalPoints?.rows,
       byMetric?.totalExactHits?.rows,
-      byMetric?.totalPrecision?.rows,
       byMetric?.totalGoalScorerHits?.rows,
       byMetric?.totalUpset?.rows,
       rankingLeague,

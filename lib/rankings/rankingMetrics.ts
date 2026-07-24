@@ -3,6 +3,7 @@ import type { RankingRow } from "@/lib/rankings/types";
 export type MobileMetric =
   | "totalScore"
   | "winRate"
+  /** ランキングからは廃止済み — 旧コミュニティグループ（totalPrecision）の表示互換用 */
   | "marginPrecision"
   | "exactHits"
   | "upsetScore"
@@ -12,7 +13,6 @@ export type MobileMetric =
 export const METRICS: { key: MobileMetric; label: string }[] = [
   { key: "totalScore", label: "総合スコア" },
   { key: "winRate", label: "勝率" },
-  { key: "marginPrecision", label: "スコア精度" },
   { key: "exactHits", label: "完全的中" },
   { key: "upsetScore", label: "アップセットスコア" },
   { key: "streak", label: "連勝" },

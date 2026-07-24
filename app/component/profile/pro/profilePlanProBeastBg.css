@@ -114,3 +114,35 @@
 .profile-plan-pro-bg--beast-ripple .profile-plan-pro-bg__beast-skin {
   filter: contrast(1.08) saturate(0.95);
 }
+
+.profile-plan-pro-bg--beast-eclipse .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.1) saturate(1.18);
+}
+
+.profile-plan-pro-bg--beast-blackiron .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.12) saturate(1.08);
+}
+
+.profile-plan-pro-bg--beast-bloodrift .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08) saturate(1.2);
+}
+
+.profile-plan-pro-bg--beast-inkhatch .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.14) saturate(1.05);
+}
+
+.profile-plan-pro-bg--beast-fangrow .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.1) saturate(1.15);
+}
+
+.profile-plan-pro-bg--beast-inkswirl .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.08) saturate(1.12);
+}
+
+.profile-plan-pro-bg--beast-jagarmor .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.12) saturate(1.08);
+}
+
+.profile-plan-pro-bg--beast-crimsonveil .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.1) saturate(1.2);
+}

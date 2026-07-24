@@ -30,6 +30,8 @@ type SnapshotDoc = {
   count?: number;
   rows?: Array<RankingApiRow & { rank: number }>;
   ranks?: Record<string, number>;
+  /** 前日スナップショットの順位マップ。期間初日は null */
+  prevRanks?: Record<string, number> | null;
 };
 
 export type PeriodSnapshotBulk = {
@@ -99,6 +101,14 @@ export async function readNbaPeriodRankingSnapshots(opts: {
     }
     const myRank = myUid ? ranks[myUid] ?? null : null;
     const myInTop = myUid ? rows.find((r) => r.uid === myUid) ?? null : null;
+    // 前日比の順位変動。期間リセット直後（prevRanks なし）や新規参加者は null
+    const myPrevRank = myUid ? data?.prevRanks?.[myUid] : undefined;
+    const myRankDeltaPlaces =
+      myRank != null &&
+      typeof myPrevRank === "number" &&
+      Number.isFinite(myPrevRank)
+        ? myPrevRank - myRank
+        : null;
     byMetric[metric] = {
       ok: true,
       rows,
@@ -107,8 +117,10 @@ export async function readNbaPeriodRankingSnapshots(opts: {
       // ライブ集計と同じく、参加条件を満たす（= ranks に載る）人だけ myRow を返す
       myRow:
         myInTop ??
-        (myRow && myRank != null ? { ...myRow, rank: myRank } : null),
-      myRankDeltaPlaces: null,
+        (myRow && myRank != null
+          ? { ...myRow, rank: myRank, rankDeltaPlaces: myRankDeltaPlaces }
+          : null),
+      myRankDeltaPlaces,
     };
   });
 

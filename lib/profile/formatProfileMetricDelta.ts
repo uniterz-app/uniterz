@@ -10,7 +10,8 @@ export type ProfileMetricDeltaKey =
 const DELTA_KEY_MAP: Record<ProfileMetricDeltaKey, MyRankMetricDeltaKey> = {
   winRate: "winRate",
   totalPoints: "totalScore",
-  scorePrecision: "marginPrecision",
+  // marginPrecision はランキング指標から廃止 — 同じ小数1桁フォーマットの upsetScore に寄せる
+  scorePrecision: "upsetScore",
   upset: "upsetScore",
 };
 
