@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import {
   CyberSlantedTab,
@@ -256,10 +257,13 @@ function ConferenceBoard({
   conference,
   picks,
   onPicksChange,
+  /** Web 横並び時はカンファレンス見出しを大きく */
+  emphasizeLabel = false,
 }: {
   conference: NbaConferenceId;
   picks: NbaConferenceStandingsPicks;
   onPicksChange: (next: NbaConferenceStandingsPicks) => void;
+  emphasizeLabel?: boolean;
 }) {
   const [selectedRank, setSelectedRank] = useState<NbaStandingsRank | null>(
     null
@@ -275,6 +279,7 @@ function ConferenceBoard({
   }, [conference, picks]);
   const filled = filledRankCount(picks);
   const complete = isConferenceComplete(picks);
+  const isEast = conference === "east";
 
   const place = (teamId: string) => {
     if (selectedRank == null) return;
@@ -332,27 +337,86 @@ function ConferenceBoard({
       </div>
     ));
 
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2 px-0.5">
+  const labelBlock = emphasizeLabel ? (
+    <div
+      className={[
+        "mb-3 flex items-center justify-between gap-3 border px-3 py-2.5",
+        isEast
+          ? "border-cyan-300/40 bg-cyan-300/[0.08]"
+          : "border-amber-300/40 bg-amber-300/[0.08]",
+      ].join(" ")}
+      style={{
+        clipPath:
+          "polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px)",
+      }}
+    >
+      <div className="min-w-0">
         <p
           className={[
             nameOxanium.className,
-            "text-[10px] font-bold uppercase tracking-[0.16em] text-white/45",
+            "text-[18px] font-black uppercase leading-none tracking-[0.14em]",
+            isEast ? "text-cyan-200" : "text-amber-200",
           ].join(" ")}
         >
-          {conference === "east" ? "Eastern" : "Western"} · 1–15
+          {isEast ? "East" : "West"}
         </p>
-        <p
-          className={[
-            nameOxanium.className,
-            "text-[10px] font-extrabold tabular-nums tracking-wide",
-            complete ? "text-[#2DFF6E]/85" : "text-cyan-200/70",
-          ].join(" ")}
-        >
-          {filled}/{NBA_STANDINGS_RANKS}
+        <p className="mt-1 text-[11px] font-semibold text-white/50">
+          {isEast ? "イースタン · 1–15" : "ウェスタン · 1–15"}
         </p>
       </div>
+      <p
+        className={[
+          nameOxanium.className,
+          "shrink-0 text-[13px] font-extrabold tabular-nums tracking-wide",
+          complete
+            ? "text-[#2DFF6E]/90"
+            : isEast
+              ? "text-cyan-200/80"
+              : "text-amber-200/80",
+        ].join(" ")}
+      >
+        {filled}/{NBA_STANDINGS_RANKS}
+      </p>
+    </div>
+  ) : (
+    <div className="flex items-center justify-between gap-2 px-0.5">
+      <p
+        className={[
+          nameOxanium.className,
+          "text-[10px] font-bold uppercase tracking-[0.16em] text-white/45",
+        ].join(" ")}
+      >
+        {isEast ? "Eastern" : "Western"} · 1–15
+      </p>
+      <p
+        className={[
+          nameOxanium.className,
+          "text-[10px] font-extrabold tabular-nums tracking-wide",
+          complete ? "text-[#2DFF6E]/85" : "text-cyan-200/70",
+        ].join(" ")}
+      >
+        {filled}/{NBA_STANDINGS_RANKS}
+      </p>
+    </div>
+  );
+
+  return (
+    <div
+      className={[
+        "space-y-2",
+        emphasizeLabel
+          ? [
+              "rounded-[2px] border p-3",
+              isEast
+                ? "border-cyan-300/25 bg-[rgba(4,14,20,0.55)]"
+                : "border-amber-300/25 bg-[rgba(18,12,6,0.45)]",
+            ].join(" ")
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {labelBlock}
 
       <ZoneDivider label="Straight in · 1–6" tone="straight" />
       <div className="flex flex-col gap-1">{renderRankBlock(ranks.slice(0, 6))}</div>
@@ -363,9 +427,11 @@ function ConferenceBoard({
       <ZoneDivider label="Out · 11–15" tone="out" />
       <div className="flex flex-col gap-1">{renderRankBlock(ranks.slice(10))}</div>
 
-      <p className="pt-1 text-[10px] leading-relaxed text-white/30">
-        順位をタップ → 下にチームスロット。配置済みはスロットから消えます。同じ順位をもう一度タップでクリア。
-      </p>
+      {!emphasizeLabel ? (
+        <p className="pt-1 text-[10px] leading-relaxed text-white/30">
+          順位をタップ → 下にチームスロット。配置済みはスロットから消えます。同じ順位をもう一度タップでクリア。
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -378,6 +444,9 @@ export default function NbaSeasonStandingsPredictPanel({
   submitDisabled,
   className,
 }: Props) {
+  const pathname = usePathname() ?? "";
+  const isNarrow =
+    pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const [conference, setConference] = useState<NbaConferenceId>("east");
   const eastDone = isConferenceComplete(value.east);
   const westDone = isConferenceComplete(value.west);
@@ -386,7 +455,7 @@ export default function NbaSeasonStandingsPredictPanel({
   return (
     <div
       className={[
-        "rounded-[2px] border border-cyan-300/20 bg-[rgba(6,10,16,0.96)] p-3",
+        "rounded-[2px] border border-cyan-300/20 bg-[rgba(6,10,16,0.96)] p-3 md:p-4",
         className,
       ]
         .filter(Boolean)
@@ -396,12 +465,12 @@ export default function NbaSeasonStandingsPredictPanel({
         <h2
           className={[
             nameOxanium.className,
-            "text-[13px] font-extrabold uppercase tracking-[0.14em] text-cyan-200",
+            "text-[13px] font-extrabold uppercase tracking-[0.14em] text-cyan-200 md:text-[15px]",
           ].join(" ")}
         >
           Season standings · {value.season}
         </h2>
-        <p className="text-[11px] leading-relaxed text-white/45">
+        <p className="text-[11px] leading-relaxed text-white/45 md:max-w-3xl md:text-sm">
           1–6 ストレートイン / 7–10 プレーイン / 11–15 圏外。シーズン終了後に採点。
           仮: 完全一致 +{SEASON_STANDINGS_SCORE_PREVIEW.exact} · ±1 +
           {SEASON_STANDINGS_SCORE_PREVIEW.within1} · ±2 +
@@ -409,39 +478,63 @@ export default function NbaSeasonStandingsPredictPanel({
         </p>
       </header>
 
-      <div className="mb-3">
-        <CyberSlantedTabBar fill aria-label="Conference">
-          <CyberSlantedTab
-            role="tab"
-            label={eastDone ? "EAST ✓" : "EAST"}
-            active={conference === "east"}
-            onClick={() => setConference("east")}
-            compact
-            fontWeight={900}
-          />
-          <CyberSlantedTab
-            role="tab"
-            label={westDone ? "WEST ✓" : "WEST"}
-            active={conference === "west"}
-            onClick={() => setConference("west")}
-            compact
-            fontWeight={900}
-          />
-        </CyberSlantedTabBar>
-      </div>
-
-      {conference === "east" ? (
-        <ConferenceBoard
-          conference="east"
-          picks={value.east}
-          onPicksChange={(east) => onChange({ ...value, east })}
-        />
+      {/* モバイル: East/West タブ切替 / Web: 横並び */}
+      {isNarrow ? (
+        <>
+          <div className="mb-3">
+            <CyberSlantedTabBar fill aria-label="Conference">
+              <CyberSlantedTab
+                role="tab"
+                label={eastDone ? "EAST ✓" : "EAST"}
+                active={conference === "east"}
+                onClick={() => setConference("east")}
+                compact
+                fontWeight={900}
+              />
+              <CyberSlantedTab
+                role="tab"
+                label={westDone ? "WEST ✓" : "WEST"}
+                active={conference === "west"}
+                onClick={() => setConference("west")}
+                compact
+                fontWeight={900}
+              />
+            </CyberSlantedTabBar>
+          </div>
+          {conference === "east" ? (
+            <ConferenceBoard
+              conference="east"
+              picks={value.east}
+              onPicksChange={(east) => onChange({ ...value, east })}
+            />
+          ) : (
+            <ConferenceBoard
+              conference="west"
+              picks={value.west}
+              onPicksChange={(west) => onChange({ ...value, west })}
+            />
+          )}
+        </>
       ) : (
-        <ConferenceBoard
-          conference="west"
-          picks={value.west}
-          onPicksChange={(west) => onChange({ ...value, west })}
-        />
+        <>
+          <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
+            <ConferenceBoard
+              conference="east"
+              emphasizeLabel
+              picks={value.east}
+              onPicksChange={(east) => onChange({ ...value, east })}
+            />
+            <ConferenceBoard
+              conference="west"
+              emphasizeLabel
+              picks={value.west}
+              onPicksChange={(west) => onChange({ ...value, west })}
+            />
+          </div>
+          <p className="mt-3 text-[11px] leading-relaxed text-white/35">
+            左が East（シアン）・右が West（アンバー）。順位をタップ → 下にチームスロット。同じ順位をもう一度タップでクリア。
+          </p>
+        </>
       )}
 
       <div className="mt-4 flex flex-col gap-2 border-t border-white/8 pt-3 sm:flex-row sm:items-center sm:justify-between">

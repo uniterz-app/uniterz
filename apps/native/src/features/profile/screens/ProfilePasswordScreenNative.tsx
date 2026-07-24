@@ -70,7 +70,14 @@ export default function ProfilePasswordScreenNative() {
   }
 
   return (
-    <LegalPageLayoutNative title={labels.title}>
+    <LegalPageLayoutNative
+      title="PASSWORD"
+      description={
+        isJa
+          ? "ログイン用パスワードを変更できます。"
+          : "Update the password you use to sign in."
+      }
+    >
       <View style={styles.formCard}>
         <Text style={styles.label}>{labels.current}</Text>
         <TextInput

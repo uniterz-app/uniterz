@@ -9,6 +9,7 @@ import {
 } from "@/lib/playoff-bracket";
 import SubmitBracketModal from "@/app/component/common/SubmitBracketModal";
 import PlayoffBracketBoard from "@/app/component/predict/PlayoffBracketBoard";
+import GamesNbaSubpageShell from "@/app/component/games/GamesNbaSubpageShell";
 import PlayoffBracketRulesModal from "@/app/component/predict/PlayoffBracketRulesModal";
 import { auth } from "@/lib/firebase";
 import {
@@ -309,17 +310,19 @@ export default function PlayoffBracketPredict() {
   }, [finalsTeams]);
 
   return (
-    <div className="min-h-screen bg-[#050b14] pb-bottom-nav text-white">
-      <div className="border-b border-white/10 px-4 pt-4">
-        <div className="flex items-center justify-center overflow-x-auto whitespace-nowrap pb-4 text-[18px] font-semibold">
-          NBA Playoff Bracket
-        </div>
-        {pastDeadline && !hasSubmittedBracket ? (
-          <p className="mx-auto max-w-xl pb-3 text-center text-[13px] leading-snug text-amber-200/90">
+    <GamesNbaSubpageShell
+      eyebrow="NBA · PLAYOFFS"
+      title="BRACKET"
+      subtitle="プレーオフの勝者を予想してブラケットを提出。提出後は変更できません。"
+      contentClassName="max-w-none px-0 sm:px-2"
+    >
+      {pastDeadline && !hasSubmittedBracket ? (
+        <div className="mb-3 px-4">
+          <p className="mx-auto max-w-xl rounded-none border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-center text-[13px] leading-snug text-amber-200/90">
             {t.bannerSubmissionClosedByDeadline}
           </p>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <PlayoffBracketBoard
         bracket={bracket}
@@ -370,6 +373,6 @@ export default function PlayoffBracketPredict() {
             document.body
           )
         : null}
-    </div>
+    </GamesNbaSubpageShell>
   );
 }

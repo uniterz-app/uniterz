@@ -20,6 +20,7 @@ import {
   Mail,
   Award,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -49,12 +50,18 @@ type SettingsMenuProps = {
   onRequestCloseMenu?: () => void;
   /** プロフィール編集を戻るで閉じたあとサイドメニューを再度開く */
   onRequestOpenMenu?: () => void;
+  /**
+   * 指定時は親が ProfileEditSheet を出す。
+   * （ドロワー閉じてもシートが生き残る・戻るでメニュー再開が確実）
+   */
+  onOpenProfileEdit?: () => void;
 };
 
 export default function SettingsMenu({
   className,
   onRequestCloseMenu,
   onRequestOpenMenu,
+  onOpenProfileEdit,
 }: SettingsMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -129,8 +136,15 @@ export default function SettingsMenu({
   }, []);
 
   const openProfileEditOverlay = () => {
-    onRequestCloseMenu?.();
+    if (onOpenProfileEdit) {
+      onOpenProfileEdit();
+      return;
+    }
+    // フォールバック: メニュー内ポータル（親未対応時）
     setShowProfileEdit(true);
+    window.setTimeout(() => {
+      onRequestCloseMenu?.();
+    }, 40);
   };
 
   const isAdmin = user?.uid === ADMIN_UID;
@@ -329,11 +343,28 @@ export default function SettingsMenu({
           </>
         )}
 
-        <div className="relative mt-5 pt-4 pb-1">
+        <div className="relative mt-5 flex flex-col gap-2 pt-4 pb-1">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/25 to-transparent"
           />
+          <SideMenuItemButton
+            icon={Trash2}
+            tone="danger"
+            dense
+            labelStyle={menuLabelFont}
+            onClick={() =>
+              pushFromMenu(
+                resolvedVariant === "web"
+                  ? "/web/settings/delete-account"
+                  : "/mobile/settings/delete-account"
+              )
+            }
+          >
+            <span className={cn(isEn && "uppercase")}>
+              {m.settings.deleteAccount}
+            </span>
+          </SideMenuItemButton>
           <SideMenuItemButton
             icon={LogOut}
             tone="danger"
@@ -354,6 +385,7 @@ export default function SettingsMenu({
 
       {portalReady &&
         showProfileEdit &&
+        !onOpenProfileEdit &&
         createPortal(
           <ProfileEditSheet
             onClose={() => setShowProfileEdit(false)}

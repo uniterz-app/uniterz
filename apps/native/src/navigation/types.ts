@@ -25,6 +25,8 @@ export type GamesStackParamList = {
           scoreAway: number;
           goalScorer?: unknown;
         };
+        /** アワード/順位予想などから戻るときサイドメニューを開く */
+        openMenu?: boolean;
       }
     | undefined;
   GamePredict: { gameId: string };
@@ -34,6 +36,8 @@ export type GamesStackParamList = {
   PlayoffBracket: undefined;
   PlayoffBracketView: undefined;
   BracketMarket: undefined;
+  /** シーズン アワード / 順位予想（プレビュー） */
+  SeasonPredict: { mode: "awards" | "standings" };
 };
 
 export type ResultStackParamList = {
@@ -43,11 +47,15 @@ export type ResultStackParamList = {
 
 export type RankingsStackParamList = {
   RankingsHome: undefined;
+  /** SQUAD BATTLE UI プレビュー（モック） */
+  SquadBattlePreview: undefined;
 };
 
 export type LeaderboardsStackParamList = {
   LeaderboardsHome: { reopenGroupId?: string } | undefined;
   CommunityDetail: { groupId: string };
+  /** SQUAD BATTLE UI プレビュー（モック） */
+  SquadBattlePreview: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -67,6 +75,8 @@ export type ProfileStackParamList = {
   ProfileSettings: undefined;
   NotificationSettings: undefined;
   ProfilePassword: undefined;
+  ProSkin: undefined;
+  DeleteAccount: undefined;
   PublicProfile: {
     handle: string;
     fromRankings?: boolean;

@@ -15,7 +15,7 @@ export default function WebTermsPage() {
   return (
     <LegalPageLayout
       variant="web"
-      title={m.settings.termsOfService}
+      title="TERMS"
       description={
         isJa
           ? "Uniterz におけるご利用条件を定めたページです。ご利用前に必ずご確認ください。"

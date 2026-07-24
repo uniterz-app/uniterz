@@ -1,0 +1,23 @@
+{
+  "version": 3,
+  "scale": 3,
+  "skewDeg": -14,
+  "cyan": "#00F5FF",
+  "bodyHeightPx1x": 26,
+  "bodyHeightNormalPx1x": 32,
+  "glowPadPx1x": 12,
+  "imageHeight": 150,
+  "imageHeightPt": 50,
+  "leftWidth": 66,
+  "leftWidthPt": 22,
+  "rightWidth": 66,
+  "rightWidthPt": 22,
+  "centerWidth": 36,
+  "centerWidthPt": 12,
+  "letterSpacingEm": 0.14,
+  "fontSizeCompact": 9,
+  "fontWeight": 700,
+  "assetShape": "rect",
+  "displayAsset": "active-stretch.png",
+  "note": "Web CyberSlantedTab active compact 焼き込み（矩形+発光+横線）。表示は active-stretch 1枚を横ストレッチし RN で skewX(-14deg)。3分割は継ぎ目用に残すが表示には使わない。Web CSS は未変更。"
+}

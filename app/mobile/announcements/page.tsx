@@ -22,7 +22,7 @@ import {
 } from "@/lib/announcements/localAnnouncementReads";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
-import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
+import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import { mergeSyntheticEventIntoAnnouncements } from "@/lib/announcements/inAppEventAnnouncement";
 import {
   queryVisibleAnnouncementsNoOrder,
@@ -134,23 +134,15 @@ export default function AnnouncementsPage() {
   }, [status, readIds]);
 
   return (
-    <div className="relative min-h-screen text-white">
-      <FloatingCloseButton />
-      {/* ダークネオン背景（放射+グラデ） */}
-      <div className="absolute inset-0 -z-10 bg-[#0B0F17]" />
-      <div className="pointer-events-none absolute inset-0 -z-10 opacity-70"
-           style={{
-             background: "radial-gradient(60% 40% at 20% 0%, rgba(0,229,255,0.10) 0%, rgba(0,0,0,0) 60%), radial-gradient(45% 35% at 100% 10%, rgba(164,77,255,0.08) 0%, rgba(0,0,0,0) 60%)"
-           }} />
-
-      {/* ヘッダー */}
-      <div className="sticky top-0 z-10 backdrop-blur supports-backdrop-filter:bg-[#0B0F17]/70 border-b border-white/5">
-        <h1 className="text-center text-lg font-bold py-3">
-          {m.settings.news}
-        </h1>
-      </div>
-
-      <div className="p-4">
+    <ProfileCyberPage
+      title="NEWS"
+      subtitle={
+        language === "en"
+          ? "Official announcements, events, and maintenance updates."
+          : "公式のお知らせ・イベント・メンテナンス情報です。"
+      }
+      contentClassName="max-w-lg px-4 py-4"
+    >
         {/* スケルトン */}
         {loading && (
           <div className="space-y-4">
@@ -240,7 +232,6 @@ export default function AnnouncementsPage() {
               </Link>
             );
           })}
-      </div>
-    </div>
+    </ProfileCyberPage>
   );
 }

@@ -41,7 +41,12 @@ export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
   if (loading) {
     return (
       <MobilePageShell
-        title={isJa ? "バッジパレット" : "Badge Palette"}
+        title="BADGES"
+        subtitle={
+          isJa
+            ? "獲得したバッジを一覧できます。タップで詳細を表示します。"
+            : "Browse badges you’ve earned. Tap one for details."
+        }
         onClose={onClose}
       >
         <View style={styles.center}>
@@ -52,7 +57,15 @@ export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
   }
 
   return (
-    <MobilePageShell title={isJa ? "バッジパレット" : "Badge Palette"} onClose={onClose}>
+    <MobilePageShell
+      title="BADGES"
+      subtitle={
+        isJa
+          ? "獲得したバッジを一覧できます。タップで詳細を表示します。"
+          : "Browse badges you’ve earned. Tap one for details."
+      }
+      onClose={onClose}
+    >
       <ScrollView contentContainerStyle={styles.listPad}>
         <BadgePaletteNative
           badges={resolvedBadges}

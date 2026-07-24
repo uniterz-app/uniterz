@@ -158,7 +158,10 @@ export default function ContactScreenNative({
 
   if (submitted) {
     return (
-      <LegalPageLayoutNative title={labels.title} description={labels.description}>
+      <LegalPageLayoutNative
+        title={isFeature ? "REQUEST" : "CONTACT"}
+        description={labels.description}
+      >
         <View style={styles.successBox}>
           <MaterialCommunityIcons name="check-circle-outline" size={40} color="#67e8f9" />
           <Text style={styles.successTitle}>{labels.success}</Text>
@@ -173,7 +176,7 @@ export default function ContactScreenNative({
 
   return (
     <LegalPageLayoutNative
-      title={labels.title}
+      title={isFeature ? "REQUEST" : "CONTACT"}
       description={labels.description}
       updatedAt={isFeature ? "2026-04-10" : "2026-03-23"}
       lastUpdatedLabel={labels.updated}

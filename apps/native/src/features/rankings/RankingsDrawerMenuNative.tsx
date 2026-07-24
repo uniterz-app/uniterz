@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import CyberSideMenuSectionTitleNative from "../../ui/CyberSideMenuSectionTitleNative";
 import SideMenuItemButtonNative from "../../ui/SideMenuItemButtonNative";
-import { SIDE_MENU_LABEL_FONT } from "../../ui/cyberSideMenuNative";
+import { SIDE_MENU_LABEL_FONT, sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
 
 type League = "nba" | "wc";
 
@@ -9,15 +9,19 @@ type Props = {
   league: League;
   onChange: (league: League) => void;
   language: "ja" | "en";
+  /** SQUAD BATTLE プレビュー（仮入口） */
+  onOpenSquadBattlePreview?: () => void;
 };
 
 /** Web `RankingsDrawerMenu` 相当 */
-export default function RankingsDrawerMenuNative({ league, onChange, language }: Props) {
+export default function RankingsDrawerMenuNative({
+  league,
+  onChange,
+  language,
+  onOpenSquadBattlePreview,
+}: Props) {
   const isJa = language === "ja";
-  const isEn = language === "en";
-  const labelStyle = isEn
-    ? { ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" as const }
-    : SIDE_MENU_LABEL_FONT;
+  const labelStyle = sideMenuLabelStyle(language);
 
   return (
     <View style={styles.root}>
@@ -36,11 +40,20 @@ export default function RankingsDrawerMenuNative({ league, onChange, language }:
         <SideMenuItemButtonNative
           icon="earth"
           active={league === "wc"}
-          labelStyle={labelStyle}
+          labelStyle={{ ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" }}
           onPress={() => onChange("wc")}
         >
-          {isJa ? "ワールドカップ" : "World Cup"}
+          World Cup
         </SideMenuItemButtonNative>
+        {onOpenSquadBattlePreview ? (
+          <SideMenuItemButtonNative
+            icon="account-group-outline"
+            labelStyle={{ ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" }}
+            onPress={onOpenSquadBattlePreview}
+          >
+            Squad Battle (Preview)
+          </SideMenuItemButtonNative>
+        ) : null}
       </View>
     </View>
   );

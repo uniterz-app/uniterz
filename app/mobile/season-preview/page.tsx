@@ -49,6 +49,21 @@ const LINKS = [
     title: "Pro 課金導線",
     note: "3プラン → 成功画面",
   },
+  {
+    href: "/mobile/settings-bg-preview",
+    title: "設定画面の背景色",
+    note: "SETTINGS 背景スウォッチ切替",
+  },
+  {
+    href: "/mobile/berserk-pro-skin-preview",
+    title: "Pro Skin · ベルセルク風",
+    note: "赤×黒ダーク案 3 つ",
+  },
+  {
+    href: "/mobile/tutorial-preview",
+    title: "初回チュートリアル",
+    note: "スライド / スポットライト / ハイブリッド比較",
+  },
 ] as const;
 
 export default function MobileSeasonPreviewHubPage() {

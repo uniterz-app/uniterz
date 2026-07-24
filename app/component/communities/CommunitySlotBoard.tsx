@@ -22,6 +22,7 @@ import {
   communityCrtPanelStyle,
 } from "@/app/component/communities/CommunityCrtTheme";
 import { preserveScrollOnInputFocus } from "@/lib/dom/preserveScrollOnInputFocus";
+import SquadBattleGroupEntry from "@/app/component/squads/SquadBattleGroupEntry";
 
 const CYAN = "#22d3ee";
 const AMBER = "#fbbf24";
@@ -114,6 +115,8 @@ type Props = {
   onCreate: () => void;
   onPreviewJoin: (code: string) => Promise<void>;
   onPasteJoin: () => Promise<string | null>;
+  /** SQUAD BATTLE プレビューを開く（未指定ならエントリー非表示） */
+  onOpenSquadBattle?: () => void;
   labels: {
     hostSection: string;
     memberSection: string;
@@ -691,6 +694,7 @@ export default function CommunitySlotBoard({
   onCreate,
   onPreviewJoin,
   onPasteJoin,
+  onOpenSquadBattle,
   labels,
 }: Props) {
   const isWeb = variant === "web";
@@ -752,6 +756,15 @@ export default function CommunitySlotBoard({
 
   return (
     <div className={[sizing.shellPad, jp.className, communityCrtMono.className].join(" ")}>
+        {onOpenSquadBattle ? (
+          <SquadBattleGroupEntry
+            language={language}
+            isWeb={isWeb}
+            onOpen={onOpenSquadBattle}
+            className="mb-6"
+          />
+        ) : null}
+
         <section>
           <CommunityCrtSectionLabel
             large

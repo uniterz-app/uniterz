@@ -12,6 +12,8 @@
 @import "./component/profile/pro/profilePlanProAtmosBg.css";
 @import "./component/profile/pro/profilePlanProScaleBg.css";
 @import "./component/profile/pro/profilePlanProBeastBg.css";
+@import "./component/profile/pro/profilePlanProCosmosBg.css";
+@import "./component/profile/pro/profilePlanProLabBg.css";
 @import "./component/profile/pro/profilePlanProFormBg.css";
 /* turbopack css cache bust 2026-07-17f */
 
@@ -499,6 +501,31 @@
   opacity: 0.34;
 }
 
+/* サイバー数字 — CyberNumber（Alfa Slab One・単層） */
+.cyber-neo-number {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.06em;
+  font-weight: 400;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  padding: 0.08em 0.1em 0.06em;
+  overflow: visible;
+  white-space: nowrap;
+  transform: skewX(-10deg) scaleX(0.96);
+  transform-origin: right center;
+  -webkit-font-smoothing: antialiased;
+}
+
+.cyber-neo-number__suffix {
+  letter-spacing: 0.04em;
+  font-weight: 400;
+  color: #22d3ee;
+}
+
 .cyber-rank-list-panel {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -595,10 +622,10 @@
   }
 }
 
-/* メニュー行 — 角切り + 走査線 */
+/* メニュー行 — 角切り + 走査線（overflow はアイコングローを切らないよう visible） */
 .cyber-side-menu-item {
   isolation: isolate;
-  overflow: hidden;
+  overflow: visible;
   clip-path: polygon(
     10px 0%,
     100% 0%,
@@ -875,7 +902,7 @@
   /* clip / 枠 / 色は `.cyber-menu-btn--close` に委譲 */
 }
 
-/* 角切り紫枠 — ハンバーガー / × / ペン / 共有（プロフィール Kinetik 基準 `#c084fc`） */
+/* 角切り黄枠 — ハンバーガー / 共有（基準 `#facc15`）。×=シアン / ペン=アンバーは別クラス */
 .cyber-menu-btn,
 .predict-overlay-menu-btn {
   position: relative;
@@ -888,12 +915,12 @@
     0% 100%,
     0% 5px
   );
-  border: 1px solid rgba(192, 132, 252, 0.34);
+  border: 1px solid rgba(250, 204, 21, 0.42);
   background: rgba(4, 10, 18, 0.84);
-  color: rgba(192, 132, 252, 0.92);
+  color: rgba(250, 204, 21, 0.95);
   box-shadow:
-    0 0 14px rgba(192, 132, 252, 0.12),
-    inset 0 1px 0 rgba(192, 132, 252, 0.14);
+    0 0 14px rgba(250, 204, 21, 0.14),
+    inset 0 1px 0 rgba(250, 204, 21, 0.16);
   backdrop-filter: blur(6px);
   transition:
     border-color 0.2s ease,
@@ -904,12 +931,12 @@
 
 .cyber-menu-btn:hover,
 .predict-overlay-menu-btn:hover {
-  border-color: rgba(192, 132, 252, 0.52);
+  border-color: rgba(250, 204, 21, 0.62);
   background: rgba(6, 14, 24, 0.92);
-  color: #e9d5ff;
+  color: #fef08a;
   box-shadow:
-    0 0 18px rgba(192, 132, 252, 0.2),
-    inset 0 1px 0 rgba(192, 132, 252, 0.18);
+    0 0 18px rgba(250, 204, 21, 0.22),
+    inset 0 1px 0 rgba(250, 204, 21, 0.2);
 }
 
 .cyber-menu-btn::before,
@@ -923,7 +950,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(192, 132, 252, 0.45) 50%,
+    rgba(250, 204, 21, 0.5) 50%,
     transparent 100%
   );
   pointer-events: none;
@@ -1914,6 +1941,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+/* チュートリアル強調中 — clip-path で見切れる黒いドロップシャドウを抑える */
+[data-tutorial-target="match-card"] .match-list-cyber-card,
+[data-tutorial-target="match-card"].match-list-cyber-card {
+  box-shadow:
+    0 0 20px rgba(0, 245, 255, 0.18),
+    inset 0 1px 0 rgba(0, 245, 255, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
 .match-list-cyber-grid {
   background-image:
     linear-gradient(rgba(0, 245, 255, 0.04) 1px, transparent 1px),
@@ -2121,13 +2157,18 @@
 /* サイバー斜めタブ（ランキング / スタッツ指標） */
 .cyber-slanted-tab {
   isolation: isolate;
-  overflow: hidden;
+  /* 選択グローを切らない（スキャンは自身で clip） */
+  overflow: visible;
 }
 
+/* 選択時の光は inline box-shadow（テーマ色・skew 後に乗る） */
+
+/* 選択塗り面上の黒スキャン横線（CyberSlantedTab デザイン固定） */
 .cyber-slanted-tab__scan {
   position: absolute;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
   background-image: repeating-linear-gradient(
     0deg,
     transparent,
@@ -2938,6 +2979,30 @@
   .live-match-mark--pulse {
     animation: none;
   }
+}
+
+/* ============================================================
+   設定画面 SETTINGS 背景 — プレビュー dual-pool（Pools）採用
+   ============================================================ */
+.settings-bg-pools {
+  background-color: #050b14;
+  background-image:
+    radial-gradient(
+      ellipse 48% 38% at 12% 78%,
+      rgba(0, 245, 255, 0.1),
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 52% 40% at 92% 88%,
+      rgba(167, 139, 250, 0.12),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 62% 32% at 50% -10%,
+      rgba(34, 211, 238, 0.08),
+      transparent 60%
+    );
+  background-repeat: no-repeat;
 }
 
 /* ============================================================
@@ -3774,6 +3839,35 @@ body.splash-bg {
 
   100% {
     transform: translateX(120%);
+  }
+}
+
+/* はてなヘルプパネルの走査線 */
+.cyber-help-scan {
+  animation: cyber-help-scan-sweep 2.8s ease-in-out infinite;
+}
+
+@keyframes cyber-help-scan-sweep {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  55% {
+    transform: translateX(100%);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cyber-help-scan {
+    animation: none;
   }
 }
 
@@ -5448,10 +5542,22 @@ body::before {
 .profile-plan-pro-metric-card__bar {
   z-index: 1;
   border-radius: 2px;
-  /* 左バーだけ自然ににじませる（外周枠は光らせない） */
-  box-shadow:
-    0 0 10px color-mix(in srgb, currentColor 36%, transparent),
-    0 0 18px color-mix(in srgb, currentColor 14%, transparent) !important;
+  /* overflow クリップで四角く見える色シャドウは使わない */
+  box-shadow: none !important;
+}
+
+/* 左バーのにじみ — 直角シャドウではなく右方向へ溶けるグラデ */
+.profile-plan-pro-metric-card__bar-bloom {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  z-index: 0;
+  width: 42px;
+  pointer-events: none;
+  border-radius: 0 18px 18px 0;
+  opacity: 0.72;
+  filter: blur(6px);
 }
 
 .profile-plan-pro-metric-card__value {
@@ -7314,11 +7420,24 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 
+/* ID 側は右下コーナー（JOIN の左下と対） */
+.profile-edit-kinetik-footer-ref--id {
+  border-left: none;
+  border-right: 1px solid var(--kinetik-frame-dim);
+  padding-left: 6px;
+  padding-right: 5px;
+}
+
 @media (min-width: 640px) {
   .profile-edit-kinetik-footer-ref--identity {
     padding: 5px 7px 6px 6px;
     font-size: 8.5px;
     letter-spacing: 0.05em;
+  }
+
+  .profile-edit-kinetik-footer-ref--id {
+    padding-left: 7px;
+    padding-right: 6px;
   }
 }
 
@@ -7326,6 +7445,15 @@ body::before {
   padding: 5px 8px 6px 7px;
   font-size: 9px;
   letter-spacing: 0.05em;
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-footer-ref--id {
+  padding-left: 8px;
+  padding-right: 7px;
+}
+
+.profile-edit-kinetik-identity-join-id {
+  max-width: 100%;
 }
 
 .profile-edit-kinetik-identity-meta {
@@ -7641,12 +7769,12 @@ body::before {
   min-height: var(--kinetik-tab-row-h);
   max-height: var(--kinetik-tab-row-h);
   flex-shrink: 0;
-  border: 1px solid var(--kinetik-menu-accent, #c084fc);
+  border: 1px solid var(--kinetik-menu-accent, #facc15);
   background: rgba(4, 10, 18, 0.84);
-  color: var(--kinetik-menu-accent, #c084fc);
+  color: var(--kinetik-menu-accent, #facc15);
   box-shadow:
-    0 0 14px color-mix(in srgb, var(--kinetik-menu-accent, #c084fc) 12%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--kinetik-menu-accent, #c084fc) 14%, transparent);
+    0 0 14px color-mix(in srgb, var(--kinetik-menu-accent, #facc15) 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--kinetik-menu-accent, #facc15) 16%, transparent);
   border-radius: 0;
   backdrop-filter: blur(6px);
   transition:
@@ -7665,7 +7793,7 @@ body::before {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    color-mix(in srgb, var(--kinetik-menu-accent, #c084fc) 45%, transparent) 50%,
+    color-mix(in srgb, var(--kinetik-menu-accent, #facc15) 50%, transparent) 50%,
     transparent 100%
   );
   pointer-events: none;
@@ -7674,8 +7802,8 @@ body::before {
 .profile-edit-kinetik-menu-btn:hover {
   background: rgba(6, 14, 24, 0.92);
   box-shadow:
-    0 0 18px color-mix(in srgb, var(--kinetik-menu-accent, #c084fc) 20%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--kinetik-menu-accent, #c084fc) 18%, transparent);
+    0 0 18px color-mix(in srgb, var(--kinetik-menu-accent, #facc15) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--kinetik-menu-accent, #facc15) 20%, transparent);
 }
 
 .profile-edit-kinetik-menu-btn--rank-1,
@@ -7687,7 +7815,7 @@ body::before {
 .profile-edit-kinetik-menu-btn--analyst,
 .profile-edit-kinetik-menu-btn--rising,
 .profile-edit-kinetik-menu-btn--default {
-  --kinetik-menu-accent: #c084fc;
+  --kinetik-menu-accent: #facc15;
 }
 
 .profile-edit-kinetik-slant-tab {

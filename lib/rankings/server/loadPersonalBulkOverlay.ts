@@ -1,6 +1,7 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { pickNbaCumulativeRankingSlice } from "@/lib/rankings/pickNbaStatsBucket";
 import { loadMostRecentPriorRankSnapshotHistory } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import type {
   BulkMetricPayload,
@@ -72,34 +73,20 @@ function readWcSlice(
   };
 }
 
-/** NBA 現行シーズンのスライス（rankingBySeason.<CURRENT_NBA_SEASON_KEY>） */
+/** NBA スライス（現行が空なら前シーズン／旧 playoffs へフォールバック） */
 function readNbaSlice(data: Record<string, unknown>): WcStatsSlice {
-  const bySeason = (
-    data.rankingBySeason as Record<string, Record<string, unknown>> | undefined
-  )?.[CURRENT_NBA_SEASON_KEY];
-  if (bySeason && typeof bySeason === "object") {
-    const tp = Number(bySeason.totalPosts ?? 0);
-    const tw = Number(bySeason.totalWins ?? 0);
-    return {
-      totalPosts: tp,
-      totalWins: tw,
-      winRate: tp > 0 ? tw / tp : Number(bySeason.winRate ?? 0),
-      totalPoints: Number(bySeason.totalPoints ?? 0),
-      totalPrecision: Number(bySeason.totalPrecision ?? 0),
-      totalUpset: Number(bySeason.totalUpset ?? 0),
-      totalGoalScorerHits: Number(bySeason.totalGoalScorerHits ?? 0),
-      activeWinStreak: activeBasketballStreak(data),
-    };
-  }
+  const bySeason = pickNbaCumulativeRankingSlice(data);
+  const tp = Number(bySeason.totalPosts ?? 0);
+  const tw = Number(bySeason.totalWins ?? 0);
   return {
-    totalPosts: 0,
-    totalWins: 0,
-    winRate: 0,
-    totalPoints: 0,
-    totalPrecision: 0,
-    totalUpset: 0,
-    totalGoalScorerHits: 0,
-    activeWinStreak: 0,
+    totalPosts: tp,
+    totalWins: tw,
+    winRate: tp > 0 ? tw / tp : Number(bySeason.winRate ?? 0),
+    totalPoints: Number(bySeason.totalPoints ?? 0),
+    totalPrecision: Number(bySeason.totalPrecision ?? 0),
+    totalUpset: Number(bySeason.totalUpset ?? 0),
+    totalGoalScorerHits: Number(bySeason.totalGoalScorerHits ?? 0),
+    activeWinStreak: activeBasketballStreak(data),
   };
 }
 

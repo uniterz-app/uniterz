@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * 斜めタブのデザインは固定（変更しない）:
+ * - 選択: アクセント塗りつぶし + 黒文字 + スキャン横線
+ * - 非選択: 透明 + アクセント枠 + アクセント文字
+ */
 import { createContext, useContext, type ReactNode } from "react";
 import { nameOxanium } from "@/lib/fonts";
 import {
@@ -21,8 +26,9 @@ const DEFAULT_TAB_THEME: CyberSlantedTabTheme = {
   accent: CYBER_TAB_CYAN,
   inactiveText: CYBER_TAB_CYAN,
   activeText: "#050508",
-  /** 外周ハローを抑え、面の中に留まる薄い光に */
-  activeShadow: "0 0 10px rgba(0,245,255,0.14)",
+  /** skew 後に乗るので平行四辺形に沿って光る */
+  activeShadow:
+    "0 0 10px rgba(0,245,255,0.55), 0 0 22px rgba(0,245,255,0.28)",
 };
 
 const CyberSlantedTabFillContext = createContext(false);
@@ -58,7 +64,8 @@ export function CyberSlantedTab({
   const inactiveText = theme.inactiveText ?? theme.accent;
   const activeText = theme.activeText ?? "#050508";
   const activeShadow =
-    theme.activeShadow ?? "0 0 10px rgba(0,245,255,0.14)";
+    theme.activeShadow ??
+    "0 0 10px rgba(0,245,255,0.55), 0 0 22px rgba(0,245,255,0.28)";
   const inactiveBorder = theme.inactiveBorder ?? theme.accent;
 
   return (

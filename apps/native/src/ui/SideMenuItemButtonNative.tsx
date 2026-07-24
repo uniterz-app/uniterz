@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
 import {
+  Image,
+  type ImageSourcePropType,
   Pressable,
   StyleSheet,
   Text,
@@ -12,12 +14,18 @@ import {
   CYBER_SIDE_MENU_ITEM,
   CYBER_TAB_CYAN,
   SIDE_MENU_LABEL_FONT,
+  SIDE_MENU_LABEL_FONT_JA,
 } from "./cyberSideMenuNative";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
+const CJK_RE = /[\u3040-\u30ff\u4e00-\u9fff]/;
+
 type Props = {
-  icon: IconName;
+  /** MCI アイコン（`iconSource` と排他） */
+  icon?: IconName;
+  /** カスタム画像アイコン */
+  iconSource?: ImageSourcePropType;
   iconSize?: number;
   children: string;
   onPress: () => void;
@@ -31,6 +39,7 @@ type Props = {
 /** Web `SideMenuItemButton` — HUD 行・角切り・走査線・選択時シアン枠 */
 export default function SideMenuItemButtonNative({
   icon,
+  iconSource,
   iconSize = 18,
   children,
   onPress,
@@ -41,7 +50,10 @@ export default function SideMenuItemButtonNative({
   labelStyle,
 }: Props) {
   const isDanger = tone === "danger";
+  const usesCjk = CJK_RE.test(children);
   const sz = dense ? Math.max(14, iconSize - 2) : iconSize;
+  /** カスタム PNG は枠いっぱい近くまで拡大 */
+  const imgSz = dense ? 32 : 36;
   const accent = isDanger ? "#fb7185" : CYBER_TAB_CYAN;
 
   return (
@@ -80,21 +92,32 @@ export default function SideMenuItemButtonNative({
             style={[
               styles.iconBox,
               dense && styles.iconBoxDense,
-              active && !isDanger && styles.iconBoxActive,
-              active && isDanger && styles.iconBoxActiveDanger,
+              !!iconSource && styles.iconBoxImage,
+              !!iconSource && dense && styles.iconBoxImageDense,
+              !!iconSource && styles.iconBoxPlain,
+              !iconSource && active && !isDanger && styles.iconBoxActive,
+              !iconSource && active && isDanger && styles.iconBoxActiveDanger,
             ]}
           >
-            <MaterialCommunityIcons
-              name={icon}
-              size={sz}
-              color={
-                isDanger
-                  ? CYBER_SIDE_MENU_ITEM.dangerIcon
-                  : active
-                    ? CYBER_TAB_CYAN
-                    : CYBER_SIDE_MENU_ITEM.iconDefault
-              }
-            />
+            {iconSource ? (
+              <Image
+                source={iconSource}
+                style={{ width: imgSz, height: imgSz }}
+                resizeMode="contain"
+              />
+            ) : icon ? (
+              <MaterialCommunityIcons
+                name={icon}
+                size={sz}
+                color={
+                  isDanger
+                    ? CYBER_SIDE_MENU_ITEM.dangerIcon
+                    : active
+                      ? CYBER_TAB_CYAN
+                      : CYBER_SIDE_MENU_ITEM.iconDefault
+                }
+              />
+            ) : null}
           </View>
 
           <Text
@@ -104,6 +127,8 @@ export default function SideMenuItemButtonNative({
               isDanger && styles.labelDanger,
               active && !isDanger && { textShadowColor: `${accent}33`, textShadowRadius: 18 },
               labelStyle,
+              /** Bebas に無い日本語は Noto Bold（細いシステムフォールバック回避） */
+              usesCjk && styles.labelJa,
             ]}
             numberOfLines={2}
           >
@@ -159,15 +184,15 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1,
     paddingHorizontal: 12,
-    overflow: "hidden",
+    overflow: "visible",
   },
   normal: {
-    minHeight: 48,
-    paddingVertical: 10,
+    minHeight: 40,
+    paddingVertical: 6,
   },
   dense: {
-    minHeight: 40,
-    paddingVertical: 8,
+    minHeight: 36,
+    paddingVertical: 5,
   },
   default: {
     borderColor: CYBER_SIDE_MENU_ITEM.border,
@@ -233,8 +258,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   iconBox: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -243,8 +268,22 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   iconBoxDense: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
+  },
+  iconBoxImage: {
+    width: 40,
+    height: 40,
+  },
+  iconBoxImageDense: {
+    width: 36,
+    height: 36,
+  },
+  /** カスタム PNG 用 — 外枠・背景なし */
+  iconBoxPlain: {
+    borderWidth: 0,
+    borderColor: "transparent",
+    backgroundColor: "transparent",
   },
   iconBoxActive: {
     borderColor: "rgba(0, 245, 255, 0.35)",
@@ -257,13 +296,16 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 16,
     zIndex: 1,
+    includeFontPadding: false,
     ...SIDE_MENU_LABEL_FONT,
   },
   labelDense: {
-    fontSize: 12,
+    fontSize: 15,
+  },
+  labelJa: {
+    ...SIDE_MENU_LABEL_FONT_JA,
   },
   labelDanger: {
     color: "rgba(254, 202, 202, 0.96)",

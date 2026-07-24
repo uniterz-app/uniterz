@@ -4,12 +4,14 @@ import { usePathname } from "next/navigation";
 import AuthGate from "@/app/AuthGate";
 import NavBar from "@/app/component/NavBar";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
+import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 
 /** 下部ナビを出さないルート（ゲスト向け文言ページ・初回プロフィールセットアップ） */
 function shouldShowBottomNavBar(pathname: string | null | undefined): boolean {
   if (!pathname) return true;
   if (isGuestLegalPath(pathname)) return false;
+  if (isGuestPreviewPath(pathname)) return false;
   if (isProfileSetupRoute(pathname)) return false;
   return true;
 }
@@ -47,12 +49,17 @@ export default function WebOrMobileSplash({
     );
   }
 
-  // dev / mobile プレビューは Auth 待ちせず即表示
-  if (
-    pathname?.startsWith("/dev") ||
-    pathname?.startsWith("/mobile/profile-plan-pro-") ||
-    pathname === "/mobile/pro-subscribe-preview"
-  ) {
+  // pathname 未確定の間は AuthGate を掛けない（誤って signup へ飛ばすのを防ぐ）
+  if (!pathname) {
+    return (
+      <div id="app-root" className="relative isolate min-h-0">
+        {children}
+      </div>
+    );
+  }
+
+  // dev / プレビューは Auth 待ちせず即表示
+  if (isGuestPreviewPath(pathname)) {
     return (
       <div id="app-root" className="relative isolate min-h-0">
         {children}

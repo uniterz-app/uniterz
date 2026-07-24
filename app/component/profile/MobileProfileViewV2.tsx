@@ -3,8 +3,10 @@
 import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation, useInView } from "framer-motion";
 import React, { Suspense, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 import { useProfileOverviewStage } from "@/lib/profile/useProfileOverviewStage";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
@@ -188,6 +190,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   } = useProfilePlayoffBracket(resolvedUid, { enabled: fetchBracketData });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadge | null>(null);
   const [bracketReveal, setBracketReveal] = useState(false);
@@ -426,8 +429,22 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onOpenMenu={() => setDrawerOpen(true)}
+        onOpenProfileEdit={() => {
+          setDrawerOpen(false);
+          setProfileEditOpen(true);
+        }}
         variant="mobile"
       />
+
+      {profileEditOpen
+        ? createPortal(
+            <ProfileEditSheet
+              onClose={() => setProfileEditOpen(false)}
+              reopenMenu={() => setDrawerOpen(true)}
+            />,
+            document.body
+          )
+        : null}
 
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal

@@ -15,6 +15,11 @@ import { db } from "../../lib/firebase";
 import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
 import { parseUserProfileFields } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
+import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
+import {
+  PROFILE_PLAN_PRO_BG_DEFAULT,
+  type ProfilePlanProBgVariant,
+} from "../../../../../lib/profile/profilePlanProBgVariants";
 
 export type NativeProfileByHandleState = {
   loading: boolean;
@@ -27,6 +32,7 @@ export type NativeProfileByHandleState = {
   language: "ja" | "en";
   countryCode: string;
   plan: "free" | "pro";
+  planProBgVariant: ProfilePlanProBgVariant;
   currentStreak: number;
   maxStreak: number;
   memberSinceMs: number | null;
@@ -43,6 +49,7 @@ const idleState: NativeProfileByHandleState = {
   language: "ja",
   countryCode: "",
   plan: "free",
+  planProBgVariant: PROFILE_PLAN_PRO_BG_DEFAULT,
   currentStreak: 0,
   maxStreak: 0,
   memberSinceMs: null,
@@ -99,6 +106,7 @@ function mapUserDoc(
     language: data.language === "en" ? "en" : "ja",
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
     plan: data.plan === "pro" ? "pro" : "free",
+    planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
     currentStreak:
       typeof data.currentStreak === "number" && Number.isFinite(data.currentStreak)
         ? Math.max(0, Math.floor(data.currentStreak))

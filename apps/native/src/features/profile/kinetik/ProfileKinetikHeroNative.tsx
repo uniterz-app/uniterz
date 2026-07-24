@@ -7,6 +7,8 @@ import type { MyRankMetricValueDeltas } from "../../../../../../lib/rankings/myR
 import type { ProfileKinetikMetricsSection } from "../../../../../../lib/profile/profileKinetikMetricsSection";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "../profileApi";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
+import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
+import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
 
 export type ProfileKinetikHeroNativeProps = {
@@ -16,6 +18,7 @@ export type ProfileKinetikHeroNativeProps = {
   bio: string;
   countryCode: string;
   plan: "free" | "pro";
+  planProBgVariant?: ProfilePlanProBgVariant;
   memberSinceMs?: number | null;
   language: "ja" | "en";
   summary?: ProfileSummaryNative | null;
@@ -42,6 +45,7 @@ export default function ProfileKinetikHeroNative({
   bio,
   countryCode,
   plan,
+  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
   memberSinceMs = null,
   language,
   summary,
@@ -68,6 +72,7 @@ export default function ProfileKinetikHeroNative({
       bio,
       countryCode: countryCode.trim() || null,
       plan,
+      planProBgVariant,
       memberSinceMs: memberSinceMs ?? null,
       counts: { posts: summary?.posts ?? 0 },
       currentStreak: winStreak,
@@ -112,6 +117,7 @@ export default function ProfileKinetikHeroNative({
       handle,
       memberSinceMs,
       plan,
+      planProBgVariant,
       profileStatsContext,
       summary,
       summaryRanks,
@@ -139,6 +145,7 @@ export default function ProfileKinetikHeroNative({
       countryCode={countryCode}
       memberSinceMs={memberSinceMs}
       isPro={plan === "pro"}
+      planProBgVariant={planProBgVariant}
       winStreak={headerSection?.winStreak ?? mapped.winStreak}
       totalPointsRank={headerSection?.totalPointsRank ?? mapped.totalPointsRank}
       totalPointsRankDenominator={

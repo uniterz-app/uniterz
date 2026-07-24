@@ -1,7 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { useFonts, loadAsync as loadFontAsync } from "expo-font";
-import { Oxanium_700Bold, Oxanium_800ExtraBold } from "@expo-google-fonts/oxanium";
+import { Oxanium_600SemiBold, Oxanium_700Bold, Oxanium_800ExtraBold } from "@expo-google-fonts/oxanium";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import { Montserrat_900Black_Italic } from "@expo-google-fonts/montserrat";
 import { AlfaSlabOne_400Regular } from "@expo-google-fonts/alfa-slab-one";
@@ -29,6 +29,7 @@ export default function App() {
   const [fontsLoaded] = useFonts({
     BebasNeue_400Regular,
     Montserrat_900Black_Italic,
+    Oxanium_600SemiBold,
     Oxanium_700Bold,
     Oxanium_800ExtraBold,
     AlfaSlabOne_400Regular,

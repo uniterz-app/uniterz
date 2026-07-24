@@ -8,7 +8,6 @@ import {
 import { type RankingsLanguage } from "./rankingsTexts";
 import {
   CyberSlantedTabBarNative,
-  CyberSlantedTabGridItemNative,
   CyberSlantedTabNative,
 } from "./CyberSlantedTabNative";
 
@@ -38,56 +37,36 @@ export function RankingsMetricRowNative({
     return null;
   }
 
-  const useGrid = gridColumns === 3;
-
   function renderTab(item: MobileMetric) {
-    const active = metric === item;
     return (
       <CyberSlantedTabNative
+        key={item}
         label={pillMetricLabel(item, language)}
-        active={active}
+        active={metric === item}
         fill
         compact
         accessibilityRole="tab"
-        accessibilityState={{ selected: active }}
+        accessibilityState={{ selected: metric === item }}
         onPress={() => onChange(item)}
       />
     );
   }
 
-  if (useGrid) {
+  /**
+   * Web `grid-cols-3 gap-y-2`。
+   * バー側の paddingVertical を重ねると行間が開きすぎるので 0 にし、gap だけにする。
+   */
+  if (gridColumns === 3) {
     const row1 = metrics.slice(0, 3);
     const row2 = metrics.slice(3);
     return (
       <View style={styles.metricGrid}>
         <CyberSlantedTabBarNative fill style={styles.metricGridRow}>
-          {row1.map((item) => (
-            <CyberSlantedTabNative
-              key={item}
-              label={pillMetricLabel(item, language)}
-              active={metric === item}
-              fill
-              compact
-              accessibilityRole="tab"
-              accessibilityState={{ selected: metric === item }}
-              onPress={() => onChange(item)}
-            />
-          ))}
+          {row1.map(renderTab)}
         </CyberSlantedTabBarNative>
         {row2.length > 0 ? (
           <CyberSlantedTabBarNative fill style={styles.metricGridRow}>
-            {row2.map((item) => (
-              <CyberSlantedTabNative
-                key={item}
-                label={pillMetricLabel(item, language)}
-                active={metric === item}
-                fill
-                compact
-                accessibilityRole="tab"
-                accessibilityState={{ selected: metric === item }}
-                onPress={() => onChange(item)}
-              />
-            ))}
+            {row2.map(renderTab)}
           </CyberSlantedTabBarNative>
         ) : null}
       </View>
@@ -95,22 +74,25 @@ export function RankingsMetricRowNative({
   }
 
   return (
-    <CyberSlantedTabBarNative fill>
-      {metrics.map((item) => (
-        <CyberSlantedTabGridItemNative key={item}>
-          {renderTab(item)}
-        </CyberSlantedTabGridItemNative>
-      ))}
-    </CyberSlantedTabBarNative>
+    <View style={styles.wrap}>
+      <CyberSlantedTabBarNative fill>{metrics.map(renderTab)}</CyberSlantedTabBarNative>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    width: "100%",
+    overflow: "visible",
+  },
+  /** Web `gap-y-2` 相当（行間のみ） */
   metricGrid: {
     width: "100%",
-    gap: 4,
+    gap: 6,
+    overflow: "visible",
+    paddingVertical: 2,
   },
   metricGridRow: {
-    paddingBottom: 0,
+    paddingVertical: 0,
   },
 });

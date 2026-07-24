@@ -6,7 +6,7 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { pickNbaCumulativeRankingSlice, pickNbaDailyIncBucket } from "@/lib/rankings/pickNbaStatsBucket";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
@@ -162,13 +162,11 @@ export function summaryFromWcCumulativeStage(
   };
 }
 
-/** NBA 現行シーズン（rankingBySeason.<key>）のサマリー */
+/** NBA サマリー（現行シーズンが空なら前シーズン／旧 playoffs へフォールバック） */
 export function summaryFromSeasonRanking(
   cumulative: Record<string, unknown> | null
 ): ProfileSummaryForCards {
-  const bySeason = ((cumulative?.rankingBySeason as Record<string, unknown>) ??
-    {}) as Record<string, Record<string, unknown> | undefined>;
-  const r = bySeason[CURRENT_NBA_SEASON_KEY] ?? {};
+  const r = pickNbaCumulativeRankingSlice(cumulative);
   const posts = safeInt(r.totalPosts);
   const wins = safeInt(r.totalWins);
   const pointsSumV3 = safeNum(r.totalPoints);
@@ -214,8 +212,7 @@ function pickWcDailyRow(
 function pickNbaDailyRow(
   data: Record<string, unknown>
 ): Record<string, unknown> {
-  const bySeason = (data.rankingBySeason ?? {}) as Record<string, unknown>;
-  return (bySeason[CURRENT_NBA_SEASON_KEY] ?? {}) as Record<string, unknown>;
+  return pickNbaDailyIncBucket(data);
 }
 
 async function fetchTodayDailyDoc(db: Firestore, uid: string) {

@@ -478,6 +478,9 @@ const ja = {
     games: "試合",
     worldCup: "ワールドカップ",
     nba: "NBA",
+    bracket: "ブラケット",
+    awardsPredict: "アワード予想",
+    standingsPredict: "順位予想",
     live: "試合中",
     liveAriaLabel: "ライブ中",
     final: "終了",
@@ -637,6 +640,7 @@ const ja = {
     announcementNotFound: "お知らせが見つかりません。",
     planStatus: "プランステータス",
     proSkin: "Pro Skin",
+    deleteAccount: "アカウント削除",
     freePlan: "Free Plan",
     proPlan: "Pro Plan",
     upgradeToPro: "Pro にアップグレード",
@@ -889,6 +893,132 @@ const ja = {
       period: "2026 FIFA World Cup グループステージ",
       target: "ワールドカップ グループステージ",
       reward: "ワールドカップ優勝国のジャージ",
+    },
+  },
+
+  tutorial: {
+    skip: "スキップ",
+    back: "戻る",
+    next: "次へ",
+    seeGames: "試合を見る",
+    pulseHint: "タップして予想!",
+    hybrid: {
+      welcomeKicker: "WELCOME",
+      welcomeTitle: "UNITERZへようこそ",
+      welcomeBody:
+        "試合を予想してポイントを稼ぎ、ランキングを競いましょう。",
+      flowKicker: "HOW TO PLAY",
+      flowTitle: "遊び方はかんたん",
+      flowBody:
+        "試合カードをタップ → 勝敗・スコアを予想 → 的中でランクアップ。",
+      startKicker: "READY",
+      startTitle: "さっそく予想してみよう",
+      startBody:
+        "閉じると試合カードが光ります。光っているカードをタップして、最初の予想を投稿してください。",
+    },
+    practice: {
+      tabGames: "試合",
+      tabResult: "リザルト",
+      tabRankings: "ランキング",
+      tabGroups: "グループ",
+      tabProfile: "マイ",
+      welcomeTitle: "ようこそ",
+      welcomeBody:
+        "試合を予想してポイントを稼ぎ、ランキングで競うアプリです。まずは画面上で基本の流れを体験しましょう。",
+      tapTitle: "試合カードをタップ",
+      tapBody:
+        "NBAのモック試合です。光っているカードをタップして予想を始めましょう。本番データには影響しません。",
+      tapHint: "上のカードをタップしてください",
+      guideTitle: "予想の入力画面",
+      guideBody:
+        "勝敗はスコアから自動で決まります。HOME / AWAY の得点を入れて、下の投稿ボタンを押してください。",
+      startPredict: "予想してみる",
+      inputTitle: "勝敗とスコアを選ぶ",
+      inputBody:
+        "HOME と AWAY に得点を入力してください。投稿しただけでは HIT は出ません。次のステップで試合終了後のリザルトを体験します。",
+      predictScoresTitle: "スコア入力欄",
+      predictScoresBody:
+        "HOME / AWAY の予想得点を入れる欄です。勝敗はスコアから自動で決まります。",
+      predictOverviewTitle: "予想の画面",
+      predictOverviewBody:
+        "スコアを予想して投稿すると、試合後のリザルトで HIT / MISS が付きます。上から順に各パーツを確認しましょう。",
+      predictSidesTitle: "HOME と AWAY",
+      predictSidesBody:
+        "左が HOME、右が AWAY です。得点入力も同じ左右の並びになります。",
+      predictMarketTitle: "市場の偏り",
+      predictMarketBody:
+        "他ユーザーの予想の偏りです。どちらのチームに票が集まっているかが分かります。",
+      predictToolsTitle: "試合の情報タブ",
+      predictToolsBody:
+        "INSIGHT（Pro）・INJURY・STATS・ROSTER で怪我やスタッツ、ロスターを確認できます。切替えて参考にしてから予想しましょう。",
+      predictBonusTitle: "最多得点者ボーナス",
+      predictBonusBody:
+        "試合の最多得点者を当てると +2 点。候補が出ている試合では選手を選びます。",
+      predictEnterTitle: "得点を入れてみよう",
+      predictEnterBody: "HOME と AWAY の両方に予想得点を入れてください。",
+      predictEnterWait: "両方の得点を入れると「次へ」が押せます",
+      predictSubmitTitle: "ここを押して投稿",
+      predictSubmitBody:
+        "予想を送ります。HIT / MISS は試合後のリザルトで確認します。",
+      predictSubmitWait: "光っているボタンをタップして投稿",
+      submitPredict: "得点を入れて → 投稿する",
+      errNeedWinner: "勝敗を選んでください",
+      errNeedScore: "スコアを正しく入力してください",
+      errHomeWinScore: "ホーム勝利ならホームの点数を高くしてください",
+      errAwayWinScore: "アウェイ勝利ならアウェイの点数を高くしてください",
+      postedTitle: "あとは試合待ち",
+      postedBody:
+        "本番では試合が終わるまで HIT / MISS は出ません。次で終了後のリザルトを体験します。",
+      resolvingTitle: "試合終了…",
+      resolvingBody: "モック試合が終了しました。結果を集計しています…",
+      resolvingSpin: "FINALIZING",
+      gotoResultsTitle: "リザルトで確認",
+      gotoResultsBody:
+        "結果はリザルトタブに出ます。下のタブをタップしてください。",
+      gotoRankingsTitle: "ランキングへ",
+      gotoRankingsBody:
+        "次はランキングタブです。下のタブをタップしてください。",
+      gotoGroupsTitle: "グループへ",
+      gotoGroupsBody:
+        "次はグループタブです。下のタブをタップしてください。",
+      gotoProfileTitle: "プロフィールへ",
+      gotoProfileBody:
+        "次はプロフィールタブです。下のタブをタップしてください。",
+      resultHitTitle: "HIT！的中です",
+      resultHitBody:
+        "勝敗が当たりました。{bonus}+{pts}pt が入るイメージです。スコア精度も予想との近さで点数が付きます。本番でも毎回、リザルトでこうして確認します。",
+      resultCardTapHint: "カードをタップして詳細を見る",
+      resultScoreBonus: "スコアも完全一致でボーナス！",
+      resultMissTitle: "MISS…はずれ",
+      resultMissBody:
+        "勝敗が外れました。本番でも結果はリザルトで確認できます。次の試合で取り返しましょう。",
+      resultDetailTitle: "リザルトの中身",
+      resultDetailBody:
+        "最終スコア・あなたの予想・得点の内訳を確認できます。上から順に見ていきましょう。",
+      resultDetailScoreTitle: "最終スコアと予想",
+      resultDetailScoreBody:
+        "大きい数字が試合結果、下があなたの予想です。勝敗が当たると HIT、外れると MISS が付きます。",
+      resultDetailStatsTitle: "3つの指標",
+      resultDetailStatsBody:
+        "スコア精度は予想得点の近さ（0〜10）。アップセットは番狂わせ的中時の加点。総合得点は勝敗点＋各種ボーナスの合計です。",
+      resultDetailMoreTitle: "下にも続きがあります",
+      resultDetailMoreBody:
+        "スクロールすると得点分布などの詳細も見られます。本番のリザルトも同じ画面です。",
+      yourPickLabel: "あなたの予想",
+      rankingsTitle: "ランキング",
+      rankingsBody: "的中ポイントで順位が決まります。期間やカテゴリを切り替えて確認。",
+      groupsTitle: "グループ",
+      groupsBody: "友達・コミュニティだけの順位表。招待コードでも参加できます。",
+      groupsMockName: "ナイトオウルズ",
+      groupsMockMeta: "メンバー 8人 · あなたはグループ内 2位",
+      profileTitle: "プロフィール",
+      profileBody: "成績・連勝・設定・プランはここ。アイコンや名前も変更できます。",
+      profileMockStats: "的中率 · 連勝 · 総ポイント",
+      doneTitle: "準備OK",
+      doneBody:
+        "これが UNITERZ の基本の流れです。本番の試合で予想を投稿して、ランキングを目指しましょう。",
+      finishCta: "アプリをはじめる",
+      tapNavHint: "下のタブをタップするか、「次へ」で移動できます",
     },
   },
 

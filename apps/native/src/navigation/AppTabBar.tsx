@@ -1,16 +1,44 @@
+import { useEffect, useRef } from "react";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Dimensions, Platform, Pressable, StyleSheet, View } from "react-native";
+import {
+  Dimensions,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import { colors } from "../theme/tokens";
 import { useNativeNavTabNotificationBadges } from "./useNativeNavTabNotificationBadges";
 import NavBarChamferShellNative from "./NavBarChamferShellNative";
+import { registerTutorialTarget } from "../features/tutorial/tutorialMeasureNative";
+import {
+  readTutorialLivePhaseNative,
+  writeTutorialLivePhaseNative,
+} from "../features/tutorial/tutorialLivePhaseNative";
+
+/** Web NavBar `data-tutorial-target` 相当 */
+const TUTORIAL_TARGET_BY_ROUTE: Record<string, string> = {
+  GamesTab: "nav-games",
+  ResultTab: "nav-home",
+  RankingsTab: "nav-ranking",
+  LeaderboardsTab: "nav-leaderboards",
+  ProfileTab: "nav-mypage",
+};
 
 const TAB_ICONS: Record<string, React.ComponentProps<typeof MaterialCommunityIcons>["name"]> = {
   GamesTab: "sword-cross",
-  ResultTab: "brain",
   RankingsTab: "trophy-outline",
   ProfileTab: "account-outline",
 };
+
+/** リザルトのみカスタム画像。他は従来アイコン */
+const RESULT_ICON = require("../../assets/navbar/result.png") as number;
+
+const ICON_SIZE = 23;
+/** リザルト（カスタム画像）のみ大きく */
+const RESULT_ICON_SIZE = 32;
 
 /** mobile Web NavBar と色味を揃えたカスタムタブバー */
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -37,9 +65,11 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                 const active = state.index === index;
                 const iconName = TAB_ICONS[route.name] ?? "circle-outline";
                 const iconColor = active ? colors.tabActive : colors.tabInactive;
+                const isResult = route.name === "ResultTab";
                 const iconStyle = active
                   ? {
                       transform: [{ scale: 1.04 }],
+                      opacity: 1,
                       ...(Platform.OS === "ios"
                         ? {
                             shadowColor: "rgba(186,230,253,0.42)",
@@ -49,7 +79,10 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                           }
                         : { elevation: 6 }),
                     }
-                  : { transform: [{ scale: 0.92 }], opacity: 0.9 };
+                  : {
+                      transform: [{ scale: 0.92 }],
+                      opacity: isResult ? 0.42 : 0.9,
+                    };
 
                 const onPress = () => {
                   const event = navigation.emit({
@@ -58,6 +91,28 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     canPreventDefault: true,
                   });
                   if (event.defaultPrevented) return;
+
+                  void (async () => {
+                    const phase = await readTutorialLivePhaseNative();
+                    if (phase === "gotoResults" && route.name === "ResultTab") {
+                      await writeTutorialLivePhaseNative("results");
+                    } else if (
+                      phase === "gotoRankings" &&
+                      route.name === "RankingsTab"
+                    ) {
+                      await writeTutorialLivePhaseNative("rankings");
+                    } else if (
+                      phase === "gotoGroups" &&
+                      route.name === "LeaderboardsTab"
+                    ) {
+                      await writeTutorialLivePhaseNative("groups");
+                    } else if (
+                      phase === "gotoProfile" &&
+                      route.name === "ProfileTab"
+                    ) {
+                      await writeTutorialLivePhaseNative("profile");
+                    }
+                  })();
 
                   if (route.name === "ProfileTab") {
                     navigation.navigate("ProfileTab", {
@@ -72,27 +127,38 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                   }
                 };
 
+                const tutorialTarget = TUTORIAL_TARGET_BY_ROUTE[route.name];
+
                 return (
-                  <Pressable
+                  <TutorialTabButton
                     key={route.key}
-                    accessibilityRole="button"
+                    tutorialTarget={tutorialTarget}
                     accessibilityState={active ? { selected: true } : {}}
                     accessibilityLabel={options.tabBarAccessibilityLabel}
                     onPress={onPress}
                     style={[styles.tabButton, active && styles.tabButtonActive]}
                   >
                     <View style={styles.iconWrap}>
-                      {route.name === "LeaderboardsTab" ? (
+                      {isResult ? (
+                        <Image
+                          source={RESULT_ICON}
+                          style={[
+                            { width: RESULT_ICON_SIZE, height: RESULT_ICON_SIZE },
+                            iconStyle,
+                          ]}
+                          resizeMode="contain"
+                        />
+                      ) : route.name === "LeaderboardsTab" ? (
                         <MaterialIcons
                           name="groups"
-                          size={23}
+                          size={ICON_SIZE}
                           color={iconColor}
                           style={iconStyle}
                         />
                       ) : (
                         <MaterialCommunityIcons
                           name={iconName}
-                          size={23}
+                          size={ICON_SIZE}
                           color={iconColor}
                           style={iconStyle}
                         />
@@ -104,7 +170,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                         <View style={styles.dot} />
                       ) : null}
                     </View>
-                  </Pressable>
+                  </TutorialTabButton>
                 );
               })}
             </View>
@@ -112,6 +178,55 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
         </View>
       </View>
     </View>
+  );
+}
+
+/** measureInWindow 登録付きタブボタン */
+function TutorialTabButton({
+  tutorialTarget,
+  children,
+  style,
+  onPress,
+  accessibilityState,
+  accessibilityLabel,
+}: {
+  tutorialTarget?: string;
+  children: React.ReactNode;
+  style?: object | object[];
+  onPress: () => void;
+  accessibilityState?: { selected?: boolean };
+  accessibilityLabel?: string;
+}) {
+  const ref = useRef<View>(null);
+
+  useEffect(() => {
+    if (!tutorialTarget) return;
+    return registerTutorialTarget(tutorialTarget, () =>
+      new Promise((resolve) => {
+        const node = ref.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width > 0 && height > 0) resolve({ x, y, width, height });
+          else resolve(null);
+        });
+      })
+    );
+  }, [tutorialTarget]);
+
+  return (
+    <Pressable
+      ref={ref}
+      accessibilityRole="button"
+      accessibilityState={accessibilityState}
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={style}
+    >
+      {children}
+    </Pressable>
   );
 }
 

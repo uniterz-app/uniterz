@@ -3,8 +3,10 @@
 import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation } from "framer-motion";
 import { Suspense, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 import { useProfileOverviewStage } from "@/lib/profile/useProfileOverviewStage";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
@@ -187,6 +189,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     null
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [bracketReveal, setBracketReveal] = useState(false);
 
   useEffect(() => {
@@ -395,8 +398,22 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onOpenMenu={() => setDrawerOpen(true)}
+        onOpenProfileEdit={() => {
+          setDrawerOpen(false);
+          setProfileEditOpen(true);
+        }}
         variant="web"
       />
+
+      {profileEditOpen
+        ? createPortal(
+            <ProfileEditSheet
+              onClose={() => setProfileEditOpen(false)}
+              reopenMenu={() => setDrawerOpen(true)}
+            />,
+            document.body
+          )
+        : null}
 
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal

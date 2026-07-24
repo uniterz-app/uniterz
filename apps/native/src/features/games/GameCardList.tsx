@@ -1,5 +1,6 @@
 import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
+import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
 import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
@@ -26,6 +27,8 @@ import {
   useGameCardListRowEntrance,
   type GameCardEntranceVariant,
 } from "./useGameCardListRowEntrance";
+import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
+import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
 type ScreenStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
 type GameCardListProps = {
@@ -64,6 +67,11 @@ type GameCardListProps = {
     side: unknown,
     fallback: string
   ) => { primary: string; secondary: string };
+  /** 先頭カードにパルス誘導（初回チュートリアル） */
+  tutorialPulseFirstCard?: boolean;
+  tutorialPulseLabel?: string;
+  /** `match-card` 測定を登録（ライブチュートリアル） */
+  tutorialRegisterMatchCard?: boolean;
 };
 
 type GameCardListRowProps = GameCardListProps & {
@@ -99,7 +107,30 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
     enteringAnimationEnabled,
     entranceVariant,
     language,
+    tutorialPulseFirstCard = false,
+    tutorialPulseLabel,
+    tutorialRegisterMatchCard = false,
   } = props;
+
+  const showTutorialPulse = tutorialPulseFirstCard && rowIndex === 0;
+  const cardMeasureRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (rowIndex !== 0 || !tutorialRegisterMatchCard) return;
+    return registerTutorialTarget("match-card", () =>
+      new Promise((resolve) => {
+        const node = cardMeasureRef.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width > 0 && height > 0) resolve({ x, y, width, height });
+          else resolve(null);
+        });
+      })
+    );
+  }, [rowIndex, tutorialRegisterMatchCard]);
 
   const reduceMotion = useReducedMotion() ?? false;
   const gameId = String(game.id ?? "");
@@ -195,6 +226,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   });
 
   return (
+    <View ref={cardMeasureRef} collapsable={false}>
     <AnimatedPressable
       collapsable={false}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
@@ -207,8 +239,23 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
         if (reduceMotion) return;
         ent.pressed.value = withTiming(0, { duration: 160 });
       }}
-      style={[styles.gameCardOuter, ent.shellTransformStyle]}
+      style={[
+        styles.gameCardOuter,
+        ent.shellTransformStyle,
+        showTutorialPulse
+          ? {
+              borderWidth: 2,
+              borderColor: TUTORIAL_CYAN,
+              overflow: "visible" as const,
+              // パルス枠・バッジがリスト端で見切れない余白
+              marginTop: 4,
+            }
+          : null,
+      ]}
     >
+      {showTutorialPulse ? (
+        <TutorialCardTapHintNative label={tutorialPulseLabel} />
+      ) : null}
       <MatchListCyberClipNative
         predicted={isPredicted}
         strokeOpacityStyle={ent.borderStrokeStyle}
@@ -452,6 +499,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
         </Animated.View>
       </MatchListCyberClipNative>
     </AnimatedPressable>
+    </View>
   );
 });
 

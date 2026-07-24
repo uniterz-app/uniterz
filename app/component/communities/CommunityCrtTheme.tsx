@@ -135,30 +135,40 @@ export function CommunityCrtSectionLabel({
   children,
   suffix,
   large = false,
+  accent = "cyan",
 }: {
   children: ReactNode;
   suffix?: string;
   large?: boolean;
+  accent?: "cyan" | "amber";
 }) {
   const textCls = large ? "text-sm sm:text-base" : "text-xs sm:text-sm";
   const suffixCls = large ? "text-xs sm:text-sm" : "text-[11px] sm:text-xs";
+  const isAmber = accent === "amber";
+  const lineGrad = isAmber
+    ? "linear-gradient(90deg, transparent, rgba(251,191,36,0.32), rgba(251,191,36,0.08))"
+    : "linear-gradient(90deg, transparent, rgba(34,211,238,0.28), rgba(34,211,238,0.08))";
+  const lineGradRev = isAmber
+    ? "linear-gradient(270deg, transparent, rgba(251,191,36,0.32), rgba(251,191,36,0.08))"
+    : "linear-gradient(270deg, transparent, rgba(34,211,238,0.28), rgba(34,211,238,0.08))";
 
   return (
     <div className="mb-3 flex items-center gap-3">
       <span
         aria-hidden
         className="h-px min-w-[1.25rem] flex-1"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent, rgba(34,211,238,0.28), rgba(34,211,238,0.08))",
-        }}
+        style={{ background: lineGrad }}
       />
       <div className="flex shrink-0 items-center gap-2">
         <p
           className={["tracking-[0.2em]", textCls].join(" ")}
           style={{
-            color: "rgba(186,230,253,0.86)",
-            textShadow: "0 0 10px rgba(34,211,238,0.28)",
+            color: isAmber
+              ? "rgba(253,230,138,0.88)"
+              : "rgba(186,230,253,0.86)",
+            textShadow: isAmber
+              ? "0 0 10px rgba(251,191,36,0.32)"
+              : "0 0 10px rgba(34,211,238,0.28)",
           }}
         >
           {children}
@@ -166,7 +176,10 @@ export function CommunityCrtSectionLabel({
         {suffix ? (
           <p
             className={[
-              "rounded border border-cyan-400/18 bg-cyan-500/[0.04] px-1.5 py-px font-mono tabular-nums tracking-wider text-cyan-200/50 backdrop-blur-sm",
+              "rounded border px-1.5 py-px font-mono tabular-nums tracking-wider backdrop-blur-sm",
+              isAmber
+                ? "border-amber-400/22 bg-amber-500/[0.06] text-amber-200/55"
+                : "border-cyan-400/18 bg-cyan-500/[0.04] text-cyan-200/50",
               suffixCls,
             ].join(" ")}
           >
@@ -177,10 +190,7 @@ export function CommunityCrtSectionLabel({
       <span
         aria-hidden
         className="h-px min-w-[1.25rem] flex-1"
-        style={{
-          background:
-            "linear-gradient(270deg, transparent, rgba(34,211,238,0.28), rgba(34,211,238,0.08))",
-        }}
+        style={{ background: lineGradRev }}
       />
     </div>
   );

@@ -247,7 +247,6 @@ function buildProfileStatsQuery(
   const qs = new URLSearchParams({
     uid,
     parts,
-    phase: "playoffs",
   });
   if (rankingLeague) qs.set("league", rankingLeague);
   if (safeWcStage) qs.set("wcStage", safeWcStage);
@@ -462,16 +461,16 @@ export async function fetchRankPlayoffTrend(
 ): Promise<RankPlayoffTrendPointNative[]> {
   const base = getUniterzApiBaseUrl();
   if (!base) return [];
-  const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "worldcup";
+  /** API 既定は nba。未指定で worldcup にすると WC 順位だけ取って空になる */
+  const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "nba";
   const wcStage: WcRankingStage =
     rankingLeague === "worldcup"
       ? ctx?.wcStage && isWcRankingStage(ctx.wcStage)
         ? ctx.wcStage
         : "overall"
       : "overall";
-  const qs = new URLSearchParams({ uid, phase: "playoffs" });
+  const qs = new URLSearchParams({ uid, league: rankingLeague });
   if (rankingLeague === "worldcup") {
-    qs.set("league", "worldcup");
     qs.set("wcStage", wcStage);
   }
   const url = `${base}/api/profile/rank-playoff-trend?${qs.toString()}`;

@@ -250,6 +250,15 @@ function MetricCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, delay: reduceMotion ? 0 : delay, ease: [0.22, 1, 0.36, 1] }}
     >
+      {isPlanPro ? (
+        <span
+          className="profile-plan-pro-metric-card__bar-bloom"
+          style={{
+            background: `linear-gradient(90deg, ${colors.glow} 0%, transparent 72%)`,
+          }}
+          aria-hidden
+        />
+      ) : null}
       <div
         className={[
           "absolute top-3 bottom-3 left-0",
@@ -257,9 +266,8 @@ function MetricCard({
         ].join(" ")}
         style={{
           background: colors.line,
-          boxShadow: isPlanPro
-            ? `0 0 10px color-mix(in srgb, ${colors.glow} 45%, transparent)`
-            : `0 0 8px ${colors.glow}`,
+          /** Pro は矩形シャドウを使わず bloom グラデでにじませる */
+          boxShadow: isPlanPro ? "none" : `0 0 8px ${colors.glow}`,
         }}
         aria-hidden
       />
@@ -409,35 +417,23 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
-function ProfileKinetikCountryUnderName({
-  countryCode,
-  align = "start",
-}: {
-  countryCode?: string | null;
-  align?: "start" | "center";
-}) {
+/** 名前行インライン国旗（Native / 参考レイアウト） */
+function ProfileKinetikNameFlag({ countryCode }: { countryCode?: string | null }) {
   const flagIso = countryCode?.trim().toUpperCase() || null;
   if (!flagIso) return null;
 
   return (
-    <div
-      className={[
-        "mt-1.5 flex w-full min-w-0",
-        align === "center" ? "justify-center md:justify-start" : "justify-start",
-      ].join(" ")}
-    >
-      <CountryFlag
-        iso2={flagIso}
-        variant="profileInline"
-        decorative
-        alt={flagIso}
-      />
-    </div>
+    <CountryFlag
+      iso2={flagIso}
+      variant="profileInline"
+      decorative
+      alt={flagIso}
+    />
   );
 }
 
-/** カード左下: 参加日 / 右: 共有 ID */
-function ProfileKinetikCardFooter({
+/** ヘッダー: 参加日（左） / 共有 ID（右）— Native `KinetikIdentityJoinIdRowNative` 相当 */
+function ProfileKinetikIdentityJoinIdRow({
   memberSinceLabel,
   systemId,
   shareLabel,
@@ -455,19 +451,18 @@ function ProfileKinetikCardFooter({
   if (!memberSinceLabel && !systemId) return null;
 
   return (
-    <div className="profile-edit-kinetik-card-footer mt-3 flex w-full min-w-0 items-end justify-between gap-2">
+    <div className="profile-edit-kinetik-identity-join-id mt-1 flex w-fit max-w-full min-w-0 items-end justify-start gap-2">
       {memberSinceLabel ? (
         <p className="profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity shrink-0 whitespace-nowrap">
           {memberSinceLabel}
         </p>
-      ) : (
-        <span />
-      )}
+      ) : null}
       {systemId ? (
         <button
           type="button"
           className={[
-            "profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity shrink-0 whitespace-nowrap transition",
+            "profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity",
+            "profile-edit-kinetik-footer-ref--id shrink-0 whitespace-nowrap transition",
             "hover:text-white/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30",
           ].join(" ")}
           onClick={onShare}
@@ -1166,7 +1161,7 @@ export default function ProfileEditKinetikPanel({
               />
               <div
                 className={[
-                  "mt-3 flex min-w-0 items-center gap-2",
+                  "mt-3 flex min-w-0 flex-wrap items-center gap-2",
                   "justify-center md:justify-start",
                 ].join(" ")}
               >
@@ -1182,6 +1177,7 @@ export default function ProfileEditKinetikPanel({
                 >
                   {identity.displayName}
                 </h2>
+                <ProfileKinetikNameFlag countryCode={countryCode} />
                 {isPro ? (
                   <ProCyberBadge
                     premium
@@ -1189,10 +1185,16 @@ export default function ProfileEditKinetikPanel({
                   />
                 ) : null}
               </div>
-              <ProfileKinetikCountryUnderName
-                countryCode={countryCode}
-                align="center"
-              />
+              <div className="mt-1 w-full md:max-w-none">
+                <ProfileKinetikIdentityJoinIdRow
+                  memberSinceLabel={memberSinceLabel}
+                  systemId={identity.systemId}
+                  shareLabel={metricCopy.shareProfile}
+                  shareCopiedLabel={metricCopy.shareCopied}
+                  shareCopied={shareCopied}
+                  onShare={handleShareProfile}
+                />
+              </div>
               {bio?.trim() ? (
                 <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-white/50 md:text-[15px]">
                   {bio.trim()}
@@ -1217,16 +1219,6 @@ export default function ProfileEditKinetikPanel({
               {metricsContent}
             </div>
           </div>
-        </div>
-        <div className="px-6 pb-5 md:px-7 md:pb-6">
-          <ProfileKinetikCardFooter
-            memberSinceLabel={memberSinceLabel}
-            systemId={identity.systemId}
-            shareLabel={metricCopy.shareProfile}
-            shareCopiedLabel={metricCopy.shareCopied}
-            shareCopied={shareCopied}
-            onShare={handleShareProfile}
-          />
         </div>
       </ProfileKinetikPanelFrame>
       {badgeDetailModal}
@@ -1291,9 +1283,17 @@ export default function ProfileEditKinetikPanel({
                   >
                     {identity.displayName}
                   </h2>
+                  <ProfileKinetikNameFlag countryCode={countryCode} />
                   <ProCyberBadge premium ariaLabel={metricCopy.proMember} />
                 </div>
-                <ProfileKinetikCountryUnderName countryCode={countryCode} />
+                <ProfileKinetikIdentityJoinIdRow
+                  memberSinceLabel={memberSinceLabel}
+                  systemId={identity.systemId}
+                  shareLabel={metricCopy.shareProfile}
+                  shareCopiedLabel={metricCopy.shareCopied}
+                  shareCopied={shareCopied}
+                  onShare={handleShareProfile}
+                />
               </div>
             </div>
           </div>
@@ -1321,15 +1321,6 @@ export default function ProfileEditKinetikPanel({
             {metricsScopeHeader}
             {metricsContent}
           </div>
-
-          <ProfileKinetikCardFooter
-            memberSinceLabel={memberSinceLabel}
-            systemId={identity.systemId}
-            shareLabel={metricCopy.shareProfile}
-            shareCopiedLabel={metricCopy.shareCopied}
-            shareCopied={shareCopied}
-            onShare={handleShareProfile}
-          />
         </div>
       ) : (
         <div className="profile-edit-kinetik-header-block">
@@ -1367,8 +1358,16 @@ export default function ProfileEditKinetikPanel({
                   >
                     {identity.displayName}
                   </h2>
+                  <ProfileKinetikNameFlag countryCode={countryCode} />
                 </div>
-                <ProfileKinetikCountryUnderName countryCode={countryCode} />
+                <ProfileKinetikIdentityJoinIdRow
+                  memberSinceLabel={memberSinceLabel}
+                  systemId={identity.systemId}
+                  shareLabel={metricCopy.shareProfile}
+                  shareCopiedLabel={metricCopy.shareCopied}
+                  shareCopied={shareCopied}
+                  onShare={handleShareProfile}
+                />
               </div>
             </div>
             <div
@@ -1399,17 +1398,6 @@ export default function ProfileEditKinetikPanel({
         {metricsScopeHeader}
         {metricsContent}
       </div>
-      ) : null}
-
-      {!isPro ? (
-        <ProfileKinetikCardFooter
-          memberSinceLabel={memberSinceLabel}
-          systemId={identity.systemId}
-          shareLabel={metricCopy.shareProfile}
-          shareCopiedLabel={metricCopy.shareCopied}
-          shareCopied={shareCopied}
-          onShare={handleShareProfile}
-        />
       ) : null}
 
     </ProfileKinetikPanelFrame>

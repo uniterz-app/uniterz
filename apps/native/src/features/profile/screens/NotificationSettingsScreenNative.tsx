@@ -161,7 +161,7 @@ export default function NotificationSettingsScreenNative() {
           : labels.osUnknown;
 
   return (
-    <LegalPageLayoutNative title={labels.title} description={labels.description}>
+    <LegalPageLayoutNative title="ALERTS" description={labels.description}>
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>{labels.osSection}</Text>
         <View style={styles.osRow}>

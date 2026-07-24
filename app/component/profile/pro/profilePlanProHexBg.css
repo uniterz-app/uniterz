@@ -28,6 +28,12 @@
   background-size: 100% 100% !important;
 }
 
+/* Web 横長 — 縦長柄は cover で比率維持 */
+.profile-plan-pro-bg--web[class*="geo-hex-layout"] .profile-plan-pro-bg__geo-pattern {
+  background-size: cover !important;
+  background-position: 70% 42%;
+}
+
 /* 全レイアウト共通のグロー */
 .profile-plan-pro-bg[class*="geo-hex-layout"] .profile-plan-pro-bg__geo-glow {
   background: radial-gradient(

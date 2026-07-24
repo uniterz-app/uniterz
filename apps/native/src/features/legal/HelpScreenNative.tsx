@@ -17,7 +17,7 @@ export default function HelpScreenNative() {
 
   return (
     <LegalPageLayoutNative
-      title={copy.title}
+      title="HELP"
       description={copy.description}
       updatedAt="2026-03-23"
       lastUpdatedLabel={copy.lastUpdatedLabel}

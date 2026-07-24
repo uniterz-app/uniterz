@@ -28,6 +28,7 @@ import { CommunityCrtSectionLabelNative } from "./CommunityCrtPartsNative";
 import CommunityMemberAvatarStackNative from "./CommunityMemberAvatarStackNative";
 import type { CommunityListGroup, CommunityListLimits } from "./communityApiNative";
 import { prefetchCommunityHeaderImageNative } from "./prefetchCommunityHeaderImageNative";
+import SquadBattleGroupEntryNative from "./SquadBattleGroupEntryNative";
 import {
   CRT_CYAN,
   communityCrtStyles,
@@ -48,6 +49,7 @@ type Props = {
   onCreate: () => void;
   onPreviewJoin: (code: string) => Promise<void>;
   onPasteJoin: () => Promise<string | null>;
+  onOpenSquadBattle?: () => void;
   labels: {
     hostSection: string;
     memberSection: string;
@@ -343,6 +345,7 @@ export default function CommunitySlotBoardNative({
   onCreate,
   onPreviewJoin,
   onPasteJoin,
+  onOpenSquadBattle,
   labels,
 }: Props) {
   const [expandedJoinSlot, setExpandedJoinSlot] = useState<string | null>(null);
@@ -379,6 +382,10 @@ export default function CommunitySlotBoardNative({
 
   return (
     <View style={styles.root}>
+      {onOpenSquadBattle ? (
+        <SquadBattleGroupEntryNative language={language} onOpen={onOpenSquadBattle} />
+      ) : null}
+
       <View style={styles.section}>
         <CommunityCrtSectionLabelNative suffix={labels.slotCount(ownedGroups.length, limits.maxOwned)}>
           {labels.hostSection}

@@ -1,5 +1,8 @@
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  previousNbaSeasonKey,
+} from "@/lib/rankings/nbaSeason";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { loadMostRecentPriorRankSnapshotHistory } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
@@ -42,7 +45,11 @@ function pickPriorValues(
   if (opts.rankingLeague === "worldcup") {
     return mv.wc?.[opts.wcStage] ?? null;
   }
-  return mv.seasons?.[CURRENT_NBA_SEASON_KEY] ?? null;
+  return (
+    mv.seasons?.[CURRENT_NBA_SEASON_KEY] ??
+    mv.seasons?.[previousNbaSeasonKey(CURRENT_NBA_SEASON_KEY)] ??
+    null
+  );
 }
 
 function winRateAsPct(raw: number | undefined): number {

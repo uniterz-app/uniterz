@@ -65,6 +65,8 @@ import {
 } from "@/lib/ui/predictOverlayCyber";
 import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
+import TutorialPredictAnnotator from "@/app/component/tutorial/TutorialPredictAnnotator";
+import { TUTORIAL_CYAN } from "@/lib/tutorial/tutorialMotion";
 import PredictTimingAdviceLine from "@/app/component/predict/PredictTimingAdviceLine";
 import PredictProInfoPanel from "@/app/component/predict/PredictProInfoPanel";
 import PredictOverlayScoreFields from "@/app/component/predict/PredictOverlayScoreFields";
@@ -137,6 +139,16 @@ type Props = {
   overlayHomeRecord?: MatchCardProps["homeRecord"];
   /** オーバーレイ: MatchCard から渡すアウェイ戦績（Pro Info チーム文脈用） */
   overlayAwayRecord?: MatchCardProps["awayRecord"];
+  /**
+   * チュートリアル練習用。API / 認証をスキップして onTutorialSubmit に渡す。
+   */
+  tutorialMode?: boolean;
+  onTutorialSubmit?: (payload: {
+    winner: "home" | "away" | "draw";
+    scoreHome: number;
+    scoreAway: number;
+    goalScorer?: { playerId: string; teamId: string } | null;
+  }) => void;
 };
 
 type Winner = "home" | "away" | "draw";
@@ -177,6 +189,8 @@ export default function PredictionFormV2({
   overlayUnifiedForm = false,
   overlayHomeRecord,
   overlayAwayRecord,
+  tutorialMode = false,
+  onTutorialSubmit,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -209,6 +223,11 @@ export default function PredictionFormV2({
     null | "stats" | "market" | "standings" | "preview" | "results"
   >(null);
   const [marketChartKey, setMarketChartKey] = useState(0);
+  const [tutorialAnnotDismissed, setTutorialAnnotDismissed] = useState(false);
+
+  useEffect(() => {
+    if (tutorialMode) setTutorialAnnotDismissed(false);
+  }, [tutorialMode]);
   /** Games オーバーレイ: 投稿後モーダル用の次試合 */
   const [nextGamePreview, setNextGamePreview] = useState<MatchCardProps | null>(
     null
@@ -766,9 +785,6 @@ export default function PredictionFormV2({
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
-    const me = auth.currentUser;
-    if (!me) return;
-
     const h = Number(scoreHome);
     const a = Number(scoreAway);
 
@@ -803,6 +819,30 @@ export default function PredictionFormV2({
         return;
       }
     }
+
+    /** チュートリアル: 認証・API をスキップ */
+    if (tutorialMode) {
+      if (!winner) return;
+      try {
+        setSubmitting(true);
+        onTutorialSubmit?.({
+          winner,
+          scoreHome: h,
+          scoreAway: a,
+          goalScorer: isNba
+            ? normalizeNbaTopScorerPick(goalScorerPick) ?? null
+            : null,
+        });
+        toast.success(m.predict.predictionSubmitted);
+        onPostCreated?.({ id: "tutorial-local", at: new Date() });
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    const me = auth.currentUser;
+    if (!me) return;
 
     try {
       setSubmitting(true);
@@ -1463,9 +1503,41 @@ export default function PredictionFormV2({
 
         {overlayFormLayout.showScoreForm ? (
           <>
+            {tutorialMode ? (
+              <TutorialPredictAnnotator
+                open={!tutorialAnnotDismissed}
+                overviewTitle={m.tutorial.practice.predictOverviewTitle}
+                overviewBody={m.tutorial.practice.predictOverviewBody}
+                sidesTitle={m.tutorial.practice.predictSidesTitle}
+                sidesBody={m.tutorial.practice.predictSidesBody}
+                marketTitle={m.tutorial.practice.predictMarketTitle}
+                marketBody={m.tutorial.practice.predictMarketBody}
+                toolsTitle={m.tutorial.practice.predictToolsTitle}
+                toolsBody={m.tutorial.practice.predictToolsBody}
+                scoresTitle={m.tutorial.practice.predictScoresTitle}
+                scoresBody={m.tutorial.practice.predictScoresBody}
+                bonusTitle={m.tutorial.practice.predictBonusTitle}
+                bonusBody={m.tutorial.practice.predictBonusBody}
+                enterTitle={m.tutorial.practice.predictEnterTitle}
+                enterBody={m.tutorial.practice.predictEnterBody}
+                submitTitle={m.tutorial.practice.predictSubmitTitle}
+                submitBody={m.tutorial.practice.predictSubmitBody}
+                nextLabel={m.tutorial.next}
+                skipLabel={m.tutorial.skip}
+                enterWaitHint={m.tutorial.practice.predictEnterWait}
+                submitWaitHint={m.tutorial.practice.predictSubmitWait}
+                enterReady={scoreHome !== "" && scoreAway !== ""}
+                backLabel={m.tutorial.back}
+                onSkip={() => setTutorialAnnotDismissed(true)}
+              />
+            ) : null}
             <motion.div
               {...fadeUpMotionProps}
-              className={`relative space-y-4 pt-1 ${glassCard}`}
+              className={`relative space-y-4 pt-1 ${glassCard} ${
+                tutorialMode
+                  ? "ring-1 ring-cyan-300/40 shadow-[0_0_18px_rgba(0,245,255,0.18)]"
+                  : ""
+              }`}
             >
               <PredictionScoringRulesChip
                 league={game.league}
@@ -1515,6 +1587,12 @@ export default function PredictionFormV2({
                 </div>
               ) : null}
 
+              <div
+                data-tutorial-target={
+                  tutorialMode ? "predict-scores" : undefined
+                }
+                className="relative z-1 space-y-4"
+              >
               {overlayEmbedded ? (
                 <PredictOverlayScoreFields
                   home={{
@@ -1621,6 +1699,7 @@ export default function PredictionFormV2({
                   </div>
                 </div>
               ) : null}
+              </div>
 
               {showScoreEdit && effectivePostId ? (
                 <button
@@ -1655,25 +1734,35 @@ export default function PredictionFormV2({
               ) : null}
 
               {isNba ? (
-                <NbaTopScorerPicker
-                  homeTeamId={game.home?.teamId}
-                  awayTeamId={game.away?.teamId}
-                  homeLabel={homeLabel}
-                  awayLabel={awayLabel}
-                  candidates={nbaTopScorerCandidates}
-                  value={
-                    goalScorerPick
-                      ? normalizeNbaTopScorerPick(goalScorerPick)
-                      : null
+                <div
+                  data-tutorial-target={
+                    tutorialMode ? "predict-bonus" : undefined
                   }
-                  onChange={setGoalScorerPick}
-                  language={language}
-                  isMobile={isMobile}
-                />
+                >
+                  <NbaTopScorerPicker
+                    homeTeamId={game.home?.teamId}
+                    awayTeamId={game.away?.teamId}
+                    homeLabel={homeLabel}
+                    awayLabel={awayLabel}
+                    candidates={nbaTopScorerCandidates}
+                    value={
+                      goalScorerPick
+                        ? normalizeNbaTopScorerPick(goalScorerPick)
+                        : null
+                    }
+                    onChange={setGoalScorerPick}
+                    language={language}
+                    isMobile={isMobile}
+                  />
+                </div>
               ) : null}
             </motion.div>
 
-            <motion.div {...fadeUpMotionProps} className="pt-0">
+            <motion.div
+              {...fadeUpMotionProps}
+              className="pt-0"
+              data-tutorial-target={tutorialMode ? "predict-submit" : undefined}
+            >
               <button
                 disabled={!canSubmit}
                 onClick={handleSubmit}
@@ -1682,7 +1771,15 @@ export default function PredictionFormV2({
                     ? PREDICT_OVERLAY_SUBMIT_BTN_CLASS
                     : PREDICT_OVERLAY_SUBMIT_BTN_DISABLED_CLASS,
                   "flex h-12 w-full items-center justify-center text-sm font-bold tracking-[0.06em]",
+                  tutorialMode && canSubmit
+                    ? "animate-pulse shadow-[0_0_22px_rgba(0,245,255,0.45)]"
+                    : "",
                 ].join(" ")}
+                style={
+                  tutorialMode && canSubmit
+                    ? { boxShadow: `0 0 22px ${TUTORIAL_CYAN}66` }
+                    : undefined
+                }
               >
                 {canSubmit ? (
                   <span

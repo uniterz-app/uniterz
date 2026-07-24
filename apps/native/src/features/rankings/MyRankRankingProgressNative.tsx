@@ -32,11 +32,17 @@ const TREND_THEME: Record<TrendState, { stroke: string; fill: string; glow: stri
   },
 };
 
-const PAD_L = 24;
-const PAD_R = 12;
+/**
+ * プロット余白。
+ * 左は Y ラベル幅 + ドット半径ぶん空けて、先頭点が軸ラベルに被らないようにする。
+ */
+const PAD_L = 36;
+const PAD_R = 16;
 const PAD_T = 14;
-const PAD_B = 16;
-const DOT_R = 9;
+const PAD_B = 20;
+const DOT_R = 10;
+/** 先頭/末尾ドットが枠や Y ラベルに食い込まないよう、系列の内側インセット */
+const SERIES_INSET = DOT_R + 4;
 
 function formatAxisDate(dateKey: string, language: "ja" | "en"): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey.trim());
@@ -92,7 +98,9 @@ export default function MyRankRankingProgressNative({
       return {
         linePath: Skia.Path.Make(),
         dots: [] as Array<{ x: number; y: number; rank: number; trend: TrendState }>,
-        gridYs: [] as number[],
+        hGrid: [] as Array<{ y: number; label: string }>,
+        vGrid: [] as number[],
+        xTicks: [] as Array<{ x: number; label: string }>,
       };
     }
     let minR = Infinity;
@@ -105,10 +113,15 @@ export default function MyRankRankingProgressNative({
     const pad = Math.max(1, Math.ceil(span * 0.15));
     const lo = Math.max(1, minR - pad);
     const hi = maxR + pad;
+    /** Web YAxis reversed — 良い順位（小さい数）が上 */
     const rankToY = (rank: number) =>
       PAD_T + ((rank - lo) / Math.max(1, hi - lo)) * plotInnerH;
+    /** 端のドットが Y ラベル / 右端に被らないようインセット */
+    const seriesW = Math.max(8, plotInnerW - SERIES_INSET * 2);
     const xForIndex = (i: number) =>
-      n === 1 ? PAD_L + plotInnerW / 2 : PAD_L + (i / (n - 1)) * plotInnerW;
+      n === 1
+        ? PAD_L + plotInnerW / 2
+        : PAD_L + SERIES_INSET + (i / (n - 1)) * seriesW;
 
     const dots = rows.map((row, i) => ({
       x: xForIndex(i),
@@ -117,6 +130,7 @@ export default function MyRankRankingProgressNative({
       trend: row.trend,
     }));
 
+    /** Web `type="monotone"` に近い滑らかな曲線 */
     const path = Skia.Path.Make();
     if (dots.length > 0) {
       path.moveTo(dots[0]!.x, dots[0]!.y);
@@ -128,12 +142,33 @@ export default function MyRankRankingProgressNative({
       }
     }
 
-    const step = Math.max(1, Math.ceil((hi - lo) / 3));
-    const gridYs: number[] = [];
-    for (let v = lo; v <= hi; v += step) gridYs.push(rankToY(v));
+    /** Web yTicks 相当 */
+    const yStep = Math.max(1, Math.ceil((hi - lo) / 4));
+    const yVals: number[] = [];
+    for (let v = lo; v <= hi; v += yStep) yVals.push(v);
+    if (yVals[yVals.length - 1]! < hi) yVals.push(hi);
+    const uniqueY = [...new Set(yVals)].sort((a, b) => a - b);
+    const hGrid = uniqueY.map((v) => ({
+      y: rankToY(v),
+      label: String(v),
+    }));
 
-    return { linePath: path, dots, gridYs };
-  }, [rows, plotW, chartHeight]);
+    /** Web XAxis interval — 多いときは間引き */
+    const xInterval = n > 6 ? 1 : 0;
+    const xTicks: Array<{ x: number; label: string }> = [];
+    const vGrid: number[] = [];
+    for (let i = 0; i < n; i++) {
+      if (xInterval > 0 && i % (xInterval + 1) !== 0 && i !== n - 1) continue;
+      const x = xForIndex(i);
+      xTicks.push({
+        x,
+        label: formatAxisDate(rows[i]!.dateKey, language),
+      });
+      vGrid.push(x);
+    }
+
+    return { linePath: path, dots, hGrid, vGrid, xTicks };
+  }, [rows, plotW, chartHeight, language]);
 
   const isEmpty = !loading && rows.length === 0;
 
@@ -168,13 +203,24 @@ export default function MyRankRankingProgressNative({
               style={StyleSheet.absoluteFill}
               pointerEvents="none"
             >
-              {model.gridYs.map((y, i) => (
+              {model.hGrid.map((g, i) => (
                 <SvgLine
-                  key={`g-${i}`}
+                  key={`h-${i}`}
                   x1={PAD_L}
-                  y1={y}
+                  y1={g.y}
                   x2={plotW - PAD_R}
-                  y2={y}
+                  y2={g.y}
+                  stroke={PROFILE_CHART_CYBER.cyanGridStrong}
+                  strokeWidth={1}
+                />
+              ))}
+              {model.vGrid.map((x, i) => (
+                <SvgLine
+                  key={`v-${i}`}
+                  x1={x}
+                  y1={PAD_T}
+                  x2={x}
+                  y2={chartHeight - PAD_B}
                   stroke={PROFILE_CHART_CYBER.cyanGridStrong}
                   strokeWidth={1}
                 />
@@ -226,6 +272,16 @@ export default function MyRankRankingProgressNative({
                 })}
               </Group>
             </Canvas>
+            {model.hGrid.map((g, i) => (
+              <Text
+                key={`yl-${i}`}
+                style={[styles.yTick, { top: g.y - 5 }]}
+                numberOfLines={1}
+                pointerEvents="none"
+              >
+                {g.label}
+              </Text>
+            ))}
             {model.dots.map((d, idx) => (
               <Text
                 key={`n-${idx}`}
@@ -236,16 +292,16 @@ export default function MyRankRankingProgressNative({
                 {d.rank}
               </Text>
             ))}
-            {rows.length > 1 ? (
-              <>
-                <Text style={[styles.xTick, styles.xTickLeft]} numberOfLines={1}>
-                  {formatAxisDate(rows[0]!.dateKey, language)}
-                </Text>
-                <Text style={[styles.xTick, styles.xTickRight]} numberOfLines={1}>
-                  {formatAxisDate(rows[rows.length - 1]!.dateKey, language)}
-                </Text>
-              </>
-            ) : null}
+            {model.xTicks.map((t, i) => (
+              <Text
+                key={`xt-${i}`}
+                style={[styles.xTick, { left: t.x - 16, width: 32 }]}
+                numberOfLines={1}
+                pointerEvents="none"
+              >
+                {t.label}
+              </Text>
+            ))}
           </>
         ) : null}
       </View>
@@ -315,6 +371,16 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     color: "rgba(255,255,255,0.4)",
   },
+  yTick: {
+    position: "absolute",
+    left: 0,
+    width: PAD_L - SERIES_INSET - 2,
+    textAlign: "right",
+    fontSize: 8,
+    color: PROFILE_CHART_CYBER.tick,
+    fontVariant: ["tabular-nums"],
+    zIndex: 2,
+  },
   dotLabel: {
     position: "absolute",
     textAlign: "center",
@@ -326,15 +392,10 @@ const styles = StyleSheet.create({
   },
   xTick: {
     position: "absolute",
-    bottom: 1,
+    bottom: 2,
+    textAlign: "center",
     fontSize: 7,
     color: PROFILE_CHART_CYBER.tick,
     fontVariant: ["tabular-nums"],
-  },
-  xTickLeft: {
-    left: PAD_L - 6,
-  },
-  xTickRight: {
-    right: PAD_R - 6,
   },
 });

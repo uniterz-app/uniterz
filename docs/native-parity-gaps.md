@@ -61,6 +61,13 @@
 
 ---
 
+## 追加ギャップ（Phase C 以降 / 随時）
+
+- [x] `squad-battle-intro` P2 | Web: `app/component/squads/SquadBattleIntroOverlay.tsx` + `lib/squads/squadBattleIntroMotion.ts` → Native: `SquadBattleIntroOverlayNative.tsx`（初回フルスクリーン・アンバー警告系・AsyncStorage 既読）。`SquadBattleScreenNative` に配線済み。
+- [x] `app-tutorial-hybrid` P1 | Web: パターンC → NBA モック練習ツアー `TutorialPracticeTour`（予想→HIT/MISS→ランキング/グループ/プロフィール）+ Native `TutorialPracticeTourNative`。`reads/appTutorial:v1`。
+
+---
+
 ## キュー運用
 
 - 先頭の `[ ]` を必ず次の作業とする

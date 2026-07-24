@@ -82,6 +82,7 @@ import {
   type RankingPeriod,
 } from "@/lib/rankings/rankingPeriod";
 import { usePeriodRankingsBulk } from "@/lib/rankings/usePeriodRankingsBulk";
+import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
 
 export default function MobileRankingsPage() {
   const searchParams = useSearchParams();
@@ -577,6 +578,7 @@ export default function MobileRankingsPage() {
           }}
         />
       </SideMenuDrawer>
+      <TutorialLiveHost page="rankings" />
     </div>
   );
 }

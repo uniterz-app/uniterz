@@ -7,7 +7,10 @@ import { CYBER_TAB_CYAN } from "@/app/component/rankings/CyberSlantedTab";
 
 type Props = {
   onClick: () => void;
-  icon: LucideIcon;
+  /** Lucide アイコン（`iconSrc` と排他） */
+  icon?: LucideIcon;
+  /** カスタム画像アイコン（`/…` の public パス） */
+  iconSrc?: string;
   iconSize?: number;
   children: ReactNode;
   /** 右端（未読バッジなど） */
@@ -28,6 +31,7 @@ type Props = {
 export default function SideMenuItemButton({
   onClick,
   icon: Icon,
+  iconSrc,
   iconSize = 18,
   children,
   trailing,
@@ -38,8 +42,16 @@ export default function SideMenuItemButton({
   className,
 }: Props) {
   const sz = dense ? Math.max(14, iconSize - 2) : iconSize;
-  const iconBox = dense ? "h-8 w-8" : "h-9 w-9";
-  const textSize = dense ? "text-xs" : "text-sm";
+  /** カスタム PNG は枠いっぱい近くまで拡大 */
+  const imgSz = dense ? 32 : 36;
+  const iconBox = iconSrc
+    ? dense
+      ? "h-9 w-9"
+      : "h-10 w-10"
+    : dense
+      ? "h-7 w-7"
+      : "h-8 w-8";
+  const textSize = dense ? "text-sm" : "text-base";
   const isDanger = tone === "danger";
   const accent = isDanger ? "#fb7185" : CYBER_TAB_CYAN;
 
@@ -49,7 +61,7 @@ export default function SideMenuItemButton({
       onClick={onClick}
       className={cn(
         "cyber-side-menu-item group relative flex w-full touch-manipulation items-center gap-3 border px-3",
-        dense ? "min-h-10 py-2" : "min-h-12 py-2.5",
+        dense ? "min-h-9 py-1.5" : "min-h-10 py-1.5",
         active
           ? isDanger
             ? "cyber-side-menu-item--active border-rose-400/55 bg-rose-500/[0.1]"
@@ -90,29 +102,51 @@ export default function SideMenuItemButton({
 
       <span
         className={cn(
-          "relative z-[1] flex shrink-0 items-center justify-center border bg-white/[0.04]",
+          "relative z-[1] flex shrink-0 items-center justify-center",
           iconBox,
-          active && !isDanger && "border-[rgba(0,245,255,0.35)] bg-[rgba(0,245,255,0.1)]",
-          active && isDanger && "border-rose-400/35 bg-rose-500/[0.14]",
-          !active && "border-white/10"
+          /* カスタム PNG は自前のネオン枠があるので外枠を付けない */
+          iconSrc
+            ? "border-0 bg-transparent"
+            : [
+                "border bg-white/[0.04]",
+                active && !isDanger && "border-[rgba(0,245,255,0.35)] bg-[rgba(0,245,255,0.1)]",
+                active && isDanger && "border-rose-400/35 bg-rose-500/[0.14]",
+                !active && "border-white/10",
+              ]
         )}
-        style={{
-          clipPath:
-            "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)",
-        }}
+        style={
+          iconSrc
+            ? undefined
+            : {
+                clipPath:
+                  "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)",
+              }
+        }
       >
-        <Icon
-          size={sz}
-          className={cn("shrink-0")}
-          style={{
-            color: isDanger
-              ? "rgba(251,180,188,0.95)"
-              : active
-                ? CYBER_TAB_CYAN
-                : "rgba(0,245,255,0.78)",
-          }}
-          strokeWidth={2}
-        />
+        {iconSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={iconSrc}
+            alt=""
+            width={imgSz}
+            height={imgSz}
+            className="shrink-0 object-contain"
+            draggable={false}
+          />
+        ) : Icon ? (
+          <Icon
+            size={sz}
+            className={cn("shrink-0")}
+            style={{
+              color: isDanger
+                ? "rgba(251,180,188,0.95)"
+                : active
+                  ? CYBER_TAB_CYAN
+                  : "rgba(0,245,255,0.78)",
+            }}
+            strokeWidth={2}
+          />
+        ) : null}
       </span>
       <span
         className={cn(

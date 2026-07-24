@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { GiCrossedSwords } from "react-icons/gi";
 import { FaTrophy, FaUsers } from "react-icons/fa";
 import { FiUser } from "react-icons/fi";
-import { Brain } from "lucide-react";
 import { useEffect, useLayoutEffect, useState, CSSProperties } from "react";
 import { useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
@@ -21,16 +20,19 @@ type Item = {
   href: string;
   key: "games" | "home" | "leaderboards" | "ranking" | "mypage";
   label: string;
-  icon: React.ComponentType<{
+  /** 従来のベクターアイコン（リザルト以外） */
+  icon?: React.ComponentType<{
     size?: number;
     color?: string;
     style?: CSSProperties;
   }>;
+  /** リザルトのみカスタム画像 */
+  iconSrc?: string;
 };
 
 const items: Item[] = [
   { key: "games", href: "/games", label: "試合", icon: GiCrossedSwords },
-  { key: "home", href: "/result", label: "リザルト", icon: Brain },
+  { key: "home", href: "/result", label: "リザルト", iconSrc: "/navbar/result.png" },
   { key: "ranking", href: "/rankings", label: "ランキング", icon: FaTrophy },
   {
     key: "leaderboards",
@@ -406,6 +408,10 @@ export default function NavBar() {
             const href =
               item.key === "mypage" ? myHref : `${prefix}${item.href}`;
             const active = pathname === href || pathname.startsWith(href + "/");
+            const iconSize = isMobile ? 23 : 24;
+            /** リザルト（カスタム画像）のみ大きく */
+            const resultIconSize = isMobile ? 32 : 34;
+            const renderSize = item.iconSrc ? resultIconSize : iconSize;
             const Icon = item.icon;
 
             const iconStyle: CSSProperties = active
@@ -427,7 +433,7 @@ export default function NavBar() {
                   transform: "scale(0.92)",
                   position: "relative",
                   zIndex: 2,
-                  opacity: 0.9,
+                  opacity: item.iconSrc ? 0.42 : 0.9,
                 };
 
             const iconEnterDelay = 0.18 + index * 0.065;
@@ -444,6 +450,7 @@ export default function NavBar() {
                 }}
                 aria-label={item.label}
                 title={item.label}
+                data-tutorial-target={`nav-${item.key}`}
                 onPointerEnter={
                   item.key === "ranking"
                     ? () => prefetchCumulativeRankingsList()
@@ -475,11 +482,29 @@ export default function NavBar() {
                       : {}),
                   }}
                 >
-                  <Icon
-                    size={isMobile ? 23 : 24}
-                    color={active ? "#ffffff" : "rgba(226,232,240,0.42)"}
-                    style={iconStyle}
-                  />
+                  {item.iconSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.iconSrc}
+                      alt=""
+                      width={renderSize}
+                      height={renderSize}
+                      draggable={false}
+                      style={{
+                        ...iconStyle,
+                        width: renderSize,
+                        height: renderSize,
+                        objectFit: "contain",
+                        display: "block",
+                      }}
+                    />
+                  ) : Icon ? (
+                    <Icon
+                      size={iconSize}
+                      color={active ? "#ffffff" : "rgba(226,232,240,0.42)"}
+                      style={iconStyle}
+                    />
+                  ) : null}
                   {item.key === "ranking" && showRankingBadge ? (
                     <NavBarNotificationDot />
                   ) : null}

@@ -45,7 +45,12 @@ export default function CancelPlanScreenNative() {
   };
 
   return (
-    <MobilePageShell title="解約" appBackground onClose={() => navigation.goBack()}>
+    <MobilePageShell
+      title="CANCEL"
+      subtitle="Pro プランの解約手続きを行います。"
+      appBackground
+      onClose={() => navigation.goBack()}
+    >
       <View style={styles.content}>
         <View style={styles.card}>
           <Text style={styles.title}>Proプランの解約</Text>

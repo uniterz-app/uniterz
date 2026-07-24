@@ -1,0 +1,114 @@
+/* PRO 背景 — デザインラボ（lab-*）洗練版 */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab) .profile-plan-pro-ambient {
+  display: none;
+}
+
+.profile-plan-pro-bg__lab-skin {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.profile-plan-pro-bg__lab-hud {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.profile-plan-pro-bg--web .profile-plan-pro-bg__lab-skin,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__lab-hud {
+  background-size: cover;
+  background-position: 70% 42%;
+}
+
+.profile-plan-pro-bg--lab .profile-plan-pro-bg__lab-skin {
+  filter: contrast(1.06) saturate(1.05);
+}
+
+/* 共通地 — 暗いスレート（Atmos 寄り） */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab) {
+  background: linear-gradient(165deg, #030508 0%, #0a121c 48%, #020406 100%);
+  --kinetik-frame: rgba(148, 163, 184, 0.36);
+  --kinetik-frame-strong: rgba(203, 213, 225, 0.7);
+  --kinetik-frame-dim: rgba(56, 189, 248, 0.22);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.7),
+    0 0 0 1px var(--kinetik-frame),
+    0 0 24px color-mix(in srgb, var(--kinetik-frame-strong) 18%, transparent),
+    0 0 48px color-mix(in srgb, var(--kinetik-frame-dim) 20%, transparent);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-ivory-vein),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-ivory-vein) {
+  background: linear-gradient(165deg, #080704 0%, #16120c 48%, #040302 100%);
+  --kinetik-frame: rgba(212, 168, 40, 0.38);
+  --kinetik-frame-strong: rgba(234, 179, 8, 0.7);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-carbon-twill),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-carbon-twill),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-graphite-mesh),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-graphite-mesh),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-mono-chevron),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-mono-chevron) {
+  background: linear-gradient(168deg, #050608 0%, #14181e 50%, #030406 100%);
+  --kinetik-frame: rgba(148, 163, 184, 0.4);
+  --kinetik-frame-strong: rgba(226, 232, 240, 0.72);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-soft-contour),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-soft-contour),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-orbit-rings),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-orbit-rings),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-mirror-facet),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-mirror-facet),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-signal-bars),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-signal-bars) {
+  background: linear-gradient(162deg, #03060c 0%, #0a1828 48%, #02040a 100%);
+  --kinetik-frame: rgba(56, 189, 248, 0.4);
+  --kinetik-frame-strong: rgba(125, 211, 252, 0.75);
+}
+
+/* メタリック系 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-brushed-steel),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-brushed-steel),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-damascus-wave),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-damascus-wave),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-gunmetal-flake),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-gunmetal-flake) {
+  background: linear-gradient(175deg, #08090c 0%, #2a3038 38%, #12161c 68%, #050608 100%);
+  --kinetik-frame: rgba(203, 213, 225, 0.42);
+  --kinetik-frame-strong: rgba(241, 245, 249, 0.78);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-liquid-chrome),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-liquid-chrome) {
+  background: linear-gradient(155deg, #06080c 0%, #3a4555 32%, #8a96a8 48%, #1a222c 72%, #040608 100%);
+  --kinetik-frame: rgba(226, 232, 240, 0.48);
+  --kinetik-frame-strong: rgba(248, 250, 252, 0.85);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-rose-metal),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-rose-metal) {
+  background: linear-gradient(160deg, #0a0606 0%, #2a1814 40%, #5a3828 58%, #1a0e0c 82%, #080404 100%);
+  --kinetik-frame: rgba(212, 168, 140, 0.45);
+  --kinetik-frame-strong: rgba(245, 210, 180, 0.8);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--lab-anodized-blue),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--lab-anodized-blue) {
+  background: linear-gradient(162deg, #040810 0%, #0c2840 40%, #1e4a7a 58%, #061018 82%, #02060c 100%);
+  --kinetik-frame: rgba(96, 165, 250, 0.45);
+  --kinetik-frame-strong: rgba(191, 219, 254, 0.82);
+}

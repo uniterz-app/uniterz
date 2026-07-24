@@ -1,7 +1,15 @@
 import { useEffect, useId, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle, Defs, Line, Pattern, Path, Rect } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  Line,
+  Pattern,
+  Path,
+  Rect,
+  SvgXml,
+} from "react-native-svg";
 import Animated, {
   cancelAnimation,
   Easing,
@@ -46,6 +54,42 @@ import {
   isProfilePlanProScaleBgVariant,
   type ProfilePlanProScaleBgVariant,
 } from "../../../../../../lib/profile/profilePlanProScaleBgVariants";
+import {
+  getProfilePlanProBeastHudSvg,
+  getProfilePlanProBeastSkinSvg,
+  PROFILE_PLAN_PRO_BEAST_CANVAS,
+} from "../../../../../../lib/profile/profilePlanProBeastPattern";
+import {
+  isProfilePlanProBeastBgVariant,
+  type ProfilePlanProBeastBgVariant,
+} from "../../../../../../lib/profile/profilePlanProBeastBgVariants";
+import {
+  getProfilePlanProCosmosHudSvg,
+  getProfilePlanProCosmosSkinSvg,
+  PROFILE_PLAN_PRO_COSMOS_CANVAS,
+} from "../../../../../../lib/profile/profilePlanProCosmosPattern";
+import {
+  isProfilePlanProCosmosBgVariant,
+  type ProfilePlanProCosmosBgVariant,
+} from "../../../../../../lib/profile/profilePlanProCosmosBgVariants";
+import {
+  getProfilePlanProLabHudSvg,
+  getProfilePlanProLabSkinSvg,
+  PROFILE_PLAN_PRO_LAB_CANVAS,
+} from "../../../../../../lib/profile/profilePlanProLabPattern";
+import {
+  isProfilePlanProLabBgVariant,
+  type ProfilePlanProLabBgVariant,
+} from "../../../../../../lib/profile/profilePlanProLabBgVariants";
+import {
+  getProfilePlanProFormHudSvg,
+  getProfilePlanProFormSkinSvg,
+  PROFILE_PLAN_PRO_FORM_CANVAS,
+} from "../../../../../../lib/profile/profilePlanProFormPattern";
+import {
+  isProfilePlanProFormBgVariant,
+  type ProfilePlanProFormBgVariant,
+} from "../../../../../../lib/profile/profilePlanProFormBgVariants";
 import { PROFILE_PLAN_PRO_BG } from "../../../../../../lib/profile/profilePlanVisual";
 
 type Props = {
@@ -436,6 +480,156 @@ function MoodLayers({
         />
       </View>
     </>
+  );
+}
+
+/** Web SVG データ URL 相当 — SvgXml で skin + hud を重ねる */
+function SvgSkinHudLayers({
+  skinXml,
+  hudXml,
+  canvasW,
+  canvasH,
+  shouldAnimate,
+  variantKey,
+}: {
+  skinXml: string;
+  hudXml: string;
+  canvasW: number;
+  canvasH: number;
+  shouldAnimate: boolean;
+  variantKey: string;
+}) {
+  const enter = useSharedValue(shouldAnimate ? 0 : 1);
+
+  useEffect(() => {
+    if (!shouldAnimate) {
+      cancelAnimation(enter);
+      enter.value = 1;
+      return;
+    }
+    enter.value = 0;
+    enter.value = withTiming(1, {
+      duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
+      easing: Easing.out(Easing.cubic),
+    });
+    return () => cancelAnimation(enter);
+  }, [enter, shouldAnimate, variantKey]);
+
+  const layerStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      {
+        scale:
+          PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom +
+          enter.value * (1 - PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom),
+      },
+      {
+        translateY: (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
+      },
+    ],
+  }));
+
+  return (
+    <Animated.View style={[StyleSheet.absoluteFillObject, layerStyle]}>
+      <View style={StyleSheet.absoluteFillObject}>
+        <SvgXml
+          xml={skinXml}
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${canvasW} ${canvasH}`}
+          preserveAspectRatio="none"
+        />
+      </View>
+      <View style={StyleSheet.absoluteFillObject}>
+        <SvgXml
+          xml={hudXml}
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${canvasW} ${canvasH}`}
+          preserveAspectRatio="none"
+        />
+      </View>
+    </Animated.View>
+  );
+}
+
+/** Web `beast-*` 相当 */
+function BeastLayers({
+  variant,
+  shouldAnimate,
+}: {
+  variant: ProfilePlanProBeastBgVariant;
+  shouldAnimate: boolean;
+}) {
+  return (
+    <SvgSkinHudLayers
+      skinXml={getProfilePlanProBeastSkinSvg(variant)}
+      hudXml={getProfilePlanProBeastHudSvg(variant)}
+      canvasW={PROFILE_PLAN_PRO_BEAST_CANVAS.width}
+      canvasH={PROFILE_PLAN_PRO_BEAST_CANVAS.height}
+      shouldAnimate={shouldAnimate}
+      variantKey={variant}
+    />
+  );
+}
+
+/** Web `cosmos-*` 相当 */
+function CosmosLayers({
+  variant,
+  shouldAnimate,
+}: {
+  variant: ProfilePlanProCosmosBgVariant;
+  shouldAnimate: boolean;
+}) {
+  return (
+    <SvgSkinHudLayers
+      skinXml={getProfilePlanProCosmosSkinSvg(variant)}
+      hudXml={getProfilePlanProCosmosHudSvg(variant)}
+      canvasW={PROFILE_PLAN_PRO_COSMOS_CANVAS.width}
+      canvasH={PROFILE_PLAN_PRO_COSMOS_CANVAS.height}
+      shouldAnimate={shouldAnimate}
+      variantKey={variant}
+    />
+  );
+}
+
+/** Web `lab-*` 相当 */
+function LabLayers({
+  variant,
+  shouldAnimate,
+}: {
+  variant: ProfilePlanProLabBgVariant;
+  shouldAnimate: boolean;
+}) {
+  return (
+    <SvgSkinHudLayers
+      skinXml={getProfilePlanProLabSkinSvg(variant)}
+      hudXml={getProfilePlanProLabHudSvg(variant)}
+      canvasW={PROFILE_PLAN_PRO_LAB_CANVAS.width}
+      canvasH={PROFILE_PLAN_PRO_LAB_CANVAS.height}
+      shouldAnimate={shouldAnimate}
+      variantKey={variant}
+    />
+  );
+}
+
+/** Web `form-*` 相当 */
+function FormLayers({
+  variant,
+  shouldAnimate,
+}: {
+  variant: ProfilePlanProFormBgVariant;
+  shouldAnimate: boolean;
+}) {
+  return (
+    <SvgSkinHudLayers
+      skinXml={getProfilePlanProFormSkinSvg(variant)}
+      hudXml={getProfilePlanProFormHudSvg(variant)}
+      canvasW={PROFILE_PLAN_PRO_FORM_CANVAS.width}
+      canvasH={PROFILE_PLAN_PRO_FORM_CANVAS.height}
+      shouldAnimate={shouldAnimate}
+      variantKey={variant}
+    />
   );
 }
 
@@ -908,6 +1102,10 @@ export default function ProfilePlanProBackgroundNative({
   const isMood = isProfilePlanProMoodBgVariant(variant);
   const isNova = isProfilePlanProNovaBgVariant(variant);
   const isScale = isProfilePlanProScaleBgVariant(variant);
+  const isBeast = isProfilePlanProBeastBgVariant(variant);
+  const isCosmos = isProfilePlanProCosmosBgVariant(variant);
+  const isLab = isProfilePlanProLabBgVariant(variant);
+  const isForm = isProfilePlanProFormBgVariant(variant);
   const isHexLayout = isProfilePlanProHexBgVariant(variant);
   const isGeo = isProfilePlanProGeoBgVariant(variant) && !isHexLayout;
   const useTunnel =
@@ -945,6 +1143,38 @@ export default function ProfilePlanProBackgroundNative({
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <ScaleLayers variant={variant} shouldAnimate={shouldAnimate} />
+      </View>
+    );
+  }
+
+  if (isBeast) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <BeastLayers variant={variant} shouldAnimate={shouldAnimate} />
+      </View>
+    );
+  }
+
+  if (isCosmos) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <CosmosLayers variant={variant} shouldAnimate={shouldAnimate} />
+      </View>
+    );
+  }
+
+  if (isLab) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <LabLayers variant={variant} shouldAnimate={shouldAnimate} />
+      </View>
+    );
+  }
+
+  if (isForm) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <FormLayers variant={variant} shouldAnimate={shouldAnimate} />
       </View>
     );
   }

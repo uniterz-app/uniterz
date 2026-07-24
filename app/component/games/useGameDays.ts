@@ -130,6 +130,9 @@ export function useGameDays(
         return;
       }
 
+      /** リーグ切替時に前リーグの行がチラつかないよう先に空にする */
+      setRows([]);
+      setPeerRowsForSeriesInference([]);
       setLoading(true);
 
       try {

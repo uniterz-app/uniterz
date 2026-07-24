@@ -40,7 +40,12 @@ export default function PlanChangeScreenNative() {
   const nextPlan = currentPlan === "monthly" ? "annual" : "monthly";
 
   return (
-    <MobilePageShell title="プラン変更" appBackground onClose={() => navigation.goBack()}>
+    <MobilePageShell
+      title="CHANGE"
+      subtitle="プランの変更手続きを行います。"
+      appBackground
+      onClose={() => navigation.goBack()}
+    >
       <View style={styles.content}>
         <View style={styles.card}>
           <View style={styles.heroIcon}>

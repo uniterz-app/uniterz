@@ -40,6 +40,16 @@ import {
 import ResultCard, {
   type ResultCardOpenAnchor,
 } from "@/app/component/result/ResultCard";
+import {
+  buildTutorialFinalMatchCardProps,
+  buildTutorialPointsDistribution,
+  buildTutorialResultMarket,
+  TUTORIAL_RESULT_POST_ID,
+} from "@/lib/tutorial/tutorialNbaUi";
+import {
+  TUTORIAL_RESULT_DETAIL_CLOSE_EVENT,
+  TUTORIAL_RESULT_DETAIL_OPEN_EVENT,
+} from "@/lib/tutorial/tutorialResultDetailEvents";
 const ResultDetail = dynamic(
   () => import("@/app/component/result/ResultDetail")
 );
@@ -946,6 +956,19 @@ export default function ResultListWithOverlay({
       return;
     }
 
+    /** チュートリアル投稿は Firestore を叩かずモックで詳細を組み立てる */
+    if (post.id === TUTORIAL_RESULT_POST_ID) {
+      setDetailGame(
+        buildTutorialFinalMatchCardProps({
+          language: language === "en" ? "en" : "ja",
+        })
+      );
+      setMarket(buildTutorialResultMarket());
+      setPointsDistribution(buildTutorialPointsDistribution());
+      setPointsDistributionLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setPointsDistributionLoading(true);
     (async () => {
@@ -994,7 +1017,33 @@ export default function ResultListWithOverlay({
     return () => {
       cancelled = true;
     };
-  }, [openPostId, selectedPost, isMobile]);
+  }, [openPostId, selectedPost, isMobile, language]);
+
+  /** チュートリアルから詳細の開閉を依頼 */
+  useEffect(() => {
+    const findTutorialPost = (): PostWithMillis | null => {
+      for (const day of filteredGrouped) {
+        const hit = [...day.pending, ...day.final].find(
+          (p) => p.id === TUTORIAL_RESULT_POST_ID
+        );
+        if (hit) return hit;
+      }
+      return null;
+    };
+    const onOpen = () => {
+      const post = findTutorialPost();
+      if (post) open(post);
+    };
+    const onClose = () => {
+      if (openPostId === TUTORIAL_RESULT_POST_ID) close();
+    };
+    window.addEventListener(TUTORIAL_RESULT_DETAIL_OPEN_EVENT, onOpen);
+    window.addEventListener(TUTORIAL_RESULT_DETAIL_CLOSE_EVENT, onClose);
+    return () => {
+      window.removeEventListener(TUTORIAL_RESULT_DETAIL_OPEN_EVENT, onOpen);
+      window.removeEventListener(TUTORIAL_RESULT_DETAIL_CLOSE_EVENT, onClose);
+    };
+  }, [filteredGrouped, open, close, openPostId]);
 
   /** ルートの perspective 等が fixed の包含ブロックになるため、オーバーレイは body 直下に描画 */
   const [overlayPortalReady, setOverlayPortalReady] = useState(false);
@@ -1651,6 +1700,7 @@ export default function ResultListWithOverlay({
               cardsClassName={cardsGridClass}
             >
               {displayPosts.map((post) => {
+                const isTutorialPost = post.id === TUTORIAL_RESULT_POST_ID;
                 const card = (
                   <ResultCard
                     post={post}
@@ -1659,17 +1709,21 @@ export default function ResultListWithOverlay({
                     language={language}
                     platform={platform}
                     scheduleDense={isMobile}
-                    ratingBarsImmediate={filteredTotalLoaded === 1}
-                    showPreKickoffDismiss={canDismissResultListPostNow(
-                      post,
-                      listNowTick
-                    )}
+                    ratingBarsImmediate={
+                      filteredTotalLoaded === 1 || isTutorialPost
+                    }
+                    showPreKickoffDismiss={
+                      !isTutorialPost &&
+                      canDismissResultListPostNow(post, listNowTick)
+                    }
                     onPreKickoffDismiss={() =>
                       setDeleteConfirmPost(post)
                     }
-                    viewerUid={viewerUid}
+                    viewerUid={isTutorialPost ? null : viewerUid}
                     gamesRoutePrefix={gamesRoutePrefix}
-                    onRequestPredictEdit={requestPredictEditFromCard}
+                    onRequestPredictEdit={
+                      isTutorialPost ? undefined : requestPredictEditFromCard
+                    }
                     cardClockMs={listNowTick}
                   />
                 );
@@ -1678,6 +1732,9 @@ export default function ResultListWithOverlay({
                   return (
                     <div
                       key={post.id}
+                      data-tutorial-target={
+                        isTutorialPost ? "result-card" : undefined
+                      }
                       className={
                         isSingleWebCard ? "w-full max-w-[640px]" : "w-full"
                       }
@@ -1690,6 +1747,9 @@ export default function ResultListWithOverlay({
                 return (
                   <motion.div
                     key={post.id}
+                    data-tutorial-target={
+                      isTutorialPost ? "result-card" : undefined
+                    }
                     variants={resultCardSlotVariants}
                     custom={takeEntrySlot()}
                     className={

@@ -3,16 +3,13 @@
 import { usePathname } from "next/navigation";
 import Header from "@/app/component/Header";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
+import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
 
 export default function AppChrome() {
   const pathname = usePathname() ?? "";
 
   const shouldHideAll =
-    pathname.startsWith("/dev/my-rank-free-pro-preview") ||
     pathname === "/" ||
-    pathname.startsWith("/dev") ||
-    pathname.startsWith("/mobile/profile-plan-pro-") ||
-    pathname === "/mobile/pro-subscribe-preview" ||
     pathname === "/lp" ||
     pathname === "/lp-v2" ||
     pathname === "/mobile/lp" ||
@@ -25,6 +22,7 @@ export default function AppChrome() {
     pathname === "/mobile/signup" ||
     pathname === "/web/reset" ||
     pathname === "/mobile/reset" ||
+    isGuestPreviewPath(pathname) ||
     isGuestLegalPath(pathname);
 
   const shouldHideHeader =

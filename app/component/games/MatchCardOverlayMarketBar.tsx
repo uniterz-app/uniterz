@@ -437,7 +437,7 @@ export default function MatchCardOverlayMarketBar({
   if (!hasData) return null;
 
   return (
-    <div className="w-full">
+    <div className="w-full" data-tutorial-target="predict-market">
       <div
         className="w-full"
         aria-label={`${m.predict.marketBias} ${homeLabel} ${formatPct(homePct)} ${awayLabel} ${formatPct(awayPct)}`}

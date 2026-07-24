@@ -506,6 +506,10 @@ export default function RankingsCommunityPanel({
           onCreate={() => setCreateOpen(true)}
           onPreviewJoin={onPreviewJoin}
           onPasteJoin={onPasteJoin}
+          onOpenSquadBattle={() => {
+            const base = variant === "web" ? "/web" : "/mobile";
+            router.push(`${base}/squad-battle-preview`);
+          }}
           labels={slotLabels}
         />
       )}

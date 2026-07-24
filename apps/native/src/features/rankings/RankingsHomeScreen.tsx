@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   Platform,
   ScrollView,
@@ -27,11 +28,11 @@ import {
   type RankingApiRow,
   toMobileRows,
 } from "../../../../../lib/rankings/rankingTransform";
-import type { RankingRow } from "../../../../../lib/rankings/useRanking";
+import type { RankingRow } from "../../../../../lib/rankings/cumulativeRankingRow";
 import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
 import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
-import type { MainTabParamList } from "../../navigation/types";
+import type { MainTabParamList, RankingsStackParamList } from "../../navigation/types";
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
@@ -58,6 +59,8 @@ import {
 import type { MyRankCardShareState } from "./RankingsMyRankCardNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
 import RankGapModalNative from "./RankGapModalNative";
+import { useNativeMyRankProgress } from "./useNativeMyRankProgress";
+import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 
 type Props = {
   bottomReserveY: number;
@@ -70,6 +73,8 @@ function scheduleNoticeForUser(language: RankingsLanguage): string {
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const stackNavigation =
+    useNavigation<NativeStackNavigationProp<RankingsStackParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
@@ -93,6 +98,23 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const language = user.language;
   const t = rankingsTexts(language);
 
+  const rankingLeagueSource = rankingsLeague === "wc" ? "worldcup" : "nba";
+
+  /**
+   * Ranking Progress（日次順位推移）。
+   * Web と同様: NBA は playoffs で表示、WC は Pro のみ。
+   */
+  const rankProgressEnabled =
+    category === "playoffs" &&
+    (rankingsLeague === "nba" || user.plan === "pro");
+  const { points: myRankProgressPoints, loading: myRankProgressLoading } =
+    useNativeMyRankProgress({
+      uid: myUid,
+      enabled: rankProgressEnabled,
+      rankingLeague: rankingLeagueSource,
+      wcStage: rankingsLeague === "wc" ? wcStage : null,
+    });
+
   useEffect(() => {
     if (category !== "playoffs") {
       setRankShare(null);
@@ -106,7 +128,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     void ensureMetric(apiKey);
   }, [apiKey, ensureMetric]);
 
-  const rankingLeagueSource = rankingsLeague === "wc" ? "worldcup" : "nba";
   const precApiKey = rankingsLeague === "wc" ? "totalExactHits" : "totalPrecision";
 
   useEffect(() => {
@@ -321,6 +342,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 rankTierGap={user.plan === "pro" ? rankTierGap : null}
                 gapHref={user.plan === "pro" ? "gap" : null}
                 onOpenGap={() => setGapOpen(true)}
+                rankProgress={
+                  rankProgressEnabled ? (myRankProgressPoints ?? []) : undefined
+                }
+                rankProgressLoading={
+                  rankProgressEnabled && myRankProgressLoading
+                }
               />
             </>
           ) : null}
@@ -401,6 +428,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             setMenuOpen(false);
           }}
           language={language}
+          onOpenSquadBattlePreview={() => {
+            setMenuOpen(false);
+            stackNavigation.navigate("SquadBattlePreview");
+          }}
         />
       </SideMenuDrawerNative>
 
@@ -412,6 +443,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         myTotalPoints={myTotalPoints}
         totalEntries={rankingHasNoEntries ? null : rankingListCount}
         rankTierGap={rankTierGap}
+      />
+      <TutorialLiveHostNative
+        page="rankings"
+        language={(language === "en" ? "en" : "ja") as Language}
       />
     </View>
   );
@@ -464,6 +499,9 @@ const styles = StyleSheet.create({
   metricRowWrap: {
     marginTop: 12,
     marginBottom: 2,
+    /** 発光のはみ出し用。行間は RankingsMetricRowNative 側で調整 */
+    paddingVertical: 4,
+    overflow: "visible",
   },
   bracketPlaceholder: {
     minHeight: 180,

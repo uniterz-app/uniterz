@@ -24,10 +24,22 @@ import {
   getProfilePlanProBeastHudUrl,
   getProfilePlanProBeastSkinUrl,
 } from "@/lib/profile/profilePlanProBeastPattern";
+import { isProfilePlanProCosmosBgVariant } from "@/lib/profile/profilePlanProCosmosBgVariants";
+import {
+  getProfilePlanProCosmosHudUrl,
+  getProfilePlanProCosmosSkinUrl,
+} from "@/lib/profile/profilePlanProCosmosPattern";
+import { isProfilePlanProLabBgVariant } from "@/lib/profile/profilePlanProLabBgVariants";
+import {
+  getProfilePlanProLabHudUrl,
+  getProfilePlanProLabSkinUrl,
+} from "@/lib/profile/profilePlanProLabPattern";
 import { isProfilePlanProFormBgVariant } from "@/lib/profile/profilePlanProFormBgVariants";
 import {
   getProfilePlanProFormHudUrl,
+  getProfilePlanProFormHudUrlWeb,
   getProfilePlanProFormSkinUrl,
+  getProfilePlanProFormSkinUrlWeb,
 } from "@/lib/profile/profilePlanProFormPattern";
 import { isProfilePlanProScaleBgVariant } from "@/lib/profile/profilePlanProScaleBgVariants";
 import {
@@ -167,6 +179,8 @@ export default function ProfilePlanProBackgroundFx({
 }: Props) {
   const isScale = isProfilePlanProScaleBgVariant(variant);
   const isBeast = isProfilePlanProBeastBgVariant(variant);
+  const isCosmos = isProfilePlanProCosmosBgVariant(variant);
+  const isLab = isProfilePlanProLabBgVariant(variant);
   const isForm = isProfilePlanProFormBgVariant(variant);
   // 常時ループ用 --animate は使わない（枠スイープ含む無限アニメを止める）。
   // 入場は SparseEnterLayer / AtmosEnterLayers の 1 回のみ。
@@ -175,6 +189,8 @@ export default function ProfilePlanProBackgroundFx({
     `profile-plan-pro-bg--${variant}`,
     isScale ? "profile-plan-pro-bg--scale" : "",
     isBeast ? "profile-plan-pro-bg--beast" : "",
+    isCosmos ? "profile-plan-pro-bg--cosmos" : "",
+    isLab ? "profile-plan-pro-bg--lab" : "",
     isForm ? "profile-plan-pro-bg--form" : "",
     mobileBoost ? "profile-plan-pro-bg--mobile-boost" : "",
     web ? "profile-plan-pro-bg--web" : "",
@@ -308,20 +324,64 @@ export default function ProfilePlanProBackgroundFx({
     );
   }
 
+  if (isProfilePlanProCosmosBgVariant(variant)) {
+    return (
+      <div className={rootClass} aria-hidden>
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
+          className="profile-plan-pro-bg__cosmos-skin"
+          style={{ backgroundImage: getProfilePlanProCosmosSkinUrl(variant) }}
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={180}
+          className="profile-plan-pro-bg__cosmos-hud"
+          style={{ backgroundImage: getProfilePlanProCosmosHudUrl(variant) }}
+        />
+      </div>
+    );
+  }
+
+  if (isProfilePlanProLabBgVariant(variant)) {
+    return (
+      <div className={rootClass} aria-hidden>
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
+          className="profile-plan-pro-bg__lab-skin"
+          style={{ backgroundImage: getProfilePlanProLabSkinUrl(variant) }}
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={180}
+          className="profile-plan-pro-bg__lab-hud"
+          style={{ backgroundImage: getProfilePlanProLabHudUrl(variant) }}
+        />
+      </div>
+    );
+  }
+
   if (isProfilePlanProFormBgVariant(variant)) {
+    const formSkin = web
+      ? getProfilePlanProFormSkinUrlWeb(variant)
+      : getProfilePlanProFormSkinUrl(variant);
+    const formHud = web
+      ? getProfilePlanProFormHudUrlWeb(variant)
+      : getProfilePlanProFormHudUrl(variant);
     return (
       <div className={rootClass} aria-hidden>
         <SparseEnterLayer
           animate={animate}
           delayMs={40}
           className="profile-plan-pro-bg__form-skin"
-          style={{ backgroundImage: getProfilePlanProFormSkinUrl(variant) }}
+          style={{ backgroundImage: formSkin }}
         />
         <SparseEnterLayer
           animate={animate}
           delayMs={180}
           className="profile-plan-pro-bg__form-hud"
-          style={{ backgroundImage: getProfilePlanProFormHudUrl(variant) }}
+          style={{ backgroundImage: formHud }}
         />
       </div>
     );

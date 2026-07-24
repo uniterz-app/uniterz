@@ -77,7 +77,14 @@ import ProCyberBadgeNative from "./ProCyberBadgeNative";
 import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStreakNative";
 import ProfilePlanProBackgroundNative from "./ProfilePlanProBackgroundNative";
 import { LinearGradient } from "expo-linear-gradient";
-import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../../lib/profile/profilePlanProBgVariants";
+import {
+  PROFILE_PLAN_PRO_BG_DEFAULT,
+  type ProfilePlanProBgVariant,
+} from "../../../../../../lib/profile/profilePlanProBgVariants";
+import { isProfilePlanProScaleBgVariant } from "../../../../../../lib/profile/profilePlanProScaleBgVariants";
+import { isProfilePlanProBeastBgVariant } from "../../../../../../lib/profile/profilePlanProBeastBgVariants";
+import { isProfilePlanProCosmosBgVariant } from "../../../../../../lib/profile/profilePlanProCosmosBgVariants";
+import { isProfilePlanProFormBgVariant } from "../../../../../../lib/profile/profilePlanProFormBgVariants";
 
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
@@ -144,10 +151,10 @@ function KinetikSegBar({
               isPlanPro && styles.segPlanPro,
               {
                 backgroundColor: lit ? colors.fill : "rgba(255,255,255,0.08)",
-                shadowColor: lit ? colors.glow : "transparent",
-                /** 枠光りを避け、薄くにじませる */
-                shadowOpacity: lit ? (isPlanPro ? 0.28 : 0.55) : 0,
-                shadowRadius: lit ? (isPlanPro ? 6 : 4) : 0,
+                /** Pro は矩形シャドウを付けず、色面だけで示す */
+                shadowColor: lit && !isPlanPro ? colors.glow : "transparent",
+                shadowOpacity: lit && !isPlanPro ? 0.55 : 0,
+                shadowRadius: lit && !isPlanPro ? 4 : 0,
                 shadowOffset: { width: 0, height: 0 },
               },
             ]}
@@ -156,6 +163,21 @@ function KinetikSegBar({
       })}
     </View>
   );
+}
+
+/**
+ * Web bar-bloom は glow(0.35) + blur(6px)。
+ * ぼかしなしだと強すぎるので、開始アルファを下げた色を返す。
+ */
+function metricBarBloomColor(glow: string): string {
+  const m = glow.match(
+    /^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/i
+  );
+  if (!m) return "rgba(34,211,238,0.12)";
+  const r = Number(m[1]);
+  const g = Number(m[2]);
+  const b = Number(m[3]);
+  return `rgba(${r},${g},${b},0.12)`;
 }
 
 /** Web `profile-plan-pro-metric-card__value` の drop-shadow(0 0 3px …) 相当 */
@@ -325,6 +347,21 @@ function KinetikMetricCardNative({
           />
           <View style={styles.metricCardCornerTl} pointerEvents="none" />
           <View style={styles.metricCardCornerBr} pointerEvents="none" />
+          {/**
+           * Web `.profile-plan-pro-metric-card__bar-bloom` は blur(6px)+opacity 0.72。
+           * RN に同等 blur がないので、開始色を薄く・72% で消し・全体 opacity を下げて近似する。
+           */}
+          <LinearGradient
+            pointerEvents="none"
+            colors={[metricBarBloomColor(colors.glow), "transparent"]}
+            locations={[0, 0.72]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={[
+              styles.metricAccentBloom,
+              compact && styles.metricAccentBloomCompact,
+            ]}
+          />
         </>
       ) : null}
       <View
@@ -334,10 +371,9 @@ function KinetikMetricCardNative({
           isPlanPro && styles.metricAccentBarPlanPro,
           {
             backgroundColor: colors.line,
-            shadowColor: colors.glow,
-            /** 左バーのにじみだけ。カード外周は影を付けない */
-            shadowOpacity: isPlanPro ? 0.38 : 0.7,
-            shadowRadius: isPlanPro ? 9 : 8,
+            shadowColor: isPlanPro ? "transparent" : colors.glow,
+            shadowOpacity: isPlanPro ? 0 : 0.7,
+            shadowRadius: isPlanPro ? 0 : 8,
             shadowOffset: { width: 0, height: 0 },
           },
         ]}
@@ -941,9 +977,7 @@ function KinetikIdentityJoinIdRowNative({
         <KinetikFooterRef style={[styles.footerRefIdentity, styles.footerRefJoin]}>
           <Text style={styles.footerRefTextIdentity}>{memberSinceLabel}</Text>
         </KinetikFooterRef>
-      ) : (
-        <View style={styles.identityJoinIdSpacer} />
-      )}
+      ) : null}
       <KinetikIdentityIdChipNative
         idLabel={idLabel}
         shareCopied={shareCopied}
@@ -951,6 +985,7 @@ function KinetikIdentityJoinIdRowNative({
         shareLabel={shareLabel}
         onShare={onShare}
         pressableStyle={styles.identityIdPressInline}
+        footerRefStyle={styles.footerRefId}
         compact
       />
     </View>
@@ -1038,6 +1073,8 @@ export type ProfileKinetikPanelNativeProps = {
   countryCode?: string | null;
   memberSinceMs?: number | null;
   isPro?: boolean;
+  /** Pro Skin（users.planProBgVariant） */
+  planProBgVariant?: ProfilePlanProBgVariant;
   winStreak?: number;
   totalPointsRank?: number | null;
   totalPointsRankDenominator?: number | null;
@@ -1065,6 +1102,7 @@ export default function ProfileKinetikPanelNative({
   countryCode = null,
   memberSinceMs = null,
   isPro = false,
+  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
   winStreak,
   totalPointsRank: totalPointsRankProp,
   totalPointsRankDenominator: totalPointsRankDenominatorProp,
@@ -1201,7 +1239,7 @@ export default function ProfileKinetikPanelNative({
       sectionRank.totalPointsRankDenominator >= 1;
 
     return (
-      <View style={[styles.metricsGrid, isPro ? styles.metricsGridPlanPro : null]}>
+      <View style={styles.metricsGrid}>
         <KinetikMetricCardNative
           label={isJa ? "勝率" : "WIN RATE"}
           value={`${formatMetricDecimals(sectionStats.winRate, 1)}%`}
@@ -1317,13 +1355,19 @@ export default function ProfileKinetikPanelNative({
           width={frameSize.width}
           height={frameSize.height}
           animate={animatePlanProBg}
-          variant={PROFILE_PLAN_PRO_BG_DEFAULT}
+          variant={planProBgVariant}
           profileAccent={profileAccent}
           accentReady={!statsPending}
         />
       ) : null}
 
-      {isPro && PROFILE_PLAN_PRO_BG_DEFAULT !== "atmos" ? (
+      {/* Web 同様 — atmos / scale / beast / cosmos / form では ambient を載せない */}
+      {isPro &&
+      planProBgVariant !== "atmos" &&
+      !isProfilePlanProScaleBgVariant(planProBgVariant) &&
+      !isProfilePlanProBeastBgVariant(planProBgVariant) &&
+      !isProfilePlanProCosmosBgVariant(planProBgVariant) &&
+      !isProfilePlanProFormBgVariant(planProBgVariant) ? (
         <LinearGradient
           colors={[
             "rgba(34,211,238,0.1)",
@@ -1723,17 +1767,22 @@ const styles = StyleSheet.create({
   identityJoinIdRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 4,
-    width: "100%",
+    justifyContent: "flex-start",
+    gap: 8,
+    alignSelf: "flex-start",
+    maxWidth: "100%",
     marginTop: 2,
-  },
-  identityJoinIdSpacer: {
-    flex: 1,
-    minWidth: 0,
   },
   footerRefJoin: {
     flexShrink: 0,
+  },
+  /** ID 側は右下コーナー（JOIN の左下と対） */
+  footerRefId: {
+    borderLeftWidth: 0,
+    borderRightWidth: 1,
+    borderColor: KINETIK_FRAME_DIM,
+    paddingLeft: 6,
+    paddingRight: 5,
   },
   identityIdRef: {
     paddingTop: 4,
@@ -1896,7 +1945,8 @@ const styles = StyleSheet.create({
   },
   metricsPanel: {
     marginTop: 14,
-    overflow: "hidden",
+    /** 斜めタブの発光を四角く切らない（Web の overflow-visible 相当） */
+    overflow: "visible",
   },
   metricsPanelPlanPro: {
     marginTop: 0,
@@ -1942,11 +1992,12 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.62)",
     textTransform: "uppercase",
   },
-  /** skew タブのはみ出し用 */
+  /** Web `wcStageTabWrapClass`: px-2.5 py-2 */
   metricsStageTabWrap: {
     overflow: "visible",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    /** バー側で glow pad を持つので、ここでは最小余白のみ */
+    paddingHorizontal: 0,
+    paddingVertical: 2,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
   },
@@ -1988,11 +2039,8 @@ const styles = StyleSheet.create({
   metricsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    padding: 10,
-    gap: 10,
-  },
-  metricsGridPlanPro: {
-    backgroundColor: "rgba(34,211,238,0.04)",
+    padding: 6,
+    gap: 5,
   },
   metricCard: {
     width: "47%",
@@ -2067,6 +2115,23 @@ const styles = StyleSheet.create({
     width: 4,
     borderRadius: 2,
     zIndex: 1,
+  },
+  /** Web `.profile-plan-pro-metric-card__bar-bloom` — 右へ溶ける左バー光（弱め近似） */
+  metricAccentBloom: {
+    position: "absolute",
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 36,
+    zIndex: 0,
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
+    opacity: 0.42,
+  },
+  metricAccentBloomCompact: {
+    top: 8,
+    bottom: 8,
+    width: 28,
   },
   metricLabelPlanPro: {
     fontWeight: "700",

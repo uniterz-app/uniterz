@@ -1,8 +1,10 @@
 /** PRO カード背景バリエーション */
 
 import type { ProfilePlanProBeastBgVariant } from "./profilePlanProBeastBgVariants";
+import type { ProfilePlanProCosmosBgVariant } from "./profilePlanProCosmosBgVariants";
 import type { ProfilePlanProFormBgVariant } from "./profilePlanProFormBgVariants";
 import type { ProfilePlanProGeoBgVariant } from "./profilePlanProGeoBgVariants";
+import type { ProfilePlanProLabBgVariant } from "./profilePlanProLabBgVariants";
 import type { ProfilePlanProMoodBgVariant } from "./profilePlanProMoodBgVariants";
 import type { ProfilePlanProNovaBgVariant } from "./profilePlanProNovaBgVariants";
 import type { ProfilePlanProScaleBgVariant } from "./profilePlanProScaleBgVariants";
@@ -34,7 +36,9 @@ export type ProfilePlanProBgVariant =
   | ProfilePlanProGeoBgVariant
   | ProfilePlanProScaleBgVariant
   | ProfilePlanProBeastBgVariant
-  | ProfilePlanProFormBgVariant;
+  | ProfilePlanProFormBgVariant
+  | ProfilePlanProCosmosBgVariant
+  | ProfilePlanProLabBgVariant;
 
 /** 本番 PRO プロフィール背景 — 確定: Atmos（疎な六角 + 微細 HUD） */
 export const PROFILE_PLAN_PRO_BG_DEFAULT: ProfilePlanProBgVariant = "atmos";

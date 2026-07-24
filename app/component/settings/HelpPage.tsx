@@ -599,7 +599,7 @@ export default function HelpPage({ variant }: { variant: Variant }) {
   return (
     <LegalPageLayout
       variant={variant}
-      title={m.settings.helpAndGuide}
+      title="HELP"
       description={m.settings.helpDescription}
       updatedAt="2026-06-24"
     >

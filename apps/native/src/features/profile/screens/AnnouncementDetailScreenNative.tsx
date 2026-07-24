@@ -106,7 +106,12 @@ export default function AnnouncementDetailScreenNative() {
   const src = synthetic ? null : heroUri(row?.heroImageURL);
 
   return (
-    <MobilePageShell title="お知らせ" appBackground onClose={() => navigation.goBack()}>
+    <MobilePageShell
+      title="NEWS"
+      subtitle="公式のお知らせ詳細です。"
+      appBackground
+      onClose={() => navigation.goBack()}
+    >
       <ScrollView contentContainerStyle={styles.content}>
         {loading ? (
           <View style={styles.center}>

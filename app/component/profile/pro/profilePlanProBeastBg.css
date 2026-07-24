@@ -146,3 +146,81 @@
 .profile-plan-pro-bg--beast-crimsonveil .profile-plan-pro-bg__beast-skin {
   filter: contrast(1.1) saturate(1.2);
 }
+
+
+.profile-plan-pro-bg--beast-behelit .profile-plan-pro-bg__beast-skin,
+.profile-plan-pro-bg--beast-berserker .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.15) saturate(1.05);
+}
+
+/* ベルセルク風 — 黒地に読める深紅パターン */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--beast-eclipse),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast-eclipse),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--beast-behelit),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast-behelit),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--beast-berserker),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast-berserker) {
+  background: linear-gradient(
+    165deg,
+    #080101 0%,
+    #120303 40%,
+    #060000 78%,
+    #0a0202 100%
+  );
+  --kinetik-frame: rgba(160, 36, 36, 0.5);
+  --kinetik-frame-strong: rgba(200, 48, 48, 0.85);
+  --kinetik-frame-dim: rgba(80, 12, 12, 0.35);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.7),
+    0 0 0 1px var(--kinetik-frame),
+    0 0 26px color-mix(in srgb, var(--kinetik-frame-strong) 26%, transparent),
+    0 0 52px color-mix(in srgb, var(--kinetik-frame-dim) 30%, transparent);
+}
+
+/* 甲冑 — 銀鉄 / ガンメタル */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--beast-armor),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast-armor) {
+  background: linear-gradient(
+    160deg,
+    #0a0c10 0%,
+    #141820 38%,
+    #08090c 72%,
+    #10141a 100%
+  );
+  --kinetik-frame: rgba(160, 168, 180, 0.42);
+  --kinetik-frame-strong: rgba(210, 216, 224, 0.78);
+  --kinetik-frame-dim: rgba(90, 98, 110, 0.32);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.68),
+    0 0 0 1px var(--kinetik-frame),
+    0 0 28px color-mix(in srgb, var(--kinetik-frame-strong) 22%, transparent),
+    0 0 56px color-mix(in srgb, var(--kinetik-frame-dim) 26%, transparent);
+}
+
+.profile-plan-pro-bg--beast-armor .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.2) saturate(0.85) brightness(1.05);
+}
+
+/* DNA — 黒ラボ空間 + ライム発光 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--beast-dna),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--beast-dna) {
+  background: linear-gradient(
+    168deg,
+    #020408 0%,
+    #061208 42%,
+    #030605 78%,
+    #010204 100%
+  );
+  --kinetik-frame: rgba(132, 204, 22, 0.42);
+  --kinetik-frame-strong: rgba(163, 230, 53, 0.82);
+  --kinetik-frame-dim: rgba(202, 138, 4, 0.28);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.7),
+    0 0 0 1px var(--kinetik-frame),
+    0 0 28px color-mix(in srgb, var(--kinetik-frame-strong) 28%, transparent),
+    0 0 56px color-mix(in srgb, var(--kinetik-frame-dim) 24%, transparent);
+}
+
+.profile-plan-pro-bg--beast-dna .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.12) saturate(1.25) brightness(1.06);
+}

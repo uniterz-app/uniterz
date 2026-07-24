@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { nameBebas, nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
 
 export type RankingsTitleCyberVariant =
@@ -17,8 +17,9 @@ const CHROME_GRADIENT_HARD =
 const CHROME_GRADIENT_SOFT =
   "linear-gradient(180deg, #CFFAFE 0%, #00F5FF 38%, #06B6D4 68%, #A5F3FC 100%)";
 
-const CYAN_TITLE_GLOW =
-  "drop-shadow(0 1px 2px rgba(0,10,18,0.85)) drop-shadow(0 0 6px rgba(34,211,238,0.28)) drop-shadow(0 0 14px rgba(14,165,233,0.14))";
+/** filter drop-shadow は background-clip:text と併用すると矩形ハローになるため使わない */
+const CYAN_GLYPH_GLOW =
+  "0 0 6px rgba(34,211,238,0.42), 0 0 12px rgba(14,165,233,0.18), 0 1px 1px rgba(0,10,18,0.55)";
 
 function chromeTextStyle(hard = true): CSSProperties {
   return {
@@ -28,6 +29,43 @@ function chromeTextStyle(hard = true): CSSProperties {
     color: "transparent",
     WebkitTextFillColor: "transparent",
   };
+}
+
+/** クローム文字 + 字形に沿うグロー（矩形ハロー回避） */
+function ChromeTitle({
+  className,
+  skewDeg,
+  hard = true,
+  glow = CYAN_GLYPH_GLOW,
+  children,
+}: {
+  className: string;
+  skewDeg: number;
+  hard?: boolean;
+  glow?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={["relative inline-block", className].join(" ")}
+      style={{ transform: `skewX(${skewDeg}deg)` }}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 select-none"
+        style={{
+          color: "#67E8F9",
+          textShadow: glow,
+          WebkitTextFillColor: "#67E8F9",
+        }}
+      >
+        {children}
+      </span>
+      <span className="relative" style={chromeTextStyle(hard)}>
+        {children}
+      </span>
+    </span>
+  );
 }
 
 type Props = {
@@ -90,43 +128,37 @@ export function RankingsPageTitleCyber({
 
   if (variant === "jp-chrome") {
     return (
-      <span
+      <ChromeTitle
         className={[
           isJa ? jp.className : nameBebas.className,
-          "inline-block font-black italic",
+          "font-black italic",
           mainSize,
           "tracking-[0.12em]",
           className,
         ].join(" ")}
-        style={{
-          ...chromeTextStyle(true),
-          transform: "skewX(-8deg)",
-          filter: CYAN_TITLE_GLOW,
-        }}
+        skewDeg={-8}
       >
         {title}
-      </span>
+      </ChromeTitle>
     );
   }
 
   if (variant === "soft-blend") {
     return (
-      <span
+      <ChromeTitle
         className={[
           nameRajdhani.className,
-          "inline-block font-bold italic",
+          "font-bold italic",
           mainSize,
           "tracking-[0.22em] uppercase",
           className,
         ].join(" ")}
-        style={{
-          ...chromeTextStyle(false),
-          transform: "skewX(-6deg)",
-          filter: "drop-shadow(0 0 14px rgba(0,245,255,0.35))",
-        }}
+        skewDeg={-6}
+        hard={false}
+        glow="0 0 8px rgba(0,245,255,0.32), 0 0 14px rgba(0,245,255,0.12)"
       >
         {title}
-      </span>
+      </ChromeTitle>
     );
   }
 
@@ -149,55 +181,49 @@ export function RankingsPageTitleCyber({
             WebkitTextStroke: "1px rgba(0,245,255,0.9)",
             color: "transparent",
             textShadow:
-              "0 0 8px rgba(0,245,255,0.95), 0 0 16px rgba(0,245,255,0.5), 0 0 24px rgba(0,245,255,0.25)",
+              "0 0 8px rgba(0,245,255,0.85), 0 0 14px rgba(0,245,255,0.35)",
           }}
         >
           {title}
         </span>
-        <span style={chromeTextStyle(true)}>{title}</span>
+        <span className="relative" style={chromeTextStyle(true)}>
+          {title}
+        </span>
       </span>
     );
   }
 
   if (variant === "scan-pulse") {
     return (
-      <span
+      <ChromeTitle
         className={[
           nameBebas.className,
-          "inline-block italic",
+          "italic",
           mainSize,
           "tracking-[0.24em] uppercase",
           className,
         ].join(" ")}
-        style={{
-          ...chromeTextStyle(true),
-          transform: "skewX(-10deg)",
-          filter: CYAN_TITLE_GLOW,
-        }}
+        skewDeg={-10}
       >
         {title}
-      </span>
+      </ChromeTitle>
     );
   }
 
   /* horizon-chrome — 参照画像に近いハードスプリット */
   return (
-    <span
+    <ChromeTitle
       className={[
         nameBebas.className,
-        "inline-block italic",
+        "italic",
         mainSize,
         "tracking-[0.24em] uppercase",
         className,
       ].join(" ")}
-      style={{
-        ...chromeTextStyle(true),
-        transform: "skewX(-10deg)",
-        filter: CYAN_TITLE_GLOW,
-      }}
+      skewDeg={-10}
     >
       {title}
-    </span>
+    </ChromeTitle>
   );
 }
 

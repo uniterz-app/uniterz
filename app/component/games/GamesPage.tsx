@@ -13,9 +13,7 @@ import GamesDrawerMenu from "./GamesDrawerMenu";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import {
-  gamesHeaderControlButtonClass,
   gamesHeaderControlHeightClass,
-  gamesHeaderControlWrapClass,
   gamesHeaderFilterWrapClass,
   gamesHeaderMenuButtonSize,
   gamesHeaderMobileShellClass,
@@ -34,6 +32,9 @@ import GamesTeamFilterPanel from "./GamesTeamFilterPanel";
 import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
+import TutorialLiveCoach from "@/app/component/tutorial/TutorialLiveCoach";
+import TutorialPulseHint from "@/app/component/tutorial/TutorialPulseHint";
+import TutorialResolvingOverlay from "@/app/component/tutorial/TutorialResolvingOverlay";
 import usePageSwipe from "./usePageSwipe";
 import { gameRowStartDateKeyInTimeZone } from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
@@ -55,7 +56,6 @@ import {
   toDateKeyInTimeZone,
   shiftCalendarMonthStart,
 } from "@/lib/time/zonedTime";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
   GAMES_CYBER_EASE,
   GAMES_DAY_SWITCH_EASE,
@@ -67,6 +67,26 @@ import {
   markWcGamesTabAnnouncementSeen,
   readWcGamesTabAnnouncementSeen,
 } from "@/lib/games/wcTabAnnouncementSeen";
+import { setAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
+import {
+  fetchAppTutorialSeen,
+  markAppTutorialSeen,
+  readAppTutorialSeenLocal,
+} from "@/lib/tutorial/tutorialSeen";
+import {
+  readTutorialLivePhase,
+  writeTutorialLivePhase,
+  type TutorialLivePhase,
+} from "@/lib/tutorial/tutorialLivePhase";
+import {
+  buildTutorialNbaRawGame,
+  TUTORIAL_NBA_GAME_ID,
+} from "@/lib/tutorial/tutorialNbaRawGame";
+import { tutorialGradeFromPick } from "@/lib/tutorial/tutorialNbaUi";
+import {
+  clearTutorialLivePick,
+  writeTutorialLivePick,
+} from "@/lib/tutorial/tutorialLivePick";
 import {
   fetchNextGameDayAfterLocalDay,
   fetchPreviousGameDayBeforeLocalDay,
@@ -176,13 +196,102 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const [league, setLeague] = useState<League>("wc");
   const [gamesDrawerOpen, setGamesDrawerOpen] = useState(false);
   const [showWcTabBadge, setShowWcTabBadge] = useState(false);
+  const [tutorialPhase, setTutorialPhase] =
+    useState<TutorialLivePhase | null>(null);
   const didInitLeague = useRef(false);
   const { preferredLeague, ready: preferredLeagueReady } =
     useUserPreferredLeague(user?.uid);
 
+  /** アワード/順位予想の戻る → `?menu=1` でサイドメニューを開く */
+  useEffect(() => {
+    if (searchParams.get("menu") !== "1") return;
+    setGamesDrawerOpen(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("menu");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [searchParams, router, pathname]);
+
   useEffect(() => {
     setShowWcTabBadge(!readWcGamesTabAnnouncementSeen());
   }, []);
+
+  /** 初回チュートリアル — 本番 Games 画面上で進行 */
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!uid) return;
+    // 既読は uid 単位。端末共通キーだと別アカウントでスキップされる
+    if (readAppTutorialSeenLocal(uid)) return;
+    let cancelled = false;
+    void (async () => {
+      const seen = await fetchAppTutorialSeen(uid);
+      if (cancelled || seen) return;
+      const existing = readTutorialLivePhase();
+      if (
+        existing === "results" ||
+        existing === "rankings" ||
+        existing === "gotoGroups" ||
+        existing === "groups" ||
+        existing === "gotoProfile" ||
+        existing === "profile"
+      ) {
+        return;
+      }
+      didInitLeague.current = true;
+      setLeague("nba");
+      const start: TutorialLivePhase = existing ?? "welcome";
+      writeTutorialLivePhase(start);
+      setTutorialPhase(start);
+      setAppTutorialBlockingEvents(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    return () => {
+      setAppTutorialBlockingEvents(false);
+    };
+  }, []);
+
+  const setTutorialPhaseAndStore = useCallback(
+    (next: TutorialLivePhase | null) => {
+      writeTutorialLivePhase(next);
+      setTutorialPhase(next);
+    },
+    []
+  );
+
+  const completeTutorialFully = useCallback(() => {
+    const uid = user?.uid ?? null;
+    void markAppTutorialSeen(uid);
+    writeTutorialLivePhase(null);
+    clearTutorialLivePick();
+    setTutorialPhase(null);
+    setAppTutorialBlockingEvents(false);
+  }, [user?.uid]);
+
+  const tutorialActive =
+    tutorialPhase != null &&
+    tutorialPhase !== "done" &&
+    tutorialPhase !== "results" &&
+    tutorialPhase !== "resultDetail" &&
+    tutorialPhase !== "rankings" &&
+    tutorialPhase !== "gotoGroups" &&
+    tutorialPhase !== "groups" &&
+    tutorialPhase !== "gotoProfile" &&
+    tutorialPhase !== "profile";
+
+  /** 投稿後 → 試合終了シミュ → リザルトタブへ誘導 */
+  useEffect(() => {
+    if (tutorialPhase !== "resolving") return;
+    const timer = window.setTimeout(() => {
+      setTutorialPhaseAndStore("gotoResults");
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [tutorialPhase, setTutorialPhaseAndStore]);
+
 
   const dismissWcTabBadge = useCallback(() => {
     markWcGamesTabAnnouncementSeen();
@@ -214,6 +323,20 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const [selectedByLeague, setSelectedByLeague] = useState<
     Partial<Record<League, Date>>
   >({});
+
+  /** チュートリアル開始直後は日程 API 待ちでも「今日」を仮選択して一覧を出す */
+  useEffect(() => {
+    if (!tutorialActive || league !== "nba") return;
+    setSelectedByLeague((prev) => {
+      if (prev.nba) return prev;
+      const today =
+        parseDateKeyInTimeZone(
+          getTodayKeyInTimeZone(dayTimeZone),
+          dayTimeZone
+        ) ?? new Date();
+      return { ...prev, nba: today };
+    });
+  }, [tutorialActive, league, dayTimeZone]);
 
   const todayKey = useMemo(
     () => getTodayKeyInTimeZone(dayTimeZone),
@@ -426,7 +549,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const selected = useMemo(() => {
     const stored = selectedByLeague[league] ?? null;
     if (!gameDaysForStrip.length) {
-      return stored;
+      /** 近傍に試合が無くても月ヘッダ・空状態を出す（selected 欠落でスケルトン固定しない） */
+      return (
+        stored ??
+        initialDateParamDay ??
+        parseDateKeyInTimeZone(todayKey, dayTimeZone) ??
+        new Date()
+      );
     }
     const stateSelected = stored ?? initialDateParamDay;
     return findInitialGameDay({
@@ -628,11 +757,37 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [games, teamFilterIds, teamFilterMatchMode, nameById]);
 
   const filteredGames = useMemo(() => {
-    if (marginMin == null && marginMax == null) return gamesAfterTeamFilter;
-    return gamesAfterTeamFilter.filter((g: Record<string, unknown>) =>
-      gameMatchesMarginBounds(g, marginMin, marginMax),
-    );
-  }, [gamesAfterTeamFilter, marginMin, marginMax]);
+    let list =
+      marginMin == null && marginMax == null
+        ? gamesAfterTeamFilter
+        : gamesAfterTeamFilter.filter((g: Record<string, unknown>) =>
+            gameMatchesMarginBounds(g, marginMin, marginMax)
+          );
+
+    if (tutorialActive && league === "nba") {
+      const tipOff =
+        selected instanceof Date
+          ? (() => {
+              const d = new Date(selected);
+              d.setHours(21, 0, 0, 0);
+              if (d.getTime() <= Date.now()) {
+                return new Date(Date.now() + 2 * 60 * 60 * 1000);
+              }
+              return d;
+            })()
+          : new Date(Date.now() + 2 * 60 * 60 * 1000);
+      /** 練習試合だけ。他リーグの残りや本番カードが裏に混ざらないようにする */
+      return [buildTutorialNbaRawGame(tipOff)];
+    }
+    return list;
+  }, [
+    gamesAfterTeamFilter,
+    marginMin,
+    marginMax,
+    tutorialActive,
+    league,
+    selected,
+  ]);
 
   /**
    * games は selectedDayKey で絞り込んだ取得済みウィンドウなので、
@@ -809,7 +964,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /** モバイル試合一覧はカード横幅を広げるため左右を詰める */
   const pagePad =
     dense && isMobile ? "px-0" : dense ? "px-3" : "px-4 md:px-6";
-  const isInitialLoading = loadingDays || !selected;
+  /** チュートリアル中はモック試合を先に出す（日程取得待ちの全面スケルトンで隠さない） */
+  const isInitialLoading =
+    loadingDays && !(tutorialActive && league === "nba");
   const isSwitchingDate = !!selected && listLoading;
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
   const playoffViewHref = isMobile
@@ -942,31 +1099,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     </motion.div>
   );
 
-  const renderBracketControl = (headerMobile: boolean) =>
-    league === "nba" ? (
-      <motion.div
-        className={gamesHeaderControlWrapClass(headerMobile)}
-        {...topBarEntry(0.27, 18)}
-      >
-        <button
-          type="button"
-          onClick={handleBracketClick}
-          style={bracketMarketTeamTypography(isMobile)}
-          className={[
-            gamesHeaderControlButtonClass(headerMobile),
-            "border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
-            headerMobile
-              ? "px-2.5 text-[10px] leading-none"
-              : dense
-                ? "rounded-lg px-3 text-sm"
-                : "rounded-xl px-4 text-base",
-          ].join(" ")}
-        >
-          Bracket
-        </button>
-      </motion.div>
-    ) : null;
-
   const monthHeaderMotion = webGamesMotion
     ? {
         initial: { opacity: 0, y: -10 } as const,
@@ -1091,7 +1223,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               </div>
               <div className={gamesHeaderMobileSideRightClass()}>
                 {renderFilterControl(true)}
-                {renderBracketControl(true)}
               </div>
             </div>
             <motion.div className="w-full" {...monthHeaderMotion}>
@@ -1109,7 +1240,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               </div>
               <div className={gamesHeaderDesktopSideRightClass()}>
                 {renderFilterControl(false)}
-                {renderBracketControl(false)}
               </div>
             </div>
             <motion.div className="w-full" {...monthHeaderMotion}>
@@ -1164,7 +1294,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     >
       <DayStrip
         dates={gameDaysForStrip}
-        selectedDate={selected}
+        selectedDate={selected ?? new Date()}
         onSelect={setSelectedAndSync}
         size={dense ? "md" : "lg"}
         visibleCount={visibleCount}
@@ -1219,10 +1349,40 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           games={filteredGames}
           extraPeerGamesForSeriesInference={peerRowsForSeriesInference}
           dense={dense}
-          loading={listLoading}
+          /** チュートリアル中はモック試合を先に見せる（取得待ちスケルトンで隠さない） */
+          loading={
+            listLoading &&
+            !(tutorialActive && league === "nba" && filteredGames.length > 0)
+          }
           league={league}
           emptyHint={scheduleEmptyHint}
           listShellIntro={listShellIntroLocked}
+          tutorialMarkFirstCard={
+            tutorialPhase === "tapCard" || tutorialPhase === "welcome"
+          }
+          tutorialModeGameId={
+            tutorialActive ? TUTORIAL_NBA_GAME_ID : null
+          }
+          forceCloseOverlay={
+            tutorialPhase === "posted" ||
+            tutorialPhase === "resolving" ||
+            tutorialPhase === "gotoResults"
+          }
+          onTutorialPredict={(payload) => {
+            const pick = payload;
+            const grade = tutorialGradeFromPick(pick);
+            writeTutorialLivePick(pick, grade);
+            setTutorialPhaseAndStore("posted");
+          }}
+          onOverlayGameIdChange={(id) => {
+            if (
+              id &&
+              String(id) === TUTORIAL_NBA_GAME_ID &&
+              (tutorialPhase === "tapCard" || tutorialPhase === "welcome")
+            ) {
+              setTutorialPhaseAndStore("predictWait");
+            }
+          }}
         />
       </div>
     </motion.div>
@@ -1251,6 +1411,20 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
             router.replace(`?${params.toString()}`, { scroll: false });
             setGamesDrawerOpen(false);
           }}
+          onSelectAwardsPredict={() => {
+            setGamesDrawerOpen(false);
+            router.push(
+              isMobile ? "/mobile/season-awards-preview" : "/dev/season-awards-preview"
+            );
+          }}
+          onSelectStandingsPredict={() => {
+            setGamesDrawerOpen(false);
+            router.push(
+              isMobile
+                ? "/mobile/season-standings-preview"
+                : "/dev/season-standings-preview"
+            );
+          }}
           onSelectWorldCup={() => {
             dismissWcTabBadge();
             didInitLeague.current = true;
@@ -1266,6 +1440,85 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           }}
         />
       </SideMenuDrawer>
+
+      {/* 本番画面上のチュートリアルコーチ */}
+      {tutorialPhase === "welcome" ? (
+        <TutorialLiveCoach
+          open
+          title={m.tutorial.practice.welcomeTitle}
+          body={m.tutorial.practice.welcomeBody}
+          skipLabel={m.tutorial.skip}
+          nextLabel={m.tutorial.next}
+          visual="welcome"
+          onSkip={completeTutorialFully}
+          onNext={() => setTutorialPhaseAndStore("tapCard")}
+        />
+      ) : null}
+
+      {tutorialPhase === "tapCard" ? (
+        <>
+          <TutorialLiveCoach
+            open
+            title={m.tutorial.practice.tapTitle}
+            body={m.tutorial.practice.tapBody}
+            skipLabel={m.tutorial.skip}
+            backLabel={m.tutorial.back}
+            target="match-card"
+            waitHint={m.tutorial.practice.tapHint}
+            showHoleRing={false}
+            onSkip={completeTutorialFully}
+            onBack={() => setTutorialPhaseAndStore("welcome")}
+          />
+          <TutorialPulseHint
+            active
+            label={m.tutorial.pulseHint}
+          />
+        </>
+      ) : null}
+
+      {/* predictWait 中の案内は PredictionFormV2 内バナー */}
+
+      {tutorialPhase === "posted" ? (
+        <TutorialLiveCoach
+          open
+          title={m.tutorial.practice.postedTitle}
+          body={m.tutorial.practice.postedBody}
+          skipLabel={m.tutorial.skip}
+          nextLabel={m.tutorial.next}
+          backLabel={m.tutorial.back}
+          onSkip={completeTutorialFully}
+          onBack={() => setTutorialPhaseAndStore("tapCard")}
+          onNext={() => setTutorialPhaseAndStore("resolving")}
+        />
+      ) : null}
+
+      <TutorialResolvingOverlay
+        open={tutorialPhase === "resolving"}
+        title={m.tutorial.practice.resolvingTitle}
+        body={m.tutorial.practice.resolvingBody}
+        spinLabel={m.tutorial.practice.resolvingSpin}
+      />
+
+      {tutorialPhase === "gotoResults" ? (
+        <TutorialLiveCoach
+          open
+          title={m.tutorial.practice.gotoResultsTitle}
+          body={m.tutorial.practice.gotoResultsBody}
+          skipLabel={m.tutorial.skip}
+          nextLabel={m.tutorial.next}
+          backLabel={m.tutorial.back}
+          target="nav-home"
+          waitHint={m.tutorial.practice.tapNavHint}
+          onSkip={completeTutorialFully}
+          onBack={() => setTutorialPhaseAndStore("posted")}
+          onNext={() => {
+            setTutorialPhaseAndStore("results");
+            router.push(
+              pathname?.startsWith("/web") ? "/web/result" : "/mobile/result"
+            );
+          }}
+        />
+      ) : null}
     </div>
   );
 }

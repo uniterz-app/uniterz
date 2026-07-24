@@ -71,9 +71,9 @@ export default function PlanStatusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center px-4">
+    <div className="min-h-screen bg-app flex items-center justify-center px-4 py-10">
       <FloatingCloseButton />
-      <div className="w-full max-w-md rounded-3xl bg-black/80 border border-white/10 px-6 py-8 shadow-[0_0_40px_rgba(0,255,255,0.08)]">
+      <div className="w-full max-w-2xl rounded-3xl bg-black/80 border border-white/10 px-8 py-10 shadow-[0_0_40px_rgba(0,255,255,0.08)]">
         {/* ロゴ + 開始日（Proのみ） */}
         <div className="mb-4 flex items-center gap-3">
           <Image
@@ -117,7 +117,7 @@ export default function PlanStatusPage() {
         {/* Actions */}
 {plan === "free" ? (
   <button
-    onClick={() => router.push("/mobile/pro/subscribe")}
+    onClick={() => router.push("/web/pro/subscribe")}
     className="
       w-full rounded-xl py-3 font-bold text-white
       transition
@@ -133,7 +133,7 @@ export default function PlanStatusPage() {
 ) : (
   <div className="flex gap-3">
     <button
-  onClick={() => router.push("/mobile//plan-change")}
+  onClick={() => router.push("/mobile/plan-change")}
   className="
     flex-1 rounded-xl py-3 font-bold text-white
     transition
@@ -150,7 +150,7 @@ export default function PlanStatusPage() {
 
     {/* 解約ボタン */}
 <button
-  onClick={() => router.push("/mobile//cancel-plan")}
+  onClick={() => router.push("/mobile/cancel-plan")}
   className="
     flex-1 rounded-xl py-3 font-bold text-red-400
     border border-red-400/40

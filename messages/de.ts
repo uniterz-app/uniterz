@@ -476,6 +476,9 @@ const de: Messages = {
     games: "Spiele",
     worldCup: "Weltmeisterschaft",
     nba: "NBA",
+    bracket: "Bracket",
+    awardsPredict: "Award-Tipps",
+    standingsPredict: "Tabellen-Tipps",
     live: "Live",
     liveAriaLabel: "Live",
     final: "Endstand",
@@ -635,6 +638,7 @@ const de: Messages = {
     announcementNotFound: "Ankündigung nicht gefunden.",
     planStatus: "Planstatus",
     proSkin: "Pro Skin",
+    deleteAccount: "Delete Account",
     freePlan: "Free Plan",
     proPlan: "Pro Plan",
     upgradeToPro: "Auf Pro upgraden",
@@ -886,6 +890,129 @@ const de: Messages = {
       period: "FIFA-Weltmeisterschaft 2026 — Gruppenphase",
       target: "FIFA-Weltmeisterschaft Gruppenphase",
       reward: "Trikot des WM-Siegelandes",
+    },
+  },
+
+  tutorial: {
+    skip: "Überspringen",
+    back: "Zurück",
+    next: "Weiter",
+    seeGames: "Spiele ansehen",
+    pulseHint: "Tippen zum Vorhersagen!",
+    hybrid: {
+      welcomeKicker: "WELCOME",
+      welcomeTitle: "Willkommen bei UNITERZ",
+      welcomeBody: "Tippe Spiele, sammle Punkte und steig im Ranking auf.",
+      flowKicker: "HOW TO PLAY",
+      flowTitle: "So einfach geht's",
+      flowBody: "Spielkarte tippen → Sieger & Score wählen → bei Treffer steigen.",
+      startKicker: "READY",
+      startTitle: "Mach deinen ersten Tipp",
+      startBody: "Danach leuchtet eine Karte. Tippe sie an und sende deinen ersten Tipp.",
+    },
+    practice: {
+      tabGames: "Games",
+      tabResult: "Results",
+      tabRankings: "Rankings",
+      tabGroups: "Groups",
+      tabProfile: "Profile",
+      welcomeTitle: "Welcome to UNITERZ",
+      welcomeBody:
+        "Predict games, earn points, and climb the rankings. Next, we'll walk through the basics on this screen.",
+      tapTitle: "Tap the match card",
+      tapBody:
+        "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
+      tapHint: "Tap the card above",
+      guideTitle: "Prediction screen",
+      guideBody:
+        "The winner is set from your scores. Enter HOME / AWAY points, then tap Submit below.",
+      startPredict: "Make a pick",
+      inputTitle: "Enter scores",
+      inputBody:
+        "Type HOME and AWAY scores. When done, tap Submit below — we'll simulate the final next.",
+      predictScoresTitle: "Score inputs",
+      predictScoresBody:
+        "HOME / AWAY predicted points go here. The winner is set from these scores.",
+      predictOverviewTitle: "Prediction screen",
+      predictOverviewBody:
+        "Post a score prediction — after the game, Results shows HIT / MISS. We'll walk through each part.",
+      predictSidesTitle: "HOME and AWAY",
+      predictSidesBody:
+        "Left is HOME, right is AWAY. Score inputs use the same left–right layout.",
+      predictMarketTitle: "Market bias",
+      predictMarketBody:
+        "How other users are leaning — which side has more picks.",
+      predictToolsTitle: "Info tabs",
+      predictToolsBody:
+        "INSIGHT (Pro), INJURY, STATS, and ROSTER—check injuries, stats, and rosters before you lock in a pick.",
+      predictBonusTitle: "Top scorer bonus",
+      predictBonusBody:
+        "Nail the game's top scorer for +2. When candidates are listed, pick a player.",
+      predictEnterTitle: "Enter your scores",
+      predictEnterBody: "Fill in both HOME and AWAY predicted scores.",
+      predictEnterWait: "Enter both scores to unlock Next",
+      predictSubmitTitle: "Submit here",
+      predictSubmitBody:
+        "Send your pick. HIT / MISS shows later on Results.",
+      predictSubmitWait: "Tap the glowing button to submit",
+      submitPredict: "Enter scores → Submit",
+      errNeedWinner: "Pick a winner",
+      errNeedScore: "Enter valid scores",
+      errHomeWinScore: "For a home win, home score must be higher",
+      errAwayWinScore: "For an away win, away score must be higher",
+      postedTitle: "Now we wait for tip-off",
+      postedBody:
+        "In the real app, HIT / MISS only shows after the game ends. Next, we'll jump to that Results moment.",
+      resolvingTitle: "Game final…",
+      resolvingBody: "The mock game has ended. Tallying the result…",
+      resolvingSpin: "FINALIZING",
+      gotoResultsTitle: "Check Results",
+      gotoResultsBody:
+        "Outcomes land on the Results tab. Tap it below.",
+      gotoRankingsTitle: "Open Rankings",
+      gotoRankingsBody: "Next up is the Rankings tab. Tap it below.",
+      gotoGroupsTitle: "Open Groups",
+      gotoGroupsBody: "Next up is the Groups tab. Tap it below.",
+      gotoProfileTitle: "Open Profile",
+      gotoProfileBody: "Next up is the Profile tab. Tap it below.",
+      resultHitTitle: "HIT!",
+      resultHitBody:
+        "You got the winner right. {bonus}+{pts}pt is the idea. Results always shows this check.",
+      resultCardTapHint: "Tap the card to see details",
+      resultScoreBonus: "Exact score bonus! ",
+      resultMissTitle: "MISS",
+      resultMissBody:
+        "Winner was wrong. In the real app you'll also check Results. Try again next game.",
+      resultDetailTitle: "Inside Results",
+      resultDetailBody:
+        "Final score, your pick, and point breakdown live here. We'll walk through from the top.",
+      resultDetailScoreTitle: "Final vs your pick",
+      resultDetailScoreBody:
+        "The big numbers are the final score; below is your prediction. HIT if you got the winner, MISS if not.",
+      resultDetailStatsTitle: "Three metrics",
+      resultDetailStatsBody:
+        "Score precision (0–10) tracks how close your scores were. Upset adds points for long-shot hits. Total score is win points plus bonuses.",
+      resultDetailMoreTitle: "More below",
+      resultDetailMoreBody:
+        "Scroll for score distribution and more detail. Same layout in the real app.",
+      yourPickLabel: "Your pick",
+      rankingsTitle: "Rankings",
+      rankingsBody:
+        "Hits earn points that decide your place. Switch periods and categories to track yourself.",
+      groupsTitle: "Groups (Leaderboards)",
+      groupsBody:
+        "Create a group with friends and compete in a private ranking. Join with an invite code too.",
+      groupsMockName: "Night Owls",
+      groupsMockMeta: "8 members · You're #2 in the group",
+      profileTitle: "Profile",
+      profileBody:
+        "Your page shows stats, streaks, settings, and plans. Change avatar and display name here.",
+      profileMockStats: "Hit rate · Streak · Total points",
+      doneTitle: "You're ready",
+      doneBody:
+        "That's the UNITERZ loop. Predict real games and climb the ranks.",
+      finishCta: "Start the app",
+      tapNavHint: "Tap the tab below, or press Next to go",
     },
   },
 

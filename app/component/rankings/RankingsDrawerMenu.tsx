@@ -60,7 +60,7 @@ export default function RankingsDrawerMenu({
           active={wcActive}
           onClick={onSelectWorldCup}
         >
-          <span className={cn(isEn && "uppercase")}>{m.rankings.worldCup}</span>
+          <span className="uppercase">World Cup</span>
         </SideMenuItemButton>
       </div>
     </nav>

@@ -65,11 +65,18 @@ export default function MobilePlanStatusScreen({
   const formatDate = (d: Date | null) =>
     d ? d.toLocaleDateString(isJa ? "ja-JP" : "en-US") : null;
 
-  const title = isJa ? "プランの確認" : "Plan Status";
+  const planHelp = isJa
+    ? "現在のプランと更新情報を確認できます。"
+    : "Check your current plan and renewal details.";
 
   if (loading) {
     return (
-      <MobilePageShell title={title} appBackground onClose={onClose}>
+      <MobilePageShell
+        title="PLAN"
+        subtitle={planHelp}
+        appBackground
+        onClose={onClose}
+      >
         <View style={styles.center}>
           <CandleChartLoaderNative label={isJa ? "読み込み中" : "Loading"} />
         </View>
@@ -78,7 +85,12 @@ export default function MobilePlanStatusScreen({
   }
 
   return (
-    <MobilePageShell title={title} appBackground onClose={onClose}>
+    <MobilePageShell
+      title="PLAN"
+      subtitle={planHelp}
+      appBackground
+      onClose={onClose}
+    >
       <View style={styles.wrap}>
         <View style={styles.card}>
           <View style={styles.logoRow}>
