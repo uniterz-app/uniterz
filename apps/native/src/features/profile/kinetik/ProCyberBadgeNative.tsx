@@ -151,9 +151,10 @@ export default function ProCyberBadgeNative({
   premium = false,
   compact = false,
 }: Props) {
-  const markSize = premium ? 17 : compact ? 12 : 15;
-  const wordSize = premium ? 10 : compact ? 8 : 9;
-  const height = premium ? 32 : compact ? 24 : 28;
+  // premium: プロフィール名横 — 名前(16)と並ぶ見やすいサイズ（旧32は大きすぎ、14は小さすぎ）
+  const markSize = premium ? 12 : compact ? 7 : 9;
+  const wordSize = premium ? 9 : compact ? 6 : 7;
+  const height = premium ? 22 : compact ? 14 : 18;
 
   return (
     <View

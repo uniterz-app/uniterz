@@ -103,14 +103,14 @@ export const SQUAD_BATTLE_SEASON_PHASES: readonly SquadBattleSeasonPhase[] = [
   {
     key: "entry",
     label: "ENTRY",
-    period: "約2週間",
+    period: "約1〜2週間前から",
     desc: "グループを作成・参加してエントリー",
   },
   {
     key: "battle",
     label: "BATTLE",
     period: "1ヶ月",
-    desc: "平均得点でランキングバトル",
+    desc: "週間×4 + 月間×1 の平均得点バトル",
   },
   {
     key: "reset",
@@ -121,7 +121,7 @@ export const SQUAD_BATTLE_SEASON_PHASES: readonly SquadBattleSeasonPhase[] = [
 ] as const;
 
 /** はてな（？）ヘルプ用のルール要約 */
-export const SQUAD_BATTLE_HELP_TEXT = `5人固定のスクワッドで、平均得点を競います。所属できるグループは1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中のグループは招待コードが必要です。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。2ヶ月に1回開催。エントリー期間約2週間 → 1ヶ月間バトル → 終了後は解散し、次回また新たにエントリー。`;
+export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 終了後は解散。過去のスクワッドから同じ顔ぶれを再招集できます。`;
 
 /** 初回イントロ既読フラグ（localStorage） */
 export const SQUAD_BATTLE_INTRO_STORAGE_KEY = "uniterz:squad-battle-intro:v1";
@@ -509,6 +509,28 @@ function rankLeaderboard(squads: Squad[]): Squad[] {
   }));
 }
 
+/** 過去スクワッド再招集プレビュー用 */
+export type PastSquadHistoryMock = {
+  battleId: string;
+  battleName: string;
+  squadId: string;
+  squadName: string;
+  role: "owner" | "member";
+  members: Array<{
+    uid: string;
+    displayName: string;
+    handle: string | null;
+  }>;
+};
+
+/** 受信した再招集招待（プレビュー） */
+export type SquadIncomingInviteMock = {
+  id: string;
+  squadId: string;
+  squadName: string;
+  fromDisplayName: string;
+};
+
 export type SquadBattleMockBundle = {
   state: SquadBattlePreviewState;
   mySquad: Squad | null;
@@ -519,7 +541,48 @@ export type SquadBattleMockBundle = {
   myOutgoingRequests: SquadJoinRequest[];
   /** 募集中: 自分のスクワッドへの申請 */
   incomingRequests: SquadJoinRequest[];
+  /** 直近 locked スクワッド（再招集） */
+  pastSquads: PastSquadHistoryMock[];
+  /** 未参加時: 再招集招待 */
+  incomingInvites: SquadIncomingInviteMock[];
 };
+
+const PAST_SQUAD_HISTORY: PastSquadHistoryMock[] = [
+  {
+    battleId: "gb-prev-1",
+    battleName: "SQUAD BATTLE Nov",
+    squadId: "past-squad-alpha",
+    squadName: "NEON WOLVES",
+    role: "owner",
+    members: [
+      { uid: "me", displayName: "Kamiya", handle: "kamiya" },
+      { uid: "u-rio", displayName: "Rio", handle: "rio_jp" },
+      { uid: "u-ken", displayName: "Ken", handle: "kenball" },
+      { uid: "u-aya", displayName: "Aya", handle: "aya_shot" },
+    ],
+  },
+  {
+    battleId: "gb-prev-2",
+    battleName: "SQUAD BATTLE Sep",
+    squadId: "past-squad-beta",
+    squadName: "COURT KINGS",
+    role: "member",
+    members: [
+      { uid: "u-max", displayName: "Max", handle: "maxout" },
+      { uid: "me", displayName: "Kamiya", handle: "kamiya" },
+      { uid: "u-leo", displayName: "Leo", handle: "leo_hz" },
+    ],
+  },
+];
+
+const INCOMING_SQUAD_INVITES: SquadIncomingInviteMock[] = [
+  {
+    id: "inv-1",
+    squadId: "open-1",
+    squadName: "NEON WOLVES",
+    fromDisplayName: "Rio",
+  },
+];
 
 /** プレビュー状態に応じたモック一式 */
 export function getSquadBattleMock(
@@ -551,6 +614,8 @@ export function getSquadBattleMock(
     openSquads: state === "none" ? OPEN_SQUAD_LISTINGS : [],
     myOutgoingRequests: state === "none" ? OUTGOING_JOIN_REQUESTS : [],
     incomingRequests: state === "recruiting" ? INCOMING_JOIN_REQUESTS : [],
+    pastSquads: state === "none" || state === "recruiting" ? PAST_SQUAD_HISTORY : [],
+    incomingInvites: state === "none" ? INCOMING_SQUAD_INVITES : [],
   };
 }
 

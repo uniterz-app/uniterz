@@ -8,7 +8,10 @@ import {
 
 export type { PushLanguage };
 
-export type GameMatchupCopyInput = PushMatchupInput;
+export type GameMatchupCopyInput = PushMatchupInput & {
+  /** 欠場名・先発変更・まとめ本文など */
+  detail?: string;
+};
 
 export function buildPushNotificationCopy(
   type: PushNotificationType,
@@ -16,6 +19,7 @@ export function buildPushNotificationCopy(
   input?: GameMatchupCopyInput
 ): { title: string; body: string; subtitle?: string } {
   const matchup = input ? formatPushMatchupLabel(input, language) : "";
+  const detail = input?.detail?.trim() || "";
 
   if (language === "en") {
     switch (type) {
@@ -33,6 +37,49 @@ export function buildPushNotificationCopy(
         return {
           title: "Rankings updated",
           body: "Today's cumulative rankings have been updated.",
+        };
+      case "injury_status":
+        return {
+          title: "Player availability updated",
+          body:
+            detail ||
+            (matchup
+              ? `${matchup} — review your prediction.`
+              : "A key player's status changed. Review your prediction."),
+        };
+      case "starter_change":
+        return {
+          title: "Important lineup change",
+          body:
+            detail ||
+            (matchup
+              ? `${matchup} — check the starting lineup.`
+              : "A high-impact starter change. Review your prediction."),
+        };
+      case "prediction_deadline":
+        return {
+          title: "Prediction deadline soon",
+          body:
+            matchup ||
+            "You haven't predicted this match yet. Submit before tip-off.",
+        };
+      case "pregame_digest":
+        return {
+          title: "Pregame updates",
+          body:
+            detail ||
+            (matchup
+              ? `${matchup} — several updates. Re-check your prediction.`
+              : "Several pregame updates. Re-check your prediction."),
+        };
+      case "pro_insight_update":
+        return {
+          title: "PRO INSIGHT updated",
+          body:
+            detail ||
+            (matchup
+              ? `${matchup} — the conclusion changed.`
+              : "The insight conclusion changed. Open the match."),
         };
     }
   }
@@ -52,6 +99,49 @@ export function buildPushNotificationCopy(
       return {
         title: "ランキング更新",
         body: "本日の累積ランキングが更新されました。",
+      };
+    case "injury_status":
+      return {
+        title: "出場ステータスが更新されました",
+        body:
+          detail ||
+          (matchup
+            ? `${matchup} の予想を確認してください。`
+            : "重要選手の出場情報が変わりました。予想を確認してください。"),
+      };
+    case "starter_change":
+      return {
+        title: "重要な先発変更があります",
+        body:
+          detail ||
+          (matchup
+            ? `${matchup} の先発を確認してください。`
+            : "影響の大きい先発変更があります。予想を確認してください。"),
+      };
+    case "prediction_deadline":
+      return {
+        title: "予想締切が近づいています",
+        body:
+          matchup ||
+          "まだ予想していない試合があります。開始前に提出してください。",
+      };
+    case "pregame_digest":
+      return {
+        title: "試合前情報が更新されました",
+        body:
+          detail ||
+          (matchup
+            ? `${matchup} に複数の更新があります。予想を再確認してください。`
+            : "複数の更新があります。予想を再確認してください。"),
+      };
+    case "pro_insight_update":
+      return {
+        title: "PRO INSIGHT が更新されました",
+        body:
+          detail ||
+          (matchup
+            ? `${matchup} の結論が変わりました。`
+            : "重要結論が変わりました。試合を開いて確認してください。"),
       };
   }
 }

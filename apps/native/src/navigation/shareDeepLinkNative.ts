@@ -16,12 +16,19 @@ export function navigateFromShareDeepLink(target: ShareDeepLinkTarget) {
         });
         return;
       case "profile":
+        // ProfileHome が一瞬出ないよう、PublicProfile だけでスタックを差し替える
         navigationRef.navigate("Main", {
           screen: "ProfileTab",
           params: {
-            screen: "PublicProfile",
-            params: { handle: target.handle },
-            initial: false,
+            state: {
+              routes: [
+                {
+                  name: "PublicProfile",
+                  params: { handle: target.handle },
+                },
+              ],
+              index: 0,
+            },
           },
         });
         return;

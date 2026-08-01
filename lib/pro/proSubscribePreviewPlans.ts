@@ -1,6 +1,6 @@
 /**
- * Pro 課金プレビュー用 — プラン定義（価格は仮。説明文は checklist §0.1.a）
- * Gap は迷い中のため課金コピーから除外。
+ * Pro 課金プレビュー用 — プラン定義（docs/pro-billing-design.md）
+ * Gap / Shadow は V1 対象外のため課金コピーから除外。
  */
 
 export type ProSubscribePreviewPlanId = "weekly" | "monthly" | "season";
@@ -60,16 +60,7 @@ const CORE_FEATURES: readonly ProSubscribePreviewFeature[] = [
   },
 ];
 
-/** Monthly / Season 向け */
-const SHADOW_FEATURE: ProSubscribePreviewFeature = {
-  titleJa: "Shadow（ライバル帯）",
-  titleEn: "Shadow (rival band)",
-  detailJa:
-    "先週同じ順位帯だった人との今週の差が分かる。個人の予想は非公開",
-  detailEn:
-    "Compare this week’s progress with last week’s rank band. Individual picks stay private.",
-};
-
+/** Monthly / Season 向け（Shadow は V1 対象外） */
 const WEEKLY_REPORT: ProSubscribePreviewFeature = {
   titleJa: "週次レポート",
   titleEn: "Weekly report",
@@ -119,27 +110,21 @@ export const PRO_SUBSCRIBE_PREVIEW_PLANS: readonly ProSubscribePreviewPlan[] = [
     recommended: true,
     blurbJa: "毎週ランキングを追う人の定番 · 初回7日無料",
     blurbEn: "Standard for ranking chasers · 7-day trial first",
-    features: [...CORE_FEATURES, SHADOW_FEATURE, WEEKLY_REPORT, MONTHLY_REPORT],
+    features: [...CORE_FEATURES, WEEKLY_REPORT, MONTHLY_REPORT],
   },
   {
     id: "season",
     labelJa: "Season Pass",
     labelEn: "Season Pass",
-    priceJa: "¥4,800",
-    priceEn: "¥4,800",
+    priceJa: "¥5,000",
+    priceEn: "¥5,000",
     periodJa: "/ シーズン",
     periodEn: "/ season",
-    badgeJa: "お得",
-    badgeEn: "Best value",
-    blurbJa: "シーズン通しで使う人向け。途中解約の返金なし（方針仮）。",
-    blurbEn: "Full season access. No mid-season refund (draft policy).",
-    features: [
-      ...CORE_FEATURES,
-      SHADOW_FEATURE,
-      WEEKLY_REPORT,
-      MONTHLY_REPORT,
-      SEASON_EXTRA,
-    ],
+    badgeJa: "買い切り",
+    badgeEn: "One-time",
+    blurbJa: "シーズン通しで使う人向け。自動更新なし・途中解約の返金なし。",
+    blurbEn: "Full season access. No auto-renew / no mid-season refund.",
+    features: [...CORE_FEATURES, WEEKLY_REPORT, MONTHLY_REPORT, SEASON_EXTRA],
   },
 ];
 

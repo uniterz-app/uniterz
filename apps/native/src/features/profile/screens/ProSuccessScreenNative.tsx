@@ -10,6 +10,7 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { colors, fonts, spacing } from "../../../theme/tokens";
+import { proPlanDisplayName } from "../../billing/iapProductIds";
 
 export default function ProSuccessScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -17,6 +18,7 @@ export default function ProSuccessScreenNative() {
   const { fUser } = useFirebaseUser();
   const [handle, setHandle] = useState<string | null>(null);
   const plan = route.params?.plan ?? "monthly";
+  const planLabel = proPlanDisplayName(plan, "en");
 
   useEffect(() => {
     if (!fUser?.uid) return;
@@ -66,9 +68,7 @@ export default function ProSuccessScreenNative() {
             <Text style={styles.brand}>UNITERZ</Text>
             <View style={styles.planRow}>
               <View style={styles.planDot} />
-              <Text style={styles.planText}>
-                {plan === "monthly" ? "Pro Monthly Plan" : "Pro Yearly Plan"}
-              </Text>
+              <Text style={styles.planText}>Pro {planLabel}</Text>
             </View>
           </View>
 

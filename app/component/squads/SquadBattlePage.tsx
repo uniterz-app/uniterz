@@ -22,6 +22,8 @@ import {
   RotateCcw,
   Pencil,
   Menu,
+  History,
+  Mail,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import cn from "clsx";
@@ -39,6 +41,7 @@ import {
   SQUAD_BATTLE_HELP_TEXT,
   SQUAD_BATTLE_MAX_MEMBERS,
   SQUAD_BATTLE_MAX_PENDING_APPLICATIONS,
+  SQUAD_BATTLE_MOCK_INVITE_CODE,
   SQUAD_BATTLE_NAME_MAX_LEN,
   SQUAD_BATTLE_OPEN_PAGE_SIZE,
   SQUAD_BATTLE_PREVIEW_STATES,
@@ -47,12 +50,15 @@ import {
   squadMemberToProfile,
   squadRankDelta,
   type OpenSquadListing,
+  type PastSquadHistoryMock,
   type Squad,
   type SquadApplicantProfile,
   type SquadBattlePreviewState,
+  type SquadIncomingInviteMock,
   type SquadJoinRequest,
   type SquadMember,
 } from "@/lib/squads/squadBattleMock";
+import type { GroupBattlePastSquadItem } from "@/lib/groupBattles/types";
 import {
   SQUAD_FIRST_AVATAR_FADE_S,
   SQUAD_FIRST_FADE_IN_EASE,
@@ -1070,11 +1076,19 @@ function MySquadCard({
 function CreateSquadNameSheet({
   onClose,
   onCreate,
+  initialName = "",
+  title = "CREATE SQUAD",
+  ariaLabel = "グループ作成",
+  submitLabel = "作成する",
 }: {
   onClose: () => void;
   onCreate: (name: string) => void;
+  initialName?: string;
+  title?: string;
+  ariaLabel?: string;
+  submitLabel?: string;
 }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName);
   const reduceMotion = useReducedMotion() === true;
   const isWeb = useSquadBattleIsWeb();
   const trimmed = name.trim();
@@ -1087,7 +1101,7 @@ function CreateSquadNameSheet({
       className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
       role="dialog"
       aria-modal
-      aria-label="グループ作成"
+      aria-label={ariaLabel}
       onClick={onClose}
     >
       <div
@@ -1150,7 +1164,7 @@ function CreateSquadNameSheet({
                     isWeb ? "text-[11px]" : "text-[10px]"
                   )}
                 >
-                  New squad · callsign
+                  {title}
                 </p>
               </div>
             </div>
@@ -1248,7 +1262,7 @@ function CreateSquadNameSheet({
               )}
             >
               <Plus size={15} strokeWidth={2.6} />
-              Deploy
+              {submitLabel}
             </SquadChamferButton>
             <button
               type="button"
@@ -1256,6 +1270,149 @@ function CreateSquadNameSheet({
               className={cn(
                 nameOxanium.className,
                 "py-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/35 transition hover:text-white/55"
+              )}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function normalizeUiInviteCode(raw: string): string {
+  return String(raw ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "");
+}
+
+/** 招待コードで参加 */
+function JoinByInviteCodeSheet({
+  onClose,
+  onJoin,
+  busy,
+}: {
+  onClose: () => void;
+  onJoin: (code: string) => void;
+  busy?: boolean;
+}) {
+  const [code, setCode] = useState("");
+  const reduceMotion = useReducedMotion() === true;
+  const isWeb = useSquadBattleIsWeb();
+  const trimmed = normalizeUiInviteCode(code);
+  const canSubmit = trimmed.length >= 4 && !busy;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
+      role="dialog"
+      aria-modal
+      aria-label="招待コードで参加"
+      onClick={onClose}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[#050208]/78 backdrop-blur-[2px]"
+      />
+      <motion.div
+        className={cn(
+          "relative w-full overflow-hidden",
+          isWeb ? "max-w-lg" : "max-w-md"
+        )}
+        style={{
+          ...chamferStyle,
+          border: "1px solid rgba(251,191,36,0.4)",
+          background:
+            "linear-gradient(168deg, rgba(28,20,8,0.98) 0%, rgba(8,6,3,1) 58%)",
+          boxShadow:
+            "0 0 48px rgba(251,191,36,0.16), 0 0 80px rgba(180,40,20,0.12)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+        initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className={cn("relative z-[10]", isWeb ? "px-6 pb-6 pt-5" : "px-5 pb-5 pt-4")}>
+          <div className={cn("flex items-start justify-between gap-3", isWeb ? "mb-5" : "mb-4")}>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"
+                />
+                <p
+                  className={cn(
+                    nameOxanium.className,
+                    "font-bold uppercase tracking-[0.28em] text-amber-200/70",
+                    isWeb ? "text-[11px]" : "text-[10px]"
+                  )}
+                >
+                  Invite code
+                </p>
+              </div>
+              <p className={cn(jp.className, "mt-2 text-sm text-white/55")}>
+                代表者から共有されたコードを入力
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center border border-amber-400/30 bg-black/35 text-amber-100/85"
+              style={chamferStyle}
+              aria-label="閉じる"
+            >
+              <X size={15} strokeWidth={2.4} />
+            </button>
+          </div>
+
+          <label className="block">
+            <span
+              className={cn(
+                nameOxanium.className,
+                "mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-amber-200/60"
+              )}
+            >
+              Code
+            </span>
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.slice(0, 24))}
+              placeholder={SQUAD_BATTLE_MOCK_INVITE_CODE}
+              autoFocus
+              autoCapitalize="characters"
+              spellCheck={false}
+              className={cn(
+                nameOxanium.className,
+                "w-full border border-amber-400/40 bg-black/55 px-3.5 py-3.5 text-[15px] font-black uppercase tracking-[0.18em] text-[#FFFBEB] outline-none placeholder:text-white/20 focus:border-amber-300/70"
+              )}
+              style={chamferStyle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSubmit) onJoin(trimmed);
+              }}
+            />
+          </label>
+
+          <div className="mt-5 flex flex-col gap-2.5">
+            <SquadChamferButton
+              onClick={() => {
+                if (!canSubmit) return;
+                onJoin(trimmed);
+              }}
+              disabled={!canSubmit}
+              variant="battle"
+              className="flex w-full items-center justify-center gap-2 py-3.5 text-sm font-black uppercase tracking-[0.22em] disabled:opacity-35"
+            >
+              <Ticket size={15} strokeWidth={2.4} />
+              {busy ? "参加中…" : "参加する"}
+            </SquadChamferButton>
+            <button
+              type="button"
+              onClick={onClose}
+              className={cn(
+                nameOxanium.className,
+                "py-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/35"
               )}
             >
               Cancel
@@ -1625,24 +1782,258 @@ function OpenSquadRow({
   );
 }
 
+function PastSquadsPanel({
+  pastSquads,
+  selfUid,
+  canReform,
+  canInvite,
+  busyId,
+  onReform,
+  onInvite,
+}: {
+  pastSquads: Array<PastSquadHistoryMock | GroupBattlePastSquadItem>;
+  selfUid: string;
+  /** 未所属時のみ一括再招集可 */
+  canReform: boolean;
+  /** 自スクワッド owner 時のみ個別招待可 */
+  canInvite: boolean;
+  busyId: string | null;
+  onReform: (item: PastSquadHistoryMock | GroupBattlePastSquadItem) => void;
+  onInvite: (
+    item: PastSquadHistoryMock | GroupBattlePastSquadItem,
+    memberUid: string
+  ) => void;
+}) {
+  const isWeb = useSquadBattleIsWeb();
+  if (pastSquads.length === 0) return null;
+
+  return (
+    <section>
+      <SquadSectionHeader
+        kicker="Past squads"
+        title="過去のスクワッド"
+        trailing={
+          <p className={cn(jp.className, "text-[11px] text-white/35")}>
+            直近 {pastSquads.length} 大会
+          </p>
+        }
+      />
+      <div className={cn("flex flex-col", isWeb ? "gap-2.5" : "gap-2")}>
+        {pastSquads.map((item) => {
+          const key = `${item.battleId}:${item.squadId}`;
+          const others = item.members.filter((m) => m.uid !== selfUid);
+          return (
+            <div
+              key={key}
+              className={cn(
+                "border border-cyan-400/25 bg-cyan-500/[0.05]",
+                isWeb ? "px-4 py-3.5" : "px-3 py-3"
+              )}
+              style={chamferStyle}
+            >
+              <div className="flex items-start gap-2.5">
+                <History
+                  size={isWeb ? 16 : 14}
+                  className="mt-0.5 shrink-0 text-cyan-300/80"
+                  strokeWidth={2}
+                />
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={cn(
+                      nameOxanium.className,
+                      "truncate text-[13px] font-bold uppercase tracking-wide text-cyan-50"
+                    )}
+                  >
+                    {item.squadName}
+                  </p>
+                  <p className={cn(jp.className, "mt-0.5 text-xs text-white/40")}>
+                    {item.battleName}
+                    {item.role === "owner" ? " · 代表" : " · メンバー"}
+                  </p>
+                  <p
+                    className={cn(
+                      jp.className,
+                      "mt-1.5 truncate text-[12px] text-white/55"
+                    )}
+                  >
+                    {item.members
+                      .map((m) => m.displayName)
+                      .join(" · ")}
+                  </p>
+                </div>
+              </div>
+
+              {canReform && item.role === "owner" ? (
+                <SquadChamferButton
+                  onClick={() => onReform(item)}
+                  disabled={busyId === key}
+                  variant="battle"
+                  className={cn(
+                    "mt-3 flex w-full items-center justify-center gap-2 px-3 font-bold uppercase tracking-wider disabled:opacity-40",
+                    isWeb ? "py-2.5 text-[13px]" : "py-2 text-xs"
+                  )}
+                >
+                  <Users size={14} strokeWidth={2.4} />
+                  同じメンバーで募集
+                </SquadChamferButton>
+              ) : null}
+
+              {canInvite ? (
+                <div className={cn("mt-3 flex flex-col", isWeb ? "gap-1.5" : "gap-1")}>
+                  {others.map((m) => (
+                    <div
+                      key={m.uid}
+                      className="flex items-center gap-2 border border-white/10 bg-black/25 px-2.5 py-1.5"
+                      style={chamferStyle}
+                    >
+                      <p
+                        className={cn(
+                          jp.className,
+                          "min-w-0 flex-1 truncate text-[12px] text-white/75"
+                        )}
+                      >
+                        {m.displayName}
+                        {m.handle ? (
+                          <span className="text-white/35"> @{m.handle}</span>
+                        ) : null}
+                      </p>
+                      <button
+                        type="button"
+                        disabled={busyId === `${key}:${m.uid}`}
+                        onClick={() => onInvite(item, m.uid)}
+                        className={cn(
+                          nameOxanium.className,
+                          "shrink-0 border border-cyan-400/40 bg-cyan-400/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-100 disabled:opacity-40"
+                        )}
+                        style={chamferStyle}
+                      >
+                        誘う
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {!canReform && !canInvite && item.role === "owner" ? (
+                <p className={cn(jp.className, "mt-2 text-[11px] text-white/35")}>
+                  未所属時に「同じメンバーで募集」できます
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function IncomingInvitesPanel({
+  invites,
+  onAccept,
+  onDecline,
+}: {
+  invites: SquadIncomingInviteMock[];
+  onAccept: (invite: SquadIncomingInviteMock) => void;
+  onDecline: (invite: SquadIncomingInviteMock) => void;
+}) {
+  const isWeb = useSquadBattleIsWeb();
+  if (invites.length === 0) return null;
+
+  return (
+    <section>
+      <SquadSectionHeader
+        kicker="Invites"
+        title="再招集の招待"
+        accent="amber"
+        trailing={
+          <p className={cn(jp.className, "text-[11px] text-white/35")}>
+            {invites.length} pending
+          </p>
+        }
+      />
+      <div className={cn("flex flex-col", isWeb ? "gap-2" : "gap-1.5")}>
+        {invites.map((inv) => (
+          <div
+            key={inv.id}
+            className="flex flex-col gap-2 border border-amber-400/25 bg-amber-500/[0.06] px-3 py-2.5"
+            style={chamferStyle}
+          >
+            <div className="flex items-center gap-2.5">
+              <Mail size={14} className="shrink-0 text-amber-200/80" />
+              <div className="min-w-0 flex-1">
+                <p
+                  className={cn(
+                    nameOxanium.className,
+                    "truncate text-[13px] font-bold uppercase tracking-wide text-amber-50"
+                  )}
+                >
+                  {inv.squadName}
+                </p>
+                <p className={cn(jp.className, "text-xs text-white/40")}>
+                  {inv.fromDisplayName} からの招待
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <SquadChamferButton
+                onClick={() => onAccept(inv)}
+                variant="battle"
+                className="flex flex-1 items-center justify-center gap-1.5 py-2 text-[12px] font-bold uppercase tracking-wider"
+              >
+                <Check size={13} strokeWidth={2.6} />
+                参加する
+              </SquadChamferButton>
+              <button
+                type="button"
+                onClick={() => onDecline(inv)}
+                className={cn(
+                  nameOxanium.className,
+                  "flex flex-1 items-center justify-center border border-white/20 bg-black/30 py-2 text-[11px] font-bold uppercase tracking-wider text-white/55"
+                )}
+                style={chamferStyle}
+              >
+                今回はパス
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function NoneState({
   openSquads,
   outgoingRequests,
   appliedSquadIds,
   pendingCount,
+  pastSquads,
+  incomingInvites,
+  reformBusyId,
+  selfUid,
   onCreate,
   onJoinByCode,
   onApply,
   onOpenMemberProfile,
+  onReform,
+  onAcceptInvite,
+  onDeclineInvite,
 }: {
   openSquads: OpenSquadListing[];
   outgoingRequests: SquadJoinRequest[];
   appliedSquadIds: Set<string>;
   pendingCount: number;
+  pastSquads: Array<PastSquadHistoryMock | GroupBattlePastSquadItem>;
+  incomingInvites: SquadIncomingInviteMock[];
+  reformBusyId: string | null;
+  selfUid: string;
   onCreate: () => void;
   onJoinByCode: () => void;
   onApply: (squadId: string, squadName: string) => void;
   onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
+  onReform: (item: PastSquadHistoryMock | GroupBattlePastSquadItem) => void;
+  onAcceptInvite: (invite: SquadIncomingInviteMock) => void;
+  onDeclineInvite: (invite: SquadIncomingInviteMock) => void;
 }) {
   const isWeb = useSquadBattleIsWeb();
   const atLimit = pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS;
@@ -1720,6 +2111,22 @@ function NoneState({
           </div>
         </div>
       </div>
+
+      <IncomingInvitesPanel
+        invites={incomingInvites}
+        onAccept={onAcceptInvite}
+        onDecline={onDeclineInvite}
+      />
+
+      <PastSquadsPanel
+        pastSquads={pastSquads}
+        selfUid={selfUid}
+        canReform
+        canInvite={false}
+        busyId={reformBusyId}
+        onReform={onReform}
+        onInvite={() => {}}
+      />
 
       {outgoingRequests.length > 0 ? (
         <section>
@@ -2359,10 +2766,10 @@ function Toast({ message }: { message: string }) {
   return (
     <div
       className={cn(
-        "fixed left-1/2 z-50 -translate-x-1/2 border border-cyan-400/35 bg-[#050b14]/95 px-4 py-2.5 shadow-[0_0_24px_rgba(0,245,255,0.2)]",
+        "fixed left-1/2 z-[80] -translate-x-1/2 border border-cyan-400/35 bg-[#050b14]/95 px-4 py-2.5 shadow-[0_0_24px_rgba(0,245,255,0.2)]",
         nameOxanium.className,
         "font-bold uppercase tracking-[0.16em] text-cyan-100",
-        isWeb ? "bottom-10 text-xs" : "bottom-24 text-[11px]"
+        isWeb ? "bottom-10 text-xs" : "bottom-28 text-[11px]"
       )}
       style={chamferStyle}
       role="status"
@@ -2568,16 +2975,99 @@ export default function SquadBattlePage({ variant }: Props) {
     metaLabel?: string;
   } | null>(null);
   const [createSquadOpen, setCreateSquadOpen] = useState(false);
+  const [joinByCodeOpen, setJoinByCodeOpen] = useState(false);
+  const [joinByCodeBusy, setJoinByCodeBusy] = useState(false);
   /** 作成フローで決めた名前（プレビュー用オーバーライド） */
   const [createdSquadName, setCreatedSquadName] = useState<string | null>(null);
   /** 初回イントロ — SSR 不一致回避のため初期 false、effect で開く */
   const [introOpen, setIntroOpen] = useState(false);
+  /** RANK サブ: 週間 / 月間 */
+  const [rankPeriod, setRankPeriod] = useState<"weekly" | "monthly">("weekly");
+  /** 本番スナップショット状態。モック時は live */
+  const [boardStatus, setBoardStatus] = useState<"live" | "final">("live");
+  /** API 接続時の battleId（未接続なら null → モック） */
+  const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
+  const [livePastSquads, setLivePastSquads] = useState<
+    GroupBattlePastSquadItem[] | null
+  >(null);
+  const [liveIncomingInvites, setLiveIncomingInvites] = useState<
+    SquadIncomingInviteMock[] | null
+  >(null);
+  const [liveSelfUid, setLiveSelfUid] = useState<string | null>(null);
+  const [liveMySquadId, setLiveMySquadId] = useState<string | null>(null);
+  const [liveIsOwner, setLiveIsOwner] = useState(false);
+  const [reformBusyId, setReformBusyId] = useState<string | null>(null);
+  const [reformTarget, setReformTarget] = useState<
+    PastSquadHistoryMock | GroupBattlePastSquadItem | null
+  >(null);
+  const [dismissedInviteIds, setDismissedInviteIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!hasSeenSquadBattleIntro()) {
       setIntroOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const user = auth.currentUser;
+        const token = await user?.getIdToken();
+        const {
+          fetchCurrentGroupBattle,
+          fetchGroupBattleRankings,
+          fetchPastGroupBattleSquads,
+          fetchGroupBattleIncomingInvites,
+        } = await import("@/lib/groupBattles/clientApi");
+        const current = await fetchCurrentGroupBattle({ idToken: token });
+        if (cancelled || !current?.battle) return;
+        setLiveBattleId(current.battle.id);
+        if (user?.uid) setLiveSelfUid(user.uid);
+        setLiveMySquadId(current.mySquad?.id ?? null);
+        setLiveIsOwner(current.membership?.role === "owner");
+        const label =
+          rankPeriod === "weekly"
+            ? current.battle.weeklyLabels?.[current.battle.weeklyLabels.length - 1]
+            : current.battle.monthlyRange?.label;
+        const rankings = await fetchGroupBattleRankings(
+          current.battle.id,
+          rankPeriod,
+          label,
+          { idToken: token }
+        );
+        if (!cancelled && rankings?.snapshot) {
+          setBoardStatus(rankings.snapshot.status);
+        }
+        if (token) {
+          const past = await fetchPastGroupBattleSquads({ idToken: token });
+          if (!cancelled && past?.pastSquads) {
+            setLivePastSquads(past.pastSquads);
+          }
+          const invites = await fetchGroupBattleIncomingInvites(
+            current.battle.id,
+            { idToken: token }
+          );
+          if (!cancelled && invites?.invites) {
+            setLiveIncomingInvites(
+              invites.invites.map((i) => ({
+                id: i.id,
+                squadId: i.squadId,
+                squadName: i.squadName,
+                fromDisplayName: i.fromDisplayName,
+              }))
+            );
+          }
+        }
+      } catch {
+        // モック継続
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rankPeriod]);
 
   const mock = useMemo(() => getSquadBattleMock(previewState), [previewState]);
 
@@ -2643,9 +3133,161 @@ export default function SquadBattlePage({ variant }: Props) {
 
   const pendingCount = outgoingForDisplay.length;
 
+  const pastSquadsForUi = livePastSquads ?? mock.pastSquads;
+  const incomingInvitesForUi = useMemo(() => {
+    const base = liveIncomingInvites ?? mock.incomingInvites;
+    return base.filter((i) => !dismissedInviteIds.includes(i.id));
+  }, [liveIncomingInvites, mock.incomingInvites, dismissedInviteIds]);
+  const selfUidForUi = liveSelfUid ?? "me";
+
   function flash(msg: string) {
     setToast(msg);
     window.setTimeout(() => setToast(null), 1800);
+  }
+
+  async function withAuthToken() {
+    const { auth } = await import("@/lib/firebase");
+    return auth.currentUser?.getIdToken() ?? null;
+  }
+
+  async function handleReformConfirm(name: string) {
+    const target = reformTarget;
+    setReformTarget(null);
+    if (!target) return;
+    const busyKey = `${target.battleId}:${target.squadId}`;
+    setReformBusyId(busyKey);
+
+    if (liveBattleId) {
+      try {
+        const token = await withAuthToken();
+        const { reformGroupBattleSquad } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await reformGroupBattleSquad(
+          liveBattleId,
+          {
+            sourceBattleId: target.battleId,
+            sourceSquadId: target.squadId,
+            name,
+          },
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`再招集失敗: ${res.error}`);
+          setReformBusyId(null);
+          return;
+        }
+        setCreatedSquadName(name);
+        setPreviewState("recruiting");
+        setLiveMySquadId(res.squadId);
+        setLiveIsOwner(true);
+        flash(
+          `再招集: ${name}（招待 ${res.invited.length} / スキップ ${res.skipped.length}）`
+        );
+      } catch {
+        flash("再招集に失敗しました");
+      }
+      setReformBusyId(null);
+      return;
+    }
+
+    setCreatedSquadName(name);
+    setPreviewState("recruiting");
+    setExtraAppliedIds([]);
+    setDismissedRequestIds([]);
+    setProfileRequest(null);
+    setViewedProfile(null);
+    setMainTab("join");
+    flash(`同じメンバーで募集: ${name}`);
+    setReformBusyId(null);
+  }
+
+  async function handleInvitePastMember(
+    item: PastSquadHistoryMock | GroupBattlePastSquadItem,
+    memberUid: string
+  ) {
+    const busyKey = `${item.battleId}:${item.squadId}:${memberUid}`;
+    setReformBusyId(busyKey);
+    const squadId = liveMySquadId ?? mySquad?.id;
+    if (liveBattleId && squadId) {
+      try {
+        const token = await withAuthToken();
+        const { inviteToGroupBattleSquad } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await inviteToGroupBattleSquad(
+          liveBattleId,
+          squadId,
+          {
+            targetUid: memberUid,
+            sourceBattleId: item.battleId,
+            sourceSquadId: item.squadId,
+          },
+          { idToken: token }
+        );
+        flash(res.ok ? "招待を送りました" : `招待失敗: ${res.error}`);
+      } catch {
+        flash("招待に失敗しました");
+      }
+      setReformBusyId(null);
+      return;
+    }
+    const member = item.members.find((m) => m.uid === memberUid);
+    flash(`誘う: ${member?.displayName ?? memberUid}`);
+    setReformBusyId(null);
+  }
+
+  async function handleAcceptInvite(invite: SquadIncomingInviteMock) {
+    if (liveBattleId) {
+      try {
+        const token = await withAuthToken();
+        const { acceptGroupBattleInvite } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await acceptGroupBattleInvite(liveBattleId, invite.id, {
+          idToken: token,
+        });
+        if (!res.ok) {
+          flash(`参加失敗: ${res.error}`);
+          return;
+        }
+        setDismissedInviteIds((prev) => [...prev, invite.id]);
+        setPreviewState("recruiting");
+        setCreatedSquadName(invite.squadName);
+        flash(`参加: ${invite.squadName}`);
+        return;
+      } catch {
+        flash("参加に失敗しました");
+        return;
+      }
+    }
+    setDismissedInviteIds((prev) => [...prev, invite.id]);
+    setPreviewState("recruiting");
+    setCreatedSquadName(invite.squadName);
+    flash(`参加: ${invite.squadName}`);
+  }
+
+  async function handleDeclineInvite(invite: SquadIncomingInviteMock) {
+    if (liveBattleId) {
+      try {
+        const token = await withAuthToken();
+        const { declineGroupBattleInvite } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await declineGroupBattleInvite(liveBattleId, invite.id, {
+          idToken: token,
+        });
+        if (!res.ok) {
+          flash(`パス失敗: ${res.error}`);
+          return;
+        }
+      } catch {
+        flash("パスに失敗しました");
+        return;
+      }
+    }
+    setDismissedInviteIds((prev) => [...prev, invite.id]);
+    flash(`パス: ${invite.squadName}`);
   }
 
   function handlePreviewStateChange(next: SquadBattlePreviewState) {
@@ -2655,9 +3297,64 @@ export default function SquadBattlePage({ variant }: Props) {
     setProfileRequest(null);
     setViewedProfile(null);
     setCreateSquadOpen(false);
+    setJoinByCodeOpen(false);
     setCreatedSquadName(null);
+    setReformTarget(null);
+    setDismissedInviteIds([]);
     // 未参加は参加タブ、所属中は順位タブを初期表示
     setMainTab(next === "none" ? "join" : "rank");
+  }
+
+  async function handleJoinByCode(code: string) {
+    const normalized = normalizeUiInviteCode(code);
+    if (normalized.length < 4) return;
+    setJoinByCodeBusy(true);
+
+    if (liveBattleId) {
+      try {
+        const token = await withAuthToken();
+        const { joinGroupBattleByInviteCode } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await joinGroupBattleByInviteCode(
+          liveBattleId,
+          code,
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(
+            res.error === "invalid_invite"
+              ? "コードが無効です"
+              : `参加失敗: ${res.error}`
+          );
+          setJoinByCodeBusy(false);
+          return;
+        }
+        setJoinByCodeOpen(false);
+        setPreviewState("recruiting");
+        setLiveMySquadId(res.squadId);
+        setLiveIsOwner(false);
+        flash("スクワッドに参加しました");
+      } catch {
+        flash("参加に失敗しました");
+      }
+      setJoinByCodeBusy(false);
+      return;
+    }
+
+    const mockNorm = normalizeUiInviteCode(SQUAD_BATTLE_MOCK_INVITE_CODE);
+    if (normalized !== mockNorm) {
+      flash("コードが無効です（プレビューは NC-7K2M）");
+      setJoinByCodeBusy(false);
+      return;
+    }
+    setJoinByCodeOpen(false);
+    setPreviewState("recruiting");
+    setExtraAppliedIds([]);
+    setDismissedRequestIds([]);
+    setMainTab("join");
+    flash("招待コードで参加しました");
+    setJoinByCodeBusy(false);
   }
 
   function handleCreateSquad(name: string) {
@@ -2757,8 +3454,12 @@ export default function SquadBattlePage({ variant }: Props) {
               outgoingRequests={outgoingForDisplay}
               appliedSquadIds={appliedSquadIds}
               pendingCount={pendingCount}
+              pastSquads={pastSquadsForUi}
+              incomingInvites={incomingInvitesForUi}
+              reformBusyId={reformBusyId}
+              selfUid={selfUidForUi}
               onCreate={() => setCreateSquadOpen(true)}
-              onJoinByCode={() => flash("モック: 招待コード未実装")}
+              onJoinByCode={() => setJoinByCodeOpen(true)}
               onApply={(squadId, squadName) => {
                 if (appliedSquadIds.has(squadId)) return;
                 if (pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS) {
@@ -2775,6 +3476,13 @@ export default function SquadBattlePage({ variant }: Props) {
               onOpenMemberProfile={(profile) =>
                 openMemberProfile(profile, "募集中スクワッドのメンバー")
               }
+              onReform={(item) => setReformTarget(item)}
+              onAcceptInvite={(invite) => {
+                void handleAcceptInvite(invite);
+              }}
+              onDeclineInvite={(invite) => {
+                void handleDeclineInvite(invite);
+              }}
             />
           ) : (
             <>
@@ -2791,6 +3499,22 @@ export default function SquadBattlePage({ variant }: Props) {
                 }}
                 onRenameSquad={handleRenameSquad}
               />
+              {(liveIsOwner || previewState === "recruiting") &&
+              pastSquadsForUi.length > 0 ? (
+                <div className={variant === "web" ? "mt-6" : "mt-5"}>
+                  <PastSquadsPanel
+                    pastSquads={pastSquadsForUi}
+                    selfUid={selfUidForUi}
+                    canReform={false}
+                    canInvite={liveIsOwner || previewState === "recruiting"}
+                    busyId={reformBusyId}
+                    onReform={() => {}}
+                    onInvite={(item, uid) => {
+                      void handleInvitePastMember(item, uid);
+                    }}
+                  />
+                </div>
+              ) : null}
               <IncomingRequestsPanel
                 requests={visibleIncoming}
                 onOpenProfile={(req) => {
@@ -2812,6 +3536,50 @@ export default function SquadBattlePage({ variant }: Props) {
           )
         ) : (
           <section>
+            <div
+              className={cn(
+                "flex items-center gap-3",
+                variant === "web" ? "mb-4" : "mb-3"
+              )}
+            >
+              <div className="min-w-0 flex-1">
+                <CyberSlantedTabBar fill aria-label="週間・月間">
+                  <CyberSlantedTab
+                    role="tab"
+                    label="WEEK"
+                    active={rankPeriod === "weekly"}
+                    onClick={() => setRankPeriod("weekly")}
+                    compact
+                    fontWeight={900}
+                  />
+                  <CyberSlantedTab
+                    role="tab"
+                    label="MONTH"
+                    active={rankPeriod === "monthly"}
+                    onClick={() => setRankPeriod("monthly")}
+                    compact
+                    fontWeight={900}
+                  />
+                </CyberSlantedTabBar>
+              </div>
+              <span
+                className={cn(
+                  nameOxanium.className,
+                  "shrink-0 rounded-sm border px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em]",
+                  boardStatus === "final"
+                    ? "border-amber-300/50 bg-amber-400/15 text-amber-200"
+                    : "border-cyan-400/45 bg-cyan-400/10 text-cyan-200 shadow-[0_0_10px_rgba(0,245,255,0.25)]"
+                )}
+                title={
+                  liveBattleId
+                    ? `大会 ${liveBattleId}`
+                    : "プレビュー（モック）"
+                }
+              >
+                {boardStatus === "final" ? "FINAL" : "LIVE"}
+              </span>
+            </div>
+
             {mySquad ? (
               <div
                 className={cn(
@@ -2827,7 +3595,7 @@ export default function SquadBattlePage({ variant }: Props) {
             ) : null}
 
             <div
-              key={mainTab}
+              key={`${mainTab}-${rankPeriod}`}
               className={cn(
                 "flex flex-col",
                 variant === "web" ? "gap-2.5" : "gap-2"
@@ -2851,6 +3619,32 @@ export default function SquadBattlePage({ variant }: Props) {
         <CreateSquadNameSheet
           onClose={() => setCreateSquadOpen(false)}
           onCreate={handleCreateSquad}
+        />
+      ) : null}
+
+      {joinByCodeOpen ? (
+        <JoinByInviteCodeSheet
+          busy={joinByCodeBusy}
+          onClose={() => {
+            if (joinByCodeBusy) return;
+            setJoinByCodeOpen(false);
+          }}
+          onJoin={(code) => {
+            void handleJoinByCode(code);
+          }}
+        />
+      ) : null}
+
+      {reformTarget ? (
+        <CreateSquadNameSheet
+          initialName={reformTarget.squadName}
+          title="REFORM SQUAD"
+          ariaLabel="同じメンバーで募集"
+          submitLabel="招待を送る"
+          onClose={() => setReformTarget(null)}
+          onCreate={(name) => {
+            void handleReformConfirm(name);
+          }}
         />
       ) : null}
 

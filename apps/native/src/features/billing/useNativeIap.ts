@@ -4,26 +4,36 @@ import { Platform } from "react-native";
 import {
   initConnection,
   endConnection,
+  getProducts,
   getSubscriptions,
+  requestPurchase,
   requestSubscription,
   getAvailablePurchases,
   finishTransaction,
   purchaseUpdatedListener,
   purchaseErrorListener,
+  type Product,
   type ProductPurchase,
   type Subscription,
   type PurchaseError,
 } from "react-native-iap";
-import { IAP_PRODUCT_IDS, type IapPlan, productIdForPlan } from "./iapProductIds";
+import {
+  IAP_ALL_SKUS,
+  IAP_ONE_TIME_SKUS,
+  IAP_SUBSCRIPTION_SKUS,
+  isSubscriptionPlan,
+  productIdForPlan,
+  type ProIapPlan,
+} from "./iapProductIds";
 import { auth } from "../../lib/firebase";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
-const SKU_LIST = Object.values(IAP_PRODUCT_IDS);
+type CatalogItem = Subscription | Product;
 
 export function useNativeIap() {
   const [ready, setReady] = useState(false);
-  const [products, setProducts] = useState<Subscription[]>([]);
+  const [products, setProducts] = useState<CatalogItem[]>([]);
   const [purchasing, setPurchasing] = useState(false);
   const pendingResolveRef = useRef<((ok: boolean) => void) | null>(null);
 
@@ -57,9 +67,12 @@ export function useNativeIap() {
     void (async () => {
       try {
         await initConnection();
-        const subs = await getSubscriptions({ skus: SKU_LIST });
+        const [subs, oneTime] = await Promise.all([
+          getSubscriptions({ skus: [...IAP_SUBSCRIPTION_SKUS] }),
+          getProducts({ skus: [...IAP_ONE_TIME_SKUS] }),
+        ]);
         if (alive) {
-          setProducts(subs);
+          setProducts([...subs, ...oneTime]);
           setReady(true);
         }
       } catch {
@@ -76,7 +89,9 @@ export function useNativeIap() {
     if (!ready) return;
 
     const successSub = purchaseUpdatedListener(async (purchase) => {
-      if (!SKU_LIST.includes(purchase.productId as (typeof SKU_LIST)[number])) return;
+      if (!IAP_ALL_SKUS.includes(purchase.productId as (typeof IAP_ALL_SKUS)[number])) {
+        return;
+      }
       try {
         await verifyOnServer(purchase);
         pendingResolveRef.current?.(true);
@@ -109,14 +124,17 @@ export function useNativeIap() {
   }, [ready, verifyOnServer]);
 
   const purchase = useCallback(
-    async (plan: IapPlan) => {
+    async (plan: ProIapPlan) => {
       if (!ready || purchasing) return false;
       setPurchasing(true);
       try {
         const sku = productIdForPlan(plan);
         return await new Promise<boolean>((resolve) => {
           pendingResolveRef.current = resolve;
-          void requestSubscription({ sku }).catch(() => {
+          const req = isSubscriptionPlan(plan)
+            ? requestSubscription({ sku })
+            : requestPurchase({ sku });
+          void req.catch(() => {
             pendingResolveRef.current = null;
             setPurchasing(false);
             resolve(false);
@@ -137,7 +155,7 @@ export function useNativeIap() {
     try {
       const purchases = await getAvailablePurchases();
       const valid = purchases.filter((p) =>
-        SKU_LIST.includes(p.productId as (typeof SKU_LIST)[number])
+        IAP_ALL_SKUS.includes(p.productId as (typeof IAP_ALL_SKUS)[number])
       );
       if (valid.length === 0) {
         cyberAlert("", "復元可能な購入がありません。");

@@ -7,6 +7,7 @@ import { spacing } from "../../theme/tokens";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { LeaderboardsStackParamList, MainTabParamList } from "../../navigation/types";
+import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { useNativeMyRankingUser } from "../rankings/useNativeMyRankingUser";
 import RankingsCommunityPanelNative from "./RankingsCommunityPanelNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
@@ -41,13 +42,10 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
             stackNavigation.navigate("SquadBattlePreview");
           }}
           onOpenProfile={(handle, groupId) => {
-            tabNavigation.navigate("ProfileTab", {
-              screen: "ProfileHome",
-              params: {
-                handle,
-                fromLeaderboards: true,
-                ...(groupId ? { leaderboardsGroupId: groupId } : {}),
-              },
+            navigateToPublicProfileNative(tabNavigation, {
+              handle,
+              fromLeaderboards: true,
+              ...(groupId ? { leaderboardsGroupId: groupId } : {}),
             });
           }}
         />

@@ -22,6 +22,13 @@ import {
 } from "@/lib/rankings/wcRankingStage";
 import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import { parseRankingDivision } from "@/lib/rankings/rankingDivision";
+import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
+import {
+  buildNbaOpenSeasonRankingFromCumulative,
+  readNbaOpenSeasonRankingSnapshots,
+} from "@/lib/rankings/server/readNbaOpenSeasonRanking";
+import { getAdminAuth } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -81,6 +88,19 @@ function wcStageCacheKey(wc: WcRankingStage | null): string {
   return wc ?? "__no_wc__";
 }
 
+async function uidFromBearer(req: Request): Promise<string | null> {
+  const authz =
+    req.headers.get("authorization") || req.headers.get("Authorization");
+  const token = authz?.startsWith("Bearer ") ? authz.slice(7) : null;
+  if (!token) return null;
+  try {
+    const decoded = await getAdminAuth().verifyIdToken(token);
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
+
 const getCachedBulk = unstable_cache(
   async (
     uidKey: string,
@@ -114,7 +134,8 @@ const getCachedBulk = unstable_cache(
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const uid = searchParams.get("uid") ?? undefined;
+    const uidParam = searchParams.get("uid") ?? undefined;
+    const division = parseRankingDivision(searchParams.get("division"));
     const personalOnly =
       searchParams.get("personalOnly") === "1" ||
       searchParams.get("personalOnly") === "true";
@@ -127,6 +148,63 @@ export async function GET(req: Request) {
     const snapshotGeneration =
       (await loadRankingSnapshotGenerationKey(wcStage)) ??
       `fallback:${dateKeyJST()}`;
+
+    /** 無差別級シーズン（Pro 限定・NBA のみ） */
+    if (division === "open") {
+      if (wcStage) {
+        return NextResponse.json(
+          { ok: false, error: "open division is NBA only" },
+          { status: 400 }
+        );
+      }
+      const bearerUid = await uidFromBearer(req);
+      const uid = bearerUid ?? uidParam;
+      if (!uid) {
+        return NextResponse.json(
+          { ok: false, error: "pro_required" },
+          { status: 403 }
+        );
+      }
+      // Bearer があるときは必ずその uid を使い、クエリ改ざんを防ぐ
+      const gatedUid = bearerUid ?? uid;
+      if (!(await assertProUser(gatedUid))) {
+        return NextResponse.json(
+          { ok: false, error: "pro_required" },
+          { status: 403 }
+        );
+      }
+
+      const metricNames = metricsList.map(String);
+      const snapshot = await readNbaOpenSeasonRankingSnapshots({
+        uid: gatedUid,
+        metrics: metricNames,
+      });
+      const payload =
+        snapshot ??
+        (await buildNbaOpenSeasonRankingFromCumulative({
+          uid: gatedUid,
+          metrics: metricNames,
+        }));
+
+      return NextResponse.json(
+        {
+          ok: true,
+          division: "open",
+          wcStage: null,
+          snapshotGeneration,
+          byMetric: payload.byMetric,
+          myMetricValueDeltas: null,
+        },
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "private, max-age=0, must-revalidate",
+          },
+        }
+      );
+    }
+
+    const uid = uidParam;
 
     /** YOUR RANK 用 — Firestore snapshotRanks のみ（Functions / 一覧キャッシュ不要） */
     if (personalOnly) {
@@ -143,7 +221,13 @@ export async function GET(req: Request) {
       );
       await mergeUserPlansIntoBulkByMetric(personal);
       return NextResponse.json(
-        { ok: true, wcStage, snapshotGeneration, byMetric: personal, myMetricValueDeltas: null },
+        {
+          ok: true,
+          wcStage,
+          snapshotGeneration,
+          byMetric: personal,
+          myMetricValueDeltas: null,
+        },
         {
           status: 200,
           headers: {
@@ -224,7 +308,13 @@ export async function GET(req: Request) {
       : `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
     return NextResponse.json(
-      { ...data, wcStage, snapshotGeneration, myMetricValueDeltas },
+      {
+        ...data,
+        division: "standard",
+        wcStage,
+        snapshotGeneration,
+        myMetricValueDeltas,
+      },
       {
         status: 200,
         headers: { "Cache-Control": cacheControl },

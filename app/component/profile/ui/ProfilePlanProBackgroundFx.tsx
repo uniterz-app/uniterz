@@ -63,8 +63,10 @@ type Props = {
 
 const ATMOS_ENTER_EASE = [0.22, 0.61, 0.36, 1] as const;
 
-/** パターン層 — 初回のみまばらに浮き出し（ループなし）
- * filter は使わない（background-image の SVG データ URL と相性が悪く、絵柄が消えることがある） */
+/**
+ * パターン層 — 初回のみ浮かび上がる（ループなし）
+ * scale / filter は使わない。opacity + translateY ならコンポジタで滑らか。
+ */
 function SparseEnterLayer({
   animate,
   delayMs = 0,
@@ -87,12 +89,12 @@ function SparseEnterLayer({
       style={style}
       initial={
         shouldEnter
-          ? { opacity: 0, y: 10, scale: 0.96 }
+          ? { opacity: 0, y: PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx }
           : false
       }
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: 0.88,
+        duration: PROFILE_PLAN_PRO_BG.atmosEnterMs / 1000,
         delay: shouldEnter ? delayMs / 1000 : 0,
         ease: ATMOS_ENTER_EASE,
       }}
@@ -128,10 +130,9 @@ function AtmosEnterLayers({
 
   const hidden = {
     opacity: 0,
-    scale: PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom,
     y: PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
   };
-  const shown = { opacity: 1, scale: 1, y: 0 };
+  const shown = { opacity: 1, y: 0 };
 
   const enterTransition = {
     duration: PROFILE_PLAN_PRO_BG.atmosEnterMs / 1000,
@@ -232,23 +233,28 @@ export default function ProfilePlanProBackgroundFx({
       const layoutId = getProfilePlanProHexLayoutId(variant);
       const patterns = getProfilePlanProHexLayoutPatterns(layoutId);
       // タイル反復せず 1 枚をパネル全体に引き伸ばす（継ぎ目防止）
+      // 幅ロック — カード高さで引き伸ばさない（バッジ有無で図形が動かない）
       const singleStyle = {
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
+        backgroundPosition: "center top",
       } as const;
 
       return (
         <div className={rootClass} aria-hidden>
           <div className="profile-plan-pro-bg__geo-base" />
-          <div
+          <SparseEnterLayer
+            animate={animate}
+            delayMs={40}
             className="profile-plan-pro-bg__geo-pattern profile-plan-pro-bg__geo-pattern--depth"
             style={{
               ...singleStyle,
               backgroundImage: patterns.depth,
             }}
           />
-          <div
+          <SparseEnterLayer
+            animate={animate}
+            delayMs={160}
             className="profile-plan-pro-bg__geo-pattern profile-plan-pro-bg__geo-pattern--hex"
             style={{
               ...singleStyle,

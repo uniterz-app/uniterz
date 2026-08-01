@@ -33,6 +33,7 @@ import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
 import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 import type { MainTabParamList, RankingsStackParamList } from "../../navigation/types";
+import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
@@ -45,6 +46,8 @@ import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 import { CandleChartLoaderNative } from "../../components/CandleChartLoaderNative";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
+import { useNativeOpenSeasonRankingsBulk } from "./useNativeOpenSeasonRankingsBulk";
+import { useNativePeriodRankingsBulk } from "./useNativePeriodRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { RankingsPageTitleCyberNative } from "./RankingsPageTitleCyberNative";
@@ -56,11 +59,19 @@ import {
   RankingsMetricRowNative,
   RankingsTopPodiumNative,
 } from "./RankingsUiParts";
+import { RankingsPeriodTabsNative } from "./RankingsPeriodTabsNative";
 import type { MyRankCardShareState } from "./RankingsMyRankCardNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
 import RankGapModalNative from "./RankGapModalNative";
 import { useNativeMyRankProgress } from "./useNativeMyRankProgress";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
+import { RankingsOpenProLockNative } from "./RankingsDivisionTabsNative";
+import {
+  divisionFromNbaBoard,
+  type NbaRankingBoard,
+} from "../../../../../lib/rankings/rankingDivision";
+import type { RankingPeriod } from "../../../../../lib/rankings/rankingPeriod";
+import { periodWinRateMinPosts } from "../../../../../lib/rankings/rankingPeriod";
 
 type Props = {
   bottomReserveY: number;
@@ -84,21 +95,78 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
   const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("wc");
   const [wcStage, setWcStage] = useState<WcRankingStage>("main");
+  const [nbaBoard, setNbaBoard] = useState<NbaRankingBoard>("regular");
+  const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("season");
+  const [periodLabel, setPeriodLabel] = useState<string | null>(null);
 
   const wcStageForHook: WcRankingStage | null =
     category === "playoffs" && rankingsLeague === "wc" ? wcStage : null;
 
+  /** Regular / PRO LEAGUE は Season・Weekly・Monthly。Playoffs はラウンド別。 */
+  const showNbaPeriodTabs =
+    rankingsLeague === "nba" &&
+    (nbaBoard === "regular" || nbaBoard === "open");
+  const usePeriodBoard =
+    showNbaPeriodTabs && rankingPeriod !== "season";
+  const useOpenSeasonBoard =
+    rankingsLeague === "nba" &&
+    nbaBoard === "open" &&
+    rankingPeriod === "season" &&
+    category === "playoffs";
+  const rankingDivision = divisionFromNbaBoard(nbaBoard);
+
+  const standardBulk = useNativeCumulativeRankingsBulk(
+    "playoffs",
+    rankingsLeague === "wc"
+      ? "overall"
+      : nbaBoard === "playoffs"
+        ? round
+        : "overall",
+    wcStageForHook
+  );
+  const openSeasonBulk = useNativeOpenSeasonRankingsBulk(useOpenSeasonBoard);
+  const periodBulk = useNativePeriodRankingsBulk(
+    usePeriodBoard
+      ? (rankingPeriod as Exclude<RankingPeriod, "season">)
+      : null,
+    periodLabel,
+    rankingDivision
+  );
+
   const { listReady, personalPending, myUid, byMetric, ensureMetric } =
-    useNativeCumulativeRankingsBulk(
-      "playoffs",
-      rankingsLeague === "wc" ? "overall" : round,
-      wcStageForHook
-    );
+    useOpenSeasonBoard
+      ? openSeasonBulk
+      : usePeriodBoard
+        ? periodBulk
+        : standardBulk;
   const { user } = useNativeMyRankingUser(myUid);
   const language = user.language;
   const t = rankingsTexts(language);
 
   const rankingLeagueSource = rankingsLeague === "wc" ? "worldcup" : "nba";
+
+  useEffect(() => {
+    if (rankingsLeague !== "nba" && nbaBoard !== "regular") {
+      setNbaBoard("regular");
+    }
+  }, [rankingsLeague, nbaBoard]);
+
+  useEffect(() => {
+    setPeriodLabel(null);
+  }, [rankingPeriod, rankingsLeague, nbaBoard]);
+
+  useEffect(() => {
+    if (!showNbaPeriodTabs && rankingPeriod !== "season") {
+      setRankingPeriod("season");
+    }
+  }, [showNbaPeriodTabs, rankingPeriod]);
+
+  const openProLocked =
+    rankingsLeague === "nba" &&
+    nbaBoard === "open" &&
+    (user.plan !== "pro" ||
+      openSeasonBulk.proRequired ||
+      periodBulk.proRequired);
 
   /**
    * Ranking Progress（日次順位推移）。
@@ -185,10 +253,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     [metric, myRawRow]
   );
 
-  const winRateMinPosts = computeWinRateMinPosts(
-    rankingsLeague === "wc" ? "worldcup" : "nba",
-    wcStageForHook
-  );
+  const winRateMinPosts = usePeriodBoard
+    ? periodWinRateMinPosts(rankingPeriod as Exclude<RankingPeriod, "season">)
+    : computeWinRateMinPosts(
+        rankingsLeague === "wc" ? "worldcup" : "nba",
+        wcStageForHook
+      );
   const rankingHasNoEntries =
     listReady && (rows.length === 0 || rankingListCount === 0);
 
@@ -217,7 +287,16 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   );
 
   const cardBarsReady = isMyRankMiniMetricsReady(byMetric, rankingLeagueSource);
-  const pageTitle = rankingsLeague === "wc" ? t.titleWorldCup : t.title;
+  const pageTitle =
+    nbaBoard === "open"
+      ? t.divisionOpen
+      : nbaBoard === "playoffs" && rankingsLeague === "nba"
+        ? t.nbaBoardPlayoffs
+        : rankingsLeague === "nba"
+          ? t.nbaBoardRegular
+          : rankingsLeague === "wc"
+            ? t.titleWorldCup
+            : t.title;
 
   const myTotalPoints =
     typeof myStatsRow?.totalPoints === "number" ? myStatsRow.totalPoints : 0;
@@ -250,9 +329,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const openProfile = (row: RankingRowWithCountry) => {
     const key = profilePathKeyFromRow(row);
     if (!key) return;
-    navigation.navigate("ProfileTab", {
-      screen: "PublicProfile",
-      params: { handle: key, fromRankings: true },
+    navigateToPublicProfileNative(navigation, {
+      handle: key,
+      fromRankings: true,
     });
   };
 
@@ -290,7 +369,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         </View>
 
         <View style={styles.section}>
-          {rankingsLeague === "nba" || rankingsLeague === "wc" ? (
+          {rankingsLeague === "wc" ? (
             <RankingsCategoryTabsNative
               category={category}
               onChange={setCategory}
@@ -299,9 +378,17 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             />
           ) : null}
 
+          {showNbaPeriodTabs ? (
+            <RankingsPeriodTabsNative
+              period={rankingPeriod}
+              onChange={setRankingPeriod}
+              language={language}
+            />
+          ) : null}
+
           {category === "playoffs" ? (
             <>
-              {rankingsLeague === "nba" ? (
+              {rankingsLeague === "nba" && nbaBoard === "playoffs" ? (
                 <PlayoffRoundTabsNative round={round} onChange={setRound} language={language} />
               ) : null}
               {rankingsLeague === "wc" && category === "playoffs" ? (
@@ -312,6 +399,16 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 />
               ) : null}
 
+              {openProLocked ? (
+                <RankingsOpenProLockNative
+                  language={language}
+                  onPressSubscribe={() =>
+                    navigation.navigate("ProfileTab", {
+                      screen: "ProSubscribe",
+                    })
+                  }
+                />
+              ) : (
               <MyRankCardNative
                 rank={rankingHasNoEntries ? null : myRank}
                 metric={metric}
@@ -337,7 +434,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 barsReady={cardBarsReady}
                 language={language}
                 mobileWide
-                leagueLabel={rankingsLeague === "wc" ? "WORLD CUP" : "NBA"}
+                leagueLabel={
+                  nbaBoard === "open"
+                    ? "PRO LEAGUE"
+                    : nbaBoard === "playoffs" && rankingsLeague === "nba"
+                      ? "PLAYOFFS"
+                      : rankingsLeague === "wc"
+                        ? "WORLD CUP"
+                        : "NBA"
+                }
                 onShareStateChange={setRankShare}
                 rankTierGap={user.plan === "pro" ? rankTierGap : null}
                 gapHref={user.plan === "pro" ? "gap" : null}
@@ -349,6 +454,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   rankProgressEnabled && myRankProgressLoading
                 }
               />
+              )}
             </>
           ) : null}
         </View>
@@ -361,7 +467,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           )
         ) : null}
 
-        {category === "playoffs" ? (
+        {category === "playoffs" && openProLocked ? null : category === "playoffs" ? (
           <>
             <View style={styles.metricRowWrap}>
               <RankingsMetricRowNative
@@ -422,9 +528,29 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       <SideMenuDrawerNative open={menuOpen} onClose={() => setMenuOpen(false)}>
         <RankingsDrawerMenuNative
           league={rankingsLeague}
+          nbaBoard={nbaBoard}
           onChange={(l) => {
             setRankingsLeague(l);
+            setNbaBoard("regular");
             if (l === "wc") setCategory("playoffs");
+            setMenuOpen(false);
+          }}
+          onSelectNbaRegular={() => {
+            setRankingsLeague("nba");
+            setNbaBoard("regular");
+            setCategory("playoffs");
+            setMenuOpen(false);
+          }}
+          onSelectNbaPlayoffs={() => {
+            setRankingsLeague("nba");
+            setNbaBoard("playoffs");
+            setCategory("playoffs");
+            setMenuOpen(false);
+          }}
+          onSelectOpenweight={() => {
+            setRankingsLeague("nba");
+            setNbaBoard("open");
+            setCategory("playoffs");
             setMenuOpen(false);
           }}
           language={language}

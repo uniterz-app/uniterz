@@ -174,21 +174,21 @@ export function ProCyberBadge({
 }: Props) {
   const rid = useId().replace(/[^a-zA-Z0-9-_]/g, "x");
 
-  // compact: 一覧用 / premium: プロフィールカード用 — 枠に対して中身も比例縮小
+  // compact: 一覧用 / premium: プロフィール名横 — 名前と並ぶ見やすいサイズ
   const tagClass = premium
-    ? "relative inline-flex h-[14px] items-center gap-[2px] px-[3px]"
+    ? "relative inline-flex h-[20px] items-center gap-[3px] px-[4px] sm:h-[22px] sm:px-[5px]"
     : compact
       ? "relative inline-flex h-[13px] items-center gap-[2px] px-[2.5px] sm:h-[14px] sm:px-[3px]"
       : "relative inline-flex h-[18px] items-center gap-[3px] px-[4px]";
   const bracketClass =
     "pointer-events-none absolute inset-0 h-full w-full overflow-visible";
   const markClass = premium
-    ? "relative z-[1] h-[7px] w-[7px] shrink-0"
+    ? "relative z-[1] h-[11px] w-[11px] shrink-0 sm:h-[12px] sm:w-[12px]"
     : compact
       ? "relative z-[1] h-[6.5px] w-[6.5px] shrink-0 sm:h-[7px] sm:w-[7px]"
       : "relative z-[1] h-[9px] w-[9px] shrink-0";
-  const wordSize = premium ? "5.5px" : compact ? "5.5px" : "7px";
-  const bracketStroke = premium || compact ? 1.35 : 0.95;
+  const wordSize = premium ? "8.5px" : compact ? "5.5px" : "7px";
+  const bracketStroke = premium ? 1.15 : compact ? 1.35 : 0.95;
 
   return (
     <motion.span

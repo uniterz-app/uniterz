@@ -5016,7 +5016,8 @@ body::before {
   position: relative;
   z-index: 1;
   display: flex;
-  flex: 1 1 auto;
+  /* 縦に伸ばさない — 背景 SVG の引き伸ばしを誘発しない */
+  flex: 0 0 auto;
   flex-direction: column;
   justify-content: flex-start;
   min-height: calc(60px + 14px);
@@ -5217,7 +5218,8 @@ body::before {
   overflow: visible;
   background: transparent;
   flex-shrink: 0;
-  margin-top: 0;
+  /* ステージ高さの余りはメトリクス側へ（バッジ帯を伸ばさない） */
+  margin-top: auto;
 }
 
 .profile-plan-pro--mobile-stage .profile-plan-pro-metric-card {
@@ -5656,6 +5658,48 @@ body::before {
 .profile-plan-pro-bg {
   z-index: 0;
   border-radius: inherit;
+  overflow: hidden;
+}
+
+/**
+ * 幅ロック図形レイヤー（バッジ有無で背景が動かない）
+ * skin / hud / atmos / hex など共通
+ */
+.profile-plan-pro-bg__scale-skin,
+.profile-plan-pro-bg__scale-hud,
+.profile-plan-pro-bg__beast-skin,
+.profile-plan-pro-bg__beast-hud,
+.profile-plan-pro-bg__cosmos-skin,
+.profile-plan-pro-bg__cosmos-hud,
+.profile-plan-pro-bg__form-skin,
+.profile-plan-pro-bg__form-hud,
+.profile-plan-pro-bg__lab-skin,
+.profile-plan-pro-bg__lab-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: auto;
+  width: 100%;
+  aspect-ratio: 300 / 430;
+  height: auto;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 100% 100%;
+  pointer-events: none;
+}
+
+.profile-plan-pro-bg--web .profile-plan-pro-bg__scale-skin,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__scale-hud,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__beast-skin,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__beast-hud,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__cosmos-skin,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__cosmos-hud,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__form-skin,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__form-hud,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__lab-skin,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__lab-hud {
+  aspect-ratio: 960 / 380;
 }
 
 .profile-plan-pro-bg__wash {
@@ -7419,6 +7463,411 @@ body::before {
   letter-spacing: 0.045em;
   font-variant-numeric: tabular-nums;
 }
+
+/* プロフィール閲覧数 — 目アイコン + 件数（JOIN/ID 行の高さに揃える） */
+.profile-edit-kinetik-view-count {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 4px 7px;
+  border: 1px solid rgba(0, 245, 255, 0.65);
+  background: rgba(0, 245, 255, 0.14);
+  box-shadow:
+    0 0 10px rgba(0, 245, 255, 0.28),
+    inset 0 0 8px rgba(0, 245, 255, 0.08);
+  color: #00f5ff;
+  line-height: 1;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.profile-edit-kinetik-view-count__icon {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  color: #00f5ff;
+  filter: drop-shadow(0 0 4px rgba(0, 245, 255, 0.55));
+}
+
+.profile-edit-kinetik-view-count__num {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+  color: #f8fafc;
+  text-shadow: 0 0 8px rgba(0, 245, 255, 0.45);
+}
+
+@media (min-width: 640px) {
+  .profile-edit-kinetik-view-count {
+    padding: 4px 9px 5px 8px;
+  }
+
+  .profile-edit-kinetik-view-count__icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .profile-edit-kinetik-view-count__num {
+    font-size: 11.5px;
+  }
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-view-count {
+  padding: 4px 10px 5px 9px;
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-view-count__icon {
+  width: 12px;
+  height: 12px;
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-view-count__num {
+  font-size: 11.5px;
+}
+
+/* 保有 Unit — 金貨ディスク + イタリック数字（U8） */
+.profile-edit-kinetik-unit-vault {
+  --unit-vault-gold: #f6c344;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  max-width: 100%;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+.profile-edit-kinetik-unit-vault__disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 210deg,
+    #f9d576,
+    #b8860b 40%,
+    #f6c344 70%,
+    #8a6410
+  );
+  box-shadow:
+    0 0 14px rgba(246, 195, 68, 0.5),
+    inset 0 0 4px rgba(0, 0, 0, 0.5);
+  animation: profile-unit-coin-glow 2.8s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-unit-vault__sheen {
+  position: absolute;
+  z-index: 2;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 42%;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 248, 220, 0.55) 48%,
+    transparent 100%
+  );
+  transform: translateX(-140%) rotate(18deg);
+  animation: profile-unit-coin-sheen 3.6s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-unit-vault__disc-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #ffedb0, #d9a125 70%);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  color: #241902;
+  line-height: 1;
+}
+
+.profile-edit-kinetik-unit-vault__value {
+  font-size: 20px;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: #ffe9a8;
+  text-shadow: 0 0 12px rgba(246, 195, 68, 0.55);
+  line-height: 1;
+  animation: profile-unit-coin-value-glow 2.8s ease-in-out infinite;
+}
+
+@keyframes profile-unit-coin-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 10px rgba(246, 195, 68, 0.38),
+      inset 0 0 4px rgba(0, 0, 0, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 20px rgba(246, 195, 68, 0.78),
+      inset 0 0 4px rgba(0, 0, 0, 0.45);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes profile-unit-coin-sheen {
+  0%,
+  55% {
+    transform: translateX(-140%) rotate(18deg);
+    opacity: 0;
+  }
+  62% {
+    opacity: 0.85;
+  }
+  78% {
+    transform: translateX(220%) rotate(18deg);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes profile-unit-coin-value-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 10px rgba(246, 195, 68, 0.4);
+  }
+  50% {
+    text-shadow: 0 0 16px rgba(246, 195, 68, 0.72);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-edit-kinetik-unit-vault__disc,
+  .profile-edit-kinetik-unit-vault__sheen,
+  .profile-edit-kinetik-unit-vault__value {
+    animation: none;
+  }
+
+  .profile-edit-kinetik-unit-vault__disc {
+    transform: none;
+  }
+}
+
+/* 右上コンパクト（名前行横） */
+.profile-edit-kinetik-unit-vault--corner {
+  gap: 7px;
+}
+
+.profile-edit-kinetik-unit-vault--corner .profile-edit-kinetik-unit-vault__disc {
+  width: 26px;
+  height: 26px;
+}
+
+.profile-edit-kinetik-unit-vault--corner
+  .profile-edit-kinetik-unit-vault__disc-inner {
+  width: 19px;
+  height: 19px;
+  font-size: 9.5px;
+}
+
+.profile-edit-kinetik-unit-vault--corner .profile-edit-kinetik-unit-vault__value {
+  font-size: 18px;
+}
+
+.profile-edit-kinetik-card--web
+  .profile-edit-kinetik-unit-vault--corner
+  .profile-edit-kinetik-unit-vault__disc {
+  width: 28px;
+  height: 28px;
+}
+
+.profile-edit-kinetik-card--web
+  .profile-edit-kinetik-unit-vault--corner
+  .profile-edit-kinetik-unit-vault__disc-inner {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+}
+
+.profile-edit-kinetik-card--web
+  .profile-edit-kinetik-unit-vault--corner
+  .profile-edit-kinetik-unit-vault__value {
+  font-size: 20px;
+}
+
+/* アバター直下の閲覧数 — アイコン横幅に合わせる */
+.profile-edit-kinetik-avatar-views {
+  width: var(--kav-size);
+}
+
+.profile-edit-kinetik-avatar-views .profile-edit-kinetik-view-count {
+  width: 100%;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* JOIN 下の Unit ヒーロー行（旧・幅いっぱい用） */
+.profile-edit-kinetik-identity-tools {
+  max-width: 100%;
+}
+
+/* プロフィールのサイドメニュー入口 — 画面左端の縦ハンドル（body ポータル想定） */
+.profile-menu-edge-handle {
+  position: fixed !important;
+  left: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 45 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: auto !important;
+  min-height: 78px;
+  padding: 10px 0 !important;
+  margin: 0 !important;
+  border: 1px solid rgba(250, 204, 21, 0.55) !important;
+  border-left: none !important;
+  border-radius: 0 !important;
+  background: rgba(8, 12, 6, 0.94) !important;
+  color: #facc15 !important;
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.28);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.profile-menu-edge-handle:hover {
+  background: rgba(12, 18, 10, 0.98) !important;
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.38);
+}
+
+.profile-menu-edge-handle__ch {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #facc15;
+}
+
+.profile-menu-edge-handle__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* サイドメニュー先頭の Unit ウォレット */
+.side-menu-unit-wallet {
+  --unit-vault-gold: #f6c344;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  overflow: hidden;
+  clip-path: polygon(
+    10px 0%,
+    100% 0%,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0% 100%,
+    0% 10px
+  );
+  border: 1px solid rgba(246, 195, 68, 0.55);
+  background:
+    linear-gradient(
+      125deg,
+      rgba(246, 195, 68, 0.18) 0%,
+      rgba(8, 8, 12, 0.94) 45%,
+      rgba(28, 20, 6, 0.9) 100%
+    );
+  box-shadow:
+    0 0 20px rgba(246, 195, 68, 0.18),
+    inset 0 1px 0 rgba(255, 236, 170, 0.16);
+}
+
+.side-menu-unit-wallet__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.side-menu-unit-wallet__hex {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--unit-vault-gold);
+  filter: drop-shadow(0 0 8px rgba(246, 195, 68, 0.5));
+}
+
+.side-menu-unit-wallet__u {
+  position: relative;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff8e1;
+}
+
+.side-menu-unit-wallet__meta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.side-menu-unit-wallet__label {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(246, 195, 68, 0.85);
+  text-transform: uppercase;
+}
+
+.side-menu-unit-wallet__value {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #fff8e7;
+  text-shadow: 0 0 12px rgba(246, 195, 68, 0.45);
+}
+
 
 /* ID 側は右下コーナー（JOIN の左下と対） */
 .profile-edit-kinetik-footer-ref--id {

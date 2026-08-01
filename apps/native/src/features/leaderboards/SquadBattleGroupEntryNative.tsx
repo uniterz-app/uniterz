@@ -59,23 +59,25 @@ export default function SquadBattleGroupEntryNative({ language, onOpen }: Props)
           <View style={styles.leftBar} pointerEvents="none" />
 
           <View style={styles.row}>
-            <View style={styles.iconGlow} pointerEvents="none" />
-            <LinearGradient
-              colors={[
-                "rgba(251,191,36,0.32)",
-                "rgba(20,12,4,0.95)",
-                "rgba(80,40,8,0.55)",
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.iconBox}
-            >
-              <MaterialCommunityIcons
-                name="sword-cross"
-                size={20}
-                color={GOLD_SOFT}
-              />
-            </LinearGradient>
+            <View style={styles.iconWrap}>
+              <View style={styles.iconGlow} pointerEvents="none" />
+              <LinearGradient
+                colors={[
+                  "rgba(251,191,36,0.32)",
+                  "rgba(20,12,4,0.95)",
+                  "rgba(80,40,8,0.55)",
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.iconBox}
+              >
+                <MaterialCommunityIcons
+                  name="sword-cross"
+                  size={20}
+                  color={GOLD_SOFT}
+                />
+              </LinearGradient>
+            </View>
 
             <View style={styles.copy}>
               <Text style={styles.title}>Squad Battle</Text>
@@ -119,6 +121,7 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
     paddingRight: 10,
     overflow: "hidden",
+    justifyContent: "center",
   },
   leftBar: {
     position: "absolute",
@@ -137,9 +140,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   iconGlow: {
     position: "absolute",
     left: 0,
+    top: 0,
     width: 44,
     height: 44,
     borderRadius: 4,
@@ -156,10 +167,12 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
     minWidth: 0,
+    justifyContent: "center",
   },
   title: {
     fontFamily: fonts.metricExtra,
     fontSize: 15,
+    lineHeight: 18,
     fontWeight: "900",
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -167,21 +180,28 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(251,191,36,0.55)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   enterBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 2,
     borderWidth: 1,
     borderColor: "rgba(253,230,138,0.55)",
     backgroundColor: "rgba(251,191,36,0.2)",
     paddingHorizontal: 10,
     paddingVertical: 8,
+    minHeight: 36,
   },
   enterText: {
     fontFamily: fonts.metricExtra,
     fontSize: 10,
+    lineHeight: 12,
     letterSpacing: 1.4,
     color: TITLE,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 });

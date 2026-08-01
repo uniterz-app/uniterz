@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import {
+  CommonActions,
+  StackActions,
+  useFocusEffect,
+  useNavigation,
+} from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
@@ -39,6 +44,7 @@ import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
 import ProfileWcStackedRankTrendChartsNative from "./ProfileWcStackedRankTrendChartsNative";
 import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
+import ProfileMenuEdgeHandleNative from "./ProfileMenuEdgeHandleNative";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
 import { CyberSubpageHeaderNative } from "../../ui/CyberSubpageShellNative";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
@@ -62,6 +68,7 @@ import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLea
 import { useProfileKinetikWcStackedStats } from "../../../../../lib/profile/useProfileKinetikWcStackedStats";
 import { useProfileWcStackedRankTrend } from "../../../../../lib/profile/useProfileWcStackedRankTrend";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
+import { parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
@@ -69,6 +76,10 @@ import {
 } from "../../../../../lib/profile/profilePlanProBgVariants";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import type { Language } from "../../../../../lib/i18n/language";
+import {
+  fetchProfileViewCountNative,
+  recordProfileViewNative,
+} from "./profileViewsApiNative";
 
 type ProfileTab = "overview" | "bracket" | "stats";
 
@@ -133,9 +144,21 @@ export default function ProfileHomeScreen({
   const externalBackVariant = fromLeaderboards ? "leaderboards" : "rankings";
 
   const dismissPublicProfileRoute = useCallback(() => {
-    const current = navigation.getState().routes[navigation.getState().index]?.name;
+    const state = navigation.getState();
+    const current = state.routes[state.index]?.name;
     if (current === "PublicProfile") {
-      if (navigation.canGoBack()) navigation.goBack();
+      // ランキングから nested navigate すると PublicProfile だけがスタックに
+      // 残ることがあり、その場合 pop / popToTop は失敗する。
+      if (state.index > 0) {
+        navigation.dispatch(StackActions.pop(state.index));
+      } else {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: "ProfileHome" }],
+          })
+        );
+      }
       return;
     }
     navigation.setParams({
@@ -191,20 +214,26 @@ export default function ProfileHomeScreen({
   }, [settingsOpen, openMenuAfterSettingsClosed]);
 
   const returnToPreviousScreen = useCallback(() => {
-    if (fromLeaderboards) {
-      const groupId = leaderboardsGroupId?.trim();
-      if (groupId) {
-        tabNavigation.navigate("LeaderboardsTab", {
-          screen: "LeaderboardsHome",
-          params: { reopenGroupId: groupId },
-        });
-      } else {
-        tabNavigation.navigate("LeaderboardsTab");
-      }
-    } else {
-      tabNavigation.navigate("RankingsTab");
-    }
+    // 先にプロフィールスタックを片付けてからタブ切替する。
+    // （タブ切替後の reset が Profile を前面に出すのを避ける）
     dismissPublicProfileRoute();
+    requestAnimationFrame(() => {
+      if (fromLeaderboards) {
+        const groupId = leaderboardsGroupId?.trim();
+        if (groupId) {
+          tabNavigation.navigate("LeaderboardsTab", {
+            screen: "LeaderboardsHome",
+            params: { reopenGroupId: groupId },
+          });
+        } else {
+          tabNavigation.navigate("LeaderboardsTab", {
+            screen: "LeaderboardsHome",
+          });
+        }
+      } else {
+        tabNavigation.navigate("RankingsTab", { screen: "RankingsHome" });
+      }
+    });
   }, [
     dismissPublicProfileRoute,
     fromLeaderboards,
@@ -226,6 +255,7 @@ export default function ProfileHomeScreen({
   const [planProBgVariant, setPlanProBgVariant] =
     useState<ProfilePlanProBgVariant>(PROFILE_PLAN_PRO_BG_DEFAULT);
   const [memberSinceMs, setMemberSinceMs] = useState<number | null>(null);
+  const [unitBalance, setUnitBalance] = useState<number>(0);
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -248,6 +278,29 @@ export default function ProfileHomeScreen({
     profilePlan: plan,
   });
   const isMe = profilePlanHook.isMe;
+  const [profileViewCount, setProfileViewCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setProfileViewCount(null);
+    if (status !== "ready" || !targetUid) return;
+
+    void (async () => {
+      try {
+        if (myUid && !isMe) {
+          await recordProfileViewNative(targetUid).catch(() => undefined);
+        }
+        const count = await fetchProfileViewCountNative(targetUid);
+        if (!cancelled) setProfileViewCount(count);
+      } catch {
+        // 閲覧数取得の失敗でプロフィール表示を壊さない。
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isMe, myUid, status, targetUid]);
 
   useEffect(() => {
     if (openSettingsOnMount && isMe) {
@@ -482,6 +535,7 @@ export default function ProfileHomeScreen({
         setPlan(data?.plan === "pro" ? "pro" : "free");
         setPlanProBgVariant(parseUserPlanProBgVariant(data?.planProBgVariant));
         setMemberSinceMs(data ? parseMemberSinceMs(data as Record<string, unknown>) : null);
+        setUnitBalance(data ? parseUserUnitBalance(data as Record<string, unknown>) : 0);
       } finally {
         if (!alive) return;
         setProfileLoading(false);
@@ -529,6 +583,7 @@ export default function ProfileHomeScreen({
     setPlan(profileByHandle.plan);
     setPlanProBgVariant(profileByHandle.planProBgVariant);
     setMemberSinceMs(profileByHandle.memberSinceMs);
+    setUnitBalance(profileByHandle.unitBalance);
     setProfileLoading(false);
   }, [isPublicProfileView, profileByHandle]);
 
@@ -887,6 +942,9 @@ export default function ProfileHomeScreen({
           setSelectedBadge(badge);
           setBadgeModalOpen(true);
         }}
+        targetUid={targetUid ?? null}
+        profileViewCount={profileViewCount}
+        unitBalance={unitBalance}
       />
 
       {renderTabs()}
@@ -907,6 +965,13 @@ export default function ProfileHomeScreen({
         />
       )}
     </ScrollView>
+
+    {isMe ? (
+      <ProfileMenuEdgeHandleNative
+        onOpen={() => setMenuOpen(true)}
+        unreadCount={menuUnreadCount}
+      />
+    ) : null}
 
     <Modal
       visible={settingsOpen}
@@ -1162,6 +1227,7 @@ export default function ProfileHomeScreen({
       unreadAnnouncements={menuUnreadCount}
       uid={fUser?.uid ?? null}
       plan={plan}
+      unitBalance={unitBalance}
       onOpenProfileSettings={openSettingsFromMenu}
       onOpenInApp={(page) => {
         setMenuOpen(false);

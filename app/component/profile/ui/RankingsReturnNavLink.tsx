@@ -1,9 +1,8 @@
 // app/component/profile/ui/RankingsReturnNavLink.tsx
 "use client";
 
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   PROFILE_FROM_PARAM,
   PROFILE_FROM_COMMUNITY_ID_PARAM,
@@ -24,6 +23,7 @@ type Props = {
 /** ランキング経由で開いたプロフィールにだけ表示する「ランキングへ戻る」 */
 export default function RankingsReturnNavLink({ language }: Props) {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
   const sp = useSearchParams();
   const from = sp.get(PROFILE_FROM_PARAM);
   const groupId =
@@ -51,9 +51,12 @@ export default function RankingsReturnNavLink({ language }: Props) {
     : m.profile.backToRankings;
 
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
       aria-label={label}
+      onClick={() => {
+        router.push(href);
+      }}
       className={[
         "mb-4 inline-flex items-center gap-2 rounded-lg border border-cyan-200/20",
         "bg-white/5 px-3 py-2 text-sm font-medium text-cyan-50/95",
@@ -65,6 +68,6 @@ export default function RankingsReturnNavLink({ language }: Props) {
     >
       <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={2.4} aria-hidden />
       <span>{label}</span>
-    </Link>
+    </button>
   );
 }

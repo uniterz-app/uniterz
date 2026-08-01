@@ -4,8 +4,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Animated, Dimensions, Easing, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View,
+  Animated, Dimensions, Easing, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { signOut } from "firebase/auth";
@@ -36,6 +37,8 @@ type Props = {
   uid: string | null | undefined;
   /** Firestore users.plan と同期した表示用 */
   plan: "free" | "pro";
+  /** ゲーム内通貨残高（サイドメニュー先頭ウォレット） */
+  unitBalance?: number;
   /** in-app 画面を開く */
   onOpenInApp: (page:
     | "badges"
@@ -73,6 +76,7 @@ export default function ProfileSideMenuModal({
   onOpenProfileSettings,
   uid,
   plan,
+  unitBalance = 0,
   onOpenInApp,
 }: Props) {
   const isJa = language === "ja";
@@ -284,6 +288,34 @@ export default function ProfileSideMenuModal({
                   showsVerticalScrollIndicator={false}
                   bounces={false}
                 >
+                  {uid ? (
+                    <View
+                      style={styles.unitWallet}
+                      accessibilityRole="text"
+                      accessibilityLabel={
+                        isJa
+                          ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
+                          : `${unitBalance.toLocaleString("en-US")} Units`
+                      }
+                    >
+                      <View style={styles.unitWalletMark}>
+                        <MaterialCommunityIcons
+                          name="hexagon-outline"
+                          size={30}
+                          color="#f6c344"
+                          style={styles.unitWalletHex}
+                        />
+                        <Text style={styles.unitWalletU}>U</Text>
+                      </View>
+                      <View style={styles.unitWalletMeta}>
+                        <Text style={styles.unitWalletLabel}>UNITS</Text>
+                        <Text style={styles.unitWalletValue}>
+                          {unitBalance.toLocaleString("en-US")}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+
                   <CyberSideMenuSectionTitleNative first>
                     {labels.main}
                   </CyberSideMenuSectionTitleNative>
@@ -545,6 +577,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 20,
+  },
+  unitWallet: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "rgba(246,195,68,0.55)",
+    backgroundColor: "rgba(28,20,6,0.9)",
+    shadowColor: "#f6c344",
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 3,
+  },
+  unitWalletMark: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unitWalletHex: {
+    position: "absolute",
+  },
+  unitWalletU: {
+    fontFamily: "Oxanium_800ExtraBold",
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#fff8e1",
+  },
+  unitWalletMeta: {
+    flexShrink: 1,
+    gap: 3,
+  },
+  unitWalletLabel: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1.6,
+    color: "rgba(246,195,68,0.85)",
+    textTransform: "uppercase",
+  },
+  unitWalletValue: {
+    fontFamily: "Oxanium_800ExtraBold",
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+    color: "#fff8e7",
+    fontVariant: ["tabular-nums"],
   },
   itemGroup: {
     gap: 8,

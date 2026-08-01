@@ -9,6 +9,8 @@ import * as functions from "firebase-functions";
 import { buildCumulativeStats } from "./rankings/buildCumulativeStats";
 import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankingSnapshot";
 import { buildNbaPeriodRankingSnapshots } from "./rankings/buildNbaPeriodRankingSnapshots";
+import { buildGroupBattlePeriodSnapshots } from "./groupBattles/buildGroupBattlePeriodSnapshots";
+import { grantAllFinalGroupBattleUnits } from "./groupBattles/grantGroupBattleUnits";
 import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAggregationScheduledJstToday";
 import { runNotifyGameStartCron } from "./notifications/notifyGameStartCron";
 import { notifyRankingUpdatedPush } from "./notifications/notifyPushEvents";
@@ -97,6 +99,17 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
     } catch (err) {
       console.error(
         "[buildCumulativeRankingSnapshotCron] period snapshots failed",
+        err
+      );
+    }
+
+    // グループバトル 週/月スナップショット + final への Unit 付与
+    try {
+      await buildGroupBattlePeriodSnapshots();
+      await grantAllFinalGroupBattleUnits();
+    } catch (err) {
+      console.error(
+        "[buildCumulativeRankingSnapshotCron] group battle snapshots/units failed",
         err
       );
     }

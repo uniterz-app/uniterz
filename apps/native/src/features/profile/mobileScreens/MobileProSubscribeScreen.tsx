@@ -1,5 +1,6 @@
 /**
  * Web `app/mobile/pro/subscribe/page.tsx` に相当。
+ * プラン: Weekly / Monthly / Season Pass（docs/pro-billing-design.md）
  */
 import { useState } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
@@ -7,11 +8,79 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "./MobilePageShell";
 import { useNativeIap } from "../../billing/useNativeIap";
-import { IAP_PRODUCT_IDS } from "../../billing/iapProductIds";
+import {
+  IAP_FALLBACK_PRICE_JA,
+  IAP_PRODUCT_IDS,
+  type ProIapPlan,
+} from "../../billing/iapProductIds";
 
-type Plan = "monthly" | "annual";
+const PLANS: readonly {
+  id: ProIapPlan;
+  titleJa: string;
+  titleEn: string;
+  periodJa: string;
+  periodEn: string;
+  badgeJa?: string;
+  badgeEn?: string;
+  noteJa: string;
+  noteEn: string;
+}[] = [
+  {
+    id: "weekly",
+    titleJa: "Weekly",
+    titleEn: "Weekly",
+    periodJa: "/ 週",
+    periodEn: "/ week",
+    badgeJa: "7日無料",
+    badgeEn: "7-day free",
+    noteJa: "月次レポートなし",
+    noteEn: "No monthly report",
+  },
+  {
+    id: "monthly",
+    titleJa: "Monthly",
+    titleEn: "Monthly",
+    periodJa: "/ 月",
+    periodEn: "/ month",
+    badgeJa: "おすすめ",
+    badgeEn: "Popular",
+    noteJa: "週次・月次レポート",
+    noteEn: "Weekly + monthly reports",
+  },
+  {
+    id: "season",
+    titleJa: "Season Pass",
+    titleEn: "Season Pass",
+    periodJa: "/ シーズン",
+    periodEn: "/ season",
+    badgeJa: "買い切り",
+    badgeEn: "One-time",
+    noteJa: "自動更新なし・返金なし",
+    noteEn: "No auto-renew / no refund",
+  },
+];
 
-function subscriptionPriceLabel(products: unknown[], productId: string, fallback: string): string {
+const FEATURES_JA = [
+  "PRO INSIGHT（試合の重要結論 3〜5）",
+  "試合直前アラート",
+  "週次レポート",
+  "月次レポート（Monthly / Season）",
+  "My Rank Pro（TOP%・進捗）",
+  "Pro バッジ",
+  "Pro Skin",
+];
+
+const FEATURES_EN = [
+  "PRO INSIGHT (3–5 key takeaways)",
+  "Pre-tipoff alerts",
+  "Weekly report",
+  "Monthly report (Monthly / Season)",
+  "My Rank Pro (TOP% & progress)",
+  "Pro badge",
+  "Pro Skin",
+];
+
+function catalogPriceLabel(products: unknown[], productId: string, fallback: string): string {
   const item = products.find(
     (p) => typeof p === "object" && p != null && (p as { productId?: string }).productId === productId
   ) as Record<string, unknown> | undefined;
@@ -23,49 +92,23 @@ function subscriptionPriceLabel(products: unknown[], productId: string, fallback
   return price ?? fallback;
 }
 
-const FEATURES_JA = [
-  "データを基にしたレーダーチャート",
-  "あなたの分析タイプ",
-  "指標別パーセンタイル",
-  "今月の傾向サマリー",
-  "月間パフォーマンス比較（平均・上位ユーザー）",
-  "Upsetデータ分析",
-  "連勝・連敗記録",
-  "Home / Away 分析",
-  "Market傾向分析",
-  "チーム別パフォーマンス",
-  "月別パフォーマンス",
-];
-
-const FEATURES_EN = [
-  "Radar charts from your data",
-  "Your analysis type",
-  "Per-metric percentiles",
-  "This month’s trend summary",
-  "Monthly performance vs average & top users",
-  "Upset analytics",
-  "Win / loss streak records",
-  "Home / Away analysis",
-  "Market trend analysis",
-  "Per-team performance",
-  "Monthly performance",
-];
-
 type Props = {
   language: "ja" | "en";
   onClose: () => void;
-  onSuccess?: (plan: Plan) => void;
+  onSuccess?: (plan: ProIapPlan) => void;
   onOpenPreview?: () => void;
 };
 
-export default function MobileProSubscribeScreen({ language, onClose, onSuccess, onOpenPreview }: Props) {
+export default function MobileProSubscribeScreen({
+  language,
+  onClose,
+  onSuccess,
+  onOpenPreview,
+}: Props) {
   const isJa = language === "ja";
-  const [plan, setPlan] = useState<Plan>("monthly");
+  const [plan, setPlan] = useState<ProIapPlan>("monthly");
   const features = isJa ? FEATURES_JA : FEATURES_EN;
   const { ready, products, purchasing, purchase, restore } = useNativeIap();
-
-  const monthlyPrice = subscriptionPriceLabel(products, IAP_PRODUCT_IDS.monthly, "¥600");
-  const annualPrice = subscriptionPriceLabel(products, IAP_PRODUCT_IDS.annual, "¥4800");
 
   async function handlePurchase() {
     const ok = await purchase(plan);
@@ -75,143 +118,131 @@ export default function MobileProSubscribeScreen({ language, onClose, onSuccess,
     }
   }
 
+  const ctaLabel = (() => {
+    if (purchasing) return isJa ? "処理中..." : "Processing...";
+    if (plan === "weekly") {
+      return isJa ? "7日間無料で試す（Weekly）" : "Start 7-day free (Weekly)";
+    }
+    if (plan === "monthly") {
+      return isJa ? "7日間無料で試す（Monthly）" : "Start 7-day free (Monthly)";
+    }
+    return isJa ? "Season Pass を購入" : "Buy Season Pass";
+  })();
+
   return (
     <MobilePageShell title={isJa ? "Pro プラン" : "Get Pro"} appBackground onClose={onClose}>
       <ScrollView contentContainerStyle={styles.pad}>
         <View style={styles.cardShell}>
-        <View style={styles.heroIcon}>
-          <Image
-            source={require("../../../../assets/icon.png")}
-            style={styles.heroImg}
-            resizeMode="contain"
-          />
-        </View>
-        <Text style={styles.h1}>Get Pro</Text>
-
-        <View style={styles.grid}>
-          <Pressable
-            onPress={() => setPlan("monthly")}
-            style={[
-              styles.priceCard,
-              plan === "monthly" ? styles.priceCardOn : styles.priceCardOff,
-            ]}
-          >
-            <Text style={[styles.priceLabel, plan === "monthly" && styles.priceLabelOn]}>
-              Pro Plan
-            </Text>
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceTitle, plan === "monthly" && styles.priceTitleOn]}>
-                {isJa ? "月額" : "Monthly"}
-              </Text>
-              {plan === "monthly" ? (
-                <View style={styles.check}>
-                  <Text style={styles.checkTxt}>✓</Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={[styles.priceAmt, plan === "monthly" && styles.priceAmtOn]}>{monthlyPrice}</Text>
-            <Text style={[styles.tax, plan === "monthly" && styles.taxOn]}>{isJa ? "税込み" : "tax incl."}</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => setPlan("annual")}
-            style={[
-              styles.priceCard,
-              plan === "annual" ? styles.priceCardOn : styles.priceCardOff,
-            ]}
-          >
-            <Text style={[styles.priceLabel, plan === "annual" && styles.priceLabelOn]}>
-              Pro Plan
-            </Text>
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceTitle, plan === "annual" && styles.priceTitleOn]}>
-                {isJa ? "年額" : "Annual"}
-              </Text>
-              {plan === "annual" ? (
-                <View style={styles.check}>
-                  <Text style={styles.checkTxt}>✓</Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={[styles.priceAmt, plan === "annual" && styles.priceAmtOn]}>{annualPrice}</Text>
-            <Text style={[styles.tax, plan === "annual" && styles.taxOn]}>{isJa ? "税込み" : "tax incl."}</Text>
-            <View style={styles.badgeSave}>
-              <Text style={styles.badgeSaveTxt}>{isJa ? "4ヶ月お得" : "Save ~4 mo."}</Text>
-            </View>
-          </Pressable>
-        </View>
-
-        <Text style={styles.noteSmall}>
-          {isJa
-            ? "※ 年額プランは途中解約しても返金はありません（期間終了まで利用可）"
-            : "Annual: no refund if you cancel early; Pro stays active until period end."}
-        </Text>
-
-        <Pressable disabled={!ready || purchasing} onPress={handlePurchase} style={{ opacity: ready ? 1 : 0.85 }}>
-          <LinearGradient
-            colors={ready ? ["#22d3ee", "#2563eb"] : ["rgba(255,255,255,0.12)", "rgba(255,255,255,0.08)"]}
-            style={styles.cta}
-          >
-            <Text style={styles.ctaTxt}>
-              {purchasing
-                ? isJa
-                  ? "処理中..."
-                  : "Processing..."
-                : isJa
-                  ? "Pro Planにアップグレード"
-                  : "Upgrade to Pro"}
-            </Text>
-          </LinearGradient>
-        </Pressable>
-
-        <Pressable onPress={() => void restore()} style={styles.restoreBtn}>
-          <Text style={styles.restoreTxt}>{isJa ? "購入を復元" : "Restore Purchases"}</Text>
-        </Pressable>
-
-        {onOpenPreview ? (
-          <Pressable onPress={onOpenPreview} style={styles.previewBtn}>
-            <Text style={styles.previewTxt}>
-              {isJa ? "新プラン（Weekly / Season）を見る" : "See new plans (Weekly / Season)"}
-            </Text>
-          </Pressable>
-        ) : null}
-
-        <Text style={styles.disclaimer}>
-          {isJa
-            ? "※ App Store / Google Play 経由のサブスクリプションです"
-            : "Subscription via App Store / Google Play."}
-        </Text>
-
-        <Text style={styles.micro}>
-          {isJa
-            ? "※ 機能は順次追加・改善されます 月間データ：月初に集計・更新"
-            : "Features improve over time. Monthly stats refresh at month start."}
-        </Text>
-
-        <View style={{ marginTop: 16, gap: 10 }}>
-          {features.map((text) => (
-            <View key={text} style={styles.featRow}>
-              <LinearGradient
-                colors={["#3B82F6", "#22D3EE"]}
-                style={styles.featCheck}
-              >
-                <Text style={styles.featCheckTxt}>✓</Text>
-              </LinearGradient>
-              <Text style={styles.featTxt}>{text}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={{ marginTop: 22, gap: 8 }}>
-          <Text style={styles.foot}>
+          <View style={styles.heroIcon}>
+            <Image
+              source={require("../../../../assets/icon.png")}
+              style={styles.heroImg}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.h1}>Get Pro</Text>
+          <Text style={styles.lead}>
             {isJa
-              ? "※ プランは自動更新されます。解約はいつでも可能ですが、次回更新まで利用可能です。"
-              : "Plans auto-renew. You can cancel anytime; access lasts until the renewal date."}
+              ? "予想を助け、自分を分析し、課金者として目立てる。"
+              : "Better picks, clearer self-analysis, and Pro status that shows."}
           </Text>
-          <Text style={styles.foot}>
-            {isJa ? "安全な外部決済サービスを利用しています。" : "Checkout uses a secure external payment provider."}
+
+          <View style={styles.grid}>
+            {PLANS.map((p) => {
+              const on = plan === p.id;
+              const price = catalogPriceLabel(
+                products,
+                IAP_PRODUCT_IDS[p.id],
+                IAP_FALLBACK_PRICE_JA[p.id]
+              );
+              return (
+                <Pressable
+                  key={p.id}
+                  onPress={() => setPlan(p.id)}
+                  style={[styles.priceCard, on ? styles.priceCardOn : styles.priceCardOff]}
+                >
+                  {p.badgeJa ? (
+                    <View style={[styles.badge, on ? styles.badgeOn : styles.badgeOff]}>
+                      <Text style={[styles.badgeTxt, on && styles.badgeTxtOn]}>
+                        {isJa ? p.badgeJa : p.badgeEn}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <Text style={[styles.priceTitle, on && styles.priceTitleOn]}>
+                    {isJa ? p.titleJa : p.titleEn}
+                  </Text>
+                  <Text style={[styles.priceAmt, on && styles.priceAmtOn]}>
+                    {price}
+                    <Text style={[styles.period, on && styles.periodOn]}>
+                      {" "}
+                      {isJa ? p.periodJa : p.periodEn}
+                    </Text>
+                  </Text>
+                  <Text style={[styles.tax, on && styles.taxOn]}>{isJa ? "税込み" : "tax incl."}</Text>
+                  <Text style={[styles.note, on && styles.noteOn]}>
+                    {isJa ? p.noteJa : p.noteEn}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.noteSmall}>
+            {isJa
+              ? "※ Season Pass は自動更新しません。途中解約の返金はありません。"
+              : "Season Pass does not auto-renew. No mid-season refund."}
           </Text>
-        </View>
+
+          <Pressable disabled={!ready || purchasing} onPress={handlePurchase} style={{ opacity: ready ? 1 : 0.85 }}>
+            <LinearGradient
+              colors={ready ? ["#22d3ee", "#2563eb"] : ["rgba(255,255,255,0.12)", "rgba(255,255,255,0.08)"]}
+              style={styles.cta}
+            >
+              <Text style={styles.ctaTxt}>{ctaLabel}</Text>
+            </LinearGradient>
+          </Pressable>
+
+          <Pressable onPress={() => void restore()} style={styles.restoreBtn}>
+            <Text style={styles.restoreTxt}>{isJa ? "購入を復元" : "Restore Purchases"}</Text>
+          </Pressable>
+
+          {onOpenPreview ? (
+            <Pressable onPress={onOpenPreview} style={styles.previewBtn}>
+              <Text style={styles.previewTxt}>
+                {isJa ? "お試し導線のプレビュー" : "Preview trial flow"}
+              </Text>
+            </Pressable>
+          ) : null}
+
+          <Text style={styles.disclaimer}>
+            {isJa
+              ? "※ App Store / Google Play 経由の購入です"
+              : "Purchases via App Store / Google Play."}
+          </Text>
+
+          <View style={{ marginTop: 16, gap: 10 }}>
+            {features.map((text) => (
+              <View key={text} style={styles.featRow}>
+                <LinearGradient colors={["#3B82F6", "#22D3EE"]} style={styles.featCheck}>
+                  <Text style={styles.featCheckTxt}>✓</Text>
+                </LinearGradient>
+                <Text style={styles.featTxt}>{text}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={{ marginTop: 22, gap: 8 }}>
+            <Text style={styles.foot}>
+              {isJa
+                ? "※ Weekly / Monthly は自動更新されます。解約はストアの管理画面から。"
+                : "Weekly / Monthly auto-renew. Cancel in the store subscription settings."}
+            </Text>
+            <Text style={styles.foot}>
+              {isJa
+                ? "※ 他人の予想は見せません。勝者は断言しません。"
+                : "We never show others’ picks or declare winners."}
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </MobilePageShell>
@@ -248,44 +279,44 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "900",
     color: "#fff",
-    marginBottom: 20,
+    marginBottom: 8,
   },
-  grid: { flexDirection: "row", gap: 12, marginBottom: 10 },
+  lead: {
+    textAlign: "center",
+    fontSize: 13,
+    color: "rgba(248,250,252,0.65)",
+    marginBottom: 18,
+    lineHeight: 18,
+  },
+  grid: { gap: 10, marginBottom: 10 },
   priceCard: {
-    flex: 1,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
   },
   priceCardOn: { backgroundColor: "#fff", borderColor: "#fff" },
   priceCardOff: { backgroundColor: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.2)" },
-  priceLabel: { fontSize: 11, fontWeight: "700", opacity: 0.55, color: "#fff" },
-  priceLabelOn: { color: "rgba(0,0,0,0.55)" },
-  priceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
-  priceTitle: { fontWeight: "800", color: "#fff" },
-  priceTitleOn: { color: "#000" },
-  check: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#facc15",
-    alignItems: "center",
-    justifyContent: "center",
+  badge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginBottom: 6,
   },
-  checkTxt: { fontSize: 11, fontWeight: "900", color: "#000" },
-  priceAmt: { fontSize: 22, fontWeight: "900", marginTop: 6, color: "#fff" },
+  badgeOn: { backgroundColor: "#facc15" },
+  badgeOff: { backgroundColor: "rgba(250,204,21,0.2)" },
+  badgeTxt: { fontSize: 10, fontWeight: "900", color: "rgba(250,204,21,0.95)" },
+  badgeTxtOn: { color: "#000" },
+  priceTitle: { fontWeight: "800", color: "#fff", fontSize: 15 },
+  priceTitleOn: { color: "#000" },
+  priceAmt: { fontSize: 22, fontWeight: "900", marginTop: 4, color: "#fff" },
   priceAmtOn: { color: "#000" },
+  period: { fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.55)" },
+  periodOn: { color: "rgba(0,0,0,0.5)" },
   tax: { fontSize: 10, opacity: 0.55, color: "#fff", marginTop: 2 },
   taxOn: { color: "rgba(0,0,0,0.55)" },
-  badgeSave: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    backgroundColor: "#facc15",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  badgeSaveTxt: { fontSize: 11, fontWeight: "900", color: "#000" },
+  note: { fontSize: 11, color: "rgba(248,250,252,0.55)", marginTop: 6 },
+  noteOn: { color: "rgba(0,0,0,0.55)" },
   noteSmall: {
     fontSize: 11,
     color: "rgba(248,250,252,0.55)",
@@ -293,7 +324,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cta: { borderRadius: 14, paddingVertical: 14, alignItems: "center", marginBottom: 10 },
-  ctaTxt: { fontSize: 16, fontWeight: "800", color: "#fff" },
+  ctaTxt: { fontSize: 15, fontWeight: "800", color: "#fff" },
   restoreBtn: { alignItems: "center", paddingVertical: 8, marginBottom: 8 },
   restoreTxt: { fontSize: 13, color: "rgba(34,211,238,0.85)", fontWeight: "600" },
   previewBtn: {
@@ -306,7 +337,6 @@ const styles = StyleSheet.create({
   },
   previewTxt: { fontSize: 12, color: "rgba(240,204,114,0.9)", fontWeight: "700", letterSpacing: 0.6 },
   disclaimer: { fontSize: 11, color: "rgba(248,250,252,0.5)", textAlign: "center", marginBottom: 8 },
-  micro: { fontSize: 10, color: "rgba(248,250,252,0.4)", textAlign: "center", marginBottom: 8 },
   featRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
   featCheck: {
     width: 18,

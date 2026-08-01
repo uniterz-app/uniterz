@@ -39,11 +39,12 @@ export const PROFILE_PLAN_PRO_NATIVE_SHADOW = {
 /** 背景アニメ周期（Web CSS / Native Reanimated 共通） */
 export const PROFILE_PLAN_PRO_BG = {
   auroraPulseMs: 5000,
-  /** atmos 図形 — 入場のみ（ループなし）。モバイルで遅く感じないよう短め */
-  atmosEnterMs: 720,
-  atmosEnterHudDelayMs: 90,
-  atmosEnterYOffsetPx: 10,
-  atmosEnterScaleFrom: 0.94,
+  /** atmos 図形 — 入場のみ（ループなし）。opacity + translateY（scale/filter なし） */
+  atmosEnterMs: 680,
+  atmosEnterHudDelayMs: 140,
+  atmosEnterYOffsetPx: 14,
+  /** scale は使わない（SVG 再ラスタでカクつく）。互換のため 1 固定 */
+  atmosEnterScaleFrom: 1,
 } as const;
 
 /** Skia SweepGradient — 将来の枠演出用（プロフィールカードでは未使用） */

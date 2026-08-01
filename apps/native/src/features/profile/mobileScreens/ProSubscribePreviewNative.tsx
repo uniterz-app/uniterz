@@ -57,10 +57,10 @@ export default function ProSubscribePreviewNative({ language, onClose }: Props) 
   const afterTrialPriceLine = ja
     ? planId === "weekly"
       ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
-      : "お試し後は月額 ¥600。期間中の解約で課金なし。"
+      : "お試し後は月額 ¥780。期間中の解約で課金なし。"
     : planId === "weekly"
       ? "Then ¥280/week. Cancel during trial — no charge."
-      : "Then ¥600/month. Cancel during trial — no charge.";
+      : "Then ¥780/month. Cancel during trial — no charge.";
 
   return (
     <MobilePageShell title={ja ? "Pro プラン" : "Get Pro"} appBackground onClose={onClose}>

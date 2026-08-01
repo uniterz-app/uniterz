@@ -6,29 +6,11 @@
 }
 
 .profile-plan-pro-bg__cosmos-skin {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
   opacity: 1;
-  pointer-events: none;
 }
 
 .profile-plan-pro-bg__cosmos-hud {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
   opacity: 1;
-  pointer-events: none;
-}
-
-.profile-plan-pro-bg--web .profile-plan-pro-bg__cosmos-skin,
-.profile-plan-pro-bg--web .profile-plan-pro-bg__cosmos-hud {
-  background-size: cover;
-  background-position: 70% 42%;
 }
 
 .profile-plan-pro-bg--cosmos .profile-plan-pro-bg__cosmos-skin {

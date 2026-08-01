@@ -186,9 +186,26 @@ export async function fetchRankGapAnalysis(input: {
   });
 }
 
+/** users.plan === "pro" かつ proUntil 未超過なら true */
 export async function assertProUser(uid: string): Promise<boolean> {
   const snap = await getAdminDb().doc(`users/${uid}`).get();
   if (!snap.exists) return false;
-  const plan = snap.data()?.plan;
-  return plan === "pro";
+  const data = snap.data() ?? {};
+  if (data.plan !== "pro") return false;
+  const until = data.proUntil as
+    | { toMillis?: () => number; seconds?: number }
+    | Date
+    | null
+    | undefined;
+  if (!until) return true;
+  let ms = 0;
+  if (until instanceof Date) {
+    ms = until.getTime();
+  } else if (typeof until.toMillis === "function") {
+    ms = until.toMillis();
+  } else if (typeof until.seconds === "number") {
+    ms = until.seconds * 1000;
+  }
+  if (!Number.isFinite(ms) || ms <= 0) return true;
+  return ms > Date.now();
 }

@@ -35,3 +35,11 @@ export function nbaSeasonSnapshotDocId(
 ): string {
   return `s${seasonKey}_${metric}`;
 }
+
+/** 無差別級シーズン（例: s2026-27_open_totalPoints） */
+export function nbaSeasonOpenSnapshotDocId(
+  seasonKey: string,
+  metric: string
+): string {
+  return `s${seasonKey}_open_${metric}`;
+}

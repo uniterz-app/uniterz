@@ -20,8 +20,11 @@
 
 - 週間ランキング
 - 月間ランキング
+- （実装）シーズンランキング
 
-各期間内に獲得したスコアを基に順位を決定し、ランキング上位者へ運営から **Unit** を無料で付与する。
+NBA では通常ランキングに加え、**Pro 限定の PRO LEAGUE**（全試合対象）を設ける。詳細は [`pickup-openweight-ranking-design.md`](pickup-openweight-ranking-design.md)。
+
+各期間内に獲得したスコアを基に順位を決定し、ランキング上位者へ運営から **Unit** を無料で付与する（PRO LEAGUE への Unit は未決）。
 
 ---
 

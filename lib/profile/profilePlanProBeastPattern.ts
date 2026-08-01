@@ -382,6 +382,7 @@ function toUrl(svg: string): string {
 }
 
 const urlCache = new Map<string, string>();
+const svgCache = new Map<string, string>();
 
 function cachedUrl(key: string, build: () => string): string {
   const hit = urlCache.get(key);
@@ -389,6 +390,14 @@ function cachedUrl(key: string, build: () => string): string {
   const url = toUrl(build());
   urlCache.set(key, url);
   return url;
+}
+
+function cachedSvg(key: string, build: () => string): string {
+  const hit = svgCache.get(key);
+  if (hit !== undefined) return hit;
+  const svg = build();
+  svgCache.set(key, svg);
+  return svg;
 }
 
 function pick<T>(arr: readonly T[], a: number, b: number): T {
@@ -3488,6 +3497,20 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
   } finally {
     activeOpacityMul = 1;
   }
+}
+
+/** 疎な獣皮 / 宝石レイヤー（Native SvgXml 用） */
+export function getProfilePlanProBeastSkinSvg(
+  variant: ProfilePlanProBeastBgVariant
+): string {
+  return cachedSvg(`beast:skin:svg:${variant}:v10`, () => buildSkinSvg(variant));
+}
+
+/** 微細 HUD（Native SvgXml 用） */
+export function getProfilePlanProBeastHudSvg(
+  variant: ProfilePlanProBeastBgVariant
+): string {
+  return cachedSvg(`beast:hud:svg:${variant}:v10`, () => buildHudSvg(variant));
 }
 
 /** 疎な獣皮 / 宝石レイヤー */

@@ -98,6 +98,7 @@ const ProfileWcStackedRankTrendChartsLazy = dynamic(
 
 import ProfileKinetikHero from "./ui/ProfileKinetikHero";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
 
 import { useProfilePlan } from "@/lib/profile/useProfilePlan";
@@ -125,6 +126,7 @@ import {
   profileVisualEffectsForViewer,
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
+import { useProfileViewCount } from "@/lib/profile/useProfileViewCount";
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
@@ -150,6 +152,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const currentIsProView = forceProView || isProView;
   const visualEffects = profileVisualEffectsForViewer(isMe);
   const visualEffectsLite = isProfileVisualLite(visualEffects);
+  const { count: profileViewCount } = useProfileViewCount(resolvedUid);
 
   const fetchOverviewExtras = tab === "overview";
   const fetchBracketData = tab === "bracket";
@@ -266,7 +269,16 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           setBadgeModalOpen(true);
         }}
         visualEffects={visualEffects}
+        targetUid={resolvedUid}
+        profileViewCount={profileViewCount}
       />
+
+      {isMe ? (
+        <ProfileMenuEdgeHandle
+          onOpen={() => setDrawerOpen(true)}
+          unreadCount={menuUnreadCount}
+        />
+      ) : null}
 
       <div className="mt-6">
         {tab === "overview" ? (

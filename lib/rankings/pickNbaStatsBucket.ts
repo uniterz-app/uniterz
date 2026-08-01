@@ -18,6 +18,47 @@ function asBucket(v: unknown): Record<string, unknown> | null {
   return v as Record<string, unknown>;
 }
 
+/** 旧プレーオフ累計（rankingByPhase.playoffs）のみ。フォールバックなし */
+export function pickNbaPlayoffsCumulativeSlice(
+  cumulative: Record<string, unknown> | null | undefined
+): Record<string, unknown> {
+  if (!cumulative) return {};
+  const byPhase = (cumulative.rankingByPhase ?? {}) as Record<string, unknown>;
+  return asBucket(byPhase.playoffs) ?? {};
+}
+
+/** 指定シーズンキーのみ（例: 2026-27）。フォールバックなし */
+export function pickNbaSeasonKeyCumulativeSlice(
+  cumulative: Record<string, unknown> | null | undefined,
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
+): Record<string, unknown> {
+  if (!cumulative) return {};
+  const bySeason = (cumulative.rankingBySeason ?? {}) as Record<
+    string,
+    unknown
+  >;
+  return asBucket(bySeason[seasonKey]) ?? {};
+}
+
+/** 日次: プレーオフ位相のみ */
+export function pickNbaPlayoffsDailyIncBucket(
+  daily: Record<string, unknown> | null | undefined
+): Record<string, unknown> {
+  if (!daily) return {};
+  const byPhase = (daily.rankingByPhase ?? {}) as Record<string, unknown>;
+  return asBucket(byPhase.playoffs) ?? {};
+}
+
+/** 日次: 指定シーズンキーのみ */
+export function pickNbaSeasonKeyDailyIncBucket(
+  daily: Record<string, unknown> | null | undefined,
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
+): Record<string, unknown> {
+  if (!daily) return {};
+  const bySeason = (daily.rankingBySeason ?? {}) as Record<string, unknown>;
+  return asBucket(bySeason[seasonKey]) ?? {};
+}
+
 /**
  * cumulative_stats から NBA 表示用スライスを選ぶ。
  * 優先: 現行シーズン → 前シーズン → rankingByPhase.playoffs → ranking

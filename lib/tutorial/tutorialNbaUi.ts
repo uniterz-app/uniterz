@@ -255,6 +255,7 @@ export function buildTutorialProfile(): Profile {
     planProBgVariant: "atmos",
     countryCode: "JP",
     memberSinceMs: Date.now(),
+    unitBalance: 0,
   };
 }
 

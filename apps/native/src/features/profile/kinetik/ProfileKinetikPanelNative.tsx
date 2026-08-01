@@ -3,6 +3,7 @@ import { cyberAlert } from "../../../components/cyberAlert";
 import {
   Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, type StyleProp, type ViewStyle,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useReducedMotion } from "react-native-reanimated";
 import Animated, {
   cancelAnimation,
@@ -39,6 +40,7 @@ import {
 import { getKinetikRankBadgeExplanation } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
 import { formatMetricDecimals } from "../../../../../../lib/format/metricDecimals";
 import { formatProfileMemberSince } from "../../../../../../lib/profile/formatProfileMemberSince";
+import { useCountUp } from "../../../../../../lib/hooks/useCountUp";
 import {
   formatProfileMetricDayDelta,
   profileMetricDeltaTone,
@@ -62,7 +64,6 @@ import { rankingsTexts } from "../../rankings/rankingsTexts";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import { buildProfileShareUrl } from "../../../../../../lib/share/shareAppUrls";
-import CyberMenuButton from "../../../ui/CyberMenuButton";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import {
   KINETIK_METRIC_ACCENT,
@@ -88,8 +89,7 @@ import { isProfilePlanProFormBgVariant } from "../../../../../../lib/profile/pro
 
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
-/** `CyberMenuButton` md（36px）+ 余白 */
-const HEADER_MENU_CLEARANCE = 40;
+const UNIT_VAULT_GOLD = "#f6c344";
 
 function kinetikWinRateSegs(winRate: number): number {
   return Math.round((Math.min(100, Math.max(0, winRate)) / 100) * 5);
@@ -954,6 +954,191 @@ function KinetikIdentityIdChipNative({
   );
 }
 
+/** Web の Unit コインアニメ秒数（CSS keyframes と揃える） */
+const UNIT_COIN_GLOW_HALF_MS = 1400;
+const UNIT_COIN_SHEEN_CYCLE_MS = 3600;
+const UNIT_COIN_SHEEN_SWEEP_MS = 580;
+const UNIT_COIN_SHEEN_HOLD_MS = Math.round(UNIT_COIN_SHEEN_CYCLE_MS * 0.55);
+
+/** Web `ProfileUnitVault` 相当 — 金貨ディスク + イタリック数字（U8） */
+function KinetikUnitVaultNative({
+  balance,
+  ariaLabel,
+  corner,
+}: {
+  balance: number;
+  ariaLabel: string;
+  corner?: boolean;
+}) {
+  const disc = corner ? 26 : 28;
+  const inner = corner ? 19 : 20;
+  const reduceMotion = useReducedMotion();
+  /** Web `useCountUp(..., 900)` 相当 */
+  const displayBalance = useCountUp(balance, 900, !reduceMotion, 0, "target");
+  const enter = useSharedValue(reduceMotion ? 1 : 0);
+  const glow = useSharedValue(0);
+  const sheenX = useSharedValue(-1.4);
+  const sheenOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    cancelAnimation(enter);
+    cancelAnimation(glow);
+    cancelAnimation(sheenX);
+    cancelAnimation(sheenOpacity);
+
+    if (reduceMotion) {
+      enter.value = 1;
+      glow.value = 0;
+      sheenX.value = -1.4;
+      sheenOpacity.value = 0;
+      return;
+    }
+
+    enter.value = 0;
+    enter.value = withTiming(1, {
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+    });
+
+    /** Web: `profile-unit-coin-glow 2.8s` */
+    glow.value = withRepeat(
+      withSequence(
+        withTiming(1, {
+          duration: UNIT_COIN_GLOW_HALF_MS,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        withTiming(0, {
+          duration: UNIT_COIN_GLOW_HALF_MS,
+          easing: Easing.inOut(Easing.ease),
+        })
+      ),
+      -1,
+      false
+    );
+
+    /** Web: `profile-unit-coin-sheen 3.6s` */
+    sheenX.value = -1.4;
+    sheenOpacity.value = 0;
+    sheenX.value = withRepeat(
+      withSequence(
+        withDelay(
+          UNIT_COIN_SHEEN_HOLD_MS,
+          withTiming(2.2, {
+            duration: UNIT_COIN_SHEEN_SWEEP_MS,
+            easing: Easing.inOut(Easing.ease),
+          })
+        ),
+        withTiming(-1.4, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+    sheenOpacity.value = withRepeat(
+      withSequence(
+        withDelay(UNIT_COIN_SHEEN_HOLD_MS, withTiming(0.85, { duration: 80 })),
+        withTiming(0, {
+          duration: UNIT_COIN_SHEEN_SWEEP_MS - 80,
+          easing: Easing.in(Easing.ease),
+        }),
+        withTiming(0, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+
+    return () => {
+      cancelAnimation(enter);
+      cancelAnimation(glow);
+      cancelAnimation(sheenX);
+      cancelAnimation(sheenOpacity);
+    };
+  }, [enter, glow, reduceMotion, sheenOpacity, sheenX]);
+
+  const rootStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      { translateY: (1 - enter.value) * -4 },
+      { scale: 0.86 + enter.value * 0.14 },
+    ],
+  }));
+
+  const discStyle = useAnimatedStyle(() => {
+    const g = glow.value;
+    return {
+      transform: [{ scale: 1 + g * 0.05 }],
+      shadowOpacity: 0.38 + g * 0.37,
+      shadowRadius: 6 + g * 6,
+    };
+  });
+
+  const sheenStyle = useAnimatedStyle(() => ({
+    opacity: sheenOpacity.value,
+    transform: [
+      { translateX: sheenX.value * disc },
+      { rotate: "18deg" },
+    ],
+  }));
+
+  const valueGlowStyle = useAnimatedStyle(() => ({
+    textShadowRadius: 6 + glow.value * 6,
+    textShadowColor: `rgba(246,195,68,${0.4 + glow.value * 0.32})`,
+  }));
+
+  return (
+    <Animated.View
+      style={[styles.unitVault, corner ? styles.unitVaultCorner : null, rootStyle]}
+      accessibilityRole="text"
+      accessibilityLabel={ariaLabel}
+    >
+      <Animated.View
+        style={[
+          styles.unitVaultDisc,
+          { width: disc, height: disc, borderRadius: disc / 2 },
+          discStyle,
+        ]}
+      >
+        <LinearGradient
+          colors={["#f9d576", "#b8860b", "#f6c344", "#8a6410"]}
+          start={{ x: 0.15, y: 0 }}
+          end={{ x: 0.85, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.unitVaultSheen, { height: disc * 1.4, top: -disc * 0.2 }, sheenStyle]}
+        />
+        <View
+          style={[
+            styles.unitVaultDiscInner,
+            {
+              width: inner,
+              height: inner,
+              borderRadius: inner / 2,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={["#ffedb0", "#d9a125"]}
+            start={{ x: 0.3, y: 0.2 }}
+            end={{ x: 0.9, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <Text style={[styles.unitVaultU, corner ? styles.unitVaultUCorner : null]}>U</Text>
+        </View>
+      </Animated.View>
+      <Animated.Text
+        style={[
+          styles.unitVaultValue,
+          corner ? styles.unitVaultValueCorner : null,
+          valueGlowStyle,
+        ]}
+      >
+        {displayBalance.toLocaleString("en-US")}
+      </Animated.Text>
+    </Animated.View>
+  );
+}
+
 function KinetikIdentityJoinIdRowNative({
   memberSinceLabel,
   idLabel,
@@ -969,7 +1154,9 @@ function KinetikIdentityJoinIdRowNative({
   shareLabel: string;
   onShare: () => void;
 }) {
-  if (!memberSinceLabel && !idLabel) return null;
+  if (!memberSinceLabel && !idLabel) {
+    return null;
+  }
 
   return (
     <View style={styles.identityJoinIdRow}>
@@ -988,6 +1175,32 @@ function KinetikIdentityJoinIdRowNative({
         footerRefStyle={styles.footerRefId}
         compact
       />
+    </View>
+  );
+}
+
+function KinetikViewCountChipNative({
+  viewCount,
+  viewCountAriaLabel,
+  underAvatar,
+}: {
+  viewCount: number;
+  viewCountAriaLabel: string | null;
+  underAvatar?: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.viewCountChip,
+        underAvatar ? styles.viewCountChipUnderAvatar : null,
+      ]}
+      accessibilityRole="text"
+      accessibilityLabel={viewCountAriaLabel ?? undefined}
+    >
+      <MaterialCommunityIcons name="eye" size={12} color="#00F5FF" />
+      <Text style={styles.viewCountNum}>
+        {viewCount.toLocaleString("en-US")}
+      </Text>
     </View>
   );
 }
@@ -1092,6 +1305,13 @@ export type ProfileKinetikPanelNativeProps = {
   stackedMetricsSections?: ProfileKinetikMetricsSection[];
   statsPending?: boolean;
   style?: ViewStyle;
+  /** NBA: Playoffs / Season 切替 */
+  metricsPeriod?: "playoffs" | "season";
+  onMetricsPeriodChange?: (period: "playoffs" | "season") => void;
+  /** 累計プロフィール閲覧数（公開） */
+  profileViewCount?: number | null;
+  /** 保有 Unit（公開） */
+  unitBalance?: number | null;
 };
 
 export default function ProfileKinetikPanelNative({
@@ -1111,18 +1331,23 @@ export default function ProfileKinetikPanelNative({
   onToggleMetricsScope,
   badges = [],
   onBadgePress,
-  canOpenMenu = false,
-  onOpenMenu,
-  menuUnreadCount = 0,
   shareHandle,
   metricValueDeltas = null,
   rankingLeague = "nba",
   stackedMetricsSections,
   statsPending = false,
   style,
+  metricsPeriod,
+  onMetricsPeriodChange,
+  profileViewCount = null,
+  unitBalance = null,
 }: ProfileKinetikPanelNativeProps) {
   const isJa = language === "ja";
   const isWcProfile = rankingLeague === "worldcup";
+  const isSeasonMetrics =
+    !isWcProfile && metricsPeriod === "season" && !!onMetricsPeriodChange;
+  const showNbaPeriodTabs =
+    !isWcProfile && metricsPeriod != null && !!onMetricsPeriodChange;
   const [shareCopied, setShareCopied] = useState(false);
 
   const activeWinStreak = Math.max(0, Math.floor(winStreak ?? stats.winStreak ?? 0));
@@ -1152,6 +1377,18 @@ export default function ProfileKinetikPanelNative({
   const animatePlanProBg = isPro && reduceMotion !== true;
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
+  const profileViewCountAria =
+    profileViewCount == null
+      ? null
+      : isJa
+        ? `プロフィール閲覧数 ${profileViewCount.toLocaleString("ja-JP")}`
+        : `${profileViewCount.toLocaleString("en-US")} profile views`;
+  const unitBalanceAria =
+    unitBalance == null
+      ? null
+      : isJa
+        ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
+        : `${unitBalance.toLocaleString("en-US")} Units`;
   const shareTargetHandle = shareHandle?.trim() || identity.handle?.trim() || "";
   const profileFlagUri = countryCode?.trim()
     ? rankingFlagImageUri(countryCode.trim())
@@ -1180,10 +1417,16 @@ export default function ProfileKinetikPanelNative({
     () => ({
       ptsUnit: "pts",
       matchUnit: isJa ? "試合" : "matches",
-      cumulativeUnitHint: isJa ? "累計" : "CUM",
+      cumulativeUnitHint: isSeasonMetrics
+        ? isJa
+          ? "今季"
+          : "SZN"
+        : isJa
+          ? "累計"
+          : "CUM",
       winRateUnitHint: "%",
     }),
-    [isJa]
+    [isJa, isSeasonMetrics]
   );
 
   const wcStackedActive =
@@ -1385,59 +1628,57 @@ export default function ProfileKinetikPanelNative({
 
       <View style={styles.headerBlock}>
         <View style={styles.headerRow}>
-          <ProfileKinetikAvatarWithStreakNative
-            photoURL={identity.photoURL}
-            displayName={identity.displayName}
-            streak={activeWinStreak}
-            accentKey={menuAccent}
-            isPlanPro={isPro}
-          />
-          <View style={styles.headerMeta}>
-            <KinetikHeaderHatch />
-            {canOpenMenu ? (
-              <View style={styles.headerMenuAnchor}>
-                <CyberMenuButton
-                  size="md"
-                  onPress={() => onOpenMenu?.()}
-                  accessibilityLabel={isJa ? "メニュー" : "Menu"}
-                  badge={
-                    menuUnreadCount > 0 ? (
-                      <View style={styles.menuBadge}>
-                        <Text style={styles.menuBadgeText}>
-                          {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
-                        </Text>
-                      </View>
-                    ) : null
-                  }
+          <View style={styles.avatarColumn}>
+            <ProfileKinetikAvatarWithStreakNative
+              photoURL={identity.photoURL}
+              displayName={identity.displayName}
+              streak={activeWinStreak}
+              accentKey={menuAccent}
+              isPlanPro={isPro}
+            />
+            {profileViewCount != null ? (
+              <View style={styles.avatarViews}>
+                <KinetikViewCountChipNative
+                  viewCount={profileViewCount}
+                  viewCountAriaLabel={profileViewCountAria}
+                  underAvatar
                 />
               </View>
             ) : null}
-            <View
-              style={[
-                styles.headerIdentity,
-                canOpenMenu ? styles.headerIdentityWithMenu : null,
-              ]}
-            >
+          </View>
+          <View style={styles.headerMeta}>
+            <KinetikHeaderHatch />
+            <View style={styles.headerIdentity}>
               <View style={styles.nameRow}>
-                <Text
-                  style={[styles.displayName, isPro ? styles.displayNamePro : null]}
-                  numberOfLines={1}
-                >
-                  {identity.displayName}
-                </Text>
-                {profileFlagUri ? (
-                  <View
-                    style={styles.nameInlineFlagWrap}
-                    accessibilityLabel={countryCode ?? undefined}
+                <View style={styles.nameWithFlag}>
+                  <Text
+                    style={[styles.displayName, isPro ? styles.displayNamePro : null]}
+                    numberOfLines={1}
                   >
-                    <Image
-                      source={{ uri: profileFlagUri }}
-                      style={styles.nameInlineFlag}
-                      resizeMode="cover"
-                    />
-                  </View>
-                ) : null}
+                    {identity.displayName}
+                  </Text>
+                  {profileFlagUri ? (
+                    <View
+                      style={styles.nameInlineFlagWrap}
+                      accessibilityLabel={countryCode ?? undefined}
+                    >
+                      <Image
+                        source={{ uri: profileFlagUri }}
+                        style={styles.nameInlineFlag}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  ) : null}
+                </View>
                 {isPro ? <ProCyberBadgeNative premium /> : null}
+                {unitBalance != null && unitBalanceAria ? (
+                  <KinetikUnitVaultNative
+                    // UI 確認用モック（実残高が 0 のとき 1,000 を表示）
+                    balance={unitBalance > 0 ? unitBalance : 1000}
+                    ariaLabel={unitBalanceAria}
+                    corner
+                  />
+                ) : null}
               </View>
               <KinetikIdentityJoinIdRowNative
                 memberSinceLabel={memberSinceLabel}
@@ -1567,6 +1808,31 @@ export default function ProfileKinetikPanelNative({
           </View>
         ) : (
           <View>
+            {showNbaPeriodTabs ? (
+              <View
+                style={[
+                  styles.metricsStageTabWrap,
+                  isPro ? styles.metricsDividerPlanPro : null,
+                ]}
+              >
+                <CyberSlantedTabBarNative fill>
+                  <CyberSlantedTabNative
+                    label="PLAYOFF"
+                    active={metricsPeriod === "playoffs"}
+                    fill
+                    compact
+                    onPress={() => onMetricsPeriodChange?.("playoffs")}
+                  />
+                  <CyberSlantedTabNative
+                    label="26-27"
+                    active={metricsPeriod === "season"}
+                    fill
+                    compact
+                    onPress={() => onMetricsPeriodChange?.("season")}
+                  />
+                </CyberSlantedTabBarNative>
+              </View>
+            ) : null}
             <View style={[styles.metricsSubHeader, isPro ? styles.metricsDividerPlanPro : null]}>
               <KinetikHeaderTabsNative
                 rankBadge={rankBadge}
@@ -1654,17 +1920,8 @@ const styles = StyleSheet.create({
     minHeight: KINETIK_AVATAR_MOBILE.size,
     justifyContent: "center",
   },
-  headerMenuAnchor: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    zIndex: 3,
-  },
   headerIdentity: {
     minWidth: 0,
-  },
-  headerIdentityWithMenu: {
-    paddingRight: HEADER_MENU_CLEARANCE,
   },
   headerHatch: {
     position: "absolute",
@@ -1739,7 +1996,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     minWidth: 0,
+    width: "100%",
     flexWrap: "wrap",
+  },
+  /** 名前と国旗だけを同じ高さで中央揃え（PRO バッジ高さの影響を受けない） */
+  nameWithFlag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+    flexShrink: 1,
   },
   nameInlineFlagWrap: {
     width: 18,
@@ -1749,6 +2015,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.28)",
     overflow: "hidden",
     flexShrink: 0,
+    // イタリック名の光学中心に合わせる
+    transform: [{ translateY: -1 }],
   },
   nameInlineFlag: {
     width: "100%",
@@ -1808,13 +2076,121 @@ const styles = StyleSheet.create({
     lineHeight: 10,
     fontVariant: ["tabular-nums"],
   },
+  /** Web `.profile-edit-kinetik-view-count` 相当 */
+  viewCountChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingTop: 3,
+    paddingRight: 8,
+    paddingBottom: 4,
+    paddingLeft: 7,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.65)",
+    backgroundColor: "rgba(0,245,255,0.14)",
+    // iOS グロー
+    shadowColor: "#00F5FF",
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    // Android
+    elevation: 3,
+    flexShrink: 0,
+  },
+  viewCountNum: {
+    fontFamily: FOOTER_REF_FONT,
+    fontSize: 10.5,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    color: "#f8fafc",
+    lineHeight: 12,
+    fontVariant: ["tabular-nums"],
+  },
+  /** Web `.profile-edit-kinetik-unit-vault` 相当 — 金貨コイン（U8） */
+  unitVault: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  unitVaultDisc: {
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    shadowColor: UNIT_VAULT_GOLD,
+    shadowOpacity: 0.55,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 5,
+  },
+  unitVaultSheen: {
+    position: "absolute",
+    zIndex: 2,
+    width: "42%",
+    left: 0,
+    backgroundColor: "rgba(255,248,220,0.55)",
+  },
+  unitVaultDiscInner: {
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    zIndex: 1,
+  },
+  unitVaultU: {
+    fontFamily: FOOTER_REF_FONT,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#241902",
+    lineHeight: 12,
+    zIndex: 1,
+  },
+  unitVaultValue: {
+    fontFamily: OXANIUM_EXTRA,
+    fontSize: 20,
+    fontWeight: "800",
+    fontStyle: "italic",
+    letterSpacing: -0.2,
+    color: "#ffe9a8",
+    lineHeight: 22,
+    fontVariant: ["tabular-nums"],
+    textShadowColor: "rgba(246,195,68,0.55)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  unitVaultCorner: {
+    marginLeft: "auto",
+    gap: 7,
+  },
+  unitVaultUCorner: {
+    fontSize: 9.5,
+    lineHeight: 11,
+  },
+  unitVaultValueCorner: {
+    fontSize: 18,
+    lineHeight: 20,
+  },
+  avatarColumn: {
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  avatarViews: {
+    marginTop: 6,
+    width: KINETIK_AVATAR_MOBILE.size,
+    alignItems: "stretch",
+  },
+  /** アバター直下 — 横幅フル */
+  viewCountChipUnderAvatar: {
+    width: "100%",
+    justifyContent: "center",
+    paddingLeft: 0,
+    paddingRight: 0,
+  },
   displayName: {
     flexShrink: 1,
-    alignSelf: "flex-start",
     maxWidth: "100%",
     fontFamily: OXANIUM_EXTRA,
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 18,
     fontStyle: "italic",
     color: "#f8fafc",
     letterSpacing: -0.3,
@@ -1892,8 +2268,8 @@ const styles = StyleSheet.create({
   },
   badgeRowEmpty: { marginTop: 8, minHeight: 4 },
   badgeBridgePro: {
-    flexGrow: 1,
-    flexShrink: 1,
+    flexGrow: 0,
+    flexShrink: 0,
     minHeight: 60 + BADGE_FLOAT_TOP_CLEARANCE_PX,
     marginHorizontal: -16,
     paddingTop: 8,
@@ -1902,8 +2278,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     overflow: "visible",
   },
+  /** 空でも同じ高さを確保 — バッジ有無で背景図形が動かない */
   badgeBridgeProEmpty: {
-    minHeight: 48,
+    minHeight: 60 + BADGE_FLOAT_TOP_CLEARANCE_PX,
   },
   /**
    * Web `.profile-edit-kinetik-badge-enter-wrap`
@@ -1950,6 +2327,8 @@ const styles = StyleSheet.create({
   },
   metricsPanelPlanPro: {
     marginTop: 0,
+    flexGrow: 1,
+    justifyContent: "flex-end",
   },
   metricsHeader: {
     alignItems: "center",

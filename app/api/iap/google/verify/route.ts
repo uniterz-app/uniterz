@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
+import {
+  planForProductId,
+  stubProUntilForPlan,
+} from "@/lib/pro/iapProductIds";
 
 /** Google Play 購入検証（本番では Play Developer API を使用） */
 export async function POST(req: NextRequest) {
@@ -17,14 +21,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid payload" }, { status: 400 });
     }
 
-    const planType = productId.includes("annual") ? "annual" : "monthly";
-    const now = new Date();
-    const proUntil = new Date(now);
-    if (planType === "annual") {
-      proUntil.setFullYear(proUntil.getFullYear() + 1);
-    } else {
-      proUntil.setMonth(proUntil.getMonth() + 1);
+    const planType = planForProductId(productId);
+    if (!planType) {
+      return NextResponse.json({ error: "unknown product" }, { status: 400 });
     }
+
+    const now = new Date();
+    const proUntil = stubProUntilForPlan(planType, now);
 
     const db = getAdminDb();
     await db.doc(`users/${uid}`).set(

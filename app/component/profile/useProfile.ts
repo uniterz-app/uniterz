@@ -19,6 +19,7 @@ import {
 import { looksLikeFirestoreUid } from "@/lib/profile/profilePathKey";
 import {
   parseUserProfileFields,
+  parseUserUnitBalance,
   profileDisplayFromUser,
 } from "@/lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "@/lib/profile/parseMemberSinceMs";
@@ -38,6 +39,8 @@ export type Profile = {
   planProBgVariant: ProfilePlanProBgVariant;
   countryCode: string | null;
   memberSinceMs: number | null;
+  /** 保有 Unit（公開表示） */
+  unitBalance: number;
 };
 
 type UserState = {
@@ -51,6 +54,7 @@ type UserState = {
   planProBgVariant?: ProfilePlanProBgVariant;
   countryCode?: string | null;
   memberSinceMs?: number | null;
+  unitBalance?: number;
 } | null;
 
 type Counts = {
@@ -263,6 +267,7 @@ export function useProfile(handle: string) {
             planProBgVariant: parseUserPlanProBgVariant(d.planProBgVariant),
             countryCode: parseCountryCode(d),
             memberSinceMs: parseMemberSinceMs(d),
+            unitBalance: parseUserUnitBalance(d),
           },
         };
         writeProfileCache([decodedHandle, docSnap.id, userHandle], nextState);
@@ -302,6 +307,7 @@ export function useProfile(handle: string) {
       planProBgVariant: u.planProBgVariant ?? parseUserPlanProBgVariant(undefined),
       countryCode: u.countryCode ?? null,
       memberSinceMs: u.memberSinceMs ?? null,
+      unitBalance: u.unitBalance ?? 0,
     };
   }, [user, decodedHandle, counts, loading]);
 

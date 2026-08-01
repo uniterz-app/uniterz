@@ -6,27 +6,32 @@
   display: none;
 }
 
-.profile-plan-pro-bg__atmos-hex {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  will-change: opacity, transform;
-  filter: contrast(1.12) saturate(1.18);
-}
-
+/*
+ * 幅ロックのアートボード:
+ * - 高さは aspect-ratio のみで決まる（カード高さに追従しない）
+ * - バッジ有無でカードが縦伸びしても六角の位置・大きさが動かない
+ * - 親 .profile-plan-pro-bg の overflow:hidden で余長をクリップ
+ */
+.profile-plan-pro-bg__atmos-hex,
 .profile-plan-pro-bg__atmos-hud {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: auto;
+  width: 100%;
+  aspect-ratio: 300 / 430;
+  height: auto;
   background-repeat: no-repeat;
-  background-position: center;
+  background-position: center top;
   background-size: 100% 100%;
-  will-change: opacity, transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
-/* Web 横長 — 図形レイヤーの描画を安定させる */
+/* Web 横長キャンバス */
 .profile-plan-pro-bg--web .profile-plan-pro-bg__atmos-hex,
 .profile-plan-pro-bg--web .profile-plan-pro-bg__atmos-hud {
-  transform-origin: center center;
+  aspect-ratio: 960 / 380;
+  transform-origin: center top;
 }

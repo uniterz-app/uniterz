@@ -6,29 +6,11 @@
 }
 
 .profile-plan-pro-bg__lab-skin {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
   opacity: 1;
-  pointer-events: none;
 }
 
 .profile-plan-pro-bg__lab-hud {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
   opacity: 1;
-  pointer-events: none;
-}
-
-.profile-plan-pro-bg--web .profile-plan-pro-bg__lab-skin,
-.profile-plan-pro-bg--web .profile-plan-pro-bg__lab-hud {
-  background-size: cover;
-  background-position: 70% 42%;
 }
 
 .profile-plan-pro-bg--lab .profile-plan-pro-bg__lab-skin {

@@ -9,7 +9,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import MobilePageShell from "./MobilePageShell";
 
-type PlanType = "monthly" | "annual" | null;
+type PlanType = "weekly" | "monthly" | "season" | "annual" | null;
 
 type Props = {
   language: "ja" | "en";
@@ -116,13 +116,21 @@ export default function MobilePlanStatusScreen({
                 : "Pro Plan"}
             {plan === "pro" && planType ? (
               <Text style={styles.planSub}>
-                {planType === "annual"
+                {planType === "weekly"
                   ? isJa
-                    ? " 年額"
-                    : " Yearly"
-                  : isJa
-                    ? " 月額"
-                    : " Monthly"}
+                    ? " 週額"
+                    : " Weekly"
+                  : planType === "season"
+                    ? isJa
+                      ? " シーズン"
+                      : " Season"
+                    : planType === "annual"
+                      ? isJa
+                        ? " 年額（旧）"
+                        : " Yearly (legacy)"
+                      : isJa
+                        ? " 月額"
+                        : " Monthly"}
               </Text>
             ) : null}
           </Text>

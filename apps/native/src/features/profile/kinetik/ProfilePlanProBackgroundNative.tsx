@@ -483,8 +483,9 @@ function MoodLayers({
   );
 }
 
-/** Web SVG データ URL 相当 — SvgXml で skin + hud を重ねる */
+/** Web SVG データ URL 相当 — SvgXml で skin + hud を重ねる（幅ロック） */
 function SvgSkinHudLayers({
+  width,
   skinXml,
   hudXml,
   canvasW,
@@ -492,6 +493,7 @@ function SvgSkinHudLayers({
   shouldAnimate,
   variantKey,
 }: {
+  width: number;
   skinXml: string;
   hudXml: string;
   canvasW: number;
@@ -500,6 +502,7 @@ function SvgSkinHudLayers({
   variantKey: string;
 }) {
   const enter = useSharedValue(shouldAnimate ? 0 : 1);
+  const artH = width * (canvasH / canvasW);
 
   useEffect(() => {
     if (!shouldAnimate) {
@@ -519,23 +522,24 @@ function SvgSkinHudLayers({
     opacity: enter.value,
     transform: [
       {
-        scale:
-          PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom +
-          enter.value * (1 - PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom),
-      },
-      {
-        translateY: (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
+        translateY:
+          (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
       },
     ],
   }));
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFillObject, layerStyle]}>
+    <Animated.View
+      style={[
+        { position: "absolute", top: 0, left: 0, width, height: artH },
+        layerStyle,
+      ]}
+    >
       <View style={StyleSheet.absoluteFillObject}>
         <SvgXml
           xml={skinXml}
-          width="100%"
-          height="100%"
+          width={width}
+          height={artH}
           viewBox={`0 0 ${canvasW} ${canvasH}`}
           preserveAspectRatio="none"
         />
@@ -543,8 +547,8 @@ function SvgSkinHudLayers({
       <View style={StyleSheet.absoluteFillObject}>
         <SvgXml
           xml={hudXml}
-          width="100%"
-          height="100%"
+          width={width}
+          height={artH}
           viewBox={`0 0 ${canvasW} ${canvasH}`}
           preserveAspectRatio="none"
         />
@@ -555,14 +559,17 @@ function SvgSkinHudLayers({
 
 /** Web `beast-*` 相当 */
 function BeastLayers({
+  width,
   variant,
   shouldAnimate,
 }: {
+  width: number;
   variant: ProfilePlanProBeastBgVariant;
   shouldAnimate: boolean;
 }) {
   return (
     <SvgSkinHudLayers
+      width={width}
       skinXml={getProfilePlanProBeastSkinSvg(variant)}
       hudXml={getProfilePlanProBeastHudSvg(variant)}
       canvasW={PROFILE_PLAN_PRO_BEAST_CANVAS.width}
@@ -575,14 +582,17 @@ function BeastLayers({
 
 /** Web `cosmos-*` 相当 */
 function CosmosLayers({
+  width,
   variant,
   shouldAnimate,
 }: {
+  width: number;
   variant: ProfilePlanProCosmosBgVariant;
   shouldAnimate: boolean;
 }) {
   return (
     <SvgSkinHudLayers
+      width={width}
       skinXml={getProfilePlanProCosmosSkinSvg(variant)}
       hudXml={getProfilePlanProCosmosHudSvg(variant)}
       canvasW={PROFILE_PLAN_PRO_COSMOS_CANVAS.width}
@@ -595,14 +605,17 @@ function CosmosLayers({
 
 /** Web `lab-*` 相当 */
 function LabLayers({
+  width,
   variant,
   shouldAnimate,
 }: {
+  width: number;
   variant: ProfilePlanProLabBgVariant;
   shouldAnimate: boolean;
 }) {
   return (
     <SvgSkinHudLayers
+      width={width}
       skinXml={getProfilePlanProLabSkinSvg(variant)}
       hudXml={getProfilePlanProLabHudSvg(variant)}
       canvasW={PROFILE_PLAN_PRO_LAB_CANVAS.width}
@@ -615,14 +628,17 @@ function LabLayers({
 
 /** Web `form-*` 相当 */
 function FormLayers({
+  width,
   variant,
   shouldAnimate,
 }: {
+  width: number;
   variant: ProfilePlanProFormBgVariant;
   shouldAnimate: boolean;
 }) {
   return (
     <SvgSkinHudLayers
+      width={width}
       skinXml={getProfilePlanProFormSkinSvg(variant)}
       hudXml={getProfilePlanProFormHudSvg(variant)}
       canvasW={PROFILE_PLAN_PRO_FORM_CANVAS.width}
@@ -633,17 +649,22 @@ function FormLayers({
   );
 }
 
-/** Web `scale-*` 相当 — 爬虫類鱗 + 微細 HUD */
+/** Web `scale-*` 相当 — 爬虫類鱗 + 微細 HUD（幅ロック） */
 function ScaleLayers({
+  width,
   variant,
   shouldAnimate,
 }: {
+  width: number;
   variant: ProfilePlanProScaleBgVariant;
   shouldAnimate: boolean;
 }) {
   const skin = getProfilePlanProScaleSkinItems(variant);
   const hud = getProfilePlanProScaleHudItems(variant);
   const enter = useSharedValue(shouldAnimate ? 0 : 1);
+  const artH =
+    width *
+    (PROFILE_PLAN_PRO_SCALE_CANVAS.height / PROFILE_PLAN_PRO_SCALE_CANVAS.width);
 
   useEffect(() => {
     if (!shouldAnimate) {
@@ -663,12 +684,8 @@ function ScaleLayers({
     opacity: enter.value,
     transform: [
       {
-        scale:
-          PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom +
-          enter.value * (1 - PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom),
-      },
-      {
-        translateY: (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
+        translateY:
+          (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
       },
     ],
   }));
@@ -712,10 +729,15 @@ function ScaleLayers({
     });
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFillObject, layerStyle]}>
+    <Animated.View
+      style={[
+        { position: "absolute", top: 0, left: 0, width, height: artH },
+        layerStyle,
+      ]}
+    >
       <Svg
-        width="100%"
-        height="100%"
+        width={width}
+        height={artH}
         viewBox={`0 0 ${PROFILE_PLAN_PRO_SCALE_CANVAS.width} ${PROFILE_PLAN_PRO_SCALE_CANVAS.height}`}
         preserveAspectRatio="none"
         pointerEvents="none"
@@ -727,12 +749,14 @@ function ScaleLayers({
   );
 }
 
-/** Web `atmos` 相当 — 図形だけ（accent 連動・入場は1回のみ） */
+/** Web `atmos` 相当 — 図形だけ（幅ロック・入場は1回のみ） */
 function AtmosLayers({
+  width,
   accent,
   shouldAnimate,
   accentReady,
 }: {
+  width: number;
   accent: KinetikProfileAccentKey;
   shouldAnimate: boolean;
   accentReady: boolean;
@@ -740,8 +764,9 @@ function AtmosLayers({
   const cells = getProfilePlanProAtmosHexCells(accent);
   const enter = useSharedValue(0);
   const hasEnteredRef = useRef(false);
-  const scaleFrom = PROFILE_PLAN_PRO_BG.atmosEnterScaleFrom;
-  const yFrom = PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx;
+  const artH =
+    width *
+    (PROFILE_PLAN_PRO_ATMOS_CANVAS.height / PROFILE_PLAN_PRO_ATMOS_CANVAS.width);
 
   useEffect(() => {
     if (!accentReady) {
@@ -774,16 +799,29 @@ function AtmosLayers({
   const layerStyle = useAnimatedStyle(() => ({
     opacity: enter.value,
     transform: [
-      { scale: scaleFrom + enter.value * (1 - scaleFrom) },
-      { translateY: (1 - enter.value) * yFrom },
+      {
+        translateY:
+          (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
+      },
     ],
   }));
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFillObject, layerStyle]}>
+    <Animated.View
+      style={[
+        {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width,
+          height: artH,
+        },
+        layerStyle,
+      ]}
+    >
       <Svg
-        width="100%"
-        height="100%"
+        width={width}
+        height={artH}
         viewBox={`0 0 ${PROFILE_PLAN_PRO_ATMOS_CANVAS.width} ${PROFILE_PLAN_PRO_ATMOS_CANVAS.height}`}
         preserveAspectRatio="none"
         pointerEvents="none"
@@ -802,43 +840,42 @@ function AtmosLayers({
   );
 }
 
-function hexLayoutAnimDuration(): number {
-  return 9000;
-}
-
 function HexLayoutLayers({
+  width,
   variant,
   shouldAnimate,
 }: {
+  width: number;
   variant: ProfilePlanProHexBgVariant;
   shouldAnimate: boolean;
 }) {
-  const phase = useSharedValue(0);
+  const enter = useSharedValue(shouldAnimate ? 0 : 1);
   const layoutId = getProfilePlanProHexLayoutId(variant);
   const art = getProfilePlanProHexLayoutArt(layoutId);
+  const artH =
+    width * (PROFILE_PLAN_PRO_HEX_LAYOUT_H / PROFILE_PLAN_PRO_HEX_LAYOUT_W);
 
   useEffect(() => {
     if (!shouldAnimate) {
-      cancelAnimation(phase);
-      phase.value = 0.5;
+      cancelAnimation(enter);
+      enter.value = 1;
       return;
     }
-    phase.value = withRepeat(
-      withTiming(1, {
-        duration: hexLayoutAnimDuration(),
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    );
-    return () => cancelAnimation(phase);
-  }, [phase, shouldAnimate]);
+    enter.value = 0;
+    enter.value = withTiming(1, {
+      duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
+      easing: Easing.out(Easing.cubic),
+    });
+    return () => cancelAnimation(enter);
+  }, [enter, shouldAnimate, layoutId]);
 
   const patternStyle = useAnimatedStyle(() => ({
-    opacity: 0.42 + phase.value * 0.28,
+    opacity: 0.2 + enter.value * 0.68,
     transform: [
-      { translateX: (phase.value - 0.5) * 16 },
-      { translateY: (phase.value - 0.5) * 10 },
+      {
+        translateY:
+          (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
+      },
     ],
   }));
 
@@ -849,11 +886,16 @@ function HexLayoutLayers({
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFillObject}
       />
-      {/* パネル全体を 1 枚で描画（タイル反復なし・継ぎ目防止） */}
-      <Animated.View style={[StyleSheet.absoluteFillObject, patternStyle]} pointerEvents="none">
+      <Animated.View
+        style={[
+          { position: "absolute", top: 0, left: 0, width, height: artH },
+          patternStyle,
+        ]}
+        pointerEvents="none"
+      >
         <Svg
-          width="100%"
-          height="100%"
+          width={width}
+          height={artH}
           viewBox={`0 0 ${PROFILE_PLAN_PRO_HEX_LAYOUT_W} ${PROFILE_PLAN_PRO_HEX_LAYOUT_H}`}
           preserveAspectRatio="none"
         >
@@ -869,7 +911,6 @@ function HexLayoutLayers({
           ))}
         </Svg>
       </Animated.View>
-      {/* 四隅レイアウトが消えないよう下部の暗がりは弱める */}
       <LinearGradient
         colors={["transparent", "rgba(2,4,8,0.4)"]}
         locations={[0.55, 1]}
@@ -1131,6 +1172,7 @@ export default function ProfilePlanProBackgroundNative({
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <AtmosLayers
+          width={width}
           accent={profileAccent}
           shouldAnimate={shouldAnimate}
           accentReady={accentReady}
@@ -1142,7 +1184,11 @@ export default function ProfilePlanProBackgroundNative({
   if (isScale) {
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-        <ScaleLayers variant={variant} shouldAnimate={shouldAnimate} />
+        <ScaleLayers
+          width={width}
+          variant={variant}
+          shouldAnimate={shouldAnimate}
+        />
       </View>
     );
   }
@@ -1150,7 +1196,11 @@ export default function ProfilePlanProBackgroundNative({
   if (isBeast) {
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-        <BeastLayers variant={variant} shouldAnimate={shouldAnimate} />
+        <BeastLayers
+          width={width}
+          variant={variant}
+          shouldAnimate={shouldAnimate}
+        />
       </View>
     );
   }
@@ -1158,7 +1208,11 @@ export default function ProfilePlanProBackgroundNative({
   if (isCosmos) {
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-        <CosmosLayers variant={variant} shouldAnimate={shouldAnimate} />
+        <CosmosLayers
+          width={width}
+          variant={variant}
+          shouldAnimate={shouldAnimate}
+        />
       </View>
     );
   }
@@ -1166,7 +1220,11 @@ export default function ProfilePlanProBackgroundNative({
   if (isLab) {
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-        <LabLayers variant={variant} shouldAnimate={shouldAnimate} />
+        <LabLayers
+          width={width}
+          variant={variant}
+          shouldAnimate={shouldAnimate}
+        />
       </View>
     );
   }
@@ -1174,7 +1232,11 @@ export default function ProfilePlanProBackgroundNative({
   if (isForm) {
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-        <FormLayers variant={variant} shouldAnimate={shouldAnimate} />
+        <FormLayers
+          width={width}
+          variant={variant}
+          shouldAnimate={shouldAnimate}
+        />
       </View>
     );
   }
@@ -1184,6 +1246,7 @@ export default function ProfilePlanProBackgroundNative({
       {isMood ? <MoodLayers variant={variant} shouldAnimate={shouldAnimate} /> : null}
       {isHexLayout ? (
         <HexLayoutLayers
+          width={width}
           variant={variant as ProfilePlanProHexBgVariant}
           shouldAnimate={shouldAnimate}
         />

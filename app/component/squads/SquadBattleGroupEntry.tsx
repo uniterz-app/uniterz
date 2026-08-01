@@ -48,7 +48,7 @@ export default function SquadBattleGroupEntry({
         type="button"
         onClick={onOpen}
         className={cn(
-          "group relative w-full overflow-hidden text-left transition",
+          "group relative flex w-full items-center overflow-hidden text-left transition",
           "active:brightness-95",
           isWeb ? "min-h-[104px]" : "min-h-[96px]"
         )}
@@ -118,12 +118,12 @@ export default function SquadBattleGroupEntry({
 
         <div
           className={cn(
-            "relative z-[1] flex items-center gap-3",
+            "relative z-[1] flex w-full items-center gap-3",
             isWeb ? "px-4 py-3.5 pl-5" : "px-3.5 py-3 pl-4"
           )}
         >
           {/* アイコン */}
-          <div className="relative shrink-0">
+          <div className="relative flex shrink-0 items-center justify-center">
             <span
               aria-hidden
               className="absolute -inset-1 rounded-sm opacity-70 blur-[6px]"
@@ -151,7 +151,7 @@ export default function SquadBattleGroupEntry({
             </div>
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 items-center">
             <p
               className={cn(
                 nameOxanium.className,
@@ -170,7 +170,7 @@ export default function SquadBattleGroupEntry({
           <span
             className={cn(
               nameOxanium.className,
-              "inline-flex shrink-0 items-center gap-0.5 border border-amber-300/55 bg-amber-400/20 px-2.5 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-amber-50 transition group-hover:bg-amber-400/30"
+              "inline-flex h-9 shrink-0 items-center justify-center gap-0.5 border border-amber-300/55 bg-amber-400/20 px-2.5 text-[10px] font-black uppercase leading-none tracking-[0.16em] text-amber-50 transition group-hover:bg-amber-400/30"
             )}
             style={{
               clipPath: PILL_CHAMFER,
@@ -179,7 +179,7 @@ export default function SquadBattleGroupEntry({
             }}
           >
             Enter
-            <ChevronRight size={13} strokeWidth={2.8} />
+            <ChevronRight size={13} strokeWidth={2.8} className="shrink-0" />
           </span>
         </div>
       </motion.button>

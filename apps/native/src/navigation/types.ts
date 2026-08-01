@@ -90,7 +90,7 @@ export type ProfileStackParamList = {
   ProSubscribe: undefined;
   ProSubscribePreview: undefined;
   SeasonPredictPreview: undefined;
-  ProSuccess: { plan?: "monthly" | "annual" } | undefined;
+  ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;
   CancelPlan: undefined;

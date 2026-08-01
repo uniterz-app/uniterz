@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
-import { parseUserProfileFields } from "../../../../../lib/profile/parseUserProfileFields";
+import { parseUserProfileFields, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import {
@@ -36,6 +36,8 @@ export type NativeProfileByHandleState = {
   currentStreak: number;
   maxStreak: number;
   memberSinceMs: number | null;
+  /** 保有 Unit（公開） */
+  unitBalance: number;
 };
 
 const idleState: NativeProfileByHandleState = {
@@ -53,6 +55,7 @@ const idleState: NativeProfileByHandleState = {
   currentStreak: 0,
   maxStreak: 0,
   memberSinceMs: null,
+  unitBalance: 0,
 };
 
 async function fetchUserDocByRouteKey(
@@ -116,6 +119,7 @@ function mapUserDoc(
         ? Math.max(0, Math.floor(data.maxStreak))
         : 0,
     memberSinceMs: parseMemberSinceMs(data),
+    unitBalance: parseUserUnitBalance(data),
   };
 }
 

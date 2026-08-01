@@ -21,7 +21,9 @@ import {
   Award,
   Sparkles,
   Trash2,
+  Hexagon,
 } from "lucide-react";
+import { parseUserUnitBalance } from "@/lib/profile/parseUserProfileFields";
 import { useRouter, usePathname } from "next/navigation";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
 import { ADMIN_UID } from "@/lib/constants";
@@ -85,6 +87,7 @@ export default function SettingsMenu({
   const [portalReady, setPortalReady] = useState(false);
 
   const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [unitBalance, setUnitBalance] = useState<number>(0);
   const { unreadCount } = useAnnouncementsUnread({
     enabled: isAuthStateResolved(status),
   });
@@ -114,10 +117,11 @@ export default function SettingsMenu({
   );
   const contactPath = p("/web/contact", "/mobile/contact");
 
-  // ===== plan =====
+  // ===== plan / Unit 残高 =====
   useEffect(() => {
     if (!user?.uid) {
       setPlan("free");
+      setUnitBalance(0);
       return;
     }
     let alive = true;
@@ -125,6 +129,9 @@ export default function SettingsMenu({
       if (!alive) return;
       const p = data?.plan;
       setPlan(p === "pro" ? "pro" : "free");
+      setUnitBalance(
+        data ? parseUserUnitBalance(data as Record<string, unknown>) : 0
+      );
     });
     return () => {
       alive = false;
@@ -167,6 +174,31 @@ export default function SettingsMenu({
   return (
     <>
       <nav className={cn(containerClasses, "overflow-x-hidden")}>
+        {user?.uid ? (
+          <div
+            className="side-menu-unit-wallet"
+            aria-label={
+              isEn
+                ? `${unitBalance.toLocaleString("en-US")} Units`
+                : `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
+            }
+          >
+            <span className="side-menu-unit-wallet__mark" aria-hidden>
+              <Hexagon
+                className="side-menu-unit-wallet__hex"
+                strokeWidth={1.6}
+              />
+              <span className="side-menu-unit-wallet__u">U</span>
+            </span>
+            <span className="side-menu-unit-wallet__meta">
+              <span className="side-menu-unit-wallet__label">UNITS</span>
+              <span className="side-menu-unit-wallet__value">
+                {unitBalance.toLocaleString("en-US")}
+              </span>
+            </span>
+          </div>
+        ) : null}
+
         <CyberSideMenuSectionTitle first>
           <span className={cn(isEn && "uppercase")}>{m.settings.sectionMain}</span>
         </CyberSideMenuSectionTitle>
