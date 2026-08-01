@@ -20,6 +20,9 @@ Pro は次の 4 軸で価値を出す。
 | **自分を分析する** | 週次レポート、月次レポート | 振り返りと次の一手 |
 | **継続して開く理由** | 毎週・毎月の更新（live / final） | 習慣化 |
 | **課金者として目立てる** | Pro Skin、Pro バッジ、My Rank 専用表示 | ステータス |
+| **競う場を広げる** | PRO LEAGUE（全試合・Pro 限定ランキング） | 本気勢の競争 |
+
+詳細: [`pickup-openweight-ranking-design.md`](pickup-openweight-ranking-design.md)
 
 ### 鉄則（Pay to Win 回避）
 

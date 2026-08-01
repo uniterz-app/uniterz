@@ -17,6 +17,8 @@ type SideMenuDrawerProps = {
   onClose: () => void;
   /** プロフィール編集の戻るなどでメニューを再度開く */
   onOpenMenu?: () => void;
+  /** プロフィール編集を親側で開く（推奨） */
+  onOpenProfileEdit?: () => void;
   /** mobile / web で中身のサイズを少し変える */
   variant?: "mobile" | "web";
   /** 指定時は SettingsMenu の代わりに表示（ランキング用ドロワーなど） */
@@ -27,6 +29,7 @@ export default function SideMenuDrawer({
   open,
   onClose,
   onOpenMenu,
+  onOpenProfileEdit,
   variant = "mobile",
   children,
 }: SideMenuDrawerProps) {
@@ -100,6 +103,7 @@ export default function SideMenuDrawer({
               <SettingsMenu
                 onRequestCloseMenu={onClose}
                 onRequestOpenMenu={onOpenMenu}
+                onOpenProfileEdit={onOpenProfileEdit}
               />
             )}
           </div>

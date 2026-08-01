@@ -102,6 +102,7 @@ export function MyRankCardNative({
   gapHref = null,
   onOpenGap,
   rankProgress,
+  rankProgressLoading = false,
 }: {
   rank: number | null;
   metric: MobileMetric;
@@ -134,6 +135,8 @@ export function MyRankCardNative({
   onOpenGap?: () => void;
   /** Ranking Progress 用スナップショット（未蓄積時は NO DATA） */
   rankProgress?: MyRankProgressPoint[] | null;
+  /** rankProgress 取得中（カード本体は表示済みでもチャートだけ待つ） */
+  rankProgressLoading?: boolean;
 }) {
   const t = rankingsTexts(language);
   const freeTier = displayTier === "free";
@@ -391,7 +394,7 @@ export function MyRankCardNative({
           <MyRankRankingProgressNative
             points={progressPoints}
             maxSnapshots={progressSnapshotLimit}
-            loading={loading}
+            loading={loading || rankProgressLoading}
             language={language === "en" ? "en" : "ja"}
             emptyHint={t.rankingProgressNoData}
           />

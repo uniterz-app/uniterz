@@ -1,11 +1,32 @@
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { RANKING_TITLE_FONT } from "./rankingsUiTheme";
 
+type Props = {
+  title: string;
+  /** ヘッダー内埋め込み（flex 拡張しない） */
+  embedded?: boolean;
+  /** Web `size` — sm ≈ 22 / md ≈ 26。未指定は従来の 18（ランキング見出し） */
+  size?: "sm" | "md";
+  style?: StyleProp<ViewStyle>;
+};
+
 /** Web `RankingsPageTitleCyber` horizon-chrome の簡易ネイティブ版 */
-export function RankingsPageTitleCyberNative({ title }: { title: string }) {
+export function RankingsPageTitleCyberNative({
+  title,
+  embedded = false,
+  size,
+  style,
+}: Props) {
+  const fontSize = size === "md" ? 26 : size === "sm" ? 24 : 18;
   return (
-    <View style={styles.wrap} accessibilityRole="header">
-      <Text style={styles.title} maxFontSizeMultiplier={1.2}>
+    <View
+      style={[styles.wrap, embedded && styles.wrapEmbedded, style]}
+      accessibilityRole="header"
+    >
+      <Text
+        style={[styles.title, { fontSize, paddingRight: Math.round(fontSize * 0.28) }]}
+        maxFontSizeMultiplier={1.2}
+      >
         {title}
       </Text>
     </View>
@@ -20,21 +41,27 @@ const styles = StyleSheet.create({
     minHeight: 40,
     transform: [{ skewX: "-10deg" }],
   },
+  wrapEmbedded: {
+    flex: 0,
+    minHeight: 0,
+    alignSelf: "center",
+  },
   title: {
     fontFamily: RANKING_TITLE_FONT,
-    fontSize: 18,
-    letterSpacing: 6,
+    letterSpacing: 5,
+    textAlign: "center",
     color: "#BFF8FF",
+    /** 大きい radius は矩形ハローになりやすいので弱く短く */
     ...Platform.select({
       ios: {
-        textShadowColor: "rgba(34,211,238,0.28)",
+        textShadowColor: "rgba(34,211,238,0.35)",
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 6,
+        textShadowRadius: 3,
       },
       android: {
-        textShadowColor: "rgba(34,211,238,0.24)",
+        textShadowColor: "rgba(34,211,238,0.28)",
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 5,
+        textShadowRadius: 2,
       },
       default: {},
     }),

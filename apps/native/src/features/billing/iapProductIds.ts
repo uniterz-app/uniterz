@@ -1,17 +1,21 @@
-/** App Store / Google Play 商品 ID */
-export const IAP_PRODUCT_IDS = {
-  monthly: "uniterz_pro_monthly",
-  annual: "uniterz_pro_annual",
-} as const;
+/**
+ * Web / 共有 `lib/pro/iapProductIds` 相当。
+ * Native からも同一の商品 ID・プラン型を使う。
+ */
+export {
+  IAP_ALL_SKUS,
+  IAP_FALLBACK_PRICE_JA,
+  IAP_LEGACY_PRODUCT_IDS,
+  IAP_ONE_TIME_SKUS,
+  IAP_PRODUCT_IDS,
+  IAP_SUBSCRIPTION_SKUS,
+  isSubscriptionPlan,
+  planForProductId,
+  productIdForPlan,
+  proPlanDisplayName,
+  stubProUntilForPlan,
+  type ProIapPlan,
+} from "../../../../../lib/pro/iapProductIds";
 
-export type IapPlan = keyof typeof IAP_PRODUCT_IDS;
-
-export function productIdForPlan(plan: IapPlan): string {
-  return IAP_PRODUCT_IDS[plan];
-}
-
-export function planForProductId(productId: string): IapPlan | null {
-  if (productId === IAP_PRODUCT_IDS.monthly) return "monthly";
-  if (productId === IAP_PRODUCT_IDS.annual) return "annual";
-  return null;
-}
+/** @deprecated ProIapPlan を使う */
+export type IapPlan = import("../../../../../lib/pro/iapProductIds").ProIapPlan;

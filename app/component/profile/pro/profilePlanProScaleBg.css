@@ -7,13 +7,8 @@
 }
 
 .profile-plan-pro-bg__scale-skin {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  will-change: opacity, transform;
-  pointer-events: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .profile-plan-pro-bg--scale-dragon .profile-plan-pro-bg__scale-skin {
@@ -28,14 +23,11 @@
 }
 
 .profile-plan-pro-bg__scale-hud {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  will-change: opacity, transform;
-  pointer-events: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
+
+/* Web 横長は globals の aspect-ratio を使用 */
 
 /* biolume だけ微弱な色移り */
 @keyframes profile-plan-pro-scale-biolume-shift {

@@ -19,7 +19,7 @@ import {
 
 export const nameOxanium = Oxanium({
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["600", "700", "800"],
   display: "swap",
 });
 
@@ -106,6 +106,9 @@ export const summaryMetricNumClass = [
   alfa.className,
   "font-bold tabular-nums tracking-wide",
 ].join(" ");
+
+/** CyberNumber 用（ランキング得点と同じ Alfa Slab One） */
+export const cyberNumberDisplay = alfa;
 
 /** アプリ日本語の基準フォント（モーダル・ランキング等と共通） */
 export const jp = Noto_Sans_JP({

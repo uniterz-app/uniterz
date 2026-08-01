@@ -74,7 +74,12 @@ export default function StandingsScreenNative() {
   const leaderRecord = filtered[0] ? nbaRegularSeasonWinsLosses(filtered[0]) : null;
 
   return (
-    <MobilePageShell title="スタンディング" appBackground onClose={() => navigation.goBack()}>
+    <MobilePageShell
+      eyebrow="GAMES"
+      title="STANDINGS"
+      appBackground
+      onClose={() => navigation.goBack()}
+    >
       <View style={styles.tabs}>
         {(["east", "west"] as const).map((c) => (
           <Pressable

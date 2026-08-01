@@ -18,6 +18,7 @@ import { usePathname } from "next/navigation";
 import { isAuthEntryRoute } from "@/lib/profileSetupRoute";
 import { normalizeLanguage } from "@/lib/i18n/language";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { subscribeAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
 
 const eventSeenStorageKey = (id: string) => `event_seen_${id}`;
 
@@ -28,6 +29,7 @@ export default function EventGate() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [readsReady, setReadsReady] = useState(false);
   const [migrationDone, setMigrationDone] = useState(false);
+  const [tutorialBlocking, setTutorialBlocking] = useState(false);
   const [displayEvent, setDisplayEvent] = useState<EventNoticeContent | null>(
     null
   );
@@ -120,6 +122,10 @@ export default function EventGate() {
   }, [uid]);
 
   useEffect(() => {
+    return subscribeAppTutorialBlockingEvents(setTutorialBlocking);
+  }, []);
+
+  useEffect(() => {
     if (isPublicLp) return;
     if (!uid) return;
     if (!onboardingComplete) return;
@@ -127,6 +133,7 @@ export default function EventGate() {
     if (languageLoading) return;
     if (!readsReady || !migrationDone) return;
     if (open) return;
+    if (tutorialBlocking) return;
 
     const merged = new Set(readIds);
     pendingReadIdsRef.current.forEach((id) => merged.add(id));
@@ -145,6 +152,7 @@ export default function EventGate() {
     migrationDone,
     readIds,
     open,
+    tutorialBlocking,
   ]);
 
   const close = async () => {

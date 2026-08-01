@@ -8,6 +8,7 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { LeaderboardsStackParamList, MainTabParamList } from "../../navigation/types";
+import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
 import type { Language } from "../../../../../lib/i18n/language";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
@@ -111,13 +112,10 @@ export default function CommunityDetailScreenNative() {
               }}
               onHeaderImageEditingChange={setHeaderImageEditing}
               onOpenProfile={(handle) => {
-                tabNavigation.navigate("ProfileTab", {
-                  screen: "ProfileHome",
-                  params: {
-                    handle,
-                    fromLeaderboards: true,
-                    leaderboardsGroupId: groupId,
-                  },
+                navigateToPublicProfileNative(tabNavigation, {
+                  handle,
+                  fromLeaderboards: true,
+                  leaderboardsGroupId: groupId,
                 });
               }}
             />

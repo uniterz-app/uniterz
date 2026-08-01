@@ -4,7 +4,11 @@ import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
 
 export default function WebElectronicNoticePage() {
   return (
-    <LegalPageLayout variant="web" title="電子公告">
+    <LegalPageLayout
+      variant="web"
+      title="NOTICE"
+      description="現在、公告事項はありません。"
+    >
       <p>現在、公告事項はありません。</p>
     </LegalPageLayout>
   );

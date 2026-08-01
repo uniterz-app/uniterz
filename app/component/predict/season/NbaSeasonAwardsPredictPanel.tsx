@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   NBA_SEASON_AWARD_DEFS,
   awardCandidateLabel,
@@ -188,10 +189,14 @@ export default function NbaSeasonAwardsPredictPanel({
   onChange,
   className,
 }: Props) {
+  const pathname = usePathname() ?? "";
+  const isNarrow =
+    pathname.startsWith("/mobile") || pathname.startsWith("/m/");
+
   return (
     <div
       className={[
-        "rounded-[2px] border border-amber-300/25 bg-[rgba(6,10,16,0.96)] p-3",
+        "rounded-[2px] border border-amber-300/25 bg-[rgba(6,10,16,0.96)] p-3 md:p-4",
         className,
       ]
         .filter(Boolean)
@@ -201,19 +206,25 @@ export default function NbaSeasonAwardsPredictPanel({
         <h2
           className={[
             nameOxanium.className,
-            "text-[13px] font-extrabold uppercase tracking-[0.14em] text-amber-200/90",
+            "text-[13px] font-extrabold uppercase tracking-[0.14em] text-amber-200/90 md:text-[15px]",
           ].join(" ")}
         >
           Season awards · {value.season}
         </h2>
-        <p className="text-[11px] leading-relaxed text-white/45">
+        <p className="text-[11px] leading-relaxed text-white/45 md:max-w-3xl md:text-sm">
           フォーカス直後は他ユーザー人気ピック約 5 人。入力すると N → NI → NIK
           の前方一致。選手名簿は API 契約後に差し替え。採点は未定（仮 +
           {SEASON_AWARDS_SCORE_PREVIEW.exact}pt）。
         </p>
       </header>
 
-      <ul className="space-y-2.5">
+      <ul
+        className={
+          isNarrow
+            ? "space-y-2.5"
+            : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+        }
+      >
         {NBA_SEASON_AWARD_DEFS.map((def) => (
           <AwardPickRow
             key={def.id}

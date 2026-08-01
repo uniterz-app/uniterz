@@ -4,6 +4,7 @@
 
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import type { RankingApiRow } from "@/lib/rankings/rankingTransform";
 import {
   periodMinPosts,
@@ -145,12 +146,15 @@ export async function buildNbaPeriodRankingBulk(opts: {
   period: Exclude<RankingPeriod, "season">;
   uid?: string | null;
   now?: Date;
+  division?: RankingDivision;
 }): Promise<{
   ok: true;
   period: Exclude<RankingPeriod, "season">;
+  division: RankingDivision;
   range: { startKey: string; endKey: string; labelKey: string };
   byMetric: Record<PeriodMetricKey, PeriodBulkMetricPayload>;
 }> {
+  const division = opts.division ?? "standard";
   const range = resolveRankingPeriodRange(opts.period, opts.now ?? new Date());
   const minPosts = periodMinPosts(opts.period);
   const winRateMin = periodWinRateMinPosts(opts.period);
@@ -209,7 +213,7 @@ export async function buildNbaPeriodRankingBulk(opts: {
     }
   }
 
-  const baseRows: RankingApiRow[] = uids.map((uid) => {
+  let baseRows: RankingApiRow[] = uids.map((uid) => {
     const agg = map.get(uid)!;
     const profile = profileByUid.get(uid);
     const winRate = agg.posts > 0 ? agg.wins / agg.posts : 0;
@@ -230,6 +234,19 @@ export async function buildNbaPeriodRankingBulk(opts: {
       winRate,
     } as RankingApiRow & { winRate: number };
   });
+
+  // plan を users から最新化してから無差別級フィルタ
+  const planProbe = {
+    _probe: {
+      rows: baseRows as unknown[],
+      myRow: null as unknown,
+    },
+  };
+  await mergeUserPlansIntoBulkByMetric(planProbe);
+  baseRows = (planProbe._probe.rows as RankingApiRow[]) ?? baseRows;
+  if (division === "open") {
+    baseRows = baseRows.filter((r) => r.plan === "pro");
+  }
 
   const byMetric = {} as Record<PeriodMetricKey, PeriodBulkMetricPayload>;
 
@@ -260,6 +277,7 @@ export async function buildNbaPeriodRankingBulk(opts: {
   return {
     ok: true,
     period: opts.period,
+    division,
     range: {
       startKey: range.startKey,
       endKey: range.endKey,

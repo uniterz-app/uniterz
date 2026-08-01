@@ -16,7 +16,7 @@ export default function WebContactPage() {
   return (
     <LegalPageLayout
       variant="web"
-      title={m.support.contactTitle}
+      title="CONTACT"
       description={m.support.contactDescription}
       updatedAt={updatedAt}
     >

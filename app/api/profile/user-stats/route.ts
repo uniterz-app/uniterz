@@ -11,6 +11,7 @@ import {
   resolveNbaProfileSummaryLive,
   type ProfileSummaryForCards,
 } from "@/lib/profile/resolveLiveProfileSummary";
+import { resolveNbaMonthlyProfileSummary } from "@/lib/profile/resolveNbaMonthlyProfileSummary";
 import {
   buildDailyTrendFromDailySnaps,
   resolveProfileDailyTrendContext,
@@ -20,6 +21,10 @@ import {
   isRankingLeagueSource,
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
+import {
+  currentRankingPeriodLabel,
+  isValidPeriodLabel,
+} from "@/lib/rankings/rankingPeriod";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
 import {
   loadMyRankMetricValueDeltas,
@@ -96,6 +101,22 @@ async function buildUserStatsResponse(req: Request) {
       : rankingLeague === "worldcup"
         ? "overall"
         : undefined;
+  /** NBA のみ: playoffs / season（現行キー） / monthly（互換） */
+  const rawPeriod = searchParams.get("period")?.trim() ?? "";
+  const nbaScope: "playoffs" | "season" | null =
+    rankingLeague === "nba" &&
+    (rawPeriod === "playoffs" || rawPeriod === "season")
+      ? rawPeriod
+      : null;
+  const wantMonthly =
+    rankingLeague === "nba" && rawPeriod === "monthly";
+  const rawMonthLabel = searchParams.get("month")?.trim() ?? "";
+  const monthLabel =
+    wantMonthly && isValidPeriodLabel("monthly", rawMonthLabel)
+      ? rawMonthLabel
+      : wantMonthly
+        ? currentRankingPeriodLabel("monthly")
+        : null;
   const parts =
     parsePartsParam(searchParams.get("parts")) ?? new Set<StatsPart>(ALL_PARTS);
 
@@ -128,7 +149,7 @@ async function buildUserStatsResponse(req: Request) {
     ? await adminDb.collection("user_stats_v2").doc(uid).get()
     : null;
   const cumulativeSnap =
-    wantPhase || wantRanks
+    !wantMonthly && (wantPhase || wantRanks)
       ? await adminDb.collection("cumulative_stats").doc(uid).get()
       : null;
 
@@ -149,7 +170,22 @@ async function buildUserStatsResponse(req: Request) {
 
   let summary: SummaryForCards | null = null;
   let metricValueDeltas: MyRankMetricValueDeltas | null = null;
-  if (wantPhase) {
+  let monthlyResolvedLabel: string | null = null;
+  let monthlySummaryRanks: SummaryRanks | null = null;
+  if (wantMonthly && monthLabel && (wantPhase || wantRanks)) {
+    const monthly = await resolveNbaMonthlyProfileSummary(
+      adminDb,
+      uid,
+      monthLabel
+    );
+    monthlyResolvedLabel = monthly.monthLabel;
+    monthlySummaryRanks = monthly.summaryRanks;
+    if (wantPhase) {
+      summary = monthly.summary;
+      // 月次は前日比デルタを出さない（シーズン累計スナップショット基準のため）
+      metricValueDeltas = null;
+    }
+  } else if (wantPhase) {
     const deltaOpts = {
       wcStage: rankingLeague === "worldcup" ? (wcStage ?? "overall") : null,
       rankingLeague,
@@ -224,33 +260,50 @@ async function buildUserStatsResponse(req: Request) {
         adminDb,
         uid,
         cumulative as Record<string, unknown> | null,
-        priorMetrics
+        priorMetrics,
+        nbaScope ?? undefined
       );
     }
 
     if (summary) {
-      const winRatePct =
-        summary.winRate <= 1 ? summary.winRate * 100 : summary.winRate;
-      metricValueDeltas = await loadMyRankMetricValueDeltas(
-        uid,
-        {
-          totalPoints: summary.pointsSumV3,
-          totalPrecision:
-            rankingLeague === "worldcup" ? summary.exactHitCount : 0,
-          totalUpset: summary.upsetPointsSum,
-          winRate: winRatePct,
-        },
-        {
-          ...deltaOpts,
-          priorMetrics,
-        }
-      );
+      if (nbaScope === "playoffs") {
+        // プレーオフはシーズン前日比スナップショットとスコープが違うのでデルタなし
+        metricValueDeltas = null;
+      } else {
+        const winRatePct =
+          summary.winRate <= 1 ? summary.winRate * 100 : summary.winRate;
+        metricValueDeltas = await loadMyRankMetricValueDeltas(
+          uid,
+          {
+            totalPoints: summary.pointsSumV3,
+            totalPrecision:
+              rankingLeague === "worldcup" ? summary.exactHitCount : 0,
+            totalUpset: summary.upsetPointsSum,
+            winRate: winRatePct,
+          },
+          {
+            ...deltaOpts,
+            priorMetrics,
+          }
+        );
+      }
     }
   }
 
   /** ティアタグ用 — 日次スナップショット（Functions 不要）。phase 取得時も同梱可。 */
   let summaryRanks: SummaryRanks | null = null;
-  if (wantRanks || wantPhase) {
+  if (wantMonthly && monthlySummaryRanks) {
+    summaryRanks = monthlySummaryRanks;
+  } else if (nbaScope === "playoffs") {
+    // プレーオフ専用ボードは廃止済み — 順位は出さない
+    summaryRanks = {
+      totalPrecision: null,
+      totalUpset: null,
+      totalPoints: null,
+      totalPointsDenominator: null,
+      rankDeltaPlaces: null,
+    };
+  } else if (wantRanks || wantPhase) {
     summaryRanks = await fetchProfileSummaryRanks(
       uid,
       rankingLeague === "worldcup" ? wcStage : undefined,
@@ -264,6 +317,12 @@ async function buildUserStatsResponse(req: Request) {
     parts: [...parts],
     rankingLeague,
     wcStage: wcStage ?? null,
+    period: wantMonthly
+      ? "monthly"
+      : nbaScope === "playoffs"
+        ? "playoffs"
+        : "season",
+    monthLabel: monthlyResolvedLabel,
   };
 
   if (wantStats) body.stats = stats;

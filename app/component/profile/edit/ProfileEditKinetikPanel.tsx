@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Menu } from "lucide-react";
-import {
-  CYBER_MENU_ICON_CLASS,
-  CYBER_MENU_ICON_STROKE,
-} from "@/lib/ui/cyberMenuButton";
+import { Eye } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   KINETIK_GREEN,
@@ -18,6 +14,7 @@ import {
 import type { ProfileEditTronIdentity } from "./profileEditTronTypes";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { nameOxanium } from "@/lib/fonts";
+import { useCountUp } from "@/lib/hooks/useCountUp";
 import { ProfileEditKinetikAvatarWithStreak } from "./ProfileEditKinetikStreakFx";
 import { KINETIK_STREAK_VARIANT } from "./kinetikStreakFx";
 import ProfileEditKinetikHeaderTabs from "./ProfileEditKinetikHeaderTabs";
@@ -66,6 +63,7 @@ import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
+import type { ProfileKinetikMetricsPeriod } from "@/lib/profile/useNbaKinetikMonthlyStats";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -250,6 +248,15 @@ function MetricCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, delay: reduceMotion ? 0 : delay, ease: [0.22, 1, 0.36, 1] }}
     >
+      {isPlanPro ? (
+        <span
+          className="profile-plan-pro-metric-card__bar-bloom"
+          style={{
+            background: `linear-gradient(90deg, ${colors.glow} 0%, transparent 72%)`,
+          }}
+          aria-hidden
+        />
+      ) : null}
       <div
         className={[
           "absolute top-3 bottom-3 left-0",
@@ -257,9 +264,8 @@ function MetricCard({
         ].join(" ")}
         style={{
           background: colors.line,
-          boxShadow: isPlanPro
-            ? `0 0 10px color-mix(in srgb, ${colors.glow} 45%, transparent)`
-            : `0 0 8px ${colors.glow}`,
+          /** Pro は矩形シャドウを使わず bloom グラデでにじませる */
+          boxShadow: isPlanPro ? "none" : `0 0 8px ${colors.glow}`,
         }}
         aria-hidden
       />
@@ -409,35 +415,50 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
-function ProfileKinetikCountryUnderName({
-  countryCode,
-  align = "start",
-}: {
-  countryCode?: string | null;
-  align?: "start" | "center";
-}) {
+/** 名前行インライン国旗（Native / 参考レイアウト） */
+function ProfileKinetikNameFlag({ countryCode }: { countryCode?: string | null }) {
   const flagIso = countryCode?.trim().toUpperCase() || null;
   if (!flagIso) return null;
 
   return (
-    <div
-      className={[
-        "mt-1.5 flex w-full min-w-0",
-        align === "center" ? "justify-center md:justify-start" : "justify-start",
-      ].join(" ")}
-    >
+    <span className="profile-edit-kinetik-name-flag inline-flex shrink-0 items-center self-center">
       <CountryFlag
         iso2={flagIso}
         variant="profileInline"
         decorative
         alt={flagIso}
       />
-    </div>
+    </span>
   );
 }
 
-/** カード左下: 参加日 / 右: 共有 ID */
-function ProfileKinetikCardFooter({
+/** ヘッダー: 参加日 / ID / 閲覧数（Unit は別コンポ） */
+function ProfileKinetikViewCountChip({
+  viewCount,
+  viewCountAriaLabel,
+}: {
+  viewCount: number;
+  viewCountAriaLabel: string | null;
+}) {
+  return (
+    <p
+      className="profile-edit-kinetik-view-count shrink-0"
+      aria-label={viewCountAriaLabel ?? undefined}
+      title={viewCountAriaLabel ?? undefined}
+    >
+      <Eye
+        className="profile-edit-kinetik-view-count__icon"
+        aria-hidden
+        strokeWidth={2.5}
+      />
+      <span className="profile-edit-kinetik-view-count__num">
+        {viewCount.toLocaleString("en-US")}
+      </span>
+    </p>
+  );
+}
+
+function ProfileKinetikIdentityJoinIdRow({
   memberSinceLabel,
   systemId,
   shareLabel,
@@ -455,19 +476,18 @@ function ProfileKinetikCardFooter({
   if (!memberSinceLabel && !systemId) return null;
 
   return (
-    <div className="profile-edit-kinetik-card-footer mt-3 flex w-full min-w-0 items-end justify-between gap-2">
+    <div className="profile-edit-kinetik-identity-join-id mt-1 flex w-fit max-w-full min-w-0 items-end justify-start gap-2">
       {memberSinceLabel ? (
         <p className="profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity shrink-0 whitespace-nowrap">
           {memberSinceLabel}
         </p>
-      ) : (
-        <span />
-      )}
+      ) : null}
       {systemId ? (
         <button
           type="button"
           className={[
-            "profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity shrink-0 whitespace-nowrap transition",
+            "profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity",
+            "profile-edit-kinetik-footer-ref--id shrink-0 whitespace-nowrap transition",
             "hover:text-white/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30",
           ].join(" ")}
           onClick={onShare}
@@ -481,26 +501,88 @@ function ProfileKinetikCardFooter({
   );
 }
 
-function getKinetikMetricCopy(isJa: boolean) {
+/** ゲーム内通貨 — 金貨ディスク + イタリック数字（U8）。corner は右上コンパクト */
+function ProfileUnitVault({
+  balance,
+  ariaLabel,
+  corner,
+}: {
+  balance: number;
+  ariaLabel: string;
+  corner?: boolean;
+}) {
+  const reduceMotion = useReducedMotion() === true;
+  /** Web ランキング系と同系統のカウントアップ（約 0.9s） */
+  const displayBalance = useCountUp(balance, 900, !reduceMotion, 0, "target");
+  return (
+    <motion.div
+      className={[
+        "profile-edit-kinetik-unit-vault",
+        corner ? "profile-edit-kinetik-unit-vault--corner" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label={ariaLabel}
+      title={ariaLabel}
+      initial={reduceMotion ? false : { opacity: 0, scale: 0.86, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : { type: "spring", stiffness: 380, damping: 22, mass: 0.7 }
+      }
+    >
+      <span className="profile-edit-kinetik-unit-vault__disc" aria-hidden>
+        <span className="profile-edit-kinetik-unit-vault__sheen" />
+        <span className="profile-edit-kinetik-unit-vault__disc-inner">U</span>
+      </span>
+      <span
+        className={[
+          nameOxanium.className,
+          "profile-edit-kinetik-unit-vault__value",
+        ].join(" ")}
+      >
+        {displayBalance.toLocaleString("en-US")}
+      </span>
+    </motion.div>
+  );
+}
+
+function getKinetikMetricCopy(isJa: boolean, opts?: { monthly?: boolean }) {
+  const monthly = opts?.monthly === true;
   return {
     dayDeltaTitle: isJa ? "前日比" : "Day-over-day",
     ptsUnit: "pts",
     matchUnit: isJa ? "試合" : "matches",
     winRateUnitHint: "%",
-    cumulativeUnitHint: isJa ? "累計" : "CUM",
+    cumulativeUnitHint: monthly
+      ? isJa
+        ? "今月"
+        : "MO"
+      : isJa
+        ? "累計"
+        : "CUM",
     metricsInfoAria: isJa ? "統計項目の説明" : "Stats metric help",
     winRateTooltip: isJa
       ? "確定試合の的中率。100% = 全試合的中。"
       : "Hit rate on settled picks. 100% = all picks correct.",
     totalPointsTooltip: isJa
-      ? "勝者的中・アップセット・ボーナス等を合算した期間内の総合得点。"
-      : "Combined score from wins, upsets, and bonuses for the period.",
+      ? monthly
+        ? "勝者的中・アップセット・ボーナス等を合算した今月の総合得点。"
+        : "勝者的中・アップセット・ボーナス等を合算した期間内の総合得点。"
+      : monthly
+        ? "Combined score from wins, upsets, and bonuses for this month."
+        : "Combined score from wins, upsets, and bonuses for the period.",
     exactHitTooltip: isJa
       ? "予想スコアが結果と完全一致した試合数（期間内の累計）。"
       : "Number of matches where your predicted score exactly matched the final score.",
     upsetTooltip: isJa
-      ? "アップセットが起きた試合で少数派を当てたときだけ加点。期間内の累計。"
-      : "Bonus points when you picked the minority side on an upset. Period total.",
+      ? monthly
+        ? "アップセットが起きた試合で少数派を当てたときだけ加点。今月の合計。"
+        : "アップセットが起きた試合で少数派を当てたときだけ加点。期間内の累計。"
+      : monthly
+        ? "Bonus points when you picked the minority side on an upset. Month total."
+        : "Bonus points when you picked the minority side on an upset. Period total.",
     shareProfile: isJa ? "プロフィールを共有" : "Share profile",
     shareCopied: isJa ? "コピー済" : "Copied",
     proMember: isJa ? "Pro 会員" : "Pro member",
@@ -603,6 +685,13 @@ type Props = {
   statsPending?: boolean;
   /** WC: ノックアウト（上）+ グループ（下）の縦積み */
   stackedMetricsSections?: ProfileKinetikMetricsSection[];
+  /** NBA: Playoffs / Season 切替 */
+  metricsPeriod?: ProfileKinetikMetricsPeriod;
+  onMetricsPeriodChange?: (period: ProfileKinetikMetricsPeriod) => void;
+  /** 累計プロフィール閲覧数（公開） */
+  profileViewCount?: number | null;
+  /** 保有 Unit（公開） */
+  unitBalance?: number | null;
 };
 
 export default function ProfileEditKinetikPanel({
@@ -611,9 +700,6 @@ export default function ProfileEditKinetikPanel({
   stats = PROFILE_EDIT_KINETIK_MOCK.stats,
   language = "ja",
   editable = false,
-  canOpenMenu = false,
-  onOpenMenu,
-  menuUnreadCount = 0,
   winStreak,
   totalPointsRank: totalPointsRankProp,
   totalPointsRankDenominator: totalPointsRankDenominatorProp,
@@ -635,15 +721,23 @@ export default function ProfileEditKinetikPanel({
   visualEffects = "full",
   statsPending = false,
   stackedMetricsSections,
+  metricsPeriod,
+  onMetricsPeriodChange,
+  profileViewCount = null,
+  unitBalance = null,
 }: Props) {
   const isJa = language === "ja";
   const isWcProfile = rankingLeague === "worldcup";
+  const isSeasonMetrics =
+    !isWcProfile && metricsPeriod === "season" && !!onMetricsPeriodChange;
+  const showNbaPeriodTabs =
+    !isWcProfile && metricsPeriod != null && !!onMetricsPeriodChange;
   const reduceUiMotion =
     useReducedMotion() === true || visualEffects === "lite";
   const animatePlanProBg =
     isPro && showProfilePlanProEffects(isPro) && useReducedMotion() !== true;
   const planProBgAccentReady = !statsPending;
-  const metricCopy = getKinetikMetricCopy(isJa);
+  const metricCopy = getKinetikMetricCopy(isJa, { monthly: isSeasonMetrics });
   const metricsInfoMessage = buildKinetikMetricsInfoMessage(metricCopy, {
     isJa,
     isWcProfile,
@@ -661,6 +755,18 @@ export default function ProfileEditKinetikPanel({
   const [shareCopied, setShareCopied] = useState(false);
   const [badgeDetail, setBadgeDetail] = useState<ResolvedBadge | null>(null);
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
+  const profileViewCountAria =
+    profileViewCount == null
+      ? null
+      : isJa
+        ? `プロフィール閲覧数 ${profileViewCount.toLocaleString("ja-JP")}`
+        : `${profileViewCount.toLocaleString("en-US")} profile views`;
+  const unitBalanceAria =
+    unitBalance == null
+      ? null
+      : isJa
+        ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
+        : `${unitBalance.toLocaleString("en-US")} Units`;
   const shareTargetHandle = shareHandle?.trim() || identity.handle?.trim() || "";
 
   const handleShareProfile = useCallback(async () => {
@@ -999,6 +1105,29 @@ export default function ProfileEditKinetikPanel({
     </div>
   ) : (
     <div>
+      {showNbaPeriodTabs ? (
+        <div className={wcStageTabWrapClass}>
+          <CyberSlantedTabBar
+            fill
+            aria-label={isJa ? "統計の期間" : "Stats period"}
+          >
+            <CyberSlantedTab
+              role="tab"
+              label="PLAYOFF"
+              active={metricsPeriod === "playoffs"}
+              onClick={() => onMetricsPeriodChange?.("playoffs")}
+              compact
+            />
+            <CyberSlantedTab
+              role="tab"
+              label="26-27"
+              active={metricsPeriod === "season"}
+              onClick={() => onMetricsPeriodChange?.("season")}
+              compact
+            />
+          </CyberSlantedTabBar>
+        </div>
+      ) : null}
       <div className={metricsSectionDividerClass}>
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -1016,39 +1145,25 @@ export default function ProfileEditKinetikPanel({
     </div>
   );
 
-  const menuButton =
-    canOpenMenu ? (
-      <button
-        type="button"
-        className={[
-          "profile-edit-kinetik-menu-btn",
-          `profile-edit-kinetik-menu-btn--${menuAccent}`,
-          "relative flex shrink-0 items-center justify-center",
-        ].join(" ")}
-        onClick={() => onOpenMenu?.()}
-        aria-label={isJa ? "メニュー" : "Menu"}
-      >
-        <Menu
-          className={CYBER_MENU_ICON_CLASS.sm}
-          strokeWidth={CYBER_MENU_ICON_STROKE}
-          aria-hidden
-        />
-        {menuUnreadCount > 0 ? (
-          <span
-            className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
-            aria-hidden
-          >
-            {menuUnreadCount > 9 ? "9+" : menuUnreadCount}
-          </span>
-        ) : null}
-      </button>
+  const unitCorner =
+    unitBalance != null && unitBalanceAria ? (
+      <ProfileUnitVault
+        // UI 確認用モック（実残高が 0 のとき 1,000 を表示）
+        balance={unitBalance > 0 ? unitBalance : 1000}
+        ariaLabel={unitBalanceAria}
+        corner
+      />
     ) : null;
 
-  const tierTagsRowMobile = menuButton ? (
-    <div className="profile-edit-kinetik-header-bar flex w-full justify-end">
-      {menuButton}
-    </div>
-  ) : null;
+  const viewUnderAvatar =
+    profileViewCount != null ? (
+      <div className="profile-edit-kinetik-avatar-views mt-1.5">
+        <ProfileKinetikViewCountChip
+          viewCount={profileViewCount}
+          viewCountAriaLabel={profileViewCountAria}
+        />
+      </div>
+    ) : null;
 
   const metricsScopeHeader = (
     <div
@@ -1127,51 +1242,60 @@ export default function ProfileEditKinetikPanel({
       >
         <div className="profile-edit-kinetik-layout-web grid md:grid-cols-[minmax(300px,36%)_1fr]">
           <aside className="profile-edit-kinetik-layout-web__side relative flex flex-col overflow-visible border-b border-white/10 px-6 py-7 md:border-r md:border-b-0 md:px-7 md:py-8">
-            {menuButton ? (
-              <div className="absolute right-6 top-7 z-20 md:right-7 md:top-8">
-                {menuButton}
-              </div>
-            ) : null}
-            <div className="flex flex-col items-center text-center md:items-stretch md:text-left">
-              <ProfileEditKinetikAvatarWithStreak
-                variant={KINETIK_STREAK_VARIANT}
-                streak={activeWinStreak}
-                accentKey={menuAccent}
-                isPlanPro={isPro}
-                language={language}
-                photoURL={identity.photoURL}
-                displayName={identity.displayName}
-                editable={editable}
-              />
-              <div
-                className={[
-                  "mt-3 flex min-w-0 items-center gap-2",
-                  "justify-center md:justify-start",
-                ].join(" ")}
-              >
-                <h2
-                  className={[
-                    nameOxanium.className,
-                    "leading-tight font-bold italic tracking-tight text-white",
-                    "text-[22px] sm:text-[24px] md:text-[26px]",
-                    isPro
-                      ? "profile-plan-pro-display-name inline-block w-fit max-w-full truncate"
-                      : "min-w-0 truncate",
-                  ].join(" ")}
-                >
-                  {identity.displayName}
-                </h2>
-                {isPro ? (
-                  <ProCyberBadge
-                    premium
-                    ariaLabel={metricCopy.proMember}
+            <div className="flex flex-col items-stretch text-left">
+              <div className="flex items-start gap-4 sm:gap-5">
+                <div className="profile-edit-kinetik-avatar-column shrink-0 items-start">
+                  <ProfileEditKinetikAvatarWithStreak
+                    variant={KINETIK_STREAK_VARIANT}
+                    streak={activeWinStreak}
+                    accentKey={menuAccent}
+                    isPlanPro={isPro}
+                    language={language}
+                    photoURL={identity.photoURL}
+                    displayName={identity.displayName}
+                    editable={editable}
                   />
-                ) : null}
+                  {viewUnderAvatar}
+                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <div className="profile-edit-kinetik-name-with-flag flex min-w-0 items-center gap-2">
+                      <h2
+                        className={[
+                          nameOxanium.className,
+                          "leading-none font-bold italic tracking-tight text-white",
+                          "text-[22px] sm:text-[24px] md:text-[26px]",
+                          isPro
+                            ? "profile-plan-pro-display-name inline-block w-fit max-w-full truncate"
+                            : "min-w-0 truncate",
+                        ].join(" ")}
+                      >
+                        {identity.displayName}
+                      </h2>
+                      <ProfileKinetikNameFlag countryCode={countryCode} />
+                    </div>
+                    {isPro ? (
+                      <ProCyberBadge
+                        premium
+                        ariaLabel={metricCopy.proMember}
+                      />
+                    ) : null}
+                    {unitCorner ? (
+                      <div className="ml-auto shrink-0">{unitCorner}</div>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 w-full">
+                    <ProfileKinetikIdentityJoinIdRow
+                      memberSinceLabel={memberSinceLabel}
+                      systemId={identity.systemId}
+                      shareLabel={metricCopy.shareProfile}
+                      shareCopiedLabel={metricCopy.shareCopied}
+                      shareCopied={shareCopied}
+                      onShare={handleShareProfile}
+                    />
+                  </div>
+                </div>
               </div>
-              <ProfileKinetikCountryUnderName
-                countryCode={countryCode}
-                align="center"
-              />
               {bio?.trim() ? (
                 <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-white/50 md:text-[15px]">
                   {bio.trim()}
@@ -1196,16 +1320,6 @@ export default function ProfileEditKinetikPanel({
               {metricsContent}
             </div>
           </div>
-        </div>
-        <div className="px-6 pb-5 md:px-7 md:pb-6">
-          <ProfileKinetikCardFooter
-            memberSinceLabel={memberSinceLabel}
-            systemId={identity.systemId}
-            shareLabel={metricCopy.shareProfile}
-            shareCopiedLabel={metricCopy.shareCopied}
-            shareCopied={shareCopied}
-            onShare={handleShareProfile}
-          />
         </div>
       </ProfileKinetikPanelFrame>
       {badgeDetailModal}
@@ -1236,43 +1350,47 @@ export default function ProfileEditKinetikPanel({
         <div className="profile-edit-kinetik-mobile-stage">
           <div className="profile-edit-kinetik-mobile-hero">
             <div className="profile-edit-kinetik-header relative flex gap-3 sm:gap-4">
-            <ProfileEditKinetikAvatarWithStreak
-              variant={KINETIK_STREAK_VARIANT}
-              streak={activeWinStreak}
-              accentKey={menuAccent}
-              isPlanPro={isPro}
-              language={language}
-              photoURL={identity.photoURL}
-              displayName={identity.displayName}
-              editable={editable}
-            />
+            <div className="profile-edit-kinetik-avatar-column">
+              <ProfileEditKinetikAvatarWithStreak
+                variant={KINETIK_STREAK_VARIANT}
+                streak={activeWinStreak}
+                accentKey={menuAccent}
+                isPlanPro={isPro}
+                language={language}
+                photoURL={identity.photoURL}
+                displayName={identity.displayName}
+                editable={editable}
+              />
+              {viewUnderAvatar}
+            </div>
             <div className="profile-edit-kinetik-header__meta profile-edit-kinetik-header__meta--stacked min-w-0 flex-1">
-              {tierTagsRowMobile ? (
-                <div className="profile-edit-kinetik-header__menu-float">
-                  {tierTagsRowMobile}
-                </div>
-              ) : null}
-              <div
-                className={[
-                  "profile-edit-kinetik-header__identity",
-                  tierTagsRowMobile ? "profile-edit-kinetik-header__identity--menu" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
+              <div className="profile-edit-kinetik-header__identity">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <h2
-                    className={[
-                      nameOxanium.className,
-                      "text-[16px] leading-tight font-bold italic tracking-tight text-white sm:text-[18px]",
-                      "profile-plan-pro-display-name inline-block w-fit max-w-full truncate",
-                    ].join(" ")}
-                  >
-                    {identity.displayName}
-                  </h2>
+                  <div className="profile-edit-kinetik-name-with-flag flex min-w-0 items-center gap-1.5">
+                    <h2
+                      className={[
+                        nameOxanium.className,
+                        "text-[16px] leading-none font-bold italic tracking-tight text-white sm:text-[18px]",
+                        "profile-plan-pro-display-name inline-block w-fit max-w-full truncate",
+                      ].join(" ")}
+                    >
+                      {identity.displayName}
+                    </h2>
+                    <ProfileKinetikNameFlag countryCode={countryCode} />
+                  </div>
                   <ProCyberBadge premium ariaLabel={metricCopy.proMember} />
+                  {unitCorner ? (
+                    <div className="ml-auto shrink-0">{unitCorner}</div>
+                  ) : null}
                 </div>
-                <ProfileKinetikCountryUnderName countryCode={countryCode} />
+                <ProfileKinetikIdentityJoinIdRow
+                  memberSinceLabel={memberSinceLabel}
+                  systemId={identity.systemId}
+                  shareLabel={metricCopy.shareProfile}
+                  shareCopiedLabel={metricCopy.shareCopied}
+                  shareCopied={shareCopied}
+                  onShare={handleShareProfile}
+                />
               </div>
             </div>
           </div>
@@ -1300,54 +1418,47 @@ export default function ProfileEditKinetikPanel({
             {metricsScopeHeader}
             {metricsContent}
           </div>
-
-          <ProfileKinetikCardFooter
-            memberSinceLabel={memberSinceLabel}
-            systemId={identity.systemId}
-            shareLabel={metricCopy.shareProfile}
-            shareCopiedLabel={metricCopy.shareCopied}
-            shareCopied={shareCopied}
-            onShare={handleShareProfile}
-          />
         </div>
       ) : (
         <div className="profile-edit-kinetik-header-block">
           <div className="profile-edit-kinetik-header relative flex gap-3 sm:gap-4">
-            <ProfileEditKinetikAvatarWithStreak
-              variant={KINETIK_STREAK_VARIANT}
-              streak={activeWinStreak}
-              accentKey={menuAccent}
-              isPlanPro={isPro}
-              language={language}
-              photoURL={identity.photoURL}
-              displayName={identity.displayName}
-              editable={editable}
-            />
+            <div className="profile-edit-kinetik-avatar-column">
+              <ProfileEditKinetikAvatarWithStreak
+                variant={KINETIK_STREAK_VARIANT}
+                streak={activeWinStreak}
+                accentKey={menuAccent}
+                isPlanPro={isPro}
+                language={language}
+                photoURL={identity.photoURL}
+                displayName={identity.displayName}
+                editable={editable}
+              />
+              {viewUnderAvatar}
+            </div>
             <div className="profile-edit-kinetik-header__meta profile-edit-kinetik-header__meta--stacked min-w-0 flex-1">
-              {tierTagsRowMobile ? (
-                <div className="profile-edit-kinetik-header__menu-float">
-                  {tierTagsRowMobile}
-                </div>
-              ) : null}
-              <div
-                className={[
-                  "profile-edit-kinetik-header__identity",
-                  tierTagsRowMobile ? "profile-edit-kinetik-header__identity--menu" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <div className="profile-edit-kinetik-header__identity">
+                <div className="profile-edit-kinetik-name-with-flag flex min-w-0 flex-wrap items-center gap-1.5">
                   <h2
                     className={[
                       nameOxanium.className,
-                      "min-w-0 truncate text-[16px] leading-tight font-bold italic tracking-tight text-white sm:text-[18px]",
+                      "min-w-0 truncate text-[16px] leading-none font-bold italic tracking-tight text-white sm:text-[18px]",
                     ].join(" ")}
                   >
                     {identity.displayName}
                   </h2>
+                  <ProfileKinetikNameFlag countryCode={countryCode} />
+                  {unitCorner ? (
+                    <div className="ml-auto shrink-0">{unitCorner}</div>
+                  ) : null}
                 </div>
-                <ProfileKinetikCountryUnderName countryCode={countryCode} />
+                <ProfileKinetikIdentityJoinIdRow
+                  memberSinceLabel={memberSinceLabel}
+                  systemId={identity.systemId}
+                  shareLabel={metricCopy.shareProfile}
+                  shareCopiedLabel={metricCopy.shareCopied}
+                  shareCopied={shareCopied}
+                  onShare={handleShareProfile}
+                />
               </div>
             </div>
             <div
@@ -1378,17 +1489,6 @@ export default function ProfileEditKinetikPanel({
         {metricsScopeHeader}
         {metricsContent}
       </div>
-      ) : null}
-
-      {!isPro ? (
-        <ProfileKinetikCardFooter
-          memberSinceLabel={memberSinceLabel}
-          systemId={identity.systemId}
-          shareLabel={metricCopy.shareProfile}
-          shareCopiedLabel={metricCopy.shareCopied}
-          shareCopied={shareCopied}
-          onShare={handleShareProfile}
-        />
       ) : null}
 
     </ProfileKinetikPanelFrame>

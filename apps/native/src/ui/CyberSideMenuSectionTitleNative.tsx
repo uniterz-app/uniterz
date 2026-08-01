@@ -1,19 +1,26 @@
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { CYBER_TAB_CYAN, SIDE_MENU_SECTION_FONT } from "./cyberSideMenuNative";
+import {
+  CYBER_TAB_CYAN,
+  SIDE_MENU_SECTION_FONT,
+  SIDE_MENU_SECTION_FONT_JA,
+} from "./cyberSideMenuNative";
 
 type Props = {
   children: string;
   first?: boolean;
 };
 
+const CJK_RE = /[\u3040-\u30ff\u4e00-\u9fff]/;
+
 /** Web `CyberSideMenuSectionTitle` */
 export default function CyberSideMenuSectionTitleNative({ children, first = false }: Props) {
+  const isJa = CJK_RE.test(children);
   return (
     <View style={[styles.root, first ? styles.rootFirst : styles.rootRest]}>
       <View style={styles.tick} />
       <View style={styles.diamond} />
-      <Text style={styles.label}>{children}</Text>
+      <Text style={[styles.label, isJa && styles.labelJa]}>{children}</Text>
       <LinearGradient
         colors={["rgba(0, 245, 255, 0.25)", "transparent"]}
         start={{ x: 0, y: 0.5 }}
@@ -56,6 +63,9 @@ const styles = StyleSheet.create({
   label: {
     ...SIDE_MENU_SECTION_FONT,
     flexShrink: 1,
+  },
+  labelJa: {
+    ...SIDE_MENU_SECTION_FONT_JA,
   },
   line: {
     flex: 1,

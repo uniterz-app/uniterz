@@ -15,13 +15,32 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { doc, getDoc } from "firebase/firestore";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
+import type { Language } from "../../../../../lib/i18n/language";
+import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import { db } from "../../lib/firebase";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import CountryFlagNative from "../games/CountryFlagNative";
-import { resolvePostListLeague } from "../../../../../lib/leagues";
+import { resolvePostListLeague, LEAGUES } from "../../../../../lib/leagues";
+import TutorialTargetNative from "../tutorial/TutorialTargetNative";
+import {
+  readTutorialLivePhaseNative,
+} from "../tutorial/tutorialLivePhaseNative";
+import {
+  readTutorialLivePickNative,
+} from "../tutorial/tutorialLivePickNative";
+import type { TutorialLivePickPayload } from "../../../../../lib/tutorial/tutorialLivePick";
+import {
+  buildTutorialResultPost,
+  TUTORIAL_RESULT_POST_ID,
+} from "../../../../../lib/tutorial/tutorialNbaUi";
+import { prependTutorialResultPost } from "../../../../../lib/tutorial/prependTutorialResultPost";
+import type { ResultDayGroup as LibResultDayGroup } from "../../../../../lib/result/result-page-data";
+import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
+import { setTutorialResultDetailHandlers } from "../tutorial/tutorialResultDetailEventsNative";
+import type { SectionList as SectionListType } from "react-native";
 import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
 import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
 import {
@@ -1173,6 +1192,58 @@ export default function ResultHomeScreen({
     setLeagueTab(defaultLeagueTab);
   }, [flagsReady, defaultLeagueTab, leagueTab]);
 
+  const [tutorialBoost, setTutorialBoost] =
+    useState<TutorialLivePickPayload | null>(null);
+  const resultListRef = useRef<SectionListType<PostWithMillis, SectionT>>(null);
+  const resultScrollYRef = useRef(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void (async () => {
+        const phase = await readTutorialLivePhaseNative();
+        if (cancelled) return;
+        if (phase === "results" || phase === "gotoResults" || phase === "resultDetail") {
+          const pick = await readTutorialLivePickNative();
+          if (cancelled) return;
+          setTutorialBoost(pick);
+          if (pick) setLeagueTab(LEAGUES.NBA);
+        } else {
+          setTutorialBoost(null);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    if (!tutorialBoost) return;
+    return registerTutorialScrollHost({
+      getOffsetY: () => resultScrollYRef.current,
+      scrollBy: (dy, animated) => {
+        const list = resultListRef.current as unknown as {
+          getScrollResponder?: () => {
+            scrollTo?: (opts: { y: number; animated?: boolean }) => void;
+          } | null;
+        } | null;
+        const y = Math.max(0, resultScrollYRef.current + dy);
+        list?.getScrollResponder?.()?.scrollTo?.({ y, animated });
+      },
+    });
+  }, [tutorialBoost]);
+
+  useEffect(() => {
+    return setTutorialResultDetailHandlers({
+      onOpen: () => setDetailPostId(TUTORIAL_RESULT_POST_ID),
+      onClose: () =>
+        setDetailPostId((cur) =>
+          cur === TUTORIAL_RESULT_POST_ID ? null : cur
+        ),
+    });
+  }, []);
+
   const { grouped, loading, postsCacheCapped, refreshPosts, loadMore, removePostById } =
     useNativeResultPosts(uid, language, {
       league: leagueTab,
@@ -1204,7 +1275,7 @@ export default function ResultHomeScreen({
   });
 
   const filteredGrouped = useMemo(() => {
-    return grouped
+    const base = grouped
       .map((g) => {
         const filterPost = (p: PostWithMillis) => {
           if (
@@ -1227,7 +1298,21 @@ export default function ResultHomeScreen({
         return { ...g, pending, final };
       })
       .filter((g) => g.pending.length > 0 || g.final.length > 0);
-  }, [grouped, resultFilters, leagueTab, showResultLeagueTabs]);
+
+    if (!tutorialBoost) return base;
+    return prependTutorialResultPost(
+      base as unknown as LibResultDayGroup[],
+      buildTutorialResultPost(tutorialBoost.pick, tutorialBoost.grade),
+      language === "en" ? "en" : "ja"
+    ) as unknown as ResultDayGroup[];
+  }, [
+    grouped,
+    resultFilters,
+    leagueTab,
+    showResultLeagueTabs,
+    tutorialBoost,
+    language,
+  ]);
 
   const sections: SectionT[] = useMemo(() => {
     let baseFlatIndex = 0;
@@ -1404,6 +1489,7 @@ export default function ResultHomeScreen({
         </View>
       ) : (
         <SectionList<PostWithMillis, SectionT>
+          ref={resultListRef}
           style={styles.listScroll}
           sections={sections}
           keyExtractor={(item) => item.id}
@@ -1415,6 +1501,10 @@ export default function ResultHomeScreen({
           contentContainerStyle={listContentWithBottomPad}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            resultScrollYRef.current = e.nativeEvent.contentOffset.y;
+          }}
           ListFooterComponent={
             loading && sections.some((s) => s.data.length > 0) ? (
               <View style={styles.footer}>
@@ -1446,21 +1536,39 @@ export default function ResultHomeScreen({
               />
             );
           }}
-          renderItem={({ item, index, section }) => (
-            <ResultPostCard
-              post={item}
-              pkScore={resolveResultPostPkScore(item, pkFromGames)}
-              language={language}
-              nowMs={listNowTick}
-              viewerUid={uid}
-              listEnterIndex={section.baseFlatIndex + index}
-              entranceEnabled={entranceArmed}
-              siblingOverlayOpen={detailPostId != null}
-              onOpenDetail={setDetailPostId}
-              onRequestDeleteConfirm={setDeleteConfirmPost}
-              onRequestPredictEdit={openPredictEditFromResult}
-            />
-          )}
+          renderItem={({ item, index, section }) => {
+            const card = (
+              <ResultPostCard
+                post={item}
+                pkScore={resolveResultPostPkScore(item, pkFromGames)}
+                language={language}
+                nowMs={listNowTick}
+                viewerUid={
+                  item.id === TUTORIAL_RESULT_POST_ID ? null : uid
+                }
+                listEnterIndex={section.baseFlatIndex + index}
+                entranceEnabled={entranceArmed}
+                siblingOverlayOpen={detailPostId != null}
+                onOpenDetail={(id) => {
+                  setDetailPostId(id);
+                }}
+                onRequestDeleteConfirm={setDeleteConfirmPost}
+                onRequestPredictEdit={
+                  item.id === TUTORIAL_RESULT_POST_ID
+                    ? undefined
+                    : openPredictEditFromResult
+                }
+              />
+            );
+            if (item.id === TUTORIAL_RESULT_POST_ID) {
+              return (
+                <TutorialTargetNative id="result-card">
+                  {card}
+                </TutorialTargetNative>
+              );
+            }
+            return card;
+          }}
           SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
         />
       )}
@@ -1479,6 +1587,10 @@ export default function ResultHomeScreen({
         if (!deleteInProgress) setDeleteConfirmPost(null);
       }}
       onConfirm={() => void confirmDismissPostFromList()}
+    />
+    <TutorialLiveHostNative
+      page="results"
+      language={(language === "en" ? "en" : "ja") as Language}
     />
     </View>
   );

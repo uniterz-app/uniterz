@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import type { RankingPeriod } from "@/lib/rankings/rankingPeriod";
 import type { BulkMetricPayload } from "@/lib/rankings/useCumulativeRankingsBulk";
 
@@ -21,7 +22,8 @@ const emptyResult: PeriodBulkResult = {
 export function usePeriodRankingsBulk(
   period: Exclude<RankingPeriod, "season"> | null,
   /** 過去期間のラベル。null なら現在期間 */
-  label: string | null = null
+  label: string | null = null,
+  division: RankingDivision = "standard"
 ) {
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
   const [listReady, setListReady] = useState(false);
@@ -31,6 +33,7 @@ export function usePeriodRankingsBulk(
   const [range, setRange] = useState<PeriodBulkResult["range"]>(null);
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
+  const [proRequired, setProRequired] = useState(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
@@ -42,25 +45,35 @@ export function usePeriodRankingsBulk(
       setRange(null);
       setAvailableLabels([]);
       setActiveLabel(null);
+      setProRequired(false);
       setListReady(true);
       return;
     }
     setListReady(false);
+    setProRequired(false);
     try {
       const token = await auth.currentUser?.getIdToken().catch(() => null);
       const params = new URLSearchParams({ period });
       if (label) params.set("label", label);
+      if (division === "open") params.set("division", "open");
       const res = await fetch(`/api/period-ranking/bulk?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         cache: "no-store",
       });
       const json = (await res.json()) as {
         ok?: boolean;
+        error?: string;
         label?: string;
         byMetric?: Record<string, BulkMetricPayload>;
         range?: PeriodBulkResult["range"];
         availableLabels?: string[];
       };
+      if (res.status === 403 && json?.error === "pro_required") {
+        setByMetric({});
+        setRange(null);
+        setProRequired(true);
+        return;
+      }
       if (!res.ok || !json?.ok) {
         setByMetric({});
         setRange(null);
@@ -76,7 +89,7 @@ export function usePeriodRankingsBulk(
     } finally {
       setListReady(true);
     }
-  }, [period, label]);
+  }, [period, label, division]);
 
   useEffect(() => {
     void load();
@@ -96,5 +109,6 @@ export function usePeriodRankingsBulk(
     periodRange: range,
     availableLabels: period ? availableLabels : emptyResult.availableLabels,
     activeLabel,
+    proRequired,
   };
 }

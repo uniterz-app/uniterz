@@ -30,9 +30,11 @@ Uniterz は、ユーザーがスポーツの試合結果を予想し、分析力
 
 - 週間の個人ランキング
 - 月間の個人ランキング
+- （実装）シーズンの個人ランキング
 - グループランキング
+- （NBA）**PRO LEAGUE** — 全試合対象・Pro 限定。詳細は [`pickup-openweight-ranking-design.md`](pickup-openweight-ranking-design.md)
 
-各ランキングの上位者に、運営から **Unit** を無料で付与する。
+各ランキングの上位者に、運営から **Unit** を無料で付与する（PRO LEAGUE への Unit は未決）。
 
 ---
 
@@ -73,6 +75,7 @@ Pro 会員には、予想の参考となる詳細データや分析情報を提�
 | [`prediction-and-scoring.md`](prediction-and-scoring.md) | 予想機能・スコア算出 |
 | [`ranking-design.md`](ranking-design.md) | ランキング設計（個人・グループ） |
 | [`group-battle-design.md`](group-battle-design.md) | グループバトル設計・確定事項 |
+| [`group-battle-tech-design.md`](group-battle-tech-design.md) | グループバトル技術設計（データ・集計・API） |
 | [`unit-reward-design.md`](unit-reward-design.md) | Unit 付与設計 |
 | [`unit-redemption-design.md`](unit-redemption-design.md) | Unit 商品交換設計 |
 | [`referral-design.md`](referral-design.md) | 招待・紹介制度設計 |
@@ -91,3 +94,4 @@ Pro 会員には、予想の参考となる詳細データや分析情報を提�
 | 2026-07-23 | 初版。サービス全体設計を設計図として保管 |
 | 2026-07-23 | 関連に予想機能・スコア算出を追加 |
 | 2026-07-27 | 弁護士初回面談ブリーフへのリンクを追加 |
+| 2026-07-27 | 関連にグループバトル技術設計を追加 |

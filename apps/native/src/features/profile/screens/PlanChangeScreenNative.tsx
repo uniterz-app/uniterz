@@ -9,6 +9,11 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { colors, fonts } from "../../../theme/tokens";
+import {
+  IAP_FALLBACK_PRICE_JA,
+  proPlanDisplayName,
+  type ProIapPlan,
+} from "../../billing/iapProductIds";
 
 function openSubscriptionManagement() {
   const url =
@@ -18,10 +23,16 @@ function openSubscriptionManagement() {
   void Linking.openURL(url);
 }
 
+function parsePlanType(value: unknown): ProIapPlan {
+  if (value === "weekly" || value === "season" || value === "monthly") return value;
+  if (value === "annual") return "monthly";
+  return "monthly";
+}
+
 export default function PlanChangeScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
-  const [currentPlan, setCurrentPlan] = useState<"monthly" | "annual">("monthly");
+  const [currentPlan, setCurrentPlan] = useState<ProIapPlan>("monthly");
 
   useEffect(() => {
     if (!fUser) return;
@@ -30,17 +41,24 @@ export default function PlanChangeScreenNative() {
       const snap = await getDoc(doc(db, "users", fUser.uid));
       if (!alive) return;
       const data = snap.data() as { planType?: unknown } | undefined;
-      setCurrentPlan(data?.planType === "annual" ? "annual" : "monthly");
+      setCurrentPlan(parsePlanType(data?.planType));
     })();
     return () => {
       alive = false;
     };
   }, [fUser]);
 
-  const nextPlan = currentPlan === "monthly" ? "annual" : "monthly";
+  const isSeason = currentPlan === "season";
+  const nextPlan: ProIapPlan =
+    currentPlan === "weekly" ? "monthly" : currentPlan === "monthly" ? "weekly" : "monthly";
 
   return (
-    <MobilePageShell title="プラン変更" appBackground onClose={() => navigation.goBack()}>
+    <MobilePageShell
+      title="CHANGE"
+      subtitle="プランの変更手続きを行います。"
+      appBackground
+      onClose={() => navigation.goBack()}
+    >
       <View style={styles.content}>
         <View style={styles.card}>
           <View style={styles.heroIcon}>
@@ -50,35 +68,51 @@ export default function PlanChangeScreenNative() {
 
           <View style={styles.currentBlock}>
             <Text style={styles.currentLabel}>現在のプラン</Text>
-            <Text style={[styles.currentPlan, currentPlan === "monthly" ? styles.monthly : styles.annual]}>
-              {currentPlan === "monthly" ? "月額プラン" : "年額プラン"}
+            <Text
+              style={[
+                styles.currentPlan,
+                currentPlan === "weekly"
+                  ? styles.weekly
+                  : currentPlan === "season"
+                    ? styles.season
+                    : styles.monthly,
+              ]}
+            >
+              {proPlanDisplayName(currentPlan, "ja")}
             </Text>
           </View>
 
-          <View style={styles.nextCard}>
-            <Text style={styles.priceLabel}>Pro Plan</Text>
-            <Text style={styles.priceTitle}>{nextPlan === "annual" ? "年額プラン" : "月額プラン"}</Text>
-            <Text style={styles.priceAmt}>{nextPlan === "annual" ? "¥4,800" : "¥600"}</Text>
-            <Text style={styles.tax}>
-              {nextPlan === "annual" ? "税込み（4ヶ月お得）" : "税込み"}
+          {isSeason ? (
+            <Text style={styles.hint}>
+              Season Pass は買い切りのため、Weekly / Monthly への自動切替はありません。期間終了後に改めて購入してください。
             </Text>
-          </View>
-          <Text style={styles.hint}>実際の変更内容・請求日は次の画面で確認できます</Text>
+          ) : (
+            <>
+              <View style={styles.nextCard}>
+                <Text style={styles.priceLabel}>Pro Plan</Text>
+                <Text style={styles.priceTitle}>{proPlanDisplayName(nextPlan, "ja")}</Text>
+                <Text style={styles.priceAmt}>{IAP_FALLBACK_PRICE_JA[nextPlan]}</Text>
+                <Text style={styles.tax}>税込み</Text>
+              </View>
+              <Text style={styles.hint}>実際の変更内容・請求日はストアの管理画面で確認できます</Text>
 
-        <Pressable
-          onPress={() => {
-            openSubscriptionManagement();
-            navigation.navigate("PlanChangeComplete");
-          }}
-        >
-            <LinearGradient colors={["#F59E0B", "#F97316"]} style={styles.cta}>
-              <Text style={styles.ctaLabel}>
-                {nextPlan === "annual" ? "年額プランへ変更" : "月額プランへ変更"}
-              </Text>
-            </LinearGradient>
-        </Pressable>
+              <Pressable
+                onPress={() => {
+                  openSubscriptionManagement();
+                  navigation.navigate("PlanChangeComplete");
+                }}
+              >
+                <LinearGradient colors={["#F59E0B", "#F97316"]} style={styles.cta}>
+                  <Text style={styles.ctaLabel}>
+                    {proPlanDisplayName(nextPlan, "ja")} へ変更（ストア）
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            </>
+          )}
+
           <View style={styles.notice}>
-            <Text style={styles.noticeText}>※ プランは自動更新されます。</Text>
+            <Text style={styles.noticeText}>※ Weekly / Monthly は自動更新されます。</Text>
             <Text style={styles.noticeText}>
               ※ ダウングレードは現在の契約期間終了後に適用されます。
             </Text>
@@ -120,8 +154,9 @@ const styles = StyleSheet.create({
   currentBlock: { alignItems: "center", marginBottom: 22 },
   currentLabel: { color: "#fff", fontSize: 18, fontWeight: "700", marginBottom: 8 },
   currentPlan: { fontSize: 24, fontWeight: "900" },
+  weekly: { color: "#67e8f9" },
   monthly: { color: "#93c5fd" },
-  annual: { color: "#4ade80" },
+  season: { color: "#f0cc72" },
   nextCard: {
     borderRadius: 16,
     borderWidth: 1,

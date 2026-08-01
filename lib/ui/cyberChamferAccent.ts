@@ -1,21 +1,21 @@
-/** プロフィール Kinetik バーガー（elite `#c084fc`）— Web / Native 共通 */
-export const CYBER_CHAMFER_ACCENT = "#c084fc" as const;
+/** バーガーメニュー（黄 `#facc15`）— Web / Native 共通 */
+export const CYBER_CHAMFER_ACCENT = "#facc15" as const;
 
 export const CYBER_CHAMFER_FILL = "rgba(4,10,18,0.84)";
 
-export const CYBER_CHAMFER_STROKE = "rgba(192,132,252,0.34)";
+export const CYBER_CHAMFER_STROKE = "rgba(250,204,21,0.42)";
 
-export const CYBER_CHAMFER_ICON = "rgba(192,132,252,0.92)";
+export const CYBER_CHAMFER_ICON = "rgba(250,204,21,0.95)";
 
-export const CYBER_CHAMFER_GLOW = "rgba(192,132,252,0.12)";
+export const CYBER_CHAMFER_GLOW = "rgba(250,204,21,0.14)";
 
-export const CYBER_CHAMFER_INSET = "rgba(192,132,252,0.14)";
+export const CYBER_CHAMFER_INSET = "rgba(250,204,21,0.16)";
 
-export const CYBER_CHAMFER_STROKE_HOVER = "rgba(192,132,252,0.52)";
+export const CYBER_CHAMFER_STROKE_HOVER = "rgba(250,204,21,0.62)";
 
-export const CYBER_CHAMFER_SHEEN = "rgba(192,132,252,0.45)";
+export const CYBER_CHAMFER_SHEEN = "rgba(250,204,21,0.5)";
 
-export const CYBER_CHAMFER_ICON_HOVER = "#e9d5ff";
+export const CYBER_CHAMFER_ICON_HOVER = "#fef08a";
 
 /** × ボタン — シアン */
 export const CYBER_CHAMFER_CLOSE_STROKE = "rgba(0,245,255,0.38)";

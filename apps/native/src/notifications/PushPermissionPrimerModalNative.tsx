@@ -19,10 +19,10 @@ export default function PushPermissionPrimerModalNative({
   onLater,
 }: Props) {
   const isJa = language === "ja";
-  const title = isJa ? "試合・結果・ランキングをお知らせ" : "Stay in the loop";
+  const title = isJa ? "試合・結果・直前アラートをお知らせ" : "Stay in the loop";
   const body = isJa
-    ? "予想した試合の開始前、結果確定、本日のランキング更新をプッシュでお知らせします。通知の種類はあとから設定で変更できます。"
-    : "Get notified before your predicted matches start, when results are confirmed, and when today's rankings update. You can change notification types anytime in Settings.";
+    ? "予想した試合の開始前・結果確定・ランキング更新に加え、予想締切などの直前アラートもお知らせできます。種類は設定で変更できます。"
+    : "Get notified before tip-off, when results finalize, on ranking updates, and for pregame alerts like prediction deadlines. Change types anytime in Settings.";
   const allowLabel = isJa ? "通知を許可" : "Allow notifications";
   const laterLabel = isJa ? "あとで" : "Not now";
 

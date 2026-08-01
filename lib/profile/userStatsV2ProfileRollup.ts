@@ -7,6 +7,7 @@ import type { DocumentSnapshot } from "firebase-admin/firestore";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
+import { pickNbaDailyIncBucket } from "@/lib/rankings/pickNbaStatsBucket";
 import {
   isWcRankingStage,
   type WcRankingStage,
@@ -52,11 +53,7 @@ function dailyBucketFromDoc(
     return ((stage === "overall" ? leagues.wc : null) ??
       {}) as Record<string, unknown>;
   }
-  const byPhase = (d.rankingByPhase ?? {}) as Record<
-    string,
-    Record<string, unknown>
-  >;
-  return (byPhase.playoffs ?? {}) as Record<string, unknown>;
+  return pickNbaDailyIncBucket(d);
 }
 
 type Bucket = {

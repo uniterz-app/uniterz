@@ -134,6 +134,8 @@ export type PredictionPostV2 = {
       diffPoints: number;
       totalPoints: number;
       goalDiffPoints?: number;
+      /** 基本点（win + diff + total）。ボーナス前 */
+      basePoints?: number;
       upsetBonus: number;
       streakBonus?: number;
       goalScorerBonus?: number;

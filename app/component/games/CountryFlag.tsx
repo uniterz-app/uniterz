@@ -108,6 +108,8 @@ export default function CountryFlag({
       <span
         className={clsx(
           "inline-block h-3 w-[18px] shrink-0 overflow-hidden align-middle opacity-90",
+          // イタリック名の光学中心に合わせる
+          "-translate-y-px",
           shapeClass,
           className,
         )}

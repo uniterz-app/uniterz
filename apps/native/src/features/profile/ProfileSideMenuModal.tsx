@@ -1,11 +1,13 @@
 /**
  * Web `SideMenuDrawer` + `SettingsMenu`（モバイル相当）に準拠したサイドメニュー。
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Animated, Dimensions, Easing, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View,
+  Animated, Dimensions, Easing, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
@@ -18,7 +20,8 @@ import SideMenuItemButtonNative, {
   SideMenuUnreadBadgeNative,
 } from "../../ui/SideMenuItemButtonNative";
 import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
-import { SIDE_MENU_LABEL_FONT } from "../../ui/cyberSideMenuNative";
+import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
+import { spacing } from "../../theme/tokens";
 
 type Lang = "ja" | "en";
 
@@ -34,12 +37,16 @@ type Props = {
   uid: string | null | undefined;
   /** Firestore users.plan と同期した表示用 */
   plan: "free" | "pro";
+  /** ゲーム内通貨残高（サイドメニュー先頭ウォレット） */
+  unitBalance?: number;
   /** in-app 画面を開く */
   onOpenInApp: (page:
     | "badges"
     | "announcements"
     | "plan"
     | "subscribe"
+    | "proSkin"
+    | "deleteAccount"
     | "guidelines"
     | "help"
     | "terms"
@@ -59,11 +66,6 @@ function openUrl(url: string) {
   void Linking.openURL(url).catch(() => {});
 }
 
-function menuLabelStyle(isEn: boolean) {
-  return isEn
-    ? { ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" as const }
-    : SIDE_MENU_LABEL_FONT;
-}
 
 export default function ProfileSideMenuModal({
   visible,
@@ -74,14 +76,22 @@ export default function ProfileSideMenuModal({
   onOpenProfileSettings,
   uid,
   plan,
+  unitBalance = 0,
   onOpenInApp,
 }: Props) {
   const isJa = language === "ja";
-  const isEn = language === "en";
-  const labelStyle = menuLabelStyle(isEn);
+  const labelStyle = sideMenuLabelStyle(language);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const slide = useRef(new Animated.Value(-PANEL_W - 24)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+  /** Web `SideMenuDrawer` の py-4 相当 — safe area 直下に下ろす */
+  const panelLayout = useMemo(() => {
+    const top = insets.top + 16;
+    const bottom = Math.max(insets.bottom, spacing.md);
+    const maxHeight = Dimensions.get("window").height - top - bottom;
+    return { top, bottom, maxHeight };
+  }, [insets.top, insets.bottom]);
 
   const isAdmin = uid != null && uid === ADMIN_UID;
 
@@ -134,6 +144,7 @@ export default function ProfileSideMenuModal({
         badges: "バッジパレット",
         announcements: "お知らせ",
         plan: "プランの確認",
+        proSkin: "Pro Skin",
         help: "ヘルプ",
         guidelines: "ガイドライン",
         terms: "利用規約",
@@ -143,6 +154,7 @@ export default function ProfileSideMenuModal({
         notifications: "通知設定",
         featureRequest: "機能リクエスト",
         electronicNotice: "電子公告",
+        deleteAccount: "アカウント削除",
         logout: "ログアウト",
         needBase: "Web の URL（EXPO_PUBLIC_UNITERZ_API_BASE_URL）が未設定です。",
         adminDash: "管理ダッシュボード",
@@ -161,6 +173,7 @@ export default function ProfileSideMenuModal({
         badges: "Badge Palette",
         announcements: "Announcements",
         plan: "Plan Status",
+        proSkin: "Pro Skin",
         help: "Help",
         guidelines: "Community Guidelines",
         terms: "Terms of Service",
@@ -170,6 +183,7 @@ export default function ProfileSideMenuModal({
         notifications: "Notifications",
         featureRequest: "Feature Request",
         electronicNotice: "Electronic Notice",
+        deleteAccount: "Delete Account",
         logout: "Log out",
         needBase: "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL to open web pages.",
         adminDash: "Admin Dashboard",
@@ -194,6 +208,8 @@ export default function ProfileSideMenuModal({
       | "announcements"
       | "plan"
       | "subscribe"
+      | "proSkin"
+      | "deleteAccount"
       | "guidelines"
       | "help"
       | "terms"
@@ -254,19 +270,52 @@ export default function ProfileSideMenuModal({
               styles.panelOuter,
               {
                 width: PANEL_W,
+                marginTop: panelLayout.top,
+                marginBottom: panelLayout.bottom,
+                maxHeight: panelLayout.maxHeight,
                 transform: [{ translateX: slide }],
               },
             ]}
             pointerEvents="box-none"
           >
             <Pressable style={styles.panelPressable} onPress={(e) => e.stopPropagation()}>
-              <CyberSideMenuPanelNative style={styles.panel}>
+              <CyberSideMenuPanelNative
+                style={[styles.panel, { maxHeight: panelLayout.maxHeight }]}
+              >
                 <ScrollView
-                  style={styles.scroll}
+                  style={[styles.scroll, { maxHeight: panelLayout.maxHeight }]}
                   contentContainerStyle={styles.scrollContent}
                   showsVerticalScrollIndicator={false}
                   bounces={false}
                 >
+                  {uid ? (
+                    <View
+                      style={styles.unitWallet}
+                      accessibilityRole="text"
+                      accessibilityLabel={
+                        isJa
+                          ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
+                          : `${unitBalance.toLocaleString("en-US")} Units`
+                      }
+                    >
+                      <View style={styles.unitWalletMark}>
+                        <MaterialCommunityIcons
+                          name="hexagon-outline"
+                          size={30}
+                          color="#f6c344"
+                          style={styles.unitWalletHex}
+                        />
+                        <Text style={styles.unitWalletU}>U</Text>
+                      </View>
+                      <View style={styles.unitWalletMeta}>
+                        <Text style={styles.unitWalletLabel}>UNITS</Text>
+                        <Text style={styles.unitWalletValue}>
+                          {unitBalance.toLocaleString("en-US")}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+
                   <CyberSideMenuSectionTitleNative first>
                     {labels.main}
                   </CyberSideMenuSectionTitleNative>
@@ -275,7 +324,7 @@ export default function ProfileSideMenuModal({
                       icon="account-edit-outline"
                       labelStyle={labelStyle}
                       onPress={() => {
-                        onClose();
+                        // メニューは親側で設定表示後に閉じる（プロフィールが一瞬見えるのを防ぐ）
                         onOpenProfileSettings();
                       }}
                     >
@@ -313,6 +362,13 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage(plan === "pro" ? "plan" : "subscribe")}
                     >
                       {labels.plan}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="star-four-points"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("proSkin")}
+                    >
+                      {labels.proSkin}
                     </SideMenuItemButtonNative>
                   </View>
 
@@ -460,6 +516,16 @@ export default function ProfileSideMenuModal({
 
                   <View style={styles.logoutDivider} />
                   <SideMenuItemButtonNative
+                    icon="trash-can-outline"
+                    tone="danger"
+                    dense
+                    labelStyle={labelStyle}
+                    onPress={() => openUserPage("deleteAccount")}
+                  >
+                    {labels.deleteAccount}
+                  </SideMenuItemButtonNative>
+                  <View style={{ height: 8 }} />
+                  <SideMenuItemButtonNative
                     icon="logout-variant"
                     tone="danger"
                     labelStyle={labelStyle}
@@ -498,9 +564,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.55)",
   },
   panelOuter: {
-    marginTop: Platform.select({ ios: 16, android: 16, default: 16 }),
-    marginBottom: Platform.select({ ios: 16, android: 16, default: 16 }),
-    maxHeight: "92%",
     alignSelf: "flex-start",
     paddingRight: 12,
   },
@@ -508,16 +571,63 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden",
   },
-  panel: {
-    maxHeight: Dimensions.get("window").height * 0.92,
-  },
-  scroll: {
-    maxHeight: Dimensions.get("window").height * 0.92,
-  },
+  panel: {},
+  scroll: {},
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 20,
+  },
+  unitWallet: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "rgba(246,195,68,0.55)",
+    backgroundColor: "rgba(28,20,6,0.9)",
+    shadowColor: "#f6c344",
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 3,
+  },
+  unitWalletMark: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unitWalletHex: {
+    position: "absolute",
+  },
+  unitWalletU: {
+    fontFamily: "Oxanium_800ExtraBold",
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#fff8e1",
+  },
+  unitWalletMeta: {
+    flexShrink: 1,
+    gap: 3,
+  },
+  unitWalletLabel: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1.6,
+    color: "rgba(246,195,68,0.85)",
+    textTransform: "uppercase",
+  },
+  unitWalletValue: {
+    fontFamily: "Oxanium_800ExtraBold",
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+    color: "#fff8e7",
+    fontVariant: ["tabular-nums"],
   },
   itemGroup: {
     gap: 8,

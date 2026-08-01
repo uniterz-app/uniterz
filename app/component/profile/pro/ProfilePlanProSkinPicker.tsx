@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -13,6 +14,7 @@ import {
 import ProfileEditKinetikPanel from "@/app/component/profile/edit/ProfileEditKinetikPanel";
 import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanProBackgroundFx";
 import { PROFILE_EDIT_KINETIK_MOCK } from "@/app/component/profile/edit/profileEditKinetikTypes";
+import { CYBER_TAB_CYAN } from "@/app/component/rankings/CyberSlantedTab";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
 import {
@@ -33,6 +35,8 @@ export type ProfilePlanProSkinPickerMode = "preview" | "production";
 
 type Props = {
   mode?: ProfilePlanProSkinPickerMode;
+  /** Web ルートでは横並びプレビュー。未指定時は pathname から判定 */
+  platform?: "mobile" | "web";
   initialSelectedId?: ProfilePlanProBgVariant | null;
 };
 
@@ -126,7 +130,8 @@ function SkinThumbnail({ entry }: { entry: ProfilePlanProAdoptedEntry }) {
         <ProfilePlanProBackgroundFx
           variant={entry.id}
           animate={false}
-          mobileBoost
+          /** サムネは横長 — Web キャンバス / cover で引き伸ばしを避ける */
+          web
         />
         <span
           className="profile-kinetik-frame-corner profile-kinetik-frame-corner--tl"
@@ -273,11 +278,13 @@ function CatalogTile({
 
 export default function ProfilePlanProSkinPicker({
   mode = "preview",
+  platform,
   initialSelectedId = null,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
-  const isWeb = pathname.startsWith("/web");
+  const isWeb =
+    platform === "web" || (platform == null && pathname.startsWith("/web"));
   const isProduction = mode === "production";
   const gridRef = useRef<HTMLDivElement>(null);
   const openPreviewRef = useRef<HTMLDivElement>(null);
@@ -314,17 +321,19 @@ export default function ProfilePlanProSkinPicker({
 
   const hasUnsavedChange =
     isProduction && selectedId != null && selectedId !== savedId;
+  const canConfirm = Boolean(selectedId) && !saving && hasUnsavedChange;
 
   useLayoutEffect(() => {
-    if (!selectedId) return;
+    // Web は右カラム sticky プレビューのためスクロール不要
+    if (isWeb || !selectedId) return;
     openPreviewRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
     });
-  }, [selectedId]);
+  }, [selectedId, isWeb]);
 
   async function handleApplySkin() {
-    if (!selectedId || saving) return;
+    if (!selectedId || saving || !hasUnsavedChange) return;
     setSaving(true);
     setSaveError(null);
     try {
@@ -332,131 +341,258 @@ export default function ProfilePlanProSkinPicker({
       setSavedId(selectedId);
       router.push(isWeb ? "/web/mypage" : "/mobile/mypage");
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Save failed");
+      setSaveError(e instanceof Error ? e.message : "保存に失敗しました");
     } finally {
       setSaving(false);
     }
   }
 
-  return (
-    <main
+  const confirmLabel = saving ? "保存中…" : hasUnsavedChange ? "確定" : "適用済み";
+
+  const headerBlock = (
+    <header className={isWeb ? "mb-5 md:mb-6" : "mx-auto mb-5 max-w-[420px]"}>
+      <p
+        className={[
+          nameRajdhani.className,
+          "text-[11px] font-semibold tracking-[0.28em] text-white/40 uppercase",
+        ].join(" ")}
+      >
+        {isProduction ? "Pro Skin" : "Dev · Pro Skin"}
+      </p>
+      <h1
+        className={[
+          "mt-1 font-semibold text-white",
+          isWeb ? "text-2xl md:text-3xl" : "text-xl sm:text-2xl",
+        ].join(" ")}
+      >
+        Choose Pro Skin
+      </h1>
+      <p
+        className={[
+          "mt-1.5 leading-relaxed text-white/50",
+          isWeb ? "max-w-2xl text-sm md:text-base" : "text-sm",
+        ].join(" ")}
+      >
+        {isProduction
+          ? "サムネをタップしてプレビューし、確定でプロフィールに反映します。"
+          : `Browse ${PROFILE_PLAN_PRO_ADOPTED_BG.length} skin thumbnails in a 2×9 catalog. Tap a thumbnail to open the full profile card preview.`}
+      </p>
+      {!isProduction ? (
+        <div className="mt-2.5 flex flex-wrap gap-3 text-[11px]">
+          <Link
+            href={isWeb ? PRO_SUBSCRIBE_PATH.web : PRO_SUBSCRIBE_PATH.mobile}
+            className="text-cyan-300/80 underline-offset-2 hover:underline"
+          >
+            ← Subscribe
+          </Link>
+        </div>
+      ) : null}
+    </header>
+  );
+
+  const applyBar = (
+    <div
       className={[
-        "profile-plan-pro-bg-picker-preview-page min-h-screen bg-[#03080d] px-3 py-6 text-white sm:px-4 md:px-8",
-        isProduction ? "pb-36" : "pb-28",
+        "z-20 mb-3 bg-[#03080d]/94 py-2 backdrop-blur-md",
+        isWeb ? "sticky top-0 -mx-0 px-0" : "sticky top-0 -mx-1 px-1",
       ].join(" ")}
     >
-      <header className="mx-auto mb-5 max-w-[420px]">
-        <p
-          className={[
-            nameRajdhani.className,
-            "text-[11px] font-semibold tracking-[0.28em] text-white/40 uppercase",
-          ].join(" ")}
-        >
-          {isProduction ? "Pro Skin" : "Dev · Pro Skin"}
-        </p>
-        <h1 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
-          Choose Pro Skin
-        </h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-white/50">
-          {isProduction
-            ? "Pick a skin for your profile card. Tap a thumbnail to preview, then apply."
-            : `Browse ${PROFILE_PLAN_PRO_ADOPTED_BG.length} skin thumbnails. Tap a thumbnail to open the full profile card preview.`}
-        </p>
-        {!isProduction ? (
-          <div className="mt-2.5 flex flex-wrap gap-3 text-[11px]">
-            <Link
-              href={PRO_SUBSCRIBE_PATH.mobile}
-              className="text-cyan-300/80 underline-offset-2 hover:underline"
-            >
-              ← Subscribe
-            </Link>
-          </div>
+      <div
+        className={[
+          "cyber-side-menu-item relative flex w-full items-center gap-3 border px-3 py-2.5",
+          hasUnsavedChange
+            ? "border-[rgba(0,245,255,0.45)] bg-[rgba(0,245,255,0.07)]"
+            : "border-white/10 bg-[#0a0e14]/95",
+        ].join(" ")}
+      >
+        <span className="cyber-side-menu-item__rail" aria-hidden />
+        <span
+          className="cyber-side-menu-item__corner left-0 top-0 border-l-2 border-t-2"
+          aria-hidden
+        />
+        <span
+          className="cyber-side-menu-item__corner right-0 bottom-0 border-b-2 border-r-2"
+          aria-hidden
+        />
+        {hasUnsavedChange ? (
+          <span className="cyber-side-menu-item__scan" aria-hidden />
         ) : null}
-      </header>
 
-      <div className="mx-auto w-full max-w-[420px]">
-        <div className="sticky top-0 z-20 mb-3 -mx-1 flex items-center justify-between gap-2 border-b border-white/8 bg-[#03080d]/94 px-1 py-2.5 backdrop-blur-md">
+        <span
+          className={[
+            "relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center border bg-white/[0.04]",
+            hasUnsavedChange
+              ? "border-[rgba(0,245,255,0.35)] bg-[rgba(0,245,255,0.1)]"
+              : "border-white/10",
+          ].join(" ")}
+          style={{
+            clipPath:
+              "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)",
+          }}
+        >
+          <Sparkles
+            size={18}
+            strokeWidth={2}
+            style={{
+              color: hasUnsavedChange
+                ? CYBER_TAB_CYAN
+                : "rgba(0,245,255,0.78)",
+            }}
+          />
+        </span>
+
+        <div className="relative z-[1] min-w-0 flex-1">
+          <p
+            className={[
+              nameOxanium.className,
+              "truncate text-sm font-bold uppercase tracking-[0.06em] text-white",
+            ].join(" ")}
+          >
+            PRO SKIN
+          </p>
+          <p
+            className={[
+              nameRajdhani.className,
+              "truncate text-[11px] font-semibold tracking-[0.06em] uppercase text-cyan-200/80",
+            ].join(" ")}
+          >
+            {selected && selectedIndex >= 0
+              ? `${formatSkinNo(selectedIndex)} · ${selected.label}${selected.tag ? ` · ${selected.tag}` : ""}`
+              : "未選択"}
+          </p>
+        </div>
+
+        {isProduction ? (
+          <button
+            type="button"
+            disabled={!canConfirm}
+            onClick={() => void handleApplySkin()}
+            className={[
+              nameOxanium.className,
+              "relative z-[1] shrink-0 border-2 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em] transition",
+              canConfirm
+                ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508] hover:brightness-110 active:brightness-95"
+                : "cursor-not-allowed border-white/15 text-white/30",
+            ].join(" ")}
+            style={
+              canConfirm
+                ? {
+                    clipPath:
+                      "polygon(4px 0%, 100% 0%, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0% 100%, 0% 4px)",
+                  }
+                : undefined
+            }
+          >
+            {confirmLabel}
+          </button>
+        ) : (
+          <p className="relative z-[1] shrink-0 text-[10px] text-white/35">
+            Tap to open
+          </p>
+        )}
+      </div>
+      {saveError && isProduction ? (
+        <p className="mt-1.5 text-center text-xs text-red-300/90">{saveError}</p>
+      ) : null}
+    </div>
+  );
+
+  const catalogGrid = (
+    <div
+      ref={gridRef}
+      className={[
+        "profile-plan-pro-bg-picker-catalog-grid",
+        isWeb ? "profile-plan-pro-bg-picker-catalog-grid--web" : "",
+      ].join(" ")}
+    >
+      {PROFILE_PLAN_PRO_ADOPTED_BG.map((entry) => (
+        <CatalogTile
+          key={entry.id}
+          entry={entry}
+          selected={selectedId === entry.id}
+          onSelect={() => {
+            setSelectedId(entry.id);
+            setReplayByVariant((prev) => ({
+              ...prev,
+              [entry.id]: (prev[entry.id] ?? 0) + 1,
+            }));
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  const webPreview =
+    selected != null ? (
+      <div className="profile-plan-pro-bg-picker-web-preview">
+        <ProfileEditKinetikPanel
+          key={`${selected.id}:${replayByVariant[selected.id] ?? 0}`}
+          layout="web"
+          {...panelProps()}
+          isPro
+          planProBgVariant={selected.id}
+        />
+      </div>
+    ) : (
+      <div className="flex min-h-[280px] items-center justify-center border border-dashed border-white/15 bg-white/[0.02] px-6 py-16 text-center text-sm text-white/40">
+        サムネを選ぶとここにプレビューが表示されます
+      </div>
+    );
+
+  const Root = isProduction ? "div" : "main";
+
+  return (
+    <Root
+      className={[
+        "profile-plan-pro-bg-picker-preview-page text-white",
+        isWeb
+          ? isProduction
+            ? "pb-10"
+            : "min-h-screen bg-[#03080d] px-4 py-6 md:px-8 md:py-8 pb-16"
+          : [
+              "min-h-screen bg-[#03080d] px-3 py-6 sm:px-4 md:px-8",
+              isProduction ? "pb-16" : "pb-28",
+            ].join(" "),
+      ].join(" ")}
+    >
+      {headerBlock}
+
+      {isWeb ? (
+        <div className="mx-auto grid w-full gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)] lg:items-start xl:gap-8">
           <div className="min-w-0">
-            <p
-              className={[
-                nameOxanium.className,
-                "text-[8px] font-extrabold uppercase tracking-[0.16em] text-white/35",
-              ].join(" ")}
-            >
-              Selected
-            </p>
+            {applyBar}
+            {catalogGrid}
+          </div>
+          <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
             <p
               className={[
                 nameRajdhani.className,
-                "truncate text-sm font-semibold tracking-[0.08em] uppercase text-cyan-200/90",
+                "mb-2 text-[11px] font-semibold tracking-[0.22em] text-white/40 uppercase",
               ].join(" ")}
             >
-              {selected && selectedIndex >= 0
-                ? `${formatSkinNo(selectedIndex)} · ${selected.label}${selected.tag ? ` · ${selected.tag}` : ""}`
-                : "None"}
+              Preview
             </p>
-          </div>
-          <p className="shrink-0 text-[10px] text-white/35">Tap to open</p>
+            {webPreview}
+          </aside>
         </div>
-
-        {selected ? (
-          <div
-            ref={openPreviewRef}
-            className="profile-plan-pro-bg-picker-open-preview mb-3 scroll-mt-24"
-          >
-            <ScaledCatalogCard
-              scale={openedScale}
-              variantId={selected.id}
-              replaySeed={replayByVariant[selected.id] ?? 0}
-            />
-          </div>
-        ) : null}
-
-        <div
-          ref={gridRef}
-          className="profile-plan-pro-bg-picker-catalog-grid"
-        >
-          {PROFILE_PLAN_PRO_ADOPTED_BG.map((entry) => (
-            <CatalogTile
-              key={entry.id}
-              entry={entry}
-              selected={selectedId === entry.id}
-              onSelect={() => {
-                setSelectedId(entry.id);
-                setReplayByVariant((prev) => ({
-                  ...prev,
-                  [entry.id]: (prev[entry.id] ?? 0) + 1,
-                }));
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {isProduction ? (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#03080d]/96 px-4 py-3 backdrop-blur-md">
-          <div className="mx-auto flex max-w-[420px] flex-col gap-2">
-            {saveError ? (
-              <p className="text-center text-xs text-red-300/90">{saveError}</p>
-            ) : null}
-            <button
-              type="button"
-              disabled={!selectedId || saving || !hasUnsavedChange}
-              onClick={() => void handleApplySkin()}
-              className={[
-                nameOxanium.className,
-                "w-full border-2 border-[#00F5FF] py-3 text-center text-[11px] font-extrabold uppercase tracking-[0.14em]",
-                "transition",
-                !selectedId || saving || !hasUnsavedChange
-                  ? "cursor-not-allowed border-white/15 text-white/30"
-                  : "text-[#00F5FF] hover:bg-[#00F5FF] hover:text-[#050508]",
-              ].join(" ")}
+      ) : (
+        <div className="mx-auto w-full max-w-[420px]">
+          {applyBar}
+          {selected ? (
+            <div
+              ref={openPreviewRef}
+              className="profile-plan-pro-bg-picker-open-preview mb-3 scroll-mt-24"
             >
-              {saving ? "Saving…" : "Apply Pro Skin"}
-            </button>
-          </div>
+              <ScaledCatalogCard
+                scale={openedScale}
+                variantId={selected.id}
+                replaySeed={replayByVariant[selected.id] ?? 0}
+              />
+            </div>
+          ) : null}
+          {catalogGrid}
         </div>
-      ) : null}
-    </main>
+      )}
+    </Root>
   );
 }

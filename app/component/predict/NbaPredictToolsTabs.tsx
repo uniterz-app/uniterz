@@ -64,7 +64,7 @@ export default function NbaPredictToolsTabs({
   const [tab, setTab] = useState<NbaPredictToolsTab>("injuries");
 
   return (
-    <div className={className}>
+    <div className={className} data-tutorial-target="predict-tools">
       <CyberSlantedTabBar fill aria-label="NBA predict tools">
         <CyberSlantedTab
           role="tab"

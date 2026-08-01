@@ -103,6 +103,12 @@ function GamesStackScreen() {
             require("../features/games/screens/BracketMarketScreenNative").default
           }
         />
+        <GamesStack.Screen
+          name="SeasonPredict"
+          getComponent={() =>
+            require("../features/games/screens/SeasonPredictScreenNative").default
+          }
+        />
       </GamesStack.Navigator>
     </NativeStackBackdrop>
   );
@@ -135,6 +141,12 @@ function RankingsStackScreen() {
         <RankingsStack.Screen name="RankingsHome">
           {() => <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />}
         </RankingsStack.Screen>
+        <RankingsStack.Screen
+          name="SquadBattlePreview"
+          getComponent={() =>
+            require("../features/squads/SquadBattleScreenNative").default
+          }
+        />
       </RankingsStack.Navigator>
     </NativeStackBackdrop>
   );
@@ -152,6 +164,12 @@ function LeaderboardsStackScreen() {
           name="CommunityDetail"
           getComponent={() =>
             require("../features/leaderboards/CommunityDetailScreenNative").default
+          }
+        />
+        <LeaderboardsStack.Screen
+          name="SquadBattlePreview"
+          getComponent={() =>
+            require("../features/squads/SquadBattleScreenNative").default
           }
         />
       </LeaderboardsStack.Navigator>
@@ -202,6 +220,18 @@ function ProfileStackScreen() {
           name="ProfilePassword"
           getComponent={() =>
             require("../features/profile/screens/ProfilePasswordScreenNative").default
+          }
+        />
+        <ProfileStack.Screen
+          name="ProSkin"
+          getComponent={() =>
+            require("../features/profile/screens/ProSkinScreenNative").default
+          }
+        />
+        <ProfileStack.Screen
+          name="DeleteAccount"
+          getComponent={() =>
+            require("../features/profile/screens/DeleteAccountScreenNative").default
           }
         />
         <ProfileStack.Screen

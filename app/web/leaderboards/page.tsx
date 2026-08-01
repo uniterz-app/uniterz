@@ -1,6 +1,7 @@
 "use client";
 
 import LeaderboardsTabbedView from "@/app/component/leaderboards/LeaderboardsTabbedView";
+import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
 
 export default function WebLeaderboardsPage() {
   return (
@@ -8,6 +9,7 @@ export default function WebLeaderboardsPage() {
       <main className="mx-auto w-full max-w-7xl px-6 pb-bottom-nav pt-6 lg:px-10">
         <LeaderboardsTabbedView variant="web" />
       </main>
+      <TutorialLiveHost page="groups" />
     </div>
   );
 }

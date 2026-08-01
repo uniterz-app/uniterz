@@ -316,6 +316,38 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
     hudSecondary: "rgba(127,29,29,",
     opacityMul: 1.95,
   },
+  "beast-behelit": {
+    strokes: ["150,28,28", "175,36,36", "110,18,18", "190,44,44"],
+    fills: ["42,6,6", "58,10,10", "28,4,4"],
+    accent: ["190,52,52", "150,32,32"],
+    hudPrimary: "rgba(170,42,42,",
+    hudSecondary: "rgba(110,18,18,",
+    opacityMul: 1.8,
+  },
+  "beast-berserker": {
+    strokes: ["170,34,34", "140,26,26", "195,46,46", "105,16,16"],
+    fills: ["40,6,6", "55,10,10", "24,3,3"],
+    accent: ["200,56,56", "155,34,34"],
+    hudPrimary: "rgba(175,42,42,",
+    hudSecondary: "rgba(105,16,16,",
+    opacityMul: 1.9,
+  },
+  "beast-armor": {
+    strokes: ["180,185,192", "148,155,165", "210,214,220", "100,108,118"],
+    fills: ["40,44,52", "58,64,74", "28,30,36"],
+    accent: ["230,233,238", "186,192,200"],
+    hudPrimary: "rgba(200,205,212,",
+    hudSecondary: "rgba(140,148,158,",
+    opacityMul: 2.05,
+  },
+  "beast-dna": {
+    strokes: ["163,230,53", "132,204,22", "74,222,128", "190,242,100"],
+    fills: ["20,40,12", "34,60,18", "12,28,8"],
+    accent: ["250,204,21", "234,179,8"],
+    hudPrimary: "rgba(163,230,53,",
+    hudSecondary: "rgba(234,179,8,",
+    opacityMul: 2.1,
+  },
 };
 
 function hash01(a: number, b: number): number {
@@ -350,6 +382,7 @@ function toUrl(svg: string): string {
 }
 
 const urlCache = new Map<string, string>();
+const svgCache = new Map<string, string>();
 
 function cachedUrl(key: string, build: () => string): string {
   const hit = urlCache.get(key);
@@ -357,6 +390,14 @@ function cachedUrl(key: string, build: () => string): string {
   const url = toUrl(build());
   urlCache.set(key, url);
   return url;
+}
+
+function cachedSvg(key: string, build: () => string): string {
+  const hit = svgCache.get(key);
+  if (hit !== undefined) return hit;
+  const svg = build();
+  svgCache.set(key, svg);
+  return svg;
 }
 
 function pick<T>(arr: readonly T[], a: number, b: number): T {
@@ -2903,6 +2944,395 @@ function buildCrimsonVeil(p: BeastPalette): string {
   return wrapSvg(parts.join(""));
 }
 
+function buildBehelit(p: BeastPalette): string {
+  const parts: string[] = [];
+
+  for (let i = 0; i < 22; i += 1) {
+    const nx = 0.36 + hash01(i * 2.0, 1.5) * 0.66;
+    const ny = hash01(i * 1.8, 3.6);
+    if (hash01(i + 2, 0.8) > densityAt(nx, ny) * 0.88) continue;
+
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const r = 7 + hash01(i, 4) * 14;
+    const n = 4 + Math.floor(hash01(i, 5) * 3);
+    const rot = hash01(i, 6) * Math.PI * 2;
+    const pts: string[] = [];
+    for (let k = 0; k < n; k += 1) {
+      const a = rot + (Math.PI * 2 * k) / n;
+      const rr = r * (0.75 + hash01(i + k, 1) * 0.35);
+      pts.push(`${(cx + Math.cos(a) * rr).toFixed(1)},${(cy + Math.sin(a) * rr).toFixed(1)}`);
+    }
+    parts.push(
+      `<polygon points="${pts.join(" ")}" fill="rgba(${pick(p.fills, i, 1)},${beastOp(0.1 + hash01(i, 7) * 0.08).toFixed(3)})" stroke="rgba(${pick(p.strokes, i, 2)},${beastOp(0.14 + hash01(i, 8) * 0.08).toFixed(3)})" stroke-width="0.75"/>`
+    );
+  }
+
+  for (let i = 0; i < 16; i += 1) {
+    const side = Math.floor(hash01(i, 0.4) * 3);
+    let x: number;
+    let y: number;
+    let ang: number;
+    if (side === 0) {
+      x = CANVAS_W * (0.68 + hash01(i, 1) * 0.32);
+      y = CANVAS_H * hash01(i, 2);
+      ang = Math.PI + (hash01(i, 3) - 0.5) * 0.9;
+    } else if (side === 1) {
+      x = CANVAS_W * (0.42 + hash01(i, 4) * 0.58);
+      y = CANVAS_H * (0.72 + hash01(i, 5) * 0.28);
+      ang = -Math.PI / 2 + (hash01(i, 6) - 0.5) * 1.0;
+    } else {
+      x = CANVAS_W * (0.58 + hash01(i, 7) * 0.42);
+      y = CANVAS_H * hash01(i, 8) * 0.28;
+      ang = Math.PI * 0.75 + (hash01(i, 9) - 0.5) * 0.7;
+    }
+    if (hash01(i + 12, 1) > densityAt(x / CANVAS_W, y / CANVAS_H) * 0.98) continue;
+
+    let len = 38 + hash01(i, 11) * 46;
+    let depth = 0;
+    let cx = x;
+    let cy = y;
+    let a = ang;
+    while (depth < 5 && len > 8) {
+      const nx2 = cx + Math.cos(a) * len;
+      const ny2 = cy + Math.sin(a) * len;
+      const sw = (1.05 - depth * 0.1).toFixed(2);
+      const op = beastOp(0.18 - depth * 0.02 + hash01(i, depth) * 0.06);
+      parts.push(
+        `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${nx2.toFixed(1)}" y2="${ny2.toFixed(1)}" stroke="rgba(${pick(p.strokes, i, depth)},${op.toFixed(3)})" stroke-width="${sw}" stroke-linecap="round"/>`
+      );
+      if (depth < 3 && hash01(i, depth + 4) > 0.4) {
+        const ba = a + (hash01(i, depth + 5) > 0.5 ? 0.55 : -0.55);
+        const bl = len * (0.32 + hash01(i, depth + 6) * 0.28);
+        parts.push(
+          `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${(cx + Math.cos(ba) * bl).toFixed(1)}" y2="${(cy + Math.sin(ba) * bl).toFixed(1)}" stroke="rgba(${pick(p.accent, i, depth)},${beastOp(0.14).toFixed(3)})" stroke-width="0.7" stroke-linecap="round"/>`
+        );
+      }
+      cx = nx2;
+      cy = ny2;
+      a += (hash01(i, depth + 8) - 0.5) * 0.7;
+      len *= 0.62;
+      depth += 1;
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+function buildBerserker(p: BeastPalette): string {
+  const parts: string[] = [];
+
+  for (let i = 0; i < 42; i += 1) {
+    const nx = 0.34 + hash01(i * 1.4, 1.0) * 0.68;
+    const ny = hash01(i * 1.9, 2.8);
+    if (hash01(i, 0.4) > densityAt(nx, ny) * 0.92) continue;
+    const x = nx * CANVAS_W;
+    const y = ny * CANVAS_H;
+    const len = 12 + hash01(i, 3) * 24;
+    parts.push(
+      `<line x1="${x.toFixed(1)}" y1="${(y - len * 0.5).toFixed(1)}" x2="${(x + (hash01(i, 4) - 0.5) * 2).toFixed(1)}" y2="${(y + len * 0.5).toFixed(1)}" stroke="rgba(${pick(p.strokes, i, 1)},${beastOp(0.12 + hash01(i, 5) * 0.08).toFixed(3)})" stroke-width="0.55"/>`
+    );
+  }
+
+  for (let i = 0; i < 32; i += 1) {
+    const nx = 0.34 + hash01(i * 1.85, 1.2) * 0.7;
+    const ny = hash01(i * 2.1, 3.5);
+    if (hash01(i + 1, 0.7) > densityAt(nx, ny) * 0.9) continue;
+
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const w = 12 + hash01(i, 4) * 22;
+    const h = 9 + hash01(i, 5) * 16;
+    const rot = ((hash01(i, 6) - 0.5) * 55).toFixed(1);
+    const jagged = 0.18 + hash01(i, 7) * 0.2;
+
+    const d = [
+      `M${(-w / 2).toFixed(1)} ${(-h * 0.15).toFixed(1)}`,
+      `L${(-w * 0.15).toFixed(1)} ${(-h / 2).toFixed(1)}`,
+      `L${(w * 0.2).toFixed(1)} ${(-h * 0.42).toFixed(1)}`,
+      `L${(w / 2).toFixed(1)} ${(-h * jagged).toFixed(1)}`,
+      `L${(w * 0.42).toFixed(1)} ${(h * 0.35).toFixed(1)}`,
+      `L${(w * 0.05).toFixed(1)} ${(h / 2).toFixed(1)}`,
+      `L${(-w * 0.35).toFixed(1)} ${(h * 0.38).toFixed(1)}`,
+      "Z",
+    ].join(" ");
+
+    const fill = pick(p.fills, i, 1);
+    const stroke = pick(p.strokes, i, 2);
+    const op = beastOp(0.14 + hash01(i, 8) * 0.1);
+    const fillOp = beastOp(0.08 + hash01(i, 9) * 0.07);
+
+    parts.push(
+      `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${rot})">` +
+        `<path d="${d}" fill="rgba(${fill},${fillOp.toFixed(3)})" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="0.85" stroke-linejoin="miter"/>` +
+        `<line x1="${(-w * 0.2).toFixed(1)}" y1="${(-h * 0.1).toFixed(1)}" x2="${(w * 0.25).toFixed(1)}" y2="${(h * 0.15).toFixed(1)}" stroke="rgba(${pick(p.accent, i, 1)},${beastOp(0.12).toFixed(3)})" stroke-width="0.55"/>` +
+        `</g>`
+    );
+  }
+
+  for (let i = 0; i < 12; i += 1) {
+    const nx = 0.5 + hash01(i * 2.5, 2) * 0.5;
+    const ny = 0.1 + hash01(i * 1.9, 4) * 0.8;
+    if (hash01(i, 0.3) > densityAt(nx, ny) * 0.75) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const ang = -Math.PI / 2 + (hash01(i, 5) - 0.5) * 0.5;
+    const len = 6 + hash01(i, 6) * 12;
+    parts.push(
+      `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${(cx + Math.cos(ang) * len).toFixed(1)}" y2="${(cy + Math.sin(ang) * len).toFixed(1)}" stroke="rgba(${pick(p.accent, i, 1)},${beastOp(0.14).toFixed(3)})" stroke-width="0.75" stroke-linecap="square"/>`
+    );
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+function armorPlatePath(
+  w: number,
+  h: number,
+  bevel: number
+): string {
+  const bw = w * bevel;
+  return [
+    `M${(-w / 2 + bw).toFixed(1)} ${(-h / 2).toFixed(1)}`,
+    `L${(w / 2 - bw).toFixed(1)} ${(-h / 2).toFixed(1)}`,
+    `L${(w / 2).toFixed(1)} ${(-h / 2 + bw * 0.7).toFixed(1)}`,
+    `L${(w / 2).toFixed(1)} ${(h / 2 - bw * 0.5).toFixed(1)}`,
+    `L${(w / 2 - bw).toFixed(1)} ${(h / 2).toFixed(1)}`,
+    `L${(-w / 2 + bw).toFixed(1)} ${(h / 2).toFixed(1)}`,
+    `L${(-w / 2).toFixed(1)} ${(h / 2 - bw * 0.5).toFixed(1)}`,
+    `L${(-w / 2).toFixed(1)} ${(-h / 2 + bw * 0.7).toFixed(1)}`,
+    "Z",
+  ].join(" ");
+}
+
+function armorFlutes(
+  w: number,
+  h: number,
+  count: number,
+  p: BeastPalette,
+  seed: number
+): string {
+  const g: string[] = [];
+  const margin = w * 0.12;
+  const usable = w - margin * 2;
+  for (let i = 0; i < count; i += 1) {
+    const t = count <= 1 ? 0.5 : i / (count - 1);
+    const x = -w / 2 + margin + usable * t;
+    const y0 = -h * 0.38;
+    const y1 = h * 0.38;
+    // 溝（暗）
+    g.push(
+      `<line x1="${x.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="rgba(${pick(p.fills, seed, i)},${beastOp(0.22).toFixed(3)})" stroke-width="1.15" stroke-linecap="round"/>`
+    );
+    // 稜のハイライト（少し右にずらす）
+    g.push(
+      `<line x1="${(x + 1.1).toFixed(1)}" y1="${(y0 + 1).toFixed(1)}" x2="${(x + 1.1).toFixed(1)}" y2="${(y1 - 1).toFixed(1)}" stroke="rgba(${pick(p.accent, seed, i)},${beastOp(0.2 + hash01(seed, i) * 0.1).toFixed(3)})" stroke-width="0.55" stroke-linecap="round"/>`
+    );
+  }
+  return g.join("");
+}
+
+function buildArmor(p: BeastPalette): string {
+  const parts: string[] = [];
+
+  // 胸当て風の縦長プレート（フルーティング密集）
+  for (let i = 0; i < 14; i += 1) {
+    const nx = 0.4 + hash01(i * 1.8, 1.2) * 0.62;
+    const ny = 0.05 + hash01(i * 1.5, 3.1) * 0.88;
+    if (hash01(i + 1, 0.6) > densityAt(nx, ny) * 0.95) continue;
+
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const w = 22 + hash01(i, 4) * 28;
+    const h = 36 + hash01(i, 5) * 42;
+    const rot = ((hash01(i, 6) - 0.5) * 10).toFixed(1);
+    const fluteN = 5 + Math.floor(hash01(i, 7) * 5);
+    const fill = pick(p.fills, i, 1);
+    const stroke = pick(p.strokes, i, 2);
+
+    parts.push(
+      `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${rot})">` +
+        `<path d="${armorPlatePath(w, h, 0.1)}" fill="rgba(${fill},${beastOp(0.12 + hash01(i, 8) * 0.08).toFixed(3)})" stroke="rgba(${stroke},${beastOp(0.22 + hash01(i, 9) * 0.1).toFixed(3)})" stroke-width="1.1" stroke-linejoin="miter"/>` +
+        armorFlutes(w, h, fluteN, p, i * 11) +
+        // 上下縁の金属ハイライト
+        `<line x1="${(-w * 0.35).toFixed(1)}" y1="${(-h * 0.42).toFixed(1)}" x2="${(w * 0.35).toFixed(1)}" y2="${(-h * 0.42).toFixed(1)}" stroke="rgba(${pick(p.accent, i, 1)},${beastOp(0.18).toFixed(3)})" stroke-width="0.7"/>` +
+        `<line x1="${(-w * 0.3).toFixed(1)}" y1="${(h * 0.42).toFixed(1)}" x2="${(w * 0.3).toFixed(1)}" y2="${(h * 0.42).toFixed(1)}" stroke="rgba(${pick(p.strokes, i, 3)},${beastOp(0.12).toFixed(3)})" stroke-width="0.55"/>` +
+        `</g>`
+    );
+  }
+
+  // 重ね肩当て / ラメラー風の横帯プレート
+  for (let row = 0; row < 9; row += 1) {
+    const cols = 3 + (row % 2);
+    for (let col = 0; col < cols; col += 1) {
+      const nx = 0.52 + col * 0.15 + (row % 2) * 0.06 + hash01(row, col) * 0.02;
+      const ny = 0.08 + row * 0.1 + hash01(col, row) * 0.015;
+      if (nx > 1.02 || ny > 0.95) continue;
+      if (hash01(row + col, 0.9) > densityAt(Math.min(1, nx), Math.min(1, ny)) * 0.9) {
+        continue;
+      }
+
+      const cx = Math.min(CANVAS_W - 6, nx * CANVAS_W);
+      const cy = ny * CANVAS_H;
+      const w = 30 + hash01(row, col + 2) * 16;
+      const h = 12 + hash01(col, row + 3) * 8;
+      const rot = ((hash01(row, col + 5) - 0.5) * 8).toFixed(1);
+      const fluteN = 4 + Math.floor(hash01(row, col + 6) * 3);
+
+      parts.push(
+        `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${rot})">` +
+          `<path d="${armorPlatePath(w, h, 0.14)}" fill="rgba(${pick(p.fills, row, col)},${beastOp(0.1 + hash01(row, col) * 0.07).toFixed(3)})" stroke="rgba(${pick(p.strokes, col, row)},${beastOp(0.2).toFixed(3)})" stroke-width="0.95"/>` +
+          armorFlutes(w, h * 0.95, fluteN, p, row * 17 + col) +
+          `</g>`
+      );
+    }
+  }
+
+  // ベローズ・バイザー風の横リブ（疎）
+  for (let i = 0; i < 7; i += 1) {
+    const nx = 0.58 + hash01(i, 2) * 0.4;
+    const ny = 0.05 + hash01(i, 3) * 0.35;
+    if (hash01(i, 0.4) > densityAt(nx, ny) * 0.85) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const w = 24 + hash01(i, 4) * 18;
+    const ribs = 4 + Math.floor(hash01(i, 5) * 3);
+    let ribSvg = "";
+    for (let r = 0; r < ribs; r += 1) {
+      const y = -8 + r * 4.2;
+      ribSvg += `<line x1="${(-w * 0.4).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(w * 0.4).toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(${pick(p.strokes, i, r)},${beastOp(0.16).toFixed(3)})" stroke-width="0.85"/>`;
+      ribSvg += `<line x1="${(-w * 0.38).toFixed(1)}" y1="${(y + 1).toFixed(1)}" x2="${(w * 0.38).toFixed(1)}" y2="${(y + 1).toFixed(1)}" stroke="rgba(${pick(p.accent, i, r)},${beastOp(0.1).toFixed(3)})" stroke-width="0.4"/>`;
+    }
+    parts.push(
+      `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)})">` +
+        `<rect x="${(-w / 2).toFixed(1)}" y="-10" width="${w.toFixed(1)}" height="20" rx="2" fill="rgba(${pick(p.fills, i, 1)},${beastOp(0.1).toFixed(3)})" stroke="rgba(${pick(p.strokes, i, 2)},${beastOp(0.18).toFixed(3)})" stroke-width="0.8"/>` +
+        ribSvg +
+        `</g>`
+    );
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+function buildDna(p: BeastPalette): string {
+  const parts: string[] = [];
+
+  // 遠景の金グリッド（左右に寄せて中央空け）
+  for (let i = 0; i < 10; i += 1) {
+    const x = 8 + i * 12;
+    parts.push(
+      `<line x1="${x}" y1="20" x2="${x}" y2="120" stroke="rgba(${pick(p.accent, i, 1)},${beastOp(0.08).toFixed(3)})" stroke-width="0.4"/>`
+    );
+  }
+  for (let i = 0; i < 8; i += 1) {
+    const y = 24 + i * 12;
+    parts.push(
+      `<line x1="6" y1="${y}" x2="120" y2="${y}" stroke="rgba(${pick(p.accent, i, 2)},${beastOp(0.07).toFixed(3)})" stroke-width="0.35"/>`
+    );
+  }
+  for (let i = 0; i < 10; i += 1) {
+    const x = CANVAS_W - 8 - i * 12;
+    parts.push(
+      `<line x1="${x}" y1="${CANVAS_H - 130}" x2="${x}" y2="${CANVAS_H - 20}" stroke="rgba(${pick(p.accent, i, 3)},${beastOp(0.08).toFixed(3)})" stroke-width="0.4"/>`
+    );
+  }
+  for (let i = 0; i < 8; i += 1) {
+    const y = CANVAS_H - 24 - i * 12;
+    parts.push(
+      `<line x1="${CANVAS_W - 120}" y1="${y}" x2="${CANVAS_W - 6}" y2="${y}" stroke="rgba(${pick(p.accent, i, 4)},${beastOp(0.07).toFixed(3)})" stroke-width="0.35"/>`
+    );
+  }
+
+  // 二重らせん（縦方向・中央やや右）
+  const helixCx = CANVAS_W * 0.62;
+  const helixTop = 28;
+  const helixH = CANVAS_H - 56;
+  const turns = 3.2;
+  const amp = 28;
+  const steps = 72;
+
+  for (let s = 0; s < steps; s += 1) {
+    const t = s / (steps - 1);
+    const y = helixTop + helixH * t;
+    const ang = t * turns * Math.PI * 2;
+    const x1 = helixCx + Math.cos(ang) * amp;
+    const x2 = helixCx + Math.cos(ang + Math.PI) * amp;
+    // 深度っぽさ: 手前側を濃く
+    const depth1 = 0.55 + 0.45 * ((Math.sin(ang) + 1) * 0.5);
+    const depth2 = 0.55 + 0.45 * ((Math.sin(ang + Math.PI) + 1) * 0.5);
+
+    // 塩基対の横棒（疎に）
+    if (s % 3 === 0) {
+      parts.push(
+        `<line x1="${x1.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(${pick(p.strokes, s, 1)},${beastOp(0.1 * Math.min(depth1, depth2)).toFixed(3)})" stroke-width="0.55"/>`
+      );
+    }
+
+    // 粒子ノード
+    const r1 = 1.2 + depth1 * 1.4;
+    const r2 = 1.2 + depth2 * 1.4;
+    parts.push(
+      `<circle cx="${x1.toFixed(1)}" cy="${y.toFixed(1)}" r="${r1.toFixed(1)}" fill="rgba(${pick(p.strokes, s, 2)},${beastOp(0.14 + depth1 * 0.16).toFixed(3)})"/>` +
+        `<circle cx="${x2.toFixed(1)}" cy="${y.toFixed(1)}" r="${r2.toFixed(1)}" fill="rgba(${pick(p.strokes, s + 1, 3)},${beastOp(0.14 + depth2 * 0.16).toFixed(3)})"/>`
+    );
+
+    // ストランドの短い接続
+    if (s > 0) {
+      const prevT = (s - 1) / (steps - 1);
+      const prevY = helixTop + helixH * prevT;
+      const prevAng = prevT * turns * Math.PI * 2;
+      const px1 = helixCx + Math.cos(prevAng) * amp;
+      const px2 = helixCx + Math.cos(prevAng + Math.PI) * amp;
+      parts.push(
+        `<line x1="${px1.toFixed(1)}" y1="${prevY.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(${pick(p.strokes, s, 4)},${beastOp(0.12 + depth1 * 0.1).toFixed(3)})" stroke-width="0.7"/>` +
+          `<line x1="${px2.toFixed(1)}" y1="${prevY.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(${pick(p.strokes, s, 5)},${beastOp(0.12 + depth2 * 0.1).toFixed(3)})" stroke-width="0.7"/>`
+      );
+    }
+  }
+
+  // 周囲の粒子 / ボケ
+  for (let i = 0; i < 55; i += 1) {
+    const nx = 0.35 + hash01(i * 2.1, 1.4) * 0.68;
+    const ny = hash01(i * 1.7, 3.3);
+    if (hash01(i, 0.5) > densityAt(nx, ny) * 0.95) continue;
+    // らせん芯の近くは少し避ける
+    const dx = nx - 0.62;
+    if (Math.abs(dx) < 0.08 && hash01(i, 9) > 0.35) continue;
+
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const isGold = hash01(i, 6) > 0.62;
+    const color = isGold ? pick(p.accent, i, 1) : pick(p.strokes, i, 2);
+    const r = 0.6 + hash01(i, 7) * 2.2;
+    parts.push(
+      `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="rgba(${color},${beastOp(0.08 + hash01(i, 8) * 0.12).toFixed(3)})"/>`
+    );
+  }
+
+  // 第2の細いへリックス（端に寄せたサブ）
+  const hx2 = CANVAS_W * 0.88;
+  const amp2 = 12;
+  for (let s = 0; s < 36; s += 1) {
+    const t = s / 35;
+    const y = 80 + (CANVAS_H - 160) * t;
+    const ang = t * 2.4 * Math.PI * 2 + 0.5;
+    const x1 = hx2 + Math.cos(ang) * amp2;
+    const x2 = hx2 + Math.cos(ang + Math.PI) * amp2;
+    parts.push(
+      `<circle cx="${x1.toFixed(1)}" cy="${y.toFixed(1)}" r="1.1" fill="rgba(${pick(p.strokes, s, 1)},${beastOp(0.14).toFixed(3)})"/>` +
+        `<circle cx="${x2.toFixed(1)}" cy="${y.toFixed(1)}" r="1.1" fill="rgba(${pick(p.strokes, s, 2)},${beastOp(0.12).toFixed(3)})"/>`
+    );
+    if (s % 4 === 0) {
+      parts.push(
+        `<line x1="${x1.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(${pick(p.strokes, s, 3)},${beastOp(0.08).toFixed(3)})" stroke-width="0.45"/>`
+      );
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+
 /* ─── HUD (shared placement with scale) ─── */
 
 function plusMark(cx: number, cy: number, s: number, op: number, strokePrefix: string): string {
@@ -3053,12 +3483,34 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
         return buildJagArmor(p);
       case "beast-crimsonveil":
         return buildCrimsonVeil(p);
+      case "beast-behelit":
+        return buildBehelit(p);
+      case "beast-berserker":
+        return buildBerserker(p);
+      case "beast-armor":
+        return buildArmor(p);
+      case "beast-dna":
+        return buildDna(p);
       default:
         return wrapSvg("");
     }
   } finally {
     activeOpacityMul = 1;
   }
+}
+
+/** 疎な獣皮 / 宝石レイヤー（Native SvgXml 用） */
+export function getProfilePlanProBeastSkinSvg(
+  variant: ProfilePlanProBeastBgVariant
+): string {
+  return cachedSvg(`beast:skin:svg:${variant}:v10`, () => buildSkinSvg(variant));
+}
+
+/** 微細 HUD（Native SvgXml 用） */
+export function getProfilePlanProBeastHudSvg(
+  variant: ProfilePlanProBeastBgVariant
+): string {
+  return cachedSvg(`beast:hud:svg:${variant}:v10`, () => buildHudSvg(variant));
 }
 
 /** 疎な獣皮 / 宝石レイヤー */

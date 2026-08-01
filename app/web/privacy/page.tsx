@@ -6,7 +6,7 @@ export default function WebPrivacyPage() {
   return (
     <LegalPageLayout
       variant="web"
-      title="プライバシーポリシー（Privacy Policy）"
+      title="PRIVACY"
       description="Uniterz におけるユーザー情報の取り扱いについて説明するページです。"
       updatedAt="2025-11-17"
     >

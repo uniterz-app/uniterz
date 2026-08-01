@@ -49,5 +49,15 @@ export function rankingsTexts(language: RankingsLanguage) {
     shareRankCardFailed: m.shareRankCardFailed,
     rankingProgressNoData: t(lang).profile.rankingProgressNoData,
     rankGapViewGap: m.rankGap.viewGap,
+    divisionStandard: m.divisionStandard,
+    periodSeason: m.periodSeason ?? "Season",
+    periodWeekly: m.periodWeekly ?? "Weekly",
+    periodMonthly: m.periodMonthly ?? "Monthly",
+    nbaBoardRegular: m.nbaBoardRegular,
+    nbaBoardPlayoffs: m.nbaBoardPlayoffs,
+    divisionOpen: m.divisionOpen,
+    divisionOpenTitle: m.divisionOpenTitle,
+    divisionOpenLockBody: m.divisionOpenLockBody,
+    divisionOpenCta: m.divisionOpenCta,
   };
 }

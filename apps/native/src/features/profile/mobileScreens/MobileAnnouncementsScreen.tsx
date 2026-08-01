@@ -183,12 +183,18 @@ export default function MobileAnnouncementsScreen({
     return (id: string) => !readIds.has(id);
   }, [authReady, readIds]);
 
-  const listTitle = isJa ? "お知らせ" : "News";
-  const detailTitle = listTitle;
-
   if (detailId) {
     return (
-      <MobilePageShell title={detailTitle} onClose={onClose} onBack={() => setDetailId(null)}>
+      <MobilePageShell
+        title="NEWS"
+        subtitle={
+          isJa
+            ? "公式のお知らせ・イベント・メンテナンス情報です。"
+            : "Official announcements, events, and maintenance updates."
+        }
+        onClose={onClose}
+        onBack={() => setDetailId(null)}
+      >
         <ScrollView contentContainerStyle={styles.detailPad}>
           {detailLoading ? (
             <View style={styles.loaderWrap}>
@@ -209,7 +215,15 @@ export default function MobileAnnouncementsScreen({
   }
 
   return (
-    <MobilePageShell title={listTitle} onClose={onClose}>
+    <MobilePageShell
+      title="NEWS"
+      subtitle={
+        isJa
+          ? "公式のお知らせ・イベント・メンテナンス情報です。"
+          : "Official announcements, events, and maintenance updates."
+      }
+      onClose={onClose}
+    >
       <ScrollView contentContainerStyle={styles.listPad}>
         {loading ? (
           <View style={styles.skelWrap}>

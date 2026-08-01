@@ -3,7 +3,10 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  previousNbaSeasonKey,
+} from "@/lib/rankings/nbaSeason";
 import {
   isRankingLeagueSource,
   type RankingLeagueSource,
@@ -38,9 +41,13 @@ function rankFromHistoryDoc(
     const block = data.wc?.[opts.wcStage];
     return coerceTotalPointsRank(block?.totalPoints);
   }
-  // NBA は現行シーズンの seasons ブロックのみ（旧シーズンの順位は混ぜない）
-  return coerceTotalPointsRank(
+  // 現行シーズン優先。空のオフシーズンは前シーズンの順位を表示する
+  const current = coerceTotalPointsRank(
     data.seasons?.[CURRENT_NBA_SEASON_KEY]?.totalPoints
+  );
+  if (current != null) return current;
+  return coerceTotalPointsRank(
+    data.seasons?.[previousNbaSeasonKey(CURRENT_NBA_SEASON_KEY)]?.totalPoints
   );
 }
 

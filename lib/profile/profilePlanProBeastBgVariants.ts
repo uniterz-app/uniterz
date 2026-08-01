@@ -40,7 +40,12 @@ export type ProfilePlanProBeastBgVariant =
   | "beast-fangrow"
   | "beast-inkswirl"
   | "beast-jagarmor"
-  | "beast-crimsonveil";
+  | "beast-crimsonveil"
+  /** ベルセルク風・赤黒ダーク（dev 案） */
+  | "beast-behelit"
+  | "beast-berserker"
+  | "beast-armor"
+  | "beast-dna";
 
 export type ProfilePlanProBeastBgMeta = {
   id: ProfilePlanProBeastBgVariant;
@@ -411,6 +416,42 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     swatch:
       "linear-gradient(150deg, #010101, #0c0404 45%, #dc262655 70%, #020101)",
   },
+  {
+    id: "beast-behelit",
+    label: "Crimson Behelit",
+    tag: "赤の卵",
+    description:
+      "ベルセルク風案②。角ばった亀裂と暗い血脈。丸い赤は出さない。",
+    swatch:
+      "linear-gradient(148deg, #060000, #180505 45%, #7a151588 65%, #030000)",
+  },
+  {
+    id: "beast-berserker",
+    label: "Berserker Plate",
+    tag: "狂戦士",
+    description:
+      "ベルセルク風案③。暗い鉄板とヘアライン。黒鉄メインの甲冑。",
+    swatch:
+      "linear-gradient(150deg, #050000, #160404 40%, #9a202088 60%, #020000)",
+  },
+  {
+    id: "beast-armor",
+    label: "Fluted Armor",
+    tag: "甲冑",
+    description:
+      "マクシミリアン甲冑風の縦溝フルーティング。銀鉄のポリッシュ鋼。",
+    swatch:
+      "linear-gradient(150deg, #0a0c10, #2a3038 40%, #c8d0dc88 58%, #08090c)",
+  },
+  {
+    id: "beast-dna",
+    label: "Helix Genome",
+    tag: "DNA",
+    description:
+      "粒子の二重らせん。ライムグリーン発光＋金の遠景グリッド。サイバー生命。",
+    swatch:
+      "linear-gradient(155deg, #020408, #0a1a08 35%, #a3e63588 55%, #ca8a0488 70%, #010204)",
+  }
 ];
 
 /** Round 3 のみ（比較ナビ用） */
@@ -459,6 +500,10 @@ export const PROFILE_PLAN_PRO_BEAST_BG_ROUND6: ProfilePlanProBeastBgVariant[] = 
   "beast-inkswirl",
   "beast-jagarmor",
   "beast-crimsonveil",
+  "beast-behelit",
+  "beast-berserker",
+  "beast-armor",
+  "beast-dna"
 ];
 
 export const PROFILE_PLAN_PRO_BEAST_BG_DEFAULT: ProfilePlanProBeastBgVariant =

@@ -6,6 +6,11 @@
 
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  periodRankingPeriodKey,
+  periodRankingSnapshotDocId,
+  type RankingDivision,
+} from "@/lib/rankings/rankingDivision";
 import type { RankingApiRow } from "@/lib/rankings/rankingTransform";
 import {
   enumerateDateKeysInclusive,
@@ -38,6 +43,7 @@ export type PeriodSnapshotBulk = {
   ok: true;
   period: Exclude<RankingPeriod, "season">;
   label: string;
+  division: RankingDivision;
   range: { startKey: string; endKey: string; labelKey: string };
   byMetric: Record<PeriodMetricKey, PeriodBulkMetricPayload>;
 };
@@ -45,12 +51,13 @@ export type PeriodSnapshotBulk = {
 /** 選択可能な期間ラベル一覧（新しい順） */
 export async function listNbaPeriodLabels(
   period: Exclude<RankingPeriod, "season">,
-  limit = 26
+  limit = 26,
+  division: RankingDivision = "standard"
 ): Promise<string[]> {
   const db = getAdminDb();
   const snap = await db
     .collection("period_ranking_snapshots")
-    .where("periodKey", "==", `nba_${period}`)
+    .where("periodKey", "==", periodRankingPeriodKey(division, period))
     .where("metric", "==", "totalPoints")
     .select("label")
     .get();
@@ -69,12 +76,21 @@ export async function readNbaPeriodRankingSnapshots(opts: {
   period: Exclude<RankingPeriod, "season">;
   label: string;
   uid?: string | null;
+  division?: RankingDivision;
 }): Promise<PeriodSnapshotBulk | null> {
+  const division = opts.division ?? "standard";
   const db = getAdminDb();
   const refs = PERIOD_METRICS.map((metric) =>
     db
       .collection("period_ranking_snapshots")
-      .doc(`nba_${opts.period}_${opts.label}_${metric}`)
+      .doc(
+        periodRankingSnapshotDocId({
+          division,
+          period: opts.period,
+          label: opts.label,
+          metric,
+        })
+      )
   );
   const snaps = await db.getAll(...refs);
   if (snaps.every((s) => !s.exists)) return null;
@@ -128,6 +144,7 @@ export async function readNbaPeriodRankingSnapshots(opts: {
     ok: true,
     period: opts.period,
     label: opts.label,
+    division,
     range: {
       startKey: range.startKey,
       endKey: range.endKey,

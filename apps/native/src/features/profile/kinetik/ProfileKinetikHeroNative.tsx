@@ -1,12 +1,23 @@
-import { useMemo } from "react";
+/**
+ * Web `ProfileKinetikHero` 相当 — NBA Playoffs / Season 切替付き。
+ */
+import { useMemo, useState } from "react";
 import type { ViewStyle } from "react-native";
 import type { Profile } from "../../../../../../app/component/profile/useProfile";
 import { mapProfileToKinetikPanel } from "../../../../../../lib/profile/mapProfileToKinetikPanel";
 import type { ProfileStatsStreakContext } from "../../../../../../lib/profile/profileStreakScope";
 import type { MyRankMetricValueDeltas } from "../../../../../../lib/rankings/myRankMetricValueDeltas";
 import type { ProfileKinetikMetricsSection } from "../../../../../../lib/profile/profileKinetikMetricsSection";
+import {
+  getNbaKinetikPeriodTitle,
+  useNbaKinetikPeriodStats,
+  type ProfileKinetikMetricsPeriod,
+} from "../../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "../profileApi";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
+import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
+import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../../lib/profile/profilePlanProBgVariants";
+import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
 
 export type ProfileKinetikHeroNativeProps = {
@@ -16,6 +27,7 @@ export type ProfileKinetikHeroNativeProps = {
   bio: string;
   countryCode: string;
   plan: "free" | "pro";
+  planProBgVariant?: ProfilePlanProBgVariant;
   memberSinceMs?: number | null;
   language: "ja" | "en";
   summary?: ProfileSummaryNative | null;
@@ -33,7 +45,54 @@ export type ProfileKinetikHeroNativeProps = {
   style?: ViewStyle;
   wcStackedMetricsSections?: ProfileKinetikMetricsSection[];
   wcStackedStatsLoading?: boolean;
+  targetUid?: string | null;
+  /** 累計プロフィール閲覧数（公開） */
+  profileViewCount?: number | null;
+  /** 保有 Unit（公開） */
+  unitBalance?: number | null;
 };
+
+const EMPTY_NBA_STATS = {
+  winRate: 0,
+  posts: 0,
+  hits: 0,
+  exactHits: 0,
+  totalPoints: 0,
+  upset: 0,
+  totalPointsRank: null as number | null,
+  totalPointsRankDenominator: null as number | null,
+  rankDeltaPlaces: null as number | null,
+};
+
+function toSummaryInput(summary?: ProfileSummaryNative | null) {
+  if (!summary) return undefined;
+  return {
+    posts: summary.posts,
+    fullPosts: summary.fullPosts,
+    recent3Posts: summary.recent3Posts,
+    wins: summary.wins,
+    winRate: summary.winRate,
+    exactHitCount: summary.exactHitCount,
+    upsetPointsSum: summary.upsetPointsSum,
+    pointsSumV3: summary.pointsSumV3,
+    upsetChanceCount: summary.upsetChanceCount,
+    upsetHitCount: summary.upsetHitCount,
+    upsetBonusSum: summary.upsetBonusSum,
+    streakBonusSum: summary.streakBonusSum,
+    basePointsSum: summary.basePointsSum,
+  };
+}
+
+function toRanksInput(summaryRanks?: ProfileSummaryRanksNative | null) {
+  if (!summaryRanks) return undefined;
+  return {
+    totalPrecision: summaryRanks.totalPrecision,
+    totalUpset: summaryRanks.totalUpset,
+    totalPoints: summaryRanks.totalPoints,
+    totalPointsDenominator: summaryRanks.totalPointsDenominator ?? null,
+    rankDeltaPlaces: summaryRanks.rankDeltaPlaces ?? null,
+  };
+}
 
 export default function ProfileKinetikHeroNative({
   displayName,
@@ -42,6 +101,7 @@ export default function ProfileKinetikHeroNative({
   bio,
   countryCode,
   plan,
+  planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
   memberSinceMs = null,
   language,
   summary,
@@ -59,53 +119,40 @@ export default function ProfileKinetikHeroNative({
   style,
   wcStackedMetricsSections,
   wcStackedStatsLoading = false,
+  targetUid = null,
+  profileViewCount = null,
+  unitBalance = null,
 }: ProfileKinetikHeroNativeProps) {
-  const mapped = useMemo(() => {
-    const profile: Profile = {
+  const isNba = profileStatsContext.rankingLeague === "nba";
+  const [metricsPeriod, setMetricsPeriod] =
+    useState<ProfileKinetikMetricsPeriod>("playoffs");
+  const effectivePeriod: ProfileKinetikMetricsPeriod = isNba
+    ? metricsPeriod
+    : "playoffs";
+  const apiBase = getUniterzApiBaseUrl() || undefined;
+  const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
+    targetUid,
+    effectivePeriod,
+    isNba,
+    apiBase
+  );
+
+  const profileBase: Profile = useMemo(
+    () => ({
       displayName,
       handle,
       avatarUrl,
       bio,
       countryCode: countryCode.trim() || null,
       plan,
-      planProBgVariant: "atmos",
+      planProBgVariant,
       memberSinceMs: memberSinceMs ?? null,
       counts: { posts: summary?.posts ?? 0 },
       currentStreak: winStreak,
       maxStreak: winStreak,
-    };
-    return mapProfileToKinetikPanel({
-      profile,
-        summary: summary
-          ? {
-              posts: summary.posts,
-              fullPosts: summary.fullPosts,
-              recent3Posts: summary.recent3Posts,
-              wins: summary.wins,
-              winRate: summary.winRate,
-              exactHitCount: summary.exactHitCount,
-              upsetPointsSum: summary.upsetPointsSum,
-              pointsSumV3: summary.pointsSumV3,
-              upsetChanceCount: summary.upsetChanceCount,
-              upsetHitCount: summary.upsetHitCount,
-              upsetBonusSum: summary.upsetBonusSum,
-              streakBonusSum: summary.streakBonusSum,
-              basePointsSum: summary.basePointsSum,
-            }
-          : undefined,
-        summaryRanks: summaryRanks
-          ? {
-              totalPrecision: summaryRanks.totalPrecision,
-              totalUpset: summaryRanks.totalUpset,
-              totalPoints: summaryRanks.totalPoints,
-              totalPointsDenominator: summaryRanks.totalPointsDenominator ?? null,
-              rankDeltaPlaces: summaryRanks.rankDeltaPlaces ?? null,
-            }
-          : undefined,
-        profileStatsContext,
-        winStreak,
-      });
-  }, [
+      unitBalance: unitBalance ?? 0,
+    }),
+    [
       avatarUrl,
       bio,
       countryCode,
@@ -113,14 +160,58 @@ export default function ProfileKinetikHeroNative({
       handle,
       memberSinceMs,
       plan,
-      profileStatsContext,
-      summary,
-      summaryRanks,
+      planProBgVariant,
+      summary?.posts,
+      unitBalance,
       winStreak,
-  ]);
+    ]
+  );
+
+  const baseMapped = useMemo(
+    () =>
+      mapProfileToKinetikPanel({
+        profile: profileBase,
+        summary: toSummaryInput(summary),
+        summaryRanks: toRanksInput(summaryRanks),
+        profileStatsContext,
+        winStreak,
+      }),
+    [profileBase, profileStatsContext, summary, summaryRanks, winStreak]
+  );
+
+  const periodMapped = useMemo(() => {
+    if (!periodData) return null;
+    return mapProfileToKinetikPanel({
+      profile: profileBase,
+      summary: periodData.summary,
+      summaryRanks: periodData.summaryRanks,
+      profileStatsContext,
+      winStreak,
+    });
+  }, [periodData, profileBase, profileStatsContext, winStreak]);
+
+  const mapped = isNba
+    ? periodMapped
+      ? {
+          ...periodMapped,
+          metricsTitle: getNbaKinetikPeriodTitle(
+            effectivePeriod,
+            periodData!.seasonKey
+          ),
+        }
+      : {
+          ...baseMapped,
+          stats: { ...baseMapped.stats, ...EMPTY_NBA_STATS },
+          metricsTitle: getNbaKinetikPeriodTitle(effectivePeriod),
+          totalPointsRank: null,
+          totalPointsRankDenominator: null,
+          rankDeltaPlaces: null,
+        }
+    : baseMapped;
 
   const statsPending =
-    (statsLoading && !summary) ||
+    (statsLoading && !summary && !isNba) ||
+    (isNba && periodLoading && !periodData) ||
     (profileStatsContext.rankingLeague === "worldcup" &&
       wcStackedStatsLoading &&
       !wcStackedMetricsSections?.length);
@@ -140,6 +231,7 @@ export default function ProfileKinetikHeroNative({
       countryCode={countryCode}
       memberSinceMs={memberSinceMs}
       isPro={plan === "pro"}
+      planProBgVariant={planProBgVariant}
       winStreak={headerSection?.winStreak ?? mapped.winStreak}
       totalPointsRank={headerSection?.totalPointsRank ?? mapped.totalPointsRank}
       totalPointsRankDenominator={
@@ -154,15 +246,21 @@ export default function ProfileKinetikHeroNative({
       onToggleMetricsScope={onToggleMetricsScope}
       badges={badges}
       onBadgePress={onBadgePress}
+      profileViewCount={profileViewCount}
+      unitBalance={unitBalance}
       shareHandle={handle}
       metricValueDeltas={
-        headerSection?.metricValueDeltas ?? metricValueDeltas
+        isNba
+          ? null
+          : (headerSection?.metricValueDeltas ?? metricValueDeltas)
       }
       rankingLeague={profileStatsContext.rankingLeague}
       stackedMetricsSections={
         isWcStacked ? wcStackedMetricsSections : undefined
       }
       statsPending={statsPending}
+      metricsPeriod={isNba ? effectivePeriod : undefined}
+      onMetricsPeriodChange={isNba ? setMetricsPeriod : undefined}
     />
   );
 }

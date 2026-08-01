@@ -926,6 +926,9 @@ const mergedPreKickoffScoreClass = [
   let center: React.ReactNode = overlayCenterMode ? (
   status === "final" && score ? (
     <div
+      data-tutorial-target={
+        showMergedResult ? "result-detail-score" : undefined
+      }
       className={
         isMobile
           ? mobileDense
@@ -1682,7 +1685,14 @@ return (
               : dense
                 ? "items-start gap-1 px-3 py-0"
                 : "items-center gap-2 px-4 py-2.5"
+        } ${
+          inPredictOverlay || attachOverlayMarketBar ? "pb-2 pt-0.5" : ""
         }`}
+        data-tutorial-target={
+          inPredictOverlay || attachOverlayMarketBar
+            ? "predict-sides"
+            : undefined
+        }
         style={
           vtContentName
             ? ({
@@ -2353,6 +2363,7 @@ return (
 
       {showMergedResult && resultPost ? (
         <motion.div
+          data-tutorial-target="result-detail-stats"
           className="w-full px-3 pb-2 pt-0.5 md:px-4 md:pb-2.5"
           initial={entryTransition ? { opacity: 0, y: 6 } : false}
           animate={entryTransition ? { opacity: 1, y: 0 } : undefined}

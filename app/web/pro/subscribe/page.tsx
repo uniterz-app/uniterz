@@ -10,9 +10,9 @@ export default function WebProSubscribePage() {
   const { language } = useUserLanguage(fUser?.uid ?? null);
 
   return (
-    <main className="min-h-screen bg-[#050b14] px-3 py-6 text-white sm:px-4">
+    <main className="min-h-screen bg-[#050b14] px-4 py-8 text-white md:px-8">
       <FloatingCloseButton />
-      <div className="mx-auto max-w-xl">
+      <div className="mx-auto max-w-4xl">
         <ProSubscribePreview language={language} />
       </div>
     </main>

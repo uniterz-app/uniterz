@@ -1,18 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Camera, ChevronLeft, User } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Camera, User } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import CyberSubpageShell from "@/app/component/common/CyberSubpageShell";
 import CyberAuthField from "@/app/component/auth/CyberAuthField";
 import CyberAuthTextarea from "@/app/component/auth/CyberAuthTextarea";
 import CyberAuthSelect from "@/app/component/auth/CyberAuthSelect";
-import cyberFieldStyles from "@/app/component/auth/cyberAuthField.module.css";
-import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
+import {
+  SETTINGS_POOLS_BG_BASE,
+  SETTINGS_POOLS_BG_IMAGE,
+} from "@/lib/ui/settingsPoolsBackground";
 import type { Language } from "@/lib/i18n/language";
 import {
   ALL_LANGUAGES,
@@ -32,7 +36,7 @@ type Props = {
   onSaved?: () => void;
   /** 別コンテナに埋め込むときは true（オーバーレイなし） */
   embedded?: boolean;
-  /** 戻る・背景タップで閉じたあとサイドメニューを再度開く（保存成功時は呼ばない） */
+  /** 戻るで閉じたあとサイドメニューを再度開く（保存成功時は呼ばない） */
   reopenMenu?: () => void;
 };
 
@@ -42,6 +46,8 @@ export default function ProfileEditSheet({
   embedded = false,
   reopenMenu,
 }: Props) {
+  const pathname = usePathname() ?? "";
+  const isWeb = pathname.startsWith("/web");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [language, setLanguage] = useState<Language>(() =>
@@ -138,209 +144,201 @@ export default function ProfileEditSheet({
       }
       alert(t(language).common.saveFailed);
     }
-    // 保存後はメニューを自動では開かない
   };
 
-  /** 戻る・オーバーレイ：シートを閉じてサイドメニューを開き直す */
+  /** 戻る：シートを閉じてからサイドメニューを開き直す */
   const handleDismiss = () => {
     onClose();
-    reopenMenu?.();
+    window.setTimeout(() => {
+      reopenMenu?.();
+    }, 30);
   };
 
-  /**
-   * スクロール領域のみ（カードの塗り・枠は SettingsNeonCard 側）。
-   * 従来ここに付けていた外枠クラス（削除・参考用）:
-   * rounded-2xl border border-white/10 bg-black/55 shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md
-   */
-  const panelScrollClasses =
-    "relative isolate mx-auto w-full max-w-[480px] max-h-[min(90dvh,760px)] overflow-y-auto overflow-x-hidden";
-
-  const panel = (
-    <div
-      onClick={(e) => {
-        if (!embedded) e.stopPropagation();
-      }}
-      className={panelScrollClasses}
-    >
-      <SettingsNeonCard bare className="w-full">
-        <div className="relative px-5 py-5 sm:px-6 sm:py-6">
-          <div className={cyberFieldStyles.pageGrid} aria-hidden />
-          <div className="relative z-10">
-            <header className="mb-5 flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <h1 className="text-2xl font-bold tracking-tight text-white">
-                  {t(language).profile.settings}
-                </h1>
-                <p className="mt-1 text-sm text-white/70">
-                  {language === "en"
-                    ? "Edit your icon, name, bio, language, and country."
-                    : "アイコン・名前・自己紹介・言語・国を編集できます"}
-                </p>
-              </div>
-              {!embedded && (
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-zinc-900/85 text-white shadow-[0_8px_18px_rgba(0,0,0,0.4)] backdrop-blur-sm transition hover:bg-zinc-800/90 active:scale-95"
-                  aria-label={t(language).common.back}
-                >
-                  <ChevronLeft className="h-6 w-6" strokeWidth={2.25} aria-hidden />
-                </button>
-              )}
-            </header>
-
-            {!ready ? (
-              <div className="flex justify-center py-12">
-                <CandleChartLoader label={t(language).common.loading} />
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">
-                <div className="flex justify-center">
-                  <label className="relative inline-block cursor-pointer">
-                    <div className="relative h-32 w-32 overflow-hidden rounded-full ring-2 ring-white/10 ring-offset-2 ring-offset-black/40 sm:h-36 sm:w-36">
-                      <img
-                        src={previewURL}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover"
-                        style={{ objectPosition: `center ${cropY}%` }}
-                      />
-                      <div className="absolute inset-0 rounded-full ring-2 ring-black/30" />
-                    </div>
-                    <span
-                      className="absolute bottom-0 right-0 grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-white/15 bg-black/70 text-white shadow-[0_8px_20px_rgba(0,0,0,0.45)]"
-                      aria-hidden
-                    >
-                      <Camera className="h-4 w-4" />
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-white/75">
-                    {t(language).profile.username}
-                  </label>
-                  <CyberAuthField
-                    inputProps={{
-                      type: "text",
-                      name: "displayName",
-                      autoComplete: "name",
-                      placeholder: t(language).profile.username,
-                      value: name,
-                      onChange: (e) => setName(e.target.value),
-                    }}
-                    rightSlot={
-                      <span className="flex items-center justify-center text-[15px] text-white/80">
-                        <User className="h-4 w-4" aria-hidden />
-                      </span>
-                    }
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-white/75">
-                    {t(language).profile.bio}
-                  </label>
-                  <CyberAuthTextarea
-                    textareaProps={{
-                      name: "bio",
-                      placeholder: t(language).profile.bio,
-                      value: bio,
-                      onChange: (e) => setBio(e.target.value),
-                      rows: 4,
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-white/75">
-                    {t(language).profile.appLanguage}
-                  </label>
-                  <CyberAuthSelect
-                    selectProps={{
-                      value: language,
-                      onChange: (e) => setLanguage(e.target.value as Language),
-                    }}
-                  >
-                    {ALL_LANGUAGES.map((l) => (
-                      <option key={l} value={l}>
-                        {LANGUAGE_NATIVE_NAMES[l]}
-                      </option>
-                    ))}
-                  </CyberAuthSelect>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-white/75">
-                    {t(language).auth.countryOptional}
-                  </label>
-                  <CyberAuthSelect
-                    selectProps={{
-                      value: countryCode,
-                      onChange: (e) => setCountryCode(e.target.value),
-                    }}
-                  >
-                    <option value="">
-                      {t(language).common.notSet}
-                    </option>
-                    {COUNTRY_OPTIONS.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {language === "ja" ? c.labelJa : c.labelEn}
-                      </option>
-                    ))}
-                  </CyberAuthSelect>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  onPointerDown={() => setSavePressed(true)}
-                  onPointerUp={() => setSavePressed(false)}
-                  onPointerCancel={() => setSavePressed(false)}
-                  className={[
-                    "mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] border-0 px-3.5 py-3 font-bold tracking-wide text-white",
-                    "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
-                    "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
-                    "transition-[transform,filter,opacity] duration-100 ease-out",
-                    savePressed && !uploading ? "scale-[0.97]" : "scale-100",
-                    uploading ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-                  ].join(" ")}
-                >
-                  <span>
-                    {uploading
-                      ? t(language).profile.uploading
-                      : t(language).profile.saveChanges}
-                  </span>
-                  {!uploading ? (
-                    <span className="text-lg leading-none">↗</span>
-                  ) : null}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      </SettingsNeonCard>
+  const formBody = !ready ? (
+    <div className="flex justify-center py-12">
+      <CandleChartLoader label={t(language).common.loading} />
     </div>
+  ) : (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">
+      <div className="flex justify-center">
+        <label className="relative inline-block cursor-pointer">
+          <div className="relative h-32 w-32 overflow-hidden rounded-full ring-2 ring-white/10 ring-offset-2 ring-offset-black/40 sm:h-36 sm:w-36">
+            <img
+              src={previewURL}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ objectPosition: `center ${cropY}%` }}
+            />
+            <div className="absolute inset-0 rounded-full ring-2 ring-black/30" />
+          </div>
+          <span
+            className="absolute bottom-0 right-0 grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-white/15 bg-black/70 text-white shadow-[0_8px_20px_rgba(0,0,0,0.45)]"
+            aria-hidden
+          >
+            <Camera className="h-4 w-4" />
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </label>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-white/75">
+          {t(language).profile.username}
+        </label>
+        <CyberAuthField
+          inputProps={{
+            type: "text",
+            name: "displayName",
+            autoComplete: "name",
+            placeholder: t(language).profile.username,
+            value: name,
+            onChange: (e) => setName(e.target.value),
+          }}
+          rightSlot={
+            <span className="flex items-center justify-center text-[15px] text-white/80">
+              <User className="h-4 w-4" aria-hidden />
+            </span>
+          }
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-white/75">
+          {t(language).profile.bio}
+        </label>
+        <CyberAuthTextarea
+          textareaProps={{
+            name: "bio",
+            placeholder: t(language).profile.bio,
+            value: bio,
+            onChange: (e) => setBio(e.target.value),
+            rows: 4,
+          }}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-white/75">
+          {t(language).profile.appLanguage}
+        </label>
+        <CyberAuthSelect
+          selectProps={{
+            value: language,
+            onChange: (e) => setLanguage(e.target.value as Language),
+          }}
+        >
+          {ALL_LANGUAGES.map((l) => (
+            <option key={l} value={l}>
+              {LANGUAGE_NATIVE_NAMES[l]}
+            </option>
+          ))}
+        </CyberAuthSelect>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-white/75">
+          {t(language).auth.countryOptional}
+        </label>
+        <CyberAuthSelect
+          selectProps={{
+            value: countryCode,
+            onChange: (e) => setCountryCode(e.target.value),
+          }}
+        >
+          <option value="">{t(language).common.notSet}</option>
+          {COUNTRY_OPTIONS.map((c) => (
+            <option key={c.code} value={c.code}>
+              {language === "ja" ? c.labelJa : c.labelEn}
+            </option>
+          ))}
+        </CyberAuthSelect>
+      </div>
+
+      <button
+        type="submit"
+        disabled={uploading}
+        onPointerDown={() => setSavePressed(true)}
+        onPointerUp={() => setSavePressed(false)}
+        onPointerCancel={() => setSavePressed(false)}
+        className={[
+          "mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] border-0 px-3.5 py-3 font-bold tracking-wide text-white",
+          "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
+          "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
+          "transition-[transform,filter,opacity] duration-100 ease-out",
+          savePressed && !uploading ? "scale-[0.97]" : "scale-100",
+          uploading ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+        ].join(" ")}
+      >
+        <span>
+          {uploading
+            ? t(language).profile.uploading
+            : t(language).profile.saveChanges}
+        </span>
+        {!uploading ? (
+          <span className="text-lg leading-none">↗</span>
+        ) : null}
+      </button>
+    </form>
   );
 
   if (embedded) {
-    return panel;
+    return (
+      <div
+        className={[
+          "relative mx-auto w-full px-5 py-5",
+          isWeb ? "max-w-2xl" : "max-w-[480px]",
+        ].join(" ")}
+      >
+        <h1 className="mb-5 text-2xl font-bold tracking-tight text-white">
+          {t(language).profile.settings}
+        </h1>
+        {formBody}
+      </div>
+    );
   }
 
+  /** 他プロフィールサブページと同様: sticky ヘッダー + 本文スクロール */
   return (
     <div
       role="dialog"
       aria-modal="true"
-      onClick={handleDismiss}
-      className="fixed inset-0 z-1000001 flex items-end justify-center bg-black/50 p-3 backdrop-blur-md sm:items-center sm:p-4"
-      style={{ WebkitBackdropFilter: "blur(16px)" }}
+      className="fixed inset-0 isolate min-h-dvh overflow-y-auto overscroll-contain"
+      style={{ zIndex: 2147483000 }}
     >
-      {panel}
+      {/* クラス依存せず不透明ベース + Pools を必ず塗る（プロフィール透け防止） */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0"
+        style={{
+          backgroundColor: SETTINGS_POOLS_BG_BASE,
+          backgroundImage: SETTINGS_POOLS_BG_IMAGE,
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+      <CyberSubpageShell
+        bare
+        eyebrow="PROFILE"
+        title="SETTINGS"
+        subtitle={
+          language === "en"
+            ? "Edit your icon, name, bio, language, and country."
+            : "アイコン・名前・自己紹介・言語・国を編集できます"
+        }
+        onBack={handleDismiss}
+        backAriaLabel={t(language).common.back}
+        contentClassName={
+          isWeb
+            ? "max-w-2xl px-6 py-6 pb-28 md:px-8"
+            : "max-w-lg px-4 py-5 pb-28"
+        }
+      >
+        {formBody}
+      </CyberSubpageShell>
     </div>
   );
 }

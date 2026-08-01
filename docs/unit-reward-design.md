@@ -70,7 +70,8 @@ Unit は、以下の条件を満たしたユーザーに付与する。
 
 募集終了後は、原則としてメンバーの追加、移籍、複数グループへの参加を認めない。
 
-途中脱退者のスコア、最低予想回数、参加資格などの詳細は、[`group-battle-design.md`](group-battle-design.md) で定める。
+途中脱退者のスコア、最低予想回数、参加資格などの詳細は、[`group-battle-design.md`](group-battle-design.md) で定める。  
+技術実装（Firestore・集計・Unit 冪等キー）は [`group-battle-tech-design.md`](group-battle-tech-design.md)。
 
 ---
 

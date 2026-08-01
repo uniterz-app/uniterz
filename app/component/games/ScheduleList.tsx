@@ -139,6 +139,15 @@ export default function ScheduleList({
    * プレーオフの「他日に開催した同シリーズ試合」を推定に含める（当日カードだけだと 0-0 のままになるのを防ぐ）。
    */
   extraPeerGamesForSeriesInference = null,
+  /** 先頭試合カードにチュートリアル用 data 属性を付与 */
+  tutorialMarkFirstCard = false,
+  /** 新規予想投稿成功時（親のチュートリアル完了など） */
+  onPredictionPosted = null,
+  tutorialModeGameId = null,
+  onTutorialPredict,
+  onOverlayGameIdChange,
+  /** true のとき予想オーバーレイを即閉じ（チュートリアル投稿後など） */
+  forceCloseOverlay = false,
 }: {
   games: GameItemRaw[];
   dense?: boolean;
@@ -148,8 +157,27 @@ export default function ScheduleList({
   emptyHint?: string | null;
   listShellIntro?: "page" | "daySwitch";
   extraPeerGamesForSeriesInference?: GameItemRaw[] | null;
+  tutorialMarkFirstCard?: boolean;
+  onPredictionPosted?: (() => void) | null;
+  /** チュートリアル試合 ID — この試合の予想は API をスキップ */
+  tutorialModeGameId?: string | null;
+  onTutorialPredict?: (
+    payload: {
+      winner: "home" | "away";
+      scoreHome: number;
+      scoreAway: number;
+      goalScorer?: { playerId: string; teamId: string } | null;
+    }
+  ) => void;
+  onOverlayGameIdChange?: (gameId: string | null) => void;
+  forceCloseOverlay?: boolean;
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onOverlayGameIdChange?.(openGameId);
+  }, [openGameId, onOverlayGameIdChange]);
+
   const [overlayResultPost, setOverlayResultPost] =
     useState<PredictionPostV2 | null>(null);
   const [overlayUserPredictionWinner, setOverlayUserPredictionWinner] =
@@ -161,6 +189,15 @@ export default function ScheduleList({
   } | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
   const [disableReturnLayout, setDisableReturnLayout] = useState(false);
+
+  /** チュートリアル投稿後など — exit アニメ無しで即閉じ（backdrop-filter 前面化を防ぐ） */
+  useEffect(() => {
+    if (!forceCloseOverlay || !openGameId) return;
+    setStandingsOpenInOverlay(false);
+    setDisableReturnLayout(true);
+    setOpenGameId(null);
+  }, [forceCloseOverlay, openGameId]);
+
   const pathname = usePathname();
   const isMobile =
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
@@ -623,7 +660,8 @@ export default function ScheduleList({
     setOverlayLiveMarketBias(null);
   }, [openGameId]);
 
-  if (loading) {
+  /** 既に表示できる試合があるときはスケルトンで隠さない（チュートリアルのモック挿入など） */
+  if (loading && !propsList.length) {
     return (
       <div className="grid gap-6 px-4 md:px-6 lg:px-8">
         <div className="skeleton-scan rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -664,7 +702,7 @@ export default function ScheduleList({
     openGameId && selectedProps ? (
       <motion.div
         key={String(openGameId)}
-        className="fixed inset-0 z-100000 overflow-hidden"
+        className="fixed inset-0 z-[100000] overflow-hidden"
         variants={overlayMotionEnabled ? predictOverlayRoot : undefined}
         {...overlayPresenceProps}
       >
@@ -805,6 +843,28 @@ export default function ScheduleList({
                 user={{ name: "You" }}
                 embedded
                 inOverlay
+                tutorialMode={
+                  !!tutorialModeGameId &&
+                  String(selectedProps.id) === String(tutorialModeGameId)
+                }
+                onTutorialSubmit={(payload) => {
+                  if (
+                    payload.winner !== "home" &&
+                    payload.winner !== "away"
+                  ) {
+                    return;
+                  }
+                  onTutorialPredict?.({
+                    winner: payload.winner,
+                    scoreHome: payload.scoreHome,
+                    scoreAway: payload.scoreAway,
+                    goalScorer: payload.goalScorer ?? null,
+                  });
+                  /** VT / exit を待たず即閉じ（投稿後コーチがカードに隠れないように） */
+                  setStandingsOpenInOverlay(false);
+                  setDisableReturnLayout(true);
+                  setOpenGameId(null);
+                }}
                 overlayHomeRecord={
                   selectedProps.home?.teamId
                     ? teamRecordMap[selectedProps.home.teamId] ?? null
@@ -848,6 +908,7 @@ export default function ScheduleList({
                       [String(gameId)]: payload.id,
                     }));
                   }
+                  onPredictionPosted?.();
                 }}
                 onMarketDistributionChange={setOverlayLiveMarketBias}
               />
@@ -945,6 +1006,9 @@ export default function ScheduleList({
         variants={scheduleItem}
         className={rowClass}
         aria-hidden={hideListCardForOverlay ? true : undefined}
+        data-tutorial-target={
+          tutorialMarkFirstCard && index === 0 ? "match-card" : undefined
+        }
       >
         {card}
       </motion.div>
@@ -978,8 +1042,9 @@ export default function ScheduleList({
             /*
              * View Transitions 利用時は AnimatePresence の exit 待ちでオーバーレイが DOM に残り、
              * 一覧カードと同じ view-transition-name が重複して InvalidStateError になるため即時アンマウント。
+             * チュートリアル投稿後も同様に即アンマウント（exit 中のカードがコーチより前面に出るのを防ぐ）。
              */
-            vtUi ? overlayContent : (
+            vtUi || forceCloseOverlay ? overlayContent : (
               <AnimatePresence>{overlayContent}</AnimatePresence>
             ),
             document.body,

@@ -138,7 +138,7 @@ export default function ProfileEditPage() {
         従来のラッパー（参考）: w-full max-w-[480px] rounded-2xl bg-[#111827] border border-white/10 shadow-2xl px-5 py-6
         見た目は SettingsNeonCard に統合（パディングはカード側の innerPad）
       */}
-      <SettingsNeonCard className="w-full max-w-[480px]">
+      <SettingsNeonCard className="w-full max-w-2xl">
         {/* ===== ヘッダー ===== */}
         <header className="mb-6">
           <div>

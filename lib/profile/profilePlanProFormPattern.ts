@@ -5,8 +5,29 @@
 
 import type { ProfilePlanProFormBgVariant } from "./profilePlanProFormBgVariants";
 
-const CANVAS_W = 300;
-const CANVAS_H = 430;
+/** モバイル（縦長カード相当） */
+const CANVAS_W_MOBILE = 300;
+const CANVAS_H_MOBILE = 430;
+/** Web（横長 2 カラム相当）— atmos と同寸 */
+const CANVAS_W_WEB = 960;
+const CANVAS_H_WEB = 380;
+
+/** 生成中のキャンバス寸法（モバイル / Web 切替） */
+let canvasW = CANVAS_W_MOBILE;
+let canvasH = CANVAS_H_MOBILE;
+
+function withFormCanvas<T>(w: number, h: number, build: () => T): T {
+  const prevW = canvasW;
+  const prevH = canvasH;
+  canvasW = w;
+  canvasH = h;
+  try {
+    return build();
+  } finally {
+    canvasW = prevW;
+    canvasH = prevH;
+  }
+}
 
 export const PROFILE_PLAN_PRO_FORM_OPACITY_SCALE = 2.35;
 
@@ -157,6 +178,7 @@ function toUrl(svg: string): string {
 }
 
 const urlCache = new Map<string, string>();
+const svgCache = new Map<string, string>();
 
 function cachedUrl(key: string, build: () => string): string {
   const hit = urlCache.get(key);
@@ -166,12 +188,20 @@ function cachedUrl(key: string, build: () => string): string {
   return url;
 }
 
+function cachedSvg(key: string, build: () => string): string {
+  const hit = svgCache.get(key);
+  if (hit !== undefined) return hit;
+  const svg = build();
+  svgCache.set(key, svg);
+  return svg;
+}
+
 function pick<T>(arr: readonly T[], a: number, b: number): T {
   return arr[Math.floor(hash01(a, b) * arr.length) % arr.length]!;
 }
 
 function wrapSvg(body: string): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height="${CANVAS_H}" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" preserveAspectRatio="none">${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasW}" height="${canvasH}" viewBox="0 0 ${canvasW} ${canvasH}" preserveAspectRatio="none">${body}</svg>`;
 }
 
 function hexPts(cx: number, cy: number, r: number): string {
@@ -192,8 +222,8 @@ function buildHexVeil(p: FormPalette): string {
     for (let col = 0; col < 24; col += 1) {
       const cx = col * colStep + (row % 2) * (colStep / 2);
       const cy = row * rowStep;
-      const nx = cx / CANVAS_W;
-      const ny = cy / CANVAS_H;
+      const nx = cx / canvasW;
+      const ny = cy / canvasH;
       if (hash01(col, row) > densityAt(nx, ny) * 0.88) continue;
       const rr = r * (0.78 + hash01(col, row + 1) * 0.4);
       const op = formOp(0.08 + hash01(col, row) * 0.1);
@@ -217,7 +247,7 @@ function buildDiamondGrid(p: FormPalette): string {
     for (let col = 0; col < 22; col += 1) {
       const cx = col * step + (row % 2) * (step / 2);
       const cy = row * step * 0.72;
-      if (hash01(col, row) > densityAt(cx / CANVAS_W, cy / CANVAS_H) * 0.85) continue;
+      if (hash01(col, row) > densityAt(cx / canvasW, cy / canvasH) * 0.85) continue;
       const rx = 6 + hash01(col, row) * 3;
       const ry = 8 + hash01(col + 1, row) * 3.5;
       const d = `M${cx.toFixed(1)} ${(cy - ry).toFixed(1)} L${(cx + rx).toFixed(1)} ${cy.toFixed(1)} L${cx.toFixed(1)} ${(cy + ry).toFixed(1)} L${(cx - rx).toFixed(1)} ${cy.toFixed(1)} Z`;
@@ -235,7 +265,7 @@ function buildChevronEdge(p: FormPalette): string {
     const y = row * 11;
     for (let col = 0; col < 20; col += 1) {
       const cx = col * 16 + (row % 2) * 8;
-      if (hash01(col, row) > densityAt(cx / CANVAS_W, y / CANVAS_H) * 0.9) continue;
+      if (hash01(col, row) > densityAt(cx / canvasW, y / canvasH) * 0.9) continue;
       const amp = 6.5 + hash01(col, row) * 2;
       const tip = y + amp;
       parts.push(
@@ -253,7 +283,7 @@ function buildTriMesh(p: FormPalette): string {
     for (let col = 0; col < 20; col += 1) {
       const x = col * step + (row % 2) * (step / 2);
       const y = row * step * 0.86;
-      if (hash01(col, row) > densityAt(x / CANVAS_W, y / CANVAS_H) * 0.82) continue;
+      if (hash01(col, row) > densityAt(x / canvasW, y / canvasH) * 0.82) continue;
       const s = 8 + hash01(col, row) * 6;
       const flip = (col + row) % 2 === 0;
       const d = flip
@@ -270,15 +300,15 @@ function buildTriMesh(p: FormPalette): string {
 function buildStrata(p: FormPalette): string {
   const parts: string[] = [];
   for (let i = 0; i < 55; i += 1) {
-    const y = (i / 55) * CANVAS_H + hash01(i, 1) * 2;
+    const y = (i / 55) * canvasH + hash01(i, 1) * 2;
     const amp = 1.5 + hash01(i, 2) * 3;
     let d = "";
     let kept = false;
     for (let s = 0; s <= 20; s += 1) {
       const t = s / 20;
-      const x = t * CANVAS_W;
+      const x = t * canvasW;
       const yy = y + Math.sin(t * Math.PI * 2.2 + i * 0.3) * amp;
-      if (hash01(i, s) > densityAt(t, Math.min(1, yy / CANVAS_H)) * 1.05) {
+      if (hash01(i, s) > densityAt(t, Math.min(1, yy / canvasH)) * 1.05) {
         if (kept) {
           parts.push(
             `<path d="${d}" fill="none" stroke="rgba(${pick(p.strokes, i, s)},${formOp(0.07 + hash01(i, s) * 0.08).toFixed(3)})" stroke-width="${(0.35 + hash01(i, 3) * 0.4).toFixed(2)}"/>`
@@ -306,8 +336,8 @@ function buildPrism(p: FormPalette): string {
     const nx = 0.32 + hash01(i * 1.7, 1) * 0.72;
     const ny = hash01(i * 2.1, 3);
     if (hash01(i, 0.5) > densityAt(nx, ny) * 0.85) continue;
-    const cx = nx * CANVAS_W;
-    const cy = ny * CANVAS_H;
+    const cx = nx * canvasW;
+    const cy = ny * canvasH;
     const r = 9 + hash01(i, 4) * 14;
     const n = 3 + Math.floor(hash01(i, 5) * 3);
     const rot = hash01(i, 6) * Math.PI;
@@ -337,7 +367,7 @@ function buildConstGrid(p: FormPalette): string {
     const nx = 0.3 + hash01(i * 1.8, 1.2) * 0.75;
     const ny = hash01(i * 2.3, 3.1);
     if (hash01(i, 0.4) > densityAt(nx, ny) * 0.9) continue;
-    stars.push({ x: nx * CANVAS_W, y: ny * CANVAS_H });
+    stars.push({ x: nx * canvasW, y: ny * canvasH });
   }
   for (let i = 0; i < stars.length; i += 1) {
     const a = stars[i]!;
@@ -369,8 +399,8 @@ function buildArcCircuit(p: FormPalette): string {
     const nx = 0.4 + hash01(i * 2, 1) * 0.6;
     const ny = hash01(i * 1.7, 3);
     if (hash01(i, 0.5) > densityAt(nx, ny) * 0.9) continue;
-    const cx = nx * CANVAS_W;
-    const cy = ny * CANVAS_H;
+    const cx = nx * canvasW;
+    const cy = ny * canvasH;
     const r = 12 + hash01(i, 4) * 28;
     const a0 = hash01(i, 5) * Math.PI * 2;
     const sweep = Math.PI * (0.45 + hash01(i, 6) * 0.9);
@@ -407,8 +437,8 @@ function buildMonolith(p: FormPalette): string {
       const nx = 0.5 + col * 0.065 + hash01(col, s) * 0.03;
       const ny = 0.05 + s * 0.09 + hash01(s, col) * 0.02;
       if (hash01(col + s, 1) > densityAt(nx, ny) * 0.92) continue;
-      const x = nx * CANVAS_W;
-      const y = ny * CANVAS_H;
+      const x = nx * canvasW;
+      const y = ny * canvasH;
       const w = 14 + col * 1.8 + hash01(col, s) * 8;
       const h = 10 + hash01(s, col) * 7;
       const inset = hash01(col, s + 2) * 3;
@@ -423,11 +453,11 @@ function buildMonolith(p: FormPalette): string {
 function buildLattice(p: FormPalette): string {
   const parts: string[] = [];
   const gap = 14;
-  for (let x = 0; x < CANVAS_W + gap; x += gap) {
+  for (let x = 0; x < canvasW + gap; x += gap) {
     for (let seg = 0; seg < 12; seg += 1) {
-      const y0 = (seg / 12) * CANVAS_H;
-      const y1 = ((seg + 1) / 12) * CANVAS_H;
-      const mx = x / CANVAS_W;
+      const y0 = (seg / 12) * canvasH;
+      const y1 = ((seg + 1) / 12) * canvasH;
+      const mx = x / canvasW;
       const my = (seg + 0.5) / 12;
       if (hash01(x, seg) > densityAt(mx, my) * 0.95) continue;
       parts.push(
@@ -435,12 +465,12 @@ function buildLattice(p: FormPalette): string {
       );
     }
   }
-  for (let y = 0; y < CANVAS_H + gap; y += gap) {
+  for (let y = 0; y < canvasH + gap; y += gap) {
     for (let seg = 0; seg < 12; seg += 1) {
-      const x0 = (seg / 12) * CANVAS_W;
-      const x1 = ((seg + 1) / 12) * CANVAS_W;
+      const x0 = (seg / 12) * canvasW;
+      const x1 = ((seg + 1) / 12) * canvasW;
       const mx = (seg + 0.5) / 12;
-      const my = y / CANVAS_H;
+      const my = y / canvasH;
       if (hash01(y + 3, seg) > densityAt(mx, my) * 0.95) continue;
       parts.push(
         `<line x1="${x0.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(${pick(p.strokes, y, seg)},${formOp(0.065).toFixed(3)})" stroke-width="0.35"/>`
@@ -452,8 +482,8 @@ function buildLattice(p: FormPalette): string {
     const nx = 0.55 + hash01(i, 1) * 0.45;
     const ny = hash01(i, 2);
     if (hash01(i, 0.3) > densityAt(nx, ny) * 0.7) continue;
-    const x = nx * CANVAS_W;
-    const y = ny * CANVAS_H;
+    const x = nx * canvasW;
+    const y = ny * canvasH;
     const s = 4 + hash01(i, 3) * 5;
     parts.push(
       `<path d="M${(x - s).toFixed(1)} ${y.toFixed(1)} L${x.toFixed(1)} ${y.toFixed(1)} L${x.toFixed(1)} ${(y - s).toFixed(1)}" fill="none" stroke="rgba(${pick(p.accent, i, 1)},${formOp(0.12).toFixed(3)})" stroke-width="0.55"/>`
@@ -469,8 +499,8 @@ function buildRadiant(p: FormPalette): string {
     const nx = 0.55 + hash01(i, 1) * 0.42;
     const ny = 0.2 + hash01(i, 2) * 0.65;
     if (hash01(i, 0.4) > densityAt(nx, ny) * 0.95) continue;
-    const cx = nx * CANVAS_W;
-    const cy = ny * CANVAS_H;
+    const cx = nx * canvasW;
+    const cy = ny * canvasH;
     const rings = 3 + Math.floor(hash01(i, 3) * 4);
     for (let r = 1; r <= rings; r += 1) {
       const rr = 8 + r * 7 + hash01(i, r) * 4;
@@ -496,8 +526,8 @@ function buildShard(p: FormPalette): string {
     const nx = 0.32 + hash01(i * 1.9, 1) * 0.72;
     const ny = hash01(i * 2.2, 3);
     if (hash01(i, 0.5) > densityAt(nx, ny) * 0.85) continue;
-    const cx = nx * CANVAS_W;
-    const cy = ny * CANVAS_H;
+    const cx = nx * canvasW;
+    const cy = ny * canvasH;
     const ang = hash01(i, 4) * Math.PI * 2;
     const len = 14 + hash01(i, 5) * 28;
     const w = 3 + hash01(i, 6) * 7;
@@ -526,9 +556,9 @@ function buildNeoDamier(p: FormPalette): string {
       const u = col / n;
       const v = row / n;
       const warp = 1 + u * 0.3 + v * 0.12;
-      const cx = 35 + u * CANVAS_W * 0.95 * warp + Math.sin(v * 3.5) * 5;
-      const cy = v * CANVAS_H * 0.95 + Math.sin(u * 3) * 5;
-      if (hash01(col, row) > densityAt(Math.min(1, cx / CANVAS_W), Math.min(1, cy / CANVAS_H)) * 0.88) continue;
+      const cx = 35 + u * canvasW * 0.95 * warp + Math.sin(v * 3.5) * 5;
+      const cy = v * canvasH * 0.95 + Math.sin(u * 3) * 5;
+      if (hash01(col, row) > densityAt(Math.min(1, cx / canvasW), Math.min(1, cy / canvasH)) * 0.88) continue;
       const dark = (col + row) % 2 === 0;
       const size = (7 + hash01(col, row) * 3.5) * (0.85 + u * 0.2);
       const rot = ((hash01(col, row) - 0.5) * 10 + u * 6).toFixed(1);
@@ -550,7 +580,7 @@ function buildOffsetCheck(p: FormPalette): string {
     for (let col = 0; col < 20; col += 1) {
       const cx = col * step + (row % 2) * (step * 0.42);
       const cy = row * step * 0.78;
-      if (hash01(col, row) > densityAt(cx / CANVAS_W, cy / CANVAS_H) * 0.82) continue;
+      if (hash01(col, row) > densityAt(cx / canvasW, cy / canvasH) * 0.82) continue;
       const s = 9 + hash01(col, row) * 4;
       const on = (col + Math.floor(row / 2)) % 2 === 0;
       parts.push(
@@ -568,8 +598,8 @@ function buildFractal(p: FormPalette): string {
     const nx = hash01(i * 1.4, 0.8);
     const ny = hash01(i * 2.1, 3.2);
     if (hash01(i, 0.3) > densityAt(nx, ny) * 0.95) continue;
-    const x = nx * CANVAS_W;
-    const y = ny * CANVAS_H;
+    const x = nx * canvasW;
+    const y = ny * canvasH;
     const s = 2.2 + hash01(i, 4) * 3.5;
     const kind = Math.floor(hash01(i, 5) * 3);
     const stroke = pick(p.strokes, i, 1);
@@ -596,11 +626,16 @@ function buildIsoCubes(p: FormPalette): string {
   const parts: string[] = [];
   const w = 14;
   const h = 8;
-  for (let row = 0; row < 22; row += 1) {
-    for (let col = 0; col < 16; col += 1) {
-      const cx = 20 + col * w * 1.55 + (row % 2) * (w * 0.78);
-      const cy = 10 + row * h * 1.7;
-      if (hash01(col, row) > densityAt(cx / CANVAS_W, cy / CANVAS_H) * 0.85) continue;
+  const colStep = w * 1.55;
+  const rowStep = h * 1.7;
+  const cols = Math.ceil(canvasW / colStep) + 2;
+  const rows = Math.ceil(canvasH / rowStep) + 2;
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const cx = 20 + col * colStep + (row % 2) * (w * 0.78);
+      const cy = 10 + row * rowStep;
+      if (cx < -w || cy < -h || cx > canvasW + w || cy > canvasH + h) continue;
+      if (hash01(col, row) > densityAt(cx / canvasW, cy / canvasH) * 0.85) continue;
       const top = [
         `M${cx.toFixed(1)} ${(cy - h).toFixed(1)}`,
         `L${(cx + w / 2).toFixed(1)} ${(cy - h / 2).toFixed(1)}`,
@@ -682,15 +717,20 @@ function dotGrid(
 
 function buildHudSvg(variant: ProfilePlanProFormBgVariant): string {
   const { hudPrimary, hudSecondary } = PALETTES[variant];
+  /** モバイル座標 → 現行キャンバスへスケール */
+  const sx = canvasW / CANVAS_W_MOBILE;
+  const sy = canvasH / CANVAS_H_MOBILE;
+  const x = (v: number) => v * sx;
+  const y = (v: number) => v * sy;
   const g: string[] = [];
-  g.push(dotGrid(210, 20, 70, 34, 8, formOp(0.12), hudPrimary));
-  g.push(tickRow(196, 66, 12, 7.5, 3, formOp(0.22), hudSecondary));
-  g.push(plusMark(276, 40, 3, formOp(0.3), hudPrimary));
-  g.push(plusMark(288, 190, 2.6, formOp(0.26), hudPrimary));
-  g.push(tickRow(286, 150, 8, 6, 2.4, formOp(0.18), hudSecondary));
-  g.push(dotGrid(24, 372, 60, 40, 9, formOp(0.1), hudPrimary));
-  g.push(tickRow(150, 420, 16, 6, 2.2, formOp(0.16), hudSecondary));
-  g.push(plusMark(280, 400, 3, formOp(0.24), hudPrimary));
+  g.push(dotGrid(x(210), y(20), x(70), y(34), 8 * Math.min(sx, sy), formOp(0.12), hudPrimary));
+  g.push(tickRow(x(196), y(66), 12, 7.5 * sx, 3 * sy, formOp(0.22), hudSecondary));
+  g.push(plusMark(x(276), y(40), 3 * Math.min(sx, sy), formOp(0.3), hudPrimary));
+  g.push(plusMark(x(288), y(190), 2.6 * Math.min(sx, sy), formOp(0.26), hudPrimary));
+  g.push(tickRow(x(286), y(150), 8, 6 * sx, 2.4 * sy, formOp(0.18), hudSecondary));
+  g.push(dotGrid(x(24), y(372), x(60), y(40), 9 * Math.min(sx, sy), formOp(0.1), hudPrimary));
+  g.push(tickRow(x(150), y(420), 16, 6 * sx, 2.2 * sy, formOp(0.16), hudSecondary));
+  g.push(plusMark(x(280), y(400), 3 * Math.min(sx, sy), formOp(0.24), hudPrimary));
   return wrapSvg(g.join(""));
 }
 
@@ -734,6 +774,19 @@ function buildSkinSvg(variant: ProfilePlanProFormBgVariant): string {
   }
 }
 
+/** Native SvgXml 用 — 生 SVG マークアップ */
+export function getProfilePlanProFormSkinSvg(
+  variant: ProfilePlanProFormBgVariant
+): string {
+  return cachedSvg(`form:skin:svg:${variant}:v2`, () => buildSkinSvg(variant));
+}
+
+export function getProfilePlanProFormHudSvg(
+  variant: ProfilePlanProFormBgVariant
+): string {
+  return cachedSvg(`form:hud:svg:${variant}:v2`, () => buildHudSvg(variant));
+}
+
 export function getProfilePlanProFormSkinUrl(
   variant: ProfilePlanProFormBgVariant
 ): string {
@@ -745,3 +798,30 @@ export function getProfilePlanProFormHudUrl(
 ): string {
   return cachedUrl(`form:hud:${variant}:v2`, () => buildHudSvg(variant));
 }
+
+/** Web 横長パネル用 — 960×380（引き伸ばしなし） */
+export function getProfilePlanProFormSkinUrlWeb(
+  variant: ProfilePlanProFormBgVariant
+): string {
+  return cachedUrl(`form:skin:web:${variant}:v1`, () =>
+    withFormCanvas(CANVAS_W_WEB, CANVAS_H_WEB, () => buildSkinSvg(variant))
+  );
+}
+
+export function getProfilePlanProFormHudUrlWeb(
+  variant: ProfilePlanProFormBgVariant
+): string {
+  return cachedUrl(`form:hud:web:${variant}:v1`, () =>
+    withFormCanvas(CANVAS_W_WEB, CANVAS_H_WEB, () => buildHudSvg(variant))
+  );
+}
+
+export const PROFILE_PLAN_PRO_FORM_CANVAS = {
+  width: CANVAS_W_MOBILE,
+  height: CANVAS_H_MOBILE,
+} as const;
+
+export const PROFILE_PLAN_PRO_FORM_CANVAS_WEB = {
+  width: CANVAS_W_WEB,
+  height: CANVAS_H_WEB,
+} as const;

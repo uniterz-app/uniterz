@@ -177,7 +177,7 @@ export default function GamePredictScreenNative() {
     : "#ff6b8a";
 
   return (
-    <MobilePageShell title={title} onClose={() => navigation.goBack()}>
+    <MobilePageShell eyebrow="GAMES" title={title} onClose={() => navigation.goBack()}>
       {loading ? (
         <View style={styles.loading}>
           <BlocksPulseLoader />

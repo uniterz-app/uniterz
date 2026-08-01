@@ -16,7 +16,7 @@ export default function MobileContactPage() {
   return (
     <LegalPageLayout
       variant="mobile"
-      title={m.support.contactTitle}
+      title="CONTACT"
       description={m.support.contactDescription}
       updatedAt={updatedAt}
     >

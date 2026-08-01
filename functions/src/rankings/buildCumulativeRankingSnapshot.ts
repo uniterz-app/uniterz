@@ -18,6 +18,7 @@ import {
 } from "./cumulativeSnapshotIndex";
 import {
   CURRENT_NBA_SEASON_KEY,
+  nbaSeasonOpenSnapshotDocId,
   nbaSeasonSnapshotDocId,
 } from "./nbaSeason";
 
@@ -703,6 +704,8 @@ export async function buildCumulativeRankingSnapshot(
   };
   const seasonTop20Jobs: Top20Job[] = [];
   const topUidSet = new Set<string>();
+  /** 無差別級用: Pro のみのベース行（シーズン集計と同じ指標） */
+  let baseRowsForOpenSeason: BaseRow[] = [];
 
   if (!wcOnly) {
     const baseRows: BaseRow[] = snap.docs
@@ -730,6 +733,8 @@ export async function buildCumulativeRankingSnapshot(
         };
       })
       .filter((row) => (row.totalPosts ?? 0) > 0);
+
+    baseRowsForOpenSeason = baseRows.filter((row) => row.plan === "pro");
 
     for (const metric of METRICS) {
       const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
@@ -888,6 +893,50 @@ export async function buildCumulativeRankingSnapshot(
             metric,
             rows: enriched,
             totalCount,
+            updatedAt: FieldValue.serverTimestamp(),
+            rankDeltaBasisDateKey: yesterdayKey,
+          },
+          { merge: true }
+        );
+    }
+
+    // 無差別級（Pro のみ）シーズンスナップショット
+    const openBaseRows = baseRowsForOpenSeason ?? [];
+    for (const metric of METRICS) {
+      const eligibleRows = filterRowsForMetricEligibility(openBaseRows, metric, {
+        postedTodayUids:
+          metric === "activeWinStreak" && !streakAllEligible
+            ? nbaSettledTodayUids
+            : undefined,
+        streakAllEligible:
+          metric === "activeWinStreak" ? streakAllEligible : undefined,
+      });
+      const sortedFull = [...eligibleRows].sort((a, b) =>
+        cmpSortRows(a, b, metric)
+      );
+      const ranksMap = assignCompetitionRanks(sortedFull, metric);
+      const ranks: Record<string, number> = {};
+      for (const [uid, rank] of ranksMap) ranks[uid] = rank;
+
+      const top20 = sortedFull.slice(0, 20).map((row) => ({
+        ...row,
+        rank: ranksMap.get(row.uid) ?? 0,
+        rankDeltaPlaces: null as number | null,
+        metricValueDelta: null as number | null,
+      }));
+
+      await db()
+        .collection("cumulative_ranking_snapshots")
+        .doc(nbaSeasonOpenSnapshotDocId(seasonKey, metric))
+        .set(
+          {
+            kind: "nbaSeasonOpen",
+            division: "open",
+            seasonKey,
+            metric,
+            rows: top20,
+            ranks,
+            totalCount: sortedFull.length,
             updatedAt: FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
           },

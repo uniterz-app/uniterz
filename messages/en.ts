@@ -195,6 +195,15 @@ const en: Messages = {
     periodSeason: "Season",
     periodWeekly: "Weekly",
     periodMonthly: "Monthly",
+    divisionStandard: "Standard",
+    nbaBoardRegular: "Regular Season",
+    nbaBoardPlayoffs: "Playoffs",
+    divisionOpen: "PRO LEAGUE",
+    divisionTabsLabel: "Ranking division",
+    divisionOpenTitle: "PRO LEAGUE",
+    divisionOpenLockBody:
+      "A Pro-only ranking across every game. Subscribe to Pro to join and view it.",
+    divisionOpenCta: "See Pro",
     upset: "Upset",
     posts: "Posts",
     noRankings: "No ranking data available",
@@ -474,6 +483,9 @@ const en: Messages = {
     games: "Games",
     worldCup: "World Cup",
     nba: "NBA",
+    bracket: "Bracket",
+    awardsPredict: "Award Predictions",
+    standingsPredict: "Standings Predictions",
     live: "Live",
     liveAriaLabel: "Live",
     final: "Final",
@@ -632,6 +644,7 @@ const en: Messages = {
     announcementNotFound: "This announcement was not found.",
     planStatus: "Plan Status",
     proSkin: "Pro Skin",
+    deleteAccount: "Delete Account",
     freePlan: "Free Plan",
     proPlan: "Pro Plan",
     upgradeToPro: "Upgrade to Pro",
@@ -885,6 +898,129 @@ const en: Messages = {
       period: "2026 FIFA World Cup — Group Stage",
       target: "FIFA World Cup group stage",
       reward: "World Cup champion nation jersey",
+    },
+  },
+
+  tutorial: {
+    skip: "Skip",
+    back: "Back",
+    next: "Next",
+    seeGames: "See games",
+    pulseHint: "Tap to predict!",
+    hybrid: {
+      welcomeKicker: "WELCOME",
+      welcomeTitle: "Welcome to UNITERZ",
+      welcomeBody:
+        "Predict games, earn points, and climb the rankings.",
+      flowKicker: "HOW TO PLAY",
+      flowTitle: "It's simple",
+      flowBody:
+        "Tap a match card → pick winner & score → climb the ranks when you hit.",
+      startKicker: "READY",
+      startTitle: "Make your first pick",
+      startBody:
+        "After this, a match card will glow. Tap it and submit your first prediction.",
+    },
+    practice: {
+      tabGames: "Games",
+      tabResult: "Results",
+      tabRankings: "Rankings",
+      tabGroups: "Groups",
+      tabProfile: "Profile",
+      welcomeTitle: "Welcome",
+      welcomeBody:
+        "Predict games, earn points, and climb the rankings. Let's walk through the basics on this screen.",
+      tapTitle: "Tap the match card",
+      tapBody:
+        "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
+      tapHint: "Tap the card above",
+      guideTitle: "Prediction screen",
+      guideBody:
+        "The winner is set from your scores. Enter HOME / AWAY points, then tap Submit below.",
+      startPredict: "Make a pick",
+      inputTitle: "Enter scores",
+      inputBody:
+        "Type HOME and AWAY scores. Submit only posts your pick — HIT/MISS comes after the game. Next, we'll simulate the final.",
+      predictScoresTitle: "Score inputs",
+      predictScoresBody:
+        "HOME / AWAY predicted points go here. The winner is set from these scores.",
+      predictOverviewTitle: "Prediction screen",
+      predictOverviewBody:
+        "Post a score prediction — after the game, Results shows HIT / MISS. We'll walk through each part from the top.",
+      predictSidesTitle: "HOME and AWAY",
+      predictSidesBody:
+        "Left is HOME, right is AWAY. Score inputs use the same left–right layout.",
+      predictMarketTitle: "Market bias",
+      predictMarketBody:
+        "How other users are leaning — which side has more picks.",
+      predictToolsTitle: "Info tabs",
+      predictToolsBody:
+        "INSIGHT (Pro), INJURY, STATS, and ROSTER—check injuries, stats, and rosters before you lock in a pick.",
+      predictBonusTitle: "Top scorer bonus",
+      predictBonusBody:
+        "Nail the game's top scorer for +2. When candidates are listed, pick a player.",
+      predictEnterTitle: "Enter your scores",
+      predictEnterBody: "Fill in both HOME and AWAY predicted scores.",
+      predictEnterWait: "Enter both scores to unlock Next",
+      predictSubmitTitle: "Submit here",
+      predictSubmitBody:
+        "Send your pick. HIT / MISS shows later on Results.",
+      predictSubmitWait: "Tap the glowing button to submit",
+      submitPredict: "Enter scores → Submit",
+      errNeedWinner: "Pick a winner",
+      errNeedScore: "Enter valid scores",
+      errHomeWinScore: "For a home win, home score must be higher",
+      errAwayWinScore: "For an away win, away score must be higher",
+      postedTitle: "Now we wait for tip-off",
+      postedBody:
+        "In the real app, HIT / MISS only shows after the game ends. Next, we'll jump to that Results moment.",
+      resolvingTitle: "Game final…",
+      resolvingBody: "The mock game has ended. Tallying the result…",
+      resolvingSpin: "FINALIZING",
+      gotoResultsTitle: "Check Results",
+      gotoResultsBody:
+        "Outcomes land on the Results tab. Tap it below.",
+      gotoRankingsTitle: "Open Rankings",
+      gotoRankingsBody: "Next up is the Rankings tab. Tap it below.",
+      gotoGroupsTitle: "Open Groups",
+      gotoGroupsBody: "Next up is the Groups tab. Tap it below.",
+      gotoProfileTitle: "Open Profile",
+      gotoProfileBody: "Next up is the Profile tab. Tap it below.",
+      resultHitTitle: "HIT!",
+      resultHitBody:
+        "You got the winner right. {bonus}+{pts}pt is the idea. Score precision also tracks how close your scores were. In the real app you'll always check Results like this.",
+      resultCardTapHint: "Tap the card to see details",
+      resultScoreBonus: "Exact score bonus! ",
+      resultMissTitle: "MISS",
+      resultMissBody:
+        "Winner was wrong. In the real app you'll also check Results. Try again next game.",
+      resultDetailTitle: "Inside Results",
+      resultDetailBody:
+        "Final score, your pick, and point breakdown live here. We'll walk through from the top.",
+      resultDetailScoreTitle: "Final vs your pick",
+      resultDetailScoreBody:
+        "The big numbers are the final score; below is your prediction. HIT if you got the winner, MISS if not.",
+      resultDetailStatsTitle: "Three metrics",
+      resultDetailStatsBody:
+        "Score precision (0–10) tracks how close your scores were. Upset adds points for long-shot hits. Total score is win points plus bonuses.",
+      resultDetailMoreTitle: "More below",
+      resultDetailMoreBody:
+        "Scroll for score distribution and more detail. Same layout in the real app.",
+      yourPickLabel: "Your pick",
+      rankingsTitle: "Rankings",
+      rankingsBody: "Hits earn points that set your place. Switch periods and categories anytime.",
+      groupsTitle: "Groups",
+      groupsBody: "Private boards with friends or communities. Join with an invite code too.",
+      groupsMockName: "Night Owls",
+      groupsMockMeta: "8 members · You're #2 in the group",
+      profileTitle: "Profile",
+      profileBody: "Stats, streaks, settings, and plans—plus avatar and display name.",
+      profileMockStats: "Hit rate · Streak · Total points",
+      doneTitle: "You're ready",
+      doneBody:
+        "That's the UNITERZ loop. Predict real games and climb the ranks.",
+      finishCta: "Start the app",
+      tapNavHint: "Tap the tab below, or press Next to go",
     },
   },
 

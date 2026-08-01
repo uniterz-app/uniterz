@@ -12,7 +12,8 @@ const RANK_INTEL_TAB_THEME: CyberSlantedTabTheme = {
   accent: RANK_GAP_CYBER.magenta,
   inactiveText: "rgba(255,255,255,0.55)",
   activeText: "#050508",
-  activeShadow: "0 0 12px rgba(255,0,200,0.25)",
+  activeShadow:
+    "0 0 10px rgba(255,0,200,0.5), 0 0 22px rgba(255,0,200,0.26)",
   inactiveBorder: RANK_GAP_CYBER.neonBorder,
 };
 

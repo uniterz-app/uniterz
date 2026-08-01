@@ -89,6 +89,32 @@ import {
 } from "./predictNextGameModalPrefs";
 import { scheduleAfterPredictModalDismissed } from "./scheduleAfterPredictModalDismissed";
 import GameCardList from "./GameCardList";
+import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
+import {
+  clearTutorialLivePickNative,
+  writeTutorialLivePickNative,
+} from "../tutorial/tutorialLivePickNative";
+import TutorialResolvingOverlayNative from "../tutorial/TutorialResolvingOverlayNative";
+import {
+  fetchAppTutorialSeenNative,
+  markAppTutorialSeenNative,
+  readAppTutorialSeenNative,
+} from "../tutorial/tutorialSeenNative";
+import {
+  readTutorialLivePhaseNative,
+  writeTutorialLivePhaseNative,
+  type TutorialLivePhase,
+} from "../tutorial/tutorialLivePhaseNative";
+import {
+  buildTutorialNbaRawGame,
+  TUTORIAL_NBA_GAME_ID,
+} from "../../../../../lib/tutorial/tutorialNbaRawGame";
+import type { TutorialPredictPick } from "../../../../../lib/tutorial/tutorialNbaMock";
+import { tutorialGradeFromPick } from "../../../../../lib/tutorial/tutorialNbaUi";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import type { Language } from "../../../../../lib/i18n/language";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { MainTabParamList } from "../../navigation/types";
 import {
   resolveNativeSeriesLabel,
   resolveNativeSeriesPair,
@@ -134,7 +160,6 @@ import { RankingsPageTitleCyberNative } from "../rankings/RankingsPageTitleCyber
 import {
   gamesLeagueTitleEntering,
   gamesScheduleShellDaySwitchEntering,
-  gamesTopBarBracketEntering,
   gamesTopBarFilterEntering,
   gamesTopBarMenuEntering,
   useGamesListShellIntro,
@@ -433,6 +458,8 @@ export default function GamesHomeScreen({
   routeParams?: GamesStackParamList["GamesHome"];
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
+  const tabNavigation =
+    useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
   const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
@@ -455,6 +482,8 @@ export default function GamesHomeScreen({
     null
   );
   const [isPredictModalOpen, setIsPredictModalOpen] = useState(false);
+  const [tutorialPhase, setTutorialPhase] =
+    useState<TutorialLivePhase | null>(null);
   /** リザルトからの深リンク: 予想済みでも最初からスコア入力を出す */
   const [expandScoreFormWhenEditing, setExpandScoreFormWhenEditing] = useState(false);
   const predictDeepLinkProcessingRef = useRef<string | null>(null);
@@ -508,16 +537,46 @@ export default function GamesHomeScreen({
     goPrevDay,
     goNextDay,
   } = useTodayGames({ enabled: preferredLeagueReady });
-  /** データ未取得時のみスケルトン（キャッシュ表示中は裏更新でもスケルトンに戻さない） */
-  const showInitialSkeleton =
-    (!preferredLeagueReady || loading) && !hasWindowData;
   const reduceMotion = useReducedMotion() ?? false;
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
-  const filteredGames = useMemo(
-    () => applyNativeGamesFilter(games, gamesFilter, teamNameById),
-    [games, gamesFilter, teamNameById]
-  );
+  const filteredGames = useMemo(() => {
+    const base = applyNativeGamesFilter(games, gamesFilter, teamNameById);
+    if (
+      tutorialPhase != null &&
+      tutorialPhase !== "done" &&
+      tutorialPhase !== "rankings" &&
+      tutorialPhase !== "gotoGroups" &&
+      tutorialPhase !== "groups" &&
+      tutorialPhase !== "gotoProfile" &&
+      tutorialPhase !== "profile" &&
+      selectedLeague === "nba"
+    ) {
+      const tipOff = (() => {
+        const d = new Date(selectedDate);
+        d.setHours(21, 0, 0, 0);
+        if (d.getTime() <= Date.now()) {
+          return new Date(Date.now() + 2 * 60 * 60 * 1000);
+        }
+        return d;
+      })();
+      /** 練習試合だけ。他リーグの残りや本番カードが裏に混ざらないようにする */
+      return [buildTutorialNbaRawGame(tipOff)];
+    }
+    return base;
+  }, [
+    games,
+    gamesFilter,
+    teamNameById,
+    tutorialPhase,
+    selectedLeague,
+    selectedDate,
+  ]);
+  /** データ未取得時のみスケルトン。チュートリアルのモック試合があるときは先に見せる */
+  const showInitialSkeleton =
+    (!preferredLeagueReady || loading) &&
+    !hasWindowData &&
+    filteredGames.length === 0;
   const filterActive = useMemo(
     () => gamesFilterIsActive(gamesFilter),
     [gamesFilter]
@@ -538,6 +597,80 @@ export default function GamesHomeScreen({
     const key = selectedLeague === "wc" ? "wc" : "nba";
     return LEAGUE_HEADER_LABEL[key];
   }, [selectedLeague]);
+
+  /** 初回チュートリアル — 本番 Games 画面上で進行 */
+  useEffect(() => {
+    const uid = fUser?.uid;
+    if (!uid || authStatus === "loading") return;
+    let cancelled = false;
+    void (async () => {
+      // 既読は uid 単位。端末共通キーだと別アカウントでスキップされる
+      const localSeen = await readAppTutorialSeenNative(uid);
+      if (cancelled || localSeen) return;
+      const seen = await fetchAppTutorialSeenNative(uid);
+      if (cancelled || seen) return;
+      const existing = await readTutorialLivePhaseNative();
+      if (
+        existing === "results" ||
+        existing === "rankings" ||
+        existing === "gotoGroups" ||
+        existing === "groups" ||
+        existing === "gotoProfile" ||
+        existing === "profile"
+      ) {
+        return;
+      }
+      didInitPreferredLeagueRef.current = true;
+      setSelectedLeague("nba");
+      const start: TutorialLivePhase = existing ?? "welcome";
+      await writeTutorialLivePhaseNative(start);
+      if (!cancelled) setTutorialPhase(start);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fUser?.uid, authStatus, setSelectedLeague]);
+
+  const setTutorialPhaseAndStore = useCallback(
+    (next: TutorialLivePhase | null) => {
+      void writeTutorialLivePhaseNative(next);
+      setTutorialPhase(next && next !== "done" ? next : null);
+    },
+    []
+  );
+
+  const completeTutorialFully = useCallback(() => {
+    const uid = fUser?.uid ?? null;
+    void markAppTutorialSeenNative(uid);
+    void writeTutorialLivePhaseNative(null);
+    void clearTutorialLivePickNative();
+    setTutorialPhase(null);
+  }, [fUser?.uid]);
+
+  const tutorialActive =
+    tutorialPhase != null &&
+    tutorialPhase !== "done" &&
+      tutorialPhase !== "results" &&
+      tutorialPhase !== "resultDetail" &&
+      tutorialPhase !== "rankings" &&
+    tutorialPhase !== "gotoGroups" &&
+    tutorialPhase !== "groups" &&
+    tutorialPhase !== "gotoProfile" &&
+    tutorialPhase !== "profile";
+
+  /** 投稿後 → 試合終了シミュ → リザルトタブへ誘導 */
+  useEffect(() => {
+    if (tutorialPhase !== "resolving") return;
+    const id = setTimeout(() => {
+      setTutorialPhaseAndStore("gotoResults");
+    }, 1800);
+    return () => clearTimeout(id);
+  }, [tutorialPhase, setTutorialPhaseAndStore]);
+
+  const tutorialCopy = useMemo(
+    () => i18nT((language === "en" ? "en" : "ja") as Language),
+    [language]
+  );
 
   useEffect(() => {
     if (didInitPreferredLeagueRef.current || authStatus === "loading") return;
@@ -693,13 +826,11 @@ export default function GamesHomeScreen({
     () => [styles.card, { paddingTop: topContentPadY, flex: 1, zIndex: 1 }],
     [topContentPadY]
   );
-  /** 表示中の暦月に属する試合日だけストリップに出す */
+  /** Web `gameDaysForStrip` 相当: 取得窓の試合日をそのまま出す（月で切らない） */
   const dayStripDates = useMemo(() => {
-    const monthPrefix = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST).slice(0, 7);
     const parsed = dateKeysForDayStrip
       .map((key) => parseDateKeyInTimeZone(key, TIMEZONE_JST))
-      .filter((d): d is Date => d != null)
-      .filter((d) => toDateKeyInTimeZone(d, TIMEZONE_JST).startsWith(monthPrefix));
+      .filter((d): d is Date => d != null);
     if (parsed.length === 0) {
       return [startOfLocalDay(selectedDate)];
     }
@@ -1272,6 +1403,13 @@ export default function GamesHomeScreen({
     setSelectedGame(sourceGame);
     setIsPredictModalOpen(true);
 
+    if (
+      String(sourceGame.id ?? "") === TUTORIAL_NBA_GAME_ID &&
+      (tutorialPhase === "tapCard" || tutorialPhase === "welcome")
+    ) {
+      setTutorialPhaseAndStore("predictWait");
+    }
+
     /** 編集モード初回ヒントはストレージ await で開幕をブロックしない（モーダル表示後に実行） */
     if (existingPostId) {
       void (async () => {
@@ -1339,6 +1477,13 @@ export default function GamesHomeScreen({
 
     proceedOpenPredictModal(sourceGame, editBootstrap);
   }
+
+  /** アワード/順位予想の戻る → 試合サイドメニューを開いた状態で復帰 */
+  useEffect(() => {
+    if (!routeParams?.openMenu) return;
+    setMenuOpen(true);
+    navigation.setParams({ openMenu: undefined });
+  }, [routeParams?.openMenu, navigation]);
 
   /** リザルト一覧などから `openPredictGameId` で予想モーダルを開く */
   useEffect(() => {
@@ -1453,6 +1598,25 @@ export default function GamesHomeScreen({
     const gameId = String(selectedGame.id ?? "");
     if (!gameId) {
       cyberAlert(t.submitErrorTitle, t.submitNoGameIdBody);
+      return;
+    }
+
+    /** チュートリアル用モック試合 — API を叩かず結果フェーズへ */
+    if (gameId === TUTORIAL_NBA_GAME_ID && tutorialActive) {
+      if (winner !== "home" && winner !== "away") {
+        cyberAlert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
+        return;
+      }
+      const pick: TutorialPredictPick = {
+        winner,
+        scoreHome: homeNum,
+        scoreAway: awayNum,
+      };
+      const grade = tutorialGradeFromPick(pick);
+      void writeTutorialLivePickNative(pick, grade);
+      setIsPredictModalOpen(false);
+      setSelectedGame(null);
+      setTutorialPhaseAndStore("posted");
       return;
     }
 
@@ -1616,19 +1780,6 @@ export default function GamesHomeScreen({
                 accessibilityLabel={t.filter}
               />
             </Animated.View>
-            {selectedLeague === "nba" ? (
-              <Animated.View
-                key={`bracket-${headerMotionKey}`}
-                entering={webGamesMotion ? gamesTopBarBracketEntering : undefined}
-              >
-                <Pressable
-                  style={styles.bracketButton}
-                  onPress={() => navigation.navigate("PlayoffBracketView")}
-                >
-                  <Text style={styles.bracketButtonText}>{t.bracket}</Text>
-                </Pressable>
-              </Animated.View>
-            ) : null}
           </View>
         </View>
       {showInitialSkeleton ? (
@@ -1722,6 +1873,15 @@ export default function GamesHomeScreen({
             getTeamRecordLabel={formatSideRecord}
             teamRecordById={teamRecordById}
             resolveTeamJerseyPalette={resolveTeamJerseyPalette}
+            tutorialPulseFirstCard={tutorialPhase === "tapCard"}
+            tutorialPulseLabel={
+              tutorialPhase === "tapCard"
+                ? tutorialCopy.tutorial.pulseHint
+                : undefined
+            }
+            tutorialRegisterMatchCard={
+              tutorialPhase === "tapCard" || tutorialPhase === "welcome"
+            }
           />
         </Animated.View>
       ) : null}
@@ -1799,6 +1959,79 @@ export default function GamesHomeScreen({
         mergedFinalPreview={predictMergedFinalPreview}
         myPostId={selectedGameId ? myPostIdByGameId[selectedGameId] ?? null : null}
         isProUser={isProUser}
+        tutorialMode={
+          tutorialActive &&
+          String(selectedGame?.id ?? "") === TUTORIAL_NBA_GAME_ID
+        }
+        tutorialGuideTitle={tutorialCopy.tutorial.practice.inputTitle}
+        tutorialGuideBody={tutorialCopy.tutorial.practice.inputBody}
+        tutorialGuideCta={tutorialCopy.tutorial.practice.submitPredict}
+      />
+
+      <TutorialLiveCoachNative
+        open={tutorialPhase === "welcome"}
+        title={tutorialCopy.tutorial.practice.welcomeTitle}
+        body={tutorialCopy.tutorial.practice.welcomeBody}
+        skipLabel={tutorialCopy.tutorial.skip}
+        nextLabel={tutorialCopy.tutorial.next}
+        visual="welcome"
+        onSkip={completeTutorialFully}
+        onNext={() => setTutorialPhaseAndStore("tapCard")}
+      />
+      <TutorialLiveCoachNative
+        open={tutorialPhase === "tapCard"}
+        title={tutorialCopy.tutorial.practice.tapTitle}
+        body={tutorialCopy.tutorial.practice.tapBody}
+        skipLabel={tutorialCopy.tutorial.skip}
+        backLabel={tutorialCopy.tutorial.back}
+        target="match-card"
+        waitHint={tutorialCopy.tutorial.practice.tapHint}
+        showHoleRing={false}
+        onSkip={completeTutorialFully}
+        onBack={() => setTutorialPhaseAndStore("welcome")}
+        onTargetPress={() => {
+          const g =
+            filteredGames.find((x) => String(x.id) === TUTORIAL_NBA_GAME_ID) ??
+            filteredGames[0];
+          if (g) void openPredictModal(g);
+        }}
+      />
+      <TutorialLiveCoachNative
+        open={tutorialPhase === "posted"}
+        title={tutorialCopy.tutorial.practice.postedTitle}
+        body={tutorialCopy.tutorial.practice.postedBody}
+        skipLabel={tutorialCopy.tutorial.skip}
+        nextLabel={tutorialCopy.tutorial.next}
+        backLabel={tutorialCopy.tutorial.back}
+        onSkip={completeTutorialFully}
+        onBack={() => setTutorialPhaseAndStore("tapCard")}
+        onNext={() => setTutorialPhaseAndStore("resolving")}
+      />
+      <TutorialResolvingOverlayNative
+        open={tutorialPhase === "resolving"}
+        title={tutorialCopy.tutorial.practice.resolvingTitle}
+        body={tutorialCopy.tutorial.practice.resolvingBody}
+        spinLabel={tutorialCopy.tutorial.practice.resolvingSpin}
+      />
+      <TutorialLiveCoachNative
+        open={tutorialPhase === "gotoResults"}
+        title={tutorialCopy.tutorial.practice.gotoResultsTitle}
+        body={tutorialCopy.tutorial.practice.gotoResultsBody}
+        skipLabel={tutorialCopy.tutorial.skip}
+        nextLabel={tutorialCopy.tutorial.next}
+        backLabel={tutorialCopy.tutorial.back}
+        target="nav-home"
+        waitHint={tutorialCopy.tutorial.practice.tapNavHint}
+        onSkip={completeTutorialFully}
+        onBack={() => setTutorialPhaseAndStore("posted")}
+        onNext={() => {
+          setTutorialPhaseAndStore("results");
+          tabNavigation.navigate("ResultTab", { screen: "ResultHome" });
+        }}
+        onTargetPress={() => {
+          setTutorialPhaseAndStore("results");
+          tabNavigation.navigate("ResultTab", { screen: "ResultHome" });
+        }}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
         <PredictNextGameNativeModal
@@ -1841,6 +2074,14 @@ export default function GamesHomeScreen({
           onSelectNba={() => {
             setSelectedLeague("nba");
             setMenuOpen(false);
+          }}
+          onSelectAwardsPredict={() => {
+            setMenuOpen(false);
+            navigation.navigate("SeasonPredict", { mode: "awards" });
+          }}
+          onSelectStandingsPredict={() => {
+            setMenuOpen(false);
+            navigation.navigate("SeasonPredict", { mode: "standings" });
           }}
           onSelectWorldCup={() => {
             setSelectedLeague("wc");
@@ -2012,23 +2253,6 @@ const styles = StyleSheet.create({
     color: "rgba(224,250,254,0.88)",
     fontSize: 9,
     fontWeight: "700",
-  },
-  bracketButton: {
-    minHeight: GAMES_HEADER_CONTROL_HEIGHT,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: "rgba(31,111,235,0.45)",
-    backgroundColor: "rgba(31,111,235,0.16)",
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bracketButtonText: {
-    color: "#8db6ff",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
   },
   /** Web `LeagueTabs` アクティブタブ相当：bg-white/10・border-white/20・rounded-lg */
   leagueChip: {

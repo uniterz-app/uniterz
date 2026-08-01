@@ -18,10 +18,12 @@ import {
 import type { RankingRow } from "@/lib/rankings/cumulativeRankingRow";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { usePeriodRankingsBulk } from "@/lib/rankings/usePeriodRankingsBulk";
+import { useOpenSeasonRankingsBulk } from "@/lib/rankings/useOpenSeasonRankingsBulk";
 import type { RankingPeriod } from "@/lib/rankings/rankingPeriod";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import { resolveMyRankForCard } from "@/lib/rankings/rankingsPageShared";
 import { sortRankingRowsByMetric } from "@/lib/rankings/sortRankingRows";
 
@@ -73,7 +75,11 @@ export function useWebRankings(
   /** NBA weekly/monthly ボード。null ならシーズン累積を使う */
   period: Exclude<RankingPeriod, "season"> | null = null,
   /** 過去期間のラベル。null なら現在期間 */
-  periodLabel: string | null = null
+  periodLabel: string | null = null,
+  /** PRO LEAGUE など。period / open シーズン用 */
+  division: RankingDivision = "standard",
+  /** PRO LEAGUE のシーズン累積ボード */
+  useOpenSeason = false
 ) {
   const availableMetrics = wcStage ? WC_RANKING_METRICS : NBA_RANKING_METRICS;
 
@@ -91,9 +97,15 @@ export function useWebRankings(
   }, [metric, availableMetrics]);
 
   const seasonBulk = useCumulativeRankingsBulk(phase, round, wcStage);
-  const periodBulk = usePeriodRankingsBulk(period, periodLabel);
+  const openSeasonBulk = useOpenSeasonRankingsBulk(useOpenSeason);
+  const periodBulk = usePeriodRankingsBulk(period, periodLabel, division);
+  const activeBulk = useOpenSeason
+    ? openSeasonBulk
+    : period
+      ? periodBulk
+      : seasonBulk;
   const { listReady, personalPending, myUid, byMetric, myMetricValueDeltas, ensureMetric } =
-    period ? periodBulk : seasonBulk;
+    activeBulk;
 
   useEffect(() => {
     void ensureMetric(API_METRIC_BY_MOBILE[metric]);
@@ -160,5 +172,6 @@ export function useWebRankings(
     ensureMetric,
     periodAvailableLabels: periodBulk.availableLabels,
     periodActiveLabel: periodBulk.activeLabel,
+    proRequired: openSeasonBulk.proRequired || periodBulk.proRequired,
   };
 }

@@ -124,7 +124,10 @@ export default function ResultDetail({
                 />
               </m.div>
             ) : null}
-            <m.div {...fadeUp(E.delayDistribution)}>
+            <m.div
+              {...fadeUp(E.delayDistribution)}
+              data-tutorial-target="result-detail-more"
+            >
               <ResultPointsDistributionCard
                 post={post}
                 distribution={pointsDistribution}

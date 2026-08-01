@@ -123,6 +123,15 @@ service cloud.firestore {
       }
     }
 
+    // プロフィール閲覧イベント・集計 — API（Admin SDK）からのみ利用
+    match /profile_views/{viewId} {
+      allow read, write: if false;
+    }
+
+    match /profile_view_counts/{userId} {
+      allow read, write: if false;
+    }
+
     // ========================================================================
     // slugs — ensureUserSlug（@handle 用）
     // ========================================================================

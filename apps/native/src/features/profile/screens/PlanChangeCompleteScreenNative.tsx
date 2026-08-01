@@ -16,7 +16,7 @@ import { colors, fonts, spacing } from "../../../theme/tokens";
 export default function PlanChangeCompleteScreenNative() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
-  const [planType, setPlanType] = useState<"monthly" | "annual">("monthly");
+  const [planType, setPlanType] = useState<"weekly" | "monthly" | "season" | "annual">("monthly");
   const [proUntil, setProUntil] = useState("");
   const [handle, setHandle] = useState<string | null>(null);
 
@@ -27,7 +27,12 @@ export default function PlanChangeCompleteScreenNative() {
       const snap = await getDoc(doc(db, "users", fUser.uid));
       if (!alive) return;
       const data = snap.data() as { planType?: unknown; proUntil?: { toDate?: () => Date }; handle?: unknown } | undefined;
-      setPlanType(data?.planType === "annual" ? "annual" : "monthly");
+      const raw = data?.planType;
+      setPlanType(
+        raw === "weekly" || raw === "season" || raw === "annual" || raw === "monthly"
+          ? raw
+          : "monthly"
+      );
       const d = data?.proUntil?.toDate?.();
       setProUntil(
         d
@@ -64,7 +69,13 @@ export default function PlanChangeCompleteScreenNative() {
             <View style={styles.planRow}>
               <View style={styles.dot} />
               <Text style={styles.planText}>
-                {planType === "annual" ? "Pro Annual Plan" : "Pro Monthly Plan"}
+                {planType === "weekly"
+                  ? "Pro Weekly Plan"
+                  : planType === "season"
+                    ? "Pro Season Pass"
+                    : planType === "annual"
+                      ? "Pro Annual Plan (legacy)"
+                      : "Pro Monthly Plan"}
               </Text>
             </View>
           </View>

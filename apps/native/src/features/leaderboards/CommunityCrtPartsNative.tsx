@@ -6,18 +6,49 @@ import { communityCrtStyles } from "./communityCrtThemeNative";
 export function CommunityCrtSectionLabelNative({
   children,
   suffix,
+  accent = "cyan",
 }: {
   children: string;
   suffix?: string;
+  accent?: "cyan" | "amber";
 }) {
+  const isAmber = accent === "amber";
   return (
     <View style={styles.sectionRow}>
-      <View style={[communityCrtStyles.sectionLine, communityCrtStyles.sectionLineLeft]} />
+      <View
+        style={[
+          communityCrtStyles.sectionLine,
+          communityCrtStyles.sectionLineLeft,
+          isAmber && styles.lineAmberLeft,
+        ]}
+      />
       <View style={styles.sectionCenter}>
-        <Text style={communityCrtStyles.sectionLabel}>{children}</Text>
-        {suffix ? <Text style={communityCrtStyles.sectionSuffix}>{suffix}</Text> : null}
+        <Text
+          style={[
+            communityCrtStyles.sectionLabel,
+            isAmber && styles.labelAmber,
+          ]}
+        >
+          {children}
+        </Text>
+        {suffix ? (
+          <Text
+            style={[
+              communityCrtStyles.sectionSuffix,
+              isAmber && styles.suffixAmber,
+            ]}
+          >
+            {suffix}
+          </Text>
+        ) : null}
       </View>
-      <View style={[communityCrtStyles.sectionLine, communityCrtStyles.sectionLineRight]} />
+      <View
+        style={[
+          communityCrtStyles.sectionLine,
+          communityCrtStyles.sectionLineRight,
+          isAmber && styles.lineAmberRight,
+        ]}
+      />
     </View>
   );
 }
@@ -58,6 +89,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     flexShrink: 0,
+  },
+  labelAmber: {
+    color: "rgba(253,230,138,0.88)",
+    textShadowColor: "rgba(251,191,36,0.32)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  suffixAmber: {
+    borderColor: "rgba(251,191,36,0.22)",
+    backgroundColor: "rgba(245,158,11,0.06)",
+    color: "rgba(253,230,138,0.55)",
+  },
+  lineAmberLeft: {
+    borderTopColor: "rgba(251,191,36,0.32)",
+  },
+  lineAmberRight: {
+    borderTopColor: "rgba(251,191,36,0.12)",
   },
   backdrop: {
     flex: 1,

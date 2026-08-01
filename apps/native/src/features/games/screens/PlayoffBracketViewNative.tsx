@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
+import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import type { GamesStackParamList } from "../../../navigation/types";
 import { colors } from "../../../theme/tokens";
@@ -14,23 +14,34 @@ export default function PlayoffBracketViewNative() {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { fUser } = useFirebaseUser();
   const language: "ja" | "en" = "ja";
+  const isJa = language === "ja";
 
   const { loading, display, savedBracket, score, season, officialResults, hasSubmitted } =
     useNativePlayoffBracketView(fUser?.uid);
 
+  const subtitle = isJa
+    ? "提出済みのプレーオフブラケット。的中状況は公式結果と照合して表示されます。"
+    : "Your submitted playoff bracket. Hits are checked against official results.";
+
   return (
-    <MobilePageShell title="My Bracket" onClose={() => navigation.goBack()}>
+    <GamesNbaSubpageShellNative
+      eyebrow="NBA · PLAYOFFS"
+      title="BRACKET"
+      subtitle={subtitle}
+      onBack={() => navigation.navigate("GamesHome", { openMenu: true })}
+      scroll={false}
+    >
       <View style={styles.actions}>
         <Pressable style={styles.actionBtn} onPress={() => navigation.navigate("BracketMarket")}>
-          <Text style={styles.actionText}>Market</Text>
+          <Text style={styles.actionText}>{isJa ? "マーケット" : "Market"}</Text>
         </Pressable>
         <Pressable style={styles.actionBtn} onPress={() => navigation.navigate("PlayoffBracket")}>
-          <Text style={styles.actionText}>Predict</Text>
+          <Text style={styles.actionText}>{isJa ? "予想する" : "Predict"}</Text>
         </Pressable>
       </View>
 
       {!fUser?.uid ? (
-        <Text style={styles.muted}>ログインが必要です</Text>
+        <Text style={styles.muted}>{isJa ? "ログインが必要です" : "Sign in required"}</Text>
       ) : loading ? (
         <View style={styles.loading}>
           <BlocksPulseLoader pixelScale={0.9} />
@@ -38,9 +49,15 @@ export default function PlayoffBracketViewNative() {
       ) : !hasSubmitted || !display ? (
         <View style={styles.noDataBox}>
           <Text style={styles.noDataTitle}>NO DATA</Text>
-          <Text style={styles.muted}>提出済みのプレーオフブラケットがありません</Text>
+          <Text style={styles.muted}>
+            {isJa
+              ? "提出済みのプレーオフブラケットがありません"
+              : "No playoff bracket submitted yet"}
+          </Text>
           <Pressable style={styles.predictCta} onPress={() => navigation.navigate("PlayoffBracket")}>
-            <Text style={styles.predictCtaText}>ブラケットを予想する</Text>
+            <Text style={styles.predictCtaText}>
+              {isJa ? "ブラケットを予想する" : "Predict the bracket"}
+            </Text>
           </Pressable>
         </View>
       ) : (
@@ -68,7 +85,7 @@ export default function PlayoffBracketViewNative() {
           />
         </ScrollView>
       )}
-    </MobilePageShell>
+    </GamesNbaSubpageShellNative>
   );
 }
 
@@ -77,16 +94,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 12,
+    paddingTop: 12,
     paddingBottom: 8,
   },
   actionBtn: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(103,232,249,0.35)",
+    borderColor: "rgba(0,245,255,0.35)",
     alignItems: "center",
-    backgroundColor: "rgba(103,232,249,0.08)",
+    backgroundColor: "rgba(0,245,255,0.08)",
   },
   actionText: { color: colors.textPrimary, fontWeight: "700", fontSize: 13 },
   scroll: { flex: 1 },
@@ -102,9 +119,8 @@ const styles = StyleSheet.create({
   noDataBox: {
     margin: 16,
     padding: 24,
-    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(0,245,255,0.18)",
     backgroundColor: "rgba(5,8,20,0.55)",
     alignItems: "center",
     gap: 8,
@@ -119,8 +135,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: "#163a5f",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.4)",
+    backgroundColor: "rgba(0,245,255,0.12)",
   },
   predictCtaText: {
     color: colors.textPrimary,

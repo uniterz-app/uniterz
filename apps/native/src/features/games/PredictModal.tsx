@@ -77,6 +77,11 @@ import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNa
 import PredictOverlayCyberDeckTabNative from "./PredictOverlayCyberDeckTabNative";
 import PredictOverlayCyberFormPanelNative from "./PredictOverlayCyberFormPanelNative";
 import PredictOverlayScoreInputNative from "./PredictOverlayScoreInputNative";
+import TutorialPredictAnnotatorNative from "../tutorial/TutorialPredictAnnotatorNative";
+import TutorialTargetNative from "../tutorial/TutorialTargetNative";
+import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
+import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
+import type { Language } from "../../../../../lib/i18n/language";
 import PredictOverlaySubmitButtonNative from "./PredictOverlaySubmitButtonNative";
 import { WcBroadcastNamesNative } from "./WcBroadcastNamesNative";
 import { PREDICT_OVERLAY_CYBER_DECK_CUT } from "./matchListCyberClipPath";
@@ -202,6 +207,7 @@ export function PredictMatchPreview({
   overlayUnifiedForm = false,
   hideCloseButton = false,
   myPostId = null,
+  tutorialMode = false,
 }: {
   data: PredictModalMatchPreview;
   onClose: () => void;
@@ -223,6 +229,7 @@ export function PredictMatchPreview({
   overlayUnifiedForm?: boolean;
   hideCloseButton?: boolean;
   myPostId?: string | null;
+  tutorialMode?: boolean;
 }) {
   const captureRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
@@ -347,6 +354,7 @@ export function PredictMatchPreview({
             {data.roundLabel}
           </Text>
         ) : null}
+        <TutorialTargetNative id="predict-sides">
         <View style={s.matchPreviewGrid}>
           {showOverlayVs ? (
             <View pointerEvents="none" style={s.matchPreviewVsOverlay}>
@@ -397,39 +405,41 @@ export function PredictMatchPreview({
           </View>
           <View style={[s.matchPreviewCenter, mergedFinal && s.matchPreviewCenterFinal]}>
             {mergedFinal ? (
-              <View style={s.matchPreviewFinalBlock}>
-                <Text style={s.matchPreviewScoreRow} numberOfLines={1}>
-                  <Text style={s.matchPreviewScoreNum}>
-                    {mergedFinal.finalScore.home}
+              <TutorialTargetNative id="result-detail-score">
+                <View style={s.matchPreviewFinalBlock}>
+                  <Text style={s.matchPreviewScoreRow} numberOfLines={1}>
+                    <Text style={s.matchPreviewScoreNum}>
+                      {mergedFinal.finalScore.home}
+                    </Text>
+                    <Text style={s.matchPreviewScoreDash}> – </Text>
+                    <Text style={s.matchPreviewScoreNum}>
+                      {mergedFinal.finalScore.away}
+                    </Text>
                   </Text>
-                  <Text style={s.matchPreviewScoreDash}> – </Text>
-                  <Text style={s.matchPreviewScoreNum}>
-                    {mergedFinal.finalScore.away}
+                  <Text style={s.matchPreviewSub} numberOfLines={1}>
+                    {mergedFinal.finalLabel}
                   </Text>
-                </Text>
-                <Text style={s.matchPreviewSub} numberOfLines={1}>
-                  {mergedFinal.finalLabel}
-                </Text>
-                {mergedFinal.pkScore ? (
-                  <MatchPkResultLineNative
-                    pkScore={mergedFinal.pkScore}
-                    density="overlay"
-                    wc={isWcLeague}
-                  />
-                ) : null}
-                <Text style={s.matchPreviewOverlayPredictKicker} numberOfLines={1}>
-                  {t.myPrediction}
-                </Text>
-                <Text style={s.matchPreviewOverlayPredictRow} numberOfLines={1}>
-                  <Text style={s.matchPreviewOverlayPredictNum}>
-                    {mergedFinal.predictedScore.home}
+                  {mergedFinal.pkScore ? (
+                    <MatchPkResultLineNative
+                      pkScore={mergedFinal.pkScore}
+                      density="overlay"
+                      wc={isWcLeague}
+                    />
+                  ) : null}
+                  <Text style={s.matchPreviewOverlayPredictKicker} numberOfLines={1}>
+                    {t.myPrediction}
                   </Text>
-                  <Text style={s.matchPreviewOverlayPredictDash}> – </Text>
-                  <Text style={s.matchPreviewOverlayPredictNum}>
-                    {mergedFinal.predictedScore.away}
+                  <Text style={s.matchPreviewOverlayPredictRow} numberOfLines={1}>
+                    <Text style={s.matchPreviewOverlayPredictNum}>
+                      {mergedFinal.predictedScore.home}
+                    </Text>
+                    <Text style={s.matchPreviewOverlayPredictDash}> – </Text>
+                    <Text style={s.matchPreviewOverlayPredictNum}>
+                      {mergedFinal.predictedScore.away}
+                    </Text>
                   </Text>
-                </Text>
-              </View>
+                </View>
+              </TutorialTargetNative>
             ) : mergedPrediction ? (
               <View style={s.matchPreviewMergedBlock}>
                 <Text style={s.matchPreviewMergedKicker} numberOfLines={1}>
@@ -563,6 +573,7 @@ export function PredictMatchPreview({
             ) : null}
           </View>
         </View>
+        </TutorialTargetNative>
         {scheduleMeta && !mergedFinal ? (
           <View style={s.matchPreviewScheduleMeta}>
             <View style={s.matchPreviewScheduleMetaRow}>
@@ -594,11 +605,21 @@ export function PredictMatchPreview({
         ) : null}
         {overlayMarketBar ? (
           <View style={s.matchPreviewMarketBarWrap}>
-            <MatchCardOverlayMarketBarNative
-              {...overlayMarketBar}
-              language={language}
-              t={t}
-            />
+            {tutorialMode ? (
+              <TutorialTargetNative id="predict-market">
+                <MatchCardOverlayMarketBarNative
+                  {...overlayMarketBar}
+                  language={language}
+                  t={t}
+                />
+              </TutorialTargetNative>
+            ) : (
+              <MatchCardOverlayMarketBarNative
+                {...overlayMarketBar}
+                language={language}
+                t={t}
+              />
+            )}
           </View>
         ) : null}
         {goalScorerInfo ? (
@@ -612,31 +633,33 @@ export function PredictMatchPreview({
           </View>
         ) : null}
         {mergedFinal && mergedFinal.statRows.length > 0 ? (
-          <View style={s.matchPreviewStatBlock}>
-            {mergedFinal.statRows.map((row) => (
-              <View key={row.key} style={s.matchPreviewStatRow}>
-                <Text style={s.matchPreviewStatLabel} numberOfLines={1}>
-                  {row.label}
-                </Text>
-                <View style={s.matchPreviewStatBarSlot}>
-                  <ResultStatRatingBarNative
-                    ratio={row.ratio}
-                    size="sm"
-                    metricKey={row.key}
-                  />
+          <TutorialTargetNative id="result-detail-stats">
+            <View style={s.matchPreviewStatBlock}>
+              {mergedFinal.statRows.map((row) => (
+                <View key={row.key} style={s.matchPreviewStatRow}>
+                  <Text style={s.matchPreviewStatLabel} numberOfLines={1}>
+                    {row.label}
+                  </Text>
+                  <View style={s.matchPreviewStatBarSlot}>
+                    <ResultStatRatingBarNative
+                      ratio={row.ratio}
+                      size="sm"
+                      metricKey={row.key}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      s.matchPreviewStatValue,
+                      row.valueTone === "yellow" && s.matchPreviewStatValueYellow,
+                      row.valueTone === "red" && s.matchPreviewStatValueRed,
+                    ]}
+                  >
+                    {row.display}
+                  </Text>
                 </View>
-                <Text
-                  style={[
-                    s.matchPreviewStatValue,
-                    row.valueTone === "yellow" && s.matchPreviewStatValueYellow,
-                    row.valueTone === "red" && s.matchPreviewStatValueRed,
-                  ]}
-                >
-                  {row.display}
-                </Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          </TutorialTargetNative>
         ) : null}
         <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
       </View>
@@ -743,6 +766,11 @@ type PredictModalProps = {
   myPostId?: string | null;
   /** Pro プラン — NBA Predict Timing UI（Pro Insight / 同帯バー） */
   isProUser?: boolean;
+  /** チュートリアル練習用の案内バナー */
+  tutorialMode?: boolean;
+  tutorialGuideTitle?: string;
+  tutorialGuideBody?: string;
+  tutorialGuideCta?: string;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -844,8 +872,35 @@ export default function PredictModal({
   overlayUnifiedForm = false,
   myPostId = null,
   isProUser = false,
+  tutorialMode = false,
+  tutorialGuideTitle: _tutorialGuideTitle,
+  tutorialGuideBody: _tutorialGuideBody,
+  tutorialGuideCta: _tutorialGuideCta,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
+  const [tutorialAnnotDismissed, setTutorialAnnotDismissed] = useState(false);
+  const tutorialMsgs = i18nT(
+    (language === "en" ? "en" : "ja") as Language
+  ).tutorial.practice;
+  const predictScrollRef = useRef<ScrollView>(null);
+  const predictScrollYRef = useRef(0);
+
+  useEffect(() => {
+    if (visible && tutorialMode) setTutorialAnnotDismissed(false);
+  }, [visible, tutorialMode]);
+
+  useEffect(() => {
+    if (!visible || !tutorialMode) return;
+    return registerTutorialScrollHost({
+      getOffsetY: () => predictScrollYRef.current,
+      scrollBy: (dy, animated) => {
+        predictScrollRef.current?.scrollTo({
+          y: Math.max(0, predictScrollYRef.current + dy),
+          animated,
+        });
+      },
+    });
+  }, [visible, tutorialMode]);
 
   /**
    * Web オーバーレイ（`PredictionFormV2` overlayEmbedded）: カード以外は入場 stagger なし。
@@ -1118,11 +1173,16 @@ export default function PredictModal({
               pointerEvents="box-none"
             >
               <ScrollView
+                ref={predictScrollRef}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={s.scrollContent}
                 style={s.scroll}
                 pointerEvents="auto"
+                scrollEventThrottle={16}
+                onScroll={(e) => {
+                  predictScrollYRef.current = e.nativeEvent.contentOffset.y;
+                }}
               >
                 <View style={s.modalContent}>
                   <PredictModalContentShell
@@ -1150,6 +1210,7 @@ export default function PredictModal({
                           showMergedScheduledInPreview ? wcGoalScorerPreview : null
                         }
                         isWcLeague={isWcLeague}
+                        tutorialMode={tutorialMode}
                         overlayCenterMode={overlayCenterMode}
                         showEditButton={
                           showMergedScheduledInPreview && !editingLockedAfterKickoff
@@ -1177,6 +1238,7 @@ export default function PredictModal({
                   ) : null}
               <View>
                 {showNbaPredictTimingOverlay ? (
+                  <TutorialTargetNative id="predict-tools">
                   <View style={s.nbaTimingTabShell}>
                     <CyberSlantedTabBarNative fill>
                       <CyberSlantedTabNative
@@ -1202,6 +1264,7 @@ export default function PredictModal({
                       />
                     </CyberSlantedTabBarNative>
                   </View>
+                  </TutorialTargetNative>
                 ) : (
                 <PredictOverlayChamferedFrameNative
                   cut={PREDICT_OVERLAY_CYBER_DECK_CUT}
@@ -1489,9 +1552,23 @@ export default function PredictModal({
 
                   {showScoreInputBlock ? (
                     <>
+                      <TutorialTargetNative id="predict-scores">
                       <Animated.View entering={scoreBlockEnter}>
                         {overlayUnifiedForm ? (
-                          <View style={s.predictScoreFormPanel}>
+                          <View
+                            style={[
+                              s.predictScoreFormPanel,
+                              tutorialMode
+                                ? {
+                                    borderColor: "rgba(0,245,255,0.4)",
+                                    borderWidth: 1,
+                                    shadowColor: TUTORIAL_CYAN,
+                                    shadowOpacity: 0.25,
+                                    shadowRadius: 12,
+                                  }
+                                : null,
+                            ]}
+                          >
                           <PredictionScoringRulesChipNative
                             language={language}
                             league={isWcLeague ? "wc" : "nba"}
@@ -1608,7 +1685,9 @@ export default function PredictModal({
                         </PredictOverlayCyberFormPanelNative>
                         )}
                       </Animated.View>
+                      </TutorialTargetNative>
 
+                      <TutorialTargetNative id="predict-submit">
                       <PredictOverlaySubmitButtonNative
                         enabled={canSubmit}
                         onPress={onSubmit}
@@ -1625,6 +1704,7 @@ export default function PredictModal({
                           isEditingPrediction ? t.submitUpdate : t.submitPrediction
                         }
                       />
+                      </TutorialTargetNative>
                     </>
                   ) : null}
                 </>
@@ -1634,6 +1714,34 @@ export default function PredictModal({
               </ScrollView>
             </KeyboardAvoidingView>
           </Animated.View>
+            {tutorialMode && !tutorialAnnotDismissed ? (
+              <TutorialPredictAnnotatorNative
+                open
+                overviewTitle={tutorialMsgs.predictOverviewTitle}
+                overviewBody={tutorialMsgs.predictOverviewBody}
+                sidesTitle={tutorialMsgs.predictSidesTitle}
+                sidesBody={tutorialMsgs.predictSidesBody}
+                marketTitle={tutorialMsgs.predictMarketTitle}
+                marketBody={tutorialMsgs.predictMarketBody}
+                toolsTitle={tutorialMsgs.predictToolsTitle}
+                toolsBody={tutorialMsgs.predictToolsBody}
+                scoresTitle={tutorialMsgs.predictScoresTitle}
+                scoresBody={tutorialMsgs.predictScoresBody}
+                bonusTitle={tutorialMsgs.predictBonusTitle}
+                bonusBody={tutorialMsgs.predictBonusBody}
+                enterTitle={tutorialMsgs.predictEnterTitle}
+                enterBody={tutorialMsgs.predictEnterBody}
+                submitTitle={tutorialMsgs.predictSubmitTitle}
+                submitBody={tutorialMsgs.predictSubmitBody}
+                nextLabel={i18nT((language === "en" ? "en" : "ja") as Language).tutorial.next}
+                skipLabel={i18nT((language === "en" ? "en" : "ja") as Language).tutorial.skip}
+                backLabel={i18nT((language === "en" ? "en" : "ja") as Language).tutorial.back}
+                enterWaitHint={tutorialMsgs.predictEnterWait}
+                submitWaitHint={tutorialMsgs.predictSubmitWait}
+                enterReady={scoreHome !== "" && scoreAway !== ""}
+                onSkip={() => setTutorialAnnotDismissed(true)}
+              />
+            ) : null}
             </>
           ) : null}
         </View>

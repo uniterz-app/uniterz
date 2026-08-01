@@ -98,10 +98,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     overflow: "visible",
   },
-  /** skew タブの右端はみ出し用 */
+  /** 発光パディングは CyberSlantedTabBarNative 側で確保 */
   tabBarWrap: {
     overflow: "visible",
-    paddingHorizontal: 10,
     marginBottom: spacing.xs,
   },
 });

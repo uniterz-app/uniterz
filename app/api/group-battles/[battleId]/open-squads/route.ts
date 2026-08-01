@@ -1,0 +1,44 @@
+import { adminDb } from "@/lib/firebaseAdmin";
+import { requireUidFromRequest } from "@/lib/communities/serverAuth";
+import { GROUP_BATTLE_MAX_MEMBERS } from "@/lib/groupBattles/constants";
+import {
+  getBattle,
+  parseSquadDoc,
+  squadsCol,
+} from "@/lib/groupBattles/server/firestore";
+import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type Ctx = { params: Promise<{ battleId: string }> };
+
+export async function GET(req: Request, ctx: Ctx) {
+  try {
+    await requireUidFromRequest(req).catch(() => null);
+    const { battleId } = await ctx.params;
+    const battle = await getBattle(adminDb, battleId);
+    if (!battle) return jsonErr("not_found", 404);
+
+    const snap = await squadsCol(adminDb, battleId)
+      .where("status", "in", ["forming", "entered"])
+      .limit(80)
+      .get();
+
+    const open = snap.docs
+      .map((d) => parseSquadDoc(d.id, d.data() as Record<string, unknown>))
+      .filter((s) => s.memberCount < GROUP_BATTLE_MAX_MEMBERS)
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        memberCount: s.memberCount,
+        openSlots: GROUP_BATTLE_MAX_MEMBERS - s.memberCount,
+        status: s.status,
+        memberUids: s.memberUids,
+      }));
+
+    return jsonOk({ squads: open });
+  } catch (e) {
+    return mapAuthError(e);
+  }
+}

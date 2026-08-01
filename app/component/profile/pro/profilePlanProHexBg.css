@@ -1,14 +1,23 @@
 /* PRO 背景 — 六角レイアウト比較 */
 
-/* 六角レイアウトは 1 枚をパネルにぴったり合わせる（四隅まで見せる）
-   - inset:0 で SVG の四隅 = パネルの四隅
-   - 縁フェードマスクは外す（四隅の内容が消えないように）
-   - 動きは opacity のみ（縁が欠けない） */
+/* 六角レイアウト — 幅ロック（バッジ有無で図形が動かない）
+   - 高さは aspect-ratio のみ。カード縦伸びではクリップされるだけ
+   - 縁フェードマスクなし / 連続ループなし */
 .profile-plan-pro-bg[class*="geo-hex-layout"] .profile-plan-pro-bg__geo-pattern {
-  inset: 0;
+  inset: auto;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: auto;
+  width: 100%;
+  aspect-ratio: 300 / 430;
+  height: auto;
   mask-image: none;
   -webkit-mask-image: none;
   animation: none;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat;
+  background-position: center top;
 }
 
 .profile-plan-pro-bg__geo-pattern--depth {
@@ -26,6 +35,12 @@
 /* スウォッチは全体（四隅含む）を表示 — クロップせず引き伸ばし */
 .profile-plan-pro-hex-swatch .profile-plan-pro-bg__geo-pattern {
   background-size: 100% 100% !important;
+}
+
+/* Web 横長 */
+.profile-plan-pro-bg--web[class*="geo-hex-layout"] .profile-plan-pro-bg__geo-pattern {
+  aspect-ratio: 960 / 380;
+  background-position: center top;
 }
 
 /* 全レイアウト共通のグロー */

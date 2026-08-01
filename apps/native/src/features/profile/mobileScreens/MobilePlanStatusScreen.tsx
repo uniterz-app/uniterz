@@ -9,7 +9,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import MobilePageShell from "./MobilePageShell";
 
-type PlanType = "monthly" | "annual" | null;
+type PlanType = "weekly" | "monthly" | "season" | "annual" | null;
 
 type Props = {
   language: "ja" | "en";
@@ -65,11 +65,18 @@ export default function MobilePlanStatusScreen({
   const formatDate = (d: Date | null) =>
     d ? d.toLocaleDateString(isJa ? "ja-JP" : "en-US") : null;
 
-  const title = isJa ? "プランの確認" : "Plan Status";
+  const planHelp = isJa
+    ? "現在のプランと更新情報を確認できます。"
+    : "Check your current plan and renewal details.";
 
   if (loading) {
     return (
-      <MobilePageShell title={title} appBackground onClose={onClose}>
+      <MobilePageShell
+        title="PLAN"
+        subtitle={planHelp}
+        appBackground
+        onClose={onClose}
+      >
         <View style={styles.center}>
           <CandleChartLoaderNative label={isJa ? "読み込み中" : "Loading"} />
         </View>
@@ -78,7 +85,12 @@ export default function MobilePlanStatusScreen({
   }
 
   return (
-    <MobilePageShell title={title} appBackground onClose={onClose}>
+    <MobilePageShell
+      title="PLAN"
+      subtitle={planHelp}
+      appBackground
+      onClose={onClose}
+    >
       <View style={styles.wrap}>
         <View style={styles.card}>
           <View style={styles.logoRow}>
@@ -104,13 +116,21 @@ export default function MobilePlanStatusScreen({
                 : "Pro Plan"}
             {plan === "pro" && planType ? (
               <Text style={styles.planSub}>
-                {planType === "annual"
+                {planType === "weekly"
                   ? isJa
-                    ? " 年額"
-                    : " Yearly"
-                  : isJa
-                    ? " 月額"
-                    : " Monthly"}
+                    ? " 週額"
+                    : " Weekly"
+                  : planType === "season"
+                    ? isJa
+                      ? " シーズン"
+                      : " Season"
+                    : planType === "annual"
+                      ? isJa
+                        ? " 年額（旧）"
+                        : " Yearly (legacy)"
+                      : isJa
+                        ? " 月額"
+                        : " Monthly"}
               </Text>
             ) : null}
           </Text>

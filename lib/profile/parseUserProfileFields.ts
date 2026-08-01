@@ -23,6 +23,13 @@ export function parseUserProfileFields(data: Record<string, unknown>): {
   return { displayName, handle };
 }
 
+/** Firestore `users.unitBalance` — 公開プロフィール表示用 */
+export function parseUserUnitBalance(data: Record<string, unknown>): number {
+  const raw = data.unitBalance;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+
 /** URL ルートキー（ハンドル or uid）を表示に混ぜないためのフォールバック */
 export function profileDisplayFromUser(
   user: {

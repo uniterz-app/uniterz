@@ -28,6 +28,7 @@ import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
+import TutorialTargetNative from "../tutorial/TutorialTargetNative";
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import {
   buildResultStatMetricValues,
@@ -42,6 +43,15 @@ import {
   type ResultDetailPost,
   type ResultPostDetailMarket,
 } from "./loadResultPostDetailNative";
+import {
+  buildTutorialFinalMatchCardProps,
+  buildTutorialPointsDistribution,
+  buildTutorialResultMarket,
+  buildTutorialResultPost,
+  TUTORIAL_RESULT_POST_ID,
+} from "../../../../../lib/tutorial/tutorialNbaUi";
+import { TUTORIAL_NBA_MOCK_GAME } from "../../../../../lib/tutorial/tutorialNbaMock";
+import { readTutorialLivePickNative } from "../tutorial/tutorialLivePickNative";
 import { resolveResultOutcomeBadge } from "../../../../../lib/result/resultBadge";
 import { RESULT_DETAIL_ENTRANCE } from "./resultDetailEntranceNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -622,6 +632,40 @@ export default function ResultDetailScreen({
     setMissing(false);
     void (async () => {
       try {
+        if (postId === TUTORIAL_RESULT_POST_ID) {
+          const pick = await readTutorialLivePickNative();
+          if (!alive) return;
+          if (!pick) {
+            setMissing(true);
+            setPost(null);
+            return;
+          }
+          const built = buildTutorialResultPost(pick.pick, pick.grade);
+          const mockGame = TUTORIAL_NBA_MOCK_GAME;
+          const card = buildTutorialFinalMatchCardProps({
+            language: isEn ? "en" : "ja",
+          });
+          setPost(built as unknown as ResultDetailPost);
+          setGame({
+            id: mockGame.id,
+            league: "nba",
+            status: "final",
+            homeTeamId: mockGame.home.teamId,
+            awayTeamId: mockGame.away.teamId,
+            homeName: card.home.name,
+            awayName: card.away.name,
+            homeScore: mockGame.finalHome,
+            awayScore: mockGame.finalAway,
+            score: {
+              home: mockGame.finalHome,
+              away: mockGame.finalAway,
+            },
+          });
+          setMarket(buildTutorialResultMarket());
+          setDistribution(buildTutorialPointsDistribution());
+          return;
+        }
+
         const r = await loadResultPostDetailNative(postId);
         if (!alive) return;
         if (!r.ok) {
@@ -642,7 +686,7 @@ export default function ResultDetailScreen({
     return () => {
       alive = false;
     };
-  }, [visible, postId, reset]);
+  }, [visible, postId, reset, isEn]);
 
   useEffect(() => {
     if (!visible) return;
@@ -752,13 +796,15 @@ export default function ResultDetailScreen({
                 ) : null}
                 {heavyContentReady ? (
                   <>
-                    <View>
-                      <ResultDetailDistributionSection
-                        distribution={distribution}
-                        post={post}
-                        language={language}
-                      />
-                    </View>
+                    <TutorialTargetNative id="result-detail-more">
+                      <View>
+                        <ResultDetailDistributionSection
+                          distribution={distribution}
+                          post={post}
+                          language={language}
+                        />
+                      </View>
+                    </TutorialTargetNative>
                     <View>
                       <ResultDetailStatsSection post={post} language={language} />
                     </View>

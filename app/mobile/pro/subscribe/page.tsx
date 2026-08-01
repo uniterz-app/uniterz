@@ -1,6 +1,6 @@
 "use client";
 
-import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
+import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import ProSubscribePreview from "@/app/component/pro/dev/ProSubscribePreview";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -10,11 +10,16 @@ export default function MobileProSubscribePage() {
   const { language } = useUserLanguage(fUser?.uid ?? null);
 
   return (
-    <main className="min-h-screen bg-[#050b14] px-3 py-6 text-white sm:px-4">
-      <FloatingCloseButton />
-      <div className="mx-auto max-w-xl">
-        <ProSubscribePreview language={language} />
-      </div>
-    </main>
+    <ProfileCyberPage
+      title="PRO"
+      subtitle={
+        language === "en"
+          ? "Upgrade to Pro for skins and premium features."
+          : "スキンやプレミアム機能を使える Pro プランです。"
+      }
+      contentClassName="max-w-xl px-3 py-4 sm:px-4"
+    >
+      <ProSubscribePreview language={language} />
+    </ProfileCyberPage>
   );
 }

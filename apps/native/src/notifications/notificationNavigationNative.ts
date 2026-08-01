@@ -2,26 +2,35 @@
 import type { PushNotificationData } from "@/lib/notifications/pushPayloadTypes";
 import { navigationRef, runWhenNavigationReady } from "../navigation/navigationRef";
 
+function navigateToGamePredict(gameId: string | undefined) {
+  if (gameId) {
+    navigationRef.navigate("Main", {
+      screen: "GamesTab",
+      params: {
+        screen: "GamePredict",
+        params: { gameId },
+      },
+    });
+    return;
+  }
+  navigationRef.navigate("Main", {
+    screen: "GamesTab",
+    params: { screen: "GamesHome" },
+  });
+}
+
 export function navigateFromPushNotificationData(data: PushNotificationData) {
   runWhenNavigationReady(() => {
     if (!navigationRef.isReady()) return;
 
     switch (data.type) {
       case "game_start":
-        if (data.gameId) {
-          navigationRef.navigate("Main", {
-            screen: "GamesTab",
-            params: {
-              screen: "GamePredict",
-              params: { gameId: data.gameId },
-            },
-          });
-        } else {
-          navigationRef.navigate("Main", {
-            screen: "GamesTab",
-            params: { screen: "GamesHome" },
-          });
-        }
+      case "injury_status":
+      case "starter_change":
+      case "prediction_deadline":
+      case "pregame_digest":
+      case "pro_insight_update":
+        navigateToGamePredict(data.gameId);
         return;
       case "game_final":
         if (data.postId) {

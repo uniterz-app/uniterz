@@ -20,7 +20,10 @@ import {
   Mail,
   Award,
   Sparkles,
+  Trash2,
+  Hexagon,
 } from "lucide-react";
+import { parseUserUnitBalance } from "@/lib/profile/parseUserProfileFields";
 import { useRouter, usePathname } from "next/navigation";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
 import { ADMIN_UID } from "@/lib/constants";
@@ -49,12 +52,18 @@ type SettingsMenuProps = {
   onRequestCloseMenu?: () => void;
   /** プロフィール編集を戻るで閉じたあとサイドメニューを再度開く */
   onRequestOpenMenu?: () => void;
+  /**
+   * 指定時は親が ProfileEditSheet を出す。
+   * （ドロワー閉じてもシートが生き残る・戻るでメニュー再開が確実）
+   */
+  onOpenProfileEdit?: () => void;
 };
 
 export default function SettingsMenu({
   className,
   onRequestCloseMenu,
   onRequestOpenMenu,
+  onOpenProfileEdit,
 }: SettingsMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -78,6 +87,7 @@ export default function SettingsMenu({
   const [portalReady, setPortalReady] = useState(false);
 
   const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [unitBalance, setUnitBalance] = useState<number>(0);
   const { unreadCount } = useAnnouncementsUnread({
     enabled: isAuthStateResolved(status),
   });
@@ -107,10 +117,11 @@ export default function SettingsMenu({
   );
   const contactPath = p("/web/contact", "/mobile/contact");
 
-  // ===== plan =====
+  // ===== plan / Unit 残高 =====
   useEffect(() => {
     if (!user?.uid) {
       setPlan("free");
+      setUnitBalance(0);
       return;
     }
     let alive = true;
@@ -118,6 +129,9 @@ export default function SettingsMenu({
       if (!alive) return;
       const p = data?.plan;
       setPlan(p === "pro" ? "pro" : "free");
+      setUnitBalance(
+        data ? parseUserUnitBalance(data as Record<string, unknown>) : 0
+      );
     });
     return () => {
       alive = false;
@@ -129,8 +143,15 @@ export default function SettingsMenu({
   }, []);
 
   const openProfileEditOverlay = () => {
-    onRequestCloseMenu?.();
+    if (onOpenProfileEdit) {
+      onOpenProfileEdit();
+      return;
+    }
+    // フォールバック: メニュー内ポータル（親未対応時）
     setShowProfileEdit(true);
+    window.setTimeout(() => {
+      onRequestCloseMenu?.();
+    }, 40);
   };
 
   const isAdmin = user?.uid === ADMIN_UID;
@@ -153,6 +174,31 @@ export default function SettingsMenu({
   return (
     <>
       <nav className={cn(containerClasses, "overflow-x-hidden")}>
+        {user?.uid ? (
+          <div
+            className="side-menu-unit-wallet"
+            aria-label={
+              isEn
+                ? `${unitBalance.toLocaleString("en-US")} Units`
+                : `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
+            }
+          >
+            <span className="side-menu-unit-wallet__mark" aria-hidden>
+              <Hexagon
+                className="side-menu-unit-wallet__hex"
+                strokeWidth={1.6}
+              />
+              <span className="side-menu-unit-wallet__u">U</span>
+            </span>
+            <span className="side-menu-unit-wallet__meta">
+              <span className="side-menu-unit-wallet__label">UNITS</span>
+              <span className="side-menu-unit-wallet__value">
+                {unitBalance.toLocaleString("en-US")}
+              </span>
+            </span>
+          </div>
+        ) : null}
+
         <CyberSideMenuSectionTitle first>
           <span className={cn(isEn && "uppercase")}>{m.settings.sectionMain}</span>
         </CyberSideMenuSectionTitle>
@@ -329,11 +375,28 @@ export default function SettingsMenu({
           </>
         )}
 
-        <div className="relative mt-5 pt-4 pb-1">
+        <div className="relative mt-5 flex flex-col gap-2 pt-4 pb-1">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/25 to-transparent"
           />
+          <SideMenuItemButton
+            icon={Trash2}
+            tone="danger"
+            dense
+            labelStyle={menuLabelFont}
+            onClick={() =>
+              pushFromMenu(
+                resolvedVariant === "web"
+                  ? "/web/settings/delete-account"
+                  : "/mobile/settings/delete-account"
+              )
+            }
+          >
+            <span className={cn(isEn && "uppercase")}>
+              {m.settings.deleteAccount}
+            </span>
+          </SideMenuItemButton>
           <SideMenuItemButton
             icon={LogOut}
             tone="danger"
@@ -354,6 +417,7 @@ export default function SettingsMenu({
 
       {portalReady &&
         showProfileEdit &&
+        !onOpenProfileEdit &&
         createPortal(
           <ProfileEditSheet
             onClose={() => setShowProfileEdit(false)}

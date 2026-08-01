@@ -7,8 +7,11 @@ import { spacing } from "../../theme/tokens";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { LeaderboardsStackParamList, MainTabParamList } from "../../navigation/types";
+import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { useNativeMyRankingUser } from "../rankings/useNativeMyRankingUser";
 import RankingsCommunityPanelNative from "./RankingsCommunityPanelNative";
+import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
+import type { Language } from "../../../../../lib/i18n/language";
 
 type Props = { bottomReserveY?: number };
 
@@ -35,18 +38,22 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
           onReopenGroupConsumed={() => {
             stackNavigation.setParams({ reopenGroupId: undefined });
           }}
+          onOpenSquadBattle={() => {
+            stackNavigation.navigate("SquadBattlePreview");
+          }}
           onOpenProfile={(handle, groupId) => {
-            tabNavigation.navigate("ProfileTab", {
-              screen: "ProfileHome",
-              params: {
-                handle,
-                fromLeaderboards: true,
-                ...(groupId ? { leaderboardsGroupId: groupId } : {}),
-              },
+            navigateToPublicProfileNative(tabNavigation, {
+              handle,
+              fromLeaderboards: true,
+              ...(groupId ? { leaderboardsGroupId: groupId } : {}),
             });
           }}
         />
       </ScrollView>
+      <TutorialLiveHostNative
+        page="groups"
+        language={(language === "en" ? "en" : "ja") as Language}
+      />
     </View>
   );
 }
