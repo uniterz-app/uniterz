@@ -1,12 +1,12 @@
 /**
- * Web `RadarChart` の簡易ネイティブ版（5軸・0–10 スケール）。
+ * Web `RadarChart` の簡易ネイティブ版（4軸・0–10 スケール）。
  */
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Polygon } from "react-native-svg";
 import { colors } from "../../theme/tokens";
 
-type RadarAxisKey = "winRate" | "precision" | "upset" | "volume" | "streak";
+type RadarAxisKey = "winRate" | "upset" | "volume" | "streak";
 
 function score10ToLevel(score: number): "S" | "M" | "W" {
   if (score >= 8) return "S";
@@ -17,7 +17,6 @@ function score10ToLevel(score: number): "S" | "M" | "W" {
 const AXES: Array<{ key: RadarAxisKey; ja: string; en: string }> = [
   { key: "winRate", ja: "勝率", en: "Win rate" },
   { key: "volume", ja: "投稿量", en: "Volume" },
-  { key: "precision", ja: "精度", en: "Precision" },
   { key: "upset", ja: "Upset", en: "Upset" },
   { key: "streak", ja: "耐性", en: "Stamina" },
 ];

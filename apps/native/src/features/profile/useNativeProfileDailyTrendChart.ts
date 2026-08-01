@@ -85,7 +85,7 @@ export function useNativeProfileDailyTrendChart(
       posts: row.posts ?? 0,
       wins: row.wins ?? 0,
       pointsV3: row.pointsV3 ?? 0,
-      scorePrecision: row.scorePrecision ?? 0,
+      exactHitCount: row.exactHitCount ?? 0,
       upsetPoints: row.upsetPoints ?? 0,
       winRate: row.winRate ?? (row.posts > 0 ? row.wins / row.posts : 0),
     }));

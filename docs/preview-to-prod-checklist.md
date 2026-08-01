@@ -111,7 +111,7 @@
 | # | 項目 | 状態 | メモ |
 |---|---|---|---|
 | 6 | **ランキングを Weekly + Monthly に** | ✅ NBA タブ再構成済み | NBA は **Weekly / Monthly / Season + 指標タブのみ**（Playoffs/Bracket カテゴリタブ・1st/2nd 等ラウンドタブは廃止。mobile/web とも）。WC は従来どおり（WORLD CUP/Bracket + ステージタブ）。Season はシーズンキー式（`rankingBySeason["2026-27"]` + `s2026-27_*` snapshot）で毎年リセット不要 |
-| 7 | **週次 / 月次レポート** | V1 完成形確定（2026-07-23） | 週次=結果→部門→順位変動→ライバル→診断 / 月次=表紙→数字→レーダー6軸→クセ→相性→ハイライト→来月分析。**Stats 廃止→Report 一本化**・Pro のみ・NBA のみ。詳細: `pro-subscription-plan.md` §3–4 |
+| 7 | **週次 / 月次レポート** | 月次 UI＋集計 #1–#4 済 | 画面順: 表紙→数字→Unit内訳→レーダー→クセ→相性→ハイライト→サマリー。次はプッシュ→Report入口（`pro-subscription-plan.md` キュー #5〜）。Unit は弁護士後。Stats→Report 一本化・Pro/NBA のみ |
 
 #### NBA ランキング指標（確定）
 
@@ -311,6 +311,7 @@
 
 | 日付 | 内容 |
 |---|---|
+| 2026-07-27 | 月次レポート残作業を `pro-subscription-plan.md`「これからやるキュー」に整理（クセ接続→CONSISTENCY→前月比→8:00 cron→プッシュ→Report入口。Unit は弁護士後）。§0.2 #7 状態更新 |
 | 2026-07-23 | **Pro Plan 煮詰め反映**: `pro-subscription-plan.md` を正として全面更新。§0.1.a 課金コピーを Insight/アラート/レポート/Skin 中心に差し替え。Shadow・Gap は V1 外。週次・月次 V1 完成形・Achievement Skin・直前アラートを計画書へ |
 | 2026-07-18 | **26-27 シーズンキー移行 + ランキング大掃除**: ① 25-26 の `cumulative_ranking_snapshots` 全 52 doc を `cumulative_ranking_snapshots_archive/2025-26-playoffs/docs/` にコピー済み（`scripts/archive-cumulative-ranking-snapshots-2025-26.ts` 実行済み。`cumulative_stats` は温存 → バッジ影響なし）。② NBA 累計は `rankingBySeason["2026-27"]` バケットに精算加算（daily も同キー）、スナップショットは `s2026-27_<metric>` doc、snapshotRanks/履歴は `seasons.<key>` ブロック。Ranking Progress（trend API）もシーズンキーで絞り込み、7月の旧順位が混入しない。③ 削除: ラウンド別集計（`rankingByPlayoffRound`）・play_in 配管・NBA Bracket リーダーボード・旧 Monthly リーダーボード（cron/API/UI）・`useRanking` + `/api/cumulative-ranking` 単発版・Gap/Shadow の日次データ収集（`gapCohorts`。UI/API はライブ read で継続）。④ 一発運用スクリプト多数を `scripts/archive/` へ移動（tsconfig から除外） |
 | 2026-07-18 | **NBA ランキングタブ再構成（シーズン制）**: NBA は Weekly / Monthly / Season + 指標タブのみに。Playoffs/Bracket カテゴリタブ・ラウンドタブ（1st/2nd/CF/Finals）を mobile/web から削除（`PlayoffRoundTabs` 削除、NBA Bracket リーダーボード導線廃止）。web にも期間タブ + `usePeriodRankingsBulk` 配線。サイドメニュー表記を「NBA プレーオフ」→「NBA」へ。**残**: 新シーズン開始時の Season 累計リセット |

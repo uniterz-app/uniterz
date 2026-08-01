@@ -1,0 +1,9 @@
+{
+  "weekKey": "2026-10-26",
+  "status": "final",
+  "note": "サンプル。本番指定時は gameIds を実在の games/{id} に差し替える。",
+  "gameIds": [
+    "REPLACE_WITH_REAL_GAME_ID_1",
+    "REPLACE_WITH_REAL_GAME_ID_2"
+  ]
+}

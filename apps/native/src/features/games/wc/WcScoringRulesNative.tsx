@@ -52,24 +52,6 @@ const RULES: Record<GamesLanguage, RuleSection[]> = {
       ],
     },
     {
-      title: "スコア精度",
-      intro: "予想スコアが実際の結果にどれだけ近かったか。総合得点とは別の指標です。",
-      blocks: [
-        {
-          lines: ["1試合あたり 0〜10点。勝者を外してもつく指標です。"],
-        },
-        {
-          tone: "highlight",
-          title: "次の3つで加点（合計10点満点）",
-          lines: [
-            "勝ち負けの区分が同じ（ホーム勝 / 引き分け / アウェイ勝）… 最大4点",
-            "合計ゴール数 … 最大4点（総合得点と同じくくり）",
-            "スコアの近さ … 最大2点（ホーム・アウェイのズレ合計が小さいほど高得点）",
-          ],
-        },
-      ],
-    },
-    {
       title: "アップセット得点",
       intro: "波乱した試合で、少数派予想が当たったときの加点です。",
       blocks: [
@@ -117,24 +99,6 @@ const RULES: Record<GamesLanguage, RuleSection[]> = {
             "Goal scorer bonus … +2 (own goals excluded)",
             "Upset bonus … +2 when your 45% or below market-side pick wins",
             "Win-streak bonus … 3-4 wins +1 / 5-6 wins +2 / 7+ wins +3",
-          ],
-        },
-      ],
-    },
-    {
-      title: "Score precision",
-      intro: "How close your predicted score was, separate from total score.",
-      blocks: [
-        {
-          lines: ["0-10 per game. Counts even if you miss the winner."],
-        },
-        {
-          tone: "highlight",
-          title: "Three checks (max 10 total)",
-          lines: [
-            "Same outcome (home / draw / away) … up to 4",
-            "Total goals … up to 4 using the same buckets as total score",
-            "Score closeness … up to 2; smaller home + away error scores higher",
           ],
         },
       ],

@@ -215,13 +215,15 @@ function BasketballTotalRulesJa() {
             <Em>得失点差</Em> … 最大 <Num>+4点</Num>
             <br />
             <span className="text-white/60">
-              例：予想 110–105（差5）・結果 100–95（差5）→ 差が同じなので満点に近い。差のズレが大きいほど減点（ズレ15以上は0点）。
+              差のズレが小さいほど高得点。誤差 0 で満点、15 以上で 0 点までなだらかに減点（小数点あり）。
             </span>
           </li>
           <li>
             <Em>合計得点</Em>（両チームの点数の合計）… 最大 <Num>+2点</Num>
             <br />
-            <span className="text-white/60">合計が近いほど高得点。ズレが大きいと +1 や 0 になります。</span>
+            <span className="text-white/60">
+              合計のズレが小さいほど高得点。誤差 0 で満点、11 以上で 0 点までなだらかに減点（小数点あり）。
+            </span>
           </li>
         </ol>
       </HighlightBlock>
@@ -249,10 +251,11 @@ function BasketballTotalRulesEn() {
             <Em>Winner</Em> … <Num>+4</Num>
           </li>
           <li>
-            <Em>Point margin</Em> … up to <Num>+4</Num> (closer margin → more points; error ≥15 → 0)
+            <Em>Point margin</Em> … up to <Num>+4</Num> (smooth decay to 0 by error 15; decimals OK)
           </li>
           <li>
-            <Em>Combined total</Em> (home + away points) … up to <Num>+2</Num>
+            <Em>Combined total</Em> (home + away points) … up to <Num>+2</Num> (smooth decay to 0 by
+            error 11; decimals OK)
           </li>
         </ol>
       </HighlightBlock>
@@ -387,123 +390,6 @@ function FootballTotalRulesEn({ showWcGoalScorer = false }: { showWcGoalScorer?:
   );
 }
 
-function BasketballPrecisionRulesJa() {
-  return (
-    <ul className="space-y-2">
-      <RuleBlock>
-        1試合あたり <Num>0〜10点</Num>。<Em>勝者を外しても</Em>つく指標です（リザルトの「スコア精度」）。
-      </RuleBlock>
-      <HighlightBlock>
-        <BlockSubhead>3つのズレをそれぞれ採点して合計</BlockSubhead>
-        <ul className="list-disc space-y-1.5 pl-4">
-          <li>
-            <Em>ホームの得点</Em> … 予想と結果の差が小さいほど高得点（最大 <Num>3点</Num>）
-          </li>
-          <li>
-            <Em>アウェイの得点</Em> … 同様（最大 <Num>3点</Num>）
-          </li>
-          <li>
-            <Em>得失点差</Em> … 同様（最大 <Num>4点</Num>）
-          </li>
-        </ul>
-        <p className="mt-1.5 text-white/60">数字がぴったりなら各項目とも満点に近く、ズレが大きいほど減点します。</p>
-      </HighlightBlock>
-    </ul>
-  );
-}
-
-function BasketballPrecisionRulesEn() {
-  return (
-    <ul className="space-y-2">
-      <RuleBlock>
-        <Num>0–10</Num> per game. Counts even if you miss the winner (<Em>score precision</Em> on results).
-      </RuleBlock>
-      <HighlightBlock>
-        <BlockSubhead>Three parts, summed</BlockSubhead>
-        <ul className="list-disc space-y-1.5 pl-4">
-          <li>
-            <Em>Home points</Em> error (max <Num>3</Num>)
-          </li>
-          <li>
-            <Em>Away points</Em> error (max <Num>3</Num>)
-          </li>
-          <li>
-            <Em>Margin</Em> error (max <Num>4</Num>)
-          </li>
-        </ul>
-        <p className="mt-1.5 text-white/60">Closer predictions score higher on each part.</p>
-      </HighlightBlock>
-    </ul>
-  );
-}
-
-function FootballPrecisionRulesJa() {
-  return (
-    <ul className="space-y-2">
-      <RuleBlock>
-        1試合あたり <Num>0〜10点</Num>。<Em>勝者を外しても</Em>つく指標です（リザルトの「スコア精度」）。
-      </RuleBlock>
-      <HighlightBlock>
-        <BlockSubhead>次の3つで加点（合計10点満点）</BlockSubhead>
-        <ol className="list-decimal space-y-1.5 pl-4">
-          <li>
-            <Em>勝ち負けの区分</Em>が同じ（ホーム勝／引き分け／アウェイ勝）… 最大 <Num>4点</Num>
-          </li>
-          <li>
-            <Em>合計ゴール数</Em> … 最大 <Num>4点</Num>
-            <p className="mt-1 text-white/60">
-              予想と結果で同じくくりなら加点（総合得点と同じ）。
-              <Num>0〜2</Num>／<Num>3〜4</Num>／<Num>5以上</Num>
-            </p>
-          </li>
-          <li>
-            <Em>スコアの近さ</Em> … 最大 <Num>2点</Num>
-            <p className="mt-1 text-white/60">
-              ホームとアウェイの「予想の得点」と「結果の得点」のズレを足した数が、小さいほど高得点です。
-            </p>
-            <p className="mt-1 text-white/55">
-              例）予想 <Num>2–1</Num>・結果 <Num>2–0</Num> → ホーム差0＋アウェイ差1＝合計1
-            </p>
-          </li>
-        </ol>
-      </HighlightBlock>
-    </ul>
-  );
-}
-
-function FootballPrecisionRulesEn() {
-  return (
-    <ul className="space-y-2">
-      <RuleBlock>
-        <Num>0–10</Num> per game. Counts even if you miss the winner.
-      </RuleBlock>
-      <HighlightBlock>
-        <BlockSubhead>Three checks (max 10 total)</BlockSubhead>
-        <ol className="list-decimal space-y-1.5 pl-4">
-          <li>
-            Same <Em>outcome</Em> (home / draw / away) … up to <Num>4</Num>
-          </li>
-          <li>
-            <Em>Total goals</Em> … up to <Num>4</Num>
-            <p className="mt-1 text-white/60">
-              Same buckets as total score: <Num>0–2</Num> / <Num>3–4</Num> / <Num>5+</Num>
-            </p>
-          </li>
-          <li>
-            <Em>Score closeness</Em> … up to <Num>2</Num>
-            <p className="mt-1 text-white/60">
-              Add how far off home and away scores each are; smaller total = more points.
-            </p>
-            <p className="mt-1 text-white/55">
-              e.g. pick <Num>2–1</Num>, result <Num>2–0</Num> → 0 + 1 = 1 total error
-            </p>
-          </li>
-        </ol>
-      </HighlightBlock>
-    </ul>
-  );
-}
-
 function UpsetPointsRulesJa() {
   return (
     <ul className="space-y-2">
@@ -600,7 +486,7 @@ export function FootballTotalScoreRulesOnly({
   );
 }
 
-/** 予想フォームの採点ルールチップ用（総合得点＋スコア精度＋アップセット得点） */
+/** 予想フォームの採点ルールチップ用（総合得点＋アップセット得点） */
 export function PredictionScoringFullRulesBody({
   sport,
   language,
@@ -613,14 +499,10 @@ export function PredictionScoringFullRulesBody({
   const showWcGoalScorer = String(league ?? "").toLowerCase() === "wc";
   const isEn = language === "en";
   const totalTitle = isEn ? "Total score" : "総合得点";
-  const precisionTitle = isEn ? "Score precision" : "スコア精度";
   const upsetTitle = isEn ? "Upset points" : "アップセット得点";
   const totalIntro = isEn
     ? "Main points per game on results and leaderboards."
     : "リザルトやランキングで使う、試合ごとのメインのポイントです。";
-  const precisionIntro = isEn
-    ? "How close your predicted score was—separate from total score."
-    : "予想スコアが実際の結果にどれだけ近かったか。総合得点とは別の指標です。";
   const upsetIntro = isEn
     ? "When an upset happens and your minority pick wins."
     : "波乱した試合で、少数派予想が当たったときの加点です。";
@@ -634,15 +516,6 @@ export function PredictionScoringFullRulesBody({
         ? <BasketballTotalRulesEn />
         : <BasketballTotalRulesJa />;
 
-  const precision =
-    sport === "football"
-      ? isEn
-        ? <FootballPrecisionRulesEn />
-        : <FootballPrecisionRulesJa />
-      : isEn
-        ? <BasketballPrecisionRulesEn />
-        : <BasketballPrecisionRulesJa />;
-
   const upset = isEn ? <UpsetPointsRulesEn /> : <UpsetPointsRulesJa />;
 
   const ui = useScoringRulesUi();
@@ -653,11 +526,6 @@ export function PredictionScoringFullRulesBody({
         <SectionTitle>{totalTitle}</SectionTitle>
         <SectionIntro>{totalIntro}</SectionIntro>
         {total}
-      </div>
-      <div>
-        <SectionTitle>{precisionTitle}</SectionTitle>
-        <SectionIntro>{precisionIntro}</SectionIntro>
-        {precision}
       </div>
       <div>
         <SectionTitle>{upsetTitle}</SectionTitle>

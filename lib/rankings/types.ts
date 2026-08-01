@@ -7,7 +7,6 @@ export type LeagueTab = "nba" | "b1";
 // ========== 指標 ==========
 export type Metric =
   | "winRate"
-  | "avgPrecision"
   | "streak"
   
   
@@ -26,7 +25,6 @@ export type RankingRow = {
   posts: number; // 期間内投稿数
   winRate?: number; // 0..1
   accuracy?: number;
-  avgPrecision?: number;
   streak?: number;
 };
 

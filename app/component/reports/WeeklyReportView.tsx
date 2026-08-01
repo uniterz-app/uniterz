@@ -1,14 +1,14 @@
 "use client";
 
-// 週次レポート（Pro）本体。docs/pro-subscription-plan.md §週次 / 月次レポート 要件定義 の
-// 週次 8 ブロック（結果 / 部門 / 抜いた / 抜かれた / ターゲット / 脅威 / ベスト予想 / 一言）。
+// 週次レポート（Pro）本体。docs/pro-subscription-plan.md §3 個人週次レポート。
+// 画面順: 結果 / 部門 / 順位変動 / ライバル / 診断。
 // 見た目はランキング画面の DATA SLAB 語彙（rankingsCyberTheme）に合わせる。
 
 import { useState, type CSSProperties } from "react";
 import { ArrowDown, ArrowUp, ChevronUp, Crosshair, ShieldAlert } from "lucide-react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import { RankingsCyberPanel } from "@/app/component/rankings/RankingsCyberPanel";
-import { nameBebas, nameOxanium } from "@/lib/fonts";
+import { nameBebas, nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
 import {
   INITIAL_REPORT_RIVALS,
   type WeeklyReport,
@@ -39,6 +39,8 @@ const COPY = {
     divisions: "部門成績",
     divisionRank: (n: number) => `部門 #${n}`,
     divisionUnranked: "圏外",
+    divisionReference: "参考記録",
+    divisionPostsToQualify: (n: number) => `あと${n}予想`,
     overtaken: "抜いた相手",
     overtakenBy: "抜かれた相手",
     noOvertaken: "今週は誰も抜けなかった",
@@ -47,6 +49,9 @@ const COPY = {
     showMore: (n: number) => `もっと見る（${n}人）`,
     showLess: "閉じる",
     firstWeekBattle: "今週から参戦。抜いた・抜かれたは来週から表示されます。",
+    battleSummary: (passed: number, passedBy: number) =>
+      `今週は${passed}人を抜き、${passedBy}人に抜かれました`,
+    battleSection: "順位変動",
     nowRank: (n: number) => `現在 #${n}`,
     nextTarget: "次のターゲット",
     targetGapLabel: "抜くまであと",
@@ -84,6 +89,8 @@ const COPY = {
     divisions: "Divisions",
     divisionRank: (n: number) => `Div #${n}`,
     divisionUnranked: "Unranked",
+    divisionReference: "Reference",
+    divisionPostsToQualify: (n: number) => `${n} more picks`,
     overtaken: "Passed",
     overtakenBy: "Passed by",
     noOvertaken: "No one passed this week",
@@ -92,6 +99,9 @@ const COPY = {
     showMore: (n: number) => `Show all (+${n})`,
     showLess: "Show less",
     firstWeekBattle: "First week in. Battle log starts next week.",
+    battleSummary: (passed: number, passedBy: number) =>
+      `Passed ${passed}, passed by ${passedBy} this week`,
+    battleSection: "Rank Moves",
     nowRank: (n: number) => `now #${n}`,
     nextTarget: "Next Target",
     targetGapLabel: "To pass",
@@ -438,7 +448,9 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
       <div className="mt-2 grid grid-cols-3 gap-1.5">
         {report.divisions.map((d) => {
           const meta = DIVISION_META[d.key];
-          const isTop10 = d.rank != null && d.rank <= 10;
+          const isReference =
+            d.postsToQualify != null && d.postsToQualify > 0;
+          const isTop10 = !isReference && d.rank != null && d.rank <= 10;
           const integer = d.key === "goalScorerHits";
           return (
             <div key={d.key} className="px-2.5 py-2" style={slabStyle(meta.accent)}>
@@ -474,18 +486,39 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
                 </span>
                 <ValueDelta value={d.value} prevValue={d.prevValue} integer={integer} />
               </div>
-              <p
-                className={[
-                  nameOxanium.className,
-                  "mt-1.5 text-[9px] font-bold uppercase tracking-[0.12em] tabular-nums",
-                ].join(" ")}
-                style={{
-                  color: d.rank != null ? meta.accent.main : "rgba(255,255,255,0.35)",
-                  opacity: d.rank != null ? 0.9 : 1,
-                }}
-              >
-                {d.rank != null ? c.divisionRank(d.rank) : c.divisionUnranked}
-              </p>
+              {isReference ? (
+                <div className="mt-1.5 space-y-0.5">
+                  <p
+                    className={[
+                      lang === "ja" ? jp.className : nameOxanium.className,
+                      "text-[10px] font-semibold leading-none text-white/55",
+                    ].join(" ")}
+                  >
+                    {c.divisionReference}
+                  </p>
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "text-[9px] font-bold uppercase tracking-[0.1em] tabular-nums text-white/40",
+                    ].join(" ")}
+                  >
+                    {c.divisionPostsToQualify(d.postsToQualify!)}
+                  </p>
+                </div>
+              ) : (
+                <p
+                  className={[
+                    nameOxanium.className,
+                    "mt-1.5 text-[9px] font-bold uppercase tracking-[0.12em] tabular-nums",
+                  ].join(" ")}
+                  style={{
+                    color: d.rank != null ? meta.accent.main : "rgba(255,255,255,0.35)",
+                    opacity: d.rank != null ? 0.9 : 1,
+                  }}
+                >
+                  {d.rank != null ? c.divisionRank(d.rank) : c.divisionUnranked}
+                </p>
+              )}
             </div>
           );
         })}
@@ -629,6 +662,17 @@ function BattleBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
 
   return (
     <section className="grid gap-2">
+      <div>
+        <SectionBadge>{c.battleSection}</SectionBadge>
+        <p
+          className={[
+            lang === "ja" ? jp.className : nameRajdhani.className,
+            "mt-2 text-[13px] font-semibold leading-snug tracking-wide text-white/80",
+          ].join(" ")}
+        >
+          {c.battleSummary(report.overtakenCount, report.overtakenByCount)}
+        </p>
+      </div>
       <BattlePanel
         label={c.overtaken}
         count={report.overtakenCount}

@@ -66,7 +66,6 @@ type Bucket = {
   upsetHitCount: number;
   upsetOpportunityCount: number;
   upsetPointsSum: number;
-  scorePrecisionSum: number;
   exactHitCount: number;
   pointsSumV3: number;
   upsetBonusSum: number;
@@ -79,7 +78,7 @@ export type SummaryForCardsRollup = {
   recent3Posts: number;
   wins: number;
   winRate: number;
-  scorePrecisionSum: number;
+  exactHitCount: number;
   upsetPointsSum: number;
   pointsSumV3: number;
   upsetChanceCount: number;
@@ -96,7 +95,6 @@ const empty = (): Bucket => ({
   upsetHitCount: 0,
   upsetOpportunityCount: 0,
   upsetPointsSum: 0,
-  scorePrecisionSum: 0,
   exactHitCount: 0,
   pointsSumV3: 0,
   upsetBonusSum: 0,
@@ -116,7 +114,6 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   base.upsetHitCount += safeInt(v.upsetHitCount);
   base.upsetOpportunityCount += safeInt(v.upsetOpportunityCount);
   base.upsetPointsSum += safeNum(v.upsetPointsSum);
-  base.scorePrecisionSum += safeNum(v.scorePrecisionSum);
   base.exactHitCount += safeInt(v.exactHitCount);
   base.pointsSumV3 += safeNum(v.pointsSumV3);
   base.upsetBonusSum += safeNum(v.upsetBonusSum);
@@ -124,14 +121,14 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   return base;
 }
 
-function precisionSumFromBucket(
+function exactHitCountFromBucket(
   bucket: Partial<Bucket>,
   ctx: ProfileDailyTrendContext
 ): number {
   if (ctx.rankingLeague === "worldcup") {
     return safeInt(bucket.exactHitCount);
   }
-  return safeNum(bucket.scorePrecisionSum);
+  return 0;
 }
 
 function computeForCards(
@@ -152,7 +149,7 @@ function computeForCards(
     recent3Posts: 0,
     wins,
     winRate: posts ? wins / posts : 0,
-    scorePrecisionSum: precisionSumFromBucket(b, ctx),
+    exactHitCount: exactHitCountFromBucket(b, ctx),
     upsetPointsSum: safeNum(b.upsetPointsSum),
     pointsSumV3,
     upsetChanceCount: safeInt(b.upsetOpportunityCount),
@@ -241,7 +238,7 @@ export function dailyTrendRowFromDailySnap(
   const wins = safeInt(bucket.wins);
   const pointsV3 = safeNum(bucket.pointsSumV3);
   const upsetPoints = safeNum(bucket.upsetPointsSum);
-  const scorePrecisionSum = precisionSumFromBucket(bucket, ctx);
+  const exactHitCount = exactHitCountFromBucket(bucket, ctx);
 
   return {
     date,
@@ -250,7 +247,7 @@ export function dailyTrendRowFromDailySnap(
     pointsV3,
     upsetPoints,
     winRate: posts > 0 ? wins / posts : 0,
-    scorePrecision: scorePrecisionSum,
+    exactHitCount,
   };
 }
 

@@ -29,6 +29,10 @@ import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
+import {
+  buildResultStatMetricValues,
+  extractResultSettlementBreakdown,
+} from "../../../../../lib/result/buildResultStatRows";
 import ResultGlassShellNative from "./ResultGlassShellNative";
 import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultPointsDistributionChartSkia from "./ResultPointsDistributionChartSkia";
@@ -464,62 +468,51 @@ function ResultDetailDistributionSection({
 function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; language: "ja" | "en" }) {
   const isEn = language === "en";
   const wcGoalScorer = useWcGoalScorerResultNative(post as WcGoalScorerPostLike);
-  const stats = post.stats as Record<string, unknown> | undefined;
-  const hadUpsetGame = Boolean(stats?.hadUpsetGame);
-  const showScorePrecision = leagueFromResultPost(post) !== "wc";
-  const scorePrecision = toNumber(stats?.scorePrecision, 0);
-  const upsetPoints = toNumber(stats?.upsetPoints, 0);
-  const pointsV3 = toNumber(stats?.pointsV3, 0);
-  const detail = stats?.pointsV3Detail as Record<string, unknown> | undefined;
-  const basePoints = toNumber(
-    detail?.basePoints,
-    toNumber(detail?.winPoints, 0) + toNumber(detail?.diffPoints, 0)
+  const breakdown = useMemo(
+    () => extractResultSettlementBreakdown(post.stats),
+    [post.stats]
   );
-  const upsetBonus = toNumber(detail?.upsetBonus, 0);
-  const streakBonus = toNumber(detail?.streakBonus, 0);
+  const {
+    hadUpsetGame,
+    basePoints,
+    upsetBonus,
+    streakBonus,
+    goalScorerBonus,
+    totalPoints,
+  } = breakdown;
   const showUpsetBonus = upsetBonus > 1e-6;
   const showStreakBonus = streakBonus > 1e-6;
+  const showGoalScorerBonus = goalScorerBonus > 1e-6;
   const fmt1 = (v: number) => (Number.isFinite(v) ? v.toFixed(1) : "--");
 
-  const rows = useMemo(
-    () => [
-      ...(showScorePrecision
-        ? [
-            {
-              key: "scorePrecision" as const,
-              label: isEn ? "Score Precision" : "スコア精度",
-              desc: isEn
-                ? "How close your predicted score is to the actual score (0–10 per match)."
-                : "予想スコアが実スコアにどれだけ近いか（1試合 0〜10）。",
-              value: scorePrecision,
-              barMax: 10,
-              format: (v: number) => v.toFixed(1),
-            },
-          ]
-        : []),
-      {
-        key: "upsetPoints" as const,
-        label: isEn ? "Upset Points" : "アップセット",
-        desc: isEn
-          ? "Points when the match was an upset and you had a minority pick that hit."
-          : "アップセット試合で少数派予想が的中したときの加点（0〜10）。",
-        value: upsetPoints,
-        barMax: 10,
-        format: (v: number) => (hadUpsetGame ? `${(Math.round(v * 10) / 10).toFixed(1)}` : "--"),
-      },
-      {
-        key: "pointsV3" as const,
-        label: isEn ? "Total Points" : "総合得点",
-        desc: isEn
-          ? "Overall score including base, upset bonus, and win-streak bonus."
-          : "基本点・アップセット・連勝ボーナスを含む総合スコア。",
-        value: pointsV3,
-        barMax: 10,
-        format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
-      },
-    ],
-    [hadUpsetGame, isEn, scorePrecision, showScorePrecision, upsetPoints, pointsV3]
-  );
+  const rows = useMemo(() => {
+    const metrics = buildResultStatMetricValues(breakdown);
+    return metrics.map((m) => ({
+      key: m.key,
+      label:
+        m.key === "upsetPoints"
+          ? isEn
+            ? "Upset Points"
+            : "アップセット"
+          : isEn
+            ? "Total Points"
+            : "総合得点",
+      desc:
+        m.key === "upsetPoints"
+          ? isEn
+            ? "Points when the match was an upset and you had a minority pick that hit."
+            : "アップセット試合で少数派予想が的中したときの加点（0〜10）。"
+          : isEn
+            ? "Overall score including base, upset bonus, and win-streak bonus."
+            : "基本点・アップセット・連勝ボーナスを含む総合スコア。",
+      value: m.value,
+      barMax: m.barMax,
+      display:
+        m.displayValue == null
+          ? "--"
+          : `${(Math.round(m.displayValue * 10) / 10).toFixed(1)}`,
+    }));
+  }, [breakdown, isEn]);
 
   return (
     <ShellCard overlayEmbedded>
@@ -538,14 +531,13 @@ function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; 
           const cap = r.barMax;
           const ratio =
             r.key === "upsetPoints" && !hadUpsetGame ? 0 : cap > 0 ? clamp01(r.value / cap) : 0;
-          const display = r.format(r.value);
           return (
             <View key={r.key} style={styles.statRow}>
               <Text style={styles.statLabel} numberOfLines={1}>
                 {r.label}
               </Text>
               <ResultStatRatingBarNative ratio={ratio} delayMs={index * 80} size="md" />
-              <Text style={styles.statValue}>{display}</Text>
+              <Text style={styles.statValue}>{r.display}</Text>
             </View>
           );
         })}
@@ -565,8 +557,14 @@ function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; 
               + {isEn ? "Streak" : "連勝"} {fmt1(streakBonus)}
             </>
           ) : null}
+          {showGoalScorerBonus ? (
+            <>
+              {" "}
+              + {isEn ? "Scorer" : "得点者"} {fmt1(goalScorerBonus)}
+            </>
+          ) : null}
           {" = "}
-          <Text style={styles.bonusTotal}>{pointsV3.toFixed(1)}</Text>
+          <Text style={styles.bonusTotal}>{totalPoints.toFixed(1)}</Text>
         </Text>
       </View>
       {rows.map((r) => (

@@ -29,7 +29,6 @@ function buildPostCumulativeContribution(opts) {
         isWin: opts.isWin,
         points: opts.points,
         upsetPoints: opts.upsetPoints,
-        scorePrecision: opts.scorePrecision,
         exactHit: (_b = opts.exactHit) !== null && _b !== void 0 ? _b : false,
         goalScorerHit: (_c = opts.goalScorerHit) !== null && _c !== void 0 ? _c : false,
         upsetBonus: opts.upsetBonus,
@@ -79,7 +78,6 @@ function emptyBucket() {
         scoreErrorSum: 0,
         upsetHitCount: 0,
         upsetOpportunityCount: 0,
-        scorePrecisionSum: 0,
         pointsSumV3: 0,
         upsetPointsSum: 0,
         upsetBonusSum: 0,
@@ -90,7 +88,6 @@ function emptyBucket() {
         winRate: 0,
         avgScoreError: 0,
         upsetHitRate: 0,
-        avgPrecision: 0,
         avgPointsV3: 0,
         upsetPickCount: 0,
     };
@@ -98,7 +95,7 @@ function emptyBucket() {
 function recomputeCache(b) {
     const posts = b.posts;
     const wins = b.wins;
-    return Object.assign(Object.assign({}, b), { winRate: posts ? wins / posts : 0, avgScoreError: posts ? b.scoreErrorSum / posts : 0, avgPrecision: posts ? b.scorePrecisionSum / posts : 0, upsetHitRate: b.upsetOpportunityCount > 0
+    return Object.assign(Object.assign({}, b), { winRate: posts ? wins / posts : 0, avgScoreError: posts ? b.scoreErrorSum / posts : 0, upsetHitRate: b.upsetOpportunityCount > 0
             ? b.upsetHitCount / b.upsetOpportunityCount
             : 0, avgPointsV3: posts ? b.pointsSumV3 / posts : 0 });
 }
@@ -106,7 +103,7 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, wcStage, homeTeamId, awayTeamId, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, wcStage, homeTeamId, awayTeamId, } = opts;
     const forRanking = shouldCountForRanking(countsForRanking);
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
@@ -131,7 +128,6 @@ async function applyPostToUserStatsV2(opts) {
             upsetOpportunityCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
             upsetHitCount: firestore_1.FieldValue.increment(upsetHit ? 1 : 0),
             upsetPickCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
-            scorePrecisionSum: firestore_1.FieldValue.increment(isWc ? 0 : scorePrecision),
             exactHitCount: firestore_1.FieldValue.increment(isWc && exactHit ? 1 : 0),
             pointsSumV3: firestore_1.FieldValue.increment(points),
             upsetPointsSum: firestore_1.FieldValue.increment(upsetPoints),
@@ -167,7 +163,6 @@ async function applyPostToUserStatsV2(opts) {
             posts: 1,
             wins: isWin ? 1 : 0,
             scoreErrorSum: scoreError,
-            scorePrecisionSum: isWc ? 0 : scorePrecision,
             exactHitCount: isWc && exactHit ? 1 : 0,
             pointsSumV3: points,
             upsetPointsSum: upsetPoints,
@@ -182,7 +177,6 @@ async function applyPostToUserStatsV2(opts) {
             isWin,
             points,
             upsetPoints,
-            scorePrecision,
             exactHit,
             goalScorerHit,
             wcStage,
@@ -214,7 +208,6 @@ async function getStatsForDateRangeV2(uid, start, end, league) {
         b.scoreErrorSum += src.scoreErrorSum || 0;
         b.upsetHitCount += src.upsetHitCount || 0;
         b.upsetOpportunityCount += src.upsetOpportunityCount || 0;
-        b.scorePrecisionSum += src.scorePrecisionSum || 0;
         b.upsetPickCount += src.upsetPickCount || 0;
         b.pointsSumV3 += src.pointsSumV3 || 0;
         b.upsetPointsSum += src.upsetPointsSum || 0;

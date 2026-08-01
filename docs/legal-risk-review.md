@@ -2,6 +2,7 @@
 
 > **設計正（アプリ設計図）に付随する法務論点メモ** — 現行実装と差分があっても、本ドキュメントの方向で進める。  
 > **本ドキュメントは法的助言ではなく、弁護士確認用の整理である。**  
+> **初回面談の事前送付・当日用は短い方:** [`legal-counsel-kickoff-brief.md`](legal-counsel-kickoff-brief.md)  
 > 最終更新: 2026-07-23  
 > 上位: [`service-overview.md`](service-overview.md)  
 > 関連: [`money-unit-product-flow.md`](money-unit-product-flow.md), [`pro-billing-design.md`](pro-billing-design.md), [`pro-subscription-plan.md`](pro-subscription-plan.md), [`unit-reward-design.md`](unit-reward-design.md), [`unit-redemption-design.md`](unit-redemption-design.md)

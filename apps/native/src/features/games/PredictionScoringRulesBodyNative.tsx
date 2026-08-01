@@ -1,4 +1,4 @@
-/** Web `predictionScoringRules` の basketball 版本体（総合得点 / スコア精度 / アップセット得点） */
+/** Web `predictionScoringRules` の basketball 版本体（総合得点 / アップセット得点） */
 import { StyleSheet, Text, View } from "react-native";
 import type { GamesLanguage } from "./gamesI18n";
 
@@ -93,23 +93,6 @@ function BasketballBodyJa() {
       </Section>
 
       <Section
-        title="スコア精度"
-        intro="予想スコアが実際の結果にどれだけ近かったか。総合得点とは別の指標です。"
-      >
-        <RuleBlock>
-          <Body>
-            1試合あたり <Num>0〜10点</Num>。<Em>勝者を外しても</Em>つきます。
-          </Body>
-        </RuleBlock>
-        <HighlightBlock>
-          <Subhead>3つのズレをそれぞれ採点して合計</Subhead>
-          <Body>• <Em>ホームの得点</Em> … 最大 <Num>3点</Num></Body>
-          <Body>• <Em>アウェイの得点</Em> … 最大 <Num>3点</Num></Body>
-          <Body>• <Em>得失点差</Em> … 最大 <Num>4点</Num></Body>
-        </HighlightBlock>
-      </Section>
-
-      <Section
         title="アップセット得点"
         intro="波乱した試合で、少数派予想が当たったときの加点です。"
       >
@@ -168,23 +151,6 @@ function BasketballBodyEn() {
             <Em>Total score</Em> = base + bonuses (can exceed <Num>10</Num>)
           </Body>
         </RuleBlock>
-      </Section>
-
-      <Section
-        title="Score precision"
-        intro="How close your predicted score was—separate from total score."
-      >
-        <RuleBlock>
-          <Body>
-            <Num>0–10</Num> per game. Counts even if you miss the winner.
-          </Body>
-        </RuleBlock>
-        <HighlightBlock>
-          <Subhead>Three parts, summed</Subhead>
-          <Body>• <Em>Home points</Em> error (max <Num>3</Num>)</Body>
-          <Body>• <Em>Away points</Em> error (max <Num>3</Num>)</Body>
-          <Body>• <Em>Margin</Em> error (max <Num>4</Num>)</Body>
-        </HighlightBlock>
       </Section>
 
       <Section

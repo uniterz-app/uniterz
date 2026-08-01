@@ -32,7 +32,7 @@ function withWinRate(raw) {
 function addRankingTotals(base, inc) {
     const precisionInc = inc.precisionFromExactHits
         ? (0, safeRankMetricNum_1.safeRankMetricNum)(inc.exactHitCount)
-        : (0, safeRankMetricNum_1.safeRankMetricNum)(inc.scorePrecisionSum);
+        : 0;
     return {
         totalPosts: (0, safeRankMetricNum_1.safeRankMetricNum)(base.totalPosts) + (0, safeRankMetricNum_1.safeRankMetricNum)(inc.posts),
         totalWins: (0, safeRankMetricNum_1.safeRankMetricNum)(base.totalWins) + (0, safeRankMetricNum_1.safeRankMetricNum)(inc.wins),
@@ -57,7 +57,6 @@ function bucketToInc(bucket, opts) {
             wins: 0,
             pointsSumV3: 0,
             upsetPointsSum: 0,
-            scorePrecisionSum: 0,
             exactHitCount: 0,
             goalScorerHitCount: 0,
             precisionFromExactHits: (_a = opts === null || opts === void 0 ? void 0 : opts.precisionFromExactHits) !== null && _a !== void 0 ? _a : false,
@@ -68,7 +67,6 @@ function bucketToInc(bucket, opts) {
         wins: num(bucket.wins),
         pointsSumV3: num(bucket.pointsSumV3),
         upsetPointsSum: num(bucket.upsetPointsSum),
-        scorePrecisionSum: num(bucket.scorePrecisionSum),
         exactHitCount: num(bucket.exactHitCount),
         goalScorerHitCount: num(bucket.goalScorerHitCount),
         precisionFromExactHits: (_b = opts === null || opts === void 0 ? void 0 : opts.precisionFromExactHits) !== null && _b !== void 0 ? _b : false,
@@ -81,10 +79,8 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
     const wins = contrib.isWin ? s : 0;
     const points = contrib.points * s;
     const upset = contrib.upsetPoints * s;
-    const profilePrecision = contrib.isWc ? 0 : contrib.scorePrecision * s;
     const goalScorer = contrib.goalScorerHit ? s : 0;
     const wcExact = contrib.isWc && contrib.exactHit ? s : 0;
-    const nbaPrecision = contrib.isWc ? 0 : contrib.scorePrecision * s;
     const upsetBonus = (0, safeRankMetricNum_1.safeRankMetricNum)(contrib.upsetBonus) * s;
     const streakBonus = (0, safeRankMetricNum_1.safeRankMetricNum)(contrib.streakBonus) * s;
     const out = {
@@ -92,7 +88,6 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
         totalWins: firestore_1.FieldValue.increment(wins),
         totalPoints: firestore_1.FieldValue.increment(points),
         totalUpset: firestore_1.FieldValue.increment(upset),
-        totalPrecision: firestore_1.FieldValue.increment(profilePrecision),
     };
     if (upsetBonus !== 0)
         out.upsetBonusSum = firestore_1.FieldValue.increment(upsetBonus);
@@ -105,7 +100,6 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
     out["ranking.totalWins"] = firestore_1.FieldValue.increment(wins);
     out["ranking.totalPoints"] = firestore_1.FieldValue.increment(points);
     out["ranking.totalUpset"] = firestore_1.FieldValue.increment(upset);
-    out["ranking.totalPrecision"] = firestore_1.FieldValue.increment(nbaPrecision);
     if (upsetBonus !== 0) {
         out["ranking.upsetBonusSum"] = firestore_1.FieldValue.increment(upsetBonus);
     }
@@ -126,7 +120,6 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
         out[`${p}.totalWins`] = firestore_1.FieldValue.increment(wins);
         out[`${p}.totalPoints`] = firestore_1.FieldValue.increment(points);
         out[`${p}.totalUpset`] = firestore_1.FieldValue.increment(upset);
-        out[`${p}.totalPrecision`] = firestore_1.FieldValue.increment(nbaPrecision);
         out[`${p}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
         applyBonusToPath(p);
     }
@@ -142,6 +135,8 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
             out[`${w}.totalWins`] = firestore_1.FieldValue.increment(wins);
             out[`${w}.totalPoints`] = firestore_1.FieldValue.increment(points);
             out[`${w}.totalUpset`] = firestore_1.FieldValue.increment(upset);
+            out[`${w}.totalExactHits`] = firestore_1.FieldValue.increment(wcExact);
+            /** 旧ランキングの fallback。新規 UI は totalExactHits を読む。 */
             out[`${w}.totalPrecision`] = firestore_1.FieldValue.increment(wcExact);
             out[`${w}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
             applyBonusToPath(w);

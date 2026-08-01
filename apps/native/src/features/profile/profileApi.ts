@@ -130,7 +130,7 @@ export function normalizeProfileDailyTrendRows(rows: unknown): ProfileDailyTrend
       pointsV3: safeNum(r.pointsV3),
       upsetPoints: safeNum(r.upsetPoints),
       winRate: safeNum(r.winRate ?? (posts > 0 ? wins / posts : 0)),
-      scorePrecision: safeNum(r.scorePrecision),
+      exactHitCount: safeInt(r.exactHitCount),
     });
   }
   out.sort((a, b) => a.date.localeCompare(b.date));
@@ -144,7 +144,7 @@ export type ProfileSummaryNative = {
   recent3Posts: number;
   wins: number;
   winRate: number;
-  scorePrecisionSum: number;
+  exactHitCount: number;
   upsetPointsSum: number;
   pointsSumV3: number;
   upsetChanceCount: number;
@@ -182,7 +182,7 @@ function parseSummary(raw: unknown): ProfileSummaryNative | null {
     recent3Posts: safeInt(o.recent3Posts),
     wins,
     winRate: safeNum(o.winRate),
-    scorePrecisionSum: safeNum(o.scorePrecisionSum),
+    exactHitCount: safeInt(o.exactHitCount),
     upsetPointsSum: safeNum(o.upsetPointsSum),
     pointsSumV3: safeNum(o.pointsSumV3),
     upsetChanceCount: safeInt(o.upsetChanceCount),

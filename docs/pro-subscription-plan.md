@@ -333,22 +333,25 @@ Pro は次の 4 軸で価値を出す。
 
 1. 表紙  
 2. 数字で見る今月  
-3. 能力チャート  
-4. 予想のクセ  
-5. チーム相性  
-6. 月間ハイライト  
-7. 来月への分析  
+3. **獲得 Unit 内訳**（当月付与の内訳。履歴フルページは別）  
+4. 能力チャート  
+5. 予想のクセ  
+6. チーム相性  
+7. 月間ハイライト  
+8. **今月のサマリー**（強み・改善・目標を1ブロックに統合）  
 
 ### 1. 表紙
 
 月次の主役。
 
 - 月間順位
+- 今月の獲得 Unit
 - TOP%
 - 前月比
-- **分析タイプ称号** + タイプ専用ビジュアル
+- 総合得点 / 勝率 / SCORER / UPSET（ミニカード）
+- **分析タイプ称号** + 短い説明
 
-例: `GIANT SLAYER / 月間84位｜TOP 7%｜前月比 +126位`
+例: `GIANT SLAYER / 月間8位｜Unit 80｜TOP 1.9%｜前月比 +7位`
 
 分析タイプはプロフィールにも表示可能（称号露出）。27 種類は維持してよいが、最初は分類精度を確認する。
 
@@ -358,71 +361,565 @@ Pro は次の 4 軸で価値を出す。
 
 載せる数字:
 
-- 予想数 / 獲得 pt / 勝率 / SCORER 的中 / UPSET 獲得 pt
-- 各数字の下に: 前月比 / 全体平均・中央値 / 上位 10% 平均
+- 予想数 / 勝率 / 獲得 Unit / 総合得点 / SCORER 的中 / UPSET 獲得 pt
+- 各数字の下に: 前月比 / 全体中央値 / 上位 10% 平均（レンジバーで可視化。平均は使わない）
+- 指標内順位（斜めタグ `#N`）: 獲得 Unit / 総合得点 / SCORER / UPSET に表示。色は順位帯。**予想数・勝率は出さない**
 
-例: `勝率 68.2% / 前月比 +5.4% / 全体平均より +9.1%`
+例: `総合得点 298.4 [#8] / 前月比 +86.2 / 中央値 154.8 / 上位10% 398.2`
+
+### 2b. 獲得 Unit 内訳
+
+表紙・数字の「獲得 Unit」合計の内訳。**レポート内パート**（フル履歴ページは別途）。
+
+| source | 内容 |
+|---|---|
+| `personal_weekly` / `personal_monthly` | 個人ランキング |
+| `group_weekly` / `group_monthly` | グループランキング |
+| `metric_rank` | **部門上位**（総合 / WIN% / SCORER / UPSET 等）にも Unit 配布予定 |
+| `invite` | 招待 |
+| `event` | 特別イベント（枠） |
+
+各行: 付与量 · 期間ラベル · 順位（あれば）· 部門（metric_rank）。  
+データは将来の Unit ledger。V1 UI はモック。合計は `unitsEarned` と一致させる。
+
+ユーザー全体の獲得履歴ページは別画面（後続）。
 
 ### 3. 能力チャート
 
-月次限定の目玉。レーダーは **6 軸・全体内パーセンタイル（0〜100）**。
+月次限定の目玉。レーダーは **5 軸・全体内パーセンタイル（0〜100）**。
 
-| 軸 | 意味 |
-|---|---|
-| WIN | 勝敗予想 |
-| SCORER | 得点者的中 |
-| UPSET | 番狂わせ予想 |
-| CONSISTENCY | 週ごとの安定性 |
-| SELECTIVITY | 予想の選び方 |
-| ACTIVITY | 参加量 |
+| 軸 | 意味 | 生指標の例 |
+|---|---|---|
+| WIN | 勝敗予想の強さ | 勝率 |
+| SCORER | 得点者的中 | SCORER 的中数 / 率 |
+| UPSET | 番狂わせで稼ぐ力 | UPSET pt |
+| ACTIVITY | 参加量 | 予想数（投稿数） |
+| CONSISTENCY | 安定 / 耐性 | 連勝を活かし連敗の傷を抑える合成 |
+
+**軸に入れない（確定）**
+
+- 総合得点 — WIN + SCORER + UPSET + 量の合成結果で重複する
+- 連敗単体 — CONSISTENCY に折り込む
+- 獲得 Unit / 順位 — 能力ではなく結果
+- SELECTIVITY（選球）— 「予想のクセ」側
 
 「スコア精度」は廃止 → **SCORER への差し替えで確定**。
 
+#### 表示 vs 判定
+
+| | 内容 |
+|---|---|
+| レーダー表示 | 相対のみ（パーセンタイル 0–100）。連続値のまま。S/M/W は使わない |
+| 強み判定 | **相対 ∩ 絶対** の両方を満たした軸だけ「強み」 |
+| 分析タイプ | ハイブリッド（後述） |
+
+#### 最低サンプル（レーダー / タイプ対象）
+
+- 分母: その月に含まれる **ピックアップゲーム**（下記フローで指定）の合計
+- 条件: ピックアップゲームの **半分以上** に予想していること
+- 未達はレーダー参考扱い。分析タイプは **Prospect**。数字セクションは別途表示可
+
+#### ピックアップ試合フロー（NBA Regular Season）
+
+単位は **週（月曜 0:00〜日曜 23:59 JST）**。月次の分母は、その月に落ちたピックアップ試合の集合。
+
+| 段階 | いつ | 何をする |
+|---|---|---|
+| 1. スケジュール投入 | NBA RS のスケジュール発表後 | 全試合スケジュールを先にデータ投入（ピックアップ前の土台） |
+| 2. ピックアップ指定 | **対象週の前週水曜日** | 運営が、翌月曜〜日曜の試合からピックアップを指定 |
+| 3. 公開・集計 | 対象週〜 | ユーザーはピックアップを予想対象の基準にし、週次/月次集計の分母に使う |
+
+補足:
+
+- スケジュールがないと指定できない → **必ず「全試合投入 → ピックアップ指定」の順**
+- 水曜確定なので、ユーザーには対象週の数日前からピックアップが見える想定
+- 月次 ACTIVITY / サンプル: `その月のピックアップ試合数` に対する予想参加率
+- プレイオフ等は別途定義（V1 は RS を主対象）
+
+#### ピックアップ スキーマ（案）
+
+**結論: 試合にフラグだけ、ではなく「週ドキュメントを正」にする。**  
+フラグ単体だと「どの週の指定か / 水曜に誰が確定したか / 訂正履歴」が弱い。
+
+| | 内容 |
+|---|---|
+| **正** | `nba_pickup_weeks/{weekKey}` |
+| **冗長（任意）** | `games/{gameId}.pickupWeekKey`（読み取り高速化用。書きは週 doc 確定時に同期） |
+
+`weekKey`: その週の月曜 JST 日付 `YYYY-MM-DD`（例: `2026-10-26` = その月曜始まりの月〜日）
+
+```
+nba_pickup_weeks/{weekKey}
+  league: "nba"
+  weekKey: "2026-10-26"          // 月曜
+  rangeStartJst: "2026-10-26"    // 月
+  rangeEndJst: "2026-11-01"      // 日
+  status: "draft" | "final"      // 水曜確定で final
+  gameIds: string[]              // ピックアップ試合
+  decidedAt: Timestamp | null
+  decidedBy: string | null       // admin uid / 運用ID
+  updatedAt: Timestamp
+```
+
+試合側（任意の同期フィールド）:
+
+```
+games/{gameId}
+  ...既存フィールド...
+  pickupWeekKey?: string | null  // ピックアップなら所属週。外したら null
+```
+
+**なぜフラグだけにしないか**
+
+- 運営の単位が「週」なので、週 doc の方が指定 UI・確定タイミングと一致する
+- `isPickup: true` だけだと、月跨ぎや訂正時に「いつの指定か」が曖昧
+- 集計は `nba_pickup_weeks` を月で束ねるか、`pickupWeekKey != null` の試合を月でフィルタすればよい
+
+**読み方（集計）**
+
+- ある週のピックアップ: `nba_pickup_weeks/{weekKey}.gameIds`
+- ある月の分母: その月に tip-off がある試合のうち `pickupWeekKey` があるもの（または該当 `weekKey` 群の `gameIds` 和集合）
+- ユーザー参加率: 分母の gameId のうち、予想投稿がある数 / 分母
+
+**運用手順（Cursor 指定フロー）**
+
+Admin 画面は使わない。得点者投入と同じく **ユーザーが指示 → Cursor が JSON を書いてスクリプト実行**。
+
+1. RS スケジュールを `games` に投入済みであること
+2. ユーザー例: 「来週 10/26 週のピックアップを ○○ と △△ にして」
+3. Cursor が `scripts/data/nba-pickup-{weekKey}.json` を作成/更新
+4. `npx tsx scripts/set-nba-pickup-week.ts --file ... --dry-run` で確認
+5. 同コマンド（dry-run なし）で `nba_pickup_weeks` + `games.pickupWeekKey` を反映
+
+```bash
+npx tsx scripts/set-nba-pickup-week.ts --file scripts/data/nba-pickup-2026-10-26.json --dry-run
+npx tsx scripts/set-nba-pickup-week.ts --file scripts/data/nba-pickup-2026-10-26.json
+```
+
+タイミング目安: **対象週の前週水曜日** に final にする。
+
+#### 強みの定義（設計中・仮置き）
+
+- **相対:** その軸がコホート内 **p70 以上**（上位おおよそ 30%）
+- **絶対:** 軸ごとに下限（例。本番前に実データで調整）
+
+| 軸 | 絶対下限（V1 仮置き） | 意図 |
+|---|---|---|
+| WIN | 勝率 ≥ **52%** | 50%はコイントス。少し上を「当てている」とする |
+| SCORER | 的中数 ≥ **月間コホート中央値** | 固定本数だと月の試合数でズレるので中央値に追従 |
+| UPSET | UPSET pt ≥ **月間コホート中央値** かつ 機会 ≥ **5** | 機会不足・偶然の少数 pt を除外 |
+| ACTIVITY | 参加率 ≥ **50%**（ピックアップ半分） | 最低サンプルと同じ。出ていればクリア |
+| CONSISTENCY | 最大連敗 ≤ **5** | 「安定」なのに大崩れしている人を除外 |
+
+補足: SCORER / UPSET の中央値は「その月の対象ユーザー集団」から計算。固定の「7的中」「25pt」などは持たない。
+
+境界のヒステリシス（入る/出るで閾値をずらす）は **いったん見送り**。
+
+#### 分析タイプ割当（ハイブリッド・骨格）
+
+1. **オールラウンド** — 強みが **3 本以上**
+2. **専門型** — 強み **1〜2 本**
+3. **Prospect** — 次のいずれか
+   - 強みが **0 本**（サンプル達成だが突出なし）
+   - **ピックアップ半分未達**（サンプル不足）
+
+旧 S/M/W（≥8 / ≥4）による判定は **廃止**。  
+旧「強み3本の組み合わせ型」も **廃止** → 3本以上はオールラウンドへ統合。
+
+#### 実装着手（集計）
+
+1. **判定ロジック** — `monthlyRadarJudge.ts` ✅
+2. **ピックアップ Cursor 指定** — `set-nba-pickup-week.ts` ✅
+3. **集計スキーム + 組み立て層** — `monthlyReportAggregation.ts` / `buildMonthlyReportFromSources.ts` ✅
+4. **Functions builder** — `functions/src/reports/buildMonthlyReportsCore.ts` ✅
+   - daily 1 パス + `period_ranking_snapshots` + pickup 週 doc
+   - cron: `rebuildMonthlyReportsCronV2`（**毎月1日 8:00 JST**）
+   - 手動: `rebuildMonthlyReportsManualV2`
+5. チーム相性・ハイライト・今月のサマリー — 集計接続 ✅（ピックアップ posts）
+6. **配信 / Report 入口 / Unit（弁護士後）/ Pro Stats 廃止** — 下記「これから」キュー
+
+**Pro Stats / 旧月次**
+
+- 現状は参照あり → 移行完了まで残す
+- **最終的に Pro Stats は廃止し、月次レポートへ一本化する**
+- 新規の分析・集計は月次レポート側だけに足す。旧 doc は読まない
+
+#### これからやるキュー（月次レポート残・優先順）
+
+UI プレビューは一通り揃っている。次は **実データ接続・届く体験・Unit（弁護士後）**。
+
+| # | 項目 | 状態 | 内容 |
+|---|---|---|---|
+| 1 | **予想のクセの集計接続** | 済 | posts 1パスで Home/Away・順当/逆張り → `buildMonthlyHabits` |
+| 2 | **CONSISTENCY 本実装** | 済 | ピックアップ結果列の連勝/連敗 → stamina raw → コホート百分位 + maxLoseStreak 閾値 |
+| 3 | **数字の前月比** | 済 | 前月 daily 合算から posts/winRate/points/scorer/upset の `prevDelta`（units は stub のまま null） |
+| 4 | **cron を 1日 8:00 JST に変更** | 済 | `0 8 1 * *`（Asia/Tokyo） |
+| 5 | **月次レポート確定プッシュ** | 未 | 集計後、Pro＋トークン持ちへ Expo push。「毎月1日朝に届く」体験。週次 final プッシュと同系 |
+| 6 | **Report タブ入口** | △ | Stats → Report。週次・月次を user_reports から表示。一覧フル UI はあと |
+| 7 | **Pro 閲覧ガード** | △ | Report タブは Pro のみ。厳密強化は余地 |
+| 8 | **Unit ledger 接続** | 待ち | UI（内訳バー＋展開）済み。付与ロジック・ledger は **弁護士 OK 後**。内訳・表紙 `unitsEarned` を stub から切替 |
+| 9 | **Unit 獲得履歴ページ** | 待ち | レポート内訳とは別。全期間の付与履歴 |
+| 10 | **Pro Stats 廃止** | △ UI・cron 済 | Profile から ProAnalysis 除去、旧月次 cron export 停止。孤児 hook / データ整理は残 |
+
+メモ:
+
+- ピックアップ週指定（`nba_pickup_weeks`）は運用前提。未指定月は ACTIVITY / 相性 / ハイライト / クセが空または弱い
+- **#1–#4 は完了。** 次は **#5 から**（プッシュ → Report 入口…）。Unit は弁護士 OK 後
+
+#### 月次レポート集計スキーム
+
+**方針: 既存の取り方を再利用し、追加スキャンを最小にする。**  
+旧 `user_stats_v2_monthly` は Pro Stats 移行完了まで残すが、**レポート V1 では使わない**。
+
+```
+安い I/O
+  period_ranking_snapshots (nba_monthly_{YYYY-MM}_{metric})  → 順位・prevRank
+  user_stats_v2_daily 月合算（NBA スライス）                 → 値（posts/pt/勝率/SCORER/UPSET）
+  pickupWeekKey / nba_pickup_weeks                         → 参加率の分母
+  （1 パスのコホート計算）                                    → 中央値・上位10%・レーダー%
+  monthlyRadarJudge                                        → 強み・分析タイプ
+  Units                                                    → ledger 未接続のため stub 0/null
+
+組み立て（I/O なし）
+  buildMonthlyReportFromSources → MonthlyReport
+  → user_reports/{uid}_monthly_{YYYY-MM}
+```
+
+| 欲しいもの | 既存ソース | コスト感 |
+|---|---|---|
+| 総合順位 / 前月順位 | `period_ranking_snapshots` totalPoints | 月あたり数 doc |
+| SCORER / UPSET 順位 | 同 snapshots | 同上 |
+| posts / points / wins / scorer / upset 値 | `user_stats_v2_daily` 合算（period builder と同系） | 日次は既にある。全ユーザーは **1 回の日付ループ**が最安 |
+| 中央値・上位10%・レーダー% | 上記合算のコホート配列 | 追加 Firestore なし |
+| ACTIVITY / サンプル | pickup 分母 + pickup への posts | pickup 指定済みが前提 |
+| CONSISTENCY | ピックアップ結果列の連勝/連敗 → stamina → 百分位 | ハイライトと同一 posts 走査 |
+| Units | **stub**（弁護士 OK 後に ledger） | 0 |
+| 予想のクセ | posts 1パス → `buildMonthlyHabits` | サイド最低投稿未満は null |
+| 月次プッシュ | **未実装** | 確定後 Expo push |
+
+契約・組み立て:
+
+- `lib/reports/monthlyReportAggregation.ts` — 段階の型
+- `lib/reports/buildMonthlyReportFromSources.ts` — 取得済みデータ → `MonthlyReport`
+- `lib/reports/monthlyRadarJudge.ts` — 強み・タイプ
+
+**やらないこと**
+
+- 旧 `rebuildUserMonthlyStatsCore` の削除（参照の最終整理までは orphan として残す）
+- レポートのために旧 `radar10` を再利用
+- ユーザーごとに daily を N 回バラバラ get（全ユーザー書くなら日付ループ一括）
+
+#### 分析タイプ一覧（V1・19種）
+
+軸略称: W=WIN / S=SCORER / U=UPSET / A=ACTIVITY / C=CONSISTENCY
+
+**オールラウンド（3）**
+
+| 条件 | ID | 表示名 |
+|---|---|---|
+| 強み 5 | GOAT | GOAT |
+| 強み 4 | COMPLETE_PLAYER | Complete Player |
+| 強み 3 | ALL_ROUNDER | All-Rounder |
+
+**単軸（5）— 強みがちょうど1本**
+
+| 強み | ID | 表示名 | 一言 |
+|---|---|---|---|
+| W | FINISHER | Finisher | 勝敗を取り切る |
+| S | LASER | Laser | 得点者を射抜く |
+| U | CHAOS_TAKER | Chaos Taker | 波乱を拾う |
+| A | HIGH_MOTOR | High-Motor | 手数で押す |
+| C | IRON_MAN | Iron Man | 崩れない |
+
+**二軸（10）— 強みがちょうど2本（確定）**
+
+| # | 強み（軸） | ID | 表示名 | 一言 |
+|---|---|---|---|---|
+| 1 | WIN + SCORER | TWO_WAY_PLAYER | Two-Way Player | 勝敗×得点者 |
+| 2 | WIN + UPSET | BIG_GAME_HUNTER | Big-Game Hunter | 勝敗×波乱 |
+| 3 | WIN + ACTIVITY | WALKING_BUCKET | Walking Bucket | 勝敗×量 |
+| 4 | WIN + CONSISTENCY | HIGH_FLOOR | High Floor | 勝敗×安定 |
+| 5 | SCORER + UPSET | CLUTCH | Clutch | 得点者×波乱 |
+| 6 | SCORER + ACTIVITY | DEEP_BAG | Deep Bag | 得点者×量 |
+| 7 | SCORER + CONSISTENCY | SHARPSHOOTER | Sharpshooter | 得点者×安定 |
+| 8 | UPSET + ACTIVITY | CHAOS_RUNNER | Chaos Runner | 波乱×量 |
+| 9 | UPSET + CONSISTENCY | CHAOS_ANCHOR | Chaos Anchor | 波乱×安定 |
+| 10 | ACTIVITY + CONSISTENCY | SPARK_PLUG | Spark Plug | 量×安定 |
+
+**Prospect（1）**
+
+| 条件 | ID | 表示名 |
+|---|---|---|
+| 強み 0、またはピックアップ半分未達 | PROSPECT | Prospect |
+
+合計 **19種**。レーダー見た目は後続。説明文は別途確定していく。
+
+**廃止 / 改名した旧タイプ**
+
+- 吸収: CHEAT_CODE / ELITE_ALLROUNDER / GIANT_SLAYER / HOT_HAND / UNICORN / ASSASSIN / KILLER_INSTINCT / SWISS_ARMY_KNIFE / TECHNICIAN / IRON_ENGINE
+- 改名: BULLDOG → HIGH_FLOOR / SCRAPPER → CHAOS_ANCHOR
+- 新設: GOAT / ALL_ROUNDER
+
+「精度」表記はすべて **SCORER** に読み替え。
+
+#### 分析タイプ説明文（ドラフト）
+
+フォーマット: 中くらいの長さ。定義 → 中身 → 次の一手 → 名前回収。
+
+**Prospect**
+```
+まだ特定の分析スタイルに固定されていない、伸びしろ優先のタイプです。
+ピックアップへの参加が半分未満か、5軸のどれもまだ「強み」まで届いていない状態。型がないのではなく、これから作る途中にいます。
+まずはピックアップの半分以上に参加し、手応えのある軸を1つ選んで強みラインまで押し上げましょう。参加が足りない月は、質より先に量の土台です。
+何者にもなれる可能性を秘めた Prospect。
+```
+
+**GOAT**（強み5）
+```
+5軸すべてが強みの、月間における最高到達点のタイプです。
+勝敗・得点者・波乱・参加量・安定のどれにも穴がなく、総合力で一段上にいます。
+次に足すものより、この水準を翌月も落とさない運用がテーマ。参加のムラや連敗の傷に注意し、5軸のバランスを維持しましょう。
+すべてを兼ね備えた頂点は、まさに GOAT。
+```
+
+**Complete Player**（強み4）
+```
+5軸中4つが強みの、ほぼ完成形の総合タイプです。
+致命的な穴はなく、残る1軸だけが強みライン未達。いわば GOAT の一歩手前です。
+来月は全部を均等に伸ばすより、未達の1軸だけを単一目標にして押し上げましょう。それが埋まれば GOAT 圏に届きます。
+高い完成度で戦うスタイルは、まさに Complete Player。
+```
+
+**All-Rounder**（強み3）
+```
+5軸中3つが強みの、多面的に戦えるタイプです。
+ひとつの武器に依存せず、複数の勝ち筋を同時に持てるのが強み。過半数がすでに機能しています。
+さらに上を目指すなら、未達の2軸のうち優先の1本だけを伸ばしましょう。次の到達点は Complete Player（強み4）です。
+局面を選ばず機能する総合力は、まさに All-Rounder。
+```
+
+**Finisher**（WIN）
+```
+WIN が唯一の強みの、勝敗予想に特化したタイプです。
+試合の勝ち負けを高い水準で取り切る力が、今月の軸になっています。
+さらに伸ばすなら SCORER か CONSISTENCY を足し、勝ちを得点と安定につなげましょう。次の二軸到達点は Two-Way Player か High Floor です。
+最後に勝負を決める決定力は、まさに Finisher。
+```
+
+**Laser**（SCORER）
+```
+SCORER が唯一の強みの、得点者予想に特化したタイプです。
+細部を射抜く精度が、今月の差別化ポイントになっています。
+さらに伸ばすなら WIN か ACTIVITY を足し、的中を総得点に変えましょう。次の二軸到達点は Two-Way Player か Deep Bag です。
+一点を狙う判断の鋭さは、まさに Laser。
+```
+
+**Chaos Taker**（UPSET）
+```
+UPSET が唯一の強みの、波乱攻略に特化したタイプです。
+番狂わせを拾う読みが、今月の得点源になっています。
+さらに伸ばすなら WIN か CONSISTENCY を足し、波乱を安定した勝ちにつなげましょう。次の二軸到達点は Big-Game Hunter か Chaos Anchor です。
+カオスを恐れず価値に変える勝負勘は、まさに Chaos Taker。
+```
+
+**High-Motor**（ACTIVITY）
+```
+ACTIVITY が唯一の強みの、参加量に特化したタイプです。
+手数と関与量で試合に入り続ける力が、今月の土台になっています。
+さらに伸ばすなら WIN か SCORER を足し、量を質と結果に変えましょう。次の二軸到達点は Walking Bucket か Deep Bag です。
+止まらず動き続ける推進力は、まさに High-Motor。
+```
+
+**Iron Man**（CONSISTENCY）
+```
+CONSISTENCY が唯一の強みの、安定運用に特化したタイプです。
+大崩れしにくく、長い期間で水準を維持できるのが武器です。
+さらに伸ばすなら WIN か SCORER を足し、安定を勝ちと的中に直結させましょう。次の二軸到達点は High Floor か Sharpshooter です。
+最後まで強度を落とさない持久力は、まさに Iron Man。
+```
+
+**Two-Way Player**（WIN+SCORER）
+```
+WIN と SCORER が強みの、二刀流タイプです。
+勝敗も得点者も高い水準で両立し、本筋の予想で差を作れます。
+さらに上を目指すなら ACTIVITY か CONSISTENCY を伸ばし、再現の幅を広げましょう。次の到達点は All-Rounder（強み3）です。
+攻守両面で試合を作る力は、まさに Two-Way Player。
+```
+
+**Big-Game Hunter**（WIN+UPSET）
+```
+WIN と UPSET が強みの、大勝負タイプです。
+勝ち切る力と波乱を突く力を持ち、難局で流れを変えられます。
+さらに上を目指すなら SCORER か CONSISTENCY を伸ばし、一撃を継続得点にしましょう。次の到達点は All-Rounder（強み3）です。
+大舞台で獲物を仕留める勝負強さは、まさに Big-Game Hunter。
+```
+
+**Walking Bucket**（WIN+ACTIVITY）
+```
+WIN と ACTIVITY が強みの、量産タイプです。
+手数を出しながら勝ちを積み、総量で差を作れます。
+さらに上を目指すなら SCORER か UPSET を伸ばし、1試合あたりの上限を上げましょう。次の到達点は All-Rounder（強み3）です。
+点を取り続ける攻撃力は、まさに Walking Bucket。
+```
+
+**High Floor**（WIN+CONSISTENCY）
+```
+WIN と CONSISTENCY が強みの、下限の高いタイプです。
+勝ちを積みつつ大崩れしにくく、月間の床が高いのが特徴です。
+さらに上を目指すなら SCORER か UPSET を伸ばし、天井も押し上げましょう。次の到達点は All-Rounder（強み3）です。
+落ちにくい強さは、まさに High Floor。
+```
+
+**Clutch**（SCORER+UPSET）
+```
+SCORER と UPSET が強みの、勝負どころタイプです。
+細部の精度と波乱の読みで、価値の高い一手を通せます。
+さらに上を目指すなら WIN か ACTIVITY を伸ばし、決定機を増やしましょう。次の到達点は All-Rounder（強み3）です。
+ここ一番で決め切る力は、まさに Clutch。
+```
+
+**Deep Bag**（SCORER+ACTIVITY）
+```
+SCORER と ACTIVITY が強みの、手札の多いタイプです。
+手数を出しても得点者の質を落としにくく、長期で差が開きます。
+さらに上を目指すなら WIN か CONSISTENCY を伸ばし、勝ちと安定を足しましょう。次の到達点は All-Rounder（強み3）です。
+多彩な選択肢で優位を広げるスタイルは、まさに Deep Bag。
+```
+
+**Sharpshooter**（SCORER+CONSISTENCY）
+```
+SCORER と CONSISTENCY が強みの、精密安定タイプです。
+得点者予想をブレにくく継続でき、再現性の高い判断が武器です。
+さらに上を目指すなら WIN か UPSET を伸ばし、勝ち筋の幅を広げましょう。次の到達点は All-Rounder（強み3）です。
+狙いを外さない再現性は、まさに Sharpshooter。
+```
+
+**Chaos Runner**（UPSET+ACTIVITY）
+```
+UPSET と ACTIVITY が強みの、展開攻略タイプです。
+手数で機会を広げながら波乱を拾い、得点機会を増やせます。
+さらに上を目指すなら WIN か SCORER を伸ばし、拾った流れを本筋の勝ちに変えましょう。次の到達点は All-Rounder（強み3）です。
+カオスを得点に変える推進力は、まさに Chaos Runner。
+```
+
+**Chaos Anchor**（UPSET+CONSISTENCY）
+```
+UPSET と CONSISTENCY が強みの、波乱を支えるタイプです。
+荒れた局面でも粘り強く価値を拾い続け、崩れにくいのが武器です。
+さらに上を目指すなら WIN か SCORER を伸ばし、波乱を安定した勝ちに接続しましょう。次の到達点は All-Rounder（強み3）です。
+カオスの中でも沈まない軸は、まさに Chaos Anchor。
+```
+
+**Spark Plug**（ACTIVITY+CONSISTENCY）
+```
+ACTIVITY と CONSISTENCY が強みの、推進力タイプです。
+高い稼働を長く維持でき、試合数が増えるほど存在感が出ます。
+さらに上を目指すなら WIN か SCORER を伸ばし、エンジンを得点に変えましょう。次の到達点は All-Rounder（強み3）です。
+チームに火をつけ続けるエネルギーは、まさに Spark Plug。
+```
+
 ### 4. 予想のクセ
 
-ユーザーが最も分析価値を感じやすい部分。スタイルマップだけでなく **必ず文章で解説**。
+ユーザーが最も分析価値を感じやすい部分。**Pro Stats ハイブリッド**: スタイルマップ + 勝率 + 短文。
 
-候補:
+#### V1 構成
 
-- Home / Away の成績差
-- 本命・中間・穴の成績
-- 人気側・少数派側の成績
-- 自信が高い予想の成功率
-- 参加率が高い曜日
-- 予想を外しやすいパターン
+1. **スタイルマップ** — 自分の今月1点のみ（他ユーザーは出さない）
+   - 横軸: Away ←→ Home（選球比バイアス）
+   - 縦軸: 順当 ←→ 逆張り（市場バイアス）
+   - 点の大きさ: 総合勝率
+2. **Home / Away 勝率** + 選球比
+3. **順当 / 逆張り 勝率** + 選球比
+4. **短文** — 象限ラベル + 1〜2文（必ず文章で解説）
 
-例: ホーム勝率 72% vs アウェー 54%。
+チーム相性は別セクション。ハイライトは V1 から外す方向。
+
+バイアス定義は Pro Stats（`homeAwayBias` / `marketBias`）と同一。
+
+サンプル: 各サイド投稿 ≥ 3。不足時はセクションをサンプル不足表示。
+
+#### V1 では出さない
+
+- 本命・中間・穴の細分化
+- 自信度成功率
+- 曜日
+- 他ユーザーの点 / コホート雲
+- 外しやすいパターンの自動列挙
+
+実装: `lib/reports/buildMonthlyHabits.ts` → `MonthlyReportHabits`。  
+UI: `MonthlyReportView` HabitsBlock。
 
 ### 5. チーム相性
 
-残す。
+残す。**ピックアップ試合のみ**・**自分が推した側のチームのみ**（対戦相手はカウントしない）。
 
-- 得意 TOP3 / 苦手 TOP3
-- 最低予想数を設定（1試合だけの 100% は対象外）
-- 勝率だけでなく獲得 pt も考慮
+想定母数: ピックアップは毎日 2〜4 試合・月あたりおおよそ 60 試合。
 
-例: `Thunder 9勝2敗｜獲得23pt`
+#### 並びの正（V1）
+
+| 側 | 定義 |
+|---|---|
+| 得意 | そのチームを推して得た **総合得点（pt）合計** の上位・最大 3 |
+| 苦手 | 同上の下位・最大 3（得意と重複なし） |
+
+- **勝率では並べない**（表示用の勝敗だけ出す）
+- 最低試合数: **同一チームへの推した回数 ≥ 2**（1試合だけの大物／全滅を除外）
+- 条件を満たすチームが少なければ **出る分だけ**（枠を無理に埋めない）
+- 総合得点は極端な大勝ちが起きにくい前提なので、合計 pt ソートでよい（試合あたりにはしない）
+
+表示例: `OKC 2試合 1–1｜+18.5pt`
+
+実装: `lib/reports/buildMonthlyTeamAffinity.ts`（純関数）+ `functions/src/reports/buildMonthlyReportsCore.ts`（ピックアップ posts 1 パス）。  
+Pro Stats 旧ロジック（全投稿・勝率・最低5）とは別。レポートは上記に従う。
 
 ### 6. 月間ハイライト
 
-「連勝」をここに統合。**価値の高いものを最大 3 個だけ**出す。
+「連勝」をここに統合。**価値の高いものを最大 3 個だけ**出す（種別は重複させない）。
 
 候補プール:
 
-- ベスト予想
-- 最大アップセット
-- ベストデー
-- 最長連勝 / 最長連敗
-- 自己最高記録
-- 部門 TOP10 入り
+| kind | 取り方 |
+|---|---|
+| `bestPick` | ピックアップ posts で `pointsV3` 最大の1本 |
+| `bestDay` | 日付（JST）ごとの pt 合計が最大の日 |
+| `upset` | `upsetPoints` 最大の1本 |
+| `winStreak` | ピックアップ内の最長連勝（長さ ≥ 3 のみ候補） |
+| `divisionTop10` | 月次 period 順位で WIN% / SCORER / UPSET のいずれか ≤10 |
 
-### 7. 来月への分析
+選定: 種別ごとに価値スコアを付け、上位最大3。UI 都合で `bestPick` があれば先頭。
 
-抽象的な締めではなく、改善行動へ。
+**対象はピックアップ試合のみ**（チーム相性と同じ posts 1 パス）。
 
-- **今月の強み**（例: UPSET で上位 4%、前月比 +18pt）
-- **改善ポイント**（例: SCORER 参加が少なくチャート最低）
-- **来月の目標**（例: SCORER に 10 試合以上参加）
+実装: `lib/reports/buildMonthlyHighlights.ts` + builder。
+
+### 7. 今月のサマリー
+
+旧「来月への分析」を統合。**強み / 改善 / 目標を分けず、1本のサマリー文**にする。
+
+#### 生成（V1・テンプレ）
+
+LLM なし。骨格は固定:
+
+> **[強み]。一方 [改善]。来月は [目標]。**
+
+| スロット | 選び方 |
+|---|---|
+| 強み軸 | `strengths` 内でレーダー%最大。無ければ全軸最大 |
+| 改善軸 | 強み以外でレーダー%最低。ACTIVITY が半分未満なら参加を優先 |
+| 目標 | 改善軸に連動した行動文 |
+
+**強みに載せる数字の優先:**  
+1. **パーセンタイル / 上位%**（最優先）  
+2. 前月比（あれば添える）  
+3. 部門順位（あれば）
+
+例外:
+
+- サンプル不足 → 参加半分未満の定型文（型より量）
+- 強み5本 → 穴ほぼなし・維持がテーマ
+
+型: `outlook: { summary: string }`  
+実装: `lib/reports/buildMonthlyOutlookSummary.ts` + builder。
 
 ### 削る・統合するもの
 
@@ -430,7 +927,7 @@ Pro は次の 4 軸で価値を出す。
 |---|---|
 | 全体の中の自分 | → 数字で見る今月へ統合 |
 | 連勝セクション | → 月間ハイライトへ統合 |
-| 抽象的な締めコメント | → 来月への分析（改善行動） |
+| 抽象的な締めコメント | → 今月のサマリー（1本文） |
 | Shadow | V1 不要 |
 | 月内順位推移 | V2 |
 
@@ -540,10 +1037,13 @@ Achievement Skin は、所定の実績達成によって解放される。**無�
 | P1 | PRO INSIGHT V1（要約 + 重要カード選出） |
 | P2 | 試合直前アラート V1 |
 | P3 | 週次レポート builder + UI（live / final） |
-| P4 | 月次レポート builder + UI（1冊再構成） |
+| P4 | 月次レポート builder + UI（1冊再構成） | UI・主要集計は進行中。残は計画書「これからやるキュー」 |
+| P4b | クセ接続 → CONSISTENCY → 前月比 → 8:00 cron → 確定プッシュ → Report 入口 |
+| P4c | Unit ledger（弁護士 OK 後）+ 履歴ページ |
 | P5 | Stats タブ廃止 → Report タブ |
 | P6 | Pro Skin 本番ガード + Achievement Skin 基盤 |
 | P7 | 分析タイプ称号のプロフィール露出（月次確定後） |
+| P8 | Pro Stats 完全廃止 |
 
 詳細の待ちリスト: [`preview-to-prod-checklist.md` §0](preview-to-prod-checklist.md#0-次の作業キュー優先順)
 
@@ -554,7 +1054,7 @@ Achievement Skin は、所定の実績達成によって解放される。**無�
 | 領域 | パス |
 |---|---|
 | 週次 UI / 型 | `app/component/reports/WeeklyReportView.tsx`, `lib/reports/weeklyReportTypes.ts` |
-| 月次 UI / mock | `app/component/reports/MonthlyReportView.tsx`, `lib/reports/monthlyReportPreviewMocks.ts` |
+| 月次 UI / mock | `app/component/reports/MonthlyReportView.tsx`, `lib/reports/monthlyReportTypes.ts`, `lib/reports/monthlyReportPreviewMocks.ts` |
 | 週次/月次プレビュー | `/dev/weekly-report-preview`, `/dev/monthly-report-preview` |
 | Pro Skin ピッカー | `app/component/profile/pro/ProfilePlanProSkinPicker.tsx`, `/mobile/pro/skin` |
 | Pro Skin 候補プレビュー（赤×黒） | `/dev/pro-skin-dark-fantasy-preview` · `/mobile/pro-skin-dark-fantasy-preview` |

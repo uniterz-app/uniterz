@@ -30,7 +30,7 @@ export const PROFILE_EDIT_KINETIK_MOCK: {
     winRate: 68.4,
     posts: 41,
     hits: 28,
-    scorePrecision: 312.0,
+    exactHits: 0,
     totalPoints: 1284,
     totalPointsRank: 14,
     totalPointsRankDenominator: 1400,

@@ -23,9 +23,9 @@ export function weeklyReportPreviewClimbed(): WeeklyReport {
     totalWins: 11,
 
     divisions: [
-      { key: "winRate", value: 61, prevValue: 57, rank: 31 },
-      { key: "goalScorerHits", value: 6, prevValue: 4, rank: 8 },
-      { key: "upset", value: 12.5, prevValue: 13.7, rank: 15 },
+      { key: "winRate", value: 61, prevValue: 57, rank: 31, postsToQualify: null },
+      { key: "goalScorerHits", value: 6, prevValue: 4, rank: 8, postsToQualify: null },
+      { key: "upset", value: 12.5, prevValue: 13.7, rank: 15, postsToQualify: null },
     ],
 
     overtaken: [
@@ -57,7 +57,7 @@ export function weeklyReportPreviewClimbed(): WeeklyReport {
   };
 }
 
-/** 大量に抜いた週（初期5人 + 「もっと見る」展開の確認用） */
+/** 大量に抜いた週（「もっと見る」展開の確認用） */
 export function weeklyReportPreviewBigClimb(): WeeklyReport {
   const base = weeklyReportPreviewClimbed();
   const names = [
@@ -131,9 +131,9 @@ export function weeklyReportPreviewDropped(): WeeklyReport {
     totalWins: 6,
 
     divisions: [
-      { key: "winRate", value: 50, prevValue: 61, rank: 74 },
-      { key: "goalScorerHits", value: 2, prevValue: 6, rank: 41 },
-      { key: "upset", value: 4.0, prevValue: 12.5, rank: 63 },
+      { key: "winRate", value: 50, prevValue: 61, rank: 74, postsToQualify: null },
+      { key: "goalScorerHits", value: 2, prevValue: 6, rank: 41, postsToQualify: null },
+      { key: "upset", value: 4.0, prevValue: 12.5, rank: 63, postsToQualify: null },
     ],
 
     overtaken: [],
@@ -182,9 +182,10 @@ export function weeklyReportPreviewLive(): WeeklyReport {
     totalPosts: 7,
     totalWins: 4,
     divisions: [
-      { key: "winRate", value: 57, prevValue: 50, rank: 45 },
-      { key: "goalScorerHits", value: 2, prevValue: 1, rank: 19 },
-      { key: "upset", value: 5.5, prevValue: 5.5, rank: 22 },
+      { key: "winRate", value: 57, prevValue: 50, rank: 45, postsToQualify: null },
+      // 進行中で SCORER 最低参加未達 → 参考記録
+      { key: "goalScorerHits", value: 1, prevValue: null, rank: null, postsToQualify: 2 },
+      { key: "upset", value: 5.5, prevValue: 5.5, rank: 22, postsToQualify: null },
     ],
     overtaken: [
       { uid: "u2", displayName: "TatumStan0", photoURL: AVATAR(33), rank: 15 },
@@ -232,9 +233,10 @@ export function weeklyReportPreviewFirstWeek(): WeeklyReport {
     totalWins: 3,
 
     divisions: [
-      { key: "winRate", value: 50, prevValue: null, rank: null },
-      { key: "goalScorerHits", value: 1, prevValue: null, rank: 88 },
-      { key: "upset", value: 2.5, prevValue: null, rank: 92 },
+      // WIN% 最低参加未達 → 参考記録
+      { key: "winRate", value: 50, prevValue: null, rank: null, postsToQualify: 2 },
+      { key: "goalScorerHits", value: 1, prevValue: null, rank: 88, postsToQualify: null },
+      { key: "upset", value: 2.5, prevValue: null, rank: 92, postsToQualify: null },
     ],
 
     overtaken: [],

@@ -37,7 +37,6 @@ export type PostCumulativeContribution = {
   isWin: boolean;
   points: number;
   upsetPoints: number;
-  scorePrecision: number;
   exactHit: boolean;
   goalScorerHit: boolean;
   upsetBonus: number;
@@ -70,7 +69,6 @@ export function addRankingTotals(
     wins?: number;
     pointsSumV3?: number;
     upsetPointsSum?: number;
-    scorePrecisionSum?: number;
     exactHitCount?: number;
     goalScorerHitCount?: number;
     /** WC ステージ累積: totalPrecision に exactHitCount を載せる */
@@ -79,7 +77,7 @@ export function addRankingTotals(
 ): Omit<RankingTotals, "winRate"> {
   const precisionInc = inc.precisionFromExactHits
     ? safeRankMetricNum(inc.exactHitCount)
-    : safeRankMetricNum(inc.scorePrecisionSum);
+    : 0;
   return {
     totalPosts:
       safeRankMetricNum(base.totalPosts) + safeRankMetricNum(inc.posts),
@@ -114,7 +112,6 @@ function bucketToInc(
       wins: 0,
       pointsSumV3: 0,
       upsetPointsSum: 0,
-      scorePrecisionSum: 0,
       exactHitCount: 0,
       goalScorerHitCount: 0,
       precisionFromExactHits: opts?.precisionFromExactHits ?? false,
@@ -125,7 +122,6 @@ function bucketToInc(
     wins: num(bucket.wins),
     pointsSumV3: num(bucket.pointsSumV3),
     upsetPointsSum: num(bucket.upsetPointsSum),
-    scorePrecisionSum: num(bucket.scorePrecisionSum),
     exactHitCount: num(bucket.exactHitCount),
     goalScorerHitCount: num(bucket.goalScorerHitCount),
     precisionFromExactHits: opts?.precisionFromExactHits ?? false,
@@ -142,11 +138,8 @@ export function buildCumulativeIncrementFields(
   const wins = contrib.isWin ? s : 0;
   const points = contrib.points * s;
   const upset = contrib.upsetPoints * s;
-  const profilePrecision =
-    contrib.isWc ? 0 : contrib.scorePrecision * s;
   const goalScorer = contrib.goalScorerHit ? s : 0;
   const wcExact = contrib.isWc && contrib.exactHit ? s : 0;
-  const nbaPrecision = contrib.isWc ? 0 : contrib.scorePrecision * s;
   const upsetBonus = safeRankMetricNum(contrib.upsetBonus) * s;
   const streakBonus = safeRankMetricNum(contrib.streakBonus) * s;
 
@@ -155,7 +148,6 @@ export function buildCumulativeIncrementFields(
     totalWins: FieldValue.increment(wins),
     totalPoints: FieldValue.increment(points),
     totalUpset: FieldValue.increment(upset),
-    totalPrecision: FieldValue.increment(profilePrecision),
   };
   if (upsetBonus !== 0) out.upsetBonusSum = FieldValue.increment(upsetBonus);
   if (streakBonus !== 0) out.streakBonusSum = FieldValue.increment(streakBonus);
@@ -168,7 +160,6 @@ export function buildCumulativeIncrementFields(
   out["ranking.totalWins"] = FieldValue.increment(wins);
   out["ranking.totalPoints"] = FieldValue.increment(points);
   out["ranking.totalUpset"] = FieldValue.increment(upset);
-  out["ranking.totalPrecision"] = FieldValue.increment(nbaPrecision);
   if (upsetBonus !== 0) {
     out["ranking.upsetBonusSum"] = FieldValue.increment(upsetBonus);
   }
@@ -191,7 +182,6 @@ export function buildCumulativeIncrementFields(
     out[`${p}.totalWins`] = FieldValue.increment(wins);
     out[`${p}.totalPoints`] = FieldValue.increment(points);
     out[`${p}.totalUpset`] = FieldValue.increment(upset);
-    out[`${p}.totalPrecision`] = FieldValue.increment(nbaPrecision);
     out[`${p}.totalGoalScorerHits`] = FieldValue.increment(goalScorer);
     applyBonusToPath(p);
   }
@@ -207,6 +197,8 @@ export function buildCumulativeIncrementFields(
       out[`${w}.totalWins`] = FieldValue.increment(wins);
       out[`${w}.totalPoints`] = FieldValue.increment(points);
       out[`${w}.totalUpset`] = FieldValue.increment(upset);
+      out[`${w}.totalExactHits`] = FieldValue.increment(wcExact);
+      /** 旧ランキングの fallback。新規 UI は totalExactHits を読む。 */
       out[`${w}.totalPrecision`] = FieldValue.increment(wcExact);
       out[`${w}.totalGoalScorerHits`] = FieldValue.increment(goalScorer);
       applyBonusToPath(w);

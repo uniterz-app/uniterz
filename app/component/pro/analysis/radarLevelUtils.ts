@@ -9,7 +9,6 @@ export function score10ToLevel(score: number): RadarAxisLevel {
 
 export type RadarAxisKey =
   | "winRate"
-  | "precision"
   | "upset"
   | "volume"
   | "streak";

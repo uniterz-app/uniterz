@@ -10,7 +10,7 @@ export function metricLabel(
   const m = t(lang).rankings;
   if (metric === "totalScore") return m.totalScore;
   if (metric === "winRate") return m.winRate;
-  if (metric === "marginPrecision") return m.scorePrecision;
+  if (metric === "marginPrecision") return m.exactHits;
   if (metric === "exactHits") return m.exactHits;
   if (metric === "upsetScore") return m.upsetScore;
   if (metric === "streak") return m.winStreak;

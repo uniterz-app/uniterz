@@ -19,7 +19,7 @@ export type ProfileDailyComboChartPoint = {
   posts: number;
   wins: number;
   pointsV3: number;
-  scorePrecision: number;
+  exactHitCount: number;
   upsetPoints: number;
 };
 
@@ -258,19 +258,9 @@ export default function ProfileDailyComboChartNeural({
   const subtitle = msg.profile.dailyComboChartDesc;
   const chartInfoTooltipMsg = msg.profile.dailyComboChartInfo;
 
-  const scorePrecisionLabel = isWcTrend
-    ? msg.rankings.exactHits
-    : msg.profile.scorePrecision;
-  const scorePrecisionUnit = isWcTrend
-    ? language === "ja"
-      ? "試合"
-      : "matches"
-    : msg.profile.ptsUnit;
-  const scorePrecisionDecimals = isWcTrend ? 0 : 1;
-
   const statLabels = {
     hitsPosts: msg.profile.hitsSlashPosts,
-    scorePrec: scorePrecisionLabel,
+    exactHits: msg.rankings.exactHits,
     totalPts: msg.profile.totalPoints,
     upset: msg.profile.upsetLabel,
     unitCount: msg.profile.items,
@@ -559,22 +549,24 @@ export default function ProfileDailyComboChartNeural({
                   </span>
                 </div>
               </div>
+              {isWcTrend ? (
               <div className="dcc-neural__stat-cell">
                 <p className={["dcc-neural__stat-label", nameOxanium.className].join(" ")}>
-                  {statLabels.scorePrec}
+                  {statLabels.exactHits}
                 </p>
                 <div className="dcc-neural__stat-value-row">
                   <span className={["dcc-neural__stat-value", nameOxanium.className].join(" ")}>
                     {formatMetricDecimals(
-                      clampNum(selectedRow.scorePrecision),
-                      scorePrecisionDecimals
+                      clampNum(selectedRow.exactHitCount),
+                      0
                     )}
                   </span>
                   <span className={["dcc-neural__stat-unit", nameOxanium.className].join(" ")}>
-                    {scorePrecisionUnit}
+                    {language === "ja" ? "試合" : "matches"}
                   </span>
                 </div>
               </div>
+              ) : null}
               <div className="dcc-neural__stat-cell">
                 <p className={["dcc-neural__stat-label", nameOxanium.className].join(" ")}>
                   {statLabels.totalPts}

@@ -108,8 +108,6 @@ export async function finalizePost({
     stats: {
       isWin: result.isWin,
       scoreError: result.scoreError,
-      scorePrecision: result.scorePrecision,
-      scorePrecisionDetail: result.scorePrecisionDetail,
       marketCount: market.total,
       marketMajority: result.marketMajority,
       isMajorityPick: result.isMajorityPick,
@@ -166,7 +164,6 @@ export async function finalizePost({
 
       isWin: result.isWin,
       scoreError: result.scoreError,
-      scorePrecision: isWc ? 0 : result.scorePrecision,
       hadUpsetGame,
 
       upsetHit: result.upsetHit,

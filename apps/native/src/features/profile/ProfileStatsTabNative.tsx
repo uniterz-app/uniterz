@@ -1,39 +1,13 @@
 /**
- * Web `WebProfileViewV2` の Stats タブ分岐 + ProAnalysis 相当（ネイティブ UI）。
+ * Web `ProfileMonthlyReportPanel` 相当。旧 Pro Stats / user_stats_v2_monthly は読まない。
  */
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useNativeProfileStats } from "./useNativeProfileStats";
-import { useNativeStreakTracker } from "./useNativeStreakTracker";
-import {
-  currentMonthKey,
-  previousMonthKey,
-  useNativeProfileMonthlyStats,
-} from "./useNativeProfileMonthlyStats";
-import {
-  extractPointsSumBenchmarks,
-  useNativeMonthlyGlobalStats,
-} from "./useNativeMonthlyGlobalStats";
-import ProfileSummaryGridNative from "./ProfileSummaryGridNative";
-import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
-import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
-import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
-import ProfileRadarChartNative from "./ProfileRadarChartNative";
-import { useNativeProfileMonthlyList } from "./useNativeProfileMonthlyList";
-import {
-  ProfileHomeAwayCardNative,
-  ProfileMarketBiasCardNative,
-} from "./ProfileProMonthlyCardsNative";
-import ProfileTeamAffinityCardNative from "./ProfileTeamAffinityCardNative";
-import ProfileAnalysisStyleMapNative from "./ProfileAnalysisStyleMapNative";
-import ProfilePrevMonthSummaryNative from "./ProfilePrevMonthSummaryNative";
-import {
-  buildStyleMapPoint,
-  normalizeTeamAffinityRows,
-} from "./profileAnalysisUtils";
-import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import type { MonthlyReport } from "../../../../../lib/reports/monthlyReportTypes";
 import type { ProfileStackParamList } from "../../navigation/types";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 
@@ -56,411 +30,189 @@ export default function ProfileStatsTabNative({
   isMyPro,
   isTargetPro,
 }: Props) {
-  const isJa = language === "ja";
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const canViewReport =
+    isProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro);
+  const [report, setReport] = useState<MonthlyReport | null>(null);
+  const [loading, setLoading] = useState(canViewReport && Boolean(uid));
+  const isJa = language === "ja";
 
-  const mode: "analysis" | "preview" | "locked" = useMemo(() => {
-    if (isProView) return "analysis";
-    if (isMe) return myPlan === "pro" ? "analysis" : "preview";
-    if (isMyPro && isTargetPro) return "analysis";
-    return "locked";
-  }, [isProView, isMe, myPlan, isMyPro, isTargetPro]);
-
-  const statsEnabled = mode !== "locked" && !!uid;
-  const statsBundle = useNativeProfileStats(uid, statsEnabled);
-  const streakBundle = useNativeStreakTracker(uid, statsEnabled);
-
-  const { months: monthlyMonths, loading: monthsLoading } = useNativeProfileMonthlyList(
-    statsEnabled ? uid : undefined
-  );
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const activeMonth = useMemo(() => {
-    if (selectedMonth) return selectedMonth;
-    if (monthlyMonths.length > 0) return monthlyMonths[monthlyMonths.length - 1]!;
-    return currentMonthKey();
-  }, [selectedMonth, monthlyMonths]);
-  const prevMonth = previousMonthKey(activeMonth);
-  const prevPrevMonth = prevMonth ? previousMonthKey(prevMonth) : undefined;
-  const monthly = useNativeProfileMonthlyStats(
-    uid,
-    statsEnabled ? activeMonth : undefined,
-    prevMonth,
-    prevPrevMonth
-  );
-
-  const [proSummaryGridLayout] = useState(isProView || myPlan === "pro");
-
-  const maxStreak = useMemo(() => {
-    const st = statsBundle.stats as Record<string, unknown> | null;
-    if (st != null) {
-      const raw = st.maxWinStreak;
-      const legacy = st.maxStreak;
-      const v = Number(raw ?? legacy);
-      if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
+  useEffect(() => {
+    if (!canViewReport || !uid) {
+      setReport(null);
+      setLoading(false);
+      return;
     }
-    return 0;
-  }, [statsBundle.stats]);
 
-  const homeAwayPayload = useMemo(() => {
-    const homeAway = monthly.stats?.homeAway as
-      | {
-          home?: { winRate?: number; posts?: number };
-          away?: { winRate?: number; posts?: number };
-        }
-      | undefined;
-    if (!homeAway) return null;
-    const hPosts = homeAway.home?.posts ?? 0;
-    const aPosts = homeAway.away?.posts ?? 0;
-    const pickTot = hPosts + aPosts;
-    return {
-      homeRate: Number(homeAway.home?.winRate ?? 0),
-      awayRate: Number(homeAway.away?.winRate ?? 0),
-      homeShare: pickTot > 0 ? hPosts / pickTot : 0.5,
-      awayShare: pickTot > 0 ? aPosts / pickTot : 0.5,
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, "user_reports"), where("uid", "==", uid))
+        );
+        if (cancelled) return;
+        const latest = snapshot.docs
+          .map((entry) => entry.data())
+          .filter(
+            (entry): entry is MonthlyReport =>
+              entry?.league === "nba" && typeof entry?.monthKey === "string"
+          )
+          .sort((a, b) => b.monthKey.localeCompare(a.monthKey))[0];
+        setReport(latest ?? null);
+      } catch {
+        if (!cancelled) setReport(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-  }, [monthly.stats]);
+  }, [canViewReport, uid]);
 
-  const marketBiasPayload = useMemo(() => {
-    const marketBiasRaw = monthly.stats?.marketBias as
-      | {
-          favoriteWinRate?: number;
-          underdogWinRate?: number;
-          favoritePickCount?: number;
-          underdogPickCount?: number;
-        }
-      | undefined;
-    if (!marketBiasRaw) return null;
-    const favCt = marketBiasRaw.favoritePickCount ?? 0;
-    const undCt = marketBiasRaw.underdogPickCount ?? 0;
-    const mTot = favCt + undCt;
-    return {
-      favorableWinRate: Number(marketBiasRaw.favoriteWinRate ?? 0),
-      contrarianWinRate: Number(marketBiasRaw.underdogWinRate ?? 0),
-      favorableShare: mTot > 0 ? favCt / mTot : 0.5,
-      contrarianShare: mTot > 0 ? undCt / mTot : 0.5,
-    };
-  }, [monthly.stats]);
-
-  const teamAffinity = useMemo(() => {
-    const teamStats = monthly.stats?.teamStats as
-      | { strong?: unknown; weak?: unknown }
-      | undefined;
-    if (!teamStats) return null;
-    return {
-      strong: normalizeTeamAffinityRows(teamStats.strong),
-      weak: normalizeTeamAffinityRows(teamStats.weak),
-    };
-  }, [monthly.stats]);
-
-  const styleMapPoint = useMemo(
-    () => buildStyleMapPoint(monthly.stats, activeMonth),
-    [monthly.stats, activeMonth]
-  );
-
-  const prevMonthSummary = useMemo(() => {
-    if (prevMonth && monthly.prevStats) {
-      return {
-        monthKey: prevMonth,
-        stats: monthly.prevStats,
-        olderStats: monthly.prevPrevStats ?? null,
-      };
-    }
-    if (monthly.stats) {
-      return {
-        monthKey: activeMonth,
-        stats: monthly.stats,
-        olderStats: monthly.prevStats ?? null,
-      };
-    }
-    return null;
-  }, [prevMonth, monthly.prevStats, monthly.prevPrevStats, monthly.stats, activeMonth]);
-
-  const summaryBenchmarkMonth = prevMonthSummary?.monthKey;
-  const globalMonthly = useNativeMonthlyGlobalStats(
-    statsEnabled ? summaryBenchmarkMonth : undefined
-  );
-  const summaryBenchmarks = useMemo(
-    () => extractPointsSumBenchmarks(globalMonthly.data),
-    [globalMonthly.data]
-  );
-
-  const monthlyRadar = monthly.stats?.radar10 as Record<string, unknown> | undefined;
-  const monthlyPosts =
-    typeof monthly.stats?.posts === "number" ? monthly.stats.posts : null;
+  const winRate = useMemo(() => {
+    const metric = report?.metrics.find((item) => item.key === "winRate");
+    return metric ? `${metric.value.toFixed(1)}%` : "—";
+  }, [report]);
 
   if (!uid) {
     return <Text style={styles.muted}>{isJa ? "ログインが必要です" : "Sign in required"}</Text>;
   }
 
-  if (mode === "locked") {
+  if (!canViewReport) {
     return (
       <View style={styles.card}>
+        <Text style={styles.title}>{isJa ? "月次レポート" : "Monthly Report"}</Text>
         <Text style={styles.body}>
-          {isJa ? "対象ユーザーはPro未加入です。" : "This user isn't on the Pro plan."}
+          {isMe
+            ? isJa
+              ? "毎月の成績・強み・ハイライトを振り返れます。"
+              : "Review each month with your results, strengths, and highlights."
+            : isJa
+              ? "この月次レポートは Pro メンバー向けです。"
+              : "This monthly report is available to Pro members."}
         </Text>
-      </View>
-    );
-  }
-
-  if (mode === "preview") {
-    return (
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.note}>
-          {isJa
-            ? "※ この分析は有料プラン限定です"
-            : "This analysis is available for paid plans only."}
-        </Text>
-        <Pressable style={styles.cta} onPress={() => navigation.navigate("ProSubscribe")}>
-          <Text style={styles.ctaText}>
-            {isJa ? "Proで全データを見る" : "View all Pro data"}
-          </Text>
-        </Pressable>
-        {statsBundle.summary ? (
-          <View style={styles.gridWrap}>
-            <ProfileSummaryGridNative
-              summary={statsBundle.summary}
-              ranks={statsBundle.summaryRanks}
-              maxStreak={maxStreak}
-              language={language}
-              proOverviewLayout={false}
-            />
-          </View>
+        {isMe ? (
+          <Pressable style={styles.cta} onPress={() => navigation.navigate("ProSubscribe")}>
+            <Text style={styles.ctaText}>{isJa ? "Pro を見る" : "Explore Pro"}</Text>
+          </Pressable>
         ) : null}
-      </ScrollView>
-    );
-  }
-
-  if ((statsBundle.loading && !statsBundle.summary) || !statsBundle.summary) {
-    return (
-      <View style={styles.inlineLoading}>
-        <BlocksPulseLoader />
       </View>
     );
   }
 
-  if (statsBundle.error) {
-    return <Text style={styles.error}>{statsBundle.error}</Text>;
+  if (loading) {
+    return <Text style={styles.muted}>{isJa ? "レポートを読み込み中…" : "Loading report…"}</Text>;
+  }
+
+  if (!report) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.title}>{isJa ? "月次レポート" : "Monthly Report"}</Text>
+        <Text style={styles.body}>
+          {isJa
+            ? "最初のレポートは毎月1日に作成されます。"
+            : "Your first report is built on the 1st of each month."}
+        </Text>
+      </View>
+    );
   }
 
   return (
-    <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>{isJa ? "Pro 分析" : "Pro analysis"}</Text>
-
-      <Text style={styles.sectionLabel}>{isJa ? "プレーオフ総合" : "Playoffs overall"}</Text>
-      <View style={styles.gridWrap}>
-        <ProfileSummaryGridNative
-          summary={statsBundle.summary}
-          ranks={statsBundle.summaryRanks}
-          maxStreak={maxStreak}
-          language={language}
-          proOverviewLayout={proSummaryGridLayout}
-        />
+    <View style={styles.card}>
+      <Text style={styles.eyebrow}>MONTHLY REPORT · {report.monthKey}</Text>
+      <Text style={styles.title}>{isJa ? "今月の結果" : "This month"}</Text>
+      <View style={styles.metrics}>
+        <Metric label={isJa ? "順位" : "Rank"} value={`#${report.rank}`} />
+        <Metric label={isJa ? "予想" : "Picks"} value={String(report.totalPosts)} />
+        <Metric label={isJa ? "勝率" : "Win %"} value={winRate} />
       </View>
-
-      <View style={styles.chartGap} />
-      <ProfileDailyTrendChartNative
-        data={statsBundle.dailyTrend}
-        language={language}
-        allowAll
-      />
-
-      <View style={styles.chartGap} />
-      <ProfileRankTrendChartNative
-        data={statsBundle.rankTrend}
-        loading={false}
-        language={language}
-      />
-
-      <View style={styles.chartGap} />
-      <ProfileStreakTrackerNative
-        points={streakBundle.points}
-        loading={streakBundle.loading}
-        language={language}
-      />
-
-      <View style={styles.chartGap} />
-      <Text style={styles.sectionLabel}>{isJa ? "月次分析" : "Monthly analysis"}</Text>
-      {monthsLoading ? (
-        <View style={styles.inlineLoading}>
-          <BlocksPulseLoader pixelScale={0.85} />
-        </View>
-      ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthStrip}>
-          {(monthlyMonths.length > 0 ? monthlyMonths : [activeMonth]).map((m) => (
-            <Pressable
-              key={m}
-              style={[styles.monthChip, m === activeMonth && styles.monthChipActive]}
-              onPress={() => setSelectedMonth(m)}
-            >
-              <Text style={[styles.monthChipText, m === activeMonth && styles.monthChipTextActive]}>
-                {m}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
-
-      {monthly.loading ? (
-        <View style={styles.inlineLoading}>
-          <BlocksPulseLoader pixelScale={0.85} />
-        </View>
-      ) : monthly.stats ? (
-        <View style={styles.monthlyCard}>
-          {prevMonthSummary ? (
-            <ProfilePrevMonthSummaryNative
-              language={language}
-              monthKey={prevMonthSummary.monthKey}
-              stats={prevMonthSummary.stats}
-              olderStats={prevMonthSummary.olderStats}
-              pointsSumBenchmarks={summaryBenchmarks}
-            />
-          ) : null}
-          {monthlyPosts != null ? (
-            <StatRow label={isJa ? "投稿" : "Posts"} value={String(monthlyPosts)} />
-          ) : null}
-          {monthlyRadar ? (
-            <>
-              <ProfileRadarChartNative
-                language={language}
-                values={{
-                  winRate: Number(monthlyRadar.winRate ?? 0),
-                  precision: Number(monthlyRadar.precision ?? 0),
-                  upset: Number(monthlyRadar.upset ?? 0),
-                  volume: Number(monthlyRadar.volume ?? 0),
-                  streak: Number(monthlyRadar.streak ?? 0),
-                }}
-              />
-              {styleMapPoint ? (
-                <ProfileAnalysisStyleMapNative points={[styleMapPoint]} language={language} />
-              ) : null}
-              {homeAwayPayload ? (
-                <ProfileHomeAwayCardNative language={language} {...homeAwayPayload} />
-              ) : null}
-              {marketBiasPayload ? (
-                <ProfileMarketBiasCardNative language={language} {...marketBiasPayload} />
-              ) : null}
-              {teamAffinity ? (
-                <ProfileTeamAffinityCardNative
-                  language={language}
-                  strong={teamAffinity.strong}
-                  weak={teamAffinity.weak}
-                />
-              ) : null}
-            </>
-          ) : (
-            <Text style={styles.mutedSmall}>
-              {isJa ? "月次データがありません" : "No monthly data"}
-            </Text>
-          )}
-        </View>
-      ) : (
-        <Text style={styles.mutedSmall}>
-          {isJa ? "月次データがありません" : "No monthly data"}
-        </Text>
-      )}
-    </ScrollView>
+      <Text style={styles.body}>
+        {isJa
+          ? "詳細な月次レポートは Web 版で確認できます。"
+          : "View the complete monthly report on the web."}
+      </Text>
+    </View>
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.statRow}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
+    <View style={styles.metric}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { maxHeight: 720 },
-  inlineLoading: { marginVertical: 16, alignItems: "center" },
-  muted: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    paddingVertical: 12,
-  },
-  mutedSmall: {
-    color: "rgba(148,163,184,0.85)",
-    fontSize: 12,
-    marginTop: 8,
-    lineHeight: 18,
-  },
   card: {
+    marginTop: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(5,8,20,0.55)",
+    borderColor: "rgba(103,232,249,0.24)",
+    backgroundColor: "rgba(5,8,20,0.62)",
+    gap: 10,
   },
-  body: {
-    color: colors.textPrimary,
-    fontSize: typography.body,
-    textAlign: "center",
-  },
-  note: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 12,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  cta: {
-    alignSelf: "center",
-    backgroundColor: "#f97316",
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    marginBottom: 16,
-  },
-  ctaText: {
-    color: "#fff",
+  eyebrow: {
+    color: "rgba(103,232,249,0.78)",
+    fontSize: 10,
     fontWeight: "800",
-    fontSize: 14,
-    textAlign: "center",
+    letterSpacing: 1.1,
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 12,
+    fontSize: 17,
+    fontWeight: "800",
   },
-  sectionLabel: {
+  body: {
     color: colors.textSecondary,
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 8,
+    fontSize: typography.body,
+    lineHeight: 21,
   },
-  gridWrap: { marginBottom: 4 },
-  chartGap: { height: 16 },
-  monthlyCard: {
-    padding: 12,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(5,8,20,0.45)",
+  muted: {
+    color: colors.textSecondary,
+    fontSize: typography.body,
+    paddingVertical: spacing.md,
+  },
+  metrics: {
+    flexDirection: "row",
     gap: 8,
   },
-  monthStrip: { marginBottom: 8, maxHeight: 40 },
-  monthChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
+  metric: {
+    flex: 1,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    marginRight: 8,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 10,
+    padding: 10,
+    gap: 3,
   },
-  monthChipActive: {
-    borderColor: "rgba(103,232,249,0.45)",
-    backgroundColor: "rgba(103,232,249,0.12)",
+  metricLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
   },
-  monthChipText: { color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
-  monthChipTextActive: { color: colors.textPrimary },
-  statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  metricValue: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
   },
-  statLabel: { color: colors.textSecondary, fontSize: 13 },
-  statValue: { color: colors.textPrimary, fontSize: 16, fontWeight: "700" },
-  error: { color: "#fca5a5", fontSize: 13 },
+  cta: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(34,211,238,0.18)",
+    borderColor: "rgba(103,232,249,0.4)",
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  ctaText: {
+    color: "rgba(207,250,254,0.98)",
+    fontSize: 14,
+    fontWeight: "800",
+  },
 });

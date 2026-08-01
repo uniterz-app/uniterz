@@ -38,30 +38,6 @@ const ProfileSettledTodayResultsLazy = dynamic(
   }
 );
 
-const ProAnalysisLazy = dynamic(
-  () => import("@/app/component/pro/analysis/ProAnalysis"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex justify-center p-6">
-        <CandleChartLoader />
-      </div>
-    ),
-  }
-);
-
-const ProPreviewLazy = dynamic(
-  () => import("@/app/component/pro/analysis/ProPreview"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex justify-center p-6">
-        <CandleChartLoader />
-      </div>
-    ),
-  }
-);
-
 const PlayoffFullBracketWebLazy = dynamic(
   () => import("@/app/component/predict/PlayoffFullBracketWeb"),
   {
@@ -109,7 +85,6 @@ import { useProfilePlayoffRankTrend } from "@/lib/profile/useProfilePlayoffRankT
 import { useProfileWcStackedRankTrend } from "@/lib/profile/useProfileWcStackedRankTrend";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
-import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { nameBebas } from "@/lib/fonts";
@@ -119,6 +94,7 @@ import {
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
+import ProfileMonthlyReportPanel from "./ProfileMonthlyReportPanel";
 import {
   profileVisualEffectsForViewer,
   isProfileVisualLite,
@@ -201,7 +177,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     enabled: isMe,
   });
 
-  const m = t(language);
   const currentStreak = Math.max(
     0,
     (profile as { currentStreak?: number }).currentStreak ?? 0
@@ -378,16 +353,15 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               />
             </div>
           )
-        ) : currentIsProView ? (
-          <ProAnalysisLazy />
-        ) : isMe ? (
-          myPlan === "pro" ? <ProAnalysisLazy /> : <ProPreviewLazy />
-        ) : isMyPro && isTargetPro ? (
-          <ProAnalysisLazy />
         ) : (
-          <div className={`${CYBER_GLASS_PANEL} p-6 text-center`}>
-            {m.pro.upgradeToSeeAll}
-          </div>
+          <ProfileMonthlyReportPanel
+            uid={resolvedUid}
+            language={language}
+            canViewReport={
+              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
+            }
+            showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
+          />
         )}
       </div>
 

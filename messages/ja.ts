@@ -77,7 +77,6 @@ const ja = {
     bracket: "ブラケット",
     userPredictionMap: "予想マップ",
     totalScore: "合計スコア",
-    scorePrecision: "スコア精度",
     upsetScore: "アップセットスコア",
     maxStreak: "最大連勝",
     analysisWinRate: "的中率",
@@ -154,7 +153,7 @@ const ja = {
     dailyComboChart: "Daily Combo Chart",
     dailyComboChartDesc: "過去10日のスタッツの推移",
     dailyComboChartInfo:
-      "オレンジ・紫の棒＝日ごとの投稿数・的中数。黄・緑の線＝累積の総合得点・スコア精度。グラフをタップすると下に内訳を表示します。",
+      "オレンジ・紫の棒＝日ごとの投稿数・的中数。黄・緑の線＝累積の総合得点。グラフをタップすると下に内訳を表示します。",
     proMonthlyTrend: "Proでは月ごとの推移が確認できます",
     hitsSlashPosts: "的中 / 投稿",
     ptsUnit: "pts",
@@ -170,8 +169,6 @@ const ja = {
     settledTodayEmpty: "今日確定した分析はまだありません",
     allTimeMaxStreak: "全期間での最高連勝",
     allTimeMaxStreakNote: "全期間（All-time）の最高連勝数です。期間切替（7日/30日）とは連動しません。",
-    scorePrecisionTooltip:
-      "予想スコアと実際スコアの近さを0〜10で評価し、期間内の合計を算出。スコアまで当てる精度を測ります。",
     exactHitTooltip:
       "予想スコアが結果と完全一致した試合数（期間内の累計）。",
     upsetTooltip:
@@ -188,7 +185,6 @@ const ja = {
     myCommunity: "マイコミュニティ",
     totalScore: "総合スコア",
     winRate: "勝率",
-    scorePrecision: "スコア精度",
     exactHits: "完全的中",
     upsetScore: "アップセットスコア",
     winStreak: "連勝",
@@ -372,7 +368,6 @@ const ja = {
     base: "基本点",
     upsetBonus: "アップセットボーナス",
     streakBonus: "連勝ボーナス",
-    precisionBonus: "精度ボーナス",
     totalPoints: "合計ポイント",
     noPrediction: "予想なし",
     correct: "的中",
@@ -397,11 +392,8 @@ const ja = {
     goalScorerBonusLabel: "得点者ボーナス",
     wcGoalScorerLabel: "ゴールする選手",
     wcPkWinnerLabel: "PKで勝つチーム",
-    scorePrecisionLabel: "スコア精度",
     upsetPointsLabel: "アップセット",
     totalPointsLabel: "総合得点",
-    scorePrecisionDesc:
-      "予想スコアが実スコアにどれだけ近いか（1試合 0〜10）。高いほどスコアまで当てている。",
     upsetPointsDesc:
       "その試合がアップセット（波乱）だったうえで、あなたが少数派予想で的中したときだけ加点される別指標（1試合 0〜10）。条件を満たさない場合は 0。",
     totalPointsDesc:
@@ -447,7 +439,6 @@ const ja = {
     filterMatchStatus: "試合の状態",
     filterLeague: "リーグ",
     filterUpsetScore: "Upset スコア",
-    filterScoreAccuracy: "スコア精度",
     filterTotalScore: "総合スコア",
     filterAll: "すべて",
     filterWins: "勝ち",
@@ -538,7 +529,6 @@ const ja = {
     base: "基本点",
     upsetBonus: "アップセット",
     streakBonus: "連勝ボーナス",
-    precisionBonus: "精度ボーナス",
     totalPoints: "合計ポイント",
     monthlyBreakdown: "月別内訳",
     performance: "パフォーマンス",

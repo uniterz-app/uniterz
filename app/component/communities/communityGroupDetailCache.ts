@@ -36,7 +36,6 @@ export type CommunityGroupLeaderboardRow = {
   winRate: number;
   activeWinStreak: number;
   totalPoints: number;
-  totalPrecision?: number;
   totalUpset?: number;
 };
 

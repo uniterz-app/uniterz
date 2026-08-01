@@ -26,7 +26,6 @@ import { useInViewOnce } from "@/lib/hooks/useInViewOnce";
 
 type Percentiles = {
   winRate: number;
-  precision: number;
   pointsV3: number;
   upset: number;
   volume: number;
@@ -37,11 +36,9 @@ type MonthlyDoc = {
     posts?: number;
     wins?: number;
     winRate?: number;
-    avgPrecision?: number;
     avgPointsV3?: number;
     upsetPointsSum?: number;
     pointsSumV3?: number;
-    scorePrecisionSum?: number;
     basePointsSum?: number;
     upsetBonusSum?: number;
     streakBonusSum?: number;
@@ -276,21 +273,6 @@ export default function PrevMonthSummaryCard({
         : 0;
   const lossesCount = Math.max(0, posts - winsCount);
 
-  const avgPrecision = raw.avgPrecision ?? 0;
-  const avgPrecisionOld =
-    oldRaw.avgPrecision !== undefined ? oldRaw.avgPrecision : null;
-
-  const scorePrecisionSum =
-    raw.scorePrecisionSum ?? avgPrecision * posts;
-  const scorePrecisionSumOld =
-    oldRaw.scorePrecisionSum !== undefined
-      ? oldRaw.scorePrecisionSum
-      : avgPrecisionOld !== null && postsOld !== null
-        ? avgPrecisionOld * postsOld
-        : null;
-
-  const precisionBarRatio = clamp01(avgPrecision / 10);
-
   const upsetSum = raw.upsetPointsSum ?? 0;
   const upsetSumOld =
     oldRaw.upsetPointsSum !== undefined ? oldRaw.upsetPointsSum : null;
@@ -326,7 +308,6 @@ export default function PrevMonthSummaryCard({
   const postsIv = useInViewOnce();
   const winIvWeb = useInViewOnce();
   const winIvMobile = useInViewOnce();
-  const precIv = useInViewOnce();
   const upsetIv = useInViewOnce();
 
   const cuPoints = useCountUp(pointsSum, 960, totalIv.inView, 1, "zero");
@@ -350,15 +331,6 @@ export default function PrevMonthSummaryCard({
     1000,
     winVisible,
     0,
-    "zero"
-  );
-
-  const cuPrecSum = useCountUp(scorePrecisionSum, 960, precIv.inView, 1, "zero");
-  const cuAvgPrec = useCountUp(
-    avgPrecision,
-    900,
-    precIv.inView,
-    posts > 0 ? 2 : 1,
     "zero"
   );
 
@@ -760,74 +732,7 @@ export default function PrevMonthSummaryCard({
             )}
           </MetricCard>
         </div>
-        <div className="col-span-2 grid grid-cols-2 items-stretch gap-2 sm:gap-3 lg:col-span-1 lg:contents">
-          <div className="min-h-0 min-w-0">
-          <MetricCard
-            ref={precIv.ref}
-            icon={<Crosshair className="h-4 w-4" />}
-            title={language === "en" ? "Score precision" : "スコア精度"}
-          >
-            {showEmptyMetrics ? (
-              <EmptyMetricPlaceholder language={language} />
-            ) : (
-              <>
-                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-                  <div>
-                    <div className="text-[10px] text-white/45 lg:text-[13px]">{lb.sumTotal}</div>
-                    <span className="inline-flex items-baseline gap-1">
-                      <span
-                        className={`text-xl leading-none text-white sm:text-2xl lg:text-[2.25rem] ${resultStatsMetricNumClass}`}
-                      >
-                        {formatMetricDecimals(cuPrecSum, 1)}
-                      </span>
-                      <span
-                        className={`text-sm leading-none text-white/60 sm:text-base lg:text-xl ${resultStatsMetricNumClass}`}
-                      >
-                        pts
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-start gap-0.5 pb-0.5">
-                    <span className="text-[10px] leading-tight text-white/40 lg:text-[13px]">
-                      {lb.priorMoM}
-                    </span>
-                    <DeltaBadge
-                      language={language}
-                      deltaPct={null}
-                      deltaPts={
-                        scorePrecisionSumOld == null
-                          ? null
-                          : scorePrecisionSum - scorePrecisionSumOld
-                      }
-                      higherIsBetter
-                      absoluteDecimals={1}
-                      absoluteSuffix="pts"
-                      textSizeClass="text-[10px] lg:text-[15px]"
-                      iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
-                    />
-                  </div>
-                </div>
-                <div className="mt-3 flex w-full min-w-0 items-center gap-2 sm:gap-3">
-                  <ResultStatRatingBar
-                    ratio={precisionBarRatio}
-                    animateMs={520}
-                    delayMs={0}
-                    size="md"
-                    animationActive={precIv.inView}
-                  />
-                  <span
-                    className={`shrink-0 whitespace-nowrap text-[13px] sm:text-[15px] lg:text-xl ${resultStatsMetricNumClass}`}
-                  >
-                    <span className="text-white/50">avg </span>
-                    <span className="text-white">
-                      {formatMetricDecimals(cuAvgPrec, posts > 0 ? 2 : 1)}
-                    </span>
-                  </span>
-                </div>
-              </>
-            )}
-          </MetricCard>
-          </div>
+        <div className="col-span-2 grid grid-cols-1 items-stretch gap-2 sm:gap-3 lg:col-span-1 lg:contents">
           <div className="min-h-0 min-w-0">
           <MetricCard
             ref={upsetIv.ref}

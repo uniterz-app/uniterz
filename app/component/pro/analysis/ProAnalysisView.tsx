@@ -45,7 +45,6 @@ type Props = {
 
   radar: {
     winRate: number;
-    precision: number;
     upset: number;
     volume: number;
     streak: number;

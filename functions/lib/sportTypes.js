@@ -1,5 +1,5 @@
 "use strict";
-// functions/src/calcScorePrecision/sportTypes.ts
+// functions/src/sportTypes.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SPORT_TYPE_BY_LEAGUE = void 0;
 /**

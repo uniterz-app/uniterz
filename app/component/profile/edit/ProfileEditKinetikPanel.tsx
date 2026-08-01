@@ -493,11 +493,8 @@ function getKinetikMetricCopy(isJa: boolean) {
       ? "確定試合の的中率。100% = 全試合的中。"
       : "Hit rate on settled picks. 100% = all picks correct.",
     totalPointsTooltip: isJa
-      ? "勝者的中・スコア精度・アップセット等を合算した期間内の総合得点。"
-      : "Combined score from wins, precision, upsets, and bonuses for the period.",
-    scorePrecisionTooltip: isJa
-      ? "予想スコアと実際スコアの近さを0〜10で評価し、期間内の合計を算出。"
-      : "Sum of 0–10 score-accuracy ratings per settled pick in the period.",
+      ? "勝者的中・アップセット・ボーナス等を合算した期間内の総合得点。"
+      : "Combined score from wins, upsets, and bonuses for the period.",
     exactHitTooltip: isJa
       ? "予想スコアが結果と完全一致した試合数（期間内の累計）。"
       : "Number of matches where your predicted score exactly matched the final score.",
@@ -515,21 +512,14 @@ function buildKinetikMetricsInfoMessage(
   opts: { isJa: boolean; isWcProfile: boolean }
 ): string {
   const { isJa, isWcProfile } = opts;
-  const precisionLabel = isWcProfile
-    ? isJa
-      ? "完全的中"
-      : "Exact hits"
-    : isJa
-      ? "スコア精度"
-      : "Precision";
-  const precisionTip = isWcProfile
-    ? copy.exactHitTooltip
-    : copy.scorePrecisionTooltip;
+  const exactHitsLabel = isJa ? "完全的中" : "Exact hits";
 
   return [
     `${isJa ? "勝率" : "Win rate"} — ${copy.winRateTooltip}`,
     `${isJa ? "総合得点" : "Total points"} — ${copy.totalPointsTooltip}`,
-    `${precisionLabel} — ${precisionTip}`,
+    ...(isWcProfile
+      ? [`${exactHitsLabel} — ${copy.exactHitTooltip}`]
+      : []),
     `${KINETIK_UPSET_METRIC_LABEL} — ${copy.upsetTooltip}`,
   ].join("\n\n");
 }
@@ -799,8 +789,8 @@ export default function ProfileEditKinetikPanel({
       "totalPoints",
       sectionDeltas?.totalPoints
     );
-    const sectionPrecisionDelta = formatProfileMetricDayDelta(
-      "scorePrecision",
+    const sectionExactHitsDelta = formatProfileMetricDayDelta(
+      "exactHits",
       sectionDeltas?.totalPrecision,
       { integer: isWcProfile }
     );
@@ -822,7 +812,7 @@ export default function ProfileEditKinetikPanel({
               hits: sectionStats.hits,
               totalPoints: sectionStats.totalPoints,
               totalPointsRank: sectionRank.totalPointsRank,
-              scorePrecision: sectionStats.scorePrecision,
+              exactHits: sectionStats.exactHits,
               upset: sectionStats.upset,
               winSegs: kinetikWinRateSegs(sectionStats.winRate),
               ptsSegs: kinetikTotalPointsRankSegs(
@@ -830,6 +820,7 @@ export default function ProfileEditKinetikPanel({
                 sectionRank.totalPointsRankDenominator
               ),
             }}
+            showExactHits={isWcProfile}
           />
         </div>
       );
@@ -884,44 +875,32 @@ export default function ProfileEditKinetikPanel({
           reduceUiMotion={reduceUiMotion}
           language={language}
         />
+        {isWcProfile ? (
         <MetricCard
-          label={
-            isWcProfile
-              ? isJa
-                ? "完全的中"
-                : "EXACT HITS"
-              : isJa
-                ? "スコア精度"
-                : "PRECISION"
-          }
-          value={
-            isWcProfile
-              ? String(Math.max(0, Math.round(sectionStats.scorePrecision)))
-              : formatMetricDecimals(sectionStats.scorePrecision, 1)
-          }
+          label={isJa ? "完全的中" : "EXACT HITS"}
+          value={String(Math.max(0, Math.round(sectionStats.exactHits)))}
           accent="cyan"
           filledSegs={0}
           layout={layout}
           delay={0.12}
           showSegBar={false}
-          unit={isWcProfile ? metricCopy.matchUnit : metricCopy.ptsUnit}
+          unit={metricCopy.matchUnit}
           unitHint={metricCopy.cumulativeUnitHint}
           dayDelta={
-            sectionPrecisionDelta
-              ? isWcProfile
-                ? `${sectionPrecisionDelta} ${metricCopy.matchUnit}`
-                : `${sectionPrecisionDelta} ${metricCopy.ptsUnit}`
+            sectionExactHitsDelta
+              ? `${sectionExactHitsDelta} ${metricCopy.matchUnit}`
               : null
           }
           dayDeltaTitle={dayDeltaTitle}
           dayDeltaTone={profileMetricDeltaTone(
             sectionDeltas?.totalPrecision ?? null,
-            { positiveOnly: isWcProfile }
+            { positiveOnly: true }
           )}
           isPlanPro={isPro}
           reduceUiMotion={reduceUiMotion}
           language={language}
         />
+        ) : null}
         <MetricCard
           label={KINETIK_UPSET_METRIC_LABEL}
           value={formatMetricDecimals(sectionStats.upset, 1)}

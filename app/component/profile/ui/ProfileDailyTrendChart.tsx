@@ -18,7 +18,7 @@ export type ProfileDailyTrendPoint = {
   posts: number;
   wins: number;
   pointsV3: number;
-  scorePrecision: number;
+  exactHitCount: number;
   upsetPoints: number;
 };
 

@@ -691,22 +691,9 @@ function ResultPostCard({
   });
 
   const statRows = useMemo(() => {
-    const scorePrecision = toNumber(stats?.scorePrecision, 0);
     const upsetPoints = toNumber(stats?.upsetPoints, 0);
     const pointsV3 = toNumber(stats?.pointsV3, 0);
-    const showScorePrecision = leagueKey !== "wc";
     return [
-      ...(showScorePrecision
-        ? [
-            {
-              key: "scorePrecision" as const,
-              label: isEn ? "Score Precision" : "スコア精度",
-              value: scorePrecision,
-              barMax: 10,
-              format: (v: number) => v.toFixed(1),
-            },
-          ]
-        : []),
       {
         key: "upsetPoints" as const,
         label: isEn ? "Upset Score" : "アップセット",
@@ -1015,17 +1002,13 @@ function ResultPostCard({
                     : 0;
               const display = row.format(row.value);
               const valueStyle =
-                row.key === "scorePrecision"
-                  ? isYellow10pt(stats?.scorePrecision)
-                    ? styles.statValueYellow
+                row.key === "upsetPoints"
+                  ? hadUpsetGame && isRedUpset(stats?.upsetPoints)
+                    ? styles.statValueRed
                     : styles.statValueWhite
-                  : row.key === "upsetPoints"
-                    ? hadUpsetGame && isRedUpset(stats?.upsetPoints)
-                      ? styles.statValueRed
-                      : styles.statValueWhite
-                    : isYellow10pt(stats?.pointsV3)
-                      ? styles.statValueYellow
-                      : styles.statValueWhite;
+                  : isYellow10pt(stats?.pointsV3)
+                    ? styles.statValueYellow
+                    : styles.statValueWhite;
               const ri = rowIndex as 0 | 1 | 2;
               return (
                 <View key={row.key} style={styles.statRow}>
@@ -1350,7 +1333,6 @@ export default function ResultHomeScreen({
           language={language}
           filters={resultFilters}
           onChange={setResultFilters}
-          hideScorePrecision={(leagueTab ?? defaultLeagueTab) === "wc"}
         />
       }
     />

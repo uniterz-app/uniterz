@@ -29,7 +29,7 @@ type BulkFetchResult = {
 const ANON_KEY = "__anon__";
 const INITIAL_RANKING_METRICS = "totalPoints";
 const DEFERRED_RANKING_METRICS_NBA = [
-  "totalPrecision",
+  "totalGoalScorerHits",
   "totalUpset",
 ] as const;
 const DEFERRED_RANKING_METRICS_WC = [

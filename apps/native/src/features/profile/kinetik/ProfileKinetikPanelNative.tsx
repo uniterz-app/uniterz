@@ -1235,41 +1235,29 @@ export default function ProfileKinetikPanelNative({
           isPlanPro={isPro}
           language={language}
         />
-        <KinetikMetricCardNative
-          label={
-            isWcProfile
-              ? isJa
-                ? "完全的中"
-                : "EXACT HITS"
-              : isJa
-                ? "スコア精度"
-                : "PRECISION"
-          }
-          value={
-            isWcProfile
-              ? String(Math.max(0, Math.round(sectionStats.scorePrecision)))
-              : formatMetricDecimals(sectionStats.scorePrecision, 1)
-          }
-          accent="cyan"
-          showSegBar={false}
-          compact
-          unit={isWcProfile ? metricCopy.matchUnit : metricCopy.ptsUnit}
-          unitHint={metricCopy.cumulativeUnitHint}
-          dayDelta={
-            formatProfileMetricDayDelta("scorePrecision", sectionDeltas?.totalPrecision, {
-              integer: isWcProfile,
-            })
-              ? isWcProfile
-                ? `${formatProfileMetricDayDelta("scorePrecision", sectionDeltas?.totalPrecision, { integer: true })} ${metricCopy.matchUnit}`
-                : `${formatProfileMetricDayDelta("scorePrecision", sectionDeltas?.totalPrecision)} ${metricCopy.ptsUnit}`
-              : null
-          }
-          dayDeltaTone={profileMetricDeltaTone(
-            sectionDeltas?.totalPrecision ?? null,
-            { positiveOnly: isWcProfile }
-          )}
-          isPlanPro={isPro}
-        />
+        {isWcProfile ? (
+          <KinetikMetricCardNative
+            label={isJa ? "完全的中" : "EXACT HITS"}
+            value={String(Math.max(0, Math.round(sectionStats.exactHits)))}
+            accent="cyan"
+            showSegBar={false}
+            compact
+            unit={metricCopy.matchUnit}
+            unitHint={metricCopy.cumulativeUnitHint}
+            dayDelta={
+              formatProfileMetricDayDelta("exactHits", sectionDeltas?.totalPrecision, {
+                integer: true,
+              })
+                ? `${formatProfileMetricDayDelta("exactHits", sectionDeltas?.totalPrecision, { integer: true })} ${metricCopy.matchUnit}`
+                : null
+            }
+            dayDeltaTone={profileMetricDeltaTone(
+              sectionDeltas?.totalPrecision ?? null,
+              { positiveOnly: true }
+            )}
+            isPlanPro={isPro}
+          />
+        ) : null}
         <KinetikMetricCardNative
           label={KINETIK_UPSET_METRIC_LABEL}
           value={formatMetricDecimals(sectionStats.upset, 1)}

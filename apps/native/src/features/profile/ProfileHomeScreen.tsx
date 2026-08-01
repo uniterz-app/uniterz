@@ -119,7 +119,7 @@ type ProfileTab = "overview" | "bracket" | "stats";
 /** Web `Tabs.tsx` と同一の英語ラベル */
 const PROFILE_TAB_LABELS_EN: Record<ProfileTab, string> = {
   overview: "Overview",
-  stats: "Pro Stats",
+  stats: "Report",
   bracket: "Bracket",
 };
 

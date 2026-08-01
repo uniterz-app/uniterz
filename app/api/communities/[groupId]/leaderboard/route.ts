@@ -126,7 +126,6 @@ export async function GET(req: Request, ctx: Ctx) {
       totalWins: r.totalWins,
       winRate: r.winRate,
       totalPoints: r.totalPoints,
-      totalPrecision: r.totalPrecision,
       totalUpset: r.totalUpset,
       activeWinStreak: r.activeWinStreak,
       sortValue: r.sortValue,

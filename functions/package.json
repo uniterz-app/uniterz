@@ -1,7 +1,9 @@
 {
   "name": "uniterz-functions",
   "scripts": {
+    "prebuild": "npm run sync:monthly-report-builders",
     "build": "tsc",
+    "sync:monthly-report-builders": "node ../scripts/sync-monthly-report-builders.mjs",
     "deploy": "firebase deploy --only functions",
     "serve": "firebase emulators:start --only functions"
   },

@@ -5,8 +5,8 @@
 /** 抜いた / 抜かれた リストを doc へ保存する最大人数（doc 肥大化のガード。残りは Count のみ） */
 export const MAX_REPORT_RIVALS = 30;
 
-/** UI の初期表示人数（以降は「もっと見る」で展開） */
-export const INITIAL_REPORT_RIVALS = 5;
+/** UI の初期表示人数（以降は「もっと見る」で展開）。計画: 最大 3 人 */
+export const INITIAL_REPORT_RIVALS = 3;
 
 /** 抜いた / 抜かれた / ターゲット / 脅威 に出てくる相手（生成時に users から非正規化） */
 export type WeeklyReportRival = {
@@ -28,6 +28,11 @@ export type WeeklyReportDivision = {
   prevValue: number | null;
   /** 部門順位。参加条件未達などで圏外は null */
   rank: number | null;
+  /**
+   * 部門ランキング対象まであと何予想。
+   * `null` = すでに対象（または非表示）。`> 0` のとき参考記録として表示する。
+   */
+  postsToQualify: number | null;
 };
 
 export type WeeklyReport = {

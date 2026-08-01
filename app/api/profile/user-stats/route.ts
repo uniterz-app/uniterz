@@ -235,7 +235,8 @@ async function buildUserStatsResponse(req: Request) {
         uid,
         {
           totalPoints: summary.pointsSumV3,
-          totalPrecision: summary.scorePrecisionSum,
+          totalPrecision:
+            rankingLeague === "worldcup" ? summary.exactHitCount : 0,
           totalUpset: summary.upsetPointsSum,
           winRate: winRatePct,
         },

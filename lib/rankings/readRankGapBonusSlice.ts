@@ -12,7 +12,7 @@ export type RankGapStatsSlice = {
   upsetBonusSum: number;
   streakBonusSum: number;
   goalScorerBonusSum: number;
-  /** WC: 完全的中数 / NBA: scorePrecisionSum */
+  /** WC: 完全的中数。NBA は常に 0。 */
   exactHitCount: number;
   winRate: number;
   posts: number;

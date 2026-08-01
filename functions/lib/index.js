@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.dailyAnalytics = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onWcBracketRescoreTaskCreated = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.dailyAnalytics = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildWeeklyReportsManualV2 = exports.rebuildWeeklyReportsCronV2 = exports.rebuildMonthlyReportsManualV2 = exports.rebuildMonthlyReportsCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onWcBracketRescoreTaskCreated = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-admin/firestore");
@@ -62,9 +62,13 @@ Object.defineProperty(exports, "getCumulativeRanking", { enumerable: true, get: 
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 var expireProUsers_1 = require("./triggers/expireProUsers");
 Object.defineProperty(exports, "expireProUsers", { enumerable: true, get: function () { return expireProUsers_1.expireProUsers; } });
-// 🔥 ユーザー月次スタッツ（Pro用）
-var rebuildUserMonthlyStatsV2_1 = require("./stats/rebuildUserMonthlyStatsV2");
-Object.defineProperty(exports, "rebuildUserMonthlyStatsMonthCronV2", { enumerable: true, get: function () { return rebuildUserMonthlyStatsV2_1.rebuildUserMonthlyStatsMonthCronV2; } });
+// 🔥 Pro 月次レポート（user_reports）
+var rebuildMonthlyReportsV2_1 = require("./reports/rebuildMonthlyReportsV2");
+Object.defineProperty(exports, "rebuildMonthlyReportsCronV2", { enumerable: true, get: function () { return rebuildMonthlyReportsV2_1.rebuildMonthlyReportsCronV2; } });
+Object.defineProperty(exports, "rebuildMonthlyReportsManualV2", { enumerable: true, get: function () { return rebuildMonthlyReportsV2_1.rebuildMonthlyReportsManualV2; } });
+var rebuildWeeklyReportsV2_1 = require("./reports/rebuildWeeklyReportsV2");
+Object.defineProperty(exports, "rebuildWeeklyReportsCronV2", { enumerable: true, get: function () { return rebuildWeeklyReportsV2_1.rebuildWeeklyReportsCronV2; } });
+Object.defineProperty(exports, "rebuildWeeklyReportsManualV2", { enumerable: true, get: function () { return rebuildWeeklyReportsV2_1.rebuildWeeklyReportsManualV2; } });
 // ===============================
 // Global
 // ===============================

@@ -25,8 +25,15 @@ export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 export { expireProUsers } from "./triggers/expireProUsers";
 
-// 🔥 ユーザー月次スタッツ（Pro用）
-export { rebuildUserMonthlyStatsMonthCronV2 } from "./stats/rebuildUserMonthlyStatsV2";
+// 🔥 Pro 月次レポート（user_reports）
+export {
+  rebuildMonthlyReportsCronV2,
+  rebuildMonthlyReportsManualV2,
+} from "./reports/rebuildMonthlyReportsV2";
+export {
+  rebuildWeeklyReportsCronV2,
+  rebuildWeeklyReportsManualV2,
+} from "./reports/rebuildWeeklyReportsV2";
 
 // ===============================
 // Global

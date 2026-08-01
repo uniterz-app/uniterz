@@ -21,7 +21,7 @@ type DailyTrendRow = {
   pointsV3: number;
   upsetPoints: number;
   winRate: number;
-  scorePrecision: number;
+  exactHitCount: number;
 };
 
 export function useUserStatsDailyTrend(
@@ -99,10 +99,10 @@ export function useUserStatsDailyTrend(
         const wins = Number(bucket.wins ?? 0);
         const pointsV3 = Number(bucket.pointsSumV3 ?? 0);
         const upsetPoints = Number(bucket.upsetPointsSum ?? 0);
-        const scorePrecisionSum =
+        const exactHitCount =
           trendCtx.rankingLeague === "worldcup"
             ? Number(bucket.exactHitCount ?? 0)
-            : Number(bucket.scorePrecisionSum ?? 0);
+            : 0;
 
         return {
           date: typeof d.date === "string" ? d.date : String(d.date ?? ""),
@@ -111,7 +111,7 @@ export function useUserStatsDailyTrend(
           pointsV3,
           upsetPoints,
           winRate: posts > 0 ? wins / posts : 0,
-          scorePrecision: scorePrecisionSum,
+          exactHitCount,
         };
       });
 

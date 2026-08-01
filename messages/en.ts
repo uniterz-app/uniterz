@@ -80,7 +80,6 @@ const en: Messages = {
     bracket: "Bracket",
     userPredictionMap: "Prediction Map",
     totalScore: "Total Score",
-    scorePrecision: "Score Precision",
     upsetScore: "Upset Score",
     maxStreak: "Max Streak",
     analysisWinRate: "Win Rate",
@@ -172,8 +171,6 @@ const en: Messages = {
     settledTodayEmpty: "No analyses finalized today yet",
     allTimeMaxStreak: "All-time Max Win Streak",
     allTimeMaxStreakNote: "This is your all-time best win streak. It doesn't change with 7d / 30d filters.",
-    scorePrecisionTooltip:
-      "Score precision measures how close your predicted score is to the actual score (0–10), totaled for the period.",
     exactHitTooltip:
       "Number of matches where your predicted score exactly matched the final score.",
     upsetTooltip:
@@ -190,7 +187,6 @@ const en: Messages = {
     myCommunity: "My community",
     totalScore: "Total Score",
     winRate: "Win Rate",
-    scorePrecision: "Score Precision",
     exactHits: "Exact Score Hits",
     upsetScore: "Upset Score",
     winStreak: "Win Streak",
@@ -375,7 +371,6 @@ const en: Messages = {
     base: "Base",
     upsetBonus: "Upset bonus",
     streakBonus: "Streak bonus",
-    precisionBonus: "Precision bonus",
     totalPoints: "Total points",
     noPrediction: "No prediction",
     correct: "Correct",
@@ -400,11 +395,8 @@ const en: Messages = {
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
     wcPkWinnerLabel: "PK winner",
-    scorePrecisionLabel: "Score Precision",
     upsetPointsLabel: "Upset Points",
     totalPointsLabel: "Total Points",
-    scorePrecisionDesc:
-      "How close your predicted score is to the actual score (0–10 per match). Higher means you predicted the score more accurately.",
     upsetPointsDesc:
       "A separate metric (0–10 per match) awarded only when the match is an upset and you correctly predicted it with a minority pick. If conditions aren't met, it's 0.",
     totalPointsDesc:
@@ -452,7 +444,6 @@ const en: Messages = {
     filterMatchStatus: "Match status",
     filterLeague: "League",
     filterUpsetScore: "Upset score",
-    filterScoreAccuracy: "Score accuracy",
     filterTotalScore: "Total score",
     filterAll: "All",
     filterWins: "Wins",
@@ -543,7 +534,6 @@ const en: Messages = {
     base: "Base",
     upsetBonus: "Upset bonus",
     streakBonus: "Streak bonus",
-    precisionBonus: "Precision bonus",
     totalPoints: "Total points",
     monthlyBreakdown: "Monthly breakdown",
     performance: "Performance",

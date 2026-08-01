@@ -200,7 +200,7 @@ function buildLinePath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-function profileCopy(language: "ja" | "en", isWc: boolean) {
+function profileCopy(language: "ja" | "en") {
   const isJa = language === "ja";
   return {
     title: "Daily Combo Chart",
@@ -209,15 +209,6 @@ function profileCopy(language: "ja" | "en", isWc: boolean) {
       ? "カラーバー＝日ごとの投稿数・的中数。黄緑の線＝累積の総合得点。棒をタップすると下に内訳を表示します。"
       : "Color bars: daily posts and correct picks. Lime line: cumulative total points. Tap a bar for that day's breakdown.",
     hitsPosts: isJa ? "的中 / 投稿" : "Hits / Posts",
-    scorePrec: isWc
-      ? isJa
-        ? "完全的中"
-        : "Exact Score Hits"
-      : isJa
-        ? "スコア精度"
-        : "Score Precision",
-    scorePrecUnit: isWc ? (isJa ? "試合" : "matches") : "pts",
-    scorePrecDecimals: isWc ? 0 : 1,
     totalPts: isJa ? "総合得点" : "Total Points",
     upset: isJa ? "アップセット" : "Upset",
     unitCount: isJa ? "件" : "items",
@@ -236,11 +227,10 @@ type Props = {
 export default function ProfileDailyComboChartNeuralNative({
   data,
   language = "ja",
-  rankingLeague = "worldcup",
+  rankingLeague: _rankingLeague = "worldcup",
 }: Props) {
   const { width: screenW } = useWindowDimensions();
-  const isWcTrend = rankingLeague === "worldcup";
-  const copy = profileCopy(language, isWcTrend);
+  const copy = profileCopy(language);
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const chartRows = useMemo(() => buildCumulative(rows), [rows]);
 
@@ -462,18 +452,6 @@ export default function ProfileDailyComboChartNeuralNative({
                   {formatMetricDecimals(clampNum(selectedRow.posts), 0)}
                 </Text>
                 <Text style={styles.statUnit}>{copy.unitCount}</Text>
-              </View>
-            </View>
-            <View style={[styles.statCell, styles.statCellBorderR]}>
-              <Text style={styles.statLabel}>{copy.scorePrec}</Text>
-              <View style={styles.statValueRow}>
-                <Text style={styles.statValue}>
-                  {formatMetricDecimals(
-                    clampNum(selectedRow.scorePrecision),
-                    copy.scorePrecDecimals
-                  )}
-                </Text>
-                <Text style={styles.statUnit}>{copy.scorePrecUnit}</Text>
               </View>
             </View>
             <View style={[styles.statCell, styles.statCellBorderR]}>

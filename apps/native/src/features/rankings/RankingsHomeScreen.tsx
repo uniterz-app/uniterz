@@ -107,7 +107,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   }, [apiKey, ensureMetric]);
 
   const rankingLeagueSource = rankingsLeague === "wc" ? "worldcup" : "nba";
-  const precApiKey = rankingsLeague === "wc" ? "totalExactHits" : "totalPrecision";
+  const precApiKey =
+    rankingsLeague === "wc" ? "totalExactHits" : "totalGoalScorerHits";
 
   useEffect(() => {
     if (!listReady) return;
@@ -310,7 +311,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 statsSource={{
                   totalPosts: myStatsRow?.totalPosts,
                   totalPoints: myStatsRow?.totalPoints,
-                  totalPrecision: myStatsRow?.totalPrecision,
                   totalUpset: myStatsRow?.totalUpset,
                 }}
                 barsReady={cardBarsReady}

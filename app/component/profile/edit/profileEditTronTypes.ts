@@ -2,7 +2,8 @@ export type ProfileEditTronStats = {
   winRate: number;
   posts: number;
   hits: number;
-  scorePrecision: number;
+  /** WC のみで表示する完全的中数 */
+  exactHits: number;
   totalPoints: number;
   upset: number;
 };
@@ -33,7 +34,7 @@ export const PROFILE_EDIT_TRON_MOCK: {
     winRate: 68.4,
     posts: 41,
     hits: 28,
-    scorePrecision: 312.0,
+    exactHits: 0,
     totalPoints: 1284,
     upset: 96.5,
   },

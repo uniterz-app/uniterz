@@ -42,7 +42,7 @@ function panelProps() {
       posts: 71,
       hits: 45,
       totalPoints: 350,
-      scorePrecision: 8,
+      exactHits: 0,
       upset: 9,
     },
     editable: false,

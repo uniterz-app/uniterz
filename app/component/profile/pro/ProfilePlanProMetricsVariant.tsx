@@ -16,7 +16,7 @@ export type ProfilePlanProMetricShowcaseData = {
   hits: number;
   totalPoints: number;
   totalPointsRank: number | null;
-  scorePrecision: number;
+  exactHits?: number;
   upset: number;
   winSegs: number;
   ptsSegs: number;
@@ -113,7 +113,8 @@ type MetricItem = {
 
 function buildMetrics(
   data: ProfilePlanProMetricShowcaseData,
-  isJa: boolean
+  isJa: boolean,
+  showExactHits: boolean
 ): MetricItem[] {
   const rankLabel =
     data.totalPointsRank != null
@@ -122,7 +123,7 @@ function buildMetrics(
         : `#${data.totalPointsRank}`
       : undefined;
 
-  return [
+  const metrics: MetricItem[] = [
     {
       key: "win",
       label: isJa ? "勝率" : "WIN RATE",
@@ -144,14 +145,18 @@ function buildMetrics(
       segs: data.ptsSegs,
       rank: rankLabel,
     },
-    {
+  ];
+  if (showExactHits) {
+    metrics.push({
       key: "prec",
       label: isJa ? "完全的中" : "EXACT HITS",
       sub: isJa ? "累計" : "CUM",
-      value: String(Math.round(data.scorePrecision)),
+      value: String(Math.round(data.exactHits ?? 0)),
       unit: isJa ? "試合" : "MTCH",
       accent: "cyan",
-    },
+    });
+  }
+  metrics.push(
     {
       key: "upset",
       label: KINETIK_UPSET_METRIC_LABEL,
@@ -159,8 +164,9 @@ function buildMetrics(
       value: data.upset.toFixed(1),
       unit: "PTS",
       accent: "red",
-    },
-  ];
+    }
+  );
+  return metrics;
 }
 
 function GridVariant({
@@ -212,7 +218,9 @@ function BentoVariant({
   metrics: MetricItem[];
   layout: Layout;
 }) {
-  const [win, pts, prec, upset] = metrics;
+  const [win, pts, ...secondary] = metrics;
+  const [prec, upset] =
+    secondary.length === 2 ? secondary : [null, secondary[0]!];
   return (
     <div className={variantClass("pro-metric-variant pro-metric-variant--bento", layout)}>
       <article
@@ -247,14 +255,16 @@ function BentoVariant({
         {pts.rank ? <span className="pro-metric-variant__rank">{pts.rank}</span> : null}
       </article>
 
-      <article
-        className={`pro-metric-variant__card pro-metric-variant__card--compact pro-metric-variant__card--${prec.accent}`}
-      >
-        <p className={[nameOxanium.className, "pro-metric-variant__label"].join(" ")}>
-          {prec.label}
-        </p>
-        <MetricValue value={prec.value} unit={prec.unit} layout={layout} />
-      </article>
+      {prec ? (
+        <article
+          className={`pro-metric-variant__card pro-metric-variant__card--compact pro-metric-variant__card--${prec.accent}`}
+        >
+          <p className={[nameOxanium.className, "pro-metric-variant__label"].join(" ")}>
+            {prec.label}
+          </p>
+          <MetricValue value={prec.value} unit={prec.unit} layout={layout} />
+        </article>
+      ) : null}
 
       <article
         className={`pro-metric-variant__card pro-metric-variant__card--compact pro-metric-variant__card--${upset.accent}`}
@@ -305,11 +315,13 @@ function OrbitVariant({
   metrics: MetricItem[];
   layout: Layout;
 }) {
-  const [win, pts, prec, upset] = metrics;
+  const [win, pts, ...secondary] = metrics;
+  const [prec, upset] =
+    secondary.length === 2 ? secondary : [null, secondary[0]!];
   const slots = [
     { item: win, pos: "top" as const },
     { item: pts, pos: "right" as const },
-    { item: prec, pos: "left" as const },
+    ...(prec ? [{ item: prec, pos: "left" as const }] : []),
     { item: upset, pos: "bottom" as const },
   ];
 
@@ -429,6 +441,7 @@ type Props = {
   data: ProfilePlanProMetricShowcaseData;
   language?: "ja" | "en";
   layout?: Layout;
+  showExactHits?: boolean;
 };
 
 /** PRO メトリクス — レイアウト案レンダラ（dev） */
@@ -437,8 +450,9 @@ export default function ProfilePlanProMetricsVariant({
   data,
   language = "ja",
   layout = "mobile",
+  showExactHits = false,
 }: Props) {
-  const metrics = buildMetrics(data, language === "ja");
+  const metrics = buildMetrics(data, language === "ja", showExactHits);
 
   switch (variant) {
     case "bento":

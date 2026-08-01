@@ -4,14 +4,13 @@ import { formatMetricDayDeltaLabel } from "@/lib/rankings/myRankMetricValueDelta
 export type ProfileMetricDeltaKey =
   | "winRate"
   | "totalPoints"
-  | "scorePrecision"
+  | "exactHits"
   | "upset";
 
 const DELTA_KEY_MAP: Record<ProfileMetricDeltaKey, MyRankMetricDeltaKey> = {
   winRate: "winRate",
   totalPoints: "totalScore",
-  // marginPrecision はランキング指標から廃止 — 同じ小数1桁フォーマットの upsetScore に寄せる
-  scorePrecision: "upsetScore",
+  exactHits: "exactHits",
   upset: "upsetScore",
 };
 
@@ -24,7 +23,7 @@ export function formatProfileMetricDayDelta(
   if (opts?.integer && delta < 0) return null;
   const metricKey = DELTA_KEY_MAP[key];
   const label = formatMetricDayDeltaLabel(metricKey, delta, {
-    integer: opts?.integer && key === "scorePrecision",
+    integer: opts?.integer && key === "exactHits",
   });
   if (!label || label === "0" || label === "0.0") return null;
 

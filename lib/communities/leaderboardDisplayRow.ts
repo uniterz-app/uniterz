@@ -19,8 +19,6 @@ export function communityMetricToMobile(
   metric: CommunityMetric
 ): MobileMetric {
   switch (metric) {
-    case "totalPrecision":
-      return "marginPrecision";
     case "totalUpset":
       return "upsetScore";
     case "winRate":
@@ -44,9 +42,7 @@ export function communityRowToRankingCardRow(
   const value =
     mobileMetric === "totalScore"
       ? row.totalPoints ?? row.sortValue
-      : mobileMetric === "marginPrecision"
-        ? row.totalPrecision ?? row.sortValue
-        : mobileMetric === "upsetScore"
+      : mobileMetric === "upsetScore"
           ? row.totalUpset ?? row.sortValue
           : mobileMetric === "winRate"
             ? winRate
@@ -54,7 +50,6 @@ export function communityRowToRankingCardRow(
 
   const posts = row.totalPosts ?? 0;
   const totalPoints = row.totalPoints ?? 0;
-  const totalPrecision = row.totalPrecision ?? 0;
   const totalUpset = row.totalUpset ?? 0;
 
   return {
@@ -68,15 +63,12 @@ export function communityRowToRankingCardRow(
     winRate,
     totalPoints,
     totalScore: totalPoints,
-    totalPrecision,
-    marginPrecisionScore: totalPrecision,
     totalUpset,
     upsetScore: totalUpset,
     streak: row.activeWinStreak ?? 0,
     activeWinStreak: row.activeWinStreak ?? 0,
     totalPosts: posts,
     avgTotalScore: posts > 0 ? totalPoints / posts : 0,
-    avgMarginPrecision: posts > 0 ? totalPrecision / posts : 0,
     avgUpsetScore: posts > 0 ? totalUpset / posts : 0,
     value,
   } as RankingRowWithCountry;

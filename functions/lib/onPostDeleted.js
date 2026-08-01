@@ -22,7 +22,7 @@ function nbaSeasonKeyForDelete(leagueKey, forRanking, startAt) {
     return (0, nbaSeason_1.nbaSeasonKeyFromDateJST)(startAt.toDate());
 }
 function buildDeleteContribution(before, stats, startAt) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e;
     const leagueKey = normalizeLeague(typeof before.league === "string" ? before.league : null);
     const isWc = leagueKey === "wc";
     const wcStageRaw = before.wcStage;
@@ -37,11 +37,10 @@ function buildDeleteContribution(before, stats, startAt) {
         isWin: stats.isWin === true,
         points: Number((_a = stats.pointsV3) !== null && _a !== void 0 ? _a : 0),
         upsetPoints: Number((_b = stats.upsetPoints) !== null && _b !== void 0 ? _b : 0),
-        scorePrecision: Number((_c = stats.scorePrecision) !== null && _c !== void 0 ? _c : 0),
         exactHit: stats.exactMatch === true,
-        goalScorerHit: Number((_d = stats.goalScorerBonus) !== null && _d !== void 0 ? _d : 0) > 0,
-        upsetBonus: Number((_e = stats.upsetBonus) !== null && _e !== void 0 ? _e : 0),
-        streakBonus: Number((_f = stats.streakBonus) !== null && _f !== void 0 ? _f : 0),
+        goalScorerHit: Number((_c = stats.goalScorerBonus) !== null && _c !== void 0 ? _c : 0) > 0,
+        upsetBonus: Number((_d = stats.upsetBonus) !== null && _d !== void 0 ? _d : 0),
+        streakBonus: Number((_e = stats.streakBonus) !== null && _e !== void 0 ? _e : 0),
     };
 }
 function teamIdFromSide(side) {
@@ -69,7 +68,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     document: "posts/{postId}",
     region: "asia-northeast1",
 }, async (event) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g;
     const snap = event.data;
     if (!snap)
         return;
@@ -121,7 +120,6 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
                 isWin: false,
                 points: 0,
                 upsetPoints: 0,
-                scorePrecision: 0,
                 exactHit: false,
                 goalScorerHit: false,
                 upsetBonus: 0,
@@ -134,15 +132,14 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     const countRank = stats.countedForRanking !== false;
     const isWin = stats.isWin === true;
     const scoreError = (_c = stats.scoreError) !== null && _c !== void 0 ? _c : 0;
-    const scorePrecision = (_d = stats.scorePrecision) !== null && _d !== void 0 ? _d : 0;
     const hadUpsetGame = stats.hadUpsetGame === true;
     const upsetHit = stats.upsetHit === true;
-    const upsetPoints = (_e = stats.upsetPoints) !== null && _e !== void 0 ? _e : 0;
-    const pointsV3 = (_f = stats.pointsV3) !== null && _f !== void 0 ? _f : 0;
-    const leagueKey = (_g = before.league) !== null && _g !== void 0 ? _g : null;
+    const upsetPoints = (_d = stats.upsetPoints) !== null && _d !== void 0 ? _d : 0;
+    const pointsV3 = (_e = stats.pointsV3) !== null && _e !== void 0 ? _e : 0;
+    const leagueKey = (_f = before.league) !== null && _f !== void 0 ? _f : null;
     const isWc = String(leagueKey !== null && leagueKey !== void 0 ? leagueKey : "").toLowerCase() === "wc";
     const exactMatch = stats.exactMatch === true;
-    const goalScorerHit = ((_h = stats.goalScorerBonus) !== null && _h !== void 0 ? _h : 0) > 0;
+    const goalScorerHit = ((_g = stats.goalScorerBonus) !== null && _g !== void 0 ? _g : 0) > 0;
     await db.runTransaction(async (tx) => {
         var _a, _b, _c, _d, _e;
         const dailySnap = await tx.get(dailyRef);
@@ -160,7 +157,6 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             upsetHitCount: firestore_2.FieldValue.increment(upsetHit ? -1 : 0),
             upsetPickCount: firestore_2.FieldValue.increment(hadUpsetGame ? -1 : 0),
             upsetPointsSum: firestore_2.FieldValue.increment(-upsetPoints),
-            scorePrecisionSum: firestore_2.FieldValue.increment(isWc ? 0 : -scorePrecision),
             exactHitCount: firestore_2.FieldValue.increment(isWc && exactMatch ? -1 : 0),
             goalScorerHitCount: firestore_2.FieldValue.increment(goalScorerHit ? -1 : 0),
             pointsSumV3: firestore_2.FieldValue.increment(-pointsV3),

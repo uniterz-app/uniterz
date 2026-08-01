@@ -12,7 +12,7 @@ const GRADIENTS = {
 function scoringLogicJa(): ReactNode {
   return (
     <HelpScoringLogicNative
-      intro="採点ロジックは下記4項目に分かれています。項目をタップすると詳細が開きます。"
+      intro="採点ロジックは下記3項目に分かれています。項目をタップすると詳細が開きます。"
       defaultOpenId="totalPoints"
       sections={[
         {
@@ -25,12 +25,6 @@ function scoringLogicJa(): ReactNode {
           title: "総合得点",
           content:
             "【サッカー（WC など）】勝者的中 +4点。HOME得点一致 +2点、AWAY得点一致 +2点、得失点差一致 +2点（各完全一致のみ）。基本点は0/4/6/8/10点など（例：引き分け＋得失点差一致で6点、完全一致10点）。【NBA】勝者的中 +4点。得失点差の近さ（Max4点）と合計得点の近さ（Max2点）で加点（すべて一致で基本点10点）。連勝ボーナス：3〜4連勝 +1点、5〜6連勝 +2点、7連勝以上 +3点。アップセットボーナス：少数派予想が的中し試合がアップセットだった場合 +2点。※ 勝者予想を外した場合、総合得点は0点です。",
-        },
-        {
-          id: "scorePrecision",
-          title: "スコア精度",
-          content:
-            "1試合 0〜10点：HOME得点差（最大3）＋ AWAY得点差（最大3）＋ 得失点差（最大4）。誤差0で満点、誤差1〜11で段階的に減点、誤差12以上は0点です。",
         },
         {
           id: "upsetPoints",
@@ -46,7 +40,7 @@ function scoringLogicJa(): ReactNode {
 function scoringLogicEn(): ReactNode {
   return (
     <HelpScoringLogicNative
-      intro="Scoring is split into four sections below. Tap a section to expand details."
+      intro="Scoring is split into three sections below. Tap a section to expand details."
       defaultOpenId="totalPoints"
       sections={[
         {
@@ -59,12 +53,6 @@ function scoringLogicEn(): ReactNode {
           title: "Total Points",
           content:
             "[Football (WC, etc.)] Correct winner: +4. HOME goals match: +2, AWAY goals match: +2, goal difference match: +2 (exact for each). Base points: 0/4/6/8/10 (e.g. draw + matching goal diff = 6, exact score = 10). [NBA] Correct winner: +4. Margin closeness (max 4) and total-score closeness (max 2) add points (all match → 10 base). Win streak bonus: +1 for 3–4 wins, +2 for 5–6, +3 for 7+. Upset bonus: +2 when your minority pick wins in an upset match. If you miss the winner, total points are 0.",
-        },
-        {
-          id: "scorePrecision",
-          title: "Score Precision",
-          content:
-            "0–10 points per match: HOME score diff (max 3) + AWAY score diff (max 3) + margin diff (max 4). Full points at 0 error, gradually reduced for errors 1–11, and 0 at 12+.",
         },
         {
           id: "upsetPoints",
@@ -118,7 +106,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
             <HelpBulletList
               items={[
                 "Win Rate: your accuracy in predicting winners.",
-                "Score Precision: how close your predicted score is to the actual score.",
                 "Upset Score: your ability to read upsets.",
                 "Total Points: the combined score from all metrics.",
               ]}
@@ -151,7 +138,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
             <HelpBulletList
               items={[
                 "Win Rate rankings",
-                "Score Precision rankings",
                 "Total Points rankings",
                 "Upset Score rankings",
               ]}
@@ -197,7 +183,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
           <HelpBulletList
             items={[
               "勝率：勝敗予想の的中率",
-              "スコア精度：スコア予想と結果のズレ",
               "Upsetスコア：番狂わせを読み切る力",
               "総合得点：各指標を合算したスコア",
             ]}
@@ -228,7 +213,6 @@ export function getHelpFaqsNative(language: "ja" | "en"): HelpFaqItemNative[] {
           <HelpBulletList
             items={[
               "勝率ランキング",
-              "スコア精度ランキング",
               "総合得点ランキング",
               "Upsetスコアランキング",
             ]}

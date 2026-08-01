@@ -17,7 +17,6 @@ export type StatsV2Bucket = {
   scoreErrorSum: number;
   upsetHitCount: number; // 少数派Upset的中数
   upsetOpportunityCount: number; // upsetGameの母数（hadUpsetGame）
-  scorePrecisionSum: number;
 
   // 総合得点
   pointsSumV3: number;
@@ -36,7 +35,6 @@ export type StatsV2Bucket = {
   winRate: number;
   avgScoreError: number;
   upsetHitRate: number;
-  avgPrecision: number;
 
   // 平均総合得点
   avgPointsV3: number;
@@ -54,7 +52,6 @@ type ApplyOptsV2 = {
 
   isWin: boolean;
   scoreError: number;
-  scorePrecision: number;
   hadUpsetGame: boolean;
 
   // finalizePost から渡す
@@ -106,7 +103,6 @@ function buildPostCumulativeContribution(
     | "isWin"
     | "points"
     | "upsetPoints"
-    | "scorePrecision"
     | "exactHit"
     | "goalScorerHit"
     | "wcStage"
@@ -125,7 +121,6 @@ function buildPostCumulativeContribution(
     isWin: opts.isWin,
     points: opts.points,
     upsetPoints: opts.upsetPoints,
-    scorePrecision: opts.scorePrecision,
     exactHit: opts.exactHit ?? false,
     goalScorerHit: opts.goalScorerHit ?? false,
     upsetBonus: opts.upsetBonus,
@@ -180,7 +175,6 @@ function emptyBucket(): StatsV2Bucket {
     scoreErrorSum: 0,
     upsetHitCount: 0,
     upsetOpportunityCount: 0,
-    scorePrecisionSum: 0,
 
     pointsSumV3: 0,
     upsetPointsSum: 0,
@@ -194,7 +188,6 @@ function emptyBucket(): StatsV2Bucket {
     winRate: 0,
     avgScoreError: 0,
     upsetHitRate: 0,
-    avgPrecision: 0,
     avgPointsV3: 0,
 
     upsetPickCount: 0,
@@ -209,7 +202,6 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
     ...b,
     winRate: posts ? wins / posts : 0,
     avgScoreError: posts ? b.scoreErrorSum / posts : 0,
-    avgPrecision: posts ? b.scorePrecisionSum / posts : 0,
     upsetHitRate:
       b.upsetOpportunityCount > 0
         ? b.upsetHitCount / b.upsetOpportunityCount
@@ -230,7 +222,6 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     league,
     isWin,
     scoreError,
-    scorePrecision,
     hadUpsetGame,
     points,
     upsetHit,
@@ -276,7 +267,6 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetHitCount: FieldValue.increment(upsetHit ? 1 : 0),
       upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
 
-      scorePrecisionSum: FieldValue.increment(isWc ? 0 : scorePrecision),
       exactHitCount: FieldValue.increment(isWc && exactHit ? 1 : 0),
 
       pointsSumV3: FieldValue.increment(points),
@@ -342,7 +332,6 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       posts: 1,
       wins: isWin ? 1 : 0,
       scoreErrorSum: scoreError,
-      scorePrecisionSum: isWc ? 0 : scorePrecision,
       exactHitCount: isWc && exactHit ? 1 : 0,
       pointsSumV3: points,
       upsetPointsSum: upsetPoints,
@@ -363,7 +352,6 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         isWin,
         points,
         upsetPoints,
-        scorePrecision,
         exactHit,
         goalScorerHit,
         wcStage,
@@ -405,7 +393,6 @@ export async function getStatsForDateRangeV2(
     b.scoreErrorSum += src.scoreErrorSum || 0;
     b.upsetHitCount += src.upsetHitCount || 0;
     b.upsetOpportunityCount += src.upsetOpportunityCount || 0;
-    b.scorePrecisionSum += src.scorePrecisionSum || 0;
     b.upsetPickCount += src.upsetPickCount || 0;
 
     b.pointsSumV3 += src.pointsSumV3 || 0;

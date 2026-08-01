@@ -40,7 +40,6 @@ const AXIS_ROWS: {
 }[] = [
   { key: "winRate", labelJa: "勝率", labelEn: "Win rate" },
   { key: "volume", labelJa: "投稿量", labelEn: "Volume" },
-  { key: "precision", labelJa: "スコア精度", labelEn: "Score precision" },
   { key: "upset", labelJa: "Upset", labelEn: "Upset" },
   { key: "streak", labelJa: "耐性", labelEn: "Stamina" },
 ];
@@ -484,7 +483,6 @@ ${spokeDelays}
     [
       value.winRate,
       value.volume,
-      value.precision,
       value.upset,
       value.streak,
     ]
@@ -509,7 +507,6 @@ ${spokeDelays}
       language,
       value.winRate,
       value.volume,
-      value.precision,
       value.upset,
       value.streak,
     ]
@@ -857,12 +854,6 @@ ${spokeDelays}
                   posted in that league.
                 </p>
                 <p>
-                  <span className="font-semibold text-white/80">
-                    Score precision:{" "}
-                  </span>
-                  Average score accuracy vs others in the same cohort.
-                </p>
-                <p>
                   <span className="font-semibold text-white/80">Upset: </span>
                   How you stack up on upset points in that cohort.
                 </p>
@@ -888,12 +879,6 @@ ${spokeDelays}
                 <p>
                   <span className="font-semibold text-white/80">投稿量：</span>
                   主戦場リーグの投稿数を、そのリーグで投稿した同母集団ユーザーと比較した相対です。
-                </p>
-                <p>
-                  <span className="font-semibold text-white/80">
-                    スコア精度：
-                  </span>
-                  同じ母集団での月次平均スコア精度の相対です。
                 </p>
                 <p>
                   <span className="font-semibold text-white/80">Upset：</span>

@@ -6,18 +6,17 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
-import { resultShowsScorePrecision } from "@/lib/result/wcResultUi";
 import {
   RESULT_STAT_ROW_GRID_COMPACT,
   RESULT_STAT_ROW_GRID_DEFAULT,
 } from "@/lib/result/resultStatRowGrid";
+import {
+  buildResultStatMetricValues,
+  extractResultSettlementBreakdown,
+} from "@/lib/result/buildResultStatRows";
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
-}
-
-function toNumber(v: unknown, fallback = 0) {
-  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
 function isYellow10pt(v: unknown): boolean {
@@ -32,18 +31,14 @@ type Props = {
   post: PredictionPostV2;
   language: Language;
   isMobile: boolean;
-  /** ビューポート判定をスキップして即アニメ */
   ratingBarsImmediate?: boolean;
-  /** 行の先頭オフセット（ゴール得点者行の分） */
   rowIndexOffset?: number;
-  /** MatchCard 統合表示向け：ラベル・バー・数値をやや大きく */
   comfortable?: boolean;
   className?: string;
-  /** 評価バーの点灯アニメを抑える */
   animationsOff?: boolean;
 };
 
-/** スコア精度・アップセット・総合得点の3行バー */
+/** アップセット・総合得点の2行バー */
 export default function ResultStatsRows({
   post,
   language,
@@ -55,63 +50,32 @@ export default function ResultStatsRows({
   animationsOff = false,
 }: Props) {
   const m = t(language);
-  const hadUpsetGame = Boolean((post.stats as { hadUpsetGame?: boolean })?.hadUpsetGame);
+  const breakdown = useMemo(
+    () => extractResultSettlementBreakdown(post.stats),
+    [post.stats]
+  );
+  const { hadUpsetGame } = breakdown;
 
-  const scorePrecisionValueClass = isYellow10pt(post.stats?.scorePrecision)
-    ? "text-yellow-300"
-    : "text-white";
-  const pointsV3ValueClass = isYellow10pt(
-    (post.stats as { pointsV3?: unknown })?.pointsV3
-  )
+  const pointsV3ValueClass = isYellow10pt(breakdown.pointsV3)
     ? "text-yellow-300"
     : "text-white";
   const upsetValueClass =
     hadUpsetGame &&
-    isRedUpset((post.stats as { upsetPoints?: unknown })?.upsetPoints)
+    isRedUpset(breakdown.upsetPoints)
       ? "text-red-400"
       : "text-white";
 
-  const showScorePrecision = resultShowsScorePrecision(post.league);
-
-  const statRows = useMemo(() => {
-    const scorePrecision = toNumber(post.stats?.scorePrecision, 0);
-    const upsetPoints = toNumber(
-      (post.stats as { upsetPoints?: unknown })?.upsetPoints,
-      0
-    );
-    const pointsV3 = toNumber((post.stats as { pointsV3?: unknown })?.pointsV3, 0);
-
-    const rows = [
-      ...(showScorePrecision
-        ? [
-            {
-              key: "scorePrecision" as const,
-              label: m.results.scorePrecisionLabel,
-              value: scorePrecision,
-              barMax: 10,
-              format: (v: number) => v.toFixed(1),
-            },
-          ]
-        : []),
-      {
-        key: "upsetPoints" as const,
-        label: m.results.upsetPointsLabel,
-        value: upsetPoints,
-        barMax: 10,
-        format: (v: number) =>
-          hadUpsetGame ? `${(Math.round(v * 10) / 10).toFixed(1)}` : "--",
-      },
-      {
-        key: "pointsV3" as const,
-        label: m.results.totalPointsLabel,
-        value: pointsV3,
-        barMax: 10,
-        format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
-      },
-    ];
-
-    return rows;
-  }, [post.stats, post.league, m, hadUpsetGame, showScorePrecision]);
+  const statRows = useMemo(
+    () =>
+      buildResultStatMetricValues(breakdown).map((row) => ({
+        ...row,
+        label:
+          row.key === "upsetPoints"
+            ? m.results.upsetPointsLabel
+            : m.results.totalPointsLabel,
+      })),
+    [breakdown, m]
+  );
 
   const barAnimateMs = isMobile ? 480 : 520;
   const barStaggerMs = isMobile ? 80 : 90;
@@ -145,15 +109,14 @@ export default function ResultStatsRows({
             : cap > 0
               ? clamp01(r.value / cap)
               : 0;
-        const display = r.format(r.value);
+        const display =
+          r.displayValue === null
+            ? "--"
+            : (Math.round(r.displayValue * 10) / 10).toFixed(1);
         const rowIndex = rowIndexOffset + index;
 
         const valueClass =
-          r.key === "scorePrecision"
-            ? scorePrecisionValueClass
-            : r.key === "upsetPoints"
-              ? upsetValueClass
-              : pointsV3ValueClass;
+          r.key === "upsetPoints" ? upsetValueClass : pointsV3ValueClass;
 
         return (
           <div
@@ -201,9 +164,9 @@ export default function ResultStatsRows({
                   ? comfortable
                     ? `min-w-0 text-right text-[12px] leading-none ${resultStatsMetricNumClass}`
                     : `min-w-0 text-right text-[10px] leading-none ${resultStatsMetricNumClass}`
-                  : comfortable
-                    ? `min-w-0 text-right text-[14px] text-white sm:text-[15px] ${resultStatsMetricNumClass}`
-                    : `min-w-0 text-right text-[12px] text-white sm:text-[13px] ${resultStatsMetricNumClass}`
+                    : comfortable
+                      ? `min-w-0 text-right text-[14px] text-white sm:text-[15px] ${resultStatsMetricNumClass}`
+                      : `min-w-0 text-right text-[12px] text-white sm:text-[13px] ${resultStatsMetricNumClass}`
               }
             >
               <span className={valueClass}>{display}</span>

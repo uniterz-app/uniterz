@@ -21,11 +21,9 @@ function filledSegCount(ratio: number, segmentCount: number): number {
 
 /** Web `ResultStatRatingBar` の metricKey → ランキング指標キー */
 function resultMetricToRankingKey(
-  metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3"
+  metricKey?: "upsetPoints" | "pointsV3"
 ): string {
   switch (metricKey) {
-    case "scorePrecision":
-      return "marginPrecision";
     case "upsetPoints":
       return "upsetScore";
     case "pointsV3":
@@ -123,7 +121,7 @@ type Props = {
   animateMs?: number;
   delayMs?: number;
   size?: "sm" | "md";
-  metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3";
+  metricKey?: "upsetPoints" | "pointsV3";
 };
 
 /**

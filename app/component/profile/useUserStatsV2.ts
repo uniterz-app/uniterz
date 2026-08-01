@@ -20,8 +20,8 @@ export type SummaryForCardsV2 = {
   // ① 勝率
   winRate: number;
 
-  // ② スコア精度（期間合計）
-  scorePrecisionSum: number;
+  /** WC の予想スコア完全一致数。NBA は常に 0。 */
+  exactHitCount: number;
 
   // ③ アップセット得点（期間合計）
   upsetPointsSum: number;
@@ -112,7 +112,6 @@ export function primeProfileStatsFromRankingRow(
     activeWinStreak?: number;
   };
   const totalPoints = ext.totalPoints ?? ext.totalScore ?? 0;
-  const totalPrecision = ext.totalPrecision ?? ext.marginPrecisionScore ?? 0;
   const totalUpset = ext.totalUpset ?? ext.upsetScore ?? 0;
 
   const summary: SummaryForCardsV2 = {
@@ -121,7 +120,7 @@ export function primeProfileStatsFromRankingRow(
     recent3Posts: Math.min(3, posts),
     wins: Math.round(winRate * posts),
     winRate,
-    scorePrecisionSum: totalPrecision,
+    exactHitCount: row.totalExactHits ?? 0,
     upsetPointsSum: totalUpset,
     pointsSumV3: totalPoints,
     basePointsSum: totalPoints,

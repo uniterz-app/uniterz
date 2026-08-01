@@ -98,7 +98,7 @@ export default function Tabs({
 
   const labelMap: Record<Tab, string> = {
     overview: "Overview",
-    stats: "Pro Stats",
+    stats: "Report",
     bracket: "Bracket",
   };
 

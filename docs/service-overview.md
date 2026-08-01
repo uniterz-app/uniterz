@@ -78,6 +78,7 @@ Pro 会員には、予想の参考となる詳細データや分析情報を提�
 | [`referral-design.md`](referral-design.md) | 招待・紹介制度設計 |
 | [`money-unit-product-flow.md`](money-unit-product-flow.md) | お金／Unit／商品の流れ |
 | [`legal-risk-review.md`](legal-risk-review.md) | 法務リスク確認（賭博・景表法・資金決済法・NBA商標・特商法／消費者契約法・個人情報保護・ストア審査） |
+| [`legal-counsel-kickoff-brief.md`](legal-counsel-kickoff-brief.md) | **弁護士初回面談ブリーフ**（事前送付・当日用） |
 | [`pro-billing-design.md`](pro-billing-design.md) | Pro 課金設計 |
 | [`pro-subscription-plan.md`](pro-subscription-plan.md) | Pro プラン（機能詳細） |
 
@@ -89,3 +90,4 @@ Pro 会員には、予想の参考となる詳細データや分析情報を提�
 |---|---|
 | 2026-07-23 | 初版。サービス全体設計を設計図として保管 |
 | 2026-07-23 | 関連に予想機能・スコア算出を追加 |
+| 2026-07-27 | 弁護士初回面談ブリーフへのリンクを追加 |

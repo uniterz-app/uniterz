@@ -18,7 +18,6 @@ export type MemberAgg = {
   totalPosts: number;
   totalWins: number;
   totalPoints: number;
-  totalPrecision: number;
   totalUpset: number;
 };
 
@@ -27,7 +26,6 @@ function emptyAgg(): MemberAgg {
     totalPosts: 0,
     totalWins: 0,
     totalPoints: 0,
-    totalPrecision: 0,
     totalUpset: 0,
   };
 }
@@ -49,9 +47,6 @@ function addBucketToAgg(
   agg.totalWins += Number((bucket as { wins?: number }).wins ?? 0);
   agg.totalPoints += Number(
     (bucket as { pointsSumV3?: number }).pointsSumV3 ?? 0
-  );
-  agg.totalPrecision += Number(
-    (bucket as { scorePrecisionSum?: number }).scorePrecisionSum ?? 0
   );
   agg.totalUpset += Number(
     (bucket as { upsetPointsSum?: number }).upsetPointsSum ?? 0
@@ -145,7 +140,6 @@ function mergeMemberAggs(
       totalPosts: cur.totalPosts + agg.totalPosts,
       totalWins: cur.totalWins + agg.totalWins,
       totalPoints: cur.totalPoints + agg.totalPoints,
-      totalPrecision: cur.totalPrecision + agg.totalPrecision,
       totalUpset: cur.totalUpset + agg.totalUpset,
     });
   }
@@ -285,7 +279,6 @@ export type CumulativeRow = {
   totalWins: number;
   winRate: number;
   totalPoints: number;
-  totalPrecision: number;
   totalUpset: number;
   activeWinStreak: number;
 };
@@ -302,7 +295,6 @@ export function sortValueFromAgg(
     return posts > 0 ? wins / posts : 0;
   }
   if (metric === "totalPoints") return agg.totalPoints;
-  if (metric === "totalPrecision") return agg.totalPrecision;
   if (metric === "totalUpset") return agg.totalUpset;
   if (metric === "activeWinStreak") {
     return cumulative?.activeWinStreak ?? 0;
@@ -344,7 +336,6 @@ function rowFromAgg(
     totalWins: agg.totalWins,
     winRate,
     totalPoints: agg.totalPoints,
-    totalPrecision: agg.totalPrecision,
     totalUpset: agg.totalUpset,
     activeWinStreak: streak,
     sortValue: sortValueFromAgg(agg, c, metric, league),
@@ -375,7 +366,6 @@ export async function buildMemberLeaderboard(
     totalWins: number;
     winRate: number;
     totalPoints: number;
-    totalPrecision: number;
     totalUpset: number;
     activeWinStreak: number;
     sortValue: number;
@@ -404,7 +394,6 @@ export async function buildMemberLeaderboard(
       totalWins: Number(d.totalWins ?? 0),
       winRate: Number(d.winRate ?? 0),
       totalPoints: Number(d.totalPoints ?? 0),
-      totalPrecision: Number(d.totalPrecision ?? 0),
       totalUpset: Number(d.totalUpset ?? 0),
       activeWinStreak: streakFromCumulative(d, league),
     });

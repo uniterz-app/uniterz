@@ -4,8 +4,7 @@ import type { RadarAxisLevels } from "./radarLevelUtils";
 import type { Language } from "@/lib/i18n/language";
 
 export type RadarMetric = {
-  winRate: number; // 0–10（当月・10投稿以上ユーザー内の相対）
-  precision: number;
+  winRate: number;
   upset: number;
   volume: number;
   streak: number;

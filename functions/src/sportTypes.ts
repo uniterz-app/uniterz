@@ -1,4 +1,4 @@
-// functions/src/calcScorePrecision/sportTypes.ts
+// functions/src/sportTypes.ts
 
 /** 
  * 各リーグを大分類スポーツにマッピング

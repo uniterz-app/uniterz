@@ -49,6 +49,7 @@ export type RankingRowWithCountry = RankingRow & {
   avgTotalScore?: number;
   marginPrecisionScore?: number;
   exactHits?: number;
+  totalExactHits?: number;
   avgMarginPrecision?: number;
   upsetScore?: number;
   avgUpsetScore?: number;

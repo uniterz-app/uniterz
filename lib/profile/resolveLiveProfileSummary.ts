@@ -16,7 +16,8 @@ export type ProfileSummaryForCards = {
   recent3Posts: number;
   wins: number;
   winRate: number;
-  scorePrecisionSum: number;
+  /** WC の予想スコア完全一致数。NBA は常に 0。 */
+  exactHitCount: number;
   upsetPointsSum: number;
   pointsSumV3: number;
   upsetChanceCount: number;
@@ -52,7 +53,7 @@ function emptySummary(): ProfileSummaryForCards {
     recent3Posts: 0,
     wins: 0,
     winRate: 0,
-    scorePrecisionSum: 0,
+    exactHitCount: 0,
     upsetPointsSum: 0,
     pointsSumV3: 0,
     upsetChanceCount: 0,
@@ -71,9 +72,9 @@ function summaryFromDailyRow(
   const wins = safeInt(row.wins);
   const pointsSumV3 = safeNum(row.pointsSumV3);
   const upsetPointsSum = safeNum(row.upsetPointsSum);
-  const scorePrecisionSum = wcStage
+  const exactHitCount = wcStage
     ? safeInt(row.exactHitCount)
-    : safeNum(row.scorePrecisionSum);
+    : 0;
   const upsetBonusSum = safeNum(row.upsetBonusSum);
   const streakBonusSum = safeNum(row.streakBonusSum);
   return {
@@ -82,7 +83,7 @@ function summaryFromDailyRow(
     recent3Posts: 0,
     wins,
     winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum,
+    exactHitCount,
     upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: safeInt(row.upsetOpportunityCount),
@@ -110,7 +111,7 @@ function mergeDailyRowIntoSummary(
     fullPosts: posts,
     wins,
     winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum: base.scorePrecisionSum + inc.scorePrecisionSum,
+    exactHitCount: base.exactHitCount + inc.exactHitCount,
     upsetPointsSum: base.upsetPointsSum + inc.upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: base.upsetChanceCount + inc.upsetChanceCount,
@@ -138,7 +139,9 @@ export function summaryFromWcCumulativeStage(
   const wins = safeInt(block.totalWins);
   const pointsSumV3 = safeNum(block.totalPoints);
   const upsetPointsSum = safeNum(block.totalUpset);
-  const scorePrecisionSum = safeNum(block.totalPrecision);
+  const exactHitCount = safeInt(
+    block.totalExactHits ?? block.totalPrecision
+  );
   const upsetBonusSum = safeNum(block.upsetBonusSum);
   const streakBonusSum = safeNum(block.streakBonusSum);
   const winRateRaw = safeNum(block.winRate);
@@ -150,7 +153,7 @@ export function summaryFromWcCumulativeStage(
     wins,
     winRate:
       posts > 0 ? wins / posts : winRateRaw <= 1 ? winRateRaw : winRateRaw / 100,
-    scorePrecisionSum,
+    exactHitCount,
     upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: safeInt(block.upsetOpportunityCount),
@@ -173,7 +176,6 @@ export function summaryFromSeasonRanking(
   const wins = safeInt(r.totalWins);
   const pointsSumV3 = safeNum(r.totalPoints);
   const upsetPointsSum = safeNum(r.totalUpset);
-  const scorePrecisionSum = safeNum(r.totalPrecision);
   const upsetBonusSum = safeNum(r.upsetBonusSum);
   const streakBonusSum = safeNum(r.streakBonusSum);
   const basePointsSum = Math.max(
@@ -186,7 +188,7 @@ export function summaryFromSeasonRanking(
     recent3Posts: 0,
     wins,
     winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum,
+    exactHitCount: 0,
     upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: safeInt(r.upsetOpportunityCount),

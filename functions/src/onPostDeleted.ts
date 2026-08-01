@@ -46,7 +46,6 @@ function buildDeleteContribution(
     isWin: stats.isWin === true,
     points: Number(stats.pointsV3 ?? 0),
     upsetPoints: Number(stats.upsetPoints ?? 0),
-    scorePrecision: Number(stats.scorePrecision ?? 0),
     exactHit: stats.exactMatch === true,
     goalScorerHit: Number(stats.goalScorerBonus ?? 0) > 0,
     upsetBonus: Number(stats.upsetBonus ?? 0),
@@ -153,7 +152,6 @@ export const onPostDeletedV2 = onDocumentDeleted(
             isWin: false,
             points: 0,
             upsetPoints: 0,
-            scorePrecision: 0,
             exactHit: false,
             goalScorerHit: false,
             upsetBonus: 0,
@@ -172,7 +170,6 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
     const isWin = stats.isWin === true;
     const scoreError = stats.scoreError ?? 0;
-    const scorePrecision = stats.scorePrecision ?? 0;
     const hadUpsetGame = stats.hadUpsetGame === true;
     const upsetHit = stats.upsetHit === true;
     const upsetPoints = stats.upsetPoints ?? 0;
@@ -205,7 +202,6 @@ export const onPostDeletedV2 = onDocumentDeleted(
         upsetHitCount: FieldValue.increment(upsetHit ? -1 : 0),
         upsetPickCount: FieldValue.increment(hadUpsetGame ? -1 : 0),
         upsetPointsSum: FieldValue.increment(-upsetPoints),
-        scorePrecisionSum: FieldValue.increment(isWc ? 0 : -scorePrecision),
         exactHitCount: FieldValue.increment(isWc && exactMatch ? -1 : 0),
         goalScorerHitCount: FieldValue.increment(goalScorerHit ? -1 : 0),
         pointsSumV3: FieldValue.increment(-pointsV3),

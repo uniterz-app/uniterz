@@ -11,7 +11,6 @@ const MONTHS = ["2025-11", "2025-12", "2026-01", "2026-02", "2026-03"];
 
 const PREVIEW_RADAR_LEVELS: RadarAxisLevels = {
   winRate: "M",
-  precision: "M",
   upset: "M",
   volume: "S",
   streak: "M",
@@ -77,9 +76,7 @@ export default function ProPreviewPage() {
               posts: 38,
               wins: 24,
               winRate: 24 / 38,
-              avgPrecision: 6.2,
               avgPointsV3: 7.85,
-              scorePrecisionSum: 6.2 * 38,
               pointsSumV3: 7.85 * 38,
               basePointsSum: 240,
               upsetBonusSum: 42,
@@ -91,7 +88,6 @@ export default function ProPreviewPage() {
             },
             percentiles: {
               winRate: 88,
-              precision: 71,
               pointsV3: 79,
               upset: 58,
               volume: 92,
@@ -102,9 +98,7 @@ export default function ProPreviewPage() {
               posts: 29,
               wins: 16,
               winRate: 16 / 29,
-              avgPrecision: 5.9,
               avgPointsV3: 6.4,
-              scorePrecisionSum: 5.9 * 29,
               pointsSumV3: 6.4 * 29,
               basePointsSum: 168,
               upsetBonusSum: 12,
@@ -114,7 +108,6 @@ export default function ProPreviewPage() {
             },
             percentiles: {
               winRate: 72,
-              precision: 65,
               pointsV3: 61,
               upset: 52,
               volume: 81,
@@ -132,7 +125,6 @@ export default function ProPreviewPage() {
         onChangeMonth={setMonth}
         radar={{
           winRate: 7,
-          precision: 6,
           upset: 5,
           volume: 9,
           streak: 6,

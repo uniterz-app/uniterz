@@ -16,7 +16,6 @@ type RankedRow = {
   totalWins: number;
   winRate: number;
   totalPoints: number;
-  totalPrecision: number;
   totalUpset: number;
   activeWinStreak: number;
   sortValue: number;

@@ -18,7 +18,6 @@ import type { HighlightV2 } from "../../../../../lib/stats/thresholdsV2";
 import {
   evaluateMaxStreakV2,
   evaluatePointsSumV3V2,
-  evaluateScorePrecisionSumV2,
   evaluateWinRateV2,
 } from "../../../../../lib/stats/thresholdsV2";
 import {
@@ -148,11 +147,6 @@ export default function ProfileSummaryGridNative({
   const NONE: HighlightV2 = { level: "none" };
   const hWinRaw =
     (summary.posts ?? 0) > 0 ? evaluateWinRateV2(summary.winRate ?? 0) : NONE;
-  const hPrecisionRaw = enoughPosts
-    ? evaluateScorePrecisionSumV2(summary.scorePrecisionSum ?? 0, "all")
-    : NONE;
-  const hPrecision =
-    hPrecisionRaw.level === "none" ? hPrecisionRaw : { level: "yellow" as const };
   const hUpset = NONE;
   const hStreak = evaluateMaxStreakV2(maxStreak);
   const hTotalRaw = enoughPosts
@@ -177,15 +171,6 @@ export default function ProfileSummaryGridNative({
       valueMain: `${winPct}%`,
       rank: null,
       valueHighlight: hWinRaw,
-    },
-    {
-      key: "precision",
-      label: isJa ? "スコア精度" : "Score precision",
-      icon: "gauge",
-      showInfo: true,
-      valueMain: format1(summary.scorePrecisionSum),
-      rank: ranks?.totalPrecision ?? null,
-      valueHighlight: hPrecision,
     },
     {
       key: "upset",

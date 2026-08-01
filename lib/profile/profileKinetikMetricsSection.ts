@@ -63,7 +63,7 @@ export function buildProfileKinetikMetricsSection(
       winRate: winRatePct,
       posts: input.summary?.posts ?? 0,
       hits: input.summary?.wins ?? 0,
-      scorePrecision: input.summary?.scorePrecisionSum ?? 0,
+      exactHits: input.summary?.exactHitCount ?? 0,
       totalPoints: input.summary?.pointsSumV3 ?? 0,
       upset: input.summary?.upsetPointsSum ?? 0,
       winStreak,

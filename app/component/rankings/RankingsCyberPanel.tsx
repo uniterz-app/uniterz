@@ -22,6 +22,10 @@ type Props = {
   /** 親の `group/{name}` active 時にフラッシュ */
   pressGroup?: string;
   style?: CSSProperties;
+  /** 枠・背景を上書き（月次ヒーローの上位帯色など） */
+  shellStyle?: CSSProperties;
+  /** 底線・フラッシュのアクセント（未指定はシアン） */
+  accentRgb?: string;
 };
 
 /** MyRankCard と同系の DATA SLAB パネル枠 */
@@ -34,6 +38,8 @@ export function RankingsCyberPanel({
   interactive = false,
   pressGroup,
   style,
+  shellStyle,
+  accentRgb = "rgba(34,211,238,0.25)",
 }: Props) {
   const pressFlashClass = pressGroup
     ? `opacity-0 transition-opacity duration-150 group-active/${pressGroup}:opacity-100`
@@ -58,23 +64,32 @@ export function RankingsCyberPanel({
           compact ? "px-3 py-3" : "px-4 py-3.5 sm:px-5",
           innerClassName,
         ].join(" ")}
-        style={rankingsCardShellStyle(subtle ? "subtle" : "default")}
+        style={{
+          ...rankingsCardShellStyle(subtle ? "subtle" : "default"),
+          ...shellStyle,
+        }}
       >
         {!subtle ? <RankingsNoiseTexture /> : null}
         {!subtle ? <RankingsScanTexture /> : null}
         {!subtle ? <RankingsGlowWireFrame variant="full" /> : null}
         {!subtle ? (
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[2] h-px bg-linear-to-r from-transparent via-cyan-400/25 to-transparent"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[2] h-px"
+            style={{
+              background: `linear-gradient(to right, transparent, ${accentRgb}, transparent)`,
+            }}
             aria-hidden
           />
         ) : null}
         {!subtle ? (
           <span
             className={[
-              "pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(105deg,transparent_10%,rgba(34,211,238,0.14)_50%,transparent_90%)]",
+              "pointer-events-none absolute inset-0 z-[3]",
               pressFlashClass,
             ].join(" ")}
+            style={{
+              background: `linear-gradient(105deg, transparent 10%, ${accentRgb} 50%, transparent 90%)`,
+            }}
             aria-hidden
           />
         ) : null}
