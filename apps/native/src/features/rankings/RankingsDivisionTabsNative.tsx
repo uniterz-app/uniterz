@@ -3,6 +3,7 @@
  */
 
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { PRO_LEAGUE_ATMOSPHERE } from "../../../../../lib/rankings/proLeagueAtmosphere";
 import type { RankingDivision } from "../../../../../lib/rankings/rankingDivision";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 
@@ -111,8 +112,8 @@ const styles = StyleSheet.create({
   lockWrap: {
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.3)",
-    backgroundColor: "rgba(0,245,255,0.08)",
+    borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
+    backgroundColor: "rgba(192,132,252,0.12)",
     paddingHorizontal: 16,
     paddingVertical: 28,
     alignItems: "center",
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 2.4,
-    color: "rgba(0,245,255,0.8)",
+    color: PRO_LEAGUE_ATMOSPHERE.gold,
   },
   lockTitle: {
     marginTop: 8,
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
   },
   lockCta: {
     marginTop: 18,
-    backgroundColor: "#00F5FF",
+    backgroundColor: PRO_LEAGUE_ATMOSPHERE.gold,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
@@ -148,6 +149,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.5,
-    color: "#050508",
+    color: PRO_LEAGUE_ATMOSPHERE.ink,
   },
 });

@@ -283,6 +283,15 @@ function ProfileStackScreen() {
               .SeasonPredictPreviewScreenWrapper
           }
         />
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="FuturisticBgPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .FuturisticBgPreviewScreenWrapper
+            }
+          />
+        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>

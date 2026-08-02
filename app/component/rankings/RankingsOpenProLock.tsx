@@ -7,6 +7,7 @@
 import Link from "next/link";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { PRO_LEAGUE_ATMOSPHERE } from "@/lib/rankings/proLeagueAtmosphere";
 
 type Props = {
   language?: Language;
@@ -20,8 +21,18 @@ export default function RankingsOpenProLock({
   const m = t(language).rankings;
 
   return (
-    <div className="mx-1 rounded-sm border border-cyan-400/30 bg-gradient-to-b from-cyan-500/10 to-black/60 px-4 py-8 text-center">
-      <p className="text-[10px] font-bold tracking-[0.2em] text-cyan-300/80">
+    <div
+      className="mx-1 rounded-sm px-4 py-8 text-center"
+      style={{
+        border: `1px solid ${PRO_LEAGUE_ATMOSPHERE.panelBorder}`,
+        background: `linear-gradient(180deg, rgba(192,132,252,0.14) 0%, rgba(8,5,15,0.85) 100%)`,
+        boxShadow: PRO_LEAGUE_ATMOSPHERE.panelGlow,
+      }}
+    >
+      <p
+        className="text-[10px] font-bold tracking-[0.2em]"
+        style={{ color: PRO_LEAGUE_ATMOSPHERE.gold }}
+      >
         PRO ONLY
       </p>
       <h2 className="mt-2 text-lg font-bold tracking-wide text-white">
@@ -33,7 +44,11 @@ export default function RankingsOpenProLock({
       </p>
       <Link
         href={subscribeHref}
-        className="mt-5 inline-flex items-center justify-center rounded-sm bg-cyan-400 px-4 py-2.5 text-[12px] font-bold tracking-wide text-[#050508]"
+        className="mt-5 inline-flex items-center justify-center rounded-sm px-4 py-2.5 text-[12px] font-bold tracking-wide"
+        style={{
+          backgroundColor: PRO_LEAGUE_ATMOSPHERE.gold,
+          color: PRO_LEAGUE_ATMOSPHERE.ink,
+        }}
       >
         {m.divisionOpenCta ?? "Pro を見る"}
       </Link>

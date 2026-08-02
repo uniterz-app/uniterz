@@ -46,6 +46,18 @@ import {
   getProfilePlanProScaleHudUrl,
   getProfilePlanProScaleSkinUrl,
 } from "@/lib/profile/profilePlanProScalePattern";
+import { isProfilePlanProNeoBgVariant } from "@/lib/profile/profilePlanProNeoBgVariants";
+import { getProfilePlanProNeoSkinUrl } from "@/lib/profile/profilePlanProNeoPattern";
+import {
+  getProfilePlanProFuturisticArtId,
+  isProfilePlanProFuturisticBgVariant,
+} from "@/lib/profile/profilePlanProFuturisticBgVariants";
+import { WebFuturisticBackground } from "@/app/component/profile/backgrounds/WebFuturisticBackground";
+import { isProfilePlanProWagaraBgVariant } from "@/lib/profile/profilePlanProWagaraBgVariants";
+import {
+  getProfilePlanProWagaraHudUrl,
+  getProfilePlanProWagaraSkinUrl,
+} from "@/lib/profile/profilePlanProWagaraPattern";
 import { PROFILE_PLAN_PRO_BG } from "@/lib/profile/profilePlanVisual";
 
 type Props = {
@@ -183,6 +195,9 @@ export default function ProfilePlanProBackgroundFx({
   const isCosmos = isProfilePlanProCosmosBgVariant(variant);
   const isLab = isProfilePlanProLabBgVariant(variant);
   const isForm = isProfilePlanProFormBgVariant(variant);
+  const isWagara = isProfilePlanProWagaraBgVariant(variant);
+  const isNeo = isProfilePlanProNeoBgVariant(variant);
+  const isFuturistic = isProfilePlanProFuturisticBgVariant(variant);
   // 常時ループ用 --animate は使わない（枠スイープ含む無限アニメを止める）。
   // 入場は SparseEnterLayer / AtmosEnterLayers の 1 回のみ。
   const rootClass = [
@@ -193,6 +208,9 @@ export default function ProfilePlanProBackgroundFx({
     isCosmos ? "profile-plan-pro-bg--cosmos" : "",
     isLab ? "profile-plan-pro-bg--lab" : "",
     isForm ? "profile-plan-pro-bg--form" : "",
+    isWagara ? "profile-plan-pro-bg--wagara" : "",
+    isNeo ? "profile-plan-pro-bg--neo" : "",
+    isFuturistic ? "profile-plan-pro-bg--futuristic" : "",
     mobileBoost ? "profile-plan-pro-bg--mobile-boost" : "",
     web ? "profile-plan-pro-bg--web" : "",
     "pointer-events-none absolute inset-0 overflow-hidden",
@@ -344,6 +362,53 @@ export default function ProfilePlanProBackgroundFx({
           delayMs={180}
           className="profile-plan-pro-bg__cosmos-hud"
           style={{ backgroundImage: getProfilePlanProCosmosHudUrl(variant) }}
+        />
+      </div>
+    );
+  }
+
+  if (isProfilePlanProNeoBgVariant(variant)) {
+    return (
+      <div className={rootClass} aria-hidden>
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
+          className="profile-plan-pro-bg__neo-skin"
+          style={{ backgroundImage: getProfilePlanProNeoSkinUrl(variant) }}
+        />
+      </div>
+    );
+  }
+
+  if (isProfilePlanProFuturisticBgVariant(variant)) {
+    const artId = getProfilePlanProFuturisticArtId(variant);
+    return (
+      <div className={rootClass} aria-hidden>
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
+          className="profile-plan-pro-bg__futuristic-skin"
+        >
+          <WebFuturisticBackground id={artId} fill />
+        </SparseEnterLayer>
+      </div>
+    );
+  }
+
+  if (isProfilePlanProWagaraBgVariant(variant)) {
+    return (
+      <div className={rootClass} aria-hidden>
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
+          className="profile-plan-pro-bg__wagara-skin"
+          style={{ backgroundImage: getProfilePlanProWagaraSkinUrl(variant) }}
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={180}
+          className="profile-plan-pro-bg__wagara-hud"
+          style={{ backgroundImage: getProfilePlanProWagaraHudUrl(variant) }}
         />
       </div>
     );

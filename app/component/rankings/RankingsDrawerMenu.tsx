@@ -10,6 +10,10 @@ import type { NbaRankingBoard } from "@/lib/rankings/rankingDivision";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import {
+  CYBER_SIDE_MENU_BRANCH,
+  CYBER_SIDE_MENU_BRANCH_GLOW,
+} from "@/lib/ui/cyberSideMenu";
 
 type Props = {
   variant?: "mobile" | "web";
@@ -24,9 +28,7 @@ type Props = {
   onSelectOpenweight?: () => void;
 };
 
-const BRANCH = "rgba(0,245,255,0.42)";
-
-/** NBA 下の枝分かれ行（├ / └）— `GamesDrawerMenu` と同型 */
+/** NBA 下の枝分かれ行（├ / └）— `GamesDrawerMenu` と同型（2px 線 + 枝先ジョイント） */
 function BranchRow({
   last,
   children,
@@ -35,26 +37,34 @@ function BranchRow({
   children: ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-9 items-stretch">
+    <div className="relative flex min-h-8 items-stretch">
       <span
         aria-hidden
-        className="absolute left-[9px] w-px"
+        className="absolute left-[9px] w-[2px]"
         style={{
           top: 0,
           bottom: last ? "50%" : 0,
-          backgroundColor: BRANCH,
-          boxShadow: "0 0 6px rgba(0,245,255,0.25)",
+          backgroundColor: CYBER_SIDE_MENU_BRANCH,
+          boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
         }}
       />
       <span
         aria-hidden
-        className="absolute left-[9px] top-1/2 h-px w-[14px] -translate-y-1/2"
+        className="absolute left-[9px] top-1/2 h-[2px] w-[14px] -translate-y-1/2"
         style={{
-          backgroundColor: BRANCH,
-          boxShadow: "0 0 6px rgba(0,245,255,0.25)",
+          backgroundColor: CYBER_SIDE_MENU_BRANCH,
+          boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
         }}
       />
-      <div className="min-w-0 flex-1 pl-[28px]">{children}</div>
+      <span
+        aria-hidden
+        className="absolute left-[20px] top-1/2 h-[5px] w-[5px] -translate-y-1/2 rotate-45"
+        style={{
+          backgroundColor: "rgba(246, 195, 68, 0.9)",
+          boxShadow: "0 0 8px rgba(246, 195, 68, 0.7)",
+        }}
+      />
+      <div className="min-w-0 flex-1 pl-[28px] pr-4">{children}</div>
     </div>
   );
 }
@@ -108,10 +118,10 @@ export default function RankingsDrawerMenu({
             <div className="relative mt-1 flex flex-col gap-1.5">
               <span
                 aria-hidden
-                className="pointer-events-none absolute left-[9px] top-[-4px] h-1 w-px"
+                className="pointer-events-none absolute left-[9px] top-[-4px] h-1 w-[2px]"
                 style={{
-                  backgroundColor: BRANCH,
-                  boxShadow: "0 0 6px rgba(0,245,255,0.25)",
+                  backgroundColor: CYBER_SIDE_MENU_BRANCH,
+                  boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
                 }}
               />
 

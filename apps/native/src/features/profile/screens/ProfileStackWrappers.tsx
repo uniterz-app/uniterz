@@ -10,6 +10,7 @@ import MobilePlanStatusScreen from "../mobileScreens/MobilePlanStatusScreen";
 import MobileProSubscribeScreen from "../mobileScreens/MobileProSubscribeScreen";
 import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNative";
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
+import FuturisticBgPreviewScreenNative from "../backgrounds/FuturisticBgPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -94,6 +95,18 @@ export function SeasonPredictPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <SeasonPredictPreviewScreenNative
+      language={language}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function FuturisticBgPreviewScreenWrapper() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <FuturisticBgPreviewScreenNative
       language={language}
       onClose={() => navigation.goBack()}
     />

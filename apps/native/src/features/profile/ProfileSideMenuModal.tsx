@@ -21,7 +21,6 @@ import SideMenuItemButtonNative, {
 } from "../../ui/SideMenuItemButtonNative";
 import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
 import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
-import { spacing } from "../../theme/tokens";
 
 type Lang = "ja" | "en";
 
@@ -57,10 +56,11 @@ type Props = {
     | "featureRequest"
     | "electronicNotice"
     | "notificationDev"
-    | "seasonPreview") => void;
+    | "seasonPreview"
+    | "futuristicBgPreview") => void;
 };
 
-const PANEL_W = Math.min(300, Math.max(260, Math.round(Dimensions.get("window").width * 0.46)));
+const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
 
 function openUrl(url: string) {
   void Linking.openURL(url).catch(() => {});
@@ -85,13 +85,14 @@ export default function ProfileSideMenuModal({
   const slide = useRef(new Animated.Value(-PANEL_W - 24)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
-  /** Web `SideMenuDrawer` の py-4 相当 — safe area 直下に下ろす */
-  const panelLayout = useMemo(() => {
-    const top = insets.top + 16;
-    const bottom = Math.max(insets.bottom, spacing.md);
-    const maxHeight = Dimensions.get("window").height - top - bottom;
-    return { top, bottom, maxHeight };
-  }, [insets.top, insets.bottom]);
+  /** 左端密着フルハイト — 内側だけ safe area */
+  const contentPad = useMemo(
+    () => ({
+      paddingTop: insets.top + 12,
+      paddingBottom: Math.max(insets.bottom, 12),
+    }),
+    [insets.top, insets.bottom]
+  );
 
   const isAdmin = uid != null && uid === ADMIN_UID;
 
@@ -111,7 +112,7 @@ export default function ProfileSideMenuModal({
           useNativeDriver: true,
         }),
         Animated.spring(slide, {
-          toValue: -16,
+          toValue: 0,
           friction: 9,
           tension: 68,
           useNativeDriver: true,
@@ -221,6 +222,7 @@ export default function ProfileSideMenuModal({
       | "electronicNotice"
       | "notificationDev"
       | "seasonPreview"
+      | "futuristicBgPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -270,21 +272,16 @@ export default function ProfileSideMenuModal({
               styles.panelOuter,
               {
                 width: PANEL_W,
-                marginTop: panelLayout.top,
-                marginBottom: panelLayout.bottom,
-                maxHeight: panelLayout.maxHeight,
                 transform: [{ translateX: slide }],
               },
             ]}
             pointerEvents="box-none"
           >
             <Pressable style={styles.panelPressable} onPress={(e) => e.stopPropagation()}>
-              <CyberSideMenuPanelNative
-                style={[styles.panel, { maxHeight: panelLayout.maxHeight }]}
-              >
+              <CyberSideMenuPanelNative fillHeight edgeAttach style={styles.panel}>
                 <ScrollView
-                  style={[styles.scroll, { maxHeight: panelLayout.maxHeight }]}
-                  contentContainerStyle={styles.scrollContent}
+                  style={styles.scroll}
+                  contentContainerStyle={[styles.scrollContent, contentPad]}
                   showsVerticalScrollIndicator={false}
                   bounces={false}
                 >
@@ -510,6 +507,14 @@ export default function ProfileSideMenuModal({
                         >
                           シーズン予想プレビュー
                         </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="palette-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("futuristicBgPreview")}
+                        >
+                          Futuristic BG プレビュー
+                        </SideMenuItemButtonNative>
                       </View>
                     </>
                   ) : null}
@@ -564,19 +569,26 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.55)",
   },
   panelOuter: {
-    alignSelf: "flex-start",
-    paddingRight: 12,
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 2,
   },
   panelPressable: {
     flex: 1,
     overflow: "hidden",
   },
-  panel: {},
-  scroll: {},
+  panel: {
+    flex: 1,
+    height: "100%",
+  },
+  scroll: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 20,
+    paddingBottom: 8,
   },
   unitWallet: {
     flexDirection: "row",

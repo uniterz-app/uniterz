@@ -1,0 +1,546 @@
+/* サイドメニュー デザイン改善案プレビュー（選定用・本番未接続）
+   行デザインは確定（スキューチップ型）。背景のみバリエーション比較。 */
+
+/* =========================
+   共通レイアウト
+========================= */
+
+.smdp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 32px 20px;
+}
+
+.smdp-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid rgba(0, 245, 255, 0.28);
+  box-shadow:
+    0 0 40px rgba(0, 245, 255, 0.1),
+    0 22px 56px rgba(0, 0, 0, 0.55);
+  clip-path: polygon(
+    14px 0%,
+    calc(100% - 14px) 0%,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0% calc(100% - 14px),
+    0% 14px
+  );
+}
+
+/* 共通コーナーブラケット — 不使用（ディープミニマル確定） */
+.smdp-corner {
+  display: none;
+}
+
+/* =========================
+   メニュー行（確定デザイン: スキューチップ）
+========================= */
+
+.smdp-item {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 12px 6px 0;
+  color: #fff;
+  text-align: left;
+  border: 1px solid rgba(0, 245, 255, 0.16);
+  border-left: none;
+  background: linear-gradient(
+    90deg,
+    rgba(4, 22, 34, 0.96),
+    rgba(3, 12, 20, 0.88)
+  );
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    0 100%
+  );
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.smdp-item.is-dense {
+  min-height: 38px;
+  padding-block: 4px;
+}
+
+/* 左のスキューチップ（アイコン台座）— シアン HUD */
+.smdp-item::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 0;
+  bottom: 0;
+  width: 62px;
+  background: linear-gradient(
+    105deg,
+    rgba(0, 52, 68, 0.92) 0%,
+    rgba(4, 18, 28, 0.95) 100%
+  );
+  border-right: 1px solid rgba(0, 245, 255, 0.42);
+  box-shadow: inset 0 0 14px rgba(0, 245, 255, 0.06);
+  transform: skewX(-14deg);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.smdp-item.is-active {
+  border-color: rgba(0, 245, 255, 0.55);
+  box-shadow:
+    0 0 28px rgba(0, 245, 255, 0.18),
+    inset 0 0 0 1px rgba(0, 245, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.smdp-item.is-active::before {
+  background: linear-gradient(
+    105deg,
+    rgba(0, 80, 98, 0.95) 0%,
+    rgba(0, 36, 52, 0.96) 100%
+  );
+  border-color: rgba(0, 245, 255, 0.85);
+  box-shadow:
+    inset 0 0 20px rgba(0, 245, 255, 0.14),
+    0 0 12px rgba(0, 245, 255, 0.2);
+}
+
+/* 選択中のスイープ光 — 不使用 */
+.smdp-item.is-active::after {
+  content: none;
+  display: none;
+}
+
+@keyframes smdp-item-sweep {
+  to {
+    left: 110%;
+  }
+}
+
+.smdp-item__icon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 40px;
+  width: 54px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding-left: 4px;
+}
+
+.smdp-item.is-dense .smdp-item__icon {
+  height: 36px;
+  width: 54px;
+}
+
+.smdp-item__label {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.smdp-item.is-dense .smdp-item__label {
+  font-size: 14px;
+}
+
+.smdp-item.is-active .smdp-item__label {
+  text-shadow: 0 0 18px rgba(0, 245, 255, 0.35);
+}
+
+/* =========================
+   背景 参考: データストリーム（前回案 E）
+========================= */
+
+.smdp-bg-stream {
+  background:
+    radial-gradient(110% 70% at 50% -10%, rgba(0, 245, 255, 0.07), transparent 60%),
+    linear-gradient(180deg, #04070c, #02040a);
+}
+
+.smdp-bg-stream::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 33px,
+    rgba(0, 245, 255, 0.045) 33px 34px
+  );
+}
+
+.smdp-bg-stream::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(0, 245, 255, 0.55) 42%,
+      rgba(0, 245, 255, 0.12) 55%,
+      transparent 68%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(0, 245, 255, 0.3) 40%,
+      transparent 60%
+    );
+  background-size:
+    26px 240px,
+    52px 380px;
+  background-repeat: repeat;
+  animation: smdp-stream-fall 7s linear infinite;
+  opacity: 0.5;
+  -webkit-mask-image: repeating-linear-gradient(
+    90deg,
+    #000 0 2px,
+    transparent 2px 26px
+  );
+  mask-image: repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 26px);
+}
+
+@keyframes smdp-stream-fall {
+  to {
+    background-position:
+      0 480px,
+      0 760px;
+  }
+}
+
+/* =========================
+   背景 A: ヘックスコム
+   ハニカム模様 + 上部グロー + 斜め光沢
+========================= */
+
+.smdp-bg-hex {
+  background:
+    linear-gradient(
+      115deg,
+      transparent 34%,
+      rgba(0, 245, 255, 0.045) 47%,
+      transparent 60%
+    ),
+    radial-gradient(120% 80% at 50% -10%, rgba(0, 245, 255, 0.09), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill='%2300f5ff' fill-opacity='0.05' fill-rule='evenodd'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5-13-7.5v-15l13-7.5zM3 17.45l6.5 3.75v7.5L3 32.45l-6.5-3.75v-7.5L3 17.45zm21.98 0l6.5 3.75v7.5l-6.5 3.75-6.5-3.75v-7.5l6.5-3.75zM14 41.45l6.5 3.75v7.5L14 56.45l-6.5-3.75v-7.5l6.5-3.75z'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(180deg, #070c13, #03050a);
+  background-size:
+    260% 100%,
+    auto,
+    28px 49px,
+    auto;
+  animation: smdp-hex-sheen 10s ease-in-out infinite;
+}
+
+@keyframes smdp-hex-sheen {
+  0%,
+  100% {
+    background-position:
+      0% 0,
+      0 0,
+      0 0,
+      0 0;
+  }
+  50% {
+    background-position:
+      100% 0,
+      0 0,
+      0 0,
+      0 0;
+  }
+}
+
+/* 下部のシアン残光 */
+.smdp-bg-hex::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    80% 40% at 15% 105%,
+    rgba(0, 245, 255, 0.07),
+    transparent 60%
+  );
+}
+
+/* =========================
+   背景 B: オーロラヴェール
+   シアン→ブルー→バイオレットの光が漂う
+========================= */
+
+.smdp-bg-aurora {
+  background: linear-gradient(180deg, #04070d, #020409);
+}
+
+.smdp-bg-aurora::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: -30%;
+  background:
+    radial-gradient(45% 32% at 30% 24%, rgba(0, 245, 255, 0.17), transparent 70%),
+    radial-gradient(50% 36% at 75% 55%, rgba(59, 130, 246, 0.15), transparent 70%),
+    radial-gradient(40% 30% at 45% 85%, rgba(139, 92, 246, 0.13), transparent 70%);
+  filter: blur(18px);
+  animation: smdp-aurora-drift 14s ease-in-out infinite alternate;
+}
+
+@keyframes smdp-aurora-drift {
+  from {
+    transform: translate3d(-4%, -3%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(4%, 3%, 0) scale(1.08);
+  }
+}
+
+/* 極細グリッドで cyber 感を残す */
+.smdp-bg-aurora::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(148, 210, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 210, 255, 0.03) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* =========================
+   背景 C: ホライゾングリッド
+   下半分にパースの床グリッド + 地平線グロー
+========================= */
+
+.smdp-bg-horizon {
+  background:
+    radial-gradient(90% 55% at 50% 100%, rgba(0, 245, 255, 0.1), transparent 60%),
+    linear-gradient(180deg, #03060b 0%, #04101a 100%);
+}
+
+/* 地平線 */
+.smdp-bg-horizon::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 47%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 245, 255, 0.75),
+    transparent
+  );
+  box-shadow: 0 0 16px rgba(0, 245, 255, 0.5);
+}
+
+/* パースの床グリッド（奥へ流れる） */
+.smdp-bg-horizon::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: -60%;
+  right: -60%;
+  bottom: -4%;
+  height: 52%;
+  background:
+    linear-gradient(rgba(0, 245, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.18) 1px, transparent 1px);
+  background-size: 44px 44px;
+  transform: perspective(340px) rotateX(58deg);
+  transform-origin: top center;
+  animation: smdp-horizon-scroll 5s linear infinite;
+  opacity: 0.6;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 30%);
+  mask-image: linear-gradient(180deg, transparent, #000 30%);
+}
+
+@keyframes smdp-horizon-scroll {
+  to {
+    background-position:
+      0 44px,
+      0 0;
+  }
+}
+
+/* =========================
+   背景 D: トポグラフィレーダー
+   等高線 + 回転するレーダースイープ
+========================= */
+
+.smdp-bg-topo {
+  background:
+    repeating-radial-gradient(
+      circle at 18% 22%,
+      transparent 0 34px,
+      rgba(0, 245, 255, 0.06) 34px 35px
+    ),
+    repeating-radial-gradient(
+      circle at 88% 78%,
+      transparent 0 46px,
+      rgba(0, 245, 255, 0.045) 46px 47px
+    ),
+    radial-gradient(80% 60% at 18% 22%, rgba(0, 245, 255, 0.05), transparent 60%),
+    linear-gradient(180deg, #05090f, #02040a);
+}
+
+/* レーダースイープ */
+.smdp-bg-topo::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: -42%;
+  top: -32%;
+  width: 120%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 332deg,
+    rgba(0, 245, 255, 0.11) 354deg,
+    transparent 360deg
+  );
+  animation: smdp-topo-spin 9s linear infinite;
+}
+
+@keyframes smdp-topo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================
+   背景 E: アーマーパネル
+   金属パネルの継ぎ目 + ヘアライン + ハザードストライプ
+========================= */
+
+.smdp-bg-armor {
+  background-image:
+    /* 継ぎ目（横 2 本 + 縦 1 本） */
+    linear-gradient(180deg, rgba(0, 245, 255, 0.14), rgba(0, 0, 0, 0.6)),
+    linear-gradient(180deg, rgba(0, 245, 255, 0.1), rgba(0, 0, 0, 0.55)),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.09), rgba(0, 0, 0, 0.5)),
+    /* ヘアライン */
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.016) 0 1px,
+      transparent 1px 3px
+    ),
+    linear-gradient(180deg, #0a0e14 0%, #060910 45%, #04060b 100%);
+  background-size:
+    100% 2px,
+    100% 2px,
+    2px 100%,
+    auto,
+    auto;
+  background-position:
+    0 31%,
+    0 74%,
+    76% 0,
+    0 0,
+    0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+}
+
+/* 対角のうっすらライト */
+.smdp-bg-armor::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    90% 60% at 0% 0%,
+    rgba(0, 245, 255, 0.06),
+    transparent 55%
+  );
+}
+
+/* 下部ハザードストライプ */
+.smdp-bg-armor::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 24px;
+  height: 8px;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 245, 255, 0.22) 0 8px,
+    transparent 8px 16px
+  );
+  opacity: 0.45;
+}
+
+/* =========================
+   背景 F: ディープミニマル
+   ほぼ無地 + 左上グロー + 微細ノイズ + 呼吸するビーム
+========================= */
+
+.smdp-bg-deep {
+  background:
+    radial-gradient(70% 46% at 12% 0%, rgba(0, 245, 255, 0.18), transparent 60%),
+    radial-gradient(60% 40% at 100% 100%, rgba(0, 245, 255, 0.1), transparent 60%),
+    linear-gradient(168deg, #041018 0%, #030b12 48%, #02070e 100%);
+}
+
+/* 微細ノイズ */
+.smdp-bg-deep::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* 右端の呼吸するビーム */
+.smdp-bg-deep::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  right: 10px;
+  top: 12%;
+  bottom: 12%;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 245, 255, 0.5),
+    transparent
+  );
+  animation: smdp-deep-breathe 4s ease-in-out infinite;
+}
+
+@keyframes smdp-deep-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}

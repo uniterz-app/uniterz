@@ -17,10 +17,13 @@ export default function ProfileMenuEdgeHandle({
   onOpen,
   unreadCount = 0,
   ariaLabel = "メニュー",
+  /** サイドメニュー開中は非表示（ドロワーと文字が被らないようにする） */
+  hidden = false,
 }: {
   onOpen: () => void;
   unreadCount?: number;
   ariaLabel?: string;
+  hidden?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -29,6 +32,7 @@ export default function ProfileMenuEdgeHandle({
   }, []);
 
   useEffect(() => {
+    if (hidden) return;
     let tracking = false;
     let startX = 0;
     let startY = 0;
@@ -69,9 +73,9 @@ export default function ProfileMenuEdgeHandle({
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("touchend", onTouchEnd);
     };
-  }, [onOpen]);
+  }, [onOpen, hidden]);
 
-  if (!mounted) return null;
+  if (!mounted || hidden) return null;
 
   return createPortal(
     <button

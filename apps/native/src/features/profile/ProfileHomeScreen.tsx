@@ -970,6 +970,7 @@ export default function ProfileHomeScreen({
       <ProfileMenuEdgeHandleNative
         onOpen={() => setMenuOpen(true)}
         unreadCount={menuUnreadCount}
+        hidden={menuOpen}
       />
     ) : null}
 
@@ -1248,6 +1249,8 @@ export default function ProfileHomeScreen({
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
         else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
+        else if (page === "futuristicBgPreview" && __DEV__)
+          navigation.navigate("FuturisticBgPreview");
       }}
     />
     <ProfileBadgeDetailModal
