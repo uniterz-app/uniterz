@@ -86,11 +86,10 @@ export default function RankingCard({
     ? "/mobile"
     : "/web";
   const profileKey = profilePathKeyFromRow(r);
-  const statsLeague = rankingLeague ?? "worldcup";
+  const statsLeague = rankingLeague ?? "nba";
   const statsContext = {
     rankingLeague: statsLeague,
-    wcStage:
-      statsLeague === "worldcup" ? (wcStage ?? ("overall" as const)) : undefined,
+    wcStage: undefined,
   };
   const profileHref = profileHrefWithRankingsReturn(pathname, base, profileKey, {
     metric,

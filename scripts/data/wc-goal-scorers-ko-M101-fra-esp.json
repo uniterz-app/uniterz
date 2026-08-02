@@ -1,8 +1,0 @@
-{
-  "homeScore": 0,
-  "awayScore": 2,
-  "goalScorers": [
-    { "playerId": "esp-oyarzabal", "teamId": "wc-esp", "minute": 22 },
-    { "playerId": "esp-porro", "teamId": "wc-esp", "minute": 58 }
-  ]
-}

@@ -1,1 +1,0 @@
-{"version":3,"file":"wcFirestoreWriteDeps.js","sourceRoot":"","sources":["../../src/wc-bracket/wcFirestoreWriteDeps.ts"],"names":[],"mappings":";;;AAAA,wDAAsD;AAQ/C,MAAM,2BAA2B,GAAG,GAAyB,EAAE,CAAC,CAAC;IACtE,eAAe,EAAE,GAAG,EAAE,CAAC,sBAAU,CAAC,eAAe,EAAE;CACpD,CAAC,CAAC;AAFU,QAAA,2BAA2B,+BAErC"}

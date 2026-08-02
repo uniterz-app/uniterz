@@ -7,12 +7,11 @@ import type {
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
-/** コミュニティの competition → プロフィール成績タブのリーグ */
+/** コミュニティの competition → プロフィール成績タブのリーグ（NBA のみ） */
 export function communityLeagueForProfile(
-  raw: string | null | undefined
+  _raw: string | null | undefined
 ): { rankingLeague: RankingLeagueSource; wcStage?: WcRankingStage } {
-  if (raw === "nba") return { rankingLeague: "nba" };
-  return { rankingLeague: "worldcup", wcStage: "overall" };
+  return { rankingLeague: "nba" };
 }
 
 export function communityMetricToMobile(

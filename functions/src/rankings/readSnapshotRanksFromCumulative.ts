@@ -1,4 +1,3 @@
-import type { WcRankingStage } from "./wcRankingStage";
 import { CURRENT_NBA_SEASON_KEY } from "./nbaSeason";
 
 type Metric =
@@ -14,7 +13,6 @@ type MetricRankMap = Partial<Record<Metric, unknown>>;
 
 type SnapshotRanksRoot = {
   seasons?: Partial<Record<string, MetricRankMap>>;
-  wc?: Partial<Record<WcRankingStage, MetricRankMap>>;
 };
 
 function isNonEmptyObject(v: unknown): v is Record<string, unknown> {
@@ -39,9 +37,6 @@ export function readSnapshotRanksRoot(
   return {
     seasons: pickBlock(nested?.seasons, data["snapshotRanks.seasons"]) as
       | Partial<Record<string, MetricRankMap>>
-      | undefined,
-    wc: pickBlock(nested?.wc, data["snapshotRanks.wc"]) as
-      | Partial<Record<WcRankingStage, MetricRankMap>>
       | undefined,
   };
 }
@@ -72,20 +67,10 @@ export function coerceRankInt(v: unknown): number | null {
 
 export function readStoredRankFromUser(
   me: Record<string, unknown>,
-  metric: Metric,
-  wcStage: WcRankingStage | null
+  metric: Metric
 ): number | null {
   const snapshotRanks = readSnapshotRanksRoot(me);
-
-  let raw: unknown;
-  if (wcStage) {
-    raw = snapshotRanks.wc?.[wcStage]?.[metric];
-    if (metric === "totalExactHits" && raw == null) {
-      raw = snapshotRanks.wc?.[wcStage]?.totalPrecision;
-    }
-  } else {
-    raw = snapshotRanks.seasons?.[CURRENT_NBA_SEASON_KEY]?.[metric];
-  }
+  const raw = snapshotRanks.seasons?.[CURRENT_NBA_SEASON_KEY]?.[metric];
 
   return typeof raw === "number" && Number.isFinite(raw) && raw >= 1
     ? Math.floor(raw)

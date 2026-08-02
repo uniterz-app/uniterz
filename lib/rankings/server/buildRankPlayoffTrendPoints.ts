@@ -2,7 +2,6 @@ import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRa
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 /** ランキングスナップショット最新 N 件（「過去 N 日」ではない） */
 export const RANK_PLAYOFF_TREND_MAX_POINTS = 10;
@@ -14,23 +13,16 @@ export type RankPlayoffTrendPoint = {
 
 type HistoryDoc = {
   seasons?: Partial<Record<string, Record<string, unknown>>>;
-  wc?: Partial<Record<WcRankingStage, Record<string, unknown>>>;
 };
 
 function rankFromHistoryDoc(
   data: HistoryDoc | undefined,
   opts: {
-    rankingLeague: RankingLeagueSource;
-    wcStage: WcRankingStage;
     /** NBA: 明示キーのみ。省略時は現行。前シーズンへは落とさない */
     seasonKey?: string;
   }
 ): number | null {
   if (!data) return null;
-  if (opts.rankingLeague === "worldcup") {
-    const block = data.wc?.[opts.wcStage];
-    return coerceTotalPointsRank(block?.totalPoints);
-  }
   const seasonKey = opts.seasonKey ?? CURRENT_NBA_SEASON_KEY;
   return coerceTotalPointsRank(data.seasons?.[seasonKey]?.totalPoints);
 }
@@ -43,12 +35,12 @@ export async function buildRankPlayoffTrendPoints(
   uid: string,
   opts: {
     rankingLeague: RankingLeagueSource;
-    wcStage: WcRankingStage;
     maxPoints?: number;
     maxLookbackDays?: number;
     seasonKey?: string;
   }
 ): Promise<RankPlayoffTrendPoint[]> {
+  void opts.rankingLeague;
   const maxPoints = opts.maxPoints ?? RANK_PLAYOFF_TREND_MAX_POINTS;
   const seasonKey = opts.seasonKey ?? CURRENT_NBA_SEASON_KEY;
   const historyDocs = await loadRankSnapshotHistoryDocsWalkBack(uid, {
@@ -58,11 +50,7 @@ export async function buildRankPlayoffTrendPoints(
 
   const points: RankPlayoffTrendPoint[] = [];
   for (const d of historyDocs) {
-    const rank = rankFromHistoryDoc(d.data as HistoryDoc, {
-      rankingLeague: opts.rankingLeague,
-      wcStage: opts.wcStage,
-      seasonKey,
-    });
+    const rank = rankFromHistoryDoc(d.data as HistoryDoc, { seasonKey });
     if (rank != null) {
       points.push({ dateKey: d.id, rank });
     }

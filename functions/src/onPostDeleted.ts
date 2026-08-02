@@ -47,7 +47,8 @@ function buildDeleteContribution(
   const wcStageRaw = before.wcStage;
   const wcStage =
     wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
-  const forRanking = stats.countedForRanking !== false;
+  const forRanking =
+    stats.countedForRanking !== false && leagueKey !== "wc";
   const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(
     leagueKey,
     forRanking,
@@ -203,7 +204,11 @@ export const onPostDeletedV2 = onDocumentDeleted(
       return;
     }
 
-    const countRank = stats.countedForRanking !== false;
+    const leagueKeyNorm = normalizeLeague(
+      typeof before.league === "string" ? before.league : null
+    );
+    const countRank =
+      stats.countedForRanking !== false && leagueKeyNorm !== "wc";
 
     const isWin = stats.isWin === true;
     const scoreError = stats.scoreError ?? 0;
@@ -212,7 +217,6 @@ export const onPostDeletedV2 = onDocumentDeleted(
     const upsetPoints = stats.upsetPoints ?? 0;
     const pointsV3 = stats.pointsV3 ?? 0;
     const leagueKey = before.league ?? null;
-    const isWc = String(leagueKey ?? "").toLowerCase() === "wc";
     const exactMatch = stats.exactMatch === true;
     const goalScorerHit = (stats.goalScorerBonus ?? 0) > 0;
 
@@ -239,7 +243,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
         upsetHitCount: FieldValue.increment(upsetHit ? -1 : 0),
         upsetPickCount: FieldValue.increment(hadUpsetGame ? -1 : 0),
         upsetPointsSum: FieldValue.increment(-upsetPoints),
-        exactHitCount: FieldValue.increment(isWc && exactMatch ? -1 : 0),
+        exactHitCount: FieldValue.increment(0),
         goalScorerHitCount: FieldValue.increment(goalScorerHit ? -1 : 0),
         pointsSumV3: FieldValue.increment(-pointsV3),
         updatedAt: FieldValue.serverTimestamp(),

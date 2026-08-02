@@ -1,8 +1,0 @@
-{
-  "homeScore": 2,
-  "awayScore": 0,
-  "scorers": [
-    { "playerId": "fra-mbappe", "teamId": "wc-fra", "minute": 60 },
-    { "playerId": "fra-dembele", "teamId": "wc-fra", "minute": 66 }
-  ]
-}

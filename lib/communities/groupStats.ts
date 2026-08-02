@@ -11,8 +11,17 @@ import {
   timestampToMs,
 } from "./rankingStartDate";
 import { normalizeLeague } from "@/lib/leagues";
-import { readDailyWcStageBuckets } from "@/lib/rankings/dailyWcStageBuckets";
 import { TIMEZONE_JST, parseDateKeyInTimeZone } from "@/lib/time/zonedTime";
+
+function readWcOverallDailyBucket(
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const nested = (data.rankingByWcStage ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  return { ...(nested.overall ?? {}) };
+}
 
 export type MemberAgg = {
   totalPosts: number;
@@ -73,7 +82,7 @@ function dailyBucket(
    * leagues.wc はランキング対象外投稿も含むため 1〜2 点ずれることがある。
    */
   if (league === "wc") {
-    const overall = readDailyWcStageBuckets(data).overall;
+    const overall = readWcOverallDailyBucket(data);
     if (Number(overall.posts ?? 0) > 0) {
       return overall as Record<string, unknown>;
     }

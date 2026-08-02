@@ -4,7 +4,6 @@
 
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export type RankGapStatsSlice = {
   pointsSumV3: number;
@@ -63,22 +62,9 @@ function sliceFromBlock(
 
 export function readRankGapStatsSlice(
   cumulative: Record<string, unknown> | null | undefined,
-  context: {
-    rankingLeague: RankingLeagueSource;
-    wcStage: WcRankingStage | null;
-  }
+  _context?: { rankingLeague?: RankingLeagueSource }
 ): RankGapStatsSlice | null {
   if (!cumulative) return null;
-
-  if (context.rankingLeague === "worldcup") {
-    const stage = context.wcStage ?? "overall";
-    const block = (
-      cumulative.rankingByWcStage as
-        | Record<string, Record<string, unknown>>
-        | undefined
-    )?.[stage];
-    return sliceFromBlock(block, { wcStage: true });
-  }
 
   const block = (
     cumulative.rankingBySeason as

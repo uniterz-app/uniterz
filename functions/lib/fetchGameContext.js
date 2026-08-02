@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchGameContext = fetchGameContext;
-const resolveWcStage_1 = require("./shared/resolveWcStage");
 /* =========================
  * Helpers
  * ========================= */
@@ -12,7 +11,7 @@ function normalizePlayoffRoundKey(v) {
     return s === "r1" || s === "r2" || s === "cf" || s === "finals" ? s : null;
 }
 function normalizeGame(after, gameId) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
     const seasonPhase = (_a = after === null || after === void 0 ? void 0 : after.seasonPhase) !== null && _a !== void 0 ? _a : null;
     return {
         id: gameId,
@@ -36,13 +35,9 @@ function normalizeGame(after, gameId) {
         wcKnockoutMatchId: typeof (after === null || after === void 0 ? void 0 : after.wcKnockoutMatchId) === "string"
             ? after.wcKnockoutMatchId
             : null,
-        wcStage: (0, resolveWcStage_1.resolveWcStageFromGame)({
-            knockout: (after === null || after === void 0 ? void 0 : after.knockout) === true,
-            roundLabel: (_k = after === null || after === void 0 ? void 0 : after.roundLabel) !== null && _k !== void 0 ? _k : null,
-            wcStage: (_l = after === null || after === void 0 ? void 0 : after.wcStage) !== null && _l !== void 0 ? _l : null,
-        }),
-        goalScorers: (_m = after === null || after === void 0 ? void 0 : after.goalScorers) !== null && _m !== void 0 ? _m : null,
-        leadingScorers: (_o = after === null || after === void 0 ? void 0 : after.leadingScorers) !== null && _o !== void 0 ? _o : null,
+        wcStage: null,
+        goalScorers: (_k = after === null || after === void 0 ? void 0 : after.goalScorers) !== null && _k !== void 0 ? _k : null,
+        leadingScorers: (_l = after === null || after === void 0 ? void 0 : after.leadingScorers) !== null && _l !== void 0 ? _l : null,
     };
 }
 /* =========================

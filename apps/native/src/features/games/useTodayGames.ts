@@ -202,9 +202,10 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
 
   const setSelectedLeague = useCallback(
     (next: SupportedLeague) => {
-      if (next === selectedLeague) return;
+      const normalized: SupportedLeague = next === "wc" ? "nba" : next;
+      if (normalized === selectedLeague) return;
       selectedByLeagueRef.current[selectedLeague] = selectedDate;
-      setSelectedLeagueState(next);
+      setSelectedLeagueState(normalized);
     },
     [selectedDate, selectedLeague]
   );

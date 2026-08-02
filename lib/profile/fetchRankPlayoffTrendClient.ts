@@ -28,7 +28,7 @@ export async function fetchRankPlayoffTrendClient(
     uid,
     league: rankingLeague,
   });
-  if (rankingLeague === "worldcup") {
+  if (false) {
     qs.set(
       "wcStage",
       isWcRankingStage(wcStage) ? wcStage : "overall"

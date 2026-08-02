@@ -9,7 +9,6 @@ import {
   isRankingLeagueSource,
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
-import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,15 +37,7 @@ export async function GET(req: Request) {
     const rawLeague = searchParams.get("league");
     const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
       ? rawLeague
-      : "worldcup";
-
-    const rawWcStage = searchParams.get("wcStage");
-    const wcStage: WcRankingStage | null =
-      rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
-        ? rawWcStage
-        : rankingLeague === "worldcup"
-          ? "main"
-          : null;
+      : "nba";
 
     const rawLang = searchParams.get("lang");
     const language: Language = normalizeLanguage(rawLang) ?? "ja";
@@ -54,7 +45,6 @@ export async function GET(req: Request) {
     const analysis = await fetchRankShadowAnalysis({
       uid,
       rankingLeague,
-      wcStage,
       language,
     });
 

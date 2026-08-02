@@ -4,6 +4,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
+import { notifyAnnouncementReadsChanged } from "../../../../../../lib/announcements/loadAnnouncementReadIds";
 
 const ANNOUNCEMENT_READ_IDS_STORAGE_KEY = "uniterz_announcement_read_ids_v1";
 
@@ -23,7 +24,10 @@ async function addLocalAnnouncementReadId(announcementId: string): Promise<void>
   const s = parseIds(raw);
   if (s.has(announcementId)) return;
   s.add(announcementId);
-  await AsyncStorage.setItem(ANNOUNCEMENT_READ_IDS_STORAGE_KEY, JSON.stringify([...s]));
+  await AsyncStorage.setItem(
+    ANNOUNCEMENT_READ_IDS_STORAGE_KEY,
+    JSON.stringify([...s])
+  );
 }
 
 export function markAnnouncementReadNative(
@@ -33,7 +37,9 @@ export function markAnnouncementReadNative(
   if (!announcementId) return;
   if (uid) {
     const ref = doc(db, `users/${uid}/reads`, announcementId);
-    void setDoc(ref, { at: serverTimestamp() }, { merge: true });
+    void setDoc(ref, { at: serverTimestamp() }, { merge: true }).then(() => {
+      notifyAnnouncementReadsChanged(uid);
+    });
   } else {
     void addLocalAnnouncementReadId(announcementId);
   }

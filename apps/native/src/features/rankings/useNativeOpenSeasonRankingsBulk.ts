@@ -39,7 +39,7 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
       const token = await auth.currentUser?.getIdToken().catch(() => null);
       const params = new URLSearchParams({
         division: "open",
-        metrics: allRankingMetricsParam(null),
+        metrics: allRankingMetricsParam(),
       });
       const res = await fetch(
         `${base}/api/cumulative-ranking/bulk?${params.toString()}`,

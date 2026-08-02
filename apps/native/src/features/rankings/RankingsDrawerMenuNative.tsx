@@ -12,7 +12,7 @@ import {
 import type { NbaRankingBoard } from "../../../../../lib/rankings/rankingDivision";
 import { rankingsTexts } from "./rankingsTexts";
 
-type League = "nba" | "wc";
+type League = "nba";
 
 type Props = {
   league: League;

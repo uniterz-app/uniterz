@@ -1,15 +1,8 @@
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
-
 export const REFETCH_ALL_METRICS_NBA =
   "totalPoints,totalUpset,winRate,totalGoalScorerHits";
 
-export const REFETCH_ALL_METRICS_WC =
-  "totalPoints,totalExactHits,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
-
-export function allRankingMetricsParam(
-  wcStage: WcRankingStage | null
-): string {
-  return wcStage ? REFETCH_ALL_METRICS_WC : REFETCH_ALL_METRICS_NBA;
+export function allRankingMetricsParam(): string {
+  return REFETCH_ALL_METRICS_NBA;
 }
 
 /** 一覧 Top20 が取得済みか（personalOnly プリフェッチの空 rows では false） */
@@ -26,13 +19,12 @@ export function isMetricListBundleLoaded(
 /** 総合得点の personal 取得後、他指標の YOUR RANK が未プリフェッチか */
 export function needsPersonalRankPrefetch(
   bundles: Record<string, { myRank?: unknown; myRow?: unknown } | undefined> | null,
-  wcStage: WcRankingStage | null,
   uid: string | null
 ): boolean {
   if (!uid || !bundles?.totalPoints) return false;
   const tp = bundles.totalPoints;
   if (tp.myRank == null && tp.myRow == null) return false;
-  for (const metric of allRankingMetricsParam(wcStage).split(",")) {
+  for (const metric of allRankingMetricsParam().split(",")) {
     if (metric === "totalPoints") continue;
     if (bundles[metric]?.myRank == null) return true;
   }

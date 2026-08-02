@@ -10,7 +10,6 @@ import {
   isRankingLeagueSource,
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
-import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +20,6 @@ export type { RankPlayoffTrendPoint };
  * cumulative_stats/{uid}/rankSnapshotHistory の各 snapshot doc から
  * 総合得点順位の推移を返す。
  * NBA: 現行シーズン（seasons.<CURRENT_NBA_SEASON_KEY>）固定
- * WC: ?league=worldcup&wcStage=overall|qualifying|main
  */
 export async function GET(req: Request) {
   try {
@@ -31,11 +29,6 @@ export async function GET(req: Request) {
     const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
       ? rawLeague
       : "nba";
-    const rawWcStage = searchParams.get("wcStage");
-    const wcStage: WcRankingStage =
-      rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
-        ? rawWcStage
-        : "overall";
     const uidParam = searchParams.get("uid")?.trim() ?? "";
     const handleParam = searchParams.get("handle")?.trim() ?? "";
 
@@ -59,15 +52,14 @@ export async function GET(req: Request) {
 
     const points = await buildRankPlayoffTrendPoints(resolvedUid, {
       rankingLeague,
-      wcStage,
     });
 
     return NextResponse.json({
       ok: true,
       resolvedUid,
-      seasonKey: rankingLeague === "worldcup" ? null : CURRENT_NBA_SEASON_KEY,
+      seasonKey: CURRENT_NBA_SEASON_KEY,
       rankingLeague,
-      wcStage: rankingLeague === "worldcup" ? wcStage : null,
+      wcStage: null,
       points,
     });
   } catch (e: unknown) {

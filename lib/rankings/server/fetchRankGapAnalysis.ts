@@ -13,7 +13,6 @@ import {
 } from "@/lib/rankings/readRankGapBonusSlice";
 import { resolveNextRankTierMilestone } from "@/lib/rankings/rankTierMilestone";
 import { fetchBulkFromFunctions } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { Language } from "@/lib/i18n/language";
 
 type RankingRowLite = {
@@ -73,10 +72,6 @@ function cohortSlicesFromSnapshotBand(
 async function loadCohortSlicesLive(input: {
   uid: string;
   cohortUids: string[];
-  context: {
-    rankingLeague: RankingLeagueSource;
-    wcStage: WcRankingStage | null;
-  };
 }): Promise<RankGapStatsSlice[]> {
   const cumulativeByUid = await loadCumulativeDocs([
     input.uid,
@@ -84,10 +79,7 @@ async function loadCohortSlicesLive(input: {
   ]);
   const cohortSlices: RankGapStatsSlice[] = [];
   for (const cohortUid of input.cohortUids) {
-    const slice = readRankGapStatsSlice(cumulativeByUid.get(cohortUid), {
-      rankingLeague: input.context.rankingLeague,
-      wcStage: input.context.wcStage,
-    });
+    const slice = readRankGapStatsSlice(cumulativeByUid.get(cohortUid));
     if (slice && slice.posts > 0) cohortSlices.push(slice);
   }
   return cohortSlices;
@@ -96,7 +88,6 @@ async function loadCohortSlicesLive(input: {
 export async function fetchRankGapAnalysis(input: {
   uid: string;
   rankingLeague: RankingLeagueSource;
-  wcStage: WcRankingStage | null;
   language: Language;
 }): Promise<RankGapAnalysis | { ok: false; reason: string }> {
   const baseUrl =
@@ -106,16 +97,7 @@ export async function fetchRankGapAnalysis(input: {
     return { ok: false, reason: "ranking_unavailable" };
   }
 
-  const context = {
-    rankingLeague: input.rankingLeague,
-    wcStage: input.wcStage,
-  };
-
-  const bulk = await fetchBulkFromFunctions(
-    input.uid,
-    ["totalPoints"],
-    input.wcStage
-  );
+  const bulk = await fetchBulkFromFunctions(input.uid, ["totalPoints"]);
   const bundle = bulk.byMetric.totalPoints;
   if (!bundle?.ok) {
     return { ok: false, reason: "ranking_unavailable" };
@@ -141,8 +123,7 @@ export async function fetchRankGapAnalysis(input: {
   const selfSlice = readRankGapStatsSlice(
     selfDocSnap.exists
       ? (selfDocSnap.data() as Record<string, unknown>)
-      : undefined,
-    context
+      : undefined
   );
   if (!selfSlice || selfSlice.posts <= 0) {
     return { ok: false, reason: "self_stats_unavailable" };
@@ -150,7 +131,6 @@ export async function fetchRankGapAnalysis(input: {
 
   const snapshotDocId = resolveCumulativeRankingSnapshotDocId({
     metric: "totalPoints",
-    wcStage: input.wcStage,
   });
   const rankingSnap = await getAdminDb()
     .doc(`cumulative_ranking_snapshots/${snapshotDocId}`)
@@ -168,7 +148,6 @@ export async function fetchRankGapAnalysis(input: {
     cohortSlices = await loadCohortSlicesLive({
       uid: input.uid,
       cohortUids,
-      context,
     });
   }
 

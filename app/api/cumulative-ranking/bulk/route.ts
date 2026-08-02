@@ -9,10 +9,6 @@ import {
   type BulkRankingMetric,
 } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
 import { loadPersonalBulkOverlayFromFirestore } from "@/lib/rankings/server/loadPersonalBulkOverlay";
-import {
-  isWcRankingStage,
-  type WcRankingStage,
-} from "@/lib/rankings/wcRankingStage";
 import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
 import { parseRankingDivision } from "@/lib/rankings/rankingDivision";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
@@ -31,15 +27,6 @@ const BULK_METRICS = [
   "totalGoalScorerHits",
 ] as const satisfies readonly BulkRankingMetric[];
 
-const WC_BULK_METRICS = [
-  "totalPoints",
-  "totalExactHits",
-  "totalUpset",
-  "activeWinStreak",
-  "winRate",
-  "totalGoalScorerHits",
-] as const satisfies readonly BulkRankingMetric[];
-
 const METRIC_SET = new Set<string>([
   ...BULK_METRICS,
   "totalGoalScorerHits",
@@ -54,11 +41,8 @@ function dateKeyJST(now: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
-function parseMetricsParam(
-  raw: string | null,
-  wcStage: WcRankingStage | null
-): BulkRankingMetric[] {
-  const defaults = wcStage ? [...WC_BULK_METRICS] : [...BULK_METRICS];
+function parseMetricsParam(raw: string | null): BulkRankingMetric[] {
+  const defaults = [...BULK_METRICS];
   if (!raw?.trim()) return defaults;
   const parts = raw
     .split(",")
@@ -74,10 +58,6 @@ function parseMetricsParam(
 
 function metricsToKey(metrics: BulkRankingMetric[]): string {
   return [...new Set(metrics)].sort().join(",");
-}
-
-function wcStageCacheKey(wc: WcRankingStage | null): string {
-  return wc ?? "__no_wc__";
 }
 
 async function uidFromBearer(req: Request): Promise<string | null> {
@@ -97,26 +77,17 @@ const getCachedBulk = unstable_cache(
   async (
     uidKey: string,
     metricsKey: string,
-    wcStageKey: string,
     snapshotGenerationKey: string
   ) => {
     const uid = uidKey === "__anon__" ? undefined : uidKey;
     const parts = metricsKey
       .split(",")
       .filter((m): m is BulkRankingMetric => METRIC_SET.has(m));
-    const defaults =
-      wcStageKey !== "__no_wc__" ? [...WC_BULK_METRICS] : [...BULK_METRICS];
-    const metrics = (parts.length ? parts : defaults) as BulkRankingMetric[];
-    const wcStage: WcRankingStage | null =
-      wcStageKey === "__no_wc__"
-        ? null
-        : isWcRankingStage(wcStageKey)
-          ? wcStageKey
-          : null;
+    const metrics = (parts.length ? parts : [...BULK_METRICS]) as BulkRankingMetric[];
     void snapshotGenerationKey;
-    return fetchBulkFromFunctions(uid, metrics, wcStage);
+    return fetchBulkFromFunctions(uid, metrics);
   },
-  ["cumulative-ranking-bulk-v15-shared-list"],
+  ["cumulative-ranking-bulk-v16-nba"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -157,24 +128,14 @@ export async function GET(req: Request) {
     const personalOnly =
       searchParams.get("personalOnly") === "1" ||
       searchParams.get("personalOnly") === "true";
-    const rawWcStage = searchParams.get("wcStage");
-    const wcStage: WcRankingStage | null = isWcRankingStage(rawWcStage)
-      ? rawWcStage
-      : null;
-    const metricsList = parseMetricsParam(searchParams.get("metrics"), wcStage);
+    const metricsList = parseMetricsParam(searchParams.get("metrics"));
     const metricsKey = metricsToKey(metricsList);
     const snapshotGeneration =
-      (await loadRankingSnapshotGenerationKey(wcStage)) ??
+      (await loadRankingSnapshotGenerationKey()) ??
       `fallback:${dateKeyJST()}`;
 
     /** 無差別級シーズン（Pro 限定・NBA のみ） */
     if (division === "open") {
-      if (wcStage) {
-        return NextResponse.json(
-          { ok: false, error: "open division is NBA only" },
-          { status: 400 }
-        );
-      }
       const bearerUid = await uidFromBearer(req);
       const uid = bearerUid ?? uidParam;
       if (!uid) {
@@ -183,7 +144,6 @@ export async function GET(req: Request) {
           { status: 403 }
         );
       }
-      // Bearer があるときは必ずその uid を使い、クエリ改ざんを防ぐ
       const gatedUid = bearerUid ?? uid;
       if (!(await assertProUser(gatedUid))) {
         return NextResponse.json(
@@ -210,7 +170,6 @@ export async function GET(req: Request) {
         {
           status: 200,
           headers: {
-            // Pro ゲート後はレスポンス本体が全員共通
             "Cache-Control": `private, max-age=60, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`,
           },
         }
@@ -219,10 +178,6 @@ export async function GET(req: Request) {
 
     const uid = uidParam;
 
-    /**
-     * 互換: personalOnly — My Rank はクライアント cumulative_stats 直読が正。
-     * 残しているのは旧クライアント向け。users merge はしない。
-     */
     if (personalOnly) {
       if (!uid) {
         return NextResponse.json(
@@ -232,13 +187,12 @@ export async function GET(req: Request) {
       }
       const personal = await loadPersonalBulkOverlayFromFirestore(
         uid,
-        metricsList,
-        wcStage
+        metricsList
       );
       return NextResponse.json(
         {
           ok: true,
-          wcStage,
+          wcStage: null,
           snapshotGeneration,
           byMetric: personal,
           myMetricValueDeltas: null,
@@ -263,16 +217,10 @@ export async function GET(req: Request) {
       );
     }
 
-    /**
-     * 一覧は全員共通（uid 無視）。
-     * My Rank はクライアント側 cumulative_stats 1 read。
-     * users の N+1 merge はしない（snapshot に plan/country 焼き込み済み）。
-     */
     void uid;
     const listSource = await getCachedBulk(
       "__anon__",
       metricsKey,
-      wcStageCacheKey(wcStage),
       snapshotGeneration
     );
 
@@ -287,7 +235,7 @@ export async function GET(req: Request) {
       {
         ...data,
         division: "standard",
-        wcStage,
+        wcStage: null,
         snapshotGeneration,
         myMetricValueDeltas: null,
       },

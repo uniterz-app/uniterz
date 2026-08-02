@@ -1,6 +1,5 @@
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export type SnapshotRankMetric =
   | "winRate"
@@ -15,7 +14,6 @@ type MetricRankMap = Partial<Record<SnapshotRankMetric, unknown>>;
 
 export type SnapshotRanksRoot = {
   seasons?: Partial<Record<string, MetricRankMap>>;
-  wc?: Partial<Record<WcRankingStage, MetricRankMap>>;
 };
 
 function isNonEmptyObject(v: unknown): v is Record<string, unknown> {
@@ -31,10 +29,7 @@ function pickBlock(
   return undefined;
 }
 
-/**
- * Firestore dot-path 書き込み（snapshotRanks.wc 等）と
- * nested snapshotRanks.wc の両方を解決する。
- */
+/** Firestore dot-path と nested snapshotRanks.seasons を解決 */
 export function readSnapshotRanksRoot(
   data: Record<string, unknown> | null | undefined
 ): SnapshotRanksRoot {
@@ -45,28 +40,14 @@ export function readSnapshotRanksRoot(
     seasons: pickBlock(nested?.seasons, data["snapshotRanks.seasons"]) as
       | Partial<Record<string, MetricRankMap>>
       | undefined,
-    wc: pickBlock(nested?.wc, data["snapshotRanks.wc"]) as
-      | Partial<Record<WcRankingStage, MetricRankMap>>
-      | undefined,
   };
 }
 
 export function readStoredRankFromSnapshotRanks(
   data: Record<string, unknown> | null | undefined,
-  metric: SnapshotRankMetric,
-  wcStage: WcRankingStage | null
+  metric: SnapshotRankMetric
 ): number | null {
   const snapshotRanks = readSnapshotRanksRoot(data);
-
-  let raw: unknown;
-  if (wcStage) {
-    raw = snapshotRanks.wc?.[wcStage]?.[metric];
-    if (metric === "totalExactHits" && raw == null) {
-      raw = snapshotRanks.wc?.[wcStage]?.totalPrecision;
-    }
-  } else {
-    raw = snapshotRanks.seasons?.[CURRENT_NBA_SEASON_KEY]?.[metric];
-  }
-
+  const raw = snapshotRanks.seasons?.[CURRENT_NBA_SEASON_KEY]?.[metric];
   return coerceTotalPointsRank(raw);
 }

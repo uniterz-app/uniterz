@@ -3,10 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchRankPlayoffTrendClient } from "@/lib/profile/fetchRankPlayoffTrendClient";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import {
-  isWcRankingStage,
-  type WcRankingStage,
-} from "@/lib/rankings/wcRankingStage";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 
 export type PlayoffRankTrendPoint = {
@@ -45,10 +42,7 @@ export function useProfilePlayoffRankTrend(
 ) {
   const enabled = options?.enabled ?? true;
   const rankingLeague = options?.rankingLeague ?? "nba";
-  const wcStage: WcRankingStage =
-    rankingLeague === "worldcup" && isWcRankingStage(options?.wcStage)
-      ? options.wcStage
-      : "overall";
+  const wcStage: WcRankingStage = "overall";
   const seedComplete = options?.seedComplete === true;
   const seedPoints = options?.seedPoints;
   const useSeed =

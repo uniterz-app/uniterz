@@ -145,10 +145,6 @@ import {
   MOBILE_GAMES_CARD_MAX_WIDTH,
 } from "./gamesMobileLayout";
 import {
-  markWcGamesTabAnnouncementSeenNative,
-  readWcGamesTabAnnouncementSeenNative,
-} from "./wcTabAnnouncementSeenNative";
-import {
   liveMarkPillCyberBase,
   liveMarkTextCyberBase,
 } from "../../ui/liveMarkCyberStyles";
@@ -356,7 +352,6 @@ function formatCountdownLabel(startAt: Date, nowMs: number): string {
 }
 
 const LEAGUE_OPTIONS: Array<{ id: SupportedLeague; label: string }> = [
-  { id: "wc", label: "WC" },
   { id: "nba", label: "NBA" },
 ];
 const LEAGUE_LINE_COLOR: Record<SupportedLeague, string> = {
@@ -464,7 +459,6 @@ export default function GamesHomeScreen({
   const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
   const [filterOpen, setFilterOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showWcTabBadge, setShowWcTabBadge] = useState(false);
   const [gamesFilter, setGamesFilter] = useState<GamesFilterState>({
     selectedTeamIds: [],
     matchMode: "any",
@@ -592,10 +586,7 @@ export default function GamesHomeScreen({
     gamesFilter,
     teamNameById,
   ]);
-  const leagueHeaderLabel = useMemo(() => {
-    const key = selectedLeague === "wc" ? "wc" : "nba";
-    return LEAGUE_HEADER_LABEL[key];
-  }, [selectedLeague]);
+  const leagueHeaderLabel = LEAGUE_HEADER_LABEL.nba;
 
   /** 初回チュートリアル — 本番 Games 画面上で進行 */
   useEffect(() => {
@@ -694,10 +685,7 @@ export default function GamesHomeScreen({
           : undefined;
         const preferred = parsePreferredLeague(row?.preferredLeague ?? null);
         if (preferred) {
-          const gamesLeague = preferredLeagueToGamesLeague(preferred);
-          if (gamesLeague === "nba" || gamesLeague === "wc") {
-            setSelectedLeague(gamesLeague);
-          }
+          setSelectedLeague(preferredLeagueToGamesLeague(preferred));
         }
         const name =
           typeof row?.displayName === "string" ? row.displayName.trim() : "";
@@ -722,18 +710,11 @@ export default function GamesHomeScreen({
     };
   }, [authStatus, fUser?.uid, fUser?.displayName, setSelectedLeague]);
 
+  /** 旧 preferredLeague=wc / 保存状態が残っていても NBA に寄せる */
   useEffect(() => {
-    void readWcGamesTabAnnouncementSeenNative().then((seen) => {
-      if (!seen) setShowWcTabBadge(true);
-    });
-  }, []);
+    if (selectedLeague === "wc") setSelectedLeague("nba");
+  }, [selectedLeague, setSelectedLeague]);
 
-  useEffect(() => {
-    if (selectedLeague === "wc" && showWcTabBadge) {
-      void markWcGamesTabAnnouncementSeenNative();
-      setShowWcTabBadge(false);
-    }
-  }, [selectedLeague, showWcTabBadge]);
   const teamRecordById = useTeamRecordMap(games, selectedLeague);
   const formatSideRecord = useCallback(
     (side: unknown, leagueRaw?: unknown) =>
@@ -1760,13 +1741,6 @@ export default function GamesHomeScreen({
                 size="md"
                 accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
                 onPress={() => setMenuOpen(true)}
-                badge={
-                  showWcTabBadge ? (
-                    <View style={styles.menuWcBadge}>
-                      <Text style={styles.menuWcBadgeText}>!</Text>
-                    </View>
-                  ) : null
-                }
               />
             </Animated.View>
           </View>
@@ -2078,7 +2052,7 @@ export default function GamesHomeScreen({
       />
       <SideMenuDrawerNative open={menuOpen} onClose={() => setMenuOpen(false)}>
         <GamesDrawerMenuNative
-          league={selectedLeague === "wc" ? "wc" : "nba"}
+          league="nba"
           language={language}
           onSelectNba={() => {
             setSelectedLeague("nba");
@@ -2151,27 +2125,6 @@ const styles = StyleSheet.create({
     width: 160,
     alignItems: "center",
     zIndex: 10,
-  },
-  menuWcBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#fbbf24",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#fbbf24",
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  menuWcBadgeText: {
-    color: "#451a03",
-    fontSize: 10,
-    fontWeight: "900",
-    lineHeight: 11,
   },
   /** DayStrip チップ単位の进入ラッパー（Web motion.div 相当） */
   dayStripChipAnimWrap: {

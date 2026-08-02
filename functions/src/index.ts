@@ -61,7 +61,7 @@ export const updateTeamRankingsDaily = onSchedule(
 );
 
 /* ============================================================================
- * Cumulative Stats reconcile (15:40) — JST 当日に NBA / WC 試合がある日
+ * Cumulative Stats reconcile (15:40) — JST 当日に NBA 試合がある日
  * 確定時インクリメントの照合。日次合計と不一致なら cumulative_stats を上書き修復。
  * ==========================================================================*/
 
@@ -75,7 +75,7 @@ export const buildCumulativeStatsCron = onSchedule(
   async () => {
     if (!(await hasRankingAggregationScheduledJstToday())) {
       console.log(
-        "[buildCumulativeStatsCron] skip: no NBA/WC games scheduled this JST date"
+        "[buildCumulativeStatsCron] skip: no NBA games scheduled this JST date"
       );
       return;
     }
@@ -84,7 +84,7 @@ export const buildCumulativeStatsCron = onSchedule(
 );
 
 /* ============================================================================
- * Cumulative Ranking Snapshot (16:00) — JST 当日に NBA / WC 試合がある日
+ * Cumulative Ranking Snapshot (16:00) — JST 当日に NBA 試合がある日
  * 連勝はこの時点の「今日確定投稿者 × 連勝>0」でスナップショット化
  * ==========================================================================*/
 
@@ -93,7 +93,7 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
   async () => {
     if (!(await hasRankingAggregationScheduledJstToday())) {
       console.log(
-        "[buildCumulativeRankingSnapshotCron] skip: no NBA/WC games scheduled this JST date"
+        "[buildCumulativeRankingSnapshotCron] skip: no NBA games scheduled this JST date"
       );
       return;
     }
@@ -171,12 +171,6 @@ export const notifyGameStartPushCron = onSchedule(
     }
   }
 );
-
-/* ============================================================================
- * Analytics
- * ==========================================================================*/
-
-export { dailyAnalytics } from "./analytics/daily";
 
 export const onUserCreate = functions.auth.user().onCreate(async (user) => {
   const db = admin.firestore();

@@ -1,6 +1,5 @@
 import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { RankingRow } from "@/lib/rankings/cumulativeRankingRow";
 import { minPostsForWinRate } from "@/lib/rankings/winRateMinPosts";
 
@@ -105,22 +104,13 @@ export function getMyMetricValue(
 
 /** 勝率ランキングの最低投稿数 */
 export function computeWinRateMinPosts(
-  rankingLeague: RankingLeagueSource,
-  wcStage?: WcRankingStage | null
+  _rankingLeague: RankingLeagueSource = "nba"
 ): number {
-  return minPostsForWinRate({ rankingLeague, wcStage });
+  return minPostsForWinRate({});
 }
 
-export function buildRankingsPageKey(input: {
-  metric: MobileMetric;
-  rankingLeague: RankingLeagueSource;
-  wcStage?: WcRankingStage | null;
-}): string {
-  const { metric, rankingLeague, wcStage } = input;
-  if (rankingLeague === "worldcup") {
-    return `wc-${wcStage ?? "overall"}-${metric}`;
-  }
-  return `nba-${metric}`;
+export function buildRankingsPageKey(input: { metric: MobileMetric }): string {
+  return `nba-${input.metric}`;
 }
 
 export function computeRankingListContentReady(input: {
@@ -139,12 +129,6 @@ export function computeRankingHasNoEntries(input: {
   rankingLeague: RankingLeagueSource;
   rankingListCount: number;
 }): boolean {
-  const { listReady, metricReady, rowsLength, rankingLeague, rankingListCount } =
-    input;
-  return (
-    listReady &&
-    metricReady &&
-    (rowsLength === 0 ||
-      (rankingLeague === "worldcup" && rankingListCount === 0))
-  );
+  const { listReady, metricReady, rowsLength } = input;
+  return listReady && metricReady && rowsLength === 0;
 }

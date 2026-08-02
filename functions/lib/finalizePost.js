@@ -4,7 +4,6 @@ exports.finalizePost = finalizePost;
 const firestore_1 = require("firebase-admin/firestore");
 const updateUserStatsV2_1 = require("./updateUserStatsV2");
 const computePostSettlement_1 = require("./computePostSettlement");
-const resolveWcStage_1 = require("./shared/resolveWcStage");
 async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
     const p = postDoc.data();
@@ -31,11 +30,6 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         streakResultMap,
     });
     const countsForRanking = (game === null || game === void 0 ? void 0 : game.countsForRanking) !== false;
-    const resolvedWcStage = (0, resolveWcStage_1.resolveWcStageFromGame)({
-        knockout: game === null || game === void 0 ? void 0 : game.knockout,
-        roundLabel: game === null || game === void 0 ? void 0 : game.roundLabel,
-        wcStage: game === null || game === void 0 ? void 0 : game.wcStage,
-    });
     const now = firestore_1.Timestamp.now();
     const isWc = String((_a = game.league) !== null && _a !== void 0 ? _a : "").toLowerCase() === "wc";
     const matchGoalScorers = [];
@@ -89,7 +83,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
                 totalError: baseScore.totalError,
                 exactMatch: Boolean(baseScore.exactMatch),
             },
-        }, status: "final", settledAt: now, updatedAt: firestore_1.FieldValue.serverTimestamp(), seasonPhase: (_b = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _b !== void 0 ? _b : null, seasonRound: (_c = game === null || game === void 0 ? void 0 : game.seasonRound) !== null && _c !== void 0 ? _c : null, wcStage: resolvedWcStage }));
+        }, status: "final", settledAt: now, updatedAt: firestore_1.FieldValue.serverTimestamp(), seasonPhase: (_b = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _b !== void 0 ? _b : null, seasonRound: (_c = game === null || game === void 0 ? void 0 : game.seasonRound) !== null && _c !== void 0 ? _c : null, wcStage: null }));
     const uid = p.authorUid;
     userUpdateTasks.push((0, updateUserStatsV2_1.applyPostToUserStatsV2)({
         uid,
@@ -106,11 +100,11 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         streakBonus,
         goalScorerBonus,
         goalScorerHit: goalScorerBonus > 0,
-        exactHit: isWc && Boolean(baseScore.exactMatch),
+        exactHit: false,
         points: totalPoints,
         countsForRanking,
         seasonPhase: (_f = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _f !== void 0 ? _f : null,
-        wcStage: resolvedWcStage,
+        wcStage: null,
         homeTeamId: (_j = (_g = game.homeTeamId) !== null && _g !== void 0 ? _g : (_h = p.home) === null || _h === void 0 ? void 0 : _h.teamId) !== null && _j !== void 0 ? _j : null,
         awayTeamId: (_m = (_k = game.awayTeamId) !== null && _k !== void 0 ? _k : (_l = p.away) === null || _l === void 0 ? void 0 : _l.teamId) !== null && _m !== void 0 ? _m : null,
     }));

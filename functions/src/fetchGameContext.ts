@@ -1,8 +1,6 @@
 // functions/src/fetchGameContext.ts
 import { Firestore } from "firebase-admin/firestore";
 import type { Timestamp } from "firebase-admin/firestore";
-import { resolveWcStageFromGame } from "./shared/resolveWcStage";
-
 /* =========================
  * Types
  * ========================= */
@@ -89,11 +87,7 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
       typeof after?.wcKnockoutMatchId === "string"
         ? after.wcKnockoutMatchId
         : null,
-    wcStage: resolveWcStageFromGame({
-      knockout: after?.knockout === true,
-      roundLabel: after?.roundLabel ?? null,
-      wcStage: after?.wcStage ?? null,
-    }),
+    wcStage: null,
     goalScorers: after?.goalScorers ?? null,
     leadingScorers: after?.leadingScorers ?? null,
   };

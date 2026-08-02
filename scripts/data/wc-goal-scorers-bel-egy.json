@@ -1,8 +1,0 @@
-{
-  "homeScore": 1,
-  "awayScore": 1,
-  "scorers": [
-    { "playerId": "egy-ashour", "teamId": "wc-egy", "minute": 20 },
-    { "playerId": "egy-hany", "teamId": "wc-egy", "minute": 66, "ownGoal": true }
-  ]
-}

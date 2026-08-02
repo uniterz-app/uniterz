@@ -41,14 +41,14 @@ export default function RankIntelPageShell({
 
   const rankingLeague = useMemo(() => {
     const raw = searchParams.get(RANKINGS_TAB_LEAGUE_PARAM);
-    return isRankingLeagueSource(raw) ? raw : "worldcup";
+    return isRankingLeagueSource(raw) ? raw : "nba";
   }, [searchParams]);
 
   const wcStage = useMemo(() => {
     const raw = searchParams.get(RANKINGS_TAB_WC_STAGE_PARAM);
     if (isWcRankingStage(raw)) return raw;
-    return rankingLeague === "worldcup" ? "main" : null;
-  }, [rankingLeague, searchParams]);
+    return null;
+  }, [searchParams]);
 
   const isPro = sessionUser.plan === "pro";
   const enabled = !!fUser?.uid && isPro;

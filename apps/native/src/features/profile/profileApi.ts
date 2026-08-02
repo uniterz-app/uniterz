@@ -248,18 +248,11 @@ function buildProfileStatsQuery(
   ctx?: ProfileStatsFetchContext
 ): URLSearchParams {
   const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "nba";
-  const safeWcStage: WcRankingStage | undefined =
-    rankingLeague === "worldcup"
-      ? ctx?.wcStage && isWcRankingStage(ctx.wcStage)
-        ? ctx.wcStage
-        : "overall"
-      : undefined;
   const qs = new URLSearchParams({
     uid,
     parts,
   });
   if (rankingLeague) qs.set("league", rankingLeague);
-  if (safeWcStage) qs.set("wcStage", safeWcStage);
   if (rankingLeague === "nba" && ctx?.nbaPeriod) {
     qs.set("period", ctx.nbaPeriod);
   }
@@ -557,45 +550,9 @@ export async function fetchNbaSeasonRankTrendFirestore(
 /** NBA は cumulative_stats / rankSnapshotHistory 公開読取（本番 API 不要） */
 export async function fetchRankPlayoffTrend(
   uid: string,
-  ctx?: ProfileStatsStreakContext
+  _ctx?: ProfileStatsStreakContext
 ): Promise<RankPlayoffTrendPointNative[]> {
-  if ((ctx?.rankingLeague ?? "nba") === "nba") {
-    return fetchNbaSeasonRankTrendFirestore(uid);
-  }
-
-  const base = getUniterzApiBaseUrl();
-  if (!base) return [];
-  const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "nba";
-  const wcStage: WcRankingStage =
-    rankingLeague === "worldcup"
-      ? ctx?.wcStage && isWcRankingStage(ctx.wcStage)
-        ? ctx.wcStage
-        : "overall"
-      : "overall";
-  const qs = new URLSearchParams({ uid, league: rankingLeague });
-  if (rankingLeague === "worldcup") {
-    qs.set("wcStage", wcStage);
-  }
-  const url = `${base}/api/profile/rank-playoff-trend?${qs.toString()}`;
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    const json = (await res.json()) as {
-      ok?: boolean;
-      seasonKey?: string | null;
-      points?: { dateKey: string; rank: number }[];
-    };
-    if (!res.ok || json.ok !== true || !Array.isArray(json.points)) return [];
-    if (
-      rankingLeague === "nba" &&
-      typeof json.seasonKey === "string" &&
-      json.seasonKey !== CURRENT_NBA_SEASON_KEY
-    ) {
-      return [];
-    }
-    return normalizeRankTrendPoints(json.points);
-  } catch {
-    return [];
-  }
+  return fetchNbaSeasonRankTrendFirestore(uid);
 }
 
 /** 欠けた profileCharts をサーバーで埋めて返す（以降は cumulative 1 read） */

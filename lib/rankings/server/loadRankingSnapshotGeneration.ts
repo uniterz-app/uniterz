@@ -3,10 +3,8 @@ import {
   buildRankingSnapshotGenerationKey,
   type RankingSnapshotGenerationMeta,
 } from "@/lib/rankings/rankingSnapshotGeneration";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 type GenerationDoc = {
-  wc?: RankingSnapshotGenerationMeta;
   nba?: RankingSnapshotGenerationMeta;
 };
 
@@ -23,9 +21,7 @@ function metaFromBlock(raw: unknown): RankingSnapshotGenerationMeta | null {
 }
 
 /** cumulative_ranking_snapshots/_generation から一覧キャッシュ世代を取得 */
-export async function loadRankingSnapshotGenerationKey(
-  wcStage: WcRankingStage | null
-): Promise<string | null> {
+export async function loadRankingSnapshotGenerationKey(): Promise<string | null> {
   const snap = await getAdminDb()
     .collection("cumulative_ranking_snapshots")
     .doc("_generation")
@@ -33,6 +29,6 @@ export async function loadRankingSnapshotGenerationKey(
   if (!snap.exists) return null;
 
   const d = snap.data() as GenerationDoc;
-  const meta = wcStage ? metaFromBlock(d.wc) : metaFromBlock(d.nba);
-  return buildRankingSnapshotGenerationKey(wcStage, meta);
+  const meta = metaFromBlock(d.nba);
+  return buildRankingSnapshotGenerationKey(meta);
 }

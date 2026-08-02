@@ -288,7 +288,7 @@ export function computeRankGapAnalysis(input: {
   }
 
   const targetTier = resolveNextRankTierMilestone(input.currentRank);
-  const showGoalScorer = input.rankingLeague === "worldcup";
+  const showGoalScorer = false;
   const axes = computeRankGapAxes(input.self, cohort, showGoalScorer);
   const cohortMetricTopPercent = buildCohortMetricTopPercents(
     input.self,

@@ -21,12 +21,9 @@ export type RankShadowCacheDoc = {
 export function buildRankShadowCacheId(input: {
   weekStartDateKey: string;
   rankingLeague: RankingLeagueSource;
-  wcStage: WcRankingStage | null;
   language: Language;
 }): string {
-  const wc = input.wcStage ?? "none";
-  const scope =
-    input.rankingLeague === "worldcup" ? wc : CURRENT_NBA_SEASON_KEY;
+  const scope = CURRENT_NBA_SEASON_KEY;
   return [
     input.weekStartDateKey,
     input.rankingLeague,
@@ -37,12 +34,8 @@ export function buildRankShadowCacheId(input: {
 
 export function buildRankShadowContextKey(input: {
   rankingLeague: RankingLeagueSource;
-  wcStage: WcRankingStage | null;
 }): string {
-  const scope =
-    input.rankingLeague === "worldcup"
-      ? (input.wcStage ?? "none")
-      : CURRENT_NBA_SEASON_KEY;
+  const scope = CURRENT_NBA_SEASON_KEY;
   return [input.rankingLeague, scope].join("_");
 }
 

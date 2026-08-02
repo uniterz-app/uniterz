@@ -117,12 +117,12 @@ export default function TopPodium({
   const metricTag = cyberMetricTag(metric, language);
   const isWebList = base === "/web" && !compact;
   const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
-  const statsLeague = rankingLeague ?? "worldcup";
+  const statsLeague = rankingLeague ?? "nba";
   const statsContext = useMemo(
     () => ({
       rankingLeague: statsLeague,
       wcStage:
-        statsLeague === "worldcup"
+        false
           ? (wcStage ?? ("overall" as const))
           : undefined,
     }),

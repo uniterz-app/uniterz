@@ -165,9 +165,6 @@ function PreviewMenu({ flags }: { flags: Flags }) {
             </BranchRow>
           </div>
         </div>
-        <PreviewItem iconSrc="/games-drawer/wc.png">
-          <span className="uppercase">World Cup</span>
-        </PreviewItem>
       </div>
     </nav>
   );

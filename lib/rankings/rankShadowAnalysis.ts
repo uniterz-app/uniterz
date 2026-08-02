@@ -369,7 +369,7 @@ export function computeRankShadowAnalysis(input: {
     return { ok: false, reason: "cohort_empty" };
   }
 
-  const showGoalScorer = input.rankingLeague === "worldcup";
+  const showGoalScorer = false;
   const selfWeekly = computeShadowWeeklySlice(
     input.selfSlice,
     input.selfAnchorMetrics

@@ -162,7 +162,7 @@ function buildMockGapAnalysis(
     currentRank: preset.rank,
     self: preset.self,
     cohortSlices,
-    rankingLeague: "worldcup",
+    rankingLeague: "nba",
     cutoffRows: [{ rank: targetTier, totalPoints: preset.cohort.pointsSumV3 }],
     language,
   });
@@ -225,7 +225,7 @@ function buildMockShadowAnalysis(
     selfWeekStartRank: preset.priorRank,
     cohortMembers,
     rankProgressPoints: buildMockMyRankProgressPoints(preset.rank, 7),
-    rankingLeague: "worldcup",
+    rankingLeague: "nba",
     language,
     selfUid: "mock-self",
   });

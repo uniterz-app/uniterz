@@ -7,10 +7,6 @@ import {
   type Firestore,
   type Transaction,
 } from "firebase-admin/firestore";
-import {
-  readDailyWcStageBuckets,
-  WC_RANKING_STAGES,
-} from "./dailyWcStageBuckets";
 import { safeRankMetricNum } from "./safeRankMetricNum";
 import {
   CUMULATIVE_RANKING_TOTAL_POSTS_FIELD,
@@ -141,7 +137,6 @@ export function buildCumulativeIncrementFields(
   const points = contrib.points * s;
   const upset = contrib.upsetPoints * s;
   const goalScorer = contrib.goalScorerHit ? s : 0;
-  const wcExact = contrib.isWc && contrib.exactHit ? s : 0;
   const upsetBonus = safeRankMetricNum(contrib.upsetBonus) * s;
   const streakBonus = safeRankMetricNum(contrib.streakBonus) * s;
 
@@ -198,25 +193,6 @@ export function buildCumulativeIncrementFields(
     applyBonusToPath(p);
   }
 
-  if (contrib.isWc && contrib.forRanking) {
-    const stages: Array<"overall" | "qualifying" | "main"> = ["overall"];
-    if (contrib.wcStage === "qualifying") stages.push("qualifying");
-    if (contrib.wcStage === "main") stages.push("main");
-
-    for (const stage of stages) {
-      const w = `rankingByWcStage.${stage}`;
-      out[`${w}.totalPosts`] = FieldValue.increment(posts);
-      out[`${w}.totalWins`] = FieldValue.increment(wins);
-      out[`${w}.totalPoints`] = FieldValue.increment(points);
-      out[`${w}.totalUpset`] = FieldValue.increment(upset);
-      out[`${w}.totalExactHits`] = FieldValue.increment(wcExact);
-      /** 旧ランキングの fallback。新規 UI は totalExactHits を読む。 */
-      out[`${w}.totalPrecision`] = FieldValue.increment(wcExact);
-      out[`${w}.totalGoalScorerHits`] = FieldValue.increment(goalScorer);
-      applyBonusToPath(w);
-    }
-  }
-
   return out;
 }
 
@@ -252,10 +228,6 @@ export type AggregatedCumulative = {
   rankingBySeason: Record<string, RankingTotals>;
   /** シーズンキー → NBA プレーオフ累積（現行シーズン PO のみ） */
   rankingByNbaPlayoffs: Record<string, RankingTotals>;
-  rankingByWcStage: Record<
-    (typeof WC_RANKING_STAGES)[number],
-    RankingTotals
-  >;
 };
 
 export function aggregateCumulativeFromDailyData(
@@ -265,11 +237,6 @@ export function aggregateCumulativeFromDailyData(
   let ranking = emptyRankingTotals();
   const bySeason = new Map<string, Omit<RankingTotals, "winRate">>();
   const byNbaPlayoffs = new Map<string, Omit<RankingTotals, "winRate">>();
-  const byWc = {
-    overall: emptyRankingTotals(),
-    qualifying: emptyRankingTotals(),
-    main: emptyRankingTotals(),
-  };
 
   for (const data of dailyDocs) {
     profile = addRankingTotals(
@@ -312,13 +279,6 @@ export function aggregateCumulativeFromDailyData(
       );
     }
 
-    const wcBuckets = readDailyWcStageBuckets(data);
-    for (const wk of WC_RANKING_STAGES) {
-      byWc[wk] = addRankingTotals(
-        byWc[wk],
-        bucketToInc(wcBuckets[wk], { precisionFromExactHits: true })
-      );
-    }
   }
 
   const rankingBySeason: Record<string, RankingTotals> = {};
@@ -336,11 +296,6 @@ export function aggregateCumulativeFromDailyData(
     ranking: withWinRate(ranking),
     rankingBySeason,
     rankingByNbaPlayoffs,
-    rankingByWcStage: {
-      overall: withWinRate(byWc.overall),
-      qualifying: withWinRate(byWc.qualifying),
-      main: withWinRate(byWc.main),
-    },
   };
 }
 
@@ -355,94 +310,23 @@ export function aggregatedCumulativeMatchesDoc(
   if (!doc) return false;
   const profilePosts = num(doc.totalPosts);
   const profilePoints = num(doc.totalPoints);
-  const wcOverall = (
-    doc.rankingByWcStage as Record<string, Record<string, unknown>> | undefined
-  )?.overall;
-  const wcPosts = num(wcOverall?.totalPosts);
-  const wcPoints = num(wcOverall?.totalPoints);
+  const rankingBlock = doc.ranking as Record<string, unknown> | undefined;
+  const rankPosts = num(rankingBlock?.totalPosts);
+  const rankPoints = num(rankingBlock?.totalPoints);
 
   return (
     totalsClose(profilePosts, agg.profile.totalPosts) &&
     totalsClose(profilePoints, agg.profile.totalPoints) &&
-    totalsClose(wcPosts, agg.rankingByWcStage.overall.totalPosts) &&
-    totalsClose(wcPoints, agg.rankingByWcStage.overall.totalPoints)
+    totalsClose(rankPosts, agg.ranking.totalPosts) &&
+    totalsClose(rankPoints, agg.ranking.totalPoints)
   );
-}
-
-function signedActiveWinStreak(raw: unknown): number {
-  return typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : 0;
-}
-
-export type WcStageStreakSnapshot = {
-  activeWinStreakFootball: number;
-  activeWinStreakByWcStage: { qualifying: number; main: number };
-};
-
-/** user_stats_v2 / cumulative_stats から WC ステージ別連勝を読む */
-export function readWcStageStreakSnapshot(
-  data: Record<string, unknown> | undefined
-): WcStageStreakSnapshot | null {
-  if (!data) return null;
-  const sb = data.streakBySport as { football?: number } | undefined;
-  const footballSigned =
-    data.activeWinStreakFootball ??
-    sb?.football ??
-    data.streakFootball ??
-    0;
-  const byStage = (data.activeWinStreakByWcStage ?? {}) as Record<
-    string,
-    unknown
-  >;
-  const rbs = (data.rankingByWcStage ?? {}) as Record<
-    string,
-    { activeWinStreak?: unknown }
-  >;
-  const qualifying =
-    signedActiveWinStreak(byStage.qualifying) ||
-    signedActiveWinStreak(rbs.qualifying?.activeWinStreak);
-  const main =
-    signedActiveWinStreak(byStage.main) ||
-    signedActiveWinStreak(rbs.main?.activeWinStreak);
-  const activeWinStreakFootball = signedActiveWinStreak(footballSigned);
-  if (
-    activeWinStreakFootball === 0 &&
-    qualifying === 0 &&
-    main === 0
-  ) {
-    return null;
-  }
-  return {
-    activeWinStreakFootball,
-    activeWinStreakByWcStage: { qualifying, main },
-  };
-}
-
-/** reconcile が rankingByWcStage を上書きしても WC 連勝フィールドを残す */
-export function applyWcStageStreakToCumulativePayload(
-  payload: Record<string, unknown>,
-  streak: WcStageStreakSnapshot
-): void {
-  payload.activeWinStreakFootball = streak.activeWinStreakFootball;
-  payload.activeWinStreak = streak.activeWinStreakFootball;
-  payload.activeWinStreakByWcStage = streak.activeWinStreakByWcStage;
-
-  const rbs = payload.rankingByWcStage as Record<
-    string,
-    Record<string, unknown>
-  >;
-  for (const stage of ["qualifying", "main"] as const) {
-    const block = rbs[stage];
-    if (!block) continue;
-    block.activeWinStreak = streak.activeWinStreakByWcStage[stage];
-  }
 }
 
 export function cumulativePayloadFromAggregate(
   uid: string,
   user: Record<string, unknown>,
   agg: AggregatedCumulative,
-  lastReconciledDateKey: string,
-  wcStageStreak?: WcStageStreakSnapshot | null
+  lastReconciledDateKey: string
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     uid,
@@ -462,7 +346,6 @@ export function cumulativePayloadFromAggregate(
     ranking: agg.ranking,
     rankingBySeason: agg.rankingBySeason,
     rankingByNbaPlayoffs: agg.rankingByNbaPlayoffs,
-    rankingByWcStage: agg.rankingByWcStage,
 
     ...rankingTotalPostsFromAggregate(agg.ranking.totalPosts),
 
@@ -470,9 +353,6 @@ export function cumulativePayloadFromAggregate(
     lastReconciledDateKey,
     updatedAt: FieldValue.serverTimestamp(),
   };
-  if (wcStageStreak) {
-    applyWcStageStreakToCumulativePayload(payload, wcStageStreak);
-  }
   return payload;
 }
 
@@ -501,36 +381,22 @@ export async function reconcileCumulativeStatsForUid(
   const agg = aggregateCumulativeFromDailyData(dailyDocs);
   const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
   const userRef = db.doc(`users/${uid}`);
-  const userStatsRef = db.doc(`user_stats_v2/${uid}`);
-  const [cumulativeSnap, userSnap, userStatsSnap] = await Promise.all([
+  const [cumulativeSnap, userSnap] = await Promise.all([
     cumulativeRef.get(),
     userRef.get(),
-    userStatsRef.get(),
   ]);
 
   const user = userSnap.exists ? userSnap.data()! : {};
   const current = cumulativeSnap.exists
     ? (cumulativeSnap.data() as Record<string, unknown>)
     : undefined;
-  const wcStageStreak =
-    readWcStageStreakSnapshot(
-      userStatsSnap.exists
-        ? (userStatsSnap.data() as Record<string, unknown>)
-        : undefined
-    ) ?? readWcStageStreakSnapshot(current);
 
   if (aggregatedCumulativeMatchesDoc(agg, current)) {
     return { updated: false, reason: "unchanged" };
   }
 
   await cumulativeRef.set(
-    cumulativePayloadFromAggregate(
-      uid,
-      user,
-      agg,
-      lastReconciledDateKey,
-      wcStageStreak
-    ),
+    cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey),
     { merge: true }
   );
   return { updated: true, reason: "ok" };

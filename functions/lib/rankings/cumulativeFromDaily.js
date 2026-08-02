@@ -7,13 +7,10 @@ exports.buildCumulativeIncrementFields = buildCumulativeIncrementFields;
 exports.applyCumulativeIncrementInTransaction = applyCumulativeIncrementInTransaction;
 exports.aggregateCumulativeFromDailyData = aggregateCumulativeFromDailyData;
 exports.aggregatedCumulativeMatchesDoc = aggregatedCumulativeMatchesDoc;
-exports.readWcStageStreakSnapshot = readWcStageStreakSnapshot;
-exports.applyWcStageStreakToCumulativePayload = applyWcStageStreakToCumulativePayload;
 exports.cumulativePayloadFromAggregate = cumulativePayloadFromAggregate;
 exports.fetchAllDailyDocsForUid = fetchAllDailyDocsForUid;
 exports.reconcileCumulativeStatsForUid = reconcileCumulativeStatsForUid;
 const firestore_1 = require("firebase-admin/firestore");
-const dailyWcStageBuckets_1 = require("./dailyWcStageBuckets");
 const safeRankMetricNum_1 = require("./safeRankMetricNum");
 const cumulativeSnapshotIndex_1 = require("./cumulativeSnapshotIndex");
 function emptyRankingTotals() {
@@ -80,7 +77,6 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
     const points = contrib.points * s;
     const upset = contrib.upsetPoints * s;
     const goalScorer = contrib.goalScorerHit ? s : 0;
-    const wcExact = contrib.isWc && contrib.exactHit ? s : 0;
     const upsetBonus = (0, safeRankMetricNum_1.safeRankMetricNum)(contrib.upsetBonus) * s;
     const streakBonus = (0, safeRankMetricNum_1.safeRankMetricNum)(contrib.streakBonus) * s;
     const out = {
@@ -132,25 +128,6 @@ function buildCumulativeIncrementFields(contrib, sign = 1) {
         out[`${p}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
         applyBonusToPath(p);
     }
-    if (contrib.isWc && contrib.forRanking) {
-        const stages = ["overall"];
-        if (contrib.wcStage === "qualifying")
-            stages.push("qualifying");
-        if (contrib.wcStage === "main")
-            stages.push("main");
-        for (const stage of stages) {
-            const w = `rankingByWcStage.${stage}`;
-            out[`${w}.totalPosts`] = firestore_1.FieldValue.increment(posts);
-            out[`${w}.totalWins`] = firestore_1.FieldValue.increment(wins);
-            out[`${w}.totalPoints`] = firestore_1.FieldValue.increment(points);
-            out[`${w}.totalUpset`] = firestore_1.FieldValue.increment(upset);
-            out[`${w}.totalExactHits`] = firestore_1.FieldValue.increment(wcExact);
-            /** 旧ランキングの fallback。新規 UI は totalExactHits を読む。 */
-            out[`${w}.totalPrecision`] = firestore_1.FieldValue.increment(wcExact);
-            out[`${w}.totalGoalScorerHits`] = firestore_1.FieldValue.increment(goalScorer);
-            applyBonusToPath(w);
-        }
-    }
     return out;
 }
 function applyCumulativeIncrementInTransaction(tx, cumulativeRef, user, uid, contrib, sign = 1) {
@@ -163,11 +140,6 @@ function aggregateCumulativeFromDailyData(dailyDocs) {
     let ranking = emptyRankingTotals();
     const bySeason = new Map();
     const byNbaPlayoffs = new Map();
-    const byWc = {
-        overall: emptyRankingTotals(),
-        qualifying: emptyRankingTotals(),
-        main: emptyRankingTotals(),
-    };
     for (const data of dailyDocs) {
         profile = addRankingTotals(profile, bucketToInc(data.all));
         const rankBucket = (_a = data.ranking) !== null && _a !== void 0 ? _a : data.all;
@@ -184,10 +156,6 @@ function aggregateCumulativeFromDailyData(dailyDocs) {
                 continue;
             byNbaPlayoffs.set(seasonKey, addRankingTotals((_e = byNbaPlayoffs.get(seasonKey)) !== null && _e !== void 0 ? _e : emptyRankingTotals(), bucketToInc(bucket)));
         }
-        const wcBuckets = (0, dailyWcStageBuckets_1.readDailyWcStageBuckets)(data);
-        for (const wk of dailyWcStageBuckets_1.WC_RANKING_STAGES) {
-            byWc[wk] = addRankingTotals(byWc[wk], bucketToInc(wcBuckets[wk], { precisionFromExactHits: true }));
-        }
     }
     const rankingBySeason = {};
     for (const [seasonKey, totals] of bySeason) {
@@ -202,76 +170,27 @@ function aggregateCumulativeFromDailyData(dailyDocs) {
         ranking: withWinRate(ranking),
         rankingBySeason,
         rankingByNbaPlayoffs,
-        rankingByWcStage: {
-            overall: withWinRate(byWc.overall),
-            qualifying: withWinRate(byWc.qualifying),
-            main: withWinRate(byWc.main),
-        },
     };
 }
 function totalsClose(a, b, eps = 0.0001) {
     return Math.abs(a - b) <= eps;
 }
 function aggregatedCumulativeMatchesDoc(agg, doc) {
-    var _a;
     if (!doc)
         return false;
     const profilePosts = num(doc.totalPosts);
     const profilePoints = num(doc.totalPoints);
-    const wcOverall = (_a = doc.rankingByWcStage) === null || _a === void 0 ? void 0 : _a.overall;
-    const wcPosts = num(wcOverall === null || wcOverall === void 0 ? void 0 : wcOverall.totalPosts);
-    const wcPoints = num(wcOverall === null || wcOverall === void 0 ? void 0 : wcOverall.totalPoints);
+    const rankingBlock = doc.ranking;
+    const rankPosts = num(rankingBlock === null || rankingBlock === void 0 ? void 0 : rankingBlock.totalPosts);
+    const rankPoints = num(rankingBlock === null || rankingBlock === void 0 ? void 0 : rankingBlock.totalPoints);
     return (totalsClose(profilePosts, agg.profile.totalPosts) &&
         totalsClose(profilePoints, agg.profile.totalPoints) &&
-        totalsClose(wcPosts, agg.rankingByWcStage.overall.totalPosts) &&
-        totalsClose(wcPoints, agg.rankingByWcStage.overall.totalPoints));
+        totalsClose(rankPosts, agg.ranking.totalPosts) &&
+        totalsClose(rankPoints, agg.ranking.totalPoints));
 }
-function signedActiveWinStreak(raw) {
-    return typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : 0;
-}
-/** user_stats_v2 / cumulative_stats から WC ステージ別連勝を読む */
-function readWcStageStreakSnapshot(data) {
-    var _a, _b, _c, _d, _e, _f, _g;
-    if (!data)
-        return null;
-    const sb = data.streakBySport;
-    const footballSigned = (_c = (_b = (_a = data.activeWinStreakFootball) !== null && _a !== void 0 ? _a : sb === null || sb === void 0 ? void 0 : sb.football) !== null && _b !== void 0 ? _b : data.streakFootball) !== null && _c !== void 0 ? _c : 0;
-    const byStage = ((_d = data.activeWinStreakByWcStage) !== null && _d !== void 0 ? _d : {});
-    const rbs = ((_e = data.rankingByWcStage) !== null && _e !== void 0 ? _e : {});
-    const qualifying = signedActiveWinStreak(byStage.qualifying) ||
-        signedActiveWinStreak((_f = rbs.qualifying) === null || _f === void 0 ? void 0 : _f.activeWinStreak);
-    const main = signedActiveWinStreak(byStage.main) ||
-        signedActiveWinStreak((_g = rbs.main) === null || _g === void 0 ? void 0 : _g.activeWinStreak);
-    const activeWinStreakFootball = signedActiveWinStreak(footballSigned);
-    if (activeWinStreakFootball === 0 &&
-        qualifying === 0 &&
-        main === 0) {
-        return null;
-    }
-    return {
-        activeWinStreakFootball,
-        activeWinStreakByWcStage: { qualifying, main },
-    };
-}
-/** reconcile が rankingByWcStage を上書きしても WC 連勝フィールドを残す */
-function applyWcStageStreakToCumulativePayload(payload, streak) {
-    payload.activeWinStreakFootball = streak.activeWinStreakFootball;
-    payload.activeWinStreak = streak.activeWinStreakFootball;
-    payload.activeWinStreakByWcStage = streak.activeWinStreakByWcStage;
-    const rbs = payload.rankingByWcStage;
-    for (const stage of ["qualifying", "main"]) {
-        const block = rbs[stage];
-        if (!block)
-            continue;
-        block.activeWinStreak = streak.activeWinStreakByWcStage[stage];
-    }
-}
-function cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey, wcStageStreak) {
+function cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey) {
     var _a, _b, _c, _d;
-    const payload = Object.assign(Object.assign({ uid, displayName: (_a = user.displayName) !== null && _a !== void 0 ? _a : "user", handle: (_b = user.handle) !== null && _b !== void 0 ? _b : null, photoURL: (_c = user.photoURL) !== null && _c !== void 0 ? _c : null, countryCode: (_d = user.countryCode) !== null && _d !== void 0 ? _d : null, plan: user.plan === "pro" ? "pro" : "free", totalPosts: agg.profile.totalPosts, totalWins: agg.profile.totalWins, totalPoints: agg.profile.totalPoints, totalUpset: agg.profile.totalUpset, totalPrecision: agg.profile.totalPrecision, winRate: agg.profile.winRate, ranking: agg.ranking, rankingBySeason: agg.rankingBySeason, rankingByNbaPlayoffs: agg.rankingByNbaPlayoffs, rankingByWcStage: agg.rankingByWcStage }, (0, cumulativeSnapshotIndex_1.rankingTotalPostsFromAggregate)(agg.ranking.totalPosts)), { cumulativeLiveUpdates: true, lastReconciledDateKey, updatedAt: firestore_1.FieldValue.serverTimestamp() });
-    if (wcStageStreak) {
-        applyWcStageStreakToCumulativePayload(payload, wcStageStreak);
-    }
+    const payload = Object.assign(Object.assign({ uid, displayName: (_a = user.displayName) !== null && _a !== void 0 ? _a : "user", handle: (_b = user.handle) !== null && _b !== void 0 ? _b : null, photoURL: (_c = user.photoURL) !== null && _c !== void 0 ? _c : null, countryCode: (_d = user.countryCode) !== null && _d !== void 0 ? _d : null, plan: user.plan === "pro" ? "pro" : "free", totalPosts: agg.profile.totalPosts, totalWins: agg.profile.totalWins, totalPoints: agg.profile.totalPoints, totalUpset: agg.profile.totalUpset, totalPrecision: agg.profile.totalPrecision, winRate: agg.profile.winRate, ranking: agg.ranking, rankingBySeason: agg.rankingBySeason, rankingByNbaPlayoffs: agg.rankingByNbaPlayoffs }, (0, cumulativeSnapshotIndex_1.rankingTotalPostsFromAggregate)(agg.ranking.totalPosts)), { cumulativeLiveUpdates: true, lastReconciledDateKey, updatedAt: firestore_1.FieldValue.serverTimestamp() });
     return payload;
 }
 async function fetchAllDailyDocsForUid(db, uid) {
@@ -283,7 +202,6 @@ async function fetchAllDailyDocsForUid(db, uid) {
     return snap.docs.map((d) => d.data());
 }
 async function reconcileCumulativeStatsForUid(db, uid, lastReconciledDateKey) {
-    var _a;
     const dailyDocs = await fetchAllDailyDocsForUid(db, uid);
     if (dailyDocs.length === 0) {
         return { updated: false, reason: "no_daily" };
@@ -291,23 +209,18 @@ async function reconcileCumulativeStatsForUid(db, uid, lastReconciledDateKey) {
     const agg = aggregateCumulativeFromDailyData(dailyDocs);
     const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
     const userRef = db.doc(`users/${uid}`);
-    const userStatsRef = db.doc(`user_stats_v2/${uid}`);
-    const [cumulativeSnap, userSnap, userStatsSnap] = await Promise.all([
+    const [cumulativeSnap, userSnap] = await Promise.all([
         cumulativeRef.get(),
         userRef.get(),
-        userStatsRef.get(),
     ]);
     const user = userSnap.exists ? userSnap.data() : {};
     const current = cumulativeSnap.exists
         ? cumulativeSnap.data()
         : undefined;
-    const wcStageStreak = (_a = readWcStageStreakSnapshot(userStatsSnap.exists
-        ? userStatsSnap.data()
-        : undefined)) !== null && _a !== void 0 ? _a : readWcStageStreakSnapshot(current);
     if (aggregatedCumulativeMatchesDoc(agg, current)) {
         return { updated: false, reason: "unchanged" };
     }
-    await cumulativeRef.set(cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey, wcStageStreak), { merge: true });
+    await cumulativeRef.set(cumulativePayloadFromAggregate(uid, user, agg, lastReconciledDateKey), { merge: true });
     return { updated: true, reason: "ok" };
 }
 //# sourceMappingURL=cumulativeFromDaily.js.map

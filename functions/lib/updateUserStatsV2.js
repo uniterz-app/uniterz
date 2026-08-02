@@ -14,7 +14,7 @@ const db = () => (0, firestore_1.getFirestore)();
 function buildPostCumulativeContribution(opts) {
     var _a, _b, _c;
     const leagueKey = normalizeLeague(opts.league);
-    const forRanking = shouldCountForRanking(opts.countsForRanking);
+    const forRanking = shouldCountForRanking(opts.countsForRanking) && leagueKey !== "wc";
     const phase = (0, nbaSeason_1.normalizeNbaSeasonPhase)(opts.seasonPhase);
     const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forRanking, opts.startAt.toDate(), phase);
     return {
@@ -102,10 +102,9 @@ function recomputeCache(b) {
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
     const { uid, postId, startAt, league, isWin, scoreError, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, wcStage, seasonPhase, homeTeamId, awayTeamId, } = opts;
-    const forRanking = shouldCountForRanking(countsForRanking);
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
-    const isWc = leagueKey === "wc";
+    const forRanking = shouldCountForRanking(countsForRanking) && leagueKey !== "wc";
     const phase = (0, nbaSeason_1.normalizeNbaSeasonPhase)(seasonPhase);
     const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forRanking, startAt.toDate(), phase);
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
@@ -132,7 +131,7 @@ async function applyPostToUserStatsV2(opts) {
             upsetOpportunityCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
             upsetHitCount: firestore_1.FieldValue.increment(upsetHit ? 1 : 0),
             upsetPickCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
-            exactHitCount: firestore_1.FieldValue.increment(isWc && exactHit ? 1 : 0),
+            exactHitCount: firestore_1.FieldValue.increment(0),
             pointsSumV3: firestore_1.FieldValue.increment(points),
             upsetPointsSum: firestore_1.FieldValue.increment(upsetPoints),
             upsetBonusSum: firestore_1.FieldValue.increment(upsetBonus),
@@ -143,9 +142,6 @@ async function applyPostToUserStatsV2(opts) {
         const update = Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (nbaSeasonKey ? { rankingBySeason: { [nbaSeasonKey]: inc } } : {})), (nbaPlayoffsSeasonKey
             ? { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: inc } }
             : {}));
-        if (forRanking && leagueKey === "wc") {
-            update.rankingByWcStage = Object.assign(Object.assign({ overall: inc }, (wcStage === "qualifying" ? { qualifying: inc } : {})), (wcStage === "main" ? { main: inc } : {}));
-        }
         if (leagueKey) {
             update.leagues = Object.assign(Object.assign({}, (update.leagues || {})), { [leagueKey]: inc });
             tx.set(userStatsRef, {
@@ -169,7 +165,7 @@ async function applyPostToUserStatsV2(opts) {
             posts: 1,
             wins: isWin ? 1 : 0,
             scoreErrorSum: scoreError,
-            exactHitCount: isWc && exactHit ? 1 : 0,
+            exactHitCount: 0,
             pointsSumV3: points,
             upsetPointsSum: upsetPoints,
             upsetHitCount: upsetHit ? 1 : 0,

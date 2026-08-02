@@ -1,5 +1,3 @@
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
-
 export const PROFILE_SUMMARY_RANK_METRICS = [
   "totalPoints",
   "totalPrecision",
@@ -25,12 +23,10 @@ export type BulkMetricPayload = {
 async function fetchOneMetricFromFunctions(
   baseUrl: string,
   uid: string | undefined,
-  metric: BulkRankingMetric,
-  wcStage: WcRankingStage | null
+  metric: BulkRankingMetric
 ): Promise<BulkMetricPayload & { metric: BulkRankingMetric }> {
   const url = new URL(baseUrl);
   url.searchParams.set("metric", metric);
-  if (wcStage) url.searchParams.set("wcStage", wcStage);
   if (uid) url.searchParams.set("uid", uid);
 
   const res = await fetch(url.toString(), {
@@ -66,7 +62,6 @@ async function fetchOneMetricFromFunctions(
 export async function fetchBulkFromFunctions(
   uid: string | undefined,
   metrics: BulkRankingMetric[],
-  wcStage: WcRankingStage | null,
   opts?: { personalOnly?: boolean }
 ): Promise<{ ok: true; byMetric: Record<string, BulkMetricPayload> }> {
   const baseUrl =
@@ -79,7 +74,6 @@ export async function fetchBulkFromFunctions(
 
   const combinedUrl = new URL(baseUrl);
   combinedUrl.searchParams.set("metrics", metrics.join(","));
-  if (wcStage) combinedUrl.searchParams.set("wcStage", wcStage);
   if (uid) combinedUrl.searchParams.set("uid", uid);
   if (opts?.personalOnly) combinedUrl.searchParams.set("personalOnly", "1");
 
@@ -112,7 +106,7 @@ export async function fetchBulkFromFunctions(
 
   const results = await Promise.all(
     metrics.map((metric) =>
-      fetchOneMetricFromFunctions(baseUrl, uid, metric, wcStage)
+      fetchOneMetricFromFunctions(baseUrl, uid, metric)
     )
   );
 

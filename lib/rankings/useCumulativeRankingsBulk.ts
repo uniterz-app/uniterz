@@ -37,7 +37,7 @@ const DEFERRED_RANKING_METRICS_WC = [
 ] as const;
 
 function refetchAllMetrics(wcStage: WcRankingStage | null): string {
-  return allRankingMetricsParam(wcStage);
+  return allRankingMetricsParam();
 }
 
 export type BulkMetricPayload = {

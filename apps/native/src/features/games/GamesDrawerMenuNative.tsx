@@ -17,7 +17,7 @@ const ICONS = {
 } as const;
 
 type Props = {
-  league: "nba" | "wc";
+  league: "nba";
   onSelectNba: () => void;
   onSelectAwardsPredict: () => void;
   onSelectStandingsPredict: () => void;

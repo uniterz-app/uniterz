@@ -18,7 +18,7 @@ type Props = {
   metric: MobileMetric;
   setMetric: (v: MobileMetric) => void;
   language?: Language;
-  rankingLeague?: "nba" | "worldcup";
+  rankingLeague?: "nba";
   gridColumns?: 3;
   /** @deprecated モバイルも斜めタブに統一 */
   compactMobile?: boolean;
@@ -29,7 +29,7 @@ type Props = {
 function formatLabel(
   key: MobileMetric,
   lang: Language,
-  rankingLeague?: "nba" | "worldcup"
+  rankingLeague?: "nba"
 ) {
   if (key === "upsetScore") return upsetShortLabel(lang);
   return metricLabel(key, lang, rankingLeague);

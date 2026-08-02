@@ -6,7 +6,6 @@ import {
 } from "@/lib/rankings/nbaSeason";
 import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import { readStoredRankFromSnapshotRanks } from "@/lib/rankings/server/readSnapshotRanksFromCumulative";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export type ProfileSummaryRanks = {
   totalPrecision: number | null;
@@ -31,7 +30,6 @@ type RankMetric = (typeof RANK_METRICS)[number];
 
 type HistoryDoc = {
   seasons?: Partial<Record<string, Partial<Record<RankMetric, unknown>>>>;
-  wc?: Partial<Record<WcRankingStage, Partial<Record<RankMetric, unknown>>>>;
 };
 
 function safeDenominator(v: unknown): number | null {
@@ -57,35 +55,25 @@ function resolveParticipantCount(
   return totalCount;
 }
 
-function rankingSnapshotDocId(
-  metric: RankMetric,
-  wcStage?: WcRankingStage
-): string {
-  if (wcStage) return `wc_${wcStage}_${metric}`;
+function rankingSnapshotDocId(metric: RankMetric): string {
   return nbaSeasonSnapshotDocId(CURRENT_NBA_SEASON_KEY, metric);
 }
 
 function readStoredRank(
   cumulative: Record<string, unknown> | null | undefined,
-  metric: RankMetric,
-  wcStage?: WcRankingStage
+  metric: RankMetric
 ): number | null {
-  return readStoredRankFromSnapshotRanks(cumulative, metric, wcStage ?? null);
+  return readStoredRankFromSnapshotRanks(cumulative, metric);
 }
 
 function readHistoryMetricBlock(
-  data: HistoryDoc | undefined,
-  wcStage?: WcRankingStage
+  data: HistoryDoc | undefined
 ): Partial<Record<RankMetric, unknown>> | undefined {
   if (!data) return undefined;
-  if (wcStage) return data.wc?.[wcStage];
   return data.seasons?.[CURRENT_NBA_SEASON_KEY];
 }
 
-async function loadHistoryRanks(
-  uid: string,
-  wcStage?: WcRankingStage
-): Promise<{
+async function loadHistoryRanks(uid: string): Promise<{
   ranks: Partial<Record<RankMetric, number | null>>;
   totalPointsDelta: number | null;
 }> {
@@ -98,11 +86,8 @@ async function loadHistoryRanks(
   const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : null;
   if (!latest) return { ranks: {}, totalPointsDelta: null };
 
-  const latestBlock = readHistoryMetricBlock(latest.data as HistoryDoc, wcStage);
-  const prevBlock = readHistoryMetricBlock(
-    prev?.data as HistoryDoc | undefined,
-    wcStage
-  );
+  const latestBlock = readHistoryMetricBlock(latest.data as HistoryDoc);
+  const prevBlock = readHistoryMetricBlock(prev?.data as HistoryDoc | undefined);
 
   const ranks: Partial<Record<RankMetric, number | null>> = {};
   for (const metric of RANK_METRICS) {
@@ -122,10 +107,9 @@ async function loadHistoryRanks(
 }
 
 async function loadSnapshotTotalCount(
-  metric: RankMetric,
-  wcStage?: WcRankingStage
+  metric: RankMetric
 ): Promise<number | null> {
-  const docId = rankingSnapshotDocId(metric, wcStage);
+  const docId = rankingSnapshotDocId(metric);
   const snap = await getAdminDb()
     .collection("cumulative_ranking_snapshots")
     .doc(docId)
@@ -149,7 +133,6 @@ function resolveMetricRank(
  */
 export async function fetchProfileSummaryRanks(
   uid: string,
-  wcStage?: WcRankingStage,
   cumulativeData?: Record<string, unknown> | null
 ): Promise<ProfileSummaryRanks> {
   try {
@@ -160,14 +143,14 @@ export async function fetchProfileSummaryRanks(
     }
 
     const [history, totalPointsDenominatorRaw] = await Promise.all([
-      loadHistoryRanks(uid, wcStage),
-      loadSnapshotTotalCount("totalPoints", wcStage),
+      loadHistoryRanks(uid),
+      loadSnapshotTotalCount("totalPoints"),
     ]);
 
     const storedRanks = Object.fromEntries(
       RANK_METRICS.map((metric) => [
         metric,
-        readStoredRank(cumulative, metric, wcStage),
+        readStoredRank(cumulative, metric),
       ])
     ) as Record<RankMetric, number | null>;
 

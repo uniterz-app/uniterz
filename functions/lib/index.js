@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.dailyAnalytics = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildWeeklyReportsManualV2 = exports.rebuildWeeklyReportsCronV2 = exports.rebuildMonthlyReportsManualV2 = exports.rebuildMonthlyReportsCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildWeeklyReportsManualV2 = exports.rebuildWeeklyReportsCronV2 = exports.rebuildMonthlyReportsManualV2 = exports.rebuildMonthlyReportsCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-admin/firestore");
@@ -86,7 +86,7 @@ exports.updateTeamRankingsDaily = (0, scheduler_1.onSchedule)({ schedule: "0 16 
     await (0, runTeamRankingsCron_1.runTeamRankingsCronIfNbaGamesToday)();
 });
 /* ============================================================================
- * Cumulative Stats reconcile (15:40) — JST 当日に NBA / WC 試合がある日
+ * Cumulative Stats reconcile (15:40) — JST 当日に NBA 試合がある日
  * 確定時インクリメントの照合。日次合計と不一致なら cumulative_stats を上書き修復。
  * ==========================================================================*/
 exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({
@@ -96,19 +96,19 @@ exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({
     timeoutSeconds: 540,
 }, async () => {
     if (!(await (0, hasRankingAggregationScheduledJstToday_1.hasRankingAggregationScheduledJstToday)())) {
-        console.log("[buildCumulativeStatsCron] skip: no NBA/WC games scheduled this JST date");
+        console.log("[buildCumulativeStatsCron] skip: no NBA games scheduled this JST date");
         return;
     }
     await (0, buildCumulativeStats_1.buildCumulativeStats)();
 });
 /* ============================================================================
- * Cumulative Ranking Snapshot (16:00) — JST 当日に NBA / WC 試合がある日
+ * Cumulative Ranking Snapshot (16:00) — JST 当日に NBA 試合がある日
  * 連勝はこの時点の「今日確定投稿者 × 連勝>0」でスナップショット化
  * ==========================================================================*/
 exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "0 16 * * *", timeZone: "Asia/Tokyo" }, async () => {
     var _a, _b;
     if (!(await (0, hasRankingAggregationScheduledJstToday_1.hasRankingAggregationScheduledJstToday)())) {
-        console.log("[buildCumulativeRankingSnapshotCron] skip: no NBA/WC games scheduled this JST date");
+        console.log("[buildCumulativeRankingSnapshotCron] skip: no NBA games scheduled this JST date");
         return;
     }
     const snapshotResult = await (0, buildCumulativeRankingSnapshot_1.buildCumulativeRankingSnapshot)();
@@ -168,11 +168,6 @@ exports.notifyGameStartPushCron = (0, scheduler_1.onSchedule)({ schedule: "*/10 
         console.error("[notifyGameStartPushCron] failed", err);
     }
 });
-/* ============================================================================
- * Analytics
- * ==========================================================================*/
-var daily_1 = require("./analytics/daily");
-Object.defineProperty(exports, "dailyAnalytics", { enumerable: true, get: function () { return daily_1.dailyAnalytics; } });
 exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
     const db = firebase_1.admin.firestore();
     await db.collection("users").doc(user.uid).set({

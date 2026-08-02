@@ -95,15 +95,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [menuOpen, setMenuOpen] = useState(false);
   const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
-  const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("nba");
+  const rankingsLeague = "nba" as const;
   const [nbaBoard, setNbaBoard] = useState<NbaRankingBoard>("regular");
   const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("season");
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const wcStageForHook: WcRankingStage | null = null;
-
-  useEffect(() => {
-    if (rankingsLeague === "wc") setRankingsLeague("nba");
-  }, [rankingsLeague]);
 
   /** Regular / PRO LEAGUE は Season・Weekly・Monthly。Playoffs はラウンド別。 */
   const showNbaPeriodTabs =
@@ -120,11 +116,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   const standardBulk = useNativeCumulativeRankingsBulk(
     "playoffs",
-    rankingsLeague === "wc"
-      ? "overall"
-      : nbaBoard === "playoffs"
-        ? round
-        : "overall",
+    nbaBoard === "playoffs" ? round : "overall",
     wcStageForHook
   );
   const openSeasonBulk = useNativeOpenSeasonRankingsBulk(useOpenSeasonBoard);
@@ -146,7 +138,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const language = user.language;
   const t = rankingsTexts(language);
 
-  const rankingLeagueSource = rankingsLeague === "wc" ? "worldcup" : "nba";
+  const rankingLeagueSource = "nba" as const;
 
   useEffect(() => {
     if (rankingsLeague !== "nba" && nbaBoard !== "regular") {
@@ -220,7 +212,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   }, [apiKey, ensureMetric]);
 
   const precApiKey =
-    rankingsLeague === "wc" ? "totalExactHits" : "totalGoalScorerHits";
+    "totalGoalScorerHits";
 
   useEffect(() => {
     if (!listReady) return;
@@ -290,10 +282,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   const winRateMinPosts = usePeriodBoard
     ? periodWinRateMinPosts(rankingPeriod as Exclude<RankingPeriod, "season">)
-    : computeWinRateMinPosts(
-        rankingsLeague === "wc" ? "worldcup" : "nba",
-        wcStageForHook
-      );
+    : computeWinRateMinPosts("nba");
   const rankingHasNoEntries =
     listReady && (rows.length === 0 || rankingListCount === 0);
 
@@ -328,13 +317,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const pageTitle =
     nbaBoard === "open"
       ? t.divisionOpen
-      : nbaBoard === "playoffs" && rankingsLeague === "nba"
+      : nbaBoard === "playoffs"
         ? t.nbaBoardPlayoffs
-        : rankingsLeague === "nba"
-          ? t.nbaBoardRegular
-          : rankingsLeague === "wc"
-            ? t.titleWorldCup
-            : t.title;
+        : t.nbaBoardRegular;
 
   const myTotalPoints =
     typeof myStatsRow?.totalPoints === "number" ? myStatsRow.totalPoints : 0;
@@ -482,11 +467,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 leagueLabel={
                   nbaBoard === "open"
                     ? "PRO LEAGUE"
-                    : nbaBoard === "playoffs" && rankingsLeague === "nba"
+                    : nbaBoard === "playoffs"
                       ? "PLAYOFFS"
-                      : rankingsLeague === "wc"
-                        ? "WORLD CUP"
-                        : "NBA"
+                      : "NBA"
                 }
                 onShareStateChange={setRankShare}
                 rankTierGap={myRankCardTier === "pro" ? rankTierGap : null}
@@ -525,7 +508,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 metric={metric}
                 onChange={setMetric}
                 language={language}
-                gridColumns={rankingsLeague === "wc" ? 3 : undefined}
+                gridColumns={undefined}
                 tabTheme={
                   nbaBoard === "open" ? PRO_LEAGUE_TAB_THEME : undefined
                 }
@@ -595,18 +578,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           league={rankingsLeague}
           nbaBoard={nbaBoard}
           onChange={() => {
-            setRankingsLeague("nba");
             setNbaBoard("regular");
             setMenuOpen(false);
           }}
           onSelectNbaRegular={() => {
-            setRankingsLeague("nba");
             setNbaBoard("regular");
             setCategory("playoffs");
             setMenuOpen(false);
           }}
           onSelectNbaPlayoffs={() => {
-            setRankingsLeague("nba");
             setNbaBoard("playoffs");
             setCategory("playoffs");
             setMenuOpen(false);

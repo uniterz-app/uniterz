@@ -234,7 +234,6 @@ async function loadUserProfiles(
 async function computeRankShadowAnalysisLive(input: {
   uid: string;
   rankingLeague: RankingLeagueSource;
-  wcStage: WcRankingStage | null;
   language: Language;
 }): Promise<RankShadowAnalysis | { ok: false; reason: string }> {
   const baseUrl =
@@ -246,18 +245,13 @@ async function computeRankShadowAnalysisLive(input: {
 
   const context: RankHistoryContext & { rankingLeague: RankingLeagueSource } = {
     rankingLeague: input.rankingLeague,
-    wcStage: input.wcStage,
   };
 
   const weekStartDateKey = resolveShadowWeekStartDateKey();
   const bandAnchorDateKey = resolveShadowBandAnchorDateKey();
   const metricAnchorDateKey = resolveShadowMetricAnchorDateKey();
 
-  const bulk = await fetchBulkFromFunctions(
-    input.uid,
-    ["totalPoints"],
-    input.wcStage
-  );
+  const bulk = await fetchBulkFromFunctions(input.uid, ["totalPoints"]);
   const bundle = bulk.byMetric.totalPoints;
   if (!bundle?.ok) {
     return { ok: false, reason: "ranking_unavailable" };
@@ -299,10 +293,7 @@ async function computeRankShadowAnalysisLive(input: {
       loadUserProfiles(cohortUids),
     ]);
 
-  const selfSlice = readRankGapStatsSlice(cumulativeByUid.get(input.uid), {
-    rankingLeague: input.rankingLeague,
-    wcStage: input.wcStage,
-  });
+  const selfSlice = readRankGapStatsSlice(cumulativeByUid.get(input.uid));
   if (!selfSlice || selfSlice.posts <= 0) {
     return { ok: false, reason: "self_stats_unavailable" };
   }
@@ -366,7 +357,6 @@ async function computeRankShadowAnalysisLive(input: {
 export async function fetchRankShadowAnalysis(input: {
   uid: string;
   rankingLeague: RankingLeagueSource;
-  wcStage: WcRankingStage | null;
   language: Language;
 }): Promise<RankShadowAnalysis | { ok: false; reason: string }> {
   const weekStartDateKey = resolveShadowWeekStartDateKey();
@@ -375,7 +365,6 @@ export async function fetchRankShadowAnalysis(input: {
   const cacheId = buildRankShadowCacheId({
     weekStartDateKey,
     rankingLeague: input.rankingLeague,
-    wcStage: input.wcStage,
     language: input.language,
   });
 

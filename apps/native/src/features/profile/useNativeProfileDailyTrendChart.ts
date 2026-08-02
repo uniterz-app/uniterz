@@ -72,7 +72,6 @@ export function useNativeProfileDailyTrendChart(
     const uid = targetUid;
     const ctx = {
       rankingLeague: trendCtx.rankingLeague,
-      wcStage: trendCtx.wcStage,
       ...(trendCtx.nbaPeriod ? { nbaPeriod: trendCtx.nbaPeriod } : {}),
     };
     let cancelled = false;
@@ -102,7 +101,6 @@ export function useNativeProfileDailyTrendChart(
     authReady,
     deferIndependentFetch,
     trendCtx.rankingLeague,
-    trendCtx.wcStage,
     trendCtx.nbaPeriod,
   ]);
 

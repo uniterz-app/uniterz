@@ -1,6 +1,5 @@
 /**
- * Web `useAnnouncementsUnread` のログイン時分岐相当（お知らせ未読数）。
- * lib の `@/` 依存を避け、クエリとソートをローカル実装。
+ * Web `useAnnouncementsUnread` 相当 — reads は必要 ID だけ getDoc。
  */
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -13,6 +12,10 @@ import {
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { SYNTHETIC_EVENT_NOTICES } from "../../../../../lib/events/syntheticEventNotices";
+import {
+  loadAnnouncementReadIdsFor,
+  subscribeAnnouncementReadsRefresh,
+} from "../../../../../lib/announcements/loadAnnouncementReadIds";
 
 const FETCH_LIMIT = 100;
 const ANNOUNCEMENTS_LIMIT = 30;
@@ -96,14 +99,21 @@ export function useNativeAnnouncementsUnread(
       setReadIds(new Set());
       return;
     }
-    const colRef = collection(db, `users/${uid}/reads`);
-    const unsub = onSnapshot(colRef, (snap) => {
-      const s = new Set<string>();
-      snap.forEach((d) => s.add(d.id));
-      setReadIds(s);
+    let cancelled = false;
+    const refresh = async () => {
+      const ids = [...mergeSyntheticIdsIntoVisibleSetNative(visibleIds)];
+      const next = await loadAnnouncementReadIdsFor(db, uid, ids);
+      if (!cancelled) setReadIds(next);
+    };
+    void refresh();
+    const unsubRefresh = subscribeAnnouncementReadsRefresh(() => {
+      void refresh();
     });
-    return () => unsub();
-  }, [enabled, authReady, uid]);
+    return () => {
+      cancelled = true;
+      unsubRefresh();
+    };
+  }, [enabled, authReady, uid, visibleIds]);
 
   const unreadCount = useMemo(() => {
     if (!enabled || !authReady) return 0;

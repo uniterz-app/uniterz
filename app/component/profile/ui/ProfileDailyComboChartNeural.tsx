@@ -218,7 +218,7 @@ export default function ProfileDailyComboChartNeural({
   const narrowViewport = useNarrowViewport(layout === "mobile");
   const isCompactChart = layout === "mobile" || narrowViewport || visualEffectsLite;
   const msg = t(language);
-  const isWcTrend = rankingLeague === "worldcup";
+  const isWcTrend = false;
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const chartRows = useMemo(() => buildCumulative(rows), [rows]);
 

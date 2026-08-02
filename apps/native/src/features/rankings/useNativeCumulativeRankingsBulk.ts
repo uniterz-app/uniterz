@@ -180,7 +180,7 @@ async function resolveSharedList(
   }
 
   clearScopeSnapshotGeneration(phase, round, wcStage);
-  const allMetrics = allRankingMetricsParam(wcStage);
+  const allMetrics = allRankingMetricsParam();
   if (metrics === allMetrics) {
     writeScopeSnapshotGeneration(
       phase,

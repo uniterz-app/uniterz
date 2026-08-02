@@ -84,13 +84,9 @@ export function invalidateCumulativeDataCacheClient(uid: string): void {
 
 function ranksFromData(data: Record<string, unknown> | null) {
   return {
-    totalPrecision: readStoredRankFromSnapshotRanks(
-      data,
-      "totalPrecision",
-      null
-    ),
-    totalUpset: readStoredRankFromSnapshotRanks(data, "totalUpset", null),
-    totalPoints: readStoredRankFromSnapshotRanks(data, "totalPoints", null),
+    totalPrecision: readStoredRankFromSnapshotRanks(data, "totalPrecision"),
+    totalUpset: readStoredRankFromSnapshotRanks(data, "totalUpset"),
+    totalPoints: readStoredRankFromSnapshotRanks(data, "totalPoints"),
     totalPointsDenominator: null as number | null,
     rankDeltaPlaces: null as number | null,
   };

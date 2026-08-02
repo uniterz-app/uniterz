@@ -3,6 +3,7 @@ import {
   dayDeltaLabelForMetric,
   type MyRankMetricValueDeltas,
 } from "@/lib/rankings/myRankMetricValueDeltas";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 
 type StatsRow = {
   totalPoints?: number;
@@ -33,26 +34,18 @@ export function buildMyRankMiniMetrics(
     upsetRows?: StatsRow[];
   },
   valueDeltas?: MyRankMetricValueDeltas | null,
-  rankingLeague: "nba" | "worldcup" = "nba"
+  _rankingLeague: RankingLeagueSource = "nba"
 ): MyRankMiniMetric[] | undefined {
   if (!myRow) return undefined;
-
-  // 3 セル目: WC = 完全的中（EXACT） / NBA = 最多得点者的中（SCORER）
-  const isWc = rankingLeague === "worldcup";
-  const hitMetricKey = isWc ? "exactHits" : "goalScorerHits";
 
   const pts = myRow.totalPoints ?? 0;
   const winRaw = myRow.winRate ?? 0;
   const winPct = winRaw <= 1 ? Math.round(winRaw * 100) : Math.round(winRaw);
-  const hits = isWc
-    ? (myRow.totalExactHits ?? myRow.totalPrecision ?? 0)
-    : (myRow.totalGoalScorerHits ?? 0);
+  const hits = myRow.totalGoalScorerHits ?? 0;
   const upset = myRow.totalUpset ?? 0;
 
   const maxPts = maxFromRows(leaders.ptsRows, (r) => r.totalPoints);
-  const maxHits = maxFromRows(leaders.precRows, (r) =>
-    isWc ? r.totalExactHits ?? r.totalPrecision : r.totalGoalScorerHits
-  );
+  const maxHits = maxFromRows(leaders.precRows, (r) => r.totalGoalScorerHits);
   const maxUpset = maxFromRows(leaders.upsetRows, (r) => r.totalUpset);
 
   const ratio = (v: number, max: number) =>
@@ -74,11 +67,11 @@ export function buildMyRankMiniMetrics(
       dayDelta: dayDeltaLabelForMetric("winRate", valueDeltas),
     },
     {
-      key: hitMetricKey,
-      label: isWc ? "EXACT" : "SCORER",
+      key: "goalScorerHits",
+      label: "SCORER",
       value: String(Math.round(hits)),
       pct: ratio(hits, maxHits),
-      dayDelta: dayDeltaLabelForMetric(hitMetricKey, valueDeltas),
+      dayDelta: dayDeltaLabelForMetric("goalScorerHits", valueDeltas),
     },
     {
       key: "upsetScore",
@@ -90,14 +83,12 @@ export function buildMyRankMiniMetrics(
   ];
 }
 
-/** 4 指標バーのリーダー行がすべて揃ったか（PTS / EXACT|SCORER / UPSET の max 計算用） */
+/** 4 指標バーのリーダー行がすべて揃ったか（PTS / SCORER / UPSET の max 計算用） */
 export function isMyRankMiniMetricsReady(
   byMetric?: Record<string, { rows?: unknown[] } | undefined> | null,
-  rankingLeague: "nba" | "worldcup" = "nba"
+  _rankingLeague: RankingLeagueSource = "nba"
 ): boolean {
   if (!Array.isArray(byMetric?.totalPoints?.rows)) return false;
   if (!Array.isArray(byMetric?.totalUpset?.rows)) return false;
-  const hitKey =
-    rankingLeague === "worldcup" ? "totalExactHits" : "totalGoalScorerHits";
-  return Array.isArray(byMetric?.[hitKey]?.rows);
+  return Array.isArray(byMetric?.totalGoalScorerHits?.rows);
 }

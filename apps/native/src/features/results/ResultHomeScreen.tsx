@@ -71,7 +71,6 @@ import {
   isDefaultResultListFilters,
   postMatchesResultListFilters,
 } from "../../../../../lib/result/resultListFilterMatch";
-import UnderlineTabsNative from "../../ui/UnderlineTabsNative";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 import { useResultLeagueFlagsNative, type ResultListLeagueTab } from "./useResultLeagueFlagsNative";
@@ -658,19 +657,7 @@ export default function ResultHomeScreen({
       onFilterPress={onFilterPress}
       filterPanelOpen={resultFilters.detailOpen}
       filterActive={!isDefaultResultListFilters(resultFilters)}
-      leagueTabs={
-        showResultLeagueTabs ? (
-          <UnderlineTabsNative
-            split
-            items={[
-              { id: "nba" as ResultListLeagueTab, label: "NBA" },
-              { id: "wc" as ResultListLeagueTab, label: "WC" },
-            ]}
-            activeId={leagueTab ?? defaultLeagueTab}
-            onChange={setLeagueTab}
-          />
-        ) : null
-      }
+      leagueTabs={null}
       filterPanel={
         <ResultListFiltersNative
           language={language}

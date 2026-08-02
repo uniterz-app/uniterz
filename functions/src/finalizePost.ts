@@ -2,8 +2,6 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
 import { computePostSettlement } from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
-import { resolveWcStageFromGame } from "./shared/resolveWcStage";
-
 export async function finalizePost({
   postDoc,
   game,
@@ -58,11 +56,6 @@ export async function finalizePost({
   });
 
   const countsForRanking = game?.countsForRanking !== false;
-  const resolvedWcStage = resolveWcStageFromGame({
-    knockout: game?.knockout,
-    roundLabel: game?.roundLabel,
-    wcStage: game?.wcStage,
-  });
 
   const now = Timestamp.now();
 
@@ -143,7 +136,7 @@ export async function finalizePost({
 
     seasonPhase: game?.seasonPhase ?? null,
     seasonRound: game?.seasonRound ?? null,
-    wcStage: resolvedWcStage,
+    wcStage: null,
   });
 
   const uid = p.authorUid;
@@ -165,12 +158,12 @@ export async function finalizePost({
       streakBonus,
       goalScorerBonus,
       goalScorerHit: goalScorerBonus > 0,
-      exactHit: isWc && Boolean((baseScore as { exactMatch?: boolean }).exactMatch),
+      exactHit: false,
 
       points: totalPoints,
       countsForRanking,
       seasonPhase: game?.seasonPhase ?? null,
-      wcStage: resolvedWcStage,
+      wcStage: null,
       homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
       awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
     })

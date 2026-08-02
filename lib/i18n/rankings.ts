@@ -5,7 +5,7 @@ import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 export function metricLabel(
   metric: MobileMetric,
   lang: Language,
-  rankingLeague?: "nba" | "worldcup"
+  rankingLeague?: "nba"
 ): string {
   const m = t(lang).rankings;
   if (metric === "totalScore") return m.totalScore;

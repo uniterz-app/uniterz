@@ -183,21 +183,15 @@ export function isRankingsCategoryParam(
   return v === "playoffs" || v === "bracket";
 }
 
-/** WC ブラケットタブ（＋任意で入力オーバーレイ）へのディープリンク */
+/** WC ブラケットは廃止 — NBA ランキングへ */
 export function buildWcBracketRankingsHref(
   pathname: string | null,
-  options?: { openInput?: boolean }
+  _options?: { openInput?: boolean }
 ): string {
   const base = pathname?.startsWith("/web")
     ? "/web/rankings"
     : "/mobile/rankings";
-  const q = new URLSearchParams();
-  q.set(RANKINGS_TAB_LEAGUE_PARAM, "worldcup");
-  q.set(RANKINGS_TAB_CATEGORY_PARAM, "bracket");
-  if (options?.openInput) {
-    q.set(RANKINGS_WC_BRACKET_INPUT_PARAM, "1");
-  }
-  return `${base}?${q.toString()}`;
+  return base;
 }
 
 /** プロフィールからグループ内ランキング（オーバーレイ）へ戻る URL */

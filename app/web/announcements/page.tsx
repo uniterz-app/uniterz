@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  collection,
   getDocs,
-  onSnapshot,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -20,6 +18,10 @@ import {
   ANNOUNCEMENT_READS_CHANGED_EVENT,
   getLocalAnnouncementReadIds,
 } from "@/lib/announcements/localAnnouncementReads";
+import {
+  ANNOUNCEMENT_READS_REFRESH_EVENT,
+  loadAnnouncementReadIdsFor,
+} from "@/lib/announcements/loadAnnouncementReadIds";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
@@ -96,20 +98,30 @@ export default function WebAnnouncementsPage() {
     })();
   }, []);
 
-  // 既読購読（ログイン: Firestore / ゲスト: localStorage）
+  // 既読（ログイン: 一覧 ID だけ getDoc / ゲスト: localStorage）
   useEffect(() => {
     if (!isAuthStateResolved(status)) {
       setReadIds(new Set());
       return;
     }
     if (user?.uid) {
-      const colRef = collection(db, `users/${user.uid}/reads`);
-      const unsub = onSnapshot(colRef, (snap) => {
-        const s = new Set<string>();
-        snap.forEach((d) => s.add(d.id));
-        setReadIds(s);
-      });
-      return () => unsub();
+      let cancelled = false;
+      const ids = items.map((x) => x.id);
+      const refresh = async () => {
+        const next = await loadAnnouncementReadIdsFor(db, user.uid!, ids);
+        if (!cancelled) setReadIds(next);
+      };
+      void refresh();
+      const onRefresh = () => {
+        void refresh();
+      };
+      window.addEventListener(ANNOUNCEMENT_READS_REFRESH_EVENT, onRefresh);
+      window.addEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onRefresh);
+      return () => {
+        cancelled = true;
+        window.removeEventListener(ANNOUNCEMENT_READS_REFRESH_EVENT, onRefresh);
+        window.removeEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onRefresh);
+      };
     }
     const sync = () => setReadIds(getLocalAnnouncementReadIds());
     sync();
@@ -123,7 +135,7 @@ export default function WebAnnouncementsPage() {
       window.removeEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onCustom);
       window.removeEventListener("storage", onStorage);
     };
-  }, [status, user?.uid]);
+  }, [status, user?.uid, items]);
 
   const isUnread = useMemo(() => {
     if (!isAuthStateResolved(status)) return (_: string) => false;

@@ -5,7 +5,6 @@
 import { useEffect, useState } from "react";
 import type { MyRankProgressPoint } from "../../../../../lib/rankings/myRankRankingProgress";
 import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
-import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
 import { fetchRankPlayoffTrend } from "../profile/profileApi";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -15,21 +14,19 @@ const cache = new Map<string, { at: number; points: MyRankProgressPoint[] }>();
 function cacheKey(input: {
   uid: string;
   rankingLeague: RankingLeagueSource;
-  wcStage: WcRankingStage | null;
 }): string {
-  return [input.uid, input.rankingLeague, input.wcStage ?? "-"].join(":");
+  return [input.uid, input.rankingLeague].join(":");
 }
 
 export function useNativeMyRankProgress(input: {
   uid: string | null | undefined;
   enabled: boolean;
   rankingLeague: RankingLeagueSource;
-  wcStage?: WcRankingStage | null;
+  wcStage?: unknown;
   seedPoints?: MyRankProgressPoint[] | null;
   seedComplete?: boolean;
 }): { points: MyRankProgressPoint[] | null; loading: boolean } {
   const { uid, enabled, rankingLeague } = input;
-  const wcStage = input.wcStage ?? null;
   const seedComplete = input.seedComplete === true;
   const seedPoints = input.seedPoints;
 
@@ -47,14 +44,14 @@ export function useNativeMyRankProgress(input: {
 
     if (seedComplete) {
       setState({
-        key: cacheKey({ uid, rankingLeague, wcStage }),
+        key: cacheKey({ uid, rankingLeague }),
         points: seedPoints ?? [],
         loading: false,
       });
       return;
     }
 
-    const key = cacheKey({ uid, rankingLeague, wcStage });
+    const key = cacheKey({ uid, rankingLeague });
     const cached = cache.get(key);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
       setState({ key, points: cached.points, loading: false });
@@ -66,11 +63,7 @@ export function useNativeMyRankProgress(input: {
 
     void (async () => {
       try {
-        const rows = await fetchRankPlayoffTrend(uid, {
-          rankingLeague,
-          wcStage:
-            rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined,
-        });
+        const rows = await fetchRankPlayoffTrend(uid, { rankingLeague });
         const points: MyRankProgressPoint[] = rows.map((r) => ({
           dateKey: r.dateKey,
           rank: r.rank,
@@ -85,7 +78,7 @@ export function useNativeMyRankProgress(input: {
     return () => {
       aborted = true;
     };
-  }, [enabled, uid, rankingLeague, wcStage, seedComplete, seedPoints]);
+  }, [enabled, uid, rankingLeague, seedComplete, seedPoints]);
 
   return { points: state.points, loading: state.loading };
 }

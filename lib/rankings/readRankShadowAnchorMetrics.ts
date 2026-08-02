@@ -37,34 +37,21 @@ function safeNum(v: unknown): number {
 }
 
 function pickSnapshotMetricValues(
-  block: HistoryMetricValuesBlock | undefined,
-  context: {
-    rankingLeague: RankingLeagueSource;
-    wcStage: WcRankingStage;
-  }
+  block: HistoryMetricValuesBlock | undefined
 ): SnapshotMetricValues | null {
   if (!block) return null;
-  if (context.rankingLeague === "worldcup") {
-    return block.wc?.[context.wcStage] ?? null;
-  }
   return block.seasons?.[CURRENT_NBA_SEASON_KEY] ?? null;
 }
 
 export function readRankShadowAnchorMetrics(
   doc: Record<string, unknown> | null | undefined,
-  context: RankHistoryContext & { rankingLeague: RankingLeagueSource }
+  _context: RankHistoryContext & { rankingLeague: RankingLeagueSource }
 ): RankShadowAnchorMetrics | null {
   const mv = doc?.metricValues as HistoryMetricValuesBlock | undefined;
-  const picked = pickSnapshotMetricValues(mv, {
-    rankingLeague: context.rankingLeague,
-    wcStage: context.wcStage ?? "overall",
-  });
+  const picked = pickSnapshotMetricValues(mv);
   if (!picked) return null;
 
-  const exactHitCount =
-    context.rankingLeague === "worldcup"
-      ? safeNum(picked.exactHitCount ?? picked.totalPrecision)
-      : safeNum(picked.totalPrecision);
+  const exactHitCount = safeNum(picked.totalPrecision);
 
   return {
     totalPoints: safeNum(picked.totalPoints),

@@ -112,7 +112,8 @@ function buildPostCumulativeContribution(
   >
 ): PostCumulativeContribution {
   const leagueKey = normalizeLeague(opts.league);
-  const forRanking = shouldCountForRanking(opts.countsForRanking);
+  const forRanking =
+    shouldCountForRanking(opts.countsForRanking) && leagueKey !== "wc";
   const phase = normalizeNbaSeasonPhase(opts.seasonPhase);
   const { nbaSeasonKey, nbaPlayoffsSeasonKey } = resolveNbaRankingBucketKeys(
     leagueKey,
@@ -247,11 +248,10 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     awayTeamId,
   } = opts;
 
-  const forRanking = shouldCountForRanking(countsForRanking);
-
   const dateKey = toDateKeyJST(startAt);
   const leagueKey = normalizeLeague(league);
-  const isWc = leagueKey === "wc";
+  const forRanking =
+    shouldCountForRanking(countsForRanking) && leagueKey !== "wc";
   const phase = normalizeNbaSeasonPhase(seasonPhase);
   const { nbaSeasonKey, nbaPlayoffsSeasonKey } = resolveNbaRankingBucketKeys(
     leagueKey,
@@ -288,7 +288,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetHitCount: FieldValue.increment(upsetHit ? 1 : 0),
       upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
 
-      exactHitCount: FieldValue.increment(isWc && exactHit ? 1 : 0),
+      exactHitCount: FieldValue.increment(0),
 
       pointsSumV3: FieldValue.increment(points),
       upsetPointsSum: FieldValue.increment(upsetPoints),
@@ -309,14 +309,6 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         ? { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: inc } }
         : {}),
     };
-
-    if (forRanking && leagueKey === "wc") {
-      update.rankingByWcStage = {
-        overall: inc,
-        ...(wcStage === "qualifying" ? { qualifying: inc } : {}),
-        ...(wcStage === "main" ? { main: inc } : {}),
-      };
-    }
 
     if (leagueKey) {
       update.leagues = {
@@ -356,7 +348,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       posts: 1,
       wins: isWin ? 1 : 0,
       scoreErrorSum: scoreError,
-      exactHitCount: isWc && exactHit ? 1 : 0,
+      exactHitCount: 0,
       pointsSumV3: points,
       upsetPointsSum: upsetPoints,
       upsetHitCount: upsetHit ? 1 : 0,

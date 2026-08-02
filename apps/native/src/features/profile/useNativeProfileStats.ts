@@ -112,13 +112,11 @@ function rankPointsFromCharts(
 function statsCacheKey(
   uid: string,
   rankingLeague: RankingLeagueSource,
-  wcStage?: WcRankingStage
+  _wcStage?: WcRankingStage
 ): string {
-  const safeWcStage =
-    rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined;
   const nbaPeriodSuffix =
     rankingLeague === "nba" ? `:${preferredNbaKinetikPeriod()}` : "";
-  return `${STATS_CACHE_VERSION}:${uid}:${rankingLeague}:${safeWcStage ?? "-"}${nbaPeriodSuffix}`;
+  return `${STATS_CACHE_VERSION}:${uid}:${rankingLeague}:${nbaPeriodSuffix}`;
 }
 
 /** Kinetik カード用（SEASON/PLAYOFF タブ既定） */
@@ -203,7 +201,7 @@ function mergeCacheEntry(key: string, patch: Partial<CacheEntry>) {
 function loadingFlagsFromCache(cached: CacheEntry, rankingLeague: RankingLeagueSource) {
   const dailyTrendLoading = cached.dailyTrend == null;
   const rankTrendLoading =
-    rankingLeague !== "worldcup" && cached.rankTrend == null;
+    true && cached.rankTrend == null;
   return {
     dailyTrendLoading,
     rankTrendLoading,
@@ -255,7 +253,7 @@ export function useNativeProfileStats(
         loading: true,
         chartsLoading: true,
         dailyTrendLoading: true,
-        rankTrendLoading: rankingLeague !== "worldcup",
+        rankTrendLoading: true,
       };
     }
     const flags = loadingFlagsFromCache(cached, rankingLeague);
@@ -298,7 +296,7 @@ export function useNativeProfileStats(
       loading: true,
       chartsLoading: true,
       dailyTrendLoading: true,
-      rankTrendLoading: rankingLeague !== "worldcup",
+      rankTrendLoading: true,
     });
   }, [cacheKey, statsEnabled, uid, rankingLeague]);
 
@@ -397,7 +395,7 @@ export function useNativeProfileStats(
       if (!cached?.summary) return;
       const needTrend = cached.dailyTrend == null;
       const needRank =
-        cached.rankTrend == null && rankingLeague !== "worldcup";
+        cached.rankTrend == null && true;
       const needLast20 = cached.last20 == null;
       if (!needTrend && !needRank && !needLast20) return;
 
@@ -478,7 +476,7 @@ export function useNativeProfileStats(
         if (needsRefresh) void refreshPhaseInBackground();
         if (
           cached.dailyTrend == null ||
-          (rankingLeague !== "worldcup" && cached.rankTrend == null)
+          (true && cached.rankTrend == null)
         ) {
           void ensureMissingCharts();
         }

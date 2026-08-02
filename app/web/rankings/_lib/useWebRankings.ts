@@ -84,8 +84,8 @@ export function useWebRankings(
   const availableMetrics = wcStage ? WC_RANKING_METRICS : NBA_RANKING_METRICS;
 
   const visibleMetrics = useMemo(
-    () => buildRankingTabMetrics(wcStage ? "worldcup" : "nba"),
-    [wcStage]
+    () => buildRankingTabMetrics("nba"),
+    []
   );
 
   const [metric, setMetric] = useState<MobileMetric>("totalScore");

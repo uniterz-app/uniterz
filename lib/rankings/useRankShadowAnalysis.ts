@@ -5,7 +5,6 @@ import { getAuth } from "firebase/auth";
 import type { Language } from "@/lib/i18n/language";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { RankShadowAnalysis } from "@/lib/rankings/rankShadowAnalysis";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 type State =
   | { status: "idle" | "loading" }
@@ -15,7 +14,7 @@ type State =
 export function useRankShadowAnalysis(input: {
   enabled?: boolean;
   rankingLeague: RankingLeagueSource;
-  wcStage: WcRankingStage | null;
+  wcStage?: unknown;
   language: Language;
 }) {
   const [state, setState] = useState<State>({ status: "idle" });
@@ -34,7 +33,6 @@ export function useRankShadowAnalysis(input: {
         league: input.rankingLeague,
         lang: input.language,
       });
-      if (input.wcStage) params.set("wcStage", input.wcStage);
 
       const res = await fetch(`/api/rankings/shadow?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -58,12 +56,7 @@ export function useRankShadowAnalysis(input: {
     } catch {
       setState({ status: "error", code: "network" });
     }
-  }, [
-    input.enabled,
-    input.language,
-    input.rankingLeague,
-    input.wcStage,
-  ]);
+  }, [input.enabled, input.language, input.rankingLeague]);
 
   useEffect(() => {
     void reload();

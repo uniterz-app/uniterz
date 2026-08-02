@@ -12,7 +12,6 @@ import {
 } from "@/lib/profile/ensureProfileChartsBundle";
 import { parseProfileChartsBundle } from "@/lib/profile/profileChartsBundle";
 import {
-  resolveWcProfileSummaryLive,
   resolveNbaProfileSummaryLive,
   type ProfileSummaryForCards,
 } from "@/lib/profile/resolveLiveProfileSummary";
@@ -41,7 +40,6 @@ import {
   loadPriorSnapshotMetrics,
 } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
-import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,13 +102,6 @@ async function buildUserStatsResponse(req: Request) {
   const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
     ? rawLeague
     : "nba";
-  const rawWcStage = searchParams.get("wcStage");
-  const wcStage: WcRankingStage | undefined =
-    rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
-      ? rawWcStage
-      : rankingLeague === "worldcup"
-        ? "overall"
-        : undefined;
   /** NBA のみ: playoffs / season（現行キー） / monthly（互換） */
   const rawPeriod = searchParams.get("period")?.trim() ?? "";
   const nbaScope: "playoffs" | "season" | null =
@@ -158,7 +149,7 @@ async function buildUserStatsResponse(req: Request) {
 
   const dailyTrendCtx = resolveProfileDailyTrendContext(
     rankingLeague,
-    wcStage,
+    undefined,
     rankingLeague === "nba" ? (nbaScope ?? "season") : undefined
   );
 
@@ -216,7 +207,6 @@ async function buildUserStatsResponse(req: Request) {
     !(rankingLeague === "nba" && isProfileChartsComplete(chartsBundle))
       ? buildRankPlayoffTrendPoints(uid, {
           rankingLeague,
-          wcStage: wcStage ?? "overall",
         })
       : Promise.resolve([] as RankPlayoffTrendPoint[]),
   ]);
@@ -258,83 +248,18 @@ async function buildUserStatsResponse(req: Request) {
     }
   } else if (wantPhase) {
     const deltaOpts = {
-      wcStage: rankingLeague === "worldcup" ? (wcStage ?? "overall") : null,
+      wcStage: null,
       rankingLeague,
     };
     const priorMetrics = await loadPriorSnapshotMetrics(uid, deltaOpts);
 
-    if (rankingLeague === "worldcup" && wcStage) {
-      summary = await resolveWcProfileSummaryLive(
-        adminDb,
-        uid,
-        wcStage,
-        cumulative as Record<string, unknown> | null,
-        priorMetrics
-      );
-      /**
-       * WC（football）の現在連勝・最大連勝は updateUserStreak が試合確定時に
-       * user_stats_v2 へライブ保存している。WC は football 唯一なので
-       * 「WC 全体（overall）の連勝」= football の連勝として確定値を採用する。
-       * （クライアントは Firestore ルールで他人の user_stats_v2 を読めないため API で渡す）
-       */
-      if (wcStage === "overall" && summary) {
-        try {
-          const usSnap = await adminDb
-            .collection("user_stats_v2")
-            .doc(uid)
-            .get();
-          const us = usSnap.exists
-            ? (usSnap.data() as Record<string, unknown>)
-            : {};
-          const curFootball = safeNum(us.streakFootball);
-          const maxBySport = (us.maxWinStreakBySport ?? {}) as Record<
-            string,
-            unknown
-          >;
-          summary.activeWinStreak =
-            curFootball > 0 ? Math.floor(curFootball) : 0;
-          summary.maxWinStreak = safeInt(
-            maxBySport.football ?? us.maxWinStreakFootball
-          );
-        } catch {
-          /* ライブ連勝が取れなくてもサマリー自体は返す */
-        }
-      } else if (
-        (wcStage === "qualifying" || wcStage === "main") &&
-        summary
-      ) {
-        try {
-          const usSnap = await adminDb
-            .collection("user_stats_v2")
-            .doc(uid)
-            .get();
-          const us = usSnap.exists
-            ? (usSnap.data() as Record<string, unknown>)
-            : {};
-          const byStage = (us.activeWinStreakByWcStage ?? {}) as Record<
-            string,
-            unknown
-          >;
-          const live = safeInt(byStage[wcStage]);
-          summary.activeWinStreak = live;
-          const maxByStage = (us.maxWinStreakByWcStage ?? {}) as Record<
-            string,
-            unknown
-          >;
-          summary.maxWinStreak = safeInt(maxByStage[wcStage]);
-        } catch {
-          /* 同上 */
-        }
-      }
-    } else {
-      summary = await resolveNbaProfileSummaryLive(
-        adminDb,
-        uid,
-        cumulative as Record<string, unknown> | null,
-        priorMetrics,
-        nbaScope ?? undefined
-      );
-    }
+    summary = await resolveNbaProfileSummaryLive(
+      adminDb,
+      uid,
+      cumulative as Record<string, unknown> | null,
+      priorMetrics,
+      nbaScope ?? undefined
+    );
 
     if (summary) {
       if (nbaScope === "playoffs") {
@@ -348,7 +273,7 @@ async function buildUserStatsResponse(req: Request) {
           {
             totalPoints: summary.pointsSumV3,
             totalPrecision:
-              rankingLeague === "worldcup" ? summary.exactHitCount : 0,
+              0,
             totalUpset: summary.upsetPointsSum,
             winRate: winRatePct,
           },
@@ -377,7 +302,6 @@ async function buildUserStatsResponse(req: Request) {
   } else if (wantRanks || wantPhase) {
     summaryRanks = await fetchProfileSummaryRanks(
       uid,
-      rankingLeague === "worldcup" ? wcStage : undefined,
       cumulative as Record<string, unknown> | null | undefined
     );
   }
@@ -387,7 +311,7 @@ async function buildUserStatsResponse(req: Request) {
     resolvedUid: uid,
     parts: [...parts],
     rankingLeague,
-    wcStage: wcStage ?? null,
+    wcStage: null,
     period: wantMonthly
       ? "monthly"
       : nbaScope === "playoffs"

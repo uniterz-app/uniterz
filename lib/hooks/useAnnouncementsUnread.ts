@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   queryVisibleAnnouncementsNoOrder,
@@ -16,6 +15,11 @@ import {
   ANNOUNCEMENT_READS_CHANGED_EVENT,
   getLocalAnnouncementReadIds,
 } from "@/lib/announcements/localAnnouncementReads";
+import {
+  ANNOUNCEMENT_READS_REFRESH_EVENT,
+  loadAnnouncementReadIdsFor,
+} from "@/lib/announcements/loadAnnouncementReadIds";
+import { onSnapshot } from "firebase/firestore";
 
 const ANNOUNCEMENTS_LIMIT = 30;
 
@@ -26,7 +30,7 @@ type Options = {
 
 /**
  * Firestore お知らせ＋アプリ内合成イベントの未読件数。
- * ログイン: users/{uid}/reads と突合。ゲスト: localStorage の既読 ID と突合。
+ * reads は必要 ID だけ getDoc（コレクション全購読しない）。
  */
 export function useAnnouncementsUnread(options: Options = {}) {
   const { enabled = true } = options;
@@ -69,28 +73,45 @@ export function useAnnouncementsUnread(options: Options = {}) {
       setReadIds(new Set());
       return;
     }
-    if (user?.uid) {
-      const colRef = collection(db, `users/${user.uid}/reads`);
-      const unsub = onSnapshot(colRef, (snap) => {
-        const s = new Set<string>();
-        snap.forEach((d) => s.add(d.id));
-        setReadIds(s);
-      });
-      return () => unsub();
+
+    if (!user?.uid) {
+      const sync = () => setReadIds(getLocalAnnouncementReadIds());
+      sync();
+      const onCustom = () => sync();
+      const onStorage = (e: StorageEvent) => {
+        if (e.key === null || e.key === ANNOUNCEMENT_READ_IDS_STORAGE_KEY) sync();
+      };
+      window.addEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onCustom);
+      window.addEventListener("storage", onStorage);
+      return () => {
+        window.removeEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onCustom);
+        window.removeEventListener("storage", onStorage);
+      };
     }
-    const sync = () => setReadIds(getLocalAnnouncementReadIds());
-    sync();
-    const onCustom = () => sync();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === null || e.key === ANNOUNCEMENT_READ_IDS_STORAGE_KEY) sync();
+
+    const uid = user.uid;
+    let cancelled = false;
+
+    const refresh = async () => {
+      const ids = [...mergeSyntheticIdsIntoVisibleSet(visibleIds)];
+      const next = await loadAnnouncementReadIdsFor(db, uid, ids);
+      if (!cancelled) setReadIds(next);
     };
-    window.addEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onCustom);
-    window.addEventListener("storage", onStorage);
+
+    void refresh();
+
+    const onRefresh = () => {
+      void refresh();
+    };
+    window.addEventListener(ANNOUNCEMENT_READS_REFRESH_EVENT, onRefresh);
+    window.addEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onRefresh);
+
     return () => {
-      window.removeEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onCustom);
-      window.removeEventListener("storage", onStorage);
+      cancelled = true;
+      window.removeEventListener(ANNOUNCEMENT_READS_REFRESH_EVENT, onRefresh);
+      window.removeEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onRefresh);
     };
-  }, [enabled, status, user?.uid]);
+  }, [enabled, status, user?.uid, visibleIds]);
 
   const unreadCount = useMemo(() => {
     if (!enabled || !isAuthStateResolved(status)) return 0;

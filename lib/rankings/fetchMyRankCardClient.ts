@@ -98,7 +98,7 @@ export async function fetchMyRankCardFastClient(
       };
     }
 
-    const myRank = readStoredRankFromSnapshotRanks(data, "totalPoints", null);
+    const myRank = readStoredRankFromSnapshotRanks(data, "totalPoints");
     const myRow = buildNbaMyRow(safeUid, data, myRank);
     const charts = parseProfileChartsBundle(data, profileOverviewSeasonKey());
     const rankProgressPoints = (charts?.rankTrend ??

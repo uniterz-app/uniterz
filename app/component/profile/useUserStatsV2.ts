@@ -160,8 +160,7 @@ function statsCacheKey(
   rankingLeague: RankingLeagueSource,
   wcStage?: WcRankingStage
 ): string {
-  const safeWcStage =
-    rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined;
+  const safeWcStage = undefined;
   return `${uid}:${rankingLeague}:${safeWcStage ?? "-"}`;
 }
 
@@ -214,8 +213,7 @@ function buildStatsQuery(
   rankingLeague: RankingLeagueSource,
   wcStage?: WcRankingStage
 ) {
-  const safeWcStage =
-    rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined;
+  const safeWcStage = undefined;
   const qs = new URLSearchParams({
     uid,
     parts,
@@ -289,8 +287,7 @@ async function bootstrapStatsByRouteKey(
 ): Promise<string | null> {
   const safeKey = routeKey.trim();
   if (!safeKey) return null;
-  const safeWcStage =
-    rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined;
+  const safeWcStage = undefined;
   const dedupeKey = `${safeKey}:${rankingLeague}:${safeWcStage ?? "-"}`;
   const existing = bootstrapInflight.get(dedupeKey);
   if (existing) return existing;
@@ -374,8 +371,7 @@ async function fetchTrendIntoCache(
 }
 
 function prefetchLeagueStats(uid: string, rankingLeague: RankingLeagueSource) {
-  const wcStage: WcRankingStage | undefined =
-    rankingLeague === "worldcup" ? "overall" : undefined;
+  const wcStage: WcRankingStage | undefined = undefined;
   const key = statsCacheKey(uid, rankingLeague, wcStage);
   if (readValidCache(key)) return;
 
@@ -492,14 +488,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
   useEffect(() => {
     if (!uid) return;
     prefetchLeagueStats(uid, rankingLeague);
-    if (!prefetchOtherLeague) return;
-    const otherLeague: RankingLeagueSource =
-      rankingLeague === "nba" ? "worldcup" : "nba";
-    const deferredId = window.setTimeout(() => {
-      prefetchLeagueStats(uid, otherLeague);
-    }, 4000);
-    return () => window.clearTimeout(deferredId);
-  }, [prefetchOtherLeague, uid, rankingLeague]);
+  }, [uid, rankingLeague]);
 
   useEffect(() => {
     let cancelled = false;

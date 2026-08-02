@@ -20,7 +20,6 @@ function readSnapshotRanksRoot(data) {
     const nested = data.snapshotRanks;
     return {
         seasons: pickBlock(nested === null || nested === void 0 ? void 0 : nested.seasons, data["snapshotRanks.seasons"]),
-        wc: pickBlock(nested === null || nested === void 0 ? void 0 : nested.wc, data["snapshotRanks.wc"]),
     };
 }
 function coerceRankInt(v) {
@@ -48,19 +47,10 @@ function coerceRankInt(v) {
     }
     return null;
 }
-function readStoredRankFromUser(me, metric, wcStage) {
-    var _a, _b, _c, _d, _e, _f;
+function readStoredRankFromUser(me, metric) {
+    var _a, _b;
     const snapshotRanks = readSnapshotRanksRoot(me);
-    let raw;
-    if (wcStage) {
-        raw = (_b = (_a = snapshotRanks.wc) === null || _a === void 0 ? void 0 : _a[wcStage]) === null || _b === void 0 ? void 0 : _b[metric];
-        if (metric === "totalExactHits" && raw == null) {
-            raw = (_d = (_c = snapshotRanks.wc) === null || _c === void 0 ? void 0 : _c[wcStage]) === null || _d === void 0 ? void 0 : _d.totalPrecision;
-        }
-    }
-    else {
-        raw = (_f = (_e = snapshotRanks.seasons) === null || _e === void 0 ? void 0 : _e[nbaSeason_1.CURRENT_NBA_SEASON_KEY]) === null || _f === void 0 ? void 0 : _f[metric];
-    }
+    const raw = (_b = (_a = snapshotRanks.seasons) === null || _a === void 0 ? void 0 : _a[nbaSeason_1.CURRENT_NBA_SEASON_KEY]) === null || _b === void 0 ? void 0 : _b[metric];
     return typeof raw === "number" && Number.isFinite(raw) && raw >= 1
         ? Math.floor(raw)
         : coerceRankInt(raw);
