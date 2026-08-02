@@ -1,4 +1,4 @@
-/** true にするとアプリ全体をメンテナンスオーバーレイでブロックする */
+/** true にするとアプリ全体をメンテナンスオーバーレイでブロックする（本番メンテ再掲用） */
 export const APP_MAINTENANCE_MODE = true;
 
 /**
@@ -6,3 +6,4 @@ export const APP_MAINTENANCE_MODE = true;
  * 再開時は false に戻す。
  */
 export const APP_NBA_SEASON_RESTART_OVERLAY = true;
+
