@@ -42,6 +42,8 @@ export type GamePointsDistributionV1 = {
   n: number;
   median: number | null;
   mean: number | null;
+  /** 参加者中の最高得点（無い古い snapshot は null） */
+  max?: number | null;
   updatedAtMillis?: number;
 };
 
@@ -96,5 +98,11 @@ export function parseGamePointsDistributionV1(
       : isFiniteNum(o.mean)
         ? o.mean
         : null;
-  return { v: 1, bins, n, median, mean };
+  const max =
+    o.max === null || o.max === undefined
+      ? null
+      : isFiniteNum(o.max)
+        ? o.max
+        : null;
+  return { v: 1, bins, n, median, mean, max };
 }

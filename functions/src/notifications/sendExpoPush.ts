@@ -15,7 +15,7 @@ import {
 
 const expo = new Expo();
 
-type SendTarget = {
+export type SendTarget = {
   uid: string;
   data?: PushNotificationData;
 };

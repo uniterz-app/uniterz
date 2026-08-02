@@ -327,6 +327,17 @@ export async function POST(req: Request) {
 
     try {
       const ref = await adminDb.collection("posts").add(data);
+      try {
+        await adminDb.doc(`games/${parsed.gameId}`).set(
+          {
+            predictorUids: FieldValue.arrayUnion(uid),
+            predictorCount: FieldValue.increment(1),
+          },
+          { merge: true }
+        );
+      } catch (predErr) {
+        console.error("[POST /api/posts_v2] predictorUids", predErr);
+      }
       const leagueFlagPatch = resultLeagueFlagPatchForPost(league);
       if (leagueFlagPatch) {
         try {

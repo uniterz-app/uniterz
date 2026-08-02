@@ -17,7 +17,6 @@ import {
   getDoc,
   query,
   where,
-  limit,
   getDocs,
 } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
@@ -1025,13 +1024,23 @@ export default function GamesHomeScreen({
         return;
       }
       try {
-        const snap = await getDocs(
-          query(
-            collection(db, "posts"),
-            where("authorUid", "==", fUser.uid),
-            limit(300)
-          )
-        );
+        const gameIds = [...gameIdSet];
+        const snaps = [];
+        const IN_LIMIT = 10;
+        for (let i = 0; i < gameIds.length; i += IN_LIMIT) {
+          const chunk = gameIds.slice(i, i + IN_LIMIT);
+          snaps.push(
+            getDocs(
+              query(
+                collection(db, "posts"),
+                where("authorUid", "==", fUser.uid),
+                where("gameId", "in", chunk),
+                where("schemaVersion", "==", 2)
+              )
+            )
+          );
+        }
+        const settled = await Promise.all(snaps);
         if (!alive) return;
         const ids = new Set<string>();
         const postMap: Record<string, string> = {};
@@ -1046,10 +1055,9 @@ export default function GamesHomeScreen({
             postStats?: Record<string, unknown> | null;
           }
         > = {};
-        snap.docs.forEach((row) => {
+        for (const snap of settled) {
+          snap.docs.forEach((row) => {
           const rowData = row.data();
-          const schemaVersion = Number(rowData?.schemaVersion ?? 0);
-          if (schemaVersion !== 2) return;
           const gameId = String(rowData?.gameId ?? "");
           if (gameId && gameIdSet.has(gameId)) {
             ids.add(gameId);
@@ -1076,7 +1084,8 @@ export default function GamesHomeScreen({
               };
             }
           }
-        });
+          });
+        }
         setPredictedGameIds(ids);
         setMyPostIdByGameId(postMap);
         setMyPredictionByGameId(predictionMap);

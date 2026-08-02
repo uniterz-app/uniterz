@@ -29,6 +29,7 @@ function binIndexForScore(score) {
     return BIN_EDGES.length - 1;
 }
 function buildGamePointsDistributionAgg(scores) {
+    var _a;
     const bins = BIN_EDGES.map(({ lo, hi }) => ({
         lo,
         hi,
@@ -42,7 +43,7 @@ function buildGamePointsDistributionAgg(scores) {
     }
     const n = scores.filter((s) => Number.isFinite(s)).length;
     if (n === 0) {
-        return { v: 1, bins, n: 0, median: null, mean: null };
+        return { v: 1, bins, n: 0, median: null, mean: null, max: null };
     }
     const sorted = [...scores].filter(Number.isFinite).sort((a, b) => a - b);
     const mean = sorted.reduce((a, b) => a + b, 0) / sorted.length;
@@ -50,6 +51,7 @@ function buildGamePointsDistributionAgg(scores) {
     const median = sorted.length % 2 === 1
         ? sorted[mid]
         : (sorted[mid - 1] + sorted[mid]) / 2;
-    return { v: 1, bins, n, median, mean };
+    const max = (_a = sorted[sorted.length - 1]) !== null && _a !== void 0 ? _a : null;
+    return { v: 1, bins, n, median, mean, max };
 }
 //# sourceMappingURL=gamePointsDistributionAgg.js.map

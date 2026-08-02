@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { League } from "@/lib/leagues";
 import {
   computeGameMarketPcts,
-  fetchGamePredictionCounts,
   isSoccerMarketLeague,
   type GamePredictionCounts,
   type MarketBiasFallback,
@@ -16,47 +15,25 @@ const EMPTY_COUNTS: GamePredictionCounts = {
   drawCount: 0,
 };
 
+/**
+ * posts 全件 getDocs は廃止。
+ * フォールバック bias があるときだけ％を出し、無ければ空。
+ */
 export function useGameMarketDistribution(
   gameId: string | null | undefined,
   league: League | string,
   fallbackMarketBias?: MarketBiasFallback | null,
   options?: { excludeDraw?: boolean }
 ) {
-  const [counts, setCounts] = useState<GamePredictionCounts>(EMPTY_COUNTS);
-  const [loading, setLoading] = useState(true);
-
+  const [loading, setLoading] = useState(Boolean(gameId));
   const excludeDraw = options?.excludeDraw ?? false;
   const isSoccer = isSoccerMarketLeague(league);
 
   useEffect(() => {
-    if (!gameId) {
-      setCounts(EMPTY_COUNTS);
-      setLoading(false);
-      return;
-    }
-
-    let alive = true;
-    setLoading(true);
-
-    fetchGamePredictionCounts(String(gameId))
-      .then((next) => {
-        if (!alive) return;
-        setCounts(next);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setCounts(EMPTY_COUNTS);
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
+    setLoading(false);
   }, [gameId]);
 
+  const counts = EMPTY_COUNTS;
   const market = useMemo(
     () =>
       computeGameMarketPcts(counts, isSoccer, fallbackMarketBias, {

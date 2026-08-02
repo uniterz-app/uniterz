@@ -9,14 +9,16 @@ import {
 } from "@/lib/communities/types";
 import { buildMemberLeaderboard } from "@/lib/communities/groupStats";
 import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
-import { resolveRankingStartDateKey, resolveRankingStartAtMs } from "@/lib/communities/rankingStartDate";
+import {
+  resolveRankingStartDateKey,
+  resolveRankingStartAtMs,
+} from "@/lib/communities/rankingStartDate";
 import {
   getCachedLeaderboardResponse,
   setCachedLeaderboardResponse,
 } from "@/lib/communities/leaderboardResponseCache";
 import {
   getLeaderboardSnapshotSlotKeyJst,
-  isLeaderboardSnapshotFresh,
   readLeaderboardSnapshot,
   writeLeaderboardSnapshot,
 } from "@/lib/communities/leaderboardSnapshot";
@@ -33,6 +35,27 @@ function sameTeamIds(a: string[], b: string[]): boolean {
   return sa.every((v, i) => v === sb[i]);
 }
 
+function snapshotMatchesGroup(
+  snapshot: NonNullable<Awaited<ReturnType<typeof readLeaderboardSnapshot>>>,
+  opts: {
+    rankingMetric: ReturnType<typeof parseCommunityMetric>;
+    rankingLeague: ReturnType<typeof parseCommunityLeague>;
+    rankingTeamIds: string[];
+    periodType: ReturnType<typeof parseCommunityPeriod>;
+    rankingStartDateKey: string;
+    rankingStartAtMs: number;
+  }
+): boolean {
+  return (
+    snapshot.rankingMetric === opts.rankingMetric &&
+    snapshot.rankingLeague === opts.rankingLeague &&
+    sameTeamIds(snapshot.rankingTeamIds, opts.rankingTeamIds) &&
+    snapshot.periodType === opts.periodType &&
+    snapshot.rankingStartDateKey === opts.rankingStartDateKey &&
+    snapshot.rankingStartAtMs === opts.rankingStartAtMs
+  );
+}
+
 export async function GET(req: Request, ctx: Ctx) {
   try {
     const uid = await requireUidFromRequest(req);
@@ -46,15 +69,57 @@ export async function GET(req: Request, ctx: Ctx) {
     const rankingStartDateKey = resolveRankingStartDateKey(d);
     const rankingStartAtMs = resolveRankingStartAtMs(d);
     const snapshotSlotKey = getLeaderboardSnapshotSlotKeyJst();
+    const rankingOpts = {
+      rankingMetric,
+      rankingLeague,
+      rankingTeamIds,
+      periodType,
+      rankingStartDateKey,
+      rankingStartAtMs,
+    };
+
+    /**
+     * 日次スロット（JST 16:00）の snapshot があれば members 全読・daily 再集計しない。
+     * ランキングと同じ「1日1回」モデル。
+     */
+    const snapshot = await readLeaderboardSnapshot(
+      adminDb,
+      groupId,
+      snapshotSlotKey
+    );
+    if (snapshot && snapshotMatchesGroup(snapshot, rankingOpts)) {
+      const myRowFromSnapshot =
+        snapshot.rows.find((x) => x.uid === uid) ?? null;
+      const payload = {
+        ok: true as const,
+        rankingMetric,
+        periodType,
+        rankingLeague,
+        rows: snapshot.rows,
+        myRow: myRowFromSnapshot,
+      };
+      setCachedLeaderboardResponse(
+        {
+          groupId,
+          rankingMetric,
+          rankingLeague,
+          rankingTeamIds,
+          periodType,
+          rankingStartDateKey,
+          rankingStartAtMs,
+          memberCount: snapshot.memberCount,
+          topMemberUidSample: "",
+        },
+        payload
+      );
+      return NextResponse.json(payload);
+    }
 
     const members = await adminDb
       .collection(`groups/${groupId}/members`)
       .get();
     const memberUids = members.docs.map((x) => x.id);
-    const memberUidSample = memberUids
-      .slice(0, 8)
-      .sort()
-      .join(",");
+    const memberUidSample = memberUids.slice(0, 8).sort().join(",");
 
     const cacheParams = {
       groupId,
@@ -71,36 +136,6 @@ export async function GET(req: Request, ctx: Ctx) {
     const cached = getCachedLeaderboardResponse(cacheParams);
     if (cached) {
       return NextResponse.json(cached);
-    }
-
-    const snapshot = await readLeaderboardSnapshot(
-      adminDb,
-      groupId,
-      snapshotSlotKey
-    );
-    if (
-      snapshot &&
-      isLeaderboardSnapshotFresh(snapshot.builtAtMs) &&
-      snapshot.rankingMetric === rankingMetric &&
-      snapshot.rankingLeague === rankingLeague &&
-      sameTeamIds(snapshot.rankingTeamIds, rankingTeamIds) &&
-      snapshot.periodType === periodType &&
-      snapshot.rankingStartDateKey === rankingStartDateKey &&
-      snapshot.rankingStartAtMs === rankingStartAtMs &&
-      snapshot.memberCount === memberUids.length
-    ) {
-      const myRowFromSnapshot =
-        snapshot.rows.find((x) => x.uid === uid) ?? null;
-      const payload = {
-        ok: true as const,
-        rankingMetric,
-        periodType,
-        rankingLeague,
-        rows: snapshot.rows,
-        myRow: myRowFromSnapshot,
-      };
-      setCachedLeaderboardResponse(cacheParams, payload);
-      return NextResponse.json(payload);
     }
 
     const rows = await buildMemberLeaderboard(

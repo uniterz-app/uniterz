@@ -1,5 +1,3 @@
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import type { League } from "@/lib/leagues";
 
 export type MarketBiasFallback = {
@@ -25,32 +23,11 @@ export function isSoccerMarketLeague(league: League | string): boolean {
   return league === "j1" || league === "pl" || league === "wc";
 }
 
-/** 市場タブ（GamePredictionDistribution）と同じ posts 集計 */
+/** posts 全件 read は廃止（常に 0）。UI は game.pointsDistribution へ移行。 */
 export async function fetchGamePredictionCounts(
-  gameId: string
+  _gameId: string
 ): Promise<GamePredictionCounts> {
-  const q = query(
-    collection(db, "posts"),
-    where("gameId", "==", gameId),
-    where("schemaVersion", "==", 2)
-  );
-  const snap = await getDocs(q);
-  let homeCount = 0;
-  let awayCount = 0;
-  let drawCount = 0;
-
-  snap.docs.forEach((docSnap) => {
-    const data = docSnap.data() as {
-      prediction?: { winner?: string };
-      winner?: string;
-    };
-    const winner = data?.prediction?.winner ?? data?.winner ?? null;
-    if (winner === "home") homeCount += 1;
-    else if (winner === "away") awayCount += 1;
-    else if (winner === "draw") drawCount += 1;
-  });
-
-  return { homeCount, awayCount, drawCount };
+  return { homeCount: 0, awayCount: 0, drawCount: 0 };
 }
 
 export function computeGameMarketPcts(
@@ -59,7 +36,6 @@ export function computeGameMarketPcts(
   fallback?: MarketBiasFallback | null,
   options?: { excludeDraw?: boolean }
 ): GameMarketPcts {
-  // ノックアウト等、引き分けが存在しない試合では引き分けを母数から除外する
   const drawEnabled = isSoccer && !options?.excludeDraw;
   const total = drawEnabled
     ? counts.homeCount + counts.awayCount + counts.drawCount

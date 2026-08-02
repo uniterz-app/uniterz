@@ -267,7 +267,7 @@ export function useResultPagePosts(
   /** 未精算カードがある間は定期再取得 */
   useEffect(() => {
     if (!authReady || !uid || !fetchEnabled || !hasPendingSettlement) return;
-    const id = setInterval(() => void loadPage({ reset: true }), 20_000);
+    const id = setInterval(() => void loadPage({ reset: true }), 60_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, uid, league, fetchEnabled, hasPendingSettlement]);

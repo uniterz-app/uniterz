@@ -524,7 +524,7 @@ export default function ResultHomeScreen({
   /** 未精算カードがある間は定期再取得（Cloud Functions 精算完了を待つ） */
   useEffect(() => {
     if (!hasPendingSettlement) return;
-    const id = setInterval(() => void refreshPostsRef.current(), 20_000);
+    const id = setInterval(() => void refreshPostsRef.current(), 60_000);
     return () => clearInterval(id);
   }, [hasPendingSettlement]);
 

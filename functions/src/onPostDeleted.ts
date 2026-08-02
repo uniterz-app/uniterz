@@ -115,6 +115,24 @@ export const onPostDeletedV2 = onDocumentDeleted(
     const stats = before.stats;
     const startAt: Timestamp =
       before.startAtJst ?? before.startAt ?? before.createdAt;
+    const gameId =
+      typeof before.gameId === "string" ? before.gameId.trim() : "";
+
+    if (uid && gameId) {
+      try {
+        await getFirestore()
+          .doc(`games/${gameId}`)
+          .set(
+            {
+              predictorUids: FieldValue.arrayRemove(uid),
+              predictorCount: FieldValue.increment(-1),
+            },
+            { merge: true }
+          );
+      } catch (e) {
+        console.error("[onPostDeletedV2] predictorUids remove", e);
+      }
+    }
 
     if (!uid || !startAt) return;
 

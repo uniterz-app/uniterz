@@ -1,7 +1,11 @@
 import { StyleSheet, Text, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
-import { usePredictionPostDistribution } from "./usePredictionPostDistribution";
-import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import {
+  parseGamePointsDistributionV1,
+  rawPointsDistributionFromGameDoc,
+} from "../../../../../lib/results/gamePointsDistribution";
 import { colors, radius } from "../../theme/tokens";
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 
@@ -14,139 +18,140 @@ type Props = {
   isSoccer: boolean;
   language: GamesLanguage;
   t: GamesTexts;
+  myScore?: number | null;
 };
 
-/** Web `GamePredictionDistribution` 相当（勝敗分布ドーナツ + 凡例） */
+function fmt(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return (Math.round(n * 10) / 10).toFixed(1);
+}
+
+/** Web `GamePredictionDistribution` 相当 — 平均/中央値/最高/自分（posts 全読なし） */
 export default function GameMarketDistributionNative({
   gameId,
-  homeName,
-  awayName,
-  homeColor,
-  awayColor,
-  isSoccer,
   language,
-  t,
+  myScore = null,
 }: Props) {
-  const { data, loading, error } = usePredictionPostDistribution(gameId, true);
-  const total = isSoccer ? data.home + data.away + data.draw : data.home + data.away;
+  const [ready, setReady] = useState(false);
+  const [mean, setMean] = useState<number | null>(null);
+  const [median, setMedian] = useState<number | null>(null);
+  const [max, setMax] = useState<number | null>(null);
+  const [n, setN] = useState(0);
 
-  if (loading) {
-    return (
-      <View style={styles.loading}>
-        <BlocksPulseLoader pixelScale={0.85} />
-      </View>
-    );
-  }
+  useEffect(() => {
+    let cancelled = false;
+    setReady(false);
+    void (async () => {
+      try {
+        const snap = await getDoc(doc(db, "games", gameId));
+        if (cancelled) return;
+        const dist = parseGamePointsDistributionV1(
+          rawPointsDistributionFromGameDoc(
+            snap.exists() ? (snap.data() as Record<string, unknown>) : null
+          )
+        );
+        setMean(dist?.mean ?? null);
+        setMedian(dist?.median ?? null);
+        setMax(
+          typeof dist?.max === "number" && Number.isFinite(dist.max)
+            ? dist.max
+            : null
+        );
+        setN(dist?.n ?? 0);
+      } catch {
+        if (!cancelled) {
+          setMean(null);
+          setMedian(null);
+          setMax(null);
+          setN(0);
+        }
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId]);
 
-  if (error) {
-    return <Text style={styles.error}>{error}</Text>;
-  }
+  const labels =
+    language === "ja"
+      ? {
+          title: "得点サマリー",
+          mean: "平均",
+          median: "中央値",
+          max: "最高",
+          mine: "自分",
+          pending: "試合確定後に表示",
+        }
+      : {
+          title: "Points summary",
+          mean: "Avg",
+          median: "Median",
+          max: "Max",
+          mine: "You",
+          pending: "Available after final",
+        };
 
-  if (total <= 0) {
-    return <Text style={styles.muted}>{t.predictToolMarketNoPosts}</Text>;
-  }
-
-  const pct = (n: number) => `${((100 * n) / total).toFixed(1)}%`;
-  const size = 160;
-  const stroke = 48;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const homeLen = c * (data.home / total);
-  const drawLen = isSoccer ? c * (data.draw / total) : 0;
-  const awayLen = c * (data.away / total);
+  const hasData = n > 0 && (mean != null || median != null);
+  const cells = [
+    { label: labels.mean, value: mean },
+    { label: labels.median, value: median },
+    { label: labels.max, value: max },
+    { label: labels.mine, value: myScore },
+  ];
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>
-        {language === "ja" ? "コミュニティ予想" : "Community picks"}
-      </Text>
-      <View style={styles.row}>
-        <Svg width={size} height={size}>
-          <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} fill="none" />
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            stroke={homeColor}
-            strokeWidth={stroke}
-            fill="none"
-            strokeDasharray={`${homeLen} ${c - homeLen}`}
-            strokeDashoffset={c * 0.25}
-            rotation={-90}
-            origin={`${size / 2}, ${size / 2}`}
-          />
-          {isSoccer ? (
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              r={r}
-              stroke="#9ca3af"
-              strokeWidth={stroke}
-              fill="none"
-              strokeDasharray={`${drawLen} ${c - drawLen}`}
-              strokeDashoffset={c * 0.25 - homeLen}
-              rotation={-90}
-              origin={`${size / 2}, ${size / 2}`}
-            />
-          ) : null}
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            stroke={awayColor}
-            strokeWidth={stroke}
-            fill="none"
-            strokeDasharray={`${awayLen} ${c - awayLen}`}
-            strokeDashoffset={c * 0.25 - homeLen - drawLen}
-            rotation={-90}
-            origin={`${size / 2}, ${size / 2}`}
-          />
-        </Svg>
-        <View style={styles.legend}>
-          <LegendRow color={homeColor} label={homeName} value={pct(data.home)} />
-          {isSoccer ? (
-            <LegendRow color="#9ca3af" label={t.predictToolDrawLabel} value={pct(data.draw)} />
-          ) : null}
-          <LegendRow color={awayColor} label={awayName} value={pct(data.away)} />
-          <Text style={styles.total}>
-            {language === "ja" ? `合計 ${total} 件` : `${total} posts`}
-          </Text>
+      <Text style={styles.title}>{labels.title}</Text>
+      {!ready ? (
+        <Text style={styles.muted}>…</Text>
+      ) : !hasData ? (
+        <Text style={styles.muted}>{labels.pending}</Text>
+      ) : (
+        <View style={styles.row}>
+          {cells.map((c) => (
+            <View key={c.label} style={styles.cell}>
+              <Text style={styles.label}>{c.label}</Text>
+              <Text style={styles.value}>{fmt(c.value)}</Text>
+            </View>
+          ))}
         </View>
-      </View>
-    </View>
-  );
-}
-
-function LegendRow({ color, label, value }: { color: string; label: string; value: string }) {
-  return (
-    <View style={styles.legendRow}>
-      <View style={[styles.swatch, { backgroundColor: color }]} />
-      <Text style={styles.legendLabel} numberOfLines={1}>
-        {label}
-      </Text>
-      <Text style={styles.legendValue}>{value}</Text>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  loading: { paddingVertical: 24, alignItems: "center" },
   card: {
-    padding: 14,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(5,8,20,0.45)",
-    gap: 12,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
-  title: { color: colors.textPrimary, fontSize: 14, fontWeight: "700" },
-  row: { flexDirection: "row", alignItems: "center", gap: 16 },
-  legend: { flex: 1, gap: 8 },
-  legendRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  swatch: { width: 10, height: 10, borderRadius: 999 },
-  legendLabel: { flex: 1, color: colors.textSecondary, fontSize: 12 },
-  legendValue: { color: colors.textPrimary, fontSize: 13, fontWeight: "700" },
-  total: { color: colors.textMuted, fontSize: 11, marginTop: 4 },
-  muted: { color: colors.textSecondary, fontSize: 13, textAlign: "center", paddingVertical: 16 },
-  error: { color: "#fca5a5", fontSize: 13 },
+  title: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  row: { flexDirection: "row", justifyContent: "space-between", gap: 6 },
+  cell: { flex: 1, alignItems: "center" },
+  label: { color: "rgba(255,255,255,0.55)", fontSize: 10 },
+  value: {
+    marginTop: 2,
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+  },
+  muted: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    textAlign: "center",
+    paddingVertical: 8,
+  },
 });

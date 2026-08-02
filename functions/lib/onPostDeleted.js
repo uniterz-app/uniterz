@@ -81,6 +81,20 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     const uid = before.authorUid;
     const stats = before.stats;
     const startAt = (_b = (_a = before.startAtJst) !== null && _a !== void 0 ? _a : before.startAt) !== null && _b !== void 0 ? _b : before.createdAt;
+    const gameId = typeof before.gameId === "string" ? before.gameId.trim() : "";
+    if (uid && gameId) {
+        try {
+            await (0, firestore_2.getFirestore)()
+                .doc(`games/${gameId}`)
+                .set({
+                predictorUids: firestore_2.FieldValue.arrayRemove(uid),
+                predictorCount: firestore_2.FieldValue.increment(-1),
+            }, { merge: true });
+        }
+        catch (e) {
+            console.error("[onPostDeletedV2] predictorUids remove", e);
+        }
+    }
     if (!uid || !startAt)
         return;
     const db = (0, firestore_2.getFirestore)();
