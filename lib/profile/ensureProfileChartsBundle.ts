@@ -22,6 +22,7 @@ import {
   profileOverviewDateKeysEndingAt,
   profileOverviewLookbackEndDateKey,
   profileOverviewSeasonKey,
+  PROFILE_OVERVIEW_USE_PREVIOUS_SEASON,
 } from "@/lib/profile/profileOverviewSeason";
 import {
   buildDailyTrendFromDailySnaps,
@@ -213,25 +214,35 @@ export async function ensureProfileChartsBundle(
     const parsed = parseProfileChartsBundle(cumData, seasonKey);
 
     if (!options?.forceRebuild && isProfileChartsComplete(parsed)) {
-      return {
-        v: PROFILE_CHARTS_BUNDLE_VERSION,
-        seasonKey,
-        dailyTrend: parsed.dailyTrend,
-        rankTrend: parsed.rankTrend,
-        last20: parsed.last20,
-        builtAtMs:
-          typeof (cumData?.profileCharts as { builtAtMs?: unknown } | undefined)
-            ?.builtAtMs === "number"
-            ? ((cumData!.profileCharts as { builtAtMs: number }).builtAtMs)
-            : Date.now(),
-      };
+      const allEmpty =
+        parsed.dailyTrend.length === 0 &&
+        parsed.rankTrend.length === 0 &&
+        parsed.last20.length === 0;
+      if (!(PROFILE_OVERVIEW_USE_PREVIOUS_SEASON && allEmpty)) {
+        return {
+          v: PROFILE_CHARTS_BUNDLE_VERSION,
+          seasonKey,
+          dailyTrend: parsed.dailyTrend,
+          rankTrend: parsed.rankTrend,
+          last20: parsed.last20,
+          builtAtMs:
+            typeof (cumData?.profileCharts as { builtAtMs?: unknown } | undefined)
+              ?.builtAtMs === "number"
+              ? ((cumData!.profileCharts as { builtAtMs: number }).builtAtMs)
+              : Date.now(),
+        };
+      }
     }
 
     /**
-     * 26-27 活動ゼロなら日次/履歴/posts を読まず空バンドルを書いて完了。
-     * オフシーズンの初回 ensure 遅延を潰す。
+     * 現行シーズンで活動ゼロなら重い読みをスキップ。
+     * 前シーズン確認中は rankingBySeason が薄くても daily/posts を掘る。
      */
-    if (!cumulativeHasNbaSeasonActivity(cumData, seasonKey)) {
+    if (
+      !options?.forceRebuild &&
+      !PROFILE_OVERVIEW_USE_PREVIOUS_SEASON &&
+      !cumulativeHasNbaSeasonActivity(cumData, seasonKey)
+    ) {
       const empty = emptyProfileChartsBundle(seasonKey);
       const bundle: CompleteProfileChartsBundle = {
         ...empty,

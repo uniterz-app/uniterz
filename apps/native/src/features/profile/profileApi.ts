@@ -599,7 +599,10 @@ export async function fetchRankPlayoffTrend(
 }
 
 /** 欠けた profileCharts をサーバーで埋めて返す（以降は cumulative 1 read） */
-export async function ensureNbaOverviewChartsApi(uid: string): Promise<{
+export async function ensureNbaOverviewChartsApi(
+  uid: string,
+  options?: { force?: boolean }
+): Promise<{
   dailyTrend: ProfileDailyTrendRow[];
   rankTrend: RankPlayoffTrendPointNative[];
   last20: { postId: string; settledAtMs: number; isWin: boolean }[];
@@ -612,6 +615,7 @@ export async function ensureNbaOverviewChartsApi(uid: string): Promise<{
     uid: uid.trim(),
     seasonKey,
   });
+  if (options?.force) qs.set("force", "1");
   try {
     const res = await fetch(
       `${base}/api/profile/ensure-overview-charts?${qs.toString()}`,

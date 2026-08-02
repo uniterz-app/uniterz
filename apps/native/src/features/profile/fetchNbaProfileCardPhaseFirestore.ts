@@ -15,7 +15,10 @@ import {
   seedNbaKinetikPeriodStatsCache,
   type ProfileKinetikMetricsPeriod,
 } from "../../../../../lib/profile/useNbaKinetikMonthlyStats";
-import { profileOverviewSeasonKey } from "../../../../../lib/profile/profileOverviewSeason";
+import {
+  PROFILE_OVERVIEW_USE_PREVIOUS_SEASON,
+  profileOverviewSeasonKey,
+} from "../../../../../lib/profile/profileOverviewSeason";
 import { readStoredRankFromSnapshotRanks } from "../../../../../lib/rankings/server/readSnapshotRanksFromCumulative";
 import { db } from "../../lib/firebase";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "./profileApi";
@@ -99,12 +102,30 @@ function chartsFromData(data: Record<string, unknown> | null): {
   const overviewSeasonKey = profileOverviewSeasonKey();
   const parsed = parseProfileChartsBundle(data, overviewSeasonKey);
   if (isProfileChartsComplete(parsed)) {
-    return { profileCharts: parsed, chartsPath: "complete", overviewSeasonKey };
+    const allEmpty =
+      parsed.dailyTrend.length === 0 &&
+      parsed.rankTrend.length === 0 &&
+      parsed.last20.length === 0;
+    /**
+     * 前シーズン確認中に empty-season で空が焼き付いている場合は
+     * ensure で daily/posts/履歴を掘り直す。
+     */
+    if (!(PROFILE_OVERVIEW_USE_PREVIOUS_SEASON && allEmpty)) {
+      return {
+        profileCharts: parsed,
+        chartsPath: "complete",
+        overviewSeasonKey,
+      };
+    }
   }
   /**
-   * 対象シーズン活動ゼロなら ensure API を待たず空を「揃った」扱い。
+   * 現行シーズンかつ累計 posts=0 なら ensure を飛ばして空即返し。
+   * 前シーズン確認中は rankingBySeason が薄いことがあるので ensure に回す。
    */
-  if (!cumulativeHasNbaSeasonActivity(data, overviewSeasonKey)) {
+  if (
+    !PROFILE_OVERVIEW_USE_PREVIOUS_SEASON &&
+    !cumulativeHasNbaSeasonActivity(data, overviewSeasonKey)
+  ) {
     return {
       profileCharts: emptyProfileChartsBundle(overviewSeasonKey),
       chartsPath: "empty-season",

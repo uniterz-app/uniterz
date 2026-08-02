@@ -13,7 +13,7 @@ import {
 import {
   preferredNbaKinetikPeriod,
 } from "../../../../../lib/rankings/nbaSeason";
-import { profileOverviewSeasonKey } from "../../../../../lib/profile/profileOverviewSeason";
+import { profileOverviewSeasonKey, PROFILE_OVERVIEW_USE_PREVIOUS_SEASON } from "../../../../../lib/profile/profileOverviewSeason";
 import type { MyRankMetricValueDeltas } from "../../../../../lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
@@ -412,7 +412,9 @@ export function useNativeProfileStats(
 
       try {
         if (rankingLeague === "nba") {
-          const ensured = await ensureNbaOverviewChartsApi(targetUid);
+          const ensured = await ensureNbaOverviewChartsApi(targetUid, {
+            force: PROFILE_OVERVIEW_USE_PREVIOUS_SEASON,
+          });
           if (cancelled) return;
           if (ensured) {
             invalidateCumulativeDataCache(targetUid);
@@ -537,7 +539,9 @@ export function useNativeProfileStats(
               summaryRanks: fs.summaryRanks,
             });
 
-            const ensured = await ensureNbaOverviewChartsApi(targetUid);
+            const ensured = await ensureNbaOverviewChartsApi(targetUid, {
+              force: PROFILE_OVERVIEW_USE_PREVIOUS_SEASON,
+            });
             if (cancelled) return;
             if (ensured) {
               invalidateCumulativeDataCache(targetUid);
