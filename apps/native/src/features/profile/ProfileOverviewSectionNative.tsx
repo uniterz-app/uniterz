@@ -1,5 +1,8 @@
 /**
  * Overview タブ本体。段階マウントはここに閉じ込めて ProfileHome の hooks 順を安定させる。
+ *
+ * 表示・描画順（同時マウント可）:
+ * 1 Result Drop → 2 Ranking Progress → 3 Last20 Tracker → 4 Daily Combo
  */
 import { StyleSheet, View } from "react-native";
 import { useProfileOverviewStage } from "../../../../../lib/profile/useProfileOverviewStage";
@@ -44,70 +47,70 @@ export default function ProfileOverviewSectionNative({
   streakPoints,
   streakLoading,
 }: Props) {
-  const overviewStage = useProfileOverviewStage(stageReady, { mobile: true });
+  /** 4ブロック同時マウント。入場アニメの index だけ Result Drop を先頭にする */
+  const overviewStage = useProfileOverviewStage(stageReady, {
+    mobile: true,
+    instant: true,
+  });
   const entranceKey = targetUid;
+  const ready = overviewStage >= 4;
 
-  return (
-    <View style={styles.overviewBlock}>
-      {overviewStage >= 4 ? (
-        <>
-          <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
-            <ProfileSettledTodayResultsNative
-              uid={targetUid}
-              language={language}
-              profileStatsContext={profileStatsContext}
-              showDesignPreviewWhenEmpty={false}
-            />
-          </ProfileOverviewEntranceBlock>
-          <View style={styles.chartGap} />
-        </>
-      ) : null}
-      {overviewStage >= 1 ? (
-        <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
-          {dailyChartLoading ? (
-            <View style={styles.chartSkeleton}>
-              <BlocksPulseLoader pixelScale={0.9} />
-            </View>
-          ) : (
-            <ProfileDailyTrendChartNative
-              key={`dailyTrend:${targetUid}:${profileOverviewSeasonKey()}:season:${dailyChartData.map((r) => r.date).join(",")}`}
-              data={dailyChartData}
-              language={language}
-              allowAll={currentIsProView}
-              rankingLeague={profileStatsContext.rankingLeague}
-              range="30d"
-            />
-          )}
-        </ProfileOverviewEntranceBlock>
-      ) : (
+  if (!ready) {
+    return (
+      <View style={styles.overviewBlock}>
         <View style={styles.chartSkeleton}>
           <BlocksPulseLoader pixelScale={0.9} />
         </View>
-      )}
-      {overviewStage >= 2 ? (
-        <>
-          <View style={styles.chartGap} />
-          <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
-            <ProfileRankTrendChartNative
-              data={rankTrend}
-              loading={rankTrendLoading && rankTrend.length === 0}
-              language={language}
-            />
-          </ProfileOverviewEntranceBlock>
-        </>
-      ) : null}
-      {overviewStage >= 3 ? (
-        <>
-          <View style={styles.chartGap} />
-          <ProfileOverviewEntranceBlock index={3} entranceKey={entranceKey}>
-            <ProfileStreakTrackerNative
-              points={streakPoints}
-              loading={streakLoading}
-              language={language}
-            />
-          </ProfileOverviewEntranceBlock>
-        </>
-      ) : null}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.overviewBlock}>
+      <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
+        <ProfileSettledTodayResultsNative
+          uid={targetUid}
+          language={language}
+          profileStatsContext={profileStatsContext}
+          showDesignPreviewWhenEmpty={false}
+        />
+      </ProfileOverviewEntranceBlock>
+
+      <View style={styles.chartGap} />
+      <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
+        <ProfileRankTrendChartNative
+          data={rankTrend}
+          loading={rankTrendLoading && rankTrend.length === 0}
+          language={language}
+        />
+      </ProfileOverviewEntranceBlock>
+
+      <View style={styles.chartGap} />
+      <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
+        <ProfileStreakTrackerNative
+          points={streakPoints}
+          loading={streakLoading}
+          language={language}
+        />
+      </ProfileOverviewEntranceBlock>
+
+      <View style={styles.chartGap} />
+      <ProfileOverviewEntranceBlock index={3} entranceKey={entranceKey}>
+        {dailyChartLoading ? (
+          <View style={styles.chartSkeleton}>
+            <BlocksPulseLoader pixelScale={0.9} />
+          </View>
+        ) : (
+          <ProfileDailyTrendChartNative
+            key={`dailyTrend:${targetUid}:${profileOverviewSeasonKey()}:season:${dailyChartData.map((r) => r.date).join(",")}`}
+            data={dailyChartData}
+            language={language}
+            allowAll={currentIsProView}
+            rankingLeague={profileStatsContext.rankingLeague}
+            range="30d"
+          />
+        )}
+      </ProfileOverviewEntranceBlock>
     </View>
   );
 }
