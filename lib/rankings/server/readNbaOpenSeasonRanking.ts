@@ -7,7 +7,6 @@ import {
   CURRENT_NBA_SEASON_KEY,
   nbaSeasonOpenSnapshotDocId,
 } from "@/lib/rankings/nbaSeason";
-import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import type { RankingApiRow } from "@/lib/rankings/rankingTransform";
 import type { BulkMetricPayload } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
 
@@ -75,7 +74,6 @@ export async function readNbaOpenSeasonRankingSnapshots(opts: {
     };
   });
 
-  await mergeUserPlansIntoBulkByMetric(byMetric);
   return { ok: true, division: "open", seasonKey, byMetric };
 }
 

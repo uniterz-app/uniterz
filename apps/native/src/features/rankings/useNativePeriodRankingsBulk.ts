@@ -1,5 +1,6 @@
 /**
  * Web `usePeriodRankingsBulk` 相当 — NBA Weekly / Monthly
+ * 一覧は全員共通。uid 変化で再取得しない。
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -45,7 +46,10 @@ export function useNativePeriodRankingsBulk(
         setByMetric({});
         return;
       }
-      const token = await auth.currentUser?.getIdToken().catch(() => null);
+      const token =
+        division === "open"
+          ? await auth.currentUser?.getIdToken().catch(() => null)
+          : null;
       const params = new URLSearchParams({ period });
       if (label) params.set("label", label);
       if (division === "open") params.set("division", "open");
@@ -53,7 +57,7 @@ export function useNativePeriodRankingsBulk(
         `${base}/api/period-ranking/bulk?${params.toString()}`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          cache: "no-store",
+          cache: division === "open" ? "no-store" : "force-cache",
         }
       );
       const json = (await res.json()) as {
@@ -84,7 +88,14 @@ export function useNativePeriodRankingsBulk(
 
   useEffect(() => {
     void load();
-  }, [load, uid]);
+  }, [load]);
+
+  // Pro ゲート用: open でログイン後に再試行
+  useEffect(() => {
+    if (period && division === "open" && uid) {
+      void load();
+    }
+  }, [uid, period, division, load]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* period bulk loads all metrics at once */

@@ -8,20 +8,12 @@ import {
   fetchBulkFromFunctions,
   type BulkRankingMetric,
 } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
-import { mergePersonalIntoBulkByMetric } from "@/lib/rankings/server/mergePersonalBulkOverlay";
 import { loadPersonalBulkOverlayFromFirestore } from "@/lib/rankings/server/loadPersonalBulkOverlay";
-import { loadMyRankMetricValueDeltas } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
-import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
-import {
-  isRankingLeagueSource,
-  type RankingLeagueSource,
-} from "@/lib/rankings/rankingLeagueSource";
 import {
   isWcRankingStage,
   type WcRankingStage,
 } from "@/lib/rankings/wcRankingStage";
 import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
-import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { parseRankingDivision } from "@/lib/rankings/rankingDivision";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import {
@@ -124,7 +116,33 @@ const getCachedBulk = unstable_cache(
     void snapshotGenerationKey;
     return fetchBulkFromFunctions(uid, metrics, wcStage);
   },
-  ["cumulative-ranking-bulk-v14"],
+  ["cumulative-ranking-bulk-v15-shared-list"],
+  {
+    revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
+    tags: ["cumulative-ranking"],
+  }
+);
+
+const getCachedOpenSeasonBulk = unstable_cache(
+  async (metricsKey: string, snapshotGenerationKey: string) => {
+    void snapshotGenerationKey;
+    const parts = metricsKey
+      .split(",")
+      .filter((m): m is BulkRankingMetric => METRIC_SET.has(m));
+    const metrics = (parts.length ? parts : [...BULK_METRICS]).map(String);
+    const snapshot = await readNbaOpenSeasonRankingSnapshots({
+      uid: null,
+      metrics,
+    });
+    return (
+      snapshot ??
+      (await buildNbaOpenSeasonRankingFromCumulative({
+        uid: null,
+        metrics,
+      }))
+    );
+  },
+  ["cumulative-ranking-open-season-v1"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -174,17 +192,11 @@ export async function GET(req: Request) {
         );
       }
 
-      const metricNames = metricsList.map(String);
-      const snapshot = await readNbaOpenSeasonRankingSnapshots({
-        uid: gatedUid,
-        metrics: metricNames,
-      });
-      const payload =
-        snapshot ??
-        (await buildNbaOpenSeasonRankingFromCumulative({
-          uid: gatedUid,
-          metrics: metricNames,
-        }));
+      void gatedUid;
+      const payload = await getCachedOpenSeasonBulk(
+        metricsKey,
+        snapshotGeneration
+      );
 
       return NextResponse.json(
         {
@@ -198,7 +210,8 @@ export async function GET(req: Request) {
         {
           status: 200,
           headers: {
-            "Cache-Control": "private, max-age=0, must-revalidate",
+            // Pro ゲート後はレスポンス本体が全員共通
+            "Cache-Control": `private, max-age=60, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`,
           },
         }
       );
@@ -206,7 +219,10 @@ export async function GET(req: Request) {
 
     const uid = uidParam;
 
-    /** YOUR RANK 用 — Firestore snapshotRanks のみ（Functions / 一覧キャッシュ不要） */
+    /**
+     * 互換: personalOnly — My Rank はクライアント cumulative_stats 直読が正。
+     * 残しているのは旧クライアント向け。users merge はしない。
+     */
     if (personalOnly) {
       if (!uid) {
         return NextResponse.json(
@@ -219,7 +235,6 @@ export async function GET(req: Request) {
         metricsList,
         wcStage
       );
-      await mergeUserPlansIntoBulkByMetric(personal);
       return NextResponse.json(
         {
           ok: true,
@@ -249,9 +264,11 @@ export async function GET(req: Request) {
     }
 
     /**
-     * 一覧は anon キャッシュ（スナップショットそのまま）。
-     * uid 付きは一覧を再利用し、Functions の myRank / myRow のみ上書き。
+     * 一覧は全員共通（uid 無視）。
+     * My Rank はクライアント側 cumulative_stats 1 read。
+     * users の N+1 merge はしない（snapshot に plan/country 焼き込み済み）。
      */
+    void uid;
     const listSource = await getCachedBulk(
       "__anon__",
       metricsKey,
@@ -264,48 +281,7 @@ export async function GET(req: Request) {
         ? structuredClone(listSource)
         : (JSON.parse(JSON.stringify(listSource)) as typeof listSource);
 
-    // plan / country / Pro Skin を users から上書き（スナップショット古さ・スキン変更に追従）
-    await mergeUserPlansIntoBulkByMetric(data.byMetric);
-
-    if (uid) {
-      const personal = await loadPersonalBulkOverlayFromFirestore(
-        uid,
-        metricsList,
-        wcStage
-      );
-      mergePersonalIntoBulkByMetric(
-        data.byMetric,
-        personal,
-        metricsList,
-        uid
-      );
-    }
-
-    let myMetricValueDeltas: MyRankMetricValueDeltas | null = null;
-
-    if (uid && data.byMetric?.totalPoints?.myRow) {
-      myMetricValueDeltas = await loadMyRankMetricValueDeltas(
-        uid,
-        data.byMetric.totalPoints.myRow as {
-          totalPoints?: number;
-          totalPrecision?: number;
-          totalUpset?: number;
-          winRate?: number;
-        },
-        {
-          wcStage,
-          rankingLeague: isRankingLeagueSource(searchParams.get("league"))
-            ? (searchParams.get("league") as RankingLeagueSource)
-            : wcStage
-              ? "worldcup"
-              : "nba",
-        }
-      ).catch(() => null);
-    }
-
-    const cacheControl = uid
-      ? `private, max-age=60, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
-      : `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
+    const cacheControl = `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
     return NextResponse.json(
       {
@@ -313,7 +289,7 @@ export async function GET(req: Request) {
         division: "standard",
         wcStage,
         snapshotGeneration,
-        myMetricValueDeltas,
+        myMetricValueDeltas: null,
       },
       {
         status: 200,

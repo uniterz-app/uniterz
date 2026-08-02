@@ -35,7 +35,7 @@ export type NbaProfileCardPhaseClient = {
   overviewSeasonKey: string;
 };
 
-const DOC_TTL_MS = 45_000;
+const DOC_TTL_MS = 10 * 60_000;
 const docCache = new Map<
   string,
   { at: number; data: Record<string, unknown> | null }

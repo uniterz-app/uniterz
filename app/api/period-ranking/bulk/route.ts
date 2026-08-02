@@ -17,7 +17,6 @@ import {
   listNbaPeriodLabels,
   readNbaPeriodRankingSnapshots,
 } from "@/lib/rankings/server/readNbaPeriodRankingSnapshots";
-import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 
@@ -36,26 +35,22 @@ async function optionalUid(req: Request): Promise<string | null> {
 
 type PeriodOnly = Exclude<RankingPeriod, "season">;
 
-async function loadPayload(
+/**
+ * 一覧は全員共通。uid は付けない（My Rank は別経路）。
+ * users merge / 個人 overlay なし。
+ */
+async function loadSharedPayload(
   period: PeriodOnly,
   label: string,
-  uid: string | null,
   division: RankingDivision
 ) {
   const snapshot = await readNbaPeriodRankingSnapshots({
     period,
     label,
-    uid,
+    uid: null,
     division,
   });
-  if (snapshot) {
-    await mergeUserPlansIntoBulkByMetric(snapshot.byMetric);
-    return snapshot;
-  }
-  /**
-   * スナップショット未生成時の daily ライブ集計はしない（16:00 cron のみ）。
-   * Season と同様、無ければ空（呼び出し側で byMetric: {}）。
-   */
+  if (snapshot) return snapshot;
   console.warn(
     `[period-ranking/bulk] missing period snapshot; skip live daily fallback`,
     { period, label, division }
@@ -108,34 +103,41 @@ export async function GET(req: Request) {
       { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
     )();
 
-    // 無差別級は Pro 限定のためキャッシュしない。通常はログイン時 myRank 付き / 匿名は cache
-    const payload =
-      division === "open" || uid
-        ? await loadPayload(period, label, uid, division)
-        : await unstable_cache(
-            async () => loadPayload(period, label, null, division),
-            [`nba-period-ranking-${period}-${label}-anon`],
-            { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
-          )();
+    const payload = await unstable_cache(
+      async () => loadSharedPayload(period, label, division),
+      [`nba-period-ranking-shared-v2-${period}-${label}-${division}`],
+      { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
+    )();
 
     const availableLabels = await labelsPromise;
     if (!availableLabels.includes(currentLabel)) {
       availableLabels.unshift(currentLabel);
     }
 
+    const cacheControl =
+      division === "open"
+        ? `private, max-age=60, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
+        : `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
+
     if (!payload) {
-      return NextResponse.json({
-        ok: true,
-        period,
-        label,
-        division,
-        range: null,
-        byMetric: {},
-        availableLabels,
-      });
+      return NextResponse.json(
+        {
+          ok: true,
+          period,
+          label,
+          division,
+          range: null,
+          byMetric: {},
+          availableLabels,
+        },
+        { headers: { "Cache-Control": cacheControl } }
+      );
     }
 
-    return NextResponse.json({ ...payload, label, division, availableLabels });
+    return NextResponse.json(
+      { ...payload, label, division, availableLabels },
+      { headers: { "Cache-Control": cacheControl } }
+    );
   } catch (e: unknown) {
     const err = e as { message?: string };
     return NextResponse.json(

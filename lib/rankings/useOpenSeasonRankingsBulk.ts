@@ -2,7 +2,7 @@
 
 /**
  * NBA 無差別級シーズンランキング（Pro 限定）の取得。
- * 通常シーズンの useCumulativeRankingsBulk とは別系統（キャッシュキーを混ぜない）。
+ * 認証後のレスポンス本体は全員共通（uid クエリなし）。
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -38,7 +38,6 @@ export function useOpenSeasonRankingsBulk(enabled: boolean) {
         division: "open",
         metrics: allRankingMetricsParam(null),
       });
-      if (uid) params.set("uid", uid);
       const res = await fetch(`/api/cumulative-ranking/bulk?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         cache: "no-store",
@@ -63,11 +62,17 @@ export function useOpenSeasonRankingsBulk(enabled: boolean) {
     } finally {
       setListReady(true);
     }
-  }, [enabled, uid]);
+  }, [enabled]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (enabled && uid) {
+      void load();
+    }
+  }, [uid, enabled, load]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* open season bulk loads all metrics at once */

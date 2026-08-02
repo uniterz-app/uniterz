@@ -280,18 +280,19 @@ export default function MobileRankingsPage() {
       listRows: rawRows,
     });
   const myRank =
-    listMyRank ??
-    (myRankCardFastEnabled && !cardFast.loading ? cardFast.myRank : null);
+    (myRankCardFastEnabled && !cardFast.loading
+      ? cardFast.myRank
+      : null) ?? listMyRank;
   const myRankDeltaPlaces =
-    listMyRankDelta ??
-    (myRankCardFastEnabled ? cardFast.myRankDeltaPlaces : null);
-  /** 累積スコアは指標タブに依存しない — totalPoints 側の myRow を優先 */
+    (myRankCardFastEnabled ? cardFast.myRankDeltaPlaces : null) ??
+    listMyRankDelta;
+  /** 累積スコアは指標タブに依存しない — cardFast / totalPoints myRow */
   const myStatsRow =
-    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ??
-    myRawRow ??
     (myRankCardFastEnabled
       ? (cardFast.myRow as RankingRow | null)
-      : null);
+      : null) ??
+    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ??
+    myRawRow;
   const rankingListCount =
     typeof bundle?.count === "number" && Number.isFinite(bundle.count)
       ? bundle.count
@@ -403,6 +404,9 @@ export default function MobileRankingsPage() {
       enabled: rankProgressEnabled,
       rankingLeague,
       wcStage: wcStageForHook,
+      seedPoints: myRankCardFastEnabled ? cardFast.rankProgressPoints : null,
+      seedComplete:
+        myRankCardFastEnabled && cardFast.rankProgressSeedComplete,
     });
 
   const cardLoading =

@@ -1,10 +1,13 @@
 /**
  * マイランクカード用 — cumulative_stats 1 read。
- * 順位・指標値を同梱。Free/Pro カードは順位デルタ非表示のため prior 履歴は読まない。
+ * 順位・指標値・Ranking Progress seed を同梱。
  */
 import type { Firestore } from "firebase/firestore";
+import { parseProfileChartsBundle } from "@/lib/profile/profileChartsBundle";
+import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
 import { loadCumulativeDataClient } from "@/lib/profile/fetchNbaProfileCardPhaseClient";
 import { pickNbaCumulativeRankingSlice } from "@/lib/rankings/pickNbaStatsBucket";
+import type { MyRankProgressPoint } from "@/lib/rankings/myRankRankingProgress";
 import { readStoredRankFromSnapshotRanks } from "@/lib/rankings/server/readSnapshotRanksFromCumulative";
 
 export type MyRankCardFastRow = {
@@ -31,6 +34,9 @@ export type MyRankCardFastPayload = {
   myRankDeltaPlaces: number | null;
   myRow: MyRankCardFastRow | null;
   plan: "free" | "pro";
+  /** profileCharts.rankTrend（別 API は打たない） */
+  rankProgressPoints: MyRankProgressPoint[] | null;
+  rankProgressSeedComplete: boolean;
 };
 
 function activeBasketballStreak(data: Record<string, unknown>): number {
@@ -87,17 +93,25 @@ export async function fetchMyRankCardFastClient(
         myRankDeltaPlaces: null,
         myRow: null,
         plan: "free",
+        rankProgressPoints: [],
+        rankProgressSeedComplete: true,
       };
     }
 
     const myRank = readStoredRankFromSnapshotRanks(data, "totalPoints", null);
     const myRow = buildNbaMyRow(safeUid, data, myRank);
+    const charts = parseProfileChartsBundle(data, profileOverviewSeasonKey());
+    const rankProgressPoints = (charts?.rankTrend ??
+      []) as MyRankProgressPoint[];
 
     return {
       myRank,
       myRankDeltaPlaces: null,
       myRow,
       plan: myRow.plan,
+      rankProgressPoints,
+      // Progress 用の別 API は打たない（コスト優先）
+      rankProgressSeedComplete: true,
     };
   } catch {
     return null;

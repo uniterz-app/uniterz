@@ -41,7 +41,6 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
         division: "open",
         metrics: allRankingMetricsParam(null),
       });
-      if (uid) params.set("uid", uid);
       const res = await fetch(
         `${base}/api/cumulative-ranking/bulk?${params.toString()}`,
         {
@@ -69,11 +68,17 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
     } finally {
       setListReady(true);
     }
-  }, [enabled, uid]);
+  }, [enabled]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (enabled && uid) {
+      void load();
+    }
+  }, [uid, enabled, load]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* open season bulk loads all metrics at once */

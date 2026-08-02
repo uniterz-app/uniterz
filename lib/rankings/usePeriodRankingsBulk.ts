@@ -52,13 +52,16 @@ export function usePeriodRankingsBulk(
     setListReady(false);
     setProRequired(false);
     try {
-      const token = await auth.currentUser?.getIdToken().catch(() => null);
+      const token =
+        division === "open"
+          ? await auth.currentUser?.getIdToken().catch(() => null)
+          : null;
       const params = new URLSearchParams({ period });
       if (label) params.set("label", label);
       if (division === "open") params.set("division", "open");
       const res = await fetch(`/api/period-ranking/bulk?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        cache: "no-store",
+        cache: division === "open" ? "no-store" : "force-cache",
       });
       const json = (await res.json()) as {
         ok?: boolean;
@@ -93,7 +96,13 @@ export function usePeriodRankingsBulk(
 
   useEffect(() => {
     void load();
-  }, [load, uid]);
+  }, [load]);
+
+  useEffect(() => {
+    if (period && division === "open" && uid) {
+      void load();
+    }
+  }, [uid, period, division, load]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* period bulk loads all metrics at once */

@@ -201,6 +201,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       enabled: rankProgressEnabled,
       rankingLeague: rankingLeagueSource,
       wcStage: null,
+      seedPoints: myRankCardFastEnabled ? cardFast.rankProgressPoints : null,
+      seedComplete:
+        myRankCardFastEnabled && cardFast.rankProgressSeedComplete,
     });
 
   useEffect(() => {
@@ -265,17 +268,18 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     ]
   );
   const myRank =
-    listMyRank ??
-    (myRankCardFastEnabled && !cardFast.loading ? cardFast.myRank : null);
+    (myRankCardFastEnabled && !cardFast.loading
+      ? cardFast.myRank
+      : null) ?? listMyRank;
   const myRankDeltaPlaces =
-    listMyRankDelta ??
-    (myRankCardFastEnabled ? cardFast.myRankDeltaPlaces : null);
+    (myRankCardFastEnabled ? cardFast.myRankDeltaPlaces : null) ??
+    listMyRankDelta;
   const myStatsRow =
-    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ??
-    myRawRow ??
     (myRankCardFastEnabled
       ? (cardFast.myRow as RankingRow | null)
-      : null);
+      : null) ??
+    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ??
+    myRawRow;
   const rankingListCount =
     typeof bundle?.count === "number" && Number.isFinite(bundle.count) ? bundle.count : 0;
 

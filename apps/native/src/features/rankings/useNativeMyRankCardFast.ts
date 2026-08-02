@@ -14,6 +14,8 @@ const idle: MyRankCardFastPayload & { loading: boolean } = {
   myRankDeltaPlaces: null,
   myRow: null,
   plan: "free",
+  rankProgressPoints: null,
+  rankProgressSeedComplete: false,
 };
 
 export function useNativeMyRankCardFast(
