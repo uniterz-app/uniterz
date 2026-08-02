@@ -6,6 +6,7 @@
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
 import {
   pickNbaPlayoffsDailyIncBucket,
@@ -20,14 +21,17 @@ import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 export type ProfileDailyTrendContext = {
   rankingLeague: RankingLeagueSource;
   wcStage?: WcRankingStage;
-  /** NBA プロフィール: season = 現行キーのみ（前シーズンフォールバックなし） */
+  /** NBA プロフィール: season = 明示キー（省略時は現行） */
   nbaPeriod?: "season" | "playoffs";
+  /** rankingBySeason.<key> を直接指定（overview 前シーズン確認用） */
+  nbaSeasonKey?: string;
 };
 
 export function resolveProfileDailyTrendContext(
   rankingLeague: RankingLeagueSource,
   wcStage?: WcRankingStage,
-  nbaPeriod?: "season" | "playoffs"
+  nbaPeriod?: "season" | "playoffs",
+  nbaSeasonKey?: string
 ): ProfileDailyTrendContext {
   if (rankingLeague === "worldcup") {
     const stage =
@@ -37,6 +41,7 @@ export function resolveProfileDailyTrendContext(
   return {
     rankingLeague: "nba",
     nbaPeriod: nbaPeriod ?? "season",
+    ...(nbaSeasonKey ? { nbaSeasonKey } : {}),
   };
 }
 
@@ -65,7 +70,10 @@ function dailyBucketFromDoc(
   if (ctx.nbaPeriod === "playoffs") {
     return pickNbaPlayoffsDailyIncBucket(d);
   }
-  return pickNbaSeasonKeyDailyIncBucket(d);
+  return pickNbaSeasonKeyDailyIncBucket(
+    d,
+    ctx.nbaSeasonKey ?? CURRENT_NBA_SEASON_KEY
+  );
 }
 
 type Bucket = {

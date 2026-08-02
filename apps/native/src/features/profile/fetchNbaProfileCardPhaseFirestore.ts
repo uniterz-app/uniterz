@@ -15,7 +15,7 @@ import {
   seedNbaKinetikPeriodStatsCache,
   type ProfileKinetikMetricsPeriod,
 } from "../../../../../lib/profile/useNbaKinetikMonthlyStats";
-import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
+import { profileOverviewSeasonKey } from "../../../../../lib/profile/profileOverviewSeason";
 import { readStoredRankFromSnapshotRanks } from "../../../../../lib/rankings/server/readSnapshotRanksFromCumulative";
 import { db } from "../../lib/firebase";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "./profileApi";
@@ -27,6 +27,8 @@ export type NbaProfileCardPhaseFirestore = {
   profileCharts: ProfileChartsBundle | null;
   /** 計測用: complete | empty-season | missing */
   chartsPath: "complete" | "empty-season" | "missing";
+  /** overview が参照しているシーズンキー（確認用に前シーズン可） */
+  overviewSeasonKey: string;
 };
 
 const DOC_TTL_MS = 45_000;
@@ -92,22 +94,24 @@ function ranksFromData(
 function chartsFromData(data: Record<string, unknown> | null): {
   profileCharts: ProfileChartsBundle | null;
   chartsPath: "complete" | "empty-season" | "missing";
+  overviewSeasonKey: string;
 } {
-  const parsed = parseProfileChartsBundle(data, CURRENT_NBA_SEASON_KEY);
+  const overviewSeasonKey = profileOverviewSeasonKey();
+  const parsed = parseProfileChartsBundle(data, overviewSeasonKey);
   if (isProfileChartsComplete(parsed)) {
-    return { profileCharts: parsed, chartsPath: "complete" };
+    return { profileCharts: parsed, chartsPath: "complete", overviewSeasonKey };
   }
   /**
-   * 26-27 活動ゼロなら ensure API を待たず空を「揃った」扱い。
-   * NO DATA でも 1 read で即描画できるようにする。
+   * 対象シーズン活動ゼロなら ensure API を待たず空を「揃った」扱い。
    */
-  if (!cumulativeHasNbaSeasonActivity(data, CURRENT_NBA_SEASON_KEY)) {
+  if (!cumulativeHasNbaSeasonActivity(data, overviewSeasonKey)) {
     return {
-      profileCharts: emptyProfileChartsBundle(CURRENT_NBA_SEASON_KEY),
+      profileCharts: emptyProfileChartsBundle(overviewSeasonKey),
       chartsPath: "empty-season",
+      overviewSeasonKey,
     };
   }
-  return { profileCharts: parsed, chartsPath: "missing" };
+  return { profileCharts: parsed, chartsPath: "missing", overviewSeasonKey };
 }
 
 export async function fetchNbaProfileCardPhaseFirestore(
@@ -119,12 +123,13 @@ export async function fetchNbaProfileCardPhaseFirestore(
 
   try {
     const data = await loadCumulativeData(safeUid);
-    const { profileCharts, chartsPath } = chartsFromData(data);
+    const { profileCharts, chartsPath, overviewSeasonKey } = chartsFromData(data);
     return {
       summary: summaryFromNbaScopeRanking(data, period),
       summaryRanks: ranksFromData(data),
       profileCharts,
       chartsPath,
+      overviewSeasonKey,
     };
   } catch {
     return null;
@@ -144,18 +149,20 @@ export async function prefetchNbaKinetikBothPeriodsFirestore(
   try {
     const data = await loadCumulativeData(safeUid);
     const ranks = ranksFromData(data);
-    const { profileCharts, chartsPath } = chartsFromData(data);
+    const { profileCharts, chartsPath, overviewSeasonKey } = chartsFromData(data);
     const season = {
       summary: summaryFromNbaScopeRanking(data, "season"),
       summaryRanks: ranks,
       profileCharts,
       chartsPath,
+      overviewSeasonKey,
     };
     const playoffs = {
       summary: summaryFromNbaScopeRanking(data, "playoffs"),
       summaryRanks: ranks,
       profileCharts,
       chartsPath,
+      overviewSeasonKey,
     };
     seedNbaKinetikPeriodStatsCache(
       safeUid,

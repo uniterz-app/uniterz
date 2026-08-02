@@ -18,18 +18,20 @@ import {
   type ProfileChartsRankPoint,
 } from "@/lib/profile/profileChartsBundle";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
-import { filterPostsForScope } from "@/lib/profile/profileStreakPostsCompute";
+import {
+  profileOverviewDateKeysEndingAt,
+  profileOverviewLookbackEndDateKey,
+  profileOverviewSeasonKey,
+} from "@/lib/profile/profileOverviewSeason";
 import {
   buildDailyTrendFromDailySnaps,
   resolveProfileDailyTrendContext,
 } from "@/lib/profile/userStatsV2ProfileRollup";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { resolvePostListLeague } from "@/lib/leagues";
 import {
-  dateKeyJST,
-  subtractOneDayFromDateKeyJST,
-} from "@/lib/rankings/rankSnapshotDate";
+  nbaSeasonKeyFromDateJST,
+} from "@/lib/rankings/nbaSeason";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
-import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export type CompleteProfileChartsBundle = {
   v: typeof PROFILE_CHARTS_BUNDLE_VERSION;
@@ -48,13 +50,19 @@ function shortCacheKey(uid: string, seasonKey: string) {
   return `${uid}:${seasonKey}`;
 }
 
+function normalizeSeasonPhase(v: unknown): string | null {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (s === "play_in" || s === "playoffs" || s === "regular") return s;
+  return null;
+}
+
 async function buildDailyTrend(
   uid: string,
-  _seasonKey: string
+  seasonKey: string
 ): Promise<ProfileDailyTrendRow[]> {
   const adminDb = getAdminDb();
-  /** user-stats と同じ getAll（存在しない日も課金されるがインデックス不要で確実） */
-  const keys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 30);
+  const endKey = profileOverviewLookbackEndDateKey(seasonKey);
+  const keys = profileOverviewDateKeysEndingAt(endKey, 45);
   if (keys.length === 0) return [];
   const refs = keys.map((dateKey) =>
     adminDb.doc(`user_stats_v2_daily/${uid}_${dateKey}`)
@@ -62,7 +70,12 @@ async function buildDailyTrend(
   const snaps = await adminDb.getAll(...refs);
   const byId = new Map(snaps.map((s) => [s.id, s]));
   const ordered = keys.map((dateKey) => byId.get(`${uid}_${dateKey}`)!);
-  const ctx = resolveProfileDailyTrendContext("nba", undefined, "season");
+  const ctx = resolveProfileDailyTrendContext(
+    "nba",
+    undefined,
+    "season",
+    seasonKey
+  );
   const rows = buildDailyTrendFromDailySnaps(ordered, ctx);
   return pruneDailyTrendRows(
     filterDailyTrendToSeasonActivity(rows),
@@ -74,17 +87,9 @@ async function buildRankTrend(
   uid: string,
   seasonKey: string
 ): Promise<ProfileChartsRankPoint[]> {
-  /**
-   * rankSnapshotHistory の range / orderBy(__name__) は本番で index 不足になり得る。
-   * 直近 N 日を getAll で拾い（欠け日も課金）、存在する順位だけ使う。
-   */
   const adminDb = getAdminDb();
-  const keys: string[] = [];
-  let key = dateKeyJST();
-  for (let i = 0; i < 45; i++) {
-    keys.push(key);
-    key = subtractOneDayFromDateKeyJST(key);
-  }
+  const endKey = profileOverviewLookbackEndDateKey(seasonKey);
+  const keys = profileOverviewDateKeysEndingAt(endKey, 60);
   const refs = keys.map((dateKey) =>
     adminDb.doc(`cumulative_stats/${uid}/rankSnapshotHistory/${dateKey}`)
   );
@@ -106,48 +111,51 @@ async function buildRankTrend(
   return points.slice(points.length - PROFILE_CHARTS_RANK_MAX);
 }
 
-async function buildLast20(uid: string): Promise<ProfileChartsLast20Point[]> {
+async function buildLast20(
+  uid: string,
+  seasonKey: string
+): Promise<ProfileChartsLast20Point[]> {
   const adminDb = getAdminDb();
+  /** 前シーズン確認時は投稿が新しい方に埋もれやすいので多めに読む */
+  const fetchLimit = 120;
   const snap = await adminDb
     .collection("posts")
     .where("authorUid", "==", uid)
     .where("schemaVersion", "==", 2)
     .orderBy("settledAt", "desc")
-    .limit(40)
+    .limit(fetchLimit)
     .get();
 
-  const rows = snap.docs
-    .map((d) => {
-      const data = d.data() as Record<string, unknown>;
-      const settledAt = data.settledAt as { toMillis?: () => number } | null;
-      const ms =
-        settledAt && typeof settledAt.toMillis === "function"
-          ? settledAt.toMillis()
-          : null;
-      if (ms == null || !Number.isFinite(ms)) return null;
-      const stats = data.stats as Record<string, unknown> | undefined;
-      if (typeof stats?.isWin !== "boolean") return null;
-      return {
-        postId: d.id,
-        gameId: typeof data.gameId === "string" ? data.gameId : null,
-        settledAtMs: ms,
-        isWin: stats.isWin,
+  const out: ProfileChartsLast20Point[] = [];
+  for (const d of snap.docs) {
+    const data = d.data() as Record<string, unknown>;
+    const settledAt = data.settledAt as { toMillis?: () => number } | null;
+    const ms =
+      settledAt && typeof settledAt.toMillis === "function"
+        ? settledAt.toMillis()
+        : null;
+    if (ms == null || !Number.isFinite(ms)) continue;
+    const stats = data.stats as Record<string, unknown> | undefined;
+    if (typeof stats?.isWin !== "boolean") continue;
+    if (
+      resolvePostListLeague({
         league: data.league,
-        seasonPhase: data.seasonPhase,
-        wcStage: data.wcStage,
-      };
-    })
-    .filter((r): r is NonNullable<typeof r> => r != null);
-
-  const scoped = filterPostsForScope(rows, "nba:season", PROFILE_CHARTS_LAST20_MAX);
-  return scoped
-    .slice()
-    .sort((a, b) => a.settledAtMs - b.settledAtMs)
-    .map((r) => ({
-      postId: r.postId,
-      settledAtMs: r.settledAtMs,
-      isWin: r.isWin,
-    }));
+        gameId: data.gameId,
+      }) !== "nba"
+    ) {
+      continue;
+    }
+    const phase = normalizeSeasonPhase(data.seasonPhase);
+    if (phase === "playoffs" || phase === "play_in") continue;
+    if (nbaSeasonKeyFromDateJST(new Date(ms)) !== seasonKey) continue;
+    out.push({
+      postId: d.id,
+      settledAtMs: ms,
+      isWin: stats.isWin,
+    });
+    if (out.length >= PROFILE_CHARTS_LAST20_MAX) break;
+  }
+  return out.slice().sort((a, b) => a.settledAtMs - b.settledAtMs);
 }
 
 async function writeCompleteBundle(
@@ -180,7 +188,7 @@ export async function ensureProfileChartsBundle(
   if (!safeUid) {
     return {
       v: PROFILE_CHARTS_BUNDLE_VERSION,
-      seasonKey: options?.seasonKey ?? CURRENT_NBA_SEASON_KEY,
+      seasonKey: options?.seasonKey ?? profileOverviewSeasonKey(),
       dailyTrend: [],
       rankTrend: [],
       last20: [],
@@ -188,7 +196,7 @@ export async function ensureProfileChartsBundle(
     };
   }
 
-  const seasonKey = options?.seasonKey ?? CURRENT_NBA_SEASON_KEY;
+  const seasonKey = options?.seasonKey ?? profileOverviewSeasonKey();
   const inflightKey = shortCacheKey(safeUid, seasonKey);
   const existing = ensureInflight.get(inflightKey);
   if (existing) return existing;
@@ -244,7 +252,9 @@ export async function ensureProfileChartsBundle(
       needRank
         ? buildRankTrend(safeUid, seasonKey)
         : Promise.resolve(parsed!.rankTrend!),
-      needLast20 ? buildLast20(safeUid) : Promise.resolve(parsed!.last20!),
+      needLast20
+        ? buildLast20(safeUid, seasonKey)
+        : Promise.resolve(parsed!.last20!),
     ]);
 
     const bundle: CompleteProfileChartsBundle = {

@@ -33,7 +33,7 @@ import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { useNativeProfileStats } from "./useNativeProfileStats";
 import { useNativeProfileDailyTrendChart } from "./useNativeProfileDailyTrendChart";
 import { useNativeStreakTracker } from "./useNativeStreakTracker";
-import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
+import { profileOverviewSeasonKey } from "../../../../../lib/profile/profileOverviewSeason";
 import {
   resolveAndExpireMyPlan,
   useNativeProfilePlan,
@@ -339,7 +339,7 @@ export default function ProfileHomeScreen({
     deferIndependentFetch: statsBundle.dailyTrendLoading,
     rankingLeague: profileStatsContext.rankingLeague,
     wcStage: profileStatsContext.wcStage,
-    /** overview は 26-27 regular season 固定 */
+    /** overview season: profileOverviewSeasonKey()（確認用に前シーズン可） */
     nbaPeriod: "season",
     authReady,
   });
@@ -759,7 +759,7 @@ export default function ProfileHomeScreen({
             </View>
           ) : (
             <ProfileDailyTrendChartNative
-              key={`dailyTrend:${targetUid ?? ""}:${CURRENT_NBA_SEASON_KEY}:season:${dailyTrendChart.chartData.map((r) => r.date).join(",")}`}
+              key={`dailyTrend:${targetUid ?? ""}:${profileOverviewSeasonKey()}:season:${dailyTrendChart.chartData.map((r) => r.date).join(",")}`}
               data={dailyTrendChart.chartData}
               language={language}
               allowAll={currentIsProView}

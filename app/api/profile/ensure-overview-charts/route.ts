@@ -4,7 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import { ensureProfileChartsBundle } from "@/lib/profile/ensureProfileChartsBundle";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +18,8 @@ export async function GET(req: Request) {
     }
     const force = url.searchParams.get("force") === "1";
     const seasonKey =
-      (url.searchParams.get("seasonKey") ?? "").trim() || CURRENT_NBA_SEASON_KEY;
+      (url.searchParams.get("seasonKey") ?? "").trim() ||
+      profileOverviewSeasonKey();
 
     const bundle = await ensureProfileChartsBundle(uid, {
       seasonKey,

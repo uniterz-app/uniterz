@@ -13,6 +13,7 @@ import {
   type ProfileKinetikMetricsPeriod,
 } from "../../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import { preferredNbaKinetikPeriod } from "../../../../../../lib/rankings/nbaSeason";
+import { profileOverviewSeasonKey } from "../../../../../../lib/profile/profileOverviewSeason";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "../profileApi";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
@@ -184,6 +185,7 @@ export default function ProfileKinetikHeroNative({
           },
           profileCharts: null,
           chartsPath: "missing" as const,
+          overviewSeasonKey: profileOverviewSeasonKey(),
         }
       : null);
 

@@ -12,8 +12,8 @@ import {
 } from "../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import {
   preferredNbaKinetikPeriod,
-  CURRENT_NBA_SEASON_KEY,
 } from "../../../../../lib/rankings/nbaSeason";
+import { profileOverviewSeasonKey } from "../../../../../lib/profile/profileOverviewSeason";
 import type { MyRankMetricValueDeltas } from "../../../../../lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
@@ -60,7 +60,7 @@ export type NativeProfileStatsState = {
   error: string | null;
 };
 
-const STATS_CACHE_VERSION = `v8:${CURRENT_NBA_SEASON_KEY}:fsCharts`;
+const STATS_CACHE_VERSION = `v9:${profileOverviewSeasonKey()}:fsCharts`;
 /** NBA 以外 / フォールバック */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -543,7 +543,7 @@ export function useNativeProfileStats(
               invalidateCumulativeDataCache(targetUid);
               charts = {
                 v: 1,
-                seasonKey: CURRENT_NBA_SEASON_KEY,
+                seasonKey: ensured.seasonKey,
                 dailyTrend: ensured.dailyTrend,
                 rankTrend: ensured.rankTrend.map((p) => ({
                   dateKey: p.dateKey,
@@ -554,7 +554,7 @@ export function useNativeProfileStats(
             } else {
               charts = {
                 v: 1,
-                seasonKey: CURRENT_NBA_SEASON_KEY,
+                seasonKey: fs.overviewSeasonKey,
                 dailyTrend: [],
                 rankTrend: [],
                 last20: [],
@@ -562,12 +562,12 @@ export function useNativeProfileStats(
             }
             if (__DEV__) {
               console.log(
-                `[profileCharts] path=ensure chartsPath=${fs.chartsPath} ms=${Date.now() - t0}`
+                `[profileCharts] path=ensure season=${fs.overviewSeasonKey} chartsPath=${fs.chartsPath} ms=${Date.now() - t0}`
               );
             }
           } else if (__DEV__) {
             console.log(
-              `[profileCharts] path=${fs.chartsPath} ms=${Date.now() - t0} daily=${charts?.dailyTrend?.length ?? 0} rank=${charts?.rankTrend?.length ?? 0} last20=${charts?.last20?.length ?? 0}`
+              `[profileCharts] path=${fs.chartsPath} season=${fs.overviewSeasonKey} ms=${Date.now() - t0} daily=${charts?.dailyTrend?.length ?? 0} rank=${charts?.rankTrend?.length ?? 0} last20=${charts?.last20?.length ?? 0}`
             );
           }
 

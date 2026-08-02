@@ -1,5 +1,6 @@
 import { filterDailyTrendToSeasonActivity } from "../../../../../lib/profile/dailyTrendSeasonActivity";
 import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
+import { profileOverviewSeasonKey } from "../../../../../lib/profile/profileOverviewSeason";
 import { fetchNbaSeasonRankTrendFirestore as fetchNbaSeasonRankTrendFirestoreShared } from "../../../../../lib/profile/fetchNbaSeasonRankTrendFirestore";
 import {
   collection,
@@ -602,12 +603,14 @@ export async function ensureNbaOverviewChartsApi(uid: string): Promise<{
   dailyTrend: ProfileDailyTrendRow[];
   rankTrend: RankPlayoffTrendPointNative[];
   last20: { postId: string; settledAtMs: number; isWin: boolean }[];
+  seasonKey: string;
 } | null> {
   const base = getUniterzApiBaseUrl();
   if (!base || !uid.trim()) return null;
+  const seasonKey = profileOverviewSeasonKey();
   const qs = new URLSearchParams({
     uid: uid.trim(),
-    seasonKey: CURRENT_NBA_SEASON_KEY,
+    seasonKey,
   });
   try {
     const res = await fetch(
@@ -616,12 +619,15 @@ export async function ensureNbaOverviewChartsApi(uid: string): Promise<{
     );
     const json = (await res.json()) as {
       ok?: boolean;
+      seasonKey?: string;
       dailyTrend?: unknown;
       rankTrend?: unknown;
       last20?: unknown;
     };
     if (!res.ok || json.ok !== true) return null;
     return {
+      seasonKey:
+        typeof json.seasonKey === "string" ? json.seasonKey : seasonKey,
       dailyTrend: normalizeProfileDailyTrendRows(json.dailyTrend),
       rankTrend: normalizeRankTrendPoints(json.rankTrend),
       last20: Array.isArray(json.last20)
