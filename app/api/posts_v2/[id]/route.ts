@@ -12,8 +12,8 @@ import {
   normalizeWcGoalScorerPick,
   validateWcGoalScorerPickForGame,
   type WcGoalScorerPick,
-} from "@/lib/wc/goalScorer";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+} from "@/lib/legacyWcWebShims";
+import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
 import { FieldValue } from "firebase-admin/firestore";
 
 /* ========= 認証 ========= */

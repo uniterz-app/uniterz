@@ -12,7 +12,6 @@ const ICONS = {
   nba: require("../../../assets/games-drawer/nba.png") as number,
   awards: require("../../../assets/games-drawer/awards.png") as number,
   standings: require("../../../assets/games-drawer/standings.png") as number,
-  wc: require("../../../assets/games-drawer/wc.png") as number,
 } as const;
 
 const BRANCH = "rgba(0, 245, 255, 0.42)";
@@ -20,7 +19,6 @@ const BRANCH = "rgba(0, 245, 255, 0.42)";
 type Props = {
   league: "nba" | "wc";
   onSelectNba: () => void;
-  onSelectWorldCup: () => void;
   onSelectAwardsPredict: () => void;
   onSelectStandingsPredict: () => void;
   language: "ja" | "en";
@@ -40,11 +38,10 @@ function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) 
   );
 }
 
-/** Web `GamesDrawerMenu` と同等（NBA + 枝分かれサブ / World Cup） */
+/** Web `GamesDrawerMenu` と同等（NBA + 枝分かれサブ） */
 export default function GamesDrawerMenuNative({
   league,
   onSelectNba,
-  onSelectWorldCup,
   onSelectAwardsPredict,
   onSelectStandingsPredict,
   language,
@@ -93,15 +90,6 @@ export default function GamesDrawerMenuNative({
             </BranchRow>
           </View>
         </View>
-
-        <SideMenuItemButtonNative
-          iconSource={ICONS.wc}
-          active={league === "wc"}
-          labelStyle={{ ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" }}
-          onPress={onSelectWorldCup}
-        >
-          World Cup
-        </SideMenuItemButtonNative>
       </View>
     </View>
   );

@@ -6,7 +6,7 @@ exports.loadAuthorUidsSettledToday = loadAuthorUidsSettledToday;
 exports.loadAuthorUidsSettledTodayForWcStage = loadAuthorUidsSettledTodayForWcStage;
 exports.isActiveWinStreakRankingEligible = isActiveWinStreakRankingEligible;
 const firestore_1 = require("firebase-admin/firestore");
-const resolveWcStage_1 = require("../wc/resolveWcStage");
+const resolveWcStage_1 = require("../shared/resolveWcStage");
 function toDateKeyJST(d) {
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const y = j.getUTCFullYear();

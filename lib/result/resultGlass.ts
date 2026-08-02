@@ -4,7 +4,7 @@
  * ネオン・HUD装飾は使わず、状態は縁色と微かな残光だけで表現する。
  */
 
-import { normalizeWinStreak } from "@/lib/ui/winStreakBadge";
+import { normalizeWinStreak } from "@/lib/ui/normalizeWinStreak";
 
 export type ResultCardBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 

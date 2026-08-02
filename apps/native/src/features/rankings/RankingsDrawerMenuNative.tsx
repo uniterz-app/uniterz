@@ -58,7 +58,6 @@ export default function RankingsDrawerMenuNative({
   const regularActive = league === "nba" && nbaBoard === "regular";
   const playoffsActive = league === "nba" && nbaBoard === "playoffs";
   const openActive = league === "nba" && nbaBoard === "open";
-  const wcActive = league === "wc";
   const showNbaBranch = Boolean(
     onSelectNbaRegular && onSelectNbaPlayoffs && onSelectOpenweight
   );
@@ -138,14 +137,6 @@ export default function RankingsDrawerMenuNative({
           </SideMenuItemButtonNative>
         )}
 
-        <SideMenuItemButtonNative
-          icon="earth"
-          active={wcActive}
-          labelStyle={{ ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" }}
-          onPress={() => onChange("wc")}
-        >
-          World Cup
-        </SideMenuItemButtonNative>
         {onOpenSquadBattlePreview ? (
           <SideMenuItemButtonNative
             icon="account-group-outline"

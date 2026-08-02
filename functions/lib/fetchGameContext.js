@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchGameContext = fetchGameContext;
-const resolveWcStage_1 = require("./wc/resolveWcStage");
+const resolveWcStage_1 = require("./shared/resolveWcStage");
 /* =========================
  * Helpers
  * ========================= */

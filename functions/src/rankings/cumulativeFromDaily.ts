@@ -29,8 +29,10 @@ export type RankingTotals = {
 
 export type PostCumulativeContribution = {
   forRanking: boolean;
-  /** NBA シーズンバケット（例: "2026-27"）。NBA ランキング対象投稿のみ */
+  /** NBA レギュラーシーズンバケット（regular / 未設定 phase のみ） */
   nbaSeasonKey: string | null;
+  /** NBA プレーオフシーズンバケット（playoffs phase のみ） */
+  nbaPlayoffsSeasonKey: string | null;
   leagueKey: string | null;
   isWc: boolean;
   wcStage: "qualifying" | "main" | null;
@@ -186,6 +188,16 @@ export function buildCumulativeIncrementFields(
     applyBonusToPath(p);
   }
 
+  if (contrib.nbaPlayoffsSeasonKey) {
+    const p = `rankingByNbaPlayoffs.${contrib.nbaPlayoffsSeasonKey}`;
+    out[`${p}.totalPosts`] = FieldValue.increment(posts);
+    out[`${p}.totalWins`] = FieldValue.increment(wins);
+    out[`${p}.totalPoints`] = FieldValue.increment(points);
+    out[`${p}.totalUpset`] = FieldValue.increment(upset);
+    out[`${p}.totalGoalScorerHits`] = FieldValue.increment(goalScorer);
+    applyBonusToPath(p);
+  }
+
   if (contrib.isWc && contrib.forRanking) {
     const stages: Array<"overall" | "qualifying" | "main"> = ["overall"];
     if (contrib.wcStage === "qualifying") stages.push("qualifying");
@@ -236,8 +248,10 @@ export function applyCumulativeIncrementInTransaction(
 export type AggregatedCumulative = {
   profile: RankingTotals;
   ranking: RankingTotals;
-  /** シーズンキー（例: "2026-27"）→ NBA シーズン累積 */
+  /** シーズンキー（例: "2026-27"）→ NBA レギュラーシーズン累積 */
   rankingBySeason: Record<string, RankingTotals>;
+  /** シーズンキー → NBA プレーオフ累積（現行シーズン PO のみ） */
+  rankingByNbaPlayoffs: Record<string, RankingTotals>;
   rankingByWcStage: Record<
     (typeof WC_RANKING_STAGES)[number],
     RankingTotals
@@ -250,6 +264,7 @@ export function aggregateCumulativeFromDailyData(
   let profile = emptyRankingTotals();
   let ranking = emptyRankingTotals();
   const bySeason = new Map<string, Omit<RankingTotals, "winRate">>();
+  const byNbaPlayoffs = new Map<string, Omit<RankingTotals, "winRate">>();
   const byWc = {
     overall: emptyRankingTotals(),
     qualifying: emptyRankingTotals(),
@@ -282,6 +297,21 @@ export function aggregateCumulativeFromDailyData(
       );
     }
 
+    const byPlayoffsBuckets = (data.rankingByNbaPlayoffs ?? {}) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    for (const [seasonKey, bucket] of Object.entries(byPlayoffsBuckets)) {
+      if (!bucket || typeof bucket !== "object") continue;
+      byNbaPlayoffs.set(
+        seasonKey,
+        addRankingTotals(
+          byNbaPlayoffs.get(seasonKey) ?? emptyRankingTotals(),
+          bucketToInc(bucket)
+        )
+      );
+    }
+
     const wcBuckets = readDailyWcStageBuckets(data);
     for (const wk of WC_RANKING_STAGES) {
       byWc[wk] = addRankingTotals(
@@ -296,10 +326,16 @@ export function aggregateCumulativeFromDailyData(
     rankingBySeason[seasonKey] = withWinRate(totals);
   }
 
+  const rankingByNbaPlayoffs: Record<string, RankingTotals> = {};
+  for (const [seasonKey, totals] of byNbaPlayoffs) {
+    rankingByNbaPlayoffs[seasonKey] = withWinRate(totals);
+  }
+
   return {
     profile: withWinRate(profile),
     ranking: withWinRate(ranking),
     rankingBySeason,
+    rankingByNbaPlayoffs,
     rankingByWcStage: {
       overall: withWinRate(byWc.overall),
       qualifying: withWinRate(byWc.qualifying),
@@ -425,6 +461,7 @@ export function cumulativePayloadFromAggregate(
 
     ranking: agg.ranking,
     rankingBySeason: agg.rankingBySeason,
+    rankingByNbaPlayoffs: agg.rankingByNbaPlayoffs,
     rankingByWcStage: agg.rankingByWcStage,
 
     ...rankingTotalPostsFromAggregate(agg.ranking.totalPosts),

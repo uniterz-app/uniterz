@@ -108,7 +108,7 @@ import {
   resolveResultPostPkScore,
   useResultPostsPkScores,
 } from "@/lib/games/useResultPostsPkScores";
-import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
+import { resolveWcTeamId } from "@/lib/legacyWcWebShims";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import {

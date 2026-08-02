@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  filterPostsForScope,
-} from "@/lib/profile/profileStreakPostsCompute";
-import { loadProfileSettledPosts } from "@/lib/profile/profileStreakPostsCache";
+import { loadProfileSettledPostsForStreakScope } from "@/lib/profile/profileStreakPostsCache";
 import {
   resolveProfileStreakScopeKey,
   type ProfileStatsStreakContext,
@@ -46,9 +43,8 @@ export function useProfileStreakTracker(
     async function run() {
       setLoading(true);
       try {
-        const rows = await loadProfileSettledPosts(safeUid);
-        const scoped = filterPostsForScope(
-          rows,
+        const scoped = await loadProfileSettledPostsForStreakScope(
+          safeUid,
           scopeKey,
           STREAK_TRACKER_LAST_N
         );

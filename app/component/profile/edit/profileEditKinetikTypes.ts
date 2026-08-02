@@ -31,6 +31,7 @@ export const PROFILE_EDIT_KINETIK_MOCK: {
     posts: 41,
     hits: 28,
     exactHits: 0,
+    goalScorerHits: 12,
     totalPoints: 1284,
     totalPointsRank: 14,
     totalPointsRankDenominator: 1400,

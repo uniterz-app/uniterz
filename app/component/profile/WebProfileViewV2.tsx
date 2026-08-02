@@ -62,16 +62,6 @@ const ProfilePlayoffRankTrendChartLazy = dynamic(
   }
 );
 
-const ProfileWcStackedRankTrendChartsLazy = dynamic(
-  () => import("@/app/component/profile/ui/ProfileWcStackedRankTrendCharts"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="min-h-[240px] rounded-2xl bg-white/5" aria-hidden />
-    ),
-  }
-);
-
 import ProfileKinetikHero from "./ui/ProfileKinetikHero";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
@@ -85,7 +75,6 @@ import {
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
 import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useProfilePlayoffRankTrend } from "@/lib/profile/useProfilePlayoffRankTrend";
-import { useProfileWcStackedRankTrend } from "@/lib/profile/useProfileWcStackedRankTrend";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
@@ -107,7 +96,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
   const rankingLeague = props.profileStatsContext.rankingLeague;
-  const onToggleStatsLeague = props.onToggleStatsLeague;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const { language } = useUserLanguage(resolvedUid);
@@ -140,20 +128,13 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       enabled: fetchOverviewExtras,
       seedRows: props.profileDailyTrendSeed ?? undefined,
       rankingLeague,
-      wcStage: props.profileStatsContext.wcStage,
     });
 
   const { chartRows: rankPlayoffTrendRows, loading: rankTrendLoading } =
     useProfilePlayoffRankTrend(resolvedUid, {
-      enabled: fetchOverviewExtras && rankingLeague !== "worldcup",
+      enabled: fetchOverviewExtras,
       rankingLeague,
-      wcStage: props.profileStatsContext.wcStage,
     });
-
-  const {
-    sections: wcRankTrendSections,
-    loading: wcRankTrendLoading,
-  } = useProfileWcStackedRankTrend(resolvedUid, fetchOverviewExtras && rankingLeague === "worldcup");
 
   const {
     loading: playoffBracketLoading,
@@ -234,9 +215,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         statsLoading={statsLoading}
         isMe={isMe}
         onOpenMenu={() => setDrawerOpen(true)}
-        onToggleMetricsScope={onToggleStatsLeague}
-        wcStackedMetricsSections={props.wcStackedMetricsSections}
-        wcStackedStatsLoading={props.wcStackedStatsLoading}
         menuUnreadCount={isMe ? menuUnreadCount : 0}
         badges={resolvedBadges}
         onBadgeClick={(badge) => {
@@ -291,21 +269,12 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               ) : null}
               {overviewStage >= 2 ? (
               <div className="min-w-0 overflow-visible pt-0">
-                {rankingLeague === "worldcup" ? (
-                  <ProfileWcStackedRankTrendChartsLazy
-                    sections={wcRankTrendSections}
-                    loading={wcRankTrendLoading}
-                    language={language}
-                    visualEffectsLite={visualEffectsLite}
-                  />
-                ) : (
-                  <ProfilePlayoffRankTrendChartLazy
-                    data={rankPlayoffTrendRows}
-                    loading={rankTrendLoading}
-                    language={language}
-                    visualEffectsLite={visualEffectsLite}
-                  />
-                )}
+                <ProfilePlayoffRankTrendChartLazy
+                  data={rankPlayoffTrendRows}
+                  loading={rankTrendLoading}
+                  language={language}
+                  visualEffectsLite={visualEffectsLite}
+                />
               </div>
               ) : null}
               {overviewStage >= 3 && resolvedUid ? (

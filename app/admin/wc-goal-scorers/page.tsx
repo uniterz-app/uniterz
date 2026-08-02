@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import AdminGuard from "@/app/admin/_components/AdminGuard";
 import { auth } from "@/lib/firebase";
-import type { WcGameGoalScorer } from "@/lib/wc/goalScorer";
-import { getWcSquad, getWcSquadPlayer } from "@/lib/wc/squads";
+import type { WcGameGoalScorer } from "@/lib/legacyWcWebShims";
+import { getWcSquad, getWcSquadPlayer } from "@/lib/legacyWcWebShims";
 
 type GameRow = {
   id: string;

@@ -25,7 +25,7 @@ export default function ResultPage() {
     flagsReady,
     showResultLeagueTabs,
     defaultLeagueTab,
-  } = useResultPagePosts(leagueTab ?? LEAGUES.WC, {
+  } = useResultPagePosts(leagueTab ?? LEAGUES.NBA, {
     waitForLeagueFlags: true,
     enabled: leagueTab !== null,
   });

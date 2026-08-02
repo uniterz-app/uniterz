@@ -5,7 +5,6 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
-import { fetchWcTeamRecordMap } from "@/lib/wc/wcTeamRecordsCache";
 
 export type MatchCardTeamRecord = {
   wins: number;
@@ -35,18 +34,6 @@ export function useMatchCardTeamRecords(
 
     void (async () => {
       try {
-        if (league === "wc") {
-          const wcMap = await fetchWcTeamRecordMap(db);
-          if (!alive) return;
-          const next: Record<string, MatchCardTeamRecord> = {};
-          for (const teamId of ids) {
-            const value = wcMap[teamId];
-            if (value) next[teamId] = value;
-          }
-          setMap(next);
-          return;
-        }
-
         const chunks: string[][] = [];
         for (let i = 0; i < ids.length; i += 10) {
           chunks.push(ids.slice(i, i + 10));

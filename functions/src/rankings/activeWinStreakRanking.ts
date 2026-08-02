@@ -2,7 +2,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import {
   resolveWcStageFromGame,
   type GameWcStage,
-} from "../wc/resolveWcStage";
+} from "../shared/resolveWcStage";
 
 function toDateKeyJST(d: Date): string {
   const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);

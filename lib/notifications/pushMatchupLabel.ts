@@ -1,5 +1,3 @@
-import { teamIdToCountryName, teamIdToWcCountry } from "@/lib/wc/wcCountry";
-
 export type PushLanguage = "ja" | "en";
 
 export type PushMatchupInput = {
@@ -13,18 +11,9 @@ export type PushMatchupInput = {
 
 function resolvePushSideLabel(
   label: string,
-  teamId: string | undefined,
+  _teamId: string | undefined,
   language: PushLanguage
 ): string {
-  if (teamId) {
-    const localized = teamIdToCountryName(teamId, language);
-    if (localized) {
-      if (language === "en" && teamIdToWcCountry(teamId)) {
-        return localized.toUpperCase();
-      }
-      return localized;
-    }
-  }
   const trimmed = label.trim() || "?";
   return language === "en" ? trimmed.toUpperCase() : trimmed;
 }

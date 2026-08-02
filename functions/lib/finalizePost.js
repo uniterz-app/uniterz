@@ -4,10 +4,9 @@ exports.finalizePost = finalizePost;
 const firestore_1 = require("firebase-admin/firestore");
 const updateUserStatsV2_1 = require("./updateUserStatsV2");
 const computePostSettlement_1 = require("./computePostSettlement");
-const matchGoalScorersDisplay_1 = require("./wc/matchGoalScorersDisplay");
-const resolveWcStage_1 = require("./wc/resolveWcStage");
+const resolveWcStage_1 = require("./shared/resolveWcStage");
 async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
     const p = postDoc.data();
     if (p.settledAt)
         return;
@@ -39,9 +38,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
     });
     const now = firestore_1.Timestamp.now();
     const isWc = String((_a = game.league) !== null && _a !== void 0 ? _a : "").toLowerCase() === "wc";
-    const matchGoalScorers = isWc
-        ? (0, matchGoalScorersDisplay_1.buildPostMatchGoalScorersFromGame)(game.goalScorers, game.homeTeamId, game.awayTeamId)
-        : [];
+    const matchGoalScorers = [];
     const pkScoreRaw = game === null || game === void 0 ? void 0 : game.pkScore;
     const pkScore = pkScoreRaw &&
         typeof pkScoreRaw === "object" &&
@@ -112,9 +109,10 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         exactHit: isWc && Boolean(baseScore.exactMatch),
         points: totalPoints,
         countsForRanking,
+        seasonPhase: (_f = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _f !== void 0 ? _f : null,
         wcStage: resolvedWcStage,
-        homeTeamId: (_h = (_f = game.homeTeamId) !== null && _f !== void 0 ? _f : (_g = p.home) === null || _g === void 0 ? void 0 : _g.teamId) !== null && _h !== void 0 ? _h : null,
-        awayTeamId: (_l = (_j = game.awayTeamId) !== null && _j !== void 0 ? _j : (_k = p.away) === null || _k === void 0 ? void 0 : _k.teamId) !== null && _l !== void 0 ? _l : null,
+        homeTeamId: (_j = (_g = game.homeTeamId) !== null && _g !== void 0 ? _g : (_h = p.home) === null || _h === void 0 ? void 0 : _h.teamId) !== null && _j !== void 0 ? _j : null,
+        awayTeamId: (_m = (_k = game.awayTeamId) !== null && _k !== void 0 ? _k : (_l = p.away) === null || _l === void 0 ? void 0 : _l.teamId) !== null && _m !== void 0 ? _m : null,
     }));
 }
 //# sourceMappingURL=finalizePost.js.map

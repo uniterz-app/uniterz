@@ -13,11 +13,12 @@ import {
   extractResultSettlementBreakdown,
   type ResultStatMetricKey,
 } from "@/lib/result/buildResultStatRows";
-import WcGoalScorerResultRow, {
+import {
+  WcGoalScorerResultRow,
   useWcGoalScorerResult,
   useWcPkWinnerResult,
   WcPkWinnerResultRow,
-} from "@/app/component/result/WcGoalScorerResultRow";
+} from "@/app/component/result/wcResultRowStubs";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import {
   RESULT_HIT_CYBER_CLIP,

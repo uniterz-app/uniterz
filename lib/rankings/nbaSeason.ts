@@ -40,3 +40,17 @@ export function nbaSeasonOpenSnapshotDocId(
 ): string {
   return `s${seasonKey}_open_${metric}`;
 }
+
+/** NBA プレーオフ期（4–6月 JST）— Kinetik の primary タブ判定 */
+export function isNbaPlayoffsCalendarWindow(d: Date = new Date()): boolean {
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const m = j.getUTCMonth() + 1;
+  return m >= 4 && m <= 6;
+}
+
+/** Kinetik SEASON / PLAYOFF の既定タブ（プレーオフ期は PLAYOFF 優先） */
+export function preferredNbaKinetikPeriod(
+  d?: Date
+): "season" | "playoffs" {
+  return isNbaPlayoffsCalendarWindow(d ?? new Date()) ? "playoffs" : "season";
+}

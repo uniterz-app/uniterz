@@ -5,7 +5,10 @@ import {
   applyCumulativeIncrementInTransaction,
   type PostCumulativeContribution,
 } from "./rankings/cumulativeFromDaily";
-import { nbaSeasonKeyFromDateJST } from "./rankings/nbaSeason";
+import {
+  normalizeNbaSeasonPhase,
+  resolveNbaRankingBucketKeys,
+} from "./rankings/nbaSeason";
 
 function normalizeLeague(raw?: string | null): string | null {
   if (!raw) return null;
@@ -15,13 +18,21 @@ function normalizeLeague(raw?: string | null): string | null {
   return v || null;
 }
 
-function nbaSeasonKeyForDelete(
+function nbaBucketKeysForDelete(
   leagueKey: string | null,
   forRanking: boolean,
-  startAt: Timestamp | undefined
-): string | null {
-  if (!forRanking || leagueKey !== "nba" || !startAt) return null;
-  return nbaSeasonKeyFromDateJST(startAt.toDate());
+  startAt: Timestamp | undefined,
+  seasonPhase: unknown
+): { nbaSeasonKey: string | null; nbaPlayoffsSeasonKey: string | null } {
+  if (!forRanking || leagueKey !== "nba" || !startAt) {
+    return { nbaSeasonKey: null, nbaPlayoffsSeasonKey: null };
+  }
+  return resolveNbaRankingBucketKeys(
+    leagueKey,
+    forRanking,
+    startAt.toDate(),
+    normalizeNbaSeasonPhase(seasonPhase)
+  );
 }
 
 function buildDeleteContribution(
@@ -37,9 +48,16 @@ function buildDeleteContribution(
   const wcStage =
     wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
   const forRanking = stats.countedForRanking !== false;
+  const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(
+    leagueKey,
+    forRanking,
+    startAt,
+    before.seasonPhase
+  );
   return {
     forRanking,
-    nbaSeasonKey: nbaSeasonKeyForDelete(leagueKey, forRanking, startAt),
+    nbaSeasonKey,
+    nbaPlayoffsSeasonKey,
     leagueKey,
     isWc,
     wcStage,
@@ -144,6 +162,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
           {
             forRanking: true,
             nbaSeasonKey: null,
+            nbaPlayoffsSeasonKey: null,
             leagueKey: normalizeLeague(
               typeof before.league === "string" ? before.league : null
             ),
@@ -213,15 +232,24 @@ export const onPostDeletedV2 = onDocumentDeleted(
         tx.set(dailyRef, { ranking: dec }, { merge: true });
       }
 
-      const seasonKey = nbaSeasonKeyForDelete(
+      const seasonPhase = before.seasonPhase;
+      const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(
         normalizeLeague(typeof before.league === "string" ? before.league : null),
         countRank,
-        startAt
+        startAt,
+        seasonPhase
       );
-      if (seasonKey) {
+      if (nbaSeasonKey) {
         tx.set(
           dailyRef,
-          { rankingBySeason: { [seasonKey]: dec } },
+          { rankingBySeason: { [nbaSeasonKey]: dec } },
+          { merge: true }
+        );
+      }
+      if (nbaPlayoffsSeasonKey) {
+        tx.set(
+          dailyRef,
+          { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: dec } },
           { merge: true }
         );
       }

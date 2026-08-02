@@ -4,18 +4,15 @@ import {
   resultStreakBadgeClass,
   resultStreakBadgeIconClass,
 } from "@/lib/result/resultGlass";
+import { normalizeWinStreak } from "@/lib/ui/normalizeWinStreak";
+
+export { normalizeWinStreak } from "@/lib/ui/normalizeWinStreak";
 
 export type WinStreakBadgeStyle = {
   label: string;
   className: string;
   iconClassName: string;
 };
-
-export function normalizeWinStreak(activeWinStreak: unknown): number {
-  return typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
-    ? Math.max(0, Math.floor(activeWinStreak))
-    : 0;
-}
 
 /** プロフィールヒーロー等：枠を走る光スイープ（リザルトカード連勝と同型） */
 export function showWinStreakSweep(activeWinStreak: unknown): boolean {

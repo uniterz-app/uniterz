@@ -47,9 +47,7 @@ export default function OnboardingForm({ variant }: Props) {
     guessLanguageFromNavigator()
   );
   const [countryCode, setCountryCode] = useState("");
-  const [preferredLeague, setPreferredLeague] = useState<PreferredLeague | null>(
-    null
-  );
+  const [preferredLeague] = useState<PreferredLeague>(LEAGUES.NBA);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [pressed, setPressed] = useState(false);
@@ -68,8 +66,7 @@ export default function OnboardingForm({ variant }: Props) {
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
-  const canSubmit =
-    displayName.trim().length > 0 && preferredLeague !== null;
+  const canSubmit = displayName.trim().length > 0;
   const isWeb = resolvedVariant === "web";
   const selectedCountryHasFlag = countryCode ? Boolean(FLAG_SRC[countryCode]) : false;
 
@@ -114,7 +111,7 @@ export default function OnboardingForm({ variant }: Props) {
         language,
         countryCode: countryCode || null,
         completeOnboarding: true,
-        preferredLeague: preferredLeague ?? undefined,
+        preferredLeague,
       });
 
       const gamesPath = resolvedVariant === "mobile" ? "/mobile/games" : "/web/games";
@@ -136,21 +133,6 @@ export default function OnboardingForm({ variant }: Props) {
       setSaving(false);
     }
   };
-
-  const leagueOptions = (
-    [
-      {
-        id: LEAGUES.NBA as PreferredLeague,
-        labelJa: "NBA",
-        labelEn: "NBA",
-      },
-      {
-        id: LEAGUES.WC as PreferredLeague,
-        labelJa: "ワールドカップ",
-        labelEn: "World Cup",
-      },
-    ] as const
-  );
 
   const setupDesc = uiStr(language, {
     ja: "ユーザーネームと言語を設定すると次へ進めます（必須）",
@@ -206,46 +188,6 @@ export default function OnboardingForm({ variant }: Props) {
           </option>
         ))}
       </CyberAuthSelect>
-    </div>
-  );
-
-  const leagueField = (
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-white/75">
-        {uiStr(language, {
-          ja: "主に予想する大会（必須）",
-          en: "Main competition (required)",
-        })}
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        {leagueOptions.map((opt) => {
-          const active = preferredLeague === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setPreferredLeague(opt.id)}
-              className={[
-                "rounded-xl border px-2 py-2.5 text-center text-sm font-semibold transition",
-                active
-                  ? "border-cyan-400/55 bg-cyan-500/15 text-white shadow-[0_0_20px_rgba(34,211,238,0.15)]"
-                  : "border-white/12 bg-white/[0.04] text-white/65 hover:border-white/22 hover:text-white/85",
-              ].join(" ")}
-            >
-              {uiStr(language, {
-                ja: opt.labelJa,
-                en: opt.labelEn,
-              })}
-            </button>
-          );
-        })}
-      </div>
-      <p className="font-[family-name:var(--font-geist-sans)] text-xs leading-relaxed text-white/55">
-        {uiStr(language, {
-          ja: "試合・ランキング・プロフィールの最初の表示に使います。あとから変更できます。",
-          en: "Used for your initial Games, Rankings, and Profile views. You can change this later.",
-        })}
-      </p>
     </div>
   );
 
@@ -377,7 +319,6 @@ export default function OnboardingForm({ variant }: Props) {
                   {usernameField}
                   {languageField}
                 </div>
-                {leagueField}
                 {countryField}
               </div>
               <div className="mt-8 flex justify-end">{submitButton}</div>
@@ -405,7 +346,6 @@ export default function OnboardingForm({ variant }: Props) {
           <div className="mt-5 space-y-3 text-left">
             {usernameField}
             {languageField}
-            {leagueField}
             {countryField}
           </div>
 

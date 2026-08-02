@@ -11,7 +11,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ActivityIndicator,
   Image,
-  InteractionManager,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -34,14 +33,17 @@ import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { useNativeProfileStats } from "./useNativeProfileStats";
 import { useNativeProfileDailyTrendChart } from "./useNativeProfileDailyTrendChart";
 import { useNativeStreakTracker } from "./useNativeStreakTracker";
-import { useNativeProfilePlan } from "./useNativeProfilePlan";
+import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
+import {
+  resolveAndExpireMyPlan,
+  useNativeProfilePlan,
+} from "./useNativeProfilePlan";
 import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
 import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
 import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
 import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
-import ProfileWcStackedRankTrendChartsNative from "./ProfileWcStackedRankTrendChartsNative";
 import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import ProfileMenuEdgeHandleNative from "./ProfileMenuEdgeHandleNative";
@@ -64,9 +66,6 @@ import {
 } from "../../../../../lib/profile/profileGamblingTerms";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
-import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
-import { useProfileKinetikWcStackedStats } from "../../../../../lib/profile/useProfileKinetikWcStackedStats";
-import { useProfileWcStackedRankTrend } from "../../../../../lib/profile/useProfileWcStackedRankTrend";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import { parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
@@ -273,11 +272,16 @@ export default function ProfileHomeScreen({
       />
     ) : null;
 
+  /** 自分プロフィールは routeHandle 無し。plan hook の getDoc より先に確定できる */
+  const isMe = !isPublicProfileView && !!myUid && myUid === targetUid;
+  const [myPlanReady, setMyPlanReady] = useState(false);
   const profilePlanHook = useNativeProfilePlan({
     targetUid: targetUid ?? null,
     profilePlan: plan,
+    myPlanOverride: plan,
+    myPlanOverrideReady: isMe ? myPlanReady : false,
+    deferOwnFetch: isMe,
   });
-  const isMe = profilePlanHook.isMe;
   const [profileViewCount, setProfileViewCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -314,24 +318,13 @@ export default function ProfileHomeScreen({
     });
   const { resolvedBadges } = useNativeProfileBadges(isMe ? myUid : targetUid);
 
-  const [profileStatsContext, setProfileStatsContext] = useState<ProfileStatsStreakContext>({
-    rankingLeague: "worldcup",
-    wcStage: "overall",
-  });
+  /** プロフィールは NBA のみ（W杯経路は使わない） */
+  const profileStatsContext = useMemo<ProfileStatsStreakContext>(
+    () => ({ rankingLeague: "nba" }),
+    []
+  );
 
   const authReady = status === "ready";
-  /** カード用 phase を先に出し、チャート群は最初の描画後に起動する */
-  const [profileHeavyReady, setProfileHeavyReady] = useState(false);
-  useEffect(() => {
-    if (!authReady || !targetUid) {
-      setProfileHeavyReady(false);
-      return;
-    }
-    const task = InteractionManager.runAfterInteractions(() => {
-      setProfileHeavyReady(true);
-    });
-    return () => task.cancel();
-  }, [authReady, targetUid]);
 
   const statsBundle = useNativeProfileStats(
     targetUid,
@@ -340,17 +333,19 @@ export default function ProfileHomeScreen({
     authReady
   );
   const dailyTrendChart = useNativeProfileDailyTrendChart(targetUid, {
-    enabled:
-      profileHeavyReady && tab === "overview" && !!targetUid && authReady,
-    seedRows:
-      statsBundle.dailyTrend.length > 0 ? statsBundle.dailyTrend : undefined,
+    enabled: tab === "overview" && !!targetUid && authReady,
+    seedRows: statsBundle.dailyTrend,
+    seedComplete: !statsBundle.dailyTrendLoading,
+    deferIndependentFetch: statsBundle.dailyTrendLoading,
     rankingLeague: profileStatsContext.rankingLeague,
     wcStage: profileStatsContext.wcStage,
+    /** overview は 26-27 regular season 固定 */
+    nbaPeriod: "season",
     authReady,
   });
   const streakBundle = useNativeStreakTracker(
     targetUid,
-    profileHeavyReady && tab === "overview" && !!targetUid && authReady,
+    tab === "overview" && !!targetUid && authReady,
     profileStatsContext
   );
 
@@ -375,39 +370,6 @@ export default function ProfileHomeScreen({
     statsBundle.summary?.activeWinStreak,
     statsBundle.stats,
   ]);
-
-  const onToggleMetricsScope = useCallback(() => {
-    setProfileStatsContext((prev) => {
-      const nextLeague: RankingLeagueSource =
-        prev.rankingLeague === "worldcup" ? "nba" : "worldcup";
-      return {
-        rankingLeague: nextLeague,
-        wcStage: nextLeague === "worldcup" ? (prev.wcStage ?? "overall") : undefined,
-      };
-    });
-  }, []);
-
-  const { sections: wcStackedMetricsSections, loading: wcStackedStatsLoading } =
-    useProfileKinetikWcStackedStats(
-      targetUid,
-      profileHeavyReady && profileStatsContext.rankingLeague === "worldcup",
-      currentStreak,
-      getUniterzApiBaseUrl() || undefined
-    );
-
-  const wcRankTrendApiBase = getUniterzApiBaseUrl() || undefined;
-  const {
-    sections: wcRankTrendSections,
-    loading: wcRankTrendLoading,
-  } = useProfileWcStackedRankTrend(
-    targetUid,
-    profileHeavyReady &&
-      tab === "overview" &&
-      !!targetUid &&
-      authReady &&
-      profileStatsContext.rankingLeague === "worldcup",
-    wcRankTrendApiBase
-  );
 
   /** Web ヒーロー2行目に近づける：ハンドル優先、無ければメール（UID の一部は誤解を招くので避ける） */
   const secondaryIdLine =
@@ -496,49 +458,45 @@ export default function ProfileHomeScreen({
     async function load() {
       if (!myUid) {
         setProfileLoading(false);
+        setMyPlanReady(true);
         return;
       }
       setProfileLoading(true);
+      setMyPlanReady(false);
       try {
         const snap = await getDoc(doc(db, "users", myUid));
         if (!alive) return;
-        const data = snap.data() as
-          | {
-              displayName?: unknown;
-              bio?: unknown;
-              handle?: unknown;
-              photoURL?: unknown;
-              avatarUrl?: unknown;
-              language?: unknown;
-              countryCode?: unknown;
-              plan?: unknown;
-              planProBgVariant?: unknown;
-            }
-          | undefined;
+        const data = (snap.data() ?? {}) as Record<string, unknown>;
         const fromDoc =
-          typeof data?.displayName === "string" ? data.displayName.trim() : "";
+          typeof data.displayName === "string" ? data.displayName.trim() : "";
         const fromAuth = auth.currentUser?.displayName?.trim() ?? "";
         /** Web はヒーロー名にハンドルを使わない。Firestore が空のときは Auth の表示名を補う */
         setDisplayName(fromDoc || fromAuth);
-        setBio(typeof data?.bio === "string" ? data.bio : "");
-        setHandle(typeof data?.handle === "string" ? data.handle : "");
+        setBio(typeof data.bio === "string" ? data.bio : "");
+        setHandle(typeof data.handle === "string" ? data.handle : "");
         const fromFirestorePhoto =
-          typeof data?.photoURL === "string" && data.photoURL.trim().length > 0
+          typeof data.photoURL === "string" && data.photoURL.trim().length > 0
             ? data.photoURL.trim()
-            : typeof data?.avatarUrl === "string" && data.avatarUrl.trim().length > 0
+            : typeof data.avatarUrl === "string" && data.avatarUrl.trim().length > 0
               ? data.avatarUrl.trim()
               : "";
         const authPhoto = auth.currentUser?.photoURL?.trim() ?? "";
         setAvatarUrl(fromFirestorePhoto || authPhoto);
-        setLanguage(data?.language === "en" ? "en" : "ja");
-        setCountryCode(typeof data?.countryCode === "string" ? data.countryCode : "");
-        setPlan(data?.plan === "pro" ? "pro" : "free");
-        setPlanProBgVariant(parseUserPlanProBgVariant(data?.planProBgVariant));
-        setMemberSinceMs(data ? parseMemberSinceMs(data as Record<string, unknown>) : null);
-        setUnitBalance(data ? parseUserUnitBalance(data as Record<string, unknown>) : 0);
+        setLanguage(data.language === "en" ? "en" : "ja");
+        setCountryCode(typeof data.countryCode === "string" ? data.countryCode : "");
+        const resolvedPlan = snap.exists()
+          ? await resolveAndExpireMyPlan(myUid, data)
+          : "free";
+        if (!alive) return;
+        setPlan(resolvedPlan);
+        setPlanProBgVariant(parseUserPlanProBgVariant(data.planProBgVariant));
+        setMemberSinceMs(parseMemberSinceMs(data));
+        setUnitBalance(parseUserUnitBalance(data));
+        setMyPlanReady(true);
       } finally {
         if (!alive) return;
         setProfileLoading(false);
+        setMyPlanReady(true);
       }
     }
     void load();
@@ -547,10 +505,15 @@ export default function ProfileHomeScreen({
     };
   }, [myUid, isPublicProfileView]);
 
-  /** Pro Skin 変更後に戻ったとき背景を再読込 */
+  /** Pro Skin 変更後に戻ったときだけ背景を再読込（初回フォーカスは上の load と重複させない） */
+  const skipFirstFocusUserDocRef = useRef(true);
   useFocusEffect(
     useCallback(() => {
       if (isPublicProfileView || !myUid) return;
+      if (skipFirstFocusUserDocRef.current) {
+        skipFirstFocusUserDocRef.current = false;
+        return;
+      }
       let alive = true;
       void getDoc(doc(db, "users", myUid)).then((snap) => {
         if (!alive || !snap.exists()) return;
@@ -752,13 +715,6 @@ export default function ProfileHomeScreen({
         <Text style={styles.warnText}>{t.apiMissing}</Text>
       );
     }
-    if (statsBundle.loading) {
-      return (
-        <View style={styles.inlineLoading}>
-          <BlocksPulseLoader pixelScale={0.9} />
-        </View>
-      );
-    }
     if (statsBundle.error) {
       const isTimeout =
         /timed out|timeout|network request failed/i.test(statsBundle.error);
@@ -783,26 +739,23 @@ export default function ProfileHomeScreen({
         </View>
       );
     }
-    if (!statsBundle.summary) {
-      return (
-        <View style={styles.inlineLoading}>
-          <BlocksPulseLoader pixelScale={0.9} />
-        </View>
-      );
-    }
 
-    const entranceKey = `${targetUid ?? ""}-${statsBundle.summary?.posts ?? 0}-${dailyTrendChart.chartData.length}`;
+    const entranceKey = `${targetUid ?? ""}`;
+    const dailyChartLoading =
+      dailyTrendChart.loading ||
+      (statsBundle.dailyTrendLoading &&
+        dailyTrendChart.chartData.length === 0);
 
     return (
       <View style={styles.overviewBlock}>
         <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
-          {dailyTrendChart.loading || statsBundle.chartsLoading ? (
+          {dailyChartLoading ? (
             <View style={styles.chartSkeleton}>
               <BlocksPulseLoader pixelScale={0.9} />
             </View>
           ) : (
             <ProfileDailyTrendChartNative
-              key={`dailyTrend:${targetUid ?? ""}:${profileStatsContext.rankingLeague}:${dailyTrendChart.chartData.map((r) => r.date).join(",")}`}
+              key={`dailyTrend:${targetUid ?? ""}:${CURRENT_NBA_SEASON_KEY}:season:${dailyTrendChart.chartData.map((r) => r.date).join(",")}`}
               data={dailyTrendChart.chartData}
               language={language}
               allowAll={currentIsProView}
@@ -813,21 +766,13 @@ export default function ProfileHomeScreen({
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
         <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
-          {profileStatsContext.rankingLeague === "worldcup" ? (
-            <ProfileWcStackedRankTrendChartsNative
-              sections={wcRankTrendSections}
-              loading={wcRankTrendLoading}
-              language={language}
-            />
-          ) : (
-            <ProfileRankTrendChartNative
-              data={statsBundle.rankTrend}
-              loading={
-                statsBundle.chartsLoading && statsBundle.rankTrend.length === 0
-              }
-              language={language}
-            />
-          )}
+          <ProfileRankTrendChartNative
+            data={statsBundle.rankTrend}
+            loading={
+              statsBundle.rankTrendLoading && statsBundle.rankTrend.length === 0
+            }
+            language={language}
+          />
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
         <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
@@ -879,22 +824,6 @@ export default function ProfileHomeScreen({
     );
   }
 
-  if (targetUid && isMe && profilePlanHook.loadingPlan) {
-    return (
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
-        ]}
-      >
-        <View style={styles.inlineLoading}>
-          <BlocksPulseLoader />
-        </View>
-      </ScrollView>
-    );
-  }
-
   return (
     <View style={styles.screenRoot}>
     <ScrollView
@@ -933,9 +862,6 @@ export default function ProfileHomeScreen({
         metricValueDeltas={statsBundle.metricValueDeltas}
         isMe={isMe}
         onOpenMenu={() => setMenuOpen(true)}
-        onToggleMetricsScope={onToggleMetricsScope}
-        wcStackedMetricsSections={wcStackedMetricsSections ?? undefined}
-        wcStackedStatsLoading={wcStackedStatsLoading}
         menuUnreadCount={menuUnreadCount}
         badges={resolvedBadges}
         onBadgePress={(badge) => {

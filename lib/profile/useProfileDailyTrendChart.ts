@@ -23,7 +23,8 @@ export function useProfileDailyTrendChart(
   const enabled = options?.enabled ?? true;
   const trendCtx = resolveProfileDailyTrendContext(
     options?.rankingLeague ?? "nba",
-    options?.wcStage
+    options?.wcStage,
+    (options?.rankingLeague ?? "nba") === "nba" ? "season" : undefined
   );
   const seedRows = options?.seedRows;
   /** user-stats API は league/wcStage 済みの rows を返すため、seed を優先する */

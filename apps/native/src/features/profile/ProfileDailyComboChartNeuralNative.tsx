@@ -227,7 +227,7 @@ type Props = {
 export default function ProfileDailyComboChartNeuralNative({
   data,
   language = "ja",
-  rankingLeague: _rankingLeague = "worldcup",
+  rankingLeague: _rankingLeague = "nba",
 }: Props) {
   const { width: screenW } = useWindowDimensions();
   const copy = profileCopy(language);

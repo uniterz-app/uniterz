@@ -124,15 +124,15 @@ import {
   parsePreferredLeague,
   preferredLeagueToGamesLeague,
 } from "../../../../../lib/user/preferredLeague";
-import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
-import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
-import { WC_DEFAULT_SEASON } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import {
-  isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
-  type WcGoalScorerPick,
-} from "../../../../../lib/wc/goalScorer";
-import { getWcSquadPlayer } from "../../../../../lib/wc/squads";
+  isWcGoalScorerPickValidForPredictedScore,
+  resolveWcBroadcastLabels,
+  isWcKnockoutGame,
+  getWcSquadPlayer,
+  WC_DEFAULT_SEASON,
+  type GoalScorerPick as WcGoalScorerPick,
+} from "./legacyWcNativeShims";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
@@ -2082,10 +2082,6 @@ export default function GamesHomeScreen({
           onSelectStandingsPredict={() => {
             setMenuOpen(false);
             navigation.navigate("SeasonPredict", { mode: "standings" });
-          }}
-          onSelectWorldCup={() => {
-            setSelectedLeague("wc");
-            setMenuOpen(false);
           }}
         />
       </SideMenuDrawerNative>

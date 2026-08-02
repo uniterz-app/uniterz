@@ -16,20 +16,18 @@ export function parseUserResultLeagueFlags(
   };
 }
 
-/** NBA / WC 両方に1件以上あるときだけリーグタブを出す */
+/** NBA 固定 — リーグ切替タブは出さない */
 export function shouldShowResultLeagueTabs(
-  flags: UserResultLeagueFlags
+  _flags: UserResultLeagueFlags
 ): boolean {
-  return flags.hasNbaPost && flags.hasWcPost;
+  return false;
 }
 
-/** タブなし時に一覧で使うリーグ（WC 投稿があれば WC、不明時も WC を優先） */
+/** 一覧は常に NBA */
 export function defaultResultListLeagueTab(
-  flags: UserResultLeagueFlags
+  _flags: UserResultLeagueFlags
 ): ResultListLeagueTab {
-  if (flags.hasWcPost) return LEAGUES.WC;
-  if (flags.hasNbaPost) return LEAGUES.NBA;
-  return LEAGUES.WC;
+  return LEAGUES.NBA;
 }
 
 /** 新規予想保存時に users/{uid} へ書くフィールド（NBA / WC のみ） */

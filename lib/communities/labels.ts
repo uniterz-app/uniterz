@@ -5,7 +5,6 @@ import type {
 } from "./types";
 import type { Language } from "@/lib/i18n/language";
 import { LEAGUE_DISPLAY, type League } from "@/lib/leagues";
-import { teamIdToCountryName } from "@/lib/wc/wcCountry";
 
 export function leagueLabel(league: CommunityLeague, lang: Language): string {
   if (league === "all") {
@@ -80,8 +79,6 @@ export function rankingTeamLabel(
 ): string {
   const fromMap = nameById?.[teamId];
   if (fromMap) return fromMap;
-  const wc = teamIdToCountryName(teamId, lang);
-  if (wc) return wc;
   const tail = teamId.includes("-") ? teamId.split("-").slice(1).join("-") : teamId;
   return tail;
 }

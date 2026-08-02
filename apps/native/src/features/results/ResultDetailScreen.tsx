@@ -56,11 +56,11 @@ import { resolveResultOutcomeBadge } from "../../../../../lib/result/resultBadge
 import { RESULT_DETAIL_ENTRANCE } from "./resultDetailEntranceNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { formatResultPostCardDateLabel } from "./nativeResultModel";
-import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import {
+  WcGoalScorerResultRowNative,
   useWcGoalScorerResultNative,
   type WcGoalScorerPostLike,
-} from "./useWcGoalScorerResultNative";
+} from "../games/legacyWcNativeShims";
 import SkiaBoundary from "../../ui/SkiaBoundary";
 import PredictOverlayCyberFormPanelNative from "../games/PredictOverlayCyberFormPanelNative";
 import PredictOverlayCloseButtonNative from "../games/PredictOverlayCloseButtonNative";

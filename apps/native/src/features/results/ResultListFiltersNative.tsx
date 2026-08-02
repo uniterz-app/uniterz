@@ -105,7 +105,7 @@ export default function ResultListFiltersNative({
       </FilterGroup>
 
       <FilterGroup title={labels.league}>
-        {(["all", "nba", "wc"] as const).map((id) => (
+        {(["all", "nba"] as const).map((id) => (
           <CyberFilterChip
             key={id}
             label={id.toUpperCase()}

@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import {
   teamIdToCountryName,
   teamIdToWcCountry,
-} from "@/lib/wc/wcCountry";
+} from "@/lib/legacyWcWebShims";
 
 type Props = {
   /** "wc-jpn" 形式の teamId（iso2 未指定時） */

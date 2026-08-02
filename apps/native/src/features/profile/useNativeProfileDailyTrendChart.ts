@@ -18,20 +18,41 @@ export function useNativeProfileDailyTrendChart(
     enabled?: boolean;
     /** user-stats から渡すときは Firestore を読まない（空配列は seed とみなさない） */
     seedRows?: ProfileDailyTrendRow[] | null;
+    /**
+     * parent が trend 解決済み（空でも再取得しない）。
+     * seedRows=[] + seedComplete で「データなし」を確定表示する。
+     */
+    seedComplete?: boolean;
+    /**
+     * stats 側の trend 取得が終わるまで独立 fetch しない。
+     * seed 待ち中の二重取得を防ぐ。
+     */
+    deferIndependentFetch?: boolean;
     rankingLeague?: RankingLeagueSource;
     wcStage?: WcRankingStage;
+    /** NBA overview: season = 現行キー（26-27）レギュラーのみ */
+    nbaPeriod?: "season" | "playoffs";
     authReady?: boolean;
   }
 ) {
   const enabled = options?.enabled ?? true;
   const authReady = options?.authReady ?? true;
+  const deferIndependentFetch = options?.deferIndependentFetch ?? false;
+  const seedComplete = options?.seedComplete ?? false;
+  const nbaPeriod =
+    options?.nbaPeriod ??
+    ((options?.rankingLeague ?? "nba") === "nba" ? "season" : undefined);
   const trendCtx = resolveProfileDailyTrendContext(
-    options?.rankingLeague ?? "worldcup",
-    options?.wcStage
+    options?.rankingLeague ?? "nba",
+    options?.wcStage,
+    nbaPeriod
   );
   const seedRows = options?.seedRows;
   const useSeed =
-    Array.isArray(seedRows) && seedRows.length > 0 && enabled && authReady;
+    Array.isArray(seedRows) &&
+    enabled &&
+    authReady &&
+    (seedRows.length > 0 || seedComplete);
 
   const [fetchedRows, setFetchedRows] = useState<ProfileDailyTrendRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,10 +64,16 @@ export function useNativeProfileDailyTrendChart(
       return;
     }
 
+    if (deferIndependentFetch) {
+      setLoading(true);
+      return;
+    }
+
     const uid = targetUid;
     const ctx = {
       rankingLeague: trendCtx.rankingLeague,
       wcStage: trendCtx.wcStage,
+      ...(trendCtx.nbaPeriod ? { nbaPeriod: trendCtx.nbaPeriod } : {}),
     };
     let cancelled = false;
 
@@ -73,8 +100,10 @@ export function useNativeProfileDailyTrendChart(
     enabled,
     useSeed,
     authReady,
+    deferIndependentFetch,
     trendCtx.rankingLeague,
     trendCtx.wcStage,
+    trendCtx.nbaPeriod,
   ]);
 
   const sourceRows = useSeed ? seedRows! : fetchedRows;

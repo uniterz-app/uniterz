@@ -25,24 +25,30 @@ import {
   liveMarkTextCyberBase,
 } from "../../ui/liveMarkCyberStyles";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
-import WcGoalScorerResultRowNative from "../results/WcGoalScorerResultRowNative";
-import ResultOutcomeBadgesNative from "../results/ResultOutcomeBadgesNative";
+import {
+  WcGoalScorerResultRowNative,
+  WcTeamFlagWithMetaNative,
+  WcGroupStandingRecordLineNative,
+  resolveWcGroupStageStandingForKnockoutDisplay,
+  WcGoalScorerPickerNative,
+  WcMatchPreviewPanelNative,
+  WcStandingPanelNative,
+  WcPastResultsPanelNative,
+  WcTeamProfilePanelNative,
+  type GoalScorerPick as WcGoalScorerPick,
+  hasWcMatchPreview,
+  WcTeamNameMobileNative,
+  WcBroadcastNamesNative,
+} from "./legacyWcNativeShims";
 import ResultStatRatingBarNative from "../results/ResultStatRatingBarNative";
-import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
-import WcGroupStandingRecordLineNative from "../results/WcGroupStandingRecordLineNative";
-import { resolveWcGroupStageStandingForKnockoutDisplay } from "../../../../../lib/wc/wcGroupStandingRank";
+import ResultOutcomeBadgesNative from "../results/ResultOutcomeBadgesNative";
 import {
   formatTeamRecordLabelNative,
   useTeamRecordLineNative,
 } from "./useTeamRecordLineNative";
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
-import WcGoalScorerPickerNative from "./wc/WcGoalScorerPickerNative";
-import WcMatchPreviewPanelNative from "./wc/WcMatchPreviewPanelNative";
 import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative";
 import PredictOverlayMatchCardShellNative from "./PredictOverlayMatchCardShellNative";
-import WcStandingPanelNative from "./wc/WcStandingPanelNative";
-import WcPastResultsPanelNative from "./wc/WcPastResultsPanelNative";
-import WcTeamProfilePanelNative from "./wc/WcTeamProfilePanelNative";
 import PredictProBriefPanelNative from "./predict/PredictProBriefPanelNative";
 import NbaInjuryReportPanelNative from "./predict/NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./predict/NbaTeamStatsPanelNative";
@@ -53,8 +59,6 @@ import {
 } from "../rankings/CyberSlantedTabNative";
 import { resolvePredictTimingMocksForGame } from "../../../../../lib/predict/resolvePredictTimingMocksForGame";
 import { injuryStatusByPlayerId } from "../../../../../lib/predict/nbaInjuryReport";
-import type { WcGoalScorerPick } from "../../../../../lib/wc/goalScorer";
-import { hasWcMatchPreview } from "../../../../../lib/wc/matchPreviews";
 import type { PredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
@@ -68,7 +72,6 @@ import {
 } from "./predictMotion";
 import PredictOverlayCloseButtonNative from "./PredictOverlayCloseButtonNative";
 import PredictOverlayActionFabNative from "./PredictOverlayActionFabNative";
-import WcTeamNameMobileNative from "./WcTeamNameMobileNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
 import { shareResultCardNative } from "../results/shareResultCardNative";
 import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
@@ -83,7 +86,6 @@ import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
 import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
 import type { Language } from "../../../../../lib/i18n/language";
 import PredictOverlaySubmitButtonNative from "./PredictOverlaySubmitButtonNative";
-import { WcBroadcastNamesNative } from "./WcBroadcastNamesNative";
 import { PREDICT_OVERLAY_CYBER_DECK_CUT } from "./matchListCyberClipPath";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,

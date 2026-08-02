@@ -8,9 +8,9 @@ import {
   resolveWcGameGoalScorers,
   validateWcGoalScorerPickForGame,
   type WcGameGoalScorer,
-} from "@/lib/wc/goalScorer";
-import { getWcSquad } from "@/lib/wc/squads";
-import { resettleWcGoalScorerBonusesForGame } from "@/lib/wc/resettleGoalScorerBonus";
+} from "@/lib/legacyWcWebShims";
+import { getWcSquad } from "@/lib/legacyWcWebShims";
+import { resettleWcGoalScorerBonusesForGame } from "@/lib/legacyWcWebShims";
 import { FieldValue } from "firebase-admin/firestore";
 
 function gameSummary(id: string, data: Record<string, unknown>) {

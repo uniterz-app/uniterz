@@ -24,7 +24,7 @@ import {
 import type { NativeGameRow, SupportedLeague } from "../games/useTodayGames";
 import type { ResultDetailPost } from "./loadResultPostDetailNative";
 import type { GamesLanguage } from "../games/gamesI18n";
-import { resolveWcTeamId } from "../../../../../lib/wc/resolveWcTeamId";
+import { resolveWcTeamId } from "../games/legacyWcNativeShims";
 
 function resolveOverlayGameSide(
   gameSide: unknown,

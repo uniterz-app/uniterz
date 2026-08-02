@@ -19,7 +19,7 @@ import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import type { ScheduleTeamOption } from "./useScheduleTeamsNative";
 import type { GamesFilterState } from "./applyNativeGamesFilter";
 import CountryFlagNative from "./CountryFlagNative";
-import { teamIdToWcCountry } from "../../../../../lib/wc/wcCountry";
+import { teamIdToWcCountry } from "./legacyWcNativeShims";
 import {
   gamesFilterHelpButtonLabel,
   gamesFilterHelpParagraphs,

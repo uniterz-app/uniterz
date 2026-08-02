@@ -18,31 +18,42 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { normalizeLeague } from "@/lib/leagues";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import NbaPredictToolsTabs from "@/app/component/predict/NbaPredictToolsTabs";
-import WcTeamProfilePanel from "@/app/component/predict/wc/WcTeamProfilePanel";
-import WcPastResultsPanel from "@/app/component/predict/wc/WcPastResultsPanel";
-import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
-import WcMatchPreviewPanel from "@/app/component/predict/wc/WcMatchPreviewPanel";
-import WcKnockoutChallengeModal from "@/app/component/predict/wc/WcKnockoutChallengeModal";
-import { useWcKnockoutChallengePrompt } from "@/lib/wc/useWcKnockoutChallengePrompt";
-import { hasWcMatchPreview } from "@/lib/wc/matchPreviews";
+function WcTeamProfilePanel(_props: Record<string, unknown>) {
+  return null;
+}
+function WcPastResultsPanel(_props: Record<string, unknown>) {
+  return null;
+}
+function WcStandingPanel(_props: Record<string, unknown>) {
+  return null;
+}
+function WcMatchPreviewPanel(_props: Record<string, unknown>) {
+  return null;
+}
+function WcKnockoutChallengeModal(_props: Record<string, unknown>) {
+  return null;
+}
+function WcGoalScorerPicker(_props: Record<string, unknown>) {
+  return null;
+}
+import { useWcKnockoutChallengePrompt, hasWcMatchPreview } from "@/lib/legacyWcWebShims";
 import NbaTopScorerPicker from "@/app/component/predict/nba/NbaTopScorerPicker";
 import {
   normalizeNbaTopScorerCandidates,
   normalizeNbaTopScorerPick,
   type NbaTopScorerPick,
 } from "@/lib/nba/topScorer";
-import WcGoalScorerPicker from "@/app/component/predict/wc/WcGoalScorerPicker";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import {
   isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
   type WcGoalScorerPick,
-} from "@/lib/wc/goalScorer";
+} from "@/lib/legacyWcWebShims";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";

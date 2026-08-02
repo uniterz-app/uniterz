@@ -8,8 +8,8 @@ import {
 } from "@/lib/time/zonedTime";
 import { compareResultPostsForDayList } from "@/lib/result/resultPostDaySort";
 
-/** リザルト一覧のリーグタブ（ワールドカップ / NBA） */
-export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.WC, LEAGUES.NBA] as const;
+/** リザルト一覧のリーグタブ（NBA 固定） */
+export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.NBA] as const;
 export type ResultListLeagueTab = (typeof RESULT_LIST_LEAGUE_TABS)[number];
 
 export type PostWithMillis = PredictionPostV2 & {

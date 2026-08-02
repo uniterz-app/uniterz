@@ -19,6 +19,8 @@ export type ProfileSummaryForCards = {
   winRate: number;
   /** WC の予想スコア完全一致数。NBA は常に 0。 */
   exactHitCount: number;
+  /** NBA 最多得点者的中数。WC は 0。 */
+  goalScorerHitCount: number;
   upsetPointsSum: number;
   pointsSumV3: number;
   upsetChanceCount: number;
@@ -55,6 +57,7 @@ function emptySummary(): ProfileSummaryForCards {
     wins: 0,
     winRate: 0,
     exactHitCount: 0,
+    goalScorerHitCount: 0,
     upsetPointsSum: 0,
     pointsSumV3: 0,
     upsetChanceCount: 0,
@@ -73,9 +76,10 @@ function summaryFromDailyRow(
   const wins = safeInt(row.wins);
   const pointsSumV3 = safeNum(row.pointsSumV3);
   const upsetPointsSum = safeNum(row.upsetPointsSum);
-  const exactHitCount = wcStage
-    ? safeInt(row.exactHitCount)
-    : 0;
+  const exactHitCount = wcStage ? safeInt(row.exactHitCount) : 0;
+  const goalScorerHitCount = wcStage
+    ? 0
+    : safeInt(row.goalScorerHitCount);
   const upsetBonusSum = safeNum(row.upsetBonusSum);
   const streakBonusSum = safeNum(row.streakBonusSum);
   return {
@@ -85,6 +89,7 @@ function summaryFromDailyRow(
     wins,
     winRate: posts > 0 ? wins / posts : 0,
     exactHitCount,
+    goalScorerHitCount,
     upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: safeInt(row.upsetOpportunityCount),
@@ -113,6 +118,7 @@ function mergeDailyRowIntoSummary(
     wins,
     winRate: posts > 0 ? wins / posts : 0,
     exactHitCount: base.exactHitCount + inc.exactHitCount,
+    goalScorerHitCount: base.goalScorerHitCount + inc.goalScorerHitCount,
     upsetPointsSum: base.upsetPointsSum + inc.upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: base.upsetChanceCount + inc.upsetChanceCount,
@@ -155,6 +161,7 @@ export function summaryFromWcCumulativeStage(
     winRate:
       posts > 0 ? wins / posts : winRateRaw <= 1 ? winRateRaw : winRateRaw / 100,
     exactHitCount,
+    goalScorerHitCount: 0,
     upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: safeInt(block.upsetOpportunityCount),
@@ -205,6 +212,7 @@ function summaryFromNbaRankingBucket(
     wins,
     winRate: posts > 0 ? wins / posts : 0,
     exactHitCount: 0,
+    goalScorerHitCount: safeInt(r.totalGoalScorerHits ?? r.goalScorerHitCount),
     upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: safeInt(r.upsetOpportunityCount),

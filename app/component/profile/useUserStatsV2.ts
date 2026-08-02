@@ -22,6 +22,8 @@ export type SummaryForCardsV2 = {
 
   /** WC の予想スコア完全一致数。NBA は常に 0。 */
   exactHitCount: number;
+  /** NBA 最多得点者的中数。WC は 0。 */
+  goalScorerHitCount: number;
 
   // ③ アップセット得点（期間合計）
   upsetPointsSum: number;
@@ -121,6 +123,11 @@ export function primeProfileStatsFromRankingRow(
     wins: Math.round(winRate * posts),
     winRate,
     exactHitCount: row.totalExactHits ?? 0,
+    goalScorerHitCount:
+      row.goalScorerHits ??
+      (row as RankingRowWithCountry & { totalGoalScorerHits?: number })
+        .totalGoalScorerHits ??
+      0,
     upsetPointsSum: totalUpset,
     pointsSumV3: totalPoints,
     basePointsSum: totalPoints,

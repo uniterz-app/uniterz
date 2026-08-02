@@ -1,4 +1,8 @@
 import { resolvePostListLeague } from "@/lib/leagues";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  nbaSeasonKeyFromDateJST,
+} from "@/lib/rankings/nbaSeason";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import {
   isGameWcStage,
@@ -8,6 +12,7 @@ import {
 
 /** プロフィールで表示する連勝の集計単位 */
 export type ProfileStreakScopeKey =
+  | "nba:season"
   | "nba:playoffs"
   | "wc:overall"
   | "wc:qualifying"
@@ -21,7 +26,7 @@ export type ProfileStatsStreakContext = {
 export function resolveProfileStreakScopeKey(
   ctx: ProfileStatsStreakContext
 ): ProfileStreakScopeKey {
-  if (ctx.rankingLeague === "nba") return "nba:playoffs";
+  if (ctx.rankingLeague === "nba") return "nba:season";
   const stage =
     ctx.wcStage && isWcRankingStage(ctx.wcStage) ? ctx.wcStage : "overall";
   if (stage === "qualifying") return "wc:qualifying";
@@ -34,6 +39,8 @@ export type SettledPostStreakInput = {
   gameId?: unknown;
   seasonPhase?: unknown;
   wcStage?: unknown;
+  /** シーズンキー判定（Last20 等）。ms のみの行でも可 */
+  settledAtMs?: number;
 };
 
 function normalizeSeasonPhase(v: unknown): string | null {
@@ -58,6 +65,21 @@ function matchesNbaPlayoffsStreak(post: SettledPostStreakInput): boolean {
   return true;
 }
 
+/** 現行 NBA シーズン（2026-27）レギュラーのみ。playoffs / play_in は除外 */
+function matchesNbaSeasonStreak(post: SettledPostStreakInput): boolean {
+  if (
+    resolvePostListLeague({ league: post.league, gameId: post.gameId }) !== "nba"
+  ) {
+    return false;
+  }
+  const phase = normalizeSeasonPhase(post.seasonPhase);
+  if (phase === "playoffs" || phase === "play_in") return false;
+
+  const ms = post.settledAtMs;
+  if (typeof ms !== "number" || !Number.isFinite(ms)) return false;
+  return nbaSeasonKeyFromDateJST(new Date(ms)) === CURRENT_NBA_SEASON_KEY;
+}
+
 /** 確定済み投稿が指定スコープに含まれるか */
 export function postMatchesProfileStreakScope(
   post: SettledPostStreakInput,
@@ -67,6 +89,9 @@ export function postMatchesProfileStreakScope(
     league: post.league,
     gameId: post.gameId,
   });
+  if (scope === "nba:season") {
+    return matchesNbaSeasonStreak(post);
+  }
   if (scope === "nba:playoffs") {
     return matchesNbaPlayoffsStreak(post);
   }
@@ -84,6 +109,7 @@ export function postMatchesProfileStreakScope(
 
 /** 先読み・キャッシュ用にプロフィールで使う全スコープ */
 export const PROFILE_STREAK_SCOPE_KEYS: ProfileStreakScopeKey[] = [
+  "nba:season",
   "nba:playoffs",
   "wc:overall",
   "wc:qualifying",

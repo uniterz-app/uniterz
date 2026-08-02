@@ -2,13 +2,7 @@ import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type 
 import { memo, useEffect, useMemo, useRef } from "react";
 import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
-import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
-import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
-import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
-import WcGroupStandingRecordLineNative from "../results/WcGroupStandingRecordLineNative";
-import { resolveWcGroupStageStandingForKnockoutDisplay } from "../../../../../lib/wc/wcGroupStandingRank";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
-import CountryFlagNative from "./CountryFlagNative";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
@@ -16,12 +10,10 @@ import { LiveMarkPill } from "./LiveMarkPill";
 import MatchPkResultLineNative from "./MatchPkResultLineNative";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import MatchListCyberClipNative from "./MatchListCyberClipNative";
-import { WcBroadcastNamesNative } from "./WcBroadcastNamesNative";
 import MatchListCyberDecorNative from "./MatchListCyberDecorNative";
 import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
-import WcTeamNameMobileNative from "./WcTeamNameMobileNative";
 import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
 import {
   useGameCardListRowEntrance,
@@ -143,8 +135,8 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   const started = isGameStarted(game);
   const leagueColor = resolveLeagueColor(game.league);
   const leagueKey = String(game.league ?? "").toLowerCase();
-  const showSideLabels = leagueKey !== "wc";
-  const isWcCard = leagueKey === "wc";
+  const showSideLabels = true;
+  const isWcCard = false;
   const homeTeamId =
     (game.home as { teamId?: string } | undefined)?.teamId ??
     (game.homeTeamId as string | undefined) ??
@@ -156,38 +148,13 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   const centerBlock = getGameCardCenterBlock(game);
   const roundLabelRaw = game.roundLabel;
   const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
-  const isKnockout = isWcKnockoutGame({
-    league: game.league,
-    knockout: game.knockout === true ? true : game.knockout === false ? false : null,
-    roundLabel,
-    wcStage: typeof game.wcStage === "string" ? game.wcStage : null,
-  });
+  const isKnockout = false;
   const seriesLabel = resolveSeriesLabel(game);
   const seriesPair = resolveSeriesPair(game);
   const homeRecordLabel = getTeamRecordLabel(game.home, game.league);
   const awayRecordLabel = getTeamRecordLabel(game.away, game.league);
   const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
   const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
-  const homeKnockoutStanding = useMemo(
-    () =>
-      isKnockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(
-            homeTeamId,
-            homeTeamId ? teamRecordById[homeTeamId] ?? null : null
-          )
-        : null,
-    [isKnockout, homeTeamId, teamRecordById]
-  );
-  const awayKnockoutStanding = useMemo(
-    () =>
-      isKnockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(
-            awayTeamId,
-            awayTeamId ? teamRecordById[awayTeamId] ?? null : null
-          )
-        : null,
-    [isKnockout, awayTeamId, teamRecordById]
-  );
   const ctaLabel =
     status === "final"
       ? t.final
@@ -205,13 +172,6 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
       ? "predicted"
       : "normal";
   const ctaDisplayLabel = ctaLabel;
-
-  const broadcastLabels = useMemo(() => {
-    if (leagueKey !== "wc" || status === "final") return [];
-    return resolveWcBroadcastLabels(gameId, game);
-  }, [game, gameId, leagueKey, status]);
-  const showWcBroadcastRow = broadcastLabels.length > 0;
-  const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
   const showPredictPrimaryGlow =
     status !== "final" && !started && !isPredicted;
@@ -287,47 +247,24 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                   <View style={styles.teamTopGroup}>
                     {showSideLabels ? <Text style={styles.sideLabel}>HOME</Text> : null}
                     <Animated.View style={ent.homeJerseyStyle}>
-                      {isWcCard ? (
-                        <WcTeamFlagWithMetaNative teamId={homeTeamId} knockout={isKnockout}>
-                          <View style={styles.teamMarkFlag}>
-                            <CountryFlagNative teamId={homeTeamId} variant="card" />
-                          </View>
-                        </WcTeamFlagWithMetaNative>
-                      ) : (
-                        <View style={styles.teamMark}>
-                          <MatchTeamMarkNative
-                            leagueRaw={game.league}
-                            side={game.home}
-                            palette={homePalette}
-                            jerseySize={62}
-                            flagVariant="card"
-                          />
-                        </View>
-                      )}
+                      <View style={styles.teamMark}>
+                        <MatchTeamMarkNative
+                          leagueRaw={game.league}
+                          side={game.home}
+                          palette={homePalette}
+                          jerseySize={62}
+                          flagVariant="card"
+                        />
+                      </View>
                     </Animated.View>
                   </View>
-                  <View style={[styles.teamBottomGroup, isWcCard && styles.teamBottomGroupWc]}>
-                    {isWcCard ? (
-                      <WcTeamNameMobileNative
-                        name={homeCompact}
-                        style={[styles.teamNameMain, styles.teamNameMainWc]}
-                      />
-                    ) : (
-                      <Text style={styles.teamNameMain} numberOfLines={1}>
-                        {homeCompact}
-                      </Text>
-                    )}
-                    {isWcCard && isKnockout ? (
-                      <WcGroupStandingRecordLineNative
-                        standing={homeKnockoutStanding}
-                        language={language}
-                        textStyle={styles.teamRecordText}
-                      />
-                    ) : !isKnockout ? (
-                      <Text style={styles.teamRecordText}>
-                        {homeRecordLabel ?? "(0-0-0)"}
-                      </Text>
-                    ) : null}
+                  <View style={styles.teamBottomGroup}>
+                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                      {homeCompact}
+                    </Text>
+                    <Text style={styles.teamRecordText}>
+                      {homeRecordLabel ?? "(0-0-0)"}
+                    </Text>
                   </View>
                 </View>
 
@@ -430,61 +367,28 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                   <View style={styles.teamTopGroup}>
                     {showSideLabels ? <Text style={styles.sideLabel}>AWAY</Text> : null}
                     <Animated.View style={ent.awayJerseyStyle}>
-                      {isWcCard ? (
-                        <WcTeamFlagWithMetaNative teamId={awayTeamId} knockout={isKnockout}>
-                          <View style={styles.teamMarkFlag}>
-                            <CountryFlagNative teamId={awayTeamId} variant="card" />
-                          </View>
-                        </WcTeamFlagWithMetaNative>
-                      ) : (
-                        <View style={styles.teamMark}>
-                          <MatchTeamMarkNative
-                            leagueRaw={game.league}
-                            side={game.away}
-                            palette={awayPalette}
-                            jerseySize={62}
-                            flagVariant="card"
-                          />
-                        </View>
-                      )}
+                      <View style={styles.teamMark}>
+                        <MatchTeamMarkNative
+                          leagueRaw={game.league}
+                          side={game.away}
+                          palette={awayPalette}
+                          jerseySize={62}
+                          flagVariant="card"
+                        />
+                      </View>
                     </Animated.View>
                   </View>
-                  <View style={[styles.teamBottomGroup, isWcCard && styles.teamBottomGroupWc]}>
-                    {isWcCard ? (
-                      <WcTeamNameMobileNative
-                        name={awayCompact}
-                        style={[styles.teamNameMain, styles.teamNameMainWc]}
-                      />
-                    ) : (
-                      <Text style={styles.teamNameMain} numberOfLines={1}>
-                        {awayCompact}
-                      </Text>
-                    )}
-                    {isWcCard && isKnockout ? (
-                      <WcGroupStandingRecordLineNative
-                        standing={awayKnockoutStanding}
-                        language={language}
-                        textStyle={styles.teamRecordText}
-                      />
-                    ) : !isKnockout ? (
-                      <Text style={styles.teamRecordText}>
-                        {awayRecordLabel ?? "(0-0-0)"}
-                      </Text>
-                    ) : null}
+                  <View style={styles.teamBottomGroup}>
+                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                      {awayCompact}
+                    </Text>
+                    <Text style={styles.teamRecordText}>
+                      {awayRecordLabel ?? "(0-0-0)"}
+                    </Text>
                   </View>
                 </View>
               </View>
               </Animated.View>
-              {showWcBroadcastRow ? (
-                <View style={styles.wcBroadcastRow}>
-                  <Text style={styles.wcBroadcastLabel}>{t.broadcasters}</Text>
-                  <WcBroadcastNamesNative
-                    labels={broadcastLabels}
-                    separator={wcBroadcastSep}
-                    textAlign="center"
-                  />
-                </View>
-              ) : null}
               <View style={styles.leagueDividerWrap}>
                 <Animated.View
                   style={[styles.leagueDivider, { backgroundColor: leagueColor }, ent.dividerStyle]}

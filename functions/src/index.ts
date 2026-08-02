@@ -21,7 +21,6 @@ import { notifyRankingUpdatedPush } from "./notifications/notifyPushEvents";
 export { onGameFinalV2 } from "./onGameFinalV2";
 export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
 export { onPlayoffBracketRescoreTaskCreated } from "./playoff-bracket/onPlayoffBracketRescoreTaskCreated";
-export { onWcBracketRescoreTaskCreated } from "./wc-bracket/onWcBracketRescoreTaskCreated";
 export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
 
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron

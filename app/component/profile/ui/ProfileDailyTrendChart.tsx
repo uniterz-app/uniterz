@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import { Info } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import { nameBebas } from "@/lib/fonts";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import ProfileDailyComboChartNeural from "@/app/component/profile/ui/ProfileDailyComboChartNeural";
@@ -12,6 +12,7 @@ import {
   type ProfileVisualEffects,
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
+import chartInfoStyles from "./profileChartInfoFaq.module.css";
 
 export type ProfileDailyTrendPoint = {
   date: string;
@@ -42,10 +43,28 @@ export default function ProfileDailyTrendChart({
   layout = "web",
   visualEffects = "full",
 }: Props) {
+  const isJa = language === "ja";
+  const title = "Daily Combo Chart";
+  const subtitle = isJa
+    ? "過去10日のスタッツの推移"
+    : "Trend of stats over the last 10 days";
+  const chartInfo = isJa
+    ? "カラーバー＝日ごとの投稿数・的中数。黄緑の線＝累積の総合得点。"
+    : "Color bars: daily posts and correct picks. Lime line: cumulative total points.";
+  const emptyHint = isJa
+    ? "シーズンの日次スタッツが溜まると表示されます"
+    : "Daily season stats appear after you settle picks.";
+
   const limitedData = useMemo(() => {
     const rows = Array.isArray(data) ? data : [];
-    if (range === "7d") return rows.slice(-7);
-    return rows.slice(-10);
+    const active = rows.filter(
+      (r) =>
+        r.posts > 0 ||
+        Math.abs(r.pointsV3) > 1e-9 ||
+        Math.abs(r.upsetPoints ?? 0) > 1e-9
+    );
+    if (range === "7d") return active.slice(-7);
+    return active.slice(-10);
   }, [data, range]);
 
   const isEmpty = limitedData.length === 0;
@@ -58,27 +77,58 @@ export default function ProfileDailyTrendChart({
         aria-hidden
       />
       <div className="relative z-1 min-w-0">
-      {isEmpty ? (
-        <div role="status" className="grid min-h-44 place-items-center px-3">
-          <p
-            className={[
-              nameBebas.className,
-              "text-center text-[clamp(1.25rem,4.2vw,2.1rem)] leading-none tracking-[0.2em]",
-            ].join(" ")}
-            style={cyberNoDataLabelStyle}
-          >
-            NO DATA
-          </p>
-        </div>
-      ) : (
-        <ProfileDailyComboChartNeural
-          data={limitedData}
-          language={language}
-          rankingLeague={rankingLeague}
-          layout={layout}
-          visualEffectsLite={isProfileVisualLite(visualEffects)}
-        />
-      )}
+        {isEmpty ? (
+          <div role="status">
+            <div className="relative z-20 mb-2 px-0.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p
+                  className={[
+                    nameRajdhani.className,
+                    "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
+                  ].join(" ")}
+                >
+                  {title}
+                </p>
+                <div className={chartInfoStyles.wrap}>
+                  <button
+                    type="button"
+                    className={chartInfoStyles.faqButton}
+                    aria-label={chartInfo}
+                  >
+                    <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
+                  </button>
+                  <div className={chartInfoStyles.tooltip} aria-hidden>
+                    {chartInfo}
+                  </div>
+                </div>
+              </div>
+              <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">
+                {subtitle}
+              </p>
+            </div>
+            <div className="grid min-h-44 place-items-center px-3">
+              <p
+                className={[
+                  nameOxanium.className,
+                  "text-center text-[22px] font-bold leading-none tracking-[0.12em] text-white/35",
+                ].join(" ")}
+              >
+                NO DATA
+              </p>
+              <p className="mt-2.5 max-w-[260px] text-center text-[11px] leading-snug text-white/42">
+                {emptyHint}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ProfileDailyComboChartNeural
+            data={limitedData}
+            language={language}
+            rankingLeague={rankingLeague}
+            layout={layout}
+            visualEffectsLite={isProfileVisualLite(visualEffects)}
+          />
+        )}
       </div>
     </ProfileKinetikPanelFrame>
   );

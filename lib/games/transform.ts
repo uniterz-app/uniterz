@@ -14,10 +14,7 @@ import {
   type SeriesStanding,
 } from "@/lib/games/playoffSeriesUi";
 import { resolvePkScore } from "@/lib/games/pkScore";
-import { resolveWcBroadcastLabels } from "@/lib/wc/wcBroadcastLabels";
 import { normalizeNbaTopScorerCandidates } from "@/lib/nba/topScorer";
-import { normalizeWcGameGoalScorers } from "@/lib/wc/goalScorer";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
 
 /** プレーオフ：Firestore に seriesStanding が無いときの既定（0-0） */
 const PLAYOFF_SERIES_STANDING_FALLBACK = { homeWins: 0, awayWins: 0 } as const;
@@ -480,14 +477,8 @@ export function toMatchCardProps(
     seasonPhase,
     venue: raw?.venue ?? "",
     roundLabel: roundLabelStr,
-    knockout: isWcKnockoutGame({
-      league,
-      knockout: raw?.knockout ?? null,
-      roundLabel: roundLabelStr,
-      wcStage: raw?.wcStage ?? null,
-    }),
-    broadcastLabels:
-      league === "wc" ? resolveWcBroadcastLabels(id, raw) : [],
+    knockout: Boolean(raw?.knockout),
+    broadcastLabels: [],
     startAtJst,
     status,
     home,
@@ -508,13 +499,6 @@ export function toMatchCardProps(
     makePredictionHref: buildMake(id),
 
     dense: Boolean(opts?.dense),
-    goalScorers:
-      league === "wc"
-        ? normalizeWcGameGoalScorers(raw?.goalScorers, {
-            homeTeamId: home.teamId,
-            awayTeamId: away.teamId,
-          })
-        : undefined,
     topScorerCandidates:
       league === "nba"
         ? normalizeNbaTopScorerCandidates(

@@ -12,7 +12,6 @@ import AppProviders from "@/app/AppProviders";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import EventGate from "@/app/component/common/EventGate";
-import WcKnockoutStreakResetGate from "@/app/component/common/WcKnockoutStreakResetGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 import NbaSeasonRestartMaintenanceOverlay from "@/app/component/common/NbaSeasonRestartMaintenanceOverlay";
 import {
@@ -69,7 +68,6 @@ export default function RootLayout({
             <SplashGlbPreload />
             <AppPageBackground />
             <EventGate />
-            <WcKnockoutStreakResetGate />
 
             <AppContentShell>
               <AppProviders>

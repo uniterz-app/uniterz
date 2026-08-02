@@ -43,3 +43,46 @@ export function nbaSeasonOpenSnapshotDocId(
 ): string {
   return `s${seasonKey}_open_${metric}`;
 }
+
+export type NbaSeasonPhase = "regular" | "play_in" | "playoffs" | null;
+
+export function normalizeNbaSeasonPhase(v: unknown): NbaSeasonPhase {
+  if (v === "regular" || v === "play_in" || v === "playoffs") return v;
+  return null;
+}
+
+/**
+ * NBA ランキング日次・累積バケットキー。
+ * regular / 未設定 → rankingBySeason、playoffs → rankingByNbaPlayoffs、play_in → どちらもなし。
+ */
+export function resolveNbaRankingBucketKeys(
+  leagueKey: string | null,
+  forRanking: boolean,
+  at: Date,
+  seasonPhase: NbaSeasonPhase
+): { nbaSeasonKey: string | null; nbaPlayoffsSeasonKey: string | null } {
+  if (!forRanking || leagueKey !== "nba") {
+    return { nbaSeasonKey: null, nbaPlayoffsSeasonKey: null };
+  }
+  const key = nbaSeasonKeyFromDateJST(at);
+  if (seasonPhase === "playoffs") {
+    return { nbaSeasonKey: null, nbaPlayoffsSeasonKey: key };
+  }
+  if (seasonPhase === "play_in") {
+    return { nbaSeasonKey: null, nbaPlayoffsSeasonKey: null };
+  }
+  return { nbaSeasonKey: key, nbaPlayoffsSeasonKey: null };
+}
+
+/** NBA プレーオフ期（4–6月 JST）— lib/rankings/nbaSeason.ts と同期 */
+export function isNbaPlayoffsCalendarWindow(d: Date = new Date()): boolean {
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const m = j.getUTCMonth() + 1;
+  return m >= 4 && m <= 6;
+}
+
+export function preferredNbaKinetikPeriod(
+  d?: Date
+): "season" | "playoffs" {
+  return isNbaPlayoffsCalendarWindow(d ?? new Date()) ? "playoffs" : "season";
+}

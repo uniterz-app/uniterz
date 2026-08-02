@@ -19,7 +19,7 @@ type DailyInc = {
   wins?: number;
   pointsSumV3?: number;
   upsetPointsSum?: number;
-  scorePrecisionSum?: number;
+  goalScorerHitCount?: number;
   upsetBonusSum?: number;
   streakBonusSum?: number;
   upsetOpportunityCount?: number;
@@ -62,7 +62,8 @@ function emptySummary(): ProfileSummaryForCards {
     recent3Posts: 0,
     wins: 0,
     winRate: 0,
-    scorePrecisionSum: 0,
+    exactHitCount: 0,
+    goalScorerHitCount: 0,
     upsetPointsSum: 0,
     pointsSumV3: 0,
     upsetChanceCount: 0,
@@ -103,7 +104,7 @@ export async function resolveNbaMonthlyProfileSummary(
   let wins = 0;
   let pointsSumV3 = 0;
   let upsetPointsSum = 0;
-  let scorePrecisionSum = 0;
+  let goalScorerHitCount = 0;
   let upsetBonusSum = 0;
   let streakBonusSum = 0;
   let upsetChanceCount = 0;
@@ -123,7 +124,7 @@ export async function resolveNbaMonthlyProfileSummary(
       wins += safeInt(inc.wins);
       pointsSumV3 += safeNum(inc.pointsSumV3);
       upsetPointsSum += safeNum(inc.upsetPointsSum);
-      scorePrecisionSum += safeNum(inc.scorePrecisionSum);
+      goalScorerHitCount += safeInt(inc.goalScorerHitCount);
       upsetBonusSum += safeNum(inc.upsetBonusSum);
       streakBonusSum += safeNum(inc.streakBonusSum);
       upsetChanceCount += safeInt(inc.upsetOpportunityCount);
@@ -139,7 +140,8 @@ export async function resolveNbaMonthlyProfileSummary(
           recent3Posts: 0,
           wins,
           winRate: wins / posts,
-          scorePrecisionSum,
+          exactHitCount: 0,
+          goalScorerHitCount,
           upsetPointsSum,
           pointsSumV3,
           upsetChanceCount,

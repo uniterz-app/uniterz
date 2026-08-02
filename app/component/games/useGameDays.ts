@@ -21,7 +21,6 @@ import {
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import { mergePlayoffSeriesPeersForWindowGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
-import { getWcGamesPageQueryRange } from "@/lib/wc/wcGamesPageScheduleWindow";
 
 /** アンカー±10日（計21暦日）分の取得上限 */
 const GAME_DAYS_WINDOW_QUERY_LIMIT = 200;
@@ -137,10 +136,7 @@ export function useGameDays(
 
       try {
         const ref = collection(db, "games");
-        const { start, end } =
-          league === "wc"
-            ? getWcGamesPageQueryRange(timeZone)
-            : getPlusMinusDaysRangeInTimeZone(
+        const { start, end } = getPlusMinusDaysRangeInTimeZone(
                 windowAnchor,
                 timeZone,
                 GAME_DAYS_PLUS_MINUS,
@@ -153,11 +149,7 @@ export function useGameDays(
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(
-            league === "wc"
-              ? WC_GAMES_PAGE_WINDOW_LIMIT
-              : GAME_DAYS_WINDOW_QUERY_LIMIT,
-          ),
+          limit(GAME_DAYS_WINDOW_QUERY_LIMIT),
         );
 
         const snap = await getDocs(q);

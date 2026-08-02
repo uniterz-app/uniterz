@@ -5,7 +5,6 @@ import type { NavigationState, PartialState } from "@react-navigation/native";
 import AppTabBar from "./AppTabBar";
 import type { MainTabParamList } from "./types";
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
-import WcKnockoutStreakResetGateNative from "../features/games/WcKnockoutStreakResetGateNative";
 import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
 import {
@@ -47,7 +46,6 @@ export default function MainTabNavigator() {
   return (
     <>
       <NativePushNotificationsHost />
-      <WcKnockoutStreakResetGateNative />
       <View style={styles.root}>
         <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
         <View style={styles.tabHost}>

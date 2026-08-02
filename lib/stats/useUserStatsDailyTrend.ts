@@ -10,6 +10,11 @@ import { db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
+import {
+  pickNbaPlayoffsDailyIncBucket,
+  pickNbaSeasonKeyDailyIncBucket,
+} from "@/lib/rankings/pickNbaStatsBucket";
+import { filterDailyTrendToSeasonActivity } from "@/lib/profile/dailyTrendSeasonActivity";
 import { resolveProfileDailyTrendContext } from "@/lib/profile/userStatsV2ProfileRollup";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
@@ -64,7 +69,8 @@ export function useUserStatsDailyTrend(
 
       const trendCtx = resolveProfileDailyTrendContext(
         context?.rankingLeague ?? "nba",
-        context?.wcStage
+        context?.wcStage,
+        (context?.rankingLeague ?? "nba") === "nba" ? "season" : undefined
       );
 
       const rows: DailyTrendRow[] = snap.docs.map((doc) => {
@@ -87,12 +93,10 @@ export function useUserStatsDailyTrend(
             (stage === "overall" ? leagues.wc : null) ??
             {}
           ) as Record<string, unknown>;
+        } else if (trendCtx.nbaPeriod === "playoffs") {
+          bucket = pickNbaPlayoffsDailyIncBucket(d);
         } else {
-          const byPhase = (d.rankingByPhase ?? {}) as Record<
-            string,
-            Record<string, unknown>
-          >;
-          bucket = (byPhase.playoffs ?? {}) as Record<string, unknown>;
+          bucket = pickNbaSeasonKeyDailyIncBucket(d);
         }
 
         const posts = Number(bucket.posts ?? 0);
@@ -115,7 +119,11 @@ export function useUserStatsDailyTrend(
         };
       });
 
-      setData(rows);
+      setData(
+        (context?.rankingLeague ?? "nba") === "nba"
+          ? filterDailyTrendToSeasonActivity(rows)
+          : rows
+      );
       setLoading(false);
     }
 

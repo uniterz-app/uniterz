@@ -5,11 +5,6 @@ import {
 import type { ResultCardBadge } from "../../../../../lib/result/resultGlass";
 import type { WinStreakBadgeStyle } from "../../../../../lib/ui/winStreakBadge";
 import type { GamesLanguage } from "./gamesI18n";
-import {
-  resolveWcGoalScorerResultNative,
-  type WcGoalScorerPostLike,
-  type WcGoalScorerResultInfo,
-} from "../results/useWcGoalScorerResultNative";
 import type { PkScore } from "../../../../../lib/games/pkScore";
 import {
   buildResultStatMetricValues,
@@ -37,7 +32,7 @@ export type PredictModalMergedFinalPreview = {
   stackBadges: boolean;
   streakBadge: WinStreakBadgeStyle | null;
   activeWinStreak: number;
-  wcGoalScorer: WcGoalScorerResultInfo | null;
+  wcGoalScorer: null;
   statRows: PredictModalResultStatRow[];
 };
 
@@ -85,28 +80,24 @@ export function buildPredictModalMergedFinalPreview(
   params: BuildParams
 ): PredictModalMergedFinalPreview | null {
   const {
-    league,
     language,
     finalScore,
     predictedScore,
     stats,
-    goalScorer,
-    homeTeamId,
-    awayTeamId,
     finalOt = false,
     pkScore = null,
   } = params;
   const isEn = language === "en";
 
-  const postLike: WcGoalScorerPostLike = {
-    league,
-    status: "final",
-    home: { teamId: homeTeamId ?? null },
-    away: { teamId: awayTeamId ?? null },
+  const postLike = {
+    league: params.league,
+    status: "final" as const,
+    home: { teamId: params.homeTeamId ?? null },
+    away: { teamId: params.awayTeamId ?? null },
     result: finalScore,
     prediction: {
       score: predictedScore,
-      goalScorer: goalScorer ?? null,
+      goalScorer: params.goalScorer ?? null,
     },
     stats,
   };
@@ -122,8 +113,6 @@ export function buildPredictModalMergedFinalPreview(
     postLike as Parameters<typeof resolveResultCardBadge>[0],
     language
   );
-
-  const wcGoalScorer = resolveWcGoalScorerResultNative(postLike);
 
   const breakdown = extractResultSettlementBreakdown(stats);
   const metricValues = buildResultStatMetricValues(breakdown);
@@ -174,7 +163,7 @@ export function buildPredictModalMergedFinalPreview(
     stackBadges,
     streakBadge,
     activeWinStreak,
-    wcGoalScorer,
+    wcGoalScorer: null,
     statRows,
   };
 }

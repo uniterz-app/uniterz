@@ -13,7 +13,6 @@ const updateUserStreak_1 = require("./updateUserStreak");
 const updateTeamStats_1 = require("./updateTeamStats");
 const updateTeamSeasonRecord_1 = require("./updateTeamSeasonRecord");
 const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
-const onKnockoutGameFinal_1 = require("./wc-bracket/onKnockoutGameFinal");
 const teamStandingsSeasonPhase_1 = require("./teamStandingsSeasonPhase");
 const settlementGame_1 = require("./settlementGame");
 const db = () => (0, firestore_2.getFirestore)();
@@ -29,7 +28,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     memory: "1GiB",
     timeoutSeconds: 540,
 }, async (event) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f;
     const firestore = db();
     const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
     const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
@@ -198,30 +197,6 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             awayWins }, upset.meta);
     }
     await firestore.doc(`games/${gameId}`).set(gamePatch, { merge: true });
-    if (becameFinal && game.knockout === true) {
-        try {
-            const bracket = await (0, onKnockoutGameFinal_1.maybeUpdateWcBracketOnKnockoutFinal)(firestore, {
-                gameId,
-                season: typeof game.season === "string" ? game.season : null,
-                league: game.league,
-                knockout: true,
-                homeTeamId: game.homeTeamId,
-                awayTeamId: game.awayTeamId,
-                homeScore: game.homeScore,
-                awayScore: game.awayScore,
-                advancingTeamId: (_g = game.advancingTeamId) !== null && _g !== void 0 ? _g : null,
-                wcKnockoutMatchId: typeof game.wcKnockoutMatchId === "string"
-                    ? game.wcKnockoutMatchId
-                    : null,
-            });
-            if ((_h = bracket.childGamesCreated) === null || _h === void 0 ? void 0 : _h.length) {
-                console.log(`[onGameFinalV2] knockout child games: ${bracket.childGamesCreated.join(", ")}`);
-            }
-        }
-        catch (err) {
-            console.error("[onGameFinalV2] wc bracket chain failed", err);
-        }
-    }
     if (becameFinal) {
         try {
             await (0, notifyPushEvents_1.notifyGameFinalPush)({

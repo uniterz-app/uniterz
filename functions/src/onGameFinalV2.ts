@@ -11,7 +11,6 @@ import { updateUserStreak } from "./updateUserStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
 import { notifyGameFinalPush } from "./notifications/notifyPushEvents";
-import { maybeUpdateWcBracketOnKnockoutFinal } from "./wc-bracket/onKnockoutGameFinal";
 import {
   countsTowardPlayoffTeamStats,
   countsTowardRegularSeasonTeamStats,
@@ -258,33 +257,6 @@ export const onGameFinalV2 = onDocumentWritten(
     }
 
     await firestore.doc(`games/${gameId}`).set(gamePatch, { merge: true });
-
-    if (becameFinal && game.knockout === true) {
-      try {
-        const bracket = await maybeUpdateWcBracketOnKnockoutFinal(firestore, {
-          gameId,
-          season: typeof game.season === "string" ? game.season : null,
-          league: game.league,
-          knockout: true,
-          homeTeamId: game.homeTeamId,
-          awayTeamId: game.awayTeamId,
-          homeScore: game.homeScore,
-          awayScore: game.awayScore,
-          advancingTeamId: game.advancingTeamId ?? null,
-          wcKnockoutMatchId:
-            typeof game.wcKnockoutMatchId === "string"
-              ? game.wcKnockoutMatchId
-              : null,
-        });
-        if (bracket.childGamesCreated?.length) {
-          console.log(
-            `[onGameFinalV2] knockout child games: ${bracket.childGamesCreated.join(", ")}`
-          );
-        }
-      } catch (err) {
-        console.error("[onGameFinalV2] wc bracket chain failed", err);
-      }
-    }
 
     if (becameFinal) {
       try {

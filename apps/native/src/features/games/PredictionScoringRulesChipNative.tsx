@@ -8,13 +8,11 @@ import {
   View,
 } from "react-native";
 import type { GamesLanguage } from "./gamesI18n";
-import WcScoringRulesNative from "./wc/WcScoringRulesNative";
 import PredictionScoringRulesBodyNative from "./PredictionScoringRulesBodyNative";
 
 type Props = {
   language: GamesLanguage;
-  /** WC 予想フォームでは `wc` */
-  league: "wc" | "nba";
+  league: "nba" | "wc";
   accessibilityLabel: string;
   closeLabel: string;
   rulesFootNote?: string;
@@ -63,11 +61,7 @@ export default function PredictionScoringRulesChipNative({
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
-              {league === "wc" ? (
-                <WcScoringRulesNative language={language} variant="modal" />
-              ) : (
-                <PredictionScoringRulesBodyNative language={language} />
-              )}
+              <PredictionScoringRulesBodyNative language={language} />
               {rulesFootNote ? (
                 <Text style={styles.footnote}>{rulesFootNote}</Text>
               ) : null}

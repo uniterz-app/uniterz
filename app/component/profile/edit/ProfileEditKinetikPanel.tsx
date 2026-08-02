@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { Eye } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -12,9 +12,12 @@ import {
   type ProfileEditKinetikStats,
 } from "./profileEditKinetikTypes";
 import type { ProfileEditTronIdentity } from "./profileEditTronTypes";
-import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { nameOxanium } from "@/lib/fonts";
 import { useCountUp } from "@/lib/hooks/useCountUp";
+import {
+  useKinetikMetricCountUp,
+  type KinetikMetricCountFormat,
+} from "@/lib/hooks/useKinetikMetricCountUp";
 import { ProfileEditKinetikAvatarWithStreak } from "./ProfileEditKinetikStreakFx";
 import { KINETIK_STREAK_VARIANT } from "./kinetikStreakFx";
 import ProfileEditKinetikHeaderTabs from "./ProfileEditKinetikHeaderTabs";
@@ -50,15 +53,6 @@ import {
   KINETIK_UPSET_METRIC_LABEL,
   kinetikMetricLabelUsesLatinUppercase,
 } from "@/lib/profile/kinetikMetricDisplay";
-import type {
-  ProfileKinetikMetricsSection,
-  WcKinetikStackedStage,
-} from "@/lib/profile/profileKinetikMetricsSection";
-import {
-  PROFILE_WC_STACKED_STAGE_TAB_ORDER,
-  profileWcStackedStageTabLabel,
-  profileWcStackedStageTabsLabel,
-} from "@/lib/profile/profileWcStackedStageTabs";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
@@ -163,6 +157,10 @@ function KinetikSegBar({
 function MetricCard({
   label,
   value,
+  countTarget,
+  countFormat,
+  countDecimals = 0,
+  valuesPending = false,
   rankLabel,
   footnote,
   accent,
@@ -182,7 +180,11 @@ function MetricCard({
   language = "ja",
 }: {
   label: string;
-  value: string;
+  value?: string;
+  countTarget?: number;
+  countFormat?: KinetikMetricCountFormat;
+  countDecimals?: number;
+  valuesPending?: boolean;
   rankLabel?: string;
   /** 勝率カード下など — 控えめな補足（投稿数・的中数など） */
   footnote?: string;
@@ -206,8 +208,21 @@ function MetricCard({
   language?: "ja" | "en";
 }) {
   const reduceMotion = reduceUiMotion || useReducedMotion() === true;
+  const useCount = countFormat != null && countTarget != null;
+  const countedValue = useKinetikMetricCountUp(
+    useCount ? valuesPending : true,
+    countTarget ?? 0,
+    countFormat ?? "int",
+    countDecimals,
+    reduceMotion
+  );
+  const displayValue = useCount
+    ? countedValue
+    : valuesPending
+      ? "—"
+      : (value ?? "—");
   const colors = ACCENT[accent];
-  const valueHasUnit = value.includes("%");
+  const valueHasUnit = displayValue.includes("%");
   const labelLatinUpper = kinetikMetricLabelUsesLatinUppercase(label);
   const showRankInline = rankLabel && segmentsReady && !rankBelowSegBar;
   const showRankBelow = rankLabel && segmentsReady && rankBelowSegBar;
@@ -317,7 +332,7 @@ function MetricCard({
           ].join(" ")}
           style={{ color: isPlanPro ? colors.line : colors.text }}
         >
-          {value}
+          {displayValue}
         </span>
         {unit && !valueHasUnit ? (
           <span
@@ -573,9 +588,13 @@ function getKinetikMetricCopy(isJa: boolean, opts?: { monthly?: boolean }) {
       : monthly
         ? "Combined score from wins, upsets, and bonuses for this month."
         : "Combined score from wins, upsets, and bonuses for the period.",
-    exactHitTooltip: isJa
-      ? "予想スコアが結果と完全一致した試合数（期間内の累計）。"
-      : "Number of matches where your predicted score exactly matched the final score.",
+    goalScorerTooltip: isJa
+      ? monthly
+        ? "最多得点者予想が的中した試合数。今月の合計。"
+        : "最多得点者予想が的中した試合数。期間内の累計。"
+      : monthly
+        ? "Correct top-scorer picks this month."
+        : "Correct top-scorer picks for the period.",
     upsetTooltip: isJa
       ? monthly
         ? "アップセットが起きた試合で少数派を当てたときだけ加点。今月の合計。"
@@ -591,17 +610,15 @@ function getKinetikMetricCopy(isJa: boolean, opts?: { monthly?: boolean }) {
 
 function buildKinetikMetricsInfoMessage(
   copy: ReturnType<typeof getKinetikMetricCopy>,
-  opts: { isJa: boolean; isWcProfile: boolean }
+  opts: { isJa: boolean }
 ): string {
-  const { isJa, isWcProfile } = opts;
-  const exactHitsLabel = isJa ? "完全的中" : "Exact hits";
+  const { isJa } = opts;
+  const goalScorerLabel = isJa ? "最多得点者" : "Top scorer";
 
   return [
     `${isJa ? "勝率" : "Win rate"} — ${copy.winRateTooltip}`,
     `${isJa ? "総合得点" : "Total points"} — ${copy.totalPointsTooltip}`,
-    ...(isWcProfile
-      ? [`${exactHitsLabel} — ${copy.exactHitTooltip}`]
-      : []),
+    `${goalScorerLabel} — ${copy.goalScorerTooltip}`,
     `${KINETIK_UPSET_METRIC_LABEL} — ${copy.upsetTooltip}`,
   ].join("\n\n");
 }
@@ -677,14 +694,12 @@ type Props = {
   planProLuxuryVariant?: ProfilePlanProLuxuryVariant;
   shareHandle?: string;
   metricValueDeltas?: MyRankMetricValueDeltas | null;
-  /** WC プロフィールでは完全的中（整数）を表示 */
+  /** @deprecated プロフィールは NBA 固定。互換のため残置 */
   rankingLeague?: RankingLeagueSource;
   /** 他人プロフィールではメトリクスカードのモーションを抑える（連勝 FX は維持） */
   visualEffects?: ProfileVisualEffects;
   /** スタッツ API 取得中 — メトリクス欄のみスケルトン表示 */
   statsPending?: boolean;
-  /** WC: ノックアウト（上）+ グループ（下）の縦積み */
-  stackedMetricsSections?: ProfileKinetikMetricsSection[];
   /** NBA: Playoffs / Season 切替 */
   metricsPeriod?: ProfileKinetikMetricsPeriod;
   onMetricsPeriodChange?: (period: ProfileKinetikMetricsPeriod) => void;
@@ -717,30 +732,27 @@ export default function ProfileEditKinetikPanel({
   planProLuxuryVariant,
   shareHandle,
   metricValueDeltas = null,
-  rankingLeague = "nba",
+  rankingLeague: _rankingLeague = "nba",
   visualEffects = "full",
   statsPending = false,
-  stackedMetricsSections,
   metricsPeriod,
   onMetricsPeriodChange,
   profileViewCount = null,
   unitBalance = null,
 }: Props) {
   const isJa = language === "ja";
-  const isWcProfile = rankingLeague === "worldcup";
   const isSeasonMetrics =
-    !isWcProfile && metricsPeriod === "season" && !!onMetricsPeriodChange;
+    metricsPeriod === "season" && !!onMetricsPeriodChange;
   const showNbaPeriodTabs =
-    !isWcProfile && metricsPeriod != null && !!onMetricsPeriodChange;
+    metricsPeriod != null && !!onMetricsPeriodChange;
   const reduceUiMotion =
     useReducedMotion() === true || visualEffects === "lite";
   const animatePlanProBg =
     isPro && showProfilePlanProEffects(isPro) && useReducedMotion() !== true;
-  const planProBgAccentReady = !statsPending;
+  const planProBgAccentReady = true;
   const metricCopy = getKinetikMetricCopy(isJa, { monthly: isSeasonMetrics });
   const metricsInfoMessage = buildKinetikMetricsInfoMessage(metricCopy, {
     isJa,
-    isWcProfile,
   });
   const metricsInfoControl = (
     <span className="profile-edit-kinetik-metrics-info shrink-0">
@@ -830,34 +842,7 @@ export default function ProfileEditKinetikPanel({
     rankBadge,
   });
 
-  const wcStackedActive =
-    isWcProfile &&
-    stackedMetricsSections != null &&
-    stackedMetricsSections.length > 0;
-  const metricsSectionTitle = isWcProfile
-    ? metricsTitle ?? "WORLD CUP // STATS"
-    : metricsTitle ?? "NBA // PLAYOFFS STATS";
-
-  const [wcStackedStage, setWcStackedStage] =
-    useState<WcKinetikStackedStage>("main");
-  const wcStackedAvailableStages = useMemo(
-    () =>
-      PROFILE_WC_STACKED_STAGE_TAB_ORDER.filter((stage) =>
-        stackedMetricsSections?.some((section) => section.wcStage === stage)
-      ),
-    [stackedMetricsSections]
-  );
-  useEffect(() => {
-    if (wcStackedAvailableStages.length === 0) return;
-    setWcStackedStage((prev) =>
-      wcStackedAvailableStages.includes(prev) ? prev : wcStackedAvailableStages[0]!
-    );
-  }, [wcStackedAvailableStages]);
-  const showWcStackedStageTabs = wcStackedAvailableStages.length > 1;
-  const activeWcStackedSection =
-    stackedMetricsSections?.find((section) => section.wcStage === wcStackedStage) ??
-    stackedMetricsSections?.[0] ??
-    null;
+  const metricsSectionTitle = metricsTitle ?? "NBA // SEASON STATS";
 
   const dayDeltaTitle = metricCopy.dayDeltaTitle;
 
@@ -867,43 +852,44 @@ export default function ProfileEditKinetikPanel({
     sectionRank: {
       totalPointsRank: number | null;
       totalPointsRankDenominator: number | null;
-    }
+    },
+    valuesPending = false
   ) => {
-    const sectionWinRateFootnote = isJa
-      ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
-      : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
-    const sectionWinSegs = kinetikWinRateSegs(sectionStats.winRate);
-    const sectionPtsSegs = kinetikTotalPointsRankSegs(
-      sectionRank.totalPointsRank,
-      sectionRank.totalPointsRankDenominator
-    );
+    const pendingMark = "—";
+    const sectionWinRateFootnote = valuesPending
+      ? pendingMark
+      : isJa
+        ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
+        : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
+    const sectionWinSegs = valuesPending
+      ? 0
+      : kinetikWinRateSegs(sectionStats.winRate);
+    const sectionPtsSegs = valuesPending
+      ? 0
+      : kinetikTotalPointsRankSegs(
+          sectionRank.totalPointsRank,
+          sectionRank.totalPointsRankDenominator
+        );
     const sectionTotalPointsRankLabel =
-      sectionRank.totalPointsRank != null
+      !valuesPending && sectionRank.totalPointsRank != null
         ? isJa
           ? `${sectionRank.totalPointsRank}位`
           : `#${sectionRank.totalPointsRank}`
         : undefined;
     const sectionPtsSegmentsReady =
+      !valuesPending &&
       sectionRank.totalPointsRankDenominator != null &&
       Number.isFinite(sectionRank.totalPointsRankDenominator) &&
       sectionRank.totalPointsRankDenominator >= 1;
-    const sectionWinRateDelta = formatProfileMetricDayDelta(
-      "winRate",
-      sectionDeltas?.winRate
-    );
-    const sectionTotalPointsDelta = formatProfileMetricDayDelta(
-      "totalPoints",
-      sectionDeltas?.totalPoints
-    );
-    const sectionExactHitsDelta = formatProfileMetricDayDelta(
-      "exactHits",
-      sectionDeltas?.totalPrecision,
-      { integer: isWcProfile }
-    );
-    const sectionUpsetDelta = formatProfileMetricDayDelta(
-      "upset",
-      sectionDeltas?.totalUpset
-    );
+    const sectionWinRateDelta = valuesPending
+      ? null
+      : formatProfileMetricDayDelta("winRate", sectionDeltas?.winRate);
+    const sectionTotalPointsDelta = valuesPending
+      ? null
+      : formatProfileMetricDayDelta("totalPoints", sectionDeltas?.totalPoints);
+    const sectionUpsetDelta = valuesPending
+      ? null
+      : formatProfileMetricDayDelta("upset", sectionDeltas?.totalUpset);
 
     if (isPro && planProMetricLayout) {
       return (
@@ -918,7 +904,7 @@ export default function ProfileEditKinetikPanel({
               hits: sectionStats.hits,
               totalPoints: sectionStats.totalPoints,
               totalPointsRank: sectionRank.totalPointsRank,
-              exactHits: sectionStats.exactHits,
+              goalScorerHits: sectionStats.goalScorerHits ?? 0,
               upset: sectionStats.upset,
               winSegs: kinetikWinRateSegs(sectionStats.winRate),
               ptsSegs: kinetikTotalPointsRankSegs(
@@ -926,7 +912,6 @@ export default function ProfileEditKinetikPanel({
                 sectionRank.totalPointsRankDenominator
               ),
             }}
-            showExactHits={isWcProfile}
           />
         </div>
       );
@@ -942,7 +927,10 @@ export default function ProfileEditKinetikPanel({
       >
         <MetricCard
           label={isJa ? "勝率" : "WIN RATE"}
-          value={`${formatMetricDecimals(sectionStats.winRate, 1)}%`}
+          countTarget={sectionStats.winRate}
+          countFormat="percent"
+          countDecimals={1}
+          valuesPending={valuesPending}
           footnote={sectionWinRateFootnote}
           accent="green"
           filledSegs={sectionWinSegs}
@@ -958,7 +946,9 @@ export default function ProfileEditKinetikPanel({
         />
         <MetricCard
           label={isJa ? "総合得点" : "TOTAL PTS"}
-          value={sectionStats.totalPoints.toLocaleString()}
+          countTarget={sectionStats.totalPoints}
+          countFormat="locale"
+          valuesPending={valuesPending}
           rankLabel={sectionTotalPointsRankLabel}
           accent="magenta"
           filledSegs={sectionPtsSegs}
@@ -981,10 +971,11 @@ export default function ProfileEditKinetikPanel({
           reduceUiMotion={reduceUiMotion}
           language={language}
         />
-        {isWcProfile ? (
         <MetricCard
-          label={isJa ? "完全的中" : "EXACT HITS"}
-          value={String(Math.max(0, Math.round(sectionStats.exactHits)))}
+          label={isJa ? "最多得点者" : "TOP SCORER"}
+          countTarget={Math.max(0, Math.round(sectionStats.goalScorerHits ?? 0))}
+          countFormat="int"
+          valuesPending={valuesPending}
           accent="cyan"
           filledSegs={0}
           layout={layout}
@@ -992,24 +983,16 @@ export default function ProfileEditKinetikPanel({
           showSegBar={false}
           unit={metricCopy.matchUnit}
           unitHint={metricCopy.cumulativeUnitHint}
-          dayDelta={
-            sectionExactHitsDelta
-              ? `${sectionExactHitsDelta} ${metricCopy.matchUnit}`
-              : null
-          }
-          dayDeltaTitle={dayDeltaTitle}
-          dayDeltaTone={profileMetricDeltaTone(
-            sectionDeltas?.totalPrecision ?? null,
-            { positiveOnly: true }
-          )}
           isPlanPro={isPro}
           reduceUiMotion={reduceUiMotion}
           language={language}
         />
-        ) : null}
         <MetricCard
           label={KINETIK_UPSET_METRIC_LABEL}
-          value={formatMetricDecimals(sectionStats.upset, 1)}
+          countTarget={sectionStats.upset}
+          countFormat="fixed"
+          countDecimals={1}
+          valuesPending={valuesPending}
           accent="red"
           filledSegs={0}
           layout={layout}
@@ -1041,76 +1024,25 @@ export default function ProfileEditKinetikPanel({
   const metricsSectionDividerClass = proMobileStage
     ? "px-2 py-1.5"
     : "border-b border-white/8 px-2 py-1.5";
-  const wcStageTabWrapClass = proMobileStage
+  const periodTabWrapClass = proMobileStage
     ? "overflow-visible px-2.5 py-2"
     : "overflow-visible border-b border-white/8 px-2.5 py-2";
 
-  const metricsContent = statsPending ? (
-    <MetricsGridSkeleton layout={layout} />
-  ) : wcStackedActive && activeWcStackedSection ? (
-    <div>
-      {showWcStackedStageTabs ? (
-        <div className={wcStageTabWrapClass}>
-          <CyberSlantedTabBar
-            fill
-            aria-label={profileWcStackedStageTabsLabel(language)}
-          >
-            {wcStackedAvailableStages.map((stage) => (
-              <CyberSlantedTab
-                key={stage}
-                role="tab"
-                label={profileWcStackedStageTabLabel(stage, language)}
-                active={wcStackedStage === stage}
-                onClick={() => setWcStackedStage(stage)}
-                compact
-              />
-            ))}
-          </CyberSlantedTabBar>
-        </div>
-      ) : null}
-      <div>
-        <div className={metricsSectionDividerClass}>
-          {!showWcStackedStageTabs ? (
-            <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
-              {activeWcStackedSection.title}
-            </ProfileEditKinetikGlitchTitle>
-          ) : null}
-          <div
-            className={[
-              "flex items-center justify-between gap-2",
-              showWcStackedStageTabs ? undefined : "mt-1.5",
-            ].join(" ")}
-          >
-            <div className="min-w-0 flex-1">
-              <ProfileEditKinetikHeaderTabs
-                rankBadge={activeWcStackedSection.rankBadge}
-                winStreak={activeWcStackedSection.winStreak}
-                language={language}
-                compact={layout === "mobile"}
-              />
-            </div>
-            {metricsInfoControl}
-          </div>
-        </div>
-        {renderMetricsGrid(
-          activeWcStackedSection.stats,
-          activeWcStackedSection.metricValueDeltas,
-          {
-            totalPointsRank: activeWcStackedSection.totalPointsRank,
-            totalPointsRankDenominator:
-              activeWcStackedSection.totalPointsRankDenominator,
-          }
-        )}
-      </div>
-    </div>
-  ) : (
+  const metricsContent = (
     <div>
       {showNbaPeriodTabs ? (
-        <div className={wcStageTabWrapClass}>
+        <div className={periodTabWrapClass}>
           <CyberSlantedTabBar
             fill
             aria-label={isJa ? "統計の期間" : "Stats period"}
           >
+            <CyberSlantedTab
+              role="tab"
+              label="SEASON"
+              active={metricsPeriod === "season"}
+              onClick={() => onMetricsPeriodChange?.("season")}
+              compact
+            />
             <CyberSlantedTab
               role="tab"
               label="PLAYOFF"
@@ -1118,30 +1050,52 @@ export default function ProfileEditKinetikPanel({
               onClick={() => onMetricsPeriodChange?.("playoffs")}
               compact
             />
-            <CyberSlantedTab
-              role="tab"
-              label="26-27"
-              active={metricsPeriod === "season"}
-              onClick={() => onMetricsPeriodChange?.("season")}
-              compact
-            />
           </CyberSlantedTabBar>
         </div>
       ) : null}
-      <div className={metricsSectionDividerClass}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <ProfileEditKinetikHeaderTabs
-              rankBadge={rankBadge}
-              winStreak={activeWinStreak}
-              language={language}
-              compact={layout === "mobile"}
-            />
+      {statsPending ? (
+        <>
+          <div className={metricsSectionDividerClass}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <ProfileEditKinetikHeaderTabs
+                  rankBadge={rankBadge}
+                  winStreak={activeWinStreak}
+                  language={language}
+                  compact={layout === "mobile"}
+                />
+              </div>
+              {metricsInfoControl}
+            </div>
           </div>
-          {metricsInfoControl}
-        </div>
-      </div>
-      {metricsGrid}
+          {renderMetricsGrid(
+            stats,
+            null,
+            {
+              totalPointsRank: null,
+              totalPointsRankDenominator: null,
+            },
+            true
+          )}
+        </>
+      ) : (
+        <>
+          <div className={metricsSectionDividerClass}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <ProfileEditKinetikHeaderTabs
+                  rankBadge={rankBadge}
+                  winStreak={activeWinStreak}
+                  language={language}
+                  compact={layout === "mobile"}
+                />
+              </div>
+              {metricsInfoControl}
+            </div>
+          </div>
+          {metricsGrid}
+        </>
+      )}
     </div>
   );
 

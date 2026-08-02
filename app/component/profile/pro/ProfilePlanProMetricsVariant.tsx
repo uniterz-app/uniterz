@@ -16,7 +16,7 @@ export type ProfilePlanProMetricShowcaseData = {
   hits: number;
   totalPoints: number;
   totalPointsRank: number | null;
-  exactHits?: number;
+  goalScorerHits?: number;
   upset: number;
   winSegs: number;
   ptsSegs: number;
@@ -113,8 +113,7 @@ type MetricItem = {
 
 function buildMetrics(
   data: ProfilePlanProMetricShowcaseData,
-  isJa: boolean,
-  showExactHits: boolean
+  isJa: boolean
 ): MetricItem[] {
   const rankLabel =
     data.totalPointsRank != null
@@ -123,7 +122,7 @@ function buildMetrics(
         : `#${data.totalPointsRank}`
       : undefined;
 
-  const metrics: MetricItem[] = [
+  return [
     {
       key: "win",
       label: isJa ? "勝率" : "WIN RATE",
@@ -145,18 +144,14 @@ function buildMetrics(
       segs: data.ptsSegs,
       rank: rankLabel,
     },
-  ];
-  if (showExactHits) {
-    metrics.push({
-      key: "prec",
-      label: isJa ? "完全的中" : "EXACT HITS",
+    {
+      key: "scorer",
+      label: isJa ? "最多得点者" : "TOP SCORER",
       sub: isJa ? "累計" : "CUM",
-      value: String(Math.round(data.exactHits ?? 0)),
+      value: String(Math.round(data.goalScorerHits ?? 0)),
       unit: isJa ? "試合" : "MTCH",
       accent: "cyan",
-    });
-  }
-  metrics.push(
+    },
     {
       key: "upset",
       label: KINETIK_UPSET_METRIC_LABEL,
@@ -164,9 +159,8 @@ function buildMetrics(
       value: data.upset.toFixed(1),
       unit: "PTS",
       accent: "red",
-    }
-  );
-  return metrics;
+    },
+  ];
 }
 
 function GridVariant({
@@ -441,7 +435,6 @@ type Props = {
   data: ProfilePlanProMetricShowcaseData;
   language?: "ja" | "en";
   layout?: Layout;
-  showExactHits?: boolean;
 };
 
 /** PRO メトリクス — レイアウト案レンダラ（dev） */
@@ -450,9 +443,8 @@ export default function ProfilePlanProMetricsVariant({
   data,
   language = "ja",
   layout = "mobile",
-  showExactHits = false,
 }: Props) {
-  const metrics = buildMetrics(data, language === "ja", showExactHits);
+  const metrics = buildMetrics(data, language === "ja");
 
   switch (variant) {
     case "bento":

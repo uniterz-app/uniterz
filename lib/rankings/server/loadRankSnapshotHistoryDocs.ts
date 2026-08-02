@@ -1,3 +1,4 @@
+import { FieldPath } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { RANK_SNAPSHOT_HISTORY_SUBCOL } from "@/lib/rankings/rankingPhase";
 import {
@@ -29,9 +30,8 @@ function buildLookbackDateKeys(
 }
 
 /**
- * rankSnapshotHistory を全件 get せず、JST 日付を遡って doc を最大 maxDocs 件集める。
- * 逐次 get だと未作成日が多いユーザーで数十往復になり ECONNRESET しやすいため、
- * getAll で 1 往復にまとめる。
+ * rankSnapshotHistory を全件 get せず、存在する最新 doc を最大 maxDocs 件だけ読む。
+ * 以前の「lookback 日数ぶん getAll」は未作成日も課金対象だったため、query + limit に変更。
  */
 export async function loadRankSnapshotHistoryDocsWalkBack(
   uid: string,
@@ -47,25 +47,28 @@ export async function loadRankSnapshotHistoryDocsWalkBack(
     options?.maxLookbackDays ?? RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS;
   const startKey = options?.startDateKey ?? dateKeyJST();
 
-  const adminDb = getAdminDb();
-  const keys = buildLookbackDateKeys(startKey, maxLookbackDays);
-  if (keys.length === 0 || maxDocs <= 0) return [];
+  if (maxDocs <= 0 || maxLookbackDays <= 0) return [];
 
+  const lookbackKeys = buildLookbackDateKeys(startKey, maxLookbackDays);
+  const minKey = lookbackKeys[lookbackKeys.length - 1]!;
+
+  const adminDb = getAdminDb();
   const historyCol = adminDb
     .collection("cumulative_stats")
     .doc(uid)
     .collection(RANK_SNAPSHOT_HISTORY_SUBCOL);
 
-  const refs = keys.map((key) => historyCol.doc(key));
-  const snaps = await adminDb.getAll(...refs);
+  const snap = await historyCol
+    .where(FieldPath.documentId(), ">=", minKey)
+    .where(FieldPath.documentId(), "<=", startKey)
+    .orderBy(FieldPath.documentId(), "desc")
+    .limit(maxDocs)
+    .get();
 
-  const collected: RankSnapshotHistoryDoc[] = [];
-  for (let i = 0; i < snaps.length; i++) {
-    const snap = snaps[i];
-    if (!snap?.exists) continue;
-    collected.push({ id: keys[i]!, data: snap.data() ?? {} });
-    if (collected.length >= maxDocs) break;
-  }
+  const collected: RankSnapshotHistoryDoc[] = snap.docs.map((d) => ({
+    id: d.id,
+    data: (d.data() as Record<string, unknown>) ?? {},
+  }));
 
   return collected.sort((a, b) => a.id.localeCompare(b.id));
 }

@@ -15,7 +15,7 @@ import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
 import CountryFlag from "@/app/component/games/CountryFlag";
-import { teamIdToWcCountry } from "@/lib/wc/wcCountry";
+import { teamIdToWcCountry } from "@/lib/legacyWcWebShims";
 import {
   gamesFilterHelpButtonLabel,
   gamesFilterHelpParagraphs,

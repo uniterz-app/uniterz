@@ -6,7 +6,6 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import {
   joinTeamNameLines,
-  splitWcCountryNameForMobileList,
   splitTeamNameByLeague,
 } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
@@ -37,9 +36,6 @@ import ResultStreakCyberFrame from "@/app/component/result/ResultStreakCyberFram
 import ResultUpsetCyberFrame from "@/app/component/result/ResultUpsetCyberFrame";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
-import WcGoalScorerResultRow, {
-  useWcGoalScorerResult,
-} from "@/app/component/result/WcGoalScorerResultRow";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { motion, useReducedMotion } from "framer-motion";
@@ -52,23 +48,16 @@ import {
   GAMES_LIST_CARDS_LEAD_IN_SEC,
 } from "./cyberMotion";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
-import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
-import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
-import { resolveWcGroupStageStandingForKnockoutDisplay } from "@/lib/wc/wcGroupStandingRank";
-import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 import { t } from "@/lib/i18n/t";
-import type { WcGameGoalScorer } from "@/lib/wc/goalScorer";
-
-import type { League } from "@/lib/leagues";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   getTeamPrimaryColor,
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
-import { normalizeLeague } from "@/lib/leagues";
+import { normalizeLeague, type League } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
@@ -222,8 +211,6 @@ homeRecord?: {
   onClosePredictOverlay?: () => void;
   /** 親で言語を渡すと users/{uid} の購読をカード毎に増やさない */
   language?: Language;
-  /** WC：試合の実得点者（一覧カード表示用） */
-  goalScorers?: WcGameGoalScorer[] | null;
   /** NBA: 最多得点者予想の候補選手 */
   topScorerCandidates?: import("@/lib/nba/topScorer").NbaTopScorerCandidate[] | null;
 };
@@ -281,36 +268,7 @@ function wcListNameFontStyle(
   wcTeamNameFont: React.CSSProperties,
   teamNameFont: React.CSSProperties
 ): React.CSSProperties {
-  if (league === "wc" && isMobile && mobileDense) {
-    return wcBracketMarketTeamTypography(true);
-  }
-  if (league === "wc") return wcTeamNameFont;
   return teamNameFont;
-}
-
-function renderWcMobileDenseTeamName(
-  fullName: string,
-  textClass: string,
-  fontStyle: React.CSSProperties
-) {
-  const split = splitWcCountryNameForMobileList(fullName);
-  if (!split.singleLine) {
-    return (
-      <>
-        <div className={textClass} style={fontStyle}>
-          {split.line1}
-        </div>
-        <div className={textClass} style={fontStyle}>
-          {split.line2}
-        </div>
-      </>
-    );
-  }
-  return (
-    <div className={`${textClass} whitespace-nowrap`} style={fontStyle}>
-      {split.text}
-    </div>
-  );
 }
 
 /** モバイル dense 一覧のキックオフ — Web 試合カード（非 dense）と同じ Oxanium + サイズ */
@@ -472,37 +430,6 @@ function MatchCardView({
   const m = t(language);
   const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
-  const wcBroadcastSep = language === "ja" ? "：" : ": ";
-
-  const wcHomeTeamId = resolveWcTeamId(
-    home,
-    resultPost?.home?.teamId,
-    resultPost?.game?.home,
-    resultPost?.home?.name,
-    home.name
-  );
-  const wcAwayTeamId = resolveWcTeamId(
-    away,
-    resultPost?.away?.teamId,
-    resultPost?.game?.away,
-    resultPost?.away?.name,
-    away.name
-  );
-  const wcKnockoutHomeStanding = useMemo(
-    () =>
-      league === "wc" && knockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(wcHomeTeamId, homeRecord)
-        : null,
-    [league, knockout, wcHomeTeamId, homeRecord]
-  );
-  const wcKnockoutAwayStanding = useMemo(
-    () =>
-      league === "wc" && knockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(wcAwayTeamId, awayRecord)
-        : null,
-    [league, knockout, wcAwayTeamId, awayRecord]
-  );
-
   const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).
   const [fullCardPressed, setFullCardPressed] = useState(false);
@@ -523,12 +450,8 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     ? MOBILE_LIST_CARD_PANEL_DENSE
     : WEB_LIST_CARD_PANEL;
   /** モバイル dense / W杯コンパクト一覧 */
-  const mobileDense =
-    (listScheduleDense && isMobile) || (compact && league === "wc");
-  const showWcBroadcastRow =
-    league === "wc" &&
-    broadcastLabels.length > 0 &&
-    status !== "final";
+  const mobileDense = listScheduleDense && isMobile;
+  const showWcBroadcastRow = false;
   const wcBroadcastCompact = mobileDense || inPredictOverlay;
   /** 予想オーバーレイは下にフォームが続くため、発光仕切り線は出さない */
   const showDividerLine =
@@ -543,7 +466,7 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   const showOverlayScheduleMeta = Boolean(
     overlayCenterMode &&
       status === "scheduled" &&
-      (startAtJst || showWcBroadcastRow)
+      startAtJst
   );
   const {
     badge: resultBadge,
@@ -586,10 +509,7 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
             : mergedResultAccent.shadow || CYBER_GLASS_SHADOW,
         ].join(" ")
       : predictOverlayGlassBase;
-  const wcGoalScorerResultRaw = useWcGoalScorerResult(
-    resultPost ?? ({ league: "nba", prediction: {} } as PredictionPostV2)
-  );
-  const wcGoalScorerResult = resultPost ? wcGoalScorerResultRaw : null;
+  const wcGoalScorerResult = null;
   const predictedScore =
     resultPost?.prediction?.score != null
       ? resultPost.prediction.score
@@ -1718,7 +1638,7 @@ return (
         >
 
   {/* HOME：Web はラベルを大きく */}
-  {league !== "wc" && (
+  {(
     <div
       className={[
         mobileDense ? "mb-0 -mt-3" : "mb-1",
@@ -1736,19 +1656,10 @@ return (
   {/* ユニ・チーム名・戦績（WC は国旗幅を基準に縦積み中央揃え） */}
   <div
     className={[
-      league === "wc"
-        ? "inline-flex flex-col items-center"
-        : "flex w-full flex-col items-center",
+      "flex w-full flex-col items-center",
     ].join(" ")}
   >
-  {league === "wc" ? (
-    <WcTeamFlagWithMeta
-      teamId={wcHomeTeamId}
-      compact={mobileDense || isMobile}
-      flagClassName={teamMarkSizeFlag}
-      knockout={knockout}
-    />
-  ) : Icon === Jersey ? (
+  {Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={homeJerseyColor}
       accentEnd={homeSecondaryColor}
@@ -1771,7 +1682,7 @@ return (
       wcListNameShellClass(league, isMobile, mobileDense),
       mobileDense
         ? "-mt-0.5"
-        : inPredictOverlay && league === "wc"
+        : inPredictOverlay
           ? "mt-0.5"
           : "mt-1.5",
     ].join(" ")}
@@ -1802,18 +1713,6 @@ return (
             {homeL2}
           </div>
         </>
-      ) : league === "wc" && mobileDense ? (
-        renderWcMobileDenseTeamName(
-          joinTeamNameLines(homeL1, homeL2),
-          wcListNameTextClass(league, isMobile, mobileDense),
-          wcListNameFontStyle(
-            league,
-            isMobile,
-            mobileDense,
-            wcTeamNameFont,
-            teamNameFont
-          )
-        )
       ) : (
         // ★ その他リーグ（mobile）
         <div
@@ -1854,15 +1753,7 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  {league === "wc" && knockout ? (
-    <WcGroupStandingRecordLine
-      standing={wcKnockoutHomeStanding}
-      language={language}
-      compact={mobileDense || isMobile}
-    />
-  ) : (
-    <RecordWithRank r={homeRecord} league={league} />
-  )}
+  <RecordWithRank r={homeRecord} league={league} />
 </div>
   </div>
 
@@ -1996,7 +1887,7 @@ return (
           {...entryGroupProps(ENTRY_GROUP_TEAMS, 12)}
         >
 
-  {league !== "wc" && (
+  {(
     <div
       className={[
         mobileDense ? "mb-0 -mt-3" : "mb-1",
@@ -2014,20 +1905,11 @@ return (
   {/* ユニ・チーム名・戦績（WC は国旗幅を基準に縦積み中央揃え） */}
   <div
     className={[
-      league === "wc"
-        ? "inline-flex flex-col items-center"
-        : "flex w-full flex-col items-center",
+      "flex w-full flex-col items-center",
     ].join(" ")}
   >
   {/* アイコン：mobile大きく / webそのまま */}
-  {league === "wc" ? (
-    <WcTeamFlagWithMeta
-      teamId={wcAwayTeamId}
-      compact={mobileDense || isMobile}
-      flagClassName={teamMarkSizeFlag}
-      knockout={knockout}
-    />
-  ) : Icon === Jersey ? (
+  {Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={awayJerseyColor}
       accentEnd={awaySecondaryColor}
@@ -2050,7 +1932,7 @@ return (
       wcListNameShellClass(league, isMobile, mobileDense),
       mobileDense
         ? "-mt-0.5"
-        : inPredictOverlay && league === "wc"
+        : inPredictOverlay
           ? "mt-0.5"
           : "mt-1.5",
     ].join(" ")}
@@ -2081,18 +1963,6 @@ return (
             {awayL2}
           </div>
         </>
-      ) : league === "wc" && mobileDense ? (
-        renderWcMobileDenseTeamName(
-          joinTeamNameLines(awayL1, awayL2),
-          wcListNameTextClass(league, isMobile, mobileDense),
-          wcListNameFontStyle(
-            league,
-            isMobile,
-            mobileDense,
-            wcTeamNameFont,
-            teamNameFont
-          )
-        )
       ) : (
         // ★ その他リーグ（mobile）
         <div
@@ -2132,15 +2002,7 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  {league === "wc" && knockout ? (
-    <WcGroupStandingRecordLine
-      standing={wcKnockoutAwayStanding}
-      language={language}
-      compact={mobileDense || isMobile}
-    />
-  ) : (
-    <RecordWithRank r={awayRecord} league={league} />
-  )}
+  <RecordWithRank r={awayRecord} league={league} />
 </div>
   </div>
 
@@ -2216,109 +2078,6 @@ return (
               </span>
             </span>
           ) : null}
-          {showWcBroadcastRow ? (
-            <span className="inline-flex flex-wrap items-baseline justify-center gap-x-1.5">
-              <span
-                className={[
-                  "shrink-0 font-semibold text-white/45",
-                  wcBroadcastCompact ? "text-xs md:text-sm" : "text-sm md:text-base",
-                ].join(" ")}
-                style={teamNameFont}
-              >
-                {m.games.broadcasters}
-              </span>
-              <span
-                className={[
-                  "flex min-w-0 flex-wrap items-baseline justify-center font-bold tracking-wide text-cyan-100/90",
-                ].join(" ")}
-                style={teamNameFont}
-              >
-                {broadcastLabels.map((label, index) => {
-                  const cjkName = broadcastNameUsesCjk(label);
-                  const nameSizeClass = cjkName
-                    ? wcBroadcastCompact
-                      ? "text-xs md:text-sm"
-                      : "text-sm md:text-base"
-                    : wcBroadcastCompact
-                      ? "text-sm md:text-base"
-                      : "text-base md:text-lg";
-                  return (
-                    <span
-                      key={`${label}-${index}`}
-                      className="inline-flex items-baseline"
-                    >
-                      {index > 0 ? (
-                        <span className={[nameSizeClass, "opacity-80"].join(" ")}>
-                          {wcBroadcastSep}
-                        </span>
-                      ) : null}
-                      <span className={nameSizeClass}>{label}</span>
-                    </span>
-                  );
-                })}
-              </span>
-            </span>
-          ) : null}
-        </motion.div>
-      ) : null}
-
-      {showWcBroadcastRow && !overlayCenterMode && showDividerLine ? (
-        <motion.div
-          className={[
-            "flex w-full items-center justify-center gap-2 px-3 text-center",
-            wcBroadcastCompact
-              ? inPredictOverlay
-                ? "mt-0.5 py-0.5 md:px-4"
-                : "mt-1 py-1 md:px-4"
-              : "mt-2 py-1.5 md:px-4",
-          ].join(" ")}
-          initial={entryTransition ? { opacity: 0, y: 8 } : false}
-          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-          transition={entryTransition ? entryTransition(6) : undefined}
-        >
-          <span
-            className={[
-              "shrink-0 font-semibold text-white/45",
-              wcBroadcastCompact
-                ? "text-xs md:text-sm"
-                : "text-sm md:text-base",
-            ].join(" ")}
-            style={teamNameFont}
-          >
-            {m.games.broadcasters}
-          </span>
-          <span
-            className={[
-              "flex min-w-0 flex-wrap items-baseline justify-center font-bold tracking-wide text-cyan-100/90",
-            ].join(" ")}
-            style={teamNameFont}
-          >
-            {broadcastLabels.map((label, index) => {
-              const cjkName = broadcastNameUsesCjk(label);
-              const nameSizeClass = cjkName
-                ? wcBroadcastCompact
-                  ? "text-xs md:text-sm"
-                  : "text-sm md:text-base"
-                : wcBroadcastCompact
-                  ? "text-sm md:text-base"
-                  : "text-base md:text-lg";
-              return (
-                <span key={`${label}-${index}`} className="inline-flex items-baseline">
-                  {index > 0 ? (
-                    <span
-                      className={[
-                        nameSizeClass,
-                        "opacity-80",
-                      ].join(" ")}
-                    >
-                      {wcBroadcastSep}
-                    </span>
-                  ) : null}
-                  <span className={nameSizeClass}>{label}</span>
-                </span>
-              );
-            })}
-          </span>
         </motion.div>
       ) : null}
 
@@ -2369,20 +2128,12 @@ return (
           animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
           transition={entryTransition ? entryTransition(8) : undefined}
         >
-          {(wcGoalScorerResult || !hideMergedStatsSection) && (
+          {!hideMergedStatsSection && (
             <div className="mb-1.5" aria-hidden>
               <div className={RESULT_HAIRLINE} />
             </div>
           )}
           <div className={mobileDense ? "space-y-1.5" : "space-y-2"}>
-            {wcGoalScorerResult ? (
-              <WcGoalScorerResultRow
-                label={m.results.wcGoalScorerLabel}
-                info={wcGoalScorerResult}
-                compact={isMobile}
-                cyberValue={attachOverlayMarketBar || inPredictOverlay}
-              />
-            ) : null}
             {!hideMergedStatsSection ? (
               <ResultStatsRows
                 post={resultPost}
@@ -2390,7 +2141,7 @@ return (
                 isMobile={isMobile}
                 comfortable
                 ratingBarsImmediate={resultRatingBarsImmediate}
-                rowIndexOffset={wcGoalScorerResult ? 1 : 0}
+                rowIndexOffset={0}
               />
             ) : null}
           </div>

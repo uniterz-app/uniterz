@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchRankPlayoffTrendClient } from "@/lib/profile/fetchRankPlayoffTrendClient";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
   isWcRankingStage,
   type WcRankingStage,
@@ -28,7 +29,7 @@ function rankTrendCacheKey(
   rankingLeague: RankingLeagueSource,
   wcStage: WcRankingStage
 ) {
-  return `${uid}:${rankingLeague}:${wcStage}`;
+  return `${uid}:${rankingLeague}:${wcStage}:v2:${CURRENT_NBA_SEASON_KEY}`;
 }
 
 export function useProfilePlayoffRankTrend(

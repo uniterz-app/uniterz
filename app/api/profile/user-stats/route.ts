@@ -27,6 +27,10 @@ import {
 } from "@/lib/rankings/rankingPeriod";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
 import {
+  buildRankPlayoffTrendPoints,
+  type RankPlayoffTrendPoint,
+} from "@/lib/rankings/server/buildRankPlayoffTrendPoints";
+import {
   loadMyRankMetricValueDeltas,
   loadPriorSnapshotMetrics,
 } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
@@ -36,9 +40,9 @@ import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingS
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type StatsPart = "stats" | "phase" | "trend" | "ranks";
+type StatsPart = "stats" | "phase" | "trend" | "ranks" | "rankTrend";
 
-const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend", "ranks"];
+const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend", "ranks", "rankTrend"];
 
 type SummaryForCards = ProfileSummaryForCards;
 
@@ -144,29 +148,43 @@ async function buildUserStatsResponse(req: Request) {
   const wantPhase = parts.has("phase");
   const wantRanks = parts.has("ranks");
   const wantTrend = parts.has("trend");
+  const wantRankTrend = parts.has("rankTrend");
 
-  const statsSnap = wantStats
-    ? await adminDb.collection("user_stats_v2").doc(uid).get()
-    : null;
-  const cumulativeSnap =
-    !wantMonthly && (wantPhase || wantRanks)
-      ? await adminDb.collection("cumulative_stats").doc(uid).get()
-      : null;
+  const dailyTrendCtx = resolveProfileDailyTrendContext(
+    rankingLeague,
+    wcStage,
+    rankingLeague === "nba" ? (nbaScope ?? "season") : undefined
+  );
+
+  const needCumulative = !wantMonthly && (wantPhase || wantRanks);
+
+  const [statsSnap, cumulativeSnap, last30Snaps, rankTrendPoints] =
+    await Promise.all([
+      wantStats
+        ? adminDb.collection("user_stats_v2").doc(uid).get()
+        : Promise.resolve(null),
+      needCumulative
+        ? adminDb.collection("cumulative_stats").doc(uid).get()
+        : Promise.resolve(null),
+      wantTrend
+        ? fetchLast30DailySnapshots(adminDb, uid)
+        : Promise.resolve([] as Awaited<
+            ReturnType<typeof fetchLast30DailySnapshots>
+          >),
+      wantRankTrend
+        ? buildRankPlayoffTrendPoints(uid, {
+            rankingLeague,
+            wcStage: wcStage ?? "overall",
+          })
+        : Promise.resolve([] as RankPlayoffTrendPoint[]),
+    ]);
 
   const stats = statsSnap?.exists ? statsSnap.data() : null;
   const cumulative = cumulativeSnap?.exists ? cumulativeSnap.data() : null;
 
-  const dailyTrendCtx = resolveProfileDailyTrendContext(
-    rankingLeague,
-    wcStage
-  );
-
-  let dailyTrend: ProfileDailyTrendRow[] = [];
-
-  if (wantTrend) {
-    const last30Snaps = await fetchLast30DailySnapshots(adminDb, uid);
-    dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx);
-  }
+  const dailyTrend: ProfileDailyTrendRow[] = wantTrend
+    ? buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx)
+    : [];
 
   let summary: SummaryForCards | null = null;
   let metricValueDeltas: MyRankMetricValueDeltas | null = null;
@@ -330,6 +348,7 @@ async function buildUserStatsResponse(req: Request) {
   if (metricValueDeltas) body.metricValueDeltas = metricValueDeltas;
   if (summaryRanks) body.summaryRanks = summaryRanks;
   if (wantTrend) body.dailyTrend = dailyTrend;
+  if (wantRankTrend) body.rankTrend = rankTrendPoints;
 
   return NextResponse.json(body);
 

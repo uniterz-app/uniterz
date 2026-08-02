@@ -9,20 +9,17 @@ const nbaSeason_1 = require("./rankings/nbaSeason");
 function shouldCountForRanking(v) {
     return v !== false;
 }
-/** NBA ランキング対象投稿だけシーズンバケット（rankingBySeason.<key>）に積む */
-function resolveNbaSeasonKey(leagueKey, forRanking, startAt) {
-    if (!forRanking || leagueKey !== "nba")
-        return null;
-    return (0, nbaSeason_1.nbaSeasonKeyFromDateJST)(startAt.toDate());
-}
 const db = () => (0, firestore_1.getFirestore)();
 function buildPostCumulativeContribution(opts) {
     var _a, _b, _c;
     const leagueKey = normalizeLeague(opts.league);
     const forRanking = shouldCountForRanking(opts.countsForRanking);
+    const phase = (0, nbaSeason_1.normalizeNbaSeasonPhase)(opts.seasonPhase);
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forRanking, opts.startAt.toDate(), phase);
     return {
         forRanking,
-        nbaSeasonKey: resolveNbaSeasonKey(leagueKey, forRanking, opts.startAt),
+        nbaSeasonKey,
+        nbaPlayoffsSeasonKey,
         leagueKey,
         isWc: leagueKey === "wc",
         wcStage: (_a = opts.wcStage) !== null && _a !== void 0 ? _a : null,
@@ -103,12 +100,13 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, wcStage, homeTeamId, awayTeamId, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, wcStage, seasonPhase, homeTeamId, awayTeamId, } = opts;
     const forRanking = shouldCountForRanking(countsForRanking);
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
     const isWc = leagueKey === "wc";
-    const nbaSeasonKey = resolveNbaSeasonKey(leagueKey, forRanking, startAt);
+    const phase = (0, nbaSeason_1.normalizeNbaSeasonPhase)(seasonPhase);
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forRanking, startAt.toDate(), phase);
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(postId);
     const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
@@ -136,7 +134,9 @@ async function applyPostToUserStatsV2(opts) {
             goalScorerHitCount: firestore_1.FieldValue.increment(goalScorerHit ? 1 : 0),
             goalScorerBonusSum: firestore_1.FieldValue.increment(goalScorerBonus),
         };
-        const update = Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (nbaSeasonKey ? { rankingBySeason: { [nbaSeasonKey]: inc } } : {}));
+        const update = Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (nbaSeasonKey ? { rankingBySeason: { [nbaSeasonKey]: inc } } : {})), (nbaPlayoffsSeasonKey
+            ? { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: inc } }
+            : {}));
         if (forRanking && leagueKey === "wc") {
             update.rankingByWcStage = Object.assign(Object.assign({ overall: inc }, (wcStage === "qualifying" ? { qualifying: inc } : {})), (wcStage === "main" ? { main: inc } : {}));
         }
@@ -174,6 +174,7 @@ async function applyPostToUserStatsV2(opts) {
             countsForRanking,
             league,
             startAt,
+            seasonPhase,
             isWin,
             points,
             upsetPoints,

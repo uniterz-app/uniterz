@@ -2,8 +2,10 @@ export type ProfileEditTronStats = {
   winRate: number;
   posts: number;
   hits: number;
-  /** WC のみで表示する完全的中数 */
+  /** WC のみで表示する完全的中数（NBA プロフィールでは使わない） */
   exactHits: number;
+  /** NBA 最多得点者的中数 */
+  goalScorerHits: number;
   totalPoints: number;
   upset: number;
 };
@@ -35,6 +37,7 @@ export const PROFILE_EDIT_TRON_MOCK: {
     posts: 41,
     hits: 28,
     exactHits: 0,
+    goalScorerHits: 12,
     totalPoints: 1284,
     upset: 96.5,
   },

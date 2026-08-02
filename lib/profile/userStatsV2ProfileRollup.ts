@@ -7,7 +7,10 @@ import type { DocumentSnapshot } from "firebase-admin/firestore";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
-import { pickNbaDailyIncBucket } from "@/lib/rankings/pickNbaStatsBucket";
+import {
+  pickNbaPlayoffsDailyIncBucket,
+  pickNbaSeasonKeyDailyIncBucket,
+} from "@/lib/rankings/pickNbaStatsBucket";
 import {
   isWcRankingStage,
   type WcRankingStage,
@@ -17,18 +20,24 @@ import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 export type ProfileDailyTrendContext = {
   rankingLeague: RankingLeagueSource;
   wcStage?: WcRankingStage;
+  /** NBA プロフィール: season = 現行キーのみ（前シーズンフォールバックなし） */
+  nbaPeriod?: "season" | "playoffs";
 };
 
 export function resolveProfileDailyTrendContext(
   rankingLeague: RankingLeagueSource,
-  wcStage?: WcRankingStage
+  wcStage?: WcRankingStage,
+  nbaPeriod?: "season" | "playoffs"
 ): ProfileDailyTrendContext {
   if (rankingLeague === "worldcup") {
     const stage =
       wcStage && isWcRankingStage(wcStage) ? wcStage : ("overall" as const);
     return { rankingLeague, wcStage: stage };
   }
-  return { rankingLeague: "nba" };
+  return {
+    rankingLeague: "nba",
+    nbaPeriod: nbaPeriod ?? "season",
+  };
 }
 
 function safeInt(v: unknown): number {
@@ -53,7 +62,10 @@ function dailyBucketFromDoc(
     return ((stage === "overall" ? leagues.wc : null) ??
       {}) as Record<string, unknown>;
   }
-  return pickNbaDailyIncBucket(d);
+  if (ctx.nbaPeriod === "playoffs") {
+    return pickNbaPlayoffsDailyIncBucket(d);
+  }
+  return pickNbaSeasonKeyDailyIncBucket(d);
 }
 
 type Bucket = {
@@ -270,9 +282,21 @@ export function buildDailyTrendFromDailySnaps(
   ctx: ProfileDailyTrendContext = { rankingLeague: "nba" }
 ): ProfileDailyTrendRow[] {
   const rows: ProfileDailyTrendRow[] = [];
+  const requireActivity = ctx.rankingLeague === "nba" && ctx.nbaPeriod != null;
   for (const snap of snaps) {
     const row = dailyTrendRowFromDailySnap(snap, ctx);
-    if (row) rows.push(row);
+    if (!row) continue;
+    if (
+      requireActivity &&
+      !(
+        row.posts > 0 ||
+        Math.abs(row.pointsV3) > 1e-9 ||
+        Math.abs(row.upsetPoints) > 1e-9
+      )
+    ) {
+      continue;
+    }
+    rows.push(row);
   }
   rows.sort((a, b) => a.date.localeCompare(b.date));
   return rows;

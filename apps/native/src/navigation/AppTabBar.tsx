@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import {
   Dimensions,
@@ -27,18 +26,16 @@ const TUTORIAL_TARGET_BY_ROUTE: Record<string, string> = {
   ProfileTab: "nav-mypage",
 };
 
-const TAB_ICONS: Record<string, React.ComponentProps<typeof MaterialCommunityIcons>["name"]> = {
-  GamesTab: "sword-cross",
-  RankingsTab: "trophy-outline",
-  ProfileTab: "account-outline",
+/** 全タブ共通のカスタム PNG（透明背景・シアン発光）。ベクターフォント依存をやめる */
+const TAB_ICON_SOURCES: Record<string, number> = {
+  GamesTab: require("../../assets/nav-bar/games.png"),
+  ResultTab: require("../../assets/nav-bar/result.png"),
+  RankingsTab: require("../../assets/nav-bar/ranking.png"),
+  LeaderboardsTab: require("../../assets/nav-bar/group.png"),
+  ProfileTab: require("../../assets/nav-bar/profile.png"),
 };
 
-/** リザルトのみカスタム画像。他は従来アイコン */
-const RESULT_ICON = require("../../assets/navbar/result.png") as number;
-
-const ICON_SIZE = 23;
-/** リザルト（カスタム画像）のみ大きく */
-const RESULT_ICON_SIZE = 32;
+const ICON_SIZE = 26;
 
 /** mobile Web NavBar と色味を揃えたカスタムタブバー */
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -63,9 +60,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
               {state.routes.map((route, index) => {
                 const { options } = descriptors[route.key];
                 const active = state.index === index;
-                const iconName = TAB_ICONS[route.name] ?? "circle-outline";
-                const iconColor = active ? colors.tabActive : colors.tabInactive;
-                const isResult = route.name === "ResultTab";
+                const iconSource = TAB_ICON_SOURCES[route.name];
                 const iconStyle = active
                   ? {
                       transform: [{ scale: 1.04 }],
@@ -81,7 +76,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     }
                   : {
                       transform: [{ scale: 0.92 }],
-                      opacity: isResult ? 0.42 : 0.9,
+                      opacity: 0.42,
                     };
 
                 const onPress = () => {
@@ -139,30 +134,16 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     style={[styles.tabButton, active && styles.tabButtonActive]}
                   >
                     <View style={styles.iconWrap}>
-                      {isResult ? (
+                      {iconSource ? (
                         <Image
-                          source={RESULT_ICON}
+                          source={iconSource}
                           style={[
-                            { width: RESULT_ICON_SIZE, height: RESULT_ICON_SIZE },
+                            { width: ICON_SIZE, height: ICON_SIZE },
                             iconStyle,
                           ]}
                           resizeMode="contain"
                         />
-                      ) : route.name === "LeaderboardsTab" ? (
-                        <MaterialIcons
-                          name="groups"
-                          size={ICON_SIZE}
-                          color={iconColor}
-                          style={iconStyle}
-                        />
-                      ) : (
-                        <MaterialCommunityIcons
-                          name={iconName}
-                          size={ICON_SIZE}
-                          color={iconColor}
-                          style={iconStyle}
-                        />
-                      )}
+                      ) : null}
                       {route.name === "RankingsTab" && showRankingBadge ? (
                         <View style={styles.dot} />
                       ) : null}

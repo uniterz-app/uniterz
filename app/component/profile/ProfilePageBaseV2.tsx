@@ -1,8 +1,7 @@
 // app/component/profile/ProfilePageBaseV2.tsx
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import { useProfile, type Profile } from "./useProfile";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -14,24 +13,16 @@ import type { SummaryForCardsV2, SummaryRanksV2 } from "./useUserStatsV2";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import { useProfileScopedStreak } from "@/lib/profile/useProfileScopedStreak";
-import {
-  RANKINGS_TAB_LEAGUE_PARAM,
-  RANKINGS_TAB_WC_STAGE_PARAM,
-} from "@/lib/navigation/rankingsProfileFrom";
-import {
-  isRankingLeagueSource,
-  type RankingLeagueSource,
-} from "@/lib/rankings/rankingLeagueSource";
-import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
-import { useProfileKinetikWcStackedStats } from "@/lib/profile/useProfileKinetikWcStackedStats";
-import type { ProfileKinetikMetricsSection } from "@/lib/profile/profileKinetikMetricsSection";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 
 type Props = { handle: string; variant?: "web" | "mobile" };
 
+const NBA_PROFILE_STATS_CONTEXT: ProfileStatsStreakContext = {
+  rankingLeague: "nba",
+};
+
 export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const sp = useSearchParams();
   const {
     profile,
     loading,
@@ -42,28 +33,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     "overview"
   );
 
-  const profileStatsContext = useMemo<{
-    rankingLeague: RankingLeagueSource;
-    wcStage?: WcRankingStage;
-  }>(() => {
-    const rawLeague = sp.get(RANKINGS_TAB_LEAGUE_PARAM);
-    if (isRankingLeagueSource(rawLeague)) {
-      const rankingLeague = rawLeague;
-      const rawWcStage = sp.get(RANKINGS_TAB_WC_STAGE_PARAM);
-      const wcStage =
-        rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
-          ? rawWcStage
-          : rankingLeague === "worldcup"
-            ? ("overall" as WcRankingStage)
-          : undefined;
-      return { rankingLeague, wcStage };
-    }
-
-    return {
-      rankingLeague: "worldcup" as RankingLeagueSource,
-      wcStage: "overall" as WcRankingStage,
-    };
-  }, [sp]);
+  const profileStatsContext = NBA_PROFILE_STATS_CONTEXT;
 
   const { stats, summary, summaryRanks, metricValueDeltas, statsLoading, dailyTrend } =
     useUserStatsV2(targetUid, {
@@ -74,69 +44,13 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 
   const scopedStreak = useProfileScopedStreak(targetUid, profileStatsContext);
 
-  const { sections: wcStackedMetricsSections, loading: wcStackedStatsLoading } =
-    useProfileKinetikWcStackedStats(
-      targetUid,
-      profileStatsContext.rankingLeague === "worldcup",
-      Math.max(0, Math.floor(scopedStreak.currentStreak))
-    );
-
-  /**
-   * WC 全体（overall）の連勝は updateUserStreak が試合確定時に保存するライブ値を
-   * サーバー API（summary）経由で採用する。投稿スキャンの待ち時間なしで即時表示でき、
-   * 「試合が終わったらインクリメントされた連勝」をそのまま読む。
-   * NBA / WC ステージ別（qualifying・main）は従来どおりスコープ集計を使う。
-   */
-  const useLiveOverallStreak =
-    profileStatsContext.rankingLeague === "worldcup" &&
-    (profileStatsContext.wcStage ?? "overall") === "overall";
-
-  const effectiveStreak = useMemo(() => {
-    if (
-      profileStatsContext.rankingLeague === "worldcup" &&
-      wcStackedMetricsSections?.[0]
-    ) {
-      return {
-        currentStreak: wcStackedMetricsSections[0].winStreak,
-        maxWinStreak: Math.max(
-          wcStackedMetricsSections[0].winStreak,
-          wcStackedMetricsSections[1]?.winStreak ?? 0
-        ),
-      };
-    }
-    if (useLiveOverallStreak && summary) {
-      return {
-        currentStreak: Math.max(0, Math.floor(summary.activeWinStreak ?? 0)),
-        maxWinStreak: Math.max(0, Math.floor(summary.maxWinStreak ?? 0)),
-      };
-    }
-    return {
+  const effectiveStreak = useMemo(
+    () => ({
       currentStreak: Math.max(0, Math.floor(scopedStreak.currentStreak)),
       maxWinStreak: Math.max(0, Math.floor(scopedStreak.maxWinStreak)),
-    };
-  }, [
-    profileStatsContext.rankingLeague,
-    wcStackedMetricsSections,
-    useLiveOverallStreak,
-    summary,
-    scopedStreak.currentStreak,
-    scopedStreak.maxWinStreak,
-  ]);
-
-  const onToggleStatsLeague = useCallback(() => {
-    const current = profileStatsContext.rankingLeague;
-    const nextLeague: RankingLeagueSource =
-      current === "worldcup" ? "nba" : "worldcup";
-    const qs = new URLSearchParams(sp.toString());
-    qs.set(RANKINGS_TAB_LEAGUE_PARAM, nextLeague);
-    if (nextLeague === "worldcup") {
-      qs.set(RANKINGS_TAB_WC_STAGE_PARAM, profileStatsContext.wcStage ?? "overall");
-    } else {
-      qs.delete(RANKINGS_TAB_WC_STAGE_PARAM);
-    }
-    const nextUrl = `${pathname ?? ""}?${qs.toString()}`;
-    router.replace(nextUrl, { scroll: false });
-  }, [pathname, profileStatsContext.rankingLeague, profileStatsContext.wcStage, router, sp]);
+    }),
+    [scopedStreak.currentStreak, scopedStreak.maxWinStreak]
+  );
 
   const normalizedProfile = useMemo<Profile | undefined>(() => {
     if (!profile) return undefined;
@@ -190,7 +104,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     );
   }
 
-  const viewProps = {
+  const viewProps: ProfileViewPropsV2 = {
     profile: mergedProfile,
     tab,
     setTab,
@@ -201,9 +115,6 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     targetUid,
     profileDailyTrendSeed: dailyTrend,
     profileStatsContext,
-    onToggleStatsLeague,
-    wcStackedMetricsSections: wcStackedMetricsSections ?? undefined,
-    wcStackedStatsLoading,
   };
 
   return variant === "web" ? (
@@ -230,9 +141,5 @@ export type ProfileViewPropsV2 = {
   profileDailyTrendSeed?: ProfileDailyTrendRow[] | null;
   profileStatsContext: {
     rankingLeague: RankingLeagueSource;
-    wcStage?: WcRankingStage;
   };
-  onToggleStatsLeague: () => void;
-  wcStackedMetricsSections?: ProfileKinetikMetricsSection[];
-  wcStackedStatsLoading?: boolean;
 };

@@ -79,11 +79,11 @@ function previewPanelProps(language: "ja" | "en") {
     totalPointsRankDenominator: 800,
     rankDeltaPlaces: 0,
     bio: "Win now",
-    metricsTitle: "WORLD CUP // STATS",
+    metricsTitle: "NBA // PLAYOFFS STATS",
     countryCode: "JP",
     memberSinceMs: new Date("2025-12-01T00:00:00+09:00").getTime(),
     shareHandle: "mpj",
-    rankingLeague: "worldcup" as const,
+    rankingLeague: "nba" as const,
     isPro: true,
     canOpenMenu: false,
   };

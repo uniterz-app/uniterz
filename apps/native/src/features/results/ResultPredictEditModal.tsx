@@ -23,12 +23,12 @@ import PredictModal, {
 } from "../games/PredictModal";
 import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
 import { buildPredictModalMergedFinalPreview } from "../games/buildPredictModalMergedFinal";
-import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
 import {
+  resolveWcBroadcastLabels,
   isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
-} from "../../../../../lib/wc/goalScorer";
-import { getWcSquadPlayer } from "../../../../../lib/wc/squads";
+  getWcSquadPlayer,
+} from "../games/legacyWcNativeShims";
 import type { NativeGameRow, SupportedLeague } from "../games/useTodayGames";
 import { getGamesTexts, type GamesLanguage } from "../games/gamesI18n";
 import type { GameCardCenterBlock } from "../games/gameCardCenterTypes";

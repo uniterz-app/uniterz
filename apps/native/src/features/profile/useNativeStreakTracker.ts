@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { filterPostsForScope } from "../../../../../lib/profile/profileStreakPostsCompute";
-import { loadProfileSettledPosts } from "../../../../../lib/profile/profileStreakPostsCache";
+import { loadProfileSettledPostsForStreakScope } from "../../../../../lib/profile/profileStreakPostsCache";
 import {
   resolveProfileStreakScopeKey,
   type ProfileStatsStreakContext,
@@ -21,7 +20,7 @@ export function useNativeStreakTracker(
   enabled: boolean,
   profileStatsContext?: ProfileStatsStreakContext
 ) {
-  const rankingLeague = profileStatsContext?.rankingLeague ?? "worldcup";
+  const rankingLeague = profileStatsContext?.rankingLeague ?? "nba";
   const wcStage = profileStatsContext?.wcStage ?? "overall";
   const scopeKey = resolveProfileStreakScopeKey({ rankingLeague, wcStage });
 
@@ -41,8 +40,11 @@ export function useNativeStreakTracker(
       if (!uid) return;
       setLoading(true);
       try {
-        const rows = await loadProfileSettledPosts(uid);
-        const scoped = filterPostsForScope(rows, scopeKey, STREAK_TRACKER_LAST_N);
+        const scoped = await loadProfileSettledPostsForStreakScope(
+          uid,
+          scopeKey,
+          STREAK_TRACKER_LAST_N
+        );
         scoped.sort((a, b) => a.settledAtMs - b.settledAtMs);
 
         let streak = 0;

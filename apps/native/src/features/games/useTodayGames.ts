@@ -17,7 +17,6 @@ import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "../../../../../lib/time/zonedTime";
-import { getWcGamesPageQueryRange } from "../../../../../lib/wc/wcGamesPageScheduleWindow";
 import { mergePlayoffSeriesPeersForWindowGames } from "../../../../../lib/games/fetchPlayoffSeriesPeerGames";
 import { sortGamesByKickoffAsc } from "../../../../../lib/games/sortGamesByKickoff";
 
@@ -181,7 +180,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
   const [windowRows, setWindowRows] = useState<NativeGameRow[]>([]);
   const [peerRowsForSeries, setPeerRowsForSeries] = useState<NativeGameRow[]>([]);
   const [selectedDate, setSelectedDateState] = useState<Date>(() => new Date());
-  const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("wc");
+  const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("nba");
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   const windowBoundsRef = useRef<{ windowKey: string } | null>(null);
@@ -256,7 +255,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     let alive = true;
 
     const leagueChanged = prevLeagueRef.current !== selectedLeague;
-    const isWc = selectedLeague === "wc";
+    const isWc = false;
     if (leagueChanged) {
       prevLeagueRef.current = selectedLeague;
       windowBoundsRef.current = null;
@@ -305,9 +304,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
 
     void (async () => {
       try {
-        const { start, end } = isWc
-          ? getWcGamesPageQueryRange(TIMEZONE_JST)
-          : getPlusMinusDaysRangeInTimeZone(
+        const { start, end } = getPlusMinusDaysRangeInTimeZone(
               selectedDate,
               TIMEZONE_JST,
               GAME_DAYS_PLUS_MINUS
@@ -320,7 +317,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(isWc ? WC_GAMES_PAGE_WINDOW_LIMIT : GAME_DAYS_WINDOW_QUERY_LIMIT)
+          limit(GAME_DAYS_WINDOW_QUERY_LIMIT)
         );
         const snap = await getDocs(q);
         if (!alive) return;

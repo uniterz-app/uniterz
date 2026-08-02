@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
-import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
-import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
-  CURRENT_NBA_SEASON_KEY,
-  previousNbaSeasonKey,
-} from "@/lib/rankings/nbaSeason";
+  buildRankPlayoffTrendPoints,
+  type RankPlayoffTrendPoint,
+} from "@/lib/rankings/server/buildRankPlayoffTrendPoints";
 import {
   isRankingLeagueSource,
   type RankingLeagueSource,
@@ -16,40 +15,7 @@ import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingS
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** ランキングスナップショット最新 N 件（「過去 N 日」ではない） */
-const MAX_POINTS = 10;
-
-export type RankPlayoffTrendPoint = {
-  dateKey: string;
-  rank: number;
-};
-
-type HistoryDoc = {
-  seasons?: Partial<Record<string, Record<string, unknown>>>;
-  wc?: Partial<Record<WcRankingStage, Record<string, unknown>>>;
-};
-
-function rankFromHistoryDoc(
-  data: HistoryDoc | undefined,
-  opts: {
-    rankingLeague: RankingLeagueSource;
-    wcStage: WcRankingStage;
-  }
-): number | null {
-  if (!data) return null;
-  if (opts.rankingLeague === "worldcup") {
-    const block = data.wc?.[opts.wcStage];
-    return coerceTotalPointsRank(block?.totalPoints);
-  }
-  // 現行シーズン優先。空のオフシーズンは前シーズンの順位を表示する
-  const current = coerceTotalPointsRank(
-    data.seasons?.[CURRENT_NBA_SEASON_KEY]?.totalPoints
-  );
-  if (current != null) return current;
-  return coerceTotalPointsRank(
-    data.seasons?.[previousNbaSeasonKey(CURRENT_NBA_SEASON_KEY)]?.totalPoints
-  );
-}
+export type { RankPlayoffTrendPoint };
 
 /**
  * cumulative_stats/{uid}/rankSnapshotHistory の各 snapshot doc から
@@ -91,24 +57,10 @@ export async function GET(req: Request) {
       );
     }
 
-    const historyDocs = await loadRankSnapshotHistoryDocsWalkBack(resolvedUid, {
-      maxDocs: MAX_POINTS,
-      maxLookbackDays: 90,
+    const points = await buildRankPlayoffTrendPoints(resolvedUid, {
+      rankingLeague,
+      wcStage,
     });
-
-    const points: RankPlayoffTrendPoint[] = [];
-    historyDocs.forEach((d) => {
-      const data = d.data as HistoryDoc;
-      const rank = rankFromHistoryDoc(data, {
-        rankingLeague,
-        wcStage,
-      });
-      if (rank != null) {
-        points.push({ dateKey: d.id, rank });
-      }
-    });
-
-    points.reverse();
 
     return NextResponse.json({
       ok: true,

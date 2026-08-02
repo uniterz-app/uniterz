@@ -13,26 +13,12 @@ type Props = {
   variant?: "mobile" | "web";
   language: Language;
   league: League;
-  /** W杯追加の周知用（未確認時のみ） */
-  showWcNewBadge?: boolean;
   onSelectNba: () => void;
-  onSelectWorldCup: () => void;
   onSelectAwardsPredict: () => void;
   onSelectStandingsPredict: () => void;
 };
 
 const BRANCH = "rgba(0,245,255,0.42)";
-
-function WcNewBadge() {
-  return (
-    <span
-      className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[11px] font-black leading-none text-amber-950 shadow-[0_0_12px_rgba(251,191,36,0.45)]"
-      aria-hidden
-    >
-      !
-    </span>
-  );
-}
 
 /** NBA 下の枝分かれ行（├ / └） */
 function BranchRow({
@@ -73,9 +59,7 @@ export default function GamesDrawerMenu({
   variant = "web",
   language,
   league,
-  showWcNewBadge = false,
   onSelectNba,
-  onSelectWorldCup,
   onSelectAwardsPredict,
   onSelectStandingsPredict,
 }: Props) {
@@ -90,7 +74,6 @@ export default function GamesDrawerMenu({
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
 
   const nbaActive = league === "nba";
-  const wcActive = league === "wc";
 
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
@@ -147,16 +130,6 @@ export default function GamesDrawerMenu({
             </BranchRow>
           </div>
         </div>
-
-        <SideMenuItemButton
-          iconSrc="/games-drawer/wc.png"
-          labelStyle={menuLabelFont}
-          active={wcActive}
-          onClick={onSelectWorldCup}
-          trailing={showWcNewBadge ? <WcNewBadge /> : undefined}
-        >
-          <span className="uppercase">World Cup</span>
-        </SideMenuItemButton>
       </div>
     </nav>
   );

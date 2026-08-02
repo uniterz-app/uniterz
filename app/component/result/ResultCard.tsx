@@ -45,24 +45,37 @@ import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/res
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
 import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
-import WcGoalScorerResultRow, {
-  useWcGoalScorerResult,
-  useWcPkWinnerResult,
-  WcPkWinnerResultRow,
-} from "@/app/component/result/WcGoalScorerResultRow";
-import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
-import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
-import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
-import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+function WcGoalScorerResultRow(_props: Record<string, unknown>) {
+  return null;
+}
+function useWcGoalScorerResult(_post?: unknown) {
+  return null;
+}
+function useWcPkWinnerResult(_post?: unknown) {
+  return null;
+}
+function WcPkWinnerResultRow(_props: Record<string, unknown>) {
+  return null;
+}
+function WcMatchGoalScorersColumn(_props: Record<string, unknown>) {
+  return null;
+}
+function WcTeamFlagWithMeta(_props: Record<string, unknown>) {
+  return null;
+}
+function WcGroupStandingRecordLine(_props: Record<string, unknown>) {
+  return null;
+}
+import { resolveWcMatchGoalScorersForDisplay } from "@/lib/legacyWcWebShims";
+import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
 import { useTeamRecordLine } from "@/lib/hooks/useTeamRecordLine";
 import {
   resolveWcGroupCodeLabel,
   resolveWcGroupStageStandingForKnockoutDisplay,
   resolveWcResultCardGroupStanding,
-} from "@/lib/wc/wcGroupStandingRank";
+} from "@/lib/legacyWcWebShims";
 import { nameBebas } from "@/lib/fonts";
-import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
+import { resolveWcTeamId } from "@/lib/legacyWcWebShims";
 export type ResultCardOpenAnchor = { clientX: number; clientY: number };
 
 type Props = {

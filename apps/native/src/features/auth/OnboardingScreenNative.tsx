@@ -4,31 +4,28 @@ import {
   Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { doc, getDoc } from "firebase/firestore";
-import { useNavigation } from "@react-navigation/native";
 import { auth, db } from "../../lib/firebase";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { colors, spacing } from "../../theme/tokens";
-import type { PreferredLeague } from "../../../../../lib/user/preferredLeague";
+import { LEAGUES } from "../../../../../lib/leagues";
 import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
 export default function OnboardingScreenNative() {
-  const navigation = useNavigation();
   const [displayName, setDisplayName] = useState("");
   const [language, setLanguage] = useState<"ja" | "en">("ja");
-  const [preferredLeague, setPreferredLeague] = useState<PreferredLeague | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     hideNativeBootSplash();
   }, []);
 
-  const canSubmit = displayName.trim().length > 0 && preferredLeague !== null;
+  const canSubmit = displayName.trim().length > 0;
 
   async function handleSubmit() {
     const user = auth.currentUser;
-    if (!user || !canSubmit || !preferredLeague) return;
+    if (!user || !canSubmit) return;
     setSaving(true);
     try {
       const userRef = doc(db, "users", user.uid);
@@ -38,7 +35,7 @@ export default function OnboardingScreenNative() {
       const body = {
         displayName: displayName.trim(),
         language,
-        preferredLeague,
+        preferredLeague: LEAGUES.NBA,
         countryCode: existing.countryCode ?? "",
       };
 
@@ -76,7 +73,7 @@ export default function OnboardingScreenNative() {
   return (
     <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
       <AuthFormShellNative title="WELCOME">
-        <Text style={styles.desc}>表示名とリーグを設定してください</Text>
+        <Text style={styles.desc}>表示名と言語を設定してください</Text>
         <TextInput
           style={styles.input}
           placeholder="Display Name"
@@ -93,29 +90,6 @@ export default function OnboardingScreenNative() {
             >
               <Text style={[styles.chipLabel, language === lang && styles.chipLabelActive]}>
                 {lang === "ja" ? "日本語" : "English"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <View style={styles.row}>
-          {(
-            [
-              ["nba", "NBA"],
-              ["wc", "World Cup"],
-            ] as const
-          ).map(([id, label]) => (
-            <Pressable
-              key={id}
-              style={[styles.chip, preferredLeague === id && styles.chipActive]}
-              onPress={() => setPreferredLeague(id as PreferredLeague)}
-            >
-              <Text
-                style={[
-                  styles.chipLabel,
-                  preferredLeague === id && styles.chipLabelActive,
-                ]}
-              >
-                {label}
               </Text>
             </Pressable>
           ))}

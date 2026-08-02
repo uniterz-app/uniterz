@@ -1,6 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { useFonts, loadAsync as loadFontAsync } from "expo-font";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { Oxanium_600SemiBold, Oxanium_700Bold, Oxanium_800ExtraBold } from "@expo-google-fonts/oxanium";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import { Montserrat_900Black_Italic } from "@expo-google-fonts/montserrat";
@@ -25,8 +26,13 @@ import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
 ensureNativeSplashHeld();
 
 export default function App() {
-  /** 起動ゲートは見出し系のみ。日本語本文フォントは後追いで読み込む */
+  /**
+   * 見出しフォント + アイコンフォントを起動ゲートで先読み。
+   * MCI / MaterialIcons が未ロードだと空の Text になり、ナビ・サイドメニューが消えて見える。
+   */
   const [fontsLoaded] = useFonts({
+    ...MaterialCommunityIcons.font,
+    ...MaterialIcons.font,
     BebasNeue_400Regular,
     Montserrat_900Black_Italic,
     Oxanium_600SemiBold,

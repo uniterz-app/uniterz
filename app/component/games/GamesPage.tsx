@@ -63,10 +63,6 @@ import {
   GAMES_SCHEDULE_SHELL_DURATION_SEC,
 } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
-import {
-  markWcGamesTabAnnouncementSeen,
-  readWcGamesTabAnnouncementSeen,
-} from "@/lib/games/wcTabAnnouncementSeen";
 import { setAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
 import {
   fetchAppTutorialSeen,
@@ -193,9 +189,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      League
   ========================= */
-  const [league, setLeague] = useState<League>("wc");
+  const [league, setLeague] = useState<League>("nba");
   const [gamesDrawerOpen, setGamesDrawerOpen] = useState(false);
-  const [showWcTabBadge, setShowWcTabBadge] = useState(false);
   const [tutorialPhase, setTutorialPhase] =
     useState<TutorialLivePhase | null>(null);
   const didInitLeague = useRef(false);
@@ -211,10 +206,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [searchParams, router, pathname]);
-
-  useEffect(() => {
-    setShowWcTabBadge(!readWcGamesTabAnnouncementSeen());
-  }, []);
 
   /** 初回チュートリアル — 本番 Games 画面上で進行 */
   useEffect(() => {
@@ -292,17 +283,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return () => window.clearTimeout(timer);
   }, [tutorialPhase, setTutorialPhaseAndStore]);
 
-
-  const dismissWcTabBadge = useCallback(() => {
-    markWcGamesTabAnnouncementSeen();
-    setShowWcTabBadge(false);
-  }, []);
-
-  useEffect(() => {
-    if (league !== "wc") return;
-    dismissWcTabBadge();
-  }, [league, dismissWcTabBadge]);
-
   useEffect(() => {
     if (didInitLeague.current || !preferredLeagueReady) return;
     didInitLeague.current = true;
@@ -313,8 +293,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   /** B リーグタブ非表示中は bj を選べない。状態が bj のままなら NBA に戻す */
   useLayoutEffect(() => {
-    if (league !== "bj") return;
-    setLeague("nba");
+    if (league === "bj" || league === "wc") setLeague("nba");
   }, [league]);
 
   /* =========================
@@ -1125,16 +1104,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         className={gamesHeaderControlHeightClass(isMobile)}
         onClick={() => setGamesDrawerOpen(true)}
         aria-label={m.games.openMenu}
-        badge={
-          showWcTabBadge ? (
-            <span
-              className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black leading-none text-amber-950 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-              aria-hidden
-            >
-              !
-            </span>
-          ) : null
-        }
       />
     </motion.div>
   );
@@ -1398,7 +1367,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           variant={isMobile ? "mobile" : "web"}
           language={language}
           league={league}
-          showWcNewBadge={showWcTabBadge}
           onSelectNba={() => {
             didInitLeague.current = true;
             setLeague("nba");
@@ -1424,19 +1392,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 ? "/mobile/season-standings-preview"
                 : "/dev/season-standings-preview"
             );
-          }}
-          onSelectWorldCup={() => {
-            dismissWcTabBadge();
-            didInitLeague.current = true;
-            setLeague("wc");
-            const params = new URLSearchParams(searchParams.toString());
-            params.delete("team");
-            params.delete("team_mode");
-            params.delete("margin");
-            params.delete("margin_min");
-            params.delete("margin_max");
-            router.replace(`?${params.toString()}`, { scroll: false });
-            setGamesDrawerOpen(false);
           }}
         />
       </SideMenuDrawer>

@@ -20,7 +20,6 @@ import MyRankCard from "@/app/component/rankings/MyRankCard";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
-import WcRankingStageTabs from "@/app/component/rankings/WcRankingStageTabs";
 import RankingsCategoryTabs, {
   type RankingsCategory,
 } from "@/app/component/rankings/RankingsCategoryTabs";
@@ -53,9 +52,6 @@ import {
   isMobileMetricParam,
   isRankingsCategoryParam,
 } from "@/lib/navigation/rankingsProfileFrom";
-import WcBracketLeaderboardSection from "@/app/component/leaderboards/WcBracketLeaderboardSection";
-import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
-import { useWcBracketSubmitted } from "@/lib/wc/useWcBracketSubmitted";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
@@ -98,7 +94,7 @@ export default function MobileRankingsPage() {
   const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const [rankingLeague, setRankingLeague] =
-    useState<RankingLeagueSource>("worldcup");
+    useState<RankingLeagueSource>("nba");
   const phase: RankingPhase = "playoffs";
   const [wcStage, setWcStage] = useState<WcRankingStage>("main");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
@@ -127,9 +123,7 @@ export default function MobileRankingsPage() {
     [rankingLeague]
   );
 
-  /** WC ブラケット未入力なら Bracket タブに ! を表示 */
-  const { shouldPromptInput: wcBracketNeedsInput } =
-    useWcBracketSubmitted(WC_KNOCKOUT_SEASON);
+  const wcBracketNeedsInput = false;
 
   /** プロフィールの「ランキングに戻る」で付いた rankMetric / rankLeague などを反映 */
   useLayoutEffect(() => {
@@ -139,8 +133,9 @@ export default function MobileRankingsPage() {
     const cat = searchParams.get(RANKINGS_TAB_CATEGORY_PARAM);
     if (isRankingsCategoryParam(cat)) setCategory(cat);
     if (isRankingLeagueSource(league)) {
-      setRankingLeague(league);
-      if (league === "worldcup" && !isRankingsCategoryParam(cat)) {
+      const normalized = league === "worldcup" ? "nba" : league;
+      setRankingLeague(normalized);
+      if (normalized === "nba" && !isRankingsCategoryParam(cat)) {
         setCategory("playoffs");
       }
     }
@@ -150,9 +145,11 @@ export default function MobileRankingsPage() {
     if (isRankingPeriod(period)) setRankingPeriod(period);
   }, [searchParams]);
 
-  useApplyPreferredRankingLeague(fUser?.uid, searchParams, setRankingLeague, () =>
-    setCategory("playoffs")
-  );
+  useApplyPreferredRankingLeague(fUser?.uid, searchParams, setRankingLeague);
+
+  useEffect(() => {
+    if (rankingLeague === "worldcup") setRankingLeague("nba");
+  }, [rankingLeague]);
 
   useEffect(() => {
     if (!visibleMetrics.includes(metric)) {
@@ -473,15 +470,6 @@ export default function MobileRankingsPage() {
               />
             ) : null}
 
-            {rankingLeague === "worldcup" && category === "playoffs" ? (
-              <WcRankingStageTabs
-                stage={wcStage}
-                onChange={setWcStage}
-                isMobile
-                language={language}
-              />
-            ) : null}
-
             {effectiveCategory === "playoffs" && !openProLocked ? (
               <MyRankCard
                 rank={rankingHasNoEntries ? null : myRank}
@@ -569,8 +557,8 @@ export default function MobileRankingsPage() {
         )}
 
         {effectiveCategory === "bracket" ? (
-          <div className="px-2 pb-bottom-nav pt-2">
-            <WcBracketLeaderboardSection season={WC_KNOCKOUT_SEASON} />
+          <div className="px-2 pb-bottom-nav pt-2" role="status">
+            <p className="text-center text-sm text-white/50">—</p>
           </div>
         ) : openProLocked ? null : rankingHasNoEntries ? (
           <div
@@ -667,12 +655,6 @@ export default function MobileRankingsPage() {
           onSelectOpenweight={() => {
             setRankingLeague("nba");
             setNbaBoard("open");
-            setCategory("playoffs");
-            setRankingsDrawerOpen(false);
-          }}
-          onSelectWorldCup={() => {
-            setRankingLeague("worldcup");
-            setNbaBoard("regular");
             setCategory("playoffs");
             setRankingsDrawerOpen(false);
           }}

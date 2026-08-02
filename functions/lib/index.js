@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.dailyAnalytics = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildWeeklyReportsManualV2 = exports.rebuildWeeklyReportsCronV2 = exports.rebuildMonthlyReportsManualV2 = exports.rebuildMonthlyReportsCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onWcBracketRescoreTaskCreated = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.dailyAnalytics = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildWeeklyReportsManualV2 = exports.rebuildWeeklyReportsCronV2 = exports.rebuildMonthlyReportsManualV2 = exports.rebuildMonthlyReportsCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-admin/firestore");
@@ -43,6 +43,8 @@ const functions = __importStar(require("firebase-functions"));
 const buildCumulativeStats_1 = require("./rankings/buildCumulativeStats");
 const buildCumulativeRankingSnapshot_1 = require("./rankings/buildCumulativeRankingSnapshot");
 const buildNbaPeriodRankingSnapshots_1 = require("./rankings/buildNbaPeriodRankingSnapshots");
+const buildGroupBattlePeriodSnapshots_1 = require("./groupBattles/buildGroupBattlePeriodSnapshots");
+const grantGroupBattleUnits_1 = require("./groupBattles/grantGroupBattleUnits");
 const hasRankingAggregationScheduledJstToday_1 = require("./schedule/hasRankingAggregationScheduledJstToday");
 const notifyGameStartCron_1 = require("./notifications/notifyGameStartCron");
 const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
@@ -55,8 +57,6 @@ var onPlayoffResultsWrite_1 = require("./playoff-bracket/onPlayoffResultsWrite")
 Object.defineProperty(exports, "onPlayoffResultsWrite", { enumerable: true, get: function () { return onPlayoffResultsWrite_1.onPlayoffResultsWrite; } });
 var onPlayoffBracketRescoreTaskCreated_1 = require("./playoff-bracket/onPlayoffBracketRescoreTaskCreated");
 Object.defineProperty(exports, "onPlayoffBracketRescoreTaskCreated", { enumerable: true, get: function () { return onPlayoffBracketRescoreTaskCreated_1.onPlayoffBracketRescoreTaskCreated; } });
-var onWcBracketRescoreTaskCreated_1 = require("./wc-bracket/onWcBracketRescoreTaskCreated");
-Object.defineProperty(exports, "onWcBracketRescoreTaskCreated", { enumerable: true, get: function () { return onWcBracketRescoreTaskCreated_1.onWcBracketRescoreTaskCreated; } });
 var getCumulativeRanking_1 = require("./rankings/getCumulativeRanking");
 Object.defineProperty(exports, "getCumulativeRanking", { enumerable: true, get: function () { return getCumulativeRanking_1.getCumulativeRanking; } });
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
@@ -118,6 +118,14 @@ exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ sched
     }
     catch (err) {
         console.error("[buildCumulativeRankingSnapshotCron] period snapshots failed", err);
+    }
+    // グループバトル 週/月スナップショット + final への Unit 付与
+    try {
+        await (0, buildGroupBattlePeriodSnapshots_1.buildGroupBattlePeriodSnapshots)();
+        await (0, grantGroupBattleUnits_1.grantAllFinalGroupBattleUnits)();
+    }
+    catch (err) {
+        console.error("[buildCumulativeRankingSnapshotCron] group battle snapshots/units failed", err);
     }
     const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
     const token = process.env.INTERNAL_REVALIDATE_SECRET;

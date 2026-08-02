@@ -18,7 +18,6 @@ import MyRankCard from "@/app/component/rankings/MyRankCard";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
-import WcRankingStageTabs from "@/app/component/rankings/WcRankingStageTabs";
 import RankingsCategoryTabs from "@/app/component/rankings/RankingsCategoryTabs";
 import RankingsPeriodTabs from "@/app/component/rankings/RankingsPeriodTabs";
 import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
@@ -55,9 +54,6 @@ import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
-import WcBracketLeaderboardSection from "@/app/component/leaderboards/WcBracketLeaderboardSection";
-import { WC_KNOCKOUT_SEASON } from "@/lib/wc/wc-knockout-bracket";
-import { useWcBracketSubmitted } from "@/lib/wc/useWcBracketSubmitted";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -84,7 +80,7 @@ export default function WebRankingsShell() {
   const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const [rankingLeague, setRankingLeague] =
-    useState<RankingLeagueSource>("worldcup");
+    useState<RankingLeagueSource>("nba");
   const phase: RankingPhase = "playoffs";
   const [wcStage, setWcStage] = useState<WcRankingStage>("main");
   const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("season");
@@ -119,9 +115,7 @@ export default function WebRankingsShell() {
     rankingDivision === "open" &&
     rankingPeriod !== "season";
 
-  /** WC ブラケット未入力なら Bracket タブに ! を表示 */
-  const { shouldPromptInput: wcBracketNeedsInput } =
-    useWcBracketSubmitted(WC_KNOCKOUT_SEASON);
+  const wcBracketNeedsInput = false;
   const {
     listReady,
     metricReady,
@@ -180,8 +174,9 @@ export default function WebRankingsShell() {
     const cat = searchParams.get(RANKINGS_TAB_CATEGORY_PARAM);
     if (isRankingsCategoryParam(cat)) setCategory(cat);
     if (isRankingLeagueSource(league)) {
-      setRankingLeague(league);
-      if (league === "worldcup" && !isRankingsCategoryParam(cat)) {
+      const normalized = league === "worldcup" ? "nba" : league;
+      setRankingLeague(normalized);
+      if (normalized === "nba" && !isRankingsCategoryParam(cat)) {
         setCategory("playoffs");
       }
     }
@@ -194,9 +189,11 @@ export default function WebRankingsShell() {
     );
   }, [searchParams, setMetric]);
 
-  useApplyPreferredRankingLeague(fUser?.uid, searchParams, setRankingLeague, () =>
-    setCategory("playoffs")
-  );
+  useApplyPreferredRankingLeague(fUser?.uid, searchParams, setRankingLeague);
+
+  useEffect(() => {
+    if (rankingLeague === "worldcup") setRankingLeague("nba");
+  }, [rankingLeague]);
 
   useEffect(() => {
     if (rankingLeague !== "nba" && rankingPeriod !== "season") {
@@ -449,15 +446,6 @@ export default function WebRankingsShell() {
             />
           ) : null}
 
-          {rankingLeague === "worldcup" && category === "playoffs" ? (
-            <WcRankingStageTabs
-              stage={wcStage}
-              onChange={setWcStage}
-              isMobile={false}
-              language={language}
-            />
-          ) : null}
-
           {effectiveCategory === "playoffs" && !openProLocked ? (
             <MyRankCard
               rank={rankingHasNoEntries ? null : myRank}
@@ -539,8 +527,8 @@ export default function WebRankingsShell() {
         )}
 
         {effectiveCategory === "bracket" ? (
-          <div className="mx-auto w-full max-w-[960px]">
-            <WcBracketLeaderboardSection season={WC_KNOCKOUT_SEASON} />
+          <div className="mx-auto w-full max-w-[960px] px-2 pb-bottom-nav pt-2" role="status">
+            <p className="text-center text-sm text-white/50">—</p>
           </div>
         ) : openProLocked ? null : rankingHasNoEntries ? (
           <div
@@ -638,12 +626,6 @@ export default function WebRankingsShell() {
           onSelectOpenweight={() => {
             setRankingLeague("nba");
             setNbaBoard("open");
-            setCategory("playoffs");
-            setRankingsDrawerOpen(false);
-          }}
-          onSelectWorldCup={() => {
-            setRankingLeague("worldcup");
-            setNbaBoard("regular");
             setCategory("playoffs");
             setRankingsDrawerOpen(false);
           }}

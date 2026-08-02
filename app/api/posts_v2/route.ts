@@ -3,8 +3,8 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags";
-import { resolveWcStageFromGame } from "@/lib/wc/resolveWcStage";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+import { resolveWcStageFromGame } from "@/lib/legacyWcWebShims";
+import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
 import { normalizeLeague, type League } from "@/lib/leagues";
 import {
   normalizeNbaTopScorerCandidates,
@@ -15,7 +15,7 @@ import {
   normalizeWcGoalScorerPick,
   validateWcGoalScorerPickForGame,
   type WcGoalScorerPick,
-} from "@/lib/wc/goalScorer";
+} from "@/lib/legacyWcWebShims";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* ========= 型 ========= */

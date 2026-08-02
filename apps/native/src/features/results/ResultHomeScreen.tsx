@@ -41,13 +41,20 @@ import type { ResultDayGroup as LibResultDayGroup } from "../../../../../lib/res
 import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
 import { setTutorialResultDetailHandlers } from "../tutorial/tutorialResultDetailEventsNative";
 import type { SectionList as SectionListType } from "react-native";
-import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
-import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
 import {
+  isWcKnockoutGame,
+  WcGroupStandingRecordLineNative,
   resolveWcGroupStageStandingForKnockoutDisplay,
   resolveWcResultCardGroupStanding,
   resolveWcGroupCodeLabel,
-} from "../../../../../lib/wc/wcGroupStandingRank";
+  WcMatchGoalScorersColumnNative,
+  WcTeamFlagWithMetaNative,
+  WcTeamNameMobileNative,
+  WcGoalScorerResultRowNative,
+  useWcGoalScorerResultNative,
+  resolveWcMatchGoalScorersForDisplay,
+  type WcGoalScorerPostLike,
+} from "../games/legacyWcNativeShims";
 import {
   MATCH_CARD_DISPLAY_FONT,
   MATCH_CARD_SCORE_FONT,
@@ -120,13 +127,7 @@ import {
   useResultPostCardEntrance,
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
-import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
-import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
-import WcTeamNameMobileNative from "../games/WcTeamNameMobileNative";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
-import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
-import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
-import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import { shareResultCardNative } from "./shareResultCardNative";
@@ -1289,7 +1290,6 @@ export default function ResultHomeScreen({
           if (showResultLeagueTabs) {
             const league = (p.leagueId ?? p.league) as string | undefined;
             if (leagueTab === "nba" && league === "wc") return false;
-            if (leagueTab === "wc" && league !== "wc") return false;
           }
           return true;
         };

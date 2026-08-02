@@ -484,6 +484,8 @@ async function buildCumulativeRankingSnapshot(options = {}) {
     }
     const seasonTop20Jobs = [];
     const topUidSet = new Set();
+    /** 無差別級用: Pro のみのベース行（シーズン集計と同じ指標） */
+    let baseRowsForOpenSeason = [];
     if (!wcOnly) {
         const baseRows = snap.docs
             .map((doc) => {
@@ -508,6 +510,7 @@ async function buildCumulativeRankingSnapshot(options = {}) {
             };
         })
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
+        baseRowsForOpenSeason = baseRows.filter((row) => row.plan === "pro");
         for (const metric of METRICS) {
             const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
                 postedTodayUids: metric === "activeWinStreak" && !streakAllEligible
@@ -628,6 +631,39 @@ async function buildCumulativeRankingSnapshot(options = {}) {
                 metric,
                 rows: enriched,
                 totalCount,
+                updatedAt: firestore_1.FieldValue.serverTimestamp(),
+                rankDeltaBasisDateKey: yesterdayKey,
+            }, { merge: true });
+        }
+        // 無差別級（Pro のみ）シーズンスナップショット
+        const openBaseRows = baseRowsForOpenSeason !== null && baseRowsForOpenSeason !== void 0 ? baseRowsForOpenSeason : [];
+        for (const metric of METRICS) {
+            const eligibleRows = filterRowsForMetricEligibility(openBaseRows, metric, {
+                postedTodayUids: metric === "activeWinStreak" && !streakAllEligible
+                    ? nbaSettledTodayUids
+                    : undefined,
+                streakAllEligible: metric === "activeWinStreak" ? streakAllEligible : undefined,
+            });
+            const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
+            const ranksMap = assignCompetitionRanks(sortedFull, metric);
+            const ranks = {};
+            for (const [uid, rank] of ranksMap)
+                ranks[uid] = rank;
+            const top20 = sortedFull.slice(0, 20).map((row) => {
+                var _a;
+                return (Object.assign(Object.assign({}, row), { rank: (_a = ranksMap.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null, metricValueDelta: null }));
+            });
+            await db()
+                .collection("cumulative_ranking_snapshots")
+                .doc((0, nbaSeason_1.nbaSeasonOpenSnapshotDocId)(seasonKey, metric))
+                .set({
+                kind: "nbaSeasonOpen",
+                division: "open",
+                seasonKey,
+                metric,
+                rows: top20,
+                ranks,
+                totalCount: sortedFull.length,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
                 rankDeltaBasisDateKey: yesterdayKey,
             }, { merge: true });

@@ -16,10 +16,11 @@ function normalizeLeague(raw) {
         return "nba";
     return v || null;
 }
-function nbaSeasonKeyForDelete(leagueKey, forRanking, startAt) {
-    if (!forRanking || leagueKey !== "nba" || !startAt)
-        return null;
-    return (0, nbaSeason_1.nbaSeasonKeyFromDateJST)(startAt.toDate());
+function nbaBucketKeysForDelete(leagueKey, forRanking, startAt, seasonPhase) {
+    if (!forRanking || leagueKey !== "nba" || !startAt) {
+        return { nbaSeasonKey: null, nbaPlayoffsSeasonKey: null };
+    }
+    return (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forRanking, startAt.toDate(), (0, nbaSeason_1.normalizeNbaSeasonPhase)(seasonPhase));
 }
 function buildDeleteContribution(before, stats, startAt) {
     var _a, _b, _c, _d, _e;
@@ -28,9 +29,11 @@ function buildDeleteContribution(before, stats, startAt) {
     const wcStageRaw = before.wcStage;
     const wcStage = wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
     const forRanking = stats.countedForRanking !== false;
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(leagueKey, forRanking, startAt, before.seasonPhase);
     return {
         forRanking,
-        nbaSeasonKey: nbaSeasonKeyForDelete(leagueKey, forRanking, startAt),
+        nbaSeasonKey,
+        nbaPlayoffsSeasonKey,
         leagueKey,
         isWc,
         wcStage,
@@ -114,6 +117,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, {
                 forRanking: true,
                 nbaSeasonKey: null,
+                nbaPlayoffsSeasonKey: null,
                 leagueKey: normalizeLeague(typeof before.league === "string" ? before.league : null),
                 isWc: false,
                 wcStage: null,
@@ -166,9 +170,13 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         if (countRank) {
             tx.set(dailyRef, { ranking: dec }, { merge: true });
         }
-        const seasonKey = nbaSeasonKeyForDelete(normalizeLeague(typeof before.league === "string" ? before.league : null), countRank, startAt);
-        if (seasonKey) {
-            tx.set(dailyRef, { rankingBySeason: { [seasonKey]: dec } }, { merge: true });
+        const seasonPhase = before.seasonPhase;
+        const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(normalizeLeague(typeof before.league === "string" ? before.league : null), countRank, startAt, seasonPhase);
+        if (nbaSeasonKey) {
+            tx.set(dailyRef, { rankingBySeason: { [nbaSeasonKey]: dec } }, { merge: true });
+        }
+        if (nbaPlayoffsSeasonKey) {
+            tx.set(dailyRef, { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: dec } }, { merge: true });
         }
         const leagueKeyInner = (_a = before.league) !== null && _a !== void 0 ? _a : null;
         if (leagueKeyInner) {

@@ -37,9 +37,7 @@ import { navigateToPublicProfileNative } from "../../navigation/navigateToPublic
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
-import WcBracketLeaderboardSectionNative from "./WcBracketLeaderboardSectionNative";
 import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
-import WcRankingStageTabsNative from "./WcRankingStageTabsNative";
 import RankingsDrawerMenuNative from "./RankingsDrawerMenuNative";
 import CyberMenuButton from "../../ui/CyberMenuButton";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
@@ -55,7 +53,6 @@ import {
   MyRankCardNative,
   PlayoffRoundTabsNative,
   RankingListCardNative,
-  RankingsCategoryTabsNative,
   RankingsMetricRowNative,
   RankingsTopPodiumNative,
 } from "./RankingsUiParts";
@@ -93,14 +90,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [gapOpen, setGapOpen] = useState(false);
   const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
-  const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("wc");
-  const [wcStage, setWcStage] = useState<WcRankingStage>("main");
+  const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("nba");
   const [nbaBoard, setNbaBoard] = useState<NbaRankingBoard>("regular");
   const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("season");
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
+  const wcStageForHook: WcRankingStage | null = null;
 
-  const wcStageForHook: WcRankingStage | null =
-    category === "playoffs" && rankingsLeague === "wc" ? wcStage : null;
+  useEffect(() => {
+    if (rankingsLeague === "wc") setRankingsLeague("nba");
+  }, [rankingsLeague]);
 
   /** Regular / PRO LEAGUE は Season・Weekly・Monthly。Playoffs はラウンド別。 */
   const showNbaPeriodTabs =
@@ -180,7 +178,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       uid: myUid,
       enabled: rankProgressEnabled,
       rankingLeague: rankingLeagueSource,
-      wcStage: rankingsLeague === "wc" ? wcStage : null,
+      wcStage: null,
     });
 
   useEffect(() => {
@@ -325,7 +323,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
-  const listEntranceKey = `${rankingsLeague}-${category}-${metric}-${wcStage}-${round}`;
+  const listEntranceKey = `${rankingsLeague}-${category}-${metric}-${round}`;
 
   const openProfile = (row: RankingRowWithCountry) => {
     const key = profilePathKeyFromRow(row);
@@ -370,15 +368,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         </View>
 
         <View style={styles.section}>
-          {rankingsLeague === "wc" ? (
-            <RankingsCategoryTabsNative
-              category={category}
-              onChange={setCategory}
-              language={language}
-              league={rankingsLeague}
-            />
-          ) : null}
-
           {showNbaPeriodTabs ? (
             <RankingsPeriodTabsNative
               period={rankingPeriod}
@@ -391,13 +380,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             <>
               {rankingsLeague === "nba" && nbaBoard === "playoffs" ? (
                 <PlayoffRoundTabsNative round={round} onChange={setRound} language={language} />
-              ) : null}
-              {rankingsLeague === "wc" && category === "playoffs" ? (
-                <WcRankingStageTabsNative
-                  stage={wcStage}
-                  onChange={setWcStage}
-                  language={language}
-                />
               ) : null}
 
               {openProLocked ? (
@@ -460,11 +442,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         </View>
 
         {category === "bracket" ? (
-          rankingsLeague === "wc" ? (
-            <WcBracketLeaderboardSectionNative language={language} />
-          ) : (
             <BracketLeaderboardSectionNative language={language} />
-          )
         ) : null}
 
         {category === "playoffs" && openProLocked ? null : category === "playoffs" ? (
@@ -529,10 +507,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         <RankingsDrawerMenuNative
           league={rankingsLeague}
           nbaBoard={nbaBoard}
-          onChange={(l) => {
-            setRankingsLeague(l);
+          onChange={() => {
+            setRankingsLeague("nba");
             setNbaBoard("regular");
-            if (l === "wc") setCategory("playoffs");
             setMenuOpen(false);
           }}
           onSelectNbaRegular={() => {

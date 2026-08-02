@@ -1,7 +1,7 @@
 // functions/src/fetchGameContext.ts
 import { Firestore } from "firebase-admin/firestore";
 import type { Timestamp } from "firebase-admin/firestore";
-import { resolveWcStageFromGame } from "./wc/resolveWcStage";
+import { resolveWcStageFromGame } from "./shared/resolveWcStage";
 
 /* =========================
  * Types

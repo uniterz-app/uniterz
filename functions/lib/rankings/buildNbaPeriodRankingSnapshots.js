@@ -2,6 +2,7 @@
 // functions/src/rankings/buildNbaPeriodRankingSnapshots.ts
 // user_stats_v2_daily から NBA Weekly / Monthly ランキングを日次で確定 doc 化する。
 // doc: period_ranking_snapshots/nba_{period}_{label}_{metric}
+// 無差別級: period_ranking_snapshots/nba_open_{period}_{label}_{metric}（Pro のみ）
 // 期間が終わると更新されなくなり、そのまま過去ランキングのアーカイブになる。
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.periodSnapshotDocId = periodSnapshotDocId;
@@ -67,8 +68,12 @@ function metricValue(row, metric) {
         return row.totalGoalScorerHits;
     return row.totalPoints;
 }
-function periodSnapshotDocId(period, label, metric) {
-    return `nba_${period}_${label}_${metric}`;
+function periodSnapshotDocId(period, label, metric, division = "standard") {
+    const prefix = division === "open" ? "nba_open" : "nba";
+    return `${prefix}_${period}_${label}_${metric}`;
+}
+function periodKeyForDivision(period, division) {
+    return division === "open" ? `nba_open_${period}` : `nba_${period}`;
 }
 /**
  * 既存 doc から順位変動の基準を決める。
@@ -100,18 +105,10 @@ function resolvePrevRankBasis(existing, todayKey) {
     };
 }
 async function buildOne(range, todayKey) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const firestore = db();
     const minPosts = (0, nbaPeriod_1.periodMinPosts)(range.period);
     const winRateMin = (0, nbaPeriod_1.periodWinRateMinPosts)(range.period);
-    const metricRefs = PERIOD_METRICS.map((metric) => firestore
-        .collection("period_ranking_snapshots")
-        .doc(periodSnapshotDocId(range.period, range.labelKey, metric)));
-    const existingSnaps = await firestore.getAll(...metricRefs);
-    const prevBasisByMetric = new Map();
-    PERIOD_METRICS.forEach((metric, i) => {
-        prevBasisByMetric.set(metric, resolvePrevRankBasis(existingSnaps[i], todayKey));
-    });
     const statsSnap = await firestore
         .collection("user_stats_v2_daily")
         .where("date", ">=", range.startKey)
@@ -152,7 +149,31 @@ async function buildOne(range, todayKey) {
             });
         }
     }
-    const baseRows = uids.map((uid) => {
+    // 無差別級は users.plan を正とする（cumulative_stats の古さを避ける）
+    const proUidSet = new Set();
+    for (let i = 0; i < uids.length; i += CHUNK) {
+        const slice = uids.slice(i, i + CHUNK);
+        const refs = slice.map((uid) => firestore.collection("users").doc(uid));
+        const snaps = await firestore.getAll(...refs);
+        const nowMs = Date.now();
+        for (let j = 0; j < snaps.length; j++) {
+            const snap = snaps[j];
+            if (!snap.exists)
+                continue;
+            const d = (_h = snap.data()) !== null && _h !== void 0 ? _h : {};
+            if (d.plan !== "pro")
+                continue;
+            const until = d.proUntil;
+            if (until && typeof until.toMillis === "function" && until.toMillis() <= nowMs) {
+                continue;
+            }
+            proUidSet.add(slice[j]);
+            const profile = profileByUid.get(slice[j]);
+            if (profile)
+                profile.plan = "pro";
+        }
+    }
+    const allBaseRows = uids.map((uid) => {
         var _a, _b, _c, _d, _e;
         const agg = aggByUid.get(uid);
         const profile = profileByUid.get(uid);
@@ -172,6 +193,32 @@ async function buildOne(range, todayKey) {
             activeWinStreak: 0,
             winRate: agg.posts > 0 ? agg.wins / agg.posts : 0,
         };
+    });
+    const divisions = ["standard", "open"];
+    for (const division of divisions) {
+        const baseRows = division === "open"
+            ? allBaseRows.filter((r) => proUidSet.has(r.uid))
+            : allBaseRows;
+        await writePeriodDivisionSnapshots({
+            firestore,
+            range,
+            todayKey,
+            division,
+            baseRows,
+            winRateMin,
+        });
+    }
+    console.log(`[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} rows=${allBaseRows.length} open=${proUidSet.size}`);
+}
+async function writePeriodDivisionSnapshots(opts) {
+    const { firestore, range, todayKey, division, baseRows, winRateMin } = opts;
+    const metricRefs = PERIOD_METRICS.map((metric) => firestore
+        .collection("period_ranking_snapshots")
+        .doc(periodSnapshotDocId(range.period, range.labelKey, metric, division)));
+    const existingSnaps = await firestore.getAll(...metricRefs);
+    const prevBasisByMetric = new Map();
+    PERIOD_METRICS.forEach((metric, i) => {
+        prevBasisByMetric.set(metric, resolvePrevRankBasis(existingSnaps[i], todayKey));
     });
     const batch = firestore.batch();
     PERIOD_METRICS.forEach((metric, metricIndex) => {
@@ -215,8 +262,9 @@ async function buildOne(range, todayKey) {
         });
         batch.set(metricRefs[metricIndex], {
             league: "nba",
+            division,
             period: range.period,
-            periodKey: `nba_${range.period}`,
+            periodKey: periodKeyForDivision(range.period, division),
             label: range.labelKey,
             metric,
             range: { startKey: range.startKey, endKey: range.endKey },
@@ -231,7 +279,6 @@ async function buildOne(range, todayKey) {
         });
     });
     await batch.commit();
-    console.log(`[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} rows=${baseRows.length}`);
 }
 /**
  * 現在の週・月のスナップショットを再構築する。

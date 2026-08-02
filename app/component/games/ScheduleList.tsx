@@ -41,7 +41,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
-import { fetchWcTeamRecordMap } from "@/lib/wc/wcTeamRecordsCache";
+import { fetchWcTeamRecordMap } from "@/lib/legacyWcWebShims";
 import {
   SCHEDULE_MY_POST_DELETED_EVENT,
   type ScheduleMyPostDeletedDetail,

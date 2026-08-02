@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import cn from "clsx";
-import { CalendarRange, Crown, Globe2, Trophy } from "lucide-react";
+import { CalendarRange, Crown, Trophy } from "lucide-react";
 import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
@@ -19,7 +19,6 @@ type Props = {
   nbaBoard?: NbaRankingBoard;
   onSelectNbaRegular: () => void;
   onSelectNbaPlayoffs: () => void;
-  onSelectWorldCup: () => void;
   /** PRO LEAGUE（Pro 限定 NBA ランキング） */
   onSelectOpenweight?: () => void;
 };
@@ -66,7 +65,6 @@ export default function RankingsDrawerMenu({
   nbaBoard = "regular",
   onSelectNbaRegular,
   onSelectNbaPlayoffs,
-  onSelectWorldCup,
   onSelectOpenweight,
 }: Props) {
   const isMobile = variant === "mobile";
@@ -85,7 +83,6 @@ export default function RankingsDrawerMenu({
   const playoffsActive =
     rankingLeague === "nba" && nbaBoard === "playoffs";
   const openActive = rankingLeague === "nba" && nbaBoard === "open";
-  const wcActive = rankingLeague === "worldcup";
 
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
@@ -165,14 +162,6 @@ export default function RankingsDrawerMenu({
           </SideMenuItemButton>
         )}
 
-        <SideMenuItemButton
-          icon={Globe2}
-          labelStyle={menuLabelFont}
-          active={wcActive}
-          onClick={onSelectWorldCup}
-        >
-          <span className="uppercase">World Cup</span>
-        </SideMenuItemButton>
       </div>
     </nav>
   );

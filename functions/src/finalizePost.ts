@@ -2,8 +2,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
 import { computePostSettlement } from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
-import { buildPostMatchGoalScorersFromGame } from "./wc/matchGoalScorersDisplay";
-import { resolveWcStageFromGame } from "./wc/resolveWcStage";
+import { resolveWcStageFromGame } from "./shared/resolveWcStage";
 
 export async function finalizePost({
   postDoc,
@@ -68,13 +67,7 @@ export async function finalizePost({
   const now = Timestamp.now();
 
   const isWc = String(game.league ?? "").toLowerCase() === "wc";
-  const matchGoalScorers = isWc
-    ? buildPostMatchGoalScorersFromGame(
-        game.goalScorers,
-        game.homeTeamId,
-        game.awayTeamId
-      )
-    : [];
+  const matchGoalScorers: unknown[] = [];
 
   const pkScoreRaw = game?.pkScore;
   const pkScore =
@@ -176,6 +169,7 @@ export async function finalizePost({
 
       points: totalPoints,
       countsForRanking,
+      seasonPhase: game?.seasonPhase ?? null,
       wcStage: resolvedWcStage,
       homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
       awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
