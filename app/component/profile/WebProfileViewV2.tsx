@@ -253,6 +253,26 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
             {chartsReady ? (
             <div className="mt-6 space-y-4">
               {overviewStage >= 1 ? (
+              <div className="min-w-0 overflow-visible pt-0">
+                <ProfilePlayoffRankTrendChartLazy
+                  data={rankPlayoffTrendRows}
+                  loading={rankTrendLoading}
+                  language={language}
+                  visualEffectsLite={visualEffectsLite}
+                />
+              </div>
+              ) : null}
+              {overviewStage >= 2 && resolvedUid ? (
+              <div className="min-w-0 overflow-hidden">
+                <StreakTrackerCardLazy
+                  uid={resolvedUid}
+                  language={language}
+                  layout="web"
+                  profileStatsContext={props.profileStatsContext}
+                />
+              </div>
+              ) : null}
+              {overviewStage >= 3 ? (
               <div className="min-w-0 overflow-hidden">
                 {dailyTrendLoading ? (
                   <div className="h-56 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
@@ -266,26 +286,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                     visualEffects={visualEffects}
                   />
                 )}
-              </div>
-              ) : null}
-              {overviewStage >= 2 ? (
-              <div className="min-w-0 overflow-visible pt-0">
-                <ProfilePlayoffRankTrendChartLazy
-                  data={rankPlayoffTrendRows}
-                  loading={rankTrendLoading}
-                  language={language}
-                  visualEffectsLite={visualEffectsLite}
-                />
-              </div>
-              ) : null}
-              {overviewStage >= 3 && resolvedUid ? (
-              <div className="min-w-0 overflow-hidden">
-                <StreakTrackerCardLazy
-                  uid={resolvedUid}
-                  language={language}
-                  layout="web"
-                  profileStatsContext={props.profileStatsContext}
-                />
               </div>
               ) : null}
             </div>
