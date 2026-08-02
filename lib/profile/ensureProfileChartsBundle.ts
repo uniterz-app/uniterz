@@ -22,7 +22,11 @@ import {
   resolveProfileDailyTrendContext,
 } from "@/lib/profile/userStatsV2ProfileRollup";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { buildRankPlayoffTrendPoints } from "@/lib/rankings/server/buildRankPlayoffTrendPoints";
+import {
+  dateKeyJST,
+  subtractOneDayFromDateKeyJST,
+} from "@/lib/rankings/rankSnapshotDate";
+import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export type CompleteProfileChartsBundle = {
@@ -68,14 +72,36 @@ async function buildRankTrend(
   uid: string,
   seasonKey: string
 ): Promise<ProfileChartsRankPoint[]> {
-  const points = await buildRankPlayoffTrendPoints(uid, {
-    rankingLeague: "nba",
-    wcStage: "overall",
-    maxPoints: PROFILE_CHARTS_RANK_MAX,
-    maxLookbackDays: 90,
-    seasonKey,
-  });
-  return points.map((p) => ({ dateKey: p.dateKey, rank: p.rank }));
+  /**
+   * rankSnapshotHistory の range / orderBy(__name__) は本番で index 不足になり得る。
+   * 直近 N 日を getAll で拾い（欠け日も課金）、存在する順位だけ使う。
+   */
+  const adminDb = getAdminDb();
+  const keys: string[] = [];
+  let key = dateKeyJST();
+  for (let i = 0; i < 45; i++) {
+    keys.push(key);
+    key = subtractOneDayFromDateKeyJST(key);
+  }
+  const refs = keys.map((dateKey) =>
+    adminDb.doc(`cumulative_stats/${uid}/rankSnapshotHistory/${dateKey}`)
+  );
+  const snaps = await adminDb.getAll(...refs);
+  const points: ProfileChartsRankPoint[] = [];
+  for (const snap of snaps) {
+    if (!snap.exists) continue;
+    const data = snap.data() as {
+      seasons?: Record<string, Record<string, unknown>>;
+    };
+    const rank = coerceTotalPointsRank(
+      data.seasons?.[seasonKey]?.totalPoints
+    );
+    if (rank == null) continue;
+    points.push({ dateKey: snap.id, rank });
+  }
+  points.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  if (points.length <= PROFILE_CHARTS_RANK_MAX) return points;
+  return points.slice(points.length - PROFILE_CHARTS_RANK_MAX);
 }
 
 async function buildLast20(uid: string): Promise<ProfileChartsLast20Point[]> {
