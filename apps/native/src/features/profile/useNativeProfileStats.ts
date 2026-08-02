@@ -23,6 +23,12 @@ import {
   type ProfileSummaryRanksNative,
   type RankPlayoffTrendPointNative,
 } from "./profileApi";
+import { fetchNbaProfileCardPhaseFirestore } from "./fetchNbaProfileCardPhaseFirestore";
+import {
+  ensureNbaTodayGamesSettled,
+  nbaCardStatsBackgroundRefreshMs,
+  nbaCardStatsCacheTtlMs,
+} from "./nbaTodayGamesSettledNative";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
 export type NativeProfileStatsState = {
@@ -46,9 +52,9 @@ export type NativeProfileStatsState = {
 /** overview チャートは常に現行シーズン（2026-27）レギュラー固定 */
 const OVERVIEW_CHART_NBA_PERIOD: ProfileKinetikMetricsPeriod = "season";
 
-const STATS_CACHE_VERSION = `v6:${CURRENT_NBA_SEASON_KEY}:seasonStrict`;
+const STATS_CACHE_VERSION = `v7:${CURRENT_NBA_SEASON_KEY}:fsPhase`;
+/** NBA 以外 / フォールバック */
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const BACKGROUND_REFRESH_MS = 30_000;
 
 type CacheEntry = {
   at: number;
@@ -145,10 +151,15 @@ function seedNbaKinetikFromFetchedPeriod(
   prefetchOtherNbaKinetikPeriod(uid, period);
 }
 
-function readValidCache(key: string): CacheEntry | null {
+function readValidCache(
+  key: string,
+  rankingLeague: RankingLeagueSource = "nba"
+): CacheEntry | null {
   const cached = statsCache.get(key);
   if (!cached) return null;
-  if (Date.now() - cached.at >= CACHE_TTL_MS) return null;
+  const ttl =
+    rankingLeague === "nba" ? nbaCardStatsCacheTtlMs() : CACHE_TTL_MS;
+  if (Date.now() - cached.at >= ttl) return null;
   if (cached.summary == null) return null;
   return cached;
 }
@@ -223,7 +234,7 @@ export function useNativeProfileStats(
 
   const [state, setState] = useState<NativeProfileStatsState>(() => {
     if (!uid || !statsEnabled) return idleState;
-    const cached = readValidCache(statsCacheKey(uid, rankingLeague, wcStage));
+    const cached = readValidCache(statsCacheKey(uid, rankingLeague, wcStage), rankingLeague);
     if (!cached) {
       return {
         ...idleState,
@@ -262,7 +273,7 @@ export function useNativeProfileStats(
       setState(idleState);
       return;
     }
-    const cached = readValidCache(cacheKey);
+    const cached = readValidCache(cacheKey, rankingLeague);
     if (cached) {
       applyCacheToState(cached, rankingLeague, setState);
       return;
@@ -289,12 +300,39 @@ export function useNativeProfileStats(
 
     async function refreshPhaseInBackground() {
       try {
+        const cardPeriod =
+          cardCtx.nbaPeriod ?? preferredNbaKinetikPeriod();
+        if (rankingLeague === "nba") {
+          const fs = await fetchNbaProfileCardPhaseFirestore(
+            targetUid,
+            cardPeriod
+          );
+          if (cancelled || !fs?.summary) return;
+          seedNbaKinetikFromFetchedPeriod(
+            targetUid,
+            rankingLeague,
+            cardPeriod,
+            fs.summary,
+            fs.summaryRanks
+          );
+          mergeCacheEntry(cacheKey, {
+            summary: fs.summary,
+            summaryRanks: fs.summaryRanks,
+          });
+          setState((prev) => ({
+            ...prev,
+            summary: fs.summary,
+            summaryRanks: fs.summaryRanks ?? prev.summaryRanks,
+          }));
+          return;
+        }
+
         const phase = await fetchProfileUserStats(targetUid, "phase", cardCtx);
         if (cancelled || !phase.summary) return;
         seedNbaKinetikFromFetchedPeriod(
           targetUid,
           rankingLeague,
-          cardCtx.nbaPeriod ?? preferredNbaKinetikPeriod(),
+          cardPeriod,
           phase.summary,
           phase.summaryRanks
         );
@@ -389,12 +427,18 @@ export function useNativeProfileStats(
     }
 
     async function run() {
-      const cached = readValidCache(cacheKey);
+      if (rankingLeague === "nba") {
+        ensureNbaTodayGamesSettled();
+      }
+
+      const cached = readValidCache(cacheKey, rankingLeague);
       if (cached) {
         applyCacheToState(cached, rankingLeague, setState);
-        const needsRefresh =
-          cached.metricValueDeltas == null ||
-          Date.now() - cached.at >= BACKGROUND_REFRESH_MS;
+        const refreshAfter =
+          rankingLeague === "nba"
+            ? nbaCardStatsBackgroundRefreshMs()
+            : 30_000;
+        const needsRefresh = Date.now() - cached.at >= refreshAfter;
         if (needsRefresh) void refreshPhaseInBackground();
         if (
           cached.dailyTrend == null ||
@@ -411,14 +455,18 @@ export function useNativeProfileStats(
       try {
         if (rankingLeague === "nba") {
           /**
-           * 分離:
-           * - Daily: Firestore で 26-27 season 厳密読み（活動日のみ。無ければ []）
-           * - Rank: 本人は Firestore 厳密 / 他人は API
-           * - phase → カード
+           * カード phase は cumulative_stats 直読のみ（本番 API なし）。
+           * 試合 final → Functions 更新 → 次回/短TTL再読で反映。
+           * 当日全試合 final 後は TTL を伸ばして read を抑制。
            */
+          const cardPeriod =
+            cardCtx.nbaPeriod ?? preferredNbaKinetikPeriod();
           const trendP = fetchNbaOverviewDailyTrendStrict(targetUid);
           const rankP = fetchRankPlayoffTrend(targetUid, chartCtx);
-          const phaseP = fetchProfileUserStats(targetUid, "phase", cardCtx);
+          const phaseP = fetchNbaProfileCardPhaseFirestore(
+            targetUid,
+            cardPeriod
+          );
 
           void trendP
             .then((dailyTrend) => {
@@ -464,10 +512,10 @@ export function useNativeProfileStats(
               }));
             });
 
-          const phase = await phaseP;
+          const fs = await phaseP;
           if (cancelled) return;
 
-          if (!phase.summary) {
+          if (!fs?.summary) {
             setState((prev) => ({
               ...prev,
               loading: false,
@@ -479,28 +527,25 @@ export function useNativeProfileStats(
           seedNbaKinetikFromFetchedPeriod(
             targetUid,
             rankingLeague,
-            cardCtx.nbaPeriod ?? preferredNbaKinetikPeriod(),
-            phase.summary,
-            phase.summaryRanks
+            cardPeriod,
+            fs.summary,
+            fs.summaryRanks
           );
 
           mergeCacheEntry(cacheKey, {
-            summary: phase.summary,
-            summaryRanks: phase.summaryRanks,
-            metricValueDeltas: phase.metricValueDeltas,
+            summary: fs.summary,
+            summaryRanks: fs.summaryRanks,
           });
 
           setState((prev) => ({
             ...prev,
             loading: false,
-            summary: phase.summary,
-            summaryRanks: phase.summaryRanks,
-            metricValueDeltas: phase.metricValueDeltas,
+            summary: fs.summary,
+            summaryRanks: fs.summaryRanks,
             stats: null,
             error: null,
           }));
 
-          // trend/rank がまだなら待つ（上の then が埋める）
           await Promise.allSettled([trendP, rankP]);
           return;
         }

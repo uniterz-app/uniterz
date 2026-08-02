@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * ベルセルク風 Pro Skin 案プレビュー（赤×黒ダーク）。
- * 本番採用リストには未追加 — 比較・選定用。
+ * ベルセルク風 Pro Skin プレビュー（赤×黒ダーク）。
+ * ROUND6 のうち本番採用は Crimson Eclipse / Jagged Plate のみ — 比較用ページとして残置。
  */
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -169,7 +169,7 @@ export default function BerserkProSkinPreviewPage({ variant }: Props) {
         bare
         eyebrow="PRO SKIN"
         title="BERSERK"
-        subtitle="DNA / 甲冑 / ベルセルク案。先頭が Helix Genome。本番採用リストには未追加。"
+        subtitle="DNA / 甲冑 / ベルセルク風。本番採用は Crimson Eclipse と Jagged Plate のみ。"
         onBack={() => {
           if (typeof window !== "undefined") window.history.back();
         }}

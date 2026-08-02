@@ -41,7 +41,7 @@ export type ProfilePlanProBeastBgVariant =
   | "beast-inkswirl"
   | "beast-jagarmor"
   | "beast-crimsonveil"
-  /** ベルセルク風・赤黒ダーク（dev 案） */
+  /** ベルセルク風・赤黒ダーク（本番採用） */
   | "beast-behelit"
   | "beast-berserker"
   | "beast-armor"
@@ -421,7 +421,7 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     label: "Crimson Behelit",
     tag: "赤の卵",
     description:
-      "ベルセルク風案②。角ばった亀裂と暗い血脈。丸い赤は出さない。",
+      "角ばった亀裂と暗い血脈。黒×深紅のベルセルク風。丸い赤は出さない。",
     swatch:
       "linear-gradient(148deg, #060000, #180505 45%, #7a151588 65%, #030000)",
   },
@@ -430,7 +430,7 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     label: "Berserker Plate",
     tag: "狂戦士",
     description:
-      "ベルセルク風案③。暗い鉄板とヘアライン。黒鉄メインの甲冑。",
+      "暗い鉄板とヘアライン。黒鉄メインの狂戦士甲冑（ベルセルク風）。",
     swatch:
       "linear-gradient(150deg, #050000, #160404 40%, #9a202088 60%, #020000)",
   },

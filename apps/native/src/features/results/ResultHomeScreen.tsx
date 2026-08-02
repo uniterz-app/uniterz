@@ -1251,11 +1251,15 @@ export default function ResultHomeScreen({
       enabled: leagueTab !== null,
     });
 
-  /** タブを開くたびに再取得（精算直後の pending 表示を残さない） */
+  const refreshPostsRef = useRef(refreshPosts);
+  refreshPostsRef.current = refreshPosts;
+
+  /** タブを開くたびに再取得（精算直後の pending 表示を残さない）
+   * refreshPosts を deps に入れると identity 変化でフォーカス中に無限再取得になる */
   useFocusEffect(
     useCallback(() => {
-      void refreshPosts();
-    }, [refreshPosts])
+      void refreshPostsRef.current();
+    }, [])
   );
 
   const hasPendingSettlement = useMemo(
@@ -1266,9 +1270,9 @@ export default function ResultHomeScreen({
   /** 未精算カードがある間は定期再取得（Cloud Functions 精算完了を待つ） */
   useEffect(() => {
     if (!hasPendingSettlement) return;
-    const id = setInterval(() => void refreshPosts(), 20_000);
+    const id = setInterval(() => void refreshPostsRef.current(), 20_000);
     return () => clearInterval(id);
-  }, [hasPendingSettlement, refreshPosts]);
+  }, [hasPendingSettlement]);
 
   const [resultFilters, setResultFilters] = useState<ResultFilterState>({
     ...DEFAULT_RESULT_LIST_FILTERS,

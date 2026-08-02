@@ -235,13 +235,13 @@ service cloud.firestore {
     }
 
 
-    // cumulative_stats — Functions が集計。本人のみ読取（snapshotRanks / rankSnapshotHistory）
+    // cumulative_stats — Functions が集計。プロフィール / ランキング表示用に公開読取
     match /cumulative_stats/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+      allow read: if true;
       allow write: if false;
 
       match /rankSnapshotHistory/{dateKey} {
-        allow read: if request.auth != null && request.auth.uid == uid;
+        allow read: if true;
         allow write: if false;
       }
     }

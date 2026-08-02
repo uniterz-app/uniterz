@@ -553,16 +553,12 @@ export async function fetchNbaSeasonRankTrendFirestore(
   return fetchNbaSeasonRankTrendFirestoreShared(uid);
 }
 
-/** Web `useProfilePlayoffRankTrend` と同一エンドポイント */
+/** NBA は cumulative_stats / rankSnapshotHistory 公開読取（本番 API 不要） */
 export async function fetchRankPlayoffTrend(
   uid: string,
   ctx?: ProfileStatsStreakContext
 ): Promise<RankPlayoffTrendPointNative[]> {
-  /** 本人は Firestore 厳密読み（本番 API の旧フォールバック回避） */
-  if (
-    (ctx?.rankingLeague ?? "nba") === "nba" &&
-    auth.currentUser?.uid === uid
-  ) {
+  if ((ctx?.rankingLeague ?? "nba") === "nba") {
     return fetchNbaSeasonRankTrendFirestore(uid);
   }
 

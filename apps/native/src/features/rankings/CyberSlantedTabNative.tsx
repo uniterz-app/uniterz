@@ -26,6 +26,15 @@ export const CYBER_TAB_CYAN = "#00F5FF";
 const TAB_ACTIVE_TEXT = "#050508";
 const SKEW = `${tabMeta.skewDeg}deg` as const;
 
+/** Web `CyberSlantedTabTheme` 相当（Native でも型だけ共有） */
+export type CyberSlantedTabThemeNative = {
+  accent: string;
+  inactiveText?: string;
+  activeText?: string;
+  activeShadow?: string;
+  inactiveBorder?: string;
+};
+
 /** 1枚素材。左右中央の3分割だと継ぎ目が縦線になって見える */
 const ACTIVE_STRETCH = require("../../../assets/cyber-slanted-tab/active-stretch.png") as ImageSourcePropType;
 
@@ -47,6 +56,11 @@ type TabProps = {
   /** 省略時は親 `CyberSlantedTabBarNative` の fill を使う */
   fill?: boolean;
   fontWeight?: "500" | "600" | "700";
+  /**
+   * Web の theme 相当。焼き込み PNG 選択態のため現状は未適用（型互換のみ）。
+   * CyberSlantedTab 見た目の変更はユーザー指示があるまで行わない。
+   */
+  theme?: CyberSlantedTabThemeNative;
   accessibilityRole?: "tab";
   accessibilityState?: { selected?: boolean };
 };
@@ -94,9 +108,11 @@ export function CyberSlantedTabNative({
   compact = false,
   fill: fillProp,
   fontWeight = "700",
+  theme: _theme,
   accessibilityRole,
   accessibilityState,
 }: TabProps) {
+  void _theme;
   const fillFromBar = useContext(CyberSlantedTabFillContext);
   const fill = fillProp ?? fillFromBar;
   const bodyH = tabBodyHeight(compact);

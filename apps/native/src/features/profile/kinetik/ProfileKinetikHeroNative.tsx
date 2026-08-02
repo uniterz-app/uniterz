@@ -109,7 +109,7 @@ export default function ProfileKinetikHeroNative({
   summaryRanks,
   profileStatsContext,
   winStreak,
-  statsLoading: _statsLoading = false,
+  statsLoading = false,
   isMe = false,
   onOpenMenu,
   menuUnreadCount = 0,
@@ -120,13 +120,23 @@ export default function ProfileKinetikHeroNative({
   profileViewCount = null,
   unitBalance = null,
 }: ProfileKinetikHeroNativeProps) {
+  const preferredPeriod = useMemo(() => preferredNbaKinetikPeriod(), []);
   const [metricsPeriod, setMetricsPeriod] =
-    useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
+    useState<ProfileKinetikMetricsPeriod>(() => preferredPeriod);
   const apiBase = getUniterzApiBaseUrl() || undefined;
+  const isPreferredTab = metricsPeriod === preferredPeriod;
+  /**
+   * 既定タブは親 `useNativeProfileStats` の phase を正にする。
+   * Hero 側で同じ API を二重取得すると「—」が長く残る。
+   * 親が終わっても summary が無いときだけフォールバック取得。
+   */
+  const fetchPeriodInHero =
+    !isPreferredTab || (!statsLoading && !summary);
+
   const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
     targetUid,
     metricsPeriod,
-    true,
+    fetchPeriodInHero,
     apiBase
   );
 
@@ -189,6 +199,8 @@ export default function ProfileKinetikHeroNative({
     });
   }, [periodData, profileBase, profileStatsContext, winStreak]);
 
+  const useParentSummary = isPreferredTab && Boolean(summary);
+
   const mapped = periodMapped
     ? {
         ...periodMapped,
@@ -197,16 +209,24 @@ export default function ProfileKinetikHeroNative({
           periodData!.seasonKey
         ),
       }
-    : {
-        ...baseMapped,
-        stats: { ...baseMapped.stats, ...EMPTY_NBA_STATS },
-        metricsTitle: getNbaKinetikPeriodTitle(metricsPeriod),
-        totalPointsRank: null,
-        totalPointsRankDenominator: null,
-        rankDeltaPlaces: null,
-      };
+    : useParentSummary
+      ? {
+          ...baseMapped,
+          metricsTitle: getNbaKinetikPeriodTitle(metricsPeriod),
+        }
+      : {
+          ...baseMapped,
+          stats: { ...baseMapped.stats, ...EMPTY_NBA_STATS },
+          metricsTitle: getNbaKinetikPeriodTitle(metricsPeriod),
+          totalPointsRank: null,
+          totalPointsRankDenominator: null,
+          rankDeltaPlaces: null,
+        };
 
-  const statsPending = periodLoading && !periodData;
+  const statsPending =
+    !periodMapped &&
+    !useParentSummary &&
+    (isPreferredTab ? statsLoading || periodLoading : periodLoading);
 
   return (
     <ProfileKinetikPanelNative

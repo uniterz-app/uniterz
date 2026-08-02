@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * ダークファンタジー（赤×黒）Pro Skin 候補プレビュー
- * 採用カタログ未搭載 — /dev/pro-skin-dark-fantasy-preview
+ * ダークファンタジー（赤×黒）Pro Skin プレビュー
+ * ROUND6 のうち本番採用は Crimson Eclipse / Jagged Plate のみ
  */
 
 import { useLayoutEffect, useRef, useState } from "react";

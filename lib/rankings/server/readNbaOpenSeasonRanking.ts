@@ -20,8 +20,6 @@ const OPEN_SEASON_METRICS = [
 
 type OpenSeasonMetric = (typeof OPEN_SEASON_METRICS)[number];
 
-const NBA_SEASON_WIN_RATE_MIN_POSTS = 20;
-
 type SnapshotDoc = {
   rows?: Array<RankingApiRow & { rank: number }>;
   ranks?: Record<string, number>;
@@ -81,18 +79,10 @@ export async function readNbaOpenSeasonRankingSnapshots(opts: {
   return { ok: true, division: "open", seasonKey, byMetric };
 }
 
-type SeasonSlice = {
-  totalPosts?: number;
-  totalWins?: number;
-  winRate?: number;
-  totalPoints?: number;
-  totalUpset?: number;
-  totalGoalScorerHits?: number;
-  totalPrecision?: number;
-};
-
 /**
- * スナップショット未整備時のライブ集計（cumulative_stats から Pro のみ）。
+ * スナップショット未整備時のライブ集計。
+ * ⚠️ 全件スキャンは課金・レイテンシ事故になるため禁止。
+ * cron が `s{season}_open_*` を書くまで空を返す。
  */
 export async function buildNbaOpenSeasonRankingFromCumulative(opts: {
   uid?: string | null;
@@ -105,108 +95,21 @@ export async function buildNbaOpenSeasonRankingFromCumulative(opts: {
       )
     : [...OPEN_SEASON_METRICS]) as OpenSeasonMetric[];
 
-  const db = getAdminDb();
-  const snap = await db
-    .collection("cumulative_stats")
-    .where("rankingTotalPosts", ">", 0)
-    .get()
-    .catch(async () => db.collection("cumulative_stats").get());
-
-  const baseRows: RankingApiRow[] = [];
-  for (const doc of snap.docs) {
-    const d = doc.data();
-    if (d.plan !== "pro") continue;
-    const bySeason = d.rankingBySeason as
-      | Record<string, SeasonSlice>
-      | undefined;
-    const r =
-      bySeason?.[seasonKey] ??
-      (d.leagues as { nba?: SeasonSlice } | undefined)?.nba ??
-      null;
-    if (!r || typeof r !== "object") continue;
-    const totalPosts = Number(r.totalPosts ?? 0) || 0;
-    if (totalPosts <= 0) continue;
-    const totalWins = Number(r.totalWins ?? 0) || 0;
-    baseRows.push({
-      uid: doc.id,
-      displayName: String(d.displayName ?? "user"),
-      handle: (d.handle as string | null) ?? null,
-      photoURL: (d.photoURL as string | null) ?? null,
-      countryCode: (d.countryCode as string | null) ?? null,
-      plan: "pro",
-      totalPosts,
-      totalWins,
-      totalPoints: Number(r.totalPoints ?? 0) || 0,
-      totalUpset: Number(r.totalUpset ?? 0) || 0,
-      totalGoalScorerHits: Number(r.totalGoalScorerHits ?? 0) || 0,
-      totalPrecision: Number(r.totalPrecision ?? 0) || 0,
-      activeWinStreak: 0,
-      winRate:
-        typeof r.winRate === "number"
-          ? r.winRate
-          : totalPosts > 0
-            ? totalWins / totalPosts
-            : 0,
-    } as RankingApiRow);
-  }
-
-  await mergeUserPlansIntoBulkByMetric({
-    _all: {
-      rows: baseRows,
-      myRow: null,
-    },
-  });
-  const proRows = baseRows.filter((r) => r.plan === "pro");
+  console.warn(
+    "[buildNbaOpenSeasonRankingFromCumulative] open-season snapshot missing; refusing full cumulative_stats scan",
+    { seasonKey, metrics }
+  );
 
   const byMetric: Record<string, BulkMetricPayload> = {};
-  const myUid = opts.uid ?? null;
-
   for (const metric of metrics) {
-    const eligible =
-      metric === "winRate"
-        ? proRows.filter(
-            (r) => (r.totalPosts ?? 0) >= NBA_SEASON_WIN_RATE_MIN_POSTS
-          )
-        : proRows;
-    const sorted = [...eligible].sort((a, b) => {
-      const va = metricValue(a, metric);
-      const vb = metricValue(b, metric);
-      if (vb !== va) return vb - va;
-      if (metric === "winRate") {
-        const pd = (b.totalPosts ?? 0) - (a.totalPosts ?? 0);
-        if (pd !== 0) return pd;
-      }
-      return (b.totalPoints ?? 0) - (a.totalPoints ?? 0);
-    });
-    let lastVal: number | null = null;
-    let lastRank = 0;
-    const ranked = sorted.map((row, i) => {
-      const v = metricValue(row, metric);
-      const rank = lastVal != null && v === lastVal ? lastRank : i + 1;
-      lastVal = v;
-      lastRank = rank;
-      return { ...row, rank };
-    });
-    const top = ranked.slice(0, 20);
-    const myFull = myUid ? ranked.find((r) => r.uid === myUid) ?? null : null;
     byMetric[metric] = {
       ok: true,
-      rows: top,
-      count: ranked.length,
-      myRank: myFull?.rank ?? null,
-      myRow: myFull,
+      rows: [],
+      count: 0,
+      myRank: null,
+      myRow: null,
       myRankDeltaPlaces: null,
     };
   }
-
-  await mergeUserPlansIntoBulkByMetric(byMetric);
   return { ok: true, division: "open", seasonKey, byMetric };
-}
-
-function metricValue(row: RankingApiRow, metric: OpenSeasonMetric): number {
-  if (metric === "winRate") return Number(row.winRate ?? 0) || 0;
-  if (metric === "totalUpset") return Number(row.totalUpset ?? 0) || 0;
-  if (metric === "totalGoalScorerHits")
-    return Number(row.totalGoalScorerHits ?? 0) || 0;
-  return Number(row.totalPoints ?? 0) || 0;
 }

@@ -300,7 +300,8 @@ function KinetikMetricCardNative({
     countTarget ?? 0,
     countFormat ?? "int",
     countDecimals,
-    reduceMotion
+    reduceMotion,
+    420
   );
   const displayValue = useCount
     ? countedValue

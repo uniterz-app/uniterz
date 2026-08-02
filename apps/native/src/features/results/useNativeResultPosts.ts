@@ -37,6 +37,13 @@ export function useNativeResultPosts(
 
   const resetGenRef = useRef(0);
   const loadingRef = useRef(false);
+  /** loadPage を安定させ、focus 効果の無限再取得を防ぐ */
+  const lastDocRef = useRef<DocumentSnapshot | null>(null);
+  const hasMoreRef = useRef(true);
+  const postsLenRef = useRef(0);
+  lastDocRef.current = lastDoc;
+  hasMoreRef.current = hasMore;
+  postsLenRef.current = posts.length;
 
   const capPosts = useCallback((list: PostWithMillis[]) => {
     return list.length > RESULT_POSTS_MAX_CACHED
@@ -49,9 +56,10 @@ export function useNativeResultPosts(
       if (!uid || !league) return;
       if (!fetchEnabled) return;
       if (loadingRef.current) return;
-      if (!hasMore && !reset) return;
-      if (posts.length >= RESULT_POSTS_MAX_CACHED && !reset) {
+      if (!hasMoreRef.current && !reset) return;
+      if (postsLenRef.current >= RESULT_POSTS_MAX_CACHED && !reset) {
         setHasMore(false);
+        hasMoreRef.current = false;
         return;
       }
 
@@ -83,19 +91,28 @@ export function useNativeResultPosts(
           const next = capPosts(list);
 
           setPosts(next);
+          postsLenRef.current = next.length;
           setLastDoc(newLast);
-          setHasMore(fullPage && next.length < RESULT_POSTS_MAX_CACHED);
+          lastDocRef.current = newLast;
+          const nextHasMore = fullPage && next.length < RESULT_POSTS_MAX_CACHED;
+          setHasMore(nextHasMore);
+          hasMoreRef.current = nextHasMore;
           return;
         }
 
-        if (!lastDoc) return;
+        const cursor = lastDocRef.current;
+        if (!cursor) return;
 
-        const q = query(collection(db, "posts"), ...base, startAfter(lastDoc));
+        const q = query(collection(db, "posts"), ...base, startAfter(cursor));
         const snap = await getDocs(q);
 
-        const list = snap.docs.map((d) => mapDocToPostWithMillis(d.id, d.data()));
+        const list = snap.docs.map((d) =>
+          mapDocToPostWithMillis(d.id, d.data())
+        );
 
-        const newLast = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+        const newLast = snap.docs.length
+          ? snap.docs[snap.docs.length - 1]
+          : null;
 
         let nextPostsLength = 0;
         setPosts((prev) => {
@@ -107,31 +124,37 @@ export function useNativeResultPosts(
               ? merged.slice(0, RESULT_POSTS_MAX_CACHED)
               : merged;
           nextPostsLength = next.length;
+          postsLenRef.current = next.length;
           return next;
         });
 
         setLastDoc(newLast);
+        lastDocRef.current = newLast;
         const cappedAfterLoad = nextPostsLength >= RESULT_POSTS_MAX_CACHED;
         const fullPage = snap.docs.length === pageLimit;
-        setHasMore(!cappedAfterLoad && fullPage);
+        const nextHasMore = !cappedAfterLoad && fullPage;
+        setHasMore(nextHasMore);
+        hasMoreRef.current = nextHasMore;
       } finally {
         loadingRef.current = false;
         setLoading(false);
       }
     },
-    [uid, league, fetchEnabled, hasMore, lastDoc, posts.length, capPosts]
+    [uid, league, fetchEnabled, capPosts]
   );
 
   useEffect(() => {
     if (!uid || !fetchEnabled) {
       setPosts([]);
       setLastDoc(null);
+      lastDocRef.current = null;
       setHasMore(true);
+      hasMoreRef.current = true;
+      postsLenRef.current = 0;
       return;
     }
     void loadPage({ reset: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid, language, league, fetchEnabled]);
+  }, [uid, language, league, fetchEnabled, loadPage]);
 
   const grouped = useMemo(
     () => groupPostsByResultDay(posts, language),
@@ -145,12 +168,16 @@ export function useNativeResultPosts(
   }, [loadPage]);
 
   const removePostById = useCallback((id: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== id));
+    setPosts((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      postsLenRef.current = next.length;
+      return next;
+    });
   }, []);
 
   const loadMore = useCallback(() => {
-    if (!loadingRef.current && hasMore) void loadPage();
-  }, [loadPage, hasMore]);
+    if (!loadingRef.current && hasMoreRef.current) void loadPage();
+  }, [loadPage]);
 
   return {
     posts,

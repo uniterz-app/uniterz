@@ -1,8 +1,9 @@
 /**
- * Web `saveMeProSkin` / `deleteMeAccount` の Native 版（絶対 URL）
+ * Web `saveMeProSkin` / `deleteMeAccount` の Native 版
  */
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
-import { auth } from "../../lib/firebase";
+import { auth, db } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -23,21 +24,40 @@ function requireApiBase(): string {
   return base;
 }
 
-/** Web `saveMeProSkin` 相当 */
+/**
+ * Web `saveMeProSkin` 相当。
+ * Native は API 待ちで固まりやすいので Firestore 直書きを正とし、
+ * API はベストエフォートで追従させる。
+ */
 export async function saveMeProSkinNative(
   planProBgVariant: ProfilePlanProBgVariant
 ): Promise<void> {
-  const base = requireApiBase();
-  const headers = await authHeaders();
-  const res = await fetch(`${base}/api/me/pro-skin`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ planProBgVariant }),
-  });
-  const data = (await res.json().catch(() => ({}))) as { error?: string };
-  if (!res.ok) {
-    throw new Error(data?.error ?? res.statusText);
-  }
+  const user = auth.currentUser;
+  if (!user) throw new Error("not authenticated");
+
+  await setDoc(
+    doc(db, "users", user.uid),
+    {
+      planProBgVariant,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  const base = getUniterzApiBaseUrl();
+  if (!base) return;
+  void (async () => {
+    try {
+      const headers = await authHeaders();
+      await fetch(`${base}/api/me/pro-skin`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ planProBgVariant }),
+      });
+    } catch {
+      /* Firestore 保存済みなので無視 */
+    }
+  })();
 }
 
 /** Web `deleteMeAccount` 相当 */

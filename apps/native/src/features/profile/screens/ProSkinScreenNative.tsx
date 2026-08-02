@@ -15,7 +15,10 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import {
+  useNavigation,
+  type NavigationProp,
+} from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,6 +30,7 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import { cyberAlert } from "../../../components/cyberAlert";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
+import type { ProfileStackParamList } from "../../../navigation/types";
 import {
   PROFILE_PLAN_PRO_ADOPTED_BG,
   profilePlanProAdoptedCategoryLabel,
@@ -160,7 +164,8 @@ function SkinThumbNative({
 }
 
 export default function ProSkinScreenNative() {
-  const navigation = useNavigation();
+  const navigation =
+    useNavigation<NavigationProp<ProfileStackParamList>>();
   const insets = useSafeAreaInsets();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguageFromAuth();
@@ -234,14 +239,16 @@ export default function ProSkinScreenNative() {
   }, [saving]);
 
   const handleConfirm = useCallback(async () => {
-    if (!overlayId || !canConfirm) return;
+    if (!overlayId || saving || !hasUnsavedChange) return;
     setSaving(true);
     setSaveError(null);
     try {
       await saveMeProSkinNative(overlayId);
       setSavedId(overlayId);
+      // Modal を先に閉じてからプロフィールへ（goBack が効かないケース対策）
       setOverlayId(null);
-      navigation.goBack();
+      setSaving(false);
+      navigation.navigate("ProfileHome");
     } catch (e) {
       const msg =
         e instanceof Error
@@ -251,10 +258,9 @@ export default function ProSkinScreenNative() {
             : "Save failed.";
       setSaveError(msg);
       cyberAlert("", msg);
-    } finally {
       setSaving(false);
     }
-  }, [canConfirm, isJa, navigation, overlayId]);
+  }, [hasUnsavedChange, isJa, navigation, overlayId, saving]);
 
   const openOverlay = useCallback((id: ProfilePlanProBgVariant) => {
     setSaveError(null);
@@ -377,23 +383,29 @@ export default function ProSkinScreenNative() {
 
               <View style={styles.overlayActions}>
                 <Pressable
-                  disabled={!canConfirm}
+                  disabled={!canConfirm && !saving}
                   onPress={() => void handleConfirm()}
                   style={[
                     styles.confirmBtn,
-                    canConfirm ? styles.confirmBtnOn : styles.confirmBtnOff,
+                    canConfirm || saving
+                      ? styles.confirmBtnOn
+                      : styles.confirmBtnOff,
                     styles.confirmBtnGrow,
                   ]}
                 >
-                  <MaterialCommunityIcons
-                    name="star-four-points"
-                    size={14}
-                    color={canConfirm ? "#050508" : "rgba(255,255,255,0.3)"}
-                  />
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#050508" />
+                  ) : (
+                    <MaterialCommunityIcons
+                      name="star-four-points"
+                      size={14}
+                      color={canConfirm ? "#050508" : "rgba(255,255,255,0.3)"}
+                    />
+                  )}
                   <Text
                     style={[
                       styles.confirmBtnText,
-                      canConfirm
+                      canConfirm || saving
                         ? styles.confirmBtnTextOn
                         : styles.confirmBtnTextOff,
                     ]}
