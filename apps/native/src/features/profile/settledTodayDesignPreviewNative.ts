@@ -22,8 +22,8 @@ export function buildSettledTodayDesignPreviewPosts(
       seasonPhase: "regular",
       settledAtMillis: nowMs - 45 * 60_000,
       startAtMillis: nowMs - 3 * 60 * 60_000,
-      home: { name: "Lakers", teamId: "lal" },
-      away: { name: "Celtics", teamId: "bos" },
+      home: { name: "Los Angeles Lakers", teamId: "lal" },
+      away: { name: "Boston Celtics", teamId: "bos" },
       prediction: {
         winner: "home",
         score: { home: 112, away: 108 },
@@ -46,8 +46,8 @@ export function buildSettledTodayDesignPreviewPosts(
       seasonPhase: "regular",
       settledAtMillis: nowMs - 90 * 60_000,
       startAtMillis: nowMs - 5 * 60 * 60_000,
-      home: { name: "Warriors", teamId: "gsw" },
-      away: { name: "Nuggets", teamId: "den" },
+      home: { name: "Golden State Warriors", teamId: "gsw" },
+      away: { name: "Denver Nuggets", teamId: "den" },
       prediction: {
         winner: "away",
         score: { home: 104, away: 111 },

@@ -1,5 +1,6 @@
 /**
  * Web `ProfileSettledTodayResults` 相当（Result Drop）。
+ * カード本体はリザルト一覧と同じ `ResultPostCardNative`。
  * 本日確定が空でもデザイン確認できるようプレビューカードを出す。
  */
 import { useMemo } from "react";
@@ -9,8 +10,8 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import type { MainTabParamList } from "../../navigation/types";
+import ResultPostCardNative from "../results/ResultPostCardNative";
 import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
-import ProfileSettledTodayResultCardNative from "./ProfileSettledTodayResultCardNative";
 import { NATIVE_SETTLED_TODAY_MAX } from "./loadProfileSettledTodayNative";
 import {
   profileOverviewChartSubtitleStyle,
@@ -41,6 +42,7 @@ export default function ProfileSettledTodayResultsNative({
 }: Props) {
   const isJa = language === "ja";
   const navigation = useNavigation();
+  const nowMs = Date.now();
   const { posts, loading } = useNativeProfileSettledTodayResults(
     uid,
     profileStatsContext,
@@ -108,16 +110,17 @@ export default function ProfileSettledTodayResultsNative({
         <Text style={styles.empty}>{empty}</Text>
       ) : (
         <View style={styles.list}>
-          {visiblePosts.map((post) => (
-            <ProfileSettledTodayResultCardNative
+          {visiblePosts.map((post, index) => (
+            <ResultPostCardNative
               key={post.id}
               post={post}
               language={language}
-              onPress={
-                isSettledTodayDesignPreviewPost(post.id)
-                  ? undefined
-                  : () => openPost(post.id)
-              }
+              nowMs={nowMs}
+              viewerUid={null}
+              listEnterIndex={index}
+              entranceEnabled={false}
+              compactSpacing
+              onOpenDetail={openPost}
             />
           ))}
         </View>
