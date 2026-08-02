@@ -2,7 +2,6 @@
  * cumulative_stats.profileCharts を正とする overview チャート集計。
  * 欠けている部品だけソースから組み立てて書き戻し、以降のクライアント多重 read を無くす。
  */
-import { FieldPath } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { filterDailyTrendToSeasonActivity } from "@/lib/profile/dailyTrendSeasonActivity";
 import {
@@ -18,13 +17,12 @@ import {
 } from "@/lib/profile/profileChartsBundle";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import { filterPostsForScope } from "@/lib/profile/profileStreakPostsCompute";
-import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import {
   buildDailyTrendFromDailySnaps,
   resolveProfileDailyTrendContext,
 } from "@/lib/profile/userStatsV2ProfileRollup";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
+import { buildRankPlayoffTrendPoints } from "@/lib/rankings/server/buildRankPlayoffTrendPoints";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export type CompleteProfileChartsBundle = {
@@ -46,22 +44,20 @@ function shortCacheKey(uid: string, seasonKey: string) {
 
 async function buildDailyTrend(
   uid: string,
-  seasonKey: string
+  _seasonKey: string
 ): Promise<ProfileDailyTrendRow[]> {
   const adminDb = getAdminDb();
+  /** user-stats と同じ getAll（存在しない日も課金されるがインデックス不要で確実） */
   const keys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 30);
   if (keys.length === 0) return [];
-  const start = keys[keys.length - 1]!;
-  const end = keys[0]!;
-  const snap = await adminDb
-    .collection("user_stats_v2_daily")
-    .where(FieldPath.documentId(), ">=", `${uid}_${start}`)
-    .where(FieldPath.documentId(), "<=", `${uid}_${end}`)
-    .orderBy(FieldPath.documentId())
-    .get();
-
+  const refs = keys.map((dateKey) =>
+    adminDb.doc(`user_stats_v2_daily/${uid}_${dateKey}`)
+  );
+  const snaps = await adminDb.getAll(...refs);
+  const byId = new Map(snaps.map((s) => [s.id, s]));
+  const ordered = keys.map((dateKey) => byId.get(`${uid}_${dateKey}`)!);
   const ctx = resolveProfileDailyTrendContext("nba", undefined, "season");
-  const rows = buildDailyTrendFromDailySnaps(snap.docs, ctx);
+  const rows = buildDailyTrendFromDailySnaps(ordered, ctx);
   return pruneDailyTrendRows(
     filterDailyTrendToSeasonActivity(rows),
     PROFILE_CHARTS_DAILY_MAX
@@ -72,23 +68,14 @@ async function buildRankTrend(
   uid: string,
   seasonKey: string
 ): Promise<ProfileChartsRankPoint[]> {
-  const historyDocs = await loadRankSnapshotHistoryDocsWalkBack(uid, {
-    maxDocs: PROFILE_CHARTS_RANK_MAX,
+  const points = await buildRankPlayoffTrendPoints(uid, {
+    rankingLeague: "nba",
+    wcStage: "overall",
+    maxPoints: PROFILE_CHARTS_RANK_MAX,
     maxLookbackDays: 90,
+    seasonKey,
   });
-
-  const points: ProfileChartsRankPoint[] = [];
-  for (const d of historyDocs) {
-    const data = d.data as {
-      seasons?: Record<string, Record<string, unknown>>;
-    };
-    const rank = coerceTotalPointsRank(
-      data.seasons?.[seasonKey]?.totalPoints
-    );
-    if (rank == null) continue;
-    points.push({ dateKey: d.id, rank });
-  }
-  return points.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  return points.map((p) => ({ dateKey: p.dateKey, rank: p.rank }));
 }
 
 async function buildLast20(uid: string): Promise<ProfileChartsLast20Point[]> {
