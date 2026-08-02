@@ -39,6 +39,21 @@ export function profileOverviewLookbackEndDateKey(
   return `${startYear + 1}-06-30`;
 }
 
+/**
+ * 現行: 直近だけ。前シーズン確認: 開幕〜終端付近まで（末尾45日だとレギュラーが落ちる）。
+ */
+export function profileOverviewDailyLookbackDays(
+  seasonKey: string = profileOverviewSeasonKey()
+): number {
+  return seasonKey === CURRENT_NBA_SEASON_KEY ? 45 : 220;
+}
+
+export function profileOverviewRankLookbackDays(
+  seasonKey: string = profileOverviewSeasonKey()
+): number {
+  return seasonKey === CURRENT_NBA_SEASON_KEY ? 60 : 220;
+}
+
 /** endKey から days 日分の YYYY-MM-DD（新しい順ではなく古い→新しい） */
 export function profileOverviewDateKeysEndingAt(
   endKey: string,

@@ -3,6 +3,10 @@
  * 欠けている部品だけソースから組み立てて書き戻し、以降のクライアント多重 read を無くす。
  */
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import type {
+  DocumentReference,
+  DocumentSnapshot,
+} from "firebase-admin/firestore";
 import { filterDailyTrendToSeasonActivity } from "@/lib/profile/dailyTrendSeasonActivity";
 import {
   PROFILE_CHARTS_BUNDLE_VERSION,
@@ -23,6 +27,8 @@ import {
   profileOverviewLookbackEndDateKey,
   profileOverviewSeasonKey,
   PROFILE_OVERVIEW_USE_PREVIOUS_SEASON,
+  profileOverviewDailyLookbackDays,
+  profileOverviewRankLookbackDays,
 } from "@/lib/profile/profileOverviewSeason";
 import {
   buildDailyTrendFromDailySnaps,
@@ -47,6 +53,22 @@ export { isProfileChartsComplete } from "@/lib/profile/profileChartsBundle";
 
 const ensureInflight = new Map<string, Promise<CompleteProfileChartsBundle>>();
 
+const GET_ALL_CHUNK = 90;
+
+async function getAllChunked(
+  refs: DocumentReference[]
+): Promise<DocumentSnapshot[]> {
+  if (refs.length === 0) return [];
+  const adminDb = getAdminDb();
+  const out: DocumentSnapshot[] = [];
+  for (let i = 0; i < refs.length; i += GET_ALL_CHUNK) {
+    const chunk = refs.slice(i, i + GET_ALL_CHUNK);
+    const snaps = await adminDb.getAll(...chunk);
+    out.push(...snaps);
+  }
+  return out;
+}
+
 function shortCacheKey(uid: string, seasonKey: string) {
   return `${uid}:${seasonKey}`;
 }
@@ -63,12 +85,15 @@ async function buildDailyTrend(
 ): Promise<ProfileDailyTrendRow[]> {
   const adminDb = getAdminDb();
   const endKey = profileOverviewLookbackEndDateKey(seasonKey);
-  const keys = profileOverviewDateKeysEndingAt(endKey, 45);
+  const keys = profileOverviewDateKeysEndingAt(
+    endKey,
+    profileOverviewDailyLookbackDays(seasonKey)
+  );
   if (keys.length === 0) return [];
   const refs = keys.map((dateKey) =>
     adminDb.doc(`user_stats_v2_daily/${uid}_${dateKey}`)
   );
-  const snaps = await adminDb.getAll(...refs);
+  const snaps = await getAllChunked(refs);
   const byId = new Map(snaps.map((s) => [s.id, s]));
   const ordered = keys.map((dateKey) => byId.get(`${uid}_${dateKey}`)!);
   const ctx = resolveProfileDailyTrendContext(
@@ -90,11 +115,14 @@ async function buildRankTrend(
 ): Promise<ProfileChartsRankPoint[]> {
   const adminDb = getAdminDb();
   const endKey = profileOverviewLookbackEndDateKey(seasonKey);
-  const keys = profileOverviewDateKeysEndingAt(endKey, 60);
+  const keys = profileOverviewDateKeysEndingAt(
+    endKey,
+    profileOverviewRankLookbackDays(seasonKey)
+  );
   const refs = keys.map((dateKey) =>
     adminDb.doc(`cumulative_stats/${uid}/rankSnapshotHistory/${dateKey}`)
   );
-  const snaps = await adminDb.getAll(...refs);
+  const snaps = await getAllChunked(refs);
   const points: ProfileChartsRankPoint[] = [];
   for (const snap of snaps) {
     if (!snap.exists) continue;
@@ -117,8 +145,8 @@ async function buildLast20(
   seasonKey: string
 ): Promise<ProfileChartsLast20Point[]> {
   const adminDb = getAdminDb();
-  /** 前シーズン確認時は投稿が新しい方に埋もれやすいので多めに読む */
-  const fetchLimit = 120;
+  /** 前シーズン確認時は新しい投稿に埋もれやすいので多めに読む */
+  const fetchLimit = PROFILE_OVERVIEW_USE_PREVIOUS_SEASON ? 500 : 120;
   const snap = await adminDb
     .collection("posts")
     .where("authorUid", "==", uid)

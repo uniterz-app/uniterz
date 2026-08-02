@@ -617,18 +617,24 @@ export async function ensureNbaOverviewChartsApi(
   });
   if (options?.force) qs.set("force", "1");
   try {
-    const res = await fetch(
-      `${base}/api/profile/ensure-overview-charts?${qs.toString()}`,
-      { cache: "no-store" }
-    );
+    const url = `${base}/api/profile/ensure-overview-charts?${qs.toString()}`;
+    const res = await fetch(url, { cache: "no-store" });
     const json = (await res.json()) as {
       ok?: boolean;
+      error?: string;
       seasonKey?: string;
       dailyTrend?: unknown;
       rankTrend?: unknown;
       last20?: unknown;
     };
-    if (!res.ok || json.ok !== true) return null;
+    if (!res.ok || json.ok !== true) {
+      if (__DEV__) {
+        console.warn(
+          `[profileCharts] ensure API failed status=${res.status} base=${base} err=${json.error ?? "?"}`
+        );
+      }
+      return null;
+    }
     return {
       seasonKey:
         typeof json.seasonKey === "string" ? json.seasonKey : seasonKey,
@@ -653,7 +659,12 @@ export async function ensureNbaOverviewChartsApi(
             .sort((a, b) => a.settledAtMs - b.settledAtMs)
         : [],
     };
-  } catch {
+  } catch (e) {
+    if (__DEV__) {
+      console.warn(
+        `[profileCharts] ensure API error base=${base} msg=${e instanceof Error ? e.message : String(e)}`
+      );
+    }
     return null;
   }
 }
