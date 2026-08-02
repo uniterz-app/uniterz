@@ -706,6 +706,7 @@ const es: Messages = {
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight está disponible con Pro.",
+    insightUpgradeCta: "Unlock with Pro",
     panelDataPending: "Datos disponibles próximamente",
     teamProfile: "Datos del equipo",
     matchPreview: "Vista previa del partido",

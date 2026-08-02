@@ -2,6 +2,8 @@
 
 import type {
   PredictProBrief,
+  ProBriefEdgeItem,
+  ProBriefLineItem,
   ProBriefTeamCard,
 } from "@/lib/predict/predictProBrief";
 import {
@@ -13,18 +15,32 @@ import { nameOxanium } from "@/lib/fonts";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
+import ProCyberBadge from "@/app/component/common/ProCyberBadge";
+import type { ReactNode } from "react";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
-  brief: PredictProBrief;
+  brief?: PredictProBrief | null;
   language: Language;
   homeTeamId: string;
   awayTeamId: string;
   homeTeamName: string;
   awayTeamName: string;
   className?: string;
+  /** Free: タイトル下をぼかして CTA */
+  locked?: boolean;
+  onPressUpgrade?: () => void;
 };
 
-function teamDisplayName(teamId: string, fallback: string): string {
+type SectionTone = "matchup" | "schedule" | "context";
+
+const EMPTY_CARD: ProBriefTeamCard = {
+  edges: [],
+  schedule: [],
+  context: [],
+};
+
+function teamNick(teamId: string, fallback: string): string {
   if (teamId.startsWith("nba-")) {
     const full = NBA_TEAM_NAME_BY_ID[teamId];
     if (full) return getMobileTeamName("nba", full);
@@ -51,19 +67,19 @@ function SectionLabel({
   tone,
 }: {
   children: string;
-  tone: "matchup" | "schedule" | "context";
+  tone: SectionTone;
 }) {
   const color =
     tone === "matchup"
-      ? "text-emerald-300/80"
+      ? "text-emerald-300/90"
       : tone === "schedule"
-        ? "text-amber-200/80"
-        : "text-cyan-300/75";
+        ? "text-amber-200/90"
+        : "text-cyan-300/90";
   return (
     <p
       className={[
         nameOxanium.className,
-        "text-[8px] font-extrabold uppercase tracking-[0.16em]",
+        "text-center text-[10px] font-extrabold uppercase tracking-[0.14em]",
         color,
       ].join(" ")}
     >
@@ -72,174 +88,314 @@ function SectionLabel({
   );
 }
 
-function TeamBriefCard({
-  side,
-  teamId,
-  teamName,
-  card,
+function EdgeBlock({
+  edges,
   language,
+  align,
 }: {
-  side: "home" | "away";
-  teamId: string;
-  teamName: string;
-  card: ProBriefTeamCard;
+  edges: ProBriefEdgeItem[];
   language: Language;
+  align: "left" | "right";
 }) {
   const lang = language === "ja" ? "ja" : "en";
-  const sideLabel = side === "home" ? "HOME" : "AWAY";
-  const primary = teamAccent(teamId);
-  const border = hexToRgba(primary, 0.55);
-  const fill = hexToRgba(primary, 0.06);
-  const divider = hexToRgba(primary, 0.2);
-
+  const textAlign = align === "right" ? "text-right" : "text-left";
+  if (edges.length === 0) {
+    return <p className={`text-[13px] text-white/35 ${textAlign}`}>—</p>;
+  }
   return (
-    <article
-      className="col-span-1 row-span-4 grid min-w-0 grid-rows-subgrid overflow-hidden bg-[rgba(6,11,18,0.92)]"
-      style={{
-        border: `1px solid ${border}`,
-        boxShadow: `inset 0 1px 0 ${hexToRgba(primary, 0.28)}`,
-        background: `linear-gradient(165deg, ${fill} 0%, rgba(6,11,18,0.94) 48%)`,
-        clipPath:
-          "polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%)",
-      }}
-    >
-      <header className="px-2 py-1.5" style={{ borderBottom: `1px solid ${divider}` }}>
-        <p
-          className={[
-            nameOxanium.className,
-            "text-[7px] font-bold uppercase tracking-[0.2em]",
-          ].join(" ")}
-          style={{ color: hexToRgba(primary, 0.85) }}
-        >
-          {sideLabel}
-        </p>
-        <p
-          className={[
-            nameOxanium.className,
-            "truncate text-[12px] font-extrabold uppercase italic leading-none tracking-wide text-white",
-          ].join(" ")}
-        >
-          {teamDisplayName(teamId, teamName)}
-        </p>
-      </header>
-
-      <div className="px-2 py-2">
-        <SectionLabel tone="matchup">Matchup</SectionLabel>
-        {card.edges.length > 0 ? (
-          <ul className="mt-1 space-y-1.5">
-            {card.edges.map((edge, i) => {
-              const detail = briefEdgeDetail(edge, lang);
-              return (
-                <li key={`e-${i}`} className="min-w-0">
-                  <p
-                    className={[
-                      nameOxanium.className,
-                      "text-[11px] font-extrabold uppercase leading-snug tracking-[0.04em] text-white/92",
-                    ].join(" ")}
-                  >
-                    {edge.label}
-                  </p>
-                  {detail ? (
-                    <p className="mt-0.5 text-[10px] leading-snug text-white/45">
-                      {detail}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="mt-1 text-[10px] text-white/35">—</p>
-        )}
-      </div>
-
-      <div className="px-2 py-2" style={{ borderTop: `1px solid ${divider}` }}>
-        <SectionLabel tone="schedule">Schedule</SectionLabel>
-        {card.schedule.length > 0 ? (
-          <ul className="mt-1 space-y-1">
-            {card.schedule.map((item, i) => (
-              <li
-                key={`s-${i}`}
-                className="text-[11px] font-medium leading-snug text-amber-50/85"
+    <ul className="space-y-2">
+      {edges.map((edge, i) => {
+        const detail = briefEdgeDetail(edge, lang);
+        return (
+          <li key={`e-${i}`} className="min-w-0">
+            <p
+              className={[
+                nameOxanium.className,
+                textAlign,
+                "text-[13px] font-extrabold uppercase leading-snug tracking-[0.03em] text-white/92",
+              ].join(" ")}
+            >
+              {edge.label}
+            </p>
+            {detail ? (
+              <p
+                className={`mt-0.5 text-[12px] leading-snug text-white/50 ${textAlign}`}
               >
-                {briefLineText(item, lang)}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-1 text-[10px] text-white/35">—</p>
-        )}
-      </div>
-
-      <div className="px-2 py-2" style={{ borderTop: `1px solid ${divider}` }}>
-        <SectionLabel tone="context">Context</SectionLabel>
-        {card.context.length > 0 ? (
-          <ul className="mt-1 space-y-1">
-            {card.context.map((item, i) => (
-              <li
-                key={`c-${i}`}
-                className="text-[11px] font-medium leading-snug text-cyan-50/80"
-              >
-                {briefLineText(item, lang)}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-1 text-[10px] text-white/35">—</p>
-        )}
-      </div>
-    </article>
+                {detail}
+              </p>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
-/** 予想オーバーレイ — Pro Insight（HOME / AWAY · MATCHUP / SCHEDULE / CONTEXT） */
+function LineBlock({
+  items,
+  language,
+  align,
+  tone,
+}: {
+  items: ProBriefLineItem[];
+  language: Language;
+  align: "left" | "right";
+  tone: "schedule" | "context";
+}) {
+  const lang = language === "ja" ? "ja" : "en";
+  const textAlign = align === "right" ? "text-right" : "text-left";
+  const color =
+    tone === "schedule" ? "text-amber-50/85" : "text-cyan-50/80";
+  if (items.length === 0) {
+    return <p className={`text-[13px] text-white/35 ${textAlign}`}>—</p>;
+  }
+  return (
+    <ul className="space-y-1.5">
+      {items.map((item, i) => (
+        <li
+          key={`${tone}-${i}`}
+          className={`text-[13px] font-medium leading-snug ${color} ${textAlign}`}
+        >
+          {briefLineText(item, lang)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CompareSection({
+  label,
+  tone,
+  left,
+  right,
+}: {
+  label: string;
+  tone: SectionTone;
+  left: ReactNode;
+  right: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)] items-center gap-x-1.5 border-b border-white/8 py-2.5 last:border-b-0">
+      <div className="min-w-0">{left}</div>
+      <div className="flex shrink-0 items-center justify-center px-0.5">
+        <SectionLabel tone={tone}>{label}</SectionLabel>
+      </div>
+      <div className="min-w-0">{right}</div>
+    </div>
+  );
+}
+
+function PlaceholderBody() {
+  return (
+    <div className="space-y-2">
+      <p className={[nameOxanium.className, "text-[13px] font-extrabold text-white/40"].join(" ")}>
+        ······
+      </p>
+      <p className="text-[12px] text-white/30">······</p>
+      <p className="text-[13px] text-white/30">······</p>
+    </div>
+  );
+}
+
+/** 予想オーバーレイ — Pro Insight（タイトル + PRO バッジ + 左右比較 / Free ぼかし CTA） */
 export default function PredictProBriefPanel({
-  brief,
+  brief = null,
   language,
   homeTeamId,
   awayTeamId,
   homeTeamName,
   awayTeamName,
   className,
+  locked = false,
+  onPressUpgrade,
 }: Props) {
+  const m = t(language).predict;
+  const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
+  const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
+  const homeColor = teamAccent(homeTeamId);
+  const awayColor = teamAccent(awayTeamId);
+  const home = brief?.home ?? EMPTY_CARD;
+  const away = brief?.away ?? EMPTY_CARD;
+  const usePlaceholder = brief == null;
+  const upgradeLabel = m.insightUpgradeCta;
+
+  const body = (
+    <>
+      <CompareSection
+        label="MATCHUP"
+        tone="matchup"
+        left={
+          usePlaceholder ? (
+            <PlaceholderBody />
+          ) : (
+            <EdgeBlock edges={home.edges} language={language} align="right" />
+          )
+        }
+        right={
+          usePlaceholder ? (
+            <PlaceholderBody />
+          ) : (
+            <EdgeBlock edges={away.edges} language={language} align="left" />
+          )
+        }
+      />
+      <CompareSection
+        label="SCHEDULE"
+        tone="schedule"
+        left={
+          usePlaceholder ? (
+            <PlaceholderBody />
+          ) : (
+            <LineBlock
+              items={home.schedule}
+              language={language}
+              align="right"
+              tone="schedule"
+            />
+          )
+        }
+        right={
+          usePlaceholder ? (
+            <PlaceholderBody />
+          ) : (
+            <LineBlock
+              items={away.schedule}
+              language={language}
+              align="left"
+              tone="schedule"
+            />
+          )
+        }
+      />
+      <CompareSection
+        label="CONTEXT"
+        tone="context"
+        left={
+          usePlaceholder ? (
+            <PlaceholderBody />
+          ) : (
+            <LineBlock
+              items={home.context}
+              language={language}
+              align="right"
+              tone="context"
+            />
+          )
+        }
+        right={
+          usePlaceholder ? (
+            <PlaceholderBody />
+          ) : (
+            <LineBlock
+              items={away.context}
+              language={language}
+              align="left"
+              tone="context"
+            />
+          )
+        }
+      />
+    </>
+  );
+
   return (
     <section
       className={[
-        "relative overflow-hidden border border-cyan-400/22 bg-[rgba(5,10,18,0.72)] px-2.5 py-2",
+        "relative overflow-hidden border border-cyan-400/22 bg-[rgba(5,10,18,0.88)] px-2.5 py-2.5",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
       style={{ boxShadow: "inset 0 1px 0 rgba(34,211,238,0.12)" }}
     >
-      <header className="mb-1.5">
-        <p
-          className={[
-            nameOxanium.className,
-            "text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200/90",
-          ].join(" ")}
-        >
-          Pro Insight
-        </p>
-      </header>
+      <div className="relative mb-2.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-white/12 pb-3">
+        <div className="min-w-0">
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[9px] font-bold uppercase tracking-[0.16em]",
+            ].join(" ")}
+            style={{ color: hexToRgba(homeColor, 0.9) }}
+          >
+            HOME
+          </p>
+          <p
+            className={[
+              nameOxanium.className,
+              "truncate text-[18px] font-extrabold uppercase italic leading-none tracking-wide",
+            ].join(" ")}
+            style={{ color: homeColor }}
+          >
+            {homeNick}
+          </p>
+        </div>
 
-      {/* subgrid で MATCHUP / SCHEDULE / CONTEXT の高さを両カードで揃える */}
-      <div className="grid grid-cols-2 grid-rows-[auto_auto_auto_auto] gap-1.5">
-        <TeamBriefCard
-          side="home"
-          teamId={homeTeamId}
-          teamName={homeTeamName}
-          card={brief.home}
-          language={language}
-        />
-        <TeamBriefCard
-          side="away"
-          teamId={awayTeamId}
-          teamName={awayTeamName}
-          card={brief.away}
-          language={language}
-        />
+        <div
+          className="flex shrink-0 items-center justify-center px-1"
+          style={{ transform: "scale(1.18)" }}
+        >
+          <ProCyberBadge premium ariaLabel="PRO" />
+        </div>
+
+        <div className="min-w-0 text-right">
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[9px] font-bold uppercase tracking-[0.16em]",
+            ].join(" ")}
+            style={{ color: hexToRgba(awayColor, 0.9) }}
+          >
+            AWAY
+          </p>
+          <p
+            className={[
+              nameOxanium.className,
+              "truncate text-[18px] font-extrabold uppercase italic leading-none tracking-wide",
+            ].join(" ")}
+            style={{ color: awayColor }}
+          >
+            {awayNick}
+          </p>
+        </div>
       </div>
+
+      {locked ? (
+        <div className="relative min-h-[180px] overflow-hidden">
+          <div aria-hidden className="select-none">
+            {body}
+          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 backdrop-blur-[10px]"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(4,8,14,0.28) 0%, rgba(4,8,14,0.55) 100%)",
+            }}
+          />
+          <div className="absolute inset-0 z-1 flex flex-col items-center justify-center gap-2.5 px-5">
+            <p
+              className={[
+                nameOxanium.className,
+                "text-center text-[12px] font-bold tracking-wide text-white/72",
+              ].join(" ")}
+            >
+              {m.insightProOnly}
+            </p>
+            <button
+              type="button"
+              onClick={onPressUpgrade}
+              className={[
+                nameOxanium.className,
+                "min-w-[180px] border border-white/35 bg-[#00F5FF] px-4 py-3 text-[13px] font-extrabold uppercase tracking-[0.12em] text-[#050508]",
+              ].join(" ")}
+            >
+              {upgradeLabel}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="relative">{body}</div>
+      )}
     </section>
   );
 }

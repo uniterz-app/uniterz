@@ -705,6 +705,7 @@ const ja = {
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight は Pro プランで利用できます",
+    insightUpgradeCta: "Pro で解除",
     panelDataPending: "データ準備中です",
     matchPreview: "試合展望",
     matchPreviewSituation: "グループ情勢",

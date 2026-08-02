@@ -710,6 +710,7 @@ const en: Messages = {
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight is available with Pro.",
+    insightUpgradeCta: "Unlock with Pro",
     panelDataPending: "Data coming soon",
     matchPreview: "Match preview",
     matchPreviewSituation: "Group picture",

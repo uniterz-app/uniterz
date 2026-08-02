@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import PredictProBriefPanel from "@/app/component/predict/PredictProBriefPanel";
 import NbaInjuryReportPanel from "@/app/component/predict/NbaInjuryReportPanel";
 import NbaTeamStatsPanel from "@/app/component/predict/NbaTeamStatsPanel";
@@ -62,6 +63,11 @@ export default function NbaPredictToolsTabs({
 }: Props) {
   const m = t(language).predict;
   const [tab, setTab] = useState<NbaPredictToolsTab>("injuries");
+  const router = useRouter();
+
+  const openProSubscribe = () => {
+    router.push("/mobile/pro/subscribe");
+  };
 
   return (
     <div className={className} data-tutorial-target="predict-tools">
@@ -102,9 +108,9 @@ export default function NbaPredictToolsTabs({
 
       <div className="mt-2.5 min-h-30">
         {tab === "insight" ? (
-          !isPro ? (
-            <PendingPanel text={m.insightProOnly} />
-          ) : brief ? (
+          isPro && !brief ? (
+            <PendingPanel text={m.panelDataPending} />
+          ) : (
             <PredictProBriefPanel
               brief={brief}
               language={language}
@@ -112,9 +118,9 @@ export default function NbaPredictToolsTabs({
               awayTeamId={awayTeamId ?? ""}
               homeTeamName={homeTeamName}
               awayTeamName={awayTeamName}
+              locked={!isPro}
+              onPressUpgrade={openProSubscribe}
             />
-          ) : (
-            <PendingPanel text={m.panelDataPending} />
           )
         ) : tab === "injuries" ? (
           injuryReport ? (

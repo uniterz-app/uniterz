@@ -704,6 +704,7 @@ const ar: Messages = {
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "‏Insight متاح مع خطة Pro.",
+    insightUpgradeCta: "Unlock with Pro",
     panelDataPending: "البيانات قادمة قريبًا",
     teamProfile: "بيانات الفريق",
     matchPreview: "معاينة المباراة",

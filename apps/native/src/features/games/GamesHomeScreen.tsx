@@ -132,6 +132,10 @@ import {
   WC_DEFAULT_SEASON,
   type GoalScorerPick as WcGoalScorerPick,
 } from "./legacyWcNativeShims";
+import {
+  normalizeNbaTopScorerPick,
+  type NbaTopScorerPick,
+} from "../../../../../lib/nba/topScorer";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
@@ -493,7 +497,9 @@ export default function GamesHomeScreen({
   const [predictToolsTab, setPredictToolsTab] = useState<PredictToolsTab>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
-  const [goalScorerPick, setGoalScorerPick] = useState<WcGoalScorerPick | null>(null);
+  const [goalScorerPick, setGoalScorerPick] = useState<
+    WcGoalScorerPick | NbaTopScorerPick | null
+  >(null);
   const [predictSubmitting, setPredictSubmitting] = useState(false);
   const [predictedGameIds, setPredictedGameIds] = useState<Set<string>>(new Set());
   const [myPostIdByGameId, setMyPostIdByGameId] = useState<Record<string, string>>({});
@@ -1423,7 +1429,14 @@ export default function GamesHomeScreen({
       setWinner(editBootstrap.seed.winner);
       setScoreHome(String(editBootstrap.seed.scoreHome));
       setScoreAway(String(editBootstrap.seed.scoreAway));
-      setGoalScorerPick(normalizeWcGoalScorerPick(editBootstrap.seed.goalScorer));
+      {
+        const league = String(sourceGame.league ?? "").toLowerCase();
+        setGoalScorerPick(
+          league === "nba"
+            ? normalizeNbaTopScorerPick(editBootstrap.seed.goalScorer)
+            : normalizeWcGoalScorerPick(editBootstrap.seed.goalScorer)
+        );
+      }
       return;
     }
 
@@ -1449,8 +1462,12 @@ export default function GamesHomeScreen({
         setWinner(existingPrediction.winner);
         setScoreHome(String(existingPrediction.score.home));
         setScoreAway(String(existingPrediction.score.away));
-        const pick = normalizeWcGoalScorerPick(existingPrediction.goalScorer);
-        setGoalScorerPick(pick);
+        const league = String(sourceGame.league ?? "").toLowerCase();
+        setGoalScorerPick(
+          league === "nba"
+            ? normalizeNbaTopScorerPick(existingPrediction.goalScorer)
+            : normalizeWcGoalScorerPick(existingPrediction.goalScorer)
+        );
       }
     })();
   }
@@ -1626,6 +1643,7 @@ export default function GamesHomeScreen({
       const existingPostId = myPostIdByGameId[gameId];
       const isEditing = Boolean(existingPostId);
       const isWcGame = String(selectedGame.league ?? "").toLowerCase() === "wc";
+      const isNbaGame = String(selectedGame.league ?? "").toLowerCase() === "nba";
       const goalScorer =
         isWcGame &&
         goalScorerPick &&
@@ -1636,13 +1654,15 @@ export default function GamesHomeScreen({
           (selectedGame.away as { teamId?: string } | undefined)?.teamId
         )
           ? goalScorerPick
-          : null;
+          : isNbaGame
+            ? normalizeNbaTopScorerPick(goalScorerPick)
+            : null;
       if (existingPostId) {
         await updatePredictionPostApi(existingPostId, {
           winner,
           scoreHome: homeNum,
           scoreAway: awayNum,
-          goalScorer: isWcGame ? goalScorer : undefined,
+          goalScorer: goalScorer ?? undefined,
         });
       } else {
         try {
@@ -1651,7 +1671,7 @@ export default function GamesHomeScreen({
             winner,
             scoreHome: homeNum,
             scoreAway: awayNum,
-            goalScorer: isWcGame ? goalScorer : undefined,
+            goalScorer: goalScorer ?? undefined,
           });
         } catch (err) {
           if (

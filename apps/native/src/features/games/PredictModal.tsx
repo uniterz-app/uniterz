@@ -49,16 +49,14 @@ import {
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
 import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative";
 import PredictOverlayMatchCardShellNative from "./PredictOverlayMatchCardShellNative";
-import PredictProBriefPanelNative from "./predict/PredictProBriefPanelNative";
-import NbaInjuryReportPanelNative from "./predict/NbaInjuryReportPanelNative";
-import NbaTeamStatsPanelNative from "./predict/NbaTeamStatsPanelNative";
-import NbaRosterPanelNative from "./predict/NbaRosterPanelNative";
-import {
-  CyberSlantedTabBarNative,
-  CyberSlantedTabNative,
-} from "../rankings/CyberSlantedTabNative";
+import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
+import NbaTopScorerPickerNative from "./predict/NbaTopScorerPickerNative";
 import { resolvePredictTimingMocksForGame } from "../../../../../lib/predict/resolvePredictTimingMocksForGame";
-import { injuryStatusByPlayerId } from "../../../../../lib/predict/nbaInjuryReport";
+import {
+  normalizeNbaTopScorerCandidates,
+  normalizeNbaTopScorerPick,
+  type NbaTopScorerPick,
+} from "../../../../../lib/nba/topScorer";
 import type { PredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
@@ -759,8 +757,8 @@ type PredictModalProps = {
   /** Web `showOverlayScheduleMeta` 相当（未開始試合のキックオフ・放送局） */
   predictScheduleMeta?: PredictModalScheduleMeta | null;
   wcGoalScorerPreview?: PredictModalWcGoalScorer | null;
-  goalScorerPick?: WcGoalScorerPick | null;
-  setGoalScorerPick?: (value: WcGoalScorerPick | null) => void;
+  goalScorerPick?: WcGoalScorerPick | NbaTopScorerPick | null;
+  setGoalScorerPick?: (value: WcGoalScorerPick | NbaTopScorerPick | null) => void;
   mergedFinalPreview?: PredictModalMergedFinalPreview | null;
   /** 親の predict-overlay-cyber-form 一枚に内包（MatchCard + フォームを分割しない） */
   overlayUnifiedForm?: boolean;
@@ -1026,6 +1024,13 @@ export default function PredictModal({
   const hideMarketTab = Boolean(overlayMarketBar);
   const showNbaPredictTimingOverlay =
     hideMarketTab && predictData?.league === "nba" && !isWcLeague;
+  const nbaTopScorerCandidates = useMemo(
+    () =>
+      normalizeNbaTopScorerCandidates(
+        predictData?.subjectGame?.topScorerCandidates
+      ),
+    [predictData?.subjectGame]
+  );
   const nbaTimingMocks = useMemo(() => {
     if (!showNbaPredictTimingOverlay || !matchPreview) return null;
     const homeTeamId = rawTeamIdFromGameSide(matchPreview.homeSide) ?? "";
@@ -1043,13 +1048,6 @@ export default function PredictModal({
     predictHomeTeamLabel,
     predictAwayTeamLabel,
   ]);
-  const nbaInjuryByPlayerId = useMemo(
-    () =>
-      nbaTimingMocks
-        ? injuryStatusByPlayerId(nbaTimingMocks.injuryReport)
-        : {},
-    [nbaTimingMocks]
-  );
   const showWcOverlayTabs = isWcLeague && hideMarketTab;
   const overlayCenterMode = hideMarketTab;
   const showOverlayScheduleMeta =
@@ -1224,50 +1222,29 @@ export default function PredictModal({
                       />
                     </Animated.View>
                   ) : null}
-                  {showNbaPredictTimingOverlay && isProUser && nbaTimingMocks ? (
-                    <PredictProBriefPanelNative
-                      brief={nbaTimingMocks.proBrief}
+                  {showNbaPredictTimingOverlay ? (
+                    <NbaPredictToolsTabsNative
                       language={language}
+                      isPro={isProUser}
                       homeTeamId={
                         rawTeamIdFromGameSide(matchPreview?.homeSide) ?? ""
                       }
                       awayTeamId={
                         rawTeamIdFromGameSide(matchPreview?.awaySide) ?? ""
                       }
-                      homeTeamName={predictHomeTeamLabel || matchPreview?.homeCompact || "HOME"}
-                      awayTeamName={predictAwayTeamLabel || matchPreview?.awayCompact || "AWAY"}
+                      homeTeamName={
+                        predictHomeTeamLabel || matchPreview?.homeCompact || "HOME"
+                      }
+                      awayTeamName={
+                        predictAwayTeamLabel || matchPreview?.awayCompact || "AWAY"
+                      }
+                      brief={nbaTimingMocks?.proBrief ?? null}
+                      injuryReport={nbaTimingMocks?.injuryReport ?? null}
+                      teamStats={nbaTimingMocks?.teamStats ?? null}
+                      roster={nbaTimingMocks?.roster ?? null}
                     />
-                  ) : null}
+                  ) : (
               <View>
-                {showNbaPredictTimingOverlay ? (
-                  <TutorialTargetNative id="predict-tools">
-                  <View style={s.nbaTimingTabShell}>
-                    <CyberSlantedTabBarNative fill>
-                      <CyberSlantedTabNative
-                        label={t.predictInjuries}
-                        active={predictToolsTab === "injuries"}
-                        onPress={() => handleToolTabPress("injuries")}
-                        compact
-                        fontWeight="700"
-                      />
-                      <CyberSlantedTabNative
-                        label={t.predictTeamStats}
-                        active={predictToolsTab === "stats"}
-                        onPress={() => handleToolTabPress("stats")}
-                        compact
-                        fontWeight="700"
-                      />
-                      <CyberSlantedTabNative
-                        label={t.predictRoster}
-                        active={predictToolsTab === "roster"}
-                        onPress={() => handleToolTabPress("roster")}
-                        compact
-                        fontWeight="700"
-                      />
-                    </CyberSlantedTabBarNative>
-                  </View>
-                  </TutorialTargetNative>
-                ) : (
                 <PredictOverlayChamferedFrameNative
                   cut={PREDICT_OVERLAY_CYBER_DECK_CUT}
                   gradientColors={["rgba(4,8,14,0.9)", "rgba(4,8,14,0.9)"]}
@@ -1334,36 +1311,16 @@ export default function PredictModal({
                   </>
                 )}
                 </PredictOverlayChamferedFrameNative>
-                )}
               </View>
+                  )}
 
-              {predictToolsTab ? (
+              {!showNbaPredictTimingOverlay && predictToolsTab ? (
                 <Animated.View
                   key={`predict-tool-${predictToolsTab}`}
                   entering={toolPanelIn}
                 >
                   <GlassPanel variant="tool" showGrid={false}>
-                    {showNbaPredictTimingOverlay && nbaTimingMocks ? (
-                      <View style={s.predictToolsPanelBody}>
-                        {predictToolsTab === "injuries" ? (
-                          <NbaInjuryReportPanelNative
-                            report={nbaTimingMocks.injuryReport}
-                            language={language}
-                          />
-                        ) : predictToolsTab === "stats" ? (
-                          <NbaTeamStatsPanelNative
-                            data={nbaTimingMocks.teamStats}
-                            isPro={isProUser}
-                            language={language}
-                          />
-                        ) : predictToolsTab === "roster" ? (
-                          <NbaRosterPanelNative
-                            report={nbaTimingMocks.roster}
-                            injuryById={nbaInjuryByPlayerId}
-                          />
-                        ) : null}
-                      </View>
-                    ) : predictToolsTab === "stats" && showWcOverlayTabs ? (
+                    {predictToolsTab === "stats" && showWcOverlayTabs ? (
                       <>
                         <Text style={s.predictToolsPanelKicker}>{t.teamProfile}</Text>
                         <View style={s.predictToolsPanelBody}>
@@ -1615,11 +1572,30 @@ export default function PredictModal({
                               homeLabel={predictHomeTeamLabel || "HOME"}
                               awayLabel={predictAwayTeamLabel || "AWAY"}
                               predictedScore={predictedScoreForGoalScorer}
-                              value={goalScorerPick}
+                              value={
+                                goalScorerPick &&
+                                "playerId" in goalScorerPick
+                                  ? (goalScorerPick as WcGoalScorerPick)
+                                  : null
+                              }
                               onChange={setGoalScorerPick}
                               language={language}
                               t={t}
                               gameId={predictData?.gameId}
+                            />
+                          ) : null}
+                          {!isWcLeague &&
+                          predictData?.league === "nba" &&
+                          setGoalScorerPick ? (
+                            <NbaTopScorerPickerNative
+                              candidates={nbaTopScorerCandidates}
+                              value={
+                                goalScorerPick
+                                  ? normalizeNbaTopScorerPick(goalScorerPick)
+                                  : null
+                              }
+                              onChange={setGoalScorerPick}
+                              language={language}
                             />
                           ) : null}
                           {isSoccerPredict && !isWcLeague ? (
@@ -1673,11 +1649,30 @@ export default function PredictModal({
                               homeLabel={predictHomeTeamLabel || "HOME"}
                               awayLabel={predictAwayTeamLabel || "AWAY"}
                               predictedScore={predictedScoreForGoalScorer}
-                              value={goalScorerPick}
+                              value={
+                                goalScorerPick &&
+                                "playerId" in goalScorerPick
+                                  ? (goalScorerPick as WcGoalScorerPick)
+                                  : null
+                              }
                               onChange={setGoalScorerPick}
                               language={language}
                               t={t}
                               gameId={predictData?.gameId}
+                            />
+                          ) : null}
+                          {!isWcLeague &&
+                          predictData?.league === "nba" &&
+                          setGoalScorerPick ? (
+                            <NbaTopScorerPickerNative
+                              candidates={nbaTopScorerCandidates}
+                              value={
+                                goalScorerPick
+                                  ? normalizeNbaTopScorerPick(goalScorerPick)
+                                  : null
+                              }
+                              onChange={setGoalScorerPick}
+                              language={language}
                             />
                           ) : null}
                           {isSoccerPredict && !isWcLeague ? (

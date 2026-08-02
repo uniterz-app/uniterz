@@ -701,6 +701,7 @@ const pt: Messages = {
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight está disponível com o Pro.",
+    insightUpgradeCta: "Unlock with Pro",
     panelDataPending: "Dados em breve",
     teamProfile: "Dados do time",
     matchPreview: "Prévia do jogo",

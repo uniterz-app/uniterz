@@ -693,6 +693,7 @@ const ko: Messages = {
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight는 Pro 플랜에서 이용할 수 있습니다",
+    insightUpgradeCta: "Unlock with Pro",
     panelDataPending: "데이터 준비 중입니다",
     teamProfile: "팀 데이터",
     matchPreview: "경기 전망",

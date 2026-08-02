@@ -693,6 +693,7 @@ const zh: Messages = {
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight 需要 Pro 方案。",
+    insightUpgradeCta: "Unlock with Pro",
     panelDataPending: "数据即将上线",
     teamProfile: "球队数据",
     matchPreview: "比赛展望",

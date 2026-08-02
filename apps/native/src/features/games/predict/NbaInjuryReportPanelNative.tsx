@@ -21,27 +21,33 @@ type Props = {
   language: GamesLanguage;
 };
 
-const TONE_COLORS: Record<InjuryStatusTone, string> = {
-  out: "#FF2D78",
-  doubt: "#FF8A3D",
-  question: "#F5C518",
-  probable: "#00E5FF",
-  available: "#2DFF6E",
-  neutral: "rgba(255,255,255,0.55)",
+const TONE_COLORS: Record<
+  InjuryStatusTone,
+  { accent: string; border: string }
+> = {
+  out: { accent: "#FF2D78", border: "rgba(255,45,120,0.85)" },
+  doubt: { accent: "#FF8A3D", border: "rgba(255,138,61,0.85)" },
+  question: { accent: "#F5C518", border: "rgba(245,197,24,0.9)" },
+  probable: { accent: "#00E5FF", border: "rgba(0,229,255,0.85)" },
+  available: { accent: "#2DFF6E", border: "rgba(45,255,110,0.85)" },
+  neutral: {
+    accent: "rgba(255,255,255,0.55)",
+    border: "rgba(255,255,255,0.22)",
+  },
 };
 
 /** Web `StatusIcon` 相当（tone ごとのアイコン） */
 function StatusIcon({ tone, color }: { tone: InjuryStatusTone; color: string }) {
   if (tone === "out") {
     return (
-      <Svg width={18} height={18} viewBox="0 0 28 28" fill="none">
+      <Svg width={22} height={22} viewBox="0 0 28 28" fill="none">
         <Path d="M7 7L21 21M21 7L7 21" stroke={color} strokeWidth={3.2} strokeLinecap="round" />
       </Svg>
     );
   }
   if (tone === "question" || tone === "doubt") {
     return (
-      <Svg width={18} height={18} viewBox="0 0 28 28" fill="none">
+      <Svg width={22} height={22} viewBox="0 0 28 28" fill="none">
         <Circle cx={14} cy={14} r={11} stroke={color} strokeWidth={2.2} />
         <Path
           d="M10.8 10.6c0-1.9 1.5-3.4 3.3-3.4s3.3 1.4 3.3 3.2c0 1.5-.8 2.3-2 3.1-.9.6-1.5 1.2-1.5 2.4"
@@ -55,7 +61,7 @@ function StatusIcon({ tone, color }: { tone: InjuryStatusTone; color: string }) 
   }
   if (tone === "probable") {
     return (
-      <Svg width={18} height={18} viewBox="0 0 28 28" fill="none">
+      <Svg width={22} height={22} viewBox="0 0 28 28" fill="none">
         <Path
           d="M14 3.5L23 7.2V13c0 5.4-3.7 9.4-9 10.8C8.7 22.4 5 18.4 5 13V7.2L14 3.5Z"
           stroke={color}
@@ -67,7 +73,7 @@ function StatusIcon({ tone, color }: { tone: InjuryStatusTone; color: string }) 
   }
   if (tone === "available") {
     return (
-      <Svg width={18} height={18} viewBox="0 0 28 28" fill="none">
+      <Svg width={22} height={22} viewBox="0 0 28 28" fill="none">
         <Path
           d="M6.5 14.5L11.5 19.5L21.5 8.5"
           stroke={color}
@@ -79,7 +85,7 @@ function StatusIcon({ tone, color }: { tone: InjuryStatusTone; color: string }) 
     );
   }
   return (
-    <Svg width={18} height={18} viewBox="0 0 28 28" fill="none">
+    <Svg width={22} height={22} viewBox="0 0 28 28" fill="none">
       <Circle cx={14} cy={14} r={9} stroke={color} strokeWidth={2} />
     </Svg>
   );
@@ -93,14 +99,14 @@ function InjuryCard({
   language: GamesLanguage;
 }) {
   const tone = injuryStatusTone(row.status);
-  const accent = TONE_COLORS[tone] ?? TONE_COLORS.neutral;
+  const colors = TONE_COLORS[tone] ?? TONE_COLORS.neutral;
   const statusText = injuryStatusLabel(row.status);
   const detail = injuryDetailLabel(row, language === "ja" ? "ja" : "en");
   const expected = (row.returnDate ?? "—").toUpperCase();
   const position = row.player.position?.trim();
 
   return (
-    <View style={[styles.card, { borderColor: `${accent}88` }]}>
+    <View style={[styles.card, { borderColor: colors.border }]}>
       <View style={styles.cardBody}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.playerName} numberOfLines={1}>
@@ -112,20 +118,28 @@ function InjuryCard({
               {detail}
             </Text>
           ) : null}
-          <Text style={[styles.exp, { color: accent }]} numberOfLines={1}>
+          <Text style={[styles.exp, { color: colors.accent }]} numberOfLines={1}>
             EXP: {expected}
           </Text>
         </View>
         <View style={styles.statusCol}>
           <View style={styles.statusDivider} />
           <View style={styles.statusInner}>
-            <StatusIcon tone={tone} color={accent} />
-            <Text style={[styles.statusText, { color: accent }]} numberOfLines={2}>
+            <StatusIcon tone={tone} color={colors.accent} />
+            <Text
+              style={[styles.statusText, { color: colors.accent }]}
+              numberOfLines={2}
+            >
               {statusText}
             </Text>
           </View>
         </View>
       </View>
+      {/* Web 右下アクセント三角（clip-path の代替） */}
+      <View
+        style={[styles.cardCornerAccent, { borderTopColor: colors.accent }]}
+        pointerEvents="none"
+      />
     </View>
   );
 }
@@ -173,10 +187,10 @@ const OXANIUM = "Oxanium_700Bold";
 
 const styles = StyleSheet.create({
   grid: { flexDirection: "row", gap: 8 },
-  column: { flex: 1, minWidth: 0, gap: 6 },
+  column: { flex: 1, minWidth: 0, gap: 8 },
   columnTitle: {
     fontFamily: OXANIUM,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 1.4,
     color: "#fff",
@@ -187,28 +201,48 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(8,10,14,0.92)",
-    paddingVertical: 12,
-    fontSize: 10,
+    paddingVertical: 14,
+    fontSize: 12,
     color: "rgba(255,255,255,0.35)",
     textAlign: "center",
   },
   card: {
     borderWidth: 1,
     backgroundColor: "rgba(8,10,14,0.92)",
+    overflow: "hidden",
+    position: "relative",
   },
-  cardBody: { flexDirection: "row", alignItems: "stretch", gap: 6, paddingHorizontal: 8, paddingVertical: 7 },
+  cardBody: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 10,
+    paddingRight: 6,
+  },
+  cardCornerAccent: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    borderStyle: "solid",
+    borderLeftWidth: 8,
+    borderTopWidth: 8,
+    borderLeftColor: "transparent",
+  },
   playerName: {
     fontFamily: OXANIUM,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.4,
     color: "#fff",
     textTransform: "uppercase",
   },
-  playerPos: { fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)" },
-  detail: { marginTop: 2, fontSize: 9, lineHeight: 12, color: "rgba(255,255,255,0.45)" },
+  playerPos: { fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.35)" },
+  detail: { marginTop: 3, fontSize: 11, lineHeight: 14, color: "rgba(255,255,255,0.5)" },
   exp: {
-    marginTop: 2,
+    marginTop: 3,
     fontFamily: OXANIUM,
     fontSize: 9,
     fontWeight: "800",
@@ -217,11 +251,11 @@ const styles = StyleSheet.create({
   },
   statusCol: { flexDirection: "row", alignItems: "stretch", gap: 4 },
   statusDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.18)", marginVertical: 2 },
-  statusInner: { width: 46, alignItems: "center", justifyContent: "center", gap: 2 },
+  statusInner: { width: 54, alignItems: "center", justifyContent: "center", gap: 3 },
   statusText: {
     maxWidth: "100%",
     fontFamily: OXANIUM,
-    fontSize: 7,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.2,
     textAlign: "center",
