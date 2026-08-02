@@ -63,6 +63,7 @@ import {
   MOBILE_RESULT_CARD_GAP,
   MOBILE_RESULT_CARD_MAX_W,
   MOBILE_RESULT_JERSEY_SIZE,
+  MOBILE_RESULT_JERSEY_WIDTH_SCALE,
   MOBILE_RESULT_MATCH_SIDE_SCORE_PAD,
   MOBILE_RESULT_STAT_LABEL_W,
   MOBILE_RESULT_STAT_ROW_GAP,
@@ -77,6 +78,7 @@ import {
 import { shareResultCardNative } from "./shareResultCardNative";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
+const JERSEY_WIDTH_SCALE = MOBILE_RESULT_JERSEY_WIDTH_SCALE;
 const NUMERIC_FONT_FAMILY = NUMERIC_FONT;
 const DISPLAY_FONT_FAMILY = DISPLAY_FONT;
 
@@ -601,11 +603,15 @@ export default function ResultPostCardNative({
                       <CountryFlagNative teamId={home?.teamId} variant="result" />
                     </WcTeamFlagWithMetaNative>
                   ) : (
-                    <JerseyMarkAdaptive
-                      accent={homeJersey.primary}
-                      accentEnd={homeJersey.secondary}
-                      size={JERSEY_SIZE_RESULT}
-                    />
+                    <View
+                      style={{ transform: [{ scaleX: JERSEY_WIDTH_SCALE }] }}
+                    >
+                      <JerseyMarkAdaptive
+                        accent={homeJersey.primary}
+                        accentEnd={homeJersey.secondary}
+                        size={JERSEY_SIZE_RESULT}
+                      />
+                    </View>
                   )}
                 </Animated.View>
                 <Animated.View style={entrance.homeTeamLabelStyle}>
@@ -648,11 +654,15 @@ export default function ResultPostCardNative({
                       <CountryFlagNative teamId={away?.teamId} variant="result" />
                     </WcTeamFlagWithMetaNative>
                   ) : (
-                    <JerseyMarkAdaptive
-                      accent={awayJersey.primary}
-                      accentEnd={awayJersey.secondary}
-                      size={JERSEY_SIZE_RESULT}
-                    />
+                    <View
+                      style={{ transform: [{ scaleX: JERSEY_WIDTH_SCALE }] }}
+                    >
+                      <JerseyMarkAdaptive
+                        accent={awayJersey.primary}
+                        accentEnd={awayJersey.secondary}
+                        size={JERSEY_SIZE_RESULT}
+                      />
+                    </View>
                   )}
                 </Animated.View>
                 <Animated.View style={entrance.awayTeamLabelStyle}>
