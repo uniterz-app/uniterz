@@ -7813,10 +7813,11 @@ body::before {
   max-width: 100%;
 }
 
-/* プロフィールのサイドメニュー入口 — 画面左端の縦ハンドル（body ポータル想定） */
+/* プロフィールのサイドメニュー入口 — 画面右端の縦ハンドル（body ポータル想定） */
 .profile-menu-edge-handle {
   position: fixed !important;
-  left: 0 !important;
+  right: 0 !important;
+  left: auto !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   z-index: 35 !important;
@@ -7832,7 +7833,8 @@ body::before {
   padding: 10px 0 !important;
   margin: 0 !important;
   border: 1px solid rgba(250, 204, 21, 0.55) !important;
-  border-left: none !important;
+  border-right: none !important;
+  border-left: 1px solid rgba(250, 204, 21, 0.55) !important;
   border-radius: 0 !important;
   background: rgba(8, 12, 6, 0.94) !important;
   color: #facc15 !important;
@@ -7861,7 +7863,8 @@ body::before {
 .profile-menu-edge-handle__badge {
   position: absolute;
   top: -6px;
-  right: -6px;
+  left: -6px;
+  right: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8194,7 +8197,7 @@ body::before {
 }
 
 
-/* ID 側は右下コーナー（JOIN の左下と対） */
+/* カード左下: JOIN + ID を左寄せで並べる */
 .profile-edit-kinetik-footer-ref--id {
   border-left: none;
   border-right: 1px solid var(--kinetik-frame-dim);

@@ -99,10 +99,10 @@ export default function ProfileSideMenuModal({
     ? `@${handle.trim()}`
     : "OPERATOR";
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const slide = useRef(new Animated.Value(-PANEL_W - 24)).current;
+  const slide = useRef(new Animated.Value(PANEL_W + 24)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
-  /** 左端密着フルハイト — 内側だけ safe area */
+  /** 左端密着 — 内側だけ safe area */
   const contentPad = useMemo(
     () => ({
       paddingTop: insets.top + 12,
@@ -143,7 +143,7 @@ export default function ProfileSideMenuModal({
           useNativeDriver: true,
         }),
         Animated.timing(slide, {
-          toValue: -PANEL_W - 24,
+          toValue: PANEL_W + 24,
           duration: 240,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
@@ -296,7 +296,12 @@ export default function ProfileSideMenuModal({
             pointerEvents="box-none"
           >
             <Pressable style={styles.panelPressable} onPress={(e) => e.stopPropagation()}>
-              <CyberSideMenuPanelNative fillHeight edgeAttach style={styles.panel}>
+              <CyberSideMenuPanelNative
+                fillHeight
+                edgeAttach
+                edgeSide="right"
+                style={styles.panel}
+              >
                 <ScrollView
                   style={styles.scroll}
                   contentContainerStyle={[styles.scrollContent, contentPad]}
@@ -666,7 +671,7 @@ const styles = StyleSheet.create({
   },
   panelOuter: {
     position: "absolute",
-    left: 0,
+    right: 0,
     top: 0,
     bottom: 0,
     zIndex: 2,

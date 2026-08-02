@@ -12,8 +12,10 @@ type Props = {
    * false/省略: 中身の高さに合わせる（ランキング等の短いドロワー向け。flex:1 だと親高さ未定で 0 になる）
    */
   fillHeight?: boolean;
-  /** 左端密着 — 四方枠の浮きカード感を消し、右辺に影を落とす */
+  /** 端密着 — 四方枠の浮きカード感を消し、内側辺に影を落とす */
   edgeAttach?: boolean;
+  /** edgeAttach 時の画面端（プロフィールは right） */
+  edgeSide?: "left" | "right";
 };
 
 /** Web `cyber-side-menu-panel` + `CyberSideMenuFrame` ラッパー */
@@ -22,7 +24,9 @@ export default function CyberSideMenuPanelNative({
   style,
   fillHeight = false,
   edgeAttach = false,
+  edgeSide = "left",
 }: Props) {
+  const attachRight = edgeAttach && edgeSide === "right";
   return (
     <View
       style={[
@@ -36,8 +40,8 @@ export default function CyberSideMenuPanelNative({
         <LinearGradient
           colors={[...CYBER_SIDE_MENU_PANEL.backgroundFadeHorizontal]}
           locations={[...CYBER_SIDE_MENU_PANEL.backgroundFadeHorizontalLocations]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
+          start={attachRight ? { x: 1, y: 0.5 } : { x: 0, y: 0.5 }}
+          end={attachRight ? { x: 0, y: 0.5 } : { x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFillObject}
         />
       ) : (
@@ -59,7 +63,10 @@ export default function CyberSideMenuPanelNative({
           locations={[...CYBER_SIDE_MENU_PANEL.edgeLineLocations]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
-          style={styles.edgeLine}
+          style={[
+            styles.edgeLine,
+            attachRight ? { left: 0, right: undefined } : { right: 0 },
+          ]}
           pointerEvents="none"
         />
       ) : null}
@@ -102,7 +109,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     bottom: 0,
-    right: 0,
     width: 1.5,
     zIndex: 3,
     shadowColor: "#00F5FF",

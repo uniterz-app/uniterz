@@ -430,13 +430,13 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
-/** 名前行インライン国旗（Native / 参考レイアウト） */
+/** 表示名の直下に置く国旗 */
 function ProfileKinetikNameFlag({ countryCode }: { countryCode?: string | null }) {
   const flagIso = countryCode?.trim().toUpperCase() || null;
   if (!flagIso) return null;
 
   return (
-    <span className="profile-edit-kinetik-name-flag inline-flex shrink-0 items-center self-center">
+    <span className="profile-edit-kinetik-name-flag mt-1.5 inline-flex shrink-0 items-center self-start">
       <CountryFlag
         iso2={flagIso}
         variant="profileInline"
@@ -491,7 +491,7 @@ function ProfileKinetikIdentityJoinIdRow({
   if (!memberSinceLabel && !systemId) return null;
 
   return (
-    <div className="profile-edit-kinetik-identity-join-id mt-1 flex w-fit max-w-full min-w-0 items-end justify-start gap-2">
+    <div className="profile-edit-kinetik-identity-join-id flex w-fit max-w-full min-w-0 items-end justify-start gap-2">
       {memberSinceLabel ? (
         <p className="profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity shrink-0 whitespace-nowrap">
           {memberSinceLabel}
@@ -1196,7 +1196,7 @@ export default function ProfileEditKinetikPanel({
       >
         <div className="profile-edit-kinetik-layout-web grid md:grid-cols-[minmax(300px,36%)_1fr]">
           <aside className="profile-edit-kinetik-layout-web__side relative flex flex-col overflow-visible border-b border-white/10 px-6 py-7 md:border-r md:border-b-0 md:px-7 md:py-8">
-            <div className="flex flex-col items-stretch text-left">
+            <div className="flex min-h-0 flex-1 flex-col items-stretch text-left">
               <div className="flex items-start gap-4 sm:gap-5">
                 <div className="profile-edit-kinetik-avatar-column shrink-0 items-start">
                   <ProfileEditKinetikAvatarWithStreak
@@ -1213,21 +1213,18 @@ export default function ProfileEditKinetikPanel({
                 </div>
                 <div className="min-w-0 flex-1 pt-0.5">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <div className="profile-edit-kinetik-name-with-flag flex min-w-0 items-center gap-2">
-                      <h2
-                        className={[
-                          nameOxanium.className,
-                          "leading-none font-bold italic tracking-tight text-white",
-                          "text-[22px] sm:text-[24px] md:text-[26px]",
-                          isPro
-                            ? "profile-plan-pro-display-name inline-block w-fit max-w-full truncate"
-                            : "min-w-0 truncate",
-                        ].join(" ")}
-                      >
-                        {identity.displayName}
-                      </h2>
-                      <ProfileKinetikNameFlag countryCode={countryCode} />
-                    </div>
+                    <h2
+                      className={[
+                        nameOxanium.className,
+                        "leading-none font-bold italic tracking-tight text-white",
+                        "text-[22px] sm:text-[24px] md:text-[26px]",
+                        isPro
+                          ? "profile-plan-pro-display-name inline-block w-fit max-w-full truncate"
+                          : "min-w-0 truncate",
+                      ].join(" ")}
+                    >
+                      {identity.displayName}
+                    </h2>
                     {isPro ? (
                       <ProCyberBadge
                         premium
@@ -1238,16 +1235,7 @@ export default function ProfileEditKinetikPanel({
                       <div className="ml-auto shrink-0">{unitCorner}</div>
                     ) : null}
                   </div>
-                  <div className="mt-1 w-full">
-                    <ProfileKinetikIdentityJoinIdRow
-                      memberSinceLabel={memberSinceLabel}
-                      systemId={identity.systemId}
-                      shareLabel={metricCopy.shareProfile}
-                      shareCopiedLabel={metricCopy.shareCopied}
-                      shareCopied={shareCopied}
-                      onShare={handleShareProfile}
-                    />
-                  </div>
+                  <ProfileKinetikNameFlag countryCode={countryCode} />
                 </div>
               </div>
               {bio?.trim() ? (
@@ -1265,6 +1253,16 @@ export default function ProfileEditKinetikPanel({
                   />
                 </div>
               ) : null}
+              <div className="mt-auto pt-4">
+                <ProfileKinetikIdentityJoinIdRow
+                  memberSinceLabel={memberSinceLabel}
+                  systemId={identity.systemId}
+                  shareLabel={metricCopy.shareProfile}
+                  shareCopiedLabel={metricCopy.shareCopied}
+                  shareCopied={shareCopied}
+                  onShare={handleShareProfile}
+                />
+              </div>
             </div>
           </aside>
 
@@ -1320,31 +1318,21 @@ export default function ProfileEditKinetikPanel({
             <div className="profile-edit-kinetik-header__meta profile-edit-kinetik-header__meta--stacked min-w-0 flex-1">
               <div className="profile-edit-kinetik-header__identity">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <div className="profile-edit-kinetik-name-with-flag flex min-w-0 items-center gap-1.5">
-                    <h2
-                      className={[
-                        nameOxanium.className,
-                        "text-[16px] leading-none font-bold italic tracking-tight text-white sm:text-[18px]",
-                        "profile-plan-pro-display-name inline-block w-fit max-w-full truncate",
-                      ].join(" ")}
-                    >
-                      {identity.displayName}
-                    </h2>
-                    <ProfileKinetikNameFlag countryCode={countryCode} />
-                  </div>
+                  <h2
+                    className={[
+                      nameOxanium.className,
+                      "text-[16px] leading-none font-bold italic tracking-tight text-white sm:text-[18px]",
+                      "profile-plan-pro-display-name inline-block w-fit max-w-full truncate",
+                    ].join(" ")}
+                  >
+                    {identity.displayName}
+                  </h2>
                   <ProCyberBadge premium ariaLabel={metricCopy.proMember} />
                   {unitCorner ? (
                     <div className="ml-auto shrink-0">{unitCorner}</div>
                   ) : null}
                 </div>
-                <ProfileKinetikIdentityJoinIdRow
-                  memberSinceLabel={memberSinceLabel}
-                  systemId={identity.systemId}
-                  shareLabel={metricCopy.shareProfile}
-                  shareCopiedLabel={metricCopy.shareCopied}
-                  shareCopied={shareCopied}
-                  onShare={handleShareProfile}
-                />
+                <ProfileKinetikNameFlag countryCode={countryCode} />
               </div>
             </div>
           </div>
@@ -1372,6 +1360,17 @@ export default function ProfileEditKinetikPanel({
             {metricsScopeHeader}
             {metricsContent}
           </div>
+
+          <div className="mt-auto pt-3">
+            <ProfileKinetikIdentityJoinIdRow
+              memberSinceLabel={memberSinceLabel}
+              systemId={identity.systemId}
+              shareLabel={metricCopy.shareProfile}
+              shareCopiedLabel={metricCopy.shareCopied}
+              shareCopied={shareCopied}
+              onShare={handleShareProfile}
+            />
+          </div>
         </div>
       ) : (
         <div className="profile-edit-kinetik-header-block">
@@ -1391,7 +1390,7 @@ export default function ProfileEditKinetikPanel({
             </div>
             <div className="profile-edit-kinetik-header__meta profile-edit-kinetik-header__meta--stacked min-w-0 flex-1">
               <div className="profile-edit-kinetik-header__identity">
-                <div className="profile-edit-kinetik-name-with-flag flex min-w-0 flex-wrap items-center gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   <h2
                     className={[
                       nameOxanium.className,
@@ -1400,19 +1399,11 @@ export default function ProfileEditKinetikPanel({
                   >
                     {identity.displayName}
                   </h2>
-                  <ProfileKinetikNameFlag countryCode={countryCode} />
                   {unitCorner ? (
                     <div className="ml-auto shrink-0">{unitCorner}</div>
                   ) : null}
                 </div>
-                <ProfileKinetikIdentityJoinIdRow
-                  memberSinceLabel={memberSinceLabel}
-                  systemId={identity.systemId}
-                  shareLabel={metricCopy.shareProfile}
-                  shareCopiedLabel={metricCopy.shareCopied}
-                  shareCopied={shareCopied}
-                  onShare={handleShareProfile}
-                />
+                <ProfileKinetikNameFlag countryCode={countryCode} />
               </div>
             </div>
             <div
@@ -1443,6 +1434,19 @@ export default function ProfileEditKinetikPanel({
         {metricsScopeHeader}
         {metricsContent}
       </div>
+      ) : null}
+
+      {!isPro ? (
+        <div className="mt-3">
+          <ProfileKinetikIdentityJoinIdRow
+            memberSinceLabel={memberSinceLabel}
+            systemId={identity.systemId}
+            shareLabel={metricCopy.shareProfile}
+            shareCopiedLabel={metricCopy.shareCopied}
+            shareCopied={shareCopied}
+            onShare={handleShareProfile}
+          />
+        </div>
       ) : null}
 
     </ProfileKinetikPanelFrame>

@@ -1662,26 +1662,12 @@ export default function ProfileKinetikPanelNative({
             <KinetikHeaderHatch />
             <View style={styles.headerIdentity}>
               <View style={styles.nameRow}>
-                <View style={styles.nameWithFlag}>
-                  <Text
-                    style={[styles.displayName, isPro ? styles.displayNamePro : null]}
-                    numberOfLines={1}
-                  >
-                    {identity.displayName}
-                  </Text>
-                  {profileFlagUri ? (
-                    <View
-                      style={styles.nameInlineFlagWrap}
-                      accessibilityLabel={countryCode ?? undefined}
-                    >
-                      <Image
-                        source={{ uri: profileFlagUri }}
-                        style={styles.nameInlineFlag}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  ) : null}
-                </View>
+                <Text
+                  style={[styles.displayName, isPro ? styles.displayNamePro : null]}
+                  numberOfLines={1}
+                >
+                  {identity.displayName}
+                </Text>
                 {isPro ? <ProCyberBadgeNative premium /> : null}
                 {unitBalance != null && unitBalanceAria ? (
                   <KinetikUnitVaultNative
@@ -1692,14 +1678,18 @@ export default function ProfileKinetikPanelNative({
                   />
                 ) : null}
               </View>
-              <KinetikIdentityJoinIdRowNative
-                memberSinceLabel={memberSinceLabel}
-                idLabel={profileIdLabel}
-                shareCopied={shareCopied}
-                copiedLabel={shareCopiedLabel}
-                shareLabel={shareProfileLabel}
-                onShare={handleShareProfile}
-              />
+              {profileFlagUri ? (
+                <View
+                  style={styles.nameFlagBelow}
+                  accessibilityLabel={countryCode ?? undefined}
+                >
+                  <Image
+                    source={{ uri: profileFlagUri }}
+                    style={styles.nameFlagBelowImg}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : null}
             </View>
           </View>
         </View>
@@ -1810,6 +1800,17 @@ export default function ProfileKinetikPanelNative({
         </View>
       </View>
 
+      <View style={styles.cardFooterMeta}>
+        <KinetikIdentityJoinIdRowNative
+          memberSinceLabel={memberSinceLabel}
+          idLabel={profileIdLabel}
+          shareCopied={shareCopied}
+          copiedLabel={shareCopiedLabel}
+          shareLabel={shareProfileLabel}
+          onShare={handleShareProfile}
+        />
+      </View>
+
     </View>
   );
 }
@@ -1822,11 +1823,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "transparent",
     overflow: "hidden",
+    flexDirection: "column",
   },
   frameOuterPlanPro: {
     backgroundColor: "rgba(3,8,13,0.14)",
     minHeight: 520,
-    flexDirection: "column",
   },
   planProAmbient: {
     ...StyleSheet.absoluteFillObject,
@@ -1961,28 +1962,26 @@ const styles = StyleSheet.create({
     width: "100%",
     flexWrap: "wrap",
   },
-  /** 名前と国旗だけを同じ高さで中央揃え（PRO バッジ高さの影響を受けない） */
-  nameWithFlag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  nameInlineFlagWrap: {
-    width: 18,
-    height: 12,
+  nameFlagBelow: {
+    marginTop: 6,
+    width: 22,
+    height: 15,
     borderRadius: 1,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255,255,255,0.28)",
     overflow: "hidden",
-    flexShrink: 0,
-    // イタリック名の光学中心に合わせる
-    transform: [{ translateY: -1 }],
+    alignSelf: "flex-start",
   },
-  nameInlineFlag: {
+  nameFlagBelowImg: {
     width: "100%",
     height: "100%",
+  },
+  cardFooterMeta: {
+    marginTop: "auto",
+    paddingTop: 12,
+    alignSelf: "stretch",
+    alignItems: "flex-start",
+    zIndex: 1,
   },
   identityIdPress: {
     alignSelf: "flex-start",
@@ -1990,7 +1989,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   identityIdPressInline: {
-    alignSelf: "flex-end",
+    alignSelf: "flex-start",
     marginTop: 0,
     flexShrink: 0,
   },
@@ -2001,12 +2000,11 @@ const styles = StyleSheet.create({
     gap: 8,
     alignSelf: "flex-start",
     maxWidth: "100%",
-    marginTop: 2,
   },
   footerRefJoin: {
     flexShrink: 0,
   },
-  /** ID 側は右下コーナー（JOIN の左下と対） */
+  /** カード左下: JOIN + ID を左寄せで並べる */
   footerRefId: {
     borderLeftWidth: 0,
     borderRightWidth: 1,

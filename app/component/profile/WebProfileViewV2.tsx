@@ -363,6 +363,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           setProfileEditOpen(true);
         }}
         variant="web"
+        from="right"
       />
 
       {profileEditOpen

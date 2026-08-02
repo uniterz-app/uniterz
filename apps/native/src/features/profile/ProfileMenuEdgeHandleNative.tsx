@@ -1,5 +1,5 @@
 /**
- * Web `ProfileMenuEdgeHandle` 相当 — 画面左端の縦ハンドル + エッジスワイプ。
+ * Web `ProfileMenuEdgeHandle` 相当 — 画面右端の縦ハンドル + エッジスワイプ。
  * プロフィールカード内バーガー廃止に伴うサイドメニュー入口。
  */
 import { useRef } from "react";
@@ -28,9 +28,9 @@ export default function ProfileMenuEdgeHandleNative({
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_e, g) =>
-        g.dx > 12 && Math.abs(g.dy) < CANCEL_DY,
+        g.dx < -12 && Math.abs(g.dy) < CANCEL_DY,
       onPanResponderRelease: (_e, g) => {
-        if (g.dx > OPEN_DX) onOpen();
+        if (g.dx < -OPEN_DX) onOpen();
       },
     })
   ).current;
@@ -71,7 +71,7 @@ export default function ProfileMenuEdgeHandleNative({
 const styles = StyleSheet.create({
   edgeStrip: {
     position: "absolute",
-    left: 0,
+    right: 0,
     top: 0,
     bottom: 0,
     width: 14,
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   handle: {
     position: "absolute",
-    left: 0,
+    right: 0,
     top: "46%",
     zIndex: 20,
     width: 19,
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 3,
     borderWidth: 1,
-    borderLeftWidth: 0,
+    borderRightWidth: 0,
     borderColor: "rgba(250,204,21,0.55)",
     backgroundColor: "rgba(8,12,6,0.92)",
     shadowColor: "#facc15",
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   badge: {
     position: "absolute",
     top: -6,
-    right: -6,
+    left: -6,
     minWidth: 14,
     height: 14,
     paddingHorizontal: 3,

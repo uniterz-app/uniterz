@@ -388,6 +388,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           setProfileEditOpen(true);
         }}
         variant="mobile"
+        from="right"
       />
 
       {profileEditOpen

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * プロフィールのサイドメニュー入口 — 画面左端の縦ハンドル + 左端スワイプ。
+ * プロフィールのサイドメニュー入口 — 画面右端の縦ハンドル + 右端スワイプ。
  * カード内のバーガーアイコン廃止に伴う代替導線。
  * body へポータルして、親の transform / overflow に固定位置を奪われないようにする。
  */
@@ -40,7 +40,7 @@ export default function ProfileMenuEdgeHandle({
     const onTouchStart = (e: TouchEvent) => {
       const t = e.touches[0];
       if (!t) return;
-      if (t.clientX <= EDGE_START_PX) {
+      if (t.clientX >= window.innerWidth - EDGE_START_PX) {
         tracking = true;
         startX = t.clientX;
         startY = t.clientY;
@@ -56,7 +56,7 @@ export default function ProfileMenuEdgeHandle({
         tracking = false;
         return;
       }
-      if (dx > OPEN_DX_PX) {
+      if (dx < -OPEN_DX_PX) {
         tracking = false;
         onOpen();
       }
