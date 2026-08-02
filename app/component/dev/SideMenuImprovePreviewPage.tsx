@@ -11,7 +11,6 @@ import cn from "clsx";
 import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { nameOxanium, jp } from "@/lib/fonts";
-import { formatCyberSideMenuDate } from "@/lib/ui/cyberSideMenuDate";
 import "./sideMenuImprovePreview.css";
 
 type Props = {
@@ -176,7 +175,6 @@ function PreviewMenu({ flags }: { flags: Flags }) {
 
 /** ドロワーパネル（背景・エッジ・ヘッダー/フッターをフラグで切替） */
 function DrawerPanel({ flags }: { flags: Flags }) {
-  const hudDate = formatCyberSideMenuDate();
   return (
     <div className={cn("smip-panel", flags.edge && "has-edge")}>
       {flags.edge ? (
@@ -187,38 +185,14 @@ function DrawerPanel({ flags }: { flags: Flags }) {
       ) : null}
       <div className="smip-panel__body">
         {flags.frame ? (
-          <div className="smip-header smip-header--row">
-            <div>
-              <p className={cn(nameOxanium.className, "smip-header__title")}>
-                UNITERZ
-              </p>
-              <p className={cn(nameOxanium.className, "smip-header__sub")}>
-                GAMES // DRAWER
-              </p>
-            </div>
-            <div className="smip-header__date">
-              <p className={cn(nameOxanium.className, "smip-header__date-num")}>
-                {hudDate.date}
-              </p>
-              <p className={cn(nameOxanium.className, "smip-header__date-wd")}>
-                {hudDate.weekday}
-              </p>
-            </div>
+          <div className="smip-header">
+            <p className={cn(nameOxanium.className, "smip-header__title")}>
+              UNITERZ
+            </p>
           </div>
         ) : null}
 
         <PreviewMenu flags={flags} />
-
-        {flags.frame ? (
-          <div className="smip-footer">
-            <div aria-hidden className="smip-footer__rule" />
-            <div className={cn(nameOxanium.className, "smip-footer__row")}>
-              <span aria-hidden className="smip-footer__dot" />
-              <span>SYS ONLINE</span>
-              <span className="smip-footer__ver">v1.0 // UNITERZ</span>
-            </div>
-          </div>
-        ) : null}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import type { ProfilePlanProAdoptedEntry } from "@/lib/profile/profilePlanProAdoptedBgVariants";
 import { PROFILE_PLAN_PRO_BEAST_BG_VARIANTS } from "@/lib/profile/profilePlanProBeastBgVariants";
 import { PROFILE_PLAN_PRO_FORM_BG_VARIANTS } from "@/lib/profile/profilePlanProFormBgVariants";
+import { PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS } from "@/lib/profile/profilePlanProFuturisticBgVariants";
 import { PROFILE_PLAN_PRO_NEO_BG_VARIANTS } from "@/lib/profile/profilePlanProNeoBgVariants";
 import { PROFILE_PLAN_PRO_SCALE_BG_VARIANTS } from "@/lib/profile/profilePlanProScaleBgVariants";
 
@@ -38,6 +39,12 @@ export function profilePlanProAdoptedSkinSwatch(
   if (family === "neo") {
     return (
       PROFILE_PLAN_PRO_NEO_BG_VARIANTS.find((v) => v.id === id)?.swatch ??
+      DEFAULT_SWATCH
+    );
+  }
+  if (family === "futuristic") {
+    return (
+      PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS.find((v) => v.id === id)?.swatch ??
       DEFAULT_SWATCH
     );
   }

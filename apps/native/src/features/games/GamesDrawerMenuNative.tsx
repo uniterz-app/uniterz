@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { ReactNode } from "react";
-import { LinearGradient } from "expo-linear-gradient";
 import CyberSideMenuSectionTitleNative from "../../ui/CyberSideMenuSectionTitleNative";
 import SideMenuItemButtonNative from "../../ui/SideMenuItemButtonNative";
 import {
@@ -11,7 +10,6 @@ import {
   sideMenuLabelStyle,
 } from "../../ui/cyberSideMenuNative";
 import { formatCyberSideMenuDate } from "../../../../../lib/ui/cyberSideMenuDate";
-
 const ICONS = {
   nba: require("../../../assets/games-drawer/nba.png") as number,
   awards: require("../../../assets/games-drawer/awards.png") as number,
@@ -58,16 +56,11 @@ export default function GamesDrawerMenuNative({
 
   return (
     <View style={styles.root}>
-      {/* ミニヘッダー — 左ブランド / 右日付 */}
+      {/* ミニヘッダー — UNITERZ + 日付 */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle} allowFontScaling={false}>
-            UNITERZ
-          </Text>
-          <Text style={styles.headerSub} allowFontScaling={false}>
-            GAMES // DRAWER
-          </Text>
-        </View>
+        <Text style={styles.headerTitle} allowFontScaling={false}>
+          UNITERZ
+        </Text>
         <View style={styles.headerDate}>
           <Text style={styles.headerDateNum} allowFontScaling={false}>
             {hudDate.date}
@@ -127,37 +120,12 @@ export default function GamesDrawerMenuNative({
           World Cup
         </SideMenuItemButtonNative>
       </View>
-
-      {/* HUD フッター — 空洞だった下部を分節 */}
-      <View style={styles.footer}>
-        <LinearGradient
-          colors={[
-            "rgba(0, 245, 255, 0.5)",
-            "rgba(0, 245, 255, 0.08)",
-            "transparent",
-          ]}
-          locations={[0, 0.7, 1]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={styles.footerRule}
-        />
-        <View style={styles.footerRow}>
-          <View style={styles.footerDot} />
-          <Text style={styles.footerText} allowFontScaling={false}>
-            SYS ONLINE
-          </Text>
-          <Text style={styles.footerVer} allowFontScaling={false}>
-            V1.0 // UNITERZ
-          </Text>
-        </View>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
@@ -171,25 +139,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
-  headerLeft: {
-    minWidth: 0,
-    flexShrink: 1,
-  },
   headerTitle: {
+    flexShrink: 1,
     fontFamily: "Oxanium_700Bold",
-    fontSize: 10,
-    letterSpacing: 0.34 * 10,
-    color: "rgba(0, 245, 255, 0.85)",
+    fontSize: 15,
+    letterSpacing: 0.28 * 15,
+    color: "rgba(0, 245, 255, 0.9)",
     textShadowColor: "rgba(0, 245, 255, 0.35)",
     textShadowRadius: 12,
-    textTransform: "uppercase",
-  },
-  headerSub: {
-    marginTop: 2,
-    fontFamily: "Oxanium_700Bold",
-    fontSize: 8,
-    letterSpacing: 0.22 * 8,
-    color: "rgba(255, 255, 255, 0.38)",
     textTransform: "uppercase",
   },
   headerDate: {
@@ -198,8 +155,8 @@ const styles = StyleSheet.create({
   },
   headerDateNum: {
     fontFamily: "Oxanium_700Bold",
-    fontSize: 11,
-    letterSpacing: 0.12 * 11,
+    fontSize: 15,
+    letterSpacing: 0.1 * 15,
     color: "rgba(0, 245, 255, 0.9)",
     textShadowColor: "rgba(0, 245, 255, 0.35)",
     textShadowRadius: 10,
@@ -208,8 +165,8 @@ const styles = StyleSheet.create({
   headerDateWeekday: {
     marginTop: 2,
     fontFamily: "Oxanium_700Bold",
-    fontSize: 8,
-    letterSpacing: 0.28 * 8,
+    fontSize: 10,
+    letterSpacing: 0.24 * 10,
     color: "rgba(255, 255, 255, 0.4)",
     textTransform: "uppercase",
   },
@@ -293,44 +250,5 @@ const styles = StyleSheet.create({
     paddingLeft: 28,
     paddingRight: 16,
     minWidth: 0,
-  },
-  footer: {
-    marginTop: "auto",
-    paddingTop: 12,
-  },
-  footerRule: {
-    height: 1,
-  },
-  footerRow: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  footerDot: {
-    width: 5,
-    height: 5,
-    transform: [{ rotate: "45deg" }],
-    borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.6)",
-    shadowColor: "#00F5FF",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-  },
-  footerText: {
-    fontFamily: "Oxanium_700Bold",
-    fontSize: 8,
-    letterSpacing: 0.18 * 8,
-    color: "rgba(0, 245, 255, 0.55)",
-    textTransform: "uppercase",
-  },
-  footerVer: {
-    marginLeft: "auto",
-    fontFamily: "Oxanium_700Bold",
-    fontSize: 8,
-    letterSpacing: 0.18 * 8,
-    color: "rgba(255, 255, 255, 0.32)",
-    textTransform: "uppercase",
   },
 });

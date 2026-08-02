@@ -1,0 +1,103 @@
+/* PRO 背景 — 和柄×サイバー（wagara-*） */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara) .profile-plan-pro-ambient {
+  display: none;
+}
+
+.profile-plan-pro-bg__wagara-skin {
+  opacity: 1;
+}
+
+.profile-plan-pro-bg__wagara-hud {
+  opacity: 1;
+}
+
+.profile-plan-pro-bg--wagara .profile-plan-pro-bg__wagara-skin {
+  filter: contrast(1.08) saturate(1.1);
+}
+
+/* パネル地・枠色（代表パレット — 藍） */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara) {
+  background: linear-gradient(165deg, #02060c 0%, #071426 45%, #010409 100%);
+  --kinetik-frame: rgba(56, 189, 248, 0.35);
+  --kinetik-frame-strong: rgba(186, 230, 253, 0.72);
+  --kinetik-frame-dim: rgba(2, 132, 199, 0.28);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.68),
+    0 0 0 1px var(--kinetik-frame),
+    0 0 26px color-mix(in srgb, var(--kinetik-frame-strong) 22%, transparent),
+    0 0 52px color-mix(in srgb, var(--kinetik-frame-dim) 24%, transparent);
+}
+
+/* 翡翠 — 麻の葉・唐草 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-asanoha),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-asanoha) {
+  background: linear-gradient(162deg, #010a06 0%, #052e20 45%, #010604 100%);
+  --kinetik-frame: rgba(52, 211, 153, 0.42);
+  --kinetik-frame-strong: rgba(167, 243, 208, 0.78);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-karakusa),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-karakusa) {
+  background: linear-gradient(162deg, #040802 0%, #1c2e06 45%, #020401 100%);
+  --kinetik-frame: rgba(163, 230, 53, 0.4);
+  --kinetik-frame-strong: rgba(217, 249, 157, 0.75);
+}
+
+/* 黄金 — 亀甲 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-kikkou),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-kikkou) {
+  background: linear-gradient(160deg, #080500 0%, #1c1305 42%, #040200 100%);
+  --kinetik-frame: rgba(234, 179, 8, 0.42);
+  --kinetik-frame-strong: rgba(253, 224, 71, 0.78);
+}
+
+/* 琥珀 — 組子 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-kumiko),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-kumiko) {
+  background: linear-gradient(160deg, #080300 0%, #221004 42%, #040100 100%);
+  --kinetik-frame: rgba(251, 146, 60, 0.42);
+  --kinetik-frame-strong: rgba(254, 215, 170, 0.78);
+}
+
+/* 緋 — 矢絣 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-yagasuri),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-yagasuri) {
+  background: linear-gradient(165deg, #080101 0%, #200606 45%, #040000 100%);
+  --kinetik-frame: rgba(248, 113, 113, 0.45);
+  --kinetik-frame-strong: rgba(252, 165, 165, 0.8);
+}
+
+/* 紫 — 七宝 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-shippou),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-shippou) {
+  background: linear-gradient(160deg, #050210 0%, #180a38 42%, #030108 100%);
+  --kinetik-frame: rgba(192, 132, 252, 0.45);
+  --kinetik-frame-strong: rgba(233, 213, 255, 0.8);
+}
+
+/* 白銀 — 紗綾形 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-sayagata),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-sayagata) {
+  background: linear-gradient(165deg, #04060a 0%, #141c2a 45%, #020408 100%);
+  --kinetik-frame: rgba(203, 213, 225, 0.4);
+  --kinetik-frame-strong: rgba(248, 250, 252, 0.72);
+}
+
+/* 青緑 — 市松 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-ichimatsu),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-ichimatsu) {
+  background: linear-gradient(162deg, #010a09 0%, #042e2a 45%, #010504 100%);
+  --kinetik-frame: rgba(45, 212, 191, 0.42);
+  --kinetik-frame-strong: rgba(153, 246, 228, 0.78);
+}
+
+/* 電光 — 雷文 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wagara-raimon),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wagara-raimon) {
+  background: linear-gradient(160deg, #020412 0%, #0c1c48 42%, #010210 100%);
+  --kinetik-frame: rgba(96, 165, 250, 0.45);
+  --kinetik-frame-strong: rgba(191, 219, 254, 0.8);
+}

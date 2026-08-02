@@ -14,7 +14,6 @@ import {
   CYBER_SIDE_MENU_BRANCH_GLOW,
 } from "@/lib/ui/cyberSideMenu";
 import { formatCyberSideMenuDate } from "@/lib/ui/cyberSideMenuDate";
-
 type Props = {
   variant?: "mobile" | "web";
   language: Language;
@@ -97,7 +96,7 @@ export default function GamesDrawerMenu({
   const m = t(language);
 
   const containerClasses = cn(
-    "relative flex min-h-full flex-col text-white",
+    "relative flex flex-col text-white",
     isMobile ? "w-full p-4" : "w-full p-5"
   );
 
@@ -109,32 +108,22 @@ export default function GamesDrawerMenu({
 
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
-      {/* ミニヘッダー — 左ブランド / 右日付 */}
+      {/* ミニヘッダー — UNITERZ + 日付 */}
       <div className="mb-3 flex items-start justify-between gap-2 border-b border-[rgba(0,245,255,0.16)] pb-2">
-        <div className="min-w-0">
-          <p
-            className={cn(
-              nameOxanium.className,
-              "text-[10px] font-extrabold uppercase tracking-[0.34em] text-[rgba(0,245,255,0.85)]"
-            )}
-            style={{ textShadow: "0 0 12px rgba(0,245,255,0.35)" }}
-          >
-            UNITERZ
-          </p>
-          <p
-            className={cn(
-              nameOxanium.className,
-              "mt-0.5 text-[8px] uppercase tracking-[0.22em] text-white/38"
-            )}
-          >
-            GAMES // DRAWER
-          </p>
-        </div>
+        <p
+          className={cn(
+            nameOxanium.className,
+            "min-w-0 text-[15px] font-extrabold uppercase tracking-[0.28em] text-[rgba(0,245,255,0.9)]"
+          )}
+          style={{ textShadow: "0 0 12px rgba(0,245,255,0.35)" }}
+        >
+          UNITERZ
+        </p>
         <div className="shrink-0 text-right">
           <p
             className={cn(
               nameOxanium.className,
-              "text-[11px] font-bold tabular-nums tracking-[0.12em] text-[rgba(0,245,255,0.9)]"
+              "text-[15px] font-bold tabular-nums tracking-[0.1em] text-[rgba(0,245,255,0.9)]"
             )}
             style={{ textShadow: "0 0 10px rgba(0,245,255,0.35)" }}
           >
@@ -143,7 +132,7 @@ export default function GamesDrawerMenu({
           <p
             className={cn(
               nameOxanium.className,
-              "mt-0.5 text-[8px] font-bold uppercase tracking-[0.28em] text-white/40"
+              "mt-0.5 text-[10px] font-bold uppercase tracking-[0.24em] text-white/40"
             )}
           >
             {hudDate.weekday}
@@ -214,33 +203,6 @@ export default function GamesDrawerMenu({
         >
           <span className="uppercase">World Cup</span>
         </SideMenuItemButton>
-      </div>
-
-      {/* HUD フッター — 空洞だった下部を分節 */}
-      <div className="mt-auto pt-3">
-        <div
-          aria-hidden
-          className="h-px"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(0,245,255,0.5), rgba(0,245,255,0.08) 70%, transparent)",
-            boxShadow: "0 0 8px rgba(0,245,255,0.25)",
-          }}
-        />
-        <div
-          className={cn(
-            nameOxanium.className,
-            "mt-2 flex items-center gap-1.5 text-[8px] uppercase tracking-[0.18em] text-[rgba(0,245,255,0.55)]"
-          )}
-        >
-          <span
-            aria-hidden
-            className="cyber-side-menu-caret h-[5px] w-[5px] rotate-45 border border-cyan-400/60"
-            style={{ boxShadow: "0 0 6px rgba(0,245,255,0.4)" }}
-          />
-          <span>SYS ONLINE</span>
-          <span className="ml-auto text-white/32">V1.0 // UNITERZ</span>
-        </div>
       </div>
     </nav>
   );

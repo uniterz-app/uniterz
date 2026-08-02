@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Animated, Dimensions, Easing, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  Animated, Dimensions, Easing, Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,6 +36,12 @@ type Props = {
   uid: string | null | undefined;
   /** Firestore users.plan と同期した表示用 */
   plan: "free" | "pro";
+  /** 表示名（最下部アイデンティティ） */
+  displayName?: string;
+  /** ハンドル（最下部アイデンティティ） */
+  handle?: string;
+  /** アバター URL（最下部アイデンティティ） */
+  avatarUrl?: string;
   /** ゲーム内通貨残高（サイドメニュー先頭ウォレット） */
   unitBalance?: number;
   /** in-app 画面を開く */
@@ -76,11 +82,21 @@ export default function ProfileSideMenuModal({
   onOpenProfileSettings,
   uid,
   plan,
+  displayName = "",
+  handle = "",
+  avatarUrl = "",
   unitBalance = 0,
   onOpenInApp,
 }: Props) {
   const isJa = language === "ja";
   const labelStyle = sideMenuLabelStyle(language);
+  const identityName =
+    displayName.trim() || (isJa ? "ユーザー" : "User");
+  const identityInitial = identityName.charAt(0).toUpperCase() || "?";
+  const planLabel = plan === "pro" ? "PRO" : "FREE";
+  const identitySub = handle.trim()
+    ? `@${handle.trim()}`
+    : "OPERATOR";
   const [logoutOpen, setLogoutOpen] = useState(false);
   const slide = useRef(new Animated.Value(-PANEL_W - 24)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -538,6 +554,76 @@ export default function ProfileSideMenuModal({
                   >
                     {labels.logout}
                   </SideMenuItemButtonNative>
+
+                  {/* 一番下: HUD アイデンティティ（アイコン・名前・プラン） */}
+                  {uid ? (
+                    <Pressable
+                      onPress={() => {
+                        onOpenProfileSettings();
+                      }}
+                      style={({ pressed }) => [
+                        styles.identity,
+                        plan === "pro" && styles.identityPro,
+                        pressed && styles.identityPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${identityName} · ${planLabel}`}
+                    >
+                      <View style={styles.identityRail} pointerEvents="none" />
+
+                      <View
+                        style={[
+                          styles.identityAvatar,
+                          plan === "pro" && styles.identityAvatarPro,
+                        ]}
+                      >
+                        {avatarUrl.trim().length > 0 ? (
+                          <Image
+                            source={{ uri: avatarUrl.trim() }}
+                            style={styles.identityImg}
+                          />
+                        ) : (
+                          <Text style={styles.identityInitial} allowFontScaling={false}>
+                            {identityInitial}
+                          </Text>
+                        )}
+                      </View>
+
+                      <View style={styles.identityMeta}>
+                        <View style={styles.identityNameRow}>
+                          <Text style={styles.identityName} numberOfLines={1}>
+                            {identityName}
+                          </Text>
+                          <View
+                            style={[
+                              styles.identityBadge,
+                              plan === "pro" && styles.identityBadgePro,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.identityBadgeText,
+                                plan === "pro" && styles.identityBadgeTextPro,
+                              ]}
+                              allowFontScaling={false}
+                            >
+                              {planLabel}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.identitySubRow}>
+                          <View style={styles.identityDot} />
+                          <Text style={styles.identitySub} numberOfLines={1} allowFontScaling={false}>
+                            {identitySub}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.identityCaret} allowFontScaling={false}>
+                        ▸
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </ScrollView>
               </CyberSideMenuPanelNative>
             </Pressable>
@@ -649,5 +735,148 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     height: StyleSheet.hairlineWidth,
     backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  identity: {
+    position: "relative",
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    paddingLeft: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.38)",
+    backgroundColor: "rgba(4, 18, 28, 0.96)",
+    shadowColor: "#00F5FF",
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
+  identityPro: {
+    borderColor: "rgba(0, 245, 255, 0.55)",
+    shadowOpacity: 0.28,
+    shadowRadius: 22,
+  },
+  identityPressed: {
+    borderColor: "rgba(0, 245, 255, 0.7)",
+    opacity: 0.95,
+  },
+  identityRail: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: "#00F5FF",
+    shadowColor: "#00F5FF",
+    shadowOpacity: 0.85,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  identityAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.65)",
+    backgroundColor: "rgba(0, 30, 42, 0.95)",
+    shadowColor: "#00F5FF",
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  identityAvatarPro: {
+    borderColor: "rgba(0, 245, 255, 0.9)",
+    shadowOpacity: 0.6,
+    shadowRadius: 14,
+  },
+  identityImg: {
+    width: "100%",
+    height: "100%",
+  },
+  identityInitial: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "rgba(0, 245, 255, 0.95)",
+  },
+  identityMeta: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
+  },
+  identityNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+  },
+  identityName: {
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#fff",
+  },
+  identityBadge: {
+    flexShrink: 0,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  identityBadgePro: {
+    borderColor: "rgba(0, 245, 255, 0.9)",
+    backgroundColor: "#00F5FF",
+    shadowColor: "#00F5FF",
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  identityBadgeText: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.18 * 9,
+    color: "rgba(255, 255, 255, 0.55)",
+    textTransform: "uppercase",
+  },
+  identityBadgeTextPro: {
+    color: "#041018",
+  },
+  identitySubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    minWidth: 0,
+  },
+  identityDot: {
+    width: 5,
+    height: 5,
+    transform: [{ rotate: "45deg" }],
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.7)",
+    backgroundColor: "rgba(0, 245, 255, 0.35)",
+  },
+  identitySub: {
+    flexShrink: 1,
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.14 * 8,
+    color: "rgba(0, 245, 255, 0.55)",
+    textTransform: "uppercase",
+  },
+  identityCaret: {
+    flexShrink: 0,
+    fontSize: 12,
+    color: "#00F5FF",
+    textShadowColor: "rgba(0, 245, 255, 0.8)",
+    textShadowRadius: 8,
   },
 });

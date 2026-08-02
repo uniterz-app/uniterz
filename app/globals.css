@@ -7952,6 +7952,239 @@ body::before {
   text-shadow: 0 0 12px rgba(246, 195, 68, 0.45);
 }
 
+/* サイドメニュー最下部 — HUD アイデンティティ */
+.side-menu-identity {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px 11px 14px;
+  overflow: hidden;
+  text-align: left;
+  border: 1px solid rgba(0, 245, 255, 0.38);
+  background:
+    linear-gradient(
+      115deg,
+      rgba(0, 62, 78, 0.55) 0%,
+      rgba(4, 16, 26, 0.94) 38%,
+      rgba(2, 10, 16, 0.96) 100%
+    );
+  clip-path: polygon(
+    0 0,
+    calc(100% - 12px) 0,
+    100% 12px,
+    100% 100%,
+    0 100%
+  );
+  box-shadow:
+    0 0 24px rgba(0, 245, 255, 0.12),
+    inset 0 1px 0 rgba(0, 245, 255, 0.16),
+    inset 0 0 28px rgba(0, 245, 255, 0.04);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.side-menu-identity.is-pro {
+  border-color: rgba(0, 245, 255, 0.55);
+  box-shadow:
+    0 0 32px rgba(0, 245, 255, 0.2),
+    inset 0 1px 0 rgba(0, 245, 255, 0.22),
+    inset 0 0 36px rgba(0, 245, 255, 0.08);
+}
+
+.side-menu-identity:hover {
+  border-color: rgba(0, 245, 255, 0.7);
+  box-shadow:
+    0 0 36px rgba(0, 245, 255, 0.22),
+    inset 0 1px 0 rgba(0, 245, 255, 0.24);
+}
+
+.side-menu-identity:active {
+  transform: scale(0.985);
+}
+
+.side-menu-identity__rail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #00f5ff;
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.85);
+  z-index: 2;
+}
+
+.side-menu-identity__scan {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 245, 255, 0.035) 2px,
+    rgba(0, 245, 255, 0.035) 3px
+  );
+}
+
+.side-menu-identity__avatar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid rgba(0, 245, 255, 0.65);
+  border-radius: 999px;
+  background: rgba(0, 30, 42, 0.95);
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.35),
+    inset 0 0 10px rgba(0, 245, 255, 0.12);
+}
+
+.side-menu-identity__avatar.is-pro {
+  border-color: rgba(0, 245, 255, 0.9);
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.55),
+    inset 0 0 12px rgba(0, 245, 255, 0.18);
+}
+
+.side-menu-identity__ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 245, 255, 0.25);
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
+  animation: side-menu-identity-ring 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.side-menu-identity__avatar.is-pro .side-menu-identity__ring {
+  border-color: rgba(0, 245, 255, 0.45);
+}
+
+@keyframes side-menu-identity-ring {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.side-menu-identity__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.side-menu-identity__initial {
+  font-size: 15px;
+  font-weight: 800;
+  color: rgba(0, 245, 255, 0.95);
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+}
+
+.side-menu-identity__meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.side-menu-identity__name-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-menu-identity__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.2);
+}
+
+.side-menu-identity__badge {
+  flex-shrink: 0;
+  padding: 2px 7px 1px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  text-transform: uppercase;
+}
+
+.side-menu-identity__badge.is-pro {
+  color: #041018;
+  border-color: rgba(0, 245, 255, 0.9);
+  background: linear-gradient(
+    105deg,
+    #00f5ff 0%,
+    #67e8f9 100%
+  );
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.side-menu-identity__sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(0, 245, 255, 0.55);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.side-menu-identity__dot {
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  transform: rotate(45deg);
+  border: 1px solid rgba(0, 245, 255, 0.7);
+  background: rgba(0, 245, 255, 0.35);
+  box-shadow: 0 0 6px rgba(0, 245, 255, 0.55);
+  animation: side-menu-identity-ring 2s ease-in-out infinite;
+}
+
+.side-menu-identity__caret {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #00f5ff;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.8);
+  animation: side-menu-identity-ring 1.8s ease-in-out infinite;
+}
+
 
 /* ID 側は右下コーナー（JOIN の左下と対） */
 .profile-edit-kinetik-footer-ref--id {

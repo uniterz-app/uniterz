@@ -162,17 +162,17 @@ export default function ProfileEditSheet({
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">
       <div className="flex justify-center">
         <label className="relative inline-block cursor-pointer">
-          <div className="relative h-32 w-32 overflow-hidden rounded-full ring-2 ring-white/10 ring-offset-2 ring-offset-black/40 sm:h-36 sm:w-36">
+          <div className="relative h-32 w-32 overflow-hidden rounded-none border border-cyan-400/40 ring-2 ring-white/10 ring-offset-2 ring-offset-black/40 sm:h-36 sm:w-36">
             <img
               src={previewURL}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
               style={{ objectPosition: `center ${cropY}%` }}
             />
-            <div className="absolute inset-0 rounded-full ring-2 ring-black/30" />
+            <div className="absolute inset-0 rounded-none ring-1 ring-cyan-400/25" />
           </div>
           <span
-            className="absolute bottom-0 right-0 grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-white/15 bg-black/70 text-white shadow-[0_8px_20px_rgba(0,0,0,0.45)]"
+            className="absolute bottom-0 right-0 grid h-9 w-9 cursor-pointer place-items-center rounded-none border border-cyan-400/35 bg-black/80 text-cyan-200 shadow-[0_0_16px_rgba(0,245,255,0.25)]"
             aria-hidden
           >
             <Camera className="h-4 w-4" />
@@ -191,6 +191,7 @@ export default function ProfileEditSheet({
           {t(language).profile.username}
         </label>
         <CyberAuthField
+          angular
           inputProps={{
             type: "text",
             name: "displayName",
@@ -212,6 +213,7 @@ export default function ProfileEditSheet({
           {t(language).profile.bio}
         </label>
         <CyberAuthTextarea
+          angular
           textareaProps={{
             name: "bio",
             placeholder: t(language).profile.bio,
@@ -227,6 +229,7 @@ export default function ProfileEditSheet({
           {t(language).profile.appLanguage}
         </label>
         <CyberAuthSelect
+          angular
           selectProps={{
             value: language,
             onChange: (e) => setLanguage(e.target.value as Language),
@@ -245,6 +248,7 @@ export default function ProfileEditSheet({
           {t(language).auth.countryOptional}
         </label>
         <CyberAuthSelect
+          angular
           selectProps={{
             value: countryCode,
             onChange: (e) => setCountryCode(e.target.value),
@@ -266,9 +270,9 @@ export default function ProfileEditSheet({
         onPointerUp={() => setSavePressed(false)}
         onPointerCancel={() => setSavePressed(false)}
         className={[
-          "mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] border-0 px-3.5 py-3 font-bold tracking-wide text-white",
+          "mt-1 flex w-full items-center justify-center gap-2 rounded-none border border-cyan-400/35 px-3.5 py-3 font-bold tracking-wide text-white",
           "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
-          "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
+          "shadow-[0_0_24px_rgba(0,245,255,0.22),0_10px_30px_rgba(124,58,237,0.2)]",
           "transition-[transform,filter,opacity] duration-100 ease-out",
           savePressed && !uploading ? "scale-[0.97]" : "scale-100",
           uploading ? "cursor-not-allowed opacity-60" : "cursor-pointer",

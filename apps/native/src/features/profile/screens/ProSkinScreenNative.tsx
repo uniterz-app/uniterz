@@ -1,13 +1,15 @@
 /**
  * Web `ProSkinPage` / `ProfilePlanProSkinPicker`（production）相当
- * — ヘッダー / HUD 確定バー / フルカードプレビュー / 2列カタログ
+ * — カタログ + 模様タップでオーバーレイ確認
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -16,6 +18,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
 import ProfilePlanProBackgroundNative from "../kinetik/ProfilePlanProBackgroundNative";
 import ProfileKinetikPanelNative from "../kinetik/ProfileKinetikPanelNative";
@@ -156,41 +159,22 @@ function SkinThumbNative({
   );
 }
 
-/** Web `ScaledCatalogCard` — Native パネルはもともと mobile 幅なのでフル幅描画 */
-function OpenPreviewCardNative({
-  variantId,
-  language,
-  replaySeed,
-}: {
-  variantId: ProfilePlanProBgVariant;
-  language: "ja" | "en";
-  replaySeed: number;
-}) {
-  return (
-    <View style={styles.openPreview} pointerEvents="none">
-      <ProfileKinetikPanelNative
-        key={`${variantId}:${replaySeed}`}
-        {...previewPanelProps(language)}
-        planProBgVariant={variantId}
-      />
-    </View>
-  );
-}
-
 export default function ProSkinScreenNative() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguageFromAuth();
   const isJa = language === "ja";
-  const { width: winW } = useWindowDimensions();
+  const { width: winW, height: winH } = useWindowDimensions();
   const contentW = Math.min(420, winW - 24);
   const tileW = Math.floor((contentW - GAP) / COLS);
+  const overlayPanelW = Math.min(420, winW - 24);
 
   const [ready, setReady] = useState(false);
-  const [selectedId, setSelectedId] = useState<ProfilePlanProBgVariant | null>(
+  const [savedId, setSavedId] = useState<ProfilePlanProBgVariant | null>(null);
+  const [overlayId, setOverlayId] = useState<ProfilePlanProBgVariant | null>(
     null
   );
-  const [savedId, setSavedId] = useState<ProfilePlanProBgVariant | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [replayByVariant, setReplayByVariant] = useState<
@@ -207,7 +191,6 @@ export default function ProSkinScreenNative() {
       if (!alive) return;
       const data = snap.data() as { planProBgVariant?: unknown } | undefined;
       const id = parseUserPlanProBgVariant(data?.planProBgVariant);
-      setSelectedId(id);
       setSavedId(id);
       setReady(true);
     });
@@ -216,39 +199,48 @@ export default function ProSkinScreenNative() {
     };
   }, [fUser]);
 
-  const selected = useMemo(
+  const overlayEntry = useMemo(
     () =>
-      selectedId
-        ? PROFILE_PLAN_PRO_ADOPTED_BG.find((e) => e.id === selectedId) ?? null
+      overlayId
+        ? PROFILE_PLAN_PRO_ADOPTED_BG.find((e) => e.id === overlayId) ?? null
         : null,
-    [selectedId]
+    [overlayId]
   );
-  const selectedIndex = selected
-    ? PROFILE_PLAN_PRO_ADOPTED_BG.findIndex((e) => e.id === selected.id)
+  const overlayIndex = overlayEntry
+    ? PROFILE_PLAN_PRO_ADOPTED_BG.findIndex((e) => e.id === overlayEntry.id)
     : -1;
 
   const hasUnsavedChange =
-    selectedId != null && savedId != null && selectedId !== savedId;
-  const canConfirm = Boolean(selectedId) && !saving && hasUnsavedChange;
+    overlayId != null && savedId != null
+      ? overlayId !== savedId
+      : overlayId != null && savedId == null;
+  const canConfirm = Boolean(overlayId) && !saving && hasUnsavedChange;
   const confirmLabel = saving
     ? isJa
       ? "保存中…"
       : "Saving…"
     : hasUnsavedChange
       ? isJa
-        ? "確定"
-        : "Confirm"
+        ? "このスキンを適用"
+        : "Apply skin"
       : isJa
         ? "適用済み"
         : "Applied";
 
+  const closeOverlay = useCallback(() => {
+    if (saving) return;
+    setOverlayId(null);
+    setSaveError(null);
+  }, [saving]);
+
   const handleConfirm = useCallback(async () => {
-    if (!selectedId || !canConfirm) return;
+    if (!overlayId || !canConfirm) return;
     setSaving(true);
     setSaveError(null);
     try {
-      await saveMeProSkinNative(selectedId);
-      setSavedId(selectedId);
+      await saveMeProSkinNative(overlayId);
+      setSavedId(overlayId);
+      setOverlayId(null);
       navigation.goBack();
     } catch (e) {
       const msg =
@@ -262,10 +254,11 @@ export default function ProSkinScreenNative() {
     } finally {
       setSaving(false);
     }
-  }, [canConfirm, isJa, navigation, selectedId]);
+  }, [canConfirm, isJa, navigation, overlayId]);
 
-  const selectSkin = useCallback((id: ProfilePlanProBgVariant) => {
-    setSelectedId(id);
+  const openOverlay = useCallback((id: ProfilePlanProBgVariant) => {
+    setSaveError(null);
+    setOverlayId(id);
     setReplayByVariant((prev) => ({
       ...prev,
       [id]: (prev[id] ?? 0) + 1,
@@ -277,8 +270,8 @@ export default function ProSkinScreenNative() {
       title="SKIN"
       subtitle={
         language === "ja"
-          ? "Pro プロフィール背景スキンを選べます。"
-          : "Choose a Pro profile background skin."
+          ? "模様をタップするとプレビューが開き、そこで適用を確定できます。"
+          : "Tap a pattern to preview, then confirm in the overlay."
       }
       appBackground
       onClose={() => navigation.goBack()}
@@ -300,128 +293,131 @@ export default function ProSkinScreenNative() {
             ]}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
-              <View>
-                <View style={styles.headerBlock}>
-                  <Text style={styles.eyebrow}>Pro Skin</Text>
-                  <Text style={styles.pageTitle}>Choose Pro Skin</Text>
-                  <Text style={styles.desc}>
-                    {isJa
-                      ? "サムネをタップしてプレビューし、確定でプロフィールに反映します。"
-                      : "Tap a thumbnail to preview, then confirm to apply."}
-                  </Text>
-                </View>
-
-                {/* stickyHeaderIndices 用の先頭セル相当 */}
-                <View style={styles.stickyWrap}>
-                  <View
-                    style={[
-                      styles.confirmBar,
-                      hasUnsavedChange ? styles.confirmBarActive : null,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.rail,
-                        hasUnsavedChange && styles.railVisible,
-                      ]}
-                      pointerEvents="none"
-                    />
-                    <View
-                      style={[
-                        styles.hudCorner,
-                        styles.hudCornerTL,
-                        hasUnsavedChange && styles.hudCornerVisible,
-                      ]}
-                      pointerEvents="none"
-                    />
-                    <View
-                      style={[
-                        styles.hudCorner,
-                        styles.hudCornerBR,
-                        hasUnsavedChange && styles.hudCornerVisible,
-                      ]}
-                      pointerEvents="none"
-                    />
-
-                    <View
-                      style={[
-                        styles.confirmIcon,
-                        hasUnsavedChange
-                          ? styles.confirmIconActive
-                          : styles.confirmIconIdle,
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="star-four-points"
-                        size={18}
-                        color={
-                          hasUnsavedChange
-                            ? CYBER_TAB_CYAN
-                            : "rgba(0,245,255,0.78)"
-                        }
-                      />
-                    </View>
-                    <View style={styles.confirmMeta}>
-                      <Text style={styles.confirmTitle}>PRO SKIN</Text>
-                      <Text style={styles.confirmSub} numberOfLines={1}>
-                        {selected && selectedIndex >= 0
-                          ? `No.${selectedIndex + 1} · ${selected.label}${
-                              selected.tag ? ` · ${selected.tag}` : ""
-                            }`
-                          : isJa
-                            ? "未選択"
-                            : "None"}
-                      </Text>
-                    </View>
-                    <Pressable
-                      disabled={!canConfirm}
-                      onPress={() => void handleConfirm()}
-                      style={[
-                        styles.confirmBtn,
-                        canConfirm
-                          ? styles.confirmBtnOn
-                          : styles.confirmBtnOff,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.confirmBtnText,
-                          canConfirm
-                            ? styles.confirmBtnTextOn
-                            : styles.confirmBtnTextOff,
-                        ]}
-                      >
-                        {confirmLabel}
-                      </Text>
-                    </Pressable>
-                  </View>
-                  {saveError ? (
-                    <Text style={styles.saveError}>{saveError}</Text>
-                  ) : null}
-                </View>
-
-                {selected ? (
-                  <View style={styles.previewWrap}>
-                    <OpenPreviewCardNative
-                      variantId={selected.id}
-                      language={language}
-                      replaySeed={replayByVariant[selected.id] ?? 0}
-                    />
-                  </View>
-                ) : null}
+              <View style={styles.headerBlock}>
+                <Text style={styles.eyebrow}>Pro Skin</Text>
+                <Text style={styles.pageTitle}>Choose Pro Skin</Text>
+                <Text style={styles.desc}>
+                  {isJa
+                    ? "模様をタップするとプレビューが開き、そこで適用を確定できます。"
+                    : "Tap a thumbnail to open the preview overlay and confirm."}
+                </Text>
               </View>
             }
             renderItem={({ item }) => (
               <SkinThumbNative
                 entry={item}
                 width={tileW}
-                selected={selectedId === item.id}
-                onPress={() => selectSkin(item.id)}
+                selected={savedId === item.id}
+                onPress={() => openOverlay(item.id)}
               />
             )}
           />
         )}
       </View>
+
+      <Modal
+        visible={overlayEntry != null}
+        transparent
+        animationType="fade"
+        onRequestClose={closeOverlay}
+      >
+        <View style={styles.overlayRoot}>
+          <Pressable
+            style={styles.overlayBackdrop}
+            onPress={closeOverlay}
+            accessibilityRole="button"
+            accessibilityLabel={isJa ? "閉じる" : "Close"}
+          />
+          {overlayEntry ? (
+            <View
+              style={[
+                styles.overlayPanel,
+                {
+                  width: overlayPanelW,
+                  maxHeight: winH - insets.top - insets.bottom - 24,
+                  marginTop: insets.top + 8,
+                  marginBottom: Math.max(insets.bottom, 12),
+                },
+              ]}
+            >
+              <View style={styles.overlayHead}>
+                <View style={styles.overlayHeadMeta}>
+                  <Text style={styles.overlayEyebrow}>PREVIEW</Text>
+                  <Text style={styles.overlayTitle} numberOfLines={1}>
+                    {overlayIndex >= 0 ? `No.${overlayIndex + 1} · ` : ""}
+                    {overlayEntry.label}
+                    {overlayEntry.tag ? ` · ${overlayEntry.tag}` : ""}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={closeOverlay}
+                  style={styles.overlayCloseBtn}
+                  disabled={saving}
+                >
+                  <Text style={styles.overlayCloseText}>
+                    {isJa ? "閉じる" : "Close"}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <ScrollView
+                style={styles.overlayScroll}
+                contentContainerStyle={styles.overlayScrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
+                <View style={styles.openPreview} pointerEvents="none">
+                  <ProfileKinetikPanelNative
+                    key={`${overlayEntry.id}:${replayByVariant[overlayEntry.id] ?? 0}`}
+                    {...previewPanelProps(language)}
+                    planProBgVariant={overlayEntry.id}
+                  />
+                </View>
+              </ScrollView>
+
+              <View style={styles.overlayActions}>
+                <Pressable
+                  disabled={!canConfirm}
+                  onPress={() => void handleConfirm()}
+                  style={[
+                    styles.confirmBtn,
+                    canConfirm ? styles.confirmBtnOn : styles.confirmBtnOff,
+                    styles.confirmBtnGrow,
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="star-four-points"
+                    size={14}
+                    color={canConfirm ? "#050508" : "rgba(255,255,255,0.3)"}
+                  />
+                  <Text
+                    style={[
+                      styles.confirmBtnText,
+                      canConfirm
+                        ? styles.confirmBtnTextOn
+                        : styles.confirmBtnTextOff,
+                    ]}
+                  >
+                    {confirmLabel}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  disabled={saving}
+                  onPress={closeOverlay}
+                  style={styles.cancelBtn}
+                >
+                  <Text style={styles.cancelBtnText}>
+                    {isJa ? "キャンセル" : "Cancel"}
+                  </Text>
+                </Pressable>
+              </View>
+              {saveError ? (
+                <Text style={styles.saveError}>{saveError}</Text>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      </Modal>
     </MobilePageShell>
   );
 }
@@ -435,14 +431,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  stickyWrap: {
-    marginBottom: 10,
-    paddingVertical: 2,
-    backgroundColor: "rgba(3,8,13,0.94)",
-  },
-  previewWrap: {
-    marginBottom: 12,
   },
   listContent: {
     paddingTop: 12,
@@ -474,96 +462,104 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: "rgba(255,255,255,0.5)",
   },
-  confirmBar: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(10,14,20,0.95)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    overflow: "hidden",
-  },
-  confirmBarActive: {
-    borderColor: "rgba(0,245,255,0.45)",
-    backgroundColor: "rgba(0,245,255,0.07)",
-  },
-  rail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "transparent",
-  },
-  railVisible: {
-    backgroundColor: "rgba(0,245,255,0.55)",
-  },
-  hudCorner: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-    borderColor: "transparent",
-    zIndex: 2,
-  },
-  hudCornerTL: {
-    left: 0,
-    top: 0,
-    borderLeftWidth: 2,
-    borderTopWidth: 2,
-  },
-  hudCornerBR: {
-    right: 0,
-    bottom: 0,
-    borderRightWidth: 2,
-    borderBottomWidth: 2,
-  },
-  hudCornerVisible: {
-    borderColor: "rgba(0,245,255,0.65)",
-  },
-  confirmIcon: {
-    width: 36,
-    height: 36,
+  overlayRoot: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
+  },
+  overlayBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.72)",
+  },
+  overlayPanel: {
     zIndex: 1,
-  },
-  confirmIconIdle: {
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  confirmIconActive: {
+    overflow: "hidden",
+    borderWidth: 1,
     borderColor: "rgba(0,245,255,0.35)",
-    backgroundColor: "rgba(0,245,255,0.1)",
+    backgroundColor: "rgba(4,16,24,0.98)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#00F5FF",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.16,
+        shadowRadius: 24,
+      },
+      android: { elevation: 16 },
+      default: {},
+    }),
   },
-  confirmMeta: {
+  overlayHead: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,245,255,0.16)",
+  },
+  overlayHeadMeta: {
     flex: 1,
     minWidth: 0,
-    zIndex: 1,
+    gap: 2,
   },
-  confirmTitle: {
-    fontSize: 13,
+  overlayEyebrow: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 10,
     fontWeight: "800",
-    color: "#fff",
-    letterSpacing: 0.8,
+    letterSpacing: 2.2,
+    color: "rgba(103,232,249,0.8)",
     textTransform: "uppercase",
   },
-  confirmSub: {
-    marginTop: 2,
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(165,243,252,0.8)",
+  overlayTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  overlayCloseBtn: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  overlayCloseText: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+    color: "rgba(255,255,255,0.7)",
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+  },
+  overlayScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  overlayScrollContent: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  overlayActions: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,245,255,0.16)",
+    backgroundColor: "rgba(2,8,14,0.92)",
   },
   confirmBtn: {
     zIndex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     borderWidth: 2,
     paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingVertical: 10,
+  },
+  confirmBtnGrow: {
+    flex: 1,
   },
   confirmBtnOn: {
     borderColor: CYBER_TAB_CYAN,
@@ -573,7 +569,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.15)",
   },
   confirmBtnText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1.4,
     textTransform: "uppercase",
@@ -584,50 +580,44 @@ const styles = StyleSheet.create({
   confirmBtnTextOff: {
     color: "rgba(255,255,255,0.3)",
   },
+  cancelBtn: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: "center",
+  },
+  cancelBtnText: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+    color: "rgba(255,255,255,0.7)",
+    textTransform: "uppercase",
+  },
   saveError: {
-    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
     textAlign: "center",
     fontSize: 12,
     color: "rgba(252,165,165,0.9)",
   },
   openPreview: {
-    marginTop: 4,
-    marginBottom: 4,
-    borderRadius: 14,
+    borderRadius: 0,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(34,211,238,0.28)",
     backgroundColor: "#060809",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.4,
-        shadowRadius: 18,
-      },
-      android: { elevation: 8 },
-      default: {},
-    }),
   },
   tile: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: 14,
+    borderRadius: 0,
     overflow: "hidden",
     backgroundColor: "rgba(255,255,255,0.02)",
   },
   tileOn: {
     borderColor: "rgba(34,211,238,0.55)",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.35,
-        shadowRadius: 14,
-      },
-      android: { elevation: 4 },
-      default: {},
-    }),
   },
   tileHead: {
     paddingHorizontal: 9,
@@ -663,7 +653,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.3)",
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
   },
   tileTagText: {
     fontSize: 10,
@@ -671,7 +660,6 @@ const styles = StyleSheet.create({
   },
   tileCatBadge: {
     alignSelf: "flex-start",
-    borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
@@ -685,8 +673,6 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#060809",
     overflow: "hidden",
-    borderBottomLeftRadius: 13,
-    borderBottomRightRadius: 13,
   },
   thumbCorner: {
     position: "absolute",

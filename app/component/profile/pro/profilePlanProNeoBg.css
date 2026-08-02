@@ -1,0 +1,105 @@
+/* PRO 背景 — NEO LAB（neo-*）フルブリード質感スキン */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo) .profile-plan-pro-ambient {
+  display: none;
+}
+
+/* フルブリード — コントラストを上げて模様をはっきり見せる */
+.profile-plan-pro-bg__neo-skin {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+  pointer-events: none;
+  opacity: 1;
+  filter: contrast(1.15) saturate(1.1) brightness(1.05);
+}
+
+/* パネル地は薄めに — SVG が主役 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo) {
+  background: linear-gradient(165deg, #0a101c 0%, #121a2e 45%, #070b14 100%);
+  --kinetik-frame: rgba(148, 163, 184, 0.45);
+  --kinetik-frame-strong: rgba(226, 232, 240, 0.82);
+  --kinetik-frame-dim: rgba(71, 85, 105, 0.35);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.7),
+    0 0 0 1px var(--kinetik-frame),
+    0 0 26px color-mix(in srgb, var(--kinetik-frame-strong) 20%, transparent),
+    0 0 52px color-mix(in srgb, var(--kinetik-frame-dim) 22%, transparent);
+}
+
+/* 油膜 — マゼンタ */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-iridis),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-iridis) {
+  background: linear-gradient(160deg, #12081e 0%, #241038 45%, #0a0614 100%);
+  --kinetik-frame: rgba(232, 121, 249, 0.5);
+  --kinetik-frame-strong: rgba(240, 171, 252, 0.88);
+}
+
+/* 水中光 — シアン */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-caustics),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-caustics) {
+  background: linear-gradient(168deg, #023840 0%, #056878 46%, #022830 100%);
+  --kinetik-frame: rgba(56, 230, 255, 0.55);
+  --kinetik-frame-strong: rgba(191, 248, 255, 0.9);
+}
+
+/* 電離雲 — 紫 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-plasma),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-plasma) {
+  background: linear-gradient(162deg, #1a0a32 0%, #3b1670 45%, #0e0620 100%);
+  --kinetik-frame: rgba(192, 132, 252, 0.55);
+  --kinetik-frame-strong: rgba(233, 213, 255, 0.9);
+}
+
+/* 信号断裂 — シアン×ローズ */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-glitch),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-glitch) {
+  background: linear-gradient(180deg, #121218 0%, #1c1c24 50%, #0a0a0e 100%);
+  --kinetik-frame: rgba(34, 211, 238, 0.5);
+  --kinetik-frame-strong: rgba(244, 63, 94, 0.75);
+}
+
+/* 磁力線 — 藍紫 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-flux),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-flux) {
+  background: linear-gradient(160deg, #06122a 0%, #0c1e48 45%, #040c1c 100%);
+  --kinetik-frame: rgba(129, 140, 248, 0.55);
+  --kinetik-frame-strong: rgba(199, 210, 254, 0.9);
+}
+
+/* 衝撃硝子 — 氷青 */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-shatter),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-shatter) {
+  background: linear-gradient(155deg, #0a1528 0%, #152848 46%, #061018 100%);
+  --kinetik-frame: rgba(147, 197, 253, 0.55);
+  --kinetik-frame-strong: rgba(219, 234, 254, 0.9);
+}
+
+/* 光跡 — 琥珀×シアン */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-velocity),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-velocity) {
+  background: linear-gradient(150deg, #12081c 0%, #241438 45%, #0a0612 100%);
+  --kinetik-frame: rgba(245, 158, 11, 0.5);
+  --kinetik-frame-strong: rgba(34, 211, 238, 0.8);
+}
+
+/* 磁性流体 — 漆黒×シアン */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-ferro),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-ferro) {
+  background: linear-gradient(165deg, #0a1018 0%, #152030 48%, #06080e 100%);
+  --kinetik-frame: rgba(34, 211, 238, 0.5);
+  --kinetik-frame-strong: rgba(167, 139, 250, 0.75);
+}
+
+/* 干渉縞 — シアン×マゼンタ */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--neo-moire),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--neo-moire) {
+  background: linear-gradient(158deg, #0a1020 0%, #1a0a30 46%, #060812 100%);
+  --kinetik-frame: rgba(34, 211, 238, 0.5);
+  --kinetik-frame-strong: rgba(232, 121, 249, 0.8);
+}

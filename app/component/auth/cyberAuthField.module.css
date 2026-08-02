@@ -377,6 +377,26 @@
   opacity: 0.45;
 }
 
+/* 角ばり（プロフィール編集など cyber HUD 向け） */
+.angular.fieldPoda,
+.angular .glow,
+.angular .darkBorderBg,
+.angular .white,
+.angular .rightSlot,
+.angular .rightBorderSpin {
+  border-radius: 0;
+}
+
+.angular .border {
+  border-radius: 0;
+}
+
+.angular .input,
+.angular .textarea,
+.angular .selectEl {
+  border-radius: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .glow::before,
   .darkBorderBg::before,
