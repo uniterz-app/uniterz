@@ -1,5 +1,5 @@
 /** true にするとアプリ全体をメンテナンスオーバーレイでブロックする */
-export const APP_MAINTENANCE_MODE = false;
+export const APP_MAINTENANCE_MODE = true;
 
 /**
  * true にするとアプリ本体は描画せず、NBA シーズン再開告知オーバーレイのみ表示する。
