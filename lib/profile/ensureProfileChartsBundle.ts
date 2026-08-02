@@ -24,7 +24,7 @@ import {
   resolveProfileDailyTrendContext,
 } from "@/lib/profile/userStatsV2ProfileRollup";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { RANK_SNAPSHOT_HISTORY_SUBCOL } from "@/lib/rankings/rankingPhase";
+import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export type CompleteProfileChartsBundle = {
@@ -72,18 +72,14 @@ async function buildRankTrend(
   uid: string,
   seasonKey: string
 ): Promise<ProfileChartsRankPoint[]> {
-  const adminDb = getAdminDb();
-  const snap = await adminDb
-    .collection("cumulative_stats")
-    .doc(uid)
-    .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
-    .orderBy(FieldPath.documentId(), "desc")
-    .limit(PROFILE_CHARTS_RANK_MAX)
-    .get();
+  const historyDocs = await loadRankSnapshotHistoryDocsWalkBack(uid, {
+    maxDocs: PROFILE_CHARTS_RANK_MAX,
+    maxLookbackDays: 90,
+  });
 
   const points: ProfileChartsRankPoint[] = [];
-  for (const d of snap.docs) {
-    const data = d.data() as {
+  for (const d of historyDocs) {
+    const data = d.data as {
       seasons?: Record<string, Record<string, unknown>>;
     };
     const rank = coerceTotalPointsRank(
