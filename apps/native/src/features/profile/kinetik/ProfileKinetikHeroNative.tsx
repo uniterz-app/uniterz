@@ -183,6 +183,7 @@ export default function ProfileKinetikHeroNative({
             rankDeltaPlaces: null,
           },
           profileCharts: null,
+          chartsPath: "missing" as const,
         }
       : null);
 

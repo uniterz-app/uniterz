@@ -47,6 +47,39 @@ export function isProfileChartsComplete(
   );
 }
 
+/** 26-27 活動ゼロでも「揃っている」とみなせる空バンドル */
+export function emptyProfileChartsBundle(
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
+): ProfileChartsBundle & {
+  dailyTrend: ProfileDailyTrendRow[];
+  rankTrend: ProfileChartsRankPoint[];
+  last20: ProfileChartsLast20Point[];
+} {
+  return {
+    v: PROFILE_CHARTS_BUNDLE_VERSION,
+    seasonKey,
+    dailyTrend: [],
+    rankTrend: [],
+    last20: [],
+  };
+}
+
+/** rankingBySeason.<key> に投稿があるか（ensure / 空ショートカット用） */
+export function cumulativeHasNbaSeasonActivity(
+  cumulative: Record<string, unknown> | null | undefined,
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
+): boolean {
+  if (!cumulative) return false;
+  const bySeason = (cumulative.rankingBySeason ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const bucket = bySeason[seasonKey];
+  if (!bucket || typeof bucket !== "object") return false;
+  const n = Number(bucket.totalPosts ?? bucket.posts ?? 0);
+  return Number.isFinite(n) && n > 0;
+}
+
 function safeInt(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;

@@ -4,6 +4,9 @@
  */
 import { doc, getDoc } from "firebase/firestore";
 import {
+  cumulativeHasNbaSeasonActivity,
+  emptyProfileChartsBundle,
+  isProfileChartsComplete,
   parseProfileChartsBundle,
   type ProfileChartsBundle,
 } from "../../../../../lib/profile/profileChartsBundle";
@@ -22,6 +25,8 @@ export type NbaProfileCardPhaseFirestore = {
   summaryRanks: ProfileSummaryRanksNative;
   /** overview チャート denorm（欠ける配列キーは従来フェッチ） */
   profileCharts: ProfileChartsBundle | null;
+  /** 計測用: complete | empty-season | missing */
+  chartsPath: "complete" | "empty-season" | "missing";
 };
 
 const DOC_TTL_MS = 45_000;
@@ -84,10 +89,25 @@ function ranksFromData(
   };
 }
 
-function chartsFromData(
-  data: Record<string, unknown> | null
-): ProfileChartsBundle | null {
-  return parseProfileChartsBundle(data, CURRENT_NBA_SEASON_KEY);
+function chartsFromData(data: Record<string, unknown> | null): {
+  profileCharts: ProfileChartsBundle | null;
+  chartsPath: "complete" | "empty-season" | "missing";
+} {
+  const parsed = parseProfileChartsBundle(data, CURRENT_NBA_SEASON_KEY);
+  if (isProfileChartsComplete(parsed)) {
+    return { profileCharts: parsed, chartsPath: "complete" };
+  }
+  /**
+   * 26-27 活動ゼロなら ensure API を待たず空を「揃った」扱い。
+   * NO DATA でも 1 read で即描画できるようにする。
+   */
+  if (!cumulativeHasNbaSeasonActivity(data, CURRENT_NBA_SEASON_KEY)) {
+    return {
+      profileCharts: emptyProfileChartsBundle(CURRENT_NBA_SEASON_KEY),
+      chartsPath: "empty-season",
+    };
+  }
+  return { profileCharts: parsed, chartsPath: "missing" };
 }
 
 export async function fetchNbaProfileCardPhaseFirestore(
@@ -99,10 +119,12 @@ export async function fetchNbaProfileCardPhaseFirestore(
 
   try {
     const data = await loadCumulativeData(safeUid);
+    const { profileCharts, chartsPath } = chartsFromData(data);
     return {
       summary: summaryFromNbaScopeRanking(data, period),
       summaryRanks: ranksFromData(data),
-      profileCharts: chartsFromData(data),
+      profileCharts,
+      chartsPath,
     };
   } catch {
     return null;
@@ -122,16 +144,18 @@ export async function prefetchNbaKinetikBothPeriodsFirestore(
   try {
     const data = await loadCumulativeData(safeUid);
     const ranks = ranksFromData(data);
-    const profileCharts = chartsFromData(data);
+    const { profileCharts, chartsPath } = chartsFromData(data);
     const season = {
       summary: summaryFromNbaScopeRanking(data, "season"),
       summaryRanks: ranks,
       profileCharts,
+      chartsPath,
     };
     const playoffs = {
       summary: summaryFromNbaScopeRanking(data, "playoffs"),
       summaryRanks: ranks,
       profileCharts,
+      chartsPath,
     };
     seedNbaKinetikPeriodStatsCache(
       safeUid,

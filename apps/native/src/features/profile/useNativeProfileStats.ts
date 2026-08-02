@@ -495,6 +495,7 @@ export function useNativeProfileStats(
            */
           const cardPeriod =
             cardCtx.nbaPeriod ?? preferredNbaKinetikPeriod();
+          const t0 = Date.now();
           const fs = await fetchNbaProfileCardPhaseFirestore(
             targetUid,
             cardPeriod
@@ -559,6 +560,15 @@ export function useNativeProfileStats(
                 last20: [],
               };
             }
+            if (__DEV__) {
+              console.log(
+                `[profileCharts] path=ensure chartsPath=${fs.chartsPath} ms=${Date.now() - t0}`
+              );
+            }
+          } else if (__DEV__) {
+            console.log(
+              `[profileCharts] path=${fs.chartsPath} ms=${Date.now() - t0} daily=${charts?.dailyTrend?.length ?? 0} rank=${charts?.rankTrend?.length ?? 0} last20=${charts?.last20?.length ?? 0}`
+            );
           }
 
           const seededDaily = normalizeProfileDailyTrendRows(

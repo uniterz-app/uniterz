@@ -9,6 +9,8 @@ import {
   PROFILE_CHARTS_DAILY_MAX,
   PROFILE_CHARTS_LAST20_MAX,
   PROFILE_CHARTS_RANK_MAX,
+  cumulativeHasNbaSeasonActivity,
+  emptyProfileChartsBundle,
   isProfileChartsComplete,
   parseProfileChartsBundle,
   pruneDailyTrendRows,
@@ -215,6 +217,20 @@ export async function ensureProfileChartsBundle(
             ? ((cumData!.profileCharts as { builtAtMs: number }).builtAtMs)
             : Date.now(),
       };
+    }
+
+    /**
+     * 26-27 活動ゼロなら日次/履歴/posts を読まず空バンドルを書いて完了。
+     * オフシーズンの初回 ensure 遅延を潰す。
+     */
+    if (!cumulativeHasNbaSeasonActivity(cumData, seasonKey)) {
+      const empty = emptyProfileChartsBundle(seasonKey);
+      const bundle: CompleteProfileChartsBundle = {
+        ...empty,
+        builtAtMs: Date.now(),
+      };
+      await writeCompleteBundle(safeUid, bundle);
+      return bundle;
     }
 
     const needDaily = options?.forceRebuild || parsed?.dailyTrend == null;
