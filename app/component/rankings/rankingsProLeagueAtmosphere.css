@@ -1,0 +1,8 @@
+/**
+ * PRO LEAGUE（無差別級）ボード用の補助クラス。
+ * 色の正は lib/rankings/proLeagueAtmosphere.ts。
+ */
+
+.rankings-pro-league-no-data {
+  color: rgba(246, 195, 68, 0.42);
+}

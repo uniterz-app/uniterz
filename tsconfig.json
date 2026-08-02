@@ -40,6 +40,6 @@
     "functions",
     "apps/native",
     "uniterz-native",
-    "scripts/archive"
+    "scripts"
   ]
 }

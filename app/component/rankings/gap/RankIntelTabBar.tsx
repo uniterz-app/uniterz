@@ -3,25 +3,18 @@
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
-  cyberSlantedTabActiveFill,
-  cyberSlantedTabActiveShadow,
   type CyberSlantedTabTheme,
 } from "@/app/component/rankings/CyberSlantedTab";
 import type { RankIntelTab } from "@/lib/navigation/rankIntelTab";
 import { RANK_GAP_CYBER } from "@/lib/rankings/rankGapDonut";
 
+/** 現行 CyberSlantedTabTheme（accent 塗り）に合わせる */
 const RANK_INTEL_TAB_THEME: CyberSlantedTabTheme = {
   accent: RANK_GAP_CYBER.magenta,
-  activeFill: cyberSlantedTabActiveFill({
-    hi: "#FFC2EC",
-    midHi: "#FF5AC8",
-    mid: "#FF00C8",
-    midLo: "#C4009A",
-    lo: "#8B006E",
-  }),
   inactiveText: "rgba(255,255,255,0.55)",
   activeText: "#050508",
-  activeShadow: cyberSlantedTabActiveShadow("255,0,200"),
+  activeShadow:
+    "0 0 10px rgba(255,0,200,0.55), 0 0 22px rgba(255,0,200,0.28)",
   inactiveBorder: RANK_GAP_CYBER.neonBorder,
 };
 

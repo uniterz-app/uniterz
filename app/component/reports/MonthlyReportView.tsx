@@ -964,7 +964,7 @@ const UNIT_SOURCE_COLOR: Record<MonthlyReportUnitSource, string> = {
 
 function unitGrantTitle(
   g: MonthlyReportUnitGrant,
-  c: (typeof COPY)["ja"]
+  c: (typeof COPY)[Lang]
 ): string {
   if (g.label) return g.label;
   if (g.source === "metric_rank" && g.metric) {
@@ -1177,7 +1177,7 @@ function RadarAxisTick(props: {
   x?: number;
   y?: number;
   payload?: { value?: string };
-  textAnchor?: string;
+  textAnchor?: "inherit" | "end" | "start" | "middle";
 }) {
   const { x = 0, y = 0, payload, textAnchor = "middle" } = props;
   const label = payload?.value ?? "";
