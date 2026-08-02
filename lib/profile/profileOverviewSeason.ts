@@ -15,7 +15,7 @@ import {
  * true = overview（Daily / Rank / Last20）だけ前シーズンを読む。
  * 確認が終わったら false に戻す。
  */
-export const PROFILE_OVERVIEW_USE_PREVIOUS_SEASON = true;
+export const PROFILE_OVERVIEW_USE_PREVIOUS_SEASON = false;
 
 export function profileOverviewSeasonKey(): string {
   return PROFILE_OVERVIEW_USE_PREVIOUS_SEASON
