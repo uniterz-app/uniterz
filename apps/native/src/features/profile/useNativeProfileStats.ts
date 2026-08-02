@@ -566,7 +566,7 @@ export function useNativeProfileStats(
             }
             if (__DEV__) {
               console.log(
-                `[profileCharts] path=ensure season=${fs.overviewSeasonKey} chartsPath=${fs.chartsPath} ms=${Date.now() - t0}`
+                `[profileCharts] path=ensure season=${fs.overviewSeasonKey} chartsPath=${fs.chartsPath} ms=${Date.now() - t0} daily=${charts?.dailyTrend?.length ?? 0} rank=${charts?.rankTrend?.length ?? 0} last20=${charts?.last20?.length ?? 0}`
               );
             }
           } else if (__DEV__) {
