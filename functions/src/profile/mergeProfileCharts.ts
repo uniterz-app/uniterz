@@ -152,7 +152,8 @@ export function mergeProfileChartsOnSeasonSettle(opts: {
     v: PROFILE_CHARTS_BUNDLE_VERSION,
     seasonKey: opts.seasonKey,
     dailyTrend: pruneDaily(without),
-    ...(Array.isArray(prev.rankTrend) ? { rankTrend: prev.rankTrend } : {}),
+    /** 欠けたままにしない（クライアントが ensure に落ちない） */
+    rankTrend: Array.isArray(prev.rankTrend) ? prev.rankTrend : [],
     last20,
   };
 }
@@ -177,8 +178,8 @@ export function mergeProfileChartsOnRankSnapshot(opts: {
   return {
     v: PROFILE_CHARTS_BUNDLE_VERSION,
     seasonKey: opts.seasonKey,
-    ...(Array.isArray(prev.dailyTrend) ? { dailyTrend: prev.dailyTrend } : {}),
+    dailyTrend: Array.isArray(prev.dailyTrend) ? prev.dailyTrend : [],
     rankTrend,
-    ...(Array.isArray(prev.last20) ? { last20: prev.last20 } : {}),
+    last20: Array.isArray(prev.last20) ? prev.last20 : [],
   };
 }

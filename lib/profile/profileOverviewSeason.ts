@@ -40,18 +40,18 @@ export function profileOverviewLookbackEndDateKey(
 }
 
 /**
- * 現行: 直近だけ。前シーズン確認: 開幕〜終端付近まで（末尾45日だとレギュラーが落ちる）。
+ * 現行: 直近だけ薄く（ensure 穴埋め用）。前シーズン確認: 開幕〜終端付近まで。
  */
 export function profileOverviewDailyLookbackDays(
   seasonKey: string = profileOverviewSeasonKey()
 ): number {
-  return seasonKey === CURRENT_NBA_SEASON_KEY ? 45 : 220;
+  return seasonKey === CURRENT_NBA_SEASON_KEY ? 21 : 220;
 }
 
 export function profileOverviewRankLookbackDays(
   seasonKey: string = profileOverviewSeasonKey()
 ): number {
-  return seasonKey === CURRENT_NBA_SEASON_KEY ? 60 : 220;
+  return seasonKey === CURRENT_NBA_SEASON_KEY ? 30 : 220;
 }
 
 /** endKey から days 日分の YYYY-MM-DD（新しい順ではなく古い→新しい） */

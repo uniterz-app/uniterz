@@ -1056,7 +1056,9 @@ export async function buildCumulativeRankingSnapshot(
             return {
               "profileCharts.v": charts.v,
               "profileCharts.seasonKey": charts.seasonKey,
+              "profileCharts.dailyTrend": charts.dailyTrend ?? [],
               "profileCharts.rankTrend": charts.rankTrend,
+              "profileCharts.last20": charts.last20 ?? [],
               "profileCharts.builtAtMs": Date.now(),
             };
           })()

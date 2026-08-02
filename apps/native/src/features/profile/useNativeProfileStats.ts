@@ -523,53 +523,66 @@ export function useNativeProfileStats(
 
           let charts = fs.profileCharts;
           if (!isProfileChartsComplete(charts)) {
-            setState((prev) => ({
-              ...prev,
-              loading: false,
-              summary: fs.summary,
-              summaryRanks: fs.summaryRanks,
-              stats: null,
-              dailyTrendLoading: true,
-              rankTrendLoading: true,
-              chartsLoading: true,
-              error: null,
-            }));
+            /**
+             * カードは即表示。ensure は裏で埋めて Functions denorm を穴埋めするだけ。
+             * 初回の重い掘りを UI 待ちにしない。
+             */
+            const seedDaily = normalizeProfileDailyTrendRows(
+              charts?.dailyTrend ?? []
+            );
+            const seedRank = rankPointsFromCharts(charts?.rankTrend ?? []);
+            const seedLast20 = charts?.last20 ?? [];
+            if (__DEV__) {
+              console.log(
+                `[profileCharts] path=ensure-bg season=${fs.overviewSeasonKey} chartsPath=${fs.chartsPath} ms=${Date.now() - t0} daily=${seedDaily.length} rank=${seedRank.length} last20=${seedLast20.length}`
+              );
+            }
             mergeCacheEntry(cacheKey, {
               summary: fs.summary,
               summaryRanks: fs.summaryRanks,
+              dailyTrend: seedDaily,
+              rankTrend: seedRank,
+              last20: seedLast20,
             });
-
-            const ensured = await ensureNbaOverviewChartsApi(targetUid, {
+            setState({
+              loading: false,
+              chartsLoading: false,
+              dailyTrendLoading: false,
+              rankTrendLoading: false,
+              summary: fs.summary,
+              summaryRanks: fs.summaryRanks,
+              stats: null,
+              dailyTrend: seedDaily,
+              rankTrend: seedRank,
+              last20: seedLast20,
+              metricValueDeltas: null,
+              error: null,
+            });
+            void ensureNbaOverviewChartsApi(targetUid, {
               force: PROFILE_OVERVIEW_USE_PREVIOUS_SEASON,
-            });
-            if (cancelled) return;
-            if (ensured) {
+            }).then((ensured) => {
+              if (cancelled || !ensured) return;
               invalidateCumulativeDataCache(targetUid);
-              charts = {
-                v: 1,
-                seasonKey: ensured.seasonKey,
-                dailyTrend: ensured.dailyTrend,
-                rankTrend: ensured.rankTrend.map((p) => ({
-                  dateKey: p.dateKey,
-                  rank: p.rank,
-                })),
-                last20: ensured.last20,
-              };
-            } else {
-              charts = {
-                v: 1,
-                seasonKey: fs.overviewSeasonKey,
-                dailyTrend: [],
-                rankTrend: [],
-                last20: [],
-              };
-            }
-            if (__DEV__) {
-              console.log(
-                `[profileCharts] path=${ensured ? "ensure" : "ensure-failed"} season=${fs.overviewSeasonKey} chartsPath=${fs.chartsPath} ms=${Date.now() - t0} daily=${charts?.dailyTrend?.length ?? 0} rank=${charts?.rankTrend?.length ?? 0} last20=${charts?.last20?.length ?? 0}`
+              const nextDaily = normalizeProfileDailyTrendRows(
+                ensured.dailyTrend
               );
-            }
-          } else if (__DEV__) {
+              const nextRank = ensured.rankTrend;
+              const nextLast20 = ensured.last20;
+              mergeCacheEntry(cacheKey, {
+                dailyTrend: nextDaily,
+                rankTrend: nextRank,
+                last20: nextLast20,
+              });
+              setState((prev) => ({
+                ...prev,
+                dailyTrend: nextDaily,
+                rankTrend: nextRank,
+                last20: nextLast20,
+              }));
+            });
+            return;
+          }
+          if (__DEV__) {
             console.log(
               `[profileCharts] path=${fs.chartsPath} season=${fs.overviewSeasonKey} ms=${Date.now() - t0} daily=${charts?.dailyTrend?.length ?? 0} rank=${charts?.rankTrend?.length ?? 0} last20=${charts?.last20?.length ?? 0}`
             );

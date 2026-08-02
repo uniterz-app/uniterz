@@ -145,8 +145,8 @@ async function buildLast20(
   seasonKey: string
 ): Promise<ProfileChartsLast20Point[]> {
   const adminDb = getAdminDb();
-  /** 前シーズン確認時は新しい投稿に埋もれやすいので多めに読む */
-  const fetchLimit = PROFILE_OVERVIEW_USE_PREVIOUS_SEASON ? 500 : 120;
+  /** 現行は直近だけ薄く。前シーズン確認時だけ多め。 */
+  const fetchLimit = PROFILE_OVERVIEW_USE_PREVIOUS_SEASON ? 500 : 40;
   const snap = await adminDb
     .collection("posts")
     .where("authorUid", "==", uid)

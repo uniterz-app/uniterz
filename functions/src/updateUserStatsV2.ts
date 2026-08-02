@@ -427,6 +427,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
           "profileCharts.v": profileCharts.v,
           "profileCharts.seasonKey": profileCharts.seasonKey,
           "profileCharts.dailyTrend": profileCharts.dailyTrend,
+          "profileCharts.rankTrend": profileCharts.rankTrend ?? [],
           "profileCharts.last20": profileCharts.last20,
           "profileCharts.builtAtMs": Date.now(),
           updatedAt: FieldValue.serverTimestamp(),

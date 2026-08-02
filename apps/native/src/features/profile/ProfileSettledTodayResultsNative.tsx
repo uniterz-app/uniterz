@@ -38,7 +38,7 @@ export default function ProfileSettledTodayResultsNative({
   uid,
   language,
   profileStatsContext,
-  showDesignPreviewWhenEmpty = true,
+  showDesignPreviewWhenEmpty = false,
 }: Props) {
   const isJa = language === "ja";
   const navigation = useNavigation();
