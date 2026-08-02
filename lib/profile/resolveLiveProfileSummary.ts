@@ -180,14 +180,14 @@ export function summaryFromSeasonRanking(
   return summaryFromNbaRankingBucket(pickNbaCumulativeRankingSlice(cumulative));
 }
 
-/** 明示スコープ: playoffs / 現行シーズンキー（フォールバックなし） */
+/** 明示スコープ: playoffs / season とも現行シーズンキーのみ（フォールバックなし） */
 export function summaryFromNbaScopeRanking(
   cumulative: Record<string, unknown> | null,
   scope: "playoffs" | "season"
 ): ProfileSummaryForCards {
   const bucket =
     scope === "playoffs"
-      ? pickNbaPlayoffsCumulativeSlice(cumulative)
+      ? pickNbaPlayoffsCumulativeSlice(cumulative, CURRENT_NBA_SEASON_KEY)
       : pickNbaSeasonKeyCumulativeSlice(cumulative, CURRENT_NBA_SEASON_KEY);
   return summaryFromNbaRankingBucket(bucket);
 }

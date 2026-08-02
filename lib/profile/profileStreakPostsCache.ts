@@ -19,8 +19,8 @@ import type { ProfileStreakScopeKey } from "@/lib/profile/profileStreakScope";
 
 export { computeAllScopeMetrics, type SettledPostRow } from "@/lib/profile/profileStreakPostsCompute";
 
-/** Last20 向け。26-27 スコープ落ちを見込んで余裕を持たせる */
-const STREAK_FETCH_LIMIT = 80;
+/** Last20 向け。denorm 未整備時のフォールバック。スコープ落ち余裕を抑えて read 削減 */
+const STREAK_FETCH_LIMIT = 40;
 const LEGACY_FETCH_LIMIT = 120;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 /** NBA シーズンスコープ変更時に bump */

@@ -345,8 +345,12 @@ export default function ProfileHomeScreen({
   });
   const streakBundle = useNativeStreakTracker(
     targetUid,
-    tab === "overview" && !!targetUid && authReady,
-    profileStatsContext
+    tab === "overview" &&
+      !!targetUid &&
+      authReady &&
+      !statsBundle.loading,
+    profileStatsContext,
+    { seedLast20: statsBundle.last20 }
   );
 
   const currentIsProView = profilePlanHook.isProView;

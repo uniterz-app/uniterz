@@ -21,6 +21,7 @@ import {
   nbaSeasonOpenSnapshotDocId,
   nbaSeasonSnapshotDocId,
 } from "./nbaSeason";
+import { mergeProfileChartsOnRankSnapshot } from "../profile/mergeProfileCharts";
 
 /* =========================================================
  * Firestore
@@ -1041,6 +1042,25 @@ export async function buildCumulativeRankingSnapshot(
     }
 
     const seasonRanks = rankByUidSeason.get(uid) ?? {};
+    const totalPointsRank = Number(seasonRanks.totalPoints ?? 0);
+    const cumData = statsByUid.get(uid) as Record<string, unknown> | undefined;
+    const profileChartsPatch =
+      Number.isFinite(totalPointsRank) && totalPointsRank > 0
+        ? (() => {
+            const charts = mergeProfileChartsOnRankSnapshot({
+              cumulative: cumData ?? null,
+              seasonKey,
+              dateKey,
+              totalPointsRank,
+            });
+            return {
+              "profileCharts.v": charts.v,
+              "profileCharts.seasonKey": charts.seasonKey,
+              "profileCharts.rankTrend": charts.rankTrend,
+              "profileCharts.builtAtMs": Date.now(),
+            };
+          })()
+        : {};
     /**
      * merge のネストで他シーズンを消さないよう、更新するシーズンだけドットパスで書く。
      */
@@ -1050,6 +1070,7 @@ export async function buildCumulativeRankingSnapshot(
         "snapshotRanks.updatedAt": FieldValue.serverTimestamp(),
         [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks,
         "snapshotRanks.wc": wc,
+        ...profileChartsPatch,
       },
       { merge: true }
     );

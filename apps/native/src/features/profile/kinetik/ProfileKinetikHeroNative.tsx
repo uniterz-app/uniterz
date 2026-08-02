@@ -1,6 +1,6 @@
 /**
  * Web `ProfileKinetikHero` 相当 — NBA Playoffs / Season 切替付き。
- * プロフィールは NBA のみ（W杯 stacked 経路は使わない）。
+ * プロフィールは NBA のみ。カード数字は cumulative_stats 直読（タブ両方を 1 read）。
  */
 import { useEffect, useMemo, useState } from "react";
 import type { ViewStyle } from "react-native";
@@ -10,8 +10,6 @@ import type { ProfileStatsStreakContext } from "../../../../../../lib/profile/pr
 import type { MyRankMetricValueDeltas } from "../../../../../../lib/rankings/myRankMetricValueDeltas";
 import {
   getNbaKinetikPeriodTitle,
-  prefetchNbaKinetikPeriodStats,
-  useNbaKinetikPeriodStats,
   type ProfileKinetikMetricsPeriod,
 } from "../../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import { preferredNbaKinetikPeriod } from "../../../../../../lib/rankings/nbaSeason";
@@ -19,7 +17,10 @@ import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "../profile
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../../lib/profile/profilePlanProBgVariants";
-import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
+import {
+  prefetchNbaKinetikBothPeriodsFirestore,
+  type NbaProfileCardPhaseFirestore,
+} from "../fetchNbaProfileCardPhaseFirestore";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
 
 export type ProfileKinetikHeroNativeProps = {
@@ -45,23 +46,8 @@ export type ProfileKinetikHeroNativeProps = {
   onBadgePress?: (badge: ResolvedBadgeNative) => void;
   style?: ViewStyle;
   targetUid?: string | null;
-  /** 累計プロフィール閲覧数（公開） */
   profileViewCount?: number | null;
-  /** 保有 Unit（公開） */
   unitBalance?: number | null;
-};
-
-const EMPTY_NBA_STATS = {
-  winRate: 0,
-  posts: 0,
-  hits: 0,
-  exactHits: 0,
-  goalScorerHits: 0,
-  totalPoints: 0,
-  upset: 0,
-  totalPointsRank: null as number | null,
-  totalPointsRankDenominator: null as number | null,
-  rankDeltaPlaces: null as number | null,
 };
 
 function toSummaryInput(summary?: ProfileSummaryNative | null) {
@@ -95,6 +81,10 @@ function toRanksInput(summaryRanks?: ProfileSummaryRanksNative | null) {
   };
 }
 
+type PeriodBundle = Partial<
+  Record<ProfileKinetikMetricsPeriod, NbaProfileCardPhaseFirestore>
+>;
+
 export default function ProfileKinetikHeroNative({
   displayName,
   handle,
@@ -123,28 +113,32 @@ export default function ProfileKinetikHeroNative({
   const preferredPeriod = useMemo(() => preferredNbaKinetikPeriod(), []);
   const [metricsPeriod, setMetricsPeriod] =
     useState<ProfileKinetikMetricsPeriod>(() => preferredPeriod);
-  const apiBase = getUniterzApiBaseUrl() || undefined;
-  const isPreferredTab = metricsPeriod === preferredPeriod;
-  /**
-   * 既定タブは親 `useNativeProfileStats` の phase を正にする。
-   * Hero 側で同じ API を二重取得すると「—」が長く残る。
-   * 親が終わっても summary が無いときだけフォールバック取得。
-   */
-  const fetchPeriodInHero =
-    !isPreferredTab || (!statsLoading && !summary);
-
-  const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
-    targetUid,
-    metricsPeriod,
-    fetchPeriodInHero,
-    apiBase
-  );
+  const [byPeriod, setByPeriod] = useState<PeriodBundle>({});
+  const [fsReady, setFsReady] = useState(false);
 
   useEffect(() => {
-    const other: ProfileKinetikMetricsPeriod =
-      metricsPeriod === "season" ? "playoffs" : "season";
-    prefetchNbaKinetikPeriodStats(targetUid, other, apiBase);
-  }, [targetUid, metricsPeriod, apiBase]);
+    const uid = targetUid?.trim() ?? "";
+    if (!uid) {
+      setByPeriod({});
+      setFsReady(true);
+      return;
+    }
+    let alive = true;
+    setFsReady(false);
+    void prefetchNbaKinetikBothPeriodsFirestore(uid).then((both) => {
+      if (!alive) return;
+      if (both) {
+        setByPeriod({
+          season: both.season,
+          playoffs: both.playoffs,
+        });
+      }
+      setFsReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [targetUid]);
 
   const profileBase: Profile = useMemo(
     () => ({
@@ -176,58 +170,37 @@ export default function ProfileKinetikHeroNative({
     ]
   );
 
-  const baseMapped = useMemo(
-    () =>
-      mapProfileToKinetikPanel({
-        profile: profileBase,
-        summary: toSummaryInput(summary),
-        summaryRanks: toRanksInput(summaryRanks),
-        profileStatsContext,
-        winStreak,
-      }),
-    [profileBase, profileStatsContext, summary, summaryRanks, winStreak]
-  );
+  const activePhase: NbaProfileCardPhaseFirestore | null =
+    byPeriod[metricsPeriod] ??
+    (metricsPeriod === preferredPeriod && summary
+      ? {
+          summary,
+          summaryRanks: summaryRanks ?? {
+            totalPrecision: null,
+            totalUpset: null,
+            totalPoints: null,
+            totalPointsDenominator: null,
+            rankDeltaPlaces: null,
+          },
+          profileCharts: null,
+        }
+      : null);
 
-  const periodMapped = useMemo(() => {
-    if (!periodData) return null;
+  const mapped = useMemo(() => {
+    const phaseSummary = activePhase?.summary;
+    const phaseRanks = activePhase?.summaryRanks;
     return mapProfileToKinetikPanel({
       profile: profileBase,
-      summary: periodData.summary,
-      summaryRanks: periodData.summaryRanks,
+      summary: toSummaryInput(phaseSummary ?? null),
+      summaryRanks: toRanksInput(phaseRanks ?? null),
       profileStatsContext,
       winStreak,
     });
-  }, [periodData, profileBase, profileStatsContext, winStreak]);
+  }, [activePhase, profileBase, profileStatsContext, winStreak]);
 
-  const useParentSummary = isPreferredTab && Boolean(summary);
-
-  const mapped = periodMapped
-    ? {
-        ...periodMapped,
-        metricsTitle: getNbaKinetikPeriodTitle(
-          metricsPeriod,
-          periodData!.seasonKey
-        ),
-      }
-    : useParentSummary
-      ? {
-          ...baseMapped,
-          metricsTitle: getNbaKinetikPeriodTitle(metricsPeriod),
-        }
-      : {
-          ...baseMapped,
-          stats: { ...baseMapped.stats, ...EMPTY_NBA_STATS },
-          metricsTitle: getNbaKinetikPeriodTitle(metricsPeriod),
-          totalPointsRank: null,
-          totalPointsRankDenominator: null,
-          rankDeltaPlaces: null,
-        };
-
+  /** 切替中は 0 埋めせず pending（—）。両方の period は 1 read で揃うので通常は即表示 */
   const statsPending =
-    !periodMapped &&
-    !useParentSummary &&
-    (isPreferredTab ? statsLoading || periodLoading : periodLoading);
-
+    !activePhase && (!fsReady || (metricsPeriod === preferredPeriod && statsLoading));
   return (
     <ProfileKinetikPanelNative
       style={style}
@@ -243,7 +216,7 @@ export default function ProfileKinetikHeroNative({
       totalPointsRank={mapped.totalPointsRank}
       totalPointsRankDenominator={mapped.totalPointsRankDenominator}
       rankDeltaPlaces={mapped.rankDeltaPlaces}
-      metricsTitle={mapped.metricsTitle}
+      metricsTitle={getNbaKinetikPeriodTitle(metricsPeriod)}
       canOpenMenu={isMe}
       onOpenMenu={isMe ? onOpenMenu : undefined}
       menuUnreadCount={menuUnreadCount}

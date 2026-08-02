@@ -596,3 +596,54 @@ export async function fetchRankPlayoffTrend(
     return [];
   }
 }
+
+/** 欠けた profileCharts をサーバーで埋めて返す（以降は cumulative 1 read） */
+export async function ensureNbaOverviewChartsApi(uid: string): Promise<{
+  dailyTrend: ProfileDailyTrendRow[];
+  rankTrend: RankPlayoffTrendPointNative[];
+  last20: { postId: string; settledAtMs: number; isWin: boolean }[];
+} | null> {
+  const base = getUniterzApiBaseUrl();
+  if (!base || !uid.trim()) return null;
+  const qs = new URLSearchParams({
+    uid: uid.trim(),
+    seasonKey: CURRENT_NBA_SEASON_KEY,
+  });
+  try {
+    const res = await fetch(
+      `${base}/api/profile/ensure-overview-charts?${qs.toString()}`,
+      { cache: "no-store" }
+    );
+    const json = (await res.json()) as {
+      ok?: boolean;
+      dailyTrend?: unknown;
+      rankTrend?: unknown;
+      last20?: unknown;
+    };
+    if (!res.ok || json.ok !== true) return null;
+    return {
+      dailyTrend: normalizeProfileDailyTrendRows(json.dailyTrend),
+      rankTrend: normalizeRankTrendPoints(json.rankTrend),
+      last20: Array.isArray(json.last20)
+        ? json.last20
+            .map((p) => {
+              if (!p || typeof p !== "object") return null;
+              const o = p as Record<string, unknown>;
+              const postId = typeof o.postId === "string" ? o.postId : "";
+              const settledAtMs = safeNum(o.settledAtMs);
+              if (!postId || !(settledAtMs > 0) || typeof o.isWin !== "boolean") {
+                return null;
+              }
+              return { postId, settledAtMs, isWin: o.isWin };
+            })
+            .filter(
+              (p): p is { postId: string; settledAtMs: number; isWin: boolean } =>
+                p != null
+            )
+            .sort((a, b) => a.settledAtMs - b.settledAtMs)
+        : [],
+    };
+  } catch {
+    return null;
+  }
+}

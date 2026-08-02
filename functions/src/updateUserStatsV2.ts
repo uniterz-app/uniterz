@@ -9,6 +9,10 @@ import {
   resolveNbaRankingBucketKeys,
   type NbaSeasonPhase,
 } from "./rankings/nbaSeason";
+import {
+  mergeProfileChartsOnSeasonSettle,
+  projectSeasonBucket,
+} from "./profile/mergeProfileCharts";
 
 /* =========================================================
  * 型
@@ -269,6 +273,11 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
 
     const userSnap = await tx.get(userRef);
     const user = userSnap.exists ? userSnap.data()! : {};
+    /** profileCharts merge 用（writes 前に全 reads） */
+    const [dailySnap, cumulativeSnap] = await Promise.all([
+      tx.get(dailyRef),
+      tx.get(cumulativeRef),
+    ]);
 
     const inc: any = {
       posts: FieldValue.increment(1),
@@ -355,26 +364,76 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       countedForRanking: forRanking,
     });
 
+    const contrib = buildPostCumulativeContribution({
+      countsForRanking,
+      league,
+      startAt,
+      seasonPhase,
+      isWin,
+      points,
+      upsetPoints,
+      exactHit,
+      goalScorerHit,
+      wcStage,
+      upsetBonus,
+      streakBonus,
+    });
+
+    /** overview チャート用 denorm（NBA レギュラーのみ・カードと同じ 1 doc） */
+    let profileCharts: ReturnType<typeof mergeProfileChartsOnSeasonSettle> | null =
+      null;
+    if (nbaSeasonKey) {
+      const dailyData = dailySnap.exists
+        ? (dailySnap.data() as Record<string, unknown>)
+        : null;
+      const bySeason = (dailyData?.rankingBySeason ?? {}) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      const projected = projectSeasonBucket(bySeason[nbaSeasonKey], {
+        posts: 1,
+        wins: isWin ? 1 : 0,
+        pointsSumV3: points,
+        upsetPointsSum: upsetPoints,
+      });
+      const settledAtMs = startAt.toMillis();
+      profileCharts = mergeProfileChartsOnSeasonSettle({
+        cumulative: cumulativeSnap.exists
+          ? (cumulativeSnap.data() as Record<string, unknown>)
+          : null,
+        seasonKey: nbaSeasonKey,
+        dateKey,
+        projectedSeasonBucket: projected,
+        last20Point: {
+          postId,
+          settledAtMs,
+          isWin,
+        },
+      });
+    }
+
     applyCumulativeIncrementInTransaction(
       tx,
       cumulativeRef,
       user,
       uid,
-      buildPostCumulativeContribution({
-        countsForRanking,
-        league,
-        startAt,
-        seasonPhase,
-        isWin,
-        points,
-        upsetPoints,
-        exactHit,
-        goalScorerHit,
-        wcStage,
-        upsetBonus,
-        streakBonus,
-      })
+      contrib
     );
+
+    if (profileCharts) {
+      tx.set(
+        cumulativeRef,
+        {
+          "profileCharts.v": profileCharts.v,
+          "profileCharts.seasonKey": profileCharts.seasonKey,
+          "profileCharts.dailyTrend": profileCharts.dailyTrend,
+          "profileCharts.last20": profileCharts.last20,
+          "profileCharts.builtAtMs": Date.now(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
   });
 }
 

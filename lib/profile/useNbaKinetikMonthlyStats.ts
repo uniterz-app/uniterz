@@ -194,7 +194,13 @@ export function getNbaKinetikPeriodTitle(
   period: ProfileKinetikMetricsPeriod,
   seasonKey: string = CURRENT_NBA_SEASON_KEY
 ): string {
-  if (period === "playoffs") return "NBA // PLAYOFFS STATS";
+  if (period === "playoffs") {
+    const short = seasonKey.replace(/^20/, "").replace("-20", "-");
+    const label = /^\d{4}-\d{2}$/.test(seasonKey)
+      ? `${seasonKey.slice(2, 4)}-${seasonKey.slice(5)}`
+      : short;
+    return `NBA // ${label} PLAYOFFS STATS`;
+  }
   const short = seasonKey.replace(/^20/, "").replace("-20", "-");
   const label = /^\d{4}-\d{2}$/.test(seasonKey)
     ? `${seasonKey.slice(2, 4)}-${seasonKey.slice(5)}`

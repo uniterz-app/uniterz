@@ -7,6 +7,11 @@ import { withFirestoreTransientRetry } from "@/lib/firebase/isTransientFirestore
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import {
+  ensureProfileChartsBundle,
+  isProfileChartsComplete,
+} from "@/lib/profile/ensureProfileChartsBundle";
+import { parseProfileChartsBundle } from "@/lib/profile/profileChartsBundle";
+import {
   resolveWcProfileSummaryLive,
   resolveNbaProfileSummaryLive,
   type ProfileSummaryForCards,
@@ -25,6 +30,7 @@ import {
   currentRankingPeriodLabel,
   isValidPeriodLabel,
 } from "@/lib/rankings/rankingPeriod";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
 import {
   buildRankPlayoffTrendPoints,
@@ -156,35 +162,82 @@ async function buildUserStatsResponse(req: Request) {
     rankingLeague === "nba" ? (nbaScope ?? "season") : undefined
   );
 
-  const needCumulative = !wantMonthly && (wantPhase || wantRanks);
+  const needCumulative =
+    !wantMonthly && (wantPhase || wantRanks || wantTrend || wantRankTrend);
 
-  const [statsSnap, cumulativeSnap, last30Snaps, rankTrendPoints] =
-    await Promise.all([
-      wantStats
-        ? adminDb.collection("user_stats_v2").doc(uid).get()
-        : Promise.resolve(null),
-      needCumulative
-        ? adminDb.collection("cumulative_stats").doc(uid).get()
-        : Promise.resolve(null),
-      wantTrend
-        ? fetchLast30DailySnapshots(adminDb, uid)
-        : Promise.resolve([] as Awaited<
-            ReturnType<typeof fetchLast30DailySnapshots>
-          >),
-      wantRankTrend
-        ? buildRankPlayoffTrendPoints(uid, {
-            rankingLeague,
-            wcStage: wcStage ?? "overall",
-          })
-        : Promise.resolve([] as RankPlayoffTrendPoint[]),
-    ]);
+  const [statsSnap, cumulativeSnap] = await Promise.all([
+    wantStats
+      ? adminDb.collection("user_stats_v2").doc(uid).get()
+      : Promise.resolve(null),
+    needCumulative
+      ? adminDb.collection("cumulative_stats").doc(uid).get()
+      : Promise.resolve(null),
+  ]);
 
   const stats = statsSnap?.exists ? statsSnap.data() : null;
-  const cumulative = cumulativeSnap?.exists ? cumulativeSnap.data() : null;
+  const cumulative = cumulativeSnap?.exists
+    ? (cumulativeSnap.data() as Record<string, unknown>)
+    : null;
+
+  /** NBA overview: 揃った profileCharts があれば日次30+履歴 read をスキップ */
+  let chartsBundle =
+    rankingLeague === "nba" && (wantTrend || wantRankTrend)
+      ? parseProfileChartsBundle(cumulative, CURRENT_NBA_SEASON_KEY)
+      : null;
+  if (
+    rankingLeague === "nba" &&
+    (wantTrend || wantRankTrend) &&
+    !isProfileChartsComplete(chartsBundle)
+  ) {
+    const ensured = await ensureProfileChartsBundle(uid, {
+      seasonKey: CURRENT_NBA_SEASON_KEY,
+    });
+    chartsBundle = {
+      v: ensured.v,
+      seasonKey: ensured.seasonKey,
+      dailyTrend: ensured.dailyTrend,
+      rankTrend: ensured.rankTrend,
+      last20: ensured.last20,
+    };
+  }
+
+  const [last30Snaps, rankTrendPoints] = await Promise.all([
+    wantTrend &&
+    !(
+      rankingLeague === "nba" &&
+      isProfileChartsComplete(chartsBundle) &&
+      (nbaScope ?? "season") === "season"
+    )
+      ? fetchLast30DailySnapshots(adminDb, uid)
+      : Promise.resolve([] as Awaited<
+          ReturnType<typeof fetchLast30DailySnapshots>
+        >),
+    wantRankTrend &&
+    !(rankingLeague === "nba" && isProfileChartsComplete(chartsBundle))
+      ? buildRankPlayoffTrendPoints(uid, {
+          rankingLeague,
+          wcStage: wcStage ?? "overall",
+        })
+      : Promise.resolve([] as RankPlayoffTrendPoint[]),
+  ]);
 
   const dailyTrend: ProfileDailyTrendRow[] = wantTrend
-    ? buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx)
+    ? rankingLeague === "nba" &&
+      isProfileChartsComplete(chartsBundle) &&
+      (nbaScope ?? "season") === "season"
+      ? chartsBundle.dailyTrend
+      : buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx)
     : [];
+
+  const rankTrendFromCharts: RankPlayoffTrendPoint[] | null =
+    wantRankTrend &&
+    rankingLeague === "nba" &&
+    isProfileChartsComplete(chartsBundle)
+      ? chartsBundle.rankTrend.map((p) => ({
+          dateKey: p.dateKey,
+          rank: p.rank,
+        }))
+      : null;
 
   let summary: SummaryForCards | null = null;
   let metricValueDeltas: MyRankMetricValueDeltas | null = null;
@@ -348,7 +401,9 @@ async function buildUserStatsResponse(req: Request) {
   if (metricValueDeltas) body.metricValueDeltas = metricValueDeltas;
   if (summaryRanks) body.summaryRanks = summaryRanks;
   if (wantTrend) body.dailyTrend = dailyTrend;
-  if (wantRankTrend) body.rankTrend = rankTrendPoints;
+  if (wantRankTrend) {
+    body.rankTrend = rankTrendFromCharts ?? rankTrendPoints;
+  }
 
   return NextResponse.json(body);
 
