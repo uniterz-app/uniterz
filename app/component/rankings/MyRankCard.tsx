@@ -1,7 +1,8 @@
 "use client";
 
 import { jp, nameOxanium, summaryMetricNumClass } from "@/lib/fonts";
-import { CyberRankNumber } from "@/app/component/rankings/CyberRankingListParts";
+import { CyberRankNumber, CyberRankingListRow, CyberRankingScore } from "@/app/component/rankings/CyberRankingListParts";
+import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
 import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -19,7 +20,6 @@ import {
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import {
   ProCyberBadge,
-  PRO_BADGE_COMPACT_SPACER_CLASS,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
@@ -36,6 +36,7 @@ import {
   deriveMyRankListAvgRow,
   MY_RANK_METRIC_HUD_LABEL,
   myRankCardAccent,
+  myRankMetricUnitSuffix,
   type MyRankStatsSource,
 } from "@/lib/rankings/myRankCardFocus";
 import {
@@ -92,14 +93,10 @@ type Props = {
   rankTierGap?: RankTierGapHint | null;
   /** dev プレビュー等 — 入場・チルト・ストリーク等のモーションを止める */
   disableMotion?: boolean;
-  /**
-   * Ranking Progress 用スナップショット。
-   * 未指定かつ displayTier も無いときはプログレス非表示（本番後方互換）。
-   */
+  /** Ranking Progress（下段右・YOUR RANK 横） */
   rankProgress?: MyRankProgressPoint[] | null;
-  /** rankProgress 取得中（カード本体は表示済みでもチャートだけ待つ） */
   rankProgressLoading?: boolean;
-  /** Weekly / Monthly 等、日次順位履歴が意味を持たないボードでプログレスを隠す */
+  /** Weekly / Monthly 等でプログレスを隠す */
   hideRankProgress?: boolean;
 };
 
@@ -123,7 +120,8 @@ const LAYOUT = {
     entriesSize: "12px",
     topPercentSize: "10px",
     nameSize: "15px",
-    statValueSize: "22px",
+    statValueSize: "24px",
+    unitSize: "10px",
     dayDeltaSize: "14px",
     rankLabelSize: "7.5px",
     avatar: "h-9 w-9",
@@ -136,7 +134,8 @@ const LAYOUT = {
     entriesSize: "13px",
     topPercentSize: "11px",
     nameSize: "17px",
-    statValueSize: "24px",
+    statValueSize: "28px",
+    unitSize: "11px",
     dayDeltaSize: "15px",
     rankLabelSize: "8px",
     avatar: "h-11 w-11",
@@ -263,13 +262,15 @@ function RankMetaStrip({
   metric,
   avgRow,
   metaSize,
-  inline = false,
+  flush,
+  alignEnd,
 }: {
   posts: number;
   metric: MobileMetric;
   avgRow?: ReturnType<typeof deriveMyRankListAvgRow>;
   metaSize: number;
-  inline?: boolean;
+  flush?: boolean;
+  alignEnd?: boolean;
 }) {
   const avgText = avgRow ? listRowAvgText(metric, avgRow) : null;
 
@@ -280,9 +281,12 @@ function RankMetaStrip({
   return (
     <div
       className={[
-        "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5",
-        inline ? "" : "mt-1.5",
-      ].join(" ")}
+        flush ? "" : "mt-1",
+        "flex min-w-0 flex-row flex-wrap items-center gap-x-1.5 gap-y-0.5",
+        alignEnd ? "justify-end" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <span
         className={[
@@ -308,51 +312,63 @@ function RankMetaStrip({
   );
 }
 
-function MetricHudColumn({
-  metricLabel,
-  metricLabelColor,
+function MetricHudInline({
+  metric,
   metricValue,
   metricValueColor,
   dayDeltaNode,
   statValueSize,
+  unitSize,
   dayDeltaSize,
 }: {
-  metricLabel: string;
-  metricLabelColor: string;
+  metric: MobileMetric;
   metricValue: string;
   metricValueColor: string;
   dayDeltaNode: ReactNode;
   statValueSize: string;
+  unitSize: string;
   dayDeltaSize: string;
 }) {
+  const unit = myRankMetricUnitSuffix(metric);
+
   return (
-    <div className="ml-auto shrink-0 border-l border-white/8 pl-2.5 text-right">
-      <span
-        className={[
-          nameOxanium.className,
-          "block font-semibold uppercase tracking-[0.12em]",
-        ].join(" ")}
-        style={{ fontSize: "7px", color: metricLabelColor }}
-      >
-        {metricLabel}
-      </span>
-      <span
-        className={[
-          summaryMetricNumClass,
-          "mt-1 block leading-none tabular-nums",
-        ].join(" ")}
-        style={{
-          fontSize: statValueSize,
-          color: metricValueColor,
-        }}
-      >
-        {metricValue}
-      </span>
+    <div className="min-w-0 text-right">
       {dayDeltaNode ? (
-        <div className="mt-1" style={{ fontSize: dayDeltaSize }}>
+        <div
+          className="leading-none"
+          style={{ fontSize: dayDeltaSize, marginBottom: -4, lineHeight: 1 }}
+        >
           {dayDeltaNode}
         </div>
       ) : null}
+      <div className="flex items-baseline justify-end gap-1.5">
+        <span
+          className={[
+            summaryMetricNumClass,
+            "leading-none tabular-nums",
+          ].join(" ")}
+          style={{
+            fontSize: statValueSize,
+            color: metricValueColor,
+          }}
+        >
+          {metricValue}
+        </span>
+        {unit ? (
+          <span
+            className={[
+              nameOxanium.className,
+              "shrink-0 font-bold uppercase tracking-[0.08em] leading-none",
+            ].join(" ")}
+            style={{
+              fontSize: unitSize,
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            {unit}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -491,7 +507,7 @@ export default function MyRankCard({
   countryCode = null,
   miniMetrics,
   leagueLabel,
-  cardResetKey,
+  cardResetKey: _cardResetKey,
   layout = "mobile",
   animateRank = true,
   statsSource = null,
@@ -502,6 +518,7 @@ export default function MyRankCard({
   rankProgressLoading = false,
   hideRankProgress = false,
 }: Props) {
+  void _cardResetKey;
   const ui = LAYOUT[layout];
   const m = t(language);
   const reduceMotion = useReducedMotion();
@@ -616,8 +633,11 @@ export default function MyRankCard({
 
   const metricValueDisplay = useMemo(() => {
     if (loading || statsPending) return STATS_PENDING_MARK;
-    if (selectedMini?.value) return selectedMini.value;
-    if (metric === "winRate") return `${Math.round(value)}%`;
+    if (selectedMini?.value) {
+      const raw = selectedMini.value;
+      return metric === "winRate" ? raw.replace(/%$/, "") : raw;
+    }
+    if (metric === "winRate") return `${Math.round(value)}`;
     if (metric === "streak" || metric === "goalScorerHits") {
       return `${Math.round(value)}`;
     }
@@ -648,10 +668,11 @@ export default function MyRankCard({
 
   const showRankTierGapHud = proTier && rankTierGapHud != null;
   const gapTextSize = layout === "web" ? "11px" : "10px";
-  const showRankMetaInline = freeTier && displayTier != null;
-
   const showRankingProgress =
-    !hideRankProgress && (displayTier != null || rankProgress !== undefined);
+    !freeTier &&
+    !hideRankProgress &&
+    metric === "totalScore" &&
+    (displayTier != null || rankProgress !== undefined);
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
@@ -662,6 +683,74 @@ export default function MyRankCard({
     layout === "mobile" && mobileWide && "outerPadWide" in ui
       ? (ui.outerPadWide as string)
       : (ui.outerPad as string);
+
+  if (freeTier) {
+    const listRank = rank != null && rank >= 1 ? rank : 99;
+    const freeInner =
+      loading || statsPending || rank == null ? (
+        <div
+          className="rounded-sm border border-white/10 bg-black/20 px-3 py-4 text-[11px] text-white/40"
+          aria-busy
+        >
+          {m.rankings.loadingRankStats}
+        </div>
+      ) : (
+        <CyberRankingListRow
+          rank={listRank}
+          displayName={displayName}
+          photoURL={photoURL}
+          metric={metric}
+          metricTag={cyberMetricTag(metric, language)}
+          posts={posts}
+          countryCode={countryCode}
+          avgRow={avgRow}
+          compact={layout === "mobile"}
+          scoreLayout={layout === "web" ? "web" : "stack"}
+          hideAccentBar
+          rankOverline={m.rankings.yourRank}
+          scoreSlot={
+            <CyberRankingScore
+              rank={listRank}
+              metric={metric}
+              counted={value}
+              compact={layout === "mobile"}
+              scoreLayout={layout === "web" ? "web" : "stack"}
+              plainWhite
+            />
+          }
+        />
+      );
+
+    const freeBody = (
+      <MyRankCardFrame
+        tone="neutral"
+        hideLeftEdge
+        className="w-full overflow-hidden"
+      >
+        <div className="relative z-10 px-1.5 py-1.5">
+          {freeInner}
+        </div>
+      </MyRankCardFrame>
+    );
+
+    if (motionOff) {
+      return <div className={outerPad}>{freeBody}</div>;
+    }
+
+    return (
+      <motion.div
+        className={outerPad}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          opacity: { duration: ENTER_DURATION, ease: ENTER_EASE },
+          y: { duration: ENTER_DURATION, ease: ENTER_EASE },
+        }}
+      >
+        {freeBody}
+      </motion.div>
+    );
+  }
 
   const body = (
     <MyRankCardFrame
@@ -746,165 +835,117 @@ export default function MyRankCard({
           <span className="sr-only">{m.rankings.loadingRankStats}</span>
         )}
 
-        <div className={["relative z-10 grid", ui.towerGrid as string].join(" ")}>
-          {/* 左: YOUR RANK 塔 */}
-          <div
-            className="flex min-h-full flex-col items-center justify-between gap-1 px-1.5 py-2.5"
-            style={{
-              borderRight: `1px solid ${accent.hairline}`,
-              background: accent.towerBg,
-            }}
-          >
-            <span
-              className={[
-                nameOxanium.className,
-                "whitespace-nowrap text-center font-bold uppercase tracking-[0.14em] text-white/42",
-              ].join(" ")}
-              style={{ fontSize: ui.rankLabelSize as string }}
+        {/* 上段2列: ユーザー | 順位+スタッツ / 下段: Progress */}
+        <div className="relative z-10 flex flex-col">
+          <div className="flex min-h-[96px] items-stretch gap-1.5 px-2 py-2">
+          <div className="flex w-[92px] shrink-0 flex-col items-center gap-1.5 pt-0.5">
+            <div
+              className="relative h-11 w-11 overflow-hidden rounded-sm"
+              style={{
+                border: "1px solid rgba(245,215,142,0.4)",
+                background: "rgba(0,0,0,0.4)",
+              }}
             >
-              {m.rankings.yourRank}
-            </span>
-
-            <div className="flex flex-col items-center gap-1">
-              {topPercentLabel ? (
-                <span
-                  className={[
-                    "rounded px-2 py-[3px] font-bold tracking-wide",
-                    nameOxanium.className,
-                    "shrink-0 uppercase tabular-nums leading-none text-center",
-                  ].join(" ")}
-                  style={{
-                    color: GOLD,
-                    fontSize: ui.topPercentSize as string,
-                    background: "rgba(255,214,90,0.08)",
-                  }}
-                >
-                  {topPercentLabel}
-                </span>
-              ) : null}
-              <CyberRankNumber
-                rank={
-                  rankVisualMuted
-                    ? 4
-                    : motionOff
-                      ? rank!
-                      : rankCount
-                }
-                compact={layout === "mobile"}
-                variant="tower"
-                displayValue={
-                  rankVisualMuted
-                    ? loading
-                      ? "--"
-                      : statsPending
-                        ? STATS_PENDING_MARK
-                        : "--"
-                    : undefined
-                }
-                muted={rankVisualMuted}
+              <RankingsAvatarCircle
+                photoURL={photoURL}
+                displayName={displayName}
+                boxClassName="h-full w-full"
+                initialTextClassName="text-[12px]"
+                gateReady={ready}
+                shape="square"
               />
-
-              {entriesDisplay ? (
-                <span
-                  className={[
-                    nameOxanium.className,
-                    "font-medium tabular-nums text-white/38",
-                  ].join(" ")}
-                  style={{ fontSize: ui.entriesSize as string }}
-                >
-                  / {entriesDisplay}
-                </span>
-              ) : null}
-
-              {!loading && !statsPending && rank != null ? (
-                <RankDeltaBadge
-                  delta={displayRankDelta}
-                  size={ui.deltaSize as "sm" | "md"}
-                  variant="tower"
-                  language={language}
-                />
-              ) : null}
             </div>
+            <div
+              className={[
+                jp.className,
+                "w-full text-center text-[12px] font-black leading-tight text-white",
+              ].join(" ")}
+            >
+              <span className="line-clamp-2 break-all">{displayName}</span>
+            </div>
+            {showProBadge ? (
+              <ProCyberBadge
+                {...proBadgeStaticMotion}
+                compact
+                ariaLabel={m.common.proMember}
+              />
+            ) : null}
           </div>
 
-          {/* 右 */}
-          <div className="flex min-h-full min-w-0 flex-col px-2.5 py-2.5">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-x-2">
-              <div className="flex min-w-0 flex-col justify-between self-stretch">
-                <div className="flex min-w-0 items-start gap-x-2">
-                  <div
-                    className={[
-                      "relative shrink-0 overflow-hidden rounded-sm",
-                      ui.avatar as string,
-                    ].join(" ")}
-                    style={{
-                      border: `1px solid ${accent.hairline}`,
-                      background: accent.avatarBg,
-                    }}
-                  >
-                    <RankingsAvatarCircle
-                      photoURL={photoURL}
-                      displayName={displayName}
-                      boxClassName="h-full w-full"
-                      initialTextClassName={ui.avatarText as string}
-                      gateReady={ready}
-                      shape="square"
+            <div
+              className="flex min-w-0 flex-[1.6] overflow-hidden rounded-sm border"
+              style={{
+                borderColor: "rgba(255,255,255,0.1)",
+                background: "rgba(0,0,0,0.28)",
+              }}
+            >
+              <div
+                className="flex flex-1 flex-col items-center justify-center gap-1 border-r px-1 py-2"
+                style={{
+                  borderColor: "rgba(245,215,142,0.2)",
+                  background: "rgba(0,0,0,0.16)",
+                }}
+              >
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center justify-center gap-0.5">
+                    <span
+                      className={[
+                        nameOxanium.className,
+                        "text-[16px] font-bold text-white/55",
+                      ].join(" ")}
+                    >
+                      #
+                    </span>
+                    <CyberRankNumber
+                      rank={
+                        rankVisualMuted
+                          ? 4
+                          : motionOff
+                            ? rank!
+                            : rankCount
+                      }
+                      compact={layout === "mobile"}
+                      variant="tower"
+                      displayValue={
+                        rankVisualMuted
+                          ? loading
+                            ? "--"
+                            : statsPending
+                              ? STATS_PENDING_MARK
+                              : "--"
+                          : undefined
+                      }
+                      muted={rankVisualMuted}
                     />
                   </div>
-
-                  <div className="min-w-0 flex-1 truncate pr-1 pt-0.5">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <div
-                        className={[
-                          jp.className,
-                          "min-w-0 truncate font-black leading-none text-white",
-                        ].join(" ")}
-                        style={{ fontSize: ui.nameSize as string }}
-                      >
-                        {displayName}
-                      </div>
-                      {showProBadge ? (
-                        <ProCyberBadge
-                          {...proBadgeStaticMotion}
-                          /* mobile は標準サイズ（枠・マーク・PRO とも一回り大きく） */
-                          compact={layout === "web"}
-                          ariaLabel={m.common.proMember}
-                        />
-                      ) : freeTier && displayTier != null ? (
-                        <span
-                          className={[
-                            layout === "web"
-                              ? PRO_BADGE_COMPACT_SPACER_CLASS
-                              : "inline-flex h-[18px] w-[34px] shrink-0",
-                            "invisible",
-                          ].join(" ")}
-                          aria-hidden
-                        />
-                      ) : null}
-                    </div>
-                  </div>
+                  {entriesDisplay ? (
+                    <span
+                      className={[
+                        nameOxanium.className,
+                        "text-[11px] font-semibold tabular-nums text-white/45 leading-none",
+                      ].join(" ")}
+                      style={{ marginTop: -3 }}
+                    >
+                      / {entriesDisplay}
+                    </span>
+                  ) : null}
                 </div>
-
-                {showRankTierGapHud && rankTierGapHud ? (
-                  <RankTierGapUnderAvatar
-                    hud={rankTierGapHud}
-                    gapTextSize={gapTextSize}
-                  />
-                ) : showRankMetaInline ? (
-                  <RankMetaStrip
-                    posts={posts}
-                    metric={metric}
-                    avgRow={avgRow}
-                    metaSize={metaSize}
-                    inline
-                  />
+                {topPercentLabel ? (
+                  <span
+                    className={[
+                      nameOxanium.className,
+                      "text-[9px] font-bold uppercase tracking-wide",
+                    ].join(" ")}
+                    style={{ color: GOLD }}
+                  >
+                    {topPercentLabel}
+                  </span>
                 ) : null}
               </div>
 
-              <div className="self-stretch">
-                <MetricHudColumn
-                  metricLabel={MY_RANK_METRIC_HUD_LABEL[metric]}
-                  metricLabelColor={metricAccent.labelDim}
+              <div className="flex min-w-0 flex-1 flex-col items-end justify-center gap-1 px-2 py-2">
+                <MetricHudInline
+                  metric={metric}
                   metricValue={metricValueDisplay}
                   metricValueColor={
                     loading || statsPending
@@ -912,38 +953,47 @@ export default function MyRankCard({
                       : metricAccent.value
                   }
                   dayDeltaNode={dayDeltaNode}
-                  statValueSize={ui.statValueSize as string}
-                  dayDeltaSize={ui.dayDeltaSize as string}
+                  statValueSize={layout === "web" ? "30px" : "26px"}
+                  unitSize={layout === "web" ? "13px" : "12px"}
+                  dayDeltaSize="10px"
                 />
+                <RankMetaStrip
+                  posts={posts}
+                  metric={metric}
+                  avgRow={avgRow}
+                  metaSize={9}
+                  flush
+                  alignEnd
+                />
+                {showRankTierGapHud && rankTierGapHud ? (
+                  <div className="w-full text-right">
+                    <RankTierGapUnderAvatar
+                      hud={rankTierGapHud}
+                      gapTextSize={gapTextSize}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
-
-            {showRankMetaInline ? null : (
-              <RankMetaStrip
-                posts={posts}
-                metric={metric}
-                avgRow={avgRow}
-                metaSize={metaSize}
-              />
-            )}
           </div>
+
+          {showRankingProgress ? (
+            <div
+              className="min-h-[64px] border-t px-2 pb-1.5 pt-1"
+              style={{ borderColor: "rgba(255,255,255,0.08)" }}
+            >
+              <MyRankRankingProgress
+                points={progressPoints}
+                maxSnapshots={progressSnapshotLimit}
+                loading={loading || rankProgressLoading}
+                language={language}
+                layout={layout}
+                numbersOnly
+                dense
+              />
+            </div>
+          ) : null}
         </div>
-
-        {showRankingProgress ? (
-          <MyRankRankingProgress
-            points={progressPoints}
-            maxSnapshots={progressSnapshotLimit}
-            loading={loading || rankProgressLoading}
-            language={language}
-            layout={layout}
-          />
-        ) : null}
-
-        <MyRankCardFooter
-          badgeLabel={footerBadgeLabel}
-          dateLine={footerDateLine}
-          metaLine={footerMetaLine}
-        />
       </div>
     </MyRankCardFrame>
   );

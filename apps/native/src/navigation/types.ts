@@ -92,6 +92,8 @@ export type ProfileStackParamList = {
   SeasonPredictPreview: undefined;
   /** __DEV__ Pro futuristic 背景プレビュー */
   FuturisticBgPreview: undefined;
+  /** __DEV__ My Rank Free / Pro カード比較（Web `/dev/my-rank-free-pro-preview`） */
+  MyRankFreeProPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

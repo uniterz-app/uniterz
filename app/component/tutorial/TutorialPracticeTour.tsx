@@ -408,9 +408,20 @@ export default function TutorialPracticeTour({
                           language={language}
                           layout="mobile"
                           disableMotion
+                          displayTier="free"
                           totalEntries={128}
                           streak={grade?.outcome === "hit" ? 1 : 0}
                           countryCode="JP"
+                          miniMetrics={[
+                            {
+                              key: "totalScore",
+                              label: "totalPTS",
+                              value:
+                                grade?.outcome === "hit" ? "2,322" : "2,310",
+                              pct: 78,
+                              dayDelta: "+12",
+                            },
+                          ]}
                         />
                         {rankingRows.map((row, i) => (
                           <RankingCard

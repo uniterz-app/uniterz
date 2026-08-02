@@ -21,7 +21,8 @@ import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
 import RankingsCategoryTabs from "@/app/component/rankings/RankingsCategoryTabs";
 import RankingsPeriodTabs from "@/app/component/rankings/RankingsPeriodTabs";
 import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
-import RankingsOpenProLock from "@/app/component/rankings/RankingsOpenProLock";
+import RankingsDivisionTabs from "@/app/component/rankings/RankingsDivisionTabs";
+import RankingsProLeagueTeaser from "@/app/component/rankings/RankingsProLeagueTeaser";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import Header from "@/app/component/Header";
@@ -33,6 +34,7 @@ import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import {
   divisionFromNbaBoard,
   type NbaRankingBoard,
+  type RankingDivision,
 } from "@/lib/rankings/rankingDivision";
 import {
   isRankingPeriod,
@@ -74,6 +76,7 @@ import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import type { RankingApiRow } from "@/lib/rankings/rankingTransform";
 import { buildRankTierGapHint } from "@/lib/rankings/rankTierMilestone";
 import { useMyRankProgress } from "@/lib/rankings/useMyRankProgress";
+import { useMyRankCardFast } from "@/lib/rankings/useMyRankCardFast";
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
@@ -127,9 +130,9 @@ export default function WebRankingsShell() {
     rows,
     top3,
     restRows,
-    myRank,
-    myRankDeltaPlaces,
-    myRow,
+    myRank: listMyRank,
+    myRankDeltaPlaces: listMyRankDelta,
+    myRow: listMyRow,
     myUid,
     rankingListCount,
     byMetric,
@@ -148,6 +151,27 @@ export default function WebRankingsShell() {
     useOpenPeriodBoard ? "open" : "standard",
     useOpenSeasonBoard
   );
+
+  const myRankCardFastEnabled =
+    !usePeriodBoard &&
+    !useOpenSeasonBoard &&
+    rankingLeague === "nba" &&
+    effectiveCategory === "playoffs";
+  const cardFast = useMyRankCardFast(myUid, {
+    enabled: myRankCardFastEnabled,
+  });
+
+  const myRank =
+    listMyRank ??
+    (myRankCardFastEnabled && !cardFast.loading ? cardFast.myRank : null);
+  const myRankDeltaPlaces =
+    listMyRankDelta ??
+    (myRankCardFastEnabled ? cardFast.myRankDeltaPlaces : null);
+  const myRow =
+    listMyRow ??
+    (myRankCardFastEnabled
+      ? (cardFast.myRow as typeof listMyRow)
+      : null);
 
   const myStatsRow =
     (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ?? myRow;
@@ -347,18 +371,16 @@ export default function WebRankingsShell() {
     });
   }, [myRank, myTotalPoints, rankingHasNoEntries, totalPointsRows]);
 
-  /** Ranking Progress — NBA は free/pro とも表示、WC は pro のみ（mobile と同方針） */
-  const myRankCardTier: "free" | "pro" | undefined =
-    sessionUser.plan === "pro"
-      ? "pro"
-      : rankingLeague === "nba"
-        ? "free"
-        : undefined;
+  /** Free / Pro マイランクカード。Season 累計は 1-read 先行。 */
+  const myRankCardTier: "free" | "pro" =
+    cardFast.plan === "pro" || sessionUser.plan === "pro" ? "pro" : "free";
   const rankProgressHidden =
     rankingLeague === "nba" && rankingPeriod !== "season";
   const rankProgressEnabled =
     effectiveCategory === "playoffs" &&
     !rankProgressHidden &&
+    myRankCardTier === "pro" &&
+    metric === "totalScore" &&
     (rankingLeague === "nba" || sessionUser.plan === "pro");
   const { points: myRankProgressPoints, loading: myRankProgressLoading } =
     useMyRankProgress({
@@ -367,6 +389,10 @@ export default function WebRankingsShell() {
       rankingLeague,
       wcStage: wcStageForHook,
     });
+
+  const cardLoading =
+    !listReady &&
+    !(myRankCardFastEnabled && !cardFast.loading && cardFast.myRow != null);
 
   const pageKey =
     buildRankingsPageKey({
@@ -428,6 +454,17 @@ export default function WebRankingsShell() {
 
           {rankingLeague === "nba" &&
           (nbaBoard === "regular" || nbaBoard === "open") ? (
+            <RankingsDivisionTabs
+              division={rankingDivision}
+              onChange={(next) =>
+                setNbaBoard(next === "open" ? "open" : "regular")
+              }
+              language={language}
+            />
+          ) : null}
+
+          {rankingLeague === "nba" &&
+          (nbaBoard === "regular" || nbaBoard === "open") ? (
             <RankingsPeriodTabs
               period={rankingPeriod}
               onChange={setRankingPeriod}
@@ -464,13 +501,13 @@ export default function WebRankingsShell() {
               displayName={sessionUser.displayName || "You"}
               photoURL={sessionUser.photoURL || null}
               totalPosts={myRow?.totalPosts}
-              loading={!listReady}
-              statsScramble={listReady && personalPending}
+              loading={cardLoading}
+              statsScramble={listReady && personalPending && !cardFast.myRow}
               animateRank={!skipCountUp}
               language={language}
-              isPro={sessionUser.plan === "pro"}
+              isPro={myRankCardTier === "pro"}
               displayTier={myRankCardTier}
-              rankTierGap={sessionUser.plan === "pro" ? rankTierGap : null}
+              rankTierGap={myRankCardTier === "pro" ? rankTierGap : null}
               rankProgress={
                 rankProgressEnabled ? (myRankProgressPoints ?? []) : undefined
               }
@@ -529,7 +566,11 @@ export default function WebRankingsShell() {
 
         {effectiveCategory === "playoffs" && openProLocked ? (
           <div className="pt-2">
-            <RankingsOpenProLock language={language} />
+            <RankingsProLeagueTeaser
+              language={language}
+              subscribeHref="/web/pro/subscribe"
+              onBackToPickUp={() => setNbaBoard("regular")}
+            />
           </div>
         ) : null}
 
@@ -634,12 +675,6 @@ export default function WebRankingsShell() {
           onSelectNbaPlayoffs={() => {
             setRankingLeague("nba");
             setNbaBoard("playoffs");
-            setCategory("playoffs");
-            setRankingsDrawerOpen(false);
-          }}
-          onSelectOpenweight={() => {
-            setRankingLeague("nba");
-            setNbaBoard("open");
             setCategory("playoffs");
             setRankingsDrawerOpen(false);
           }}

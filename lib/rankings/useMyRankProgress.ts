@@ -2,7 +2,8 @@
 
 /**
  * My Rank カードの Ranking Progress 用 — 自分の総合得点順位の日次推移。
- * `/api/profile/rank-playoff-trend`（rankSnapshotHistory 最新10件）を読む。
+ * 既定: `/api/profile/rank-playoff-trend`。
+ * seedComplete 時は API を打たず seedPoints を使う（cumulative_stats.profileCharts）。
  */
 
 import { useEffect, useState } from "react";
@@ -41,9 +42,14 @@ export function useMyRankProgress(input: {
   enabled: boolean;
   rankingLeague: RankingLeagueSource;
   wcStage?: WcRankingStage | null;
+  /** cumulative profileCharts.rankTrend */
+  seedPoints?: MyRankProgressPoint[] | null;
+  seedComplete?: boolean;
 }): { points: MyRankProgressPoint[] | null; loading: boolean } {
   const { uid, enabled, rankingLeague } = input;
   const wcStage = input.wcStage ?? null;
+  const seedComplete = input.seedComplete === true;
+  const seedPoints = input.seedPoints;
 
   const [state, setState] = useState<{
     key: string | null;
@@ -54,6 +60,15 @@ export function useMyRankProgress(input: {
   useEffect(() => {
     if (!enabled || !uid) {
       setState({ key: null, points: null, loading: false });
+      return;
+    }
+
+    if (seedComplete) {
+      setState({
+        key: cacheKey({ uid, rankingLeague, wcStage }),
+        points: seedPoints ?? [],
+        loading: false,
+      });
       return;
     }
 
@@ -92,7 +107,7 @@ export function useMyRankProgress(input: {
     return () => {
       aborted = true;
     };
-  }, [enabled, uid, rankingLeague, wcStage]);
+  }, [enabled, uid, rankingLeague, wcStage, seedComplete, seedPoints]);
 
   return { points: state.points, loading: state.loading };
 }

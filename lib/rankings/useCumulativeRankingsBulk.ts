@@ -826,7 +826,7 @@ export function useCumulativeRankingsBulk(
     if (typeof requestIdleCallback !== "undefined") {
       idleId = requestIdleCallback(loadDeferred, { timeout: 2500 });
     } else {
-      timeoutId = setTimeout(loadDeferred, 1200);
+      timeoutId = setTimeout(loadDeferred, 400);
     }
 
     return () => {

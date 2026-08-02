@@ -95,12 +95,15 @@ export function MyRankCardFrame({
   className = "",
   tone = "up",
   proSpec = false,
+  hideLeftEdge = false,
 }: {
   children: ReactNode;
   className?: string;
   tone?: MyRankCardFrameTone;
   /** Pro 仕様 — ゴールド四隅ブラケット + 右下チャムファー */
   proSpec?: boolean;
+  /** Free — 左端アクセント色を出さない */
+  hideLeftEdge?: boolean;
 }) {
   const chamferId = useId().replace(/[^a-zA-Z0-9-_]/g, "x");
 
@@ -108,6 +111,7 @@ export function MyRankCardFrame({
     "my-rank-card-frame relative",
     TONE_CLASS[tone],
     proSpec ? "my-rank-card-frame--pro-spec" : "",
+    hideLeftEdge ? "my-rank-card-frame--no-left-edge" : "",
     className,
   ]
     .filter(Boolean)

@@ -4,13 +4,12 @@ export type MyRankProgressPoint = {
   rank: number;
 };
 
-export function resolveMyRankProgressSnapshotLimit(input: {
+/** My Rank カード内 Ranking Progress — 一律 7 スナップショット */
+export function resolveMyRankProgressSnapshotLimit(_input?: {
   displayTier?: "free" | "pro";
   isPro?: boolean;
 }): number {
-  if (input.displayTier === "free") return 3;
-  if (input.displayTier === "pro") return 10;
-  return input.isPro ? 10 : 3;
+  return 7;
 }
 
 /** dev プレビュー — 現在順位に向かって変動する仮スナップショット */

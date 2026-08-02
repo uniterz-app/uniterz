@@ -63,7 +63,8 @@ type Props = {
     | "electronicNotice"
     | "notificationDev"
     | "seasonPreview"
-    | "futuristicBgPreview") => void;
+    | "futuristicBgPreview"
+    | "myRankFreeProPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -239,6 +240,7 @@ export default function ProfileSideMenuModal({
       | "notificationDev"
       | "seasonPreview"
       | "futuristicBgPreview"
+      | "myRankFreeProPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -530,6 +532,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("futuristicBgPreview")}
                         >
                           Futuristic BG プレビュー
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="chart-box-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("myRankFreeProPreview")}
+                        >
+                          My Rank ページモック
                         </SideMenuItemButtonNative>
                       </View>
                     </>

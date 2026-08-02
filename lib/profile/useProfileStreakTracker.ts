@@ -6,6 +6,7 @@ import {
   resolveProfileStreakScopeKey,
   type ProfileStatsStreakContext,
 } from "@/lib/profile/profileStreakScope";
+import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 
 /** Last20 Tracker 用の表示件数 */
 export const STREAK_TRACKER_LAST_N = 20;
@@ -24,9 +25,17 @@ export type StreakTrackerPoint = {
  */
 export function useProfileStreakTracker(
   uid: string | null | undefined,
-  ctx: ProfileStatsStreakContext
+  ctx: ProfileStatsStreakContext,
+  options?: {
+    /**
+     * cumulative_stats.profileCharts.last20。
+     * null/undefined = 未取得（posts クエリ）。配列（空含む）= 確定。
+     */
+    seedLast20?: ProfileChartsLast20Point[] | null;
+  }
 ) {
   const scopeKey = resolveProfileStreakScopeKey(ctx);
+  const seedLast20 = options?.seedLast20;
   const [points, setPoints] = useState<StreakTrackerPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +43,27 @@ export function useProfileStreakTracker(
     if (!uid) {
       setPoints([]);
       setLoading(true);
+      return;
+    }
+
+    if (seedLast20 != null) {
+      let streak = 0;
+      const out: StreakTrackerPoint[] = [];
+      for (const r of seedLast20) {
+        if (r.isWin) {
+          streak = streak > 0 ? streak + 1 : 1;
+        } else {
+          streak = streak < 0 ? streak - 1 : -1;
+        }
+        out.push({
+          postId: r.postId,
+          settledAtMs: r.settledAtMs,
+          isWin: r.isWin,
+          streakAfter: streak,
+        });
+      }
+      setPoints(out);
+      setLoading(false);
       return;
     }
 
@@ -79,7 +109,7 @@ export function useProfileStreakTracker(
     return () => {
       alive = false;
     };
-  }, [scopeKey, uid]);
+  }, [uid, scopeKey, seedLast20]);
 
   return { points, loading };
 }

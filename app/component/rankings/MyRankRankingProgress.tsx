@@ -112,6 +112,9 @@ export default function MyRankRankingProgress({
   layout = "mobile",
   embedded = false,
   title: titleOverride,
+  /** 順位ドットの変動のみ（タイトル・左右軸ラベルなし） */
+  numbersOnly = false,
+  dense = false,
 }: {
   points: MyRankProgressPoint[];
   maxSnapshots: number;
@@ -120,11 +123,14 @@ export default function MyRankRankingProgress({
   layout?: "mobile" | "web";
   embedded?: boolean;
   title?: string;
+  numbersOnly?: boolean;
+  /** My Rank Pro 下段 — 薄い Progress 帯 */
+  dense?: boolean;
 }) {
   const msg = t(language);
   const title = titleOverride ?? MY_RANK_RANKING_PROGRESS_TITLE;
   const emptyHint = msg.profile.rankingProgressNoData;
-  const chartHeight = layout === "web" ? 104 : 92;
+  const chartHeight = dense ? 64 : layout === "web" ? 104 : 92;
 
   const rows = useMemo(() => {
     const sliced = points.slice(-Math.max(1, maxSnapshots));
@@ -172,30 +178,46 @@ export default function MyRankRankingProgress({
       className={
         embedded
           ? "relative z-10 px-0 pt-0 pb-1"
-          : "relative z-10 border-t border-white/8 px-2.5 pt-2 pb-1"
+          : numbersOnly
+            ? "relative z-10 px-1.5 pt-1 pb-1"
+            : "relative z-10 border-t border-white/8 px-2.5 pt-2 pb-1"
       }
       aria-label={title}
     >
-      <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <p
-          className={[
-            nameOxanium.className,
-            "truncate font-bold uppercase tracking-[0.16em] text-cyan-300/78",
-          ].join(" ")}
-          style={{ fontSize: layout === "web" ? "9px" : "8px" }}
-        >
-          {title}
-        </p>
-        <span
-          className={[
-            nameOxanium.className,
-            "shrink-0 font-semibold tabular-nums tracking-[0.12em] text-white/28",
-          ].join(" ")}
-          style={{ fontSize: "7px" }}
-        >
-          {rows.length}/{maxSnapshots}
-        </span>
-      </div>
+      {numbersOnly && dense ? null : numbersOnly ? (
+        <div className="mb-1 flex items-baseline justify-between gap-2 px-0.5">
+          <p
+            className={[
+              nameOxanium.className,
+              "truncate font-bold uppercase tracking-[0.16em] text-cyan-300/78",
+            ].join(" ")}
+            style={{ fontSize: layout === "web" ? "9px" : "8px" }}
+          >
+            {title}
+          </p>
+        </div>
+      ) : (
+        <div className="mb-1.5 flex items-baseline justify-between gap-2">
+          <p
+            className={[
+              nameOxanium.className,
+              "truncate font-bold uppercase tracking-[0.16em] text-cyan-300/78",
+            ].join(" ")}
+            style={{ fontSize: layout === "web" ? "9px" : "8px" }}
+          >
+            {title}
+          </p>
+          <span
+            className={[
+              nameOxanium.className,
+              "shrink-0 font-semibold tabular-nums tracking-[0.12em] text-white/28",
+            ].join(" ")}
+            style={{ fontSize: "7px" }}
+          >
+            {rows.length}/{maxSnapshots}
+          </span>
+        </div>
+      )}
 
       <div
         className="relative overflow-hidden rounded-sm"
@@ -228,26 +250,37 @@ export default function MyRankRankingProgress({
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={rows}
-              margin={{ top: 14, right: 12, left: 6, bottom: 4 }}
+              margin={
+                numbersOnly
+                  ? { top: 14, right: 14, left: 10, bottom: 8 }
+                  : { top: 14, right: 12, left: 6, bottom: 4 }
+              }
             >
-              <CartesianGrid
-                stroke={PROFILE_CHART_CYBER.cyanGridStrong}
-                strokeDasharray="0"
-                vertical
-                horizontal
-                syncWithTicks
-              />
+              {numbersOnly ? null : (
+                <CartesianGrid
+                  stroke={PROFILE_CHART_CYBER.cyanGridStrong}
+                  strokeDasharray="0"
+                  vertical
+                  horizontal
+                  syncWithTicks
+                />
+              )}
               <XAxis
                 dataKey="dateKey"
                 tickFormatter={(v) => formatAxisDate(String(v), language)}
-                tick={{ fontSize: 8, fill: PROFILE_CHART_CYBER.tick }}
+                tick={
+                  numbersOnly
+                    ? false
+                    : { fontSize: 8, fill: PROFILE_CHART_CYBER.tick }
+                }
                 tickLine={false}
                 axisLine={false}
                 interval={xAxisInterval}
                 padding={{ left: 10, right: 10 }}
                 minTickGap={8}
                 tickMargin={4}
-                height={18}
+                height={numbersOnly ? 0 : 18}
+                hide={numbersOnly}
               />
               <YAxis
                 dataKey="rank"
@@ -256,10 +289,15 @@ export default function MyRankRankingProgress({
                 ticks={yTicks}
                 padding={{ top: 12, bottom: 0 }}
                 allowDecimals={false}
-                tick={{ fontSize: 8, fill: PROFILE_CHART_CYBER.tick }}
+                tick={
+                  numbersOnly
+                    ? false
+                    : { fontSize: 8, fill: PROFILE_CHART_CYBER.tick }
+                }
                 tickLine={false}
                 axisLine={false}
-                width={22}
+                width={numbersOnly ? 0 : 22}
+                hide={numbersOnly}
               />
               <Tooltip cursor={false} content={() => null} wrapperStyle={{ display: "none" }} />
               <Line

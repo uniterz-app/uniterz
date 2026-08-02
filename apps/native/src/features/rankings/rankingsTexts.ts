@@ -59,5 +59,8 @@ export function rankingsTexts(language: RankingsLanguage) {
     divisionOpenTitle: m.divisionOpenTitle,
     divisionOpenLockBody: m.divisionOpenLockBody,
     divisionOpenCta: m.divisionOpenCta,
+    divisionOpenModalDismiss: m.divisionOpenModalDismiss ?? (language === "en" ? "Close" : "とじる"),
+    divisionOpenBackToPickUp:
+      m.divisionOpenBackToPickUp ?? (language === "en" ? "Back to Pick Up" : "Pick Up に戻る"),
   };
 }

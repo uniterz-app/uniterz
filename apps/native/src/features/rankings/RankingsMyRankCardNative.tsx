@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
 import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
@@ -17,18 +17,18 @@ import MyRankRankingProgressNative from "./MyRankRankingProgressNative";
 import {
   computeMyRankTopPercent,
   deriveMyRankListAvgRow,
-  MY_RANK_METRIC_HUD_LABEL,
-  myRankCardAccent,
+  myRankMetricUnitSuffix,
   type MyRankStatsSource,
 } from "../../../../../lib/rankings/myRankCardFocus";
-import { dateKeyJST } from "../../../../../lib/rankings/rankSnapshotDate";
+import { listRowAvgText } from "../../../../../lib/rankings/listRowMetricMeta";
 import { rankingMetricAccent } from "../../../../../lib/rankings/rankingMetricAccent";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { RankingsAvatarNative } from "./RankingsAvatarAndTabs";
 import { CyberRankNumberNative } from "./CyberRankNumberNative";
-import { CyberSlantedSegBarNative } from "./CyberSlantedSegBarNative";
+import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
 import { MyRankCardFrameNative, resolveMyRankFrameTone } from "./MyRankCardFrameNative";
 import { RankDeltaBadgeNative } from "./RankingsRankDeltaBadge";
+import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
 import { rankingNameFont } from "./rankingsUiTheme";
 import { shareMyRankCardNative } from "./shareRankCardNative";
@@ -40,42 +40,6 @@ export type MyRankCardShareState = {
   sharing: boolean;
   share: () => void;
 };
-
-function RankMetaStripNative({
-  topPercentLabel,
-  posts,
-  metric,
-  avgRow,
-}: {
-  topPercentLabel?: string | null;
-  posts: number;
-  metric: MobileMetric;
-  avgRow?: ReturnType<typeof deriveMyRankListAvgRow>;
-}) {
-  const avgText = avgRow
-    ? metric === "totalScore"
-      ? `AVG ${formatMetricDecimals(avgRow.avgTotalScore ?? 0, 1)}`
-      : metric === "marginPrecision"
-        ? avgRow.avgMarginPrecision && avgRow.avgMarginPrecision > 0
-          ? `AVG ${formatMetricDecimals(avgRow.avgMarginPrecision, 1)}`
-          : null
-        : null
-    : null;
-
-  if (!topPercentLabel && posts === 0 && !avgText) return null;
-
-  return (
-    <View style={styles.myRankMetaStrip}>
-      {topPercentLabel ? (
-        <View style={styles.myRankTopPercentBadge}>
-          <Text style={styles.myRankTopPercentText}>{topPercentLabel}</Text>
-        </View>
-      ) : null}
-      <Text style={styles.myRankMetaVol}>VOL:{posts}</Text>
-      {avgText ? <Text style={styles.myRankMetaAvg} numberOfLines={1}>{avgText}</Text> : null}
-    </View>
-  );
-}
 
 export function MyRankCardNative({
   rank,
@@ -93,16 +57,14 @@ export function MyRankCardNative({
   language,
   miniMetrics,
   statsSource,
-  barsReady = true,
   leagueLabel,
   mobileWide = false,
-  cardResetKey,
+  cardResetKey: _cardResetKey,
   onShareStateChange,
   rankTierGap = null,
-  gapHref = null,
-  onOpenGap,
   rankProgress,
   rankProgressLoading = false,
+  hideRankProgress = false,
 }: {
   rank: number | null;
   metric: MobileMetric;
@@ -120,24 +82,19 @@ export function MyRankCardNative({
   language: RankingsLanguage;
   miniMetrics?: MyRankMiniMetric[];
   statsSource?: MyRankStatsSource | null;
-  barsReady?: boolean;
   leagueLabel?: string | null;
-  /** Web `cardResetKey` — 指標タブ切替でセグメントバーを再点灯 */
+  /** Web `cardResetKey` — 互換のため残す（未使用） */
   cardResetKey?: string;
   /** Web `mobileWide` — 親 padding 内でカード幅をリストと揃える */
   mobileWide?: boolean;
   onShareStateChange?: (state: MyRankCardShareState) => void;
   /** Pro のみ — 次順位帯までの総合得点差（totalScore タブ時） */
   rankTierGap?: RankTierGapHint | null;
-  /** Pro — Gap 画面リンクの有無（href の代わりに存在判定に使用） */
-  gapHref?: string | null;
-  /** Pro — Gap 画面への遷移コールバック */
-  onOpenGap?: () => void;
-  /** Ranking Progress 用スナップショット（未蓄積時は NO DATA） */
   rankProgress?: MyRankProgressPoint[] | null;
-  /** rankProgress 取得中（カード本体は表示済みでもチャートだけ待つ） */
   rankProgressLoading?: boolean;
+  hideRankProgress?: boolean;
 }) {
+  void _cardResetKey;
   const t = rankingsTexts(language);
   const freeTier = displayTier === "free";
   const proTier = displayTier === "pro";
@@ -147,23 +104,12 @@ export function MyRankCardNative({
     displayTier != null ? null : rankDeltaPlaces
   );
   const displayRankDelta = displayTier != null ? null : rankDeltaPlaces;
-  const accent = myRankCardAccent(frameTone);
   const metricAccent = rankingMetricAccent(metric);
-  const segAccent = {
-    border: accent.primary,
-    glow: accent.glow,
-    bg: accent.dim,
-  };
   const statsPending = !!statsScramble;
   const rankVisualMuted = loading || statsPending || rank == null;
 
   const selectedMini =
     miniMetrics?.find((m) => m.key === metric) ?? miniMetrics?.[0] ?? null;
-  const segPct = selectedMini?.pct ?? 0;
-
-  const leagueDisplay =
-    leagueLabel && leagueLabel.toUpperCase() !== "NBA" ? leagueLabel : null;
-  const serialDateKey = dateKeyJST();
 
   const entriesDisplay =
     !loading &&
@@ -189,20 +135,20 @@ export function MyRankCardNative({
   const posts =
     typeof totalPosts === "number" ? totalPosts : (statsSource?.totalPosts ?? 0);
   const avgRow = deriveMyRankListAvgRow(statsSource);
+  const avgText = listRowAvgText(metric, avgRow ?? {});
+  const showVolAvg = posts > 0 || avgText != null;
 
   const rankTierGapHud =
     metric === "totalScore" && rankTierGap
       ? formatRankTierGapForHud(rankTierGap, language === "en" ? "en" : "ja")
       : null;
   const showRankTierGapHud = proTier && rankTierGapHud != null;
-  const showGapLink =
-    proTier &&
-    metric === "totalScore" &&
-    typeof gapHref === "string" &&
-    gapHref.length > 0;
 
-  const showRankMetaInline = freeTier && displayTier != null;
-  const showRankingProgress = displayTier != null || rankProgress !== undefined;
+  const showRankingProgress =
+    !freeTier &&
+    !hideRankProgress &&
+    metric === "totalScore" &&
+    (displayTier != null || rankProgress !== undefined);
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
@@ -211,26 +157,19 @@ export function MyRankCardNative({
 
   const metricValueDisplay = (() => {
     if (loading || statsPending) return "···";
-    if (selectedMini?.value) return selectedMini.value;
-    if (metric === "winRate") return `${Math.round(value)}%`;
+    if (selectedMini?.value) {
+      const raw = selectedMini.value;
+      return metric === "winRate" ? raw.replace(/%$/, "") : raw;
+    }
+    if (metric === "winRate") return `${Math.round(value)}`;
     if (metric === "streak" || metric === "goalScorerHits") return `${Math.round(value)}`;
     if (metric === "totalScore") return Math.round(value).toLocaleString("en-US");
     return formatMetricDecimals(value, 1);
   })();
+  const metricUnit = myRankMetricUnitSuffix(metric);
 
-  const [segEnter, setSegEnter] = useState(false);
   const [sharing, setSharing] = useState(false);
   const captureRef = useRef<View>(null);
-
-  useEffect(() => {
-    if (loading || !barsReady) {
-      setSegEnter(false);
-      return;
-    }
-    setSegEnter(false);
-    const id = setTimeout(() => setSegEnter(true), 16);
-    return () => clearTimeout(id);
-  }, [loading, barsReady, cardResetKey]);
 
   const canShare = !loading && !statsPending && rank != null && !sharing;
   const shareLinkUrl = buildRankingsShareUrl();
@@ -256,173 +195,217 @@ export function MyRankCardNative({
 
   useEffect(() => {
     onShareStateChange?.({
-      canShare,
+      canShare: freeTier ? false : canShare,
       sharing,
       share: () => void handleShare(),
     });
-  }, [canShare, sharing, handleShare, onShareStateChange]);
+  }, [canShare, sharing, handleShare, onShareStateChange, freeTier]);
+
+  if (freeTier) {
+    const listRank = rank != null && rank >= 1 ? rank : 99;
+    return (
+      <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
+        <MyRankCardFrameNative tone="neutral" hideLeftEdge>
+          <View style={styles.myRankFreeBody}>
+            {loading || statsPending || rank == null ? (
+              <View style={styles.myRankFreeLoading}>
+                <Text style={styles.myRankFreeLoadingText}>···</Text>
+              </View>
+            ) : (
+              <CyberRankingListRowNative
+                rank={listRank}
+                displayName={displayName.trim() || "?"}
+                photoURL={photoURL}
+                metric={metric}
+                counted={value}
+                posts={posts}
+                avgRow={avgRow}
+                language={language}
+                isPro={false}
+                rankDeltaPlaces={null}
+                hideAccentBar
+                rankOverline={t.yourRank}
+                plainWhiteScore
+              />
+            )}
+          </View>
+        </MyRankCardFrameNative>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
       <View style={styles.myRankCaptureWrap}>
         <View ref={captureRef} collapsable={false}>
           <MyRankCardFrameNative tone={frameTone} proSpec={proTier}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
-        />
-        <View style={styles.myRankTowerGrid}>
-          <View style={[styles.myRankTowerLeft, { borderRightColor: accent.hairline, backgroundColor: "rgba(0,0,0,0.15)" }]}>
-            <Text style={styles.myRankYourRankLabel}>{t.yourRank}</Text>
-            <View style={styles.myRankTowerRankBlock}>
-              <CyberRankNumberNative
-                rank={rankVisualMuted ? 4 : rank ?? 4}
-                variant="tower"
-                compact
-                muted={rankVisualMuted}
-                displayValue={
-                  rankVisualMuted
-                    ? loading
-                      ? "--"
-                      : statsPending
-                        ? "···"
-                        : "--"
-                    : undefined
-                }
-              />
-              {entriesDisplay ? (
-                <Text style={styles.myRankEntries}>/ {entriesDisplay}</Text>
-              ) : null}
-              {!loading && !statsPending && rank != null ? (
-                <RankDeltaBadgeNative delta={displayRankDelta} size="md" />
-              ) : null}
-            </View>
-          </View>
+            <LinearGradient
+              pointerEvents="none"
+              colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)", "transparent"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
+            />
 
-          <View style={styles.myRankTowerRight}>
-            <View style={styles.myRankHeaderRow}>
-              <View style={[styles.myRankAvatarSquare, { borderColor: accent.hairline, backgroundColor: accent.avatarBg }]}>
-                <RankingsAvatarNative
-                  photoURL={photoURL}
-                  label={displayName.trim() || "?"}
-                  size={36}
-                  square
-                />
-              </View>
-              <View style={styles.myRankNameCol}>
-                <View style={styles.myRankNameRow}>
-                  {displayName.trim().length > 0 ? (
-                    <Text
-                      style={[styles.myRankNameWeb, { fontFamily: rankingNameFont(displayName.trim()) }]}
-                      numberOfLines={1}
-                    >
-                      {displayName.trim()}
-                    </Text>
-                  ) : null}
-                  {showProBadge ? (
-                    <View style={styles.proBadgeWrap}>
-                      <Text style={styles.proBadgeInner}>PRO</Text>
-                    </View>
-                  ) : null}
-                </View>
-                {showRankTierGapHud && rankTierGapHud ? (
-                  <Text style={myRankLocalStyles.tierGapText} numberOfLines={1}>
-                    {rankTierGapHud.segments.map((seg, i) => (
+            {/* 上段2列: ユーザー | 順位+スタッツ / 下段: Progress */}
+            <View style={styles.myRankProStack}>
+              <View style={styles.myRankProThreeCol}>
+                <View style={styles.myRankProUserCol}>
+                  <View
+                    style={[
+                      styles.myRankProAvatarFrame,
+                      {
+                        borderColor: "rgba(245,215,142,0.4)",
+                        backgroundColor: "rgba(0,0,0,0.4)",
+                      },
+                    ]}
+                  >
+                    <RankingsAvatarNative
+                      photoURL={photoURL}
+                      label={displayName.trim() || "?"}
+                      size={44}
+                      square
+                    />
+                  </View>
+                  <View style={styles.myRankProUserNameBlock}>
+                    {displayName.trim().length > 0 ? (
                       <Text
-                        key={i}
-                        style={seg.tone === "tier" ? myRankLocalStyles.tierGapGold : null}
+                        style={[
+                          styles.myRankProHeroName,
+                          {
+                            fontFamily: rankingNameFont(displayName.trim()),
+                            fontSize: 13,
+                            lineHeight: 15,
+                          },
+                        ]}
+                        numberOfLines={2}
                       >
-                        {seg.text}
+                        {displayName.trim()}
                       </Text>
-                    ))}
-                  </Text>
-                ) : showRankMetaInline ? (
-                  <RankMetaStripNative
-                    posts={posts}
-                    metric={metric}
-                    avgRow={avgRow}
+                    ) : null}
+                    {showProBadge ? (
+                      <View style={styles.myRankProUserBadgeWrap}>
+                        <ProCyberBadgeNative compact />
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+
+                <View style={[styles.myRankProMidCol, styles.myRankProMidColWide]}>
+                  <View style={styles.myRankProRankHalf}>
+                    <View style={styles.myRankProRankCluster}>
+                      <View style={styles.myRankProHashRankRow}>
+                        <Text style={styles.myRankProHash}>#</Text>
+                        <CyberRankNumberNative
+                          rank={rankVisualMuted ? 4 : rank ?? 4}
+                          variant="tower"
+                          compact
+                          muted={rankVisualMuted}
+                          displayValue={
+                            rankVisualMuted
+                              ? loading
+                                ? "--"
+                                : statsPending
+                                  ? "···"
+                                  : "--"
+                              : undefined
+                          }
+                        />
+                      </View>
+                      {entriesDisplay ? (
+                        <Text style={styles.myRankProEntriesTight} numberOfLines={1}>
+                          / {entriesDisplay}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {topPercentLabel ? (
+                      <Text style={styles.myRankProMetaGold} numberOfLines={1}>
+                        {topPercentLabel}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.myRankProStatsHalf}>
+                    <View style={styles.myRankHudValueCluster}>
+                      {selectedMini?.dayDelta ? (
+                        <Text
+                          style={[
+                            styles.myRankHudDeltaAbove,
+                            styles.myRankHudDeltaRight,
+                            { color: metricAccent.label },
+                          ]}
+                        >
+                          {selectedMini.dayDelta}
+                        </Text>
+                      ) : null}
+                      <View style={styles.myRankHudValueRow}>
+                        <Text
+                          style={[
+                            styles.myRankHudValueLarge,
+                            {
+                              fontSize: 26,
+                              lineHeight: 28,
+                              color:
+                                loading || statsPending
+                                  ? "rgba(255,255,255,0.92)"
+                                  : metricAccent.value,
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {metricValueDisplay}
+                        </Text>
+                        {metricUnit ? (
+                          <Text style={styles.myRankHudUnitLarge}>{metricUnit}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+                    {showVolAvg ? (
+                      <View style={styles.myRankProVolAvgRow}>
+                        {posts > 0 ? (
+                          <Text style={styles.myRankProVolText}>VOL:{posts}</Text>
+                        ) : null}
+                        {avgText ? (
+                          <Text style={styles.myRankProAvgText} numberOfLines={1}>
+                            {avgText}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+                    {showRankTierGapHud && rankTierGapHud ? (
+                      <Text style={myRankLocalStyles.tierGapText} numberOfLines={2}>
+                        {rankTierGapHud.segments.map((seg, i) => (
+                          <Text
+                            key={i}
+                            style={
+                              seg.tone === "tier" ? myRankLocalStyles.tierGapGold : null
+                            }
+                          >
+                            {seg.text}
+                          </Text>
+                        ))}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+
+              {showRankingProgress ? (
+                <View style={styles.myRankProProgressBand}>
+                  <MyRankRankingProgressNative
+                    points={progressPoints}
+                    maxSnapshots={progressSnapshotLimit}
+                    loading={loading || rankProgressLoading}
+                    language={language === "en" ? "en" : "ja"}
+                    emptyHint={t.rankingProgressNoData}
+                    numbersOnly
+                    dense
                   />
-                ) : null}
-              </View>
-              <View style={styles.myRankHudCol}>
-                <Text style={[styles.myRankHudLabel, { color: metricAccent.labelDim }]}>
-                  {MY_RANK_METRIC_HUD_LABEL[metric]}
-                </Text>
-                <Text
-                  style={[
-                    styles.myRankHudValue,
-                    { color: loading || statsPending ? "rgba(255,255,255,0.92)" : metricAccent.value },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {metricValueDisplay}
-                </Text>
-                {selectedMini?.dayDelta ? (
-                  <Text style={[styles.myRankHudDelta, { color: metricAccent.label }]}>
-                    {selectedMini.dayDelta}
-                  </Text>
-                ) : null}
-              </View>
+                </View>
+              ) : null}
             </View>
 
-            {showRankMetaInline ? null : (
-              <RankMetaStripNative
-                topPercentLabel={topPercentLabel}
-                posts={posts}
-                metric={metric}
-                avgRow={avgRow}
-              />
-            )}
-
-            <View style={styles.myRankSegWrap}>
-              <CyberSlantedSegBarNative
-                pct={segPct}
-                segments={12}
-                compact
-                accent={segAccent}
-                enter={segEnter && !statsPending}
-                replayKey={cardResetKey ?? metric}
-              />
-            </View>
-          </View>
-        </View>
-
-        {showRankingProgress ? (
-          <MyRankRankingProgressNative
-            points={progressPoints}
-            maxSnapshots={progressSnapshotLimit}
-            loading={loading || rankProgressLoading}
-            language={language === "en" ? "en" : "ja"}
-            emptyHint={t.rankingProgressNoData}
-          />
-        ) : null}
-
-        {showGapLink ? (
-          <View style={myRankLocalStyles.gapLinkWrap}>
-            <Pressable
-              onPress={onOpenGap}
-              accessibilityRole="button"
-              style={myRankLocalStyles.gapLink}
-            >
-              <Text style={myRankLocalStyles.gapLinkText} numberOfLines={1}>
-                ◈ {t.rankGapViewGap}
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        <View style={styles.myRankFooter}>
-          <Text style={styles.myRankFooterText} numberOfLines={1}>
-            {proTier || (isPro && !freeTier) ? "UNITERZ/PRO" : "UNITERZ"}
-            {leagueDisplay ? ` · ${leagueDisplay}` : ""}
-            {` · ${MY_RANK_METRIC_HUD_LABEL[metric]}`}
-            {` // ${serialDateKey}`}
-          </Text>
-        </View>
-        <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
+            <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </MyRankCardFrameNative>
         </View>
       </View>
@@ -432,37 +415,15 @@ export function MyRankCardNative({
 
 const myRankLocalStyles = StyleSheet.create({
   tierGapText: {
-    marginTop: 3,
+    marginTop: 2,
     fontSize: 10,
     fontWeight: "700",
     color: "rgba(140,240,255,0.88)",
     fontVariant: ["tabular-nums"],
     fontFamily: "Oxanium_700Bold",
+    textAlign: "right",
   },
   tierGapGold: {
     color: "#FFD65A",
-  },
-  gapLinkWrap: {
-    paddingHorizontal: 10,
-    paddingTop: 8,
-  },
-  gapLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(252,211,77,0.25)",
-    backgroundColor: "rgba(251,191,36,0.08)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  gapLinkText: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
-    color: "rgba(254,243,199,0.9)",
-    fontFamily: "Oxanium_700Bold",
   },
 });

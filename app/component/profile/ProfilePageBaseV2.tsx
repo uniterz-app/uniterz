@@ -8,11 +8,12 @@ import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import MobileProfileViewV2 from "./MobileProfileViewV2";
 import WebProfileViewV2 from "./WebProfileViewV2";
 
-import { useUserStatsV2 } from "./useUserStatsV2";
 import type { SummaryForCardsV2, SummaryRanksV2 } from "./useUserStatsV2";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
+import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 import { useProfileScopedStreak } from "@/lib/profile/useProfileScopedStreak";
+import { useNbaProfileOverviewClient } from "@/lib/profile/useNbaProfileOverviewClient";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 
@@ -35,12 +36,10 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 
   const profileStatsContext = NBA_PROFILE_STATS_CONTEXT;
 
-  const { stats, summary, summaryRanks, metricValueDeltas, statsLoading, dailyTrend } =
-    useUserStatsV2(targetUid, {
-      ...profileStatsContext,
-      prefetchOtherLeague: false,
-      routeKey: handle,
-    });
+  /** Native と同じ: cumulative_stats 1 read（カード + overview charts） */
+  const overview = useNbaProfileOverviewClient(targetUid, {
+    enabled: !!targetUid,
+  });
 
   const scopedStreak = useProfileScopedStreak(targetUid, profileStatsContext);
 
@@ -79,12 +78,17 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   ]);
 
   const summaryV2: SummaryForCardsV2 | undefined = useMemo(() => {
-    if (!summary) return undefined;
+    if (!overview.summary) return undefined;
     return {
-      ...summary,
+      ...(overview.summary as SummaryForCardsV2),
       activeWinStreak: effectiveStreak.currentStreak,
     };
-  }, [summary, effectiveStreak.currentStreak]);
+  }, [overview.summary, effectiveStreak.currentStreak]);
+
+  const summaryRanksV2: SummaryRanksV2 | undefined = useMemo(() => {
+    if (!overview.summaryRanks) return undefined;
+    return overview.summaryRanks as SummaryRanksV2;
+  }, [overview.summaryRanks]);
 
   if (loading && !targetUid) {
     return (
@@ -109,11 +113,15 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     tab,
     setTab,
     summary: summaryV2,
-    summaryRanks: summaryRanks ?? undefined,
-    metricValueDeltas: metricValueDeltas ?? undefined,
-    statsLoading,
+    summaryRanks: summaryRanksV2,
+    metricValueDeltas: undefined,
+    statsLoading: overview.loading,
     targetUid,
-    profileDailyTrendSeed: dailyTrend,
+    profileDailyTrendSeed: overview.dailyTrend,
+    profileDailyTrendSeedComplete: !overview.loading,
+    profileRankTrendSeed: overview.rankTrend,
+    profileRankTrendSeedComplete: !overview.loading,
+    profileLast20Seed: overview.loading ? null : overview.last20,
     profileStatsContext,
   };
 
@@ -137,8 +145,14 @@ export type ProfileViewPropsV2 = {
 
   targetUid: string | null;
 
-  /** user-stats API の dailyTrend（あれば日次チャートは Firestore を読まない） */
+  /** cumulative profileCharts.dailyTrend（空配列も確定） */
   profileDailyTrendSeed?: ProfileDailyTrendRow[] | null;
+  profileDailyTrendSeedComplete?: boolean;
+  /** cumulative profileCharts.rankTrend */
+  profileRankTrendSeed?: { dateKey: string; rank: number }[] | null;
+  profileRankTrendSeedComplete?: boolean;
+  /** cumulative profileCharts.last20 */
+  profileLast20Seed?: ProfileChartsLast20Point[] | null;
   profileStatsContext: {
     rankingLeague: RankingLeagueSource;
   };

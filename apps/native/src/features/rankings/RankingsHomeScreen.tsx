@@ -20,7 +20,6 @@ import {
 import type { RankingRowWithCountry } from "../../../../../lib/rankings/rankingMetrics";
 import {
   buildMyRankMiniMetrics,
-  isMyRankMiniMetricsReady,
 } from "../../../../../lib/rankings/buildMyRankMiniMetrics";
 import { resolveMyRankForCard, getMyMetricValue, computeWinRateMinPosts } from "../../../../../lib/rankings/rankingsPageShared";
 import { buildRankTierGapHint } from "../../../../../lib/rankings/rankTierMilestone";
@@ -62,12 +61,14 @@ import {
   RankingsTopPodiumNative,
 } from "./RankingsUiParts";
 import { RankingsPeriodTabsNative } from "./RankingsPeriodTabsNative";
+import { RankingsPeriodLabelNavNative } from "./RankingsPeriodLabelNavNative";
 import type { MyRankCardShareState } from "./RankingsMyRankCardNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
-import RankGapModalNative from "./RankGapModalNative";
 import { useNativeMyRankProgress } from "./useNativeMyRankProgress";
+import { useNativeMyRankCardFast } from "./useNativeMyRankCardFast";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
-import { RankingsOpenProLockNative } from "./RankingsDivisionTabsNative";
+import { RankingsDivisionTabsNative } from "./RankingsDivisionTabsNative";
+import { RankingsProLeagueTeaserNative } from "./RankingsProLeagueTeaserNative";
 import {
   divisionFromNbaBoard,
   type NbaRankingBoard,
@@ -93,7 +94,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [gapOpen, setGapOpen] = useState(false);
   const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
   const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("nba");
   const [nbaBoard, setNbaBoard] = useState<NbaRankingBoard>("regular");
@@ -173,10 +173,27 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   /**
    * Ranking Progress（日次順位推移）。
-   * Web と同様: NBA は playoffs で表示、WC は Pro のみ。
+   * Free / Pro カードは常に displayTier を渡す（プレビューと同系）。
+   * Season 累計ボードのみ cumulative_stats 1-read でカード先行。
    */
+  const myRankCardFastEnabled =
+    !usePeriodBoard &&
+    !useOpenSeasonBoard &&
+    rankingsLeague === "nba" &&
+    category === "playoffs";
+  const cardFast = useNativeMyRankCardFast(myUid, {
+    enabled: myRankCardFastEnabled,
+  });
+
+  const myRankCardTier: "free" | "pro" =
+    (cardFast.plan === "pro" || user.plan === "pro") ? "pro" : "free";
+  const rankProgressHidden =
+    rankingsLeague === "nba" && rankingPeriod !== "season";
   const rankProgressEnabled =
     category === "playoffs" &&
+    !rankProgressHidden &&
+    myRankCardTier === "pro" &&
+    metric === "totalScore" &&
     (rankingsLeague === "nba" || user.plan === "pro");
   const { points: myRankProgressPoints, loading: myRankProgressLoading } =
     useNativeMyRankProgress({
@@ -230,7 +247,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   }, [metric, rawRows]);
 
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
-  const { myRank, myRankDeltaPlaces } = useMemo(
+  const { myRank: listMyRank, myRankDeltaPlaces: listMyRankDelta } = useMemo(
     () =>
       resolveMyRankForCard({
         myUid,
@@ -247,14 +264,24 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       rawRows,
     ]
   );
+  const myRank =
+    listMyRank ??
+    (myRankCardFastEnabled && !cardFast.loading ? cardFast.myRank : null);
+  const myRankDeltaPlaces =
+    listMyRankDelta ??
+    (myRankCardFastEnabled ? cardFast.myRankDeltaPlaces : null);
   const myStatsRow =
-    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ?? myRawRow;
+    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ??
+    myRawRow ??
+    (myRankCardFastEnabled
+      ? (cardFast.myRow as RankingRow | null)
+      : null);
   const rankingListCount =
     typeof bundle?.count === "number" && Number.isFinite(bundle.count) ? bundle.count : 0;
 
   const myValue = useMemo(
-    () => getMyMetricValue(metric, myRawRow),
-    [metric, myRawRow]
+    () => getMyMetricValue(metric, myRawRow ?? myStatsRow),
+    [metric, myRawRow, myStatsRow]
   );
 
   const winRateMinPosts = usePeriodBoard
@@ -290,7 +317,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     ]
   );
 
-  const cardBarsReady = isMyRankMiniMetricsReady(byMetric, rankingLeagueSource);
+  const cardLoading =
+    !listReady &&
+    !(myRankCardFastEnabled && !cardFast.loading && cardFast.myRow != null);
+
   const pageTitle =
     nbaBoard === "open"
       ? t.divisionOpen
@@ -385,6 +415,16 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
         <View style={styles.section}>
           {showNbaPeriodTabs ? (
+            <RankingsDivisionTabsNative
+              division={rankingDivision}
+              onChange={(next) =>
+                setNbaBoard(next === "open" ? "open" : "regular")
+              }
+              language={language}
+            />
+          ) : null}
+
+          {showNbaPeriodTabs ? (
             <RankingsPeriodTabsNative
               period={rankingPeriod}
               onChange={setRankingPeriod}
@@ -395,22 +435,23 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             />
           ) : null}
 
+          {usePeriodBoard ? (
+            <RankingsPeriodLabelNavNative
+              period={rankingPeriod as Exclude<RankingPeriod, "season">}
+              activeLabel={periodBulk.activeLabel}
+              availableLabels={periodBulk.availableLabels}
+              onChange={setPeriodLabel}
+              language={language}
+            />
+          ) : null}
+
           {category === "playoffs" ? (
             <>
               {rankingsLeague === "nba" && nbaBoard === "playoffs" ? (
                 <PlayoffRoundTabsNative round={round} onChange={setRound} language={language} />
               ) : null}
 
-              {openProLocked ? (
-                <RankingsOpenProLockNative
-                  language={language}
-                  onPressSubscribe={() =>
-                    navigation.navigate("ProfileTab", {
-                      screen: "ProSubscribe",
-                    })
-                  }
-                />
-              ) : (
+              {openProLocked ? null : (
               <MyRankCardNative
                 rank={rankingHasNoEntries ? null : myRank}
                 metric={metric}
@@ -420,10 +461,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 totalPosts={
                   typeof myRawRow?.totalPosts === "number" ? myRawRow.totalPosts : undefined
                 }
-                loading={!listReady}
-                statsScramble={listReady && personalPending}
-                isPro={user.plan === "pro"}
-                displayTier={user.plan === "pro" ? "pro" : "free"}
+                loading={cardLoading}
+                statsScramble={listReady && personalPending && !cardFast.myRow}
+                isPro={myRankCardTier === "pro"}
+                displayTier={myRankCardTier}
                 rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
                 totalEntries={rankingHasNoEntries ? null : rankingListCount}
                 miniMetrics={myMiniMetrics}
@@ -432,7 +473,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   totalPoints: myStatsRow?.totalPoints,
                   totalUpset: myStatsRow?.totalUpset,
                 }}
-                barsReady={cardBarsReady}
                 language={language}
                 mobileWide
                 leagueLabel={
@@ -445,15 +485,14 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                         : "NBA"
                 }
                 onShareStateChange={setRankShare}
-                rankTierGap={user.plan === "pro" ? rankTierGap : null}
-                gapHref={user.plan === "pro" ? "gap" : null}
-                onOpenGap={() => setGapOpen(true)}
+                rankTierGap={myRankCardTier === "pro" ? rankTierGap : null}
                 rankProgress={
                   rankProgressEnabled ? (myRankProgressPoints ?? []) : undefined
                 }
                 rankProgressLoading={
                   rankProgressEnabled && myRankProgressLoading
                 }
+                hideRankProgress={rankProgressHidden}
               />
               )}
             </>
@@ -464,7 +503,17 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             <BracketLeaderboardSectionNative language={language} />
         ) : null}
 
-        {category === "playoffs" && openProLocked ? null : category === "playoffs" ? (
+        {category === "playoffs" && openProLocked ? (
+          <RankingsProLeagueTeaserNative
+            language={language}
+            onPressSubscribe={() =>
+              navigation.navigate("ProfileTab", {
+                screen: "ProSubscribe",
+              })
+            }
+            onBackToPickUp={() => setNbaBoard("regular")}
+          />
+        ) : category === "playoffs" ? (
           <>
             <View style={styles.metricRowWrap}>
               <RankingsMetricRowNative
@@ -558,12 +607,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             setCategory("playoffs");
             setMenuOpen(false);
           }}
-          onSelectOpenweight={() => {
-            setRankingsLeague("nba");
-            setNbaBoard("open");
-            setCategory("playoffs");
-            setMenuOpen(false);
-          }}
           language={language}
           onOpenSquadBattlePreview={() => {
             setMenuOpen(false);
@@ -572,15 +615,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         />
       </SideMenuDrawerNative>
 
-      <RankGapModalNative
-        visible={gapOpen}
-        onClose={() => setGapOpen(false)}
-        language={language}
-        currentRank={rankingHasNoEntries ? null : myRank}
-        myTotalPoints={myTotalPoints}
-        totalEntries={rankingHasNoEntries ? null : rankingListCount}
-        rankTierGap={rankTierGap}
-      />
       <TutorialLiveHostNative
         page="rankings"
         language={(language === "en" ? "en" : "ja") as Language}

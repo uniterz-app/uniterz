@@ -151,10 +151,11 @@ export default function ProCyberBadgeNative({
   premium = false,
   compact = false,
 }: Props) {
-  // premium: プロフィール名横 — 名前(16)と並ぶ見やすいサイズ（旧32は大きすぎ、14は小さすぎ）
-  const markSize = premium ? 12 : compact ? 7 : 9;
-  const wordSize = premium ? 9 : compact ? 6 : 7;
-  const height = premium ? 22 : compact ? 14 : 18;
+  // premium: プロフィール名横 — 名前(16)と並ぶ見やすいサイズ
+  // compact: ランキング一覧 — 少し大きめ（旧 7/6/14 は小さすぎ）
+  const markSize = premium ? 12 : 9;
+  const wordSize = premium ? 9 : compact ? 7.5 : 7;
+  const height = premium ? 22 : compact ? 17 : 18;
 
   return (
     <View
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   tagCompact: {
-    paddingHorizontal: 2,
+    paddingHorizontal: 3,
     paddingVertical: 1,
   },
   /** 親サイズ確定後に枠を載せる（% SVG の初期レイアウトジャンプを防ぐ） */

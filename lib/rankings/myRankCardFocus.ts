@@ -78,6 +78,19 @@ export const MY_RANK_METRIC_HUD_LABEL: Record<MobileMetric, string> = {
   goalScorerHits: "SCORER",
 };
 
+/** My Rank HUD — 数値横の小さめ単位。null は単位なし */
+export function myRankMetricUnitSuffix(metric: MobileMetric): string | null {
+  switch (metric) {
+    case "totalScore":
+    case "upsetScore":
+      return "pts";
+    case "winRate":
+      return "%";
+    default:
+      return null;
+  }
+}
+
 export type MyRankStatsSource = {
   totalPosts?: number;
   totalPoints?: number;

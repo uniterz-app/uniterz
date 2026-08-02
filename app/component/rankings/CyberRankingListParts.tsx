@@ -136,14 +136,17 @@ export function CyberRankingScore({
   counted,
   compact = false,
   scoreLayout = "stack",
+  plainWhite = false,
 }: {
   rank: number;
   metric: MobileMetric;
   counted: number;
   compact?: boolean;
   scoreLayout?: CyberRankingScoreLayout;
+  /** My Rank Free — 順位色ではなく白 */
+  plainWhite?: boolean;
 }) {
-  const color = cyberScoreColor(rank);
+  const color = plainWhite ? "rgba(255,255,255,0.96)" : cyberScoreColor(rank);
   const mainSize =
     scoreLayout === "web"
       ? rank <= 3
@@ -159,7 +162,7 @@ export function CyberRankingScore({
 
   const valueStyle = {
     color,
-    textShadow: cyberScoreGlow(rank),
+    textShadow: plainWhite ? "none" : cyberScoreGlow(rank),
   } as const;
 
   const displayValue =
@@ -271,6 +274,8 @@ export function CyberRankingListRow({
   showFirstPlaceFrame = false,
   proSkinVariant = null,
   proSkinIntensity = "medium",
+  hideAccentBar = false,
+  rankOverline = null,
 }: {
   rank: number;
   displayName: string;
@@ -296,6 +301,10 @@ export function CyberRankingListRow({
   /** Pro Skin — 実パターンを行背景に（未指定時は従来） */
   proSkinVariant?: ProfilePlanProBgVariant | null;
   proSkinIntensity?: RankingListProSkinIntensity;
+  /** My Rank Free など — 左アクセントバー非表示 */
+  hideAccentBar?: boolean;
+  /** 順位数字の上に置くラベル（例: YOUR RANK） */
+  rankOverline?: string | null;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame =
@@ -371,44 +380,64 @@ export function CyberRankingListRow({
       ) : null}
       {firstFrame ? <RankFirstBorderEdgeScan /> : null}
 
-      <span
-        aria-hidden
-        className={[
-          "w-[3px] shrink-0",
-          firstFrame || proSkinVariant ? "relative z-10" : "",
-        ].join(" ")}
-        style={{
-          background: palette.accent,
-          boxShadow: `0 0 12px ${palette.accentGlow}`,
-        }}
-      />
+      {!hideAccentBar ? (
+        <span
+          aria-hidden
+          className={[
+            "w-[3px] shrink-0",
+            firstFrame || proSkinVariant ? "relative z-10" : "",
+          ].join(" ")}
+          style={{
+            background: palette.accent,
+            boxShadow: `0 0 12px ${palette.accentGlow}`,
+          }}
+        />
+      ) : null}
 
       <div
         className={[
           "flex min-w-0 flex-1 items-center",
           firstFrame || proSkinVariant ? "relative z-10" : "",
-          compact ? "gap-2 px-2 py-2" : "gap-3 px-3 py-2.5 sm:gap-4 sm:px-4",
+          compact
+            ? firstFrame
+              ? "gap-2 px-2 pb-2 pt-5"
+              : "gap-2 px-2 py-2"
+            : firstFrame
+              ? "gap-3 px-3 pb-2.5 pt-5 sm:gap-4 sm:px-4"
+              : "gap-3 px-3 py-2.5 sm:gap-4 sm:px-4",
         ].join(" ")}
       >
         <div
           className={[
-            "relative shrink-0",
-            compact ? "w-[42px]" : "w-[52px] sm:w-[58px]",
+            "relative flex shrink-0 flex-col items-center justify-center",
+            compact ? "h-9 w-[42px]" : "h-11 w-[52px] sm:w-[58px]",
+            rankOverline ? (compact ? "gap-1.5" : "gap-2") : "gap-0.5",
           ].join(" ")}
         >
+          {rankOverline ? (
+            <span
+              className={[
+                nameOxanium.className,
+                "whitespace-nowrap text-center font-bold uppercase tracking-[0.12em] text-white/50",
+                compact ? "text-[6.5px]" : "text-[7px]",
+              ].join(" ")}
+            >
+              {rankOverline}
+            </span>
+          ) : null}
           <CyberRankNumber rank={rank} compact={compact} />
         </div>
 
         <div
           className={[
-            "flex shrink-0 flex-col items-center",
-            rank === 1 && firstFrame ? (compact ? "gap-0.5" : "gap-1") : "",
+            "relative flex shrink-0 flex-col items-center justify-center",
+            compact ? "h-9 w-9" : "h-11 w-11",
           ].join(" ")}
         >
           {rank === 1 && firstFrame ? (
             <div
               className={[
-                "flex items-end justify-center",
+                "absolute bottom-full mb-0.5 flex items-end justify-center",
                 compact ? "gap-0.5" : "gap-1",
               ].join(" ")}
             >

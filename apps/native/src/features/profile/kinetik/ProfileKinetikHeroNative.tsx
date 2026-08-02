@@ -176,12 +176,13 @@ export default function ProfileKinetikHeroNative({
     (metricsPeriod === preferredPeriod && summary
       ? {
           summary,
-          summaryRanks: summaryRanks ?? {
-            totalPrecision: null,
-            totalUpset: null,
-            totalPoints: null,
-            totalPointsDenominator: null,
-            rankDeltaPlaces: null,
+          summaryRanks: {
+            totalPrecision: summaryRanks?.totalPrecision ?? null,
+            totalUpset: summaryRanks?.totalUpset ?? null,
+            totalPoints: summaryRanks?.totalPoints ?? null,
+            totalPointsDenominator:
+              summaryRanks?.totalPointsDenominator ?? null,
+            rankDeltaPlaces: summaryRanks?.rankDeltaPlaces ?? null,
           },
           profileCharts: null,
           chartsPath: "missing" as const,

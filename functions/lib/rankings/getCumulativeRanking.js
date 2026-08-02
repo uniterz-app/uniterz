@@ -266,14 +266,13 @@ async function rankingPayloadForMetric(metric, uid, snaps, wcStage, personalOnly
         : [];
     let rows = normalizeSnapshotRows(rawRows, metric);
     let totalCount = readSnapshotTotalCount(snapData, rows.length);
-    /** スナップショット未生成時のみ live フォールバック */
-    /** 連勝は 16:00 スナップショットのみ（live フォールバックなし） */
+    /**
+     * スナップショット未生成時に cumulative_stats 全件 .get() する live フォールバックはしない。
+     * 26-27 など空シーズンでも全ユーザー分の読み取りが発生し、コストが爆発するため。
+     * 一覧は空（NO DATA）のまま返す。
+     */
     if (rows.length === 0 && metric !== "activeWinStreak") {
-        const live = wcStage
-            ? await (0, buildCumulativeRankingSnapshot_1.loadWcStageTop20RowsLive)(wcStage, metric)
-            : await (0, buildCumulativeRankingSnapshot_1.loadNbaSeasonTop20RowsLive)(metric);
-        rows = normalizeSnapshotRows(live.rows, metric);
-        totalCount = live.totalCount;
+        console.warn(`[getCumulativeRanking] empty snapshot ${snapshotDocId}; skip live full-scan fallback`);
     }
     let myRank = null;
     let myRow = null;

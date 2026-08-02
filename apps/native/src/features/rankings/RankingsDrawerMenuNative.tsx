@@ -21,7 +21,6 @@ type Props = {
   nbaBoard?: NbaRankingBoard;
   onSelectNbaRegular?: () => void;
   onSelectNbaPlayoffs?: () => void;
-  onSelectOpenweight?: () => void;
   /** SQUAD BATTLE プレビュー（仮入口） */
   onOpenSquadBattlePreview?: () => void;
 };
@@ -49,19 +48,16 @@ export default function RankingsDrawerMenuNative({
   nbaBoard = "regular",
   onSelectNbaRegular,
   onSelectNbaPlayoffs,
-  onSelectOpenweight,
   onOpenSquadBattlePreview,
 }: Props) {
   const isJa = language === "ja";
   const t = rankingsTexts(language);
   const labelStyle = sideMenuLabelStyle(language);
   const nbaClusterActive = league === "nba";
-  const regularActive = league === "nba" && nbaBoard === "regular";
+  const regularActive =
+    league === "nba" && (nbaBoard === "regular" || nbaBoard === "open");
   const playoffsActive = league === "nba" && nbaBoard === "playoffs";
-  const openActive = league === "nba" && nbaBoard === "open";
-  const showNbaBranch = Boolean(
-    onSelectNbaRegular && onSelectNbaPlayoffs && onSelectOpenweight
-  );
+  const showNbaBranch = Boolean(onSelectNbaRegular && onSelectNbaPlayoffs);
 
   return (
     <View style={styles.root}>
@@ -97,7 +93,7 @@ export default function RankingsDrawerMenuNative({
                   {t.nbaBoardRegular}
                 </SideMenuItemButtonNative>
               </BranchRow>
-              <BranchRow>
+              <BranchRow last>
                 <SideMenuItemButtonNative
                   icon="trophy-outline"
                   dense
@@ -109,20 +105,6 @@ export default function RankingsDrawerMenuNative({
                   onPress={() => onSelectNbaPlayoffs?.()}
                 >
                   {t.nbaBoardPlayoffs}
-                </SideMenuItemButtonNative>
-              </BranchRow>
-              <BranchRow last>
-                <SideMenuItemButtonNative
-                  icon="crown-outline"
-                  dense
-                  active={openActive}
-                  labelStyle={{
-                    ...SIDE_MENU_LABEL_FONT,
-                    textTransform: "uppercase",
-                  }}
-                  onPress={() => onSelectOpenweight?.()}
-                >
-                  {t.divisionOpen}
                 </SideMenuItemButtonNative>
               </BranchRow>
             </View>

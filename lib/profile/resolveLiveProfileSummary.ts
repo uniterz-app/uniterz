@@ -173,7 +173,7 @@ export function summaryFromWcCumulativeStage(
   };
 }
 
-/** NBA サマリー（現行シーズンが空なら前シーズン／旧 playoffs へフォールバック） */
+/** NBA サマリー（現行シーズンキーのみ。空ならゼロ） */
 export function summaryFromSeasonRanking(
   cumulative: Record<string, unknown> | null
 ): ProfileSummaryForCards {

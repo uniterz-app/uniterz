@@ -1,6 +1,6 @@
 /**
  * Web `useMyRankProgress` 相当。
- * `/api/profile/rank-playoff-trend` から総合得点順位の日次推移を取得する。
+ * seedComplete 時は API を打たず seedPoints を使う。
  */
 import { useEffect, useState } from "react";
 import type { MyRankProgressPoint } from "../../../../../lib/rankings/myRankRankingProgress";
@@ -25,9 +25,13 @@ export function useNativeMyRankProgress(input: {
   enabled: boolean;
   rankingLeague: RankingLeagueSource;
   wcStage?: WcRankingStage | null;
+  seedPoints?: MyRankProgressPoint[] | null;
+  seedComplete?: boolean;
 }): { points: MyRankProgressPoint[] | null; loading: boolean } {
   const { uid, enabled, rankingLeague } = input;
   const wcStage = input.wcStage ?? null;
+  const seedComplete = input.seedComplete === true;
+  const seedPoints = input.seedPoints;
 
   const [state, setState] = useState<{
     key: string | null;
@@ -38,6 +42,15 @@ export function useNativeMyRankProgress(input: {
   useEffect(() => {
     if (!enabled || !uid) {
       setState({ key: null, points: null, loading: false });
+      return;
+    }
+
+    if (seedComplete) {
+      setState({
+        key: cacheKey({ uid, rankingLeague, wcStage }),
+        points: seedPoints ?? [],
+        loading: false,
+      });
       return;
     }
 
@@ -55,7 +68,8 @@ export function useNativeMyRankProgress(input: {
       try {
         const rows = await fetchRankPlayoffTrend(uid, {
           rankingLeague,
-          wcStage: rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined,
+          wcStage:
+            rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined,
         });
         const points: MyRankProgressPoint[] = rows.map((r) => ({
           dateKey: r.dateKey,
@@ -71,7 +85,7 @@ export function useNativeMyRankProgress(input: {
     return () => {
       aborted = true;
     };
-  }, [enabled, uid, rankingLeague, wcStage]);
+  }, [enabled, uid, rankingLeague, wcStage, seedComplete, seedPoints]);
 
   return { points: state.points, loading: state.loading };
 }

@@ -18,6 +18,7 @@ const activeWinStreakRanking_1 = require("./activeWinStreakRanking");
 const loadUidsWhoPredictedOnDateFromDaily_1 = require("../notifications/loadUidsWhoPredictedOnDateFromDaily");
 const cumulativeSnapshotIndex_1 = require("./cumulativeSnapshotIndex");
 const nbaSeason_1 = require("./nbaSeason");
+const mergeProfileCharts_1 = require("../profile/mergeProfileCharts");
 /* =========================================================
  * Firestore
  * =======================================================*/
@@ -454,7 +455,7 @@ async function loadWcStageTop20RowsLive(stage, metric, postedTodayUids) {
     };
 }
 async function buildCumulativeRankingSnapshot(options = {}) {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     const scope = (_a = options.scope) !== null && _a !== void 0 ? _a : "all";
     const wcOnly = scope === "wc";
     const streakAllEligible = options.streakAllEligible === true;
@@ -741,14 +742,31 @@ async function buildCumulativeRankingSnapshot(options = {}) {
             continue;
         }
         const seasonRanks = (_c = rankByUidSeason.get(uid)) !== null && _c !== void 0 ? _c : {};
+        const totalPointsRank = Number((_d = seasonRanks.totalPoints) !== null && _d !== void 0 ? _d : 0);
+        const cumData = statsByUid.get(uid);
+        const profileChartsPatch = Number.isFinite(totalPointsRank) && totalPointsRank > 0
+            ? (() => {
+                var _a, _b;
+                const charts = (0, mergeProfileCharts_1.mergeProfileChartsOnRankSnapshot)({
+                    cumulative: cumData !== null && cumData !== void 0 ? cumData : null,
+                    seasonKey,
+                    dateKey,
+                    totalPointsRank,
+                });
+                return {
+                    "profileCharts.v": charts.v,
+                    "profileCharts.seasonKey": charts.seasonKey,
+                    "profileCharts.dailyTrend": (_a = charts.dailyTrend) !== null && _a !== void 0 ? _a : [],
+                    "profileCharts.rankTrend": charts.rankTrend,
+                    "profileCharts.last20": (_b = charts.last20) !== null && _b !== void 0 ? _b : [],
+                    "profileCharts.builtAtMs": Date.now(),
+                };
+            })()
+            : {};
         /**
          * merge のネストで他シーズンを消さないよう、更新するシーズンだけドットパスで書く。
          */
-        batch.set(firestore.doc(`cumulative_stats/${uid}`), {
-            "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(),
-            [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks,
-            "snapshotRanks.wc": wc,
-        }, { merge: true });
+        batch.set(firestore.doc(`cumulative_stats/${uid}`), Object.assign({ "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(), [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks, "snapshotRanks.wc": wc }, profileChartsPatch), { merge: true });
         batch.set(firestore
             .collection("cumulative_stats")
             .doc(uid)

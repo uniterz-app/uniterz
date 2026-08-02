@@ -10,6 +10,7 @@ import {
   type StreakTrackerPoint,
 } from "@/lib/profile/useProfileStreakTracker";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
+import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { jp, nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
@@ -32,6 +33,8 @@ type Props = {
   entranceReady?: boolean;
   layout?: Layout;
   profileStatsContext?: ProfileStatsStreakContext;
+  /** cumulative profileCharts.last20（null = 未取得） */
+  seedLast20?: ProfileChartsLast20Point[] | null;
 };
 
 function formatTick(n: number) {
@@ -125,6 +128,7 @@ export default function StreakTrackerCard({
   entranceReady,
   layout = "mobile",
   profileStatsContext = { rankingLeague: "nba" },
+  seedLast20,
 }: Props) {
   const msg = t(language);
   const reduceMotion = useReducedMotion();
@@ -141,7 +145,8 @@ export default function StreakTrackerCard({
 
   const { points, loading: streakLoading } = useProfileStreakTracker(
     uid,
-    profileStatsContext
+    profileStatsContext,
+    { seedLast20 }
   );
   const loading = streakLoading || !uid;
 

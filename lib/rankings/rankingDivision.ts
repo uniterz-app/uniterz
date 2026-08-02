@@ -9,7 +9,7 @@
 
 export type RankingDivision = "standard" | "open";
 
-/** NBA サイドメニューの枝（レギュラー / プレーオフ / PRO LEAGUE） */
+/** NBA サイドメニューの枝（レギュラー / プレーオフ）。PRO LEAGUE は Regular 内タブ。 */
 export type NbaRankingBoard = "regular" | "playoffs" | "open";
 
 export function isRankingDivision(v: unknown): v is RankingDivision {

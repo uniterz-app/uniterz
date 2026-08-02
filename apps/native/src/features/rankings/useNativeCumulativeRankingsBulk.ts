@@ -459,7 +459,7 @@ export function useNativeCumulativeRankingsBulk(
       }
     };
 
-    const timeoutId = setTimeout(loadDeferred, 1200);
+    const timeoutId = setTimeout(loadDeferred, 400);
 
     return () => {
       cancelled = true;

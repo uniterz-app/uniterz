@@ -19,10 +19,7 @@ import {
   mockCutoffTotalPointsAtRank,
   resolveNextRankTierMilestone,
 } from "@/lib/rankings/rankTierMilestone";
-import {
-  buildMockMyRankProgressPoints,
-  buildVolatileMockMyRankProgressPoints,
-} from "@/lib/rankings/myRankRankingProgress";
+import { buildMockMyRankProgressPoints } from "@/lib/rankings/myRankRankingProgress";
 
 const METRICS: MobileMetric[] = [
   "totalScore",
@@ -63,19 +60,15 @@ const MOCK_MINI: MyRankMiniMetric[] = [
 ];
 
 const FREE_FEATURES = [
-  "順位 · 母数",
-  "指標値 · 指標前日比",
-  "VOL · AVG",
-  "選択指標のセグメントバー（1本）",
-  "Ranking Progress（直近3件）",
+  "順位の上に YOUR RANK",
+  "ランキングリスト行と同じ見た目（左ライン・四隅なし）",
+  "Ranking Progress なし",
 ];
 
 const PRO_FEATURES = [
-  "Free のすべて",
-  "TOP ◯%（常時 · 左タワー順位の上）",
-  "次順位帯までの pt 差（アバター下 · TOP20圏内まで＋pt）",
-  "Pro 枠スキン · PRO バッジ",
-  "Ranking Progress（直近10件）",
+  "上段: ユーザー | 順位+スタッツ / 下段: Progress",
+  "順位は #56 + 母数 + TOP%（YOUR RANK なし）",
+  "スタッツは数字 · 差分 · 次帯差 · VOL/AVG / Progress は総合のみ",
 ];
 
 const RANK_PRESETS = [
@@ -88,19 +81,10 @@ const RANK_PRESETS = [
 
 const MOCK_MY_TOTAL_POINTS = 1284;
 
-const PROGRESS_PRESETS = [
-  { id: "mild", label: "穏やか" },
-  { id: "volatile", label: "大きく動く" },
-] as const;
-
-type ProgressPresetId = (typeof PROGRESS_PRESETS)[number]["id"];
-
 export default function MyRankFreeProPreviewPage() {
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [layout, setLayout] = useState<"mobile" | "web">("mobile");
   const [rank, setRank] = useState(48);
-  const [progressPreset, setProgressPreset] =
-    useState<ProgressPresetId>("volatile");
 
   const rankTierGap = useMemo(() => {
     const target = resolveNextRankTierMilestone(rank);
@@ -115,27 +99,16 @@ export default function MyRankFreeProPreviewPage() {
     });
   }, [rank]);
 
-  const rankProgress = useMemo(() => {
-    const build =
-      progressPreset === "volatile"
-        ? buildVolatileMockMyRankProgressPoints
-        : buildMockMyRankProgressPoints;
-    return build(rank, 10);
-  }, [rank, progressPreset]);
-
-  const rankProgressSummary = useMemo(() => {
-    if (rankProgress.length === 0) return null;
-    const ranks = rankProgress.map((p) => p.rank);
-    const min = Math.min(...ranks);
-    const max = Math.max(...ranks);
-    return { min, max, span: max - min };
-  }, [rankProgress]);
-
   const nextMilestoneLabel = useMemo(() => {
     const target = resolveNextRankTierMilestone(rank);
     if (target == null) return "TOP10 圏内";
     return `${rank}位 → 次の目標 ${target}位`;
   }, [rank]);
+
+  const rankProgress = useMemo(
+    () => buildMockMyRankProgressPoints(rank, 7),
+    [rank]
+  );
 
   const selectedMini = useMemo(
     () => MOCK_MINI.find((m) => m.key === metric) ?? MOCK_MINI[0]!,
@@ -178,6 +151,7 @@ export default function MyRankFreeProPreviewPage() {
     mobileWide: layout === "mobile",
     layout,
     disableMotion: true,
+    rankProgress,
   };
 
   return (
@@ -197,7 +171,7 @@ export default function MyRankFreeProPreviewPage() {
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
           本番未接続。{" "}
           <code className="text-cyan-300/90">displayTier</code> で Free / Pro
-          の表示差を確認します。Ranking Progress はカード内フッター直上に表示。
+          の表示差を確認します。
         </p>
 
         <div className="mt-6 flex flex-wrap gap-2">
@@ -219,30 +193,6 @@ export default function MyRankFreeProPreviewPage() {
         </div>
 
         <p className="mt-2 text-[11px] text-white/40">{nextMilestoneLabel}</p>
-        {rankProgressSummary ? (
-          <p className="mt-1 text-[11px] text-white/35">
-            Progress 変動幅: {rankProgressSummary.min}位〜
-            {rankProgressSummary.max}位（幅 {rankProgressSummary.span}）
-          </p>
-        ) : null}
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {PROGRESS_PRESETS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setProgressPreset(id)}
-              className={[
-                "rounded-full border px-3 py-1 text-xs font-bold tracking-wide",
-                progressPreset === id
-                  ? "border-fuchsia-400/50 bg-fuchsia-400/15 text-fuchsia-100"
-                  : "border-white/15 text-white/50",
-              ].join(" ")}
-            >
-              Progress: {label}
-            </button>
-          ))}
-        </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
           {METRICS.map((m) => (
@@ -291,7 +241,6 @@ export default function MyRankFreeProPreviewPage() {
               displayTier="free"
               isPro={false}
               rankTierGap={rankTierGap}
-              rankProgress={rankProgress}
             />
           </section>
 
@@ -306,7 +255,6 @@ export default function MyRankFreeProPreviewPage() {
               displayTier="pro"
               isPro
               rankTierGap={rankTierGap}
-              rankProgress={rankProgress}
             />
           </section>
         </div>

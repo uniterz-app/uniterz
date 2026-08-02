@@ -34,12 +34,14 @@ const TREND_THEME: Record<TrendState, { stroke: string; fill: string; glow: stri
 
 /**
  * プロット余白。
- * 左は Y ラベル幅 + ドット半径ぶん空けて、先頭点が軸ラベルに被らないようにする。
+ * numbersOnly 時は Y ラベル無しなので左を詰める。
  */
-const PAD_L = 36;
+const PAD_L_FULL = 36;
+const PAD_L_NUMBERS = 14;
 const PAD_R = 16;
 const PAD_T = 14;
-const PAD_B = 20;
+const PAD_B_FULL = 20;
+const PAD_B_NUMBERS = 10;
 const DOT_R = 10;
 /** 先頭/末尾ドットが枠や Y ラベルに食い込まないよう、系列の内側インセット */
 const SERIES_INSET = DOT_R + 4;
@@ -61,6 +63,10 @@ type Props = {
   language: "ja" | "en";
   emptyHint: string;
   layout?: "mobile" | "web";
+  /** 順位ドットの変動のみ（タイトル・軸ラベルなし） */
+  numbersOnly?: boolean;
+  /** My Rank Pro 下段 — 薄い Progress 帯 */
+  dense?: boolean;
 };
 
 export default function MyRankRankingProgressNative({
@@ -70,9 +76,17 @@ export default function MyRankRankingProgressNative({
   language,
   emptyHint,
   layout = "mobile",
+  numbersOnly = false,
+  dense = false,
 }: Props) {
   const [plotW, setPlotW] = useState(0);
-  const chartHeight = layout === "web" ? 104 : 92;
+  const chartHeight = dense
+    ? 64
+    : layout === "web"
+      ? 104
+      : 92;
+  const PAD_L = numbersOnly ? PAD_L_NUMBERS : PAD_L_FULL;
+  const PAD_B = numbersOnly ? PAD_B_NUMBERS : PAD_B_FULL;
 
   const rows = useMemo(() => {
     const sliced = points.slice(-Math.max(1, maxSnapshots));
@@ -168,20 +182,24 @@ export default function MyRankRankingProgressNative({
     }
 
     return { linePath: path, dots, hGrid, vGrid, xTicks };
-  }, [rows, plotW, chartHeight, language]);
+  }, [rows, plotW, chartHeight, language, PAD_L, PAD_B]);
 
   const isEmpty = !loading && rows.length === 0;
 
   return (
-    <View style={styles.section}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title} numberOfLines={1}>
-          {MY_RANK_RANKING_PROGRESS_TITLE}
-        </Text>
-        <Text style={styles.count}>
-          {rows.length}/{maxSnapshots}
-        </Text>
-      </View>
+    <View style={[styles.section, numbersOnly ? styles.sectionNumbersOnly : null]}>
+      {numbersOnly && dense ? null : (
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={1}>
+            {MY_RANK_RANKING_PROGRESS_TITLE}
+          </Text>
+          {numbersOnly ? null : (
+            <Text style={styles.count}>
+              {rows.length}/{maxSnapshots}
+            </Text>
+          )}
+        </View>
+      )}
 
       <View style={[styles.plot, { height: chartHeight }]} onLayout={onLayout}>
         {loading ? (
@@ -197,35 +215,37 @@ export default function MyRankRankingProgressNative({
           </View>
         ) : plotW > 0 ? (
           <>
-            <Svg
-              width={plotW}
-              height={chartHeight}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            >
-              {model.hGrid.map((g, i) => (
-                <SvgLine
-                  key={`h-${i}`}
-                  x1={PAD_L}
-                  y1={g.y}
-                  x2={plotW - PAD_R}
-                  y2={g.y}
-                  stroke={PROFILE_CHART_CYBER.cyanGridStrong}
-                  strokeWidth={1}
-                />
-              ))}
-              {model.vGrid.map((x, i) => (
-                <SvgLine
-                  key={`v-${i}`}
-                  x1={x}
-                  y1={PAD_T}
-                  x2={x}
-                  y2={chartHeight - PAD_B}
-                  stroke={PROFILE_CHART_CYBER.cyanGridStrong}
-                  strokeWidth={1}
-                />
-              ))}
-            </Svg>
+            {numbersOnly ? null : (
+              <Svg
+                width={plotW}
+                height={chartHeight}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              >
+                {model.hGrid.map((g, i) => (
+                  <SvgLine
+                    key={`h-${i}`}
+                    x1={PAD_L}
+                    y1={g.y}
+                    x2={plotW - PAD_R}
+                    y2={g.y}
+                    stroke={PROFILE_CHART_CYBER.cyanGridStrong}
+                    strokeWidth={1}
+                  />
+                ))}
+                {model.vGrid.map((x, i) => (
+                  <SvgLine
+                    key={`v-${i}`}
+                    x1={x}
+                    y1={PAD_T}
+                    x2={x}
+                    y2={chartHeight - PAD_B}
+                    stroke={PROFILE_CHART_CYBER.cyanGridStrong}
+                    strokeWidth={1}
+                  />
+                ))}
+              </Svg>
+            )}
             <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
               <Group>
                 {model.dots.length > 1 ? (
@@ -272,16 +292,18 @@ export default function MyRankRankingProgressNative({
                 })}
               </Group>
             </Canvas>
-            {model.hGrid.map((g, i) => (
-              <Text
-                key={`yl-${i}`}
-                style={[styles.yTick, { top: g.y - 5 }]}
-                numberOfLines={1}
-                pointerEvents="none"
-              >
-                {g.label}
-              </Text>
-            ))}
+            {numbersOnly
+              ? null
+              : model.hGrid.map((g, i) => (
+                  <Text
+                    key={`yl-${i}`}
+                    style={[styles.yTick, { top: g.y - 5, width: PAD_L - SERIES_INSET - 2 }]}
+                    numberOfLines={1}
+                    pointerEvents="none"
+                  >
+                    {g.label}
+                  </Text>
+                ))}
             {model.dots.map((d, idx) => (
               <Text
                 key={`n-${idx}`}
@@ -292,16 +314,18 @@ export default function MyRankRankingProgressNative({
                 {d.rank}
               </Text>
             ))}
-            {model.xTicks.map((t, i) => (
-              <Text
-                key={`xt-${i}`}
-                style={[styles.xTick, { left: t.x - 16, width: 32 }]}
-                numberOfLines={1}
-                pointerEvents="none"
-              >
-                {t.label}
-              </Text>
-            ))}
+            {numbersOnly
+              ? null
+              : model.xTicks.map((t, i) => (
+                  <Text
+                    key={`xt-${i}`}
+                    style={[styles.xTick, { left: t.x - 16, width: 32 }]}
+                    numberOfLines={1}
+                    pointerEvents="none"
+                  >
+                    {t.label}
+                  </Text>
+                ))}
           </>
         ) : null}
       </View>
@@ -318,6 +342,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 8,
     paddingBottom: 4,
+  },
+  sectionNumbersOnly: {
+    borderTopWidth: 0,
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    paddingBottom: 2,
   },
   titleRow: {
     flexDirection: "row",
@@ -374,7 +404,6 @@ const styles = StyleSheet.create({
   yTick: {
     position: "absolute",
     left: 0,
-    width: PAD_L - SERIES_INSET - 2,
     textAlign: "right",
     fontSize: 8,
     color: PROFILE_CHART_CYBER.tick,

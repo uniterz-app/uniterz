@@ -14,8 +14,10 @@ export function useProfileDailyTrendChart(
   targetUid: string | null,
   options?: {
     enabled?: boolean;
-    /** user-stats API から渡すときは Firestore の日次取得をスキップ */
+    /** profileCharts / user-stats から渡すとき Firestore 日次取得をスキップ */
     seedRows?: ProfileDailyTrendRow[] | null;
+    /** true なら空配列も「確定 seed」として独立 fetch しない */
+    seedComplete?: boolean;
     rankingLeague?: RankingLeagueSource;
     wcStage?: WcRankingStage;
   }
@@ -27,11 +29,10 @@ export function useProfileDailyTrendChart(
     (options?.rankingLeague ?? "nba") === "nba" ? "season" : undefined
   );
   const seedRows = options?.seedRows;
-  /** user-stats API は league/wcStage 済みの rows を返すため、seed を優先する */
+  const seedComplete = options?.seedComplete === true;
   const useSeed =
-    Array.isArray(seedRows) &&
-    seedRows.length > 0 &&
-    enabled;
+    enabled &&
+    (seedComplete || (Array.isArray(seedRows) && seedRows.length > 0));
 
   const uidForDailyTrend =
     useSeed || !enabled ? undefined : targetUid ?? undefined;
@@ -46,7 +47,9 @@ export function useProfileDailyTrendChart(
     wcStage: trendCtx.wcStage,
   });
 
-  const sourceRows = useSeed ? seedRows! : (dailyTrend ?? []);
+  const sourceRows = useSeed
+    ? (seedRows ?? [])
+    : (dailyTrend ?? []);
 
   const chartData: ProfileDailyTrendChartRow[] = useMemo(() => {
     return sourceRows.map((row) => ({

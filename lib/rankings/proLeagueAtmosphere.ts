@@ -31,7 +31,7 @@ export const PRO_LEAGUE_ATMOSPHERE = {
   titleNativeShadow: "rgba(192,132,252,0.45)",
 } as const;
 
-/** CyberSlantedTab / Native タブに渡す PRO LEAGUE アクセント */
+/** CyberSlantedTab / Native タブに渡す PRO LEAGUE アクセント（Season 行など） */
 export const PRO_LEAGUE_TAB_THEME: ProLeagueTabTheme = {
   accent: PRO_LEAGUE_ATMOSPHERE.gold,
   inactiveText: PRO_LEAGUE_ATMOSPHERE.gold,
@@ -39,4 +39,14 @@ export const PRO_LEAGUE_TAB_THEME: ProLeagueTabTheme = {
   activeShadow:
     "0 0 10px rgba(246,195,68,0.55), 0 0 22px rgba(192,132,252,0.28)",
   inactiveBorder: PRO_LEAGUE_ATMOSPHERE.gold,
+};
+
+/** Pick Up / PRO LEAGUE のうち PRO LEAGUE タブ選択色（紫） */
+export const PRO_LEAGUE_DIVISION_TAB_THEME: ProLeagueTabTheme = {
+  accent: PRO_LEAGUE_ATMOSPHERE.violet,
+  inactiveText: PRO_LEAGUE_ATMOSPHERE.violet,
+  activeText: PRO_LEAGUE_ATMOSPHERE.ink,
+  activeShadow:
+    "0 0 10px rgba(192,132,252,0.55), 0 0 22px rgba(168,85,247,0.28)",
+  inactiveBorder: PRO_LEAGUE_ATMOSPHERE.violet,
 };

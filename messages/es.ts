@@ -194,7 +194,7 @@ const es: Messages = {
     periodSeason: "Season",
     periodWeekly: "Weekly",
     periodMonthly: "Monthly",
-    divisionStandard: "Standard",
+    divisionStandard: "Pick Up",
     nbaBoardRegular: "Regular Season",
     nbaBoardPlayoffs: "Playoffs",
     divisionOpen: "PRO LEAGUE",
@@ -203,6 +203,8 @@ const es: Messages = {
     divisionOpenLockBody:
       "A Pro-only ranking across every game. Subscribe to Pro to join and view it.",
     divisionOpenCta: "See Pro",
+    divisionOpenModalDismiss: "Close",
+    divisionOpenBackToPickUp: "Back to Pick Up",
     winStreak: "Racha de victorias",
     upset: "Sorpresa",
     posts: "Publicaciones",

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import cn from "clsx";
-import { CalendarRange, Crown, Trophy } from "lucide-react";
+import { CalendarRange, Trophy } from "lucide-react";
 import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
@@ -23,8 +23,6 @@ type Props = {
   nbaBoard?: NbaRankingBoard;
   onSelectNbaRegular: () => void;
   onSelectNbaPlayoffs: () => void;
-  /** PRO LEAGUE（Pro 限定 NBA ランキング） */
-  onSelectOpenweight?: () => void;
 };
 
 /** NBA 下の枝分かれ行（├ / └）— `GamesDrawerMenu` と同型（2px 線 + 枝先ジョイント） */
@@ -75,7 +73,6 @@ export default function RankingsDrawerMenu({
   nbaBoard = "regular",
   onSelectNbaRegular,
   onSelectNbaPlayoffs,
-  onSelectOpenweight,
 }: Props) {
   const isMobile = variant === "mobile";
   const m = t(language);
@@ -89,10 +86,10 @@ export default function RankingsDrawerMenu({
 
   const nbaClusterActive = rankingLeague === "nba";
   const regularActive =
-    rankingLeague === "nba" && nbaBoard === "regular";
+    rankingLeague === "nba" &&
+    (nbaBoard === "regular" || nbaBoard === "open");
   const playoffsActive =
     rankingLeague === "nba" && nbaBoard === "playoffs";
-  const openActive = rankingLeague === "nba" && nbaBoard === "open";
 
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
@@ -101,77 +98,54 @@ export default function RankingsDrawerMenu({
       </CyberSideMenuSectionTitle>
 
       <div className="flex flex-col gap-2">
-        {onSelectOpenweight ? (
-          <div className="flex flex-col">
-            <SideMenuItemButton
-              icon={Trophy}
-              labelStyle={menuLabelFont}
-              active={nbaClusterActive}
-              onClick={onSelectNbaRegular}
-            >
-              <span className="uppercase">NBA</span>
-            </SideMenuItemButton>
-
-            <div className="relative mt-1 flex flex-col gap-1.5">
-              <span
-                aria-hidden
-                className="pointer-events-none absolute left-[9px] top-[-4px] h-1 w-[2px]"
-                style={{
-                  backgroundColor: CYBER_SIDE_MENU_BRANCH,
-                  boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
-                }}
-              />
-
-              <BranchRow>
-                <SideMenuItemButton
-                  icon={CalendarRange}
-                  dense
-                  labelStyle={menuLabelFont}
-                  active={regularActive}
-                  onClick={onSelectNbaRegular}
-                >
-                  <span className="uppercase">
-                    {m.rankings.nbaBoardRegular}
-                  </span>
-                </SideMenuItemButton>
-              </BranchRow>
-              <BranchRow>
-                <SideMenuItemButton
-                  icon={Trophy}
-                  dense
-                  labelStyle={menuLabelFont}
-                  active={playoffsActive}
-                  onClick={onSelectNbaPlayoffs}
-                >
-                  <span className="uppercase">
-                    {m.rankings.nbaBoardPlayoffs}
-                  </span>
-                </SideMenuItemButton>
-              </BranchRow>
-              <BranchRow last>
-                <SideMenuItemButton
-                  icon={Crown}
-                  dense
-                  labelStyle={menuLabelFont}
-                  active={openActive}
-                  onClick={onSelectOpenweight}
-                >
-                  <span className="uppercase">{m.rankings.divisionOpen}</span>
-                </SideMenuItemButton>
-              </BranchRow>
-            </div>
-          </div>
-        ) : (
+        <div className="flex flex-col">
           <SideMenuItemButton
             icon={Trophy}
             labelStyle={menuLabelFont}
             active={nbaClusterActive}
             onClick={onSelectNbaRegular}
           >
-            <span className="uppercase">{m.rankings.nbaPlayoffs}</span>
+            <span className="uppercase">NBA</span>
           </SideMenuItemButton>
-        )}
 
+          <div className="relative mt-1 flex flex-col gap-1.5">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-[9px] top-[-4px] h-1 w-[2px]"
+              style={{
+                backgroundColor: CYBER_SIDE_MENU_BRANCH,
+                boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
+              }}
+            />
+
+            <BranchRow>
+              <SideMenuItemButton
+                icon={CalendarRange}
+                dense
+                labelStyle={menuLabelFont}
+                active={regularActive}
+                onClick={onSelectNbaRegular}
+              >
+                <span className="uppercase">
+                  {m.rankings.nbaBoardRegular}
+                </span>
+              </SideMenuItemButton>
+            </BranchRow>
+            <BranchRow last>
+              <SideMenuItemButton
+                icon={Trophy}
+                dense
+                labelStyle={menuLabelFont}
+                active={playoffsActive}
+                onClick={onSelectNbaPlayoffs}
+              >
+                <span className="uppercase">
+                  {m.rankings.nbaBoardPlayoffs}
+                </span>
+              </SideMenuItemButton>
+            </BranchRow>
+          </div>
+        </div>
       </div>
     </nav>
   );

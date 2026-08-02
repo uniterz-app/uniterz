@@ -57,8 +57,8 @@ type TabProps = {
   fill?: boolean;
   fontWeight?: "500" | "600" | "700";
   /**
-   * Web の theme 相当。焼き込み PNG 選択態のため現状は未適用（型互換のみ）。
-   * CyberSlantedTab 見た目の変更はユーザー指示があるまで行わない。
+   * Web の theme 相当。
+   * 既定（シアン）は焼き込み PNG。accent がシアン以外のときだけ塗りを theme に合わせる。
    */
   theme?: CyberSlantedTabThemeNative;
   accessibilityRole?: "tab";
@@ -71,6 +71,17 @@ function tabBodyHeight(compact: boolean): number {
 
 function chromeImageHeight(bodyH: number): number {
   return bodyH + GLOW_PAD * 2;
+}
+
+function resolveTabTheme(theme?: CyberSlantedTabThemeNative) {
+  const accent = theme?.accent ?? CYBER_TAB_CYAN;
+  return {
+    accent,
+    inactiveText: theme?.inactiveText ?? accent,
+    activeText: theme?.activeText ?? TAB_ACTIVE_TEXT,
+    inactiveBorder: theme?.inactiveBorder ?? accent,
+    useBakedActive: accent.toUpperCase() === CYBER_TAB_CYAN.toUpperCase(),
+  };
 }
 
 /** 選択: 焼き込み1枚を横ストレッチし、Web と同じ skew で傾ける */
@@ -90,12 +101,40 @@ function ActiveTabChrome({ bodyH }: { bodyH: number }) {
   );
 }
 
-/** Web 非選択: 透明 + シアン枠（skew）。光は付けない。 */
-function InactiveTabChrome({ bodyH }: { bodyH: number }) {
+/** 選択: theme 塗り（シアン以外）。Web の accent 背景に相当 */
+function ActiveTabChromeThemed({
+  bodyH,
+  accent,
+}: {
+  bodyH: number;
+  accent: string;
+}) {
   return (
     <View
       pointerEvents="none"
-      style={[styles.inactiveChrome, { height: bodyH, width: "100%" }]}
+      style={[
+        styles.themedActiveChrome,
+        { height: bodyH, width: "100%", backgroundColor: accent },
+      ]}
+    />
+  );
+}
+
+/** Web 非選択: 透明 + 枠（skew）。光は付けない。 */
+function InactiveTabChrome({
+  bodyH,
+  borderColor,
+}: {
+  bodyH: number;
+  borderColor: string;
+}) {
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.inactiveChrome,
+        { height: bodyH, width: "100%", borderColor },
+      ]}
     />
   );
 }
@@ -108,11 +147,10 @@ export function CyberSlantedTabNative({
   compact = false,
   fill: fillProp,
   fontWeight = "700",
-  theme: _theme,
+  theme,
   accessibilityRole,
   accessibilityState,
 }: TabProps) {
-  void _theme;
   const fillFromBar = useContext(CyberSlantedTabFillContext);
   const fill = fillProp ?? fillFromBar;
   const bodyH = tabBodyHeight(compact);
@@ -120,6 +158,7 @@ export function CyberSlantedTabNative({
   const jaLabel = hasJaScript(label);
   const fontSize = rankingFontSizePx(compact ? 9 : 10, label);
   const letterSpacing = jaLabel ? fontSize * 0.06 : fontSize * tabMeta.letterSpacingEm;
+  const resolved = resolveTabTheme(theme);
 
   const tab = (
     <Pressable
@@ -134,23 +173,32 @@ export function CyberSlantedTabNative({
     >
       <View style={[styles.tabFrame, { height: bodyH }]} pointerEvents="box-none">
         {active ? (
-          <View
-            pointerEvents="none"
-            style={[
-              styles.chromeHost,
-              {
-                top: -GLOW_PAD,
-                left: -GLOW_PAD,
-                right: -GLOW_PAD,
-                height: imageH,
-              },
-            ]}
-          >
-            <ActiveTabChrome bodyH={bodyH} />
-          </View>
+          resolved.useBakedActive ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.chromeHost,
+                {
+                  top: -GLOW_PAD,
+                  left: -GLOW_PAD,
+                  right: -GLOW_PAD,
+                  height: imageH,
+                },
+              ]}
+            >
+              <ActiveTabChrome bodyH={bodyH} />
+            </View>
+          ) : (
+            <View style={styles.inactiveSlot} pointerEvents="none">
+              <ActiveTabChromeThemed bodyH={bodyH} accent={resolved.accent} />
+            </View>
+          )
         ) : (
           <View style={styles.inactiveSlot} pointerEvents="none">
-            <InactiveTabChrome bodyH={bodyH} />
+            <InactiveTabChrome
+              bodyH={bodyH}
+              borderColor={resolved.inactiveBorder}
+            />
           </View>
         )}
         <View pointerEvents="none" style={styles.labelLayer}>
@@ -164,7 +212,7 @@ export function CyberSlantedTabNative({
                 fontWeight,
                 lineHeight: Math.round(fontSize * 1.2),
                 letterSpacing,
-                color: active ? TAB_ACTIVE_TEXT : CYBER_TAB_CYAN,
+                color: active ? resolved.activeText : resolved.inactiveText,
               },
               !jaLabel ? styles.tabTextUpper : null,
             ]}
@@ -294,6 +342,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CYBER_TAB_CYAN,
     backgroundColor: "transparent",
+    transform: [{ skewX: SKEW }],
+  },
+  themedActiveChrome: {
+    borderWidth: 0,
     transform: [{ skewX: SKEW }],
   },
   labelLayer: {

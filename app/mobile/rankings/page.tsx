@@ -70,9 +70,11 @@ import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import { visibleMetricsForLeague, buildRankingTabMetrics } from "@/lib/rankings/wcVisibleMetrics";
 import { buildRankTierGapHint } from "@/lib/rankings/rankTierMilestone";
 import { useMyRankProgress } from "@/lib/rankings/useMyRankProgress";
+import { useMyRankCardFast } from "@/lib/rankings/useMyRankCardFast";
 import RankingsPeriodTabs from "@/app/component/rankings/RankingsPeriodTabs";
 import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
-import RankingsOpenProLock from "@/app/component/rankings/RankingsOpenProLock";
+import RankingsDivisionTabs from "@/app/component/rankings/RankingsDivisionTabs";
+import RankingsProLeagueTeaser from "@/app/component/rankings/RankingsProLeagueTeaser";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import {
   isRankingPeriod,
@@ -259,18 +261,37 @@ export default function MobileRankingsPage() {
     [bundle?.rows]
   );
 
-  const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
-  const { myRank, myRankDeltaPlaces } = resolveMyRankForCard({
-    myUid,
-    myRank: bundle?.myRank,
-    myRankDeltaPlaces: bundle?.myRankDeltaPlaces,
-    myRow: myRawRow,
-    listRows: rawRows,
+  const myRankCardFastEnabled =
+    !usePeriodBoard &&
+    !useOpenSeasonBoard &&
+    rankingLeague === "nba" &&
+    effectiveCategory === "playoffs";
+  const cardFast = useMyRankCardFast(myUid, {
+    enabled: myRankCardFastEnabled,
   });
+
+  const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
+  const { myRank: listMyRank, myRankDeltaPlaces: listMyRankDelta } =
+    resolveMyRankForCard({
+      myUid,
+      myRank: bundle?.myRank,
+      myRankDeltaPlaces: bundle?.myRankDeltaPlaces,
+      myRow: myRawRow,
+      listRows: rawRows,
+    });
+  const myRank =
+    listMyRank ??
+    (myRankCardFastEnabled && !cardFast.loading ? cardFast.myRank : null);
+  const myRankDeltaPlaces =
+    listMyRankDelta ??
+    (myRankCardFastEnabled ? cardFast.myRankDeltaPlaces : null);
   /** 累積スコアは指標タブに依存しない — totalPoints 側の myRow を優先 */
   const myStatsRow =
     (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ??
-    myRawRow;
+    myRawRow ??
+    (myRankCardFastEnabled
+      ? (cardFast.myRow as RankingRow | null)
+      : null);
   const rankingListCount =
     typeof bundle?.count === "number" && Number.isFinite(bundle.count)
       ? bundle.count
@@ -285,8 +306,8 @@ export default function MobileRankingsPage() {
   const restRows = rows.slice(3);
 
   const myValue = useMemo(
-    () => getMyMetricValue(metric, myRawRow),
-    [metric, myRawRow]
+    () => getMyMetricValue(metric, myRawRow ?? myStatsRow),
+    [metric, myRawRow, myStatsRow]
   );
   /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
   const precApiKey =
@@ -363,21 +384,18 @@ export default function MobileRankingsPage() {
   }, [myRank, myTotalPoints, rankingHasNoEntries, totalPointsRows]);
 
   /**
-   * Ranking Progress（日次順位推移）。
-   * NBA: Season ボードで free(3件)/pro(10件) とも表示。Weekly/Monthly は日次履歴が
-   * 累計順位のため非表示。WC: 既存挙動を変えないよう pro のみ。
+   * Free / Pro マイランクカード（プレビューと同系）。
+   * Season 累計は cumulative_stats 1-read でカード先行。
    */
-  const myRankCardTier: "free" | "pro" | undefined =
-    sessionUser.plan === "pro"
-      ? "pro"
-      : rankingLeague === "nba"
-        ? "free"
-        : undefined;
+  const myRankCardTier: "free" | "pro" =
+    cardFast.plan === "pro" || sessionUser.plan === "pro" ? "pro" : "free";
   const rankProgressHidden =
     rankingLeague === "nba" && rankingPeriod !== "season";
   const rankProgressEnabled =
     effectiveCategory === "playoffs" &&
     !rankProgressHidden &&
+    myRankCardTier === "pro" &&
+    metric === "totalScore" &&
     (rankingLeague === "nba" || sessionUser.plan === "pro");
   const { points: myRankProgressPoints, loading: myRankProgressLoading } =
     useMyRankProgress({
@@ -386,6 +404,10 @@ export default function MobileRankingsPage() {
       rankingLeague,
       wcStage: wcStageForHook,
     });
+
+  const cardLoading =
+    !listReady &&
+    !(myRankCardFastEnabled && !cardFast.loading && cardFast.myRow != null);
 
   const pageKey =
     buildRankingsPageKey({
@@ -449,6 +471,17 @@ export default function MobileRankingsPage() {
 
             {rankingLeague === "nba" &&
             (nbaBoard === "regular" || nbaBoard === "open") ? (
+              <RankingsDivisionTabs
+                division={rankingDivision}
+                onChange={(next) =>
+                  setNbaBoard(next === "open" ? "open" : "regular")
+                }
+                language={language}
+              />
+            ) : null}
+
+            {rankingLeague === "nba" &&
+            (nbaBoard === "regular" || nbaBoard === "open") ? (
               <RankingsPeriodTabs
                 period={rankingPeriod}
                 onChange={setRankingPeriod}
@@ -490,13 +523,15 @@ export default function MobileRankingsPage() {
                     ? myRawRow.totalPosts
                     : undefined
                 }
-                loading={!listReady}
-                statsScramble={listReady && personalPending}
+                loading={cardLoading}
+                statsScramble={
+                  listReady && personalPending && !cardFast.myRow
+                }
                 animateRank={!skipCountUp}
                 language={language}
-                isPro={sessionUser.plan === "pro"}
+                isPro={myRankCardTier === "pro"}
                 displayTier={myRankCardTier}
-                rankTierGap={sessionUser.plan === "pro" ? rankTierGap : null}
+                rankTierGap={myRankCardTier === "pro" ? rankTierGap : null}
                 rankProgress={
                   rankProgressEnabled ? (myRankProgressPoints ?? []) : undefined
                 }
@@ -561,7 +596,10 @@ export default function MobileRankingsPage() {
 
         {effectiveCategory === "playoffs" && openProLocked ? (
           <div className="px-2 pb-bottom-nav pt-2">
-            <RankingsOpenProLock language={language} />
+            <RankingsProLeagueTeaser
+              language={language}
+              onBackToPickUp={() => setNbaBoard("regular")}
+            />
           </div>
         ) : effectiveCategory === "playoffs" && !listContentReady && (
           <CandleChartLoader className="px-3 pt-2" label={m.common.loading} />
@@ -661,12 +699,6 @@ export default function MobileRankingsPage() {
           onSelectNbaPlayoffs={() => {
             setRankingLeague("nba");
             setNbaBoard("playoffs");
-            setCategory("playoffs");
-            setRankingsDrawerOpen(false);
-          }}
-          onSelectOpenweight={() => {
-            setRankingLeague("nba");
-            setNbaBoard("open");
             setCategory("playoffs");
             setRankingsDrawerOpen(false);
           }}

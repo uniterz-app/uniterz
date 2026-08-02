@@ -1,13 +1,19 @@
 "use client";
 
 /**
- * NBA ランキングの通常 / 無差別級切替。
- * CyberSlantedTab は凍結対象のため、ここでは単純なセグメント UI を使う。
+ * Regular Season 内 — Pick Up / PRO LEAGUE
+ * Season / Weekly と同じ CyberSlantedTab（本体は凍結・ここでは利用のみ）。
+ * PRO LEAGUE 選択色のみ紫。
  */
 
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+} from "@/app/component/rankings/CyberSlantedTab";
 import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { PRO_LEAGUE_DIVISION_TAB_THEME } from "@/lib/rankings/proLeagueAtmosphere";
 
 type Props = {
   division: RankingDivision;
@@ -21,45 +27,27 @@ export default function RankingsDivisionTabs({
   language = "ja",
 }: Props) {
   const m = t(language).rankings;
-  const items: Array<{ id: RankingDivision; label: string }> = [
-    {
-      id: "standard",
-      label: m.divisionStandard ?? "Standard",
-    },
-    {
-      id: "open",
-      label: m.divisionOpen ?? "PRO LEAGUE",
-    },
-  ];
 
   return (
-    <div
-      className="flex w-full gap-1 rounded-sm border border-cyan-400/25 bg-black/40 p-0.5"
-      role="tablist"
+    <CyberSlantedTabBar
+      fill
       aria-label={m.divisionTabsLabel ?? "Ranking division"}
     >
-      {items.map((item) => {
-        const active = division === item.id;
-        return (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(item.id)}
-            className={
-              active
-                ? "flex-1 rounded-sm bg-cyan-400 px-2 py-1.5 text-center text-[11px] font-bold tracking-wide text-[#050508]"
-                : "flex-1 rounded-sm px-2 py-1.5 text-center text-[11px] font-semibold tracking-wide text-cyan-300/80"
-            }
-          >
-            {item.label}
-            {item.id === "open" ? (
-              <span className="ml-1 text-[9px] font-bold opacity-80">PRO</span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
+      <CyberSlantedTab
+        role="tab"
+        label={m.divisionStandard ?? "Pick Up"}
+        active={division === "standard"}
+        onClick={() => onChange("standard")}
+        compact
+      />
+      <CyberSlantedTab
+        role="tab"
+        label={m.divisionOpen ?? "PRO LEAGUE"}
+        active={division === "open"}
+        onClick={() => onChange("open")}
+        compact
+        theme={PRO_LEAGUE_DIVISION_TAB_THEME}
+      />
+    </CyberSlantedTabBar>
   );
 }

@@ -13,7 +13,6 @@ import {
   parseRankingDivision,
   type RankingDivision,
 } from "@/lib/rankings/rankingDivision";
-import { buildNbaPeriodRankingBulk } from "@/lib/rankings/server/buildNbaPeriodRankingFromDaily";
 import {
   listNbaPeriodLabels,
   readNbaPeriodRankingSnapshots,
@@ -53,10 +52,15 @@ async function loadPayload(
     await mergeUserPlansIntoBulkByMetric(snapshot.byMetric);
     return snapshot;
   }
-  // cron 未実行（当日/移行期）はライブ集計にフォールバック。過去ラベルは空を返す
-  const currentLabel = currentRankingPeriodLabel(period);
-  if (label !== currentLabel) return null;
-  return buildNbaPeriodRankingBulk({ period, uid, division });
+  /**
+   * スナップショット未生成時の daily ライブ集計はしない（16:00 cron のみ）。
+   * Season と同様、無ければ空（呼び出し側で byMetric: {}）。
+   */
+  console.warn(
+    `[period-ranking/bulk] missing period snapshot; skip live daily fallback`,
+    { period, label, division }
+  );
+  return null;
 }
 
 export async function GET(req: Request) {

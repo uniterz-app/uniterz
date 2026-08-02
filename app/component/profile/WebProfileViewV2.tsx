@@ -125,15 +125,18 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
   const { chartData, loading: dailyTrendLoading } =
     useProfileDailyTrendChart(resolvedUid, {
-      enabled: fetchOverviewExtras,
+      enabled: fetchOverviewExtras && !statsLoading,
       seedRows: props.profileDailyTrendSeed ?? undefined,
+      seedComplete: props.profileDailyTrendSeedComplete,
       rankingLeague,
     });
 
   const { chartRows: rankPlayoffTrendRows, loading: rankTrendLoading } =
     useProfilePlayoffRankTrend(resolvedUid, {
-      enabled: fetchOverviewExtras,
+      enabled: fetchOverviewExtras && !statsLoading,
       rankingLeague,
+      seedPoints: props.profileRankTrendSeed ?? undefined,
+      seedComplete: props.profileRankTrendSeedComplete,
     });
 
   const {
@@ -269,6 +272,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   language={language}
                   layout="web"
                   profileStatsContext={props.profileStatsContext}
+                  seedLast20={props.profileLast20Seed}
                 />
               </div>
               ) : null}

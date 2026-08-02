@@ -28,6 +28,7 @@ import { RankFirstBorderEdgeScanNative } from "./RankFirstBorderEdgeScanNative";
 import { rankingFlagImageUri } from "./rankingFlagUri";
 import { METRIC_FONT, RANKING_SCORE_FONT, rankingNameFont, rankingTagFont } from "./rankingsUiTheme";
 import { useRankingsCrownEntrance } from "./useRankingsCrownEntrance";
+import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
 
 function cyberScoreColor(rank: number): string {
   if (rank === 1) return "#FFD65A";
@@ -50,12 +51,15 @@ function CyberRankingScoreNative({
   rank,
   metric,
   counted,
+  plainWhite = false,
 }: {
   rank: number;
   metric: MobileMetric;
   counted: number;
+  /** My Rank Free — 順位色ではなく白 */
+  plainWhite?: boolean;
 }) {
-  const color = cyberScoreColor(rank);
+  const color = plainWhite ? "rgba(255,255,255,0.96)" : cyberScoreColor(rank);
   const fontSize = scoreFontSize(rank);
   const displayValue =
     metric === "winRate" || metric === "streak" || metric === "goalScorerHits"
@@ -73,7 +77,7 @@ function CyberRankingScoreNative({
           fontFamily: RANKING_SCORE_FONT,
         },
       ]}
-      layers={cyberScoreGlowLayers(rank)}
+      layers={plainWhite ? [] : cyberScoreGlowLayers(rank)}
     >
       {displayValue}
     </CyberGlyphGlowTextNative>
@@ -127,6 +131,9 @@ export function CyberRankingListRowNative({
   animateCrown = false,
   pageKey = "",
   reduceMotion = false,
+  hideAccentBar = false,
+  rankOverline = null,
+  plainWhiteScore = false,
 }: {
   rank: number;
   displayName: string;
@@ -149,6 +156,12 @@ export function CyberRankingListRowNative({
   animateCrown?: boolean;
   pageKey?: string;
   reduceMotion?: boolean;
+  /** My Rank Free — 左アクセントバー非表示 */
+  hideAccentBar?: boolean;
+  /** 順位数字の上に置くラベル（例: YOUR RANK） */
+  rankOverline?: string | null;
+  /** My Rank Free — スタッツ数字を白に */
+  plainWhiteScore?: boolean;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = palette.firstPlaceFrame;
@@ -178,23 +191,36 @@ export function CyberRankingListRowNative({
         style={StyleSheet.absoluteFillObject}
       />
       {firstFrame ? <RankFirstBorderEdgeScanNative /> : null}
-      <View
-        style={[
-          styles.accentBar,
-          {
-            backgroundColor: palette.accent,
-            shadowColor: palette.accentGlow,
-          },
-        ]}
-      />
+      {!hideAccentBar ? (
+        <View
+          style={[
+            styles.accentBar,
+            {
+              backgroundColor: palette.accent,
+              shadowColor: palette.accentGlow,
+            },
+          ]}
+        />
+      ) : null}
       <View style={[styles.rowInner, firstFrame && styles.rowInnerFirst]}>
-        <View style={styles.rankCol}>
+        <View style={[styles.rankCol, rankOverline ? styles.rankColWithOverline : null]}>
+          {rankOverline ? (
+            <Text style={styles.rankOverline} numberOfLines={1}>
+              {rankOverline}
+            </Text>
+          ) : null}
           <CyberRankNumberNative rank={rank} />
         </View>
 
         <View style={styles.avatarCol}>
           {rank === 1 ? (
-            <Animated.View style={[styles.crownRow, animateCrown ? crownStyle : null]}>
+            <Animated.View
+              style={[
+                styles.crownRow,
+                styles.crownOverlay,
+                animateCrown ? crownStyle : null,
+              ]}
+            >
               <MaterialCommunityIcons name="crown" size={14} color="#F4C542" />
               <Text style={styles.plusLabel}>+++</Text>
             </Animated.View>
@@ -228,7 +254,7 @@ export function CyberRankingListRowNative({
               {displayName}
             </Text>
             <RankDeltaBadgeNative delta={rankDeltaPlaces} />
-            {isPro ? <Text style={styles.proBadge}>PRO</Text> : null}
+            {isPro ? <ProCyberBadgeNative compact /> : null}
           </View>
           <ListRowMeta
             countryCode={countryCode}
@@ -239,7 +265,12 @@ export function CyberRankingListRowNative({
         </View>
 
         <View style={styles.scoreCol}>
-          <CyberRankingScoreNative rank={rank} metric={metric} counted={counted} />
+          <CyberRankingScoreNative
+            rank={rank}
+            metric={metric}
+            counted={counted}
+            plainWhite={plainWhiteScore}
+          />
           <Text
             style={[styles.metricTag, { fontSize: tagFontSize, fontFamily: rankingTagFont(metricTag) }]}
             numberOfLines={1}
@@ -301,19 +332,51 @@ const styles = StyleSheet.create({
   },
   rowInnerFirst: {
     zIndex: 10,
+    /** 王冠を absolute にした分の上余白 — 順位とアバター中心を揃えたまま確保 */
+    paddingTop: 22,
   },
   rankCol: {
     width: 52,
+    height: 44,
     alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  rankColWithOverline: {
+    height: undefined,
+    minHeight: 44,
+    gap: 6,
+  },
+  rankOverline: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 6.5,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    fontFamily: METRIC_FONT,
+    textAlign: "center",
+    marginBottom: 2,
   },
   avatarCol: {
+    width: 44,
+    height: 44,
     alignItems: "center",
-    gap: 2,
+    justifyContent: "center",
+    position: "relative",
   },
   crownRow: {
     flexDirection: "row",
     alignItems: "flex-end",
+    justifyContent: "center",
     gap: 2,
+  },
+  crownOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: "100%",
+    marginBottom: 2,
+    zIndex: 3,
   },
   plusLabel: {
     color: "#B8FF3C",
@@ -421,12 +484,5 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: StyleSheet.hairlineWidth,
     backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  proBadge: {
-    color: "rgba(252,211,77,0.95)",
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    fontFamily: METRIC_FONT,
   },
 });

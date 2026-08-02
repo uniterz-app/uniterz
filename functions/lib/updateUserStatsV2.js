@@ -6,6 +6,7 @@ exports.getStatsForDateRangeV2 = getStatsForDateRangeV2;
 const firestore_1 = require("firebase-admin/firestore");
 const cumulativeFromDaily_1 = require("./rankings/cumulativeFromDaily");
 const nbaSeason_1 = require("./rankings/nbaSeason");
+const mergeProfileCharts_1 = require("./profile/mergeProfileCharts");
 function shouldCountForRanking(v) {
     return v !== false;
 }
@@ -113,12 +114,17 @@ async function applyPostToUserStatsV2(opts) {
     const userRef = db().doc(`users/${uid}`);
     const userStatsRef = db().doc(`user_stats_v2/${uid}`);
     await db().runTransaction(async (tx) => {
-        var _a;
+        var _a, _b, _c;
         const marker = await tx.get(markerRef);
         if (marker.exists)
             return;
         const userSnap = await tx.get(userRef);
         const user = userSnap.exists ? userSnap.data() : {};
+        /** profileCharts merge 用（writes 前に全 reads） */
+        const [dailySnap, cumulativeSnap] = await Promise.all([
+            tx.get(dailyRef),
+            tx.get(cumulativeRef),
+        ]);
         const inc = {
             posts: firestore_1.FieldValue.increment(1),
             wins: firestore_1.FieldValue.increment(isWin ? 1 : 0),
@@ -170,7 +176,7 @@ async function applyPostToUserStatsV2(opts) {
             upsetOpportunityCount: hadUpsetGame ? 1 : 0,
             countedForRanking: forRanking,
         });
-        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, buildPostCumulativeContribution({
+        const contrib = buildPostCumulativeContribution({
             countsForRanking,
             league,
             startAt,
@@ -183,7 +189,47 @@ async function applyPostToUserStatsV2(opts) {
             wcStage,
             upsetBonus,
             streakBonus,
-        }));
+        });
+        /** overview チャート用 denorm（NBA レギュラーのみ・カードと同じ 1 doc） */
+        let profileCharts = null;
+        if (nbaSeasonKey) {
+            const dailyData = dailySnap.exists
+                ? dailySnap.data()
+                : null;
+            const bySeason = ((_b = dailyData === null || dailyData === void 0 ? void 0 : dailyData.rankingBySeason) !== null && _b !== void 0 ? _b : {});
+            const projected = (0, mergeProfileCharts_1.projectSeasonBucket)(bySeason[nbaSeasonKey], {
+                posts: 1,
+                wins: isWin ? 1 : 0,
+                pointsSumV3: points,
+                upsetPointsSum: upsetPoints,
+            });
+            const settledAtMs = startAt.toMillis();
+            profileCharts = (0, mergeProfileCharts_1.mergeProfileChartsOnSeasonSettle)({
+                cumulative: cumulativeSnap.exists
+                    ? cumulativeSnap.data()
+                    : null,
+                seasonKey: nbaSeasonKey,
+                dateKey,
+                projectedSeasonBucket: projected,
+                last20Point: {
+                    postId,
+                    settledAtMs,
+                    isWin,
+                },
+            });
+        }
+        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, contrib);
+        if (profileCharts) {
+            tx.set(cumulativeRef, {
+                "profileCharts.v": profileCharts.v,
+                "profileCharts.seasonKey": profileCharts.seasonKey,
+                "profileCharts.dailyTrend": profileCharts.dailyTrend,
+                "profileCharts.rankTrend": (_c = profileCharts.rankTrend) !== null && _c !== void 0 ? _c : [],
+                "profileCharts.last20": profileCharts.last20,
+                "profileCharts.builtAtMs": Date.now(),
+                updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            }, { merge: true });
+        }
     });
 }
 /* =========================================================
