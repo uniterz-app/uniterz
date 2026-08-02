@@ -57,6 +57,7 @@ import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
 import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
+import ProfileSettledTodayResultsNative from "./ProfileSettledTodayResultsNative";
 import { profileOverviewChartShellStyle } from "./profileOverviewChartShell";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import {
@@ -752,7 +753,20 @@ export default function ProfileHomeScreen({
 
     return (
       <View style={styles.overviewBlock}>
-        <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
+        {targetUid ? (
+          <>
+            <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
+              <ProfileSettledTodayResultsNative
+                uid={targetUid}
+                language={language}
+                profileStatsContext={profileStatsContext}
+                showDesignPreviewWhenEmpty
+              />
+            </ProfileOverviewEntranceBlock>
+            <View style={styles.chartGap} />
+          </>
+        ) : null}
+        <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
           {dailyChartLoading ? (
             <View style={styles.chartSkeleton}>
               <BlocksPulseLoader pixelScale={0.9} />
@@ -769,7 +783,7 @@ export default function ProfileHomeScreen({
           )}
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
-        <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
+        <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
           <ProfileRankTrendChartNative
             data={statsBundle.rankTrend}
             loading={
@@ -779,7 +793,7 @@ export default function ProfileHomeScreen({
           />
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
-        <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
+        <ProfileOverviewEntranceBlock index={3} entranceKey={entranceKey}>
           <ProfileStreakTrackerNative
             points={streakBundle.points}
             loading={streakBundle.loading}
