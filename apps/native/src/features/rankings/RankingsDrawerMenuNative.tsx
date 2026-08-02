@@ -3,14 +3,14 @@ import { StyleSheet, View } from "react-native";
 import CyberSideMenuSectionTitleNative from "../../ui/CyberSideMenuSectionTitleNative";
 import SideMenuItemButtonNative from "../../ui/SideMenuItemButtonNative";
 import {
-  CYBER_TAB_CYAN,
+  CYBER_SIDE_MENU_BRANCH,
+  CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
+  CYBER_SIDE_MENU_BRANCH_JOINT,
   SIDE_MENU_LABEL_FONT,
   sideMenuLabelStyle,
 } from "../../ui/cyberSideMenuNative";
 import type { NbaRankingBoard } from "../../../../../lib/rankings/rankingDivision";
 import { rankingsTexts } from "./rankingsTexts";
-
-const BRANCH = "rgba(0, 245, 255, 0.42)";
 
 type League = "nba" | "wc";
 
@@ -26,7 +26,7 @@ type Props = {
   onOpenSquadBattlePreview?: () => void;
 };
 
-/** NBA 下の枝分かれ行（├ / └）— `GamesDrawerMenuNative` と同型 */
+/** NBA 下の枝分かれ行（├ / └）— `GamesDrawerMenuNative` と同型（2px 線 + 枝先ジョイント） */
 function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) {
   return (
     <View style={styles.branchRow}>
@@ -35,6 +35,7 @@ function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) 
         style={[styles.vline, last ? styles.vlineLast : null]}
       />
       <View pointerEvents="none" style={styles.hline} />
+      <View pointerEvents="none" style={styles.joint} />
       <View style={styles.branchContent}>{children}</View>
     </View>
   );
@@ -171,30 +172,30 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 9,
     top: -4,
-    width: 1,
+    width: 2,
     height: 4,
-    backgroundColor: BRANCH,
-    shadowColor: CYBER_TAB_CYAN,
+    backgroundColor: CYBER_SIDE_MENU_BRANCH,
+    shadowColor: CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.9,
     shadowRadius: 4,
   },
   branchRow: {
     position: "relative",
     flexDirection: "row",
     alignItems: "stretch",
-    minHeight: 36,
+    minHeight: 32,
   },
   vline: {
     position: "absolute",
     left: 9,
     top: 0,
     bottom: 0,
-    width: 1,
-    backgroundColor: BRANCH,
-    shadowColor: CYBER_TAB_CYAN,
+    width: 2,
+    backgroundColor: CYBER_SIDE_MENU_BRANCH,
+    shadowColor: CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.9,
     shadowRadius: 4,
   },
   vlineLast: {
@@ -206,17 +207,35 @@ const styles = StyleSheet.create({
     left: 9,
     top: "50%",
     width: 14,
-    height: 1,
-    marginTop: -0.5,
-    backgroundColor: BRANCH,
-    shadowColor: CYBER_TAB_CYAN,
+    height: 2,
+    marginTop: -1,
+    backgroundColor: CYBER_SIDE_MENU_BRANCH,
+    shadowColor: CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.9,
     shadowRadius: 4,
   },
+  /** 枝先ジョイント（◆） */
+  joint: {
+    position: "absolute",
+    left: 20,
+    top: "50%",
+    width: 5,
+    height: 5,
+    marginTop: -2.5,
+    transform: [{ rotate: "45deg" }],
+    backgroundColor: CYBER_SIDE_MENU_BRANCH_JOINT,
+    shadowColor: CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
+    zIndex: 1,
+  },
+  /** サブ行は右端を短くして「ぶら下がり」を形で見せる */
   branchContent: {
     flex: 1,
     paddingLeft: 28,
+    paddingRight: 16,
     minWidth: 0,
   },
 });

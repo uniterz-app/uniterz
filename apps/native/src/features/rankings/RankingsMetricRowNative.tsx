@@ -9,6 +9,7 @@ import { type RankingsLanguage } from "./rankingsTexts";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
+  type CyberSlantedTabThemeNative,
 } from "./CyberSlantedTabNative";
 
 /** Web `RankingsMetricRow` の `formatLabel` と同じ短縮ルール */
@@ -25,6 +26,7 @@ export function RankingsMetricRowNative({
   onChange,
   language,
   gridColumns,
+  tabTheme,
 }: {
   metrics: MobileMetric[];
   metric: MobileMetric;
@@ -32,6 +34,7 @@ export function RankingsMetricRowNative({
   language: RankingsLanguage;
   /** Web と同様。WC は 3×2 グリッド */
   gridColumns?: 3;
+  tabTheme?: CyberSlantedTabThemeNative;
 }) {
   if (metrics.length === 0) {
     return null;
@@ -45,6 +48,7 @@ export function RankingsMetricRowNative({
         active={metric === item}
         fill
         compact
+        theme={tabTheme}
         accessibilityRole="tab"
         accessibilityState={{ selected: metric === item }}
         onPress={() => onChange(item)}

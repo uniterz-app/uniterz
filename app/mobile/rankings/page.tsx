@@ -86,6 +86,7 @@ import {
 } from "@/lib/rankings/rankingDivision";
 import { usePeriodRankingsBulk } from "@/lib/rankings/usePeriodRankingsBulk";
 import { useOpenSeasonRankingsBulk } from "@/lib/rankings/useOpenSeasonRankingsBulk";
+import { PRO_LEAGUE_TAB_THEME } from "@/lib/rankings/proLeagueAtmosphere";
 import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
 
 export default function MobileRankingsPage() {
@@ -397,7 +398,10 @@ export default function MobileRankingsPage() {
 
   return (
     <div
-      className="relative min-h-svh max-w-full overflow-x-clip overflow-y-auto overscroll-y-contain pb-bottom-nav text-white"
+      className={[
+        "relative min-h-svh max-w-full overflow-x-clip overflow-y-auto overscroll-y-contain pb-bottom-nav text-white",
+        nbaBoard === "open" ? "rankings-atmosphere--pro-league" : "",
+      ].join(" ")}
       style={{ touchAction: "pan-y" }}
     >
       <div className="sticky top-0 z-40">
@@ -414,6 +418,7 @@ export default function MobileRankingsPage() {
             <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
               <RankingsPageTitleCyber
                 variant="horizon-chrome"
+                tone={nbaBoard === "open" ? "pro-league" : "default"}
                 title={
                   nbaBoard === "open"
                     ? m.rankings.divisionOpen
@@ -448,6 +453,9 @@ export default function MobileRankingsPage() {
                 period={rankingPeriod}
                 onChange={setRankingPeriod}
                 language={language}
+                tabTheme={
+                  nbaBoard === "open" ? PRO_LEAGUE_TAB_THEME : undefined
+                }
               />
             ) : null}
 
@@ -533,6 +541,9 @@ export default function MobileRankingsPage() {
                 rankingLeague={rankingLeague}
                 gridColumns={rankingLeague === "worldcup" ? 3 : undefined}
                 compactMobile
+                tabTheme={
+                  nbaBoard === "open" ? PRO_LEAGUE_TAB_THEME : undefined
+                }
               />
               {metric === "winRate" && (
                 <p className="px-1 text-[11px] leading-4 text-white/60">
@@ -569,8 +580,9 @@ export default function MobileRankingsPage() {
               className={[
                 nameBebas.className,
                 "text-[clamp(1.75rem,10vw,2.7rem)] leading-none tracking-[0.22em]",
+                nbaBoard === "open" ? "rankings-pro-league-no-data" : "",
               ].join(" ")}
-              style={cyberNoDataLabelStyle}
+              style={nbaBoard === "open" ? undefined : cyberNoDataLabelStyle}
             >
               NO DATA
             </p>

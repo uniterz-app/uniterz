@@ -1,0 +1,21 @@
+/* PRO 背景 — Futuristic 8 案（dev プレビュー） */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--futuristic) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--futuristic) .profile-plan-pro-ambient {
+  display: none;
+}
+
+.profile-plan-pro-bg__futuristic-skin {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--futuristic),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--futuristic) {
+  background: linear-gradient(165deg, #050c14 0%, #0a1624 45%, #020305 100%);
+  --kinetik-frame: rgba(34, 211, 238, 0.38);
+  --kinetik-frame-strong: rgba(34, 211, 238, 0.85);
+  --kinetik-frame-dim: rgba(167, 139, 250, 0.28);
+}

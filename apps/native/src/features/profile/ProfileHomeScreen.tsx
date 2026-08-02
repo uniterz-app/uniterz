@@ -896,6 +896,7 @@ export default function ProfileHomeScreen({
       <ProfileMenuEdgeHandleNative
         onOpen={() => setMenuOpen(true)}
         unreadCount={menuUnreadCount}
+        hidden={menuOpen}
       />
     ) : null}
 
@@ -1153,6 +1154,17 @@ export default function ProfileHomeScreen({
       unreadAnnouncements={menuUnreadCount}
       uid={fUser?.uid ?? null}
       plan={plan}
+      displayName={
+        displayName.trim() ||
+        fUser?.displayName?.trim() ||
+        ""
+      }
+      handle={handle.trim()}
+      avatarUrl={
+        avatarUrl.trim() ||
+        fUser?.photoURL?.trim() ||
+        ""
+      }
       unitBalance={unitBalance}
       onOpenProfileSettings={openSettingsFromMenu}
       onOpenInApp={(page) => {
@@ -1174,6 +1186,8 @@ export default function ProfileHomeScreen({
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
         else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
+        else if (page === "futuristicBgPreview" && __DEV__)
+          navigation.navigate("FuturisticBgPreview");
       }}
     />
     <ProfileBadgeDetailModal
@@ -1514,7 +1528,7 @@ const styles = StyleSheet.create({
   },
   avatarEditUploading: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 54,
+    borderRadius: 0,
     backgroundColor: "rgba(0,0,0,0.45)",
     alignItems: "center",
     justifyContent: "center",
@@ -1522,9 +1536,11 @@ const styles = StyleSheet.create({
   avatarEditCircle: {
     width: 108,
     height: 108,
-    borderRadius: 54,
+    borderRadius: 0,
     overflow: "hidden",
     backgroundColor: "rgba(0,0,0,0.5)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.4)",
   },
   avatarEditImage: {
     width: "100%",
@@ -1541,9 +1557,9 @@ const styles = StyleSheet.create({
   },
   avatarEditRing: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 54,
-    borderWidth: 3,
-    borderColor: "rgba(0,0,0,0.4)",
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.25)",
   },
   avatarEditCameraFab: {
     position: "absolute",
@@ -1551,12 +1567,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: 0,
     backgroundColor: "rgba(0,0,0,0.92)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.35)",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -1576,13 +1592,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  /** Web `border-white/15 bg-black/20 rounded-xl` に相当（モバイルはややコンパクト） */
+  /** Web プロフィール編集の角ばり入力に相当 */
   fieldInput: {
     minHeight: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(0, 245, 255, 0.28)",
+    backgroundColor: "rgba(0,0,0,0.35)",
     color: colors.textPrimary,
     fontSize: 14,
     paddingHorizontal: 12,
@@ -1594,10 +1610,10 @@ const styles = StyleSheet.create({
   },
   selectRow: {
     minHeight: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(0, 245, 255, 0.28)",
+    backgroundColor: "rgba(0,0,0,0.35)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: "row",
@@ -1615,10 +1631,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  /** Web `mt-2` + `shadow-blue-500/30` に寄せる */
+  /** Web プロフィール保存ボタン（角ばり）に相当 */
   saveButton: {
     minHeight: 42,
-    borderRadius: 12,
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.35)",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgb(59,130,246)",
@@ -1646,9 +1664,9 @@ const styles = StyleSheet.create({
   modalSheet: {
     position: "relative",
     zIndex: 1,
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(0, 245, 255, 0.28)",
     backgroundColor: "rgba(15,23,42,0.98)",
     paddingVertical: 8,
     overflow: "hidden",
@@ -1657,9 +1675,9 @@ const styles = StyleSheet.create({
     position: "relative",
     zIndex: 1,
     maxHeight: 480,
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(0, 245, 255, 0.28)",
     backgroundColor: "rgba(15,23,42,0.98)",
     paddingVertical: 8,
     overflow: "hidden",

@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { nameBebas, nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
+import { PRO_LEAGUE_ATMOSPHERE } from "@/lib/rankings/proLeagueAtmosphere";
 
 export type RankingsTitleCyberVariant =
   | "horizon-chrome"
@@ -10,6 +11,8 @@ export type RankingsTitleCyberVariant =
   | "jp-chrome"
   | "soft-blend"
   | "scan-pulse";
+
+export type RankingsTitleCyberTone = "default" | "pro-league";
 
 const CHROME_GRADIENT_HARD =
   "linear-gradient(180deg, #F5FEFF 0%, #BFF8FF 24%, #67E8F9 43%, #12C8D6 50%, #0EA5B7 64%, #7DDDEA 100%)";
@@ -21,9 +24,18 @@ const CHROME_GRADIENT_SOFT =
 const CYAN_GLYPH_GLOW =
   "0 0 6px rgba(34,211,238,0.42), 0 0 12px rgba(14,165,233,0.18), 0 1px 1px rgba(0,10,18,0.55)";
 
-function chromeTextStyle(hard = true): CSSProperties {
+function chromeTextStyle(
+  hard = true,
+  tone: RankingsTitleCyberTone = "default"
+): CSSProperties {
+  const gradient =
+    tone === "pro-league"
+      ? PRO_LEAGUE_ATMOSPHERE.chromeGradient
+      : hard
+        ? CHROME_GRADIENT_HARD
+        : CHROME_GRADIENT_SOFT;
   return {
-    backgroundImage: hard ? CHROME_GRADIENT_HARD : CHROME_GRADIENT_SOFT,
+    backgroundImage: gradient,
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
@@ -37,14 +49,23 @@ function ChromeTitle({
   skewDeg,
   hard = true,
   glow = CYAN_GLYPH_GLOW,
+  glowFill = "#67E8F9",
+  tone = "default",
   children,
 }: {
   className: string;
   skewDeg: number;
   hard?: boolean;
   glow?: string;
+  glowFill?: string;
+  tone?: RankingsTitleCyberTone;
   children: ReactNode;
 }) {
+  const resolvedGlow =
+    tone === "pro-league" ? PRO_LEAGUE_ATMOSPHERE.chromeGlow : glow;
+  const resolvedFill =
+    tone === "pro-league" ? PRO_LEAGUE_ATMOSPHERE.chromeGlowFill : glowFill;
+
   return (
     <span
       className={["relative inline-block", className].join(" ")}
@@ -54,14 +75,14 @@ function ChromeTitle({
         aria-hidden
         className="pointer-events-none absolute inset-0 select-none"
         style={{
-          color: "#67E8F9",
-          textShadow: glow,
-          WebkitTextFillColor: "#67E8F9",
+          color: resolvedFill,
+          textShadow: resolvedGlow,
+          WebkitTextFillColor: resolvedFill,
         }}
       >
         {children}
       </span>
-      <span className="relative" style={chromeTextStyle(hard)}>
+      <span className="relative" style={chromeTextStyle(hard, tone)}>
         {children}
       </span>
     </span>
@@ -78,6 +99,8 @@ type Props = {
   subtitle?: string;
   /** web はやや大きめ */
   size?: "sm" | "md";
+  /** PRO LEAGUE — 紫金クローム */
+  tone?: RankingsTitleCyberTone;
   className?: string;
 };
 
@@ -87,21 +110,32 @@ export function RankingsPageTitleCyber({
   kicker = "SECTOR // NBA",
   subtitle = "LEADERBOARD",
   size = "md",
+  tone = "default",
   className = "",
 }: Props) {
-  const mainSize = size === "sm" ? "text-[22px] sm:text-[26px]" : "text-[26px] sm:text-[32px]";
+  const mainSize =
+    size === "sm" ? "text-[22px] sm:text-[26px]" : "text-[26px] sm:text-[32px]";
   const isJa = /[\u3040-\u30ff\u3400-\u9fff]/.test(title);
 
   if (variant === "hud-stack") {
     return (
-      <div className={["flex flex-col items-center leading-none", className].join(" ")}>
+      <div
+        className={["flex flex-col items-center leading-none", className].join(
+          " "
+        )}
+      >
         <span
-          className={[nameOxanium.className, "mb-1 text-[8px] font-bold uppercase tracking-[0.32em] sm:text-[9px]"].join(
-            " "
-          )}
+          className={[
+            nameOxanium.className,
+            "mb-1 text-[8px] font-bold uppercase tracking-[0.32em] sm:text-[9px]",
+          ].join(" ")}
           style={{
-            color: "#00F5FF",
-            textShadow: "0 0 10px rgba(0,245,255,0.65)",
+            color:
+              tone === "pro-league" ? PRO_LEAGUE_ATMOSPHERE.gold : "#00F5FF",
+            textShadow:
+              tone === "pro-league"
+                ? "0 0 10px rgba(246,195,68,0.55)"
+                : "0 0 10px rgba(0,245,255,0.65)",
           }}
         >
           {kicker}
@@ -110,14 +144,20 @@ export function RankingsPageTitleCyber({
           variant="horizon-chrome"
           title={title}
           size={size}
+          tone={tone}
         />
         <span
-          className={[nameOxanium.className, "mt-1 text-[9px] font-bold uppercase tracking-[0.28em] sm:text-[10px]"].join(
-            " "
-          )}
+          className={[
+            nameOxanium.className,
+            "mt-1 text-[9px] font-bold uppercase tracking-[0.28em] sm:text-[10px]",
+          ].join(" ")}
           style={{
-            color: "#FF2BD6",
-            textShadow: "0 0 12px rgba(255,43,214,0.55)",
+            color:
+              tone === "pro-league" ? PRO_LEAGUE_ATMOSPHERE.violet : "#FF2BD6",
+            textShadow:
+              tone === "pro-league"
+                ? "0 0 12px rgba(192,132,252,0.55)"
+                : "0 0 12px rgba(255,43,214,0.55)",
           }}
         >
           {subtitle}
@@ -137,6 +177,7 @@ export function RankingsPageTitleCyber({
           className,
         ].join(" ")}
         skewDeg={-8}
+        tone={tone}
       >
         {title}
       </ChromeTitle>
@@ -155,7 +196,12 @@ export function RankingsPageTitleCyber({
         ].join(" ")}
         skewDeg={-6}
         hard={false}
-        glow="0 0 8px rgba(0,245,255,0.32), 0 0 14px rgba(0,245,255,0.12)"
+        glow={
+          tone === "pro-league"
+            ? PRO_LEAGUE_ATMOSPHERE.chromeGlow
+            : "0 0 8px rgba(0,245,255,0.32), 0 0 14px rgba(0,245,255,0.12)"
+        }
+        tone={tone}
       >
         {title}
       </ChromeTitle>
@@ -163,6 +209,18 @@ export function RankingsPageTitleCyber({
   }
 
   if (variant === "neon-edge") {
+    const edge =
+      tone === "pro-league"
+        ? {
+            stroke: "rgba(246,195,68,0.9)",
+            shadow:
+              "0 0 8px rgba(192,132,252,0.85), 0 0 14px rgba(246,195,68,0.35)",
+          }
+        : {
+            stroke: "rgba(0,245,255,0.9)",
+            shadow:
+              "0 0 8px rgba(0,245,255,0.85), 0 0 14px rgba(0,245,255,0.35)",
+          };
     return (
       <span
         className={[
@@ -178,15 +236,14 @@ export function RankingsPageTitleCyber({
           aria-hidden
           className="absolute inset-0 select-none"
           style={{
-            WebkitTextStroke: "1px rgba(0,245,255,0.9)",
+            WebkitTextStroke: `1px ${edge.stroke}`,
             color: "transparent",
-            textShadow:
-              "0 0 8px rgba(0,245,255,0.85), 0 0 14px rgba(0,245,255,0.35)",
+            textShadow: edge.shadow,
           }}
         >
           {title}
         </span>
-        <span className="relative" style={chromeTextStyle(true)}>
+        <span className="relative" style={chromeTextStyle(true, tone)}>
           {title}
         </span>
       </span>
@@ -204,13 +261,14 @@ export function RankingsPageTitleCyber({
           className,
         ].join(" ")}
         skewDeg={-10}
+        tone={tone}
       >
         {title}
       </ChromeTitle>
     );
   }
 
-  /* horizon-chrome — 参照画像に近いハードスプリット */
+  /* horizon-chrome */
   return (
     <ChromeTitle
       className={[
@@ -221,6 +279,7 @@ export function RankingsPageTitleCyber({
         className,
       ].join(" ")}
       skewDeg={-10}
+      tone={tone}
     >
       {title}
     </ChromeTitle>

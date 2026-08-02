@@ -17,9 +17,12 @@ const CANCEL_DY = 24;
 export default function ProfileMenuEdgeHandleNative({
   onOpen,
   unreadCount = 0,
+  /** サイドメニュー開中は非表示（ドロワーと文字が被らないようにする） */
+  hidden = false,
 }: {
   onOpen: () => void;
   unreadCount?: number;
+  hidden?: boolean;
 }) {
   const pan = useRef(
     PanResponder.create({
@@ -31,6 +34,8 @@ export default function ProfileMenuEdgeHandleNative({
       },
     })
   ).current;
+
+  if (hidden) return null;
 
   return (
     <>

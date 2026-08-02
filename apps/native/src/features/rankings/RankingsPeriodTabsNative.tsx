@@ -7,16 +7,19 @@ import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
+  type CyberSlantedTabThemeNative,
 } from "./CyberSlantedTabNative";
 
 export function RankingsPeriodTabsNative({
   period,
   onChange,
   language,
+  tabTheme,
 }: {
   period: RankingPeriod;
   onChange: (next: RankingPeriod) => void;
   language: RankingsLanguage;
+  tabTheme?: CyberSlantedTabThemeNative;
 }) {
   const t = rankingsTexts(language);
   const items: Array<{ key: RankingPeriod; label: string }> = [
@@ -33,6 +36,7 @@ export function RankingsPeriodTabsNative({
           active={period === item.key}
           fill
           compact
+          theme={tabTheme}
           onPress={() => onChange(item.key)}
         />
       ))}

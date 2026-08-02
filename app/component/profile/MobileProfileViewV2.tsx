@@ -240,6 +240,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         <ProfileMenuEdgeHandle
           onOpen={() => setDrawerOpen(true)}
           unreadCount={menuUnreadCount}
+          hidden={drawerOpen}
         />
       ) : null}
 

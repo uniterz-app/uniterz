@@ -8,6 +8,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
+  type CyberSlantedTabTheme,
 } from "@/app/component/rankings/CyberSlantedTab";
 
 const tabFadeEase: [number, number, number, number] = [0.16, 0.82, 0.32, 1];
@@ -21,6 +22,8 @@ type Props = {
   gridColumns?: 3;
   /** @deprecated モバイルも斜めタブに統一 */
   compactMobile?: boolean;
+  /** PRO LEAGUE など画面固有のタブ色 */
+  tabTheme?: CyberSlantedTabTheme;
 };
 
 function formatLabel(
@@ -39,6 +42,7 @@ export default function RankingsMetricRow({
   language = "ja",
   rankingLeague,
   gridColumns,
+  tabTheme,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const msgs = t(language);
@@ -71,6 +75,7 @@ export default function RankingsMetricRow({
             active={item.key === metric}
             onClick={() => setMetric(item.key)}
             compact
+            theme={tabTheme}
           />
         ))}
       </CyberSlantedTabBar>

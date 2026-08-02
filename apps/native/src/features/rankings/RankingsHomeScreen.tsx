@@ -9,6 +9,11 @@ import {
   Text,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  PRO_LEAGUE_ATMOSPHERE,
+  PRO_LEAGUE_TAB_THEME,
+} from "../../../../../lib/rankings/proLeagueAtmosphere";
 import {
   type MobileMetric,
 } from "../../../../../lib/rankings/rankingMetrics";
@@ -336,6 +341,14 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   return (
     <View style={styles.root}>
+      {nbaBoard === "open" ? (
+        <LinearGradient
+          pointerEvents="none"
+          colors={["#0c0716", PRO_LEAGUE_ATMOSPHERE.bgDeep, "#050308"]}
+          locations={[0, 0.55, 1]}
+          style={StyleSheet.absoluteFillObject}
+        />
+      ) : null}
       <ScrollView
         style={styles.scrollLayer}
         contentContainerStyle={[
@@ -351,7 +364,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             onPress={() => setMenuOpen(true)}
           />
           <View style={styles.titleCenterCol}>
-            <RankingsPageTitleCyberNative title={pageTitle} />
+            <RankingsPageTitleCyberNative
+              title={pageTitle}
+              tone={nbaBoard === "open" ? "pro-league" : "default"}
+            />
             <Text style={styles.scheduleNoticeInline} maxFontSizeMultiplier={1.1}>
               {scheduleNoticeForUser(language)}
             </Text>
@@ -373,6 +389,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               period={rankingPeriod}
               onChange={setRankingPeriod}
               language={language}
+              tabTheme={
+                nbaBoard === "open" ? PRO_LEAGUE_TAB_THEME : undefined
+              }
             />
           ) : null}
 
@@ -454,6 +473,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 onChange={setMetric}
                 language={language}
                 gridColumns={rankingsLeague === "wc" ? 3 : undefined}
+                tabTheme={
+                  nbaBoard === "open" ? PRO_LEAGUE_TAB_THEME : undefined
+                }
               />
             </View>
 
@@ -469,10 +491,22 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               </View>
             ) : rankingHasNoEntries ? (
               <View style={styles.noDataWrap}>
-                <Text style={styles.noData}>{t.noData}</Text>
+                <Text
+                  style={[
+                    styles.noData,
+                    nbaBoard === "open" ? styles.noDataPro : null,
+                  ]}
+                >
+                  {t.noData}
+                </Text>
               </View>
             ) : (
-              <View style={styles.listSection}>
+              <View
+                style={[
+                  styles.listSection,
+                  nbaBoard === "open" ? styles.listSectionPro : null,
+                ]}
+              >
                 <RankingsTopPodiumNative
                   rows={top3}
                   metric={metric}
@@ -648,6 +682,9 @@ const styles = StyleSheet.create({
       default: "BebasNeue_400Regular",
     }),
   },
+  noDataPro: {
+    color: PRO_LEAGUE_ATMOSPHERE.noData,
+  },
   listSection: {
     marginTop: 4,
     gap: 0,
@@ -655,6 +692,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
     backgroundColor: "rgba(0,0,0,0.18)",
+  },
+  listSectionPro: {
+    borderColor: PRO_LEAGUE_ATMOSPHERE.panelBorder,
+    backgroundColor: PRO_LEAGUE_ATMOSPHERE.panelBg,
   },
   restList: {
     gap: 0,

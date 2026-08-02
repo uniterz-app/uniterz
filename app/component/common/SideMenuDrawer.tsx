@@ -6,7 +6,7 @@ import cn from "clsx";
 import { CyberSideMenuFrame } from "@/app/component/common/CyberSideMenuFrame";
 import SettingsMenu from "@/app/component/settings/SettingsMenu";
 import {
-  CYBER_SIDE_MENU_CLIP,
+  CYBER_SIDE_MENU_EDGE_CLIP,
   CYBER_SIDE_MENU_PANEL_CLASS,
 } from "@/lib/ui/cyberSideMenu";
 
@@ -23,6 +23,11 @@ type SideMenuDrawerProps = {
   variant?: "mobile" | "web";
   /** 指定時は SettingsMenu の代わりに表示（ランキング用ドロワーなど） */
   children?: ReactNode;
+  /**
+   * full: 画面高さ全体（既定）
+   * hug: 中身の高さに合わせる
+   */
+  panelSize?: "full" | "hug";
 };
 
 export default function SideMenuDrawer({
@@ -32,9 +37,10 @@ export default function SideMenuDrawer({
   onOpenProfileEdit,
   variant = "mobile",
   children,
+  panelSize = "full",
 }: SideMenuDrawerProps) {
   const isMobile = variant === "mobile";
-  const panelHeight = "min(92dvh, calc(100dvh - 2rem))";
+  const hugContent = panelSize === "hug";
 
   useEffect(() => {
     if (!open) return;
@@ -54,8 +60,8 @@ export default function SideMenuDrawer({
         @keyframes sideMenuPanelIn {
           0% {
             opacity: 0;
-            transform: translateX(-14px);
-            filter: blur(4px);
+            transform: translateX(-18px);
+            filter: blur(3px);
           }
           100% {
             opacity: 1;
@@ -66,7 +72,7 @@ export default function SideMenuDrawer({
       `}</style>
       <div
         className={cn(
-          "fixed inset-0 z-40 touch-none bg-black/55 backdrop-blur-[3px] transition-opacity duration-250",
+          "fixed inset-0 z-40 touch-none bg-black/58 backdrop-blur-[4px] transition-opacity duration-250",
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
@@ -74,31 +80,51 @@ export default function SideMenuDrawer({
 
       <div
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-[100dvh] max-h-[100dvh] flex-col py-4 pl-0 pr-3 sm:py-5 sm:pr-5",
+          "fixed left-0 top-0 z-50 flex h-[100dvh] max-h-[100dvh] flex-col",
           "transition-transform duration-300 ease-out",
-          open ? (isMobile ? "-translate-x-4" : "-translate-x-2") : "-translate-x-full"
+          open ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div
           className={cn(
             CYBER_SIDE_MENU_PANEL_CLASS,
+            "cyber-side-menu-panel--edge",
             "cyber-card relative flex min-h-0 flex-col overflow-hidden",
             isMobile
-              ? "w-[46vw] min-w-[260px] max-w-[300px] -ml-2"
-              : "w-[min(368px,32vw)]"
+              ? "h-full w-[44vw] min-w-[248px] max-w-[288px]"
+              : "h-full w-[min(368px,32vw)]"
           )}
           style={{
-            clipPath: CYBER_SIDE_MENU_CLIP,
+            clipPath: CYBER_SIDE_MENU_EDGE_CLIP,
             borderRadius: 0,
-            height: panelHeight,
-            maxHeight: panelHeight,
+            height: hugContent ? "auto" : "100%",
+            maxHeight: "100dvh",
             animation: open
               ? "sideMenuPanelIn 0.32s cubic-bezier(0.2, 0.9, 0.2, 1) both"
               : undefined,
           }}
         >
-          <CyberSideMenuFrame />
-          <div className="relative z-10 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+          <div
+            aria-hidden
+            className="cyber-side-menu-grid pointer-events-none absolute inset-0 z-[1] opacity-50 [mask-image:linear-gradient(90deg,#000_0%,#000_55%,transparent_100%)] [-webkit-mask-image:linear-gradient(90deg,#000_0%,#000_55%,transparent_100%)]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-[1] opacity-65 [mask-image:linear-gradient(90deg,#000_0%,#000_45%,transparent_100%)] [-webkit-mask-image:linear-gradient(90deg,#000_0%,#000_45%,transparent_100%)]"
+          >
+            <CyberSideMenuFrame />
+          </div>
+          <span
+            aria-hidden
+            className="cyber-side-menu-edge-line pointer-events-none absolute inset-y-0 right-0 z-[2]"
+          />
+          <div
+            className={cn(
+              "relative z-10 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]",
+              "pt-[max(12px,env(safe-area-inset-top))] pb-[max(12px,env(safe-area-inset-bottom))]",
+              hugContent ? "" : "flex-1",
+            )}
+          >
             {children ?? (
               <SettingsMenu
                 onRequestCloseMenu={onClose}

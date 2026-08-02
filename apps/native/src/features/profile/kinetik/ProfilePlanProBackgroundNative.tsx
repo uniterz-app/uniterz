@@ -90,6 +90,21 @@ import {
   isProfilePlanProFormBgVariant,
   type ProfilePlanProFormBgVariant,
 } from "../../../../../../lib/profile/profilePlanProFormBgVariants";
+import {
+  getProfilePlanProNeoSkinSvg,
+  PROFILE_PLAN_PRO_NEO_CANVAS,
+} from "../../../../../../lib/profile/profilePlanProNeoPattern";
+import {
+  isProfilePlanProNeoBgVariant,
+  type ProfilePlanProNeoBgVariant,
+} from "../../../../../../lib/profile/profilePlanProNeoBgVariants";
+import {
+  getProfilePlanProFuturisticArtId,
+  isProfilePlanProFuturisticBgVariant,
+  type ProfilePlanProFuturisticBgVariant,
+} from "../../../../../../lib/profile/profilePlanProFuturisticBgVariants";
+import EclipseBackground from "../backgrounds/EclipseBackground";
+import DataStreamBackground from "../backgrounds/DataStreamBackground";
 import { PROFILE_PLAN_PRO_BG } from "../../../../../../lib/profile/profilePlanVisual";
 
 type Props = {
@@ -649,6 +664,52 @@ function FormLayers({
   );
 }
 
+/** Web `futuristic-*` 相当 — RN SVG 背景コンポーネント */
+function FuturisticLayers({
+  width,
+  height,
+  variant,
+}: {
+  width: number;
+  height: number;
+  variant: ProfilePlanProFuturisticBgVariant;
+}) {
+  const artId = getProfilePlanProFuturisticArtId(variant);
+  const props = { width, height };
+  switch (artId) {
+    case "eclipse":
+      return <EclipseBackground {...props} />;
+    case "data-stream":
+      return <DataStreamBackground {...props} />;
+    default:
+      return <EclipseBackground {...props} />;
+  }
+}
+
+/** Web `neo-*` 相当（フルブリード skin のみ） */
+function NeoLayers({
+  width,
+  variant,
+  shouldAnimate,
+}: {
+  width: number;
+  variant: ProfilePlanProNeoBgVariant;
+  shouldAnimate: boolean;
+}) {
+  const emptyHud = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PROFILE_PLAN_PRO_NEO_CANVAS.width} ${PROFILE_PLAN_PRO_NEO_CANVAS.height}"></svg>`;
+  return (
+    <SvgSkinHudLayers
+      width={width}
+      skinXml={getProfilePlanProNeoSkinSvg(variant)}
+      hudXml={emptyHud}
+      canvasW={PROFILE_PLAN_PRO_NEO_CANVAS.width}
+      canvasH={PROFILE_PLAN_PRO_NEO_CANVAS.height}
+      shouldAnimate={shouldAnimate}
+      variantKey={variant}
+    />
+  );
+}
+
 /** Web `scale-*` 相当 — 爬虫類鱗 + 微細 HUD（幅ロック） */
 function ScaleLayers({
   width,
@@ -1147,6 +1208,8 @@ export default function ProfilePlanProBackgroundNative({
   const isCosmos = isProfilePlanProCosmosBgVariant(variant);
   const isLab = isProfilePlanProLabBgVariant(variant);
   const isForm = isProfilePlanProFormBgVariant(variant);
+  const isNeo = isProfilePlanProNeoBgVariant(variant);
+  const isFuturistic = isProfilePlanProFuturisticBgVariant(variant);
   const isHexLayout = isProfilePlanProHexBgVariant(variant);
   const isGeo = isProfilePlanProGeoBgVariant(variant) && !isHexLayout;
   const useTunnel =
@@ -1237,6 +1300,26 @@ export default function ProfilePlanProBackgroundNative({
           variant={variant}
           shouldAnimate={shouldAnimate}
         />
+      </View>
+    );
+  }
+
+  if (isNeo) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <NeoLayers
+          width={width}
+          variant={variant}
+          shouldAnimate={shouldAnimate}
+        />
+      </View>
+    );
+  }
+
+  if (isFuturistic) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <FuturisticLayers width={width} height={height} variant={variant} />
       </View>
     );
   }

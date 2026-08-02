@@ -52,6 +52,8 @@ function panelProps() {
     shareHandle: "mpj",
     rankingLeague: "worldcup" as const,
     visualEffects: "lite" as const,
+    profileViewCount: 1284,
+    unitBalance: 2450,
   };
 }
 

@@ -23,7 +23,11 @@ import {
   Trash2,
   Hexagon,
 } from "lucide-react";
-import { parseUserUnitBalance } from "@/lib/profile/parseUserProfileFields";
+import {
+  parseUserProfileFields,
+  parseUserUnitBalance,
+} from "@/lib/profile/parseUserProfileFields";
+import { nameOxanium } from "@/lib/fonts";
 import { useRouter, usePathname } from "next/navigation";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
 import { ADMIN_UID } from "@/lib/constants";
@@ -88,6 +92,9 @@ export default function SettingsMenu({
 
   const [plan, setPlan] = useState<"free" | "pro">("free");
   const [unitBalance, setUnitBalance] = useState<number>(0);
+  const [displayName, setDisplayName] = useState("");
+  const [handle, setHandle] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const { unreadCount } = useAnnouncementsUnread({
     enabled: isAuthStateResolved(status),
   });
@@ -117,26 +124,39 @@ export default function SettingsMenu({
   );
   const contactPath = p("/web/contact", "/mobile/contact");
 
-  // ===== plan / Unit 残高 =====
+  // ===== plan / Unit 残高 / 表示名・アイコン =====
   useEffect(() => {
     if (!user?.uid) {
       setPlan("free");
       setUnitBalance(0);
+      setDisplayName("");
+      setHandle("");
+      setAvatarUrl("");
       return;
     }
     let alive = true;
     getUserDocDataCached(user.uid).then((data) => {
       if (!alive) return;
+      const row = (data ?? {}) as Record<string, unknown>;
       const p = data?.plan;
       setPlan(p === "pro" ? "pro" : "free");
-      setUnitBalance(
-        data ? parseUserUnitBalance(data as Record<string, unknown>) : 0
+      setUnitBalance(parseUserUnitBalance(row));
+      const { displayName: name, handle: h } = parseUserProfileFields(row);
+      setDisplayName(
+        name || user.displayName?.trim() || (isEn ? "User" : "ユーザー")
       );
+      setHandle(h);
+      const photo =
+        (typeof row.photoURL === "string" && row.photoURL.trim()) ||
+        (typeof row.avatarUrl === "string" && row.avatarUrl.trim()) ||
+        user.photoURL?.trim() ||
+        "";
+      setAvatarUrl(photo);
     });
     return () => {
       alive = false;
     };
-  }, [user?.uid]);
+  }, [user?.uid, user?.displayName, user?.photoURL, isEn]);
 
   useEffect(() => {
     setPortalReady(true);
@@ -164,10 +184,16 @@ export default function SettingsMenu({
 
   // ===== styles =====
   const containerClasses = cn(
-    "relative flex flex-col text-white",
+    "relative flex min-h-full flex-col text-white",
     isMobile ? "w-full p-4" : "w-full p-5",
     className
   );
+  const identityName =
+    displayName.trim() ||
+    user?.displayName?.trim() ||
+    (isEn ? "User" : "ユーザー");
+  const identityInitial = identityName.charAt(0).toUpperCase() || "?";
+  const planLabel = plan === "pro" ? "PRO" : "FREE";
   /** 試合カードの HOME/AWAY ラベルと同系統 */
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
 
@@ -375,7 +401,7 @@ export default function SettingsMenu({
           </>
         )}
 
-        <div className="relative mt-5 flex flex-col gap-2 pt-4 pb-1">
+        <div className="relative mt-auto flex flex-col gap-2 pt-5 pb-1">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/25 to-transparent"
@@ -405,6 +431,79 @@ export default function SettingsMenu({
           >
             <span className={cn(isEn && "uppercase")}>{m.settings.logout}</span>
           </SideMenuItemButton>
+
+          {/* 一番下: HUD アイデンティティ（アイコン・名前・プラン） */}
+          {user?.uid ? (
+            <button
+              type="button"
+              onClick={openProfileEditOverlay}
+              className={cn(
+                "side-menu-identity mt-2",
+                plan === "pro" && "is-pro"
+              )}
+              aria-label={`${identityName} · ${planLabel}`}
+            >
+              <span aria-hidden className="side-menu-identity__rail" />
+              <span aria-hidden className="side-menu-identity__scan" />
+
+              <span
+                className={cn(
+                  "side-menu-identity__avatar",
+                  plan === "pro" && "is-pro"
+                )}
+                aria-hidden
+              >
+                <span className="side-menu-identity__ring" />
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="side-menu-identity__img"
+                    draggable={false}
+                  />
+                ) : (
+                  <span className="side-menu-identity__initial">
+                    {identityInitial}
+                  </span>
+                )}
+              </span>
+
+              <span className="side-menu-identity__meta">
+                <span className="side-menu-identity__name-row">
+                  <span className="side-menu-identity__name">{identityName}</span>
+                  <span
+                    className={cn(
+                      nameOxanium.className,
+                      "side-menu-identity__badge",
+                      plan === "pro" && "is-pro"
+                    )}
+                  >
+                    {planLabel}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    nameOxanium.className,
+                    "side-menu-identity__sub"
+                  )}
+                >
+                  <span className="side-menu-identity__dot" />
+                  {handle ? `@${handle}` : "OPERATOR"}
+                </span>
+              </span>
+
+              <span
+                aria-hidden
+                className={cn(
+                  nameOxanium.className,
+                  "side-menu-identity__caret"
+                )}
+              >
+                ▸
+              </span>
+            </button>
+          ) : null}
         </div>
       </nav>
 

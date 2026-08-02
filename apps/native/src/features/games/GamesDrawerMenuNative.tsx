@@ -1,20 +1,20 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import type { ReactNode } from "react";
 import CyberSideMenuSectionTitleNative from "../../ui/CyberSideMenuSectionTitleNative";
 import SideMenuItemButtonNative from "../../ui/SideMenuItemButtonNative";
 import {
-  CYBER_TAB_CYAN,
+  CYBER_SIDE_MENU_BRANCH,
+  CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
+  CYBER_SIDE_MENU_BRANCH_JOINT,
   SIDE_MENU_LABEL_FONT,
   sideMenuLabelStyle,
 } from "../../ui/cyberSideMenuNative";
-
+import { formatCyberSideMenuDate } from "../../../../../lib/ui/cyberSideMenuDate";
 const ICONS = {
   nba: require("../../../assets/games-drawer/nba.png") as number,
   awards: require("../../../assets/games-drawer/awards.png") as number,
   standings: require("../../../assets/games-drawer/standings.png") as number,
 } as const;
-
-const BRANCH = "rgba(0, 245, 255, 0.42)";
 
 type Props = {
   league: "nba" | "wc";
@@ -24,7 +24,7 @@ type Props = {
   language: "ja" | "en";
 };
 
-/** NBA 下の枝分かれ行（├ / └） */
+/** NBA 下の枝分かれ行（├ / └）— 2px 線 + 枝先ジョイントで階層を明示 */
 function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) {
   return (
     <View style={styles.branchRow}>
@@ -33,6 +33,7 @@ function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) 
         style={[styles.vline, last ? styles.vlineLast : null]}
       />
       <View pointerEvents="none" style={styles.hline} />
+      <View pointerEvents="none" style={styles.joint} />
       <View style={styles.branchContent}>{children}</View>
     </View>
   );
@@ -48,9 +49,25 @@ export default function GamesDrawerMenuNative({
 }: Props) {
   const isJa = language === "ja";
   const labelStyle = sideMenuLabelStyle(language);
+  const hudDate = formatCyberSideMenuDate();
 
   return (
     <View style={styles.root}>
+      {/* ミニヘッダー — UNITERZ + 日付 */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle} allowFontScaling={false}>
+          UNITERZ
+        </Text>
+        <View style={styles.headerDate}>
+          <Text style={styles.headerDateNum} allowFontScaling={false}>
+            {hudDate.date}
+          </Text>
+          <Text style={styles.headerDateWeekday} allowFontScaling={false}>
+            {hudDate.weekday}
+          </Text>
+        </View>
+      </View>
+
       <CyberSideMenuSectionTitleNative first>
         {isJa ? "試合" : "Games"}
       </CyberSideMenuSectionTitleNative>
@@ -100,6 +117,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  header: {
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0, 245, 255, 0.16)",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  headerTitle: {
+    flexShrink: 1,
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 15,
+    letterSpacing: 0.28 * 15,
+    color: "rgba(0, 245, 255, 0.9)",
+    textShadowColor: "rgba(0, 245, 255, 0.35)",
+    textShadowRadius: 12,
+    textTransform: "uppercase",
+  },
+  headerDate: {
+    alignItems: "flex-end",
+    flexShrink: 0,
+  },
+  headerDateNum: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 15,
+    letterSpacing: 0.1 * 15,
+    color: "rgba(0, 245, 255, 0.9)",
+    textShadowColor: "rgba(0, 245, 255, 0.35)",
+    textShadowRadius: 10,
+    fontVariant: ["tabular-nums"],
+  },
+  headerDateWeekday: {
+    marginTop: 2,
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 10,
+    letterSpacing: 0.24 * 10,
+    color: "rgba(255, 255, 255, 0.4)",
+    textTransform: "uppercase",
+  },
   itemGroup: {
     gap: 8,
   },
@@ -115,30 +173,30 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 9,
     top: -4,
-    width: 1,
+    width: 2,
     height: 4,
-    backgroundColor: BRANCH,
-    shadowColor: CYBER_TAB_CYAN,
+    backgroundColor: CYBER_SIDE_MENU_BRANCH,
+    shadowColor: CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.9,
     shadowRadius: 4,
   },
   branchRow: {
     position: "relative",
     flexDirection: "row",
     alignItems: "stretch",
-    minHeight: 36,
+    minHeight: 32,
   },
   vline: {
     position: "absolute",
     left: 9,
     top: 0,
     bottom: 0,
-    width: 1,
-    backgroundColor: BRANCH,
-    shadowColor: CYBER_TAB_CYAN,
+    width: 2,
+    backgroundColor: CYBER_SIDE_MENU_BRANCH,
+    shadowColor: CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.9,
     shadowRadius: 4,
   },
   vlineLast: {
@@ -150,17 +208,35 @@ const styles = StyleSheet.create({
     left: 9,
     top: "50%",
     width: 14,
-    height: 1,
-    marginTop: -0.5,
-    backgroundColor: BRANCH,
-    shadowColor: CYBER_TAB_CYAN,
+    height: 2,
+    marginTop: -1,
+    backgroundColor: CYBER_SIDE_MENU_BRANCH,
+    shadowColor: CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.9,
     shadowRadius: 4,
   },
+  /** 枝先ジョイント（◆） */
+  joint: {
+    position: "absolute",
+    left: 20,
+    top: "50%",
+    width: 5,
+    height: 5,
+    marginTop: -2.5,
+    transform: [{ rotate: "45deg" }],
+    backgroundColor: CYBER_SIDE_MENU_BRANCH_JOINT,
+    shadowColor: CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
+    zIndex: 1,
+  },
+  /** サブ行は右端を短くして「ぶら下がり」を形で見せる */
   branchContent: {
     flex: 1,
     paddingLeft: 28,
+    paddingRight: 16,
     minWidth: 0,
   },
 });

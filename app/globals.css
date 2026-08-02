@@ -15,7 +15,11 @@
 @import "./component/profile/pro/profilePlanProCosmosBg.css";
 @import "./component/profile/pro/profilePlanProLabBg.css";
 @import "./component/profile/pro/profilePlanProFormBg.css";
-/* turbopack css cache bust 2026-07-17f */
+@import "./component/profile/pro/profilePlanProWagaraBg.css";
+@import "./component/profile/pro/profilePlanProNeoBg.css";
+@import "./component/profile/pro/profilePlanProFuturisticBg.css";
+@import "./component/rankings/rankingsProLeagueAtmosphere.css";
+/* turbopack css cache bust 2026-08-01-neo-v3 */
 
 @theme {
   /* EntrySplash / SplashWrapper のローディング位置用（取り込みブランチの mt-27 と整合） */
@@ -533,26 +537,52 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
-/* サイドメニュー — ランキング / MatchCard と同系 HUD */
+/* サイドメニュー — サイバー HUD（ディープ + シアン） */
 .cyber-side-menu-panel {
-  border: 1px solid rgba(0, 245, 255, 0.14);
+  border: 1px solid rgba(0, 245, 255, 0.28);
   background: linear-gradient(
     168deg,
-    rgba(7, 10, 16, 0.98) 0%,
-    rgba(4, 6, 11, 0.99) 55%,
-    rgba(3, 5, 9, 1) 100%
+    #041018 0%,
+    #030b12 48%,
+    #02070e 100%
   );
   box-shadow:
-    0 0 32px rgba(0, 245, 255, 0.05),
-    0 22px 56px rgba(0, 0, 0, 0.52),
-    inset 0 1px 0 rgba(0, 245, 255, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    0 0 40px rgba(0, 245, 255, 0.1),
+    0 22px 56px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(0, 245, 255, 0.16),
+    inset 0 0 0 1px rgba(0, 245, 255, 0.06);
 }
 
+/* 左端ドロワー — 枠なし、透明化は途中で下げ止めて「面」を保つ */
+.cyber-side-menu-panel--edge {
+  border: none;
+  background: linear-gradient(
+    90deg,
+    rgba(4, 16, 24, 0.97) 0%,
+    rgba(3, 12, 19, 0.92) 48%,
+    rgba(2, 8, 15, 0.84) 100%
+  ) !important;
+  box-shadow: 14px 0 42px rgba(0, 0, 0, 0.5);
+}
+
+/* ドロワー右端の発光エッジライン */
+.cyber-side-menu-edge-line {
+  width: 1.5px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.06) 0%,
+    rgba(0, 245, 255, 0.65) 18%,
+    rgba(0, 245, 255, 0.65) 78%,
+    rgba(0, 245, 255, 0.06) 100%
+  );
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.4);
+}
+
+/* 後方互換（他参照用） */
 .cyber-side-menu-grid {
   background-image:
-    linear-gradient(rgba(0, 245, 255, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 245, 255, 0.055) 1px, transparent 1px);
+    linear-gradient(rgba(0, 245, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.07) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
@@ -561,81 +591,142 @@
     0deg,
     transparent,
     transparent 3px,
-    rgba(0, 245, 255, 0.018) 3px,
-    rgba(0, 245, 255, 0.018) 4px
+    rgba(0, 245, 255, 0.028) 3px,
+    rgba(0, 245, 255, 0.028) 4px
   );
 }
 
-.cyber-side-menu-top-beam {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(0, 245, 255, 0.55),
-    rgba(255, 255, 255, 0.85),
-    rgba(0, 245, 255, 0.55),
-    transparent
-  );
-  box-shadow: 0 0 12px rgba(0, 245, 255, 0.45);
-}
-
-.cyber-side-menu-edge-h::before,
-.cyber-side-menu-edge-h::after {
-  content: "";
-  position: absolute;
-  height: 1px;
-  width: 42%;
-  filter: blur(0.2px);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(0, 245, 255, 0.2),
-    rgba(0, 245, 255, 0.85),
-    rgba(255, 255, 255, 0.65),
-    transparent
-  );
-  box-shadow: 0 0 10px rgba(0, 245, 255, 0.35);
-  pointer-events: none;
-}
-
-.cyber-side-menu-edge-h::before {
-  top: 0;
-  left: -44%;
-  animation: cyber-side-menu-edge-h 3.2s linear infinite;
-}
-
-.cyber-side-menu-edge-h::after {
-  bottom: 0;
-  left: 100%;
-  animation: cyber-side-menu-edge-h-rev 3.2s linear infinite;
+.cyber-side-menu-deep-noise {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   opacity: 0.7;
 }
 
-@keyframes cyber-side-menu-edge-h {
-  to {
-    left: 100%;
+.cyber-side-menu-deep-beam {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 245, 255, 0.7),
+    transparent
+  );
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.45);
+  animation: cyber-side-menu-deep-breathe 4s ease-in-out infinite;
+}
+
+@keyframes cyber-side-menu-deep-breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
-@keyframes cyber-side-menu-edge-h-rev {
-  to {
-    left: -44%;
-  }
-}
-
-/* メニュー行 — 角切り + 走査線（overflow はアイコングローを切らないよう visible） */
+/* メニュー行 — 右上角切り + 左スキューチップ
+   （非選択はトーンを落とし、コントラストを選択行に集める） */
 .cyber-side-menu-item {
   isolation: isolate;
-  overflow: visible;
+  overflow: hidden;
+  border-left: none;
+  background: linear-gradient(
+    90deg,
+    rgba(4, 20, 30, 0.72),
+    rgba(3, 12, 20, 0.6)
+  );
   clip-path: polygon(
-    10px 0%,
-    100% 0%,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    0% 100%,
-    0% 10px
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    0 100%
   );
 }
 
+/* 選択行 — 面ごと発光（danger 行は除外） */
+.cyber-side-menu-item--active:not(.cyber-side-menu-item--danger) {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 56, 72, 0.95),
+    rgba(2, 22, 34, 0.92)
+  );
+}
+
+/* 選択行の左アクセントレール */
+.cyber-side-menu-item--active:not(.cyber-side-menu-item--danger)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #00f5ff;
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.8);
+  z-index: 2;
+}
+
+/* 選択行の ▸ インジケータ */
+.cyber-side-menu-caret {
+  color: #00f5ff;
+  text-shadow: 0 0 8px rgba(0, 245, 255, 0.8);
+  animation: cyber-side-menu-caret-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes cyber-side-menu-caret-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.cyber-side-menu-item__chip {
+  position: absolute;
+  left: -7px;
+  top: 0;
+  bottom: 0;
+  width: 54px;
+  /* シアン HUD 台座（非選択は控えめ） */
+  background: linear-gradient(
+    105deg,
+    rgba(0, 42, 56, 0.7) 0%,
+    rgba(4, 16, 24, 0.75) 100%
+  );
+  border-right: 1px solid rgba(0, 245, 255, 0.26);
+  box-shadow: inset 0 0 14px rgba(0, 245, 255, 0.06);
+  transform: skewX(-14deg);
+  transform-origin: center center;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  pointer-events: none;
+}
+
+.cyber-side-menu-item__chip--active,
+.cyber-side-menu-item--active .cyber-side-menu-item__chip {
+  background: linear-gradient(
+    105deg,
+    rgba(0, 80, 98, 0.95) 0%,
+    rgba(0, 36, 52, 0.96) 100%
+  );
+  border-color: rgba(0, 245, 255, 0.85);
+  box-shadow:
+    inset 0 0 20px rgba(0, 245, 255, 0.14),
+    0 0 12px rgba(0, 245, 255, 0.2);
+}
+
+.cyber-side-menu-item:hover .cyber-side-menu-item__chip:not(.cyber-side-menu-item__chip--active) {
+  background: linear-gradient(
+    105deg,
+    rgba(0, 64, 82, 0.94) 0%,
+    rgba(4, 22, 34, 0.95) 100%
+  );
+  border-color: rgba(0, 245, 255, 0.62);
+}
+
+/* 後方互換 — スキンピッカー等の旧装飾 */
 .cyber-side-menu-item__scan {
   position: absolute;
   inset: 0;
@@ -663,13 +754,8 @@
     transparent
   );
   box-shadow: 0 0 8px rgba(0, 245, 255, 0.55);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.cyber-side-menu-item--active .cyber-side-menu-item__rail,
-.cyber-side-menu-item:hover .cyber-side-menu-item__rail {
-  opacity: 1;
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 .cyber-side-menu-item__corner {
@@ -678,17 +764,11 @@
   height: 7px;
   border-color: rgba(0, 245, 255, 0.55);
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.cyber-side-menu-item--active .cyber-side-menu-item__corner {
-  opacity: 1;
+  opacity: 0.85;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cyber-side-menu-edge-h::before,
-  .cyber-side-menu-edge-h::after {
+  .cyber-side-menu-deep-beam {
     animation: none !important;
   }
 }
@@ -5674,7 +5754,9 @@ body::before {
 .profile-plan-pro-bg__form-skin,
 .profile-plan-pro-bg__form-hud,
 .profile-plan-pro-bg__lab-skin,
-.profile-plan-pro-bg__lab-hud {
+.profile-plan-pro-bg__lab-hud,
+.profile-plan-pro-bg__wagara-skin,
+.profile-plan-pro-bg__wagara-hud {
   position: absolute;
   left: 0;
   right: 0;
@@ -5698,7 +5780,9 @@ body::before {
 .profile-plan-pro-bg--web .profile-plan-pro-bg__form-skin,
 .profile-plan-pro-bg--web .profile-plan-pro-bg__form-hud,
 .profile-plan-pro-bg--web .profile-plan-pro-bg__lab-skin,
-.profile-plan-pro-bg--web .profile-plan-pro-bg__lab-hud {
+.profile-plan-pro-bg--web .profile-plan-pro-bg__lab-hud,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__wagara-skin,
+.profile-plan-pro-bg--web .profile-plan-pro-bg__wagara-hud {
   aspect-ratio: 960 / 380;
 }
 
@@ -7727,7 +7811,7 @@ body::before {
   left: 0 !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
-  z-index: 45 !important;
+  z-index: 35 !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -7866,6 +7950,239 @@ body::before {
   font-variant-numeric: tabular-nums;
   color: #fff8e7;
   text-shadow: 0 0 12px rgba(246, 195, 68, 0.45);
+}
+
+/* サイドメニュー最下部 — HUD アイデンティティ */
+.side-menu-identity {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px 11px 14px;
+  overflow: hidden;
+  text-align: left;
+  border: 1px solid rgba(0, 245, 255, 0.38);
+  background:
+    linear-gradient(
+      115deg,
+      rgba(0, 62, 78, 0.55) 0%,
+      rgba(4, 16, 26, 0.94) 38%,
+      rgba(2, 10, 16, 0.96) 100%
+    );
+  clip-path: polygon(
+    0 0,
+    calc(100% - 12px) 0,
+    100% 12px,
+    100% 100%,
+    0 100%
+  );
+  box-shadow:
+    0 0 24px rgba(0, 245, 255, 0.12),
+    inset 0 1px 0 rgba(0, 245, 255, 0.16),
+    inset 0 0 28px rgba(0, 245, 255, 0.04);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.side-menu-identity.is-pro {
+  border-color: rgba(0, 245, 255, 0.55);
+  box-shadow:
+    0 0 32px rgba(0, 245, 255, 0.2),
+    inset 0 1px 0 rgba(0, 245, 255, 0.22),
+    inset 0 0 36px rgba(0, 245, 255, 0.08);
+}
+
+.side-menu-identity:hover {
+  border-color: rgba(0, 245, 255, 0.7);
+  box-shadow:
+    0 0 36px rgba(0, 245, 255, 0.22),
+    inset 0 1px 0 rgba(0, 245, 255, 0.24);
+}
+
+.side-menu-identity:active {
+  transform: scale(0.985);
+}
+
+.side-menu-identity__rail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #00f5ff;
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.85);
+  z-index: 2;
+}
+
+.side-menu-identity__scan {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 245, 255, 0.035) 2px,
+    rgba(0, 245, 255, 0.035) 3px
+  );
+}
+
+.side-menu-identity__avatar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid rgba(0, 245, 255, 0.65);
+  border-radius: 999px;
+  background: rgba(0, 30, 42, 0.95);
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.35),
+    inset 0 0 10px rgba(0, 245, 255, 0.12);
+}
+
+.side-menu-identity__avatar.is-pro {
+  border-color: rgba(0, 245, 255, 0.9);
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.55),
+    inset 0 0 12px rgba(0, 245, 255, 0.18);
+}
+
+.side-menu-identity__ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 245, 255, 0.25);
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
+  animation: side-menu-identity-ring 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.side-menu-identity__avatar.is-pro .side-menu-identity__ring {
+  border-color: rgba(0, 245, 255, 0.45);
+}
+
+@keyframes side-menu-identity-ring {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.side-menu-identity__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.side-menu-identity__initial {
+  font-size: 15px;
+  font-weight: 800;
+  color: rgba(0, 245, 255, 0.95);
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+}
+
+.side-menu-identity__meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.side-menu-identity__name-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-menu-identity__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.2);
+}
+
+.side-menu-identity__badge {
+  flex-shrink: 0;
+  padding: 2px 7px 1px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  text-transform: uppercase;
+}
+
+.side-menu-identity__badge.is-pro {
+  color: #041018;
+  border-color: rgba(0, 245, 255, 0.9);
+  background: linear-gradient(
+    105deg,
+    #00f5ff 0%,
+    #67e8f9 100%
+  );
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.side-menu-identity__sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(0, 245, 255, 0.55);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.side-menu-identity__dot {
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  transform: rotate(45deg);
+  border: 1px solid rgba(0, 245, 255, 0.7);
+  background: rgba(0, 245, 255, 0.35);
+  box-shadow: 0 0 6px rgba(0, 245, 255, 0.55);
+  animation: side-menu-identity-ring 2s ease-in-out infinite;
+}
+
+.side-menu-identity__caret {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #00f5ff;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.8);
+  animation: side-menu-identity-ring 1.8s ease-in-out infinite;
 }
 
 

@@ -83,6 +83,8 @@ import { isProfilePlanProScaleBgVariant } from "../../../../../../lib/profile/pr
 import { isProfilePlanProBeastBgVariant } from "../../../../../../lib/profile/profilePlanProBeastBgVariants";
 import { isProfilePlanProCosmosBgVariant } from "../../../../../../lib/profile/profilePlanProCosmosBgVariants";
 import { isProfilePlanProFormBgVariant } from "../../../../../../lib/profile/profilePlanProFormBgVariants";
+import { isProfilePlanProNeoBgVariant } from "../../../../../../lib/profile/profilePlanProNeoBgVariants";
+import { isProfilePlanProFuturisticBgVariant } from "../../../../../../lib/profile/profilePlanProFuturisticBgVariants";
 
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
@@ -1611,13 +1613,15 @@ export default function ProfileKinetikPanelNative({
         />
       ) : null}
 
-      {/* Web 同様 — atmos / scale / beast / cosmos / form では ambient を載せない */}
+      {/* Web 同様 — atmos / scale / beast / cosmos / form / neo では ambient を載せない */}
       {isPro &&
       planProBgVariant !== "atmos" &&
       !isProfilePlanProScaleBgVariant(planProBgVariant) &&
       !isProfilePlanProBeastBgVariant(planProBgVariant) &&
       !isProfilePlanProCosmosBgVariant(planProBgVariant) &&
-      !isProfilePlanProFormBgVariant(planProBgVariant) ? (
+      !isProfilePlanProFormBgVariant(planProBgVariant) &&
+      !isProfilePlanProNeoBgVariant(planProBgVariant) &&
+      !isProfilePlanProFuturisticBgVariant(planProBgVariant) ? (
         <LinearGradient
           colors={[
             "rgba(34,211,238,0.1)",

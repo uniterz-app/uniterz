@@ -6,8 +6,11 @@ import type { ProfilePlanProFormBgVariant } from "./profilePlanProFormBgVariants
 import type { ProfilePlanProGeoBgVariant } from "./profilePlanProGeoBgVariants";
 import type { ProfilePlanProLabBgVariant } from "./profilePlanProLabBgVariants";
 import type { ProfilePlanProMoodBgVariant } from "./profilePlanProMoodBgVariants";
+import type { ProfilePlanProNeoBgVariant } from "./profilePlanProNeoBgVariants";
+import type { ProfilePlanProFuturisticBgVariant } from "./profilePlanProFuturisticBgVariants";
 import type { ProfilePlanProNovaBgVariant } from "./profilePlanProNovaBgVariants";
 import type { ProfilePlanProScaleBgVariant } from "./profilePlanProScaleBgVariants";
+import type { ProfilePlanProWagaraBgVariant } from "./profilePlanProWagaraBgVariants";
 
 export type ProfilePlanProBgVariant =
   | "atmos"
@@ -38,7 +41,10 @@ export type ProfilePlanProBgVariant =
   | ProfilePlanProBeastBgVariant
   | ProfilePlanProFormBgVariant
   | ProfilePlanProCosmosBgVariant
-  | ProfilePlanProLabBgVariant;
+  | ProfilePlanProLabBgVariant
+  | ProfilePlanProWagaraBgVariant
+  | ProfilePlanProNeoBgVariant
+  | ProfilePlanProFuturisticBgVariant;
 
 /** 本番 PRO プロフィール背景 — 確定: Atmos（疎な六角 + 微細 HUD） */
 export const PROFILE_PLAN_PRO_BG_DEFAULT: ProfilePlanProBgVariant = "atmos";

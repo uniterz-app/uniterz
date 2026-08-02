@@ -58,6 +58,7 @@ import type { RankingsCategory } from "@/app/component/rankings/RankingsCategory
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { PRO_LEAGUE_TAB_THEME } from "@/lib/rankings/proLeagueAtmosphere";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useApplyPreferredRankingLeague } from "@/lib/hooks/useApplyPreferredRankingLeague";
 import { buildMyRankMiniMetrics } from "@/lib/rankings/buildMyRankMiniMetrics";
@@ -377,7 +378,12 @@ export default function WebRankingsShell() {
   const { skipCountUp, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
   return (
-    <div className="relative z-10 min-h-full w-full overflow-x-hidden">
+    <div
+      className={[
+        "relative z-10 min-h-full w-full overflow-x-hidden",
+        nbaBoard === "open" ? "rankings-atmosphere--pro-league" : "",
+      ].join(" ")}
+    >
       <div className="sticky top-0 z-40">
         <Header />
       </div>
@@ -392,6 +398,7 @@ export default function WebRankingsShell() {
           <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
             <RankingsPageTitleCyber
               variant="horizon-chrome"
+              tone={nbaBoard === "open" ? "pro-league" : "default"}
               title={
                 nbaBoard === "open"
                   ? m.rankings.divisionOpen
@@ -425,6 +432,9 @@ export default function WebRankingsShell() {
               period={rankingPeriod}
               onChange={setRankingPeriod}
               language={language}
+              tabTheme={
+                nbaBoard === "open" ? PRO_LEAGUE_TAB_THEME : undefined
+              }
             />
           ) : null}
 
@@ -503,6 +513,9 @@ export default function WebRankingsShell() {
               language={language}
               rankingLeague={rankingLeague}
               gridColumns={rankingLeague === "worldcup" ? 3 : undefined}
+              tabTheme={
+                nbaBoard === "open" ? PRO_LEAGUE_TAB_THEME : undefined
+              }
             />
             {metric === "winRate" && (
               <p className="px-1 text-xs leading-5 text-white/60">
@@ -539,8 +552,9 @@ export default function WebRankingsShell() {
               className={[
                 nameBebas.className,
                 "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+                nbaBoard === "open" ? "rankings-pro-league-no-data" : "",
               ].join(" ")}
-              style={cyberNoDataLabelStyle}
+              style={nbaBoard === "open" ? undefined : cyberNoDataLabelStyle}
             >
               NO DATA
             </p>

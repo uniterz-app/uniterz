@@ -22,6 +22,16 @@ import {
   type ProfilePlanProFormBgVariant,
 } from "@/lib/profile/profilePlanProFormBgVariants";
 import {
+  PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS,
+  type ProfilePlanProFuturisticBgMeta,
+  type ProfilePlanProFuturisticBgVariant,
+} from "@/lib/profile/profilePlanProFuturisticBgVariants";
+import {
+  PROFILE_PLAN_PRO_NEO_BG_VARIANTS,
+  type ProfilePlanProNeoBgMeta,
+  type ProfilePlanProNeoBgVariant,
+} from "@/lib/profile/profilePlanProNeoBgVariants";
+import {
   PROFILE_PLAN_PRO_SCALE_BG_VARIANTS,
   type ProfilePlanProScaleBgMeta,
   type ProfilePlanProScaleBgVariant,
@@ -36,7 +46,13 @@ export type ProfilePlanProAdoptedCategory =
   | "geometry";
 
 /** 実装系統（内部） */
-export type ProfilePlanProAdoptedFamily = "atmos" | "scale" | "beast" | "form";
+export type ProfilePlanProAdoptedFamily =
+  | "atmos"
+  | "scale"
+  | "beast"
+  | "form"
+  | "neo"
+  | "futuristic";
 
 /** @deprecated 表示は category を使う */
 export type ProfilePlanProAdoptedGroup = ProfilePlanProAdoptedFamily;
@@ -107,11 +123,14 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用 18 — カテゴリ順（No.1〜） */
+/** 採用 21 — カテゴリ順（No.1〜） */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // サイバー空間 ×2
+  // サイバー空間 ×5
   { id: "atmos", category: "cyber", family: "atmos" },
   { id: "parallax", category: "cyber", family: "atmos" },
+  { id: "neo-flux", category: "cyber", family: "neo" },
+  { id: "futuristic-eclipse", category: "cyber", family: "futuristic" },
+  { id: "futuristic-data-stream", category: "cyber", family: "futuristic" },
   // 爬虫類 ×8
   { id: "scale-mamba", category: "reptile", family: "scale" },
   { id: "scale-king", category: "reptile", family: "scale" },
@@ -156,6 +175,18 @@ function formMeta(
   return PROFILE_PLAN_PRO_FORM_BG_VARIANTS.find((v) => v.id === id);
 }
 
+function neoMeta(
+  id: ProfilePlanProNeoBgVariant
+): ProfilePlanProNeoBgMeta | undefined {
+  return PROFILE_PLAN_PRO_NEO_BG_VARIANTS.find((v) => v.id === id);
+}
+
+function futuristicMeta(
+  id: ProfilePlanProFuturisticBgVariant
+): ProfilePlanProFuturisticBgMeta | undefined {
+  return PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS.find((v) => v.id === id);
+}
+
 function metaForSpec(spec: AdoptedSpec): {
   label: string;
   tag: string;
@@ -180,6 +211,22 @@ function metaForSpec(spec: AdoptedSpec): {
   }
   if (family === "beast") {
     const meta = beastMeta(id as ProfilePlanProBeastBgVariant);
+    return {
+      label: meta?.label ?? id,
+      tag: meta?.tag ?? "",
+      description: meta?.description ?? "",
+    };
+  }
+  if (family === "neo") {
+    const meta = neoMeta(id as ProfilePlanProNeoBgVariant);
+    return {
+      label: meta?.label ?? id,
+      tag: meta?.tag ?? "",
+      description: meta?.description ?? "",
+    };
+  }
+  if (family === "futuristic") {
+    const meta = futuristicMeta(id as ProfilePlanProFuturisticBgVariant);
     return {
       label: meta?.label ?? id,
       tag: meta?.tag ?? "",

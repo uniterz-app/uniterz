@@ -4,28 +4,50 @@ import { Platform, type TextStyle } from "react-native";
 export const CYBER_TAB_CYAN = "#00F5FF";
 
 export const CYBER_SIDE_MENU_PANEL = {
-  borderColor: "rgba(0, 245, 255, 0.14)",
-  backgroundGradient: [
-    "rgba(7, 10, 16, 0.98)",
-    "rgba(4, 6, 11, 0.99)",
-    "rgba(3, 5, 9, 1)",
+  borderColor: "rgba(0, 245, 255, 0.28)",
+  /** サイバー HUD（縦方向のベース） */
+  backgroundGradient: ["#041018", "#030b12", "#02070e"] as const,
+  /**
+   * 左→右のフェード（ドロワー背景用）
+   * 透明化は途中で下げ止めて「面」を保つ（Web `--edge` と同期）
+   */
+  backgroundFadeHorizontal: [
+    "rgba(4, 16, 24, 0.97)",
+    "rgba(3, 12, 19, 0.92)",
+    "rgba(2, 8, 15, 0.84)",
   ] as const,
+  backgroundFadeHorizontalLocations: [0, 0.48, 1] as const,
   shadowColor: "#00F5FF",
-  innerBorderColor: "rgba(0, 245, 255, 0.1)",
+  innerBorderColor: "rgba(0, 245, 255, 0.16)",
+  /** 右端の発光エッジライン（縦グラデ） */
+  edgeLineColors: [
+    "rgba(0, 245, 255, 0.06)",
+    "rgba(0, 245, 255, 0.65)",
+    "rgba(0, 245, 255, 0.65)",
+    "rgba(0, 245, 255, 0.06)",
+  ] as const,
+  edgeLineLocations: [0, 0.18, 0.78, 1] as const,
 };
 
 export const CYBER_SIDE_MENU_ITEM = {
-  bg: "rgba(10, 14, 20, 0.95)",
-  border: "rgba(255, 255, 255, 0.1)",
-  borderHover: "rgba(0, 245, 255, 0.28)",
-  borderActive: "rgba(0, 245, 255, 0.45)",
-  bgActive: "rgba(0, 245, 255, 0.07)",
-  iconDefault: "rgba(0, 245, 255, 0.78)",
+  /** 非選択はトーンを落とし、コントラストを選択行に集める */
+  bg: "rgba(4, 20, 30, 0.72)",
+  border: "rgba(0, 245, 255, 0.1)",
+  borderHover: "rgba(0, 245, 255, 0.4)",
+  borderActive: "rgba(0, 245, 255, 0.75)",
+  bgActive: "rgba(0, 56, 72, 0.94)",
+  iconDefault: "rgba(0, 245, 255, 0.85)",
   dangerBorder: "rgba(251, 113, 133, 0.22)",
   dangerBorderActive: "rgba(251, 113, 133, 0.55)",
   dangerBgActive: "rgba(251, 113, 133, 0.1)",
   dangerIcon: "rgba(251, 180, 188, 0.95)",
 };
+
+/** 枝分かれ線 — Web `CYBER_SIDE_MENU_BRANCH` 相当（階層が読めるよう明るめ） */
+export const CYBER_SIDE_MENU_BRANCH = "rgba(246, 195, 68, 0.85)";
+export const CYBER_SIDE_MENU_BRANCH_GLOW_COLOR = "rgba(246, 195, 68, 0.6)";
+/** 枝先ジョイント（◆） */
+export const CYBER_SIDE_MENU_BRANCH_JOINT = "rgba(246, 195, 68, 0.9)";
 
 const JP_BOLD = Platform.select({
   ios: "NotoSansJP_700Bold",
@@ -60,7 +82,7 @@ export const SIDE_MENU_SECTION_FONT = {
   fontSize: 10,
   fontWeight: "700" as const,
   letterSpacing: 0.24 * 10,
-  color: "rgba(255, 255, 255, 0.42)",
+  color: "rgba(103, 232, 249, 0.75)",
   textTransform: "uppercase" as const,
 };
 
@@ -70,5 +92,5 @@ export const SIDE_MENU_SECTION_FONT_JA = {
   fontSize: 11,
   fontWeight: "700" as const,
   letterSpacing: 1.2,
-  color: "rgba(255, 255, 255, 0.42)",
+  color: "rgba(103, 232, 249, 0.75)",
 } as const;
