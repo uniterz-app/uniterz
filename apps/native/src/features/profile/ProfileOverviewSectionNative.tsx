@@ -49,8 +49,21 @@ export default function ProfileOverviewSectionNative({
 
   return (
     <View style={styles.overviewBlock}>
+      {overviewStage >= 4 ? (
+        <>
+          <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
+            <ProfileSettledTodayResultsNative
+              uid={targetUid}
+              language={language}
+              profileStatsContext={profileStatsContext}
+              showDesignPreviewWhenEmpty={false}
+            />
+          </ProfileOverviewEntranceBlock>
+          <View style={styles.chartGap} />
+        </>
+      ) : null}
       {overviewStage >= 1 ? (
-        <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
+        <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
           {dailyChartLoading ? (
             <View style={styles.chartSkeleton}>
               <BlocksPulseLoader pixelScale={0.9} />
@@ -74,7 +87,7 @@ export default function ProfileOverviewSectionNative({
       {overviewStage >= 2 ? (
         <>
           <View style={styles.chartGap} />
-          <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
+          <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
             <ProfileRankTrendChartNative
               data={rankTrend}
               loading={rankTrendLoading && rankTrend.length === 0}
@@ -86,24 +99,11 @@ export default function ProfileOverviewSectionNative({
       {overviewStage >= 3 ? (
         <>
           <View style={styles.chartGap} />
-          <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
+          <ProfileOverviewEntranceBlock index={3} entranceKey={entranceKey}>
             <ProfileStreakTrackerNative
               points={streakPoints}
               loading={streakLoading}
               language={language}
-            />
-          </ProfileOverviewEntranceBlock>
-        </>
-      ) : null}
-      {overviewStage >= 4 ? (
-        <>
-          <View style={styles.chartGap} />
-          <ProfileOverviewEntranceBlock index={3} entranceKey={entranceKey}>
-            <ProfileSettledTodayResultsNative
-              uid={targetUid}
-              language={language}
-              profileStatsContext={profileStatsContext}
-              showDesignPreviewWhenEmpty={false}
             />
           </ProfileOverviewEntranceBlock>
         </>
