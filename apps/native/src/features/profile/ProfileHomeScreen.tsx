@@ -33,7 +33,6 @@ import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { useNativeProfileStats } from "./useNativeProfileStats";
 import { useNativeProfileDailyTrendChart } from "./useNativeProfileDailyTrendChart";
 import { useNativeStreakTracker } from "./useNativeStreakTracker";
-import { profileOverviewSeasonKey } from "../../../../../lib/profile/profileOverviewSeason";
 import {
   resolveAndExpireMyPlan,
   useNativeProfilePlan,
@@ -42,9 +41,6 @@ import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
 import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
-import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
-import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
-import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import ProfileMenuEdgeHandleNative from "./ProfileMenuEdgeHandleNative";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
@@ -56,10 +52,7 @@ import { SETTINGS_POOLS_BG_BASE } from "../../../../../lib/ui/settingsPoolsBackg
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
-import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
-import ProfileSettledTodayResultsNative from "./ProfileSettledTodayResultsNative";
-import { profileOverviewChartShellStyle } from "./profileOverviewChartShell";
-import { useProfileOverviewStage } from "../../../../../lib/profile/useProfileOverviewStage";
+import ProfileOverviewSectionNative from "./ProfileOverviewSectionNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import {
   assertProfileTextsFreeOfGamblingTerms,
@@ -341,7 +334,6 @@ export default function ProfileHomeScreen({
     deferIndependentFetch: statsBundle.dailyTrendLoading,
     rankingLeague: profileStatsContext.rankingLeague,
     wcStage: profileStatsContext.wcStage,
-    /** overview season: profileOverviewSeasonKey()（確認用に前シーズン可） */
     nbaPeriod: "season",
     authReady,
   });
@@ -354,15 +346,6 @@ export default function ProfileHomeScreen({
     profileStatsContext,
     { seedLast20: statsBundle.last20 }
   );
-
-  /** カード済みなら段階マウント開始（ensure 待ちで止めない） */
-  const overviewStageReady =
-    tab === "overview" &&
-    Boolean(targetUid) &&
-    (!statsBundle.loading || Boolean(statsBundle.summary));
-  const overviewStage = useProfileOverviewStage(overviewStageReady, {
-    mobile: true,
-  });
 
   const currentIsProView = profilePlanHook.isProView;
   const currentStreak = useMemo(() => {
@@ -755,77 +738,32 @@ export default function ProfileHomeScreen({
       );
     }
 
-    const entranceKey = `${targetUid ?? ""}`;
     const dailyChartLoading =
       dailyTrendChart.loading ||
       (statsBundle.dailyTrendLoading &&
         dailyTrendChart.chartData.length === 0);
+    const overviewStageReady =
+      Boolean(targetUid) &&
+      (!statsBundle.loading || Boolean(statsBundle.summary));
+
+    if (!targetUid) {
+      return null;
+    }
 
     return (
-      <View style={styles.overviewBlock}>
-        {overviewStage >= 1 ? (
-          <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
-            {dailyChartLoading ? (
-              <View style={styles.chartSkeleton}>
-                <BlocksPulseLoader pixelScale={0.9} />
-              </View>
-            ) : (
-              <ProfileDailyTrendChartNative
-                key={`dailyTrend:${targetUid ?? ""}:${profileOverviewSeasonKey()}:season:${dailyTrendChart.chartData.map((r) => r.date).join(",")}`}
-                data={dailyTrendChart.chartData}
-                language={language}
-                allowAll={currentIsProView}
-                rankingLeague={profileStatsContext.rankingLeague}
-                range="30d"
-              />
-            )}
-          </ProfileOverviewEntranceBlock>
-        ) : (
-          <View style={styles.chartSkeleton}>
-            <BlocksPulseLoader pixelScale={0.9} />
-          </View>
-        )}
-        {overviewStage >= 2 ? (
-          <>
-            <View style={styles.chartGap} />
-            <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
-              <ProfileRankTrendChartNative
-                data={statsBundle.rankTrend}
-                loading={
-                  statsBundle.rankTrendLoading &&
-                  statsBundle.rankTrend.length === 0
-                }
-                language={language}
-              />
-            </ProfileOverviewEntranceBlock>
-          </>
-        ) : null}
-        {overviewStage >= 3 ? (
-          <>
-            <View style={styles.chartGap} />
-            <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
-              <ProfileStreakTrackerNative
-                points={streakBundle.points}
-                loading={streakBundle.loading}
-                language={language}
-              />
-            </ProfileOverviewEntranceBlock>
-          </>
-        ) : null}
-        {overviewStage >= 4 && targetUid ? (
-          <>
-            <View style={styles.chartGap} />
-            <ProfileOverviewEntranceBlock index={3} entranceKey={entranceKey}>
-              <ProfileSettledTodayResultsNative
-                uid={targetUid}
-                language={language}
-                profileStatsContext={profileStatsContext}
-                showDesignPreviewWhenEmpty={false}
-              />
-            </ProfileOverviewEntranceBlock>
-          </>
-        ) : null}
-      </View>
+      <ProfileOverviewSectionNative
+        targetUid={targetUid}
+        language={language}
+        profileStatsContext={profileStatsContext}
+        currentIsProView={currentIsProView}
+        stageReady={overviewStageReady}
+        dailyChartLoading={dailyChartLoading}
+        dailyChartData={dailyTrendChart.chartData}
+        rankTrend={statsBundle.rankTrend}
+        rankTrendLoading={statsBundle.rankTrendLoading}
+        streakPoints={streakBundle.points}
+        streakLoading={streakBundle.loading}
+      />
     );
   }
 
@@ -1493,13 +1431,6 @@ const styles = StyleSheet.create({
   summaryGridWrap: {
     alignSelf: "stretch",
     width: "100%",
-  },
-  chartGap: { height: 12 },
-  chartSkeleton: {
-    minHeight: 176,
-    alignItems: "center",
-    justifyContent: "center",
-    ...profileOverviewChartShellStyle,
   },
   muted: {
     color: colors.textSecondary,
