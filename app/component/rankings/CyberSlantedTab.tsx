@@ -133,11 +133,12 @@ export function CyberSlantedTabBar({
   gridColumns?: 3;
   "aria-label"?: string;
 }) {
+  /** py は選択グロー（box-shadow）が overflow-x-clip 親で縦方向まで切れないよう確保 */
   const layoutClass =
     gridColumns === 3
-      ? "grid w-full grid-cols-3 gap-x-2 gap-y-2 pb-1"
+      ? "grid w-full grid-cols-3 gap-x-2 gap-y-2 py-2"
       : [
-          "flex gap-2 pb-1",
+          "flex gap-2 py-2",
           fill
             ? "w-full"
             : "overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",

@@ -1,13 +1,14 @@
 /**
  * Web `CyberSlantedTab` / `CyberSlantedTabBar` 相当。
  *
- * 選択態の発光・横線は焼き込み PNG（矩形）。Web と同様に skewX(-14deg) を当て、
- * 非選択アウトラインと隙間バランスを揃える。
- * アプリ側で shadow / blur による光の再現はしない。Web コンポーネントは変更しない。
+ * 選択態（シアン既定）: 焼き込み PNG（矩形）。Web と同様に skewX(-14deg)。
+ * 選択態（テーマ色）: 塗り + 黒スキャン横線 + 外周ブルーム（Web の accent / scan / box-shadow）。
+ * シアン既定は shadow / BlurMask で光を再発明しない。
  */
 import { createContext, useContext, type ReactNode } from "react";
 import {
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -84,6 +85,34 @@ function resolveTabTheme(theme?: CyberSlantedTabThemeNative) {
   };
 }
 
+/** Web `.cyber-slanted-tab__scan` — transparent 2px + rgba(0,0,0,0.14) 1px */
+function ScanOverlay({ height }: { height: number }) {
+  const lines: ReactNode[] = [];
+  for (let y = 2; y < height; y += 3) {
+    lines.push(
+      <View
+        key={y}
+        style={{
+          position: "absolute",
+          top: y,
+          left: 0,
+          right: 0,
+          height: 1,
+          backgroundColor: "rgba(0,0,0,0.14)",
+        }}
+      />
+    );
+  }
+  return (
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}
+    >
+      {lines}
+    </View>
+  );
+}
+
 /** 選択: 焼き込み1枚を横ストレッチし、Web と同じ skew で傾ける */
 function ActiveTabChrome({ bodyH }: { bodyH: number }) {
   const imageH = chromeImageHeight(bodyH);
@@ -101,7 +130,10 @@ function ActiveTabChrome({ bodyH }: { bodyH: number }) {
   );
 }
 
-/** 選択: theme 塗り（シアン以外）。Web の accent 背景に相当 */
+/**
+ * 選択: theme 塗り（シアン以外）。
+ * Web の accent 背景 + scan + box-shadow に相当。
+ */
 function ActiveTabChromeThemed({
   bodyH,
   accent,
@@ -113,10 +145,28 @@ function ActiveTabChromeThemed({
     <View
       pointerEvents="none"
       style={[
-        styles.themedActiveChrome,
-        { height: bodyH, width: "100%", backgroundColor: accent },
+        styles.themedActiveGlow,
+        {
+          height: bodyH,
+          width: "100%",
+          shadowColor: accent,
+        },
       ]}
-    />
+    >
+      <View
+        style={[
+          styles.themedActiveChrome,
+          {
+            height: bodyH,
+            width: "100%",
+            backgroundColor: accent,
+            overflow: "hidden",
+          },
+        ]}
+      >
+        <ScanOverlay height={bodyH} />
+      </View>
+    </View>
   );
 }
 
@@ -157,7 +207,9 @@ export function CyberSlantedTabNative({
   const imageH = chromeImageHeight(bodyH);
   const jaLabel = hasJaScript(label);
   const fontSize = rankingFontSizePx(compact ? 9 : 10, label);
-  const letterSpacing = jaLabel ? fontSize * 0.06 : fontSize * tabMeta.letterSpacingEm;
+  const letterSpacing = jaLabel
+    ? fontSize * 0.06
+    : fontSize * tabMeta.letterSpacingEm;
   const resolved = resolveTabTheme(theme);
 
   const tab = (
@@ -246,7 +298,11 @@ export function CyberSlantedTabBarNative({
     <CyberSlantedTabFillContext.Provider value={fill}>
       <View
         style={[
-          gridColumns === 3 ? styles.barGrid3 : fill ? styles.barFill : styles.barScroll,
+          gridColumns === 3
+            ? styles.barGrid3
+            : fill
+              ? styles.barFill
+              : styles.barScroll,
           style,
         ]}
       >
@@ -263,7 +319,11 @@ export function CyberSlantedTabGridItemNative({
   children: ReactNode;
   columns?: 3;
 }) {
-  return <View style={columns === 3 ? styles.gridItem3 : styles.gridItemFill}>{children}</View>;
+  return (
+    <View style={columns === 3 ? styles.gridItem3 : styles.gridItemFill}>
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -274,14 +334,14 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "stretch",
     overflow: "visible",
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   barScroll: {
     flexDirection: "row",
     gap: 8,
     alignItems: "center",
     overflow: "visible",
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   barGrid3: {
     flexDirection: "row",
@@ -291,7 +351,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "stretch",
     overflow: "visible",
-    paddingBottom: 4,
+    paddingVertical: 6,
   },
   gridItem3: {
     width: "31%",
@@ -347,6 +407,20 @@ const styles = StyleSheet.create({
   themedActiveChrome: {
     borderWidth: 0,
     transform: [{ skewX: SKEW }],
+  },
+  /** Web theme.activeShadow（0 0 10px / 0 0 22px）相当 — テーマ色のみ */
+  themedActiveGlow: {
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.55,
+        shadowRadius: 11,
+      },
+      android: {
+        elevation: 6,
+      },
+      default: {},
+    }),
   },
   labelLayer: {
     ...StyleSheet.absoluteFillObject,
