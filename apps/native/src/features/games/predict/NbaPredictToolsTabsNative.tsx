@@ -76,6 +76,7 @@ export default function NbaPredictToolsTabsNative({
   return (
     <TutorialTargetNative id="predict-tools">
       <View style={styles.root}>
+        {/* skew / 選択グローが見切れないようタブ行だけ余白を確保（CyberSlantedTab 本体は変更しない） */}
         <View style={styles.tabShell}>
           <CyberSlantedTabBarNative fill>
             <CyberSlantedTabNative
@@ -169,14 +170,26 @@ export default function NbaPredictToolsTabsNative({
 const styles = StyleSheet.create({
   root: {
     width: "100%",
-    gap: 10,
+    gap: 6,
   },
   tabShell: {
+    alignSelf: "stretch",
     width: "100%",
+    overflow: "visible",
+    /**
+     * 試合カードと見た目幅を揃える。
+     * skew は transform-origin center のため片側 ≈ h/2·tan(14°) だけ。
+     * 余白を大きくするとカードより狭く見える。
+     */
+    paddingHorizontal: 3,
+    paddingTop: 0,
+    paddingBottom: 6,
   },
   panel: {
     minHeight: 120,
     width: "100%",
+    /** タブはカード全幅、パネル本体だけ内側余白 */
+    paddingHorizontal: 2,
   },
   pending: {
     borderRadius: 8,

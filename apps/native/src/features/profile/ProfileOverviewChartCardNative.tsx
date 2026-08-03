@@ -57,6 +57,8 @@ export default function ProfileOverviewChartCardNative({ children, style, minHei
 const styles = StyleSheet.create({
   card: {
     ...profileOverviewChartShellStyle,
+    alignSelf: "stretch",
+    width: "100%",
     position: "relative",
   },
 });

@@ -28,18 +28,18 @@ export const RESULT_CYBER_BADGE_THEMES: Record<
 > = {
   hit: {
     gradient: [
-      "rgba(251,191,36,0.3)",
-      "rgba(120,53,15,0.16)",
+      "rgba(251,191,36,0.38)",
+      "rgba(120,53,15,0.2)",
       "rgba(0,0,0,0.42)",
     ],
     gradientLocations: [0, 0.4, 1],
-    borderColor: "rgba(251,191,36,0.62)",
-    leftAccent: "rgba(253,224,71,0.58)",
-    topHighlight: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(252,211,77,0.95)",
+    leftAccent: "rgba(253,224,71,0.82)",
+    topHighlight: "rgba(255,255,255,0.32)",
     textColor: "#fffbeb",
-    shadowColor: "rgba(251,191,36,0.3)",
-    shadowOpacity: 0.34,
-    shadowRadius: 12,
+    shadowColor: "rgba(251,191,36,1)",
+    shadowOpacity: 0.78,
+    shadowRadius: 14,
   },
   perfect: {
     gradient: [

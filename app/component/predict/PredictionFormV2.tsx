@@ -733,12 +733,13 @@ export default function PredictionFormV2({
       ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-4 py-3`
       : `relative w-full overflow-hidden rounded-2xl ${standaloneGlassFill} px-4 py-3`;
 
+  /** 試合カードと同幅。上下は詰めてセグメントを近づける */
   const glassCardStatsPanel = overlayUnified
-    ? "relative w-full overflow-hidden px-3 py-2 md:px-4 md:py-2.5"
+    ? "relative w-full overflow-visible px-0 py-0 md:px-0"
     : overlayEmbedded
-      ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-3 py-2.5`
+      ? `relative w-full overflow-visible ${PREDICT_OVERLAY_FORM_PANEL} px-0 py-1`
       : isMobile
-        ? `relative w-full overflow-hidden rounded-xl ${standaloneGlassFill} px-3 py-2.5`
+        ? `relative w-full overflow-visible rounded-xl ${standaloneGlassFill} px-0 py-1`
         : glassCard;
 
   const toolButtonInactiveClass = overlayEmbedded
@@ -1114,8 +1115,8 @@ export default function PredictionFormV2({
           "overflow-x-hidden",
           overlayEmbedded
             ? isMobile
-              ? "space-y-3 pt-2"
-              : "space-y-3 pt-2.5"
+              ? "space-y-1.5 pt-1.5"
+              : "space-y-2 pt-2"
             : "space-y-4",
         ].join(" ")}
       >

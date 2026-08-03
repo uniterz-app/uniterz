@@ -921,8 +921,8 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: "#ecfeff", fontWeight: "700" },
   /** 一覧 `cardFrameHit` と同一のゴールド枠（詳細ヘッダーカードのみ） */
   shellCardHitGoldFrame: {
-    borderColor: "rgba(250,204,21,0.72)",
-    shadowColor: "rgba(250,204,21,0.45)",
+    borderColor: "rgba(254,243,199,0.92)",
+    shadowColor: "rgba(251,191,36,0.72)",
     shadowOpacity: 0.4,
     shadowRadius: 14,
   },

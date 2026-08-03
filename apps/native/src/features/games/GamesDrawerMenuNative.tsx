@@ -59,11 +59,11 @@ export default function GamesDrawerMenuNative({
           UNITERZ
         </Text>
         <View style={styles.headerDate}>
-          <Text style={styles.headerDateNum} allowFontScaling={false}>
-            {hudDate.date}
-          </Text>
           <Text style={styles.headerDateWeekday} allowFontScaling={false}>
             {hudDate.weekday}
+          </Text>
+          <Text style={styles.headerDateNum} allowFontScaling={false}>
+            {hudDate.date}
           </Text>
         </View>
       </View>
@@ -142,6 +142,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   headerDateNum: {
+    marginTop: 2,
     fontFamily: "Oxanium_700Bold",
     fontSize: 15,
     letterSpacing: 0.1 * 15,
@@ -151,7 +152,6 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   headerDateWeekday: {
-    marginTop: 2,
     fontFamily: "Oxanium_700Bold",
     fontSize: 10,
     letterSpacing: 0.24 * 10,

@@ -110,6 +110,8 @@ export const PROFILE_OVERVIEW_CHART_GRID_OPACITY = 0.36;
 
 /** プロフィール Kinetik カードと同系の透明シェル */
 export const profileOverviewChartShellStyle: ViewStyle = {
+  alignSelf: "stretch",
+  width: "100%",
   borderRadius: 4,
   borderWidth: 1,
   borderColor: PROFILE_CHART_CYBER.frame,

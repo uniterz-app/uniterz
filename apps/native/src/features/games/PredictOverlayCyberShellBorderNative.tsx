@@ -1,10 +1,11 @@
 /**
  * Web `.predict-overlay-cyber-card` border + `PredictOverlayCyberDecor` トップビーム。
- * 走査光（z11）の下に置き、枠線だけ先に描く。
+ * HIT 枠はコア線 + BlurMask ブルームで発光させる。
  */
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import {
+  BlurMask,
   Canvas,
   Group,
   LinearGradient as SkiaLinearGradient,
@@ -82,6 +83,8 @@ export default function PredictOverlayCyberShellBorderNative({
 
   const showBorder = mode === "border" || mode === "all";
   const showBeam = mode === "beam" || mode === "all";
+  /** HIT クリップ時は枠を発光させる */
+  const hitGlow = clipShape === "hit" && showBorder && borderPath != null;
 
   if (!clipPath) return null;
 
@@ -91,6 +94,31 @@ export default function PredictOverlayCyberShellBorderNative({
   return (
     <View pointerEvents="none" style={[styles.layer, { width, height, zIndex: layerZIndex }]}>
       <Canvas style={{ width, height }} pointerEvents="none">
+        {hitGlow ? (
+          <>
+            <Path
+              path={borderPath}
+              style="stroke"
+              strokeWidth={borderWidth + 5}
+              strokeJoin="miter"
+              strokeCap="butt"
+              color="rgba(251,191,36,0.42)"
+            >
+              <BlurMask blur={5.5} style="normal" />
+            </Path>
+            <Path
+              path={borderPath}
+              style="stroke"
+              strokeWidth={borderWidth + 2.2}
+              strokeJoin="miter"
+              strokeCap="butt"
+              color="rgba(253,224,71,0.62)"
+            >
+              <BlurMask blur={2.4} style="normal" />
+            </Path>
+          </>
+        ) : null}
+
         {showBorder && borderPath ? (
           <Path
             path={borderPath}
@@ -108,7 +136,19 @@ export default function PredictOverlayCyberShellBorderNative({
               <SkiaLinearGradient
                 start={vec(beamLeft, 0.5)}
                 end={vec(beamLeft + beamWidth, 0.5)}
-                colors={["rgba(34,211,238,0)", "rgba(34,211,238,0.55)", "rgba(34,211,238,0)"]}
+                colors={
+                  hitGlow
+                    ? [
+                        "rgba(253,224,71,0)",
+                        "rgba(255,251,235,0.75)",
+                        "rgba(253,224,71,0)",
+                      ]
+                    : [
+                        "rgba(34,211,238,0)",
+                        "rgba(34,211,238,0.55)",
+                        "rgba(34,211,238,0)",
+                      ]
+                }
                 positions={[0, 0.5, 1]}
               />
             </Rect>

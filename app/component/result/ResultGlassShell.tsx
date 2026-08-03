@@ -74,8 +74,13 @@ export default function ResultGlassShell({
   const glassLift = lite ? false : lift;
   const frameSweep = !lite && showSweep;
 
+  /** 発光枠の drop-shadow を切らない（形状は clip-path で保つ） */
+  const panelOverflow = isResultCyberClipFrameBadge(badge)
+    ? "relative overflow-visible"
+    : "relative overflow-hidden";
+
   const panelClass = [
-    "relative overflow-hidden",
+    panelOverflow,
     roundedClassName,
     isResultCyberClipFrameBadge(badge)
       ? RESULT_GLASS_BORDER

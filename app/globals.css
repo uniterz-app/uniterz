@@ -3042,6 +3042,90 @@
   );
 }
 
+/* HIT バッジ枠：clip-path でも消えないよう drop-shadow で発光 */
+.result-hit-badge-glow {
+  filter: drop-shadow(0 0 3px rgba(253, 224, 71, 0.95))
+    drop-shadow(0 0 8px rgba(251, 191, 36, 0.72))
+    drop-shadow(0 0 16px rgba(245, 158, 11, 0.42));
+}
+
+/* HIT カード外枠ブルーム：子の clip 形状に沿って外側へ光る */
+.result-hit-frame-bloom {
+  filter: drop-shadow(0 0 2px rgba(255, 251, 235, 0.95))
+    drop-shadow(0 0 7px rgba(253, 224, 71, 0.78))
+    drop-shadow(0 0 16px rgba(251, 191, 36, 0.52))
+    drop-shadow(0 0 28px rgba(245, 158, 11, 0.28));
+}
+
+.result-hit-frame-corner {
+  border-color: rgba(254, 243, 199, 0.95);
+  filter: drop-shadow(0 0 4px rgba(253, 224, 71, 0.85))
+    drop-shadow(0 0 10px rgba(251, 191, 36, 0.45));
+}
+
+/* PERFECT / UPSET / 連勝 — HIT と同型の枠ブルーム */
+.result-perfect-frame-bloom {
+  filter: drop-shadow(0 0 2px rgba(245, 243, 255, 0.95))
+    drop-shadow(0 0 7px rgba(196, 181, 253, 0.78))
+    drop-shadow(0 0 16px rgba(167, 139, 250, 0.52))
+    drop-shadow(0 0 28px rgba(139, 92, 246, 0.28));
+}
+
+.result-perfect-frame-corner {
+  border-color: rgba(237, 233, 254, 0.95);
+  filter: drop-shadow(0 0 4px rgba(196, 181, 253, 0.85))
+    drop-shadow(0 0 10px rgba(139, 92, 246, 0.45));
+}
+
+.result-upset-frame-bloom {
+  filter: drop-shadow(0 0 2px rgba(254, 242, 242, 0.95))
+    drop-shadow(0 0 7px rgba(252, 165, 165, 0.78))
+    drop-shadow(0 0 16px rgba(248, 113, 113, 0.52))
+    drop-shadow(0 0 28px rgba(239, 68, 68, 0.28));
+}
+
+.result-upset-frame-corner {
+  border-color: rgba(254, 226, 226, 0.95);
+  filter: drop-shadow(0 0 4px rgba(252, 165, 165, 0.85))
+    drop-shadow(0 0 10px rgba(239, 68, 68, 0.45));
+}
+
+.result-streak-frame-bloom--gold {
+  filter: drop-shadow(0 0 2px rgba(255, 251, 235, 0.95))
+    drop-shadow(0 0 7px rgba(253, 224, 71, 0.78))
+    drop-shadow(0 0 16px rgba(251, 191, 36, 0.52))
+    drop-shadow(0 0 28px rgba(249, 115, 22, 0.28));
+}
+
+.result-streak-frame-bloom--platinum {
+  filter: drop-shadow(0 0 2px rgba(236, 254, 255, 0.95))
+    drop-shadow(0 0 7px rgba(103, 232, 249, 0.78))
+    drop-shadow(0 0 16px rgba(34, 211, 238, 0.52))
+    drop-shadow(0 0 28px rgba(0, 245, 255, 0.28));
+}
+
+.result-streak-frame-bloom--silver {
+  filter: drop-shadow(0 0 2px rgba(248, 250, 252, 0.9))
+    drop-shadow(0 0 7px rgba(226, 232, 240, 0.7))
+    drop-shadow(0 0 16px rgba(148, 163, 184, 0.48))
+    drop-shadow(0 0 28px rgba(100, 116, 139, 0.26));
+}
+
+.result-streak-frame-corner--gold {
+  filter: drop-shadow(0 0 4px rgba(253, 224, 71, 0.85))
+    drop-shadow(0 0 10px rgba(251, 191, 36, 0.45));
+}
+
+.result-streak-frame-corner--platinum {
+  filter: drop-shadow(0 0 4px rgba(103, 232, 249, 0.85))
+    drop-shadow(0 0 10px rgba(34, 211, 238, 0.45));
+}
+
+.result-streak-frame-corner--silver {
+  filter: drop-shadow(0 0 4px rgba(226, 232, 240, 0.8))
+    drop-shadow(0 0 10px rgba(148, 163, 184, 0.4));
+}
+
 /* LIVE バッジ：ライブ中は赤く発光（HIT/MISS 同系 + グロー点滅） */
 @keyframes live-match-mark-glow {
   0%,

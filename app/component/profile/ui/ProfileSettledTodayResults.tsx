@@ -52,7 +52,7 @@ export default function ProfileSettledTodayResults({
       : posts;
 
   return (
-    <ProfileKinetikPanelFrame as="section" className="p-4 md:p-5">
+    <ProfileKinetikPanelFrame as="section" className="block w-full min-w-0 p-3">
       <div>
           <h3
             className={[

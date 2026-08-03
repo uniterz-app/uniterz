@@ -1236,6 +1236,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.sm,
     flexGrow: 1,
+    alignSelf: "stretch",
+    width: "100%",
   },
   hero: {
     borderRadius: radius.card,

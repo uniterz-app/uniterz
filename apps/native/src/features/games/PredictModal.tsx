@@ -1900,19 +1900,19 @@ const s = StyleSheet.create({
     alignItems: "stretch",
     paddingVertical: spacing.xs,
   },
-  /** プレビュー・タブ・フォーム・送信の縦積み（間隔は詰めめ） */
+  /** プレビュー・タブ・フォーム・送信の縦積み（試合カード↔セグメントは詰める） */
   modalContent: {
     width: "100%",
     maxWidth: 520,
     alignSelf: "center",
-    gap: 12,
+    gap: 8,
   },
   unifiedOverlayPanelContent: {
     position: "relative",
     paddingHorizontal: 0,
     paddingTop: 4,
     paddingBottom: 12,
-    gap: 12,
+    gap: 6,
   },
   predictCyberDeckFrame: {
     width: "100%",
@@ -2209,7 +2209,8 @@ const s = StyleSheet.create({
     position: "relative",
     width: "100%",
     overflow: "visible",
-    marginTop: 4,
+    marginTop: 0,
+    marginBottom: 0,
   },
   /** ラウンド名・3 カラム（背景は `PredictOverlayMatchCardShellNative`） */
   matchPreviewPaddedContent: {

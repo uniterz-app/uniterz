@@ -380,7 +380,7 @@ export default function ProfilePlayoffRankTrendChart({
   }, [showLineLayer, rechartsAnimActive, lineLayerKey]);
 
   return (
-    <ProfileKinetikPanelFrame ref={ref} className="p-3">
+    <ProfileKinetikPanelFrame ref={ref} className="w-full p-3">
       {/* z をチャートより上にし、下方向の Info ツールチップが SVG に隠れないようにする */}
       <div className="relative z-20 px-1 pt-0.5">
         <div className="flex items-start justify-between gap-3">

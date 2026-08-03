@@ -106,19 +106,19 @@ export default function GamesDrawerMenu({
           <p
             className={cn(
               nameOxanium.className,
-              "text-[15px] font-bold tabular-nums tracking-[0.1em] text-[rgba(0,245,255,0.9)]"
+              "text-[10px] font-bold uppercase tracking-[0.24em] text-white/40"
             )}
-            style={{ textShadow: "0 0 10px rgba(0,245,255,0.35)" }}
           >
-            {hudDate.date}
+            {hudDate.weekday}
           </p>
           <p
             className={cn(
               nameOxanium.className,
-              "mt-0.5 text-[10px] font-bold uppercase tracking-[0.24em] text-white/40"
+              "mt-0.5 text-[15px] font-bold tabular-nums tracking-[0.1em] text-[rgba(0,245,255,0.9)]"
             )}
+            style={{ textShadow: "0 0 10px rgba(0,245,255,0.35)" }}
           >
-            {hudDate.weekday}
+            {hudDate.date}
           </p>
         </div>
       </div>

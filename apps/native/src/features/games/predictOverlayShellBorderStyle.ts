@@ -27,7 +27,8 @@ export function predictOverlayShellBorderColor(
   activeWinStreak: unknown
 ): string {
   if (badge === "perfect") return "rgba(167,139,250,0.8)";
-  if (badge === "hit") return "rgba(250,204,21,0.76)";
+  /** HIT: 明るいコア線（ブルームは ShellBorder の BlurMask） */
+  if (badge === "hit") return "rgba(254,243,199,0.96)";
   if (badge === "upset") return "rgba(248,113,113,0.84)";
   if (badge === "streak") {
     const tier = resultStreakTier(activeWinStreak);
@@ -49,6 +50,7 @@ export function predictOverlayShellSweepVariant(
   activeWinStreak: unknown
 ): ResultFrameBorderSweepVariant | null {
   if (badge === "perfect") return "perfect";
+  if (badge === "hit") return "streakGold";
   if (badge === "upset") return "upset";
   if (badge === "streak") {
     const tier = resultStreakTier(activeWinStreak);

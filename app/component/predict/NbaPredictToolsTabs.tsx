@@ -71,42 +71,45 @@ export default function NbaPredictToolsTabs({
 
   return (
     <div className={className} data-tutorial-target="predict-tools">
-      <CyberSlantedTabBar fill aria-label="NBA predict tools">
-        <CyberSlantedTab
-          role="tab"
-          label="INSIGHT"
-          active={tab === "insight"}
-          onClick={() => setTab("insight")}
-          compact
-          fontWeight={900}
-        />
-        <CyberSlantedTab
-          role="tab"
-          label="INJURY"
-          active={tab === "injuries"}
-          onClick={() => setTab("injuries")}
-          compact
-          fontWeight={900}
-        />
-        <CyberSlantedTab
-          role="tab"
-          label="STATS"
-          active={tab === "stats"}
-          onClick={() => setTab("stats")}
-          compact
-          fontWeight={900}
-        />
-        <CyberSlantedTab
-          role="tab"
-          label="ROSTER"
-          active={tab === "roster"}
-          onClick={() => setTab("roster")}
-          compact
-          fontWeight={900}
-        />
-      </CyberSlantedTabBar>
+      {/* 試合カードと同幅。skew 分だけ極小余白（大きくするとカードより狭く見える） */}
+      <div className="w-full min-w-0 overflow-visible px-0.5 pb-1.5 pt-0">
+        <CyberSlantedTabBar fill aria-label="NBA predict tools">
+          <CyberSlantedTab
+            role="tab"
+            label="INSIGHT"
+            active={tab === "insight"}
+            onClick={() => setTab("insight")}
+            compact
+            fontWeight={900}
+          />
+          <CyberSlantedTab
+            role="tab"
+            label="INJURY"
+            active={tab === "injuries"}
+            onClick={() => setTab("injuries")}
+            compact
+            fontWeight={900}
+          />
+          <CyberSlantedTab
+            role="tab"
+            label="STATS"
+            active={tab === "stats"}
+            onClick={() => setTab("stats")}
+            compact
+            fontWeight={900}
+          />
+          <CyberSlantedTab
+            role="tab"
+            label="ROSTER"
+            active={tab === "roster"}
+            onClick={() => setTab("roster")}
+            compact
+            fontWeight={900}
+          />
+        </CyberSlantedTabBar>
+      </div>
 
-      <div className="mt-2.5 min-h-30">
+      <div className="mt-1.5 min-h-30 px-0.5">
         {tab === "insight" ? (
           isPro && !brief ? (
             <PendingPanel text={m.panelDataPending} />

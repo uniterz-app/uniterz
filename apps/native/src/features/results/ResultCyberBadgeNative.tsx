@@ -7,6 +7,7 @@ import {
   type TextStyle,
 } from "react-native";
 import {
+  BlurMask,
   Canvas,
   Group,
   LinearGradient as SkiaLinearGradient,
@@ -63,7 +64,9 @@ export default function ResultCyberBadgeNative({
     [size.w, size.h]
   );
 
-  const shadowScale = subtle ? 0.72 : 1;
+  /** HIT は枠発光を優先し、subtle でもグローを弱めすぎない */
+  const shadowScale = kind === "hit" ? (subtle ? 0.92 : 1) : subtle ? 0.72 : 1;
+  const hitGlow = kind === "hit";
 
   function onLayout(e: LayoutChangeEvent) {
     const { width, height } = e.nativeEvent.layout;
@@ -81,7 +84,7 @@ export default function ResultCyberBadgeNative({
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: theme.shadowOpacity * shadowScale,
           shadowRadius: theme.shadowRadius * shadowScale,
-          elevation: 4,
+          elevation: hitGlow ? 8 : 4,
         },
       ]}
     >
@@ -114,7 +117,17 @@ export default function ResultCyberBadgeNative({
               color={theme.topHighlight}
             />
           </Group>
-          <Path path={clipPath} style="stroke" strokeWidth={1} color={theme.borderColor} />
+          {hitGlow ? (
+            <Path
+              path={clipPath}
+              style="stroke"
+              strokeWidth={3.2}
+              color="rgba(251,191,36,0.55)"
+            >
+              <BlurMask blur={3.6} style="normal" />
+            </Path>
+          ) : null}
+          <Path path={clipPath} style="stroke" strokeWidth={1.15} color={theme.borderColor} />
         </Canvas>
       ) : null}
 

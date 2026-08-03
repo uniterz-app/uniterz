@@ -15,6 +15,7 @@ import {
 import Animated, { type AnimatedStyle } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import {
+  BlurMask,
   Canvas,
   Group,
   LinearGradient as SkiaLinearGradient,
@@ -83,6 +84,15 @@ function GlassFillFallback() {
       />
     </>
   );
+}
+
+/** rgba の alpha だけ差し替えてブルーム色を作る */
+function borderGlowColor(color: string, alpha: number): string {
+  const m = color.match(
+    /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)$/i
+  );
+  if (!m) return `rgba(251,191,36,${alpha})`;
+  return `rgba(${m[1]},${m[2]},${m[3]},${alpha})`;
 }
 
 export default function ResultGlassShellNative({
@@ -198,6 +208,26 @@ export default function ResultGlassShellNative({
             ]}
           >
             <Canvas style={{ width: size.w, height: size.h }} pointerEvents="none">
+              {strokeWidth > 1 ? (
+                <>
+                  <Path
+                    path={skiaPath}
+                    style="stroke"
+                    strokeWidth={strokeWidth + 5}
+                    color={borderGlowColor(borderColor, 0.4)}
+                  >
+                    <BlurMask blur={5.5} style="normal" />
+                  </Path>
+                  <Path
+                    path={skiaPath}
+                    style="stroke"
+                    strokeWidth={strokeWidth + 2}
+                    color={borderGlowColor(borderColor, 0.62)}
+                  >
+                    <BlurMask blur={2.4} style="normal" />
+                  </Path>
+                </>
+              ) : null}
               <Path
                 path={skiaPath}
                 style="stroke"
@@ -230,7 +260,8 @@ const styles = StyleSheet.create({
   },
   shell: {
     position: "relative",
-    overflow: "hidden",
+    /** 枠ブルームを切らない */
+    overflow: "visible",
     borderRadius: 0,
   },
   shellMeasuring: {

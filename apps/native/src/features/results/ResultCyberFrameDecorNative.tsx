@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import {
+  BlurMask,
   Canvas,
   Group,
   LinearGradient as SkiaLinearGradient,
@@ -30,6 +31,8 @@ type Props = {
   topGlowColors: readonly string[];
   topGlowLocations?: readonly number[];
   shellContext?: ResultCyberFrameShellContext;
+  /** HIT など角を発光させる */
+  glowCorners?: boolean;
 };
 
 export default function ResultCyberFrameDecorNative({
@@ -41,6 +44,7 @@ export default function ResultCyberFrameDecorNative({
   topGlowColors,
   topGlowLocations = [0, 0.42, 0.7],
   shellContext = "default",
+  glowCorners = false,
 }: Props) {
   const clipPath = useMemo(() => {
     if (width <= 0 || height <= 0) return null;
@@ -92,15 +96,29 @@ export default function ResultCyberFrameDecorNative({
           ) : null}
 
           {cornerPaths.map((path, index) => (
-            <Path
-              key={`corner-${index}`}
-              path={path}
-              style="stroke"
-              strokeWidth={RESULT_CYBER_FRAME_CORNER_STROKE_WIDTH}
-              strokeJoin="miter"
-              strokeCap="square"
-              color={cornerColor}
-            />
+            <Group key={`corner-${index}`}>
+              {glowCorners ? (
+                <Path
+                  path={path}
+                  style="stroke"
+                  strokeWidth={RESULT_CYBER_FRAME_CORNER_STROKE_WIDTH + 3}
+                  strokeJoin="miter"
+                  strokeCap="square"
+                  color={cornerColor}
+                  opacity={0.55}
+                >
+                  <BlurMask blur={3.2} style="normal" />
+                </Path>
+              ) : null}
+              <Path
+                path={path}
+                style="stroke"
+                strokeWidth={RESULT_CYBER_FRAME_CORNER_STROKE_WIDTH}
+                strokeJoin="miter"
+                strokeCap="square"
+                color={cornerColor}
+              />
+            </Group>
           ))}
         </Group>
       </Canvas>

@@ -84,6 +84,7 @@ export default function ProfileSettledTodayResultsNative({
   };
 
   return (
+    <View style={styles.stretch}>
     <ProfileOverviewChartCardNative style={styles.card}>
       <View>
         <Text style={profileOverviewChartTitleStyle}>{title}</Text>
@@ -126,12 +127,19 @@ export default function ProfileSettledTodayResultsNative({
         </View>
       )}
     </ProfileOverviewChartCardNative>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  stretch: {
+    alignSelf: "stretch",
+    width: "100%",
+  },
   card: {
-    padding: 16,
+    alignSelf: "stretch",
+    width: "100%",
+    padding: 12,
   },
   subtitle: {
     marginTop: 6,

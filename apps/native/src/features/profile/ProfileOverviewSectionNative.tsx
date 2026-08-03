@@ -117,6 +117,7 @@ export default function ProfileOverviewSectionNative({
 
 const styles = StyleSheet.create({
   overviewBlock: {
+    alignSelf: "stretch",
     width: "100%",
   },
   chartGap: {

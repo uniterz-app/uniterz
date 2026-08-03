@@ -253,8 +253,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         <Tabs value={tab} onChange={setTab} size="lg" layout="split" />
         {tab === "overview" ? (
           <>
+            <div className="mt-6 w-full min-w-0 space-y-4 overflow-visible">
             {resolvedUid ? (
-              <div className="mt-6 min-w-0 overflow-hidden">
+              <div className="w-full min-w-0">
                 <ProfileSettledTodayResultsLazy
                   uid={resolvedUid}
                   language={language}
@@ -267,9 +268,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               </div>
             ) : null}
             {chartsReady ? (
-            <div className="mt-6 space-y-4">
+            <div className="w-full min-w-0 space-y-4">
               {overviewStage >= 1 ? (
-              <div className="min-w-0 overflow-visible pt-0">
+              <div className="w-full min-w-0 overflow-visible pt-0">
                 <ProfilePlayoffRankTrendChartLazy
                   data={rankPlayoffTrendRows}
                   loading={rankTrendLoading}
@@ -307,10 +308,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               ) : null}
             </div>
             ) : (
-              <div className="mt-6 space-y-4">
+              <div className="w-full space-y-4">
                 <div className="h-56 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
               </div>
             )}
+            </div>
           </>
         ) : tab === "report" ? (
           <ProfileMonthlyReportPanel

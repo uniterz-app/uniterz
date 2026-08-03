@@ -40,18 +40,19 @@ export default function ResultPerfectCyberFrameNative({
 
   return (
     <View pointerEvents="none" style={styles.overlay} onLayout={onLayout}>
-      {shellContext !== "predictOverlay" && size.w > 0 && size.h > 0 ? (
+      {size.w > 0 && size.h > 0 ? (
         <ResultCyberFrameDecorNative
           width={size.w}
           height={size.h}
-          cornerColor="rgba(196,181,253,0.9)"
+          cornerColor="rgba(237,233,254,0.96)"
           topLineColors={PERFECT_TOP_LINE}
           topGlowColors={[
-            "rgba(167,139,250,0.18)",
-            "rgba(124,58,237,0.1)",
+            "rgba(167,139,250,0.26)",
+            "rgba(124,58,237,0.14)",
             "transparent",
           ]}
           shellContext={shellContext}
+          glowCorners
         />
       ) : null}
 

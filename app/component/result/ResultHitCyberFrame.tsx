@@ -15,15 +15,29 @@ type Props = {
 };
 
 const CORNER =
-  "pointer-events-none absolute z-[12] border-yellow-300/88";
+  "pointer-events-none absolute z-[12] result-hit-frame-corner";
 
-/** HIT 用サイバー角切り枠（丸角なし） */
+/** HIT 用サイバー角切り枠 — コア線 + drop-shadow ブルーム + 角ハイライト */
 export default function ResultHitCyberFrame({
   showSweep = false,
   className = "",
 }: Props) {
   return (
     <>
+      {/* clip-path 外で光らせる（box-shadow は clip で消える） */}
+      <div
+        className="result-hit-frame-bloom pointer-events-none absolute inset-0 z-[3]"
+        aria-hidden
+      >
+        <div
+          className={[
+            "absolute inset-0",
+            RESULT_HIT_CYBER_CLIP,
+            "border border-amber-200/90",
+          ].join(" ")}
+        />
+      </div>
+
       <div
         className={[
           "pointer-events-none absolute inset-0 z-[4]",
@@ -36,19 +50,19 @@ export default function ResultHitCyberFrame({
       />
 
       <div
-        className={`${CORNER} left-0 top-0 h-2.5 w-2.5 border-l-2 border-t-2`}
+        className={`${CORNER} left-0 top-0 h-3 w-3 border-l-[2.5px] border-t-[2.5px]`}
         aria-hidden
       />
       <div
-        className={`${CORNER} right-0 top-0 h-2.5 w-2.5 border-r-2 border-t-2`}
+        className={`${CORNER} right-0 top-0 h-3 w-3 border-r-[2.5px] border-t-[2.5px]`}
         aria-hidden
       />
       <div
-        className={`${CORNER} bottom-0 left-0 h-2.5 w-2.5 border-b-2 border-l-2`}
+        className={`${CORNER} bottom-0 left-0 h-3 w-3 border-b-[2.5px] border-l-[2.5px]`}
         aria-hidden
       />
       <div
-        className={`${CORNER} bottom-0 right-0 h-2.5 w-2.5 border-b-2 border-r-2`}
+        className={`${CORNER} bottom-0 right-0 h-3 w-3 border-b-[2.5px] border-r-[2.5px]`}
         aria-hidden
       />
 
