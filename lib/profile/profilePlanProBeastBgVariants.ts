@@ -45,7 +45,15 @@ export type ProfilePlanProBeastBgVariant =
   | "beast-behelit"
   | "beast-berserker"
   | "beast-armor"
-  | "beast-dna";
+  | "beast-dna"
+  /** 称号スキン候補 — 月間1位 / UPSET / 最多得点者 */
+  | "beast-regalia"
+  | "beast-thunder"
+  | "beast-starborne"
+  | "beast-reticle"
+  | "beast-facet"
+  | "beast-shard"
+  | "beast-tessera";
 
 export type ProfilePlanProBeastBgMeta = {
   id: ProfilePlanProBeastBgVariant;
@@ -403,7 +411,7 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     label: "Jagged Plate",
     tag: "裂甲",
     description:
-      "ギザギザの装甲パネルを重ねた模様。黒×血赤の縁。尖ったプレート。",
+      "尖った装甲板を全面に鱗状に重ねた模様。黒×血赤の縁。",
     swatch:
       "linear-gradient(145deg, #020101, #161010 42%, #7f1d1d55 62%, #010101)",
   },
@@ -451,7 +459,70 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
       "粒子の二重らせん。ライムグリーン発光＋金の遠景グリッド。サイバー生命。",
     swatch:
       "linear-gradient(155deg, #020408, #0a1a08 35%, #a3e63588 55%, #ca8a0488 70%, #010204)",
-  }
+  },
+  {
+    id: "beast-regalia",
+    label: "Gold Regalia",
+    tag: "金冠",
+    description:
+      "月間総合1位向け。ミッドナイト黒のカピトネレザー。ラジアルで膨らむパッド＋金パイピングとフルールボタン。",
+    swatch:
+      "linear-gradient(148deg, #010101, #0a0a0e 32%, #2e2e36 48%, #d4af3744 66%, #000000)",
+  },
+  {
+    id: "beast-thunder",
+    label: "Thunder Strike",
+    tag: "雷撃",
+    description:
+      "月間UPSET1位向け。定番の稲妻シルエットを斜めに敷き詰め。黒地に電光ゴールド／シアン。",
+    swatch:
+      "linear-gradient(155deg, #03050a, #0c1220 38%, #fbbf2455 58%, #67e8f966 72%, #020408)",
+  },
+  {
+    id: "beast-starborne",
+    label: "Star Crest",
+    tag: "銀星",
+    description:
+      "月間勝率1位で解放。銀×黒の六方格子。マットな四尖星とV溝リッジ。",
+    swatch:
+      "linear-gradient(150deg, #0a0a0c, #1a1a1e 40%, #78788244 58%, #0c0c0e)",
+  },
+  {
+    id: "beast-reticle",
+    label: "Target Lock",
+    tag: "照準",
+    description:
+      "最多得点者1位候補。黒地にスナイパー照準・レティクルを散りばめたクールHUD柄。",
+    swatch:
+      "linear-gradient(155deg, #010204, #0a1218 40%, #67e8f955 58%, #e2e8f044 72%, #000000)",
+  },
+  {
+    id: "beast-facet",
+    label: "Diamond Cut",
+    tag: "切子",
+    description:
+      "月間最多得点者1位。宝石の切子面が連続するファセット格子。黒×アイスシルバー。",
+    swatch:
+      "linear-gradient(148deg, #000000, #12161c 38%, #c8d0dc66 55%, #f8fafc55 70%, #010101)",
+  },
+  {
+    id: "beast-shard",
+    label: "Azure Fracture",
+    tag: "結晶",
+    description:
+      "パーフェクト予想10で解放。黒曜石の低ポリ結晶クラック＋ブルー切面。",
+    swatch:
+      "linear-gradient(155deg, #000000, #050a12 35%, #1d4ed855 55%, #38bdf866 72%, #010104)",
+  },
+  {
+    id: "beast-tessera",
+    label: "Obsidian Tessera",
+    tag: "三角",
+    description:
+      "正三角形の全面テッセレーション。マットな黒メタルの立体切面。上からの光で凹凸を出す。",
+    swatch:
+      "linear-gradient(160deg, #000000, #1a1a1e 40%, #3a3a42 55%, #0a0a0c 78%, #000000)",
+  },
 ];
 
 /** Round 3 のみ（比較ナビ用） */
@@ -503,7 +574,21 @@ export const PROFILE_PLAN_PRO_BEAST_BG_ROUND6: ProfilePlanProBeastBgVariant[] = 
   "beast-behelit",
   "beast-berserker",
   "beast-armor",
-  "beast-dna"
+  "beast-dna",
+];
+
+/** Round 7 — 称号スキン（月間総合 / UPSET / 最多得点者） */
+export const PROFILE_PLAN_PRO_BEAST_BG_ROUND7: ProfilePlanProBeastBgVariant[] = [
+  "beast-regalia",
+  "beast-thunder",
+  "beast-reticle",
+  "beast-facet",
+  "beast-shard",
+  "beast-tessera",
+  "beast-starborne",
+  /** 既存参考 */
+  "beast-crown",
+  "beast-constellation",
 ];
 
 export const PROFILE_PLAN_PRO_BEAST_BG_DEFAULT: ProfilePlanProBeastBgVariant =

@@ -48,6 +48,7 @@ export async function saveMeProSkinNative(
 export async function fetchProSkinStatusNative(): Promise<{
   unlockedIds: string[];
   savedId: string;
+  isPro: boolean;
   skins: {
     id: string;
     unlocked: boolean;
@@ -67,6 +68,7 @@ export async function fetchProSkinStatusNative(): Promise<{
     error?: string;
     unlockedIds?: string[];
     savedId?: string;
+    progress?: { isPro?: boolean };
     skins?: {
       id: string;
       unlocked: boolean;
@@ -82,6 +84,7 @@ export async function fetchProSkinStatusNative(): Promise<{
   return {
     unlockedIds: data.unlockedIds ?? [],
     savedId: data.savedId ?? "atmos",
+    isPro: data.progress?.isPro === true,
     skins: data.skins ?? [],
     ownerCounts: data.ownerCounts ?? {},
   };

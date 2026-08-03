@@ -301,12 +301,12 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
     opacityMul: 1.75,
   },
   "beast-jagarmor": {
-    strokes: ["153,27,27", "185,28,28", "127,29,29", "220,38,38"],
-    fills: ["28,10,10", "44,14,14", "16,6,6"],
-    accent: ["248,113,113", "239,68,68"],
+    strokes: ["153,27,27", "185,28,28", "127,29,29", "200,35,35"],
+    fills: ["26,9,9", "38,12,12", "14,5,5"],
+    accent: ["220,38,38", "239,68,68"],
     hudPrimary: "rgba(185,28,28,",
     hudSecondary: "rgba(127,29,29,",
-    opacityMul: 1.65,
+    opacityMul: 1.7,
   },
   "beast-crimsonveil": {
     strokes: ["127,29,29", "153,27,27", "185,28,28", "69,10,10"],
@@ -347,6 +347,62 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
     hudPrimary: "rgba(163,230,53,",
     hudSecondary: "rgba(234,179,8,",
     opacityMul: 2.1,
+  },
+  "beast-regalia": {
+    strokes: ["212,175,55", "201,162,39", "180,140,50", "161,128,40"],
+    fills: ["8,8,10", "18,18,22", "4,4,6"],
+    accent: ["253,230,138", "250,204,21", "245,208,140"],
+    hudPrimary: "rgba(234,179,8,",
+    hudSecondary: "rgba(212,175,55,",
+    opacityMul: 1.6,
+  },
+  "beast-thunder": {
+    strokes: ["30,41,59", "51,65,85", "71,85,105", "15,23,42"],
+    fills: ["12,16,28", "24,32,48", "8,12,20"],
+    accent: ["250,204,21", "253,224,71", "125,211,252", "254,249,195"],
+    hudPrimary: "rgba(250,204,21,",
+    hudSecondary: "rgba(125,211,252,",
+    opacityMul: 2.05,
+  },
+  "beast-starborne": {
+    strokes: ["120,120,128", "90,90,98", "60,60,68", "40,40,46"],
+    fills: ["10,10,12", "8,8,10", "4,4,6"],
+    accent: ["160,160,168", "140,140,148"],
+    hudPrimary: "rgba(120,120,128,",
+    hudSecondary: "rgba(60,60,68,",
+    opacityMul: 1.35,
+  },
+  "beast-reticle": {
+    strokes: ["148,163,184", "125,211,252", "94,234,212", "71,85,105"],
+    fills: ["8,12,16", "12,18,24", "4,6,8"],
+    accent: ["224,242,254", "165,243,252", "248,250,252"],
+    hudPrimary: "rgba(125,211,252,",
+    hudSecondary: "rgba(148,163,184,",
+    opacityMul: 1.9,
+  },
+  "beast-facet": {
+    strokes: ["100,116,139", "71,85,105", "51,65,85", "30,41,59"],
+    fills: ["10,12,16", "22,26,32", "6,7,9"],
+    accent: ["148,163,184", "226,232,240", "203,213,225"],
+    hudPrimary: "rgba(148,163,184,",
+    hudSecondary: "rgba(71,85,105,",
+    opacityMul: 1.45,
+  },
+  "beast-shard": {
+    strokes: ["30,58,138", "29,78,216", "37,99,235", "15,23,42"],
+    fills: ["6,8,12", "10,14,22", "2,4,8"],
+    accent: ["59,130,246", "37,99,235", "96,165,250"],
+    hudPrimary: "rgba(59,130,246,",
+    hudSecondary: "rgba(30,58,138,",
+    opacityMul: 1.4,
+  },
+  "beast-tessera": {
+    strokes: ["58,58,64", "42,42,48", "28,28,32", "72,72,80"],
+    fills: ["12,12,14", "8,8,10", "4,4,6"],
+    accent: ["90,90,98", "70,70,78"],
+    hudPrimary: "rgba(90,90,98,",
+    hudSecondary: "rgba(42,42,48,",
+    opacityMul: 1.55,
   },
 };
 
@@ -2344,63 +2400,69 @@ function buildConstellation(p: BeastPalette): string {
   return wrapSvg(parts.join(""));
 }
 
-/* ─── Circuit Lace: lace curves + circuit nodes ─── */
+/* ─── Circuit Lace: lace curves + circuit nodes（全面） ─── */
 
 function buildCircuitLace(p: BeastPalette): string {
   const parts: string[] = [];
+  const colStep = 26;
+  const rowStep = 24;
+  const cols = Math.ceil(CANVAS_W / colStep) + 2;
+  const rows = Math.ceil(CANVAS_H / rowStep) + 2;
 
-  // Lace loops
-  for (let i = 0; i < 28; i += 1) {
-    const nx = 0.34 + hash01(i * 2, 1.4) * 0.7;
-    const ny = hash01(i * 1.8, 3.6);
-    if (hash01(i + 1, 0.55) > densityAt(nx, ny) * 0.85) continue;
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      const cx =
+        col * colStep +
+        (row % 2) * (colStep * 0.5) +
+        (hash01(col, row) - 0.5) * 7;
+      const cy = row * rowStep + (hash01(col + 1, row + 2) - 0.5) * 6;
+      if (cx < -22 || cx > CANVAS_W + 22 || cy < -22 || cy > CANVAS_H + 22) continue;
+      // 軽く間引き（全面は維持）
+      if (hash01(col * 1.3, row * 2.1) < 0.1) continue;
 
-    const cx = nx * CANVAS_W;
-    const cy = ny * CANVAS_H;
-    const r = 8 + hash01(i, 4) * 16;
-    const lobes = 4 + Math.floor(hash01(i, 5) * 3);
-    let d = "";
-    for (let k = 0; k <= lobes * 2; k += 1) {
-      const t = k / (lobes * 2);
-      const a = t * Math.PI * 2;
-      const rr = r * (0.55 + 0.45 * Math.abs(Math.sin(a * (lobes / 2))));
-      const x = cx + Math.cos(a) * rr;
-      const y = cy + Math.sin(a) * rr * 0.88;
-      d += k === 0 ? `M${x.toFixed(1)} ${y.toFixed(1)}` : ` L${x.toFixed(1)} ${y.toFixed(1)}`;
-    }
-    d += " Z";
-    const stroke = pick(p.strokes, i, 1);
-    parts.push(
-      `<path d="${d}" fill="none" stroke="rgba(${stroke},${beastOp(0.07 + hash01(i, 6) * 0.08).toFixed(3)})" stroke-width="0.45"/>`
-    );
-
-    // circuit traces radiating
-    const rays = 3 + Math.floor(hash01(i, 7) * 3);
-    for (let k = 0; k < rays; k += 1) {
-      const a = hash01(i, k + 8) * Math.PI * 2;
-      const len = r * (0.7 + hash01(i, k) * 0.8);
-      const x2 = cx + Math.cos(a) * len;
-      const y2 = cy + Math.sin(a) * len;
-      const mid = len * 0.55;
-      const xm = cx + Math.cos(a) * mid;
-      const ym = cy + Math.sin(a) * mid;
-      // elbow: horizontal then to tip (circuit style)
-      const elbow =
-        hash01(i, k + 10) > 0.5
-          ? `M${cx.toFixed(1)} ${cy.toFixed(1)} L${xm.toFixed(1)} ${cy.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}`
-          : `M${cx.toFixed(1)} ${cy.toFixed(1)} L${cx.toFixed(1)} ${ym.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}`;
+      const i = col * 17 + row;
+      const r = 6.5 + hash01(col, row + 4) * 10;
+      const lobes = 4 + Math.floor(hash01(col, row + 5) * 3);
+      let d = "";
+      for (let k = 0; k <= lobes * 2; k += 1) {
+        const t = k / (lobes * 2);
+        const a = t * Math.PI * 2;
+        const rr = r * (0.55 + 0.45 * Math.abs(Math.sin(a * (lobes / 2))));
+        const x = cx + Math.cos(a) * rr;
+        const y = cy + Math.sin(a) * rr * 0.88;
+        d += k === 0 ? `M${x.toFixed(1)} ${y.toFixed(1)}` : ` L${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      d += " Z";
+      const stroke = pick(p.strokes, i, 1);
       parts.push(
-        `<path d="${elbow}" fill="none" stroke="rgba(${pick(p.accent, i, k)},${beastOp(0.08).toFixed(3)})" stroke-width="0.4"/>`
+        `<path d="${d}" fill="none" stroke="rgba(${stroke},${beastOp(0.055 + hash01(col, row + 6) * 0.06).toFixed(3)})" stroke-width="0.42"/>`
       );
+
+      const rays = 2 + Math.floor(hash01(col, row + 7) * 3);
+      for (let k = 0; k < rays; k += 1) {
+        const a = hash01(col + k, row + 8) * Math.PI * 2;
+        const len = r * (0.65 + hash01(col, row + k) * 0.75);
+        const x2 = cx + Math.cos(a) * len;
+        const y2 = cy + Math.sin(a) * len;
+        const mid = len * 0.55;
+        const xm = cx + Math.cos(a) * mid;
+        const ym = cy + Math.sin(a) * mid;
+        const elbow =
+          hash01(col, row + k + 10) > 0.5
+            ? `M${cx.toFixed(1)} ${cy.toFixed(1)} L${xm.toFixed(1)} ${cy.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}`
+            : `M${cx.toFixed(1)} ${cy.toFixed(1)} L${cx.toFixed(1)} ${ym.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}`;
+        parts.push(
+          `<path d="${elbow}" fill="none" stroke="rgba(${pick(p.accent, i, k)},${beastOp(0.065).toFixed(3)})" stroke-width="0.38"/>`
+        );
+        parts.push(
+          `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="0.9" fill="none" stroke="rgba(${pick(p.strokes, i, k + 2)},${beastOp(0.1).toFixed(3)})" stroke-width="0.4"/>`
+        );
+      }
+
       parts.push(
-        `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="1" fill="none" stroke="rgba(${pick(p.strokes, i, k + 2)},${beastOp(0.12).toFixed(3)})" stroke-width="0.45"/>`
+        `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="1.05" fill="rgba(${pick(p.accent, i, 3)},${beastOp(0.11).toFixed(3)})"/>`
       );
     }
-
-    // center via
-    parts.push(
-      `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="1.2" fill="rgba(${pick(p.accent, i, 3)},${beastOp(0.14).toFixed(3)})"/>`
-    );
   }
 
   return wrapSvg(parts.join(""));
@@ -2835,38 +2897,47 @@ function buildInkSwirl(p: BeastPalette): string {
   return wrapSvg(parts.join(""));
 }
 
-/* ─── Jagged Plate: pointed overlapping armor panels ─── */
+/* ─── Jagged Plate: 尖った装甲板を全面に重ねる ─── */
 
 function buildJagArmor(p: BeastPalette): string {
   const parts: string[] = [];
-  const colStep = 17;
-  const rowStep = 15;
-  const cols = Math.ceil(CANVAS_W / colStep) + 2;
-  const rows = Math.ceil(CANVAS_H / rowStep) + 2;
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#040203"/>`
+  );
 
-  for (let row = 0; row < rows; row += 1) {
-    for (let col = 0; col < cols; col += 1) {
-      const cx = col * colStep + (row % 2) * (colStep * 0.5);
-      const cy = row * rowStep;
-      const nx = cx / CANVAS_W;
-      const ny = cy / CANVAS_H;
-      if (hash01(col + 1.1, row + 2.3) > densityAt(nx, ny) * 0.96) continue;
+  const colStep = 14.4;
+  const rowStep = 13.0;
+  const cols = Math.ceil(CANVAS_W / colStep) + 3;
+  const rows = Math.ceil(CANVAS_H / rowStep) + 3;
 
-      const s = 8 + hash01(col, row) * 5;
-      const rot = ((hash01(col, row + 2) - 0.5) * 18).toFixed(1);
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      const cx = col * colStep + (row % 2) * (colStep * 0.52) - colStep * 0.3;
+      const cy = row * rowStep - rowStep * 0.25;
+      if (cx < -24 || cx > CANVAS_W + 24 || cy < -24 || cy > CANVAS_H + 24) continue;
+
+      // 軽く間引き（全面は維持）
+      if (hash01(col * 1.3, row * 2.1) < 0.07) continue;
+
+      const s = 7.0 + hash01(col, row) * 3.8;
+      const rot = ((hash01(col, row + 2) - 0.5) * 12).toFixed(1);
       const pts = [
         `0,${(-s).toFixed(1)}`,
-        `${(s * 0.7).toFixed(1)},${(-s * 0.2).toFixed(1)}`,
-        `${(s * 0.45).toFixed(1)},${(s * 0.75).toFixed(1)}`,
-        `0,${(s * 0.4).toFixed(1)}`,
-        `${(-s * 0.5).toFixed(1)},${(s * 0.7).toFixed(1)}`,
-        `${(-s * 0.7).toFixed(1)},${(-s * 0.15).toFixed(1)}`,
+        `${(s * 0.72).toFixed(1)},${(-s * 0.18).toFixed(1)}`,
+        `${(s * 0.48).toFixed(1)},${(s * 0.78).toFixed(1)}`,
+        `0,${(s * 0.38).toFixed(1)}`,
+        `${(-s * 0.52).toFixed(1)},${(s * 0.72).toFixed(1)}`,
+        `${(-s * 0.72).toFixed(1)},${(-s * 0.14).toFixed(1)}`,
       ].join(" ");
+
+      const fillOp = beastOp(0.09 + hash01(col, row + 3) * 0.07);
+      const strokeOp = beastOp(0.14 + hash01(col, row) * 0.09);
+      const accentOp = beastOp(0.07 + hash01(col, row + 1) * 0.06);
 
       parts.push(
         `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${rot})">` +
-          `<polygon points="${pts}" fill="rgba(${pick(p.fills, col, row)},${beastOp(0.08).toFixed(3)})" stroke="rgba(${pick(p.strokes, col, row)},${beastOp(0.13 + hash01(col, row) * 0.1).toFixed(3)})" stroke-width="0.85"/>` +
-          `<line x1="0" y1="${(-s * 0.55).toFixed(1)}" x2="0" y2="${(s * 0.15).toFixed(1)}" stroke="rgba(${pick(p.accent, col, row)},${beastOp(0.1).toFixed(3)})" stroke-width="0.45"/>` +
+          `<polygon points="${pts}" fill="rgba(${pick(p.fills, col, row)},${fillOp.toFixed(3)})" stroke="rgba(${pick(p.strokes, col, row)},${strokeOp.toFixed(3)})" stroke-width="0.75" stroke-linejoin="miter"/>` +
+          `<line x1="0" y1="${(-s * 0.52).toFixed(1)}" x2="0" y2="${(s * 0.12).toFixed(1)}" stroke="rgba(${pick(p.accent, col, row)},${accentOp.toFixed(3)})" stroke-width="0.38"/>` +
           `</g>`
       );
     }
@@ -3362,6 +3433,949 @@ function tickRow(
   return t.join("");
 }
 
+/* ─── Gold Regalia: 黒カピトネ＋控えめ金フルール（月間総合1位） ─── */
+
+/** 交点のフルール — 小さく・低彩度で黒地に溶ける */
+function regaliaFleurButton(
+  cx: number,
+  cy: number,
+  s: number,
+  gold: string,
+  bright: string,
+  op: number
+): string {
+  const o = op.toFixed(3);
+  const ob = Math.min(1, op * 1.1).toFixed(3);
+  const od = (op * 0.55).toFixed(3);
+  return (
+    `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(s * 0.95).toFixed(1)}" fill="rgba(0,0,0,${(op * 0.55).toFixed(3)})"/>` +
+    `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(s * 0.68).toFixed(1)}" fill="none" stroke="rgba(${gold},${od})" stroke-width="0.3"/>` +
+    `<path d="M${cx.toFixed(1)} ${(cy + s * 0.26).toFixed(1)} C${(cx - s * 0.24).toFixed(1)} ${(cy + s * 0.02).toFixed(1)} ${(cx - s * 0.18).toFixed(1)} ${(cy - s * 0.38).toFixed(1)} ${cx.toFixed(1)} ${(cy - s * 0.7).toFixed(1)} C${(cx + s * 0.18).toFixed(1)} ${(cy - s * 0.38).toFixed(1)} ${(cx + s * 0.24).toFixed(1)} ${(cy + s * 0.02).toFixed(1)} ${cx.toFixed(1)} ${(cy + s * 0.26).toFixed(1)} Z" fill="rgba(${gold},${o})"/>` +
+    `<path d="M${(cx - s * 0.02).toFixed(1)} ${(cy + s * 0.04).toFixed(1)} C${(cx - s * 0.4).toFixed(1)} ${(cy - s * 0.08).toFixed(1)} ${(cx - s * 0.9).toFixed(1)} ${(cy - s * 0.4).toFixed(1)} ${(cx - s * 0.82).toFixed(1)} ${(cy - s * 0.04).toFixed(1)} C${(cx - s * 0.62).toFixed(1)} ${(cy + s * 0.22).toFixed(1)} ${(cx - s * 0.26).toFixed(1)} ${(cy + s * 0.3).toFixed(1)} ${(cx - s * 0.02).toFixed(1)} ${(cy + s * 0.04).toFixed(1)} Z" fill="rgba(${gold},${o})"/>` +
+    `<path d="M${(cx + s * 0.02).toFixed(1)} ${(cy + s * 0.04).toFixed(1)} C${(cx + s * 0.4).toFixed(1)} ${(cy - s * 0.08).toFixed(1)} ${(cx + s * 0.9).toFixed(1)} ${(cy - s * 0.4).toFixed(1)} ${(cx + s * 0.82).toFixed(1)} ${(cy - s * 0.04).toFixed(1)} C${(cx + s * 0.62).toFixed(1)} ${(cy + s * 0.22).toFixed(1)} ${(cx + s * 0.26).toFixed(1)} ${(cy + s * 0.3).toFixed(1)} ${(cx + s * 0.02).toFixed(1)} ${(cy + s * 0.04).toFixed(1)} Z" fill="rgba(${gold},${o})"/>` +
+    `<rect x="${(cx - s * 0.42).toFixed(1)}" y="${(cy + s * 0.24).toFixed(1)}" width="${(s * 0.84).toFixed(1)}" height="${(s * 0.14).toFixed(1)}" rx="0.25" fill="rgba(${bright},${ob})"/>`
+  );
+}
+
+function buildRegalia(p: BeastPalette): string {
+  const gold = p.strokes[0] ?? "212,175,55";
+  const bright = p.accent[0] ?? "253,230,138";
+
+  // 少し大きめにして金の密度を下げる
+  const cell = 48;
+  const rowH = cell * 0.54;
+  const cols = Math.ceil(CANVAS_W / cell) + 3;
+  const rows = Math.ceil(CANVAS_H / rowH) + 3;
+
+  const diamondAt = (col: number, row: number) => {
+    const cx = col * cell + (row % 2 === 0 ? 0 : cell / 2);
+    const cy = row * rowH;
+    const hw = cell * 0.5;
+    const hh = rowH * 0.5;
+    return { cx, cy, hw, hh };
+  };
+
+  const defs =
+    `<defs>` +
+    `<radialGradient id="regalia-quilt-pad" cx="38%" cy="32%" r="82%" fx="34%" fy="28%">` +
+    `<stop offset="0%" stop-color="#2a2a30"/>` +
+    `<stop offset="32%" stop-color="#18181c"/>` +
+    `<stop offset="62%" stop-color="#0a0a0c"/>` +
+    `<stop offset="88%" stop-color="#030304"/>` +
+    `<stop offset="100%" stop-color="#000000"/>` +
+    `</radialGradient>` +
+    `<radialGradient id="regalia-quilt-shine" cx="30%" cy="22%" r="48%">` +
+    `<stop offset="0%" stop-color="#5a5a64" stop-opacity="0.16"/>` +
+    `<stop offset="50%" stop-color="#5a5a64" stop-opacity="0.04"/>` +
+    `<stop offset="100%" stop-color="#5a5a64" stop-opacity="0"/>` +
+    `</radialGradient>` +
+    `</defs>`;
+
+  const parts: string[] = [defs];
+
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#010102"/>`
+  );
+
+  // ① クッション菱形
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      const { cx, cy, hw, hh } = diamondAt(col, row);
+      if (cx < -50 || cx > CANVAS_W + 50 || cy < -50 || cy > CANVAS_H + 50) continue;
+
+      const pts = `${cx.toFixed(1)},${(cy - hh).toFixed(1)} ${(cx + hw).toFixed(1)},${cy.toFixed(1)} ${cx.toFixed(1)},${(cy + hh).toFixed(1)} ${(cx - hw).toFixed(1)},${cy.toFixed(1)}`;
+
+      parts.push(`<polygon points="${pts}" fill="url(#regalia-quilt-pad)"/>`);
+      parts.push(`<polygon points="${pts}" fill="url(#regalia-quilt-shine)"/>`);
+      parts.push(
+        `<polygon points="${pts}" fill="none" stroke="rgba(0,0,0,0.85)" stroke-width="2.4"/>`
+      );
+      parts.push(
+        `<path d="M${(cx + hw * 0.1).toFixed(1)} ${(cy + hh * 0.12).toFixed(1)} L${(cx + hw).toFixed(1)} ${cy.toFixed(1)} L${cx.toFixed(1)} ${(cy + hh).toFixed(1)} L${(cx - hw * 0.15).toFixed(1)} ${(cy + hh * 0.45).toFixed(1)} Z" fill="rgba(0,0,0,0.45)"/>`
+      );
+    }
+  }
+
+  // ② 金シーム — 控えめに読める程度
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      const { cx, cy, hw, hh } = diamondAt(col, row);
+      if (cx < -50 || cx > CANVAS_W + 50 || cy < -50 || cy > CANVAS_H + 50) continue;
+
+      const pts = `${cx.toFixed(1)},${(cy - hh).toFixed(1)} ${(cx + hw).toFixed(1)},${cy.toFixed(1)} ${cx.toFixed(1)},${(cy + hh).toFixed(1)} ${(cx - hw).toFixed(1)},${cy.toFixed(1)}`;
+      parts.push(
+        `<polygon points="${pts}" fill="none" stroke="rgba(${bright},${beastOp(0.05).toFixed(3)})" stroke-width="1.2"/>`
+      );
+      parts.push(
+        `<polygon points="${pts}" fill="none" stroke="rgba(${gold},${beastOp(0.15).toFixed(3)})" stroke-width="0.6"/>`
+      );
+    }
+  }
+
+  // ③ 交点エンブレム — 市松でやや間引き
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      const { cx, cy, hw, hh } = diamondAt(col, row);
+      const verts: Array<[number, number, number, number]> = [
+        [cx, cy - hh, col, row],
+        [cx - hw, cy, col, row + 100],
+      ];
+      for (const [vx, vy, a, b] of verts) {
+        if (vx < -8 || vx > CANVAS_W + 8 || vy < -8 || vy > CANVAS_H + 8) continue;
+        if ((Math.round(vx / (cell * 0.5)) + Math.round(vy / rowH)) % 2 !== 0) continue;
+        if (hash01(a + 0.7, b + 1.3) < 0.1) continue;
+
+        const dens = densityAt(
+          Math.max(0, Math.min(1, vx / CANVAS_W)),
+          Math.max(0, Math.min(1, vy / CANVAS_H))
+        );
+        const emblemOp = beastOp(0.15 + dens * 0.07);
+        parts.push(regaliaFleurButton(vx, vy, 3.8, gold, bright, emblemOp));
+      }
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Thunder Strike: クラシック稲妻シルエット（月間UPSET1位） ─── */
+
+/**
+ * 参考アイコン寄せの塗りつぶし稲妻。
+ * ローカル座標: 上尖 y=-1、下尖 y=+1、幅はだいたい ±0.55。
+ */
+const THUNDER_BOLT_SHAPES: readonly (readonly [number, number][])[] = [
+  // ① 定番⚡ — 太い2段ジグザグ
+  [
+    [0.12, -1.05],
+    [0.62, -0.08],
+    [0.22, -0.08],
+    [0.72, 1.05],
+    [-0.38, 0.22],
+    [0.08, 0.22],
+    [-0.48, -1.05],
+  ],
+  // ② シャープ3段 — 段差をはっきり
+  [
+    [0.05, -1.08],
+    [0.48, -0.42],
+    [0.12, -0.42],
+    [0.58, 0.18],
+    [0.18, 0.18],
+    [0.55, 1.08],
+    [-0.28, 0.42],
+    [0.1, 0.42],
+    [-0.52, -0.18],
+    [-0.12, -0.18],
+    [-0.42, -1.08],
+  ],
+  // ③ 細長く尖る — 下へ矢じり
+  [
+    [0.08, -1.1],
+    [0.42, -0.35],
+    [0.14, -0.35],
+    [0.52, 0.25],
+    [0.2, 0.25],
+    [0.38, 0.85],
+    [0.05, 1.12],
+    [-0.22, 0.55],
+    [0.05, 0.55],
+    [-0.4, -0.05],
+    [-0.08, -0.05],
+    [-0.35, -1.1],
+  ],
+  // ④ ブロック寄りクラシック（アイコン2列目）
+  [
+    [0.18, -1.0],
+    [0.7, 0.0],
+    [0.28, 0.0],
+    [0.68, 1.0],
+    [-0.42, 0.28],
+    [0.05, 0.28],
+    [-0.52, -1.0],
+  ],
+];
+
+function thunderBoltVerts(shapeIndex: number): readonly [number, number][] {
+  return THUNDER_BOLT_SHAPES[shapeIndex % THUNDER_BOLT_SHAPES.length]!;
+}
+
+function thunderBoltPolygon(
+  cx: number,
+  cy: number,
+  scale: number,
+  tilt: number,
+  shapeIndex: number
+): string {
+  const cos = Math.cos(tilt);
+  const sin = Math.sin(tilt);
+  return thunderBoltVerts(shapeIndex)
+    .map(([x, y]) => {
+      const px = cx + (x * cos - y * sin) * scale;
+      const py = cy + (x * sin + y * cos) * scale;
+      return `${px.toFixed(1)},${py.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function buildThunder(p: BeastPalette): string {
+  const parts: string[] = [];
+  // 稲妻が読める余白を残しつつ、斜めに敷き詰める
+  const colStep = 16.5;
+  const rowStep = 20.5;
+  const baseTilt = -Math.PI * 0.14;
+  const cols = Math.ceil(CANVAS_W / colStep) + 3;
+  const rows = Math.ceil(CANVAS_H / rowStep) + 3;
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const cx = col * colStep + (row % 2) * (colStep * 0.5) - colStep;
+      const cy = row * rowStep - rowStep * 0.3;
+      const nx = cx / CANVAS_W;
+      const ny = cy / CANVAS_H;
+      if (nx < -0.06 || nx > 1.1 || ny < -0.06 || ny > 1.1) continue;
+
+      const dens = densityAt(
+        Math.max(0, Math.min(1, nx)),
+        Math.max(0, Math.min(1, ny))
+      );
+      if (hash01(col * 1.7, row * 2.1) > dens * 0.88 + 0.12) continue;
+
+      const sizeJ = 0.9 + hash01(col * 1.3, row * 1.9) * 0.35;
+      const scale = 9.6 * sizeJ;
+      const roll = hash01(col + 3.1, row + 0.7);
+      const shapeIndex = Math.floor(hash01(col * 2.4, row * 3.7) * THUNDER_BOLT_SHAPES.length);
+      const localTilt =
+        baseTilt + (hash01(col, row + 11) - 0.5) * 0.22;
+
+      let fill: string;
+      let stroke: string;
+      let fillOp: number;
+      let strokeOp: number;
+      if (roll > 0.84) {
+        fill = pick(p.accent, col, row);
+        stroke = pick(p.accent, col + 2, row + 1);
+        fillOp = beastOp(0.24 + hash01(col, row + 4) * 0.12);
+        strokeOp = beastOp(0.16);
+      } else if (roll > 0.52) {
+        fill = pick(p.strokes, col, row);
+        stroke = pick(p.strokes, col + 1, row + 2);
+        fillOp = beastOp(0.14 + hash01(col, row) * 0.1);
+        strokeOp = beastOp(0.1);
+      } else {
+        fill = pick(p.fills, col, row);
+        stroke = pick(p.strokes, col + 2, row);
+        fillOp = beastOp(0.11 + hash01(col, row + 5) * 0.08);
+        strokeOp = beastOp(0.08);
+      }
+
+      const poly = thunderBoltPolygon(cx, cy, scale, localTilt, shapeIndex);
+      parts.push(
+        `<polygon points="${poly}" fill="rgba(${fill},${fillOp.toFixed(3)})" stroke="rgba(${stroke},${strokeOp.toFixed(3)})" stroke-width="0.35" stroke-linejoin="miter"/>`
+      );
+
+      // 電光ハイライト芯（明るいボルトだけ）
+      if (roll > 0.78) {
+        const core = thunderBoltPolygon(
+          cx,
+          cy,
+          scale * 0.38,
+          localTilt,
+          shapeIndex
+        );
+        parts.push(
+          `<polygon points="${core}" fill="rgba(${pick(p.accent, col + 5, row)},${beastOp(0.14).toFixed(3)})" stroke="none"/>`
+        );
+      }
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Star Crest: 銀×黒・六方格子の四尖星（参考準拠・抑えめ） ─── */
+
+/** 凹辺の四尖星 — tips は上下左右 */
+function fourPointStarPts(
+  cx: number,
+  cy: number,
+  outer: number,
+  inner: number
+): string {
+  const pts: string[] = [];
+  // 0° から → 尖は上下左右、くぼみは斜め
+  for (let i = 0; i < 8; i += 1) {
+    const a = (Math.PI * i) / 4;
+    const r = i % 2 === 0 ? outer : inner;
+    pts.push(
+      `${(cx + Math.cos(a) * r).toFixed(1)},${(cy + Math.sin(a) * r).toFixed(1)}`
+    );
+  }
+  return pts.join(" ");
+}
+
+/** V溝のリッジ（マット銀・低コントラスト） */
+function mutedBevelBeam(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  halfW: number
+): string {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const px = -uy * halfW;
+  const py = ux * halfW;
+  const hi =
+    `${x0.toFixed(1)},${y0.toFixed(1)} ${(x0 + px).toFixed(1)},${(y0 + py).toFixed(1)} ${(x1 + px).toFixed(1)},${(y1 + py).toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  const lo =
+    `${x0.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)} ${(x1 - px).toFixed(1)},${(y1 - py).toFixed(1)} ${(x0 - px).toFixed(1)},${(y0 - py).toFixed(1)}`;
+  return (
+    `<polygon points="${hi}" fill="rgba(130,130,138,0.62)"/>` +
+    `<polygon points="${lo}" fill="rgba(22,22,26,0.9)"/>`
+  );
+}
+
+function buildStarborne(_p: BeastPalette): string {
+  // 六方: ハブ中心 → 6本スポーク → 頂点に四尖星
+  const R = 17;
+  const hubDx = Math.sqrt(3) * R;
+  const hubDy = 1.5 * R;
+  const halfW = 0.85;
+
+  const parts: string[] = [];
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#121214"/>`
+  );
+
+  const cols = Math.ceil(CANVAS_W / hubDx) + 3;
+  const rows = Math.ceil(CANVAS_H / hubDy) + 3;
+
+  type Pt = { x: number; y: number };
+  const hubs: Pt[] = [];
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      hubs.push({
+        x: col * hubDx + (row % 2 === 0 ? 0 : hubDx / 2) - hubDx,
+        y: row * hubDy - hubDy,
+      });
+    }
+  }
+
+  // ① 6方向のマット銀リッジ
+  for (const h of hubs) {
+    if (h.x < -R * 2 || h.x > CANVAS_W + R * 2 || h.y < -R * 2 || h.y > CANVAS_H + R * 2)
+      continue;
+    for (let k = 0; k < 6; k += 1) {
+      const a = (Math.PI * k) / 3 + Math.PI / 6;
+      const x1 = h.x + Math.cos(a) * R;
+      const y1 = h.y + Math.sin(a) * R;
+      parts.push(mutedBevelBeam(h.x, h.y, x1, y1, halfW));
+    }
+    // ハブはごく小さく
+    parts.push(
+      `<circle cx="${h.x.toFixed(1)}" cy="${h.y.toFixed(1)}" r="0.9" fill="rgba(90,90,98,0.5)"/>`
+    );
+  }
+
+  // ② 六角形頂点の黒四尖星（重複除去）
+  const seen = new Set<string>();
+  const outer = R * 0.42;
+  const inner = R * 0.11;
+  for (const h of hubs) {
+    for (let k = 0; k < 6; k += 1) {
+      const a = (Math.PI * k) / 3 + Math.PI / 6;
+      const sx = h.x + Math.cos(a) * R;
+      const sy = h.y + Math.sin(a) * R;
+      if (sx < -R || sx > CANVAS_W + R || sy < -R || sy > CANVAS_H + R) continue;
+      const key = `${(sx * 2).toFixed(0)}_${(sy * 2).toFixed(0)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const pts = fourPointStarPts(sx, sy, outer, inner);
+      const top = `${sx.toFixed(1)},${(sy - outer).toFixed(1)}`;
+      const leftIndent = `${(sx - inner * 0.85).toFixed(1)},${(sy - inner * 0.85).toFixed(1)}`;
+      parts.push(
+        `<polygon points="${pts}" fill="#08080a" stroke="rgba(158,158,166,0.5)" stroke-width="0.5" stroke-linejoin="miter"/>`
+      );
+      parts.push(
+        `<polyline points="${leftIndent} ${top} ${(sx + inner * 0.85).toFixed(1)},${(sy - inner * 0.85).toFixed(1)}" fill="none" stroke="rgba(175,175,182,0.4)" stroke-width="0.45" stroke-linecap="round"/>`
+      );
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Target Lock: スナイパー照準の散りばめ（最多得点者候補） ─── */
+
+function reticleMark(
+  cx: number,
+  cy: number,
+  s: number,
+  ink: string,
+  bright: string,
+  op: number,
+  style: number
+): string {
+  const o = op.toFixed(3);
+  const ob = Math.min(1, op * 1.25).toFixed(3);
+  const od = (op * 0.55).toFixed(3);
+  const sw = Math.max(0.35, s * 0.06).toFixed(2);
+  const r = s;
+  const g: string[] = [];
+
+  // 外円
+  g.push(
+    `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="rgba(${ink},${o})" stroke-width="${sw}"/>`
+  );
+
+  if (style < 0.34) {
+    // クラシッククロスヘア + 四隅ブラケット
+    const arm = r * 0.72;
+    const gap = r * 0.18;
+    g.push(
+      `<line x1="${(cx - arm).toFixed(1)}" y1="${cy.toFixed(1)}" x2="${(cx - gap).toFixed(1)}" y2="${cy.toFixed(1)}" stroke="rgba(${bright},${ob})" stroke-width="${sw}"/>` +
+        `<line x1="${(cx + gap).toFixed(1)}" y1="${cy.toFixed(1)}" x2="${(cx + arm).toFixed(1)}" y2="${cy.toFixed(1)}" stroke="rgba(${bright},${ob})" stroke-width="${sw}"/>` +
+        `<line x1="${cx.toFixed(1)}" y1="${(cy - arm).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${(cy - gap).toFixed(1)}" stroke="rgba(${bright},${ob})" stroke-width="${sw}"/>` +
+        `<line x1="${cx.toFixed(1)}" y1="${(cy + gap).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${(cy + arm).toFixed(1)}" stroke="rgba(${bright},${ob})" stroke-width="${sw}"/>`
+    );
+    const b = r * 0.55;
+    const bl = r * 0.22;
+    for (const [sx, sy] of [
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ] as const) {
+      const x0 = cx + sx * b;
+      const y0 = cy + sy * b;
+      g.push(
+        `<path d="M${(x0 - sx * bl).toFixed(1)} ${y0.toFixed(1)} L${x0.toFixed(1)} ${y0.toFixed(1)} L${x0.toFixed(1)} ${(y0 - sy * bl).toFixed(1)}" fill="none" stroke="rgba(${ink},${o})" stroke-width="${sw}" stroke-linecap="square"/>`
+      );
+    }
+    g.push(
+      `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r * 0.08).toFixed(2)}" fill="rgba(${bright},${ob})"/>`
+    );
+  } else if (style < 0.67) {
+    // 二重リング + ティック
+    g.push(
+      `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r * 0.62).toFixed(1)}" fill="none" stroke="rgba(${ink},${od})" stroke-width="${sw}" stroke-dasharray="${(r * 0.18).toFixed(1)} ${(r * 0.12).toFixed(1)}"/>`
+    );
+    for (let i = 0; i < 8; i += 1) {
+      const a = (Math.PI * 2 * i) / 8;
+      const x0 = cx + Math.cos(a) * r * 0.78;
+      const y0 = cy + Math.sin(a) * r * 0.78;
+      const x1 = cx + Math.cos(a) * r * 0.95;
+      const y1 = cy + Math.sin(a) * r * 0.95;
+      g.push(
+        `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="rgba(${bright},${o})" stroke-width="${sw}"/>`
+      );
+    }
+    g.push(
+      `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r * 0.12).toFixed(2)}" fill="none" stroke="rgba(${bright},${ob})" stroke-width="${sw}"/>`
+    );
+  } else {
+    // ダイヤロック枠
+    const d = r * 0.72;
+    g.push(
+      `<polygon points="${cx.toFixed(1)},${(cy - d).toFixed(1)} ${(cx + d).toFixed(1)},${cy.toFixed(1)} ${cx.toFixed(1)},${(cy + d).toFixed(1)} ${(cx - d).toFixed(1)},${cy.toFixed(1)}" fill="none" stroke="rgba(${ink},${o})" stroke-width="${sw}"/>`
+    );
+    g.push(
+      `<polygon points="${cx.toFixed(1)},${(cy - d * 0.4).toFixed(1)} ${(cx + d * 0.4).toFixed(1)},${cy.toFixed(1)} ${cx.toFixed(1)},${(cy + d * 0.4).toFixed(1)} ${(cx - d * 0.4).toFixed(1)},${cy.toFixed(1)}" fill="none" stroke="rgba(${bright},${ob})" stroke-width="${(Number(sw) * 0.85).toFixed(2)}"/>`
+    );
+    g.push(
+      `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r * 0.06).toFixed(2)}" fill="rgba(${bright},${ob})"/>`
+    );
+  }
+
+  return g.join("");
+}
+
+function buildReticle(p: BeastPalette): string {
+  const parts: string[] = [];
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#020406"/>`
+  );
+
+  // 淡いグリッド（ロックオンHUD感）
+  const grid = 22;
+  for (let x = 0; x < CANVAS_W; x += grid) {
+    parts.push(
+      `<line x1="${x}" y1="0" x2="${x}" y2="${CANVAS_H}" stroke="rgba(71,85,105,${beastOp(0.035).toFixed(3)})" stroke-width="0.4"/>`
+    );
+  }
+  for (let y = 0; y < CANVAS_H; y += grid) {
+    parts.push(
+      `<line x1="0" y1="${y}" x2="${CANVAS_W}" y2="${y}" stroke="rgba(71,85,105,${beastOp(0.035).toFixed(3)})" stroke-width="0.4"/>`
+    );
+  }
+
+  for (let i = 0; i < 42; i += 1) {
+    const nx = 0.06 + hash01(i * 1.7, 2.1) * 0.88;
+    const ny = 0.05 + hash01(i * 2.3, 3.4) * 0.9;
+    if (hash01(i + 0.8, 1.2) > densityAt(nx, ny) * 0.9 + 0.1) continue;
+
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const s = 6.5 + hash01(i, 4) * 14;
+    const style = hash01(i, 5);
+    const ink = pick(p.strokes, i, 1);
+    const bright = pick(p.accent, i, 2);
+    const op = beastOp(0.12 + hash01(i, 6) * 0.14);
+    parts.push(reticleMark(cx, cy, s, ink, bright, op, style));
+  }
+
+  // 大きめの主照準を数個
+  for (let i = 0; i < 6; i += 1) {
+    const nx = 0.18 + hash01(i * 4.1, 5.2) * 0.64;
+    const ny = 0.15 + hash01(i * 3.3, 6.1) * 0.7;
+    const dens = densityAt(nx, ny);
+    if (dens < 0.35) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const s = 16 + hash01(i, 7) * 10;
+    parts.push(
+      reticleMark(
+        cx,
+        cy,
+        s,
+        pick(p.strokes, i + 3, 1),
+        pick(p.accent, i + 1, 2),
+        beastOp(0.18 + dens * 0.08),
+        hash01(i, 8) * 0.33
+      )
+    );
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+/* ─── Diamond Cut: 連続ファセット格子（最多得点者候補） ─── */
+
+function buildFacet(p: BeastPalette): string {
+  const defs =
+    `<defs>` +
+    // ハイ面も白飛びさせない — 暗いgunmetal帯
+    `<linearGradient id="facet-hi" x1="15%" y1="10%" x2="85%" y2="90%">` +
+    `<stop offset="0%" stop-color="#7a8494"/>` +
+    `<stop offset="40%" stop-color="#3a4250"/>` +
+    `<stop offset="75%" stop-color="#161a22"/>` +
+    `<stop offset="100%" stop-color="#050608"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="facet-mid" x1="80%" y1="5%" x2="10%" y2="95%">` +
+    `<stop offset="0%" stop-color="#4a5260"/>` +
+    `<stop offset="50%" stop-color="#1c222c"/>` +
+    `<stop offset="100%" stop-color="#06080c"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="facet-lo" x1="40%" y1="0%" x2="60%" y2="100%">` +
+    `<stop offset="0%" stop-color="#2a303a"/>` +
+    `<stop offset="55%" stop-color="#0c0e12"/>` +
+    `<stop offset="100%" stop-color="#000000"/>` +
+    `</linearGradient>` +
+    `</defs>`;
+
+  const parts: string[] = [defs];
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#010102"/>`
+  );
+
+  // 少し大きめにして密度・ギラつきを抑える
+  const cell = 34;
+  const rowH = cell * 0.58;
+  const cols = Math.ceil(CANVAS_W / cell) + 2;
+  const rows = Math.ceil(CANVAS_H / rowH) + 2;
+
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      const cx = col * cell + (row % 2 === 0 ? 0 : cell / 2);
+      const cy = row * rowH;
+      if (cx < -40 || cx > CANVAS_W + 40 || cy < -40 || cy > CANVAS_H + 40) continue;
+
+      const hw = cell * 0.5;
+      const hh = rowH * 0.5;
+      const dens = densityAt(
+        Math.max(0, Math.min(1, cx / CANVAS_W)),
+        Math.max(0, Math.min(1, cy / CANVAS_H))
+      );
+      const roll = hash01(col * 1.3, row * 2.1);
+
+      const mid = `${cx.toFixed(1)},${cy.toFixed(1)}`;
+      const top = `${cx.toFixed(1)},${(cy - hh).toFixed(1)}`;
+      const right = `${(cx + hw).toFixed(1)},${cy.toFixed(1)}`;
+      const bot = `${cx.toFixed(1)},${(cy + hh).toFixed(1)}`;
+      const left = `${(cx - hw).toFixed(1)},${cy.toFixed(1)}`;
+
+      // 明るい面はごく稀に — 大半は mid / lo
+      const tris: [string, string][] = [
+        [
+          `${mid} ${top} ${right}`,
+          roll < 0.1
+            ? "url(#facet-hi)"
+            : roll < 0.42
+              ? "url(#facet-mid)"
+              : "url(#facet-lo)",
+        ],
+        [
+          `${mid} ${right} ${bot}`,
+          hash01(col, row + 1) < 0.08 ? "url(#facet-hi)" : "url(#facet-lo)",
+        ],
+        [
+          `${mid} ${bot} ${left}`,
+          hash01(col + 2, row) < 0.18 ? "url(#facet-mid)" : "url(#facet-lo)",
+        ],
+        [
+          `${mid} ${left} ${top}`,
+          hash01(col + 1, row + 2) < 0.07
+            ? "url(#facet-hi)"
+            : "url(#facet-mid)",
+        ],
+      ];
+
+      for (const [pts, fill] of tris) {
+        parts.push(
+          `<polygon points="${pts}" fill="${fill}" fill-opacity="${(0.38 + dens * 0.28).toFixed(2)}"/>`
+        );
+      }
+
+      const edgeOp = beastOp(0.055 + dens * 0.045);
+      parts.push(
+        `<polygon points="${top} ${right} ${bot} ${left}" fill="none" stroke="rgba(${pick(p.strokes, col, row)},${edgeOp.toFixed(3)})" stroke-width="0.35"/>`
+      );
+      const cutOp = beastOp(0.03 + dens * 0.03);
+      const ink = pick(p.strokes, col + 1, row);
+      for (const end of [top, right, bot, left]) {
+        const [ex, ey] = end.split(",");
+        parts.push(
+          `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${ex}" y2="${ey}" stroke="rgba(${ink},${cutOp.toFixed(3)})" stroke-width="0.25"/>`
+        );
+      }
+
+      // 頂点の光点はさらに稀・弱く
+      if (roll > 0.93) {
+        parts.push(
+          `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="0.45" fill="rgba(203,213,225,${beastOp(0.14).toFixed(3)})"/>`
+        );
+      }
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+
+/* ─── Azure Fracture: 低ポリ結晶クラック（新 Pro Skin 候補） ─── */
+
+function buildShard(p: BeastPalette): string {
+  const defs =
+    `<defs>` +
+    // 青は深いコバルト寄り — ネオン白青を避ける
+    `<linearGradient id="shard-blue-hi" x1="20%" y1="5%" x2="80%" y2="95%">` +
+    `<stop offset="0%" stop-color="#3b82f6"/>` +
+    `<stop offset="40%" stop-color="#1e40af"/>` +
+    `<stop offset="75%" stop-color="#0c1a3a"/>` +
+    `<stop offset="100%" stop-color="#020617"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="shard-blue-mid" x1="70%" y1="0%" x2="20%" y2="100%">` +
+    `<stop offset="0%" stop-color="#2563eb"/>` +
+    `<stop offset="50%" stop-color="#1e3a8a"/>` +
+    `<stop offset="100%" stop-color="#050810"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="shard-blue-lo" x1="40%" y1="10%" x2="60%" y2="100%">` +
+    `<stop offset="0%" stop-color="#1d4ed8"/>` +
+    `<stop offset="45%" stop-color="#0f172a"/>` +
+    `<stop offset="100%" stop-color="#000000"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="shard-matte" x1="30%" y1="0%" x2="70%" y2="100%">` +
+    `<stop offset="0%" stop-color="#1c2028"/>` +
+    `<stop offset="45%" stop-color="#0a0c10"/>` +
+    `<stop offset="100%" stop-color="#000000"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="shard-matte-hi" x1="15%" y1="10%" x2="90%" y2="90%">` +
+    `<stop offset="0%" stop-color="#2e3440"/>` +
+    `<stop offset="55%" stop-color="#141820"/>` +
+    `<stop offset="100%" stop-color="#030406"/>` +
+    `</linearGradient>` +
+    `</defs>`;
+
+  const parts: string[] = [defs];
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#000000"/>`
+  );
+
+  const step = 18;
+  const cols = Math.ceil(CANVAS_W / step) + 3;
+  const rows = Math.ceil(CANVAS_H / step) + 3;
+  type Pt = { x: number; y: number };
+  const grid: Pt[][] = [];
+  for (let r = 0; r < rows; r += 1) {
+    const rowPts: Pt[] = [];
+    for (let c = 0; c < cols; c += 1) {
+      const jx = (hash01(c * 1.7, r * 2.3) - 0.5) * step * 0.65;
+      const jy = (hash01(c * 2.9, r * 1.4) - 0.5) * step * 0.65;
+      rowPts.push({
+        x: c * step - step + jx,
+        y: r * step - step + jy,
+      });
+    }
+    grid.push(rowPts);
+  }
+
+  const pushTri = (
+    a: Pt,
+    b: Pt,
+    c: Pt,
+    fill: string,
+    edgeRgb: string,
+    edgeOp: number
+  ) => {
+    const pts = `${a.x.toFixed(1)},${a.y.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)} ${c.x.toFixed(1)},${c.y.toFixed(1)}`;
+    parts.push(`<polygon points="${pts}" fill="${fill}"/>`);
+    parts.push(
+      `<polygon points="${pts}" fill="none" stroke="rgba(${edgeRgb},${edgeOp.toFixed(3)})" stroke-width="0.28" stroke-linejoin="miter"/>`
+    );
+  };
+
+  for (let r = 0; r < rows - 1; r += 1) {
+    for (let c = 0; c < cols - 1; c += 1) {
+      const A = grid[r]![c]!;
+      const B = grid[r]![c + 1]!;
+      const C = grid[r + 1]![c + 1]!;
+      const D = grid[r + 1]![c]!;
+
+      const lightFace = (p0: Pt, p1: Pt, p2: Pt) => {
+        const e1x = p1.x - p0.x;
+        const e1y = p1.y - p0.y;
+        const e2x = p2.x - p0.x;
+        const e2y = p2.y - p0.y;
+        return e1x * e2y - e1y * e2x;
+      };
+
+      const flip = hash01(c, r) > 0.5;
+      const tris: [Pt, Pt, Pt][] = flip
+        ? [
+            [A, B, C],
+            [A, C, D],
+          ]
+        : [
+            [A, B, D],
+            [B, C, D],
+          ];
+
+      for (let ti = 0; ti < tris.length; ti += 1) {
+        const [p0, p1, p2] = tris[ti]!;
+        const nx = (p0.x + p1.x + p2.x) / 3 / CANVAS_W;
+        const ny = (p0.y + p1.y + p2.y) / 3 / CANVAS_H;
+        const dens = densityAt(
+          Math.max(0, Math.min(1, nx)),
+          Math.max(0, Math.min(1, ny))
+        );
+        const lit = lightFace(p0, p1, p2);
+        const roll = hash01(c * 3.1 + ti, r * 2.7);
+        // 青はごく一部 — 黒結晶が主役
+        const blueChance = 0.045 + dens * 0.05;
+        let fill: string;
+        if (roll < blueChance && lit > 0) {
+          fill =
+            roll < blueChance * 0.22
+              ? "url(#shard-blue-hi)"
+              : roll < blueChance * 0.55
+                ? "url(#shard-blue-mid)"
+                : "url(#shard-blue-lo)";
+        } else if (lit > 50 && roll > 0.78) {
+          fill = "url(#shard-matte-hi)";
+        } else {
+          fill = "url(#shard-matte)";
+        }
+        const isBlue = fill.startsWith("url(#shard-blue");
+        const edge = isBlue ? pick(p.strokes, c, r) : pick(p.fills, c + 1, r);
+        const edgeOp = beastOp(isBlue ? 0.1 : 0.05);
+        pushTri(p0, p1, p2, fill, edge, edgeOp);
+      }
+    }
+  }
+
+  // 大きめスパイクは少なめ・青も控えめ
+  for (let i = 0; i < 12; i += 1) {
+    const nx = 0.08 + hash01(i * 2.2, 1.1) * 0.84;
+    const ny = 0.06 + hash01(i * 1.8, 3.3) * 0.88;
+    if (hash01(i + 0.5, 2.2) > densityAt(nx, ny) * 0.8 + 0.2) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const n = 3 + Math.floor(hash01(i, 4) * 3);
+    const rad = 9 + hash01(i, 5) * 16;
+    const rot = hash01(i, 6) * Math.PI * 2;
+    const verts: Pt[] = [];
+    for (let k = 0; k < n; k += 1) {
+      const a = rot + (Math.PI * 2 * k) / n;
+      const rr = rad * (0.55 + hash01(i + k, 7) * 0.65);
+      verts.push({
+        x: cx + Math.cos(a) * rr,
+        y: cy + Math.sin(a) * rr * (0.75 + hash01(i, 8) * 0.35),
+      });
+    }
+    const peak: Pt = {
+      x: cx + (hash01(i, 9) - 0.5) * rad * 0.2,
+      y: cy + (hash01(i, 10) - 0.5) * rad * 0.2,
+    };
+    for (let k = 0; k < n; k += 1) {
+      const a = verts[k]!;
+      const b = verts[(k + 1) % n]!;
+      const roll = hash01(i * 5 + k, 11);
+      const fill =
+        roll < 0.14
+          ? "url(#shard-blue-lo)"
+          : roll < 0.28
+            ? "url(#shard-blue-mid)"
+            : roll < 0.55
+              ? "url(#shard-matte-hi)"
+              : "url(#shard-matte)";
+      const isBlue = fill.startsWith("url(#shard-blue");
+      pushTri(
+        peak,
+        a,
+        b,
+        fill,
+        isBlue ? pick(p.strokes, i, k) : "16,18,24",
+        beastOp(isBlue ? 0.12 : 0.06)
+      );
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
+
+/* ─── Obsidian Tessera: 正三角形のマット黒メタル切面（新候補） ─── */
+
+function buildTessera(_p: BeastPalette): string {
+  const side = 19;
+  const h = (side * Math.sqrt(3)) / 2;
+  const half = side / 2;
+
+  const defs =
+    `<defs>` +
+    `<linearGradient id="tess-up-a" x1="50%" y1="0%" x2="50%" y2="100%">` +
+    `<stop offset="0%" stop-color="#505058"/>` +
+    `<stop offset="38%" stop-color="#26262c"/>` +
+    `<stop offset="100%" stop-color="#08080a"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="tess-up-b" x1="50%" y1="0%" x2="50%" y2="100%">` +
+    `<stop offset="0%" stop-color="#42424a"/>` +
+    `<stop offset="48%" stop-color="#1c1c20"/>` +
+    `<stop offset="100%" stop-color="#050506"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="tess-dn-a" x1="50%" y1="0%" x2="50%" y2="100%">` +
+    `<stop offset="0%" stop-color="#484850"/>` +
+    `<stop offset="35%" stop-color="#24242a"/>` +
+    `<stop offset="100%" stop-color="#0a0a0c"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="tess-dn-b" x1="50%" y1="0%" x2="50%" y2="100%">` +
+    `<stop offset="0%" stop-color="#3c3c44"/>` +
+    `<stop offset="45%" stop-color="#1c1c20"/>` +
+    `<stop offset="100%" stop-color="#060608"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="tess-edge" x1="0%" y1="0%" x2="100%" y2="0%">` +
+    `<stop offset="0%" stop-color="#7a7a86" stop-opacity="0"/>` +
+    `<stop offset="50%" stop-color="#9a9aa6" stop-opacity="0.5"/>` +
+    `<stop offset="100%" stop-color="#7a7a86" stop-opacity="0"/>` +
+    `</linearGradient>` +
+    `</defs>`;
+
+  const parts: string[] = [defs];
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="#000000"/>`
+  );
+
+  const cols = Math.ceil((CANVAS_W + side * 2) / half) + 4;
+  const rows = Math.ceil((CANVAS_H + h * 2) / h) + 3;
+
+  const pt = (c: number, r: number) => ({
+    x: c * half - half * 2,
+    y: r * h - h,
+  });
+
+  const drawTri = (
+    a: { x: number; y: number },
+    b: { x: number; y: number },
+    c: { x: number; y: number },
+    fill: string
+  ) => {
+    const pts = `${a.x.toFixed(1)},${a.y.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)} ${c.x.toFixed(1)},${c.y.toFixed(1)}`;
+    parts.push(`<polygon points="${pts}" fill="${fill}"/>`);
+    parts.push(
+      `<polygon points="${pts}" fill="none" stroke="rgba(0,0,0,0.95)" stroke-width="1.0" stroke-linejoin="miter"/>`
+    );
+    // 最も高い辺にサテン線
+    const verts = [a, b, c];
+    const topY = Math.min(a.y, b.y, c.y);
+    const tops = verts.filter((v) => v.y <= topY + 0.15);
+    if (tops.length === 2) {
+      const L = tops[0]!.x <= tops[1]!.x ? tops[0]! : tops[1]!;
+      const R = tops[0]!.x <= tops[1]!.x ? tops[1]! : tops[0]!;
+      parts.push(
+        `<line x1="${(L.x + 1.2).toFixed(1)}" y1="${(topY + 0.4).toFixed(1)}" x2="${(R.x - 1.2).toFixed(1)}" y2="${(topY + 0.4).toFixed(1)}" stroke="url(#tess-edge)" stroke-width="0.6"/>`
+      );
+    } else if (tops.length === 1) {
+      // 上向き: 頂点だけ明るいので左右の斜辺の上寄りに短い光は不要 — 頂点付近の点
+      const tip = tops[0]!;
+      parts.push(
+        `<circle cx="${tip.x.toFixed(1)}" cy="${(tip.y + 1.2).toFixed(1)}" r="0.55" fill="rgba(120,120,130,0.22)"/>`
+      );
+    }
+  };
+
+  for (let r = 0; r < rows - 1; r += 1) {
+    // c を偶数だけ走査し、各セルで up + down を1組描く
+    for (let c = 0; c < cols - 2; c += 2) {
+      const P00 = pt(c, r);
+      const P20 = pt(c + 2, r);
+      const P11 = pt(c + 1, r + 1);
+      const P10 = pt(c + 1, r);
+      const P01 = pt(c, r + 1);
+      const P21 = pt(c + 2, r + 1);
+
+      // 上向き △
+      const upFill =
+        hash01(c * 0.7, r * 1.3) > 0.5 ? "url(#tess-up-a)" : "url(#tess-up-b)";
+      drawTri(P00, P20, P11, upFill);
+
+      // 下向き ▽（ひとつ右にずらした組: tip down from top row midpoint）
+      // (c+1,r), (c,r+1), (c+2,r+1)
+      const dnFill =
+        hash01(c * 0.9 + 1, r * 1.1) > 0.5
+          ? "url(#tess-dn-a)"
+          : "url(#tess-dn-b)";
+      drawTri(P10, P01, P21, dnFill);
+    }
+  }
+
+  return wrapSvg(parts.join(""));
+}
+
 function dotGrid(
   x0: number,
   y0: number,
@@ -3491,6 +4505,20 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
         return buildArmor(p);
       case "beast-dna":
         return buildDna(p);
+      case "beast-regalia":
+        return buildRegalia(p);
+      case "beast-thunder":
+        return buildThunder(p);
+      case "beast-starborne":
+        return buildStarborne(p);
+      case "beast-reticle":
+        return buildReticle(p);
+      case "beast-facet":
+        return buildFacet(p);
+      case "beast-shard":
+        return buildShard(p);
+      case "beast-tessera":
+        return buildTessera(p);
       default:
         return wrapSvg("");
     }
@@ -3503,28 +4531,28 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
 export function getProfilePlanProBeastSkinSvg(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedSvg(`beast:skin:svg:${variant}:v11`, () => buildSkinSvg(variant));
+  return cachedSvg(`beast:skin:svg:${variant}:v42`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD（Native SvgXml 用） */
 export function getProfilePlanProBeastHudSvg(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedSvg(`beast:hud:svg:${variant}:v11`, () => buildHudSvg(variant));
+  return cachedSvg(`beast:hud:svg:${variant}:v42`, () => buildHudSvg(variant));
 }
 
 /** 疎な獣皮 / 宝石レイヤー */
 export function getProfilePlanProBeastSkinUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:skin:${variant}:v11`, () => buildSkinSvg(variant));
+  return cachedUrl(`beast:skin:${variant}:v42`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD */
 export function getProfilePlanProBeastHudUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:hud:${variant}:v11`, () => buildHudSvg(variant));
+  return cachedUrl(`beast:hud:${variant}:v42`, () => buildHudSvg(variant));
 }
 
 export const PROFILE_PLAN_PRO_BEAST_CANVAS = {

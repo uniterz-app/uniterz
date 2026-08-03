@@ -128,11 +128,42 @@
 }
 
 .profile-plan-pro-bg--beast-jagarmor .profile-plan-pro-bg__beast-skin {
-  filter: contrast(1.12) saturate(1.08);
+  filter: contrast(1.12) saturate(1.05) brightness(0.97);
 }
 
 .profile-plan-pro-bg--beast-crimsonveil .profile-plan-pro-bg__beast-skin {
   filter: contrast(1.1) saturate(1.2);
+}
+
+.profile-plan-pro-bg--beast-regalia .profile-plan-pro-bg__beast-skin {
+  /* 黒キルト優先。金は適度に */
+  filter: contrast(1.12) saturate(0.98) brightness(0.96);
+}
+
+.profile-plan-pro-bg--beast-thunder .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.14) saturate(1.2);
+}
+
+.profile-plan-pro-bg--beast-starborne .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.06) saturate(0.8) brightness(0.94);
+}
+
+.profile-plan-pro-bg--beast-reticle .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.16) saturate(1.1) brightness(1.01);
+}
+
+.profile-plan-pro-bg--beast-facet .profile-plan-pro-bg__beast-skin {
+  /* 切子は残しつつ、ギラつきを抑えて黒を優先 */
+  filter: contrast(1.08) saturate(0.85) brightness(0.94);
+}
+
+.profile-plan-pro-bg--beast-shard .profile-plan-pro-bg__beast-skin {
+  /* 黒結晶優先。青はアクセント程度に */
+  filter: contrast(1.1) saturate(0.9) brightness(0.93);
+}
+
+.profile-plan-pro-bg--beast-tessera .profile-plan-pro-bg__beast-skin {
+  filter: contrast(1.16) saturate(0.85) brightness(0.98);
 }
 
 

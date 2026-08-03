@@ -92,8 +92,8 @@ export const PROFILE_PLAN_PRO_ADOPTED_CATEGORIES: readonly ProfilePlanProAdopted
       id: "material",
       labelJa: "素材",
       labelEn: "Material",
-      descriptionJa: "カーボン・チタン・織物・回路レースなど、素材・ブランド柄。",
-      descriptionEn: "Carbon, titanium, weave, and circuit-lace motifs.",
+      descriptionJa: "チタン・装甲・回路レースなど、素材・ブランド柄。",
+      descriptionEn: "Titanium, armor plate, and circuit-lace motifs.",
     },
     {
       id: "geometry",
@@ -125,30 +125,30 @@ type AdoptedSpec = {
 
 /** 採用 22 — 解放カタログ順（即解放 → マイルストーン）。詳細は `proSkinUnlock.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // Pro 即解放 ×11
+  // Pro 即解放 ×10
   { id: "atmos", category: "cyber", family: "atmos" },
   { id: "parallax", category: "cyber", family: "atmos" },
-  { id: "neo-flux", category: "cyber", family: "neo" },
-  { id: "futuristic-eclipse", category: "cyber", family: "futuristic" },
   { id: "scale-mamba", category: "reptile", family: "scale" },
   { id: "scale-python", category: "reptile", family: "scale" },
   { id: "beast-crocodile", category: "reptile", family: "beast" },
-  { id: "beast-carbon", category: "material", family: "beast" },
-  { id: "beast-titanium", category: "material", family: "beast" },
-  { id: "beast-chevron", category: "material", family: "beast" },
-  { id: "form-hexveil", category: "geometry", family: "form" },
-  // マイルストーン ×11
-  { id: "scale-diamondback", category: "reptile", family: "scale" },
-  { id: "beast-viper", category: "reptile", family: "beast" },
   { id: "beast-panther", category: "beast", family: "beast" },
+  { id: "beast-titanium", category: "material", family: "beast" },
+  { id: "form-hexveil", category: "geometry", family: "form" },
+  { id: "scale-diamondback", category: "reptile", family: "scale" },
+  { id: "beast-shark", category: "beast", family: "beast" },
+  // マイルストーン ×12
+  { id: "beast-viper", category: "reptile", family: "beast" },
   { id: "scale-king", category: "reptile", family: "scale" },
   { id: "scale-dragon", category: "reptile", family: "scale" },
-  { id: "beast-drake", category: "reptile", family: "beast" },
-  { id: "beast-shark", category: "beast", family: "beast" },
   { id: "beast-circuitlace", category: "material", family: "beast" },
+  { id: "beast-eclipse", category: "beast", family: "beast" },
+  { id: "beast-shard", category: "beast", family: "beast" },
   { id: "beast-jagarmor", category: "material", family: "beast" },
   { id: "form-isocubes", category: "geometry", family: "form" },
-  { id: "beast-eclipse", category: "beast", family: "beast" },
+  { id: "beast-facet", category: "beast", family: "beast" },
+  { id: "beast-thunder", category: "beast", family: "beast" },
+  { id: "beast-starborne", category: "beast", family: "beast" },
+  { id: "beast-regalia", category: "beast", family: "beast" },
 ];
 
 function bgMeta(id: ProfilePlanProBgVariant): ProfilePlanProBgVariantMeta | undefined {

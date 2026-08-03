@@ -9,6 +9,7 @@ import {
   formatProSkinUnlockCondition,
   getProSkinUnlockEntry,
   PRO_SKIN_UNLOCK_CATALOG,
+  userDataIsPro,
 } from "@/lib/profile/proSkinUnlock";
 import {
   ensurePersistedProSkinUnlocks,
@@ -107,7 +108,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "user not found" }, { status: 404 });
     }
     const userData = (snap.data() ?? {}) as Record<string, unknown>;
-    if (userData.plan !== "pro") {
+    if (!userDataIsPro(userData)) {
       return NextResponse.json({ error: "pro required" }, { status: 403 });
     }
 

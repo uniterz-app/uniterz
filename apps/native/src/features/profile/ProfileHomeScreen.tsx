@@ -1195,6 +1195,8 @@ export default function ProfileHomeScreen({
         else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
         else if (page === "futuristicBgPreview" && __DEV__)
           navigation.navigate("FuturisticBgPreview");
+        else if (page === "titleSkinPreview" && __DEV__)
+          navigation.navigate("TitleSkinPreview");
       }}
     />
     <ProfileBadgeDetailModal

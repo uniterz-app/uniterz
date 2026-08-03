@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放11 / マイルストーン11。
+ * Pro Skin 解放ルール — 即解放10 / マイルストーン12。
  * 並べ順もここが正（カタログ表示・No. はこの順）。
  */
 
@@ -21,7 +21,8 @@ export type ProSkinUnlockKind =
 export type ProSkinRankMetric =
   | "totalPoints"
   | "totalUpset"
-  | "totalGoalScorerHits";
+  | "totalGoalScorerHits"
+  | "winRate";
 
 export type ProSkinUnlockRule =
   | { kind: "pro" }
@@ -62,11 +63,42 @@ export type ProSkinUnlockCatalogEntry = ProfilePlanProAdoptedEntry & {
   sortIndex: number;
 };
 
+/** users.plan / proUntil から Pro 判定（期限切れは free） */
+export function userDataIsPro(userData: Record<string, unknown> | null | undefined): boolean {
+  if (!userData || userData.plan !== "pro") return false;
+  const until = userData.proUntil as
+    | { toMillis?: () => number; seconds?: number; _seconds?: number }
+    | Date
+    | number
+    | string
+    | null
+    | undefined;
+  if (until == null || until === "") return true;
+  let ms = 0;
+  if (until instanceof Date) {
+    ms = until.getTime();
+  } else if (typeof until === "number") {
+    ms = until < 1e12 ? until * 1000 : until;
+  } else if (typeof until === "string") {
+    const parsed = Date.parse(until);
+    ms = Number.isFinite(parsed) ? parsed : 0;
+  } else if (typeof until.toMillis === "function") {
+    ms = until.toMillis();
+  } else if (typeof until.seconds === "number") {
+    ms = until.seconds * 1000;
+  } else if (typeof until._seconds === "number") {
+    ms = until._seconds * 1000;
+  }
+  if (!Number.isFinite(ms) || ms <= 0) return true;
+  return ms > Date.now();
+}
+
 export const EMPTY_PRO_SKIN_RANK_MAP: Record<ProSkinRankMetric, number | null> =
   {
     totalPoints: null,
     totalUpset: null,
     totalGoalScorerHits: null,
+    winRate: null,
   };
 
 /** 即解放（Pro）→ マイルストーン（難易度昇順） */
@@ -74,27 +106,27 @@ const UNLOCK_ORDER: readonly {
   id: ProfilePlanProBgVariant;
   unlock: ProSkinUnlockRule;
 }[] = [
-  // —— Pro 即解放 ×11 ——
+  // —— Pro 即解放 ×10 ——
   { id: "atmos", unlock: { kind: "pro" } },
   { id: "parallax", unlock: { kind: "pro" } },
-  { id: "neo-flux", unlock: { kind: "pro" } },
-  { id: "futuristic-eclipse", unlock: { kind: "pro" } },
   { id: "scale-mamba", unlock: { kind: "pro" } },
   { id: "scale-python", unlock: { kind: "pro" } },
   { id: "beast-crocodile", unlock: { kind: "pro" } },
-  { id: "beast-carbon", unlock: { kind: "pro" } },
+  { id: "beast-panther", unlock: { kind: "pro" } },
   { id: "beast-titanium", unlock: { kind: "pro" } },
-  { id: "beast-chevron", unlock: { kind: "pro" } },
   { id: "form-hexveil", unlock: { kind: "pro" } },
-  // —— マイルストーン ×11 ——
-  { id: "scale-diamondback", unlock: { kind: "streak", threshold: 7 } },
-  { id: "beast-viper", unlock: { kind: "streak", threshold: 10 } },
-  { id: "beast-panther", unlock: { kind: "streak", threshold: 15 } },
-  { id: "scale-king", unlock: { kind: "posts", threshold: 50 } },
-  { id: "scale-dragon", unlock: { kind: "posts", threshold: 100 } },
-  { id: "beast-drake", unlock: { kind: "posts", threshold: 150 } },
-  { id: "beast-shark", unlock: { kind: "exactHits", threshold: 5 } },
-  { id: "beast-circuitlace", unlock: { kind: "exactHits", threshold: 10 } },
+  { id: "scale-diamondback", unlock: { kind: "pro" } },
+  { id: "beast-shark", unlock: { kind: "pro" } },
+  // —— マイルストーン ×12 ——
+  // 努力
+  { id: "beast-viper", unlock: { kind: "streak", threshold: 7 } },
+  { id: "scale-king", unlock: { kind: "streak", threshold: 10 } },
+  { id: "scale-dragon", unlock: { kind: "streak", threshold: 15 } },
+  { id: "beast-circuitlace", unlock: { kind: "posts", threshold: 100 } },
+  { id: "beast-eclipse", unlock: { kind: "posts", threshold: 150 } },
+  // 精度
+  { id: "beast-shard", unlock: { kind: "exactHits", threshold: 10 } },
+  // 順位
   {
     id: "beast-jagarmor",
     unlock: { kind: "monthlyRank", maxRank: 10, metric: "totalPoints" },
@@ -103,8 +135,25 @@ const UNLOCK_ORDER: readonly {
     id: "form-isocubes",
     unlock: { kind: "weeklyRank", maxRank: 1, metric: "totalPoints" },
   },
+  // 月間称号（最後へ）
   {
-    id: "beast-eclipse",
+    id: "beast-facet",
+    unlock: {
+      kind: "monthlyRank",
+      maxRank: 1,
+      metric: "totalGoalScorerHits",
+    },
+  },
+  {
+    id: "beast-thunder",
+    unlock: { kind: "monthlyRank", maxRank: 1, metric: "totalUpset" },
+  },
+  {
+    id: "beast-starborne",
+    unlock: { kind: "monthlyRank", maxRank: 1, metric: "winRate" },
+  },
+  {
+    id: "beast-regalia",
     unlock: { kind: "monthlyRank", maxRank: 1, metric: "totalPoints" },
   },
 ] as const;
@@ -207,6 +256,13 @@ export function listUnlockedProSkinIds(
   ).map((e) => e.id);
 }
 
+/** Pro 加入だけで解放されるスキン */
+export function listProImmediateSkinIds(): ProfilePlanProBgVariant[] {
+  return PRO_SKIN_UNLOCK_CATALOG.filter((e) => e.unlock.kind === "pro").map(
+    (e) => e.id
+  );
+}
+
 /** 称号コレクション（Drake 等）を保持セットへ反映 */
 export function applyProSkinTitleCollections(
   unlockedIds: Set<string>,
@@ -232,6 +288,8 @@ function formatRankMetricLabel(
       return ja ? "UPSET" : "upset";
     case "totalGoalScorerHits":
       return ja ? "最多得点者" : "goal scorer";
+    case "winRate":
+      return ja ? "勝率" : "win rate";
   }
 }
 

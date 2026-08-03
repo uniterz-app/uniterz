@@ -622,20 +622,23 @@ function buildFractal(p: FormPalette): string {
   return wrapSvg(parts.join(""));
 }
 
+/* ─── Isometric Cubes: 全面タイル ─── */
+
 function buildIsoCubes(p: FormPalette): string {
   const parts: string[] = [];
-  const w = 14;
-  const h = 8;
-  const colStep = w * 1.55;
-  const rowStep = h * 1.7;
-  const cols = Math.ceil(canvasW / colStep) + 2;
-  const rows = Math.ceil(canvasH / rowStep) + 2;
-  for (let row = 0; row < rows; row += 1) {
-    for (let col = 0; col < cols; col += 1) {
-      const cx = 20 + col * colStep + (row % 2) * (w * 0.78);
-      const cy = 10 + row * rowStep;
+  const w = 13;
+  const h = 7.5;
+  const colStep = w * 1.48;
+  const rowStep = h * 1.62;
+  const cols = Math.ceil(canvasW / colStep) + 3;
+  const rows = Math.ceil(canvasH / rowStep) + 3;
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      const cx = col * colStep + (row % 2) * (w * 0.78) - colStep * 0.2;
+      const cy = row * rowStep - rowStep * 0.15;
       if (cx < -w || cy < -h || cx > canvasW + w || cy > canvasH + h) continue;
-      if (hash01(col, row) > densityAt(cx / canvasW, cy / canvasH) * 0.85) continue;
+      // 軽く間引き（全面は維持）
+      if (hash01(col * 1.2, row * 1.8) < 0.06) continue;
       const top = [
         `M${cx.toFixed(1)} ${(cy - h).toFixed(1)}`,
         `L${(cx + w / 2).toFixed(1)} ${(cy - h / 2).toFixed(1)}`,
@@ -659,9 +662,9 @@ function buildIsoCubes(p: FormPalette): string {
       ].join(" ");
       const stroke = pick(p.strokes, col, row);
       parts.push(
-        `<path d="${top}" fill="rgba(${pick(p.fills, col, row)},${formOp(0.055).toFixed(3)})" stroke="rgba(${stroke},${formOp(0.1).toFixed(3)})" stroke-width="0.45"/>` +
-          `<path d="${left}" fill="rgba(${pick(p.fills, col + 1, row)},${formOp(0.04).toFixed(3)})" stroke="rgba(${stroke},${formOp(0.09).toFixed(3)})" stroke-width="0.4"/>` +
-          `<path d="${right}" fill="none" stroke="rgba(${pick(p.accent, col, row)},${formOp(0.08).toFixed(3)})" stroke-width="0.4"/>`
+        `<path d="${top}" fill="rgba(${pick(p.fills, col, row)},${formOp(0.045).toFixed(3)})" stroke="rgba(${stroke},${formOp(0.085).toFixed(3)})" stroke-width="0.42"/>` +
+          `<path d="${left}" fill="rgba(${pick(p.fills, col + 1, row)},${formOp(0.032).toFixed(3)})" stroke="rgba(${stroke},${formOp(0.075).toFixed(3)})" stroke-width="0.38"/>` +
+          `<path d="${right}" fill="none" stroke="rgba(${pick(p.accent, col, row)},${formOp(0.065).toFixed(3)})" stroke-width="0.38"/>`
       );
     }
   }
@@ -778,32 +781,32 @@ function buildSkinSvg(variant: ProfilePlanProFormBgVariant): string {
 export function getProfilePlanProFormSkinSvg(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedSvg(`form:skin:svg:${variant}:v2`, () => buildSkinSvg(variant));
+  return cachedSvg(`form:skin:svg:${variant}:v3`, () => buildSkinSvg(variant));
 }
 
 export function getProfilePlanProFormHudSvg(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedSvg(`form:hud:svg:${variant}:v2`, () => buildHudSvg(variant));
+  return cachedSvg(`form:hud:svg:${variant}:v3`, () => buildHudSvg(variant));
 }
 
 export function getProfilePlanProFormSkinUrl(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedUrl(`form:skin:${variant}:v2`, () => buildSkinSvg(variant));
+  return cachedUrl(`form:skin:${variant}:v3`, () => buildSkinSvg(variant));
 }
 
 export function getProfilePlanProFormHudUrl(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedUrl(`form:hud:${variant}:v2`, () => buildHudSvg(variant));
+  return cachedUrl(`form:hud:${variant}:v3`, () => buildHudSvg(variant));
 }
 
 /** Web 横長パネル用 — 960×380（引き伸ばしなし） */
 export function getProfilePlanProFormSkinUrlWeb(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedUrl(`form:skin:web:${variant}:v1`, () =>
+  return cachedUrl(`form:skin:web:${variant}:v2`, () =>
     withFormCanvas(CANVAS_W_WEB, CANVAS_H_WEB, () => buildSkinSvg(variant))
   );
 }

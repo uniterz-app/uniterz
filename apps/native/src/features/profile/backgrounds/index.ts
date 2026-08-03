@@ -25,4 +25,5 @@ export { default as EclipseBackground } from "./EclipseBackground";
 export { default as DataStreamBackground } from "./DataStreamBackground";
 export { default as PreviewScreen } from "./PreviewScreen";
 export { default as FuturisticBgPreviewScreenNative } from "./FuturisticBgPreviewScreenNative";
+export { default as TitleSkinPreviewScreenNative } from "./TitleSkinPreviewScreenNative";
 

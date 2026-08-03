@@ -22,6 +22,7 @@ import {
 } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
 import ProfilePlanProBackgroundNative from "../kinetik/ProfilePlanProBackgroundNative";
 import ProfileKinetikPanelNative from "../kinetik/ProfileKinetikPanelNative";
@@ -37,17 +38,23 @@ import {
   profilePlanProAdoptedCategoryLabel,
   type ProfilePlanProAdoptedCategory,
 } from "../../../../../../lib/profile/profilePlanProAdoptedBgVariants";
+import { profilePlanProAdoptedSkinSwatch } from "../../../../../../lib/profile/profilePlanProAdoptedSkinSwatch";
+import { parseCssLinearGradientColors } from "../../../../../../lib/profile/parseCssLinearGradientColors";
 import {
   diffNewlyUnlockedProSkins,
   formatProSkinOwnerCount,
   formatProSkinUnlockCondition,
   getProSkinUnlockEntry,
+  listProImmediateSkinIds,
   PRO_SKIN_UNLOCK_CATALOG,
   PRO_SKIN_UNLOCK_SEEN_STORAGE_KEY,
+  userDataIsPro,
   type ProSkinUnlockCatalogEntry,
 } from "../../../../../../lib/profile/proSkinUnlock";
 import { parseUserPlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
+import { db } from "../../../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { PROFILE_EDIT_KINETIK_MOCK } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 
@@ -159,6 +166,9 @@ function SkinThumbNative({
   const height = Math.max(84, Math.min(108, Math.round(width / 2.05)));
   const cat = categoryBadgeColors(entry.category);
   const condition = formatProSkinUnlockCondition(entry.unlock, language);
+  const swatchColors = parseCssLinearGradientColors(
+    profilePlanProAdoptedSkinSwatch(entry)
+  );
 
   return (
     <Pressable
@@ -222,11 +232,12 @@ function SkinThumbNative({
         </Text>
       </View>
       <View style={[styles.tilePreview, { height }]}>
-        <ProfilePlanProBackgroundNative
-          width={width}
-          height={height}
-          animate={false}
-          variant={entry.id}
+        {/* カタログは swatch のみ。フル SVG×22 は Native で極端に重い */}
+        <LinearGradient
+          colors={swatchColors}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
         />
         <ThumbCorners />
         {!unlocked ? (
@@ -236,7 +247,9 @@ function SkinThumbNative({
               size={18}
               color="rgba(253,230,138,0.95)"
             />
-            <Text style={styles.tileLockOverlayText}>MILESTONE</Text>
+            <Text style={styles.tileLockOverlayText}>
+              {entry.unlock.kind === "pro" ? "PRO" : "MILESTONE"}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -270,39 +283,70 @@ export default function ProSkinScreenNative() {
     () => new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
   );
   const [ownerCounts, setOwnerCounts] = useState<Record<string, number>>({});
+  const [viewerIsPro, setViewerIsPro] = useState(false);
   const [unlockModalIds, setUnlockModalIds] = useState<
     ProfilePlanProBgVariant[]
   >([]);
 
   useEffect(() => {
     if (!fUser) {
-      setUnlockedIds(new Set());
-      setReady(true);
+      setReady(false);
       return;
     }
     let alive = true;
+
+    async function resolveUnlockedIds(
+      fromApi: readonly string[],
+      apiSaysPro: boolean
+    ): Promise<{ ids: string[]; isPro: boolean }> {
+      const next = new Set(fromApi);
+      let isPro = apiSaysPro;
+      if (!isPro) {
+        try {
+          const snap = await getDoc(doc(db, "users", fUser!.uid));
+          isPro = userDataIsPro(
+            snap.exists() ? (snap.data() as Record<string, unknown>) : undefined
+          );
+        } catch {
+          /* ignore */
+        }
+      }
+      if (isPro) {
+        for (const id of listProImmediateSkinIds()) next.add(id);
+      }
+      return { ids: [...next], isPro };
+    }
+
     void (async () => {
       try {
         const status = await fetchProSkinStatusNative();
         if (!alive) return;
-        setUnlockedIds(new Set(status.unlockedIds));
+        const { ids, isPro } = await resolveUnlockedIds(
+          status.unlockedIds ?? [],
+          status.isPro
+        );
+        if (!alive) return;
+        setViewerIsPro(isPro);
+        setUnlockedIds(new Set(ids));
         setOwnerCounts(status.ownerCounts ?? {});
         const parsed = parseUserPlanProBgVariant(status.savedId);
         if (parsed) setSavedId(parsed);
         const seen = await readUnlockSeenIdsNative();
-        const newly = diffNewlyUnlockedProSkins(status.unlockedIds, seen);
+        const newly = diffNewlyUnlockedProSkins(ids, seen);
         if (newly.length > 0) {
           setUnlockModalIds(newly as ProfilePlanProBgVariant[]);
         }
         const nextSeen = new Set(seen);
-        for (const id of status.unlockedIds) {
+        for (const id of ids) {
           const entry = getProSkinUnlockEntry(id);
           if (entry?.unlock.kind === "pro") nextSeen.add(id);
         }
         await writeUnlockSeenIdsNative(nextSeen);
       } catch {
         if (!alive) return;
-        setUnlockedIds(new Set());
+        const { ids, isPro } = await resolveUnlockedIds([], false);
+        setViewerIsPro(isPro);
+        setUnlockedIds(new Set(ids));
       } finally {
         if (alive) setReady(true);
       }
@@ -332,17 +376,23 @@ export default function ProSkinScreenNative() {
     ? isJa
       ? "保存中…"
       : "Saving…"
-    : !overlayUnlocked
-      ? isJa
-        ? "未解放"
-        : "Locked"
-      : hasUnsavedChange
+    : !viewerIsPro
+      ? "GET PRO"
+      : !overlayUnlocked
         ? isJa
-          ? "このスキンを適用"
-          : "Apply skin"
-        : isJa
-          ? "適用済み"
-          : "Applied";
+          ? "未解放"
+          : "Locked"
+        : hasUnsavedChange
+          ? isJa
+            ? "このスキンを適用"
+            : "Apply skin"
+          : isJa
+            ? "適用済み"
+            : "Applied";
+
+  const goGetPro = useCallback(() => {
+    navigation.navigate("ProSubscribe");
+  }, [navigation]);
 
   const closeOverlay = useCallback(() => {
     if (saving) return;
@@ -396,8 +446,12 @@ export default function ProSkinScreenNative() {
       title="SKIN"
       subtitle={
         isJa
-          ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
-          : "Top skins unlock with Pro. Milestone skins unlock as you progress."
+          ? viewerIsPro
+            ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
+            : "プレビューは無料で見られます。適用するには Pro プランが必要です。"
+          : viewerIsPro
+            ? "Top skins unlock with Pro. Milestone skins unlock as you progress."
+            : "Preview is free. Upgrade to Pro to apply a skin."
       }
       appBackground
       onClose={() => navigation.goBack()}
@@ -424,8 +478,12 @@ export default function ProSkinScreenNative() {
                 <Text style={styles.pageTitle}>Choose Pro Skin</Text>
                 <Text style={styles.desc}>
                   {isJa
-                    ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
-                    : "Top skins unlock with Pro. Milestone skins unlock as you progress."}
+                    ? viewerIsPro
+                      ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
+                      : "プレビューは無料で見られます。適用するには Pro プランが必要です。"
+                    : viewerIsPro
+                      ? "Top skins unlock with Pro. Milestone skins unlock as you progress."
+                      : "Preview is free. Upgrade to Pro to apply a skin."}
                 </Text>
               </View>
             }
@@ -512,16 +570,49 @@ export default function ProSkinScreenNative() {
                       color="rgba(253,230,138,0.95)"
                     />
                     <Text style={styles.lockedBannerText}>
-                      {isJa
-                        ? "このスキンはまだ解放されていません"
-                        : "This skin is still locked"}
+                      {!viewerIsPro
+                        ? isJa
+                          ? "プレビューのみ · 適用には Pro が必要です"
+                          : "Preview only · Pro required to apply"
+                        : isJa
+                          ? "このスキンはまだ解放されていません"
+                          : "This skin is still locked"}
                     </Text>
                   </View>
                 ) : null}
               </ScrollView>
 
               <View style={styles.overlayActions}>
-                {overlayUnlocked ? (
+                {!viewerIsPro ? (
+                  <>
+                    <Pressable
+                      onPress={goGetPro}
+                      style={[
+                        styles.confirmBtn,
+                        styles.confirmBtnOn,
+                        styles.confirmBtnGrow,
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name="star-four-points"
+                        size={14}
+                        color="#050508"
+                      />
+                      <Text style={[styles.confirmBtnText, styles.confirmBtnTextOn]}>
+                        GET PRO
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={saving}
+                      onPress={closeOverlay}
+                      style={styles.cancelBtn}
+                    >
+                      <Text style={styles.cancelBtnText}>
+                        {isJa ? "キャンセル" : "Cancel"}
+                      </Text>
+                    </Pressable>
+                  </>
+                ) : overlayUnlocked ? (
                   <>
                     <Pressable
                       disabled={!canConfirm && !saving}

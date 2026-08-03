@@ -12,7 +12,6 @@ import {
   type KeyboardEvent,
 } from "react";
 import ProfileEditKinetikPanel from "@/app/component/profile/edit/ProfileEditKinetikPanel";
-import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanProBackgroundFx";
 import { PROFILE_EDIT_KINETIK_MOCK } from "@/app/component/profile/edit/profileEditKinetikTypes";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
@@ -27,8 +26,10 @@ import {
   formatProSkinOwnerCount,
   formatProSkinUnlockCondition,
   getProSkinUnlockEntry,
+  listProImmediateSkinIds,
   PRO_SKIN_UNLOCK_CATALOG,
   readProSkinUnlockSeenIds,
+  userDataIsPro,
   writeProSkinUnlockSeenIds,
   type ProSkinUnlockCatalogEntry,
 } from "@/lib/profile/proSkinUnlock";
@@ -36,6 +37,8 @@ import { profilePlanProAdoptedSkinSwatch } from "@/lib/profile/profilePlanProAdo
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_CLASS } from "@/lib/profile/profilePlanVisual";
 import { PRO_SUBSCRIBE_PATH } from "@/lib/pro/proSkinRoutes";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { auth } from "@/lib/firebase";
 import "@/app/component/profile/pro/profilePlanProBgPickerPreview.css";
 
 const CARD_LAYOUT_WIDTH = 400;
@@ -136,12 +139,7 @@ function SkinThumbnail({ entry }: { entry: ProfilePlanProAdoptedEntry }) {
         ].join(" ")}
         style={{ background: swatch }}
       >
-        <ProfilePlanProBackgroundFx
-          variant={entry.id}
-          animate={false}
-          /** サムネは横長 — Web キャンバス / cover で引き伸ばしを避ける */
-          web
-        />
+        {/* カタログは swatch のみ。フル SVG を22枚同時生成すると数百MB級になる */}
         <span
           className="profile-kinetik-frame-corner profile-kinetik-frame-corner--tl"
           aria-hidden
@@ -338,7 +336,7 @@ function CatalogTile({
                   "text-[9px] font-extrabold uppercase tracking-[0.12em] text-amber-50/90",
                 ].join(" ")}
               >
-                Milestone
+                {entry.unlock.kind === "pro" ? "PRO" : "MILESTONE"}
               </span>
             </div>
           </div>
@@ -378,6 +376,7 @@ export default function ProfilePlanProSkinPicker({
     new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
   );
   const [ownerCounts, setOwnerCounts] = useState<Record<string, number>>({});
+  const [viewerIsPro, setViewerIsPro] = useState(!isProduction);
   const [statusReady, setStatusReady] = useState(!isProduction);
   const [unlockModalIds, setUnlockModalIds] = useState<ProfilePlanProBgVariant[]>(
     []
@@ -390,33 +389,68 @@ export default function ProfilePlanProSkinPicker({
   useEffect(() => {
     if (!isProduction) {
       setUnlockedIds(new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id)));
+      setViewerIsPro(true);
       setStatusReady(true);
       return;
     }
     let alive = true;
+
+    async function resolveViewerIsPro(apiSaysPro: boolean): Promise<boolean> {
+      if (apiSaysPro) return true;
+      const uid = auth.currentUser?.uid;
+      if (!uid) return false;
+      try {
+        const data = await getUserDocDataCached(uid);
+        return userDataIsPro(data ?? undefined);
+      } catch {
+        return false;
+      }
+    }
+
+    async function resolveUnlockedIds(
+      fromApi: readonly string[],
+      apiSaysPro: boolean
+    ): Promise<string[]> {
+      const next = new Set(fromApi);
+      const isPro = await resolveViewerIsPro(apiSaysPro);
+      if (isPro) {
+        for (const id of listProImmediateSkinIds()) next.add(id);
+      }
+      return [...next];
+    }
+
     void fetchProSkinStatus()
-      .then((status) => {
+      .then(async (status) => {
         if (!alive) return;
-        setUnlockedIds(new Set(status.unlockedIds));
+        const apiSaysPro = status.progress?.isPro === true;
+        const isPro = await resolveViewerIsPro(apiSaysPro);
+        const fromApi = status.unlockedIds ?? [];
+        const ids = await resolveUnlockedIds(fromApi, apiSaysPro);
+        if (!alive) return;
+        setViewerIsPro(isPro);
+        setUnlockedIds(new Set(ids));
         setOwnerCounts(status.ownerCounts ?? {});
         if (status.savedId) setSavedId(status.savedId);
         const seen = readProSkinUnlockSeenIds();
-        const newly = diffNewlyUnlockedProSkins(status.unlockedIds, seen);
+        const newly = diffNewlyUnlockedProSkins(ids, seen);
         if (newly.length > 0) {
           setUnlockModalIds(newly as ProfilePlanProBgVariant[]);
         }
-        // Pro 即解放は既知扱いにする
         const nextSeen = new Set(seen);
-        for (const id of status.unlockedIds) {
+        for (const id of ids) {
           const entry = getProSkinUnlockEntry(id);
           if (entry?.unlock.kind === "pro") nextSeen.add(id);
         }
         writeProSkinUnlockSeenIds(nextSeen);
         setStatusReady(true);
       })
-      .catch(() => {
+      .catch(async () => {
         if (!alive) return;
-        setUnlockedIds(new Set());
+        const isPro = await resolveViewerIsPro(false);
+        const ids = await resolveUnlockedIds([], false);
+        if (!alive) return;
+        setViewerIsPro(isPro);
+        setUnlockedIds(new Set(ids));
         setStatusReady(true);
       });
     return () => {
@@ -495,11 +529,15 @@ export default function ProfilePlanProSkinPicker({
 
   const confirmLabel = saving
     ? "保存中…"
-    : !overlayUnlocked
-      ? "未解放"
-      : hasUnsavedChange
-        ? "このスキンを適用"
-        : "適用済み";
+    : !viewerIsPro
+      ? "GET PRO"
+      : !overlayUnlocked
+        ? "未解放"
+        : hasUnsavedChange
+          ? "このスキンを適用"
+          : "適用済み";
+
+  const subscribeHref = isWeb ? PRO_SUBSCRIBE_PATH.web : PRO_SUBSCRIBE_PATH.mobile;
 
   const headerBlock = (
     <header className={isWeb ? "mb-5 md:mb-6" : "mx-auto mb-5 max-w-[420px]"}>
@@ -526,13 +564,15 @@ export default function ProfilePlanProSkinPicker({
         ].join(" ")}
       >
         {isProduction
-          ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
+          ? viewerIsPro
+            ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
+            : "プレビューは無料で見られます。適用するには Pro プランが必要です。"
           : `Browse ${PRO_SKIN_UNLOCK_CATALOG.length} skin thumbnails. Tap a thumbnail to open the preview overlay.`}
       </p>
       {!isProduction ? (
         <div className="mt-2.5 flex flex-wrap gap-3 text-[11px]">
           <Link
-            href={isWeb ? PRO_SUBSCRIBE_PATH.web : PRO_SUBSCRIBE_PATH.mobile}
+            href={subscribeHref}
             className="text-cyan-300/80 underline-offset-2 hover:underline"
           >
             ← Subscribe
@@ -624,7 +664,7 @@ export default function ProfilePlanProSkinPicker({
           <div className="profile-plan-pro-bg-picker-overlay__actions">
             {isProduction ? (
               <>
-                {!overlayUnlocked ? (
+                {viewerIsPro && !overlayUnlocked ? (
                   <p
                     className={[
                       nameOxanium.className,
@@ -636,23 +676,48 @@ export default function ProfilePlanProSkinPicker({
                       : "未解放"}
                   </p>
                 ) : null}
-                <button
-                  type="button"
-                  disabled={!canConfirm}
-                  onClick={() => void handleApplySkin()}
-                  className={[
-                    nameOxanium.className,
-                    "flex-1 border-2 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] transition",
-                    canConfirm
-                      ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508] hover:brightness-110 active:brightness-95"
-                      : "cursor-not-allowed border-white/15 text-white/30",
-                  ].join(" ")}
-                >
-                  <span className="inline-flex items-center justify-center gap-1.5">
-                    <Sparkles size={14} strokeWidth={2.2} aria-hidden />
-                    {confirmLabel}
-                  </span>
-                </button>
+                {!viewerIsPro ? (
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "w-full text-center text-[11px] font-bold tracking-[0.06em] text-cyan-100/80",
+                    ].join(" ")}
+                  >
+                    プレビューのみ · 適用には Pro が必要です
+                  </p>
+                ) : null}
+                {!viewerIsPro ? (
+                  <Link
+                    href={subscribeHref}
+                    className={[
+                      nameOxanium.className,
+                      "flex flex-1 items-center justify-center border-2 border-[#00F5FF] bg-[#00F5FF] px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#050508] transition hover:brightness-110 active:brightness-95",
+                    ].join(" ")}
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      <Sparkles size={14} strokeWidth={2.2} aria-hidden />
+                      GET PRO
+                    </span>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!canConfirm}
+                    onClick={() => void handleApplySkin()}
+                    className={[
+                      nameOxanium.className,
+                      "flex-1 border-2 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] transition",
+                      canConfirm
+                        ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508] hover:brightness-110 active:brightness-95"
+                        : "cursor-not-allowed border-white/15 text-white/30",
+                    ].join(" ")}
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      <Sparkles size={14} strokeWidth={2.2} aria-hidden />
+                      {confirmLabel}
+                    </span>
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={saving}

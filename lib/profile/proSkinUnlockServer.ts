@@ -7,6 +7,7 @@ import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { pickNbaSeasonKeyCumulativeSlice } from "@/lib/rankings/pickNbaStatsBucket";
 import {
   periodRankingPeriodKey,
+  periodRankingSnapshotDocId,
 } from "@/lib/rankings/rankingDivision";
 import {
   applyProSkinTitleCollections,
@@ -17,6 +18,7 @@ import {
   PRO_SKIN_UNLOCK_CATALOG,
   type ProSkinRankMetric,
   type ProSkinUnlockProgress,
+  userDataIsPro,
 } from "@/lib/profile/proSkinUnlock";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 
@@ -32,37 +34,53 @@ function readPersistedUnlockIds(raw: unknown): Set<string> {
   return new Set(raw.filter((x): x is string => typeof x === "string"));
 }
 
-/** 最新週/月の指標順位（1始まり）。無い場合は null */
-async function readLatestPeriodRank(
+/** 最新期間ラベルのみ（ranks マップを落とさない） */
+async function resolveLatestPeriodLabel(
   db: Firestore,
-  uid: string,
-  period: "weekly" | "monthly",
-  metric: ProSkinRankMetric
-): Promise<number | null> {
+  period: "weekly" | "monthly"
+): Promise<string | null> {
   try {
     const snap = await db
       .collection("period_ranking_snapshots")
       .where("periodKey", "==", periodRankingPeriodKey("standard", period))
-      .where("metric", "==", metric)
-      .select("label", "ranks")
+      .where("metric", "==", "totalPoints")
+      .select("label")
       .get();
     if (snap.empty) return null;
-    const docs = snap.docs
-      .map((d) => {
-        const data = d.data() as {
-          label?: string;
-          ranks?: Record<string, number>;
-        };
-        return {
-          label: String(data.label ?? ""),
-          ranks: data.ranks ?? {},
-        };
-      })
-      .filter((d) => d.label);
-    docs.sort((a, b) => (a.label < b.label ? 1 : -1));
-    const latest = docs[0];
-    if (!latest) return null;
-    const rank = latest.ranks[uid];
+    let best = "";
+    for (const d of snap.docs) {
+      const label = String((d.data() as { label?: string }).label ?? "");
+      if (label && label > best) best = label;
+    }
+    return best || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 特定期間×指標の本人順位（1始まり）。無い場合は null */
+async function readPeriodRankAtLabel(
+  db: Firestore,
+  uid: string,
+  period: "weekly" | "monthly",
+  label: string,
+  metric: ProSkinRankMetric
+): Promise<number | null> {
+  try {
+    const snap = await db
+      .doc(
+        `period_ranking_snapshots/${periodRankingSnapshotDocId({
+          division: "standard",
+          period,
+          label,
+          metric,
+        })}`
+      )
+      .get();
+    if (!snap.exists) return null;
+    const ranks = (snap.data() as { ranks?: Record<string, number> } | undefined)
+      ?.ranks;
+    const rank = ranks?.[uid];
     return typeof rank === "number" && Number.isFinite(rank) && rank > 0
       ? Math.floor(rank)
       : null;
@@ -76,7 +94,7 @@ export async function loadProSkinUnlockProgress(
   uid: string,
   userData: Record<string, unknown>
 ): Promise<ProSkinUnlockProgress> {
-  const isPro = userData.plan === "pro";
+  const isPro = userDataIsPro(userData);
 
   let posts = 0;
   let exactHits = 0;
@@ -104,9 +122,39 @@ export async function loadProSkinUnlockProgress(
     /* best-effort */
   }
 
-  const [weeklyTotalPointsRank, monthlyTotalPointsRank] = await Promise.all([
-    readLatestPeriodRank(db, uid, "weekly", "totalPoints"),
-    readLatestPeriodRank(db, uid, "monthly", "totalPoints"),
+  const [weeklyLabel, monthlyLabel] = await Promise.all([
+    resolveLatestPeriodLabel(db, "weekly"),
+    resolveLatestPeriodLabel(db, "monthly"),
+  ]);
+
+  const [
+    weeklyTotalPointsRank,
+    monthlyTotalPointsRank,
+    monthlyUpsetRank,
+    monthlyGoalScorerRank,
+    monthlyWinRateRank,
+  ] = await Promise.all([
+    weeklyLabel
+      ? readPeriodRankAtLabel(db, uid, "weekly", weeklyLabel, "totalPoints")
+      : Promise.resolve(null),
+    monthlyLabel
+      ? readPeriodRankAtLabel(db, uid, "monthly", monthlyLabel, "totalPoints")
+      : Promise.resolve(null),
+    monthlyLabel
+      ? readPeriodRankAtLabel(db, uid, "monthly", monthlyLabel, "totalUpset")
+      : Promise.resolve(null),
+    monthlyLabel
+      ? readPeriodRankAtLabel(
+          db,
+          uid,
+          "monthly",
+          monthlyLabel,
+          "totalGoalScorerHits"
+        )
+      : Promise.resolve(null),
+    monthlyLabel
+      ? readPeriodRankAtLabel(db, uid, "monthly", monthlyLabel, "winRate")
+      : Promise.resolve(null),
   ]);
 
   return {
@@ -121,6 +169,9 @@ export async function loadProSkinUnlockProgress(
     monthlyRanks: {
       ...EMPTY_PRO_SKIN_RANK_MAP,
       totalPoints: monthlyTotalPointsRank,
+      totalUpset: monthlyUpsetRank,
+      totalGoalScorerHits: monthlyGoalScorerRank,
+      winRate: monthlyWinRateRank,
     },
   };
 }
