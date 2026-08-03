@@ -67,6 +67,8 @@ export function getGamesTexts(language: GamesLanguage) {
       invalidHomeWinBody: "When HOME win is selected, HOME score must be higher.",
       invalidAwayWinBody: "When AWAY win is selected, AWAY score must be higher.",
       invalidDrawScoreBody: "For draw prediction, scores must be equal.",
+      knockoutPkWinnerRequiredBody:
+        "Level score goes to penalties — pick which team advances.",
       submitErrorTitle: "Submit error",
       submitNoGameIdBody: "Game ID is missing.",
       submitLockedTitle: "Posting locked",
@@ -212,6 +214,8 @@ export function getGamesTexts(language: GamesLanguage) {
     invalidHomeWinBody: "HOME勝利を選んだ場合は HOME スコアを高くしてください。",
     invalidAwayWinBody: "AWAY勝利を選んだ場合は AWAY スコアを高くしてください。",
     invalidDrawScoreBody: "引き分け予想では同点スコアを入力してください。",
+    knockoutPkWinnerRequiredBody:
+      "同点予想のため、PKで勝ち上がるチームを選んでください。",
     submitErrorTitle: "送信エラー",
     submitNoGameIdBody: "試合IDが取得できませんでした。",
     submitLockedTitle: "投稿不可",

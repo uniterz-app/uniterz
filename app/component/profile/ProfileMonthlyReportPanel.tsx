@@ -2,23 +2,31 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { MonthlyReport } from "@/lib/reports/monthlyReportTypes";
-import type { WeeklyReport } from "@/lib/reports/weeklyReportTypes";
 import {
-  parseWeeklyReportDoc,
-  weeklyReportDocId,
-} from "@/lib/reports/parseWeeklyReportDoc";
-import { resolveRankingWeekStartDateKey } from "@/lib/rankings/rankingPeriod";
-import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+  partitionUserReportDocs,
+  type UserReportListItem,
+} from "@/lib/reports/partitionUserReports";
+import { formatReportPeriodLabel } from "@/lib/reports/reportDelivery";
+import { weeklyReportPreviewClimbed } from "@/lib/reports/weeklyReportPreviewMocks";
+import { monthlyReportPreviewTop10 } from "@/lib/reports/monthlyReportPreviewMocks";
+import {
+  REPORT_GATE_PREVIEW_MODES,
+  type ReportGateKind,
+  type ReportGatePreviewMode,
+} from "@/lib/reports/reportGateTypes";
+import ReportGateSurface from "@/app/component/reports/ReportGateSurface";
+import { nameOxanium } from "@/lib/fonts";
 
 const MonthlyReportView = dynamic(
   () => import("@/app/component/reports/MonthlyReportView"),
   {
     ssr: false,
-    loading: () => <div className="h-72 animate-pulse rounded-2xl bg-white/5" aria-hidden />,
+    loading: () => (
+      <div className="h-72 animate-pulse rounded-2xl bg-white/5" aria-hidden />
+    ),
   }
 );
 
@@ -26,7 +34,9 @@ const WeeklyReportView = dynamic(
   () => import("@/app/component/reports/WeeklyReportView"),
   {
     ssr: false,
-    loading: () => <div className="h-56 animate-pulse rounded-2xl bg-white/5" aria-hidden />,
+    loading: () => (
+      <div className="h-56 animate-pulse rounded-2xl bg-white/5" aria-hidden />
+    ),
   }
 );
 
@@ -39,9 +49,18 @@ type Props = {
 
 type Tab = "weekly" | "monthly";
 
+const GATE_CHIP: Record<ReportGatePreviewMode, { ja: string; en: string }> = {
+  live: { ja: "ライブ", en: "Live" },
+  free: { ja: "Free", en: "Free" },
+  waitingMonday: { ja: "月曜待ち", en: "Monday" },
+  waitingMonth: { ja: "月初待ち", en: "Month wait" },
+  insufficientPicks: { ja: "予想不足", en: "No picks" },
+  monthlyLocked: { ja: "月次ロック", en: "Monthly lock" },
+};
+
 /**
- * Report タブ入口。旧 ProAnalysis / user_stats_v2_monthly は読まない。
- * 週次・月次とも user_reports から実データ。
+ * Report タブ入口。週次・月次を user_reports から一覧。
+ * 見た目確認用にゲート強制切替あり（Pro でも Free / ロック面を表示可）。
  */
 export default function ProfileMonthlyReportPanel({
   uid,
@@ -50,14 +69,25 @@ export default function ProfileMonthlyReportPanel({
   showUpgrade,
 }: Props) {
   const [tab, setTab] = useState<Tab>("weekly");
-  const [monthly, setMonthly] = useState<MonthlyReport | null>(null);
-  const [weekly, setWeekly] = useState<WeeklyReport | null>(null);
+  const [weeklies, setWeeklies] = useState<UserReportListItem[]>([]);
+  const [monthlies, setMonthlies] = useState<UserReportListItem[]>([]);
+  const [selectedWeeklyId, setSelectedWeeklyId] = useState<string | null>(null);
+  const [selectedMonthlyId, setSelectedMonthlyId] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(canViewReport && Boolean(uid));
+  const [forceGate, setForceGate] = useState<ReportGatePreviewMode>("live");
+
+  const isJa = language === "ja";
+  const lang = isJa ? "ja" : "en";
+
+  const mockWeekly = useMemo(() => weeklyReportPreviewClimbed(), []);
+  const mockMonthly = useMemo(() => monthlyReportPreviewTop10(), []);
 
   useEffect(() => {
     if (!canViewReport || !uid) {
-      setMonthly(null);
-      setWeekly(null);
+      setWeeklies([]);
+      setMonthlies([]);
       setLoading(false);
       return;
     }
@@ -66,29 +96,23 @@ export default function ProfileMonthlyReportPanel({
     setLoading(true);
     void (async () => {
       try {
-        const weekLabel = resolveRankingWeekStartDateKey();
-        const [monthlySnap, weeklySnap] = await Promise.all([
-          getDocs(query(collection(db, "user_reports"), where("uid", "==", uid))),
-          getDoc(doc(db, "user_reports", weeklyReportDocId(uid, weekLabel))),
-        ]);
-        if (cancelled) return;
-
-        const latestMonthly = monthlySnap.docs
-          .map((entry) => entry.data())
-          .filter(
-            (entry): entry is MonthlyReport =>
-              entry?.league === "nba" && typeof entry?.monthKey === "string"
-          )
-          .sort((a, b) => b.monthKey.localeCompare(a.monthKey))[0];
-        setMonthly(latestMonthly ?? null);
-
-        setWeekly(
-          weeklySnap.exists() ? parseWeeklyReportDoc(weeklySnap.data()) : null
+        const snap = await getDocs(
+          query(collection(db, "user_reports"), where("uid", "==", uid))
         );
+        if (cancelled) return;
+        const { weeklies: w, monthlies: m } = partitionUserReportDocs(
+          snap.docs.map((d) => ({ id: d.id, data: d.data() }))
+        );
+        setWeeklies(w);
+        setMonthlies(m);
+        setSelectedWeeklyId(w[0]?.id ?? null);
+        setSelectedMonthlyId(m[0]?.id ?? null);
       } catch {
         if (!cancelled) {
-          setMonthly(null);
-          setWeekly(null);
+          setWeeklies([]);
+          setMonthlies([]);
+          setSelectedWeeklyId(null);
+          setSelectedMonthlyId(null);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -100,49 +124,110 @@ export default function ProfileMonthlyReportPanel({
     };
   }, [canViewReport, uid]);
 
-  const isJa = language === "ja";
+  const selectedWeekly = useMemo(() => {
+    const hit = weeklies.find((x) => x.id === selectedWeeklyId) ?? weeklies[0];
+    return hit?.kind === "weekly" ? hit : null;
+  }, [weeklies, selectedWeeklyId]);
+  const selectedMonthly = useMemo(() => {
+    const hit =
+      monthlies.find((x) => x.id === selectedMonthlyId) ?? monthlies[0];
+    return hit?.kind === "monthly" ? hit : null;
+  }, [monthlies, selectedMonthlyId]);
 
-  if (!canViewReport) {
-    return (
-      <div className={`${CYBER_GLASS_PANEL} space-y-3 p-6 text-center`}>
-        <h2 className="text-base font-bold text-white">
-          {isJa ? "レポート" : "Reports"}
-        </h2>
-        <p className="text-sm leading-relaxed text-white/65">
-          {showUpgrade
-            ? isJa
-              ? "週次・月次レポートで成績を振り返れます。"
-              : "Review your week and month with Pro reports."
-            : isJa
-              ? "レポートは Pro メンバー向けです。"
-              : "Reports are available to Pro members."}
+  const effectiveGate: ReportGateKind | null = useMemo(() => {
+    if (forceGate !== "live") return forceGate;
+    if (!canViewReport) return "free";
+    return null;
+  }, [forceGate, canViewReport]);
+
+  const gateSwitcher = (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <p
+          className={[
+            nameOxanium.className,
+            "text-[9px] font-bold uppercase tracking-[0.16em] text-white/40",
+          ].join(" ")}
+        >
+          {isJa ? "GATE PREVIEW" : "GATE PREVIEW"}
         </p>
-        {showUpgrade ? (
-          <div className="flex flex-wrap justify-center gap-2">
-            <Link
-              href="/mobile/weekly-report-preview"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/18"
+        <Link
+          href="/mobile/report-gate-preview"
+          className="text-[10px] font-semibold text-cyan-200/70 underline-offset-2 hover:text-cyan-100 hover:underline"
+        >
+          {isJa ? "専用ページ" : "Full page"}
+        </Link>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {REPORT_GATE_PREVIEW_MODES.map((key) => {
+          const on = forceGate === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setForceGate(key)}
+              className={[
+                "rounded-md border px-2 py-1 text-[10px] font-semibold transition",
+                on
+                  ? "border-cyan-400/55 bg-cyan-400/14 text-cyan-100"
+                  : "border-white/12 bg-white/3 text-white/50 hover:border-white/25",
+              ].join(" ")}
             >
-              {isJa ? "週次を見る" : "Weekly"}
-            </Link>
-            <Link
-              href="/mobile/monthly-report-preview"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/18"
-            >
-              {isJa ? "月次を見る" : "Monthly"}
-            </Link>
-          </div>
-        ) : null}
+              {GATE_CHIP[key][lang]}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderGate = (kind: ReportGateKind) => {
+    if (kind === "free") {
+      return (
+        <ReportGateSurface
+          kind="free"
+          language={lang}
+          ctaHref={showUpgrade || forceGate === "free" ? undefined : null}
+          preview={<WeeklyReportView report={mockWeekly} language={lang} />}
+        />
+      );
+    }
+    if (kind === "monthlyLocked") {
+      return (
+        <ReportGateSurface
+          kind="monthlyLocked"
+          language={lang}
+          preview={<MonthlyReportView report={mockMonthly} language={lang} />}
+        />
+      );
+    }
+    return <ReportGateSurface kind={kind} language={lang} />;
+  };
+
+  if (effectiveGate) {
+    return (
+      <div className="space-y-3">
+        {gateSwitcher}
+        {renderGate(effectiveGate)}
       </div>
     );
   }
 
   if (loading) {
-    return <div className="h-72 animate-pulse rounded-2xl bg-white/5" aria-hidden />;
+    return (
+      <div className="space-y-3">
+        {gateSwitcher}
+        <div className="h-72 animate-pulse rounded-2xl bg-white/5" aria-hidden />
+      </div>
+    );
   }
+
+  const list = tab === "weekly" ? weeklies : monthlies;
 
   return (
     <div className="space-y-3">
+      {gateSwitcher}
+
       <div className="flex gap-1.5">
         {(
           [
@@ -166,34 +251,49 @@ export default function ProfileMonthlyReportPanel({
         ))}
       </div>
 
-      {tab === "weekly" ? (
-        weekly ? (
-          <WeeklyReportView report={weekly} language={isJa ? "ja" : "en"} />
-        ) : (
-          <div className={`${CYBER_GLASS_PANEL} space-y-2 p-6 text-center`}>
-            <h2 className="text-base font-bold text-white">
-              {isJa ? "週次レポート" : "Weekly Report"}
-            </h2>
-            <p className="text-sm leading-relaxed text-white/65">
-              {isJa
-                ? "今週のレポートはまだありません。毎朝更新されます。"
-                : "No weekly report yet. It updates every morning."}
-            </p>
-          </div>
-        )
-      ) : monthly ? (
-        <MonthlyReportView report={monthly} language={isJa ? "ja" : "en"} />
-      ) : (
-        <div className={`${CYBER_GLASS_PANEL} space-y-2 p-6 text-center`}>
-          <h2 className="text-base font-bold text-white">
-            {isJa ? "月次レポート" : "Monthly Report"}
-          </h2>
-          <p className="text-sm leading-relaxed text-white/65">
-            {isJa
-              ? "最初のレポートは毎月1日に作成されます。"
-              : "Your first report is built on the 1st of each month."}
-          </p>
+      {tab === "monthly" && list.length > 1 ? (
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {list.map((item) => {
+            const selected = item.id === selectedMonthly?.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedMonthlyId(item.id)}
+                className={[
+                  nameOxanium.className,
+                  "shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition",
+                  selected
+                    ? "border-cyan-400/55 bg-cyan-400/14 text-cyan-100"
+                    : "border-white/12 bg-white/4 text-white/55 hover:border-white/25",
+                ].join(" ")}
+              >
+                {formatReportPeriodLabel(item.kind, item.periodKey, lang)}
+              </button>
+            );
+          })}
         </div>
+      ) : null}
+
+      {tab === "weekly" ? (
+        selectedWeekly ? (
+          <WeeklyReportView
+            report={selectedWeekly.report}
+            language={lang}
+            periods={weeklies.map((w) => ({
+              id: w.id,
+              label: formatReportPeriodLabel("weekly", w.periodKey, lang),
+            }))}
+            selectedPeriodId={selectedWeekly.id}
+            onSelectPeriod={setSelectedWeeklyId}
+          />
+        ) : (
+          renderGate("waitingMonday")
+        )
+      ) : selectedMonthly ? (
+        <MonthlyReportView report={selectedMonthly.report} language={lang} />
+      ) : (
+        renderGate("waitingMonth")
       )}
     </div>
   );

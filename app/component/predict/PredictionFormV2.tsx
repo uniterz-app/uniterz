@@ -50,10 +50,13 @@ import {
 } from "@/lib/nba/topScorer";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import {
-  isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
   type WcGoalScorerPick,
 } from "@/lib/legacyWcWebShims";
+import {
+  buildClientPredictionPayload,
+  validateClientPrediction,
+} from "@/lib/predict/clientPredictionSubmit";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
@@ -689,34 +692,20 @@ export default function PredictionFormV2({
 
   const buildPredictionPayload = (
     h: number,
-    a: number
+    a: number,
+    resolvedWinner: "home" | "away" | "draw"
   ): {
     winner: Winner;
     score: { home: number; away: number };
     goalScorer?: WcGoalScorerPick | NbaTopScorerPick | null;
   } => {
-    const score = { home: h, away: a };
-    const wcGoalScorer =
-      isWc &&
-      goalScorerPick &&
-      isWcGoalScorerPickValidForPredictedScore(
-        goalScorerPick,
-        score,
-        game.home?.teamId,
-        game.away?.teamId
-      )
-        ? goalScorerPick
-        : null;
-    const nbaGoalScorer =
-      isNba && goalScorerPick
-        ? normalizeNbaTopScorerPick(goalScorerPick)
-        : null;
-    return {
-      winner: winner!,
-      score,
-      ...(isWc ? { goalScorer: wcGoalScorer } : {}),
-      ...(isNba ? { goalScorer: nbaGoalScorer } : {}),
-    };
+    return buildClientPredictionPayload({
+      validated: { winner: resolvedWinner, score: { home: h, away: a } },
+      league: game.league,
+      goalScorerPick,
+      homeTeamId: game.home?.teamId,
+      awayTeamId: game.away?.teamId,
+    });
   };
 
   const overlayEmbedded = embedded && inOverlay;
@@ -799,50 +788,45 @@ export default function PredictionFormV2({
     const h = Number(scoreHome);
     const a = Number(scoreAway);
 
-    if (Number.isNaN(h) || Number.isNaN(a)) {
+    const validated = validateClientPrediction({
+      winner,
+      scoreHome: h,
+      scoreAway: a,
+      league: game.league,
+      knockout: isKnockout,
+      pkWinner,
+    });
+    if (!validated.ok) {
+      if (validated.code === "knockout_pk_winner_required") {
+        alert(
+          language === "ja"
+            ? "同点予想のため、PKで勝ち上がるチームを選んでください。"
+            : "Pick which team advances on penalties."
+        );
+        return;
+      }
       alert(m.predict.enterValidScores);
       return;
     }
 
-    const isPkTie = isKnockout && h === a;
-
-    if (isPkTie && !pkWinner) {
-      alert(
-        language === "ja"
-          ? "同点予想のため、PKで勝ち上がるチームを選んでください。"
-          : "Pick which team advances on penalties."
-      );
-      return;
-    }
-
-    // PK 決着（同点）以外は、勝者とスコアの整合性を確認する
-    if (!isPkTie) {
-      if (winner === "home" && h <= a) {
-        alert(m.predict.enterValidScores);
-        return;
-      }
-      if (winner === "away" && a <= h) {
-        alert(m.predict.enterValidScores);
-        return;
-      }
-      if (drawAllowed && winner === "draw" && h !== a) {
-        alert(m.predict.enterValidScores);
-        return;
-      }
-    }
+    const predictionPayload = buildPredictionPayload(
+      validated.value.score.home,
+      validated.value.score.away,
+      validated.value.winner
+    );
 
     /** チュートリアル: 認証・API をスキップ */
     if (tutorialMode) {
-      if (!winner) return;
       try {
         setSubmitting(true);
         onTutorialSubmit?.({
-          winner,
-          scoreHome: h,
-          scoreAway: a,
-          goalScorer: isNba
-            ? normalizeNbaTopScorerPick(goalScorerPick) ?? null
-            : null,
+          winner: validated.value.winner,
+          scoreHome: validated.value.score.home,
+          scoreAway: validated.value.score.away,
+          goalScorer:
+            isNba && predictionPayload.goalScorer
+              ? (predictionPayload.goalScorer as NbaTopScorerPick)
+              : null,
         });
         toast.success(m.predict.predictionSubmitted);
         onPostCreated?.({ id: "tutorial-local", at: new Date() });
@@ -877,7 +861,7 @@ export default function PredictionFormV2({
               Authorization: `Bearer ${idToken}`,
             },
             body: JSON.stringify({
-              prediction: buildPredictionPayload(h, a),
+              prediction: predictionPayload,
             }),
           }
         );
@@ -898,7 +882,7 @@ export default function PredictionFormV2({
           throw new Error(detailPatch || `更新失敗 (${res.status})`);
         }
         toast.success(m.predict.predictionUpdated);
-        const nextPrediction = buildPredictionPayload(h, a);
+        const nextPrediction = predictionPayload;
         let mergedPostForOverlay: PredictionPostV2 | null = null;
         setExistingSnapshot((prev) => {
           if (typeof prev !== "object" || prev === null || !("post" in prev)) {
@@ -925,9 +909,8 @@ export default function PredictionFormV2({
 
       const body = {
         gameId: (game as any).id,
-        league: game.league,
-        authorUid: me.uid,
-        prediction: buildPredictionPayload(h, a),
+        prediction: predictionPayload,
+        comment: "",
       };
 
       const res = await fetch("/api/posts_v2", {

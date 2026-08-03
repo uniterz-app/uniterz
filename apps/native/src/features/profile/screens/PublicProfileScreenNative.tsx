@@ -17,6 +17,7 @@ export default function PublicProfileScreenNative() {
       routeHandle={handle}
       fromRankings={route.params?.fromRankings === true}
       fromLeaderboards={route.params?.fromLeaderboards === true}
+      fromWeeklyReport={route.params?.fromWeeklyReport === true}
       leaderboardsGroupId={route.params?.leaderboardsGroupId}
     />
   );

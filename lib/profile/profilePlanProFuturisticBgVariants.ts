@@ -1,5 +1,5 @@
 /**
- * PRO 背景 — Futuristic 案（採用: Eclipse / Data Stream のみ）
+ * PRO 背景 — Futuristic 案（本番採用は Eclipse のみ。Data Stream は非採用）
  */
 
 export type ProfilePlanProFuturisticBgVariant =

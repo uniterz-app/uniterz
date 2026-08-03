@@ -15,32 +15,64 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   useNavigation,
   type NavigationProp,
 } from "@react-navigation/native";
-import { doc, getDoc } from "firebase/firestore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
 import ProfilePlanProBackgroundNative from "../kinetik/ProfilePlanProBackgroundNative";
 import ProfileKinetikPanelNative from "../kinetik/ProfileKinetikPanelNative";
-import { saveMeProSkinNative } from "../accountApiNative";
+import {
+  fetchProSkinStatusNative,
+  saveMeProSkinNative,
+} from "../accountApiNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
-import { db } from "../../../lib/firebase";
 import { cyberAlert } from "../../../components/cyberAlert";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import {
-  PROFILE_PLAN_PRO_ADOPTED_BG,
   profilePlanProAdoptedCategoryLabel,
   type ProfilePlanProAdoptedCategory,
-  type ProfilePlanProAdoptedEntry,
 } from "../../../../../../lib/profile/profilePlanProAdoptedBgVariants";
+import {
+  diffNewlyUnlockedProSkins,
+  formatProSkinOwnerCount,
+  formatProSkinUnlockCondition,
+  getProSkinUnlockEntry,
+  PRO_SKIN_UNLOCK_CATALOG,
+  PRO_SKIN_UNLOCK_SEEN_STORAGE_KEY,
+  type ProSkinUnlockCatalogEntry,
+} from "../../../../../../lib/profile/proSkinUnlock";
 import { parseUserPlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { PROFILE_EDIT_KINETIK_MOCK } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
+
+async function readUnlockSeenIdsNative(): Promise<Set<string>> {
+  try {
+    const raw = await AsyncStorage.getItem(PRO_SKIN_UNLOCK_SEEN_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((x): x is string => typeof x === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+async function writeUnlockSeenIdsNative(ids: Iterable<string>): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      PRO_SKIN_UNLOCK_SEEN_STORAGE_KEY,
+      JSON.stringify([...ids])
+    );
+  } catch {
+    /* ignore */
+  }
+}
 
 const COLS = 2;
 const GAP = 10;
@@ -68,7 +100,7 @@ function previewPanelProps(language: "ja" | "en") {
     language,
     identity: {
       ...PROFILE_EDIT_KINETIK_MOCK.identity,
-      displayName: "MPJ",
+      displayName: "UNITERZ",
       systemId: "3PJVG4Y9",
       handle: "mpj",
     },
@@ -85,7 +117,7 @@ function previewPanelProps(language: "ja" | "en") {
     totalPointsRank: 14,
     totalPointsRankDenominator: 800,
     rankDeltaPlaces: 0,
-    bio: "Win now",
+    bio: "PREVIEW",
     metricsTitle: "NBA // PLAYOFFS STATS",
     countryCode: "JP",
     memberSinceMs: new Date("2025-12-01T00:00:00+09:00").getTime(),
@@ -111,15 +143,22 @@ function SkinThumbNative({
   entry,
   width,
   selected,
+  unlocked,
+  owners,
+  language,
   onPress,
 }: {
-  entry: ProfilePlanProAdoptedEntry;
+  entry: ProSkinUnlockCatalogEntry;
   width: number;
   selected: boolean;
+  unlocked: boolean;
+  owners: number;
+  language: "ja" | "en";
   onPress: () => void;
 }) {
   const height = Math.max(84, Math.min(108, Math.round(width / 2.05)));
   const cat = categoryBadgeColors(entry.category);
+  const condition = formatProSkinUnlockCondition(entry.unlock, language);
 
   return (
     <Pressable
@@ -144,11 +183,43 @@ function SkinThumbNative({
             </View>
           ) : null}
         </View>
-        <View style={[styles.tileCatBadge, { backgroundColor: cat.bg }]}>
-          <Text style={[styles.tileCatText, { color: cat.text }]} numberOfLines={1}>
-            {profilePlanProAdoptedCategoryLabel(entry.category, "en")}
-          </Text>
+        <View style={styles.tileBadgeRow}>
+          <View style={[styles.tileCatBadge, { backgroundColor: cat.bg }]}>
+            <Text style={[styles.tileCatText, { color: cat.text }]} numberOfLines={1}>
+              {profilePlanProAdoptedCategoryLabel(entry.category, "en")}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.tileLockBadge,
+              unlocked
+                ? entry.unlock.kind === "pro"
+                  ? styles.tileLockBadgePro
+                  : styles.tileLockBadgeOn
+                : styles.tileLockBadgeOff,
+            ]}
+          >
+            <Text
+              style={[
+                styles.tileLockBadgeText,
+                !unlocked
+                  ? styles.tileLockBadgeTextOff
+                  : entry.unlock.kind === "pro"
+                    ? styles.tileLockBadgeTextPro
+                    : styles.tileLockBadgeTextOn,
+              ]}
+            >
+              {unlocked
+                ? entry.unlock.kind === "pro"
+                  ? "PRO"
+                  : "UNLOCKED"
+                : "LOCKED"}
+            </Text>
+          </View>
         </View>
+        <Text style={styles.tileMeta} numberOfLines={2}>
+          {condition} · {formatProSkinOwnerCount(owners, language)}
+        </Text>
       </View>
       <View style={[styles.tilePreview, { height }]}>
         <ProfilePlanProBackgroundNative
@@ -158,6 +229,16 @@ function SkinThumbNative({
           variant={entry.id}
         />
         <ThumbCorners />
+        {!unlocked ? (
+          <View style={styles.tileLockOverlay} pointerEvents="none">
+            <MaterialCommunityIcons
+              name="lock"
+              size={18}
+              color="rgba(253,230,138,0.95)"
+            />
+            <Text style={styles.tileLockOverlayText}>MILESTONE</Text>
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -185,20 +266,47 @@ export default function ProSkinScreenNative() {
   const [replayByVariant, setReplayByVariant] = useState<
     Partial<Record<ProfilePlanProBgVariant, number>>
   >({});
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(
+    () => new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
+  );
+  const [ownerCounts, setOwnerCounts] = useState<Record<string, number>>({});
+  const [unlockModalIds, setUnlockModalIds] = useState<
+    ProfilePlanProBgVariant[]
+  >([]);
 
   useEffect(() => {
     if (!fUser) {
+      setUnlockedIds(new Set());
       setReady(true);
       return;
     }
     let alive = true;
-    void getDoc(doc(db, "users", fUser.uid)).then((snap) => {
-      if (!alive) return;
-      const data = snap.data() as { planProBgVariant?: unknown } | undefined;
-      const id = parseUserPlanProBgVariant(data?.planProBgVariant);
-      setSavedId(id);
-      setReady(true);
-    });
+    void (async () => {
+      try {
+        const status = await fetchProSkinStatusNative();
+        if (!alive) return;
+        setUnlockedIds(new Set(status.unlockedIds));
+        setOwnerCounts(status.ownerCounts ?? {});
+        const parsed = parseUserPlanProBgVariant(status.savedId);
+        if (parsed) setSavedId(parsed);
+        const seen = await readUnlockSeenIdsNative();
+        const newly = diffNewlyUnlockedProSkins(status.unlockedIds, seen);
+        if (newly.length > 0) {
+          setUnlockModalIds(newly as ProfilePlanProBgVariant[]);
+        }
+        const nextSeen = new Set(seen);
+        for (const id of status.unlockedIds) {
+          const entry = getProSkinUnlockEntry(id);
+          if (entry?.unlock.kind === "pro") nextSeen.add(id);
+        }
+        await writeUnlockSeenIdsNative(nextSeen);
+      } catch {
+        if (!alive) return;
+        setUnlockedIds(new Set());
+      } finally {
+        if (alive) setReady(true);
+      }
+    })();
     return () => {
       alive = false;
     };
@@ -207,36 +315,49 @@ export default function ProSkinScreenNative() {
   const overlayEntry = useMemo(
     () =>
       overlayId
-        ? PROFILE_PLAN_PRO_ADOPTED_BG.find((e) => e.id === overlayId) ?? null
+        ? PRO_SKIN_UNLOCK_CATALOG.find((e) => e.id === overlayId) ?? null
         : null,
     [overlayId]
   );
   const overlayIndex = overlayEntry
-    ? PROFILE_PLAN_PRO_ADOPTED_BG.findIndex((e) => e.id === overlayEntry.id)
+    ? PRO_SKIN_UNLOCK_CATALOG.findIndex((e) => e.id === overlayEntry.id)
     : -1;
+  const overlayUnlocked =
+    overlayId != null && unlockedIds.has(overlayId);
 
   const hasUnsavedChange =
-    overlayId != null && savedId != null
-      ? overlayId !== savedId
-      : overlayId != null && savedId == null;
+    overlayId != null && overlayUnlocked && overlayId !== savedId;
   const canConfirm = Boolean(overlayId) && !saving && hasUnsavedChange;
   const confirmLabel = saving
     ? isJa
       ? "保存中…"
       : "Saving…"
-    : hasUnsavedChange
+    : !overlayUnlocked
       ? isJa
-        ? "このスキンを適用"
-        : "Apply skin"
-      : isJa
-        ? "適用済み"
-        : "Applied";
+        ? "未解放"
+        : "Locked"
+      : hasUnsavedChange
+        ? isJa
+          ? "このスキンを適用"
+          : "Apply skin"
+        : isJa
+          ? "適用済み"
+          : "Applied";
 
   const closeOverlay = useCallback(() => {
     if (saving) return;
     setOverlayId(null);
     setSaveError(null);
   }, [saving]);
+
+  const dismissUnlockModal = useCallback(() => {
+    void (async () => {
+      const seen = await readUnlockSeenIdsNative();
+      for (const id of unlockModalIds) seen.add(id);
+      await writeUnlockSeenIdsNative(seen);
+      setUnlockModalIds([]);
+    })();
+  }, [unlockModalIds]);
 
   const handleConfirm = useCallback(async () => {
     if (!overlayId || saving || !hasUnsavedChange) return;
@@ -245,7 +366,6 @@ export default function ProSkinScreenNative() {
     try {
       await saveMeProSkinNative(overlayId);
       setSavedId(overlayId);
-      // Modal を先に閉じてからプロフィールへ（goBack が効かないケース対策）
       setOverlayId(null);
       setSaving(false);
       navigation.navigate("ProfileHome");
@@ -275,9 +395,9 @@ export default function ProSkinScreenNative() {
     <MobilePageShell
       title="SKIN"
       subtitle={
-        language === "ja"
-          ? "模様をタップするとプレビューが開き、そこで適用を確定できます。"
-          : "Tap a pattern to preview, then confirm in the overlay."
+        isJa
+          ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
+          : "Top skins unlock with Pro. Milestone skins unlock as you progress."
       }
       appBackground
       onClose={() => navigation.goBack()}
@@ -289,7 +409,7 @@ export default function ProSkinScreenNative() {
           </View>
         ) : (
           <FlatList
-            data={PROFILE_PLAN_PRO_ADOPTED_BG}
+            data={PRO_SKIN_UNLOCK_CATALOG as ProSkinUnlockCatalogEntry[]}
             keyExtractor={(item) => item.id}
             numColumns={COLS}
             columnWrapperStyle={styles.row}
@@ -304,8 +424,8 @@ export default function ProSkinScreenNative() {
                 <Text style={styles.pageTitle}>Choose Pro Skin</Text>
                 <Text style={styles.desc}>
                   {isJa
-                    ? "模様をタップするとプレビューが開き、そこで適用を確定できます。"
-                    : "Tap a thumbnail to open the preview overlay and confirm."}
+                    ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
+                    : "Top skins unlock with Pro. Milestone skins unlock as you progress."}
                 </Text>
               </View>
             }
@@ -314,6 +434,9 @@ export default function ProSkinScreenNative() {
                 entry={item}
                 width={tileW}
                 selected={savedId === item.id}
+                unlocked={unlockedIds.has(item.id)}
+                owners={ownerCounts[item.id] ?? 0}
+                language={language === "ja" ? "ja" : "en"}
                 onPress={() => openOverlay(item.id)}
               />
             )}
@@ -354,16 +477,18 @@ export default function ProSkinScreenNative() {
                     {overlayEntry.label}
                     {overlayEntry.tag ? ` · ${overlayEntry.tag}` : ""}
                   </Text>
-                </View>
-                <Pressable
-                  onPress={closeOverlay}
-                  style={styles.overlayCloseBtn}
-                  disabled={saving}
-                >
-                  <Text style={styles.overlayCloseText}>
-                    {isJa ? "閉じる" : "Close"}
+                  <Text style={styles.overlayCondition} numberOfLines={2}>
+                    {formatProSkinUnlockCondition(
+                      overlayEntry.unlock,
+                      isJa ? "ja" : "en"
+                    )}
+                    {" · "}
+                    {formatProSkinOwnerCount(
+                      ownerCounts[overlayEntry.id] ?? 0,
+                      isJa ? "ja" : "en"
+                    )}
                   </Text>
-                </Pressable>
+                </View>
               </View>
 
               <ScrollView
@@ -375,59 +500,140 @@ export default function ProSkinScreenNative() {
                 <View style={styles.openPreview} pointerEvents="none">
                   <ProfileKinetikPanelNative
                     key={`${overlayEntry.id}:${replayByVariant[overlayEntry.id] ?? 0}`}
-                    {...previewPanelProps(language)}
+                    {...previewPanelProps(language === "ja" ? "ja" : "en")}
                     planProBgVariant={overlayEntry.id}
                   />
                 </View>
+                {!overlayUnlocked ? (
+                  <View style={styles.lockedBanner}>
+                    <MaterialCommunityIcons
+                      name="lock"
+                      size={16}
+                      color="rgba(253,230,138,0.95)"
+                    />
+                    <Text style={styles.lockedBannerText}>
+                      {isJa
+                        ? "このスキンはまだ解放されていません"
+                        : "This skin is still locked"}
+                    </Text>
+                  </View>
+                ) : null}
               </ScrollView>
 
               <View style={styles.overlayActions}>
-                <Pressable
-                  disabled={!canConfirm && !saving}
-                  onPress={() => void handleConfirm()}
-                  style={[
-                    styles.confirmBtn,
-                    canConfirm || saving
-                      ? styles.confirmBtnOn
-                      : styles.confirmBtnOff,
-                    styles.confirmBtnGrow,
-                  ]}
-                >
-                  {saving ? (
-                    <ActivityIndicator size="small" color="#050508" />
-                  ) : (
-                    <MaterialCommunityIcons
-                      name="star-four-points"
-                      size={14}
-                      color={canConfirm ? "#050508" : "rgba(255,255,255,0.3)"}
-                    />
-                  )}
-                  <Text
-                    style={[
-                      styles.confirmBtnText,
-                      canConfirm || saving
-                        ? styles.confirmBtnTextOn
-                        : styles.confirmBtnTextOff,
-                    ]}
+                {overlayUnlocked ? (
+                  <>
+                    <Pressable
+                      disabled={!canConfirm && !saving}
+                      onPress={() => void handleConfirm()}
+                      style={[
+                        styles.confirmBtn,
+                        canConfirm || saving
+                          ? styles.confirmBtnOn
+                          : styles.confirmBtnOff,
+                        styles.confirmBtnGrow,
+                      ]}
+                    >
+                      {saving ? (
+                        <ActivityIndicator size="small" color="#050508" />
+                      ) : (
+                        <MaterialCommunityIcons
+                          name="star-four-points"
+                          size={14}
+                          color={
+                            canConfirm ? "#050508" : "rgba(255,255,255,0.3)"
+                          }
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.confirmBtnText,
+                          canConfirm || saving
+                            ? styles.confirmBtnTextOn
+                            : styles.confirmBtnTextOff,
+                        ]}
+                      >
+                        {confirmLabel}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={saving}
+                      onPress={closeOverlay}
+                      style={styles.cancelBtn}
+                    >
+                      <Text style={styles.cancelBtnText}>
+                        {isJa ? "キャンセル" : "Cancel"}
+                      </Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <Pressable
+                    onPress={closeOverlay}
+                    style={[styles.confirmBtn, styles.confirmBtnOff, styles.confirmBtnGrow]}
                   >
-                    {confirmLabel}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  disabled={saving}
-                  onPress={closeOverlay}
-                  style={styles.cancelBtn}
-                >
-                  <Text style={styles.cancelBtnText}>
-                    {isJa ? "キャンセル" : "Cancel"}
-                  </Text>
-                </Pressable>
+                    <Text style={[styles.confirmBtnText, styles.confirmBtnTextOff]}>
+                      {isJa ? "閉じる" : "Close"}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
               {saveError ? (
                 <Text style={styles.saveError}>{saveError}</Text>
               ) : null}
             </View>
           ) : null}
+        </View>
+      </Modal>
+
+      <Modal
+        visible={unlockModalIds.length > 0}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissUnlockModal}
+      >
+        <View style={styles.unlockRoot}>
+          <Pressable
+            style={styles.overlayBackdrop}
+            onPress={dismissUnlockModal}
+            accessibilityRole="button"
+            accessibilityLabel={isJa ? "閉じる" : "Close"}
+          />
+          <View style={[styles.unlockPanel, { width: Math.min(360, winW - 32) }]}>
+            <Text style={styles.unlockEyebrow}>SKIN UNLOCKED</Text>
+            <Text style={styles.unlockTitle}>
+              {isJa
+                ? "新しい Pro Skin が解放されました"
+                : "New Pro Skin unlocked"}
+            </Text>
+            <View style={styles.unlockList}>
+              {unlockModalIds.map((id) => {
+                const entry = getProSkinUnlockEntry(id);
+                if (!entry) return null;
+                return (
+                  <View key={id} style={styles.unlockItem}>
+                    <Text style={styles.unlockItemLabel}>
+                      {entry.label}
+                      {entry.tag ? ` · ${entry.tag}` : ""}
+                    </Text>
+                    <Text style={styles.unlockItemCond}>
+                      {formatProSkinUnlockCondition(
+                        entry.unlock,
+                        isJa ? "ja" : "en"
+                      )}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            <Pressable
+              onPress={dismissUnlockModal}
+              style={[styles.confirmBtn, styles.confirmBtnOn]}
+            >
+              <Text style={[styles.confirmBtnText, styles.confirmBtnTextOn]}>
+                OK
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </Modal>
     </MobilePageShell>
@@ -526,20 +732,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#fff",
-  },
-  overlayCloseBtn: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  overlayCloseText: {
-    fontFamily: "Oxanium_700Bold",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.4,
-    color: "rgba(255,255,255,0.7)",
-    textTransform: "uppercase",
   },
   overlayScroll: {
     flexGrow: 0,
@@ -681,10 +873,152 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
   },
+  tileBadgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+  },
+  tileLockBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+  },
+  tileLockBadgePro: {
+    borderColor: "rgba(0,245,255,0.45)",
+    backgroundColor: "rgba(0,245,255,0.12)",
+  },
+  tileLockBadgeOn: {
+    borderColor: "rgba(52,211,153,0.45)",
+    backgroundColor: "rgba(52,211,153,0.12)",
+  },
+  tileLockBadgeOff: {
+    borderColor: "rgba(251,191,36,0.4)",
+    backgroundColor: "rgba(251,191,36,0.1)",
+  },
+  tileLockBadgeText: {
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  tileLockBadgeTextOn: {
+    color: "rgba(167,243,208,0.95)",
+  },
+  tileLockBadgeTextPro: {
+    color: "rgba(165,243,252,0.9)",
+  },
+  tileLockBadgeTextOff: {
+    color: "rgba(253,230,138,0.95)",
+  },
+  tileMeta: {
+    fontSize: 9,
+    lineHeight: 12,
+    color: "rgba(255,255,255,0.42)",
+  },
   tilePreview: {
     width: "100%",
     backgroundColor: "#060809",
     overflow: "hidden",
+  },
+  tileLockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: "rgba(3,8,13,0.55)",
+  },
+  tileLockOverlayText: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+    color: "rgba(253,230,138,0.9)",
+  },
+  overlayCondition: {
+    marginTop: 2,
+    fontSize: 10,
+    lineHeight: 14,
+    color: "rgba(255,255,255,0.45)",
+  },
+  lockedBanner: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.35)",
+    backgroundColor: "rgba(251,191,36,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  lockedBannerText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(253,230,138,0.95)",
+  },
+  unlockRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unlockPanel: {
+    zIndex: 1,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.35)",
+    backgroundColor: "#050b14",
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#00F5FF",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.18,
+        shadowRadius: 24,
+      },
+      android: { elevation: 16 },
+      default: {},
+    }),
+  },
+  unlockEyebrow: {
+    textAlign: "center",
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2.2,
+    color: "rgba(103,232,249,0.85)",
+    textTransform: "uppercase",
+  },
+  unlockTitle: {
+    marginTop: 8,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  unlockList: {
+    marginTop: 16,
+    gap: 8,
+  },
+  unlockItem: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  unlockItemLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  unlockItemCond: {
+    marginTop: 2,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "rgba(165,243,252,0.7)",
   },
   thumbCorner: {
     position: "absolute",

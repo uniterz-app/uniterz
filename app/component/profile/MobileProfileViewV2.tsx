@@ -86,6 +86,8 @@ import {
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
 import ProfileMonthlyReportPanel from "./ProfileMonthlyReportPanel";
+import ProfileReportDeliveryOverlay from "./ProfileReportDeliveryOverlay";
+import { useProReportDeliveryOverlay } from "@/lib/reports/useProReportDeliveryOverlay";
 import {
   profileVisualEffectsForViewer,
   isProfileVisualLite,
@@ -122,6 +124,14 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const visualEffects = profileVisualEffectsForViewer(isMe);
   const visualEffectsLite = isProfileVisualLite(visualEffects);
   const { count: profileViewCount } = useProfileViewCount(resolvedUid);
+
+  const reportOverlayEnabled =
+    Boolean(isMe && !loadingPlan && (currentIsProView || myPlan === "pro"));
+  const { active: reportOverlay, dismiss: dismissReportOverlay } =
+    useProReportDeliveryOverlay({
+      uid: resolvedUid,
+      enabled: reportOverlayEnabled,
+    });
 
   const fetchOverviewExtras = tab === "overview";
   const fetchBracketData = tab === "bracket";
@@ -411,6 +421,14 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           }}
         />
       )}
+
+      {reportOverlay ? (
+        <ProfileReportDeliveryOverlay
+          active={reportOverlay}
+          language={language === "ja" ? "ja" : "en"}
+          onDismiss={dismissReportOverlay}
+        />
+      ) : null}
     </div>
     </LazyMotion>
   );

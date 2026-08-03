@@ -136,6 +136,12 @@ import {
   normalizeNbaTopScorerPick,
   type NbaTopScorerPick,
 } from "../../../../../lib/nba/topScorer";
+import {
+  buildClientPredictionPayload,
+  validateClientPrediction,
+  type ClientPredictionValidationCode,
+} from "../../../../../lib/predict/clientPredictionSubmit";
+import { findNextUnpredictedScheduledGameInList } from "../../../../../lib/games/nextPredictGame";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
@@ -380,6 +386,33 @@ function draftStorageKey(userId: string, gameId: string): string {
   return `predictDraft:${userId}:${gameId}`;
 }
 
+function clientPredictionErrorBody(
+  t: ReturnType<typeof getGamesTexts>,
+  code: ClientPredictionValidationCode
+): string {
+  switch (code) {
+    case "winner_required":
+      return t.predictionNeedsWinnerScoreBody;
+    case "invalid_score":
+      return t.invalidScoreBody;
+    case "draw_not_allowed":
+      return t.invalidDrawLeagueBody;
+    case "home_win_score":
+    case "knockout_home_advance":
+      return t.invalidHomeWinBody;
+    case "away_win_score":
+    case "knockout_away_advance":
+      return t.invalidAwayWinBody;
+    case "draw_requires_equal":
+      return t.invalidDrawScoreBody;
+    case "knockout_draw_not_allowed":
+    case "knockout_pk_winner_required":
+      return t.knockoutPkWinnerRequiredBody;
+    default:
+      return t.predictionNeedsWinnerScoreBody;
+  }
+}
+
 /**
  * モバイルWeb `findNextUnpredictedScheduledGameInList` 相当：同一リーグ・scheduled ・未予想
  */
@@ -389,26 +422,14 @@ function findNextUnpredictedGame(
   games: Array<Record<string, unknown>>,
   predictedIds: Set<string>
 ): Record<string, unknown> | null {
-  const leagueKey = String(currentLeague ?? "").toLowerCase();
-  const sorted = [...games].sort((a, b) => {
-    const aStart = resolveGameStartAt(a)?.getTime() ?? 0;
-    const bStart = resolveGameStartAt(b)?.getTime() ?? 0;
-    return aStart - bStart;
-  });
-  const idx = sorted.findIndex((g) => String(g.id ?? "") === currentGameId);
-  if (idx < 0) return null;
-  for (let i = idx + 1; i < sorted.length; i += 1) {
-    const game = sorted[i];
-    if (!game) continue;
-    if (String(game.league ?? "").toLowerCase() !== leagueKey) continue;
-    if (resolveGameStatus(game) !== "scheduled") continue;
-    const gid = String(game.id ?? "");
-    if (!gid) continue;
-    if (predictedIds.has(gid)) continue;
-    if (isGameStarted(game)) continue;
-    return game;
-  }
-  return null;
+  const nextId = findNextUnpredictedScheduledGameInList(
+    games,
+    currentGameId,
+    currentLeague,
+    predictedIds
+  );
+  if (!nextId) return null;
+  return games.find((g) => String(g.id ?? "") === nextId) ?? null;
 }
 
 function isGameStarted(game: Record<string, unknown>): boolean {
@@ -494,6 +515,7 @@ export default function GamesHomeScreen({
     unknown
   > | null>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
+  const [pkWinner, setPkWinner] = useState<"home" | "away" | null>(null);
   const [predictToolsTab, setPredictToolsTab] = useState<PredictToolsTab>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
@@ -880,6 +902,25 @@ export default function GamesHomeScreen({
     String(selectedGame?.league ?? "").toLowerCase() === "pl" ||
     String(selectedGame?.league ?? "").toLowerCase() === "j1" ||
     String(selectedGame?.league ?? "").toLowerCase() === "wc";
+  const isKnockoutPredict = selectedGame
+    ? isWcKnockoutGame({
+        league: selectedGame.league,
+        knockout:
+          selectedGame.knockout === true
+            ? true
+            : selectedGame.knockout === false
+              ? false
+              : null,
+        roundLabel:
+          typeof selectedGame.roundLabel === "string"
+            ? selectedGame.roundLabel
+            : null,
+        wcStage:
+          typeof selectedGame.wcStage === "string"
+            ? selectedGame.wcStage
+            : null,
+      })
+    : false;
 
   const predictModalHomeLabel = useMemo(() => {
     if (!selectedGame) return "";
@@ -961,12 +1002,23 @@ export default function GamesHomeScreen({
       setWinner("away");
       return;
     }
+    if (isKnockoutPredict) {
+      setWinner(pkWinner);
+      return;
+    }
     if (isSoccerPredict) {
       setWinner("draw");
       return;
     }
     setWinner(null);
-  }, [isPredictModalOpen, scoreHome, scoreAway, isSoccerPredict]);
+  }, [
+    isPredictModalOpen,
+    scoreHome,
+    scoreAway,
+    isSoccerPredict,
+    isKnockoutPredict,
+    pkWinner,
+  ]);
 
   useEffect(() => {
     if (!isPredictModalOpen || !selectedGame || !fUser?.uid) return;
@@ -1392,6 +1444,7 @@ export default function GamesHomeScreen({
 
     setPredictSpectatorStartedNoPost(spectatorStartedNoPost);
     setWinner(null);
+    setPkWinner(null);
     setScoreHome("");
     setScoreAway("");
     setGoalScorerPick(null);
@@ -1429,6 +1482,15 @@ export default function GamesHomeScreen({
       setWinner(editBootstrap.seed.winner);
       setScoreHome(String(editBootstrap.seed.scoreHome));
       setScoreAway(String(editBootstrap.seed.scoreAway));
+      if (
+        editBootstrap.seed.scoreHome === editBootstrap.seed.scoreAway &&
+        (editBootstrap.seed.winner === "home" ||
+          editBootstrap.seed.winner === "away")
+      ) {
+        setPkWinner(editBootstrap.seed.winner);
+      } else {
+        setPkWinner(null);
+      }
       {
         const league = String(sourceGame.league ?? "").toLowerCase();
         setGoalScorerPick(
@@ -1462,6 +1524,15 @@ export default function GamesHomeScreen({
         setWinner(existingPrediction.winner);
         setScoreHome(String(existingPrediction.score.home));
         setScoreAway(String(existingPrediction.score.away));
+        if (
+          existingPrediction.score.home === existingPrediction.score.away &&
+          (existingPrediction.winner === "home" ||
+            existingPrediction.winner === "away")
+        ) {
+          setPkWinner(existingPrediction.winner);
+        } else {
+          setPkWinner(null);
+        }
         const league = String(sourceGame.league ?? "").toLowerCase();
         setGoalScorerPick(
           league === "nba"
@@ -1570,35 +1641,21 @@ export default function GamesHomeScreen({
       cyberAlert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
       return;
     }
-    if (!winner) {
-      cyberAlert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
-      return;
-    }
+
     const homeNum = Number(scoreHome);
     const awayNum = Number(scoreAway);
-    if (
-      !Number.isFinite(homeNum) ||
-      !Number.isFinite(awayNum) ||
-      homeNum < 0 ||
-      awayNum < 0
-    ) {
-      cyberAlert(t.invalidInputTitle, t.invalidScoreBody);
-      return;
-    }
-    if (!isSoccerPredict && winner === "draw") {
-      cyberAlert(t.invalidInputTitle, t.invalidDrawLeagueBody);
-      return;
-    }
-    if (winner === "home" && homeNum <= awayNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidHomeWinBody);
-      return;
-    }
-    if (winner === "away" && awayNum <= homeNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidAwayWinBody);
-      return;
-    }
-    if (winner === "draw" && homeNum !== awayNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidDrawScoreBody);
+    const league = selectedGame.league;
+    const validated = validateClientPrediction({
+      winner,
+      scoreHome: homeNum,
+      scoreAway: awayNum,
+      league,
+      knockout: isKnockoutPredict,
+      pkWinner,
+    });
+    if (!validated.ok) {
+      const body = clientPredictionErrorBody(t, validated.code);
+      cyberAlert(t.invalidInputTitle, body);
       return;
     }
 
@@ -1610,14 +1667,17 @@ export default function GamesHomeScreen({
 
     /** チュートリアル用モック試合 — API を叩かず結果フェーズへ */
     if (gameId === TUTORIAL_NBA_GAME_ID && tutorialActive) {
-      if (winner !== "home" && winner !== "away") {
+      if (
+        validated.value.winner !== "home" &&
+        validated.value.winner !== "away"
+      ) {
         cyberAlert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
         return;
       }
       const pick: TutorialPredictPick = {
-        winner,
-        scoreHome: homeNum,
-        scoreAway: awayNum,
+        winner: validated.value.winner,
+        scoreHome: validated.value.score.home,
+        scoreAway: validated.value.score.away,
       };
       const grade = tutorialGradeFromPick(pick);
       void writeTutorialLivePickNative(pick, grade);
@@ -1627,7 +1687,6 @@ export default function GamesHomeScreen({
       return;
     }
 
-    const startAt = resolveGameStartAt(selectedGame);
     if (isGameStarted(selectedGame)) {
       cyberAlert(t.submitLockedTitle, t.submitLockedBody);
       return;
@@ -1642,36 +1701,31 @@ export default function GamesHomeScreen({
     try {
       const existingPostId = myPostIdByGameId[gameId];
       const isEditing = Boolean(existingPostId);
-      const isWcGame = String(selectedGame.league ?? "").toLowerCase() === "wc";
-      const isNbaGame = String(selectedGame.league ?? "").toLowerCase() === "nba";
-      const goalScorer =
-        isWcGame &&
-        goalScorerPick &&
-        isWcGoalScorerPickValidForPredictedScore(
-          goalScorerPick,
-          { home: homeNum, away: awayNum },
-          (selectedGame.home as { teamId?: string } | undefined)?.teamId,
-          (selectedGame.away as { teamId?: string } | undefined)?.teamId
-        )
-          ? goalScorerPick
-          : isNbaGame
-            ? normalizeNbaTopScorerPick(goalScorerPick)
-            : null;
+      const payload = buildClientPredictionPayload({
+        validated: validated.value,
+        league,
+        goalScorerPick,
+        homeTeamId: (selectedGame.home as { teamId?: string } | undefined)
+          ?.teamId,
+        awayTeamId: (selectedGame.away as { teamId?: string } | undefined)
+          ?.teamId,
+      });
+      const goalScorer = payload.goalScorer ?? undefined;
       if (existingPostId) {
         await updatePredictionPostApi(existingPostId, {
-          winner,
-          scoreHome: homeNum,
-          scoreAway: awayNum,
-          goalScorer: goalScorer ?? undefined,
+          winner: payload.winner,
+          scoreHome: payload.score.home,
+          scoreAway: payload.score.away,
+          goalScorer,
         });
       } else {
         try {
           await createPredictionPostApi({
             gameId,
-            winner,
-            scoreHome: homeNum,
-            scoreAway: awayNum,
-            goalScorer: goalScorer ?? undefined,
+            winner: payload.winner,
+            scoreHome: payload.score.home,
+            scoreAway: payload.score.away,
+            goalScorer,
           });
         } catch (err) {
           if (
@@ -1680,10 +1734,10 @@ export default function GamesHomeScreen({
             err.existingPostId
           ) {
             await updatePredictionPostApi(err.existingPostId, {
-              winner,
-              scoreHome: homeNum,
-              scoreAway: awayNum,
-              goalScorer: isWcGame ? goalScorer : undefined,
+              winner: payload.winner,
+              scoreHome: payload.score.home,
+              scoreAway: payload.score.away,
+              goalScorer,
             });
           } else {
             throw err;
@@ -1713,6 +1767,7 @@ export default function GamesHomeScreen({
       }
 
       setWinner(null);
+      setPkWinner(null);
       setScoreHome("");
       setScoreAway("");
       setGoalScorerPick(null);
@@ -1934,6 +1989,9 @@ export default function GamesHomeScreen({
         setPredictToolsTab={setPredictToolsTab}
         winner={winner}
         isSoccerPredict={isSoccerPredict}
+        isKnockoutPredict={isKnockoutPredict}
+        pkWinner={pkWinner}
+        setPkWinner={setPkWinner}
         scoreAway={scoreAway}
         setScoreAway={setScoreAway}
         scoreHome={scoreHome}

@@ -7,11 +7,9 @@ import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 import MobileBadgesScreen from "../mobileScreens/MobileBadgesScreen";
 import MobileAnnouncementsScreen from "../mobileScreens/MobileAnnouncementsScreen";
 import MobilePlanStatusScreen from "../mobileScreens/MobilePlanStatusScreen";
-import MobileProSubscribeScreen from "../mobileScreens/MobileProSubscribeScreen";
 import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNative";
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import FuturisticBgPreviewScreenNative from "../backgrounds/FuturisticBgPreviewScreenNative";
-import MyRankFreeProPreviewScreenNative from "../../rankings/MyRankFreeProPreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -65,27 +63,29 @@ export function PlanStatusScreenWrapper() {
 }
 
 export function ProSubscribeScreenWrapper() {
-  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <MobileProSubscribeScreen
-      language={language}
-      onClose={() => navigation.goBack()}
-      onSuccess={(plan) => navigation.navigate("ProSuccess", { plan })}
-      onOpenPreview={() => navigation.navigate("ProSubscribePreview")}
-    />
-  );
-}
-
-export function ProSubscribePreviewScreenWrapper() {
-  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <ProSubscribePreviewNative
       language={language}
       onClose={() => navigation.goBack()}
+      onOpenSkin={() => navigation.navigate("ProSkin")}
+    />
+  );
+}
+
+export function ProSubscribePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ProSubscribePreviewNative
+      language={language}
+      onClose={() => navigation.goBack()}
+      onOpenSkin={() => navigation.navigate("ProSkin")}
     />
   );
 }
@@ -108,18 +108,6 @@ export function FuturisticBgPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <FuturisticBgPreviewScreenNative
-      language={language}
-      onClose={() => navigation.goBack()}
-    />
-  );
-}
-
-export function MyRankFreeProPreviewScreenWrapper() {
-  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { fUser } = useFirebaseUser();
-  const { language } = useNativeUserLanguage(fUser?.uid);
-  return (
-    <MyRankFreeProPreviewScreenNative
       language={language}
       onClose={() => navigation.goBack()}
     />

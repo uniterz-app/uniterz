@@ -29,24 +29,24 @@ export function weeklyReportPreviewClimbed(): WeeklyReport {
     ],
 
     overtaken: [
-      { uid: "u1", displayName: "hoop_sniper", photoURL: AVATAR(12), rank: 13 },
-      { uid: "u2", displayName: "TatumStan0", photoURL: AVATAR(33), rank: 14 },
-      { uid: "u3", displayName: "예측왕", photoURL: AVATAR(56), rank: 16 },
+      { uid: "u1", displayName: "hoop_sniper", photoURL: AVATAR(12), rank: 13, plan: "pro" },
+      { uid: "u2", displayName: "TatumStan0", photoURL: AVATAR(33), rank: 14, plan: "free" },
+      { uid: "u3", displayName: "예측왕", photoURL: AVATAR(56), rank: 16, plan: "pro" },
       { uid: "u4", displayName: "BuzzerBeater", photoURL: null, rank: 19 },
-      { uid: "u5", displayName: "sofia.mp4", photoURL: AVATAR(47), rank: 22 },
+      { uid: "u5", displayName: "sofia.mp4", photoURL: AVATAR(47), rank: 22, plan: "free" },
     ],
     overtakenCount: 5,
     overtakenBy: [
-      { uid: "u6", displayName: "NightOwlPicks", photoURL: AVATAR(68), rank: 9 },
+      { uid: "u6", displayName: "NightOwlPicks", photoURL: AVATAR(68), rank: 9, plan: "pro" },
     ],
     overtakenByCount: 1,
 
     nextTarget: {
-      rival: { uid: "u7", displayName: "CourtVision", photoURL: AVATAR(15), rank: 11 },
+      rival: { uid: "u7", displayName: "CourtVision", photoURL: AVATAR(15), rank: 11, plan: "pro" },
       pointsBehind: 3.2,
     },
     threat: {
-      rival: { uid: "u1", displayName: "hoop_sniper", photoURL: AVATAR(12), rank: 13 },
+      rival: { uid: "u1", displayName: "hoop_sniper", photoURL: AVATAR(12), rank: 13, plan: "pro" },
       pointsGap: 1.5,
     },
 

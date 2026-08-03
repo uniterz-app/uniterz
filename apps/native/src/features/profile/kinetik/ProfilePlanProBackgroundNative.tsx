@@ -103,8 +103,8 @@ import {
   isProfilePlanProFuturisticBgVariant,
   type ProfilePlanProFuturisticBgVariant,
 } from "../../../../../../lib/profile/profilePlanProFuturisticBgVariants";
-import EclipseBackground from "../backgrounds/EclipseBackground";
-import DataStreamBackground from "../backgrounds/DataStreamBackground";
+import WebParityFuturisticBackgroundNative from "../backgrounds/WebParityFuturisticBackgroundNative";
+import ParallaxLayersNative from "../backgrounds/ParallaxLayersNative";
 import { PROFILE_PLAN_PRO_BG } from "../../../../../../lib/profile/profilePlanVisual";
 
 type Props = {
@@ -664,7 +664,7 @@ function FormLayers({
   );
 }
 
-/** Web `futuristic-*` 相当 — RN SVG 背景コンポーネント */
+/** Web `futuristic-*` 相当 — WebFuturisticBackground と同一構図 */
 function FuturisticLayers({
   width,
   height,
@@ -675,38 +675,72 @@ function FuturisticLayers({
   variant: ProfilePlanProFuturisticBgVariant;
 }) {
   const artId = getProfilePlanProFuturisticArtId(variant);
-  const props = { width, height };
-  switch (artId) {
-    case "eclipse":
-      return <EclipseBackground {...props} />;
-    case "data-stream":
-      return <DataStreamBackground {...props} />;
-    default:
-      return <EclipseBackground {...props} />;
-  }
+  return (
+    <WebParityFuturisticBackgroundNative
+      id={artId}
+      width={width}
+      height={height}
+    />
+  );
 }
 
-/** Web `neo-*` 相当（フルブリード skin のみ） */
+/** Web `neo-*` 相当（フルブリード skin — cover 相当） */
 function NeoLayers({
   width,
+  height,
   variant,
   shouldAnimate,
 }: {
   width: number;
+  height: number;
   variant: ProfilePlanProNeoBgVariant;
   shouldAnimate: boolean;
 }) {
-  const emptyHud = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PROFILE_PLAN_PRO_NEO_CANVAS.width} ${PROFILE_PLAN_PRO_NEO_CANVAS.height}"></svg>`;
+  const enter = useSharedValue(shouldAnimate ? 0 : 1);
+  const skinXml = getProfilePlanProNeoSkinSvg(variant);
+  const coverH = Math.max(
+    height,
+    width *
+      (PROFILE_PLAN_PRO_NEO_CANVAS.height / PROFILE_PLAN_PRO_NEO_CANVAS.width)
+  );
+
+  useEffect(() => {
+    if (!shouldAnimate) {
+      cancelAnimation(enter);
+      enter.value = 1;
+      return;
+    }
+    enter.value = 0;
+    enter.value = withTiming(1, {
+      duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
+      easing: Easing.out(Easing.cubic),
+    });
+    return () => cancelAnimation(enter);
+  }, [enter, shouldAnimate, variant]);
+
+  const layerStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+  }));
+
   return (
-    <SvgSkinHudLayers
-      width={width}
-      skinXml={getProfilePlanProNeoSkinSvg(variant)}
-      hudXml={emptyHud}
-      canvasW={PROFILE_PLAN_PRO_NEO_CANVAS.width}
-      canvasH={PROFILE_PLAN_PRO_NEO_CANVAS.height}
-      shouldAnimate={shouldAnimate}
-      variantKey={variant}
-    />
+    <Animated.View style={[StyleSheet.absoluteFillObject, layerStyle]}>
+      <LinearGradient
+        colors={["#0a101c", "#121a2e", "#070b14"]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width,
+          height: coverH,
+        }}
+      >
+        <SvgXml xml={skinXml} width={width} height={coverH} />
+      </View>
+    </Animated.View>
   );
 }
 
@@ -1218,7 +1252,6 @@ export default function ProfilePlanProBackgroundNative({
     variant === "isometric" ||
     variant === "circuit";
   const useParallax =
-    variant === "parallax" ||
     variant === "light-shaft" ||
     variant === "stack" ||
     variant === "topography";
@@ -1239,6 +1272,18 @@ export default function ProfilePlanProBackgroundNative({
           accent={profileAccent}
           shouldAnimate={shouldAnimate}
           accentReady={accentReady}
+        />
+      </View>
+    );
+  }
+
+  if (variant === "parallax") {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <ParallaxLayersNative
+          width={width}
+          height={height}
+          shouldAnimate={shouldAnimate}
         />
       </View>
     );
@@ -1309,6 +1354,7 @@ export default function ProfilePlanProBackgroundNative({
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <NeoLayers
           width={width}
+          height={height}
           variant={variant}
           shouldAnimate={shouldAnimate}
         />

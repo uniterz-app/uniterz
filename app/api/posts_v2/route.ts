@@ -6,9 +6,9 @@ import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags
 import { resolveWcStageFromGame } from "@/lib/legacyWcWebShims";
 import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
 import { normalizeLeague, type League } from "@/lib/leagues";
+import { parsePredictionPayload } from "@/lib/predict/parsePredictionPayload";
 import {
   normalizeNbaTopScorerCandidates,
-  normalizeNbaTopScorerPick,
   validateNbaTopScorerPickForGame,
 } from "@/lib/nba/topScorer";
 import {
@@ -30,13 +30,12 @@ type PredictionPayloadV2 = {
 type ParsedOkV2 = {
   ok: true;
   gameId: string;
-  prediction: PredictionPayloadV2;
   comment: string;
-  rawGoalScorer: unknown;
+  rawPrediction: unknown;
 };
 type ParsedNg = { ok: false; error: string };
 
-/* ========= バリデーション ========= */
+/* ========= バリデーション（game 未取得時の薄い抽出。整合は game 取得後に parsePredictionPayload） ========= */
 function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
   try {
     const gameId = String(body?.gameId ?? "").trim();
@@ -62,12 +61,8 @@ function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
     return {
       ok: true,
       gameId,
-      prediction: {
-        winner: p.winner,
-        score: { home, away },
-      },
       comment,
-      rawGoalScorer: p.goalScorer,
+      rawPrediction: p,
     };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? "bad payload" };
@@ -183,6 +178,25 @@ export async function POST(req: Request) {
     const g = gameSnap.data() as Record<string, unknown>;
     const league: League = resolvePostLeagueFromGame(g, parsed.gameId);
 
+    const isKnockout = isWcKnockoutGame({
+      league,
+      knockout: (g as { knockout?: boolean }).knockout ?? null,
+      roundLabel: (g as { roundLabel?: string }).roundLabel ?? null,
+      wcStage: (g as { wcStage?: string }).wcStage ?? null,
+    });
+
+    const predictionParsed = parsePredictionPayload(
+      parsed.rawPrediction,
+      league,
+      isKnockout
+    );
+    if (!predictionParsed.ok) {
+      return NextResponse.json(
+        { ok: false, error: predictionParsed.error },
+        { status: 400 }
+      );
+    }
+
     const startAtTs =
       toAdminTimestamp(g?.startAtJst) ??
       toAdminTimestamp(g?.startAt) ??
@@ -213,9 +227,10 @@ export async function POST(req: Request) {
       (g.away as { teamId?: string } | undefined)?.teamId ??
       (g.awayTeamId as string | undefined) ??
       null;
-    const goalScorerPick = normalizeWcGoalScorerPick(parsed.rawGoalScorer);
+    const rawGoalScorer = predictionParsed.rawGoalScorer;
+    const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);
     const allowsGoalScorer = league === "wc" || league === "nba";
-    if (allowsGoalScorer && parsed.rawGoalScorer != null && !goalScorerPick) {
+    if (allowsGoalScorer && rawGoalScorer != null && !goalScorerPick) {
       return NextResponse.json(
         { ok: false, error: "goalScorer invalid" },
         { status: 400 }
@@ -246,7 +261,7 @@ export async function POST(req: Request) {
           goalScorerPick,
           homeTeamId,
           awayTeamId,
-          parsed.prediction.score
+          predictionParsed.prediction.score
         );
         if (!v.ok) {
           return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
@@ -254,25 +269,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // ノックアウトは「引き分け」結果を予想できない（同点スコア自体は PK 決着として許可し、
-    // 勝者は進出側＝home/away として記録する）
-    if (
-      isWcKnockoutGame({
-        league,
-        knockout: (g as { knockout?: boolean }).knockout ?? null,
-        roundLabel: (g as { roundLabel?: string }).roundLabel ?? null,
-        wcStage: (g as { wcStage?: string }).wcStage ?? null,
-      }) &&
-      parsed.prediction.winner === "draw"
-    ) {
-      return NextResponse.json(
-        { ok: false, error: "draw result not allowed in knockout stage" },
-        { status: 400 }
-      );
-    }
-
     const prediction: PredictionPayloadV2 = {
-      ...parsed.prediction,
+      ...predictionParsed.prediction,
       ...(goalScorerPick ? { goalScorer: goalScorerPick } : {}),
     };
 

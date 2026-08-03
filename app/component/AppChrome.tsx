@@ -1,12 +1,22 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useSyncExternalStore } from "react";
 import Header from "@/app/component/Header";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
+import {
+  getAppBrandShelfHidden,
+  subscribeAppBrandShelfHidden,
+} from "@/lib/ui/appBrandShelfVisibility";
 
 export default function AppChrome() {
   const pathname = usePathname() ?? "";
+  const brandShelfHidden = useSyncExternalStore(
+    subscribeAppBrandShelfHidden,
+    getAppBrandShelfHidden,
+    () => false
+  );
 
   const shouldHideAll =
     pathname === "/" ||
@@ -29,7 +39,8 @@ export default function AppChrome() {
     pathname === "/web/rankings" ||
     pathname === "/mobile/rankings" ||
     pathname.startsWith("/web/communities/") ||
-    pathname.startsWith("/mobile/communities/");
+    pathname.startsWith("/mobile/communities/") ||
+    brandShelfHidden;
 
   if (shouldHideAll) return null;
 

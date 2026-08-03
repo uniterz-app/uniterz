@@ -44,11 +44,11 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
     hudSecondary: "rgba(148,163,184,",
   },
   "beast-drake": {
-    strokes: ["157,23,77", "190,24,93", "219,39,119", "112,26,66"],
-    fills: ["40,8,28", "76,16,48", "24,6,18"],
-    accent: ["244,114,182", "192,38,211"],
-    hudPrimary: "rgba(244,114,182,",
-    hudSecondary: "rgba(192,38,211,",
+    strokes: ["22,163,74", "34,197,94", "74,222,128", "21,128,61"],
+    fills: ["6,28,14", "20,55,28", "4,18,10"],
+    accent: ["134,239,172", "74,222,128"],
+    hudPrimary: "rgba(134,239,172,",
+    hudSecondary: "rgba(34,197,94,",
   },
   "beast-raven": {
     strokes: ["99,102,241", "129,140,248", "67,56,202", "139,92,246"],
@@ -3503,28 +3503,28 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
 export function getProfilePlanProBeastSkinSvg(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedSvg(`beast:skin:svg:${variant}:v10`, () => buildSkinSvg(variant));
+  return cachedSvg(`beast:skin:svg:${variant}:v11`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD（Native SvgXml 用） */
 export function getProfilePlanProBeastHudSvg(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedSvg(`beast:hud:svg:${variant}:v10`, () => buildHudSvg(variant));
+  return cachedSvg(`beast:hud:svg:${variant}:v11`, () => buildHudSvg(variant));
 }
 
 /** 疎な獣皮 / 宝石レイヤー */
 export function getProfilePlanProBeastSkinUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:skin:${variant}:v10`, () => buildSkinSvg(variant));
+  return cachedUrl(`beast:skin:${variant}:v11`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD */
 export function getProfilePlanProBeastHudUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:hud:${variant}:v10`, () => buildHudSvg(variant));
+  return cachedUrl(`beast:hud:${variant}:v11`, () => buildHudSvg(variant));
 }
 
 export const PROFILE_PLAN_PRO_BEAST_CANVAS = {

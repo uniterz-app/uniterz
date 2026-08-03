@@ -33,7 +33,11 @@ type SnapshotRow = Agg & {
   photoURL?: string | null;
   winRate?: number;
 };
-type Profile = { displayName: string; photoURL: string | null };
+type Profile = {
+  displayName: string;
+  photoURL: string | null;
+  plan: "free" | "pro";
+};
 type ExistingReport = {
   status?: Status;
   snapshotDateKey?: string;
@@ -187,9 +191,11 @@ async function loadProfiles(
       profiles.set(uid, {
         displayName: row.displayName,
         photoURL: row.photoURL ?? null,
+        plan: "free",
       });
     }
   }
+  const nowMs = Date.now();
   for (let i = 0; i < uids.length; i += PROFILE_CHUNK) {
     const slice = uids.slice(i, i + PROFILE_CHUNK);
     const snaps = await db().getAll(
@@ -203,11 +209,27 @@ async function loadProfiles(
       const user = snaps[j * 2 + 1];
       const c = cumulative?.exists ? cumulative.data() ?? {} : {};
       const u = user?.exists ? user.data() ?? {} : {};
-      const displayName = String(c.displayName ?? u.displayName ?? profiles.get(slice[j]!)?.displayName ?? "user");
+      const displayName = String(
+        c.displayName ?? u.displayName ?? profiles.get(slice[j]!)?.displayName ?? "user"
+      );
       const photo = c.photoURL ?? u.photoURL ?? profiles.get(slice[j]!)?.photoURL ?? null;
+      let plan: "free" | "pro" = "free";
+      if (u.plan === "pro") {
+        const until = u.proUntil as { toMillis?: () => number } | undefined;
+        if (
+          !(
+            until &&
+            typeof until.toMillis === "function" &&
+            until.toMillis() <= nowMs
+          )
+        ) {
+          plan = "pro";
+        }
+      }
       profiles.set(slice[j]!, {
         displayName,
         photoURL: typeof photo === "string" ? photo : null,
+        plan,
       });
     }
   }
@@ -273,7 +295,13 @@ function divisions(
 
 function rival(uid: string, rank: number, profiles: Map<string, Profile>): WeeklyReportRival {
   const profile = profiles.get(uid);
-  return { uid, rank, displayName: profile?.displayName ?? "user", photoURL: profile?.photoURL ?? null };
+  return {
+    uid,
+    rank,
+    displayName: profile?.displayName ?? "user",
+    photoURL: profile?.photoURL ?? null,
+    plan: profile?.plan ?? "free",
+  };
 }
 
 function buildComment(input: {
@@ -318,7 +346,7 @@ export async function buildWeeklyReportsCore(opts?: {
   now?: Date;
 }): Promise<{ weekLabel: string; status: Status; written: number }> {
   const now = opts?.now ?? new Date();
-  const status = opts?.status ?? "live";
+  const status = opts?.status ?? "final";
   const weekLabel = opts?.weekLabel ?? weekStartDateKeyJST(now);
   const range = rangeForLabel("weekly", weekLabel, now);
   const previousWeek = previousLabel("weekly", weekLabel);

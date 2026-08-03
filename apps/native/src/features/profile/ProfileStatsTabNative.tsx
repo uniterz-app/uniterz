@@ -1,15 +1,41 @@
 /**
- * Web `ProfileMonthlyReportPanel` 相当。旧 Pro Stats / user_stats_v2_monthly は読まない。
+ * Web `ProfileMonthlyReportPanel` 相当。
+ * ゲート面＋見た目確認用の強制切替（Pro でも Free / ロックを表示可）。
  */
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../lib/firebase";
-import type { MonthlyReport } from "../../../../../lib/reports/monthlyReportTypes";
-import type { ProfileStackParamList } from "../../navigation/types";
-import { colors, radius, spacing, typography } from "../../theme/tokens";
+import type {
+  MainTabParamList,
+  ProfileStackParamList,
+} from "../../navigation/types";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../rankings/CyberSlantedTabNative";
+import WeeklyReportViewNative from "./reports/WeeklyReportViewNative";
+import MonthlyReportViewNative from "./reports/MonthlyReportViewNative";
+import ReportGateSurfaceNative from "./reports/ReportGateSurfaceNative";
+import { useUserReportsArchiveNative } from "./reports/useProReportDeliveryOverlayNative";
+import { formatReportPeriodLabel } from "../../../../../lib/reports/reportDelivery";
+import {
+  REPORT_GATE_PREVIEW_MODES,
+  type ReportGateKind,
+  type ReportGatePreviewMode,
+} from "../../../../../lib/reports/reportGateTypes";
+import { weeklyReportPreviewClimbed } from "../../../../../lib/reports/weeklyReportPreviewMocks";
+import { monthlyReportPreviewTop10 } from "../../../../../lib/reports/monthlyReportPreviewMocks";
+import { colors, spacing, typography } from "../../theme/tokens";
+import { OXANIUM_700 } from "./reports/reportThemeNative";
 
 type Props = {
   uid: string | undefined;
@@ -21,6 +47,17 @@ type Props = {
   isTargetPro: boolean;
 };
 
+type Tab = "weekly" | "monthly";
+
+const GATE_CHIP: Record<ReportGatePreviewMode, { ja: string; en: string }> = {
+  live: { ja: "ライブ", en: "Live" },
+  free: { ja: "Free", en: "Free" },
+  waitingMonday: { ja: "月曜待ち", en: "Monday" },
+  waitingMonth: { ja: "月初待ち", en: "Month wait" },
+  insufficientPicks: { ja: "予想不足", en: "No picks" },
+  monthlyLocked: { ja: "月次ロック", en: "Monthly lock" },
+};
+
 export default function ProfileStatsTabNative({
   uid,
   language,
@@ -30,189 +67,329 @@ export default function ProfileStatsTabNative({
   isMyPro,
   isTargetPro,
 }: Props) {
-  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const canViewReport =
     isProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro);
-  const [report, setReport] = useState<MonthlyReport | null>(null);
-  const [loading, setLoading] = useState(canViewReport && Boolean(uid));
+  const [tab, setTab] = useState<Tab>("weekly");
+  const [forceGate, setForceGate] = useState<ReportGatePreviewMode>("live");
   const isJa = language === "ja";
 
-  useEffect(() => {
-    if (!canViewReport || !uid) {
-      setReport(null);
-      setLoading(false);
-      return;
-    }
+  const { loading, weeklies, monthlies } = useUserReportsArchiveNative({
+    uid,
+    enabled: canViewReport && Boolean(uid),
+  });
 
-    let cancelled = false;
-    setLoading(true);
-    void (async () => {
-      try {
-        const snapshot = await getDocs(
-          query(collection(db, "user_reports"), where("uid", "==", uid))
-        );
-        if (cancelled) return;
-        const latest = snapshot.docs
-          .map((entry) => entry.data())
-          .filter(
-            (entry): entry is MonthlyReport =>
-              entry?.league === "nba" && typeof entry?.monthKey === "string"
-          )
-          .sort((a, b) => b.monthKey.localeCompare(a.monthKey))[0];
-        setReport(latest ?? null);
-      } catch {
-        if (!cancelled) setReport(null);
-      } finally {
-        if (!cancelled) setLoading(false);
+  const [selectedWeeklyId, setSelectedWeeklyId] = useState<string | null>(null);
+  const [selectedMonthlyId, setSelectedMonthlyId] = useState<string | null>(
+    null
+  );
+
+  const mockWeekly = useMemo(() => weeklyReportPreviewClimbed(), []);
+  const mockMonthly = useMemo(() => monthlyReportPreviewTop10(), []);
+
+  const selectedWeekly = useMemo(() => {
+    if (!weeklies.length) return null;
+    return (
+      weeklies.find((x) => x.id === selectedWeeklyId) ?? weeklies[0] ?? null
+    );
+  }, [weeklies, selectedWeeklyId]);
+
+  const selectedMonthly = useMemo(() => {
+    if (!monthlies.length) return null;
+    return (
+      monthlies.find((x) => x.id === selectedMonthlyId) ?? monthlies[0] ?? null
+    );
+  }, [monthlies, selectedMonthlyId]);
+
+  const effectiveGate: ReportGateKind | null = useMemo(() => {
+    if (forceGate !== "live") return forceGate;
+    if (!canViewReport) return "free";
+    return null;
+  }, [forceGate, canViewReport]);
+
+  const handleGateCta = (kind: ReportGateKind) => {
+    switch (kind) {
+      case "free":
+        navigation.navigate("ProSubscribe");
+        break;
+      case "monthlyLocked":
+        navigation.navigate("PlanChange");
+        break;
+      case "insufficientPicks": {
+        const tabNav =
+          navigation.getParent<BottomTabNavigationProp<MainTabParamList>>();
+        tabNav?.navigate("GamesTab", { screen: "GamesHome" });
+        break;
       }
-    })();
+      default:
+        break;
+    }
+  };
 
-    return () => {
-      cancelled = true;
-    };
-  }, [canViewReport, uid]);
+  const renderGate = (kind: ReportGateKind) => {
+    const showCta =
+      kind === "free"
+        ? isMe || forceGate === "free"
+        : kind === "monthlyLocked" || kind === "insufficientPicks";
 
-  const winRate = useMemo(() => {
-    const metric = report?.metrics.find((item) => item.key === "winRate");
-    return metric ? `${metric.value.toFixed(1)}%` : "—";
-  }, [report]);
+    if (kind === "free") {
+      return (
+        <ReportGateSurfaceNative
+          kind="free"
+          language={language}
+          showCta={showCta}
+          onPressCta={() => handleGateCta("free")}
+          preview={
+            <WeeklyReportViewNative report={mockWeekly} language={language} />
+          }
+        />
+      );
+    }
+    if (kind === "monthlyLocked") {
+      return (
+        <ReportGateSurfaceNative
+          kind="monthlyLocked"
+          language={language}
+          showCta={showCta}
+          onPressCta={() => handleGateCta("monthlyLocked")}
+          preview={
+            <MonthlyReportViewNative
+              report={mockMonthly}
+              language={language}
+            />
+          }
+        />
+      );
+    }
+    return (
+      <ReportGateSurfaceNative
+        kind={kind}
+        language={language}
+        showCta={showCta}
+        onPressCta={
+          kind === "insufficientPicks"
+            ? () => handleGateCta("insufficientPicks")
+            : undefined
+        }
+      />
+    );
+  };
+
+  const gateSwitcher = (
+    <View style={styles.gateBlock}>
+      <Text style={styles.gateLabel}>GATE PREVIEW</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.gateChipRow}
+      >
+        {REPORT_GATE_PREVIEW_MODES.map((key) => {
+          const on = forceGate === key;
+          return (
+            <Pressable
+              key={key}
+              onPress={() => setForceGate(key)}
+              style={[styles.gateChip, on && styles.gateChipOn]}
+            >
+              <Text style={[styles.gateChipText, on && styles.gateChipTextOn]}>
+                {GATE_CHIP[key][language]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
 
   if (!uid) {
-    return <Text style={styles.muted}>{isJa ? "ログインが必要です" : "Sign in required"}</Text>;
+    return (
+      <Text style={styles.muted}>
+        {isJa ? "ログインが必要です" : "Sign in required"}
+      </Text>
+    );
   }
 
-  if (!canViewReport) {
+  if (effectiveGate) {
     return (
-      <View style={styles.card}>
-        <Text style={styles.title}>{isJa ? "月次レポート" : "Monthly Report"}</Text>
-        <Text style={styles.body}>
-          {isMe
-            ? isJa
-              ? "毎月の成績・強み・ハイライトを振り返れます。"
-              : "Review each month with your results, strengths, and highlights."
-            : isJa
-              ? "この月次レポートは Pro メンバー向けです。"
-              : "This monthly report is available to Pro members."}
-        </Text>
-        {isMe ? (
-          <Pressable style={styles.cta} onPress={() => navigation.navigate("ProSubscribe")}>
-            <Text style={styles.ctaText}>{isJa ? "Pro を見る" : "Explore Pro"}</Text>
-          </Pressable>
-        ) : null}
+      <View style={styles.root}>
+        {gateSwitcher}
+        {renderGate(effectiveGate)}
       </View>
     );
   }
 
   if (loading) {
-    return <Text style={styles.muted}>{isJa ? "レポートを読み込み中…" : "Loading report…"}</Text>;
-  }
-
-  if (!report) {
     return (
-      <View style={styles.card}>
-        <Text style={styles.title}>{isJa ? "月次レポート" : "Monthly Report"}</Text>
-        <Text style={styles.body}>
-          {isJa
-            ? "最初のレポートは毎月1日に作成されます。"
-            : "Your first report is built on the 1st of each month."}
-        </Text>
+      <View style={styles.root}>
+        {gateSwitcher}
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color="#67e8f9" />
+        </View>
       </View>
     );
   }
 
-  return (
-    <View style={styles.card}>
-      <Text style={styles.eyebrow}>MONTHLY REPORT · {report.monthKey}</Text>
-      <Text style={styles.title}>{isJa ? "今月の結果" : "This month"}</Text>
-      <View style={styles.metrics}>
-        <Metric label={isJa ? "順位" : "Rank"} value={`#${report.rank}`} />
-        <Metric label={isJa ? "予想" : "Picks"} value={String(report.totalPosts)} />
-        <Metric label={isJa ? "勝率" : "Win %"} value={winRate} />
-      </View>
-      <Text style={styles.body}>
-        {isJa
-          ? "詳細な月次レポートは Web 版で確認できます。"
-          : "View the complete monthly report on the web."}
-      </Text>
-    </View>
-  );
-}
+  const list = tab === "weekly" ? weeklies : monthlies;
 
-function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.metric}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
+    <View style={styles.root}>
+      {gateSwitcher}
+
+      <View style={styles.tabShell}>
+        <CyberSlantedTabBarNative fill>
+          <CyberSlantedTabNative
+            label="WEEKLY"
+            active={tab === "weekly"}
+            onPress={() => setTab("weekly")}
+            compact
+            fontWeight="700"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === "weekly" }}
+          />
+          <CyberSlantedTabNative
+            label="MONTHLY"
+            active={tab === "monthly"}
+            onPress={() => setTab("monthly")}
+            compact
+            fontWeight="700"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === "monthly" }}
+          />
+        </CyberSlantedTabBarNative>
+      </View>
+
+      {tab === "monthly" && list.length > 1 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.periodRow}
+        >
+          {list.map((item) => {
+            const selected = item.id === selectedMonthly?.id;
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => setSelectedMonthlyId(item.id)}
+                style={[styles.periodChip, selected && styles.periodChipOn]}
+              >
+                <Text
+                  style={[
+                    styles.periodChipText,
+                    selected && styles.periodChipTextOn,
+                  ]}
+                >
+                  {formatReportPeriodLabel(item.kind, item.periodKey, language)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+
+      {tab === "weekly" ? (
+        selectedWeekly && selectedWeekly.kind === "weekly" ? (
+          <WeeklyReportViewNative
+            report={selectedWeekly.report}
+            language={language}
+            periods={weeklies.map((w) => ({
+              id: w.id,
+              label: formatReportPeriodLabel("weekly", w.periodKey, language),
+            }))}
+            selectedPeriodId={selectedWeekly.id}
+            onSelectPeriod={setSelectedWeeklyId}
+          />
+        ) : (
+          renderGate("waitingMonday")
+        )
+      ) : selectedMonthly && selectedMonthly.kind === "monthly" ? (
+        <MonthlyReportViewNative
+          report={selectedMonthly.report}
+          language={language}
+        />
+      ) : (
+        renderGate("waitingMonth")
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  root: {
     marginTop: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.card,
+    gap: 12,
+    paddingBottom: spacing.lg,
+  },
+  loadingWrap: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  gateBlock: {
+    gap: 6,
+  },
+  gateLabel: {
+    fontFamily: OXANIUM_700,
+    fontSize: 9,
+    letterSpacing: 1.6,
+    color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase",
+  },
+  gateChipRow: {
+    gap: 4,
+    paddingVertical: 2,
+  },
+  gateChip: {
     borderWidth: 1,
-    borderColor: "rgba(103,232,249,0.24)",
-    backgroundColor: "rgba(5,8,20,0.62)",
-    gap: 10,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
-  eyebrow: {
-    color: "rgba(103,232,249,0.78)",
+  gateChipOn: {
+    borderColor: "rgba(34,211,238,0.55)",
+    backgroundColor: "rgba(34,211,238,0.14)",
+  },
+  gateChipText: {
     fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.1,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.5)",
   },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 17,
-    fontWeight: "800",
+  gateChipTextOn: {
+    color: "#a5f3fc",
   },
-  body: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    lineHeight: 21,
+  tabShell: {
+    minHeight: 36,
+  },
+  periodRow: {
+    gap: 6,
+    paddingVertical: 2,
+  },
+  periodChip: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  periodChipOn: {
+    borderColor: "rgba(34,211,238,0.55)",
+    backgroundColor: "rgba(34,211,238,0.14)",
+  },
+  periodChipText: {
+    fontFamily: OXANIUM_700,
+    fontSize: 10,
+    letterSpacing: 0.6,
+    color: "rgba(255,255,255,0.55)",
+    textTransform: "uppercase",
+  },
+  periodChipTextOn: {
+    color: "#a5f3fc",
   },
   muted: {
     color: colors.textSecondary,
     fontSize: typography.body,
     paddingVertical: spacing.md,
-  },
-  metrics: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  metric: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderRadius: 10,
-    padding: 10,
-    gap: 3,
-  },
-  metricLabel: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  metricValue: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  cta: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(34,211,238,0.18)",
-    borderColor: "rgba(103,232,249,0.4)",
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 12,
-  },
-  ctaText: {
-    color: "rgba(207,250,254,0.98)",
-    fontSize: 14,
-    fontWeight: "800",
   },
 });

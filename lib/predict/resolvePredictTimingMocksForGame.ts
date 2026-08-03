@@ -1,6 +1,6 @@
 /**
- * NBA 予想オーバーレイ — プレビュー mock を任意の対戦カードに当てはめる。
- * API 接続前の Native / Web 共通フォールバック。
+ * NBA 予想オーバーレイ — プレビュー専用 mock を任意の対戦カードに当てはめる。
+ * 本番フォームには渡さない（準備中表示）。
  */
 
 import { injuryReportForPreset } from "@/lib/predict/nbaInjuryReportPreviewMocks";

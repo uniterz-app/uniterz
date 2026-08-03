@@ -292,15 +292,6 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="MyRankFreeProPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .MyRankFreeProPreviewScreenWrapper
-            }
-          />
-        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>

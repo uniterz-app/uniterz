@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { Lock, Sparkles } from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -16,12 +16,22 @@ import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanPr
 import { PROFILE_EDIT_KINETIK_MOCK } from "@/app/component/profile/edit/profileEditKinetikTypes";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
+import { fetchProSkinStatus } from "@/lib/api/fetchProSkinStatus";
 import {
-  PROFILE_PLAN_PRO_ADOPTED_BG,
   profilePlanProAdoptedCategoryLabel,
   type ProfilePlanProAdoptedCategory,
   type ProfilePlanProAdoptedEntry,
 } from "@/lib/profile/profilePlanProAdoptedBgVariants";
+import {
+  diffNewlyUnlockedProSkins,
+  formatProSkinOwnerCount,
+  formatProSkinUnlockCondition,
+  getProSkinUnlockEntry,
+  PRO_SKIN_UNLOCK_CATALOG,
+  readProSkinUnlockSeenIds,
+  writeProSkinUnlockSeenIds,
+  type ProSkinUnlockCatalogEntry,
+} from "@/lib/profile/proSkinUnlock";
 import { profilePlanProAdoptedSkinSwatch } from "@/lib/profile/profilePlanProAdoptedSkinSwatch";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_CLASS } from "@/lib/profile/profilePlanVisual";
@@ -63,7 +73,7 @@ function panelProps() {
     language: "ja" as const,
     identity: {
       ...PROFILE_EDIT_KINETIK_MOCK.identity,
-      displayName: "MPJ",
+      displayName: "UNITERZ",
       systemId: "3PJVG4Y9",
       handle: "mpj",
     },
@@ -81,7 +91,7 @@ function panelProps() {
     totalPointsRank: 14,
     totalPointsRankDenominator: 800,
     rankDeltaPlaces: 0,
-    bio: "Win now",
+    bio: "PREVIEW",
     metricsTitle: "NBA // SEASON STATS",
     countryCode: "JP",
     memberSinceMs: new Date("2025-12-01T00:00:00+09:00").getTime(),
@@ -213,10 +223,14 @@ function ScaledCatalogCard({
 function CatalogTile({
   entry,
   selected,
+  unlocked,
+  owners,
   onSelect,
 }: {
-  entry: ProfilePlanProAdoptedEntry;
+  entry: ProSkinUnlockCatalogEntry;
   selected: boolean;
+  unlocked: boolean;
+  owners: number;
   onSelect: () => void;
 }) {
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -225,6 +239,7 @@ function CatalogTile({
       onSelect();
     }
   };
+  const condition = formatProSkinUnlockCondition(entry.unlock, "ja");
 
   return (
     <div
@@ -233,10 +248,11 @@ function CatalogTile({
       onClick={onSelect}
       onKeyDown={handleKeyDown}
       aria-pressed={selected}
-      aria-label={`${entry.label} ${entry.tag ? entry.tag : ""}`}
+      aria-label={`${entry.label} ${unlocked ? "" : "locked"}`}
       className={[
         "profile-plan-pro-bg-picker-catalog-tile",
         selected ? "profile-plan-pro-bg-picker-catalog-tile--on" : "",
+        unlocked ? "" : "opacity-95",
       ].join(" ")}
     >
       <div className="profile-plan-pro-bg-picker-catalog-tile__head">
@@ -256,7 +272,7 @@ function CatalogTile({
             </span>
           ) : null}
         </div>
-        <div className="profile-plan-pro-bg-picker-catalog-tile__group-row">
+        <div className="profile-plan-pro-bg-picker-catalog-tile__group-row flex flex-wrap items-center gap-1.5">
           <span
             className={[
               nameOxanium.className,
@@ -266,10 +282,67 @@ function CatalogTile({
           >
             {profilePlanProAdoptedCategoryLabel(entry.category, "en")}
           </span>
+          {!unlocked ? (
+            <span
+              className={[
+                nameOxanium.className,
+                "inline-flex items-center gap-0.5 rounded border border-amber-300/35 bg-amber-300/10 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.08em] text-amber-100/85",
+              ].join(" ")}
+            >
+              <Lock size={9} strokeWidth={2.4} aria-hidden />
+              LOCKED
+            </span>
+          ) : entry.unlock.kind === "pro" ? (
+            <span
+              className={[
+                nameOxanium.className,
+                "rounded border border-cyan-400/30 bg-cyan-400/10 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.08em] text-cyan-100/80",
+              ].join(" ")}
+            >
+              PRO
+            </span>
+          ) : (
+            <span
+              className={[
+                nameOxanium.className,
+                "rounded border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.08em] text-emerald-100/85",
+              ].join(" ")}
+            >
+              UNLOCKED
+            </span>
+          )}
         </div>
+        <p
+          className={[
+            nameOxanium.className,
+            "mt-1 text-[9px] font-bold tracking-[0.04em] text-white/45",
+          ].join(" ")}
+        >
+          {condition}
+          <span className="mx-1.5 text-white/20">·</span>
+          {formatProSkinOwnerCount(owners, "ja")}
+        </p>
       </div>
-      <div className="profile-plan-pro-bg-picker-catalog-tile__card">
+      <div className="profile-plan-pro-bg-picker-catalog-tile__card relative">
         <SkinThumbnail entry={entry} />
+        {!unlocked ? (
+          <div
+            className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[1px]"
+            aria-hidden
+          >
+            <div className="flex flex-col items-center gap-1 px-2 text-center">
+              <Lock size={16} className="text-amber-200/90" strokeWidth={2.2} />
+              <span
+                className={[
+                  nameOxanium.className,
+                  "text-[9px] font-extrabold uppercase tracking-[0.12em] text-amber-50/90",
+                ].join(" ")}
+              >
+                Milestone
+              </span>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -301,10 +374,55 @@ export default function ProfilePlanProSkinPicker({
   >({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() =>
+    new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
+  );
+  const [ownerCounts, setOwnerCounts] = useState<Record<string, number>>({});
+  const [statusReady, setStatusReady] = useState(!isProduction);
+  const [unlockModalIds, setUnlockModalIds] = useState<ProfilePlanProBgVariant[]>(
+    []
+  );
 
   useEffect(() => {
     setSavedId(initialSelectedId);
   }, [initialSelectedId]);
+
+  useEffect(() => {
+    if (!isProduction) {
+      setUnlockedIds(new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id)));
+      setStatusReady(true);
+      return;
+    }
+    let alive = true;
+    void fetchProSkinStatus()
+      .then((status) => {
+        if (!alive) return;
+        setUnlockedIds(new Set(status.unlockedIds));
+        setOwnerCounts(status.ownerCounts ?? {});
+        if (status.savedId) setSavedId(status.savedId);
+        const seen = readProSkinUnlockSeenIds();
+        const newly = diffNewlyUnlockedProSkins(status.unlockedIds, seen);
+        if (newly.length > 0) {
+          setUnlockModalIds(newly as ProfilePlanProBgVariant[]);
+        }
+        // Pro 即解放は既知扱いにする
+        const nextSeen = new Set(seen);
+        for (const id of status.unlockedIds) {
+          const entry = getProSkinUnlockEntry(id);
+          if (entry?.unlock.kind === "pro") nextSeen.add(id);
+        }
+        writeProSkinUnlockSeenIds(nextSeen);
+        setStatusReady(true);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setUnlockedIds(new Set());
+        setStatusReady(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [isProduction]);
 
   useEffect(() => {
     if (!overlayId) return;
@@ -318,17 +436,23 @@ export default function ProfilePlanProSkinPicker({
   const overlayEntry = useMemo(
     () =>
       overlayId
-        ? PROFILE_PLAN_PRO_ADOPTED_BG.find((e) => e.id === overlayId) ?? null
+        ? PRO_SKIN_UNLOCK_CATALOG.find((e) => e.id === overlayId) ?? null
         : null,
     [overlayId]
   );
 
   const overlayIndex = overlayEntry
-    ? PROFILE_PLAN_PRO_ADOPTED_BG.findIndex((e) => e.id === overlayEntry.id)
+    ? PRO_SKIN_UNLOCK_CATALOG.findIndex((e) => e.id === overlayEntry.id)
     : -1;
 
+  const overlayUnlocked =
+    !isProduction || (overlayId != null && unlockedIds.has(overlayId));
+
   const hasUnsavedChange =
-    isProduction && overlayId != null && overlayId !== savedId;
+    isProduction &&
+    overlayId != null &&
+    overlayId !== savedId &&
+    overlayUnlocked;
   const canConfirm = Boolean(overlayId) && !saving && hasUnsavedChange;
 
   function openOverlay(id: ProfilePlanProBgVariant) {
@@ -344,6 +468,13 @@ export default function ProfilePlanProSkinPicker({
     if (saving) return;
     setOverlayId(null);
     setSaveError(null);
+  }
+
+  function dismissUnlockModal() {
+    const seen = readProSkinUnlockSeenIds();
+    for (const id of unlockModalIds) seen.add(id);
+    writeProSkinUnlockSeenIds(seen);
+    setUnlockModalIds([]);
   }
 
   async function handleApplySkin() {
@@ -364,9 +495,11 @@ export default function ProfilePlanProSkinPicker({
 
   const confirmLabel = saving
     ? "保存中…"
-    : hasUnsavedChange
-      ? "このスキンを適用"
-      : "適用済み";
+    : !overlayUnlocked
+      ? "未解放"
+      : hasUnsavedChange
+        ? "このスキンを適用"
+        : "適用済み";
 
   const headerBlock = (
     <header className={isWeb ? "mb-5 md:mb-6" : "mx-auto mb-5 max-w-[420px]"}>
@@ -393,8 +526,8 @@ export default function ProfilePlanProSkinPicker({
         ].join(" ")}
       >
         {isProduction
-          ? "模様をタップするとプレビューが開き、そこで適用を確定できます。"
-          : `Browse ${PROFILE_PLAN_PRO_ADOPTED_BG.length} skin thumbnails. Tap a thumbnail to open the preview overlay.`}
+          ? "上段は Pro ですぐ使えるスキン。下段はマイルストーン達成で解放されます。"
+          : `Browse ${PRO_SKIN_UNLOCK_CATALOG.length} skin thumbnails. Tap a thumbnail to open the preview overlay.`}
       </p>
       {!isProduction ? (
         <div className="mt-2.5 flex flex-wrap gap-3 text-[11px]">
@@ -417,11 +550,13 @@ export default function ProfilePlanProSkinPicker({
         isWeb ? "profile-plan-pro-bg-picker-catalog-grid--web" : "",
       ].join(" ")}
     >
-      {PROFILE_PLAN_PRO_ADOPTED_BG.map((entry) => (
+      {PRO_SKIN_UNLOCK_CATALOG.map((entry) => (
         <CatalogTile
           key={entry.id}
           entry={entry}
           selected={savedId === entry.id}
+          unlocked={!isProduction || unlockedIds.has(entry.id)}
+          owners={ownerCounts[entry.id] ?? 0}
           onSelect={() => openOverlay(entry.id)}
         />
       ))}
@@ -464,16 +599,6 @@ export default function ProfilePlanProSkinPicker({
                 {overlayEntry.tag ? ` · ${overlayEntry.tag}` : ""}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={closeOverlay}
-              className={[
-                nameOxanium.className,
-                "shrink-0 border border-white/20 px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/70 hover:border-cyan-400/50 hover:text-cyan-200",
-              ].join(" ")}
-            >
-              閉じる
-            </button>
           </div>
 
           <div className="profile-plan-pro-bg-picker-overlay__preview">
@@ -499,6 +624,18 @@ export default function ProfilePlanProSkinPicker({
           <div className="profile-plan-pro-bg-picker-overlay__actions">
             {isProduction ? (
               <>
+                {!overlayUnlocked ? (
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "w-full text-center text-[11px] font-bold tracking-[0.06em] text-amber-100/85",
+                    ].join(" ")}
+                  >
+                    {overlayEntry
+                      ? formatProSkinUnlockCondition(overlayEntry.unlock, "ja")
+                      : "未解放"}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   disabled={!canConfirm}
@@ -541,9 +678,94 @@ export default function ProfilePlanProSkinPicker({
               </button>
             )}
           </div>
+          {overlayEntry ? (
+            <p
+              className={[
+                nameOxanium.className,
+                "mt-2 text-center text-[10px] font-bold tracking-[0.06em] text-white/40",
+              ].join(" ")}
+            >
+              {formatProSkinOwnerCount(ownerCounts[overlayEntry.id] ?? 0, "ja")}
+            </p>
+          ) : null}
           {saveError && isProduction ? (
             <p className="mt-2 text-center text-xs text-red-300/90">{saveError}</p>
           ) : null}
+        </div>
+      </div>
+    ) : null;
+
+  const unlockModal =
+    unlockModalIds.length > 0 ? (
+      <div
+        className="fixed inset-0 z-[80] flex items-center justify-center px-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="スキン解放"
+      >
+        <button
+          type="button"
+          className="absolute inset-0 bg-black/70"
+          aria-label="閉じる"
+          onClick={dismissUnlockModal}
+        />
+        <div className="relative z-[1] w-full max-w-sm border border-cyan-400/35 bg-[#050b14] px-4 py-5 shadow-[0_0_40px_rgba(0,245,255,0.18)]">
+          <p
+            className={[
+              nameOxanium.className,
+              "text-center text-[10px] font-extrabold uppercase tracking-[0.22em] text-cyan-300/85",
+            ].join(" ")}
+          >
+            SKIN UNLOCKED
+          </p>
+          <h2
+            className={[
+              nameRajdhani.className,
+              "mt-2 text-center text-lg font-bold text-white",
+            ].join(" ")}
+          >
+            新しい Pro Skin が解放されました
+          </h2>
+          <ul className="mt-4 space-y-2">
+            {unlockModalIds.map((id) => {
+              const entry = getProSkinUnlockEntry(id);
+              if (!entry) return null;
+              return (
+                <li
+                  key={id}
+                  className="border border-white/10 bg-white/[0.03] px-3 py-2"
+                >
+                  <p
+                    className={[
+                      nameRajdhani.className,
+                      "text-sm font-bold text-white",
+                    ].join(" ")}
+                  >
+                    {entry.label}
+                    {entry.tag ? ` · ${entry.tag}` : ""}
+                  </p>
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "mt-0.5 text-[10px] font-bold tracking-[0.06em] text-cyan-100/70",
+                    ].join(" ")}
+                  >
+                    {formatProSkinUnlockCondition(entry.unlock, "ja")}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+          <button
+            type="button"
+            onClick={dismissUnlockModal}
+            className={[
+              nameOxanium.className,
+              "mt-4 w-full border-2 border-[#00F5FF] bg-[#00F5FF] py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#050508]",
+            ].join(" ")}
+          >
+            OK
+          </button>
         </div>
       </div>
     ) : null;
@@ -571,10 +793,15 @@ export default function ProfilePlanProSkinPicker({
           isWeb ? "mx-auto w-full max-w-5xl" : "mx-auto w-full max-w-[420px]"
         }
       >
-        {catalogGrid}
+        {isProduction && !statusReady ? (
+          <p className="py-10 text-center text-sm text-white/45">読み込み中…</p>
+        ) : (
+          catalogGrid
+        )}
       </div>
 
       {confirmOverlay}
+      {unlockModal}
     </Root>
   );
 }

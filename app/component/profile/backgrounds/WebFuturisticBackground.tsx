@@ -1,6 +1,6 @@
 /**
  * Web 用 futuristic 背景（DOM SVG）。
- * 採用: Eclipse / Data Stream のみ。
+ * 本番採用は Eclipse。Data Stream は非採用（互換のため残置）。
  */
 "use client";
 

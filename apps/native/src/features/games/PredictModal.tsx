@@ -50,8 +50,8 @@ import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
 import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative";
 import PredictOverlayMatchCardShellNative from "./PredictOverlayMatchCardShellNative";
 import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
+import CountryFlagNative from "./CountryFlagNative";
 import NbaTopScorerPickerNative from "./predict/NbaTopScorerPickerNative";
-import { resolvePredictTimingMocksForGame } from "../../../../../lib/predict/resolvePredictTimingMocksForGame";
 import {
   normalizeNbaTopScorerCandidates,
   normalizeNbaTopScorerPick,
@@ -725,6 +725,10 @@ type PredictModalProps = {
   setPredictToolsTab: (value: PredictToolsTab) => void;
   winner: "home" | "away" | "draw" | null;
   isSoccerPredict: boolean;
+  /** WC ノックアウト — 同点時は PK 進出選択が必要 */
+  isKnockoutPredict?: boolean;
+  pkWinner?: "home" | "away" | null;
+  setPkWinner?: (value: "home" | "away" | null) => void;
   scoreAway: string;
   setScoreAway: (value: string) => void;
   scoreHome: string;
@@ -850,6 +854,9 @@ export default function PredictModal({
   setPredictToolsTab,
   winner,
   isSoccerPredict,
+  isKnockoutPredict = false,
+  pkWinner = null,
+  setPkWinner,
   scoreAway,
   setScoreAway,
   scoreHome,
@@ -1031,23 +1038,6 @@ export default function PredictModal({
       ),
     [predictData?.subjectGame]
   );
-  const nbaTimingMocks = useMemo(() => {
-    if (!showNbaPredictTimingOverlay || !matchPreview) return null;
-    const homeTeamId = rawTeamIdFromGameSide(matchPreview.homeSide) ?? "";
-    const awayTeamId = rawTeamIdFromGameSide(matchPreview.awaySide) ?? "";
-    if (!homeTeamId || !awayTeamId) return null;
-    return resolvePredictTimingMocksForGame({
-      homeTeamId,
-      awayTeamId,
-      homeTeamName: predictHomeTeamLabel || matchPreview.homeCompact,
-      awayTeamName: predictAwayTeamLabel || matchPreview.awayCompact,
-    });
-  }, [
-    showNbaPredictTimingOverlay,
-    matchPreview,
-    predictHomeTeamLabel,
-    predictAwayTeamLabel,
-  ]);
   const showWcOverlayTabs = isWcLeague && hideMarketTab;
   const overlayCenterMode = hideMarketTab;
   const showOverlayScheduleMeta =
@@ -1102,7 +1092,12 @@ export default function PredictModal({
     Boolean(winner) &&
     !predictSubmitting &&
     scoreHome !== "" &&
-    scoreAway !== "";
+    scoreAway !== "" &&
+    !(
+      isKnockoutPredict &&
+      Number(scoreHome) === Number(scoreAway) &&
+      pkWinner == null
+    );
 
   const modalChromeVisible = visible || exitingUi;
 
@@ -1238,10 +1233,6 @@ export default function PredictModal({
                       awayTeamName={
                         predictAwayTeamLabel || matchPreview?.awayCompact || "AWAY"
                       }
-                      brief={nbaTimingMocks?.proBrief ?? null}
-                      injuryReport={nbaTimingMocks?.injuryReport ?? null}
-                      teamStats={nbaTimingMocks?.teamStats ?? null}
-                      roster={nbaTimingMocks?.roster ?? null}
                     />
                   ) : (
               <View>
@@ -1565,6 +1556,73 @@ export default function PredictModal({
                               />
                             </View>
                           </View>
+                          {isKnockoutPredict &&
+                          predictedScoreForGoalScorer &&
+                          predictedScoreForGoalScorer.home ===
+                            predictedScoreForGoalScorer.away &&
+                          setPkWinner ? (
+                            <View style={s.pkAdvanceBlock}>
+                              <Text style={s.pkAdvanceTitle}>
+                                {language === "en"
+                                  ? "Who advances on penalties?"
+                                  : "PK戦で勝ち上がるチーム"}
+                              </Text>
+                              <View style={s.pkAdvanceRow}>
+                                {(
+                                  [
+                                    {
+                                      side: "home" as const,
+                                      label: predictHomeTeamLabel || "HOME",
+                                      teamId: rawTeamIdFromGameSide(
+                                        matchPreview?.homeSide
+                                      ),
+                                    },
+                                    {
+                                      side: "away" as const,
+                                      label: predictAwayTeamLabel || "AWAY",
+                                      teamId: rawTeamIdFromGameSide(
+                                        matchPreview?.awaySide
+                                      ),
+                                    },
+                                  ] as const
+                                ).map(({ side, label, teamId }) => {
+                                  const active = pkWinner === side;
+                                  return (
+                                    <Pressable
+                                      key={side}
+                                      onPress={() => setPkWinner(side)}
+                                      style={[
+                                        s.pkAdvanceChip,
+                                        active ? s.pkAdvanceChipActive : null,
+                                      ]}
+                                      accessibilityRole="button"
+                                      accessibilityState={{ selected: active }}
+                                      accessibilityLabel={label}
+                                    >
+                                      {teamId ? (
+                                        <CountryFlagNative
+                                          teamId={teamId}
+                                          variant="inline"
+                                        />
+                                      ) : (
+                                        <Text
+                                          style={[
+                                            s.pkAdvanceChipText,
+                                            active
+                                              ? s.pkAdvanceChipTextActive
+                                              : null,
+                                          ]}
+                                          numberOfLines={1}
+                                        >
+                                          {label}
+                                        </Text>
+                                      )}
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                            </View>
+                          ) : null}
                           {isWcLeague && setGoalScorerPick ? (
                             <WcGoalScorerPickerNative
                               homeTeamId={rawTeamIdFromGameSide(predictData?.subjectGame.home)}
@@ -1642,6 +1700,73 @@ export default function PredictModal({
                               />
                             </View>
                           </View>
+                          {isKnockoutPredict &&
+                          predictedScoreForGoalScorer &&
+                          predictedScoreForGoalScorer.home ===
+                            predictedScoreForGoalScorer.away &&
+                          setPkWinner ? (
+                            <View style={s.pkAdvanceBlock}>
+                              <Text style={s.pkAdvanceTitle}>
+                                {language === "en"
+                                  ? "Who advances on penalties?"
+                                  : "PK戦で勝ち上がるチーム"}
+                              </Text>
+                              <View style={s.pkAdvanceRow}>
+                                {(
+                                  [
+                                    {
+                                      side: "home" as const,
+                                      label: predictHomeTeamLabel || "HOME",
+                                      teamId: rawTeamIdFromGameSide(
+                                        matchPreview?.homeSide
+                                      ),
+                                    },
+                                    {
+                                      side: "away" as const,
+                                      label: predictAwayTeamLabel || "AWAY",
+                                      teamId: rawTeamIdFromGameSide(
+                                        matchPreview?.awaySide
+                                      ),
+                                    },
+                                  ] as const
+                                ).map(({ side, label, teamId }) => {
+                                  const active = pkWinner === side;
+                                  return (
+                                    <Pressable
+                                      key={side}
+                                      onPress={() => setPkWinner(side)}
+                                      style={[
+                                        s.pkAdvanceChip,
+                                        active ? s.pkAdvanceChipActive : null,
+                                      ]}
+                                      accessibilityRole="button"
+                                      accessibilityState={{ selected: active }}
+                                      accessibilityLabel={label}
+                                    >
+                                      {teamId ? (
+                                        <CountryFlagNative
+                                          teamId={teamId}
+                                          variant="inline"
+                                        />
+                                      ) : (
+                                        <Text
+                                          style={[
+                                            s.pkAdvanceChipText,
+                                            active
+                                              ? s.pkAdvanceChipTextActive
+                                              : null,
+                                          ]}
+                                          numberOfLines={1}
+                                        >
+                                          {label}
+                                        </Text>
+                                      )}
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                            </View>
+                          ) : null}
                           {isWcLeague && setGoalScorerPick ? (
                             <WcGoalScorerPickerNative
                               homeTeamId={rawTeamIdFromGameSide(predictData?.subjectGame.home)}
@@ -2043,6 +2168,41 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: "rgba(147,185,255,0.85)",
     textAlign: "center",
+  },
+  pkAdvanceBlock: {
+    marginTop: 12,
+    gap: 8,
+  },
+  pkAdvanceTitle: {
+    color: "rgba(252,211,77,0.9)",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  pkAdvanceRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  pkAdvanceChip: {
+    flex: 1,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  pkAdvanceChipActive: {
+    borderColor: "rgba(252,211,77,0.7)",
+    backgroundColor: "rgba(252,211,77,0.15)",
+  },
+  pkAdvanceChipText: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  pkAdvanceChipTextActive: {
+    color: "#fde68a",
   },
   /** バッジ・閉じるボタンは overflow:visible。内側 shell だけ clip */
   matchPreviewWrap: {

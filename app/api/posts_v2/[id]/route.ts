@@ -5,7 +5,6 @@ import { NextResponse, NextRequest } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import {
   normalizeNbaTopScorerCandidates,
-  normalizeNbaTopScorerPick,
   validateNbaTopScorerPickForGame,
 } from "@/lib/nba/topScorer";
 import {
@@ -14,6 +13,10 @@ import {
   type WcGoalScorerPick,
 } from "@/lib/legacyWcWebShims";
 import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
+import {
+  parsePredictionPayload,
+  type ParsedPredictionPayload,
+} from "@/lib/predict/parsePredictionPayload";
 import { FieldValue } from "firebase-admin/firestore";
 
 /* ========= 認証 ========= */
@@ -108,76 +111,9 @@ export async function GET(req: NextRequest, ctx: any) {
   }
 }
 
-function isSoccerLeague(league: unknown): boolean {
-  const s = String(league ?? "").toLowerCase();
-  return s === "pl" || s === "j1" || s === "wc" || s.includes("premier");
-}
-
-/** 予想 PATCH 用（POST /api/posts_v2 と同趣旨の検証） */
-type PredictionPatch = {
-  winner: "home" | "away" | "draw";
-  score: { home: number; away: number };
+type PredictionPatch = ParsedPredictionPayload & {
   goalScorer?: WcGoalScorerPick;
 };
-
-function parsePredictionPatch(
-  raw: unknown,
-  league: unknown,
-  knockout: boolean
-): { ok: true; prediction: PredictionPatch; rawGoalScorer: unknown } | { ok: false; error: string } {
-  const soccer = isSoccerLeague(league);
-  const p = (raw as any)?.prediction ?? raw;
-  if (!p || typeof p !== "object")
-    return { ok: false, error: "prediction required" };
-  const winner = (p as any).winner;
-  if (!["home", "away", "draw"].includes(winner))
-    return { ok: false, error: "prediction.winner must be home/away/draw" };
-  const s = (p as any).score ?? {};
-  const home = Number(s.home);
-  const away = Number(s.away);
-  if (
-    !Number.isInteger(home) ||
-    !Number.isInteger(away) ||
-    home < 0 ||
-    away < 0
-  )
-    return { ok: false, error: "score invalid" };
-
-  if (knockout) {
-    // ノックアウト: 引き分け結果は不可。同点スコアは PK 決着として許可（勝者は進出側）
-    if (winner === "draw")
-      return { ok: false, error: "draw result not allowed in knockout stage" };
-    if (winner === "home" && home < away)
-      return { ok: false, error: "home advance requires home score >= away" };
-    if (winner === "away" && away < home)
-      return { ok: false, error: "away advance requires away score >= home" };
-    return {
-      ok: true,
-      prediction: {
-        winner: winner as "home" | "away" | "draw",
-        score: { home, away },
-      },
-      rawGoalScorer: (p as any).goalScorer,
-    };
-  }
-
-  if (!soccer && winner === "draw")
-    return { ok: false, error: "draw not allowed for this league" };
-  if (winner === "home" && home <= away)
-    return { ok: false, error: "home win requires home score > away" };
-  if (winner === "away" && away <= home)
-    return { ok: false, error: "away win requires away score > home" };
-  if (soccer && winner === "draw" && home !== away)
-    return { ok: false, error: "draw requires equal scores" };
-  return {
-    ok: true,
-    prediction: {
-      winner: winner as "home" | "away" | "draw",
-      score: { home, away },
-    },
-    rawGoalScorer: (p as any).goalScorer,
-  };
-}
 
 /* ========= PATCH ========= */
 export async function PATCH(req: NextRequest, ctx: any) {
@@ -222,7 +158,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         wcStage: g?.wcStage ?? data.wcStage ?? null,
       });
 
-      const parsed = parsePredictionPatch(body.prediction, data.league, isKnockout);
+      const parsed = parsePredictionPayload(body.prediction, data.league, isKnockout);
       if (!parsed.ok) {
         return NextResponse.json(
           { ok: false, error: parsed.error },

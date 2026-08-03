@@ -35,11 +35,6 @@ const LINKS = [
     note: "Team Stats / Box Score（mock）",
   },
   {
-    href: "/mobile/my-rank-free-pro-preview",
-    title: "My Rank Free / Pro",
-    note: "カード比較",
-  },
-  {
     href: "/mobile/rank-gap-preview",
     title: "Gap / Shadow",
     note: "Rank Intel",

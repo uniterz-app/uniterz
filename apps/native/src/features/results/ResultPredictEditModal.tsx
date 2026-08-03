@@ -28,6 +28,7 @@ import {
   isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
   getWcSquadPlayer,
+  isWcKnockoutGame,
 } from "../games/legacyWcNativeShims";
 import type { NativeGameRow, SupportedLeague } from "../games/useTodayGames";
 import { getGamesTexts, type GamesLanguage } from "../games/gamesI18n";
@@ -43,6 +44,10 @@ import {
   PredictionApiError,
   updatePredictionPostApi,
 } from "../games/submitPredictionApi";
+import {
+  buildClientPredictionPayload,
+  validateClientPrediction,
+} from "../../../../../lib/predict/clientPredictionSubmit";
 import { scheduleAfterPredictModalDismissed } from "../games/scheduleAfterPredictModalDismissed";
 import {
   readEditModeHintShown,
@@ -179,6 +184,7 @@ export default function ResultPredictEditModal({
 
   const [predictToolsTab, setPredictToolsTab] = useState<PredictToolsTab>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
+  const [pkWinner, setPkWinner] = useState<"home" | "away" | null>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
   const [predictSubmitting, setPredictSubmitting] = useState(false);
@@ -186,6 +192,7 @@ export default function ResultPredictEditModal({
   const resetLocalForm = useCallback(() => {
     setPredictToolsTab(null);
     setWinner(null);
+    setPkWinner(null);
     setScoreHome("");
     setScoreAway("");
     setPredictSubmitting(false);
@@ -303,6 +310,15 @@ export default function ResultPredictEditModal({
     selectedLeague === "wc" ||
     selectedLeague === "pl" ||
     selectedLeague === "j1";
+  const isKnockoutPredict = game
+    ? isWcKnockoutGame({
+        league: game.league,
+        knockout:
+          game.knockout === true ? true : game.knockout === false ? false : null,
+        roundLabel: typeof game.roundLabel === "string" ? game.roundLabel : null,
+        wcStage: typeof game.wcStage === "string" ? game.wcStage : null,
+      })
+    : false;
 
   useEffect(() => {
     if (!visible || phase !== "ready") return;
@@ -329,12 +345,24 @@ export default function ResultPredictEditModal({
       setWinner("away");
       return;
     }
+    if (isKnockoutPredict) {
+      setWinner(pkWinner);
+      return;
+    }
     if (isSoccerPredict) {
       setWinner("draw");
       return;
     }
     setWinner(null);
-  }, [visible, phase, scoreHome, scoreAway, isSoccerPredict]);
+  }, [
+    visible,
+    phase,
+    scoreHome,
+    scoreAway,
+    isSoccerPredict,
+    isKnockoutPredict,
+    pkWinner,
+  ]);
 
   useEffect(() => {
     if (!visible || phase !== "ready" || !game || !fUser?.uid) return;
@@ -564,35 +592,35 @@ export default function ResultPredictEditModal({
       cyberAlert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
       return;
     }
-    if (!winner) {
-      cyberAlert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
-      return;
-    }
     const homeNum = Number(scoreHome);
     const awayNum = Number(scoreAway);
-    if (
-      !Number.isFinite(homeNum) ||
-      !Number.isFinite(awayNum) ||
-      homeNum < 0 ||
-      awayNum < 0
-    ) {
-      cyberAlert(t.invalidInputTitle, t.invalidScoreBody);
-      return;
-    }
-    if (!isSoccerPredict && winner === "draw") {
-      cyberAlert(t.invalidInputTitle, t.invalidDrawLeagueBody);
-      return;
-    }
-    if (winner === "home" && homeNum <= awayNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidHomeWinBody);
-      return;
-    }
-    if (winner === "away" && awayNum <= homeNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidAwayWinBody);
-      return;
-    }
-    if (winner === "draw" && homeNum !== awayNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidDrawScoreBody);
+    const validated = validateClientPrediction({
+      winner,
+      scoreHome: homeNum,
+      scoreAway: awayNum,
+      league: game.league,
+      knockout: isKnockoutPredict,
+      pkWinner,
+    });
+    if (!validated.ok) {
+      const body =
+        validated.code === "knockout_pk_winner_required" ||
+        validated.code === "knockout_draw_not_allowed"
+          ? t.knockoutPkWinnerRequiredBody
+          : validated.code === "draw_not_allowed"
+            ? t.invalidDrawLeagueBody
+            : validated.code === "home_win_score" ||
+                validated.code === "knockout_home_advance"
+              ? t.invalidHomeWinBody
+              : validated.code === "away_win_score" ||
+                  validated.code === "knockout_away_advance"
+                ? t.invalidAwayWinBody
+                : validated.code === "draw_requires_equal"
+                  ? t.invalidDrawScoreBody
+                  : validated.code === "invalid_score"
+                    ? t.invalidScoreBody
+                    : t.predictionNeedsWinnerScoreBody;
+      cyberAlert(t.invalidInputTitle, body);
       return;
     }
 
@@ -608,10 +636,19 @@ export default function ResultPredictEditModal({
 
     setPredictSubmitting(true);
     try {
+      const payload = buildClientPredictionPayload({
+        validated: validated.value,
+        league: game.league,
+        goalScorerPick: (post.prediction as { goalScorer?: unknown } | undefined)
+          ?.goalScorer,
+        homeTeamId: (game.home as { teamId?: string } | undefined)?.teamId,
+        awayTeamId: (game.away as { teamId?: string } | undefined)?.teamId,
+      });
       await updatePredictionPostApi(post.id, {
-        winner,
-        scoreHome: homeNum,
-        scoreAway: awayNum,
+        winner: payload.winner,
+        scoreHome: payload.score.home,
+        scoreAway: payload.score.away,
+        goalScorer: payload.goalScorer ?? undefined,
       });
       await AsyncStorage.removeItem(draftStorageKey(fUser.uid, String(game.id ?? "")));
       await onUpdated();
@@ -640,7 +677,8 @@ export default function ResultPredictEditModal({
     scoreHome,
     scoreAway,
     winner,
-    isSoccerPredict,
+    pkWinner,
+    isKnockoutPredict,
     t,
     language,
     onUpdated,
@@ -699,6 +737,9 @@ export default function ResultPredictEditModal({
         setPredictToolsTab={setPredictToolsTab}
         winner={winner}
         isSoccerPredict={isSoccerPredict}
+        isKnockoutPredict={isKnockoutPredict}
+        pkWinner={pkWinner}
+        setPkWinner={setPkWinner}
         scoreAway={scoreAway}
         setScoreAway={setScoreAway}
         scoreHome={scoreHome}

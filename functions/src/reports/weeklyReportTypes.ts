@@ -10,6 +10,8 @@ export type WeeklyReportRival = {
   displayName: string;
   photoURL: string | null;
   rank: number;
+  /** 生成時点の Pro 判定。古い doc は欠けることがある */
+  plan?: "free" | "pro";
 };
 
 export type WeeklyReportDivision = {
@@ -46,7 +48,7 @@ export type WeeklyReport = {
   league: "nba";
   label: string;
   range: { startKey: string; endKey: string };
-  status: "live" | "final";
+  status: "live" | "final"; // live = レガシー手動用。正は final（月曜確定のみ）
   participantCount: number;
   rank: number;
   prevRank: number | null;

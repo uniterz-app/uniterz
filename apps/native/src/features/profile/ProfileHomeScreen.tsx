@@ -51,6 +51,8 @@ import SettingsPoolsBackdropNative from "./SettingsPoolsBackdropNative";
 import { SETTINGS_POOLS_BG_BASE } from "../../../../../lib/ui/settingsPoolsBackground";
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
+import ProfileReportDeliveryOverlayNative from "./reports/ProfileReportDeliveryOverlayNative";
+import { useProReportDeliveryOverlayNative } from "./reports/useProReportDeliveryOverlayNative";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
 import ProfileOverviewSectionNative from "./ProfileOverviewSectionNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -99,6 +101,7 @@ export default function ProfileHomeScreen({
   routeHandle,
   fromRankings = false,
   fromLeaderboards = false,
+  fromWeeklyReport = false,
   leaderboardsGroupId,
   openSettingsOnMount = false,
 }: {
@@ -110,6 +113,8 @@ export default function ProfileHomeScreen({
   fromRankings?: boolean;
   /** グループ（Leaderboards タブ）から遷移してきた他人プロフィール */
   fromLeaderboards?: boolean;
+  /** 週次レポートのライバルから遷移してきた他人プロフィール */
+  fromWeeklyReport?: boolean;
   leaderboardsGroupId?: string;
   openSettingsOnMount?: boolean;
 }) {
@@ -134,8 +139,12 @@ export default function ProfileHomeScreen({
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
   const showExternalBack =
-    isPublicProfileView && (fromRankings || fromLeaderboards);
-  const externalBackVariant = fromLeaderboards ? "leaderboards" : "rankings";
+    isPublicProfileView && (fromRankings || fromLeaderboards || fromWeeklyReport);
+  const externalBackVariant = fromWeeklyReport
+    ? "report"
+    : fromLeaderboards
+      ? "leaderboards"
+      : "rankings";
 
   const dismissPublicProfileRoute = useCallback(() => {
     const state = navigation.getState();
@@ -159,6 +168,7 @@ export default function ProfileHomeScreen({
       handle: undefined,
       fromRankings: undefined,
       fromLeaderboards: undefined,
+      fromWeeklyReport: undefined,
       leaderboardsGroupId: undefined,
     });
   }, [navigation]);
@@ -208,6 +218,11 @@ export default function ProfileHomeScreen({
   }, [settingsOpen, openMenuAfterSettingsClosed]);
 
   const returnToPreviousScreen = useCallback(() => {
+    // レポート経由は同じ Profile スタック内の push なので pop だけで戻る
+    if (fromWeeklyReport) {
+      dismissPublicProfileRoute();
+      return;
+    }
     // 先にプロフィールスタックを片付けてからタブ切替する。
     // （タブ切替後の reset が Profile を前面に出すのを避ける）
     dismissPublicProfileRoute();
@@ -231,6 +246,7 @@ export default function ProfileHomeScreen({
   }, [
     dismissPublicProfileRoute,
     fromLeaderboards,
+    fromWeeklyReport,
     leaderboardsGroupId,
     tabNavigation,
   ]);
@@ -348,6 +364,16 @@ export default function ProfileHomeScreen({
   );
 
   const currentIsProView = profilePlanHook.isProView;
+  const reportOverlayEnabled =
+    isMe &&
+    myPlanReady &&
+    (currentIsProView || profilePlanHook.myPlan === "pro");
+  const { active: reportOverlay, dismiss: dismissReportOverlay } =
+    useProReportDeliveryOverlayNative({
+      uid: myUid,
+      enabled: reportOverlayEnabled,
+    });
+
   const currentStreak = useMemo(() => {
     if (isPublicProfileView && profileByHandle.currentStreak > 0) {
       return profileByHandle.currentStreak;
@@ -1169,8 +1195,6 @@ export default function ProfileHomeScreen({
         else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
         else if (page === "futuristicBgPreview" && __DEV__)
           navigation.navigate("FuturisticBgPreview");
-        else if (page === "myRankFreeProPreview" && __DEV__)
-          navigation.navigate("MyRankFreeProPreview");
       }}
     />
     <ProfileBadgeDetailModal
@@ -1182,6 +1206,13 @@ export default function ProfileHomeScreen({
         setSelectedBadge(null);
       }}
     />
+    {reportOverlay ? (
+      <ProfileReportDeliveryOverlayNative
+        active={reportOverlay}
+        language={language}
+        onDismiss={dismissReportOverlay}
+      />
+    ) : null}
     {!isPublicProfileView ? (
       <TutorialLiveHostNative
         page="profile"

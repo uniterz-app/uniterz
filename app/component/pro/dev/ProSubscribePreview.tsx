@@ -7,25 +7,63 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  Bell,
+  CalendarRange,
+  ChartNoAxesColumn,
+  ChevronLeft,
+  FileText,
+  Image,
+  Lightbulb,
+  Medal,
+  Radar,
+  Swords,
+} from "lucide-react";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
 import { CyberScanlineText } from "@/app/component/rankings/CyberRankingListParts";
 import {
   PRO_SUBSCRIBE_PREVIEW_PLANS,
   proSubscribePreviewPlanById,
+  type ProSubscribeFeatureIcon,
   type ProSubscribePreviewPlan,
   type ProSubscribePreviewPlanId,
 } from "@/lib/pro/proSubscribePreviewPlans";
 import { PRO_SKIN_PATH } from "@/lib/pro/proSkinRoutes";
+import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "@/lib/pro/proSubscribeSuccessMotion";
 import { jp, nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
+import { setAppBrandShelfHidden } from "@/lib/ui/appBrandShelfVisibility";
+import { motion, useReducedMotion } from "framer-motion";
+import cn from "clsx";
 
 type Phase = "plans" | "purchasing" | "success";
 type CheckoutKind = "trial" | "paid";
 
+const FEATURE_ICONS: Record<
+  ProSubscribeFeatureIcon,
+  typeof Lightbulb
+> = {
+  insight: Lightbulb,
+  alert: Bell,
+  rank: ChartNoAxesColumn,
+  badge: Medal,
+  skin: Image,
+  proLeague: Swords,
+  weeklyReport: FileText,
+  monthlyReport: Radar,
+  season: CalendarRange,
+};
+
 type Props = {
   language?: Language;
   className?: string;
+  /** カード左上の戻る。未指定時は非表示 */
+  onBack?: () => void;
+  backAriaLabel?: string;
+  /** カード右上はてな。未指定時は非表示 */
+  helpText?: string;
 };
 
 function trialAvailableFor(planId: ProSubscribePreviewPlanId): boolean {
@@ -92,6 +130,9 @@ function PlanScanLabel({
 export default function ProSubscribePreview({
   language = "ja",
   className,
+  onBack,
+  backAriaLabel = "戻る",
+  helpText,
 }: Props) {
   const pathname = usePathname() ?? "";
   const skinPickerHref = pathname.startsWith("/web")
@@ -102,8 +143,35 @@ export default function ProSubscribePreview({
   const [phase, setPhase] = useState<Phase>("plans");
   const [checkoutKind, setCheckoutKind] = useState<CheckoutKind>("paid");
   const [trialModalOpen, setTrialModalOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpMounted, setHelpMounted] = useState(false);
   const selected = planId ? proSubscribePreviewPlanById(planId) : null;
-  const trialAvailable = planId ? trialAvailableFor(planId) : false;
+
+  useEffect(() => {
+    setHelpMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const hide = phase === "success";
+    setAppBrandShelfHidden(hide);
+    return () => {
+      if (hide) setAppBrandShelfHidden(false);
+    };
+  }, [phase]);
+
+  useEffect(() => {
+    if (!helpOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setHelpOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [helpOpen]);
 
   function togglePlan(id: ProSubscribePreviewPlanId) {
     setPlanId((prev) => (prev === id ? null : id));
@@ -133,29 +201,29 @@ export default function ProSubscribePreview({
 
   if (phase === "success" && selected && planId) {
     return (
-      <div className={["w-full", className].filter(Boolean).join(" ")}>
-        <SuccessPanel
-          ja={ja}
-          planId={planId}
-          planLabel={ja ? selected.labelJa : selected.labelEn}
-          price={ja ? selected.priceJa : selected.priceEn}
-          period={ja ? selected.periodJa : selected.periodEn}
-          trial={checkoutKind === "trial"}
-          skinPickerHref={skinPickerHref}
-          onAgain={reset}
-        />
+      <div
+        className={[
+          "flex min-h-0 w-full flex-1 flex-col items-center justify-center",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <div className="-translate-y-5 sm:-translate-y-6">
+          <SuccessPanel
+            ja={ja}
+            planId={planId}
+            planLabel={ja ? selected.labelJa : selected.labelEn}
+            price={ja ? selected.priceJa : selected.priceEn}
+            period={ja ? selected.periodJa : selected.periodEn}
+            trial={checkoutKind === "trial"}
+            skinPickerHref={skinPickerHref}
+            onAgain={reset}
+          />
+        </div>
       </div>
     );
   }
-
-  const afterTrialPriceLine =
-    planId === "weekly"
-      ? ja
-        ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
-        : "Then ¥280/week. Cancel during trial — no charge."
-      : ja
-        ? "お試し後は月額 ¥780。期間中の解約で課金なし。"
-        : "Then ¥780/month. Cancel during trial — no charge.";
 
   return (
     <div className={["relative w-full", className].filter(Boolean).join(" ")}>
@@ -167,23 +235,79 @@ export default function ProSubscribePreview({
           "shadow-[0_20px_52px_rgba(0,0,0,0.55),0_0_28px_rgba(212,175,90,0.08)]",
         ].join(" ")}
       >
-        <header className="mb-5 text-center">
-          <div className="mb-3 flex justify-center">
-            <ProCyberBadge ariaLabel="UNITERZ Pro" />
+        <header className="mb-5">
+          {(onBack || helpText) && (
+            <div className="mb-3 flex items-center justify-between gap-2">
+              {onBack ? (
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center border border-[rgba(0,245,255,0.28)] bg-[rgba(0,245,255,0.06)] text-cyan-100 transition hover:border-[rgba(0,245,255,0.5)] hover:bg-[rgba(0,245,255,0.12)] active:scale-95"
+                  style={{
+                    clipPath:
+                      "polygon(6px 0%, 100% 0%, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0% 100%, 0% 6px)",
+                  }}
+                  aria-label={backAriaLabel}
+                >
+                  <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+                </button>
+              ) : (
+                <span className="h-10 w-10 shrink-0" aria-hidden />
+              )}
+              {helpText ? (
+                <button
+                  type="button"
+                  onClick={() => setHelpOpen(true)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center border border-[rgba(0,245,255,0.22)] bg-[rgba(0,245,255,0.05)] transition hover:border-[rgba(0,245,255,0.45)] hover:bg-[rgba(0,245,255,0.1)]"
+                  style={{
+                    clipPath:
+                      "polygon(6px 0%, 100% 0%, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0% 100%, 0% 6px)",
+                  }}
+                  aria-label={ja ? "説明" : "Info"}
+                  aria-expanded={helpOpen}
+                >
+                  <span
+                    className={cn(
+                      nameOxanium.className,
+                      "text-[17px] font-black italic leading-none tracking-wide text-cyan-200/90"
+                    )}
+                    style={{
+                      textShadow:
+                        "0 0 6px rgba(0,245,255,0.55), 0 0 14px rgba(0,245,255,0.28)",
+                    }}
+                    aria-hidden
+                  >
+                    ?
+                  </span>
+                </button>
+              ) : (
+                <span className="h-10 w-10 shrink-0" aria-hidden />
+              )}
+            </div>
+          )}
+          <div className="text-center">
+            <div className="mb-3 flex justify-center">
+              <ProCyberBadge ariaLabel="UNITERZ Pro" />
+            </div>
+            <h1
+              className={[
+                nameOxanium.className,
+                "text-[22px] font-extrabold uppercase tracking-[0.14em] text-white",
+              ].join(" ")}
+            >
+              Get Pro
+            </h1>
+            <p
+              className={[
+                jp.className,
+                "mt-2 text-[12px] leading-relaxed text-white/50",
+              ].join(" ")}
+            >
+              {ja
+                ? "プランをタップして、できることを確認。もう一度タップで閉じます。"
+                : "Tap a plan to see what’s included. Tap again to close."}
+            </p>
           </div>
-          <h1
-            className={[
-              nameOxanium.className,
-              "text-[22px] font-extrabold uppercase tracking-[0.14em] text-white",
-            ].join(" ")}
-          >
-            Get Pro
-          </h1>
-          <p className={[jp.className, "mt-2 text-[12px] leading-relaxed text-white/50"].join(" ")}>
-            {ja
-              ? "プランをタップして、できることを確認。もう一度タップで閉じます。"
-              : "Tap a plan to see what’s included. Tap again to close."}
-          </p>
         </header>
 
         {/* モバイル縦並び: タップでそのカード直下に機能が開閉 */}
@@ -296,129 +420,137 @@ export default function ProSubscribePreview({
                       {ja ? "このプランでできること" : "Included"}
                     </p>
                     <ul className="space-y-2.5">
-                      {plan.features.map((f) => (
-                        <li key={f.titleEn} className="flex items-start gap-2">
-                          <span
-                            className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full"
-                            style={{ background: accent.fill }}
-                          />
-                          <div className="min-w-0">
-                            <p
-                              className={[
-                                nameOxanium.className,
-                                "text-[11px] font-extrabold tracking-[0.04em] text-white/90",
-                              ].join(" ")}
+                      {plan.features.map((f) => {
+                        const Icon = FEATURE_ICONS[f.icon];
+                        return (
+                          <li
+                            key={f.titleEn}
+                            className="flex items-start gap-2.5"
+                          >
+                            <span
+                              className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border"
+                              style={{
+                                borderColor: `${accent.fill}73`,
+                                background: `${accent.fill}26`,
+                                color: accent.fill,
+                              }}
+                              aria-hidden
                             >
-                              {ja ? f.titleJa : f.titleEn}
-                            </p>
-                            <p
-                              className={[
-                                jp.className,
-                                "mt-0.5 text-[11px] leading-snug text-white/50",
-                              ].join(" ")}
-                            >
-                              {ja ? f.detailJa : f.detailEn}
-                            </p>
-                          </div>
-                        </li>
-                      ))}
+                              <Icon className="h-3 w-3" strokeWidth={2.4} />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={[
+                                  nameOxanium.className,
+                                  "text-[11px] font-extrabold tracking-[0.04em] text-white/90",
+                                ].join(" ")}
+                              >
+                                {ja ? f.titleJa : f.titleEn}
+                              </p>
+                              <p
+                                className={[
+                                  jp.className,
+                                  "mt-0.5 text-[11px] leading-snug text-white/50",
+                                ].join(" ")}
+                              >
+                                {ja ? f.detailJa : f.detailEn}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
+
+                    {trialAvailableFor(plan.id) ? (
+                      <div className="mt-4 space-y-2 border-t border-white/10 pt-3.5">
+                        <button
+                          type="button"
+                          disabled={phase === "purchasing"}
+                          onClick={() => setTrialModalOpen(true)}
+                          className={[
+                            nameOxanium.className,
+                            "w-full rounded-[2px] py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em] transition",
+                            phase === "purchasing"
+                              ? "cursor-wait bg-white/10 text-white/50"
+                              : "bg-amber-300 text-[#120e08] hover:brightness-110 active:scale-[0.99]",
+                          ].join(" ")}
+                        >
+                          {phase === "purchasing"
+                            ? ja
+                              ? "処理中…"
+                              : "Processing…"
+                            : ja
+                              ? "7日間無料で試す"
+                              : "Start 7-day free trial"}
+                        </button>
+                        <p
+                          className={[
+                            jp.className,
+                            "text-center text-[11px] leading-relaxed text-white/50",
+                          ].join(" ")}
+                        >
+                          {plan.id === "weekly"
+                            ? ja
+                              ? "お試し後は週額 ¥280。期間中の解約で課金なし。"
+                              : "Then ¥280/week. Cancel during trial — no charge."
+                            : ja
+                              ? "お試し後は月額 ¥780。期間中の解約で課金なし。"
+                              : "Then ¥780/month. Cancel during trial — no charge."}
+                        </p>
+                        <button
+                          type="button"
+                          disabled={phase === "purchasing"}
+                          onClick={startPaid}
+                          className={[
+                            nameOxanium.className,
+                            "w-full py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45 transition hover:text-white/70",
+                          ].join(" ")}
+                        >
+                          {ja
+                            ? `お試しなしで${plan.labelJa}を購入`
+                            : `Buy ${plan.labelEn} (no trial)`}
+                        </button>
+                        <p className="text-center text-[10px] leading-relaxed text-white/35">
+                          {ja
+                            ? "※ 初回のみ。iOS は App Store のサブスク管理から解約できます。プレビューでは決済しません。"
+                            : "※ First time only. On iOS, cancel in App Store subscriptions. Preview does not charge."}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 space-y-2 border-t border-white/10 pt-3.5">
+                        <button
+                          type="button"
+                          disabled={phase === "purchasing"}
+                          onClick={startPaid}
+                          className={[
+                            nameOxanium.className,
+                            "w-full rounded-[2px] py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em] transition",
+                            phase === "purchasing"
+                              ? "cursor-wait bg-white/10 text-white/50"
+                              : "bg-amber-300 text-[#120e08] hover:brightness-110 active:scale-[0.99]",
+                          ].join(" ")}
+                        >
+                          {phase === "purchasing"
+                            ? ja
+                              ? "処理中…"
+                              : "Processing…"
+                            : ja
+                              ? `${plan.labelJa} を購入（プレビュー）`
+                              : `Buy ${plan.labelEn} (preview)`}
+                        </button>
+                        <p className="text-center text-[10px] leading-relaxed text-white/35">
+                          {ja
+                            ? "※ 7日無料は Weekly / Monthly のみ。価格・特典は仮。決済は走りません。"
+                            : "※ 7-day trial is Weekly / Monthly only. Prices are draft. No real charge."}
+                        </p>
+                      </div>
+                    )}
                   </section>
                 ) : null}
               </div>
             );
           })}
         </div>
-
-        {!selected ? (
-          <p
-            className={[
-              jp.className,
-              "mt-5 text-center text-[12px] leading-relaxed text-white/40",
-            ].join(" ")}
-          >
-            {ja
-              ? "プランを選ぶと、お試し／購入ボタンが表示されます。"
-              : "Select a plan to continue."}
-          </p>
-        ) : trialAvailable ? (
-          <div className="mt-5 space-y-2">
-            <button
-              type="button"
-              disabled={phase === "purchasing"}
-              onClick={() => setTrialModalOpen(true)}
-              className={[
-                nameOxanium.className,
-                "w-full rounded-[2px] py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em] transition",
-                phase === "purchasing"
-                  ? "cursor-wait bg-white/10 text-white/50"
-                  : "bg-amber-300 text-[#120e08] hover:brightness-110 active:scale-[0.99]",
-              ].join(" ")}
-            >
-              {phase === "purchasing"
-                ? ja
-                  ? "処理中…"
-                  : "Processing…"
-                : ja
-                  ? "7日間無料で試す"
-                  : "Start 7-day free trial"}
-            </button>
-            <p
-              className={[
-                jp.className,
-                "text-center text-[11px] leading-relaxed text-white/50",
-              ].join(" ")}
-            >
-              {afterTrialPriceLine}
-            </p>
-            <button
-              type="button"
-              disabled={phase === "purchasing"}
-              onClick={startPaid}
-              className={[
-                nameOxanium.className,
-                "w-full py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45 transition hover:text-white/70",
-              ].join(" ")}
-            >
-              {ja
-                ? `お試しなしで${selected.labelJa}を購入`
-                : `Buy ${selected.labelEn} (no trial)`}
-            </button>
-            <p className="text-center text-[10px] leading-relaxed text-white/35">
-              {ja
-                ? "※ 初回のみ。iOS は App Store のサブスク管理から解約できます。プレビューでは決済しません。"
-                : "※ First time only. On iOS, cancel in App Store subscriptions. Preview does not charge."}
-            </p>
-          </div>
-        ) : (
-          <div className="mt-5 space-y-2">
-            <button
-              type="button"
-              disabled={phase === "purchasing"}
-              onClick={startPaid}
-              className={[
-                nameOxanium.className,
-                "w-full rounded-[2px] py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em] transition",
-                phase === "purchasing"
-                  ? "cursor-wait bg-white/10 text-white/50"
-                  : "bg-amber-300 text-[#120e08] hover:brightness-110 active:scale-[0.99]",
-              ].join(" ")}
-            >
-              {phase === "purchasing"
-                ? ja
-                  ? "処理中…"
-                  : "Processing…"
-                : ja
-                  ? `${selected.labelJa} を購入（プレビュー）`
-                  : `Buy ${selected.labelEn} (preview)`}
-            </button>
-            <p className="text-center text-[10px] leading-relaxed text-white/35">
-              {ja
-                ? "※ 7日無料は Weekly / Monthly のみ。価格・特典は仮。決済は走りません。"
-                : "※ 7-day trial is Weekly / Monthly only. Prices are draft. No real charge."}
-            </p>
-          </div>
-        )}
       </div>
 
       {trialModalOpen && selected ? (
@@ -429,6 +561,53 @@ export default function ProSubscribePreview({
           onConfirm={confirmTrialFromModal}
         />
       ) : null}
+
+      {helpMounted && helpText && helpOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-[1000040] flex items-center justify-center p-4">
+              <button
+                type="button"
+                aria-label={ja ? "閉じる" : "Close"}
+                className="absolute inset-0 bg-[#020609]/78"
+                onClick={() => setHelpOpen(false)}
+              />
+              <div
+                role="dialog"
+                aria-modal="true"
+                className="relative z-[1] w-full max-w-md overflow-hidden rounded-sm border border-[rgba(0,245,255,0.32)] bg-[#050b14] px-5 py-4 shadow-[0_0_40px_rgba(0,245,255,0.14)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p
+                  className={[
+                    nameOxanium.className,
+                    "text-center text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300/85",
+                  ].join(" ")}
+                >
+                  Info
+                </p>
+                <p
+                  className={[
+                    jp.className,
+                    "mt-3 text-center text-[13px] leading-relaxed text-white/75",
+                  ].join(" ")}
+                >
+                  {helpText}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setHelpOpen(false)}
+                  className={[
+                    nameOxanium.className,
+                    "mt-4 w-full border border-[rgba(0,245,255,0.28)] bg-[rgba(0,245,255,0.06)] py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-100",
+                  ].join(" ")}
+                >
+                  {ja ? "閉じる" : "Close"}
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
@@ -577,18 +756,50 @@ function SuccessPanel({
     ? `7DAY_TRIAL // ${planLabel.toUpperCase()}`
     : `ACTIVE // ${planLabel.toUpperCase()}`;
 
+  const reduceMotion = useReducedMotion();
+  const motionOn = reduceMotion !== true;
+  const easeOut = [0.22, 0.61, 0.36, 1] as const;
+
   return (
-    <div className="flex w-full flex-col items-center px-1 py-2">
-      <div className="mb-4 flex items-center gap-2.5">
-        <span
+    <div className="flex w-full flex-col items-center px-1">
+      <motion.div
+        className="mb-4 flex items-center gap-2.5"
+        initial={motionOn ? { opacity: 0, y: SM.headFromY } : false}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          delay: motionOn ? SM.headDelayMs / 1000 : 0,
+          duration: motionOn ? SM.headMs / 1000 : 0,
+          ease: easeOut,
+        }}
+      >
+        <motion.span
           className={[
             "grid h-7 w-7 place-items-center rounded-full text-[13px] font-black",
             "bg-[#00F5FF] text-[#050508]",
-            "shadow-[0_0_14px_rgba(0,245,255,0.45)]",
           ].join(" ")}
+          initial={
+            motionOn
+              ? { boxShadow: "0 0 8px rgba(0,245,255,0.28)" }
+              : { boxShadow: "0 0 14px rgba(0,245,255,0.45)" }
+          }
+          animate={{
+            boxShadow: motionOn
+              ? [
+                  "0 0 8px rgba(0,245,255,0.28)",
+                  "0 0 22px rgba(0,245,255,0.7)",
+                  "0 0 14px rgba(0,245,255,0.45)",
+                ]
+              : "0 0 14px rgba(0,245,255,0.45)",
+          }}
+          transition={{
+            delay: motionOn ? SM.checkGlowDelayMs / 1000 : 0,
+            duration: motionOn ? SM.checkGlowMs / 1000 : 0,
+            times: motionOn ? [0, 0.45, 1] : undefined,
+            ease: "easeOut",
+          }}
         >
           ✓
-        </span>
+        </motion.span>
         <h2
           className={[
             nameOxanium.className,
@@ -597,24 +808,57 @@ function SuccessPanel({
         >
           {title}
         </h2>
-      </div>
+      </motion.div>
 
       {/* 上=白ヘッダー / サイド=シアン オフセット＋Lブラケット */}
-      <div className="relative w-full max-w-[22.5rem] pb-[7px] pr-[7px] pt-2 pl-2">
-        <span
+      <motion.div
+        className="relative w-full max-w-[22.5rem] pb-[7px] pr-[7px] pt-2 pl-2"
+        initial={
+          motionOn
+            ? { opacity: 0, y: SM.cardFromY, scale: SM.cardFromScale }
+            : false
+        }
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{
+          duration: motionOn ? SM.cardMs / 1000 : 0,
+          ease: easeOut,
+        }}
+      >
+        <motion.span
           aria-hidden
           className="pointer-events-none absolute left-0 top-0 z-20 h-[18px] w-[18px] border-l-[3px] border-t-[3px] border-[#00F5FF] shadow-[0_0_10px_rgba(0,245,255,0.35)]"
+          initial={motionOn ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={{
+            delay: motionOn ? SM.accentDelayMs / 1000 : 0,
+            duration: motionOn ? SM.accentMs / 1000 : 0,
+            ease: "easeOut",
+          }}
         />
-        <span
+        <motion.span
           aria-hidden
           className="pointer-events-none absolute bottom-0 right-0 z-20 h-[18px] w-[18px] border-b-[3px] border-r-[3px] border-[#00F5FF] shadow-[0_0_10px_rgba(0,245,255,0.35)]"
+          initial={motionOn ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={{
+            delay: motionOn ? SM.accentDelayMs / 1000 : 0,
+            duration: motionOn ? SM.accentMs / 1000 : 0,
+            ease: "easeOut",
+          }}
         />
 
         {/* Side accent — cyan offset plate */}
-        <div
+        <motion.div
           aria-hidden
           className="absolute bottom-0 right-0 top-2 left-2 z-0 bg-[#00F5FF]"
           style={{ boxShadow: "0 0 28px rgba(0,245,255,0.28)" }}
+          initial={motionOn ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={{
+            delay: motionOn ? SM.accentDelayMs / 1000 : 0,
+            duration: motionOn ? SM.accentMs / 1000 : 0,
+            ease: "easeOut",
+          }}
         />
 
         {/* Main frame — white border */}
@@ -691,15 +935,35 @@ function SuccessPanel({
                   "inset 0 0 24px rgba(0,245,255,0.06), 0 0 18px rgba(34,211,238,0.08)",
               }}
             >
-              <ProCyberBadge ariaLabel="UNITERZ Pro" compact />
-              <p
-                className={[
-                  nameOxanium.className,
-                  "text-[20px] font-semibold tracking-[0.22em] text-cyan-50",
-                ].join(" ")}
-              >
-                UNITERZ
-              </p>
+              <div className="relative flex flex-col items-center gap-2.5 overflow-hidden px-1 py-0.5">
+                <ProCyberBadge ariaLabel="UNITERZ Pro" premium />
+                <p
+                  className={[
+                    nameOxanium.className,
+                    "text-[20px] font-semibold tracking-[0.22em] text-cyan-50",
+                  ].join(" ")}
+                >
+                  UNITERZ
+                </p>
+                {motionOn ? (
+                  <motion.span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-[-30%] left-0 w-[38%] skew-x-[-18deg] mix-blend-screen"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 30%, rgba(255,255,255,0.92) 50%, rgba(186,250,255,0.5) 64%, transparent 100%)",
+                    }}
+                    initial={{ x: "-130%", opacity: 0 }}
+                    animate={{ x: "280%", opacity: [0, 1, 1, 0] }}
+                    transition={{
+                      delay: SM.brandSheenDelayMs / 1000,
+                      duration: SM.brandSheenMs / 1000,
+                      ease: [0.22, 0.61, 0.36, 1],
+                      times: [0, 0.12, 0.78, 1],
+                    }}
+                  />
+                ) : null}
+              </div>
               <div className="h-px w-14 bg-[#00F5FF] shadow-[0_0_8px_rgba(0,245,255,0.55)]" />
               <p
                 className={[
@@ -775,7 +1039,7 @@ function SuccessPanel({
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

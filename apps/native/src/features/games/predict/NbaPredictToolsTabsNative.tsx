@@ -47,7 +47,8 @@ function PendingPanel({ text }: { text: string }) {
 
 /**
  * NBA 予想フォームの情報タブ（本番相当）。
- * Insight (Pro) / Injury / Team Stats / Roster — Web と同じ配列で常時パネル表示。
+ * Insight (Pro) / Injury / Team Stats / Roster — データ未投入時は準備中。
+ * モックは `resolvePredictTimingMocksForGame`（preview 専用）経由のみ。
  */
 export default function NbaPredictToolsTabsNative({
   language,

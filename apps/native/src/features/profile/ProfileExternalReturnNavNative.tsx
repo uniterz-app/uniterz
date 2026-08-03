@@ -6,7 +6,7 @@ import { t } from "../../../../../lib/i18n/t";
 
 type Props = {
   language: Language;
-  variant: "rankings" | "leaderboards";
+  variant: "rankings" | "leaderboards" | "report";
   onPress: () => void;
 };
 
@@ -17,9 +17,11 @@ export default function ProfileExternalReturnNavNative({
 }: Props) {
   const m = t(language);
   const label =
-    variant === "leaderboards"
-      ? m.profile.backToGroupRankings
-      : m.profile.backToRankings;
+    variant === "report"
+      ? m.profile.backToReport
+      : variant === "leaderboards"
+        ? m.profile.backToGroupRankings
+        : m.profile.backToRankings;
 
   return (
     <Pressable

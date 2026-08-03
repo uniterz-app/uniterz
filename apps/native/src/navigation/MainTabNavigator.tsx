@@ -1,7 +1,8 @@
 import { StyleSheet, View } from "react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigationState, PartialState } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AppTabBar from "./AppTabBar";
 import type { MainTabParamList } from "./types";
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
@@ -12,6 +13,10 @@ import {
   resolveHeaderWordmarkFromMainTab,
   type HeaderWordmark,
 } from "../../../../lib/ui/headerWordmark";
+import {
+  getAppBrandShelfHidden,
+  subscribeAppBrandShelfHidden,
+} from "../../../../lib/ui/appBrandShelfVisibility";
 import {
   GamesStackScreen,
   ResultStackScreen,
@@ -30,7 +35,13 @@ function resolveTabWordmark(
 }
 
 export default function MainTabNavigator() {
+  const insets = useSafeAreaInsets();
   const [wordmark, setWordmark] = useState(DEFAULT_HEADER_WORDMARK);
+  const brandShelfHidden = useSyncExternalStore(
+    subscribeAppBrandShelfHidden,
+    getAppBrandShelfHidden,
+    () => false
+  );
 
   const syncWordmarkFromTabState = useCallback(
     (state: NavigationState | PartialState<NavigationState> | undefined) => {
@@ -47,7 +58,11 @@ export default function MainTabNavigator() {
     <>
       <NativePushNotificationsHost />
       <View style={styles.root}>
-        <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
+        {brandShelfHidden ? (
+          <View style={{ height: insets.top }} pointerEvents="none" />
+        ) : (
+          <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
+        )}
         <View style={styles.tabHost}>
           <Tab.Navigator
             tabBar={(props) => <AppTabBar {...props} />}

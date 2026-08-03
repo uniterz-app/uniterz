@@ -179,7 +179,12 @@ export default function GamePredictionsScreenNative() {
           {fUser?.uid && hasMyPost != null ? (
             <Pressable
               style={[styles.fab, hasMyPost ? styles.fabEdit : null]}
-              onPress={() => navigation.navigate("GamePredict", { gameId })}
+              onPress={() =>
+                navigation.navigate("GamesHome", {
+                  openPredictGameId: gameId,
+                  expandScoreForm: true,
+                })
+              }
               accessibilityRole="button"
               accessibilityLabel={hasMyPost ? t.editPrediction : t.predict}
             >

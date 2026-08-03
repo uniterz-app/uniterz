@@ -1,9 +1,8 @@
 /**
  * Web `saveMeProSkin` / `deleteMeAccount` の Native 版
  */
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
-import { auth, db } from "../../lib/firebase";
+import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -25,39 +24,67 @@ function requireApiBase(): string {
 }
 
 /**
- * Web `saveMeProSkin` 相当。
- * Native は API 待ちで固まりやすいので Firestore 直書きを正とし、
- * API はベストエフォートで追従させる。
+ * Web `saveMeProSkin` 相当 — 解放チェック込みの API を正とする。
  */
 export async function saveMeProSkinNative(
   planProBgVariant: ProfilePlanProBgVariant
 ): Promise<void> {
-  const user = auth.currentUser;
-  if (!user) throw new Error("not authenticated");
+  const base = requireApiBase();
+  const headers = await authHeaders();
+  const res = await fetch(`${base}/api/me/pro-skin`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ planProBgVariant }),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    condition?: string;
+  };
+  if (!res.ok) {
+    throw new Error(data.condition ?? data.error ?? res.statusText);
+  }
+}
 
-  await setDoc(
-    doc(db, "users", user.uid),
-    {
-      planProBgVariant,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
-
-  const base = getUniterzApiBaseUrl();
-  if (!base) return;
-  void (async () => {
-    try {
-      const headers = await authHeaders();
-      await fetch(`${base}/api/me/pro-skin`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ planProBgVariant }),
-      });
-    } catch {
-      /* Firestore 保存済みなので無視 */
-    }
-  })();
+export async function fetchProSkinStatusNative(): Promise<{
+  unlockedIds: string[];
+  savedId: string;
+  skins: {
+    id: string;
+    unlocked: boolean;
+    conditionJa: string;
+    conditionEn: string;
+    owners: number;
+  }[];
+  ownerCounts: Record<string, number>;
+}> {
+  const base = requireApiBase();
+  const headers = await authHeaders();
+  const res = await fetch(`${base}/api/me/pro-skin`, {
+    method: "GET",
+    headers: { Authorization: headers.Authorization! },
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    unlockedIds?: string[];
+    savedId?: string;
+    skins?: {
+      id: string;
+      unlocked: boolean;
+      conditionJa: string;
+      conditionEn: string;
+      owners: number;
+    }[];
+    ownerCounts?: Record<string, number>;
+  };
+  if (!res.ok) {
+    throw new Error(data.error ?? res.statusText);
+  }
+  return {
+    unlockedIds: data.unlockedIds ?? [],
+    savedId: data.savedId ?? "atmos",
+    skins: data.skins ?? [],
+    ownerCounts: data.ownerCounts ?? {},
+  };
 }
 
 /** Web `deleteMeAccount` 相当 */

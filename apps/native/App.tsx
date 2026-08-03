@@ -1,13 +1,17 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { useFonts, loadAsync as loadFontAsync } from "expo-font";
+import { useFonts } from "expo-font";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { Oxanium_600SemiBold, Oxanium_700Bold, Oxanium_800ExtraBold } from "@expo-google-fonts/oxanium";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import { Montserrat_900Black_Italic } from "@expo-google-fonts/montserrat";
 import { AlfaSlabOne_400Regular } from "@expo-google-fonts/alfa-slab-one";
 import { Rajdhani_700Bold } from "@expo-google-fonts/rajdhani";
-import { NotoSansJP_700Bold } from "@expo-google-fonts/noto-sans-jp";
+import {
+  NotoSansJP_400Regular,
+  NotoSansJP_600SemiBold,
+  NotoSansJP_700Bold,
+} from "@expo-google-fonts/noto-sans-jp";
 import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -40,18 +44,14 @@ export default function App() {
     Oxanium_800ExtraBold,
     AlfaSlabOne_400Regular,
     Rajdhani_700Bold,
+    NotoSansJP_400Regular,
+    NotoSansJP_600SemiBold,
+    NotoSansJP_700Bold,
   });
 
   useEffect(() => {
     ensureNativeSplashHeld();
   }, []);
-
-  useEffect(() => {
-    if (!fontsLoaded) return;
-    void loadFontAsync({ NotoSansJP_700Bold }).catch(() => {
-      /* 未ロード時はシステムフォントにフォールバック */
-    });
-  }, [fontsLoaded]);
 
   useNativeShareDeepLinks();
 

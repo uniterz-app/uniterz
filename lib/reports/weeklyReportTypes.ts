@@ -15,6 +15,8 @@ export type WeeklyReportRival = {
   photoURL: string | null;
   /** 今週の週間最終順位 */
   rank: number;
+  /** 生成時点の Pro 判定。古い doc は欠けることがある */
+  plan?: "free" | "pro";
 };
 
 export type WeeklyReportDivisionKey = "winRate" | "goalScorerHits" | "upset";
@@ -41,10 +43,11 @@ export type WeeklyReport = {
   label: string;
   range: { startKey: string; endKey: string };
   /**
-   * live = 進行中（毎日上書き） / final = 月曜確定版。
-   * 比較値（prevRank / prevValue / prevTotalPoints）のセマンティクス:
+   * live = 旧・進行中日次（廃止予定。手動再生成の後方互換のみ）
+   * final = 月曜確定版（現行の正）
+   * 比較値（prevRank / prevValue / prevTotalPoints）:
    * - final: 先週の確定値との比較（前週比）
-   * - live: 前日 doc との比較（前日比）。走りかけの週 vs 確定した先週は不公平な比較になるため
+   * - live: 前日 doc との比較（レガシー）
    */
   status: "live" | "final";
 

@@ -7,8 +7,11 @@ function navigateToGamePredict(gameId: string | undefined) {
     navigationRef.navigate("Main", {
       screen: "GamesTab",
       params: {
-        screen: "GamePredict",
-        params: { gameId },
+        screen: "GamesHome",
+        params: {
+          openPredictGameId: gameId,
+          expandScoreForm: true,
+        },
       },
     });
     return;

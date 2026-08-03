@@ -2,6 +2,8 @@
  * App Store / Google Play の Pro 商品 ID（設計正: docs/pro-billing-design.md）
  */
 
+import { ensureProUntilCoversFirstWeeklyReport } from "@/lib/reports/weeklyReportTrialGuarantee";
+
 export type ProIapPlan = "weekly" | "monthly" | "season";
 
 export const IAP_PRODUCT_IDS = {
@@ -59,11 +61,12 @@ export function stubProUntilForPlan(plan: ProIapPlan, now = new Date()): Date {
   const d = new Date(now);
   if (plan === "weekly") {
     d.setDate(d.getDate() + 7);
-    return d;
+    // 7 日トライアルでも、次の月曜 final 配信まで閲覧できるように底上げ
+    return ensureProUntilCoversFirstWeeklyReport(d, now);
   }
   if (plan === "monthly") {
     d.setMonth(d.getMonth() + 1);
-    return d;
+    return ensureProUntilCoversFirstWeeklyReport(d, now);
   }
   // Season Pass: 当年 or 翌年の 6/30（NBA シーズン終了の簡易スタブ）
   const endYear = d.getMonth() >= 6 ? d.getFullYear() + 1 : d.getFullYear();

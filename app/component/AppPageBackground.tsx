@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import GamesPageBackground from "@/app/component/games/GamesPageBackground";
 import MobileStaticPageBackground from "@/app/component/games/MobileStaticPageBackground";
 import { usePreferStaticPageBackground } from "@/lib/perf/usePreferStaticPageBackground";
@@ -15,12 +14,7 @@ import { usePreferStaticPageBackground } from "@/lib/perf/usePreferStaticPageBac
  * - その他デスクトップ: フルオーロラ + モート
  */
 export default function AppPageBackground() {
-  const pathname = usePathname() ?? "";
   const preferStatic = usePreferStaticPageBackground();
-
-  if (pathname.startsWith("/dev/my-rank-free-pro-preview")) {
-    return null;
-  }
 
   if (preferStatic) {
     return <MobileStaticPageBackground />;

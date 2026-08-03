@@ -7,42 +7,39 @@ function isMondayJst(now: Date): boolean {
   return new Date(now.getTime() + 9 * 60 * 60 * 1000).getUTCDay() === 1;
 }
 
-/** 毎朝 08:30 JST: 今週 live、月曜のみ先週 final も確定する。 */
+/**
+ * 月曜 08:30 JST のみ: 先週の週間レポートを final 確定する。
+ * （進行中 live 日次更新は廃止。確定週だけを履歴に残す）
+ */
 export const rebuildWeeklyReportsCronV2 = onSchedule(
   {
-    schedule: "30 8 * * *",
+    schedule: "30 8 * * 1",
     timeZone: "Asia/Tokyo",
     memory: "1GiB",
     timeoutSeconds: 540,
   },
   async () => {
     const now = new Date();
+    if (!isMondayJst(now)) {
+      console.log("[rebuildWeeklyReportsCronV2] skip: not Monday JST");
+      return;
+    }
     const currentWeek = weekStartDateKeyJST(now);
-    const live = await buildWeeklyReportsCore({
-      weekLabel: currentWeek,
-      status: "live",
+    const final = await buildWeeklyReportsCore({
+      weekLabel: previousLabel("weekly", currentWeek),
+      status: "final",
       now,
     });
     console.log(
-      `[rebuildWeeklyReportsCronV2] status=live week=${live.weekLabel} written=${live.written}`
+      `[rebuildWeeklyReportsCronV2] status=final week=${final.weekLabel} written=${final.written}`
     );
-
-    if (isMondayJst(now)) {
-      const final = await buildWeeklyReportsCore({
-        weekLabel: previousLabel("weekly", currentWeek),
-        status: "final",
-        now,
-      });
-      console.log(
-        `[rebuildWeeklyReportsCronV2] status=final week=${final.weekLabel} written=${final.written}`
-      );
-    }
   }
 );
 
 /**
  * 手動 / Cursor 用 HTTP。
  * GET/POST ?weekLabel=2026-10-19&status=final&limit=50
+ * status 省略時は final。live は後方互換の手動再生成用のみ。
  */
 export const rebuildWeeklyReportsManualV2 = onRequest(
   {
@@ -64,7 +61,8 @@ export const rebuildWeeklyReportsManualV2 = onRequest(
           : typeof req.body?.status === "string"
             ? req.body.status
             : undefined;
-      const status = rawStatus === "final" ? "final" : rawStatus === "live" ? "live" : undefined;
+      const status =
+        rawStatus === "live" ? "live" : rawStatus === "final" ? "final" : "final";
       const rawLimit =
         typeof req.query.limit === "string"
           ? Number(req.query.limit)
@@ -79,12 +77,11 @@ export const rebuildWeeklyReportsManualV2 = onRequest(
       console.log(
         `[rebuildWeeklyReportsManualV2] status=${result.status} week=${result.weekLabel} written=${result.written}`
       );
-      res.status(200).json({ ok: true, ...result });
-    } catch (error) {
-      console.error("[rebuildWeeklyReportsManualV2]", error);
+      res.status(200).json(result);
+    } catch (e) {
+      console.error("[rebuildWeeklyReportsManualV2]", e);
       res.status(500).json({
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: e instanceof Error ? e.message : String(e),
       });
     }
   }

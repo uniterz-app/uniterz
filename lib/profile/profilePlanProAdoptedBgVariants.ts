@@ -123,36 +123,32 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用 23 — カテゴリ順（No.1〜）。ベルセルク風は Crimson Eclipse / Jagged Plate のみ */
+/** 採用 22 — 解放カタログ順（即解放 → マイルストーン）。詳細は `proSkinUnlock.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // サイバー空間 ×5
+  // Pro 即解放 ×11
   { id: "atmos", category: "cyber", family: "atmos" },
   { id: "parallax", category: "cyber", family: "atmos" },
   { id: "neo-flux", category: "cyber", family: "neo" },
   { id: "futuristic-eclipse", category: "cyber", family: "futuristic" },
-  { id: "futuristic-data-stream", category: "cyber", family: "futuristic" },
-  // 爬虫類 ×8
   { id: "scale-mamba", category: "reptile", family: "scale" },
-  { id: "scale-king", category: "reptile", family: "scale" },
-  { id: "scale-diamondback", category: "reptile", family: "scale" },
-  { id: "scale-dragon", category: "reptile", family: "scale" },
   { id: "scale-python", category: "reptile", family: "scale" },
   { id: "beast-crocodile", category: "reptile", family: "beast" },
-  { id: "beast-viper", category: "reptile", family: "beast" },
-  { id: "beast-drake", category: "reptile", family: "beast" },
-  // 獣皮 ×3（既存2 + Crimson Eclipse）
-  { id: "beast-panther", category: "beast", family: "beast" },
-  { id: "beast-shark", category: "beast", family: "beast" },
-  { id: "beast-eclipse", category: "beast", family: "beast" },
-  // 素材 ×5（既存4 + Jagged Plate）
   { id: "beast-carbon", category: "material", family: "beast" },
   { id: "beast-titanium", category: "material", family: "beast" },
   { id: "beast-chevron", category: "material", family: "beast" },
+  { id: "form-hexveil", category: "geometry", family: "form" },
+  // マイルストーン ×11
+  { id: "scale-diamondback", category: "reptile", family: "scale" },
+  { id: "beast-viper", category: "reptile", family: "beast" },
+  { id: "beast-panther", category: "beast", family: "beast" },
+  { id: "scale-king", category: "reptile", family: "scale" },
+  { id: "scale-dragon", category: "reptile", family: "scale" },
+  { id: "beast-drake", category: "reptile", family: "beast" },
+  { id: "beast-shark", category: "beast", family: "beast" },
   { id: "beast-circuitlace", category: "material", family: "beast" },
   { id: "beast-jagarmor", category: "material", family: "beast" },
-  // 幾何学 ×2
-  { id: "form-hexveil", category: "geometry", family: "form" },
   { id: "form-isocubes", category: "geometry", family: "form" },
+  { id: "beast-eclipse", category: "beast", family: "beast" },
 ];
 
 function bgMeta(id: ProfilePlanProBgVariant): ProfilePlanProBgVariantMeta | undefined {

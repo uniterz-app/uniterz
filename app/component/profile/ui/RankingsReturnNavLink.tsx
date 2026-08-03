@@ -10,6 +10,7 @@ import {
   PROFILE_FROM_GROUP_ID_PARAM,
   PROFILE_FROM_GROUP_VALUE,
   PROFILE_FROM_RANKINGS_VALUE,
+  PROFILE_FROM_REPORT_VALUE,
   buildRankingsPathQuery,
   leaderboardsGroupReturnHref,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -20,7 +21,7 @@ type Props = {
   language: Language;
 };
 
-/** ランキング経由で開いたプロフィールにだけ表示する「ランキングへ戻る」 */
+/** ランキング / レポート経由で開いたプロフィールに表示する戻りリンク */
 export default function RankingsReturnNavLink({ language }: Props) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
@@ -33,7 +34,12 @@ export default function RankingsReturnNavLink({ language }: Props) {
     (from === PROFILE_FROM_GROUP_VALUE ||
       from === PROFILE_FROM_COMMUNITY_VALUE) &&
     !!groupId;
-  if (from !== PROFILE_FROM_RANKINGS_VALUE && !isGroupReturn) {
+  const isReportReturn = from === PROFILE_FROM_REPORT_VALUE;
+  if (
+    from !== PROFILE_FROM_RANKINGS_VALUE &&
+    !isGroupReturn &&
+    !isReportReturn
+  ) {
     return null;
   }
 
@@ -46,15 +52,21 @@ export default function RankingsReturnNavLink({ language }: Props) {
     ? leaderboardsGroupReturnHref(prefix, groupId!)
     : `${prefix}/rankings${tabQuery ? `?${tabQuery}` : ""}`;
   const m = t(language);
-  const label = isGroupReturn
-    ? m.profile.backToGroupRankings
-    : m.profile.backToRankings;
+  const label = isReportReturn
+    ? m.profile.backToReport
+    : isGroupReturn
+      ? m.profile.backToGroupRankings
+      : m.profile.backToRankings;
 
   return (
     <button
       type="button"
       aria-label={label}
       onClick={() => {
+        if (isReportReturn) {
+          router.back();
+          return;
+        }
         router.push(href);
       }}
       className={[

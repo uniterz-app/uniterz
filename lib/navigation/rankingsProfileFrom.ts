@@ -17,6 +17,8 @@ export const PROFILE_FROM_COMMUNITY_ID_PARAM = "communityId";
 /** グループ内ランキングからプロフィールへ（community の後継） */
 export const PROFILE_FROM_GROUP_VALUE = "group";
 export const PROFILE_FROM_GROUP_ID_PARAM = "groupId";
+/** 週次レポートのライバル一覧からプロフィールへ */
+export const PROFILE_FROM_REPORT_VALUE = "report";
 
 /** Leaderboards でグループオーバーレイを開き直すクエリ */
 export const LEADERBOARDS_OPEN_GROUP_PARAM = "openGroup";

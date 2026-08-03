@@ -88,9 +88,9 @@ export const PROFILE_PLAN_PRO_BEAST_BG_VARIANTS: ProfilePlanProBeastBgMeta[] = [
     label: "Dragon Scale",
     tag: "龍鱗",
     description:
-      "重なった六角形の龍鱗。黒×赤紫。サイバーとの相性が強いハニカム。",
+      "重なった六角形の龍鱗。黒×緑。サイバーとの相性が強いハニカム。",
     swatch:
-      "linear-gradient(148deg, #0a0408, #2a0a1a 38%, #c026d355 58%, #050204)",
+      "linear-gradient(148deg, #040a06, #0a1f10 38%, #22c55e55 58%, #020503)",
   },
   {
     id: "beast-raven",

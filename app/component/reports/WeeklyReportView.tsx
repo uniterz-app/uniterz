@@ -5,10 +5,21 @@
 // 見た目はランキング画面の DATA SLAB 語彙（rankingsCyberTheme）に合わせる。
 
 import { useState, type CSSProperties } from "react";
-import { ArrowDown, ArrowUp, ChevronUp, Crosshair, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ArrowDown, ChevronUp, Crosshair, ShieldAlert } from "lucide-react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import { RankingsCyberPanel } from "@/app/component/rankings/RankingsCyberPanel";
+import {
+  ProCyberBadge,
+  proBadgeStaticMotion,
+} from "@/app/component/common/ProCyberBadge";
 import { nameBebas, nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
+import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
+import {
+  PROFILE_FROM_PARAM,
+  PROFILE_FROM_REPORT_VALUE,
+} from "@/lib/navigation/rankingsProfileFrom";
 import {
   INITIAL_REPORT_RIVALS,
   type WeeklyReport,
@@ -27,9 +38,10 @@ type Lang = "ja" | "en";
 const COPY = {
   ja: {
     title: "WEEKLY REPORT",
-    live: "LIVE",
-    liveNote: "進行中の週。数字は毎日更新され、月曜に確定版が届きます。",
-    thisWeek: "今週の結果",
+    live: "LEGACY",
+    liveNote: "過去の進行中レポートです。いまは確定週のみ配信されます。",
+    heroRank: "順位",
+    heroScore: "スコア",
     participants: (n: number) => `${n}人中`,
     top: (p: string) => `TOP ${p}%`,
     posts: "投稿",
@@ -59,6 +71,7 @@ const COPY = {
     threat: "背後の脅威",
     threatGapLabel: "背後に接近中",
     noThreat: "背後に脅威なし",
+    proMember: "Pro会員",
     commentTone: {
       climbedBig: "圧巻の週。",
       climbed: "確実に順位を上げた。",
@@ -77,9 +90,10 @@ const COPY = {
   },
   en: {
     title: "WEEKLY REPORT",
-    live: "LIVE",
-    liveNote: "Week in progress. Numbers update daily; the final report lands Monday.",
-    thisWeek: "This Week",
+    live: "LEGACY",
+    liveNote: "Legacy in-progress report. Weekly reports now ship as finals only.",
+    heroRank: "Rank",
+    heroScore: "Score",
     participants: (n: number) => `of ${n}`,
     top: (p: string) => `TOP ${p}%`,
     posts: "picks",
@@ -109,6 +123,7 @@ const COPY = {
     threat: "Closing In",
     threatGapLabel: "Behind you",
     noThreat: "No threat behind",
+    proMember: "Pro member",
     commentTone: {
       climbedBig: "A statement week.",
       climbed: "A solid climb.",
@@ -274,34 +289,6 @@ function Avatar({
   );
 }
 
-/** 値の前週比（▲/▼ + 差分）。前週なしは非表示 */
-function ValueDelta({
-  value,
-  prevValue,
-  integer,
-}: {
-  value: number;
-  prevValue: number | null;
-  integer?: boolean;
-}) {
-  if (prevValue == null) return null;
-  const diff = value - prevValue;
-  if (diff === 0) return null;
-  const up = diff > 0;
-  const Icon = up ? ArrowUp : ArrowDown;
-  return (
-    <span
-      className={[
-        "inline-flex items-center gap-0.5 text-[10px] font-bold tabular-nums leading-none",
-        up ? "text-emerald-400" : "text-orange-400",
-      ].join(" ")}
-    >
-      <Icon className="h-2.5 w-2.5" strokeWidth={2.75} aria-hidden />
-      {integer ? Math.abs(Math.round(diff)) : Math.abs(diff).toFixed(1)}
-    </span>
-  );
-}
-
 /* ============================================================
  * blocks
  * ============================================================ */
@@ -309,131 +296,148 @@ function ValueDelta({
 function HeroBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
   const c = COPY[lang];
   const delta = report.rankDeltaPlaces;
-  const losses = report.totalPosts - report.totalWins;
+  const losses = Math.max(0, report.totalPosts - report.totalWins);
 
   return (
     <RankingsCyberPanel>
       <div className="relative z-10">
-        <div className="flex items-center justify-between">
-          <MicroLabel>{c.thisWeek}</MicroLabel>
-          {report.topPercent != null ? (
-            <span
-              className={[
-                nameOxanium.className,
-                "rounded-[2px] border px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.14em]",
-              ].join(" ")}
-              style={{
-                color: ACCENT.cyan.main,
-                borderColor: ACCENT.cyan.border,
-                background: ACCENT.cyan.tint,
-                textShadow: `0 0 12px ${ACCENT.cyan.glow}`,
-              }}
-            >
-              {c.top(fmtPt(report.topPercent))}
-            </span>
-          ) : null}
-        </div>
+        {/* 左=順位 / 右=スコア。数字は同一テキスト行でベースライン共有 */}
+        <div className="relative mt-1">
+          <div
+            className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2"
+            style={{ background: "rgba(34,211,238,0.16)" }}
+            aria-hidden
+          />
 
-        <div className="mt-1 flex items-end gap-3">
-          <p
-            className={[nameBebas.className, "leading-none text-white"].join(" ")}
-            style={{
-              fontSize: "3.6rem",
-              transform: "skewX(-10deg)",
-              letterSpacing: "0.02em",
-              textShadow: "0 0 24px rgba(34,211,238,0.28)",
-            }}
-          >
-            <span className="text-white/40" style={{ fontSize: "2.1rem" }}>
-              #
-            </span>
-            {report.rank}
-          </p>
-          {delta != null ? (
-            <span
-              className={[
-                nameBebas.className,
-                "mb-1 inline-flex items-center gap-0.5 leading-none",
-              ].join(" ")}
+          <div className="grid grid-cols-2">
+            <div className="min-w-0 pr-3.5">
+              <MicroLabel>{c.heroRank}</MicroLabel>
+            </div>
+            <div className="min-w-0 pl-3.5">
+              <MicroLabel>{c.heroScore}</MicroLabel>
+            </div>
+          </div>
+
+          <div className="mt-1.5 grid grid-cols-2 items-baseline">
+            {/* 左: 順位 + 前週比 */}
+            <p
+              className={[nameBebas.className, "min-w-0 pr-3.5 leading-none text-white"].join(
+                " "
+              )}
               style={{
-                fontSize: "1.7rem",
+                fontSize: "3.2rem",
                 transform: "skewX(-10deg)",
-                color:
-                  delta > 0
-                    ? ACCENT.emerald.main
-                    : delta < 0
-                      ? ACCENT.orange.main
-                      : "rgba(255,255,255,0.45)",
-                textShadow:
-                  delta > 0
-                    ? `0 0 16px ${ACCENT.emerald.glow}`
-                    : delta < 0
-                      ? `0 0 16px ${ACCENT.orange.glow}`
-                      : undefined,
+                letterSpacing: "0.02em",
+                textShadow: "0 0 24px rgba(34,211,238,0.28)",
               }}
             >
-              {delta > 0 ? (
-                <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2.75} aria-hidden />
-              ) : delta < 0 ? (
-                <ArrowDown className="h-[18px] w-[18px]" strokeWidth={2.75} aria-hidden />
-              ) : null}
-              {delta === 0 ? "±0" : Math.abs(delta)}
-            </span>
-          ) : (
-            <span
-              className={[
-                nameOxanium.className,
-                "mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40",
-              ].join(" ")}
-            >
-              {c.firstWeekRank}
-            </span>
-          )}
-          <span
-            className={[
-              nameOxanium.className,
-              "mb-1.5 ml-auto text-[11px] font-bold uppercase tracking-[0.1em] text-white/40",
-            ].join(" ")}
-          >
-            {c.participants(report.participantCount)}
-          </span>
-        </div>
+              <span className="text-white/40" style={{ fontSize: "0.58em" }}>
+                #
+              </span>
+              {report.rank}
+              {delta != null ? (
+                <span
+                  style={{
+                    marginLeft: "0.28em",
+                    fontSize: "0.45em",
+                    color:
+                      delta > 0
+                        ? ACCENT.emerald.main
+                        : delta < 0
+                          ? ACCENT.orange.main
+                          : "rgba(255,255,255,0.45)",
+                    textShadow:
+                      delta > 0
+                        ? `0 0 16px ${ACCENT.emerald.glow}`
+                        : delta < 0
+                          ? `0 0 16px ${ACCENT.orange.glow}`
+                          : undefined,
+                  }}
+                >
+                  {delta > 0 ? "↑" : delta < 0 ? "↓" : ""}
+                  {delta === 0 ? "±0" : Math.abs(delta)}
+                </span>
+              ) : (
+                <span
+                  className={[
+                    nameOxanium.className,
+                    "ml-2 text-[9px] font-bold uppercase tracking-[0.14em] text-white/40",
+                  ].join(" ")}
+                  style={{ display: "inline-block", transform: "skewX(10deg)" }}
+                >
+                  {c.firstWeekRank}
+                </span>
+              )}
+            </p>
 
-        <div
-          className="mt-2.5 flex items-baseline gap-3 pt-2.5"
-          style={{ borderTop: "1px solid rgba(34,211,238,0.16)" }}
-        >
-          <p className="flex items-baseline gap-1.5">
-            <span
-              className={[nameBebas.className, "text-xl leading-none"].join(" ")}
+            {/* 右: スコア + PTS */}
+            <p
+              className={[nameBebas.className, "min-w-0 pl-3.5 leading-none"].join(" ")}
               style={{
+                fontSize: "3.2rem",
+                transform: "skewX(-10deg)",
+                letterSpacing: "0.02em",
                 color: ACCENT.cyan.main,
-                textShadow: `0 0 14px ${ACCENT.cyan.glow}`,
+                textShadow: `0 0 24px ${ACCENT.cyan.glow}`,
               }}
             >
               {fmtPt(report.totalPoints)}
-            </span>
-            <span
+              <span
+                className={[
+                  nameOxanium.className,
+                  "font-bold uppercase tracking-[0.14em] text-white/40",
+                ].join(" ")}
+                style={{
+                  marginLeft: "0.28em",
+                  fontSize: "0.32em",
+                  display: "inline-block",
+                  transform: "skewX(10deg)",
+                }}
+              >
+                PTS
+              </span>
+            </p>
+          </div>
+
+          <div className="mt-2 grid grid-cols-2">
+            <div className="flex h-5 items-center gap-1.5 pr-3.5">
+              <span
+                className={[
+                  nameOxanium.className,
+                  "text-[10px] font-bold uppercase leading-none tracking-[0.1em] text-white/40",
+                ].join(" ")}
+              >
+                {c.participants(report.participantCount)}
+              </span>
+              {report.topPercent != null ? (
+                <span
+                  className={[
+                    nameOxanium.className,
+                    "rounded-[2px] border px-1.5 py-0.5 text-[8px] font-extrabold uppercase leading-none tracking-[0.14em]",
+                  ].join(" ")}
+                  style={{
+                    color: ACCENT.cyan.main,
+                    borderColor: ACCENT.cyan.border,
+                    background: ACCENT.cyan.tint,
+                    textShadow: `0 0 12px ${ACCENT.cyan.glow}`,
+                  }}
+                >
+                  {c.top(fmtPt(report.topPercent))}
+                </span>
+              ) : null}
+            </div>
+            <p
               className={[
                 nameOxanium.className,
-                "text-[9px] font-bold uppercase tracking-[0.14em] text-white/40",
+                "flex h-5 items-center pl-3.5 text-[10px] font-bold tabular-nums leading-none tracking-[0.08em] text-white/55",
               ].join(" ")}
             >
-              PTS
-            </span>
-            <ValueDelta value={report.totalPoints} prevValue={report.prevTotalPoints} />
-          </p>
-          <p
-            className={[
-              nameOxanium.className,
-              "ml-auto text-[11px] font-bold tabular-nums tracking-[0.08em] text-white/55",
-            ].join(" ")}
-          >
-            {c.posts} {report.totalPosts} · {report.totalWins}
-            {c.wins}
-            {losses}
-            {c.losses}
-          </p>
+              {c.posts} {report.totalPosts} · {report.totalWins}
+              {c.wins}
+              {losses}
+              {c.losses}
+            </p>
+          </div>
         </div>
       </div>
     </RankingsCyberPanel>
@@ -473,10 +477,13 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
               </div>
               <div className="mt-1.5 flex items-baseline gap-1">
                 <span
-                  className={[nameBebas.className, "text-[24px] leading-none text-white"].join(
+                  className={[nameBebas.className, "inline-block text-[27px] leading-none text-white"].join(
                     " "
                   )}
-                  style={isTop10 ? { textShadow: `0 0 16px ${meta.accent.glow}` } : undefined}
+                  style={{
+                    transform: "skewX(-10deg)",
+                    ...(isTop10 ? { textShadow: `0 0 16px ${meta.accent.glow}` } : null),
+                  }}
                 >
                   {d.key === "winRate"
                     ? `${Math.round(d.value)}%`
@@ -484,7 +491,6 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
                       ? Math.round(d.value)
                       : fmtPt(d.value)}
                 </span>
-                <ValueDelta value={d.value} prevValue={d.prevValue} integer={integer} />
               </div>
               {isReference ? (
                 <div className="mt-1.5 space-y-0.5">
@@ -509,7 +515,7 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
                 <p
                   className={[
                     nameOxanium.className,
-                    "mt-1.5 text-[9px] font-bold uppercase tracking-[0.12em] tabular-nums",
+                    "mt-1.5 text-[12px] font-bold uppercase tracking-[0.1em] tabular-nums",
                   ].join(" ")}
                   style={{
                     color: d.rank != null ? meta.accent.main : "rgba(255,255,255,0.35)",
@@ -527,6 +533,16 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
   );
 }
 
+function rivalProfileHref(pathname: string, rival: WeeklyReportRival): string {
+  const base =
+    pathname.startsWith("/mobile") || pathname.startsWith("/m/") ? "/mobile" : "/web";
+  const key = profilePathKeyFromRow(rival);
+  const q = new URLSearchParams({
+    [PROFILE_FROM_PARAM]: PROFILE_FROM_REPORT_VALUE,
+  });
+  return `${base}/u/${encodeURIComponent(key)}?${q.toString()}`;
+}
+
 function RivalRow({
   rival,
   lang,
@@ -537,21 +553,37 @@ function RivalRow({
   accent: Accent;
 }) {
   const c = COPY[lang];
+  const pathname = usePathname() ?? "/mobile";
+  const href = rivalProfileHref(pathname, rival);
   return (
-    <li className="flex items-center gap-2.5 py-1.5">
-      <Avatar rival={rival} size={30} ringColor={accent.border} />
-      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/88">
-        {rival.displayName}
-      </span>
-      <span
-        className={[
-          nameOxanium.className,
-          "text-[10px] font-bold uppercase tracking-[0.1em] tabular-nums",
-        ].join(" ")}
-        style={{ color: accent.main, opacity: 0.75 }}
+    <li>
+      <Link
+        href={href}
+        className="flex items-center gap-2.5 py-1.5 transition hover:bg-white/[0.04]"
       >
-        {c.nowRank(rival.rank)}
-      </span>
+        <Avatar rival={rival} size={30} ringColor={accent.border} />
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="min-w-0 truncate text-[13px] font-semibold text-white/88">
+            {rival.displayName}
+          </span>
+          {rival.plan === "pro" ? (
+            <ProCyberBadge
+              {...proBadgeStaticMotion}
+              compact
+              ariaLabel={c.proMember}
+            />
+          ) : null}
+        </span>
+        <span
+          className={[
+            nameOxanium.className,
+            "text-[10px] font-bold uppercase tracking-[0.1em] tabular-nums",
+          ].join(" ")}
+          style={{ color: accent.main, opacity: 0.75 }}
+        >
+          {c.nowRank(rival.rank)}
+        </span>
+      </Link>
     </li>
   );
 }
@@ -744,6 +776,26 @@ function GapValue({
 
 function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
   const c = COPY[lang];
+  const pathname = usePathname() ?? "/mobile";
+
+  const rivalLine = (rival: WeeklyReportRival, accent: Accent) => (
+    <Link
+      href={rivalProfileHref(pathname, rival)}
+      className="mt-1 flex min-w-0 items-center gap-2 transition hover:brightness-110"
+    >
+      <Avatar rival={rival} size={26} ringColor={accent.border} />
+      <span className="min-w-0 truncate text-[13px] font-semibold text-white/90">
+        <span className={[nameOxanium.className, "mr-1 text-white/45"].join(" ")}>
+          #{rival.rank}
+        </span>
+        {rival.displayName}
+      </span>
+      {rival.plan === "pro" ? (
+        <ProCyberBadge {...proBadgeStaticMotion} compact ariaLabel={c.proMember} />
+      ) : null}
+    </Link>
+  );
+
   return (
     <section className="grid gap-2">
       <div className="flex items-center gap-3 px-3.5 py-3" style={slabStyle(ACCENT.cyan)}>
@@ -756,15 +808,7 @@ function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang 
         <div className="min-w-0 flex-1">
           <MicroLabel color={ACCENT.cyan.main}>{c.nextTarget}</MicroLabel>
           {report.nextTarget ? (
-            <p className="mt-1 flex items-center gap-2">
-              <Avatar rival={report.nextTarget.rival} size={26} ringColor={ACCENT.cyan.border} />
-              <span className="min-w-0 truncate text-[13px] font-semibold text-white/90">
-                <span className={[nameOxanium.className, "mr-1 text-white/45"].join(" ")}>
-                  #{report.nextTarget.rival.rank}
-                </span>
-                {report.nextTarget.rival.displayName}
-              </span>
-            </p>
+            rivalLine(report.nextTarget.rival, ACCENT.cyan)
           ) : (
             <p className="mt-1 text-[12px] text-white/60">{c.youAreTop}</p>
           )}
@@ -791,15 +835,7 @@ function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang 
           />
           <div className="min-w-0 flex-1">
             <MicroLabel color={ACCENT.orange.main}>{c.threat}</MicroLabel>
-            <p className="mt-1 flex items-center gap-2">
-              <Avatar rival={report.threat.rival} size={26} ringColor={ACCENT.orange.border} />
-              <span className="min-w-0 truncate text-[13px] font-semibold text-white/90">
-                <span className={[nameOxanium.className, "mr-1 text-white/45"].join(" ")}>
-                  #{report.threat.rival.rank}
-                </span>
-                {report.threat.rival.displayName}
-              </span>
-            </p>
+            {rivalLine(report.threat.rival, ACCENT.orange)}
           </div>
           <GapValue
             label={c.threatGapLabel}
@@ -836,18 +872,36 @@ function commentText(comment: WeeklyReportComment, lang: Lang): string {
  * main
  * ============================================================ */
 
+export type WeeklyReportPeriodOption = {
+  id: string;
+  label: string;
+};
+
 export default function WeeklyReportView({
   report,
   language = "ja",
+  periods,
+  selectedPeriodId,
+  onSelectPeriod,
 }: {
   report: WeeklyReport;
   language?: Lang;
+  /** 過去週の切り替え。1件以下ならナビ非表示 */
+  periods?: WeeklyReportPeriodOption[];
+  selectedPeriodId?: string;
+  onSelectPeriod?: (id: string) => void;
 }) {
   const c = COPY[language];
+  const periodList = periods ?? [];
+  const selectedIdx = periodList.findIndex((p) => p.id === selectedPeriodId);
+  const activeIdx = selectedIdx >= 0 ? selectedIdx : 0;
+  const canPrev = periodList.length > 1 && activeIdx < periodList.length - 1;
+  const canNext = periodList.length > 1 && activeIdx > 0;
+  const rangeLabel = fmtRange(report.range.startKey, report.range.endKey);
 
   return (
     <div className="space-y-3">
-      <header className="flex items-center justify-between gap-2">
+      <header className="space-y-2">
         <h2
           className={[
             nameOxanium.className,
@@ -870,14 +924,81 @@ export default function WeeklyReportView({
             </span>
           ) : null}
         </h2>
-        <p
-          className={[
-            nameOxanium.className,
-            "text-[11px] font-bold uppercase tracking-[0.12em] tabular-nums text-white/45",
-          ].join(" ")}
-        >
-          {fmtRange(report.range.startKey, report.range.endKey)}
-        </p>
+
+        <div className="flex items-center gap-1">
+          {periodList.length > 1 ? (
+            <button
+              type="button"
+              disabled={!canPrev}
+              aria-label={language === "ja" ? "前の週" : "Previous week"}
+              onClick={() => {
+                if (!canPrev || !onSelectPeriod) return;
+                onSelectPeriod(periodList[activeIdx + 1]!.id);
+              }}
+              className={[
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition",
+                canPrev
+                  ? "border-white/18 bg-white/5 text-white/80 hover:border-cyan-300/40 hover:text-cyan-100"
+                  : "border-white/8 bg-transparent text-white/20",
+              ].join(" ")}
+            >
+              <ChevronUp className="h-4 w-4 -rotate-90" strokeWidth={2.5} aria-hidden />
+            </button>
+          ) : null}
+
+          <p
+            className={[
+              nameOxanium.className,
+              "min-w-0 flex-1 text-center text-[15px] font-extrabold uppercase tracking-[0.14em] tabular-nums text-white/85",
+            ].join(" ")}
+          >
+            {rangeLabel}
+          </p>
+
+          {periodList.length > 1 ? (
+            <button
+              type="button"
+              disabled={!canNext}
+              aria-label={language === "ja" ? "次の週" : "Next week"}
+              onClick={() => {
+                if (!canNext || !onSelectPeriod) return;
+                onSelectPeriod(periodList[activeIdx - 1]!.id);
+              }}
+              className={[
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition",
+                canNext
+                  ? "border-white/18 bg-white/5 text-white/80 hover:border-cyan-300/40 hover:text-cyan-100"
+                  : "border-white/8 bg-transparent text-white/20",
+              ].join(" ")}
+            >
+              <ChevronUp className="h-4 w-4 rotate-90" strokeWidth={2.5} aria-hidden />
+            </button>
+          ) : null}
+        </div>
+
+        {periodList.length > 1 ? (
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {periodList.map((p, i) => {
+              const selected = i === activeIdx;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onSelectPeriod?.(p.id)}
+                  className={[
+                    nameOxanium.className,
+                    "shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition",
+                    selected
+                      ? "border-cyan-400/55 bg-cyan-400/14 text-cyan-100"
+                      : "border-white/12 bg-white/4 text-white/55 hover:border-white/25",
+                  ].join(" ")}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </header>
 
       {report.status === "live" ? (
