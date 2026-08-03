@@ -1,8 +1,15 @@
 "use client";
 import React from "react";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+} from "@/app/component/rankings/CyberSlantedTab";
 
-export type Tab = "overview" | "stats" | "bracket";
+export type ProfileMainTab = "overview" | "report" | "awards" | "bracket";
+
+/** @deprecated use ProfileMainTab */
+export type Tab = ProfileMainTab;
 
 const sizeMap = {
   sm: "text-sm pb-2 tracking-[0.06em]",
@@ -22,6 +29,7 @@ type UnderlineTabsProps<T extends string> = {
   layout?: "inline" | "split";
 };
 
+/** 下線インジケータ付きタブ（結果一覧など） */
 export function UnderlineTabs<T extends string>({
   value,
   onChange,
@@ -80,35 +88,50 @@ export function UnderlineTabs<T extends string>({
 }
 
 type Props = {
-  value: Tab;
-  onChange: (v: Tab) => void;
-  showStats?: boolean;
+  value: ProfileMainTab;
+  onChange: (v: ProfileMainTab) => void;
   size?: UnderlineTabSize;
+  /** split: 均等幅（CyberSlantedTabBar fill） */
+  layout?: "inline" | "split";
 };
 
+export const PROFILE_MAIN_TAB_ORDER: readonly ProfileMainTab[] = [
+  "overview",
+  "report",
+  "awards",
+  "bracket",
+] as const;
+
+export const PROFILE_MAIN_TAB_LABELS_EN: Record<ProfileMainTab, string> = {
+  overview: "OVERVIEW",
+  report: "REPORT",
+  awards: "AWARDS",
+  bracket: "BRACKET",
+};
+
+/** プロフィール主タブ — CyberSlantedTab（ランキング等と同デザイン） */
 export default function Tabs({
   value,
   onChange,
-  showStats = true,
   size = "md",
+  layout = "split",
 }: Props) {
-  const items: Tab[] = showStats
-    ? ["overview", "stats", "bracket"]
-    : ["overview", "bracket"];
-
-  const labelMap: Record<Tab, string> = {
-    overview: "Overview",
-    stats: "Report",
-    bracket: "Bracket",
-  };
-
+  const compact = size !== "lg";
   return (
-    <UnderlineTabs
-      value={value}
-      onChange={onChange}
-      items={items}
-      labelMap={labelMap}
-      size={size}
-    />
+    <CyberSlantedTabBar
+      fill={layout !== "inline"}
+      aria-label="Profile sections"
+    >
+      {PROFILE_MAIN_TAB_ORDER.map((id) => (
+        <CyberSlantedTab
+          key={id}
+          role="tab"
+          label={PROFILE_MAIN_TAB_LABELS_EN[id]}
+          active={value === id}
+          onClick={() => onChange(id)}
+          compact={compact}
+        />
+      ))}
+    </CyberSlantedTabBar>
   );
 }

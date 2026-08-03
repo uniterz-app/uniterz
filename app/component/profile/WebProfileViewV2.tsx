@@ -86,8 +86,10 @@ import {
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
+import ProfileAwardsTab from "./ProfileAwardsTab";
 import ProfileMonthlyReportPanel from "./ProfileMonthlyReportPanel";
 import ProfileReportDeliveryOverlay from "./ProfileReportDeliveryOverlay";
+import Tabs from "./ui/Tabs";
 import { useProReportDeliveryOverlay } from "@/lib/reports/useProReportDeliveryOverlay";
 import {
   profileVisualEffectsForViewer,
@@ -95,7 +97,7 @@ import {
 } from "@/lib/profile/profileVisualEffects";
 import { useProfileViewCount } from "@/lib/profile/useProfileViewCount";
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
-  const { profile, tab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
+  const { profile, tab, setTab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
   const rankingLeague = props.profileStatsContext.rankingLeague;
 
@@ -248,6 +250,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       ) : null}
 
       <div className="mt-6">
+        <Tabs value={tab} onChange={setTab} size="lg" layout="split" />
         {tab === "overview" ? (
           <>
             {resolvedUid ? (
@@ -309,6 +312,17 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               </div>
             )}
           </>
+        ) : tab === "report" ? (
+          <ProfileMonthlyReportPanel
+            uid={resolvedUid}
+            language={language}
+            canViewReport={
+              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
+            }
+            showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
+          />
+        ) : tab === "awards" ? (
+          <ProfileAwardsTab language={language} />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
             <div className={`${CYBER_GLASS_PANEL} flex justify-center p-6`}>
@@ -352,16 +366,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               />
             </div>
           )
-        ) : (
-          <ProfileMonthlyReportPanel
-            uid={resolvedUid}
-            language={language}
-            canViewReport={
-              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
-            }
-            showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
-          />
-        )}
+        ) : null}
       </div>
 
       <SideMenuDrawer

@@ -85,8 +85,10 @@ import {
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
+import ProfileAwardsTab from "./ProfileAwardsTab";
 import ProfileMonthlyReportPanel from "./ProfileMonthlyReportPanel";
 import ProfileReportDeliveryOverlay from "./ProfileReportDeliveryOverlay";
+import Tabs from "./ui/Tabs";
 import { useProReportDeliveryOverlay } from "@/lib/reports/useProReportDeliveryOverlay";
 import {
   profileVisualEffectsForViewer,
@@ -100,7 +102,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     history.scrollRestoration = "manual";
   }, []);
 
-  const { profile, tab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
+  const { profile, tab, setTab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
   const rankingLeague = props.profileStatsContext.rankingLeague;
 
@@ -258,6 +260,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       ) : null}
 
       <div className="mt-4">
+        <Tabs value={tab} onChange={setTab} size="md" layout="split" />
         {tab === "overview" ? (
           <>
             {resolvedUid ? (
@@ -325,6 +328,17 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               </div>
             )}
           </>
+        ) : tab === "report" ? (
+          <ProfileMonthlyReportPanel
+            uid={resolvedUid}
+            language={language}
+            canViewReport={
+              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
+            }
+            showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
+          />
+        ) : tab === "awards" ? (
+          <ProfileAwardsTab language={language} />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
             <div className={`${CYBER_GLASS_PANEL} mt-4 flex justify-center p-6`}>
@@ -377,16 +391,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               />
             </div>
           )
-        ) : (
-          <ProfileMonthlyReportPanel
-            uid={resolvedUid}
-            language={language}
-            canViewReport={
-              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
-            }
-            showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
-          />
-        )}
+        ) : null}
       </div>
 
       <SideMenuDrawer

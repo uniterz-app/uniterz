@@ -49,6 +49,11 @@ import type { MainTabParamList, ProfileStackParamList } from "../../navigation/t
 import ProfileExternalReturnNavNative from "./ProfileExternalReturnNavNative";
 import SettingsPoolsBackdropNative from "./SettingsPoolsBackdropNative";
 import { SETTINGS_POOLS_BG_BASE } from "../../../../../lib/ui/settingsPoolsBackground";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../rankings/CyberSlantedTabNative";
+import ProfileAwardsTabNative from "./ProfileAwardsTabNative";
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import ProfileReportDeliveryOverlayNative from "./reports/ProfileReportDeliveryOverlayNative";
@@ -77,16 +82,22 @@ import {
   recordProfileViewNative,
 } from "./profileViewsApiNative";
 
-type ProfileTab = "overview" | "bracket" | "stats";
+type ProfileTab = "overview" | "report" | "awards" | "bracket";
 
-/** Web `Tabs.tsx` と同一の英語ラベル */
+/** Web `Tabs.tsx` / CyberSlantedTab と同一の英語ラベル */
 const PROFILE_TAB_LABELS_EN: Record<ProfileTab, string> = {
-  overview: "Overview",
-  stats: "Report",
-  bracket: "Bracket",
+  overview: "OVERVIEW",
+  report: "REPORT",
+  awards: "AWARDS",
+  bracket: "BRACKET",
 };
 
-const PROFILE_TAB_ORDER: ProfileTab[] = ["overview", "stats", "bracket"];
+const PROFILE_TAB_ORDER: ProfileTab[] = [
+  "overview",
+  "report",
+  "awards",
+  "bracket",
+];
 
 function profileCountryRowLabel(code: string, appLang: "ja" | "en"): string {
   const trimmed = code.trim();
@@ -700,36 +711,20 @@ export default function ProfileHomeScreen({
   const apiConfigured = apiBase != null;
 
   function renderTabs() {
-    const items: { id: ProfileTab; label: string }[] = PROFILE_TAB_ORDER.map((id) => ({
-      id,
-      label: PROFILE_TAB_LABELS_EN[id],
-    }));
     return (
-      <View style={styles.tabBar}>
-        <View style={styles.tabRow}>
-          {items.map((item) => {
-            const active = tab === item.id;
-            return (
-              <Pressable
-                key={item.id}
-                style={({ pressed }) => [
-                  styles.tabHit,
-                  pressed && styles.tabHitPressed,
-                ]}
-                onPress={() => setTab(item.id)}
-              >
-                <Text
-                  style={[styles.tabLabel, active && styles.tabLabelActive]}
-                  maxFontSizeMultiplier={1.2}
-                >
-                  {item.label}
-                </Text>
-                {active ? <View style={styles.tabIndicator} /> : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <CyberSlantedTabBarNative fill style={styles.tabBar}>
+        {PROFILE_TAB_ORDER.map((id) => (
+          <CyberSlantedTabNative
+            key={id}
+            label={PROFILE_TAB_LABELS_EN[id]}
+            active={tab === id}
+            onPress={() => setTab(id)}
+            compact
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === id }}
+          />
+        ))}
+      </CyberSlantedTabBarNative>
     );
   }
 
@@ -884,9 +879,7 @@ export default function ProfileHomeScreen({
 
       {tab === "overview" ? (
         renderOverview()
-      ) : tab === "bracket" ? (
-        <ProfileBracketTabNative uid={targetUid} language={language} />
-      ) : (
+      ) : tab === "report" ? (
         <ProfileStatsTabNative
           uid={targetUid}
           language={language}
@@ -896,6 +889,10 @@ export default function ProfileHomeScreen({
           isMyPro={profilePlanHook.isMyPro}
           isTargetPro={profilePlanHook.isTargetPro}
         />
+      ) : tab === "awards" ? (
+        <ProfileAwardsTabNative uid={targetUid} language={language} />
+      ) : (
+        <ProfileBracketTabNative uid={targetUid} language={language} />
       )}
     </ScrollView>
 
@@ -1401,49 +1398,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  /** Web `Tabs.tsx`（size lg + `bracketMarketTeamTypography`）に寄せる：Bebas・tracking 0.06em 相当・下線 #6EA8FE */
+  /** Web `CyberSlantedTabBar`（fill）相当。本体デザインは CyberSlantedTabNative に委譲 */
   tabBar: {
     marginBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  tabRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "flex-end",
-    gap: 24,
-  },
-  tabHit: {
-    position: "relative",
-    paddingTop: 2,
-    paddingBottom: 10,
-  },
-  tabHitPressed: {
-    opacity: 0.85,
-  },
-  tabLabel: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 15,
-    fontWeight: "400",
-    /** Web `tracking-[0.06em]` に比例（15px 時は約 0.9px） */
-    letterSpacing: 0.9,
-    fontFamily: Platform.select({
-      ios: "BebasNeue_400Regular",
-      android: "BebasNeue_400Regular",
-      default: "sans-serif",
-    }),
-  },
-  tabLabelActive: {
-    color: "#ffffff",
-  },
-  tabIndicator: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: -StyleSheet.hairlineWidth,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: "#6EA8FE",
   },
   playoffsHeading: {
     alignSelf: "stretch",

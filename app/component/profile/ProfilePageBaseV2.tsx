@@ -17,6 +17,8 @@ import { useNbaProfileOverviewClient } from "@/lib/profile/useNbaProfileOverview
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 
+import type { ProfileMainTab } from "./ui/Tabs";
+
 type Props = { handle: string; variant?: "web" | "mobile" };
 
 const NBA_PROFILE_STATS_CONTEXT: ProfileStatsStreakContext = {
@@ -30,9 +32,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     targetUid,
   } = useProfile(handle);
 
-  const [tab, setTab] = useState<"overview" | "stats" | "bracket">(
-    "overview"
-  );
+  const [tab, setTab] = useState<ProfileMainTab>("overview");
 
   const profileStatsContext = NBA_PROFILE_STATS_CONTEXT;
 
@@ -135,8 +135,8 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 export type ProfileViewPropsV2 = {
   profile: Profile;
 
-  tab: "overview" | "stats" | "bracket";
-  setTab: (v: "overview" | "stats" | "bracket") => void;
+  tab: ProfileMainTab;
+  setTab: (v: ProfileMainTab) => void;
 
   summary?: SummaryForCardsV2;
   summaryRanks?: SummaryRanksV2;
