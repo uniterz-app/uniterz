@@ -5,7 +5,8 @@
  * アンバー戦闘 HUD — 通常グループ枠と明確に差別化する。
  */
 
-import { ChevronRight, Swords } from "lucide-react";
+import Image from "next/image";
+import { ChevronRight } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import cn from "clsx";
 import { nameOxanium } from "@/lib/fonts";
@@ -13,13 +14,18 @@ import {
   CommunityCrtSectionLabel,
   communityCrtMono,
 } from "@/app/component/communities/CommunityCrtTheme";
+import {
+  squadBattleEntryStatusChip,
+  type SquadBattleUiPhase,
+} from "@/lib/squads/squadBattleUiCopy";
 
 const CHAMFER =
   "polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px)";
-const ICON_CHAMFER =
-  "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)";
 const PILL_CHAMFER =
   "polygon(3px 0%, 100% 0%, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0% 100%, 0% 3px)";
+
+/** グループバトル公式マーク */
+const SQUAD_BATTLE_ICON = "/squad-battle/icon.png";
 
 type Props = {
   language: "ja" | "en" | string;
@@ -27,6 +33,12 @@ type Props = {
   isWeb?: boolean;
   onOpen: () => void;
   className?: string;
+  /** 開催フェーズ（未指定は BATTLE） */
+  phase?: SquadBattleUiPhase;
+  /** 自分の順位（バトル中チップ用） */
+  myRank?: number | null;
+  /** ENTRY 締切ラベル */
+  deadlineLabel?: string | null;
 };
 
 export default function SquadBattleGroupEntry({
@@ -34,9 +46,17 @@ export default function SquadBattleGroupEntry({
   isWeb = false,
   onOpen,
   className,
+  phase = "battle",
+  myRank = null,
+  deadlineLabel = null,
 }: Props) {
   const reduceMotion = useReducedMotion() === true;
   const isEn = language === "en";
+  const statusChip = squadBattleEntryStatusChip({
+    phase,
+    myRank,
+    deadlineLabel,
+  });
 
   return (
     <section className={cn(communityCrtMono.className, className)}>
@@ -122,36 +142,27 @@ export default function SquadBattleGroupEntry({
             isWeb ? "px-4 py-3.5 pl-5" : "px-3.5 py-3 pl-4"
           )}
         >
-          {/* アイコン */}
-          <div className="relative flex shrink-0 items-center justify-center">
-            <span
-              aria-hidden
-              className="absolute -inset-1 rounded-sm opacity-70 blur-[6px]"
-              style={{ background: "rgba(251,191,36,0.28)" }}
+          {/* アイコン — 枠は画像内に焼き込み済み */}
+          <div
+            className={cn(
+              "relative shrink-0 overflow-hidden",
+              isWeb ? "h-[52px] w-[52px]" : "h-11 w-11"
+            )}
+            style={{
+              boxShadow: "0 0 18px rgba(251,191,36,0.35)",
+            }}
+          >
+            <Image
+              src={SQUAD_BATTLE_ICON}
+              alt=""
+              width={isWeb ? 52 : 44}
+              height={isWeb ? 52 : 44}
+              className="h-full w-full object-cover"
+              priority={false}
             />
-            <div
-              className={cn(
-                "relative flex items-center justify-center border border-amber-300/55",
-                isWeb ? "h-[52px] w-[52px]" : "h-11 w-11"
-              )}
-              style={{
-                clipPath: ICON_CHAMFER,
-                WebkitClipPath: ICON_CHAMFER,
-                background:
-                  "linear-gradient(160deg, rgba(251,191,36,0.28) 0%, rgba(20,12,4,0.95) 55%, rgba(80,40,8,0.55) 100%)",
-                boxShadow:
-                  "inset 0 0 0 1px rgba(253,230,138,0.2), 0 0 18px rgba(251,191,36,0.35)",
-              }}
-            >
-              <Swords
-                className="text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)]"
-                size={isWeb ? 24 : 20}
-                strokeWidth={1.7}
-              />
-            </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 items-center">
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
             <p
               className={cn(
                 nameOxanium.className,
@@ -165,6 +176,25 @@ export default function SquadBattleGroupEntry({
             >
               Squad Battle
             </p>
+            <span
+              className={cn(
+                nameOxanium.className,
+                "inline-flex w-fit items-center border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.14em]",
+                statusChip.tone === "idle"
+                  ? "border-white/20 bg-white/5 text-white/55"
+                  : statusChip.tone === "entry"
+                    ? "border-amber-300/45 bg-amber-400/15 text-amber-100"
+                    : statusChip.tone === "reward"
+                      ? "border-amber-200/50 bg-amber-300/20 text-amber-50"
+                      : "border-amber-400/40 bg-amber-500/15 text-amber-50"
+              )}
+              style={{
+                clipPath: PILL_CHAMFER,
+                WebkitClipPath: PILL_CHAMFER,
+              }}
+            >
+              {statusChip.label}
+            </span>
           </div>
 
           <span

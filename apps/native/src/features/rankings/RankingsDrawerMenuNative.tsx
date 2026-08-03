@@ -122,7 +122,8 @@ export default function RankingsDrawerMenuNative({
 
         {onOpenSquadBattlePreview ? (
           <SideMenuItemButtonNative
-            icon="account-group-outline"
+            iconSource={require("../../../assets/squad-battle/icon.png")}
+            iconSize={20}
             labelStyle={{ ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" }}
             onPress={onOpenSquadBattlePreview}
           >

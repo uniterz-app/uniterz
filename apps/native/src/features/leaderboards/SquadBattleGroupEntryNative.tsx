@@ -2,23 +2,63 @@
  * Web `SquadBattleGroupEntry` 相当 — GROUP スロット一覧用エントリー。
  * アンバー戦闘 HUD。
  */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { fonts } from "../../theme/tokens";
 import { CommunityCrtSectionLabelNative } from "./CommunityCrtPartsNative";
+import {
+  squadBattleEntryStatusChip,
+  type SquadBattleUiPhase,
+} from "../../../../../lib/squads/squadBattleUiCopy";
 
 type Props = {
   language: string;
   onOpen: () => void;
+  /** 開催フェーズ（未指定は BATTLE） */
+  phase?: SquadBattleUiPhase;
+  /** 自分の順位（バトル中チップ用） */
+  myRank?: number | null;
+  /** ENTRY 締切ラベル */
+  deadlineLabel?: string | null;
 };
 
 const GOLD = "#FBBF24";
-const GOLD_SOFT = "#FDE68A";
 const TITLE = "#FFF8E7";
 
-export default function SquadBattleGroupEntryNative({ language, onOpen }: Props) {
+/** Web `/squad-battle/icon.png` 相当 */
+const SQUAD_BATTLE_ICON = require("../../../assets/squad-battle/icon.png");
+
+export default function SquadBattleGroupEntryNative({
+  language,
+  onOpen,
+  phase = "battle",
+  myRank = null,
+  deadlineLabel = null,
+}: Props) {
   const isEn = language === "en";
+  const statusChip = squadBattleEntryStatusChip({
+    phase,
+    myRank,
+    deadlineLabel,
+  });
+
+  const chipBoxStyle =
+    statusChip.tone === "idle"
+      ? styles.statusChipIdle
+      : statusChip.tone === "entry"
+        ? styles.statusChipEntry
+        : statusChip.tone === "reward"
+          ? styles.statusChipReward
+          : styles.statusChipBattle;
+  const chipTextStyle =
+    statusChip.tone === "idle"
+      ? styles.statusChipTextIdle
+      : statusChip.tone === "entry"
+        ? styles.statusChipTextEntry
+        : statusChip.tone === "reward"
+          ? styles.statusChipTextReward
+          : styles.statusChipTextBattle;
 
   return (
     <View style={styles.section}>
@@ -60,27 +100,22 @@ export default function SquadBattleGroupEntryNative({ language, onOpen }: Props)
 
           <View style={styles.row}>
             <View style={styles.iconWrap}>
-              <View style={styles.iconGlow} pointerEvents="none" />
-              <LinearGradient
-                colors={[
-                  "rgba(251,191,36,0.32)",
-                  "rgba(20,12,4,0.95)",
-                  "rgba(80,40,8,0.55)",
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.iconBox}
-              >
-                <MaterialCommunityIcons
-                  name="sword-cross"
-                  size={20}
-                  color={GOLD_SOFT}
-                />
-              </LinearGradient>
+              {/* 枠は画像内に焼き込み済み — UI 側に枠を重ねない */}
+              <Image
+                source={SQUAD_BATTLE_ICON}
+                style={styles.iconImage}
+                resizeMode="cover"
+                accessibilityIgnoresInvertColors
+              />
             </View>
 
             <View style={styles.copy}>
               <Text style={styles.title}>Squad Battle</Text>
+              <View style={[styles.statusChip, chipBoxStyle]}>
+                <Text style={[styles.statusChipText, chipTextStyle]}>
+                  {statusChip.label}
+                </Text>
+              </View>
             </View>
 
             <View style={styles.enterBtn}>
@@ -143,31 +178,21 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 44,
     height: 44,
-    position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
+    overflow: "hidden",
+    shadowColor: GOLD,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
   },
-  iconGlow: {
-    position: "absolute",
-    left: 0,
-    top: 0,
+  iconImage: {
     width: 44,
     height: 44,
-    borderRadius: 4,
-    backgroundColor: "rgba(251,191,36,0.22)",
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(253,230,138,0.55)",
   },
   copy: {
     flex: 1,
     minWidth: 0,
     justifyContent: "center",
+    gap: 6,
   },
   title: {
     fontFamily: fonts.metricExtra,
@@ -182,6 +207,48 @@ const styles = StyleSheet.create({
     textShadowRadius: 12,
     includeFontPadding: false,
     textAlignVertical: "center",
+  },
+  statusChip: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  statusChipIdle: {
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  statusChipEntry: {
+    borderColor: "rgba(252,211,77,0.45)",
+    backgroundColor: "rgba(251,191,36,0.15)",
+  },
+  statusChipReward: {
+    borderColor: "rgba(253,230,138,0.5)",
+    backgroundColor: "rgba(252,211,77,0.2)",
+  },
+  statusChipBattle: {
+    borderColor: "rgba(251,191,36,0.4)",
+    backgroundColor: "rgba(245,158,11,0.15)",
+  },
+  statusChipText: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+  },
+  statusChipTextIdle: {
+    color: "rgba(255,255,255,0.55)",
+  },
+  statusChipTextEntry: {
+    color: "rgba(254,243,199,1)",
+  },
+  statusChipTextReward: {
+    color: "rgba(255,251,235,1)",
+  },
+  statusChipTextBattle: {
+    color: "rgba(255,251,235,1)",
   },
   enterBtn: {
     flexDirection: "row",

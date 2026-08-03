@@ -13,9 +13,10 @@ import cn from "clsx";
 import { nameOxanium, jp } from "@/lib/fonts";
 import {
   SQUAD_BATTLE_INTRO_STORAGE_KEY,
-  SQUAD_BATTLE_MAX_MEMBERS,
+  SQUAD_BATTLE_INTRO_TAGLINE,
   SQUAD_BATTLE_SEASON_PHASES,
 } from "@/lib/squads/squadBattleMock";
+import { SQUAD_BATTLE_INTRO_NOTICES } from "@/lib/squads/squadBattleUiCopy";
 import {
   SQUAD_INTRO_BG_FADE_S,
   SQUAD_INTRO_ENTER_DELAY_S,
@@ -244,8 +245,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
                 ease: EASE,
               }}
             >
-              {SQUAD_BATTLE_MAX_MEMBERS}
-              人固定のスクワッドで平均得点を競う期間限定バトル。
+              {SQUAD_BATTLE_INTRO_TAGLINE}
             </motion.p>
 
             {/* フェーズタイムライン */}
@@ -331,9 +331,24 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
                     "text-[9px] font-bold uppercase tracking-[0.22em]"
                   )}
                 >
-                  Loop · next entry opens
+                  Loop · next season
                 </p>
               </motion.div>
+
+              <ul className="mt-4 flex flex-col gap-1.5 border border-amber-400/20 bg-black/35 px-3 py-2.5">
+                {SQUAD_BATTLE_INTRO_NOTICES.map((line) => (
+                  <li
+                    key={line}
+                    className={cn(
+                      jp.className,
+                      "flex gap-2 text-[11px] leading-snug text-white/50"
+                    )}
+                  >
+                    <span className="mt-[0.35em] h-1 w-1 shrink-0 rounded-full bg-amber-400/70" />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {/* ENTER */}
@@ -365,7 +380,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
           {/* 退出用の暗転は AnimatePresence 側の opacity で十分 */}
           <span className="sr-only" aria-live="polite">
             {open
-              ? "スクワッドバトルの説明。エントリー約2週間、バトル1ヶ月、終了後解散。"
+              ? "スクワッドバトルの説明。3〜5人で平均スコアを競う。募集約1〜2週間、バトル約1ヶ月、結果確定後に上位へ Unit 配布。"
               : ""}
           </span>
         </motion.div>

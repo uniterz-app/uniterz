@@ -13,9 +13,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { fonts } from "../../theme/tokens";
 import {
-  SQUAD_BATTLE_MAX_MEMBERS,
+  SQUAD_BATTLE_INTRO_TAGLINE,
   SQUAD_BATTLE_SEASON_PHASES,
 } from "../../../../../lib/squads/squadBattleMock";
+import { SQUAD_BATTLE_INTRO_NOTICES } from "../../../../../lib/squads/squadBattleUiCopy";
 import {
   SQUAD_INTRO_BG_FADE_MS,
   SQUAD_INTRO_ENTER_DELAY_MS,
@@ -153,8 +154,7 @@ export default function SquadBattleIntroOverlayNative({
                 : FadeInDown.duration(280).delay(SQUAD_INTRO_RULE_DELAY_MS)
             }
           >
-            {SQUAD_BATTLE_MAX_MEMBERS}
-            人固定のスクワッドで平均得点を競う期間限定バトル。
+            {SQUAD_BATTLE_INTRO_TAGLINE}
           </Animated.Text>
 
           <View style={styles.timeline}>
@@ -195,8 +195,18 @@ export default function SquadBattleIntroOverlayNative({
                 size={12}
                 color="rgba(253,230,138,0.5)"
               />
-              <Text style={styles.loopText}>Loop · next entry opens</Text>
+              <Text style={styles.loopText}>Loop · next season</Text>
             </Animated.View>
+
+            {/* 告知・禁止事項（Web と同文言） */}
+            <View style={styles.noticesBox}>
+              {SQUAD_BATTLE_INTRO_NOTICES.map((line) => (
+                <View key={line} style={styles.noticeRow}>
+                  <View style={styles.noticeDot} />
+                  <Text style={styles.noticeText}>{line}</Text>
+                </View>
+              ))}
+            </View>
           </View>
 
           <Animated.View
@@ -232,7 +242,7 @@ export default function SquadBattleIntroOverlayNative({
           style={styles.srOnly}
         >
           <Text>
-            スクワッドバトルの説明。エントリー約2週間、バトル1ヶ月、終了後解散。
+            スクワッドバトルの説明。3〜5人で平均スコアを競う。募集約1〜2週間、バトル約1ヶ月、結果確定後に上位へ Unit 配布。
           </Text>
         </View>
       </View>
@@ -412,6 +422,33 @@ const styles = StyleSheet.create({
     letterSpacing: 2.2,
     textTransform: "uppercase",
     color: "rgba(253,230,138,0.5)",
+  },
+  noticesBox: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.2)",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  noticeRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  noticeDot: {
+    marginTop: 6,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(251,191,36,0.7)",
+  },
+  noticeText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgba(255,255,255,0.5)",
   },
   enterWrap: {
     marginTop: 32,

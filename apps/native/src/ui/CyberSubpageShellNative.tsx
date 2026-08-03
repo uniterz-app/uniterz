@@ -211,6 +211,8 @@ type Props = CyberSubpageHeaderNativeProps & {
   /** ScrollView を使わず children をそのまま置く（ブラケット等） */
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
+  /** ScrollView の stickyHeaderIndices（RANK ピン留め等） */
+  stickyHeaderIndices?: number[];
 };
 
 export default function CyberSubpageShellNative({
@@ -222,6 +224,7 @@ export default function CyberSubpageShellNative({
   children,
   scroll = true,
   contentStyle,
+  stickyHeaderIndices,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
@@ -232,6 +235,7 @@ export default function CyberSubpageShellNative({
       contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      stickyHeaderIndices={stickyHeaderIndices}
     >
       {children}
     </ScrollView>

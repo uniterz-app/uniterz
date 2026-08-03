@@ -81,6 +81,9 @@ export type OpenSquadListing = {
 
 export const SQUAD_BATTLE_MAX_MEMBERS = 5;
 
+/** 最小人数（正: docs/group-battle-design.md） */
+export const SQUAD_BATTLE_MIN_MEMBERS = 3;
+
 /** スクワッド名の最大文字数（作成時） */
 export const SQUAD_BATTLE_NAME_MAX_LEN = 20;
 
@@ -89,39 +92,44 @@ export const SQUAD_BATTLE_MAX_PENDING_APPLICATIONS = 3;
 
 /** 開催サイクルの1フェーズ（イントロ / ヘルプ共用） */
 export type SquadBattleSeasonPhase = {
-  key: "entry" | "battle" | "reset";
+  key: "entry" | "battle" | "reward";
   label: string;
   period: string;
   desc: string;
 };
 
 /**
- * 開催サイクル（2ヶ月に1回）。
- * ENTRY → BATTLE → DISBAND → 次回 ENTRY。
+ * 開催サイクル（約2ヶ月に1回）。
+ * ENTRY → BATTLE → REWARD → 次回 ENTRY。
+ * 正: docs/group-battle-design.md / lib/groupBattles/constants.ts
  */
 export const SQUAD_BATTLE_SEASON_PHASES: readonly SquadBattleSeasonPhase[] = [
   {
     key: "entry",
     label: "ENTRY",
-    period: "約1〜2週間前から",
-    desc: "グループを作成・参加してエントリー",
+    period: "約1〜2週間前",
+    desc: "3〜5人のスクワッドを確定。開始後の入れ替えは不可",
   },
   {
     key: "battle",
     label: "BATTLE",
-    period: "1ヶ月",
-    desc: "週間×4 + 月間×1 の平均得点バトル",
+    period: "約1ヶ月",
+    desc: "全員の総合スコア平均で競う。週間×4 + 月間×1",
   },
   {
-    key: "reset",
-    label: "DISBAND",
-    period: "終了後",
-    desc: "解散して次回エントリーへ",
+    key: "reward",
+    label: "REWARD",
+    period: "結果確定後",
+    desc: "週間・月間の上位グループ全員に Unit を配布",
   },
 ] as const;
 
+/** 初回イントロのルール1行 */
+export const SQUAD_BATTLE_INTRO_TAGLINE =
+  "3〜5人のスクワッドで、メンバー全員の総合スコア平均を競う。約2ヶ月に1回の期間限定バトル。";
+
 /** はてな（？）ヘルプ用のルール要約 */
-export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 終了後は解散。過去のスクワッドから同じ顔ぶれを再招集できます。`;
+export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間・月間の上位グループ全員へ Unit を配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;
 
 /** 初回イントロ既読フラグ（localStorage） */
 export const SQUAD_BATTLE_INTRO_STORAGE_KEY = "uniterz:squad-battle-intro:v1";
