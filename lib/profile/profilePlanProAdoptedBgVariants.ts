@@ -71,8 +71,8 @@ export const PROFILE_PLAN_PRO_ADOPTED_CATEGORIES: readonly ProfilePlanProAdopted
       id: "cyber",
       labelJa: "サイバー空間",
       labelEn: "Cyber Space",
-      descriptionJa: "ネビュラ・多層パララックスなど、奥行きのあるサイバー HUD。",
-      descriptionEn: "Nebula and parallax layers — depth-first cyber HUD.",
+      descriptionJa: "ネビュラ・パララックス・Eclipse / Data Stream など、奥行きのあるサイバー HUD。",
+      descriptionEn: "Nebula, parallax, Eclipse / Data Stream — depth-first cyber HUD.",
     },
     {
       id: "reptile",
@@ -123,11 +123,13 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用 22 — 解放カタログ順（即解放 → マイルストーン）。詳細は `proSkinUnlock.ts` */
+/** 採用 24 — 解放カタログ順（即解放 → マイルストーン）。詳細は `proSkinUnlock.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // Pro 即解放 ×10
+  // Pro 即解放 ×12
   { id: "atmos", category: "cyber", family: "atmos" },
   { id: "parallax", category: "cyber", family: "atmos" },
+  { id: "futuristic-eclipse", category: "cyber", family: "futuristic" },
+  { id: "futuristic-data-stream", category: "cyber", family: "futuristic" },
   { id: "scale-mamba", category: "reptile", family: "scale" },
   { id: "scale-python", category: "reptile", family: "scale" },
   { id: "beast-crocodile", category: "reptile", family: "beast" },

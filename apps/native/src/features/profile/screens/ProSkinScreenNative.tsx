@@ -231,14 +231,23 @@ function SkinThumbNative({
           {condition} · {formatProSkinOwnerCount(owners, language)}
         </Text>
       </View>
-      <View style={[styles.tilePreview, { height }]}>
-        {/* カタログは swatch のみ。フル SVG×22 は Native で極端に重い */}
+      <View style={[styles.tilePreview, { height }]} collapsable={false}>
+        {/* フォールバック用 swatch（FX 未対応時も空にしない） */}
         <LinearGradient
           colors={swatchColors}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
+        {/* 一覧で模様が見えるよう本番背景をサムネ描画（FlatList 仮想化で同時描画は少数） */}
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+          <ProfilePlanProBackgroundNative
+            width={width}
+            height={height}
+            variant={entry.id}
+            animate={false}
+          />
+        </View>
         <ThumbCorners />
         {!unlocked ? (
           <View style={styles.tileLockOverlay} pointerEvents="none">
@@ -472,6 +481,10 @@ export default function ProSkinScreenNative() {
               { width: contentW, alignSelf: "center" },
             ]}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={6}
+            maxToRenderPerBatch={4}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === "android"}
             ListHeaderComponent={
               <View style={styles.headerBlock}>
                 <Text style={styles.eyebrow}>Pro Skin</Text>

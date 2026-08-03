@@ -48,6 +48,7 @@ export const FUTURISTIC_BG_PREVIEW_CARD = {
   height: 440,
 } as const;
 
+/** Native Skia コンポーネント名（Web は同構図の SVG） */
 export const FUTURISTIC_BG_VARIANT_META = [
   { id: "eclipse", name: "EclipseBackground" },
   { id: "data-stream", name: "DataStreamBackground" },

@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放10 / マイルストーン12。
+ * Pro Skin 解放ルール — 即解放12 / マイルストーン12。
  * 並べ順もここが正（カタログ表示・No. はこの順）。
  */
 
@@ -106,9 +106,11 @@ const UNLOCK_ORDER: readonly {
   id: ProfilePlanProBgVariant;
   unlock: ProSkinUnlockRule;
 }[] = [
-  // —— Pro 即解放 ×10 ——
+  // —— Pro 即解放 ×12 ——
   { id: "atmos", unlock: { kind: "pro" } },
   { id: "parallax", unlock: { kind: "pro" } },
+  { id: "futuristic-eclipse", unlock: { kind: "pro" } },
+  { id: "futuristic-data-stream", unlock: { kind: "pro" } },
   { id: "scale-mamba", unlock: { kind: "pro" } },
   { id: "scale-python", unlock: { kind: "pro" } },
   { id: "beast-crocodile", unlock: { kind: "pro" } },

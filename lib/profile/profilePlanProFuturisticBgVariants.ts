@@ -1,5 +1,5 @@
 /**
- * PRO 背景 — Futuristic 案（本番採用は Eclipse のみ。Data Stream は非採用）
+ * PRO 背景 — Futuristic 案（採用: Eclipse / Data Stream）
  */
 
 export type ProfilePlanProFuturisticBgVariant =
@@ -24,7 +24,7 @@ export const PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS: ProfilePlanProFuturisticBg
       tag: "食",
       description: "右下の巨大惑星リムと薄い軌道。中央は暗い余白。",
       swatch:
-        "linear-gradient(155deg, #020305, #050c14 40%, #22d3ee33 78%, #a78bfa22 92%, #020305)",
+        "radial-gradient(ellipse at 88% 78%, #e879f966 0%, transparent 42%), radial-gradient(ellipse at 28% 58%, #22d3ee44 0%, transparent 28%), linear-gradient(155deg, #020305, #0a1020 38%, #1a0a28 72%, #020305)",
       artId: "eclipse",
     },
     {
@@ -33,7 +33,7 @@ export const PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS: ProfilePlanProFuturisticBg
       tag: "データ流",
       description: "中下段を横切る多層ウェーブ。上は静か。",
       swatch:
-        "linear-gradient(180deg, #020305 30%, #a78bfa33 55%, #22d3ee44 75%, #3b82f633)",
+        "linear-gradient(180deg, #020305 28%, #050a14 42%, #e879f955 52%, #a78bfa66 58%, #22d3ee55 68%, #050a14 78%, #020305)",
       artId: "data-stream",
     },
   ];

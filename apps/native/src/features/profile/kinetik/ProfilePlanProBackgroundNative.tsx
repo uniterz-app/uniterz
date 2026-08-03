@@ -103,7 +103,8 @@ import {
   isProfilePlanProFuturisticBgVariant,
   type ProfilePlanProFuturisticBgVariant,
 } from "../../../../../../lib/profile/profilePlanProFuturisticBgVariants";
-import WebParityFuturisticBackgroundNative from "../backgrounds/WebParityFuturisticBackgroundNative";
+import EclipseBackground from "../backgrounds/EclipseBackground";
+import DataStreamBackground from "../backgrounds/DataStreamBackground";
 import ParallaxLayersNative from "../backgrounds/ParallaxLayersNative";
 import { PROFILE_PLAN_PRO_BG } from "../../../../../../lib/profile/profilePlanVisual";
 
@@ -664,7 +665,7 @@ function FormLayers({
   );
 }
 
-/** Web `futuristic-*` 相当 — WebFuturisticBackground と同一構図 */
+/** 参考画像準拠の Skia 背景（簡略 WebParity ではなく本番品質） */
 function FuturisticLayers({
   width,
   height,
@@ -675,13 +676,10 @@ function FuturisticLayers({
   variant: ProfilePlanProFuturisticBgVariant;
 }) {
   const artId = getProfilePlanProFuturisticArtId(variant);
-  return (
-    <WebParityFuturisticBackgroundNative
-      id={artId}
-      width={width}
-      height={height}
-    />
-  );
+  if (artId === "data-stream") {
+    return <DataStreamBackground width={width} height={height} />;
+  }
+  return <EclipseBackground width={width} height={height} />;
 }
 
 /** Web `neo-*` 相当（フルブリード skin — cover 相当） */

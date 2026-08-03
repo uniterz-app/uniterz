@@ -134,6 +134,8 @@
 }
 
 .profile-plan-pro-bg-picker-skin-thumb__frame .profile-plan-pro-bg {
+  position: absolute;
+  inset: 0;
   border-radius: inherit;
 }
 

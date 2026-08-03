@@ -4,7 +4,7 @@
 
 ## いままで（develop に反映）
 
-- 採用カタログ **即解放 10 / マイルストーン 12**
+- 採用カタログ **即解放 12 / マイルストーン 12**（Eclipse / Data Stream 含む）
 - マイルストーン梯子（連勝 7/10/15、予想 100/150、パーフェクト 10、月 Top10、週 1 位、月間 得点者 / UPSET / 勝率 / 総合 1 位）
 - Circuit Lace / Iso Cubes など全面パターン、Crimson Eclipse 再採用、Carbon 削除
 - Pro Skin 一覧の軽量化（カタログは swatch、フル模様はプレビュー時のみ）

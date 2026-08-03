@@ -15,7 +15,7 @@ import { nameOxanium } from "@/lib/fonts";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
-import ProCyberBadge from "@/app/component/common/ProCyberBadge";
+import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
 import type { ReactNode } from "react";
 import { t } from "@/lib/i18n/t";
 

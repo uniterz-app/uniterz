@@ -13,6 +13,7 @@ import {
 } from "react";
 import ProfileEditKinetikPanel from "@/app/component/profile/edit/ProfileEditKinetikPanel";
 import { PROFILE_EDIT_KINETIK_MOCK } from "@/app/component/profile/edit/profileEditKinetikTypes";
+import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanProBackgroundFx";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { saveMeProSkin } from "@/lib/api/saveMeProSkin";
 import { fetchProSkinStatus } from "@/lib/api/fetchProSkinStatus";
@@ -139,7 +140,12 @@ function SkinThumbnail({ entry }: { entry: ProfilePlanProAdoptedEntry }) {
         ].join(" ")}
         style={{ background: swatch }}
       >
-        {/* カタログは swatch のみ。フル SVG を22枚同時生成すると数百MB級になる */}
+        {/* 一覧で模様が見えるよう、全スキンで本番 FX をサムネ描画（アニメなし） */}
+        <ProfilePlanProBackgroundFx
+          variant={entry.id}
+          animate={false}
+          web
+        />
         <span
           className="profile-kinetik-frame-corner profile-kinetik-frame-corner--tl"
           aria-hidden

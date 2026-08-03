@@ -79,8 +79,8 @@ export default function PreviewScreen({ language, onClose }: Props) {
         eyebrow="PRO // PREVIEW"
         subtitle={
           isJa
-            ? "実カードに当てはめて 8 種を比較。本番採用リストには未追加。"
-            : "Compare 8 variants on the real profile card."
+            ? "採用スキン Eclipse / Data Stream を実カードに当てはめて確認。"
+            : "Preview adopted Eclipse / Data Stream on the real profile card."
         }
         appBackground
         onClose={onClose}
