@@ -47,16 +47,25 @@ function buildDeleteContribution(
   const wcStageRaw = before.wcStage;
   const wcStage =
     wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
-  const forRanking =
+  const forOpenEligible =
     stats.countedForRanking !== false && leagueKey !== "wc";
+  const hasPickupFlag = typeof stats.countedForPickup === "boolean";
+  // レガシー: countedForPickup 未設定なら当時は ranking に全試合加算
+  const forPickupRanking =
+    stats.countedForPickup === true ||
+    (!hasPickupFlag && forOpenEligible);
+  // open* はデュアル書き込み導入後の投稿のみ戻す
+  const forOpenRanking = hasPickupFlag && forOpenEligible;
   const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(
     leagueKey,
-    forRanking,
+    forOpenEligible,
     startAt,
     before.seasonPhase
   );
   return {
-    forRanking,
+    forRanking: forPickupRanking,
+    forOpenRanking,
+    forPlayoffsRanking: forOpenEligible,
     nbaSeasonKey,
     nbaPlayoffsSeasonKey,
     leagueKey,
@@ -180,6 +189,8 @@ export const onPostDeletedV2 = onDocumentDeleted(
           uid,
           {
             forRanking: true,
+            forOpenRanking: false,
+            forPlayoffsRanking: false,
             nbaSeasonKey: null,
             nbaPlayoffsSeasonKey: null,
             leagueKey: normalizeLeague(
@@ -207,8 +218,13 @@ export const onPostDeletedV2 = onDocumentDeleted(
     const leagueKeyNorm = normalizeLeague(
       typeof before.league === "string" ? before.league : null
     );
-    const countRank =
+    const forOpenEligible =
       stats.countedForRanking !== false && leagueKeyNorm !== "wc";
+    const hasPickupFlag = typeof stats.countedForPickup === "boolean";
+    const forPickupRanking =
+      stats.countedForPickup === true ||
+      (!hasPickupFlag && forOpenEligible);
+    const forOpenRanking = hasPickupFlag && forOpenEligible;
 
     const isWin = stats.isWin === true;
     const scoreError = stats.scoreError ?? 0;
@@ -232,6 +248,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
             homeTeamId?: string | null;
             awayTeamId?: string | null;
             countedForRanking?: boolean;
+            countedForPickup?: boolean;
           }
         | undefined;
 
@@ -250,25 +267,35 @@ export const onPostDeletedV2 = onDocumentDeleted(
       };
 
       tx.set(dailyRef, { all: dec }, { merge: true });
-      if (countRank) {
+      if (forPickupRanking) {
         tx.set(dailyRef, { ranking: dec }, { merge: true });
+      }
+      if (forOpenRanking) {
+        tx.set(dailyRef, { openRanking: dec }, { merge: true });
       }
 
       const seasonPhase = before.seasonPhase;
       const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(
         normalizeLeague(typeof before.league === "string" ? before.league : null),
-        countRank,
+        forOpenEligible,
         startAt,
         seasonPhase
       );
-      if (nbaSeasonKey) {
+      if (forPickupRanking && nbaSeasonKey) {
         tx.set(
           dailyRef,
           { rankingBySeason: { [nbaSeasonKey]: dec } },
           { merge: true }
         );
       }
-      if (nbaPlayoffsSeasonKey) {
+      if (forOpenRanking && nbaSeasonKey) {
+        tx.set(
+          dailyRef,
+          { openRankingBySeason: { [nbaSeasonKey]: dec } },
+          { merge: true }
+        );
+      }
+      if (forOpenEligible && nbaPlayoffsSeasonKey) {
         tx.set(
           dailyRef,
           { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: dec } },
@@ -290,7 +317,10 @@ export const onPostDeletedV2 = onDocumentDeleted(
           null
       );
       const countTeams =
-        marker?.countedForRanking !== false && countRank;
+        (marker?.countedForPickup === true ||
+          (marker?.countedForPickup == null &&
+            marker?.countedForRanking !== false)) &&
+        forPickupRanking;
       if (countTeams && gameTeamIds.length > 0) {
         for (const teamId of gameTeamIds) {
           tx.set(dailyRef, teamDecrementFields(teamId, dec), { merge: true });

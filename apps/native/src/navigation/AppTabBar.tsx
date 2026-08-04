@@ -47,6 +47,8 @@ const RESULT_ICON_SIZE = 32;
 /** mobile Web NavBar と色味を揃えたカスタムタブバー */
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const pillSidePad = Math.max(0, (Dimensions.get("window").width * (1 - 0.94)) / 2);
+  /** 連打で navigate が積み上がるのを抑える */
+  const lastPressAtRef = useRef(0);
 
   const activeRouteName = state.routes[state.index]?.name ?? "";
   const { showRankingBadge, showResultBadge } =
@@ -89,6 +91,10 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     };
 
                 const onPress = () => {
+                  const now = Date.now();
+                  if (now - lastPressAtRef.current < 280) return;
+                  lastPressAtRef.current = now;
+
                   const event = navigation.emit({
                     type: "tabPress",
                     target: route.key,

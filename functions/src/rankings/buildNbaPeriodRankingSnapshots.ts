@@ -93,15 +93,28 @@ function addInc(agg: Agg, inc: DailyInc | null | undefined) {
   agg.totalGoalScorerHits += Number(inc.goalScorerHitCount ?? 0) || 0;
 }
 
-/** シーズンスライス（rankingBySeason.<key>）優先、なければ leagues.nba */
-function pickNbaInc(data: Record<string, unknown>): DailyInc | null {
+/** シーズンスライス。standard=Pick Up / open=PRO LEAGUE（未移行日は ranking にフォールバック） */
+function pickNbaInc(
+  data: Record<string, unknown>,
+  division: "standard" | "open"
+): DailyInc | null {
+  if (division === "open") {
+    const openBySeason = data.openRankingBySeason as
+      | Record<string, DailyInc>
+      | undefined;
+    const openInc = openBySeason?.[CURRENT_NBA_SEASON_KEY];
+    if (openInc && typeof openInc === "object") return openInc;
+  }
   const bySeason = data.rankingBySeason as
     | Record<string, DailyInc>
     | undefined;
   const seasonInc = bySeason?.[CURRENT_NBA_SEASON_KEY];
   if (seasonInc && typeof seasonInc === "object") return seasonInc;
-  const leagues = data.leagues as { nba?: DailyInc } | undefined;
-  if (leagues?.nba && typeof leagues.nba === "object") return leagues.nba;
+  // Pick Up 導入後は leagues.nba（全試合）へフォールバックしない
+  if (division === "open") {
+    const leagues = data.leagues as { nba?: DailyInc } | undefined;
+    if (leagues?.nba && typeof leagues.nba === "object") return leagues.nba;
+  }
   return null;
 }
 
@@ -192,21 +205,32 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     .where("date", "<=", range.endKey)
     .get();
 
-  const aggByUid = new Map<string, Agg>();
+  const aggByUidStandard = new Map<string, Agg>();
+  const aggByUidOpen = new Map<string, Agg>();
   for (const doc of statsSnap.docs) {
     const data = doc.data() as Record<string, unknown>;
     const dateKey = String(data.date ?? "");
     const uid = uidFromDailyDocId(doc.id, dateKey);
     if (!uid) continue;
-    const inc = pickNbaInc(data);
-    if (!inc) continue;
-    if (!aggByUid.has(uid)) aggByUid.set(uid, emptyAgg());
-    addInc(aggByUid.get(uid)!, inc);
+    const incStandard = pickNbaInc(data, "standard");
+    if (incStandard) {
+      if (!aggByUidStandard.has(uid)) aggByUidStandard.set(uid, emptyAgg());
+      addInc(aggByUidStandard.get(uid)!, incStandard);
+    }
+    const incOpen = pickNbaInc(data, "open");
+    if (incOpen) {
+      if (!aggByUidOpen.has(uid)) aggByUidOpen.set(uid, emptyAgg());
+      addInc(aggByUidOpen.get(uid)!, incOpen);
+    }
   }
 
-  const uids = [...aggByUid.keys()].filter(
-    (uid) => (aggByUid.get(uid)?.posts ?? 0) >= minPosts
+  const uidsStandard = [...aggByUidStandard.keys()].filter(
+    (uid) => (aggByUidStandard.get(uid)?.posts ?? 0) >= minPosts
   );
+  const uidsOpen = [...aggByUidOpen.keys()].filter(
+    (uid) => (aggByUidOpen.get(uid)?.posts ?? 0) >= minPosts
+  );
+  const uids = [...new Set([...uidsStandard, ...uidsOpen])];
 
   // 表示用プロフィール（cumulative_stats に集約済み）
   const profileByUid = new Map<
@@ -261,8 +285,11 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     }
   }
 
-  const allBaseRows: Array<Omit<SnapshotRow, "rank" | "rankDeltaPlaces">> = uids.map(
-    (uid) => {
+  const toBaseRows = (
+    targetUids: string[],
+    aggByUid: Map<string, Agg>
+  ): Array<Omit<SnapshotRow, "rank" | "rankDeltaPlaces">> =>
+    targetUids.map((uid) => {
       const agg = aggByUid.get(uid)!;
       const profile = profileByUid.get(uid);
       return {
@@ -281,27 +308,32 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
         activeWinStreak: 0,
         winRate: agg.posts > 0 ? agg.wins / agg.posts : 0,
       };
-    }
+    });
+
+  const standardBaseRows = toBaseRows(uidsStandard, aggByUidStandard);
+  const openBaseRows = toBaseRows(uidsOpen, aggByUidOpen).filter((r) =>
+    proUidSet.has(r.uid)
   );
 
-  const divisions: Array<"standard" | "open"> = ["standard", "open"];
-  for (const division of divisions) {
-    const baseRows =
-      division === "open"
-        ? allBaseRows.filter((r) => proUidSet.has(r.uid))
-        : allBaseRows;
-    await writePeriodDivisionSnapshots({
-      firestore,
-      range,
-      todayKey,
-      division,
-      baseRows,
-      winRateMin,
-    });
-  }
+  await writePeriodDivisionSnapshots({
+    firestore,
+    range,
+    todayKey,
+    division: "standard",
+    baseRows: standardBaseRows,
+    winRateMin,
+  });
+  await writePeriodDivisionSnapshots({
+    firestore,
+    range,
+    todayKey,
+    division: "open",
+    baseRows: openBaseRows,
+    winRateMin,
+  });
 
   console.log(
-    `[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} rows=${allBaseRows.length} open=${proUidSet.size}`
+    `[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length} open=${openBaseRows.length}`
   );
 }
 

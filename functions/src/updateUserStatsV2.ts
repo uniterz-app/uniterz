@@ -79,6 +79,8 @@ type ApplyOptsV2 = {
 
   /** false のとき（例: プレーイン）はランキング用日次・累積に含めない。未設定は従来どおり true */
   countsForRanking?: boolean;
+  /** NBA: ピックアップ試合のみ Pick Up（standard）に加算 */
+  isPickup?: boolean;
   /** NBA: regular / play_in / playoffs — バケット振り分け用 */
   seasonPhase?: NbaSeasonPhase;
   /** World Cup（league=wc）: 予選 / 本戦。overall は常に別途加算 */
@@ -98,6 +100,7 @@ function buildPostCumulativeContribution(
   opts: Pick<
     ApplyOptsV2,
     | "countsForRanking"
+    | "isPickup"
     | "league"
     | "startAt"
     | "seasonPhase"
@@ -112,17 +115,20 @@ function buildPostCumulativeContribution(
   >
 ): PostCumulativeContribution {
   const leagueKey = normalizeLeague(opts.league);
-  const forRanking =
+  const forOpenRanking =
     shouldCountForRanking(opts.countsForRanking) && leagueKey !== "wc";
+  const forPickupRanking = forOpenRanking && opts.isPickup === true;
   const phase = normalizeNbaSeasonPhase(opts.seasonPhase);
   const { nbaSeasonKey, nbaPlayoffsSeasonKey } = resolveNbaRankingBucketKeys(
     leagueKey,
-    forRanking,
+    forOpenRanking,
     opts.startAt.toDate(),
     phase
   );
   return {
-    forRanking,
+    forRanking: forPickupRanking,
+    forOpenRanking,
+    forPlayoffsRanking: forOpenRanking,
     nbaSeasonKey,
     nbaPlayoffsSeasonKey,
     leagueKey,
@@ -242,6 +248,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     goalScorerHit = false,
     exactHit = false,
     countsForRanking,
+    isPickup = false,
     wcStage,
     seasonPhase,
     homeTeamId,
@@ -250,12 +257,13 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
 
   const dateKey = toDateKeyJST(startAt);
   const leagueKey = normalizeLeague(league);
-  const forRanking =
+  const forOpenRanking =
     shouldCountForRanking(countsForRanking) && leagueKey !== "wc";
+  const forPickupRanking = forOpenRanking && isPickup === true;
   const phase = normalizeNbaSeasonPhase(seasonPhase);
   const { nbaSeasonKey, nbaPlayoffsSeasonKey } = resolveNbaRankingBucketKeys(
     leagueKey,
-    forRanking,
+    forOpenRanking,
     startAt.toDate(),
     phase
   );
@@ -303,9 +311,15 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       date: dateKey,
       updatedAt: FieldValue.serverTimestamp(),
       all: inc,
-      ...(forRanking ? { ranking: inc } : {}),
-      ...(nbaSeasonKey ? { rankingBySeason: { [nbaSeasonKey]: inc } } : {}),
-      ...(nbaPlayoffsSeasonKey
+      ...(forPickupRanking ? { ranking: inc } : {}),
+      ...(forPickupRanking && nbaSeasonKey
+        ? { rankingBySeason: { [nbaSeasonKey]: inc } }
+        : {}),
+      ...(forOpenRanking ? { openRanking: inc } : {}),
+      ...(forOpenRanking && nbaSeasonKey
+        ? { openRankingBySeason: { [nbaSeasonKey]: inc } }
+        : {}),
+      ...(forOpenRanking && nbaPlayoffsSeasonKey
         ? { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: inc } }
         : {}),
     };
@@ -330,7 +344,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     }
 
     const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
-    if (forRanking && gameTeamIds.length > 0) {
+    if (forPickupRanking && gameTeamIds.length > 0) {
       update.teams = {
         ...(update.teams ?? {}),
         ...Object.fromEntries(
@@ -353,11 +367,13 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetPointsSum: upsetPoints,
       upsetHitCount: upsetHit ? 1 : 0,
       upsetOpportunityCount: hadUpsetGame ? 1 : 0,
-      countedForRanking: forRanking,
+      countedForRanking: forOpenRanking,
+      countedForPickup: forPickupRanking,
     });
 
     const contrib = buildPostCumulativeContribution({
       countsForRanking,
+      isPickup,
       league,
       startAt,
       seasonPhase,
@@ -371,10 +387,10 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       streakBonus,
     });
 
-    /** overview チャート用 denorm（NBA レギュラーのみ・カードと同じ 1 doc） */
+    /** overview チャート用 denorm（Pick Up シーズンスライス） */
     let profileCharts: ReturnType<typeof mergeProfileChartsOnSeasonSettle> | null =
       null;
-    if (nbaSeasonKey) {
+    if (forPickupRanking && nbaSeasonKey) {
       const dailyData = dailySnap.exists
         ? (dailySnap.data() as Record<string, unknown>)
         : null;

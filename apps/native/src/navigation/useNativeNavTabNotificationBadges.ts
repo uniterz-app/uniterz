@@ -128,8 +128,15 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
   }, [active, uid]);
 
   useEffect(() => {
-    if (!active || !uid || !resultBaselineReady || resultSeenMs == null) {
-      setHasNewSettledPost(false);
+    // リザルト表示中はバッジ不要。seen 更新で listener を張り直さない（読み取り増の主因）
+    if (
+      !active ||
+      !uid ||
+      !resultBaselineReady ||
+      resultSeenMs == null ||
+      resultTabActive
+    ) {
+      if (resultTabActive) setHasNewSettledPost(false);
       return;
     }
 
@@ -147,7 +154,7 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
       (snap) => setHasNewSettledPost(snap.size > 0),
       () => setHasNewSettledPost(false)
     );
-  }, [active, uid, resultBaselineReady, resultSeenMs]);
+  }, [active, uid, resultBaselineReady, resultSeenMs, resultTabActive]);
 
   useEffect(() => {
     if (!active || !uid || !rankingTabActive) return;
@@ -159,9 +166,22 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
     if (!active || !uid || !resultTabActive) return;
     const ms = Date.now();
     void markNavResultSeenNative(uid, ms).then(() => {
-      setResultSeenMs(ms);
+      // ストレージだけ更新。resultSeenMs state はタブを離れたときに反映して listener を1回だけ張り直す
       setHasNewSettledPost(false);
     });
+  }, [active, uid, resultTabActive]);
+
+  // リザルトタブを離れたら seen を state に反映（次回 listener 用）
+  useEffect(() => {
+    if (!active || !uid || resultTabActive) return;
+    let cancelled = false;
+    void readNavResultSeenMsNative(uid).then((seen) => {
+      if (cancelled || seen == null) return;
+      setResultSeenMs((prev) => (prev === seen ? prev : seen));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [active, uid, resultTabActive]);
 
   const showRankingBadge =

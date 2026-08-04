@@ -28,8 +28,9 @@ const screenOptions = {
   headerShown: false,
   animation: "fade" as const,
   contentStyle: { backgroundColor: "transparent" },
+  // タブ切替連打時のフリーズ回避（MainTab と同様）。深層 push の detach は維持
   detachInactiveScreens: true,
-  freezeOnBlur: true,
+  freezeOnBlur: false,
 };
 
 /**

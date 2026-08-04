@@ -26,10 +26,11 @@ export function useTeamRecordMap(
 ) {
   void _selectedLeague;
   const [map, setMap] = useState<Record<string, TeamRecordSnapshot>>({});
+  const teamIdsKey = uniqueTeamIdsFromGames(games).sort().join(",");
 
   useEffect(() => {
     let alive = true;
-    const teamIds = uniqueTeamIdsFromGames(games);
+    const teamIds = teamIdsKey ? teamIdsKey.split(",") : [];
     if (teamIds.length === 0) {
       setMap({});
       return;
@@ -71,7 +72,7 @@ export function useTeamRecordMap(
     return () => {
       alive = false;
     };
-  }, [games]);
+  }, [teamIdsKey]);
 
   return map;
 }

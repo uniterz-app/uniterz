@@ -898,6 +898,10 @@ export default function GamesHomeScreen({
     () => new Set(games.map((g) => String(g.id ?? "")).filter(Boolean)),
     [games]
   );
+  const gameIdsKey = useMemo(
+    () => [...gameIdSet].sort().join(","),
+    [gameIdSet]
+  );
   const isSoccerPredict =
     String(selectedGame?.league ?? "").toLowerCase() === "pl" ||
     String(selectedGame?.league ?? "").toLowerCase() === "j1" ||
@@ -1063,7 +1067,7 @@ export default function GamesHomeScreen({
         return;
       }
       try {
-        const gameIds = [...gameIdSet];
+        const gameIds = gameIdsKey ? gameIdsKey.split(",") : [];
         const snaps = [];
         const IN_LIMIT = 10;
         for (let i = 0; i < gameIds.length; i += IN_LIMIT) {
@@ -1139,7 +1143,7 @@ export default function GamesHomeScreen({
     return () => {
       alive = false;
     };
-  }, [fUser, gameIdSet, myPredictionsReloadNonce]);
+  }, [fUser, gameIdsKey, gameIdSet, myPredictionsReloadNonce]);
 
   const t = useMemo(() => getGamesTexts(language), [language]);
 

@@ -76,8 +76,9 @@ export default function MainTabNavigator() {
               tabBarShowLabel: false,
               tabBarStyle: { display: "none" },
               sceneStyle: { backgroundColor: "transparent" },
+              // 初回だけ遅延マウント。freezeOnBlur はタブ連打で解凍が積み上がりフリーズするためオフ
               lazy: true,
-              freezeOnBlur: true,
+              freezeOnBlur: false,
             }}
             initialRouteName="GamesTab"
           >

@@ -2,6 +2,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
 import { computePostSettlement } from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
+import { isNbaPickupGame } from "./rankings/isPickupGame";
 export async function finalizePost({
   postDoc,
   game,
@@ -56,6 +57,7 @@ export async function finalizePost({
   });
 
   const countsForRanking = game?.countsForRanking !== false;
+  const isPickup = isNbaPickupGame(game);
 
   const now = Timestamp.now();
 
@@ -108,6 +110,7 @@ export async function finalizePost({
       exactMatch: Boolean((baseScore as { exactMatch?: boolean }).exactMatch),
 
       countedForRanking: countsForRanking,
+      countedForPickup: countsForRanking && isPickup,
 
       pointsV3: totalPoints,
       pointsV3Detail: {
@@ -164,6 +167,7 @@ export async function finalizePost({
 
         points: totalPoints,
         countsForRanking,
+        isPickup,
         seasonPhase: game?.seasonPhase ?? null,
         wcStage: null,
         homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,

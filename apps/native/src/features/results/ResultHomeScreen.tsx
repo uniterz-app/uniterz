@@ -506,11 +506,16 @@ export default function ResultHomeScreen({
 
   const refreshPostsRef = useRef(refreshPosts);
   refreshPostsRef.current = refreshPosts;
+  const lastFocusRefreshAtRef = useRef(0);
 
-  /** タブを開くたびに再取得（精算直後の pending 表示を残さない）
+  /** タブ再訪で再取得（精算直後の pending を残さない）。
+   * 連打で毎回 Firestore を叩かないよう最短間隔を空ける。
    * refreshPosts を deps に入れると identity 変化でフォーカス中に無限再取得になる */
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastFocusRefreshAtRef.current < 12_000) return;
+      lastFocusRefreshAtRef.current = now;
       void refreshPostsRef.current();
     }, [])
   );

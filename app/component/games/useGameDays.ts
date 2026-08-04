@@ -111,6 +111,42 @@ export function useGameDays(
         league === "wc"
           ? wcWindowCacheKey
           : `${league}|${timeZone}|${anchorDateKey}|pm${GAME_DAYS_PLUS_MINUS}`;
+
+      /** 選択日を覆う新鮮な窓があれば、アンカーが違っても再取得しない */
+      if (league !== "wc") {
+        const now = Date.now();
+        for (const [key, entry] of gameDaysRowsCache.entries()) {
+          if (!key.startsWith(`${league}|${timeZone}|`)) continue;
+          if (now - entry.savedAt >= GAME_DAYS_ROWS_CACHE_TTL_MS) continue;
+          const m = key.match(/\|(\d{4}-\d{2}-\d{2})\|pm/);
+          const cachedAnchor = m?.[1];
+          if (!cachedAnchor) continue;
+          const anchor = parseDateKeyInTimeZone(cachedAnchor, timeZone);
+          if (!anchor) continue;
+          const { start, end } = getPlusMinusDaysRangeInTimeZone(
+            anchor,
+            timeZone,
+            GAME_DAYS_PLUS_MINUS
+          );
+          const startKey = toDateKeyInTimeZone(start, timeZone);
+          const endKey = toDateKeyInTimeZone(end, timeZone);
+          if (anchorDateKey < startKey || anchorDateKey >= endKey) continue;
+          const rowsHaveId =
+            !!entry.rows?.length &&
+            typeof (entry.rows[0] as { id?: string })?.id === "string";
+          if (!rowsHaveId) continue;
+          if (!alive) return;
+          setRows(entry.rows);
+          setPeerRowsForSeriesInference(
+            entry.peerRowsForSeriesInference?.length
+              ? entry.peerRowsForSeriesInference
+              : entry.rows
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       const cached = gameDaysRowsCache.get(cacheKey);
       const fresh =
         cached && Date.now() - cached.savedAt < GAME_DAYS_ROWS_CACHE_TTL_MS;

@@ -13,10 +13,10 @@ NBA シーズン向けに、個人ランキングを二層化する。
 
 | 区分 | 表示名 | 対象試合 | 参加・閲覧 | 期間 |
 |---|---|---|---|---|
-| **通常（standard）** | NBA プレーオフ等 | 将来はピックアップ試合のみ（現状は全試合） | 全員 | 週間 / 月間 / シーズン |
+| **通常（standard）** | Pick Up | **ピックアップ試合のみ**（`pickupWeekKey` または `isPickup`） | 全員 | 週間 / 月間 / シーズン |
 | **open** | **PRO LEAGUE** | 全試合（`countsForRanking !== false`） | **Pro 限定** | 週間 / 月間 / シーズン |
 
-予想自体は全員が全試合可能。無料ユーザーの非ピックアップ予想は、ピックアップ制導入後に通常ランキングへ乗らないだけ（現状はピックアップ未実装のため点数源は同一）。
+予想自体は全員が全試合可能。無料ユーザーの非ピックアップ予想は通常（Pick Up）ランキングへ乗らない。PRO LEAGUE は Pro のみ閲覧・掲載。
 
 ---
 
@@ -31,12 +31,12 @@ NBA シーズン向けに、個人ランキングを二層化する。
 
 ## 3. データモデル
 
-### 3.1 試合（将来・ピックアップ）
+### 3.1 試合（ピックアップ）
 
-- `games/{gameId}.isPickup: boolean`（未実装）
+- `games/{gameId}.pickupWeekKey: string`（運用スクリプトで付与）および任意で `isPickup: boolean`
 - 既存 `countsForRanking` は Play-In 除外などの意味で維持
 - 集計対象:
-  - 通常: `countsForRanking !== false && isPickup === true`（導入後）
+  - 通常（Pick Up）: `countsForRanking !== false && isNbaPickupGame(game)`
   - PRO LEAGUE: `countsForRanking !== false`
 
 ### 3.2 スナップショット
@@ -50,14 +50,17 @@ NBA シーズン向けに、個人ランキングを二層化する。
 
 open doc には `division: "open"` を付与。掲載は `users.plan === "pro"`（+ `proUntil` 未超過）のみ。
 
-### 3.3 スタッツ二層化（ピックアップ導入時）
+### 3.3 スタッツ二層化
 
-現状の `pointsSumV3` 等は全試合。ピックアップ導入時:
+日次 `user_stats_v2_daily` / 累積 `cumulative_stats`:
 
-- 既存フィールド → ピックアップのみに意味変更（新シーズンから）
-- `openPointsSumV3` 等 → 全試合（PRO LEAGUE 用）
+| バケット | 意味 |
+|---|---|
+| `ranking` / `rankingBySeason` | Pick Up（ピックアップのみ） |
+| `openRanking` / `openRankingBySeason` | PRO LEAGUE（全ランキング対象試合） |
+| `rankingByNbaPlayoffs` | プレーオフ（全ランキング対象・ピックアップ非適用） |
 
-コミュニティ・グループバトルは通常（ピックアップ）側を読む想定。
+過去に `ranking*` へ書き込まれた全試合分は残る（過去シーズン再集計なし）。新規精算から意味が分かれる。
 
 ---
 
@@ -81,14 +84,15 @@ open doc には `division: "open"` を付与。掲載は `users.plan === "pro"`�
 ## 6. ロールアウト
 
 - NBA のみ。WC 等は対象外
-- ピックアップ制は別途。PRO LEAGUE はピックアップ前でも Pro フィルタ付きで稼働可能（点数源は現状の全試合集計）
+- ピックアップ判定は `pickupWeekKey` / `isPickup`。未設定試合は Pick Up に乗らない
+- Free が PRO LEAGUE を開くと実データではなく Report 同型ゲート（ぼかし + CTA）
 - 過去シーズン再集計はしない
 
 ---
 
 ## 7. 未決事項
 
-- ピックアップの選定方法・基準・タイミング
+- ピックアップの選定方法・基準・タイミングの最終ルール
 - ピックアップ 0 試合の日の扱い
 - PRO LEAGUE の最低投稿数（現状は通常と同じ）
 - PRO LEAGUE への Unit 報酬有無

@@ -47,6 +47,38 @@ function gamesWindowCacheKey(league: SupportedLeague, windowKey: string): string
     : `${league}|${windowKey}|pm${GAME_DAYS_PLUS_MINUS}`;
 }
 
+/** アンカー日の ±N 日窓が selectedDateKey を覆うか（end は半開区間） */
+function anchorWindowCoversDateKey(
+  anchorKey: string,
+  selectedDateKey: string
+): boolean {
+  const anchor = parseDateKeyInTimeZone(anchorKey, TIMEZONE_JST);
+  if (!anchor) return false;
+  const { start, end } = getPlusMinusDaysRangeInTimeZone(
+    anchor,
+    TIMEZONE_JST,
+    GAME_DAYS_PLUS_MINUS
+  );
+  const startKey = toDateKeyInTimeZone(start, TIMEZONE_JST);
+  const endKey = toDateKeyInTimeZone(end, TIMEZONE_JST);
+  return selectedDateKey >= startKey && selectedDateKey < endKey;
+}
+
+/** 同一リーグで selectedDate を覆う新鮮なキャッシュを探す（日付チップ移動の再取得を抑える） */
+function findCoveringGamesCache(
+  league: SupportedLeague,
+  selectedDateKey: string
+): GamesWindowCacheEntry | null {
+  const now = Date.now();
+  for (const [key, entry] of gamesWindowCache.entries()) {
+    if (!key.startsWith(`${league}|`)) continue;
+    if (now - entry.savedAt >= GAMES_WINDOW_CACHE_TTL_MS) continue;
+    if (!anchorWindowCoversDateKey(entry.windowKey, selectedDateKey)) continue;
+    return entry;
+  }
+  return null;
+}
+
 export type NativeGameRow = {
   id: string;
   [key: string]: unknown;
@@ -183,7 +215,10 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
   const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("nba");
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  const windowBoundsRef = useRef<{ windowKey: string } | null>(null);
+  const windowBoundsRef = useRef<{
+    /** 取得時のアンカー日キー（キャッシュキーと一致） */
+    windowKey: string;
+  } | null>(null);
   const wcWindowLoadedRef = useRef(false);
   const prevLeagueRef = useRef(selectedLeague);
   const lastSuccessfulRefreshNonceRef = useRef<number | null>(null);
@@ -266,29 +301,50 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
       setPeerRowsForSeries([]);
     }
 
-    const cacheKey = gamesWindowCacheKey(selectedLeague, fetchWindowKey);
-    const cached = gamesWindowCache.get(cacheKey);
-    const cacheFresh =
-      !!cached && Date.now() - cached.savedAt < GAMES_WINDOW_CACHE_TTL_MS;
+    const forceRefresh =
+      lastSuccessfulRefreshNonceRef.current !== null &&
+      lastSuccessfulRefreshNonceRef.current !== refreshNonce;
 
-    const b = windowBoundsRef.current;
-    const insideWindow =
-      b != null &&
-      b.windowKey === fetchWindowKey &&
-      lastSuccessfulRefreshNonceRef.current === refreshNonce;
-    const wcCached =
-      isWc &&
-      wcWindowLoadedRef.current &&
-      lastSuccessfulRefreshNonceRef.current === refreshNonce;
+    /** すでにメモリ上の窓が選択日を覆っていれば再取得しない（日付チップ連打の主因を止める） */
+    const loaded = windowBoundsRef.current;
+    const memoryCovers =
+      !forceRefresh &&
+      !leagueChanged &&
+      loaded != null &&
+      lastSuccessfulRefreshNonceRef.current === refreshNonce &&
+      (isWc
+        ? wcWindowLoadedRef.current
+        : anchorWindowCoversDateKey(loaded.windowKey, dateKey));
 
-    if (!leagueChanged && (isWc ? wcCached : insideWindow)) {
+    if (memoryCovers) {
       setLoading(false);
       setError(null);
       return;
     }
 
-    /** キャッシュがあれば即表示し、裏で再取得（Web `useGameDays` 相当） */
-    if (cacheFresh && cached) {
+    const covering = !forceRefresh
+      ? findCoveringGamesCache(selectedLeague, dateKey)
+      : null;
+    if (covering) {
+      setWindowRows(covering.rows);
+      setPeerRowsForSeries(
+        covering.peerRows.length ? covering.peerRows : covering.rows
+      );
+      windowBoundsRef.current = { windowKey: covering.windowKey };
+      if (isWc) wcWindowLoadedRef.current = true;
+      lastSuccessfulRefreshNonceRef.current = refreshNonce;
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    const cacheKey = gamesWindowCacheKey(selectedLeague, fetchWindowKey);
+    const cached = gamesWindowCache.get(cacheKey);
+    const cacheFresh =
+      !!cached && Date.now() - cached.savedAt < GAMES_WINDOW_CACHE_TTL_MS;
+
+    /** Web `useGameDays` 相当: TTL 内ならネット再取得しない */
+    if (cacheFresh && cached && !forceRefresh) {
       setWindowRows(cached.rows);
       setPeerRowsForSeries(
         cached.peerRows.length ? cached.peerRows : cached.rows
@@ -298,18 +354,19 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
       lastSuccessfulRefreshNonceRef.current = refreshNonce;
       setError(null);
       setLoading(false);
-    } else {
-      setLoading(true);
+      return;
     }
+
+    setLoading(true);
     setError(null);
 
     void (async () => {
       try {
         const { start, end } = getPlusMinusDaysRangeInTimeZone(
-              selectedDate,
-              TIMEZONE_JST,
-              GAME_DAYS_PLUS_MINUS
-            );
+          selectedDate,
+          TIMEZONE_JST,
+          GAME_DAYS_PLUS_MINUS
+        );
 
         const q = query(
           collection(db, "games"),
@@ -365,13 +422,11 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
         });
       } catch (e: unknown) {
         if (!alive) return;
-        if (!cacheFresh) {
-          setError(e instanceof Error ? e.message : "unknown error");
-          windowBoundsRef.current = null;
-          lastSuccessfulRefreshNonceRef.current = null;
-          setWindowRows([]);
-          setPeerRowsForSeries([]);
-        }
+        setError(e instanceof Error ? e.message : "unknown error");
+        windowBoundsRef.current = null;
+        lastSuccessfulRefreshNonceRef.current = null;
+        setWindowRows([]);
+        setPeerRowsForSeries([]);
       } finally {
         if (alive) setLoading(false);
       }
@@ -380,7 +435,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     return () => {
       alive = false;
     };
-  }, [enabled, fetchWindowKey, selectedDate, selectedLeague, refreshNonce]);
+  }, [enabled, fetchWindowKey, selectedDate, selectedLeague, refreshNonce, dateKey]);
 
   useEffect(() => {
     if (loading) return;

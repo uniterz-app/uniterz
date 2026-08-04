@@ -162,8 +162,8 @@ export function useNavTabNotificationBadges(options: Options = {}) {
   }, [active, uid]);
 
   useEffect(() => {
-    if (!active || !uid || !resultBaselineReady || resultSeenMs == null) {
-      setHasNewSettledPost(false);
+    if (!active || !uid || !resultBaselineReady || resultSeenMs == null || onResultRoute) {
+      if (onResultRoute) setHasNewSettledPost(false);
       return;
     }
 
@@ -187,7 +187,7 @@ export function useNavTabNotificationBadges(options: Options = {}) {
     );
 
     return () => unsub();
-  }, [active, uid, resultBaselineReady, resultSeenMs]);
+  }, [active, uid, resultBaselineReady, resultSeenMs, onResultRoute]);
 
   useEffect(() => {
     if (!active || !uid || !onRankingsRoute) return;
@@ -196,13 +196,17 @@ export function useNavTabNotificationBadges(options: Options = {}) {
 
   useEffect(() => {
     if (!active || !uid || !onResultRoute) return;
-    const nextSeen = Date.now();
-    markNavResultSeen(uid, nextSeen);
-    setResultSeenMs(nextSeen);
+    // ストレージのみ。state の resultSeenMs を毎回変えると posts listener が張り直される
+    markNavResultSeen(uid, Date.now());
     setHasNewSettledPost(false);
   }, [active, uid, onResultRoute]);
 
-  void seenRev;
+  useEffect(() => {
+    if (!active || !uid || onResultRoute) return;
+    const seen = readNavResultSeenMs(uid);
+    if (seen == null) return;
+    setResultSeenMs((prev) => (prev === seen ? prev : seen));
+  }, [active, uid, onResultRoute, seenRev]);
 
   const rankingSeenMs = uid ? readNavRankingSeenMs(uid) : null;
   const showRankingBadge =

@@ -24,7 +24,15 @@ export type RankingTotals = {
 };
 
 export type PostCumulativeContribution = {
+  /**
+   * Pick Up（standard）: ピックアップ試合のみ。
+   * レガシー削除では countedForPickup 未設定かつ countedForRanking のとき true。
+   */
   forRanking: boolean;
+  /** PRO LEAGUE（open）: ランキング対象の全試合 */
+  forOpenRanking: boolean;
+  /** プレーオフ累積（ピックアップ対象外・ランキング対象の全試合） */
+  forPlayoffsRanking: boolean;
   /** NBA レギュラーシーズンバケット（regular / 未設定 phase のみ） */
   nbaSeasonKey: string | null;
   /** NBA プレーオフシーズンバケット（playoffs phase のみ） */
@@ -149,21 +157,6 @@ export function buildCumulativeIncrementFields(
   if (upsetBonus !== 0) out.upsetBonusSum = FieldValue.increment(upsetBonus);
   if (streakBonus !== 0) out.streakBonusSum = FieldValue.increment(streakBonus);
 
-  if (!contrib.forRanking) return out;
-
-  out[CUMULATIVE_RANKING_TOTAL_POSTS_FIELD] = FieldValue.increment(posts);
-
-  out["ranking.totalPosts"] = FieldValue.increment(posts);
-  out["ranking.totalWins"] = FieldValue.increment(wins);
-  out["ranking.totalPoints"] = FieldValue.increment(points);
-  out["ranking.totalUpset"] = FieldValue.increment(upset);
-  if (upsetBonus !== 0) {
-    out["ranking.upsetBonusSum"] = FieldValue.increment(upsetBonus);
-  }
-  if (streakBonus !== 0) {
-    out["ranking.streakBonusSum"] = FieldValue.increment(streakBonus);
-  }
-
   const applyBonusToPath = (path: string) => {
     if (upsetBonus !== 0) {
       out[`${path}.upsetBonusSum`] = FieldValue.increment(upsetBonus);
@@ -173,17 +166,51 @@ export function buildCumulativeIncrementFields(
     }
   };
 
-  if (contrib.nbaSeasonKey) {
-    const p = `rankingBySeason.${contrib.nbaSeasonKey}`;
+  const applySeasonPaths = (prefix: "rankingBySeason" | "openRankingBySeason") => {
+    if (!contrib.nbaSeasonKey) return;
+    const p = `${prefix}.${contrib.nbaSeasonKey}`;
     out[`${p}.totalPosts`] = FieldValue.increment(posts);
     out[`${p}.totalWins`] = FieldValue.increment(wins);
     out[`${p}.totalPoints`] = FieldValue.increment(points);
     out[`${p}.totalUpset`] = FieldValue.increment(upset);
     out[`${p}.totalGoalScorerHits`] = FieldValue.increment(goalScorer);
     applyBonusToPath(p);
+  };
+
+  // Pick Up（standard）
+  if (contrib.forRanking) {
+    out[CUMULATIVE_RANKING_TOTAL_POSTS_FIELD] = FieldValue.increment(posts);
+
+    out["ranking.totalPosts"] = FieldValue.increment(posts);
+    out["ranking.totalWins"] = FieldValue.increment(wins);
+    out["ranking.totalPoints"] = FieldValue.increment(points);
+    out["ranking.totalUpset"] = FieldValue.increment(upset);
+    if (upsetBonus !== 0) {
+      out["ranking.upsetBonusSum"] = FieldValue.increment(upsetBonus);
+    }
+    if (streakBonus !== 0) {
+      out["ranking.streakBonusSum"] = FieldValue.increment(streakBonus);
+    }
+    applySeasonPaths("rankingBySeason");
   }
 
-  if (contrib.nbaPlayoffsSeasonKey) {
+  // PRO LEAGUE（open）— 全試合
+  if (contrib.forOpenRanking) {
+    out["openRanking.totalPosts"] = FieldValue.increment(posts);
+    out["openRanking.totalWins"] = FieldValue.increment(wins);
+    out["openRanking.totalPoints"] = FieldValue.increment(points);
+    out["openRanking.totalUpset"] = FieldValue.increment(upset);
+    if (upsetBonus !== 0) {
+      out["openRanking.upsetBonusSum"] = FieldValue.increment(upsetBonus);
+    }
+    if (streakBonus !== 0) {
+      out["openRanking.streakBonusSum"] = FieldValue.increment(streakBonus);
+    }
+    applySeasonPaths("openRankingBySeason");
+  }
+
+  // プレーオフはピックアップ対象外 → ランキング対象の全試合
+  if (contrib.forPlayoffsRanking && contrib.nbaPlayoffsSeasonKey) {
     const p = `rankingByNbaPlayoffs.${contrib.nbaPlayoffsSeasonKey}`;
     out[`${p}.totalPosts`] = FieldValue.increment(posts);
     out[`${p}.totalWins`] = FieldValue.increment(wins);
@@ -224,8 +251,11 @@ export function applyCumulativeIncrementInTransaction(
 export type AggregatedCumulative = {
   profile: RankingTotals;
   ranking: RankingTotals;
-  /** シーズンキー（例: "2026-27"）→ NBA レギュラーシーズン累積 */
+  openRanking: RankingTotals;
+  /** シーズンキー（例: "2026-27"）→ NBA レギュラーシーズン累積（Pick Up） */
   rankingBySeason: Record<string, RankingTotals>;
+  /** PRO LEAGUE シーズン累積 */
+  openRankingBySeason: Record<string, RankingTotals>;
   /** シーズンキー → NBA プレーオフ累積（現行シーズン PO のみ） */
   rankingByNbaPlayoffs: Record<string, RankingTotals>;
 };
@@ -235,7 +265,9 @@ export function aggregateCumulativeFromDailyData(
 ): AggregatedCumulative {
   let profile = emptyRankingTotals();
   let ranking = emptyRankingTotals();
+  let openRanking = emptyRankingTotals();
   const bySeason = new Map<string, Omit<RankingTotals, "winRate">>();
+  const openBySeason = new Map<string, Omit<RankingTotals, "winRate">>();
   const byNbaPlayoffs = new Map<string, Omit<RankingTotals, "winRate">>();
 
   for (const data of dailyDocs) {
@@ -249,6 +281,11 @@ export function aggregateCumulativeFromDailyData(
       (data.all as Record<string, unknown> | undefined);
     ranking = addRankingTotals(ranking, bucketToInc(rankBucket));
 
+    const openBucket = data.openRanking as Record<string, unknown> | undefined;
+    if (openBucket && typeof openBucket === "object") {
+      openRanking = addRankingTotals(openRanking, bucketToInc(openBucket));
+    }
+
     const bySeasonBuckets = (data.rankingBySeason ?? {}) as Record<
       string,
       Record<string, unknown>
@@ -259,6 +296,21 @@ export function aggregateCumulativeFromDailyData(
         seasonKey,
         addRankingTotals(
           bySeason.get(seasonKey) ?? emptyRankingTotals(),
+          bucketToInc(bucket)
+        )
+      );
+    }
+
+    const openBySeasonBuckets = (data.openRankingBySeason ?? {}) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    for (const [seasonKey, bucket] of Object.entries(openBySeasonBuckets)) {
+      if (!bucket || typeof bucket !== "object") continue;
+      openBySeason.set(
+        seasonKey,
+        addRankingTotals(
+          openBySeason.get(seasonKey) ?? emptyRankingTotals(),
           bucketToInc(bucket)
         )
       );
@@ -278,12 +330,16 @@ export function aggregateCumulativeFromDailyData(
         )
       );
     }
-
   }
 
   const rankingBySeason: Record<string, RankingTotals> = {};
   for (const [seasonKey, totals] of bySeason) {
     rankingBySeason[seasonKey] = withWinRate(totals);
+  }
+
+  const openRankingBySeason: Record<string, RankingTotals> = {};
+  for (const [seasonKey, totals] of openBySeason) {
+    openRankingBySeason[seasonKey] = withWinRate(totals);
   }
 
   const rankingByNbaPlayoffs: Record<string, RankingTotals> = {};
@@ -294,7 +350,9 @@ export function aggregateCumulativeFromDailyData(
   return {
     profile: withWinRate(profile),
     ranking: withWinRate(ranking),
+    openRanking: withWinRate(openRanking),
     rankingBySeason,
+    openRankingBySeason,
     rankingByNbaPlayoffs,
   };
 }
@@ -344,7 +402,9 @@ export function cumulativePayloadFromAggregate(
     winRate: agg.profile.winRate,
 
     ranking: agg.ranking,
+    openRanking: agg.openRanking,
     rankingBySeason: agg.rankingBySeason,
+    openRankingBySeason: agg.openRankingBySeason,
     rankingByNbaPlayoffs: agg.rankingByNbaPlayoffs,
 
     ...rankingTotalPostsFromAggregate(agg.ranking.totalPosts),

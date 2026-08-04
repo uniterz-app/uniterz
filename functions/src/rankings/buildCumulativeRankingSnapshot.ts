@@ -172,6 +172,19 @@ export function nbaSeasonRankingSlice(
   return sliceFromBucket(bySeason?.[seasonKey]);
 }
 
+/** PRO LEAGUE 用。openRankingBySeason 優先、未移行は rankingBySeason にフォールバック */
+export function nbaOpenSeasonRankingSlice(
+  d: Record<string, unknown>,
+  seasonKey: string = CURRENT_NBA_SEASON_KEY
+): RankingSliceTotals {
+  const openBySeason = d.openRankingBySeason as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  const open = sliceFromBucket(openBySeason?.[seasonKey]);
+  if ((open.totalPosts ?? 0) > 0) return open;
+  return nbaSeasonRankingSlice(d, seasonKey);
+}
+
 function activeBasketballStreak(d: any): number {
   const signed =
     d.activeWinStreakBasketball ??
@@ -600,7 +613,31 @@ export async function buildCumulativeRankingSnapshot(
     })
     .filter((row) => (row.totalPosts ?? 0) > 0);
 
-  const baseRowsForOpenSeason = baseRows.filter((row) => row.plan === "pro");
+  const openSeasonBaseRows: BaseRow[] = snap.docs
+    .map((doc) => {
+      const d = doc.data();
+      const r = nbaOpenSeasonRankingSlice(d, seasonKey);
+      return {
+        uid: doc.id,
+        displayName: d.displayName ?? "user",
+        handle: d.handle ?? null,
+        photoURL: d.photoURL ?? null,
+        countryCode: d.countryCode ?? null,
+        plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
+        totalPosts: r.totalPosts,
+        totalWins: r.totalWins,
+        winRate: r.winRate,
+        totalPoints: r.totalPoints,
+        totalPrecision: r.totalPrecision,
+        totalUpset: r.totalUpset,
+        totalGoalScorerHits: r.totalGoalScorerHits,
+        activeWinStreak: activeBasketballStreak(d),
+      };
+    })
+    .filter((row) => (row.totalPosts ?? 0) > 0)
+    .filter((row) => row.plan === "pro");
+
+  const baseRowsForOpenSeason = openSeasonBaseRows;
 
   for (const metric of METRICS) {
     const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
