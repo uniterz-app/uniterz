@@ -206,7 +206,9 @@ async function resolveSharedList(
 export function useNativeCumulativeRankingsBulk(
   phase: RankingPhase = "playoffs",
   round: PlayoffRoundKey = "overall",
-  wcStage: WcRankingStage | null = null
+  wcStage: WcRankingStage | null = null,
+  /** false のとき取得しない（週次/月次/open ボード表示中） */
+  enabled = true
 ) {
   const [authReady, setAuthReady] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
@@ -237,6 +239,14 @@ export function useNativeCumulativeRankingsBulk(
     metricReqSeqRef.current += 1;
     attemptedMetricsRef.current = new Set();
     let cancelled = false;
+
+    if (!enabled) {
+      setByMetric(null);
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const cached = readListCache(phase, round, wcStage);
     if (cached) {
@@ -278,10 +288,11 @@ export function useNativeCumulativeRankingsBulk(
     return () => {
       cancelled = true;
     };
-  }, [phase, round, wcStage]);
+  }, [phase, round, wcStage, enabled]);
 
   const ensureMetric = useCallback(
     async (metric: string) => {
+      if (!enabled) return;
       if (metric === "totalPoints") return;
       if (!authReady) return;
       const current = byMetricRef.current;
@@ -321,13 +332,13 @@ export function useNativeCumulativeRankingsBulk(
         );
       }
     },
-    [authReady, phase, round, wcStage]
+    [authReady, enabled, phase, round, wcStage]
   );
 
-  const listReady = byMetric?.totalPoints != null;
+  const listReady = enabled ? byMetric?.totalPoints != null : true;
 
   useEffect(() => {
-    if (!listReady || loading) return;
+    if (!enabled || !listReady || loading) return;
 
     let cancelled = false;
     const loadDeferred = () => {
@@ -345,15 +356,15 @@ export function useNativeCumulativeRankingsBulk(
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [listReady, loading, wcStage, ensureMetric]);
+  }, [enabled, listReady, loading, wcStage, ensureMetric]);
 
   return {
-    loading,
+    loading: enabled ? loading : false,
     listReady,
     /** My Rank は cardFast 側。一覧は共有のため常に false */
     personalPending: false,
     myUid,
-    byMetric,
+    byMetric: enabled ? byMetric : null,
     ensureMetric,
   };
 }

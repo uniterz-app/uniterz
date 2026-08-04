@@ -7,7 +7,17 @@ exports.resolveGameMatchupCopy = resolveGameMatchupCopy;
 const pushMatchupLabel_1 = require("./pushMatchupLabel");
 function buildPushNotificationCopy(type, language, input) {
     var _a;
-    const matchup = input ? (0, pushMatchupLabel_1.formatPushMatchupLabel)(input, language) : "";
+    const hasMatchup = typeof (input === null || input === void 0 ? void 0 : input.homeLabel) === "string" && typeof (input === null || input === void 0 ? void 0 : input.awayLabel) === "string";
+    const matchup = hasMatchup
+        ? (0, pushMatchupLabel_1.formatPushMatchupLabel)({
+            homeLabel: input.homeLabel,
+            awayLabel: input.awayLabel,
+            homeTeamId: input.homeTeamId,
+            awayTeamId: input.awayTeamId,
+            homeScore: input.homeScore,
+            awayScore: input.awayScore,
+        }, language)
+        : "";
     const detail = ((_a = input === null || input === void 0 ? void 0 : input.detail) === null || _a === void 0 ? void 0 : _a.trim()) || "";
     if (language === "en") {
         switch (type) {
@@ -64,6 +74,11 @@ function buildPushNotificationCopy(type, language, input) {
                             ? `${matchup} — the conclusion changed.`
                             : "The insight conclusion changed. Open the match."),
                 };
+            case "monthly_report":
+                return {
+                    title: "Monthly report is ready",
+                    body: detail || "Your Pro monthly report is available in Profile → Report.",
+                };
         }
     }
     switch (type) {
@@ -119,6 +134,12 @@ function buildPushNotificationCopy(type, language, input) {
                     (matchup
                         ? `${matchup} の結論が変わりました。`
                         : "重要結論が変わりました。試合を開いて確認してください。"),
+            };
+        case "monthly_report":
+            return {
+                title: "月次レポートが届きました",
+                body: detail ||
+                    "プロフィールの Report タブで月次レポートを確認できます。",
             };
     }
 }

@@ -117,7 +117,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const standardBulk = useNativeCumulativeRankingsBulk(
     "playoffs",
     nbaBoard === "playoffs" ? round : "overall",
-    wcStageForHook
+    wcStageForHook,
+    !usePeriodBoard && !useOpenSeasonBoard
   );
   const openSeasonBulk = useNativeOpenSeasonRankingsBulk(useOpenSeasonBoard);
   const periodBulk = useNativePeriodRankingsBulk(

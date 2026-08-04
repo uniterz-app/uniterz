@@ -66,13 +66,7 @@ export function useOpenSeasonRankingsBulk(enabled: boolean) {
 
   useEffect(() => {
     void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (enabled && uid) {
-      void load();
-    }
-  }, [uid, enabled, load]);
+  }, [load, uid]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* open season bulk loads all metrics at once */

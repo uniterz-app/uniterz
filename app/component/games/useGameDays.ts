@@ -1,16 +1,6 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  getDocs,
-  Timestamp,
-  limit,
-} from "firebase/firestore";
 
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
@@ -19,16 +9,12 @@ import {
   toDateKeyInTimeZone,
   getPlusMinusDaysRangeInTimeZone,
 } from "@/lib/time/zonedTime";
-import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
-import { mergePlayoffSeriesPeersForWindowGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
-
-/** アンカー±10日（計21暦日）分の取得上限 */
-const GAME_DAYS_WINDOW_QUERY_LIMIT = 200;
-/** W杯: 一窓で本戦＋近接シード分を取得（件数多め） */
-const WC_GAMES_PAGE_WINDOW_LIMIT = 500;
+import { toDateOrNull } from "@/lib/games/transform";
+import { fetchGamesWindowShared } from "@/lib/games/fetchGamesWindowShared";
+import { GAMES_WINDOW_PLUS_MINUS_DEFAULT } from "@/lib/games/gamesWindowConstants";
 
 /** 日付ストリップ用：アンカーの前後に含める暦日数（前後10日＝計21日） */
-const GAME_DAYS_PLUS_MINUS = 10;
+const GAME_DAYS_PLUS_MINUS = GAMES_WINDOW_PLUS_MINUS_DEFAULT;
 
 /** 月内の games 行から、タイムゾーン基準の「試合がある日」を重複なく昇順で返す */
 export function monthRowsToSortedGameDays(
@@ -40,13 +26,7 @@ export function monthRowsToSortedGameDays(
   const map = new Map<string, Date>();
 
   for (const g of rows) {
-    const t = g.startAtJst;
-    if (!t) continue;
-
-    let d: Date | null = null;
-    if (t instanceof Timestamp) d = t.toDate();
-    else if (typeof t?.toDate === "function") d = t.toDate();
-    else if (t instanceof Date) d = t;
+    const d = toDateOrNull(g?.startAtJst);
     if (!d) continue;
 
     const key = toDateKeyInTimeZone(d, timeZone);
@@ -68,8 +48,7 @@ const gameDaysRowsCache = new Map<
 
 /**
  * 試合がある日の一覧（日付ストリップ用）。
- * - 通常: アンカー日の暦日 ±10 日分を Firestore から取得
- * - World Cup: 本戦期間（タイムゾーン別に 2026-05-01〜07 月頃まで）を一窓で取得（狭い窓では遠い試合が落ちるため）
+ * 共通データは `/api/games/window`（CDN 共有）。予想・Pro は別。
  */
 export function useGameDays(
   rawLeague: League,
@@ -132,7 +111,7 @@ export function useGameDays(
           const endKey = toDateKeyInTimeZone(end, timeZone);
           if (anchorDateKey < startKey || anchorDateKey >= endKey) continue;
           const rowsHaveId =
-            !!entry.rows?.length &&
+            entry.rows.length === 0 ||
             typeof (entry.rows[0] as { id?: string })?.id === "string";
           if (!rowsHaveId) continue;
           if (!alive) return;
@@ -151,7 +130,8 @@ export function useGameDays(
       const fresh =
         cached && Date.now() - cached.savedAt < GAME_DAYS_ROWS_CACHE_TTL_MS;
       const rowsHaveId =
-        !!cached?.rows?.length &&
+        !cached ||
+        cached.rows.length === 0 ||
         typeof (cached.rows[0] as { id?: string })?.id === "string";
       if (fresh && rowsHaveId) {
         if (!alive) return;
@@ -165,39 +145,22 @@ export function useGameDays(
         return;
       }
 
-      /** リーグ切替時に前リーグの行がチラつかないよう先に空にする */
       setRows([]);
       setPeerRowsForSeriesInference([]);
       setLoading(true);
 
       try {
-        const ref = collection(db, "games");
-        const { start, end } = getPlusMinusDaysRangeInTimeZone(
-                windowAnchor,
-                timeZone,
-                GAME_DAYS_PLUS_MINUS,
-              );
-
-        const q = query(
-          ref,
-          where("league", "==", league),
-          where("season", "==", GAME_SCHEDULE_SEASON),
-          where("startAtJst", ">=", Timestamp.fromDate(start)),
-          where("startAtJst", "<", Timestamp.fromDate(end)),
-          orderBy("startAtJst", "asc"),
-          limit(GAME_DAYS_WINDOW_QUERY_LIMIT),
-        );
-
-        const snap = await getDocs(q);
+        const payload = await fetchGamesWindowShared({
+          league,
+          anchorDateKey,
+          timeZone,
+          plusMinus: GAME_DAYS_PLUS_MINUS,
+        });
 
         if (!alive) return;
 
-        const list = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-
-        const peerRows = await mergePlayoffSeriesPeersForWindowGames(list);
+        const list = payload.rows;
+        const peerRows = payload.peerRows.length ? payload.peerRows : list;
 
         const savedAt = Date.now();
         gameDaysRowsCache.set(cacheKey, {
@@ -220,7 +183,6 @@ export function useGameDays(
     return () => {
       alive = false;
     };
-    // fetchDepsKey に依存（WC はアンカー変更では再フェッチしない）
   }, [fetchDepsKey]);
 
   const gameDays = useMemo(

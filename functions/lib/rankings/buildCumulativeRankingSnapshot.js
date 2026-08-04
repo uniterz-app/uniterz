@@ -6,6 +6,7 @@ exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = exports.RANK_SNAPSHOT_HISTORY_SUBCO
 exports.getYesterdayDateKeyJST = getYesterdayDateKeyJST;
 exports.subtractOneDayFromDateKeyJST = subtractOneDayFromDateKeyJST;
 exports.nbaSeasonRankingSlice = nbaSeasonRankingSlice;
+exports.nbaOpenSeasonRankingSlice = nbaOpenSeasonRankingSlice;
 exports.loadNbaSeasonTop20RowsLive = loadNbaSeasonTop20RowsLive;
 exports.buildCumulativeRankingSnapshot = buildCumulativeRankingSnapshot;
 const firestore_1 = require("firebase-admin/firestore");
@@ -114,6 +115,15 @@ function sliceFromBucket(rr) {
 function nbaSeasonRankingSlice(d, seasonKey = nbaSeason_1.CURRENT_NBA_SEASON_KEY) {
     const bySeason = d.rankingBySeason;
     return sliceFromBucket(bySeason === null || bySeason === void 0 ? void 0 : bySeason[seasonKey]);
+}
+/** PRO LEAGUE 用。openRankingBySeason 優先、未移行は rankingBySeason にフォールバック */
+function nbaOpenSeasonRankingSlice(d, seasonKey = nbaSeason_1.CURRENT_NBA_SEASON_KEY) {
+    var _a;
+    const openBySeason = d.openRankingBySeason;
+    const open = sliceFromBucket(openBySeason === null || openBySeason === void 0 ? void 0 : openBySeason[seasonKey]);
+    if (((_a = open.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0)
+        return open;
+    return nbaSeasonRankingSlice(d, seasonKey);
 }
 function activeBasketballStreak(d) {
     var _a, _b, _c, _d, _e;
@@ -413,7 +423,31 @@ async function buildCumulativeRankingSnapshot(options = {}) {
         };
     })
         .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
-    const baseRowsForOpenSeason = baseRows.filter((row) => row.plan === "pro");
+    const openSeasonBaseRows = snap.docs
+        .map((doc) => {
+        var _a, _b, _c, _d;
+        const d = doc.data();
+        const r = nbaOpenSeasonRankingSlice(d, seasonKey);
+        return {
+            uid: doc.id,
+            displayName: (_a = d.displayName) !== null && _a !== void 0 ? _a : "user",
+            handle: (_b = d.handle) !== null && _b !== void 0 ? _b : null,
+            photoURL: (_c = d.photoURL) !== null && _c !== void 0 ? _c : null,
+            countryCode: (_d = d.countryCode) !== null && _d !== void 0 ? _d : null,
+            plan: (d.plan === "pro" ? "pro" : "free"),
+            totalPosts: r.totalPosts,
+            totalWins: r.totalWins,
+            winRate: r.winRate,
+            totalPoints: r.totalPoints,
+            totalPrecision: r.totalPrecision,
+            totalUpset: r.totalUpset,
+            totalGoalScorerHits: r.totalGoalScorerHits,
+            activeWinStreak: activeBasketballStreak(d),
+        };
+    })
+        .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; })
+        .filter((row) => row.plan === "pro");
+    const baseRowsForOpenSeason = openSeasonBaseRows;
     for (const metric of METRICS) {
         const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
             postedTodayUids: metric === "activeWinStreak" && !streakAllEligible

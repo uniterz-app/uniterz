@@ -92,17 +92,11 @@ export function usePeriodRankingsBulk(
     } finally {
       setListReady(true);
     }
-  }, [period, label, division]);
+  }, [period, label, division, uid]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (period && division === "open" && uid) {
-      void load();
-    }
-  }, [uid, period, division, load]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* period bulk loads all metrics at once */

@@ -17,15 +17,16 @@ import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "../../../../../lib/time/zonedTime";
-import { mergePlayoffSeriesPeersForWindowGames } from "../../../../../lib/games/fetchPlayoffSeriesPeerGames";
+import { fetchGamesWindowShared } from "../../../../../lib/games/fetchGamesWindowShared";
+import { GAMES_WINDOW_PLUS_MINUS_DEFAULT } from "../../../../../lib/games/gamesWindowConstants";
+import { toDateOrNull } from "../../../../../lib/games/transform";
 import { sortGamesByKickoffAsc } from "../../../../../lib/games/sortGamesByKickoff";
+import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 
 export type SupportedLeague = "nba" | "bj" | "j1" | "pl" | "wc";
 
-const WC_GAMES_PAGE_WINDOW_LIMIT = 500;
-
 /** Web `useGameDays` 相当: アンカー±10日（計21暦日） */
-const GAME_DAYS_PLUS_MINUS = 10;
+const GAME_DAYS_PLUS_MINUS = GAMES_WINDOW_PLUS_MINUS_DEFAULT;
 const GAME_DAYS_WINDOW_QUERY_LIMIT = 200;
 
 /** Web `useGameDays` の gameDaysRowsCache と同趣旨 */
@@ -89,8 +90,7 @@ function filterGamesForDay(rows: NativeGameRow[], day: Date): NativeGameRow[] {
   const startTs = start.getTime();
   const endTs = end.getTime();
   return rows.filter((g) => {
-    const raw = g.startAtJst as Timestamp | undefined;
-    const d = raw?.toDate?.();
+    const d = toDateOrNull(g.startAtJst);
     if (!d) return false;
     const t = d.getTime();
     return t >= startTs && t < endTs;
@@ -192,8 +192,7 @@ function resolveLandingDate(
 export function sortedUniqueDateKeysFromRows(rows: NativeGameRow[]): string[] {
   const keys = new Set<string>();
   for (const g of rows) {
-    const raw = g.startAtJst as Timestamp | undefined;
-    const d = raw?.toDate?.();
+    const d = toDateOrNull(g.startAtJst);
     if (!d) continue;
     keys.add(toDateKeyInTimeZone(d, TIMEZONE_JST));
   }
@@ -362,38 +361,57 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
 
     void (async () => {
       try {
-        const { start, end } = getPlusMinusDaysRangeInTimeZone(
-          selectedDate,
-          TIMEZONE_JST,
-          GAME_DAYS_PLUS_MINUS
-        );
+        const apiBase = getUniterzApiBaseUrl();
+        let rows: NativeGameRow[];
+        let peerRows: NativeGameRow[];
 
-        const q = query(
-          collection(db, "games"),
-          where("league", "==", selectedLeague),
-          where("season", "==", GAME_SCHEDULE_SEASON),
-          where("startAtJst", ">=", Timestamp.fromDate(start)),
-          where("startAtJst", "<", Timestamp.fromDate(end)),
-          orderBy("startAtJst", "asc"),
-          limit(GAME_DAYS_WINDOW_QUERY_LIMIT)
-        );
-        const snap = await getDocs(q);
-        if (!alive) return;
-
-        const rows = snap.docs.map((row) => ({
-          id: row.id,
-          ...(row.data() as Omit<NativeGameRow, "id">),
-        }));
+        if (apiBase) {
+          const payload = await fetchGamesWindowShared({
+            league: selectedLeague,
+            anchorDateKey: dateKey,
+            timeZone: TIMEZONE_JST,
+            plusMinus: GAME_DAYS_PLUS_MINUS,
+            apiBaseUrl: apiBase,
+          });
+          if (!alive) return;
+          rows = payload.rows as NativeGameRow[];
+          peerRows = (payload.peerRows.length
+            ? payload.peerRows
+            : payload.rows) as NativeGameRow[];
+        } else {
+          // ローカル等で API Base 未設定時のみ Firestore 直読み
+          const { start, end } = getPlusMinusDaysRangeInTimeZone(
+            selectedDate,
+            TIMEZONE_JST,
+            GAME_DAYS_PLUS_MINUS
+          );
+          const q = query(
+            collection(db, "games"),
+            where("league", "==", selectedLeague),
+            where("season", "==", GAME_SCHEDULE_SEASON),
+            where("startAtJst", ">=", Timestamp.fromDate(start)),
+            where("startAtJst", "<", Timestamp.fromDate(end)),
+            orderBy("startAtJst", "asc"),
+            limit(GAME_DAYS_WINDOW_QUERY_LIMIT)
+          );
+          const snap = await getDocs(q);
+          if (!alive) return;
+          rows = snap.docs.map((row) => ({
+            id: row.id,
+            ...(row.data() as Omit<NativeGameRow, "id">),
+          }));
+          peerRows = rows;
+        }
 
         windowBoundsRef.current = { windowKey: fetchWindowKey };
         if (isWc) wcWindowLoadedRef.current = true;
         lastSuccessfulRefreshNonceRef.current = refreshNonce;
         setWindowRows(rows);
-        setPeerRowsForSeries(rows);
+        setPeerRowsForSeries(peerRows);
 
         gamesWindowCache.set(cacheKey, {
           rows,
-          peerRows: rows,
+          peerRows,
           windowKey: fetchWindowKey,
           savedAt: Date.now(),
         });
@@ -409,17 +427,6 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
         }
 
         if (alive) setLoading(false);
-
-        /** 一覧表示後にプレーオフ peer を補完（初回 paint をブロックしない） */
-        void mergePlayoffSeriesPeersForWindowGames(rows).then((peerRows) => {
-          if (!alive) return;
-          const merged = (peerRows.length ? peerRows : rows) as NativeGameRow[];
-          setPeerRowsForSeries(merged);
-          const hit = gamesWindowCache.get(cacheKey);
-          if (hit) {
-            gamesWindowCache.set(cacheKey, { ...hit, peerRows: merged });
-          }
-        });
       } catch (e: unknown) {
         if (!alive) return;
         setError(e instanceof Error ? e.message : "unknown error");

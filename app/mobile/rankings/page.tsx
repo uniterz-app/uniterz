@@ -165,7 +165,8 @@ export default function MobileRankingsPage() {
   const seasonBulk = useCumulativeRankingsBulk(
     phase,
     effectiveRound,
-    wcStageForHook
+    wcStageForHook,
+    !usePeriodBoard && !useOpenSeasonBoard
   );
   const openSeasonBulk = useOpenSeasonRankingsBulk(useOpenSeasonBoard);
   const periodBulk = usePeriodRankingsBulk(

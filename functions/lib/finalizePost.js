@@ -1,11 +1,45 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.finalizePost = finalizePost;
 const firestore_1 = require("firebase-admin/firestore");
 const updateUserStatsV2_1 = require("./updateUserStatsV2");
 const computePostSettlement_1 = require("./computePostSettlement");
+const isPickupGame_1 = require("./rankings/isPickupGame");
 async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+    var _a, _b, _c;
     const p = postDoc.data();
     if (p.settledAt)
         return;
@@ -30,6 +64,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         streakResultMap,
     });
     const countsForRanking = (game === null || game === void 0 ? void 0 : game.countsForRanking) !== false;
+    const isPickup = (0, isPickupGame_1.isNbaPickupGame)(game);
     const now = firestore_1.Timestamp.now();
     const isWc = String((_a = game.league) !== null && _a !== void 0 ? _a : "").toLowerCase() === "wc";
     const matchGoalScorers = [];
@@ -65,6 +100,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             goalScorerBonus,
             exactMatch: Boolean(baseScore.exactMatch),
             countedForRanking: countsForRanking,
+            countedForPickup: countsForRanking && isPickup,
             pointsV3: totalPoints,
             pointsV3Detail: {
                 basePoints: baseScore.basePoints,
@@ -85,28 +121,44 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             },
         }, status: "final", settledAt: now, updatedAt: firestore_1.FieldValue.serverTimestamp(), seasonPhase: (_b = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _b !== void 0 ? _b : null, seasonRound: (_c = game === null || game === void 0 ? void 0 : game.seasonRound) !== null && _c !== void 0 ? _c : null, wcStage: null }));
     const uid = p.authorUid;
-    userUpdateTasks.push((0, updateUserStatsV2_1.applyPostToUserStatsV2)({
-        uid,
-        postId: postDoc.id,
-        createdAt: p.createdAt,
-        startAt: (_e = (_d = after.startAtJst) !== null && _d !== void 0 ? _d : after.startAt) !== null && _e !== void 0 ? _e : p.createdAt,
-        league: game.league,
-        isWin: result.isWin,
-        scoreError: result.scoreError,
-        hadUpsetGame,
-        upsetHit: result.upsetHit,
-        upsetPoints,
-        upsetBonus,
-        streakBonus,
-        goalScorerBonus,
-        goalScorerHit: goalScorerBonus > 0,
-        exactHit: false,
-        points: totalPoints,
-        countsForRanking,
-        seasonPhase: (_f = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _f !== void 0 ? _f : null,
-        wcStage: null,
-        homeTeamId: (_j = (_g = game.homeTeamId) !== null && _g !== void 0 ? _g : (_h = p.home) === null || _h === void 0 ? void 0 : _h.teamId) !== null && _j !== void 0 ? _j : null,
-        awayTeamId: (_m = (_k = game.awayTeamId) !== null && _k !== void 0 ? _k : (_l = p.away) === null || _l === void 0 ? void 0 : _l.teamId) !== null && _m !== void 0 ? _m : null,
-    }));
+    const exactHit = Boolean(baseScore.exactMatch);
+    userUpdateTasks.push((async () => {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+        await (0, updateUserStatsV2_1.applyPostToUserStatsV2)({
+            uid,
+            postId: postDoc.id,
+            createdAt: p.createdAt,
+            startAt: (_b = (_a = after.startAtJst) !== null && _a !== void 0 ? _a : after.startAt) !== null && _b !== void 0 ? _b : p.createdAt,
+            league: game.league,
+            isWin: result.isWin,
+            scoreError: result.scoreError,
+            hadUpsetGame,
+            upsetHit: result.upsetHit,
+            upsetPoints,
+            upsetBonus,
+            streakBonus,
+            goalScorerBonus,
+            goalScorerHit: goalScorerBonus > 0,
+            exactHit,
+            points: totalPoints,
+            countsForRanking,
+            isPickup,
+            seasonPhase: (_c = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _c !== void 0 ? _c : null,
+            wcStage: null,
+            homeTeamId: (_f = (_d = game.homeTeamId) !== null && _d !== void 0 ? _d : (_e = p.home) === null || _e === void 0 ? void 0 : _e.teamId) !== null && _f !== void 0 ? _f : null,
+            awayTeamId: (_j = (_g = game.awayTeamId) !== null && _g !== void 0 ? _g : (_h = p.away) === null || _h === void 0 ? void 0 : _h.teamId) !== null && _j !== void 0 ? _j : null,
+        });
+        const { syncProSkinProgressOnNbaSettle } = await Promise.resolve().then(() => __importStar(require("./profile/syncProSkinProgressOnNbaSettle")));
+        await syncProSkinProgressOnNbaSettle({
+            uid,
+            postId: postDoc.id,
+            startAt: (_l = (_k = after.startAtJst) !== null && _k !== void 0 ? _k : after.startAt) !== null && _l !== void 0 ? _l : p.createdAt,
+            league: game.league,
+            countsForRanking,
+            seasonPhase: (_m = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _m !== void 0 ? _m : null,
+            exactHit,
+            activeWinStreak,
+        });
+    })());
 }
 //# sourceMappingURL=finalizePost.js.map

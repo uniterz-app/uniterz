@@ -14,6 +14,7 @@ exports.PUSH_NOTIFICATION_PREF_KEYS = [
     "predictionDeadline",
     "pregameDigest",
     "proInsightUpdate",
+    "monthlyReport",
 ];
 exports.PREDICTION_DEADLINE_MINUTE_OPTIONS = [60, 30, 10];
 exports.DEFAULT_PUSH_NOTIFICATION_PREFS = {
@@ -25,6 +26,7 @@ exports.DEFAULT_PUSH_NOTIFICATION_PREFS = {
     predictionDeadline: true,
     pregameDigest: false,
     proInsightUpdate: false,
+    monthlyReport: true,
     predictionDeadlineMinutes: 30,
 };
 function prefKeyForPushType(type) {
@@ -45,6 +47,8 @@ function prefKeyForPushType(type) {
             return "pregameDigest";
         case "pro_insight_update":
             return "proInsightUpdate";
+        case "monthly_report":
+            return "monthlyReport";
     }
 }
 function parseDeadlineMinutes(raw) {
@@ -73,6 +77,7 @@ function parsePushNotificationPrefs(raw) {
         predictionDeadline: boolOr("predictionDeadline", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.predictionDeadline),
         pregameDigest: boolOr("pregameDigest", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.pregameDigest),
         proInsightUpdate: boolOr("proInsightUpdate", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.proInsightUpdate),
+        monthlyReport: boolOr("monthlyReport", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.monthlyReport),
         predictionDeadlineMinutes: parseDeadlineMinutes(src.predictionDeadlineMinutes),
     };
 }

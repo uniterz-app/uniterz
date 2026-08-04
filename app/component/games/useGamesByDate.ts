@@ -50,9 +50,16 @@ export function gameRowStartDateKeyInTimeZone(
   let d: Date | null = null;
   if (t instanceof Timestamp) d = t.toDate();
   else if (typeof (t as { toDate?: () => Date }).toDate === "function")
-    d = (t as Timestamp).toDate();
+    d = (t as { toDate: () => Date }).toDate();
   else if (t instanceof Date) d = t;
-  if (!d) return null;
+  else if (
+    typeof t === "object" &&
+    t !== null &&
+    typeof (t as { __ts?: unknown }).__ts === "number"
+  ) {
+    d = new Date((t as { __ts: number }).__ts);
+  }
+  if (!d || Number.isNaN(+d)) return null;
   return toDateKeyInTimeZone(d, timeZone);
 }
 

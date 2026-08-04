@@ -14,11 +14,14 @@ const db = () => (0, firestore_1.getFirestore)();
 function buildPostCumulativeContribution(opts) {
     var _a, _b, _c;
     const leagueKey = normalizeLeague(opts.league);
-    const forRanking = shouldCountForRanking(opts.countsForRanking) && leagueKey !== "wc";
+    const forOpenRanking = shouldCountForRanking(opts.countsForRanking) && leagueKey !== "wc";
+    const forPickupRanking = forOpenRanking && opts.isPickup === true;
     const phase = (0, nbaSeason_1.normalizeNbaSeasonPhase)(opts.seasonPhase);
-    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forRanking, opts.startAt.toDate(), phase);
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forOpenRanking, opts.startAt.toDate(), phase);
     return {
-        forRanking,
+        forRanking: forPickupRanking,
+        forOpenRanking,
+        forPlayoffsRanking: forOpenRanking,
         nbaSeasonKey,
         nbaPlayoffsSeasonKey,
         leagueKey,
@@ -101,12 +104,13 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, wcStage, seasonPhase, homeTeamId, awayTeamId, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, isPickup = false, wcStage, seasonPhase, homeTeamId, awayTeamId, } = opts;
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
-    const forRanking = shouldCountForRanking(countsForRanking) && leagueKey !== "wc";
+    const forOpenRanking = shouldCountForRanking(countsForRanking) && leagueKey !== "wc";
+    const forPickupRanking = forOpenRanking && isPickup === true;
     const phase = (0, nbaSeason_1.normalizeNbaSeasonPhase)(seasonPhase);
-    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forRanking, startAt.toDate(), phase);
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forOpenRanking, startAt.toDate(), phase);
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(postId);
     const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
@@ -131,7 +135,7 @@ async function applyPostToUserStatsV2(opts) {
             upsetOpportunityCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
             upsetHitCount: firestore_1.FieldValue.increment(upsetHit ? 1 : 0),
             upsetPickCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
-            exactHitCount: firestore_1.FieldValue.increment(0),
+            exactHitCount: firestore_1.FieldValue.increment(exactHit ? 1 : 0),
             pointsSumV3: firestore_1.FieldValue.increment(points),
             upsetPointsSum: firestore_1.FieldValue.increment(upsetPoints),
             upsetBonusSum: firestore_1.FieldValue.increment(upsetBonus),
@@ -139,7 +143,11 @@ async function applyPostToUserStatsV2(opts) {
             goalScorerHitCount: firestore_1.FieldValue.increment(goalScorerHit ? 1 : 0),
             goalScorerBonusSum: firestore_1.FieldValue.increment(goalScorerBonus),
         };
-        const update = Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (nbaSeasonKey ? { rankingBySeason: { [nbaSeasonKey]: inc } } : {})), (nbaPlayoffsSeasonKey
+        const update = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forPickupRanking ? { ranking: inc } : {})), (forPickupRanking && nbaSeasonKey
+            ? { rankingBySeason: { [nbaSeasonKey]: inc } }
+            : {})), (forOpenRanking ? { openRanking: inc } : {})), (forOpenRanking && nbaSeasonKey
+            ? { openRankingBySeason: { [nbaSeasonKey]: inc } }
+            : {})), (forOpenRanking && nbaPlayoffsSeasonKey
             ? { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: inc } }
             : {}));
         if (leagueKey) {
@@ -153,7 +161,7 @@ async function applyPostToUserStatsV2(opts) {
             }, { merge: true });
         }
         const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
-        if (forRanking && gameTeamIds.length > 0) {
+        if (forPickupRanking && gameTeamIds.length > 0) {
             update.teams = Object.assign(Object.assign({}, ((_a = update.teams) !== null && _a !== void 0 ? _a : {})), Object.fromEntries(gameTeamIds.map((teamId) => [teamId, inc])));
         }
         tx.set(dailyRef, update, { merge: true });
@@ -170,10 +178,12 @@ async function applyPostToUserStatsV2(opts) {
             upsetPointsSum: upsetPoints,
             upsetHitCount: upsetHit ? 1 : 0,
             upsetOpportunityCount: hadUpsetGame ? 1 : 0,
-            countedForRanking: forRanking,
+            countedForRanking: forOpenRanking,
+            countedForPickup: forPickupRanking,
         });
         const contrib = buildPostCumulativeContribution({
             countsForRanking,
+            isPickup,
             league,
             startAt,
             seasonPhase,
@@ -186,9 +196,9 @@ async function applyPostToUserStatsV2(opts) {
             upsetBonus,
             streakBonus,
         });
-        /** overview チャート用 denorm（NBA レギュラーのみ・カードと同じ 1 doc） */
+        /** overview チャート用 denorm（Pick Up シーズンスライス） */
         let profileCharts = null;
-        if (nbaSeasonKey) {
+        if (forPickupRanking && nbaSeasonKey) {
             const dailyData = dailySnap.exists
                 ? dailySnap.data()
                 : null;

@@ -84,18 +84,11 @@ export function useNativePeriodRankingsBulk(
     } finally {
       setListReady(true);
     }
-  }, [period, label, division]);
+  }, [period, label, division, uid]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  // Pro ゲート用: open でログイン後に再試行
-  useEffect(() => {
-    if (period && division === "open" && uid) {
-      void load();
-    }
-  }, [uid, period, division, load]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* period bulk loads all metrics at once */

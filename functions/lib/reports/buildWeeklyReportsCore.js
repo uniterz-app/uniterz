@@ -141,9 +141,11 @@ async function loadProfiles(uids, snapshotRows) {
             profiles.set(uid, {
                 displayName: row.displayName,
                 photoURL: (_a = row.photoURL) !== null && _a !== void 0 ? _a : null,
+                plan: "free",
             });
         }
     }
+    const nowMs = Date.now();
     for (let i = 0; i < uids.length; i += PROFILE_CHUNK) {
         const slice = uids.slice(i, i + PROFILE_CHUNK);
         const snaps = await db().getAll(...slice.flatMap((uid) => [
@@ -157,9 +159,19 @@ async function loadProfiles(uids, snapshotRows) {
             const u = (user === null || user === void 0 ? void 0 : user.exists) ? (_c = user.data()) !== null && _c !== void 0 ? _c : {} : {};
             const displayName = String((_g = (_e = (_d = c.displayName) !== null && _d !== void 0 ? _d : u.displayName) !== null && _e !== void 0 ? _e : (_f = profiles.get(slice[j])) === null || _f === void 0 ? void 0 : _f.displayName) !== null && _g !== void 0 ? _g : "user");
             const photo = (_l = (_j = (_h = c.photoURL) !== null && _h !== void 0 ? _h : u.photoURL) !== null && _j !== void 0 ? _j : (_k = profiles.get(slice[j])) === null || _k === void 0 ? void 0 : _k.photoURL) !== null && _l !== void 0 ? _l : null;
+            let plan = "free";
+            if (u.plan === "pro") {
+                const until = u.proUntil;
+                if (!(until &&
+                    typeof until.toMillis === "function" &&
+                    until.toMillis() <= nowMs)) {
+                    plan = "pro";
+                }
+            }
             profiles.set(slice[j], {
                 displayName,
                 photoURL: typeof photo === "string" ? photo : null,
+                plan,
             });
         }
     }
@@ -209,9 +221,15 @@ function divisions(agg, previous) {
     return result;
 }
 function rival(uid, rank, profiles) {
-    var _a, _b;
+    var _a, _b, _c;
     const profile = profiles.get(uid);
-    return { uid, rank, displayName: (_a = profile === null || profile === void 0 ? void 0 : profile.displayName) !== null && _a !== void 0 ? _a : "user", photoURL: (_b = profile === null || profile === void 0 ? void 0 : profile.photoURL) !== null && _b !== void 0 ? _b : null };
+    return {
+        uid,
+        rank,
+        displayName: (_a = profile === null || profile === void 0 ? void 0 : profile.displayName) !== null && _a !== void 0 ? _a : "user",
+        photoURL: (_b = profile === null || profile === void 0 ? void 0 : profile.photoURL) !== null && _b !== void 0 ? _b : null,
+        plan: (_c = profile === null || profile === void 0 ? void 0 : profile.plan) !== null && _c !== void 0 ? _c : "free",
+    };
 }
 function buildComment(input) {
     const tone = input.rankDelta == null
@@ -244,7 +262,7 @@ function buildComment(input) {
 async function buildWeeklyReportsCore(opts) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
     const now = (_a = opts === null || opts === void 0 ? void 0 : opts.now) !== null && _a !== void 0 ? _a : new Date();
-    const status = (_b = opts === null || opts === void 0 ? void 0 : opts.status) !== null && _b !== void 0 ? _b : "live";
+    const status = (_b = opts === null || opts === void 0 ? void 0 : opts.status) !== null && _b !== void 0 ? _b : "final";
     const weekLabel = (_c = opts === null || opts === void 0 ? void 0 : opts.weekLabel) !== null && _c !== void 0 ? _c : (0, nbaPeriod_1.weekStartDateKeyJST)(now);
     const range = (0, nbaPeriod_1.rangeForLabel)("weekly", weekLabel, now);
     const previousWeek = (0, nbaPeriod_1.previousLabel)("weekly", weekLabel);

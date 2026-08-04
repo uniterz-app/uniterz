@@ -74,7 +74,22 @@ export async function fetchGroupBattleRankingsNative(
   if (!json?.ok) return null;
   return json as {
     ok: true;
-    snapshot: { status: "live" | "final" } | null;
+    battleId: string;
+    period: GroupBattlePeriod;
+    label: string;
+    snapshot: {
+      status: "live" | "final";
+      rows: Array<{
+        rank: number;
+        squadId: string;
+        name: string;
+        groupScore: number;
+        memberCount: number;
+        memberScores: Array<{ uid: string; points: number }>;
+        prevRank: number | null;
+        scoreGapToAbove: number | null;
+      }>;
+    } | null;
   };
 }
 

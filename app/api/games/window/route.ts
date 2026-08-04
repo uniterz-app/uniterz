@@ -1,0 +1,74 @@
+import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
+import { getAdminDb } from "@/lib/firebaseAdmin";
+import { normalizeLeague } from "@/lib/leagues";
+import {
+  GAMES_WINDOW_PLUS_MINUS_DEFAULT,
+  gamesWindowCacheControl,
+  loadGamesWindow,
+} from "@/lib/games/server/loadGamesWindow";
+
+export const runtime = "nodejs";
+
+/**
+ * GET /api/games/window
+ * 全ユーザー共通の試合窓（カード一覧）。認証不要・CDN 共有。
+ *
+ * Query:
+ * - league: nba|bj|j1|pl|wc
+ * - anchor: YYYY-MM-DD（timeZone 基準のアンカー日）
+ * - tz: IANA TZ（省略時 Asia/Tokyo）
+ * - pm: ±日数（省略時 10）
+ */
+export async function GET(req: Request) {
+  try {
+    const url = new URL(req.url);
+    const league = normalizeLeague(url.searchParams.get("league") ?? "nba");
+    const anchorDateKey = (url.searchParams.get("anchor") ?? "").trim();
+    const timeZone = (url.searchParams.get("tz") ?? "Asia/Tokyo").trim();
+    const pmRaw = url.searchParams.get("pm");
+    const plusMinus = pmRaw
+      ? Math.max(0, Math.min(31, Number(pmRaw) || GAMES_WINDOW_PLUS_MINUS_DEFAULT))
+      : GAMES_WINDOW_PLUS_MINUS_DEFAULT;
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(anchorDateKey)) {
+      return NextResponse.json(
+        { ok: false, error: "anchor required (YYYY-MM-DD)" },
+        { status: 400 }
+      );
+    }
+
+    const cached = unstable_cache(
+      async () =>
+        loadGamesWindow(getAdminDb(), {
+          league,
+          anchorDateKey,
+          timeZone,
+          plusMinus,
+        }),
+      ["games-window", league, anchorDateKey, timeZone, String(plusMinus)],
+      {
+        // ライブ有無に関わらずオリジン側は短め。CDN は hasLive でさらに分岐。
+        revalidate: 20,
+        tags: ["games-window", `games-window:${league}`],
+      }
+    );
+
+    const payload = await cached();
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": gamesWindowCacheControl(payload.hasLive),
+      },
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "error";
+    if (msg === "invalid_anchor") {
+      return NextResponse.json(
+        { ok: false, error: "invalid_anchor" },
+        { status: 400 }
+      );
+    }
+    console.error("[api/games/window]", e);
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  }
+}

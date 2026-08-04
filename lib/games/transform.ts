@@ -41,6 +41,21 @@ export const toDateOrNull = (v: any): Date | null => {
     return d instanceof Date && !Number.isNaN(+d) ? d : null;
   }
 
+  if (v && typeof v === "object" && typeof v.__ts === "number") {
+    const d = new Date(v.__ts);
+    return Number.isNaN(+d) ? null : d;
+  }
+
+  if (
+    v &&
+    typeof v === "object" &&
+    typeof v.seconds === "number" &&
+    Number.isFinite(v.seconds)
+  ) {
+    const d = new Date(v.seconds * 1000 + (Number(v.nanoseconds) || 0) / 1e6);
+    return Number.isNaN(+d) ? null : d;
+  }
+
   if (typeof v === "string" || typeof v === "number") {
     const d = new Date(v);
     return Number.isNaN(+d) ? null : d;

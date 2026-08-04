@@ -4,6 +4,39 @@
 // doc: period_ranking_snapshots/nba_{period}_{label}_{metric}
 // 無差別級: period_ranking_snapshots/nba_open_{period}_{label}_{metric}（Pro のみ）
 // 期間が終わると更新されなくなり、そのまま過去ランキングのアーカイブになる。
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.periodSnapshotDocId = periodSnapshotDocId;
 exports.buildNbaPeriodRankingSnapshots = buildNbaPeriodRankingSnapshots;
@@ -39,15 +72,24 @@ function addInc(agg, inc) {
     agg.totalUpset += Number((_d = inc.upsetPointsSum) !== null && _d !== void 0 ? _d : 0) || 0;
     agg.totalGoalScorerHits += Number((_e = inc.goalScorerHitCount) !== null && _e !== void 0 ? _e : 0) || 0;
 }
-/** シーズンスライス（rankingBySeason.<key>）優先、なければ leagues.nba */
-function pickNbaInc(data) {
+/** シーズンスライス。standard=Pick Up / open=PRO LEAGUE（未移行日は ranking にフォールバック） */
+function pickNbaInc(data, division) {
+    if (division === "open") {
+        const openBySeason = data.openRankingBySeason;
+        const openInc = openBySeason === null || openBySeason === void 0 ? void 0 : openBySeason[nbaSeason_1.CURRENT_NBA_SEASON_KEY];
+        if (openInc && typeof openInc === "object")
+            return openInc;
+    }
     const bySeason = data.rankingBySeason;
     const seasonInc = bySeason === null || bySeason === void 0 ? void 0 : bySeason[nbaSeason_1.CURRENT_NBA_SEASON_KEY];
     if (seasonInc && typeof seasonInc === "object")
         return seasonInc;
-    const leagues = data.leagues;
-    if ((leagues === null || leagues === void 0 ? void 0 : leagues.nba) && typeof leagues.nba === "object")
-        return leagues.nba;
+    // Pick Up 導入後は leagues.nba（全試合）へフォールバックしない
+    if (division === "open") {
+        const leagues = data.leagues;
+        if ((leagues === null || leagues === void 0 ? void 0 : leagues.nba) && typeof leagues.nba === "object")
+            return leagues.nba;
+    }
     return null;
 }
 function uidFromDailyDocId(docId, dateKey) {
@@ -114,21 +156,30 @@ async function buildOne(range, todayKey) {
         .where("date", ">=", range.startKey)
         .where("date", "<=", range.endKey)
         .get();
-    const aggByUid = new Map();
+    const aggByUidStandard = new Map();
+    const aggByUidOpen = new Map();
     for (const doc of statsSnap.docs) {
         const data = doc.data();
         const dateKey = String((_a = data.date) !== null && _a !== void 0 ? _a : "");
         const uid = uidFromDailyDocId(doc.id, dateKey);
         if (!uid)
             continue;
-        const inc = pickNbaInc(data);
-        if (!inc)
-            continue;
-        if (!aggByUid.has(uid))
-            aggByUid.set(uid, emptyAgg());
-        addInc(aggByUid.get(uid), inc);
+        const incStandard = pickNbaInc(data, "standard");
+        if (incStandard) {
+            if (!aggByUidStandard.has(uid))
+                aggByUidStandard.set(uid, emptyAgg());
+            addInc(aggByUidStandard.get(uid), incStandard);
+        }
+        const incOpen = pickNbaInc(data, "open");
+        if (incOpen) {
+            if (!aggByUidOpen.has(uid))
+                aggByUidOpen.set(uid, emptyAgg());
+            addInc(aggByUidOpen.get(uid), incOpen);
+        }
     }
-    const uids = [...aggByUid.keys()].filter((uid) => { var _a, _b; return ((_b = (_a = aggByUid.get(uid)) === null || _a === void 0 ? void 0 : _a.posts) !== null && _b !== void 0 ? _b : 0) >= minPosts; });
+    const uidsStandard = [...aggByUidStandard.keys()].filter((uid) => { var _a, _b; return ((_b = (_a = aggByUidStandard.get(uid)) === null || _a === void 0 ? void 0 : _a.posts) !== null && _b !== void 0 ? _b : 0) >= minPosts; });
+    const uidsOpen = [...aggByUidOpen.keys()].filter((uid) => { var _a, _b; return ((_b = (_a = aggByUidOpen.get(uid)) === null || _a === void 0 ? void 0 : _a.posts) !== null && _b !== void 0 ? _b : 0) >= minPosts; });
+    const uids = [...new Set([...uidsStandard, ...uidsOpen])];
     // 表示用プロフィール（cumulative_stats に集約済み）
     const profileByUid = new Map();
     const CHUNK = 80;
@@ -173,7 +224,7 @@ async function buildOne(range, todayKey) {
                 profile.plan = "pro";
         }
     }
-    const allBaseRows = uids.map((uid) => {
+    const toBaseRows = (targetUids, aggByUid) => targetUids.map((uid) => {
         var _a, _b, _c, _d, _e;
         const agg = aggByUid.get(uid);
         const profile = profileByUid.get(uid);
@@ -194,21 +245,25 @@ async function buildOne(range, todayKey) {
             winRate: agg.posts > 0 ? agg.wins / agg.posts : 0,
         };
     });
-    const divisions = ["standard", "open"];
-    for (const division of divisions) {
-        const baseRows = division === "open"
-            ? allBaseRows.filter((r) => proUidSet.has(r.uid))
-            : allBaseRows;
-        await writePeriodDivisionSnapshots({
-            firestore,
-            range,
-            todayKey,
-            division,
-            baseRows,
-            winRateMin,
-        });
-    }
-    console.log(`[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} rows=${allBaseRows.length} open=${proUidSet.size}`);
+    const standardBaseRows = toBaseRows(uidsStandard, aggByUidStandard);
+    const openBaseRows = toBaseRows(uidsOpen, aggByUidOpen).filter((r) => proUidSet.has(r.uid));
+    await writePeriodDivisionSnapshots({
+        firestore,
+        range,
+        todayKey,
+        division: "standard",
+        baseRows: standardBaseRows,
+        winRateMin,
+    });
+    await writePeriodDivisionSnapshots({
+        firestore,
+        range,
+        todayKey,
+        division: "open",
+        baseRows: openBaseRows,
+        winRateMin,
+    });
+    console.log(`[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length} open=${openBaseRows.length}`);
 }
 async function writePeriodDivisionSnapshots(opts) {
     const { firestore, range, todayKey, division, baseRows, winRateMin } = opts;
@@ -304,6 +359,13 @@ async function buildNbaPeriodRankingSnapshots(now = new Date()) {
         catch (err) {
             console.error(`[buildNbaPeriodRankingSnapshots] failed ${range.period} ${range.labelKey}`, err);
         }
+    }
+    try {
+        const { grantProSkinRankUnlocksAfterPeriodSnapshots } = await Promise.resolve().then(() => __importStar(require("../profile/grantProSkinRankUnlocksOnPeriodFinal")));
+        await grantProSkinRankUnlocksAfterPeriodSnapshots(now);
+    }
+    catch (err) {
+        console.error("[buildNbaPeriodRankingSnapshots] pro skin rank grants failed", err);
     }
 }
 /** 期間開始日 + 猶予日数の dateKey */

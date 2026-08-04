@@ -4,6 +4,7 @@ exports.rebuildMonthlyReportsManualV2 = exports.rebuildMonthlyReportsCronV2 = vo
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
 const buildMonthlyReportsCore_1 = require("./buildMonthlyReportsCore");
+const notifyPushEvents_1 = require("../notifications/notifyPushEvents");
 /** 毎月 1 日 8:00 JST — 前月レポートを確定書き込み（period snapshot 後を想定） */
 exports.rebuildMonthlyReportsCronV2 = (0, scheduler_1.onSchedule)({
     schedule: "0 8 1 * *",
@@ -13,6 +14,15 @@ exports.rebuildMonthlyReportsCronV2 = (0, scheduler_1.onSchedule)({
 }, async () => {
     const result = await (0, buildMonthlyReportsCore_1.rebuildMonthlyReportsCore)();
     console.log(`[rebuildMonthlyReportsCronV2] month=${result.monthKey} written=${result.written}`);
+    try {
+        await (0, notifyPushEvents_1.notifyMonthlyReportPush)({
+            uids: result.writtenUids,
+            monthKey: result.monthKey,
+        });
+    }
+    catch (e) {
+        console.error("[rebuildMonthlyReportsCronV2] monthly push failed", e);
+    }
 });
 /**
  * 手動 / Cursor 用 HTTP。
@@ -44,10 +54,7 @@ exports.rebuildMonthlyReportsManualV2 = (0, https_1.onRequest)({
     }
     catch (e) {
         console.error("[rebuildMonthlyReportsManualV2]", e);
-        res.status(500).json({
-            ok: false,
-            error: e instanceof Error ? e.message : String(e),
-        });
+        res.status(500).json({ ok: false, error: String(e) });
     }
 });
 //# sourceMappingURL=rebuildMonthlyReportsV2.js.map

@@ -327,7 +327,7 @@ function listInflightKey(
 export function prefetchCumulativeRankingsList(
   phase: RankingPhase = "playoffs",
   round: PlayoffRoundKey = "overall",
-  wcStage: WcRankingStage | null = "overall"
+  wcStage: WcRankingStage | null = null
 ): void {
   if (readBulkCache(phase, round, wcStage, ANON_KEY)) return;
   const inflightKey = listInflightKey(phase, round, wcStage);
@@ -353,7 +353,9 @@ export function prefetchCumulativeRankingsList(
 export function useCumulativeRankingsBulk(
   phase: RankingPhase = "playoffs",
   round: PlayoffRoundKey = "overall",
-  wcStage: WcRankingStage | null = null
+  wcStage: WcRankingStage | null = null,
+  /** false のとき取得しない（週次/月次/open ボード表示中） */
+  enabled = true
 ) {
   const [authReady, setAuthReady] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
@@ -442,6 +444,16 @@ export function useCumulativeRankingsBulk(
     metricReqSeqRef.current += 1;
     attemptedMetricsRef.current = new Set();
     let cancelled = false;
+
+    if (!enabled) {
+      setByMetric(null);
+      setMyMetricValueDeltas(null);
+      setAppliedTotalPointsUid(null);
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const applyAnonList = (bundles: Record<string, BulkMetricPayload>) => {
       setByMetric((prev) => {
@@ -553,10 +565,11 @@ export function useCumulativeRankingsBulk(
       cancelled = true;
       unsub();
     };
-  }, [phase, round, wcStage]);
+  }, [phase, round, wcStage, enabled]);
 
   const ensureMetric = useCallback(
     async (metric: string) => {
+      if (!enabled) return;
       if (!authReady) return;
       const current = byMetricRef.current;
       if (!current?.totalPoints) return;
@@ -625,13 +638,13 @@ export function useCumulativeRankingsBulk(
         });
       }
     },
-    [authReady, phase, round, wcStage]
+    [authReady, enabled, phase, round, wcStage]
   );
 
-  const listReady = byMetric?.totalPoints != null;
+  const listReady = enabled ? byMetric?.totalPoints != null : true;
 
   useEffect(() => {
-    if (!listReady || loading) return;
+    if (!enabled || !listReady || loading) return;
 
     let cancelled = false;
     const loadDeferred = () => {
@@ -660,16 +673,16 @@ export function useCumulativeRankingsBulk(
       }
       if (timeoutId != null) clearTimeout(timeoutId);
     };
-  }, [listReady, loading, ensureMetric, phase, round, wcStage]);
+  }, [enabled, listReady, loading, ensureMetric, phase, round, wcStage]);
   const personalPending = false;
 
   return {
-    loading,
+    loading: enabled ? loading : false,
     listReady,
     personalPending,
     myUid,
-    byMetric,
-    myMetricValueDeltas,
+    byMetric: enabled ? byMetric : null,
+    myMetricValueDeltas: enabled ? myMetricValueDeltas : null,
     authReady,
     ensureMetric,
   };

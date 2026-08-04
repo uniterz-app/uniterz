@@ -96,7 +96,12 @@ export function useWebRankings(
     }
   }, [metric, availableMetrics]);
 
-  const seasonBulk = useCumulativeRankingsBulk(phase, round, wcStage);
+  const seasonBulk = useCumulativeRankingsBulk(
+    phase,
+    round,
+    wcStage,
+    !period && !useOpenSeason
+  );
   const openSeasonBulk = useOpenSeasonRankingsBulk(useOpenSeason);
   const periodBulk = usePeriodRankingsBulk(period, periodLabel, division);
   const activeBulk = useOpenSeason

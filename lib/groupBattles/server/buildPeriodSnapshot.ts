@@ -48,6 +48,20 @@ function uidFromDailyDocId(docId: string, dateKey: string): string | null {
   return docId.slice(0, i);
 }
 
+function enumerateDateKeys(startKey: string, endKey: string): string[] {
+  const keys: string[] = [];
+  let cur = startKey;
+  while (cur <= endKey) {
+    keys.push(cur);
+    cur = addDaysToDateKey(cur, 1);
+  }
+  return keys;
+}
+
+/**
+ * 対象メンバー×日付の daily のみ getAll（期間全体の date 範囲スキャンはしない）。
+ * docId = `{uid}_{dateKey}`。
+ */
 async function sumMemberPoints(
   db: Firestore,
   memberUids: string[],
@@ -57,21 +71,27 @@ async function sumMemberPoints(
 ): Promise<Map<string, number>> {
   const points = new Map<string, number>();
   for (const uid of memberUids) points.set(uid, 0);
+  if (memberUids.length === 0) return points;
 
-  const snap = await db
-    .collection("user_stats_v2_daily")
-    .where("date", ">=", startKey)
-    .where("date", "<=", endKey)
-    .get();
+  const dateKeys = enumerateDateKeys(startKey, endKey);
+  if (dateKeys.length === 0) return points;
 
-  const uidSet = new Set(memberUids);
-  for (const doc of snap.docs) {
-    const data = doc.data() as Record<string, unknown>;
-    const dateKey = String(data.date ?? "");
-    const uid = uidFromDailyDocId(doc.id, dateKey);
-    if (!uid || !uidSet.has(uid)) continue;
-    const add = pointsFromDailyDoc(data, seasonKey);
-    points.set(uid, (points.get(uid) ?? 0) + add);
+  const col = db.collection("user_stats_v2_daily");
+  const refs = memberUids.flatMap((uid) =>
+    dateKeys.map((dateKey) => col.doc(`${uid}_${dateKey}`))
+  );
+
+  const CHUNK = 300;
+  for (let i = 0; i < refs.length; i += CHUNK) {
+    const docs = await db.getAll(...refs.slice(i, i + CHUNK));
+    for (const doc of docs) {
+      if (!doc.exists) continue;
+      const data = doc.data() as Record<string, unknown>;
+      const dateKey = String(data.date ?? "");
+      const uid = uidFromDailyDocId(doc.id, dateKey);
+      if (!uid || !points.has(uid)) continue;
+      points.set(uid, (points.get(uid) ?? 0) + pointsFromDailyDoc(data, seasonKey));
+    }
   }
   return points;
 }

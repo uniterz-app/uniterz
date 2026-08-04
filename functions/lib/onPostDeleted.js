@@ -28,10 +28,18 @@ function buildDeleteContribution(before, stats, startAt) {
     const isWc = leagueKey === "wc";
     const wcStageRaw = before.wcStage;
     const wcStage = wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
-    const forRanking = stats.countedForRanking !== false && leagueKey !== "wc";
-    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(leagueKey, forRanking, startAt, before.seasonPhase);
+    const forOpenEligible = stats.countedForRanking !== false && leagueKey !== "wc";
+    const hasPickupFlag = typeof stats.countedForPickup === "boolean";
+    // レガシー: countedForPickup 未設定なら当時は ranking に全試合加算
+    const forPickupRanking = stats.countedForPickup === true ||
+        (!hasPickupFlag && forOpenEligible);
+    // open* はデュアル書き込み導入後の投稿のみ戻す
+    const forOpenRanking = hasPickupFlag && forOpenEligible;
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(leagueKey, forOpenEligible, startAt, before.seasonPhase);
     return {
-        forRanking,
+        forRanking: forPickupRanking,
+        forOpenRanking,
+        forPlayoffsRanking: forOpenEligible,
         nbaSeasonKey,
         nbaPlayoffsSeasonKey,
         leagueKey,
@@ -130,6 +138,8 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             const user = userSnap.exists ? userSnap.data() : {};
             (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, {
                 forRanking: true,
+                forOpenRanking: false,
+                forPlayoffsRanking: false,
                 nbaSeasonKey: null,
                 nbaPlayoffsSeasonKey: null,
                 leagueKey: normalizeLeague(typeof before.league === "string" ? before.league : null),
@@ -148,7 +158,11 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         return;
     }
     const leagueKeyNorm = normalizeLeague(typeof before.league === "string" ? before.league : null);
-    const countRank = stats.countedForRanking !== false && leagueKeyNorm !== "wc";
+    const forOpenEligible = stats.countedForRanking !== false && leagueKeyNorm !== "wc";
+    const hasPickupFlag = typeof stats.countedForPickup === "boolean";
+    const forPickupRanking = stats.countedForPickup === true ||
+        (!hasPickupFlag && forOpenEligible);
+    const forOpenRanking = hasPickupFlag && forOpenEligible;
     const isWin = stats.isWin === true;
     const scoreError = (_c = stats.scoreError) !== null && _c !== void 0 ? _c : 0;
     const hadUpsetGame = stats.hadUpsetGame === true;
@@ -181,15 +195,21 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         };
         tx.set(dailyRef, { all: dec }, { merge: true });
-        if (countRank) {
+        if (forPickupRanking) {
             tx.set(dailyRef, { ranking: dec }, { merge: true });
         }
+        if (forOpenRanking) {
+            tx.set(dailyRef, { openRanking: dec }, { merge: true });
+        }
         const seasonPhase = before.seasonPhase;
-        const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(normalizeLeague(typeof before.league === "string" ? before.league : null), countRank, startAt, seasonPhase);
-        if (nbaSeasonKey) {
+        const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(normalizeLeague(typeof before.league === "string" ? before.league : null), forOpenEligible, startAt, seasonPhase);
+        if (forPickupRanking && nbaSeasonKey) {
             tx.set(dailyRef, { rankingBySeason: { [nbaSeasonKey]: dec } }, { merge: true });
         }
-        if (nbaPlayoffsSeasonKey) {
+        if (forOpenRanking && nbaSeasonKey) {
+            tx.set(dailyRef, { openRankingBySeason: { [nbaSeasonKey]: dec } }, { merge: true });
+        }
+        if (forOpenEligible && nbaPlayoffsSeasonKey) {
             tx.set(dailyRef, { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: dec } }, { merge: true });
         }
         const leagueKeyInner = (_a = before.league) !== null && _a !== void 0 ? _a : null;
@@ -197,7 +217,10 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             tx.set(dailyRef, { leagues: { [leagueKeyInner]: dec } }, { merge: true });
         }
         const gameTeamIds = uniqueGameTeamIds((_c = (_b = marker === null || marker === void 0 ? void 0 : marker.homeTeamId) !== null && _b !== void 0 ? _b : teamIdFromSide(before.home)) !== null && _c !== void 0 ? _c : null, (_e = (_d = marker === null || marker === void 0 ? void 0 : marker.awayTeamId) !== null && _d !== void 0 ? _d : teamIdFromSide(before.away)) !== null && _e !== void 0 ? _e : null);
-        const countTeams = (marker === null || marker === void 0 ? void 0 : marker.countedForRanking) !== false && countRank;
+        const countTeams = ((marker === null || marker === void 0 ? void 0 : marker.countedForPickup) === true ||
+            ((marker === null || marker === void 0 ? void 0 : marker.countedForPickup) == null &&
+                (marker === null || marker === void 0 ? void 0 : marker.countedForRanking) !== false)) &&
+            forPickupRanking;
         if (countTeams && gameTeamIds.length > 0) {
             for (const teamId of gameTeamIds) {
                 tx.set(dailyRef, teamDecrementFields(teamId, dec), { merge: true });

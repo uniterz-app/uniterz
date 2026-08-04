@@ -8,7 +8,7 @@ import {
 
 export type { PushLanguage };
 
-export type GameMatchupCopyInput = PushMatchupInput & {
+export type GameMatchupCopyInput = Partial<PushMatchupInput> & {
   /** 欠場名・先発変更・まとめ本文など */
   detail?: string;
 };
@@ -18,7 +18,21 @@ export function buildPushNotificationCopy(
   language: PushLanguage,
   input?: GameMatchupCopyInput
 ): { title: string; body: string; subtitle?: string } {
-  const matchup = input ? formatPushMatchupLabel(input, language) : "";
+  const hasMatchup =
+    typeof input?.homeLabel === "string" && typeof input?.awayLabel === "string";
+  const matchup = hasMatchup
+    ? formatPushMatchupLabel(
+        {
+          homeLabel: input.homeLabel!,
+          awayLabel: input.awayLabel!,
+          homeTeamId: input.homeTeamId,
+          awayTeamId: input.awayTeamId,
+          homeScore: input.homeScore,
+          awayScore: input.awayScore,
+        },
+        language
+      )
+    : "";
   const detail = input?.detail?.trim() || "";
 
   if (language === "en") {

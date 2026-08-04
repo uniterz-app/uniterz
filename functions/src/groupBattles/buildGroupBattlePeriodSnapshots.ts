@@ -105,26 +105,41 @@ async function buildOne(
     };
   });
 
-  const uidSet = new Set(squads.flatMap((s) => s.memberUids));
+  const uidSet = [...new Set(squads.flatMap((s) => s.memberUids))];
   const pointsByUid = new Map<string, number>();
   for (const uid of uidSet) pointsByUid.set(uid, 0);
 
   const seasonKey = String(battle.seasonKey ?? "");
-  const statsSnap = await db
-    .collection("user_stats_v2_daily")
-    .where("date", ">=", startKey)
-    .where("date", "<=", endKey)
-    .get();
+  const dateKeys: string[] = [];
+  {
+    let cur = startKey;
+    while (cur <= endKey) {
+      dateKeys.push(cur);
+      cur = addDaysToDateKey(cur, 1);
+    }
+  }
 
-  for (const doc of statsSnap.docs) {
-    const data = doc.data();
-    const dateKey = String(data.date ?? "");
-    const uid = uidFromDailyDocId(doc.id, dateKey);
-    if (!uid || !uidSet.has(uid)) continue;
-    pointsByUid.set(
-      uid,
-      (pointsByUid.get(uid) ?? 0) + pickPoints(data, seasonKey)
+  // 期間全体の date 範囲スキャンはしない。対象メンバー×日付だけ getAll。
+  if (uidSet.length > 0 && dateKeys.length > 0) {
+    const col = db.collection("user_stats_v2_daily");
+    const refs = uidSet.flatMap((uid) =>
+      dateKeys.map((dateKey) => col.doc(`${uid}_${dateKey}`))
     );
+    const CHUNK = 300;
+    for (let i = 0; i < refs.length; i += CHUNK) {
+      const docs = await db.getAll(...refs.slice(i, i + CHUNK));
+      for (const doc of docs) {
+        if (!doc.exists) continue;
+        const data = doc.data() as Record<string, unknown>;
+        const dateKey = String(data.date ?? "");
+        const uid = uidFromDailyDocId(doc.id, dateKey);
+        if (!uid || !pointsByUid.has(uid)) continue;
+        pointsByUid.set(
+          uid,
+          (pointsByUid.get(uid) ?? 0) + pickPoints(data, seasonKey)
+        );
+      }
+    }
   }
 
   const snapId = `${battleId}_${period}_${label}`;

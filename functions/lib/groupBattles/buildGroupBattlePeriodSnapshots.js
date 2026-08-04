@@ -90,23 +90,37 @@ async function buildOne(battleId, battle, period, label, startKey, endKey, today
             memberCount: Number((_b = data.memberCount) !== null && _b !== void 0 ? _b : memberUids.length) || 0,
         };
     });
-    const uidSet = new Set(squads.flatMap((s) => s.memberUids));
+    const uidSet = [...new Set(squads.flatMap((s) => s.memberUids))];
     const pointsByUid = new Map();
     for (const uid of uidSet)
         pointsByUid.set(uid, 0);
     const seasonKey = String((_a = battle.seasonKey) !== null && _a !== void 0 ? _a : "");
-    const statsSnap = await db
-        .collection("user_stats_v2_daily")
-        .where("date", ">=", startKey)
-        .where("date", "<=", endKey)
-        .get();
-    for (const doc of statsSnap.docs) {
-        const data = doc.data();
-        const dateKey = String((_b = data.date) !== null && _b !== void 0 ? _b : "");
-        const uid = uidFromDailyDocId(doc.id, dateKey);
-        if (!uid || !uidSet.has(uid))
-            continue;
-        pointsByUid.set(uid, ((_c = pointsByUid.get(uid)) !== null && _c !== void 0 ? _c : 0) + pickPoints(data, seasonKey));
+    const dateKeys = [];
+    {
+        let cur = startKey;
+        while (cur <= endKey) {
+            dateKeys.push(cur);
+            cur = (0, nbaPeriod_1.addDaysToDateKey)(cur, 1);
+        }
+    }
+    // 期間全体の date 範囲スキャンはしない。対象メンバー×日付だけ getAll。
+    if (uidSet.length > 0 && dateKeys.length > 0) {
+        const col = db.collection("user_stats_v2_daily");
+        const refs = uidSet.flatMap((uid) => dateKeys.map((dateKey) => col.doc(`${uid}_${dateKey}`)));
+        const CHUNK = 300;
+        for (let i = 0; i < refs.length; i += CHUNK) {
+            const docs = await db.getAll(...refs.slice(i, i + CHUNK));
+            for (const doc of docs) {
+                if (!doc.exists)
+                    continue;
+                const data = doc.data();
+                const dateKey = String((_b = data.date) !== null && _b !== void 0 ? _b : "");
+                const uid = uidFromDailyDocId(doc.id, dateKey);
+                if (!uid || !pointsByUid.has(uid))
+                    continue;
+                pointsByUid.set(uid, ((_c = pointsByUid.get(uid)) !== null && _c !== void 0 ? _c : 0) + pickPoints(data, seasonKey));
+            }
+        }
     }
     const snapId = `${battleId}_${period}_${label}`;
     const prevRef = db.collection(SNAPSHOTS).doc(snapId);

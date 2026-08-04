@@ -1,5 +1,5 @@
 /**
- * Web `SquadBattlePage` 相当 — SQUAD BATTLE プレビュー（モック専用）
+ * Web `SquadBattlePage` 相当 — SQUAD BATTLE（スナップショット接続、未接続時はモック）
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -48,6 +48,7 @@ import {
   type SquadIncomingInviteMock,
 } from "../../../../../lib/squads/squadBattleMock";
 import type { GroupBattlePastSquadItem } from "../../../../../lib/groupBattles/types";
+import { mapGroupBattleSnapshotRowsToSquads } from "../../../../../lib/groupBattles/mapSnapshotRowsToSquads";
 import {
   SQUAD_FIRST_AVATAR_FADE_MS,
   SQUAD_FIRST_FOOTER_FADE_MS,
@@ -2345,6 +2346,8 @@ export default function SquadBattleScreenNative() {
   /** 開催フェーズ（プレビュー切替） */
   const [uiPhase, setUiPhase] = useState<SquadBattleUiPhase>("battle");
   const [boardStatus, setBoardStatus] = useState<"live" | "final">("live");
+  /** スナップショット rows。null ならモック leaderboard */
+  const [liveLeaderboard, setLiveLeaderboard] = useState<Squad[] | null>(null);
   /** 取り下げた申請 ID（プレビュー） */
   const [withdrawnRequestIds, setWithdrawnRequestIds] = useState<string[]>([]);
   const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
@@ -2384,7 +2387,8 @@ export default function SquadBattleScreenNative() {
         if (cancelled || !current?.battle) return;
         setLiveBattleId(current.battle.id);
         if (user?.uid) setLiveSelfUid(user.uid);
-        setLiveMySquadId(current.mySquad?.id ?? null);
+        const mySquadId = current.mySquad?.id ?? null;
+        setLiveMySquadId(mySquadId);
         setLiveIsOwner(current.membership?.role === "owner");
         const label =
           rankPeriod === "weekly"
@@ -2398,8 +2402,21 @@ export default function SquadBattleScreenNative() {
           label,
           { idToken: token }
         );
-        if (!cancelled && rankings?.snapshot) {
-          setBoardStatus(rankings.snapshot.status);
+        if (!cancelled) {
+          if (rankings?.snapshot?.rows?.length) {
+            setBoardStatus(rankings.snapshot.status);
+            setLiveLeaderboard(
+              mapGroupBattleSnapshotRowsToSquads(
+                rankings.snapshot.rows,
+                mySquadId
+              )
+            );
+          } else {
+            setLiveLeaderboard(null);
+            if (rankings?.snapshot) {
+              setBoardStatus(rankings.snapshot.status);
+            }
+          }
         }
         if (token) {
           const past = await fetchPastGroupBattleSquadsNative({ idToken: token });
@@ -2431,26 +2448,30 @@ export default function SquadBattleScreenNative() {
   }, [rankPeriod]);
 
   const mock = useMemo(() => getSquadBattleMock(previewState), [previewState]);
+  const leaderboard = liveLeaderboard ?? mock.leaderboard;
 
   const mySquad = useMemo(() => {
+    if (liveLeaderboard) {
+      return liveLeaderboard.find((s) => s.isMine) ?? null;
+    }
     if (!mock.mySquad) return null;
     if (!createdSquadName) return mock.mySquad;
     return { ...mock.mySquad, name: createdSquadName };
-  }, [mock.mySquad, createdSquadName]);
+  }, [liveLeaderboard, mock.mySquad, createdSquadName]);
 
   const boardMaxAvg = useMemo(
-    () => Math.max(1, ...mock.leaderboard.map((s) => s.avgPoints)),
-    [mock.leaderboard]
+    () => Math.max(1, ...leaderboard.map((s) => s.avgPoints)),
+    [leaderboard]
   );
 
   const boardOthers = useMemo(
-    () => mock.leaderboard.filter((s) => !s.isMine),
-    [mock.leaderboard]
+    () => leaderboard.filter((s) => !s.isMine),
+    [leaderboard]
   );
 
   const boardRunnerUpAvg = useMemo(
-    () => mock.leaderboard.find((s) => s.rank === 2)?.avgPoints ?? 0,
-    [mock.leaderboard]
+    () => leaderboard.find((s) => s.rank === 2)?.avgPoints ?? 0,
+    [leaderboard]
   );
 
   const appliedSquadIds = useMemo(() => {
@@ -3038,7 +3059,7 @@ export default function SquadBattleScreenNative() {
                       squad={squad}
                       maxAvg={boardMaxAvg}
                       runnerUpAvg={boardRunnerUpAvg}
-                      board={mock.leaderboard}
+                      board={leaderboard}
                       index={i}
                       replayKey={`${mainTab}-${rankPeriod}-${weekIndex}`}
                     />

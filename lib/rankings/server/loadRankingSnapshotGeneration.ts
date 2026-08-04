@@ -21,14 +21,30 @@ function metaFromBlock(raw: unknown): RankingSnapshotGenerationMeta | null {
 }
 
 /** cumulative_ranking_snapshots/_generation から一覧キャッシュ世代を取得 */
+const GENERATION_MEM_TTL_MS = 30_000;
+let generationMemCache: { key: string | null; at: number } | null = null;
+
 export async function loadRankingSnapshotGenerationKey(): Promise<string | null> {
+  const now = Date.now();
+  if (
+    generationMemCache &&
+    now - generationMemCache.at < GENERATION_MEM_TTL_MS
+  ) {
+    return generationMemCache.key;
+  }
+
   const snap = await getAdminDb()
     .collection("cumulative_ranking_snapshots")
     .doc("_generation")
     .get();
-  if (!snap.exists) return null;
+  if (!snap.exists) {
+    generationMemCache = { key: null, at: now };
+    return null;
+  }
 
   const d = snap.data() as GenerationDoc;
   const meta = metaFromBlock(d.nba);
-  return buildRankingSnapshotGenerationKey(meta);
+  const key = buildRankingSnapshotGenerationKey(meta);
+  generationMemCache = { key, at: now };
+  return key;
 }

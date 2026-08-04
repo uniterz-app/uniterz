@@ -407,6 +407,7 @@ async function rebuildMonthlyReportsCore(opts) {
     const upsetMedian = median(upsets);
     const WRITE_CHUNK = 400;
     let written = 0;
+    const writtenUids = [];
     for (let offset = 0; offset < rows.length; offset += WRITE_CHUNK) {
         const chunk = rows.slice(offset, offset + WRITE_CHUNK);
         const batch = db().batch();
@@ -522,7 +523,7 @@ async function rebuildMonthlyReportsCore(opts) {
                 totalPoints: agg.points,
                 totalPosts: agg.posts,
                 totalWins: agg.wins,
-                unitsEarned: 0,
+                unitsEarned: 0, // MONTHLY_REPORT_UNITS_FROM_LEDGER 後に loadMonthlyUnitsFromLedger 接続
                 unitsEarnedRank: null,
                 analysisTypeId,
                 metrics,
@@ -539,9 +540,10 @@ async function rebuildMonthlyReportsCore(opts) {
             const ref = db().collection("user_reports").doc(`${uid}_monthly_${monthKey}`);
             batch.set(ref, reportDoc, { merge: true });
             written++;
+            writtenUids.push(uid);
         }
         await batch.commit();
     }
-    return { monthKey, written };
+    return { monthKey, written, writtenUids };
 }
 //# sourceMappingURL=buildMonthlyReportsCore.js.map
