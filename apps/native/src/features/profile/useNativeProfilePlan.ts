@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "../../lib/firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { withTimeout } from "../../../../../lib/async/withTimeout";
 
 type Params = {
   targetUid: string | null | undefined;
@@ -22,6 +23,8 @@ type Params = {
    */
   deferOwnFetch?: boolean;
 };
+
+const PLAN_FETCH_TIMEOUT_MS = 12_000;
 
 /** Pro 期限切れなら free に落として Firestore も更新。解決後の plan を返す */
 export async function resolveAndExpireMyPlan(
@@ -106,7 +109,11 @@ export function useNativeProfilePlan({
         if (!cancelled) setLoadingPlan(true);
 
         const userDocRef = doc(db, "users", myUid);
-        const snap = await getDoc(userDocRef);
+        const snap = await withTimeout(
+          getDoc(userDocRef),
+          PLAN_FETCH_TIMEOUT_MS,
+          "plan-fetch-timeout"
+        );
 
         if (!snap.exists()) {
           if (!cancelled) {
@@ -127,7 +134,7 @@ export function useNativeProfilePlan({
         }
       } catch {
         if (!cancelled) {
-          setMyPlan("free");
+          setMyPlan((prev) => prev ?? "free");
           setLoadingPlan(false);
         }
       }

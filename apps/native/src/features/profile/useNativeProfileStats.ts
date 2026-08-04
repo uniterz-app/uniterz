@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { withTimeout } from "../../../../../lib/async/withTimeout";
 import type { ProfileDailyTrendRow } from "../../../../../lib/profile/profileDailyTrendRow";
 import {
   isProfileChartsComplete,
@@ -63,6 +64,7 @@ export type NativeProfileStatsState = {
 const STATS_CACHE_VERSION = `v9:${profileOverviewSeasonKey()}:fsCharts`;
 /** NBA 以外 / フォールバック */
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const PROFILE_STATS_FETCH_TIMEOUT_MS = 20_000;
 
 type CacheEntry = {
   at: number;
@@ -277,6 +279,14 @@ export function useNativeProfileStats(
   const refetchDailyTrend = useCallback(() => {
     if (cacheKey) {
       mergeCacheEntry(cacheKey, { dailyTrend: null });
+    }
+    setRefreshKey((k) => k + 1);
+  }, [cacheKey]);
+
+  /** 画面復帰時など: ハングした loading をやり直す */
+  const refetch = useCallback(() => {
+    if (cacheKey) {
+      activeFetchKeyRef.current = "";
     }
     setRefreshKey((k) => k + 1);
   }, [cacheKey]);
@@ -496,9 +506,10 @@ export function useNativeProfileStats(
           const cardPeriod =
             cardCtx.nbaPeriod ?? preferredNbaKinetikPeriod();
           const t0 = Date.now();
-          const fs = await fetchNbaProfileCardPhaseFirestore(
-            targetUid,
-            cardPeriod
+          const fs = await withTimeout(
+            fetchNbaProfileCardPhaseFirestore(targetUid, cardPeriod),
+            PROFILE_STATS_FETCH_TIMEOUT_MS,
+            "profile-stats-timeout"
           );
           if (cancelled) return;
 
@@ -670,6 +681,11 @@ export function useNativeProfileStats(
     void run();
     return () => {
       cancelled = true;
+      // 離脱中にハングした fetch が残っていると、復帰時に
+      // `activeFetchKeyRef === cacheKey` で再取得スキップされ loading が固まる
+      if (activeFetchKeyRef.current === cacheKey) {
+        activeFetchKeyRef.current = "";
+      }
     };
   }, [uid, statsEnabled, rankingLeague, wcStage, cacheKey, refreshKey]);
 
@@ -681,5 +697,5 @@ export function useNativeProfileStats(
     state.error == null;
   const overviewReady = cardsReady;
 
-  return { ...state, cardsReady, overviewReady, refetchDailyTrend };
+  return { ...state, cardsReady, overviewReady, refetchDailyTrend, refetch };
 }

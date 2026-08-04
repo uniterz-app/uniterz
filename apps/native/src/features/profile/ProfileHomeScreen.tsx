@@ -57,7 +57,10 @@ import ProfileAwardsTabNative from "./ProfileAwardsTabNative";
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import ProfileReportDeliveryOverlayNative from "./reports/ProfileReportDeliveryOverlayNative";
+import ProfileProSkinUnlockOverlayNative from "./reports/ProfileProSkinUnlockOverlayNative";
 import { useProReportDeliveryOverlayNative } from "./reports/useProReportDeliveryOverlayNative";
+import { useProSkinUnlockOverlayNative } from "./reports/useProSkinUnlockOverlayNative";
+import { consumeProSkinUnlockPreviewOnProfile } from "./reports/proSkinUnlockPreviewArm";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
 import ProfileOverviewSectionNative from "./ProfileOverviewSectionNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -384,6 +387,29 @@ export default function ProfileHomeScreen({
       uid: myUid,
       enabled: reportOverlayEnabled,
     });
+  const skinUnlockEnabled = Boolean(isMe && myUid) && reportOverlay == null;
+  const [forceSkinUnlockPreview, setForceSkinUnlockPreview] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (consumeProSkinUnlockPreviewOnProfile()) {
+        setForceSkinUnlockPreview(true);
+      }
+    }, [])
+  );
+  const {
+    activeIds: skinUnlockIds,
+    ownerCounts: skinUnlockOwnerCounts,
+    preview: skinUnlockPreview,
+    dismiss: dismissSkinUnlock,
+  } = useProSkinUnlockOverlayNative({
+    uid: myUid,
+    enabled: skinUnlockEnabled,
+    forcePreview: forceSkinUnlockPreview,
+  });
+  const dismissSkinUnlockAndClearForce = useCallback(() => {
+    setForceSkinUnlockPreview(false);
+    dismissSkinUnlock();
+  }, [dismissSkinUnlock]);
 
   const currentStreak = useMemo(() => {
     if (isPublicProfileView && profileByHandle.currentStreak > 0) {
@@ -560,6 +586,25 @@ export default function ProfileHomeScreen({
         alive = false;
       };
     }, [isPublicProfileView, myUid])
+  );
+
+  /** しばらく離れて戻ったとき、ハングした overview 読み込みをやり直す */
+  const skipFirstFocusStatsRef = useRef(true);
+  const statsLoadingRef = useRef(statsBundle.loading);
+  const statsSummaryRef = useRef(statsBundle.summary);
+  statsLoadingRef.current = statsBundle.loading;
+  statsSummaryRef.current = statsBundle.summary;
+  useFocusEffect(
+    useCallback(() => {
+      if (!targetUid || !authReady) return;
+      if (skipFirstFocusStatsRef.current) {
+        skipFirstFocusStatsRef.current = false;
+        return;
+      }
+      if (statsLoadingRef.current && !statsSummaryRef.current) {
+        statsBundle.refetch();
+      }
+    }, [targetUid, authReady, statsBundle.refetch])
   );
 
   useEffect(() => {
@@ -1194,6 +1239,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("FuturisticBgPreview");
         else if (page === "titleSkinPreview" && __DEV__)
           navigation.navigate("TitleSkinPreview");
+        else if (page === "proSkinUnlockPreview" && __DEV__)
+          navigation.navigate("ProSkinUnlockPreview");
       }}
     />
     <ProfileBadgeDetailModal
@@ -1210,6 +1257,19 @@ export default function ProfileHomeScreen({
         active={reportOverlay}
         language={language}
         onDismiss={dismissReportOverlay}
+      />
+    ) : null}
+    {skinUnlockIds && skinUnlockIds.length > 0 ? (
+      <ProfileProSkinUnlockOverlayNative
+        unlockedIds={skinUnlockIds}
+        language={language === "ja" ? "ja" : "en"}
+        preview={skinUnlockPreview}
+        visible
+        ownerCounts={skinUnlockOwnerCounts}
+        onDismiss={dismissSkinUnlockAndClearForce}
+        onApplied={(id) => {
+          setPlanProBgVariant(id);
+        }}
       />
     ) : null}
     {!isPublicProfileView ? (

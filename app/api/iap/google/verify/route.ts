@@ -43,6 +43,15 @@ export async function POST(req: NextRequest) {
       { merge: true }
     );
 
+    try {
+      const { applyProSkinUnlocksAfterProUpgrade } = await import(
+        "@/lib/profile/applyProSkinUnlocksAfterProUpgrade"
+      );
+      await applyProSkinUnlocksAfterProUpgrade(db, uid);
+    } catch (err) {
+      console.warn("[iap/google/verify] pro-skin upgrade merge failed:", err);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[iap/google/verify]", e);

@@ -2,49 +2,64 @@
 
 最終更新: 2026-08-04
 
-## いままで（develop に反映）
+## いままで（develop 向け実装）
 
 - 採用カタログ **即解放 12 / マイルストーン 12**（Eclipse / Data Stream 含む）
-- マイルストーン梯子（連勝 7/10/15、予想 100/150、パーフェクト 10、月 Top10、週 1 位、月間 得点者 / UPSET / 勝率 / 総合 1 位）
 - Circuit Lace / Iso Cubes など全面パターン、Crimson Eclipse 再採用、Carbon 削除
 - Pro Skin 一覧の軽量化（カタログは swatch、フル模様はプレビュー時のみ）
-- 解放 API の順位取得を軽量化、Pro 判定の共通化
 - **無料ユーザー**も Pro Skin プレビュー可。適用ボタンは **GET PRO** → 購入ページ
+- **薄い集計基盤** `users.proSkinProgress`（seasonKey / posts / exactHits / maxWinStreak）
+- マイルストーンは **2026-27 以降のみ**（旧シーズン・`users.maxWinStreak` 通算は使わない）
+- **GET `/api/me/pro-skin` は `users` + meta のみ**（`cumulative_stats` を毎回読まない）
+- NBA settle 時に `syncProSkinProgressOnNbaSettle` で進捗更新 + 閾値解放
+- ロック下に進捗バー（連勝 / 予想 / Perfect のみ。順位系はバーなし）
+- 達成モーダル（プロフィール復帰）+ ライブ通知キュー
+- Pro Skin 画面の旧リストモーダル削除 → `noticeIds` の NEW バッジのみ
+- Free→Pro: Stripe / IAP 成功直後に `ensurePersisted` で progress + earned を unlocked へ合流（サイレント）
+- 週/月スナップショット確定後に順位マイルストーン ×6 を付与（**standard 通常**）
+- マイルストーン定義は `lib/profile/proSkinMilestoneCatalog.ts` 単一ソース（Functions 同期）
+- grant は `done` のみスキップ、`running` 停滞（15分超）はリトライ
+- settle の新規努力解放でも所持人数を加算
 
-## 次にやること（優先順）
+## 解放アーキテクチャ（確定）
 
-### 1. マイルストーン判定のデータ取り方の確認
+| 種類 | 正データ | いつ書くか | ホットパス |
+|---|---|---|---|
+| Pro 即解放 ×12 | `users.plan` | Pro Skin API | users 1 read |
+| 連勝 / 予想 / Perfect | `users.proSkinProgress` | NBA settle（Functions） | 進捗は users に載っている |
+| 週/月順位 | `proSkinRankEarnedIds`（権利）+ unlocked | 期間確定時に standard 順位で earned。Pro なら unlocked+notice | users の短い ID 配列のみ |
 
-- 各条件（連勝 / 予想数 / パーフェクト / 週・月ランク）の**正データ源**を一覧化する
-  - `cumulative_stats` / `period_ranking_snapshots` / `users` のどれを見るか
-- 「最新期間だけ」か「通算ベスト／過去達成の永続」かを条件ごとに決める
-- 勝率 1 位の最低投稿数など、ランキング側ルールとの整合を確認する
-- `proSkinUnlockedIds` への永続化タイミング（達成直後 / 次回 API ヒット時）を確定する
+### 通知方針（確定）
 
-### 2. マイルストーン達成時のユーザー通知
+| ケース | 解放 | モーダル |
+|---|---|---|
+| Free 中に閾値到達 | 進捗のみ積む（unlocked には入れない） | なし |
+| Free→Pro で遡及解放 | 努力: progress / 順位: `proSkinRankEarnedIds` → unlocked | **なし**（サイレント） |
+| Pro 中に閾値を初めて跨ぐ | settle が unlocked + `proSkinUnlockNoticeIds` | **あり**（プロフィール復帰） |
+| Pro 中に期間順位を達成 | grant が earned + unlocked + notice | **あり** |
 
-- 解放検知（サーバ永続化時 or クライアント差分）の単一の正を決める
-- 通知手段の選定と実装
-  - アプリ内モーダル（現状の unlock modal の本番仕上げ）
-  - プッシュ（任意）
-  - プロフィール / サイドメニューのバッジ
-- 「見た」状態（`unlockSeen`）と再表示ルール
-- 文言・i18n（Web / Native パリティ）
+- モーダル対象の正は `users.proSkinUnlockNoticeIds`（unlocked 全件 diff ではない）
+- dismiss は `POST /api/me/pro-skin` `{ dismissNoticeIds }` + ローカル seen
+- （任意）遡及分は NEW バッジ / 短い toast のみ — ヒーローモーダルは出さない
 
-### 3. 招待機能の作成
+### なぜ cumulative を再利用しなかったか
 
-- 設計参照: [`docs/referral-design.md`](referral-design.md)
-- 招待コード発行・入力・不正対策の最小実装範囲を切る
-- Pro / マイルストーン報酬と紐づけるかどうかは別判断（まずは導線と記録）
+- シーズン連勝が cumulative に無い / フィールドが日次と不一致
+- exactHit の加算が壊れていた（settle で修正）
+- 閲覧ごとに cumulative を読むとコストが閲覧回数に比例する
 
-### 4. マンスリーレポートなど細かい仕上げ
+→ **スキン用の薄いミラー**が最安・最速・進捗バーも出せる。
 
-- 月次レポートの残ギャップ（配信・表示・無料ゲート）
-- Pro 導線（スキン / 購読 / レポート）の文言・遷移の通し確認
-- Native ↔ モバイル Web パリティの残りキュー消化
+## 次にやること
 
-## やらないこと（このフェーズ）
+1. 招待機能（`docs/referral-design.md`）
+2. マンスリーレポートなど細かい仕上げ
+4. （任意）メニュー NEW バッジ / プッシュ / 遡及用 toast
+
+## やらないこと
 
 - `main` へのマージ（develop のみ）
-- PRO LEAGUE 専用スキン条件（ピックアップ導入後に再検討）
-- 3 冠コレクション型の解放（見送り済み）
+- Pro Skin GET ごとの `cumulative_stats` 読み
+- 全ユーザー定期バッチ走査
+- Free→Pro 遡及でのヒーローモーダル
+- Pro Skin 画面での二重ヒーローモーダル（プロフィール復帰が正）

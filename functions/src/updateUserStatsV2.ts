@@ -288,7 +288,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetHitCount: FieldValue.increment(upsetHit ? 1 : 0),
       upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
 
-      exactHitCount: FieldValue.increment(0),
+      exactHitCount: FieldValue.increment(exactHit ? 1 : 0),
 
       pointsSumV3: FieldValue.increment(points),
       upsetPointsSum: FieldValue.increment(upsetPoints),

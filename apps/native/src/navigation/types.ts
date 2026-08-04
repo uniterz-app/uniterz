@@ -96,6 +96,8 @@ export type ProfileStackParamList = {
   FuturisticBgPreview: undefined;
   /** __DEV__ 称号 Pro Skin（金冠 / 雷 / 星）プレビュー */
   TitleSkinPreview: undefined;
+  /** __DEV__ Pro Skin マイルストーン解放モーダル */
+  ProSkinUnlockPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

@@ -110,5 +110,14 @@ export async function POST(req: Request) {
     { merge: true }
   );
 
+  try {
+    const { applyProSkinUnlocksAfterProUpgrade } = await import(
+      "@/lib/profile/applyProSkinUnlocksAfterProUpgrade"
+    );
+    await applyProSkinUnlocksAfterProUpgrade(db, uid);
+  } catch (err) {
+    console.warn("[PURCHASE] pro-skin upgrade merge failed:", err);
+  }
+
   return NextResponse.json({ received: true });
 }

@@ -11,6 +11,8 @@ import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNativ
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import FuturisticBgPreviewScreenNative from "../backgrounds/FuturisticBgPreviewScreenNative";
 import TitleSkinPreviewScreenNative from "../backgrounds/TitleSkinPreviewScreenNative";
+import ProSkinUnlockPreviewScreenNative from "../mobileScreens/ProSkinUnlockPreviewScreenNative";
+import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -123,6 +125,23 @@ export function TitleSkinPreviewScreenWrapper() {
     <TitleSkinPreviewScreenNative
       language={language}
       onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ProSkinUnlockPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ProSkinUnlockPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      onForceOnProfile={() => {
+        armProSkinUnlockPreviewOnProfile();
+        navigation.navigate("ProfileHome");
+      }}
     />
   );
 }

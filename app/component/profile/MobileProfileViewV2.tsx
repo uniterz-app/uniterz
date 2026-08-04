@@ -88,8 +88,10 @@ import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavL
 import ProfileAwardsTab from "./ProfileAwardsTab";
 import ProfileMonthlyReportPanel from "./ProfileMonthlyReportPanel";
 import ProfileReportDeliveryOverlay from "./ProfileReportDeliveryOverlay";
+import ProfileProSkinUnlockOverlay from "./pro/ProfileProSkinUnlockOverlay";
 import Tabs from "./ui/Tabs";
 import { useProReportDeliveryOverlay } from "@/lib/reports/useProReportDeliveryOverlay";
+import { useProSkinUnlockOverlay } from "@/lib/profile/useProSkinUnlockOverlay";
 import {
   profileVisualEffectsForViewer,
   isProfileVisualLite,
@@ -134,6 +136,17 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       uid: resolvedUid,
       enabled: reportOverlayEnabled,
     });
+  const skinUnlockEnabled =
+    Boolean(isMe && resolvedUid) && reportOverlay == null;
+  const {
+    activeIds: skinUnlockIds,
+    ownerCounts: skinUnlockOwnerCounts,
+    preview: skinUnlockPreview,
+    dismiss: dismissSkinUnlock,
+  } = useProSkinUnlockOverlay({
+    uid: resolvedUid,
+    enabled: skinUnlockEnabled,
+  });
 
   const fetchOverviewExtras = tab === "overview";
   const fetchBracketData = tab === "bracket";
@@ -341,7 +354,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
           />
         ) : tab === "awards" ? (
-          <ProfileAwardsTab language={language} />
+          <ProfileAwardsTab language={language === "ja" ? "ja" : "en"} />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
             <div className={`${CYBER_GLASS_PANEL} mt-4 flex justify-center p-6`}>
@@ -435,6 +448,17 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           active={reportOverlay}
           language={language === "ja" ? "ja" : "en"}
           onDismiss={dismissReportOverlay}
+        />
+      ) : null}
+
+      {skinUnlockIds && skinUnlockIds.length > 0 ? (
+        <ProfileProSkinUnlockOverlay
+          unlockedIds={skinUnlockIds}
+          language={language === "ja" ? "ja" : "en"}
+          preview={skinUnlockPreview}
+          platform="mobile"
+          ownerCounts={skinUnlockOwnerCounts}
+          onDismiss={dismissSkinUnlock}
         />
       ) : null}
     </div>

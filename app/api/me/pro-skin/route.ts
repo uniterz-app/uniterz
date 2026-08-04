@@ -11,10 +11,11 @@ import {
   PRO_SKIN_UNLOCK_CATALOG,
   userDataIsPro,
 } from "@/lib/profile/proSkinUnlock";
+import { parseProSkinUnlockNoticeIds } from "@/lib/profile/proSkinUnlockNotice";
 import {
   ensurePersistedProSkinUnlocks,
   isProSkinIdUnlockedForUser,
-  loadProSkinUnlockProgress,
+  progressFromUserDocOnly,
   readProSkinOwnerCounts,
 } from "@/lib/profile/proSkinUnlockServer";
 
@@ -38,7 +39,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "user not found" }, { status: 404 });
     }
     const userData = (snap.data() ?? {}) as Record<string, unknown>;
-    const progress = await loadProSkinUnlockProgress(db, uid, userData);
+    // users doc のみ。cumulative_stats / period_ranking は読まない
+    const progress = progressFromUserDocOnly(userData);
     const unlockedIds = await ensurePersistedProSkinUnlocks(
       db,
       uid,
@@ -61,10 +63,15 @@ export async function GET(req: Request) {
       };
     });
 
+    const noticeIds = parseProSkinUnlockNoticeIds(
+      userData.proSkinUnlockNoticeIds
+    );
+
     return NextResponse.json({
       ok: true,
       progress,
       unlockedIds,
+      noticeIds,
       savedId,
       skins,
       ownerCounts,
@@ -79,7 +86,10 @@ export async function GET(req: Request) {
   }
 }
 
-/** 本人 users/{uid}.planProBgVariant — Pro + 解放済み限定 */
+/**
+ * - planProBgVariant: スキン適用
+ * - dismissNoticeIds: ライブ達成モーダル既読（キュー削除）
+ */
 export async function POST(req: Request) {
   try {
     const uid = await requireUid(req);
@@ -89,6 +99,23 @@ export async function POST(req: Request) {
     > | null;
     if (!body || typeof body !== "object") {
       return NextResponse.json({ error: "invalid json" }, { status: 400 });
+    }
+
+    const db = getAdminDb();
+    const userRef = db.doc(`users/${uid}`);
+
+    if (Array.isArray(body.dismissNoticeIds)) {
+      const ids = parseProSkinUnlockNoticeIds(body.dismissNoticeIds);
+      if (ids.length > 0) {
+        await userRef.set(
+          {
+            proSkinUnlockNoticeIds: FieldValue.arrayRemove(...ids),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+      return NextResponse.json({ ok: true, dismissed: ids });
     }
 
     const variant = body.planProBgVariant;
@@ -101,8 +128,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "invalid variant" }, { status: 400 });
     }
 
-    const db = getAdminDb();
-    const userRef = db.doc(`users/${uid}`);
     const snap = await userRef.get();
     if (!snap.exists) {
       return NextResponse.json({ error: "user not found" }, { status: 404 });
@@ -112,7 +137,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "pro required" }, { status: 403 });
     }
 
-    const progress = await loadProSkinUnlockProgress(db, uid, userData);
+    const progress = progressFromUserDocOnly(userData);
     const unlockedIds = await ensurePersistedProSkinUnlocks(
       db,
       uid,

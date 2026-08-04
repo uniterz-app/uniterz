@@ -4,6 +4,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { withTimeout } from "@/lib/async/withTimeout";
 import { db } from "@/lib/firebase";
 import {
   fetchNbaProfileCardPhaseClient,
@@ -44,6 +45,8 @@ const idle: NbaProfileOverviewClientState = {
   chartsPath: null,
   overviewSeasonKey: profileOverviewSeasonKey(),
 };
+
+const OVERVIEW_FETCH_TIMEOUT_MS = 20_000;
 
 async function ensureOverviewChartsBg(uid: string, seasonKey: string) {
   const qs = new URLSearchParams({
@@ -91,55 +94,69 @@ export function useNbaProfileOverviewClient(
     let cancelled = false;
 
     async function run() {
-      setState((prev) => ({ ...prev, loading: true }));
+      // 既に summary がある再入場ではフルスケルトンに戻さない
+      setState((prev) => ({
+        ...prev,
+        loading: prev.summary == null,
+      }));
       const t0 = Date.now();
 
       void prefetchNbaKinetikBothPeriodsClient(db, safeUid);
 
-      const fs = await fetchNbaProfileCardPhaseClient(db, safeUid, period);
-      if (cancelled) return;
-
-      if (!fs) {
-        setState({ ...idle, loading: false });
-        return;
-      }
-
-      const charts = fs.profileCharts;
-      const dailyTrend = charts?.dailyTrend ?? [];
-      const rankTrend = charts?.rankTrend ?? [];
-      const last20 = charts?.last20 ?? [];
-
-      if (process.env.NODE_ENV !== "production") {
-        console.log(
-          `[profileCharts:web] path=${fs.chartsPath} season=${fs.overviewSeasonKey} ms=${Date.now() - t0} daily=${dailyTrend.length} rank=${rankTrend.length} last20=${last20.length}`
+      try {
+        const fs = await withTimeout(
+          fetchNbaProfileCardPhaseClient(db, safeUid, period),
+          OVERVIEW_FETCH_TIMEOUT_MS,
+          "overview-fetch-timeout"
         );
-      }
+        if (cancelled) return;
 
-      setState({
-        loading: false,
-        summary: fs.summary,
-        summaryRanks: fs.summaryRanks,
-        dailyTrend,
-        rankTrend,
-        last20,
-        chartsPath: fs.chartsPath,
-        overviewSeasonKey: fs.overviewSeasonKey,
-      });
+        if (!fs) {
+          setState({ ...idle, loading: false });
+          return;
+        }
 
-      if (!isProfileChartsComplete(charts) && fs.chartsPath === "missing") {
-        void ensureOverviewChartsBg(safeUid, fs.overviewSeasonKey).then(
-          (ensured) => {
-            if (cancelled || !ensured) return;
-            invalidateCumulativeDataCacheClient(safeUid);
-            setState((prev) => ({
-              ...prev,
-              dailyTrend: ensured.dailyTrend,
-              rankTrend: ensured.rankTrend,
-              last20: ensured.last20,
-              chartsPath: "complete",
-            }));
-          }
-        );
+        const charts = fs.profileCharts;
+        const dailyTrend = charts?.dailyTrend ?? [];
+        const rankTrend = charts?.rankTrend ?? [];
+        const last20 = charts?.last20 ?? [];
+
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            `[profileCharts:web] path=${fs.chartsPath} season=${fs.overviewSeasonKey} ms=${Date.now() - t0} daily=${dailyTrend.length} rank=${rankTrend.length} last20=${last20.length}`
+          );
+        }
+
+        setState({
+          loading: false,
+          summary: fs.summary,
+          summaryRanks: fs.summaryRanks,
+          dailyTrend,
+          rankTrend,
+          last20,
+          chartsPath: fs.chartsPath,
+          overviewSeasonKey: fs.overviewSeasonKey,
+        });
+
+        if (!isProfileChartsComplete(charts) && fs.chartsPath === "missing") {
+          void ensureOverviewChartsBg(safeUid, fs.overviewSeasonKey).then(
+            (ensured) => {
+              if (cancelled || !ensured) return;
+              invalidateCumulativeDataCacheClient(safeUid);
+              setState((prev) => ({
+                ...prev,
+                dailyTrend: ensured.dailyTrend,
+                rankTrend: ensured.rankTrend,
+                last20: ensured.last20,
+                chartsPath: "complete",
+              }));
+            }
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setState((prev) => ({ ...prev, loading: false }));
+        }
       }
     }
 

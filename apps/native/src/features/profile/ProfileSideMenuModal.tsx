@@ -64,7 +64,8 @@ type Props = {
     | "notificationDev"
     | "seasonPreview"
     | "futuristicBgPreview"
-    | "titleSkinPreview") => void;
+    | "titleSkinPreview"
+    | "proSkinUnlockPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -241,6 +242,7 @@ export default function ProfileSideMenuModal({
       | "seasonPreview"
       | "futuristicBgPreview"
       | "titleSkinPreview"
+      | "proSkinUnlockPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -545,6 +547,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("titleSkinPreview")}
                         >
                           称号スキン プレビュー
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="lock-open-variant-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proSkinUnlockPreview")}
+                        >
+                          Skin解放モーダル
                         </SideMenuItemButtonNative>
                       </View>
                     </>

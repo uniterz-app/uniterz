@@ -2,11 +2,10 @@
  * Web `useProfileSettledTodayResults` 相当。
  */
 import { useEffect, useMemo, useState } from "react";
+import { withTimeout } from "../../../../../lib/async/withTimeout";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
 import { TIMEZONE_JST, toDateKeyInTimeZone } from "../../../../../lib/time/zonedTime";
-import {
-  loadProfileSettledTodayResultPostsNative,
-} from "./loadProfileSettledTodayNative";
+import { loadProfileSettledTodayResultPostsNative } from "./loadProfileSettledTodayNative";
 import type { PostWithMillis } from "../results/nativeResultModel";
 
 type SettledTodayCacheEntry = {
@@ -16,6 +15,7 @@ type SettledTodayCacheEntry = {
 };
 
 const settledTodayCache = new Map<string, SettledTodayCacheEntry>();
+const SETTLED_TODAY_TIMEOUT_MS = 15_000;
 
 function todayCacheDateKey(): string {
   return toDateKeyInTimeZone(new Date(), TIMEZONE_JST);
@@ -35,6 +35,12 @@ function readResolvedPosts(key: string): PostWithMillis[] | null {
   return cached.posts;
 }
 
+function markSettledTodayFailed(key: string): PostWithMillis[] {
+  const empty: PostWithMillis[] = [];
+  settledTodayCache.set(key, { posts: empty, resolved: true });
+  return empty;
+}
+
 async function loadSettledTodayOnce(
   uid: string,
   ctx: ProfileStatsStreakContext,
@@ -44,12 +50,17 @@ async function loadSettledTodayOnce(
   if (cached?.resolved) return cached.posts;
   if (cached?.promise) return cached.promise;
 
-  const promise = loadProfileSettledTodayResultPostsNative(uid, ctx).then(
-    (posts) => {
+  const promise = withTimeout(
+    loadProfileSettledTodayResultPostsNative(uid, ctx),
+    SETTLED_TODAY_TIMEOUT_MS,
+    "settled-today-timeout"
+  )
+    .then((posts) => {
       settledTodayCache.set(key, { posts, resolved: true });
       return posts;
-    }
-  );
+    })
+    .catch(() => markSettledTodayFailed(key));
+
   settledTodayCache.set(key, { posts: [], resolved: false, promise });
   return promise;
 }
@@ -90,22 +101,6 @@ export function useNativeProfileSettledTodayResults(
       return;
     }
 
-    const inFlight = settledTodayCache.get(safeRequestKey)?.promise;
-    if (inFlight) {
-      setState((prev) => ({
-        key: safeRequestKey,
-        posts: prev.key === safeRequestKey ? prev.posts : [],
-        loading: true,
-      }));
-      void inFlight.then((list) => {
-        if (!alive) return;
-        setState({ key: safeRequestKey, posts: list, loading: false });
-      });
-      return () => {
-        alive = false;
-      };
-    }
-
     setState((prev) => ({
       key: safeRequestKey,
       posts: prev.key === safeRequestKey ? prev.posts : [],
@@ -119,10 +114,10 @@ export function useNativeProfileSettledTodayResults(
       })
       .catch(() => {
         if (!alive) return;
-        setState({ key: safeRequestKey, posts: [], loading: false });
-        settledTodayCache.set(safeRequestKey, {
-          posts: [],
-          resolved: true,
+        setState({
+          key: safeRequestKey,
+          posts: markSettledTodayFailed(safeRequestKey),
+          loading: false,
         });
       });
 

@@ -17,6 +17,8 @@ export type ProSkinStatusResponse = {
   ok: boolean;
   progress: ProSkinUnlockProgress;
   unlockedIds: ProfilePlanProBgVariant[];
+  /** ライブ達成キュー（プロフィール復帰モーダル対象） */
+  noticeIds?: ProfilePlanProBgVariant[];
   savedId: ProfilePlanProBgVariant;
   skins: ProSkinStatusSkinRow[];
   ownerCounts: Record<string, number>;

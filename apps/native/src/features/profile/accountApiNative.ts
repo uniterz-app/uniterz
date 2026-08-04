@@ -45,10 +45,34 @@ export async function saveMeProSkinNative(
   }
 }
 
+/** Web `dismissMeProSkinNotices` 相当 */
+export async function dismissMeProSkinNoticesNative(
+  dismissNoticeIds: readonly string[]
+): Promise<void> {
+  const ids = [...new Set(dismissNoticeIds)].filter(Boolean);
+  if (ids.length === 0) return;
+  const base = requireApiBase();
+  const headers = await authHeaders();
+  const res = await fetch(`${base}/api/me/pro-skin`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ dismissNoticeIds: ids }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) {
+    throw new Error(data.error ?? res.statusText);
+  }
+}
+
 export async function fetchProSkinStatusNative(): Promise<{
   unlockedIds: string[];
   savedId: string;
   isPro: boolean;
+  progress: {
+    posts: number;
+    exactHits: number;
+    maxWinStreak: number;
+  };
   skins: {
     id: string;
     unlocked: boolean;
@@ -57,6 +81,7 @@ export async function fetchProSkinStatusNative(): Promise<{
     owners: number;
   }[];
   ownerCounts: Record<string, number>;
+  noticeIds: string[];
 }> {
   const base = requireApiBase();
   const headers = await authHeaders();
@@ -68,7 +93,12 @@ export async function fetchProSkinStatusNative(): Promise<{
     error?: string;
     unlockedIds?: string[];
     savedId?: string;
-    progress?: { isPro?: boolean };
+    progress?: {
+      isPro?: boolean;
+      posts?: number;
+      exactHits?: number;
+      maxWinStreak?: number;
+    };
     skins?: {
       id: string;
       unlocked: boolean;
@@ -77,6 +107,7 @@ export async function fetchProSkinStatusNative(): Promise<{
       owners: number;
     }[];
     ownerCounts?: Record<string, number>;
+    noticeIds?: string[];
   };
   if (!res.ok) {
     throw new Error(data.error ?? res.statusText);
@@ -85,8 +116,16 @@ export async function fetchProSkinStatusNative(): Promise<{
     unlockedIds: data.unlockedIds ?? [],
     savedId: data.savedId ?? "atmos",
     isPro: data.progress?.isPro === true,
+    progress: {
+      posts: data.progress?.posts ?? 0,
+      exactHits: data.progress?.exactHits ?? 0,
+      maxWinStreak: data.progress?.maxWinStreak ?? 0,
+    },
     skins: data.skins ?? [],
     ownerCounts: data.ownerCounts ?? {},
+    noticeIds: Array.isArray(data.noticeIds)
+      ? data.noticeIds.filter((x): x is string => typeof x === "string")
+      : [],
   };
 }
 

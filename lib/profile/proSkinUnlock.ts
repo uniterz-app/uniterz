@@ -8,6 +8,11 @@ import {
   type ProfilePlanProAdoptedEntry,
 } from "@/lib/profile/profilePlanProAdoptedBgVariants";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import {
+  PRO_SKIN_RANK_MILESTONES,
+  PRO_SKIN_THRESHOLD_MILESTONES,
+  PRO_SKIN_UNLOCK_FROM_SEASON_KEY as CATALOG_FROM_SEASON,
+} from "@/lib/profile/proSkinMilestoneCatalog";
 
 export type ProSkinUnlockKind =
   | "pro"
@@ -46,16 +51,58 @@ export type ProSkinUnlockRule =
     };
 
 export type ProSkinUnlockProgress = {
-  /** 通算最大連勝（現在連勝ではなくベスト） */
+  /** 対象シーズン内の最大連勝（users 通算や前シーズンは使わない） */
   maxWinStreak: number;
-  /** 通算予想数 */
+  /** 対象シーズン内の予想数 */
   posts: number;
-  /** パーフェクト予想（得点まで完全的中）通算 */
+  /** 対象シーズン内のパーフェクト予想 */
   exactHits: number;
   weeklyRanks: Record<ProSkinRankMetric, number | null>;
   monthlyRanks: Record<ProSkinRankMetric, number | null>;
   isPro: boolean;
+  /** マイルストーン判定に使うシーズンキー（未評価時も明示） */
+  seasonKey?: string;
 };
+
+export const EMPTY_PRO_SKIN_RANK_MAP: Record<ProSkinRankMetric, number | null> =
+  {
+    totalPoints: null,
+    totalUpset: null,
+    totalGoalScorerHits: null,
+    winRate: null,
+  };
+
+/**
+ * マイルストーン解放の開始シーズン。これより前の累計・順位は使わない。
+ * （カレンダー上 CURRENT が 2026-27 でも、旧データや users 通算からは解放しない）
+ */
+export const PRO_SKIN_UNLOCK_FROM_SEASON_KEY = CATALOG_FROM_SEASON;
+
+export function isProSkinUnlockSeasonKeyEligible(
+  seasonKey: string | null | undefined
+): boolean {
+  return (
+    typeof seasonKey === "string" &&
+    seasonKey.length > 0 &&
+    seasonKey >= PRO_SKIN_UNLOCK_FROM_SEASON_KEY
+  );
+}
+
+/** API ホットパス用: 追加 Firestore read なしの進捗（マイルストーンは未評価） */
+export function emptyProSkinUnlockProgress(
+  isPro: boolean,
+  seasonKey: string = PRO_SKIN_UNLOCK_FROM_SEASON_KEY
+): ProSkinUnlockProgress {
+  return {
+    isPro,
+    posts: 0,
+    exactHits: 0,
+    maxWinStreak: 0,
+    weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
+    monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
+    seasonKey,
+  };
+}
 
 export type ProSkinUnlockCatalogEntry = ProfilePlanProAdoptedEntry & {
   unlock: ProSkinUnlockRule;
@@ -93,15 +140,7 @@ export function userDataIsPro(userData: Record<string, unknown> | null | undefin
   return ms > Date.now();
 }
 
-export const EMPTY_PRO_SKIN_RANK_MAP: Record<ProSkinRankMetric, number | null> =
-  {
-    totalPoints: null,
-    totalUpset: null,
-    totalGoalScorerHits: null,
-    winRate: null,
-  };
-
-/** 即解放（Pro）→ マイルストーン（難易度昇順） */
+/** 即解放（Pro）→ マイルストーン（難易度昇順）。マイルストーン定義は catalog が正 */
 const UNLOCK_ORDER: readonly {
   id: ProfilePlanProBgVariant;
   unlock: ProSkinUnlockRule;
@@ -119,46 +158,23 @@ const UNLOCK_ORDER: readonly {
   { id: "form-hexveil", unlock: { kind: "pro" } },
   { id: "scale-diamondback", unlock: { kind: "pro" } },
   { id: "beast-shark", unlock: { kind: "pro" } },
-  // —— マイルストーン ×12 ——
-  // 努力
-  { id: "beast-viper", unlock: { kind: "streak", threshold: 7 } },
-  { id: "scale-king", unlock: { kind: "streak", threshold: 10 } },
-  { id: "scale-dragon", unlock: { kind: "streak", threshold: 15 } },
-  { id: "beast-circuitlace", unlock: { kind: "posts", threshold: 100 } },
-  { id: "beast-eclipse", unlock: { kind: "posts", threshold: 150 } },
-  // 精度
-  { id: "beast-shard", unlock: { kind: "exactHits", threshold: 10 } },
-  // 順位
-  {
-    id: "beast-jagarmor",
-    unlock: { kind: "monthlyRank", maxRank: 10, metric: "totalPoints" },
-  },
-  {
-    id: "form-isocubes",
-    unlock: { kind: "weeklyRank", maxRank: 1, metric: "totalPoints" },
-  },
-  // 月間称号（最後へ）
-  {
-    id: "beast-facet",
+  // —— マイルストーン（catalog） ——
+  ...PRO_SKIN_THRESHOLD_MILESTONES.map((row) => ({
+    id: row.id as ProfilePlanProBgVariant,
     unlock: {
-      kind: "monthlyRank",
-      maxRank: 1,
-      metric: "totalGoalScorerHits",
-    },
-  },
-  {
-    id: "beast-thunder",
-    unlock: { kind: "monthlyRank", maxRank: 1, metric: "totalUpset" },
-  },
-  {
-    id: "beast-starborne",
-    unlock: { kind: "monthlyRank", maxRank: 1, metric: "winRate" },
-  },
-  {
-    id: "beast-regalia",
-    unlock: { kind: "monthlyRank", maxRank: 1, metric: "totalPoints" },
-  },
-] as const;
+      kind: row.kind,
+      threshold: row.threshold,
+    } as ProSkinUnlockRule,
+  })),
+  ...PRO_SKIN_RANK_MILESTONES.map((row) => ({
+    id: row.id as ProfilePlanProBgVariant,
+    unlock: {
+      kind: row.period === "weekly" ? "weeklyRank" : "monthlyRank",
+      maxRank: row.maxRank,
+      metric: row.metric,
+    } as ProSkinUnlockRule,
+  })),
+];
 
 const BY_ID = new Map(
   PROFILE_PLAN_PRO_ADOPTED_BG.map((e) => [e.id, e] as const)

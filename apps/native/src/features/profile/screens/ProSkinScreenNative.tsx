@@ -15,7 +15,6 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   useNavigation,
   type NavigationProp,
@@ -41,45 +40,20 @@ import {
 import { profilePlanProAdoptedSkinSwatch } from "../../../../../../lib/profile/profilePlanProAdoptedSkinSwatch";
 import { parseCssLinearGradientColors } from "../../../../../../lib/profile/parseCssLinearGradientColors";
 import {
-  diffNewlyUnlockedProSkins,
   formatProSkinOwnerCount,
   formatProSkinUnlockCondition,
-  getProSkinUnlockEntry,
   listProImmediateSkinIds,
   PRO_SKIN_UNLOCK_CATALOG,
-  PRO_SKIN_UNLOCK_SEEN_STORAGE_KEY,
   userDataIsPro,
   type ProSkinUnlockCatalogEntry,
 } from "../../../../../../lib/profile/proSkinUnlock";
+import { proSkinMilestoneProgressBar } from "../../../../../../lib/profile/proSkinProgress";
 import { parseUserPlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { PROFILE_EDIT_KINETIK_MOCK } from "../../../../../../app/component/profile/edit/profileEditKinetikTypes";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
-
-async function readUnlockSeenIdsNative(): Promise<Set<string>> {
-  try {
-    const raw = await AsyncStorage.getItem(PRO_SKIN_UNLOCK_SEEN_STORAGE_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.filter((x): x is string => typeof x === "string"));
-  } catch {
-    return new Set();
-  }
-}
-
-async function writeUnlockSeenIdsNative(ids: Iterable<string>): Promise<void> {
-  try {
-    await AsyncStorage.setItem(
-      PRO_SKIN_UNLOCK_SEEN_STORAGE_KEY,
-      JSON.stringify([...ids])
-    );
-  } catch {
-    /* ignore */
-  }
-}
 
 const COLS = 2;
 const GAP = 10;
@@ -151,16 +125,20 @@ function SkinThumbNative({
   width,
   selected,
   unlocked,
+  isNew,
   owners,
   language,
+  progress,
   onPress,
 }: {
   entry: ProSkinUnlockCatalogEntry;
   width: number;
   selected: boolean;
   unlocked: boolean;
+  isNew: boolean;
   owners: number;
   language: "ja" | "en";
+  progress: { posts: number; exactHits: number; maxWinStreak: number };
   onPress: () => void;
 }) {
   const height = Math.max(84, Math.min(108, Math.round(width / 2.05)));
@@ -169,6 +147,18 @@ function SkinThumbNative({
   const swatchColors = parseCssLinearGradientColors(
     profilePlanProAdoptedSkinSwatch(entry)
   );
+  const bar =
+    !unlocked && entry.unlock.kind !== "pro"
+      ? proSkinMilestoneProgressBar(entry.unlock, progress, language)
+      : null;
+
+  const badgeLabel = !unlocked
+    ? "LOCKED"
+    : isNew
+      ? "NEW"
+      : entry.unlock.kind === "pro"
+        ? "PRO"
+        : "UNLOCKED";
 
   return (
     <Pressable
@@ -202,11 +192,13 @@ function SkinThumbNative({
           <View
             style={[
               styles.tileLockBadge,
-              unlocked
-                ? entry.unlock.kind === "pro"
-                  ? styles.tileLockBadgePro
-                  : styles.tileLockBadgeOn
-                : styles.tileLockBadgeOff,
+              !unlocked
+                ? styles.tileLockBadgeOff
+                : isNew
+                  ? styles.tileLockBadgeNew
+                  : entry.unlock.kind === "pro"
+                    ? styles.tileLockBadgePro
+                    : styles.tileLockBadgeOn,
             ]}
           >
             <Text
@@ -214,16 +206,14 @@ function SkinThumbNative({
                 styles.tileLockBadgeText,
                 !unlocked
                   ? styles.tileLockBadgeTextOff
-                  : entry.unlock.kind === "pro"
-                    ? styles.tileLockBadgeTextPro
-                    : styles.tileLockBadgeTextOn,
+                  : isNew
+                    ? styles.tileLockBadgeTextNew
+                    : entry.unlock.kind === "pro"
+                      ? styles.tileLockBadgeTextPro
+                      : styles.tileLockBadgeTextOn,
               ]}
             >
-              {unlocked
-                ? entry.unlock.kind === "pro"
-                  ? "PRO"
-                  : "UNLOCKED"
-                : "LOCKED"}
+              {badgeLabel}
             </Text>
           </View>
         </View>
@@ -259,6 +249,19 @@ function SkinThumbNative({
             <Text style={styles.tileLockOverlayText}>
               {entry.unlock.kind === "pro" ? "PRO" : "MILESTONE"}
             </Text>
+            {bar ? (
+              <View style={styles.tileProgressWrap}>
+                <View style={styles.tileProgressTrack}>
+                  <View
+                    style={[
+                      styles.tileProgressFill,
+                      { width: `${Math.round(bar.ratio * 100)}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.tileProgressLabel}>{bar.label}</Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -292,10 +295,13 @@ export default function ProSkinScreenNative() {
     () => new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
   );
   const [ownerCounts, setOwnerCounts] = useState<Record<string, number>>({});
+  const [milestoneProgress, setMilestoneProgress] = useState({
+    posts: 0,
+    exactHits: 0,
+    maxWinStreak: 0,
+  });
   const [viewerIsPro, setViewerIsPro] = useState(false);
-  const [unlockModalIds, setUnlockModalIds] = useState<
-    ProfilePlanProBgVariant[]
-  >([]);
+  const [noticeIds, setNoticeIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     if (!fUser) {
@@ -338,24 +344,18 @@ export default function ProSkinScreenNative() {
         setViewerIsPro(isPro);
         setUnlockedIds(new Set(ids));
         setOwnerCounts(status.ownerCounts ?? {});
+        setMilestoneProgress(
+          status.progress ?? { posts: 0, exactHits: 0, maxWinStreak: 0 }
+        );
         const parsed = parseUserPlanProBgVariant(status.savedId);
         if (parsed) setSavedId(parsed);
-        const seen = await readUnlockSeenIdsNative();
-        const newly = diffNewlyUnlockedProSkins(ids, seen);
-        if (newly.length > 0) {
-          setUnlockModalIds(newly as ProfilePlanProBgVariant[]);
-        }
-        const nextSeen = new Set(seen);
-        for (const id of ids) {
-          const entry = getProSkinUnlockEntry(id);
-          if (entry?.unlock.kind === "pro") nextSeen.add(id);
-        }
-        await writeUnlockSeenIdsNative(nextSeen);
+        setNoticeIds(new Set(status.noticeIds ?? []));
       } catch {
         if (!alive) return;
         const { ids, isPro } = await resolveUnlockedIds([], false);
         setViewerIsPro(isPro);
         setUnlockedIds(new Set(ids));
+        setNoticeIds(new Set());
       } finally {
         if (alive) setReady(true);
       }
@@ -408,15 +408,6 @@ export default function ProSkinScreenNative() {
     setOverlayId(null);
     setSaveError(null);
   }, [saving]);
-
-  const dismissUnlockModal = useCallback(() => {
-    void (async () => {
-      const seen = await readUnlockSeenIdsNative();
-      for (const id of unlockModalIds) seen.add(id);
-      await writeUnlockSeenIdsNative(seen);
-      setUnlockModalIds([]);
-    })();
-  }, [unlockModalIds]);
 
   const handleConfirm = useCallback(async () => {
     if (!overlayId || saving || !hasUnsavedChange) return;
@@ -506,8 +497,10 @@ export default function ProSkinScreenNative() {
                 width={tileW}
                 selected={savedId === item.id}
                 unlocked={unlockedIds.has(item.id)}
+                isNew={noticeIds.has(item.id)}
                 owners={ownerCounts[item.id] ?? 0}
                 language={language === "ja" ? "ja" : "en"}
+                progress={milestoneProgress}
                 onPress={() => openOverlay(item.id)}
               />
             )}
@@ -686,58 +679,6 @@ export default function ProSkinScreenNative() {
               ) : null}
             </View>
           ) : null}
-        </View>
-      </Modal>
-
-      <Modal
-        visible={unlockModalIds.length > 0}
-        transparent
-        animationType="fade"
-        onRequestClose={dismissUnlockModal}
-      >
-        <View style={styles.unlockRoot}>
-          <Pressable
-            style={styles.overlayBackdrop}
-            onPress={dismissUnlockModal}
-            accessibilityRole="button"
-            accessibilityLabel={isJa ? "閉じる" : "Close"}
-          />
-          <View style={[styles.unlockPanel, { width: Math.min(360, winW - 32) }]}>
-            <Text style={styles.unlockEyebrow}>SKIN UNLOCKED</Text>
-            <Text style={styles.unlockTitle}>
-              {isJa
-                ? "新しい Pro Skin が解放されました"
-                : "New Pro Skin unlocked"}
-            </Text>
-            <View style={styles.unlockList}>
-              {unlockModalIds.map((id) => {
-                const entry = getProSkinUnlockEntry(id);
-                if (!entry) return null;
-                return (
-                  <View key={id} style={styles.unlockItem}>
-                    <Text style={styles.unlockItemLabel}>
-                      {entry.label}
-                      {entry.tag ? ` · ${entry.tag}` : ""}
-                    </Text>
-                    <Text style={styles.unlockItemCond}>
-                      {formatProSkinUnlockCondition(
-                        entry.unlock,
-                        isJa ? "ja" : "en"
-                      )}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-            <Pressable
-              onPress={dismissUnlockModal}
-              style={[styles.confirmBtn, styles.confirmBtnOn]}
-            >
-              <Text style={[styles.confirmBtnText, styles.confirmBtnTextOn]}>
-                OK
-              </Text>
-            </Pressable>
-          </View>
         </View>
       </Modal>
     </MobilePageShell>
@@ -996,6 +937,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(52,211,153,0.45)",
     backgroundColor: "rgba(52,211,153,0.12)",
   },
+  tileLockBadgeNew: {
+    borderColor: "rgba(103,232,249,0.5)",
+    backgroundColor: "rgba(34,211,238,0.16)",
+  },
   tileLockBadgeOff: {
     borderColor: "rgba(251,191,36,0.4)",
     backgroundColor: "rgba(251,191,36,0.1)",
@@ -1011,6 +956,9 @@ const styles = StyleSheet.create({
   },
   tileLockBadgeTextPro: {
     color: "rgba(165,243,252,0.9)",
+  },
+  tileLockBadgeTextNew: {
+    color: "rgba(165,243,252,0.98)",
   },
   tileLockBadgeTextOff: {
     color: "rgba(253,230,138,0.95)",
@@ -1039,6 +987,30 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     color: "rgba(253,230,138,0.9)",
   },
+  tileProgressWrap: {
+    marginTop: 4,
+    width: "84%",
+    alignItems: "center",
+    gap: 3,
+  },
+  tileProgressTrack: {
+    height: 5,
+    width: "100%",
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    overflow: "hidden",
+  },
+  tileProgressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "rgba(125, 211, 252, 0.95)",
+  },
+  tileProgressLabel: {
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "rgba(255,255,255,0.72)",
+  },
   overlayCondition: {
     marginTop: 2,
     fontSize: 10,
@@ -1061,68 +1033,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: "rgba(253,230,138,0.95)",
-  },
-  unlockRoot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  unlockPanel: {
-    zIndex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.35)",
-    backgroundColor: "#050b14",
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#00F5FF",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.18,
-        shadowRadius: 24,
-      },
-      android: { elevation: 16 },
-      default: {},
-    }),
-  },
-  unlockEyebrow: {
-    textAlign: "center",
-    fontFamily: "Oxanium_700Bold",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 2.2,
-    color: "rgba(103,232,249,0.85)",
-    textTransform: "uppercase",
-  },
-  unlockTitle: {
-    marginTop: 8,
-    textAlign: "center",
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  unlockList: {
-    marginTop: 16,
-    gap: 8,
-  },
-  unlockItem: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.03)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  unlockItemLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  unlockItemCond: {
-    marginTop: 2,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    color: "rgba(165,243,252,0.7)",
   },
   thumbCorner: {
     position: "absolute",

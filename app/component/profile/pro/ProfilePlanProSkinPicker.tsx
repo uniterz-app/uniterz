@@ -23,17 +23,15 @@ import {
   type ProfilePlanProAdoptedEntry,
 } from "@/lib/profile/profilePlanProAdoptedBgVariants";
 import {
-  diffNewlyUnlockedProSkins,
   formatProSkinOwnerCount,
   formatProSkinUnlockCondition,
-  getProSkinUnlockEntry,
   listProImmediateSkinIds,
   PRO_SKIN_UNLOCK_CATALOG,
-  readProSkinUnlockSeenIds,
   userDataIsPro,
-  writeProSkinUnlockSeenIds,
   type ProSkinUnlockCatalogEntry,
+  type ProSkinUnlockProgress,
 } from "@/lib/profile/proSkinUnlock";
+import { proSkinMilestoneProgressBar } from "@/lib/profile/proSkinProgress";
 import { profilePlanProAdoptedSkinSwatch } from "@/lib/profile/profilePlanProAdoptedSkinSwatch";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_CLASS } from "@/lib/profile/profilePlanVisual";
@@ -228,13 +226,20 @@ function CatalogTile({
   entry,
   selected,
   unlocked,
+  isNew,
   owners,
+  progress,
   onSelect,
 }: {
   entry: ProSkinUnlockCatalogEntry;
   selected: boolean;
   unlocked: boolean;
+  isNew: boolean;
   owners: number;
+  progress: Pick<
+    ProSkinUnlockProgress,
+    "posts" | "exactHits" | "maxWinStreak"
+  >;
   onSelect: () => void;
 }) {
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -244,6 +249,10 @@ function CatalogTile({
     }
   };
   const condition = formatProSkinUnlockCondition(entry.unlock, "ja");
+  const bar =
+    !unlocked && entry.unlock.kind !== "pro"
+      ? proSkinMilestoneProgressBar(entry.unlock, progress, "ja")
+      : null;
 
   return (
     <div
@@ -296,6 +305,15 @@ function CatalogTile({
               <Lock size={9} strokeWidth={2.4} aria-hidden />
               LOCKED
             </span>
+          ) : isNew ? (
+            <span
+              className={[
+                nameOxanium.className,
+                "rounded border border-cyan-300/45 bg-cyan-300/15 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.08em] text-cyan-100",
+              ].join(" ")}
+            >
+              NEW
+            </span>
           ) : entry.unlock.kind === "pro" ? (
             <span
               className={[
@@ -334,7 +352,7 @@ function CatalogTile({
             className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[1px]"
             aria-hidden
           >
-            <div className="flex flex-col items-center gap-1 px-2 text-center">
+            <div className="flex w-full max-w-[88%] flex-col items-center gap-1.5 px-2 text-center">
               <Lock size={16} className="text-amber-200/90" strokeWidth={2.2} />
               <span
                 className={[
@@ -344,6 +362,24 @@ function CatalogTile({
               >
                 {entry.unlock.kind === "pro" ? "PRO" : "MILESTONE"}
               </span>
+              {bar ? (
+                <div className="mt-0.5 w-full">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-amber-300/90 to-cyan-300/90"
+                      style={{ width: `${Math.round(bar.ratio * 100)}%` }}
+                    />
+                  </div>
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "mt-1 text-[8px] font-bold tracking-[0.06em] text-white/70",
+                    ].join(" ")}
+                  >
+                    {bar.label}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -381,12 +417,14 @@ export default function ProfilePlanProSkinPicker({
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(() =>
     new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
   );
+  const [milestoneProgress, setMilestoneProgress] = useState<
+    Pick<ProSkinUnlockProgress, "posts" | "exactHits" | "maxWinStreak">
+  >({ posts: 0, exactHits: 0, maxWinStreak: 0 });
   const [ownerCounts, setOwnerCounts] = useState<Record<string, number>>({});
   const [viewerIsPro, setViewerIsPro] = useState(!isProduction);
   const [statusReady, setStatusReady] = useState(!isProduction);
-  const [unlockModalIds, setUnlockModalIds] = useState<ProfilePlanProBgVariant[]>(
-    []
-  );
+  /** ライブ達成キュー（プロフィール復帰モーダルと同一。Picker では NEW のみ） */
+  const [noticeIds, setNoticeIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     setSavedId(initialSelectedId);
@@ -436,18 +474,13 @@ export default function ProfilePlanProSkinPicker({
         setViewerIsPro(isPro);
         setUnlockedIds(new Set(ids));
         setOwnerCounts(status.ownerCounts ?? {});
+        setMilestoneProgress({
+          posts: status.progress?.posts ?? 0,
+          exactHits: status.progress?.exactHits ?? 0,
+          maxWinStreak: status.progress?.maxWinStreak ?? 0,
+        });
         if (status.savedId) setSavedId(status.savedId);
-        const seen = readProSkinUnlockSeenIds();
-        const newly = diffNewlyUnlockedProSkins(ids, seen);
-        if (newly.length > 0) {
-          setUnlockModalIds(newly as ProfilePlanProBgVariant[]);
-        }
-        const nextSeen = new Set(seen);
-        for (const id of ids) {
-          const entry = getProSkinUnlockEntry(id);
-          if (entry?.unlock.kind === "pro") nextSeen.add(id);
-        }
-        writeProSkinUnlockSeenIds(nextSeen);
+        setNoticeIds(new Set(status.noticeIds ?? []));
         setStatusReady(true);
       })
       .catch(async () => {
@@ -508,13 +541,6 @@ export default function ProfilePlanProSkinPicker({
     if (saving) return;
     setOverlayId(null);
     setSaveError(null);
-  }
-
-  function dismissUnlockModal() {
-    const seen = readProSkinUnlockSeenIds();
-    for (const id of unlockModalIds) seen.add(id);
-    writeProSkinUnlockSeenIds(seen);
-    setUnlockModalIds([]);
   }
 
   async function handleApplySkin() {
@@ -602,7 +628,9 @@ export default function ProfilePlanProSkinPicker({
           entry={entry}
           selected={savedId === entry.id}
           unlocked={!isProduction || unlockedIds.has(entry.id)}
+          isNew={noticeIds.has(entry.id)}
           owners={ownerCounts[entry.id] ?? 0}
+          progress={milestoneProgress}
           onSelect={() => openOverlay(entry.id)}
         />
       ))}
@@ -766,81 +794,6 @@ export default function ProfilePlanProSkinPicker({
       </div>
     ) : null;
 
-  const unlockModal =
-    unlockModalIds.length > 0 ? (
-      <div
-        className="fixed inset-0 z-[80] flex items-center justify-center px-4"
-        role="dialog"
-        aria-modal="true"
-        aria-label="スキン解放"
-      >
-        <button
-          type="button"
-          className="absolute inset-0 bg-black/70"
-          aria-label="閉じる"
-          onClick={dismissUnlockModal}
-        />
-        <div className="relative z-[1] w-full max-w-sm border border-cyan-400/35 bg-[#050b14] px-4 py-5 shadow-[0_0_40px_rgba(0,245,255,0.18)]">
-          <p
-            className={[
-              nameOxanium.className,
-              "text-center text-[10px] font-extrabold uppercase tracking-[0.22em] text-cyan-300/85",
-            ].join(" ")}
-          >
-            SKIN UNLOCKED
-          </p>
-          <h2
-            className={[
-              nameRajdhani.className,
-              "mt-2 text-center text-lg font-bold text-white",
-            ].join(" ")}
-          >
-            新しい Pro Skin が解放されました
-          </h2>
-          <ul className="mt-4 space-y-2">
-            {unlockModalIds.map((id) => {
-              const entry = getProSkinUnlockEntry(id);
-              if (!entry) return null;
-              return (
-                <li
-                  key={id}
-                  className="border border-white/10 bg-white/[0.03] px-3 py-2"
-                >
-                  <p
-                    className={[
-                      nameRajdhani.className,
-                      "text-sm font-bold text-white",
-                    ].join(" ")}
-                  >
-                    {entry.label}
-                    {entry.tag ? ` · ${entry.tag}` : ""}
-                  </p>
-                  <p
-                    className={[
-                      nameOxanium.className,
-                      "mt-0.5 text-[10px] font-bold tracking-[0.06em] text-cyan-100/70",
-                    ].join(" ")}
-                  >
-                    {formatProSkinUnlockCondition(entry.unlock, "ja")}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-          <button
-            type="button"
-            onClick={dismissUnlockModal}
-            className={[
-              nameOxanium.className,
-              "mt-4 w-full border-2 border-[#00F5FF] bg-[#00F5FF] py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#050508]",
-            ].join(" ")}
-          >
-            OK
-          </button>
-        </div>
-      </div>
-    ) : null;
-
   const Root = isProduction ? "div" : "main";
 
   return (
@@ -872,7 +825,6 @@ export default function ProfilePlanProSkinPicker({
       </div>
 
       {confirmOverlay}
-      {unlockModal}
     </Root>
   );
 }

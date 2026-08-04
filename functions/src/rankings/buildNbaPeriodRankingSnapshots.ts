@@ -429,6 +429,18 @@ export async function buildNbaPeriodRankingSnapshots(
       );
     }
   }
+
+  try {
+    const { grantProSkinRankUnlocksAfterPeriodSnapshots } = await import(
+      "../profile/grantProSkinRankUnlocksOnPeriodFinal"
+    );
+    await grantProSkinRankUnlocksAfterPeriodSnapshots(now);
+  } catch (err) {
+    console.error(
+      "[buildNbaPeriodRankingSnapshots] pro skin rank grants failed",
+      err
+    );
+  }
 }
 
 /** 期間開始日 + 猶予日数の dateKey */

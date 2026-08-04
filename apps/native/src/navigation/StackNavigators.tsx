@@ -301,6 +301,15 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="ProSkinUnlockPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ProSkinUnlockPreviewScreenWrapper
+            }
+          />
+        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>

@@ -51,7 +51,8 @@
     "badges:wcgp:grant-test": "tsx scripts/archive/grant-wc-2026-gp-badges-test.ts",
     "badges:wcgp:revoke-test": "tsx scripts/archive/revoke-wc-2026-gp-test-grants.ts",
     "badges:wcgp:grant:dry": "DRY_RUN=1 tsx scripts/archive/grant-wc-2026-gp-total-points-badges.ts",
-    "badges:wcgp:grant": "tsx scripts/archive/grant-wc-2026-gp-total-points-badges.ts"
+    "badges:wcgp:grant": "tsx scripts/archive/grant-wc-2026-gp-total-points-badges.ts",
+    "sync:pro-skin-milestone-catalog": "node scripts/sync-pro-skin-milestone-catalog.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

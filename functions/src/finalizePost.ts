@@ -140,32 +140,49 @@ export async function finalizePost({
   });
 
   const uid = p.authorUid;
+  const exactHit = Boolean((baseScore as { exactMatch?: boolean }).exactMatch);
   userUpdateTasks.push(
-    applyPostToUserStatsV2({
-      uid,
-      postId: postDoc.id,
-      createdAt: p.createdAt,
-      startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
-      league: game.league,
+    (async () => {
+      await applyPostToUserStatsV2({
+        uid,
+        postId: postDoc.id,
+        createdAt: p.createdAt,
+        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+        league: game.league,
 
-      isWin: result.isWin,
-      scoreError: result.scoreError,
-      hadUpsetGame,
+        isWin: result.isWin,
+        scoreError: result.scoreError,
+        hadUpsetGame,
 
-      upsetHit: result.upsetHit,
-      upsetPoints,
-      upsetBonus,
-      streakBonus,
-      goalScorerBonus,
-      goalScorerHit: goalScorerBonus > 0,
-      exactHit: false,
+        upsetHit: result.upsetHit,
+        upsetPoints,
+        upsetBonus,
+        streakBonus,
+        goalScorerBonus,
+        goalScorerHit: goalScorerBonus > 0,
+        exactHit,
 
-      points: totalPoints,
-      countsForRanking,
-      seasonPhase: game?.seasonPhase ?? null,
-      wcStage: null,
-      homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
-      awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
-    })
+        points: totalPoints,
+        countsForRanking,
+        seasonPhase: game?.seasonPhase ?? null,
+        wcStage: null,
+        homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
+        awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
+      });
+
+      const { syncProSkinProgressOnNbaSettle } = await import(
+        "./profile/syncProSkinProgressOnNbaSettle"
+      );
+      await syncProSkinProgressOnNbaSettle({
+        uid,
+        postId: postDoc.id,
+        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+        league: game.league,
+        countsForRanking,
+        seasonPhase: game?.seasonPhase ?? null,
+        exactHit,
+        activeWinStreak,
+      });
+    })()
   );
 }

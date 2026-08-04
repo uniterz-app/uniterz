@@ -55,6 +55,11 @@ const LINKS = [
     note: "赤×黒ダーク案 3 つ",
   },
   {
+    href: "/mobile/pro-skin-unlock-preview",
+    title: "Pro Skin 解放モーダル",
+    note: "マイルストーン達成通知",
+  },
+  {
     href: "/mobile/tutorial-preview",
     title: "初回チュートリアル",
     note: "スライド / スポットライト / ハイブリッド比較",
