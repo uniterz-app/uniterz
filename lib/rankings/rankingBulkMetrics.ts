@@ -5,15 +5,11 @@ export function allRankingMetricsParam(): string {
   return REFETCH_ALL_METRICS_NBA;
 }
 
-/** 一覧 Top20 が取得済みか（personalOnly プリフェッチの空 rows では false） */
+/** 一覧 Top20 が取得済みか（空配列も取得済み＝再フェッチ無限ループ防止） */
 export function isMetricListBundleLoaded(
   bundle: { rows?: unknown[] } | null | undefined
 ): boolean {
-  return (
-    bundle != null &&
-    Array.isArray(bundle.rows) &&
-    bundle.rows.length > 0
-  );
+  return bundle != null && Array.isArray(bundle.rows);
 }
 
 /** 総合得点の personal 取得後、他指標の YOUR RANK が未プリフェッチか */

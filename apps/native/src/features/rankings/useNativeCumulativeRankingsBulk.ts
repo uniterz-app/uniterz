@@ -219,6 +219,10 @@ export function useNativeCumulativeRankingsBulk(
   const mountPrimaryGenRef = useRef(0);
   const metricReqSeqRef = useRef(0);
   const phaseRoundGenRef = useRef(0);
+  const byMetricRef = useRef(byMetric);
+  byMetricRef.current = byMetric;
+  /** 空 rows でも同じ指標を連打取得しない */
+  const attemptedMetricsRef = useRef(new Set<string>());
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -231,6 +235,7 @@ export function useNativeCumulativeRankingsBulk(
   useEffect(() => {
     phaseRoundGenRef.current += 1;
     metricReqSeqRef.current += 1;
+    attemptedMetricsRef.current = new Set();
     let cancelled = false;
 
     const cached = readListCache(phase, round, wcStage);
@@ -279,8 +284,11 @@ export function useNativeCumulativeRankingsBulk(
     async (metric: string) => {
       if (metric === "totalPoints") return;
       if (!authReady) return;
-      if (!byMetric?.totalPoints) return;
-      if (isMetricListBundleLoaded(byMetric?.[metric])) return;
+      const current = byMetricRef.current;
+      if (!current?.totalPoints) return;
+      if (isMetricListBundleLoaded(current[metric])) return;
+      if (attemptedMetricsRef.current.has(metric)) return;
+      attemptedMetricsRef.current.add(metric);
 
       const genAtStart = phaseRoundGenRef.current;
       const seq = ++metricReqSeqRef.current;
@@ -313,7 +321,7 @@ export function useNativeCumulativeRankingsBulk(
         );
       }
     },
-    [authReady, byMetric, phase, round, wcStage]
+    [authReady, phase, round, wcStage]
   );
 
   const listReady = byMetric?.totalPoints != null;

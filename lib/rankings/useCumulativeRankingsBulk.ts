@@ -372,6 +372,9 @@ export function useCumulativeRankingsBulk(
   const phaseRoundGenRef = useRef(0);
   const metricReqSeqRef = useRef(0);
   const invalidateSeqRef = useRef(0);
+  const byMetricRef = useRef(byMetric);
+  byMetricRef.current = byMetric;
+  const attemptedMetricsRef = useRef(new Set<string>());
 
   useEffect(() => {
     const onPatchMyCountry = (ev: Event) => {
@@ -437,6 +440,7 @@ export function useCumulativeRankingsBulk(
   useEffect(() => {
     phaseRoundGenRef.current += 1;
     metricReqSeqRef.current += 1;
+    attemptedMetricsRef.current = new Set();
     let cancelled = false;
 
     const applyAnonList = (bundles: Record<string, BulkMetricPayload>) => {
@@ -554,8 +558,11 @@ export function useCumulativeRankingsBulk(
   const ensureMetric = useCallback(
     async (metric: string) => {
       if (!authReady) return;
-      if (!byMetric?.totalPoints) return;
-      if (isMetricListBundleLoaded(byMetric?.[metric])) return;
+      const current = byMetricRef.current;
+      if (!current?.totalPoints) return;
+      if (isMetricListBundleLoaded(current[metric])) return;
+      if (attemptedMetricsRef.current.has(metric)) return;
+      attemptedMetricsRef.current.add(metric);
 
       const genAtStart = phaseRoundGenRef.current;
       const seq = ++metricReqSeqRef.current;
@@ -618,7 +625,7 @@ export function useCumulativeRankingsBulk(
         });
       }
     },
-    [authReady, byMetric, phase, round, wcStage]
+    [authReady, phase, round, wcStage]
   );
 
   const listReady = byMetric?.totalPoints != null;
