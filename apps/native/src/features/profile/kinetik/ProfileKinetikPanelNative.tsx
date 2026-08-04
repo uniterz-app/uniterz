@@ -989,10 +989,12 @@ function KinetikUnitVaultNative({
   balance,
   ariaLabel,
   corner,
+  onPress,
 }: {
   balance: number;
   ariaLabel: string;
   corner?: boolean;
+  onPress?: () => void;
 }) {
   const disc = corner ? 26 : 28;
   const inner = corner ? 19 : 20;
@@ -1111,54 +1113,62 @@ function KinetikUnitVaultNative({
   return (
     <Animated.View
       style={[styles.unitVault, corner ? styles.unitVaultCorner : null, rootStyle]}
-      accessibilityRole="text"
+      accessibilityRole={onPress ? "button" : "text"}
       accessibilityLabel={ariaLabel}
+      accessibilityHint={onPress ? ariaLabel : undefined}
     >
-      <Animated.View
-        style={[
-          styles.unitVaultDisc,
-          { width: disc, height: disc, borderRadius: disc / 2 },
-          discStyle,
-        ]}
+      <Pressable
+        disabled={!onPress}
+        onPress={onPress}
+        style={styles.unitVaultPressable}
+        hitSlop={6}
       >
-        <LinearGradient
-          colors={["#f9d576", "#b8860b", "#f6c344", "#8a6410"]}
-          start={{ x: 0.15, y: 0 }}
-          end={{ x: 0.85, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
         <Animated.View
-          pointerEvents="none"
-          style={[styles.unitVaultSheen, { height: disc * 1.4, top: -disc * 0.2 }, sheenStyle]}
-        />
-        <View
           style={[
-            styles.unitVaultDiscInner,
-            {
-              width: inner,
-              height: inner,
-              borderRadius: inner / 2,
-            },
+            styles.unitVaultDisc,
+            { width: disc, height: disc, borderRadius: disc / 2 },
+            discStyle,
           ]}
         >
           <LinearGradient
-            colors={["#ffedb0", "#d9a125"]}
-            start={{ x: 0.3, y: 0.2 }}
-            end={{ x: 0.9, y: 1 }}
+            colors={["#f9d576", "#b8860b", "#f6c344", "#8a6410"]}
+            start={{ x: 0.15, y: 0 }}
+            end={{ x: 0.85, y: 1 }}
             style={StyleSheet.absoluteFillObject}
           />
-          <Text style={[styles.unitVaultU, corner ? styles.unitVaultUCorner : null]}>U</Text>
-        </View>
-      </Animated.View>
-      <Animated.Text
-        style={[
-          styles.unitVaultValue,
-          corner ? styles.unitVaultValueCorner : null,
-          valueGlowStyle,
-        ]}
-      >
-        {displayBalance.toLocaleString("en-US")}
-      </Animated.Text>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.unitVaultSheen, { height: disc * 1.4, top: -disc * 0.2 }, sheenStyle]}
+          />
+          <View
+            style={[
+              styles.unitVaultDiscInner,
+              {
+                width: inner,
+                height: inner,
+                borderRadius: inner / 2,
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={["#ffedb0", "#d9a125"]}
+              start={{ x: 0.3, y: 0.2 }}
+              end={{ x: 0.9, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <Text style={[styles.unitVaultU, corner ? styles.unitVaultUCorner : null]}>U</Text>
+          </View>
+        </Animated.View>
+        <Animated.Text
+          style={[
+            styles.unitVaultValue,
+            corner ? styles.unitVaultValueCorner : null,
+            valueGlowStyle,
+          ]}
+        >
+          {displayBalance.toLocaleString("en-US")}
+        </Animated.Text>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -1335,6 +1345,8 @@ export type ProfileKinetikPanelNativeProps = {
   profileViewCount?: number | null;
   /** 保有 Unit（公開） */
   unitBalance?: number | null;
+  /** 自分のプロフィール時: Unit 履歴を開く */
+  onOpenUnitLedger?: () => void;
 };
 
 export default function ProfileKinetikPanelNative({
@@ -1363,6 +1375,7 @@ export default function ProfileKinetikPanelNative({
   onMetricsPeriodChange,
   profileViewCount = null,
   unitBalance = null,
+  onOpenUnitLedger,
 }: ProfileKinetikPanelNativeProps) {
   const isJa = language === "ja";
   const isSeasonMetrics =
@@ -1677,8 +1690,15 @@ export default function ProfileKinetikPanelNative({
                   <KinetikUnitVaultNative
                     // UI 確認用モック（実残高が 0 のとき 1,000 を表示）
                     balance={unitBalance > 0 ? unitBalance : 1000}
-                    ariaLabel={unitBalanceAria}
+                    ariaLabel={
+                      onOpenUnitLedger
+                        ? isJa
+                          ? `${unitBalanceAria} · 履歴を開く`
+                          : `${unitBalanceAria} · Open history`
+                        : unitBalanceAria
+                    }
                     corner
+                    onPress={onOpenUnitLedger}
                   />
                 ) : null}
               </View>
@@ -2076,6 +2096,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     flexShrink: 0,
+  },
+  unitVaultPressable: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   unitVaultDisc: {
     alignItems: "center",

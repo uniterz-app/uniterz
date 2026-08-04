@@ -676,6 +676,8 @@ const en: Messages = {
     sectionMain: "Main",
     editProfile: "Edit Profile",
     invite: "Invite",
+    unitHistory: "Unit History",
+    unitRedeem: "Redeem Units",
     sectionSubscription: "Subscription",
     sectionSupport: "Support",
     sectionAdmin: "Admin",

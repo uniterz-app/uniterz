@@ -107,10 +107,14 @@ NBA ジャージはスウィングマンを基本とし、価格上限内であ�
 
 | 項目 | 内容 |
 |---|---|
-| 締切 | 交換申請は **毎月末** で締め切る |
-| 注文 | その月に受け付けた申請を月末以降にまとめて確認し、商品を注文 |
+| 受付 | 交換申請は月中いつでも受け付ける |
+| まとめ購入 | 配送料を抑えるため、**その月の申請を月末にまとめて購入**する |
+| 目安 | 購入・発送準備は **おおよそ毎月 25 日前後** |
+| 例 | 4/1 に申請しても、実際の購入は 4/25 前後 |
 
 申請時点で在庫があっても、注文時点で在庫切れとなる可能性がある。
+
+ユーザー向け画面では、申請直後に「すぐ購入されない」ことを明示する。
 
 ---
 
@@ -265,4 +269,50 @@ NBA ジャージはスウィングマンを基本とし、価格上限内であ�
 
 | 日付 | 内容 |
 |---|---|
+| 2026-08-04 | 月末まとめ購入（〜25日前後）を運用正として明記。画面コピー連動 |
+| 2026-08-04 | 画面・API・ステータス実装メモを追記。Unit ロックはライブフラグ待ち |
 | 2026-07-23 | 初版。Unit 商品交換設計を設計図として保管 |
+
+---
+
+## 21. 実装メモ（2026-08-04）
+
+### 画面
+
+| 画面 | Web | Native |
+|---|---|---|
+| カタログ / 一覧 | `/mobile/redeem` | `Redeem` |
+| 申請 | `/mobile/redeem/apply` | `RedeemApply` |
+| 進捗 | `/mobile/redeem/[id]` | `RedeemProgress` |
+| Admin | `/admin/redemptions` | — |
+
+### ステータス
+
+`draft` → `pending` → (`needs_revision`) → `approved` → `ordered` → `shipped` → `completed`  
+分岐: `cancelled` / `rejected`（注文前は Unit 戻し）
+
+### API
+
+- `GET/POST /api/me/redemptions`
+- `GET /api/me/redemptions/[id]`
+- `GET/PATCH /api/admin/redemptions`
+
+### ライブ切替
+
+[`lib/redemption/redemptionLiveFlags.ts`](../lib/redemption/redemptionLiveFlags.ts)
+
+- `REDEMPTION_UNITS_LIVE` — 申請時 `unitReserved` ロック、購入時 ledger 消費
+- `MONTHLY_REPORT_UNITS_FROM_LEDGER` — 月次 `unitsEarned` を ledger から
+
+弁護士 OK 後に両方 `true` にする。
+
+### まとめ購入
+
+- 申請は月中いつでも可
+- **おおよそ毎月 25 日前後**にその月分をまとめて購入（配送料抑制）
+- 例: 4/1 申請 → 4/25 前後に購入
+- 文言: `lib/redemption/redemptionBatchScheduleCopy.ts`
+
+### Firestore
+
+- `unit_redemptions/{id}` — 本人 read / write は Admin SDK のみ（rules）

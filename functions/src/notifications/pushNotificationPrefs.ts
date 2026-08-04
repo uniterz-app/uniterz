@@ -9,6 +9,7 @@ export const PUSH_NOTIFICATION_PREF_KEYS = [
   "predictionDeadline",
   "pregameDigest",
   "proInsightUpdate",
+  "monthlyReport",
 ] as const;
 
 export type PushNotificationPrefKey = (typeof PUSH_NOTIFICATION_PREF_KEYS)[number];
@@ -30,6 +31,7 @@ export const DEFAULT_PUSH_NOTIFICATION_PREFS: PushNotificationPrefs = {
   predictionDeadline: true,
   pregameDigest: false,
   proInsightUpdate: false,
+  monthlyReport: true,
   predictionDeadlineMinutes: 30,
 };
 
@@ -53,6 +55,8 @@ export function prefKeyForPushType(
       return "pregameDigest";
     case "pro_insight_update":
       return "proInsightUpdate";
+    case "monthly_report":
+      return "monthlyReport";
   }
 }
 
@@ -98,6 +102,10 @@ export function parsePushNotificationPrefs(raw: unknown): PushNotificationPrefs 
     proInsightUpdate: boolOr(
       "proInsightUpdate",
       DEFAULT_PUSH_NOTIFICATION_PREFS.proInsightUpdate
+    ),
+    monthlyReport: boolOr(
+      "monthlyReport",
+      DEFAULT_PUSH_NOTIFICATION_PREFS.monthlyReport
     ),
     predictionDeadlineMinutes: parseDeadlineMinutes(
       src.predictionDeadlineMinutes

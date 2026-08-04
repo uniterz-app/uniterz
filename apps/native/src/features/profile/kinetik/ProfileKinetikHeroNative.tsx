@@ -49,6 +49,7 @@ export type ProfileKinetikHeroNativeProps = {
   targetUid?: string | null;
   profileViewCount?: number | null;
   unitBalance?: number | null;
+  onOpenUnitLedger?: () => void;
 };
 
 function toSummaryInput(summary?: ProfileSummaryNative | null) {
@@ -110,6 +111,7 @@ export default function ProfileKinetikHeroNative({
   targetUid = null,
   profileViewCount = null,
   unitBalance = null,
+  onOpenUnitLedger,
 }: ProfileKinetikHeroNativeProps) {
   const preferredPeriod = useMemo(() => preferredNbaKinetikPeriod(), []);
   const [metricsPeriod, setMetricsPeriod] =
@@ -228,6 +230,7 @@ export default function ProfileKinetikHeroNative({
       onBadgePress={onBadgePress}
       profileViewCount={profileViewCount}
       unitBalance={unitBalance}
+      onOpenUnitLedger={isMe ? onOpenUnitLedger : undefined}
       shareHandle={handle}
       metricValueDeltas={null}
       rankingLeague="nba"

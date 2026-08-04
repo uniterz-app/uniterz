@@ -160,6 +160,25 @@ export function softenTeamUiColor(hex: string): string {
   return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
 }
 
+/** 塗りの上に載せる文字色（暗い紺などでは白、明るい黄などは墨） */
+export function contrastingInkOnHex(bgHex: string): string {
+  const raw = bgHex.replace("#", "").trim();
+  if (raw.length !== 6) return "#050508";
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return "#050508";
+
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const lum =
+    0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  // Timberwolves 紺など低輝度は白字。スキャン線でさらに暗くなる分、閾値はやや高め
+  return lum < 0.42 ? "#F5F7FA" : "#050508";
+}
+
 /** カード枠・セクションアクセント用（ジャージ mark は getTeamJerseyPrimaryColor のまま） */
 export function getTeamUiAccentColor(
   league: League,

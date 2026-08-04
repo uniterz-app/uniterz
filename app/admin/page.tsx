@@ -41,6 +41,11 @@ export default function AdminHomePage() {
           title="試合データ インポート"
           desc="JSONプレビュー → Firestoreへ一括書込み"
         />
+        <Card
+          href="/admin/redemptions"
+          title="商品交換申請"
+          desc="審査・購入・追跡番号の更新"
+        />
       </div>
     </AdminGuard>
   );

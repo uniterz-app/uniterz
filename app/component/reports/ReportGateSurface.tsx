@@ -101,7 +101,7 @@ export default function ReportGateSurface({
           onClick={onCtaClick}
           className={[
             nameOxanium.className,
-            "min-h-12 min-w-[200px] border border-white/35 bg-[#00F5FF] px-5 py-3 text-[13px] font-extrabold uppercase tracking-[0.12em] text-[#050508] transition hover:brightness-110 active:scale-[0.98]",
+            "min-h-10 min-w-[160px] border border-white/35 bg-[#00F5FF] px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#050508] transition hover:brightness-110 active:scale-[0.98]",
           ].join(" ")}
         >
           {copy.cta}
@@ -112,7 +112,7 @@ export default function ReportGateSurface({
           onClick={onCtaClick}
           className={[
             nameOxanium.className,
-            "inline-flex min-h-12 min-w-[200px] items-center justify-center border border-white/35 bg-[#00F5FF] px-5 py-3 text-[13px] font-extrabold uppercase tracking-[0.12em] text-[#050508] transition hover:brightness-110 active:scale-[0.98]",
+            "inline-flex min-h-10 min-w-[160px] items-center justify-center border border-white/35 bg-[#00F5FF] px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#050508] transition hover:brightness-110 active:scale-[0.98]",
           ].join(" ")}
         >
           {copy.cta}

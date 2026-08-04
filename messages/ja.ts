@@ -671,6 +671,8 @@ const ja = {
     sectionMain: "メイン",
     editProfile: "プロフィール編集",
     invite: "招待",
+    unitHistory: "Unit 履歴",
+    unitRedeem: "商品交換",
     sectionSubscription: "サブスクリプション",
     sectionSupport: "サポート",
     sectionAdmin: "管理",

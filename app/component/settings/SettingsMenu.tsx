@@ -23,6 +23,8 @@ import {
   Trash2,
   Hexagon,
   UserPlus,
+  Coins,
+  ShoppingBag,
 } from "lucide-react";
 import {
   parseUserProfileFields,
@@ -43,6 +45,10 @@ import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
+import {
+  ProCyberBadge,
+  proBadgeStaticMotion,
+} from "@/app/component/common/ProCyberBadge";
 import {
   markNavigatedFromSideMenu,
   clearSideMenuOrigin,
@@ -202,12 +208,14 @@ export default function SettingsMenu({
     <>
       <nav className={cn(containerClasses, "overflow-x-hidden")}>
         {user?.uid ? (
-          <div
+          <button
+            type="button"
             className="side-menu-unit-wallet"
+            onClick={() => pushFromMenu(p("/web/units", "/mobile/units"))}
             aria-label={
               isEn
-                ? `${unitBalance.toLocaleString("en-US")} Units`
-                : `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
+                ? `${unitBalance.toLocaleString("en-US")} Units · Open history`
+                : `保有 Unit ${unitBalance.toLocaleString("ja-JP")} · 履歴を開く`
             }
           >
             <span className="side-menu-unit-wallet__mark" aria-hidden>
@@ -223,7 +231,7 @@ export default function SettingsMenu({
                 {unitBalance.toLocaleString("en-US")}
               </span>
             </span>
-          </div>
+          </button>
         ) : null}
 
         <CyberSideMenuSectionTitle first>
@@ -253,6 +261,26 @@ export default function SettingsMenu({
             onClick={() => pushFromMenu(p("/web/invite", "/mobile/invite"))}
           >
             <span className={cn(isEn && "uppercase")}>{m.settings.invite}</span>
+          </SideMenuItemButton>
+
+          <SideMenuItemButton
+            icon={Coins}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(p("/web/units", "/mobile/units"))}
+          >
+            <span className={cn(isEn && "uppercase")}>
+              {m.settings.unitHistory}
+            </span>
+          </SideMenuItemButton>
+
+          <SideMenuItemButton
+            icon={ShoppingBag}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(p("/web/redeem", "/mobile/redeem"))}
+          >
+            <span className={cn(isEn && "uppercase")}>
+              {m.settings.unitRedeem}
+            </span>
           </SideMenuItemButton>
 
           <SideMenuItemButton
@@ -481,15 +509,22 @@ export default function SettingsMenu({
               <span className="side-menu-identity__meta">
                 <span className="side-menu-identity__name-row">
                   <span className="side-menu-identity__name">{identityName}</span>
-                  <span
-                    className={cn(
-                      nameOxanium.className,
-                      "side-menu-identity__badge",
-                      plan === "pro" && "is-pro"
-                    )}
-                  >
-                    {planLabel}
-                  </span>
+                  {plan === "pro" ? (
+                    <ProCyberBadge
+                      ariaLabel="PRO"
+                      compact
+                      {...proBadgeStaticMotion}
+                    />
+                  ) : (
+                    <span
+                      className={cn(
+                        nameOxanium.className,
+                        "side-menu-identity__badge"
+                      )}
+                    >
+                      FREE
+                    </span>
+                  )}
                 </span>
                 <span
                   className={cn(

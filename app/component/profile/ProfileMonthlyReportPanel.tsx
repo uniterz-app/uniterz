@@ -228,6 +228,20 @@ export default function ProfileMonthlyReportPanel({
     <div className="space-y-3">
       {gateSwitcher}
 
+      <p
+        className={[
+          nameOxanium.className,
+          "text-[10px] font-bold uppercase tracking-[0.14em] text-white/40",
+        ].join(" ")}
+      >
+        {isJa ? "REPORT ARCHIVE" : "REPORT ARCHIVE"}
+      </p>
+      <p className="text-[12px] leading-relaxed text-white/50">
+        {isJa
+          ? "週次は競争の実況、月次は自分の分析。毎月1日朝に月次が届きます。"
+          : "Weekly = competition pulse. Monthly = self analysis. Monthly drops on the 1st morning."}
+      </p>
+
       <div className="flex gap-1.5">
         {(
           [

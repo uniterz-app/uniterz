@@ -557,17 +557,17 @@ UI プレビューは一通り揃っている。次は **実データ接続・�
 | 2 | **CONSISTENCY 本実装** | 済 | ピックアップ結果列の連勝/連敗 → stamina raw → コホート百分位 + maxLoseStreak 閾値 |
 | 3 | **数字の前月比** | 済 | 前月 daily 合算から posts/winRate/points/scorer/upset の `prevDelta`（units は stub のまま null） |
 | 4 | **cron を 1日 8:00 JST に変更** | 済 | `0 8 1 * *`（Asia/Tokyo） |
-| 5 | **月次レポート確定プッシュ** | 未 | 集計後、Pro＋トークン持ちへ Expo push。「毎月1日朝に届く」体験。週次 final プッシュと同系 |
-| 6 | **Report タブ入口** | △ | Stats → Report。週次・月次を user_reports から表示。一覧フル UI はあと |
-| 7 | **Pro 閲覧ガード** | △ | Report タブは Pro のみ。厳密強化は余地 |
-| 8 | **Unit ledger 接続** | 待ち | UI（内訳バー＋展開）済み。付与ロジック・ledger は **弁護士 OK 後**。内訳・表紙 `unitsEarned` を stub から切替 |
-| 9 | **Unit 獲得履歴ページ** | 待ち | レポート内訳とは別。全期間の付与履歴 |
-| 10 | **Pro Stats 廃止** | △ UI・cron 済 | Profile から ProAnalysis 除去、旧月次 cron export 停止。孤児 hook / データ整理は残 |
+| 5 | **月次レポート確定プッシュ** | 済 | 集計後 Pro＋トークン持ちへ Expo `monthly_report`（`notifyMonthlyReportPush`） |
+| 6 | **Report タブ入口** | 済 | Stats → Report。週次・月次を user_reports から表示。入口コピー微調整済 |
+| 7 | **Pro 閲覧ガード** | 済 | Report タブは Pro のみ（Free はゲート） |
+| 8 | **Unit ledger 接続** | 待ち | UI（内訳バー＋展開）済み。`MONTHLY_REPORT_UNITS_FROM_LEDGER` フラグ＋`loadMonthlyUnitsFromLedger` 用意。弁護士 OK 後に ON |
+| 9 | **Unit 獲得履歴ページ** | 済 | `/mobile/units` · Native `UnitLedger` |
+| 10 | **Pro Stats 廃止** | △ UI·cron 済 | Profile から ProAnalysis 除去、旧月次 cron export 停止。孤児 hook / データ整理は残 |
 
 メモ:
 
 - ピックアップ週指定（`nba_pickup_weeks`）は運用前提。未指定月は ACTIVITY / 相性 / ハイライト / クセが空または弱い
-- **#1–#4 は完了。** 次は **#5 から**（プッシュ → Report 入口…）。Unit は弁護士 OK 後
+- **#1–#7・#9 は完了。** Unit 内訳（#8）は弁護士 OK 後にフラグ ON
 
 #### 月次レポート集計スキーム
 
@@ -581,7 +581,7 @@ UI プレビューは一通り揃っている。次は **実データ接続・�
   pickupWeekKey / nba_pickup_weeks                         → 参加率の分母
   （1 パスのコホート計算）                                    → 中央値・上位10%・レーダー%
   monthlyRadarJudge                                        → 強み・分析タイプ
-  Units                                                    → ledger 未接続のため stub 0/null
+  Units                                                    → フラグ OFF 時 stub / ON 時 ledger
 
 組み立て（I/O なし）
   buildMonthlyReportFromSources → MonthlyReport

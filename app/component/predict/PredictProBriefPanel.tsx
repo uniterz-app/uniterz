@@ -10,14 +10,27 @@ import {
   briefEdgeDetail,
   briefLineText,
 } from "@/lib/predict/predictProBrief";
+import {
+  proInsightGateCopy,
+  type ProInsightGateBulletIcon,
+} from "@/lib/predict/proInsightGateCopy";
 import type { Language } from "@/lib/i18n/language";
 import { nameOxanium } from "@/lib/fonts";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
-import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
+import {
+  ProCyberBadge,
+  proBadgeStaticMotion,
+} from "@/app/component/common/ProCyberBadge";
 import type { ReactNode } from "react";
-import { t } from "@/lib/i18n/t";
+import {
+  CalendarRange,
+  MessageSquareText,
+  Scale,
+  Swords,
+  Waypoints,
+} from "lucide-react";
 
 type Props = {
   brief?: PredictProBrief | null;
@@ -40,6 +53,14 @@ const EMPTY_CARD: ProBriefTeamCard = {
   context: [],
 };
 
+const BULLET_ICONS: Record<ProInsightGateBulletIcon, typeof Swords> = {
+  matchup: Swords,
+  schedule: CalendarRange,
+  context: Waypoints,
+  edge: Scale,
+  comment: MessageSquareText,
+};
+
 function teamNick(teamId: string, fallback: string): string {
   if (teamId.startsWith("nba-")) {
     const full = NBA_TEAM_NAME_BY_ID[teamId];
@@ -60,6 +81,28 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = Number.parseInt(raw.slice(2, 4), 16);
   const b = Number.parseInt(raw.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function TitleWithBrandFonts({ title }: { title: string }) {
+  return (
+    <>
+      {title.split(/(Pro)/).map((part, i) =>
+        part === "Pro" ? (
+          <span
+            key={i}
+            className={[
+              nameOxanium.className,
+              "font-extrabold uppercase tracking-[0.06em]",
+            ].join(" ")}
+          >
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
 }
 
 function SectionLabel({
@@ -209,7 +252,8 @@ export default function PredictProBriefPanel({
   locked = false,
   onPressUpgrade,
 }: Props) {
-  const m = t(language).predict;
+  const gateLang = language === "ja" ? "ja" : "en";
+  const gate = proInsightGateCopy(gateLang);
   const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
   const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
   const homeColor = teamAccent(homeTeamId);
@@ -217,7 +261,6 @@ export default function PredictProBriefPanel({
   const home = brief?.home ?? EMPTY_CARD;
   const away = brief?.away ?? EMPTY_CARD;
   const usePlaceholder = brief == null;
-  const upgradeLabel = m.insightUpgradeCta;
 
   const body = (
     <>
@@ -360,37 +403,91 @@ export default function PredictProBriefPanel({
       </div>
 
       {locked ? (
-        <div className="relative min-h-[180px] overflow-hidden">
-          <div aria-hidden className="select-none">
+        <div className="relative isolate min-h-[320px] overflow-hidden">
+          <div
+            aria-hidden
+            className="select-none [mask-image:linear-gradient(180deg,#000_50%,transparent_100%)]"
+          >
             {body}
           </div>
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 backdrop-blur-[10px]"
+            className="pointer-events-none absolute inset-0 backdrop-blur-[12px]"
             style={{
               background:
-                "linear-gradient(180deg, rgba(4,8,14,0.28) 0%, rgba(4,8,14,0.55) 100%)",
+                "linear-gradient(180deg, rgba(4,8,14,0.22) 0%, rgba(4,8,14,0.62) 48%, rgba(4,8,14,0.82) 100%)",
             }}
           />
-          <div className="absolute inset-0 z-1 flex flex-col items-center justify-center gap-2.5 px-5">
-            <p
-              className={[
-                nameOxanium.className,
-                "text-center text-[12px] font-bold tracking-wide text-white/72",
-              ].join(" ")}
-            >
-              {m.insightProOnly}
-            </p>
-            <button
-              type="button"
-              onClick={onPressUpgrade}
-              className={[
-                nameOxanium.className,
-                "min-w-[180px] border border-white/35 bg-[#00F5FF] px-4 py-3 text-[13px] font-extrabold uppercase tracking-[0.12em] text-[#050508]",
-              ].join(" ")}
-            >
-              {upgradeLabel}
-            </button>
+          <div className="absolute inset-0 z-1 flex items-start justify-center px-2 pb-6 pt-6 sm:pt-8">
+            <div className="flex w-full max-w-[22rem] flex-col items-stretch gap-3 px-2 text-center">
+              <div className="flex flex-col items-center gap-2">
+                <p
+                  className={[
+                    nameOxanium.className,
+                    "text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200/80",
+                  ].join(" ")}
+                >
+                  {gate.eyebrow}
+                </p>
+                <span className="inline-flex origin-top scale-[1.45]">
+                  <ProCyberBadge
+                    {...proBadgeStaticMotion}
+                    premium
+                    ariaLabel={gateLang === "ja" ? "Pro会員" : "Pro member"}
+                  />
+                </span>
+              </div>
+              <h2 className="text-balance text-[17px] font-bold leading-snug text-white">
+                <TitleWithBrandFonts title={gate.title} />
+              </h2>
+              <p className="text-pretty text-[13px] leading-relaxed text-white/72">
+                {gate.body}
+              </p>
+              {onPressUpgrade ? (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={onPressUpgrade}
+                    className={[
+                      nameOxanium.className,
+                      "min-h-10 min-w-[160px] border border-white/35 bg-[#00F5FF] px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#050508] transition hover:brightness-110 active:scale-[0.98]",
+                    ].join(" ")}
+                  >
+                    {gate.cta}
+                  </button>
+                </div>
+              ) : null}
+              <div className="w-full rounded-[2px] border border-orange-400/55 bg-orange-500/[0.07] px-3 py-2.5 text-left shadow-[0_0_18px_rgba(251,146,60,0.12)]">
+                <ul className="list-none space-y-2">
+                  {gate.bullets.map((item) => {
+                    const Icon = BULLET_ICONS[item.icon];
+                    return (
+                      <li key={item.title} className="flex items-start gap-2.5">
+                        <span
+                          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border border-orange-400/45 bg-orange-500/15 text-orange-300"
+                          aria-hidden
+                        >
+                          <Icon className="h-3 w-3" strokeWidth={2.4} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className={[
+                              nameOxanium.className,
+                              "text-[11px] font-extrabold tracking-[0.04em] text-orange-100",
+                            ].join(" ")}
+                          >
+                            {item.title}
+                          </p>
+                          <p className="mt-0.5 break-words text-[11px] leading-snug text-white/70">
+                            {item.detail}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       ) : (

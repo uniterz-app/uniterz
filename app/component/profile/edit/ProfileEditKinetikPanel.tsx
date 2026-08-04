@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -521,24 +522,41 @@ function ProfileUnitVault({
   balance,
   ariaLabel,
   corner,
+  onPress,
 }: {
   balance: number;
   ariaLabel: string;
   corner?: boolean;
+  onPress?: () => void;
 }) {
   const reduceMotion = useReducedMotion() === true;
   /** Web ランキング系と同系統のカウントアップ（約 0.9s） */
   const displayBalance = useCountUp(balance, 900, !reduceMotion, 0, "target");
+  const interactive = typeof onPress === "function";
   return (
     <motion.div
       className={[
         "profile-edit-kinetik-unit-vault",
         corner ? "profile-edit-kinetik-unit-vault--corner" : "",
+        interactive ? "profile-edit-kinetik-unit-vault--pressable" : "",
       ]
         .filter(Boolean)
         .join(" ")}
       aria-label={ariaLabel}
       title={ariaLabel}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? onPress : undefined}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onPress();
+              }
+            }
+          : undefined
+      }
       initial={reduceMotion ? false : { opacity: 0, scale: 0.86, y: -4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={
@@ -740,6 +758,7 @@ export default function ProfileEditKinetikPanel({
   profileViewCount = null,
   unitBalance = null,
 }: Props) {
+  const router = useRouter();
   const isJa = language === "ja";
   const isSeasonMetrics =
     metricsPeriod === "season" && !!onMetricsPeriodChange;
@@ -1099,13 +1118,26 @@ export default function ProfileEditKinetikPanel({
     </div>
   );
 
+  const openUnitLedger = editable
+    ? () => {
+        router.push(layout === "web" ? "/web/units" : "/mobile/units");
+      }
+    : undefined;
+
   const unitCorner =
     unitBalance != null && unitBalanceAria ? (
       <ProfileUnitVault
         // UI 確認用モック（実残高が 0 のとき 1,000 を表示）
         balance={unitBalance > 0 ? unitBalance : 1000}
-        ariaLabel={unitBalanceAria}
+        ariaLabel={
+          openUnitLedger
+            ? isJa
+              ? `${unitBalanceAria} · 履歴を開く`
+              : `${unitBalanceAria} · Open history`
+            : unitBalanceAria
+        }
         corner
+        onPress={openUnitLedger}
       />
     ) : null;
 

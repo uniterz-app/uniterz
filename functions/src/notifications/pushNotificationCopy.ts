@@ -12,12 +12,14 @@ export type PushNotificationType =
   | "starter_change"
   | "prediction_deadline"
   | "pregame_digest"
-  | "pro_insight_update";
+  | "pro_insight_update"
+  | "monthly_report";
 
 export type PushNotificationData = {
   type: PushNotificationType;
   gameId?: string;
   postId?: string;
+  monthKey?: string;
 };
 
 export type PushLanguage = "ja" | "en";
@@ -94,6 +96,11 @@ export function buildPushNotificationCopy(
               ? `${matchup} — the conclusion changed.`
               : "The insight conclusion changed. Open the match."),
         };
+      case "monthly_report":
+        return {
+          title: "Monthly report is ready",
+          body: detail || "Your Pro monthly report is available in Profile → Report.",
+        };
     }
   }
 
@@ -155,6 +162,13 @@ export function buildPushNotificationCopy(
           (matchup
             ? `${matchup} の結論が変わりました。`
             : "重要結論が変わりました。試合を開いて確認してください。"),
+      };
+    case "monthly_report":
+      return {
+        title: "月次レポートが届きました",
+        body:
+          detail ||
+          "プロフィールの Report タブで月次レポートを確認できます。",
       };
   }
 }

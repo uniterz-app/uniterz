@@ -236,6 +236,13 @@ export default function ProfileStatsTabNative({
     <View style={styles.root}>
       {gateSwitcher}
 
+      <Text style={styles.archiveLabel}>REPORT ARCHIVE</Text>
+      <Text style={styles.archiveHint}>
+        {isJa
+          ? "週次は競争の実況、月次は自分の分析。毎月1日朝に月次が届きます。"
+          : "Weekly = competition pulse. Monthly = self analysis. Drops on the 1st morning."}
+      </Text>
+
       <View style={styles.tabShell}>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
@@ -333,6 +340,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     color: "rgba(255,255,255,0.4)",
     textTransform: "uppercase",
+  },
+  archiveLabel: {
+    fontFamily: OXANIUM_700,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase",
+  },
+  archiveHint: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.5)",
+    marginTop: -4,
   },
   gateChipRow: {
     gap: 4,

@@ -188,6 +188,7 @@ function ProfileHomeRoute() {
       fromLeaderboards={route.params?.fromLeaderboards === true}
       leaderboardsGroupId={route.params?.leaderboardsGroupId}
       openSettingsOnMount={route.params?.openSettings === true}
+      openReportTabOnMount={route.params?.openReportTab === true}
     />
   );
 }
@@ -245,6 +246,34 @@ function ProfileStackScreen() {
           name="Invite"
           getComponent={() =>
             require("../features/profile/screens/ReferralInviteScreenNative")
+              .default
+          }
+        />
+        <ProfileStack.Screen
+          name="UnitLedger"
+          getComponent={() =>
+            require("../features/profile/screens/UnitLedgerScreenNative")
+              .default
+          }
+        />
+        <ProfileStack.Screen
+          name="Redeem"
+          getComponent={() =>
+            require("../features/profile/screens/RedemptionHubScreenNative")
+              .default
+          }
+        />
+        <ProfileStack.Screen
+          name="RedeemApply"
+          getComponent={() =>
+            require("../features/profile/screens/RedemptionApplyScreenNative")
+              .default
+          }
+        />
+        <ProfileStack.Screen
+          name="RedeemProgress"
+          getComponent={() =>
+            require("../features/profile/screens/RedemptionProgressScreenNative")
               .default
           }
         />

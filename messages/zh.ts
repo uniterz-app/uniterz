@@ -659,6 +659,8 @@ const zh: Messages = {
     sectionMain: "主菜单",
     editProfile: "编辑个人资料",
     invite: "邀请",
+    unitHistory: "Unit 记录",
+    unitRedeem: "商品兑换",
     sectionSubscription: "订阅",
     sectionSupport: "支持",
     sectionAdmin: "管理",

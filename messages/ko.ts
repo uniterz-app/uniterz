@@ -659,6 +659,8 @@ const ko: Messages = {
     sectionMain: "메인",
     editProfile: "프로필 편집",
     invite: "초대",
+    unitHistory: "유닛 기록",
+    unitRedeem: "유닛 교환",
     sectionSubscription: "구독",
     sectionSupport: "지원",
     sectionAdmin: "관리",

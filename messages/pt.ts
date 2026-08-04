@@ -667,6 +667,8 @@ const pt: Messages = {
     sectionMain: "Principal",
     editProfile: "Editar perfil",
     invite: "Convidar",
+    unitHistory: "Histórico de Units",
+    unitRedeem: "Trocar Units",
     sectionSubscription: "Assinatura",
     sectionSupport: "Suporte",
     sectionAdmin: "Admin",

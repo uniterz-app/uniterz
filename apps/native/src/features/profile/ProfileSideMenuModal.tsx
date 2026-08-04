@@ -21,6 +21,7 @@ import SideMenuItemButtonNative, {
 } from "../../ui/SideMenuItemButtonNative";
 import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
 import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
+import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
 
 type Lang = "ja" | "en";
 
@@ -48,6 +49,8 @@ type Props = {
   onOpenInApp: (page:
     | "badges"
     | "invite"
+    | "unitLedger"
+    | "redeem"
     | "announcements"
     | "plan"
     | "subscribe"
@@ -165,6 +168,8 @@ export default function ProfileSideMenuModal({
         profile: "プロフィール編集",
         badges: "バッジパレット",
         invite: "招待",
+        unitHistory: "Unit 履歴",
+        unitRedeem: "商品交換",
         announcements: "お知らせ",
         plan: "プランの確認",
         proSkin: "Pro Skin",
@@ -195,6 +200,8 @@ export default function ProfileSideMenuModal({
         profile: "Edit Profile",
         badges: "Badge Palette",
         invite: "Invite",
+        unitHistory: "Unit History",
+        unitRedeem: "Redeem Units",
         announcements: "Announcements",
         plan: "Plan Status",
         proSkin: "Pro Skin",
@@ -230,6 +237,8 @@ export default function ProfileSideMenuModal({
     page:
       | "badges"
       | "invite"
+      | "unitLedger"
+      | "redeem"
       | "announcements"
       | "plan"
       | "subscribe"
@@ -319,13 +328,14 @@ export default function ProfileSideMenuModal({
                   bounces={false}
                 >
                   {uid ? (
-                    <View
+                    <Pressable
                       style={styles.unitWallet}
-                      accessibilityRole="text"
+                      onPress={() => openUserPage("unitLedger")}
+                      accessibilityRole="button"
                       accessibilityLabel={
                         isJa
-                          ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
-                          : `${unitBalance.toLocaleString("en-US")} Units`
+                          ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")} · 履歴を開く`
+                          : `${unitBalance.toLocaleString("en-US")} Units · Open history`
                       }
                     >
                       <View style={styles.unitWalletMark}>
@@ -343,7 +353,7 @@ export default function ProfileSideMenuModal({
                           {unitBalance.toLocaleString("en-US")}
                         </Text>
                       </View>
-                    </View>
+                    </Pressable>
                   ) : null}
 
                   <CyberSideMenuSectionTitleNative first>
@@ -373,6 +383,20 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("invite")}
                     >
                       {labels.invite}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="history"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("unitLedger")}
+                    >
+                      {labels.unitHistory}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="shopping-outline"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("redeem")}
+                    >
+                      {labels.unitRedeem}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
                       icon="bullhorn-outline"
@@ -650,22 +674,18 @@ export default function ProfileSideMenuModal({
                           <Text style={styles.identityName} numberOfLines={1}>
                             {identityName}
                           </Text>
-                          <View
-                            style={[
-                              styles.identityBadge,
-                              plan === "pro" && styles.identityBadgePro,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.identityBadgeText,
-                                plan === "pro" && styles.identityBadgeTextPro,
-                              ]}
-                              allowFontScaling={false}
-                            >
-                              {planLabel}
-                            </Text>
-                          </View>
+                          {plan === "pro" ? (
+                            <ProCyberBadgeNative compact />
+                          ) : (
+                            <View style={styles.identityBadge}>
+                              <Text
+                                style={styles.identityBadgeText}
+                                allowFontScaling={false}
+                              >
+                                FREE
+                              </Text>
+                            </View>
+                          )}
                         </View>
                         <View style={styles.identitySubRow}>
                           <View style={styles.identityDot} />
@@ -835,7 +855,7 @@ const styles = StyleSheet.create({
   identityAvatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 2,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -886,14 +906,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.18)",
     backgroundColor: "rgba(255, 255, 255, 0.04)",
   },
-  identityBadgePro: {
-    borderColor: "rgba(0, 245, 255, 0.9)",
-    backgroundColor: "#00F5FF",
-    shadowColor: "#00F5FF",
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-  },
   identityBadgeText: {
     fontFamily: "Oxanium_700Bold",
     fontSize: 9,
@@ -901,9 +913,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.18 * 9,
     color: "rgba(255, 255, 255, 0.55)",
     textTransform: "uppercase",
-  },
-  identityBadgeTextPro: {
-    color: "#041018",
   },
   identitySubRow: {
     flexDirection: "row",

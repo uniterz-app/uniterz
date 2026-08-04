@@ -313,7 +313,7 @@ export async function rebuildMonthlyReportsCore(opts?: {
   monthKey?: string;
   /** 書き込み上限（テスト用）。未指定で全員 */
   limit?: number;
-}): Promise<{ monthKey: string; written: number }> {
+}): Promise<{ monthKey: string; written: number; writtenUids: string[] }> {
   const now = new Date();
   const currentMonth = monthLabelJST(now);
   const monthKey =
@@ -512,6 +512,7 @@ export async function rebuildMonthlyReportsCore(opts?: {
 
   const WRITE_CHUNK = 400;
   let written = 0;
+  const writtenUids: string[] = [];
 
   for (let offset = 0; offset < rows.length; offset += WRITE_CHUNK) {
     const chunk = rows.slice(offset, offset + WRITE_CHUNK);
@@ -698,7 +699,7 @@ export async function rebuildMonthlyReportsCore(opts?: {
         totalPoints: agg.points,
         totalPosts: agg.posts,
         totalWins: agg.wins,
-        unitsEarned: 0,
+        unitsEarned: 0, // MONTHLY_REPORT_UNITS_FROM_LEDGER 後に loadMonthlyUnitsFromLedger 接続
         unitsEarnedRank: null,
         analysisTypeId,
         metrics,
@@ -716,10 +717,11 @@ export async function rebuildMonthlyReportsCore(opts?: {
       const ref = db().collection("user_reports").doc(`${uid}_monthly_${monthKey}`);
       batch.set(ref, reportDoc, { merge: true });
       written++;
+      writtenUids.push(uid);
     }
 
     await batch.commit();
   }
 
-  return { monthKey, written };
+  return { monthKey, written, writtenUids };
 }

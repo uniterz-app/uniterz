@@ -12,6 +12,7 @@ import {
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
 import { nbaTeamIdFromBracketCode } from "../../../../../../../lib/nba-bracket-code";
 import {
+  contrastingInkOnHex,
   getTeamJerseyPrimaryColor,
   softenTeamUiColor,
 } from "../../../../../../../lib/team-colors";
@@ -37,6 +38,7 @@ function TeamAbbrBadge({ abbr }: { abbr: string }) {
   const fill = teamId
     ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
     : "#5B8CFF";
+  const ink = contrastingInkOnHex(fill);
 
   return (
     <View style={[styles.badgeSkew, { backgroundColor: fill }]}>
@@ -45,7 +47,9 @@ function TeamAbbrBadge({ abbr }: { abbr: string }) {
           <View key={i} style={[styles.badgeScanLine, { top: 1 + i * 3 }]} />
         ))}
       </View>
-      <Text style={styles.badgeText}>{abbr.slice(0, 3).toUpperCase()}</Text>
+      <Text style={[styles.badgeText, { color: ink }]}>
+        {abbr.slice(0, 3).toUpperCase()}
+      </Text>
     </View>
   );
 }
@@ -188,9 +192,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontFamily: OX,
     fontSize: 9,
-    fontWeight: "900",
     letterSpacing: 0.8,
-    color: "#050508",
     textTransform: "uppercase",
     transform: [{ skewX: "14deg" }],
   },

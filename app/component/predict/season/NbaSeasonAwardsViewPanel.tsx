@@ -13,6 +13,7 @@ import {
 import { nameOxanium } from "@/lib/fonts";
 import { nbaTeamIdFromBracketCode } from "@/lib/nba-bracket-code";
 import {
+  contrastingInkOnHex,
   getTeamJerseyPrimaryColor,
   softenTeamUiColor,
 } from "@/lib/team-colors";
@@ -38,6 +39,7 @@ function TeamAbbrBadge({ abbr }: { abbr: string }) {
   const fill = teamId
     ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
     : "#5B8CFF";
+  const ink = contrastingInkOnHex(fill);
 
   return (
     <span
@@ -49,7 +51,7 @@ function TeamAbbrBadge({ abbr }: { abbr: string }) {
         backgroundColor: fill,
         backgroundImage:
           "repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 1px, transparent 1px, transparent 3px)",
-        color: "#050508",
+        color: ink,
         transform: "skewX(-14deg)",
         boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.2)",
       }}

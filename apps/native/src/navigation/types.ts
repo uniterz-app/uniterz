@@ -70,6 +70,8 @@ export type ProfileStackParamList = {
         leaderboardsGroupId?: string;
         /** プロフィール編集モーダルを開く */
         openSettings?: boolean;
+        /** Report タブを開く（月次プッシュ等） */
+        openReportTab?: boolean;
       }
     | undefined;
   ProfileSettings: undefined;
@@ -87,6 +89,10 @@ export type ProfileStackParamList = {
   };
   Badges: undefined;
   Invite: undefined;
+  UnitLedger: undefined;
+  Redeem: undefined;
+  RedeemApply: { kind?: string } | undefined;
+  RedeemProgress: { id: string };
   Announcements: undefined;
   AnnouncementDetail: { id: string };
   PlanStatus: undefined;

@@ -1,7 +1,11 @@
-/** Web `PredictProBriefPanel` 相当 — タイトル + Pro バッジ + 左右比較（Free はぼかし + CTA） */
-import type { ReactNode } from "react";
+/**
+ * Web `PredictProBriefPanel` 相当 — タイトル + Pro バッジ + 左右比較
+ * Free は ReportGate 同型の PRO INSIGHT ブラーゲート
+ */
+import type { ComponentProps, ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   briefEdgeDetail,
   briefLineText,
@@ -10,13 +14,20 @@ import {
   type ProBriefLineItem,
   type ProBriefTeamCard,
 } from "../../../../../../lib/predict/predictProBrief";
+import {
+  proInsightGateCopy,
+  type ProInsightGateBulletIcon,
+} from "../../../../../../lib/predict/proInsightGateCopy";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getTeamJerseyPrimaryColor } from "../../../../../../lib/team-colors";
 import { nativeBlurViewExtraProps } from "../../../ui/nativeBlurProps";
 import ProCyberBadgeNative from "../../profile/kinetik/ProCyberBadgeNative";
+import {
+  OXANIUM_700,
+  OXANIUM_800,
+} from "../../profile/reports/reportThemeNative";
 import type { GamesLanguage } from "../gamesI18n";
-import { getGamesTexts } from "../gamesI18n";
 
 type Props = {
   brief?: PredictProBrief | null;
@@ -38,6 +49,17 @@ const EMPTY_CARD: ProBriefTeamCard = {
   context: [],
 };
 
+const BULLET_ICONS: Record<
+  ProInsightGateBulletIcon,
+  ComponentProps<typeof MaterialCommunityIcons>["name"]
+> = {
+  matchup: "sword-cross",
+  schedule: "calendar-range",
+  context: "chart-timeline-variant",
+  edge: "scale-balance",
+  comment: "comment-text-outline",
+};
+
 function hexToRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "");
   if (raw.length !== 6) return `rgba(34,211,238,${alpha})`;
@@ -53,6 +75,22 @@ function teamNick(teamId: string, fallback: string): string {
     if (full) return getMobileTeamName("nba", full);
   }
   return fallback;
+}
+
+function TitleWithBrandFontsNative({ title }: { title: string }) {
+  return (
+    <>
+      {title.split(/(Pro)/).map((part, i) =>
+        part === "Pro" ? (
+          <Text key={i} style={styles.gateTitlePro}>
+            {part}
+          </Text>
+        ) : (
+          <Text key={i}>{part}</Text>
+        )
+      )}
+    </>
+  );
 }
 
 function SectionLabel({
@@ -170,13 +208,12 @@ function CompareSection({
   );
 }
 
-function PlaceholderBody({ language }: { language: GamesLanguage }) {
-  const dash = language === "ja" ? "······" : "······";
+function PlaceholderBody() {
   return (
     <View style={styles.blockStack}>
-      <Text style={styles.edgeLabel}>{dash}</Text>
-      <Text style={styles.edgeDetail}>{dash}</Text>
-      <Text style={styles.scheduleLine}>{dash}</Text>
+      <Text style={styles.edgeLabel}>······</Text>
+      <Text style={styles.edgeDetail}>······</Text>
+      <Text style={styles.scheduleLine}>······</Text>
     </View>
   );
 }
@@ -191,7 +228,8 @@ export default function PredictProBriefPanelNative({
   locked = false,
   onPressUpgrade,
 }: Props) {
-  const t = getGamesTexts(language);
+  const gateLang = language === "ja" ? "ja" : "en";
+  const gate = proInsightGateCopy(gateLang);
   const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
   const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
   const homeColor = getTeamJerseyPrimaryColor("nba", homeTeamId);
@@ -207,14 +245,14 @@ export default function PredictProBriefPanelNative({
         tone="matchup"
         left={
           usePlaceholder ? (
-            <PlaceholderBody language={language} />
+            <PlaceholderBody />
           ) : (
             <EdgeBlock edges={home.edges} language={language} align="right" />
           )
         }
         right={
           usePlaceholder ? (
-            <PlaceholderBody language={language} />
+            <PlaceholderBody />
           ) : (
             <EdgeBlock edges={away.edges} language={language} align="left" />
           )
@@ -225,7 +263,7 @@ export default function PredictProBriefPanelNative({
         tone="schedule"
         left={
           usePlaceholder ? (
-            <PlaceholderBody language={language} />
+            <PlaceholderBody />
           ) : (
             <LineBlock
               items={home.schedule}
@@ -237,7 +275,7 @@ export default function PredictProBriefPanelNative({
         }
         right={
           usePlaceholder ? (
-            <PlaceholderBody language={language} />
+            <PlaceholderBody />
           ) : (
             <LineBlock
               items={away.schedule}
@@ -253,7 +291,7 @@ export default function PredictProBriefPanelNative({
         tone="context"
         left={
           usePlaceholder ? (
-            <PlaceholderBody language={language} />
+            <PlaceholderBody />
           ) : (
             <LineBlock
               items={home.context}
@@ -265,7 +303,7 @@ export default function PredictProBriefPanelNative({
         }
         right={
           usePlaceholder ? (
-            <PlaceholderBody language={language} />
+            <PlaceholderBody />
           ) : (
             <LineBlock
               items={away.context}
@@ -313,24 +351,56 @@ export default function PredictProBriefPanelNative({
 
       {locked ? (
         <View style={styles.lockedHost}>
-          <View pointerEvents="none">{body}</View>
+          <View pointerEvents="none" style={styles.previewClip}>
+            {body}
+          </View>
           <BlurView
-            intensity={34}
+            intensity={36}
             tint="dark"
             style={StyleSheet.absoluteFillObject}
             {...nativeBlurViewExtraProps()}
           />
           <View style={styles.lockedVeil} pointerEvents="none" />
-          <View style={styles.lockedCtaWrap} pointerEvents="box-none">
-            <Text style={styles.lockedHint}>{t.insightProOnly}</Text>
-            <Pressable
-              onPress={onPressUpgrade}
-              style={styles.cta}
-              accessibilityRole="button"
-              accessibilityLabel={t.insightUpgradeCta}
-            >
-              <Text style={styles.ctaLabel}>{t.insightUpgradeCta}</Text>
-            </Pressable>
+          <View style={styles.gateOverlay} pointerEvents="box-none">
+            <View style={styles.gateMessage}>
+              <View style={styles.gateCenter}>
+                <Text style={styles.gateEyebrow}>{gate.eyebrow}</Text>
+                <View style={styles.gateBadgeScale}>
+                  <ProCyberBadgeNative premium />
+                </View>
+                <Text style={styles.gateTitle}>
+                  <TitleWithBrandFontsNative title={gate.title} />
+                </Text>
+                <Text style={styles.gateBody}>{gate.body}</Text>
+                {onPressUpgrade ? (
+                  <Pressable
+                    onPress={onPressUpgrade}
+                    style={styles.cta}
+                    accessibilityRole="button"
+                    accessibilityLabel={gate.cta}
+                  >
+                    <Text style={styles.ctaLabel}>{gate.cta}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              <View style={styles.bulletPanel}>
+                {gate.bullets.map((item) => (
+                  <View key={item.title} style={styles.bulletRow}>
+                    <View style={styles.bulletIcon}>
+                      <MaterialCommunityIcons
+                        name={BULLET_ICONS[item.icon]}
+                        size={12}
+                        color="#fdba74"
+                      />
+                    </View>
+                    <View style={styles.bulletCopy}>
+                      <Text style={styles.bulletTitle}>{item.title}</Text>
+                      <Text style={styles.bulletDetail}>{item.detail}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
           </View>
         </View>
       ) : (
@@ -339,8 +409,6 @@ export default function PredictProBriefPanelNative({
     </View>
   );
 }
-
-const OXANIUM = "Oxanium_700Bold";
 
 const styles = StyleSheet.create({
   shell: {
@@ -369,16 +437,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   sideTag: {
-    fontFamily: OXANIUM,
+    fontFamily: OXANIUM_700,
     fontSize: 9,
-    fontWeight: "700",
     letterSpacing: 1.6,
     marginBottom: 3,
   },
   titleNick: {
-    fontFamily: OXANIUM,
+    fontFamily: OXANIUM_800,
     fontSize: 18,
-    fontWeight: "800",
     fontStyle: "italic",
     letterSpacing: 0.6,
   },
@@ -415,9 +481,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   sectionLabel: {
-    fontFamily: OXANIUM,
+    fontFamily: OXANIUM_800,
     fontSize: 10,
-    fontWeight: "800",
     letterSpacing: 1.2,
     textTransform: "uppercase",
     textAlign: "center",
@@ -429,9 +494,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   edgeLabel: {
-    fontFamily: OXANIUM,
+    fontFamily: OXANIUM_800,
     fontSize: 13,
-    fontWeight: "800",
     letterSpacing: 0.3,
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.92)",
@@ -463,43 +527,120 @@ const styles = StyleSheet.create({
   lockedHost: {
     position: "relative",
     overflow: "hidden",
-    minHeight: 180,
+    minHeight: 320,
+  },
+  previewClip: {
+    opacity: 0.9,
   },
   lockedVeil: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(4,8,14,0.42)",
+    backgroundColor: "rgba(4,8,14,0.55)",
   },
-  lockedCtaWrap: {
+  gateOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingHorizontal: 20,
+    justifyContent: "flex-start",
+    paddingTop: 24,
+    paddingBottom: 20,
+    paddingHorizontal: 8,
   },
-  lockedHint: {
-    fontFamily: OXANIUM,
-    fontSize: 12,
+  gateMessage: {
+    width: "100%",
+    maxWidth: 360,
+    gap: 12,
+  },
+  gateCenter: {
+    alignItems: "center",
+    gap: 10,
+  },
+  gateEyebrow: {
+    fontFamily: OXANIUM_700,
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    color: "rgba(165,243,252,0.8)",
+  },
+  gateBadgeScale: {
+    transform: [{ scale: 1.45 }],
+    marginVertical: 4,
+  },
+  gateTitle: {
+    fontSize: 17,
     fontWeight: "700",
-    letterSpacing: 0.4,
+    lineHeight: 24,
+    color: "#fff",
+    textAlign: "center",
+  },
+  gateTitlePro: {
+    fontFamily: OXANIUM_800,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  gateBody: {
+    fontSize: 13,
+    lineHeight: 20,
     color: "rgba(255,255,255,0.72)",
     textAlign: "center",
   },
   cta: {
-    minWidth: 180,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    minWidth: 160,
+    minHeight: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 2,
     backgroundColor: "#00F5FF",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   ctaLabel: {
-    fontFamily: OXANIUM,
-    fontSize: 13,
-    fontWeight: "800",
+    fontFamily: OXANIUM_800,
+    fontSize: 12,
     letterSpacing: 1.2,
     textAlign: "center",
     color: "#050508",
     textTransform: "uppercase",
+  },
+  bulletPanel: {
+    borderWidth: 1,
+    borderColor: "rgba(251,146,60,0.55)",
+    backgroundColor: "rgba(249,115,22,0.07)",
+    borderRadius: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  bulletIcon: {
+    marginTop: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: "rgba(251,146,60,0.45)",
+    backgroundColor: "rgba(249,115,22,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bulletCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  bulletTitle: {
+    fontFamily: OXANIUM_800,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    color: "#ffedd5",
+  },
+  bulletDetail: {
+    marginTop: 2,
+    fontSize: 11,
+    lineHeight: 15,
+    color: "rgba(255,255,255,0.7)",
   },
 });

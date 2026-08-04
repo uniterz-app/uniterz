@@ -669,6 +669,8 @@ const de: Messages = {
     sectionMain: "Hauptmenü",
     editProfile: "Profil bearbeiten",
     invite: "Einladen",
+    unitHistory: "Unit-Verlauf",
+    unitRedeem: "Units einlösen",
     sectionSubscription: "Abonnement",
     sectionSupport: "Support",
     sectionAdmin: "Admin",

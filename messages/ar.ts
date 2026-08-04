@@ -668,6 +668,8 @@ const ar: Messages = {
     sectionMain: "الرئيسية",
     editProfile: "تعديل الملف الشخصي",
     invite: "دعوة",
+    unitHistory: "سجل الوحدات",
+    unitRedeem: "استبدال الوحدات",
     sectionSubscription: "الاشتراك",
     sectionSupport: "الدعم",
     sectionAdmin: "الإدارة",

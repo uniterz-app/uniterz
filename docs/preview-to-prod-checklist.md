@@ -153,14 +153,16 @@
 |---|---|---|---|
 | 10 | **Pro Stats → 月次レポート統合** | V1 方針確定 | Stats タブ廃止。カード群は月次レポートへ再構成（`pro-subscription-plan.md` §4） |
 | 11 | **試合直前アラート** | V1 方針確定 | 欠場・重要先発・締切・Insight 更新。開始通知は Free 程度（同 §2） |
-| 12 | **招待ページ** | ❌ | 自分が何人招待したかが分かるページ |
+| 12 | **招待ページ** | ✅ | `/mobile/invite` · Native `Invite` · スタンプボード |
+| 13 | **Unit 履歴** | ✅ | `/mobile/units` · Native `UnitLedger` |
+| 14 | **商品交換（カタログ・申請・進捗・Admin）** | △ UI/API 済 | Unit ロック/消費は `REDEMPTION_UNITS_LIVE`（弁護士後）。設計: `unit-redemption-design.md` |
 
 ### 進め方メモ
 
 - **キューは厳格な順番ではない。** その中から **1 つずつ** 選んで進める（課金・レポート・ライブなどを並行・入れ替え可）。
 - WC 終わるまで（ゲート A）は、既存本番オーバーレイへの大胆差し替えはしない。上記キューは主に **新規導線・プレビュー / 独立ページ** で先行してよい。
 - Weekly / Monthly / Season Pass の価格・特典差は決済実装前に `pro-subscription-plan.md` 側にも確定メモを追記する。
-
+- **商品交換の公開**は弁護士 OK + `REDEMPTION_UNITS_LIVE=true` の後。それまでは申請プレビュー可。
 ---
 
 ## 1. ゲート条件（いつやるか）

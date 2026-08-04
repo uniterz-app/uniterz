@@ -57,6 +57,15 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
           params: { screen: "RankingsHome" },
         });
         return;
+      case "monthly_report":
+        navigationRef.navigate("Main", {
+          screen: "ProfileTab",
+          params: {
+            screen: "ProfileHome",
+            params: { openReportTab: true },
+          },
+        });
+        return;
     }
   });
 }

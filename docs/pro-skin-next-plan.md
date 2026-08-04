@@ -52,9 +52,10 @@
 
 ## 次にやること
 
-1. 招待機能（`docs/referral-design.md`）
-2. マンスリーレポートなど細かい仕上げ
-4. （任意）メニュー NEW バッジ / プッシュ / 遡及用 toast
+1. **商品交換** — Unit ロック本番化（弁護士後 `REDEMPTION_UNITS_LIVE`）/ 規約追記 / 運用習熟
+2. **月次レポート** — ledger 内訳接続（`MONTHLY_REPORT_UNITS_FROM_LEDGER`）・Pro Stats 孤児掃除
+3. （任意）メニュー NEW バッジ / 遡及用 toast
+4. 開幕前: シーズン予想締切・報酬付与本番・Insight/アラート実データ
 
 ## やらないこと
 

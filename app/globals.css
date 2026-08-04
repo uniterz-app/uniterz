@@ -7841,6 +7841,15 @@ body::before {
 }
 
 /* 右上コンパクト（名前行横） */
+.profile-edit-kinetik-unit-vault--pressable {
+  cursor: pointer;
+}
+
+.profile-edit-kinetik-unit-vault--pressable:focus-visible {
+  outline: 1px solid rgba(246, 195, 68, 0.7);
+  outline-offset: 2px;
+}
+
 .profile-edit-kinetik-unit-vault--corner {
   gap: 7px;
 }
@@ -7972,6 +7981,7 @@ body::before {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   margin: 0 0 14px;
   padding: 10px 12px;
   overflow: hidden;
@@ -7994,6 +8004,21 @@ body::before {
   box-shadow:
     0 0 20px rgba(246, 195, 68, 0.18),
     inset 0 1px 0 rgba(255, 236, 170, 0.16);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.side-menu-unit-wallet:hover {
+  border-color: rgba(246, 195, 68, 0.8);
+  box-shadow:
+    0 0 24px rgba(246, 195, 68, 0.28),
+    inset 0 1px 0 rgba(255, 236, 170, 0.2);
+}
+
+.side-menu-unit-wallet:focus-visible {
+  outline: 1px solid rgba(246, 195, 68, 0.7);
+  outline-offset: 2px;
 }
 
 .side-menu-unit-wallet__mark {
@@ -8139,7 +8164,7 @@ body::before {
   flex-shrink: 0;
   overflow: hidden;
   border: 1px solid rgba(0, 245, 255, 0.65);
-  border-radius: 999px;
+  border-radius: 2px;
   background: rgba(0, 30, 42, 0.95);
   box-shadow:
     0 0 14px rgba(0, 245, 255, 0.35),
@@ -8156,7 +8181,7 @@ body::before {
 .side-menu-identity__ring {
   position: absolute;
   inset: -3px;
-  border-radius: 999px;
+  border-radius: 2px;
   border: 1px solid rgba(0, 245, 255, 0.25);
   box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
   animation: side-menu-identity-ring 2.4s ease-in-out infinite;
@@ -8231,19 +8256,6 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.04);
   text-transform: uppercase;
-}
-
-.side-menu-identity__badge.is-pro {
-  color: #041018;
-  border-color: rgba(0, 245, 255, 0.9);
-  background: linear-gradient(
-    105deg,
-    #00f5ff 0%,
-    #67e8f9 100%
-  );
-  box-shadow:
-    0 0 14px rgba(0, 245, 255, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .side-menu-identity__sub {

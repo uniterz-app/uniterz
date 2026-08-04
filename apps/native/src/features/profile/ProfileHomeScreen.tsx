@@ -118,6 +118,7 @@ export default function ProfileHomeScreen({
   fromWeeklyReport = false,
   leaderboardsGroupId,
   openSettingsOnMount = false,
+  openReportTabOnMount = false,
 }: {
   bottomReserveY?: number;
   onSaved?: () => void;
@@ -131,6 +132,7 @@ export default function ProfileHomeScreen({
   fromWeeklyReport?: boolean;
   leaderboardsGroupId?: string;
   openSettingsOnMount?: boolean;
+  openReportTabOnMount?: boolean;
 }) {
   const { fUser, status } = useFirebaseUser();
   const myUid = fUser?.uid;
@@ -336,6 +338,12 @@ export default function ProfileHomeScreen({
       setSettingsOpen(true);
     }
   }, [openSettingsOnMount, isMe]);
+
+  useEffect(() => {
+    if (openReportTabOnMount && isMe) {
+      setTab("report");
+    }
+  }, [openReportTabOnMount, isMe]);
 
   const { unreadCount: menuUnreadCount, readIds: announcementReadIds } =
     useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
@@ -918,6 +926,9 @@ export default function ProfileHomeScreen({
         targetUid={targetUid ?? null}
         profileViewCount={profileViewCount}
         unitBalance={unitBalance}
+        onOpenUnitLedger={
+          isMe ? () => navigation.navigate("UnitLedger") : undefined
+        }
       />
 
       {renderTabs()}
@@ -1220,6 +1231,8 @@ export default function ProfileHomeScreen({
         setMenuOpen(false);
         if (page === "badges") navigation.navigate("Badges");
         else if (page === "invite") navigation.navigate("Invite");
+        else if (page === "unitLedger") navigation.navigate("UnitLedger");
+        else if (page === "redeem") navigation.navigate("Redeem");
         else if (page === "announcements") navigation.navigate("Announcements");
         else if (page === "plan") navigation.navigate("PlanStatus");
         else if (page === "subscribe") navigation.navigate("ProSubscribe");
