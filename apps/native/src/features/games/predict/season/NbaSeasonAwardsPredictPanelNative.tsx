@@ -5,6 +5,8 @@ import {
   NBA_SEASON_AWARD_DEFS,
   awardCandidateLabel,
   filterAwardCandidatesByPrefix,
+  filledSeasonAwardsCount,
+  isSeasonAwardsComplete,
   popularAwardPicks,
   type NbaAwardCandidate,
   type NbaAwardId,
@@ -19,6 +21,8 @@ import {
 type Props = {
   value: NbaSeasonAwardsPrediction;
   onChange?: (next: NbaSeasonAwardsPrediction) => void;
+  onSubmit?: () => void;
+  submitDisabled?: boolean;
 };
 
 const OX = "Oxanium_700Bold";
@@ -131,7 +135,16 @@ function AwardPickRow({
   );
 }
 
-export default function NbaSeasonAwardsPredictPanelNative({ value, onChange }: Props) {
+export default function NbaSeasonAwardsPredictPanelNative({
+  value,
+  onChange,
+  onSubmit,
+  submitDisabled,
+}: Props) {
+  const filled = filledSeasonAwardsCount(value.picks);
+  const total = NBA_SEASON_AWARD_DEFS.length;
+  const allDone = isSeasonAwardsComplete(value);
+
   return (
     <View style={styles.card}>
       <View style={{ gap: 4, marginBottom: 12 }}>
@@ -157,6 +170,37 @@ export default function NbaSeasonAwardsPredictPanelNative({ value, onChange }: P
           />
         ))}
       </View>
+
+      {onSubmit ? (
+        <View style={styles.submitRow}>
+          <Text style={[styles.progress, allDone && styles.progressReady]}>
+            {allDone
+              ? "Ready to submit · all awards picked"
+              : `Progress · ${filled}/${total}`}
+          </Text>
+          <Pressable
+            disabled={submitDisabled}
+            onPress={() => {
+              onSubmit();
+            }}
+            style={[
+              styles.submitBtn,
+              allDone && !submitDisabled
+                ? styles.submitBtnReady
+                : styles.submitBtnDisabled,
+            ]}
+          >
+            <Text
+              style={[
+                styles.submitBtnText,
+                !(allDone && !submitDisabled) && styles.submitBtnTextDisabled,
+              ]}
+            >
+              {submitDisabled ? "Submitting…" : "Submit prediction"}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -271,4 +315,44 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   suggestionTeam: { fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.3)" },
+  submitRow: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.08)",
+    gap: 10,
+  },
+  progress: {
+    fontFamily: OX,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase",
+  },
+  progressReady: { color: "rgba(45,255,110,0.85)" },
+  submitBtn: {
+    alignSelf: "stretch",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+  },
+  submitBtnReady: {
+    borderColor: "rgba(252,211,77,0.5)",
+    backgroundColor: "rgba(252,211,77,0.2)",
+  },
+  submitBtnDisabled: {
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  submitBtnText: {
+    fontFamily: OX,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+    textAlign: "center",
+    color: "rgba(255,251,235,0.95)",
+    textTransform: "uppercase",
+  },
+  submitBtnTextDisabled: { color: "rgba(255,255,255,0.3)" },
 });

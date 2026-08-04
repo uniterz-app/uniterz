@@ -86,6 +86,7 @@ export type ProfileStackParamList = {
     fromWeeklyReport?: boolean;
   };
   Badges: undefined;
+  Invite: undefined;
   Announcements: undefined;
   AnnouncementDetail: { id: string };
   PlanStatus: undefined;
@@ -96,6 +97,10 @@ export type ProfileStackParamList = {
   FuturisticBgPreview: undefined;
   /** __DEV__ 称号 Pro Skin（金冠 / 雷 / 星）プレビュー */
   TitleSkinPreview: undefined;
+  /** __DEV__ Pro Skin Wave9 プレビュー */
+  WaveProSkinPreview: undefined;
+  /** __DEV__ ランキング行 Pro Skin プレビュー */
+  RankingListProSkinPreview: undefined;
   /** __DEV__ Pro Skin マイルストーン解放モーダル */
   ProSkinUnlockPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
@@ -120,7 +125,7 @@ export type ProfileStackParamList = {
 export type AuthStackParamList = {
   Landing: undefined;
   Login: { initialMode?: "login" | "signup" } | undefined;
-  Signup: undefined;
+  Signup: { inviteCode?: string } | undefined;
   ResetPassword: undefined;
   Onboarding: undefined;
 };

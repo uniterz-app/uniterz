@@ -6,6 +6,8 @@ import {
   NBA_SEASON_AWARD_DEFS,
   awardCandidateLabel,
   filterAwardCandidatesByPrefix,
+  filledSeasonAwardsCount,
+  isSeasonAwardsComplete,
   popularAwardPicks,
   type NbaAwardCandidate,
   type NbaAwardId,
@@ -21,6 +23,8 @@ import { nameOxanium } from "@/lib/fonts";
 type Props = {
   value: NbaSeasonAwardsPrediction;
   onChange?: (next: NbaSeasonAwardsPrediction) => void;
+  onSubmit?: () => void;
+  submitDisabled?: boolean;
   className?: string;
 };
 
@@ -187,11 +191,16 @@ function AwardPickRow({
 export default function NbaSeasonAwardsPredictPanel({
   value,
   onChange,
+  onSubmit,
+  submitDisabled,
   className,
 }: Props) {
   const pathname = usePathname() ?? "";
   const isNarrow =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
+  const filled = filledSeasonAwardsCount(value.picks);
+  const total = NBA_SEASON_AWARD_DEFS.length;
+  const allDone = isSeasonAwardsComplete(value);
 
   return (
     <div
@@ -242,6 +251,38 @@ export default function NbaSeasonAwardsPredictPanel({
           />
         ))}
       </ul>
+
+      {onSubmit ? (
+        <div className="mt-4 flex flex-col gap-2 border-t border-white/8 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[10px] font-bold uppercase tracking-[0.12em]",
+              allDone ? "text-[#2DFF6E]/85" : "text-white/40",
+            ].join(" ")}
+          >
+            {allDone
+              ? "Ready to submit · all awards picked"
+              : `Progress · ${filled}/${total}`}
+          </p>
+          <button
+            type="button"
+            disabled={submitDisabled}
+            onClick={onSubmit}
+            className={[
+              nameOxanium.className,
+              "px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.14em] transition",
+              allDone && !submitDisabled
+                ? "border border-amber-300/50 bg-amber-300/20 text-amber-50 hover:bg-amber-300/28"
+                : submitDisabled
+                  ? "cursor-wait border border-white/10 bg-white/[0.04] text-white/30"
+                  : "border border-white/15 bg-white/[0.04] text-white/55 hover:bg-white/[0.08]",
+            ].join(" ")}
+          >
+            {submitDisabled ? "Submitting…" : "Submit prediction"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

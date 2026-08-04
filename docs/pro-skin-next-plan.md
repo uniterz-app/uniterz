@@ -4,7 +4,7 @@
 
 ## いままで（develop 向け実装）
 
-- 採用カタログ **即解放 12 / マイルストーン 12**（Eclipse / Data Stream 含む）
+- 採用カタログ **即解放 12 / マイルストーン 18**（Wave 招待・週/月回数含む）
 - Circuit Lace / Iso Cubes など全面パターン、Crimson Eclipse 再採用、Carbon 削除
 - Pro Skin 一覧の軽量化（カタログは swatch、フル模様はプレビュー時のみ）
 - **無料ユーザー**も Pro Skin プレビュー可。適用ボタンは **GET PRO** → 購入ページ
@@ -26,7 +26,7 @@
 | 種類 | 正データ | いつ書くか | ホットパス |
 |---|---|---|---|
 | Pro 即解放 ×12 | `users.plan` | Pro Skin API | users 1 read |
-| 連勝 / 予想 / Perfect | `users.proSkinProgress` | NBA settle（Functions） | 進捗は users に載っている |
+| 連勝 / 予想 / Perfect / 招待 / 週月回数 | `users.proSkinProgress` + `referralStats` | settle / period grant / referral settle | 進捗は users に載っている |
 | 週/月順位 | `proSkinRankEarnedIds`（権利）+ unlocked | 期間確定時に standard 順位で earned。Pro なら unlocked+notice | users の短い ID 配列のみ |
 
 ### 通知方針（確定）

@@ -1,8 +1,10 @@
 import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import type { ReactNode } from "react";
 import Animated from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
+import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
 import { cyberScoreGlowLayers } from "../../../../../lib/rankings/cyberGlyphGlowLayers";
 import {
@@ -25,6 +27,9 @@ import { RankingsAvatarNative } from "./RankingsAvatarAndTabs";
 import { CyberRankNumberNative } from "./CyberRankNumberNative";
 import { RankDeltaBadgeNative } from "./RankingsRankDeltaBadge";
 import { RankFirstBorderEdgeScanNative } from "./RankFirstBorderEdgeScanNative";
+import RankingListProSkinFxNative, {
+  type RankingListProSkinIntensity,
+} from "./RankingListProSkinFxNative";
 import { rankingFlagImageUri } from "./rankingFlagUri";
 import { METRIC_FONT, RANKING_SCORE_FONT, rankingNameFont, rankingTagFont } from "./rankingsUiTheme";
 import { useRankingsCrownEntrance } from "./useRankingsCrownEntrance";
@@ -134,6 +139,10 @@ export function CyberRankingListRowNative({
   hideAccentBar = false,
   rankOverline = null,
   plainWhiteScore = false,
+  proSkinVariant = null,
+  proSkinIntensity = "medium",
+  /** プレビュー等 — スコアを任意スロットに差し替え */
+  scoreSlot = null,
 }: {
   rank: number;
   displayName: string;
@@ -162,6 +171,10 @@ export function CyberRankingListRowNative({
   rankOverline?: string | null;
   /** My Rank Free — スタッツ数字を白に */
   plainWhiteScore?: boolean;
+  /** Pro Skin（Web `proSkinVariant`） */
+  proSkinVariant?: ProfilePlanProBgVariant | null;
+  proSkinIntensity?: RankingListProSkinIntensity;
+  scoreSlot?: ReactNode;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = palette.firstPlaceFrame;
@@ -176,25 +189,34 @@ export function CyberRankingListRowNative({
     pageKey,
     reduceMotion
   );
+  const elevateContent = Boolean(firstFrame || proSkinVariant);
 
   const body = (
     <View style={styles.article}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={[
-          "rgba(255,255,255,0.03)",
-          "rgba(255,255,255,0.01)",
-          "rgba(0,0,0,0.12)",
-        ]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={StyleSheet.absoluteFillObject}
-      />
+      {proSkinVariant ? (
+        <RankingListProSkinFxNative
+          variant={proSkinVariant}
+          intensity={proSkinIntensity}
+        />
+      ) : (
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            "rgba(255,255,255,0.03)",
+            "rgba(255,255,255,0.01)",
+            "rgba(0,0,0,0.12)",
+          ]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      )}
       {firstFrame ? <RankFirstBorderEdgeScanNative /> : null}
       {!hideAccentBar ? (
         <View
           style={[
             styles.accentBar,
+            elevateContent ? styles.contentAboveFx : null,
             {
               backgroundColor: palette.accent,
               shadowColor: palette.accentGlow,
@@ -202,7 +224,13 @@ export function CyberRankingListRowNative({
           ]}
         />
       ) : null}
-      <View style={[styles.rowInner, firstFrame && styles.rowInnerFirst]}>
+      <View
+        style={[
+          styles.rowInner,
+          firstFrame && styles.rowInnerFirst,
+          elevateContent ? styles.contentAboveFx : null,
+        ]}
+      >
         <View style={[styles.rankCol, rankOverline ? styles.rankColWithOverline : null]}>
           {rankOverline ? (
             <Text style={styles.rankOverline} numberOfLines={1}>
@@ -265,12 +293,14 @@ export function CyberRankingListRowNative({
         </View>
 
         <View style={styles.scoreCol}>
-          <CyberRankingScoreNative
-            rank={rank}
-            metric={metric}
-            counted={counted}
-            plainWhite={plainWhiteScore}
-          />
+          {scoreSlot ?? (
+            <CyberRankingScoreNative
+              rank={rank}
+              metric={metric}
+              counted={counted}
+              plainWhite={plainWhiteScore}
+            />
+          )}
           <Text
             style={[styles.metricTag, { fontSize: tagFontSize, fontFamily: rankingTagFont(metricTag) }]}
             numberOfLines={1}
@@ -284,7 +314,7 @@ export function CyberRankingListRowNative({
           ) : null}
         </View>
       </View>
-      <View style={styles.bottomBorder} />
+      <View style={[styles.bottomBorder, elevateContent ? styles.contentAboveFx : null]} />
     </View>
   );
 
@@ -307,6 +337,9 @@ const styles = StyleSheet.create({
     position: "relative",
     minHeight: 72,
     overflow: "hidden",
+  },
+  contentAboveFx: {
+    zIndex: 10,
   },
   rowPressed: {
     opacity: 0.88,

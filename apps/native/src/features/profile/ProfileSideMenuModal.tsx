@@ -47,6 +47,7 @@ type Props = {
   /** in-app 画面を開く */
   onOpenInApp: (page:
     | "badges"
+    | "invite"
     | "announcements"
     | "plan"
     | "subscribe"
@@ -65,6 +66,8 @@ type Props = {
     | "seasonPreview"
     | "futuristicBgPreview"
     | "titleSkinPreview"
+    | "waveProSkinPreview"
+    | "rankingListProSkinPreview"
     | "proSkinUnlockPreview") => void;
 };
 
@@ -161,6 +164,7 @@ export default function ProfileSideMenuModal({
         admin: "管理",
         profile: "プロフィール編集",
         badges: "バッジパレット",
+        invite: "招待",
         announcements: "お知らせ",
         plan: "プランの確認",
         proSkin: "Pro Skin",
@@ -190,6 +194,7 @@ export default function ProfileSideMenuModal({
         admin: "ADMIN",
         profile: "Edit Profile",
         badges: "Badge Palette",
+        invite: "Invite",
         announcements: "Announcements",
         plan: "Plan Status",
         proSkin: "Pro Skin",
@@ -224,6 +229,7 @@ export default function ProfileSideMenuModal({
   function openUserPage(
     page:
       | "badges"
+      | "invite"
       | "announcements"
       | "plan"
       | "subscribe"
@@ -242,6 +248,8 @@ export default function ProfileSideMenuModal({
       | "seasonPreview"
       | "futuristicBgPreview"
       | "titleSkinPreview"
+      | "waveProSkinPreview"
+      | "rankingListProSkinPreview"
       | "proSkinUnlockPreview"
   ) {
     onClose();
@@ -358,6 +366,13 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("badges")}
                     >
                       {labels.badges}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="account-multiple-plus-outline"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("invite")}
+                    >
+                      {labels.invite}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
                       icon="bullhorn-outline"
@@ -547,6 +562,22 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("titleSkinPreview")}
                         >
                           称号スキン プレビュー
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="palette-swatch-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("waveProSkinPreview")}
+                        >
+                          Wave 9 スキンプレビュー
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="format-list-bulleted"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("rankingListProSkinPreview")}
+                        >
+                          ランキング行 Pro Skin
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="lock-open-variant-outline"

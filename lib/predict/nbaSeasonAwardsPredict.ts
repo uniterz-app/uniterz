@@ -75,6 +75,50 @@ export function emptySeasonAwardsPrediction(
   return { season, picks: {} };
 }
 
+export const NBA_SEASON_AWARD_IDS: readonly NbaAwardId[] =
+  NBA_SEASON_AWARD_DEFS.map((d) => d.id);
+
+export function filledSeasonAwardsCount(picks: NbaSeasonAwardsPicks): number {
+  let n = 0;
+  for (const id of NBA_SEASON_AWARD_IDS) {
+    const v = picks[id];
+    if (typeof v === "string" && v.trim()) n += 1;
+  }
+  return n;
+}
+
+export function isSeasonAwardsComplete(pred: NbaSeasonAwardsPrediction): boolean {
+  return filledSeasonAwardsCount(pred.picks) === NBA_SEASON_AWARD_IDS.length;
+}
+
+/** API / Firestore から来た picks を正規化（未知キー無視・空文字は null） */
+export function parseSeasonAwardsPicks(raw: unknown): NbaSeasonAwardsPicks {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const src = raw as Record<string, unknown>;
+  const out: NbaSeasonAwardsPicks = {};
+  for (const id of NBA_SEASON_AWARD_IDS) {
+    const v = src[id];
+    if (v == null) {
+      out[id] = null;
+      continue;
+    }
+    if (typeof v !== "string") continue;
+    const trimmed = v.trim();
+    out[id] = trimmed.length > 0 ? trimmed : null;
+  }
+  return out;
+}
+
+export function parseSeasonAwardsPrediction(
+  season: string,
+  picksRaw: unknown
+): NbaSeasonAwardsPrediction {
+  return {
+    season: season.trim(),
+    picks: parseSeasonAwardsPicks(picksRaw),
+  };
+}
+
 export function awardCandidateLabel(c: NbaAwardCandidate): string {
   return `${c.firstName} ${c.lastName}`.trim();
 }

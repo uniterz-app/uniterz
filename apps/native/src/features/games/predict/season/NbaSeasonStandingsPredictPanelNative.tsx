@@ -339,12 +339,14 @@ export default function NbaSeasonStandingsPredictPanelNative({
             : `Progress · E ${filledRankCount(value.east)}/15 · W ${filledRankCount(value.west)}/15`}
         </Text>
         <Pressable
-          disabled={submitDisabled || !allDone}
-          onPress={onSubmit}
+          disabled={submitDisabled}
+          onPress={() => {
+            onSubmit?.();
+          }}
           style={[styles.submitBtn, allDone && !submitDisabled ? styles.submitBtnOn : styles.submitBtnOff]}
         >
           <Text style={[styles.submitText, allDone && !submitDisabled ? styles.submitTextOn : styles.submitTextOff]}>
-            Submit prediction
+            {submitDisabled ? "Submitting…" : "Submit prediction"}
           </Text>
         </Pressable>
       </View>

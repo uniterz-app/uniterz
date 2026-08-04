@@ -36,6 +36,11 @@ import {
   type ProfilePlanProScaleBgMeta,
   type ProfilePlanProScaleBgVariant,
 } from "@/lib/profile/profilePlanProScaleBgVariants";
+import {
+  PROFILE_PLAN_PRO_WAVE_BG_VARIANTS,
+  type ProfilePlanProWaveBgMeta,
+  type ProfilePlanProWaveBgVariant,
+} from "@/lib/profile/profilePlanProWaveBgVariants";
 
 /** ユーザー向けカテゴリ */
 export type ProfilePlanProAdoptedCategory =
@@ -52,7 +57,8 @@ export type ProfilePlanProAdoptedFamily =
   | "beast"
   | "form"
   | "neo"
-  | "futuristic";
+  | "futuristic"
+  | "wave";
 
 /** @deprecated 表示は category を使う */
 export type ProfilePlanProAdoptedGroup = ProfilePlanProAdoptedFamily;
@@ -71,8 +77,8 @@ export const PROFILE_PLAN_PRO_ADOPTED_CATEGORIES: readonly ProfilePlanProAdopted
       id: "cyber",
       labelJa: "サイバー空間",
       labelEn: "Cyber Space",
-      descriptionJa: "ネビュラ・パララックス・Eclipse / Data Stream など、奥行きのあるサイバー HUD。",
-      descriptionEn: "Nebula, parallax, Eclipse / Data Stream — depth-first cyber HUD.",
+      descriptionJa: "シアン格子・ネオン稜線など、線画サイバー HUD。",
+      descriptionEn: "Cyan grids, neon ridges, and line-art cyber HUD.",
     },
     {
       id: "reptile",
@@ -123,26 +129,26 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用 24 — 解放カタログ順（即解放 → マイルストーン）。詳細は `proSkinUnlock.ts` */
+/** 採用カタログ — 解放カタログ順（即解放 → マイルストーン）。詳細は `proSkinUnlock.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // Pro 即解放 ×12
-  { id: "atmos", category: "cyber", family: "atmos" },
-  { id: "parallax", category: "cyber", family: "atmos" },
-  { id: "futuristic-eclipse", category: "cyber", family: "futuristic" },
-  { id: "futuristic-data-stream", category: "cyber", family: "futuristic" },
+  // Pro 即解放 ×12（ランキング行でも識別できる柄）
+  { id: "beast-titanium", category: "material", family: "beast" },
+  { id: "beast-circuitlace", category: "material", family: "beast" },
+  { id: "beast-panther", category: "beast", family: "beast" },
+  { id: "beast-crocodile", category: "reptile", family: "beast" },
   { id: "scale-mamba", category: "reptile", family: "scale" },
   { id: "scale-python", category: "reptile", family: "scale" },
-  { id: "beast-crocodile", category: "reptile", family: "beast" },
-  { id: "beast-panther", category: "beast", family: "beast" },
-  { id: "beast-titanium", category: "material", family: "beast" },
   { id: "form-hexveil", category: "geometry", family: "form" },
   { id: "scale-diamondback", category: "reptile", family: "scale" },
   { id: "beast-shark", category: "beast", family: "beast" },
-  // マイルストーン ×12
+  { id: "form-diamondgrid", category: "geometry", family: "form" },
+  { id: "beast-damascus", category: "material", family: "beast" },
+  { id: "beast-chrome", category: "material", family: "beast" },
+  // マイルストーン ×12（努力・順位1回）
   { id: "beast-viper", category: "reptile", family: "beast" },
   { id: "scale-king", category: "reptile", family: "scale" },
   { id: "scale-dragon", category: "reptile", family: "scale" },
-  { id: "beast-circuitlace", category: "material", family: "beast" },
+  { id: "beast-kintsugi", category: "material", family: "beast" },
   { id: "beast-eclipse", category: "beast", family: "beast" },
   { id: "beast-shard", category: "beast", family: "beast" },
   { id: "beast-jagarmor", category: "material", family: "beast" },
@@ -151,6 +157,13 @@ const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   { id: "beast-thunder", category: "beast", family: "beast" },
   { id: "beast-starborne", category: "beast", family: "beast" },
   { id: "beast-regalia", category: "beast", family: "beast" },
+  // Wave マイルストーン ×6（招待 / 週・月回数）
+  { id: "wave-cyan-grid", category: "cyber", family: "wave" },
+  { id: "wave-gold-monogram", category: "material", family: "wave" },
+  { id: "wave-ember-hex", category: "geometry", family: "wave" },
+  { id: "wave-chem-ink", category: "material", family: "wave" },
+  { id: "wave-neon-ridge", category: "cyber", family: "wave" },
+  { id: "wave-obsidian-warp", category: "geometry", family: "wave" },
 ];
 
 function bgMeta(id: ProfilePlanProBgVariant): ProfilePlanProBgVariantMeta | undefined {
@@ -185,6 +198,12 @@ function futuristicMeta(
   id: ProfilePlanProFuturisticBgVariant
 ): ProfilePlanProFuturisticBgMeta | undefined {
   return PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS.find((v) => v.id === id);
+}
+
+function waveMeta(
+  id: ProfilePlanProWaveBgVariant
+): ProfilePlanProWaveBgMeta | undefined {
+  return PROFILE_PLAN_PRO_WAVE_BG_VARIANTS.find((v) => v.id === id);
 }
 
 function metaForSpec(spec: AdoptedSpec): {
@@ -227,6 +246,14 @@ function metaForSpec(spec: AdoptedSpec): {
   }
   if (family === "futuristic") {
     const meta = futuristicMeta(id as ProfilePlanProFuturisticBgVariant);
+    return {
+      label: meta?.label ?? id,
+      tag: meta?.tag ?? "",
+      description: meta?.description ?? "",
+    };
+  }
+  if (family === "wave") {
+    const meta = waveMeta(id as ProfilePlanProWaveBgVariant);
     return {
       label: meta?.label ?? id,
       tag: meta?.tag ?? "",
@@ -300,6 +327,10 @@ export const PROFILE_PLAN_PRO_ADOPTED_MATERIAL = PROFILE_PLAN_PRO_ADOPTED_BG.fil
 
 export const PROFILE_PLAN_PRO_ADOPTED_GEOMETRY = PROFILE_PLAN_PRO_ADOPTED_BG.filter(
   (e) => e.category === "geometry"
+);
+
+export const PROFILE_PLAN_PRO_ADOPTED_WAVE = PROFILE_PLAN_PRO_ADOPTED_BG.filter(
+  (e) => e.family === "wave"
 );
 
 /** @deprecated category フィルタを使う */

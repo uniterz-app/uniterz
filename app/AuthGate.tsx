@@ -28,6 +28,7 @@ function isWebPublicPath(pathname: string | null): boolean {
   if (!pathname?.startsWith("/web")) return false;
   if (pathname === "/web/login" || pathname === "/web/signup") return true;
   if (pathname.startsWith("/web/reset")) return true;
+  if (pathname.startsWith("/web/r/")) return true;
   if (isGuestPreviewPath(pathname)) return true;
   return WEB_GUEST_LEGAL_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
@@ -38,6 +39,7 @@ function isMobilePublicPath(pathname: string | null): boolean {
   if (!pathname?.startsWith("/mobile")) return false;
   if (pathname === "/mobile/login" || pathname === "/mobile/signup") return true;
   if (pathname.startsWith("/mobile/reset")) return true;
+  if (pathname.startsWith("/mobile/r/")) return true;
   if (isGuestPreviewPath(pathname)) return true;
   return MOBILE_GUEST_LEGAL_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)

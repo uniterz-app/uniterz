@@ -386,7 +386,7 @@ const PALETTES: Record<ProfilePlanProBeastBgVariant, BeastPalette> = {
     accent: ["148,163,184", "226,232,240", "203,213,225"],
     hudPrimary: "rgba(148,163,184,",
     hudSecondary: "rgba(71,85,105,",
-    opacityMul: 1.45,
+    opacityMul: 2.05,
   },
   "beast-shard": {
     strokes: ["30,58,138", "29,78,216", "37,99,235", "15,23,42"],
@@ -4057,15 +4057,15 @@ function buildFacet(p: BeastPalette): string {
 
       for (const [pts, fill] of tris) {
         parts.push(
-          `<polygon points="${pts}" fill="${fill}" fill-opacity="${(0.38 + dens * 0.28).toFixed(2)}"/>`
+          `<polygon points="${pts}" fill="${fill}" fill-opacity="${(0.55 + dens * 0.35).toFixed(2)}"/>`
         );
       }
 
-      const edgeOp = beastOp(0.055 + dens * 0.045);
+      const edgeOp = beastOp(0.1 + dens * 0.08);
       parts.push(
-        `<polygon points="${top} ${right} ${bot} ${left}" fill="none" stroke="rgba(${pick(p.strokes, col, row)},${edgeOp.toFixed(3)})" stroke-width="0.35"/>`
+        `<polygon points="${top} ${right} ${bot} ${left}" fill="none" stroke="rgba(${pick(p.strokes, col, row)},${edgeOp.toFixed(3)})" stroke-width="0.45"/>`
       );
-      const cutOp = beastOp(0.03 + dens * 0.03);
+      const cutOp = beastOp(0.06 + dens * 0.05);
       const ink = pick(p.strokes, col + 1, row);
       for (const end of [top, right, bot, left]) {
         const [ex, ey] = end.split(",");
@@ -4531,28 +4531,28 @@ function buildSkinSvg(variant: ProfilePlanProBeastBgVariant): string {
 export function getProfilePlanProBeastSkinSvg(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedSvg(`beast:skin:svg:${variant}:v42`, () => buildSkinSvg(variant));
+  return cachedSvg(`beast:skin:svg:${variant}:v43`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD（Native SvgXml 用） */
 export function getProfilePlanProBeastHudSvg(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedSvg(`beast:hud:svg:${variant}:v42`, () => buildHudSvg(variant));
+  return cachedSvg(`beast:hud:svg:${variant}:v43`, () => buildHudSvg(variant));
 }
 
 /** 疎な獣皮 / 宝石レイヤー */
 export function getProfilePlanProBeastSkinUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:skin:${variant}:v42`, () => buildSkinSvg(variant));
+  return cachedUrl(`beast:skin:${variant}:v43`, () => buildSkinSvg(variant));
 }
 
 /** 微細 HUD */
 export function getProfilePlanProBeastHudUrl(
   variant: ProfilePlanProBeastBgVariant
 ): string {
-  return cachedUrl(`beast:hud:${variant}:v42`, () => buildHudSvg(variant));
+  return cachedUrl(`beast:hud:${variant}:v43`, () => buildHudSvg(variant));
 }
 
 export const PROFILE_PLAN_PRO_BEAST_CANVAS = {

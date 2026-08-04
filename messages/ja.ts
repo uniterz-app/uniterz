@@ -670,6 +670,7 @@ const ja = {
     typeInfo: "お知らせ",
     sectionMain: "メイン",
     editProfile: "プロフィール編集",
+    invite: "招待",
     sectionSubscription: "サブスクリプション",
     sectionSupport: "サポート",
     sectionAdmin: "管理",

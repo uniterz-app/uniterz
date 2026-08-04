@@ -34,6 +34,11 @@ import {
   getProfilePlanProLabHudUrl,
   getProfilePlanProLabSkinUrl,
 } from "@/lib/profile/profilePlanProLabPattern";
+import { isProfilePlanProWaveBgVariant } from "@/lib/profile/profilePlanProWaveBgVariants";
+import {
+  getProfilePlanProWaveHudUrl,
+  getProfilePlanProWaveSkinUrl,
+} from "@/lib/profile/profilePlanProWavePattern";
 import { isProfilePlanProFormBgVariant } from "@/lib/profile/profilePlanProFormBgVariants";
 import {
   getProfilePlanProFormHudUrl,
@@ -194,6 +199,7 @@ export default function ProfilePlanProBackgroundFx({
   const isBeast = isProfilePlanProBeastBgVariant(variant);
   const isCosmos = isProfilePlanProCosmosBgVariant(variant);
   const isLab = isProfilePlanProLabBgVariant(variant);
+  const isWave = isProfilePlanProWaveBgVariant(variant);
   const isForm = isProfilePlanProFormBgVariant(variant);
   const isWagara = isProfilePlanProWagaraBgVariant(variant);
   const isNeo = isProfilePlanProNeoBgVariant(variant);
@@ -207,6 +213,7 @@ export default function ProfilePlanProBackgroundFx({
     isBeast ? "profile-plan-pro-bg--beast" : "",
     isCosmos ? "profile-plan-pro-bg--cosmos" : "",
     isLab ? "profile-plan-pro-bg--lab" : "",
+    isWave ? "profile-plan-pro-bg--wave" : "",
     isForm ? "profile-plan-pro-bg--form" : "",
     isWagara ? "profile-plan-pro-bg--wagara" : "",
     isNeo ? "profile-plan-pro-bg--neo" : "",
@@ -428,6 +435,25 @@ export default function ProfilePlanProBackgroundFx({
           delayMs={180}
           className="profile-plan-pro-bg__lab-hud"
           style={{ backgroundImage: getProfilePlanProLabHudUrl(variant) }}
+        />
+      </div>
+    );
+  }
+
+  if (isProfilePlanProWaveBgVariant(variant)) {
+    return (
+      <div className={rootClass} aria-hidden>
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={40}
+          className="profile-plan-pro-bg__wave-skin"
+          style={{ backgroundImage: getProfilePlanProWaveSkinUrl(variant) }}
+        />
+        <SparseEnterLayer
+          animate={animate}
+          delayMs={180}
+          className="profile-plan-pro-bg__wave-hud"
+          style={{ backgroundImage: getProfilePlanProWaveHudUrl(variant) }}
         />
       </div>
     );

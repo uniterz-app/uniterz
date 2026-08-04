@@ -11,6 +11,8 @@ import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNativ
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import FuturisticBgPreviewScreenNative from "../backgrounds/FuturisticBgPreviewScreenNative";
 import TitleSkinPreviewScreenNative from "../backgrounds/TitleSkinPreviewScreenNative";
+import WaveProSkinPreviewScreenNative from "../backgrounds/WaveProSkinPreviewScreenNative";
+import RankingListProSkinPreviewScreenNative from "../backgrounds/RankingListProSkinPreviewScreenNative";
 import ProSkinUnlockPreviewScreenNative from "../mobileScreens/ProSkinUnlockPreviewScreenNative";
 import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
@@ -124,6 +126,32 @@ export function TitleSkinPreviewScreenWrapper() {
   return (
     <TitleSkinPreviewScreenNative
       language={language}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function WaveProSkinPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <WaveProSkinPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function RankingListProSkinPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <RankingListProSkinPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />
   );

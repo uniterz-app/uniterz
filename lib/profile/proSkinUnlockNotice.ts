@@ -43,7 +43,7 @@ export function parseProSkinUnlockNoticeIds(raw: unknown): string[] {
 
 /** プレビュー用 — 実際の模様を1枚ヒーロー表示 */
 export const PRO_SKIN_UNLOCK_NOTICE_PREVIEW_IDS: readonly ProfilePlanProBgVariant[] =
-  ["beast-circuitlace"];
+  ["beast-kintsugi"];
 
 export function resolveProSkinUnlockNoticeEntries(
   ids: readonly string[]

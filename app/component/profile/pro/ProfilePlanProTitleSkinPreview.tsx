@@ -235,7 +235,7 @@ export default function ProfilePlanProTitleSkinPreview() {
           Title Skins · Crown / Thunder / Star
         </h1>
         <p className="mt-1.5 text-sm leading-relaxed text-white/50">
-          採用カタログ計24種（即解放12 / マイルストーン12）。月間称号: Facet / Thunder / Star Crest（勝率） / Regalia（総合・最後）。
+          採用カタログ計30種（即解放12 / マイルストーン18）。月間称号: Facet / Thunder / Star Crest（勝率） / Regalia（総合・最後）。
         </p>
 
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">

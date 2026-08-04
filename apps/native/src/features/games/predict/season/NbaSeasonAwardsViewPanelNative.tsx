@@ -32,23 +32,20 @@ function resolveCandidate(
   return catalog.find((c) => c.id === id) ?? null;
 }
 
-function contrastInk(hex: string): string {
-  const raw = hex.replace("#", "");
-  if (raw.length !== 6) return "#050508";
-  const r = Number.parseInt(raw.slice(0, 2), 16);
-  const g = Number.parseInt(raw.slice(2, 4), 16);
-  const b = Number.parseInt(raw.slice(4, 6), 16);
-  const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return luma > 0.62 ? "#050508" : "#F5FBFF";
-}
-
 function TeamAbbrBadge({ abbr }: { abbr: string }) {
   const teamId = nbaTeamIdFromBracketCode(abbr);
-  const fill = teamId ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId)) : "#5B8CFF";
-  const ink = contrastInk(fill);
+  const fill = teamId
+    ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
+    : "#5B8CFF";
+
   return (
-    <View style={[styles.badge, { backgroundColor: fill }]}>
-      <Text style={[styles.badgeText, { color: ink }]}>{abbr.slice(0, 3).toUpperCase()}</Text>
+    <View style={[styles.badgeSkew, { backgroundColor: fill }]}>
+      <View style={styles.badgeScan} pointerEvents="none">
+        {Array.from({ length: 8 }, (_, i) => (
+          <View key={i} style={[styles.badgeScanLine, { top: 1 + i * 3 }]} />
+        ))}
+      </View>
+      <Text style={styles.badgeText}>{abbr.slice(0, 3).toUpperCase()}</Text>
     </View>
   );
 }
@@ -58,7 +55,9 @@ export default function NbaSeasonAwardsViewPanelNative({
   officialByAward = null,
   catalog,
 }: Props) {
-  const list = catalog ?? ([...AWARDS_PREVIEW_PLAYERS, ...AWARDS_PREVIEW_COACHES] as NbaAwardCandidate[]);
+  const list =
+    catalog ??
+    ([...AWARDS_PREVIEW_PLAYERS, ...AWARDS_PREVIEW_COACHES] as NbaAwardCandidate[]);
 
   return (
     <View>
@@ -72,23 +71,36 @@ export default function NbaSeasonAwardsViewPanelNative({
           const picked = resolveCandidate(prediction.picks[def.id], list);
           const officialId = officialByAward?.[def.id];
           const hit =
-            officialId != null && officialId !== "" && picked ? officialId === picked.id : null;
+            officialId != null && officialId !== "" && picked
+              ? officialId === picked.id
+              : null;
           const isLast = index === NBA_SEASON_AWARD_DEFS.length - 1;
           return (
-            <View key={def.id} style={[styles.row, !isLast ? styles.rowBorder : null]}>
+            <View
+              key={def.id}
+              style={[styles.row, !isLast ? styles.rowBorder : null]}
+            >
               <Text style={styles.awardLabel}>{def.labelEn}</Text>
               {picked ? (
                 <>
                   <Text style={styles.pickName} numberOfLines={1}>
                     {awardCandidateLabel(picked)}
                   </Text>
-                  {picked.teamAbbr ? <TeamAbbrBadge abbr={picked.teamAbbr} /> : <View style={styles.badgeSpacer} />}
+                  {picked.teamAbbr ? (
+                    <TeamAbbrBadge abbr={picked.teamAbbr} />
+                  ) : (
+                    <View style={styles.badgeSpacer} />
+                  )}
                 </>
               ) : (
                 <Text style={styles.dash}>—</Text>
               )}
               {hit != null ? (
-                <Text style={[styles.resultMark, hit ? styles.hit : styles.miss]}>{hit ? "HIT" : "MISS"}</Text>
+                <Text
+                  style={[styles.resultMark, hit ? styles.hit : styles.miss]}
+                >
+                  {hit ? "HIT" : "MISS"}
+                </Text>
               ) : null}
             </View>
           );
@@ -124,8 +136,17 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(4,9,16,0.97)",
     overflow: "hidden",
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 7 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
   awardLabel: {
     width: 52,
     fontFamily: OX,
@@ -145,9 +166,35 @@ const styles = StyleSheet.create({
     color: "#fff",
     textTransform: "uppercase",
   },
-  badge: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
-  badgeText: { fontFamily: OX, fontSize: 9, fontWeight: "900", letterSpacing: 0.4 },
-  badgeSpacer: { width: 28, height: 28 },
+  badgeSkew: {
+    minWidth: 38,
+    height: 22,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    transform: [{ skewX: "-14deg" }],
+  },
+  badgeScan: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  badgeScanLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.28)",
+  },
+  badgeText: {
+    fontFamily: OX,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+    color: "#050508",
+    textTransform: "uppercase",
+    transform: [{ skewX: "14deg" }],
+  },
+  badgeSpacer: { width: 38, height: 22 },
   dash: { flex: 1, fontSize: 11, color: "rgba(255,255,255,0.3)" },
   resultMark: { fontFamily: OX, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
   hit: { color: "rgba(45,255,110,0.85)" },

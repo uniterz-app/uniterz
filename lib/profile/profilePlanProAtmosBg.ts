@@ -226,6 +226,22 @@ function cachedUrl(key: string, build: () => string): string {
   return url;
 }
 
+/** Native SvgXml 用 — 疎な六角（モバイル縦長） */
+export function getProfilePlanProAtmosHexSvg(
+  accent: KinetikProfileAccentKey = "default"
+): string {
+  const palette = getAtmosShapePalette(accent);
+  return buildSparseHexSvg(CANVAS_W, CANVAS_H, densityAt, palette.hexStrokes);
+}
+
+/** Native SvgXml 用 — 微細 HUD（モバイル縦長） */
+export function getProfilePlanProAtmosHudSvg(
+  accent: KinetikProfileAccentKey = "default"
+): string {
+  const palette = getAtmosShapePalette(accent);
+  return buildHudSvg(palette);
+}
+
 /** 疎な六角レイヤー（モバイル縦長） */
 export function getProfilePlanProAtmosHexUrl(
   accent: KinetikProfileAccentKey = "default"

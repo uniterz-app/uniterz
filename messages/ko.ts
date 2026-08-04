@@ -658,6 +658,7 @@ const ko: Messages = {
     typeInfo: "소식",
     sectionMain: "메인",
     editProfile: "프로필 편집",
+    invite: "초대",
     sectionSubscription: "구독",
     sectionSupport: "지원",
     sectionAdmin: "관리",

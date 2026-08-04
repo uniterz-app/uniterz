@@ -658,6 +658,7 @@ const zh: Messages = {
     typeInfo: "资讯",
     sectionMain: "主菜单",
     editProfile: "编辑个人资料",
+    invite: "邀请",
     sectionSubscription: "订阅",
     sectionSupport: "支持",
     sectionAdmin: "管理",

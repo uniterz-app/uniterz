@@ -1,27 +1,100 @@
 /**
  * Web プロフィール「アワード」タブ相当。
- * 提出済みシーズンアワード予想を表示（未提出は NO DATA）。
+ * 提出済みシーズン予想（アワード + 順位）を表示。
  */
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import NbaSeasonAwardsViewPanelNative from "../games/predict/season/NbaSeasonAwardsViewPanelNative";
-import { MOCK_SUBMITTED_AWARDS } from "../../../../../lib/predict/nbaSeasonPicksViewMocks";
+import NbaSeasonStandingsViewPanelNative from "../games/predict/season/NbaSeasonStandingsViewPanelNative";
+import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
+import type {
+  NbaAwardCandidate,
+  NbaSeasonAwardsPrediction,
+} from "../../../../../lib/predict/nbaSeasonAwardsPredict";
+import type { NbaSeasonStandingsPrediction } from "../../../../../lib/predict/nbaSeasonStandingsPredict";
+import { fetchProfileSeasonAwardsNative } from "./seasonAwardsApiNative";
+import { fetchProfileSeasonStandingsNative } from "./seasonStandingsApiNative";
 
 type Props = {
   uid: string | undefined;
   language: "ja" | "en";
-  /** 提出済み予想。未指定・null は NO DATA（本番データ接続までのプレースホルダ） */
-  prediction?: typeof MOCK_SUBMITTED_AWARDS | null;
-  /** dev / プレビュー用にモックを出す */
-  useMockWhenEmpty?: boolean;
+  /** 明示指定時は fetch せずこれを表示（プレビュー用） */
+  prediction?: NbaSeasonAwardsPrediction | null;
+  candidates?: NbaAwardCandidate[];
+  standings?: NbaSeasonStandingsPrediction | null;
 };
 
 export default function ProfileAwardsTabNative({
   uid,
   language,
-  prediction = null,
-  useMockWhenEmpty = false,
+  prediction: predictionProp,
+  candidates: candidatesProp,
+  standings: standingsProp,
 }: Props) {
   const isJa = language === "ja";
+  const controlled =
+    predictionProp !== undefined || standingsProp !== undefined;
+  const [loading, setLoading] = useState(!controlled && Boolean(uid));
+  const [prediction, setPrediction] = useState<NbaSeasonAwardsPrediction | null>(
+    predictionProp ?? null
+  );
+  const [candidates, setCandidates] = useState<NbaAwardCandidate[]>(
+    candidatesProp ?? []
+  );
+  const [standings, setStandings] = useState<NbaSeasonStandingsPrediction | null>(
+    standingsProp ?? null
+  );
+
+  useEffect(() => {
+    if (controlled) {
+      if (predictionProp !== undefined) {
+        setPrediction(predictionProp ?? null);
+        setCandidates(candidatesProp ?? []);
+      }
+      if (standingsProp !== undefined) {
+        setStandings(standingsProp ?? null);
+      }
+      setLoading(false);
+      return;
+    }
+    if (!uid) {
+      setPrediction(null);
+      setCandidates([]);
+      setStandings(null);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const [awardsRes, standingsRes] = await Promise.allSettled([
+          fetchProfileSeasonAwardsNative(uid, CURRENT_NBA_SEASON_KEY),
+          fetchProfileSeasonStandingsNative(uid, CURRENT_NBA_SEASON_KEY),
+        ]);
+        if (cancelled) return;
+        if (awardsRes.status === "fulfilled") {
+          setPrediction(awardsRes.value.prediction);
+          setCandidates(awardsRes.value.candidates ?? []);
+        } else {
+          console.error("ProfileAwardsTabNative awards", awardsRes.reason);
+          setPrediction(null);
+          setCandidates([]);
+        }
+        if (standingsRes.status === "fulfilled") {
+          setStandings(standingsRes.value.prediction);
+        } else {
+          console.error("ProfileAwardsTabNative standings", standingsRes.reason);
+          setStandings(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uid, controlled, predictionProp, candidatesProp, standingsProp]);
 
   if (!uid) {
     return (
@@ -31,17 +104,22 @@ export default function ProfileAwardsTabNative({
     );
   }
 
-  const resolved =
-    prediction ?? (useMockWhenEmpty ? MOCK_SUBMITTED_AWARDS : null);
+  if (loading) {
+    return (
+      <View style={styles.loadingBox}>
+        <ActivityIndicator color="rgba(252,211,77,0.8)" />
+      </View>
+    );
+  }
 
-  if (!resolved) {
+  if (!prediction && !standings) {
     return (
       <View style={styles.noDataBox}>
         <Text style={styles.noDataBebas}>NO DATA</Text>
         <Text style={styles.muted}>
           {isJa
-            ? "提出済みのシーズンアワード予想がありません"
-            : "No season awards prediction submitted"}
+            ? "提出済みのシーズン予想がありません"
+            : "No season predictions submitted"}
         </Text>
       </View>
     );
@@ -49,7 +127,15 @@ export default function ProfileAwardsTabNative({
 
   return (
     <View style={styles.wrap}>
-      <NbaSeasonAwardsViewPanelNative prediction={resolved} />
+      {standings ? (
+        <NbaSeasonStandingsViewPanelNative prediction={standings} />
+      ) : null}
+      {prediction ? (
+        <NbaSeasonAwardsViewPanelNative
+          prediction={prediction}
+          catalog={candidates.length > 0 ? candidates : undefined}
+        />
+      ) : null}
     </View>
   );
 }
@@ -58,12 +144,18 @@ const styles = StyleSheet.create({
   wrap: {
     marginTop: 8,
     paddingHorizontal: 2,
+    gap: 20,
   },
   muted: {
     marginTop: 16,
     color: "rgba(255,255,255,0.45)",
     fontSize: 13,
     textAlign: "center",
+  },
+  loadingBox: {
+    marginTop: 24,
+    alignItems: "center",
+    paddingVertical: 28,
   },
   noDataBox: {
     marginTop: 16,

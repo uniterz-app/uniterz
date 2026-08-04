@@ -76,7 +76,7 @@ function panelProps() {
     identity: {
       ...PROFILE_EDIT_KINETIK_MOCK.identity,
       displayName: "UNITERZ",
-      systemId: "3PJVG4Y9",
+      systemId: "",
       handle: "mpj",
     },
     stats: {
@@ -238,7 +238,11 @@ function CatalogTile({
   owners: number;
   progress: Pick<
     ProSkinUnlockProgress,
-    "posts" | "exactHits" | "maxWinStreak"
+    | "posts"
+    | "exactHits"
+    | "maxWinStreak"
+    | "referralCompletedCount"
+    | "periodWins"
   >;
   onSelect: () => void;
 }) {
@@ -418,8 +422,21 @@ export default function ProfilePlanProSkinPicker({
     new Set(PRO_SKIN_UNLOCK_CATALOG.map((e) => e.id))
   );
   const [milestoneProgress, setMilestoneProgress] = useState<
-    Pick<ProSkinUnlockProgress, "posts" | "exactHits" | "maxWinStreak">
-  >({ posts: 0, exactHits: 0, maxWinStreak: 0 });
+    Pick<
+      ProSkinUnlockProgress,
+      | "posts"
+      | "exactHits"
+      | "maxWinStreak"
+      | "referralCompletedCount"
+      | "periodWins"
+    >
+  >({
+    posts: 0,
+    exactHits: 0,
+    maxWinStreak: 0,
+    referralCompletedCount: 0,
+    periodWins: {},
+  });
   const [ownerCounts, setOwnerCounts] = useState<Record<string, number>>({});
   const [viewerIsPro, setViewerIsPro] = useState(!isProduction);
   const [statusReady, setStatusReady] = useState(!isProduction);
@@ -478,6 +495,9 @@ export default function ProfilePlanProSkinPicker({
           posts: status.progress?.posts ?? 0,
           exactHits: status.progress?.exactHits ?? 0,
           maxWinStreak: status.progress?.maxWinStreak ?? 0,
+          referralCompletedCount:
+            status.progress?.referralCompletedCount ?? 0,
+          periodWins: status.progress?.periodWins ?? {},
         });
         if (status.savedId) setSavedId(status.savedId);
         setNoticeIds(new Set(status.noticeIds ?? []));

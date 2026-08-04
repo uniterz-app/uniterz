@@ -668,6 +668,7 @@ const de: Messages = {
     typeInfo: "Neuigkeiten",
     sectionMain: "Hauptmenü",
     editProfile: "Profil bearbeiten",
+    invite: "Einladen",
     sectionSubscription: "Abonnement",
     sectionSupport: "Support",
     sectionAdmin: "Admin",

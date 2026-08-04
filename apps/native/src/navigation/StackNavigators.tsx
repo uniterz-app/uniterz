@@ -242,6 +242,13 @@ function ProfileStackScreen() {
           }
         />
         <ProfileStack.Screen
+          name="Invite"
+          getComponent={() =>
+            require("../features/profile/screens/ReferralInviteScreenNative")
+              .default
+          }
+        />
+        <ProfileStack.Screen
           name="Announcements"
           getComponent={() =>
             require("../features/profile/screens/ProfileStackWrappers")
@@ -298,6 +305,24 @@ function ProfileStackScreen() {
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
                 .TitleSkinPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="WaveProSkinPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .WaveProSkinPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="RankingListProSkinPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .RankingListProSkinPreviewScreenWrapper
             }
           />
         ) : null}

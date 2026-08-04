@@ -4,6 +4,7 @@ import { PROFILE_PLAN_PRO_FORM_BG_VARIANTS } from "@/lib/profile/profilePlanProF
 import { PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS } from "@/lib/profile/profilePlanProFuturisticBgVariants";
 import { PROFILE_PLAN_PRO_NEO_BG_VARIANTS } from "@/lib/profile/profilePlanProNeoBgVariants";
 import { PROFILE_PLAN_PRO_SCALE_BG_VARIANTS } from "@/lib/profile/profilePlanProScaleBgVariants";
+import { PROFILE_PLAN_PRO_WAVE_BG_VARIANTS } from "@/lib/profile/profilePlanProWaveBgVariants";
 
 const DEFAULT_SWATCH = "linear-gradient(180deg, #050810, #0a1628)";
 
@@ -45,6 +46,12 @@ export function profilePlanProAdoptedSkinSwatch(
   if (family === "futuristic") {
     return (
       PROFILE_PLAN_PRO_FUTURISTIC_BG_VARIANTS.find((v) => v.id === id)?.swatch ??
+      DEFAULT_SWATCH
+    );
+  }
+  if (family === "wave") {
+    return (
+      PROFILE_PLAN_PRO_WAVE_BG_VARIANTS.find((v) => v.id === id)?.swatch ??
       DEFAULT_SWATCH
     );
   }

@@ -675,6 +675,7 @@ const en: Messages = {
     typeInfo: "News",
     sectionMain: "Main",
     editProfile: "Edit Profile",
+    invite: "Invite",
     sectionSubscription: "Subscription",
     sectionSupport: "Support",
     sectionAdmin: "Admin",

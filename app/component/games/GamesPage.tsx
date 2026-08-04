@@ -1381,9 +1381,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           }}
           onSelectAwardsPredict={() => {
             setGamesDrawerOpen(false);
-            router.push(
-              isMobile ? "/mobile/season-awards-preview" : "/dev/season-awards-preview"
-            );
+            router.push("/mobile/season-awards");
           }}
           onSelectStandingsPredict={() => {
             setGamesDrawerOpen(false);

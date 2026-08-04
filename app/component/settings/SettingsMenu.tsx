@@ -22,6 +22,7 @@ import {
   Sparkles,
   Trash2,
   Hexagon,
+  UserPlus,
 } from "lucide-react";
 import {
   parseUserProfileFields,
@@ -244,6 +245,14 @@ export default function SettingsMenu({
             onClick={() => pushFromMenu(p("/web/badges", "/mobile/badges"))}
           >
             <span className={cn(isEn && "uppercase")}>{m.profile.badgePalette}</span>
+          </SideMenuItemButton>
+
+          <SideMenuItemButton
+            icon={UserPlus}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(p("/web/invite", "/mobile/invite"))}
+          >
+            <span className={cn(isEn && "uppercase")}>{m.settings.invite}</span>
           </SideMenuItemButton>
 
           <SideMenuItemButton

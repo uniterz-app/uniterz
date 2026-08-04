@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放12 / マイルストーン12。
+ * Pro Skin 解放ルール — 即解放12 / マイルストーン18。
  * 並べ順もここが正（カタログ表示・No. はこの順）。
  */
 
@@ -9,9 +9,12 @@ import {
 } from "@/lib/profile/profilePlanProAdoptedBgVariants";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import {
+  PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_RANK_MILESTONES,
+  PRO_SKIN_REFERRAL_MILESTONES,
   PRO_SKIN_THRESHOLD_MILESTONES,
   PRO_SKIN_UNLOCK_FROM_SEASON_KEY as CATALOG_FROM_SEASON,
+  proSkinPeriodWinCounterKey,
 } from "@/lib/profile/proSkinMilestoneCatalog";
 
 export type ProSkinUnlockKind =
@@ -21,6 +24,8 @@ export type ProSkinUnlockKind =
   | "exactHits"
   | "weeklyRank"
   | "monthlyRank"
+  | "referralCompleted"
+  | "periodWins"
   | "titleCollection";
 
 export type ProSkinRankMetric =
@@ -44,6 +49,14 @@ export type ProSkinUnlockRule =
       maxRank: number;
       metric?: ProSkinRankMetric;
     }
+  | { kind: "referralCompleted"; threshold: number }
+  | {
+      kind: "periodWins";
+      period: "weekly" | "monthly";
+      metric: ProSkinRankMetric;
+      maxRank: number;
+      wins: number;
+    }
   | {
       kind: "titleCollection";
       /** これらのスキンをすべて保持すると解放 */
@@ -59,6 +72,13 @@ export type ProSkinUnlockProgress = {
   exactHits: number;
   weeklyRanks: Record<ProSkinRankMetric, number | null>;
   monthlyRanks: Record<ProSkinRankMetric, number | null>;
+  /** 招待完了人数（referralStats.completedCount） */
+  referralCompletedCount: number;
+  /**
+   * 週/月条件の累計達成回数。
+   * キー: `${period}_${metric}_${maxRank}`（proSkinPeriodWinCounterKey）
+   */
+  periodWins: Record<string, number>;
   isPro: boolean;
   /** マイルストーン判定に使うシーズンキー（未評価時も明示） */
   seasonKey?: string;
@@ -100,6 +120,8 @@ export function emptyProSkinUnlockProgress(
     maxWinStreak: 0,
     weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
+    referralCompletedCount: 0,
+    periodWins: {},
     seasonKey,
   };
 }
@@ -146,18 +168,18 @@ const UNLOCK_ORDER: readonly {
   unlock: ProSkinUnlockRule;
 }[] = [
   // —— Pro 即解放 ×12 ——
-  { id: "atmos", unlock: { kind: "pro" } },
-  { id: "parallax", unlock: { kind: "pro" } },
-  { id: "futuristic-eclipse", unlock: { kind: "pro" } },
-  { id: "futuristic-data-stream", unlock: { kind: "pro" } },
+  { id: "beast-titanium", unlock: { kind: "pro" } },
+  { id: "beast-circuitlace", unlock: { kind: "pro" } },
+  { id: "beast-panther", unlock: { kind: "pro" } },
+  { id: "beast-crocodile", unlock: { kind: "pro" } },
   { id: "scale-mamba", unlock: { kind: "pro" } },
   { id: "scale-python", unlock: { kind: "pro" } },
-  { id: "beast-crocodile", unlock: { kind: "pro" } },
-  { id: "beast-panther", unlock: { kind: "pro" } },
-  { id: "beast-titanium", unlock: { kind: "pro" } },
   { id: "form-hexveil", unlock: { kind: "pro" } },
   { id: "scale-diamondback", unlock: { kind: "pro" } },
   { id: "beast-shark", unlock: { kind: "pro" } },
+  { id: "form-diamondgrid", unlock: { kind: "pro" } },
+  { id: "beast-damascus", unlock: { kind: "pro" } },
+  { id: "beast-chrome", unlock: { kind: "pro" } },
   // —— マイルストーン（catalog） ——
   ...PRO_SKIN_THRESHOLD_MILESTONES.map((row) => ({
     id: row.id as ProfilePlanProBgVariant,
@@ -173,6 +195,24 @@ const UNLOCK_ORDER: readonly {
       maxRank: row.maxRank,
       metric: row.metric,
     } as ProSkinUnlockRule,
+  })),
+  // Wave — 招待 / 週・月回数
+  ...PRO_SKIN_REFERRAL_MILESTONES.map((row) => ({
+    id: row.id as ProfilePlanProBgVariant,
+    unlock: {
+      kind: "referralCompleted" as const,
+      threshold: row.completedCount,
+    },
+  })),
+  ...PRO_SKIN_PERIOD_WIN_MILESTONES.map((row) => ({
+    id: row.id as ProfilePlanProBgVariant,
+    unlock: {
+      kind: "periodWins" as const,
+      period: row.period,
+      metric: row.metric,
+      maxRank: row.maxRank,
+      wins: row.wins,
+    },
   })),
 ];
 
@@ -247,6 +287,16 @@ export function isProSkinUnlockRuleMet(
         periodRank(progress, "monthly", rankMetric(rule)),
         rule.maxRank
       );
+    case "referralCompleted":
+      return progress.referralCompletedCount >= rule.threshold;
+    case "periodWins": {
+      const key = proSkinPeriodWinCounterKey({
+        period: rule.period,
+        metric: rule.metric,
+        maxRank: rule.maxRank,
+      });
+      return (progress.periodWins[key] ?? 0) >= rule.wins;
+    }
     case "titleCollection":
       if (!unlockedIds) return false;
       return rule.requires.every((id) => unlockedIds.has(id));
@@ -364,6 +414,26 @@ export function formatProSkinUnlockCondition(
         rankMetric(rule),
         language
       );
+    case "referralCompleted":
+      return ja
+        ? `招待完了 ${rule.threshold} 人で解放`
+        : `Unlock at ${rule.threshold} completed invites`;
+    case "periodWins": {
+      const periodLabel =
+        rule.period === "weekly" ? (ja ? "週間" : "weekly") : ja ? "月間" : "monthly";
+      const metricLabel = formatRankMetricLabel(rule.metric, language);
+      const rankLabel =
+        rule.maxRank === 1
+          ? ja
+            ? "1位"
+            : "#1"
+          : ja
+            ? `Top${rule.maxRank}`
+            : `Top ${rule.maxRank}`;
+      return ja
+        ? `${periodLabel}${metricLabel} ${rankLabel} を ${rule.wins} 回で解放`
+        : `Unlock after ${rule.wins}× ${periodLabel} ${metricLabel} ${rankLabel}`;
+    }
     case "titleCollection":
       return ja
         ? "月間総合・UPSET・最多得点者の各1位スキンを集めて解放"

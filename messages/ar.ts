@@ -667,6 +667,7 @@ const ar: Messages = {
     typeInfo: "أخبار",
     sectionMain: "الرئيسية",
     editProfile: "تعديل الملف الشخصي",
+    invite: "دعوة",
     sectionSubscription: "الاشتراك",
     sectionSupport: "الدعم",
     sectionAdmin: "الإدارة",

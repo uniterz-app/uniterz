@@ -17,6 +17,8 @@ import {
   type WcGoalScorerPick,
 } from "@/lib/legacyWcWebShims";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { touchReferralPredictDay } from "@/lib/referral/touchReferralPredictDay";
+import { settleReferralRelationWithRetries } from "@/lib/referral/settleReferralRelation";
 
 /* ========= 型 ========= */
 type Status = "scheduled" | "live" | "final";
@@ -156,6 +158,8 @@ export async function POST(req: Request) {
     let authorDisplayName = "ユーザー";
     let authorPhotoURL: string | null = null;
     let authorHandle: string | null = null;
+    let referredByUid: string | null = null;
+    let referralSettled = false;
 
     try {
       const userDoc = await adminDb.collection("users").doc(uid).get();
@@ -164,6 +168,11 @@ export async function POST(req: Request) {
         authorDisplayName = u.displayName || authorDisplayName;
         authorPhotoURL = u.photoURL || u.avatarUrl || null;
         authorHandle = u.handle || u.username || u.slug || null;
+        const rawRef = u.referredByUid;
+        if (typeof rawRef === "string" && rawRef.trim()) {
+          referredByUid = rawRef.trim();
+        }
+        referralSettled = Boolean(u.referralSettledAt);
       }
     } catch {}
 
@@ -346,6 +355,33 @@ export async function POST(req: Request) {
         } catch (flagErr) {
           console.error("[POST /api/posts_v2] user league flags", flagErr);
         }
+      }
+      try {
+        // 招待経由かつ未精算のみ。達成済みは touch しない（コスト抑制）
+        if (referredByUid && !referralSettled) {
+          const touch = await touchReferralPredictDay(adminDb, uid);
+          if (!touch.ok) {
+            console.error("[POST /api/posts_v2] referral day", touch.error);
+          } else if (touch.needsSettle) {
+            try {
+              const settled = await settleReferralRelationWithRetries(
+                adminDb,
+                uid,
+                3
+              );
+              if (!settled.ok) {
+                console.error(
+                  "[POST /api/posts_v2] referral settle",
+                  settled.error
+                );
+              }
+            } catch (settleErr) {
+              console.error("[POST /api/posts_v2] referral settle", settleErr);
+            }
+          }
+        }
+      } catch (referralErr) {
+        console.error("[POST /api/posts_v2] referral day", referralErr);
       }
       return NextResponse.json({ ok: true, id: ref.id }, { status: 201 });
     } catch (e: any) {

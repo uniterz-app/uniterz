@@ -19,6 +19,7 @@ import {
   listThresholdUnlockIdsFromProgress,
   parseProSkinProgressSnapshot,
   progressFromProSkinSnapshot,
+  readReferralCompletedCount,
 } from "@/lib/profile/proSkinProgress";
 import {
   applyProSkinTitleCollections,
@@ -77,7 +78,11 @@ export function progressFromUserDocOnly(
 ): ProSkinUnlockProgress {
   const isPro = userDataIsPro(userData);
   const snap = parseProSkinProgressSnapshot(userData.proSkinProgress);
-  return progressFromProSkinSnapshot(snap, isPro);
+  return progressFromProSkinSnapshot(
+    snap,
+    isPro,
+    readReferralCompletedCount(userData)
+  );
 }
 
 /**
@@ -108,7 +113,9 @@ export function sanitizePersistedUnlockIds(
       if (
         entry.unlock.kind === "weeklyRank" ||
         entry.unlock.kind === "monthlyRank" ||
-        entry.unlock.kind === "titleCollection"
+        entry.unlock.kind === "titleCollection" ||
+        entry.unlock.kind === "referralCompleted" ||
+        entry.unlock.kind === "periodWins"
       ) {
         kept.add(id);
       }
@@ -132,7 +139,11 @@ export async function loadProSkinUnlockProgressFromSeasonStats(
   const isPro = userDataIsPro(userData);
   const mirrored = parseProSkinProgressSnapshot(userData.proSkinProgress);
   if (mirrored && mirrored.seasonKey === seasonKey) {
-    return progressFromProSkinSnapshot(mirrored, isPro);
+    return progressFromProSkinSnapshot(
+      mirrored,
+      isPro,
+      readReferralCompletedCount(userData)
+    );
   }
   if (!isProSkinUnlockSeasonKeyEligible(seasonKey)) {
     return emptyProSkinUnlockProgress(isPro, PRO_SKIN_UNLOCK_FROM_SEASON_KEY);
@@ -169,6 +180,8 @@ export async function loadProSkinUnlockProgressFromSeasonStats(
     maxWinStreak,
     weeklyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
     monthlyRanks: { ...EMPTY_PRO_SKIN_RANK_MAP },
+    referralCompletedCount: readReferralCompletedCount(userData),
+    periodWins: {},
     seasonKey,
   };
 }
@@ -241,7 +254,9 @@ export function isProSkinIdUnlockedForUser(
   if (
     entry.unlock.kind === "streak" ||
     entry.unlock.kind === "posts" ||
-    entry.unlock.kind === "exactHits"
+    entry.unlock.kind === "exactHits" ||
+    entry.unlock.kind === "referralCompleted" ||
+    entry.unlock.kind === "periodWins"
   ) {
     return (
       progress.isPro && isProSkinUnlockRuleMet(entry.unlock, progress)

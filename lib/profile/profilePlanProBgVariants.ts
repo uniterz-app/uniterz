@@ -11,6 +11,7 @@ import type { ProfilePlanProFuturisticBgVariant } from "./profilePlanProFuturist
 import type { ProfilePlanProNovaBgVariant } from "./profilePlanProNovaBgVariants";
 import type { ProfilePlanProScaleBgVariant } from "./profilePlanProScaleBgVariants";
 import type { ProfilePlanProWagaraBgVariant } from "./profilePlanProWagaraBgVariants";
+import type { ProfilePlanProWaveBgVariant } from "./profilePlanProWaveBgVariants";
 
 export type ProfilePlanProBgVariant =
   | "atmos"
@@ -44,10 +45,11 @@ export type ProfilePlanProBgVariant =
   | ProfilePlanProLabBgVariant
   | ProfilePlanProWagaraBgVariant
   | ProfilePlanProNeoBgVariant
-  | ProfilePlanProFuturisticBgVariant;
+  | ProfilePlanProFuturisticBgVariant
+  | ProfilePlanProWaveBgVariant;
 
-/** 本番 PRO プロフィール背景 — 確定: Atmos（疎な六角 + 微細 HUD） */
-export const PROFILE_PLAN_PRO_BG_DEFAULT: ProfilePlanProBgVariant = "atmos";
+/** 本番 PRO プロフィール背景 — 確定: Brushed Titanium */
+export const PROFILE_PLAN_PRO_BG_DEFAULT: ProfilePlanProBgVariant = "beast-titanium";
 
 export type ProfilePlanProBgVariantMeta = {
   id: ProfilePlanProBgVariant;

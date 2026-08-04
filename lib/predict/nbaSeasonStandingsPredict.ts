@@ -84,6 +84,68 @@ export function isSeasonStandingsComplete(
   return isConferenceComplete(pred.east) && isConferenceComplete(pred.west);
 }
 
+function parseConferencePicks(raw: unknown): NbaConferenceStandingsPicks {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const src = raw as Record<string, unknown>;
+  const out: NbaConferenceStandingsPicks = {};
+  for (let r = 1; r <= NBA_STANDINGS_RANKS; r += 1) {
+    const v = src[String(r)] ?? src[r as unknown as string];
+    if (v == null) continue;
+    if (typeof v !== "string") continue;
+    const trimmed = v.trim();
+    if (trimmed) out[r] = trimmed;
+  }
+  return out;
+}
+
+/** API / Firestore から来た予測を正規化 */
+export function parseSeasonStandingsPrediction(
+  season: string,
+  raw: unknown
+): NbaSeasonStandingsPrediction {
+  const base = emptySeasonStandingsPrediction(season.trim());
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return base;
+  const o = raw as Record<string, unknown>;
+  return {
+    season: season.trim(),
+    east: parseConferencePicks(o.east),
+    west: parseConferencePicks(o.west),
+  };
+}
+
+/**
+ * 完全提出の検証（カンファ別チーム・重複なし）。
+ */
+export function validateSeasonStandingsForSubmit(
+  pred: NbaSeasonStandingsPrediction
+): { ok: true } | { ok: false; error: string } {
+  const season = pred.season.trim();
+  if (!season || season.length > 32 || season.includes("/")) {
+    return { ok: false, error: "invalid_season" };
+  }
+  if (!isSeasonStandingsComplete(pred)) {
+    return { ok: false, error: "incomplete_picks" };
+  }
+  for (const conf of ["east", "west"] as const) {
+    const picks = pred[conf];
+    const seen = new Set<string>();
+    for (let r = 1; r <= NBA_STANDINGS_RANKS; r += 1) {
+      const id = picks[r];
+      if (typeof id !== "string" || !id) {
+        return { ok: false, error: "incomplete_picks" };
+      }
+      if (!isNbaConferenceTeam(conf, id)) {
+        return { ok: false, error: `wrong_conference:${conf}:${r}` };
+      }
+      if (seen.has(id)) {
+        return { ok: false, error: `duplicate_team:${conf}` };
+      }
+      seen.add(id);
+    }
+  }
+  return { ok: true };
+}
+
 export function firstEmptyRank(
   picks: NbaConferenceStandingsPicks
 ): NbaStandingsRank | null {

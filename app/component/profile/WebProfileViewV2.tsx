@@ -337,7 +337,10 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
             showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
           />
         ) : tab === "awards" ? (
-          <ProfileAwardsTab language={language === "ja" ? "ja" : "en"} />
+          <ProfileAwardsTab
+            uid={resolvedUid}
+            language={language === "ja" ? "ja" : "en"}
+          />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
             <div className={`${CYBER_GLASS_PANEL} flex justify-center p-6`}>

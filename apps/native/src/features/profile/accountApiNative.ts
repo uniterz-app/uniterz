@@ -114,7 +114,7 @@ export async function fetchProSkinStatusNative(): Promise<{
   }
   return {
     unlockedIds: data.unlockedIds ?? [],
-    savedId: data.savedId ?? "atmos",
+    savedId: data.savedId ?? "beast-titanium",
     isPro: data.progress?.isPro === true,
     progress: {
       posts: data.progress?.posts ?? 0,

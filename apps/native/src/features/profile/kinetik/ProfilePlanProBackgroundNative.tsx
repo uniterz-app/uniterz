@@ -82,6 +82,16 @@ import {
   type ProfilePlanProLabBgVariant,
 } from "../../../../../../lib/profile/profilePlanProLabBgVariants";
 import {
+  getProfilePlanProWaveHudSvg,
+  getProfilePlanProWaveSkinSvg,
+  PROFILE_PLAN_PRO_WAVE_CANVAS,
+} from "../../../../../../lib/profile/profilePlanProWavePattern";
+import {
+  getProfilePlanProWaveBgMeta,
+  isProfilePlanProWaveBgVariant,
+  type ProfilePlanProWaveBgVariant,
+} from "../../../../../../lib/profile/profilePlanProWaveBgVariants";
+import {
   getProfilePlanProFormHudSvg,
   getProfilePlanProFormSkinSvg,
   PROFILE_PLAN_PRO_FORM_CANVAS,
@@ -639,6 +649,40 @@ function LabLayers({
       shouldAnimate={shouldAnimate}
       variantKey={variant}
     />
+  );
+}
+
+/** Web `wave-*` 相当（Wave9 プレビュー） */
+function WaveLayers({
+  width,
+  variant,
+  shouldAnimate,
+}: {
+  width: number;
+  variant: ProfilePlanProWaveBgVariant;
+  shouldAnimate: boolean;
+}) {
+  const meta = getProfilePlanProWaveBgMeta(variant);
+  const colors = meta?.cardColors ?? (["#050508", "#0a121c", "#020406"] as const);
+  return (
+    <View style={StyleSheet.absoluteFillObject}>
+      <LinearGradient
+        colors={[...colors]}
+        locations={[0, 0.48, 1]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <SvgSkinHudLayers
+        width={width}
+        skinXml={getProfilePlanProWaveSkinSvg(variant)}
+        hudXml={getProfilePlanProWaveHudSvg(variant)}
+        canvasW={PROFILE_PLAN_PRO_WAVE_CANVAS.width}
+        canvasH={PROFILE_PLAN_PRO_WAVE_CANVAS.height}
+        shouldAnimate={shouldAnimate}
+        variantKey={variant}
+      />
+    </View>
   );
 }
 
@@ -1239,6 +1283,7 @@ export default function ProfilePlanProBackgroundNative({
   const isBeast = isProfilePlanProBeastBgVariant(variant);
   const isCosmos = isProfilePlanProCosmosBgVariant(variant);
   const isLab = isProfilePlanProLabBgVariant(variant);
+  const isWave = isProfilePlanProWaveBgVariant(variant);
   const isForm = isProfilePlanProFormBgVariant(variant);
   const isNeo = isProfilePlanProNeoBgVariant(variant);
   const isFuturistic = isProfilePlanProFuturisticBgVariant(variant);
@@ -1327,6 +1372,18 @@ export default function ProfilePlanProBackgroundNative({
     return (
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <LabLayers
+          width={width}
+          variant={variant}
+          shouldAnimate={shouldAnimate}
+        />
+      </View>
+    );
+  }
+
+  if (isWave) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        <WaveLayers
           width={width}
           variant={variant}
           shouldAnimate={shouldAnimate}

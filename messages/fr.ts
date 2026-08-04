@@ -670,6 +670,7 @@ const fr: Messages = {
     typeInfo: "Actualités",
     sectionMain: "Principal",
     editProfile: "Modifier le profil",
+    invite: "Inviter",
     sectionSubscription: "Abonnement",
     sectionSupport: "Support",
     sectionAdmin: "Administration",

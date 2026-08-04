@@ -60,6 +60,13 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.uid == userId
         && !('plan' in request.resource.data)
+        && !('unitBalance' in request.resource.data)
+        && !('inviteCode' in request.resource.data)
+        && !('referredByUid' in request.resource.data)
+        && !('referralInviteCode' in request.resource.data)
+        && !('referralBoundAt' in request.resource.data)
+        && !('referralStats' in request.resource.data)
+        && !('referralSettledAt' in request.resource.data)
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50
@@ -83,6 +90,28 @@ service cloud.firestore {
             || request.resource.data.plan == resource.data.plan)
         && (!('createdAt' in resource.data) || !('createdAt' in request.resource.data)
             || request.resource.data.createdAt == resource.data.createdAt)
+        // Unit / 招待フィールドは Admin API のみ（クライアント改ざん防止）
+        && (!('unitBalance' in request.resource.data)
+            || (('unitBalance' in resource.data)
+                && request.resource.data.unitBalance == resource.data.unitBalance))
+        && (!('inviteCode' in request.resource.data)
+            || (('inviteCode' in resource.data)
+                && request.resource.data.inviteCode == resource.data.inviteCode))
+        && (!('referredByUid' in request.resource.data)
+            || (('referredByUid' in resource.data)
+                && request.resource.data.referredByUid == resource.data.referredByUid))
+        && (!('referralInviteCode' in request.resource.data)
+            || (('referralInviteCode' in resource.data)
+                && request.resource.data.referralInviteCode == resource.data.referralInviteCode))
+        && (!('referralBoundAt' in request.resource.data)
+            || (('referralBoundAt' in resource.data)
+                && request.resource.data.referralBoundAt == resource.data.referralBoundAt))
+        && (!('referralStats' in request.resource.data)
+            || (('referralStats' in resource.data)
+                && request.resource.data.referralStats == resource.data.referralStats))
+        && (!('referralSettledAt' in request.resource.data)
+            || (('referralSettledAt' in resource.data)
+                && request.resource.data.referralSettledAt == resource.data.referralSettledAt))
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50
@@ -249,6 +278,38 @@ service cloud.firestore {
     // ========================================================================
     // プレーオフ — lib/playoff-*, PlayoffBracketMarket, usePlayoffOfficialResults
     // ========================================================================
+    // シーズンアワード予想 — Admin API のみ書込（/api/me/season-awards）
+    match /seasonAwardsPredictions/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /seasonStandingsPredictions/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // referralRelations — 招待関係（inviteeUid が docId）
+    // 作成・進捗・付与は API（Admin SDK）のみ。当事者は read 可。
+    // ========================================================================
+    match /referralRelations/{inviteeUid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == inviteeUid
+            || request.auth.uid == resource.data.referrerUid);
+      allow create, update, delete: if false;
+    }
+
+    // 招待コード一意マップ — Admin のみ
+    match /inviteCodes/{code} {
+      allow read, write: if false;
+    }
+
+    // Unit 台帳 — Admin のみ
+    match /unit_ledger/{ledgerId} {
+      allow read, write: if false;
+    }
+
     match /playoffBracketMarket/{season} {
       allow read: if true;
       allow write: if false;

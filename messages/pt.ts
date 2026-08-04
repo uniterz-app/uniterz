@@ -666,6 +666,7 @@ const pt: Messages = {
     typeInfo: "Notícias",
     sectionMain: "Principal",
     editProfile: "Editar perfil",
+    invite: "Convidar",
     sectionSubscription: "Assinatura",
     sectionSupport: "Suporte",
     sectionAdmin: "Admin",

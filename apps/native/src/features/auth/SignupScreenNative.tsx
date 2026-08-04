@@ -1,25 +1,37 @@
 import { useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Pressable, StyleSheet, Text, TextInput, View,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { auth, db } from "../../lib/firebase";
 import type { AuthStackParamList } from "../../navigation/types";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { mapAuthErrorMessage } from "./authShared";
 import { spacing } from "../../theme/tokens";
+import { bindMeReferralNative } from "../profile/referralApiNative";
+import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
 
 const BTN_SKEW = "-10deg";
 const BTN_UNSKEW = "10deg";
 
 export default function SignupScreenNative() {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const route = useRoute<RouteProp<AuthStackParamList, "Signup">>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState(
+    normalizeReferralInviteCode(route.params?.inviteCode ?? "")
+  );
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSignup() {
@@ -35,7 +47,11 @@ export default function SignupScreenNative() {
     }
     setSubmitting(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, normalized, password);
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        normalized,
+        password
+      );
       await setDoc(
         doc(db, "users", cred.user.uid),
         {
@@ -47,6 +63,14 @@ export default function SignupScreenNative() {
         },
         { merge: true }
       );
+      const code = normalizeReferralInviteCode(inviteCode);
+      if (code) {
+        try {
+          await bindMeReferralNative(code);
+        } catch {
+          /* bind 失敗でもサインアップは継続 */
+        }
+      }
     } catch (e) {
       cyberAlert("Authentication error", mapAuthErrorMessage(e, "signup"));
     } finally {
@@ -61,7 +85,10 @@ export default function SignupScreenNative() {
         <View style={styles.footer}>
           <Text style={styles.helperText}>
             すでにアカウントをお持ちの方は
-            <Text style={styles.helperLinkInline} onPress={() => navigation.navigate("Login")}>
+            <Text
+              style={styles.helperLinkInline}
+              onPress={() => navigation.navigate("Login")}
+            >
               {" LOGIN"}
             </Text>
           </Text>
@@ -91,13 +118,34 @@ export default function SignupScreenNative() {
           onChangeText={setPassword}
         />
       </View>
+      <View style={styles.field}>
+        <View style={styles.fieldRail} />
+        <TextInput
+          style={styles.input}
+          placeholder="Invite code (optional)"
+          placeholderTextColor="rgba(186,200,210,0.45)"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          value={inviteCode}
+          onChangeText={(t) => setInviteCode(normalizeReferralInviteCode(t))}
+        />
+      </View>
+      <Text style={styles.inviteHint}>
+        友達からコードをもらった場合のみ入力
+      </Text>
       <View style={styles.ctaSkewWrap}>
-        <Pressable style={styles.ctaPressable} onPress={handleSignup} disabled={submitting}>
+        <Pressable
+          style={styles.ctaPressable}
+          onPress={handleSignup}
+          disabled={submitting}
+        >
           <View style={styles.ctaBorder}>
             <View style={styles.ctaFill}>
               <View style={styles.ctaRail} pointerEvents="none" />
               <View style={styles.ctaLabelWrap}>
-                <Text style={styles.ctaLabel}>{submitting ? "Creating..." : "SIGN UP"}</Text>
+                <Text style={styles.ctaLabel}>
+                  {submitting ? "Creating..." : "SIGN UP"}
+                </Text>
               </View>
             </View>
           </View>
@@ -131,6 +179,14 @@ const styles = StyleSheet.create({
     color: "#f1f5f9",
     fontSize: 16,
     minHeight: 52,
+  },
+  inviteHint: {
+    marginTop: -4,
+    marginBottom: 2,
+    paddingHorizontal: 2,
+    color: "rgba(186,200,210,0.45)",
+    fontSize: 11,
+    lineHeight: 15,
   },
   ctaSkewWrap: {
     width: "100%",

@@ -33,37 +33,31 @@ function resolveCandidate(
   return catalog.find((c) => c.id === id) ?? null;
 }
 
-function contrastInk(hex: string): string {
-  const raw = hex.replace("#", "");
-  if (raw.length !== 6) return "#050508";
-  const r = Number.parseInt(raw.slice(0, 2), 16);
-  const g = Number.parseInt(raw.slice(2, 4), 16);
-  const b = Number.parseInt(raw.slice(4, 6), 16);
-  const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return luma > 0.62 ? "#050508" : "#F5FBFF";
-}
-
 function TeamAbbrBadge({ abbr }: { abbr: string }) {
   const teamId = nbaTeamIdFromBracketCode(abbr);
   const fill = teamId
     ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
     : "#5B8CFF";
-  const ink = contrastInk(fill);
 
   return (
     <span
       className={[
         nameOxanium.className,
-        "grid h-7 w-7 shrink-0 place-items-center text-[9px] font-black uppercase tracking-wide",
+        "relative grid h-[22px] min-w-[2.35rem] shrink-0 place-items-center overflow-hidden px-2 text-[9px] font-black uppercase tracking-[0.08em]",
       ].join(" ")}
       style={{
-        background: fill,
-        color: ink,
-        boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.25)`,
+        backgroundColor: fill,
+        backgroundImage:
+          "repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 1px, transparent 1px, transparent 3px)",
+        color: "#050508",
+        transform: "skewX(-14deg)",
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.2)",
       }}
       aria-hidden
     >
-      {abbr.slice(0, 3).toUpperCase()}
+      <span style={{ transform: "skewX(14deg)" }}>
+        {abbr.slice(0, 3).toUpperCase()}
+      </span>
     </span>
   );
 }
@@ -140,7 +134,7 @@ export default function NbaSeasonAwardsViewPanel({
                   {picked.teamAbbr ? (
                     <TeamAbbrBadge abbr={picked.teamAbbr} />
                   ) : (
-                    <span className="h-7 w-7 shrink-0" aria-hidden />
+                    <span className="h-[22px] w-[2.35rem] shrink-0" aria-hidden />
                   )}
                 </>
               ) : (

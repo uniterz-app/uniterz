@@ -636,6 +636,20 @@ export function getProfilePlanProScaleHudItems(
   return items;
 }
 
+/** Native SvgXml 用 — 疎な爬虫類鱗 */
+export function getProfilePlanProScaleSkinSvg(
+  variant: ProfilePlanProScaleBgVariant
+): string {
+  return buildSparseScaleSvg(variant);
+}
+
+/** Native SvgXml 用 — 微細 HUD */
+export function getProfilePlanProScaleHudSvg(
+  variant: ProfilePlanProScaleBgVariant
+): string {
+  return buildHudSvg(variant);
+}
+
 /** 疎な爬虫類鱗レイヤー（atmos 配置） */
 export function getProfilePlanProScaleSkinUrl(
   variant: ProfilePlanProScaleBgVariant

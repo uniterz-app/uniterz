@@ -1,0 +1,86 @@
+/* PRO 背景 — Wave9（SVG 線画パターン・プレビュー先行） */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave) .profile-plan-pro-ambient {
+  display: none;
+}
+
+.profile-plan-pro-bg__wave-skin,
+.profile-plan-pro-bg__wave-hud {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  opacity: 1;
+}
+
+.profile-plan-pro-bg--wave .profile-plan-pro-bg__wave-skin {
+  filter: contrast(1.18) saturate(1.12) brightness(1.06);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-royal-plum),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-royal-plum) {
+  background: linear-gradient(165deg, #12060f 0%, #2a1224 48%, #080308 100%);
+  --kinetik-frame: rgba(166, 124, 124, 0.4);
+  --kinetik-frame-strong: rgba(212, 168, 140, 0.65);
+  --kinetik-frame-dim: rgba(120, 60, 100, 0.28);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-obsidian-warp),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-obsidian-warp),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-stealth-facet),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-stealth-facet) {
+  background: linear-gradient(165deg, #060606 0%, #121212 50%, #030303 100%);
+  --kinetik-frame: rgba(148, 163, 184, 0.28);
+  --kinetik-frame-strong: rgba(203, 213, 225, 0.5);
+  --kinetik-frame-dim: rgba(100, 116, 139, 0.22);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-cyan-grid),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-cyan-grid) {
+  background: linear-gradient(165deg, #000000 0%, #041820 48%, #000408 100%);
+  --kinetik-frame: rgba(34, 211, 238, 0.4);
+  --kinetik-frame-strong: rgba(165, 243, 252, 0.7);
+  --kinetik-frame-dim: rgba(6, 182, 212, 0.28);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-ember-hex),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-ember-hex) {
+  background: linear-gradient(165deg, #080200 0%, #1c0800 48%, #020000 100%);
+  --kinetik-frame: rgba(255, 80, 40, 0.42);
+  --kinetik-frame-strong: rgba(255, 140, 60, 0.7);
+  --kinetik-frame-dim: rgba(180, 40, 20, 0.28);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-neon-ridge),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-neon-ridge) {
+  background: linear-gradient(165deg, #08040c 0%, #180820 40%, #041018 100%);
+  --kinetik-frame: rgba(236, 72, 153, 0.38);
+  --kinetik-frame-strong: rgba(34, 211, 238, 0.65);
+  --kinetik-frame-dim: rgba(168, 85, 247, 0.28);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-chem-ink),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-chem-ink) {
+  background: linear-gradient(165deg, #000000 0%, #0c0404 50%, #000000 100%);
+  --kinetik-frame: rgba(248, 113, 113, 0.4);
+  --kinetik-frame-strong: rgba(254, 226, 226, 0.55);
+  --kinetik-frame-dim: rgba(220, 38, 38, 0.28);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-gold-monogram),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-gold-monogram) {
+  background: linear-gradient(165deg, #050400 0%, #161208 48%, #020200 100%);
+  --kinetik-frame: rgba(234, 179, 8, 0.38);
+  --kinetik-frame-strong: rgba(253, 224, 71, 0.65);
+  --kinetik-frame-dim: rgba(180, 140, 30, 0.28);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-parchment-crest),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-parchment-crest) {
+  background: linear-gradient(165deg, #2a2218 0%, #3d3226 48%, #1a1410 100%);
+  --kinetik-frame: rgba(197, 176, 138, 0.5);
+  --kinetik-frame-strong: rgba(245, 230, 200, 0.7);
+  --kinetik-frame-dim: rgba(120, 100, 70, 0.35);
+}

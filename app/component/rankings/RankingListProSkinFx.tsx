@@ -6,7 +6,10 @@
  */
 
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
-import { getProfilePlanProAtmosHexUrl, getProfilePlanProAtmosHudUrl } from "@/lib/profile/profilePlanProAtmosBg";
+import {
+  getProfilePlanProAtmosHexUrl,
+  getProfilePlanProAtmosHudUrl,
+} from "@/lib/profile/profilePlanProAtmosBg";
 import {
   getProfilePlanProBeastHudUrl,
   getProfilePlanProBeastSkinUrl,
@@ -22,6 +25,11 @@ import {
   getProfilePlanProScaleSkinUrl,
 } from "@/lib/profile/profilePlanProScalePattern";
 import { isProfilePlanProScaleBgVariant } from "@/lib/profile/profilePlanProScaleBgVariants";
+import {
+  getProfilePlanProWaveHudUrl,
+  getProfilePlanProWaveSkinUrl,
+} from "@/lib/profile/profilePlanProWavePattern";
+import { isProfilePlanProWaveBgVariant } from "@/lib/profile/profilePlanProWaveBgVariants";
 import "@/app/component/rankings/rankingListProSkinFx.css";
 
 export type RankingListProSkinIntensity = "subtle" | "medium";
@@ -99,6 +107,22 @@ export default function RankingListProSkinFx({
         <SkinLayer
           className="ranking-list-pro-skin-fx__hud"
           backgroundImage={getProfilePlanProFormHudUrl(variant)}
+        />
+        <div className="ranking-list-pro-skin-fx__wash" />
+      </div>
+    );
+  }
+
+  if (isProfilePlanProWaveBgVariant(variant)) {
+    return (
+      <div className={rootClass} aria-hidden>
+        <SkinLayer
+          className="ranking-list-pro-skin-fx__skin"
+          backgroundImage={getProfilePlanProWaveSkinUrl(variant)}
+        />
+        <SkinLayer
+          className="ranking-list-pro-skin-fx__hud"
+          backgroundImage={getProfilePlanProWaveHudUrl(variant)}
         />
         <div className="ranking-list-pro-skin-fx__wash" />
       </div>

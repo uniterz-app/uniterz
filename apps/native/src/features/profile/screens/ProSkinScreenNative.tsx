@@ -82,7 +82,7 @@ function previewPanelProps(language: "ja" | "en") {
     identity: {
       ...PROFILE_EDIT_KINETIK_MOCK.identity,
       displayName: "UNITERZ",
-      systemId: "3PJVG4Y9",
+      systemId: "",
       handle: "mpj",
     },
     stats: {
@@ -138,7 +138,13 @@ function SkinThumbNative({
   isNew: boolean;
   owners: number;
   language: "ja" | "en";
-  progress: { posts: number; exactHits: number; maxWinStreak: number };
+  progress: {
+    posts: number;
+    exactHits: number;
+    maxWinStreak: number;
+    referralCompletedCount: number;
+    periodWins: Record<string, number>;
+  };
   onPress: () => void;
 }) {
   const height = Math.max(84, Math.min(108, Math.round(width / 2.05)));
@@ -299,6 +305,8 @@ export default function ProSkinScreenNative() {
     posts: 0,
     exactHits: 0,
     maxWinStreak: 0,
+    referralCompletedCount: 0,
+    periodWins: {} as Record<string, number>,
   });
   const [viewerIsPro, setViewerIsPro] = useState(false);
   const [noticeIds, setNoticeIds] = useState<Set<string>>(() => new Set());
@@ -344,9 +352,14 @@ export default function ProSkinScreenNative() {
         setViewerIsPro(isPro);
         setUnlockedIds(new Set(ids));
         setOwnerCounts(status.ownerCounts ?? {});
-        setMilestoneProgress(
-          status.progress ?? { posts: 0, exactHits: 0, maxWinStreak: 0 }
-        );
+        setMilestoneProgress({
+          posts: status.progress?.posts ?? 0,
+          exactHits: status.progress?.exactHits ?? 0,
+          maxWinStreak: status.progress?.maxWinStreak ?? 0,
+          referralCompletedCount:
+            status.progress?.referralCompletedCount ?? 0,
+          periodWins: status.progress?.periodWins ?? {},
+        });
         const parsed = parseUserPlanProBgVariant(status.savedId);
         if (parsed) setSavedId(parsed);
         setNoticeIds(new Set(status.noticeIds ?? []));

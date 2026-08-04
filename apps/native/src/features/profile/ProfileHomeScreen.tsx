@@ -1219,6 +1219,7 @@ export default function ProfileHomeScreen({
       onOpenInApp={(page) => {
         setMenuOpen(false);
         if (page === "badges") navigation.navigate("Badges");
+        else if (page === "invite") navigation.navigate("Invite");
         else if (page === "announcements") navigation.navigate("Announcements");
         else if (page === "plan") navigation.navigate("PlanStatus");
         else if (page === "subscribe") navigation.navigate("ProSubscribe");
@@ -1239,6 +1240,10 @@ export default function ProfileHomeScreen({
           navigation.navigate("FuturisticBgPreview");
         else if (page === "titleSkinPreview" && __DEV__)
           navigation.navigate("TitleSkinPreview");
+        else if (page === "waveProSkinPreview" && __DEV__)
+          navigation.navigate("WaveProSkinPreview");
+        else if (page === "rankingListProSkinPreview" && __DEV__)
+          navigation.navigate("RankingListProSkinPreview");
         else if (page === "proSkinUnlockPreview" && __DEV__)
           navigation.navigate("ProSkinUnlockPreview");
       }}

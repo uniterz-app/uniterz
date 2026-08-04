@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEnvelope, FaEye, FaEyeSlash, FaTicketAlt } from "react-icons/fa";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
@@ -15,6 +15,11 @@ import {
   sanitizeInternalNext,
   stashPostOnboardingRedirect,
 } from "@/lib/auth/safeNextRedirect";
+import { bindMeReferral } from "@/lib/api/bindMeReferral";
+import {
+  normalizeReferralInviteCode,
+  pickReferralInviteCodeFromSearch,
+} from "@/lib/referral/referralInviteCode";
 
 type SignupFormProps = {
   variant?: "web" | "mobile";
@@ -23,6 +28,7 @@ type SignupFormProps = {
 export default function SignupForm({ variant = "web" }: SignupFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pressed, setPressed] = useState(false);
@@ -37,6 +43,8 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
     const sp = new URLSearchParams(window.location.search);
     const safe = sanitizeInternalNext(sp.get("next"));
     setLoginHref(safe ? `${loginBase}?next=${encodeURIComponent(safe)}` : loginBase);
+    const fromQuery = pickReferralInviteCodeFromSearch(sp);
+    if (fromQuery) setInviteCode(fromQuery);
   }, [loginBase]);
 
   const bodySans =
@@ -47,6 +55,8 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
       title: "CREATE ACCOUNT",
       emailPlaceholder: "Email Address",
       passwordPlaceholder: "Password",
+      invitePlaceholder: "Invite code (optional)",
+      inviteHint: "友達からコードをもらった場合のみ入力",
       signupCta: "SIGN UP",
       alreadyLead: "すでにアカウントをお持ちの方は",
       loginText: "Login",
@@ -80,6 +90,15 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
         },
         { merge: true }
       );
+
+      const code = normalizeReferralInviteCode(inviteCode);
+      if (code) {
+        try {
+          await bindMeReferral(code);
+        } catch (bindErr) {
+          console.warn("referral bind skipped:", bindErr);
+        }
+      }
 
       const sp = new URLSearchParams(
         typeof window !== "undefined" ? window.location.search : ""
@@ -154,6 +173,28 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
                 </button>
               }
             />
+
+            <CyberAuthField
+              inputProps={{
+                type: "text",
+                name: "inviteCode",
+                autoComplete: "off",
+                autoCapitalize: "characters",
+                spellCheck: false,
+                placeholder: ui.invitePlaceholder,
+                value: inviteCode,
+                onChange: (e) =>
+                  setInviteCode(normalizeReferralInviteCode(e.target.value)),
+              }}
+              rightSlot={
+                <span className="flex items-center justify-center text-[15px] text-white/85">
+                  <FaTicketAlt aria-hidden />
+                </span>
+              }
+            />
+            <p className="px-0.5 text-[11px] leading-relaxed text-white/40">
+              {ui.inviteHint}
+            </p>
           </div>
 
           <button

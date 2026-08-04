@@ -55,6 +55,21 @@ const LINKS = [
     note: "赤×黒ダーク案 3 つ",
   },
   {
+    href: "/mobile/cosmos-pro-skin-preview",
+    title: "Pro Skin · Design Lab",
+    note: "線画ラボ / メタリック",
+  },
+  {
+    href: "/mobile/wave-pro-skin-preview",
+    title: "Pro Skin · Wave 9",
+    note: "9テーマ SVG 線画プレビュー",
+  },
+  {
+    href: "/mobile/ranking-list-pro-skin-preview",
+    title: "Pro Skin · ランキング行",
+    note: "採用30種のリスト行デザイン一覧",
+  },
+  {
     href: "/mobile/pro-skin-unlock-preview",
     title: "Pro Skin 解放モーダル",
     note: "マイルストーン達成通知",

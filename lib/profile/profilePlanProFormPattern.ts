@@ -662,9 +662,9 @@ function buildIsoCubes(p: FormPalette): string {
       ].join(" ");
       const stroke = pick(p.strokes, col, row);
       parts.push(
-        `<path d="${top}" fill="rgba(${pick(p.fills, col, row)},${formOp(0.045).toFixed(3)})" stroke="rgba(${stroke},${formOp(0.085).toFixed(3)})" stroke-width="0.42"/>` +
-          `<path d="${left}" fill="rgba(${pick(p.fills, col + 1, row)},${formOp(0.032).toFixed(3)})" stroke="rgba(${stroke},${formOp(0.075).toFixed(3)})" stroke-width="0.38"/>` +
-          `<path d="${right}" fill="none" stroke="rgba(${pick(p.accent, col, row)},${formOp(0.065).toFixed(3)})" stroke-width="0.38"/>`
+        `<path d="${top}" fill="rgba(${pick(p.fills, col, row)},${formOp(0.08).toFixed(3)})" stroke="rgba(${stroke},${formOp(0.15).toFixed(3)})" stroke-width="0.5"/>` +
+          `<path d="${left}" fill="rgba(${pick(p.fills, col + 1, row)},${formOp(0.06).toFixed(3)})" stroke="rgba(${stroke},${formOp(0.13).toFixed(3)})" stroke-width="0.45"/>` +
+          `<path d="${right}" fill="none" stroke="rgba(${pick(p.accent, col, row)},${formOp(0.12).toFixed(3)})" stroke-width="0.45"/>`
       );
     }
   }
@@ -781,25 +781,25 @@ function buildSkinSvg(variant: ProfilePlanProFormBgVariant): string {
 export function getProfilePlanProFormSkinSvg(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedSvg(`form:skin:svg:${variant}:v3`, () => buildSkinSvg(variant));
+  return cachedSvg(`form:skin:svg:${variant}:v4`, () => buildSkinSvg(variant));
 }
 
 export function getProfilePlanProFormHudSvg(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedSvg(`form:hud:svg:${variant}:v3`, () => buildHudSvg(variant));
+  return cachedSvg(`form:hud:svg:${variant}:v4`, () => buildHudSvg(variant));
 }
 
 export function getProfilePlanProFormSkinUrl(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedUrl(`form:skin:${variant}:v3`, () => buildSkinSvg(variant));
+  return cachedUrl(`form:skin:${variant}:v4`, () => buildSkinSvg(variant));
 }
 
 export function getProfilePlanProFormHudUrl(
   variant: ProfilePlanProFormBgVariant
 ): string {
-  return cachedUrl(`form:hud:${variant}:v3`, () => buildHudSvg(variant));
+  return cachedUrl(`form:hud:${variant}:v4`, () => buildHudSvg(variant));
 }
 
 /** Web 横長パネル用 — 960×380（引き伸ばしなし） */
