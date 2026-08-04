@@ -593,7 +593,7 @@ export default function ProfileSideMenuModal({
                           labelStyle={labelStyle}
                           onPress={() => openUserPage("waveProSkinPreview")}
                         >
-                          Wave 9 スキンプレビュー
+                          Wave 13 スキンプレビュー
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="format-list-bulleted"

@@ -2,6 +2,8 @@
  * Pro Skin マイルストーン定義の単一ソース。
  * Functions へは `npm run sync:pro-skin-milestone-catalog` で同期する。
  *
+ * 構成: 即解放 12 / マイルストーン 20
+ *
  * - 閾値系 → NBA settle
  * - 順位1回系 → period snapshot 確定後 grant（earnedIds）
  * - 順位回数系 → 同 grant で wins 加算 → 閾値到達で解放
@@ -41,21 +43,26 @@ export type ProSkinPeriodWinMilestone = {
   wins: number;
 };
 
-/** 努力・精度（連勝 / 予想 / Perfect） */
+/**
+ * 努力・精度（連勝 / Perfect / 予想）
+ * Crimson Shard / Signal Mosaic はマイルストーン（スクショ指定）
+ */
 export const PRO_SKIN_THRESHOLD_MILESTONES: readonly ProSkinThresholdMilestone[] =
   [
+    { id: "wave-crimson-shard", kind: "streak", threshold: 5 },
     { id: "beast-viper", kind: "streak", threshold: 7 },
     { id: "scale-king", kind: "streak", threshold: 10 },
     { id: "scale-dragon", kind: "streak", threshold: 15 },
-    { id: "beast-kintsugi", kind: "posts", threshold: 100 },
-    { id: "beast-eclipse", kind: "posts", threshold: 150 },
+    { id: "wave-signal-mosaic", kind: "exactHits", threshold: 5 },
     { id: "beast-shard", kind: "exactHits", threshold: 10 },
+    { id: "beast-circuitlace", kind: "posts", threshold: 100 },
+    { id: "beast-eclipse", kind: "posts", threshold: 150 },
   ] as const;
 
-/** 週/月順位 1回達成（standard ボード）— 表示順もここが正 */
+/** 週/月順位 1回達成（standard ボード） */
 export const PRO_SKIN_RANK_MILESTONES: readonly ProSkinRankMilestone[] = [
   {
-    id: "beast-jagarmor",
+    id: "wave-chem-ink",
     period: "monthly",
     metric: "totalPoints",
     maxRank: 10,
@@ -100,27 +107,26 @@ export const PRO_SKIN_REFERRAL_MILESTONES: readonly ProSkinReferralMilestone[] =
   ] as const;
 
 /**
- * Wave — 週/月条件の累計回数
- * （週間総合1位 ×3/×5、月間総合 Top10 ×3/×5）
+ * Wave / Beast — 週/月条件の累計回数
  */
 export const PRO_SKIN_PERIOD_WIN_MILESTONES: readonly ProSkinPeriodWinMilestone[] =
   [
     {
-      id: "wave-ember-hex",
+      id: "wave-neon-ridge",
       period: "monthly",
       metric: "totalPoints",
       maxRank: 10,
       wins: 3,
     },
     {
-      id: "wave-chem-ink",
+      id: "beast-jagarmor",
       period: "monthly",
       metric: "totalPoints",
       maxRank: 10,
       wins: 5,
     },
     {
-      id: "wave-neon-ridge",
+      id: "wave-ember-hex",
       period: "weekly",
       metric: "totalPoints",
       maxRank: 1,

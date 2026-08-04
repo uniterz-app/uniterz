@@ -156,7 +156,7 @@ export default function WaveProSkinPreviewPage({ variant }: Props) {
       <CyberSubpageShell
         bare
         eyebrow="PRO SKIN"
-        title="WAVE 9"
+        title="WAVE 13"
         subtitle="参考テーマの SVG 線画。PNG 直貼りなし。前へ／次へで切替。"
         onBack={() => {
           if (typeof window !== "undefined") window.history.back();

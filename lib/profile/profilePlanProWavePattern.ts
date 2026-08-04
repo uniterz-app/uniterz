@@ -1,5 +1,5 @@
 /**
- * PRO 背景 — Wave9（テーマ参考パターン）
+ * PRO 背景 — Wave テーマ参考パターン
  * PNG 直貼り禁止。参考画像の「密度・コントラスト・立体感」を優先。
  * UI 可読のため中央は少し弱めるが、端寄せだけで薄くはしない。
  */
@@ -76,20 +76,52 @@ const PALETTES: Record<ProfilePlanProWaveBgVariant, WavePalette> = {
     opacityMul: 0.74,
   },
   "wave-stealth-facet": {
-    strokes: ["70,75,85", "110,118,130", "40,44,50"],
-    fills: ["18,20,24", "32,36,42", "10,11,13", "48,54,62", "28,30,36"],
-    accent: ["150,158,170", "90,96,108"],
-    hudPrimary: "rgba(140,148,160,",
-    hudSecondary: "rgba(100,108,120,",
-    opacityMul: 1.4,
+    strokes: ["190,205,225", "140,155,175", "230,238,250"],
+    fills: ["28,34,44", "16,18,24"],
+    accent: ["255,255,255", "120,200,255"],
+    hudPrimary: "rgba(200,215,235,",
+    hudSecondary: "rgba(140,160,185,",
+    opacityMul: 1.35,
   },
   "wave-parchment-crest": {
-    strokes: ["18,12,8", "28,20,12", "12,8,5"],
-    fills: ["225,200,165", "210,185,150", "195,170,135"],
-    accent: ["245,230,200", "90,70,45"],
-    hudPrimary: "rgba(220,195,155,",
-    hudSecondary: "rgba(160,135,100,",
-    opacityMul: 1.55,
+    strokes: ["245,220,160", "220,185,115", "255,240,200"],
+    fills: ["42,32,22", "28,20,14"],
+    accent: ["255,236,190", "170,130,70"],
+    hudPrimary: "rgba(245,220,160,",
+    hudSecondary: "rgba(200,165,100,",
+    opacityMul: 1.4,
+  },
+  "wave-crimson-shard": {
+    strokes: ["255,50,50", "220,30,40", "160,20,28", "255,120,100"],
+    fills: ["18,18,20", "32,34,38", "10,10,12", "48,50,56"],
+    accent: ["255,70,70", "255,160,140"],
+    hudPrimary: "rgba(255,70,70,",
+    hudSecondary: "rgba(180,40,50,",
+    opacityMul: 1.25,
+  },
+  "wave-signal-mosaic": {
+    strokes: ["255,40,40", "0,160,170", "255,90,70", "0,120,140"],
+    fills: ["0,0,0", "8,20,24"],
+    accent: ["255,80,60", "40,210,220"],
+    hudPrimary: "rgba(255,60,50,",
+    hudSecondary: "rgba(0,180,190,",
+    opacityMul: 0.72,
+  },
+  "wave-riot-shard": {
+    strokes: ["255,20,20", "200,0,0", "80,80,85", "40,40,44"],
+    fills: ["255,30,30", "180,10,10", "55,55,60", "20,20,22"],
+    accent: ["255,60,60", "120,120,128"],
+    hudPrimary: "rgba(255,40,40,",
+    hudSecondary: "rgba(160,160,168,",
+    opacityMul: 1.2,
+  },
+  "wave-inferno-decal": {
+    strokes: ["255,30,30", "255,70,40", "220,10,20"],
+    fills: ["255,35,35", "230,20,20"],
+    accent: ["255,90,60", "255,180,120"],
+    hudPrimary: "rgba(255,50,40,",
+    hudSecondary: "rgba(200,30,30,",
+    opacityMul: 1.3,
   },
 };
 
@@ -570,131 +602,305 @@ function buildGoldMonogram(p: WavePalette): string {
 
 function buildStealthFacet(p: WavePalette): string {
   const parts: string[] = [];
-  const cell = 16;
-  // コントラストを広げた面色（塗りのみ・線なし）
-  const facets = [
-    "8,9,11",
-    "18,20,24",
-    "32,36,42",
-    "48,54,62",
-    "62,70,80",
-    "14,15,18",
-    "28,32,38",
-  ];
-  for (let row = 0; row < Math.ceil(CANVAS_H / cell) + 1; row += 1) {
-    for (let col = 0; col < Math.ceil(CANVAS_W / cell) + 1; col += 1) {
-      const x0 = col * cell;
+  // 全面塗りはしない（暗カードが地）。明るい稜線の切子だけ載せる。
+  const cell = 28;
+  for (let row = -1; row < Math.ceil(CANVAS_H / cell) + 2; row += 1) {
+    for (let col = -1; col < Math.ceil(CANVAS_W / cell) + 2; col += 1) {
+      const x0 = col * cell + (row % 2) * (cell * 0.2);
       const y0 = row * cell;
-      const mode = Math.floor(hash01(col, row) * 4);
-      const f1 = pick(facets, col, row);
-      const f2 = pick(facets, col + 3, row + 1);
-      const op = waveOp(0.85 + hash01(col, row) * 0.15);
-      const op2 = waveOp(0.8 + hash01(col + 1, row) * 0.18);
+      const nx = (x0 + cell / 2) / CANVAS_W;
+      const ny = (y0 + cell / 2) / CANVAS_H;
+      if (!place(nx, ny, 1.35, row * 31 + col)) continue;
+      const mode = Math.floor(hash01(col, row) * 3);
+      const stroke = pick(p.strokes, col, row);
+      const accent = pick(p.accent, col + 1, row);
+      const op = waveOp(0.55 + hash01(col, row) * 0.35);
+      const sw = 1.35 + hash01(col, row + 2) * 0.9;
+      const x1 = x0 + cell;
+      const y1 = y0 + cell;
+      const mx = x0 + cell * 0.5;
+      const my = y0 + cell * 0.5;
       if (mode === 0) {
         parts.push(
-          `<polygon points="${x0},${y0} ${x0 + cell},${y0} ${x0},${y0 + cell}" fill="rgba(${f1},${op.toFixed(3)})"/>`
+          `<polygon points="${x0.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y0.toFixed(1)} ${x0.toFixed(1)},${y1.toFixed(1)}" fill="none" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="${sw.toFixed(2)}"/>`
         );
         parts.push(
-          `<polygon points="${x0 + cell},${y0} ${x0 + cell},${y0 + cell} ${x0},${y0 + cell}" fill="rgba(${f2},${op2.toFixed(3)})"/>`
+          `<polygon points="${x1.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)} ${x0.toFixed(1)},${y1.toFixed(1)}" fill="none" stroke="rgba(${stroke},${(op * 0.75).toFixed(3)})" stroke-width="${(sw * 0.85).toFixed(2)}"/>`
+        );
+        parts.push(
+          `<line x1="${x1.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x0.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="rgba(${accent},${(op * 0.55).toFixed(3)})" stroke-width="${(sw * 0.7).toFixed(2)}"/>`
         );
       } else if (mode === 1) {
         parts.push(
-          `<polygon points="${x0},${y0} ${x0 + cell},${y0} ${x0 + cell},${y0 + cell}" fill="rgba(${f1},${op.toFixed(3)})"/>`
+          `<polygon points="${x0.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}" fill="none" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="${sw.toFixed(2)}"/>`
         );
         parts.push(
-          `<polygon points="${x0},${y0} ${x0 + cell},${y0 + cell} ${x0},${y0 + cell}" fill="rgba(${f2},${op2.toFixed(3)})"/>`
-        );
-      } else if (mode === 2) {
-        const mx = x0 + cell / 2;
-        const my = y0 + cell / 2;
-        parts.push(
-          `<polygon points="${x0},${y0} ${x0 + cell},${y0} ${mx},${my}" fill="rgba(${f1},${op.toFixed(3)})"/>`
-        );
-        parts.push(
-          `<polygon points="${x0 + cell},${y0} ${x0 + cell},${y0 + cell} ${mx},${my}" fill="rgba(${f2},${op2.toFixed(3)})"/>`
-        );
-        parts.push(
-          `<polygon points="${x0 + cell},${y0 + cell} ${x0},${y0 + cell} ${mx},${my}" fill="rgba(${pick(facets, col, row + 2)},${op.toFixed(3)})"/>`
-        );
-        parts.push(
-          `<polygon points="${x0},${y0 + cell} ${x0},${y0} ${mx},${my}" fill="rgba(${pick(facets, col + 2, row)},${op2.toFixed(3)})"/>`
+          `<polygon points="${x0.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)} ${x0.toFixed(1)},${y1.toFixed(1)}" fill="none" stroke="rgba(${stroke},${(op * 0.75).toFixed(3)})" stroke-width="${(sw * 0.85).toFixed(2)}"/>`
         );
       } else {
         parts.push(
-          `<rect x="${x0}" y="${y0}" width="${cell}" height="${cell}" fill="rgba(${f1},${op.toFixed(3)})"/>`
+          `<polygon points="${x0.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y0.toFixed(1)} ${mx.toFixed(1)},${my.toFixed(1)}" fill="none" stroke="rgba(${stroke},${op.toFixed(3)})" stroke-width="${sw.toFixed(2)}"/>`
         );
         parts.push(
-          `<polygon points="${x0},${y0} ${x0 + cell},${y0} ${x0 + cell * 0.5},${y0 + cell * 0.55}" fill="rgba(${f2},${(op * 0.85).toFixed(3)})"/>`
+          `<polygon points="${x1.toFixed(1)},${y0.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)} ${mx.toFixed(1)},${my.toFixed(1)}" fill="none" stroke="rgba(${accent},${(op * 0.7).toFixed(3)})" stroke-width="${(sw * 0.9).toFixed(2)}"/>`
+        );
+        parts.push(
+          `<polygon points="${x1.toFixed(1)},${y1.toFixed(1)} ${x0.toFixed(1)},${y1.toFixed(1)} ${mx.toFixed(1)},${my.toFixed(1)}" fill="none" stroke="rgba(${stroke},${(op * 0.8).toFixed(3)})" stroke-width="${(sw * 0.85).toFixed(2)}"/>`
+        );
+        parts.push(
+          `<polygon points="${x0.toFixed(1)},${y1.toFixed(1)} ${x0.toFixed(1)},${y0.toFixed(1)} ${mx.toFixed(1)},${my.toFixed(1)}" fill="none" stroke="rgba(${stroke},${(op * 0.65).toFixed(3)})" stroke-width="${(sw * 0.8).toFixed(2)}"/>`
+        );
+      }
+      if (hash01(col, row + 9) > 0.62) {
+        parts.push(
+          `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${(1.4 + hash01(col, row) * 1.2).toFixed(1)}" fill="rgba(${accent},${(op * 0.55).toFixed(3)})"/>`
         );
       }
     }
   }
-  parts.push(
-    `<radialGradient id="sfV" cx="50%" cy="40%" r="78%"><stop offset="50%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,0.65)"/></radialGradient><rect width="${CANVAS_W}" height="${CANVAS_H}" fill="url(#sfV)"/>`
-  );
   return wrapSvg(parts.join(""));
 }
 
 function buildParchmentCrest(p: WavePalette): string {
   const parts: string[] = [];
-  // 不透明に近い羊皮紙地（暗カード上でも地色が見える）
-  const paper = p.fills[0] ?? "225,200,165";
-  parts.push(
-    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="rgba(${paper},${waveOp(0.72).toFixed(3)})"/>`
-  );
-  // 細かい紙粒
-  for (let i = 0; i < 100; i += 1) {
-    const x = hash01(i, 1) * CANVAS_W;
-    const y = hash01(i, 2) * CANVAS_H;
-    parts.push(
-      `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(0.5 + hash01(i, 3)).toFixed(1)}" fill="rgba(55,40,25,${waveOp(0.1 + hash01(i, 4) * 0.1).toFixed(3)})"/>`
-    );
-  }
-  const step = 24;
+  // 暗地はカード CSS 任せ。暖色の紋章だけを疎に・太く（SVG 肥大化を避ける）。
+  const step = 48;
   for (let row = -1; row < Math.ceil(CANVAS_H / step) + 2; row += 1) {
     for (let col = -1; col < Math.ceil(CANVAS_W / step) + 2; col += 1) {
       const ox = (row % 2) * (step / 2);
-      const cx = col * step + ox + 4;
-      const cy = row * step + 6;
+      const cx = col * step + ox + 8;
+      const cy = row * step + 10;
       const nx = cx / CANVAS_W;
       const ny = cy / CANVAS_H;
-      // ほぼ全面に置く（欠けは少なめ）
-      if (!place(nx, ny, 1.45, row * 22 + col)) continue;
-      const r = 9.5 + hash01(col, row) * 4;
+      if (!place(nx, ny, 1.15, row * 19 + col)) continue;
+      const r = 13 + hash01(col, row) * 5;
       const ink = pick(p.strokes, col, row);
-      const op = waveOp(0.78 + hash01(col, row) * 0.2);
-      // ゴシック十字（太い塗り）
+      const glow = pick(p.accent, col + 2, row);
+      const op = waveOp(0.7 + hash01(col, row) * 0.25);
+      // 四芒星アーム（塗り）
       for (let k = 0; k < 4; k += 1) {
         const a = -Math.PI / 2 + (Math.PI / 2) * k;
         const tipX = cx + Math.cos(a) * r;
         const tipY = cy + Math.sin(a) * r;
-        const leftA = a - 0.28;
-        const rightA = a + 0.28;
-        const mid = r * 0.48;
+        const leftA = a - 0.36;
+        const rightA = a + 0.36;
+        const mid = r * 0.5;
         const arm = `${tipX.toFixed(1)},${tipY.toFixed(1)} ${(cx + Math.cos(rightA) * mid).toFixed(1)},${(cy + Math.sin(rightA) * mid).toFixed(1)} ${cx.toFixed(1)},${cy.toFixed(1)} ${(cx + Math.cos(leftA) * mid).toFixed(1)},${(cy + Math.sin(leftA) * mid).toFixed(1)}`;
         parts.push(
           `<polygon points="${arm}" fill="rgba(${ink},${op.toFixed(3)})"/>`
         );
       }
-      // 翼状フロリッシュ（太め）
+      // 斜め翼は1本ストロークのみ（要素数抑制）
       for (let k = 0; k < 4; k += 1) {
         const a = -Math.PI / 2 + (Math.PI / 2) * k + Math.PI / 4;
+        const d = `M${(cx + Math.cos(a) * r * 0.22).toFixed(1)} ${(cy + Math.sin(a) * r * 0.22).toFixed(1)} Q${(cx + Math.cos(a) * r * 0.82).toFixed(1)} ${(cy + Math.sin(a) * r * 0.82).toFixed(1)} ${(cx + Math.cos(a + (k % 2 === 0 ? -0.55 : 0.55)) * r * 1.15).toFixed(1)} ${(cy + Math.sin(a + (k % 2 === 0 ? -0.55 : 0.55)) * r * 1.15).toFixed(1)}`;
         parts.push(
-          `<path d="M${(cx + Math.cos(a) * r * 0.18).toFixed(1)} ${(cy + Math.sin(a) * r * 0.18).toFixed(1)} Q${(cx + Math.cos(a) * r * 0.78).toFixed(1)} ${(cy + Math.sin(a) * r * 0.78).toFixed(1)} ${(cx + Math.cos(a - 0.55) * r * 1.08).toFixed(1)} ${(cy + Math.sin(a - 0.55) * r * 1.08).toFixed(1)}" fill="none" stroke="rgba(${ink},${op.toFixed(3)})" stroke-width="1.85"/>`
+          `<path d="${d}" fill="none" stroke="rgba(${glow},${(op * 0.5).toFixed(3)})" stroke-width="3.4"/>`
         );
         parts.push(
-          `<path d="M${(cx + Math.cos(a) * r * 0.18).toFixed(1)} ${(cy + Math.sin(a) * r * 0.18).toFixed(1)} Q${(cx + Math.cos(a) * r * 0.78).toFixed(1)} ${(cy + Math.sin(a) * r * 0.78).toFixed(1)} ${(cx + Math.cos(a + 0.55) * r * 1.08).toFixed(1)} ${(cy + Math.sin(a + 0.55) * r * 1.08).toFixed(1)}" fill="none" stroke="rgba(${ink},${op.toFixed(3)})" stroke-width="1.85"/>`
+          `<path d="${d}" fill="none" stroke="rgba(${ink},${op.toFixed(3)})" stroke-width="1.8"/>`
         );
       }
       parts.push(
-        `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2.6" fill="rgba(${ink},${op.toFixed(3)})"/>`
+        `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.6" fill="rgba(${ink},${op.toFixed(3)})"/>`
       );
     }
   }
-  // 端だけ落とす（中央は読める）
-  parts.push(
-    `<radialGradient id="pcV" cx="50%" cy="42%" r="78%"><stop offset="55%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,0.42)"/></radialGradient><rect width="${CANVAS_W}" height="${CANVAS_H}" fill="url(#pcV)"/>`
-  );
+  return wrapSvg(parts.join(""));
+}
+
+/** 参考1 — 黒裂晶＋右縁紅光 */
+function buildCrimsonShard(p: WavePalette): string {
+  const parts: string[] = [];
+  const cell = 22;
+  for (let row = -1; row < Math.ceil(CANVAS_H / cell) + 2; row += 1) {
+    for (let col = -1; col < Math.ceil(CANVAS_W / cell) + 2; col += 1) {
+      const x0 = col * cell + hash01(col, row) * 4;
+      const y0 = row * cell + hash01(row, col) * 3;
+      const nx = (x0 + cell / 2) / CANVAS_W;
+      const ny = (y0 + cell / 2) / CANVAS_H;
+      if (!place(nx, ny, 1.4, row * 29 + col)) continue;
+      const jitter = 3 + hash01(col + 2, row) * 6;
+      const pts = [
+        [x0 + hash01(col, 1) * jitter, y0 + hash01(row, 2) * jitter],
+        [x0 + cell - hash01(col, 3) * jitter, y0 + hash01(row, 4) * 2],
+        [
+          x0 + cell * (0.55 + hash01(col, 5) * 0.35),
+          y0 + cell - hash01(row, 6) * jitter,
+        ],
+        [x0 + hash01(col, 7) * 2, y0 + cell * (0.45 + hash01(row, 8) * 0.4)],
+      ];
+      const poly = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+      const fill = pick(p.fills, col, row);
+      const fop = waveOp(0.55 + hash01(col, row) * 0.35);
+      // 右縁ほど紅い稜線
+      const rimBoost = Math.pow(Math.max(0, (nx - 0.35) / 0.65), 1.2);
+      const rim = pick(p.strokes, col, row);
+      const rop = waveOp(0.12 + rimBoost * 0.75 + hash01(col, row + 1) * 0.12);
+      parts.push(
+        `<polygon points="${poly}" fill="rgba(${fill},${fop.toFixed(3)})" stroke="rgba(${rim},${rop.toFixed(3)})" stroke-width="${(0.7 + rimBoost * 1.4).toFixed(2)}"/>`
+      );
+      if (rimBoost > 0.35 && hash01(col, row + 11) > 0.45) {
+        const [ax, ay] = pts[0]!;
+        const [bx, by] = pts[1]!;
+        parts.push(
+          `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="rgba(${p.accent[0]},${(rop * 0.85).toFixed(3)})" stroke-width="${(1.4 + rimBoost).toFixed(2)}"/>`
+        );
+      }
+    }
+  }
+  return wrapSvg(parts.join(""));
+}
+
+/** 参考2 — 赤×シアンの信号モザイク（やや薄め） */
+function buildSignalMosaic(p: WavePalette): string {
+  const parts: string[] = [];
+  const step = 22;
+  for (let row = -1; row < Math.ceil(CANVAS_H / step) + 2; row += 1) {
+    for (let col = -1; col < Math.ceil(CANVAS_W / step) + 2; col += 1) {
+      const cx = col * step + (row % 2) * (step * 0.35) + 4;
+      const cy = row * step + 4;
+      const nx = cx / CANVAS_W;
+      const ny = cy / CANVAS_H;
+      if (!place(nx, ny, 0.85, row * 41 + col)) continue;
+      const red = hash01(col, row) > 0.42;
+      const ink = red ? (p.strokes[0] ?? "255,40,40") : (p.strokes[1] ?? "0,160,170");
+      const glow = red ? (p.accent[0] ?? ink) : (p.accent[1] ?? ink);
+      const op = waveOp((red ? 0.32 : 0.18) + hash01(col, row) * 0.2);
+      const s = 4.2 + hash01(col + 1, row) * 6.5;
+      const kind = Math.floor(hash01(col, row + 3) * 5);
+      if (kind === 0) {
+        parts.push(
+          `<rect x="${(cx - s).toFixed(1)}" y="${(cy - s).toFixed(1)}" width="${(s * 2).toFixed(1)}" height="${(s * 2).toFixed(1)}" fill="none" stroke="rgba(${ink},${op.toFixed(3)})" stroke-width="1.05" transform="rotate(45 ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`
+        );
+        parts.push(
+          `<rect x="${(cx - s * 0.55).toFixed(1)}" y="${(cy - s * 0.55).toFixed(1)}" width="${(s * 1.1).toFixed(1)}" height="${(s * 1.1).toFixed(1)}" fill="none" stroke="rgba(${glow},${(op * 0.55).toFixed(3)})" stroke-width="0.85" transform="rotate(45 ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`
+        );
+      } else if (kind === 1) {
+        parts.push(
+          `<rect x="${(cx - s).toFixed(1)}" y="${(cy - s).toFixed(1)}" width="${(s * 2).toFixed(1)}" height="${(s * 2).toFixed(1)}" fill="none" stroke="rgba(${ink},${op.toFixed(3)})" stroke-width="1.0"/>`
+        );
+        if (hash01(col, row + 5) > 0.55) {
+          parts.push(
+            `<rect x="${(cx - s * 0.55).toFixed(1)}" y="${(cy - s * 0.55).toFixed(1)}" width="${(s * 1.1).toFixed(1)}" height="${(s * 1.1).toFixed(1)}" fill="none" stroke="rgba(${glow},${(op * 0.5).toFixed(3)})" stroke-width="0.8"/>`
+          );
+        }
+      } else if (kind === 2) {
+        const a = s * 0.9;
+        parts.push(
+          `<path d="M${(cx - a).toFixed(1)} ${(cy - a).toFixed(1)} H${(cx - a * 0.25).toFixed(1)} M${(cx - a).toFixed(1)} ${(cy - a).toFixed(1)} V${(cy - a * 0.25).toFixed(1)}" fill="none" stroke="rgba(${ink},${op.toFixed(3)})" stroke-width="1.1"/>`
+        );
+        parts.push(
+          `<path d="M${(cx + a).toFixed(1)} ${(cy + a).toFixed(1)} H${(cx + a * 0.25).toFixed(1)} M${(cx + a).toFixed(1)} ${(cy + a).toFixed(1)} V${(cy + a * 0.25).toFixed(1)}" fill="none" stroke="rgba(${ink},${op.toFixed(3)})" stroke-width="1.1"/>`
+        );
+      } else if (kind === 3) {
+        parts.push(
+          `<rect x="${(cx - s * 0.3).toFixed(1)}" y="${(cy - s * 0.3).toFixed(1)}" width="${(s * 0.6).toFixed(1)}" height="${(s * 0.6).toFixed(1)}" fill="rgba(${ink},${(op * 0.75).toFixed(3)})"/>`
+        );
+      } else {
+        parts.push(
+          `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(1.0 + hash01(col, row) * 1.2).toFixed(1)}" fill="rgba(${ink},${(op * 0.85).toFixed(3)})"/>`
+        );
+      }
+    }
+  }
+  return wrapSvg(parts.join(""));
+}
+
+/** 参考3 — 赤×灰の暴砕シャード＋ハッチ */
+function buildRiotShard(p: WavePalette): string {
+  const parts: string[] = [];
+  for (let i = 0; i < 48; i += 1) {
+    const nx = 0.04 + hash01(i, 1) * 0.92;
+    const ny = 0.03 + hash01(i, 2) * 0.94;
+    if (!place(nx, ny, 1.15, i + 7)) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const isRed = hash01(i, 3) > 0.38;
+    const fill = isRed
+      ? pick([p.fills[0]!, p.fills[1]!], i, 4)
+      : pick([p.fills[2]!, p.fills[3]!], i, 5);
+    const stroke = isRed
+      ? pick([p.strokes[0]!, p.strokes[1]!], i, 6)
+      : pick([p.strokes[2]!, p.strokes[3]!], i, 7);
+    const op = waveOp((isRed ? 0.72 : 0.45) + hash01(i, 8) * 0.22);
+    const ang = hash01(i, 9) * Math.PI * 2;
+    const len = 18 + hash01(i, 10) * 34;
+    const w = 7 + hash01(i, 11) * 14;
+    const cos = Math.cos(ang);
+    const sin = Math.sin(ang);
+    const px = (dx: number, dy: number) => {
+      const x = cx + dx * cos - dy * sin;
+      const y = cy + dx * sin + dy * cos;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    };
+    const poly = [
+      px(-len * 0.15, 0),
+      px(len * 0.55, -w * 0.15),
+      px(len, 0),
+      px(len * 0.4, w * 0.55),
+      px(-len * 0.05, w * 0.2),
+    ].join(" ");
+    parts.push(
+      `<polygon points="${poly}" fill="rgba(${fill},${op.toFixed(3)})" stroke="rgba(${stroke},${Math.min(1, op * 1.05).toFixed(3)})" stroke-width="1.15"/>`
+    );
+    if (isRed && hash01(i, 12) > 0.35) {
+      // ハッチ線
+      for (let h = 0; h < 4; h += 1) {
+        const t0 = 0.15 + h * 0.18;
+        const t1 = t0 + 0.22;
+        const yOff = -w * 0.25 + h * (w * 0.18);
+        parts.push(
+          `<line x1="${(cx + (t0 * len - len * 0.1) * cos - yOff * sin).toFixed(1)}" y1="${(cy + (t0 * len - len * 0.1) * sin + yOff * cos).toFixed(1)}" x2="${(cx + (t1 * len - len * 0.1) * cos - yOff * sin).toFixed(1)}" y2="${(cy + (t1 * len - len * 0.1) * sin + yOff * cos).toFixed(1)}" stroke="rgba(0,0,0,${waveOp(0.45).toFixed(3)})" stroke-width="0.85"/>`
+        );
+      }
+    }
+  }
+  return wrapSvg(parts.join(""));
+}
+
+/** 参考4 — 黒地の赤炎デカール */
+function buildInfernoDecal(p: WavePalette): string {
+  const parts: string[] = [];
+  for (let i = 0; i < 36; i += 1) {
+    const nx = 0.06 + hash01(i, 1) * 0.88;
+    const ny = 0.05 + hash01(i, 2) * 0.9;
+    if (!place(nx, ny, 1.05, i + 17)) continue;
+    const cx = nx * CANVAS_W;
+    const cy = ny * CANVAS_H;
+    const rot = hash01(i, 3) * Math.PI * 2;
+    const s = 10 + hash01(i, 4) * 16;
+    const ink = pick(p.strokes, i, 5);
+    const op = waveOp(0.75 + hash01(i, 6) * 0.22);
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const pt = (dx: number, dy: number) => {
+      const x = cx + dx * cos - dy * sin;
+      const y = cy + dx * sin + dy * cos;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    };
+    // 2〜3舌の炎シルエット
+    const tongues = 2 + Math.floor(hash01(i, 7) * 2);
+    const tip = pt(0, -s);
+    const baseL = pt(-s * 0.42, s * 0.55);
+    const baseR = pt(s * 0.42, s * 0.55);
+    const midL = pt(-s * 0.55, -s * 0.05);
+    const midR = pt(s * 0.55, -s * 0.1);
+    const cleft = pt(s * (hash01(i, 8) - 0.5) * 0.35, -s * 0.35);
+    if (tongues === 2) {
+      parts.push(
+        `<path d="M${baseL} Q${midL} ${tip} Q${midR} ${baseR} Q${pt(0, s * 0.35)} ${baseL} Z" fill="rgba(${ink},${op.toFixed(3)})"/>`
+      );
+    } else {
+      parts.push(
+        `<path d="M${baseL} Q${midL} ${tip} L${cleft} Q${midR} ${baseR} Q${pt(0, s * 0.32)} ${baseL} Z" fill="rgba(${ink},${op.toFixed(3)})"/>`
+      );
+    }
+    // 細いハイライト縁
+    parts.push(
+      `<path d="M${baseL} Q${midL} ${tip}" fill="none" stroke="rgba(${p.accent[0]},${(op * 0.35).toFixed(3)})" stroke-width="0.9"/>`
+    );
+  }
   return wrapSvg(parts.join(""));
 }
 
@@ -745,12 +951,20 @@ function buildSkinSvg(variant: ProfilePlanProWaveBgVariant): string {
       return buildStealthFacet(p);
     case "wave-parchment-crest":
       return buildParchmentCrest(p);
+    case "wave-crimson-shard":
+      return buildCrimsonShard(p);
+    case "wave-signal-mosaic":
+      return buildSignalMosaic(p);
+    case "wave-riot-shard":
+      return buildRiotShard(p);
+    case "wave-inferno-decal":
+      return buildInfernoDecal(p);
     default:
       return wrapSvg("");
   }
 }
 
-const CACHE_VER = "v7-soften-gold-ember";
+const CACHE_VER = "v12-signal-lighter-adopt-2";
 
 export function getProfilePlanProWaveSkinSvg(
   variant: ProfilePlanProWaveBgVariant

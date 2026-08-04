@@ -1,5 +1,5 @@
 /**
- * Web `WaveProSkinPreviewPage` 相当 — Wave9 SVG 線画プレビュー
+ * Web `WaveProSkinPreviewPage` 相当 — Wave SVG 線画プレビュー
  */
 import { useMemo, useState } from "react";
 import {
@@ -79,7 +79,7 @@ export default function WaveProSkinPreviewScreenNative({
   return (
     <View style={styles.appRoot}>
       <MobilePageShell
-        title="WAVE 9"
+        title="WAVE 13"
         eyebrow="PRO SKIN // PREVIEW"
         subtitle={
           isJa

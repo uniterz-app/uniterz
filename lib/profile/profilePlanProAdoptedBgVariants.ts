@@ -129,11 +129,13 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用カタログ — 解放カタログ順（即解放 → マイルストーン）。詳細は `proSkinUnlock.ts` */
+/** 採用カタログ — 解放カタログ順（即解放12 → マイルストーン20）。詳細は `proSkinUnlock.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
-  // Pro 即解放 ×12（ランキング行でも識別できる柄）
+  // Pro 即解放 ×12
+  { id: "atmos", category: "cyber", family: "atmos" },
+  { id: "parallax", category: "cyber", family: "atmos" },
+  { id: "wave-riot-shard", category: "cyber", family: "wave" },
   { id: "beast-titanium", category: "material", family: "beast" },
-  { id: "beast-circuitlace", category: "material", family: "beast" },
   { id: "beast-panther", category: "beast", family: "beast" },
   { id: "beast-crocodile", category: "reptile", family: "beast" },
   { id: "scale-mamba", category: "reptile", family: "scale" },
@@ -142,27 +144,26 @@ const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   { id: "scale-diamondback", category: "reptile", family: "scale" },
   { id: "beast-shark", category: "beast", family: "beast" },
   { id: "form-diamondgrid", category: "geometry", family: "form" },
-  { id: "beast-damascus", category: "material", family: "beast" },
-  { id: "beast-chrome", category: "material", family: "beast" },
-  // マイルストーン ×12（努力・順位1回）
+  // マイルストーン ×20（閾値 → 順位1回 → 招待 → 回数）
+  { id: "wave-crimson-shard", category: "cyber", family: "wave" },
   { id: "beast-viper", category: "reptile", family: "beast" },
   { id: "scale-king", category: "reptile", family: "scale" },
   { id: "scale-dragon", category: "reptile", family: "scale" },
-  { id: "beast-kintsugi", category: "material", family: "beast" },
-  { id: "beast-eclipse", category: "beast", family: "beast" },
+  { id: "wave-signal-mosaic", category: "cyber", family: "wave" },
   { id: "beast-shard", category: "beast", family: "beast" },
-  { id: "beast-jagarmor", category: "material", family: "beast" },
+  { id: "beast-circuitlace", category: "material", family: "beast" },
+  { id: "beast-eclipse", category: "beast", family: "beast" },
+  { id: "wave-chem-ink", category: "material", family: "wave" },
   { id: "form-isocubes", category: "geometry", family: "form" },
   { id: "beast-facet", category: "beast", family: "beast" },
   { id: "beast-thunder", category: "beast", family: "beast" },
   { id: "beast-starborne", category: "beast", family: "beast" },
   { id: "beast-regalia", category: "beast", family: "beast" },
-  // Wave マイルストーン ×6（招待 / 週・月回数）
   { id: "wave-cyan-grid", category: "cyber", family: "wave" },
   { id: "wave-gold-monogram", category: "material", family: "wave" },
-  { id: "wave-ember-hex", category: "geometry", family: "wave" },
-  { id: "wave-chem-ink", category: "material", family: "wave" },
   { id: "wave-neon-ridge", category: "cyber", family: "wave" },
+  { id: "beast-jagarmor", category: "material", family: "beast" },
+  { id: "wave-ember-hex", category: "geometry", family: "wave" },
   { id: "wave-obsidian-warp", category: "geometry", family: "wave" },
 ];
 

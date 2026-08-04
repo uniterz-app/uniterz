@@ -4,7 +4,7 @@
 
 ## いままで（develop 向け実装）
 
-- 採用カタログ **即解放 12 / マイルストーン 18**（Wave 招待・週/月回数含む）
+- 採用カタログ **即解放 12 / マイルストーン 20**（Wave 招待・週/月回数含む）
 - Circuit Lace / Iso Cubes など全面パターン、Crimson Eclipse 再採用、Carbon 削除
 - Pro Skin 一覧の軽量化（カタログは swatch、フル模様はプレビュー時のみ）
 - **無料ユーザー**も Pro Skin プレビュー可。適用ボタンは **GET PRO** → 購入ページ

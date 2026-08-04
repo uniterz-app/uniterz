@@ -61,7 +61,7 @@ const LINKS = [
   },
   {
     href: "/mobile/wave-pro-skin-preview",
-    title: "Pro Skin · Wave 9",
+    title: "Pro Skin · Wave 13",
     note: "9テーマ SVG 線画プレビュー",
   },
   {

@@ -1,6 +1,6 @@
 /**
- * Pro Skin 解放ルール — 即解放12 / マイルストーン18。
- * 並べ順もここが正（カタログ表示・No. はこの順）。
+ * Pro Skin 解放ルール — 即解放12 / マイルストーン20。
+ * 表示順の正は `PROFILE_PLAN_PRO_ADOPTED_BG`。解放条件は milestone catalog。
  */
 
 import {
@@ -162,71 +162,67 @@ export function userDataIsPro(userData: Record<string, unknown> | null | undefin
   return ms > Date.now();
 }
 
-/** 即解放（Pro）→ マイルストーン（難易度昇順）。マイルストーン定義は catalog が正 */
-const UNLOCK_ORDER: readonly {
-  id: ProfilePlanProBgVariant;
-  unlock: ProSkinUnlockRule;
-}[] = [
-  // —— Pro 即解放 ×12 ——
-  { id: "beast-titanium", unlock: { kind: "pro" } },
-  { id: "beast-circuitlace", unlock: { kind: "pro" } },
-  { id: "beast-panther", unlock: { kind: "pro" } },
-  { id: "beast-crocodile", unlock: { kind: "pro" } },
-  { id: "scale-mamba", unlock: { kind: "pro" } },
-  { id: "scale-python", unlock: { kind: "pro" } },
-  { id: "form-hexveil", unlock: { kind: "pro" } },
-  { id: "scale-diamondback", unlock: { kind: "pro" } },
-  { id: "beast-shark", unlock: { kind: "pro" } },
-  { id: "form-diamondgrid", unlock: { kind: "pro" } },
-  { id: "beast-damascus", unlock: { kind: "pro" } },
-  { id: "beast-chrome", unlock: { kind: "pro" } },
-  // —— マイルストーン（catalog） ——
-  ...PRO_SKIN_THRESHOLD_MILESTONES.map((row) => ({
-    id: row.id as ProfilePlanProBgVariant,
-    unlock: {
-      kind: row.kind,
-      threshold: row.threshold,
-    } as ProSkinUnlockRule,
-  })),
-  ...PRO_SKIN_RANK_MILESTONES.map((row) => ({
-    id: row.id as ProfilePlanProBgVariant,
-    unlock: {
-      kind: row.period === "weekly" ? "weeklyRank" : "monthlyRank",
-      maxRank: row.maxRank,
-      metric: row.metric,
-    } as ProSkinUnlockRule,
-  })),
-  // Wave — 招待 / 週・月回数
-  ...PRO_SKIN_REFERRAL_MILESTONES.map((row) => ({
-    id: row.id as ProfilePlanProBgVariant,
-    unlock: {
-      kind: "referralCompleted" as const,
-      threshold: row.completedCount,
-    },
-  })),
-  ...PRO_SKIN_PERIOD_WIN_MILESTONES.map((row) => ({
-    id: row.id as ProfilePlanProBgVariant,
-    unlock: {
-      kind: "periodWins" as const,
-      period: row.period,
-      metric: row.metric,
-      maxRank: row.maxRank,
-      wins: row.wins,
-    },
-  })),
-];
+/** Pro 即解放 ×12 */
+const PRO_IMMEDIATE_IDS = new Set<ProfilePlanProBgVariant>([
+  "atmos",
+  "parallax",
+  "wave-riot-shard",
+  "beast-titanium",
+  "beast-panther",
+  "beast-crocodile",
+  "scale-mamba",
+  "scale-python",
+  "form-hexveil",
+  "scale-diamondback",
+  "beast-shark",
+  "form-diamondgrid",
+]);
 
-const BY_ID = new Map(
-  PROFILE_PLAN_PRO_ADOPTED_BG.map((e) => [e.id, e] as const)
-);
+/** id → 解放条件（表示順は ADOPTED に委譲） */
+const UNLOCK_RULE_BY_ID: Map<ProfilePlanProBgVariant, ProSkinUnlockRule> =
+  (() => {
+    const m = new Map<ProfilePlanProBgVariant, ProSkinUnlockRule>();
+    for (const id of PRO_IMMEDIATE_IDS) {
+      m.set(id, { kind: "pro" });
+    }
+    for (const row of PRO_SKIN_THRESHOLD_MILESTONES) {
+      m.set(row.id as ProfilePlanProBgVariant, {
+        kind: row.kind,
+        threshold: row.threshold,
+      });
+    }
+    for (const row of PRO_SKIN_RANK_MILESTONES) {
+      m.set(row.id as ProfilePlanProBgVariant, {
+        kind: row.period === "weekly" ? "weeklyRank" : "monthlyRank",
+        maxRank: row.maxRank,
+        metric: row.metric,
+      });
+    }
+    for (const row of PRO_SKIN_REFERRAL_MILESTONES) {
+      m.set(row.id as ProfilePlanProBgVariant, {
+        kind: "referralCompleted",
+        threshold: row.completedCount,
+      });
+    }
+    for (const row of PRO_SKIN_PERIOD_WIN_MILESTONES) {
+      m.set(row.id as ProfilePlanProBgVariant, {
+        kind: "periodWins",
+        period: row.period,
+        metric: row.metric,
+        maxRank: row.maxRank,
+        wins: row.wins,
+      });
+    }
+    return m;
+  })();
 
 export const PRO_SKIN_UNLOCK_CATALOG: readonly ProSkinUnlockCatalogEntry[] =
-  UNLOCK_ORDER.map((row, sortIndex) => {
-    const base = BY_ID.get(row.id);
-    if (!base) {
-      throw new Error(`proSkinUnlock: missing adopted entry ${row.id}`);
+  PROFILE_PLAN_PRO_ADOPTED_BG.map((base, sortIndex) => {
+    const unlock = UNLOCK_RULE_BY_ID.get(base.id);
+    if (!unlock) {
+      throw new Error(`proSkinUnlock: missing unlock rule for ${base.id}`);
     }
-    return { ...base, unlock: row.unlock, sortIndex };
+    return { ...base, unlock, sortIndex };
   });
 
 const UNLOCK_BY_ID = new Map(

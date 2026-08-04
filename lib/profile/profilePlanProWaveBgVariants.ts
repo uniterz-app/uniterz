@@ -1,9 +1,13 @@
-/** PRO 背景 — Wave9 テーマ
+/** PRO 背景 — Wave テーマ
  * 本番採用（マイルストーン）:
  *   cyan-grid=招待5 / gold-monogram=招待10
- *   ember-hex=月間総合Top10×3 / chem-ink=×5
- *   neon-ridge=週間総合1位×3 / obsidian-warp=×5
- * プレビューのみ: royal-plum / stealth-facet / parchment-crest
+ *   neon-ridge=月間総合Top10×3 / chem-ink=月間総合Top10（1回）
+ *   ember-hex=週間総合1位×3 / obsidian-warp=週間総合1位×5
+ * 追加採用:
+ *   - riot-shard … Pro 即解放
+ *   - crimson-shard … 連勝5 / signal-mosaic … Perfect 5（マイルストーン）
+ * カタログ外（プレビューのみ）: royal-plum / stealth-facet / parchment-crest / inferno-decal
+ * ※ Jagged Plate (beast-jagarmor)=月間総合Top10×5 は Beast 側
  */
 
 export type ProfilePlanProWaveBgVariant =
@@ -15,7 +19,11 @@ export type ProfilePlanProWaveBgVariant =
   | "wave-chem-ink"
   | "wave-gold-monogram"
   | "wave-stealth-facet"
-  | "wave-parchment-crest";
+  | "wave-parchment-crest"
+  | "wave-crimson-shard"
+  | "wave-signal-mosaic"
+  | "wave-riot-shard"
+  | "wave-inferno-decal";
 
 export type ProfilePlanProWaveBgMeta = {
   id: ProfilePlanProWaveBgVariant;
@@ -89,16 +97,48 @@ export const PROFILE_PLAN_PRO_WAVE_BG_VARIANTS: ProfilePlanProWaveBgMeta[] = [
     label: "Stealth Facet",
     tag: "切子黒",
     description: "低ポリ切子モザイクのマット装甲。",
-    swatch: "linear-gradient(160deg,#000000,#121212 50%,#000000)",
-    cardColors: ["#040404", "#101010", "#020202"],
+    swatch: "linear-gradient(160deg,#07090e,#1a2430 45%,#c8d8ec 88%)",
+    cardColors: ["#07090e", "#151b24", "#05070b"],
   },
   {
     id: "wave-parchment-crest",
     label: "Parchment Crest",
     tag: "羊皮紋章",
     description: "ゴシック四芒星の紋章リピート（暗地に暖色線）。",
-    swatch: "linear-gradient(160deg,#2a2218,#3d3226 50%,#1a1410)",
-    cardColors: ["#2a2218", "#3d3226", "#1a1410"],
+    swatch: "linear-gradient(160deg,#2e2418,#4a3a28 42%,#f5dca0 90%)",
+    cardColors: ["#2e2418", "#4a3a28", "#1c1610"],
+  },
+  {
+    id: "wave-crimson-shard",
+    label: "Crimson Shard",
+    tag: "紅裂晶",
+    description: "黒の裂晶切子＋右縁から差し込む紅光。",
+    swatch: "linear-gradient(115deg,#050505 35%,#1a0508 70%,#ff2a2a)",
+    cardColors: ["#050505", "#120608", "#020202"],
+  },
+  {
+    id: "wave-signal-mosaic",
+    label: "Signal Mosaic",
+    tag: "信号格子",
+    description: "赤とシアンの入れ子菱・角括弧のサイバーモザイク。",
+    swatch: "linear-gradient(160deg,#000000,#0a1014 50%,#ff1a1a 92%)",
+    cardColors: ["#000000", "#061014", "#000000"],
+  },
+  {
+    id: "wave-riot-shard",
+    label: "Riot Shard",
+    tag: "暴砕片",
+    description: "赤の鋭角シャード＋ハッチ線のストリートグラフィティ。",
+    swatch: "linear-gradient(160deg,#000000,#1a0505 45%,#ff0000 90%)",
+    cardColors: ["#050000", "#140404", "#000000"],
+  },
+  {
+    id: "wave-inferno-decal",
+    label: "Inferno Decal",
+    tag: "炎紋",
+    description: "黒地に散らした赤炎のフラットデカール。",
+    swatch: "linear-gradient(160deg,#000000,#120000 48%,#ff1a1a)",
+    cardColors: ["#000000", "#100000", "#000000"],
   },
 ];
 
