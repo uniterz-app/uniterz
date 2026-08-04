@@ -43,7 +43,6 @@ export default function ResultHitCyberFrameNative({
             "transparent",
           ]}
           shellContext={shellContext}
-          glowCorners
         />
       ) : null}
     </View>

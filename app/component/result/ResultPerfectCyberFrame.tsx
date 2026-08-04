@@ -13,10 +13,7 @@ type Props = {
   showSweep?: boolean;
 };
 
-const CORNER =
-  "pointer-events-none absolute z-[12] result-perfect-frame-corner";
-
-/** PERFECT 用サイバー角切り枠 — コア線 + drop-shadow ブルーム + 角ハイライト */
+/** PERFECT 用サイバー角切り枠 — コア線 + drop-shadow ブルーム */
 export default function ResultPerfectCyberFrame({
   className = "",
   showSweep = true,
@@ -59,23 +56,6 @@ export default function ResultPerfectCyberFrame({
           <div className="result-card-border-sweep__spin result-card-streak-sweep__spin" />
         </div>
       ) : null}
-
-      <div
-        className={`${CORNER} left-0 top-0 h-3 w-3 border-l-[2.5px] border-t-[2.5px]`}
-        aria-hidden
-      />
-      <div
-        className={`${CORNER} right-0 top-0 h-3 w-3 border-r-[2.5px] border-t-[2.5px]`}
-        aria-hidden
-      />
-      <div
-        className={`${CORNER} bottom-0 left-0 h-3 w-3 border-b-[2.5px] border-l-[2.5px]`}
-        aria-hidden
-      />
-      <div
-        className={`${CORNER} bottom-0 right-0 h-3 w-3 border-b-[2.5px] border-r-[2.5px]`}
-        aria-hidden
-      />
 
       <div
         className={[

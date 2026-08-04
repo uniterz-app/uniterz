@@ -88,10 +88,9 @@ export default function PredictOverlayMatchCardShellNative({
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const hasResultFrame = hasPredictOverlayResultCyberFrame(resultBadge);
-  /** Web: 結果バッジ時は `.result-hit-cyber-clip`、通常は `.predict-overlay-cyber-card` */
-  const shellClipShape: ResultCyberFrameClipShape = hasResultFrame ? "hit" : "chamfer";
-  const cut =
-    shellClipShape === "hit" ? RESULT_HIT_CYBER_CLIP_CUT : PREDICT_OVERLAY_CYBER_CUT;
+  /** 四隅 chamfer（左上・右下の直角は出さない） */
+  const shellClipShape: ResultCyberFrameClipShape = "chamfer";
+  const cut = hasResultFrame ? RESULT_HIT_CYBER_CLIP_CUT : PREDICT_OVERLAY_CYBER_CUT;
 
   const skiaPath = useMemo(
     () =>

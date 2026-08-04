@@ -1,35 +1,39 @@
 /**
- * Web `ResultGlassShell` + `.result-hit-cyber-clip` 相当。
- * 塗りはモバイル `RESULT_GLASS_FILL_MOBILE`（白半透明グラデ + blur）に準拠。
- * 角切りは Skia clip（ページ色の角マスクは使わない）。
+ * Web `ResultGlassShell` + リザルト外枠相当。
+ * 塗りはモバイル `RESULT_GLASS_FILL_MOBILE` に準拠。
+ * 四隅すべて斜め切り（左上・右下の直角は出さない）。
+ * 枠は外枠−内枠の塗りリング。Canvas は透明クリア。
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
   type LayoutChangeEvent,
-  Platform,
   type StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
 } from "react-native";
 import Animated, { type AnimatedStyle } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
 import {
   BlurMask,
   Canvas,
   Group,
   LinearGradient as SkiaLinearGradient,
   Path,
+  PathOp,
   Rect,
   Skia,
   vec,
+  type SkPath,
 } from "@shopify/react-native-skia";
 import { LinearGradient } from "expo-linear-gradient";
 import {
-  RESULT_HIT_CYBER_CLIP_CUT,
-  resultHitCyberClipPathD,
-} from "./resultHitCyberClipPath";
-import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+  chamferedRectPathD,
+  insetChamferedRectPathD,
+} from "../games/matchListCyberClipPath";
+import { RESULT_HIT_CYBER_CLIP_CUT } from "./resultHitCyberClipPath";
+
+/** 枠ブルームが Canvas 端で切れないよう外側余白 */
+const BORDER_BLOOM_PAD = 12;
 
 /**
  * Web `RESULT_GLASS_FILL_MOBILE`
@@ -62,27 +66,37 @@ type Props = {
 };
 
 function makeSkiaPath(width: number, height: number) {
-  const d = resultHitCyberClipPathD(width, height);
+  const d = chamferedRectPathD(width, height, RESULT_HIT_CYBER_CLIP_CUT);
   if (!d) return null;
   return Skia.Path.MakeFromSVGString(d);
 }
 
+/** 外枠 − 内枠 = 隙間のない枠リング */
+function makeBorderRingPath(
+  width: number,
+  height: number,
+  strokeWidth: number
+): SkPath | null {
+  const cut = RESULT_HIT_CYBER_CLIP_CUT;
+  const outerD = chamferedRectPathD(width, height, cut);
+  const innerD = insetChamferedRectPathD(width, height, cut, strokeWidth);
+  if (!outerD || !innerD) return null;
+  const outer = Skia.Path.MakeFromSVGString(outerD);
+  const inner = Skia.Path.MakeFromSVGString(innerD);
+  if (!outer || !inner) return null;
+  return Skia.Path.MakeFromOp(outer, inner, PathOp.Difference);
+}
+
 function GlassFillFallback() {
   return (
-    <>
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: GLASS_UNDERLAY }]}
-      />
-      <LinearGradient
-        pointerEvents="none"
-        colors={[...GLASS_FILL_MOBILE.colors]}
-        locations={[...GLASS_FILL_MOBILE.locations]}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-    </>
+    <LinearGradient
+      pointerEvents="none"
+      colors={[...GLASS_FILL_MOBILE.colors]}
+      locations={[...GLASS_FILL_MOBILE.locations]}
+      start={{ x: 0.1, y: 0 }}
+      end={{ x: 0.9, y: 1 }}
+      style={StyleSheet.absoluteFillObject}
+    />
   );
 }
 
@@ -112,6 +126,20 @@ export default function ResultGlassShellNative({
     [size.w, size.h]
   );
 
+  const borderRingPath = useMemo(
+    () =>
+      size.w > 0 && size.h > 0
+        ? makeBorderRingPath(size.w, size.h, Math.max(1, strokeWidth))
+        : null,
+    [size.w, size.h, strokeWidth]
+  );
+
+  /** ブルーム用 — コア枠より太いリング（外側へ広がる分は Canvas 余白内） */
+  const bloomRingPath = useMemo(() => {
+    if (size.w <= 0 || size.h <= 0 || strokeWidth <= 1) return null;
+    return makeBorderRingPath(size.w, size.h, strokeWidth + 4);
+  }, [size.w, size.h, strokeWidth]);
+
   function onLayout(e: LayoutChangeEvent) {
     const { width, height } = e.nativeEvent.layout;
     if (Math.abs(width - size.w) < 0.5 && Math.abs(height - size.h) < 0.5) return;
@@ -119,14 +147,23 @@ export default function ResultGlassShellNative({
   }
 
   const hasSize = size.w > 0 && size.h > 0;
+  const canvasW = size.w + BORDER_BLOOM_PAD * 2;
+  const canvasH = size.h + BORDER_BLOOM_PAD * 2;
+  const topLineLeft = RESULT_HIT_CYBER_CLIP_CUT;
+  const topLineWidth = hasSize
+    ? Math.max(0, size.w - RESULT_HIT_CYBER_CLIP_CUT * 2)
+    : 0;
 
   return (
     <View
       style={[
         styles.root,
-        overflowVisible && styles.rootOverflowVisible,
         style,
         shellStyle,
+        /** 親の shadow* / overflow:hidden を打ち消し — 角切り外の黒い三角・クリップを防ぐ */
+        styles.noRectShadow,
+        styles.forceClipSafe,
+        overflowVisible && styles.rootOverflowVisible,
       ]}
       onLayout={onLayout}
     >
@@ -137,23 +174,16 @@ export default function ResultGlassShellNative({
           hasSize ? { width: size.w, height: size.h } : styles.shellMeasuring,
         ]}
       >
-        {(Platform.OS === "ios" || Platform.OS === "android") && (
-          <BlurView
-            intensity={Platform.OS === "ios" ? 28 : 16}
-            tint="dark"
-            {...nativeBlurViewExtraProps()}
-            style={styles.glassBlur}
-          />
-        )}
-
         {hasSize && skiaPath ? (
           <Canvas
+            opaque={false}
             style={{
               position: "absolute",
               left: 0,
               top: 0,
               width: size.w,
               height: size.h,
+              zIndex: 1,
             }}
             pointerEvents="none"
           >
@@ -179,61 +209,60 @@ export default function ResultGlassShellNative({
           <GlassFillFallback />
         )}
 
-        {hasSize ? (
+        {hasSize && topLineWidth > 0 ? (
           <View
             pointerEvents="none"
             style={[
               styles.insetTopHighlight,
               {
-                width: size.w - RESULT_HIT_CYBER_CLIP_CUT,
-                left: 0,
+                width: topLineWidth,
+                left: topLineLeft,
               },
             ]}
           />
-        ) : (
-          <View pointerEvents="none" style={styles.insetTopHighlight} />
-        )}
+        ) : null}
         <View pointerEvents="none" style={styles.insetBottomShade} />
 
-        {hasSize && skiaPath ? (
+        {hasSize && borderRingPath ? (
           <Animated.View
             pointerEvents="none"
             style={[
               styles.borderStroke,
               {
-                width: size.w,
-                height: size.h,
+                left: -BORDER_BLOOM_PAD,
+                top: -BORDER_BLOOM_PAD,
+                width: canvasW,
+                height: canvasH,
               },
               strokeOpacityStyle,
             ]}
           >
-            <Canvas style={{ width: size.w, height: size.h }} pointerEvents="none">
-              {strokeWidth > 1 ? (
-                <>
+            <Canvas
+              opaque={false}
+              style={{ width: canvasW, height: canvasH }}
+              pointerEvents="none"
+            >
+              <Group
+                transform={[
+                  { translateX: BORDER_BLOOM_PAD },
+                  { translateY: BORDER_BLOOM_PAD },
+                ]}
+              >
+                {bloomRingPath ? (
                   <Path
-                    path={skiaPath}
-                    style="stroke"
-                    strokeWidth={strokeWidth + 5}
-                    color={borderGlowColor(borderColor, 0.4)}
+                    path={bloomRingPath}
+                    style="fill"
+                    color={borderGlowColor(borderColor, 0.38)}
                   >
-                    <BlurMask blur={5.5} style="normal" />
+                    <BlurMask blur={4.5} style="normal" />
                   </Path>
-                  <Path
-                    path={skiaPath}
-                    style="stroke"
-                    strokeWidth={strokeWidth + 2}
-                    color={borderGlowColor(borderColor, 0.62)}
-                  >
-                    <BlurMask blur={2.4} style="normal" />
-                  </Path>
-                </>
-              ) : null}
-              <Path
-                path={skiaPath}
-                style="stroke"
-                strokeWidth={strokeWidth}
-                color={borderColor}
-              />
+                ) : null}
+                <Path
+                  path={borderRingPath}
+                  style="fill"
+                  color={borderColor}
+                />
+              </Group>
             </Canvas>
           </Animated.View>
         ) : null}
@@ -249,20 +278,28 @@ const styles = StyleSheet.create({
     position: "relative",
     width: "100%",
     overflow: "visible",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.58,
-    shadowRadius: 32,
-    elevation: 7,
+    backgroundColor: "transparent",
+  },
+  /** 角切り外へ矩形の黒い影を出さない */
+  noRectShadow: {
+    shadowColor: "transparent",
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+    backgroundColor: "transparent",
+  },
+  forceClipSafe: {
+    overflow: "visible",
   },
   rootOverflowVisible: {
     overflow: "visible",
   },
   shell: {
     position: "relative",
-    /** 枠ブルームを切らない */
     overflow: "visible",
     borderRadius: 0,
+    backgroundColor: "transparent",
   },
   shellMeasuring: {
     width: "100%",
@@ -270,26 +307,19 @@ const styles = StyleSheet.create({
   shellOverflowVisible: {
     overflow: "visible",
   },
-  glassBlur: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-  },
   content: {
     position: "relative",
     zIndex: 8,
   },
-  /** Web `ResultStreakCyberFrame` 静的枠 z-[4] — 走査光 z-[11] より下 */
   borderStroke: {
     position: "absolute",
     left: 0,
     top: 0,
-    zIndex: 4,
+    zIndex: 5,
   },
   insetTopHighlight: {
     position: "absolute",
     top: 0,
-    left: 0,
-    right: 0,
     height: 1,
     backgroundColor: "rgba(255,255,255,0.12)",
     zIndex: 2,
@@ -297,8 +327,8 @@ const styles = StyleSheet.create({
   insetBottomShade: {
     position: "absolute",
     bottom: 0,
-    left: 0,
-    right: 0,
+    left: RESULT_HIT_CYBER_CLIP_CUT,
+    right: RESULT_HIT_CYBER_CLIP_CUT,
     height: 1,
     backgroundColor: "rgba(255,255,255,0.03)",
     zIndex: 2,

@@ -3020,15 +3020,17 @@
     drop-shadow(0 0 22px rgba(248, 113, 113, 0.72));
 }
 
-/* HIT：角切りのサイバー枠（丸角なし） */
+/* HIT：四隅角切りのサイバー枠（左上・右下の直角は出さない） */
 .result-hit-cyber-clip {
   clip-path: polygon(
-    0 0,
+    12px 0,
     calc(100% - 12px) 0,
     100% 12px,
-    100% 100%,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
     12px 100%,
-    0 calc(100% - 12px)
+    0 calc(100% - 12px),
+    0 12px
   );
 }
 

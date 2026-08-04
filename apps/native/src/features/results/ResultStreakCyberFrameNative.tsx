@@ -49,7 +49,6 @@ export default function ResultStreakCyberFrameNative({
           topLineColors={colors.topLine}
           topGlowColors={colors.topGlow}
           shellContext={shellContext}
-          glowCorners
         />
       ) : null}
 

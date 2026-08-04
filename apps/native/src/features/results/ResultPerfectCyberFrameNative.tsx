@@ -52,7 +52,6 @@ export default function ResultPerfectCyberFrameNative({
             "transparent",
           ]}
           shellContext={shellContext}
-          glowCorners
         />
       ) : null}
 

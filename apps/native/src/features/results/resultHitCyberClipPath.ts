@@ -38,11 +38,15 @@ export function resultHitCyberCornerRevealPathsD(
   return [tr, bl];
 }
 
-/** 四隅 L 字アクセント（clip 内に描画 — Web の border-l/t 角飾り相当） */
+/**
+ * Web 角飾り相当の L 字（バウンディング四隅）。
+ * 斜め角そのものはシェルの枠リングが担うので、ここでは重ね描きしない。
+ * 直角コーナー（左上・右下）だけ強調する。
+ */
 export function resultHitCyberCornerAccentPathsD(
   width: number,
   height: number,
-  cut = RESULT_HIT_CYBER_CLIP_CUT,
+  _cut = RESULT_HIT_CYBER_CLIP_CUT,
   len = 10
 ): string[] {
   const w = Math.max(0, width);
@@ -50,10 +54,30 @@ export function resultHitCyberCornerAccentPathsD(
   const l = Math.min(len, w / 2, h / 2);
   if (l <= 0 || w <= 0 || h <= 0) return [];
   return [
+    // 左上（直角）
     `M 0 ${l} L 0 0 L ${l} 0`,
-    `M ${w - l} 0 L ${w} 0 L ${w} ${l}`,
+    // 右下（直角）
     `M ${w} ${h - l} L ${w} ${h} L ${w - l} ${h}`,
-    `M ${l} ${h} L 0 ${h} L 0 ${h - l}`,
+  ];
+}
+
+/** 全角 chamfer（8 角）用の四隅アクセント — 外形に沿う */
+export function chamferedCornerAccentPathsD(
+  width: number,
+  height: number,
+  cut: number,
+  len = 10
+): string[] {
+  const w = Math.max(0, width);
+  const h = Math.max(0, height);
+  const c = Math.min(cut, w / 2, h / 2);
+  const l = Math.min(len, w / 2, h / 2);
+  if (l <= 0 || c <= 0 || w <= 0 || h <= 0) return [];
+  return [
+    `M 0 ${Math.min(h, c + l)} L 0 ${c} L ${c} 0 L ${Math.min(w, c + l)} 0`,
+    `M ${Math.max(0, w - c - l)} 0 L ${w - c} 0 L ${w} ${c} L ${w} ${Math.min(h, c + l)}`,
+    `M ${w} ${Math.max(0, h - c - l)} L ${w} ${h - c} L ${w - c} ${h} L ${Math.max(0, w - c - l)} ${h}`,
+    `M ${Math.min(w, c + l)} ${h} L ${c} ${h} L 0 ${h - c} L 0 ${Math.max(0, h - c - l)}`,
   ];
 }
 
