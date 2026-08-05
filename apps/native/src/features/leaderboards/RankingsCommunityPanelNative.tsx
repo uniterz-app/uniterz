@@ -185,7 +185,7 @@ export default function RankingsCommunityPanelNative({
     prefetchCommunityGroupDetails(
       groups.map((g) => g.id),
       getIdToken,
-      6
+      2
     );
     prefetchCommunityHeaderImagesNative(groups.map((g) => g.headerImageUrl));
   }, [groups, fUser, getIdToken]);

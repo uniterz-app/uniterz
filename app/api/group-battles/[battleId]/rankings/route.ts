@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import type { GroupBattlePeriod } from "@/lib/groupBattles/types";
@@ -6,12 +7,19 @@ import {
   parseSnapshotDoc,
   snapshotRef,
 } from "@/lib/groupBattles/server/firestore";
-import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import { jsonErr, mapAuthError } from "@/lib/groupBattles/server/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ battleId: string }> };
+
+function rankingsCacheControl(status: "live" | "final" | null): string {
+  if (status === "final") {
+    return "public, s-maxage=300, stale-while-revalidate=600";
+  }
+  return "public, s-maxage=30, stale-while-revalidate=60";
+}
 
 export async function GET(req: Request, ctx: Ctx) {
   try {
@@ -37,23 +45,33 @@ export async function GET(req: Request, ctx: Ctx) {
 
     const snap = await snapshotRef(adminDb, battleId, period, label).get();
     if (!snap.exists) {
-      return jsonOk({
+      return NextResponse.json(
+        {
+          ok: true,
+          battleId,
+          period,
+          label,
+          snapshot: null,
+        },
+        { headers: { "Cache-Control": rankingsCacheControl(null) } }
+      );
+    }
+
+    const snapshot = parseSnapshotDoc(
+      snap.id,
+      snap.data() as Record<string, unknown>
+    );
+
+    return NextResponse.json(
+      {
+        ok: true,
         battleId,
         period,
         label,
-        snapshot: null,
-      });
-    }
-
-    return jsonOk({
-      battleId,
-      period,
-      label,
-      snapshot: parseSnapshotDoc(
-        snap.id,
-        snap.data() as Record<string, unknown>
-      ),
-    });
+        snapshot,
+      },
+      { headers: { "Cache-Control": rankingsCacheControl(snapshot.status) } }
+    );
   } catch (e) {
     return mapAuthError(e);
   }

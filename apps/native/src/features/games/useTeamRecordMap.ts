@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import { nbaRegularSeasonWinsLosses } from "../../../../../lib/nbaRegularSeasonRecord";
 import { footballWinsLossesDraws } from "../../../../../lib/teamRecordDisplay";
-import { db } from "../../lib/firebase";
+import { fetchTeamsByLeagueShared } from "../../../../../lib/games/fetchTeamsByLeagueShared";
+import { normalizeLeague } from "../../../../../lib/leagues";
+import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 
@@ -17,16 +18,22 @@ function uniqueTeamIdsFromGames(games: NativeGameRow[]): string[] {
   return Array.from(s).filter(Boolean);
 }
 
+const leagueTeamsCache = new Map<
+  string,
+  { at: number; byId: Map<string, Record<string, unknown>> }
+>();
+const LEAGUE_TEAMS_TTL_MS = 5 * 60 * 1000;
+
 /**
- * モバイル `ScheduleList` の teamRecordMap 相当：`teams` コレクションから W/L/rank
+ * モバイル `ScheduleList` の teamRecordMap 相当：共通 teams API から W/L/rank
  */
 export function useTeamRecordMap(
   games: NativeGameRow[],
-  _selectedLeague: SupportedLeague
+  selectedLeague: SupportedLeague
 ) {
-  void _selectedLeague;
   const [map, setMap] = useState<Record<string, TeamRecordSnapshot>>({});
   const teamIdsKey = uniqueTeamIdsFromGames(games).sort().join(",");
+  const league = normalizeLeague(selectedLeague);
 
   useEffect(() => {
     let alive = true;
@@ -36,43 +43,51 @@ export function useTeamRecordMap(
       return;
     }
 
-    (async () => {
-      const merged: Record<string, TeamRecordSnapshot> = {};
+    void (async () => {
       try {
-        for (let i = 0; i < teamIds.length; i += 10) {
-          const chunk = teamIds.slice(i, i + 10);
-          const snap = await getDocs(
-            query(collection(db, "teams"), where("__name__", "in", chunk))
-          );
-          snap.forEach((docSnap) => {
-            const d = docSnap.data() as Record<string, unknown>;
-            const isNbaTeam = String(d.league ?? "") === "nba";
-            const rank = typeof d.rank === "number" ? d.rank : undefined;
-            if (isNbaTeam) {
-              const wl = nbaRegularSeasonWinsLosses(
-                d as Parameters<typeof nbaRegularSeasonWinsLosses>[0]
-              );
-              merged[docSnap.id] = { wins: wl.wins, losses: wl.losses, rank };
-            } else {
-              const wl = footballWinsLossesDraws(d);
-              merged[docSnap.id] = {
-                wins: wl.wins,
-                losses: wl.losses,
-                draws: wl.draws,
-                rank,
-              };
-            }
+        const now = Date.now();
+        let byId = leagueTeamsCache.get(league)?.byId;
+        const cached = leagueTeamsCache.get(league);
+        if (!cached || now - cached.at >= LEAGUE_TEAMS_TTL_MS) {
+          const rows = await fetchTeamsByLeagueShared({
+            league,
+            apiBaseUrl: getUniterzApiBaseUrl(),
           });
+          byId = new Map(rows.map((r) => [String(r.id), r]));
+          leagueTeamsCache.set(league, { at: now, byId });
+        }
+
+        const merged: Record<string, TeamRecordSnapshot> = {};
+        for (const id of teamIds) {
+          const d = byId?.get(id);
+          if (!d) continue;
+          const isNbaTeam = String(d.league ?? "") === "nba";
+          const rank = typeof d.rank === "number" ? d.rank : undefined;
+          if (isNbaTeam) {
+            const wl = nbaRegularSeasonWinsLosses(
+              d as Parameters<typeof nbaRegularSeasonWinsLosses>[0]
+            );
+            merged[id] = { wins: wl.wins, losses: wl.losses, rank };
+          } else {
+            const wl = footballWinsLossesDraws(d);
+            merged[id] = {
+              wins: wl.wins,
+              losses: wl.losses,
+              draws: wl.draws,
+              rank,
+            };
+          }
         }
         if (alive) setMap(merged);
       } catch {
         if (alive) setMap({});
       }
     })();
+
     return () => {
       alive = false;
     };
-  }, [teamIdsKey]);
+  }, [teamIdsKey, league]);
 
   return map;
 }

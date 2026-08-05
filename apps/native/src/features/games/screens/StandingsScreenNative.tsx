@@ -9,13 +9,13 @@ import {
 import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
-import { db } from "../../../lib/firebase";
 import { colors } from "../../../theme/tokens";
 import { compareNbaStandingsSortRows } from "../../../../../../lib/nba/compareNbaStandingsSort";
 import { nbaRegularSeasonWinsLosses } from "../../../../../../lib/nbaRegularSeasonRecord";
+import { fetchTeamsByLeagueShared } from "../../../../../../lib/games/fetchTeamsByLeagueShared";
+import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import type { GamesStackParamList } from "../../../navigation/types";
 
 type Team = {
@@ -49,13 +49,15 @@ export default function StandingsScreenNative() {
 
   useEffect(() => {
     let alive = true;
-    const q = query(collection(db, "teams"), where("league", "==", "nba"));
-    void getDocs(q)
-      .then((snap) => {
+    void fetchTeamsByLeagueShared({
+      league: "nba",
+      apiBaseUrl: getUniterzApiBaseUrl(),
+    })
+      .then((rows) => {
         if (!alive) return;
-        const list = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<Team, "id">),
+        const list = rows.map((d) => ({
+          id: String(d.id),
+          ...(d as Omit<Team, "id">),
         }));
         setTeams(list);
       })

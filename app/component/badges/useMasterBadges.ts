@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { fetchMasterBadgesShared } from "@/lib/badges/fetchMasterBadgesShared";
 
 export type MasterBadge = {
   id: string;
@@ -42,27 +41,12 @@ export function useMasterBadges() {
     async function fetchBadges() {
       try {
         setLoading(true);
-        const col = collection(db, "master_badges");
-        const snap = await getDocs(col);
-
-        const list: MasterBadge[] = [];
-        snap.forEach((d) => {
-          const data = d.data() as Omit<MasterBadge, "id">;
-
-          list.push({
-            id: d.id,
-            title: data.title,
-            description: data.description,
-            icon: data.icon,
-          });
-        });
-
+        const list = await fetchMasterBadgesShared();
         if (!cancelled) {
           masterBadgesMemoryCache = { at: Date.now(), badges: list };
           setBadges(list);
         }
-      } catch (e) {
-        console.error("Failed to load master_badges:", e);
+      } catch {
         if (!cancelled) setBadges([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -70,7 +54,6 @@ export function useMasterBadges() {
     }
 
     void fetchBadges();
-
     return () => {
       cancelled = true;
     };

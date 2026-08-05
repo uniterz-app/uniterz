@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { fetchTeamsByLeagueShared } from "@/lib/games/fetchTeamsByLeagueShared";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { compareNbaStandingsSortRows } from "@/lib/nba/compareNbaStandingsSort";
@@ -104,14 +103,13 @@ export default function NbaStandingsPanel({
 
   useEffect(() => {
     let alive = true;
-    const q = query(collection(db, "teams"), where("league", "==", "nba"));
 
-    getDocs(q)
-      .then((snap) => {
+    void fetchTeamsByLeagueShared({ league: "nba" })
+      .then((rows) => {
         if (!alive) return;
-        const list = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<Team, "id">),
+        const list = rows.map((d) => ({
+          id: String(d.id),
+          ...(d as Omit<Team, "id">),
         }));
         setTeams(list);
       })

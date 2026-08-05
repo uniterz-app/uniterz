@@ -106,7 +106,7 @@ export function prefetchCommunityGroupDetail(groupId: string, getIdToken: () => 
 export function prefetchCommunityGroupDetails(
   groupIds: string[],
   getIdToken: () => Promise<string>,
-  limit = 5
+  limit = 2
 ) {
   for (const id of groupIds.slice(0, limit)) {
     prefetchCommunityGroupDetail(id, getIdToken);

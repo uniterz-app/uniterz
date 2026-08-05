@@ -160,7 +160,7 @@ export async function fetchCommunityGroupDetail(
 
       const leaderboardPromise = fetch(
         `/api/communities/${groupId}/leaderboard`,
-        { headers, cache: "no-store" }
+        { headers, cache: "default" }
       )
         .then((res) => res.json().catch(() => ({})))
         .then((lJson) => {
@@ -203,7 +203,7 @@ export function prefetchCommunityGroupDetail(groupId: string) {
   void fetchCommunityGroupDetail(groupId);
 }
 
-export function prefetchCommunityGroupDetails(groupIds: string[], limit = 5) {
+export function prefetchCommunityGroupDetails(groupIds: string[], limit = 2) {
   for (const id of groupIds.slice(0, limit)) {
     prefetchCommunityGroupDetail(id);
   }

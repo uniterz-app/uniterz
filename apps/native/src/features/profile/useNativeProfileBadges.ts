@@ -100,19 +100,16 @@ function useMasterBadgesNative() {
     async function run() {
       try {
         setLoading(true);
-        const col = collection(db, "master_badges");
-        const snap = await getDocs(col);
-        if (cancelled) return;
-        const list: MasterBadgeNative[] = [];
-        snap.forEach((d) => {
-          const data = d.data() as Omit<MasterBadgeNative, "id">;
-          list.push({
-            id: d.id,
-            title: data.title,
-            description: data.description,
-            icon: data.icon,
-          });
+        const { fetchMasterBadgesShared } = await import(
+          "../../../../../lib/badges/fetchMasterBadgesShared"
+        );
+        const { getUniterzApiBaseUrl } = await import(
+          "../games/submitPredictionApi"
+        );
+        const list = await fetchMasterBadgesShared({
+          apiBaseUrl: getUniterzApiBaseUrl(),
         });
+        if (cancelled) return;
         masterBadgesMemoryCache = { at: Date.now(), badges: list };
         setBadges(list);
       } catch {

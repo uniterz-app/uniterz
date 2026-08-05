@@ -223,7 +223,7 @@ export default function RankingsCommunityPanel({
     if (!groups.length) return;
     prefetchCommunityGroupDetails(
       groups.map((g) => g.id),
-      groups.length
+      2
     );
     prefetchCommunityHeaderImages(groups.map((g) => g.headerImageUrl));
   }, [groups]);

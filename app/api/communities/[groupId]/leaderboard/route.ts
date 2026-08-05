@@ -87,7 +87,7 @@ export async function GET(req: Request, ctx: Ctx) {
       groupId,
       snapshotSlotKey
     );
-    if (snapshot && snapshotMatchesGroup(snapshot, rankingOpts)) {
+        if (snapshot && snapshotMatchesGroup(snapshot, rankingOpts)) {
       const myRowFromSnapshot =
         snapshot.rows.find((x) => x.uid === uid) ?? null;
       const payload = {
@@ -112,7 +112,12 @@ export async function GET(req: Request, ctx: Ctx) {
         },
         payload
       );
-      return NextResponse.json(payload);
+      return NextResponse.json(payload, {
+        headers: {
+          // 認証付きのため CDN 公開はしない。同一ブラウザの短再取得だけ抑える
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+        },
+      });
     }
 
     const members = await adminDb
@@ -189,7 +194,11 @@ export async function GET(req: Request, ctx: Ctx) {
       builtAtMs: Date.now(),
     });
     setCachedLeaderboardResponse(cacheParams, payload);
-    return NextResponse.json(payload);
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+      },
+    });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "error";
     const status = (e as { status?: number }).status;
