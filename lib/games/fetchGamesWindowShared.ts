@@ -11,14 +11,19 @@ export type FetchGamesWindowResult = {
   rows: Record<string, unknown>[];
   peerRows: Record<string, unknown>[];
   hasLive: boolean;
-  anchorDateKey: string;
+  anchorDateKey: string | null;
+  range: { startKey: string; endKey: string };
 };
 
 export type FetchGamesWindowParams = {
   league: League;
-  anchorDateKey: string;
   timeZone: string;
+  /** 初期窓: anchor ± pm */
+  anchorDateKey?: string;
   plusMinus?: number;
+  /** 端延長: 半開 [from, to) */
+  fromDateKey?: string;
+  toDateKey?: string;
   /** Native: API origin。Web は省略で相対パス */
   apiBaseUrl?: string | null;
   signal?: AbortSignal;
@@ -27,30 +32,67 @@ export type FetchGamesWindowParams = {
 export async function fetchGamesWindowShared(
   params: FetchGamesWindowParams
 ): Promise<FetchGamesWindowResult> {
-  const plusMinus = params.plusMinus ?? GAMES_WINDOW_PLUS_MINUS_DEFAULT;
   const q = new URLSearchParams({
     league: params.league,
-    anchor: params.anchorDateKey,
     tz: params.timeZone,
-    pm: String(plusMinus),
   });
+  if (params.fromDateKey && params.toDateKey) {
+    q.set("from", params.fromDateKey);
+    q.set("to", params.toDateKey);
+  } else {
+    const anchor = params.anchorDateKey ?? "";
+    const plusMinus = params.plusMinus ?? GAMES_WINDOW_PLUS_MINUS_DEFAULT;
+    q.set("anchor", anchor);
+    q.set("pm", String(plusMinus));
+  }
+
   const base = (params.apiBaseUrl ?? "").replace(/\/$/, "");
   const url = `${base}/api/games/window?${q.toString()}`;
 
-  const res = await fetch(url, {
-    method: "GET",
-    // CDN / browser HTTP キャッシュを活かす
-    cache: "default",
-    signal: params.signal,
-  });
-  const json = (await res.json().catch(() => null)) as {
+  const controller = new AbortController();
+  const timeoutMs = 8_000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  if (params.signal) {
+    if (params.signal.aborted) controller.abort();
+    else {
+      params.signal.addEventListener("abort", () => controller.abort(), {
+        once: true,
+      });
+    }
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "GET",
+      cache: "default",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const text = await res.text().catch(() => "");
+  type GamesWindowJson = {
     ok?: boolean;
     rows?: Record<string, unknown>[];
     peerRows?: Record<string, unknown>[];
     hasLive?: boolean;
-    anchorDateKey?: string;
+    anchorDateKey?: string | null;
+    range?: { startKey?: string; endKey?: string };
     error?: string;
-  } | null;
+  };
+
+  let json: GamesWindowJson | null = null;
+  try {
+    json = text ? (JSON.parse(text) as GamesWindowJson) : null;
+  } catch {
+    throw new Error(
+      res.ok
+        ? "games_window_invalid_json"
+        : `games_window_http_${res.status}`
+    );
+  }
 
   if (!res.ok || !json?.ok) {
     throw new Error(json?.error ?? `games_window_http_${res.status}`);
@@ -58,11 +100,14 @@ export async function fetchGamesWindowShared(
 
   const rows = reviveGameDocs(json.rows ?? []);
   const peerRows = reviveGameDocs(json.peerRows ?? rows);
+  const startKey = String(json.range?.startKey ?? params.fromDateKey ?? "");
+  const endKey = String(json.range?.endKey ?? params.toDateKey ?? "");
 
   return {
     rows,
     peerRows,
     hasLive: !!json.hasLive,
-    anchorDateKey: json.anchorDateKey ?? params.anchorDateKey,
+    anchorDateKey: json.anchorDateKey ?? params.anchorDateKey ?? null,
+    range: { startKey, endKey },
   };
 }

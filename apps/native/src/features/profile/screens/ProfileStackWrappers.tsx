@@ -14,6 +14,8 @@ import TitleSkinPreviewScreenNative from "../backgrounds/TitleSkinPreviewScreenN
 import WaveProSkinPreviewScreenNative from "../backgrounds/WaveProSkinPreviewScreenNative";
 import RankingListProSkinPreviewScreenNative from "../backgrounds/RankingListProSkinPreviewScreenNative";
 import ProSkinUnlockPreviewScreenNative from "../mobileScreens/ProSkinUnlockPreviewScreenNative";
+import ReferralStampCelebratePreviewScreenNative from "../mobileScreens/ReferralStampCelebratePreviewScreenNative";
+import UnitEarnCelebratePreviewScreenNative from "../mobileScreens/UnitEarnCelebratePreviewScreenNative";
 import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
@@ -170,6 +172,34 @@ export function ProSkinUnlockPreviewScreenWrapper() {
         armProSkinUnlockPreviewOnProfile();
         navigation.navigate("ProfileHome");
       }}
+    />
+  );
+}
+
+export function ReferralStampCelebratePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ReferralStampCelebratePreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      onOpenInvite={() => navigation.replace("Invite")}
+    />
+  );
+}
+
+export function UnitEarnCelebratePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <UnitEarnCelebratePreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      onOpenUnitLedger={() => navigation.replace("UnitLedger")}
     />
   );
 }

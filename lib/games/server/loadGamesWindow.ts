@@ -16,7 +16,6 @@ import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
-import { resolveGameStatus } from "@uniterz/shared";
 import { serializeGameDoc } from "@/lib/games/gameDocJson";
 import { mergePlayoffSeriesPeersForWindowGamesAdmin } from "@/lib/games/server/playoffSeriesPeersAdmin";
 
@@ -25,12 +24,21 @@ export {
   GAMES_WINDOW_QUERY_LIMIT,
 } from "@/lib/games/gamesWindowConstants";
 
+function isLiveGameRow(raw: Record<string, unknown>): boolean {
+  if (raw.final === true || raw.final === 1) return false;
+  const t = String(raw.status ?? "").toLowerCase();
+  return t === "live" || t === "inprogress";
+}
+
 export type GamesWindowLoadParams = {
   league: League;
-  /** YYYY-MM-DD（timeZone 基準） */
-  anchorDateKey: string;
   timeZone: string;
+  /** YYYY-MM-DD。from/to 未指定時に必須 */
+  anchorDateKey?: string;
   plusMinus?: number;
+  /** 半開区間 [from, to) — 端延長用 */
+  fromDateKey?: string;
+  toDateKey?: string;
   season?: string;
   limit?: number;
 };
@@ -40,8 +48,8 @@ export type GamesWindowPayload = {
   league: League;
   season: string;
   timeZone: string;
-  anchorDateKey: string;
-  plusMinus: number;
+  anchorDateKey: string | null;
+  plusMinus: number | null;
   range: { startKey: string; endKey: string };
   rows: Record<string, unknown>[];
   peerRows: Record<string, unknown>[];
@@ -54,22 +62,49 @@ export async function loadGamesWindow(
 ): Promise<GamesWindowPayload> {
   const league = normalizeLeague(params.league);
   const timeZone = params.timeZone || "Asia/Tokyo";
-  const plusMinus = params.plusMinus ?? GAMES_WINDOW_PLUS_MINUS_DEFAULT;
   const season = params.season ?? GAME_SCHEDULE_SEASON;
   const limitN = params.limit ?? GAMES_WINDOW_QUERY_LIMIT;
 
-  const anchor = parseDateKeyInTimeZone(params.anchorDateKey, timeZone);
-  if (!anchor) {
-    throw new Error("invalid_anchor");
-  }
+  let start: Date;
+  let end: Date;
+  let startKey: string;
+  let endKey: string;
+  let anchorDateKey: string | null = params.anchorDateKey ?? null;
+  let plusMinus: number | null = null;
 
-  const { start, end } = getPlusMinusDaysRangeInTimeZone(
-    anchor,
-    timeZone,
-    plusMinus
-  );
-  const startKey = toDateKeyInTimeZone(start, timeZone);
-  const endKey = toDateKeyInTimeZone(end, timeZone);
+  if (params.fromDateKey && params.toDateKey) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(params.fromDateKey) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(params.toDateKey)
+    ) {
+      throw new Error("invalid_range");
+    }
+    if (params.fromDateKey >= params.toDateKey) {
+      throw new Error("invalid_range");
+    }
+    const s = parseDateKeyInTimeZone(params.fromDateKey, timeZone);
+    const e = parseDateKeyInTimeZone(params.toDateKey, timeZone);
+    if (!s || !e) throw new Error("invalid_range");
+    start = s;
+    end = e;
+    startKey = params.fromDateKey;
+    endKey = params.toDateKey;
+  } else {
+    const anchorKey = params.anchorDateKey ?? "";
+    const anchor = parseDateKeyInTimeZone(anchorKey, timeZone);
+    if (!anchor) throw new Error("invalid_anchor");
+    plusMinus = params.plusMinus ?? GAMES_WINDOW_PLUS_MINUS_DEFAULT;
+    const range = getPlusMinusDaysRangeInTimeZone(
+      anchor,
+      timeZone,
+      plusMinus
+    );
+    start = range.start;
+    end = range.end;
+    startKey = toDateKeyInTimeZone(start, timeZone);
+    endKey = toDateKeyInTimeZone(end, timeZone);
+    anchorDateKey = anchorKey;
+  }
 
   const snap = await db
     .collection("games")
@@ -98,8 +133,8 @@ export async function loadGamesWindow(
     serializeGameDoc(String(r.id ?? ""), r as Record<string, unknown>)
   );
 
-  const hasLive = windowRows.some(
-    (r) => resolveGameStatus(r as Record<string, unknown>) === "live"
+  const hasLive = windowRows.some((r) =>
+    isLiveGameRow(r as Record<string, unknown>)
   );
 
   return {
@@ -107,7 +142,7 @@ export async function loadGamesWindow(
     league,
     season,
     timeZone,
-    anchorDateKey: params.anchorDateKey,
+    anchorDateKey,
     plusMinus,
     range: { startKey, endKey },
     rows,

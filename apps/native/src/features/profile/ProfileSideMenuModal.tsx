@@ -71,7 +71,9 @@ type Props = {
     | "titleSkinPreview"
     | "waveProSkinPreview"
     | "rankingListProSkinPreview"
-    | "proSkinUnlockPreview") => void;
+    | "proSkinUnlockPreview"
+    | "referralStampCelebratePreview"
+    | "unitEarnCelebratePreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -260,6 +262,8 @@ export default function ProfileSideMenuModal({
       | "waveProSkinPreview"
       | "rankingListProSkinPreview"
       | "proSkinUnlockPreview"
+      | "referralStampCelebratePreview"
+      | "unitEarnCelebratePreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -610,6 +614,26 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("proSkinUnlockPreview")}
                         >
                           Skin解放モーダル
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="stamper"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("referralStampCelebratePreview")
+                          }
+                        >
+                          招待スタンプ演出
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="circle-multiple-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("unitEarnCelebratePreview")
+                          }
+                        >
+                          Unit 獲得演出
                         </SideMenuItemButtonNative>
                       </View>
                     </>

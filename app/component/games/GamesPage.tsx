@@ -341,7 +341,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [dayTimeZone, league, selectedByLeague, todayKey, initialDateParamDay]);
 
   /* =========================
-     Game days（アンカー日の暦日±10日を取得しストリップ用）
+     Game days（アンカー日の暦日±5日を取得しストリップ用。端で+2延長）
   ========================= */
   const { gameDays, monthRows, peerRowsForSeriesInference, loading: loadingDays } =
     useGameDays(league, dayTimeZone, anchorForGameDays);
@@ -874,7 +874,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ]);
 
   /**
-   * 今日に試合が無く、かつ近傍ウィンドウ（±10日）にも試合が無いときは
+   * 今日に試合が無く、かつ近傍ウィンドウ（±5日）にも試合が無いときは
    * 次の試合日へ、無ければ直近の過去試合日へ自動ジャンプする。
    */
   useEffect(() => {

@@ -1259,6 +1259,10 @@ export default function ProfileHomeScreen({
           navigation.navigate("RankingListProSkinPreview");
         else if (page === "proSkinUnlockPreview" && __DEV__)
           navigation.navigate("ProSkinUnlockPreview");
+        else if (page === "referralStampCelebratePreview" && __DEV__)
+          navigation.navigate("ReferralStampCelebratePreview");
+        else if (page === "unitEarnCelebratePreview" && __DEV__)
+          navigation.navigate("UnitEarnCelebratePreview");
       }}
     />
     <ProfileBadgeDetailModal

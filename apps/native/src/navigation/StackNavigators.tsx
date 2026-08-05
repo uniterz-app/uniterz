@@ -365,6 +365,24 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="ReferralStampCelebratePreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ReferralStampCelebratePreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="UnitEarnCelebratePreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .UnitEarnCelebratePreviewScreenWrapper
+            }
+          />
+        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>

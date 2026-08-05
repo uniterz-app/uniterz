@@ -109,6 +109,10 @@ export type ProfileStackParamList = {
   RankingListProSkinPreview: undefined;
   /** __DEV__ Pro Skin マイルストーン解放モーダル */
   ProSkinUnlockPreview: undefined;
+  /** __DEV__ 招待達成スタンプ演出 */
+  ReferralStampCelebratePreview: undefined;
+  /** __DEV__ Unit 獲得演出 */
+  UnitEarnCelebratePreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

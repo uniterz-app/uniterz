@@ -127,7 +127,7 @@ export function getGamesTexts(language: GamesLanguage) {
       predictToolLoading: "Loading…",
       predictToolLoadError: "Failed to load.",
       predictToolH2hEmpty:
-        "No finished games for this pairing in the current date window (±10 days from selected day).",
+        "No finished games for this pairing in the current date window (±5 days from selected day).",
       predictToolH2hScope: "Showing games within the nearby schedule query window.",
       predictToolH2hTrend: "Series Trend",
       predictToolH2hInjury: "Inactive",
@@ -274,7 +274,7 @@ export function getGamesTexts(language: GamesLanguage) {
     predictToolLoading: "読み込み中…",
     predictToolLoadError: "取得に失敗しました。",
     predictToolH2hEmpty:
-      "日付枠内（当日前後±10日）に、同一カード同士の終了試合がまだありません。",
+      "日付枠内（当日前後±5日）に、同一カード同士の終了試合がまだありません。",
     predictToolH2hScope: "※ 一覧はスケジュール取得の枠内に限ります。",
     predictToolH2hTrend: "シリーズ推移",
     predictToolH2hInjury: "欠場",
