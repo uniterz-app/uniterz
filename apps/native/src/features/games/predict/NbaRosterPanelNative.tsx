@@ -54,6 +54,7 @@ type SortState = {
 
 const EMPHASIS = new Set(["pts", "fg", "fg3", "fga", "fg3a"]);
 const IDENTITY_W = 172;
+const IDENTITY_W_DETAIL = 148;
 const STAT_COL_W = 48;
 const ROW_H = 46;
 const HEADER_H = 32;
@@ -190,12 +191,16 @@ function TeamRosterCard({
   block,
   injuryById,
   defaultOpen,
+  mode = "matchup",
 }: {
   block: NbaRosterTeamBlock;
   injuryById: Record<string, string>;
   defaultOpen: boolean;
+  /** detail: 常時展開・試合の HOME/AWAY バッジなし */
+  mode?: "matchup" | "detail";
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const isDetail = mode === "detail";
+  const [open, setOpen] = useState(defaultOpen || isDetail);
   const [sort, setSort] = useState<SortState>(null);
   const primary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const players = useMemo(
@@ -204,9 +209,14 @@ function TeamRosterCard({
   );
   const title = teamFullLabel(block.teamId, block.teamName);
   const abbr = teamAbbr(block.teamId);
-  const refCode = `REF: ${abbr}-24-${block.side === "home" ? "H" : "A"}`;
-  const footerLeft =
-    block.side === "home" ? "ACTIVE SCANNING…" : "ANALYZING ROSTER DATA…";
+  const refCode = isDetail
+    ? `REF: ${abbr}-ROSTER`
+    : `REF: ${abbr}-24-${block.side === "home" ? "H" : "A"}`;
+  const footerLeft = isDetail
+    ? "ROSTER SCAN…"
+    : block.side === "home"
+      ? "ACTIVE SCANNING…"
+      : "ANALYZING ROSTER DATA…";
 
   const onSortCol = (key: StatColKey) => {
     setSort((prev) => {
@@ -216,21 +226,27 @@ function TeamRosterCard({
     });
   };
 
+  const expanded = isDetail ? true : open;
+  const identityW = isDetail ? IDENTITY_W_DETAIL : IDENTITY_W;
+
   return (
     <View style={[styles.teamCard, { borderColor: `${primary}88` }]}>
       <Pressable
         style={styles.teamHeader}
-        onPress={() => setOpen((v) => !v)}
+        onPress={isDetail ? undefined : () => setOpen((v) => !v)}
+        disabled={isDetail}
         accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
+        accessibilityState={{ expanded }}
       >
         <View style={styles.headerMain}>
           <View style={styles.headerTitleRow}>
-            <View style={[styles.sideBadge, { borderColor: primary }]}>
-              <Text style={[styles.sideBadgeText, { color: primary }]}>
-                {block.side === "home" ? "HOME" : "AWAY"}
-              </Text>
-            </View>
+            {!isDetail ? (
+              <View style={[styles.sideBadge, { borderColor: primary }]}>
+                <Text style={[styles.sideBadgeText, { color: primary }]}>
+                  {block.side === "home" ? "HOME" : "AWAY"}
+                </Text>
+              </View>
+            ) : null}
             <Text style={styles.teamName} numberOfLines={1}>
               {title}
             </Text>
@@ -245,13 +261,13 @@ function TeamRosterCard({
             <Text style={[styles.seedNum, { color: primary }]}>#{block.seed}</Text>
           </View>
         ) : null}
-        <Chevron open={open} color={primary} />
+        {!isDetail ? <Chevron open={open} color={primary} /> : null}
       </Pressable>
 
-      {open ? (
+      {expanded ? (
         <>
           <View style={styles.tableRow}>
-            <View style={styles.identityColumn}>
+            <View style={[styles.identityColumn, { width: identityW }]}>
               <Pressable
                 style={[styles.identityHeader, { height: HEADER_H }]}
                 onPress={() => setSort(null)}
@@ -323,6 +339,24 @@ function TeamRosterCard({
         </>
       ) : null}
     </View>
+  );
+}
+
+/** Team Detail 用 — 予想ロスターと同じ表スタイル・常時展開 */
+export function NbaTeamRosterCardNative({
+  block,
+  injuryById = {},
+}: {
+  block: NbaRosterTeamBlock;
+  injuryById?: Record<string, string>;
+}) {
+  return (
+    <TeamRosterCard
+      block={block}
+      injuryById={injuryById}
+      defaultOpen
+      mode="detail"
+    />
   );
 }
 
@@ -410,14 +444,13 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.08)",
   },
   identityColumn: {
-    width: IDENTITY_W,
     borderRightWidth: 1,
     borderRightColor: "rgba(255,255,255,0.08)",
     backgroundColor: "rgba(8,10,16,0.98)",
   },
   identityHeader: {
     justifyContent: "center",
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     backgroundColor: "rgba(255,255,255,0.04)",
   },
   identityHeaderText: {
@@ -431,8 +464,8 @@ const styles = StyleSheet.create({
     height: ROW_H,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 8,
+    gap: 5,
+    paddingHorizontal: 6,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.06)",
   },

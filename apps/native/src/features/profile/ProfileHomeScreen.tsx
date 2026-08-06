@@ -1263,6 +1263,12 @@ export default function ProfileHomeScreen({
           navigation.navigate("ReferralStampCelebratePreview");
         else if (page === "unitEarnCelebratePreview" && __DEV__)
           navigation.navigate("UnitEarnCelebratePreview");
+        else if (page === "teamStatsPreview" && __DEV__)
+          navigation.navigate("TeamStatsPreview");
+        else if (page === "playerStatsPreview" && __DEV__)
+          navigation.navigate("PlayerStatsPreview");
+        else if (page === "teamDetailPreview" && __DEV__)
+          navigation.navigate("TeamDetailPreview");
       }}
     />
     <ProfileBadgeDetailModal

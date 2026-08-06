@@ -113,6 +113,12 @@ export type ProfileStackParamList = {
   ReferralStampCelebratePreview: undefined;
   /** __DEV__ Unit 獲得演出 */
   UnitEarnCelebratePreview: undefined;
+  /** __DEV__ リーグ Team Stats（30 チーム表） */
+  TeamStatsPreview: undefined;
+  /** __DEV__ リーグ Player Stats（指標トップリーダー） */
+  PlayerStatsPreview: undefined;
+  /** __DEV__ Team Detail 再構築プレビュー */
+  TeamDetailPreview: { teamId?: string } | undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

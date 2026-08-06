@@ -1,4 +1,5 @@
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeAnnouncementsUnread } from "../useNativeAnnouncementsUnread";
@@ -16,6 +17,9 @@ import RankingListProSkinPreviewScreenNative from "../backgrounds/RankingListPro
 import ProSkinUnlockPreviewScreenNative from "../mobileScreens/ProSkinUnlockPreviewScreenNative";
 import ReferralStampCelebratePreviewScreenNative from "../mobileScreens/ReferralStampCelebratePreviewScreenNative";
 import UnitEarnCelebratePreviewScreenNative from "../mobileScreens/UnitEarnCelebratePreviewScreenNative";
+import TeamStatsPreviewScreenNative from "../../games/teamStats/TeamStatsPreviewScreenNative";
+import PlayerStatsPreviewScreenNative from "../../games/playerStats/PlayerStatsPreviewScreenNative";
+import TeamDetailPreviewScreenNative from "../../games/teamDetail/TeamDetailPreviewScreenNative";
 import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
@@ -200,6 +204,50 @@ export function UnitEarnCelebratePreviewScreenWrapper() {
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       onOpenUnitLedger={() => navigation.replace("UnitLedger")}
+    />
+  );
+}
+
+export function TeamStatsPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <TeamStatsPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      onSelectTeam={(teamId) =>
+        navigation.navigate("TeamDetailPreview", { teamId })
+      }
+    />
+  );
+}
+
+export function PlayerStatsPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <PlayerStatsPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function TeamDetailPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const route = useRoute<RouteProp<ProfileStackParamList, "TeamDetailPreview">>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <TeamDetailPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      teamId={route.params?.teamId}
     />
   );
 }

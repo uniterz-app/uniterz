@@ -10,12 +10,7 @@ import {
   AWARDS_PREVIEW_COACHES,
   AWARDS_PREVIEW_PLAYERS,
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
-import { nbaTeamIdFromBracketCode } from "../../../../../../../lib/nba-bracket-code";
-import {
-  contrastingInkOnHex,
-  getTeamJerseyPrimaryColor,
-  softenTeamUiColor,
-} from "../../../../../../../lib/team-colors";
+import TeamAbbrBadgeNative from "../../TeamAbbrBadgeNative";
 
 type Props = {
   prediction: NbaSeasonAwardsPrediction;
@@ -31,27 +26,6 @@ function resolveCandidate(
 ): NbaAwardCandidate | null {
   if (!id) return null;
   return catalog.find((c) => c.id === id) ?? null;
-}
-
-function TeamAbbrBadge({ abbr }: { abbr: string }) {
-  const teamId = nbaTeamIdFromBracketCode(abbr);
-  const fill = teamId
-    ? softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
-    : "#5B8CFF";
-  const ink = contrastingInkOnHex(fill);
-
-  return (
-    <View style={[styles.badgeSkew, { backgroundColor: fill }]}>
-      <View style={styles.badgeScan} pointerEvents="none">
-        {Array.from({ length: 8 }, (_, i) => (
-          <View key={i} style={[styles.badgeScanLine, { top: 1 + i * 3 }]} />
-        ))}
-      </View>
-      <Text style={[styles.badgeText, { color: ink }]}>
-        {abbr.slice(0, 3).toUpperCase()}
-      </Text>
-    </View>
-  );
 }
 
 export default function NbaSeasonAwardsViewPanelNative({
@@ -91,7 +65,7 @@ export default function NbaSeasonAwardsViewPanelNative({
                     {awardCandidateLabel(picked)}
                   </Text>
                   {picked.teamAbbr ? (
-                    <TeamAbbrBadge abbr={picked.teamAbbr} />
+                    <TeamAbbrBadgeNative abbr={picked.teamAbbr} />
                   ) : (
                     <View style={styles.badgeSpacer} />
                   )}
@@ -169,32 +143,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     color: "#fff",
     textTransform: "uppercase",
-  },
-  badgeSkew: {
-    minWidth: 38,
-    height: 22,
-    paddingHorizontal: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    transform: [{ skewX: "-14deg" }],
-  },
-  badgeScan: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  badgeScanLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(0,0,0,0.28)",
-  },
-  badgeText: {
-    fontFamily: OX,
-    fontSize: 9,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    transform: [{ skewX: "14deg" }],
   },
   badgeSpacer: { width: 38, height: 22 },
   dash: { flex: 1, fontSize: 11, color: "rgba(255,255,255,0.3)" },

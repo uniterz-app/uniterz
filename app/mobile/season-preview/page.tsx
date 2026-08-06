@@ -35,6 +35,11 @@ const LINKS = [
     note: "Team Stats / Box Score（mock）",
   },
   {
+    href: "/mobile/team-stats-preview",
+    title: "リーグ Team Stats",
+    note: "30 チーム表 · ソート · 比較（mock）",
+  },
+  {
     href: "/mobile/rank-gap-preview",
     title: "Gap / Shadow",
     note: "Rank Intel",

@@ -73,7 +73,10 @@ type Props = {
     | "rankingListProSkinPreview"
     | "proSkinUnlockPreview"
     | "referralStampCelebratePreview"
-    | "unitEarnCelebratePreview") => void;
+    | "unitEarnCelebratePreview"
+    | "teamStatsPreview"
+    | "playerStatsPreview"
+    | "teamDetailPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -264,6 +267,9 @@ export default function ProfileSideMenuModal({
       | "proSkinUnlockPreview"
       | "referralStampCelebratePreview"
       | "unitEarnCelebratePreview"
+      | "teamStatsPreview"
+      | "playerStatsPreview"
+      | "teamDetailPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -634,6 +640,30 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           Unit 獲得演出
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="chart-box-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("teamStatsPreview")}
+                        >
+                          リーグ Team Stats
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="account-multiple-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("playerStatsPreview")}
+                        >
+                          リーグ Player Stats
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="shield-account-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("teamDetailPreview")}
+                        >
+                          Team Detail 再構築
                         </SideMenuItemButtonNative>
                       </View>
                     </>
