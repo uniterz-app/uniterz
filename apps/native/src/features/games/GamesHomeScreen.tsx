@@ -2696,9 +2696,9 @@ const styles = StyleSheet.create({
   teamNameMain: {
     color: colors.textPrimary,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "400",
     textAlign: "center",
-    letterSpacing: 0.5,
+    letterSpacing: 0.96,
     lineHeight: 18,
     marginTop: 0,
     marginBottom: 0,
@@ -2706,6 +2706,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: MATCH_CARD_DISPLAY_FONT,
     maxWidth: "100%",
+    transform: [{ skewX: "-6deg" }],
   },
   teamNameMainWc: {
     width: 72,

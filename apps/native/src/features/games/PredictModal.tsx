@@ -2523,7 +2523,6 @@ const s = StyleSheet.create({
   /** Web WC overlay `wcTeamNameFont`（Bebas + letter-spacing 補正） */
   matchPreviewTeamName: {
     ...MATCH_CARD_BRACKET_TEXT,
-    fontWeight: "800",
     fontSize: 13,
     lineHeight: 16,
     letterSpacing: 1.04,
@@ -2534,6 +2533,7 @@ const s = StyleSheet.create({
     textShadowColor: "rgba(255,255,255,0.18)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 1,
+    transform: [{ skewX: "-6deg" }],
   },
   /** Web WC mobile overlay `text-[15px]` */
   matchPreviewTeamNameWc: {

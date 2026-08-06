@@ -481,6 +481,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
   identityNameCol: { flex: 1, minWidth: 0 },
   identityNameRow: {
@@ -495,12 +496,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
     letterSpacing: 0.2,
+    transform: [{ skewX: "-6deg" }],
   },
   playerPos: {
     fontFamily: OXANIUM,
     fontSize: 12,
     color: "rgba(255,255,255,0.55)",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
   injuryChip: {
     alignSelf: "flex-start",
@@ -553,6 +556,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "rgba(255,255,255,0.82)",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
   statEmph: { color: "#fff" },
   dim: { opacity: 0.45 },

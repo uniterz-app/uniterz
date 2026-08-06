@@ -517,7 +517,10 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   const hideMergedStatsSection =
     showMergedResult && resultPost?.status !== "final";
   const kickoffLocale = language === "ja" ? "ja-JP" : "en-US";
-  const teamNameFont = bracketMarketTeamTypography(isMobile);
+  const teamNameFont = {
+    ...bracketMarketTeamTypography(isMobile),
+    transform: "skewX(-6deg)",
+  };
   /** letter-spacing は末尾にも余白が乗るため、中央揃え時の見た目ずれを補正 */
   const wcTeamNameFont: React.CSSProperties =
     league === "wc"

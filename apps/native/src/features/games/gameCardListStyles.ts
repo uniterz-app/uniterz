@@ -122,9 +122,9 @@ export const gameCardListStyles = StyleSheet.create({
   teamNameMain: {
     color: colors.textPrimary,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "400",
     textAlign: "center",
-    letterSpacing: 0.5,
+    letterSpacing: 0.96,
     lineHeight: 18,
     marginTop: 0,
     marginBottom: 0,
@@ -132,6 +132,7 @@ export const gameCardListStyles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: DISPLAY_FONT_FAMILY,
     maxWidth: "100%",
+    transform: [{ skewX: "-6deg" }],
   },
   teamNameMainWc: {
     width: 72,

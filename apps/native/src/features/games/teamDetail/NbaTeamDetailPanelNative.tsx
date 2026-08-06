@@ -19,7 +19,6 @@ import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import {
   METRIC_FONT,
-  RANK_DISPLAY_FONT,
 } from "../../rankings/rankingsUiTheme";
 import {
   MATCH_CARD_BRACKET_LETTER_SPACING_12,
@@ -650,6 +649,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.8,
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   nick: {
     ...MATCH_CARD_BRACKET_TEXT,
@@ -658,6 +658,7 @@ const styles = StyleSheet.create({
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     textTransform: "uppercase",
     marginBottom: 2,
+    transform: [{ skewX: "-6deg" }],
   },
   recordRankRow: {
     flexDirection: "row",
@@ -695,6 +696,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.4,
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
   },
   rankCyan: {
     color: CYBER_TAB_CYAN,
@@ -705,6 +707,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.3,
+    transform: [{ skewX: "-8deg" }],
   },
   divider: {
     height: StyleSheet.hairlineWidth,
@@ -751,6 +754,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     minWidth: 28,
     textAlign: "right",
+    transform: [{ skewX: "-8deg" }],
   },
   streakWin: {
     color: FORM_WIN,
@@ -795,6 +799,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     minWidth: 36,
     textAlign: "right",
+    transform: [{ skewX: "-8deg" }],
   },
   schedSection: {
     zIndex: 1,
@@ -807,6 +812,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     minWidth: 44,
     textAlign: "right",
+    transform: [{ skewX: "-8deg" }],
   },
   gameList: {
     borderWidth: 1,
@@ -851,6 +857,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
   },
   gameResult: {
     width: 18,
@@ -858,6 +865,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     textAlign: "right",
+    transform: [{ skewX: "-8deg" }],
   },
   win: { color: FORM_WIN },
   loss: { color: FORM_LOSS },
@@ -884,6 +892,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
   },
   ratingRank: {
     fontWeight: "700",
@@ -964,6 +973,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.3,
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
   },
   splitRow: { flexDirection: "row", gap: 10 },
   splitCard: {
@@ -980,7 +990,9 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.4)",
     fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    transform: [{ skewX: "-8deg" }],
   },
   splitValues: {
     flexDirection: "row",
@@ -988,9 +1000,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   splitValue: {
-    fontFamily: RANK_DISPLAY_FONT,
+    fontFamily: METRIC_FONT,
     color: "#fff",
     fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
   },
   splitPct: {
     fontFamily: METRIC_FONT,
@@ -998,6 +1014,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.3,
+    transform: [{ skewX: "-8deg" }],
   },
   footerAsOf: {
     marginTop: 18,

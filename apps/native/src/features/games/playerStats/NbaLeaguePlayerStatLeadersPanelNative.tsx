@@ -216,6 +216,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     textTransform: "uppercase",
     textAlign: "center",
+    transform: [{ skewX: "-6deg" }],
   },
   metricChipLabelActive: { color: "#050508" },
   metricHint: {

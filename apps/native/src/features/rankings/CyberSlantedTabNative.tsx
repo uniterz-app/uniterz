@@ -433,6 +433,7 @@ const styles = StyleSheet.create({
     fontFamily: METRIC_FONT,
     textAlign: "center",
     fontWeight: "700",
+    transform: [{ skewX: "-6deg" }],
   },
   tabTextUpper: {
     textTransform: "uppercase",

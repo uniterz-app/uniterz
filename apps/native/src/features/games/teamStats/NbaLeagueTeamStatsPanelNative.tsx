@@ -412,6 +412,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: "uppercase",
     textAlign: "center",
+    transform: [{ skewX: "-6deg" }],
   },
   metricChipLabelActive: {
     color: "#050508",
@@ -515,6 +516,7 @@ const styles = StyleSheet.create({
     color: CYBER_TAB_CYAN,
     fontSize: 14,
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
   tdWl: {
     width: 52,
@@ -524,6 +526,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
   tdNet: {
     width: 52,
@@ -533,5 +536,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
 });
