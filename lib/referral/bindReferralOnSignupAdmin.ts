@@ -33,9 +33,28 @@ export type BindReferralOnSignupResult =
         | "invalid_code"
         | "invite_code_not_found"
         | "self_invite"
-        | "already_bound";
+        | "already_bound"
+        | "bind_window_expired";
       inviteCode: string | null;
     };
+
+/** 新規登録からこの時間内のみ bind 可（ミリ秒） */
+export const REFERRAL_BIND_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function createdAtMillis(data: Record<string, unknown>): number | null {
+  const v = data.createdAt as
+    | { toMillis?: () => number; seconds?: number }
+    | Date
+    | number
+    | null
+    | undefined;
+  if (v == null) return null;
+  if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
+  if (v instanceof Date) return v.getTime();
+  if (typeof v.toMillis === "function") return v.toMillis();
+  if (typeof v.seconds === "number") return v.seconds * 1000;
+  return null;
+}
 
 export async function bindReferralOnSignupAdmin(
   db: Firestore,
@@ -58,6 +77,15 @@ export async function bindReferralOnSignupAdmin(
       error: "already_bound",
       inviteCode: String(existing.referralInviteCode ?? code),
     };
+  }
+
+  const createdMs = createdAtMillis(existing as Record<string, unknown>);
+  // createdAt が無い古いドキュメントは拒否（新規サインアップ経路のみ許可）
+  if (
+    createdMs == null ||
+    Date.now() - createdMs > REFERRAL_BIND_WINDOW_MS
+  ) {
+    return { ok: false, error: "bind_window_expired", inviteCode: code };
   }
 
   const relRef = db.collection("referralRelations").doc(inviteeUid);
@@ -104,8 +132,9 @@ export async function bindReferralOnSignupAdmin(
     { merge: true }
   );
 
-  await relRef.set(
-    {
+  // create のみ（並行 bind の二重作成を抑止）
+  try {
+    await relRef.create({
       inviteeUid,
       referrerUid,
       inviteCode: code,
@@ -114,9 +143,17 @@ export async function bindReferralOnSignupAdmin(
       activePredictDays: 0,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
+    });
+  } catch (e: unknown) {
+    const codeNum =
+      e && typeof e === "object" && "code" in e
+        ? Number((e as { code?: number }).code)
+        : null;
+    if (codeNum === 6) {
+      return { ok: false, error: "already_bound", inviteCode: code };
+    }
+    throw e;
+  }
 
   return {
     ok: true,

@@ -129,7 +129,7 @@ type AdoptedSpec = {
   family: ProfilePlanProAdoptedFamily;
 };
 
-/** 採用カタログ — 解放カタログ順（即解放12 → マイルストーン20）。詳細は `proSkinUnlock.ts` */
+/** 採用カタログ — 解放カタログ順（即解放12 → マイルストーン21）。詳細は `proSkinUnlock.ts` */
 const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   // Pro 即解放 ×12
   { id: "atmos", category: "cyber", family: "atmos" },
@@ -144,7 +144,7 @@ const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   { id: "scale-diamondback", category: "reptile", family: "scale" },
   { id: "beast-shark", category: "beast", family: "beast" },
   { id: "form-diamondgrid", category: "geometry", family: "form" },
-  // マイルストーン ×20（閾値 → 順位1回 → 招待 → 回数）
+  // マイルストーン ×21（閾値 → 順位1回 → 招待 → 回数）
   { id: "wave-crimson-shard", category: "cyber", family: "wave" },
   { id: "beast-viper", category: "reptile", family: "beast" },
   { id: "scale-king", category: "reptile", family: "scale" },
@@ -153,6 +153,7 @@ const ADOPTED_SPECS: readonly AdoptedSpec[] = [
   { id: "beast-shard", category: "beast", family: "beast" },
   { id: "beast-circuitlace", category: "material", family: "beast" },
   { id: "beast-eclipse", category: "beast", family: "beast" },
+  { id: "beast-tessera", category: "geometry", family: "beast" },
   { id: "wave-chem-ink", category: "material", family: "wave" },
   { id: "form-isocubes", category: "geometry", family: "form" },
   { id: "beast-facet", category: "beast", family: "beast" },

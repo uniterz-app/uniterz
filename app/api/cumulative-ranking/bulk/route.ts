@@ -137,22 +137,19 @@ export async function GET(req: Request) {
     /** 無差別級シーズン（Pro 限定・NBA のみ） */
     if (division === "open") {
       const bearerUid = await uidFromBearer(req);
-      const uid = bearerUid ?? uidParam;
-      if (!uid) {
+      if (!bearerUid) {
         return NextResponse.json(
           { ok: false, error: "pro_required" },
           { status: 403 }
         );
       }
-      const gatedUid = bearerUid ?? uid;
-      if (!(await assertProUser(gatedUid))) {
+      if (!(await assertProUser(bearerUid))) {
         return NextResponse.json(
           { ok: false, error: "pro_required" },
           { status: 403 }
         );
       }
 
-      void gatedUid;
       const payload = await getCachedOpenSeasonBulk(
         metricsKey,
         snapshotGeneration
@@ -179,12 +176,14 @@ export async function GET(req: Request) {
     const uid = uidParam;
 
     if (personalOnly) {
-      if (!uid) {
+      const bearerUid = await uidFromBearer(req);
+      if (!bearerUid) {
         return NextResponse.json(
-          { ok: false, error: "uid required for personalOnly" },
-          { status: 400 }
+          { ok: false, error: "unauthorized" },
+          { status: 401 }
         );
       }
+      const uid = bearerUid;
       const personal = await loadPersonalBulkOverlayFromFirestore(
         uid,
         metricsList

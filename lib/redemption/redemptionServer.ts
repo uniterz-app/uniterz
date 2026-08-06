@@ -286,6 +286,15 @@ async function releaseReservedInTx(
 ): Promise<void> {
   if (!isRedemptionUnitsLive() || amount <= 0) return;
   const userRef = db.collection("users").doc(uid);
+  const userSnap = await tx.get(userRef);
+  const reservedField = userSnap.data()?.unitReserved;
+  const alreadyReserved =
+    typeof reservedField === "number" && Number.isFinite(reservedField)
+      ? Math.floor(reservedField)
+      : 0;
+  if (alreadyReserved < amount) {
+    throw new Error("invalid_reserved");
+  }
   tx.set(
     userRef,
     {
@@ -310,6 +319,16 @@ async function consumeUnitsInTx(
     .doc(`redemption:${redemptionId}:consume`);
   const ledgerSnap = await tx.get(ledgerRef);
   if (ledgerSnap.exists) return;
+
+  const userSnap = await tx.get(userRef);
+  const balanceRaw = userSnap.data()?.unitBalance;
+  const balance =
+    typeof balanceRaw === "number" && Number.isFinite(balanceRaw)
+      ? Math.floor(balanceRaw)
+      : 0;
+  if (balance < amount) {
+    throw new Error("insufficient_units");
+  }
 
   tx.set(
     userRef,
@@ -408,20 +427,21 @@ export async function submitDraftRedemption(
   uid: string,
   id: string
 ): Promise<{ ok: true; request: RedemptionRequest } | { ok: false; error: string }> {
-  const existing = await loadRedemptionById(db, id);
-  if (!existing || existing.uid !== uid) return { ok: false, error: "not_found" };
-  if (existing.status !== "draft") return { ok: false, error: "not_draft" };
-
-  const seasonUsed = await sumSeasonUnitsUsed(db, uid, existing.seasonKey);
-  // draft は未算入なのでそのまま加算チェック
-  if (seasonUsed + existing.unitsRequired > REDEMPTION_SEASON_CAP_UNITS) {
-    return { ok: false, error: "season_cap_exceeded" };
-  }
-
   const ts = nowMs();
   try {
     await db.runTransaction(async (tx) => {
       const ref = db.collection(COLLECTION).doc(id);
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new Error("not_found");
+      const existing = docToRequest(id, snap.data() as Record<string, unknown>);
+      if (!existing || existing.uid !== uid) throw new Error("not_found");
+      if (existing.status !== "draft") throw new Error("not_draft");
+
+      const seasonUsed = await sumSeasonUnitsUsed(db, uid, existing.seasonKey);
+      if (seasonUsed + existing.unitsRequired > REDEMPTION_SEASON_CAP_UNITS) {
+        throw new Error("season_cap_exceeded");
+      }
+
       if (isRedemptionUnitsLive()) {
         await reserveUnitsInTx(tx, db, uid, existing.unitsRequired, id);
       }
@@ -442,8 +462,14 @@ export async function submitDraftRedemption(
       );
     });
   } catch (e) {
-    if (e instanceof Error && e.message === "insufficient_units") {
-      return { ok: false, error: "insufficient_units" };
+    const msg = e instanceof Error ? e.message : "submit_failed";
+    if (
+      msg === "insufficient_units" ||
+      msg === "not_found" ||
+      msg === "not_draft" ||
+      msg === "season_cap_exceeded"
+    ) {
+      return { ok: false, error: msg };
     }
     throw e;
   }
@@ -458,34 +484,46 @@ export async function cancelRedemptionByUser(
   uid: string,
   id: string
 ): Promise<{ ok: true; request: RedemptionRequest } | { ok: false; error: string }> {
-  const existing = await loadRedemptionById(db, id);
-  if (!existing || existing.uid !== uid) return { ok: false, error: "not_found" };
-  if (!canUserCancelRedemption(existing.status)) {
-    return { ok: false, error: "not_cancellable" };
-  }
-
   const ts = nowMs();
-  await db.runTransaction(async (tx) => {
-    const ref = db.collection(COLLECTION).doc(id);
-    if (existing.unitsReserved && !existing.unitsConsumed) {
-      await releaseReservedInTx(tx, db, uid, existing.unitsRequired);
+  try {
+    await db.runTransaction(async (tx) => {
+      const ref = db.collection(COLLECTION).doc(id);
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new Error("not_found");
+      const existing = docToRequest(id, snap.data() as Record<string, unknown>);
+      if (!existing || existing.uid !== uid) throw new Error("not_found");
+      if (!canUserCancelRedemption(existing.status)) {
+        throw new Error("not_cancellable");
+      }
+      if (existing.unitsReserved && !existing.unitsConsumed) {
+        await releaseReservedInTx(tx, db, uid, existing.unitsRequired);
+      }
+      const timeline = [
+        ...existing.timeline,
+        { status: "cancelled" as const, atMs: ts, note: null },
+      ];
+      tx.set(
+        ref,
+        {
+          status: "cancelled",
+          unitsReserved: false,
+          updatedAtMs: ts,
+          timeline,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "cancel_failed";
+    if (
+      msg === "not_found" ||
+      msg === "not_cancellable"
+    ) {
+      return { ok: false, error: msg };
     }
-    const timeline = [
-      ...existing.timeline,
-      { status: "cancelled" as const, atMs: ts, note: null },
-    ];
-    tx.set(
-      ref,
-      {
-        status: "cancelled",
-        unitsReserved: false,
-        updatedAtMs: ts,
-        timeline,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  });
+    throw e;
+  }
 
   const updated = await loadRedemptionById(db, id);
   if (!updated) return { ok: false, error: "update_failed" };

@@ -28,6 +28,8 @@ export async function POST(req: Request) {
       const status =
         result.error === "already_bound"
           ? 409
+          : result.error === "bind_window_expired"
+            ? 403
           : result.error === "invalid_code" ||
               result.error === "invite_code_not_found" ||
               result.error === "self_invite"

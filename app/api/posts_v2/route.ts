@@ -19,6 +19,10 @@ import {
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { touchReferralPredictDay } from "@/lib/referral/touchReferralPredictDay";
 import { settleReferralRelationWithRetries } from "@/lib/referral/settleReferralRelation";
+import {
+  deterministicPostV2Id,
+  loadGameKickoffLock,
+} from "@/lib/predict/gameKickoffLock";
 
 /* ========= 型 ========= */
 type Status = "scheduled" | "live" | "final";
@@ -221,7 +225,14 @@ export async function POST(req: Request) {
     const startAtMillis = startAtTs.toMillis();
     const startAtIso = new Date(startAtMillis).toISOString();
 
-    if (Date.now() >= startAtMillis) {
+    const lock = await loadGameKickoffLock(adminDb, parsed.gameId);
+    if (!lock.ok) {
+      return NextResponse.json(
+        { ok: false, error: lock.error },
+        { status: 500 }
+      );
+    }
+    if (lock.locked) {
       return NextResponse.json(
         { ok: false, error: "locked: game started" },
         { status: 403 }
@@ -298,6 +309,15 @@ export async function POST(req: Request) {
       );
     }
 
+    const postId = deterministicPostV2Id(uid, parsed.gameId);
+    const existingById = await adminDb.collection("posts").doc(postId).get();
+    if (existingById.exists) {
+      return NextResponse.json(
+        { ok: false, error: "duplicate", existingId: postId },
+        { status: 409 }
+      );
+    }
+
     const data = {
       schemaVersion: 2,
 
@@ -333,7 +353,23 @@ export async function POST(req: Request) {
     };
 
     try {
-      const ref = await adminDb.collection("posts").add(data);
+      const ref = adminDb.collection("posts").doc(postId);
+      try {
+        await ref.create(data);
+      } catch (createErr: unknown) {
+        const code =
+          createErr && typeof createErr === "object" && "code" in createErr
+            ? Number((createErr as { code?: number }).code)
+            : null;
+        // ALREADY_EXISTS
+        if (code === 6) {
+          return NextResponse.json(
+            { ok: false, error: "duplicate", existingId: postId },
+            { status: 409 }
+          );
+        }
+        throw createErr;
+      }
       try {
         await adminDb.doc(`games/${parsed.gameId}`).set(
           {
@@ -383,7 +419,7 @@ export async function POST(req: Request) {
       } catch (referralErr) {
         console.error("[POST /api/posts_v2] referral day", referralErr);
       }
-      return NextResponse.json({ ok: true, id: ref.id }, { status: 201 });
+      return NextResponse.json({ ok: true, id: postId }, { status: 201 });
     } catch (e: any) {
       console.error("[POST /api/posts_v2]", e?.message ?? e);
       return NextResponse.json(

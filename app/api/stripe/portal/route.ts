@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { requireUidFromRequest } from "@/lib/communities/serverAuth";
+import { readUserStripeCustomerId } from "@/lib/billing/userBillingSecure";
 
 /* =====================
    Stripe（遅延初期化）
@@ -13,25 +15,30 @@ function getStripe() {
 }
 
 /* =====================
-   Portal API
+   Portal API — Bearer 必須。uid はトークンのみ（body.uid は無視）
 ===================== */
 export async function POST(req: Request) {
   try {
-    const stripe = getStripe();
-
-    const { uid, returnUrl } = await req.json();
-
-    if (!uid) {
-      return NextResponse.json({ error: "uid required" }, { status: 400 });
+    let uid: string;
+    try {
+      uid = await requireUidFromRequest(req);
+    } catch {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    const userSnap = await getAdminDb().collection("users").doc(uid).get();
+    const stripe = getStripe();
+    const body = (await req.json().catch(() => null)) as {
+      returnUrl?: unknown;
+    } | null;
+
+    const db = getAdminDb();
+    const userSnap = await db.collection("users").doc(uid).get();
 
     if (!userSnap.exists) {
       return NextResponse.json({ error: "user not found" }, { status: 404 });
     }
 
-    const customerId = userSnap.data()?.stripeCustomerId;
+    const customerId = await readUserStripeCustomerId(db, uid, userSnap.data());
 
     if (!customerId) {
       return NextResponse.json(
@@ -42,8 +49,8 @@ export async function POST(req: Request) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL!;
     const redirectPath =
-      typeof returnUrl === "string" && returnUrl.startsWith("/")
-        ? returnUrl
+      typeof body?.returnUrl === "string" && body.returnUrl.startsWith("/")
+        ? body.returnUrl
         : "/mobile/settings";
 
     const session = await stripe.billingPortal.sessions.create({

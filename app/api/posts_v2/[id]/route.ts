@@ -18,6 +18,7 @@ import {
   type ParsedPredictionPayload,
 } from "@/lib/predict/parsePredictionPayload";
 import { FieldValue } from "firebase-admin/firestore";
+import { loadGameKickoffLock } from "@/lib/predict/gameKickoffLock";
 
 /* ========= 認証 ========= */
 async function requireUid(req: NextRequest): Promise<string> {
@@ -30,6 +31,34 @@ async function requireUid(req: NextRequest): Promise<string> {
 
   const decoded = await getAdminAuth().verifyIdToken(token);
   return decoded.uid;
+}
+
+async function assertPostUnlockedByLiveGame(
+  gameId: unknown,
+  fallbackStartAtMillis?: unknown
+): Promise<void> {
+  const id = String(gameId ?? "").trim();
+  if (id) {
+    const lock = await loadGameKickoffLock(getAdminDb(), id);
+    if (!lock.ok) {
+      const err: any = new Error(lock.error);
+      err.status = 403;
+      throw err;
+    }
+    if (lock.locked) {
+      const err: any = new Error("locked");
+      err.status = 403;
+      throw err;
+    }
+    return;
+  }
+  // gameId 欠落は fail-closed
+  if (typeof fallbackStartAtMillis === "number" && Date.now() < fallbackStartAtMillis) {
+    return;
+  }
+  const err: any = new Error("locked");
+  err.status = 403;
+  throw err;
 }
 
 /* ========= 投稿取得（削除チェック） ========= */
@@ -57,15 +86,7 @@ async function getPostForDelete(uid: string, postId: string) {
     throw err;
   }
 
-  // 試合前のみ削除可
-  if (
-    typeof data.startAtMillis === "number" &&
-    Date.now() >= data.startAtMillis
-  ) {
-    const err: any = new Error("locked");
-    err.status = 403;
-    throw err;
-  }
+  await assertPostUnlockedByLiveGame(data.gameId, data.startAtMillis);
 
   return ref;
 }
@@ -86,11 +107,15 @@ export async function GET(req: NextRequest, ctx: any) {
     const data = snap.data() || {};
     const mine = data.authorUid === uid;
 
-    const editable =
-      mine &&
-      Number(data.schemaVersion) === 2 &&
-      typeof data.startAtMillis === "number" &&
-      Date.now() < data.startAtMillis;
+    let editable = false;
+    if (mine && Number(data.schemaVersion) === 2) {
+      try {
+        await assertPostUnlockedByLiveGame(data.gameId, data.startAtMillis);
+        editable = true;
+      } catch {
+        editable = false;
+      }
+    }
 
     const payload: Record<string, unknown> = {
       ok: true,
@@ -134,8 +159,14 @@ export async function PATCH(req: NextRequest, ctx: any) {
     if (Number(data.schemaVersion) !== 2)
       return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
 
-    if (typeof data.startAtMillis === "number" && Date.now() >= data.startAtMillis)
-      return NextResponse.json({ ok: false, error: "locked" }, { status: 403 });
+    try {
+      await assertPostUnlockedByLiveGame(data.gameId, data.startAtMillis);
+    } catch (e: any) {
+      return NextResponse.json(
+        { ok: false, error: e?.message ?? "locked" },
+        { status: e?.status ?? 403 }
+      );
+    }
 
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object")

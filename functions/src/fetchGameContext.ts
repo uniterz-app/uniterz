@@ -35,6 +35,8 @@ export type NormalizedGame = {
   goalScorers?: unknown;
   /** NBA: 最多得点者 */
   leadingScorers?: unknown;
+  /** false のときランキング集計から除外（play-in 等） */
+  countsForRanking?: boolean;
 };
 
 export type GameContext = {
@@ -90,6 +92,7 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
     wcStage: null,
     goalScorers: after?.goalScorers ?? null,
     leadingScorers: after?.leadingScorers ?? null,
+    countsForRanking: after?.countsForRanking !== false,
   };
 }
 

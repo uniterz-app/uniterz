@@ -133,7 +133,26 @@ export async function settleReferralRelation(
 
       const referrerRef = db.collection("users").doc(referrerUid);
       const inviteeRef = db.collection("users").doc(inviteeUid);
-      const referrerSnap = await tx.get(referrerRef);
+      const [referrerSnap, inviteeSnap] = await Promise.all([
+        tx.get(referrerRef),
+        tx.get(inviteeRef),
+      ]);
+
+      if (inviteeSnap.data()?.deletedAt != null) {
+        tx.set(
+          relRef,
+          {
+            status: "withdrawn",
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        return {
+          ok: true as const,
+          skipped: true as const,
+          reason: "invitee_deleted",
+        };
+      }
 
       const priorCompleted = Math.max(
         0,

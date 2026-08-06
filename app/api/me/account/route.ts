@@ -57,6 +57,25 @@ export async function DELETE(req: Request) {
       { merge: true }
     );
 
+    try {
+      const relRef = db.collection("referralRelations").doc(uid);
+      const relSnap = await relRef.get();
+      if (relSnap.exists) {
+        const st = String(relSnap.data()?.status ?? "");
+        if (st !== "completed") {
+          await relRef.set(
+            {
+              status: "withdrawn",
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+      }
+    } catch (relErr) {
+      console.warn("DELETE /api/me/account referral withdraw:", relErr);
+    }
+
     await auth.deleteUser(uid);
 
     return NextResponse.json({ ok: true });

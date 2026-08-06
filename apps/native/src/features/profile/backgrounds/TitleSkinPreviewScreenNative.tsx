@@ -36,7 +36,7 @@ const ROLE_BY_ID: Partial<
   "beast-reticle": "未採用 · 照準",
   "beast-facet": "最多得点者 1位 · 採用",
   "beast-shard": "称号コレクション · 採用",
-  "beast-tessera": "新候補 · 三角切面",
+  "beast-tessera": "予想 200 回 · 採用",
   "beast-starborne": "週間最多得点者 1位 · 採用",
   "beast-crown": "既存参考 · Crown",
   "beast-constellation": "既存参考 · Constellation",

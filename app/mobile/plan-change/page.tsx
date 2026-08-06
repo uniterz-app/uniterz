@@ -122,11 +122,14 @@ export default function PlanChangePage() {
     const user = auth.currentUser;
     if (!user) return;
 
+    const idToken = await user.getIdToken();
     const res = await fetch("/api/stripe/portal", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
       body: JSON.stringify({
-        uid: user.uid,
         returnUrl: "/mobile/plan-change"
       }),
     });

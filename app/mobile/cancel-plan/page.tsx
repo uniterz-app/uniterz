@@ -54,13 +54,17 @@ export default function CancelPlanPage() {
     // モーダルを閉じる
     setOpen(false);
 
+    const idToken = await user.getIdToken();
+
     // 解約処理開始（Stripe Portal）
     const res = await fetch("/api/stripe/portal", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
       body: JSON.stringify({
-        uid: user.uid,
-        returnUrl: "/mobile/cancel-complete",  // 解約後に遷移させたいページ
+        returnUrl: "/mobile/cancel-complete",
       }),
     });
 

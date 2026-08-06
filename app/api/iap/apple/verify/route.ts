@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
-import {
-  planForProductId,
-  stubProUntilForPlan,
-} from "@/lib/pro/iapProductIds";
+import { planForProductId, stubProUntilForPlan } from "@/lib/pro/iapProductIds";
+import { writeUserBillingSecure } from "@/lib/billing/userBillingSecure";
+import { isIapVerifyStubAllowed } from "@/lib/pro/iapVerifyPolicy";
 
 /** Apple IAP レシート検証（本番では App Store Server API を使用） */
 export async function POST(req: NextRequest) {
   try {
     const uid = await requireUidFromRequest(req);
+
+    if (!isIapVerifyStubAllowed()) {
+      return NextResponse.json(
+        {
+          error: "iap_verify_not_configured",
+          message:
+            "Apple receipt verification is not enabled. Set IAP_VERIFY_STUB_ALLOW=true only for non-production.",
+        },
+        { status: 501 }
+      );
+    }
 
     const body = await req.json();
     const { productId, transactionReceipt, transactionId } = body as {
@@ -31,6 +41,9 @@ export async function POST(req: NextRequest) {
     const proUntil = stubProUntilForPlan(planType, now);
 
     const db = getAdminDb();
+    await writeUserBillingSecure(db, uid, {
+      appleOriginalTransactionId: transactionId ?? null,
+    });
     await db.doc(`users/${uid}`).set(
       {
         plan: "pro",
@@ -38,7 +51,6 @@ export async function POST(req: NextRequest) {
         proUntil,
         cancelAtPeriodEnd: false,
         billingProvider: "apple",
-        appleOriginalTransactionId: transactionId ?? null,
         updatedAt: new Date(),
       },
       { merge: true }
@@ -53,7 +65,7 @@ export async function POST(req: NextRequest) {
       console.warn("[iap/apple/verify] pro-skin upgrade merge failed:", err);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, stub: true });
   } catch (e) {
     console.error("[iap/apple/verify]", e);
     return NextResponse.json({ error: "internal" }, { status: 500 });

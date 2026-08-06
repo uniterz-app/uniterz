@@ -42,7 +42,7 @@ const ROLE_BY_ID: Partial<
     accent: "text-blue-300/80",
   },
   "beast-tessera": {
-    role: "新候補 · 三角切面",
+    role: "予想 200 回 · 採用",
     accent: "text-zinc-300/80",
   },
   "beast-starborne": {
@@ -235,7 +235,7 @@ export default function ProfilePlanProTitleSkinPreview() {
           Title Skins · Crown / Thunder / Star
         </h1>
         <p className="mt-1.5 text-sm leading-relaxed text-white/50">
-          採用カタログ計32種（即解放12 / マイルストーン20）。月間称号: Facet / Thunder / Star Crest（勝率） / Regalia（総合・最後）。
+          採用カタログ計33種（即解放12 / マイルストーン21）。月間称号: Facet / Thunder / Star Crest（勝率） / Regalia（総合・最後）。
         </p>
 
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">

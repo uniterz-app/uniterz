@@ -54,13 +54,32 @@ service cloud.firestore {
     //       useUserLanguage, ContactForm, EventGate, ensureSlug 連携,
     //       users/{uid}/reads/*（お知らせ既読）, users/{uid}/groups/*（コミュAPIミラー）
     // ========================================================================
+      // stripeCustomerIndex / stripeSubscriptionIndex — Admin のみ
+    match /stripeCustomerIndex/{customerId} {
+      allow read, write: if false;
+    }
+    match /stripeSubscriptionIndex/{subscriptionId} {
+      allow read, write: if false;
+    }
+
     match /users/{userId} {
       allow read: if true;
 
       allow create: if request.auth != null
         && request.auth.uid == userId
         && !('plan' in request.resource.data)
+        && !('planType' in request.resource.data)
+        && !('proUntil' in request.resource.data)
+        && !('nextPlanType' in request.resource.data)
+        && !('cancelAtPeriodEnd' in request.resource.data)
+        && !('billingProvider' in request.resource.data)
         && !('unitBalance' in request.resource.data)
+        && !('unitReserved' in request.resource.data)
+        && !('stripeCustomerId' in request.resource.data)
+        && !('stripeSubscriptionId' in request.resource.data)
+        && !('googlePurchaseToken' in request.resource.data)
+        && !('appleOriginalTransactionId' in request.resource.data)
+        && !('proSkinUnlockedIds' in request.resource.data)
         && !('inviteCode' in request.resource.data)
         && !('referredByUid' in request.resource.data)
         && !('referralInviteCode' in request.resource.data)
@@ -86,14 +105,49 @@ service cloud.firestore {
             || request.resource.data.slug == resource.data.slug)
         && (!('counts' in request.resource.data)
             || request.resource.data.counts == resource.data.counts)
-        && (!('plan' in resource.data) || !('plan' in request.resource.data)
-            || request.resource.data.plan == resource.data.plan)
+        // Pro / 課金 / Unit / 招待 / スキン解放は Admin・Functions のみ
+        // plan 等は「既存と同じ値の維持」のみ可。新規追加・変更は不可。
         && (!('createdAt' in resource.data) || !('createdAt' in request.resource.data)
             || request.resource.data.createdAt == resource.data.createdAt)
-        // Unit / 招待フィールドは Admin API のみ（クライアント改ざん防止）
         && (!('unitBalance' in request.resource.data)
             || (('unitBalance' in resource.data)
                 && request.resource.data.unitBalance == resource.data.unitBalance))
+        && (!('unitReserved' in request.resource.data)
+            || (('unitReserved' in resource.data)
+                && request.resource.data.unitReserved == resource.data.unitReserved))
+        && (!('stripeCustomerId' in request.resource.data)
+            || (('stripeCustomerId' in resource.data)
+                && request.resource.data.stripeCustomerId == resource.data.stripeCustomerId))
+        && (!('stripeSubscriptionId' in request.resource.data)
+            || (('stripeSubscriptionId' in resource.data)
+                && request.resource.data.stripeSubscriptionId == resource.data.stripeSubscriptionId))
+        && (!('googlePurchaseToken' in request.resource.data)
+            || (('googlePurchaseToken' in resource.data)
+                && request.resource.data.googlePurchaseToken == resource.data.googlePurchaseToken))
+        && (!('appleOriginalTransactionId' in request.resource.data)
+            || (('appleOriginalTransactionId' in resource.data)
+                && request.resource.data.appleOriginalTransactionId == resource.data.appleOriginalTransactionId))
+        && (!('proSkinUnlockedIds' in request.resource.data)
+            || (('proSkinUnlockedIds' in resource.data)
+                && request.resource.data.proSkinUnlockedIds == resource.data.proSkinUnlockedIds))
+        && (!('billingProvider' in request.resource.data)
+            || (('billingProvider' in resource.data)
+                && request.resource.data.billingProvider == resource.data.billingProvider))
+        && (!('cancelAtPeriodEnd' in request.resource.data)
+            || (('cancelAtPeriodEnd' in resource.data)
+                && request.resource.data.cancelAtPeriodEnd == resource.data.cancelAtPeriodEnd))
+        && (!('nextPlanType' in request.resource.data)
+            || (('nextPlanType' in resource.data)
+                && request.resource.data.nextPlanType == resource.data.nextPlanType))
+        && (!('planType' in request.resource.data)
+            || (('planType' in resource.data)
+                && request.resource.data.planType == resource.data.planType))
+        && (!('plan' in request.resource.data)
+            || (('plan' in resource.data)
+                && request.resource.data.plan == resource.data.plan))
+        && (!('proUntil' in request.resource.data)
+            || (('proUntil' in resource.data)
+                && request.resource.data.proUntil == resource.data.proUntil))
         && (!('inviteCode' in request.resource.data)
             || (('inviteCode' in resource.data)
                 && request.resource.data.inviteCode == resource.data.inviteCode))
@@ -130,6 +184,12 @@ service cloud.firestore {
             || isValidNotificationPrefs(request.resource.data.notificationPrefs));
 
       allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // 課金シークレット — 本人 read のみ、クライアント write 不可
+      match /secure/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
 
       match /reads/{announcementId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;

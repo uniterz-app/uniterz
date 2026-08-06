@@ -28,8 +28,8 @@ export async function grantGroupBattleUnitsForSnapshot(
 ): Promise<GrantResult> {
   const battle = await getBattle(db, input.battleId);
   if (!battle) throw new Error("battle_not_found");
-  if (!canGrantUnits(battle.phase) && battle.phase !== "settling") {
-    // settling 中は final スナップのみ許可
+  if (!canGrantUnits(battle.phase)) {
+    throw new Error(`grant_not_allowed_in_phase:${battle.phase}`);
   }
 
   const snap = await snapshotRef(

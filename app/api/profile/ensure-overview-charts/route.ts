@@ -1,10 +1,11 @@
 /**
  * profileCharts が揃っていなければソースから埋めて cumulative_stats に書き戻す。
- * 公開チャートなので uid 指定で誰でも ensure 可（欠けているときだけ書込）。
+ * 欠け補完は公開可。force 再構築は本人 Bearer のみ（コスト爆弾防止）。
  */
 import { NextResponse } from "next/server";
 import { ensureProfileChartsBundle } from "@/lib/profile/ensureProfileChartsBundle";
 import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
+import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,17 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "uid required" }, { status: 400 });
     }
     const force = url.searchParams.get("force") === "1";
+    if (force) {
+      let caller: string;
+      try {
+        caller = await requireUidFromRequest(req);
+      } catch {
+        return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+      }
+      if (caller !== uid) {
+        return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      }
+    }
     const seasonKey =
       (url.searchParams.get("seasonKey") ?? "").trim() ||
       profileOverviewSeasonKey();

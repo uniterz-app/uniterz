@@ -38,6 +38,7 @@ function normalizeGame(after, gameId) {
         wcStage: null,
         goalScorers: (_k = after === null || after === void 0 ? void 0 : after.goalScorers) !== null && _k !== void 0 ? _k : null,
         leadingScorers: (_l = after === null || after === void 0 ? void 0 : after.leadingScorers) !== null && _l !== void 0 ? _l : null,
+        countsForRanking: (after === null || after === void 0 ? void 0 : after.countsForRanking) !== false,
     };
 }
 /* =========================
