@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
+import UnitEarnOverlay from "@/app/component/profile/UnitEarnOverlay";
+import UnitEarnPlayButton from "@/app/component/profile/UnitEarnPlayButton";
+import { useUnitEarnOverlay } from "@/lib/units/useUnitEarnOverlay";
+import { unitVaultUiBalance } from "@/lib/units/unitVaultDisplay";
+import { UNIT_EARN_VAULT_COUNT_MS } from "@/lib/units/unitEarnMotion";
 import {
   KINETIK_GREEN,
   KINETIK_MAGENTA,
@@ -523,22 +528,55 @@ function ProfileUnitVault({
   ariaLabel,
   corner,
   onPress,
+  absorbPulse = false,
+  /** false のあいだは数字を固定（中央の獲得演出中） */
+  countUpEnabled = true,
 }: {
   balance: number;
   ariaLabel: string;
   corner?: boolean;
   onPress?: () => void;
+  /** 獲得演出のヒット時パルス */
+  absorbPulse?: boolean;
+  countUpEnabled?: boolean;
 }) {
   const reduceMotion = useReducedMotion() === true;
-  /** Web ランキング系と同系統のカウントアップ（約 0.9s） */
-  const displayBalance = useCountUp(balance, 900, !reduceMotion, 0, "target");
+  /**
+   * ヒットでラッチし、オーバーレイ退出後も加算カウントを完走させる。
+   * （absorbPulse だけだと dismiss で即切れ、カウントが見えない）
+   */
+  const [countLatch, setCountLatch] = useState(false);
+  useEffect(() => {
+    if (absorbPulse) {
+      setCountLatch(true);
+      return;
+    }
+    if (!countUpEnabled) setCountLatch(false);
+  }, [absorbPulse, countUpEnabled]);
+
+  const counting =
+    countUpEnabled && !reduceMotion && (absorbPulse || countLatch);
+  const displayBalance = useCountUp(
+    balance,
+    UNIT_EARN_VAULT_COUNT_MS,
+    counting,
+    0,
+    "target"
+  );
+
+  useEffect(() => {
+    if (!countLatch || absorbPulse) return;
+    if (displayBalance >= balance) setCountLatch(false);
+  }, [absorbPulse, balance, countLatch, displayBalance]);
   const interactive = typeof onPress === "function";
   return (
     <motion.div
+      data-unit-vault="1"
       className={[
         "profile-edit-kinetik-unit-vault",
         corner ? "profile-edit-kinetik-unit-vault--corner" : "",
         interactive ? "profile-edit-kinetik-unit-vault--pressable" : "",
+        absorbPulse ? "profile-edit-kinetik-unit-vault--absorb" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -557,12 +595,16 @@ function ProfileUnitVault({
             }
           : undefined
       }
-      initial={reduceMotion ? false : { opacity: 0, scale: 0.86, y: -4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
+      initial={false}
+      animate={
+        absorbPulse && !reduceMotion
+          ? { opacity: 1, scale: [1, 1.12, 1], y: 0 }
+          : { opacity: 1, scale: 1, y: 0 }
+      }
       transition={
-        reduceMotion
-          ? { duration: 0 }
-          : { type: "spring", stiffness: 380, damping: 22, mass: 0.7 }
+        absorbPulse && !reduceMotion
+          ? { duration: 0.28, ease: [0.25, 1, 0.5, 1] }
+          : { duration: 0 }
       }
     >
       <span className="profile-edit-kinetik-unit-vault__disc" aria-hidden>
@@ -766,10 +808,21 @@ export default function ProfileEditKinetikPanel({
     metricsPeriod != null && !!onMetricsPeriodChange;
   const reduceUiMotion =
     useReducedMotion() === true || visualEffects === "lite";
-  const animatePlanProBg =
-    isPro && showProfilePlanProEffects(isPro) && useReducedMotion() !== true;
   const planProBgAccentReady = true;
   const metricCopy = getKinetikMetricCopy(isJa, { monthly: isSeasonMetrics });
+
+  /** 自分プロフィールのみ: 残高増分 → 中央カウント → 金庫へ加算 */
+  const unitEarn = useUnitEarnOverlay({
+    balance: unitBalance ?? null,
+    enabled: editable && unitBalance != null,
+    storageKey: shareHandle?.trim() || "me",
+  });
+  /** 獲得演出中は Pro 背景ループを止めて復帰直後の重さを避ける */
+  const animatePlanProBg =
+    isPro &&
+    showProfilePlanProEffects(isPro) &&
+    useReducedMotion() !== true &&
+    unitEarn.active == null;
   const metricsInfoMessage = buildKinetikMetricsInfoMessage(metricCopy, {
     isJa,
   });
@@ -1124,11 +1177,15 @@ export default function ProfileEditKinetikPanel({
       }
     : undefined;
 
+  /** hook 側でモック / プレビュー加算済み（1000→1250）まで解決済み */
+  const vaultDisplayBalance =
+    unitEarn.vaultBalance ?? unitVaultUiBalance(unitBalance);
+
   const unitCorner =
     unitBalance != null && unitBalanceAria ? (
       <ProfileUnitVault
-        // UI 確認用モック（実残高が 0 のとき 1,000 を表示）
-        balance={unitBalance > 0 ? unitBalance : 1000}
+        // UI 確認用モック（実残高が 0・演出なしのとき 1,000 を表示）
+        balance={vaultDisplayBalance}
         ariaLabel={
           openUnitLedger
             ? isJa
@@ -1138,6 +1195,9 @@ export default function ProfileEditKinetikPanel({
         }
         corner
         onPress={openUnitLedger}
+        absorbPulse={unitEarn.active != null && unitEarn.absorbed}
+        /** 中央演出中は裏の金庫カウントを止める（ヒット後だけ加算） */
+        countUpEnabled={!unitEarn.active || unitEarn.absorbed}
       />
     ) : null;
 
@@ -1264,7 +1324,9 @@ export default function ProfileEditKinetikPanel({
                       />
                     ) : null}
                     {unitCorner ? (
-                      <div className="ml-auto shrink-0">{unitCorner}</div>
+                      <div className="ml-auto shrink-0 self-center">
+                        {unitCorner}
+                      </div>
                     ) : null}
                   </div>
                   <ProfileKinetikNameFlag countryCode={countryCode} />
@@ -1307,6 +1369,25 @@ export default function ProfileEditKinetikPanel({
         </div>
       </ProfileKinetikPanelFrame>
       {badgeDetailModal}
+      {unitEarn.active ? (
+        <UnitEarnOverlay
+          open
+          amount={unitEarn.active.amount}
+          label={unitEarn.active.label}
+          language={isJa ? "ja" : "en"}
+          onAbsorb={unitEarn.markAbsorbed}
+          onDone={unitEarn.dismiss}
+        />
+      ) : null}
+      {editable && unitBalance != null && !unitEarn.active ? (
+        <UnitEarnPlayButton
+          floating
+          language={isJa ? "ja" : "en"}
+          onPlay={() =>
+            unitEarn.play({ amount: 250, preview: true })
+          }
+        />
+      ) : null}
       </>
     );
   }
@@ -1361,7 +1442,9 @@ export default function ProfileEditKinetikPanel({
                   </h2>
                   <ProCyberBadge premium ariaLabel={metricCopy.proMember} />
                   {unitCorner ? (
-                    <div className="ml-auto shrink-0">{unitCorner}</div>
+                    <div className="ml-auto shrink-0 self-center">
+                      {unitCorner}
+                    </div>
                   ) : null}
                 </div>
                 <ProfileKinetikNameFlag countryCode={countryCode} />
@@ -1432,7 +1515,9 @@ export default function ProfileEditKinetikPanel({
                     {identity.displayName}
                   </h2>
                   {unitCorner ? (
-                    <div className="ml-auto shrink-0">{unitCorner}</div>
+                    <div className="ml-auto shrink-0 self-center">
+                      {unitCorner}
+                    </div>
                   ) : null}
                 </div>
                 <ProfileKinetikNameFlag countryCode={countryCode} />
@@ -1483,6 +1568,25 @@ export default function ProfileEditKinetikPanel({
 
     </ProfileKinetikPanelFrame>
     {badgeDetailModal}
+    {unitEarn.active ? (
+      <UnitEarnOverlay
+        open
+        amount={unitEarn.active.amount}
+        label={unitEarn.active.label}
+        language={isJa ? "ja" : "en"}
+        onAbsorb={unitEarn.markAbsorbed}
+        onDone={unitEarn.dismiss}
+      />
+    ) : null}
+    {editable && unitBalance != null && !unitEarn.active ? (
+      <UnitEarnPlayButton
+        floating
+        language={isJa ? "ja" : "en"}
+        onPlay={() =>
+          unitEarn.play({ amount: 250, preview: true })
+        }
+      />
+    ) : null}
     </>
   );
 }

@@ -7773,7 +7773,16 @@ body::before {
   }
 }
 
-/* 右上コンパクト（名前行横） */
+/* プレビュー等の絶対配置アンカー */
+.profile-edit-kinetik-unit-vault-anchor {
+  position: absolute;
+  z-index: 6;
+  top: 10px;
+  right: 10px;
+  pointer-events: auto;
+}
+
+/* 名前行コンパクト — PRO バッジ（~16–18px）と高さを揃える */
 .profile-edit-kinetik-unit-vault--pressable {
   cursor: pointer;
 }
@@ -7784,44 +7793,116 @@ body::before {
 }
 
 .profile-edit-kinetik-unit-vault--corner {
-  gap: 7px;
+  gap: 5px;
+  min-height: 18px;
 }
 
 .profile-edit-kinetik-unit-vault--corner .profile-edit-kinetik-unit-vault__disc {
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
 }
 
 .profile-edit-kinetik-unit-vault--corner
   .profile-edit-kinetik-unit-vault__disc-inner {
-  width: 19px;
-  height: 19px;
-  font-size: 9.5px;
+  width: 13px;
+  height: 13px;
+  font-size: 8px;
 }
 
 .profile-edit-kinetik-unit-vault--corner .profile-edit-kinetik-unit-vault__value {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .profile-edit-kinetik-card--web
   .profile-edit-kinetik-unit-vault--corner
   .profile-edit-kinetik-unit-vault__disc {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
 }
 
 .profile-edit-kinetik-card--web
   .profile-edit-kinetik-unit-vault--corner
   .profile-edit-kinetik-unit-vault__disc-inner {
-  width: 20px;
-  height: 20px;
-  font-size: 10px;
+  width: 14px;
+  height: 14px;
+  font-size: 8.5px;
 }
 
 .profile-edit-kinetik-card--web
   .profile-edit-kinetik-unit-vault--corner
   .profile-edit-kinetik-unit-vault__value {
-  font-size: 20px;
+  font-size: 18px;
+}
+
+/* Unit 獲得演出 — 軽量（blur / 無限CSSアニメなし） */
+.unit-earn-overlay__payload {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 獲得演出中はプロフィール内の無限 CSS を止めて負荷を下げる */
+html.unit-earn-playing .profile-edit-kinetik-unit-vault__disc,
+html.unit-earn-playing .profile-edit-kinetik-unit-vault__sheen,
+html.unit-earn-playing .profile-edit-kinetik-unit-vault__value,
+html.unit-earn-playing .profile-edit-kinetik-badge-float,
+html.unit-earn-playing .profile-edit-kinetik-panel [class*="profile-plan-pro"] {
+  animation-play-state: paused !important;
+}
+
+.unit-earn-overlay__disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 210deg,
+    #f9d576,
+    #b8860b 40%,
+    #f6c344 70%,
+    #8a6410
+  );
+  box-shadow:
+    0 0 20px rgba(246, 195, 68, 0.55),
+    inset 0 0 4px rgba(0, 0, 0, 0.45);
+}
+
+.unit-earn-overlay__disc-inner {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #ffedb0, #d9a125 70%);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: #241902;
+  line-height: 1;
+}
+
+.unit-earn-overlay__value {
+  font-size: clamp(40px, 11vw, 56px);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: #ffe9a8;
+  text-shadow: 0 0 14px rgba(246, 195, 68, 0.55);
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.unit-earn-overlay__plus {
+  margin-right: 0.06em;
+  font-weight: 700;
+  color: #f6c344;
+}
+
+.profile-edit-kinetik-unit-vault--absorb {
+  box-shadow: 0 0 18px rgba(246, 195, 68, 0.75);
 }
 
 /* アバター直下の閲覧数 — アイコン横幅に合わせる */

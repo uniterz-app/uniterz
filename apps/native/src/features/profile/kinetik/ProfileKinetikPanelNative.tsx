@@ -1,8 +1,21 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
   Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, type StyleProp, type ViewStyle,
 } from "react-native";
+import UnitEarnOverlayNative from "../UnitEarnOverlayNative";
+import UnitEarnPlayButtonNative from "../UnitEarnPlayButtonNative";
+import { useUnitEarnOverlayNative } from "../useUnitEarnOverlayNative";
+import { unitVaultUiBalance } from "../../../../../../lib/units/unitVaultDisplay";
+import { UNIT_EARN_VAULT_COUNT_MS } from "../../../../../../lib/units/unitEarnMotion";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useReducedMotion } from "react-native-reanimated";
 import Animated, {
@@ -693,36 +706,50 @@ const BADGE_FLOAT_TOP_CLEARANCE_PX = BADGE_FLOAT_TRAVEL_PX + 8;
  */
 function KinetikBadgeProBridgeWrapNative({
   index,
+  paused = false,
   children,
 }: {
   index: number;
+  /** Unit 獲得演出中など — フロートを止めて負荷を下げる */
+  paused?: boolean;
   children: ReactNode;
 }) {
   const reduceMotion = useReducedMotion();
   const enter = useSharedValue(reduceMotion ? 1 : 0);
   const floatY = useSharedValue(0);
+  const enteredRef = useRef(false);
 
   useEffect(() => {
     cancelAnimation(enter);
     cancelAnimation(floatY);
 
-    if (reduceMotion) {
+    if (reduceMotion || paused) {
       enter.value = 1;
       floatY.value = 0;
+      enteredRef.current = true;
       return;
     }
 
-    const enterDelayMs = proBridgeBadgeEnterDelayMs(index);
-    const floatDelayMs =
-      proBridgeBadgeFloatDelayMs(index) + (index % PRO_BRIDGE_FLOAT_PHASE_STAGGER) * 80;
+    const enterDelayMs = enteredRef.current
+      ? 0
+      : proBridgeBadgeEnterDelayMs(index);
+    const floatDelayMs = enteredRef.current
+      ? 0
+      : proBridgeBadgeFloatDelayMs(index) +
+        (index % PRO_BRIDGE_FLOAT_PHASE_STAGGER) * 80;
 
-    enter.value = 0;
+    if (!enteredRef.current) {
+      enter.value = 0;
+      enter.value = withDelay(
+        enterDelayMs,
+        withTiming(1, { duration: 580, easing: BADGE_ENTER_EASE })
+      );
+      enteredRef.current = true;
+    } else {
+      enter.value = 1;
+    }
+
     floatY.value = 0;
-
-    enter.value = withDelay(
-      enterDelayMs,
-      withTiming(1, { duration: 580, easing: BADGE_ENTER_EASE })
-    );
     /** Web: `animation: profile-kinetik-badge-float 3.4s ease-in-out infinite` */
     floatY.value = withDelay(
       floatDelayMs,
@@ -740,7 +767,7 @@ function KinetikBadgeProBridgeWrapNative({
       cancelAnimation(enter);
       cancelAnimation(floatY);
     };
-  }, [enter, floatY, index, reduceMotion]);
+  }, [enter, floatY, index, paused, reduceMotion]);
 
   const enterStyle = useAnimatedStyle(() => {
     const enterT = enter.value;
@@ -795,13 +822,17 @@ const PRO_BRIDGE_NUDGE_WIDTH = Math.round(60 * 4.35 + PRO_BRIDGE_BADGE_GAP * 4);
 
 function KinetikBadgeFloatWrapNative({
   index,
+  paused = false,
   children,
 }: {
   index: number;
+  paused?: boolean;
   children: ReactNode;
 }) {
   return (
-    <KinetikBadgeProBridgeWrapNative index={index}>{children}</KinetikBadgeProBridgeWrapNative>
+    <KinetikBadgeProBridgeWrapNative index={index} paused={paused}>
+      {children}
+    </KinetikBadgeProBridgeWrapNative>
   );
 }
 
@@ -810,11 +841,13 @@ function KinetikBadgeRowNative({
   onBadgePress,
   inline = false,
   variant = "default",
+  motionPaused = false,
 }: {
   badges: ResolvedBadgeNative[];
   onBadgePress?: (badge: ResolvedBadgeNative) => void;
   inline?: boolean;
   variant?: "default" | "proBridge";
+  motionPaused?: boolean;
 }) {
   if (badges.length === 0) {
     return inline ? null : <View style={styles.badgeRowEmpty} />;
@@ -849,7 +882,11 @@ function KinetikBadgeRowNative({
     }
 
     return (
-      <KinetikBadgeFloatWrapNative key={badge.id} index={index}>
+      <KinetikBadgeFloatWrapNative
+        key={badge.id}
+        index={index}
+        paused={motionPaused}
+      >
         {thumb}
       </KinetikBadgeFloatWrapNative>
     );
@@ -985,107 +1022,158 @@ const UNIT_COIN_SHEEN_SWEEP_MS = 580;
 const UNIT_COIN_SHEEN_HOLD_MS = Math.round(UNIT_COIN_SHEEN_CYCLE_MS * 0.55);
 
 /** Web `ProfileUnitVault` 相当 — 金貨ディスク + イタリック数字（U8） */
-function KinetikUnitVaultNative({
-  balance,
-  ariaLabel,
-  corner,
-  onPress,
-}: {
-  balance: number;
-  ariaLabel: string;
-  corner?: boolean;
-  onPress?: () => void;
-}) {
-  const disc = corner ? 26 : 28;
-  const inner = corner ? 19 : 20;
+const KinetikUnitVaultNative = forwardRef<
+  View,
+  {
+    balance: number;
+    ariaLabel: string;
+    corner?: boolean;
+    onPress?: () => void;
+    absorbPulse?: boolean;
+    /** false のあいだは数字を固定（中央の獲得演出中） */
+    countUpEnabled?: boolean;
+    /** Web `html.unit-earn-playing` 相当 — 獲得演出中は常時ループを止める */
+    effectsPaused?: boolean;
+  }
+>(function KinetikUnitVaultNative(
+  {
+    balance,
+    ariaLabel,
+    corner,
+    onPress,
+    absorbPulse = false,
+    countUpEnabled = true,
+    effectsPaused = false,
+  },
+  ref
+) {
+  /** Web corner: 18px disc / 16px value — PRO バッジ高さと揃える */
+  const disc = corner ? 18 : 28;
+  const inner = corner ? 13 : 20;
   const reduceMotion = useReducedMotion();
-  /** Web `useCountUp(..., 900)` 相当 */
-  const displayBalance = useCountUp(balance, 900, !reduceMotion, 0, "target");
-  const enter = useSharedValue(reduceMotion ? 1 : 0);
+  /**
+   * ヒットでラッチし、オーバーレイ退出後も加算カウントを完走させる。
+   * （absorbPulse だけだと dismiss で即切れ、カウントが見えない）
+   */
+  const [countLatch, setCountLatch] = useState(false);
+  useEffect(() => {
+    if (absorbPulse) {
+      setCountLatch(true);
+      return;
+    }
+    if (!countUpEnabled) setCountLatch(false);
+  }, [absorbPulse, countUpEnabled]);
+
+  const counting =
+    countUpEnabled && !reduceMotion && (absorbPulse || countLatch);
+  const displayBalance = useCountUp(
+    balance,
+    UNIT_EARN_VAULT_COUNT_MS,
+    counting,
+    0,
+    "target"
+  );
+
+  useEffect(() => {
+    if (!countLatch || absorbPulse) return;
+    if (displayBalance >= balance) setCountLatch(false);
+  }, [absorbPulse, balance, countLatch, displayBalance]);
+  /** 復帰マウントで入場アニメをやり直さない（獲得演出の硬さ対策） */
+  const enter = useSharedValue(1);
+  const absorb = useSharedValue(1);
   const glow = useSharedValue(0);
   const sheenX = useSharedValue(-1.4);
   const sheenOpacity = useSharedValue(0);
 
   useEffect(() => {
-    cancelAnimation(enter);
+    if (!absorbPulse || reduceMotion) {
+      absorb.value = 1;
+      return;
+    }
+    absorb.value = withSequence(
+      withTiming(1.14, {
+        duration: 160,
+        easing: Easing.out(Easing.cubic),
+      }),
+      withTiming(1, {
+        duration: 160,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, [absorb, absorbPulse, reduceMotion]);
+
+  useEffect(() => {
     cancelAnimation(glow);
     cancelAnimation(sheenX);
     cancelAnimation(sheenOpacity);
 
-    if (reduceMotion) {
-      enter.value = 1;
+    if (reduceMotion || effectsPaused) {
       glow.value = 0;
       sheenX.value = -1.4;
       sheenOpacity.value = 0;
       return;
     }
 
-    enter.value = 0;
-    enter.value = withTiming(1, {
-      duration: 420,
-      easing: Easing.out(Easing.cubic),
-    });
-
-    /** Web: `profile-unit-coin-glow 2.8s` */
-    glow.value = withRepeat(
-      withSequence(
-        withTiming(1, {
-          duration: UNIT_COIN_GLOW_HALF_MS,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        withTiming(0, {
-          duration: UNIT_COIN_GLOW_HALF_MS,
-          easing: Easing.inOut(Easing.ease),
-        })
-      ),
-      -1,
-      false
-    );
-
-    /** Web: `profile-unit-coin-sheen 3.6s` */
-    sheenX.value = -1.4;
-    sheenOpacity.value = 0;
-    sheenX.value = withRepeat(
-      withSequence(
-        withDelay(
-          UNIT_COIN_SHEEN_HOLD_MS,
-          withTiming(2.2, {
-            duration: UNIT_COIN_SHEEN_SWEEP_MS,
+    /** タブ復帰直後はレイアウトが落ち着いてからループ開始 */
+    const settleId = setTimeout(() => {
+      /** Web: `profile-unit-coin-glow 2.8s` */
+      glow.value = withRepeat(
+        withSequence(
+          withTiming(1, {
+            duration: UNIT_COIN_GLOW_HALF_MS,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(0, {
+            duration: UNIT_COIN_GLOW_HALF_MS,
             easing: Easing.inOut(Easing.ease),
           })
         ),
-        withTiming(-1.4, { duration: 0 })
-      ),
-      -1,
-      false
-    );
-    sheenOpacity.value = withRepeat(
-      withSequence(
-        withDelay(UNIT_COIN_SHEEN_HOLD_MS, withTiming(0.85, { duration: 80 })),
-        withTiming(0, {
-          duration: UNIT_COIN_SHEEN_SWEEP_MS - 80,
-          easing: Easing.in(Easing.ease),
-        }),
-        withTiming(0, { duration: 0 })
-      ),
-      -1,
-      false
-    );
+        -1,
+        false
+      );
+
+      /** Web: `profile-unit-coin-sheen 3.6s` */
+      sheenX.value = -1.4;
+      sheenOpacity.value = 0;
+      sheenX.value = withRepeat(
+        withSequence(
+          withDelay(
+            UNIT_COIN_SHEEN_HOLD_MS,
+            withTiming(2.2, {
+              duration: UNIT_COIN_SHEEN_SWEEP_MS,
+              easing: Easing.inOut(Easing.ease),
+            })
+          ),
+          withTiming(-1.4, { duration: 0 })
+        ),
+        -1,
+        false
+      );
+      sheenOpacity.value = withRepeat(
+        withSequence(
+          withDelay(UNIT_COIN_SHEEN_HOLD_MS, withTiming(0.85, { duration: 80 })),
+          withTiming(0, {
+            duration: UNIT_COIN_SHEEN_SWEEP_MS - 80,
+            easing: Easing.in(Easing.ease),
+          }),
+          withTiming(0, { duration: 0 })
+        ),
+        -1,
+        false
+      );
+    }, 480);
 
     return () => {
-      cancelAnimation(enter);
+      clearTimeout(settleId);
       cancelAnimation(glow);
       cancelAnimation(sheenX);
       cancelAnimation(sheenOpacity);
     };
-  }, [enter, glow, reduceMotion, sheenOpacity, sheenX]);
+  }, [effectsPaused, glow, reduceMotion, sheenOpacity, sheenX]);
 
   const rootStyle = useAnimatedStyle(() => ({
     opacity: enter.value,
-    transform: [
-      { translateY: (1 - enter.value) * -4 },
-      { scale: 0.86 + enter.value * 0.14 },
-    ],
+    transform: [{ scale: absorb.value }],
   }));
 
   const discStyle = useAnimatedStyle(() => {
@@ -1111,67 +1199,72 @@ function KinetikUnitVaultNative({
   }));
 
   return (
-    <Animated.View
-      style={[styles.unitVault, corner ? styles.unitVaultCorner : null, rootStyle]}
-      accessibilityRole={onPress ? "button" : "text"}
-      accessibilityLabel={ariaLabel}
-      accessibilityHint={onPress ? ariaLabel : undefined}
-    >
-      <Pressable
-        disabled={!onPress}
-        onPress={onPress}
-        style={styles.unitVaultPressable}
-        hitSlop={6}
+    <View ref={ref} collapsable={false}>
+      <Animated.View
+        style={[styles.unitVault, corner ? styles.unitVaultCorner : null, rootStyle]}
+        accessibilityRole={onPress ? "button" : "text"}
+        accessibilityLabel={ariaLabel}
+        accessibilityHint={onPress ? ariaLabel : undefined}
       >
-        <Animated.View
+        <Pressable
+          disabled={!onPress}
+          onPress={onPress}
           style={[
-            styles.unitVaultDisc,
-            { width: disc, height: disc, borderRadius: disc / 2 },
-            discStyle,
+            styles.unitVaultPressable,
+            corner ? styles.unitVaultPressableCorner : null,
           ]}
+          hitSlop={6}
         >
-          <LinearGradient
-            colors={["#f9d576", "#b8860b", "#f6c344", "#8a6410"]}
-            start={{ x: 0.15, y: 0 }}
-            end={{ x: 0.85, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
           <Animated.View
-            pointerEvents="none"
-            style={[styles.unitVaultSheen, { height: disc * 1.4, top: -disc * 0.2 }, sheenStyle]}
-          />
-          <View
             style={[
-              styles.unitVaultDiscInner,
-              {
-                width: inner,
-                height: inner,
-                borderRadius: inner / 2,
-              },
+              styles.unitVaultDisc,
+              { width: disc, height: disc, borderRadius: disc / 2 },
+              discStyle,
             ]}
           >
             <LinearGradient
-              colors={["#ffedb0", "#d9a125"]}
-              start={{ x: 0.3, y: 0.2 }}
-              end={{ x: 0.9, y: 1 }}
+              colors={["#f9d576", "#b8860b", "#f6c344", "#8a6410"]}
+              start={{ x: 0.15, y: 0 }}
+              end={{ x: 0.85, y: 1 }}
               style={StyleSheet.absoluteFillObject}
             />
-            <Text style={[styles.unitVaultU, corner ? styles.unitVaultUCorner : null]}>U</Text>
-          </View>
-        </Animated.View>
-        <Animated.Text
-          style={[
-            styles.unitVaultValue,
-            corner ? styles.unitVaultValueCorner : null,
-            valueGlowStyle,
-          ]}
-        >
-          {displayBalance.toLocaleString("en-US")}
-        </Animated.Text>
-      </Pressable>
-    </Animated.View>
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.unitVaultSheen, { height: disc * 1.4, top: -disc * 0.2 }, sheenStyle]}
+            />
+            <View
+              style={[
+                styles.unitVaultDiscInner,
+                {
+                  width: inner,
+                  height: inner,
+                  borderRadius: inner / 2,
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={["#ffedb0", "#d9a125"]}
+                start={{ x: 0.3, y: 0.2 }}
+                end={{ x: 0.9, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={[styles.unitVaultU, corner ? styles.unitVaultUCorner : null]}>U</Text>
+            </View>
+          </Animated.View>
+          <Animated.Text
+            style={[
+              styles.unitVaultValue,
+              corner ? styles.unitVaultValueCorner : null,
+              valueGlowStyle,
+            ]}
+          >
+            {displayBalance.toLocaleString("en-US")}
+          </Animated.Text>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
-}
+});
 
 function KinetikIdentityJoinIdRowNative({
   memberSinceLabel,
@@ -1383,6 +1476,17 @@ export default function ProfileKinetikPanelNative({
   const showNbaPeriodTabs =
     metricsPeriod != null && !!onMetricsPeriodChange;
   const [shareCopied, setShareCopied] = useState(false);
+  const unitVaultRef = useRef<View>(null);
+
+  /** 自分プロフィール（台帳導線あり）のみ獲得演出 */
+  const unitEarn = useUnitEarnOverlayNative({
+    balance: unitBalance ?? null,
+    enabled: !!onOpenUnitLedger && unitBalance != null,
+    storageKey: shareHandle?.trim() || "me",
+  });
+  /** hook 側でモック / プレビュー加算済み（1000→1250）まで解決済み */
+  const vaultDisplayBalance =
+    unitEarn.vaultBalance ?? unitVaultUiBalance(unitBalance);
 
   const activeWinStreak = Math.max(0, Math.floor(winStreak ?? stats.winStreak ?? 0));
   const activeTotalPointsRank = totalPointsRankProp ?? stats.totalPointsRank ?? null;
@@ -1408,7 +1512,9 @@ export default function ProfileKinetikPanelNative({
   const proFrameTheme = isPro ? kinetikPlanProFrameTheme(profileAccent) : null;
   const panelBorder = kinetikPanelBorderColor(profileAccent);
   const reduceMotion = useReducedMotion();
-  const animatePlanProBg = isPro && reduceMotion !== true;
+  /** 獲得演出中は Pro 背景ループを止めて復帰直後の重さを避ける */
+  const animatePlanProBg =
+    isPro && reduceMotion !== true && unitEarn.active == null;
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
   const profileViewCountAria =
@@ -1597,6 +1703,7 @@ export default function ProfileKinetikPanelNative({
   };
 
   return (
+    <View style={styles.panelRoot}>
     <View
       style={[
         styles.frameOuter,
@@ -1687,19 +1794,25 @@ export default function ProfileKinetikPanelNative({
                 </Text>
                 {isPro ? <ProCyberBadgeNative premium /> : null}
                 {unitBalance != null && unitBalanceAria ? (
-                  <KinetikUnitVaultNative
-                    // UI 確認用モック（実残高が 0 のとき 1,000 を表示）
-                    balance={unitBalance > 0 ? unitBalance : 1000}
-                    ariaLabel={
-                      onOpenUnitLedger
-                        ? isJa
-                          ? `${unitBalanceAria} · 履歴を開く`
-                          : `${unitBalanceAria} · Open history`
-                        : unitBalanceAria
-                    }
-                    corner
-                    onPress={onOpenUnitLedger}
-                  />
+                  <View style={styles.unitVaultInNameRow}>
+                    <KinetikUnitVaultNative
+                      ref={unitVaultRef}
+                      // UI 確認用モック（実残高が 0・演出なしのとき 1,000 を表示）
+                      balance={vaultDisplayBalance}
+                      ariaLabel={
+                        onOpenUnitLedger
+                          ? isJa
+                            ? `${unitBalanceAria} · 履歴を開く`
+                            : `${unitBalanceAria} · Open history`
+                          : unitBalanceAria
+                      }
+                      corner
+                      onPress={onOpenUnitLedger}
+                      absorbPulse={unitEarn.active != null && unitEarn.absorbed}
+                      countUpEnabled={!unitEarn.active || unitEarn.absorbed}
+                      effectsPaused={unitEarn.active != null}
+                    />
+                  </View>
                 ) : null}
               </View>
               {profileFlagUri ? (
@@ -1737,11 +1850,16 @@ export default function ProfileKinetikPanelNative({
               badges={badges}
               onBadgePress={onBadgePress}
               variant="proBridge"
+              motionPaused={unitEarn.active != null}
             />
           ) : null}
         </View>
       ) : (
-        <KinetikBadgeRowNative badges={badges} onBadgePress={onBadgePress} />
+        <KinetikBadgeRowNative
+          badges={badges}
+          onBadgePress={onBadgePress}
+          motionPaused={unitEarn.active != null}
+        />
       )}
 
       <View style={[styles.metricsPanel, isPro ? styles.metricsPanelPlanPro : null]}>
@@ -1836,10 +1954,34 @@ export default function ProfileKinetikPanelNative({
       </View>
 
     </View>
+    {unitEarn.active ? (
+      <UnitEarnOverlayNative
+        open
+        amount={unitEarn.active.amount}
+        label={unitEarn.active.label}
+        language={isJa ? "ja" : "en"}
+        vaultRef={unitVaultRef}
+        onAbsorb={unitEarn.markAbsorbed}
+        onDone={unitEarn.dismiss}
+      />
+    ) : null}
+    {onOpenUnitLedger && unitBalance != null && !unitEarn.active ? (
+      <UnitEarnPlayButtonNative
+        language={isJa ? "ja" : "en"}
+        onPlay={() =>
+          unitEarn.play({ amount: 250, preview: true })
+        }
+      />
+    ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  panelRoot: {
+    position: "relative",
+    alignSelf: "stretch",
+  },
   frameOuter: {
     borderWidth: 1,
     borderRadius: 4,
@@ -1986,6 +2128,11 @@ const styles = StyleSheet.create({
     width: "100%",
     flexWrap: "wrap",
   },
+  unitVaultInNameRow: {
+    marginLeft: "auto",
+    flexShrink: 0,
+    alignSelf: "center",
+  },
   nameFlagBelow: {
     marginTop: 6,
     width: 22,
@@ -2102,6 +2249,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  unitVaultPressableCorner: {
+    gap: 5,
+  },
   unitVaultDisc: {
     alignItems: "center",
     justifyContent: "center",
@@ -2147,16 +2297,16 @@ const styles = StyleSheet.create({
     textShadowRadius: 8,
   },
   unitVaultCorner: {
-    marginLeft: "auto",
-    gap: 7,
+    gap: 5,
+    minHeight: 18,
   },
   unitVaultUCorner: {
-    fontSize: 9.5,
-    lineHeight: 11,
+    fontSize: 8,
+    lineHeight: 10,
   },
   unitVaultValueCorner: {
-    fontSize: 18,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 18,
   },
   avatarColumn: {
     alignItems: "center",

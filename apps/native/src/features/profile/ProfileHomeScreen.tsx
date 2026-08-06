@@ -281,7 +281,8 @@ export default function ProfileHomeScreen({
   const [planProBgVariant, setPlanProBgVariant] =
     useState<ProfilePlanProBgVariant>(PROFILE_PLAN_PRO_BG_DEFAULT);
   const [memberSinceMs, setMemberSinceMs] = useState<number | null>(null);
-  const [unitBalance, setUnitBalance] = useState<number>(0);
+  /** null = 未読込（獲得演出の誤発火防止） */
+  const [unitBalance, setUnitBalance] = useState<number | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -574,7 +575,7 @@ export default function ProfileHomeScreen({
     };
   }, [myUid, isPublicProfileView]);
 
-  /** Pro Skin 変更後に戻ったときだけ背景を再読込（初回フォーカスは上の load と重複させない） */
+  /** Pro Skin / Unit 残高 — 復帰時に再読込（初回フォーカスは上の load と重複させない） */
   const skipFirstFocusUserDocRef = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -586,9 +587,10 @@ export default function ProfileHomeScreen({
       let alive = true;
       void getDoc(doc(db, "users", myUid)).then((snap) => {
         if (!alive || !snap.exists()) return;
-        const data = snap.data() as { planProBgVariant?: unknown; plan?: unknown };
+        const data = snap.data() as Record<string, unknown>;
         setPlanProBgVariant(parseUserPlanProBgVariant(data.planProBgVariant));
         setPlan(data.plan === "pro" ? "pro" : "free");
+        setUnitBalance(parseUserUnitBalance(data));
       });
       return () => {
         alive = false;
@@ -1225,7 +1227,7 @@ export default function ProfileHomeScreen({
         fUser?.photoURL?.trim() ||
         ""
       }
-      unitBalance={unitBalance}
+      unitBalance={unitBalance ?? undefined}
       onOpenProfileSettings={openSettingsFromMenu}
       onOpenInApp={(page) => {
         setMenuOpen(false);

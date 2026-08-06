@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
+  type ImageSourcePropType,
   Pressable,
   StyleSheet,
   Text,
@@ -26,10 +28,18 @@ import { redemptionBatchScheduleCopy } from "../../../../../../lib/redemption/re
 import { redemptionStatusLabel } from "../../../../../../lib/redemption/redemptionStatus";
 import type {
   RedemptionCatalogItem,
+  RedemptionProductKind,
   RedemptionRequest,
 } from "../../../../../../lib/redemption/redemptionTypes";
 
 const OX = "Oxanium_700Bold";
+
+/** Web `/redemption/catalog-*.png` 相当 */
+const CATALOG_IMAGES: Record<RedemptionProductKind, ImageSourcePropType> = {
+  jersey: require("../../../../assets/redemption/catalog-jersey.png"),
+  tshirt: require("../../../../assets/redemption/catalog-tshirt.png"),
+  cap: require("../../../../assets/redemption/catalog-cap.png"),
+};
 
 export default function RedemptionHubScreenNative() {
   const navigation =
@@ -129,25 +139,35 @@ export default function RedemptionHubScreenNative() {
       {catalog.map((item) => (
         <View key={item.kind} style={styles.card}>
           <View style={styles.cardRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>
-                {isJa ? item.titleJa : item.titleEn}
-              </Text>
+            <View style={styles.thumbWrap}>
+              <Image
+                source={CATALOG_IMAGES[item.kind]}
+                style={styles.thumb}
+                resizeMode="cover"
+                accessibilityIgnoresInvertColors
+              />
+            </View>
+            <View style={styles.cardBody}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>
+                  {isJa ? item.titleJa : item.titleEn}
+                </Text>
+                <Text style={styles.units}>{item.unitsRequired} U</Text>
+              </View>
               <Text style={styles.cardMeta}>
                 {isJa ? item.blurbJa : item.blurbEn}
               </Text>
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("RedeemApply", { kind: item.kind })
+                }
+              >
+                <Text style={styles.link}>
+                  {isJa ? "この区分で申請" : "Apply with this tier"}
+                </Text>
+              </Pressable>
             </View>
-            <Text style={styles.units}>{item.unitsRequired} U</Text>
           </View>
-          <Pressable
-            onPress={() =>
-              navigation.navigate("RedeemApply", { kind: item.kind })
-            }
-          >
-            <Text style={styles.link}>
-              {isJa ? "この区分で申請" : "Apply with this tier"}
-            </Text>
-          </Pressable>
         </View>
       ))}
 
@@ -292,8 +312,27 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(4,9,16,0.97)",
   },
-  cardRow: { flexDirection: "row", gap: 12 },
-  cardTitle: { fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.9)" },
+  cardRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  thumbWrap: {
+    width: 72,
+    height: 72,
+    overflow: "hidden",
+    backgroundColor: "#000",
+  },
+  thumb: { width: "100%", height: "100%" },
+  cardBody: { flex: 1, minWidth: 0 },
+  cardTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  cardTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.9)",
+  },
   cardMeta: { marginTop: 4, fontSize: 11, color: "rgba(255,255,255,0.45)" },
   units: {
     fontFamily: OX,

@@ -3,6 +3,7 @@
 /**
  * 商品交換ハブ: カタログ / 申請一覧 / 申請フォーム入口
  */
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
@@ -16,6 +17,7 @@ import {
   REDEMPTION_EXCLUSIONS_EN,
   REDEMPTION_EXCLUSIONS_JA,
 } from "@/lib/redemption/redemptionCatalog";
+import { redemptionCatalogImageSrc } from "@/lib/redemption/redemptionCatalogImages";
 import { redemptionBatchScheduleCopy } from "@/lib/redemption/redemptionBatchScheduleCopy";
 import { redemptionStatusLabel } from "@/lib/redemption/redemptionStatus";
 import type {
@@ -160,11 +162,34 @@ export default function RedemptionHubPage() {
               key={item.kind}
               className="rounded-[2px] border border-white/10 bg-[rgba(4,9,16,0.97)] px-3 py-3"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[14px] font-semibold text-white/90">
-                    {isJa ? item.titleJa : item.titleEn}
-                  </p>
+              <div className="flex items-start gap-3">
+                <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden bg-black">
+                  <Image
+                    src={redemptionCatalogImageSrc(item.kind)}
+                    alt=""
+                    width={72}
+                    height={72}
+                    className="h-full w-full object-cover"
+                    sizes="72px"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[14px] font-semibold text-white/90">
+                      {isJa ? item.titleJa : item.titleEn}
+                    </p>
+                    <p
+                      className={[
+                        nameOxanium.className,
+                        "shrink-0 text-[16px] font-extrabold text-amber-200",
+                      ].join(" ")}
+                    >
+                      {item.unitsRequired}
+                      <span className="ml-1 text-[10px] font-bold tracking-wide text-amber-200/70">
+                        U
+                      </span>
+                    </p>
+                  </div>
                   <p className="mt-0.5 text-[11px] text-white/45">
                     {isJa ? item.blurbJa : item.blurbEn}
                   </p>
@@ -173,25 +198,14 @@ export default function RedemptionHubPage() {
                       ? `価格上限 ${item.priceCapJpy.toLocaleString("ja-JP")} 円`
                       : `Price cap ¥${item.priceCapJpy.toLocaleString("en-US")}`}
                   </p>
+                  <Link
+                    href={`${base}/redeem/apply?kind=${item.kind}`}
+                    className="mt-2 inline-block text-[11px] font-semibold text-cyan-300/90 underline-offset-2 hover:underline"
+                  >
+                    {isJa ? "この区分で申請" : "Apply with this tier"}
+                  </Link>
                 </div>
-                <p
-                  className={[
-                    nameOxanium.className,
-                    "shrink-0 text-[16px] font-extrabold text-amber-200",
-                  ].join(" ")}
-                >
-                  {item.unitsRequired}
-                  <span className="ml-1 text-[10px] font-bold tracking-wide text-amber-200/70">
-                    U
-                  </span>
-                </p>
               </div>
-              <Link
-                href={`${base}/redeem/apply?kind=${item.kind}`}
-                className="mt-2 inline-block text-[11px] font-semibold text-cyan-300/90 underline-offset-2 hover:underline"
-              >
-                {isJa ? "この区分で申請" : "Apply with this tier"}
-              </Link>
             </li>
           ))}
         </ul>

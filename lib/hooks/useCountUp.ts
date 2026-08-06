@@ -77,8 +77,11 @@ export function useCountUp(
         next = Math.min(displayRef.current, next);
       }
 
-      displayRef.current = next;
-      setValue(next);
+      // 表示値が変わらないフレームは setState しない（獲得演出などのカクつき抑制）
+      if (next !== displayRef.current || done) {
+        displayRef.current = next;
+        setValue(next);
+      }
 
       if (!done) {
         raf = requestAnimationFrame(tick);
