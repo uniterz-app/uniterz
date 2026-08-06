@@ -28,13 +28,16 @@ export async function POST(req: Request) {
       const status =
         result.error === "already_bound"
           ? 409
-          : result.error === "bind_window_expired"
+          : result.error === "bind_window_expired" ||
+              result.error === "referrer_rate_limited"
             ? 403
-          : result.error === "invalid_code" ||
-              result.error === "invite_code_not_found" ||
-              result.error === "self_invite"
-            ? 400
-            : 400;
+            : result.error === "mutual_invite" ||
+                result.error === "referrer_unavailable" ||
+                result.error === "invalid_code" ||
+                result.error === "invite_code_not_found" ||
+                result.error === "self_invite"
+              ? 400
+              : 400;
       return NextResponse.json(
         { ok: false, error: result.error, inviteCode: result.inviteCode },
         { status }

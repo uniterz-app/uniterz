@@ -147,7 +147,13 @@ export default function ContactScreenNative({
           handle: handle ?? undefined,
         }),
       });
-      if (!res.ok) throw new Error("failed");
+      if (!res.ok) {
+        if (res.status === 429) {
+          cyberAlert("", isJa ? "送信上限に達しました。明日またお試しください。" : "Daily limit reached. Try again tomorrow.");
+          return;
+        }
+        throw new Error("failed");
+      }
       setSubmitted(true);
     } catch {
       cyberAlert("", labels.err);

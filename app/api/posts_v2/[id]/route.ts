@@ -19,6 +19,7 @@ import {
 } from "@/lib/predict/parsePredictionPayload";
 import { FieldValue } from "firebase-admin/firestore";
 import { loadGameKickoffLock } from "@/lib/predict/gameKickoffLock";
+import { recomputeReferralActivePredictDays } from "@/lib/referral/recomputeReferralActivePredictDays";
 
 /* ========= 認証 ========= */
 async function requireUid(req: NextRequest): Promise<string> {
@@ -306,6 +307,13 @@ export async function DELETE(req: NextRequest, ctx: any) {
     const ref = await getPostForDelete(uid, params.id);
 
     await ref.delete();
+
+    // 削除後に招待日数を現存 posts から再集計（§5）
+    try {
+      await recomputeReferralActivePredictDays(getAdminDb(), uid);
+    } catch (err) {
+      console.warn("referral day recompute after delete failed:", err);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

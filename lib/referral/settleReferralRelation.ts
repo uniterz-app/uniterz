@@ -12,6 +12,7 @@ import {
   REFERRAL_REFERRER_MAX_COMPLETED,
   REFERRAL_REFERRER_UNITS_PER_COMPLETED,
 } from "./referralRewards";
+import { recomputeReferralActivePredictDays } from "./recomputeReferralActivePredictDays";
 
 const LEDGER = "unit_ledger";
 
@@ -77,6 +78,21 @@ export async function settleReferralRelation(
   const inviteeUid = String(inviteeUidRaw ?? "").trim();
   if (!inviteeUid) return { ok: false, error: "uid required" };
 
+  // 付与前に削除済み posts を日数から除外（§5）
+  const recomputed = await recomputeReferralActivePredictDays(db, inviteeUid);
+  if (
+    recomputed.ok &&
+    !recomputed.skipped &&
+    recomputed.activePredictDays < 7 &&
+    recomputed.status !== "under_review"
+  ) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "insufficient_active_days",
+    };
+  }
+
   const relRef = db.collection("referralRelations").doc(inviteeUid);
 
   try {
@@ -128,6 +144,18 @@ export async function settleReferralRelation(
           ok: true as const,
           skipped: true as const,
           reason: `status_${status || "unknown"}`,
+        };
+      }
+
+      const liveDays = Math.max(
+        0,
+        Math.floor(Number(data.activePredictDays ?? 0))
+      );
+      if (!alreadyCompleted && liveDays < 7) {
+        return {
+          ok: true as const,
+          skipped: true as const,
+          reason: "insufficient_active_days",
         };
       }
 

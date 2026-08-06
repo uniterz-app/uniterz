@@ -25,7 +25,41 @@ export function stripeSubscriptionIndexRef(db: Firestore, subscriptionId: string
   return db.collection("stripeSubscriptionIndex").doc(subscriptionId);
 }
 
-/** Portal / 管理用: secure 優先、旧 users ルートフィールドにフォールバック */
+const LEGACY_BILLING_ROOT_KEYS = [
+  "stripeCustomerId",
+  "stripeSubscriptionId",
+  "googlePurchaseToken",
+  "appleOriginalTransactionId",
+] as const;
+
+/** 公開 users に残る旧課金フィールドを secure へ移し、ルートから削除 */
+export async function migrateLegacyUserBillingIfNeeded(
+  db: Firestore,
+  uid: string,
+  userData?: FirebaseFirestore.DocumentData | null
+): Promise<boolean> {
+  const data =
+    userData ??
+    (await db.collection("users").doc(uid).get()).data() ??
+    null;
+  if (!data) return false;
+
+  const fields: UserBillingSecureFields = {};
+  let need = false;
+  for (const key of LEGACY_BILLING_ROOT_KEYS) {
+    const raw = data[key];
+    if (raw == null) continue;
+    const s = String(raw).trim();
+    if (!s) continue;
+    fields[key] = s;
+    need = true;
+  }
+  if (!need) return false;
+  await writeUserBillingSecure(db, uid, fields);
+  return true;
+}
+
+/** Portal / 管理用: secure 優先、旧 users ルートフィールドにフォールバック（見つけたら移行） */
 export async function readUserStripeCustomerId(
   db: Firestore,
   uid: string,
@@ -33,8 +67,20 @@ export async function readUserStripeCustomerId(
 ): Promise<string | null> {
   const secureSnap = await userBillingSecureRef(db, uid).get();
   const fromSecure = String(secureSnap.data()?.stripeCustomerId ?? "").trim();
-  if (fromSecure) return fromSecure;
+  if (fromSecure) {
+    // secure にあるがルートに残骸があれば scrub
+    if (
+      userData &&
+      LEGACY_BILLING_ROOT_KEYS.some((k) => userData[k] != null && String(userData[k]).trim())
+    ) {
+      void migrateLegacyUserBillingIfNeeded(db, uid, userData).catch(() => {});
+    }
+    return fromSecure;
+  }
   const legacy = String(userData?.stripeCustomerId ?? "").trim();
+  if (legacy) {
+    void migrateLegacyUserBillingIfNeeded(db, uid, userData).catch(() => {});
+  }
   return legacy || null;
 }
 
@@ -56,7 +102,11 @@ export async function resolveUidByStripeCustomerId(
     .limit(1)
     .get();
   if (legacy.empty) return null;
-  return legacy.docs[0]!.id;
+  const uid = legacy.docs[0]!.id;
+  void migrateLegacyUserBillingIfNeeded(db, uid, legacy.docs[0]!.data()).catch(
+    () => {}
+  );
+  return uid;
 }
 
 export async function resolveUidByStripeSubscriptionId(
@@ -76,7 +126,11 @@ export async function resolveUidByStripeSubscriptionId(
     .limit(1)
     .get();
   if (legacy.empty) return null;
-  return legacy.docs[0]!.id;
+  const uid = legacy.docs[0]!.id;
+  void migrateLegacyUserBillingIfNeeded(db, uid, legacy.docs[0]!.data()).catch(
+    () => {}
+  );
+  return uid;
 }
 
 /** secure に書き、公開 users からは課金フィールドを削除 */

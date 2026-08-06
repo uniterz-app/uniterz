@@ -34,12 +34,19 @@ export type BindReferralOnSignupResult =
         | "invite_code_not_found"
         | "self_invite"
         | "already_bound"
-        | "bind_window_expired";
+        | "bind_window_expired"
+        | "mutual_invite"
+        | "referrer_unavailable"
+        | "referrer_rate_limited";
       inviteCode: string | null;
     };
 
 /** 新規登録からこの時間内のみ bind 可（ミリ秒） */
 export const REFERRAL_BIND_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** 同一紹介者への bind 作成上限（直近 24h）— マルチ垢ファーム緩和 */
+export const REFERRAL_REFERRER_BIND_RATE_LIMIT = 20;
+export const REFERRAL_REFERRER_BIND_RATE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function createdAtMillis(data: Record<string, unknown>): number | null {
   const v = data.createdAt as
@@ -121,6 +128,31 @@ export async function bindReferralOnSignupAdmin(
   }
   if (referrerUid === inviteeUid) {
     return { ok: false, error: "self_invite", inviteCode: code };
+  }
+
+  const referrerSnap = await db.collection("users").doc(referrerUid).get();
+  const referrerData = referrerSnap.data() ?? {};
+  if (!referrerSnap.exists || referrerData.deletedAt != null) {
+    return { ok: false, error: "referrer_unavailable", inviteCode: code };
+  }
+  // 相互招待（A→B と B→A）を拒否
+  if (String(referrerData.referredByUid ?? "").trim() === inviteeUid) {
+    return { ok: false, error: "mutual_invite", inviteCode: code };
+  }
+
+  const rateSince = new Date(Date.now() - REFERRAL_REFERRER_BIND_RATE_WINDOW_MS);
+  try {
+    const recentBinds = await db
+      .collection("referralRelations")
+      .where("referrerUid", "==", referrerUid)
+      .where("createdAt", ">=", rateSince)
+      .limit(REFERRAL_REFERRER_BIND_RATE_LIMIT + 1)
+      .get();
+    if (recentBinds.size > REFERRAL_REFERRER_BIND_RATE_LIMIT) {
+      return { ok: false, error: "referrer_rate_limited", inviteCode: code };
+    }
+  } catch {
+    // index 未整備時はスキップ（他の antifraud は有効）
   }
 
   await inviteeRef.set(
