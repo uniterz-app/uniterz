@@ -1152,8 +1152,8 @@ export default function PredictionFormV2({
           </motion.div>
         ) : null}
 
-        {isNba ? (
-          /* NBA: 新4タブ（Insight=Pro / Injury / Team Stats / Roster）。旧ツールタブは廃止 */
+        {isNba && !isGameStarted ? (
+          /* 開始前のみ: Insight / Injury / Stats / Roster */
           <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
             <div className="relative z-1">
               <NbaPredictToolsTabs
@@ -1166,7 +1166,7 @@ export default function PredictionFormV2({
               />
             </div>
           </motion.div>
-        ) : (
+        ) : !isNba ? (
         <motion.div
           {...fadeUpMotionProps}
           className={
@@ -1311,7 +1311,7 @@ export default function PredictionFormV2({
             </span>
           </button>
         </motion.div>
-        )}
+        ) : null}
 
         {toolsTab === "stats" && (
           <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>

@@ -142,6 +142,7 @@ import {
   type ClientPredictionValidationCode,
 } from "../../../../../lib/predict/clientPredictionSubmit";
 import { findNextUnpredictedScheduledGameInList } from "../../../../../lib/games/nextPredictGame";
+import { resolveMarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
@@ -363,11 +364,11 @@ const LEAGUE_OPTIONS: Array<{ id: SupportedLeague; label: string }> = [
   { id: "nba", label: "NBA" },
 ];
 const LEAGUE_LINE_COLOR: Record<SupportedLeague, string> = {
-  nba: "#60a5fa",
-  wc: "#f59e0b",
-  bj: "#eab308",
-  j1: "#22c55e",
-  pl: "#a855f7",
+  nba: "rgba(255,255,255,0.32)",
+  wc: "rgba(255,255,255,0.32)",
+  bj: "rgba(255,255,255,0.32)",
+  j1: "rgba(255,255,255,0.32)",
+  pl: "rgba(255,255,255,0.32)",
 };
 const SKELETON_ROWS = [0, 1, 2];
 const DISPLAY_FONT_FAMILY = Platform.select({
@@ -443,7 +444,7 @@ function resolveLeagueColor(leagueRaw: unknown): string {
   if (league in LEAGUE_LINE_COLOR) {
     return LEAGUE_LINE_COLOR[league];
   }
-  return "#60a5fa";
+  return "rgba(255,255,255,0.32)";
 }
 
 function startOfLocalDay(date: Date): Date {
@@ -1290,15 +1291,15 @@ export default function GamesHomeScreen({
     const homePalette = resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a");
     const awayPalette = resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff");
     const marketBias = g.marketBias as { homePct?: number; awayPct?: number } | undefined;
+    const nestedMarket = g.market as
+      | { homePct?: number; awayPct?: number; homeRate?: number; awayRate?: number }
+      | undefined;
     return {
       gameId,
       league: selectedLeague,
       status: resolveGameStatus(g),
       score: resolveGameScore(g),
-      fallbackMarketBias:
-        marketBias?.homePct != null && marketBias?.awayPct != null
-          ? { homePct: marketBias.homePct, awayPct: marketBias.awayPct }
-          : null,
+      fallbackMarketBias: resolveMarketBiasFallback(marketBias, nestedMarket),
       homeColor: homePalette.primary,
       awayColor: awayPalette.primary,
       homeLabel: toCompactTeamName(g.league, homeName),
@@ -1380,6 +1381,9 @@ export default function GamesHomeScreen({
       awayTeamId: awaySide?.teamId ?? null,
       finalOt: resolveFinalMetaOt(selectedGame),
       pkScore: resolvePkScore(selectedGame),
+      topScorerCandidates: (selectedGame as { topScorerCandidates?: unknown })
+        .topScorerCandidates,
+      leadingScorers: (selectedGame as { leadingScorers?: unknown }).leadingScorers,
     });
   }, [selectedGame, selectedLeague, language, myPredictionByGameId]);
 
@@ -3081,16 +3085,13 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingTop: 0,
   },
-  /** MatchCard 仕切り：league 色＋入場アニメ相当の薄いシアン光彩 */
+  /** MatchCard 仕切り：白ヘアライン（直角カード向け） */
   leagueDivider: {
-    height: 2,
+    height: 1,
     width: "100%",
-    borderRadius: 999,
-    shadowColor: "rgb(0, 245, 255)",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 3,
+    borderRadius: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   wcBroadcastRow: {
     width: "100%",
@@ -3121,15 +3122,15 @@ const styles = StyleSheet.create({
   },
   cardFooterShell: {
     width: "100%",
-    paddingHorizontal: 8,
-    paddingTop: 0,
-    paddingBottom: 2,
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 10,
   },
-  /** MatchCard: h-8 ≈ 32, rounded-md = 6, 枠は style ではなくグラデ（Web に合わせ枠なし） */
+  /** MatchCard: h-8 ≈ 32, 直角 CTA（Web に合わせ角切りなし） */
   cardAction: {
     width: "100%",
     minHeight: 32,
-    borderRadius: 6,
+    borderRadius: 0,
     borderWidth: 0,
     overflow: "hidden",
     position: "relative",
@@ -3137,7 +3138,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "transparent",
     marginTop: 0,
-    marginBottom: 2,
+    marginBottom: 0,
     paddingVertical: 0,
     shadowColor: "transparent",
     shadowOffset: { width: 0, height: 0 },

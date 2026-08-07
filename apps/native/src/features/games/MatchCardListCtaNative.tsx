@@ -19,8 +19,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { chamferedRectPathD } from "./matchListCyberClipPath";
 
-/** Web `.match-list-cyber-cta` の角切り（6px） */
-const CTA_CUT = 6;
+/** Web `.match-list-cyber-cta` の角（直角） */
+const CTA_CUT = 0;
 
 export type MatchCardListCtaVariant = "normal" | "predicted" | "live" | "final";
 
@@ -213,6 +213,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     elevation: 2,
     position: "relative",
+    borderRadius: 0,
+    overflow: "hidden",
   },
   insetTop: {
     position: "absolute",

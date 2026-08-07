@@ -59,6 +59,10 @@ const LiveGameStatsPanel = dynamic(
   () => import("./live/LiveGameStatsPanel"),
   { loading: () => null, ssr: false }
 );
+const LiveGameStatsPlaceholder = dynamic(
+  () => import("./live/LiveGameStatsPlaceholder"),
+  { loading: () => null, ssr: false }
+);
 
 export type GameItemRaw = any;
 
@@ -267,13 +271,12 @@ export default function ScheduleList({
     return propsList.find((p) => String(p.id) === String(openGameId)) ?? null;
   }, [propsList, openGameId]);
 
-  /** NBA のライブ中/終了カードのみ、オーバーレイにチームスタッツ + ボックススコアを出す */
   const liveStatsEnabled = Boolean(
     openGameId &&
       selectedProps?.league === "nba" &&
       (selectedProps?.status === "live" || selectedProps?.status === "final")
   );
-  const { report: liveStatsReport } = useLiveGameStats(
+  const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     liveStatsEnabled && openGameId ? String(openGameId) : null,
     liveStatsEnabled
   );
@@ -822,20 +825,27 @@ export default function ScheduleList({
                 />
               </motion.div>
 
-              {liveStatsReport ? (
+              {liveStatsEnabled ? (
                 <motion.div
                   className="mt-4"
                   variants={
                     overlayMotionEnabled ? predictOverlayCard : undefined
                   }
                 >
-                  <LiveGameStatsPanel
-                    report={liveStatsReport}
-                    language={language}
-                  />
+                  {liveStatsReport ? (
+                    <LiveGameStatsPanel
+                      report={liveStatsReport}
+                      language={language}
+                      omitScoreHeader
+                    />
+                  ) : (
+                    <LiveGameStatsPlaceholder
+                      language={language}
+                      loading={liveStatsLoading}
+                    />
+                  )}
                 </motion.div>
-              ) : null}
-
+              ) : (
               <PredictionFormV2
                 key={String(openGameId)}
                 dense={dense}
@@ -912,6 +922,7 @@ export default function ScheduleList({
                 }}
                 onMarketDistributionChange={setOverlayLiveMarketBias}
               />
+              )}
             </motion.div>
           </div>
         </motion.div>

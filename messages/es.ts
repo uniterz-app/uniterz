@@ -407,6 +407,7 @@ const es: Messages = {
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
     wcPkWinnerLabel: "PK winner",
+    nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "Puntos sorpresa",
     totalPointsLabel: "Puntos totales",
     upsetPointsDesc: "Métrica aparte (0–10) otorgada solo cuando el partido es una sorpresa y acertaste con una predicción minoritaria. Si no se cumple, es 0.",

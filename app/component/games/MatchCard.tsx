@@ -36,6 +36,8 @@ import ResultStreakCyberFrame from "@/app/component/result/ResultStreakCyberFram
 import ResultUpsetCyberFrame from "@/app/component/result/ResultUpsetCyberFrame";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
+import NbaTopScorerResultRow from "@/app/component/result/NbaTopScorerResultRow";
+import { resolveNbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerResult";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { motion, useReducedMotion } from "framer-motion";
@@ -218,11 +220,11 @@ homeRecord?: {
 
 
 const leagueLineColor: Record<League, string> = {
-  bj: "#eab308",   // Bリーグ
-  j1: "#22c55e",   // J1
-  nba: "#60a5fa",  // NBA
-  pl: "#a855f7",   // Premier League（紫系・仮）
-  wc: "#f59e0b",   // World Cup（アンバー）
+  bj: "rgba(255,255,255,0.32)",
+  j1: "rgba(255,255,255,0.32)",
+  nba: "rgba(255,255,255,0.32)",
+  pl: "rgba(255,255,255,0.32)",
+  wc: "rgba(255,255,255,0.32)",
 };
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
@@ -510,6 +512,10 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
         ].join(" ")
       : predictOverlayGlassBase;
   const wcGoalScorerResult = null;
+  const nbaTopScorerResult = useMemo(
+    () => (resultPost ? resolveNbaTopScorerResultInfo(resultPost) : null),
+    [resultPost]
+  );
   const predictedScore =
     resultPost?.prediction?.score != null
       ? resultPost.prediction.score
@@ -2131,12 +2137,19 @@ return (
           animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
           transition={entryTransition ? entryTransition(8) : undefined}
         >
-          {!hideMergedStatsSection && (
+          {(!hideMergedStatsSection || nbaTopScorerResult) && (
             <div className="mb-1.5" aria-hidden>
               <div className={RESULT_HAIRLINE} />
             </div>
           )}
           <div className={mobileDense ? "space-y-1.5" : "space-y-2"}>
+            {nbaTopScorerResult ? (
+              <NbaTopScorerResultRow
+                label={m.results.nbaTopScorerResultLabel}
+                info={nbaTopScorerResult}
+                compact={isMobile}
+              />
+            ) : null}
             {!hideMergedStatsSection ? (
               <ResultStatsRows
                 post={resultPost}
@@ -2144,7 +2157,7 @@ return (
                 isMobile={isMobile}
                 comfortable
                 ratingBarsImmediate={resultRatingBarsImmediate}
-                rowIndexOffset={0}
+                rowIndexOffset={nbaTopScorerResult ? 1 : 0}
               />
             ) : null}
           </div>
@@ -2158,9 +2171,9 @@ return (
       "relative overflow-hidden match-list-cyber-divider",
       dense
         ? mobileDense
-          ? "h-[2px] w-full mt-1.5 md:mt-2"
-          : "h-[2px] w-full mt-2 md:mt-2.5"
-        : "h-[3px] w-full mt-2.5 md:mt-3",
+          ? "h-px w-full mt-1.5 md:mt-2"
+          : "h-px w-full mt-2 md:mt-2.5"
+        : "h-px w-full mt-2.5 md:mt-3",
     ].join(" ")}
     style={{
       backgroundColor: leagueLineColor[league],
@@ -2199,7 +2212,7 @@ return (
         <motion.div
           className={
             mobileDense
-              ? "grid grid-cols-1 gap-1 px-2 py-0.5 md:gap-3 md:px-4 md:py-3"
+              ? "grid grid-cols-1 gap-1 px-2.5 pt-1.5 pb-2.5 md:gap-3 md:px-4 md:py-3"
               : "grid grid-cols-1 gap-2 px-3 py-1.5 md:gap-3 md:px-4 md:py-2.5"
           }
           {...entryGroupProps(ENTRY_GROUP_FOOTER)}

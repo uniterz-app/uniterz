@@ -93,7 +93,7 @@ export type PredictionPostV2 = {
     /** UI 用（任意）。旧データは null の場合あり */
     confidence?: number | null;
     /** WC: ゴール得点者 / NBA: 試合最多得点者（任意・的中 +2） */
-    goalScorer?: { playerId: string; teamId: string } | null;
+    goalScorer?: { playerId: string; teamId: string; name?: string | null } | null;
   };
 
   note?: string;

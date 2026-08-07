@@ -34,8 +34,8 @@ import {
   resolvePkScoreFromResultPost,
   type PkScore,
 } from "@/lib/games/pkScore";
-import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
-import ResultStatsRows from "@/app/component/result/ResultStatsRows";
+import NbaTopScorerResultRow from "@/app/component/result/NbaTopScorerResultRow";
+import { resolveNbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerResult";
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
@@ -179,6 +179,10 @@ function ResultCardPresentationImpl({
   const isEn = language === "en";
   const wcGoalScorer = useWcGoalScorerResult(post);
   const wcPkWinner = useWcPkWinnerResult(post);
+  const nbaTopScorer = useMemo(
+    () => resolveNbaTopScorerResultInfo(post),
+    [post]
+  );
 
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
@@ -1007,7 +1011,7 @@ function ResultCardPresentationImpl({
         </div>
       </div>
 
-      {hideStatsSection && !wcGoalScorer ? null : (
+      {hideStatsSection && !wcGoalScorer && !nbaTopScorer ? null : (
         <div
           className={mobileScheduleDense ? "mt-2.5" : isMobile ? "mt-5" : "mt-3"}
           aria-hidden
@@ -1042,13 +1046,25 @@ function ResultCardPresentationImpl({
           />
         ) : null}
 
+        {nbaTopScorer ? (
+          <NbaTopScorerResultRow
+            label={m.results.nbaTopScorerResultLabel}
+            info={nbaTopScorer}
+            compact={isMobile}
+          />
+        ) : null}
+
         {hideStatsSection ? null : (
           <ResultStatsRows
             post={post}
             language={language}
             isMobile={isMobile}
             ratingBarsImmediate={ratingBarsImmediate}
-            rowIndexOffset={(wcGoalScorer ? 1 : 0) + (wcPkWinner ? 1 : 0)}
+            rowIndexOffset={
+              (wcGoalScorer ? 1 : 0) +
+              (wcPkWinner ? 1 : 0) +
+              (nbaTopScorer ? 1 : 0)
+            }
             animationsOff={visualEffectsLite}
           />
         )}

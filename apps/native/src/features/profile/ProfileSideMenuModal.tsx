@@ -77,7 +77,8 @@ type Props = {
     | "teamStatsPreview"
     | "playerStatsPreview"
     | "teamDetailPreview"
-    | "playerDetailPreview") => void;
+    | "playerDetailPreview"
+    | "liveGameStatsPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -272,6 +273,7 @@ export default function ProfileSideMenuModal({
       | "playerStatsPreview"
       | "teamDetailPreview"
       | "playerDetailPreview"
+      | "liveGameStatsPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -674,6 +676,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("playerDetailPreview")}
                         >
                           Player Detail 叩き台
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="scoreboard-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("liveGameStatsPreview")}
+                        >
+                          ライブ試合スタッツ
                         </SideMenuItemButtonNative>
                       </View>
                     </>

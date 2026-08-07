@@ -15,7 +15,7 @@ import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
-import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameOxanium } from "@/lib/fonts";
 
 type Props = {
   report: LiveGameStatsReport;
@@ -93,10 +93,10 @@ function IdentityCell({
       <div
         className={[
           nameOxanium.className,
-          "sticky left-0 z-[2] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-[rgba(12,14,20,0.98)] py-1 pr-1 text-[7px] font-bold uppercase tracking-[0.12em] text-white/40",
+          "sticky left-0 z-[2] flex w-[11rem] shrink-0 items-center gap-1.5 border-r border-white/[0.08] bg-[rgba(12,14,20,0.98)] py-1.5 pr-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40",
         ].join(" ")}
       >
-        <span className="w-6 text-center">#</span>
+        <span className="w-7 text-center">#</span>
         <span className="min-w-0">Player</span>
         <span className="ml-0.5">Pos</span>
       </div>
@@ -107,11 +107,11 @@ function IdentityCell({
   const asRoster: Pick<NbaRosterPlayer, "firstName" | "lastName"> = p;
 
   return (
-    <div className="sticky left-0 z-[1] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-[rgba(8,10,16,0.98)] py-1.5 pr-1">
+    <div className="sticky left-0 z-[1] flex w-[11rem] shrink-0 items-center gap-1.5 border-r border-white/[0.08] bg-[rgba(8,10,16,0.98)] py-2 pr-1.5">
       <span
         className={[
           nameOxanium.className,
-          "relative grid h-6 w-6 shrink-0 place-items-center overflow-hidden border bg-transparent text-[9px] font-extrabold tabular-nums",
+          "relative grid h-7 w-7 shrink-0 place-items-center overflow-hidden border bg-transparent text-[11px] font-extrabold tabular-nums",
         ].join(" ")}
         style={{ borderColor: accent, color: accent }}
       >
@@ -130,19 +130,20 @@ function IdentityCell({
         />
         <span className="relative z-[1]">{p.jerseyNumber}</span>
       </span>
-      <div className="flex min-w-0 items-center gap-0.5">
+      <div className="flex min-w-0 items-center gap-1">
         <p
           className={[
             nameOxanium.className,
-            "max-w-[5.25rem] truncate text-[11px] font-bold uppercase tracking-[0.03em] text-white",
+            "max-w-[6rem] truncate text-[13px] font-bold uppercase tracking-[0.03em] text-white",
           ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
         >
           {playerCardName(asRoster)}
         </p>
         <p
           className={[
-            resultStatsMetricNumClass,
-            "shrink-0 text-[10px] text-white/55",
+            nameOxanium.className,
+            "shrink-0 text-[11px] text-white/55",
           ].join(" ")}
         >
           {p.position}
@@ -164,11 +165,11 @@ function StatsCells({
       <div
         className={[
           nameOxanium.className,
-          "flex items-center gap-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40",
+          "flex items-center gap-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white/40",
         ].join(" ")}
       >
         {BOX_COLS.map((c) => (
-          <span key={c.key} className="w-9 shrink-0 text-center">
+          <span key={c.key} className="w-10 shrink-0 text-center">
             {c.label}
           </span>
         ))}
@@ -177,45 +178,21 @@ function StatsCells({
   }
 
   return (
-    <div className="flex items-center gap-1.5 py-1.5">
+    <div className="flex items-center gap-2 py-2">
       {(values ?? []).map((v, i) => (
         <p
           key={BOX_COLS[i]!.key}
           className={[
-            resultStatsMetricNumClass,
-            "w-9 shrink-0 text-center text-[12px] tabular-nums",
+            nameOxanium.className,
+            "w-10 shrink-0 text-center text-[14px] font-extrabold tabular-nums",
             EMPHASIS.has(BOX_COLS[i]!.key) ? "text-white" : "text-white/78",
           ].join(" ")}
+          style={{ transform: "skewX(-6deg)" }}
         >
           {v}
         </p>
       ))}
     </div>
-  );
-}
-
-function Chevron({ open, accent }: { open: boolean; accent: string }) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="shrink-0 transition-transform duration-200"
-      style={{
-        color: accent,
-        transform: open ? "rotate(180deg)" : "rotate(0deg)",
-      }}
-      aria-hidden
-    >
-      <path
-        d="M6 9l6 6 6-6"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 
@@ -230,18 +207,14 @@ function TeamBoxCard({
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
   const border = hexToRgba(teamPrimary, 0.55);
-  const fill = hexToRgba(teamPrimary, 0.05);
   const divider = hexToRgba(teamPrimary, 0.22);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
   const players = sortBoxPlayers(block.players);
 
   return (
     <section
-      className="overflow-hidden rounded-lg border bg-[rgba(8,10,16,0.94)]"
-      style={{
-        borderColor: border,
-        background: `linear-gradient(165deg, ${fill} 0%, rgba(8,10,16,0.96) 50%)`,
-      }}
+      className="overflow-hidden border bg-transparent"
+      style={{ borderColor: border }}
     >
       <button
         type="button"
@@ -277,7 +250,26 @@ function TeamBoxCard({
             </p>
           </div>
         </div>
-        <Chevron open={open} accent={teamPrimary} />
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          className="shrink-0 transition-transform duration-200"
+          style={{
+            color: teamPrimary,
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          }}
+          aria-hidden
+        >
+          <path
+            d="M6 9l6 6 6-6"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
 
       {open ? (

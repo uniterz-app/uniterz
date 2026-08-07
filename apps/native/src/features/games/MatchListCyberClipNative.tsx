@@ -1,6 +1,5 @@
 /**
- * Web `.match-list-cyber-card` — `clip-path: polygon(...)` を Skia clip で再現。
- * 塗り・方眼・枠線を角切り内に収め、角にページ色のマスクは置かない。
+ * Web `.match-list-cyber-card` — 直角シェル（塗り・枠）。方眼は出さない。
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
@@ -21,11 +20,7 @@ import {
   vec,
 } from "@shopify/react-native-skia";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  chamferedRectPathD,
-  MATCH_LIST_CYBER_CUT_DENSE,
-} from "./matchListCyberClipPath";
-import { MatchListCyberGridSkia } from "./matchListCyberGridSkia";
+import { chamferedRectPathD } from "./matchListCyberClipPath";
 
 const SHELL_GRADIENT = {
   colors: ["rgba(9,13,20,0.95)", "rgba(6,9,15,0.93)", "rgba(4,7,12,0.91)"],
@@ -34,12 +29,13 @@ const SHELL_GRADIENT = {
 
 type Props = {
   children: ReactNode;
+  /** 0 = 直角（一覧カード既定） */
   cut?: number;
   predicted?: boolean;
   style?: StyleProp<ViewStyle>;
   shellStyle?: StyleProp<ViewStyle>;
   strokeOpacityStyle?: StyleProp<AnimatedStyle<ViewStyle>>;
-  /** 入場アニメ用の方眼レイヤー opacity */
+  /** @deprecated 方眼は一覧では出さない。互換のため残す */
   gridOpacityStyle?: StyleProp<AnimatedStyle<ViewStyle>>;
 };
 
@@ -51,12 +47,11 @@ function makeSkiaPath(width: number, height: number, cut: number) {
 
 export default function MatchListCyberClipNative({
   children,
-  cut = MATCH_LIST_CYBER_CUT_DENSE,
+  cut = 0,
   predicted = false,
   style,
   shellStyle,
   strokeOpacityStyle,
-  gridOpacityStyle,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const borderColor = predicted
@@ -87,48 +82,27 @@ export default function MatchListCyberClipNative({
         ]}
       >
         {hasSize && skiaPath ? (
-          <>
-            <Canvas
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                width: size.w,
-                height: size.h,
-              }}
-              pointerEvents="none"
-            >
-              <Group clip={skiaPath}>
-                <Rect x={0} y={0} width={size.w} height={size.h}>
-                  <SkiaLinearGradient
-                    start={vec(size.w * 0.15, 0)}
-                    end={vec(size.w * 0.85, size.h)}
-                    colors={[...SHELL_GRADIENT.colors]}
-                    positions={[...SHELL_GRADIENT.locations]}
-                  />
-                </Rect>
-              </Group>
-            </Canvas>
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                {
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  width: size.w,
-                  height: size.h,
-                },
-                gridOpacityStyle,
-              ]}
-            >
-              <Canvas style={{ width: size.w, height: size.h }} pointerEvents="none">
-                <Group clip={skiaPath}>
-                  <MatchListCyberGridSkia width={size.w} height={size.h} />
-                </Group>
-              </Canvas>
-            </Animated.View>
-          </>
+          <Canvas
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: size.w,
+              height: size.h,
+            }}
+            pointerEvents="none"
+          >
+            <Group clip={skiaPath}>
+              <Rect x={0} y={0} width={size.w} height={size.h}>
+                <SkiaLinearGradient
+                  start={vec(size.w * 0.15, 0)}
+                  end={vec(size.w * 0.85, size.h)}
+                  colors={[...SHELL_GRADIENT.colors]}
+                  positions={[...SHELL_GRADIENT.locations]}
+                />
+              </Rect>
+            </Group>
+          </Canvas>
         ) : (
           <LinearGradient
             pointerEvents="none"
@@ -143,7 +117,12 @@ export default function MatchListCyberClipNative({
         {hasSize ? (
           <View
             pointerEvents="none"
-            style={[styles.insetTopHighlight, { width: size.w - cut * 2, left: cut }]}
+            style={[
+              styles.insetTopHighlight,
+              cut > 0
+                ? { width: size.w - cut * 2, left: cut }
+                : { width: size.w, left: 0 },
+            ]}
           />
         ) : null}
 
@@ -176,6 +155,7 @@ const styles = StyleSheet.create({
   frame: {
     position: "relative",
     minHeight: 148,
+    borderRadius: 0,
     shadowColor: "#00f5ff",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.05,

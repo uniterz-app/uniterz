@@ -32,7 +32,7 @@ const LINKS = [
   {
     href: "/mobile/live-game-stats-preview",
     title: "ライブ試合スタッツ",
-    note: "Team Stats / Box Score（mock）",
+    note: "Team Stats + Box Score（mock）",
   },
   {
     href: "/mobile/stats-preview",

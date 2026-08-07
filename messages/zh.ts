@@ -403,6 +403,7 @@ const zh: Messages = {
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
     wcPkWinnerLabel: "PK winner",
+    nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "冷门得分",
     totalPointsLabel: "总得分",
     upsetPointsDesc: "仅在比赛爆冷且你以少数派预测命中时加分的独立指标（每场0–10分）。不满足条件为0。",

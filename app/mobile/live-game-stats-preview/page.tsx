@@ -115,7 +115,7 @@ export default function LiveGameStatsPreviewPage() {
         Live Game Stats
       </h1>
       <p className="mt-1 text-xs leading-relaxed text-white/50">
-        試合カードを押す → 試合中ならその時点のチームスタッツ / ボックススコア。
+        試合カードを押す → 試合中ならその時点のチームスタッツ + ボックススコア。
         終了後も同じ UI で最終データを表示。データは API 差し替え前提の mock。
       </p>
 
@@ -150,23 +150,28 @@ export default function LiveGameStatsPreviewPage() {
             <motion.div
               role="dialog"
               aria-modal="true"
-              className="relative z-[1] max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-white/12 bg-[#07090f] px-4 pb-8 pt-3 shadow-[0_-12px_40px_rgba(0,0,0,0.55)] sm:rounded-2xl sm:pb-6"
+              className="relative z-[1] flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-white/12 bg-[#07090f] shadow-[0_-12px_40px_rgba(0,0,0,0.55)] sm:rounded-2xl"
               initial={reduceMotion ? false : { y: 28, opacity: 0.85 }}
               animate={{ y: 0, opacity: 1 }}
               exit={reduceMotion ? undefined : { y: 20, opacity: 0 }}
               transition={{ duration: 0.24, ease: [0.16, 0.84, 0.22, 1] }}
             >
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="h-1 w-10 rounded-full bg-white/20 sm:hidden" />
+              <div className="flex justify-center pt-3 sm:hidden">
+                <div className="h-1 w-10 rounded-full bg-white/20" />
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-2">
+                <LiveGameStatsPanel report={openReport} language="ja" />
+              </div>
+              <div className="shrink-0 border-t border-white/10 px-4 pb-6 pt-3 sm:pb-4">
                 <button
                   type="button"
                   onClick={() => setOpenPhase(null)}
-                  className="ml-auto grid h-8 w-8 place-items-center rounded-lg border border-white/15 text-white/70 hover:bg-white/8 hover:text-white"
+                  aria-label="Close"
+                  className="mx-auto grid h-10 w-10 place-items-center rounded-lg border border-white/15 text-white/70 hover:bg-white/8 hover:text-white"
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
-              <LiveGameStatsPanel report={openReport} language="ja" />
             </motion.div>
           </motion.div>
         ) : null}

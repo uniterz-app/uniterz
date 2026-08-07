@@ -6,10 +6,6 @@ import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import type { MarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
 import { MATCH_CARD_METRIC_FONT } from "./matchCardTypography";
 import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
-import {
-  MATCH_LIST_CYBER_CUT_MARKET_BAR,
-  MATCH_LIST_CYBER_CUT_STAT_BOX,
-} from "./matchListCyberClipPath";
 
 type MarketKey = "home" | "away" | "draw";
 type Status = "scheduled" | "live" | "final";
@@ -302,7 +298,7 @@ function SegmentedMarketBar({
 
   return (
     <PredictOverlayChamferedFrameNative
-      cut={MATCH_LIST_CYBER_CUT_MARKET_BAR}
+      cut={0}
       gradientColors={["rgba(0,0,0,0.25)", "rgba(0,0,0,0.25)"]}
       borderColor="rgba(34,211,238,0.1)"
       style={styles.barOuter}
@@ -346,7 +342,7 @@ function StatBox({
   return (
     <View style={styles.statBoxSlot}>
       <PredictOverlayChamferedFrameNative
-        cut={MATCH_LIST_CYBER_CUT_STAT_BOX}
+        cut={0}
         gradientColors={surface.colors}
         gradientLocations={surface.locations}
         borderColor={surface.borderColor}

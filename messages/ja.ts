@@ -404,8 +404,9 @@ const ja = {
     goalScorerBonusLabel: "得点者ボーナス",
     wcGoalScorerLabel: "ゴールする選手",
     wcPkWinnerLabel: "PKで勝つチーム",
+    nbaTopScorerResultLabel: "最多得点者",
     upsetPointsLabel: "アップセット",
-    totalPointsLabel: "総合得点",
+    totalPointsLabel: "スコア",
     upsetPointsDesc:
       "その試合がアップセット（波乱）だったうえで、あなたが少数派予想で的中したときだけ加点される別指標（1試合 0〜10）。条件を満たさない場合は 0。",
     totalPointsDesc:

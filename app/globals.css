@@ -783,17 +783,9 @@
 }
 
 /* 予想オーバーレイ — MatchCard / 市場棒 / ツールデッキ */
+/* 予想オーバーレイ MatchCard — 直角シェル（角切りなし） */
 .predict-overlay-cyber-card {
-  clip-path: polygon(
-    12px 0%,
-    calc(100% - 12px) 0%,
-    100% 12px,
-    100% calc(100% - 12px),
-    calc(100% - 12px) 100%,
-    12px 100%,
-    0% calc(100% - 12px),
-    0% 12px
-  );
+  border-radius: 0;
   border: 1px solid rgba(0, 245, 255, 0.2);
   background: linear-gradient(
     168deg,
@@ -809,24 +801,11 @@
 }
 
 .predict-overlay-cyber-grid {
-  background-image:
-    linear-gradient(rgba(0, 245, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 245, 255, 0.045) 1px, transparent 1px);
-  background-size: 18px 18px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, transparent 92%);
+  display: none;
 }
 
 .predict-overlay-cyber-form {
-  clip-path: polygon(
-    10px 0%,
-    calc(100% - 10px) 0%,
-    100% 10px,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    10px 100%,
-    0% calc(100% - 10px),
-    0% 10px
-  );
+  border-radius: 0;
   border: 1px solid rgba(0, 245, 255, 0.16);
   background: linear-gradient(
     168deg,
@@ -839,32 +818,14 @@
 }
 
 .predict-overlay-market-frame {
-  clip-path: polygon(
-    8px 0%,
-    calc(100% - 8px) 0%,
-    100% 8px,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    8px 100%,
-    0% calc(100% - 8px),
-    0% 8px
-  );
+  border-radius: 0;
   border: 1px solid rgba(0, 245, 255, 0.14);
   background: rgba(0, 245, 255, 0.03);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 .predict-overlay-stat-box {
-  clip-path: polygon(
-    7px 0%,
-    calc(100% - 7px) 0%,
-    100% 7px,
-    100% calc(100% - 7px),
-    calc(100% - 7px) 100%,
-    7px 100%,
-    0% calc(100% - 7px),
-    0% 7px
-  );
+  border-radius: 0;
 }
 
 .predict-overlay-cyber-deck {
@@ -1983,18 +1944,9 @@
   text-shadow: none;
 }
 
-/* 試合一覧 MatchCard */
+/* 試合一覧 MatchCard — 直角シェル（角切りなし） */
 .match-list-cyber-card {
-  clip-path: polygon(
-    10px 0%,
-    calc(100% - 10px) 0%,
-    100% 10px,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    10px 100%,
-    0% calc(100% - 10px),
-    0% 10px
-  );
+  border-radius: 0;
   border: 1px solid rgba(0, 245, 255, 0.16);
   background: linear-gradient(
     168deg,
@@ -2010,16 +1962,7 @@
 }
 
 .match-list-cyber-card--web {
-  clip-path: polygon(
-    12px 0%,
-    calc(100% - 12px) 0%,
-    100% 12px,
-    100% calc(100% - 12px),
-    calc(100% - 12px) 100%,
-    12px 100%,
-    0% calc(100% - 12px),
-    0% 12px
-  );
+  border-radius: 0;
 }
 
 .match-list-cyber-card--predicted {
@@ -2030,7 +1973,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* チュートリアル強調中 — clip-path で見切れる黒いドロップシャドウを抑える */
+/* チュートリアル強調中 */
 [data-tutorial-target="match-card"] .match-list-cyber-card,
 [data-tutorial-target="match-card"].match-list-cyber-card {
   box-shadow:
@@ -2039,31 +1982,17 @@
     inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
+/* 一覧カードの方眼は非表示 */
 .match-list-cyber-grid {
-  background-image:
-    linear-gradient(rgba(0, 245, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 245, 255, 0.04) 1px, transparent 1px);
-  background-size: 16px 16px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, transparent 96%);
+  display: none;
 }
 
 .match-list-cyber-divider {
-  box-shadow:
-    0 0 14px rgba(0, 245, 255, 0.45),
-    0 0 5px rgba(94, 234, 212, 0.35);
+  box-shadow: none;
 }
 
 .match-list-cyber-cta {
-  clip-path: polygon(
-    6px 0%,
-    calc(100% - 6px) 0%,
-    100% 6px,
-    100% calc(100% - 6px),
-    calc(100% - 6px) 100%,
-    6px 100%,
-    0% calc(100% - 6px),
-    0% 6px
-  );
+  border-radius: 0;
   border: 1px solid rgba(0, 245, 255, 0.52);
   background: linear-gradient(
     180deg,

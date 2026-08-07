@@ -407,6 +407,7 @@ const ar: Messages = {
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
     wcPkWinnerLabel: "PK winner",
+    nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "نقاط المفاجأة",
     totalPointsLabel: "إجمالي النقاط",
     upsetPointsDesc: "مقياس منفصل (0–10) يُمنح فقط عندما تكون المباراة مفاجأة وتوقعت بشكل صحيح كأقلية. وإلا فهو 0.",

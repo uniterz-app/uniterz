@@ -26,6 +26,11 @@ export const MOBILE_RESULT_STAT_LABEL_W = 80;
 export const MOBILE_RESULT_STAT_VALUE_W = 28;
 export const MOBILE_RESULT_STAT_ROW_GAP = 6;
 
+/** Web overlay `ResultStatsRows` comfortable（5.5rem / 1fr / 2.25rem, gap-x-2） */
+export const OVERLAY_RESULT_STAT_LABEL_W = 88;
+export const OVERLAY_RESULT_STAT_VALUE_W = 36;
+export const OVERLAY_RESULT_STAT_ROW_GAP = 8;
+
 export const NUMERIC_FONT = Platform.select({
   ios: "Oxanium_700Bold",
   android: "Oxanium_700Bold",

@@ -55,6 +55,8 @@ import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
 import ResultPerfectCyberFrameNative from "./ResultPerfectCyberFrameNative";
 import ResultStreakCyberFrameNative from "./ResultStreakCyberFrameNative";
 import ResultMatchScoreLineNative from "./ResultMatchScoreLineNative";
+import NbaTopScorerResultRowNative from "./NbaTopScorerResultRowNative";
+import { resolveNbaTopScorerResultInfo } from "../../../../../lib/result/resolveNbaTopScorerResult";
 import ResultOutcomeBadgesNative from "./ResultOutcomeBadgesNative";
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
@@ -413,6 +415,10 @@ export default function ResultPostCardNative({
   }, [isWcCard, hasFinal, post, home?.teamId, away?.teamId]);
 
   const wcGoalScorer = useWcGoalScorerResultNative(post as WcGoalScorerPostLike);
+  const nbaTopScorer = useMemo(
+    () => resolveNbaTopScorerResultInfo(post as Parameters<typeof resolveNbaTopScorerResultInfo>[0]),
+    [post]
+  );
 
   const activeWinStreak =
     toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
@@ -439,7 +445,7 @@ export default function ResultPostCardNative({
     return [
       {
         key: "upsetPoints" as const,
-        label: isEn ? "Upset Score" : "アップセット",
+        label: resultCopy.upsetPointsLabel,
         value: upsetPoints,
         barMax: 10,
         format: (v: number) =>
@@ -447,13 +453,13 @@ export default function ResultPostCardNative({
       },
       {
         key: "pointsV3" as const,
-        label: isEn ? "Total Score" : "総合得点",
+        label: resultCopy.totalPointsLabel,
         value: pointsV3,
         barMax: 10,
         format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
       },
     ];
-  }, [stats, isEn, hadUpsetGame, leagueKey]);
+  }, [stats, resultCopy.upsetPointsLabel, resultCopy.totalPointsLabel, hadUpsetGame]);
 
   const statRowEntranceMeta = useMemo((): [
     ResultStatRowEntranceMeta,
@@ -747,6 +753,13 @@ export default function ResultPostCardNative({
               <WcGoalScorerResultRowNative
                 label={isEn ? "Goal scorer" : "ゴールする選手"}
                 info={wcGoalScorer}
+              />
+            ) : null}
+            {nbaTopScorer ? (
+              <NbaTopScorerResultRowNative
+                label={resultCopy.nbaTopScorerResultLabel}
+                info={nbaTopScorer}
+                compact
               />
             ) : null}
             {statRows.map((row, rowIndex) => {

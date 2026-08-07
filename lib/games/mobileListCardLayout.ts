@@ -4,9 +4,9 @@ import {
 } from "@/lib/ui/matchListCardCyber";
 
 /**
- * モバイルの試合一覧（dense）とリザルト一覧でカード横幅を揃える（MatchCard と同一値）。
+ * モバイルの試合一覧（dense）カード横幅（MatchCard と同一値）。
  */
-export const MOBILE_LIST_CARD_MAX_W_CLASS = "max-w-[min(100%,20.5rem)]";
+export const MOBILE_LIST_CARD_MAX_W_CLASS = "max-w-[min(100%,23rem)]";
 
 export const MOBILE_LIST_CARD_OUTER_CLASS =
   `mx-auto w-full ${MOBILE_LIST_CARD_MAX_W_CLASS}`;
@@ -15,7 +15,7 @@ export const MOBILE_LIST_CARD_OUTER_CLASS =
 export const MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS =
   "mx-auto w-full max-w-none";
 
-/** リザルト一覧のカードのみやや広い（試合一覧の 20.5rem とは切り離し） */
+/** リザルト一覧のカード横幅（試合一覧の 23rem とは切り離し） */
 export const MOBILE_RESULT_CARD_MAX_W_CLASS = "max-w-[min(100%,21.5rem)]";
 export const MOBILE_RESULT_CARD_OUTER_CLASS =
   `mx-auto w-full ${MOBILE_RESULT_CARD_MAX_W_CLASS}`;

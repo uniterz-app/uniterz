@@ -57,6 +57,13 @@ export type LiveGameBoxTeam = {
   players: LiveGameBoxPlayer[];
 };
 
+/** クォーター別スコア（Q1–Q4 + OT…）。未実施ピリオドは null */
+export type LiveGameLineScore = {
+  periods: string[];
+  home: Array<number | null>;
+  away: Array<number | null>;
+};
+
 export type LiveGameStatsReport = {
   gameId: string;
   phase: LiveGamePhase;
@@ -64,6 +71,8 @@ export type LiveGameStatsReport = {
   clock: string | null;
   home: LiveGameTeamSide;
   away: LiveGameTeamSide;
+  /** 無い・不正なら UI は非表示 */
+  lineScore: LiveGameLineScore | null;
   teamStats: LiveGameTeamStatRow[];
   box: {
     home: LiveGameBoxTeam;
@@ -78,6 +87,7 @@ export type LiveGameStatsDoc = {
   clock: string | null;
   homeScore: number;
   awayScore: number;
+  lineScore: LiveGameLineScore | null;
   /** カタログの key → 値。片側でも欠けている行は表示しない */
   teamStats: {
     home: Record<string, number>;
@@ -116,6 +126,85 @@ export function formatLiveTeamStatValue(
   if (format === "pct") return `${value.toFixed(1)}%`;
   if (format === "one") return value.toFixed(1);
   return String(Math.round(value));
+}
+
+/** 試合リーダー（ボックスから算出） */
+export const LIVE_GAME_LEADER_CATALOG = [
+  { key: "pts", label: "PTS" },
+  { key: "reb", label: "REB" },
+  { key: "ast", label: "AST" },
+  { key: "stl", label: "STL" },
+  { key: "blk", label: "BLK" },
+] as const;
+
+export type LiveGameLeaderStatKey =
+  (typeof LIVE_GAME_LEADER_CATALOG)[number]["key"];
+
+export type LiveGameLeaderEntry = {
+  key: LiveGameLeaderStatKey;
+  label: string;
+  playerId: string;
+  firstName: string;
+  lastName: string;
+  teamId: string;
+  teamAbbr: string;
+  value: number;
+};
+
+type LeaderCandidate = {
+  player: LiveGameBoxPlayer;
+  teamId: string;
+  teamAbbr: string;
+};
+
+export function deriveLiveGameLeaders(
+  report: Pick<LiveGameStatsReport, "home" | "away" | "box">
+): LiveGameLeaderEntry[] {
+  const pool: LeaderCandidate[] = [
+    ...report.box.home.players.map((player) => ({
+      player,
+      teamId: report.box.home.teamId,
+      teamAbbr: report.home.abbr,
+    })),
+    ...report.box.away.players.map((player) => ({
+      player,
+      teamId: report.box.away.teamId,
+      teamAbbr: report.away.abbr,
+    })),
+  ];
+  if (pool.length === 0) return [];
+
+  const out: LiveGameLeaderEntry[] = [];
+  for (const def of LIVE_GAME_LEADER_CATALOG) {
+    let best: LeaderCandidate | null = null;
+    let bestVal = -Infinity;
+    for (const c of pool) {
+      const v = c.player[def.key];
+      if (!Number.isFinite(v)) continue;
+      if (
+        v > bestVal ||
+        (v === bestVal &&
+          best != null &&
+          c.player.pts > best.player.pts)
+      ) {
+        best = c;
+        bestVal = v;
+      }
+    }
+    if (!best || bestVal < 0) continue;
+    if (bestVal === 0 && def.key !== "pts") continue;
+    out.push({
+      key: def.key,
+      label: def.label,
+      playerId: best.player.playerId,
+      firstName: best.player.firstName,
+      lastName: best.player.lastName,
+      teamId: best.teamId,
+      teamAbbr: best.teamAbbr,
+      value: bestVal,
+    });
+  }
+  return out;
 }
 
 function num(v: unknown, fallback = 0): number {
@@ -165,6 +254,34 @@ function normalizeStatMap(raw: unknown): Record<string, number> {
   return out;
 }
 
+function normalizePeriodScore(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
+export function normalizeLiveGameLineScore(
+  raw: unknown
+): LiveGameLineScore | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const periodsRaw = Array.isArray(r.periods) ? r.periods : null;
+  const homeRaw = Array.isArray(r.home) ? r.home : null;
+  const awayRaw = Array.isArray(r.away) ? r.away : null;
+  if (!periodsRaw || !homeRaw || !awayRaw) return null;
+  if (periodsRaw.length === 0) return null;
+  if (homeRaw.length !== periodsRaw.length || awayRaw.length !== periodsRaw.length) {
+    return null;
+  }
+  const periods = periodsRaw.map((p) => str(p).trim()).filter(Boolean);
+  if (periods.length !== periodsRaw.length) return null;
+  return {
+    periods,
+    home: homeRaw.map(normalizePeriodScore),
+    away: awayRaw.map(normalizePeriodScore),
+  };
+}
+
 /**
  * ingest ペイロード（admin API 経由）を検証・正規化する。
  * 必須が欠けていれば null。
@@ -194,6 +311,7 @@ export function normalizeLiveGameStatsDoc(
     clock: str(r.clock).trim() || null,
     homeScore: num(r.homeScore),
     awayScore: num(r.awayScore),
+    lineScore: normalizeLiveGameLineScore(r.lineScore),
     teamStats: {
       home: normalizeStatMap(statsRaw.home),
       away: normalizeStatMap(statsRaw.away),
@@ -275,6 +393,7 @@ export function buildLiveGameStatsReport(
       abbr: teamAbbr(ctx.awayTeamId),
       score: live.awayScore,
     },
+    lineScore: live.lineScore,
     teamStats,
     box: {
       home: {

@@ -6,6 +6,8 @@
 export type NbaTopScorerPick = {
   playerId: string;
   teamId: string;
+  /** 表示用。投稿時に候補名をコピー（古い投稿は欠ける） */
+  name?: string | null;
 };
 
 export type NbaTopScorerCandidate = NbaTopScorerPick & {
@@ -30,7 +32,12 @@ export function normalizeNbaTopScorerPick(
   const playerId = String((raw as NbaTopScorerPick).playerId ?? "").trim();
   const teamId = String((raw as NbaTopScorerPick).teamId ?? "").trim();
   if (!playerId || !teamId) return null;
-  return { playerId, teamId };
+  const nameRaw = (raw as NbaTopScorerPick).name;
+  const name =
+    nameRaw == null || String(nameRaw).trim() === ""
+      ? null
+      : String(nameRaw).trim();
+  return name ? { playerId, teamId, name } : { playerId, teamId };
 }
 
 export function normalizeNbaTopScorerCandidates(

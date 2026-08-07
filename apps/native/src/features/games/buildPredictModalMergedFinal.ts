@@ -10,6 +10,12 @@ import {
   buildResultStatMetricValues,
   extractResultSettlementBreakdown,
 } from "../../../../../lib/result/buildResultStatRows";
+import {
+  resolveNbaTopScorerResultInfo,
+  type NbaTopScorerResultInfo,
+} from "../../../../../lib/result/resolveNbaTopScorerResult";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import type { Language } from "../../../../../lib/i18n/language";
 
 export type PredictModalResultStatRow = {
   key: "upsetPoints" | "pointsV3";
@@ -33,6 +39,8 @@ export type PredictModalMergedFinalPreview = {
   streakBadge: WinStreakBadgeStyle | null;
   activeWinStreak: number;
   wcGoalScorer: null;
+  nbaTopScorer: NbaTopScorerResultInfo | null;
+  nbaTopScorerLabel: string;
   statRows: PredictModalResultStatRow[];
 };
 
@@ -73,6 +81,8 @@ type BuildParams = {
   awayTeamId?: string | null;
   finalOt?: boolean;
   pkScore?: PkScore | null;
+  topScorerCandidates?: unknown;
+  leadingScorers?: unknown;
 };
 
 /** Web `MatchCard` overlay + `ResultStatsRows` 相当の試合終了・予想済みプレビュー */
@@ -116,10 +126,11 @@ export function buildPredictModalMergedFinalPreview(
 
   const breakdown = extractResultSettlementBreakdown(stats);
   const metricValues = buildResultStatMetricValues(breakdown);
+  const resultsCopy = i18nT((language === "en" ? "en" : "ja") as Language).results;
 
   const labelFor = (key: "upsetPoints" | "pointsV3") => {
-    if (key === "upsetPoints") return isEn ? "Upset Score" : "アップセット";
-    return isEn ? "Total Score" : "総合得点";
+    if (key === "upsetPoints") return resultsCopy.upsetPointsLabel;
+    return resultsCopy.totalPointsLabel;
   };
 
   const toneFor = (
@@ -151,6 +162,10 @@ export function buildPredictModalMergedFinalPreview(
   }));
 
   const finalLabel = `${isEn ? "Final" : "試合終了"}${finalOt ? " (OT)" : ""}`;
+  const nbaTopScorer = resolveNbaTopScorerResultInfo(postLike, {
+    candidates: params.topScorerCandidates,
+    leadingScorers: params.leadingScorers,
+  });
 
   return {
     finalScore,
@@ -164,6 +179,8 @@ export function buildPredictModalMergedFinalPreview(
     streakBadge,
     activeWinStreak,
     wcGoalScorer: null,
+    nbaTopScorer,
+    nbaTopScorerLabel: resultsCopy.nbaTopScorerResultLabel,
     statRows,
   };
 }

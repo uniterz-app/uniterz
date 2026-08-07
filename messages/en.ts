@@ -407,8 +407,9 @@ const en: Messages = {
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
     wcPkWinnerLabel: "PK winner",
-    upsetPointsLabel: "Upset Points",
-    totalPointsLabel: "Total Points",
+    nbaTopScorerResultLabel: "Top scorer",
+    upsetPointsLabel: "Upset",
+    totalPointsLabel: "Score",
     upsetPointsDesc:
       "A separate metric (0–10 per match) awarded only when the match is an upset and you correctly predicted it with a minority pick. If conditions aren't met, it's 0.",
     totalPointsDesc:

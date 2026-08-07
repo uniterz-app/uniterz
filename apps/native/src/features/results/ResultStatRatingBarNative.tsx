@@ -120,7 +120,7 @@ type Props = {
   /** Web 互換（API 揃え） */
   animateMs?: number;
   delayMs?: number;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   metricKey?: "upsetPoints" | "pointsV3";
 };
 
@@ -134,7 +134,7 @@ export default function ResultStatRatingBarNative({
 }: Props) {
   const accent = rankingMetricAccent(resultMetricToRankingKey(metricKey));
   const filled = filledSegCount(ratio, SEGMENTS);
-  const segH = size === "sm" ? 9 : 11;
+  const segH = size === "lg" ? 14 : size === "sm" ? 9 : 11;
 
   return (
     <View style={styles.track} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

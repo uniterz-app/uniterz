@@ -1271,6 +1271,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("TeamDetailPreview");
         else if (page === "playerDetailPreview" && __DEV__)
           navigation.navigate("PlayerDetailPreview");
+        else if (page === "liveGameStatsPreview" && __DEV__)
+          navigation.navigate("LiveGameStatsPreview");
       }}
     />
     <ProfileBadgeDetailModal

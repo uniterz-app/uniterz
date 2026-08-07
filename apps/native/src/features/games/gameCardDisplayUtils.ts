@@ -12,11 +12,11 @@ import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import type { SupportedLeague } from "./useTodayGames";
 
 export const LEAGUE_LINE_COLOR: Record<SupportedLeague, string> = {
-  nba: "#60a5fa",
-  wc: "#f59e0b",
-  bj: "#eab308",
-  j1: "#22c55e",
-  pl: "#a855f7",
+  nba: "rgba(255,255,255,0.32)",
+  wc: "rgba(255,255,255,0.32)",
+  bj: "rgba(255,255,255,0.32)",
+  j1: "rgba(255,255,255,0.32)",
+  pl: "rgba(255,255,255,0.32)",
 };
 
 export const DISPLAY_FONT_FAMILY = Platform.select({
@@ -121,7 +121,7 @@ export function resolveLeagueColor(leagueRaw: unknown): string {
   if (league in LEAGUE_LINE_COLOR) {
     return LEAGUE_LINE_COLOR[league];
   }
-  return "#60a5fa";
+  return "rgba(255,255,255,0.32)";
 }
 
 export function isGameStarted(game: Record<string, unknown>): boolean {

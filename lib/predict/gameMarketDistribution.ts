@@ -5,6 +5,53 @@ export type MarketBiasFallback = {
   awayPct: number;
 };
 
+/**
+ * Web `toMatchCardProps` と同じ：欠落時は 50/50。
+ * Native オーバーレイの市場バーが消えないようにする。
+ */
+export function resolveMarketBiasFallback(
+  raw?: {
+    homePct?: number | null;
+    awayPct?: number | null;
+    homeRate?: number | null;
+    awayRate?: number | null;
+  } | null,
+  nestedMarket?: {
+    homePct?: number | null;
+    awayPct?: number | null;
+    homeRate?: number | null;
+    awayRate?: number | null;
+  } | null
+): MarketBiasFallback {
+  const homePct = Math.max(
+    0,
+    Math.min(
+      100,
+      Number(
+        raw?.homePct ??
+          nestedMarket?.homePct ??
+          nestedMarket?.homeRate ??
+          raw?.homeRate ??
+          50
+      )
+    )
+  );
+  const awayPct = Math.max(
+    0,
+    Math.min(
+      100,
+      Number(
+        raw?.awayPct ??
+          nestedMarket?.awayPct ??
+          nestedMarket?.awayRate ??
+          raw?.awayRate ??
+          50
+      )
+    )
+  );
+  return { homePct, awayPct };
+}
+
 export type GamePredictionCounts = {
   homeCount: number;
   awayCount: number;

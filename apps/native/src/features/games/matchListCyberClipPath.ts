@@ -43,12 +43,15 @@ export function chamferedCornerRevealPathsD(
   ];
 }
 
-/** Skia / SVG 用の閉じたパス（左上から時計回り） */
+/** Skia / SVG 用の閉じたパス（左上から時計回り）。cut=0 は直角矩形 */
 export function chamferedRectPathD(width: number, height: number, cut: number): string {
   const w = Math.max(0, width);
   const h = Math.max(0, height);
-  const c = Math.min(cut, w / 2, h / 2);
-  if (c <= 0 || w <= 0 || h <= 0) return "";
+  if (w <= 0 || h <= 0) return "";
+  const c = Math.min(Math.max(0, cut), w / 2, h / 2);
+  if (c <= 0) {
+    return [`M 0 0`, `L ${w} 0`, `L ${w} ${h}`, `L 0 ${h}`, "Z"].join(" ");
+  }
   return [
     `M ${c} 0`,
     `L ${w - c} 0`,

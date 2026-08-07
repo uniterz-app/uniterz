@@ -39,12 +39,12 @@ export default function NbaTopScorerPickerNative({
     [candidates]
   );
 
-  const onPick = (playerId: string, teamId: string) => {
-    if (value?.playerId === playerId && value?.teamId === teamId) {
+  const onPick = (row: NbaTopScorerCandidate) => {
+    if (value?.playerId === row.playerId && value?.teamId === row.teamId) {
       onChange(null);
       return;
     }
-    onChange({ playerId, teamId });
+    onChange({ playerId: row.playerId, teamId: row.teamId, name: row.name });
   };
 
   if (sorted.length === 0) {
@@ -87,7 +87,7 @@ export default function NbaTopScorerPickerNative({
           return (
             <Pressable
               key={`${c.teamId}:${c.playerId}`}
-              onPress={() => onPick(c.playerId, c.teamId)}
+              onPress={() => onPick(c)}
               style={[
                 styles.row,
                 active && {

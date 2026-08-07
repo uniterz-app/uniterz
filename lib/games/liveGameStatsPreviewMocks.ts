@@ -14,6 +14,7 @@ export type {
   LiveGameTeamStatRow,
   LiveGameBoxPlayer,
   LiveGameBoxTeam,
+  LiveGameLineScore,
   LiveGameStatsReport,
 } from "@/lib/games/liveGameStats";
 export { formatLiveTeamStatValue } from "@/lib/games/liveGameStats";
@@ -34,6 +35,11 @@ const LIVE_REPORT: LiveGameStatsReport = {
     teamName: "Boston Celtics",
     abbr: "BOS",
     score: 81,
+  },
+  lineScore: {
+    periods: ["Q1", "Q2", "Q3", "Q4"],
+    home: [24, 21, 33, null],
+    away: [28, 26, 27, null],
   },
   teamStats: [
     { key: "fg", label: "FG%", home: 46.2, away: 48.1, format: "pct" },
@@ -301,6 +307,11 @@ const FINAL_REPORT: LiveGameStatsReport = {
   clock: null,
   home: { ...LIVE_REPORT.home, score: 108 },
   away: { ...LIVE_REPORT.away, score: 112 },
+  lineScore: {
+    periods: ["Q1", "Q2", "Q3", "Q4"],
+    home: [24, 21, 33, 30],
+    away: [28, 26, 27, 31],
+  },
   teamStats: [
     { key: "fg", label: "FG%", home: 45.1, away: 47.8, format: "pct" },
     { key: "fg3", label: "3P%", home: 33.3, away: 39.5, format: "pct" },

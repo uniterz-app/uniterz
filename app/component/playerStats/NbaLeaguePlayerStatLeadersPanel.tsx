@@ -62,9 +62,12 @@ export default function NbaLeaguePlayerStatLeadersPanel({
         </CyberSlantedTabBar>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="mb-3 space-y-1.5">
         {NBA_PLAYER_STAT_LEADER_METRIC_ROWS.map((row, rowIdx) => (
-          <div key={rowIdx} className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+          <div
+            key={rowIdx}
+            className="grid grid-cols-3 gap-1.5 sm:grid-cols-6"
+          >
             {row.map((m) => (
               <button
                 key={m.id}
@@ -72,10 +75,10 @@ export default function NbaLeaguePlayerStatLeadersPanel({
                 onClick={() => setMetric(m.id)}
                 className={[
                   nameOxanium.className,
-                  "rounded-[2px] border px-1 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em] transition",
+                  "w-full rounded-[2px] border px-1 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em] transition sm:text-[10px] sm:tracking-[0.12em]",
                   metric === m.id
                     ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508]"
-                    : "border-[#00F5FF]/30 bg-[rgba(4,20,30,0.72)] text-[#00F5FF]",
+                    : "border-[#00F5FF]/30 bg-[rgba(4,20,30,0.72)] text-[#00F5FF] hover:border-[#00F5FF]/50",
                 ].join(" ")}
               >
                 {m.short}

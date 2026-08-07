@@ -4,35 +4,44 @@ import {
   formatLiveTeamStatValue,
   type LiveGameStatsReport,
 } from "@/lib/games/liveGameStats";
-import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameOxanium } from "@/lib/fonts";
 
 type Props = {
   report: LiveGameStatsReport;
 };
 
 const WIN_GREEN = "#5cf0b5";
+const FRAME = "rgba(255,255,255,0.22)";
+const ROW_LINE = "rgba(255,255,255,0.1)";
 
 /** チームスタッツ比較行のみ（スコアヘッダーは LiveGameStatsPanel 側） */
 export default function LiveGameTeamStatsPanel({ report }: Props) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1">
-      {report.teamStats.map((row) => {
+    <div
+      className="overflow-hidden border px-3 py-1"
+      style={{ borderColor: FRAME, backgroundColor: "transparent" }}
+    >
+      {report.teamStats.map((row, i) => {
         const leftWin = row.lowerIsBetter
           ? row.home < row.away
           : row.home > row.away;
         const rightWin = row.lowerIsBetter
           ? row.away < row.home
           : row.away > row.home;
+        const last = i === report.teamStats.length - 1;
 
         return (
           <div
             key={row.key}
-            className="flex items-center border-b border-white/8 py-2 last:border-b-0"
+            className="flex items-center py-2"
+            style={
+              last ? undefined : { borderBottom: `1px solid ${ROW_LINE}` }
+            }
           >
             <p
               className={[
-                resultStatsMetricNumClass,
-                "flex-1 text-right text-[15px] tabular-nums",
+                nameOxanium.className,
+                "flex-1 text-right text-[15px] font-extrabold tabular-nums",
                 leftWin ? "" : "text-white",
               ].join(" ")}
               style={
@@ -41,8 +50,9 @@ export default function LiveGameTeamStatsPanel({ report }: Props) {
                       color: WIN_GREEN,
                       textShadow:
                         "0 0 6px rgba(92,240,181,0.42), 0 0 2px rgba(92,240,181,0.55)",
+                      transform: "skewX(-6deg)",
                     }
-                  : undefined
+                  : { transform: "skewX(-6deg)" }
               }
             >
               {formatLiveTeamStatValue(row.home, row.format)}
@@ -57,8 +67,8 @@ export default function LiveGameTeamStatsPanel({ report }: Props) {
             </p>
             <p
               className={[
-                resultStatsMetricNumClass,
-                "flex-1 text-left text-[15px] tabular-nums",
+                nameOxanium.className,
+                "flex-1 text-left text-[15px] font-extrabold tabular-nums",
                 rightWin ? "" : "text-white",
               ].join(" ")}
               style={
@@ -67,8 +77,9 @@ export default function LiveGameTeamStatsPanel({ report }: Props) {
                       color: WIN_GREEN,
                       textShadow:
                         "0 0 6px rgba(92,240,181,0.42), 0 0 2px rgba(92,240,181,0.55)",
+                      transform: "skewX(-6deg)",
                     }
-                  : undefined
+                  : { transform: "skewX(-6deg)" }
               }
             >
               {formatLiveTeamStatValue(row.away, row.format)}

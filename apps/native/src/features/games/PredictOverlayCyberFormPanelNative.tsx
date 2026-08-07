@@ -4,7 +4,6 @@
 import { type ReactNode } from "react";
 import { type StyleProp, StyleSheet, type ViewStyle } from "react-native";
 import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
-import { PREDICT_OVERLAY_CYBER_FORM_CUT } from "./matchListCyberClipPath";
 
 type Props = {
   children: ReactNode;
@@ -19,7 +18,7 @@ export default function PredictOverlayCyberFormPanelNative({
 }: Props) {
   return (
     <PredictOverlayChamferedFrameNative
-      cut={PREDICT_OVERLAY_CYBER_FORM_CUT}
+      cut={0}
       gradientColors={["rgba(8,12,20,0.94)", "rgba(5,8,14,0.92)"]}
       gradientLocations={[0, 1]}
       borderColor="rgba(0,245,255,0.16)"

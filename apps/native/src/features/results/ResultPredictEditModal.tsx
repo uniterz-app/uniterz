@@ -48,6 +48,7 @@ import {
   buildClientPredictionPayload,
   validateClientPrediction,
 } from "../../../../../lib/predict/clientPredictionSubmit";
+import { resolveMarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
 import { scheduleAfterPredictModalDismissed } from "../games/scheduleAfterPredictModalDismissed";
 import {
   readEditModeHintShown,
@@ -453,15 +454,15 @@ export default function ResultPredictEditModal({
     const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
     const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
     const marketBias = game.marketBias as { homePct?: number; awayPct?: number } | undefined;
+    const nestedMarket = game.market as
+      | { homePct?: number; awayPct?: number; homeRate?: number; awayRate?: number }
+      | undefined;
     return {
       gameId,
       league: selectedLeague,
       status: resolveGameStatus(game),
       score: resolveGameScore(game),
-      fallbackMarketBias:
-        marketBias?.homePct != null && marketBias?.awayPct != null
-          ? { homePct: marketBias.homePct, awayPct: marketBias.awayPct }
-          : null,
+      fallbackMarketBias: resolveMarketBiasFallback(marketBias, nestedMarket),
       homeColor: homePalette.primary,
       awayColor: awayPalette.primary,
       homeLabel: toCompactTeamName(game.league, homeName),

@@ -403,6 +403,7 @@ const ko: Messages = {
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
     wcPkWinnerLabel: "PK winner",
+    nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "이변 득점",
     totalPointsLabel: "총 득점",
     upsetPointsDesc: "해당 경기가 이변이었고, 소수파 예측으로 적중했을 때만 가산되는 별도 지표 (경기당 0–10). 조건 불충족 시 0.",

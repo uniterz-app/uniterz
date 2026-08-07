@@ -117,6 +117,16 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
                   />
                 </View>
               ))}
+              {/* Team Stats と同じ 6 列幅を保つ（最終行の MIN/EFF が横に伸びないように） */}
+              {Array.from({ length: Math.max(0, 6 - row.length) }).map(
+                (_, i) => (
+                  <View
+                    key={`pad-${rowIdx}-${i}`}
+                    style={styles.metricCell}
+                    pointerEvents="none"
+                  />
+                )
+              )}
             </View>
           ))}
         </View>
@@ -199,19 +209,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   tabBlock: { marginBottom: 10 },
-  metricBlock: { gap: 4, marginBottom: 8 },
-  metricRowLine: { flexDirection: "row", gap: 4 },
+  metricBlock: { gap: 6, marginBottom: 8 },
+  metricRowLine: { flexDirection: "row", gap: 6 },
   metricCell: { flex: 1, minWidth: 0 },
   metricChip: {
     borderWidth: 1,
     borderColor: "rgba(0,245,255,0.28)",
     backgroundColor: "rgba(4,20,30,0.72)",
     borderRadius: 2,
-    paddingHorizontal: 0,
-    paddingVertical: 5,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
     alignItems: "center",
-    minHeight: 26,
-    justifyContent: "center",
   },
   metricChipActive: {
     borderColor: CYBER_TAB_CYAN,
@@ -220,9 +228,9 @@ const styles = StyleSheet.create({
   metricChipLabel: {
     fontFamily: METRIC_FONT,
     color: CYBER_TAB_CYAN,
-    fontSize: 7,
+    fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 0.2,
+    letterSpacing: 0.6,
     textTransform: "uppercase",
     textAlign: "center",
     transform: [{ skewX: "-6deg" }],

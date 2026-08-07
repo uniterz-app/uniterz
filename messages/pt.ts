@@ -406,6 +406,7 @@ const pt: Messages = {
     goalScorerBonusLabel: "Goal scorer bonus",
     wcGoalScorerLabel: "Goal scorer",
     wcPkWinnerLabel: "PK winner",
+    nbaTopScorerResultLabel: "Top scorer",
     upsetPointsLabel: "Pontos surpresa",
     totalPointsLabel: "Pontos totais",
     upsetPointsDesc: "Métrica separada (0–10) concedida apenas quando o jogo é uma surpresa e você acertou com uma previsão minoritária. Caso contrário, 0.",

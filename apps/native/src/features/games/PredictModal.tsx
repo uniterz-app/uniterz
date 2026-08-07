@@ -7,9 +7,9 @@ import Animated, { useReducedMotion } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { colors, spacing } from "../../theme/tokens";
 import {
-  MOBILE_RESULT_STAT_LABEL_W,
-  MOBILE_RESULT_STAT_ROW_GAP,
-  MOBILE_RESULT_STAT_VALUE_W,
+  OVERLAY_RESULT_STAT_LABEL_W,
+  OVERLAY_RESULT_STAT_ROW_GAP,
+  OVERLAY_RESULT_STAT_VALUE_W,
 } from "../results/resultMobileUiNative";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import MatchCardOverlayMarketBarNative from "./MatchCardOverlayMarketBarNative";
@@ -41,6 +41,7 @@ import {
   WcBroadcastNamesNative,
 } from "./legacyWcNativeShims";
 import ResultStatRatingBarNative from "../results/ResultStatRatingBarNative";
+import NbaTopScorerResultRowNative from "../results/NbaTopScorerResultRowNative";
 import ResultOutcomeBadgesNative from "../results/ResultOutcomeBadgesNative";
 import {
   formatTeamRecordLabelNative,
@@ -50,6 +51,10 @@ import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
 import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative";
 import PredictOverlayMatchCardShellNative from "./PredictOverlayMatchCardShellNative";
 import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
+import LiveGameStatsPanelNative from "./live/LiveGameStatsPanelNative";
+import LiveGameStatsPlaceholderNative from "./live/LiveGameStatsPlaceholderNative";
+import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
+import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 import CountryFlagNative from "./CountryFlagNative";
 import NbaTopScorerPickerNative from "./predict/NbaTopScorerPickerNative";
 import {
@@ -632,9 +637,17 @@ export function PredictMatchPreview({
             />
           </View>
         ) : null}
-        {mergedFinal && mergedFinal.statRows.length > 0 ? (
+        {mergedFinal &&
+        (mergedFinal.nbaTopScorer || mergedFinal.statRows.length > 0) ? (
           <TutorialTargetNative id="result-detail-stats">
             <View style={s.matchPreviewStatBlock}>
+              <View style={s.matchPreviewStatHairline} />
+              {mergedFinal.nbaTopScorer ? (
+                <NbaTopScorerResultRowNative
+                  label={mergedFinal.nbaTopScorerLabel}
+                  info={mergedFinal.nbaTopScorer}
+                />
+              ) : null}
               {mergedFinal.statRows.map((row) => (
                 <View key={row.key} style={s.matchPreviewStatRow}>
                   <Text style={s.matchPreviewStatLabel} numberOfLines={1}>
@@ -643,7 +656,7 @@ export function PredictMatchPreview({
                   <View style={s.matchPreviewStatBarSlot}>
                     <ResultStatRatingBarNative
                       ratio={row.ratio}
-                      size="sm"
+                      size="lg"
                       metricKey={row.key}
                     />
                   </View>
@@ -1029,8 +1042,26 @@ export default function PredictModal({
     isWcLeague && predictData?.gameId && hasWcMatchPreview(predictData.gameId)
   );
   const hideMarketTab = Boolean(overlayMarketBar);
+  /** 開始前のみ Insight / Injury / Stats / Roster */
   const showNbaPredictTimingOverlay =
-    hideMarketTab && predictData?.league === "nba" && !isWcLeague;
+    hideMarketTab &&
+    predictData?.league === "nba" &&
+    !isWcLeague &&
+    gameStatus === "scheduled";
+  /** ライブ／終了は試合スタッツ画面 */
+  const showNbaLiveGameStats =
+    hideMarketTab &&
+    predictData?.league === "nba" &&
+    !isWcLeague &&
+    (gameStatus === "live" || gameStatus === "final");
+  const liveStatsGameId = showNbaLiveGameStats
+    ? predictData?.gameId ?? null
+    : null;
+  const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
+    liveStatsGameId,
+    showNbaLiveGameStats,
+    { apiBaseUrl: getUniterzApiBaseUrl() }
+  );
   const nbaTopScorerCandidates = useMemo(
     () =>
       normalizeNbaTopScorerCandidates(
@@ -1217,7 +1248,20 @@ export default function PredictModal({
                       />
                     </Animated.View>
                   ) : null}
-                  {showNbaPredictTimingOverlay ? (
+                  {showNbaLiveGameStats ? (
+                    liveStatsReport ? (
+                      <LiveGameStatsPanelNative
+                        report={liveStatsReport}
+                        language={language === "en" ? "en" : "ja"}
+                        omitScoreHeader
+                      />
+                    ) : (
+                      <LiveGameStatsPlaceholderNative
+                        language={language === "en" ? "en" : "ja"}
+                        loading={liveStatsLoading}
+                      />
+                    )
+                  ) : showNbaPredictTimingOverlay ? (
                     <NbaPredictToolsTabsNative
                       language={language}
                       isPro={isProUser}
@@ -1305,7 +1349,9 @@ export default function PredictModal({
               </View>
                   )}
 
-              {!showNbaPredictTimingOverlay && predictToolsTab ? (
+              {!showNbaPredictTimingOverlay &&
+              !showNbaLiveGameStats &&
+              predictToolsTab ? (
                 <Animated.View
                   key={`predict-tool-${predictToolsTab}`}
                   entering={toolPanelIn}
@@ -2222,8 +2268,9 @@ const s = StyleSheet.create({
     paddingBottom: 6,
   },
   matchPreviewMarketBarWrap: {
-    marginTop: 2,
-    paddingBottom: 4,
+    marginTop: 4,
+    paddingTop: 2,
+    paddingBottom: 6,
   },
   /** Web overlay `text-xl` + `bracketMarketTeamTypography` */
   matchPreviewRoundPadded: {
@@ -2426,34 +2473,41 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
   matchPreviewStatBlock: {
-    marginTop: 4,
-    gap: 4,
-    paddingBottom: 2,
+    marginTop: 2,
+    gap: 10,
+    paddingBottom: 8,
+  },
+  matchPreviewStatHairline: {
+    height: 1,
+    width: "100%",
+    marginBottom: 2,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    opacity: 0.85,
   },
   matchPreviewStatRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: MOBILE_RESULT_STAT_ROW_GAP,
-    paddingVertical: 2,
+    gap: OVERLAY_RESULT_STAT_ROW_GAP,
+    paddingVertical: 6,
   },
   matchPreviewStatLabel: {
-    width: MOBILE_RESULT_STAT_LABEL_W,
+    width: OVERLAY_RESULT_STAT_LABEL_W,
     flexShrink: 0,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.92)",
+    color: "rgba(255,255,255,0.96)",
   },
   matchPreviewStatBarSlot: {
     flex: 1,
     minWidth: 0,
   },
   matchPreviewStatValue: {
-    width: MOBILE_RESULT_STAT_VALUE_W,
+    width: OVERLAY_RESULT_STAT_VALUE_W,
     flexShrink: 0,
     textAlign: "right",
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700",
     fontFamily: MATCH_CARD_METRIC_FONT,
     color: "rgba(255,255,255,0.92)",

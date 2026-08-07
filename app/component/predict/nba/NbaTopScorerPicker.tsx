@@ -46,12 +46,12 @@ export default function NbaTopScorerPicker({
     [candidates]
   );
 
-  const onPick = (playerId: string, teamId: string) => {
-    if (value?.playerId === playerId && value?.teamId === teamId) {
+  const onPick = (row: NbaTopScorerCandidate) => {
+    if (value?.playerId === row.playerId && value?.teamId === row.teamId) {
       onChange(null);
       return;
     }
-    onChange({ playerId, teamId });
+    onChange({ playerId: row.playerId, teamId: row.teamId, name: row.name });
   };
 
   return (
@@ -110,7 +110,7 @@ export default function NbaTopScorerPicker({
               <button
                 key={`${row.teamId}-${row.playerId}`}
                 type="button"
-                onClick={() => onPick(row.playerId, row.teamId)}
+                onClick={() => onPick(row)}
                 className={[
                   "flex w-full items-center justify-between gap-3 rounded-lg text-left transition",
                   isMobile ? "px-2 py-1.5" : "px-2.5 py-2",

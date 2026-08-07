@@ -25,6 +25,7 @@ import type { NativeGameRow, SupportedLeague } from "../games/useTodayGames";
 import type { ResultDetailPost } from "./loadResultPostDetailNative";
 import type { GamesLanguage } from "../games/gamesI18n";
 import { resolveWcTeamId } from "../games/legacyWcNativeShims";
+import { resolveMarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
 
 function resolveOverlayGameSide(
   gameSide: unknown,
@@ -184,15 +185,15 @@ export function buildResultOverlayMarketBar(
   const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
   const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
   const marketBias = game.marketBias as { homePct?: number; awayPct?: number } | undefined;
+  const nestedMarket = game.market as
+    | { homePct?: number; awayPct?: number; homeRate?: number; awayRate?: number }
+    | undefined;
   return {
     gameId,
     league,
     status: resolveGameStatus(game),
     score: resolveGameScore(game),
-    fallbackMarketBias:
-      marketBias?.homePct != null && marketBias?.awayPct != null
-        ? { homePct: marketBias.homePct, awayPct: marketBias.awayPct }
-        : null,
+    fallbackMarketBias: resolveMarketBiasFallback(marketBias, nestedMarket),
     homeColor: homePalette.primary,
     awayColor: awayPalette.primary,
     homeLabel: toCompactTeamName(game.league, homeName),
