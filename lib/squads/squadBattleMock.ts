@@ -108,25 +108,25 @@ export const SQUAD_BATTLE_SEASON_PHASES: readonly SquadBattleSeasonPhase[] = [
     key: "entry",
     label: "ENTRY",
     period: "約1〜2週間前",
-    desc: "3〜5人のスクワッドを確定。開始後の入れ替えは不可",
+    desc: "スクワッド確定 · 開始後は入れ替え不可",
   },
   {
     key: "battle",
     label: "BATTLE",
     period: "約1ヶ月",
-    desc: "全員の総合スコア平均で競う。週間×4 + 月間×1",
+    desc: "週間×4 + 月間×1 で平均スコアを競う",
   },
   {
     key: "reward",
     label: "REWARD",
     period: "結果確定後",
-    desc: "週間・月間の上位グループ全員に Unit を配布",
+    desc: "上位グループ全員へ同額 Unit",
   },
 ] as const;
 
-/** 初回イントロのルール1行 */
+/** 初回イントロのルール1行（キッカー／フェーズと重複しないこと） */
 export const SQUAD_BATTLE_INTRO_TAGLINE =
-  "3〜5人のスクワッドで、メンバー全員の総合スコア平均を競う。約2ヶ月に1回の期間限定バトル。";
+  "3〜5人のスクワッドで、メンバー全員の総合スコア平均を競う。";
 
 /** はてな（？）ヘルプ用のルール要約 */
 export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間・月間の上位グループ全員へ Unit を配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;

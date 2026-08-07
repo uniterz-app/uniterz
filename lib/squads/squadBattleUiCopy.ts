@@ -37,11 +37,12 @@ export const SQUAD_BATTLE_UI_PHASE_OPTIONS: readonly {
   { id: "idle", label: "休止" },
 ] as const;
 
-/** イントロ下部の告知・禁止事項（短文） */
+/**
+ * イントロ下部の補足（フェーズ説明と重複しないこと）。
+ * 報酬の同額配布・入れ替え不可は ENTRY / REWARD 側で伝える。
+ */
 export const SQUAD_BATTLE_INTRO_NOTICES: readonly string[] = [
-  "上位グループの確定メンバー全員に同額の Unit を配布（個人差なし）",
-  "同点は同順位・同 Unit。開始後のメンバー入れ替えは不可",
-  "マルチアカウント・不正操作は失格。配布量は Free / Pro 共通",
+  "同点は同順位。不正は失格。配布は Free / Pro 共通。",
 ] as const;
 
 /** LIVE / FINAL の短い説明 */

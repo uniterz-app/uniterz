@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, RefreshCw } from "lucide-react";
+import { X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import cn from "clsx";
 import { nameOxanium, jp } from "@/lib/fonts";
@@ -22,7 +22,6 @@ import {
   SQUAD_INTRO_ENTER_DELAY_S,
   SQUAD_INTRO_ENTER_DURATION_S,
   SQUAD_INTRO_KICKER_DELAY_S,
-  SQUAD_INTRO_LOOP_DELAY_S,
   SQUAD_INTRO_PHASE_DURATION_S,
   SQUAD_INTRO_RULE_DELAY_S,
   SQUAD_INTRO_TITLE_DELAY_S,
@@ -235,7 +234,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
             <motion.p
               className={cn(
                 jp.className,
-                "mb-6 max-w-sm text-center text-[13px] leading-relaxed text-white/60"
+                "mb-7 max-w-sm text-center text-[13px] leading-relaxed text-white/60"
               )}
               initial={reduceMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -248,19 +247,18 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
               {SQUAD_BATTLE_INTRO_TAGLINE}
             </motion.p>
 
-            {/* フェーズタイムライン */}
+            {/* フェーズタイムライン（枠なし・レールのみ） */}
             <div className="relative w-full max-w-sm">
-              {/* 縦レール */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute bottom-3 left-[11px] top-3 w-px bg-gradient-to-b from-amber-400/50 via-amber-400/25 to-rose-500/40"
+                className="pointer-events-none absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-amber-400/50 via-amber-400/20 to-rose-500/35"
               />
 
-              <ul className="flex flex-col gap-2.5">
+              <ol className="flex flex-col gap-4">
                 {SQUAD_BATTLE_SEASON_PHASES.map((phase, i) => (
                   <motion.li
                     key={phase.key}
-                    className="relative flex items-stretch gap-3 pl-1"
+                    className="relative flex items-start gap-3.5 pl-0.5"
                     initial={reduceMotion ? false : { opacity: 0, x: -14 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{
@@ -273,17 +271,10 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
                   >
                     <span
                       aria-hidden
-                      className="mt-3.5 h-2.5 w-2.5 shrink-0 rounded-full border border-amber-300/80 bg-amber-400/90 shadow-[0_0_10px_rgba(251,191,36,0.65)]"
+                      className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.55)]"
                     />
-                    <div
-                      className="min-w-0 flex-1 border border-amber-400/28 bg-black/45 px-3 py-2.5"
-                      style={{
-                        ...chamferStyle,
-                        boxShadow:
-                          "inset 0 0 0 1px rgba(20,12,4,0.8), 0 0 16px rgba(251,191,36,0.06)",
-                      }}
-                    >
-                      <div className="flex items-baseline justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2.5">
                         <p
                           className={cn(
                             nameOxanium.className,
@@ -295,7 +286,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
                         <p
                           className={cn(
                             nameOxanium.className,
-                            "shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200/55"
+                            "text-[10px] font-bold tracking-[0.08em] text-amber-200/50"
                           )}
                         >
                           {phase.period}
@@ -304,7 +295,7 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
                       <p
                         className={cn(
                           jp.className,
-                          "mt-1 text-[12px] leading-snug text-white/55"
+                          "mt-0.5 text-[12px] leading-snug text-white/55"
                         )}
                       >
                         {phase.desc}
@@ -312,40 +303,19 @@ export default function SquadBattleIntroOverlay({ open, onClose }: Props) {
                     </div>
                   </motion.li>
                 ))}
-              </ul>
+              </ol>
 
-              {/* 循環ヒント */}
-              <motion.div
-                className="mt-3 flex items-center justify-center gap-2 text-amber-200/50"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{
-                  delay: reduceMotion ? 0 : SQUAD_INTRO_LOOP_DELAY_S,
-                  duration: 0.28,
-                }}
-              >
-                <RefreshCw size={12} strokeWidth={2.4} aria-hidden />
-                <p
-                  className={cn(
-                    nameOxanium.className,
-                    "text-[9px] font-bold uppercase tracking-[0.22em]"
-                  )}
-                >
-                  Loop · next season
-                </p>
-              </motion.div>
-
-              <ul className="mt-4 flex flex-col gap-1.5 border border-amber-400/20 bg-black/35 px-3 py-2.5">
+              {/* フェーズと重複しない補足のみ */}
+              <ul className="mt-5 flex flex-col gap-1 border-t border-amber-400/15 pt-3">
                 {SQUAD_BATTLE_INTRO_NOTICES.map((line) => (
                   <li
                     key={line}
                     className={cn(
                       jp.className,
-                      "flex gap-2 text-[11px] leading-snug text-white/50"
+                      "text-center text-[11px] leading-snug text-white/40"
                     )}
                   >
-                    <span className="mt-[0.35em] h-1 w-1 shrink-0 rounded-full bg-amber-400/70" />
-                    <span>{line}</span>
+                    {line}
                   </li>
                 ))}
               </ul>

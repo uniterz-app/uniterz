@@ -22,7 +22,6 @@ import {
   SQUAD_INTRO_ENTER_DELAY_MS,
   SQUAD_INTRO_ENTER_DURATION_MS,
   SQUAD_INTRO_KICKER_DELAY_MS,
-  SQUAD_INTRO_LOOP_DELAY_MS,
   SQUAD_INTRO_PHASE_DURATION_MS,
   SQUAD_INTRO_RULE_DELAY_MS,
   SQUAD_INTRO_TITLE_DELAY_MS,
@@ -77,9 +76,7 @@ export default function SquadBattleIntroOverlayNative({
 
         <Animated.View
           entering={
-            reduceMotion
-              ? undefined
-              : FadeIn.duration(200).delay(200)
+            reduceMotion ? undefined : FadeIn.duration(200).delay(200)
           }
           style={styles.closeWrap}
         >
@@ -157,6 +154,7 @@ export default function SquadBattleIntroOverlayNative({
             {SQUAD_BATTLE_INTRO_TAGLINE}
           </Animated.Text>
 
+          {/* フェーズタイムライン（枠なし・レールのみ） */}
           <View style={styles.timeline}>
             <View style={styles.rail} pointerEvents="none" />
             {SQUAD_BATTLE_SEASON_PHASES.map((phase, i) => (
@@ -172,7 +170,7 @@ export default function SquadBattleIntroOverlayNative({
                 }
               >
                 <View style={styles.dot} />
-                <View style={styles.phaseCard}>
+                <View style={styles.phaseBody}>
                   <View style={styles.phaseHeader}>
                     <Text style={styles.phaseLabel}>{phase.label}</Text>
                     <Text style={styles.phasePeriod}>{phase.period}</Text>
@@ -182,29 +180,12 @@ export default function SquadBattleIntroOverlayNative({
               </Animated.View>
             ))}
 
-            <Animated.View
-              style={styles.loopRow}
-              entering={
-                reduceMotion
-                  ? undefined
-                  : FadeIn.duration(280).delay(SQUAD_INTRO_LOOP_DELAY_MS)
-              }
-            >
-              <MaterialCommunityIcons
-                name="refresh"
-                size={12}
-                color="rgba(253,230,138,0.5)"
-              />
-              <Text style={styles.loopText}>Loop · next season</Text>
-            </Animated.View>
-
-            {/* 告知・禁止事項（Web と同文言） */}
-            <View style={styles.noticesBox}>
+            {/* フェーズと重複しない補足のみ */}
+            <View style={styles.notices}>
               {SQUAD_BATTLE_INTRO_NOTICES.map((line) => (
-                <View key={line} style={styles.noticeRow}>
-                  <View style={styles.noticeDot} />
-                  <Text style={styles.noticeText}>{line}</Text>
-                </View>
+                <Text key={line} style={styles.noticeText}>
+                  {line}
+                </Text>
               ))}
             </View>
           </View>
@@ -330,7 +311,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 18,
   },
   rule: {
-    marginBottom: 24,
+    marginBottom: 28,
     maxWidth: 360,
     fontSize: 13,
     lineHeight: 20,
@@ -344,46 +325,38 @@ const styles = StyleSheet.create({
   },
   rail: {
     position: "absolute",
-    left: 11,
-    top: 12,
-    bottom: 36,
+    left: 7,
+    top: 8,
+    bottom: 40,
     width: 1,
     backgroundColor: "rgba(251,191,36,0.28)",
   },
   phaseRow: {
     flexDirection: "row",
-    alignItems: "stretch",
-    gap: 12,
-    paddingLeft: 4,
-    marginBottom: 10,
+    alignItems: "flex-start",
+    gap: 14,
+    paddingLeft: 2,
+    marginBottom: 16,
   },
   dot: {
-    marginTop: 14,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(252,211,77,0.8)",
-    backgroundColor: "rgba(251,191,36,0.9)",
+    marginTop: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(251,191,36,0.95)",
     shadowColor: AMBER,
-    shadowOpacity: 0.65,
-    shadowRadius: 6,
+    shadowOpacity: 0.55,
+    shadowRadius: 5,
     shadowOffset: { width: 0, height: 0 },
   },
-  phaseCard: {
+  phaseBody: {
     flex: 1,
     minWidth: 0,
-    borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.28)",
-    backgroundColor: "rgba(0,0,0,0.45)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
   phaseHeader: {
     flexDirection: "row",
     alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: 8,
+    gap: 10,
   },
   phaseLabel: {
     fontFamily: fonts.metricExtra,
@@ -397,58 +370,28 @@ const styles = StyleSheet.create({
     fontFamily: fonts.metric,
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: "rgba(253,230,138,0.55)",
+    letterSpacing: 0.8,
+    color: "rgba(253,230,138,0.5)",
     flexShrink: 0,
   },
   phaseDesc: {
-    marginTop: 4,
+    marginTop: 2,
     fontSize: 12,
     lineHeight: 17,
     color: "rgba(255,255,255,0.55)",
   },
-  loopRow: {
+  notices: {
     marginTop: 4,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  loopText: {
-    fontFamily: fonts.metric,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 2.2,
-    textTransform: "uppercase",
-    color: "rgba(253,230,138,0.5)",
-  },
-  noticesBox: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.2)",
-    backgroundColor: "rgba(0,0,0,0.35)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  noticeRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  noticeDot: {
-    marginTop: 6,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(251,191,36,0.7)",
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(251,191,36,0.15)",
+    gap: 4,
   },
   noticeText: {
-    flex: 1,
     fontSize: 11,
     lineHeight: 16,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.4)",
+    textAlign: "center",
   },
   enterWrap: {
     marginTop: 32,
