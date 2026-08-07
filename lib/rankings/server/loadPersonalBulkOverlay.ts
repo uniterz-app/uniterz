@@ -140,7 +140,7 @@ function buildMyRow(
 
 function minPostsForMetric(metric: RankMetric): number {
   if (metric !== "winRate") return 1;
-  return minPostsForWinRate();
+  return minPostsForWinRate({});
 }
 
 /** MyRankCard 用 — Firestore snapshotRanks を直接読む（Functions 不要） */

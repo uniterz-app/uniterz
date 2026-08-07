@@ -317,7 +317,6 @@ async function computeRankShadowAnalysisLive(input: {
     const cumulative = cumulativeByUid.get(member.uid);
     const slice = readRankGapStatsSlice(cumulative, {
       rankingLeague: input.rankingLeague,
-      wcStage: input.wcStage,
     });
     if (!slice || slice.posts <= 0) continue;
 

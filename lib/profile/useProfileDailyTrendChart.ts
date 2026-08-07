@@ -44,7 +44,6 @@ export function useProfileDailyTrendChart(
     loading,
   } = useUserStatsDailyTrend(uidForDailyTrend, fetchEnabled, {
     rankingLeague: trendCtx.rankingLeague,
-    wcStage: trendCtx.wcStage,
   });
 
   const sourceRows = useSeed

@@ -68,7 +68,7 @@ export default function UnitEarnVaultSettleFly({ fly, onComplete }: Props) {
         }}
         transition={{
           duration: M.flyDurationS,
-          ease: M.flyEase as unknown as number[],
+          ease: M.flyEase as [number, number, number, number],
         }}
       >
         <UnitEarnFlyChip label={fly.label} />

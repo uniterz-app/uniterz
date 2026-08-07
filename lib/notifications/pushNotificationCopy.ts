@@ -95,6 +95,11 @@ export function buildPushNotificationCopy(
               ? `${matchup} — the conclusion changed.`
               : "The insight conclusion changed. Open the match."),
         };
+      case "monthly_report":
+        return {
+          title: "Monthly report ready",
+          body: "Your monthly prediction report is ready.",
+        };
     }
   }
 
@@ -156,6 +161,11 @@ export function buildPushNotificationCopy(
           (matchup
             ? `${matchup} の結論が変わりました。`
             : "重要結論が変わりました。試合を開いて確認してください。"),
+      };
+    case "monthly_report":
+      return {
+        title: "月次レポートが届きました",
+        body: "今月の予想レポートを確認できます。",
       };
   }
 }

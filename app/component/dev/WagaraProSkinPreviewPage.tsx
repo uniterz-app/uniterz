@@ -52,7 +52,7 @@ function panelProps() {
     countryCode: "JP",
     memberSinceMs: new Date("2025-12-01T00:00:00+09:00").getTime(),
     shareHandle: "mpj",
-    rankingLeague: "worldcup" as const,
+    rankingLeague: "nba" as const,
     visualEffects: "lite" as const,
     profileViewCount: 1284,
     unitBalance: 2450,

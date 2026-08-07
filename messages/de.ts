@@ -75,6 +75,7 @@ const de: Messages = {
     last30d: "30 Tage",
     backToRankings: "Zurück zum Ranking",
     backToGroupRankings: "Zurück zum Gruppen-Ranking",
+    backToReport: "Zurück zum Bericht",
     overview: "Übersicht",
     stats: "Statistiken",
     bracket: "Bracket",

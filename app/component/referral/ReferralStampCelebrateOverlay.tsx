@@ -127,7 +127,7 @@ export default function ReferralStampCelebrateOverlay({
                   ? { duration: 0.01 }
                   : {
                       duration: M.stampSlamS,
-                      ease: M.stampSlamEase as unknown as number[],
+                      ease: M.stampSlamEase as [number, number, number, number],
                     }
               }
             >

@@ -285,7 +285,7 @@ export default function WebRankingsShell() {
 
   const winRateMinPosts = usePeriodBoard
     ? periodWinRateMinPosts(rankingPeriod as Exclude<RankingPeriod, "season">)
-    : computeWinRateMinPosts(rankingLeague, null);
+    : computeWinRateMinPosts(rankingLeague);
 
   const listContentReady = computeRankingListContentReady({
     listReady,
@@ -355,7 +355,6 @@ export default function WebRankingsShell() {
   const pageKey =
     buildRankingsPageKey({
       metric: metric as MobileMetric,
-      rankingLeague,
     }) + `:${nbaBoard}:${rankingPeriod}:${effectiveRound}`;
   const prefersReducedMotion = useReducedMotion();
   const { skipCountUp, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
@@ -520,11 +519,7 @@ export default function WebRankingsShell() {
           <CandleChartLoader className="pt-2" label={m.common.loading} />
         )}
 
-        {effectiveCategory === "bracket" ? (
-          <div className="mx-auto w-full max-w-[960px] px-2 pb-bottom-nav pt-2" role="status">
-            <p className="text-center text-sm text-white/50">—</p>
-          </div>
-        ) : openProLocked ? null : rankingHasNoEntries ? (
+        {openProLocked ? null : rankingHasNoEntries ? (
           <div
             role="status"
             className="flex min-h-[min(65dvh,520px)] items-center justify-center px-4 text-center"

@@ -99,7 +99,7 @@ export default function UnitEarnCelebrateOverlay({
                 ? { duration: 0.01 }
                 : {
                     duration: M.panelEnterS,
-                    ease: M.panelEnterEase as unknown as number[],
+                    ease: M.panelEnterEase as [number, number, number, number],
                   }
             }
           >
@@ -169,7 +169,7 @@ export default function UnitEarnCelebrateOverlay({
                       : {
                           delay: 0.08,
                           duration: M.amountSlamS,
-                          ease: M.amountSlamEase as unknown as number[],
+                          ease: M.amountSlamEase as [number, number, number, number],
                         }
                   }
                 >
@@ -208,7 +208,7 @@ export default function UnitEarnCelebrateOverlay({
                     : {
                         delay: M.copyDelayS,
                         duration: M.copyFadeS,
-                        ease: M.panelEnterEase as unknown as number[],
+                        ease: M.panelEnterEase as [number, number, number, number],
                       }
                 }
               >
@@ -243,7 +243,7 @@ export default function UnitEarnCelebrateOverlay({
                     : {
                         delay: M.ctaDelayS,
                         duration: M.ctaFadeS,
-                        ease: M.panelEnterEase as unknown as number[],
+                        ease: M.panelEnterEase as [number, number, number, number],
                       }
                 }
               >
