@@ -24,6 +24,7 @@ type WindowId = "season" | "last10";
 
 type Props = {
   language: "ja" | "en";
+  onSelectPlayer?: (playerId: string) => void;
 };
 
 function MetricChip({
@@ -53,6 +54,7 @@ function MetricChip({
 
 export default function NbaLeaguePlayerStatLeadersPanelNative({
   language,
+  onSelectPlayer,
 }: Props) {
   const isJa = language === "ja";
   const insets = useSafeAreaInsets();
@@ -148,7 +150,14 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
           </View>
 
           {leaders.map((row, index) => (
-            <View key={row.playerId} style={styles.row}>
+            <Pressable
+              key={row.playerId}
+              onPress={() => onSelectPlayer?.(row.playerId)}
+              style={({ pressed }) => [
+                styles.row,
+                pressed && onSelectPlayer ? { opacity: 0.75 } : null,
+              ]}
+            >
               <Text style={[styles.tdRank, { color: index < 6 ? CYBER_TAB_CYAN : "rgba(255,255,255,0.55)" }]}>
                 {index + 1}
               </Text>
@@ -162,7 +171,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
               <Text style={styles.tdVal}>
                 {formatPlayerLeaderValue(metric, row.value)}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       </ScrollView>

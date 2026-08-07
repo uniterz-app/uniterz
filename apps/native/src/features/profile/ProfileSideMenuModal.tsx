@@ -76,7 +76,8 @@ type Props = {
     | "unitEarnCelebratePreview"
     | "teamStatsPreview"
     | "playerStatsPreview"
-    | "teamDetailPreview") => void;
+    | "teamDetailPreview"
+    | "playerDetailPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -270,6 +271,7 @@ export default function ProfileSideMenuModal({
       | "teamStatsPreview"
       | "playerStatsPreview"
       | "teamDetailPreview"
+      | "playerDetailPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -664,6 +666,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("teamDetailPreview")}
                         >
                           Team Detail 再構築
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="account-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("playerDetailPreview")}
+                        >
+                          Player Detail 叩き台
                         </SideMenuItemButtonNative>
                       </View>
                     </>

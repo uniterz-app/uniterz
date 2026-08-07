@@ -5,11 +5,13 @@ import NbaLeaguePlayerStatLeadersPanelNative from "./NbaLeaguePlayerStatLeadersP
 type Props = {
   language: "ja" | "en";
   onClose: () => void;
+  onSelectPlayer?: (playerId: string) => void;
 };
 
 export default function PlayerStatsPreviewScreenNative({
   language,
   onClose,
+  onSelectPlayer,
 }: Props) {
   const isJa = language === "ja";
   return (
@@ -24,8 +26,10 @@ export default function PlayerStatsPreviewScreenNative({
       appBackground
       onClose={onClose}
     >
-      <NbaLeaguePlayerStatLeadersPanelNative language={language} />
+      <NbaLeaguePlayerStatLeadersPanelNative
+        language={language}
+        onSelectPlayer={onSelectPlayer}
+      />
     </MobilePageShell>
   );
 }
-

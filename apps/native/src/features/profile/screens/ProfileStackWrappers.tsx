@@ -19,6 +19,7 @@ import ReferralStampCelebratePreviewScreenNative from "../mobileScreens/Referral
 import UnitEarnCelebratePreviewScreenNative from "../mobileScreens/UnitEarnCelebratePreviewScreenNative";
 import TeamStatsPreviewScreenNative from "../../games/teamStats/TeamStatsPreviewScreenNative";
 import PlayerStatsPreviewScreenNative from "../../games/playerStats/PlayerStatsPreviewScreenNative";
+import PlayerDetailPreviewScreenNative from "../../games/playerDetail/PlayerDetailPreviewScreenNative";
 import TeamDetailPreviewScreenNative from "../../games/teamDetail/TeamDetailPreviewScreenNative";
 import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
@@ -233,6 +234,9 @@ export function PlayerStatsPreviewScreenWrapper() {
     <PlayerStatsPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
+      onSelectPlayer={(playerId) =>
+        navigation.navigate("PlayerDetailPreview", { playerId })
+      }
     />
   );
 }
@@ -248,6 +252,21 @@ export function TeamDetailPreviewScreenWrapper() {
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       teamId={route.params?.teamId}
+    />
+  );
+}
+
+export function PlayerDetailPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const route = useRoute<RouteProp<ProfileStackParamList, "PlayerDetailPreview">>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <PlayerDetailPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      playerId={route.params?.playerId}
     />
   );
 }

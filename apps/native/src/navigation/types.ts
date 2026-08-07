@@ -119,6 +119,8 @@ export type ProfileStackParamList = {
   PlayerStatsPreview: undefined;
   /** __DEV__ Team Detail 再構築プレビュー */
   TeamDetailPreview: { teamId?: string } | undefined;
+  /** __DEV__ Player Detail 叩き台プレビュー */
+  PlayerDetailPreview: { playerId?: string } | undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

@@ -184,7 +184,41 @@ export function getTeamUiAccentColor(
   league: League,
   teamId: string | null | undefined
 ): string {
-  return softenTeamUiColor(getTeamJerseyPrimaryColor(league, teamId));
+  return readableTeamAccentOnDark(
+    softenTeamUiColor(getTeamJerseyPrimaryColor(league, teamId))
+  );
+}
+
+/**
+ * 暗い背景上のテキスト／枠用。Kings 紫など低輝度を持ち上げて視認性を確保。
+ */
+export function readableTeamAccentOnDark(hex: string): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return hex;
+  let r = Number.parseInt(raw.slice(0, 2), 16);
+  let g = Number.parseInt(raw.slice(2, 4), 16);
+  let b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return hex;
+
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const lum =
+    0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+
+  // 十分明るい色はそのまま（枠線でも読める）
+  if (lum >= 0.32) return `#${raw.toUpperCase()}`;
+
+  // 同系色のまま白へブレンドして輝度を上げる
+  const t = Math.min(0.72, (0.38 - lum) / 0.38);
+  const blend = 0.35 + t * 0.45;
+  r = Math.round(r + (255 - r) * blend);
+  g = Math.round(g + (255 - g) * blend);
+  b = Math.round(b + (255 - b) * blend);
+  const toHex = (n: number) =>
+    Math.min(255, Math.max(0, n)).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
 }
 
 /** ユニフォーム canvas の2色目（通常はチーム secondary、上記セットのチームは jersey primary と同色） */

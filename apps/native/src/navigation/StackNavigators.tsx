@@ -410,6 +410,15 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="PlayerDetailPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .PlayerDetailPreviewScreenWrapper
+            }
+          />
+        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>

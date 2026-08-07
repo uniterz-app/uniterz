@@ -6,16 +6,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamUiAccentColor,
 } from "../../../../../../lib/team-colors";
 import {
   formatStreakLabel,
   getNbaTeamDetailPreview,
+  payrollDisplaySlices,
+  type NbaTeamInjuryEntry,
   type NbaTeamMetricWithRank,
+  type NbaTeamOpponentAllowedMetric,
+  type NbaTeamPayroll,
   type NbaTeamRecentGame,
   type NbaTeamStreak,
   type NbaTeamUpcomingGame,
 } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import {
+  availabilityStatusColor,
+  formatAvailabilityStatus,
+  formatSalaryUsd,
+} from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import {
   METRIC_FONT,
@@ -37,10 +46,23 @@ const FORM_LOSS = "#FF2D78";
 const OXANIUM = "Oxanium_800ExtraBold";
 /** 予想入力 `NbaTeamStatsPanelNative` と同じ */
 const LEAGUE_RANK_SEGMENTS = 6;
-const BAR_OFFENSE = "#5cf0b5";
-const BAR_DEFENSE = "#b388ff";
-const OFFENSE_GLOW = "rgba(92,240,181,0.28)";
-const DEFENSE_GLOW = "rgba(179,136,255,0.28)";
+/** PERFORMANCE METRICS — 攻撃=ホットレッド / 守備=アイスブルー */
+const METRIC_OFFENSE = "#FF3D5A";
+const METRIC_DEFENSE = "#3BA0FF";
+const METRIC_OFFENSE_GLOW = "rgba(255,61,90,0.34)";
+const METRIC_DEFENSE_GLOW = "rgba(59,160,255,0.34)";
+/** キャップ余裕・勝率など「良い」系 */
+const POSITIVE_TEAL = "#5cf0b5";
+
+function hexToRgba(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "");
+  if (raw.length !== 6) return `rgba(255,255,255,${alpha})`;
+  const n = parseInt(raw, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 function ordinal(n: number): string {
   const v = n % 100;
@@ -103,14 +125,37 @@ function RatingRow({
   );
 }
 
-function CornerMarks() {
+function CornerMarks({ color }: { color: string }) {
+  const c = { borderColor: color };
   return (
     <>
-      <View style={[styles.corner, styles.cornerTL]} />
-      <View style={[styles.corner, styles.cornerTR]} />
-      <View style={[styles.corner, styles.cornerBL]} />
-      <View style={[styles.corner, styles.cornerBR]} />
+      <View style={[styles.corner, styles.cornerTL, c]} />
+      <View style={[styles.corner, styles.cornerTR, c]} />
+      <View style={[styles.corner, styles.cornerBL, c]} />
+      <View style={[styles.corner, styles.cornerBR, c]} />
     </>
+  );
+}
+
+function SectionHeader({
+  title,
+  accent,
+}: {
+  title: string;
+  accent: string;
+}) {
+  return (
+    <View style={styles.advTitleRow}>
+      <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.75) }]}>
+        {title}
+      </Text>
+      <View
+        style={[
+          styles.advTitleLine,
+          { backgroundColor: hexToRgba(accent, 0.35) },
+        ]}
+      />
+    </View>
   );
 }
 
@@ -143,28 +188,26 @@ function FormChip({
 function RecentFormSection({
   games,
   streak,
+  accent,
 }: {
   games: NbaTeamRecentGame[];
   streak: NbaTeamStreak;
+  accent: string;
 }) {
-  const [open, setOpen] = useState(false);
   const results = games.slice(-10).map((g) => g.result);
   const wins = results.filter((r) => r === "W").length;
   const losses = results.length - wins;
-  // 展開リストは新しい試合が上
-  const list = [...games].slice(-10).reverse();
   const streakLabel = formatStreakLabel(streak);
   const streakWin = streak.kind === "W";
 
   return (
     <View style={styles.formSection}>
-      <Pressable
-        onPress={() => setOpen((v) => !v)}
-        style={styles.formHeadPress}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-      >
-        <Text style={styles.sectionTitleInline}>RECENT FORM (LAST 10)</Text>
+      <View style={styles.formHeadPress}>
+        <Text
+          style={[styles.sectionTitleInline, { color: hexToRgba(accent, 0.75) }]}
+        >
+          RECENT FORM (LAST 10)
+        </Text>
         <Text
           style={[
             styles.streakBadge,
@@ -173,14 +216,8 @@ function RecentFormSection({
         >
           {streakLabel}
         </Text>
-        <Text style={styles.formChevron}>{open ? "▾" : "▸"}</Text>
-      </Pressable>
-
-      <Pressable
-        onPress={() => setOpen((v) => !v)}
-        style={styles.formBlock}
-        accessibilityRole="button"
-      >
+      </View>
+      <View style={styles.formBlock}>
         <View style={styles.formChips}>
           {results.map((r, i) => (
             <FormChip key={`f-${i}`} result={r} index={i} total={results.length} />
@@ -189,66 +226,283 @@ function RecentFormSection({
         <Text style={styles.formRecord}>
           {wins}-{losses}
         </Text>
-      </Pressable>
+      </View>
+    </View>
+  );
+}
 
-      {open ? (
-        <View style={styles.gameList}>
-          {list.map((g, i) => (
-            <View
-              key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
+function GameLogsSection({
+  games,
+  accent,
+}: {
+  games: NbaTeamRecentGame[];
+  accent: string;
+}) {
+  const list = [...games].slice(-10).reverse();
+  const frame = hexToRgba(accent, 0.3);
+  const line = hexToRgba(accent, 0.12);
+  return (
+    <View style={styles.schedSection}>
+      <SectionHeader title={`GAME LOGS (LAST ${list.length})`} accent={accent} />
+      <View style={[styles.gameList, { borderColor: frame }]}>
+        <View
+          style={[
+            styles.gameRow,
+            {
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: line,
+            },
+          ]}
+        >
+          <Text style={[styles.gameDate, styles.gameHead]}>DATE</Text>
+          <Text style={[styles.gameVs, styles.gameHead]}>GAME</Text>
+          <Text style={[styles.gameScore, styles.gameHead]}>SCORE</Text>
+          <Text style={[styles.gameResult, styles.gameHead]}> </Text>
+        </View>
+        {list.map((g, i) => (
+          <View
+            key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
+            style={[
+              styles.gameRow,
+              i < list.length - 1
+                ? {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: line,
+                  }
+                : null,
+            ]}
+          >
+            <Text style={styles.gameDate}>{g.dateLabel}</Text>
+            <Text style={styles.gameVs} numberOfLines={1}>
+              {g.home ? "vs" : "@"} {g.oppAbbr}
+            </Text>
+            <Text style={styles.gameScore}>
+              {g.teamScore}-{g.oppScore}
+            </Text>
+            <Text
               style={[
-                styles.gameRow,
-                i < list.length - 1 ? styles.gameRowBorder : null,
+                styles.gameResult,
+                g.result === "W" ? styles.win : styles.loss,
               ]}
             >
-              <Text style={styles.gameDate}>{g.dateLabel}</Text>
-              <Text style={styles.gameVs} numberOfLines={1}>
-                {g.home ? "vs" : "@"} {g.oppAbbr}
-                {g.conferenceGame ? (
-                  <Text style={styles.confTag}> · CONF</Text>
-                ) : null}
-              </Text>
-              <Text style={styles.gameScore}>
-                {g.teamScore}-{g.oppScore}
-              </Text>
-              <Text
+              {g.result}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function InjuriesSection({
+  injuries,
+  accent,
+  isJa,
+}: {
+  injuries: NbaTeamInjuryEntry[];
+  accent: string;
+  isJa: boolean;
+}) {
+  const frame = hexToRgba(accent, 0.35);
+  return (
+    <View style={styles.schedSection}>
+      <SectionHeader title="INJURIES" accent={accent} />
+      <View style={[styles.gameList, { borderColor: frame }]}>
+        {injuries.length === 0 ? (
+          <View style={styles.gameRow}>
+            <Text style={styles.injuryEmpty}>
+              {isJa ? "欠場者なし" : "No injuries"}
+            </Text>
+          </View>
+        ) : (
+          injuries.map((inj, i) => {
+            const tone = availabilityStatusColor(inj.status);
+            return (
+              <View
+                key={inj.playerId}
                 style={[
-                  styles.gameResult,
-                  g.result === "W" ? styles.win : styles.loss,
+                  styles.injuryRow,
+                  i < injuries.length - 1
+                    ? {
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderBottomColor: hexToRgba(accent, 0.12),
+                      }
+                    : null,
                 ]}
               >
-                {g.result}
+                <View style={styles.injuryTop}>
+                  <Text style={styles.injuryName}>{inj.name}</Text>
+                  <Text style={[styles.injuryStatus, { color: tone }]}>
+                    {formatAvailabilityStatus(inj.status)}
+                  </Text>
+                </View>
+                <View style={styles.injuryMeta}>
+                  <Text style={styles.injuryReason} numberOfLines={1}>
+                    {inj.reason ?? "—"}
+                  </Text>
+                  {inj.returnEstimate ? (
+                    <Text
+                      style={[
+                        styles.injuryReturn,
+                        { color: hexToRgba(tone, 0.85) },
+                      ]}
+                    >
+                      {inj.returnEstimate.toUpperCase()}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
+    </View>
+  );
+}
+
+function OpponentStatsSection({
+  metrics,
+  accent,
+  isJa,
+}: {
+  metrics: NbaTeamOpponentAllowedMetric[];
+  accent: string;
+  isJa: boolean;
+}) {
+  const frame = hexToRgba(accent, 0.4);
+  const line = hexToRgba(accent, 0.22);
+  const [selectedId, setSelectedId] = useState(metrics[0]?.id ?? null);
+  const selected =
+    metrics.find((m) => m.id === selectedId) ?? metrics[0] ?? null;
+
+  return (
+    <View style={styles.schedSection}>
+      <SectionHeader title="OPPONENTS STATS" accent={accent} />
+      <Text style={styles.oppAllowedHint}>ALLOWED</Text>
+      <Text style={styles.oppAllowedCaption}>
+        {isJa
+          ? "相手に許したスタッツ（TOV は誘発数）。順位は #1 が最良。"
+          : "What opponents average vs this team (TOV = forced). Rank #1 is best."}
+      </Text>
+      <View style={[styles.oppAllowedGrid, { borderColor: frame }]}>
+        {metrics.map((m, i) => {
+          const col = i % 3;
+          const row = Math.floor(i / 3);
+          const lastRow = Math.floor((metrics.length - 1) / 3);
+          const active = selected?.id === m.id;
+          const dirLabel = m.lowerIsBetter
+            ? isJa
+              ? "↓ 低ほど良"
+              : "↓ lower"
+            : isJa
+              ? "↑ 高ほど良"
+              : "↑ higher";
+          return (
+            <Pressable
+              key={m.id}
+              onPress={() => setSelectedId(m.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${m.short}. ${dirLabel}`}
+              style={[
+                styles.oppAllowedCell,
+                active ? { backgroundColor: hexToRgba(accent, 0.08) } : null,
+                col < 2
+                  ? {
+                      borderRightWidth: StyleSheet.hairlineWidth,
+                      borderRightColor: line,
+                    }
+                  : null,
+                row < lastRow
+                  ? {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: line,
+                    }
+                  : null,
+              ]}
+            >
+              <View style={styles.oppAllowedTop}>
+                <Text style={styles.oppAllowedLabel}>{m.short}</Text>
+                <Text
+                  style={[
+                    styles.oppAllowedRank,
+                    {
+                      color:
+                        m.leagueRank <= 10
+                          ? accent
+                          : "rgba(255,255,255,0.35)",
+                    },
+                  ]}
+                >
+                  #{m.leagueRank}
+                </Text>
+              </View>
+              <Text style={styles.oppAllowedValue}>{m.display}</Text>
+              <Text
+                style={[
+                  styles.oppAllowedDir,
+                  {
+                    color: m.lowerIsBetter
+                      ? "rgba(59,160,255,0.75)"
+                      : "rgba(92,240,181,0.8)",
+                  },
+                ]}
+              >
+                {dirLabel}
               </Text>
-            </View>
-          ))}
-        </View>
+            </Pressable>
+          );
+        })}
+      </View>
+      {selected ? (
+        <Text style={styles.oppAllowedDetail}>
+          {isJa ? selected.hintJa : selected.hintEn}
+        </Text>
       ) : null}
     </View>
   );
 }
 
-function UpcomingScheduleSection({ games }: { games: NbaTeamUpcomingGame[] }) {
+function UpcomingScheduleSection({
+  games,
+  accent,
+}: {
+  games: NbaTeamUpcomingGame[];
+  accent: string;
+}) {
   if (games.length === 0) return null;
+  const frame = hexToRgba(accent, 0.3);
+  const line = hexToRgba(accent, 0.12);
   return (
     <View style={styles.schedSection}>
-      <Text style={styles.sectionTitle}>UPCOMING</Text>
-      <View style={styles.gameList}>
+      <SectionHeader title="UPCOMING" accent={accent} />
+      <View style={[styles.gameList, { borderColor: frame }]}>
         {games.map((g, i) => (
           <View
             key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
             style={[
               styles.gameRow,
-              i < games.length - 1 ? styles.gameRowBorder : null,
+              i < games.length - 1
+                ? {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: line,
+                  }
+                : null,
             ]}
           >
             <Text style={styles.gameDate}>{g.dateLabel}</Text>
             <Text style={styles.gameVs} numberOfLines={1}>
               {g.home ? "vs" : "@"} {g.oppAbbr}
               {g.conferenceGame ? (
-                <Text style={styles.confTag}> · CONF</Text>
+                <Text style={[styles.confTag, { color: hexToRgba(accent, 0.55) }]}>
+                  {" "}
+                  · CONF
+                </Text>
               ) : null}
             </Text>
-            <Text style={styles.schedTip}>{g.tipLabel}</Text>
+            <Text style={[styles.schedTip, { color: hexToRgba(accent, 0.85) }]}>
+              {g.tipLabel}
+            </Text>
           </View>
         ))}
       </View>
@@ -292,14 +546,16 @@ function SplitCard({
   wins,
   losses,
   labelColor,
+  accent,
 }: {
   label: string;
   wins: number;
   losses: number;
   labelColor?: string;
+  accent: string;
 }) {
   return (
-    <View style={styles.splitCard}>
+    <View style={[styles.splitCard, { borderColor: hexToRgba(accent, 0.3) }]}>
       <Text style={[styles.splitLabel, labelColor ? { color: labelColor } : null]}>
         {label}
       </Text>
@@ -361,34 +617,44 @@ function rankAccent(rank: number): {
   };
 }
 
-function AdvancedMetricsGrid({ metrics }: { metrics: NbaTeamMetricWithRank[] }) {
+function AdvancedMetricsGrid({
+  metrics,
+  accent,
+}: {
+  metrics: NbaTeamMetricWithRank[];
+  accent: string;
+}) {
   const byId = new Map(metrics.map((m) => [m.id, m]));
   const cells = ADVANCED_METRIC_IDS.map((id) => byId.get(id)).filter(
     (m): m is NbaTeamMetricWithRank => Boolean(m)
   );
+  const cellLine = hexToRgba(accent, 0.22);
 
   return (
     <View style={styles.advWrap}>
-      <View style={styles.advTitleRow}>
-        <Text style={styles.advTitle}>ADVANCED METRICS</Text>
-        <View style={styles.advTitleLine} />
-      </View>
-      <View style={styles.advGrid}>
+      <SectionHeader title="ADVANCED METRICS" accent={accent} />
+      <View
+        style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}
+      >
         {cells.map((m, i) => {
           const col = i % 3;
           const row = Math.floor(i / 3);
-          const accent = rankAccent(m.leagueRank);
+          const tint = rankAccent(m.leagueRank);
           return (
             <View
               key={m.id}
               style={[
                 styles.advCell,
-                col < 2 ? styles.advCellBorderR : null,
-                row < 2 ? styles.advCellBorderB : null,
+                col < 2
+                  ? { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: cellLine }
+                  : null,
+                row < 2
+                  ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cellLine }
+                  : null,
               ]}
             >
               <LinearGradient
-                colors={[accent.glow, accent.clear]}
+                colors={[tint.glow, tint.clear]}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={StyleSheet.absoluteFillObject}
@@ -399,7 +665,17 @@ function AdvancedMetricsGrid({ metrics }: { metrics: NbaTeamMetricWithRank[] }) 
                   {ADVANCED_LABEL[m.id as (typeof ADVANCED_METRIC_IDS)[number]] ??
                     m.short}
                 </Text>
-                <Text style={[styles.advRank, { color: rankTint(m.leagueRank) }]}>
+                <Text
+                  style={[
+                    styles.advRank,
+                    {
+                      color:
+                        m.leagueRank <= 10
+                          ? accent
+                          : rankTint(m.leagueRank),
+                    },
+                  ]}
+                >
                   #{m.leagueRank}
                 </Text>
               </View>
@@ -412,13 +688,122 @@ function AdvancedMetricsGrid({ metrics }: { metrics: NbaTeamMetricWithRank[] }) 
   );
 }
 
+function PayrollSection({
+  payroll,
+  accent,
+  isJa,
+}: {
+  payroll: NbaTeamPayroll;
+  accent: string;
+  isJa: boolean;
+}) {
+  const frame = hexToRgba(accent, 0.45);
+  const overCap = payroll.capSpace < 0;
+  const slices = payrollDisplaySlices(payroll.lines, accent, 5);
+
+  return (
+    <View style={styles.payrollWrap}>
+      <SectionHeader title="PAYROLL" accent={accent} />
+      <View style={[styles.payrollCard, { borderColor: frame }]}>
+        <View style={styles.payrollTop}>
+          <View style={styles.payrollSalaryBlock}>
+            <Text style={styles.payrollLabel}>
+              {isJa ? "総年俸" : "TOTAL"}
+            </Text>
+            <Text style={styles.payrollSalary}>
+              {formatSalaryUsd(payroll.totalSalary)}
+            </Text>
+          </View>
+          <View style={styles.payrollRankBlock}>
+            <Text style={styles.payrollLabel}>RANK</Text>
+            <Text style={[styles.payrollRank, { color: accent }]}>
+              #{payroll.leagueRank}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.payrollMetaRow}>
+          <Text style={styles.payrollMeta}>
+            CAP {formatSalaryUsd(payroll.salaryCap)}
+          </Text>
+          <Text style={[styles.payrollMetaDot, { color: hexToRgba(accent, 0.45) }]}>
+            ·
+          </Text>
+          <Text style={styles.payrollMeta}>
+            TAX LINE {formatSalaryUsd(payroll.taxLine)}
+          </Text>
+        </View>
+        <Text
+          style={[
+            styles.payrollSpace,
+            { color: overCap ? FORM_LOSS : POSITIVE_TEAL },
+          ]}
+        >
+          {isJa ? "キャップ余裕" : "CAP SPACE"}{" "}
+          {overCap ? "" : "+"}
+          {formatSalaryUsd(payroll.capSpace)}
+          {payroll.taxBill > 0
+            ? `  ·  TAX ${formatSalaryUsd(payroll.taxBill)}`
+            : ""}
+        </Text>
+        <Text style={[styles.payrollGuaranteed, { color: accent }]}>
+          {isJa ? "保証額" : "GUARANTEED"}{" "}
+          {formatSalaryUsd(payroll.guaranteed)}
+        </Text>
+
+        {/* Player composition stacked bar */}
+        <Text style={styles.payrollBreakdownTitle}>
+          {isJa ? "選手内訳" : "BY PLAYER"}
+        </Text>
+        <View style={styles.payrollStackWrap}>
+          <View style={styles.payrollStack}>
+            {slices.map((s) => (
+              <View
+                key={s.key}
+                style={{
+                  flexGrow: Math.max(s.share, 0.02),
+                  flexBasis: 0,
+                  height: "100%",
+                  backgroundColor: s.color,
+                }}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.payrollLines}>
+          {slices.map((s) => (
+            <View key={s.key} style={styles.payrollLineRow}>
+              <View
+                style={[styles.payrollSwatch, { backgroundColor: s.color }]}
+              />
+              <Text style={styles.payrollLineName} numberOfLines={1}>
+                {s.label}
+              </Text>
+              <Text style={styles.payrollLineSalary}>
+                {formatSalaryUsd(s.salary)}
+              </Text>
+              <Text style={[styles.payrollLineShare, { color: accent }]}>
+                {Math.round(s.share * 100)}%
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
-  void language;
+  const isJa = language === "ja";
   const insets = useSafeAreaInsets();
   const detail = useMemo(() => getNbaTeamDetailPreview(teamId), [teamId]);
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
+  /** 枠・文字用（暗いチーム色も読める） */
+  const accent = getTeamUiAccentColor("nba", detail.teamId);
   const bottomPad = Math.max(12, insets.bottom);
+  const dividerColor = hexToRgba(accent, 0.22);
+  const frameColor = hexToRgba(accent, 0.4);
 
   const seasonMetrics = detail.metrics.season;
   const ortg = seasonMetrics.find((m) => m.id === "ortg");
@@ -430,7 +815,7 @@ export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
       : "WESTERN CONFERENCE";
   const divLine = `${detail.divisionLabelEn.toUpperCase()} DIVISION`;
 
-  const winPctLabel = detail.season.winPct.toFixed(3).replace(/^0/, "");
+  const winPctText = detail.season.winPct.toFixed(3).replace(/^0/, "");
 
   return (
     <ScrollView
@@ -440,111 +825,150 @@ export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
     >
       <View style={styles.panel}>
         {/* HEADER */}
-        <View style={styles.header}>
-          <View style={styles.jerseyFrame}>
-            <CornerMarks />
-            <JerseyMarkSvg
-              accent={jerseyPrimary}
-              accentEnd={jerseySecondary}
-              size={44}
-            />
+        <View style={[styles.headerCard, { borderColor: accent }]}>
+          <View style={styles.header}>
+            <View style={styles.jerseyFrame}>
+              <CornerMarks color={accent} />
+              <JerseyMarkSvg
+                accent={jerseyPrimary}
+                accentEnd={jerseySecondary}
+                size={44}
+              />
+            </View>
+            <View style={styles.headerText}>
+              <Text
+                style={[styles.confSeed, { color: hexToRgba(accent, 0.85) }]}
+                numberOfLines={1}
+              >
+                {confLine}  •  {divLine}
+              </Text>
+              <Text style={styles.city} numberOfLines={1}>
+                {detail.cityEn.toUpperCase()}
+              </Text>
+              <Text style={styles.nick} numberOfLines={1}>
+                {detail.nickEn.toUpperCase()}
+              </Text>
+            </View>
           </View>
-          <View style={styles.headerText}>
-            <Text style={styles.confSeed} numberOfLines={1}>
-              {confLine}  •  {divLine}
-            </Text>
-            <Text style={styles.city} numberOfLines={1}>
-              {detail.cityEn.toUpperCase()}
-            </Text>
-            <Text style={styles.nick} numberOfLines={1}>
-              {detail.nickEn.toUpperCase()}
-            </Text>
+
+          <View style={styles.recordRankRow}>
+            <View
+              style={[styles.recordRankCard, { borderColor: frameColor }]}
+            >
+              <Text style={styles.recordRankLabel}>RECORD</Text>
+              <View style={styles.recordRankValues}>
+                <Text style={styles.recordRankPrimary}>
+                  {detail.season.wins}-{detail.season.losses}
+                </Text>
+                <Text style={[styles.recordRankAccent, { color: accent }]}>
+                  {winPctText}
+                </Text>
+              </View>
+            </View>
+            <View
+              style={[styles.recordRankCard, { borderColor: frameColor }]}
+            >
+              <Text style={styles.recordRankLabel}>RANK</Text>
+              <View style={styles.recordRankValues}>
+                <Text style={[styles.recordRankPrimary, { color: accent }]}>
+                  #{String(detail.conferenceRank).padStart(2, "0")}
+                </Text>
+                <Text style={styles.recordRankAccentMuted}>Seed</Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        <View style={styles.recordRankRow}>
-          <View style={styles.recordRankCard}>
-            <Text style={styles.recordRankLabel}>RECORD</Text>
-            <View style={styles.recordRankValues}>
-              <Text style={styles.recordRankPrimary}>
-                {detail.season.wins}-{detail.season.losses}
-              </Text>
-              <Text style={styles.recordRankAccent}>{winPctLabel}</Text>
-            </View>
-          </View>
-          <View style={styles.recordRankCard}>
-            <Text style={styles.recordRankLabel}>RANK</Text>
-            <View style={styles.recordRankValues}>
-              <Text style={[styles.recordRankPrimary, styles.rankCyan]}>
-                #{String(detail.conferenceRank).padStart(2, "0")}
-              </Text>
-              <Text style={styles.recordRankAccent}>Seed</Text>
-            </View>
-          </View>
-        </View>
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <View style={styles.divider} />
-
-        {/* PERFORMANCE METRICS */}
-        <Text style={styles.sectionTitle}>PERFORMANCE METRICS</Text>
-        {ortg ? (
-          <RatingRow
-            label="OFFENSIVE RATING"
-            value={ortg.display}
-            rank={ortg.leagueRank}
-            color={BAR_OFFENSE}
-            barAccent={{
-              border: BAR_OFFENSE,
-              glow: OFFENSE_GLOW,
-              bg: BAR_OFFENSE,
-            }}
-            replayKey={`${detail.teamId}-ortg`}
-          />
-        ) : null}
-        {drtg ? (
-          <RatingRow
-            label="DEFENSIVE RATING"
-            value={drtg.display}
-            rank={drtg.leagueRank}
-            color={BAR_DEFENSE}
-            barAccent={{
-              border: BAR_DEFENSE,
-              glow: DEFENSE_GLOW,
-              bg: BAR_DEFENSE,
-            }}
-            replayKey={`${detail.teamId}-drtg`}
-          />
-        ) : null}
-
-        <View style={styles.divider} />
-
-        {/* RECENT FORM — tap to expand game list */}
-        <RecentFormSection
-          games={detail.recentGames}
-          streak={detail.streak}
+        <InjuriesSection
+          injuries={detail.injuries}
+          accent={accent}
+          isJa={isJa}
         />
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <UpcomingScheduleSection games={detail.upcomingGames} />
+        <SectionHeader title="PERFORMANCE METRICS" accent={accent} />
+        <View style={[styles.perfCard, { borderColor: frameColor }]}>
+          {ortg ? (
+            <RatingRow
+              label="OFFENSIVE RATING"
+              value={ortg.display}
+              rank={ortg.leagueRank}
+              color={METRIC_OFFENSE}
+              barAccent={{
+                border: METRIC_OFFENSE,
+                glow: METRIC_OFFENSE_GLOW,
+                bg: METRIC_OFFENSE,
+              }}
+              replayKey={`${detail.teamId}-ortg`}
+            />
+          ) : null}
+          {drtg ? (
+            <RatingRow
+              label="DEFENSIVE RATING"
+              value={drtg.display}
+              rank={drtg.leagueRank}
+              color={METRIC_DEFENSE}
+              barAccent={{
+                border: METRIC_DEFENSE,
+                glow: METRIC_DEFENSE_GLOW,
+                bg: METRIC_DEFENSE,
+              }}
+              replayKey={`${detail.teamId}-drtg`}
+            />
+          ) : null}
+        </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <AdvancedMetricsGrid metrics={seasonMetrics} />
+        <AdvancedMetricsGrid metrics={seasonMetrics} accent={accent} />
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <Text style={styles.sectionTitle}>SPLITS</Text>
+        <OpponentStatsSection
+          metrics={detail.opponentStats}
+          accent={accent}
+          isJa={isJa}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <View style={[styles.sectionCard, { borderColor: frameColor }]}>
+          <RecentFormSection
+            games={detail.recentGames}
+            streak={detail.streak}
+            accent={accent}
+          />
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <GameLogsSection games={detail.recentGames} accent={accent} />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <UpcomingScheduleSection
+          games={detail.upcomingGames}
+          accent={accent}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <SectionHeader title="SPLITS" accent={accent} />
         <View style={styles.splitRow}>
           <SplitCard
             label="HOME"
             wins={detail.homeAwaySplit.home.wins}
             losses={detail.homeAwaySplit.home.losses}
+            accent={accent}
           />
           <SplitCard
             label="AWAY"
             wins={detail.homeAwaySplit.away.wins}
             losses={detail.homeAwaySplit.away.losses}
+            accent={accent}
           />
         </View>
         <View style={[styles.splitRow, { marginTop: 8 }]}>
@@ -553,24 +977,37 @@ export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
             wins={detail.conferenceSplit.vsEast.wins}
             losses={detail.conferenceSplit.vsEast.losses}
             labelColor="#EF3B24"
+            accent={accent}
           />
           <SplitCard
             label="VS WEST"
             wins={detail.conferenceSplit.vsWest.wins}
             losses={detail.conferenceSplit.vsWest.losses}
             labelColor="#007AC1"
+            accent={accent}
           />
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <View style={styles.advTitleRow}>
-          <Text style={styles.advTitle}>ROSTER</Text>
-          <View style={styles.advTitleLine} />
+        <PayrollSection
+          payroll={detail.payroll}
+          accent={accent}
+          isJa={isJa}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <SectionHeader title="ROSTER" accent={accent} />
+        <View style={[styles.rosterFrame, { borderColor: frameColor }]}>
+          <NbaTeamRosterCardNative block={detail.rosterBlock} />
         </View>
-        <NbaTeamRosterCardNative block={detail.rosterBlock} />
 
-        <Text style={styles.footerAsOf}>{detail.asOfLabel} · PREVIEW</Text>
+        <Text
+          style={[styles.footerAsOf, { color: hexToRgba(accent, 0.4) }]}
+        >
+          {detail.asOfLabel} · PREVIEW
+        </Text>
       </View>
     </ScrollView>
   );
@@ -585,6 +1022,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingTop: 4,
     paddingBottom: 20,
+  },
+  headerCard: {
+    borderWidth: 1,
+    backgroundColor: "#050808",
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   header: {
     flexDirection: "row",
@@ -602,7 +1046,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 10,
     height: 10,
-    borderColor: CYBER_TAB_CYAN,
   },
   cornerTL: {
     top: 0,
@@ -635,7 +1078,6 @@ const styles = StyleSheet.create({
   },
   confSeed: {
     fontFamily: METRIC_FONT,
-    color: CYBER_TAB_CYAN,
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.05,
@@ -669,9 +1111,8 @@ const styles = StyleSheet.create({
   recordRankCard: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.18)",
-    borderRadius: 4,
-    backgroundColor: "rgba(0,16,28,0.55)",
+    borderRadius: 0,
+    backgroundColor: "rgba(8,8,12,0.45)",
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 4,
@@ -698,12 +1139,16 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
-  rankCyan: {
-    color: CYBER_TAB_CYAN,
-  },
   recordRankAccent: {
     fontFamily: METRIC_FONT,
-    color: BAR_OFFENSE,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    transform: [{ skewX: "-8deg" }],
+  },
+  recordRankAccentMuted: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.3,
@@ -711,21 +1156,160 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(0,245,255,0.18)",
     marginVertical: 16,
   },
-  sectionTitle: {
+  perfCard: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.4)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  sectionCard: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.4)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  rosterFrame: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.35)",
+    overflow: "hidden",
+  },
+  payrollWrap: {
+    gap: 10,
+  },
+  payrollCard: {
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.45)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  payrollTop: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+  },
+  payrollSalaryBlock: { gap: 2 },
+  payrollRankBlock: { alignItems: "flex-end", gap: 2 },
+  payrollLabel: {
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.38)",
-    fontSize: 10,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1.6,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
-    marginBottom: 12,
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollSalary: {
+    fontFamily: OXANIUM,
+    color: "#FFFFFF",
+    fontSize: 26,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollRank: {
+    fontFamily: METRIC_FONT,
+    fontSize: 22,
+    fontWeight: "800",
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+  },
+  payrollMeta: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.62)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
+  payrollMetaDot: { fontSize: 11 },
+  payrollSpace: {
+    fontFamily: METRIC_FONT,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    transform: [{ skewX: "-6deg" }],
+  },
+  payrollGuaranteed: {
+    fontFamily: METRIC_FONT,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    transform: [{ skewX: "-6deg" }],
+  },
+  payrollBreakdownTitle: {
+    marginTop: 8,
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
+  },
+  payrollStackWrap: {
+    paddingHorizontal: 6,
+    overflow: "hidden",
+  },
+  payrollStack: {
+    flexDirection: "row",
+    height: 14,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    gap: 1,
+    transform: [{ skewX: "-14deg" }],
+  },
+  payrollLines: {
+    gap: 5,
+    marginTop: 2,
+  },
+  payrollLineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  payrollSwatch: {
+    width: 8,
+    height: 8,
+    borderRadius: 1,
+    transform: [{ skewX: "-12deg" }],
+  },
+  payrollLineName: {
+    flex: 1,
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollLineSalary: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 11,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  payrollLineShare: {
+    width: 36,
+    textAlign: "right",
+    fontFamily: METRIC_FONT,
+    fontSize: 11,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
   },
   sectionTitleInline: {
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.38)",
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.6,
@@ -743,7 +1327,6 @@ const styles = StyleSheet.create({
   },
   formChevron: {
     fontFamily: METRIC_FONT,
-    color: CYBER_TAB_CYAN,
     fontSize: 14,
     fontWeight: "800",
   },
@@ -816,9 +1399,7 @@ const styles = StyleSheet.create({
   },
   gameList: {
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.14)",
-    borderRadius: 4,
-    backgroundColor: "rgba(0,16,28,0.5)",
+    backgroundColor: "rgba(8,8,12,0.5)",
     overflow: "hidden",
   },
   gameRow: {
@@ -869,6 +1450,135 @@ const styles = StyleSheet.create({
   },
   win: { color: FORM_WIN },
   loss: { color: FORM_LOSS },
+  gameHead: {
+    color: "rgba(255,255,255,0.38)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  injuryRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  injuryTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  injuryName: {
+    flex: 1,
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    fontWeight: "800",
+    transform: [{ skewX: "-6deg" }],
+  },
+  injuryStatus: {
+    fontFamily: METRIC_FONT,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    transform: [{ skewX: "-8deg" }],
+  },
+  injuryMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  injuryReason: {
+    flex: 1,
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+  },
+  injuryReturn: {
+    fontFamily: METRIC_FONT,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  injuryEmpty: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  oppAllowedHint: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 4,
+    transform: [{ skewX: "-6deg" }],
+  },
+  oppAllowedCaption: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(200,200,210,0.48)",
+    fontSize: 10,
+    lineHeight: 14,
+    marginBottom: 8,
+  },
+  oppAllowedGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    borderWidth: 1,
+    backgroundColor: "rgba(8,8,12,0.5)",
+    overflow: "hidden",
+  },
+  oppAllowedCell: {
+    width: "33.333%",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 3,
+  },
+  oppAllowedTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
+  },
+  oppAllowedLabel: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.1,
+    transform: [{ skewX: "-6deg" }],
+  },
+  oppAllowedRank: {
+    fontFamily: METRIC_FONT,
+    fontSize: 12,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  oppAllowedValue: {
+    fontFamily: METRIC_FONT,
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  oppAllowedDir: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    transform: [{ skewX: "-6deg" }],
+  },
+  oppAllowedDetail: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(200,200,210,0.55)",
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 8,
+  },
   ratingBlock: {
     marginBottom: 14,
     gap: 8,
@@ -908,7 +1618,6 @@ const styles = StyleSheet.create({
   },
   advTitle: {
     fontFamily: METRIC_FONT,
-    color: "rgba(0,245,255,0.7)",
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.6,
@@ -917,15 +1626,12 @@ const styles = StyleSheet.create({
   advTitleLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(0,245,255,0.28)",
   },
   advGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.28)",
-    borderRadius: 2,
-    backgroundColor: "rgba(4,14,24,0.72)",
+    backgroundColor: "rgba(6,8,12,0.72)",
     overflow: "hidden",
   },
   advCell: {
@@ -935,14 +1641,6 @@ const styles = StyleSheet.create({
     gap: 4,
     overflow: "hidden",
     position: "relative",
-  },
-  advCellBorderR: {
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: "rgba(0,245,255,0.2)",
-  },
-  advCellBorderB: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(0,245,255,0.2)",
   },
   advCellTop: {
     flexDirection: "row",
@@ -979,10 +1677,9 @@ const styles = StyleSheet.create({
   splitCard: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.14)",
-    borderRadius: 4,
+    borderRadius: 0,
     padding: 12,
-    backgroundColor: "rgba(0,16,28,0.4)",
+    backgroundColor: "rgba(8,8,12,0.4)",
     gap: 4,
   },
   splitLabel: {
@@ -1010,7 +1707,7 @@ const styles = StyleSheet.create({
   },
   splitPct: {
     fontFamily: METRIC_FONT,
-    color: BAR_OFFENSE,
+    color: POSITIVE_TEAL,
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.3,
@@ -1019,10 +1716,10 @@ const styles = StyleSheet.create({
   footerAsOf: {
     marginTop: 18,
     fontFamily: METRIC_FONT,
-    color: "rgba(0,245,255,0.35)",
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.4,
     textTransform: "uppercase",
+    textAlign: "center",
   },
 });
