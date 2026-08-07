@@ -110,6 +110,41 @@ function GamesStackScreen() {
             require("../features/games/screens/SeasonPredictScreenNative").default
           }
         />
+        <GamesStack.Screen
+          name="LeagueStats"
+          getComponent={() =>
+            require("../features/games/screens/LeagueStatsScreenWrappers")
+              .LeagueStatsScreenWrapper
+          }
+        />
+        <GamesStack.Screen
+          name="LeagueTeamStats"
+          getComponent={() =>
+            require("../features/games/screens/LeagueStatsScreenWrappers")
+              .LeagueTeamStatsScreenWrapper
+          }
+        />
+        <GamesStack.Screen
+          name="LeaguePlayerStats"
+          getComponent={() =>
+            require("../features/games/screens/LeagueStatsScreenWrappers")
+              .LeaguePlayerStatsScreenWrapper
+          }
+        />
+        <GamesStack.Screen
+          name="TeamDetailPreview"
+          getComponent={() =>
+            require("../features/games/screens/LeagueStatsScreenWrappers")
+              .GamesTeamDetailPreviewScreenWrapper
+          }
+        />
+        <GamesStack.Screen
+          name="PlayerDetailPreview"
+          getComponent={() =>
+            require("../features/games/screens/LeagueStatsScreenWrappers")
+              .GamesPlayerDetailPreviewScreenWrapper
+          }
+        />
       </GamesStack.Navigator>
     </NativeStackBackdrop>
   );

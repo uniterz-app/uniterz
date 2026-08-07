@@ -1,12 +1,13 @@
 "use client";
 
-import NbaLeagueTeamStatsPanel from "@/app/component/teamStats/NbaLeagueTeamStatsPanel";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-/** リーグ視点 Team Stats（モック）— 予想内の 2 チーム比較とは別画面 */
-export default function MobileTeamStatsPreviewPage() {
-  return (
-    <main className="min-h-dvh bg-app px-4 pb-bottom-nav pt-4 text-white">
-      <NbaLeagueTeamStatsPanel />
-    </main>
-  );
+/** 旧 Team Stats URL → STATS ハブへ */
+export default function MobileTeamStatsPreviewRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/mobile/stats-preview");
+  }, [router]);
+  return null;
 }

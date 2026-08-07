@@ -38,6 +38,16 @@ export type GamesStackParamList = {
   BracketMarket: undefined;
   /** シーズン アワード / 順位予想（プレビュー） */
   SeasonPredict: { mode: "awards" | "standings" };
+  /** STATS ハブ（Team / Player タブ） */
+  LeagueStats: { tab?: "team" | "player" } | undefined;
+  /** @deprecated LeagueStats へ */
+  LeagueTeamStats: undefined;
+  /** @deprecated LeagueStats tab=player へ */
+  LeaguePlayerStats: undefined;
+  /** Team Stats からのチーム詳細（モック） */
+  TeamDetailPreview: { teamId?: string } | undefined;
+  /** Player Stats からの選手詳細（モック） */
+  PlayerDetailPreview: { playerId?: string } | undefined;
 };
 
 export type ResultStackParamList = {

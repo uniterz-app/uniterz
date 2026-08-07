@@ -9,13 +9,10 @@ import React, {
   useCallback,
 } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import GamesDrawerMenu from "./GamesDrawerMenu";
-import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
-import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
+import GamesSeasonPredictHeaderButtons from "./GamesSeasonPredictHeaderButtons";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import {
-  gamesHeaderControlHeightClass,
   gamesHeaderFilterWrapClass,
-  gamesHeaderMenuButtonSize,
   gamesHeaderMobileShellClass,
   gamesHeaderMobileSideLeftClass,
   gamesHeaderMobileSideRightClass,
@@ -190,17 +187,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
      League
   ========================= */
   const [league, setLeague] = useState<League>("nba");
-  const [gamesDrawerOpen, setGamesDrawerOpen] = useState(false);
   const [tutorialPhase, setTutorialPhase] =
     useState<TutorialLivePhase | null>(null);
   const didInitLeague = useRef(false);
   const { preferredLeague, ready: preferredLeagueReady } =
     useUserPreferredLeague(user?.uid);
 
-  /** アワード/順位予想の戻る → `?menu=1` でサイドメニューを開く */
+  /** アワード/順位予想の戻る → 旧 `?menu=1` をクリア */
   useEffect(() => {
     if (searchParams.get("menu") !== "1") return;
-    setGamesDrawerOpen(true);
     const params = new URLSearchParams(searchParams.toString());
     params.delete("menu");
     const qs = params.toString();
@@ -1094,16 +1089,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       }
     : { initial: false as const, animate: { opacity: 1, y: 0 } };
 
-  const renderMenuButton = () => (
+  const renderSeasonPredictButtons = () => (
     <motion.div
       className="flex items-center justify-center"
       {...topBarEntry(0, -10)}
     >
-      <CyberMenuButton
-        size={gamesHeaderMenuButtonSize(isMobile)}
-        className={gamesHeaderControlHeightClass(isMobile)}
-        onClick={() => setGamesDrawerOpen(true)}
-        aria-label={m.games.openMenu}
+      <GamesSeasonPredictHeaderButtons
+        isMobile={isMobile}
+        awardsLabel={m.games.awardsPredict}
+        standingsLabel={m.games.standingsPredict}
+        onAwards={() => router.push("/mobile/season-awards")}
+        onStandings={() =>
+          router.push(
+            isMobile
+              ? "/mobile/season-standings-preview"
+              : "/dev/season-standings-preview"
+          )
+        }
       />
     </motion.div>
   );
@@ -1185,7 +1187,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           <div className={gamesHeaderMobileShellClass()}>
             <div className={gamesHeaderMobileTitleRowClass()}>
               <div className={gamesHeaderMobileSideLeftClass()}>
-                {renderMenuButton()}
+                {renderSeasonPredictButtons()}
               </div>
               <div className={gamesHeaderTitleCenterClass(true)}>
                 {renderLeagueTitle()}
@@ -1202,7 +1204,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           <>
             <div className={gamesHeaderRowClass(false)}>
               <div className={gamesHeaderDesktopSideLeftClass()}>
-                {renderMenuButton()}
+                {renderSeasonPredictButtons()}
               </div>
               <div className={gamesHeaderTitleCenterClass(false)}>
                 {renderLeagueTitle()}
@@ -1358,41 +1360,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   </>
 )}
 
-      <SideMenuDrawer
-        open={gamesDrawerOpen}
-        onClose={() => setGamesDrawerOpen(false)}
-        variant={isMobile ? "mobile" : "web"}
-      >
-        <GamesDrawerMenu
-          variant={isMobile ? "mobile" : "web"}
-          language={language}
-          league={league}
-          onSelectNba={() => {
-            didInitLeague.current = true;
-            setLeague("nba");
-            const params = new URLSearchParams(searchParams.toString());
-            params.delete("team");
-            params.delete("team_mode");
-            params.delete("margin");
-            params.delete("margin_min");
-            params.delete("margin_max");
-            router.replace(`?${params.toString()}`, { scroll: false });
-            setGamesDrawerOpen(false);
-          }}
-          onSelectAwardsPredict={() => {
-            setGamesDrawerOpen(false);
-            router.push("/mobile/season-awards");
-          }}
-          onSelectStandingsPredict={() => {
-            setGamesDrawerOpen(false);
-            router.push(
-              isMobile
-                ? "/mobile/season-standings-preview"
-                : "/dev/season-standings-preview"
-            );
-          }}
-        />
-      </SideMenuDrawer>
+      <ProfileMenuEdgeHandle
+        onOpen={() =>
+          router.push(isMobile ? "/mobile/stats-preview" : "/dev/stats-preview")
+        }
+        ariaLabel={m.games.statsSection}
+        label="STATS"
+      />
 
       {/* 本番画面上のチュートリアルコーチ */}
       {tutorialPhase === "welcome" ? (

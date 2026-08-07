@@ -6,10 +6,10 @@ import {
   CYBER_SIDE_MENU_BRANCH,
   CYBER_SIDE_MENU_BRANCH_GLOW_COLOR,
   CYBER_SIDE_MENU_BRANCH_JOINT,
-  SIDE_MENU_LABEL_FONT,
   sideMenuLabelStyle,
 } from "../../ui/cyberSideMenuNative";
 import { formatCyberSideMenuDate } from "../../../../../lib/ui/cyberSideMenuDate";
+
 const ICONS = {
   nba: require("../../../assets/games-drawer/nba.png") as number,
   awards: require("../../../assets/games-drawer/awards.png") as number,
@@ -18,13 +18,16 @@ const ICONS = {
 
 type Props = {
   league: "nba";
-  onSelectNba: () => void;
-  onSelectAwardsPredict: () => void;
-  onSelectStandingsPredict: () => void;
+  /** full = NBA + 予想枝 + STATS / stats = STATS のみ */
+  mode?: "full" | "stats";
+  onSelectNba?: () => void;
+  onSelectAwardsPredict?: () => void;
+  onSelectStandingsPredict?: () => void;
+  onSelectTeamStats?: () => void;
+  onSelectPlayerStats?: () => void;
   language: "ja" | "en";
 };
 
-/** NBA 下の枝分かれ行（├ / └）— 2px 線 + 枝先ジョイントで階層を明示 */
 function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) {
   return (
     <View style={styles.branchRow}>
@@ -39,24 +42,27 @@ function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) 
   );
 }
 
-/** Web `GamesDrawerMenu` と同等（NBA + 枝分かれサブ） */
+/** Web `GamesDrawerMenu` と同等 */
 export default function GamesDrawerMenuNative({
   league,
+  mode = "full",
   onSelectNba,
   onSelectAwardsPredict,
   onSelectStandingsPredict,
+  onSelectTeamStats,
+  onSelectPlayerStats,
   language,
 }: Props) {
   const isJa = language === "ja";
   const labelStyle = sideMenuLabelStyle(language);
   const hudDate = formatCyberSideMenuDate();
+  const statsOnly = mode === "stats";
 
   return (
     <View style={styles.root}>
-      {/* ミニヘッダー — UNITERZ + 日付 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle} allowFontScaling={false}>
-          UNITERZ
+          {statsOnly ? "STATS" : "UNITERZ"}
         </Text>
         <View style={styles.headerDate}>
           <Text style={styles.headerDateWeekday} allowFontScaling={false}>
@@ -68,46 +74,81 @@ export default function GamesDrawerMenuNative({
         </View>
       </View>
 
-      <CyberSideMenuSectionTitleNative first>
-        {isJa ? "試合" : "Games"}
-      </CyberSideMenuSectionTitleNative>
-      <View style={styles.itemGroup}>
-        <View style={styles.nbaCluster}>
-          <SideMenuItemButtonNative
-            iconSource={ICONS.nba}
-            active={league === "nba"}
-            labelStyle={labelStyle}
-            onPress={onSelectNba}
-          >
-            NBA
-          </SideMenuItemButtonNative>
-
-          <View style={styles.branchList}>
-            <View pointerEvents="none" style={styles.trunkFromParent} />
-
-            <BranchRow>
+      {!statsOnly &&
+      onSelectNba &&
+      onSelectAwardsPredict &&
+      onSelectStandingsPredict ? (
+        <>
+          <CyberSideMenuSectionTitleNative first>
+            {isJa ? "試合" : "Games"}
+          </CyberSideMenuSectionTitleNative>
+          <View style={styles.itemGroup}>
+            <View style={styles.nbaCluster}>
               <SideMenuItemButtonNative
-                iconSource={ICONS.awards}
-                dense
+                iconSource={ICONS.nba}
+                active={league === "nba"}
                 labelStyle={labelStyle}
-                onPress={onSelectAwardsPredict}
+                onPress={onSelectNba}
               >
-                {isJa ? "アワード予想" : "Award Predictions"}
+                NBA
               </SideMenuItemButtonNative>
-            </BranchRow>
-            <BranchRow last>
-              <SideMenuItemButtonNative
-                iconSource={ICONS.standings}
-                dense
-                labelStyle={labelStyle}
-                onPress={onSelectStandingsPredict}
-              >
-                {isJa ? "順位予想" : "Standings Predictions"}
-              </SideMenuItemButtonNative>
-            </BranchRow>
+
+              <View style={styles.branchList}>
+                <View pointerEvents="none" style={styles.trunkFromParent} />
+
+                <BranchRow>
+                  <SideMenuItemButtonNative
+                    iconSource={ICONS.awards}
+                    dense
+                    labelStyle={labelStyle}
+                    onPress={onSelectAwardsPredict}
+                  >
+                    {isJa ? "アワード予想" : "Award Predictions"}
+                  </SideMenuItemButtonNative>
+                </BranchRow>
+                <BranchRow last>
+                  <SideMenuItemButtonNative
+                    iconSource={ICONS.standings}
+                    dense
+                    labelStyle={labelStyle}
+                    onPress={onSelectStandingsPredict}
+                  >
+                    {isJa ? "順位予想" : "Standings Predictions"}
+                  </SideMenuItemButtonNative>
+                </BranchRow>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
+        </>
+      ) : null}
+
+      {onSelectTeamStats || onSelectPlayerStats ? (
+        <>
+          <CyberSideMenuSectionTitleNative first={statsOnly}>
+            STATS
+          </CyberSideMenuSectionTitleNative>
+          <View style={styles.itemGroup}>
+            {onSelectTeamStats ? (
+              <SideMenuItemButtonNative
+                icon="chart-box-outline"
+                labelStyle={labelStyle}
+                onPress={onSelectTeamStats}
+              >
+                Team Stats
+              </SideMenuItemButtonNative>
+            ) : null}
+            {onSelectPlayerStats ? (
+              <SideMenuItemButtonNative
+                icon="account-multiple-outline"
+                labelStyle={labelStyle}
+                onPress={onSelectPlayerStats}
+              >
+                Player Stats
+              </SideMenuItemButtonNative>
+            ) : null}
+          </View>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -216,7 +257,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.9,
     shadowRadius: 4,
   },
-  /** 枝先ジョイント（◆） */
   joint: {
     position: "absolute",
     left: 20,
@@ -232,7 +272,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     zIndex: 1,
   },
-  /** サブ行は右端を短くして「ぶら下がり」を形で見せる */
   branchContent: {
     flex: 1,
     paddingLeft: 28,

@@ -16,7 +16,7 @@ export default function PlayerStatsPreviewScreenNative({
   const isJa = language === "ja";
   return (
     <MobilePageShell
-      title={isJa ? "リーグ Player Stats" : "League Player Stats"}
+      title={isJa ? "PLAYER STATS" : "PLAYER STATS"}
       eyebrow="STATS"
       subtitle={
         isJa

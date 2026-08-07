@@ -19,10 +19,13 @@ export default function ProfileMenuEdgeHandleNative({
   unreadCount = 0,
   /** サイドメニュー開中は非表示（ドロワーと文字が被らないようにする） */
   hidden = false,
+  /** 縦書きラベル（既定 MENU） */
+  label = "MENU",
 }: {
   onOpen: () => void;
   unreadCount?: number;
   hidden?: boolean;
+  label?: string;
 }) {
   const pan = useRef(
     PanResponder.create({
@@ -48,14 +51,17 @@ export default function ProfileMenuEdgeHandleNative({
         style={styles.handle}
         onPress={onOpen}
         accessibilityRole="button"
-        accessibilityLabel="メニュー"
+        accessibilityLabel={label.toUpperCase()}
         hitSlop={8}
       >
-        {"MENU".split("").map((ch, i) => (
-          <Text key={i} style={styles.letter}>
-            {ch}
-          </Text>
-        ))}
+        {label
+          .toUpperCase()
+          .split("")
+          .map((ch, i) => (
+            <Text key={`${ch}-${i}`} style={styles.letter}>
+              {ch}
+            </Text>
+          ))}
         {unreadCount > 0 ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>

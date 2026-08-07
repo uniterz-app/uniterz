@@ -19,11 +19,14 @@ export default function ProfileMenuEdgeHandle({
   ariaLabel = "メニュー",
   /** サイドメニュー開中は非表示（ドロワーと文字が被らないようにする） */
   hidden = false,
+  /** 縦書きラベル（既定 MENU） */
+  label = "MENU",
 }: {
   onOpen: () => void;
   unreadCount?: number;
   ariaLabel?: string;
   hidden?: boolean;
+  label?: string;
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -84,11 +87,18 @@ export default function ProfileMenuEdgeHandle({
       onClick={onOpen}
       aria-label={ariaLabel}
     >
-      {"MENU".split("").map((ch) => (
-        <span key={ch} className="profile-menu-edge-handle__ch" aria-hidden>
-          {ch}
-        </span>
-      ))}
+      {label
+        .toUpperCase()
+        .split("")
+        .map((ch, i) => (
+          <span
+            key={`${ch}-${i}`}
+            className="profile-menu-edge-handle__ch"
+            aria-hidden
+          >
+            {ch}
+          </span>
+        ))}
       {unreadCount > 0 ? (
         <span className="profile-menu-edge-handle__badge" aria-hidden>
           {unreadCount > 9 ? "9+" : unreadCount}

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import cn from "clsx";
+import { BarChart3, Users } from "lucide-react";
 import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
@@ -14,13 +15,18 @@ import {
   CYBER_SIDE_MENU_BRANCH_GLOW,
 } from "@/lib/ui/cyberSideMenu";
 import { formatCyberSideMenuDate } from "@/lib/ui/cyberSideMenuDate";
+
 type Props = {
   variant?: "mobile" | "web";
+  /** full = NBA + 予想枝 + STATS / stats = STATS のみ（右端 STATS ハンドル用） */
+  mode?: "full" | "stats";
   language: Language;
   league: League;
-  onSelectNba: () => void;
-  onSelectAwardsPredict: () => void;
-  onSelectStandingsPredict: () => void;
+  onSelectNba?: () => void;
+  onSelectAwardsPredict?: () => void;
+  onSelectStandingsPredict?: () => void;
+  onSelectTeamStats?: () => void;
+  onSelectPlayerStats?: () => void;
 };
 
 /** NBA 下の枝分かれ行（├ / └）— 2px 線 + 枝先ジョイントで階層を明示 */
@@ -33,7 +39,6 @@ function BranchRow({
 }) {
   return (
     <div className="relative flex min-h-8 items-stretch">
-      {/* 縦幹 */}
       <span
         aria-hidden
         className="absolute left-[9px] w-[2px]"
@@ -44,7 +49,6 @@ function BranchRow({
           boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
         }}
       />
-      {/* 横枝 */}
       <span
         aria-hidden
         className="absolute left-[9px] top-1/2 h-[2px] w-[14px] -translate-y-1/2"
@@ -53,7 +57,6 @@ function BranchRow({
           boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
         }}
       />
-      {/* 枝先ジョイント */}
       <span
         aria-hidden
         className="absolute left-[20px] top-1/2 h-[5px] w-[5px] -translate-y-1/2 rotate-45"
@@ -62,7 +65,6 @@ function BranchRow({
           boxShadow: "0 0 8px rgba(246, 195, 68, 0.7)",
         }}
       />
-      {/* サブ行は右端を短くして「ぶら下がり」を形で見せる */}
       <div className="min-w-0 flex-1 pl-[28px] pr-4">{children}</div>
     </div>
   );
@@ -70,14 +72,18 @@ function BranchRow({
 
 export default function GamesDrawerMenu({
   variant = "web",
+  mode = "full",
   language,
   league,
   onSelectNba,
   onSelectAwardsPredict,
   onSelectStandingsPredict,
+  onSelectTeamStats,
+  onSelectPlayerStats,
 }: Props) {
   const isMobile = variant === "mobile";
   const m = t(language);
+  const statsOnly = mode === "stats";
 
   const containerClasses = cn(
     "relative flex flex-col text-white",
@@ -85,13 +91,11 @@ export default function GamesDrawerMenu({
   );
 
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
-
   const nbaActive = league === "nba";
   const hudDate = formatCyberSideMenuDate();
 
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
-      {/* ミニヘッダー — UNITERZ + 日付 */}
       <div className="mb-3 flex items-start justify-between gap-2 border-b border-[rgba(0,245,255,0.16)] pb-2">
         <p
           className={cn(
@@ -100,7 +104,7 @@ export default function GamesDrawerMenu({
           )}
           style={{ textShadow: "0 0 12px rgba(0,245,255,0.35)" }}
         >
-          UNITERZ
+          {statsOnly ? "STATS" : "UNITERZ"}
         </p>
         <div className="shrink-0 text-right">
           <p
@@ -123,60 +127,96 @@ export default function GamesDrawerMenu({
         </div>
       </div>
 
-      <CyberSideMenuSectionTitle first>
-        {m.games.games}
-      </CyberSideMenuSectionTitle>
+      {!statsOnly && onSelectNba && onSelectAwardsPredict && onSelectStandingsPredict ? (
+        <>
+          <CyberSideMenuSectionTitle first>
+            {m.games.games}
+          </CyberSideMenuSectionTitle>
 
-      <div className="flex flex-col gap-2">
-        {/* NBA + 枝分かれサブ */}
-        <div className="flex flex-col">
-          <SideMenuItemButton
-            iconSrc="/games-drawer/nba.png"
-            labelStyle={menuLabelFont}
-            active={nbaActive}
-            onClick={onSelectNba}
-          >
-            <span className={cn(language !== "ja" && "uppercase")}>{m.games.nba}</span>
-          </SideMenuItemButton>
-
-          <div className="relative mt-1 flex flex-col gap-1.5">
-            {/* NBA 底辺 → 最初の枝までの縦幹 */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute left-[9px] top-[-4px] h-1 w-[2px]"
-              style={{
-                backgroundColor: CYBER_SIDE_MENU_BRANCH,
-                boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
-              }}
-            />
-
-            <BranchRow>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col">
               <SideMenuItemButton
-                iconSrc="/games-drawer/awards.png"
-                dense
+                iconSrc="/games-drawer/nba.png"
                 labelStyle={menuLabelFont}
-                onClick={onSelectAwardsPredict}
+                active={nbaActive}
+                onClick={onSelectNba}
               >
                 <span className={cn(language !== "ja" && "uppercase")}>
-                  {m.games.awardsPredict}
+                  {m.games.nba}
                 </span>
               </SideMenuItemButton>
-            </BranchRow>
-            <BranchRow last>
-              <SideMenuItemButton
-                iconSrc="/games-drawer/standings.png"
-                dense
-                labelStyle={menuLabelFont}
-                onClick={onSelectStandingsPredict}
-              >
-                <span className={cn(language !== "ja" && "uppercase")}>
-                  {m.games.standingsPredict}
-                </span>
-              </SideMenuItemButton>
-            </BranchRow>
+
+              <div className="relative mt-1 flex flex-col gap-1.5">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute left-[9px] top-[-4px] h-1 w-[2px]"
+                  style={{
+                    backgroundColor: CYBER_SIDE_MENU_BRANCH,
+                    boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
+                  }}
+                />
+
+                <BranchRow>
+                  <SideMenuItemButton
+                    iconSrc="/games-drawer/awards.png"
+                    dense
+                    labelStyle={menuLabelFont}
+                    onClick={onSelectAwardsPredict}
+                  >
+                    <span className={cn(language !== "ja" && "uppercase")}>
+                      {m.games.awardsPredict}
+                    </span>
+                  </SideMenuItemButton>
+                </BranchRow>
+                <BranchRow last>
+                  <SideMenuItemButton
+                    iconSrc="/games-drawer/standings.png"
+                    dense
+                    labelStyle={menuLabelFont}
+                    onClick={onSelectStandingsPredict}
+                  >
+                    <span className={cn(language !== "ja" && "uppercase")}>
+                      {m.games.standingsPredict}
+                    </span>
+                  </SideMenuItemButton>
+                </BranchRow>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      ) : null}
+
+      {onSelectTeamStats || onSelectPlayerStats ? (
+        <>
+          <CyberSideMenuSectionTitle first={statsOnly}>
+            {m.games.statsSection}
+          </CyberSideMenuSectionTitle>
+          <div className="flex flex-col gap-2">
+            {onSelectTeamStats ? (
+              <SideMenuItemButton
+                icon={BarChart3}
+                labelStyle={menuLabelFont}
+                onClick={onSelectTeamStats}
+              >
+                <span className={cn(language !== "ja" && "uppercase")}>
+                  {m.games.teamStatsMenu}
+                </span>
+              </SideMenuItemButton>
+            ) : null}
+            {onSelectPlayerStats ? (
+              <SideMenuItemButton
+                icon={Users}
+                labelStyle={menuLabelFont}
+                onClick={onSelectPlayerStats}
+              >
+                <span className={cn(language !== "ja" && "uppercase")}>
+                  {m.games.playerStatsMenu}
+                </span>
+              </SideMenuItemButton>
+            ) : null}
+          </div>
+        </>
+      ) : null}
     </nav>
   );
 }

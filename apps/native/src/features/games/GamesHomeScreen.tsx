@@ -145,10 +145,9 @@ import { findNextUnpredictedScheduledGameInList } from "../../../../../lib/games
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
-import GamesDrawerMenuNative from "./GamesDrawerMenuNative";
-import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
-import CyberMenuButton from "../../ui/CyberMenuButton";
+import ProfileMenuEdgeHandleNative from "../profile/ProfileMenuEdgeHandleNative";
 import GamesHeaderFilterButtonNative from "./GamesHeaderFilterButtonNative";
+import GamesSeasonPredictHeaderButtonsNative from "./GamesSeasonPredictHeaderButtonsNative";
 import {
   GAMES_HEADER_CONTROL_HEIGHT,
   LEAGUE_HEADER_LABEL,
@@ -166,7 +165,6 @@ import {
   gamesLeagueTitleEntering,
   gamesScheduleShellDaySwitchEntering,
   gamesTopBarFilterEntering,
-  gamesTopBarMenuEntering,
   useGamesListShellIntro,
 } from "./gamesPageMotion";
 import {
@@ -483,7 +481,6 @@ export default function GamesHomeScreen({
   const { fUser, status: authStatus } = useFirebaseUser();
   const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [gamesFilter, setGamesFilter] = useState<GamesFilterState>({
     selectedTeamIds: [],
     matchMode: "any",
@@ -1560,10 +1557,9 @@ export default function GamesHomeScreen({
     proceedOpenPredictModal(sourceGame, editBootstrap);
   }
 
-  /** アワード/順位予想の戻る → 試合サイドメニューを開いた状態で復帰 */
+  /** アワード/順位予想の戻る → 旧メニューフラグをクリア */
   useEffect(() => {
     if (!routeParams?.openMenu) return;
-    setMenuOpen(true);
     navigation.setParams({ openMenu: undefined });
   }, [routeParams?.openMenu, navigation]);
 
@@ -1813,13 +1809,22 @@ export default function GamesHomeScreen({
         <View style={styles.gamesHeaderTitleRow}>
           <View style={styles.gamesHeaderSideLeft}>
             <Animated.View
-              key={`menu-${headerMotionKey}`}
-              entering={webGamesMotion ? gamesTopBarMenuEntering : undefined}
+              key={`predict-${headerMotionKey}`}
+              entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
             >
-              <CyberMenuButton
-                size="md"
-                accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
-                onPress={() => setMenuOpen(true)}
+              <GamesSeasonPredictHeaderButtonsNative
+                onAwards={() =>
+                  navigation.navigate("SeasonPredict", { mode: "awards" })
+                }
+                onStandings={() =>
+                  navigation.navigate("SeasonPredict", { mode: "standings" })
+                }
+                awardsLabel={
+                  language === "ja" ? "アワード予想" : "Award Predictions"
+                }
+                standingsLabel={
+                  language === "ja" ? "順位予想" : "Standings Predictions"
+                }
               />
             </Animated.View>
           </View>
@@ -2132,24 +2137,10 @@ export default function GamesHomeScreen({
         initial={gamesFilter}
         onApply={setGamesFilter}
       />
-      <SideMenuDrawerNative open={menuOpen} onClose={() => setMenuOpen(false)}>
-        <GamesDrawerMenuNative
-          league="nba"
-          language={language}
-          onSelectNba={() => {
-            setSelectedLeague("nba");
-            setMenuOpen(false);
-          }}
-          onSelectAwardsPredict={() => {
-            setMenuOpen(false);
-            navigation.navigate("SeasonPredict", { mode: "awards" });
-          }}
-          onSelectStandingsPredict={() => {
-            setMenuOpen(false);
-            navigation.navigate("SeasonPredict", { mode: "standings" });
-          }}
-        />
-      </SideMenuDrawerNative>
+      <ProfileMenuEdgeHandleNative
+        onOpen={() => navigation.navigate("LeagueStats", { tab: "team" })}
+        label="STATS"
+      />
       </View>
     </View>
   );
