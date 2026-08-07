@@ -27,6 +27,10 @@ import {
   type NbaStandingsRank,
   SEASON_STANDINGS_SCORE_PREVIEW,
 } from "../../../../../../../lib/predict/nbaSeasonStandingsPredict";
+import {
+  MATCH_CARD_BRACKET_LETTER_SPACING_12,
+  MATCH_CARD_BRACKET_TEXT,
+} from "../../matchCardTypography";
 
 type Props = {
   value: NbaSeasonStandingsPrediction;
@@ -386,12 +390,12 @@ const styles = StyleSheet.create({
   rankRowEmpty: { borderColor: "rgba(255,255,255,0.12)", borderStyle: "dashed", backgroundColor: "transparent" },
   rankNum: { width: 24, fontFamily: OX, fontSize: 12, fontWeight: "900", fontVariant: ["tabular-nums"] },
   rankTeamName: {
-    fontFamily: OX,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.6,
+    ...MATCH_CARD_BRACKET_TEXT,
+    fontSize: 13,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     color: "#fff",
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   rankHint: { marginTop: 1, fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.32)" },
   rankPlaceholder: {
@@ -429,11 +433,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   trayAbbr: {
-    fontFamily: OX,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.4,
+    ...MATCH_CARD_BRACKET_TEXT,
+    fontSize: 10,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     color: "rgba(255,255,255,0.85)",
+    transform: [{ skewX: "-6deg" }],
   },
   trayEmpty: { paddingHorizontal: 4, paddingVertical: 8, fontSize: 11, color: "rgba(255,255,255,0.35)" },
   boardHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 2 },

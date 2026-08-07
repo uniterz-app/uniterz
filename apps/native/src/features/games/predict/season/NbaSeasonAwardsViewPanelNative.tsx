@@ -11,6 +11,10 @@ import {
   AWARDS_PREVIEW_PLAYERS,
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
 import TeamAbbrBadgeNative from "../../TeamAbbrBadgeNative";
+import {
+  MATCH_CARD_BRACKET_LETTER_SPACING_12,
+  MATCH_CARD_BRACKET_TEXT,
+} from "../../matchCardTypography";
 
 type Props = {
   prediction: NbaSeasonAwardsPrediction;
@@ -135,14 +139,14 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   pickName: {
+    ...MATCH_CARD_BRACKET_TEXT,
     flex: 1,
     minWidth: 0,
-    fontFamily: OX,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.4,
+    fontSize: 13,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     color: "#fff",
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   badgeSpacer: { width: 38, height: 22 },
   dash: { flex: 1, fontSize: 11, color: "rgba(255,255,255,0.3)" },

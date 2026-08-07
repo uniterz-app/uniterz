@@ -1,10 +1,11 @@
 {
   "name": "uniterz-functions",
   "scripts": {
-    "prebuild": "npm run sync:monthly-report-builders && npm run sync:pro-skin-milestone-catalog",
+    "prebuild": "npm run sync:monthly-report-builders && npm run sync:pro-skin-milestone-catalog && npm run sync:period-ranking-unit-rewards",
     "build": "tsc",
     "sync:monthly-report-builders": "node ../scripts/sync-monthly-report-builders.mjs",
     "sync:pro-skin-milestone-catalog": "node ../scripts/sync-pro-skin-milestone-catalog.mjs",
+    "sync:period-ranking-unit-rewards": "node ../scripts/sync-period-ranking-unit-rewards.mjs",
     "deploy": "firebase deploy --only functions",
     "serve": "firebase emulators:start --only functions"
   },

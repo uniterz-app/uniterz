@@ -32,6 +32,8 @@ export type UnitLedgerEntry = {
     battleId?: string;
     period?: string;
     label?: string;
+    /** period ranking metric（totalPoints / winRate / …） */
+    metric?: string;
   };
 };
 

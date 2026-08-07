@@ -3,6 +3,10 @@
  */
 
 import type { UnitLedgerReasonCode } from "@/lib/units/unitLedgerTypes";
+import {
+  periodRankingUnitMetricLabel,
+  type PeriodRankingUnitMetric,
+} from "@/lib/units/periodRankingUnitRewards";
 
 export function normalizeUnitLedgerReason(raw: unknown): UnitLedgerReasonCode {
   if (typeof raw !== "string") return "unknown";
@@ -25,7 +29,7 @@ export function normalizeUnitLedgerReason(raw: unknown): UnitLedgerReasonCode {
 export function unitLedgerReasonTitle(
   reason: UnitLedgerReasonCode,
   language: "ja" | "en",
-  meta?: { milestoneAt?: number; rank?: number }
+  meta?: { milestoneAt?: number; rank?: number; metric?: string }
 ): string {
   const ja = language === "ja";
   switch (reason) {
@@ -54,10 +58,28 @@ export function unitLedgerReasonTitle(
   }
 }
 
+function metricLabelForLedger(
+  metric: string | undefined,
+  language: "ja" | "en"
+): string | null {
+  if (!metric) return null;
+  const known: PeriodRankingUnitMetric[] = [
+    "totalPoints",
+    "winRate",
+    "totalUpset",
+    "totalGoalScorerHits",
+  ];
+  if (!(known as string[]).includes(metric)) return metric;
+  return periodRankingUnitMetricLabel(
+    metric as PeriodRankingUnitMetric,
+    language
+  );
+}
+
 export function unitLedgerReasonDetail(
   reason: UnitLedgerReasonCode,
   language: "ja" | "en",
-  meta?: { rank?: number; label?: string }
+  meta?: { rank?: number; label?: string; metric?: string }
 ): string | null {
   const ja = language === "ja";
   if (
@@ -70,7 +92,12 @@ export function unitLedgerReasonDetail(
     (reason === "weekly_rank" || reason === "monthly_rank") &&
     meta?.rank != null
   ) {
-    return ja ? `${meta.rank}位` : `Rank #${meta.rank}`;
+    const metricLabel = metricLabelForLedger(meta.metric, language);
+    const rankPart = ja ? `${meta.rank}位` : `Rank #${meta.rank}`;
+    if (metricLabel) {
+      return `${metricLabel} · ${rankPart}`;
+    }
+    return rankPart;
   }
   if (meta?.label) return meta.label;
   return null;

@@ -473,6 +473,18 @@ export async function buildNbaPeriodRankingSnapshots(
       err
     );
   }
+
+  try {
+    const { grantPeriodRankingUnitsAfterPeriodSnapshots } = await import(
+      "../units/grantPeriodRankingUnits"
+    );
+    await grantPeriodRankingUnitsAfterPeriodSnapshots(now);
+  } catch (err) {
+    console.error(
+      "[buildNbaPeriodRankingSnapshots] period ranking unit grants failed",
+      err
+    );
+  }
 }
 
 /** 期間開始日 + 猶予日数の dateKey */

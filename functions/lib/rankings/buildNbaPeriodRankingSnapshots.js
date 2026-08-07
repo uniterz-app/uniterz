@@ -367,6 +367,13 @@ async function buildNbaPeriodRankingSnapshots(now = new Date()) {
     catch (err) {
         console.error("[buildNbaPeriodRankingSnapshots] pro skin rank grants failed", err);
     }
+    try {
+        const { grantPeriodRankingUnitsAfterPeriodSnapshots } = await Promise.resolve().then(() => __importStar(require("../units/grantPeriodRankingUnits")));
+        await grantPeriodRankingUnitsAfterPeriodSnapshots(now);
+    }
+    catch (err) {
+        console.error("[buildNbaPeriodRankingSnapshots] period ranking unit grants failed", err);
+    }
 }
 /** 期間開始日 + 猶予日数の dateKey */
 function addGrace(periodStartKey) {

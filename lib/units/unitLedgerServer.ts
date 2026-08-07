@@ -62,7 +62,8 @@ export async function loadUnitLedgerForUid(
       typeof data.battleId === "string" ? data.battleId : undefined;
     const period = typeof data.period === "string" ? data.period : undefined;
     const label = typeof data.label === "string" ? data.label : undefined;
-    const meta = { milestoneAt, rank, battleId, period, label };
+    const metric = typeof data.metric === "string" ? data.metric : undefined;
+    const meta = { milestoneAt, rank, battleId, period, label, metric };
     return {
       id: doc.id,
       amount,

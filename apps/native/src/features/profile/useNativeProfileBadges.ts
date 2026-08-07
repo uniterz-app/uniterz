@@ -97,18 +97,41 @@ function useMasterBadgesNative() {
       return;
     }
     let cancelled = false;
+    async function loadFromFirestore(): Promise<MasterBadgeNative[]> {
+      const col = collection(db, "master_badges");
+      const snap = await getDocs(col);
+      const list: MasterBadgeNative[] = [];
+      snap.forEach((d) => {
+        const data = d.data() as Omit<MasterBadgeNative, "id">;
+        list.push({
+          id: d.id,
+          title: data.title,
+          description: data.description,
+          icon: data.icon,
+        });
+      });
+      return list;
+    }
     async function run() {
       try {
         setLoading(true);
-        const { fetchMasterBadgesShared } = await import(
-          "../../../../../lib/badges/fetchMasterBadgesShared"
-        );
+        let list: MasterBadgeNative[] = [];
         const { getUniterzApiBaseUrl } = await import(
           "../games/submitPredictionApi"
         );
-        const list = await fetchMasterBadgesShared({
-          apiBaseUrl: getUniterzApiBaseUrl(),
-        });
+        const apiBaseUrl = getUniterzApiBaseUrl();
+        if (apiBaseUrl) {
+          try {
+            const { fetchMasterBadgesShared } = await import(
+              "../../../../../lib/badges/fetchMasterBadgesShared"
+            );
+            list = await fetchMasterBadgesShared({ apiBaseUrl });
+          } catch {
+            list = await loadFromFirestore();
+          }
+        } else {
+          list = await loadFromFirestore();
+        }
         if (cancelled) return;
         masterBadgesMemoryCache = { at: Date.now(), badges: list };
         setBadges(list);

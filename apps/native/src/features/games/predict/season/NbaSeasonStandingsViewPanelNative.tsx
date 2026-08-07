@@ -19,6 +19,10 @@ import type {
   NbaSeasonStandingsPrediction,
   NbaStandingsRank,
 } from "../../../../../../../lib/predict/nbaSeasonStandingsPredict";
+import {
+  MATCH_CARD_BRACKET_LETTER_SPACING_12,
+  MATCH_CARD_BRACKET_TEXT,
+} from "../../matchCardTypography";
 
 type Props = {
   prediction: NbaSeasonStandingsPrediction;
@@ -195,14 +199,14 @@ const styles = StyleSheet.create({
   bandBar: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   viewRank: { width: 20, fontFamily: OX, fontSize: 11, fontWeight: "900", fontVariant: ["tabular-nums"] },
   viewTeam: {
+    ...MATCH_CARD_BRACKET_TEXT,
     flex: 1,
     minWidth: 0,
-    fontFamily: OX,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.4,
+    fontSize: 13,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     color: "#fff",
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   resultMark: { fontFamily: OX, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
   hit: { color: "rgba(45,255,110,0.85)" },

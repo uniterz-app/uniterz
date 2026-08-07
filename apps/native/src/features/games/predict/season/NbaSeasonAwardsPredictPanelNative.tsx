@@ -17,6 +17,10 @@ import {
   awardsPreviewCatalog,
   AWARDS_PREVIEW_POPULAR,
 } from "../../../../../../../lib/predict/nbaSeasonAwardsPreviewMocks";
+import {
+  MATCH_CARD_BRACKET_LETTER_SPACING_12,
+  MATCH_CARD_BRACKET_TEXT,
+} from "../../matchCardTypography";
 
 type Props = {
   value: NbaSeasonAwardsPrediction;
@@ -251,14 +255,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   selectedName: {
-    fontFamily: OX,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.4,
+    ...MATCH_CARD_BRACKET_TEXT,
+    fontSize: 13,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     color: "#fff",
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
-  selectedTeam: { fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.35)" },
+  selectedTeam: {
+    ...MATCH_CARD_BRACKET_TEXT,
+    fontSize: 10,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
+    color: "rgba(255,255,255,0.35)",
+    transform: [{ skewX: "-6deg" }],
+  },
   clearText: {
     fontFamily: OX,
     fontSize: 9,
@@ -306,15 +316,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   suggestionName: {
+    ...MATCH_CARD_BRACKET_TEXT,
     flex: 1,
-    fontFamily: OX,
     fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.4,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
     color: "rgba(255,255,255,0.9)",
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
-  suggestionTeam: { fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.3)" },
+  suggestionTeam: {
+    ...MATCH_CARD_BRACKET_TEXT,
+    fontSize: 10,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
+    color: "rgba(255,255,255,0.3)",
+    transform: [{ skewX: "-6deg" }],
+  },
   submitRow: {
     marginTop: 16,
     paddingTop: 12,
