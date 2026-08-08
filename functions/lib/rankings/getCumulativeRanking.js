@@ -13,6 +13,38 @@ const nbaSeason_1 = require("./nbaSeason");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
+/** 同一インスタンスの stampede を 1 read にまとめる */
+const SNAPSHOT_MEM_TTL_MS = 10 * 60 * 1000;
+const snapshotMem = new Map();
+const snapshotInflight = new Map();
+async function loadRankingSnapshotDoc(snapshotDocId) {
+    const now = Date.now();
+    const hit = snapshotMem.get(snapshotDocId);
+    if (hit && now - hit.at < SNAPSHOT_MEM_TTL_MS)
+        return hit;
+    const pending = snapshotInflight.get(snapshotDocId);
+    if (pending)
+        return pending;
+    const p = (async () => {
+        const snapDoc = await db()
+            .collection("cumulative_ranking_snapshots")
+            .doc(snapshotDocId)
+            .get();
+        const cached = {
+            at: Date.now(),
+            exists: snapDoc.exists,
+            data: snapDoc.exists
+                ? snapDoc.data()
+                : undefined,
+        };
+        snapshotMem.set(snapshotDocId, cached);
+        return cached;
+    })().finally(() => {
+        snapshotInflight.delete(snapshotDocId);
+    });
+    snapshotInflight.set(snapshotDocId, p);
+    return p;
+}
 function isMetric(v) {
     return (v === "winRate" ||
         v === "totalPoints" ||
@@ -212,15 +244,10 @@ async function rankingPayloadForMetric(metric, uid, snaps, personalOnly = false)
         return personalRankingPayloadForMetric(metric, uid, snaps);
     }
     const snapshotDocId = (0, nbaSeason_1.nbaSeasonSnapshotDocId)(nbaSeason_1.CURRENT_NBA_SEASON_KEY, metric);
-    const snapDoc = await db()
-        .collection("cumulative_ranking_snapshots")
-        .doc(snapshotDocId)
-        .get();
-    const snapData = snapDoc.exists
-        ? snapDoc.data()
-        : undefined;
+    const snapDoc = await loadRankingSnapshotDoc(snapshotDocId);
+    const snapData = snapDoc.exists ? snapDoc.data : undefined;
     const rawRows = snapDoc.exists
-        ? ((_b = (_a = snapDoc.data()) === null || _a === void 0 ? void 0 : _a.rows) !== null && _b !== void 0 ? _b : [])
+        ? ((_b = (_a = snapDoc.data) === null || _a === void 0 ? void 0 : _a.rows) !== null && _b !== void 0 ? _b : [])
         : [];
     let rows = normalizeSnapshotRows(rawRows, metric);
     let totalCount = readSnapshotTotalCount(snapData, rows.length);

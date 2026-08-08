@@ -5,6 +5,8 @@ const firestore_1 = require("firebase-admin/firestore");
 const sendExpoPush_1 = require("./sendExpoPush");
 const pushNotificationCopy_1 = require("./pushNotificationCopy");
 const LOOKAHEAD_MS = 20 * 60 * 1000;
+const LOOKAHEAD_LIMIT = 40;
+const PUSH_LEAGUES = ["nba", "bj", "j1", "pl", "wc"];
 function targetsFromPredictorUids(gameId, uids) {
     if (!Array.isArray(uids))
         return [];
@@ -54,12 +56,15 @@ async function runNotifyGameStartCron() {
     const firestore = (0, firestore_1.getFirestore)();
     const now = new Date();
     const until = new Date(now.getTime() + LOOKAHEAD_MS);
-    const gamesSnap = await firestore
+    const leagueSnaps = await Promise.all(PUSH_LEAGUES.map((league) => firestore
         .collection("games")
+        .where("league", "==", league)
         .where("startAtJst", ">=", firestore_1.Timestamp.fromDate(now))
         .where("startAtJst", "<=", firestore_1.Timestamp.fromDate(until))
-        .get();
-    for (const gameDoc of gamesSnap.docs) {
+        .limit(LOOKAHEAD_LIMIT)
+        .get()));
+    const gameDocs = leagueSnaps.flatMap((snap) => snap.docs);
+    for (const gameDoc of gameDocs) {
         const gameData = gameDoc.data();
         if (gameData.final === true)
             continue;

@@ -33,14 +33,6 @@ const METRIC_SET = new Set<string>([
   "totalExactHits",
 ]);
 
-function dateKeyJST(now: Date = new Date()): string {
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const y = jst.getUTCFullYear();
-  const m = String(jst.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(jst.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 function parseMetricsParam(raw: string | null): BulkRankingMetric[] {
   const defaults = [...BULK_METRICS];
   if (!raw?.trim()) return defaults;
@@ -130,9 +122,7 @@ export async function GET(req: Request) {
       searchParams.get("personalOnly") === "true";
     const metricsList = parseMetricsParam(searchParams.get("metrics"));
     const metricsKey = metricsToKey(metricsList);
-    const snapshotGeneration =
-      (await loadRankingSnapshotGenerationKey()) ??
-      `fallback:${dateKeyJST()}`;
+    const snapshotGeneration = await loadRankingSnapshotGenerationKey();
 
     /** 無差別級シーズン（Pro 限定・NBA のみ） */
     if (division === "open") {

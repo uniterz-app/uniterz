@@ -13,6 +13,7 @@ import { db } from "../../lib/firebase";
 import {
   groupPostsByResultDay,
   mapDocToPostWithMillis,
+  RESULT_INITIAL_PAGE_SIZE,
   RESULT_NEXT_PAGE_SIZE,
   RESULT_POSTS_MAX_CACHED,
   type PostWithMillis,
@@ -66,7 +67,9 @@ export function useNativeResultPosts(
       loadingRef.current = true;
       setLoading(true);
       try {
-        const pageLimit = RESULT_NEXT_PAGE_SIZE;
+        const pageLimit = reset
+          ? RESULT_INITIAL_PAGE_SIZE
+          : RESULT_NEXT_PAGE_SIZE;
         const base = [
           where("authorUid", "==", uid),
           where("league", "==", league),

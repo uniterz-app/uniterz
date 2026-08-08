@@ -31,6 +31,7 @@ type ConfFilter = "all" | NbaConferenceId;
 type Props = {
   className?: string;
   language?: "ja" | "en";
+  onSelectTeam?: (teamId: string) => void;
 };
 
 function nick(row: NbaLeagueTeamStatRow): string {
@@ -238,6 +239,7 @@ function CompareBar({
 export default function NbaLeagueTeamStatsPanel({
   className = "",
   language = "ja",
+  onSelectTeam,
 }: Props) {
   const isJa = language === "ja";
   const reduceMotion = useReducedMotion();
@@ -410,13 +412,15 @@ export default function NbaLeagueTeamStatsPanel({
             <ArrowUp className="h-3 w-3 shrink-0 text-[#00F5FF]/70" aria-hidden />
           )}
         </button>
-        <span className="text-[10px] text-[#00F5FF]/45">
-          {picked.length === 0
-            ? "比較: 0/2"
-            : picked.length === 1
-              ? "比較: もう1チーム選択"
-              : "比較: 2/2"}
-        </span>
+        {onSelectTeam ? null : (
+          <span className="text-[10px] text-[#00F5FF]/45">
+            {picked.length === 0
+              ? "比較: 0/2"
+              : picked.length === 1
+                ? "比較: もう1チーム選択"
+                : "比較: 2/2"}
+          </span>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-[2px] border border-[rgba(0,245,255,0.16)] bg-[rgba(4,16,24,0.35)]">
@@ -470,10 +474,14 @@ export default function NbaLeagueTeamStatsPanel({
               >
                 <button
                   type="button"
-                  onClick={() => togglePick(row.teamId)}
+                  onClick={() =>
+                    onSelectTeam
+                      ? onSelectTeam(row.teamId)
+                      : togglePick(row.teamId)
+                  }
                   className={[
                     "grid w-full grid-cols-[28px_minmax(0,1.2fr)_64px_52px_52px] items-center gap-1 px-2 py-2.5 text-left transition",
-                    selected
+                    !onSelectTeam && selected
                       ? "bg-[rgba(0,56,72,0.55)]"
                       : "bg-transparent hover:bg-white/[0.03] active:bg-white/[0.05]",
                   ].join(" ")}
@@ -497,7 +505,7 @@ export default function NbaLeagueTeamStatsPanel({
                     >
                       {nick(row)}
                     </span>
-                    {selected ? (
+                    {!onSelectTeam && selected ? (
                       <span
                         className={[
                           nameOxanium.className,
@@ -540,7 +548,7 @@ export default function NbaLeagueTeamStatsPanel({
       </div>
 
       <AnimatePresence>
-        {pickedRows.length === 2 ? (
+        {!onSelectTeam && pickedRows.length === 2 ? (
           <motion.div
             className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
             initial={reduceMotion ? false : { y: 24, opacity: 0 }}

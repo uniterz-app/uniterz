@@ -1,6 +1,8 @@
 /** Web `/mobile/player-stats-preview` 相当 (mock) */
+import { StyleSheet, View } from "react-native";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
 import NbaLeaguePlayerStatLeadersPanelNative from "./NbaLeaguePlayerStatLeadersPanelNative";
+import NbaStatsSearchBarNative from "../stats/NbaStatsSearchBarNative";
 
 type Props = {
   language: "ja" | "en";
@@ -26,6 +28,13 @@ export default function PlayerStatsPreviewScreenNative({
       appBackground
       onClose={onClose}
     >
+      <View style={styles.search}>
+        <NbaStatsSearchBarNative
+          kind="player"
+          language={language}
+          onSelect={(hit) => onSelectPlayer?.(hit.id)}
+        />
+      </View>
       <NbaLeaguePlayerStatLeadersPanelNative
         language={language}
         onSelectPlayer={onSelectPlayer}
@@ -33,3 +42,11 @@ export default function PlayerStatsPreviewScreenNative({
     </MobilePageShell>
   );
 }
+
+const styles = StyleSheet.create({
+  search: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    zIndex: 20,
+  },
+});

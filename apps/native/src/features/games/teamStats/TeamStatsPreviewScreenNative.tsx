@@ -1,6 +1,8 @@
 /** Web `/mobile/team-stats-preview` 相当 */
+import { StyleSheet, View } from "react-native";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
-import NbaLeagueTeamStatsPanelNative from "../teamStats/NbaLeagueTeamStatsPanelNative";
+import NbaLeagueTeamStatsPanelNative from "./NbaLeagueTeamStatsPanelNative";
+import NbaStatsSearchBarNative from "../stats/NbaStatsSearchBarNative";
 
 type Props = {
   language: "ja" | "en";
@@ -26,6 +28,13 @@ export default function TeamStatsPreviewScreenNative({
       appBackground
       onClose={onClose}
     >
+      <View style={styles.search}>
+        <NbaStatsSearchBarNative
+          kind="team"
+          language={language}
+          onSelect={(hit) => onSelectTeam(hit.id)}
+        />
+      </View>
       <NbaLeagueTeamStatsPanelNative
         language={language}
         onSelectTeam={onSelectTeam}
@@ -33,3 +42,11 @@ export default function TeamStatsPreviewScreenNative({
     </MobilePageShell>
   );
 }
+
+const styles = StyleSheet.create({
+  search: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    zIndex: 20,
+  },
+});

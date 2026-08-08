@@ -5,3 +5,5 @@ export const GAMES_WINDOW_EDGE_EXTEND_DAYS = 2;
 /** この日数以内に端へ近づいたら追加取得 */
 export const GAMES_WINDOW_EDGE_TRIGGER_DAYS = 2;
 export const GAMES_WINDOW_QUERY_LIMIT = 200;
+/** 次/前の試合日ジャンプ用の最大探索日数（API 窓） */
+export const GAMES_NEAREST_DAY_LOOKAHEAD_DAYS = 62;

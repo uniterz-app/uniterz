@@ -27,6 +27,10 @@ export type FetchGamesWindowParams = {
   /** Native: API origin。Web は省略で相対パス */
   apiBaseUrl?: string | null;
   signal?: AbortSignal;
+  /** サーバ側 games 取得上限 */
+  limit?: number;
+  /** false でシリーズ peer を省略（存在チェック用） */
+  includePeers?: boolean;
 };
 
 export async function fetchGamesWindowShared(
@@ -45,6 +49,10 @@ export async function fetchGamesWindowShared(
     q.set("anchor", anchor);
     q.set("pm", String(plusMinus));
   }
+  if (typeof params.limit === "number" && params.limit > 0) {
+    q.set("limit", String(params.limit));
+  }
+  if (params.includePeers === false) q.set("peers", "0");
 
   const base = (params.apiBaseUrl ?? "").replace(/\/$/, "");
   const url = `${base}/api/games/window?${q.toString()}`;

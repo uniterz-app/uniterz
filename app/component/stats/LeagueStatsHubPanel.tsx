@@ -5,12 +5,14 @@
  * Native `LeagueStatsHubScreenNative` 相当
  */
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import NbaLeagueTeamStatsPanel from "@/app/component/teamStats/NbaLeagueTeamStatsPanel";
 import NbaLeaguePlayerStatLeadersPanel from "@/app/component/playerStats/NbaLeaguePlayerStatLeadersPanel";
+import NbaStatsSearchBar from "@/app/component/stats/NbaStatsSearchBar";
 import { nameOxanium } from "@/lib/fonts";
 
 type TabId = "team" | "player";
@@ -24,6 +26,7 @@ export default function LeagueStatsHubPanel({
   language = "ja",
   initialTab = "team",
 }: Props) {
+  const router = useRouter();
   const [tab, setTab] = useState<TabId>(initialTab);
   const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
 
@@ -58,10 +61,41 @@ export default function LeagueStatsHubPanel({
         />
       </CyberSlantedTabBar>
 
+      <NbaStatsSearchBar
+        key={tab}
+        kind={tab}
+        language={language}
+        onSelect={(hit) => {
+          if (hit.kind === "team") {
+            router.push(
+              `/mobile/team-detail-preview?teamId=${encodeURIComponent(hit.id)}`
+            );
+            return;
+          }
+          router.push(
+            `/mobile/player-detail-preview?playerId=${encodeURIComponent(hit.id)}`
+          );
+        }}
+      />
+
       {tab === "team" ? (
-        <NbaLeagueTeamStatsPanel language={language} />
+        <NbaLeagueTeamStatsPanel
+          language={language}
+          onSelectTeam={(teamId) =>
+            router.push(
+              `/mobile/team-detail-preview?teamId=${encodeURIComponent(teamId)}`
+            )
+          }
+        />
       ) : (
-        <NbaLeaguePlayerStatLeadersPanel language={language} />
+        <NbaLeaguePlayerStatLeadersPanel
+          language={language}
+          onSelectPlayer={(playerId) =>
+            router.push(
+              `/mobile/player-detail-preview?playerId=${encodeURIComponent(playerId)}`
+            )
+          }
+        />
       )}
     </div>
   );

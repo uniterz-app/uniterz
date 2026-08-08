@@ -27,7 +27,8 @@ import {
   mapDocToPostWithMillis,
   isFinalResultPost,
   RESULT_POSTS_MAX_CACHED,
-  RESULT_TAB_PAGE_SIZE,
+  RESULT_INITIAL_PAGE_SIZE,
+  RESULT_NEXT_PAGE_SIZE,
   type PostWithMillis,
   type ResultDayGroup,
   type ResultListLeagueTab,
@@ -91,7 +92,7 @@ export function useResultPagePosts(
           where("authorUid", "==", authorUid),
           where("schemaVersion", "==", 2),
           orderBy("createdAt", "desc"),
-          limit(40)
+          limit(RESULT_INITIAL_PAGE_SIZE)
         )
       );
       return snap.docs
@@ -158,7 +159,9 @@ export function useResultPagePosts(
       loadingRef.current = true;
       setLoading(true);
       try {
-        const pageLimit = RESULT_TAB_PAGE_SIZE;
+        const pageLimit = reset
+          ? RESULT_INITIAL_PAGE_SIZE
+          : RESULT_NEXT_PAGE_SIZE;
         const base = [
           where("authorUid", "==", uid),
           where("league", "==", league),

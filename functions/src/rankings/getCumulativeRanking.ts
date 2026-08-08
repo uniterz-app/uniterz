@@ -24,6 +24,47 @@ function db() {
   return getFirestore();
 }
 
+type CachedSnapshotDoc = {
+  at: number;
+  exists: boolean;
+  data: Record<string, unknown> | undefined;
+};
+
+/** 同一インスタンスの stampede を 1 read にまとめる */
+const SNAPSHOT_MEM_TTL_MS = 10 * 60 * 1000;
+const snapshotMem = new Map<string, CachedSnapshotDoc>();
+const snapshotInflight = new Map<string, Promise<CachedSnapshotDoc>>();
+
+async function loadRankingSnapshotDoc(
+  snapshotDocId: string
+): Promise<CachedSnapshotDoc> {
+  const now = Date.now();
+  const hit = snapshotMem.get(snapshotDocId);
+  if (hit && now - hit.at < SNAPSHOT_MEM_TTL_MS) return hit;
+  const pending = snapshotInflight.get(snapshotDocId);
+  if (pending) return pending;
+
+  const p = (async (): Promise<CachedSnapshotDoc> => {
+    const snapDoc = await db()
+      .collection("cumulative_ranking_snapshots")
+      .doc(snapshotDocId)
+      .get();
+    const cached: CachedSnapshotDoc = {
+      at: Date.now(),
+      exists: snapDoc.exists,
+      data: snapDoc.exists
+        ? (snapDoc.data() as Record<string, unknown>)
+        : undefined,
+    };
+    snapshotMem.set(snapshotDocId, cached);
+    return cached;
+  })().finally(() => {
+    snapshotInflight.delete(snapshotDocId);
+  });
+  snapshotInflight.set(snapshotDocId, p);
+  return p;
+}
+
 type Metric =
   | "winRate"
   | "totalPoints"
@@ -330,17 +371,12 @@ async function rankingPayloadForMetric(
 
   const snapshotDocId = nbaSeasonSnapshotDocId(CURRENT_NBA_SEASON_KEY, metric);
 
-  const snapDoc = await db()
-    .collection("cumulative_ranking_snapshots")
-    .doc(snapshotDocId)
-    .get();
+  const snapDoc = await loadRankingSnapshotDoc(snapshotDocId);
 
-  const snapData = snapDoc.exists
-    ? (snapDoc.data() as Record<string, unknown>)
-    : undefined;
+  const snapData = snapDoc.exists ? snapDoc.data : undefined;
 
   const rawRows: RankingRow[] = snapDoc.exists
-    ? (snapDoc.data()?.rows ?? [])
+    ? ((snapDoc.data?.rows ?? []) as RankingRow[])
     : [];
   let rows = normalizeSnapshotRows(rawRows, metric);
   let totalCount = readSnapshotTotalCount(snapData, rows.length);

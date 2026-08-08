@@ -614,6 +614,20 @@ const SEEDS: Record<string, SeedProfile> = {
   [JOKIC.playerId]: JOKIC,
 };
 
+export function listNbaPlayerDetailPreviewSeeds(): Array<{
+  playerId: string;
+  firstName: string;
+  lastName: string;
+  teamId: string;
+}> {
+  return Object.values(SEEDS).map((s) => ({
+    playerId: s.playerId,
+    firstName: s.firstName,
+    lastName: s.lastName,
+    teamId: s.teamId,
+  }));
+}
+
 function hashSeed(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i += 1) {

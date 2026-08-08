@@ -7,6 +7,8 @@ import {
 import { resolveGameMatchupCopy } from "./pushNotificationCopy";
 
 const LOOKAHEAD_MS = 20 * 60 * 1000;
+const LOOKAHEAD_LIMIT = 40;
+const PUSH_LEAGUES = ["nba", "bj", "j1", "pl", "wc"] as const;
 
 function targetsFromPredictorUids(
   gameId: string,
@@ -60,13 +62,20 @@ export async function runNotifyGameStartCron(): Promise<void> {
   const now = new Date();
   const until = new Date(now.getTime() + LOOKAHEAD_MS);
 
-  const gamesSnap = await firestore
-    .collection("games")
-    .where("startAtJst", ">=", Timestamp.fromDate(now))
-    .where("startAtJst", "<=", Timestamp.fromDate(until))
-    .get();
+  const leagueSnaps = await Promise.all(
+    PUSH_LEAGUES.map((league) =>
+      firestore
+        .collection("games")
+        .where("league", "==", league)
+        .where("startAtJst", ">=", Timestamp.fromDate(now))
+        .where("startAtJst", "<=", Timestamp.fromDate(until))
+        .limit(LOOKAHEAD_LIMIT)
+        .get()
+    )
+  );
+  const gameDocs = leagueSnaps.flatMap((snap) => snap.docs);
 
-  for (const gameDoc of gamesSnap.docs) {
+  for (const gameDoc of gameDocs) {
     const gameData = gameDoc.data();
     if (gameData.final === true) continue;
     if (gameData.pushNotifiedStartAt) continue;

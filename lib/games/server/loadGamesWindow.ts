@@ -41,6 +41,8 @@ export type GamesWindowLoadParams = {
   toDateKey?: string;
   season?: string;
   limit?: number;
+  /** false のときシリーズ peer を取らない（存在チェック用） */
+  includePeers?: boolean;
 };
 
 export type GamesWindowPayload = {
@@ -121,10 +123,10 @@ export async function loadGamesWindow(
     ...(d.data() as Record<string, unknown>),
   }));
 
-  const peerRaw = await mergePlayoffSeriesPeersForWindowGamesAdmin(
-    db,
-    windowRows
-  );
+  const peerRaw =
+    params.includePeers === false
+      ? windowRows
+      : await mergePlayoffSeriesPeersForWindowGamesAdmin(db, windowRows);
 
   const rows = windowRows.map((r) =>
     serializeGameDoc(String(r.id), r as Record<string, unknown>)

@@ -8,6 +8,7 @@ import {
 } from "../../rankings/CyberSlantedTabNative";
 import NbaLeagueTeamStatsPanelNative from "../teamStats/NbaLeagueTeamStatsPanelNative";
 import NbaLeaguePlayerStatLeadersPanelNative from "../playerStats/NbaLeaguePlayerStatLeadersPanelNative";
+import NbaStatsSearchBarNative from "./NbaStatsSearchBarNative";
 
 type TabId = "team" | "player";
 
@@ -64,6 +65,20 @@ export default function LeagueStatsHubScreenNative({
           />
         </CyberSlantedTabBarNative>
       </View>
+      <View style={styles.search}>
+        <NbaStatsSearchBarNative
+          key={tab}
+          kind={tab}
+          language={language}
+          onSelect={(hit) => {
+            if (hit.kind === "team") {
+              onSelectTeam(hit.id);
+              return;
+            }
+            onSelectPlayer?.(hit.id);
+          }}
+        />
+      </View>
       <View style={styles.body}>
         {tab === "team" ? (
           <NbaLeagueTeamStatsPanelNative
@@ -86,6 +101,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 4,
     paddingBottom: 2,
+  },
+  search: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    zIndex: 20,
   },
   body: {
     flex: 1,

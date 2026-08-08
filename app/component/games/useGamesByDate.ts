@@ -1,31 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query,
-  where,
-  limit,
-  Timestamp,
-} from "firebase/firestore";
-
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
 import {
   getCalendarMonthRangeInTimeZone,
-  getDayRangeInTimeZone,
   getZonedYMD,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
-import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
+import { fetchGamesWindowShared } from "@/lib/games/fetchGamesWindowShared";
 
 const GAMES_BY_DAY_CACHE_TTL_MS = 5 * 60 * 1000;
 const GAMES_BY_MONTH_CACHE_TTL_MS = 5 * 60 * 1000;
-/** 暦月1本の games 取得上限（useGameDays と同程度） */
-const GAMES_MONTH_QUERY_LIMIT = 500;
 const gamesByDayCache = new Map<
   string,
   { games: any[]; savedAt: number }
@@ -48,10 +34,9 @@ export function gameRowStartDateKeyInTimeZone(
   const t = game?.startAtJst;
   if (!t) return null;
   let d: Date | null = null;
-  if (t instanceof Timestamp) d = t.toDate();
+  if (t instanceof Date) d = t;
   else if (typeof (t as { toDate?: () => Date }).toDate === "function")
     d = (t as { toDate: () => Date }).toDate();
-  else if (t instanceof Date) d = t;
   else if (
     typeof t === "object" &&
     t !== null &&
@@ -80,19 +65,20 @@ export function useGamesByCalendarMonth(
     return `${year}-${String(month).padStart(2, "0")}`;
   }, [monthAnchor, timeZone]);
 
-  const range = useMemo(() => {
+  const rangeKeys = useMemo(() => {
     const { start, end } = getCalendarMonthRangeInTimeZone(
       monthAnchor,
       timeZone,
     );
     return {
-      startTs: Timestamp.fromDate(start),
-      endTs: Timestamp.fromDate(end),
+      fromDateKey: toDateKeyInTimeZone(start, timeZone),
+      toDateKey: toDateKeyInTimeZone(end, timeZone),
     };
   }, [monthAnchor, timeZone]);
 
   useEffect(() => {
     let alive = true;
+    const ac = new AbortController();
 
     async function load() {
       setErr(null);
@@ -111,32 +97,24 @@ export function useGamesByCalendarMonth(
       setLoading(true);
 
       try {
-        const ref = collection(db, "games");
-
-        const q = query(
-          ref,
-          where("league", "==", league),
-          where("season", "==", GAME_SCHEDULE_SEASON),
-          where("startAtJst", ">=", range.startTs),
-          where("startAtJst", "<", range.endTs),
-          orderBy("startAtJst", "asc"),
-          limit(GAMES_MONTH_QUERY_LIMIT),
-        );
-
-        const snap = await getDocs(q);
+        const payload = await fetchGamesWindowShared({
+          league,
+          timeZone,
+          fromDateKey: rangeKeys.fromDateKey,
+          toDateKey: rangeKeys.toDateKey,
+          signal: ac.signal,
+        });
 
         if (!alive) return;
 
-        const rows = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-
-        gamesByMonthCache.set(cacheKey, { games: rows, savedAt: Date.now() });
-        setGames(rows);
+        gamesByMonthCache.set(cacheKey, {
+          games: payload.rows,
+          savedAt: Date.now(),
+        });
+        setGames(payload.rows);
         setLoading(false);
       } catch (e: unknown) {
-        if (!alive) return;
+        if (!alive || ac.signal.aborted) return;
         setErr(e instanceof Error ? e.message : "unknown error");
         setLoading(false);
       }
@@ -146,8 +124,9 @@ export function useGamesByCalendarMonth(
 
     return () => {
       alive = false;
+      ac.abort();
     };
-  }, [league, monthWindowKey, range, timeZone]);
+  }, [league, monthWindowKey, rangeKeys, timeZone]);
 
   return { loading, error, games };
 }
@@ -164,20 +143,12 @@ export function useGamesByDate(
 
   const league = useMemo(() => normalizeLeague(rawLeague), [rawLeague]);
 
-  const range = useMemo(() => {
-    if (!dayDate) return null;
-    const { start, end } = getDayRangeInTimeZone(dayDate, timeZone);
-    return {
-      startTs: Timestamp.fromDate(start),
-      endTs: Timestamp.fromDate(end),
-    };
-  }, [dayDate, timeZone]);
-
   useEffect(() => {
     let alive = true;
+    const ac = new AbortController();
 
     async function load() {
-      if (!enabled || !dayDate || !range) {
+      if (!enabled || !dayDate) {
         if (!alive) return;
         setErr(null);
         setGames([]);
@@ -188,7 +159,7 @@ export function useGamesByDate(
       setErr(null);
 
       const dayKey = toDateKeyInTimeZone(dayDate, timeZone);
-      const cacheKey = `${league}|${timeZone}|${dayKey}|${GAME_SCHEDULE_SEASON}`;
+      const cacheKey = `${league}|${timeZone}|${dayKey}`;
       const hit = gamesByDayCache.get(cacheKey);
       const cacheFresh =
         hit && Date.now() - hit.savedAt < GAMES_BY_DAY_CACHE_TTL_MS;
@@ -202,33 +173,25 @@ export function useGamesByDate(
       setLoading(true);
 
       try {
-        const ref = collection(db, "games");
-
-        const q = query(
-          ref,
-          where("league", "==", league),
-          where("season", "==", GAME_SCHEDULE_SEASON),
-          where("startAtJst", ">=", range.startTs),
-          where("startAtJst", "<", range.endTs),
-          orderBy("startAtJst", "asc"),
-          limit(200)
-        );
-
-        const snap = await getDocs(q);
+        const payload = await fetchGamesWindowShared({
+          league,
+          timeZone,
+          anchorDateKey: dayKey,
+          plusMinus: 0,
+          signal: ac.signal,
+        });
 
         if (!alive) return;
 
-        const rows = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-
-        gamesByDayCache.set(cacheKey, { games: rows, savedAt: Date.now() });
-        setGames(rows);
+        gamesByDayCache.set(cacheKey, {
+          games: payload.rows,
+          savedAt: Date.now(),
+        });
+        setGames(payload.rows);
         setLoading(false);
-      } catch (e: any) {
-        if (!alive) return;
-        setErr(e?.message ?? "unknown error");
+      } catch (e: unknown) {
+        if (!alive || ac.signal.aborted) return;
+        setErr(e instanceof Error ? e.message : "unknown error");
         setLoading(false);
       }
     }
@@ -237,8 +200,9 @@ export function useGamesByDate(
 
     return () => {
       alive = false;
+      ac.abort();
     };
-  }, [enabled, league, dayDate, range, timeZone]);
+  }, [enabled, league, dayDate, timeZone]);
 
   return { loading, error, games };
 }

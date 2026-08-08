@@ -26,7 +26,7 @@ export type ResultDayGroup = {
   final: PostWithMillis[];
 };
 
-export const RESULT_INITIAL_PAGE_SIZE = 20;
+export const RESULT_INITIAL_PAGE_SIZE = 15;
 export const RESULT_NEXT_PAGE_SIZE = 10;
 export const RESULT_POSTS_MAX_CACHED = 400;
 

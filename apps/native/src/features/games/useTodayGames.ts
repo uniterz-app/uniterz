@@ -1,15 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Timestamp,
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
-import { db } from "../../lib/firebase";
-import { resolveGameStatus, GAME_SCHEDULE_SEASON } from "@uniterz/shared";
+import { resolveGameStatus } from "@uniterz/shared";
 import {
   TIMEZONE_JST,
   getDayRangeInTimeZone,
@@ -36,7 +26,6 @@ export type SupportedLeague = "nba" | "bj" | "j1" | "pl" | "wc";
 
 /** Web `useGameDays` 相当: アンカー±5日（計11暦日）。端で +2 延長 */
 const GAME_DAYS_PLUS_MINUS = GAMES_WINDOW_PLUS_MINUS_DEFAULT;
-const GAME_DAYS_WINDOW_QUERY_LIMIT = 200;
 
 /** Web `useGameDays` の gameDaysRowsCache と同趣旨 */
 const GAMES_WINDOW_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -390,84 +379,40 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     void (async () => {
       try {
         const apiBase = getUniterzApiBaseUrl();
+        if (!apiBase) {
+          throw new Error("games_window_api_base_missing");
+        }
+
         let rows: NativeGameRow[];
         let peerRows: NativeGameRow[];
-
         let rangeStartKey = "";
         let rangeEndKey = "";
 
-        const loadFromFirestore = async () => {
-          const { start, end } = getPlusMinusDaysRangeInTimeZone(
-            selectedDate,
-            TIMEZONE_JST,
-            GAME_DAYS_PLUS_MINUS
-          );
-          const q = query(
-            collection(db, "games"),
-            where("league", "==", selectedLeague),
-            where("season", "==", GAME_SCHEDULE_SEASON),
-            where("startAtJst", ">=", Timestamp.fromDate(start)),
-            where("startAtJst", "<", Timestamp.fromDate(end)),
-            orderBy("startAtJst", "asc"),
-            limit(GAME_DAYS_WINDOW_QUERY_LIMIT)
-          );
-          const snap = await getDocs(q);
-          const list = snap.docs.map((row) => ({
-            id: row.id,
-            ...(row.data() as Omit<NativeGameRow, "id">),
-          }));
-          return {
-            rows: list,
-            peerRows: list,
-            startKey: toDateKeyInTimeZone(start, TIMEZONE_JST),
-            endKey: toDateKeyInTimeZone(end, TIMEZONE_JST),
-          };
-        };
-
-        if (apiBase) {
-          try {
-            const payload = await fetchGamesWindowShared({
-              league: selectedLeague,
-              anchorDateKey: dateKey,
-              timeZone: TIMEZONE_JST,
-              plusMinus: GAME_DAYS_PLUS_MINUS,
-              apiBaseUrl: apiBase,
-              signal: ac.signal,
-            });
-            if (!alive) return;
-            rows = payload.rows as NativeGameRow[];
-            peerRows = (payload.peerRows.length
-              ? payload.peerRows
-              : payload.rows) as NativeGameRow[];
-            rangeStartKey = payload.range.startKey;
-            rangeEndKey = payload.range.endKey;
-          } catch (apiErr) {
-            // 画面切替・リロードの abort は失敗扱いしない（Firestore 二重取得で遅く見える主因）
-            if (
-              !alive ||
-              ac.signal.aborted ||
-              (apiErr instanceof Error && apiErr.name === "AbortError")
-            ) {
-              return;
-            }
-            console.warn(
-              "[useTodayGames] games/window failed, fallback",
-              apiErr
-            );
-            const loaded = await loadFromFirestore();
-            if (!alive) return;
-            rows = loaded.rows;
-            peerRows = loaded.peerRows;
-            rangeStartKey = loaded.startKey;
-            rangeEndKey = loaded.endKey;
-          }
-        } else {
-          const loaded = await loadFromFirestore();
+        try {
+          const payload = await fetchGamesWindowShared({
+            league: selectedLeague,
+            anchorDateKey: dateKey,
+            timeZone: TIMEZONE_JST,
+            plusMinus: GAME_DAYS_PLUS_MINUS,
+            apiBaseUrl: apiBase,
+            signal: ac.signal,
+          });
           if (!alive) return;
-          rows = loaded.rows;
-          peerRows = loaded.peerRows;
-          rangeStartKey = loaded.startKey;
-          rangeEndKey = loaded.endKey;
+          rows = payload.rows as NativeGameRow[];
+          peerRows = (payload.peerRows.length
+            ? payload.peerRows
+            : payload.rows) as NativeGameRow[];
+          rangeStartKey = payload.range.startKey;
+          rangeEndKey = payload.range.endKey;
+        } catch (apiErr) {
+          if (
+            !alive ||
+            ac.signal.aborted ||
+            (apiErr instanceof Error && apiErr.name === "AbortError")
+          ) {
+            return;
+          }
+          throw apiErr;
         }
 
         if (!rangeStartKey || !rangeEndKey) {
@@ -580,45 +525,24 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
         const extras: NativeGameRow[][] = [];
         const extraPeers: NativeGameRow[][] = [];
 
+        if (!apiBase) return;
+
         for (const slice of slices) {
-          if (apiBase) {
-            const payload = await fetchGamesWindowShared({
-              league: selectedLeague,
-              timeZone: TIMEZONE_JST,
-              fromDateKey: slice.fromKey,
-              toDateKey: slice.toKey,
-              apiBaseUrl: apiBase,
-              signal: ac.signal,
-            });
-            if (!alive) return;
-            extras.push(payload.rows as NativeGameRow[]);
-            extraPeers.push(
-              (payload.peerRows.length
-                ? payload.peerRows
-                : payload.rows) as NativeGameRow[]
-            );
-          } else {
-            const start = parseDateKeyInTimeZone(slice.fromKey, TIMEZONE_JST);
-            const end = parseDateKeyInTimeZone(slice.toKey, TIMEZONE_JST);
-            if (!start || !end) continue;
-            const q = query(
-              collection(db, "games"),
-              where("league", "==", selectedLeague),
-              where("season", "==", GAME_SCHEDULE_SEASON),
-              where("startAtJst", ">=", Timestamp.fromDate(start)),
-              where("startAtJst", "<", Timestamp.fromDate(end)),
-              orderBy("startAtJst", "asc"),
-              limit(GAME_DAYS_WINDOW_QUERY_LIMIT)
-            );
-            const snap = await getDocs(q);
-            const list = snap.docs.map((row) => ({
-              id: row.id,
-              ...(row.data() as Omit<NativeGameRow, "id">),
-            }));
-            if (!alive) return;
-            extras.push(list);
-            extraPeers.push(list);
-          }
+          const payload = await fetchGamesWindowShared({
+            league: selectedLeague,
+            timeZone: TIMEZONE_JST,
+            fromDateKey: slice.fromKey,
+            toDateKey: slice.toKey,
+            apiBaseUrl: apiBase,
+            signal: ac.signal,
+          });
+          if (!alive) return;
+          extras.push(payload.rows as NativeGameRow[]);
+          extraPeers.push(
+            (payload.peerRows.length
+              ? payload.peerRows
+              : payload.rows) as NativeGameRow[]
+          );
         }
 
         let mergedExtra: NativeGameRow[] = [];

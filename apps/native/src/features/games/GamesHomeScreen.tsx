@@ -859,11 +859,13 @@ export default function GamesHomeScreen({
         league: selectedLeague,
         monthAnchor: prevAnchor,
         timeZone: TIMEZONE_JST,
+        apiBaseUrl: getUniterzApiBaseUrl(),
       }),
       fetchMonthHasGames({
         league: selectedLeague,
         monthAnchor: nextAnchor,
         timeZone: TIMEZONE_JST,
+        apiBaseUrl: getUniterzApiBaseUrl(),
       }),
     ])
       .then(([hasPrev, hasNext]) => {

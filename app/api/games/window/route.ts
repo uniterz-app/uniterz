@@ -32,6 +32,11 @@ export async function GET(req: Request) {
     const plusMinus = pmRaw
       ? Math.max(0, Math.min(31, Number(pmRaw) || GAMES_WINDOW_PLUS_MINUS_DEFAULT))
       : GAMES_WINDOW_PLUS_MINUS_DEFAULT;
+    const limitRaw = url.searchParams.get("limit");
+    const limitN = limitRaw
+      ? Math.max(1, Math.min(500, Number(limitRaw) || 0))
+      : undefined;
+    const includePeers = url.searchParams.get("peers") !== "0";
 
     const useRange = Boolean(fromDateKey && toDateKey);
     if (useRange) {
@@ -52,16 +57,46 @@ export async function GET(req: Request) {
     }
 
     const cacheKey = useRange
-      ? ["games-window-range", league, fromDateKey, toDateKey, timeZone]
-      : ["games-window", league, anchorDateKey, timeZone, String(plusMinus)];
+      ? [
+          "games-window-range",
+          league,
+          fromDateKey,
+          toDateKey,
+          timeZone,
+          String(limitN ?? ""),
+          includePeers ? "peers" : "nopeers",
+        ]
+      : [
+          "games-window",
+          league,
+          anchorDateKey,
+          timeZone,
+          String(plusMinus),
+          String(limitN ?? ""),
+          includePeers ? "peers" : "nopeers",
+        ];
 
     const cached = unstable_cache(
       async () =>
         loadGamesWindow(
           getAdminDb(),
           useRange
-            ? { league, timeZone, fromDateKey, toDateKey }
-            : { league, timeZone, anchorDateKey, plusMinus }
+            ? {
+                league,
+                timeZone,
+                fromDateKey,
+                toDateKey,
+                limit: limitN,
+                includePeers,
+              }
+            : {
+                league,
+                timeZone,
+                anchorDateKey,
+                plusMinus,
+                limit: limitN,
+                includePeers,
+              }
         ),
       cacheKey,
       {
