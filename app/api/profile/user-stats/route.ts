@@ -15,7 +15,7 @@ import {
   resolveNbaProfileSummaryLive,
   type ProfileSummaryForCards,
 } from "@/lib/profile/resolveLiveProfileSummary";
-import { resolveNbaMonthlyProfileSummary } from "@/lib/profile/resolveNbaMonthlyProfileSummary";
+import { resolveNbaWindowProfileSummary } from "@/lib/profile/resolveNbaWindowProfileSummary";
 import {
   buildDailyTrendFromDailySnaps,
   resolveProfileDailyTrendContext,
@@ -102,21 +102,27 @@ async function buildUserStatsResponse(req: Request) {
   const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
     ? rawLeague
     : "nba";
-  /** NBA のみ: playoffs / season（現行キー） / monthly（互換） */
+  /** NBA: playoffs / season（累計）/ weekly / monthly（ウィンドウ） */
   const rawPeriod = searchParams.get("period")?.trim() ?? "";
   const nbaScope: "playoffs" | "season" | null =
     rankingLeague === "nba" &&
     (rawPeriod === "playoffs" || rawPeriod === "season")
       ? rawPeriod
       : null;
-  const wantMonthly =
-    rankingLeague === "nba" && rawPeriod === "monthly";
-  const rawMonthLabel = searchParams.get("month")?.trim() ?? "";
-  const monthLabel =
-    wantMonthly && isValidPeriodLabel("monthly", rawMonthLabel)
-      ? rawMonthLabel
-      : wantMonthly
-        ? currentRankingPeriodLabel("monthly")
+  const wantWeekly = rankingLeague === "nba" && rawPeriod === "weekly";
+  const wantMonthly = rankingLeague === "nba" && rawPeriod === "monthly";
+  const wantWindow = wantWeekly || wantMonthly;
+  const rawBoard = searchParams.get("board")?.trim() ?? "";
+  const windowBoard: "playoffs" | "season" =
+    rawBoard === "playoffs" ? "playoffs" : "season";
+  const rawWindowLabel =
+    searchParams.get(wantWeekly ? "week" : "month")?.trim() ?? "";
+  const windowLabel =
+    wantWindow &&
+    isValidPeriodLabel(wantWeekly ? "weekly" : "monthly", rawWindowLabel)
+      ? rawWindowLabel
+      : wantWindow
+        ? currentRankingPeriodLabel(wantWeekly ? "weekly" : "monthly")
         : null;
   const parts =
     parsePartsParam(searchParams.get("parts")) ?? new Set<StatsPart>(ALL_PARTS);
@@ -154,7 +160,7 @@ async function buildUserStatsResponse(req: Request) {
   );
 
   const needCumulative =
-    !wantMonthly && (wantPhase || wantRanks || wantTrend || wantRankTrend);
+    !wantWindow && (wantPhase || wantRanks || wantTrend || wantRankTrend);
 
   const [statsSnap, cumulativeSnap] = await Promise.all([
     wantStats
@@ -232,18 +238,20 @@ async function buildUserStatsResponse(req: Request) {
   let summary: SummaryForCards | null = null;
   let metricValueDeltas: MyRankMetricValueDeltas | null = null;
   let monthlyResolvedLabel: string | null = null;
+  let windowResolvedLabel: string | null = null;
   let monthlySummaryRanks: SummaryRanks | null = null;
-  if (wantMonthly && monthLabel && (wantPhase || wantRanks)) {
-    const monthly = await resolveNbaMonthlyProfileSummary(
-      adminDb,
-      uid,
-      monthLabel
-    );
-    monthlyResolvedLabel = monthly.monthLabel;
-    monthlySummaryRanks = monthly.summaryRanks;
+  if (wantWindow && windowLabel && (wantPhase || wantRanks)) {
+    const windowed = await resolveNbaWindowProfileSummary(adminDb, uid, {
+      board: windowBoard,
+      window: wantWeekly ? "weekly" : "monthly",
+      label: windowLabel,
+    });
+    windowResolvedLabel = windowed.label;
+    monthlyResolvedLabel =
+      windowed.window === "monthly" ? windowed.label : null;
+    monthlySummaryRanks = windowed.summaryRanks;
     if (wantPhase) {
-      summary = monthly.summary;
-      // 月次は前日比デルタを出さない（シーズン累計スナップショット基準のため）
+      summary = windowed.summary;
       metricValueDeltas = null;
     }
   } else if (wantPhase) {
@@ -288,7 +296,7 @@ async function buildUserStatsResponse(req: Request) {
 
   /** ティアタグ用 — 日次スナップショット（Functions 不要）。phase 取得時も同梱可。 */
   let summaryRanks: SummaryRanks | null = null;
-  if (wantMonthly && monthlySummaryRanks) {
+  if (wantWindow && monthlySummaryRanks) {
     summaryRanks = monthlySummaryRanks;
   } else if (nbaScope === "playoffs") {
     // プレーオフ専用ボードは廃止済み — 順位は出さない
@@ -312,12 +320,17 @@ async function buildUserStatsResponse(req: Request) {
     parts: [...parts],
     rankingLeague,
     wcStage: null,
-    period: wantMonthly
-      ? "monthly"
-      : nbaScope === "playoffs"
-        ? "playoffs"
-        : "season",
+    period: wantWeekly
+      ? "weekly"
+      : wantMonthly
+        ? "monthly"
+        : nbaScope === "playoffs"
+          ? "playoffs"
+          : "season",
+    board: wantWindow ? windowBoard : nbaScope ?? "season",
     monthLabel: monthlyResolvedLabel,
+    weekLabel: wantWeekly ? windowResolvedLabel : null,
+    windowLabel: windowResolvedLabel,
   };
 
   if (wantStats) body.stats = stats;

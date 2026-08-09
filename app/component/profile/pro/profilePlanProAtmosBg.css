@@ -7,10 +7,9 @@
 }
 
 /*
- * 幅ロックのアートボード:
- * - 高さは aspect-ratio のみで決まる（カード高さに追従しない）
- * - バッジ有無でカードが縦伸びしても六角の位置・大きさが動かない
- * - 親 .profile-plan-pro-bg の overflow:hidden で余長をクリップ
+ * アートボード:
+ * - 基準は aspect-ratio（幅ロック）
+ * - min-height:100% でパネルが高いとき下端まで stretch
  */
 .profile-plan-pro-bg__atmos-hex,
 .profile-plan-pro-bg__atmos-hud {
@@ -22,6 +21,7 @@
   width: 100%;
   aspect-ratio: 300 / 430;
   height: auto;
+  min-height: 100%;
   background-repeat: no-repeat;
   background-position: center top;
   background-size: 100% 100%;

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, {
   Circle,
@@ -91,6 +91,8 @@ import {
   isProfilePlanProWaveBgVariant,
   type ProfilePlanProWaveBgVariant,
 } from "../../../../../../lib/profile/profilePlanProWaveBgVariants";
+import { UNITERZ_LOGO_ASSET } from "../../../../../../lib/units/uniterzLogoAsset";
+import { PROFILE_UNITERZ_LOGO_SCATTER } from "../../../../../../lib/profile/profilePlanProUniterzLogoScatter";
 import {
   getProfilePlanProFormHudSvg,
   getProfilePlanProFormSkinSvg,
@@ -509,9 +511,10 @@ function MoodLayers({
   );
 }
 
-/** Web SVG データ URL 相当 — SvgXml で skin + hud を重ねる（幅ロック） */
+/** Web SVG データ URL 相当 — SvgXml で skin + hud を重ねる（パネル下端まで stretch） */
 function SvgSkinHudLayers({
   width,
+  height,
   skinXml,
   hudXml,
   canvasW,
@@ -520,6 +523,7 @@ function SvgSkinHudLayers({
   variantKey,
 }: {
   width: number;
+  height: number;
   skinXml: string;
   hudXml: string;
   canvasW: number;
@@ -528,14 +532,28 @@ function SvgSkinHudLayers({
   variantKey: string;
 }) {
   const enter = useSharedValue(shouldAnimate ? 0 : 1);
-  const artH = width * (canvasH / canvasW);
+  const hasEnteredRef = useRef(false);
+  const enteredVariantRef = useRef<string | null>(null);
+  /** Neo 同様: 自然アスペクトとパネル高さの大きい方（下端が空かない） */
+  const artH = Math.max(height, width * (canvasH / canvasW));
 
   useEffect(() => {
+    if (enteredVariantRef.current !== variantKey) {
+      enteredVariantRef.current = variantKey;
+      hasEnteredRef.current = false;
+    }
     if (!shouldAnimate) {
       cancelAnimation(enter);
       enter.value = 1;
+      hasEnteredRef.current = true;
       return;
     }
+    /** 一時停止後の再開で入場をやり直さない（獲得演出後の再ロード感を防ぐ） */
+    if (hasEnteredRef.current) {
+      enter.value = 1;
+      return;
+    }
+    hasEnteredRef.current = true;
     enter.value = 0;
     enter.value = withTiming(1, {
       duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
@@ -586,16 +604,19 @@ function SvgSkinHudLayers({
 /** Web `beast-*` 相当 */
 function BeastLayers({
   width,
+  height,
   variant,
   shouldAnimate,
 }: {
   width: number;
+  height: number;
   variant: ProfilePlanProBeastBgVariant;
   shouldAnimate: boolean;
 }) {
   return (
     <SvgSkinHudLayers
       width={width}
+      height={height}
       skinXml={getProfilePlanProBeastSkinSvg(variant)}
       hudXml={getProfilePlanProBeastHudSvg(variant)}
       canvasW={PROFILE_PLAN_PRO_BEAST_CANVAS.width}
@@ -609,16 +630,19 @@ function BeastLayers({
 /** Web `cosmos-*` 相当 */
 function CosmosLayers({
   width,
+  height,
   variant,
   shouldAnimate,
 }: {
   width: number;
+  height: number;
   variant: ProfilePlanProCosmosBgVariant;
   shouldAnimate: boolean;
 }) {
   return (
     <SvgSkinHudLayers
       width={width}
+      height={height}
       skinXml={getProfilePlanProCosmosSkinSvg(variant)}
       hudXml={getProfilePlanProCosmosHudSvg(variant)}
       canvasW={PROFILE_PLAN_PRO_COSMOS_CANVAS.width}
@@ -632,16 +656,19 @@ function CosmosLayers({
 /** Web `lab-*` 相当 */
 function LabLayers({
   width,
+  height,
   variant,
   shouldAnimate,
 }: {
   width: number;
+  height: number;
   variant: ProfilePlanProLabBgVariant;
   shouldAnimate: boolean;
 }) {
   return (
     <SvgSkinHudLayers
       width={width}
+      height={height}
       skinXml={getProfilePlanProLabSkinSvg(variant)}
       hudXml={getProfilePlanProLabHudSvg(variant)}
       canvasW={PROFILE_PLAN_PRO_LAB_CANVAS.width}
@@ -652,18 +679,113 @@ function LabLayers({
   );
 }
 
+const UNITERZ_LOGO_PNG = require("../../../../assets/brand/uniterz-logo.png");
+
+/** Web `wave-uniterz-logo` — 確定版ロゴ PNG（まばら配置） */
+function UniterzLogoSkinLayers({
+  width,
+  height,
+  shouldAnimate,
+}: {
+  width: number;
+  height: number;
+  shouldAnimate: boolean;
+}) {
+  const enter = useSharedValue(shouldAnimate ? 0 : 1);
+  const hasEnteredRef = useRef(false);
+  const artH = Math.max(
+    height,
+    width *
+      (PROFILE_PLAN_PRO_WAVE_CANVAS.height / PROFILE_PLAN_PRO_WAVE_CANVAS.width)
+  );
+
+  useEffect(() => {
+    if (!shouldAnimate) {
+      cancelAnimation(enter);
+      enter.value = 1;
+      hasEnteredRef.current = true;
+      return;
+    }
+    if (hasEnteredRef.current) {
+      enter.value = 1;
+      return;
+    }
+    hasEnteredRef.current = true;
+    enter.value = 0;
+    enter.value = withTiming(1, {
+      duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
+      easing: Easing.out(Easing.cubic),
+    });
+    return () => cancelAnimation(enter);
+  }, [enter, shouldAnimate]);
+
+  const layerStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      {
+        translateY:
+          (1 - enter.value) * PROFILE_PLAN_PRO_BG.atmosEnterYOffsetPx,
+      },
+    ],
+  }));
+
+  const logoAspect = UNITERZ_LOGO_ASSET.aspectRatio;
+
+  return (
+    <Animated.View
+      style={[
+        {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width,
+          height: artH,
+          overflow: "hidden",
+        },
+        layerStyle,
+      ]}
+      pointerEvents="none"
+    >
+      {PROFILE_UNITERZ_LOGO_SCATTER.map((mark) => {
+        const markW = width * mark.widthPct;
+        const markH = markW / logoAspect;
+        return (
+          <Image
+            key={mark.id}
+            source={UNITERZ_LOGO_PNG}
+            blurRadius={mark.blurPx}
+            style={{
+              position: "absolute",
+              width: markW,
+              height: markH,
+              left: width * mark.cxPct - markW / 2,
+              top: artH * mark.cyPct - markH / 2,
+              opacity: mark.opacity,
+              transform: [{ rotate: `${mark.rotateDeg}deg` }],
+            }}
+            resizeMode="contain"
+          />
+        );
+      })}
+    </Animated.View>
+  );
+}
+
 /** Web `wave-*` 相当（Wave9 プレビュー） */
 function WaveLayers({
   width,
+  height,
   variant,
   shouldAnimate,
 }: {
   width: number;
+  height: number;
   variant: ProfilePlanProWaveBgVariant;
   shouldAnimate: boolean;
 }) {
   const meta = getProfilePlanProWaveBgMeta(variant);
   const colors = meta?.cardColors ?? (["#050508", "#0a121c", "#020406"] as const);
+  const isUniterzLogo = variant === "wave-uniterz-logo";
   return (
     <View style={StyleSheet.absoluteFillObject}>
       <LinearGradient
@@ -673,9 +795,21 @@ function WaveLayers({
         end={{ x: 0.8, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
+      {isUniterzLogo ? (
+        <UniterzLogoSkinLayers
+          width={width}
+          height={height}
+          shouldAnimate={shouldAnimate}
+        />
+      ) : null}
       <SvgSkinHudLayers
         width={width}
-        skinXml={getProfilePlanProWaveSkinSvg(variant)}
+        height={height}
+        skinXml={
+          isUniterzLogo
+            ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PROFILE_PLAN_PRO_WAVE_CANVAS.width} ${PROFILE_PLAN_PRO_WAVE_CANVAS.height}"></svg>`
+            : getProfilePlanProWaveSkinSvg(variant)
+        }
         hudXml={getProfilePlanProWaveHudSvg(variant)}
         canvasW={PROFILE_PLAN_PRO_WAVE_CANVAS.width}
         canvasH={PROFILE_PLAN_PRO_WAVE_CANVAS.height}
@@ -689,16 +823,19 @@ function WaveLayers({
 /** Web `form-*` 相当 */
 function FormLayers({
   width,
+  height,
   variant,
   shouldAnimate,
 }: {
   width: number;
+  height: number;
   variant: ProfilePlanProFormBgVariant;
   shouldAnimate: boolean;
 }) {
   return (
     <SvgSkinHudLayers
       width={width}
+      height={height}
       skinXml={getProfilePlanProFormSkinSvg(variant)}
       hudXml={getProfilePlanProFormHudSvg(variant)}
       canvasW={PROFILE_PLAN_PRO_FORM_CANVAS.width}
@@ -739,6 +876,8 @@ function NeoLayers({
   shouldAnimate: boolean;
 }) {
   const enter = useSharedValue(shouldAnimate ? 0 : 1);
+  const hasEnteredRef = useRef(false);
+  const enteredVariantRef = useRef<string | null>(null);
   const skinXml = getProfilePlanProNeoSkinSvg(variant);
   const coverH = Math.max(
     height,
@@ -747,11 +886,21 @@ function NeoLayers({
   );
 
   useEffect(() => {
+    if (enteredVariantRef.current !== variant) {
+      enteredVariantRef.current = variant;
+      hasEnteredRef.current = false;
+    }
     if (!shouldAnimate) {
       cancelAnimation(enter);
       enter.value = 1;
+      hasEnteredRef.current = true;
       return;
     }
+    if (hasEnteredRef.current) {
+      enter.value = 1;
+      return;
+    }
+    hasEnteredRef.current = true;
     enter.value = 0;
     enter.value = withTiming(1, {
       duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
@@ -786,29 +935,45 @@ function NeoLayers({
   );
 }
 
-/** Web `scale-*` 相当 — 爬虫類鱗 + 微細 HUD（幅ロック） */
+/** Web `scale-*` 相当 — 爬虫類鱗 + 微細 HUD（パネル下端まで stretch） */
 function ScaleLayers({
   width,
+  height,
   variant,
   shouldAnimate,
 }: {
   width: number;
+  height: number;
   variant: ProfilePlanProScaleBgVariant;
   shouldAnimate: boolean;
 }) {
   const skin = getProfilePlanProScaleSkinItems(variant);
   const hud = getProfilePlanProScaleHudItems(variant);
   const enter = useSharedValue(shouldAnimate ? 0 : 1);
-  const artH =
+  const hasEnteredRef = useRef(false);
+  const enteredVariantRef = useRef<string | null>(null);
+  const artH = Math.max(
+    height,
     width *
-    (PROFILE_PLAN_PRO_SCALE_CANVAS.height / PROFILE_PLAN_PRO_SCALE_CANVAS.width);
+      (PROFILE_PLAN_PRO_SCALE_CANVAS.height / PROFILE_PLAN_PRO_SCALE_CANVAS.width)
+  );
 
   useEffect(() => {
+    if (enteredVariantRef.current !== variant) {
+      enteredVariantRef.current = variant;
+      hasEnteredRef.current = false;
+    }
     if (!shouldAnimate) {
       cancelAnimation(enter);
       enter.value = 1;
+      hasEnteredRef.current = true;
       return;
     }
+    if (hasEnteredRef.current) {
+      enter.value = 1;
+      return;
+    }
+    hasEnteredRef.current = true;
     enter.value = 0;
     enter.value = withTiming(1, {
       duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
@@ -886,14 +1051,16 @@ function ScaleLayers({
   );
 }
 
-/** Web `atmos` 相当 — 図形だけ（幅ロック・入場は1回のみ） */
+/** Web `atmos` 相当 — 図形だけ（パネル下端まで stretch・入場は1回のみ） */
 function AtmosLayers({
   width,
+  height,
   accent,
   shouldAnimate,
   accentReady,
 }: {
   width: number;
+  height: number;
   accent: KinetikProfileAccentKey;
   shouldAnimate: boolean;
   accentReady: boolean;
@@ -901,9 +1068,11 @@ function AtmosLayers({
   const cells = getProfilePlanProAtmosHexCells(accent);
   const enter = useSharedValue(0);
   const hasEnteredRef = useRef(false);
-  const artH =
+  const artH = Math.max(
+    height,
     width *
-    (PROFILE_PLAN_PRO_ATMOS_CANVAS.height / PROFILE_PLAN_PRO_ATMOS_CANVAS.width);
+      (PROFILE_PLAN_PRO_ATMOS_CANVAS.height / PROFILE_PLAN_PRO_ATMOS_CANVAS.width)
+  );
 
   useEffect(() => {
     if (!accentReady) {
@@ -979,25 +1148,41 @@ function AtmosLayers({
 
 function HexLayoutLayers({
   width,
+  height,
   variant,
   shouldAnimate,
 }: {
   width: number;
+  height: number;
   variant: ProfilePlanProHexBgVariant;
   shouldAnimate: boolean;
 }) {
   const enter = useSharedValue(shouldAnimate ? 0 : 1);
+  const hasEnteredRef = useRef(false);
+  const enteredLayoutRef = useRef<string | null>(null);
   const layoutId = getProfilePlanProHexLayoutId(variant);
   const art = getProfilePlanProHexLayoutArt(layoutId);
-  const artH =
-    width * (PROFILE_PLAN_PRO_HEX_LAYOUT_H / PROFILE_PLAN_PRO_HEX_LAYOUT_W);
+  const artH = Math.max(
+    height,
+    width * (PROFILE_PLAN_PRO_HEX_LAYOUT_H / PROFILE_PLAN_PRO_HEX_LAYOUT_W)
+  );
 
   useEffect(() => {
+    if (enteredLayoutRef.current !== layoutId) {
+      enteredLayoutRef.current = layoutId;
+      hasEnteredRef.current = false;
+    }
     if (!shouldAnimate) {
       cancelAnimation(enter);
       enter.value = 1;
+      hasEnteredRef.current = true;
       return;
     }
+    if (hasEnteredRef.current) {
+      enter.value = 1;
+      return;
+    }
+    hasEnteredRef.current = true;
     enter.value = 0;
     enter.value = withTiming(1, {
       duration: PROFILE_PLAN_PRO_BG.atmosEnterMs,
@@ -1312,6 +1497,7 @@ export default function ProfilePlanProBackgroundNative({
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <AtmosLayers
           width={width}
+          height={height}
           accent={profileAccent}
           shouldAnimate={shouldAnimate}
           accentReady={accentReady}
@@ -1337,6 +1523,7 @@ export default function ProfilePlanProBackgroundNative({
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <ScaleLayers
           width={width}
+          height={height}
           variant={variant}
           shouldAnimate={shouldAnimate}
         />
@@ -1349,6 +1536,7 @@ export default function ProfilePlanProBackgroundNative({
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <BeastLayers
           width={width}
+          height={height}
           variant={variant}
           shouldAnimate={shouldAnimate}
         />
@@ -1361,6 +1549,7 @@ export default function ProfilePlanProBackgroundNative({
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <CosmosLayers
           width={width}
+          height={height}
           variant={variant}
           shouldAnimate={shouldAnimate}
         />
@@ -1373,6 +1562,7 @@ export default function ProfilePlanProBackgroundNative({
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <LabLayers
           width={width}
+          height={height}
           variant={variant}
           shouldAnimate={shouldAnimate}
         />
@@ -1385,6 +1575,7 @@ export default function ProfilePlanProBackgroundNative({
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <WaveLayers
           width={width}
+          height={height}
           variant={variant}
           shouldAnimate={shouldAnimate}
         />
@@ -1397,6 +1588,7 @@ export default function ProfilePlanProBackgroundNative({
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <FormLayers
           width={width}
+          height={height}
           variant={variant}
           shouldAnimate={shouldAnimate}
         />
@@ -1431,6 +1623,7 @@ export default function ProfilePlanProBackgroundNative({
       {isHexLayout ? (
         <HexLayoutLayers
           width={width}
+          height={height}
           variant={variant as ProfilePlanProHexBgVariant}
           shouldAnimate={shouldAnimate}
         />

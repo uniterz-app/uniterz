@@ -7,6 +7,7 @@
  *   - riot-shard … Pro 即解放
  *   - crimson-shard … 連勝5 / signal-mosaic … Perfect 5（マイルストーン）
  * カタログ外（プレビューのみ）: royal-plum / stealth-facet / parchment-crest / inferno-decal
+ * 本番採用: uniterz-logo / mono-hex … Pro 即解放
  * ※ Jagged Plate (beast-jagarmor)=月間総合Top10×5 は Beast 側
  */
 
@@ -23,7 +24,9 @@ export type ProfilePlanProWaveBgVariant =
   | "wave-crimson-shard"
   | "wave-signal-mosaic"
   | "wave-riot-shard"
-  | "wave-inferno-decal";
+  | "wave-inferno-decal"
+  | "wave-uniterz-logo"
+  | "wave-mono-hex";
 
 export type ProfilePlanProWaveBgMeta = {
   id: ProfilePlanProWaveBgVariant;
@@ -139,6 +142,23 @@ export const PROFILE_PLAN_PRO_WAVE_BG_VARIANTS: ProfilePlanProWaveBgMeta[] = [
     description: "黒地に散らした赤炎のフラットデカール。",
     swatch: "linear-gradient(160deg,#000000,#120000 48%,#ff1a1a)",
     cardColors: ["#000000", "#100000", "#000000"],
+  },
+  {
+    id: "wave-uniterz-logo",
+    label: "UNITERZ Mark",
+    tag: "ブランドロゴ",
+    description: "確定版 UNITERZ ロゴ画像を黒地に配したブランドスキン。",
+    swatch: "linear-gradient(160deg,#000000,#041018 48%,#000000)",
+    cardColors: ["#000000", "#050b10", "#000000"],
+  },
+  {
+    id: "wave-mono-hex",
+    label: "Cyber Hex",
+    tag: "電光六角",
+    description:
+      "シアン×黒の立体六角タイル。サイバー格子の幾何スキン。",
+    swatch: "linear-gradient(160deg,#010406,#031018 45%,#1a5f70 92%)",
+    cardColors: ["#010406", "#030a10", "#000000"],
   },
 ];
 

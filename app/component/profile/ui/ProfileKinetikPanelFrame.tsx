@@ -2,6 +2,12 @@
 
 import { forwardRef, type ReactNode, type Ref } from "react";
 import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanProBackgroundFx";
+import {
+  KINETIK_FLIP_EAR,
+  ProfileKinetikFlipEar,
+  ProfileKinetikFlipEarTopEdges,
+  useProfileKinetikFlipEar,
+} from "@/app/component/profile/ui/ProfileKinetikFlipEar";
 import { PROFILE_PLAN_PRO_CLASS } from "@/lib/profile/profilePlanVisual";
 import { PROFILE_PLAN_PRO_BG_DEFAULT } from "@/lib/profile/profilePlanProBgVariants";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
@@ -27,23 +33,6 @@ type Props = {
   planProBgAccentReady?: boolean;
 };
 
-function FrameCorners({ isPlanPro = false }: { isPlanPro?: boolean }) {
-  const cornerClass = [
-    "profile-kinetik-frame-corner",
-    isPlanPro ? "profile-plan-pro-frame-corner" : "",
-  ].join(" ");
-
-  return (
-    <>
-      <span className={`${cornerClass} profile-kinetik-frame-corner--tl`} aria-hidden />
-      <span className={`${cornerClass} profile-kinetik-frame-corner--tr`} aria-hidden />
-      <span className={`${cornerClass} profile-kinetik-frame-corner--bl`} aria-hidden />
-      <span className={`${cornerClass} profile-kinetik-frame-corner--br`} aria-hidden />
-    </>
-  );
-}
-
-/** PRO 枠 — 環境光のみ（枠スイープの常時アニメは廃止） */
 function ProFrameDecor() {
   return <span className="profile-plan-pro-ambient" aria-hidden />;
 }
@@ -64,10 +53,13 @@ const ProfileKinetikPanelFrame = forwardRef<HTMLElement, Props>(
     },
     ref
   ) {
+    const flipEar = useProfileKinetikFlipEar();
+
     const frameClass = [
       "profile-kinetik-panel min-w-0",
       isPlanPro ? PROFILE_PLAN_PRO_CLASS : "",
       proMobileStage ? "profile-plan-pro--mobile-stage" : "",
+      flipEar ? "profile-kinetik-panel--flip-ear" : "",
       className,
     ]
       .filter(Boolean)
@@ -75,6 +67,7 @@ const ProfileKinetikPanelFrame = forwardRef<HTMLElement, Props>(
 
     const inner = (
       <>
+        {flipEar ? <ProfileKinetikFlipEarTopEdges /> : null}
         {isPlanPro ? (
           <ProfilePlanProBackgroundFx
             animate={animatePlanProBg}
@@ -86,22 +79,30 @@ const ProfileKinetikPanelFrame = forwardRef<HTMLElement, Props>(
           />
         ) : null}
         {isPlanPro ? <ProFrameDecor /> : null}
-        <FrameCorners isPlanPro={isPlanPro} />
         {children}
       </>
     );
 
-    if (frameTag === "section") {
-      return (
+    const frame =
+      frameTag === "section" ? (
         <section ref={ref} className={frameClass}>
           {inner}
         </section>
+      ) : (
+        <div ref={ref as Ref<HTMLDivElement>} className={frameClass}>
+          {inner}
+        </div>
       );
-    }
+
+    if (!flipEar) return frame;
 
     return (
-      <div ref={ref as Ref<HTMLDivElement>} className={frameClass}>
-        {inner}
+      <div
+        className="relative w-full min-w-0"
+        style={{ paddingTop: KINETIK_FLIP_EAR.lipPx }}
+      >
+        <ProfileKinetikFlipEar />
+        {frame}
       </div>
     );
   }

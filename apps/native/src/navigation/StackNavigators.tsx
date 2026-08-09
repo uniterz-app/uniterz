@@ -420,6 +420,51 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="CareerFlipButtonPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .CareerFlipButtonPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="UnitEarnModalDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .UnitEarnModalDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="UnitEarnOverlayAnimPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .UnitEarnOverlayAnimPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="UnitEarnOverlayFontPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .UnitEarnOverlayFontPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="UniterzLogoTypePreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .UniterzLogoTypePreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="TeamStatsPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

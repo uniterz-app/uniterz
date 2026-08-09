@@ -4768,20 +4768,22 @@ body::before {
   border: 1px solid var(--kinetik-frame);
 }
 
-.profile-kinetik-panel > :not(.profile-kinetik-frame-corner):not(.profile-plan-pro-bg):not(.profile-plan-pro-ambient):not(.profile-plan-pro-frame-sweep):not(.profile-plan-pro-frame-inner):not(.profile-plan-pro-frame-rail):not(.profile-plan-pro-frame-edge),
-.profile-edit-kinetik-card > :not(.profile-kinetik-frame-corner):not(.profile-plan-pro-bg):not(.profile-plan-pro-ambient):not(.profile-plan-pro-frame-sweep):not(.profile-plan-pro-frame-inner):not(.profile-plan-pro-frame-rail):not(.profile-plan-pro-frame-edge) {
+/* フリップ耳用 — 天辺は左右セグメント + 耳枠で描く */
+.profile-kinetik-panel--flip-ear::before {
+  border-top-color: transparent;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.profile-kinetik-panel > :not(.profile-kinetik-frame-corner):not(.profile-plan-pro-bg):not(.profile-plan-pro-ambient):not(.profile-plan-pro-frame-sweep):not(.profile-plan-pro-frame-inner):not(.profile-plan-pro-frame-rail):not(.profile-plan-pro-frame-edge):not(.profile-kinetik-flip-ear-edge),
+.profile-edit-kinetik-card > :not(.profile-kinetik-frame-corner):not(.profile-plan-pro-bg):not(.profile-plan-pro-ambient):not(.profile-plan-pro-frame-sweep):not(.profile-plan-pro-frame-inner):not(.profile-plan-pro-frame-rail):not(.profile-plan-pro-frame-edge):not(.profile-kinetik-flip-ear-edge) {
   position: relative;
   z-index: 1;
 }
 
 .profile-kinetik-frame-corner,
 .profile-edit-kinetik-frame-corner {
-  position: absolute;
-  box-sizing: border-box;
-  width: var(--kinetik-frame-corner);
-  height: var(--kinetik-frame-corner);
-  pointer-events: none;
-  z-index: 3;
+  display: none !important;
 }
 
 .profile-kinetik-frame-corner--tl,
@@ -5617,34 +5619,6 @@ body::before {
   opacity: 0.65;
 }
 
-.profile-plan-pro-metric-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  width: 12px;
-  height: 12px;
-  border-top: 1.5px solid rgba(34, 211, 238, 0.34);
-  border-left: 1.5px solid rgba(34, 211, 238, 0.34);
-  filter: none;
-  pointer-events: none;
-}
-
-.profile-plan-pro-metric-card::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  width: 12px;
-  height: 12px;
-  border-right: 1.5px solid rgba(167, 139, 250, 0.28);
-  border-bottom: 1.5px solid rgba(167, 139, 250, 0.28);
-  filter: none;
-  pointer-events: none;
-}
-
 .profile-plan-pro-metric-card__bar {
   z-index: 1;
   border-radius: 2px;
@@ -5768,6 +5742,7 @@ body::before {
 /**
  * 幅ロック図形レイヤー（バッジ有無で背景が動かない）
  * skin / hud / atmos / hex など共通
+ * min-height:100% — パネルが自然アスペクトより高いとき下端まで stretch
  */
 .profile-plan-pro-bg__scale-skin,
 .profile-plan-pro-bg__scale-hud,
@@ -5791,6 +5766,7 @@ body::before {
   width: 100%;
   aspect-ratio: 300 / 430;
   height: auto;
+  min-height: 100%;
   background-repeat: no-repeat;
   background-position: center top;
   background-size: 100% 100%;
@@ -7834,71 +7810,205 @@ body::before {
   font-size: 18px;
 }
 
-/* Unit 獲得演出 — 軽量（blur / 無限CSSアニメなし） */
+/* Unit 獲得演出 — 枠なしオーバーレイ（金額 / 理由 / 順位のみ） */
 .unit-earn-overlay__payload {
   transform: translateZ(0);
   backface-visibility: hidden;
 }
 
-/* 獲得演出中はプロフィール内の無限 CSS を止めて負荷を下げる */
-html.unit-earn-playing .profile-edit-kinetik-unit-vault__disc,
-html.unit-earn-playing .profile-edit-kinetik-unit-vault__sheen,
-html.unit-earn-playing .profile-edit-kinetik-unit-vault__value,
-html.unit-earn-playing .profile-edit-kinetik-badge-float,
-html.unit-earn-playing .profile-edit-kinetik-panel [class*="profile-plan-pro"] {
-  animation-play-state: paused !important;
+.unit-earn-overlay__ring-wrap {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  place-items: center;
 }
 
-.unit-earn-overlay__disc {
+.unit-earn-overlay__ring {
+  width: 144px;
+  height: 144px;
+  border-radius: 999px;
+  border: 1px solid rgba(207, 250, 254, 0.35);
+  transform: scale(0.35);
+  will-change: transform, opacity;
+}
+
+.unit-earn-overlay__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unit-earn-overlay__claim--ready {
+    animation: none;
+  }
+}
+
+.unit-earn-overlay__prize {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: conic-gradient(
-    from 210deg,
-    #f9d576,
-    #b8860b 40%,
-    #f6c344 70%,
-    #8a6410
-  );
-  box-shadow:
-    0 0 20px rgba(246, 195, 68, 0.55),
-    inset 0 0 4px rgba(0, 0, 0, 0.45);
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.unit-earn-overlay__disc-inner {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 35% 30%, #ffedb0, #d9a125 70%);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 16px;
-  font-weight: 800;
-  color: #241902;
-  line-height: 1;
+.unit-earn-overlay__amount {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* プロフィール金庫と同型の U コイン（やや大きく・静止） */
+.unit-earn-overlay__coin.profile-edit-kinetik-unit-vault__disc {
+  width: 40px;
+  height: 40px;
+  animation: none;
+}
+
+.unit-earn-overlay__coin .profile-edit-kinetik-unit-vault__sheen {
+  animation: none;
+  display: none;
+}
+
+.unit-earn-overlay__coin .profile-edit-kinetik-unit-vault__disc-inner {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
 }
 
 .unit-earn-overlay__value {
-  font-size: clamp(40px, 11vw, 56px);
+  font-size: clamp(48px, 13vw, 64px);
   font-weight: 800;
-  font-style: italic;
-  letter-spacing: -0.02em;
-  line-height: 1;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  /* プロフィール金庫数字と同色 */
   color: #ffe9a8;
-  text-shadow: 0 0 14px rgba(246, 195, 68, 0.55);
+  text-shadow: 0 0 12px rgba(246, 195, 68, 0.55);
   will-change: transform;
   transform: translateZ(0);
 }
 
 .unit-earn-overlay__plus {
-  margin-right: 0.06em;
-  font-weight: 700;
+  margin-right: 0.02em;
+  font-weight: 800;
   color: #f6c344;
+}
+
+.unit-earn-overlay__detail {
+  width: 100%;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.unit-earn-overlay__context {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.unit-earn-overlay__meta {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(226, 246, 255, 0.78);
+}
+
+.unit-earn-overlay__rank {
+  margin: 12px 0 0;
+  font-size: clamp(28px, 8vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: #cffafe;
+}
+
+.unit-earn-overlay__footer {
+  margin-top: 28px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.unit-earn-overlay__claim {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  border: 1px solid rgba(0, 245, 255, 0.85);
+  background: #00f5ff;
+  padding: 12px 28px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #041018;
+  transition:
+    transform 220ms ease,
+    filter 220ms ease,
+    opacity 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease;
+}
+
+.unit-earn-overlay__claim--dim {
+  border-color: rgba(0, 245, 255, 0.22);
+  background: rgba(0, 245, 255, 0.14);
+  color: rgba(180, 230, 240, 0.38);
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.unit-earn-overlay__claim--ready {
+  opacity: 1;
+  cursor: pointer;
+  animation: unit-earn-claim-ready 0.38s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+@keyframes unit-earn-claim-ready {
+  0% {
+    transform: scale(0.96);
+    filter: brightness(0.85);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.unit-earn-overlay__claim--ready:hover {
+  filter: brightness(1.06);
+}
+
+.unit-earn-overlay__claim--ready:active {
+  transform: scale(0.98);
+}
+
+/* 獲得演出中〜金庫加算完了まで、プロフィール内の無限 CSS を止めて負荷を下げる */
+html.unit-earn-playing .profile-edit-kinetik-unit-vault__disc,
+html.unit-earn-playing .profile-edit-kinetik-unit-vault__sheen,
+html.unit-earn-playing .profile-edit-kinetik-unit-vault__value,
+html.unit-earn-playing .profile-edit-kinetik-badge-float,
+html.unit-earn-playing .profile-edit-kinetik-panel [class*="profile-plan-pro"],
+html.unit-earn-settling .profile-edit-kinetik-unit-vault__disc,
+html.unit-earn-settling .profile-edit-kinetik-unit-vault__sheen,
+html.unit-earn-settling .profile-edit-kinetik-unit-vault__value,
+html.unit-earn-settling .profile-edit-kinetik-badge-float,
+html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] {
+  animation-play-state: paused !important;
 }
 
 .profile-edit-kinetik-unit-vault--absorb {

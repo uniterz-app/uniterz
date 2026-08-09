@@ -12,10 +12,9 @@ import {
   Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, type StyleProp, type ViewStyle,
 } from "react-native";
 import UnitEarnOverlayNative from "../UnitEarnOverlayNative";
-import UnitEarnPlayButtonNative from "../UnitEarnPlayButtonNative";
 import { useUnitEarnOverlayNative } from "../useUnitEarnOverlayNative";
 import { unitVaultUiBalance } from "../../../../../../lib/units/unitVaultDisplay";
-import { UNIT_EARN_VAULT_COUNT_MS } from "../../../../../../lib/units/unitEarnMotion";
+import { UNIT_EARN_VAULT_COUNT_MS, unitEarnCountDisplayValue } from "../../../../../../lib/units/unitEarnMotion";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useReducedMotion } from "react-native-reanimated";
 import Animated, {
@@ -52,7 +51,6 @@ import {
 } from "../../../../../../app/component/profile/edit/kinetikStreakFx";
 import { getKinetikRankBadgeExplanation } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
 import { formatProfileMemberSince } from "../../../../../../lib/profile/formatProfileMemberSince";
-import { useCountUp } from "../../../../../../lib/hooks/useCountUp";
 import {
   useKinetikMetricCountUp,
   type KinetikMetricCountFormat,
@@ -87,6 +85,12 @@ import {
 import ProCyberBadgeNative from "./ProCyberBadgeNative";
 import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStreakNative";
 import ProfilePlanProBackgroundNative from "./ProfilePlanProBackgroundNative";
+import {
+  KINETIK_FLIP_EAR,
+  ProfileKinetikFlipEarNative,
+  ProfileKinetikFlipEarTopEdgesNative,
+  useProfileKinetikFlipEar,
+} from "./ProfileKinetikFlipEarNative";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
@@ -104,7 +108,6 @@ import { isProfilePlanProWaveBgVariant } from "../../../../../../lib/profile/pro
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
 const UNIT_VAULT_GOLD = "#f6c344";
-
 function kinetikWinRateSegs(winRate: number): number {
   return Math.round((Math.min(100, Math.max(0, winRate)) / 100) * 5);
 }
@@ -382,8 +385,6 @@ function KinetikMetricCardNative({
             end={{ x: 1, y: 1 }}
             style={styles.metricCardPlanProSheen}
           />
-          <View style={styles.metricCardCornerTl} pointerEvents="none" />
-          <View style={styles.metricCardCornerBr} pointerEvents="none" />
           {/**
            * Web `.profile-plan-pro-metric-card__bar-bloom` は blur(6px)+opacity 0.72。
            * RN に同等 blur がないので、開始色を薄く・72% で消し・全体 opacity を下げて近似する。
@@ -1021,6 +1022,10 @@ const UNIT_COIN_SHEEN_CYCLE_MS = 3600;
 const UNIT_COIN_SHEEN_SWEEP_MS = 580;
 const UNIT_COIN_SHEEN_HOLD_MS = Math.round(UNIT_COIN_SHEEN_CYCLE_MS * 0.55);
 
+function formatVaultBalance(n: number): string {
+  return Math.max(0, Math.floor(n)).toLocaleString("en-US");
+}
+
 /** Web `ProfileUnitVault` 相当 — 金貨ディスク + イタリック数字（U8） */
 const KinetikUnitVaultNative = forwardRef<
   View,
@@ -1034,6 +1039,8 @@ const KinetikUnitVaultNative = forwardRef<
     countUpEnabled?: boolean;
     /** Web `html.unit-earn-playing` 相当 — 獲得演出中は常時ループを止める */
     effectsPaused?: boolean;
+    /** 加算カウント中（背景ループ停止用） */
+    onCountBusyChange?: (busy: boolean) => void;
   }
 >(function KinetikUnitVaultNative(
   {
@@ -1044,6 +1051,7 @@ const KinetikUnitVaultNative = forwardRef<
     absorbPulse = false,
     countUpEnabled = true,
     effectsPaused = false,
+    onCountBusyChange,
   },
   ref
 ) {
@@ -1056,6 +1064,11 @@ const KinetikUnitVaultNative = forwardRef<
    * （absorbPulse だけだと dismiss で即切れ、カウントが見えない）
    */
   const [countLatch, setCountLatch] = useState(false);
+  const [label, setLabel] = useState(() => formatVaultBalance(balance));
+  const shownRef = useRef(balance);
+  const onBusyRef = useRef(onCountBusyChange);
+  onBusyRef.current = onCountBusyChange;
+
   useEffect(() => {
     if (absorbPulse) {
       setCountLatch(true);
@@ -1066,18 +1079,53 @@ const KinetikUnitVaultNative = forwardRef<
 
   const counting =
     countUpEnabled && !reduceMotion && (absorbPulse || countLatch);
-  const displayBalance = useCountUp(
-    balance,
-    UNIT_EARN_VAULT_COUNT_MS,
-    counting,
-    0,
-    "target"
-  );
 
   useEffect(() => {
-    if (!countLatch || absorbPulse) return;
-    if (displayBalance >= balance) setCountLatch(false);
-  }, [absorbPulse, balance, countLatch, displayBalance]);
+    onBusyRef.current?.(counting);
+  }, [counting]);
+
+  /**
+   * AnimatedTextInput は使わない（Hermes hades GC の TextInputState 連鎖で SIGBUS するため）。
+   * 表示は間引き、整数が変わったときだけ Text を更新する。
+   */
+  useEffect(() => {
+    const end = Math.max(0, Math.floor(balance));
+    if (!counting) {
+      shownRef.current = end;
+      setLabel(formatVaultBalance(end));
+      return;
+    }
+    const start = shownRef.current;
+    if (end <= start) {
+      shownRef.current = end;
+      setLabel(formatVaultBalance(end));
+      return;
+    }
+
+    let raf = 0;
+    let lastShown = -1;
+    const t0 = Date.now();
+    const tick = () => {
+      const t = Math.min(1, (Date.now() - t0) / UNIT_EARN_VAULT_COUNT_MS);
+      const eased = 1 - (1 - t) ** 3;
+      const n = unitEarnCountDisplayValue(start, end, eased);
+      if (n !== lastShown) {
+        lastShown = n;
+        shownRef.current = n;
+        setLabel(formatVaultBalance(n));
+      }
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        shownRef.current = end;
+        setLabel(formatVaultBalance(end));
+        setCountLatch(false);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [balance, counting]);
+
   /** 復帰マウントで入場アニメをやり直さない（獲得演出の硬さ対策） */
   const enter = useSharedValue(1);
   const absorb = useSharedValue(1);
@@ -1258,7 +1306,7 @@ const KinetikUnitVaultNative = forwardRef<
               valueGlowStyle,
             ]}
           >
-            {displayBalance.toLocaleString("en-US")}
+            {label}
           </Animated.Text>
         </Pressable>
       </Animated.View>
@@ -1434,6 +1482,9 @@ export type ProfileKinetikPanelNativeProps = {
   /** NBA: Playoffs / Season 切替 */
   metricsPeriod?: "playoffs" | "season";
   onMetricsPeriodChange?: (period: "playoffs" | "season") => void;
+  /** NBA: Week / Month 切替 */
+  metricsWindow?: "weekly" | "monthly";
+  onMetricsWindowChange?: (window: "weekly" | "monthly") => void;
   /** 累計プロフィール閲覧数（公開） */
   profileViewCount?: number | null;
   /** 保有 Unit（公開） */
@@ -1455,7 +1506,7 @@ export default function ProfileKinetikPanelNative({
   totalPointsRank: totalPointsRankProp,
   totalPointsRankDenominator: totalPointsRankDenominatorProp,
   rankDeltaPlaces: rankDeltaPlacesProp,
-  metricsTitle = "NBA // SEASON STATS",
+  metricsTitle = "NBA // 26-27",
   onToggleMetricsScope,
   badges = [],
   onBadgePress,
@@ -1464,17 +1515,19 @@ export default function ProfileKinetikPanelNative({
   rankingLeague: _rankingLeague = "nba",
   statsPending = false,
   style,
-  metricsPeriod,
-  onMetricsPeriodChange,
+  metricsPeriod: _metricsPeriod,
+  onMetricsPeriodChange: _onMetricsPeriodChange,
+  metricsWindow,
+  onMetricsWindowChange,
   profileViewCount = null,
   unitBalance = null,
   onOpenUnitLedger,
 }: ProfileKinetikPanelNativeProps) {
   const isJa = language === "ja";
-  const isSeasonMetrics =
-    metricsPeriod === "season" && !!onMetricsPeriodChange;
-  const showNbaPeriodTabs =
-    metricsPeriod != null && !!onMetricsPeriodChange;
+  const showNbaWindowTabs =
+    metricsWindow != null && !!onMetricsWindowChange;
+  const isMonthlyWindow = metricsWindow === "monthly";
+  const isWeeklyWindow = metricsWindow === "weekly";
   const [shareCopied, setShareCopied] = useState(false);
   const unitVaultRef = useRef<View>(null);
 
@@ -1484,6 +1537,12 @@ export default function ProfileKinetikPanelNative({
     enabled: !!onOpenUnitLedger && unitBalance != null,
     storageKey: shareHandle?.trim() || "me",
   });
+  /** 金庫加算中はバッジ／コイン常時ループを止め続ける */
+  const [vaultSettling, setVaultSettling] = useState(false);
+  const onVaultCountBusyChange = useCallback((busy: boolean) => {
+    setVaultSettling(busy);
+  }, []);
+  const earnFxPaused = unitEarn.active != null || vaultSettling;
   /** hook 側でモック / プレビュー加算済み（1000→1250）まで解決済み */
   const vaultDisplayBalance =
     unitEarn.vaultBalance ?? unitVaultUiBalance(unitBalance);
@@ -1511,10 +1570,14 @@ export default function ProfileKinetikPanelNative({
   });
   const proFrameTheme = isPro ? kinetikPlanProFrameTheme(profileAccent) : null;
   const panelBorder = kinetikPanelBorderColor(profileAccent);
+  const flipEar = useProfileKinetikFlipEar();
   const reduceMotion = useReducedMotion();
-  /** 獲得演出中は Pro 背景ループを止めて復帰直後の重さを避ける */
+  /**
+   * 獲得演出中は Pro 背景ループも止める（SvgSkinHud は再開時に入場をやり直さない）。
+   * バッジ／金庫の常時ループも earnFxPaused で止める。
+   */
   const animatePlanProBg =
-    isPro && reduceMotion !== true && unitEarn.active == null;
+    isPro && reduceMotion !== true && !earnFxPaused;
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
   const profileViewCountAria =
@@ -1557,19 +1620,23 @@ export default function ProfileKinetikPanelNative({
     () => ({
       ptsUnit: "pts",
       matchUnit: isJa ? "試合" : "matches",
-      cumulativeUnitHint: isSeasonMetrics
+      cumulativeUnitHint: isWeeklyWindow
         ? isJa
-          ? "今季"
-          : "SZN"
-        : isJa
-          ? "累計"
-          : "CUM",
+          ? "今週"
+          : "WK"
+        : isMonthlyWindow
+          ? isJa
+            ? "今月"
+            : "MO"
+          : isJa
+            ? "累計"
+            : "CUM",
       winRateUnitHint: "%",
     }),
-    [isJa, isSeasonMetrics]
+    [isJa, isMonthlyWindow, isWeeklyWindow]
   );
 
-  const metricsHeaderTitle = metricsTitle ?? "NBA // SEASON STATS";
+  const metricsHeaderTitle = metricsTitle ?? "NBA // 26-27";
 
   const renderMetricsGrid = (
     sectionStats: ProfileEditKinetikStats,
@@ -1703,11 +1770,18 @@ export default function ProfileKinetikPanelNative({
   };
 
   return (
-    <View style={styles.panelRoot}>
+    <View
+      style={[
+        styles.panelRoot,
+        flipEar ? { paddingTop: KINETIK_FLIP_EAR.lip } : null,
+      ]}
+    >
+      {flipEar ? <ProfileKinetikFlipEarNative /> : null}
     <View
       style={[
         styles.frameOuter,
         { borderColor: panelBorder },
+        flipEar ? styles.frameOuterNotched : null,
         isPro && proFrameTheme
           ? {
               shadowColor: proFrameTheme.strong,
@@ -1725,6 +1799,7 @@ export default function ProfileKinetikPanelNative({
         setFrameSize({ width, height });
       }}
     >
+      {flipEar ? <ProfileKinetikFlipEarTopEdgesNative borderColor={panelBorder} /> : null}
       {isPro && frameSize.width > 0 ? (
         <ProfilePlanProBackgroundNative
           width={frameSize.width}
@@ -1810,7 +1885,8 @@ export default function ProfileKinetikPanelNative({
                       onPress={onOpenUnitLedger}
                       absorbPulse={unitEarn.active != null && unitEarn.absorbed}
                       countUpEnabled={!unitEarn.active || unitEarn.absorbed}
-                      effectsPaused={unitEarn.active != null}
+                      effectsPaused={earnFxPaused}
+                      onCountBusyChange={onVaultCountBusyChange}
                     />
                   </View>
                 ) : null}
@@ -1850,7 +1926,7 @@ export default function ProfileKinetikPanelNative({
               badges={badges}
               onBadgePress={onBadgePress}
               variant="proBridge"
-              motionPaused={unitEarn.active != null}
+              motionPaused={earnFxPaused}
             />
           ) : null}
         </View>
@@ -1858,7 +1934,7 @@ export default function ProfileKinetikPanelNative({
         <KinetikBadgeRowNative
           badges={badges}
           onBadgePress={onBadgePress}
-          motionPaused={unitEarn.active != null}
+          motionPaused={earnFxPaused}
         />
       )}
 
@@ -1897,7 +1973,7 @@ export default function ProfileKinetikPanelNative({
             </Text>
           )}
         </View>
-        {showNbaPeriodTabs ? (
+        {showNbaWindowTabs ? (
           <View
             style={[
               styles.metricsStageTabWrap,
@@ -1906,18 +1982,18 @@ export default function ProfileKinetikPanelNative({
           >
             <CyberSlantedTabBarNative fill>
               <CyberSlantedTabNative
-                label="SEASON"
-                active={metricsPeriod === "season"}
+                label="WEEK"
+                active={metricsWindow === "weekly"}
                 fill
                 compact
-                onPress={() => onMetricsPeriodChange?.("season")}
+                onPress={() => onMetricsWindowChange?.("weekly")}
               />
               <CyberSlantedTabNative
-                label="PLAYOFF"
-                active={metricsPeriod === "playoffs"}
+                label="MONTH"
+                active={metricsWindow === "monthly"}
                 fill
                 compact
-                onPress={() => onMetricsPeriodChange?.("playoffs")}
+                onPress={() => onMetricsWindowChange?.("monthly")}
               />
             </CyberSlantedTabBarNative>
           </View>
@@ -1959,18 +2035,13 @@ export default function ProfileKinetikPanelNative({
         open
         amount={unitEarn.active.amount}
         label={unitEarn.active.label}
+        title={unitEarn.active.title}
+        subtitle={unitEarn.active.subtitle}
+        rank={unitEarn.active.rank}
         language={isJa ? "ja" : "en"}
         vaultRef={unitVaultRef}
         onAbsorb={unitEarn.markAbsorbed}
         onDone={unitEarn.dismiss}
-      />
-    ) : null}
-    {onOpenUnitLedger && unitBalance != null && !unitEarn.active ? (
-      <UnitEarnPlayButtonNative
-        language={isJa ? "ja" : "en"}
-        onPlay={() =>
-          unitEarn.play({ amount: 250, preview: true })
-        }
       />
     ) : null}
     </View>
@@ -1990,6 +2061,11 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     overflow: "hidden",
     flexDirection: "column",
+  },
+  frameOuterNotched: {
+    borderTopWidth: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
   },
   frameOuterPlanPro: {
     backgroundColor: "rgba(3,8,13,0.14)",
@@ -2606,28 +2682,6 @@ const styles = StyleSheet.create({
   },
   metricCardPlanProRed: {
     borderColor: "rgba(255,255,255,0.07)",
-  },
-  metricCardCornerTl: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: 12,
-    height: 12,
-    borderTopWidth: 1.5,
-    borderLeftWidth: 1.5,
-    borderColor: "rgba(34,211,238,0.32)",
-    zIndex: 1,
-  },
-  metricCardCornerBr: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: 12,
-    height: 12,
-    borderRightWidth: 1.5,
-    borderBottomWidth: 1.5,
-    borderColor: "rgba(167,139,250,0.26)",
-    zIndex: 1,
   },
   metricAccentBarPlanPro: {
     width: 4,

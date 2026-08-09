@@ -11,8 +11,14 @@ import {
 
 export type PendingUnitEarn = {
   amount: number;
-  /** 任意ラベル（招待・バトル等） */
+  /** 任意ラベル（招待・バトル等）— 副文のフォールバック */
   label?: string | null;
+  /** 主文言（例: 月間ランキング 8位） */
+  title?: string | null;
+  /** 補足（例: 2026年1月 · NBA） */
+  subtitle?: string | null;
+  /** 順位（表示用。title と併用） */
+  rank?: number | null;
 };
 
 function safeParseAmount(raw: unknown): number {
@@ -49,20 +55,38 @@ export function writeUnitEarnLastSeen(
 }
 
 /** session キューへ積む（付与直後など） */
+function normalizePending(entry: PendingUnitEarn): PendingUnitEarn {
+  const amount = safeParseAmount(entry.amount);
+  const rankRaw = entry.rank;
+  const rank =
+    typeof rankRaw === "number" && Number.isFinite(rankRaw)
+      ? Math.max(1, Math.floor(rankRaw))
+      : null;
+  return {
+    amount,
+    label: entry.label ?? null,
+    title: entry.title ?? null,
+    subtitle: entry.subtitle ?? null,
+    rank,
+  };
+}
+
 export function enqueueUnitEarn(entry: PendingUnitEarn): void {
   if (typeof window === "undefined") return;
-  const amount = safeParseAmount(entry.amount);
-  if (amount <= 0) return;
+  const normalized = normalizePending(entry);
+  if (normalized.amount <= 0) return;
   try {
     const prev = window.sessionStorage.getItem(UNIT_EARN_QUEUE_KEY);
-    const list: PendingUnitEarn[] = prev ? (JSON.parse(prev) as PendingUnitEarn[]) : [];
+    const list: PendingUnitEarn[] = prev
+      ? (JSON.parse(prev) as PendingUnitEarn[])
+      : [];
     if (!Array.isArray(list)) {
       window.sessionStorage.setItem(
         UNIT_EARN_QUEUE_KEY,
-        JSON.stringify([{ amount, label: entry.label ?? null }])
+        JSON.stringify([normalized])
       );
     } else {
-      list.push({ amount, label: entry.label ?? null });
+      list.push(normalized);
       window.sessionStorage.setItem(UNIT_EARN_QUEUE_KEY, JSON.stringify(list));
     }
   } catch {
@@ -71,7 +95,7 @@ export function enqueueUnitEarn(entry: PendingUnitEarn): void {
   try {
     window.dispatchEvent(
       new CustomEvent(UNIT_EARN_EVENT, {
-        detail: { amount, label: entry.label ?? null },
+        detail: normalized,
       })
     );
   } catch {
@@ -89,9 +113,15 @@ export function dequeueUnitEarn(): PendingUnitEarn | null {
     if (!Array.isArray(list) || list.length === 0) return null;
     const [head, ...rest] = list;
     window.sessionStorage.setItem(UNIT_EARN_QUEUE_KEY, JSON.stringify(rest));
-    const amount = safeParseAmount(head?.amount);
-    if (amount <= 0) return dequeueUnitEarn();
-    return { amount, label: head?.label ?? null };
+    const normalized = normalizePending({
+      amount: head?.amount ?? 0,
+      label: head?.label ?? null,
+      title: head?.title ?? null,
+      subtitle: head?.subtitle ?? null,
+      rank: head?.rank ?? null,
+    });
+    if (normalized.amount <= 0) return dequeueUnitEarn();
+    return normalized;
   } catch {
     return null;
   }

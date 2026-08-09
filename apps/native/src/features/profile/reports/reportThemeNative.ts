@@ -36,6 +36,16 @@ export const JP = JP_700;
 /** Web `nameRajdhani` — 英字の短い本文寄り */
 export const RAJDHANI: TextStyle["fontFamily"] = pick("Rajdhani_700Bold");
 
+/** Web `nameMichroma` — サイバー系ラテン（ウェイト 400 のみ。fontWeight を付けない） */
+export const MICHROMA: TextStyle["fontFamily"] = pick("Michroma_400Regular");
+
+/** 角張り系 — Unit 獲得フォントプレビュー等 */
+export const ORBITRON_700: TextStyle["fontFamily"] = pick("Orbitron_700Bold");
+export const ORBITRON_800: TextStyle["fontFamily"] = pick("Orbitron_800ExtraBold");
+export const AUDIOWIDE: TextStyle["fontFamily"] = pick("Audiowide_400Regular");
+export const CHAKRA_700: TextStyle["fontFamily"] = pick("ChakraPetch_700Bold");
+export const EXO2_800: TextStyle["fontFamily"] = pick("Exo2_800ExtraBold");
+
 export const PANEL_BG = "rgba(14,20,32,0.98)";
 
 export type ReportAccent = {

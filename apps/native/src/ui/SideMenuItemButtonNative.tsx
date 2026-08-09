@@ -56,7 +56,7 @@ export default function SideMenuItemButtonNative({
   const accent = isDanger ? "#fb7185" : CYBER_TAB_CYAN;
 
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} style={styles.pressable}>
       {({ pressed }) => (
         <View
           style={[
@@ -171,8 +171,14 @@ const badgeStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  /** 親幅いっぱいに伸ばす（内容幅で縮まない） */
+  pressable: {
+    alignSelf: "stretch",
+    width: "100%",
+  },
   root: {
     position: "relative",
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,

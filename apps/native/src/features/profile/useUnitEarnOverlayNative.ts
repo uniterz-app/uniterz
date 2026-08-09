@@ -2,7 +2,7 @@
  * Web `useUnitEarnOverlay` 相当 — AsyncStorage で前回残高を保持。
  * プレビュー加算後は表示残高を sticky で維持（1000→1250 が戻らない）。
  */
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { unitEarnLastSeenKey } from "../../../../../lib/units/unitEarnMotion";
 import type {
@@ -72,6 +72,11 @@ export function useUnitEarnOverlayNative(opts: {
       const toBalance = entry.preview
         ? current + amount
         : Math.max(current, fromBalance + amount);
+      const rankRaw = entry.rank;
+      const rank =
+        typeof rankRaw === "number" && Number.isFinite(rankRaw)
+          ? Math.max(1, Math.floor(rankRaw))
+          : null;
       busyRef.current = true;
       setAbsorbed(false);
       setActive({
@@ -79,6 +84,9 @@ export function useUnitEarnOverlayNative(opts: {
         fromBalance,
         toBalance,
         label: entry.label ?? null,
+        title: entry.title ?? null,
+        subtitle: entry.subtitle ?? null,
+        rank,
         preview: entry.preview === true,
       });
     },
@@ -86,9 +94,8 @@ export function useUnitEarnOverlayNative(opts: {
   );
 
   const markAbsorbed = useCallback(() => {
-    startTransition(() => {
-      setAbsorbed(true);
-    });
+    /** 着地と同期して金庫を更新（遅延するとプロフィール全体が後追い再描画に見える） */
+    setAbsorbed(true);
   }, []);
 
   const dismiss = useCallback(() => {

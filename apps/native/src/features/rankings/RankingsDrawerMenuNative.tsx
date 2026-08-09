@@ -25,16 +25,15 @@ type Props = {
   onOpenSquadBattlePreview?: () => void;
 };
 
-/** NBA 下の枝分かれ行（├ / └）— `GamesDrawerMenuNative` と同型（2px 線 + 枝先ジョイント） */
+/** NBA 下の枝分かれ行（├ / └）— ガターに枝線、ボタンは残り幅いっぱい */
 function BranchRow({ last, children }: { last?: boolean; children: ReactNode }) {
   return (
     <View style={styles.branchRow}>
-      <View
-        pointerEvents="none"
-        style={[styles.vline, last ? styles.vlineLast : null]}
-      />
-      <View pointerEvents="none" style={styles.hline} />
-      <View pointerEvents="none" style={styles.joint} />
+      <View style={styles.branchGutter} pointerEvents="none">
+        <View style={[styles.vline, last ? styles.vlineLast : null]} />
+        <View style={styles.hline} />
+        <View style={styles.joint} />
+      </View>
       <View style={styles.branchContent}>{children}</View>
     </View>
   );
@@ -135,21 +134,31 @@ export default function RankingsDrawerMenuNative({
   );
 }
 
+const BRANCH_GUTTER = 22;
+
 const styles = StyleSheet.create({
   root: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 8,
+    alignSelf: "stretch",
+    width: "100%",
   },
   itemGroup: {
     gap: 8,
+    alignSelf: "stretch",
+    width: "100%",
   },
   nbaCluster: {
     gap: 0,
+    alignSelf: "stretch",
+    width: "100%",
   },
   branchList: {
     marginTop: 4,
     gap: 6,
     position: "relative",
+    alignSelf: "stretch",
+    width: "100%",
   },
   trunkFromParent: {
     position: "absolute",
@@ -164,10 +173,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   branchRow: {
-    position: "relative",
     flexDirection: "row",
     alignItems: "stretch",
+    alignSelf: "stretch",
+    width: "100%",
     minHeight: 32,
+  },
+  branchGutter: {
+    width: BRANCH_GUTTER,
+    flexShrink: 0,
+    position: "relative",
   },
   vline: {
     position: "absolute",
@@ -189,7 +204,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 9,
     top: "50%",
-    width: 14,
+    width: 12,
     height: 2,
     marginTop: -1,
     backgroundColor: CYBER_SIDE_MENU_BRANCH,
@@ -198,10 +213,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.9,
     shadowRadius: 4,
   },
-  /** 枝先ジョイント（◆） */
   joint: {
     position: "absolute",
-    left: 20,
+    left: 17,
     top: "50%",
     width: 5,
     height: 5,
@@ -214,11 +228,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     zIndex: 1,
   },
-  /** サブ行は右端を短くして「ぶら下がり」を形で見せる */
   branchContent: {
     flex: 1,
-    paddingLeft: 28,
-    paddingRight: 16,
     minWidth: 0,
   },
 });

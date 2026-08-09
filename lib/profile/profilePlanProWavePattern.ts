@@ -123,6 +123,24 @@ const PALETTES: Record<ProfilePlanProWaveBgVariant, WavePalette> = {
     hudSecondary: "rgba(200,30,30,",
     opacityMul: 1.3,
   },
+  /** ロゴ画像スキン — HUD のみ SVG。本体は PNG レイヤー */
+  "wave-uniterz-logo": {
+    strokes: ["120,240,255", "80,220,255", "200,250,255"],
+    fills: ["0,20,28", "0,8,12"],
+    accent: ["180,250,255", "100,230,255"],
+    hudPrimary: "rgba(120,240,255,",
+    hudSecondary: "rgba(80,220,255,",
+    opacityMul: 0.85,
+  },
+  /** サイバー六角 — Native/ランキングは SVG。Web は CSS タイル */
+  "wave-mono-hex": {
+    strokes: ["26,95,112", "10,40,52", "6,28,36"],
+    fills: ["26,95,112", "4,18,26", "2,6,10"],
+    accent: ["40,120,140", "20,70,85"],
+    hudPrimary: "rgba(40,120,140,",
+    hudSecondary: "rgba(20,70,85,",
+    opacityMul: 0.72,
+  },
 };
 
 function hash01(a: number, b: number): number {
@@ -906,18 +924,7 @@ function buildInfernoDecal(p: WavePalette): string {
 
 function buildHud(p: WavePalette): string {
   const parts: string[] = [];
-  const corners: [number, number, number, number][] = [
-    [10, 12, 1, 1],
-    [CANVAS_W - 10, 12, -1, 1],
-    [10, CANVAS_H - 14, 1, -1],
-    [CANVAS_W - 10, CANVAS_H - 14, -1, -1],
-  ];
-  for (const [x, y, sx, sy] of corners) {
-    const op = waveOp(0.22);
-    parts.push(
-      `<path d="M${x} ${y + sy * 16} L${x} ${y} L${x + sx * 16} ${y}" fill="none" stroke="${p.hudPrimary}${op})" stroke-width="1.35"/>`
-    );
-  }
+  // パネル四隅の鉤括弧は出さない（プロフィール枠と二重になるため）
   for (let i = 0; i < 10; i += 1) {
     const y = 50 + i * 36;
     if (y > CANVAS_H - 36) continue;
@@ -926,6 +933,66 @@ function buildHud(p: WavePalette): string {
       `<line x1="${CANVAS_W - 20}" y1="${y}" x2="${CANVAS_W - 7}" y2="${y}" stroke="${p.hudSecondary}${op})" stroke-width="1.1"/>`
     );
   }
+  return wrapSvg(parts.join(""));
+}
+
+/**
+ * Uiverse hex lattice のサイバー色版（アイソメ立体六角）。
+ * Web は CSS 本番パターン、Native / ランキングは本 SVG。
+ * 上面シアンは抑えてメトリクス文字と競合しないようにする。
+ */
+function buildMonoHex(_p: WavePalette): string {
+  const c1 = "#1a5f70"; // 上面（旧 #67e8f9 → 深シアン）
+  const c2 = "#02060a";
+  const c3 = "#0a1c28"; // 暗シアン側面
+  // --u:5 → tile ≈ 84.5 × 64
+  const tw = 84.5;
+  const th = 64;
+  const hw = tw / 2;
+  const hh = th / 2;
+  const parts: string[] = [];
+  parts.push(
+    `<rect width="${CANVAS_W}" height="${CANVAS_H}" fill="${c2}"/>`
+  );
+  parts.push(`<g opacity="0.72">`);
+
+  const cols = Math.ceil(CANVAS_W / tw) + 2;
+  const rows = Math.ceil(CANVAS_H / hh) + 2;
+  for (let row = -1; row < rows; row += 1) {
+    for (let col = -1; col < cols; col += 1) {
+      const ox = col * tw + (row % 2 === 0 ? 0 : hw);
+      const oy = row * hh;
+      // 上面（明るい菱）
+      const top = [
+        [ox + hw, oy],
+        [ox + tw, oy + hh * 0.5],
+        [ox + hw, oy + hh],
+        [ox, oy + hh * 0.5],
+      ];
+      // 左側面（黒）
+      const left = [
+        [ox, oy + hh * 0.5],
+        [ox + hw, oy + hh],
+        [ox + hw, oy + th],
+        [ox, oy + hh * 1.5],
+      ];
+      // 右側面（暗シアン）
+      const right = [
+        [ox + hw, oy + hh],
+        [ox + tw, oy + hh * 0.5],
+        [ox + tw, oy + hh * 1.5],
+        [ox + hw, oy + th],
+      ];
+      const poly = (pts: number[][], fill: string) =>
+        `<polygon points="${pts
+          .map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`)
+          .join(" ")}" fill="${fill}"/>`;
+      parts.push(poly(top, c1));
+      parts.push(poly(left, c2));
+      parts.push(poly(right, c3));
+    }
+  }
+  parts.push(`</g>`);
   return wrapSvg(parts.join(""));
 }
 
@@ -959,12 +1026,22 @@ function buildSkinSvg(variant: ProfilePlanProWaveBgVariant): string {
       return buildRiotShard(p);
     case "wave-inferno-decal":
       return buildInfernoDecal(p);
+    case "wave-uniterz-logo":
+      // 本体は PNG（Web CSS / Native Image）。SVG は空。
+      return wrapSvg("");
+    case "wave-mono-hex":
+      return buildMonoHex(p);
     default:
       return wrapSvg("");
   }
 }
 
-const CACHE_VER = "v12-signal-lighter-adopt-2";
+const CACHE_VER = "v24-no-hud-corners";
+
+/** Web 用: ロゴ画像スキンは PNG を返す（他は SVG data URL） */
+export function getProfilePlanProWaveUniterzLogoCssUrl(): string {
+  return "url(/brand/uniterz-logo.png)";
+}
 
 export function getProfilePlanProWaveSkinSvg(
   variant: ProfilePlanProWaveBgVariant

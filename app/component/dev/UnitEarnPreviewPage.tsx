@@ -15,6 +15,7 @@ import {
   UNIT_EARN_VAULT_COUNT_MS,
   UNIT_VAULT_DATA_ATTR,
 } from "@/lib/units/unitEarnMotion";
+import { unitEarnPreviewPlayEntry } from "@/lib/units/unitEarnPreview";
 
 const PRESETS = [50, 120, 250, 1000] as const;
 const DEFAULT_AMOUNT = 250;
@@ -22,10 +23,14 @@ const DEFAULT_AMOUNT = 250;
 export default function UnitEarnPreviewPage() {
   const reduceMotion = useReducedMotion() === true;
   const [balance, setBalance] = useState(1840);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [pending, setPending] = useState<{
     amount: number;
     from: number;
     to: number;
+    title: string | null;
+    subtitle: string | null;
+    rank: number | null;
   } | null>(null);
   const [absorbed, setAbsorbed] = useState(false);
   const [countLatch, setCountLatch] = useState(false);
@@ -60,16 +65,37 @@ export default function UnitEarnPreviewPage() {
   }, [absorbed, countLatch, displayBalance, vaultBalance]);
 
   const play = useCallback(
-    (amount: number) => {
+    (amount: number, meta?: {
+      title?: string | null;
+      subtitle?: string | null;
+      rank?: number | null;
+    }) => {
       if (pending) return;
       const from = balance;
       const to = balance + amount;
       setAbsorbed(false);
       setCountLatch(false);
-      setPending({ amount, from, to });
+      setPending({
+        amount,
+        from,
+        to,
+        title: meta?.title ?? "月間ランキング",
+        subtitle: meta?.subtitle ?? "2026年1月 · NBA",
+        rank: meta?.rank ?? 8,
+      });
     },
     [balance, pending]
   );
+
+  const playRankedPreview = useCallback(() => {
+    const entry = unitEarnPreviewPlayEntry(previewIndex, true);
+    setPreviewIndex((i) => i + 1);
+    play(entry.amount, {
+      title: entry.title,
+      subtitle: entry.subtitle,
+      rank: entry.rank,
+    });
+  }, [play, previewIndex]);
 
   return (
     <main className="min-h-screen bg-[#03080d] px-4 py-8 text-white">
@@ -134,7 +160,7 @@ export default function UnitEarnPreviewPage() {
           <UnitEarnPlayButton
             language="ja"
             disabled={pending != null}
-            onPlay={() => play(DEFAULT_AMOUNT)}
+            onPlay={playRankedPreview}
           />
         </div>
 
@@ -168,6 +194,9 @@ export default function UnitEarnPreviewPage() {
           <UnitEarnOverlay
             open
             amount={pending.amount}
+            title={pending.title}
+            subtitle={pending.subtitle}
+            rank={pending.rank}
             language="ja"
             onAbsorb={() => {
               setAbsorbed(true);

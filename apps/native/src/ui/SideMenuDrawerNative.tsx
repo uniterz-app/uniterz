@@ -21,13 +21,13 @@ type Props = {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
-  /** パネル幅（mobile デフォルト 248–288） */
+  /** パネル幅（mobile デフォルト 268–320） */
   panelWidth?: number;
 };
 
 const DEFAULT_PANEL_W = Math.min(
-  288,
-  Math.max(248, Math.round(Dimensions.get("window").width * 0.44))
+  320,
+  Math.max(268, Math.round(Dimensions.get("window").width * 0.52))
 );
 
 export default function SideMenuDrawerNative({

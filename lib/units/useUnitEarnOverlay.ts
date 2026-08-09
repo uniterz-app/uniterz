@@ -7,7 +7,7 @@
  * - `?forceUnitEarn=`
  * - プレビュー再生後は加算後の表示残高を維持（実残高 0 で 1000 に戻さない）
  */
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   UNIT_EARN_EVENT,
 } from "@/lib/units/unitEarnMotion";
@@ -25,9 +25,29 @@ export type UnitEarnActive = {
   fromBalance: number;
   toBalance: number;
   label?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  rank?: number | null;
   /** 強制プレビュー（lastSeen を更新しない） */
   preview?: boolean;
 };
+
+function earnMetaFromEntry(entry: PendingUnitEarn): Pick<
+  UnitEarnActive,
+  "label" | "title" | "subtitle" | "rank"
+> {
+  const rankRaw = entry.rank;
+  const rank =
+    typeof rankRaw === "number" && Number.isFinite(rankRaw)
+      ? Math.max(1, Math.floor(rankRaw))
+      : null;
+  return {
+    label: entry.label ?? null,
+    title: entry.title ?? null,
+    subtitle: entry.subtitle ?? null,
+    rank,
+  };
+}
 
 export function useUnitEarnOverlay(opts: {
   balance: number | null | undefined;
@@ -81,7 +101,7 @@ export function useUnitEarnOverlay(opts: {
         amount,
         fromBalance,
         toBalance,
-        label: entry.label ?? null,
+        ...earnMetaFromEntry(entry),
         preview: entry.preview === true,
       });
     },
@@ -89,10 +109,8 @@ export function useUnitEarnOverlay(opts: {
   );
 
   const markAbsorbed = useCallback(() => {
-    /** 飛行着地フレームと金庫再描画が重ならないよう低優先度で反映 */
-    startTransition(() => {
-      setAbsorbed(true);
-    });
+    /** 着地と同期して金庫を更新（遅延するとプロフィール全体が後追い再描画に見える） */
+    setAbsorbed(true);
   }, []);
 
   const dismiss = useCallback(() => {
@@ -139,6 +157,10 @@ export function useUnitEarnOverlay(opts: {
           amount: forced,
           fromBalance: ui,
           toBalance: ui + forced,
+          title: "月間ランキング",
+          subtitle: "Preview · NBA",
+          rank: 8,
+          label: "月間ランキング 8位",
           preview: true,
         });
         return;
@@ -153,7 +175,7 @@ export function useUnitEarnOverlay(opts: {
           amount: queued.amount,
           fromBalance: from,
           toBalance: current,
-          label: queued.label ?? null,
+          ...earnMetaFromEntry(queued),
         });
         return;
       }
@@ -188,7 +210,7 @@ export function useUnitEarnOverlay(opts: {
         amount: queued.amount,
         fromBalance: from,
         toBalance: Math.max(current, from + queued.amount),
-        label: queued.label ?? null,
+        ...earnMetaFromEntry(queued),
       });
       return;
     }
@@ -231,7 +253,7 @@ export function useUnitEarnOverlay(opts: {
         amount,
         fromBalance: current,
         toBalance: current + amount,
-        label: detail?.label ?? null,
+        ...earnMetaFromEntry(detail ?? { amount }),
       });
     };
     window.addEventListener(UNIT_EARN_EVENT, onEarn);

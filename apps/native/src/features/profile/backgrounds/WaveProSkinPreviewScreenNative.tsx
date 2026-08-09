@@ -67,7 +67,8 @@ export default function WaveProSkinPreviewScreenNative({
   const insets = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
   const entries = PROFILE_PLAN_PRO_WAVE_BG_VARIANTS;
-  const [index, setIndex] = useState(0);
+  const uniterzIndex = entries.findIndex((e) => e.id === "wave-uniterz-logo");
+  const [index, setIndex] = useState(uniterzIndex >= 0 ? uniterzIndex : 0);
   const selected = useMemo(
     () => entries[index] ?? entries[0]!,
     [entries, index]

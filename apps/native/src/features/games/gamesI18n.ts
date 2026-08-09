@@ -8,7 +8,7 @@ export function toNativeGamesLanguage(language: string): GamesLanguage {
 export function getGamesTexts(language: GamesLanguage) {
   if (language === "en") {
     return {
-      noGames: "No games for this date.",
+      noGames: "No date",
       live: "Live",
       final: "Final",
       startsIn: "Starts in",
@@ -155,7 +155,7 @@ export function getGamesTexts(language: GamesLanguage) {
   }
 
   return {
-    noGames: "本日の試合はありません。",
+    noGames: "No date",
     live: "試合中",
     final: "試合終了",
     startsIn: "開始まで",

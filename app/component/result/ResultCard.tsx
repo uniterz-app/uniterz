@@ -45,6 +45,8 @@ import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/res
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
 import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
+import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
+import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 function WcGoalScorerResultRow(_props: Record<string, unknown>) {
   return null;
 }

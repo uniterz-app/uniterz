@@ -3,6 +3,7 @@
  *
  * 表示・描画順（同時マウント可）:
  * 1 Result Drop → 2 Ranking Progress → 3 Last20 Tracker → 4 Daily Combo
+ * CAREER はヒーローカード裏面（フリップ）で見る。
  */
 import { StyleSheet, View } from "react-native";
 import { useProfileOverviewStage } from "../../../../../lib/profile/useProfileOverviewStage";

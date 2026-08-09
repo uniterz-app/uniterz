@@ -28,8 +28,10 @@ import { isProfilePlanProScaleBgVariant } from "@/lib/profile/profilePlanProScal
 import {
   getProfilePlanProWaveHudUrl,
   getProfilePlanProWaveSkinUrl,
+  getProfilePlanProWaveUniterzLogoCssUrl,
 } from "@/lib/profile/profilePlanProWavePattern";
 import { isProfilePlanProWaveBgVariant } from "@/lib/profile/profilePlanProWaveBgVariants";
+import { RANKING_UNITERZ_LOGO_SCATTER } from "@/lib/profile/profilePlanProUniterzLogoScatter";
 import "@/app/component/rankings/rankingListProSkinFx.css";
 
 export type RankingListProSkinIntensity = "subtle" | "medium";
@@ -114,12 +116,49 @@ export default function RankingListProSkinFx({
   }
 
   if (isProfilePlanProWaveBgVariant(variant)) {
+    const isUniterzLogo = variant === "wave-uniterz-logo";
+    const logoUrl = getProfilePlanProWaveUniterzLogoCssUrl();
     return (
       <div className={rootClass} aria-hidden>
-        <SkinLayer
-          className="ranking-list-pro-skin-fx__skin"
-          backgroundImage={getProfilePlanProWaveSkinUrl(variant)}
-        />
+        {isUniterzLogo ? (
+          <>
+            <div className="ranking-list-pro-skin-fx__uniterz-base" aria-hidden />
+            <div
+              className={[
+                "ranking-list-pro-skin-fx__skin",
+                "ranking-list-pro-skin-fx__skin--uniterz-logo",
+                intensity === "subtle"
+                  ? "ranking-list-pro-skin-fx__skin--uniterz-logo-subtle"
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-hidden
+            >
+              {RANKING_UNITERZ_LOGO_SCATTER.map((mark) => (
+                <span
+                  key={mark.id}
+                  className="ranking-list-pro-skin-fx__uniterz-mark"
+                  style={{
+                    backgroundImage: logoUrl,
+                    width: `${mark.widthPct * 100}%`,
+                    left: `${mark.cxPct * 100}%`,
+                    top: `${mark.cyPct * 100}%`,
+                    opacity: mark.opacity,
+                    filter:
+                      mark.blurPx > 0 ? `blur(${mark.blurPx}px)` : undefined,
+                    transform: `translate(-50%, -50%) rotate(${mark.rotateDeg}deg)`,
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          <SkinLayer
+            className="ranking-list-pro-skin-fx__skin"
+            backgroundImage={getProfilePlanProWaveSkinUrl(variant)}
+          />
+        )}
         <SkinLayer
           className="ranking-list-pro-skin-fx__hud"
           backgroundImage={getProfilePlanProWaveHudUrl(variant)}

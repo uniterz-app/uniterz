@@ -114,6 +114,50 @@
   background-position: 70% 42%;
 }
 
+/* UNITERZ Mark — 横長行では右寄せ contain（文字が切れない） */
+.ranking-list-pro-skin-fx__uniterz-base {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, #000000 0%, #050b10 55%, #000408 100%);
+}
+
+.ranking-list-pro-skin-fx--wave-uniterz-logo .ranking-list-pro-skin-fx__skin--uniterz-logo {
+  background: none;
+  opacity: 1;
+  filter: none;
+  overflow: hidden;
+}
+
+.ranking-list-pro-skin-fx--medium.ranking-list-pro-skin-fx--wave-uniterz-logo
+  .ranking-list-pro-skin-fx__skin--uniterz-logo {
+  opacity: 1;
+}
+
+.ranking-list-pro-skin-fx--subtle.ranking-list-pro-skin-fx--wave-uniterz-logo
+  .ranking-list-pro-skin-fx__skin--uniterz-logo,
+.ranking-list-pro-skin-fx__skin--uniterz-logo-subtle {
+  opacity: 0.78;
+}
+
+.ranking-list-pro-skin-fx__uniterz-mark {
+  position: absolute;
+  aspect-ratio: 1024 / 682;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  pointer-events: none;
+}
+
+.ranking-list-pro-skin-fx--wave-mono-hex .ranking-list-pro-skin-fx__skin {
+  filter: none;
+  opacity: 0.62;
+}
+
+.ranking-list-pro-skin-fx--wave-mono-hex .ranking-list-pro-skin-fx__layer {
+  background-position: 50% 50%;
+  background-size: cover;
+}
+
 .ranking-list-pro-skin-fx--medium[class*="--beast-"] .ranking-list-pro-skin-fx__skin {
   opacity: 0.95;
   filter: contrast(1.12) saturate(1.1) brightness(1.05);

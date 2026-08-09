@@ -12,6 +12,7 @@ import {
 import {
   formatProSkinUnlockCondition,
   PRO_SKIN_UNLOCK_CATALOG,
+  type ProSkinUnlockCatalogEntry,
 } from "../../../../../../lib/profile/proSkinUnlock";
 import { RANKING_SCORE_FONT } from "../../rankings/rankingsUiTheme";
 
@@ -20,12 +21,20 @@ type Props = {
   onClose: () => void;
 };
 
+function rankingPreviewCatalog(): readonly ProSkinUnlockCatalogEntry[] {
+  const pin = "wave-uniterz-logo";
+  const pinned = PRO_SKIN_UNLOCK_CATALOG.filter((e) => e.id === pin);
+  const rest = PRO_SKIN_UNLOCK_CATALOG.filter((e) => e.id !== pin);
+  return [...pinned, ...rest];
+}
+
 export default function RankingListProSkinPreviewScreenNative({
   language,
   onClose,
 }: Props) {
   const isJa = language === "ja";
   const insets = useSafeAreaInsets();
+  const catalog = rankingPreviewCatalog();
 
   return (
     <View style={styles.appRoot}>
@@ -55,7 +64,7 @@ export default function RankingListProSkinPreviewScreenNative({
           </Text>
 
           <View style={styles.list}>
-            {PRO_SKIN_UNLOCK_CATALOG.map((entry, index) => {
+            {catalog.map((entry, index) => {
               const adopted = PROFILE_PLAN_PRO_ADOPTED_BG.find(
                 (e) => e.id === entry.id
               );

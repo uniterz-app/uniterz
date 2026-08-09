@@ -9,6 +9,24 @@ export const UNIT_EARN_SCRIM_S = 0.2;
 /** 中央ブロック入場 */
 export const UNIT_EARN_ENTER_S = 0.28;
 
+/** スタッガー入場（題名 → 金額 → ボタン）— プレビュー比較用に残置 */
+export const UNIT_EARN_STAGGER_DETAIL_S = 0.05;
+export const UNIT_EARN_STAGGER_PRIZE_S = 0.14;
+export const UNIT_EARN_STAGGER_CLAIM_S = 0.24;
+export const UNIT_EARN_STAGGER_ITEM_S = 0.34;
+
+/**
+ * 本番入場: Aperture
+ * 細いリングが開いてから情報が揃う（跳ね・フラッシュなし）
+ */
+export const UNIT_EARN_APERTURE_RING_S = 0.72;
+export const UNIT_EARN_APERTURE_DETAIL_DELAY_S = 0.18;
+export const UNIT_EARN_APERTURE_RANK_DELAY_S = 0.26;
+export const UNIT_EARN_APERTURE_PRIZE_DELAY_S = 0.34;
+export const UNIT_EARN_APERTURE_CLAIM_DELAY_S = 0.46;
+export const UNIT_EARN_APERTURE_ITEM_S = 0.4;
+export const UNIT_EARN_APERTURE_COUNT_DELAY_MS = 220;
+
 /** 獲得額カウントアップ — やや長めにして着地を柔らかく */
 export const UNIT_EARN_COUNT_S = 1.25;
 
@@ -71,8 +89,37 @@ export function easeUnitEarnFly(t: number): number {
 /** 金庫ヒット後のパルス */
 export const UNIT_EARN_ABSORB_S = 0.32;
 
-/** 金庫残高の加算カウントアップ（ヒット後） */
-export const UNIT_EARN_VAULT_COUNT_S = 0.78;
+/**
+ * 金庫残高の加算カウントアップ（ヒット後）。
+ * 体感の滑らかさを優先。極端な大口だけ表示を間引く。
+ */
+export const UNIT_EARN_VAULT_COUNT_S = 0.7;
+
+/**
+ * これ以下の加算幅は 1 刻み。超えた分だけ表示を間引く上限段数。
+ * （+80 程度は全部 1 刻みで見せる）
+ */
+export const UNIT_EARN_COUNT_DISPLAY_STEPS = 48;
+
+/** カウント表示値（最終は progress≥1 で必ず end） */
+export function unitEarnCountDisplayValue(
+  start: number,
+  end: number,
+  progress01: number,
+  steps = UNIT_EARN_COUNT_DISPLAY_STEPS
+): number {
+  const s = Math.max(0, Math.floor(start));
+  const e = Math.max(0, Math.floor(end));
+  if (e <= s) return e;
+  const t = Math.min(1, Math.max(0, progress01));
+  if (t >= 1) return e;
+  const raw = Math.floor(s + (e - s) * t + 1e-6);
+  const delta = e - s;
+  // 通常の報酬レンジは 1 刻み。数千〜など大口だけ間引く
+  if (delta <= steps) return Math.min(e, Math.max(s, raw));
+  const step = Math.max(1, Math.ceil(delta / steps));
+  return Math.min(e, s + Math.floor((raw - s) / step) * step);
+}
 
 /** 退出 */
 export const UNIT_EARN_EXIT_S = 0.2;
@@ -82,6 +129,36 @@ export const UNIT_EARN_EASE = [0.25, 1, 0.5, 1] as const;
 
 export const UNIT_EARN_SCRIM_MS = Math.round(UNIT_EARN_SCRIM_S * 1000);
 export const UNIT_EARN_ENTER_MS = Math.round(UNIT_EARN_ENTER_S * 1000);
+export const UNIT_EARN_STAGGER_DETAIL_MS = Math.round(
+  UNIT_EARN_STAGGER_DETAIL_S * 1000
+);
+export const UNIT_EARN_STAGGER_PRIZE_MS = Math.round(
+  UNIT_EARN_STAGGER_PRIZE_S * 1000
+);
+export const UNIT_EARN_STAGGER_CLAIM_MS = Math.round(
+  UNIT_EARN_STAGGER_CLAIM_S * 1000
+);
+export const UNIT_EARN_STAGGER_ITEM_MS = Math.round(
+  UNIT_EARN_STAGGER_ITEM_S * 1000
+);
+export const UNIT_EARN_APERTURE_RING_MS = Math.round(
+  UNIT_EARN_APERTURE_RING_S * 1000
+);
+export const UNIT_EARN_APERTURE_DETAIL_DELAY_MS = Math.round(
+  UNIT_EARN_APERTURE_DETAIL_DELAY_S * 1000
+);
+export const UNIT_EARN_APERTURE_RANK_DELAY_MS = Math.round(
+  UNIT_EARN_APERTURE_RANK_DELAY_S * 1000
+);
+export const UNIT_EARN_APERTURE_PRIZE_DELAY_MS = Math.round(
+  UNIT_EARN_APERTURE_PRIZE_DELAY_S * 1000
+);
+export const UNIT_EARN_APERTURE_CLAIM_DELAY_MS = Math.round(
+  UNIT_EARN_APERTURE_CLAIM_DELAY_S * 1000
+);
+export const UNIT_EARN_APERTURE_ITEM_MS = Math.round(
+  UNIT_EARN_APERTURE_ITEM_S * 1000
+);
 export const UNIT_EARN_COUNT_MS = Math.round(UNIT_EARN_COUNT_S * 1000);
 export const UNIT_EARN_HOLD_MS = Math.round(UNIT_EARN_HOLD_S * 1000);
 export const UNIT_EARN_FLY_MS = Math.round(UNIT_EARN_FLY_S * 1000);

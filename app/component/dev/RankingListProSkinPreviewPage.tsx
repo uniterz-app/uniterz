@@ -14,13 +14,23 @@ import {
 import {
   formatProSkinUnlockCondition,
   PRO_SKIN_UNLOCK_CATALOG,
+  type ProSkinUnlockCatalogEntry,
 } from "@/lib/profile/proSkinUnlock";
 
 type Props = {
   variant: "web" | "mobile";
 };
 
+/** UNITERZ Mark を先頭にして確認しやすくする */
+function rankingPreviewCatalog(): readonly ProSkinUnlockCatalogEntry[] {
+  const pin = "wave-uniterz-logo";
+  const pinned = PRO_SKIN_UNLOCK_CATALOG.filter((e) => e.id === pin);
+  const rest = PRO_SKIN_UNLOCK_CATALOG.filter((e) => e.id !== pin);
+  return [...pinned, ...rest];
+}
+
 export default function RankingListProSkinPreviewPage({ variant }: Props) {
+  const catalog = rankingPreviewCatalog();
   return (
     <CyberSubpageShell
       bare
@@ -47,7 +57,7 @@ export default function RankingListProSkinPreviewPage({ variant }: Props) {
       </p>
 
       <div className="flex flex-col gap-5">
-        {PRO_SKIN_UNLOCK_CATALOG.map((entry, index) => {
+        {catalog.map((entry, index) => {
           const adopted = PROFILE_PLAN_PRO_ADOPTED_BG.find(
             (e) => e.id === entry.id
           );

@@ -1265,6 +1265,16 @@ export default function ProfileHomeScreen({
           navigation.navigate("ReferralStampCelebratePreview");
         else if (page === "unitEarnCelebratePreview" && __DEV__)
           navigation.navigate("UnitEarnCelebratePreview");
+        else if (page === "careerFlipButtonPreview" && __DEV__)
+          navigation.navigate("CareerFlipButtonPreview");
+        else if (page === "unitEarnModalDesignPreview" && __DEV__)
+          navigation.navigate("UnitEarnModalDesignPreview");
+        else if (page === "unitEarnOverlayAnimPreview" && __DEV__)
+          navigation.navigate("UnitEarnOverlayAnimPreview");
+        else if (page === "unitEarnOverlayFontPreview" && __DEV__)
+          navigation.navigate("UnitEarnOverlayFontPreview");
+        else if (page === "uniterzLogoTypePreview" && __DEV__)
+          navigation.navigate("UniterzLogoTypePreview");
         else if (page === "teamStatsPreview" && __DEV__)
           navigation.navigate("TeamStatsPreview");
         else if (page === "playerStatsPreview" && __DEV__)

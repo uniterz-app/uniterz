@@ -48,6 +48,9 @@ const proBadgeEurostileFallback = Michroma({
 
 export const proBadgeWordClass = proBadgeEurostileFallback.className;
 
+/** Unit 獲得オーバーレイ等 — サイバー系ラテン（Michroma） */
+export const nameMichroma = proBadgeEurostileFallback;
+
 export const proBadgeWordFamily = [
   '"Eurostile"',
   '"Eurostile Extended"',

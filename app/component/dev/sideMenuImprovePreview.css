@@ -397,9 +397,9 @@
    改善 B: 階層の明確化
 ========================= */
 
-/* サブ行は右端を短くして「ぶら下がり」を形で見せる */
+/* 左インデント＋枝線で階層。右端は親と揃える */
 .smip-menu.has-hier .smip-branch-content {
-  padding-right: 16px;
+  padding-right: 0;
 }
 
 .smip-menu.has-hier .smip-item.is-dense {

@@ -117,7 +117,7 @@ export default function SideMenuDrawer({
             fromRight && "cyber-side-menu-panel--edge-right",
             "cyber-card relative flex min-h-0 flex-col overflow-hidden",
             isMobile
-              ? "h-full w-[44vw] min-w-[248px] max-w-[288px]"
+              ? "h-full w-[52vw] min-w-[268px] max-w-[320px]"
               : "h-full w-[min(368px,32vw)]"
           )}
           style={{

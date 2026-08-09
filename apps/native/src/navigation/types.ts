@@ -123,6 +123,16 @@ export type ProfileStackParamList = {
   ReferralStampCelebratePreview: undefined;
   /** __DEV__ Unit 獲得演出 */
   UnitEarnCelebratePreview: undefined;
+  /** __DEV__ CAREER フリップボタン見た目案 */
+  CareerFlipButtonPreview: undefined;
+  /** __DEV__ Unit 獲得モーダル見た目案 A〜D */
+  UnitEarnModalDesignPreview: undefined;
+  /** __DEV__ Unit 獲得オーバーレイ入場アニメ案 */
+  UnitEarnOverlayAnimPreview: undefined;
+  /** __DEV__ Unit 獲得オーバーレイフォント案 */
+  UnitEarnOverlayFontPreview: undefined;
+  /** __DEV__ UNITERZ ウェスタン調ロゴ文字 3案 */
+  UniterzLogoTypePreview: undefined;
   /** __DEV__ リーグ Team Stats（30 チーム表） */
   TeamStatsPreview: undefined;
   /** __DEV__ リーグ Player Stats（指標トップリーダー） */

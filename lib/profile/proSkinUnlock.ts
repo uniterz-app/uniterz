@@ -1,5 +1,5 @@
 /**
- * Pro Skin 解放ルール — 即解放12 / マイルストーン21。
+ * Pro Skin 解放ルール — 即解放14 / マイルストーン21。
  * 表示順の正は `PROFILE_PLAN_PRO_ADOPTED_BG`。解放条件は milestone catalog。
  */
 
@@ -162,11 +162,13 @@ export function userDataIsPro(userData: Record<string, unknown> | null | undefin
   return ms > Date.now();
 }
 
-/** Pro 即解放 ×12 */
+/** Pro 即解放 ×14 */
 const PRO_IMMEDIATE_IDS = new Set<ProfilePlanProBgVariant>([
   "atmos",
   "parallax",
   "wave-riot-shard",
+  "wave-uniterz-logo",
+  "wave-mono-hex",
   "beast-titanium",
   "beast-panther",
   "beast-crocodile",

@@ -1,3 +1,4 @@
+import { getNbaKinetikBoardTitle } from "@/lib/profile/useNbaKinetikMonthlyStats";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
@@ -17,11 +18,11 @@ export function getProfileStatsTitle(
   return m.profile.statsTitlePlayoffs2026;
 }
 
-/** Kinetik カードのグリッチタイトル（スコープ連動・英語固定） */
+/** Kinetik カードのグリッチタイトル（期間は SEASON/PLAYOFF タブ側） */
 export function getProfileKinetikMetricsTitle(
-  ctx: ProfileStatsStreakContext
+  _ctx: ProfileStatsStreakContext
 ): string {
-  return "NBA // PLAYOFFS STATS";
+  return getNbaKinetikBoardTitle();
 }
 
 export function getProfileMaxStreakLabels(

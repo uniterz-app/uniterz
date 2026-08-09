@@ -25,7 +25,7 @@ type Props = {
   onSelectNbaPlayoffs: () => void;
 };
 
-/** NBA 下の枝分かれ行（├ / └）— `GamesDrawerMenu` と同型（2px 線 + 枝先ジョイント） */
+/** NBA 下の枝分かれ行（├ / └）— ガターに枝線、ボタンは残り幅いっぱい */
 function BranchRow({
   last,
   children,
@@ -34,34 +34,33 @@ function BranchRow({
   children: ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-8 items-stretch">
-      <span
-        aria-hidden
-        className="absolute left-[9px] w-[2px]"
-        style={{
-          top: 0,
-          bottom: last ? "50%" : 0,
-          backgroundColor: CYBER_SIDE_MENU_BRANCH,
-          boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
-        }}
-      />
-      <span
-        aria-hidden
-        className="absolute left-[9px] top-1/2 h-[2px] w-[14px] -translate-y-1/2"
-        style={{
-          backgroundColor: CYBER_SIDE_MENU_BRANCH,
-          boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
-        }}
-      />
-      <span
-        aria-hidden
-        className="absolute left-[20px] top-1/2 h-[5px] w-[5px] -translate-y-1/2 rotate-45"
-        style={{
-          backgroundColor: "rgba(246, 195, 68, 0.9)",
-          boxShadow: "0 0 8px rgba(246, 195, 68, 0.7)",
-        }}
-      />
-      <div className="min-w-0 flex-1 pl-[28px] pr-4">{children}</div>
+    <div className="flex min-h-8 w-full items-stretch">
+      <div className="relative w-[22px] shrink-0" aria-hidden>
+        <span
+          className="absolute left-[9px] w-[2px]"
+          style={{
+            top: 0,
+            bottom: last ? "50%" : 0,
+            backgroundColor: CYBER_SIDE_MENU_BRANCH,
+            boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
+          }}
+        />
+        <span
+          className="absolute left-[9px] top-1/2 h-[2px] w-3 -translate-y-1/2"
+          style={{
+            backgroundColor: CYBER_SIDE_MENU_BRANCH,
+            boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
+          }}
+        />
+        <span
+          className="absolute left-[17px] top-1/2 h-[5px] w-[5px] -translate-y-1/2 rotate-45"
+          style={{
+            backgroundColor: "rgba(246, 195, 68, 0.9)",
+            boxShadow: "0 0 8px rgba(246, 195, 68, 0.7)",
+          }}
+        />
+      </div>
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
@@ -78,8 +77,8 @@ export default function RankingsDrawerMenu({
   const m = t(language);
 
   const containerClasses = cn(
-    "relative flex flex-col text-white",
-    isMobile ? "w-full p-4" : "w-full p-5"
+    "relative flex w-full flex-col text-white",
+    isMobile ? "px-2.5 py-4" : "px-3 py-5"
   );
 
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
@@ -97,8 +96,8 @@ export default function RankingsDrawerMenu({
         {m.rankings.title}
       </CyberSideMenuSectionTitle>
 
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col">
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex w-full flex-col">
           <SideMenuItemButton
             icon={Trophy}
             labelStyle={menuLabelFont}
@@ -108,7 +107,7 @@ export default function RankingsDrawerMenu({
             <span className="uppercase">NBA</span>
           </SideMenuItemButton>
 
-          <div className="relative mt-1 flex flex-col gap-1.5">
+          <div className="relative mt-1 flex w-full flex-col gap-1.5">
             <span
               aria-hidden
               className="pointer-events-none absolute left-[9px] top-[-4px] h-1 w-[2px]"

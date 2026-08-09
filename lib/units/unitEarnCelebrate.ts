@@ -30,6 +30,8 @@ export type UnitEarnCelebrateContent = {
   kicker: string;
   title: string;
   subtitle: string | null;
+  /** 順位がある報酬のみ */
+  rank: number | null;
   amountHero: string;
   claimLabel: string;
   historyLabel: string;
@@ -39,35 +41,40 @@ export type UnitEarnCelebrateContent = {
 function presetMeta(
   id: UnitEarnCelebratePresetId,
   isJa: boolean
-): { title: string; subtitle: string | null } {
+): { title: string; subtitle: string | null; rank: number | null } {
   if (isJa) {
     switch (id) {
       case "monthly-rank-1":
-        return { title: "月間ランキング 1位", subtitle: "2026年1月 · NBA" };
+        return { title: "月間ランキング 1位", subtitle: "2026年1月 · NBA", rank: 1 };
       case "monthly-rank-8":
-        return { title: "月間ランキング 8位", subtitle: "2026年1月 · NBA" };
+        return { title: "月間ランキング 8位", subtitle: "2026年1月 · NBA", rank: 8 };
       case "weekly-rank-3":
-        return { title: "週間ランキング 3位", subtitle: "第12週 · NBA" };
+        return { title: "週間ランキング 3位", subtitle: "第12週 · NBA", rank: 3 };
       case "referral-base":
-        return { title: "招待が成立", subtitle: null };
+        return { title: "招待が成立", subtitle: null, rank: null };
       case "referral-milestone-3":
         return {
           title: "招待マイルストーン",
           subtitle: "3人目 · ボーナス",
+          rank: null,
         };
     }
   }
   switch (id) {
     case "monthly-rank-1":
-      return { title: "Monthly rank #1", subtitle: "Jan 2026 · NBA" };
+      return { title: "Monthly rank #1", subtitle: "Jan 2026 · NBA", rank: 1 };
     case "monthly-rank-8":
-      return { title: "Monthly rank #8", subtitle: "Jan 2026 · NBA" };
+      return { title: "Monthly rank #8", subtitle: "Jan 2026 · NBA", rank: 8 };
     case "weekly-rank-3":
-      return { title: "Weekly rank #3", subtitle: "Week 12 · NBA" };
+      return { title: "Weekly rank #3", subtitle: "Week 12 · NBA", rank: 3 };
     case "referral-base":
-      return { title: "Invite confirmed", subtitle: null };
+      return { title: "Invite confirmed", subtitle: null, rank: null };
     case "referral-milestone-3":
-      return { title: "Invite milestone", subtitle: "3 invites · Bonus" };
+      return {
+        title: "Invite milestone",
+        subtitle: "3 invites · Bonus",
+        rank: null,
+      };
   }
 }
 
@@ -86,6 +93,7 @@ export function unitEarnCelebrateContent(
       kicker: "UNIT REWARD",
       title: meta.title,
       subtitle: meta.subtitle,
+      rank: meta.rank,
       amountHero: `+${amount.toLocaleString("en-US")}`,
       claimLabel: "受け取る",
       historyLabel: "Unit 履歴を見る",
@@ -99,6 +107,7 @@ export function unitEarnCelebrateContent(
     kicker: "UNIT REWARD",
     title: meta.title,
     subtitle: meta.subtitle,
+    rank: meta.rank,
     amountHero: `+${amount.toLocaleString("en-US")}`,
     claimLabel: "Claim",
     historyLabel: "View Unit history",

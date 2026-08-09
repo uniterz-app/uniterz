@@ -2,7 +2,7 @@
  * Web `RankingListProSkinFx` 相当 — ランキング行用 Pro Skin（cover + wash）
  */
 import { useMemo, useState } from "react";
-import { LayoutChangeEvent, StyleSheet, View } from "react-native";
+import { Image, LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SvgXml } from "react-native-svg";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
@@ -35,6 +35,10 @@ import {
   PROFILE_PLAN_PRO_WAVE_CANVAS,
 } from "../../../../../lib/profile/profilePlanProWavePattern";
 import { isProfilePlanProWaveBgVariant } from "../../../../../lib/profile/profilePlanProWaveBgVariants";
+import { UNITERZ_LOGO_ASSET } from "../../../../../lib/units/uniterzLogoAsset";
+import { RANKING_UNITERZ_LOGO_SCATTER } from "../../../../../lib/profile/profilePlanProUniterzLogoScatter";
+
+const UNITERZ_LOGO_PNG = require("../../../assets/brand/uniterz-logo.png");
 
 export type RankingListProSkinIntensity = "subtle" | "medium";
 
@@ -230,6 +234,57 @@ export default function RankingListProSkinFxNative({
     if (isProfilePlanProWaveBgVariant(variant)) {
       const softWave =
         variant === "wave-gold-monogram" || variant === "wave-ember-hex";
+      if (variant === "wave-uniterz-logo") {
+        const intensityScale = intensity === "medium" ? 1 : 0.78;
+        return (
+          <>
+            <LinearGradient
+              pointerEvents="none"
+              colors={["#000000", "#050b10", "#000408"]}
+              locations={[0, 0.55, 1]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}
+            >
+              {RANKING_UNITERZ_LOGO_SCATTER.map((mark) => {
+                const markW = w * mark.widthPct;
+                const markH = markW / UNITERZ_LOGO_ASSET.aspectRatio;
+                return (
+                  <Image
+                    key={mark.id}
+                    source={UNITERZ_LOGO_PNG}
+                    blurRadius={mark.blurPx}
+                    style={{
+                      position: "absolute",
+                      width: markW,
+                      height: markH,
+                      left: w * mark.cxPct - markW / 2,
+                      top: h * mark.cyPct - markH / 2,
+                      opacity: mark.opacity * intensityScale,
+                      transform: [{ rotate: `${mark.rotateDeg}deg` }],
+                    }}
+                    resizeMode="contain"
+                  />
+                );
+              })}
+            </View>
+            <CoverSvgLayer
+              xml={getProfilePlanProWaveHudSvg(variant)}
+              canvasW={PROFILE_PLAN_PRO_WAVE_CANVAS.width}
+              canvasH={PROFILE_PLAN_PRO_WAVE_CANVAS.height}
+              width={w}
+              height={h}
+              opacity={intensity === "medium" ? 0.42 : 0.32}
+              focus={{ x: 0.78, y: 0.4 }}
+            />
+            <Wash intensity={intensity} />
+          </>
+        );
+      }
       return (
         <SkinHudPair
           skinXml={getProfilePlanProWaveSkinSvg(variant)}

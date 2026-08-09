@@ -1,77 +1,88 @@
 /**
- * Web `UnitEarnOverlay` 相当 — 中央カウントアップ → 金庫へ飛行加算。
- * カウントは Reanimated（UI スレッド）。JS の毎フレーム setState はしない。
+ * Web `UnitEarnOverlay` 相当 —
+ * 枠なしオーバーレイで金額・理由・順位を表示し、獲得後に金庫へ飛行加算。
  */
 import {
+  useCallback,
   useEffect,
   useRef,
+  useState,
   type RefObject,
 } from "react";
 import {
   Dimensions,
   Modal,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
   type View as ViewType,
 } from "react-native";
+import { FullWindowOverlay } from "react-native-screens";
 import Animated, {
   Easing,
   runOnJS,
-  useAnimatedProps,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withDelay,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { fonts } from "../../theme/tokens";
+import { JP_700, JP_600 } from "./reports/reportThemeNative";
 import {
   UNIT_EARN_ABSORB_MS,
+  UNIT_EARN_APERTURE_CLAIM_DELAY_MS,
+  UNIT_EARN_APERTURE_COUNT_DELAY_MS,
+  UNIT_EARN_APERTURE_DETAIL_DELAY_MS,
+  UNIT_EARN_APERTURE_ITEM_MS,
+  UNIT_EARN_APERTURE_PRIZE_DELAY_MS,
+  UNIT_EARN_APERTURE_RANK_DELAY_MS,
+  UNIT_EARN_APERTURE_RING_MS,
   UNIT_EARN_COUNT_MS,
-  UNIT_EARN_ENTER_MS,
   UNIT_EARN_EXIT_MS,
   UNIT_EARN_FLY_ARC,
   UNIT_EARN_FLY_MS,
-  UNIT_EARN_HOLD_MS,
   UNIT_EARN_SCRIM_MS,
   UNIT_EARN_VAULT_COUNT_MS,
+  UNIT_EARN_COUNT_DISPLAY_STEPS,
 } from "../../../../../lib/units/unitEarnMotion";
+import { formatUnitEarnRankOrdinal } from "../../../../../lib/units/formatUnitEarnRank";
+import UnitCoinDiscNative from "./UnitCoinDiscNative";
 
 type Props = {
   open: boolean;
   amount: number;
   label?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  rank?: number | null;
   language?: "ja" | "en";
   vaultRef: RefObject<ViewType | null>;
   onAbsorb: () => void;
   onDone: () => void;
 };
 
+type Phase = "enter" | "ready" | "flying";
+
 const EASE = Easing.bezier(0.25, 1, 0.5, 1);
-/** easeUnitEarnCount 相当（worklet 用） */
 const COUNT_EASE = Easing.bezier(0.22, 0.82, 0.28, 1);
 
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
-
-function formatCountWorklet(n: number): string {
-  "worklet";
+function formatCount(n: number): string {
   const v = Math.max(0, Math.floor(n));
-  const s = String(v);
-  if (s.length <= 3) return s;
-  let out = "";
-  for (let i = 0; i < s.length; i++) {
-    const fromEnd = s.length - i;
-    out += s[i];
-    if (fromEnd > 1 && fromEnd % 3 === 1) out += ",";
-  }
-  return out;
+  return v.toLocaleString("en-US");
 }
 
 export default function UnitEarnOverlayNative({
   open,
   amount,
   label = null,
+  title = null,
+  subtitle = null,
+  rank = null,
   language = "ja",
   vaultRef,
   onAbsorb,
@@ -79,57 +90,121 @@ export default function UnitEarnOverlayNative({
 }: Props) {
   const isJa = language === "ja";
   const reduceMotion = useReducedMotion();
+  const [phase, setPhase] = useState<Phase>("enter");
+  /** AnimatedTextInput は使わない（Hermes hades GC × TextInputState 連鎖で SIGBUS） */
+  const [amountLabel, setAmountLabel] = useState("+0");
   const absorbedRef = useRef(false);
+  const flyingRef = useRef(false);
   const onAbsorbRef = useRef(onAbsorb);
   const onDoneRef = useRef(onDone);
+  const flyMeasureRef = useRef<ViewType>(null);
+  const afterAbsorbRef = useRef<() => void>(() => {});
   const safeAmount = Math.max(0, Math.floor(amount));
+  const safeRank =
+    typeof rank === "number" && Number.isFinite(rank)
+      ? Math.max(1, Math.floor(rank))
+      : null;
 
   onAbsorbRef.current = onAbsorb;
   onDoneRef.current = onDone;
 
   const scrim = useSharedValue(0);
-  const payloadOpacity = useSharedValue(0);
-  const payloadScale = useSharedValue(0.9);
-  const payloadX = useSharedValue(0);
-  const payloadY = useSharedValue(16);
-  const labelOpacity = useSharedValue(1);
+  const stageOpacity = useSharedValue(1);
+  const metaOpacity = useSharedValue(1);
+  const flyOpacity = useSharedValue(1);
   const valueScale = useSharedValue(1);
-  /** カウント進行 0→1（UI スレッド） */
   const countT = useSharedValue(0);
   const amountSV = useSharedValue(safeAmount);
-  /** 1 のとき弧飛行（flyT / flyEnd* を使う） */
   const flying = useSharedValue(0);
   const flyT = useSharedValue(0);
   const flyEndX = useSharedValue(0);
   const flyEndY = useSharedValue(0);
   const flyEndScale = useSharedValue(0.35);
+  const detailOpacity = useSharedValue(0);
+  const detailY = useSharedValue(8);
+  const rankOpacity = useSharedValue(0);
+  const rankY = useSharedValue(6);
+  const prizeOpacity = useSharedValue(0);
+  const prizeY = useSharedValue(8);
+  const prizeEnterScale = useSharedValue(0.97);
+  const claimOpacity = useSharedValue(0);
+  const claimY = useSharedValue(6);
+  const ringOpacity = useSharedValue(0);
+  const ringScale = useSharedValue(0.35);
 
-  const title = isJa ? "UNIT 獲得" : "UNITS EARNED";
-  const sub =
+  const reasonTitle =
+    title?.trim() ||
     label?.trim() ||
-    (isJa ? "プロフィールの残高に加算されます" : "Added to your vault");
+    (isJa ? "Unit 報酬" : "Unit reward");
+  const reasonSub = subtitle?.trim() || null;
+  const claimLabel = isJa ? "獲得する" : "Claim";
+  const rankText =
+    safeRank != null ? formatUnitEarnRankOrdinal(safeRank) : null;
+
+  const markReady = useCallback(() => {
+    setPhase("ready");
+  }, []);
+
+  const invokeAfterAbsorb = useCallback(() => {
+    afterAbsorbRef.current();
+  }, []);
 
   useEffect(() => {
     amountSV.value = safeAmount;
   }, [amountSV, safeAmount]);
 
+  const setAmountLabelSafe = useCallback((n: number) => {
+    setAmountLabel(`+${formatCount(n)}`);
+  }, []);
+
+  useAnimatedReaction(
+    () => {
+      const total = Math.max(0, Math.floor(amountSV.value));
+      const raw = Math.floor(amountSV.value * countT.value + 1e-6);
+      if (countT.value >= 1) return total;
+      // +80 程度は 1 刻み。大口だけ間引く
+      if (total <= UNIT_EARN_COUNT_DISPLAY_STEPS) return Math.min(total, raw);
+      const step = Math.max(1, Math.ceil(total / UNIT_EARN_COUNT_DISPLAY_STEPS));
+      return Math.min(total, Math.floor(raw / step) * step);
+    },
+    (n, prev) => {
+      if (n === prev) return;
+      runOnJS(setAmountLabelSafe)(n);
+    },
+    [setAmountLabelSafe]
+  );
+
   useEffect(() => {
     if (!open) {
       absorbedRef.current = false;
+      flyingRef.current = false;
+      setPhase("enter");
+      setAmountLabel("+0");
       scrim.value = 0;
-      payloadOpacity.value = 0;
-      payloadScale.value = 0.9;
-      payloadX.value = 0;
-      payloadY.value = 16;
-      labelOpacity.value = 1;
+      stageOpacity.value = 1;
+      metaOpacity.value = 1;
+      flyOpacity.value = 1;
       valueScale.value = 1;
       countT.value = 0;
       flying.value = 0;
       flyT.value = 0;
+      detailOpacity.value = 0;
+      detailY.value = 8;
+      rankOpacity.value = 0;
+      rankY.value = 6;
+      prizeOpacity.value = 0;
+      prizeY.value = 8;
+      prizeEnterScale.value = 0.97;
+      claimOpacity.value = 0;
+      claimY.value = 6;
+      ringOpacity.value = 0;
+      ringScale.value = 0.35;
       return;
     }
 
     absorbedRef.current = false;
+    flyingRef.current = false;
+    setPhase("enter");
     let cancelled = false;
     const timers: Array<ReturnType<typeof setTimeout>> = [];
 
@@ -149,20 +224,16 @@ export default function UnitEarnOverlayNative({
         duration: UNIT_EARN_EXIT_MS,
         easing: EASE,
       });
-      payloadOpacity.value = withTiming(
+      stageOpacity.value = withTiming(
         0,
-        {
-          duration: UNIT_EARN_EXIT_MS,
-          easing: EASE,
-        },
+        { duration: UNIT_EARN_EXIT_MS, easing: EASE },
         (done) => {
           if (done) runOnJS(runDone)();
         }
       );
     };
 
-    /** ヒット → 金庫カウントが見えてから退出 */
-    const afterAbsorb = () => {
+    afterAbsorbRef.current = () => {
       runAbsorb();
       const holdMs = Math.max(
         UNIT_EARN_ABSORB_MS,
@@ -173,23 +244,19 @@ export default function UnitEarnOverlayNative({
 
     if (reduceMotion) {
       countT.value = 1;
+      setAmountLabelSafe(safeAmount);
       scrim.value = withTiming(1, { duration: 160 });
-      payloadOpacity.value = 1;
-      payloadScale.value = 1;
-      payloadY.value = 0;
-      timers.push(
-        setTimeout(() => {
-          runAbsorb();
-          scrim.value = withTiming(0, { duration: UNIT_EARN_EXIT_MS });
-          payloadOpacity.value = withTiming(
-            0,
-            { duration: UNIT_EARN_EXIT_MS },
-            (finished) => {
-              if (finished) runOnJS(runDone)();
-            }
-          );
-        }, 360)
-      );
+      detailOpacity.value = 1;
+      detailY.value = 0;
+      rankOpacity.value = 1;
+      rankY.value = 0;
+      prizeOpacity.value = 1;
+      prizeY.value = 0;
+      prizeEnterScale.value = 1;
+      claimOpacity.value = 1;
+      claimY.value = 0;
+      ringOpacity.value = 0;
+      markReady();
       return () => {
         cancelled = true;
         timers.forEach(clearTimeout);
@@ -197,86 +264,95 @@ export default function UnitEarnOverlayNative({
     }
 
     countT.value = 0;
+    setAmountLabelSafe(0);
+    metaOpacity.value = 1;
+    flyOpacity.value = 1;
+    flying.value = 0;
+    flyT.value = 0;
+    detailOpacity.value = 0;
+    detailY.value = 8;
+    rankOpacity.value = 0;
+    rankY.value = 6;
+    prizeOpacity.value = 0;
+    prizeY.value = 8;
+    prizeEnterScale.value = 0.97;
+    claimOpacity.value = 0;
+    claimY.value = 6;
+    ringOpacity.value = 0;
+    ringScale.value = 0.35;
+
     scrim.value = withTiming(1, {
       duration: UNIT_EARN_SCRIM_MS,
       easing: EASE,
     });
-    payloadOpacity.value = withTiming(1, {
-      duration: UNIT_EARN_ENTER_MS,
-      easing: EASE,
-    });
-    payloadScale.value = withTiming(1, {
-      duration: UNIT_EARN_ENTER_MS,
-      easing: EASE,
-    });
-    payloadY.value = withTiming(0, {
-      duration: UNIT_EARN_ENTER_MS,
-      easing: EASE,
-    });
 
-    const countDelayMs = UNIT_EARN_ENTER_MS + 16;
-    const flyAtMs = countDelayMs + UNIT_EARN_COUNT_MS + UNIT_EARN_HOLD_MS;
+    // 本番入場: Aperture
+    ringOpacity.value = withSequence(
+      withTiming(0.5, { duration: 100, easing: EASE }),
+      withTiming(0, { duration: UNIT_EARN_APERTURE_RING_MS - 100, easing: EASE })
+    );
+    ringScale.value = withTiming(1.7, {
+      duration: UNIT_EARN_APERTURE_RING_MS,
+      easing: EASE,
+    });
+    detailOpacity.value = withDelay(
+      UNIT_EARN_APERTURE_DETAIL_DELAY_MS,
+      withTiming(1, { duration: UNIT_EARN_APERTURE_ITEM_MS, easing: EASE })
+    );
+    detailY.value = withDelay(
+      UNIT_EARN_APERTURE_DETAIL_DELAY_MS,
+      withTiming(0, { duration: UNIT_EARN_APERTURE_ITEM_MS, easing: EASE })
+    );
+    rankOpacity.value = withDelay(
+      UNIT_EARN_APERTURE_RANK_DELAY_MS,
+      withTiming(1, { duration: UNIT_EARN_APERTURE_ITEM_MS, easing: EASE })
+    );
+    rankY.value = withDelay(
+      UNIT_EARN_APERTURE_RANK_DELAY_MS,
+      withTiming(0, { duration: UNIT_EARN_APERTURE_ITEM_MS, easing: EASE })
+    );
+    prizeOpacity.value = withDelay(
+      UNIT_EARN_APERTURE_PRIZE_DELAY_MS,
+      withTiming(1, { duration: 420, easing: EASE })
+    );
+    prizeY.value = withDelay(
+      UNIT_EARN_APERTURE_PRIZE_DELAY_MS,
+      withTiming(0, { duration: 420, easing: EASE })
+    );
+    prizeEnterScale.value = withDelay(
+      UNIT_EARN_APERTURE_PRIZE_DELAY_MS,
+      withTiming(1, { duration: 420, easing: EASE })
+    );
+    claimOpacity.value = withDelay(
+      UNIT_EARN_APERTURE_CLAIM_DELAY_MS,
+      withTiming(1, { duration: 340, easing: EASE })
+    );
+    claimY.value = withDelay(
+      UNIT_EARN_APERTURE_CLAIM_DELAY_MS,
+      withTiming(0, { duration: 340, easing: EASE })
+    );
 
-    // カウントは入場完了後・UI スレッド（復帰直後の JS 負荷を避ける）
+    const countDelayMs = UNIT_EARN_APERTURE_COUNT_DELAY_MS;
     timers.push(
       setTimeout(() => {
         if (cancelled) return;
         countT.value = 0;
-        countT.value = withTiming(1, {
-          duration: UNIT_EARN_COUNT_MS,
-          easing: COUNT_EASE,
-        });
-        valueScale.value = 1.04;
+        countT.value = withTiming(
+          1,
+          {
+            duration: UNIT_EARN_COUNT_MS,
+            easing: COUNT_EASE,
+          },
+          (finished) => {
+            if (finished) runOnJS(markReady)();
+          }
+        );
+        valueScale.value = 1.05;
         valueScale.value = withTiming(1, {
           duration: UNIT_EARN_COUNT_MS,
           easing: COUNT_EASE,
         });
       }, countDelayMs)
-    );
-
-    timers.push(
-      setTimeout(() => {
-        countT.value = 1;
-        valueScale.value = 1;
-
-        const { width: sw, height: sh } = Dimensions.get("window");
-        const fromCx = sw / 2;
-        const fromCy = sh / 2;
-
-        const startFly = (toCx: number, toCy: number) => {
-          labelOpacity.value = withTiming(0, {
-            duration: Math.round(UNIT_EARN_FLY_MS * 0.3),
-            easing: EASE,
-          });
-          scrim.value = withTiming(0.28, {
-            duration: Math.round(UNIT_EARN_FLY_MS * 0.55),
-            easing: EASE,
-          });
-          flyEndX.value = toCx - fromCx;
-          flyEndY.value = toCy - fromCy;
-          flyEndScale.value = 0.35;
-          flyT.value = 0;
-          flying.value = 1;
-          flyT.value = withTiming(
-            1,
-            { duration: UNIT_EARN_FLY_MS, easing: Easing.out(Easing.cubic) },
-            (finished) => {
-              if (!finished) return;
-              runOnJS(afterAbsorb)();
-            }
-          );
-        };
-
-        const vault = vaultRef.current;
-        if (vault && typeof vault.measureInWindow === "function") {
-          vault.measureInWindow((x, y, w, h) => {
-            if (cancelled) return;
-            startFly(x + w / 2, y + h / 2);
-          });
-        } else {
-          startFly(sw - 48, 96);
-        }
-      }, flyAtMs)
     );
 
     return () => {
@@ -285,39 +361,156 @@ export default function UnitEarnOverlayNative({
     };
   }, [
     amountSV,
+    claimOpacity,
+    claimY,
+    countT,
+    detailOpacity,
+    detailY,
+    flyOpacity,
+    flyT,
+    flying,
+    markReady,
+    metaOpacity,
+    open,
+    prizeEnterScale,
+    prizeOpacity,
+    prizeY,
+    rankOpacity,
+    rankY,
+    reduceMotion,
+    ringOpacity,
+    ringScale,
+    safeAmount,
+    scrim,
+    setAmountLabelSafe,
+    stageOpacity,
+    valueScale,
+  ]);
+
+  const handleClaim = useCallback(() => {
+    if (phase !== "ready" || flyingRef.current) return;
+    flyingRef.current = true;
+    setPhase("flying");
+    countT.value = 1;
+    valueScale.value = 1;
+
+    if (reduceMotion) {
+      afterAbsorbRef.current();
+      return;
+    }
+
+    const { width: sw, height: sh } = Dimensions.get("window");
+
+    const startFly = (
+      fromCx: number,
+      fromCy: number,
+      toCx: number,
+      toCy: number
+    ) => {
+      metaOpacity.value = withTiming(0, {
+        duration: Math.round(UNIT_EARN_FLY_MS * 0.28),
+        easing: EASE,
+      });
+      scrim.value = withTiming(0.28, {
+        duration: Math.round(UNIT_EARN_FLY_MS * 0.55),
+        easing: EASE,
+      });
+      flyEndX.value = toCx - fromCx;
+      flyEndY.value = toCy - fromCy;
+      flyEndScale.value = 0.35;
+      flyT.value = 0;
+      flying.value = 1;
+      flyT.value = withTiming(
+        1,
+        { duration: UNIT_EARN_FLY_MS, easing: Easing.out(Easing.cubic) },
+        (finished) => {
+          if (!finished) return;
+          runOnJS(invokeAfterAbsorb)();
+        }
+      );
+    };
+
+    const fallbackFly = () => {
+      startFly(sw / 2, sh / 2, sw - 48, 96);
+    };
+
+    const vault = vaultRef.current;
+    const flyEl = flyMeasureRef.current;
+    if (
+      vault &&
+      typeof vault.measureInWindow === "function" &&
+      flyEl &&
+      typeof flyEl.measureInWindow === "function"
+    ) {
+      flyEl.measureInWindow((px, py, pw, ph) => {
+        vault.measureInWindow((vx, vy, vw, vh) => {
+          startFly(px + pw / 2, py + ph / 2, vx + vw / 2, vy + vh / 2);
+        });
+      });
+    } else if (vault && typeof vault.measureInWindow === "function") {
+      vault.measureInWindow((vx, vy, vw, vh) => {
+        startFly(sw / 2, sh / 2, vx + vw / 2, vy + vh / 2);
+      });
+    } else {
+      fallbackFly();
+    }
+  }, [
     countT,
     flyEndScale,
     flyEndX,
     flyEndY,
     flyT,
     flying,
-    labelOpacity,
-    open,
-    payloadOpacity,
-    payloadScale,
-    payloadX,
-    payloadY,
+    invokeAfterAbsorb,
+    metaOpacity,
+    phase,
     reduceMotion,
-    safeAmount,
     scrim,
     valueScale,
     vaultRef,
   ]);
 
   const scrimStyle = useAnimatedStyle(() => ({
-    // 裏の Pro 背景をほぼ隠して合成負荷を下げる
     opacity: scrim.value * 0.9,
   }));
 
-  const payloadStyle = useAnimatedStyle(() => {
+  const stageStyle = useAnimatedStyle(() => ({
+    opacity: stageOpacity.value,
+  }));
+
+  const detailStyle = useAnimatedStyle(() => ({
+    opacity: detailOpacity.value * metaOpacity.value,
+    transform: [{ translateY: detailY.value }],
+  }));
+
+  const rankStyle = useAnimatedStyle(() => ({
+    opacity: rankOpacity.value,
+    transform: [{ translateY: rankY.value }],
+  }));
+
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: ringOpacity.value,
+    transform: [{ scale: ringScale.value }],
+  }));
+
+  const prizeEnterStyle = useAnimatedStyle(() => ({
+    opacity: prizeOpacity.value,
+    transform: [
+      { translateY: prizeY.value },
+      { scale: prizeEnterScale.value },
+    ],
+  }));
+
+  const claimEnterStyle = useAnimatedStyle(() => ({
+    opacity: claimOpacity.value * metaOpacity.value,
+    transform: [{ translateY: claimY.value }],
+  }));
+
+  const flyStyle = useAnimatedStyle(() => {
     if (flying.value < 0.5) {
       return {
-        opacity: payloadOpacity.value,
-        transform: [
-          { translateX: payloadX.value },
-          { translateY: payloadY.value },
-          { scale: payloadScale.value },
-        ],
+        opacity: flyOpacity.value,
+        transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
       };
     }
     const t = flyT.value;
@@ -338,31 +531,86 @@ export default function UnitEarnOverlayNative({
     const y = 2 * s * t * cY + t * t * endY;
     const scale = 1 + (flyEndScale.value - 1) * t;
     return {
-      opacity: payloadOpacity.value,
-      transform: [
-        { translateX: x },
-        { translateY: y },
-        { scale },
-      ],
+      opacity: flyOpacity.value * (1 - (1 - 0.92) * t),
+      transform: [{ translateX: x }, { translateY: y }, { scale }],
     };
   });
-
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: labelOpacity.value,
-  }));
 
   const valueWrapStyle = useAnimatedStyle(() => ({
     transform: [{ scale: valueScale.value }],
   }));
 
-  const amountAnimProps = useAnimatedProps(() => {
-    const n = Math.floor(amountSV.value * countT.value + 1e-6);
-    return {
-      text: `+${formatCountWorklet(n)}`,
-      // iOS 向け
-      value: `+${formatCountWorklet(n)}`,
-    } as { text: string; value: string };
-  });
+  const body = (
+    <View style={styles.root} pointerEvents="box-none">
+      <Animated.View style={[styles.scrim, scrimStyle]} />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.ring, ringStyle]}
+      />
+      <Animated.View style={[styles.stage, stageStyle]}>
+        {/* 上から: 題名 → UNIT → 獲得（Aperture 入場） */}
+        <Animated.View style={[styles.detail, detailStyle]} pointerEvents="none">
+          <Text style={styles.context} numberOfLines={2}>
+            {reasonTitle}
+          </Text>
+          {reasonSub ? (
+            <Text style={styles.sub} numberOfLines={2}>
+              {reasonSub}
+            </Text>
+          ) : null}
+          {rankText ? (
+            <Animated.Text style={[styles.rank, rankStyle]}>
+              {rankText}
+            </Animated.Text>
+          ) : null}
+        </Animated.View>
+
+        <Animated.View style={prizeEnterStyle}>
+          <Animated.View style={[styles.flyRow, flyStyle]} pointerEvents="none">
+            <View
+              ref={flyMeasureRef}
+              collapsable={false}
+              style={styles.flyInner}
+            >
+              <Animated.View style={[styles.amountRow, valueWrapStyle]}>
+                <UnitCoinDiscNative size={40} />
+                <Animated.Text style={styles.valueText}>{amountLabel}</Animated.Text>
+              </Animated.View>
+            </View>
+          </Animated.View>
+        </Animated.View>
+
+        <Animated.View style={[styles.footer, claimEnterStyle]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={claimLabel}
+            accessibilityState={{ disabled: phase !== "ready" }}
+            disabled={phase !== "ready"}
+            onPress={handleClaim}
+            style={({ pressed }) => [
+              styles.claimBtn,
+              phase === "ready" ? styles.claimBtnReady : styles.claimBtnDim,
+              phase === "ready" && pressed ? styles.claimBtnPressed : null,
+            ]}
+          >
+            <Text
+              style={[
+                styles.claimBtnText,
+                phase !== "ready" ? styles.claimBtnTextDim : null,
+              ]}
+            >
+              {claimLabel}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </Animated.View>
+    </View>
+  );
+
+  if (Platform.OS === "ios") {
+    if (!open) return null;
+    return <FullWindowOverlay>{body}</FullWindowOverlay>;
+  }
 
   return (
     <Modal
@@ -371,6 +619,10 @@ export default function UnitEarnOverlayNative({
       animationType="none"
       statusBarTranslucent
       onRequestClose={() => {
+        if (phase === "ready") {
+          handleClaim();
+          return;
+        }
         if (!absorbedRef.current) {
           absorbedRef.current = true;
           onAbsorb();
@@ -378,113 +630,132 @@ export default function UnitEarnOverlayNative({
         onDone();
       }}
     >
-      <View style={styles.root} pointerEvents="box-none">
-        <Animated.View style={[styles.scrim, scrimStyle]} />
-        <Animated.View style={[styles.payload, payloadStyle]}>
-          <Animated.Text style={[styles.kicker, labelStyle]}>
-            {title}
-          </Animated.Text>
-          <View style={styles.row}>
-            <View style={styles.disc}>
-              <View style={styles.discInner}>
-                <Text style={styles.discU}>U</Text>
-              </View>
-            </View>
-            <Animated.View style={valueWrapStyle}>
-              <AnimatedTextInput
-                editable={false}
-                caretHidden
-                underlineColorAndroid="transparent"
-                pointerEvents="none"
-                style={styles.valueInput}
-                animatedProps={amountAnimProps}
-                defaultValue="+0"
-              />
-            </Animated.View>
-          </View>
-          <Animated.Text style={[styles.sub, labelStyle]}>{sub}</Animated.Text>
-        </Animated.View>
-      </View>
+      {body}
     </Modal>
   );
 }
 
+const CYBER_CYAN = "#00F5FF";
+
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 28,
   },
   scrim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#000",
   },
-  payload: {
+  ring: {
+    position: "absolute",
+    alignSelf: "center",
+    top: "50%",
+    marginTop: -72,
+    width: 144,
+    height: 144,
+    borderRadius: 72,
+    borderWidth: 1,
+    borderColor: "rgba(207,250,254,0.35)",
+    zIndex: 0,
+  },
+  stage: {
+    width: "100%",
+    maxWidth: 280,
     alignItems: "center",
-    paddingHorizontal: 16,
+    zIndex: 1,
   },
-  kicker: {
-    fontFamily: fonts.metricExtra,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 2.2,
-    color: "rgba(246,195,68,0.9)",
-    textTransform: "uppercase",
+  flyRow: {
+    marginTop: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  row: {
-    marginTop: 16,
+  flyInner: {
+    alignItems: "center",
+  },
+  amountRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  disc: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "#f6c344",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#f6c344",
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 6,
-  },
-  discInner: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#d9a125",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  discU: {
+  valueText: {
     fontFamily: fonts.metricExtra,
+    fontSize: 56,
+    fontWeight: "800",
+    color: "#ffe9a8",
+    letterSpacing: -1.5,
+    minWidth: 96,
+    textAlign: "left",
+    textShadowColor: "rgba(246,195,68,0.55)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
+  detail: {
+    width: "100%",
+    alignItems: "center",
+  },
+  context: {
+    fontFamily: JP_700,
     fontSize: 16,
     fontWeight: "800",
-    color: "#241902",
-  },
-  valueInput: {
-    fontFamily: fonts.metricExtra,
-    fontSize: 48,
-    fontWeight: "800",
-    fontStyle: "italic",
-    color: "#ffe9a8",
-    letterSpacing: -0.5,
-    padding: 0,
-    margin: 0,
-    minWidth: 120,
-    textAlign: "left",
-    textShadowColor: "rgba(246,195,68,0.5)",
-    textShadowRadius: 10,
-    textShadowOffset: { width: 0, height: 0 },
+    letterSpacing: 0.8,
+    color: "rgba(255,255,255,0.94)",
+    textAlign: "center",
   },
   sub: {
-    marginTop: 12,
-    fontFamily: fonts.metric,
-    fontSize: 14,
+    marginTop: 6,
+    fontFamily: JP_600,
+    fontSize: 13,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.55)",
+    letterSpacing: 0.4,
+    color: "rgba(226,246,255,0.78)",
     textAlign: "center",
+  },
+  rank: {
+    marginTop: 12,
+    fontFamily: fonts.metricExtra,
+    fontSize: 34,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+    color: "#cffafe",
+    textAlign: "center",
+  },
+  footer: {
+    marginTop: 28,
+    width: "100%",
+    alignItems: "center",
+  },
+  claimBtn: {
+    minWidth: 160,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+  },
+  claimBtnDim: {
+    borderColor: "rgba(0,245,255,0.22)",
+    backgroundColor: "rgba(0,245,255,0.14)",
+    opacity: 0.55,
+  },
+  claimBtnReady: {
+    borderColor: "rgba(0,245,255,0.85)",
+    backgroundColor: CYBER_CYAN,
+    opacity: 1,
+  },
+  claimBtnPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  claimBtnText: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2.2,
+    textTransform: "uppercase",
+    color: "#041018",
+  },
+  claimBtnTextDim: {
+    color: "rgba(180,230,240,0.5)",
   },
 });

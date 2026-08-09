@@ -74,6 +74,11 @@ type Props = {
     | "proSkinUnlockPreview"
     | "referralStampCelebratePreview"
     | "unitEarnCelebratePreview"
+    | "careerFlipButtonPreview"
+    | "unitEarnModalDesignPreview"
+    | "unitEarnOverlayAnimPreview"
+    | "unitEarnOverlayFontPreview"
+    | "uniterzLogoTypePreview"
     | "teamStatsPreview"
     | "playerStatsPreview"
     | "teamDetailPreview"
@@ -269,6 +274,11 @@ export default function ProfileSideMenuModal({
       | "proSkinUnlockPreview"
       | "referralStampCelebratePreview"
       | "unitEarnCelebratePreview"
+      | "careerFlipButtonPreview"
+      | "unitEarnModalDesignPreview"
+      | "unitEarnOverlayAnimPreview"
+      | "unitEarnOverlayFontPreview"
+      | "uniterzLogoTypePreview"
       | "teamStatsPreview"
       | "playerStatsPreview"
       | "teamDetailPreview"
@@ -644,6 +654,56 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           Unit 獲得演出
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="rotate-3d-variant"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("careerFlipButtonPreview")
+                          }
+                        >
+                          CAREER フリップ配置案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="view-dashboard-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("unitEarnModalDesignPreview")
+                          }
+                        >
+                          Unit 獲得モーダル案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="movie-open-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("unitEarnOverlayAnimPreview")
+                          }
+                        >
+                          Unit 獲得アニメ案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="format-letter-case"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("unitEarnOverlayFontPreview")
+                          }
+                        >
+                          Unit 獲得フォント案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="format-font"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("uniterzLogoTypePreview")
+                          }
+                        >
+                          UNITERZ Logo
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="chart-box-outline"

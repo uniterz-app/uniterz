@@ -131,7 +131,10 @@ function ScaledCard({
 
 export default function WaveProSkinPreviewPage({ variant }: Props) {
   const entries = PROFILE_PLAN_PRO_WAVE_BG_VARIANTS;
-  const [index, setIndex] = useState(0);
+  const uniterzIndex = entries.findIndex((e) => e.id === "wave-uniterz-logo");
+  const [index, setIndex] = useState(
+    uniterzIndex >= 0 ? uniterzIndex : 0
+  );
   const gridRef = useRef<HTMLDivElement>(null);
   const openedScale = useOpenPreviewScale(gridRef);
 

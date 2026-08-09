@@ -1,14 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import UnitEarnOverlay from "@/app/component/profile/UnitEarnOverlay";
-import UnitEarnPlayButton from "@/app/component/profile/UnitEarnPlayButton";
 import { useUnitEarnOverlay } from "@/lib/units/useUnitEarnOverlay";
 import { unitVaultUiBalance } from "@/lib/units/unitVaultDisplay";
-import { UNIT_EARN_VAULT_COUNT_MS } from "@/lib/units/unitEarnMotion";
+import { UNIT_EARN_VAULT_COUNT_MS, unitEarnCountDisplayValue } from "@/lib/units/unitEarnMotion";
 import {
   KINETIK_GREEN,
   KINETIK_MAGENTA,
@@ -19,7 +18,6 @@ import {
 } from "./profileEditKinetikTypes";
 import type { ProfileEditTronIdentity } from "./profileEditTronTypes";
 import { nameOxanium } from "@/lib/fonts";
-import { useCountUp } from "@/lib/hooks/useCountUp";
 import {
   useKinetikMetricCountUp,
   type KinetikMetricCountFormat,
@@ -63,7 +61,10 @@ import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
-import type { ProfileKinetikMetricsPeriod } from "@/lib/profile/useNbaKinetikMonthlyStats";
+import type {
+  ProfileKinetikMetricsPeriod,
+  ProfileKinetikWindow,
+} from "@/lib/profile/useNbaKinetikMonthlyStats";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -522,6 +523,10 @@ function ProfileKinetikIdentityJoinIdRow({
   );
 }
 
+function formatVaultBalance(n: number): string {
+  return Math.max(0, Math.floor(n)).toLocaleString("en-US");
+}
+
 /** ゲーム内通貨 — 金貨ディスク + イタリック数字（U8）。corner は右上コンパクト */
 function ProfileUnitVault({
   balance,
@@ -531,6 +536,8 @@ function ProfileUnitVault({
   absorbPulse = false,
   /** false のあいだは数字を固定（中央の獲得演出中） */
   countUpEnabled = true,
+  /** 加算カウント中（プロフィール常時アニメ停止用） */
+  onCountBusyChange,
 }: {
   balance: number;
   ariaLabel: string;
@@ -539,6 +546,7 @@ function ProfileUnitVault({
   /** 獲得演出のヒット時パルス */
   absorbPulse?: boolean;
   countUpEnabled?: boolean;
+  onCountBusyChange?: (busy: boolean) => void;
 }) {
   const reduceMotion = useReducedMotion() === true;
   /**
@@ -546,6 +554,11 @@ function ProfileUnitVault({
    * （absorbPulse だけだと dismiss で即切れ、カウントが見えない）
    */
   const [countLatch, setCountLatch] = useState(false);
+  const valueRef = useRef<HTMLSpanElement | null>(null);
+  const displayRef = useRef(balance);
+  const onBusyRef = useRef(onCountBusyChange);
+  onBusyRef.current = onCountBusyChange;
+
   useEffect(() => {
     if (absorbPulse) {
       setCountLatch(true);
@@ -556,18 +569,57 @@ function ProfileUnitVault({
 
   const counting =
     countUpEnabled && !reduceMotion && (absorbPulse || countLatch);
-  const displayBalance = useCountUp(
-    balance,
-    UNIT_EARN_VAULT_COUNT_MS,
-    counting,
-    0,
-    "target"
-  );
 
   useEffect(() => {
-    if (!countLatch || absorbPulse) return;
-    if (displayBalance >= balance) setCountLatch(false);
-  }, [absorbPulse, balance, countLatch, displayBalance]);
+    onBusyRef.current?.(counting);
+  }, [counting]);
+
+  /**
+   * 加算は DOM 直書き（毎フレーム setState しない）。
+   * オーバーレイ金額と同じく、プロフィール全体の再描画を避ける。
+   */
+  useLayoutEffect(() => {
+    const el = valueRef.current;
+    if (!el) return;
+
+    if (!counting) {
+      displayRef.current = balance;
+      el.textContent = formatVaultBalance(balance);
+      return;
+    }
+
+    const start = displayRef.current;
+    const end = Math.max(0, Math.floor(balance));
+    if (end <= start) {
+      displayRef.current = end;
+      el.textContent = formatVaultBalance(end);
+      return;
+    }
+
+    let raf = 0;
+    let lastShown = -1;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - t0) / UNIT_EARN_VAULT_COUNT_MS);
+      const eased = 1 - (1 - t) ** 3;
+      const n = unitEarnCountDisplayValue(start, end, eased);
+      if (n !== lastShown) {
+        lastShown = n;
+        displayRef.current = n;
+        el.textContent = formatVaultBalance(n);
+      }
+      if (t < 1) {
+        raf = window.requestAnimationFrame(tick);
+      } else {
+        displayRef.current = end;
+        el.textContent = formatVaultBalance(end);
+        setCountLatch(false);
+      }
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [balance, counting]);
+
   const interactive = typeof onPress === "function";
   return (
     <motion.div
@@ -612,56 +664,54 @@ function ProfileUnitVault({
         <span className="profile-edit-kinetik-unit-vault__disc-inner">U</span>
       </span>
       <span
+        ref={valueRef}
         className={[
           nameOxanium.className,
           "profile-edit-kinetik-unit-vault__value",
         ].join(" ")}
-      >
-        {displayBalance.toLocaleString("en-US")}
-      </span>
+      />
     </motion.div>
   );
 }
 
-function getKinetikMetricCopy(isJa: boolean, opts?: { monthly?: boolean }) {
+function getKinetikMetricCopy(
+  isJa: boolean,
+  opts?: { monthly?: boolean; weekly?: boolean }
+) {
   const monthly = opts?.monthly === true;
-  return {
-    dayDeltaTitle: isJa ? "前日比" : "Day-over-day",
-    ptsUnit: "pts",
-    matchUnit: isJa ? "試合" : "matches",
-    winRateUnitHint: "%",
-    cumulativeUnitHint: monthly
+  const weekly = opts?.weekly === true;
+  const windowHint = weekly
+    ? isJa
+      ? "今週"
+      : "WK"
+    : monthly
       ? isJa
         ? "今月"
         : "MO"
       : isJa
         ? "累計"
-        : "CUM",
+        : "CUM";
+  const windowJa = weekly ? "今週" : monthly ? "今月" : "期間内";
+  const windowEn = weekly ? "this week" : monthly ? "this month" : "the period";
+  return {
+    dayDeltaTitle: isJa ? "前日比" : "Day-over-day",
+    ptsUnit: "pts",
+    matchUnit: isJa ? "試合" : "matches",
+    winRateUnitHint: "%",
+    cumulativeUnitHint: windowHint,
     metricsInfoAria: isJa ? "統計項目の説明" : "Stats metric help",
     winRateTooltip: isJa
       ? "確定試合の的中率。100% = 全試合的中。"
       : "Hit rate on settled picks. 100% = all picks correct.",
     totalPointsTooltip: isJa
-      ? monthly
-        ? "勝者的中・アップセット・ボーナス等を合算した今月の総合得点。"
-        : "勝者的中・アップセット・ボーナス等を合算した期間内の総合得点。"
-      : monthly
-        ? "Combined score from wins, upsets, and bonuses for this month."
-        : "Combined score from wins, upsets, and bonuses for the period.",
+      ? `勝者的中・アップセット・ボーナス等を合算した${windowJa}の総合得点。`
+      : `Combined score from wins, upsets, and bonuses for ${windowEn}.`,
     goalScorerTooltip: isJa
-      ? monthly
-        ? "最多得点者予想が的中した試合数。今月の合計。"
-        : "最多得点者予想が的中した試合数。期間内の累計。"
-      : monthly
-        ? "Correct top-scorer picks this month."
-        : "Correct top-scorer picks for the period.",
+      ? `最多得点者予想が的中した試合数。${windowJa}の合計。`
+      : `Correct top-scorer picks ${windowEn}.`,
     upsetTooltip: isJa
-      ? monthly
-        ? "アップセットが起きた試合で少数派を当てたときだけ加点。今月の合計。"
-        : "アップセットが起きた試合で少数派を当てたときだけ加点。期間内の累計。"
-      : monthly
-        ? "Bonus points when you picked the minority side on an upset. Month total."
-        : "Bonus points when you picked the minority side on an upset. Period total.",
+      ? `アップセットが起きた試合で少数派を当てたときだけ加点。${windowJa}の合計。`
+      : `Bonus points when you picked the minority side on an upset. ${weekly || monthly ? (weekly ? "Week" : "Month") : "Period"} total.`,
     shareProfile: isJa ? "プロフィールを共有" : "Share profile",
     shareCopied: isJa ? "コピー済" : "Copied",
     proMember: isJa ? "Pro 会員" : "Pro member",
@@ -763,6 +813,9 @@ type Props = {
   /** NBA: Playoffs / Season 切替 */
   metricsPeriod?: ProfileKinetikMetricsPeriod;
   onMetricsPeriodChange?: (period: ProfileKinetikMetricsPeriod) => void;
+  /** NBA: Week / Month 切替（SEASON・PLAYOFF 共通） */
+  metricsWindow?: ProfileKinetikWindow;
+  onMetricsWindowChange?: (window: ProfileKinetikWindow) => void;
   /** 累計プロフィール閲覧数（公開） */
   profileViewCount?: number | null;
   /** 保有 Unit（公開） */
@@ -795,21 +848,26 @@ export default function ProfileEditKinetikPanel({
   rankingLeague: _rankingLeague = "nba",
   visualEffects = "full",
   statsPending = false,
-  metricsPeriod,
-  onMetricsPeriodChange,
+  metricsPeriod: _metricsPeriod,
+  onMetricsPeriodChange: _onMetricsPeriodChange,
+  metricsWindow,
+  onMetricsWindowChange,
   profileViewCount = null,
   unitBalance = null,
 }: Props) {
   const router = useRouter();
   const isJa = language === "ja";
-  const isSeasonMetrics =
-    metricsPeriod === "season" && !!onMetricsPeriodChange;
-  const showNbaPeriodTabs =
-    metricsPeriod != null && !!onMetricsPeriodChange;
+  const showNbaWindowTabs =
+    metricsWindow != null && !!onMetricsWindowChange;
+  const isMonthlyWindow = metricsWindow === "monthly";
+  const isWeeklyWindow = metricsWindow === "weekly";
   const reduceUiMotion =
     useReducedMotion() === true || visualEffects === "lite";
   const planProBgAccentReady = true;
-  const metricCopy = getKinetikMetricCopy(isJa, { monthly: isSeasonMetrics });
+  const metricCopy = getKinetikMetricCopy(isJa, {
+    monthly: isMonthlyWindow,
+    weekly: isWeeklyWindow,
+  });
 
   /** 自分プロフィールのみ: 残高増分 → 中央カウント → 金庫へ加算 */
   const unitEarn = useUnitEarnOverlay({
@@ -817,12 +875,26 @@ export default function ProfileEditKinetikPanel({
     enabled: editable && unitBalance != null,
     storageKey: shareHandle?.trim() || "me",
   });
-  /** 獲得演出中は Pro 背景ループを止めて復帰直後の重さを避ける */
+  /** 金庫加算カウント中は背景ループを止め続ける（オーバーレイ退出後も） */
+  const [vaultSettling, setVaultSettling] = useState(false);
+  const onVaultCountBusyChange = useCallback((busy: boolean) => {
+    setVaultSettling(busy);
+  }, []);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (vaultSettling) root.classList.add("unit-earn-settling");
+    else root.classList.remove("unit-earn-settling");
+    return () => root.classList.remove("unit-earn-settling");
+  }, [vaultSettling]);
+  /**
+   * 獲得演出中も背景 animate は切らない。
+   * （切ると dismiss で入場アニメが再走し、プロフィール再ロードに見える）
+   * 負荷軽減は html.unit-earn-playing の animation-play-state: paused に任せる。
+   */
   const animatePlanProBg =
     isPro &&
     showProfilePlanProEffects(isPro) &&
-    useReducedMotion() !== true &&
-    unitEarn.active == null;
+    useReducedMotion() !== true;
   const metricsInfoMessage = buildKinetikMetricsInfoMessage(metricCopy, {
     isJa,
   });
@@ -914,7 +986,7 @@ export default function ProfileEditKinetikPanel({
     rankBadge,
   });
 
-  const metricsSectionTitle = metricsTitle ?? "NBA // SEASON STATS";
+  const metricsSectionTitle = metricsTitle ?? "NBA // 26-27";
 
   const dayDeltaTitle = metricCopy.dayDeltaTitle;
 
@@ -1102,24 +1174,24 @@ export default function ProfileEditKinetikPanel({
 
   const metricsContent = (
     <div>
-      {showNbaPeriodTabs ? (
+      {showNbaWindowTabs ? (
         <div className={periodTabWrapClass}>
           <CyberSlantedTabBar
             fill
-            aria-label={isJa ? "統計の期間" : "Stats period"}
+            aria-label={isJa ? "週次 / 月次" : "Week / Month"}
           >
             <CyberSlantedTab
               role="tab"
-              label="SEASON"
-              active={metricsPeriod === "season"}
-              onClick={() => onMetricsPeriodChange?.("season")}
+              label="WEEK"
+              active={metricsWindow === "weekly"}
+              onClick={() => onMetricsWindowChange?.("weekly")}
               compact
             />
             <CyberSlantedTab
               role="tab"
-              label="PLAYOFF"
-              active={metricsPeriod === "playoffs"}
-              onClick={() => onMetricsPeriodChange?.("playoffs")}
+              label="MONTH"
+              active={metricsWindow === "monthly"}
+              onClick={() => onMetricsWindowChange?.("monthly")}
               compact
             />
           </CyberSlantedTabBar>
@@ -1198,6 +1270,7 @@ export default function ProfileEditKinetikPanel({
         absorbPulse={unitEarn.active != null && unitEarn.absorbed}
         /** 中央演出中は裏の金庫カウントを止める（ヒット後だけ加算） */
         countUpEnabled={!unitEarn.active || unitEarn.absorbed}
+        onCountBusyChange={onVaultCountBusyChange}
       />
     ) : null;
 
@@ -1227,7 +1300,7 @@ export default function ProfileEditKinetikPanel({
             type="button"
             className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
             onClick={onToggleMetricsScope}
-            aria-label={isJa ? "前のスポーツ統計" : "Previous sport stats"}
+            aria-label={isJa ? "前の統計ボード" : "Previous stats board"}
           >
             <span
               className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
@@ -1238,7 +1311,11 @@ export default function ProfileEditKinetikPanel({
             type="button"
             className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--breath"
             onClick={onToggleMetricsScope}
-            aria-label={isJa ? "統計の種目を切り替え" : "Switch stats league"}
+            aria-label={
+              isJa
+                ? "SEASON / PLAYOFF を切り替え"
+                : "Switch Season / Playoff stats"
+            }
           >
             <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
               {metricsSectionTitle}
@@ -1248,7 +1325,7 @@ export default function ProfileEditKinetikPanel({
             type="button"
             className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
             onClick={onToggleMetricsScope}
-            aria-label={isJa ? "次のスポーツ統計" : "Next sport stats"}
+            aria-label={isJa ? "次の統計ボード" : "Next stats board"}
           >
             <span
               className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
@@ -1374,18 +1451,12 @@ export default function ProfileEditKinetikPanel({
           open
           amount={unitEarn.active.amount}
           label={unitEarn.active.label}
+          title={unitEarn.active.title}
+          subtitle={unitEarn.active.subtitle}
+          rank={unitEarn.active.rank}
           language={isJa ? "ja" : "en"}
           onAbsorb={unitEarn.markAbsorbed}
           onDone={unitEarn.dismiss}
-        />
-      ) : null}
-      {editable && unitBalance != null && !unitEarn.active ? (
-        <UnitEarnPlayButton
-          floating
-          language={isJa ? "ja" : "en"}
-          onPlay={() =>
-            unitEarn.play({ amount: 250, preview: true })
-          }
         />
       ) : null}
       </>
@@ -1573,18 +1644,12 @@ export default function ProfileEditKinetikPanel({
         open
         amount={unitEarn.active.amount}
         label={unitEarn.active.label}
+        title={unitEarn.active.title}
+        subtitle={unitEarn.active.subtitle}
+        rank={unitEarn.active.rank}
         language={isJa ? "ja" : "en"}
         onAbsorb={unitEarn.markAbsorbed}
         onDone={unitEarn.dismiss}
-      />
-    ) : null}
-    {editable && unitBalance != null && !unitEarn.active ? (
-      <UnitEarnPlayButton
-        floating
-        language={isJa ? "ja" : "en"}
-        onPlay={() =>
-          unitEarn.play({ amount: 250, preview: true })
-        }
       />
     ) : null}
     </>

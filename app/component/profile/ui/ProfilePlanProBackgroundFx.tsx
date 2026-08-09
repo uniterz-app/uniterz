@@ -35,9 +35,11 @@ import {
   getProfilePlanProLabSkinUrl,
 } from "@/lib/profile/profilePlanProLabPattern";
 import { isProfilePlanProWaveBgVariant } from "@/lib/profile/profilePlanProWaveBgVariants";
+import { PROFILE_UNITERZ_LOGO_SCATTER } from "@/lib/profile/profilePlanProUniterzLogoScatter";
 import {
   getProfilePlanProWaveHudUrl,
   getProfilePlanProWaveSkinUrl,
+  getProfilePlanProWaveUniterzLogoCssUrl,
 } from "@/lib/profile/profilePlanProWavePattern";
 import { isProfilePlanProFormBgVariant } from "@/lib/profile/profilePlanProFormBgVariants";
 import {
@@ -441,14 +443,48 @@ export default function ProfilePlanProBackgroundFx({
   }
 
   if (isProfilePlanProWaveBgVariant(variant)) {
+    const isUniterzLogo = variant === "wave-uniterz-logo";
+    const isMonoHex = variant === "wave-mono-hex";
+    const logoUrl = getProfilePlanProWaveUniterzLogoCssUrl();
     return (
       <div className={rootClass} aria-hidden>
-        <SparseEnterLayer
-          animate={animate}
-          delayMs={40}
-          className="profile-plan-pro-bg__wave-skin"
-          style={{ backgroundImage: getProfilePlanProWaveSkinUrl(variant) }}
-        />
+        {isUniterzLogo ? (
+          <SparseEnterLayer
+            animate={animate}
+            delayMs={40}
+            className="profile-plan-pro-bg__wave-skin profile-plan-pro-bg__wave-skin--uniterz-logo"
+          >
+            {PROFILE_UNITERZ_LOGO_SCATTER.map((mark) => (
+              <span
+                key={mark.id}
+                className="profile-plan-pro-bg__uniterz-mark"
+                style={{
+                  backgroundImage: logoUrl,
+                  width: `${mark.widthPct * 100}%`,
+                  left: `${mark.cxPct * 100}%`,
+                  top: `${mark.cyPct * 100}%`,
+                  opacity: mark.opacity,
+                  filter:
+                    mark.blurPx > 0 ? `blur(${mark.blurPx}px)` : undefined,
+                  transform: `translate(-50%, -50%) rotate(${mark.rotateDeg}deg)`,
+                }}
+              />
+            ))}
+          </SparseEnterLayer>
+        ) : isMonoHex ? (
+          <SparseEnterLayer
+            animate={animate}
+            delayMs={40}
+            className="profile-plan-pro-bg__wave-skin profile-plan-pro-bg__wave-skin--mono-hex"
+          />
+        ) : (
+          <SparseEnterLayer
+            animate={animate}
+            delayMs={40}
+            className="profile-plan-pro-bg__wave-skin"
+            style={{ backgroundImage: getProfilePlanProWaveSkinUrl(variant) }}
+          />
+        )}
         <SparseEnterLayer
           animate={animate}
           delayMs={180}
