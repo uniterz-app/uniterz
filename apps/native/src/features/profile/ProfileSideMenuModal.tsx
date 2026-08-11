@@ -75,6 +75,7 @@ type Props = {
     | "referralStampCelebratePreview"
     | "unitEarnCelebratePreview"
     | "careerFlipButtonPreview"
+    | "careerPlacementPreview"
     | "unitEarnModalDesignPreview"
     | "unitEarnOverlayAnimPreview"
     | "unitEarnOverlayFontPreview"
@@ -275,6 +276,7 @@ export default function ProfileSideMenuModal({
       | "referralStampCelebratePreview"
       | "unitEarnCelebratePreview"
       | "careerFlipButtonPreview"
+    | "careerPlacementPreview"
       | "unitEarnModalDesignPreview"
       | "unitEarnOverlayAnimPreview"
       | "unitEarnOverlayFontPreview"
@@ -664,6 +666,16 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           CAREER フリップ配置案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="view-column-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("careerPlacementPreview")
+                          }
+                        >
+                          CAREER 載せ場所案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="view-dashboard-outline"

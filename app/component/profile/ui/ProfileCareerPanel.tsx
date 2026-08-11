@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useReducedMotion } from "framer-motion";
 import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import CyberNumber from "@/app/component/ui/CyberNumber";
 import { jp, nameOxanium, nameRajdhani } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -18,10 +19,6 @@ import {
 } from "@/lib/profile/profileCareerStats";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_BG_DEFAULT } from "@/lib/profile/profilePlanProBgVariants";
-import {
-  getNbaKinetikScopeTitle,
-  type ProfileKinetikMetricsPeriod,
-} from "@/lib/profile/useNbaKinetikMonthlyStats";
 
 type Props = {
   language?: Language;
@@ -41,11 +38,6 @@ type Props = {
   className?: string;
   isPro?: boolean;
   planProBgVariant?: ProfilePlanProBgVariant;
-  /** SEASON / PLAYOFF 切替（face で表と同期） */
-  metricsPeriod?: ProfileKinetikMetricsPeriod;
-  onMetricsPeriodChange?: (period: ProfileKinetikMetricsPeriod) => void;
-  /** 期間タブ併記時のシーズンキー（見出し用） */
-  seasonKey?: string | null;
 };
 
 type CareerRow = {
@@ -53,6 +45,115 @@ type CareerRow = {
   label: string;
   value: string;
 };
+
+/** CAREER グリッドの数値 — CyberNumber で角張ったシアン表示 */
+function CareerStatValue({
+  rowKey,
+  fallback,
+  stats,
+}: {
+  rowKey: string;
+  fallback: string;
+  stats: ProfileCareerStats;
+}) {
+  if (fallback === "—") {
+    return (
+      <span
+        className={[
+          nameOxanium.className,
+          "text-[1.05rem] font-semibold tracking-wide text-cyan-300/35",
+        ].join(" ")}
+      >
+        —
+      </span>
+    );
+  }
+
+  if (rowKey === "bestSport") {
+    return (
+      <span
+        className={[
+          nameOxanium.className,
+          "text-[1.05rem] font-semibold tracking-[0.12em] text-cyan-100",
+        ].join(" ")}
+      >
+        {fallback}
+      </span>
+    );
+  }
+
+  if (rowKey === "predictions" && stats.predictions != null) {
+    return <CyberNumber value={stats.predictions} size={18} glowIntensity={0.55} />;
+  }
+  if (rowKey === "since" && stats.sinceDate != null) {
+    return (
+      <CyberNumber
+        value={stats.sinceDate}
+        size={15}
+        format={false}
+        glowIntensity={0.55}
+      />
+    );
+  }
+  if (rowKey === "allTimeRank" && stats.allTimeRank != null) {
+    return (
+      <CyberNumber
+        value={stats.allTimeRank}
+        prefix="#"
+        size={18}
+        glowIntensity={0.55}
+      />
+    );
+  }
+  if (rowKey === "bestMonthlyRank" && stats.bestMonthlyRank != null) {
+    return (
+      <CyberNumber
+        value={stats.bestMonthlyRank}
+        prefix="#"
+        size={18}
+        glowIntensity={0.55}
+      />
+    );
+  }
+  if (rowKey === "top10" && stats.top10Finishes != null) {
+    return (
+      <CyberNumber value={stats.top10Finishes} size={18} glowIntensity={0.55} />
+    );
+  }
+  if (rowKey === "units" && stats.totalUnitsEarned != null) {
+    const n = stats.totalUnitsEarned;
+    return (
+      <CyberNumber
+        value={Math.abs(n)}
+        cornerSign={n > 0 ? "+" : n < 0 ? "−" : ""}
+        size={18}
+        glowIntensity={0.55}
+      />
+    );
+  }
+  if (rowKey === "winRate" && stats.winRatePct != null) {
+    return (
+      <CyberNumber
+        value={stats.winRatePct.toFixed(1)}
+        format={false}
+        suffix="%"
+        size={18}
+        glowIntensity={0.55}
+      />
+    );
+  }
+
+  return (
+    <span
+      className={[
+        nameOxanium.className,
+        "text-[1.05rem] font-semibold tabular-nums tracking-wide text-cyan-100",
+      ].join(" ")}
+    >
+      {fallback}
+    </span>
+  );
+}
 
 function buildRows(
   stats: ProfileCareerStats,
@@ -76,7 +177,7 @@ function buildRows(
     {
       key: "since",
       label: labels.since,
-      value: stats.sinceYear != null ? String(stats.sinceYear) : "—",
+      value: stats.sinceDate ?? "—",
     },
     {
       key: "allTimeRank",
@@ -126,9 +227,6 @@ export default function ProfileCareerPanel({
   className = "",
   isPro = false,
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
-  metricsPeriod = "season",
-  onMetricsPeriodChange,
-  seasonKey = null,
 }: Props) {
   const msg = t(language);
   const isJa = language === "ja";
@@ -137,7 +235,8 @@ export default function ProfileCareerPanel({
   const lang: "ja" | "en" = isJa ? "ja" : "en";
   const reduceMotion = useReducedMotion() === true;
   const showProSkin = isPro && isFace;
-  const showPeriodSwitcher = isFace && !!onMetricsPeriodChange;
+  /** CAREER は通算（ALL）固定。SEASON/PLAYOFF 切替は表側のみ */
+  const allTimeScope = "ALL // TIME";
 
   const stats = useMemo(
     () =>
@@ -161,33 +260,19 @@ export default function ProfileCareerPanel({
     ]
   );
 
-  const scopeTitle = getNbaKinetikScopeTitle(
-    metricsPeriod,
-    seasonKey ?? undefined
-  );
-
-  const togglePeriod = () => {
-    onMetricsPeriodChange?.(
-      metricsPeriod === "season" ? "playoffs" : "season"
-    );
-  };
-
   const rows = useMemo(
     () =>
       buildRows(stats, {
         predictions: msg.profile.careerPredictions,
         since: msg.profile.careerSince,
-        allTimeRank:
-          metricsPeriod === "playoffs"
-            ? msg.profile.careerPlayoffRank
-            : msg.profile.careerSeasonRank,
+        allTimeRank: msg.profile.careerAllTimeRank,
         bestMonthlyRank: msg.profile.careerBestMonthlyRank,
         top10Finishes: msg.profile.careerTop10Finishes,
         totalUnitsEarned: msg.profile.careerTotalUnitsEarned,
         winRate: msg.profile.careerWinRate,
         bestSport: msg.profile.careerBestSport,
       }),
-    [stats, msg.profile, metricsPeriod]
+    [stats, msg.profile]
   );
 
   const body = (
@@ -230,63 +315,31 @@ export default function ProfileCareerPanel({
               />
             </>
           )}
-          {showPeriodSwitcher ? (
+          {isFace ? (
             <div
               className={[
                 "profile-edit-kinetik-metrics-scope-header",
                 "profile-edit-kinetik-metrics-scope-header--picker",
-                "profile-edit-kinetik-metrics-scope-header--toggle",
                 "mt-3",
                 showProSkin
                   ? "profile-edit-kinetik-metrics-scope-header--pro"
                   : "",
               ].join(" ")}
             >
-              <button
-                type="button"
-                className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
-                onClick={togglePeriod}
-                aria-label={isJa ? "前の統計ボード" : "Previous stats board"}
-              >
-                <span
-                  className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
-                  aria-hidden
-                />
-              </button>
-              <button
-                type="button"
-                className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--breath"
-                onClick={togglePeriod}
-                aria-label={
-                  isJa
-                    ? "SEASON / PLAYOFF を切り替え"
-                    : "Switch Season / Playoff"
-                }
-              >
+              <div className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--static">
                 <span
                   className={[
                     nameRajdhani.className,
                     "font-semibold tracking-[0.14em] text-white/95",
-                    isFace || isMobile ? "text-base" : "text-lg sm:text-xl",
+                    isMobile ? "text-base" : "text-lg sm:text-xl",
                     showProSkin
                       ? "drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
                       : "",
                   ].join(" ")}
                 >
-                  {scopeTitle}
+                  {allTimeScope}
                 </span>
-              </button>
-              <button
-                type="button"
-                className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
-                onClick={togglePeriod}
-                aria-label={isJa ? "次の統計ボード" : "Next stats board"}
-              >
-                <span
-                  className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
-                  aria-hidden
-                />
-              </button>
+              </div>
             </div>
           ) : null}
           {!isFace ? (
@@ -316,7 +369,7 @@ export default function ProfileCareerPanel({
               <div
                 key={row.key}
                 className={[
-                  "min-w-0 px-2.5 py-2",
+                  "min-w-0 px-2.5 py-2 text-center",
                   showProSkin
                     ? "border border-white/[0.08] bg-black/20"
                     : "border border-white/[0.06] bg-white/[0.03]",
@@ -330,13 +383,12 @@ export default function ProfileCareerPanel({
                 >
                   {row.label}
                 </dt>
-                <dd
-                  className={[
-                    nameOxanium.className,
-                    "mt-1 truncate text-[1.02rem] font-semibold tabular-nums tracking-wide text-white/90",
-                  ].join(" ")}
-                >
-                  {row.value}
+                <dd className="mt-1 flex min-w-0 justify-center truncate">
+                  <CareerStatValue
+                    rowKey={row.key}
+                    fallback={row.value}
+                    stats={stats}
+                  />
                 </dd>
               </div>
             ))}
@@ -380,40 +432,6 @@ export default function ProfileCareerPanel({
             )}
           </div>
 
-          {!isFace ? (
-            <div className="mt-4 flex flex-wrap items-center gap-1.5">
-              {stats.seasonOptions.map((opt) => {
-                const active = stats.seasonKey === opt;
-                const label =
-                  opt === "all-time" ? msg.profile.careerSeasonAllTime : opt;
-                return (
-                  <span
-                    key={opt}
-                    aria-current={active ? "true" : undefined}
-                    className={[
-                      nameRajdhani.className,
-                      "rounded-sm border px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em]",
-                      active
-                        ? "border-cyan-300/45 bg-cyan-400/15 text-cyan-50"
-                        : "border-white/10 bg-white/[0.03] text-white/35",
-                    ].join(" ")}
-                  >
-                    {label}
-                  </span>
-                );
-              })}
-              <span
-                className={[
-                  isJa ? jp.className : "",
-                  "ml-1 text-[10px] text-white/30",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {msg.profile.careerSeasonSoon}
-              </span>
-            </div>
-          ) : null}
         </>
       )}
     </div>

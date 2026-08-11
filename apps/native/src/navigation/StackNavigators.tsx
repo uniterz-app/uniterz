@@ -429,6 +429,15 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="CareerPlacementPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .CareerPlacementPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="UnitEarnModalDesignPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

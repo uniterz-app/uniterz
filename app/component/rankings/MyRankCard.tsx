@@ -336,16 +336,17 @@ function MetricHudInline({
       {dayDeltaNode ? (
         <div
           className="leading-none"
-          style={{ fontSize: dayDeltaSize, marginBottom: -4, lineHeight: 1 }}
+          style={{ fontSize: dayDeltaSize, marginBottom: 2, lineHeight: 1.1 }}
         >
           {dayDeltaNode}
         </div>
       ) : null}
-      <div className="flex items-baseline justify-end gap-1.5">
+      <div className="flex items-baseline justify-end gap-1.5 overflow-visible py-0.5">
         <span
           className={[
             summaryMetricNumClass,
-            "leading-none tabular-nums",
+            /** Alfa Slab は leading-none だと上が欠ける */
+            "leading-[1.28] tabular-nums",
           ].join(" ")}
           style={{
             fontSize: statValueSize,

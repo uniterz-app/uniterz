@@ -1,6 +1,6 @@
 /**
- * Web `ProfileKinetikHero` 相当 — Season/Playoff × Week/Month。
- * 表カードは API window、CAREER は cumulative（両ボード 1 read）。
+ * Web `ProfileKinetikHero` 相当 — 表は Season/Playoff × Week/Month。
+ * CAREER 裏面は通算（ALL）summary 固定。
  */
 import { useEffect, useMemo, useState } from "react";
 import type { ViewStyle } from "react-native";
@@ -16,15 +16,10 @@ import {
   type ProfileKinetikWindow,
 } from "../../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import { preferredNbaKinetikPeriod } from "../../../../../../lib/rankings/nbaSeason";
-import { profileOverviewSeasonKey } from "../../../../../../lib/profile/profileOverviewSeason";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "../profileApi";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../../lib/profile/profilePlanProBgVariants";
-import {
-  prefetchNbaKinetikBothPeriodsFirestore,
-  type NbaProfileCardPhaseFirestore,
-} from "../fetchNbaProfileCardPhaseFirestore";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
 import ProfileKinetikFlipShellNative from "./ProfileKinetikFlipShellNative";
@@ -89,10 +84,6 @@ function toRanksInput(summaryRanks?: ProfileSummaryRanksNative | null) {
   };
 }
 
-type PeriodBundle = Partial<
-  Record<ProfileKinetikMetricsPeriod, NbaProfileCardPhaseFirestore>
->;
-
 export default function ProfileKinetikHeroNative({
   displayName,
   handle,
@@ -124,33 +115,7 @@ export default function ProfileKinetikHeroNative({
     useState<ProfileKinetikMetricsPeriod>(() => preferredPeriod);
   const [metricsWindow, setMetricsWindow] =
     useState<ProfileKinetikWindow>("monthly");
-  const [byPeriod, setByPeriod] = useState<PeriodBundle>({});
-  const [fsReady, setFsReady] = useState(false);
   const apiBase = useMemo(() => getUniterzApiBaseUrl() ?? undefined, []);
-
-  useEffect(() => {
-    const uid = targetUid?.trim() ?? "";
-    if (!uid) {
-      setByPeriod({});
-      setFsReady(true);
-      return;
-    }
-    let alive = true;
-    setFsReady(false);
-    void prefetchNbaKinetikBothPeriodsFirestore(uid).then((both) => {
-      if (!alive) return;
-      if (both) {
-        setByPeriod({
-          season: both.season,
-          playoffs: both.playoffs,
-        });
-      }
-      setFsReady(true);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [targetUid]);
 
   const { data: windowData, loading: windowLoading } = useNbaKinetikWindowStats(
     targetUid,
@@ -209,25 +174,6 @@ export default function ProfileKinetikHeroNative({
     ]
   );
 
-  const careerPhase: NbaProfileCardPhaseFirestore | null =
-    byPeriod[metricsPeriod] ??
-    (metricsPeriod === preferredPeriod && summary
-      ? {
-          summary,
-          summaryRanks: {
-            totalPrecision: summaryRanks?.totalPrecision ?? null,
-            totalUpset: summaryRanks?.totalUpset ?? null,
-            totalPoints: summaryRanks?.totalPoints ?? null,
-            totalPointsDenominator:
-              summaryRanks?.totalPointsDenominator ?? null,
-            rankDeltaPlaces: summaryRanks?.rankDeltaPlaces ?? null,
-          },
-          profileCharts: null,
-          chartsPath: "missing" as const,
-          overviewSeasonKey: profileOverviewSeasonKey(),
-        }
-      : null);
-
   const mapped = useMemo(() => {
     return mapProfileToKinetikPanel({
       profile: profileBase,
@@ -243,8 +189,8 @@ export default function ProfileKinetikHeroNative({
   }, [windowData, profileBase, profileStatsContext, winStreak]);
 
   const statsPending = !windowData && (windowLoading || statsLoading);
-  const careerPending =
-    !careerPhase && (!fsReady || (metricsPeriod === preferredPeriod && statsLoading));
+  /** CAREER は通算 summary（ALL）固定。表の期間切替とは独立 */
+  const careerPending = statsLoading && summary == null;
 
   return (
     <ProfileKinetikFlipShellNative
@@ -295,32 +241,17 @@ export default function ProfileKinetikHeroNative({
         <ProfileCareerPanelNative
           language={language}
           variant="face"
-          posts={
-            careerPhase?.summary?.posts ??
-            (careerPending ? null : summary?.posts ?? null)
-          }
-          winRate={
-            careerPhase?.summary?.winRate ??
-            (careerPending ? null : summary?.winRate ?? null)
-          }
-          totalPointsRank={
-            careerPhase?.summaryRanks?.totalPoints ??
-            summaryRanks?.totalPoints ??
-            null
-          }
+          posts={summary?.posts ?? null}
+          winRate={summary?.winRate ?? null}
+          totalPointsRank={summaryRanks?.totalPoints ?? null}
           totalPointsRankDenominator={
-            careerPhase?.summaryRanks?.totalPointsDenominator ??
-            summaryRanks?.totalPointsDenominator ??
-            null
+            summaryRanks?.totalPointsDenominator ?? null
           }
           memberSinceMs={memberSinceMs}
           badges={badges}
-          loading={careerPending}
+          loading={summary == null && careerPending}
           isPro={plan === "pro"}
           planProBgVariant={planProBgVariant}
-          metricsPeriod={metricsPeriod}
-          onMetricsPeriodChange={setMetricsPeriod}
-          seasonKey={null}
         />
       }
     />

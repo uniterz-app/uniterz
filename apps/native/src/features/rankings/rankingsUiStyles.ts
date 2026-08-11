@@ -299,7 +299,8 @@ export const rankingsUiStyles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(0,0,0,0.28)",
     borderRadius: 4,
-    overflow: "hidden",
+    /** 得点 Alfa Slab の上端を切らない */
+    overflow: "visible",
   },
   myRankProMidColWide: {
     flex: 1.6,
@@ -470,6 +471,8 @@ export const rankingsUiStyles = StyleSheet.create({
     flexShrink: 0,
     alignItems: "flex-end",
     gap: 0,
+    overflow: "visible",
+    paddingTop: 2,
   },
   myRankMetaBesideStats: {
     alignItems: "flex-end",
@@ -477,9 +480,10 @@ export const rankingsUiStyles = StyleSheet.create({
   },
   myRankHudValueRow: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "flex-end",
     gap: 6,
+    overflow: "visible",
   },
   myRankHudDeltaRight: {
     textAlign: "right",
@@ -494,13 +498,13 @@ export const rankingsUiStyles = StyleSheet.create({
   myRankHudValue: {
     marginTop: 4,
     fontSize: 22,
-    lineHeight: 24,
+    lineHeight: 28,
     fontWeight: "700",
     fontFamily: RANKING_SCORE_FONT,
   },
   myRankHudValueLarge: {
     fontSize: 24,
-    lineHeight: 26,
+    lineHeight: 32,
     fontWeight: "700",
     fontFamily: RANKING_SCORE_FONT,
   },
@@ -528,10 +532,10 @@ export const rankingsUiStyles = StyleSheet.create({
   },
   myRankHudDeltaAbove: {
     fontSize: 10,
-    lineHeight: 10,
+    lineHeight: 12,
     fontWeight: "800",
     fontFamily: METRIC_FONT,
-    marginBottom: -4,
+    marginBottom: 0,
   },
   myRankMetaStrip: {
     alignSelf: "stretch",

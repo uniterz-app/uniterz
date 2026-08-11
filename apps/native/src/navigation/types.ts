@@ -125,6 +125,8 @@ export type ProfileStackParamList = {
   UnitEarnCelebratePreview: undefined;
   /** __DEV__ CAREER フリップボタン見た目案 */
   CareerFlipButtonPreview: undefined;
+  /** __DEV__ CAREER 情報の載せ場所案 */
+  CareerPlacementPreview: undefined;
   /** __DEV__ Unit 獲得モーダル見た目案 A〜D */
   UnitEarnModalDesignPreview: undefined;
   /** __DEV__ Unit 獲得オーバーレイ入場アニメ案 */

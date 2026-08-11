@@ -20,9 +20,7 @@ import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDe
 import type { ProfileVisualEffects } from "@/lib/profile/profileVisualEffects";
 import {
   getNbaKinetikScopeTitle,
-  prefetchNbaKinetikPeriodStats,
   prefetchNbaKinetikWindowStats,
-  useNbaKinetikPeriodStats,
   useNbaKinetikWindowStats,
   type ProfileKinetikMetricsPeriod,
   type ProfileKinetikWindow,
@@ -72,6 +70,7 @@ export default function ProfileKinetikHero({
   summaryRanks,
   profileStatsContext,
   winStreak,
+  statsLoading = false,
   isMe = false,
   onOpenMenu,
   menuUnreadCount = 0,
@@ -94,19 +93,11 @@ export default function ProfileKinetikHero({
     true
   );
 
-  /** CAREER: Season / Playoffs 累計 */
-  const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
-    targetUid,
-    metricsPeriod,
-    true
-  );
-
   useEffect(() => {
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
     const otherWindow: ProfileKinetikWindow =
       metricsWindow === "monthly" ? "weekly" : "monthly";
-    prefetchNbaKinetikPeriodStats(targetUid, otherBoard);
     prefetchNbaKinetikWindowStats(targetUid, metricsPeriod, otherWindow);
     prefetchNbaKinetikWindowStats(targetUid, otherBoard, metricsWindow);
   }, [targetUid, metricsPeriod, metricsWindow]);
@@ -154,7 +145,8 @@ export default function ProfileKinetikHero({
   const kinetikLanguage = toKinetikPanelLanguage(language);
 
   const statsPending = windowLoading && !windowData;
-  const careerPending = periodLoading && !periodData;
+  /** CAREER は通算 summary（ALL）固定 */
+  const careerPending = Boolean(statsLoading) && summary == null;
 
   return (
     <div
@@ -209,32 +201,17 @@ export default function ProfileKinetikHero({
             language={language}
             layout={layout}
             variant="face"
-            posts={
-              periodData?.summary.posts ??
-              (careerPending ? null : summary?.posts ?? null)
-            }
-            winRate={
-              periodData?.summary.winRate ??
-              (careerPending ? null : summary?.winRate ?? null)
-            }
-            totalPointsRank={
-              periodData?.summaryRanks.totalPoints ??
-              summaryRanks?.totalPoints ??
-              null
-            }
+            posts={summary?.posts ?? null}
+            winRate={summary?.winRate ?? null}
+            totalPointsRank={summaryRanks?.totalPoints ?? null}
             totalPointsRankDenominator={
-              periodData?.summaryRanks.totalPointsDenominator ??
-              summaryRanks?.totalPointsDenominator ??
-              null
+              summaryRanks?.totalPointsDenominator ?? null
             }
             memberSinceMs={profile.memberSinceMs}
             badges={badges}
-            loading={careerPending}
+            loading={summary == null && careerPending}
             isPro={profile.plan === "pro"}
             planProBgVariant={profile.planProBgVariant}
-            metricsPeriod={metricsPeriod}
-            onMetricsPeriodChange={setMetricsPeriod}
-            seasonKey={periodData?.seasonKey ?? null}
           />
         }
       />

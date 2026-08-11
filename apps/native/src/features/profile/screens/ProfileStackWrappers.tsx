@@ -18,6 +18,7 @@ import ProSkinUnlockPreviewScreenNative from "../mobileScreens/ProSkinUnlockPrev
 import ReferralStampCelebratePreviewScreenNative from "../mobileScreens/ReferralStampCelebratePreviewScreenNative";
 import UnitEarnCelebratePreviewScreenNative from "../mobileScreens/UnitEarnCelebratePreviewScreenNative";
 import CareerFlipButtonPreviewScreenNative from "../mobileScreens/CareerFlipButtonPreviewScreenNative";
+import CareerPlacementPreviewScreenNative from "../mobileScreens/CareerPlacementPreviewScreenNative";
 import UnitEarnModalDesignPreviewScreenNative from "../mobileScreens/UnitEarnModalDesignPreviewScreenNative";
 import UnitEarnOverlayAnimPreviewScreenNative from "../mobileScreens/UnitEarnOverlayAnimPreviewScreenNative";
 import UnitEarnOverlayFontPreviewScreenNative from "../mobileScreens/UnitEarnOverlayFontPreviewScreenNative";
@@ -222,6 +223,19 @@ export function CareerFlipButtonPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <CareerFlipButtonPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function CareerPlacementPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <CareerPlacementPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />

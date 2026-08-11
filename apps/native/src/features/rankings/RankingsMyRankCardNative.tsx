@@ -344,7 +344,8 @@ export function MyRankCardNative({
                             styles.myRankHudValueLarge,
                             {
                               fontSize: 26,
-                              lineHeight: 28,
+                              /** Alfa Slab は ascender が大きく 1.0〜1.1 だと上が欠ける */
+                              lineHeight: 34,
                               color:
                                 loading || statsPending
                                   ? "rgba(255,255,255,0.92)"

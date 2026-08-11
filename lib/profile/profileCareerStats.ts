@@ -18,6 +18,8 @@ export type ProfileCareerStats = {
   predictions: number | null;
   /** 参加年 */
   sinceYear: number | null;
+  /** 参加日 YYYY/MM/DD（表示用） */
+  sinceDate: string | null;
   /** 総合順位（現状はシーズン累計の近似） */
   allTimeRank: number | null;
   allTimeRankDenominator: number | null;
@@ -122,6 +124,19 @@ export function profileCareerSinceYear(
   return d.getFullYear();
 }
 
+/** CAREER SINCE 表示用 — 例: 2025/12/09 */
+export function formatCareerSinceDate(
+  memberSinceMs: number | null | undefined
+): string | null {
+  if (memberSinceMs == null || !Number.isFinite(memberSinceMs)) return null;
+  const d = new Date(memberSinceMs);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}/${m}/${day}`;
+}
+
 export function buildProfileCareerStats(input: {
   language: "ja" | "en";
   posts?: number | null;
@@ -160,6 +175,7 @@ export function buildProfileCareerStats(input: {
   return {
     predictions: posts,
     sinceYear: profileCareerSinceYear(input.memberSinceMs),
+    sinceDate: formatCareerSinceDate(input.memberSinceMs),
     allTimeRank,
     allTimeRankDenominator,
     bestMonthlyRank: null,

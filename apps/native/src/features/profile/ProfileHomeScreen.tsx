@@ -1267,6 +1267,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("UnitEarnCelebratePreview");
         else if (page === "careerFlipButtonPreview" && __DEV__)
           navigation.navigate("CareerFlipButtonPreview");
+        else if (page === "careerPlacementPreview" && __DEV__)
+          navigation.navigate("CareerPlacementPreview");
         else if (page === "unitEarnModalDesignPreview" && __DEV__)
           navigation.navigate("UnitEarnModalDesignPreview");
         else if (page === "unitEarnOverlayAnimPreview" && __DEV__)

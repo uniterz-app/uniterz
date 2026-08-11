@@ -3,7 +3,7 @@
  * face + Pro のときは表カードと同じ Pro スキン背景を載せる。
  */
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useReducedMotion } from "react-native-reanimated";
 import {
@@ -13,13 +13,10 @@ import {
   formatCareerUnitsEarned,
   formatCareerWinRate,
   type ProfileCareerBadgeLike,
+  type ProfileCareerStats,
 } from "../../../../../lib/profile/profileCareerStats";
 import type { ProfilePlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariants";
 import { PROFILE_PLAN_PRO_BG_DEFAULT } from "../../../../../lib/profile/profilePlanProBgVariants";
-import {
-  getNbaKinetikScopeTitle,
-  type ProfileKinetikMetricsPeriod,
-} from "../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import ProfilePlanProBackgroundNative from "./kinetik/ProfilePlanProBackgroundNative";
 import {
   KINETIK_FLIP_EAR,
@@ -32,9 +29,108 @@ import {
   profileOverviewChartSubtitleStyle,
   profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
+import CyberNumberNative from "../../ui/CyberNumberNative";
 
 const RAJDHANI = "Rajdhani_600SemiBold";
 const OXANIUM = "Oxanium_700Bold";
+
+type CareerRow = { key: string; label: string; value: string };
+
+/** CAREER グリッドの数値 — CyberNumber で角張ったシアン表示 */
+function CareerStatValueNative({
+  rowKey,
+  fallback,
+  stats,
+}: {
+  rowKey: string;
+  fallback: string;
+  stats: ProfileCareerStats;
+}) {
+  if (fallback === "—") {
+    return <Text style={styles.valueEmpty}>—</Text>;
+  }
+
+  if (rowKey === "bestSport") {
+    return (
+      <Text style={styles.valueSport} numberOfLines={1}>
+        {fallback}
+      </Text>
+    );
+  }
+
+  if (rowKey === "predictions" && stats.predictions != null) {
+    return (
+      <CyberNumberNative value={stats.predictions} size={18} glowIntensity={0.5} />
+    );
+  }
+  if (rowKey === "since" && stats.sinceDate != null) {
+    return (
+      <CyberNumberNative
+        value={stats.sinceDate}
+        size={15}
+        format={false}
+        glowIntensity={0.5}
+      />
+    );
+  }
+  if (rowKey === "allTimeRank" && stats.allTimeRank != null) {
+    return (
+      <CyberNumberNative
+        value={stats.allTimeRank}
+        prefix="#"
+        size={18}
+        glowIntensity={0.5}
+      />
+    );
+  }
+  if (rowKey === "bestMonthlyRank" && stats.bestMonthlyRank != null) {
+    return (
+      <CyberNumberNative
+        value={stats.bestMonthlyRank}
+        prefix="#"
+        size={18}
+        glowIntensity={0.5}
+      />
+    );
+  }
+  if (rowKey === "top10" && stats.top10Finishes != null) {
+    return (
+      <CyberNumberNative
+        value={stats.top10Finishes}
+        size={18}
+        glowIntensity={0.5}
+      />
+    );
+  }
+  if (rowKey === "units" && stats.totalUnitsEarned != null) {
+    const n = stats.totalUnitsEarned;
+    return (
+      <CyberNumberNative
+        value={Math.abs(n)}
+        cornerSign={n > 0 ? "+" : n < 0 ? "−" : ""}
+        size={18}
+        glowIntensity={0.5}
+      />
+    );
+  }
+  if (rowKey === "winRate" && stats.winRatePct != null) {
+    return (
+      <CyberNumberNative
+        value={stats.winRatePct.toFixed(1)}
+        format={false}
+        suffix="%"
+        size={18}
+        glowIntensity={0.5}
+      />
+    );
+  }
+
+  return (
+    <Text style={styles.value} numberOfLines={1}>
+      {fallback}
+    </Text>
+  );
+}
 
 type Props = {
   language: "ja" | "en";
@@ -49,12 +145,7 @@ type Props = {
   variant?: "section" | "face";
   isPro?: boolean;
   planProBgVariant?: ProfilePlanProBgVariant;
-  metricsPeriod?: ProfileKinetikMetricsPeriod;
-  onMetricsPeriodChange?: (period: ProfileKinetikMetricsPeriod) => void;
-  seasonKey?: string | null;
 };
-
-type CareerRow = { key: string; label: string; value: string };
 
 export default function ProfileCareerPanelNative({
   language,
@@ -68,14 +159,11 @@ export default function ProfileCareerPanelNative({
   variant = "section",
   isPro = false,
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
-  metricsPeriod = "season",
-  onMetricsPeriodChange,
-  seasonKey = null,
 }: Props) {
   const isJa = language === "ja";
   const isFace = variant === "face";
   const showProSkin = isPro && isFace;
-  const showPeriodSwitcher = isFace && !!onMetricsPeriodChange;
+  /** CAREER は通算（ALL）固定。SEASON/PLAYOFF 切替は表側のみ */
   const reduceMotion = useReducedMotion() === true;
   const flipEar = useProfileKinetikFlipEar();
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
@@ -89,37 +177,33 @@ export default function ProfileCareerPanelNative({
         ? {
             title: "CAREER",
             sheetTitle: "CAREER // SHEET",
+            allTimeScope: "ALL // TIME",
             desc: "予想者としての履歴書。長期成績は信頼の証明になる。",
             predictions: "Predictions",
             since: "Since",
-            seasonRank: "Season Rank",
-            playoffRank: "Playoff Rank",
+            allTimeRank: "All-Time Rank",
             bestMonthlyRank: "Best Monthly Rank",
             top10Finishes: "Top 10 Finishes",
             totalUnitsEarned: "Total Units Earned",
             winRate: "Win Rate",
             bestSport: "Best Sport",
             awards: "Awards",
-            seasonAllTime: "All-Time",
-            seasonSoon: "シーズン切替は準備中",
             dossier: "PREDICTOR DOSSIER",
           }
         : {
             title: "CAREER",
             sheetTitle: "CAREER // SHEET",
+            allTimeScope: "ALL // TIME",
             desc: "Your résumé as a predictor. Long-term records build trust.",
             predictions: "Predictions",
             since: "Since",
-            seasonRank: "Season Rank",
-            playoffRank: "Playoff Rank",
+            allTimeRank: "All-Time Rank",
             bestMonthlyRank: "Best Monthly Rank",
             top10Finishes: "Top 10 Finishes",
             totalUnitsEarned: "Total Units Earned",
             winRate: "Win Rate",
             bestSport: "Best Sport",
             awards: "Awards",
-            seasonAllTime: "All-Time",
-            seasonSoon: "Season switch coming soon",
             dossier: "PREDICTOR DOSSIER",
           },
     [isJa]
@@ -147,18 +231,7 @@ export default function ProfileCareerPanelNative({
     ]
   );
 
-  const scopeTitle = getNbaKinetikScopeTitle(
-    metricsPeriod,
-    seasonKey ?? undefined
-  );
-  const rankLabel =
-    metricsPeriod === "playoffs" ? copy.playoffRank : copy.seasonRank;
-
-  const togglePeriod = () => {
-    onMetricsPeriodChange?.(
-      metricsPeriod === "season" ? "playoffs" : "season"
-    );
-  };
+  const rankLabel = copy.allTimeRank;
 
   const rows: CareerRow[] = useMemo(
     () => [
@@ -170,11 +243,11 @@ export default function ProfileCareerPanelNative({
       {
         key: "since",
         label: copy.since,
-        value: stats.sinceYear != null ? String(stats.sinceYear) : "—",
+        value: stats.sinceDate ?? "—",
       },
       {
         key: "allTimeRank",
-        label: showPeriodSwitcher ? rankLabel : copy.seasonRank,
+        label: rankLabel,
         value: formatCareerRank(stats.allTimeRank),
       },
       {
@@ -203,7 +276,7 @@ export default function ProfileCareerPanelNative({
         value: stats.bestSport ?? "—",
       },
     ],
-    [copy, stats, showPeriodSwitcher, rankLabel]
+    [copy, stats, rankLabel]
   );
 
   const content = (
@@ -230,31 +303,9 @@ export default function ProfileCareerPanelNative({
           />
         </>
       )}
-      {showPeriodSwitcher ? (
+      {isFace ? (
         <View style={styles.scopeHeader}>
-          <Pressable
-            style={[styles.scopeNavBtn, styles.scopeNavBtnLeft]}
-            onPress={togglePeriod}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={isJa ? "前の統計ボード" : "Previous stats board"}
-          >
-            <View
-              style={[
-                styles.scopeArrow,
-                styles.scopeArrowLeft,
-                showProSkin ? styles.scopeArrowPro : null,
-              ]}
-            />
-          </Pressable>
-          <Pressable
-            style={styles.scopeTitlePress}
-            onPress={togglePeriod}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isJa ? "SEASON / PLAYOFF を切り替え" : "Switch Season / Playoff"
-            }
-          >
+          <View style={styles.scopeTitlePress}>
             <Text
               style={[
                 styles.scopeTitleText,
@@ -263,24 +314,9 @@ export default function ProfileCareerPanelNative({
               ]}
               numberOfLines={1}
             >
-              {scopeTitle}
+              {copy.allTimeScope}
             </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.scopeNavBtn, styles.scopeNavBtnRight]}
-            onPress={togglePeriod}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={isJa ? "次の統計ボード" : "Next stats board"}
-          >
-            <View
-              style={[
-                styles.scopeArrow,
-                styles.scopeArrowRight,
-                showProSkin ? styles.scopeArrowPro : null,
-              ]}
-            />
-          </Pressable>
+          </View>
         </View>
       ) : null}
       {!isFace ? (
@@ -305,12 +341,13 @@ export default function ProfileCareerPanelNative({
                 style={[styles.cell, showProSkin ? styles.cellPro : null]}
               >
                 <Text style={styles.label}>{row.label}</Text>
-                <Text
-                  style={[styles.value, showProSkin ? styles.valuePro : null]}
-                  numberOfLines={1}
-                >
-                  {row.value}
-                </Text>
+                <View style={styles.valueWrap}>
+                  <CareerStatValueNative
+                    rowKey={row.key}
+                    fallback={row.value}
+                    stats={stats}
+                  />
+                </View>
               </View>
             ))}
           </View>
@@ -337,33 +374,6 @@ export default function ProfileCareerPanelNative({
             </View>
           )}
 
-          {!isFace ? (
-            <View style={styles.seasonRow}>
-              {stats.seasonOptions.map((opt) => {
-                const active = stats.seasonKey === opt;
-                const label = opt === "all-time" ? copy.seasonAllTime : opt;
-                return (
-                  <View
-                    key={opt}
-                    style={[
-                      styles.seasonPill,
-                      active ? styles.seasonPillActive : null,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.seasonPillText,
-                        active ? styles.seasonPillTextActive : null,
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </View>
-                );
-              })}
-              <Text style={styles.seasonSoon}>{copy.seasonSoon}</Text>
-            </View>
-          ) : null}
         </>
       )}
     </>
@@ -587,6 +597,7 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    alignItems: "center",
   },
   cellPro: {
     borderColor: "rgba(255,255,255,0.08)",
@@ -598,13 +609,36 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.4)",
+    textAlign: "center",
   },
   value: {
     marginTop: 4,
     fontFamily: OXANIUM,
     fontSize: 16,
     letterSpacing: 0.4,
-    color: "rgba(255,255,255,0.9)",
+    color: "rgba(200,247,255,0.95)",
+    textAlign: "center",
+  },
+  valueWrap: {
+    marginTop: 4,
+    minHeight: 24,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  valueEmpty: {
+    fontFamily: OXANIUM,
+    fontSize: 17,
+    letterSpacing: 1,
+    color: "rgba(34,211,238,0.32)",
+    textAlign: "center",
+  },
+  valueSport: {
+    fontFamily: OXANIUM,
+    fontSize: 16,
+    letterSpacing: 1.2,
+    color: "rgba(200,247,255,0.95)",
+    textAlign: "center",
   },
   valuePro: {
     textShadowRadius: 0,
@@ -642,38 +676,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.4,
     color: "rgba(255,255,255,0.8)",
-  },
-  seasonRow: {
-    marginTop: 14,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 6,
-  },
-  seasonPill: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderRadius: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  seasonPillActive: {
-    borderColor: "rgba(103,232,249,0.45)",
-    backgroundColor: "rgba(34,211,238,0.15)",
-  },
-  seasonPillText: {
-    fontFamily: RAJDHANI,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    color: "rgba(255,255,255,0.35)",
-  },
-  seasonPillTextActive: {
-    color: "rgba(236,254,255,0.95)",
-  },
-  seasonSoon: {
-    marginLeft: 4,
-    fontSize: 10,
-    color: "rgba(255,255,255,0.3)",
   },
 });
