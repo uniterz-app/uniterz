@@ -85,8 +85,23 @@ export async function grantGroupBattleUnits(input: {
         );
         return true;
       });
-      if (did) granted += 1;
-      else skipped += 1;
+      if (did) {
+        granted += 1;
+        try {
+          const { syncUserCareerGroupBattleRank, syncUserCareerUnitsEarned } =
+            await import("../profile/syncUserCareer");
+          await syncUserCareerUnitsEarned(member.uid, amount);
+          await syncUserCareerGroupBattleRank({
+            uid: member.uid,
+            battleId: input.battleId,
+            period: input.period,
+            label: input.label,
+            rank: row.rank,
+          });
+        } catch (err) {
+          console.warn("[grantGroupBattleUnits] career sync failed", err);
+        }
+      } else skipped += 1;
     }
   }
 

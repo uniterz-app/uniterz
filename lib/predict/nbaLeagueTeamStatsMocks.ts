@@ -67,6 +67,14 @@ export type NbaLeagueTeamStatMetricDef = {
 export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[] =
   [
     {
+      id: "winPct",
+      label: "Win %",
+      short: "W%",
+      higherIsBetter: true,
+      hintJa: "勝率。結果そのものの順位。",
+      hintEn: "Win percentage. Standings outcome.",
+    },
+    {
       id: "netrtg",
       label: "Net Rating",
       short: "NET",
@@ -97,14 +105,6 @@ export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[]
       higherIsBetter: true,
       hintJa: "1 試合あたりの possessions 数。高いほどテンポが速い。",
       hintEn: "Possessions per game. Higher means faster pace.",
-    },
-    {
-      id: "winPct",
-      label: "Win %",
-      short: "W%",
-      higherIsBetter: true,
-      hintJa: "勝率。結果そのものの順位。",
-      hintEn: "Win percentage. Standings outcome.",
     },
     {
       id: "diff",

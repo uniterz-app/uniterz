@@ -20,12 +20,14 @@ import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDe
 import type { ProfileVisualEffects } from "@/lib/profile/profileVisualEffects";
 import {
   getNbaKinetikScopeTitle,
+  prefetchNbaKinetikPeriodStats,
   prefetchNbaKinetikWindowStats,
   useNbaKinetikWindowStats,
   type ProfileKinetikMetricsPeriod,
   type ProfileKinetikWindow,
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
 import { preferredNbaKinetikPeriod } from "@/lib/rankings/nbaSeason";
+import { useUserCareer } from "@/lib/profile/useUserCareer";
 
 type Props = {
   layout: "web" | "mobile";
@@ -70,7 +72,6 @@ export default function ProfileKinetikHero({
   summaryRanks,
   profileStatsContext,
   winStreak,
-  statsLoading = false,
   isMe = false,
   onOpenMenu,
   menuUnreadCount = 0,
@@ -93,11 +94,16 @@ export default function ProfileKinetikHero({
     true
   );
 
+  const { career, loading: careerDocLoading } = useUserCareer(targetUid, {
+    enabled: true,
+  });
+
   useEffect(() => {
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
     const otherWindow: ProfileKinetikWindow =
       metricsWindow === "monthly" ? "weekly" : "monthly";
+    prefetchNbaKinetikPeriodStats(targetUid, otherBoard);
     prefetchNbaKinetikWindowStats(targetUid, metricsPeriod, otherWindow);
     prefetchNbaKinetikWindowStats(targetUid, otherBoard, metricsWindow);
   }, [targetUid, metricsPeriod, metricsWindow]);
@@ -145,8 +151,7 @@ export default function ProfileKinetikHero({
   const kinetikLanguage = toKinetikPanelLanguage(language);
 
   const statsPending = windowLoading && !windowData;
-  /** CAREER は通算 summary（ALL）固定 */
-  const careerPending = Boolean(statsLoading) && summary == null;
+  const careerPending = careerDocLoading && !career;
 
   return (
     <div
@@ -201,15 +206,9 @@ export default function ProfileKinetikHero({
             language={language}
             layout={layout}
             variant="face"
-            posts={summary?.posts ?? null}
-            winRate={summary?.winRate ?? null}
-            totalPointsRank={summaryRanks?.totalPoints ?? null}
-            totalPointsRankDenominator={
-              summaryRanks?.totalPointsDenominator ?? null
-            }
-            memberSinceMs={profile.memberSinceMs}
+            career={career}
             badges={badges}
-            loading={summary == null && careerPending}
+            loading={careerPending}
             isPro={profile.plan === "pro"}
             planProBgVariant={profile.planProBgVariant}
           />

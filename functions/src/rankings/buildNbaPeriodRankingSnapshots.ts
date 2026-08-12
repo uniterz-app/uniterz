@@ -475,6 +475,18 @@ export async function buildNbaPeriodRankingSnapshots(
   }
 
   try {
+    const { syncUserCareerAfterPeriodSnapshots } = await import(
+      "../profile/syncUserCareerAfterPeriodSnapshots"
+    );
+    await syncUserCareerAfterPeriodSnapshots(now);
+  } catch (err) {
+    console.error(
+      "[buildNbaPeriodRankingSnapshots] user_career period sync failed",
+      err
+    );
+  }
+
+  try {
     const { grantPeriodRankingUnitsAfterPeriodSnapshots } = await import(
       "../units/grantPeriodRankingUnits"
     );

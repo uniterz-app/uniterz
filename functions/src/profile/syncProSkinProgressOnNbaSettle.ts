@@ -15,6 +15,7 @@ import {
   PRO_SKIN_THRESHOLD_MILESTONES,
   PRO_SKIN_UNLOCK_FROM_SEASON_KEY,
 } from "./proSkinMilestoneCatalog";
+import { countMilestoneUnlockedProSkins } from "./countMilestoneUnlockedProSkins";
 
 const OWNER_COUNTS_DOC = "meta/proSkinOwnerCounts";
 
@@ -97,9 +98,11 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
   const db = getFirestore();
   const userRef = db.doc(`users/${opts.uid}`);
   let newlyUnlockedIds: string[] = [];
+  let unlockedCount = 0;
 
   await db.runTransaction(async (tx) => {
     newlyUnlockedIds = [];
+    unlockedCount = 0;
     const snap = await tx.get(userRef);
     const user = (snap.exists ? snap.data() : {}) as Record<string, unknown>;
     const prevRaw = user.proSkinProgress as Record<string, unknown> | undefined;
@@ -170,6 +173,7 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
     }
 
     tx.set(userRef, patch, { merge: true });
+    unlockedCount = countMilestoneUnlockedProSkins([...unlocked]);
   });
 
   if (newlyUnlockedIds.length > 0) {
@@ -177,6 +181,17 @@ export async function syncProSkinProgressOnNbaSettle(opts: {
       await incrementHolderCounts(newlyUnlockedIds);
     } catch (err) {
       console.warn("[syncProSkinProgressOnNbaSettle] holder count failed", err);
+    }
+  }
+
+  if (unlockedCount > 0) {
+    try {
+      const { syncUserCareerUnlockedSkinCount } = await import(
+        "./syncUserCareer"
+      );
+      await syncUserCareerUnlockedSkinCount(opts.uid, unlockedCount);
+    } catch (err) {
+      console.warn("[syncProSkinProgressOnNbaSettle] career skin sync failed", err);
     }
   }
 }

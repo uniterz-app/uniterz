@@ -187,6 +187,26 @@ export async function finalizePost({
         exactHit,
         activeWinStreak,
       });
+
+      try {
+        const { syncUserCareerOnNbaSettle } = await import(
+          "./profile/syncUserCareer"
+        );
+        const streakInfo = streakResultMap.get(uid);
+        await syncUserCareerOnNbaSettle({
+          uid,
+          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+          league: game.league,
+          countsForRanking,
+          seasonPhase: game?.seasonPhase ?? null,
+          isWin: result.isWin,
+          exactHit,
+          activeWinStreak,
+          maxWinStreak: streakInfo?.maxWinStreak,
+        });
+      } catch (careerErr) {
+        console.warn("[finalizePost] user_career settle sync failed", careerErr);
+      }
     })()
   );
 }

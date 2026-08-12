@@ -368,6 +368,13 @@ async function buildNbaPeriodRankingSnapshots(now = new Date()) {
         console.error("[buildNbaPeriodRankingSnapshots] pro skin rank grants failed", err);
     }
     try {
+        const { syncUserCareerAfterPeriodSnapshots } = await Promise.resolve().then(() => __importStar(require("../profile/syncUserCareerAfterPeriodSnapshots")));
+        await syncUserCareerAfterPeriodSnapshots(now);
+    }
+    catch (err) {
+        console.error("[buildNbaPeriodRankingSnapshots] user_career period sync failed", err);
+    }
+    try {
         const { grantPeriodRankingUnitsAfterPeriodSnapshots } = await Promise.resolve().then(() => __importStar(require("../units/grantPeriodRankingUnits")));
         await grantPeriodRankingUnitsAfterPeriodSnapshots(now);
     }

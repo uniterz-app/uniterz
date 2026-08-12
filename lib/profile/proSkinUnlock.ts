@@ -329,6 +329,23 @@ export function listProImmediateSkinIds(): ProfilePlanProBgVariant[] {
   );
 }
 
+const PRO_IMMEDIATE_SKIN_ID_SET = new Set<string>(listProImmediateSkinIds());
+
+/** CAREER 等: Pro 即解放を除いたマイルストーン解放スキン数 */
+export function countMilestoneUnlockedProSkins(
+  unlockedIds: readonly string[] | null | undefined
+): number {
+  if (!unlockedIds?.length) return 0;
+  const set = new Set<string>();
+  for (const id of unlockedIds) {
+    if (typeof id !== "string") continue;
+    const trimmed = id.trim();
+    if (!trimmed || PRO_IMMEDIATE_SKIN_ID_SET.has(trimmed)) continue;
+    set.add(trimmed);
+  }
+  return set.size;
+}
+
 /** 称号コレクション（Drake 等）を保持セットへ反映 */
 export function applyProSkinTitleCollections(
   unlockedIds: Set<string>,

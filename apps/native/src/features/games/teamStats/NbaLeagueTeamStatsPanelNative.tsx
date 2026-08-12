@@ -101,10 +101,10 @@ export default function NbaLeagueTeamStatsPanelNative({
   });
   const [windowId, setWindowId] = useState<NbaLeagueTeamStatWindow>("season");
   const [conf, setConf] = useState<ConfFilter>("all");
-  const [metric, setMetric] = useState<NbaLeagueTeamStatMetric>("netrtg");
+  const [metric, setMetric] = useState<NbaLeagueTeamStatMetric>("winPct");
   const [sortDir, setSortDir] = useState<NbaLeagueTeamStatSortDir>(() =>
     defaultLeagueTeamStatSortDir(
-      NBA_LEAGUE_TEAM_STAT_METRICS.find((m) => m.id === "netrtg")!
+      NBA_LEAGUE_TEAM_STAT_METRICS.find((m) => m.id === "winPct")!
         .higherIsBetter
     )
   );

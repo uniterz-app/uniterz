@@ -123,7 +123,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
     const uid = p.authorUid;
     const exactHit = Boolean(baseScore.exactMatch);
     userUpdateTasks.push((async () => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
         await (0, updateUserStatsV2_1.applyPostToUserStatsV2)({
             uid,
             postId: postDoc.id,
@@ -159,6 +159,24 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             exactHit,
             activeWinStreak,
         });
+        try {
+            const { syncUserCareerOnNbaSettle } = await Promise.resolve().then(() => __importStar(require("./profile/syncUserCareer")));
+            const streakInfo = streakResultMap.get(uid);
+            await syncUserCareerOnNbaSettle({
+                uid,
+                startAt: (_p = (_o = after.startAtJst) !== null && _o !== void 0 ? _o : after.startAt) !== null && _p !== void 0 ? _p : p.createdAt,
+                league: game.league,
+                countsForRanking,
+                seasonPhase: (_q = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _q !== void 0 ? _q : null,
+                isWin: result.isWin,
+                exactHit,
+                activeWinStreak,
+                maxWinStreak: streakInfo === null || streakInfo === void 0 ? void 0 : streakInfo.maxWinStreak,
+            });
+        }
+        catch (careerErr) {
+            console.warn("[finalizePost] user_career settle sync failed", careerErr);
+        }
     })());
 }
 //# sourceMappingURL=finalizePost.js.map

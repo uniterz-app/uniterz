@@ -1,6 +1,6 @@
 /**
- * Web `ProfileKinetikHero` 相当 — 表は Season/Playoff × Week/Month。
- * CAREER 裏面は通算（ALL）summary 固定。
+ * Web `ProfileKinetikHero` 相当 — Season/Playoff × Week/Month。
+ * 表カードは API window、CAREER は user_career（ensure API）。
  */
 import { useEffect, useMemo, useState } from "react";
 import type { ViewStyle } from "react-native";
@@ -24,6 +24,7 @@ import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import ProfileKinetikPanelNative from "./ProfileKinetikPanelNative";
 import ProfileKinetikFlipShellNative from "./ProfileKinetikFlipShellNative";
 import ProfileCareerPanelNative from "../ProfileCareerPanelNative";
+import { useUserCareerNative } from "../useUserCareerNative";
 
 export type ProfileKinetikHeroNativeProps = {
   displayName: string;
@@ -125,6 +126,12 @@ export default function ProfileKinetikHeroNative({
     apiBase
   );
 
+  const { career, loading: careerDocLoading, error: careerError } =
+    useUserCareerNative(targetUid, {
+      apiBaseUrl: apiBase,
+      enabled: true,
+    });
+
   useEffect(() => {
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
@@ -189,8 +196,7 @@ export default function ProfileKinetikHeroNative({
   }, [windowData, profileBase, profileStatsContext, winStreak]);
 
   const statsPending = !windowData && (windowLoading || statsLoading);
-  /** CAREER は通算 summary（ALL）固定。表の期間切替とは独立 */
-  const careerPending = statsLoading && summary == null;
+  const careerPending = careerDocLoading && !career;
 
   return (
     <ProfileKinetikFlipShellNative
@@ -241,15 +247,10 @@ export default function ProfileKinetikHeroNative({
         <ProfileCareerPanelNative
           language={language}
           variant="face"
-          posts={summary?.posts ?? null}
-          winRate={summary?.winRate ?? null}
-          totalPointsRank={summaryRanks?.totalPoints ?? null}
-          totalPointsRankDenominator={
-            summaryRanks?.totalPointsDenominator ?? null
-          }
-          memberSinceMs={memberSinceMs}
+          career={career}
           badges={badges}
-          loading={summary == null && careerPending}
+          loading={careerPending}
+          loadError={careerError}
           isPro={plan === "pro"}
           planProBgVariant={planProBgVariant}
         />

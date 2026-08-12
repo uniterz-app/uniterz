@@ -335,6 +335,12 @@ service cloud.firestore {
       }
     }
 
+    // user_career — CAREER 通算正本。Functions / Admin API のみ書込。公開読取。
+    match /user_career/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ========================================================================
     // プレーオフ — lib/playoff-*, PlayoffBracketMarket, usePlayoffOfficialResults
     // ========================================================================

@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.syncProSkinProgressOnNbaSettle = syncProSkinProgressOnNbaSettle;
 /**
@@ -12,6 +45,7 @@ exports.syncProSkinProgressOnNbaSettle = syncProSkinProgressOnNbaSettle;
 const firestore_1 = require("firebase-admin/firestore");
 const nbaSeason_1 = require("../rankings/nbaSeason");
 const proSkinMilestoneCatalog_1 = require("./proSkinMilestoneCatalog");
+const countMilestoneUnlockedProSkins_1 = require("./countMilestoneUnlockedProSkins");
 const OWNER_COUNTS_DOC = "meta/proSkinOwnerCounts";
 function safeInt(v) {
     const n = typeof v === "number" ? v : Number(v);
@@ -75,8 +109,10 @@ async function syncProSkinProgressOnNbaSettle(opts) {
     const db = (0, firestore_1.getFirestore)();
     const userRef = db.doc(`users/${opts.uid}`);
     let newlyUnlockedIds = [];
+    let unlockedCount = 0;
     await db.runTransaction(async (tx) => {
         newlyUnlockedIds = [];
+        unlockedCount = 0;
         const snap = await tx.get(userRef);
         const user = (snap.exists ? snap.data() : {});
         const prevRaw = user.proSkinProgress;
@@ -138,6 +174,7 @@ async function syncProSkinProgressOnNbaSettle(opts) {
             patch.proSkinUnlockNoticeIds = firestore_1.FieldValue.arrayUnion(...liveNoticeIds);
         }
         tx.set(userRef, patch, { merge: true });
+        unlockedCount = (0, countMilestoneUnlockedProSkins_1.countMilestoneUnlockedProSkins)([...unlocked]);
     });
     if (newlyUnlockedIds.length > 0) {
         try {
@@ -145,6 +182,15 @@ async function syncProSkinProgressOnNbaSettle(opts) {
         }
         catch (err) {
             console.warn("[syncProSkinProgressOnNbaSettle] holder count failed", err);
+        }
+    }
+    if (unlockedCount > 0) {
+        try {
+            const { syncUserCareerUnlockedSkinCount } = await Promise.resolve().then(() => __importStar(require("./syncUserCareer")));
+            await syncUserCareerUnlockedSkinCount(opts.uid, unlockedCount);
+        }
+        catch (err) {
+            console.warn("[syncProSkinProgressOnNbaSettle] career skin sync failed", err);
         }
     }
 }

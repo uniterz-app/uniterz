@@ -229,6 +229,21 @@ export async function grantPeriodRankingUnitsForPeriod(opts: {
         if (did) {
           ledgerWrites += 1;
           metricGranted += 1;
+          try {
+            const { syncUserCareerUnitsEarned, syncUserCareerPeriodRank } =
+              await import("../profile/syncUserCareer");
+            await syncUserCareerUnitsEarned(uid, amount);
+            if (metric === "totalPoints") {
+              await syncUserCareerPeriodRank({
+                uid,
+                period: opts.period,
+                label: opts.labelKey,
+                rank,
+              });
+            }
+          } catch (err) {
+            console.warn("[grantPeriodRankingUnits] career sync failed", err);
+          }
         } else {
           skipped += 1;
         }

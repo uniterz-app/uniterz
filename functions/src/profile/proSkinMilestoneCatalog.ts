@@ -3,7 +3,7 @@
  * Pro Skin マイルストーン定義の単一ソース。
  * Functions へは `npm run sync:pro-skin-milestone-catalog` で同期する。
  *
- * 構成: 即解放 15 / マイルストーン 21
+ * 構成: 即解放 14 / マイルストーン 21
  *
  * - 閾値系 → NBA settle
  * - 順位1回系 → period snapshot 確定後 grant（earnedIds）
