@@ -57,6 +57,12 @@ export function navigateFromPushNotificationData(data: PushNotificationData) {
           params: { screen: "RankingsHome" },
         });
         return;
+      case "unit_reward":
+        navigationRef.navigate("Main", {
+          screen: "ProfileTab",
+          params: { screen: "ProfileHome" },
+        });
+        return;
       case "monthly_report":
         navigationRef.navigate("Main", {
           screen: "ProfileTab",

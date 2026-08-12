@@ -81,11 +81,8 @@ import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
 import TutorialPredictAnnotator from "@/app/component/tutorial/TutorialPredictAnnotator";
 import { TUTORIAL_CYAN } from "@/lib/tutorial/tutorialMotion";
-import PredictTimingAdviceLine from "@/app/component/predict/PredictTimingAdviceLine";
-import PredictProInfoPanel from "@/app/component/predict/PredictProInfoPanel";
 import PredictOverlayScoreFields from "@/app/component/predict/PredictOverlayScoreFields";
-import { usePredictTimingAdvice } from "@/lib/predict/usePredictTimingAdvice";
-import { usePredictProInfo } from "@/lib/predict/usePredictProInfo";
+import { useUserPlan } from "@/hooks/useUserPlan";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
@@ -201,11 +198,13 @@ export default function PredictionFormV2({
   predictEditTriggerNonce = 0,
   onPredictEditEnd,
   overlayUnifiedForm = false,
-  overlayHomeRecord,
-  overlayAwayRecord,
+  overlayHomeRecord: _overlayHomeRecord,
+  overlayAwayRecord: _overlayAwayRecord,
   tutorialMode = false,
   onTutorialSubmit,
 }: Props) {
+  void _overlayHomeRecord;
+  void _overlayAwayRecord;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -276,24 +275,7 @@ export default function PredictionFormV2({
   const isSoccer = game.league === "pl" || game.league === "j1" || isWc;
   /** WC ノックアウト：引き分け「結果」は存在しない（同点は PK 決着）ため市場表示から引き分けを除外 */
   const isKnockout = isWcKnockoutGame(game);
-  const timingAdvice = usePredictTimingAdvice({
-    uid: auth.currentUser?.uid,
-    game,
-    language,
-    isKnockout,
-    enabled: !inOverlay,
-  });
-  const { data: proInfo, isPro: isProUser } = usePredictProInfo({
-    uid: auth.currentUser?.uid,
-    game,
-    language,
-    homeRecord: overlayHomeRecord,
-    awayRecord: overlayAwayRecord,
-    enabled: inOverlay,
-  });
-  /** 旧 Pro Info パネル。NBA は新しい Insight タブに置き換えたため非 NBA のみ */
-  const showOverlayProInfo =
-    inOverlay && isProUser && proInfo != null && game.league !== "nba";
+  const { isPro: isProUser } = useUserPlan(auth.currentUser?.uid ?? undefined);
   /** 引き分けを許可するサッカー試合か（グループリーグ・リーグ戦のみ） */
   const drawAllowed = isSoccer && !isKnockout;
   /** ノックアウト予想フローで UNITERZ ノックアウトチャレンジ告知を生涯1回表示 */
@@ -1146,12 +1128,6 @@ export default function PredictionFormV2({
           </motion.div>
         ) : null}
 
-        {showOverlayProInfo ? (
-          <motion.div {...fadeUpMotionProps}>
-            <PredictProInfoPanel data={proInfo} language={language} />
-          </motion.div>
-        ) : null}
-
         {isNba && !isGameStarted ? (
           /* 開始前のみ: Insight / Injury / Stats / Roster */
           <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
@@ -1548,13 +1524,6 @@ export default function PredictionFormV2({
                   </span>
                 ) : null}
               </div>
-
-              {timingAdvice && !showOverlayProInfo ? (
-                <PredictTimingAdviceLine
-                  advice={timingAdvice}
-                  language={language}
-                />
-              ) : null}
 
               {isKnockout ? (
                 <div className="relative z-1 -mt-2 space-y-1">

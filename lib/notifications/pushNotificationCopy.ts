@@ -100,6 +100,13 @@ export function buildPushNotificationCopy(
           title: "Monthly report ready",
           body: "Your monthly prediction report is ready.",
         };
+      case "unit_reward":
+        return {
+          title: "You earned Units",
+          body:
+            detail ||
+            "Ranking rewards were added. Open your profile to claim.",
+        };
     }
   }
 
@@ -166,6 +173,13 @@ export function buildPushNotificationCopy(
       return {
         title: "月次レポートが届きました",
         body: "今月の予想レポートを確認できます。",
+      };
+    case "unit_reward":
+      return {
+        title: "Unit を獲得しました",
+        body:
+          detail ||
+          "ランキング報酬が付与されました。プロフィールで受け取ってください。",
       };
   }
 }

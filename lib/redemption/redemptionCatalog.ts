@@ -14,28 +14,32 @@ export const REDEMPTION_CATALOG: readonly RedemptionCatalogItem[] = [
     kind: "jersey",
     unitsRequired: 1000,
     priceCapJpy: 25_000,
+    priceCapUsd: 170,
     titleJa: "NBA ジャージ",
     titleEn: "NBA Jersey",
-    blurbJa: "スウィングマン基本。上限内ならオーセンティック可。",
-    blurbEn: "Swingman baseline; authentic OK within price cap.",
+    blurbJa: "スウィングマン基本。25,000円まで。上限内ならオーセンティック可。",
+    blurbEn: "Swingman baseline; up to $170. Authentic OK within cap.",
   },
   {
     kind: "tshirt",
     unitsRequired: 600,
-    priceCapJpy: 10_000,
+    priceCapJpy: 12_000,
+    priceCapUsd: 80,
     titleJa: "NBA Tシャツ",
     titleEn: "NBA T-Shirt",
-    blurbJa: "正規販売店の新品のみ。",
-    blurbEn: "New items from approved retailers only.",
+    blurbJa: "正規販売店の新品のみ。12,000円まで。",
+    blurbEn: "New items from approved retailers only. Up to $80.",
   },
   {
     kind: "cap",
     unitsRequired: 300,
-    priceCapJpy: 6_000,
+    priceCapJpy: 7_000,
+    priceCapUsd: 50,
     titleJa: "NBA キャップ",
     titleEn: "NBA Cap",
-    blurbJa: "価格が上限未満でも必要 Unit は変わりません。",
-    blurbEn: "Units required stay fixed even if the price is lower.",
+    blurbJa: "7,000円まで。価格が上限未満でも必要 Unit は変わりません。",
+    blurbEn:
+      "Up to $50. Units required stay fixed even if the price is lower.",
   },
 ] as const;
 
@@ -50,6 +54,28 @@ export function normalizeRedemptionProductKind(
 ): RedemptionProductKind | null {
   if (raw === "jersey" || raw === "tshirt" || raw === "cap") return raw;
   return null;
+}
+
+/** カタログ行の価格上限ラベル（言語別） */
+export function redemptionPriceCapLabel(
+  item: Pick<RedemptionCatalogItem, "priceCapJpy" | "priceCapUsd">,
+  language: "ja" | "en"
+): string {
+  if (language === "en") {
+    return `Price cap $${item.priceCapUsd.toLocaleString("en-US")}`;
+  }
+  return `価格上限 ${item.priceCapJpy.toLocaleString("ja-JP")} 円`;
+}
+
+/** 申請フォーム等の短い上限表示 */
+export function redemptionPriceCapShort(
+  item: Pick<RedemptionCatalogItem, "priceCapJpy" | "priceCapUsd">,
+  language: "ja" | "en"
+): string {
+  if (language === "en") {
+    return `$${item.priceCapUsd.toLocaleString("en-US")}`;
+  }
+  return `${item.priceCapJpy.toLocaleString("ja-JP")} 円`;
 }
 
 /** 対象外の案内（カタログ注意書き） */

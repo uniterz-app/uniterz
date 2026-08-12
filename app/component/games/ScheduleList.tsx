@@ -47,6 +47,12 @@ import {
   type ScheduleMyPostDeletedDetail,
 } from "@/lib/games/scheduleMyPostSyncEvents";
 import {
+  mergeScheduleMyPostsCache,
+  missingScheduleMyPostGameIds,
+  peekScheduleMyPosts,
+  removeScheduleMyPostFromCache,
+} from "@/lib/games/scheduleMyPostsCache";
+import {
   predictOverlayBackdrop,
   predictOverlayCard,
   predictOverlayContentOrch,
@@ -432,10 +438,20 @@ export default function ScheduleList({
         return;
       }
 
+      const cached = peekScheduleMyPosts(uid, gameIds);
+      const cachedMap: Record<string, string> = {};
+      for (const [gid, row] of Object.entries(cached)) {
+        cachedMap[gid] = row.postId;
+      }
+      if (alive) setMyPostMap(cachedMap);
+
+      const need = missingScheduleMyPostGameIds(uid, gameIds);
+      if (need.length === 0) return;
+
       try {
         const chunks: string[][] = [];
-        for (let i = 0; i < gameIds.length; i += 10) {
-          chunks.push(gameIds.slice(i, i + 10));
+        for (let i = 0; i < need.length; i += 10) {
+          chunks.push(need.slice(i, i + 10));
         }
 
         const snaps = await Promise.all(
@@ -453,22 +469,28 @@ export default function ScheduleList({
 
         if (!alive) return;
 
-        const nextMap: Record<string, string> = {};
+        const found: Record<string, { postId: string }> = {};
         snaps.forEach((snap) => {
           snap.docs.forEach((d) => {
-            const data = d.data() as any;
+            const data = d.data() as { gameId?: unknown };
             const gameId = String(data?.gameId ?? "");
-            if (gameId) nextMap[gameId] = d.id;
+            if (gameId) found[gameId] = { postId: d.id };
           });
         });
 
+        mergeScheduleMyPostsCache(uid, need, found);
+        const next = peekScheduleMyPosts(uid, gameIds);
+        const nextMap: Record<string, string> = {};
+        for (const [gid, row] of Object.entries(next)) {
+          nextMap[gid] = row.postId;
+        }
         setMyPostMap(nextMap);
       } catch {
-        if (alive) setMyPostMap({});
+        if (alive) setMyPostMap(cachedMap);
       }
     };
 
-    run();
+    void run();
 
     return () => {
       alive = false;
@@ -481,6 +503,8 @@ export default function ScheduleList({
       const d = (e as CustomEvent<ScheduleMyPostDeletedDetail>).detail;
       const gid = d?.gameId ? String(d.gameId) : "";
       if (!gid) return;
+      const uid = auth.currentUser?.uid;
+      if (uid) removeScheduleMyPostFromCache(uid, gid);
       setMyPostMap((prev) => {
         if (!prev[gid]) return prev;
         const next = { ...prev };

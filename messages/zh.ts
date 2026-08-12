@@ -268,6 +268,7 @@ const zh: Messages = {
     metricTabsLabel: "Ranking metrics",
     pts: "pts",
     minPostsRequired: "胜率排名需要至少 {n} 篇帖子。",
+    winRatePickupRateRequired: "Win Rate ranking requires predicting at least 65% of pickup games available so far.",
     noMinPosts: "本轮无最低帖子要求。",
     roundTotal: "TOTAL",
     roundFirst: "1ST",

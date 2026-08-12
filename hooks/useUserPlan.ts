@@ -1,8 +1,15 @@
-import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
+import { subscribeUserDocLive } from "@/lib/user/subscribeUserDocLive";
 
 type Plan = "free" | "pro";
+
+function proUntilFromData(data: Record<string, unknown> | null): Date | null {
+  const raw = data?.proUntil as { toDate?: () => Date } | Date | null | undefined;
+  if (!raw) return null;
+  if (raw instanceof Date) return raw;
+  if (typeof raw.toDate === "function") return raw.toDate();
+  return null;
+}
 
 export function useUserPlan(uid?: string) {
   const [plan, setPlan] = useState<Plan>("free");
@@ -15,19 +22,15 @@ export function useUserPlan(uid?: string) {
       return;
     }
 
-    const ref = doc(db, "users", uid);
-
-    return onSnapshot(ref, (snap) => {
-      if (!snap.exists()) {
+    return subscribeUserDocLive(uid, (data) => {
+      if (!data) {
         setPlan("free");
         setProUntil(null);
         setLoading(false);
         return;
       }
-
-      const d = snap.data();
-      setPlan(d.plan ?? "free");
-      setProUntil(d.proUntil?.toDate?.() ?? null);
+      setPlan((data.plan as Plan | undefined) ?? "free");
+      setProUntil(proUntilFromData(data));
       setLoading(false);
     });
   }, [uid]);

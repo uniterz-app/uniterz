@@ -514,7 +514,7 @@ export default function ResultHomeScreen({
   useFocusEffect(
     useCallback(() => {
       const now = Date.now();
-      if (now - lastFocusRefreshAtRef.current < 12_000) return;
+      if (now - lastFocusRefreshAtRef.current < 30_000) return;
       lastFocusRefreshAtRef.current = now;
       void refreshPostsRef.current();
     }, [])
@@ -528,7 +528,7 @@ export default function ResultHomeScreen({
   /** 未精算カードがある間は定期再取得（Cloud Functions 精算完了を待つ） */
   useEffect(() => {
     if (!hasPendingSettlement) return;
-    const id = setInterval(() => void refreshPostsRef.current(), 60_000);
+    const id = setInterval(() => void refreshPostsRef.current(), 120_000);
     return () => clearInterval(id);
   }, [hasPendingSettlement]);
 

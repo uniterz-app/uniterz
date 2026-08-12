@@ -14,6 +14,7 @@ export default function PlanChangeCompletePage() {
 
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [proUntil, setProUntil] = useState<string>("");
+  const [profileHref, setProfileHref] = useState("/mobile");
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -37,6 +38,12 @@ export default function PlanChangeCompletePage() {
           })
         );
       }
+
+      const handle =
+        typeof data.handle === "string" && data.handle.trim()
+          ? data.handle.trim()
+          : user.uid;
+      setProfileHref(`/mobile/u/${encodeURIComponent(handle)}`);
     };
 
     fetchUser();
@@ -114,7 +121,7 @@ export default function PlanChangeCompletePage() {
 
         {/* CTA */}
         <button
-          onClick={() => router.push("/mobile/pro/analysis")}
+          onClick={() => router.push(profileHref)}
           className="
             w-full rounded-2xl py-3 font-bold text-white
             transition

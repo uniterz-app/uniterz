@@ -1,6 +1,6 @@
 /**
  * Web `ProfileMonthlyReportPanel` 相当。
- * ゲート面＋見た目確認用の強制切替（Pro でも Free / ロックを表示可）。
+ * Pro は user_reports の確定版。非 Pro は Free ゲート。
  */
 import { useMemo, useState } from "react";
 import {
@@ -27,11 +27,7 @@ import MonthlyReportViewNative from "./reports/MonthlyReportViewNative";
 import ReportGateSurfaceNative from "./reports/ReportGateSurfaceNative";
 import { useUserReportsArchiveNative } from "./reports/useProReportDeliveryOverlayNative";
 import { formatReportPeriodLabel } from "../../../../../lib/reports/reportDelivery";
-import {
-  REPORT_GATE_PREVIEW_MODES,
-  type ReportGateKind,
-  type ReportGatePreviewMode,
-} from "../../../../../lib/reports/reportGateTypes";
+import type { ReportGateKind } from "../../../../../lib/reports/reportGateTypes";
 import { weeklyReportPreviewClimbed } from "../../../../../lib/reports/weeklyReportPreviewMocks";
 import { monthlyReportPreviewTop10 } from "../../../../../lib/reports/monthlyReportPreviewMocks";
 import { colors, spacing, typography } from "../../theme/tokens";
@@ -49,15 +45,6 @@ type Props = {
 
 type Tab = "weekly" | "monthly";
 
-const GATE_CHIP: Record<ReportGatePreviewMode, { ja: string; en: string }> = {
-  live: { ja: "ライブ", en: "Live" },
-  free: { ja: "Free", en: "Free" },
-  waitingMonday: { ja: "月曜待ち", en: "Monday" },
-  waitingMonth: { ja: "月初待ち", en: "Month wait" },
-  insufficientPicks: { ja: "予想不足", en: "No picks" },
-  monthlyLocked: { ja: "月次ロック", en: "Monthly lock" },
-};
-
 export default function ProfileStatsTabNative({
   uid,
   language,
@@ -72,7 +59,6 @@ export default function ProfileStatsTabNative({
   const canViewReport =
     isProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro);
   const [tab, setTab] = useState<Tab>("weekly");
-  const [forceGate, setForceGate] = useState<ReportGatePreviewMode>("live");
   const isJa = language === "ja";
 
   const { loading, weeklies, monthlies } = useUserReportsArchiveNative({
@@ -102,12 +88,6 @@ export default function ProfileStatsTabNative({
     );
   }, [monthlies, selectedMonthlyId]);
 
-  const effectiveGate: ReportGateKind | null = useMemo(() => {
-    if (forceGate !== "live") return forceGate;
-    if (!canViewReport) return "free";
-    return null;
-  }, [forceGate, canViewReport]);
-
   const handleGateCta = (kind: ReportGateKind) => {
     switch (kind) {
       case "free":
@@ -130,7 +110,7 @@ export default function ProfileStatsTabNative({
   const renderGate = (kind: ReportGateKind) => {
     const showCta =
       kind === "free"
-        ? isMe || forceGate === "free"
+        ? isMe
         : kind === "monthlyLocked" || kind === "insufficientPicks";
 
     if (kind === "free") {
@@ -176,43 +156,6 @@ export default function ProfileStatsTabNative({
     );
   };
 
-  const gateSwitcher = (
-    <View style={styles.gateBlock}>
-      <View style={styles.gateTopRow}>
-        <Text style={styles.gateLabel}>GATE PREVIEW</Text>
-        {__DEV__ ? (
-          <Pressable
-            onPress={() => navigation.navigate("MonthlyReportPreview")}
-            style={styles.devPreviewBtn}
-            accessibilityRole="button"
-          >
-            <Text style={styles.devPreviewBtnText}>WEEKLY / MONTHLY</Text>
-          </Pressable>
-        ) : null}
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.gateChipRow}
-      >
-        {REPORT_GATE_PREVIEW_MODES.map((key) => {
-          const on = forceGate === key;
-          return (
-            <Pressable
-              key={key}
-              onPress={() => setForceGate(key)}
-              style={[styles.gateChip, on && styles.gateChipOn]}
-            >
-              <Text style={[styles.gateChipText, on && styles.gateChipTextOn]}>
-                {GATE_CHIP[key][language]}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-
   if (!uid) {
     return (
       <Text style={styles.muted}>
@@ -221,19 +164,13 @@ export default function ProfileStatsTabNative({
     );
   }
 
-  if (effectiveGate) {
-    return (
-      <View style={styles.root}>
-        {gateSwitcher}
-        {renderGate(effectiveGate)}
-      </View>
-    );
+  if (!canViewReport) {
+    return <View style={styles.root}>{renderGate("free")}</View>;
   }
 
   if (loading) {
     return (
       <View style={styles.root}>
-        {gateSwitcher}
         <View style={styles.loadingWrap}>
           <ActivityIndicator color="#67e8f9" />
         </View>
@@ -245,15 +182,6 @@ export default function ProfileStatsTabNative({
 
   return (
     <View style={styles.root}>
-      {gateSwitcher}
-
-      <Text style={styles.archiveLabel}>REPORT ARCHIVE</Text>
-      <Text style={styles.archiveHint}>
-        {isJa
-          ? "週次は競争の実況、月次は自分の分析。毎月1日朝に月次が届きます。"
-          : "Weekly = competition pulse. Monthly = self analysis. Drops on the 1st morning."}
-      </Text>
-
       <View style={styles.tabShell}>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
@@ -307,16 +235,20 @@ export default function ProfileStatsTabNative({
 
       {tab === "weekly" ? (
         selectedWeekly && selectedWeekly.kind === "weekly" ? (
-          <WeeklyReportViewNative
-            report={selectedWeekly.report}
-            language={language}
-            periods={weeklies.map((w) => ({
-              id: w.id,
-              label: formatReportPeriodLabel("weekly", w.periodKey, language),
-            }))}
-            selectedPeriodId={selectedWeekly.id}
-            onSelectPeriod={setSelectedWeeklyId}
-          />
+          selectedWeekly.report.totalPosts === 0 ? (
+            renderGate("insufficientPicks")
+          ) : (
+            <WeeklyReportViewNative
+              report={selectedWeekly.report}
+              language={language}
+              periods={weeklies.map((w) => ({
+                id: w.id,
+                label: formatReportPeriodLabel("weekly", w.periodKey, language),
+              }))}
+              selectedPeriodId={selectedWeekly.id}
+              onSelectPeriod={setSelectedWeeklyId}
+            />
+          )
         ) : (
           renderGate("waitingMonday")
         )
@@ -341,74 +273,6 @@ const styles = StyleSheet.create({
   loadingWrap: {
     paddingVertical: 40,
     alignItems: "center",
-  },
-  gateBlock: {
-    gap: 6,
-  },
-  gateTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  gateLabel: {
-    fontFamily: OXANIUM_700,
-    fontSize: 9,
-    letterSpacing: 1.6,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
-  },
-  devPreviewBtn: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.55)",
-    backgroundColor: "rgba(34,211,238,0.14)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  devPreviewBtnText: {
-    fontFamily: OXANIUM_700,
-    color: "rgba(165,243,252,0.95)",
-    fontSize: 9,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  archiveLabel: {
-    fontFamily: OXANIUM_700,
-    fontSize: 10,
-    letterSpacing: 1.4,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
-  },
-  archiveHint: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(255,255,255,0.5)",
-    marginTop: -4,
-  },
-  gateChipRow: {
-    gap: 4,
-    paddingVertical: 2,
-  },
-  gateChip: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  gateChipOn: {
-    borderColor: "rgba(34,211,238,0.55)",
-    backgroundColor: "rgba(34,211,238,0.14)",
-  },
-  gateChipText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.5)",
-  },
-  gateChipTextOn: {
-    color: "#a5f3fc",
   },
   tabShell: {
     minHeight: 36,

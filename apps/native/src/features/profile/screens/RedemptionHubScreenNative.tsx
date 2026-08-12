@@ -23,6 +23,7 @@ import {
   REDEMPTION_DISCLAIMER_JA,
   REDEMPTION_EXCLUSIONS_EN,
   REDEMPTION_EXCLUSIONS_JA,
+  redemptionPriceCapLabel,
 } from "../../../../../../lib/redemption/redemptionCatalog";
 import { redemptionBatchScheduleCopy } from "../../../../../../lib/redemption/redemptionBatchScheduleCopy";
 import { redemptionStatusLabel } from "../../../../../../lib/redemption/redemptionStatus";
@@ -156,6 +157,9 @@ export default function RedemptionHubScreenNative() {
               </View>
               <Text style={styles.cardMeta}>
                 {isJa ? item.blurbJa : item.blurbEn}
+              </Text>
+              <Text style={styles.cardCap}>
+                {redemptionPriceCapLabel(item, isJa ? "ja" : "en")}
               </Text>
               <Pressable
                 onPress={() =>
@@ -334,6 +338,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.9)",
   },
   cardMeta: { marginTop: 4, fontSize: 11, color: "rgba(255,255,255,0.45)" },
+  cardCap: { marginTop: 4, fontSize: 11, color: "rgba(255,255,255,0.4)" },
   units: {
     fontFamily: OX,
     fontSize: 16,

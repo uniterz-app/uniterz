@@ -29,7 +29,8 @@ export async function POST(req: Request) {
         result.error === "already_bound"
           ? 409
           : result.error === "bind_window_expired" ||
-              result.error === "referrer_rate_limited"
+              result.error === "referrer_rate_limited" ||
+              result.error === "referrer_open_cap"
             ? 403
             : result.error === "mutual_invite" ||
                 result.error === "referrer_unavailable" ||

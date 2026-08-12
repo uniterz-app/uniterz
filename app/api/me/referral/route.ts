@@ -16,7 +16,10 @@ export async function GET(req: Request) {
     const uid = await requireUidFromRequest(req);
     const db = getAdminDb();
     // 自分が invitee で under_review の取り残しがあればセルフヒール
-    await settleReferralRelationWithRetries(db, uid, 2).catch(() => null);
+    // 1 人分のみ・画面表示用なので posts 再走査は省略（投稿/削除パスで再集計済み想定）
+    await settleReferralRelationWithRetries(db, uid, 2, {
+      recomputeDays: false,
+    }).catch(() => null);
     const summary = await loadReferrerInviteSummary(db, uid);
     return NextResponse.json({ ok: true, ...summary });
   } catch (e: unknown) {

@@ -75,6 +75,10 @@ import {
 } from "../../../../../lib/rankings/rankingDivision";
 import type { RankingPeriod } from "../../../../../lib/rankings/rankingPeriod";
 import { periodWinRateMinPosts } from "../../../../../lib/rankings/rankingPeriod";
+import {
+  estimatePeriodRankingUnits,
+  periodUnitRanksFromByMetric,
+} from "../../../../../lib/rankings/estimatePeriodRankingUnits";
 
 type Props = {
   bottomReserveY: number;
@@ -97,7 +101,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
   const rankingsLeague = "nba" as const;
   const [nbaBoard, setNbaBoard] = useState<NbaRankingBoard>("regular");
-  const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("season");
+  const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("weekly");
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const wcStageForHook: WcRankingStage | null = null;
 
@@ -182,6 +186,16 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     (cardFast.plan === "pro" || user.plan === "pro") ? "pro" : "free";
   const rankProgressHidden =
     rankingsLeague === "nba" && rankingPeriod !== "season";
+  const estimatedUnits =
+    myRankCardTier === "pro" &&
+    usePeriodBoard &&
+    nbaBoard === "regular" &&
+    (rankingPeriod === "weekly" || rankingPeriod === "monthly")
+      ? estimatePeriodRankingUnits(
+          rankingPeriod,
+          periodUnitRanksFromByMetric(byMetric)
+        )
+      : null;
   const rankProgressEnabled =
     category === "playoffs" &&
     !rankProgressHidden &&
@@ -284,6 +298,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const winRateMinPosts = usePeriodBoard
     ? periodWinRateMinPosts(rankingPeriod as Exclude<RankingPeriod, "season">)
     : computeWinRateMinPosts("nba");
+  const winRateUsesPickupRate =
+    usePeriodBoard && rankingPeriod === "monthly" && nbaBoard === "regular";
   const rankingHasNoEntries =
     listReady && (rows.length === 0 || rankingListCount === 0);
 
@@ -481,6 +497,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   rankProgressEnabled && myRankProgressLoading
                 }
                 hideRankProgress={rankProgressHidden}
+                estimatedUnits={estimatedUnits}
               />
               )}
             </>
@@ -518,7 +535,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
             {metric === "winRate" ? (
               <Text style={styles.winRateHint}>
-                {winRateMinPosts > 1 ? t.winRateMin(winRateMinPosts) : t.winRateNoMin}
+                {winRateUsesPickupRate
+                  ? t.winRatePickupRate
+                  : winRateMinPosts > 1
+                    ? t.winRateMin(winRateMinPosts)
+                    : t.winRateNoMin}
               </Text>
             ) : null}
 

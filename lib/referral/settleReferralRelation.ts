@@ -70,27 +70,36 @@ export type SettleReferralResult =
 
 /**
  * 1 招待関係を精算。成功時 invitee に referralSettledAt を付け、以降の touch を省略可能にする。
+ *
+ * @param opts.recomputeDays
+ *   true（既定）: posts から日キー再集計（削除反映・投稿直後の settle）
+ *   false: 既存 activePredictDays を信頼（招待画面の軽量セルフヒール用）
  */
 export async function settleReferralRelation(
   db: Firestore,
-  inviteeUidRaw: string
+  inviteeUidRaw: string,
+  opts?: { recomputeDays?: boolean }
 ): Promise<SettleReferralResult> {
   const inviteeUid = String(inviteeUidRaw ?? "").trim();
   if (!inviteeUid) return { ok: false, error: "uid required" };
 
-  // 付与前に削除済み posts を日数から除外（§5）
-  const recomputed = await recomputeReferralActivePredictDays(db, inviteeUid);
-  if (
-    recomputed.ok &&
-    !recomputed.skipped &&
-    recomputed.activePredictDays < 7 &&
-    recomputed.status !== "under_review"
-  ) {
-    return {
-      ok: true,
-      skipped: true,
-      reason: "insufficient_active_days",
-    };
+  const recomputeDays = opts?.recomputeDays !== false;
+
+  if (recomputeDays) {
+    // 付与前に削除済み posts を日数から除外（§5）
+    const recomputed = await recomputeReferralActivePredictDays(db, inviteeUid);
+    if (
+      recomputed.ok &&
+      !recomputed.skipped &&
+      recomputed.activePredictDays < 7 &&
+      recomputed.status !== "under_review"
+    ) {
+      return {
+        ok: true,
+        skipped: true,
+        reason: "insufficient_active_days",
+      };
+    }
   }
 
   const relRef = db.collection("referralRelations").doc(inviteeUid);
@@ -385,12 +394,13 @@ export async function settleReferralRelation(
 export async function settleReferralRelationWithRetries(
   db: Firestore,
   inviteeUid: string,
-  attempts = 3
+  attempts = 3,
+  opts?: { recomputeDays?: boolean }
 ): Promise<SettleReferralResult> {
   let last: SettleReferralResult = { ok: false, error: "no_attempt" };
   const n = Math.max(1, Math.min(5, Math.floor(attempts)));
   for (let i = 0; i < n; i++) {
-    last = await settleReferralRelation(db, inviteeUid);
+    last = await settleReferralRelation(db, inviteeUid, opts);
     if (last.ok) return last;
     if (i < n - 1) {
       await new Promise((r) => setTimeout(r, 40 * (i + 1)));

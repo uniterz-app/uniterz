@@ -18,6 +18,8 @@ import {
   type NbaPeriodRange,
   type NbaRankingPeriod,
 } from "./nbaPeriod";
+import { countNbaPickupGamesSoFar } from "./countNbaPickupGamesSoFar";
+import { winRateMinPostsFromPickupCount } from "../units/periodRankingUnitRewards";
 
 function db() {
   return getFirestore();
@@ -197,7 +199,19 @@ function resolvePrevRankBasis(
 async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> {
   const firestore = db();
   const minPosts = periodMinPosts(range.period);
-  const winRateMin = periodWinRateMinPosts(range.period);
+  /** open / 週間は固定最低投稿。月間 standard 勝率は pickup 65%（パターン B） */
+  const winRateMinFallback = periodWinRateMinPosts(range.period);
+  let winRateMinStandard = winRateMinFallback;
+  if (range.period === "monthly") {
+    const asOfKey = todayKey < range.endKey ? todayKey : range.endKey;
+    const pickupSoFar = await countNbaPickupGamesSoFar({
+      db: firestore,
+      startKey: range.startKey,
+      asOfKey,
+    });
+    const fromPickup = winRateMinPostsFromPickupCount(pickupSoFar);
+    if (fromPickup > 0) winRateMinStandard = fromPickup;
+  }
 
   const statsSnap = await firestore
     .collection("user_stats_v2_daily")
@@ -321,7 +335,7 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     todayKey,
     division: "standard",
     baseRows: standardBaseRows,
-    winRateMin,
+    winRateMin: winRateMinStandard,
   });
   await writePeriodDivisionSnapshots({
     firestore,
@@ -329,11 +343,11 @@ async function buildOne(range: NbaPeriodRange, todayKey: string): Promise<void> 
     todayKey,
     division: "open",
     baseRows: openBaseRows,
-    winRateMin,
+    winRateMin: winRateMinFallback,
   });
 
   console.log(
-    `[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length} open=${openBaseRows.length}`
+    `[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length} open=${openBaseRows.length} winRateMinStandard=${winRateMinStandard}`
   );
 }
 

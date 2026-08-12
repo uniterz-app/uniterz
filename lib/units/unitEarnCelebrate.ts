@@ -17,9 +17,9 @@ export type UnitEarnCelebratePreset = {
 
 export const UNIT_EARN_CELEBRATE_PREVIEW_PRESETS: readonly UnitEarnCelebratePreset[] =
   [
-    { id: "monthly-rank-1", amount: 200 },
-    { id: "monthly-rank-8", amount: 80 },
-    { id: "weekly-rank-3", amount: 30 },
+    { id: "monthly-rank-1", amount: 300 },
+    { id: "monthly-rank-8", amount: 140 },
+    { id: "weekly-rank-3", amount: 42 },
     { id: "referral-base", amount: 10 },
     { id: "referral-milestone-3", amount: 10 },
   ] as const;

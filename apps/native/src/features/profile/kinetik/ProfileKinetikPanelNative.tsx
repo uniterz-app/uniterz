@@ -1558,6 +1558,7 @@ export default function ProfileKinetikPanelNative({
     balance: unitBalance ?? null,
     enabled: !!onOpenUnitLedger && unitBalance != null,
     storageKey: shareHandle?.trim() || "me",
+    language: isJa ? "ja" : "en",
   });
   /** 金庫加算中はバッジ／コイン常時ループを止め続ける */
   const [vaultSettling, setVaultSettling] = useState(false);

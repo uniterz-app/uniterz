@@ -69,6 +69,10 @@ import type { RankingApiRow } from "@/lib/rankings/rankingTransform";
 import { buildRankTierGapHint } from "@/lib/rankings/rankTierMilestone";
 import { useMyRankProgress } from "@/lib/rankings/useMyRankProgress";
 import { useMyRankCardFast } from "@/lib/rankings/useMyRankCardFast";
+import {
+  estimatePeriodRankingUnits,
+  periodUnitRanksFromByMetric,
+} from "@/lib/rankings/estimatePeriodRankingUnits";
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
@@ -76,7 +80,7 @@ export default function WebRankingsShell() {
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const rankingLeague: RankingLeagueSource = "nba";
   const phase: RankingPhase = "playoffs";
-  const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("season");
+  const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("weekly");
   /** NBA: レギュラー / プレーオフ / PRO LEAGUE */
   const [nbaBoard, setNbaBoard] = useState<NbaRankingBoard>("regular");
   const rankingDivision = divisionFromNbaBoard(nbaBoard);
@@ -286,6 +290,8 @@ export default function WebRankingsShell() {
   const winRateMinPosts = usePeriodBoard
     ? periodWinRateMinPosts(rankingPeriod as Exclude<RankingPeriod, "season">)
     : computeWinRateMinPosts(rankingLeague);
+  const winRateUsesPickupRate =
+    usePeriodBoard && rankingPeriod === "monthly" && nbaBoard === "regular";
 
   const listContentReady = computeRankingListContentReady({
     listReady,
@@ -334,6 +340,16 @@ export default function WebRankingsShell() {
     cardFast.plan === "pro" || sessionUser.plan === "pro" ? "pro" : "free";
   const rankProgressHidden =
     rankingLeague === "nba" && rankingPeriod !== "season";
+  const estimatedUnits =
+    myRankCardTier === "pro" &&
+    usePeriodBoard &&
+    nbaBoard === "regular" &&
+    (rankingPeriod === "weekly" || rankingPeriod === "monthly")
+      ? estimatePeriodRankingUnits(
+          rankingPeriod,
+          periodUnitRanksFromByMetric(byMetric)
+        )
+      : null;
   const rankProgressEnabled =
     effectiveCategory === "playoffs" &&
     !rankProgressHidden &&
@@ -457,6 +473,7 @@ export default function WebRankingsShell() {
                 rankProgressEnabled && myRankProgressLoading
               }
               hideRankProgress={rankProgressHidden}
+              estimatedUnits={estimatedUnits}
               mobileWide
               layout="web"
               rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
@@ -495,9 +512,12 @@ export default function WebRankingsShell() {
             />
             {metric === "winRate" && (
               <p className="px-1 text-xs leading-5 text-white/60">
-                {winRateMinPosts > 1
-                  ? m.rankings.minPostsRequired.replace("{n}", String(winRateMinPosts))
-                  : m.rankings.noMinPosts}
+                {winRateUsesPickupRate
+                  ? m.rankings.winRatePickupRateRequired ??
+                    m.rankings.minPostsRequired.replace("{n}", String(winRateMinPosts))
+                  : winRateMinPosts > 1
+                    ? m.rankings.minPostsRequired.replace("{n}", String(winRateMinPosts))
+                    : m.rankings.noMinPosts}
               </p>
             )}
           </>

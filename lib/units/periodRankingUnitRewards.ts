@@ -1,6 +1,8 @@
 /**
  * 個人ランキング Unit 配布表（設計正: docs/unit-reward-design.md §3）
  * Functions へは `npm run sync:period-ranking-unit-rewards` で同期。
+ *
+ * 順位ごと異なる Unit（帯の同額なし）。同点で同順位になった場合のみ同額。
  */
 
 export type PeriodRankingUnitPeriod = "weekly" | "monthly";
@@ -25,51 +27,47 @@ export const PERIOD_RANKING_UNIT_WEEKLY_OVERALL_MAX_RANK = 20;
 /** 月間・総合 上位 50 */
 export const PERIOD_RANKING_UNIT_MONTHLY_OVERALL_MAX_RANK = 50;
 
-/** 月間・部門 上位 10 */
-export const PERIOD_RANKING_UNIT_MONTHLY_DEPARTMENT_MAX_RANK = 10;
+/** 月間・部門 上位 30 */
+export const PERIOD_RANKING_UNIT_MONTHLY_DEPARTMENT_MAX_RANK = 30;
 
-type Band = { maxRank: number; units: number };
+/**
+ * 月間勝率部門の参加率ガード（パターン B）。
+ * その時点までの pickup 試合数 × この率 以上の投稿が必要。
+ */
+export const PERIOD_WIN_RATE_PICKUP_PARTICIPATION_RATE = 0.65;
 
-/** rank 1..max を帯で解決（competition 順位番号をそのまま渡す） */
-function unitsFromBands(rank: number, bands: readonly Band[]): number | null {
-  if (!Number.isFinite(rank) || rank < 1) return null;
-  for (const band of bands) {
-    if (rank <= band.maxRank) {
-      return band.units > 0 ? band.units : null;
-    }
-  }
-  return null;
+/** 週間総合: 1→50 … 20→5（順位ごと差あり） */
+const WEEKLY_OVERALL_BY_RANK: readonly number[] = [
+  50, 46, 42, 38, 35, 32, 29, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 7, 6, 5,
+];
+
+/** 月間総合: 1→300 / 2→250 / 3→200 … 50→1 */
+const MONTHLY_OVERALL_BY_RANK: readonly number[] = [
+  300, 250, 200, 185, 170, 160, 150, 140, 130, 120, 110, 100, 92, 85, 78, 72, 66,
+  60, 55, 50, 46, 42, 38, 35, 32, 30, 28, 26, 24, 22, 20, 19, 18, 17, 16, 15, 14,
+  13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+];
+
+/** 月間部門: 1→50 … 30→3（連番寄り・順位ごと差あり） */
+const MONTHLY_DEPARTMENT_BY_RANK: readonly number[] = [
+  50, 46, 42, 38, 35, 32, 29, 26, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13,
+  12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
+];
+
+function unitsFromRankTable(
+  rank: number,
+  table: readonly number[]
+): number | null {
+  if (!Number.isFinite(rank) || rank < 1 || rank > table.length) return null;
+  const units = table[rank - 1];
+  return units > 0 ? units : null;
 }
 
-/** 週間総合: 1→40 … 11–20→6 */
-const WEEKLY_OVERALL_BANDS: readonly Band[] = [
-  { maxRank: 1, units: 40 },
-  { maxRank: 3, units: 30 },
-  { maxRank: 5, units: 20 },
-  { maxRank: 10, units: 12 },
-  { maxRank: 20, units: 6 },
-];
-
-/** 月間総合: 1→200 … 31–50→15 */
-const MONTHLY_OVERALL_BANDS: readonly Band[] = [
-  { maxRank: 1, units: 200 },
-  { maxRank: 2, units: 150 },
-  { maxRank: 3, units: 120 },
-  { maxRank: 5, units: 100 },
-  { maxRank: 10, units: 80 },
-  { maxRank: 20, units: 50 },
-  { maxRank: 30, units: 30 },
-  { maxRank: 50, units: 15 },
-];
-
-/** 月間部門: 1→50 … 6–10→8 */
-const MONTHLY_DEPARTMENT_BANDS: readonly Band[] = [
-  { maxRank: 1, units: 50 },
-  { maxRank: 2, units: 35 },
-  { maxRank: 3, units: 25 },
-  { maxRank: 5, units: 15 },
-  { maxRank: 10, units: 8 },
-];
+/** pickup 試合数から勝率部門の最低投稿数（ceil） */
+export function winRateMinPostsFromPickupCount(pickupCountSoFar: number): number {
+  if (!Number.isFinite(pickupCountSoFar) || pickupCountSoFar <= 0) return 0;
+  return Math.ceil(pickupCountSoFar * PERIOD_WIN_RATE_PICKUP_PARTICIPATION_RATE);
+}
 
 export function periodRankingUnitMaxRank(
   period: PeriodRankingUnitPeriod,
@@ -94,12 +92,12 @@ export function unitsForPeriodRankingRank(
   const max = periodRankingUnitMaxRank(period, metric);
   if (max <= 0 || rank > max) return null;
   if (period === "weekly") {
-    return unitsFromBands(rank, WEEKLY_OVERALL_BANDS);
+    return unitsFromRankTable(rank, WEEKLY_OVERALL_BY_RANK);
   }
   if (metric === PERIOD_RANKING_UNIT_OVERALL_METRIC) {
-    return unitsFromBands(rank, MONTHLY_OVERALL_BANDS);
+    return unitsFromRankTable(rank, MONTHLY_OVERALL_BY_RANK);
   }
-  return unitsFromBands(rank, MONTHLY_DEPARTMENT_BANDS);
+  return unitsFromRankTable(rank, MONTHLY_DEPARTMENT_BY_RANK);
 }
 
 /** その period で付与対象の metric 一覧 */

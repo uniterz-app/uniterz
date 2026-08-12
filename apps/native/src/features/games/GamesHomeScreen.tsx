@@ -28,6 +28,13 @@ import {
 } from "../../../../../lib/time/zonedTime";
 import { fetchMonthHasGames } from "../../../../../lib/games/fetchMonthHasGames";
 import {
+  clearScheduleMyPostsAbsent,
+  mergeScheduleMyPostsCache,
+  missingScheduleMyPostGameIds,
+  peekScheduleMyPosts,
+  type ScheduleMyPostsMap,
+} from "../../../../../lib/games/scheduleMyPostsCache";
+import {
   resolveGameLiveMeta,
   resolveGameScore,
   resolveGameStartAt,
@@ -1068,10 +1075,58 @@ export default function GamesHomeScreen({
       }
       try {
         const gameIds = gameIdsKey ? gameIdsKey.split(",") : [];
+        // 予想保存後の再読込では absent を捨てて差分取得
+        if (myPredictionsReloadNonce > 0) {
+          clearScheduleMyPostsAbsent(fUser.uid, gameIds);
+        }
+        const applyMap = (found: ScheduleMyPostsMap) => {
+          const ids = new Set<string>();
+          const postMap: Record<string, string> = {};
+          const predictionMap: Record<
+            string,
+            {
+              winner: "home" | "away" | "draw";
+              score: { home: number; away: number };
+              comment: string;
+              updatedAt?: unknown;
+              goalScorer?: unknown;
+              postStats?: Record<string, unknown> | null;
+            }
+          > = {};
+          for (const [gameId, row] of Object.entries(found)) {
+            if (!gameIdSet.has(gameId)) continue;
+            ids.add(gameId);
+            postMap[gameId] = row.postId;
+            if (
+              (row.winner === "home" ||
+                row.winner === "away" ||
+                row.winner === "draw") &&
+              row.score
+            ) {
+              predictionMap[gameId] = {
+                winner: row.winner,
+                score: row.score,
+                comment: row.comment ?? "",
+                updatedAt: row.updatedAt ?? null,
+                goalScorer: row.goalScorer ?? null,
+                postStats: row.postStats ?? null,
+              };
+            }
+          }
+          setPredictedGameIds(ids);
+          setMyPostIdByGameId(postMap);
+          setMyPredictionByGameId(predictionMap);
+        };
+
+        applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
+
+        const need = missingScheduleMyPostGameIds(fUser.uid, gameIds);
+        if (need.length === 0) return;
+
         const snaps = [];
         const IN_LIMIT = 10;
-        for (let i = 0; i < gameIds.length; i += IN_LIMIT) {
-          const chunk = gameIds.slice(i, i + IN_LIMIT);
+        for (let i = 0; i < need.length; i += IN_LIMIT) {
+          const chunk = need.slice(i, i + IN_LIMIT);
           snaps.push(
             getDocs(
               query(
@@ -1085,53 +1140,40 @@ export default function GamesHomeScreen({
         }
         const settled = await Promise.all(snaps);
         if (!alive) return;
-        const ids = new Set<string>();
-        const postMap: Record<string, string> = {};
-        const predictionMap: Record<
-          string,
-          {
-            winner: "home" | "away" | "draw";
-            score: { home: number; away: number };
-            comment: string;
-            updatedAt?: unknown;
-            goalScorer?: unknown;
-            postStats?: Record<string, unknown> | null;
-          }
-        > = {};
+        const found: ScheduleMyPostsMap = {};
         for (const snap of settled) {
           snap.docs.forEach((row) => {
-          const rowData = row.data();
-          const gameId = String(rowData?.gameId ?? "");
-          if (gameId && gameIdSet.has(gameId)) {
-            ids.add(gameId);
-            postMap[gameId] = row.id;
+            const rowData = row.data();
+            const gameId = String(rowData?.gameId ?? "");
+            if (!gameId) return;
             const winnerRaw = rowData?.prediction?.winner;
             const homeRaw = rowData?.prediction?.score?.home;
             const awayRaw = rowData?.prediction?.score?.away;
-            if (
-              (winnerRaw === "home" || winnerRaw === "away" || winnerRaw === "draw") &&
-              typeof homeRaw === "number" &&
-              typeof awayRaw === "number"
-            ) {
-              predictionMap[gameId] = {
-                winner: winnerRaw,
-                score: { home: homeRaw, away: awayRaw },
-                comment:
-                  typeof rowData?.comment === "string" ? rowData.comment : "",
-                updatedAt: rowData?.updatedAt ?? null,
-                goalScorer: rowData?.prediction?.goalScorer ?? null,
-                postStats:
-                  rowData?.stats && typeof rowData.stats === "object"
-                    ? (rowData.stats as Record<string, unknown>)
-                    : null,
-              };
-            }
-          }
+            found[gameId] = {
+              postId: row.id,
+              winner:
+                winnerRaw === "home" ||
+                winnerRaw === "away" ||
+                winnerRaw === "draw"
+                  ? winnerRaw
+                  : undefined,
+              score:
+                typeof homeRaw === "number" && typeof awayRaw === "number"
+                  ? { home: homeRaw, away: awayRaw }
+                  : undefined,
+              comment:
+                typeof rowData?.comment === "string" ? rowData.comment : "",
+              updatedAt: rowData?.updatedAt ?? null,
+              goalScorer: rowData?.prediction?.goalScorer ?? null,
+              postStats:
+                rowData?.stats && typeof rowData.stats === "object"
+                  ? (rowData.stats as Record<string, unknown>)
+                  : null,
+            };
           });
         }
-        setPredictedGameIds(ids);
-        setMyPostIdByGameId(postMap);
-        setMyPredictionByGameId(predictionMap);
+        mergeScheduleMyPostsCache(fUser.uid, need, found);
+        applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
       } catch {
         if (!alive) return;
         setPredictedGameIds(new Set());

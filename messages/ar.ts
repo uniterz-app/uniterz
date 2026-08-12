@@ -271,6 +271,7 @@ const ar: Messages = {
     metricTabsLabel: "Ranking metrics",
     pts: "pts",
     minPostsRequired: "يتطلب تصنيف نسبة الفوز {n} منشورات على الأقل.",
+    winRatePickupRateRequired: "Win Rate ranking requires predicting at least 65% of pickup games available so far.",
     noMinPosts: "لا يوجد حد أدنى للمنشورات في هذه الجولة.",
     roundTotal: "TOTAL",
     roundFirst: "1ST",

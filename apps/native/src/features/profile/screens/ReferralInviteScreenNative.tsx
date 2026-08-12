@@ -283,10 +283,28 @@ export default function ReferralInviteScreenNative() {
               <View key={label} style={styles.rewardCell}>
                 <Text style={styles.statLabel}>{label}</Text>
                 <Text style={styles.rewardValue}>
-                  {value}
+                  {value.split("").map((ch, i) =>
+                    /\d/.test(ch) ? (
+                      <Text key={`${i}-${ch}`} style={styles.rewardValueDigit}>
+                        {ch}
+                      </Text>
+                    ) : (
+                      <Text key={`${i}-${ch}`}>{ch}</Text>
+                    )
+                  )}
                   <Text style={styles.rewardUnit}> UNIT</Text>
                 </Text>
-                <Text style={styles.rewardHint}>{hint}</Text>
+                <Text style={styles.rewardHint}>
+                  {hint.split("").map((ch, i) =>
+                    /\d/.test(ch) ? (
+                      <Text key={`${i}-${ch}`} style={styles.rewardHintDigit}>
+                        {ch}
+                      </Text>
+                    ) : (
+                      <Text key={`${i}-${ch}`}>{ch}</Text>
+                    )
+                  )}
+                </Text>
               </View>
             ))}
           </View>
@@ -428,6 +446,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.8,
     color: "rgba(254,243,199,0.95)",
+    transform: [{ skewX: "-12deg" }],
   },
   copyAmber: {
     borderWidth: 1,
@@ -531,6 +550,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: 10,
     color: "rgba(255,255,255,0.35)",
+  },
+  rewardValueDigit: {
+    transform: [{ skewX: "-12deg" }],
+  },
+  rewardHintDigit: {
+    transform: [{ skewX: "-12deg" }],
   },
   statsGrid: { flexDirection: "row", gap: 8 },
   statCell: {

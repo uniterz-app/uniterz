@@ -20,7 +20,14 @@ import {
 } from "../../../../../../lib/reports/reportGateCopy";
 import type { ReportGateKind } from "../../../../../../lib/reports/reportGateTypes";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
-import { OXANIUM_700, OXANIUM_800 } from "./reportThemeNative";
+import {
+  JP_400,
+  JP_700,
+  OXANIUM_700,
+  OXANIUM_800,
+  PANEL_BG,
+  REPORT_FRAME,
+} from "./reportThemeNative";
 
 type Lang = "ja" | "en";
 
@@ -67,6 +74,10 @@ type Props = {
 
 const BLUR_KINDS: ReportGateKind[] = ["free", "monthlyLocked"];
 
+function gatePeriod(kind: ReportGateKind): "weekly" | "monthly" {
+  return kind === "waitingMonth" || kind === "monthlyLocked" ? "monthly" : "weekly";
+}
+
 export default function ReportGateSurfaceNative({
   kind,
   language,
@@ -78,26 +89,28 @@ export default function ReportGateSurfaceNative({
   const copy = reportGateCopy(kind, language);
   const showBlur = BLUR_KINDS.includes(kind) && preview != null;
   const ctaVisible = Boolean(showCta && copy.cta && onPressCta);
+  const period = gatePeriod(kind);
+  const frame = REPORT_FRAME[period];
 
   const message = (
     <View style={styles.message}>
       <View style={styles.centerBlock}>
         <View style={styles.eyebrowBlock}>
-          <Text style={styles.eyebrow}>{copy.eyebrow}</Text>
-          {kind === "free" || kind === "monthlyLocked" ? (
-            <View style={styles.badgeScale}>
-              <ProCyberBadgeNative premium />
-            </View>
-          ) : null}
+          <Text style={[styles.eyebrow, { color: frame.main }]}>{copy.eyebrow}</Text>
+          <View style={styles.badgeScale}>
+            <ProCyberBadgeNative premium />
+          </View>
         </View>
-        <Text style={styles.title}>
+        <Text style={[styles.title, { fontFamily: language === "en" ? OXANIUM_800 : JP_700 }]}>
           {kind === "free" || kind === "monthlyLocked" ? (
             <TitleWithBrandFontsNative title={copy.title} />
           ) : (
             copy.title
           )}
         </Text>
-        <Text style={styles.body}>{copy.body}</Text>
+        <Text style={[styles.body, { fontFamily: language === "en" ? OXANIUM_700 : JP_400 }]}>
+          {copy.body}
+        </Text>
         {ctaVisible ? (
           <Pressable
             onPress={onPressCta}
@@ -110,19 +123,54 @@ export default function ReportGateSurfaceNative({
         ) : null}
       </View>
       {copy.bullets && copy.bullets.length > 0 ? (
-        <View style={styles.bulletPanel}>
+        <View
+          style={[
+            styles.bulletPanel,
+            {
+              borderColor: period === "monthly" ? "rgba(167,139,250,0.40)" : "rgba(34,211,238,0.40)",
+              backgroundColor:
+                period === "monthly" ? "rgba(167,139,250,0.07)" : "rgba(34,211,238,0.07)",
+            },
+          ]}
+        >
           {copy.bullets.map((item) => (
             <View key={item.title} style={styles.bulletRow}>
-              <View style={styles.bulletIcon}>
+              <View
+                style={[
+                  styles.bulletIcon,
+                  {
+                    borderColor: period === "monthly" ? "rgba(167,139,250,0.45)" : "rgba(34,211,238,0.45)",
+                    backgroundColor:
+                      period === "monthly" ? "rgba(167,139,250,0.15)" : "rgba(34,211,238,0.15)",
+                  },
+                ]}
+              >
                 <MaterialCommunityIcons
                   name={BULLET_ICONS[item.icon]}
                   size={12}
-                  color="#fdba74"
+                  color={period === "monthly" ? "#c4b5fd" : "#67e8f9"}
                 />
               </View>
               <View style={styles.bulletCopy}>
-                <Text style={styles.bulletTitle}>{item.title}</Text>
-                <Text style={styles.bulletDetail}>{item.detail}</Text>
+                <Text
+                  style={[
+                    styles.bulletTitle,
+                    {
+                      fontFamily: language === "en" ? OXANIUM_800 : JP_700,
+                      color: period === "monthly" ? "#ede9fe" : "#ecfeff",
+                    },
+                  ]}
+                >
+                  {item.title}
+                </Text>
+                <Text
+                  style={[
+                    styles.bulletDetail,
+                    { fontFamily: language === "en" ? OXANIUM_700 : JP_400 },
+                  ]}
+                >
+                  {item.detail}
+                </Text>
               </View>
             </View>
           ))}
@@ -133,14 +181,20 @@ export default function ReportGateSurfaceNative({
 
   if (!showBlur) {
     return (
-      <View style={[styles.emptyShell, style]}>
+      <View
+        style={[
+          styles.emptyShell,
+          { borderColor: frame.border, backgroundColor: PANEL_BG },
+          style,
+        ]}
+      >
         {message}
       </View>
     );
   }
 
   return (
-    <View style={[styles.blurShell, style]}>
+    <View style={[styles.blurShell, { borderColor: frame.border }, style]}>
       <View style={styles.previewClip} pointerEvents="none">
         {preview}
       </View>
@@ -160,10 +214,10 @@ export default function ReportGateSurfaceNative({
 
 const styles = StyleSheet.create({
   emptyShell: {
+    position: "relative",
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 3,
     paddingHorizontal: 16,
     paddingVertical: 56,
     alignItems: "center",
@@ -172,8 +226,8 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: 16,
+    borderRadius: 3,
+    backgroundColor: PANEL_BG,
     minHeight: 280,
   },
   previewClip: {
@@ -194,6 +248,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   message: {
+    zIndex: 1,
     width: "100%",
     maxWidth: 360,
     alignItems: "stretch",
@@ -215,37 +270,31 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontFamily: OXANIUM_700,
     fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: "rgba(165,243,252,0.8)",
+    letterSpacing: 2.4,
     textTransform: "uppercase",
     textAlign: "center",
   },
   title: {
-    fontSize: 17,
-    fontWeight: "700",
-    lineHeight: 24,
+    fontSize: 20,
+    lineHeight: 28,
     color: "#ffffff",
     textAlign: "center",
   },
   titlePro: {
     fontFamily: OXANIUM_800,
-    fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   body: {
     fontSize: 13,
     lineHeight: 20,
-    color: "rgba(255,255,255,0.72)",
+    color: "rgba(255,255,255,0.82)",
     textAlign: "center",
   },
   bulletPanel: {
     width: "100%",
     borderWidth: 1,
-    borderColor: "rgba(251,146,60,0.55)",
     borderRadius: 2,
-    backgroundColor: "rgba(249,115,22,0.07)",
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
@@ -261,8 +310,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
     borderRadius: 2,
     borderWidth: 1,
-    borderColor: "rgba(251,146,60,0.45)",
-    backgroundColor: "rgba(249,115,22,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -271,17 +318,14 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   bulletTitle: {
-    fontFamily: OXANIUM_800,
     fontSize: 11,
-    fontWeight: "800",
     letterSpacing: 0.4,
-    color: "#ffedd5",
   },
   bulletDetail: {
     marginTop: 2,
     fontSize: 11,
     lineHeight: 16,
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.78)",
   },
   cta: {
     marginTop: 4,

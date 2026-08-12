@@ -1,12 +1,12 @@
 /** Web `useUserLanguage` 相当 */
 import { useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
+import type { DocumentData } from "firebase/firestore";
 import {
   guessLanguageFromNavigator,
   normalizeLanguage,
   type Language,
 } from "../../../../lib/i18n/language";
-import { db } from "../lib/firebase";
+import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
 
 export function useNativeUserLanguage(uid: string | null | undefined) {
   const [language, setLanguage] = useState<Language>(() =>
@@ -24,22 +24,14 @@ export function useNativeUserLanguage(uid: string | null | undefined) {
     }
 
     setLoading(true);
-    const ref = doc(db, "users", uid);
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        const d = snap.data();
-        const resolved = normalizeLanguage(d?.language);
-        setLanguage(resolved ?? guessLanguageFromNavigator());
-        setCountryCode(typeof d?.countryCode === "string" ? d.countryCode : null);
-        setLoading(false);
-      },
-      () => {
-        setLoading(false);
-      }
-    );
-
-    return () => unsub();
+    return subscribeUserDocLive(uid, (data: DocumentData | null) => {
+      const resolved = normalizeLanguage(data?.language);
+      setLanguage(resolved ?? guessLanguageFromNavigator());
+      setCountryCode(
+        typeof data?.countryCode === "string" ? data.countryCode : null
+      );
+      setLoading(false);
+    });
   }, [uid]);
 
   return { language, countryCode, loading };

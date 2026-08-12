@@ -37,7 +37,8 @@ export type BindReferralOnSignupResult =
         | "bind_window_expired"
         | "mutual_invite"
         | "referrer_unavailable"
-        | "referrer_rate_limited";
+        | "referrer_rate_limited"
+        | "referrer_open_cap";
       inviteCode: string | null;
     };
 
@@ -47,6 +48,9 @@ export const REFERRAL_BIND_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** 同一紹介者への bind 作成上限（直近 24h）— マルチ垢ファーム緩和 */
 export const REFERRAL_REFERRER_BIND_RATE_LIMIT = 20;
 export const REFERRAL_REFERRER_BIND_RATE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** 未完了の招待関係の同時上限（registered / in_progress / under_review） */
+export const REFERRAL_REFERRER_OPEN_RELATIONS_CAP = 40;
 
 function createdAtMillis(data: Record<string, unknown>): number | null {
   const v = data.createdAt as
@@ -151,8 +155,29 @@ export async function bindReferralOnSignupAdmin(
     if (recentBinds.size > REFERRAL_REFERRER_BIND_RATE_LIMIT) {
       return { ok: false, error: "referrer_rate_limited", inviteCode: code };
     }
-  } catch {
-    // index 未整備時はスキップ（他の antifraud は有効）
+  } catch (err) {
+    console.warn(
+      "[bindReferralOnSignupAdmin] rate-limit query failed (index?)",
+      err
+    );
+  }
+
+  // 未完了招待が膨らみすぎるのを抑止（ファーム・放置垢）
+  try {
+    const openSnap = await db
+      .collection("referralRelations")
+      .where("referrerUid", "==", referrerUid)
+      .where("status", "in", ["registered", "in_progress", "under_review"])
+      .limit(REFERRAL_REFERRER_OPEN_RELATIONS_CAP + 1)
+      .get();
+    if (openSnap.size > REFERRAL_REFERRER_OPEN_RELATIONS_CAP) {
+      return { ok: false, error: "referrer_open_cap", inviteCode: code };
+    }
+  } catch (err) {
+    console.warn(
+      "[bindReferralOnSignupAdmin] open-cap query failed (index?)",
+      err
+    );
   }
 
   await inviteeRef.set(

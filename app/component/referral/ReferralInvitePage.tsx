@@ -8,6 +8,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import { nameOxanium } from "@/lib/fonts";
+import {
+  renderReferralSkewedDigits,
+  referralSkewBlockClassName,
+  referralSkewBlockStyle,
+} from "@/lib/referral/referralSkewedDigits";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { fetchMeReferral } from "@/lib/api/fetchMeReferral";
@@ -234,7 +239,12 @@ export default function ReferralInvitePage() {
                 {isJa ? "招待コード" : "Invite code"}
               </p>
               <div className="flex items-stretch gap-2">
-                <code className="min-w-0 flex-1 truncate border border-amber-300/35 bg-amber-300/10 px-3 py-2.5 text-[16px] font-bold tracking-[0.14em] text-amber-100">
+                <code
+                  className={referralSkewBlockClassName(
+                    "min-w-0 flex-1 truncate border border-amber-300/35 bg-amber-300/10 px-3 py-2.5 text-[16px] font-bold tracking-[0.14em] text-amber-100"
+                  )}
+                  style={referralSkewBlockStyle}
+                >
                   {summary.inviteCode}
                 </code>
                 <button
@@ -370,12 +380,14 @@ export default function ReferralInvitePage() {
                   "mt-1 text-[15px] font-extrabold tabular-nums tracking-wide text-cyan-100",
                 ].join(" ")}
               >
-                {c.value}
+                {renderReferralSkewedDigits(c.value)}
                 <span className="ml-1 text-[8px] tracking-[0.1em] text-white/40">
                   UNIT
                 </span>
               </p>
-              <p className="mt-0.5 text-[10px] text-white/35">{c.hint}</p>
+              <p className="mt-0.5 text-[10px] text-white/35">
+                {renderReferralSkewedDigits(c.hint)}
+              </p>
             </div>
           ))}
         </div>

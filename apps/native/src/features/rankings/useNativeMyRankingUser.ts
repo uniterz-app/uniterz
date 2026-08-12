@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import type { DocumentData } from "firebase/firestore";
+import { subscribeUserDocLive } from "../../../../../lib/user/subscribeUserDocLive";
 
 export type NativeMyRankingUser = {
   displayName: string;
@@ -32,47 +32,35 @@ export function useNativeMyRankingUser(uid: string | null | undefined) {
     }
 
     setLoading(true);
-    const ref = doc(db, "users", uid);
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        const d = snap.data() as
-          | {
-              displayName?: string;
-              handle?: string;
-              photoURL?: string;
-              plan?: string;
-              language?: string;
-              countryCode?: string | null;
-            }
-          | undefined;
-
-        if (!d) {
-          setUser(EMPTY_USER);
-          setLoading(false);
-          return;
-        }
-
-        setUser({
-          displayName: d.displayName?.trim() || "",
-          handle: d.handle?.trim() || "",
-          photoURL: d.photoURL?.trim() || "",
-          plan: d.plan === "pro" ? "pro" : "free",
-          language: d.language === "en" ? "en" : "ja",
-          countryCode:
-            typeof d.countryCode === "string" && d.countryCode.trim()
-              ? d.countryCode.trim()
-              : null,
-        });
-        setLoading(false);
-      },
-      () => {
+    return subscribeUserDocLive(uid, (data: DocumentData | null) => {
+      if (!data) {
         setUser(EMPTY_USER);
         setLoading(false);
+        return;
       }
-    );
 
-    return () => unsub();
+      const d = data as {
+        displayName?: string;
+        handle?: string;
+        photoURL?: string;
+        plan?: string;
+        language?: string;
+        countryCode?: string | null;
+      };
+
+      setUser({
+        displayName: d.displayName?.trim() || "",
+        handle: d.handle?.trim() || "",
+        photoURL: d.photoURL?.trim() || "",
+        plan: d.plan === "pro" ? "pro" : "free",
+        language: d.language === "en" ? "en" : "ja",
+        countryCode:
+          typeof d.countryCode === "string" && d.countryCode.trim()
+            ? d.countryCode.trim()
+            : null,
+      });
+      setLoading(false);
+    });
   }, [uid]);
 
   return { user, loading };

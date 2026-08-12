@@ -49,6 +49,8 @@ import {
   resolveMyRankProgressSnapshotLimit,
   type MyRankProgressPoint,
 } from "@/lib/rankings/myRankRankingProgress";
+import type { EstimatedPeriodUnits } from "@/lib/rankings/estimatePeriodRankingUnits";
+import { periodRankingUnitMetricLabel } from "@/lib/units/periodRankingUnitRewards";
 
 export type { MyRankProgressPoint };
 
@@ -98,6 +100,8 @@ type Props = {
   rankProgressLoading?: boolean;
   /** Weekly / Monthly 等でプログレスを隠す */
   hideRankProgress?: boolean;
+  /** Pro · 週/月 Pick Up — 現順位ベースの推定 Unit */
+  estimatedUnits?: EstimatedPeriodUnits | null;
 };
 
 type CardLayout = NonNullable<Props["layout"]>;
@@ -291,9 +295,13 @@ function RankMetaStrip({
       <span
         className={[
           nameOxanium.className,
-          "shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none",
+          "inline-block shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none",
         ].join(" ")}
-        style={{ color: "rgba(255,255,255,0.42)", fontSize: metaSize }}
+        style={{
+          color: "rgba(255,255,255,0.42)",
+          fontSize: metaSize,
+          transform: "skewX(-12deg)",
+        }}
       >
         VOL:{posts}
       </span>
@@ -301,9 +309,13 @@ function RankMetaStrip({
         <span
           className={[
             nameOxanium.className,
-            "min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none",
+            "inline-block min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none",
           ].join(" ")}
-          style={{ color: "rgba(0,245,255,0.55)", fontSize: metaSize }}
+          style={{
+            color: "rgba(0,245,255,0.55)",
+            fontSize: metaSize,
+            transform: "skewX(-12deg)",
+          }}
         >
           {avgText}
         </span>
@@ -346,11 +358,12 @@ function MetricHudInline({
           className={[
             summaryMetricNumClass,
             /** Alfa Slab は leading-none だと上が欠ける */
-            "leading-[1.28] tabular-nums",
+            "inline-block leading-[1.28] tabular-nums",
           ].join(" ")}
           style={{
             fontSize: statValueSize,
             color: metricValueColor,
+            transform: "skewX(-12deg)",
           }}
         >
           {metricValue}
@@ -359,11 +372,12 @@ function MetricHudInline({
           <span
             className={[
               nameOxanium.className,
-              "shrink-0 font-bold uppercase tracking-[0.08em] leading-none",
+              "inline-block shrink-0 font-bold uppercase tracking-[0.08em] leading-none",
             ].join(" ")}
             style={{
               fontSize: unitSize,
               color: "rgba(255,255,255,0.45)",
+              transform: "skewX(-12deg)",
             }}
           >
             {unit}
@@ -518,6 +532,7 @@ export default function MyRankCard({
   rankProgress,
   rankProgressLoading = false,
   hideRankProgress = false,
+  estimatedUnits = null,
 }: Props) {
   void _cardResetKey;
   const ui = LAYOUT[layout];
@@ -674,11 +689,40 @@ export default function MyRankCard({
     !hideRankProgress &&
     metric === "totalScore" &&
     (displayTier != null || rankProgress !== undefined);
+  const showEstimatedUnits =
+    proTier && estimatedUnits != null && !loading && !statsPending;
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
   });
   const progressPoints = rankProgress ?? [];
+
+  const estimatedUnitsLabel =
+    language === "en" ? "EST. UNITS" : "推定獲得 UNIT";
+  const estimatedUnitsHint =
+    estimatedUnits?.period === "monthly"
+      ? language === "en"
+        ? "Sum of 4 metrics · current ranks · final after period ends"
+        : "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース"
+      : language === "en"
+        ? "Based on current ranks · final after period ends"
+        : "現順位ベース · 期間確定後に付与";
+  const estimatedBreakdown =
+    estimatedUnits && estimatedUnits.lines.length > 0
+      ? estimatedUnits.lines
+          .map((line) => {
+            const label = periodRankingUnitMetricLabel(
+              line.metric,
+              language === "en" ? "en" : "ja"
+            );
+            return `${label} #${line.rank} +${line.units}`;
+          })
+          .join(" · ")
+      : estimatedUnits?.period === "monthly"
+        ? language === "en"
+          ? "Overall + Win% + Upset + Scorer"
+          : "総合 + 勝率 + Upset + 得点者"
+        : null;
 
   const outerPad =
     layout === "mobile" && mobileWide && "outerPadWide" in ui
@@ -892,8 +936,9 @@ export default function MyRankCard({
                     <span
                       className={[
                         nameOxanium.className,
-                        "text-[16px] font-bold text-white/55",
+                        "inline-block text-[16px] font-bold text-white/55",
                       ].join(" ")}
+                      style={{ transform: "skewX(-12deg)" }}
                     >
                       #
                     </span>
@@ -923,9 +968,9 @@ export default function MyRankCard({
                     <span
                       className={[
                         nameOxanium.className,
-                        "text-[11px] font-semibold tabular-nums text-white/45 leading-none",
+                        "inline-block text-[11px] font-semibold tabular-nums text-white/45 leading-none",
                       ].join(" ")}
-                      style={{ marginTop: -3 }}
+                      style={{ marginTop: -3, transform: "skewX(-12deg)" }}
                     >
                       / {entriesDisplay}
                     </span>
@@ -992,6 +1037,59 @@ export default function MyRankCard({
                 numbersOnly
                 dense
               />
+            </div>
+          ) : null}
+
+          {showEstimatedUnits && estimatedUnits ? (
+            <div
+              className="border-t px-2.5 py-2"
+              style={{ borderColor: "rgba(255,255,255,0.08)" }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "text-[10px] font-extrabold uppercase tracking-[0.14em] text-amber-200/75",
+                    ].join(" ")}
+                  >
+                    {estimatedUnitsLabel}
+                  </p>
+                  {estimatedBreakdown ? (
+                    <p
+                      className={[
+                        nameOxanium.className,
+                        "mt-0.5 truncate text-[8px] font-semibold uppercase tracking-[0.08em] text-white/40",
+                      ].join(" ")}
+                    >
+                      {estimatedBreakdown}
+                    </p>
+                  ) : null}
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "mt-0.5 text-[8px] font-semibold uppercase tracking-[0.1em] text-white/38",
+                    ].join(" ")}
+                  >
+                    {estimatedUnitsHint}
+                  </p>
+                </div>
+                <p
+                  className={[
+                    nameOxanium.className,
+                    "inline-block shrink-0 text-[20px] font-black tabular-nums leading-none tracking-tight",
+                  ].join(" ")}
+                  style={{ color: GOLD, transform: "skewX(-12deg)" }}
+                >
+                  +{estimatedUnits.total.toLocaleString("en-US")}
+                  <span
+                    className="ml-1.5 text-[11px] font-extrabold uppercase tracking-[0.1em]"
+                    style={{ color: "rgba(255,214,90,0.78)" }}
+                  >
+                    Unit
+                  </span>
+                </p>
+              </div>
             </div>
           ) : null}
         </div>

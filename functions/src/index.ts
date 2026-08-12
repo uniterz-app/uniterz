@@ -91,15 +91,57 @@ export const buildCumulativeStatsCron = onSchedule(
 export const buildCumulativeRankingSnapshotCron = onSchedule(
   { schedule: "0 16 * * *", timeZone: "Asia/Tokyo" },
   async () => {
-    if (!(await hasRankingAggregationScheduledJstToday())) {
-      console.log(
-        "[buildCumulativeRankingSnapshotCron] skip: no NBA games scheduled this JST date"
-      );
-      return;
-    }
-    const snapshotResult = await buildCumulativeRankingSnapshot();
+    const hasGamesToday = await hasRankingAggregationScheduledJstToday();
 
-    // NBA Weekly / Monthly の期間スナップショット（過去期間のアーカイブ兼用）
+    if (hasGamesToday) {
+      const snapshotResult = await buildCumulativeRankingSnapshot();
+
+      const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
+      const token = process.env.INTERNAL_REVALIDATE_SECRET;
+      if (!revalidateUrl || !token) {
+        console.warn(
+          "[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)"
+        );
+      } else {
+        try {
+          const res = await fetch(revalidateUrl, {
+            method: "POST",
+            headers: { "x-revalidate-token": token },
+          });
+          if (!res.ok) {
+            const body = await res.text().catch(() => "");
+            console.error(
+              `[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`
+            );
+          } else {
+            console.log(
+              "[buildCumulativeRankingSnapshotCron] revalidate success"
+            );
+          }
+        } catch (err: unknown) {
+          const message =
+            err instanceof Error ? err.message : String(err ?? "");
+          console.error(
+            `[buildCumulativeRankingSnapshotCron] revalidate error: ${message}`
+          );
+        }
+      }
+
+      try {
+        await notifyRankingUpdatedPush(snapshotResult.notifiedUids ?? []);
+      } catch (err) {
+        console.error(
+          "[buildCumulativeRankingSnapshotCron] push notify failed",
+          err
+        );
+      }
+    } else {
+      console.log(
+        "[buildCumulativeRankingSnapshotCron] skip cumulative: no NBA games scheduled this JST date"
+      );
+    }
+
+    // 期間スナップショット + Unit 付与は無試合日も実行（猶予後の確定付与のため）
     try {
       await buildNbaPeriodRankingSnapshots();
     } catch (err) {
@@ -109,7 +151,6 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
       );
     }
 
-    // グループバトル 週/月スナップショット + final への Unit 付与
     try {
       await buildGroupBattlePeriodSnapshots();
       await grantAllFinalGroupBattleUnits();
@@ -118,41 +159,6 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
         "[buildCumulativeRankingSnapshotCron] group battle snapshots/units failed",
         err
       );
-    }
-
-    const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
-    const token = process.env.INTERNAL_REVALIDATE_SECRET;
-    if (!revalidateUrl || !token) {
-      console.warn(
-        "[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)"
-      );
-    } else {
-      try {
-        const res = await fetch(revalidateUrl, {
-          method: "POST",
-          headers: { "x-revalidate-token": token },
-        });
-        if (!res.ok) {
-          const body = await res.text().catch(() => "");
-          console.error(
-            `[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`
-          );
-        } else {
-          console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
-        }
-      } catch (err: any) {
-        console.error(
-          `[buildCumulativeRankingSnapshotCron] revalidate error: ${String(
-            err?.message ?? err
-          )}`
-        );
-      }
-    }
-
-    try {
-      await notifyRankingUpdatedPush(snapshotResult.notifiedUids ?? []);
-    } catch (err) {
-      console.error("[buildCumulativeRankingSnapshotCron] push notify failed", err);
     }
   }
 );

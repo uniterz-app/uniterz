@@ -877,6 +877,7 @@ export default function ProfileEditKinetikPanel({
     balance: unitBalance ?? null,
     enabled: editable && unitBalance != null,
     storageKey: shareHandle?.trim() || "me",
+    language: isJa ? "ja" : "en",
   });
   /** 金庫加算カウント中は背景ループを止め続ける（オーバーレイ退出後も） */
   const [vaultSettling, setVaultSettling] = useState(false);

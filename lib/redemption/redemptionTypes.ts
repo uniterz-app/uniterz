@@ -18,7 +18,10 @@ export type RedemptionRequestStatus =
 export type RedemptionCatalogItem = {
   kind: RedemptionProductKind;
   unitsRequired: number;
+  /** 日本語 UI・国内審査の価格上限（税込・円） */
   priceCapJpy: number;
+  /** 英語 UI 表示用の価格上限（USD）。運用上の固定上限（為替都度換算ではない） */
+  priceCapUsd: number;
   titleJa: string;
   titleEn: string;
   blurbJa: string;

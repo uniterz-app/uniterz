@@ -204,9 +204,10 @@ export default function ReferralStampBoardNative({
             {isJa ? "招待スタンプラリー" : "Invite stamp rally"}
           </Text>
           <Text style={styles.title}>
-            {isJa
-              ? `${completedCount} / 10 達成`
-              : `${completedCount} / 10 locked`}
+            <Text style={styles.titleDigits}>
+              {completedCount} / 10
+            </Text>
+            {isJa ? " 達成" : " locked"}
           </Text>
         </View>
         <View style={styles.earnedCol}>
@@ -286,6 +287,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     textTransform: "uppercase",
   },
+  titleDigits: {
+    transform: [{ skewX: "-12deg" }],
+  },
   earnedCol: { alignItems: "flex-end" },
   earnedLabel: {
     fontFamily: OX,
@@ -300,6 +304,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: "rgba(207,250,254,1)",
+    transform: [{ skewX: "-12deg" }],
   },
   earnedUnit: {
     fontSize: 9,
@@ -390,6 +395,7 @@ const styles = StyleSheet.create({
     fontFamily: OX,
     fontSize: 15,
     fontWeight: "800",
+    transform: [{ skewX: "-12deg" }],
   },
   cellIndexNext: { color: "rgba(207,250,254,0.9)" },
   cellIndexEmpty: { color: "rgba(255,255,255,0.35)" },
@@ -424,6 +430,7 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 0.4,
+    transform: [{ skewX: "-12deg" }],
   },
   bonusChipTextOn: { color: "#050508" },
   bonusChipTextInkOn: { color: "#fff" },

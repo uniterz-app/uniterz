@@ -31,6 +31,9 @@ export function rankingsTexts(language: RankingsLanguage) {
     posts: common.posts,
     noData: "NO DATA",
     winRateMin: (n: number) => m.minPostsRequired.replace("{n}", String(n)),
+    winRatePickupRate:
+      (m as { winRatePickupRateRequired?: string }).winRatePickupRateRequired ??
+      m.minPostsRequired.replace("{n}", "65%"),
     winRateNoMin: m.noMinPosts,
     roundTotal: m.roundTotal,
     roundFirst: m.roundFirst,

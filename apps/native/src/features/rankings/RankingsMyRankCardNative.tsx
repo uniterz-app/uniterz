@@ -9,6 +9,8 @@ import {
   formatRankTierGapForHud,
   type RankTierGapHint,
 } from "../../../../../lib/rankings/rankTierMilestone";
+import type { EstimatedPeriodUnits } from "../../../../../lib/rankings/estimatePeriodRankingUnits";
+import { periodRankingUnitMetricLabel } from "../../../../../lib/units/periodRankingUnitRewards";
 import {
   resolveMyRankProgressSnapshotLimit,
   type MyRankProgressPoint,
@@ -65,6 +67,7 @@ export function MyRankCardNative({
   rankProgress,
   rankProgressLoading = false,
   hideRankProgress = false,
+  estimatedUnits = null,
 }: {
   rank: number | null;
   metric: MobileMetric;
@@ -93,6 +96,7 @@ export function MyRankCardNative({
   rankProgress?: MyRankProgressPoint[] | null;
   rankProgressLoading?: boolean;
   hideRankProgress?: boolean;
+  estimatedUnits?: EstimatedPeriodUnits | null;
 }) {
   void _cardResetKey;
   const t = rankingsTexts(language);
@@ -149,11 +153,39 @@ export function MyRankCardNative({
     !hideRankProgress &&
     metric === "totalScore" &&
     (displayTier != null || rankProgress !== undefined);
+  const showEstimatedUnits =
+    proTier && estimatedUnits != null && !loading && !statsPending;
   const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
     displayTier,
     isPro,
   });
   const progressPoints = rankProgress ?? [];
+  const estimatedUnitsLabel =
+    language === "en" ? "EST. UNITS" : "推定獲得 UNIT";
+  const estimatedUnitsHint =
+    estimatedUnits?.period === "monthly"
+      ? language === "en"
+        ? "Sum of 4 metrics · current ranks · final after period ends"
+        : "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース"
+      : language === "en"
+        ? "Based on current ranks · final after period ends"
+        : "現順位ベース · 期間確定後に付与";
+  const estimatedBreakdown =
+    estimatedUnits && estimatedUnits.lines.length > 0
+      ? estimatedUnits.lines
+          .map((line) => {
+            const label = periodRankingUnitMetricLabel(
+              line.metric,
+              language === "en" ? "en" : "ja"
+            );
+            return `${label} #${line.rank} +${line.units}`;
+          })
+          .join(" · ")
+      : estimatedUnits?.period === "monthly"
+        ? language === "en"
+          ? "Overall + Win% + Upset + Scorer"
+          : "総合 + 勝率 + Upset + 得点者"
+        : null;
 
   const metricValueDisplay = (() => {
     if (loading || statsPending) return "···";
@@ -404,6 +436,30 @@ export function MyRankCardNative({
                   />
                 </View>
               ) : null}
+
+              {showEstimatedUnits && estimatedUnits ? (
+                <View style={myRankLocalStyles.estUnitsBand}>
+                  <View style={myRankLocalStyles.estUnitsRow}>
+                    <View style={myRankLocalStyles.estUnitsLeft}>
+                      <Text style={myRankLocalStyles.estUnitsLabel}>
+                        {estimatedUnitsLabel}
+                      </Text>
+                      {estimatedBreakdown ? (
+                        <Text style={myRankLocalStyles.estUnitsBreakdown} numberOfLines={2}>
+                          {estimatedBreakdown}
+                        </Text>
+                      ) : null}
+                      <Text style={myRankLocalStyles.estUnitsHint}>{estimatedUnitsHint}</Text>
+                    </View>
+                    <View style={myRankLocalStyles.estUnitsValueRow}>
+                      <Text style={myRankLocalStyles.estUnitsValue}>
+                        +{estimatedUnits.total.toLocaleString("en-US")}
+                      </Text>
+                      <Text style={myRankLocalStyles.estUnitsUnit}>Unit</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
             </View>
 
             <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
@@ -426,5 +482,70 @@ const myRankLocalStyles = StyleSheet.create({
   },
   tierGapGold: {
     color: "#FFD65A",
+  },
+  estUnitsBand: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  estUnitsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  estUnitsLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  estUnitsLabel: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+    color: "rgba(253,230,138,0.78)",
+  },
+  estUnitsBreakdown: {
+    marginTop: 2,
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 8,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.4)",
+  },
+  estUnitsValue: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#FFD65A",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-12deg" }],
+  },
+  estUnitsValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 5,
+    flexShrink: 0,
+  },
+  estUnitsUnit: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: "rgba(255,214,90,0.78)",
+    transform: [{ skewX: "-12deg" }],
+  },
+  estUnitsHint: {
+    marginTop: 2,
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 8,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.38)",
   },
 });

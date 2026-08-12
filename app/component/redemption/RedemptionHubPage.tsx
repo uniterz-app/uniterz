@@ -16,6 +16,7 @@ import {
   REDEMPTION_DISCLAIMER_JA,
   REDEMPTION_EXCLUSIONS_EN,
   REDEMPTION_EXCLUSIONS_JA,
+  redemptionPriceCapLabel,
 } from "@/lib/redemption/redemptionCatalog";
 import { redemptionCatalogImageSrc } from "@/lib/redemption/redemptionCatalogImages";
 import { redemptionBatchScheduleCopy } from "@/lib/redemption/redemptionBatchScheduleCopy";
@@ -194,9 +195,7 @@ export default function RedemptionHubPage() {
                     {isJa ? item.blurbJa : item.blurbEn}
                   </p>
                   <p className="mt-1 text-[11px] text-white/40">
-                    {isJa
-                      ? `価格上限 ${item.priceCapJpy.toLocaleString("ja-JP")} 円`
-                      : `Price cap ¥${item.priceCapJpy.toLocaleString("en-US")}`}
+                    {redemptionPriceCapLabel(item, isJa ? "ja" : "en")}
                   </p>
                   <Link
                     href={`${base}/redeem/apply?kind=${item.kind}`}

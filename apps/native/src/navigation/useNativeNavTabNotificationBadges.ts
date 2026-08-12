@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { AppState } from "react-native";
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
-  onSnapshot,
   orderBy,
   query,
   Timestamp,
@@ -18,6 +19,9 @@ import {
   readNavRankingSeenMsNative,
   readNavResultSeenMsNative,
 } from "./navTabNotificationSeenNative";
+
+/** Web `useNavTabNotificationBadges` と同趣旨 — 常時 onSnapshot を避けて poll */
+const BADGE_POLL_MS = 120_000;
 
 function firestoreTsToMs(v: unknown): number | null {
   const t = v as { toMillis?: () => number; seconds?: number } | null | undefined;
@@ -84,26 +88,39 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
     }
 
     let cancelled = false;
+    const ref = doc(db, "cumulative_stats", uid);
 
     void readNavRankingSeenMsNative(uid).then((seen) => {
       if (!cancelled) setRankingSeenMs(seen);
     });
 
-    const unsub = onSnapshot(doc(db, "cumulative_stats", uid), (snap) => {
-      const ms = firestoreTsToMs(snap.data()?.snapshotRanks?.updatedAt);
-      setRankingUpdatedAtMs(ms);
-      void (async () => {
+    const refresh = async () => {
+      if (AppState.currentState !== "active") return;
+      try {
+        const snap = await getDoc(ref);
+        if (cancelled) return;
+        const ms = firestoreTsToMs(snap.data()?.snapshotRanks?.updatedAt);
+        setRankingUpdatedAtMs(ms);
         const seen = await readNavRankingSeenMsNative(uid);
         if (seen == null && ms != null) {
           await markNavRankingSeenNative(uid, ms);
           if (!cancelled) setRankingSeenMs(ms);
         }
-      })();
+      } catch {
+        if (!cancelled) setRankingUpdatedAtMs(null);
+      }
+    };
+
+    void refresh();
+    const timer = setInterval(() => void refresh(), BADGE_POLL_MS);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void refresh();
     });
 
     return () => {
       cancelled = true;
-      unsub();
+      clearInterval(timer);
+      sub.remove();
     };
   }, [active, uid]);
 
@@ -128,7 +145,6 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
   }, [active, uid]);
 
   useEffect(() => {
-    // リザルト表示中はバッジ不要。seen 更新で listener を張り直さない（読み取り増の主因）
     if (
       !active ||
       !uid ||
@@ -140,6 +156,7 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
       return;
     }
 
+    let cancelled = false;
     const q = query(
       collection(db, "posts"),
       where("authorUid", "==", uid),
@@ -149,11 +166,27 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
       limit(1)
     );
 
-    return onSnapshot(
-      q,
-      (snap) => setHasNewSettledPost(snap.size > 0),
-      () => setHasNewSettledPost(false)
-    );
+    const refresh = async () => {
+      if (AppState.currentState !== "active") return;
+      try {
+        const snap = await getDocs(q);
+        if (!cancelled) setHasNewSettledPost(snap.size > 0);
+      } catch {
+        if (!cancelled) setHasNewSettledPost(false);
+      }
+    };
+
+    void refresh();
+    const timer = setInterval(() => void refresh(), BADGE_POLL_MS);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void refresh();
+    });
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      sub.remove();
+    };
   }, [active, uid, resultBaselineReady, resultSeenMs, resultTabActive]);
 
   useEffect(() => {
@@ -166,12 +199,10 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
     if (!active || !uid || !resultTabActive) return;
     const ms = Date.now();
     void markNavResultSeenNative(uid, ms).then(() => {
-      // ストレージだけ更新。resultSeenMs state はタブを離れたときに反映して listener を1回だけ張り直す
       setHasNewSettledPost(false);
     });
   }, [active, uid, resultTabActive]);
 
-  // リザルトタブを離れたら seen を state に反映（次回 listener 用）
   useEffect(() => {
     if (!active || !uid || resultTabActive) return;
     let cancelled = false;

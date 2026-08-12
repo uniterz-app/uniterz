@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import {
   DEFAULT_PUSH_NOTIFICATION_PREFS,
   parsePushNotificationPrefs,
@@ -7,7 +7,9 @@ import {
   type PushNotificationPrefKey,
   type PushNotificationPrefs,
 } from "@/lib/notifications/pushNotificationPrefs";
+import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
 import { db } from "../lib/firebase";
+import type { DocumentData } from "firebase/firestore";
 
 export function usePushNotificationPrefsNative(uid: string | null | undefined) {
   const [prefs, setPrefs] = useState<PushNotificationPrefs>({
@@ -23,17 +25,10 @@ export function usePushNotificationPrefsNative(uid: string | null | undefined) {
     }
 
     setLoading(true);
-    const unsub = onSnapshot(
-      doc(db, "users", uid),
-      (snap) => {
-        setPrefs(parsePushNotificationPrefs(snap.data()?.notificationPrefs));
-        setLoading(false);
-      },
-      () => {
-        setLoading(false);
-      }
-    );
-    return unsub;
+    return subscribeUserDocLive(uid, (data: DocumentData | null) => {
+      setPrefs(parsePushNotificationPrefs(data?.notificationPrefs));
+      setLoading(false);
+    });
   }, [uid]);
 
   const persistPrefs = useCallback(

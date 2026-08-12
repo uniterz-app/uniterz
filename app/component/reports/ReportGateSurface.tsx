@@ -29,7 +29,7 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
-import { nameOxanium } from "@/lib/fonts";
+import { jp, nameOxanium } from "@/lib/fonts";
 
 type Lang = "ja" | "en";
 
@@ -81,6 +81,23 @@ type Props = {
 
 const BLUR_KINDS: ReportGateKind[] = ["free", "monthlyLocked"];
 
+const REPORT_FRAME = {
+  weekly: {
+    main: "#22d3ee",
+    border: "rgba(34,211,238,0.40)",
+    grid: "rgba(34,211,238,0.28)",
+  },
+  monthly: {
+    main: "#a78bfa",
+    border: "rgba(167,139,250,0.40)",
+    grid: "rgba(167,139,250,0.28)",
+  },
+} as const;
+
+function gatePeriod(kind: ReportGateKind): "weekly" | "monthly" {
+  return kind === "waitingMonth" || kind === "monthlyLocked" ? "monthly" : "weekly";
+}
+
 export default function ReportGateSurface({
   kind,
   language,
@@ -92,6 +109,22 @@ export default function ReportGateSurface({
   const copy = reportGateCopy(kind, language);
   const href = ctaHref === undefined ? reportGateCtaHref(kind) : ctaHref;
   const showBlur = BLUR_KINDS.includes(kind) && preview != null;
+  const period = gatePeriod(kind);
+  const frame = REPORT_FRAME[period];
+  const titleFont = language === "en" ? nameOxanium.className : jp.className;
+  const bodyFont = language === "en" ? nameOxanium.className : jp.className;
+  const bulletTone =
+    period === "monthly"
+      ? {
+          panel: "border-[rgba(167,139,250,0.40)] bg-[rgba(167,139,250,0.07)]",
+          icon: "border-[rgba(167,139,250,0.45)] bg-[rgba(167,139,250,0.15)] text-[#c4b5fd]",
+          title: "text-[#ede9fe]",
+        }
+      : {
+          panel: "border-[rgba(34,211,238,0.40)] bg-[rgba(34,211,238,0.07)]",
+          icon: "border-[rgba(34,211,238,0.45)] bg-[rgba(34,211,238,0.15)] text-[#67e8f9]",
+          title: "text-[#ecfeff]",
+        };
 
   const cta =
     copy.cta && (href || onCtaClick) ? (
@@ -121,46 +154,58 @@ export default function ReportGateSurface({
     ) : null;
 
   const message = (
-    <div className="flex w-full max-w-[22rem] flex-col items-stretch gap-3 px-3 text-center">
+    <div className="relative z-1 flex w-full max-w-[22rem] flex-col items-stretch gap-3 px-3 text-center">
       <div className="flex flex-col items-center gap-2">
         <p
           className={[
             nameOxanium.className,
-            "text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200/80",
+            "text-[10px] font-bold uppercase tracking-[0.24em]",
           ].join(" ")}
+          style={{ color: frame.main }}
         >
           {copy.eyebrow}
         </p>
-        {kind === "free" || kind === "monthlyLocked" ? (
-          <span className="inline-flex origin-top scale-[1.45]">
-            <ProCyberBadge
-              {...proBadgeStaticMotion}
-              premium
-              ariaLabel={language === "ja" ? "Pro会員" : "Pro member"}
-            />
-          </span>
-        ) : null}
+        <span className="inline-flex origin-top scale-[1.45]">
+          <ProCyberBadge
+            {...proBadgeStaticMotion}
+            premium
+            ariaLabel={language === "ja" ? "Pro会員" : "Pro member"}
+          />
+        </span>
       </div>
-      <h2 className="text-balance text-[17px] font-bold leading-snug text-white">
+      <h2
+        className={[
+          titleFont,
+          "text-balance text-[20px] font-bold leading-7 text-white",
+        ].join(" ")}
+      >
         {kind === "free" || kind === "monthlyLocked" ? (
           <TitleWithBrandFonts title={copy.title} />
         ) : (
           copy.title
         )}
       </h2>
-      <p className="text-pretty text-[13px] leading-relaxed text-white/72">
+      <p
+        className={[
+          bodyFont,
+          "text-pretty text-[13px] leading-relaxed text-white/82",
+        ].join(" ")}
+      >
         {copy.body}
       </p>
       {cta ? <div className="flex justify-center">{cta}</div> : null}
       {copy.bullets && copy.bullets.length > 0 ? (
-        <div className="w-full rounded-[2px] border border-orange-400/55 bg-orange-500/[0.07] px-3 py-2.5 text-left shadow-[0_0_18px_rgba(251,146,60,0.12)]">
+        <div className={["w-full rounded-[2px] border px-3 py-2.5 text-left", bulletTone.panel].join(" ")}>
           <ul className="list-none space-y-2">
             {copy.bullets.map((item) => {
               const Icon = BULLET_ICONS[item.icon];
               return (
                 <li key={item.title} className="flex items-start gap-2.5">
                   <span
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border border-orange-400/45 bg-orange-500/15 text-orange-300"
+                    className={[
+                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border",
+                      bulletTone.icon,
+                    ].join(" ")}
                     aria-hidden
                   >
                     <Icon className="h-3 w-3" strokeWidth={2.4} />
@@ -168,13 +213,19 @@ export default function ReportGateSurface({
                   <div className="min-w-0 flex-1">
                     <p
                       className={[
-                        nameOxanium.className,
-                        "text-[11px] font-extrabold tracking-[0.04em] text-orange-100",
+                        language === "en" ? nameOxanium.className : jp.className,
+                        "text-[11px] font-bold tracking-[0.04em]",
+                        bulletTone.title,
                       ].join(" ")}
                     >
                       {item.title}
                     </p>
-                    <p className="mt-0.5 break-words text-[11px] leading-snug text-white/70">
+                    <p
+                      className={[
+                        language === "en" ? nameOxanium.className : jp.className,
+                        "mt-0.5 break-words text-[11px] leading-snug text-white/78",
+                      ].join(" ")}
+                    >
                       {item.detail}
                     </p>
                   </div>
@@ -191,13 +242,12 @@ export default function ReportGateSurface({
     return (
       <div
         className={[
-          "relative overflow-hidden rounded-2xl border border-white/10",
-          "bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_100%)]",
-          "px-4 py-14",
+          "relative overflow-hidden rounded-[3px] border bg-[rgba(5,5,8,0.98)] px-4 py-14",
           className ?? "",
         ].join(" ")}
+        style={{ borderColor: frame.border }}
       >
-        <div className="flex justify-center">{message}</div>
+        <div className="relative z-1 flex justify-center">{message}</div>
       </div>
     );
   }
@@ -205,9 +255,10 @@ export default function ReportGateSurface({
   return (
     <div
       className={[
-        "relative isolate overflow-hidden rounded-2xl border border-white/10",
+        "relative isolate overflow-hidden rounded-[3px] border bg-[rgba(5,5,8,0.98)]",
         className ?? "",
       ].join(" ")}
+      style={{ borderColor: frame.border }}
     >
       <div
         aria-hidden
@@ -229,8 +280,8 @@ export default function ReportGateSurface({
         {message}
       </div>
 
-      {/* 最低高さを確保（短いプレビューでも CTA が窮屈にならない） */}
       <div className="pointer-events-none invisible min-h-[280px]" aria-hidden />
     </div>
   );
 }
+

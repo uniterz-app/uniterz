@@ -7,10 +7,8 @@ import { useCallback, useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
-  buildForcedDeliveryCandidates,
   buildReportDeliveryCandidates,
   type ReportDeliveryCandidate,
-  type ReportDeliveryKind,
 } from "@/lib/reports/reportDelivery";
 import {
   markReportOverlaySeenInSet,
@@ -22,8 +20,6 @@ import { parseMonthlyReportDoc } from "@/lib/reports/parseMonthlyReportDoc";
 import { parseWeeklyReportDoc } from "@/lib/reports/parseWeeklyReportDoc";
 import type { MonthlyReport } from "@/lib/reports/monthlyReportTypes";
 import type { WeeklyReport } from "@/lib/reports/weeklyReportTypes";
-import { weeklyReportPreviewClimbed } from "@/lib/reports/weeklyReportPreviewMocks";
-import { monthlyReportPreviewTop10 } from "@/lib/reports/monthlyReportPreviewMocks";
 
 export type ActiveReportOverlay = {
   candidate: ReportDeliveryCandidate;
@@ -55,20 +51,6 @@ function writeSeen(uid: string, ids: Set<string>): void {
   }
 }
 
-function forceKindsFromEnv(): ReportDeliveryKind[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const q = new URLSearchParams(window.location.search).get("forceReportOverlay");
-    if (q === "weekly" || q === "monthly" || q === "both") {
-      if (q === "both") return ["monthly", "weekly"];
-      return [q];
-    }
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
-
 export function useProReportDeliveryOverlay(opts: {
   uid: string | null;
   enabled: boolean;
@@ -89,10 +71,7 @@ export function useProReportDeliveryOverlay(opts: {
 
     let cancelled = false;
     void (async () => {
-      const forced = forceKindsFromEnv();
-      const candidates = forced
-        ? buildForcedDeliveryCandidates(uid, forced)
-        : buildReportDeliveryCandidates(uid);
+      const candidates = buildReportDeliveryCandidates(uid);
       if (candidates.length === 0) {
         if (!cancelled) {
           setQueue([]);
@@ -126,13 +105,6 @@ export function useProReportDeliveryOverlay(opts: {
                 monthly: null,
                 preview: false,
               });
-            } else if (forced) {
-              loaded.push({
-                candidate,
-                weekly: weeklyReportPreviewClimbed(),
-                monthly: null,
-                preview: true,
-              });
             }
           } else {
             const parsed = snap.exists()
@@ -145,42 +117,10 @@ export function useProReportDeliveryOverlay(opts: {
                 monthly: parsed,
                 preview: false,
               });
-            } else if (forced) {
-              loaded.push({
-                candidate,
-                weekly: null,
-                monthly: monthlyReportPreviewTop10(),
-                preview: true,
-              });
             }
           }
         } catch {
           /* skip */
-        }
-      }
-
-      // 本番カレンダー日で doc 未作成でも、体験確認用にプレビューを出す（開発時のみ）
-      if (
-        loaded.length === 0 &&
-        pending.length > 0 &&
-        process.env.NODE_ENV !== "production"
-      ) {
-        for (const candidate of pending) {
-          if (candidate.kind === "weekly") {
-            loaded.push({
-              candidate,
-              weekly: weeklyReportPreviewClimbed(),
-              monthly: null,
-              preview: true,
-            });
-          } else {
-            loaded.push({
-              candidate,
-              weekly: null,
-              monthly: monthlyReportPreviewTop10(),
-              preview: true,
-            });
-          }
         }
       }
 

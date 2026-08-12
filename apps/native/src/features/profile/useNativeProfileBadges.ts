@@ -23,14 +23,19 @@ export type ResolvedBadgeNative = MasterBadgeNative & {
   grantedAt: Date | null;
 };
 
-const MASTER_BADGES_TTL_MS = 30 * 60 * 1000;
-let masterBadgesMemoryCache: { at: number; badges: MasterBadgeNative[] } | null =
-  null;
-
 export type UserGrantedBadgeNative = {
   badgeId: string;
   grantedAt: Date | null;
 };
+
+const MASTER_BADGES_TTL_MS = 30 * 60 * 1000;
+const USER_BADGES_TTL_MS = 10 * 60 * 1000;
+let masterBadgesMemoryCache: { at: number; badges: MasterBadgeNative[] } | null =
+  null;
+const userBadgesMemoryCache = new Map<
+  string,
+  { at: number; badges: UserGrantedBadgeNative[] }
+>();
 
 function useUserBadgesNative(uid: string | undefined) {
   const [badges, setBadges] = useState<UserGrantedBadgeNative[]>([]);
@@ -44,6 +49,14 @@ function useUserBadgesNative(uid: string | undefined) {
     }
     const userId = uid;
     let cancelled = false;
+
+    const hit = userBadgesMemoryCache.get(userId);
+    if (hit && Date.now() - hit.at < USER_BADGES_TTL_MS) {
+      setBadges(hit.badges);
+      setLoading(false);
+      return;
+    }
+
     async function run() {
       try {
         setLoading(true);
@@ -60,6 +73,7 @@ function useUserBadgesNative(uid: string | undefined) {
               ga instanceof Timestamp ? ga.toDate() : null,
           };
         });
+        userBadgesMemoryCache.set(userId, { at: Date.now(), badges: list });
         setBadges(list);
       } catch {
         if (!cancelled) setBadges([]);

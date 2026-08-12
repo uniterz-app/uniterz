@@ -268,6 +268,7 @@ const ko: Messages = {
     metricTabsLabel: "Ranking metrics",
     pts: "pts",
     minPostsRequired: "승률 랭킹은 {n}개 이상의 게시물이 필요합니다.",
+    winRatePickupRateRequired: "Win Rate ranking requires predicting at least 65% of pickup games available so far.",
     noMinPosts: "이 라운드에는 최소 게시물 요건이 없습니다.",
     roundTotal: "TOTAL",
     roundFirst: "1ST",

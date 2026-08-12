@@ -250,12 +250,17 @@ export function useResultPagePosts(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, uid, league, fetchEnabled]);
 
-  /** タブ復帰時に再取得 */
+  /** タブ復帰時に再取得（連続切替の空振りを抑える） */
   useEffect(() => {
     if (!authReady || !uid || !fetchEnabled) return;
     if (typeof document === "undefined") return;
+    let lastAt = 0;
     const onVisible = () => {
-      if (document.visibilityState === "visible") void loadPage({ reset: true });
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastAt < 30_000) return;
+      lastAt = now;
+      void loadPage({ reset: true });
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
@@ -267,10 +272,16 @@ export function useResultPagePosts(
     [posts]
   );
 
-  /** 未精算カードがある間は定期再取得 */
+  /** 未精算カードがある間は定期再取得（非表示タブは止める） */
   useEffect(() => {
     if (!authReady || !uid || !fetchEnabled || !hasPendingSettlement) return;
-    const id = setInterval(() => void loadPage({ reset: true }), 60_000);
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
+      void loadPage({ reset: true });
+    };
+    const id = setInterval(tick, 120_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, uid, league, fetchEnabled, hasPendingSettlement]);

@@ -1,8 +1,7 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
-import { db } from "../lib/firebase";
+import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
 import NativeStackBackdrop from "../components/NativeStackBackdrop";
 import type { AuthStackParamList, RootStackParamList } from "./types";
 import MainTabNavigator from "./MainTabNavigator";
@@ -49,8 +48,8 @@ function useNeedsOnboarding(uid: string | undefined): boolean | null {
       setNeeds(null);
       return;
     }
-    return onSnapshot(doc(db, "users", uid), (snap) => {
-      const handle = snap.data()?.handle;
+    return subscribeUserDocLive(uid, (data) => {
+      const handle = data?.handle;
       setNeeds(!handle || handle === "");
     });
   }, [uid]);

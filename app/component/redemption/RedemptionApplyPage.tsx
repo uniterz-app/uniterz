@@ -14,6 +14,7 @@ import { createMeRedemption } from "@/lib/api/fetchMeRedemptions";
 import {
   REDEMPTION_CATALOG,
   normalizeRedemptionProductKind,
+  redemptionPriceCapShort,
 } from "@/lib/redemption/redemptionCatalog";
 import { redemptionBatchScheduleCopy } from "@/lib/redemption/redemptionBatchScheduleCopy";
 import type { RedemptionProductKind } from "@/lib/redemption/redemptionTypes";
@@ -140,8 +141,8 @@ export default function RedemptionApplyPage() {
         {selected ? (
           <p className="text-[11px] text-white/40">
             {isJa
-              ? `必要 ${selected.unitsRequired} Unit · 価格上限 ${selected.priceCapJpy.toLocaleString("ja-JP")} 円`
-              : `${selected.unitsRequired} Units · Cap ¥${selected.priceCapJpy.toLocaleString("en-US")}`}
+              ? `必要 ${selected.unitsRequired} Unit · 価格上限 ${redemptionPriceCapShort(selected, "ja")}`
+              : `${selected.unitsRequired} Units · Cap ${redemptionPriceCapShort(selected, "en")}`}
           </p>
         ) : null}
       </label>

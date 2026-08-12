@@ -6,10 +6,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import {
-  buildForcedDeliveryCandidates,
   buildReportDeliveryCandidates,
   type ReportDeliveryCandidate,
-  type ReportDeliveryKind,
 } from "../../../../../../lib/reports/reportDelivery";
 import {
   markReportOverlaySeenInSet,
@@ -21,8 +19,6 @@ import { parseMonthlyReportDoc } from "../../../../../../lib/reports/parseMonthl
 import { parseWeeklyReportDoc } from "../../../../../../lib/reports/parseWeeklyReportDoc";
 import type { MonthlyReport } from "../../../../../../lib/reports/monthlyReportTypes";
 import type { WeeklyReport } from "../../../../../../lib/reports/weeklyReportTypes";
-import { weeklyReportPreviewClimbed } from "../../../../../../lib/reports/weeklyReportPreviewMocks";
-import { monthlyReportPreviewTop10 } from "../../../../../../lib/reports/monthlyReportPreviewMocks";
 import { fetchUserReportsArchive } from "../../../../../../lib/reports/fetchUserReportsArchive";
 import type { UserReportListItem } from "../../../../../../lib/reports/partitionUserReports";
 
@@ -53,21 +49,6 @@ async function writeSeen(uid: string, ids: Set<string>): Promise<void> {
   }
 }
 
-/** `__DEV__` のみ: AsyncStorage `uniterz:forceReportOverlay` = weekly|monthly|both */
-async function forceKindsFromStorage(): Promise<ReportDeliveryKind[] | null> {
-  if (!__DEV__) return null;
-  try {
-    const q = await AsyncStorage.getItem("uniterz:forceReportOverlay");
-    if (q === "weekly" || q === "monthly" || q === "both") {
-      if (q === "both") return ["monthly", "weekly"];
-      return [q];
-    }
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
-
 export function useProReportDeliveryOverlayNative(opts: {
   uid: string | null | undefined;
   enabled: boolean;
@@ -88,10 +69,7 @@ export function useProReportDeliveryOverlayNative(opts: {
 
     let cancelled = false;
     void (async () => {
-      const forced = await forceKindsFromStorage();
-      const candidates = forced
-        ? buildForcedDeliveryCandidates(uid, forced)
-        : buildReportDeliveryCandidates(uid);
+      const candidates = buildReportDeliveryCandidates(uid);
       if (candidates.length === 0) {
         if (!cancelled) {
           setQueue([]);
@@ -125,13 +103,6 @@ export function useProReportDeliveryOverlayNative(opts: {
                 monthly: null,
                 preview: false,
               });
-            } else if (forced || __DEV__) {
-              loaded.push({
-                candidate,
-                weekly: weeklyReportPreviewClimbed(),
-                monthly: null,
-                preview: true,
-              });
             }
           } else {
             const parsed = snap.exists()
@@ -143,13 +114,6 @@ export function useProReportDeliveryOverlayNative(opts: {
                 weekly: null,
                 monthly: parsed,
                 preview: false,
-              });
-            } else if (forced || __DEV__) {
-              loaded.push({
-                candidate,
-                weekly: null,
-                monthly: monthlyReportPreviewTop10(),
-                preview: true,
               });
             }
           }

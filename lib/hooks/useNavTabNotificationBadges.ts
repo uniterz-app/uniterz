@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
-  onSnapshot,
   orderBy,
   query,
   Timestamp,
@@ -33,6 +33,9 @@ type Options = {
   /** React Native タブ：リザルト表示中 */
   resultTabActive?: boolean;
 };
+
+/** 未読ドットは数分遅れでも可。常時 onSnapshot は開発中の読み取り急増の主因 */
+const BADGE_POLL_MS = 120_000;
 
 function firestoreTsToMs(v: unknown): number | null {
   const t = v as { toMillis?: () => number; seconds?: number } | null | undefined;
@@ -116,9 +119,12 @@ export function useNavTabNotificationBadges(options: Options = {}) {
     let cancelled = false;
     const ref = doc(db, "cumulative_stats", uid);
 
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
+    const refresh = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      try {
+        const snap = await getDoc(ref);
         if (cancelled) return;
         const ms = firestoreTsToMs(snap.data()?.snapshotRanks?.updatedAt);
         setRankingUpdatedAtMs(ms);
@@ -127,15 +133,22 @@ export function useNavTabNotificationBadges(options: Options = {}) {
         if (seen == null && ms != null) {
           markNavRankingSeen(uid, ms);
         }
-      },
-      () => {
+      } catch {
         if (!cancelled) setRankingUpdatedAtMs(null);
       }
-    );
+    };
+
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), BADGE_POLL_MS);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVis);
 
     return () => {
       cancelled = true;
-      unsub();
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, [active, uid]);
 
@@ -167,6 +180,7 @@ export function useNavTabNotificationBadges(options: Options = {}) {
       return;
     }
 
+    let cancelled = false;
     const q = query(
       collection(db, "posts"),
       where("authorUid", "==", uid),
@@ -176,17 +190,30 @@ export function useNavTabNotificationBadges(options: Options = {}) {
       limit(1)
     );
 
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setHasNewSettledPost(snap.size > 0);
-      },
-      () => {
-        setHasNewSettledPost(false);
+    const refresh = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
       }
-    );
+      try {
+        const snap = await getDocs(q);
+        if (!cancelled) setHasNewSettledPost(snap.size > 0);
+      } catch {
+        if (!cancelled) setHasNewSettledPost(false);
+      }
+    };
 
-    return () => unsub();
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), BADGE_POLL_MS);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [active, uid, resultBaselineReady, resultSeenMs, onResultRoute]);
 
   useEffect(() => {
@@ -196,7 +223,7 @@ export function useNavTabNotificationBadges(options: Options = {}) {
 
   useEffect(() => {
     if (!active || !uid || !onResultRoute) return;
-    // ストレージのみ。state の resultSeenMs を毎回変えると posts listener が張り直される
+    // ストレージのみ。state の resultSeenMs を毎回変えると posts poll が張り直される
     markNavResultSeen(uid, Date.now());
     setHasNewSettledPost(false);
   }, [active, uid, onResultRoute]);

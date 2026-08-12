@@ -20,6 +20,7 @@ import { createMeRedemptionNative } from "../redemptionApiNative";
 import {
   REDEMPTION_CATALOG,
   normalizeRedemptionProductKind,
+  redemptionPriceCapShort,
 } from "../../../../../../lib/redemption/redemptionCatalog";
 import { redemptionBatchScheduleCopy } from "../../../../../../lib/redemption/redemptionBatchScheduleCopy";
 import type { RedemptionProductKind } from "../../../../../../lib/redemption/redemptionTypes";
@@ -121,8 +122,8 @@ export default function RedemptionApplyScreenNative() {
       </View>
       {selected ? (
         <Text style={styles.hint}>
-          {selected.unitsRequired} Unit · ¥
-          {selected.priceCapJpy.toLocaleString("en-US")}
+          {selected.unitsRequired} Unit ·{" "}
+          {redemptionPriceCapShort(selected, isJa ? "ja" : "en")}
         </Text>
       ) : null}
 

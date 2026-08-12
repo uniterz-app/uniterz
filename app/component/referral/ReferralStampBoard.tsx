@@ -6,6 +6,7 @@
  */
 import { useMemo } from "react";
 import { nameOxanium } from "@/lib/fonts";
+import { renderReferralSkewedDigits, REFERRAL_DIGIT_SKEW } from "@/lib/referral/referralSkewedDigits";
 import {
   nextReferralMilestone,
   referralReferrerUnitsEarned,
@@ -152,9 +153,10 @@ function StampCell({
           <span
             className={[
               nameOxanium.className,
-              "text-[15px] font-extrabold tabular-nums leading-none tracking-wide sm:text-[17px]",
+              "inline-block text-[15px] font-extrabold tabular-nums leading-none tracking-wide sm:text-[17px]",
               isNextTarget ? "text-cyan-100/90" : "text-white/35",
             ].join(" ")}
+            style={{ transform: REFERRAL_DIGIT_SKEW }}
           >
             {index}
           </span>
@@ -165,9 +167,10 @@ function StampCell({
         <span
           className={[
             nameOxanium.className,
-            "absolute -right-0.5 -top-0.5 z-[1] rounded-[2px] px-1 py-[1px] text-[7px] font-extrabold tracking-wide",
+            "absolute -right-0.5 -top-0.5 z-[1] inline-block rounded-[2px] px-1 py-[1px] text-[7px] font-extrabold tracking-wide tabular-nums",
             bonusChipClass(stamped, milestoneTone),
           ].join(" ")}
+          style={{ transform: REFERRAL_DIGIT_SKEW }}
         >
           +{milestoneBonusUnits}
         </span>
@@ -243,9 +246,8 @@ export default function ReferralStampBoard({ completedCount, isJa }: Props) {
                 "mt-1 text-[13px] font-extrabold uppercase tracking-[0.14em] text-white",
               ].join(" ")}
             >
-              {isJa
-                ? `${completedCount} / 10 達成`
-                : `${completedCount} / 10 locked`}
+              {renderReferralSkewedDigits(`${completedCount} / 10`)}
+              {isJa ? " 達成" : " locked"}
             </h2>
           </div>
           <div className="text-right">
@@ -260,8 +262,9 @@ export default function ReferralStampBoard({ completedCount, isJa }: Props) {
             <p
               className={[
                 nameOxanium.className,
-                "text-[18px] font-extrabold tabular-nums text-cyan-100",
+                "inline-block text-[18px] font-extrabold tabular-nums text-cyan-100",
               ].join(" ")}
+              style={{ transform: REFERRAL_DIGIT_SKEW }}
             >
               {earned.total}
               <span className="ml-1 text-[9px] tracking-[0.1em] text-white/45">

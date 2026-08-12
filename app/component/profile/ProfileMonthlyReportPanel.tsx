@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
 import { fetchUserReportsArchive } from "@/lib/reports/fetchUserReportsArchive";
@@ -9,11 +8,7 @@ import type { UserReportListItem } from "@/lib/reports/partitionUserReports";
 import { formatReportPeriodLabel } from "@/lib/reports/reportDelivery";
 import { weeklyReportPreviewClimbed } from "@/lib/reports/weeklyReportPreviewMocks";
 import { monthlyReportPreviewTop10 } from "@/lib/reports/monthlyReportPreviewMocks";
-import {
-  REPORT_GATE_PREVIEW_MODES,
-  type ReportGateKind,
-  type ReportGatePreviewMode,
-} from "@/lib/reports/reportGateTypes";
+import type { ReportGateKind } from "@/lib/reports/reportGateTypes";
 import ReportGateSurface from "@/app/component/reports/ReportGateSurface";
 import { nameOxanium } from "@/lib/fonts";
 
@@ -46,18 +41,8 @@ type Props = {
 
 type Tab = "weekly" | "monthly";
 
-const GATE_CHIP: Record<ReportGatePreviewMode, { ja: string; en: string }> = {
-  live: { ja: "ライブ", en: "Live" },
-  free: { ja: "Free", en: "Free" },
-  waitingMonday: { ja: "月曜待ち", en: "Monday" },
-  waitingMonth: { ja: "月初待ち", en: "Month wait" },
-  insufficientPicks: { ja: "予想不足", en: "No picks" },
-  monthlyLocked: { ja: "月次ロック", en: "Monthly lock" },
-};
-
 /**
  * Report タブ入口。週次・月次を user_reports から一覧。
- * 見た目確認用にゲート強制切替あり（Pro でも Free / ロック面を表示可）。
  */
 export default function ProfileMonthlyReportPanel({
   uid,
@@ -73,7 +58,6 @@ export default function ProfileMonthlyReportPanel({
     null
   );
   const [loading, setLoading] = useState(canViewReport && Boolean(uid));
-  const [forceGate, setForceGate] = useState<ReportGatePreviewMode>("live");
 
   const isJa = language === "ja";
   const lang = isJa ? "ja" : "en";
@@ -129,60 +113,13 @@ export default function ProfileMonthlyReportPanel({
     return hit?.kind === "monthly" ? hit : null;
   }, [monthlies, selectedMonthlyId]);
 
-  const effectiveGate: ReportGateKind | null = useMemo(() => {
-    if (forceGate !== "live") return forceGate;
-    if (!canViewReport) return "free";
-    return null;
-  }, [forceGate, canViewReport]);
-
-  const gateSwitcher = (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <p
-          className={[
-            nameOxanium.className,
-            "text-[9px] font-bold uppercase tracking-[0.16em] text-white/40",
-          ].join(" ")}
-        >
-          {isJa ? "GATE PREVIEW" : "GATE PREVIEW"}
-        </p>
-        <Link
-          href="/mobile/report-gate-preview"
-          className="text-[10px] font-semibold text-cyan-200/70 underline-offset-2 hover:text-cyan-100 hover:underline"
-        >
-          {isJa ? "専用ページ" : "Full page"}
-        </Link>
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {REPORT_GATE_PREVIEW_MODES.map((key) => {
-          const on = forceGate === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setForceGate(key)}
-              className={[
-                "rounded-md border px-2 py-1 text-[10px] font-semibold transition",
-                on
-                  ? "border-cyan-400/55 bg-cyan-400/14 text-cyan-100"
-                  : "border-white/12 bg-white/3 text-white/50 hover:border-white/25",
-              ].join(" ")}
-            >
-              {GATE_CHIP[key][lang]}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   const renderGate = (kind: ReportGateKind) => {
     if (kind === "free") {
       return (
         <ReportGateSurface
           kind="free"
           language={lang}
-          ctaHref={showUpgrade || forceGate === "free" ? undefined : null}
+          ctaHref={showUpgrade ? undefined : null}
           preview={<WeeklyReportView report={mockWeekly} language={lang} />}
         />
       );
@@ -199,21 +136,13 @@ export default function ProfileMonthlyReportPanel({
     return <ReportGateSurface kind={kind} language={lang} />;
   };
 
-  if (effectiveGate) {
-    return (
-      <div className="space-y-3">
-        {gateSwitcher}
-        {renderGate(effectiveGate)}
-      </div>
-    );
+  if (!canViewReport) {
+    return renderGate("free");
   }
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        {gateSwitcher}
-        <div className="h-72 animate-pulse rounded-2xl bg-white/5" aria-hidden />
-      </div>
+      <div className="h-72 animate-pulse rounded-2xl bg-white/5" aria-hidden />
     );
   }
 
@@ -221,22 +150,6 @@ export default function ProfileMonthlyReportPanel({
 
   return (
     <div className="space-y-3">
-      {gateSwitcher}
-
-      <p
-        className={[
-          nameOxanium.className,
-          "text-[10px] font-bold uppercase tracking-[0.14em] text-white/40",
-        ].join(" ")}
-      >
-        {isJa ? "REPORT ARCHIVE" : "REPORT ARCHIVE"}
-      </p>
-      <p className="text-[12px] leading-relaxed text-white/50">
-        {isJa
-          ? "週次は競争の実況、月次は自分の分析。毎月1日朝に月次が届きます。"
-          : "Weekly = competition pulse. Monthly = self analysis. Monthly drops on the 1st morning."}
-      </p>
-
       <div className="flex gap-1.5">
         {(
           [
@@ -286,16 +199,20 @@ export default function ProfileMonthlyReportPanel({
 
       {tab === "weekly" ? (
         selectedWeekly ? (
-          <WeeklyReportView
-            report={selectedWeekly.report}
-            language={lang}
-            periods={weeklies.map((w) => ({
-              id: w.id,
-              label: formatReportPeriodLabel("weekly", w.periodKey, lang),
-            }))}
-            selectedPeriodId={selectedWeekly.id}
-            onSelectPeriod={setSelectedWeeklyId}
-          />
+          selectedWeekly.report.totalPosts === 0 ? (
+            renderGate("insufficientPicks")
+          ) : (
+            <WeeklyReportView
+              report={selectedWeekly.report}
+              language={lang}
+              periods={weeklies.map((w) => ({
+                id: w.id,
+                label: formatReportPeriodLabel("weekly", w.periodKey, lang),
+              }))}
+              selectedPeriodId={selectedWeekly.id}
+              onSelectPeriod={setSelectedWeeklyId}
+            />
+          )
         ) : (
           renderGate("waitingMonday")
         )

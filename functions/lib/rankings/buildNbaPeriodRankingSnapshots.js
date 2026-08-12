@@ -43,6 +43,8 @@ exports.buildNbaPeriodRankingSnapshots = buildNbaPeriodRankingSnapshots;
 const firestore_1 = require("firebase-admin/firestore");
 const nbaSeason_1 = require("./nbaSeason");
 const nbaPeriod_1 = require("./nbaPeriod");
+const countNbaPickupGamesSoFar_1 = require("./countNbaPickupGamesSoFar");
+const periodRankingUnitRewards_1 = require("../units/periodRankingUnitRewards");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
@@ -150,7 +152,20 @@ async function buildOne(range, todayKey) {
     var _a, _b, _c, _d, _e, _f, _g, _h;
     const firestore = db();
     const minPosts = (0, nbaPeriod_1.periodMinPosts)(range.period);
-    const winRateMin = (0, nbaPeriod_1.periodWinRateMinPosts)(range.period);
+    /** open / 週間は固定最低投稿。月間 standard 勝率は pickup 65%（パターン B） */
+    const winRateMinFallback = (0, nbaPeriod_1.periodWinRateMinPosts)(range.period);
+    let winRateMinStandard = winRateMinFallback;
+    if (range.period === "monthly") {
+        const asOfKey = todayKey < range.endKey ? todayKey : range.endKey;
+        const pickupSoFar = await (0, countNbaPickupGamesSoFar_1.countNbaPickupGamesSoFar)({
+            db: firestore,
+            startKey: range.startKey,
+            asOfKey,
+        });
+        const fromPickup = (0, periodRankingUnitRewards_1.winRateMinPostsFromPickupCount)(pickupSoFar);
+        if (fromPickup > 0)
+            winRateMinStandard = fromPickup;
+    }
     const statsSnap = await firestore
         .collection("user_stats_v2_daily")
         .where("date", ">=", range.startKey)
@@ -253,7 +268,7 @@ async function buildOne(range, todayKey) {
         todayKey,
         division: "standard",
         baseRows: standardBaseRows,
-        winRateMin,
+        winRateMin: winRateMinStandard,
     });
     await writePeriodDivisionSnapshots({
         firestore,
@@ -261,9 +276,9 @@ async function buildOne(range, todayKey) {
         todayKey,
         division: "open",
         baseRows: openBaseRows,
-        winRateMin,
+        winRateMin: winRateMinFallback,
     });
-    console.log(`[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length} open=${openBaseRows.length}`);
+    console.log(`[buildNbaPeriodRankingSnapshots] ${range.period} ${range.labelKey} standard=${standardBaseRows.length} open=${openBaseRows.length} winRateMinStandard=${winRateMinStandard}`);
 }
 async function writePeriodDivisionSnapshots(opts) {
     const { firestore, range, todayKey, division, baseRows, winRateMin } = opts;

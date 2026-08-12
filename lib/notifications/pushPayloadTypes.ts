@@ -13,13 +13,18 @@ export type PushNotificationType =
   | "pregame_digest"
   /** PRO INSIGHT の重要更新（結論変化時のみ） */
   | "pro_insight_update"
-  | "monthly_report";
+  | "monthly_report"
+  /** 期間ランキング等の Unit 付与 */
+  | "unit_reward";
 
 export type PushNotificationData = {
   type: PushNotificationType;
   gameId?: string;
   postId?: string;
   monthKey?: string;
+  amount?: string;
+  period?: string;
+  label?: string;
 };
 
 const PUSH_TYPES = new Set<PushNotificationType>([
@@ -32,6 +37,7 @@ const PUSH_TYPES = new Set<PushNotificationType>([
   "pregame_digest",
   "pro_insight_update",
   "monthly_report",
+  "unit_reward",
 ]);
 
 export function parsePushNotificationData(
@@ -54,5 +60,25 @@ export function parsePushNotificationData(
     typeof raw.monthKey === "string" && raw.monthKey.trim() !== ""
       ? raw.monthKey.trim()
       : undefined;
-  return { type: type as PushNotificationType, gameId, postId, monthKey };
+  const amount =
+    typeof raw.amount === "string" && raw.amount.trim() !== ""
+      ? raw.amount.trim()
+      : undefined;
+  const period =
+    typeof raw.period === "string" && raw.period.trim() !== ""
+      ? raw.period.trim()
+      : undefined;
+  const label =
+    typeof raw.label === "string" && raw.label.trim() !== ""
+      ? raw.label.trim()
+      : undefined;
+  return {
+    type: type as PushNotificationType,
+    gameId,
+    postId,
+    monthKey,
+    amount,
+    period,
+    label,
+  };
 }

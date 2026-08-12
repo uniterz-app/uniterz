@@ -6,7 +6,6 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   doc,
-  onSnapshot,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
@@ -17,6 +16,7 @@ import { usePathname } from "next/navigation";
 import { isAuthEntryRoute } from "@/lib/profileSetupRoute";
 import { normalizeLanguage } from "@/lib/i18n/language";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { subscribeUserDocLive } from "@/lib/user/subscribeUserDocLive";
 import { subscribeAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
 import {
   ANNOUNCEMENT_READS_REFRESH_EVENT,
@@ -56,15 +56,12 @@ export default function EventGate() {
       setOnboardingComplete(false);
       return;
     }
-    const userRef = doc(db, "users", uid);
-    const unsub = onSnapshot(userRef, (snap) => {
-      const d = snap.data() as Record<string, unknown> | undefined;
+    return subscribeUserDocLive(uid, (d) => {
       const lang = d?.language;
       const handle = d?.handle || d?.slug || d?.username;
       const ok = normalizeLanguage(lang) !== null && Boolean(handle);
       setOnboardingComplete(ok);
     });
-    return () => unsub();
   }, [isPublicLp, uid]);
 
   useEffect(() => {

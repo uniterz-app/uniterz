@@ -13,13 +13,17 @@ export type PushNotificationType =
   | "prediction_deadline"
   | "pregame_digest"
   | "pro_insight_update"
-  | "monthly_report";
+  | "monthly_report"
+  | "unit_reward";
 
 export type PushNotificationData = {
   type: PushNotificationType;
   gameId?: string;
   postId?: string;
   monthKey?: string;
+  amount?: string;
+  period?: string;
+  label?: string;
 };
 
 export type PushLanguage = "ja" | "en";
@@ -115,6 +119,13 @@ export function buildPushNotificationCopy(
           title: "Monthly report is ready",
           body: detail || "Your Pro monthly report is available in Profile → Report.",
         };
+      case "unit_reward":
+        return {
+          title: "You earned Units",
+          body:
+            detail ||
+            "Ranking rewards were added. Open your profile to claim.",
+        };
     }
   }
 
@@ -183,6 +194,13 @@ export function buildPushNotificationCopy(
         body:
           detail ||
           "プロフィールの Report タブで月次レポートを確認できます。",
+      };
+    case "unit_reward":
+      return {
+        title: "Unit を獲得しました",
+        body:
+          detail ||
+          "ランキング報酬が付与されました。プロフィールで受け取ってください。",
       };
   }
 }

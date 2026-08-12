@@ -271,6 +271,7 @@ const es: Messages = {
     metricTabsLabel: "Ranking metrics",
     pts: "pts",
     minPostsRequired: "El ranking de tasa de acierto requiere al menos {n} publicaciones.",
+    winRatePickupRateRequired: "Win Rate ranking requires predicting at least 65% of pickup games available so far.",
     noMinPosts: "Esta ronda no tiene requisito mínimo de publicaciones.",
     roundTotal: "TOTAL",
     roundFirst: "1ST",

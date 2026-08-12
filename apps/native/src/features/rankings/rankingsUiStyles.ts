@@ -332,6 +332,7 @@ export const rankingsUiStyles = StyleSheet.create({
     fontWeight: "700",
     fontFamily: METRIC_FONT,
     marginTop: 2,
+    transform: [{ skewX: "-12deg" }],
   },
   myRankProEntriesTight: {
     color: "rgba(255,255,255,0.45)",
@@ -340,6 +341,7 @@ export const rankingsUiStyles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     fontFamily: METRIC_FONT,
     marginTop: -3,
+    transform: [{ skewX: "-12deg" }],
   },
   myRankProStatsHalf: {
     flex: 1,
@@ -364,6 +366,7 @@ export const rankingsUiStyles = StyleSheet.create({
     letterSpacing: 1.2,
     fontFamily: METRIC_FONT,
     textTransform: "uppercase",
+    transform: [{ skewX: "-12deg" }],
   },
   myRankProAvgText: {
     flexShrink: 1,
@@ -373,6 +376,7 @@ export const rankingsUiStyles = StyleSheet.create({
     letterSpacing: 1,
     fontFamily: METRIC_FONT,
     textTransform: "uppercase",
+    transform: [{ skewX: "-12deg" }],
   },
   myRankProMetaGold: {
     color: "#FFD65A",
@@ -501,12 +505,14 @@ export const rankingsUiStyles = StyleSheet.create({
     lineHeight: 28,
     fontWeight: "700",
     fontFamily: RANKING_SCORE_FONT,
+    transform: [{ skewX: "-12deg" }],
   },
   myRankHudValueLarge: {
     fontSize: 24,
     lineHeight: 32,
     fontWeight: "700",
     fontFamily: RANKING_SCORE_FONT,
+    transform: [{ skewX: "-12deg" }],
   },
   myRankHudUnit: {
     fontSize: 10,
@@ -515,6 +521,7 @@ export const rankingsUiStyles = StyleSheet.create({
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.45)",
     fontFamily: METRIC_FONT,
+    transform: [{ skewX: "-12deg" }],
   },
   myRankHudUnitLarge: {
     fontSize: 12,
@@ -523,6 +530,7 @@ export const rankingsUiStyles = StyleSheet.create({
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.45)",
     fontFamily: METRIC_FONT,
+    transform: [{ skewX: "-12deg" }],
   },
   myRankHudDelta: {
     marginTop: 4,

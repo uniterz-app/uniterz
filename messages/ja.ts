@@ -269,6 +269,8 @@ const ja = {
     metricTabsLabel: "ランキング指標",
     pts: "pts",
     minPostsRequired: "勝率ランキングは{n}投稿以上が対象です。",
+    winRatePickupRateRequired:
+      "勝率ランキングは、現時点までのピックアップ試合の65%以上に予想している人が対象です。",
     noMinPosts: "このラウンドは投稿数の足切りはありません。",
     roundTotal: "TOTAL",
     roundFirst: "1ST",
