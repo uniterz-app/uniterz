@@ -357,6 +357,15 @@ function ProfileStackScreen() {
         />
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="MonthlyReportPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .MonthlyReportPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="FuturisticBgPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

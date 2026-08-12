@@ -93,6 +93,8 @@ type Props = {
   size?: UnderlineTabSize;
   /** split: 均等幅（CyberSlantedTabBar fill） */
   layout?: "inline" | "split";
+  /** Pro のときのみ BRACKET を表示 */
+  showBracket?: boolean;
 };
 
 export const PROFILE_MAIN_TAB_ORDER: readonly ProfileMainTab[] = [
@@ -115,14 +117,18 @@ export default function Tabs({
   onChange,
   size = "md",
   layout = "split",
+  showBracket = true,
 }: Props) {
   const compact = size !== "lg";
+  const order = showBracket
+    ? PROFILE_MAIN_TAB_ORDER
+    : PROFILE_MAIN_TAB_ORDER.filter((id) => id !== "bracket");
   return (
     <CyberSlantedTabBar
       fill={layout !== "inline"}
       aria-label="Profile sections"
     >
-      {PROFILE_MAIN_TAB_ORDER.map((id) => (
+      {order.map((id) => (
         <CyberSlantedTab
           key={id}
           role="tab"

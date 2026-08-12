@@ -2,6 +2,7 @@
 // ロールアップキャッシュで Firestore read を抑える
 
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { withFirestoreTransientRetry } from "@/lib/firebase/isTransientFirestoreError";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
@@ -31,6 +32,7 @@ import {
 } from "@/lib/rankings/rankingPeriod";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
+import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import {
   buildRankPlayoffTrendPoints,
   type RankPlayoffTrendPoint,
@@ -43,6 +45,9 @@ import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDe
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Profile WEEK / MONTH（window）カードのキャッシュ（同一ラベル連打対策） */
+const PROFILE_WINDOW_STATS_CACHE_REVALIDATE_SEC = 60;
 
 type StatsPart = "stats" | "phase" | "trend" | "ranks" | "rankTrend";
 
@@ -117,12 +122,19 @@ async function buildUserStatsResponse(req: Request) {
     rawBoard === "playoffs" ? "playoffs" : "season";
   const rawWindowLabel =
     searchParams.get(wantWeekly ? "week" : "month")?.trim() ?? "";
+  const resolvedWindowPeriod = wantWeekly ? "weekly" : "monthly";
+  const requestedWindowLabelValid =
+    wantWindow && isValidPeriodLabel(resolvedWindowPeriod, rawWindowLabel);
+  const requestedWindowLabel =
+    requestedWindowLabelValid && rawWindowLabel ? rawWindowLabel : null;
+  const currentWindowLabel = wantWindow
+    ? currentRankingPeriodLabel(resolvedWindowPeriod)
+    : null;
   const windowLabel =
-    wantWindow &&
-    isValidPeriodLabel(wantWeekly ? "weekly" : "monthly", rawWindowLabel)
-      ? rawWindowLabel
+    wantWindow && requestedWindowLabel
+      ? requestedWindowLabel
       : wantWindow
-        ? currentRankingPeriodLabel(wantWeekly ? "weekly" : "monthly")
+        ? currentWindowLabel
         : null;
   const parts =
     parsePartsParam(searchParams.get("parts")) ?? new Set<StatsPart>(ALL_PARTS);
@@ -241,11 +253,44 @@ async function buildUserStatsResponse(req: Request) {
   let windowResolvedLabel: string | null = null;
   let monthlySummaryRanks: SummaryRanks | null = null;
   if (wantWindow && windowLabel && (wantPhase || wantRanks)) {
-    const windowed = await resolveNbaWindowProfileSummary(adminDb, uid, {
-      board: windowBoard,
-      window: wantWeekly ? "weekly" : "monthly",
-      label: windowLabel,
-    });
+    /**
+     * 過去（現行以外の week/month ラベル指定）は Pro ユーザーのみ許可。
+     * UI 側は `profile.plan === "pro"` のみラベルナビを出すため、
+     * API まで合わせて抜け道を塞ぐ。
+     */
+    const isNonCurrentWindow =
+      requestedWindowLabelValid &&
+      requestedWindowLabel &&
+      requestedWindowLabel !== currentWindowLabel;
+
+    if (isNonCurrentWindow) {
+      const isPro = await assertProUser(uid);
+      if (!isPro) {
+        return NextResponse.json(
+          { ok: false, error: "pro_required" },
+          { status: 403 }
+        );
+      }
+    }
+
+    const windowed = await unstable_cache(
+      async () =>
+        resolveNbaWindowProfileSummary(adminDb, uid, {
+          board: windowBoard,
+          window: wantWeekly ? "weekly" : "monthly",
+          label: windowLabel,
+        }),
+      [
+        "profile-window-stats",
+        uid,
+        windowBoard,
+        wantWeekly ? "weekly" : "monthly",
+        windowLabel,
+      ],
+      {
+        revalidate: PROFILE_WINDOW_STATS_CACHE_REVALIDATE_SEC,
+      }
+    )();
     windowResolvedLabel = windowed.label;
     monthlyResolvedLabel =
       windowed.window === "monthly" ? windowed.label : null;

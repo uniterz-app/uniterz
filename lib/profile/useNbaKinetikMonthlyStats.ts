@@ -10,6 +10,10 @@ import type {
   SummaryRanksV2,
 } from "@/app/component/profile/useUserStatsV2";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  currentRankingPeriodLabel,
+  formatRankingPeriodDisplay,
+} from "@/lib/rankings/rankingPeriod";
 import type {
   ProfileKinetikBoard,
   ProfileKinetikWindow,
@@ -17,6 +21,8 @@ import type {
 
 export type { ProfileKinetikBoard, ProfileKinetikWindow };
 export type ProfileKinetikMetricsPeriod = ProfileKinetikBoard;
+/** プロフィール表カード: シーズン累計 / 週次 / 月次 */
+export type ProfileKinetikMetricsTab = "total" | ProfileKinetikWindow;
 
 export type NbaPeriodKinetikStats = {
   period: ProfileKinetikMetricsPeriod;
@@ -53,14 +59,6 @@ function cacheKey(uid: string, period: ProfileKinetikMetricsPeriod): string {
   return `${uid}:${period}:${CURRENT_NBA_SEASON_KEY}`;
 }
 
-function windowCacheKey(
-  uid: string,
-  board: ProfileKinetikBoard,
-  window: ProfileKinetikWindow
-): string {
-  return `${uid}:${board}:${window}:${CURRENT_NBA_SEASON_KEY}`;
-}
-
 function readCache(uid: string, period: ProfileKinetikMetricsPeriod) {
   const hit = cache.get(cacheKey(uid, period));
   if (!hit) return null;
@@ -68,12 +66,23 @@ function readCache(uid: string, period: ProfileKinetikMetricsPeriod) {
   return hit.data;
 }
 
+function windowCacheKey(
+  uid: string,
+  board: ProfileKinetikBoard,
+  window: ProfileKinetikWindow,
+  label: string | null | undefined
+): string {
+  const labelKey = label?.trim() || "current";
+  return `${uid}:${board}:${window}:${labelKey}:${CURRENT_NBA_SEASON_KEY}`;
+}
+
 function readWindowCache(
   uid: string,
   board: ProfileKinetikBoard,
-  window: ProfileKinetikWindow
+  window: ProfileKinetikWindow,
+  label?: string | null
 ) {
-  const hit = windowCache.get(windowCacheKey(uid, board, window));
+  const hit = windowCache.get(windowCacheKey(uid, board, window, label));
   if (!hit) return null;
   if (Date.now() - hit.at >= CACHE_TTL_MS) return null;
   return hit.data;
@@ -161,10 +170,11 @@ async function fetchNbaWindowKinetikStats(
   uid: string,
   board: ProfileKinetikBoard,
   window: ProfileKinetikWindow,
-  apiBase?: string
+  apiBase?: string,
+  label?: string | null
 ): Promise<NbaWindowKinetikStats | null> {
-  const key = windowCacheKey(uid, board, window);
-  const cached = readWindowCache(uid, board, window);
+  const key = windowCacheKey(uid, board, window, label);
+  const cached = readWindowCache(uid, board, window, label);
   if (cached) return cached;
 
   const existing = windowInflight.get(key);
@@ -177,6 +187,10 @@ async function fetchNbaWindowKinetikStats(
     period: window,
     board,
   });
+  const trimmedLabel = label?.trim();
+  if (trimmedLabel) {
+    qs.set(window === "weekly" ? "week" : "month", trimmedLabel);
+  }
   const base = (apiBase ?? "").replace(/\/$/, "");
   const url = `${base}/api/profile/user-stats?${qs.toString()}`;
 
@@ -201,16 +215,17 @@ async function fetchNbaWindowKinetikStats(
       if (!summary) {
         throw new Error("nba window summary missing");
       }
-      const label =
+      const resolvedLabel =
         (typeof json.windowLabel === "string" && json.windowLabel) ||
         (typeof json.monthLabel === "string" && json.monthLabel) ||
         (typeof json.weekLabel === "string" && json.weekLabel) ||
-        "";
+        trimmedLabel ||
+        currentRankingPeriodLabel(window);
       const next: NbaWindowKinetikStats = {
         board,
         window,
         seasonKey: CURRENT_NBA_SEASON_KEY,
-        label,
+        label: resolvedLabel,
         summary,
         summaryRanks,
       };
@@ -241,11 +256,12 @@ export function prefetchNbaKinetikWindowStats(
   uid: string | null | undefined,
   board: ProfileKinetikBoard,
   window: ProfileKinetikWindow,
-  apiBase?: string
+  apiBase?: string,
+  label?: string | null
 ): void {
   const safeUid = uid?.trim() ?? "";
   if (!safeUid) return;
-  void fetchNbaWindowKinetikStats(safeUid, board, window, apiBase);
+  void fetchNbaWindowKinetikStats(safeUid, board, window, apiBase, label);
 }
 
 export function useNbaKinetikPeriodStats(
@@ -303,14 +319,15 @@ export function useNbaKinetikWindowStats(
   board: ProfileKinetikBoard,
   window: ProfileKinetikWindow,
   enabled: boolean,
-  apiBase?: string
+  apiBase?: string,
+  label?: string | null
 ): {
   data: NbaWindowKinetikStats | null;
   loading: boolean;
 } {
   const safeUid = uid?.trim() ?? "";
   const initial =
-    enabled && safeUid ? readWindowCache(safeUid, board, window) : null;
+    enabled && safeUid ? readWindowCache(safeUid, board, window, label) : null;
   const [data, setData] = useState<NbaWindowKinetikStats | null>(initial);
   const [loading, setLoading] = useState(
     () => Boolean(enabled && safeUid && !initial)
@@ -323,7 +340,7 @@ export function useNbaKinetikWindowStats(
       return;
     }
 
-    const cached = readWindowCache(safeUid, board, window);
+    const cached = readWindowCache(safeUid, board, window, label);
     if (cached) {
       setData(cached);
       setLoading(false);
@@ -333,18 +350,22 @@ export function useNbaKinetikWindowStats(
     let cancelled = false;
     setLoading(true);
 
-    void fetchNbaWindowKinetikStats(safeUid, board, window, apiBase).then(
-      (next) => {
-        if (cancelled) return;
-        setData(next);
-        setLoading(false);
-      }
-    );
+    void fetchNbaWindowKinetikStats(
+      safeUid,
+      board,
+      window,
+      apiBase,
+      label
+    ).then((next) => {
+      if (cancelled) return;
+      setData(next);
+      setLoading(false);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [uid, board, window, enabled, apiBase, safeUid]);
+  }, [uid, board, window, enabled, apiBase, safeUid, label]);
 
   return { data, loading };
 }
@@ -406,4 +427,54 @@ export function getNbaKinetikMonthlyTitle(monthLabel: string): string {
   const m = monthLabel.trim();
   if (/^\d{4}-\d{2}$/.test(m)) return `NBA // ${m} STATS`;
   return getNbaKinetikPeriodTitle("season");
+}
+
+/** メトリクスカード右上の期間ヒント（TOTAL / 今週 / 今月 / 過去期間） */
+export function getKinetikMetricsScopeHint(
+  tab: ProfileKinetikMetricsTab,
+  language: "ja" | "en",
+  opts?: {
+    windowLabel?: string | null;
+    isCurrentWindow?: boolean;
+  }
+): {
+  unitHint: string;
+  windowJa: string;
+  windowEn: string;
+} {
+  if (tab === "total") {
+    return {
+      unitHint: language === "ja" ? "累計" : "TTL",
+      windowJa: "シーズン累計",
+      windowEn: "season total",
+    };
+  }
+  const current =
+    opts?.isCurrentWindow !== false &&
+    (!opts?.windowLabel ||
+      opts.windowLabel === currentRankingPeriodLabel(tab));
+  if (current) {
+    return tab === "weekly"
+      ? {
+          // カード内の「今週」文字は不要との要望に合わせて表示を消す。
+          // ツールチップ等に使う windowJa/windowEn は残す。
+          unitHint: "",
+          windowJa: "今週",
+          windowEn: "this week",
+        }
+      : {
+          // カード内の「今月」文字は不要との要望に合わせて表示を消す。
+          // ツールチップ等に使う windowJa/windowEn は残す。
+          unitHint: "",
+          windowJa: "今月",
+          windowEn: "this month",
+        };
+  }
+  const label = opts?.windowLabel ?? currentRankingPeriodLabel(tab);
+  const display = formatRankingPeriodDisplay(tab, label, language);
+  return {
+    unitHint: display,
+    windowJa: display,
+    windowEn: display,
+  };
 }

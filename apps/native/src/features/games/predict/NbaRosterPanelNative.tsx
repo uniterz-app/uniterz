@@ -143,15 +143,17 @@ function IdentityRow({
   player,
   accent,
   injuryStatus,
+  onPress,
 }: {
   player: NbaRosterPlayer;
   accent: string;
   injuryStatus?: string;
+  onPress?: (player: NbaRosterPlayer) => void;
 }) {
   const jersey = player.jerseyNumber?.replace(/^#/, "") ?? "—";
   const stroke = player.dimmed ? "rgba(255,255,255,0.35)" : accent;
-  return (
-    <View style={[styles.identityRow, player.dimmed && styles.dim]}>
+  const content = (
+    <>
       <View style={[styles.jerseyBox, { borderColor: stroke }]}>
         <Text style={[styles.jerseyText, { color: stroke }]}>{jersey}</Text>
       </View>
@@ -164,6 +166,28 @@ function IdentityRow({
         </View>
         {injuryStatus ? <InjuryChip status={injuryStatus} /> : null}
       </View>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={() => onPress(player)}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.identityRow,
+          player.dimmed && styles.dim,
+          pressed && styles.identityRowPressed,
+        ]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={[styles.identityRow, player.dimmed && styles.dim]}>
+      {content}
     </View>
   );
 }
@@ -192,12 +216,14 @@ function TeamRosterCard({
   injuryById,
   defaultOpen,
   mode = "matchup",
+  onPlayerPress,
 }: {
   block: NbaRosterTeamBlock;
   injuryById: Record<string, string>;
   defaultOpen: boolean;
   /** detail: 常時展開・試合の HOME/AWAY バッジなし */
   mode?: "matchup" | "detail";
+  onPlayerPress?: (player: NbaRosterPlayer) => void;
 }) {
   const isDetail = mode === "detail";
   const [open, setOpen] = useState(defaultOpen || isDetail);
@@ -282,6 +308,7 @@ function TeamRosterCard({
                   player={p}
                   accent={primary}
                   injuryStatus={injuryById[String(p.id)]}
+                  onPress={onPlayerPress}
                 />
               ))}
             </View>
@@ -346,9 +373,11 @@ function TeamRosterCard({
 export function NbaTeamRosterCardNative({
   block,
   injuryById = {},
+  onPlayerPress,
 }: {
   block: NbaRosterTeamBlock;
   injuryById?: Record<string, string>;
+  onPlayerPress?: (player: NbaRosterPlayer) => void;
 }) {
   return (
     <TeamRosterCard
@@ -356,6 +385,7 @@ export function NbaTeamRosterCardNative({
       injuryById={injuryById}
       defaultOpen
       mode="detail"
+      onPlayerPress={onPlayerPress}
     />
   );
 }
@@ -468,6 +498,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  identityRowPressed: {
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   jerseyBox: {
     width: 26,

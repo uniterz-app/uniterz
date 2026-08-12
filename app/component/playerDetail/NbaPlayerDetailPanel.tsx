@@ -14,6 +14,7 @@ import {
   availabilityStatusColor,
   formatAvailabilityStatus,
   formatBirthDateLabel,
+  formatCareerSeasonLabel,
   formatContractSeasonLabel,
   formatFgLine,
   formatPhysique,
@@ -21,8 +22,12 @@ import {
   formatTeamHistory,
   getNbaPlayerDetailPreview,
   nbaCountryNameToIso2,
+  type NbaPlayerCareerSeasonBoard,
+  type NbaPlayerCareerSeasonRow,
   type NbaPlayerGameLog,
   type NbaPlayerShotZone,
+  type NbaPlayerVenueSplit,
+  type NbaPlayerVsOpponentSample,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import {
   SHOT_ZONE_BASKET,
@@ -474,6 +479,428 @@ function RecentWindowCompare({ logs }: { logs: NbaPlayerGameLog[] }) {
   );
 }
 
+function fmtPerGame(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+function fmtPctBref(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  return n.toFixed(3).replace(/^0/, "");
+}
+
+const CAREER_SEASON_COLS: Array<{
+  key: string;
+  label: string;
+  align?: "left" | "right";
+  width: string;
+  render: (row: NbaPlayerCareerSeasonRow) => string;
+}> = [
+  {
+    key: "season",
+    label: "Season",
+    align: "left",
+    width: "w-[58px]",
+    render: (r) => formatCareerSeasonLabel(r.seasonStart),
+  },
+  {
+    key: "age",
+    label: "Age",
+    align: "left",
+    width: "w-7",
+    render: (r) => String(r.age),
+  },
+  {
+    key: "teamAbbr",
+    label: "TEAM",
+    align: "left",
+    width: "w-10",
+    render: (r) => r.teamAbbr,
+  },
+  {
+    key: "games",
+    label: "G",
+    width: "w-7",
+    render: (r) => String(r.games),
+  },
+  {
+    key: "gamesStarted",
+    label: "GS",
+    width: "w-7",
+    render: (r) => String(r.gamesStarted),
+  },
+  {
+    key: "min",
+    label: "MP",
+    width: "w-9",
+    render: (r) => fmtPerGame(r.min),
+  },
+  {
+    key: "pts",
+    label: "PTS",
+    width: "w-9",
+    render: (r) => fmtPerGame(r.pts),
+  },
+  {
+    key: "reb",
+    label: "REB",
+    width: "w-9",
+    render: (r) => fmtPerGame(r.reb),
+  },
+  {
+    key: "ast",
+    label: "AST",
+    width: "w-9",
+    render: (r) => fmtPerGame(r.ast),
+  },
+  {
+    key: "fgm",
+    label: "FG",
+    width: "w-8",
+    render: (r) => fmtPerGame(r.fgm),
+  },
+  {
+    key: "fga",
+    label: "FGA",
+    width: "w-9",
+    render: (r) => fmtPerGame(r.fga),
+  },
+  {
+    key: "fgPct",
+    label: "FG%",
+    width: "w-10",
+    render: (r) => fmtPctBref(r.fgPct),
+  },
+  {
+    key: "fg3m",
+    label: "3P",
+    width: "w-8",
+    render: (r) => fmtPerGame(r.fg3m),
+  },
+  {
+    key: "fg3a",
+    label: "3PA",
+    width: "w-9",
+    render: (r) => fmtPerGame(r.fg3a),
+  },
+  {
+    key: "fg3Pct",
+    label: "3P%",
+    width: "w-10",
+    render: (r) => fmtPctBref(r.fg3Pct),
+  },
+  {
+    key: "ftm",
+    label: "FT",
+    width: "w-8",
+    render: (r) => fmtPerGame(r.ftm),
+  },
+  {
+    key: "fta",
+    label: "FTA",
+    width: "w-9",
+    render: (r) => fmtPerGame(r.fta),
+  },
+  {
+    key: "ftPct",
+    label: "FT%",
+    width: "w-10",
+    render: (r) => fmtPctBref(r.ftPct),
+  },
+  {
+    key: "stl",
+    label: "STL",
+    width: "w-8",
+    render: (r) => fmtPerGame(r.stl),
+  },
+  {
+    key: "blk",
+    label: "BLK",
+    width: "w-8",
+    render: (r) => fmtPerGame(r.blk),
+  },
+  {
+    key: "tov",
+    label: "TOV",
+    width: "w-8",
+    render: (r) => fmtPerGame(r.tov),
+  },
+];
+
+function SeasonHistoryTable({
+  regular,
+  playoffs,
+  accent,
+  currentSeasonStart = 2025,
+}: {
+  regular: NbaPlayerCareerSeasonRow[];
+  playoffs: NbaPlayerCareerSeasonRow[];
+  accent: string;
+  currentSeasonStart?: number;
+}) {
+  const [board, setBoard] = useState<NbaPlayerCareerSeasonBoard>("regular");
+  const rows = board === "regular" ? regular : playoffs;
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2
+          className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
+          style={{ color: hexToRgba(accent, 0.75) }}
+        >
+          Season Averages · Career
+        </h2>
+        <div
+          className="flex overflow-hidden border"
+          style={{ borderColor: hexToRgba(accent, 0.35) }}
+        >
+          {(
+            [
+              ["regular", "Regular"],
+              ["playoffs", "Playoffs"],
+            ] as const
+          ).map(([id, label]) => {
+            const active = board === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setBoard(id)}
+                className={`${nameOxanium.className} px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide`}
+                style={{
+                  backgroundColor: active ? accent : "transparent",
+                  color: active ? "#050508" : "rgba(255,255,255,0.55)",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <p
+          className={`${nameOxanium.className} border px-3 py-4 text-center text-[12px] text-white/35`}
+          style={{ borderColor: hexToRgba(accent, 0.25) }}
+        >
+          No {board === "playoffs" ? "playoff" : "season"} data
+        </p>
+      ) : (
+        <div
+          className="overflow-x-auto border bg-black/45"
+          style={{ borderColor: hexToRgba(accent, 0.35) }}
+        >
+          <div className="min-w-max">
+            <div
+              className={`${nameOxanium.className} flex items-center gap-x-1 border-b px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40`}
+              style={{ borderBottomColor: hexToRgba(accent, 0.18) }}
+            >
+              {CAREER_SEASON_COLS.map((col) => (
+                <span
+                  key={col.key}
+                  className={`${col.width} shrink-0 ${
+                    col.align === "left" ? "text-left" : "text-right"
+                  }`}
+                >
+                  {col.label}
+                </span>
+              ))}
+            </div>
+            {[...rows].reverse().map((row, i, arr) => {
+              const isCurrent = row.seasonStart === currentSeasonStart;
+              return (
+                <div
+                  key={`${board}-${row.seasonStart}-${row.teamAbbr}`}
+                  className={`${nameOxanium.className} flex items-center gap-x-1 px-2 py-1.5 text-[13px] tabular-nums`}
+                  style={{
+                    backgroundColor: isCurrent
+                      ? hexToRgba(accent, 0.12)
+                      : "transparent",
+                    borderBottom:
+                      i < arr.length - 1
+                        ? `1px solid ${hexToRgba(accent, 0.1)}`
+                        : undefined,
+                  }}
+                >
+                  {CAREER_SEASON_COLS.map((col) => {
+                    const value = col.render(row);
+                    const emphasize =
+                      col.key === "season" ||
+                      col.key === "pts" ||
+                      col.key === "teamAbbr";
+                    return (
+                      <span
+                        key={col.key}
+                        className={`${col.width} shrink-0 ${
+                          col.align === "left" ? "text-left" : "text-right"
+                        } ${
+                          emphasize
+                            ? "font-extrabold text-white"
+                            : "font-semibold text-white/75"
+                        }`}
+                      >
+                        {value}
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function fmtSplitNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+function PlayerVenueSplitsSection({
+  splits,
+  accent,
+  isJa,
+}: {
+  splits: NbaPlayerVenueSplit[];
+  accent: string;
+  isJa: boolean;
+}) {
+  return (
+    <section className="space-y-2">
+      <h2
+        className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
+        style={{ color: hexToRgba(accent, 0.75) }}
+      >
+        {isJa ? "ホーム / アウェイ" : "Home / Away"}
+      </h2>
+      <div
+        className="overflow-hidden border bg-black/50"
+        style={{ borderColor: hexToRgba(accent, 0.4) }}
+      >
+        <div
+          className={`${nameOxanium.className} grid grid-cols-6 gap-0 border-b px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-white/40`}
+          style={{ borderBottomColor: hexToRgba(accent, 0.18) }}
+        >
+          <span />
+          <span className="text-right">GP</span>
+          <span className="text-right">PTS</span>
+          <span className="text-right">REB</span>
+          <span className="text-right">AST</span>
+          <span className="text-right">+/-</span>
+        </div>
+        {splits.map((row, i) => (
+          <div
+            key={row.venue}
+            className={`${nameOxanium.className} grid grid-cols-6 gap-0 px-2 py-2 text-[12px] font-semibold tabular-nums text-white/85`}
+            style={
+              i < splits.length - 1
+                ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
+                : undefined
+            }
+          >
+            <span className="font-extrabold uppercase text-white">
+              {row.venue === "home" ? (isJa ? "HOME" : "HOME") : isJa ? "AWAY" : "AWAY"}
+            </span>
+            <span className="text-right">{row.games}</span>
+            <span className="text-right">{fmtSplitNum(row.pts)}</span>
+            <span className="text-right">{fmtSplitNum(row.reb)}</span>
+            <span className="text-right">{fmtSplitNum(row.ast)}</span>
+            <span
+              className="text-right font-extrabold"
+              style={{
+                color:
+                  row.plusMinus > 0
+                    ? "#5cf0b5"
+                    : row.plusMinus < 0
+                      ? "#FF2D78"
+                      : "rgba(255,255,255,0.55)",
+              }}
+            >
+              {row.plusMinus > 0 ? "+" : ""}
+              {fmtSplitNum(row.plusMinus)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PlayerVsOpponentSection({
+  samples,
+  accent,
+  isJa,
+}: {
+  samples: NbaPlayerVsOpponentSample[];
+  accent: string;
+  isJa: boolean;
+}) {
+  if (!samples.length) return null;
+  return (
+    <section className="space-y-2">
+      <h2
+        className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
+        style={{ color: hexToRgba(accent, 0.75) }}
+      >
+        {isJa ? "対戦相手別（平均）" : "Vs Opponent (Avg)"}
+      </h2>
+      <p className={`${nameOxanium.className} text-[10px] text-white/40`}>
+        {isJa
+          ? "今季の対戦試合からの平均（プレビュー）"
+          : "Season average vs opponent (preview)"}
+      </p>
+      <div
+        className="overflow-hidden border bg-black/50"
+        style={{ borderColor: hexToRgba(accent, 0.4) }}
+      >
+        <div
+          className={`${nameOxanium.className} grid grid-cols-6 gap-0 border-b px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-white/40`}
+          style={{ borderBottomColor: hexToRgba(accent, 0.18) }}
+        >
+          <span>{isJa ? "相手" : "OPP"}</span>
+          <span className="text-right">GP</span>
+          <span className="text-right">PTS</span>
+          <span className="text-right">REB</span>
+          <span className="text-right">AST</span>
+          <span className="text-right">+/-</span>
+        </div>
+        {samples.map((row, i) => (
+          <div
+            key={row.oppTeamId}
+            className={`${nameOxanium.className} grid grid-cols-6 gap-0 px-2 py-2 text-[12px] font-semibold tabular-nums text-white/85`}
+            style={
+              i < samples.length - 1
+                ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
+                : undefined
+            }
+          >
+            <span className="font-extrabold text-white">vs {row.oppAbbr}</span>
+            <span className="text-right">{row.games}</span>
+            <span className="text-right">{fmtSplitNum(row.pts)}</span>
+            <span className="text-right">{fmtSplitNum(row.reb)}</span>
+            <span className="text-right">{fmtSplitNum(row.ast)}</span>
+            <span
+              className="text-right font-extrabold"
+              style={{
+                color:
+                  row.plusMinus > 0
+                    ? "#5cf0b5"
+                    : row.plusMinus < 0
+                      ? "#FF2D78"
+                      : "rgba(255,255,255,0.55)",
+              }}
+            >
+              {row.plusMinus > 0 ? "+" : ""}
+              {fmtSplitNum(row.plusMinus)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function GameLogs({
   logs,
   accent,
@@ -582,7 +1009,7 @@ export default function NbaPlayerDetailPanel({
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
   const seasonShown = detail.seasonMetrics.filter((m) =>
-    ["pts", "reb", "ast", "stl", "blk", "tov", "fg_pct", "fg3_pct", "ft_pct"].includes(
+    ["pts", "reb", "ast", "stl", "blk", "tov", "plus_minus", "fg_pct", "fg3_pct", "ft_pct"].includes(
       m.id
     )
   );
@@ -764,6 +1191,25 @@ export default function NbaPlayerDetailPanel({
         </div>
       </section>
 
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+      />
+      <PlayerVenueSplitsSection
+        splits={detail.venueSplits}
+        accent={jerseyPrimary}
+        isJa={isJa}
+      />
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+      />
+      <PlayerVsOpponentSection
+        samples={detail.vsOpponentSamples}
+        accent={jerseyPrimary}
+        isJa={isJa}
+      />
+
       <section className="space-y-2">
         <h2
           className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
@@ -772,7 +1218,7 @@ export default function NbaPlayerDetailPanel({
           Advanced
         </h2>
         <div
-          className="flex overflow-hidden border bg-black/50"
+          className="flex items-start border bg-black/50"
           style={{ borderColor: hexToRgba(jerseyPrimary, 0.4) }}
         >
           {detail.advancedMetrics.map((m, i) => (
@@ -804,7 +1250,7 @@ export default function NbaPlayerDetailPanel({
               <p className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}>
                 {m.display}
               </p>
-              <p className="mt-1 text-[9px] leading-snug text-white/40">
+              <p className="mt-1 break-words text-[10px] leading-[1.45] text-white/40">
                 {isJa ? m.hintJa : m.hintEn}
               </p>
             </div>
@@ -812,6 +1258,15 @@ export default function NbaPlayerDetailPanel({
         </div>
       </section>
 
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+      />
+      <SeasonHistoryTable
+        regular={detail.careerSeasons.regular}
+        playoffs={detail.careerSeasons.playoffs}
+        accent={jerseyPrimary}
+      />
       <div
         className="h-px"
         style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}

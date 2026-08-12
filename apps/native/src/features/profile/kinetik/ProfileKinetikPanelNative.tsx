@@ -69,6 +69,13 @@ import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
+import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
+import { RankingsPeriodLabelNavNative } from "../../rankings/RankingsPeriodLabelNavNative";
+import {
+  getKinetikMetricsScopeHint,
+  type ProfileKinetikMetricsTab,
+} from "../../../../../../lib/profile/useNbaKinetikMonthlyStats";
+import { currentRankingPeriodLabel } from "../../../../../../lib/rankings/rankingPeriod";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import { buildProfileShareUrl } from "../../../../../../lib/share/shareAppUrls";
@@ -1482,9 +1489,12 @@ export type ProfileKinetikPanelNativeProps = {
   /** NBA: Playoffs / Season 切替 */
   metricsPeriod?: "playoffs" | "season";
   onMetricsPeriodChange?: (period: "playoffs" | "season") => void;
-  /** NBA: Week / Month 切替 */
-  metricsWindow?: "weekly" | "monthly";
-  onMetricsWindowChange?: (window: "weekly" | "monthly") => void;
+  /** NBA: TOTAL / Week / Month 切替 */
+  metricsTab?: ProfileKinetikMetricsTab;
+  onMetricsTabChange?: (tab: ProfileKinetikMetricsTab) => void;
+  metricsWindowLabel?: string | null;
+  onMetricsWindowLabelChange?: (label: string | null) => void;
+  metricsPeriodLabels?: string[];
   /** 累計プロフィール閲覧数（公開） */
   profileViewCount?: number | null;
   /** 保有 Unit（公開） */
@@ -1517,17 +1527,29 @@ export default function ProfileKinetikPanelNative({
   style,
   metricsPeriod: _metricsPeriod,
   onMetricsPeriodChange: _onMetricsPeriodChange,
-  metricsWindow,
-  onMetricsWindowChange,
+  metricsTab,
+  onMetricsTabChange,
+  metricsWindowLabel = null,
+  onMetricsWindowLabelChange,
+  metricsPeriodLabels = [],
   profileViewCount = null,
   unitBalance = null,
   onOpenUnitLedger,
 }: ProfileKinetikPanelNativeProps) {
   const isJa = language === "ja";
-  const showNbaWindowTabs =
-    metricsWindow != null && !!onMetricsWindowChange;
-  const isMonthlyWindow = metricsWindow === "monthly";
-  const isWeeklyWindow = metricsWindow === "weekly";
+  const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
+  const scopeHint = getKinetikMetricsScopeHint(
+    metricsTab ?? "total",
+    isJa ? "ja" : "en",
+    metricsTab === "weekly" || metricsTab === "monthly"
+      ? {
+          windowLabel: metricsWindowLabel,
+          isCurrentWindow:
+            !metricsWindowLabel ||
+            metricsWindowLabel === currentRankingPeriodLabel(metricsTab),
+        }
+      : undefined
+  );
   const [shareCopied, setShareCopied] = useState(false);
   const unitVaultRef = useRef<View>(null);
 
@@ -1620,20 +1642,10 @@ export default function ProfileKinetikPanelNative({
     () => ({
       ptsUnit: "pts",
       matchUnit: isJa ? "試合" : "matches",
-      cumulativeUnitHint: isWeeklyWindow
-        ? isJa
-          ? "今週"
-          : "WK"
-        : isMonthlyWindow
-          ? isJa
-            ? "今月"
-            : "MO"
-          : isJa
-            ? "累計"
-            : "CUM",
+      cumulativeUnitHint: scopeHint.unitHint,
       winRateUnitHint: "%",
     }),
-    [isJa, isMonthlyWindow, isWeeklyWindow]
+    [isJa, scopeHint.unitHint]
   );
 
   const metricsHeaderTitle = metricsTitle ?? "NBA // 26-27";
@@ -1973,7 +1985,7 @@ export default function ProfileKinetikPanelNative({
             </Text>
           )}
         </View>
-        {showNbaWindowTabs ? (
+        {showNbaMetricsTabs ? (
           <View
             style={[
               styles.metricsStageTabWrap,
@@ -1982,20 +1994,44 @@ export default function ProfileKinetikPanelNative({
           >
             <CyberSlantedTabBarNative fill>
               <CyberSlantedTabNative
-                label="WEEK"
-                active={metricsWindow === "weekly"}
+                label="TOTAL"
+                active={metricsTab === "total"}
                 fill
                 compact
-                onPress={() => onMetricsWindowChange?.("weekly")}
+                onPress={() => onMetricsTabChange?.("total")}
+              />
+              <CyberSlantedTabNative
+                label="WEEK"
+                active={metricsTab === "weekly"}
+                fill
+                compact
+                onPress={() => onMetricsTabChange?.("weekly")}
               />
               <CyberSlantedTabNative
                 label="MONTH"
-                active={metricsWindow === "monthly"}
+                active={metricsTab === "monthly"}
                 fill
                 compact
-                onPress={() => onMetricsWindowChange?.("monthly")}
+                onPress={() => onMetricsTabChange?.("monthly")}
               />
             </CyberSlantedTabBarNative>
+            {metricsTab !== "total" &&
+            isPro &&
+            onMetricsWindowLabelChange &&
+            metricsPeriodLabels.length > 0 ? (
+              <RankingsPeriodLabelNavNative
+                period={metricsTab}
+                activeLabel={
+                  metricsWindowLabel ??
+                  currentRankingPeriodLabel(metricsTab)
+                }
+                availableLabels={metricsPeriodLabels}
+                onChange={onMetricsWindowLabelChange}
+                language={isJa ? "ja" : "en"}
+              />
+            ) : metricsTab !== "total" && scopeHint.unitHint ? (
+              <Text style={styles.metricsPeriodHint}>{scopeHint.unitHint}</Text>
+            ) : null}
           </View>
         ) : null}
         <View>
@@ -2594,6 +2630,15 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
+  },
+  metricsPeriodHint: {
+    marginTop: 6,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    fontFamily: METRIC_FONT,
   },
   metricsSkeleton: {
     width: "47%",

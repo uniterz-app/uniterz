@@ -61,10 +61,13 @@ import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
-import type {
-  ProfileKinetikMetricsPeriod,
-  ProfileKinetikWindow,
+import {
+  getKinetikMetricsScopeHint,
+  type ProfileKinetikMetricsPeriod,
+  type ProfileKinetikMetricsTab,
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
+import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
+import { currentRankingPeriodLabel } from "@/lib/rankings/rankingPeriod";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -676,29 +679,15 @@ function ProfileUnitVault({
 
 function getKinetikMetricCopy(
   isJa: boolean,
-  opts?: { monthly?: boolean; weekly?: boolean }
+  scope: ReturnType<typeof getKinetikMetricsScopeHint>
 ) {
-  const monthly = opts?.monthly === true;
-  const weekly = opts?.weekly === true;
-  const windowHint = weekly
-    ? isJa
-      ? "今週"
-      : "WK"
-    : monthly
-      ? isJa
-        ? "今月"
-        : "MO"
-      : isJa
-        ? "累計"
-        : "CUM";
-  const windowJa = weekly ? "今週" : monthly ? "今月" : "期間内";
-  const windowEn = weekly ? "this week" : monthly ? "this month" : "the period";
+  const { unitHint, windowJa, windowEn } = scope;
   return {
     dayDeltaTitle: isJa ? "前日比" : "Day-over-day",
     ptsUnit: "pts",
     matchUnit: isJa ? "試合" : "matches",
     winRateUnitHint: "%",
-    cumulativeUnitHint: windowHint,
+    cumulativeUnitHint: unitHint,
     metricsInfoAria: isJa ? "統計項目の説明" : "Stats metric help",
     winRateTooltip: isJa
       ? "確定試合の的中率。100% = 全試合的中。"
@@ -708,10 +697,10 @@ function getKinetikMetricCopy(
       : `Combined score from wins, upsets, and bonuses for ${windowEn}.`,
     goalScorerTooltip: isJa
       ? `最多得点者予想が的中した試合数。${windowJa}の合計。`
-      : `Correct top-scorer picks ${windowEn}.`,
+      : `Correct top-scorer picks for ${windowEn}.`,
     upsetTooltip: isJa
       ? `アップセットが起きた試合で少数派を当てたときだけ加点。${windowJa}の合計。`
-      : `Bonus points when you picked the minority side on an upset. ${weekly || monthly ? (weekly ? "Week" : "Month") : "Period"} total.`,
+      : `Bonus points when you picked the minority side on an upset (${windowEn}).`,
     shareProfile: isJa ? "プロフィールを共有" : "Share profile",
     shareCopied: isJa ? "コピー済" : "Copied",
     proMember: isJa ? "Pro 会員" : "Pro member",
@@ -813,9 +802,14 @@ type Props = {
   /** NBA: Playoffs / Season 切替 */
   metricsPeriod?: ProfileKinetikMetricsPeriod;
   onMetricsPeriodChange?: (period: ProfileKinetikMetricsPeriod) => void;
-  /** NBA: Week / Month 切替（SEASON・PLAYOFF 共通） */
-  metricsWindow?: ProfileKinetikWindow;
-  onMetricsWindowChange?: (window: ProfileKinetikWindow) => void;
+  /** NBA: TOTAL / Week / Month 切替 */
+  metricsTab?: ProfileKinetikMetricsTab;
+  onMetricsTabChange?: (tab: ProfileKinetikMetricsTab) => void;
+  /** Week / Month の対象ラベル（null = 現行） */
+  metricsWindowLabel?: string | null;
+  onMetricsWindowLabelChange?: (label: string | null) => void;
+  /** Pro: 過去期間ナビ用ラベル一覧 */
+  metricsPeriodLabels?: string[];
   /** 累計プロフィール閲覧数（公開） */
   profileViewCount?: number | null;
   /** 保有 Unit（公開） */
@@ -850,24 +844,33 @@ export default function ProfileEditKinetikPanel({
   statsPending = false,
   metricsPeriod: _metricsPeriod,
   onMetricsPeriodChange: _onMetricsPeriodChange,
-  metricsWindow,
-  onMetricsWindowChange,
+  metricsTab,
+  onMetricsTabChange,
+  metricsWindowLabel = null,
+  onMetricsWindowLabelChange,
+  metricsPeriodLabels = [],
   profileViewCount = null,
   unitBalance = null,
 }: Props) {
   const router = useRouter();
   const isJa = language === "ja";
-  const showNbaWindowTabs =
-    metricsWindow != null && !!onMetricsWindowChange;
-  const isMonthlyWindow = metricsWindow === "monthly";
-  const isWeeklyWindow = metricsWindow === "weekly";
+  const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
+  const scopeHint = getKinetikMetricsScopeHint(
+    metricsTab ?? "total",
+    isJa ? "ja" : "en",
+    metricsTab === "weekly" || metricsTab === "monthly"
+      ? {
+          windowLabel: metricsWindowLabel,
+          isCurrentWindow:
+            !metricsWindowLabel ||
+            metricsWindowLabel === currentRankingPeriodLabel(metricsTab),
+        }
+      : undefined
+  );
   const reduceUiMotion =
     useReducedMotion() === true || visualEffects === "lite";
   const planProBgAccentReady = true;
-  const metricCopy = getKinetikMetricCopy(isJa, {
-    monthly: isMonthlyWindow,
-    weekly: isWeeklyWindow,
-  });
+  const metricCopy = getKinetikMetricCopy(isJa, scopeHint);
 
   /** 自分プロフィールのみ: 残高増分 → 中央カウント → 金庫へ加算 */
   const unitEarn = useUnitEarnOverlay({
@@ -1174,27 +1177,57 @@ export default function ProfileEditKinetikPanel({
 
   const metricsContent = (
     <div>
-      {showNbaWindowTabs ? (
+      {showNbaMetricsTabs ? (
         <div className={periodTabWrapClass}>
           <CyberSlantedTabBar
             fill
-            aria-label={isJa ? "週次 / 月次" : "Week / Month"}
+            aria-label={isJa ? "累計 / 週次 / 月次" : "Total / Week / Month"}
           >
             <CyberSlantedTab
               role="tab"
+              label="TOTAL"
+              active={metricsTab === "total"}
+              onClick={() => onMetricsTabChange?.("total")}
+              compact
+            />
+            <CyberSlantedTab
+              role="tab"
               label="WEEK"
-              active={metricsWindow === "weekly"}
-              onClick={() => onMetricsWindowChange?.("weekly")}
+              active={metricsTab === "weekly"}
+              onClick={() => onMetricsTabChange?.("weekly")}
               compact
             />
             <CyberSlantedTab
               role="tab"
               label="MONTH"
-              active={metricsWindow === "monthly"}
-              onClick={() => onMetricsWindowChange?.("monthly")}
+              active={metricsTab === "monthly"}
+              onClick={() => onMetricsTabChange?.("monthly")}
               compact
             />
           </CyberSlantedTabBar>
+          {metricsTab !== "total" &&
+          isPro &&
+          onMetricsWindowLabelChange &&
+          metricsPeriodLabels.length > 0 ? (
+            <div className="mt-2">
+              <RankingsPeriodLabelNav
+                period={metricsTab}
+                activeLabel={
+                  metricsWindowLabel ??
+                  currentRankingPeriodLabel(metricsTab)
+                }
+                availableLabels={metricsPeriodLabels}
+                onChange={onMetricsWindowLabelChange}
+                language={isJa ? "ja" : "en"}
+              />
+            </div>
+          ) : metricsTab !== "total" && scopeHint.unitHint ? (
+            <p
+              className={`${nameOxanium.className} mt-2 text-center text-[10px] font-bold tracking-wide text-white/45`}
+            >
+              {scopeHint.unitHint}
+            </p>
+          ) : null}
         </div>
       ) : null}
       {statsPending ? (

@@ -24,12 +24,15 @@ import {
   OXANIUM_800,
   PANEL_BG,
   REPORT_ACCENT,
+  REPORT_FRAME,
   fmtReportPt,
   fmtReportRange,
   reportBodyFont,
   reportBodyFontSemibold,
   type ReportAccent,
 } from "./reportThemeNative";
+import { WeeklyReportCardShell } from "./reportCardShellNative";
+import { ReportSquareGridOverlay } from "./reportGridOverlaysNative";
 
 type Lang = "ja" | "en";
 
@@ -153,10 +156,10 @@ const DIVISION_META: Record<
   upset: { label: "UPSET", accent: REPORT_ACCENT.orange },
 };
 
-function slabStyle(accent: ReportAccent): ViewStyle {
+function slabStyle(_accent?: ReportAccent): ViewStyle {
   return {
     borderWidth: 1,
-    borderColor: accent.border,
+    borderColor: REPORT_FRAME.weekly.border,
     backgroundColor: PANEL_BG,
     borderRadius: 3,
     overflow: "hidden",
@@ -276,7 +279,15 @@ function HeroBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
   const losses = Math.max(0, report.totalPosts - report.totalWins);
 
   return (
-    <RankingsCyberPanelNative compact style={{ marginBottom: 0 }}>
+    <RankingsCyberPanelNative
+      compact
+      style={{
+        marginBottom: 0,
+        backgroundColor: PANEL_BG,
+        borderColor: REPORT_FRAME.weekly.border,
+      }}
+    >
+      <ReportSquareGridOverlay borderRadius={0} />
       {/* 左=順位 / 右=スコア。数字は同一テキスト行でベースライン共有 */}
       <View style={styles.heroSplit}>
         <View style={styles.heroDivider} pointerEvents="none" />
@@ -365,7 +376,7 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
           const isTop10 = !isReference && d.rank != null && d.rank <= 10;
           const integer = d.key === "goalScorerHits";
           return (
-            <View key={d.key} style={[styles.divCell, slabStyle(meta.accent)]}>
+            <WeeklyReportCardShell key={d.key} style={[styles.divCell, slabStyle(meta.accent)]}>
               <View style={styles.divCellHeader}>
                 <MicroLabel color={meta.accent.main}>{meta.label}</MicroLabel>
                 {isTop10 ? (
@@ -398,7 +409,7 @@ function DivisionsBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) 
                   {d.rank != null ? c.divisionRank(d.rank) : c.divisionUnranked}
                 </Text>
               )}
-            </View>
+            </WeeklyReportCardShell>
           );
         })}
       </View>
@@ -430,7 +441,7 @@ function BattlePanel({
   const overflowCount = Math.max(0, count - rivals.length);
 
   return (
-    <View style={[styles.battlePanel, slabStyle(accent)]}>
+    <WeeklyReportCardShell style={[styles.battlePanel, slabStyle(accent)]}>
       <View style={styles.battlePanelHeader}>
         <MicroLabel color={accent.main}>{label}</MicroLabel>
         {count > 0 ? (
@@ -473,7 +484,7 @@ function BattlePanel({
       ) : (
         <Text style={[styles.emptyText, { fontFamily: reportBodyFont(lang) }]}>{emptyText}</Text>
       )}
-    </View>
+    </WeeklyReportCardShell>
   );
 }
 
@@ -483,9 +494,9 @@ function BattleBlock({ report, lang }: { report: WeeklyReport; lang: Lang }) {
 
   if (firstWeek && report.overtaken.length === 0 && report.overtakenBy.length === 0) {
     return (
-      <View style={[styles.firstWeekBattlePanel, slabStyle(REPORT_ACCENT.cyan)]}>
+      <WeeklyReportCardShell style={[styles.firstWeekBattlePanel, slabStyle(REPORT_ACCENT.cyan)]}>
         <Text style={[styles.firstWeekBattleText, { fontFamily: reportBodyFont(lang) }]}>{c.firstWeekBattle}</Text>
-      </View>
+      </WeeklyReportCardShell>
     );
   }
 
@@ -565,7 +576,7 @@ function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang 
 
   return (
     <View style={styles.battleBlockRoot}>
-      <View style={[styles.targetRow, slabStyle(REPORT_ACCENT.cyan)]}>
+      <WeeklyReportCardShell style={[styles.targetRow, slabStyle(REPORT_ACCENT.cyan)]}>
         <MaterialCommunityIcons name="crosshairs" size={20} color={REPORT_ACCENT.cyan.main} />
         <View style={styles.targetMain}>
           <MicroLabel color={REPORT_ACCENT.cyan.main}>{c.nextTarget}</MicroLabel>
@@ -584,10 +595,10 @@ function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang 
             accent={REPORT_ACCENT.cyan}
           />
         ) : null}
-      </View>
+      </WeeklyReportCardShell>
 
       {report.threat ? (
-        <View style={[styles.targetRow, slabStyle(REPORT_ACCENT.orange)]}>
+        <WeeklyReportCardShell style={[styles.targetRow, slabStyle(REPORT_ACCENT.orange)]}>
           <MaterialCommunityIcons name="shield-alert" size={20} color={REPORT_ACCENT.orange.main} />
           <View style={styles.targetMain}>
             <MicroLabel color={REPORT_ACCENT.orange.main}>{c.threat}</MicroLabel>
@@ -598,7 +609,7 @@ function TargetThreatBlock({ report, lang }: { report: WeeklyReport; lang: Lang 
             points={report.threat.pointsGap}
             accent={REPORT_ACCENT.orange}
           />
-        </View>
+        </WeeklyReportCardShell>
       ) : null}
     </View>
   );
@@ -647,7 +658,7 @@ export default function WeeklyReportViewNative({
           ) : null}
         </View>
 
-        <View style={styles.rangeRow}>
+        <View style={styles.headerRange}>
           {periodList.length > 1 ? (
             <Pressable
               disabled={!canPrev}
@@ -661,8 +672,8 @@ export default function WeeklyReportViewNative({
             >
               <MaterialCommunityIcons
                 name="chevron-left"
-                size={20}
-                color={canPrev ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.2)"}
+                size={16}
+                color={canPrev ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)"}
               />
             </Pressable>
           ) : null}
@@ -682,12 +693,13 @@ export default function WeeklyReportViewNative({
             >
               <MaterialCommunityIcons
                 name="chevron-right"
-                size={20}
-                color={canNext ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.2)"}
+                size={16}
+                color={canNext ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)"}
               />
             </Pressable>
           ) : null}
         </View>
+      </View>
 
         {periodList.length > 1 ? (
           <ScrollView
@@ -711,7 +723,6 @@ export default function WeeklyReportViewNative({
             })}
           </ScrollView>
         ) : null}
-      </View>
 
       {report.status === "live" ? (
         <Text style={[styles.liveNote, { fontFamily: reportBodyFont(language) }]}>{c.liveNote}</Text>
@@ -722,11 +733,11 @@ export default function WeeklyReportViewNative({
       <BattleBlock report={report} lang={language} />
       <TargetThreatBlock report={report} lang={language} />
 
-      <View style={[styles.commentSlab, slabStyle(REPORT_ACCENT.cyan)]}>
+      <WeeklyReportCardShell style={[styles.commentSlab, slabStyle(REPORT_ACCENT.cyan)]}>
         <Text style={[styles.commentText, { fontFamily: reportBodyFont(language) }]}>
           {commentText(report.comment, language)}
         </Text>
-      </View>
+      </WeeklyReportCardShell>
     </View>
   );
 }
@@ -734,9 +745,12 @@ export default function WeeklyReportViewNative({
 const styles = StyleSheet.create({
   root: { gap: 12 },
   header: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
     gap: 8,
   },
-  headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
   title: {
     fontFamily: OXANIUM_800,
     color: "#fff",
@@ -761,17 +775,18 @@ const styles = StyleSheet.create({
     fontSize: 8,
     letterSpacing: 1.2,
   },
-  rangeRow: {
+  headerRange: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 2,
+    flexShrink: 0,
   },
   rangeNavBtn: {
-    width: 36,
-    height: 36,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 6,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.18)",
     backgroundColor: "rgba(255,255,255,0.05)",
@@ -781,13 +796,10 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   range: {
-    flex: 1,
-    fontFamily: OXANIUM_800,
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 15,
-    letterSpacing: 1.4,
-    textAlign: "center",
-    textTransform: "uppercase",
+    fontFamily: OXANIUM_700,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 11,
+    letterSpacing: 1,
   },
   periodChipRow: {
     gap: 6,
@@ -802,7 +814,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   periodChipOn: {
-    borderColor: "rgba(34,211,238,0.55)",
+    borderColor: REPORT_FRAME.weekly.border,
     backgroundColor: "rgba(34,211,238,0.14)",
   },
   periodChipText: {

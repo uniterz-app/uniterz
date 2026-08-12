@@ -10,6 +10,7 @@ import MobileAnnouncementsScreen from "../mobileScreens/MobileAnnouncementsScree
 import MobilePlanStatusScreen from "../mobileScreens/MobilePlanStatusScreen";
 import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNative";
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
+import MonthlyReportPreviewScreenNative from "../mobileScreens/MonthlyReportPreviewScreenNative";
 import FuturisticBgPreviewScreenNative from "../backgrounds/FuturisticBgPreviewScreenNative";
 import TitleSkinPreviewScreenNative from "../backgrounds/TitleSkinPreviewScreenNative";
 import WaveProSkinPreviewScreenNative from "../backgrounds/WaveProSkinPreviewScreenNative";
@@ -116,6 +117,22 @@ export function SeasonPredictPreviewScreenWrapper() {
   return (
     <SeasonPredictPreviewScreenNative
       language={language}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function MonthlyReportPreviewScreenWrapper() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const route = useRoute<RouteProp<ProfileStackParamList, "MonthlyReportPreview">>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+
+  return (
+    <MonthlyReportPreviewScreenNative
+      language={language}
+      initialCaseKey={route.params?.caseKey}
+      initialTab={route.params?.tab}
       onClose={() => navigation.goBack()}
     />
   );
@@ -337,6 +354,9 @@ export function TeamDetailPreviewScreenWrapper() {
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       teamId={route.params?.teamId}
+      onSelectPlayer={(playerId) =>
+        navigation.navigate("PlayerDetailPreview", { playerId })
+      }
     />
   );
 }

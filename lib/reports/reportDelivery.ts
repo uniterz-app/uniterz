@@ -1,8 +1,8 @@
 /**
  * Pro レポート配信スケジュール（JST）。
- * - 月曜日 08:30: 確定した前週の週次をプロフィールオーバーレイで提示（final のみ）
- * - 毎月1日: 前月の月次を同様に提示
- * Report タブには履歴として溜まる（別途 user_reports から一覧）。
+ * - 週次 final: 月曜 08:30 に前週を確定。未読なら以降いつ開いてもオーバーレイ。
+ * - 月次 final: 毎月1日 08:00 に前月を確定。未読なら以降いつ開いてもオーバーレイ。
+ * Report タブは直近の確定 ID を getDoc（全件 query しない）。
  * トライアル1回保証: lib/reports/weeklyReportTrialGuarantee.ts
  */
 
@@ -20,6 +20,9 @@ export type ReportDeliveryCandidate = {
   reportId: string;
 };
 
+export const ARCHIVE_WEEKLY_COUNT = 16;
+export const ARCHIVE_MONTHLY_COUNT = 12;
+
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
@@ -29,6 +32,13 @@ function addDaysToDateKeyJST(dateKey: string, days: number): string {
   const base = new Date(Date.UTC(y, m - 1, d));
   base.setUTCDate(base.getUTCDate() + Math.max(0, Math.floor(days)));
   return `${base.getUTCFullYear()}-${pad2(base.getUTCMonth() + 1)}-${pad2(base.getUTCDate())}`;
+}
+
+function previousMonthKeyFrom(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  if (!y || !m) return monthKey;
+  if (m === 1) return `${y - 1}-12`;
+  return `${y}-${pad2(m - 1)}`;
 }
 
 /** JST で月曜か */
@@ -42,7 +52,7 @@ export function isFirstOfMonthJST(now: Date = new Date()): boolean {
   return getZonedYMD(now, TIMEZONE_JST).day === 1;
 }
 
-/** 確定配信対象の前週ラベル（今日が月曜のとき = 今日−7） */
+/** 確定配信対象の前週ラベル（どの曜日でも「直近の確定週」） */
 export function previousWeekLabelForMondayDelivery(now: Date = new Date()): string {
   const thisMonday = resolveRankingWeekStartDateKey(now);
   return subtractDaysFromDateKeyJST(thisMonday, 7);
@@ -55,7 +65,7 @@ export function previousMonthKeyJST(now: Date = new Date()): string {
   return `${year}-${pad2(month - 1)}`;
 }
 
-/** 確定配信対象の前月 monthKey（今日が1日のとき） */
+/** 確定配信対象の前月 monthKey */
 export function previousMonthKeyForFirstDelivery(now: Date = new Date()): string {
   return previousMonthKeyJST(now);
 }
@@ -64,35 +74,60 @@ export function monthlyReportDocId(uid: string, monthKey: string): string {
   return `${uid}_monthly_${monthKey}`;
 }
 
+/** Report タブ用: 直近の確定週次 doc id（新しい順） */
+export function recentWeeklyReportDocIds(
+  uid: string,
+  now: Date = new Date(),
+  count: number = ARCHIVE_WEEKLY_COUNT
+): string[] {
+  let label = previousWeekLabelForMondayDelivery(now);
+  const ids: string[] = [];
+  const n = Math.max(0, Math.floor(count));
+  for (let i = 0; i < n; i++) {
+    ids.push(weeklyReportDocId(uid, label));
+    label = subtractDaysFromDateKeyJST(label, 7);
+  }
+  return ids;
+}
+
+/** Report タブ用: 直近の確定月次 doc id（新しい順） */
+export function recentMonthlyReportDocIds(
+  uid: string,
+  now: Date = new Date(),
+  count: number = ARCHIVE_MONTHLY_COUNT
+): string[] {
+  let key = previousMonthKeyJST(now);
+  const ids: string[] = [];
+  const n = Math.max(0, Math.floor(count));
+  for (let i = 0; i < n; i++) {
+    ids.push(monthlyReportDocId(uid, key));
+    key = previousMonthKeyFrom(key);
+  }
+  return ids;
+}
+
 /**
- * 今日開いたときに提示候補のレポート（未読フィルタは呼び出し側）。
- * 1日かつ月曜なら月次 → 週次の順。
+ * 未読ならいつ開いても出す（月曜/1日限定にしない）。
+ * cron 前は doc が無くスキップされる。月次 → 週次の順。
  */
 export function buildReportDeliveryCandidates(
   uid: string,
   now: Date = new Date()
 ): ReportDeliveryCandidate[] {
-  const out: ReportDeliveryCandidate[] = [];
-
-  if (isFirstOfMonthJST(now)) {
-    const periodKey = previousMonthKeyForFirstDelivery(now);
-    out.push({
+  const monthlyKey = previousMonthKeyJST(now);
+  const weeklyKey = previousWeekLabelForMondayDelivery(now);
+  return [
+    {
       kind: "monthly",
-      periodKey,
-      reportId: monthlyReportDocId(uid, periodKey),
-    });
-  }
-
-  if (isMondayJST(now)) {
-    const periodKey = previousWeekLabelForMondayDelivery(now);
-    out.push({
+      periodKey: monthlyKey,
+      reportId: monthlyReportDocId(uid, monthlyKey),
+    },
+    {
       kind: "weekly",
-      periodKey,
-      reportId: weeklyReportDocId(uid, periodKey),
-    });
-  }
-
-  return out;
+      periodKey: weeklyKey,
+      reportId: weeklyReportDocId(uid, weeklyKey),
+    },
+  ];
 }
 
 /** 一覧用: 今週の進行中週次 doc id */

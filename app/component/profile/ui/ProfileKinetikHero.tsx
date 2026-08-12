@@ -22,10 +22,12 @@ import {
   getNbaKinetikScopeTitle,
   prefetchNbaKinetikPeriodStats,
   prefetchNbaKinetikWindowStats,
+  useNbaKinetikPeriodStats,
   useNbaKinetikWindowStats,
   type ProfileKinetikMetricsPeriod,
-  type ProfileKinetikWindow,
+  type ProfileKinetikMetricsTab,
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
+import { listRankingPeriodLabels } from "@/lib/rankings/rankingPeriod";
 import { preferredNbaKinetikPeriod } from "@/lib/rankings/nbaSeason";
 import { useUserCareer } from "@/lib/profile/useUserCareer";
 
@@ -45,23 +47,8 @@ type Props = {
   badges?: ResolvedBadge[];
   onBadgeClick?: (badge: ResolvedBadge) => void;
   visualEffects?: ProfileVisualEffects;
-  /** 期間スタッツ取得用（NBA Season / Playoffs × Week / Month） */
   targetUid?: string | null;
-  /** 累計プロフィール閲覧数（公開） */
   profileViewCount?: number | null;
-};
-
-const EMPTY_NBA_STATS = {
-  winRate: 0,
-  posts: 0,
-  hits: 0,
-  exactHits: 0,
-  goalScorerHits: 0,
-  totalPoints: 0,
-  upset: 0,
-  totalPointsRank: null as number | null,
-  totalPointsRankDenominator: null as number | null,
-  rankDeltaPlaces: null as number | null,
 };
 
 export default function ProfileKinetikHero({
@@ -83,30 +70,63 @@ export default function ProfileKinetikHero({
 }: Props) {
   const [metricsPeriod, setMetricsPeriod] =
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
-  const [metricsWindow, setMetricsWindow] =
-    useState<ProfileKinetikWindow>("monthly");
+  const [metricsTab, setMetricsTab] =
+    useState<ProfileKinetikMetricsTab>("total");
+  const [windowLabel, setWindowLabel] = useState<string | null>(null);
 
-  /** 表カード: Week / Month（board 連動） */
+  const windowEnabled = metricsTab !== "total";
+  const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
+    targetUid,
+    metricsPeriod,
+    metricsTab === "total"
+  );
   const { data: windowData, loading: windowLoading } = useNbaKinetikWindowStats(
     targetUid,
     metricsPeriod,
-    metricsWindow,
-    true
+    metricsTab === "weekly" || metricsTab === "monthly" ? metricsTab : "weekly",
+    windowEnabled,
+    undefined,
+    windowLabel
   );
+
+  const activeData =
+    metricsTab === "total"
+      ? periodData
+      : windowData
+        ? {
+            summary: windowData.summary,
+            summaryRanks: windowData.summaryRanks,
+            seasonKey: windowData.seasonKey,
+            label: windowData.label,
+          }
+        : null;
 
   const { career, loading: careerDocLoading } = useUserCareer(targetUid, {
     enabled: true,
   });
 
   useEffect(() => {
+    setWindowLabel(null);
+  }, [metricsTab, metricsPeriod]);
+
+  useEffect(() => {
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
-    const otherWindow: ProfileKinetikWindow =
-      metricsWindow === "monthly" ? "weekly" : "monthly";
     prefetchNbaKinetikPeriodStats(targetUid, otherBoard);
-    prefetchNbaKinetikWindowStats(targetUid, metricsPeriod, otherWindow);
-    prefetchNbaKinetikWindowStats(targetUid, otherBoard, metricsWindow);
-  }, [targetUid, metricsPeriod, metricsWindow]);
+    if (metricsTab === "total") {
+      prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod);
+      return;
+    }
+    const otherTab: ProfileKinetikMetricsTab =
+      metricsTab === "monthly" ? "weekly" : "monthly";
+    prefetchNbaKinetikWindowStats(targetUid, metricsPeriod, otherTab);
+    prefetchNbaKinetikWindowStats(targetUid, otherBoard, metricsTab);
+  }, [targetUid, metricsPeriod, metricsTab]);
+
+  const periodLabels = useMemo(() => {
+    if (metricsTab === "total") return [];
+    return listRankingPeriodLabels(metricsTab);
+  }, [metricsTab]);
 
   const baseMapped = useMemo(
     () =>
@@ -120,37 +140,44 @@ export default function ProfileKinetikHero({
     [profile, profileStatsContext, summary, summaryRanks, winStreak]
   );
 
-  const windowMapped = useMemo(() => {
-    if (!windowData) return null;
-    return mapProfileToKinetikPanel({
-      profile,
-      summary: windowData.summary,
-      summaryRanks: windowData.summaryRanks,
-      profileStatsContext,
-      winStreak,
-    });
-  }, [windowData, profile, profileStatsContext, winStreak]);
-
-  const mapped = windowMapped
-    ? {
-        ...windowMapped,
-        metricsTitle: getNbaKinetikScopeTitle(
-          metricsPeriod,
-          windowData!.seasonKey
-        ),
-      }
-    : {
+  const mapped = useMemo(() => {
+    if (!activeData) {
+      return {
         ...baseMapped,
-        stats: { ...baseMapped.stats, ...EMPTY_NBA_STATS },
         metricsTitle: getNbaKinetikScopeTitle(metricsPeriod),
         totalPointsRank: null,
         totalPointsRankDenominator: null,
         rankDeltaPlaces: null,
       };
+    }
+    const panel = mapProfileToKinetikPanel({
+      profile,
+      summary: activeData.summary,
+      summaryRanks: activeData.summaryRanks,
+      profileStatsContext,
+      winStreak,
+    });
+    return {
+      ...panel,
+      metricsTitle: getNbaKinetikScopeTitle(
+        metricsPeriod,
+        activeData.seasonKey
+      ),
+    };
+  }, [
+    activeData,
+    baseMapped,
+    metricsPeriod,
+    profile,
+    profileStatsContext,
+    winStreak,
+  ]);
 
   const kinetikLanguage = toKinetikPanelLanguage(language);
-
-  const statsPending = windowLoading && !windowData;
+  const statsPending =
+    metricsTab === "total"
+      ? periodLoading && !periodData
+      : windowLoading && !windowData;
   const careerPending = careerDocLoading && !career;
 
   return (
@@ -192,8 +219,15 @@ export default function ProfileKinetikHero({
             visualEffects={visualEffects}
             metricsPeriod={metricsPeriod}
             onMetricsPeriodChange={setMetricsPeriod}
-            metricsWindow={metricsWindow}
-            onMetricsWindowChange={setMetricsWindow}
+            metricsTab={metricsTab}
+            onMetricsTabChange={setMetricsTab}
+            metricsWindowLabel={
+              metricsTab === "total" ? null : windowData?.label ?? windowLabel
+            }
+            onMetricsWindowLabelChange={
+              profile.plan === "pro" ? setWindowLabel : undefined
+            }
+            metricsPeriodLabels={profile.plan === "pro" ? periodLabels : []}
             onToggleMetricsScope={() =>
               setMetricsPeriod((prev) =>
                 prev === "season" ? "playoffs" : "season"

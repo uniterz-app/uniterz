@@ -3,12 +3,9 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import {
-  partitionUserReportDocs,
-  type UserReportListItem,
-} from "@/lib/reports/partitionUserReports";
+import { fetchUserReportsArchive } from "@/lib/reports/fetchUserReportsArchive";
+import type { UserReportListItem } from "@/lib/reports/partitionUserReports";
 import { formatReportPeriodLabel } from "@/lib/reports/reportDelivery";
 import { weeklyReportPreviewClimbed } from "@/lib/reports/weeklyReportPreviewMocks";
 import { monthlyReportPreviewTop10 } from "@/lib/reports/monthlyReportPreviewMocks";
@@ -96,13 +93,11 @@ export default function ProfileMonthlyReportPanel({
     setLoading(true);
     void (async () => {
       try {
-        const snap = await getDocs(
-          query(collection(db, "user_reports"), where("uid", "==", uid))
+        const { weeklies: w, monthlies: m } = await fetchUserReportsArchive(
+          db,
+          uid
         );
         if (cancelled) return;
-        const { weeklies: w, monthlies: m } = partitionUserReportDocs(
-          snap.docs.map((d) => ({ id: d.id, data: d.data() }))
-        );
         setWeeklies(w);
         setMonthlies(m);
         setSelectedWeeklyId(w[0]?.id ?? null);

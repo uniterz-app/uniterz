@@ -216,6 +216,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     return () => window.cancelAnimationFrame(id);
   }, [tab, playoffDisplayData?.season, visualEffectsLite]);
 
+  // BRACKET タブは当面非表示（実装が揃うまで）
+  useEffect(() => {
+    if (tab === "bracket") setTab("overview");
+  }, [tab, setTab]);
+
   if (isMe && loadingPlan) {
     return (
       <div className="flex justify-center p-4">
@@ -263,7 +268,13 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       ) : null}
 
       <div className="mt-6">
-        <Tabs value={tab} onChange={setTab} size="lg" layout="split" />
+        <Tabs
+          value={tab}
+          onChange={setTab}
+          size="lg"
+          layout="split"
+          showBracket={false}
+        />
         {tab === "overview" ? (
           <>
             <div className="mt-6 w-full min-w-0 space-y-4 overflow-visible">

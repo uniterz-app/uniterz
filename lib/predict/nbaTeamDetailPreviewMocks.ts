@@ -689,6 +689,23 @@ function buildRosterBlock(
   };
 }
 
+/** Team Detail ロスター行 → Player Detail プレビュー用（ID から同一モック選手を復元） */
+export function lookupTeamDetailRosterPlayer(
+  playerId: string
+): { player: NbaRosterPlayer; teamId: string } | null {
+  const match = /^(.+)-p(\d+)$/.exec(playerId);
+  if (!match) return null;
+  const teamId = match[1]!;
+  const block = buildRosterBlock(
+    teamId,
+    NBA_TEAM_NAME_BY_ID[teamId] ?? teamId,
+    1
+  );
+  const player = block.players.find((p) => String(p.id) === playerId);
+  if (!player) return null;
+  return { player, teamId };
+}
+
 function conferenceRankAmong(
   rows: NbaLeagueTeamStatRow[],
   teamId: string,

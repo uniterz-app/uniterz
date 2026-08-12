@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Flame, Snowflake } from "lucide-react";
 import { nameOxanium } from "@/lib/fonts";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
+import { NbaTeamRosterCard } from "@/app/component/predict/NbaRosterPanel";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
@@ -26,6 +29,11 @@ import {
   type NbaTeamStreak,
   type NbaTeamUpcomingGame,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import {
+  recentFormRecord,
+  teamStreakBadgeLabel,
+  teamStreakBadgeTheme,
+} from "@/lib/predict/nbaTeamDetailForm";
 
 type Props = {
   teamId?: string;
@@ -155,6 +163,67 @@ function RecentForm({
           {wins}-{results.length - wins}
         </span>
       </div>
+    </div>
+  );
+}
+
+function TeamHeroStreakBadge({
+  streak,
+  last10,
+  isJa,
+}: {
+  streak: NbaTeamStreak;
+  last10: { wins: number; losses: number };
+  isJa: boolean;
+}) {
+  const badge = teamStreakBadgeLabel(streak, isJa);
+  const theme = teamStreakBadgeTheme(streak);
+
+  return (
+    <div
+      className="flex shrink-0 flex-col items-end gap-1"
+      aria-label={
+        isJa
+          ? `直近 ${last10.wins}勝${last10.losses}敗、${badge.headline}`
+          : `Last 10: ${last10.wins}-${last10.losses}, ${badge.headline}`
+      }
+    >
+      <div
+        className="flex items-center gap-1.5 border px-2 py-1"
+        style={{
+          borderColor: theme.borderColor,
+          backgroundColor: theme.backgroundColor,
+        }}
+      >
+        {theme.showFireIcon ? (
+          <Flame
+            className="h-3.5 w-3.5"
+            style={{ color: theme.tagColor }}
+            aria-hidden
+          />
+        ) : theme.showColdIcon ? (
+          <Snowflake
+            className="h-3.5 w-3.5"
+            style={{ color: theme.tagColor }}
+            aria-hidden
+          />
+        ) : null}
+        <span
+          className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em]`}
+          style={{ color: theme.tagColor }}
+        >
+          {badge.tag}
+        </span>
+        <span
+          className={`${nameOxanium.className} text-[15px] font-extrabold tabular-nums`}
+          style={{ color: theme.headlineColor, transform: "skewX(-8deg)" }}
+        >
+          {badge.headline}
+        </span>
+      </div>
+      <span className={`${nameOxanium.className} text-[10px] font-bold tabular-nums text-white/45`}>
+        L10 {last10.wins}-{last10.losses}
+      </span>
     </div>
   );
 }
@@ -299,8 +368,8 @@ function OpponentStats({
       </p>
       <p className={`${nameOxanium.className} text-[10px] leading-snug text-white/45`}>
         {isJa
-          ? "相手に許したスタッツ（TOV は誘発数）。順位は #1 が最良。"
-          : "What opponents average vs this team (TOV = forced). Rank #1 is best."}
+          ? "順位が上（#1に近い）ほど DF が良い。"
+          : "Higher rank (closer to #1) = better defense."}
       </p>
       <div
         className="grid grid-cols-3 overflow-hidden border bg-black/50"
@@ -308,13 +377,7 @@ function OpponentStats({
       >
         {metrics.map((m) => {
           const active = selected?.id === m.id;
-          const dirLabel = m.lowerIsBetter
-            ? isJa
-              ? "↓ 低ほど良"
-              : "↓ lower"
-            : isJa
-              ? "↑ 高ほど良"
-              : "↑ higher";
+          const isForcedTov = m.id === "tov_forced";
           return (
             <button
               key={m.id}
@@ -338,7 +401,7 @@ function OpponentStats({
                   {m.short}
                 </span>
                 <span
-                  className={`${nameOxanium.className} text-[12px] font-extrabold tabular-nums`}
+                  className={`${nameOxanium.className} text-[13px] font-extrabold tabular-nums`}
                   style={{
                     color:
                       m.leagueRank <= 10 ? accent : "rgba(255,255,255,0.35)",
@@ -354,17 +417,16 @@ function OpponentStats({
               >
                 {m.display}
               </p>
-              <p
-                className={`${nameOxanium.className} text-[9px] font-bold tracking-wide`}
-                style={{
-                  color: m.lowerIsBetter
-                    ? "rgba(59,160,255,0.75)"
-                    : "rgba(92,240,181,0.8)",
-                  transform: "skewX(-6deg)",
-                }}
-              >
-                {dirLabel}
-              </p>
+              {isForcedTov ? (
+                <p
+                  className={`${nameOxanium.className} text-[9px] font-bold tracking-wide text-emerald-300/85`}
+                  style={{ transform: "skewX(-6deg)" }}
+                >
+                  {isJa ? "奪取・高いほど良" : "Forced · higher is better"}
+                </p>
+              ) : (
+                <span className="block h-[13px]" aria-hidden />
+              )}
             </button>
           );
         })}
@@ -652,6 +714,7 @@ export default function NbaTeamDetailPanel({
   teamId,
   language = "ja",
 }: Props) {
+  const router = useRouter();
   const isJa = language === "ja";
   const detail = useMemo(() => getNbaTeamDetailPreview(teamId), [teamId]);
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
@@ -668,7 +731,7 @@ export default function NbaTeamDetailPanel({
   const advCells = ADV_IDS.map((id) => byId.get(id)).filter(
     (m): m is NbaTeamMetricWithRank => Boolean(m)
   );
-
+  const last10 = recentFormRecord(detail.recentGames);
   return (
     <div className="space-y-4 pb-24 text-white">
       <div
@@ -684,22 +747,29 @@ export default function NbaTeamDetailPanel({
               glow="soft"
             />
           </div>
-          <div className="min-w-0 flex-1">
-            <p
-              className={`${nameOxanium.className} mb-1 truncate text-[9px] font-bold uppercase tracking-[0.12em]`}
-              style={{ color: hexToRgba(accent, 0.85) }}
-            >
-              {confLine} · {detail.divisionLabelEn.toUpperCase()} DIVISION
-            </p>
-            <p className={`${nameOxanium.className} text-[12px] font-bold uppercase tracking-wide text-white/55`}>
-              {detail.cityEn}
-            </p>
-            <p
-              className={`${nameOxanium.className} text-[24px] font-extrabold uppercase`}
-              style={{ transform: "skewX(-6deg)" }}
-            >
-              {detail.nickEn}
-            </p>
+          <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p
+                className={`${nameOxanium.className} mb-1 truncate text-[9px] font-bold uppercase tracking-[0.12em]`}
+                style={{ color: hexToRgba(accent, 0.85) }}
+              >
+                {confLine}
+              </p>
+              <p className={`${nameOxanium.className} text-[12px] font-bold uppercase tracking-wide text-white/55`}>
+                {detail.cityEn}
+              </p>
+              <p
+                className={`${nameOxanium.className} text-[24px] font-extrabold uppercase`}
+                style={{ transform: "skewX(-6deg)" }}
+              >
+                {detail.nickEn}
+              </p>
+            </div>
+            <TeamHeroStreakBadge
+              streak={detail.streak}
+              last10={last10}
+              isJa={isJa}
+            />
           </div>
         </div>
         <div className="flex gap-2">
@@ -838,6 +908,28 @@ export default function NbaTeamDetailPanel({
       />
 
       <PayrollCard payroll={detail.payroll} accent={accent} isJa={isJa} />
+
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+      />
+
+      <section className="space-y-2.5">
+        <SectionTitle title="Roster" accent={accent} />
+        <div
+          className="border bg-black/40 p-2"
+          style={{ borderColor: frame }}
+        >
+          <NbaTeamRosterCard
+            block={detail.rosterBlock}
+            onPlayerClick={(player) =>
+              router.push(
+                `/mobile/player-detail-preview?playerId=${encodeURIComponent(String(player.id))}`
+              )
+            }
+          />
+        </div>
+      </section>
 
       <p
         className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em]`}

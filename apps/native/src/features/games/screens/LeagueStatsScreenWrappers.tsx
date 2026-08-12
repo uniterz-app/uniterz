@@ -83,6 +83,9 @@ export function GamesTeamDetailPreviewScreenWrapper() {
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
       teamId={route.params?.teamId}
+      onSelectPlayer={(playerId) =>
+        navigation.navigate("PlayerDetailPreview", { playerId })
+      }
     />
   );
 }

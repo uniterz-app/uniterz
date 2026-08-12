@@ -226,6 +226,11 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     return () => window.cancelAnimationFrame(id);
   }, [tab, playoffDisplayData?.season, visualEffectsLite]);
 
+  // BRACKET タブは当面非表示（実装が揃うまで）
+  useEffect(() => {
+    if (tab === "bracket") setTab("overview");
+  }, [tab, setTab]);
+
   if (isMe && loadingPlan) {
     return (
       <div className="flex justify-center p-4">
@@ -273,7 +278,13 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       ) : null}
 
       <div className="mt-4">
-        <Tabs value={tab} onChange={setTab} size="md" layout="split" />
+        <Tabs
+          value={tab}
+          onChange={setTab}
+          size="md"
+          layout="split"
+          showBracket={false}
+        />
         {tab === "overview" ? (
           <>
             {/* Result Drop / チャート列で同じ幅制約（overflow で右枠が切れないよう visible） */}

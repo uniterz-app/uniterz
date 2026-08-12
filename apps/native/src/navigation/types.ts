@@ -109,6 +109,8 @@ export type ProfileStackParamList = {
   ProSubscribe: undefined;
   ProSubscribePreview: undefined;
   SeasonPredictPreview: undefined;
+  /** __DEV__ 週間/月間レポート UI プレビュー（mock） */
+  MonthlyReportPreview: { tab?: "weekly" | "monthly"; caseKey?: string } | undefined;
   /** __DEV__ Pro futuristic 背景プレビュー */
   FuturisticBgPreview: undefined;
   /** __DEV__ 称号 Pro Skin（金冠 / 雷 / 星）プレビュー */

@@ -124,12 +124,14 @@ function IdentityCell({
   injuryStatus,
   dim,
   header,
+  onClick,
 }: {
   player?: NbaRosterPlayer;
   accent: string;
   injuryStatus?: string;
   dim?: boolean;
   header?: boolean;
+  onClick?: () => void;
 }) {
   if (header) {
     return (
@@ -149,14 +151,14 @@ function IdentityCell({
   const p = player!;
   const jersey = p.jerseyNumber?.replace(/^#/, "") ?? "—";
   const stroke = dim ? "rgba(255,255,255,0.35)" : accent;
+  const className = [
+    "sticky left-0 z-[1] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-[rgba(8,10,16,0.98)] py-1.5 pr-1 text-left",
+    dim ? "opacity-45" : "",
+    onClick ? "transition-colors hover:bg-white/[0.06]" : "",
+  ].join(" ");
 
-  return (
-    <div
-      className={[
-        "sticky left-0 z-[1] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-[rgba(8,10,16,0.98)] py-1.5 pr-1",
-        dim ? "opacity-45" : "",
-      ].join(" ")}
-    >
+  const content = (
+    <>
       <span
         className={[
           nameOxanium.className,
@@ -201,8 +203,18 @@ function IdentityCell({
         </p>
         {injuryStatus ? <InjuryChip status={injuryStatus} /> : null}
       </div>
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }
 
 function StatsCells({
@@ -291,48 +303,47 @@ function TeamRosterCard({
   block,
   injuryById,
   defaultOpen,
+  mode = "matchup",
+  onPlayerClick,
 }: {
   block: NbaRosterTeamBlock;
   injuryById: Record<string, string>;
   defaultOpen: boolean;
+  mode?: "matchup" | "detail";
+  onPlayerClick?: (player: NbaRosterPlayer) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const isDetail = mode === "detail";
+  const [open, setOpen] = useState(defaultOpen || isDetail);
   const sideLabel = block.side === "home" ? "HOME" : "AWAY";
   const players = sortRosterPlayers(block.players);
   const abbr = teamAbbr(block.teamId);
   const title = teamFullLabel(block.teamId, block.teamName);
-  const footerLeft =
-    block.side === "home" ? "ACTIVE SCANNING…" : "ANALYZING ROSTER DATA…";
-  const refCode = `REF: ${abbr}-24-${block.side === "home" ? "H" : "A"}`;
+  const footerLeft = isDetail
+    ? "ROSTER SCAN…"
+    : block.side === "home"
+      ? "ACTIVE SCANNING…"
+      : "ANALYZING ROSTER DATA…";
+  const refCode = isDetail
+    ? `REF: ${abbr}-ROSTER`
+    : `REF: ${abbr}-24-${block.side === "home" ? "H" : "A"}`;
   const teamPrimary = getTeamJerseyPrimaryColor("nba", block.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", block.teamId);
   const border = hexToRgba(teamPrimary, 0.55);
   const fill = hexToRgba(teamPrimary, 0.05);
   const divider = hexToRgba(teamPrimary, 0.22);
+  const expanded = isDetail ? true : open;
 
-  return (
-    <section
-      className="overflow-hidden rounded-lg border bg-[rgba(8,10,16,0.94)]"
-      style={{
-        borderColor: border,
-        background: `linear-gradient(165deg, ${fill} 0%, rgba(8,10,16,0.96) 50%)`,
-      }}
-    >
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.03]"
-        style={{ borderBottom: open ? `1px solid ${divider}` : undefined }}
-      >
-        <HalftoneJerseyMark
-          accent={teamPrimary}
-          accentEnd={jerseySecondary}
-          className="h-9 w-9 shrink-0"
-          glow="none"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
+  const headerInner = (
+    <>
+      <HalftoneJerseyMark
+        accent={teamPrimary}
+        accentEnd={jerseySecondary}
+        className="h-9 w-9 shrink-0"
+        glow="none"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {!isDetail ? (
             <span
               className={[
                 nameOxanium.className,
@@ -345,45 +356,74 @@ function TeamRosterCard({
             >
               {sideLabel}
             </span>
-            <p
-              className={[
-                nameOxanium.className,
-                "min-w-0 truncate text-[12px] font-extrabold uppercase tracking-[0.06em] text-white",
-              ].join(" ")}
-            >
-              {title}
-            </p>
-          </div>
+          ) : null}
           <p
             className={[
               nameOxanium.className,
-              "mt-1 text-[8px] font-bold uppercase tracking-[0.1em]",
+              "min-w-0 truncate text-[12px] font-extrabold uppercase tracking-[0.06em] text-white",
             ].join(" ")}
-            style={{ color: hexToRgba(teamPrimary, 0.9) }}
           >
-            AVAILABILITY: {block.activeCount}/{block.rosterCount} ACTIVE
+            {title}
           </p>
         </div>
-        {block.seed != null ? (
-          <div className="shrink-0 text-right">
-            <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-white/35">
-              SEED
-            </p>
-            <p
-              className={[
-                nameOxanium.className,
-                "text-[18px] font-black leading-none",
-              ].join(" ")}
-              style={{ color: teamPrimary }}
-            >
-              #{block.seed}
-            </p>
-          </div>
-        ) : null}
-        <Chevron open={open} accent={teamPrimary} />
-      </button>
+        <p
+          className={[
+            nameOxanium.className,
+            "mt-1 text-[8px] font-bold uppercase tracking-[0.1em]",
+          ].join(" ")}
+          style={{ color: hexToRgba(teamPrimary, 0.9) }}
+        >
+          AVAILABILITY: {block.activeCount}/{block.rosterCount} ACTIVE
+        </p>
+      </div>
+      {block.seed != null ? (
+        <div className="shrink-0 text-right">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-white/35">
+            SEED
+          </p>
+          <p
+            className={[
+              nameOxanium.className,
+              "text-[18px] font-black leading-none",
+            ].join(" ")}
+            style={{ color: teamPrimary }}
+          >
+            #{block.seed}
+          </p>
+        </div>
+      ) : null}
+      {!isDetail ? <Chevron open={open} accent={teamPrimary} /> : null}
+    </>
+  );
 
-      {open ? (
+  return (
+    <section
+      className="overflow-hidden rounded-lg border bg-[rgba(8,10,16,0.94)]"
+      style={{
+        borderColor: border,
+        background: `linear-gradient(165deg, ${fill} 0%, rgba(8,10,16,0.96) 50%)`,
+      }}
+    >
+      {isDetail ? (
+        <div
+          className="flex w-full items-center gap-2 px-2.5 py-2"
+          style={{ borderBottom: expanded ? `1px solid ${divider}` : undefined }}
+        >
+          {headerInner}
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.03]"
+          style={{ borderBottom: open ? `1px solid ${divider}` : undefined }}
+        >
+          {headerInner}
+        </button>
+      )}
+
+      {expanded ? (
         <>
           <div className="overflow-x-auto pl-1.5 pr-2.5 pb-1.5 pt-1">
             <div className="min-w-max">
@@ -402,6 +442,11 @@ function TeamRosterCard({
                     accent={teamPrimary}
                     injuryStatus={injuryById[String(p.id)]}
                     dim={p.dimmed}
+                    onClick={
+                      onPlayerClick
+                        ? () => onPlayerClick(p)
+                        : undefined
+                    }
                   />
                   <StatsCells values={playerStats(p)} dim={p.dimmed} />
                 </div>
@@ -434,6 +479,27 @@ function TeamRosterCard({
         </>
       ) : null}
     </section>
+  );
+}
+
+/** Team Detail 用 — 常時展開・選手タップで詳細へ */
+export function NbaTeamRosterCard({
+  block,
+  injuryById = {},
+  onPlayerClick,
+}: {
+  block: NbaRosterTeamBlock;
+  injuryById?: Record<string, string>;
+  onPlayerClick?: (player: NbaRosterPlayer) => void;
+}) {
+  return (
+    <TeamRosterCard
+      block={block}
+      injuryById={injuryById}
+      defaultOpen
+      mode="detail"
+      onPlayerClick={onPlayerClick}
+    />
   );
 }
 

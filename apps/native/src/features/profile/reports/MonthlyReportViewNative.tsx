@@ -45,11 +45,14 @@ import {
   OXANIUM_800,
   PANEL_BG,
   REPORT_ACCENT,
+  REPORT_FRAME,
   fmtReportMonth,
   fmtReportPt,
   reportBodyFont,
   reportBodyFontSemibold,
 } from "./reportThemeNative";
+import { MonthlyReportCardShell } from "./reportCardShellNative";
+import { ReportIsometricGridOverlay } from "./reportGridOverlaysNative";
 
 type Lang = "ja" | "en";
 
@@ -255,7 +258,7 @@ const NUMBERS_METRIC_ORDER: MonthlyReportMetricKey[] = [
 function cellStyle(): ViewStyle {
   return {
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.28)",
+    borderColor: REPORT_FRAME.monthly.border,
     backgroundColor: PANEL_BG,
     borderRadius: 3,
     overflow: "hidden",
@@ -397,8 +400,9 @@ function CoverBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
   return (
     <RankingsCyberPanelNative
       compact
-      style={[styles.coverPanel, { borderColor: band.border, backgroundColor: PANEL_BG }]}
+      style={[styles.coverPanel, { borderColor: REPORT_FRAME.monthly.border, backgroundColor: PANEL_BG }]}
     >
+      <ReportIsometricGridOverlay borderRadius={0} />
       <Text style={styles.microCenterLabel}>{c.thisMonth}</Text>
 
       <View style={styles.coverRow}>
@@ -472,7 +476,16 @@ function MetricRankTag({ rank }: { rank: number }) {
   return <SlantTag color={accent.main}>{`#${rank}`}</SlantTag>;
 }
 
-function MetricRangeBar({ metric, lang }: { metric: MonthlyReportMetric; lang: Lang }) {
+function MetricRangeBar({
+  metric,
+  lang,
+  youRankForColor,
+}: {
+  metric: MonthlyReportMetric;
+  lang: Lang;
+  /** you マーカーの色決定に使う順位 */
+  youRankForColor: number | null;
+}) {
   const c = COPY[lang];
   const { value, median, top10 } = metric;
   if (median == null && top10 == null) return null;
@@ -492,17 +505,35 @@ function MetricRangeBar({ metric, lang }: { metric: MonthlyReportMetric; lang: L
   const vsMedian = median != null ? formatMetricDelta(metric, value - median) : null;
   const vsTop10 = top10 != null ? formatMetricDelta(metric, value - top10) : null;
 
+  // 塗り（rangeFill）はオレンジ。マーカー（you）は順位帯で色を変える。
+  const YOU_COLOR =
+    youRankForColor != null ? monthlyReportRankBandAccent(youRankForColor).main : "#22d3ee";
+  const FILL_COLOR = MARK_YOU;
+
   return (
     <View style={styles.rangeWrap}>
       <View style={styles.rangeTrack}>
-        <View style={[styles.rangeFill, { width: `${youPct}%` }]} />
+        {/* “you” オレンジ塗りの内側だけにグリッドを描画 */}
+        <View style={[styles.rangeYouFillClip, { width: `${youPct}%` }]}>
+            <View style={[styles.rangeFillSkew, { backgroundColor: FILL_COLOR }]}>
+            <View pointerEvents="none" style={styles.rangeGridOverlay}>
+              {[0, 1, 2].map((i) => (
+                <View
+                  key={i}
+                  style={[styles.rangeGridLine, { top: 2 + i * 2 }]}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
         {median != null ? (
           <View style={[styles.rangeTick, { left: `${toPct(median)}%`, backgroundColor: MARK_MEDIAN }]} />
         ) : null}
         {top10 != null ? (
           <View style={[styles.rangeTick, { left: `${toPct(top10)}%`, backgroundColor: MARK_TOP10 }]} />
         ) : null}
-        <View style={[styles.rangeYouMarker, { left: `${youPct}%` }]} />
+        {/* “you” の位置は元のダイヤ */}
+        <View style={[styles.rangeYouMarker, { left: `${youPct}%`, backgroundColor: YOU_COLOR }]} />
       </View>
       {vsMedian != null || vsTop10 != null ? (
         <View style={styles.rangeLegendRow}>
@@ -524,7 +555,35 @@ function MetricRangeBar({ metric, lang }: { metric: MonthlyReportMetric; lang: L
   );
 }
 
-function NumbersBlock({ metrics, lang }: { metrics: MonthlyReportMetric[]; lang: Lang }) {
+function ordinalSuffixEn(rank: number): string {
+  // 11/12/13 は例外（th）
+  const r = rank % 100;
+  if (r >= 11 && r <= 13) return "th";
+  switch (rank % 10) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+  }
+}
+
+function NumbersBlock({
+  metrics,
+  lang,
+  overallRank,
+  unitsEarnedRank,
+}: {
+  metrics: MonthlyReportMetric[];
+  lang: Lang;
+  /** 総合順位（表紙の rank） */
+  overallRank: number;
+  /** ユニット獲得順位（表紙右側の band） */
+  unitsEarnedRank: number | null;
+}) {
   const c = COPY[lang];
   const ordered = sortNumbersMetrics(metrics);
   return (
@@ -536,7 +595,13 @@ function NumbersBlock({ metrics, lang }: { metrics: MonthlyReportMetric[]; lang:
           <Text style={styles.legendText}>{c.medianMark}</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDiamond, { backgroundColor: MARK_YOU }]} />
+          {/* 自分（you）の凡例色はオレンジ以外に寄せる */}
+          <View
+            style={[
+              styles.legendDiamond,
+              { backgroundColor: monthlyReportRankBandAccent(overallRank).main },
+            ]}
+          />
           <Text style={styles.legendText}>{c.youMark}</Text>
         </View>
         <View style={styles.legendItem}>
@@ -547,26 +612,56 @@ function NumbersBlock({ metrics, lang }: { metrics: MonthlyReportMetric[]; lang:
       <View style={styles.metricList}>
         {ordered.map((m) => {
           const prev = formatMetricDelta(m, m.prevDelta);
-          const showRank = showsMetricRank(m.key) && m.rank != null;
+          // Firestore 上では metrics.points の rank が null になりがち。
+          // その場合でも「結局自分が何位か」を解決するため、フォールバック表示する。
+          const rankForTag =
+            m.rank ??
+            (m.key === "points" ? overallRank : null) ??
+            (m.key === "units" ? unitsEarnedRank : null);
+
+          const showRank = showsMetricRank(m.key) && rankForTag != null;
           return (
-            <View key={m.key} style={[styles.metricCell, cellStyle()]}>
+            <MonthlyReportCardShell key={m.key} style={[styles.metricCell, cellStyle()]}>
               <View style={styles.metricHeaderRow}>
                 <View style={styles.metricHeaderLeft}>
                   <Text style={styles.metricLabel}>{c.metric[m.key]}</Text>
-                  {showRank ? <MetricRankTag rank={m.rank!} /> : null}
-                </View>
-                <View style={styles.metricHeaderRight}>
+                  <Text style={styles.metricValue}>{formatMetricValue(m)}</Text>
                   {prev != null ? (
                     <Text style={styles.metricPrevDelta}>
                       <Text style={styles.metricPrevDeltaLabel}>{c.prevDelta} </Text>
                       <Text style={{ color: deltaTone(m.prevDelta) }}>{prev}</Text>
                     </Text>
                   ) : null}
-                  <Text style={styles.metricValue}>{formatMetricValue(m)}</Text>
+                </View>
+                <View style={styles.metricHeaderRight}>
+                  {showRank ? (
+                    <View style={styles.metricRankWrap}>
+                      <Text
+                        style={[
+                          styles.metricRankNumber,
+                          { color: monthlyReportRankBandAccent(rankForTag!).main },
+                        ]}
+                      >
+                        {rankForTag}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.metricRankSuffix,
+                          { color: monthlyReportRankBandAccent(rankForTag!).main },
+                        ]}
+                      >
+                        {ordinalSuffixEn(rankForTag!)}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
-              <MetricRangeBar metric={m} lang={lang} />
-            </View>
+              <MetricRangeBar
+                metric={m}
+                lang={lang}
+                youRankForColor={overallRank}
+              />
+            </MonthlyReportCardShell>
           );
         })}
       </View>
@@ -619,9 +714,10 @@ function UnitsBreakdownBlock({
           style={[
             styles.unitsHeaderCard,
             cellStyle(),
-            open && canExpand ? { borderColor: "rgba(34,211,238,0.45)" } : null,
+            open && canExpand ? { borderColor: REPORT_FRAME.monthly.border } : null,
           ]}
         >
+          <ReportIsometricGridOverlay borderRadius={3} />
           <View style={styles.unitsHeaderRow}>
             <Text style={styles.unitsHeaderLabel}>{c.unitsBreakdownTotal}</Text>
             <View style={styles.unitsHeaderValueRow}>
@@ -641,6 +737,18 @@ function UnitsBreakdownBlock({
                   }}
                 />
               ))}
+              {/* 横線グリッド（レンジバーと同じ視点合わせ） */}
+              <View pointerEvents="none" style={styles.unitsBarGridOverlay}>
+                {[0, 1, 2].map((i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.unitsBarGridLine,
+                      { top: 2 + i * 2 },
+                    ]}
+                  />
+                ))}
+              </View>
             </View>
           ) : (
             <Text style={[styles.emptyText, { fontFamily: reportBodyFont(lang) }]}>{c.unitsBreakdownEmpty}</Text>
@@ -666,7 +774,7 @@ function UnitsBreakdownBlock({
             {sorted.map((g) => {
               const accent = UNIT_SOURCE_COLOR[g.source];
               return (
-                <View key={g.id} style={[styles.unitGrantRow, cellStyle()]}>
+                <MonthlyReportCardShell key={g.id} style={[styles.unitGrantRow, cellStyle()]}>
                   <View style={[styles.unitGrantDot, { backgroundColor: accent }]} />
                   <View style={styles.unitGrantMain}>
                     <Text style={styles.unitGrantTitle} numberOfLines={1}>
@@ -678,7 +786,7 @@ function UnitsBreakdownBlock({
                     </Text>
                   </View>
                   <Text style={styles.unitGrantAmount}>+{g.amount}</Text>
-                </View>
+                </MonthlyReportCardShell>
               );
             })}
           </View>
@@ -704,7 +812,7 @@ function RadarBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
   return (
     <View>
       <SectionBadge>{c.radar}</SectionBadge>
-      <View style={[styles.radarPanel, cellStyle()]}>
+      <MonthlyReportCardShell style={[styles.radarPanel, cellStyle()]}>
         <MonthlyReportRadarChartNative
           radar={report.radar}
           labels={c.radarAxis}
@@ -758,7 +866,7 @@ function RadarBlock({ report, lang }: { report: MonthlyReport; lang: Lang }) {
             ))}
           </View>
         </View>
-      </View>
+      </MonthlyReportCardShell>
     </View>
   );
 }
@@ -829,7 +937,7 @@ function HabitsRatePair({
   const rightHigher = rightPct > leftPct;
 
   return (
-    <View style={[styles.rateCard, cellStyle()]}>
+    <MonthlyReportCardShell style={[styles.rateCard, cellStyle()]}>
       <Text style={styles.rateCardTitle}>{title}</Text>
       <View style={styles.rateCardRow}>
         <View style={styles.rateCardSide}>
@@ -854,7 +962,7 @@ function HabitsRatePair({
         leftColor={leftColor}
         rightColor={rightColor}
       />
-    </View>
+    </MonthlyReportCardShell>
   );
 }
 
@@ -865,9 +973,9 @@ function HabitsBlock({ habits, lang }: { habits: MonthlyReportHabits | null; lan
     return (
       <View>
         <SectionBadge>{c.habits}</SectionBadge>
-        <View style={[styles.habitsEmptyCard, cellStyle()]}>
+        <MonthlyReportCardShell style={[styles.habitsEmptyCard, cellStyle()]}>
           <Text style={[styles.emptyText, { fontFamily: reportBodyFont(lang) }]}>{c.habitsEmpty}</Text>
-        </View>
+        </MonthlyReportCardShell>
       </View>
     );
   }
@@ -884,7 +992,7 @@ function HabitsBlock({ habits, lang }: { habits: MonthlyReportHabits | null; lan
     <View>
       <SectionBadge>{c.habits}</SectionBadge>
       <View style={styles.habitsRoot}>
-        <View style={[styles.mapCard, cellStyle()]}>
+        <MonthlyReportCardShell style={[styles.mapCard, cellStyle()]}>
           <View style={styles.mapBox}>
             <View style={styles.mapAxisV} />
             <View style={styles.mapAxisH} />
@@ -914,7 +1022,7 @@ function HabitsBlock({ habits, lang }: { habits: MonthlyReportHabits | null; lan
           <Text style={styles.mapSummaryTitle}>{habits.summaryTitle}</Text>
           <Text style={[styles.mapSummaryBody, { fontFamily: reportBodyFont(lang) }]}>{habits.summaryBody}</Text>
           <Text style={styles.mapHint}>{c.habitsMapHint}</Text>
-        </View>
+        </MonthlyReportCardShell>
 
         <View style={styles.rateGrid}>
           <HabitsRatePair
@@ -962,7 +1070,7 @@ function TeamList({
 }) {
   const accent = tone === "strong" ? REPORT_ACCENT.emerald.main : REPORT_ACCENT.rose.main;
   return (
-    <View style={[styles.teamListCard, cellStyle()]}>
+    <MonthlyReportCardShell style={[styles.teamListCard, cellStyle()]}>
       <Text style={[styles.teamListTitle, { color: accent }]}>{title}</Text>
       <View style={styles.teamRows}>
         {teams.map((t) => {
@@ -979,7 +1087,7 @@ function TeamList({
           );
         })}
       </View>
-    </View>
+    </MonthlyReportCardShell>
   );
 }
 
@@ -1015,7 +1123,7 @@ function HighlightCard({ item, lang }: { item: MonthlyReportHighlight; lang: Lan
     const homeColor = getTeamPrimaryColor("nba", item.home.teamId);
     const awayColor = getTeamPrimaryColor("nba", item.away.teamId);
     return (
-      <View style={[styles.highlightCardWide, cellStyle()]}>
+      <MonthlyReportCardShell style={[styles.highlightCardWide, cellStyle()]}>
         <View style={styles.highlightHeaderRow}>
           <Text style={styles.highlightMeta}>
             {c.bestPick} · {item.dateKey.slice(5).replace("-", "/")}
@@ -1038,13 +1146,13 @@ function HighlightCard({ item, lang }: { item: MonthlyReportHighlight; lang: Lan
         <Text style={styles.bestPickMyPick}>
           {c.myPick} {item.myHome}–{item.myAway}
         </Text>
-      </View>
+      </MonthlyReportCardShell>
     );
   }
 
   if (item.kind === "bestDay") {
     return (
-      <View style={[styles.highlightCard, cellStyle()]}>
+      <MonthlyReportCardShell style={[styles.highlightCard, cellStyle()]}>
         <Text style={styles.highlightMeta}>
           {c.bestDay} · {item.dateKey.slice(5).replace("-", "/")}
         </Text>
@@ -1053,43 +1161,43 @@ function HighlightCard({ item, lang }: { item: MonthlyReportHighlight; lang: Lan
           <Text style={styles.highlightUnit}>PT</Text>
         </View>
         <Text style={styles.highlightSub}>{c.bestDayLine(item.wins, item.posts)}</Text>
-      </View>
+      </MonthlyReportCardShell>
     );
   }
 
   if (item.kind === "winStreak") {
     return (
-      <View style={[styles.highlightCard, cellStyle()]}>
-        <View style={styles.highlightHeaderRow}>
-          <MaterialCommunityIcons name="fire" size={12} color={REPORT_ACCENT.orange.main} />
+      <MonthlyReportCardShell style={[styles.highlightCard, cellStyle()]}>
+        <View style={styles.highlightStreakLabelRow}>
+          <MaterialCommunityIcons name="fire" size={14} color={REPORT_ACCENT.orange.main} />
           <Text style={styles.highlightMeta}>{c.streak}</Text>
         </View>
         <View style={styles.highlightValueRow}>
           <Text style={styles.highlightValueOrange}>{item.length}</Text>
           <Text style={styles.highlightUnit}>{c.streakUnit}</Text>
         </View>
-      </View>
+      </MonthlyReportCardShell>
     );
   }
 
   if (item.kind === "upset") {
     return (
-      <View style={[styles.highlightCard, cellStyle()]}>
+      <MonthlyReportCardShell style={[styles.highlightCard, cellStyle()]}>
         <Text style={styles.highlightMeta}>
           {c.upset} · {item.dateKey.slice(5).replace("-", "/")}
         </Text>
         <Text style={[styles.highlightBody, { fontFamily: reportBodyFont(lang) }]}>{item.label}</Text>
         <Text style={styles.highlightValueOrange}>+{fmtReportPt(item.points)}pt</Text>
-      </View>
+      </MonthlyReportCardShell>
     );
   }
 
   const divLabel = item.division === "winRate" ? "WIN%" : item.division === "goalScorerHits" ? "SCORER" : "UPSET";
   return (
-    <View style={[styles.highlightCard, cellStyle()]}>
+    <MonthlyReportCardShell style={[styles.highlightCard, cellStyle()]}>
       <Text style={styles.highlightMeta}>{c.divisionTop10(divLabel, item.rank)}</Text>
       <Text style={styles.highlightValueAmber}>#{item.rank}</Text>
-    </View>
+    </MonthlyReportCardShell>
   );
 }
 
@@ -1163,7 +1271,12 @@ export default function MonthlyReportViewNative({
       </View>
 
       <CoverBlock report={report} lang={language} />
-      <NumbersBlock metrics={report.metrics} lang={language} />
+      <NumbersBlock
+        metrics={report.metrics}
+        lang={language}
+        overallRank={report.rank}
+        unitsEarnedRank={report.unitsEarnedRank}
+      />
       <UnitsBreakdownBlock total={report.unitsEarned} entries={report.unitsBreakdown} lang={language} />
       <RadarBlock report={report} lang={language} />
       <HabitsBlock habits={report.habits} lang={language} />
@@ -1249,10 +1362,11 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-8deg" }],
   },
   coverParticipants: {
-    fontFamily: OXANIUM_700,
+    fontFamily: BEBAS,
     fontSize: 10,
     color: "rgba(255,255,255,0.4)",
     marginTop: 2,
+    transform: [{ skewX: "-8deg" }],
   },
   coverTagRow: { flexDirection: "row", gap: 10, marginTop: 8, alignItems: "flex-start" },
   coverDeltaCol: { alignItems: "center" },
@@ -1285,7 +1399,8 @@ const styles = StyleSheet.create({
   legendRow: { flexDirection: "row", gap: 12, marginTop: 8, flexWrap: "wrap" },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   legendTick: { width: 1.5, height: 10 },
-  legendDiamond: { width: 8, height: 8, transform: [{ rotate: "45deg" }] },
+  // you マーカー（レンジ/凡例）をダイヤ→四角に寄せる
+  legendDiamond: { width: 8, height: 8, borderRadius: 2 },
   legendText: {
     fontFamily: OXANIUM_800,
     fontSize: 10,
@@ -1305,9 +1420,34 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.5)",
     textTransform: "uppercase",
   },
-  metricPrevDelta: { fontFamily: OXANIUM_800, fontSize: 11, letterSpacing: 0.6 },
+  metricPrevDelta: {
+    fontFamily: BEBAS,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    transform: [{ skewX: "-8deg" }],
+  },
   metricPrevDeltaLabel: { color: "rgba(255,255,255,0.4)" },
-  metricValue: { fontFamily: OXANIUM_800, fontSize: 20, color: "#fff", letterSpacing: 0.2 },
+  metricValue: {
+    fontFamily: BEBAS,
+    fontSize: 18,
+    color: "#fff",
+    letterSpacing: 0.2,
+    transform: [{ skewX: "-8deg" }],
+  },
+  metricRankNumber: {
+    fontFamily: BEBAS,
+    fontSize: 18,
+    letterSpacing: 0.2,
+    marginLeft: 0,
+    transform: [{ skewX: "-8deg" }],
+  },
+  metricRankWrap: { flexDirection: "row", alignItems: "baseline", gap: 2 },
+  metricRankSuffix: {
+    fontFamily: BEBAS,
+    fontSize: 12,
+    letterSpacing: 0.2,
+    transform: [{ skewX: "-8deg" }],
+  },
 
   rangeWrap: { marginTop: 10 },
   rangeTrack: {
@@ -1317,14 +1457,36 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
-  rangeFill: {
+  rangeYouFillClip: {
     position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
-    borderRadius: 2,
-    backgroundColor: MARK_YOU,
+    overflow: "hidden",
+  },
+  rangeFillSkew: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: "100%",
+    borderRadius: 0,
     opacity: 0.85,
+    transform: [{ skewX: "-14deg" }],
+  },
+  rangeGridOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  rangeGridLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.10)",
   },
   rangeTick: { position: "absolute", top: 0, bottom: 0, width: 1.5 },
   rangeYouMarker: {
@@ -1335,9 +1497,16 @@ const styles = StyleSheet.create({
     marginLeft: -5,
     marginTop: -5,
     backgroundColor: MARK_YOU,
-    transform: [{ rotate: "45deg" }],
+    borderRadius: 2,
+    transform: [],
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.4)",
+  },
+  metricRankText: {
+    fontFamily: OXANIUM_800,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
   rangeLegendRow: { flexDirection: "row", gap: 12, marginTop: 8, flexWrap: "wrap" },
   rangeLegendText: { fontFamily: OXANIUM_800, fontSize: 11, letterSpacing: 0.6 },
@@ -1355,9 +1524,36 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   unitsHeaderValueRow: { flexDirection: "row", alignItems: "baseline", gap: 3 },
-  unitsHeaderValue: { fontFamily: OXANIUM_800, fontSize: 20, color: "#fff" },
-  unitsHeaderUnit: { fontFamily: OXANIUM_800, fontSize: 9, color: "rgba(255,255,255,0.4)" },
-  unitsBar: { marginTop: 10, flexDirection: "row", height: 10, borderRadius: 5, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.08)" },
+  unitsHeaderValue: { fontFamily: BEBAS, fontSize: 20, color: "#fff", transform: [{ skewX: "-8deg" }] },
+  unitsHeaderUnit: {
+    fontFamily: BEBAS,
+    fontSize: 9,
+    color: "rgba(255,255,255,0.4)",
+    transform: [{ skewX: "-8deg" }],
+  },
+  unitsBar: {
+    marginTop: 10,
+    flexDirection: "row",
+    height: 10,
+    borderRadius: 0,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    position: "relative",
+  },
+  unitsBarGridOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  unitsBarGridLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
   unitsExpandRow: { marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   unitsExpandText: {
     fontFamily: OXANIUM_800,
@@ -1368,7 +1564,7 @@ const styles = StyleSheet.create({
   },
   unitGrantList: { gap: 6 },
   unitGrantRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
-  unitGrantDot: { width: 10, height: 10, borderRadius: 5 },
+  unitGrantDot: { width: 10, height: 10, borderRadius: 2 },
   unitGrantMain: { flex: 1, minWidth: 0 },
   unitGrantTitle: { fontFamily: OXANIUM_800, fontSize: 12, letterSpacing: 0.4, color: "#fff" },
   unitGrantMeta: {
@@ -1441,7 +1637,7 @@ const styles = StyleSheet.create({
     height: 168,
     borderRadius: 2,
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.22)",
+    borderColor: REPORT_FRAME.monthly.border,
     backgroundColor: "#050912",
     overflow: "hidden",
     position: "relative",
@@ -1510,7 +1706,7 @@ const styles = StyleSheet.create({
   rateCard: { flex: 1, paddingHorizontal: 10, paddingVertical: 10 },
   rateCardTitle: {
     fontFamily: OXANIUM_800,
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 1.2,
     color: "rgba(103,232,249,0.75)",
     textTransform: "uppercase",
@@ -1520,20 +1716,20 @@ const styles = StyleSheet.create({
   rateCardSideRight: { alignItems: "flex-end" },
   rateCardSideLabel: {
     fontFamily: OXANIUM_800,
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-  rateCardValue: { fontFamily: OXANIUM_800, fontSize: 18, color: "#fff", marginTop: 2 },
+  rateCardValue: { fontFamily: BEBAS, fontSize: 22, color: "#fff", marginTop: 2, transform: [{ skewX: "-8deg" }] },
   rateCardValueHigh: { color: "#fcd34d" },
-  rateCardPercent: { fontFamily: OXANIUM_700, fontSize: 11, color: "rgba(255,255,255,0.5)" },
+  rateCardPercent: { fontFamily: BEBAS, fontSize: 13, color: "rgba(255,255,255,0.5)", transform: [{ skewX: "-8deg" }] },
 
   shareBarWrap: { marginTop: 10 },
   shareBarTrack: { flexDirection: "row", height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.08)" },
   shareBarLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
   shareBarLabel: {
     fontFamily: OXANIUM_800,
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 1,
     color: "rgba(255,255,255,0.45)",
     textTransform: "uppercase",
@@ -1545,55 +1741,69 @@ const styles = StyleSheet.create({
   teamListTitle: { fontFamily: OXANIUM_800, fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase" },
   teamRows: { marginTop: 10, gap: 8 },
   teamRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6 },
-  teamAbbr: { fontFamily: OXANIUM_800, fontSize: 13, letterSpacing: 0.4, flexShrink: 0 },
-  teamMeta: { fontFamily: OXANIUM_700, fontSize: 11, color: "rgba(255,255,255,0.55)", letterSpacing: 0.4 },
+  teamAbbr: { fontFamily: BEBAS, fontSize: 17, letterSpacing: 0.4, flexShrink: 0, transform: [{ skewX: "-8deg" }] },
+  teamMeta: {
+    fontFamily: BEBAS,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.55)",
+    letterSpacing: 0.4,
+    transform: [{ skewX: "-8deg" }],
+  },
 
   /* highlights */
   highlightsRoot: { marginTop: 8, gap: 6 },
-  highlightGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  highlightGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "stretch" },
   highlightGridItem: { flexBasis: "48%", flexGrow: 1 },
   highlightCardWide: { paddingHorizontal: 14, paddingVertical: 12 },
-  highlightCard: { paddingHorizontal: 12, paddingVertical: 10 },
+  highlightCard: { flex: 1, paddingHorizontal: 12, paddingVertical: 10 },
   highlightHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 },
+  highlightStreakLabelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   highlightMeta: {
     fontFamily: OXANIUM_800,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.2,
     color: "rgba(255,255,255,0.45)",
     textTransform: "uppercase",
   },
   highlightPtsEmerald: {
     fontFamily: BEBAS,
-    fontSize: 18,
+    fontSize: 20,
     color: REPORT_ACCENT.emerald.main,
     transform: [{ skewX: "-10deg" }],
   },
   bestPickScoreRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 8 },
-  bestPickAbbr: { flex: 1, fontFamily: OXANIUM_800, fontSize: 13, letterSpacing: 0.6, textAlign: "center" },
-  bestPickScore: { fontFamily: BEBAS, fontSize: 22, color: "#fff" },
+  bestPickAbbr: {
+    flex: 1,
+    fontFamily: BEBAS,
+    fontSize: 20,
+    letterSpacing: 0.4,
+    textAlign: "center",
+    transform: [{ skewX: "-8deg" }],
+  },
+  bestPickScore: { fontFamily: BEBAS, fontSize: 24, color: "#fff", transform: [{ skewX: "-8deg" }] },
   bestPickDash: { color: "rgba(255,255,255,0.35)" },
   bestPickMyPick: {
     marginTop: 4,
     textAlign: "center",
     fontFamily: OXANIUM_800,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1,
     color: "rgba(255,255,255,0.45)",
   },
   highlightValueRow: { flexDirection: "row", alignItems: "baseline", gap: 4, marginTop: 4 },
-  highlightValueCyan: { fontFamily: BEBAS, fontSize: 20, color: REPORT_ACCENT.cyan.main },
-  highlightValueOrange: { fontFamily: BEBAS, fontSize: 20, color: REPORT_ACCENT.orange.main, marginTop: 4 },
-  highlightValueAmber: { fontFamily: BEBAS, fontSize: 20, color: "#fcd34d", marginTop: 4 },
+  highlightValueCyan: { fontFamily: BEBAS, fontSize: 22, color: REPORT_ACCENT.cyan.main, transform: [{ skewX: "-8deg" }] },
+  highlightValueOrange: { fontFamily: BEBAS, fontSize: 22, color: REPORT_ACCENT.orange.main, marginTop: 4, transform: [{ skewX: "-8deg" }] },
+  highlightValueAmber: { fontFamily: BEBAS, fontSize: 22, color: "#fcd34d", marginTop: 4, transform: [{ skewX: "-8deg" }] },
   highlightUnit: {
     fontFamily: OXANIUM_800,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
     color: "rgba(255,255,255,0.4)",
   },
   highlightSub: {
     marginTop: 4,
     fontFamily: OXANIUM_800,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
     color: "rgba(255,255,255,0.45)",
     textTransform: "uppercase",
@@ -1604,7 +1814,7 @@ const styles = StyleSheet.create({
   outlookCard: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.32)",
+    borderColor: REPORT_FRAME.monthly.border,
     backgroundColor: "rgba(8,14,22,0.96)",
     borderRadius: 3,
     paddingHorizontal: 14,

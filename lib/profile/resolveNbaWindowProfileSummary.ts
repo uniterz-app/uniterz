@@ -23,6 +23,10 @@ import { resolveNbaMonthlyProfileSummary } from "@/lib/profile/resolveNbaMonthly
 export type ProfileKinetikBoard = "season" | "playoffs";
 export type ProfileKinetikWindow = Exclude<RankingPeriod, "season">;
 
+/** 週次/月次プロフィール（WEEK/MONTH）カード用の事前集計キャッシュ */
+const PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION =
+  "user_nba_window_profile_summaries_v1";
+
 type DailyInc = {
   posts?: number;
   wins?: number;
@@ -125,8 +129,34 @@ export async function resolveNbaWindowProfileSummary(
     };
   }
 
-  const label =
-    opts.label?.trim() || currentRankingPeriodLabel(window);
+  const label = opts.label?.trim() || currentRankingPeriodLabel(window);
+  const isCurrentWindow = label === currentRankingPeriodLabel(window);
+
+  // 現行ウィンドウは日次合算で鮮度優先（キャッシュでズレるリスクを避ける）
+  if (!isCurrentWindow) {
+    const cacheDocId = `${uid}_${board}_${window}_${label}`;
+    const snap = await db
+      .collection(PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION)
+      .doc(cacheDocId)
+      .get();
+    if (snap.exists) {
+      const data = snap.data() as Partial<{
+        label: string;
+        summary: ProfileSummaryForCards;
+        summaryRanks: ProfileSummaryRanks;
+      }>;
+      if (data?.summary && data?.summaryRanks) {
+        return {
+          board,
+          window,
+          label: typeof data.label === "string" && data.label ? data.label : label,
+          summary: data.summary,
+          summaryRanks: data.summaryRanks,
+        };
+      }
+    }
+  }
+
   const range = resolveRankingPeriodRangeForLabel(window, label);
   const dateKeys = enumerateDateKeysInclusive(range.startKey, range.endKey);
 
@@ -211,6 +241,27 @@ export async function resolveNbaWindowProfileSummary(
     } catch {
       /* 順位は任意 */
     }
+  }
+
+  // 過去ラベルのみ書き戻し（現行は鮮度優先のためスキップ）
+  if (!isCurrentWindow) {
+    const cacheDocId = `${uid}_${board}_${window}_${label}`;
+    await db
+      .collection(PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION)
+      .doc(cacheDocId)
+      .set(
+        {
+          board,
+          window,
+          label,
+          summary,
+          summaryRanks,
+        },
+        { merge: true }
+      )
+      .catch(() => {
+        // 書き込み失敗はユーザー体験に影響させない（次回再計算で埋まる）
+      });
   }
 
   return { board, window, label, summary, summaryRanks };

@@ -765,10 +765,16 @@ export default function ProfileHomeScreen({
 
   const apiConfigured = apiBase != null;
 
+  // BRACKET タブは当面非表示（実装が揃うまで）
+  useEffect(() => {
+    if (tab === "bracket") setTab("overview");
+  }, [tab]);
+
   function renderTabs() {
+    const order: ProfileTab[] = PROFILE_TAB_ORDER.filter((id) => id !== "bracket");
     return (
       <CyberSlantedTabBarNative fill style={styles.tabBar}>
-        {PROFILE_TAB_ORDER.map((id) => (
+        {order.map((id) => (
           <CyberSlantedTabNative
             key={id}
             label={PROFILE_TAB_LABELS_EN[id]}
@@ -887,7 +893,7 @@ export default function ProfileHomeScreen({
       style={styles.scroll}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
+        { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY + (tab === "report" ? 48 : 0) },
       ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}

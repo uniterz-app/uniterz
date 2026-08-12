@@ -32,6 +32,10 @@ import {
   buildMonthlyHabits,
   type MonthlyHabitsRaw,
 } from "./buildMonthlyHabits";
+import {
+  loadMonthlyUnitsByUid,
+  rankUnitsEarned,
+} from "./loadMonthlyUnitsFromLedger";
 
 function db() {
   return getFirestore();
@@ -460,6 +464,14 @@ export async function rebuildMonthlyReportsCore(opts?: {
   );
   if (opts?.limit != null) uids = uids.slice(0, opts.limit);
 
+  const [unitsByUid, prevUnitsByUid] = await Promise.all([
+    loadMonthlyUnitsByUid(db(), monthKey),
+    loadMonthlyUnitsByUid(db(), prevMonthKey),
+  ]);
+  const unitsRankByUid = rankUnitsEarned(uids, unitsByUid);
+  const unitsValues = uids.map((uid) => unitsByUid.get(uid)?.unitsEarned ?? 0);
+  const unitsSorted = [...unitsValues].sort((a, b) => a - b);
+
   const sampleMinPosts =
     pickupGameCount > 0 ? Math.ceil(pickupGameCount * 0.5) : 10;
 
@@ -611,7 +623,16 @@ export async function rebuildMonthlyReportsCore(opts?: {
           top10Mean(winRates) * 100,
           null
         ),
-        metricRow("units", 0, null, null, null, null),
+        metricRow(
+          "units",
+          unitsByUid.get(uid)?.unitsEarned ?? 0,
+          prevUnitsByUid.get(uid) != null
+            ? prevUnitsByUid.get(uid)!.unitsEarned
+            : null,
+          median(unitsSorted),
+          top10Mean(unitsSorted),
+          unitsRankByUid.get(uid) ?? null
+        ),
         metricRow(
           "points",
           agg.points,
@@ -686,6 +707,7 @@ export async function rebuildMonthlyReportsCore(opts?: {
 
       const reportDoc = {
         uid,
+        type: "monthly" as const,
         league: "nba",
         monthKey,
         status: "final",
@@ -699,13 +721,13 @@ export async function rebuildMonthlyReportsCore(opts?: {
         totalPoints: agg.points,
         totalPosts: agg.posts,
         totalWins: agg.wins,
-        unitsEarned: 0, // MONTHLY_REPORT_UNITS_FROM_LEDGER 後に loadMonthlyUnitsFromLedger 接続
-        unitsEarnedRank: null,
+        unitsEarned: unitsByUid.get(uid)?.unitsEarned ?? 0,
+        unitsEarnedRank: unitsRankByUid.get(uid) ?? null,
         analysisTypeId,
         metrics,
         radar,
         habits,
-        unitsBreakdown: [],
+        unitsBreakdown: unitsByUid.get(uid)?.breakdown ?? [],
         teamAffinity,
         highlights,
         outlook,

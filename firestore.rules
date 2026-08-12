@@ -341,6 +341,22 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // user_reports — 週次/月次レポート。Functions のみ書込。
+    // 本人は常に読める。他人は双方 Pro のときだけ（プロフィール Report タブと同じ）。
+    function userPlanIsPro(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.plan == "pro";
+    }
+    match /user_reports/{reportId} {
+      allow read: if request.auth != null
+        && resource.data.uid is string
+        && (
+          resource.data.uid == request.auth.uid
+          || (userPlanIsPro(request.auth.uid) && userPlanIsPro(resource.data.uid))
+        );
+      allow write: if false;
+    }
+
     // ========================================================================
     // プレーオフ — lib/playoff-*, PlayoffBracketMarket, usePlayoffOfficialResults
     // ========================================================================

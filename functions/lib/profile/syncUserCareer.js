@@ -293,5 +293,4 @@ async function syncUserCareerUnlockedSkinCount(uid, unlockedSkinCount) {
         }, { merge: true });
     });
 }
-// deploy-marker 20260810091655
 //# sourceMappingURL=syncUserCareer.js.map

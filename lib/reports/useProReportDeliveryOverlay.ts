@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Pro 本人がプロフィールを開いたとき、月曜 / 毎月1日に未読レポートをオーバーレイ表示。
+ * Pro 本人がプロフィールを開いたとき、直近の未読週次/月次をオーバーレイ表示。
  */
 import { useCallback, useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";

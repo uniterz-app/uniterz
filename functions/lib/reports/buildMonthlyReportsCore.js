@@ -13,6 +13,7 @@ const resolveNbaTeamAbbr_1 = require("./resolveNbaTeamAbbr");
 const buildMonthlyHighlights_1 = require("./buildMonthlyHighlights");
 const buildMonthlyOutlookSummary_1 = require("./buildMonthlyOutlookSummary");
 const buildMonthlyHabits_1 = require("./buildMonthlyHabits");
+const loadMonthlyUnitsFromLedger_1 = require("./loadMonthlyUnitsFromLedger");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
@@ -241,7 +242,7 @@ function metricRow(key, value, prev, med, top10, rank) {
  * @param monthKey YYYY-MM。省略時は前月 JST。
  */
 async function rebuildMonthlyReportsCore(opts) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21;
     const now = new Date();
     const currentMonth = (0, nbaPeriod_1.monthLabelJST)(now);
     const monthKey = (_a = opts === null || opts === void 0 ? void 0 : opts.monthKey) !== null && _a !== void 0 ? _a : (0, nbaPeriod_1.previousLabel)("monthly", currentMonth);
@@ -372,6 +373,13 @@ async function rebuildMonthlyReportsCore(opts) {
     let uids = [...aggByUid.keys()].filter((uid) => { var _a, _b; return ((_b = (_a = aggByUid.get(uid)) === null || _a === void 0 ? void 0 : _a.posts) !== null && _b !== void 0 ? _b : 0) > 0; });
     if ((opts === null || opts === void 0 ? void 0 : opts.limit) != null)
         uids = uids.slice(0, opts.limit);
+    const [unitsByUid, prevUnitsByUid] = await Promise.all([
+        (0, loadMonthlyUnitsFromLedger_1.loadMonthlyUnitsByUid)(db(), monthKey),
+        (0, loadMonthlyUnitsFromLedger_1.loadMonthlyUnitsByUid)(db(), prevMonthKey),
+    ]);
+    const unitsRankByUid = (0, loadMonthlyUnitsFromLedger_1.rankUnitsEarned)(uids, unitsByUid);
+    const unitsValues = uids.map((uid) => { var _a, _b; return (_b = (_a = unitsByUid.get(uid)) === null || _a === void 0 ? void 0 : _a.unitsEarned) !== null && _b !== void 0 ? _b : 0; });
+    const unitsSorted = [...unitsValues].sort((a, b) => a - b);
     const sampleMinPosts = pickupGameCount > 0 ? Math.ceil(pickupGameCount * 0.5) : 10;
     const rows = uids.map((uid) => {
         var _a;
@@ -470,10 +478,12 @@ async function rebuildMonthlyReportsCore(opts) {
             const metrics = [
                 metricRow("posts", agg.posts, prevPosts, median(postsArr), top10Mean(postsArr), null),
                 metricRow("winRate", winRate * 100, prevWinRatePct, median(winRates) * 100, top10Mean(winRates) * 100, null),
-                metricRow("units", 0, null, null, null, null),
-                metricRow("points", agg.points, prevPoints, median(pointsArr), top10Mean(pointsArr), (_7 = ranks.totalPoints[uid]) !== null && _7 !== void 0 ? _7 : null),
-                metricRow("goalScorerHits", agg.scorer, prevScorer, scorerMedian, top10Mean(scorers), (_8 = ranks.totalGoalScorerHits[uid]) !== null && _8 !== void 0 ? _8 : null),
-                metricRow("upsetPoints", agg.upset, prevUpset, upsetMedian, top10Mean(upsets), (_9 = ranks.totalUpset[uid]) !== null && _9 !== void 0 ? _9 : null),
+                metricRow("units", (_8 = (_7 = unitsByUid.get(uid)) === null || _7 === void 0 ? void 0 : _7.unitsEarned) !== null && _8 !== void 0 ? _8 : 0, prevUnitsByUid.get(uid) != null
+                    ? prevUnitsByUid.get(uid).unitsEarned
+                    : null, median(unitsSorted), top10Mean(unitsSorted), (_9 = unitsRankByUid.get(uid)) !== null && _9 !== void 0 ? _9 : null),
+                metricRow("points", agg.points, prevPoints, median(pointsArr), top10Mean(pointsArr), (_10 = ranks.totalPoints[uid]) !== null && _10 !== void 0 ? _10 : null),
+                metricRow("goalScorerHits", agg.scorer, prevScorer, scorerMedian, top10Mean(scorers), (_11 = ranks.totalGoalScorerHits[uid]) !== null && _11 !== void 0 ? _11 : null),
+                metricRow("upsetPoints", agg.upset, prevUpset, upsetMedian, top10Mean(upsets), (_12 = ranks.totalUpset[uid]) !== null && _12 !== void 0 ? _12 : null),
             ];
             const teamMap = teamAffinityByUid.get(uid);
             const teamAffinity = teamMap
@@ -483,10 +493,10 @@ async function rebuildMonthlyReportsCore(opts) {
             const habits = habitsRaw
                 ? (0, buildMonthlyHabits_1.buildMonthlyHabits)(Object.assign(Object.assign({}, habitsRaw), { winRate }))
                 : null;
-            const highlights = (0, buildMonthlyHighlights_1.buildMonthlyHighlights)((_10 = highlightEventsByUid.get(uid)) !== null && _10 !== void 0 ? _10 : [], {
-                winRate: (_11 = ranks.winRate[uid]) !== null && _11 !== void 0 ? _11 : null,
-                goalScorerHits: (_12 = ranks.totalGoalScorerHits[uid]) !== null && _12 !== void 0 ? _12 : null,
-                upset: (_13 = ranks.totalUpset[uid]) !== null && _13 !== void 0 ? _13 : null,
+            const highlights = (0, buildMonthlyHighlights_1.buildMonthlyHighlights)((_13 = highlightEventsByUid.get(uid)) !== null && _13 !== void 0 ? _13 : [], {
+                winRate: (_14 = ranks.winRate[uid]) !== null && _14 !== void 0 ? _14 : null,
+                goalScorerHits: (_15 = ranks.totalGoalScorerHits[uid]) !== null && _15 !== void 0 ? _15 : null,
+                upset: (_16 = ranks.totalUpset[uid]) !== null && _16 !== void 0 ? _16 : null,
             });
             const outlook = (0, buildMonthlyOutlookSummary_1.buildMonthlyOutlookSummary)({
                 sampleEligible,
@@ -510,6 +520,7 @@ async function rebuildMonthlyReportsCore(opts) {
             });
             const reportDoc = {
                 uid,
+                type: "monthly",
                 league: "nba",
                 monthKey,
                 status: "final",
@@ -523,13 +534,13 @@ async function rebuildMonthlyReportsCore(opts) {
                 totalPoints: agg.points,
                 totalPosts: agg.posts,
                 totalWins: agg.wins,
-                unitsEarned: 0, // MONTHLY_REPORT_UNITS_FROM_LEDGER 後に loadMonthlyUnitsFromLedger 接続
-                unitsEarnedRank: null,
+                unitsEarned: (_18 = (_17 = unitsByUid.get(uid)) === null || _17 === void 0 ? void 0 : _17.unitsEarned) !== null && _18 !== void 0 ? _18 : 0,
+                unitsEarnedRank: (_19 = unitsRankByUid.get(uid)) !== null && _19 !== void 0 ? _19 : null,
                 analysisTypeId,
                 metrics,
                 radar,
                 habits,
-                unitsBreakdown: [],
+                unitsBreakdown: (_21 = (_20 = unitsByUid.get(uid)) === null || _20 === void 0 ? void 0 : _20.breakdown) !== null && _21 !== void 0 ? _21 : [],
                 teamAffinity,
                 highlights,
                 outlook,

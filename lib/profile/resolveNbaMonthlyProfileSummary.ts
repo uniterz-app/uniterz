@@ -14,6 +14,10 @@ import { readNbaPeriodRankingSnapshots } from "@/lib/rankings/server/readNbaPeri
 import type { ProfileSummaryForCards } from "@/lib/profile/resolveLiveProfileSummary";
 import type { ProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
 
+/** 月次プロフィール（MONTH）カード用の事前集計キャッシュ */
+const PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION =
+  "user_nba_window_profile_summaries_v1";
+
 type DailyInc = {
   posts?: number;
   wins?: number;
@@ -97,6 +101,34 @@ export async function resolveNbaMonthlyProfileSummary(
   monthLabel?: string
 ): Promise<NbaMonthlyProfileSummaryResult> {
   const label = monthLabel?.trim() || currentRankingPeriodLabel("monthly");
+  const isCurrentWindow = label === currentRankingPeriodLabel("monthly");
+
+  // 現行月は日次合算で鮮度優先。過去月のみキャッシュを読む/書く。
+  if (!isCurrentWindow) {
+    const cacheDocId = `${uid}_season_monthly_${label}`;
+    const snap = await db
+      .collection(PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION)
+      .doc(cacheDocId)
+      .get();
+    if (snap.exists) {
+      const data = snap.data() as Partial<{
+        monthLabel: string;
+        label: string;
+        summary: ProfileSummaryForCards;
+        summaryRanks: ProfileSummaryRanks;
+      }>;
+      if (data?.summary && data?.summaryRanks) {
+        const resolvedLabel =
+          typeof data.label === "string" && data.label ? data.label : label;
+        return {
+          monthLabel: resolvedLabel,
+          summary: data.summary,
+          summaryRanks: data.summaryRanks,
+        };
+      }
+    }
+  }
+
   const range = resolveRankingPeriodRangeForLabel("monthly", label);
   const dateKeys = enumerateDateKeysInclusive(range.startKey, range.endKey);
 
@@ -173,6 +205,28 @@ export async function resolveNbaMonthlyProfileSummary(
     }
   } catch {
     /* 順位は任意 — サマリー本体は返す */
+  }
+
+  // 過去月のみ書き戻し（現行月は鮮度優先）
+  if (!isCurrentWindow) {
+    const cacheDocId = `${uid}_season_monthly_${label}`;
+    await db
+      .collection(PROFILE_WINDOW_SUMMARY_CACHE_COLLECTION)
+      .doc(cacheDocId)
+      .set(
+        {
+          board: "season",
+          window: "monthly",
+          label,
+          monthLabel: label,
+          summary,
+          summaryRanks,
+        },
+        { merge: true }
+      )
+      .catch(() => {
+        // 書き込み失敗は許容（次回再計算で埋まる）
+      });
   }
 
   return { monthLabel: label, summary, summaryRanks };

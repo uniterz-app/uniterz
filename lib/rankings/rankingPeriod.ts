@@ -7,6 +7,7 @@ import {
   dateKeyJST,
   subtractDaysFromDateKeyJST,
 } from "@/lib/rankings/rankSnapshotDate";
+import { nbaSeasonKeyFromDateJST } from "@/lib/rankings/nbaSeason";
 
 export type RankingPeriod = "season" | "weekly" | "monthly";
 
@@ -174,6 +175,96 @@ export function enumerateDateKeysInclusive(
     guard += 1;
   }
   return out;
+}
+
+/** NBA シーズン開始日（10/1 JST） */
+export function nbaSeasonCalendarStartKey(seasonKey: string): string {
+  const startYear = Number.parseInt(seasonKey.slice(0, 4), 10);
+  if (!Number.isFinite(startYear)) return `${seasonKey}-10-01`;
+  return `${startYear}-10-01`;
+}
+
+/**
+ * プロフィール / ランキング用 — 現シーズン内の選択可能ラベル（新しい順）。
+ * weekly: 週初め月曜 / monthly: YYYY-MM
+ */
+export function listRankingPeriodLabels(
+  period: Exclude<RankingPeriod, "season">,
+  opts?: { seasonKey?: string; now?: Date; limit?: number }
+): string[] {
+  const now = opts?.now ?? new Date();
+  const seasonKey = opts?.seasonKey ?? nbaSeasonKeyFromDateJST(now);
+  const limit = opts?.limit ?? 52;
+  const current = currentRankingPeriodLabel(period, now);
+  const labels: string[] = [];
+
+  if (period === "monthly") {
+    const startYear = Number.parseInt(seasonKey.slice(0, 4), 10);
+    let y = startYear;
+    let m = 10;
+    const [cy, cm] = current.split("-").map(Number);
+    while (y < cy || (y === cy && m <= cm)) {
+      labels.push(`${y}-${pad2(m)}`);
+      m += 1;
+      if (m > 12) {
+        m = 1;
+        y += 1;
+      }
+      if (labels.length > limit + 4) break;
+    }
+  } else {
+    const seasonStart = nbaSeasonCalendarStartKey(seasonKey);
+    let weekStart = resolveRankingWeekStartDateKey(
+      new Date(`${seasonStart}T12:00:00+09:00`)
+    );
+    if (weekStart < seasonStart) {
+      weekStart = addDaysToDateKey(weekStart, 7);
+    }
+    while (weekStart <= current && labels.length < limit + 4) {
+      labels.push(weekStart);
+      weekStart = addDaysToDateKey(weekStart, 7);
+    }
+  }
+
+  const uniq = [...new Set(labels)].filter((l) => l <= current);
+  uniq.sort((a, b) => (a < b ? 1 : -1));
+  return uniq.slice(0, limit);
+}
+
+function weekEndLabelFromStart(startKey: string): string {
+  return addDaysToDateKey(startKey, 6);
+}
+
+/** プロフィールカード用の期間表示（週次 / 月次） */
+export function formatRankingPeriodDisplay(
+  period: Exclude<RankingPeriod, "season">,
+  label: string,
+  language: "ja" | "en"
+): string {
+  if (period === "weekly") {
+    const [, m1, d1] = label.split("-");
+    const [, m2, d2] = weekEndLabelFromStart(label).split("-");
+    return `${Number(m1)}/${Number(d1)} – ${Number(m2)}/${Number(d2)}`;
+  }
+  const [y, m] = label.split("-").map(Number);
+  if (language === "en") {
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    return `${months[m - 1]} ${y}`;
+  }
+  return `${y}年${m}月`;
 }
 
 export { subtractDaysFromDateKeyJST, dateKeyJST };

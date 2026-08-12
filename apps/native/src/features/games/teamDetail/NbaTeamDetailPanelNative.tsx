@@ -1,6 +1,7 @@
 /** Team Detail 再構築 — 参考ダッシュボード UI をそのまま再現（微調整前提） */
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -21,6 +22,11 @@ import {
   type NbaTeamUpcomingGame,
 } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import {
+  recentFormRecord,
+  teamStreakBadgeLabel,
+  teamStreakBadgeTheme,
+} from "../../../../../../lib/predict/nbaTeamDetailForm";
+import {
   availabilityStatusColor,
   formatAvailabilityStatus,
   formatSalaryUsd,
@@ -39,6 +45,7 @@ import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 type Props = {
   language: "ja" | "en";
   teamId?: string;
+  onSelectPlayer?: (playerId: string) => void;
 };
 
 const FORM_WIN = "#00F5FF";
@@ -181,6 +188,52 @@ function FormChip({
       ]}
     >
       <Text style={styles.formChipText}>{result}</Text>
+    </View>
+  );
+}
+
+function TeamHeroStreakBadgeNative({
+  streak,
+  last10,
+  isJa,
+}: {
+  streak: NbaTeamStreak;
+  last10: { wins: number; losses: number };
+  isJa: boolean;
+}) {
+  const badge = teamStreakBadgeLabel(streak, isJa);
+  const theme = teamStreakBadgeTheme(streak);
+
+  return (
+    <View style={styles.heroStreakWrap}>
+      <View
+        style={[
+          styles.heroStreakBadge,
+          {
+            borderColor: theme.borderColor,
+            backgroundColor: theme.backgroundColor,
+          },
+        ]}
+      >
+        {theme.showFireIcon ? (
+          <MaterialCommunityIcons name="fire" size={14} color={theme.tagColor} />
+        ) : theme.showColdIcon ? (
+          <MaterialCommunityIcons
+            name="snowflake"
+            size={14}
+            color={theme.tagColor}
+          />
+        ) : null}
+        <Text style={[styles.heroStreakTag, { color: theme.tagColor }]}>
+          {badge.tag}
+        </Text>
+        <Text style={[styles.heroStreakValue, { color: theme.headlineColor }]}>
+          {badge.headline}
+        </Text>
+      </View>
+      <Text style={styles.heroStreakL10}>
+        L10 {last10.wins}-{last10.losses}
+      </Text>
     </View>
   );
 }
@@ -381,8 +434,8 @@ function OpponentStatsSection({
       <Text style={styles.oppAllowedHint}>ALLOWED</Text>
       <Text style={styles.oppAllowedCaption}>
         {isJa
-          ? "相手に許したスタッツ（TOV は誘発数）。順位は #1 が最良。"
-          : "What opponents average vs this team (TOV = forced). Rank #1 is best."}
+          ? "順位が上（#1に近い）ほど DF が良い。"
+          : "Higher rank (closer to #1) = better defense."}
       </Text>
       <View style={[styles.oppAllowedGrid, { borderColor: frame }]}>
         {metrics.map((m, i) => {
@@ -390,20 +443,18 @@ function OpponentStatsSection({
           const row = Math.floor(i / 3);
           const lastRow = Math.floor((metrics.length - 1) / 3);
           const active = selected?.id === m.id;
-          const dirLabel = m.lowerIsBetter
-            ? isJa
-              ? "↓ 低ほど良"
-              : "↓ lower"
-            : isJa
-              ? "↑ 高ほど良"
-              : "↑ higher";
+          const isForcedTov = m.id === "tov_forced";
           return (
             <Pressable
               key={m.id}
               onPress={() => setSelectedId(m.id)}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              accessibilityLabel={`${m.short}. ${dirLabel}`}
+              accessibilityLabel={
+                isForcedTov
+                  ? `${m.short}. #${m.leagueRank}. ${isJa ? "奪取・高いほど良" : "Forced, higher is better"}`
+                  : `${m.short}. #${m.leagueRank}`
+              }
               style={[
                 styles.oppAllowedCell,
                 active ? { backgroundColor: hexToRgba(accent, 0.08) } : null,
@@ -438,18 +489,13 @@ function OpponentStatsSection({
                 </Text>
               </View>
               <Text style={styles.oppAllowedValue}>{m.display}</Text>
-              <Text
-                style={[
-                  styles.oppAllowedDir,
-                  {
-                    color: m.lowerIsBetter
-                      ? "rgba(59,160,255,0.75)"
-                      : "rgba(92,240,181,0.8)",
-                  },
-                ]}
-              >
-                {dirLabel}
-              </Text>
+              {isForcedTov ? (
+                <Text style={styles.oppAllowedTovBadge}>
+                  {isJa ? "奪取・高いほど良" : "Forced · higher is better"}
+                </Text>
+              ) : (
+                <View style={styles.oppAllowedBadgeSpacer} />
+              )}
             </Pressable>
           );
         })}
@@ -793,7 +839,11 @@ function PayrollSection({
   );
 }
 
-export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
+export default function NbaTeamDetailPanelNative({
+  language,
+  teamId,
+  onSelectPlayer,
+}: Props) {
   const isJa = language === "ja";
   const insets = useSafeAreaInsets();
   const detail = useMemo(() => getNbaTeamDetailPreview(teamId), [teamId]);
@@ -813,10 +863,9 @@ export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
     detail.conference === "east"
       ? "EASTERN CONFERENCE"
       : "WESTERN CONFERENCE";
-  const divLine = `${detail.divisionLabelEn.toUpperCase()} DIVISION`;
 
   const winPctText = detail.season.winPct.toFixed(3).replace(/^0/, "");
-
+  const last10 = recentFormRecord(detail.recentGames);
   return (
     <ScrollView
       style={styles.root}
@@ -840,7 +889,7 @@ export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
                 style={[styles.confSeed, { color: hexToRgba(accent, 0.85) }]}
                 numberOfLines={1}
               >
-                {confLine}  •  {divLine}
+                {confLine}
               </Text>
               <Text style={styles.city} numberOfLines={1}>
                 {detail.cityEn.toUpperCase()}
@@ -849,6 +898,11 @@ export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
                 {detail.nickEn.toUpperCase()}
               </Text>
             </View>
+            <TeamHeroStreakBadgeNative
+              streak={detail.streak}
+              last10={last10}
+              isJa={isJa}
+            />
           </View>
 
           <View style={styles.recordRankRow}>
@@ -1000,7 +1054,12 @@ export default function NbaTeamDetailPanelNative({ language, teamId }: Props) {
 
         <SectionHeader title="ROSTER" accent={accent} />
         <View style={[styles.rosterFrame, { borderColor: frameColor }]}>
-          <NbaTeamRosterCardNative block={detail.rosterBlock} />
+          <NbaTeamRosterCardNative
+            block={detail.rosterBlock}
+            onPlayerPress={(player) =>
+              onSelectPlayer?.(String(player.id))
+            }
+          />
         </View>
 
         <Text
@@ -1101,6 +1160,40 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 2,
     transform: [{ skewX: "-6deg" }],
+  },
+  heroStreakWrap: {
+    alignItems: "flex-end",
+    gap: 4,
+    flexShrink: 0,
+  },
+  heroStreakBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  heroStreakTag: {
+    fontFamily: METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  heroStreakValue: {
+    fontFamily: METRIC_FONT,
+    fontSize: 15,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-8deg" }],
+  },
+  heroStreakL10: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 10,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
   },
   recordRankRow: {
     flexDirection: "row",
@@ -1552,7 +1645,7 @@ const styles = StyleSheet.create({
   },
   oppAllowedRank: {
     fontFamily: METRIC_FONT,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
@@ -1565,12 +1658,16 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
-  oppAllowedDir: {
+  oppAllowedTovBadge: {
     fontFamily: METRIC_FONT,
+    color: "rgba(110,231,183,0.85)",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.3,
     transform: [{ skewX: "-6deg" }],
+  },
+  oppAllowedBadgeSpacer: {
+    height: 13,
   },
   oppAllowedDetail: {
     fontFamily: METRIC_FONT,

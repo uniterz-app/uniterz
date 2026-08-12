@@ -3,7 +3,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import {
   buildForcedDeliveryCandidates,
@@ -23,7 +23,7 @@ import type { MonthlyReport } from "../../../../../../lib/reports/monthlyReportT
 import type { WeeklyReport } from "../../../../../../lib/reports/weeklyReportTypes";
 import { weeklyReportPreviewClimbed } from "../../../../../../lib/reports/weeklyReportPreviewMocks";
 import { monthlyReportPreviewTop10 } from "../../../../../../lib/reports/monthlyReportPreviewMocks";
-import { partitionUserReportDocs } from "../../../../../../lib/reports/partitionUserReports";
+import { fetchUserReportsArchive } from "../../../../../../lib/reports/fetchUserReportsArchive";
 import type { UserReportListItem } from "../../../../../../lib/reports/partitionUserReports";
 
 export type ActiveReportOverlayNative = {
@@ -211,13 +211,11 @@ export function useUserReportsArchiveNative(opts: {
     setLoading(true);
     void (async () => {
       try {
-        const snap = await getDocs(
-          query(collection(db, "user_reports"), where("uid", "==", uid))
+        const { weeklies: w, monthlies: m } = await fetchUserReportsArchive(
+          db,
+          uid
         );
         if (cancelled) return;
-        const { weeklies: w, monthlies: m } = partitionUserReportDocs(
-          snap.docs.map((d) => ({ id: d.id, data: d.data() }))
-        );
         setWeeklies(w);
         setMonthlies(m);
       } catch {

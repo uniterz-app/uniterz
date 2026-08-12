@@ -46,7 +46,21 @@ export const AUDIOWIDE: TextStyle["fontFamily"] = pick("Audiowide_400Regular");
 export const CHAKRA_700: TextStyle["fontFamily"] = pick("ChakraPetch_700Bold");
 export const EXO2_800: TextStyle["fontFamily"] = pick("Exo2_800ExtraBold");
 
-export const PANEL_BG = "rgba(14,20,32,0.98)";
+export const PANEL_BG = "rgba(5,5,8,0.98)";
+
+/** 週間＝シアン / 月間＝バイオレット。枠・グリッドの基調色 */
+export const REPORT_FRAME = {
+  weekly: {
+    main: "#22d3ee",
+    border: "rgba(34,211,238,0.40)",
+    grid: "rgba(34,211,238,0.28)",
+  },
+  monthly: {
+    main: "#a78bfa",
+    border: "rgba(167,139,250,0.40)",
+    grid: "rgba(167,139,250,0.28)",
+  },
+} as const;
 
 export type ReportAccent = {
   main: string;

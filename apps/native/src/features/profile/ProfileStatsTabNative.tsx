@@ -178,7 +178,18 @@ export default function ProfileStatsTabNative({
 
   const gateSwitcher = (
     <View style={styles.gateBlock}>
-      <Text style={styles.gateLabel}>GATE PREVIEW</Text>
+      <View style={styles.gateTopRow}>
+        <Text style={styles.gateLabel}>GATE PREVIEW</Text>
+        {__DEV__ ? (
+          <Pressable
+            onPress={() => navigation.navigate("MonthlyReportPreview")}
+            style={styles.devPreviewBtn}
+            accessibilityRole="button"
+          >
+            <Text style={styles.devPreviewBtnText}>WEEKLY / MONTHLY</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -334,11 +345,32 @@ const styles = StyleSheet.create({
   gateBlock: {
     gap: 6,
   },
+  gateTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
   gateLabel: {
     fontFamily: OXANIUM_700,
     fontSize: 9,
     letterSpacing: 1.6,
     color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase",
+  },
+  devPreviewBtn: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(34,211,238,0.55)",
+    backgroundColor: "rgba(34,211,238,0.14)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  devPreviewBtnText: {
+    fontFamily: OXANIUM_700,
+    color: "rgba(165,243,252,0.95)",
+    fontSize: 9,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
   },
   archiveLabel: {
