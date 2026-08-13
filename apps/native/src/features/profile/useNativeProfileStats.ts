@@ -3,6 +3,7 @@ import { withTimeout } from "../../../../../lib/async/withTimeout";
 import type { ProfileDailyTrendRow } from "../../../../../lib/profile/profileDailyTrendRow";
 import {
   isProfileChartsComplete,
+  type ProfileChartsBundle,
   type ProfileChartsLast20Point,
 } from "../../../../../lib/profile/profileChartsBundle";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
@@ -29,13 +30,22 @@ import {
 } from "./profileApi";
 import {
   fetchNbaProfileCardPhaseFirestore,
-  invalidateCumulativeDataCache,
+  fetchNbaProfileOverviewChartsFirestore,
+  invalidateProfileChartsCache,
+  type NbaProfileCardPhaseFirestore,
 } from "./fetchNbaProfileCardPhaseFirestore";
+import { loadProfileUserDocNative } from "./profileUserDocCacheNative";
 import {
   ensureNbaTodayGamesSettled,
   nbaCardStatsBackgroundRefreshMs,
   nbaCardStatsCacheTtlMs,
 } from "./nbaTodayGamesSettledNative";
+import {
+  heroSnapshotToSummary,
+  heroSnapshotToSummaryRanks,
+  isProfileHeroSnapshotFresh,
+  parseProfileHeroSnapshot,
+} from "../../../../../lib/profile/profileHeroSnapshot";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
 export type NativeProfileStatsState = {
@@ -61,7 +71,7 @@ export type NativeProfileStatsState = {
   error: string | null;
 };
 
-const STATS_CACHE_VERSION = `v9:${profileOverviewSeasonKey()}:fsCharts`;
+const STATS_CACHE_VERSION = `v11:${profileOverviewSeasonKey()}:heroNoLegacy`;
 /** NBA 以外 / フォールバック */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const PROFILE_STATS_FETCH_TIMEOUT_MS = 20_000;
@@ -231,6 +241,208 @@ function applyCacheToState(
   });
 }
 
+function emptySummaryRanks(): ProfileSummaryRanksNative {
+  return {
+    totalPrecision: null,
+    totalUpset: null,
+    totalPoints: null,
+    totalPointsDenominator: null,
+    rankDeltaPlaces: null,
+  };
+}
+
+function hasNbaActivityFromSummary(
+  summary: ProfileSummaryNative | null | undefined
+): boolean {
+  return (summary?.posts ?? 0) > 0;
+}
+
+function chartsRowsFromBundle(charts: ProfileChartsBundle | null) {
+  return {
+    dailyTrend: normalizeProfileDailyTrendRows(charts?.dailyTrend ?? []),
+    rankTrend: rankPointsFromCharts(charts?.rankTrend ?? []),
+    last20: charts?.last20 ?? [],
+  };
+}
+
+async function resolveNbaHeroSummary(
+  targetUid: string,
+  rankingLeague: RankingLeagueSource,
+  cacheKey: string,
+  cardPeriod: ProfileKinetikMetricsPeriod
+): Promise<{
+  summary: ProfileSummaryNative;
+  summaryRanks: ProfileSummaryRanksNative;
+} | null> {
+  const cached = statsCache.get(cacheKey);
+  if (cached?.summary) {
+    return {
+      summary: cached.summary,
+      summaryRanks: cached.summaryRanks ?? emptySummaryRanks(),
+    };
+  }
+
+  const userLoaded = await loadProfileUserDocNative(targetUid);
+  if (userLoaded?.exists) {
+    seedNativeProfileStatsFromUserDoc(targetUid, userLoaded.data, rankingLeague);
+    const seeded = statsCache.get(cacheKey);
+    if (seeded?.summary) {
+      return {
+        summary: seeded.summary,
+        summaryRanks: seeded.summaryRanks ?? emptySummaryRanks(),
+      };
+    }
+  }
+
+  /** 移行期: hero 未整備ユーザーだけ cumulative 1 read */
+  const fs = await fetchNbaProfileCardPhaseFirestore(targetUid, cardPeriod);
+  if (!fs?.summary) return null;
+  const summary = fs.summary as ProfileSummaryNative;
+  const summaryRanks = (fs.summaryRanks ??
+    emptySummaryRanks()) as ProfileSummaryRanksNative;
+  mergeCacheEntry(cacheKey, { summary, summaryRanks });
+  return { summary, summaryRanks };
+}
+
+async function fetchOverviewChartsOnly(
+  targetUid: string,
+  hasActivity: boolean
+) {
+  return fetchNbaProfileOverviewChartsFirestore(targetUid, {
+    hasNbaSeasonActivity: hasActivity,
+    allowNestedFallback: true,
+  });
+}
+
+function commitChartsToStatsCache(
+  cacheKey: string,
+  charts: ProfileChartsBundle | null
+): ReturnType<typeof chartsRowsFromBundle> {
+  const rows = chartsRowsFromBundle(charts);
+  mergeCacheEntry(cacheKey, rows);
+  return rows;
+}
+
+function commitNbaCardPhaseToStatsCache(
+  cacheKey: string,
+  targetUid: string,
+  rankingLeague: RankingLeagueSource,
+  cardPeriod: ProfileKinetikMetricsPeriod,
+  fs: NbaProfileCardPhaseFirestore & { summary: ProfileSummaryNative }
+): void {
+  seedNbaKinetikFromFetchedPeriod(
+    targetUid,
+    rankingLeague,
+    cardPeriod,
+    fs.summary,
+    fs.summaryRanks
+  );
+  const charts = fs.profileCharts;
+  mergeCacheEntry(cacheKey, {
+    summary: fs.summary,
+    summaryRanks: fs.summaryRanks,
+    dailyTrend: normalizeProfileDailyTrendRows(charts?.dailyTrend ?? []),
+    rankTrend: rankPointsFromCharts(charts?.rankTrend ?? []),
+    last20: charts?.last20 ?? [],
+  });
+}
+
+/**
+ * users.profileHeroSnapshot から statsCache を即 seed（charts は後追い）。
+ */
+export function seedNativeProfileStatsFromUserDoc(
+  uid: string,
+  userDoc: Record<string, unknown> | null | undefined,
+  rankingLeague: RankingLeagueSource = "nba"
+): boolean {
+  const safeUid = uid.trim();
+  if (!safeUid || !userDoc) return false;
+  const hero = parseProfileHeroSnapshot(userDoc);
+  if (!isProfileHeroSnapshotFresh(hero)) return false;
+
+  const cacheKey = statsCacheKey(safeUid, rankingLeague);
+  if (readValidCache(cacheKey, rankingLeague)) return true;
+
+  const cardPeriod = preferredNbaKinetikPeriod();
+  const summary = heroSnapshotToSummary(hero, cardPeriod) as ProfileSummaryNative;
+  const summaryRanks =
+    heroSnapshotToSummaryRanks(hero) as ProfileSummaryRanksNative;
+
+  seedNbaKinetikFromFetchedPeriod(
+    safeUid,
+    rankingLeague,
+    "season",
+    heroSnapshotToSummary(hero, "season") as ProfileSummaryNative,
+    summaryRanks
+  );
+  seedNbaKinetikFromFetchedPeriod(
+    safeUid,
+    rankingLeague,
+    "playoffs",
+    heroSnapshotToSummary(hero, "playoffs") as ProfileSummaryNative,
+    summaryRanks
+  );
+
+  mergeCacheEntry(cacheKey, {
+    summary,
+    summaryRanks,
+    dailyTrend: [],
+    rankTrend: [],
+    last20: null,
+  });
+  return true;
+}
+
+/**
+ * Overview charts subcollection を先読み（cumulative 親 doc は読まない）。
+ */
+export async function prefetchNativeProfileCharts(
+  uid: string,
+  rankingLeague: RankingLeagueSource = "nba"
+): Promise<void> {
+  const safeUid = uid.trim();
+  if (!safeUid || rankingLeague !== "nba") return;
+
+  const cacheKey = statsCacheKey(safeUid, rankingLeague);
+  const cached = statsCache.get(cacheKey);
+  const hasActivity = hasNbaActivityFromSummary(cached?.summary ?? null);
+
+  try {
+    const chartsResult = await fetchOverviewChartsOnly(safeUid, hasActivity);
+    if (!cached?.summary) return;
+    commitChartsToStatsCache(cacheKey, chartsResult.profileCharts);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * ログイン直後 — users hero + charts subcol のみ（cumulative 親は読まない）。
+ */
+export async function prefetchNativeProfileStats(
+  uid: string,
+  rankingLeague: RankingLeagueSource = "nba"
+): Promise<void> {
+  const safeUid = uid.trim();
+  if (!safeUid) return;
+
+  const cacheKey = statsCacheKey(safeUid, rankingLeague);
+  if (readValidCache(cacheKey, rankingLeague)) return;
+
+  if (rankingLeague !== "nba") return;
+
+  ensureNbaTodayGamesSettled();
+  try {
+    const userLoaded = await loadProfileUserDocNative(safeUid);
+    if (userLoaded?.exists) {
+      seedNativeProfileStatsFromUserDoc(safeUid, userLoaded.data, rankingLeague);
+    }
+    await prefetchNativeProfileCharts(safeUid, rankingLeague);
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * カードは preferred period、overview チャートは 26-27 season 固定。
  * Daily は trend 専用リクエストで先行表示（phase 待ちしない）。
@@ -325,52 +537,25 @@ export function useNativeProfileStats(
         const cardPeriod =
           cardCtx.nbaPeriod ?? preferredNbaKinetikPeriod();
         if (rankingLeague === "nba") {
-          const fs = await fetchNbaProfileCardPhaseFirestore(
+          const cached = statsCache.get(cacheKey);
+          if (!cached?.summary) return;
+          const chartsResult = await fetchOverviewChartsOnly(
             targetUid,
-            cardPeriod
+            hasNbaActivityFromSummary(cached.summary)
           );
-          if (cancelled || !fs?.summary) return;
-          seedNbaKinetikFromFetchedPeriod(
-            targetUid,
-            rankingLeague,
-            cardPeriod,
-            fs.summary,
-            fs.summaryRanks
+          if (cancelled) return;
+          const rows = commitChartsToStatsCache(
+            cacheKey,
+            chartsResult.profileCharts
           );
-          const charts = fs.profileCharts;
-          mergeCacheEntry(cacheKey, {
-            summary: fs.summary,
-            summaryRanks: fs.summaryRanks,
-            ...(charts?.dailyTrend != null
-              ? {
-                  dailyTrend: normalizeProfileDailyTrendRows(charts.dailyTrend),
-                }
-              : {}),
-            ...(charts?.rankTrend != null
-              ? { rankTrend: rankPointsFromCharts(charts.rankTrend) }
-              : {}),
-            ...(charts?.last20 != null ? { last20: charts.last20 } : {}),
-          });
           setState((prev) => ({
             ...prev,
-            summary: fs.summary,
-            summaryRanks: fs.summaryRanks ?? prev.summaryRanks,
-            dailyTrend:
-              charts?.dailyTrend != null
-                ? normalizeProfileDailyTrendRows(charts.dailyTrend)
-                : prev.dailyTrend,
-            rankTrend:
-              charts?.rankTrend != null
-                ? rankPointsFromCharts(charts.rankTrend)
-                : prev.rankTrend,
-            last20: charts?.last20 != null ? charts.last20 : prev.last20,
-            dailyTrendLoading:
-              charts?.dailyTrend != null ? false : prev.dailyTrendLoading,
-            rankTrendLoading:
-              charts?.rankTrend != null ? false : prev.rankTrendLoading,
-            chartsLoading:
-              (charts?.dailyTrend != null ? false : prev.dailyTrendLoading) ||
-              (charts?.rankTrend != null ? false : prev.rankTrendLoading),
+            dailyTrend: rows.dailyTrend,
+            rankTrend: rows.rankTrend,
+            last20: rows.last20,
+            dailyTrendLoading: false,
+            rankTrendLoading: false,
+            chartsLoading: false,
           }));
           return;
         }
@@ -425,7 +610,7 @@ export function useNativeProfileStats(
           });
           if (cancelled) return;
           if (ensured) {
-            invalidateCumulativeDataCache(targetUid);
+            invalidateProfileChartsCache(targetUid);
             mergeCacheEntry(cacheKey, {
               dailyTrend: ensured.dailyTrend,
               rankTrend: ensured.rankTrend,
@@ -499,21 +684,26 @@ export function useNativeProfileStats(
       try {
         if (rankingLeague === "nba") {
           /**
-           * 正: cumulative_stats 1 read（カード + profileCharts）。
-           * 欠けていれば ensure API がソースから埋めて書き戻す（以降は常に 1 read）。
-           * クライアントの daily×30 / history×10 / posts×40 は廃止。
+           * ヒーロー: users.profileHeroSnapshot（移行期のみ cumulative）。
+           * Overview: profileCharts subcollection 1 read。
            */
           const cardPeriod =
             cardCtx.nbaPeriod ?? preferredNbaKinetikPeriod();
           const t0 = Date.now();
-          const fs = await withTimeout(
-            fetchNbaProfileCardPhaseFirestore(targetUid, cardPeriod),
+
+          const hero = await withTimeout(
+            resolveNbaHeroSummary(
+              targetUid,
+              rankingLeague,
+              cacheKey,
+              cardPeriod
+            ),
             PROFILE_STATS_FETCH_TIMEOUT_MS,
             "profile-stats-timeout"
           );
           if (cancelled) return;
 
-          if (!fs?.summary) {
+          if (!hero) {
             setState((prev) => ({
               ...prev,
               loading: false,
@@ -526,44 +716,43 @@ export function useNativeProfileStats(
             targetUid,
             rankingLeague,
             cardPeriod,
-            fs.summary,
-            fs.summaryRanks
+            hero.summary,
+            hero.summaryRanks
           );
 
-          let charts = fs.profileCharts;
+          const chartsResult = await fetchOverviewChartsOnly(
+            targetUid,
+            hasNbaActivityFromSummary(hero.summary)
+          );
+          if (cancelled) return;
+
+          const charts = chartsResult.profileCharts;
+          const rows = chartsRowsFromBundle(charts);
+
           if (!isProfileChartsComplete(charts)) {
-            /**
-             * カードは即表示。ensure は裏で埋めて Functions denorm を穴埋めするだけ。
-             * 初回の重い掘りを UI 待ちにしない。
-             */
-            const seedDaily = normalizeProfileDailyTrendRows(
-              charts?.dailyTrend ?? []
-            );
-            const seedRank = rankPointsFromCharts(charts?.rankTrend ?? []);
-            const seedLast20 = charts?.last20 ?? [];
             if (__DEV__) {
               console.log(
-                `[profileCharts] path=ensure-bg season=${fs.overviewSeasonKey} chartsPath=${fs.chartsPath} ms=${Date.now() - t0} daily=${seedDaily.length} rank=${seedRank.length} last20=${seedLast20.length}`
+                `[profileCharts] path=charts-subcol+ensure season=${chartsResult.overviewSeasonKey} chartsPath=${chartsResult.chartsPath} ms=${Date.now() - t0} daily=${rows.dailyTrend.length} rank=${rows.rankTrend.length} last20=${rows.last20.length}`
               );
             }
             mergeCacheEntry(cacheKey, {
-              summary: fs.summary,
-              summaryRanks: fs.summaryRanks,
-              dailyTrend: seedDaily,
-              rankTrend: seedRank,
-              last20: seedLast20,
+              summary: hero.summary,
+              summaryRanks: hero.summaryRanks,
+              dailyTrend: rows.dailyTrend,
+              rankTrend: rows.rankTrend,
+              last20: rows.last20,
             });
             setState({
               loading: false,
               chartsLoading: false,
               dailyTrendLoading: false,
               rankTrendLoading: false,
-              summary: fs.summary,
-              summaryRanks: fs.summaryRanks,
+              summary: hero.summary,
+              summaryRanks: hero.summaryRanks,
               stats: null,
-              dailyTrend: seedDaily,
-              rankTrend: seedRank,
-              last20: seedLast20,
+              dailyTrend: rows.dailyTrend,
+              rankTrend: rows.rankTrend,
+              last20: rows.last20,
               metricValueDeltas: null,
               error: null,
             });
@@ -571,7 +760,7 @@ export function useNativeProfileStats(
               force: PROFILE_OVERVIEW_USE_PREVIOUS_SEASON,
             }).then((ensured) => {
               if (cancelled || !ensured) return;
-              invalidateCumulativeDataCache(targetUid);
+              invalidateProfileChartsCache(targetUid);
               const nextDaily = normalizeProfileDailyTrendRows(
                 ensured.dailyTrend
               );
@@ -591,24 +780,19 @@ export function useNativeProfileStats(
             });
             return;
           }
+
           if (__DEV__) {
             console.log(
-              `[profileCharts] path=${fs.chartsPath} season=${fs.overviewSeasonKey} ms=${Date.now() - t0} daily=${charts?.dailyTrend?.length ?? 0} rank=${charts?.rankTrend?.length ?? 0} last20=${charts?.last20?.length ?? 0}`
+              `[profileCharts] path=${chartsResult.chartsPath} season=${chartsResult.overviewSeasonKey} ms=${Date.now() - t0} daily=${rows.dailyTrend.length} rank=${rows.rankTrend.length} last20=${rows.last20.length}`
             );
           }
 
-          const seededDaily = normalizeProfileDailyTrendRows(
-            charts?.dailyTrend ?? []
-          );
-          const seededRank = rankPointsFromCharts(charts?.rankTrend ?? []);
-          const seededLast20 = charts?.last20 ?? [];
-
           mergeCacheEntry(cacheKey, {
-            summary: fs.summary,
-            summaryRanks: fs.summaryRanks,
-            dailyTrend: seededDaily,
-            rankTrend: seededRank,
-            last20: seededLast20,
+            summary: hero.summary,
+            summaryRanks: hero.summaryRanks,
+            dailyTrend: rows.dailyTrend,
+            rankTrend: rows.rankTrend,
+            last20: rows.last20,
           });
 
           setState({
@@ -616,12 +800,12 @@ export function useNativeProfileStats(
             chartsLoading: false,
             dailyTrendLoading: false,
             rankTrendLoading: false,
-            summary: fs.summary,
-            summaryRanks: fs.summaryRanks,
+            summary: hero.summary,
+            summaryRanks: hero.summaryRanks,
             stats: null,
-            dailyTrend: seededDaily,
-            rankTrend: seededRank,
-            last20: seededLast20,
+            dailyTrend: rows.dailyTrend,
+            rankTrend: rows.rankTrend,
+            last20: rows.last20,
             metricValueDeltas: null,
             error: null,
           });

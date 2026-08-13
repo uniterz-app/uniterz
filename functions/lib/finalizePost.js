@@ -38,13 +38,13 @@ const firestore_1 = require("firebase-admin/firestore");
 const updateUserStatsV2_1 = require("./updateUserStatsV2");
 const computePostSettlement_1 = require("./computePostSettlement");
 const isPickupGame_1 = require("./rankings/isPickupGame");
-async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
+async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, scoreRel = "none", settlement: settlementIn, }) {
     var _a, _b, _c;
     const p = postDoc.data();
     if (p.settledAt)
         return;
     const final = { home: game.homeScore, away: game.awayScore };
-    const { totalPoints, result, baseScore, upsetPoints, upsetBonus, streakBonus, goalScorerBonus, activeWinStreak, } = (0, computePostSettlement_1.computePostSettlement)({
+    const { totalPoints, result, baseScore, upsetPoints, upsetBonus, streakBonus, goalScorerBonus, activeWinStreak, } = settlementIn !== null && settlementIn !== void 0 ? settlementIn : (0, computePostSettlement_1.computePostSettlement)({
         p,
         game: {
             homeScore: final.home,
@@ -86,6 +86,16 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
     batch.update(postDoc.ref, Object.assign(Object.assign(Object.assign({ result: final }, (isWc ? { matchGoalScorers } : {})), pkScorePatch), { marketMeta: {
             majoritySide: market.majoritySide,
             majorityRatio: market.majorityRatio,
+            // カード一覧が games を読まずに市場%を出せるよう埋め込み（0–100）
+            homePct: typeof market.homeRate === "number" && Number.isFinite(market.homeRate)
+                ? Math.round(market.homeRate * 1000) / 10
+                : null,
+            awayPct: typeof market.awayRate === "number" && Number.isFinite(market.awayRate)
+                ? Math.round(market.awayRate * 1000) / 10
+                : null,
+            drawPct: typeof market.drawRate === "number" && Number.isFinite(market.drawRate)
+                ? Math.round(market.drawRate * 1000) / 10
+                : null,
         }, stats: {
             isWin: result.isWin,
             scoreError: result.scoreError,
@@ -102,6 +112,8 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             countedForRanking: countsForRanking,
             countedForPickup: countsForRanking && isPickup,
             pointsV3: totalPoints,
+            /** カード相対ラベル（一覧が games を読まないための埋め込み） */
+            scoreRel,
             pointsV3Detail: {
                 basePoints: baseScore.basePoints,
                 winnerCorrect: baseScore.winnerCorrect,
@@ -123,7 +135,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
     const uid = p.authorUid;
     const exactHit = Boolean(baseScore.exactMatch);
     userUpdateTasks.push((async () => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
         await (0, updateUserStatsV2_1.applyPostToUserStatsV2)({
             uid,
             postId: postDoc.id,
@@ -159,15 +171,34 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             exactHit,
             activeWinStreak,
         });
+        const { syncProfileHeroSnapshotOnNbaSettle } = await Promise.resolve().then(() => __importStar(require("./profile/syncProfileHeroSnapshotOnNbaSettle")));
+        await syncProfileHeroSnapshotOnNbaSettle({
+            uid,
+            postId: postDoc.id,
+            startAt: (_p = (_o = after.startAtJst) !== null && _o !== void 0 ? _o : after.startAt) !== null && _p !== void 0 ? _p : p.createdAt,
+            league: game.league,
+            countsForRanking,
+            isPickup,
+            seasonPhase: (_q = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _q !== void 0 ? _q : null,
+            isWin: result.isWin,
+            points: totalPoints,
+            upsetPoints,
+            upsetBonus,
+            streakBonus,
+            goalScorerHit: goalScorerBonus > 0,
+            hadUpsetGame,
+            upsetHit: result.upsetHit,
+            activeWinStreak,
+        });
         try {
             const { syncUserCareerOnNbaSettle } = await Promise.resolve().then(() => __importStar(require("./profile/syncUserCareer")));
             const streakInfo = streakResultMap.get(uid);
             await syncUserCareerOnNbaSettle({
                 uid,
-                startAt: (_p = (_o = after.startAtJst) !== null && _o !== void 0 ? _o : after.startAt) !== null && _p !== void 0 ? _p : p.createdAt,
+                startAt: (_s = (_r = after.startAtJst) !== null && _r !== void 0 ? _r : after.startAt) !== null && _s !== void 0 ? _s : p.createdAt,
                 league: game.league,
                 countsForRanking,
-                seasonPhase: (_q = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _q !== void 0 ? _q : null,
+                seasonPhase: (_t = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _t !== void 0 ? _t : null,
                 isWin: result.isWin,
                 exactHit,
                 activeWinStreak,

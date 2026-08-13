@@ -1,4 +1,5 @@
-import { Image, Text, View, type ImageStyle, type ViewStyle } from "react-native";
+import { Image, View, type ImageStyle, type ViewStyle } from "react-native";
+import Svg, { Circle, Polygon } from "react-native-svg";
 import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
@@ -6,6 +7,39 @@ import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "./CyberSlantedTabNative";
+
+/** Web `KinetikAvatarGlyph` / プロフィール未設定アバターと同一 */
+const GLYPH_ACCENT = "#ccff00";
+const GLYPH_FILL = "rgba(204, 255, 0, 0.12)";
+
+function RankingsDefaultAvatarGlyphNative({ size }: { size: number }) {
+  const glyphSize = Math.max(12, Math.round(size * 0.62));
+  return (
+    <View
+      style={{
+        width: glyphSize,
+        height: glyphSize,
+        alignItems: "center",
+        justifyContent: "center",
+        // Web `drop-shadow(0 0 4px rgba(204,255,0,0.36))` 相当
+        shadowColor: "rgba(204, 255, 0, 0.36)",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 4,
+      }}
+    >
+      <Svg width={glyphSize} height={glyphSize} viewBox="0 0 40 40">
+        <Polygon
+          points="20,9 31.5,29 8.5,29"
+          fill={GLYPH_FILL}
+          stroke={GLYPH_ACCENT}
+          strokeWidth={1.35}
+        />
+        <Circle cx={20} cy={21.5} r={2.8} fill={GLYPH_ACCENT} />
+      </Svg>
+    </View>
+  );
+}
 
 export function RankingsAvatarNative({
   photoURL,
@@ -18,12 +52,14 @@ export function RankingsAvatarNative({
   size?: number;
   square?: boolean;
 }) {
-  const initial = (label.trim().charAt(0) || "?").toUpperCase();
+  const uri = typeof photoURL === "string" ? photoURL.trim() : "";
   const radius = square ? 4 : size / 2;
   const boxStyle: ViewStyle = {
     width: size,
     height: size,
     borderRadius: radius,
+    // Web `RankingsAvatarCircle` — square `#0a0c14` / circle `#0f2d35`
+    backgroundColor: uri ? undefined : square ? "#0a0c14" : "#0f2d35",
   };
   const imageStyle: ImageStyle = {
     width: size,
@@ -31,11 +67,14 @@ export function RankingsAvatarNative({
     borderRadius: radius,
   };
   return (
-    <View style={[styles.avatarWrap, boxStyle, square && styles.avatarSquare]}>
-      {photoURL ? (
-        <Image source={{ uri: photoURL }} style={imageStyle} />
+    <View
+      accessibilityLabel={label}
+      style={[styles.avatarWrap, boxStyle, square && styles.avatarSquare]}
+    >
+      {uri ? (
+        <Image source={{ uri }} style={imageStyle} />
       ) : (
-        <Text style={[styles.avatarInitial, { fontSize: size * 0.38 }]}>{initial}</Text>
+        <RankingsDefaultAvatarGlyphNative size={size} />
       )}
     </View>
   );

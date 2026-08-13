@@ -14,6 +14,21 @@ export type GamePointsDistributionAgg = {
   max: number | null;
 };
 
+export type GamePointsTopEntryAgg = {
+  rank: number;
+  postId: string;
+  uid: string | null;
+  handle: string;
+  displayName: string;
+  photoURL: string | null;
+  isPro: boolean;
+  points: number;
+};
+
+export type GamePointsDistributionWithTopAgg = GamePointsDistributionAgg & {
+  top: GamePointsTopEntryAgg[];
+};
+
 /** [lo, hi) 。最終ビンは hi を大きく取り 10 超を包含 */
 const BIN_EDGES: { lo: number; hi: number }[] = [
   { lo: 0, hi: 0 },

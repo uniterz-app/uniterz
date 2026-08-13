@@ -429,6 +429,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     );
 
     if (profileCharts) {
+      const builtAtMs = Date.now();
       tx.set(
         cumulativeRef,
         {
@@ -437,8 +438,20 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
           "profileCharts.dailyTrend": profileCharts.dailyTrend,
           "profileCharts.rankTrend": profileCharts.rankTrend ?? [],
           "profileCharts.last20": profileCharts.last20,
-          "profileCharts.builtAtMs": Date.now(),
+          "profileCharts.builtAtMs": builtAtMs,
           updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      tx.set(
+        cumulativeRef.collection("profileCharts").doc(profileCharts.seasonKey),
+        {
+          v: profileCharts.v,
+          seasonKey: profileCharts.seasonKey,
+          dailyTrend: profileCharts.dailyTrend ?? [],
+          rankTrend: profileCharts.rankTrend ?? [],
+          last20: profileCharts.last20 ?? [],
+          builtAtMs,
         },
         { merge: true }
       );

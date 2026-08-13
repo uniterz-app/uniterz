@@ -6,7 +6,12 @@ import { fetchGameContext } from "./fetchGameContext";
 import { marketCalculator } from "./marketCalculator";
 import { upsetJudge } from "./upsetJudge";
 import { finalizePost } from "./finalizePost";
-import { aggregateGamePointsDistributionFromPostsSnap } from "./aggregateGamePointsDistribution";
+import {
+  aggregateGamePointsSummaryFromPostsSnap,
+  resolveScoreRelFromSummary,
+} from "./aggregateGamePointsDistribution";
+import { enrichGamePointsTopFromUsers } from "./enrichGamePointsTopFromUsers";
+import { buildTopScorerMarketEmbedFromPostsSnap } from "./buildTopScorerMarketEmbed";
 import { updateUserStreak } from "./updateUserStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
@@ -187,7 +192,33 @@ export const onGameFinalV2 = onDocumentWritten(
 
     hadUpsetGame = upset.isUpsetGame;
 
-    /* ===== ④ finalize posts（バッチ分割 + チャンクごとにユーザー更新をフラッシュ） ===== */
+    /* ===== ④ 得点サマリ先行（同一 posts スナップ・追加 read なし） ===== */
+    const { summary: pointsSummaryRaw, settlementByPostId } =
+      aggregateGamePointsSummaryFromPostsSnap({
+        postsSnap,
+        game: settlementGame,
+        market,
+        hadUpsetGame,
+        streakResultMap,
+      });
+
+    /** Top10 の表示名 / アバターは users から補完（posts.author が無いため） */
+    const pointsSummary = {
+      ...pointsSummaryRaw,
+      top: await enrichGamePointsTopFromUsers(
+        firestore,
+        pointsSummaryRaw.top
+      ),
+    };
+
+    const topScorerMarket = buildTopScorerMarketEmbedFromPostsSnap({
+      league: game.league,
+      postsSnap,
+      leadingScorers: game.leadingScorers,
+      topScorerCandidates: after?.topScorerCandidates,
+    });
+
+    /* ===== ⑤ finalize posts（scoreRel を同書き込みで埋め込み・決済は再利用） ===== */
     const postDocs = postsSnap.docs;
     for (let i = 0; i < postDocs.length; i += FINALIZE_POSTS_CHUNK_SIZE) {
       const slice = postDocs.slice(i, i + FINALIZE_POSTS_CHUNK_SIZE);
@@ -198,6 +229,11 @@ export const onGameFinalV2 = onDocumentWritten(
       const userUpdateTasks: Promise<any>[] = [];
 
       for (const doc of pendingInSlice) {
+        const settlement = settlementByPostId.get(doc.id);
+        const scoreRel = resolveScoreRelFromSummary(
+          settlement?.totalPoints ?? 0,
+          pointsSummary
+        );
         await finalizePost({
           postDoc: doc,
           game,
@@ -207,6 +243,8 @@ export const onGameFinalV2 = onDocumentWritten(
           batch,
           userUpdateTasks,
           streakResultMap,
+          scoreRel,
+          settlement,
         });
       }
 
@@ -214,15 +252,7 @@ export const onGameFinalV2 = onDocumentWritten(
       await Promise.all(userUpdateTasks);
     }
 
-    const pointsDistribution = aggregateGamePointsDistributionFromPostsSnap({
-      postsSnap,
-      game: settlementGame,
-      market,
-      hadUpsetGame,
-      streakResultMap,
-    });
-
-    /* ===== ⑤ finalize game ===== */
+    /* ===== ⑥ finalize game ===== */
     const gamePatch: Record<string, any> = {
       market: {
         homeCount: market.homeCount,
@@ -234,10 +264,11 @@ export const onGameFinalV2 = onDocumentWritten(
         majority: market.majoritySide,
         majorityRatio: market.majorityRatio,
       },
-      pointsDistribution: {
-        ...pointsDistribution,
+      pointsSummary: {
+        ...pointsSummary,
         updatedAtMillis: Date.now(),
       },
+      ...(topScorerMarket ? { topScorerMarket } : {}),
       "game.status": "final",
       "game.finalScore": {
         home: game.homeScore,

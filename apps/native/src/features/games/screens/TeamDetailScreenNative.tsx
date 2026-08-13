@@ -131,6 +131,7 @@ export default function TeamDetailScreenNative() {
     <MobilePageShell
       eyebrow="GAMES"
       title={team?.name ?? "TEAM DETAIL"}
+      edgeBack
       onClose={() => navigation.goBack()}
     >
       {loading ? (

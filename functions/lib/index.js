@@ -106,55 +106,57 @@ exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({
  * 連勝はこの時点の「今日確定投稿者 × 連勝>0」でスナップショット化
  * ==========================================================================*/
 exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "0 16 * * *", timeZone: "Asia/Tokyo" }, async () => {
-    var _a, _b;
-    if (!(await (0, hasRankingAggregationScheduledJstToday_1.hasRankingAggregationScheduledJstToday)())) {
-        console.log("[buildCumulativeRankingSnapshotCron] skip: no NBA games scheduled this JST date");
-        return;
+    var _a;
+    const hasGamesToday = await (0, hasRankingAggregationScheduledJstToday_1.hasRankingAggregationScheduledJstToday)();
+    if (hasGamesToday) {
+        const snapshotResult = await (0, buildCumulativeRankingSnapshot_1.buildCumulativeRankingSnapshot)();
+        const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
+        const token = process.env.INTERNAL_REVALIDATE_SECRET;
+        if (!revalidateUrl || !token) {
+            console.warn("[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)");
+        }
+        else {
+            try {
+                const res = await fetch(revalidateUrl, {
+                    method: "POST",
+                    headers: { "x-revalidate-token": token },
+                });
+                if (!res.ok) {
+                    const body = await res.text().catch(() => "");
+                    console.error(`[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`);
+                }
+                else {
+                    console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
+                }
+            }
+            catch (err) {
+                const message = err instanceof Error ? err.message : String(err !== null && err !== void 0 ? err : "");
+                console.error(`[buildCumulativeRankingSnapshotCron] revalidate error: ${message}`);
+            }
+        }
+        try {
+            await (0, notifyPushEvents_1.notifyRankingUpdatedPush)((_a = snapshotResult.notifiedUids) !== null && _a !== void 0 ? _a : []);
+        }
+        catch (err) {
+            console.error("[buildCumulativeRankingSnapshotCron] push notify failed", err);
+        }
     }
-    const snapshotResult = await (0, buildCumulativeRankingSnapshot_1.buildCumulativeRankingSnapshot)();
-    // NBA Weekly / Monthly の期間スナップショット（過去期間のアーカイブ兼用）
+    else {
+        console.log("[buildCumulativeRankingSnapshotCron] skip cumulative: no NBA games scheduled this JST date");
+    }
+    // 期間スナップショット + Unit 付与は無試合日も実行（猶予後の確定付与のため）
     try {
         await (0, buildNbaPeriodRankingSnapshots_1.buildNbaPeriodRankingSnapshots)();
     }
     catch (err) {
         console.error("[buildCumulativeRankingSnapshotCron] period snapshots failed", err);
     }
-    // グループバトル 週/月スナップショット + final への Unit 付与
     try {
         await (0, buildGroupBattlePeriodSnapshots_1.buildGroupBattlePeriodSnapshots)();
         await (0, grantGroupBattleUnits_1.grantAllFinalGroupBattleUnits)();
     }
     catch (err) {
         console.error("[buildCumulativeRankingSnapshotCron] group battle snapshots/units failed", err);
-    }
-    const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
-    const token = process.env.INTERNAL_REVALIDATE_SECRET;
-    if (!revalidateUrl || !token) {
-        console.warn("[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)");
-    }
-    else {
-        try {
-            const res = await fetch(revalidateUrl, {
-                method: "POST",
-                headers: { "x-revalidate-token": token },
-            });
-            if (!res.ok) {
-                const body = await res.text().catch(() => "");
-                console.error(`[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`);
-            }
-            else {
-                console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
-            }
-        }
-        catch (err) {
-            console.error(`[buildCumulativeRankingSnapshotCron] revalidate error: ${String((_a = err === null || err === void 0 ? void 0 : err.message) !== null && _a !== void 0 ? _a : err)}`);
-        }
-    }
-    try {
-        await (0, notifyPushEvents_1.notifyRankingUpdatedPush)((_b = snapshotResult.notifiedUids) !== null && _b !== void 0 ? _b : []);
-    }
-    catch (err) {
-        console.error("[buildCumulativeRankingSnapshotCron] push notify failed", err);
     }
 });
 /* ============================================================================

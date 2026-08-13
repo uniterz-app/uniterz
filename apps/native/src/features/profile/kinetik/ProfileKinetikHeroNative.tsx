@@ -17,7 +17,7 @@ import {
   type ProfileKinetikMetricsTab,
 } from "../../../../../../lib/profile/useNbaKinetikMonthlyStats";
 import { listRankingPeriodLabels } from "../../../../../../lib/rankings/rankingPeriod";
-import { preferredNbaKinetikPeriod } from "../../../../../../lib/rankings/nbaSeason";
+import { preferredNbaKinetikPeriod, CURRENT_NBA_SEASON_KEY } from "../../../../../../lib/rankings/nbaSeason";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "../profileApi";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
@@ -118,13 +118,37 @@ export default function ProfileKinetikHeroNative({
   const [metricsTab, setMetricsTab] =
     useState<ProfileKinetikMetricsTab>("total");
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
+  const [careerFlipped, setCareerFlipped] = useState(false);
   const apiBase = useMemo(() => getUniterzApiBaseUrl() ?? undefined, []);
 
   const windowEnabled = metricsTab !== "total";
+  const fetchedBoard = preferredNbaKinetikPeriod();
+  const parentPeriodStats = useMemo(() => {
+    if (metricsTab !== "total" || !summary) return null;
+    if (metricsPeriod !== fetchedBoard) return null;
+    return {
+      summary,
+      summaryRanks: summaryRanks ?? {
+        totalPrecision: null,
+        totalUpset: null,
+        totalPoints: null,
+        totalPointsDenominator: null,
+        rankDeltaPlaces: null,
+      },
+      seasonKey: CURRENT_NBA_SEASON_KEY,
+    };
+  }, [metricsTab, metricsPeriod, summary, summaryRanks, fetchedBoard]);
+
+  const periodFetchEnabled =
+    metricsTab === "total" &&
+    Boolean(targetUid?.trim()) &&
+    !statsLoading &&
+    parentPeriodStats == null;
+
   const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
     targetUid,
     metricsPeriod,
-    metricsTab === "total",
+    periodFetchEnabled,
     apiBase
   );
   const { data: windowData, loading: windowLoading } = useNbaKinetikWindowStats(
@@ -139,7 +163,7 @@ export default function ProfileKinetikHeroNative({
   const { career, loading: careerDocLoading, error: careerError } =
     useUserCareerNative(targetUid, {
       apiBaseUrl: apiBase,
-      enabled: true,
+      enabled: careerFlipped,
     });
 
   useEffect(() => {
@@ -147,11 +171,14 @@ export default function ProfileKinetikHeroNative({
   }, [metricsTab, metricsPeriod]);
 
   useEffect(() => {
+    if (!targetUid?.trim() || statsLoading) return;
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
     prefetchNbaKinetikPeriodStats(targetUid, otherBoard, apiBase);
     if (metricsTab === "total") {
-      prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod, apiBase);
+      if (periodFetchEnabled) {
+        prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod, apiBase);
+      }
       return;
     }
     const otherTab: ProfileKinetikMetricsTab =
@@ -168,7 +195,7 @@ export default function ProfileKinetikHeroNative({
       metricsTab,
       apiBase
     );
-  }, [targetUid, metricsPeriod, metricsTab, apiBase]);
+  }, [targetUid, metricsPeriod, metricsTab, apiBase, statsLoading, periodFetchEnabled]);
 
   const periodLabels = useMemo(() => {
     if (metricsTab === "total") return [];
@@ -207,7 +234,7 @@ export default function ProfileKinetikHeroNative({
 
   const activeData =
     metricsTab === "total"
-      ? periodData
+      ? periodData ?? parentPeriodStats
       : windowData
         ? {
             summary: windowData.summary,
@@ -237,13 +264,15 @@ export default function ProfileKinetikHeroNative({
 
   const statsPending =
     metricsTab === "total"
-      ? !periodData && (periodLoading || statsLoading)
+      ? !activeData &&
+        (periodLoading || statsLoading || (periodFetchEnabled && !periodData))
       : !windowData && (windowLoading || statsLoading);
-  const careerPending = careerDocLoading && !career;
+  const careerPending = careerFlipped && careerDocLoading && !career;
 
   return (
     <ProfileKinetikFlipShellNative
       language={language}
+      onFlipChange={setCareerFlipped}
       front={
         <ProfileKinetikPanelNative
           style={style}

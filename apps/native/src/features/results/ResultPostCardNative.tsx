@@ -78,6 +78,10 @@ import {
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
 import { shareResultCardNative } from "./shareResultCardNative";
+import { buildResultCardFaceModel } from "../../../../../lib/result/buildResultCardFace";
+import {
+  ResultCardDesignFaceNative,
+} from "./ResultCardDesignPreviewScreenNative";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 const JERSEY_WIDTH_SCALE = MOBILE_RESULT_JERSEY_WIDTH_SCALE;
@@ -184,6 +188,7 @@ export default function ResultPostCardNative({
   onRequestDeleteConfirm,
   onRequestPredictEdit,
   pkScore: pkScoreProp = null,
+  gameMarket = null,
   compactSpacing = false,
 }: {
   post: PostWithMillis;
@@ -204,6 +209,8 @@ export default function ResultPostCardNative({
   /** プロフィール等 — カード下マージンを抑える */
   compactSpacing?: boolean;
   pkScore?: { home: number; away: number } | null;
+  /** games.market 補完（marketMeta 未埋め込みの確定投稿向け） */
+  gameMarket?: { homeRate: number; awayRate: number } | null;
 }) {
   const isEn = language === "en";
   const resultCopy = i18nT(language).results;
@@ -534,6 +541,54 @@ export default function ResultPostCardNative({
         elevation: (frameStyle as ViewStyle).elevation,
       }
     : null;
+
+  const faceModel = useMemo(
+    () =>
+      buildResultCardFaceModel(
+        {
+          ...(post as Record<string, unknown>),
+          id: post.id,
+        },
+        gameMarket
+          ? {
+              market: {
+                homeRate: gameMarket.homeRate,
+                awayRate: gameMarket.awayRate,
+              },
+            }
+          : undefined
+      ),
+    [post, gameMarket]
+  );
+
+  /** 新カード面（WC 以外の確定済み）。未確定・WC は従来カード */
+  if (!isWcCard && hasFinal) {
+    return (
+      <Animated.View
+        collapsable={false}
+        style={[
+          styles.listRowOuter,
+          compactSpacing ? styles.cardOuterCompact : styles.cardOuter,
+          entrance.cardShellMotionStyle,
+        ]}
+      >
+        <View style={styles.resultCardPressable}>
+          <View style={styles.cardCaptureWrap}>
+            <View ref={captureRef} collapsable={false}>
+              <ResultCardDesignFaceNative
+                language={language}
+                face={faceModel}
+                frameGlow
+                showDetailTab
+                onOpenDetail={() => onOpenDetail(post.id)}
+              />
+              <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View

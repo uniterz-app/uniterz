@@ -1,6 +1,6 @@
 /**
  * cumulative_stats クライアント直読（Web / Native 共用）。
- * 1 doc でカード phase + overview チャート denorm を賄う。
+ * カード phase は cumulative_stats、charts は subcollection 優先。
  */
 import { doc, getDoc, type Firestore } from "firebase/firestore";
 import {
@@ -10,6 +10,10 @@ import {
   parseProfileChartsBundle,
   type ProfileChartsBundle,
 } from "@/lib/profile/profileChartsBundle";
+import {
+  invalidateProfileChartsCacheClient,
+  loadProfileChartsBundleClient,
+} from "@/lib/profile/profileChartsStorage";
 import { summaryFromNbaScopeRanking } from "@/lib/profile/resolveLiveProfileSummary";
 import {
   seedNbaKinetikPeriodStatsCache,
@@ -80,6 +84,7 @@ export async function loadCumulativeDataClient(
 
 export function invalidateCumulativeDataCacheClient(uid: string): void {
   docCache.delete(uid.trim());
+  invalidateProfileChartsCacheClient(uid);
 }
 
 function ranksFromData(data: Record<string, unknown> | null) {
@@ -92,15 +97,18 @@ function ranksFromData(data: Record<string, unknown> | null) {
   };
 }
 
-export function chartsFromCumulativeData(
-  data: Record<string, unknown> | null
+export function chartsFromLoadedBundle(
+  data: Record<string, unknown> | null,
+  loaded: ProfileChartsBundle | null,
+  hasNbaSeasonActivity?: boolean
 ): {
   profileCharts: ProfileChartsBundle | null;
   chartsPath: "complete" | "empty-season" | "missing";
   overviewSeasonKey: string;
 } {
   const overviewSeasonKey = profileOverviewSeasonKey();
-  const parsed = parseProfileChartsBundle(data, overviewSeasonKey);
+  const parsed =
+    loaded ?? parseProfileChartsBundle(data, overviewSeasonKey);
   if (isProfileChartsComplete(parsed)) {
     const allEmpty =
       parsed.dailyTrend.length === 0 &&
@@ -114,10 +122,10 @@ export function chartsFromCumulativeData(
       };
     }
   }
-  if (
-    !PROFILE_OVERVIEW_USE_PREVIOUS_SEASON &&
-    !cumulativeHasNbaSeasonActivity(data, overviewSeasonKey)
-  ) {
+  const seasonActive =
+    hasNbaSeasonActivity ??
+    cumulativeHasNbaSeasonActivity(data, overviewSeasonKey);
+  if (!PROFILE_OVERVIEW_USE_PREVIOUS_SEASON && !seasonActive) {
     return {
       profileCharts: emptyProfileChartsBundle(overviewSeasonKey),
       chartsPath: "empty-season",
@@ -125,6 +133,17 @@ export function chartsFromCumulativeData(
     };
   }
   return { profileCharts: parsed, chartsPath: "missing", overviewSeasonKey };
+}
+
+/** @deprecated chartsFromCumulativeData — nested のみ。split read は fetch 側で行う */
+export function chartsFromCumulativeData(
+  data: Record<string, unknown> | null
+): {
+  profileCharts: ProfileChartsBundle | null;
+  chartsPath: "complete" | "empty-season" | "missing";
+  overviewSeasonKey: string;
+} {
+  return chartsFromLoadedBundle(data, null);
 }
 
 export async function fetchNbaProfileCardPhaseClient(
@@ -136,9 +155,15 @@ export async function fetchNbaProfileCardPhaseClient(
   if (!safeUid) return null;
 
   try {
-    const data = await loadCumulativeDataClient(db, safeUid);
-    const { profileCharts, chartsPath, overviewSeasonKey } =
-      chartsFromCumulativeData(data);
+    const overviewSeasonKey = profileOverviewSeasonKey();
+    const [data, chartsLoaded] = await Promise.all([
+      loadCumulativeDataClient(db, safeUid),
+      loadProfileChartsBundleClient(db, safeUid, overviewSeasonKey),
+    ]);
+    const { profileCharts, chartsPath } = chartsFromLoadedBundle(
+      data,
+      chartsLoaded
+    );
     return {
       summary: summaryFromNbaScopeRanking(data, period),
       summaryRanks: ranksFromData(data),
@@ -162,10 +187,16 @@ export async function prefetchNbaKinetikBothPeriodsClient(
   if (!safeUid) return null;
 
   try {
-    const data = await loadCumulativeDataClient(db, safeUid);
+    const overviewSeasonKey = profileOverviewSeasonKey();
+    const [data, chartsLoaded] = await Promise.all([
+      loadCumulativeDataClient(db, safeUid),
+      loadProfileChartsBundleClient(db, safeUid, overviewSeasonKey),
+    ]);
     const ranks = ranksFromData(data);
-    const { profileCharts, chartsPath, overviewSeasonKey } =
-      chartsFromCumulativeData(data);
+    const { profileCharts, chartsPath } = chartsFromLoadedBundle(
+      data,
+      chartsLoaded
+    );
     const season: NbaProfileCardPhaseClient = {
       summary: summaryFromNbaScopeRanking(data, "season"),
       summaryRanks: ranks,

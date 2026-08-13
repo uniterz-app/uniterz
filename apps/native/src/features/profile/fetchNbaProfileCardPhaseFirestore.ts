@@ -9,6 +9,7 @@ import {
   prefetchNbaKinetikBothPeriodsClient,
   type NbaProfileCardPhaseClient,
 } from "../../../../../lib/profile/fetchNbaProfileCardPhaseClient";
+import { fetchNbaProfileOverviewChartsClient } from "../../../../../lib/profile/fetchNbaProfileOverviewChartsClient";
 import type { ProfileKinetikMetricsPeriod } from "../../../../../lib/profile/useNbaKinetikMonthlyStats";
 
 export type NbaProfileCardPhaseFirestore = NbaProfileCardPhaseClient;
@@ -20,7 +21,17 @@ export async function loadCumulativeData(uid: string) {
   return loadCumulativeDataClient(db, uid);
 }
 
-export function invalidateCumulativeDataCache(uid: string): void {
+export async function fetchNbaProfileOverviewChartsFirestore(
+  uid: string,
+  options?: {
+    hasNbaSeasonActivity?: boolean;
+    allowNestedFallback?: boolean;
+  }
+) {
+  return fetchNbaProfileOverviewChartsClient(db, uid, options);
+}
+
+export function invalidateProfileChartsCache(uid: string): void {
   invalidateCumulativeDataCacheClient(uid);
 }
 

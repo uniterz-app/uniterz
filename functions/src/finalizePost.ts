@@ -1,8 +1,13 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
-import { computePostSettlement } from "./computePostSettlement";
+import {
+  computePostSettlement,
+  type PostSettlementComputed,
+} from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
 import { isNbaPickupGame } from "./rankings/isPickupGame";
+import type { ResultScoreRelAgg } from "./aggregateGamePointsDistribution";
+
 export async function finalizePost({
   postDoc,
   game,
@@ -12,6 +17,8 @@ export async function finalizePost({
   batch,
   userUpdateTasks,
   streakResultMap,
+  scoreRel = "none",
+  settlement: settlementIn,
 }: {
   postDoc: FirebaseFirestore.QueryDocumentSnapshot;
   game: any;
@@ -21,6 +28,10 @@ export async function finalizePost({
   batch: FirebaseFirestore.WriteBatch;
   userUpdateTasks: Promise<any>[];
   streakResultMap: Map<string, UpdatedUserStreakResult>;
+  /** カード一覧用。games を読まずに #1/TOP5%/TOP10% を出す */
+  scoreRel?: ResultScoreRelAgg;
+  /** サマリ構築時の結果を再利用（再計算しない） */
+  settlement?: PostSettlementComputed;
 }) {
   const p = postDoc.data();
   if (p.settledAt) return;
@@ -36,25 +47,27 @@ export async function finalizePost({
     streakBonus,
     goalScorerBonus,
     activeWinStreak,
-  } = computePostSettlement({
-    p,
-    game: {
-      homeScore: final.home,
-      awayScore: final.away,
-      league: game.league,
-      homeTeamId: game.homeTeamId,
-      awayTeamId: game.awayTeamId,
-      regulationEtScore: game.regulationEtScore,
-      advancingTeamId: game.advancingTeamId,
-      knockout: game.knockout,
-      countsForRanking: game.countsForRanking,
-      goalScorers: game.goalScorers,
-      leadingScorers: game.leadingScorers,
-    },
-    market,
-    hadUpsetGame,
-    streakResultMap,
-  });
+  } =
+    settlementIn ??
+    computePostSettlement({
+      p,
+      game: {
+        homeScore: final.home,
+        awayScore: final.away,
+        league: game.league,
+        homeTeamId: game.homeTeamId,
+        awayTeamId: game.awayTeamId,
+        regulationEtScore: game.regulationEtScore,
+        advancingTeamId: game.advancingTeamId,
+        knockout: game.knockout,
+        countsForRanking: game.countsForRanking,
+        goalScorers: game.goalScorers,
+        leadingScorers: game.leadingScorers,
+      },
+      market,
+      hadUpsetGame,
+      streakResultMap,
+    });
 
   const countsForRanking = game?.countsForRanking !== false;
   const isPickup = isNbaPickupGame(game);
@@ -91,6 +104,19 @@ export async function finalizePost({
     marketMeta: {
       majoritySide: market.majoritySide,
       majorityRatio: market.majorityRatio,
+      // カード一覧が games を読まずに市場%を出せるよう埋め込み（0–100）
+      homePct:
+        typeof market.homeRate === "number" && Number.isFinite(market.homeRate)
+          ? Math.round(market.homeRate * 1000) / 10
+          : null,
+      awayPct:
+        typeof market.awayRate === "number" && Number.isFinite(market.awayRate)
+          ? Math.round(market.awayRate * 1000) / 10
+          : null,
+      drawPct:
+        typeof market.drawRate === "number" && Number.isFinite(market.drawRate)
+          ? Math.round(market.drawRate * 1000) / 10
+          : null,
     },
 
     stats: {
@@ -113,6 +139,8 @@ export async function finalizePost({
       countedForPickup: countsForRanking && isPickup,
 
       pointsV3: totalPoints,
+      /** カード相対ラベル（一覧が games を読まないための埋め込み） */
+      scoreRel,
       pointsV3Detail: {
         basePoints: baseScore.basePoints,
         winnerCorrect: baseScore.winnerCorrect,
@@ -185,6 +213,28 @@ export async function finalizePost({
         countsForRanking,
         seasonPhase: game?.seasonPhase ?? null,
         exactHit,
+        activeWinStreak,
+      });
+
+      const { syncProfileHeroSnapshotOnNbaSettle } = await import(
+        "./profile/syncProfileHeroSnapshotOnNbaSettle"
+      );
+      await syncProfileHeroSnapshotOnNbaSettle({
+        uid,
+        postId: postDoc.id,
+        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+        league: game.league,
+        countsForRanking,
+        isPickup,
+        seasonPhase: game?.seasonPhase ?? null,
+        isWin: result.isWin,
+        points: totalPoints,
+        upsetPoints,
+        upsetBonus,
+        streakBonus,
+        goalScorerHit: goalScorerBonus > 0,
+        hadUpsetGame,
+        upsetHit: result.upsetHit,
         activeWinStreak,
       });
 

@@ -483,6 +483,24 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="ResultCardDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ResultCardDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="ResultDetailDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ResultDetailDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="TeamStatsPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

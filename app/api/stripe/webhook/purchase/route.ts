@@ -110,6 +110,15 @@ export async function POST(req: Request) {
   );
 
   try {
+    const { ensureUserPlanStartDate } = await import(
+      "@/lib/pro/ensureUserPlanStartDate"
+    );
+    await ensureUserPlanStartDate(db, uid);
+  } catch (err) {
+    console.warn("[stripe/purchase] planStartDate ensure failed:", err);
+  }
+
+  try {
     const { applyProSkinUnlocksAfterProUpgrade } = await import(
       "@/lib/profile/applyProSkinUnlocksAfterProUpgrade"
     );

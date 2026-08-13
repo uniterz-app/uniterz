@@ -24,6 +24,7 @@ import {
   LeaderboardsStackScreen,
   ProfileStackScreen,
 } from "./StackNavigators";
+import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -56,6 +57,7 @@ export default function MainTabNavigator() {
 
   return (
     <>
+      <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
       <View style={styles.root}>
         {brandShelfHidden ? (

@@ -134,6 +134,31 @@ export function buildTutorialPointsDistribution(): GamePointsDistributionV1 {
 /** チュートリアル用リザルト投稿 ID（一覧差し込み・ハイライト用） */
 export const TUTORIAL_RESULT_POST_ID = "tutorial-post-1";
 
+/**
+ * __DEV__ リザルトカード詳細プレビュー用 ID。
+ * チュートリアルの保存ピックに依存せず、常に固定モックを返す。
+ */
+export const RESULT_DETAIL_DESIGN_PREVIEW_POST_ID =
+  "__dev_result_detail_preview__";
+
+/** 詳細プレビュー用の固定予想（的中寄り） */
+export function buildResultDetailDesignPreviewPick(): TutorialPredictPick {
+  const winner = game.finalHome >= game.finalAway ? "home" : "away";
+  const leading = game.leadingScorers[0];
+  return {
+    winner,
+    scoreHome: game.finalHome + (winner === "home" ? -3 : 3),
+    scoreAway: game.finalAway + (winner === "away" ? -2 : 2),
+    goalScorer: leading
+      ? {
+          playerId: leading.playerId,
+          teamId: leading.teamId,
+          name: leading.name,
+        }
+      : null,
+  };
+}
+
 export function buildTutorialResultPost(
   pick: TutorialPredictPick,
   grade?: TutorialGrade | null

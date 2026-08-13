@@ -21,6 +21,10 @@ import {
   buildSettledTodayDesignPreviewPosts,
   isSettledTodayDesignPreviewPost,
 } from "./settledTodayDesignPreviewNative";
+import {
+  resolveResultPostGameMarket,
+  useResultPostsGameMarkets,
+} from "../../../../../lib/games/useResultPostsGameMarkets";
 import { useNativeProfileSettledTodayResults } from "./useNativeProfileSettledTodayResults";
 
 type Props = {
@@ -73,6 +77,8 @@ export default function ProfileSettledTodayResultsNative({
     return { visiblePosts: [], isDesignPreview: false };
   }, [loading, posts, showDesignPreviewWhenEmpty]);
 
+  const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
+
   const openPost = (postId: string) => {
     if (isSettledTodayDesignPreviewPost(postId)) return;
     const tabNav = (navigation.getParent?.() ??
@@ -121,6 +127,7 @@ export default function ProfileSettledTodayResultsNative({
               listEnterIndex={index}
               entranceEnabled={false}
               compactSpacing
+              gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
               onOpenDetail={openPost}
             />
           ))}

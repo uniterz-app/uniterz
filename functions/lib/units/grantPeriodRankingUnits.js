@@ -44,6 +44,7 @@ exports.grantPeriodRankingUnitsAfterPeriodSnapshots = grantPeriodRankingUnitsAft
 const firestore_1 = require("firebase-admin/firestore");
 const nbaPeriod_1 = require("../rankings/nbaPeriod");
 const periodRankingUnitRewards_1 = require("./periodRankingUnitRewards");
+const formatPeriodRankingUnitEarn_1 = require("./formatPeriodRankingUnitEarn");
 /** running のままこの時間を超えたらリトライ許可 */
 const GRANT_RUNNING_STALE_MS = 15 * 60 * 1000;
 function timestampToMs(v) {
@@ -127,7 +128,7 @@ function loadRankEntriesFromSnapshot(data) {
     return [...byUid.entries()].map(([uid, rank]) => ({ uid, rank }));
 }
 async function grantPeriodRankingUnitsForPeriod(opts) {
-    var _a, _b;
+    var _a, _b, _c;
     const now = (_a = opts.now) !== null && _a !== void 0 ? _a : new Date();
     if (!isNbaPeriodFinalForUnitGrants(opts.period, opts.labelKey, now)) {
         return { granted: false, ledgerWrites: 0, skipped: 0 };
@@ -144,7 +145,11 @@ async function grantPeriodRankingUnitsForPeriod(opts) {
     const metrics = (0, periodRankingUnitRewards_1.periodRankingUnitMetricsForPeriod)(opts.period);
     let ledgerWrites = 0;
     let skipped = 0;
+    let snapshotsSeen = 0;
+    let snapshotsMissing = 0;
     const metricStats = {};
+    /** uid → 今回新規付与の合計 Unit（プッシュ用） */
+    const grantedByUid = new Map();
     try {
         for (const metric of metrics) {
             const maxRank = (0, periodRankingUnitRewards_1.periodRankingUnitMaxRank)(opts.period, metric);
@@ -155,9 +160,11 @@ async function grantPeriodRankingUnitsForPeriod(opts) {
                 .doc(periodStandardSnapshotDocId(opts.period, opts.labelKey, metric))
                 .get();
             if (!snap.exists) {
+                snapshotsMissing += 1;
                 console.warn(`[grantPeriodRankingUnits] missing snapshot ${opts.period} ${opts.labelKey} ${metric}`);
                 continue;
             }
+            snapshotsSeen += 1;
             const entries = loadRankEntriesFromSnapshot(((_b = snap.data()) !== null && _b !== void 0 ? _b : {}));
             let metricGranted = 0;
             for (const { uid, rank } of entries) {
@@ -174,6 +181,13 @@ async function grantPeriodRankingUnitsForPeriod(opts) {
                 });
                 const ledgerRef = db.collection("unit_ledger").doc(key);
                 const userRef = db.collection("users").doc(uid);
+                const pendingRef = userRef.collection("pending_unit_earns").doc(key);
+                const copy = (0, formatPeriodRankingUnitEarn_1.buildPeriodRankingUnitEarnCopy)({
+                    period: opts.period,
+                    label: opts.labelKey,
+                    metric,
+                    rank,
+                });
                 const did = await db.runTransaction(async (tx) => {
                     const existing = await tx.get(ledgerRef);
                     if (existing.exists)
@@ -193,11 +207,27 @@ async function grantPeriodRankingUnitsForPeriod(opts) {
                         unitBalance: firestore_1.FieldValue.increment(amount),
                         updatedAt: firestore_1.FieldValue.serverTimestamp(),
                     }, { merge: true });
+                    tx.set(pendingRef, {
+                        amount,
+                        reason,
+                        period: opts.period,
+                        label: opts.labelKey,
+                        metric,
+                        rank,
+                        titleJa: copy.titleJa,
+                        titleEn: copy.titleEn,
+                        subtitleJa: copy.subtitleJa,
+                        subtitleEn: copy.subtitleEn,
+                        claimedAt: null,
+                        createdAt: firestore_1.FieldValue.serverTimestamp(),
+                        createdAtMs: Date.now(),
+                    });
                     return true;
                 });
                 if (did) {
                     ledgerWrites += 1;
                     metricGranted += 1;
+                    grantedByUid.set(uid, ((_c = grantedByUid.get(uid)) !== null && _c !== void 0 ? _c : 0) + amount);
                     try {
                         const { syncUserCareerUnitsEarned, syncUserCareerPeriodRank } = await Promise.resolve().then(() => __importStar(require("../profile/syncUserCareer")));
                         await syncUserCareerUnitsEarned(uid, amount);
@@ -220,6 +250,18 @@ async function grantPeriodRankingUnitsForPeriod(opts) {
             }
             metricStats[metric] = metricGranted;
         }
+        if (snapshotsSeen === 0 && snapshotsMissing > 0) {
+            await grantRef.set({
+                status: "error",
+                error: "missing_snapshots",
+                period: opts.period,
+                labelKey: opts.labelKey,
+                snapshotsMissing,
+                failedAt: firestore_1.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            console.warn(`[grantPeriodRankingUnits] abort done: missing all snapshots ${opts.period} ${opts.labelKey}`);
+            return { granted: false, ledgerWrites: 0, skipped: 0 };
+        }
         await grantRef.set({
             status: "done",
             period: opts.period,
@@ -228,8 +270,29 @@ async function grantPeriodRankingUnitsForPeriod(opts) {
             ledgerWrites,
             skipped,
             metricStats,
+            snapshotsMissing,
             grantedAt: firestore_1.FieldValue.serverTimestamp(),
         }, { merge: true });
+        if (grantedByUid.size > 0) {
+            try {
+                const { sendExpoPushToUids } = await Promise.resolve().then(() => __importStar(require("../notifications/sendExpoPush")));
+                await sendExpoPushToUids({
+                    type: "unit_reward",
+                    targets: [...grantedByUid.entries()].map(([uid, amount]) => ({
+                        uid,
+                        data: {
+                            type: "unit_reward",
+                            amount: String(amount),
+                            period: opts.period,
+                            label: opts.labelKey,
+                        },
+                    })),
+                });
+            }
+            catch (err) {
+                console.warn("[grantPeriodRankingUnits] push failed", err);
+            }
+        }
         console.log(`[grantPeriodRankingUnits] ${opts.period} ${opts.labelKey} writes=${ledgerWrites} skipped=${skipped}`, metricStats);
         return { granted: true, ledgerWrites, skipped };
     }

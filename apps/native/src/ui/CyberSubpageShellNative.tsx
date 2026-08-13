@@ -22,6 +22,7 @@ import {
   nbaSubpageHeaderEntering,
   nbaSubpageTitleEntering,
 } from "../features/games/gamesNbaSubpageMotion";
+import ProfileBackEdgeHandleNative from "../features/profile/ProfileBackEdgeHandleNative";
 
 /** Web `CyberHelpMark` 相当 — グロー付き ? のみ */
 function CyberHelpMarkNative({ active }: { active: boolean }) {
@@ -119,6 +120,13 @@ export type CyberSubpageHeaderNativeProps = {
    */
   headerTrailing?: ReactNode;
   onBack: () => void;
+  /**
+   * 右端の縦 BACK タブに置き換え（ヘッダー左の戻るは非表示）。既定 true。
+   * `hideBack` を明示した場合はそちらを優先。
+   */
+  edgeBack?: boolean;
+  /** @deprecated `edgeBack` を利用 */
+  hideBack?: boolean;
   /** 埋め込み時は sticky/背景を弱める */
   embedded?: boolean;
 };
@@ -130,8 +138,11 @@ export function CyberSubpageHeaderNative({
   subtitle,
   headerTrailing,
   onBack,
+  edgeBack = true,
+  hideBack,
   embedded = false,
 }: CyberSubpageHeaderNativeProps) {
+  const useEdgeBack = hideBack ?? edgeBack;
   const [helpOpen, setHelpOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
@@ -149,14 +160,25 @@ export function CyberSubpageHeaderNative({
     >
       <View style={styles.header}>
         <View style={styles.rail} pointerEvents="none" />
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="戻る"
-          style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-        >
-          <MaterialCommunityIcons name="chevron-left" size={22} color="#ecfeff" />
-        </Pressable>
+        {useEdgeBack ? (
+          <View style={styles.sideSpacer} pointerEvents="none" />
+        ) : (
+          <Pressable
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel="戻る"
+            style={({ pressed }) => [
+              styles.iconBtn,
+              pressed && styles.iconBtnPressed,
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="chevron-left"
+              size={22}
+              color="#ecfeff"
+            />
+          </Pressable>
+        )}
         <TitleWrap
           style={[
             styles.titleBlock,
@@ -221,11 +243,14 @@ export default function CyberSubpageShellNative({
   subtitle,
   headerTrailing,
   onBack,
+  edgeBack = true,
+  hideBack,
   children,
   scroll = true,
   contentStyle,
   stickyHeaderIndices,
 }: Props) {
+  const useEdgeBack = hideBack ?? edgeBack;
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
 
@@ -251,6 +276,8 @@ export default function CyberSubpageShellNative({
         subtitle={subtitle}
         headerTrailing={headerTrailing}
         onBack={onBack}
+        edgeBack={useEdgeBack}
+        hideBack={useEdgeBack}
       />
 
       <Animated.View
@@ -259,6 +286,10 @@ export default function CyberSubpageShellNative({
       >
         {body}
       </Animated.View>
+
+      {useEdgeBack ? (
+        <ProfileBackEdgeHandleNative onPress={onBack} />
+      ) : null}
     </View>
   );
 }

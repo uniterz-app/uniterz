@@ -18,6 +18,7 @@ import {
   nbaSeasonSnapshotDocId,
 } from "./nbaSeason";
 import { mergeProfileChartsOnRankSnapshot } from "../profile/mergeProfileCharts";
+import { buildProfileHeroSnapshotFromCumulative } from "../profile/profileHeroSnapshot";
 
 /* =========================================================
  * Firestore
@@ -822,6 +823,34 @@ export async function buildCumulativeRankingSnapshot(
       },
       { merge: true }
     );
+    if (profileChartsPatch && Object.keys(profileChartsPatch).length > 0) {
+      batch.set(
+        firestore
+          .collection("cumulative_stats")
+          .doc(uid)
+          .collection("profileCharts")
+          .doc(seasonKey),
+        {
+          v: profileChartsPatch["profileCharts.v"],
+          seasonKey: profileChartsPatch["profileCharts.seasonKey"],
+          dailyTrend: profileChartsPatch["profileCharts.dailyTrend"] ?? [],
+          rankTrend: profileChartsPatch["profileCharts.rankTrend"] ?? [],
+          last20: profileChartsPatch["profileCharts.last20"] ?? [],
+          builtAtMs: profileChartsPatch["profileCharts.builtAtMs"] ?? Date.now(),
+        },
+        { merge: true }
+      );
+      ops += 1;
+    }
+    if (cumData) {
+      const hero = buildProfileHeroSnapshotFromCumulative(cumData, seasonKey);
+      batch.set(
+        firestore.doc(`users/${uid}`),
+        { profileHeroSnapshot: hero },
+        { merge: true }
+      );
+      ops += 1;
+    }
     batch.set(
       firestore
         .collection("cumulative_stats")

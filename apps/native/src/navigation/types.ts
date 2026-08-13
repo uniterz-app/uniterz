@@ -51,7 +51,7 @@ export type GamesStackParamList = {
 };
 
 export type ResultStackParamList = {
-  ResultHome: undefined;
+  ResultHome: { reopenDetailPostId?: string } | undefined;
   ResultDetail: { postId: string };
 };
 
@@ -76,6 +76,10 @@ export type ProfileStackParamList = {
         fromRankings?: boolean;
         /** グループ（Leaderboards タブ）から他人プロフィールを開いたとき */
         fromLeaderboards?: boolean;
+        /** リザルト詳細から他人プロフィールを開いたとき */
+        fromResultDetail?: boolean;
+        /** リザルト詳細へ戻るときの投稿 ID */
+        resultDetailPostId?: string;
         /** 戻る先のグループ ID（オーバーレイ / 詳細画面） */
         leaderboardsGroupId?: string;
         /** プロフィール編集モーダルを開く */
@@ -96,6 +100,10 @@ export type ProfileStackParamList = {
     leaderboardsGroupId?: string;
     /** 週次レポートのライバル一覧から遷移 */
     fromWeeklyReport?: boolean;
+    /** リザルト詳細（得点上位等）から遷移 */
+    fromResultDetail?: boolean;
+    /** 戻るときに再開するリザルト詳細の投稿 ID */
+    resultDetailPostId?: string;
   };
   Badges: undefined;
   Invite: undefined;
@@ -137,6 +145,10 @@ export type ProfileStackParamList = {
   UnitEarnOverlayFontPreview: undefined;
   /** __DEV__ UNITERZ ウェスタン調ロゴ文字 3案 */
   UniterzLogoTypePreview: undefined;
+  /** __DEV__ リザルトカード見た目案 */
+  ResultCardDesignPreview: undefined;
+  /** __DEV__ リザルト詳細デザイン用プレビュー */
+  ResultDetailDesignPreview: undefined;
   /** __DEV__ リーグ Team Stats（30 チーム表） */
   TeamStatsPreview: undefined;
   /** __DEV__ リーグ Player Stats（指標トップリーダー） */

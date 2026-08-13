@@ -1,15 +1,16 @@
 import { Platform, StyleSheet, type TextStyle, type ViewStyle } from "react-native";
+import { MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
+import { PANEL_BG } from "../profile/reports/reportThemeNative";
 import { resultStreakTier } from "../../../../../lib/result/resultGlass";
 
 /** Web `mobileListCardLayout` / `/mobile/result` */
 export const MOBILE_RESULT_PAGE_PAD_X = 18;
 export const MOBILE_RESULT_PAGE_PAD_Y = 16;
-export const MOBILE_RESULT_SECTION_GAP = 12;
+export const MOBILE_RESULT_SECTION_GAP = 6;
 export const MOBILE_RESULT_CARD_GAP = 8;
-/** Web `ResultDayPipeGroup` モバイル `pt-3` より詰め（日付帯→先頭カード） */
+/** 日付帯→先頭カード / 最終カード→次の日付帯 */
 export const MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP = 4;
 export const MOBILE_RESULT_CARD_MAX_W = 344;
-export const MOBILE_RESULT_DAY_STRIP_MAX_W = 380;
 
 /** Web `ResultCard` scheduleDense（モバイル一覧） */
 export const MOBILE_RESULT_JERSEY_SIZE = 52;
@@ -43,12 +44,13 @@ export const DISPLAY_FONT = Platform.select({
   default: "BebasNeue_400Regular",
 });
 
-/** 日付帯の数字 — Oxanium 800（最太） */
-export const DAY_STRIP_METRIC_FONT = Platform.select({
-  ios: "Oxanium_800ExtraBold",
-  android: "Oxanium_800ExtraBold",
-  default: "Oxanium_800ExtraBold",
-});
+/** 日付帯の数字 — リザルトカードスコアと同じ Montserrat Black Italic */
+export const dayStripNumberText: TextStyle = {
+  fontFamily: MATCH_CARD_SCORE_FONT,
+  fontWeight: "900",
+  fontStyle: "italic",
+  fontVariant: ["tabular-nums"],
+};
 
 export const MONO_FONT = Platform.select({
   ios: "Menlo",
@@ -198,7 +200,7 @@ export const resultOutcomeBadgeTextNative = StyleSheet.create({
 export const resultDayStripPanelNative = StyleSheet.create({
   outer: {
     width: "100%",
-    maxWidth: MOBILE_RESULT_DAY_STRIP_MAX_W,
+    maxWidth: MOBILE_RESULT_CARD_MAX_W,
     alignSelf: "center",
   },
   panel: {
@@ -207,119 +209,38 @@ export const resultDayStripPanelNative = StyleSheet.create({
     borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(8,11,18,0.48)",
+    backgroundColor: PANEL_BG,
     paddingHorizontal: 0,
     paddingVertical: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  glassBlur: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 0,
-  },
-  glassSheen: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 1,
-  },
-  insetTopHighlight: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    zIndex: 4,
-  },
-  insetBottomShade: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.03)",
-    zIndex: 4,
-  },
-  leftAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    zIndex: 2,
-  },
-  cornerTl: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: 10,
-    height: 10,
-    borderLeftWidth: 1,
-    borderTopWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
-    zIndex: 5,
-  },
-  cornerBr: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: 10,
-    height: 10,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "rgba(217,70,239,0.32)",
-    zIndex: 5,
-  },
-  gridOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 0,
   },
   row: {
     position: "relative",
     zIndex: 3,
     flexDirection: "row",
     alignItems: "stretch",
-    minHeight: 52,
+    minHeight: 40,
   },
   dateCol: {
     flex: 1,
     minWidth: 0,
     justifyContent: "center",
     alignItems: "flex-start",
-    paddingLeft: 14,
-    paddingRight: 8,
-    paddingVertical: 10,
+    paddingLeft: 12,
+    paddingRight: 6,
+    paddingVertical: 6,
   },
   date: {
     flexShrink: 0,
-    fontSize: 18,
-    fontWeight: "800",
+    ...dayStripNumberText,
+    fontSize: 15,
+    lineHeight: 17,
     color: "rgba(236,254,255,0.95)",
-    fontVariant: ["tabular-nums"],
-    fontFamily: DAY_STRIP_METRIC_FONT,
-    letterSpacing: 0.6,
-    textShadowColor: "rgba(34,211,238,0.28)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
+    letterSpacing: -0.4,
   },
   divider: {
     width: 1,
     alignSelf: "stretch",
-    marginVertical: 8,
+    marginVertical: 5,
     backgroundColor: "rgba(255,255,255,0.08)",
   },
   /** 確定日: hit を中央列 */
@@ -329,8 +250,8 @@ export const resultDayStripPanelNative = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 10,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
   },
   /** 確定日: 総合スコアを右列 */
   totalCol: {
@@ -339,9 +260,9 @@ export const resultDayStripPanelNative = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    paddingRight: 12,
-    paddingLeft: 6,
-    paddingVertical: 10,
+    paddingRight: 10,
+    paddingLeft: 4,
+    paddingVertical: 6,
   },
   /** 未確定日: 得点未確定ピルを右寄せ */
   rightCol: {
@@ -350,8 +271,8 @@ export const resultDayStripPanelNative = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
 });
 

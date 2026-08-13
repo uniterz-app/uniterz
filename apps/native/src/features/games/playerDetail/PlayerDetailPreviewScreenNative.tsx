@@ -24,6 +24,7 @@ export default function PlayerDetailPreviewScreenNative({
           : "Draft · season / game logs / contract"
       }
       appBackground
+      edgeBack
       onClose={onClose}
     >
       <NbaPlayerDetailPanelNative language={language} playerId={playerId} />

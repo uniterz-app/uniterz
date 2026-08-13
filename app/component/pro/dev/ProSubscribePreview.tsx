@@ -32,6 +32,7 @@ import {
 } from "@/lib/pro/proSubscribePreviewPlans";
 import { PRO_SKIN_PATH } from "@/lib/pro/proSkinRoutes";
 import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "@/lib/pro/proSubscribeSuccessMotion";
+import { PRO_SUCCESS_ACCENT } from "@/lib/pro/proSuccessAccent";
 import { jp, nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { setAppBrandShelfHidden } from "@/lib/ui/appBrandShelfVisibility";
@@ -709,11 +710,7 @@ function TrialExplainModal({
   );
 }
 
-/** 成功カード — Uniterz サイバー HUD（シアン／エレクトリック） */
-const SUCCESS_CYBER = {
-  cyanGrid: "rgba(0,245,255,0.45)",
-} as const;
-
+/** 成功カード — Trial=シアン / 有料アップグレード=グリーン */
 function SuccessPanel({
   ja,
   planId,
@@ -733,6 +730,7 @@ function SuccessPanel({
   skinPickerHref: string;
   onAgain: () => void;
 }) {
+  const A = trial ? PRO_SUCCESS_ACCENT.trial : PRO_SUCCESS_ACCENT.billing;
   const started = new Date().toLocaleDateString(ja ? "ja-JP" : "en-US", {
     year: "numeric",
     month: "short",
@@ -773,23 +771,21 @@ function SuccessPanel({
         }}
       >
         <motion.span
-          className={[
-            "grid h-7 w-7 place-items-center rounded-full text-[13px] font-black",
-            "bg-[#00F5FF] text-[#050508]",
-          ].join(" ")}
+          className="grid h-7 w-7 place-items-center rounded-full text-[13px] font-black"
+          style={{ backgroundColor: A.main, color: A.ink }}
           initial={
             motionOn
-              ? { boxShadow: "0 0 8px rgba(0,245,255,0.28)" }
-              : { boxShadow: "0 0 14px rgba(0,245,255,0.45)" }
+              ? { boxShadow: `0 0 8px rgba(${A.mainRgb},0.28)` }
+              : { boxShadow: `0 0 14px rgba(${A.mainRgb},0.45)` }
           }
           animate={{
             boxShadow: motionOn
               ? [
-                  "0 0 8px rgba(0,245,255,0.28)",
-                  "0 0 22px rgba(0,245,255,0.7)",
-                  "0 0 14px rgba(0,245,255,0.45)",
+                  `0 0 8px rgba(${A.mainRgb},0.28)`,
+                  `0 0 22px rgba(${A.mainRgb},0.7)`,
+                  `0 0 14px rgba(${A.mainRgb},0.45)`,
                 ]
-              : "0 0 14px rgba(0,245,255,0.45)",
+              : `0 0 14px rgba(${A.mainRgb},0.45)`,
           }}
           transition={{
             delay: motionOn ? SM.checkGlowDelayMs / 1000 : 0,
@@ -803,14 +799,14 @@ function SuccessPanel({
         <h2
           className={[
             nameOxanium.className,
-            "text-[17px] font-extrabold uppercase tracking-[0.14em] text-cyan-50",
+            "text-[17px] font-extrabold uppercase tracking-[0.14em]",
           ].join(" ")}
+          style={{ color: A.title }}
         >
           {title}
         </h2>
       </motion.div>
 
-      {/* 上=白ヘッダー / サイド=シアン オフセット＋Lブラケット */}
       <motion.div
         className="relative w-full max-w-[22.5rem] pb-[7px] pr-[7px] pt-2 pl-2"
         initial={
@@ -826,7 +822,11 @@ function SuccessPanel({
       >
         <motion.span
           aria-hidden
-          className="pointer-events-none absolute left-0 top-0 z-20 h-[18px] w-[18px] border-l-[3px] border-t-[3px] border-[#00F5FF] shadow-[0_0_10px_rgba(0,245,255,0.35)]"
+          className="pointer-events-none absolute left-0 top-0 z-20 h-[18px] w-[18px] border-l-[3px] border-t-[3px]"
+          style={{
+            borderColor: A.main,
+            boxShadow: `0 0 10px rgba(${A.mainRgb},0.35)`,
+          }}
           initial={motionOn ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{
@@ -837,7 +837,11 @@ function SuccessPanel({
         />
         <motion.span
           aria-hidden
-          className="pointer-events-none absolute bottom-0 right-0 z-20 h-[18px] w-[18px] border-b-[3px] border-r-[3px] border-[#00F5FF] shadow-[0_0_10px_rgba(0,245,255,0.35)]"
+          className="pointer-events-none absolute bottom-0 right-0 z-20 h-[18px] w-[18px] border-b-[3px] border-r-[3px]"
+          style={{
+            borderColor: A.main,
+            boxShadow: `0 0 10px rgba(${A.mainRgb},0.35)`,
+          }}
           initial={motionOn ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{
@@ -847,11 +851,13 @@ function SuccessPanel({
           }}
         />
 
-        {/* Side accent — cyan offset plate */}
         <motion.div
           aria-hidden
-          className="absolute bottom-0 right-0 top-2 left-2 z-0 bg-[#00F5FF]"
-          style={{ boxShadow: "0 0 28px rgba(0,245,255,0.28)" }}
+          className="absolute bottom-0 right-0 top-2 left-2 z-0"
+          style={{
+            backgroundColor: A.main,
+            boxShadow: `0 0 28px rgba(${A.mainRgb},0.28)`,
+          }}
           initial={motionOn ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           transition={{
@@ -861,15 +867,12 @@ function SuccessPanel({
           }}
         />
 
-        {/* Main frame — white border */}
         <div
           className="relative z-10 border-[2.5px] border-white bg-[#04080f]"
           style={{
-            boxShadow:
-              "0 0 24px rgba(34,211,238,0.14), inset 0 1px 0 rgba(255,255,255,0.1)",
+            boxShadow: `0 0 24px rgba(${A.mainRgb},0.14), inset 0 1px 0 rgba(255,255,255,0.1)`,
           }}
         >
-          {/* Top — white header bar + scanlines（CyberSlantedTab と同型） */}
           <div className="relative flex items-stretch overflow-hidden border-b-[2.5px] border-white bg-white">
             <span
               aria-hidden
@@ -886,7 +889,9 @@ function SuccessPanel({
                   "text-[8px] font-bold uppercase tracking-[0.16em] text-black/55",
                 ].join(" ")}
               >
-                {trial ? "TRIAL_CONFIRMED // TYPE: PRO" : "UPGRADE_CONFIRMED // TYPE: PRO"}
+                {trial
+                  ? "TRIAL_CONFIRMED // TYPE: PRO"
+                  : "UPGRADE_CONFIRMED // TYPE: PRO"}
               </p>
               <p
                 className={[
@@ -915,7 +920,7 @@ function SuccessPanel({
               aria-hidden
               className="pointer-events-none absolute inset-0 opacity-[0.28]"
               style={{
-                backgroundImage: `radial-gradient(${SUCCESS_CYBER.cyanGrid} 0.55px, transparent 0.55px)`,
+                backgroundImage: `radial-gradient(${A.gridDot} 0.55px, transparent 0.55px)`,
                 backgroundSize: "7px 7px",
               }}
             />
@@ -923,16 +928,15 @@ function SuccessPanel({
               aria-hidden
               className="pointer-events-none absolute inset-0"
               style={{
-                background:
-                  "radial-gradient(ellipse 80% 55% at 50% 18%, rgba(0,245,255,0.1), transparent 70%)",
+                background: `radial-gradient(ellipse 80% 55% at 50% 18%, rgba(${A.mainRgb},0.1), transparent 70%)`,
               }}
             />
 
             <div
-              className="relative mx-auto flex max-w-[15rem] flex-col items-center gap-2.5 border border-cyan-400/35 bg-[rgba(4,10,18,0.88)] px-3 py-5"
+              className="relative mx-auto flex max-w-[15rem] flex-col items-center gap-2.5 bg-[rgba(4,10,18,0.88)] px-3 py-5"
               style={{
-                boxShadow:
-                  "inset 0 0 24px rgba(0,245,255,0.06), 0 0 18px rgba(34,211,238,0.08)",
+                border: `1px solid ${A.borderSoft}`,
+                boxShadow: `inset 0 0 24px rgba(${A.mainRgb},0.06), 0 0 18px rgba(${A.mainRgb},0.08)`,
               }}
             >
               <div className="relative flex flex-col items-center gap-2.5 overflow-hidden px-1 py-0.5">
@@ -940,8 +944,9 @@ function SuccessPanel({
                 <p
                   className={[
                     nameOxanium.className,
-                    "text-[20px] font-semibold tracking-[0.22em] text-cyan-50",
+                    "text-[20px] font-semibold tracking-[0.22em]",
                   ].join(" ")}
+                  style={{ color: A.title }}
                 >
                   UNITERZ
                 </p>
@@ -964,21 +969,31 @@ function SuccessPanel({
                   />
                 ) : null}
               </div>
-              <div className="h-px w-14 bg-[#00F5FF] shadow-[0_0_8px_rgba(0,245,255,0.55)]" />
+              <div
+                className="h-px w-14"
+                style={{
+                  backgroundColor: A.main,
+                  boxShadow: `0 0 8px rgba(${A.mainRgb},0.55)`,
+                }}
+              />
               <p
                 className={[
                   nameOxanium.className,
-                  "text-center text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-100/70",
+                  "text-center text-[10px] font-bold uppercase tracking-[0.1em]",
                 ].join(" ")}
+                style={{ color: A.muted }}
               >
                 {statusLine}
               </p>
               <p
                 className={[
                   nameOxanium.className,
-                  "text-[12px] font-black tabular-nums tracking-[0.04em] text-[#00F5FF]",
-                  "drop-shadow-[0_0_8px_rgba(0,245,255,0.35)]",
+                  "text-[12px] font-black tabular-nums tracking-[0.04em]",
                 ].join(" ")}
+                style={{
+                  color: A.main,
+                  textShadow: `0 0 8px rgba(${A.mainRgb},0.35)`,
+                }}
               >
                 {trial ? (ja ? "無料 → その後 " : "FREE → THEN ") : ""}
                 {price}
@@ -986,20 +1001,24 @@ function SuccessPanel({
               </p>
             </div>
 
-            <div className="relative mt-3 space-y-1.5 border-t border-cyan-400/30 pt-3">
+            <div
+              className="relative mt-3 space-y-1.5 border-t pt-3"
+              style={{ borderColor: A.borderSoft }}
+            >
               {trial ? (
                 <>
-                  <MetaRow label="START" value={started} />
-                  <MetaRow label="ENDS" value={trialEndLabel} />
+                  <MetaRow accent={A} label="START" value={started} />
+                  <MetaRow accent={A} label="ENDS" value={trialEndLabel} />
                   <MetaRow
+                    accent={A}
                     label="CHARGE"
                     value={ja ? "期間中解約で課金なし" : "Cancel in trial = ¥0"}
                   />
                 </>
               ) : (
                 <>
-                  <MetaRow label="START" value={started} />
-                  <MetaRow label="PLAN_ID" value={planId} />
+                  <MetaRow accent={A} label="START" value={started} />
+                  <MetaRow accent={A} label="PLAN_ID" value={planId} />
                 </>
               )}
             </div>
@@ -1009,10 +1028,14 @@ function SuccessPanel({
                 href={skinPickerHref}
                 className={[
                   nameOxanium.className,
-                  "flex w-full items-center justify-center border-2 border-[#00F5FF] bg-transparent py-3 text-center text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#00F5FF]",
-                  "shadow-[0_0_16px_rgba(0,245,255,0.18)]",
-                  "transition hover:bg-[#00F5FF] hover:text-[#050508] hover:shadow-[0_0_22px_rgba(0,245,255,0.4)] active:scale-[0.99]",
+                  "flex w-full items-center justify-center border-2 bg-transparent py-3 text-center text-[11px] font-extrabold uppercase tracking-[0.14em]",
+                  "transition active:scale-[0.99]",
                 ].join(" ")}
+                style={{
+                  borderColor: A.main,
+                  color: A.main,
+                  boxShadow: `0 0 16px rgba(${A.mainRgb},0.18)`,
+                }}
               >
                 {ja ? "Pro Skinを試す" : "Try Pro Skin"}
               </Link>
@@ -1021,9 +1044,13 @@ function SuccessPanel({
                 onClick={onAgain}
                 className={[
                   nameOxanium.className,
-                  "w-full border border-cyan-400/35 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100/50",
-                  "transition hover:border-cyan-300/60 hover:text-cyan-100/85",
+                  "w-full border py-2.5 text-[10px] font-bold uppercase tracking-[0.14em]",
+                  "transition",
                 ].join(" ")}
+                style={{
+                  borderColor: A.borderSoft,
+                  color: A.soft,
+                }}
               >
                 {ja ? "プラン選択に戻る" : "Back to plans"}
               </button>
@@ -1032,8 +1059,9 @@ function SuccessPanel({
             <p
               className={[
                 nameOxanium.className,
-                "relative mt-2.5 text-center text-[8px] font-bold uppercase tracking-[0.12em] text-cyan-400/35",
+                "relative mt-2.5 text-center text-[8px] font-bold uppercase tracking-[0.12em]",
               ].join(" ")}
+              style={{ color: `rgba(${A.mainRgb},0.35)` }}
             >
               SYS_LOG · PREVIEW_MOCK · NO_CHARGE
             </p>
@@ -1044,22 +1072,32 @@ function SuccessPanel({
   );
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function MetaRow({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent: (typeof PRO_SUCCESS_ACCENT)[keyof typeof PRO_SUCCESS_ACCENT];
+}) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <span
         className={[
           nameOxanium.className,
-          "shrink-0 text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-200/40",
+          "shrink-0 text-[9px] font-bold uppercase tracking-[0.14em]",
         ].join(" ")}
+        style={{ color: accent.metaLabel }}
       >
         {label}
       </span>
       <span
         className={[
           nameOxanium.className,
-          "min-w-0 text-right text-[11px] font-bold uppercase tracking-[0.04em] text-[#00F5FF]",
+          "min-w-0 text-right text-[11px] font-bold uppercase tracking-[0.04em]",
         ].join(" ")}
+        style={{ color: accent.main }}
       >
         {value}
       </span>

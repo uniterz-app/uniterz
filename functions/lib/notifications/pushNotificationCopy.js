@@ -79,6 +79,12 @@ function buildPushNotificationCopy(type, language, input) {
                     title: "Monthly report is ready",
                     body: detail || "Your Pro monthly report is available in Profile → Report.",
                 };
+            case "unit_reward":
+                return {
+                    title: "You earned Units",
+                    body: detail ||
+                        "Ranking rewards were added. Open your profile to claim.",
+                };
         }
     }
     switch (type) {
@@ -140,6 +146,12 @@ function buildPushNotificationCopy(type, language, input) {
                 title: "月次レポートが届きました",
                 body: detail ||
                     "プロフィールの Report タブで月次レポートを確認できます。",
+            };
+        case "unit_reward":
+            return {
+                title: "Unit を獲得しました",
+                body: detail ||
+                    "ランキング報酬が付与されました。プロフィールで受け取ってください。",
             };
     }
 }

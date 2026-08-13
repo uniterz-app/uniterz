@@ -57,6 +57,15 @@ export async function POST(req: NextRequest) {
     );
 
     try {
+      const { ensureUserPlanStartDate } = await import(
+        "@/lib/pro/ensureUserPlanStartDate"
+      );
+      await ensureUserPlanStartDate(db, uid);
+    } catch (err) {
+      console.warn("[iap/apple/verify] planStartDate ensure failed:", err);
+    }
+
+    try {
       const { applyProSkinUnlocksAfterProUpgrade } = await import(
         "@/lib/profile/applyProSkinUnlocksAfterProUpgrade"
       );

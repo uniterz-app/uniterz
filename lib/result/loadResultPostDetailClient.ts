@@ -7,6 +7,15 @@ import {
   rawPointsDistributionFromGameDoc,
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
+import {
+  resolveGamePointsSummary,
+  type GamePointsSummaryV1,
+} from "@/lib/results/gamePointsSummary";
+import {
+  buildResultDetailViewModel,
+  type ResultDetailViewModel,
+} from "@/lib/result/buildResultDetailView";
+import { resolveTopScorerMarketView } from "@/lib/result/buildTopScorerMarketEmbed";
 
 export type ResultPostDetailMarket = {
   homeRate: number;
@@ -21,7 +30,10 @@ export type LoadResultPostDetailClientResult =
       ok: true;
       post: PredictionPostV2;
       market: ResultPostDetailMarket | null;
+      pointsSummary: GamePointsSummaryV1 | null;
+      /** @deprecated 旧分布チャート用 */
       pointsDistribution: GamePointsDistributionV1 | null;
+      game: Record<string, unknown> | null;
     };
 
 /** posts + games をまとめて取得（クライアント専用）。 */
@@ -47,7 +59,9 @@ export async function loadResultPostDetailClient(
       ok: true,
       post,
       market: null,
+      pointsSummary: null,
       pointsDistribution: null,
+      game: null,
     };
   }
   const mkt = gameData.market as
@@ -69,8 +83,40 @@ export async function loadResultPostDetailClient(
     ok: true,
     post,
     market,
+    pointsSummary: resolveGamePointsSummary(gameData),
     pointsDistribution: parseGamePointsDistributionV1(
       rawPointsDistributionFromGameDoc(gameData)
     ),
+    game: gameData,
   };
+}
+
+/** 取得結果 → 新カード／詳細共有 VM（追加 read なし） */
+export function buildResultDetailViewFromLoad(
+  loaded: Extract<LoadResultPostDetailClientResult, { ok: true }>,
+  viewer?: {
+    uid?: string | null;
+    handle?: string | null;
+    displayName?: string | null;
+    photoURL?: string | null;
+    isPro?: boolean;
+  } | null
+): ResultDetailViewModel {
+  const game = loaded.game;
+  return buildResultDetailViewModel(loaded.post as Record<string, unknown>, {
+    market: loaded.market
+      ? {
+          homeRate: loaded.market.homeRate,
+          awayRate: loaded.market.awayRate,
+        }
+      : null,
+    pointsSummary: loaded.pointsSummary,
+    leadingScorers: game?.leadingScorers,
+    topScorerCandidates: game?.topScorerCandidates,
+    topScorerMarket: resolveTopScorerMarketView(
+      game,
+      loaded.post as Record<string, unknown>
+    ),
+    viewer,
+  });
 }

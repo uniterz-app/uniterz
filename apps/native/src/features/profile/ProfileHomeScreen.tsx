@@ -30,7 +30,12 @@ import { auth, db, storage } from "../../lib/firebase";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
-import { useNativeProfileStats } from "./useNativeProfileStats";
+import { useNativeProfileStats, seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
+import {
+  invalidateProfileUserDocNative,
+  loadProfileUserDocNative,
+  peekProfileUserDocNative,
+} from "./profileUserDocCacheNative";
 import { useNativeProfileDailyTrendChart } from "./useNativeProfileDailyTrendChart";
 import { useNativeStreakTracker } from "./useNativeStreakTracker";
 import {
@@ -43,10 +48,10 @@ import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import ProfileMenuEdgeHandleNative from "./ProfileMenuEdgeHandleNative";
+import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
 import { CyberSubpageHeaderNative } from "../../ui/CyberSubpageShellNative";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
-import ProfileExternalReturnNavNative from "./ProfileExternalReturnNavNative";
 import SettingsPoolsBackdropNative from "./SettingsPoolsBackdropNative";
 import { SETTINGS_POOLS_BG_BASE } from "../../../../../lib/ui/settingsPoolsBackground";
 import {
@@ -116,6 +121,8 @@ export default function ProfileHomeScreen({
   fromRankings = false,
   fromLeaderboards = false,
   fromWeeklyReport = false,
+  fromResultDetail = false,
+  resultDetailPostId,
   leaderboardsGroupId,
   openSettingsOnMount = false,
   openReportTabOnMount = false,
@@ -130,6 +137,10 @@ export default function ProfileHomeScreen({
   fromLeaderboards?: boolean;
   /** 週次レポートのライバルから遷移してきた他人プロフィール */
   fromWeeklyReport?: boolean;
+  /** リザルト詳細から遷移してきた他人プロフィール */
+  fromResultDetail?: boolean;
+  /** リザルト詳細へ戻るときの投稿 ID */
+  resultDetailPostId?: string;
   leaderboardsGroupId?: string;
   openSettingsOnMount?: boolean;
   openReportTabOnMount?: boolean;
@@ -155,12 +166,11 @@ export default function ProfileHomeScreen({
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
   const showExternalBack =
-    isPublicProfileView && (fromRankings || fromLeaderboards || fromWeeklyReport);
-  const externalBackVariant = fromWeeklyReport
-    ? "report"
-    : fromLeaderboards
-      ? "leaderboards"
-      : "rankings";
+    isPublicProfileView &&
+    (fromRankings ||
+      fromLeaderboards ||
+      fromWeeklyReport ||
+      fromResultDetail);
 
   const dismissPublicProfileRoute = useCallback(() => {
     const state = navigation.getState();
@@ -185,6 +195,8 @@ export default function ProfileHomeScreen({
       fromRankings: undefined,
       fromLeaderboards: undefined,
       fromWeeklyReport: undefined,
+      fromResultDetail: undefined,
+      resultDetailPostId: undefined,
       leaderboardsGroupId: undefined,
     });
   }, [navigation]);
@@ -234,7 +246,25 @@ export default function ProfileHomeScreen({
   }, [settingsOpen, openMenuAfterSettingsClosed]);
 
   const returnToPreviousScreen = useCallback(() => {
-    // レポート経由は同じ Profile スタック内の push なので pop だけで戻る
+    if (fromResultDetail) {
+      const state = navigation.getState();
+      const current = state.routes[state.index]?.name;
+      // 同一スタック内 push（DEV プレビュー等）なら前画面へ pop。
+      // タブ跨ぎ navigate だと PublicProfile だけなので、Result タブへ戻す。
+      if (current === "PublicProfile" && state.index > 0) {
+        navigation.goBack();
+        return;
+      }
+      dismissPublicProfileRoute();
+      const postId = resultDetailPostId?.trim();
+      requestAnimationFrame(() => {
+        tabNavigation.navigate("ResultTab", {
+          screen: "ResultHome",
+          params: postId ? { reopenDetailPostId: postId } : undefined,
+        });
+      });
+      return;
+    }
     if (fromWeeklyReport) {
       dismissPublicProfileRoute();
       return;
@@ -262,8 +292,11 @@ export default function ProfileHomeScreen({
   }, [
     dismissPublicProfileRoute,
     fromLeaderboards,
+    fromResultDetail,
     fromWeeklyReport,
     leaderboardsGroupId,
+    navigation,
+    resultDetailPostId,
     tabNavigation,
   ]);
 
@@ -291,18 +324,26 @@ export default function ProfileHomeScreen({
   /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
   const isJa = language === "ja";
 
-  const renderExternalBackNav = () =>
+  const externalBackLabel = isJa ? "戻る" : "Back";
+
+  const renderProfileBackHandle = () =>
     showExternalBack ? (
-      <ProfileExternalReturnNavNative
-        language={language}
-        variant={externalBackVariant}
+      <ProfileBackEdgeHandleNative
         onPress={returnToPreviousScreen}
+        accessibilityLabel={externalBackLabel}
       />
     ) : null;
 
   /** 自分プロフィールは routeHandle 無し。plan hook の getDoc より先に確定できる */
   const isMe = !isPublicProfileView && !!myUid && myUid === targetUid;
   const [myPlanReady, setMyPlanReady] = useState(false);
+  /** users/{uid} — Pro Skin overlay 等への共有（重複 read 回避） */
+  const [myUserDoc, setMyUserDoc] = useState<
+    Record<string, unknown> | null | undefined
+  >(() => {
+    if (isPublicProfileView || !myUid) return undefined;
+    return peekProfileUserDocNative(myUid);
+  });
   const profilePlanHook = useNativeProfilePlan({
     targetUid: targetUid ?? null,
     profilePlan: plan,
@@ -366,6 +407,11 @@ export default function ProfileHomeScreen({
     profileStatsContext,
     authReady
   );
+
+  useEffect(() => {
+    if (isPublicProfileView || !myUid || myUserDoc == null) return;
+    seedNativeProfileStatsFromUserDoc(myUid, myUserDoc);
+  }, [isPublicProfileView, myUid, myUserDoc]);
   const dailyTrendChart = useNativeProfileDailyTrendChart(targetUid, {
     enabled: tab === "overview" && !!targetUid && authReady,
     seedRows: statsBundle.dailyTrend,
@@ -381,7 +427,7 @@ export default function ProfileHomeScreen({
     tab === "overview" &&
       !!targetUid &&
       authReady &&
-      !statsBundle.loading,
+      (statsBundle.last20 != null || !statsBundle.loading),
     profileStatsContext,
     { seedLast20: statsBundle.last20 }
   );
@@ -414,6 +460,7 @@ export default function ProfileHomeScreen({
     uid: myUid,
     enabled: skinUnlockEnabled,
     forcePreview: forceSkinUnlockPreview,
+    userDoc: isMe ? myUserDoc : null,
   });
   const dismissSkinUnlockAndClearForce = useCallback(() => {
     setForceSkinUnlockPreview(false);
@@ -529,14 +576,20 @@ export default function ProfileHomeScreen({
       if (!myUid) {
         setProfileLoading(false);
         setMyPlanReady(true);
+        setMyUserDoc(null);
         return;
       }
       setProfileLoading(true);
       setMyPlanReady(false);
+      if (peekProfileUserDocNative(myUid) === undefined) {
+        setMyUserDoc(undefined);
+      }
       try {
-        const snap = await getDoc(doc(db, "users", myUid));
+        const loaded = await loadProfileUserDocNative(myUid);
         if (!alive) return;
-        const data = (snap.data() ?? {}) as Record<string, unknown>;
+        const data = loaded?.data ?? {};
+        const snapExists = loaded?.exists ?? false;
+        setMyUserDoc(data);
         const fromDoc =
           typeof data.displayName === "string" ? data.displayName.trim() : "";
         const fromAuth = auth.currentUser?.displayName?.trim() ?? "";
@@ -554,7 +607,7 @@ export default function ProfileHomeScreen({
         setAvatarUrl(fromFirestorePhoto || authPhoto);
         setLanguage(data.language === "en" ? "en" : "ja");
         setCountryCode(typeof data.countryCode === "string" ? data.countryCode : "");
-        const resolvedPlan = snap.exists()
+        const resolvedPlan = snapExists
           ? await resolveAndExpireMyPlan(myUid, data)
           : "free";
         if (!alive) return;
@@ -585,9 +638,10 @@ export default function ProfileHomeScreen({
         return;
       }
       let alive = true;
-      void getDoc(doc(db, "users", myUid)).then((snap) => {
-        if (!alive || !snap.exists()) return;
-        const data = snap.data() as Record<string, unknown>;
+      void loadProfileUserDocNative(myUid).then((loaded) => {
+        if (!alive || !loaded?.exists) return;
+        const data = loaded.data;
+        setMyUserDoc(data);
         setPlanProBgVariant(parseUserPlanProBgVariant(data.planProBgVariant));
         setPlan(data.plan === "pro" ? "pro" : "free");
         setUnitBalance(parseUserUnitBalance(data));
@@ -752,6 +806,7 @@ export default function ProfileHomeScreen({
         },
         { merge: true }
       );
+      invalidateProfileUserDocNative(myUid);
       onSaved?.();
       setSettingsOpen(false);
       cyberAlert(t.savedTitle, t.savedBody);
@@ -859,11 +914,12 @@ export default function ProfileHomeScreen({
             { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
           ]}
         >
-          {renderExternalBackNav()}
+
           <View style={styles.inlineLoading}>
             <BlocksPulseLoader pixelScale={0.9} />
           </View>
         </ScrollView>
+        {renderProfileBackHandle()}
       </View>
     );
   }
@@ -878,11 +934,12 @@ export default function ProfileHomeScreen({
             { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
           ]}
         >
-          {renderExternalBackNav()}
+
           <Text style={styles.errorText}>
             {isJa ? "ユーザーが見つかりません" : "User not found"}
           </Text>
         </ScrollView>
+        {renderProfileBackHandle()}
       </View>
     );
   }
@@ -898,7 +955,6 @@ export default function ProfileHomeScreen({
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      {renderExternalBackNav()}
       <ProfileKinetikHeroNative
         displayName={
           displayName.trim() ||
@@ -968,6 +1024,8 @@ export default function ProfileHomeScreen({
       />
     ) : null}
 
+    {renderProfileBackHandle()}
+
     <Modal
       visible={settingsOpen}
       transparent
@@ -1000,6 +1058,11 @@ export default function ProfileHomeScreen({
                 title="SETTINGS"
                 subtitle={t.settingsSubtitle}
                 onBack={returnFromSettingsToMenu}
+                edgeBack
+              />
+              <ProfileBackEdgeHandleNative
+                onPress={returnFromSettingsToMenu}
+                accessibilityLabel={isJa ? "戻る" : "Back"}
               />
               <ScrollView
                 style={styles.profileModalFill}
@@ -1283,6 +1346,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("UnitEarnOverlayFontPreview");
         else if (page === "uniterzLogoTypePreview" && __DEV__)
           navigation.navigate("UniterzLogoTypePreview");
+        else if (page === "resultCardDesignPreview" && __DEV__)
+          navigation.navigate("ResultCardDesignPreview");
         else if (page === "teamStatsPreview" && __DEV__)
           navigation.navigate("TeamStatsPreview");
         else if (page === "playerStatsPreview" && __DEV__)

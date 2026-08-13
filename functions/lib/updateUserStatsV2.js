@@ -117,7 +117,7 @@ async function applyPostToUserStatsV2(opts) {
     const userRef = db().doc(`users/${uid}`);
     const userStatsRef = db().doc(`user_stats_v2/${uid}`);
     await db().runTransaction(async (tx) => {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e, _f;
         const marker = await tx.get(markerRef);
         if (marker.exists)
             return;
@@ -226,14 +226,23 @@ async function applyPostToUserStatsV2(opts) {
         }
         (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, contrib);
         if (profileCharts) {
+            const builtAtMs = Date.now();
             tx.set(cumulativeRef, {
                 "profileCharts.v": profileCharts.v,
                 "profileCharts.seasonKey": profileCharts.seasonKey,
                 "profileCharts.dailyTrend": profileCharts.dailyTrend,
                 "profileCharts.rankTrend": (_c = profileCharts.rankTrend) !== null && _c !== void 0 ? _c : [],
                 "profileCharts.last20": profileCharts.last20,
-                "profileCharts.builtAtMs": Date.now(),
+                "profileCharts.builtAtMs": builtAtMs,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            tx.set(cumulativeRef.collection("profileCharts").doc(profileCharts.seasonKey), {
+                v: profileCharts.v,
+                seasonKey: profileCharts.seasonKey,
+                dailyTrend: (_d = profileCharts.dailyTrend) !== null && _d !== void 0 ? _d : [],
+                rankTrend: (_e = profileCharts.rankTrend) !== null && _e !== void 0 ? _e : [],
+                last20: (_f = profileCharts.last20) !== null && _f !== void 0 ? _f : [],
+                builtAtMs,
             }, { merge: true });
         }
     });

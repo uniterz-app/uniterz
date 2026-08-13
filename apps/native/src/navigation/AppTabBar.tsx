@@ -12,6 +12,15 @@ import {
 import { colors } from "../theme/tokens";
 import { useNativeNavTabNotificationBadges } from "./useNativeNavTabNotificationBadges";
 import NavBarChamferShellNative from "./NavBarChamferShellNative";
+import { useFirebaseUser } from "../auth/FirebaseUserProvider";
+import {
+  loadProfileUserDocNative,
+  peekProfileUserDocNative,
+} from "../features/profile/profileUserDocCacheNative";
+import {
+  prefetchNativeProfileStats,
+  seedNativeProfileStatsFromUserDoc,
+} from "../features/profile/useNativeProfileStats";
 import { registerTutorialTarget } from "../features/tutorial/tutorialMeasureNative";
 import {
   readTutorialLivePhaseNative,
@@ -49,6 +58,8 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const pillSidePad = Math.max(0, (Dimensions.get("window").width * (1 - 0.94)) / 2);
   /** 連打で navigate が積み上がるのを抑える */
   const lastPressAtRef = useRef(0);
+  const { fUser } = useFirebaseUser();
+  const myUid = fUser?.uid?.trim() ?? "";
 
   const activeRouteName = state.routes[state.index]?.name ?? "";
   const { showRankingBadge, showResultBadge } =
@@ -139,12 +150,25 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
 
                 const tutorialTarget = TUTORIAL_TARGET_BY_ROUTE[route.name];
 
+                const warmProfileTab = () => {
+                  if (route.name !== "ProfileTab" || !myUid) return;
+                  const peek = peekProfileUserDocNative(myUid);
+                  if (peek) seedNativeProfileStatsFromUserDoc(myUid, peek);
+                  void prefetchNativeProfileStats(myUid);
+                  void loadProfileUserDocNative(myUid).then((loaded) => {
+                    if (loaded?.exists) {
+                      seedNativeProfileStatsFromUserDoc(myUid, loaded.data);
+                    }
+                  });
+                };
+
                 return (
                   <TutorialTabButton
                     key={route.key}
                     tutorialTarget={tutorialTarget}
                     accessibilityState={active ? { selected: true } : {}}
                     accessibilityLabel={options.tabBarAccessibilityLabel}
+                    onPressIn={warmProfileTab}
                     onPress={onPress}
                     style={[styles.tabButton, active && styles.tabButtonActive]}
                   >
@@ -200,6 +224,7 @@ function TutorialTabButton({
   children,
   style,
   onPress,
+  onPressIn,
   accessibilityState,
   accessibilityLabel,
 }: {
@@ -207,6 +232,7 @@ function TutorialTabButton({
   children: React.ReactNode;
   style?: object | object[];
   onPress: () => void;
+  onPressIn?: () => void;
   accessibilityState?: { selected?: boolean };
   accessibilityLabel?: string;
 }) {
@@ -235,6 +261,7 @@ function TutorialTabButton({
       accessibilityRole="button"
       accessibilityState={accessibilityState}
       accessibilityLabel={accessibilityLabel}
+      onPressIn={onPressIn}
       onPress={onPress}
       style={style}
     >

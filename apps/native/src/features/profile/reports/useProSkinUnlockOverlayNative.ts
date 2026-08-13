@@ -54,13 +54,15 @@ export function useProSkinUnlockOverlayNative(opts: {
   uid: string | null | undefined;
   enabled: boolean;
   forcePreview?: boolean;
+  /** 親が users を既読したとき渡す（重複 getDoc 回避）。undefined = 未読込待ち */
+  userDoc?: Record<string, unknown> | null;
 }): {
   activeIds: ProfilePlanProBgVariant[] | null;
   ownerCounts: Record<string, number>;
   preview: boolean;
   dismiss: () => void;
 } {
-  const { uid, enabled, forcePreview = false } = opts;
+  const { uid, enabled, forcePreview = false, userDoc } = opts;
   const [activeIds, setActiveIds] = useState<ProfilePlanProBgVariant[] | null>(
     null
   );
@@ -72,6 +74,9 @@ export function useProSkinUnlockOverlayNative(opts: {
       setActiveIds(null);
       setOwnerCounts({});
       setPreview(false);
+      return;
+    }
+    if (!forcePreview && userDoc === undefined) {
       return;
     }
     let alive = true;
@@ -87,11 +92,7 @@ export function useProSkinUnlockOverlayNative(opts: {
         return;
       }
       try {
-        const snap = await getDoc(doc(db, "users", uid));
-        if (!alive) return;
-        const data = snap.exists()
-          ? (snap.data() as Record<string, unknown>)
-          : {};
+        const data = userDoc ?? {};
         const notice = parseProSkinUnlockNoticeIds(
           data.proSkinUnlockNoticeIds
         );
@@ -111,7 +112,7 @@ export function useProSkinUnlockOverlayNative(opts: {
     return () => {
       alive = false;
     };
-  }, [uid, enabled, forcePreview]);
+  }, [uid, enabled, forcePreview, userDoc]);
 
   const dismiss = useCallback(() => {
     if (!uid || !activeIds) {

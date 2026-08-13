@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Platform, Pressable, RefreshControl, SectionList, StyleSheet, Text, View, type LayoutChangeEvent, type ViewStyle,
+  Platform, Pressable, RefreshControl, SectionList, StyleSheet, Text, View, type ViewStyle,
 } from "react-native";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import type { MainTabParamList } from "../../navigation/types";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RouteProp } from "@react-navigation/native";
+import type { MainTabParamList, ResultStackParamList } from "../../navigation/types";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
-import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { doc, getDoc } from "firebase/firestore";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { Language } from "../../../../../lib/i18n/language";
@@ -88,7 +88,7 @@ import {
   MOBILE_RESULT_STAT_ROW_GAP,
   MOBILE_RESULT_STAT_VALUE_W,
   NUMERIC_FONT,
-  DAY_STRIP_METRIC_FONT,
+  dayStripNumberText,
   resultCardShellNative,
   resultDayStripPanelNative,
   resultFilterBarNative,
@@ -114,6 +114,10 @@ import {
   resolveResultPostPkScore,
   useResultPostsPkScores,
 } from "../../../../../lib/games/useResultPostsPkScores";
+import {
+  resolveResultPostGameMarket,
+  useResultPostsGameMarkets,
+} from "../../../../../lib/games/useResultPostsGameMarkets";
 import { resolvePkScoreFromResultPost } from "../../../../../lib/games/pkScore";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultGlassShellNative from "./ResultGlassShellNative";
@@ -128,86 +132,12 @@ import {
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
 import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
-import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import { shareResultCardNative } from "./shareResultCardNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
 import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
-
-/** Web モバイル日付帯グリッド — `opacity-[0.08]` + 14px */
-const DAY_HEADER_MOBILE_GRID_STEP = 14;
-const DAY_HEADER_MOBILE_GRID_LINE = "rgba(34,211,238,0.45)";
-const DAY_HEADER_MOBILE_GRID_OPACITY = 0.08;
-
-const dayHeaderGridStyles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-  },
-  gridLineV: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 1,
-  },
-  gridLineH: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-});
-
-function ResultDayHeaderGridOverlay({ mobileStrip = false }: { mobileStrip?: boolean }) {
-  const step = DAY_HEADER_MOBILE_GRID_STEP;
-  const lineColor = DAY_HEADER_MOBILE_GRID_LINE;
-  const opacity = mobileStrip ? DAY_HEADER_MOBILE_GRID_OPACITY : 0.1;
-  const [size, setSize] = useState({ w: 0, h: 0 });
-  const verticalLefts = useMemo(() => {
-    const out: number[] = [];
-    for (let x = step; x < size.w; x += step) {
-      out.push(x);
-    }
-    return out;
-  }, [size.w, step]);
-  const horizontalTops = useMemo(() => {
-    const out: number[] = [];
-    for (let y = step; y < size.h; y += step) {
-      out.push(y);
-    }
-    return out;
-  }, [size.h, step]);
-
-  function onGridLayout(e: LayoutChangeEvent) {
-    const { width, height } = e.nativeEvent.layout;
-    if (Math.abs(width - size.w) < 0.5 && Math.abs(height - size.h) < 0.5) return;
-    setSize({ w: width, h: height });
-  }
-
-  return (
-    <View pointerEvents="none" style={dayHeaderGridStyles.overlay} onLayout={onGridLayout}>
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, { opacity }]}
-      >
-        {verticalLefts.map((left) => (
-          <View
-            key={`dhgv-${left}`}
-            style={[dayHeaderGridStyles.gridLineV, { left, backgroundColor: lineColor }]}
-          />
-        ))}
-        {horizontalTops.map((top) => (
-          <View
-            key={`dhgh-${top}`}
-            style={[dayHeaderGridStyles.gridLineH, { top, backgroundColor: lineColor }]}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
 
 const NUMERIC_FONT_FAMILY = NUMERIC_FONT;
 const DISPLAY_FONT_FAMILY = DISPLAY_FONT;
@@ -274,11 +204,14 @@ function ResultDayHeader({
   dayPoints,
   entranceActive,
   sectionStaggerIndex,
+  leadGap = false,
 }: {
   dateLabel: string;
   dayPoints: NativeDayPointsHeader;
   entranceActive: boolean;
   sectionStaggerIndex: number;
+  /** 前セクションの最終カードとの間（SectionSeparator の代わり） */
+  leadGap?: boolean;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   const { clipStyle, dateClusterStyle, rightClusterStyle } = useResultDayHeaderEntrance(
@@ -287,41 +220,15 @@ function ResultDayHeader({
     sectionStaggerIndex
   );
   return (
-    <View style={[styles.listRowOuter, styles.dayHeaderSpacing]}>
+    <View
+      style={[
+        styles.listRowOuter,
+        styles.dayHeaderSpacing,
+        leadGap ? styles.dayHeaderLeadGap : null,
+      ]}
+    >
       <View style={resultDayStripPanelNative.outer}>
         <Animated.View style={[resultDayStripPanelNative.panel, clipStyle]}>
-          {(Platform.OS === "ios" || Platform.OS === "android") && (
-            <BlurView
-              intensity={Platform.OS === "ios" ? 22 : 14}
-              tint="dark"
-              {...nativeBlurViewExtraProps()}
-              style={resultDayStripPanelNative.glassBlur}
-            />
-          )}
-          <LinearGradient
-            pointerEvents="none"
-            colors={[
-              "rgba(255,255,255,0.08)",
-              "rgba(255,255,255,0.035)",
-              "rgba(255,255,255,0.015)",
-            ]}
-            locations={[0, 0.45, 1]}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 0.9, y: 1 }}
-            style={resultDayStripPanelNative.glassSheen}
-          />
-          <LinearGradient
-            pointerEvents="none"
-            colors={["rgba(34,211,238,0.95)", "rgba(34,211,238,0.2)"]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={resultDayStripPanelNative.leftAccent}
-          />
-          <View style={resultDayStripPanelNative.insetTopHighlight} pointerEvents="none" />
-          <View style={resultDayStripPanelNative.insetBottomShade} pointerEvents="none" />
-          <View style={resultDayStripPanelNative.cornerTl} pointerEvents="none" />
-          <View style={resultDayStripPanelNative.cornerBr} pointerEvents="none" />
-          <ResultDayHeaderGridOverlay mobileStrip />
           <View style={resultDayStripPanelNative.row}>
             <Animated.View style={[resultDayStripPanelNative.dateCol, dateClusterStyle]}>
               <Text style={resultDayStripPanelNative.date}>{dateLabel}</Text>
@@ -381,6 +288,10 @@ export default function ResultHomeScreen({
 }) {
   const { fUser } = useFirebaseUser();
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const stackNavigation =
+    useNavigation<NativeStackNavigationProp<ResultStackParamList>>();
+  const route = useRoute<RouteProp<ResultStackParamList, "ResultHome">>();
+  const reopenDetailPostId = route.params?.reopenDetailPostId;
   const { topContentPadY } = useBottomTabBarInsets();
   const listTopPad = topContentPadY;
   const [language, setLanguage] = useState<"ja" | "en">("ja");
@@ -437,6 +348,13 @@ export default function ResultHomeScreen({
   const [deleteConfirmPost, setDeleteConfirmPost] = useState<PostWithMillis | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const deleteSubmittingRef = useRef(false);
+
+  useEffect(() => {
+    const id = reopenDetailPostId?.trim();
+    if (!id) return;
+    setDetailPostId(id);
+    stackNavigation.setParams({ reopenDetailPostId: undefined });
+  }, [reopenDetailPostId, stackNavigation]);
 
   const { showResultLeagueTabs, defaultLeagueTab, flagsReady } =
     useResultLeagueFlagsNative(uid ?? null);
@@ -598,6 +516,7 @@ export default function ResultHomeScreen({
     [sections]
   );
   const pkFromGames = useResultPostsPkScores(visiblePostsFlat);
+  const marketsFromGames = useResultPostsGameMarkets(visiblePostsFlat);
 
   /** 初回マウント時のみ一覧入場を有効化（スクロールで遅延マウントされた日付帯は除外） */
   const entranceArmed = useResultEntranceArmed();
@@ -783,14 +702,17 @@ export default function ResultHomeScreen({
                 dayPoints={dayPointsHeaderForNative(section.final, section.pending, language)}
                 entranceActive={entranceArmed && isInitialHeader}
                 sectionStaggerIndex={sectionIndex >= 0 ? sectionIndex : 0}
+                leadGap={sectionIndex > 0}
               />
             );
           }}
           renderItem={({ item, index, section }) => {
+            const isLastInSection = index === section.data.length - 1;
             const card = (
               <ResultPostCardNative
                 post={item}
                 pkScore={resolveResultPostPkScore(item, pkFromGames)}
+                gameMarket={resolveResultPostGameMarket(item, marketsFromGames)}
                 language={language}
                 nowMs={listNowTick}
                 viewerUid={
@@ -799,6 +721,7 @@ export default function ResultHomeScreen({
                 listEnterIndex={section.baseFlatIndex + index}
                 entranceEnabled={entranceArmed}
                 siblingOverlayOpen={detailPostId != null}
+                compactSpacing={isLastInSection}
                 onOpenDetail={(id) => {
                   setDetailPostId(id);
                 }}
@@ -819,7 +742,7 @@ export default function ResultHomeScreen({
             }
             return card;
           }}
-          SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
+          SectionSeparatorComponent={null}
         />
       )}
     </View>
@@ -955,6 +878,9 @@ const styles = StyleSheet.create({
   dayHeaderSpacing: {
     marginBottom: MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
   },
+  dayHeaderLeadGap: {
+    marginTop: MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
+  },
   dayHeaderClip: {
     position: "relative",
     borderWidth: 1,
@@ -1014,19 +940,17 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   dayHitLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "800",
     color: "rgba(255,255,255,0.82)",
     letterSpacing: 0.3,
   },
   dayHitNums: {
-    fontSize: 20,
-    fontWeight: "800",
+    ...dayStripNumberText,
+    fontSize: 16,
     color: "rgba(255,255,255,0.95)",
-    fontFamily: DAY_STRIP_METRIC_FONT,
-    fontVariant: ["tabular-nums"],
-    letterSpacing: 0.5,
-    lineHeight: 22,
+    letterSpacing: -0.4,
+    lineHeight: 18,
   },
   dayTotalWrap: {
     flexShrink: 0,
@@ -1037,21 +961,19 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   dayTotalPrefix: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
     color: "rgba(255,255,255,0.92)",
   },
   dayTotalValue: {
-    fontSize: 22,
-    fontWeight: "800",
+    ...dayStripNumberText,
+    fontSize: 17,
     color: "rgba(255,255,255,0.98)",
-    fontFamily: DAY_STRIP_METRIC_FONT,
-    fontVariant: ["tabular-nums"],
-    letterSpacing: 0.5,
-    lineHeight: 24,
+    letterSpacing: -0.4,
+    lineHeight: 19,
   },
   dayTotalUnit: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
     color: "rgba(255,255,255,0.92)",
   },

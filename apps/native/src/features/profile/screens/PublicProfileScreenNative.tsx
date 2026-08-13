@@ -18,6 +18,8 @@ export default function PublicProfileScreenNative() {
       fromRankings={route.params?.fromRankings === true}
       fromLeaderboards={route.params?.fromLeaderboards === true}
       fromWeeklyReport={route.params?.fromWeeklyReport === true}
+      fromResultDetail={route.params?.fromResultDetail === true}
+      resultDetailPostId={route.params?.resultDetailPostId}
       leaderboardsGroupId={route.params?.leaderboardsGroupId}
     />
   );

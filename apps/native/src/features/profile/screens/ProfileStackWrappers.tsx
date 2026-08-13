@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -24,6 +26,10 @@ import UnitEarnModalDesignPreviewScreenNative from "../mobileScreens/UnitEarnMod
 import UnitEarnOverlayAnimPreviewScreenNative from "../mobileScreens/UnitEarnOverlayAnimPreviewScreenNative";
 import UnitEarnOverlayFontPreviewScreenNative from "../mobileScreens/UnitEarnOverlayFontPreviewScreenNative";
 import UniterzLogoTypePreviewScreenNative from "../mobileScreens/UniterzLogoTypePreviewScreenNative";
+import ResultCardDesignPreviewScreenNative from "../../results/ResultCardDesignPreviewScreenNative";
+import ResultDetailDesignPreviewScreenNative from "../../results/ResultDetailDesignPreviewScreenNative";
+import ResultDetailScreen from "../../results/ResultDetailScreen";
+import { RESULT_DETAIL_DESIGN_PREVIEW_POST_ID } from "../../../../../../lib/tutorial/tutorialNbaUi";
 import TeamStatsPreviewScreenNative from "../../games/teamStats/TeamStatsPreviewScreenNative";
 import PlayerStatsPreviewScreenNative from "../../games/playerStats/PlayerStatsPreviewScreenNative";
 import PlayerDetailPreviewScreenNative from "../../games/playerDetail/PlayerDetailPreviewScreenNative";
@@ -307,6 +313,51 @@ export function UniterzLogoTypePreviewScreenWrapper() {
     <UniterzLogoTypePreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ResultCardDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  const lang = language === "en" ? "en" : "ja";
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  return (
+    <View style={{ flex: 1, position: "relative" }}>
+      <ResultCardDesignPreviewScreenNative
+        language={lang}
+        onClose={() => navigation.goBack()}
+        onOpenDetail={() => setDetailOpen(true)}
+      />
+      <ResultDetailScreen
+        visible={detailOpen}
+        postId={RESULT_DETAIL_DESIGN_PREVIEW_POST_ID}
+        language={lang}
+        onClose={() => setDetailOpen(false)}
+        onOpenProfile={(handle) => {
+          setDetailOpen(false);
+          navigation.push("PublicProfile", { handle, fromResultDetail: true });
+        }}
+      />
+    </View>
+  );
+}
+
+export function ResultDetailDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ResultDetailDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+      onOpenProfile={(handle) =>
+        navigation.push("PublicProfile", { handle, fromResultDetail: true })
+      }
     />
   );
 }

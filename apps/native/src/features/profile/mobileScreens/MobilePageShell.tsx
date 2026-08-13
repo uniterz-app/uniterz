@@ -1,6 +1,7 @@
 /**
  * Web `ProfileCyberPage` / 一覧系モバイルページ相当。
- * 左戻る · 中央サイバー題名 · 右はてな（subtitle あり時）。
+ * 中央サイバー題名 · 右はてな（subtitle あり時）。
+ * 戻るは右端 BACK タブ（`CyberSubpageShellNative` 既定）。
  */
 import { ReactNode } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
@@ -23,6 +24,8 @@ type Props = {
   underBrandShelf?: boolean;
   /** 互換: 常にサイバー題名を使うため無視 */
   cyberTitle?: boolean;
+  /** false でヘッダー左の従来戻るを使う（通常は不要） */
+  edgeBack?: boolean;
   children: ReactNode;
 };
 
@@ -33,6 +36,7 @@ export default function MobilePageShell({
   subtitle,
   eyebrow = "PROFILE",
   appBackground = false,
+  edgeBack = true,
   children,
 }: Props) {
   const { width } = useWindowDimensions();
@@ -51,6 +55,7 @@ export default function MobilePageShell({
         title={title}
         subtitle={subtitle}
         onBack={backHandler}
+        edgeBack={edgeBack}
         scroll={false}
         contentStyle={styles.body}
       >

@@ -70,6 +70,10 @@ export type PredictionPostV2 = {
   marketMeta?: {
     majoritySide: "home" | "away" | "draw";
     majorityRatio: number;
+    /** 0–100。settle 時埋め込み（カード一覧が games を読まないため） */
+    homePct?: number | null;
+    awayPct?: number | null;
+    drawPct?: number | null;
   } | null;
 
   /* ------------------------
@@ -128,6 +132,11 @@ export type PredictionPostV2 = {
     upsetPoints?: number | null;
 
     pointsV3?: number | null;
+    /**
+     * カード相対ラベル（settle 時埋め込み）。
+     * 一覧が games を読まずに #1 / TOP 5% / TOP 10% を出す。
+     */
+    scoreRel?: "max" | "top5" | "top10" | "none" | null;
     pointsV3Detail?: {
       winnerCorrect: boolean;
       winPoints: number;

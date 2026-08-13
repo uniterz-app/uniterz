@@ -16,6 +16,7 @@ const loadUidsWhoPredictedOnDateFromDaily_1 = require("../notifications/loadUids
 const cumulativeSnapshotIndex_1 = require("./cumulativeSnapshotIndex");
 const nbaSeason_1 = require("./nbaSeason");
 const mergeProfileCharts_1 = require("../profile/mergeProfileCharts");
+const profileHeroSnapshot_1 = require("../profile/profileHeroSnapshot");
 /* =========================================================
  * Firestore
  * =======================================================*/
@@ -384,7 +385,7 @@ async function loadNbaSeasonTop20RowsLive(metric, postedTodayUids) {
     };
 }
 async function buildCumulativeRankingSnapshot(options = {}) {
-    var _a, _b;
+    var _a, _b, _c, _d, _e, _f;
     const streakAllEligible = options.streakAllEligible === true;
     const seasonKey = nbaSeason_1.CURRENT_NBA_SEASON_KEY;
     const snap = await (0, cumulativeSnapshotIndex_1.loadCumulativeStatsForRankingSnapshot)(db());
@@ -581,6 +582,26 @@ async function buildCumulativeRankingSnapshot(options = {}) {
             })()
             : {};
         batch.set(firestore.doc(`cumulative_stats/${uid}`), Object.assign({ "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(), [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks }, profileChartsPatch), { merge: true });
+        if (profileChartsPatch && Object.keys(profileChartsPatch).length > 0) {
+            batch.set(firestore
+                .collection("cumulative_stats")
+                .doc(uid)
+                .collection("profileCharts")
+                .doc(seasonKey), {
+                v: profileChartsPatch["profileCharts.v"],
+                seasonKey: profileChartsPatch["profileCharts.seasonKey"],
+                dailyTrend: (_c = profileChartsPatch["profileCharts.dailyTrend"]) !== null && _c !== void 0 ? _c : [],
+                rankTrend: (_d = profileChartsPatch["profileCharts.rankTrend"]) !== null && _d !== void 0 ? _d : [],
+                last20: (_e = profileChartsPatch["profileCharts.last20"]) !== null && _e !== void 0 ? _e : [],
+                builtAtMs: (_f = profileChartsPatch["profileCharts.builtAtMs"]) !== null && _f !== void 0 ? _f : Date.now(),
+            }, { merge: true });
+            ops += 1;
+        }
+        if (cumData) {
+            const hero = (0, profileHeroSnapshot_1.buildProfileHeroSnapshotFromCumulative)(cumData, seasonKey);
+            batch.set(firestore.doc(`users/${uid}`), { profileHeroSnapshot: hero }, { merge: true });
+            ops += 1;
+        }
         batch.set(firestore
             .collection("cumulative_stats")
             .doc(uid)

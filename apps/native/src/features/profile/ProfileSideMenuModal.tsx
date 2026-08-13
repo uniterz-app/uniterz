@@ -80,6 +80,7 @@ type Props = {
     | "unitEarnOverlayAnimPreview"
     | "unitEarnOverlayFontPreview"
     | "uniterzLogoTypePreview"
+    | "resultCardDesignPreview"
     | "teamStatsPreview"
     | "playerStatsPreview"
     | "teamDetailPreview"
@@ -281,6 +282,7 @@ export default function ProfileSideMenuModal({
       | "unitEarnOverlayAnimPreview"
       | "unitEarnOverlayFontPreview"
       | "uniterzLogoTypePreview"
+      | "resultCardDesignPreview"
       | "teamStatsPreview"
       | "playerStatsPreview"
       | "teamDetailPreview"
@@ -716,6 +718,16 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           UNITERZ Logo
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="card-bulleted-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("resultCardDesignPreview")
+                          }
+                        >
+                          リザルトカード案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="chart-box-outline"

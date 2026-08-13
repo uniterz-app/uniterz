@@ -34,6 +34,7 @@ import {
   type ProSubscribePreviewPlanId,
 } from "../../../../../../lib/pro/proSubscribePreviewPlans";
 import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "../../../../../../lib/pro/proSubscribeSuccessMotion";
+import { PRO_SUCCESS_ACCENT } from "../../../../../../lib/pro/proSuccessAccent";
 import { setAppBrandShelfHidden } from "../../../../../../lib/ui/appBrandShelfVisibility";
 import { OXANIUM_700, OXANIUM_800 } from "../reports/reportThemeNative";
 
@@ -575,11 +576,19 @@ function TrialExplainModal({
   );
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function MetaRow({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent: (typeof PRO_SUCCESS_ACCENT)[keyof typeof PRO_SUCCESS_ACCENT];
+}) {
   return (
     <View style={styles.metaRow}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text style={styles.metaValue}>{value}</Text>
+      <Text style={[styles.metaLabel, { color: accent.metaLabel }]}>{label}</Text>
+      <Text style={[styles.metaValue, { color: accent.main }]}>{value}</Text>
     </View>
   );
 }
@@ -603,6 +612,7 @@ function SuccessPanel({
   onAgain: () => void;
   onOpenSkin?: () => void;
 }) {
+  const A = trial ? PRO_SUCCESS_ACCENT.trial : PRO_SUCCESS_ACCENT.billing;
   const started = new Date().toLocaleDateString(ja ? "ja-JP" : "en-US", {
     year: "numeric",
     month: "short",
@@ -692,11 +702,15 @@ function SuccessPanel({
         entering={reduceMotion ? undefined : successHeadEntering}
       >
         <Animated.View
-          style={[styles.successCheck, checkGlowStyle]}
+          style={[
+            styles.successCheck,
+            checkGlowStyle,
+            { backgroundColor: A.main, shadowColor: A.main },
+          ]}
         >
-          <Text style={styles.successCheckText}>✓</Text>
+          <Text style={[styles.successCheckText, { color: A.ink }]}>✓</Text>
         </Animated.View>
-        <Text style={styles.successTitle}>{title}</Text>
+        <Text style={[styles.successTitle, { color: A.title }]}>{title}</Text>
       </Animated.View>
 
       <Animated.View
@@ -704,15 +718,15 @@ function SuccessPanel({
         entering={reduceMotion ? undefined : successCardEntering}
       >
         <Animated.View
-          style={styles.successCornerTL}
+          style={[styles.successCornerTL, { borderColor: A.main }]}
           entering={reduceMotion ? undefined : successAccentEntering}
         />
         <Animated.View
-          style={styles.successCornerBR}
+          style={[styles.successCornerBR, { borderColor: A.main }]}
           entering={reduceMotion ? undefined : successAccentEntering}
         />
         <Animated.View
-          style={styles.successPlate}
+          style={[styles.successPlate, { backgroundColor: A.main }]}
           entering={reduceMotion ? undefined : successAccentEntering}
         />
         <View style={styles.successCard}>
@@ -738,10 +752,14 @@ function SuccessPanel({
           </View>
 
           <View style={styles.successBody}>
-            <View style={styles.successBadgeBox}>
+            <View
+              style={[styles.successBadgeBox, { borderColor: A.borderSoft }]}
+            >
               <View style={styles.successBrandCluster}>
                 <ProCyberBadgeNative premium />
-                <Text style={styles.successBrand}>UNITERZ</Text>
+                <Text style={[styles.successBrand, { color: A.title }]}>
+                  UNITERZ
+                </Text>
                 {!reduceMotion ? (
                   <Animated.View
                     pointerEvents="none"
@@ -762,43 +780,52 @@ function SuccessPanel({
                   </Animated.View>
                 ) : null}
               </View>
-              <View style={styles.successHair} />
-              <Text style={styles.successStatus}>{statusLine}</Text>
-              <Text style={styles.successPrice}>
+              <View style={[styles.successHair, { backgroundColor: A.main }]} />
+              <Text style={[styles.successStatus, { color: A.muted }]}>
+                {statusLine}
+              </Text>
+              <Text style={[styles.successPrice, { color: A.main }]}>
                 {trial ? (ja ? "無料 → その後 " : "FREE → THEN ") : ""}
                 {price}
                 {trial ? period : ""}
               </Text>
             </View>
 
-            <View style={styles.successMeta}>
+            <View style={[styles.successMeta, { borderTopColor: A.borderSoft }]}>
               {trial ? (
                 <>
-                  <MetaRow label="START" value={started} />
-                  <MetaRow label="ENDS" value={trialEndLabel} />
+                  <MetaRow accent={A} label="START" value={started} />
+                  <MetaRow accent={A} label="ENDS" value={trialEndLabel} />
                   <MetaRow
+                    accent={A}
                     label="CHARGE"
                     value={ja ? "期間中解約で課金なし" : "Cancel in trial = ¥0"}
                   />
                 </>
               ) : (
                 <>
-                  <MetaRow label="START" value={started} />
-                  <MetaRow label="PLAN_ID" value={planId} />
+                  <MetaRow accent={A} label="START" value={started} />
+                  <MetaRow accent={A} label="PLAN_ID" value={planId} />
                 </>
               )}
             </View>
 
             <Pressable
-              style={styles.successPrimary}
+              style={[
+                styles.successPrimary,
+                { backgroundColor: A.main },
+              ]}
               onPress={onOpenSkin}
             >
-              <Text style={styles.successPrimaryText}>
+              <Text style={[styles.successPrimaryText, { color: A.ink }]}>
                 {ja ? "Pro Skin を選ぶ" : "Choose Pro Skin"}
               </Text>
             </Pressable>
-            <Pressable onPress={onAgain} style={styles.successSecondary}>
-              <Text style={styles.successSecondaryText}>
+            <Pressable
+              onPress={onAgain}
+              style={[styles.successSecondary, { borderColor: A.borderSoft }]}
+            >
+              <Text style={[styles.successSecondaryText, { color: A.soft }]}>
                 {ja ? "プラン選択に戻る" : "Back to plans"}
               </Text>
             </Pressable>

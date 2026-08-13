@@ -1,17 +1,14 @@
 /**
- * 試合確定後の得点サマリー（平均・中央値・最高・自分）。
- * games/{id}.pointsDistribution 1 read + 自分の post 得点（親から渡す）。
- * posts コレクションの全件読みはしない。
+ * 試合確定後の得点サマリー（中央値・最高・自分）。
+ * games/{id}.pointsSummary（なければ旧 pointsDistribution）1 read。
+ * posts 全件読みはしない。分布 bins は使わない。
  */
 "use client";
 
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import {
-  parseGamePointsDistributionV1,
-  rawPointsDistributionFromGameDoc,
-} from "@/lib/results/gamePointsDistribution";
+import { resolveGamePointsSummary } from "@/lib/results/gamePointsSummary";
 
 export type GamePointsSummaryStats = {
   mean: number | null;
@@ -59,35 +56,23 @@ export function useGamePointsSummaryStats(input: {
       try {
         const snap = await getDoc(doc(db, "games", gameId.trim()));
         if (cancelled) return;
-        const raw = rawPointsDistributionFromGameDoc(
-          snap.exists() ? (snap.data() as Record<string, unknown>) : null
-        );
-        const dist = parseGamePointsDistributionV1(raw);
-        if (!dist) {
+        if (!snap.exists()) {
           setState({ ...idle, ready: true, myScore });
           return;
         }
-        const maxFromBins =
-          dist.max ??
-          (dist.bins.length
-            ? Math.max(
-                ...dist.bins.flatMap((b) =>
-                  b.count > 0 ? [b.hi === b.lo ? b.lo : b.hi - 0.01] : []
-                ),
-                0
-              )
-            : null);
+        const summary = resolveGamePointsSummary(
+          snap.data() as Record<string, unknown>
+        );
+        if (!summary) {
+          setState({ ...idle, ready: true, myScore });
+          return;
+        }
         setState({
-          mean: dist.mean,
-          median: dist.median,
-          max:
-            typeof dist.max === "number" && Number.isFinite(dist.max)
-              ? dist.max
-              : maxFromBins != null && Number.isFinite(maxFromBins)
-                ? maxFromBins
-                : null,
+          mean: null,
+          median: summary.median,
+          max: summary.max,
           myScore,
-          n: dist.n,
+          n: summary.n,
           ready: true,
         });
       } catch {

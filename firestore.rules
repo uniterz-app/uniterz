@@ -339,6 +339,11 @@ service cloud.firestore {
         allow read: if true;
         allow write: if false;
       }
+
+      match /profileCharts/{seasonKey} {
+        allow read: if true;
+        allow write: if false;
+      }
     }
 
     // user_career — CAREER 通算正本。Functions / Admin API のみ書込。公開読取。

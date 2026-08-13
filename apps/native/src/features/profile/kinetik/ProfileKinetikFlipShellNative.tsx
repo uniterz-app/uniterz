@@ -20,12 +20,15 @@ type Props = {
   language: "ja" | "en";
   front: ReactNode;
   back: ReactNode;
+  /** 裏面表示時に true — CAREER データの遅延読込用 */
+  onFlipChange?: (flipped: boolean) => void;
 };
 
 export default function ProfileKinetikFlipShellNative({
   language: _language,
   front,
   back,
+  onFlipChange,
 }: Props) {
   const reduceMotion = useReducedMotion() === true;
   const [flipped, setFlipped] = useState(false);
@@ -35,6 +38,7 @@ export default function ProfileKinetikFlipShellNative({
   const toggle = useCallback(() => {
     const next = !flipped;
     setFlipped(next);
+    onFlipChange?.(next);
     if (reduceMotion) {
       progress.value = next ? 1 : 0;
       return;
@@ -43,7 +47,7 @@ export default function ProfileKinetikFlipShellNative({
       duration: FLIP_MS,
       easing: Easing.out(Easing.cubic),
     });
-  }, [flipped, progress, reduceMotion]);
+  }, [flipped, onFlipChange, progress, reduceMotion]);
 
   const frontEar = useMemo(
     () => ({

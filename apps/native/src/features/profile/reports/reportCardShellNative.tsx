@@ -9,16 +9,21 @@ type ShellProps = {
   style?: StyleProp<ViewStyle>;
   children: ReactNode;
   borderRadius?: number;
+  /** true で背景方眼を描画しない（リザルト詳細など） */
+  hideGrid?: boolean;
 };
 
 export function WeeklyReportCardShell({
   style,
   children,
   borderRadius = CARD_RADIUS,
+  hideGrid = false,
 }: ShellProps) {
   return (
     <View style={[{ overflow: "hidden" }, style]}>
-      <ReportSquareGridOverlay borderRadius={borderRadius} />
+      {!hideGrid ? (
+        <ReportSquareGridOverlay borderRadius={borderRadius} />
+      ) : null}
       {children}
     </View>
   );

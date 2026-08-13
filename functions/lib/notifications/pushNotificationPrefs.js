@@ -37,6 +37,8 @@ function prefKeyForPushType(type) {
             return "gameFinal";
         case "ranking_updated":
             return "rankingUpdated";
+        case "unit_reward":
+            return "rankingUpdated";
         case "injury_status":
             return "injuryStatus";
         case "starter_change":

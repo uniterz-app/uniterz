@@ -11,6 +11,8 @@ export type OpenPublicProfileParams = {
   fromRankings?: boolean;
   fromLeaderboards?: boolean;
   leaderboardsGroupId?: string;
+  fromResultDetail?: boolean;
+  resultDetailPostId?: string;
 };
 
 export function navigateToPublicProfileNative(
@@ -20,10 +22,13 @@ export function navigateToPublicProfileNative(
   const handle = params.handle.trim();
   if (!handle) return;
 
+  const resultDetailPostId = params.resultDetailPostId?.trim();
   const screenParams: ProfileStackParamList["PublicProfile"] = {
     handle,
     ...(params.fromRankings ? { fromRankings: true } : {}),
     ...(params.fromLeaderboards ? { fromLeaderboards: true } : {}),
+    ...(params.fromResultDetail ? { fromResultDetail: true } : {}),
+    ...(resultDetailPostId ? { resultDetailPostId } : {}),
     ...(params.leaderboardsGroupId
       ? { leaderboardsGroupId: params.leaderboardsGroupId }
       : {}),

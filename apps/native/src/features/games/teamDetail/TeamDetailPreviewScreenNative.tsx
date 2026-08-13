@@ -26,6 +26,7 @@ export default function TeamDetailPreviewScreenNative({
           : "Rebuild preview · metrics with league ranks"
       }
       appBackground
+      edgeBack
       onClose={onClose}
     >
       <NbaTeamDetailPanelNative

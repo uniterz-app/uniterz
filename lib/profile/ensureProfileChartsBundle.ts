@@ -21,6 +21,7 @@ import {
   type ProfileChartsLast20Point,
   type ProfileChartsRankPoint,
 } from "@/lib/profile/profileChartsBundle";
+import { profileChartsNestedFields } from "@/lib/profile/profileChartsStorage";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import {
   profileOverviewDateKeysEndingAt,
@@ -192,17 +193,25 @@ async function writeCompleteBundle(
   bundle: CompleteProfileChartsBundle
 ): Promise<void> {
   const adminDb = getAdminDb();
+  const builtAtMs = bundle.builtAtMs;
+  const chartsPayload = {
+    v: bundle.v,
+    seasonKey: bundle.seasonKey,
+    dailyTrend: bundle.dailyTrend,
+    rankTrend: bundle.rankTrend,
+    last20: bundle.last20,
+    builtAtMs,
+  };
   await adminDb.collection("cumulative_stats").doc(uid).set(
-    {
-      "profileCharts.v": bundle.v,
-      "profileCharts.seasonKey": bundle.seasonKey,
-      "profileCharts.dailyTrend": bundle.dailyTrend,
-      "profileCharts.rankTrend": bundle.rankTrend,
-      "profileCharts.last20": bundle.last20,
-      "profileCharts.builtAtMs": bundle.builtAtMs,
-    },
+    profileChartsNestedFields({ ...bundle, builtAtMs }),
     { merge: true }
   );
+  await adminDb
+    .collection("cumulative_stats")
+    .doc(uid)
+    .collection("profileCharts")
+    .doc(bundle.seasonKey)
+    .set(chartsPayload, { merge: true });
 }
 
 /**
@@ -239,7 +248,18 @@ export async function ensureProfileChartsBundle(
     const cumData = cumSnap.exists
       ? (cumSnap.data() as Record<string, unknown>)
       : null;
-    const parsed = parseProfileChartsBundle(cumData, seasonKey);
+    const subSnap = await adminDb
+      .collection("cumulative_stats")
+      .doc(safeUid)
+      .collection("profileCharts")
+      .doc(seasonKey)
+      .get();
+    const parsed = subSnap.exists
+      ? parseProfileChartsBundle(
+          { profileCharts: subSnap.data() },
+          seasonKey
+        )
+      : parseProfileChartsBundle(cumData, seasonKey);
 
     if (!options?.forceRebuild && isProfileChartsComplete(parsed)) {
       const allEmpty =
