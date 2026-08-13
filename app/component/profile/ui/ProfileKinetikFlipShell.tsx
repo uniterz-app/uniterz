@@ -63,7 +63,7 @@ export default function ProfileKinetikFlipShell({
     perspective: reduceMotion ? undefined : 1200,
   };
 
-  const cardStyle: CSSProperties = reduceMotion
+  const cardStyle: CSSProperties | undefined = reduceMotion
     ? undefined
     : {
         transformStyle: "preserve-3d",
@@ -71,7 +71,7 @@ export default function ProfileKinetikFlipShell({
         transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
       };
 
-  const faceBase: CSSProperties = reduceMotion
+  const faceBase: CSSProperties | undefined = reduceMotion
     ? undefined
     : {
         backfaceVisibility: "hidden",
