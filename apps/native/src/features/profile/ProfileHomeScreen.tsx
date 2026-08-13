@@ -1319,6 +1319,48 @@ export default function ProfileHomeScreen({
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
+        else if (page === "restartTutorial" && __DEV__) {
+          void (async () => {
+            const uid = fUser?.uid ?? null;
+            const {
+              prepareTutorialRestartNative,
+              pulseTutorialRestartNative,
+            } = await import("../tutorial/tutorialRestartEventsNative");
+            const at = await prepareTutorialRestartNative(uid);
+            /** Stack → Tab まで親をたどる（getParent 1段だと届かないことがある） */
+            let tabNav:
+              | BottomTabNavigationProp<MainTabParamList>
+              | undefined;
+            let cursor: { getParent?: () => unknown } | undefined =
+              navigation as { getParent?: () => unknown };
+            for (let i = 0; i < 4 && cursor; i += 1) {
+              const parent = cursor.getParent?.() as
+                | {
+                    getState?: () => { routeNames?: string[] };
+                    navigate?: BottomTabNavigationProp<MainTabParamList>["navigate"];
+                  }
+                | undefined;
+              if (!parent) break;
+              if (parent.getState?.()?.routeNames?.includes("GamesTab")) {
+                tabNav = parent as BottomTabNavigationProp<MainTabParamList>;
+                break;
+              }
+              cursor = parent as { getParent?: () => unknown };
+            }
+            const nav = tabNav ?? tabNavigation;
+            nav.navigate({
+              name: "GamesTab",
+              params: {
+                screen: "GamesHome",
+                params: { restartTutorialAt: at },
+                initial: false,
+              },
+              merge: true,
+            });
+            /** lazy タブがマウントされるまでイベントを連続送出 */
+            pulseTutorialRestartNative();
+          })();
+        }
         else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
         else if (page === "futuristicBgPreview" && __DEV__)
           navigation.navigate("FuturisticBgPreview");
@@ -1348,6 +1390,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("UniterzLogoTypePreview");
         else if (page === "resultCardDesignPreview" && __DEV__)
           navigation.navigate("ResultCardDesignPreview");
+        else if (page === "splashLogoPreview" && __DEV__)
+          navigation.navigate("SplashLogoPreview");
         else if (page === "teamStatsPreview" && __DEV__)
           navigation.navigate("TeamStatsPreview");
         else if (page === "playerStatsPreview" && __DEV__)
@@ -1390,10 +1434,12 @@ export default function ProfileHomeScreen({
       />
     ) : null}
     {!isPublicProfileView ? (
-      <TutorialLiveHostNative
-        page="profile"
-        language={(language === "en" ? "en" : "ja") as Language}
-      />
+      <View style={styles.tutorialHostLayer} pointerEvents="box-none">
+        <TutorialLiveHostNative
+          page="profile"
+          language={(language === "en" ? "en" : "ja") as Language}
+        />
+      </View>
     ) : null}
     </View>
   );
@@ -1404,6 +1450,11 @@ const styles = StyleSheet.create({
     flex: 1,
     position: "relative",
     backgroundColor: "transparent",
+  },
+  tutorialHostLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 500,
+    elevation: 500,
   },
   scroll: {
     flex: 1,

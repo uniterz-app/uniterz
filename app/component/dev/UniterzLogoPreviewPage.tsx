@@ -2,7 +2,7 @@
 
 /**
  * /mobile/uniterz-logo · /dev/uniterz-logo
- * 確定版 UNITERZ ロゴ（画像）プレビュー。
+ * 確定版 UNITERZ ロゴ（線＋線グロー）プレビュー。
  */
 import { nameOxanium } from "@/lib/fonts";
 import UniterzLogo from "@/app/component/units/UniterzLogo";

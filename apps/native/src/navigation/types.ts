@@ -27,6 +27,8 @@ export type GamesStackParamList = {
         };
         /** アワード/順位予想などから戻るときサイドメニューを開く */
         openMenu?: boolean;
+        /** DEV「チュートリアル再開」— 変更のたび welcome を強制 */
+        restartTutorialAt?: number;
       }
     | undefined;
   GamePredict: { gameId: string };
@@ -149,6 +151,8 @@ export type ProfileStackParamList = {
   ResultCardDesignPreview: undefined;
   /** __DEV__ リザルト詳細デザイン用プレビュー */
   ResultDetailDesignPreview: undefined;
+  /** __DEV__ サイバーロゴスプラッシュ */
+  SplashLogoPreview: undefined;
   /** __DEV__ リーグ Team Stats（30 チーム表） */
   TeamStatsPreview: undefined;
   /** __DEV__ リーグ Player Stats（指標トップリーダー） */

@@ -1497,6 +1497,7 @@ export default function PredictionFormV2({
                 skipLabel={m.tutorial.skip}
                 enterWaitHint={m.tutorial.practice.predictEnterWait}
                 submitWaitHint={m.tutorial.practice.predictSubmitWait}
+                toolsWaitHint={m.tutorial.practice.predictToolsWait}
                 enterReady={scoreHome !== "" && scoreAway !== ""}
                 backLabel={m.tutorial.back}
                 onSkip={() => setTutorialAnnotDismissed(true)}

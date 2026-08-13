@@ -111,6 +111,7 @@ import { isProfilePlanProNeoBgVariant } from "../../../../../../lib/profile/prof
 import { isProfilePlanProFuturisticBgVariant } from "../../../../../../lib/profile/profilePlanProFuturisticBgVariants";
 import { isProfilePlanProLabBgVariant } from "../../../../../../lib/profile/profilePlanProLabBgVariants";
 import { isProfilePlanProWaveBgVariant } from "../../../../../../lib/profile/profilePlanProWaveBgVariants";
+import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
 
 const OXANIUM_BOLD = "Oxanium_700Bold";
 const OXANIUM_EXTRA = "Oxanium_800ExtraBold";
@@ -1883,26 +1884,36 @@ export default function ProfileKinetikPanelNative({
                 {isPro ? <ProCyberBadgeNative premium /> : null}
                 {unitBalance != null && unitBalanceAria ? (
                   <View style={styles.unitVaultInNameRow}>
-                    <KinetikUnitVaultNative
-                      ref={unitVaultRef}
-                      // UI 確認用モック（実残高が 0・演出なしのとき 1,000 を表示）
-                      balance={vaultDisplayBalance}
-                      ariaLabel={
-                        onOpenUnitLedger
-                          ? isJa
-                            ? `${unitBalanceAria} · 履歴を開く`
-                            : `${unitBalanceAria} · Open history`
-                          : unitBalanceAria
-                      }
-                      corner
-                      onPress={onOpenUnitLedger}
-                      absorbPulse={unitEarn.active != null && unitEarn.absorbed}
-                      countUpEnabled={!unitEarn.active || unitEarn.absorbed}
-                      effectsPaused={earnFxPaused}
-                      onCountBusyChange={onVaultCountBusyChange}
-                    />
+                    <TutorialTargetNative id="profile-unit-coin">
+                      <KinetikUnitVaultNative
+                        ref={unitVaultRef}
+                        // UI 確認用モック（実残高が 0・演出なしのとき 1,000 を表示）
+                        balance={vaultDisplayBalance}
+                        ariaLabel={
+                          onOpenUnitLedger
+                            ? isJa
+                              ? `${unitBalanceAria} · 履歴を開く`
+                              : `${unitBalanceAria} · Open history`
+                            : unitBalanceAria
+                        }
+                        corner
+                        onPress={onOpenUnitLedger}
+                        absorbPulse={unitEarn.active != null && unitEarn.absorbed}
+                        countUpEnabled={!unitEarn.active || unitEarn.absorbed}
+                        effectsPaused={earnFxPaused}
+                        onCountBusyChange={onVaultCountBusyChange}
+                      />
+                    </TutorialTargetNative>
                   </View>
-                ) : null}
+                ) : (
+                  /** 残高未取得でも測位用ターゲットを残す（チュートリアル枠ずれ防止） */
+                  <TutorialTargetNative
+                    id="profile-unit-coin"
+                    style={styles.unitVaultInNameRow}
+                  >
+                    <View style={styles.unitCoinTutorialStub} collapsable={false} />
+                  </TutorialTargetNative>
+                )}
               </View>
               {profileFlagUri ? (
                 <View
@@ -2245,6 +2256,12 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     flexShrink: 0,
     alignSelf: "center",
+  },
+  /** 残高未ロード時の測位スタブ（見た目は出さない） */
+  unitCoinTutorialStub: {
+    width: 72,
+    height: 28,
+    opacity: 0,
   },
   nameFlagBelow: {
     marginTop: 6,

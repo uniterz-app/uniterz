@@ -929,8 +929,8 @@ const pt: Messages = {
     pulseHint: "Toque para prever!",
     hybrid: {
       welcomeKicker: "WELCOME",
-      welcomeTitle: "Bem-vindo ao UNITERZ",
-      welcomeBody: "Preveja jogos, ganhe pontos e suba no ranking.",
+      welcomeTitle: "Preveja. Pontue. Suba.",
+      welcomeBody: "Acertos definem o ranking. Um jogo: postar → Resultados → Ranking.",
       flowKicker: "HOW TO PLAY",
       flowTitle: "É simples",
       flowBody: "Toque no card → escolha vencedor e placar → suba ao acertar.",
@@ -946,7 +946,7 @@ const pt: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "Predict games, earn points, and climb the rankings. Next, we'll walk through the basics on this screen.",
+        "Acertos definem o ranking. Um jogo: postar → Resultados → Ranking.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -973,12 +973,13 @@ const pt: Messages = {
       predictToolsTitle: "Info tabs",
       predictToolsBody:
         "INSIGHT (Pro), INJURY, STATS, and ROSTER—check injuries, stats, and rosters before you lock in a pick.",
+      predictToolsWait: "Toque nas abas acima para alternar",
       predictBonusTitle: "Top scorer bonus",
       predictBonusBody:
         "Nail the game's top scorer for +2. When candidates are listed, pick a player.",
       predictEnterTitle: "Enter your scores",
       predictEnterBody: "Fill in both HOME and AWAY predicted scores.",
-      predictEnterWait: "Enter both scores to unlock Next",
+      predictEnterWait: "Enter both scores — submit lights up",
       predictSubmitTitle: "Submit here",
       predictSubmitBody:
         "Send your pick. HIT / MISS shows later on Results.",
@@ -1017,9 +1018,9 @@ const pt: Messages = {
       resultDetailScoreTitle: "Final vs your pick",
       resultDetailScoreBody:
         "The big numbers are the final score; below is your prediction. HIT if you got the winner, MISS if not.",
-      resultDetailStatsTitle: "Three metrics",
+      resultDetailStatsTitle: "Two metrics",
       resultDetailStatsBody:
-        "Score precision (0–10) tracks how close your scores were. Upset adds points for long-shot hits. Total score is win points plus bonuses.",
+        "Upset is the underdog-hit bonus. Score is win points plus bonuses. Scroll for more.",
       resultDetailMoreTitle: "More below",
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",
@@ -1036,11 +1037,37 @@ const pt: Messages = {
       profileBody:
         "Your page shows stats, streaks, settings, and plans. Change avatar and display name here.",
       profileMockStats: "Hit rate · Streak · Total points",
+      horizonFeatureTag: "Novo",
+      horizonSquadWhatTitle: "What is Squad Battle?",
+      horizonSquadWhatBody:
+        "Form a **squad of 3–5** and compete on **every member's average score** in a **limited-time event**.\nSeparate from **Groups** (friend boards) — this is its **own battlefield**.\nRuns about **once every two months** for **one month** of weekly and monthly ranks.",
+      horizonSquadHowTitle: "Joining a squad",
+      horizonSquadHowBody:
+        "From **Groups**, **apply** to an open squad or join with an **invite code**.\nDuring the event, **weekly (×4)** and **monthly (×1)** standings update.\n**All members** of top squads receive **UNIT**.",
+      horizonUnitWhatTitle: "What is UNIT?",
+      horizonUnitWhatBody:
+        "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
+      horizonUnitHowTitle: "Earning UNIT",
+      horizonUnitHowBody:
+        "Earn from **weekly/monthly rankings** and **Squad Battle** rewards.\nWhen you earn, a celebration plays on Profile and the balance updates here.\nSave UNIT to **redeem** skins and items.",
+      horizonCareerWhatTitle: "What is Career?",
+      horizonCareerWhatBody:
+        "Your predictor **track record** — like a résumé.\nSee **hit rate, streaks, season ranks**, and **long-term stats**.\nSpot growth that short-term rankings alone won't show.",
+      horizonCareerHowTitle: "Opening Career",
+      horizonCareerHowBody:
+        "Tap **CAREER** at the top of Profile.\nSwitch **by season** to look back.\nFlip **PROFILE ↔ CAREER** to compare now vs. your history.",
+      horizonStatsWhatTitle: "What is STATS?",
+      horizonStatsWhatBody:
+        "**Team and player stats** from the **Games** tab.\nUse for **pre-pick research** — scoring, efficiency, recent form.\nLinks to the live **STATS hub** backed by real data.",
+      horizonStatsHowTitle: "Opening STATS",
+      horizonStatsHowBody:
+        "The highlighted **yellow STATS** tab opens it (or swipe from the right edge).\n**Tap STATS** to try it, or press **Start the app** below when you're ready.",
       doneTitle: "You're ready",
       doneBody:
         "That's the UNITERZ loop. Predict real games and climb the ranks.",
       finishCta: "Start the app",
       tapNavHint: "Tap the tab below, or press Next to go",
+      progressLabel: "{current} / {total}",
     },
   },
 

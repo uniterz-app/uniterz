@@ -24,6 +24,7 @@ import {
   TUTORIAL_CTA_DELAY_MS,
   TUTORIAL_SLIDE_DURATION_MS,
 } from "../../../../../lib/tutorial/tutorialMotion";
+import TutorialRichBodyNative from "./TutorialRichBodyNative";
 
 export type TutorialHybridFinishReason = "skip" | "complete";
 
@@ -115,7 +116,7 @@ export default function TutorialHybridIntroNative({
           >
             <Text style={styles.kicker}>{slide.kicker}</Text>
             <Text style={styles.title}>{slide.title}</Text>
-            <Text style={styles.body}>{slide.body}</Text>
+            <TutorialRichBodyNative text={slide.body} style={styles.body} />
           </Animated.View>
 
           <View style={styles.dots}>

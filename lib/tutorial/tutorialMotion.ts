@@ -89,9 +89,37 @@ export const TUTORIAL_CALLOUT_GLASS_BLUR_INTENSITY = 40;
 
 /**
  * 予想オーバーレイ入場後に注釈を出す遅延。
- * オーバーレイと同時だと Safari / RN で一瞬フォームの裏に回ることがある。
+ * シートが落ち着いてから、暗幕→枠→吹き出しの順で出す。
  */
-export const TUTORIAL_PREDICT_ANNOT_REVEAL_DELAY_MS = 320;
+export const TUTORIAL_PREDICT_ANNOT_REVEAL_DELAY_MS = 720;
+
+/** 注釈の暗幕フェード */
+export const TUTORIAL_PREDICT_ANNOT_SCRIM_MS = 360;
+export const TUTORIAL_PREDICT_ANNOT_SCRIM_S =
+  TUTORIAL_PREDICT_ANNOT_SCRIM_MS / 1000;
+
+/** 吹き出し・誘導線の開始ディレイ（暗幕のあと） */
+export const TUTORIAL_PREDICT_ANNOT_CALLOUT_DELAY_MS = 340;
+export const TUTORIAL_PREDICT_ANNOT_CALLOUT_DELAY_S =
+  TUTORIAL_PREDICT_ANNOT_CALLOUT_DELAY_MS / 1000;
+
+/** 吹き出し・誘導線のフェード */
+export const TUTORIAL_PREDICT_ANNOT_CALLOUT_MS = 580;
+export const TUTORIAL_PREDICT_ANNOT_CALLOUT_S =
+  TUTORIAL_PREDICT_ANNOT_CALLOUT_MS / 1000;
+
+/** コーチ（LiveCoach）暗幕 */
+export const TUTORIAL_COACH_SCRIM_MS = 420;
+export const TUTORIAL_COACH_SCRIM_S = TUTORIAL_COACH_SCRIM_MS / 1000;
+
+/** コーチ吹き出しの開始ディレイ */
+export const TUTORIAL_COACH_CALLOUT_DELAY_MS = 260;
+export const TUTORIAL_COACH_CALLOUT_DELAY_S =
+  TUTORIAL_COACH_CALLOUT_DELAY_MS / 1000;
+
+/** コーチ吹き出しフェード */
+export const TUTORIAL_COACH_CALLOUT_MS = 560;
+export const TUTORIAL_COACH_CALLOUT_S = TUTORIAL_COACH_CALLOUT_MS / 1000;
 
 /** 予想注釈の z-index（ScheduleList overlay=100000 / LiveCoach=1000060 より上） */
 export const TUTORIAL_PREDICT_ANNOT_Z_INDEX = 1000200;

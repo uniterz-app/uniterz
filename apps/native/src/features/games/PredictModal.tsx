@@ -4,6 +4,7 @@ import {
   Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { colors, spacing } from "../../theme/tokens";
 import {
@@ -69,6 +70,8 @@ import {
   predictModalBackdropExit,
   predictModalPreviewEnter,
   predictModalSheetEnter,
+  predictModalTutorialBackdropEnter,
+  predictModalTutorialSheetEnter,
   predictModalSheetExit,
   predictBlockFadeUpEnter,
   predictPanelRevealEnter,
@@ -85,7 +88,10 @@ import PredictOverlayCyberFormPanelNative from "./PredictOverlayCyberFormPanelNa
 import PredictOverlayScoreInputNative from "./PredictOverlayScoreInputNative";
 import TutorialPredictAnnotatorNative from "../tutorial/TutorialPredictAnnotatorNative";
 import TutorialTargetNative from "../tutorial/TutorialTargetNative";
-import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
+import {
+  registerTutorialScrollHost,
+  registerTutorialTarget,
+} from "../tutorial/tutorialMeasureNative";
 import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
 import type { Language } from "../../../../../lib/i18n/language";
 import PredictOverlaySubmitButtonNative from "./PredictOverlaySubmitButtonNative";
@@ -239,6 +245,27 @@ export function PredictMatchPreview({
   const captureRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
   const resultCopy = i18nT(language).results;
+
+  /** リザルト詳細チュートリアル: カード全体を1つの穴として測る */
+  useEffect(() => {
+    if (!mergedFinal) return;
+    return registerTutorialTarget("result-detail-card", () =>
+      new Promise((resolve) => {
+        const node = captureRef.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width < 1 || height < 1) {
+            resolve(null);
+            return;
+          }
+          resolve({ x, y, width, height });
+        });
+      })
+    );
+  }, [mergedFinal]);
   const { centerBlock, seriesPair } = data;
   const isKnockout = data.knockout === true;
   const homeTeamId = rawTeamIdFromGameSide(data.homeSide);
@@ -355,9 +382,11 @@ export function PredictMatchPreview({
   const previewBody = (
       <View pointerEvents="box-none" style={s.matchPreviewPaddedContent}>
         {data.roundLabel ? (
-          <Text style={s.matchPreviewRoundPadded} numberOfLines={1}>
-            {data.roundLabel}
-          </Text>
+          <TutorialTargetNative id="predict-round">
+            <Text style={s.matchPreviewRoundPadded} numberOfLines={1}>
+              {data.roundLabel}
+            </Text>
+          </TutorialTargetNative>
         ) : null}
         <TutorialTargetNative id="predict-sides">
         <View style={s.matchPreviewGrid}>
@@ -785,9 +814,6 @@ type PredictModalProps = {
   isProUser?: boolean;
   /** チュートリアル練習用の案内バナー */
   tutorialMode?: boolean;
-  tutorialGuideTitle?: string;
-  tutorialGuideBody?: string;
-  tutorialGuideCta?: string;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -893,12 +919,12 @@ export default function PredictModal({
   myPostId = null,
   isProUser = false,
   tutorialMode = false,
-  tutorialGuideTitle: _tutorialGuideTitle,
-  tutorialGuideBody: _tutorialGuideBody,
-  tutorialGuideCta: _tutorialGuideCta,
 }: PredictModalProps) {
+  const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() ?? false;
   const [tutorialAnnotDismissed, setTutorialAnnotDismissed] = useState(false);
+  const [tutorialUserScrollEnabled, setTutorialUserScrollEnabled] =
+    useState(true);
   const tutorialMsgs = i18nT(
     (language === "en" ? "en" : "ja") as Language
   ).tutorial.practice;
@@ -907,6 +933,7 @@ export default function PredictModal({
 
   useEffect(() => {
     if (visible && tutorialMode) setTutorialAnnotDismissed(false);
+    if (!visible || !tutorialMode) setTutorialUserScrollEnabled(true);
   }, [visible, tutorialMode]);
 
   useEffect(() => {
@@ -914,32 +941,58 @@ export default function PredictModal({
     return registerTutorialScrollHost({
       getOffsetY: () => predictScrollYRef.current,
       scrollBy: (dy, animated) => {
+        /** 連続 scrollBy で古い offset を使わない（枠ずれ防止） */
+        const y = Math.max(0, predictScrollYRef.current + dy);
+        predictScrollYRef.current = y;
         predictScrollRef.current?.scrollTo({
-          y: Math.max(0, predictScrollYRef.current + dy),
+          y,
           animated,
         });
       },
+      setScrollEnabled: setTutorialUserScrollEnabled,
+      getViewportInWindow: () =>
+        new Promise((resolve) => {
+          const node = predictScrollRef.current;
+          if (!node) {
+            resolve(null);
+            return;
+          }
+          node.measureInWindow((_x, y, _w, h) => {
+            resolve(h > 32 ? { y, height: h } : null);
+          });
+        }),
     });
   }, [visible, tutorialMode]);
 
   /**
-   * Web オーバーレイ（`PredictionFormV2` overlayEmbedded）: カード以外は入場 stagger なし。
+   * チュートリアル中はスライド入場を避け、ゆったりフェードのみ。
+   * 注釈は TUTORIAL_PREDICT_ANNOT_REVEAL_DELAY_MS 後に重ねる。
    */
-  const toolPanelIn = reduceMotion ? undefined : predictPanelRevealEnter();
+  const toolPanelIn =
+    reduceMotion || tutorialMode ? undefined : predictPanelRevealEnter();
   /** オーバーレイ内包時は stagger なし（Web `overlayEmbedded` 相当） */
   const scoreBlockEnter =
-    reduceMotion || overlayUnifiedForm
+    reduceMotion || tutorialMode || overlayUnifiedForm
       ? undefined
       : predictBlockFadeUpEnter(1);
 
-  const backdropEnter = reduceMotion ? undefined : predictModalBackdropEnter();
+  const backdropEnter = reduceMotion
+    ? undefined
+    : tutorialMode
+      ? predictModalTutorialBackdropEnter()
+      : predictModalBackdropEnter();
   const backdropExit = reduceMotion ? undefined : predictModalBackdropExit();
-  const sheetEnter = reduceMotion ? undefined : predictModalSheetEnter();
+  const sheetEnter = reduceMotion
+    ? undefined
+    : tutorialMode
+      ? predictModalTutorialSheetEnter()
+      : predictModalSheetEnter();
   const sheetExit = reduceMotion ? undefined : predictModalSheetExit();
 
   const [layersVisible, setLayersVisible] = useState(visible);
 
-  const previewEnter = reduceMotion ? undefined : predictModalPreviewEnter();
+  const previewEnter =
+    reduceMotion || tutorialMode ? undefined : predictModalPreviewEnter();
 
   /** 直接対決／市場／詳細スタッツ：タップでパネルを開閉 */
   function handleToolTabPress(
@@ -1120,15 +1173,34 @@ export default function PredictModal({
     (!isEditingPrediction || scoreFormExpanded);
   const canSubmit =
     showScoreInputBlock &&
-    Boolean(winner) &&
     !predictSubmitting &&
     scoreHome !== "" &&
     scoreAway !== "" &&
-    !(
-      isKnockoutPredict &&
-      Number(scoreHome) === Number(scoreAway) &&
-      pkWinner == null
-    );
+    (() => {
+      const homeNum = Number(scoreHome);
+      const awayNum = Number(scoreAway);
+      if (!Number.isFinite(homeNum) || !Number.isFinite(awayNum)) return false;
+      const effectiveWinner =
+        winner ??
+        (homeNum > awayNum
+          ? "home"
+          : awayNum > homeNum
+            ? "away"
+            : isSoccerPredict
+              ? "draw"
+              : isKnockoutPredict
+                ? pkWinner
+                : null);
+      if (!effectiveWinner) return false;
+      if (
+        isKnockoutPredict &&
+        homeNum === awayNum &&
+        pkWinner == null
+      ) {
+        return false;
+      }
+      return true;
+    })();
 
   const modalChromeVisible = visible || exitingUi;
 
@@ -1195,7 +1267,13 @@ export default function PredictModal({
           >
             <KeyboardAvoidingView
               behavior={Platform.OS === "ios" ? "padding" : undefined}
-              style={s.kav}
+              style={[
+                s.kav,
+                {
+                  /** ×・REGULAR SEASON がノッチ/ステータスバーに食い込まない */
+                  paddingTop: Math.max(spacing.md, insets.top),
+                },
+              ]}
               pointerEvents="box-none"
             >
               <ScrollView
@@ -1206,6 +1284,9 @@ export default function PredictModal({
                 style={s.scroll}
                 pointerEvents="auto"
                 scrollEventThrottle={16}
+                scrollEnabled={tutorialUserScrollEnabled}
+                bounces={tutorialUserScrollEnabled}
+                nestedScrollEnabled={tutorialUserScrollEnabled}
                 onScroll={(e) => {
                   predictScrollYRef.current = e.nativeEvent.contentOffset.y;
                 }}
@@ -1585,21 +1666,27 @@ export default function PredictModal({
                               <Text style={s.teamNameLabel} numberOfLines={1}>
                                 {predictHomeTeamLabel || "HOME"}
                               </Text>
-                              <PredictOverlayScoreInputNative
-                                value={scoreHome}
-                                onChangeText={setScoreHome}
-                                placeholder={t.scoreFieldPlaceholder}
-                              />
+                              <TutorialTargetNative id="predict-score-home">
+                                <PredictOverlayScoreInputNative
+                                  tutorialFocusId="home"
+                                  value={scoreHome}
+                                  onChangeText={setScoreHome}
+                                  placeholder={t.scoreFieldPlaceholder}
+                                />
+                              </TutorialTargetNative>
                             </View>
                             <View style={s.scoreCol}>
                               <Text style={s.teamNameLabel} numberOfLines={1}>
                                 {predictAwayTeamLabel || "AWAY"}
                               </Text>
-                              <PredictOverlayScoreInputNative
-                                value={scoreAway}
-                                onChangeText={setScoreAway}
-                                placeholder={t.scoreFieldPlaceholder}
-                              />
+                              <TutorialTargetNative id="predict-score-away">
+                                <PredictOverlayScoreInputNative
+                                  tutorialFocusId="away"
+                                  value={scoreAway}
+                                  onChangeText={setScoreAway}
+                                  placeholder={t.scoreFieldPlaceholder}
+                                />
+                              </TutorialTargetNative>
                             </View>
                           </View>
                           {isKnockoutPredict &&
@@ -1729,21 +1816,27 @@ export default function PredictModal({
                               <Text style={s.teamNameLabel} numberOfLines={1}>
                                 {predictHomeTeamLabel || "HOME"}
                               </Text>
-                              <PredictOverlayScoreInputNative
-                                value={scoreHome}
-                                onChangeText={setScoreHome}
-                                placeholder={t.scoreFieldPlaceholder}
-                              />
+                              <TutorialTargetNative id="predict-score-home">
+                                <PredictOverlayScoreInputNative
+                                  tutorialFocusId="home"
+                                  value={scoreHome}
+                                  onChangeText={setScoreHome}
+                                  placeholder={t.scoreFieldPlaceholder}
+                                />
+                              </TutorialTargetNative>
                             </View>
                             <View style={s.scoreCol}>
                               <Text style={s.teamNameLabel} numberOfLines={1}>
                                 {predictAwayTeamLabel || "AWAY"}
                               </Text>
-                              <PredictOverlayScoreInputNative
-                                value={scoreAway}
-                                onChangeText={setScoreAway}
-                                placeholder={t.scoreFieldPlaceholder}
-                              />
+                              <TutorialTargetNative id="predict-score-away">
+                                <PredictOverlayScoreInputNative
+                                  tutorialFocusId="away"
+                                  value={scoreAway}
+                                  onChangeText={setScoreAway}
+                                  placeholder={t.scoreFieldPlaceholder}
+                                />
+                              </TutorialTargetNative>
                             </View>
                           </View>
                           {isKnockoutPredict &&
@@ -1858,6 +1951,7 @@ export default function PredictModal({
                       <TutorialTargetNative id="predict-submit">
                       <PredictOverlaySubmitButtonNative
                         enabled={canSubmit}
+                        tutorialPulse={tutorialMode}
                         onPress={onSubmit}
                         label={
                           predictSubmitting
@@ -1906,7 +2000,13 @@ export default function PredictModal({
                 backLabel={i18nT((language === "en" ? "en" : "ja") as Language).tutorial.back}
                 enterWaitHint={tutorialMsgs.predictEnterWait}
                 submitWaitHint={tutorialMsgs.predictSubmitWait}
-                enterReady={scoreHome !== "" && scoreAway !== ""}
+                toolsWaitHint={tutorialMsgs.predictToolsWait}
+                enterReady={
+                  scoreHome !== "" &&
+                  scoreAway !== "" &&
+                  Number.isFinite(Number(scoreHome)) &&
+                  Number.isFinite(Number(scoreAway))
+                }
                 onSkip={() => setTutorialAnnotDismissed(true)}
               />
             ) : null}

@@ -24,6 +24,7 @@ import {
   type TutorialPracticePhase,
 } from "../../../../../lib/tutorial/tutorialNbaMock";
 import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
+import TutorialRichBodyNative from "./TutorialRichBodyNative";
 
 type Props = {
   open: boolean;
@@ -411,7 +412,7 @@ export default function TutorialPracticeTourNative({
             </View>
 
             <Text style={styles.title}>{title}</Text>
-            <Text style={styles.body}>{body}</Text>
+            <TutorialRichBodyNative text={body} style={styles.body} />
           </Animated.View>
         </ScrollView>
 

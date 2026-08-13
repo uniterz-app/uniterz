@@ -1,4 +1,4 @@
-import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
@@ -20,7 +20,6 @@ import {
   type GameCardEntranceVariant,
 } from "./useGameCardListRowEntrance";
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
-import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
 type ScreenStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
 type GameCardListProps = {
@@ -186,7 +185,6 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   });
 
   return (
-    <View ref={cardMeasureRef} collapsable={false}>
     <AnimatedPressable
       collapsable={false}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
@@ -199,23 +197,17 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
         if (reduceMotion) return;
         ent.pressed.value = withTiming(0, { duration: 160 });
       }}
-      style={[
-        styles.gameCardOuter,
-        ent.shellTransformStyle,
-        showTutorialPulse
-          ? {
-              borderWidth: 2,
-              borderColor: TUTORIAL_CYAN,
-              overflow: "visible" as const,
-              // パルス枠・バッジがリスト端で見切れない余白
-              marginTop: 4,
-            }
-          : null,
-      ]}
+      style={[styles.gameCardOuter, ent.shellTransformStyle]}
     >
-      {showTutorialPulse ? (
-        <TutorialCardTapHintNative label={tutorialPulseLabel} />
-      ) : null}
+      {/*
+        測定・パルス枠はカード実寸（Clip）に一致させる。
+        外側 View に置くと一覧幅まで伸びて枠がカードより大きく見える。
+      */}
+      <View
+        ref={cardMeasureRef}
+        collapsable={false}
+        style={rowStyles.cardMeasure}
+      >
       <MatchListCyberClipNative
         predicted={isPredicted}
         strokeOpacityStyle={ent.borderStrokeStyle}
@@ -402,8 +394,12 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
         </View>
         </Animated.View>
       </MatchListCyberClipNative>
+      {/* カード面の後ろに回らないよう、クリップの後・高 zIndex で重ねる */}
+      {showTutorialPulse ? (
+        <TutorialCardTapHintNative label={tutorialPulseLabel} />
+      ) : null}
+      </View>
     </AnimatedPressable>
-    </View>
   );
 });
 
@@ -431,3 +427,12 @@ export default function GameCardList(props: GameCardListProps) {
     </View>
   );
 }
+
+const rowStyles = StyleSheet.create({
+  /** クリップと同寸。親一覧幅へ伸びないよう width 100% のみ */
+  cardMeasure: {
+    position: "relative",
+    width: "100%",
+    overflow: "visible",
+  },
+});

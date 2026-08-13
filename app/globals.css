@@ -3768,6 +3768,205 @@ body.splash-bg {
   }
 }
 
+/* ============================================================
+   スプラッシュ：サイバーロゴ（枠光ライン → 白塗り出現）
+   ============================================================ */
+
+.splash-logo-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #03070b;
+}
+
+.splash-logo-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.splash-logo-bg-grid,
+.splash-logo-bg-scan {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+}
+
+.splash-logo-bg-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 48%,
+      transparent 20%,
+      rgba(3, 7, 11, 0.55) 70%,
+      #03070b 100%
+    );
+}
+
+.splash-logo-stage {
+  position: relative;
+  z-index: 1;
+  width: min(86vw, 420px);
+  padding-inline: 4px;
+}
+
+.splash-logo-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.splash-logo-edge path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: splash-logo-edge-draw 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.splash-logo-edge path:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.splash-logo-edge path:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.splash-logo-edge path:nth-child(3) {
+  animation-delay: 0.14s;
+}
+.splash-logo-edge path:nth-child(4) {
+  animation-delay: 0s;
+}
+.splash-logo-edge path:nth-child(5) {
+  animation-delay: 0.1s;
+}
+.splash-logo-edge path:nth-child(6) {
+  animation-delay: 0.06s;
+}
+.splash-logo-edge path:nth-child(7) {
+  animation-delay: 0.04s;
+}
+.splash-logo-edge path:nth-child(8) {
+  animation-delay: 0.12s;
+}
+.splash-logo-edge path:nth-child(9) {
+  animation-delay: 0.16s;
+}
+.splash-logo-edge path:nth-child(10),
+.splash-logo-edge path:nth-child(11) {
+  animation-delay: 0.18s;
+  animation-duration: 0.7s;
+}
+
+.splash-logo-fill {
+  opacity: 0;
+  animation: splash-logo-fill-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 1.05s
+    forwards;
+  filter: drop-shadow(0 0 0 transparent);
+}
+
+.splash-logo-bloom {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120%;
+  height: 180%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 245, 255, 0.28) 0%,
+    rgba(0, 245, 255, 0.08) 35%,
+    transparent 68%
+  );
+  opacity: 0;
+  animation: splash-logo-bloom 0.55s ease-out 1.65s forwards;
+}
+
+@keyframes splash-logo-edge-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes splash-logo-fill-in {
+  0% {
+    opacity: 0;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+
+  55% {
+    opacity: 1;
+    filter: drop-shadow(0 0 14px rgba(0, 245, 255, 0.55));
+  }
+
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(0, 245, 255, 0.25));
+  }
+}
+
+@keyframes splash-logo-bloom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+.splash-logo-screen--static .splash-logo-edge path {
+  animation: none;
+  stroke-dashoffset: 0;
+  opacity: 0.35;
+}
+
+.splash-logo-screen--static .splash-logo-fill {
+  animation: none;
+  opacity: 1;
+  filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.3));
+}
+
+.splash-logo-screen--static .splash-logo-bloom {
+  animation: none;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo-edge path {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 0.35;
+  }
+
+  .splash-logo-fill {
+    animation: none;
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.3));
+  }
+
+  .splash-logo-bloom {
+    animation: none;
+    opacity: 0;
+  }
+
+  .splash-logo-bg-grid,
+  .splash-logo-bg-scan {
+    animation: none;
+  }
+}
+
 /* スプラッシュ：充填率は AnimatedSplashScreen の loadProgress01 と同期（inline transform） */
 
 .splash-loading-track {

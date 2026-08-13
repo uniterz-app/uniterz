@@ -22,9 +22,11 @@ export default function PredictOverlayCyberFormPanelNative({
       gradientColors={["rgba(8,12,20,0.94)", "rgba(5,8,14,0.92)"]}
       gradientLocations={[0, 1]}
       borderColor="rgba(0,245,255,0.16)"
+      /** 大きな矩形 shadow が下の送信ボタンに食い込むため弱める */
       shadowColor="#000"
-      shadowOpacity={0.36}
-      shadowRadius={22}
+      shadowOpacity={0.16}
+      shadowRadius={10}
+      overflowHidden
       style={[styles.root, style]}
       contentStyle={[styles.content, contentStyle]}
     >

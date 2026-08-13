@@ -411,56 +411,298 @@ function MockTabs({ highlight }: { highlight?: string }) {
 }
 
 function MockWelcome() {
+  const steps = [
+    { n: "01", label: "予想", en: "PREDICT" },
+    { n: "02", label: "的中", en: "HIT" },
+    { n: "03", label: "ランク", en: "RANK" },
+  ] as const;
   return (
-    <div className="flex w-full flex-col items-center gap-2.5 py-1">
-      <div
-        className="relative flex h-16 w-16 items-center justify-center"
-        style={{
-          filter: `drop-shadow(0 0 14px ${TUTORIAL_CYAN}66)`,
-        }}
+    <div
+      className="relative flex w-full flex-col items-center gap-2.5 overflow-hidden border border-cyan-400/25 bg-[rgba(3,10,18,0.55)] px-3 pb-3 pt-3.5"
+      style={{
+        backgroundImage:
+          "linear-gradient(180deg, rgba(0,245,255,0.14) 0%, transparent 42%, rgba(0,245,255,0.06) 100%)",
+      }}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-0 top-0 h-3 w-3 border-l-2 border-t-2 border-cyan-300"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-0 top-0 h-3 w-3 border-r-2 border-t-2 border-cyan-300"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b-2 border-l-2 border-cyan-300"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b-2 border-r-2 border-cyan-300"
+      />
+      <span
+        className={cn(
+          nameOxanium.className,
+          "absolute left-3.5 top-2 text-[8px] font-black tracking-[0.28em] text-cyan-300/55"
+        )}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element -- 静的ブランドマーク */}
-        <img
-          src="/logo/uniterz-u.svg"
-          alt=""
-          width={64}
-          height={64}
-          className="h-16 w-16 object-contain"
-          draggable={false}
+        BRIEFING
+      </span>
+
+      <div className="relative mt-1.5 flex flex-col items-center gap-1.5">
+        <div
+          aria-hidden
+          className="absolute -top-1.5 h-[88px] w-[88px] rounded-full bg-cyan-400/10"
+          style={{ boxShadow: `0 0 28px ${TUTORIAL_CYAN}88` }}
         />
+        <div
+          className="relative flex h-[76px] w-[76px] items-center justify-center rounded-[18px] border border-cyan-400/45 bg-cyan-400/[0.06]"
+          style={{ boxShadow: `0 0 18px ${TUTORIAL_CYAN}66` }}
+        >
+          <div className="h-[66px] w-[66px] overflow-hidden rounded-[14px] border border-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 静的ブランドマーク */}
+            <img
+              src="/logo/uniterz-u.svg"
+              alt=""
+              width={66}
+              height={66}
+              className="h-full w-full object-contain"
+              draggable={false}
+            />
+          </div>
+        </div>
+        <div
+          className={cn(
+            nameOxanium.className,
+            "text-[30px] font-black tracking-[0.2em]"
+          )}
+          style={{
+            color: "#F2FEFF",
+            textShadow: `0 0 18px ${TUTORIAL_CYAN}77`,
+          }}
+        >
+          UNITERZ
+        </div>
+        <div
+          className={cn(
+            nameOxanium.className,
+            "text-[9px] font-bold tracking-[0.22em] text-cyan-100/70"
+          )}
+        >
+          SCORE PREDICTION PROTOCOL
+        </div>
       </div>
+
+      <div
+        className="h-px w-[92%] bg-gradient-to-r from-transparent via-cyan-300 to-transparent"
+        style={{ boxShadow: `0 0 10px ${TUTORIAL_CYAN}66` }}
+        aria-hidden
+      />
+
+      <div className="relative flex w-full justify-between px-1 pt-1">
+        <div
+          aria-hidden
+          className="absolute left-[16%] right-[16%] top-2.5 h-px bg-cyan-400/35"
+        />
+        {steps.map((s) => (
+          <div key={s.n} className="flex flex-1 flex-col items-center gap-0.5">
+            <span
+              className="mb-0.5 h-1.5 w-1.5 rounded-full bg-cyan-300"
+              style={{ boxShadow: `0 0 8px ${TUTORIAL_CYAN}` }}
+            />
+            <span
+              className={cn(
+                nameOxanium.className,
+                "text-[10px] font-black tracking-[0.14em]"
+              )}
+              style={{ color: TUTORIAL_CYAN }}
+            >
+              {s.n}
+            </span>
+            <span className={cn(jp.className, "text-[13px] font-bold text-white")}>
+              {s.label}
+            </span>
+            <span
+              className={cn(
+                nameOxanium.className,
+                "text-[8px] font-bold tracking-[0.16em] text-cyan-100/55"
+              )}
+            >
+              {s.en}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MockHorizon() {
+  const items = [
+    { num: "1", label: "スクワッドバトル", sub: "仲間とチーム対戦" },
+    { num: "2", label: "UNIT", sub: "通貨・報酬" },
+    { num: "3", label: "キャリア", sub: "成績の軌跡" },
+    { num: "4", label: "STATS", sub: "試合スタッツ" },
+  ];
+  return (
+    <div
+      className="overflow-hidden border border-cyan-400/25 bg-[rgba(6,10,16,0.95)]"
+      style={{ clipPath: CYBER_CHAMFER_CLIP, WebkitClipPath: CYBER_CHAMFER_CLIP }}
+    >
       <div
         className={cn(
           nameOxanium.className,
-          "text-[26px] font-black tracking-[0.18em]"
+          "px-3 pt-2.5 pb-1.5 text-[11px] font-black tracking-[0.12em]"
         )}
-        style={{
-          color: "#E8FBFF",
-          textShadow: `0 0 20px ${TUTORIAL_CYAN}77`,
-        }}
+        style={{ color: TUTORIAL_CYAN }}
       >
-        UNITERZ
+        このあと説明する機能
       </div>
-      <div
-        className="h-px w-[min(200px,70%)] bg-gradient-to-r from-transparent via-cyan-400/85 to-transparent"
-        style={{ boxShadow: `0 0 12px ${TUTORIAL_CYAN}66` }}
-        aria-hidden
-      />
-      <div className="mt-0.5 flex items-center gap-1.5">
-        {["予想", "的中", "ランク"].map((label, i) => (
-          <div key={label} className="flex items-center gap-1.5">
-            {i > 0 ? (
-              <span className="text-[10px] text-cyan-400/50">→</span>
-            ) : null}
+      {items.map((it) => (
+        <div
+          key={it.num}
+          className="flex items-center gap-2.5 border-t border-white/10 px-3 py-2"
+        >
+          <span
+            className={cn(
+              nameOxanium.className,
+              "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border border-cyan-400/45 bg-cyan-400/10 text-[11px] font-extrabold text-cyan-300"
+            )}
+          >
+            {it.num}
+          </span>
+          <span className="min-w-0 flex-1">
             <span
-              className="border border-cyan-400/35 px-2 py-1 text-[10px] font-bold text-cyan-100/90"
-              style={{
-                clipPath: CYBER_CHAMFER_CLIP,
-                WebkitClipPath: CYBER_CHAMFER_CLIP,
-                background: "rgba(0,245,255,0.08)",
-              }}
+              className={cn(
+                nameOxanium.className,
+                "block text-[13px] font-bold text-white"
+              )}
             >
-              {label}
+              {it.label}
+            </span>
+            <span
+              className={cn(
+                nameOxanium.className,
+                "block text-[10px] text-white/45"
+              )}
+            >
+              {it.sub}
+            </span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockHorizonStats() {
+  return (
+    <div className="flex flex-col items-center gap-2 py-1">
+      <div
+        className="relative h-[88px] w-full overflow-hidden border border-white/10 bg-[rgba(4,8,12,0.9)]"
+        style={{ clipPath: CYBER_CHAMFER_CLIP, WebkitClipPath: CYBER_CHAMFER_CLIP }}
+      >
+        <div
+          className={cn(
+            nameOxanium.className,
+            "flex h-full items-center pl-3.5 text-[11px] font-extrabold tracking-[0.2em] text-white/35"
+          )}
+        >
+          GAMES
+        </div>
+        <div
+          className="absolute right-0 top-[22%] flex w-[18px] flex-col items-center gap-0.5 border border-r-0 border-amber-300/70 bg-[rgba(8,12,6,0.95)] py-2"
+        >
+          {"STATS".split("").map((ch, i) => (
+            <span
+              key={`${ch}-${i}`}
+              className={cn(
+                nameOxanium.className,
+                "text-[7px] font-extrabold leading-[8px] text-amber-300"
+              )}
+            >
+              {ch}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className={cn(nameOxanium.className, "text-[10px] tracking-wide text-white/55")}>
+        右端の黄色いタブ
+      </p>
+    </div>
+  );
+}
+
+function MockHorizonUnit() {
+  return (
+    <div
+      className="overflow-hidden border border-cyan-400/25 bg-[rgba(6,10,16,0.95)]"
+      style={{ clipPath: CYBER_CHAMFER_CLIP, WebkitClipPath: CYBER_CHAMFER_CLIP }}
+    >
+      <div className="border-b border-cyan-400/35 bg-cyan-400/15 px-3 py-2">
+        <span
+          className={cn(
+            nameOxanium.className,
+            "text-[11px] font-black tracking-[0.2em] text-cyan-100"
+          )}
+        >
+          UNIT EARN
+        </span>
+      </div>
+      <div className="px-3 py-2.5">
+        <div className={cn(nameOxanium.className, "text-[9px] tracking-wider text-cyan-300/65")}>
+          MINI GAME
+        </div>
+        <div className={cn(nameOxanium.className, "text-[14px] font-bold text-white")}>
+          Play → Earn UNIT
+        </div>
+        <div className="mt-1 text-[11px] text-white/55">
+          プロフィールからいつでも挑戦できる
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MockHorizonCareer() {
+  return (
+    <div
+      className="overflow-hidden border border-cyan-400/25 bg-[rgba(6,10,16,0.95)] p-3"
+      style={{ clipPath: CYBER_CHAMFER_CLIP, WebkitClipPath: CYBER_CHAMFER_CLIP }}
+    >
+      <div className="mb-3 flex items-center gap-3">
+        <div
+          className="flex h-11 w-11 items-center justify-center rounded-full"
+          style={{ background: "rgba(251,191,36,0.95)" }}
+        >
+          <span className={cn(nameOxanium.className, "text-[11px] font-black text-[#050508]")}>
+            REC
+          </span>
+        </div>
+        <div>
+          <div className={cn(nameOxanium.className, "text-[14px] font-bold text-white")}>
+            Career
+          </div>
+          <div className={cn(nameOxanium.className, "text-[9px] tracking-wider text-white/40")}>
+            TRACK RECORD
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-1.5">
+        {[
+          { label: "HITS", value: "42" },
+          { label: "STREAK", value: "5" },
+          { label: "SEASON", value: "A" },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="flex flex-1 flex-col items-center border border-white/10 bg-white/[0.03] py-1.5"
+          >
+            <span className={cn(nameOxanium.className, "text-[13px]")} style={{ color: TUTORIAL_CYAN }}>
+              {s.value}
+            </span>
+            <span className={cn(nameOxanium.className, "mt-0.5 text-[8px] tracking-wider text-white/40")}>
+              {s.label}
             </span>
           </div>
         ))}
@@ -490,6 +732,10 @@ export default function TutorialSlideVisual({ visual, className }: Props) {
       {visual === "rankings" ? <MockRankings /> : null}
       {visual === "groups" ? <MockGroups /> : null}
       {visual === "profile" ? <MockProfile /> : null}
+      {visual === "horizon" ? <MockHorizon /> : null}
+      {visual === "horizon-unit" ? <MockHorizonUnit /> : null}
+      {visual === "horizon-career" ? <MockHorizonCareer /> : null}
+      {visual === "horizon-stats" ? <MockHorizonStats /> : null}
       {tabHighlight ? <MockTabs highlight={tabHighlight} /> : null}
     </div>
   );

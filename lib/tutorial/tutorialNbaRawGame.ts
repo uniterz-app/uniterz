@@ -16,6 +16,8 @@ export function buildTutorialNbaRawGame(tipOff: Date): Record<string, unknown> {
     league: "nba",
     season: "2025-26",
     seasonPhase: "regular",
+    /** 本番 NBA カードと同じ帯ラベル */
+    roundLabel: "REGULAR SEASON",
     status: "scheduled",
     startAt: tipOff,
     startAtJst: tipOff,
@@ -26,6 +28,10 @@ export function buildTutorialNbaRawGame(tipOff: Date): Record<string, unknown> {
       teamId: g.home.teamId,
       abbr: g.home.abbr,
       colorHex: g.home.colorHex,
+      /** 本番カードと同じく戦績を表示（未設定だと (0-0) になる） */
+      wins: 48,
+      losses: 20,
+      rank: 2,
     },
     away: {
       name: g.away.name,
@@ -34,12 +40,17 @@ export function buildTutorialNbaRawGame(tipOff: Date): Record<string, unknown> {
       teamId: g.away.teamId,
       abbr: g.away.abbr,
       colorHex: g.away.colorHex,
+      wins: 42,
+      losses: 26,
+      rank: 6,
     },
     homeTeamId: g.home.teamId,
     awayTeamId: g.away.teamId,
     homeTeamName: g.home.name,
     awayTeamName: g.away.name,
     score: null,
+    /** Web `buildTutorialMatchCardProps` と同じ市場偏り */
+    marketBias: { homePct: 54, awayPct: 46 },
     topScorerCandidates: [
       {
         playerId: "tutorial-tatum",

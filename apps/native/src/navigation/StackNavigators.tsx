@@ -501,6 +501,15 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="SplashLogoPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .SplashLogoPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="TeamStatsPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

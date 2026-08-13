@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 確定版 UNITERZ ロゴ — 参考画像をそのまま表示。
+ * 確定版 UNITERZ ロゴ — 白塗り PNG（ベクター原稿由来）。
  * Native は `UniterzLogoNative`。
  */
 import Image from "next/image";
@@ -11,7 +11,6 @@ export type UniterzLogoProps = {
   width?: number | string;
   height?: number | string;
   className?: string;
-  /** アクセシビリティ用（既定: UNITERZ） */
   title?: string;
 };
 
@@ -44,7 +43,7 @@ export default function UniterzLogo({
       aria-label={title}
     >
       <Image
-        src={webPath}
+        src={`${webPath}?v=vector-fill-2026-08`}
         alt={title}
         width={aw}
         height={ah}
@@ -56,6 +55,7 @@ export default function UniterzLogo({
             : { width: "100%", height: "auto" }
         }
         priority
+        unoptimized
       />
     </span>
   );

@@ -17,6 +17,7 @@ export type TutorialLivePhase =
   | "groups"
   | "gotoProfile"
   | "profile"
+  | "horizon"
   | "done";
 
 export const TUTORIAL_LIVE_PHASE_KEY = "uniterz:tutorialLivePhase:v1";

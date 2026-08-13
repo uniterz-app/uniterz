@@ -1,5 +1,5 @@
 /**
- * Web `UniterzLogo` 相当 — 確定版ロゴ画像をそのまま表示。
+ * Web `UniterzLogo` 相当 — 白塗り PNG（ベクター原稿由来）。
  */
 import {
   Image,
@@ -17,7 +17,6 @@ export type UniterzLogoNativeProps = {
   width?: number;
   height?: number;
   style?: StyleProp<ViewStyle>;
-  /** 親いっぱいに配置（resizeMode で contain / cover） */
   fill?: boolean;
   resizeMode?: ImageResizeMode;
 };
@@ -33,10 +32,7 @@ export default function UniterzLogoNative({
     const contain = resizeMode === "contain";
     return (
       <View
-        style={[
-          contain ? styles.fillWrapContain : styles.fillWrap,
-          style,
-        ]}
+        style={[contain ? styles.fillWrapContain : styles.fillWrap, style]}
         accessibilityLabel="UNITERZ"
         accessibilityRole="image"
       >
@@ -76,7 +72,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-start",
   },
-  /** 親幅に合わせて高さを確保（absoluteFill だと高さが 0 になることがある） */
   fillWrapContain: {
     width: "100%",
     aspectRatio: UNITERZ_LOGO_ASSET.aspectRatio,

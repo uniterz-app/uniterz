@@ -21,12 +21,15 @@ export default function ProfileMenuEdgeHandle({
   hidden = false,
   /** 縦書きラベル（既定 MENU） */
   label = "MENU",
+  /** チュートリアル穴測定（Web data-tutorial-target 相当） */
+  tutorialTargetId,
 }: {
   onOpen: () => void;
   unreadCount?: number;
   ariaLabel?: string;
   hidden?: boolean;
   label?: string;
+  tutorialTargetId?: string;
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -86,6 +89,9 @@ export default function ProfileMenuEdgeHandle({
       className="profile-menu-edge-handle"
       onClick={onOpen}
       aria-label={ariaLabel}
+      {...(tutorialTargetId
+        ? { "data-tutorial-target": tutorialTargetId }
+        : {})}
     >
       {label
         .toUpperCase()

@@ -66,6 +66,7 @@ type Props = {
     | "featureRequest"
     | "electronicNotice"
     | "notificationDev"
+    | "restartTutorial"
     | "seasonPreview"
     | "futuristicBgPreview"
     | "titleSkinPreview"
@@ -81,6 +82,7 @@ type Props = {
     | "unitEarnOverlayFontPreview"
     | "uniterzLogoTypePreview"
     | "resultCardDesignPreview"
+    | "splashLogoPreview"
     | "teamStatsPreview"
     | "playerStatsPreview"
     | "teamDetailPreview"
@@ -268,6 +270,7 @@ export default function ProfileSideMenuModal({
       | "featureRequest"
       | "electronicNotice"
       | "notificationDev"
+      | "restartTutorial"
       | "seasonPreview"
       | "futuristicBgPreview"
       | "titleSkinPreview"
@@ -283,6 +286,7 @@ export default function ProfileSideMenuModal({
       | "unitEarnOverlayFontPreview"
       | "uniterzLogoTypePreview"
       | "resultCardDesignPreview"
+      | "splashLogoPreview"
       | "teamStatsPreview"
       | "playerStatsPreview"
       | "teamDetailPreview"
@@ -592,6 +596,14 @@ export default function ProfileSideMenuModal({
                           通知テスト
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
+                          icon="school-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("restartTutorial")}
+                        >
+                          チュートリアル再開
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
                           icon="trophy-outline"
                           dense
                           labelStyle={labelStyle}
@@ -728,6 +740,14 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           リザルトカード案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="flash-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("splashLogoPreview")}
+                        >
+                          スプラッシュ Logo
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="chart-box-outline"

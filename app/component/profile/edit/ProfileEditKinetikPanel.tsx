@@ -627,6 +627,7 @@ function ProfileUnitVault({
   return (
     <motion.div
       data-unit-vault="1"
+      data-tutorial-target="profile-unit-coin"
       className={[
         "profile-edit-kinetik-unit-vault",
         corner ? "profile-edit-kinetik-unit-vault--corner" : "",

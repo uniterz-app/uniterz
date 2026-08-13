@@ -1,5 +1,5 @@
 /** Web `NbaPredictToolsTabs` 相当 */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
@@ -8,6 +8,7 @@ import {
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
 import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
+import { registerTutorialPredictToolsListener } from "../../tutorial/tutorialPredictToolsBridgeNative";
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
 import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./NbaTeamStatsPanelNative";
@@ -69,6 +70,9 @@ export default function NbaPredictToolsTabsNative({
     ? injuryStatusByPlayerId(injuryReport)
     : {};
 
+  /** チュートリアル・オーバーレイからタブ切替（CyberSlantedTab は触らない） */
+  useEffect(() => registerTutorialPredictToolsListener(setTab), []);
+
   const openProSubscribe = () => {
     navigation.navigate("ProfileTab", { screen: "ProSubscribe" });
   };
@@ -77,6 +81,7 @@ export default function NbaPredictToolsTabsNative({
     <TutorialTargetNative id="predict-tools">
       <View style={styles.root}>
         {/* skew / 選択グローが見切れないようタブ行だけ余白を確保（CyberSlantedTab 本体は変更しない） */}
+        <TutorialTargetNative id="predict-tools-tabs">
         <View style={styles.tabShell}>
           <CyberSlantedTabBarNative fill>
             <CyberSlantedTabNative
@@ -117,6 +122,7 @@ export default function NbaPredictToolsTabsNative({
             />
           </CyberSlantedTabBarNative>
         </View>
+        </TutorialTargetNative>
 
         <View style={styles.panel}>
           {tab === "insight" ? (

@@ -20,22 +20,21 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import cn from "clsx";
 import { nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
 import {
-  TUTORIAL_BG_BLUR_PX,
   TUTORIAL_BG_FADE_S,
   TUTORIAL_CALLOUT_DURATION_S,
-  TUTORIAL_CALLOUT_GLASS_BG,
-  TUTORIAL_CALLOUT_GLASS_BLUR_PX,
-  TUTORIAL_CALLOUT_GLASS_SATURATE,
+  TUTORIAL_COACH_CALLOUT_DELAY_S,
+  TUTORIAL_COACH_CALLOUT_S,
+  TUTORIAL_COACH_SCRIM_S,
   TUTORIAL_CYAN,
   TUTORIAL_FLOAT_PERIOD_S,
   TUTORIAL_FLOAT_Y_PX,
   TUTORIAL_PULSE_PERIOD_S,
   TUTORIAL_SCRIM_OPACITY,
-  TUTORIAL_SPOTLIGHT_DURATION_S,
 } from "@/lib/tutorial/tutorialMotion";
-import { scrollTutorialTargetIntoView } from "@/lib/tutorial/scrollTutorialTargetIntoView";
+import { scrollTutorialTargetIntoViewAsync } from "@/lib/tutorial/scrollTutorialTargetIntoView";
 import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
 import TutorialSlideVisual from "@/app/component/tutorial/TutorialSlideVisual";
+import TutorialRichBody from "@/app/component/tutorial/TutorialRichBody";
 
 const CYBER_CHAMFER_CLIP =
   "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)";
@@ -45,11 +44,12 @@ const PAD = 6;
 /** 試合カードはパルスバッジ分も穴に含める */
 const PAD_MATCH_CARD = 14;
 const PAD_SIDES = 10;
+/** UNIT 残高のカプセル枠 */
+const PAD_UNIT_COIN = 8;
 
 const SCRIM_STYLE: CSSProperties = {
-  background: `rgba(2, 6, 12, ${TUTORIAL_SCRIM_OPACITY})`,
-  backdropFilter: `blur(${TUTORIAL_BG_BLUR_PX}px)`,
-  WebkitBackdropFilter: `blur(${TUTORIAL_BG_BLUR_PX}px)`,
+  /** blur はフェード中にカクつくので単色のみ */
+  background: `rgba(2, 6, 12, ${Math.min(0.52, TUTORIAL_SCRIM_OPACITY + 0.14)})`,
 };
 
 type Rect = { top: number; left: number; width: number; height: number };
@@ -79,6 +79,8 @@ type Props = {
   onTargetPress?: () => void;
   /** 図解（文字だけのモーダルを避ける） */
   visual?: TutorialVisualId | null;
+  /** 主要フェーズ進捗（例: 3 / 11） */
+  progressLabel?: string | null;
   children?: ReactNode;
 };
 
@@ -130,7 +132,9 @@ function readRect(target: string): Rect | null {
   const primary =
     target === "match-card"
       ? readRawRect(target, PAD_MATCH_CARD)
-      : readRawRect(target);
+      : target === "profile-unit-coin"
+        ? readRawRect(target, PAD_UNIT_COIN)
+        : readRawRect(target);
   if (!primary) return null;
 
   if (target === "result-detail-score") {
@@ -225,6 +229,7 @@ export default function TutorialLiveCoach({
   allowInteractBehind = false,
   onTargetPress,
   visual = null,
+  progressLabel = null,
   children,
 }: Props) {
   const [mounted, setMounted] = useState(false);
@@ -265,41 +270,30 @@ export default function TutorialLiveCoach({
 
   useLayoutEffect(() => {
     if (!open) return;
-    /** 固定ナビはスクロール不要。リザルト詳細はカード上端（sides）へ */
-    if (target && !target.startsWith("nav-")) {
-      const scrollId =
-        (target === "result-detail-score" ||
-          target === "result-detail-stats") &&
-        document.querySelector('[data-tutorial-target="predict-sides"]')
-          ? "predict-sides"
-          : target;
-      scrollTutorialTargetIntoView(scrollId, {
-        behavior: reduceMotion ? "auto" : "smooth",
-        idealRatio:
-          target === "result-detail-score" || target === "result-detail-stats"
-            ? 0.16
-            : 0.28,
-      });
-    }
-    measure();
-    const onResize = () => {
-      measure();
-      /** コールアウトも測り直し（誘導線用） */
+    let cancelled = false;
+
+    const syncCalloutBox = () => {
       const el = document.getElementById("tutorial-live-coach-callout");
-      if (el) {
-        const r = el.getBoundingClientRect();
-        setCalloutBox({
-          top: r.top,
-          left: r.left,
-          width: r.width,
-          height: r.height,
-        });
-      }
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setCalloutBox({
+        top: r.top,
+        left: r.left,
+        width: r.width,
+        height: r.height,
+      });
+    };
+
+    const onResize = () => {
+      if (cancelled) return;
+      measure();
+      syncCalloutBox();
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
-    const t = window.setTimeout(measure, 80);
-    const t2 = window.setTimeout(() => {
+
+    void (async () => {
+      /** 固定ナビはスクロール不要。リザルト詳細はカード上端（sides）へ */
       if (target && !target.startsWith("nav-")) {
         const scrollId =
           (target === "result-detail-score" ||
@@ -307,23 +301,41 @@ export default function TutorialLiveCoach({
           document.querySelector('[data-tutorial-target="predict-sides"]')
             ? "predict-sides"
             : target;
-        scrollTutorialTargetIntoView(scrollId, {
-          behavior: "auto",
-          idealRatio:
-            target === "result-detail-score" ||
-            target === "result-detail-stats"
-              ? 0.16
-              : 0.28,
-        });
+        const scrollOpts =
+          target === "result-card"
+            ? {
+                behavior: "auto" as const,
+                align: "top" as const,
+                topPad: 152,
+              }
+            : {
+                behavior: reduceMotion
+                  ? ("auto" as const)
+                  : ("smooth" as const),
+                idealRatio:
+                  target === "result-detail-score" ||
+                  target === "result-detail-stats"
+                    ? 0.16
+                    : 0.28,
+              };
+        await scrollTutorialTargetIntoViewAsync(scrollId, scrollOpts);
       }
+      if (cancelled) return;
       measure();
-      onResize();
-    }, 400);
+      syncCalloutBox();
+    })();
+
+    const t1 = window.setTimeout(() => {
+      if (!cancelled) {
+        measure();
+        syncCalloutBox();
+      }
+    }, target === "result-card" ? 640 : 520);
     return () => {
+      cancelled = true;
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
-      window.clearTimeout(t);
-      window.clearTimeout(t2);
+      window.clearTimeout(t1);
     };
   }, [open, measure, target, reduceMotion]);
 
@@ -331,6 +343,7 @@ export default function TutorialLiveCoach({
 
   /** ターゲットなし／画面全体説明は全面ぼかし禁止 */
   const softBackdrop = allowInteractBehind || !target;
+  const isWelcomeBriefing = visual === "welcome" && !target;
   /**
    * - 画面全体説明: 下（背後を見せる）
    * - ナビ誘導・対象なし: 中央 + 誘導線
@@ -350,23 +363,6 @@ export default function TutorialLiveCoach({
       ? CENTER_CALLOUT_STYLE
       : buildNearTargetCalloutStyle(hole, calloutBox?.height ?? CALLOUT_EST_H);
 
-  const line =
-    (focusRect ?? hole) && calloutBox
-      ? (() => {
-          const tip = focusRect ?? hole!;
-          const tipMidY = tip.top + tip.height / 2;
-          const calloutMidY = calloutBox.top + calloutBox.height / 2;
-          const tipIsAbove = tipMidY < calloutMidY;
-          const cx = calloutBox.left + calloutBox.width / 2;
-          const cy = tipIsAbove
-            ? calloutBox.top
-            : calloutBox.top + calloutBox.height;
-          const hx = tip.left + tip.width / 2;
-          const hy = tipIsAbove ? tip.top + tip.height : tip.top;
-          return { x1: cx, y1: cy, x2: hx, y2: hy };
-        })()
-      : null;
-
   const showFocusNav =
     focusRect != null &&
     hole != null &&
@@ -381,27 +377,43 @@ export default function TutorialLiveCoach({
           className="pointer-events-none fixed inset-0 z-[1000060]"
           style={{ isolation: "isolate" }}
         >
-          {/* 背景: ソフトは下フェードのみ／スポットライトは穴あきぼかし */}
+          {/* 背景: welcome は briefing ディム／ソフトは下フェード／スポットライトは穴あき */}
           {softBackdrop ? (
-            <motion.div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%]"
-              style={{
-                background:
-                  "linear-gradient(to top, rgba(2,6,12,0.42) 0%, rgba(2,6,12,0.14) 55%, transparent 100%)",
-              }}
-              initial={reduceMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: TUTORIAL_BG_FADE_S, ease: EASE }}
-            />
+            <>
+              {isWelcomeBriefing ? (
+                <motion.div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0"
+                  style={{ background: "rgba(2,6,12,0.58)" }}
+                  initial={reduceMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: TUTORIAL_COACH_SCRIM_S, ease: EASE }}
+                />
+              ) : null}
+              <motion.div
+                aria-hidden
+                className={cn(
+                  "pointer-events-none absolute inset-x-0 bottom-0",
+                  isWelcomeBriefing ? "h-[55%]" : "h-[38%]"
+                )}
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(2,6,12,0.42) 0%, rgba(2,6,12,0.14) 55%, transparent 100%)",
+                }}
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: TUTORIAL_COACH_SCRIM_S, ease: EASE }}
+              />
+            </>
           ) : hole ? (
             <motion.div
               className="pointer-events-none absolute inset-0"
               initial={reduceMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: TUTORIAL_BG_FADE_S, ease: EASE }}
+              transition={{ duration: TUTORIAL_COACH_SCRIM_S, ease: EASE }}
             >
               <div
                 className="pointer-events-auto absolute"
@@ -445,18 +457,17 @@ export default function TutorialLiveCoach({
               />
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute rounded-xl"
-                animate={{
+                className={
+                  target === "profile-unit-coin"
+                    ? "pointer-events-none absolute rounded-full"
+                    : "pointer-events-none absolute rounded-xl"
+                }
+                /** 位置は即時反映（スクロールと枠アニメがずれるのを防ぐ） */
+                style={{
                   top: hole.top,
                   left: hole.left,
                   width: hole.width,
                   height: hole.height,
-                }}
-                transition={{
-                  duration: TUTORIAL_SPOTLIGHT_DURATION_S,
-                  ease: EASE,
-                }}
-                style={{
                   boxShadow: showHoleRing
                     ? showFocusNav
                       ? `0 0 0 1px ${TUTORIAL_CYAN}55, 0 0 14px ${TUTORIAL_CYAN}22`
@@ -528,7 +539,11 @@ export default function TutorialLiveCoach({
                 <button
                   type="button"
                   aria-label={waitHint ?? title}
-                  className="pointer-events-auto absolute cursor-pointer rounded-xl bg-transparent"
+                  className={
+                    target === "profile-unit-coin"
+                      ? "pointer-events-auto absolute cursor-pointer rounded-full bg-transparent"
+                      : "pointer-events-auto absolute cursor-pointer rounded-xl bg-transparent"
+                  }
                   style={{
                     top: hole.top,
                     left: hole.left,
@@ -541,39 +556,6 @@ export default function TutorialLiveCoach({
             </motion.div>
           ) : null}
 
-          {line ? (
-            <svg
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              aria-hidden
-            >
-              <defs>
-                <marker
-                  id="tutorial-live-coach-arrow"
-                  markerWidth="8"
-                  markerHeight="8"
-                  refX="6"
-                  refY="3"
-                  orient="auto"
-                >
-                  <path d="M0,0 L6,3 L0,6 Z" fill={TUTORIAL_CYAN} />
-                </marker>
-              </defs>
-              <motion.line
-                x1={line.x1}
-                y1={line.y1}
-                x2={line.x2}
-                y2={line.y2}
-                stroke={TUTORIAL_CYAN}
-                strokeWidth={1.5}
-                strokeDasharray="5 5"
-                markerEnd="url(#tutorial-live-coach-arrow)"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 0.92 }}
-                transition={{ duration: 0.35, ease: EASE }}
-              />
-            </svg>
-          ) : null}
-
           {/* transform は外枠固定。motion は内側のみ（中央ズレ防止） */}
           <div
             id="tutorial-live-coach-callout"
@@ -582,15 +564,13 @@ export default function TutorialLiveCoach({
             style={calloutStyle}
           >
             <motion.div
-              initial={
-                reduceMotion ? false : { opacity: 0, y: 14, scale: 0.96 }
-              }
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
               transition={{
-                duration: TUTORIAL_CALLOUT_DURATION_S,
+                duration: TUTORIAL_COACH_CALLOUT_S,
                 ease: EASE,
-                delay: reduceMotion ? 0 : 0.06,
+                delay: reduceMotion ? 0 : TUTORIAL_COACH_CALLOUT_DELAY_S,
               }}
             >
               <motion.div
@@ -598,28 +578,37 @@ export default function TutorialLiveCoach({
                 style={{
                   clipPath: CYBER_CHAMFER_CLIP,
                   WebkitClipPath: CYBER_CHAMFER_CLIP,
-                  background: TUTORIAL_CALLOUT_GLASS_BG,
-                  backdropFilter: `blur(${TUTORIAL_CALLOUT_GLASS_BLUR_PX}px) saturate(${TUTORIAL_CALLOUT_GLASS_SATURATE})`,
-                  WebkitBackdropFilter: `blur(${TUTORIAL_CALLOUT_GLASS_BLUR_PX}px) saturate(${TUTORIAL_CALLOUT_GLASS_SATURATE})`,
-                  boxShadow: `0 0 0 1px ${TUTORIAL_CYAN}33, 0 16px 48px rgba(0,0,0,0.45), 0 0 28px ${TUTORIAL_CYAN}20, inset 0 1px 0 rgba(255,255,255,0.14)`,
+                  background: isWelcomeBriefing
+                    ? "rgba(4, 12, 20, 0.96)"
+                    : "rgba(6, 14, 24, 0.94)",
+                  boxShadow: isWelcomeBriefing
+                    ? `0 0 0 1px ${TUTORIAL_CYAN}55, 0 18px 52px rgba(0,0,0,0.5), 0 0 36px ${TUTORIAL_CYAN}28, inset 0 1px 0 rgba(255,255,255,0.14)`
+                    : `0 0 0 1px ${TUTORIAL_CYAN}33, 0 16px 48px rgba(0,0,0,0.45), 0 0 28px ${TUTORIAL_CYAN}20, inset 0 1px 0 rgba(255,255,255,0.14)`,
                 }}
                 animate={
-                  reduceMotion
-                    ? undefined
-                    : {
+                  !reduceMotion && visual === "welcome"
+                    ? {
                         y: [0, -TUTORIAL_FLOAT_Y_PX, 0],
                       }
+                    : undefined
                 }
                 transition={
-                  reduceMotion
-                    ? undefined
-                    : {
+                  !reduceMotion && visual === "welcome"
+                    ? {
                         duration: TUTORIAL_FLOAT_PERIOD_S,
                         repeat: Infinity,
                         ease: "easeInOut",
                       }
+                    : undefined
                 }
               >
+                {isWelcomeBriefing ? (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-3 top-0 h-0.5 bg-cyan-300"
+                    style={{ boxShadow: `0 0 10px ${TUTORIAL_CYAN}` }}
+                  />
+                ) : null}
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span
                     className={cn(
@@ -628,7 +617,11 @@ export default function TutorialLiveCoach({
                     )}
                     style={{ color: TUTORIAL_CYAN }}
                   >
-                    Tutorial
+                    {progressLabel
+                      ? isWelcomeBriefing
+                        ? `Mission · ${progressLabel}`
+                        : `Tutorial · ${progressLabel}`
+                      : "Tutorial"}
                   </span>
                   <button
                     type="button"
@@ -654,14 +647,13 @@ export default function TutorialLiveCoach({
                 >
                   {title}
                 </h2>
-                <p
+                <TutorialRichBody
+                  text={body}
                   className={cn(
                     nameRajdhani.className,
-                    "mb-3 text-[13px] leading-relaxed text-white/65"
+                    "mb-3 text-[14px] leading-relaxed text-white/80"
                   )}
-                >
-                  {body}
-                </p>
+                />
                 {children}
                 {waitHint ? (
                   <p
@@ -699,13 +691,19 @@ export default function TutorialLiveCoach({
                         onClick={onNext}
                         className={cn(
                           nameOxanium.className,
-                          "min-w-0 flex-1 py-2.5 text-[12px] font-black uppercase tracking-[0.12em]"
+                          "min-w-0 flex-1 py-2.5 text-[12px] font-black uppercase tracking-[0.12em]",
+                          isWelcomeBriefing && "py-3.5 tracking-[0.18em] text-[13px]"
                         )}
                         style={{
-                          background: TUTORIAL_CYAN,
+                          background: isWelcomeBriefing
+                            ? `linear-gradient(90deg, #5CFFF8 0%, ${TUTORIAL_CYAN} 50%, #00D4E8 100%)`
+                            : TUTORIAL_CYAN,
                           color: "#050508",
                           clipPath: CYBER_CHAMFER_CLIP,
                           WebkitClipPath: CYBER_CHAMFER_CLIP,
+                          boxShadow: isWelcomeBriefing
+                            ? `0 0 22px ${TUTORIAL_CYAN}66`
+                            : undefined,
                         }}
                       >
                         {nextLabel}

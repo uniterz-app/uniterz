@@ -3,7 +3,7 @@
  * 既読キャッシュは uid 付きキー（アカウントまたぎ防止）
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import {
   APP_TUTORIAL_LS_KEY,
@@ -117,4 +117,31 @@ export async function markAppTutorialSeenNative(
   } catch {
     /* ignore */
   }
+}
+
+/**
+ * 既読を完全リセット（AsyncStorage + Firestore）。
+ * DEV メニューから本番ツアーをやり直すときに使う。
+ * Firestore は待たない（オフラインで再開が固まるのを防ぐ）。
+ */
+export async function clearAppTutorialSeenNative(
+  uid: string | null | undefined
+): Promise<void> {
+  try {
+    await clearLegacyUnscopedKeys();
+    if (uid) {
+      await AsyncStorage.multiRemove([
+        seenStorageKey(uid),
+        pulseStorageKey(uid),
+      ]);
+    }
+  } catch {
+    /* ignore */
+  }
+  if (!uid) return;
+  void deleteDoc(doc(db, `users/${uid}/reads`, APP_TUTORIAL_READ_ID)).catch(
+    () => {
+      /* 未作成・権限なし・オフラインは無視 */
+    }
+  );
 }

@@ -260,7 +260,8 @@ export function uniterzLogoLetterLayouts(): UniterzLogoLetterLayout[] {
 }
 
 export const UNITERZ_LOGO_GLOW = {
-  core: "#8AF7FF",
+  core: "#FFFFFF",
+  rim: "#8AF7FF",
   soft: "#00E8FF",
   rimBlur: 1.1,
   softBlur: 3.4,

@@ -23,6 +23,7 @@ import {
   TUTORIAL_SLIDE_DURATION_S,
   TUTORIAL_SLIDE_OFFSET_PX,
 } from "@/lib/tutorial/tutorialMotion";
+import TutorialRichBody from "@/app/component/tutorial/TutorialRichBody";
 
 const CYBER_CHAMFER_CLIP =
   "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)";
@@ -208,14 +209,13 @@ export default function TutorialHybridIntro({
                 >
                   {slide.title}
                 </h2>
-                <p
+                <TutorialRichBody
+                  text={slide.body}
                   className={cn(
                     nameRajdhani.className,
                     "text-[14px] leading-relaxed text-white/65"
                   )}
-                >
-                  {slide.body}
-                </p>
+                />
               </motion.div>
             </AnimatePresence>
 

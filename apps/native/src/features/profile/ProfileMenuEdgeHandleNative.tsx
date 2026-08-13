@@ -2,7 +2,7 @@
  * Web `ProfileMenuEdgeHandle` 相当 — 画面右端の縦ハンドル + エッジスワイプ。
  * プロフィールカード内バーガー廃止に伴うサイドメニュー入口。
  */
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   PanResponder,
   Pressable,
@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 
 const OPEN_DX = 40;
 const CANCEL_DY = 24;
@@ -21,12 +22,37 @@ export default function ProfileMenuEdgeHandleNative({
   hidden = false,
   /** 縦書きラベル（既定 MENU） */
   label = "MENU",
+  /** チュートリアル穴測定 */
+  tutorialTargetId,
 }: {
   onOpen: () => void;
   unreadCount?: number;
   hidden?: boolean;
   label?: string;
+  tutorialTargetId?: string;
 }) {
+  const handleRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (!tutorialTargetId || hidden) return;
+    return registerTutorialTarget(tutorialTargetId, () =>
+      new Promise((resolve) => {
+        const node = handleRef.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width < 1 || height < 1) {
+            resolve(null);
+            return;
+          }
+          resolve({ x, y, width, height });
+        });
+      })
+    );
+  }, [tutorialTargetId, hidden]);
+
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
@@ -54,6 +80,7 @@ export default function ProfileMenuEdgeHandleNative({
         accessibilityLabel={label.toUpperCase()}
         hitSlop={8}
       >
+        <View ref={handleRef} collapsable={false} style={styles.handleMeasure}>
         {label
           .toUpperCase()
           .split("")
@@ -69,6 +96,7 @@ export default function ProfileMenuEdgeHandleNative({
             </Text>
           </View>
         ) : null}
+        </View>
       </Pressable>
     </>
   );
@@ -101,6 +129,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
     elevation: 4,
+  },
+  handleMeasure: {
+    alignItems: "center",
+    gap: 3,
   },
   letter: {
     fontFamily: "Oxanium_700Bold",

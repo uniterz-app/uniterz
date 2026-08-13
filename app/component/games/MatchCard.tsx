@@ -1586,6 +1586,11 @@ return (
                       "mt-2 mb-0.5 text-xl tracking-[0.06em] md:text-2xl lg:text-3xl",
             ].join(" ")}
             style={teamNameFont}
+            data-tutorial-target={
+              inPredictOverlay || attachOverlayMarketBar
+                ? "predict-round"
+                : undefined
+            }
           >
             {roundLabel}
           </div>

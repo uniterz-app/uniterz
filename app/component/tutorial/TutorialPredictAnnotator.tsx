@@ -16,40 +16,39 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import cn from "clsx";
 import { nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
 import {
-  TUTORIAL_BG_BLUR_PX,
   TUTORIAL_BG_FADE_S,
   TUTORIAL_CALLOUT_DURATION_S,
-  TUTORIAL_CALLOUT_GLASS_BG,
-  TUTORIAL_CALLOUT_GLASS_BLUR_PX,
-  TUTORIAL_CALLOUT_GLASS_SATURATE,
   TUTORIAL_CYAN,
-  TUTORIAL_FLOAT_PERIOD_S,
   TUTORIAL_FLOAT_Y_PX,
+  TUTORIAL_PREDICT_ANNOT_CALLOUT_DELAY_S,
+  TUTORIAL_PREDICT_ANNOT_CALLOUT_S,
   TUTORIAL_PREDICT_ANNOT_REVEAL_DELAY_MS,
+  TUTORIAL_PREDICT_ANNOT_SCRIM_S,
   TUTORIAL_PREDICT_ANNOT_Z_INDEX,
   TUTORIAL_PULSE_PERIOD_S,
   TUTORIAL_SCRIM_OPACITY,
 } from "@/lib/tutorial/tutorialMotion";
-import { scrollTutorialTargetIntoView } from "@/lib/tutorial/scrollTutorialTargetIntoView";
+import {
+  scrollTutorialTargetIntoViewAsync,
+  setTutorialScrollLocked,
+} from "@/lib/tutorial/scrollTutorialTargetIntoView";
+import TutorialRichBody from "@/app/component/tutorial/TutorialRichBody";
 
 const CYBER_CHAMFER_CLIP =
   "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const PAD = 8;
-/** HOME/AWAY: 上の閉じるに食い込まない（負の top = 内側へ）／戦績用に下を広げる */
-const PAD_SIDES = { top: -6, right: 10, bottom: 16, left: 10 } as const;
+/** HOME/AWAY + REGULAR SEASON 見出しの枠余白 */
+const PAD_SIDES = { top: 8, right: 10, bottom: 16, left: 10 } as const;
+const PAD_ROUND = { top: 4, right: 10, bottom: 0, left: 10 } as const;
 /** コールアウト見切れ防止（実測前の高さ見積もり） */
 const CALLOUT_GAP = 18;
 const CALLOUT_EST_H = 280;
 const CALLOUT_EDGE = 16 + TUTORIAL_FLOAT_Y_PX;
 
-const SCRIM_BG = `rgba(2,6,12,${TUTORIAL_SCRIM_OPACITY})`;
-const SCRIM_BG_SOFT = `rgba(2,6,12,${Math.max(0.2, TUTORIAL_SCRIM_OPACITY - 0.08)})`;
-const SCRIM_BLUR = {
-  backdropFilter: `blur(${TUTORIAL_BG_BLUR_PX}px)`,
-  WebkitBackdropFilter: `blur(${TUTORIAL_BG_BLUR_PX}px)`,
-} as const;
+const SCRIM_BG = `rgba(2,6,12,${Math.min(0.52, TUTORIAL_SCRIM_OPACITY + 0.14)})`;
+const SCRIM_BG_SOFT = `rgba(2,6,12,${Math.max(0.28, TUTORIAL_SCRIM_OPACITY)})`;
 
 type Rect = { top: number; left: number; width: number; height: number };
 type HolePad = { top: number; right: number; bottom: number; left: number };
@@ -85,6 +84,8 @@ type Props = {
   skipLabel: string;
   enterWaitHint: string;
   submitWaitHint: string;
+  /** tools ステップでタブ切替を促す */
+  toolsWaitHint?: string;
   /** enter ステップで両方の得点が入っているか */
   enterReady?: boolean;
   /** 機能確認用: 前の説明ステップへ */
@@ -148,11 +149,21 @@ function readTarget(
   return raw ? clampRectToViewport(raw) : null;
 }
 
+function readSidesFocusHole(): Rect | null {
+  const round = readTargetRaw("predict-round", { ...PAD_ROUND });
+  const sides = readTargetRaw("predict-sides", { ...PAD_SIDES });
+  if (round && sides) return clampRectToViewport(unionRects(round, sides));
+  if (sides) return clampRectToViewport(sides);
+  if (round) return clampRectToViewport(round);
+  return null;
+}
+
 /**
- * HOME/AWAY と市場の偏りは同一カード内。
+ * HOME/AWAY・見出し・市場の偏りは同一カード内。
  * ぼかし穴を分割せず、まとめてくり抜く。
  */
 function readMatchCardHole(): Rect | null {
+  const round = readTargetRaw("predict-round", { ...PAD_ROUND });
   const sides = readTargetRaw("predict-sides", { ...PAD_SIDES });
   const market = readTargetRaw("predict-market", {
     top: PAD,
@@ -160,8 +171,11 @@ function readMatchCardHole(): Rect | null {
     bottom: PAD,
     left: PAD,
   });
-  if (sides && market) return clampRectToViewport(unionRects(sides, market));
-  if (sides) return clampRectToViewport(sides);
+  let base: Rect | null = null;
+  if (round && sides) base = unionRects(round, sides);
+  else base = sides ?? round;
+  if (base && market) return clampRectToViewport(unionRects(base, market));
+  if (base) return clampRectToViewport(base);
   if (market) return clampRectToViewport(market);
   return null;
 }
@@ -212,6 +226,7 @@ export default function TutorialPredictAnnotator({
   skipLabel,
   enterWaitHint,
   submitWaitHint,
+  toolsWaitHint,
   enterReady = false,
   backLabel,
   onSkip,
@@ -251,9 +266,22 @@ export default function TutorialPredictAnnotator({
   }, [open]);
 
   const targetId = targetIdForStep(step);
-  /** 情報タブは実際に切り替えて見せる。入力・投稿も穴から操作させる */
+  /** 情報タブ・得点入力・投稿は実際に操作させる */
   const allowHoleInteract =
-    step === "tools" || step === "enter" || step === "submit";
+    step === "tools" ||
+    step === "scores" ||
+    step === "enter" ||
+    step === "submit";
+  /** 操作ステップはスクラム板を置かず背後を触れるようにする */
+  const interactBehind =
+    step === "tools" ||
+    step === "scores" ||
+    step === "enter" ||
+    step === "submit";
+  /** タブは上固定しない。得点・投稿は上に置いて入力を隠さない */
+  const pinCalloutBottom = step === "tools";
+  const pinCalloutTop =
+    step === "enter" || step === "scores" || step === "submit";
 
   const copy =
     step === "overview"
@@ -264,13 +292,20 @@ export default function TutorialPredictAnnotator({
           ? { title: marketTitle, body: marketBody }
           : step === "tools"
             ? { title: toolsTitle, body: toolsBody }
-            : step === "scores"
-              ? { title: scoresTitle, body: scoresBody }
-              : step === "bonus"
-                ? { title: bonusTitle, body: bonusBody }
-                : step === "enter"
-                  ? { title: enterTitle, body: enterBody }
-                  : { title: submitTitle, body: submitBody };
+            : step === "bonus"
+              ? { title: bonusTitle, body: bonusBody }
+              : step === "enter" || step === "scores"
+                ? { title: enterTitle, body: enterBody }
+                : { title: submitTitle, body: submitBody };
+
+  /** 「スコア入力欄」説明は「得点を入力」に統合 */
+  useEffect(() => {
+    if (!open || step !== "scores") return;
+    setStep(readTarget("predict-bonus") ? "bonus" : "enter");
+  }, [open, step]);
+
+  /** 得点入力中は暗くしない。投稿ステップだけ soft ディム */
+  const softDimBehind = interactBehind && step === "submit";
 
   const measure = useCallback(() => {
     if (!targetId) {
@@ -279,14 +314,16 @@ export default function TutorialPredictAnnotator({
       return;
     }
     // HOME/AWAY と市場は一枚のカード → ぼかし穴は分けない。ナビ枠だけ対象を絞る
-    if (step === "sides" || step === "market") {
+    if (step === "sides") {
+      setHole(readSidesFocusHole());
+      setFocusRect(null);
+      return;
+    }
+    if (step === "market") {
       setHole(readMatchCardHole());
-      const focusId = step === "market" ? "predict-market" : "predict-sides";
-      const focusPad: HolePad =
-        step === "sides"
-          ? { ...PAD_SIDES }
-          : { top: 4, right: 6, bottom: 4, left: 6 };
-      setFocusRect(readTarget(focusId, focusPad));
+      setFocusRect(
+        readTarget("predict-market", { top: 4, right: 6, bottom: 4, left: 6 })
+      );
       return;
     }
     const rect = readTarget(targetId, {
@@ -307,23 +344,25 @@ export default function TutorialPredictAnnotator({
         if (!readTarget("predict-sides", { ...PAD_SIDES })) {
           if (readTarget("predict-market")) setStep("market");
           else if (readTarget("predict-tools")) setStep("tools");
-          else setStep("scores");
+          else setStep(readTarget("predict-bonus") ? "bonus" : "enter");
         }
       }, 320);
       return () => window.clearTimeout(t);
     }
     if (step === "market") {
       const t = window.setTimeout(() => {
-        // sides があればカード全体で案内済み。market 単体も sides も無いときだけスキップ
         if (!readTarget("predict-market") && !readTarget("predict-sides", { ...PAD_SIDES })) {
-          setStep(readTarget("predict-tools") ? "tools" : "scores");
+          if (readTarget("predict-tools")) setStep("tools");
+          else setStep(readTarget("predict-bonus") ? "bonus" : "enter");
         }
       }, 60);
       return () => window.clearTimeout(t);
     }
     if (step === "tools") {
       const t = window.setTimeout(() => {
-        if (!readTarget("predict-tools")) setStep("scores");
+        if (!readTarget("predict-tools")) {
+          setStep(readTarget("predict-bonus") ? "bonus" : "enter");
+        }
       }, 60);
       return () => window.clearTimeout(t);
     }
@@ -336,36 +375,86 @@ export default function TutorialPredictAnnotator({
   }, [open, step]);
 
   useLayoutEffect(() => {
-    if (!open || !targetId) return;
+    if (!open || !revealReady || !targetId) {
+      if (!open) setTutorialScrollLocked(false);
+      return;
+    }
+    let cancelled = false;
+    /** ステップ切替で対象へクロール（reduced motion 時のみ即時） */
     const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
-    const idealRatio =
+    const lockUserScroll = step === "enter" || step === "scores";
+    const calloutH =
+      calloutBox?.height && calloutBox.height > 80 ? calloutBox.height : 220;
+    const scrollOpts =
       step === "sides" || step === "market"
-        ? 0.18
-        : step === "submit"
-          ? 0.28
-          : 0.32;
-    scrollTutorialTargetIntoView(targetId, { behavior, idealRatio });
-    measure();
-    const onResize = () => measure();
+        ? {
+            behavior,
+            idealRatio: step === "sides" ? 0.38 : 0.34,
+          }
+        : lockUserScroll
+          ? {
+              behavior,
+              align: "top" as const,
+              topPad: CALLOUT_EDGE + calloutH + 10,
+            }
+        : {
+            behavior,
+            idealRatio:
+              step === "tools"
+                ? 0.22
+                : step === "submit"
+                  ? 0.62
+                  : 0.36,
+          };
+    const scrollId =
+      step === "sides" || step === "market"
+        ? "predict-sides"
+        : lockUserScroll
+          ? "predict-scores"
+          : targetId;
+
+    const onResize = () => {
+      if (!cancelled) measure();
+    };
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
-    const t1 = window.setTimeout(measure, 80);
-    const t2 = window.setTimeout(() => {
-      scrollTutorialTargetIntoView(targetId, {
-        behavior: "auto",
-        idealRatio,
-      });
+
+    setTutorialScrollLocked(false);
+    void (async () => {
+      await scrollTutorialTargetIntoViewAsync(scrollId, scrollOpts);
+      if (cancelled) return;
+      setTutorialScrollLocked(lockUserScroll);
       measure();
-    }, 280);
-    const t3 = window.setTimeout(measure, 600);
+    })();
+
+    const t1 = window.setTimeout(() => {
+      if (cancelled) return;
+      if (lockUserScroll) {
+        void (async () => {
+          await scrollTutorialTargetIntoViewAsync(scrollId, scrollOpts);
+          if (cancelled) return;
+          setTutorialScrollLocked(true);
+          measure();
+        })();
+      } else {
+        measure();
+      }
+    }, reduceMotion ? 160 : 560);
     return () => {
+      cancelled = true;
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
       window.clearTimeout(t1);
-      window.clearTimeout(t2);
-      window.clearTimeout(t3);
     };
-  }, [open, measure, step, targetId, reduceMotion]);
+  }, [
+    open,
+    revealReady,
+    measure,
+    step,
+    targetId,
+    reduceMotion,
+    calloutBox?.height,
+  ]);
 
   const calloutRef = useCallback((node: HTMLDivElement | null) => {
     if (!node) {
@@ -404,17 +493,20 @@ export default function TutorialPredictAnnotator({
     setStep((prev) => {
       if (prev === "enter" && !enterReady) return prev;
       if (prev === "overview") {
-        /** 入場直後は測れないことがあるので、まず HOME/AWAY へ進む */
         return "sides";
       }
       if (prev === "sides") {
         if (readTarget("predict-market")) return "market";
-        return readTarget("predict-tools") ? "tools" : "scores";
+        if (readTarget("predict-tools")) return "tools";
+        return readTarget("predict-bonus") ? "bonus" : "enter";
       }
       if (prev === "market") {
-        return readTarget("predict-tools") ? "tools" : "scores";
+        if (readTarget("predict-tools")) return "tools";
+        return readTarget("predict-bonus") ? "bonus" : "enter";
       }
-      if (prev === "tools") return "scores";
+      if (prev === "tools") {
+        return readTarget("predict-bonus") ? "bonus" : "enter";
+      }
       if (prev === "scores") {
         return readTarget("predict-bonus") ? "bonus" : "enter";
       }
@@ -439,9 +531,16 @@ export default function TutorialPredictAnnotator({
         if (readTarget("predict-market")) return "market";
         return readTarget("predict-sides") ? "sides" : "overview";
       }
-      if (prev === "bonus") return "scores";
+      if (prev === "bonus") {
+        if (readTarget("predict-tools")) return "tools";
+        if (readTarget("predict-market")) return "market";
+        return readTarget("predict-sides") ? "sides" : "overview";
+      }
       if (prev === "enter") {
-        return readTarget("predict-bonus") ? "bonus" : "scores";
+        if (readTarget("predict-bonus")) return "bonus";
+        if (readTarget("predict-tools")) return "tools";
+        if (readTarget("predict-market")) return "market";
+        return readTarget("predict-sides") ? "sides" : "overview";
       }
       if (prev === "submit") return "enter";
       return prev;
@@ -457,36 +556,63 @@ export default function TutorialPredictAnnotator({
     : 0;
   const spaceAbove = hole ? hole.top - CALLOUT_EDGE : 0;
   const need = calloutH + CALLOUT_GAP;
-  /** 下に収まるなら下、足りなければ空きの大きい側へ */
-  const preferCalloutBelow =
-    hole != null &&
-    (spaceBelow >= need || (spaceBelow >= spaceAbove && spaceBelow > 96));
-  const calloutStyle = preferCalloutBelow && hole
+  /** 情報タブは下固定。得点・投稿は上固定。それ以外は空きに合わせる */
+  const preferCalloutBelow = pinCalloutBottom
+    ? true
+    : interactBehind
+      ? false
+      : hole != null &&
+        (spaceBelow >= need || (spaceBelow >= spaceAbove && spaceBelow > 96));
+  const calloutStyle = pinCalloutBottom
     ? {
-        top: Math.max(
-          CALLOUT_EDGE,
-          Math.min(
-            hole.top + hole.height + CALLOUT_GAP,
-            vh - calloutH - CALLOUT_EDGE
-          )
-        ),
+        bottom: CALLOUT_EDGE + 24,
         left: "50%" as const,
         transform: "translateX(-50%)",
       }
-    : hole
+    : pinCalloutTop
       ? {
-          bottom: Math.min(
-            Math.max(CALLOUT_EDGE, vh - hole.top + CALLOUT_GAP),
-            Math.max(CALLOUT_EDGE, vh - calloutH - CALLOUT_EDGE)
+          top: CALLOUT_EDGE,
+          left: "50%" as const,
+          transform: "translateX(-50%)",
+        }
+    : interactBehind && hole
+      ? {
+          top: Math.max(
+            CALLOUT_EDGE,
+            Math.min(
+              hole.top - calloutH - CALLOUT_GAP,
+              vh - calloutH - CALLOUT_EDGE
+            )
           ),
           left: "50%" as const,
           transform: "translateX(-50%)",
         }
-      : {
-          top: "50%" as const,
-          left: "50%" as const,
-          transform: "translate(-50%, -50%)",
-        };
+      : preferCalloutBelow && hole
+        ? {
+            top: Math.max(
+              CALLOUT_EDGE,
+              Math.min(
+                hole.top + hole.height + CALLOUT_GAP,
+                vh - calloutH - CALLOUT_EDGE
+              )
+            ),
+            left: "50%" as const,
+            transform: "translateX(-50%)",
+          }
+        : hole
+          ? {
+              bottom: Math.min(
+                Math.max(CALLOUT_EDGE, vh - hole.top + CALLOUT_GAP),
+                Math.max(CALLOUT_EDGE, vh - calloutH - CALLOUT_EDGE)
+              ),
+              left: "50%" as const,
+              transform: "translateX(-50%)",
+            }
+          : {
+              top: "50%" as const,
+              left: "50%" as const,
+              transform: "translate(-50%, -50%)",
+            };
 
   const line =
     (focusRect ?? hole) && calloutBox
@@ -504,32 +630,22 @@ export default function TutorialPredictAnnotator({
         })()
       : null;
 
-  /** カード内ナビ: 穴より狭いフォーカスがあるときだけ出す */
+  /** 市場棒だけを絞るときだけ内側ナビ枠 */
   const showFocusNav =
-    focusRect != null &&
-    hole != null &&
-    (step === "sides" ||
-      step === "market" ||
-      Math.abs(focusRect.height - hole.height) > 12 ||
-      Math.abs(focusRect.width - hole.width) > 12);
-
-  const focusNavLabel =
-    step === "market"
-      ? marketTitle
-      : step === "sides"
-        ? sidesTitle
-        : copy.title;
+    focusRect != null && hole != null && step === "market";
 
   const showNext = step !== "submit";
   const enterBlocked = step === "enter" && !enterReady;
   const waitHint =
-    step === "enter"
-      ? enterBlocked
-        ? enterWaitHint
-        : null
-      : step === "submit"
-        ? submitWaitHint
-        : null;
+    step === "tools"
+      ? toolsWaitHint ?? null
+      : step === "enter"
+        ? enterBlocked
+          ? enterWaitHint
+          : null
+        : step === "submit"
+          ? submitWaitHint
+          : null;
 
   return createPortal(
     <AnimatePresence>
@@ -542,12 +658,53 @@ export default function TutorialPredictAnnotator({
             isolation: "isolate",
           }}
         >
-          {hole ? (
+          {interactBehind ? (
             <motion.div
               className="pointer-events-none absolute inset-0"
               initial={reduceMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: TUTORIAL_BG_FADE_S, ease: EASE }}
+              transition={{ duration: TUTORIAL_PREDICT_ANNOT_SCRIM_S, ease: EASE }}
+              style={
+                softDimBehind
+                  ? { background: SCRIM_BG_SOFT }
+                  : undefined
+              }
+            >
+              {hole ? (
+                <motion.div
+                  key={`soft-ring-${step}-${Math.round(hole.top)}-${Math.round(hole.left)}`}
+                  aria-hidden
+                  className="pointer-events-none absolute"
+                  style={{
+                    top: hole.top,
+                    left: hole.left,
+                    width: hole.width,
+                    height: hole.height,
+                    boxShadow: softDimBehind
+                      ? `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 28px ${TUTORIAL_CYAN}66`
+                      : `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 22px ${TUTORIAL_CYAN}55`,
+                    transformOrigin: "center center",
+                  }}
+                  initial={
+                    reduceMotion
+                      ? false
+                      : { opacity: 0, scale: 1.14 }
+                  }
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    delay: TUTORIAL_PREDICT_ANNOT_CALLOUT_DELAY_S,
+                    duration: 0.52,
+                    ease: EASE,
+                  }}
+                />
+              ) : null}
+            </motion.div>
+          ) : hole ? (
+            <motion.div
+              className="pointer-events-none absolute inset-0"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: TUTORIAL_PREDICT_ANNOT_SCRIM_S, ease: EASE }}
             >
               <div
                 className="pointer-events-auto absolute"
@@ -557,7 +714,6 @@ export default function TutorialPredictAnnotator({
                   right: 0,
                   height: Math.max(0, hole.top),
                   background: SCRIM_BG,
-                  ...SCRIM_BLUR,
                 }}
               />
               <div
@@ -568,7 +724,6 @@ export default function TutorialPredictAnnotator({
                   right: 0,
                   bottom: 0,
                   background: SCRIM_BG,
-                  ...SCRIM_BLUR,
                 }}
               />
               <div
@@ -579,7 +734,6 @@ export default function TutorialPredictAnnotator({
                   width: Math.max(0, hole.left),
                   height: hole.height,
                   background: SCRIM_BG,
-                  ...SCRIM_BLUR,
                 }}
               />
               <div
@@ -590,25 +744,38 @@ export default function TutorialPredictAnnotator({
                   right: 0,
                   height: hole.height,
                   background: SCRIM_BG,
-                  ...SCRIM_BLUR,
                 }}
               />
-              <motion.div
-                aria-hidden
-                className="pointer-events-none absolute"
-                style={{
-                  top: hole.top,
-                  left: hole.left,
-                  width: hole.width,
-                  height: hole.height,
-                  boxShadow: showFocusNav
-                    ? `0 0 0 1px ${TUTORIAL_CYAN}55, 0 0 14px ${TUTORIAL_CYAN}22`
-                    : `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 22px ${TUTORIAL_CYAN}55`,
-                }}
-              />
+              {/** フォーカス枠があるときは外枠を出さない（二重枠を避ける） */}
+              {!showFocusNav ? (
+                <motion.div
+                  key={`hard-ring-${step}-${Math.round(hole.top)}-${Math.round(hole.left)}`}
+                  aria-hidden
+                  className="pointer-events-none absolute"
+                  style={{
+                    top: hole.top,
+                    left: hole.left,
+                    width: hole.width,
+                    height: hole.height,
+                    boxShadow: `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 28px ${TUTORIAL_CYAN}66`,
+                    transformOrigin: "center center",
+                  }}
+                  initial={
+                    reduceMotion
+                      ? false
+                      : { opacity: 0, scale: 1.14 }
+                  }
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    delay: 0.04,
+                    duration: 0.52,
+                    ease: EASE,
+                  }}
+                />
+              ) : null}
               {showFocusNav && focusRect ? (
                 <motion.div
-                  key={`focus-${step}`}
+                  key={`focus-${step}-${Math.round(focusRect.top)}-${Math.round(focusRect.left)}`}
                   aria-hidden
                   className="pointer-events-none absolute"
                   style={{
@@ -616,17 +783,26 @@ export default function TutorialPredictAnnotator({
                     left: focusRect.left - 2,
                     width: focusRect.width + 4,
                     height: focusRect.height + 4,
+                    transformOrigin: "center center",
                   }}
-                  initial={reduceMotion ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.25, ease: EASE }}
+                  initial={
+                    reduceMotion
+                      ? false
+                      : { opacity: 0, scale: 1.14 }
+                  }
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    delay: 0.04,
+                    duration: 0.52,
+                    ease: EASE,
+                  }}
                 >
                   <motion.div
                     className="absolute inset-0"
                     style={{
                       clipPath: CYBER_CHAMFER_CLIP,
                       WebkitClipPath: CYBER_CHAMFER_CLIP,
-                      boxShadow: `0 0 0 2px ${TUTORIAL_CYAN}`,
+                      boxShadow: `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 22px ${TUTORIAL_CYAN}66`,
                     }}
                     animate={
                       reduceMotion
@@ -643,29 +819,9 @@ export default function TutorialPredictAnnotator({
                       duration: TUTORIAL_PULSE_PERIOD_S,
                       repeat: Infinity,
                       ease: "easeInOut",
+                      delay: 0.56,
                     }}
                   />
-                  <motion.span
-                    className={cn(
-                      nameOxanium.className,
-                      "absolute -top-3 left-1/2 max-w-[min(220px,70vw)] -translate-x-1/2 truncate rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
-                    )}
-                    style={{
-                      background: TUTORIAL_CYAN,
-                      color: "#050508",
-                      boxShadow: `0 0 14px ${TUTORIAL_CYAN}99`,
-                    }}
-                    animate={
-                      reduceMotion ? undefined : { y: [0, -3, 0] }
-                    }
-                    transition={{
-                      duration: TUTORIAL_PULSE_PERIOD_S,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    {focusNavLabel}
-                  </motion.span>
                 </motion.div>
               ) : null}
               {/* 説明ステップでは穴も塞ぎ、最後の入力・投稿だけ通す */}
@@ -686,12 +842,12 @@ export default function TutorialPredictAnnotator({
               className="pointer-events-none absolute inset-0"
               style={{
                 background: SCRIM_BG_SOFT,
-                ...SCRIM_BLUR,
               }}
             />
           )}
 
-          {line ? (
+          {/** フォーカス枠＋説明カードがあるときは誘導線も省く */}
+          {line && !showFocusNav ? (
             <svg
               className="pointer-events-none absolute inset-0 h-full w-full"
               aria-hidden
@@ -719,7 +875,11 @@ export default function TutorialPredictAnnotator({
                 markerEnd="url(#tutorial-predict-arrow)"
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 0.95 }}
-                transition={{ duration: 0.35, ease: EASE }}
+                transition={{
+                  delay: TUTORIAL_PREDICT_ANNOT_CALLOUT_DELAY_S,
+                  duration: TUTORIAL_PREDICT_ANNOT_CALLOUT_S,
+                  ease: EASE,
+                }}
               />
             </svg>
           ) : null}
@@ -734,13 +894,11 @@ export default function TutorialPredictAnnotator({
             }}
           >
             <motion.div
-              key={step}
-              initial={
-                reduceMotion ? false : { opacity: 0, y: 10, scale: 0.97 }
-              }
-              animate={{ opacity: 1, y: 0, scale: 1 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{
-                duration: TUTORIAL_CALLOUT_DURATION_S,
+                delay: TUTORIAL_PREDICT_ANNOT_CALLOUT_DELAY_S,
+                duration: TUTORIAL_PREDICT_ANNOT_CALLOUT_S,
                 ease: EASE,
               }}
             >
@@ -749,27 +907,9 @@ export default function TutorialPredictAnnotator({
                 style={{
                   clipPath: CYBER_CHAMFER_CLIP,
                   WebkitClipPath: CYBER_CHAMFER_CLIP,
-                  background: TUTORIAL_CALLOUT_GLASS_BG,
-                  backdropFilter: `blur(${TUTORIAL_CALLOUT_GLASS_BLUR_PX}px) saturate(${TUTORIAL_CALLOUT_GLASS_SATURATE})`,
-                  WebkitBackdropFilter: `blur(${TUTORIAL_CALLOUT_GLASS_BLUR_PX}px) saturate(${TUTORIAL_CALLOUT_GLASS_SATURATE})`,
+                  background: "rgba(6, 14, 24, 0.94)",
                   boxShadow: `0 0 0 1px ${TUTORIAL_CYAN}33, 0 16px 40px rgba(0,0,0,0.45), 0 0 24px ${TUTORIAL_CYAN}18, inset 0 1px 0 rgba(255,255,255,0.14)`,
                 }}
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        y: [0, -TUTORIAL_FLOAT_Y_PX, 0],
-                      }
-                }
-                transition={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        duration: TUTORIAL_FLOAT_PERIOD_S,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }
-                }
               >
               <div className="mb-1 flex items-center justify-between gap-2">
                 <span
@@ -802,14 +942,13 @@ export default function TutorialPredictAnnotator({
               >
                 {copy.title}
               </h2>
-              <p
+              <TutorialRichBody
+                text={copy.body}
                 className={cn(
                   nameRajdhani.className,
-                  "mb-3 text-[13px] leading-relaxed text-white/65"
+                  "mb-3 text-[14px] leading-relaxed text-white/80"
                 )}
-              >
-                {copy.body}
-              </p>
+              />
               {showNext ? (
                 <>
                   {waitHint ? (

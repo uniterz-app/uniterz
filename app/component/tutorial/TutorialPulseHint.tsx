@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 試合カードへのタップ誘導 — パルス枠 + リップル（カードの面取りに合わせる）。
+ * 試合カードへのタップ誘導 — 枠の淡いパルスのみ。
  * 対象: data-tutorial-target="match-card"
  */
 
@@ -83,14 +83,12 @@ export default function TutorialPulseHint({
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
     const t1 = window.setTimeout(measure, 40);
-    const t2 = window.setTimeout(measure, 200);
-    const t3 = window.setTimeout(measure, 500);
+    const t2 = window.setTimeout(measure, 280);
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
       window.clearTimeout(t1);
       window.clearTimeout(t2);
-      window.clearTimeout(t3);
     };
   }, [active, measure]);
 
@@ -114,7 +112,6 @@ export default function TutorialPulseHint({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: TUTORIAL_EXIT_S } }}
         >
-          {/* 外枠パルス（カードと同型の面取り） */}
           <motion.div
             aria-hidden
             className="absolute inset-0"
@@ -127,11 +124,7 @@ export default function TutorialPulseHint({
               reduceMotion
                 ? undefined
                 : {
-                    boxShadow: [
-                      `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 12px ${TUTORIAL_CYAN}66`,
-                      `0 0 0 3px ${TUTORIAL_CYAN}, 0 0 26px ${TUTORIAL_CYAN}99`,
-                      `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 12px ${TUTORIAL_CYAN}66`,
-                    ],
+                    opacity: [0.72, 1, 0.72],
                   }
             }
             transition={{
@@ -140,30 +133,6 @@ export default function TutorialPulseHint({
               ease: "easeInOut",
             }}
           />
-
-          {/* 広がるリップル */}
-          {!reduceMotion
-            ? [0, 0.55].map((delay) => (
-                <motion.div
-                  key={`ripple-${delay}`}
-                  aria-hidden
-                  className="absolute inset-[3px]"
-                  style={{
-                    clipPath: CARD_CHAMFER_CLIP,
-                    WebkitClipPath: CARD_CHAMFER_CLIP,
-                    boxShadow: `inset 0 0 0 2px ${TUTORIAL_CYAN}`,
-                  }}
-                  initial={{ opacity: 0.5 }}
-                  animate={{ opacity: 0 }}
-                  transition={{
-                    duration: TUTORIAL_PULSE_PERIOD_S,
-                    repeat: Infinity,
-                    ease: "easeOut",
-                    delay,
-                  }}
-                />
-              ))
-            : null}
 
           {captureClicks ? (
             <button
@@ -177,11 +146,7 @@ export default function TutorialPulseHint({
             />
           ) : null}
 
-          {/*
-            カード内に置く（-top はコーチ暗幕の穴外で見切れる）。
-            浮遊は下方向のみにして上端クリップを避ける。
-          */}
-          <motion.span
+          <span
             className={cn(
               nameOxanium.className,
               "pointer-events-none absolute top-2 right-2 z-20 rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
@@ -189,17 +154,10 @@ export default function TutorialPulseHint({
             style={{
               background: TUTORIAL_CYAN,
               color: "#050508",
-              boxShadow: `0 0 14px ${TUTORIAL_CYAN}99`,
-            }}
-            animate={reduceMotion ? undefined : { y: [0, 3, 0] }}
-            transition={{
-              duration: TUTORIAL_PULSE_PERIOD_S,
-              repeat: Infinity,
-              ease: "easeInOut",
             }}
           >
             {badge}
-          </motion.span>
+          </span>
         </motion.div>
       ) : null}
     </AnimatePresence>,

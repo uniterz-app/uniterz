@@ -25,6 +25,7 @@ export function buildTutorialMatchCardProps(_opts?: {
     league: "nba",
     season: "2025-26",
     seasonPhase: "regular",
+    roundLabel: "REGULAR SEASON",
     startAtJst: new Date(Date.now() + 2 * 60 * 60 * 1000),
     status: "scheduled",
     home: {
@@ -47,8 +48,8 @@ export function buildTutorialMatchCardProps(_opts?: {
     heavyListEntry: false,
     showMarketBias: true,
     marketBias: { homePct: 54, awayPct: 46 },
-    homeRecord: { wins: 48, losses: 20 },
-    awayRecord: { wins: 42, losses: 26 },
+    homeRecord: { wins: 48, losses: 20, rank: 2 },
+    awayRecord: { wins: 42, losses: 26, rank: 6 },
     topScorerCandidates: [
       {
         playerId: "tutorial-tatum",

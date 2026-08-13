@@ -2,6 +2,7 @@
  * Web `TutorialSlideVisual` 相当 — ライブコーチ用の図解。
  */
 import { Image, StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import type { TutorialVisualId } from "../../../../../lib/tutorial/tutorialCopy";
 import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
 import { fonts } from "../../theme/tokens";
@@ -10,25 +11,89 @@ type Props = {
   visual: TutorialVisualId;
 };
 
+const WELCOME_STEPS = [
+  { n: "01", label: "予想", en: "PREDICT" },
+  { n: "02", label: "的中", en: "HIT" },
+  { n: "03", label: "ランク", en: "RANK" },
+] as const;
+
+/** 角括弧（HUD コーナー） */
+function WelcomeCorner({
+  top,
+  left,
+  right,
+  bottom,
+}: {
+  top?: boolean;
+  left?: boolean;
+  right?: boolean;
+  bottom?: boolean;
+}) {
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.welcomeCorner,
+        top ? { top: 0 } : { bottom: 0 },
+        left ? { left: 0 } : { right: 0 },
+        top && left ? styles.welcomeCornerTL : null,
+        top && right ? styles.welcomeCornerTR : null,
+        bottom && left ? styles.welcomeCornerBL : null,
+        bottom && right ? styles.welcomeCornerBR : null,
+      ]}
+    />
+  );
+}
+
 function MockWelcome() {
   return (
-    <View style={styles.welcomeWrap}>
-      <View style={styles.welcomeIconGlow}>
-        <Image
-          source={require("../../../assets/icon.png")}
-          style={styles.welcomeIcon}
-          accessibilityIgnoresInvertColors
+    <View style={styles.welcomeStage}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(0,245,255,0.14)", "transparent", "rgba(0,245,255,0.06)"]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <WelcomeCorner top left />
+      <WelcomeCorner top right />
+      <WelcomeCorner bottom left />
+      <WelcomeCorner bottom right />
+
+      <Text style={styles.welcomeBrief}>BRIEFING</Text>
+
+      <View style={styles.welcomeHero}>
+        <View style={styles.welcomeHalo} />
+        <View style={styles.welcomeRingOuter}>
+          <View style={styles.welcomeRingInner}>
+            <Image
+              source={require("../../../assets/icon.png")}
+              style={styles.welcomeIcon}
+              accessibilityIgnoresInvertColors
+            />
+          </View>
+        </View>
+        <Text style={styles.welcomeWordmark}>UNITERZ</Text>
+        <Text style={styles.welcomeTag}>SCORE PREDICTION PROTOCOL</Text>
+      </View>
+
+      <View style={styles.welcomeBeamRow}>
+        <LinearGradient
+          colors={["transparent", TUTORIAL_CYAN, "transparent"]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.welcomeBeam}
         />
       </View>
-      <Text style={styles.welcomeWordmark}>UNITERZ</Text>
-      <View style={styles.welcomeLine} />
-      <View style={styles.welcomeFlow}>
-        {(["予想", "的中", "ランク"] as const).map((label, i) => (
-          <View key={label} style={styles.welcomeFlowItem}>
-            {i > 0 ? <Text style={styles.welcomeArrow}>→</Text> : null}
-            <View style={styles.welcomeChip}>
-              <Text style={styles.welcomeChipText}>{label}</Text>
-            </View>
+
+      <View style={styles.welcomeStepsTrack}>
+        <View style={styles.welcomeStepsLine} pointerEvents="none" />
+        {WELCOME_STEPS.map((s) => (
+          <View key={s.n} style={styles.welcomeStep}>
+            <View style={styles.welcomeStepDot} />
+            <Text style={styles.welcomeStepN}>{s.n}</Text>
+            <Text style={styles.welcomeStepLabel}>{s.label}</Text>
+            <Text style={styles.welcomeStepEn}>{s.en}</Text>
           </View>
         ))}
       </View>
@@ -130,11 +195,102 @@ function MockTabs({ highlight }: { highlight: string }) {
   );
 }
 
+function MockHorizon() {
+  /** このあと説明する順番（overview の並び = 各ステップの順） */
+  const items = [
+    { num: "1", label: "スクワッドバトル", sub: "仲間とチーム対戦" },
+    { num: "2", label: "UNIT", sub: "通貨・報酬" },
+    { num: "3", label: "キャリア", sub: "成績の軌跡" },
+    { num: "4", label: "STATS", sub: "試合スタッツ" },
+  ];
+  return (
+    <View style={styles.card}>
+      <Text style={styles.horizonHead}>このあと説明する機能</Text>
+      {items.map((it) => (
+        <View key={it.num} style={styles.horizonRow}>
+          <View style={styles.horizonNumBadge}>
+            <Text style={styles.horizonNum}>{it.num}</Text>
+          </View>
+          <View style={styles.horizonTextCol}>
+            <Text style={styles.horizonLabel}>{it.label}</Text>
+            <Text style={styles.horizonSub}>{it.sub}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function MockHorizonStats() {
+  return (
+    <View style={styles.statsEdgeWrap}>
+      <View style={styles.statsEdgeMockScreen}>
+        <Text style={styles.statsEdgeHint}>GAMES</Text>
+        <View style={styles.statsEdgeHandle}>
+          {"STATS".split("").map((ch, i) => (
+            <Text key={`${ch}-${i}`} style={styles.statsEdgeLetter}>
+              {ch}
+            </Text>
+          ))}
+        </View>
+      </View>
+      <Text style={styles.statsEdgeCaption}>右端の黄色いタブ</Text>
+    </View>
+  );
+}
+
+function MockHorizonUnit() {
+  return (
+    <View style={styles.card}>
+      <View style={styles.unitBanner}>
+        <Text style={styles.unitBannerText}>UNIT EARN</Text>
+      </View>
+      <View style={styles.groupPad}>
+        <Text style={styles.groupKicker}>MINI GAME</Text>
+        <Text style={styles.groupName}>Play → Earn UNIT</Text>
+        <Text style={styles.metaText}>プロフィールからいつでも挑戦できる</Text>
+      </View>
+    </View>
+  );
+}
+
+function MockHorizonCareer() {
+  return (
+    <View style={styles.card}>
+      <View style={styles.profileHead}>
+        <View style={[styles.avatar, styles.careerAvatar]}>
+          <Text style={styles.avatarText}>REC</Text>
+        </View>
+        <View>
+          <Text style={styles.profileName}>Career</Text>
+          <Text style={styles.profileKicker}>TRACK RECORD</Text>
+        </View>
+      </View>
+      <View style={styles.statsRow}>
+        {[
+          { label: "HITS", value: "42" },
+          { label: "STREAK", value: "5" },
+          { label: "SEASON", value: "A" },
+        ].map((s) => (
+          <View key={s.label} style={styles.statCell}>
+            <Text style={styles.statValue}>{s.value}</Text>
+            <Text style={styles.statLabel}>{s.label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function TutorialCoachVisualNative({ visual }: Props) {
   if (visual === "welcome") return <MockWelcome />;
   if (visual === "rankings") return <MockRankings />;
   if (visual === "groups") return <MockGroups />;
   if (visual === "profile") return <MockProfile />;
+  if (visual === "horizon") return <MockHorizon />;
+  if (visual === "horizon-unit") return <MockHorizonUnit />;
+  if (visual === "horizon-career") return <MockHorizonCareer />;
+  if (visual === "horizon-stats") return <MockHorizonStats />;
   if (visual === "tabs-rankings") return <MockTabs highlight="rankings" />;
   if (visual === "tabs-boards" || visual === "tabs") {
     return <MockTabs highlight="boards" />;
@@ -144,63 +300,233 @@ export default function TutorialCoachVisualNative({ visual }: Props) {
 }
 
 const styles = StyleSheet.create({
-  welcomeWrap: {
+  welcomeStage: {
+    position: "relative",
     alignItems: "center",
-    paddingVertical: 4,
-    gap: 8,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.22)",
+    backgroundColor: "rgba(3,10,18,0.55)",
+    paddingTop: 14,
+    paddingBottom: 12,
+    paddingHorizontal: 12,
+    gap: 10,
   },
-  welcomeIconGlow: {
+  welcomeCorner: {
+    position: "absolute",
+    width: 12,
+    height: 12,
+    borderColor: TUTORIAL_CYAN,
+  },
+  welcomeCornerTL: {
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+  },
+  welcomeCornerTR: {
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+  },
+  welcomeCornerBL: {
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+  },
+  welcomeCornerBR: {
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+  },
+  welcomeBrief: {
+    position: "absolute",
+    top: 8,
+    left: 14,
+    fontFamily: fonts.metricExtra,
+    fontSize: 8,
+    letterSpacing: 2.4,
+    color: "rgba(0,245,255,0.55)",
+  },
+  welcomeHero: {
+    alignItems: "center",
+    marginTop: 6,
+    gap: 6,
+  },
+  welcomeHalo: {
+    position: "absolute",
+    top: -6,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: "rgba(0,245,255,0.12)",
     shadowColor: TUTORIAL_CYAN,
-    shadowOpacity: 0.55,
-    shadowRadius: 14,
+    shadowOpacity: 0.85,
+    shadowRadius: 22,
     shadowOffset: { width: 0, height: 0 },
   },
-  welcomeIcon: {
-    width: 64,
-    height: 64,
+  welcomeRingOuter: {
+    width: 76,
+    height: 76,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,245,255,0.06)",
+    shadowColor: TUTORIAL_CYAN,
+    shadowOpacity: 0.55,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  welcomeRingInner: {
+    width: 66,
+    height: 66,
     borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  welcomeIcon: {
+    width: 66,
+    height: 66,
   },
   welcomeWordmark: {
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 28,
-    letterSpacing: 5,
-    color: "#E8FBFF",
+    fontSize: 32,
+    letterSpacing: 6,
+    color: "#F2FEFF",
+    textShadowColor: "rgba(0,245,255,0.45)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
-  welcomeLine: {
+  welcomeTag: {
+    fontFamily: fonts.metric,
+    fontSize: 9,
+    letterSpacing: 2.2,
+    color: "rgba(165,243,252,0.72)",
+  },
+  welcomeBeamRow: {
+    width: "100%",
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+  welcomeBeam: {
+    height: 1,
+    width: "92%",
+  },
+  welcomeStepsTrack: {
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-between",
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    position: "relative",
+  },
+  welcomeStepsLine: {
+    position: "absolute",
+    left: "16%",
+    right: "16%",
+    top: 10,
     height: StyleSheet.hairlineWidth,
-    width: 180,
-    backgroundColor: "rgba(34,211,238,0.85)",
+    backgroundColor: "rgba(0,245,255,0.35)",
+  },
+  welcomeStep: {
+    flex: 1,
+    alignItems: "center",
+    gap: 3,
+  },
+  welcomeStepDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: TUTORIAL_CYAN,
+    borderWidth: 2,
+    borderColor: "rgba(5,12,20,0.95)",
+    marginBottom: 2,
     shadowColor: TUTORIAL_CYAN,
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 0 },
   },
-  welcomeFlow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-  },
-  welcomeFlowItem: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  welcomeArrow: {
-    marginHorizontal: 4,
+  welcomeStepN: {
+    fontFamily: fonts.metricExtra,
     fontSize: 10,
-    color: "rgba(34,211,238,0.5)",
+    letterSpacing: 1.5,
+    color: TUTORIAL_CYAN,
   },
-  welcomeChip: {
+  welcomeStepLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#F4FBFF",
+  },
+  welcomeStepEn: {
+    fontFamily: fonts.metric,
+    fontSize: 8,
+    letterSpacing: 1.4,
+    color: "rgba(165,243,252,0.55)",
+  },
+  horizonHead: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: TUTORIAL_CYAN,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  horizonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.08)",
+  },
+  horizonNumBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.35)",
+    borderColor: "rgba(0,245,255,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "rgba(0,245,255,0.08)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
   },
-  welcomeChipText: {
+  horizonNum: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 11,
+    fontWeight: "800",
+    color: TUTORIAL_CYAN,
+  },
+  horizonTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  horizonSub: {
     fontFamily: fonts.metric,
     fontSize: 10,
+    color: "rgba(255,255,255,0.45)",
+    letterSpacing: 0.3,
+  },
+  horizonLabel: {
+    fontFamily: fonts.metric,
+    fontSize: 13,
     fontWeight: "700",
-    color: "rgba(207,250,254,0.9)",
+    color: "#fff",
+  },
+  unitBanner: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "rgba(0,245,255,0.16)",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,245,255,0.35)",
+  },
+  unitBannerText: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: "rgba(207,250,254,0.95)",
+  },
+  careerAvatar: {
+    backgroundColor: "rgba(251,191,36,0.95)",
   },
   card: {
     borderWidth: 1,
@@ -389,5 +715,54 @@ const styles = StyleSheet.create({
   },
   tabTextOn: {
     color: "#050508",
+  },
+  statsEdgeWrap: {
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 4,
+  },
+  statsEdgeMockScreen: {
+    width: "100%",
+    height: 88,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(4,8,12,0.9)",
+    position: "relative",
+    overflow: "hidden",
+    justifyContent: "center",
+    paddingLeft: 14,
+  },
+  statsEdgeHint: {
+    fontFamily: fonts.metric,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 2,
+    color: "rgba(255,255,255,0.35)",
+  },
+  statsEdgeHandle: {
+    position: "absolute",
+    right: 0,
+    top: "22%",
+    width: 18,
+    paddingVertical: 8,
+    alignItems: "center",
+    gap: 2,
+    borderWidth: 1,
+    borderRightWidth: 0,
+    borderColor: "rgba(250,204,21,0.7)",
+    backgroundColor: "rgba(8,12,6,0.95)",
+  },
+  statsEdgeLetter: {
+    fontFamily: fonts.metric,
+    fontSize: 7,
+    fontWeight: "800",
+    lineHeight: 8,
+    color: "#facc15",
+  },
+  statsEdgeCaption: {
+    fontFamily: fonts.metric,
+    fontSize: 10,
+    color: "rgba(255,255,255,0.55)",
+    letterSpacing: 0.4,
   },
 });

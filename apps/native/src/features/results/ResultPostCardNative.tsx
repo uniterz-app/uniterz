@@ -47,6 +47,7 @@ import { useTeamRecordLineNative } from "../games/useTeamRecordLineNative";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
+import { registerTutorialTarget, notifyTutorialTargetsChanged } from "../tutorial/tutorialMeasureNative";
 import { cyberAlert } from "../../components/cyberAlert";
 import type { PostWithMillis } from "./nativeResultModel";
 import { canDismissResultListPostNow } from "./nativeResultModel";
@@ -190,6 +191,7 @@ export default function ResultPostCardNative({
   pkScore: pkScoreProp = null,
   gameMarket = null,
   compactSpacing = false,
+  tutorialTargetId,
 }: {
   post: PostWithMillis;
   language: "ja" | "en";
@@ -211,12 +213,34 @@ export default function ResultPostCardNative({
   pkScore?: { home: number; away: number } | null;
   /** games.market 補完（marketMeta 未埋め込みの確定投稿向け） */
   gameMarket?: { homeRate: number; awayRate: number } | null;
+  /** チュートリアル穴測定（外枠マージンを含めないカード実寸） */
+  tutorialTargetId?: string;
 }) {
   const isEn = language === "en";
   const resultCopy = i18nT(language).results;
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const captureRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (!tutorialTargetId) return;
+    return registerTutorialTarget(tutorialTargetId, () =>
+      new Promise((resolve) => {
+        const node = captureRef.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width < 1 || height < 1) {
+            resolve(null);
+            return;
+          }
+          resolve({ x, y, width, height });
+        });
+      })
+    );
+  }, [tutorialTargetId]);
   const reduceMotionList = useReducedMotion() ?? false;
   const pauseListFx = Boolean(siblingOverlayOpen);
 
@@ -493,7 +517,9 @@ export default function ResultPostCardNative({
 
   const entrance = useResultPostCardEntrance({
     rowIndex: listEnterIndex,
-    entranceEnabled: entranceEnabled && !pauseListFx,
+    /** チュートリアル穴は Reanimated の scaleY と測位が食い違うので入場モーションを切る */
+    entranceEnabled:
+      entranceEnabled && !pauseListFx && !tutorialTargetId,
     reduceMotion: reduceMotionList,
     badge,
     hasFinalScore: hasFinal,
@@ -592,7 +618,13 @@ export default function ResultPostCardNative({
 
   return (
     <Animated.View
+      ref={tutorialTargetId ? captureRef : undefined}
       collapsable={false}
+      onLayout={
+        tutorialTargetId
+          ? () => notifyTutorialTargetsChanged()
+          : undefined
+      }
       style={[
         styles.listRowOuter,
         compactSpacing ? styles.cardOuterCompact : styles.cardOuter,
@@ -612,7 +644,7 @@ export default function ResultPostCardNative({
         }}
       >
       <View style={styles.cardCaptureWrap}>
-      <View ref={captureRef} collapsable={false}>
+      <View collapsable={false}>
       <ResultGlassShellNative
         borderColor={shellBorderColor}
         strokeWidth={shellStrokeWidth}

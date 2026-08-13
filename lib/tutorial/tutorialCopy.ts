@@ -21,6 +21,10 @@ export type TutorialVisualId =
   | "tabs"
   | "groups"
   | "profile"
+  | "horizon"
+  | "horizon-unit"
+  | "horizon-career"
+  | "horizon-stats"
   | "tabs-rankings"
   | "tabs-boards"
   | "tabs-profile";

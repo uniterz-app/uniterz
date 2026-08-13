@@ -30,6 +30,7 @@ import ResultCardDesignPreviewScreenNative from "../../results/ResultCardDesignP
 import ResultDetailDesignPreviewScreenNative from "../../results/ResultDetailDesignPreviewScreenNative";
 import ResultDetailScreen from "../../results/ResultDetailScreen";
 import { RESULT_DETAIL_DESIGN_PREVIEW_POST_ID } from "../../../../../../lib/tutorial/tutorialNbaUi";
+import SplashLogoPreviewScreenNative from "../mobileScreens/SplashLogoPreviewScreenNative";
 import TeamStatsPreviewScreenNative from "../../games/teamStats/TeamStatsPreviewScreenNative";
 import PlayerStatsPreviewScreenNative from "../../games/playerStats/PlayerStatsPreviewScreenNative";
 import PlayerDetailPreviewScreenNative from "../../games/playerDetail/PlayerDetailPreviewScreenNative";
@@ -358,6 +359,19 @@ export function ResultDetailDesignPreviewScreenWrapper() {
       onOpenProfile={(handle) =>
         navigation.push("PublicProfile", { handle, fromResultDetail: true })
       }
+    />
+  );
+}
+
+export function SplashLogoPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <SplashLogoPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
     />
   );
 }

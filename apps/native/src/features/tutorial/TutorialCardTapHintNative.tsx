@@ -1,5 +1,5 @@
 /**
- * Web `TutorialPulseHint` 相当 — 試合カード上のタップ誘導（パルス枠 + リップル）
+ * Web `TutorialPulseHint` 相当 — 試合カード上のタップ誘導（枠の淡いパルスのみ）
  */
 import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -9,7 +9,6 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withRepeat,
-  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { fonts } from "../../theme/tokens";
@@ -24,12 +23,13 @@ type Props = {
 
 export default function TutorialCardTapHintNative({ label }: Props) {
   const reduceMotion = useReducedMotion() ?? false;
-  const pulse = useSharedValue(0);
-  const ripple = useSharedValue(0);
-  const badgeY = useSharedValue(0);
+  const pulse = useSharedValue(reduceMotion ? 1 : 0);
 
   useEffect(() => {
-    if (reduceMotion) return;
+    if (reduceMotion) {
+      pulse.value = 1;
+      return;
+    }
     pulse.value = withRepeat(
       withTiming(1, {
         duration: TUTORIAL_PULSE_PERIOD_MS,
@@ -38,89 +38,48 @@ export default function TutorialCardTapHintNative({ label }: Props) {
       -1,
       true
     );
-    ripple.value = withRepeat(
-      withTiming(1, {
-        duration: TUTORIAL_PULSE_PERIOD_MS,
-        easing: Easing.out(Easing.cubic),
-      }),
-      -1,
-      false
-    );
-    // 上方向へ浮かせるとカード穴／リスト端で見切れるので下方向のみ
-    badgeY.value = withRepeat(
-      withSequence(
-        withTiming(3, {
-          duration: TUTORIAL_PULSE_PERIOD_MS / 2,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        withTiming(0, {
-          duration: TUTORIAL_PULSE_PERIOD_MS / 2,
-          easing: Easing.inOut(Easing.ease),
-        })
-      ),
-      -1,
-      false
-    );
-  }, [reduceMotion, pulse, ripple, badgeY]);
+  }, [reduceMotion, pulse]);
 
+  /** shadow は毎フレーム更新しない（iOS で重い） */
   const ringStyle = useAnimatedStyle(() => ({
-    opacity: 0.55 + pulse.value * 0.45,
-    shadowOpacity: 0.35 + pulse.value * 0.4,
-    shadowRadius: 8 + pulse.value * 14,
-  }));
-
-  const rippleStyle = useAnimatedStyle(() => ({
-    opacity: 0.5 * (1 - ripple.value),
-  }));
-
-  const badgeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: badgeY.value }],
+    opacity: 0.72 + pulse.value * 0.28,
   }));
 
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View pointerEvents="none" style={styles.root} collapsable={false}>
       <Animated.View style={[styles.ring, ringStyle]} />
-      <Animated.View style={[styles.ripple, rippleStyle]} />
       {label ? (
-        <Animated.View style={[styles.badge, badgeStyle]}>
+        <View style={styles.badge}>
           <Text style={styles.badgeText}>{label}</Text>
-        </Animated.View>
+        </View>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  /** MatchListCyberClip の elevation より手前・カード実寸に密着 */
+  root: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+    elevation: 40,
+  },
   ring: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 2,
     borderColor: TUTORIAL_CYAN,
-    borderRadius: 2,
-    shadowColor: TUTORIAL_CYAN,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  ripple: {
-    ...StyleSheet.absoluteFillObject,
-    margin: 4,
-    borderWidth: 2,
-    borderColor: TUTORIAL_CYAN,
-    borderRadius: 2,
+    borderRadius: 0,
   },
   badge: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 20,
+    top: 8,
+    right: 8,
+    zIndex: 50,
     backgroundColor: TUTORIAL_CYAN,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 2,
-    // Web PulseHint の box-shadow 相当（穴内でも光が切れにくい）
-    shadowColor: TUTORIAL_CYAN,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 7,
-    elevation: 4,
+    elevation: 50,
   },
   badgeText: {
     fontFamily: fonts.metricExtra,

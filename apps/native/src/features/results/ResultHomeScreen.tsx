@@ -24,7 +24,6 @@ import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague, LEAGUES } from "../../../../../lib/leagues";
-import TutorialTargetNative from "../tutorial/TutorialTargetNative";
 import {
   readTutorialLivePhaseNative,
 } from "../tutorial/tutorialLivePhaseNative";
@@ -399,10 +398,30 @@ export default function ResultHomeScreen({
           getScrollResponder?: () => {
             scrollTo?: (opts: { y: number; animated?: boolean }) => void;
           } | null;
+          measureInWindow?: (
+            cb: (x: number, y: number, w: number, h: number) => void
+          ) => void;
         } | null;
+        /** 連続 scrollBy で古い offset を使わない（枠ずれ防止） */
         const y = Math.max(0, resultScrollYRef.current + dy);
+        resultScrollYRef.current = y;
         list?.getScrollResponder?.()?.scrollTo?.({ y, animated });
       },
+      getViewportInWindow: () =>
+        new Promise((resolve) => {
+          const list = resultListRef.current as unknown as {
+            measureInWindow?: (
+              cb: (x: number, y: number, w: number, h: number) => void
+            ) => void;
+          } | null;
+          if (!list?.measureInWindow) {
+            resolve(null);
+            return;
+          }
+          list.measureInWindow((_x, y, _w, h) => {
+            resolve(h > 32 ? { y, height: h } : null);
+          });
+        }),
     });
   }, [tutorialBoost]);
 
@@ -577,7 +596,7 @@ export default function ResultHomeScreen({
       hintText={t.cacheHint}
       filterLabel={t.filterFold}
       filterCollapseLabel={t.filterClose}
-      entranceArmed={entranceArmed}
+      entranceArmed={entranceArmed && !tutorialBoost}
       onFilterPress={onFilterPress}
       filterPanelOpen={resultFilters.detailOpen}
       filterActive={!isDefaultResultListFilters(resultFilters)}
@@ -700,7 +719,9 @@ export default function ResultHomeScreen({
               <ResultDayHeader
                 dateLabel={section.dateLabel}
                 dayPoints={dayPointsHeaderForNative(section.final, section.pending, language)}
-                entranceActive={entranceArmed && isInitialHeader}
+                entranceActive={
+                  entranceArmed && isInitialHeader && !tutorialBoost
+                }
                 sectionStaggerIndex={sectionIndex >= 0 ? sectionIndex : 0}
                 leadGap={sectionIndex > 0}
               />
@@ -708,7 +729,7 @@ export default function ResultHomeScreen({
           }}
           renderItem={({ item, index, section }) => {
             const isLastInSection = index === section.data.length - 1;
-            const card = (
+            return (
               <ResultPostCardNative
                 post={item}
                 pkScore={resolveResultPostPkScore(item, pkFromGames)}
@@ -719,9 +740,14 @@ export default function ResultHomeScreen({
                   item.id === TUTORIAL_RESULT_POST_ID ? null : uid
                 }
                 listEnterIndex={section.baseFlatIndex + index}
-                entranceEnabled={entranceArmed}
+                entranceEnabled={entranceArmed && !tutorialBoost}
                 siblingOverlayOpen={detailPostId != null}
                 compactSpacing={isLastInSection}
+                tutorialTargetId={
+                  item.id === TUTORIAL_RESULT_POST_ID
+                    ? "result-card"
+                    : undefined
+                }
                 onOpenDetail={(id) => {
                   setDetailPostId(id);
                 }}
@@ -733,14 +759,6 @@ export default function ResultHomeScreen({
                 }
               />
             );
-            if (item.id === TUTORIAL_RESULT_POST_ID) {
-              return (
-                <TutorialTargetNative id="result-card">
-                  {card}
-                </TutorialTargetNative>
-              );
-            }
-            return card;
           }}
           SectionSeparatorComponent={null}
         />
@@ -761,10 +779,12 @@ export default function ResultHomeScreen({
       }}
       onConfirm={() => void confirmDismissPostFromList()}
     />
-    <TutorialLiveHostNative
-      page="results"
-      language={(language === "en" ? "en" : "ja") as Language}
-    />
+    <View style={styles.tutorialHostLayer} pointerEvents="box-none">
+      <TutorialLiveHostNative
+        page="results"
+        language={(language === "en" ? "en" : "ja") as Language}
+      />
+    </View>
     </View>
   );
 }
@@ -777,6 +797,12 @@ const styles = StyleSheet.create({
     width: "100%",
     position: "relative",
     backgroundColor: "transparent",
+  },
+  /** 詳細オーバーレイ (zIndex 120) より前面にコーチを載せる */
+  tutorialHostLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 200,
+    elevation: 200,
   },
   root: {
     flex: 1,

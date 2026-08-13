@@ -71,6 +71,7 @@ import {
   writeTutorialLivePhase,
   type TutorialLivePhase,
 } from "@/lib/tutorial/tutorialLivePhase";
+import { formatTutorialLiveProgress } from "@/lib/tutorial/tutorialLiveProgress";
 import {
   buildTutorialNbaRawGame,
   TUTORIAL_NBA_GAME_ID,
@@ -267,16 +268,20 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     tutorialPhase !== "gotoGroups" &&
     tutorialPhase !== "groups" &&
     tutorialPhase !== "gotoProfile" &&
-    tutorialPhase !== "profile";
+    tutorialPhase !== "profile" &&
+    tutorialPhase !== "horizon";
 
-  /** 投稿後 → 試合終了シミュ → リザルトタブへ誘導 */
+  /** 投稿後 → 試合終了シミュ → リザルトへ直接遷移（goto 待機コーチなし） */
   useEffect(() => {
     if (tutorialPhase !== "resolving") return;
     const timer = window.setTimeout(() => {
-      setTutorialPhaseAndStore("gotoResults");
+      setTutorialPhaseAndStore("results");
+      router.push(
+        pathname?.startsWith("/web") ? "/web/result" : "/mobile/result"
+      );
     }, 1800);
     return () => window.clearTimeout(timer);
-  }, [tutorialPhase, setTutorialPhaseAndStore]);
+  }, [tutorialPhase, setTutorialPhaseAndStore, router, pathname]);
 
   useEffect(() => {
     if (didInitLeague.current || !preferredLeagueReady) return;
@@ -1366,6 +1371,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         }
         ariaLabel={m.games.statsSection}
         label="STATS"
+        tutorialTargetId="games-stats-edge"
       />
 
       {/* 本番画面上のチュートリアルコーチ */}
@@ -1377,6 +1383,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           skipLabel={m.tutorial.skip}
           nextLabel={m.tutorial.next}
           visual="welcome"
+          progressLabel={formatTutorialLiveProgress(
+            m.tutorial.practice.progressLabel,
+            "welcome"
+          )}
           onSkip={completeTutorialFully}
           onNext={() => setTutorialPhaseAndStore("tapCard")}
         />
@@ -1393,6 +1403,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
             target="match-card"
             waitHint={m.tutorial.practice.tapHint}
             showHoleRing={false}
+            progressLabel={formatTutorialLiveProgress(
+              m.tutorial.practice.progressLabel,
+              "tapCard"
+            )}
             onSkip={completeTutorialFully}
             onBack={() => setTutorialPhaseAndStore("welcome")}
           />
@@ -1413,6 +1427,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           skipLabel={m.tutorial.skip}
           nextLabel={m.tutorial.next}
           backLabel={m.tutorial.back}
+          progressLabel={formatTutorialLiveProgress(
+            m.tutorial.practice.progressLabel,
+            "posted"
+          )}
           onSkip={completeTutorialFully}
           onBack={() => setTutorialPhaseAndStore("tapCard")}
           onNext={() => setTutorialPhaseAndStore("resolving")}
@@ -1425,27 +1443,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         body={m.tutorial.practice.resolvingBody}
         spinLabel={m.tutorial.practice.resolvingSpin}
       />
-
-      {tutorialPhase === "gotoResults" ? (
-        <TutorialLiveCoach
-          open
-          title={m.tutorial.practice.gotoResultsTitle}
-          body={m.tutorial.practice.gotoResultsBody}
-          skipLabel={m.tutorial.skip}
-          nextLabel={m.tutorial.next}
-          backLabel={m.tutorial.back}
-          target="nav-home"
-          waitHint={m.tutorial.practice.tapNavHint}
-          onSkip={completeTutorialFully}
-          onBack={() => setTutorialPhaseAndStore("posted")}
-          onNext={() => {
-            setTutorialPhaseAndStore("results");
-            router.push(
-              pathname?.startsWith("/web") ? "/web/result" : "/mobile/result"
-            );
-          }}
-        />
-      ) : null}
     </div>
   );
 }
