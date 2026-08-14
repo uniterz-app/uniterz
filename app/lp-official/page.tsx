@@ -13,7 +13,7 @@ export default function OfficialLandingPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: officialSite.company.name === "準備中" ? officialSite.productName : officialSite.company.name,
+    name: officialSite.company.name,
     url: "https://uniterz.app",
     email: officialSite.supportEmail,
     description:

@@ -29,10 +29,7 @@ export default function OfficialLpFooter() {
         </div>
 
         <p className="olp-copy">
-          © {year} {officialSite.productName}
-          {officialSite.company.name !== "準備中"
-            ? ` / ${officialSite.company.name}`
-            : ""}
+          © {year} {officialSite.productName} / {officialSite.company.name}
         </p>
       </div>
     </footer>
