@@ -313,6 +313,8 @@ NBA ジャージはスウィングマンを基本とし、価格上限内であ�
 
 弁護士 OK 後に両方 `true` にする。
 
+**2026-08-13:** 弁護士 OK により `REDEMPTION_UNITS_LIVE = true`（`MONTHLY_REPORT_UNITS_FROM_LEDGER` は先行して true）。
+
 ### まとめ購入
 
 - 申請は月中いつでも可

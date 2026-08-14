@@ -2,6 +2,7 @@
 "use client";
 
 import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
+import UnitRedemptionTermsSections from "@/app/component/legal/UnitRedemptionTermsSections";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -21,7 +22,7 @@ export default function WebTermsPage() {
           ? "Uniterz におけるご利用条件を定めたページです。ご利用前に必ずご確認ください。"
           : "This page sets forth the terms and conditions for using Uniterz. Please review them carefully before using the Service."
       }
-      updatedAt="2026-03-23"
+      updatedAt="2026-08-13"
     >
       <section>
         <h2 className="text-base font-semibold mb-1">
@@ -266,6 +267,15 @@ export default function WebTermsPage() {
             日本法に準拠し、紛争は日本国内の裁判所を専属管轄とします。
           </p>
         )}
+      </section>
+
+      <section className="space-y-6">
+        <UnitRedemptionTermsSections
+          language={isJa ? "ja" : "en"}
+          headingClassName="text-base font-semibold mb-1"
+          unitNumber="13"
+          redemptionNumber="14"
+        />
       </section>
     </LegalPageLayout>
   );

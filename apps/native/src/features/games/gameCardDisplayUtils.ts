@@ -67,7 +67,7 @@ export function getGameCardCenterBlock(
   const liveUi = isEffectiveLive(game);
   if (status === "final" && score) {
     const ot = resolveFinalMetaOt(game);
-    const sub = `${language === "en" ? "Final" : "試合終了"}${ot ? " (OT)" : ""}`;
+    const sub = `FINAL${ot ? " (OT)" : ""}`;
     const pkScore = resolvePkScore(game);
     return {
       variant: "score",

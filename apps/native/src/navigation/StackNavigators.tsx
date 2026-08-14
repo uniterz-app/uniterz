@@ -553,6 +553,15 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="MatchCardDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .MatchCardDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
         <ProfileStack.Screen
           name="ProSuccess"
           getComponent={() =>

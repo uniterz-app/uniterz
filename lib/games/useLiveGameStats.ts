@@ -1,13 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { LiveGameStatsReport } from "@/lib/games/liveGameStats";
+import {
+  buildLiveGameStatsReport,
+  normalizeLiveGameStatsDoc,
+  type LiveGameStatsReport,
+} from "@/lib/games/liveGameStats";
 
 const LIVE_POLL_MS = 30_000;
 
 export type UseLiveGameStatsOptions = {
   /** Native など相対パスが使えないとき（末尾スラッシュなし） */
   apiBaseUrl?: string | null;
+  /**
+   * API が空/失敗のとき games/{id} を直接読む（Native は Window API が liveStats を落とす）。
+   */
+  loadGameDoc?: (
+    gameId: string
+  ) => Promise<Record<string, unknown> | null>;
 };
 
 /**
@@ -24,6 +34,8 @@ export function useLiveGameStats(
   const [loading, setLoading] = useState(false);
   const reportRef = useRef<LiveGameStatsReport | null>(null);
   const apiBase = (options?.apiBaseUrl ?? "").replace(/\/+$/, "");
+  const loadGameDocRef = useRef(options?.loadGameDoc);
+  loadGameDocRef.current = options?.loadGameDoc;
 
   useEffect(() => {
     reportRef.current = null;
@@ -37,36 +49,54 @@ export function useLiveGameStats(
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
+    const reportFromGameDoc = async (): Promise<LiveGameStatsReport | null> => {
+      const loader = loadGameDocRef.current;
+      if (!loader) return null;
+      const game = await loader(gameId);
+      if (!game) return null;
+      const live = normalizeLiveGameStatsDoc(game.liveStats);
+      if (!live) return null;
+      return buildLiveGameStatsReport(gameId, game, live);
+    };
+
     const fetchOnce = async () => {
+      let next: LiveGameStatsReport | null = null;
       try {
-        const path = `/api/games/live-stats?gameId=${encodeURIComponent(gameId)}`;
-        const url = apiBase ? `${apiBase}${path}` : path;
-        const res = await fetch(url, { cache: "no-store" });
-        if (!alive) return;
-        if (res.ok) {
-          const json = (await res.json().catch(() => null)) as {
-            ok?: boolean;
-            report?: LiveGameStatsReport | null;
-          } | null;
-          if (!alive) return;
-          const next = json?.ok ? json.report ?? null : null;
-          reportRef.current = next;
-          setReport(next);
+        if (apiBase) {
+          const path = `/api/games/live-stats?gameId=${encodeURIComponent(gameId)}`;
+          const url = `${apiBase}${path}`;
+          const res = await fetch(url, { cache: "no-store" });
+          if (res.ok) {
+            const json = (await res.json().catch(() => null)) as {
+              ok?: boolean;
+              report?: LiveGameStatsReport | null;
+            } | null;
+            next = json?.ok ? json.report ?? null : null;
+          }
         }
       } catch {
-        // ネットワーク一時失敗は次のポーリングに任せる
-      } finally {
-        if (alive) setLoading(false);
+        // API 失敗は Firestore フォールバックへ
+      }
+
+      if (!next) {
+        try {
+          next = await reportFromGameDoc();
+        } catch {
+          next = null;
+        }
       }
 
       if (!alive) return;
-      // final になったらポーリング停止。未登録(null)はライブ開始待ちの可能性があるため継続
+      reportRef.current = next;
+      setReport(next);
+      setLoading(false);
+
       if (reportRef.current?.phase === "final") return;
       timer = setTimeout(fetchOnce, LIVE_POLL_MS);
     };
 
     setLoading(true);
-    fetchOnce();
+    void fetchOnce();
 
     return () => {
       alive = false;

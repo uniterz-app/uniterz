@@ -5,12 +5,15 @@
  */
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import { nameOxanium } from "@/lib/fonts";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import { createMeRedemption } from "@/lib/api/fetchMeRedemptions";
+import {
+  createMeRedemption,
+  fetchMeRedemptions,
+} from "@/lib/api/fetchMeRedemptions";
 import {
   REDEMPTION_CATALOG,
   normalizeRedemptionProductKind,
@@ -18,6 +21,12 @@ import {
 } from "@/lib/redemption/redemptionCatalog";
 import { redemptionBatchScheduleCopy } from "@/lib/redemption/redemptionBatchScheduleCopy";
 import type { RedemptionProductKind } from "@/lib/redemption/redemptionTypes";
+import { REDEMPTION_APPLY_CONSENT } from "@/lib/legal/unitRedemptionLegalCopy";
+import {
+  canAffordRedemption,
+  redemptionApplyErrorMessage,
+  redemptionAvailableUnits,
+} from "@/lib/redemption/redemptionApplyGate";
 
 function pathBase() {
   if (typeof window === "undefined") return "/mobile";
@@ -33,8 +42,9 @@ export default function RedemptionApplyPage() {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const isJa = language === "ja";
+  const lang = isJa ? "ja" : "en";
   const base = pathBase();
-  const batch = redemptionBatchScheduleCopy(isJa ? "ja" : "en");
+  const batch = redemptionBatchScheduleCopy(lang);
 
   const initialKind =
     normalizeRedemptionProductKind(search.get("kind")) ?? "tshirt";
@@ -52,15 +62,71 @@ export default function RedemptionApplyPage() {
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingPhone, setShippingPhone] = useState("");
   const [shippingCountry, setShippingCountry] = useState("JP");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [reservedUnits, setReservedUnits] = useState(0);
+  const [seasonUnitsUsed, setSeasonUnitsUsed] = useState(0);
+  const [seasonCap, setSeasonCap] = useState(2000);
+  const [walletReady, setWalletReady] = useState(false);
 
   const selected = useMemo(
     () => REDEMPTION_CATALOG.find((x) => x.kind === productKind),
     [productKind]
   );
 
+  const available = redemptionAvailableUnits(balance, reservedUnits);
+  const afford = selected
+    ? canAffordRedemption({
+        balance,
+        reservedUnits,
+        unitsRequired: selected.unitsRequired,
+        seasonUnitsUsed,
+        seasonCap,
+      })
+    : { ok: false as const, reason: "insufficient_units" as const };
+  const submitBlocked = walletReady && !afford.ok;
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    let alive = true;
+    void fetchMeRedemptions()
+      .then((data) => {
+        if (!alive) return;
+        setBalance(data.balance ?? 0);
+        setReservedUnits(data.reservedUnits ?? 0);
+        setSeasonUnitsUsed(data.seasonUnitsUsed ?? 0);
+        setSeasonCap(data.seasonCap ?? 2000);
+        setWalletReady(true);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setWalletReady(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [user?.uid]);
+
   async function submit(asDraft: boolean) {
+    if (!asDraft && !consent) {
+      setError(redemptionApplyErrorMessage("consent_required", lang));
+      return;
+    }
+    if (!asDraft && selected) {
+      const gate = canAffordRedemption({
+        balance,
+        reservedUnits,
+        unitsRequired: selected.unitsRequired,
+        seasonUnitsUsed,
+        seasonCap,
+      });
+      if (!gate.ok) {
+        setError(redemptionApplyErrorMessage(gate.reason, lang));
+        return;
+      }
+    }
     setBusy(true);
     setError(null);
     try {
@@ -83,7 +149,8 @@ export default function RedemptionApplyPage() {
       );
       router.push(`${base}/redeem/${req.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "error");
+      const raw = e instanceof Error ? e.message : "error";
+      setError(redemptionApplyErrorMessage(raw, lang));
     } finally {
       setBusy(false);
     }
@@ -117,6 +184,24 @@ export default function RedemptionApplyPage() {
           {batch.short}
         </p>
         <p className="mt-1.5">{batch.detail}</p>
+      </div>
+
+      <div className="rounded-[2px] border border-white/10 bg-black/30 px-3 py-2.5 text-[12px] text-white/70">
+        <p>
+          {isJa
+            ? `利用可能 ${available.toLocaleString("ja-JP")} Unit（保有 ${balance.toLocaleString("ja-JP")} − 申請中 ${reservedUnits.toLocaleString("ja-JP")}）`
+            : `Available ${available.toLocaleString("en-US")} Units (held ${balance.toLocaleString("en-US")} − reserved ${reservedUnits.toLocaleString("en-US")})`}
+        </p>
+        <p className="mt-1 text-white/45">
+          {isJa
+            ? `今シーズン交換 ${seasonUnitsUsed.toLocaleString("ja-JP")} / ${seasonCap.toLocaleString("ja-JP")} Unit`
+            : `Season used ${seasonUnitsUsed.toLocaleString("en-US")} / ${seasonCap.toLocaleString("en-US")} Units`}
+        </p>
+        {submitBlocked ? (
+          <p className="mt-2 text-[12px] text-rose-300/90">
+            {redemptionApplyErrorMessage(afford.reason, lang)}
+          </p>
+        ) : null}
       </div>
 
       <label className="block space-y-1">
@@ -210,6 +295,27 @@ export default function RedemptionApplyPage() {
         </label>
       ))}
 
+      <label className="flex items-start gap-2 pt-1 text-[12px] leading-relaxed text-white/70">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+        />
+        <span>
+          {isJa
+            ? REDEMPTION_APPLY_CONSENT.label.ja
+            : REDEMPTION_APPLY_CONSENT.label.en}{" "}
+          <Link href={`${base}/terms`} className="text-cyan-200/90 underline">
+            {isJa ? "利用規約" : "Terms"}
+          </Link>
+          {" / "}
+          <Link href={`${base}/privacy`} className="text-cyan-200/90 underline">
+            {isJa ? "プライバシー" : "Privacy"}
+          </Link>
+        </span>
+      </label>
+
       {error ? (
         <p className="text-[13px] text-rose-300/80">{error}</p>
       ) : null}
@@ -217,7 +323,7 @@ export default function RedemptionApplyPage() {
       <div className="flex flex-wrap gap-2 pt-2">
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || submitBlocked}
           onClick={() => void submit(false)}
           className={[
             nameOxanium.className,

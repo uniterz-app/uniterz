@@ -5,6 +5,7 @@ import AuthGate from "@/app/AuthGate";
 import NavBar from "@/app/component/NavBar";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
+import { isPublicLpPath } from "@/lib/lp/publicLpPaths";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 
 /** 下部ナビを出さないルート（ゲスト向け文言ページ・初回プロフィールセットアップ） */
@@ -34,14 +35,7 @@ export default function WebOrMobileSplash({
   }
 
   // 公開LPは Firebase 待ちのスプラッシュを出さない（開けないように見えるのを防ぐ）
-  if (pathname === "/mobile/lp" || pathname === "/mobile/lp-v2") {
-    return (
-      <div id="app-root" className="relative isolate min-h-0">
-        {children}
-      </div>
-    );
-  }
-  if (pathname === "/lp" || pathname === "/lp-v2") {
+  if (isPublicLpPath(pathname)) {
     return (
       <div id="app-root" className="relative isolate min-h-0">
         {children}

@@ -1,7 +1,7 @@
 /**
  * Web `RedemptionApplyPage` 相当
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -16,7 +16,10 @@ import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 import type { ProfileStackParamList } from "../../../navigation/types";
-import { createMeRedemptionNative } from "../redemptionApiNative";
+import {
+  createMeRedemptionNative,
+  fetchMeRedemptionsNative,
+} from "../redemptionApiNative";
 import {
   REDEMPTION_CATALOG,
   normalizeRedemptionProductKind,
@@ -24,6 +27,12 @@ import {
 } from "../../../../../../lib/redemption/redemptionCatalog";
 import { redemptionBatchScheduleCopy } from "../../../../../../lib/redemption/redemptionBatchScheduleCopy";
 import type { RedemptionProductKind } from "../../../../../../lib/redemption/redemptionTypes";
+import { REDEMPTION_APPLY_CONSENT } from "../../../../../../lib/legal/unitRedemptionLegalCopy";
+import {
+  canAffordRedemption,
+  redemptionApplyErrorMessage,
+  redemptionAvailableUnits,
+} from "../../../../../../lib/redemption/redemptionApplyGate";
 
 const OX = "Oxanium_700Bold";
 
@@ -34,7 +43,8 @@ export default function RedemptionApplyScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const isJa = language === "ja";
-  const batch = redemptionBatchScheduleCopy(isJa ? "ja" : "en");
+  const lang = isJa ? "ja" : "en";
+  const batch = redemptionBatchScheduleCopy(lang);
 
   const initial =
     normalizeRedemptionProductKind(route.params?.kind) ?? "tshirt";
@@ -51,15 +61,71 @@ export default function RedemptionApplyScreenNative() {
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingPhone, setShippingPhone] = useState("");
   const [shippingCountry, setShippingCountry] = useState("JP");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [reservedUnits, setReservedUnits] = useState(0);
+  const [seasonUnitsUsed, setSeasonUnitsUsed] = useState(0);
+  const [seasonCap, setSeasonCap] = useState(2000);
+  const [walletReady, setWalletReady] = useState(false);
 
   const selected = useMemo(
     () => REDEMPTION_CATALOG.find((x) => x.kind === productKind),
     [productKind]
   );
 
+  const available = redemptionAvailableUnits(balance, reservedUnits);
+  const afford = selected
+    ? canAffordRedemption({
+        balance,
+        reservedUnits,
+        unitsRequired: selected.unitsRequired,
+        seasonUnitsUsed,
+        seasonCap,
+      })
+    : { ok: false as const, reason: "insufficient_units" as const };
+  const submitBlocked = walletReady && !afford.ok;
+
+  useEffect(() => {
+    if (!fUser?.uid) return;
+    let alive = true;
+    void fetchMeRedemptionsNative()
+      .then((data) => {
+        if (!alive) return;
+        setBalance(data.balance ?? 0);
+        setReservedUnits(data.reservedUnits ?? 0);
+        setSeasonUnitsUsed(data.seasonUnitsUsed ?? 0);
+        setSeasonCap(data.seasonCap ?? 2000);
+        setWalletReady(true);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setWalletReady(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [fUser?.uid]);
+
   async function submit(asDraft: boolean) {
+    if (!asDraft && !consent) {
+      setError(redemptionApplyErrorMessage("consent_required", lang));
+      return;
+    }
+    if (!asDraft && selected) {
+      const gate = canAffordRedemption({
+        balance,
+        reservedUnits,
+        unitsRequired: selected.unitsRequired,
+        seasonUnitsUsed,
+        seasonCap,
+      });
+      if (!gate.ok) {
+        setError(redemptionApplyErrorMessage(gate.reason, lang));
+        return;
+      }
+    }
     setBusy(true);
     setError(null);
     try {
@@ -82,7 +148,8 @@ export default function RedemptionApplyScreenNative() {
       );
       navigation.replace("RedeemProgress", { id: req.id });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "error");
+      const raw = e instanceof Error ? e.message : "error";
+      setError(redemptionApplyErrorMessage(raw, lang));
     } finally {
       setBusy(false);
     }
@@ -101,6 +168,24 @@ export default function RedemptionApplyScreenNative() {
       <View style={styles.batchCard}>
         <Text style={styles.batchTitle}>{batch.short}</Text>
         <Text style={styles.batchBody}>{batch.detail}</Text>
+      </View>
+
+      <View style={styles.walletCard}>
+        <Text style={styles.walletLine}>
+          {isJa
+            ? `利用可能 ${available.toLocaleString("ja-JP")} Unit`
+            : `Available ${available.toLocaleString("en-US")} Units`}
+        </Text>
+        <Text style={styles.walletSub}>
+          {isJa
+            ? `保有 ${balance.toLocaleString("ja-JP")} − 申請中 ${reservedUnits.toLocaleString("ja-JP")} · 今シーズン ${seasonUnitsUsed}/${seasonCap}`
+            : `Held ${balance.toLocaleString("en-US")} − reserved ${reservedUnits.toLocaleString("en-US")} · Season ${seasonUnitsUsed}/${seasonCap}`}
+        </Text>
+        {submitBlocked ? (
+          <Text style={styles.walletWarn}>
+            {redemptionApplyErrorMessage(afford.reason, lang)}
+          </Text>
+        ) : null}
       </View>
 
       <Text style={styles.label}>{isJa ? "商品区分" : "Tier"}</Text>
@@ -123,7 +208,7 @@ export default function RedemptionApplyScreenNative() {
       {selected ? (
         <Text style={styles.hint}>
           {selected.unitsRequired} Unit ·{" "}
-          {redemptionPriceCapShort(selected, isJa ? "ja" : "en")}
+          {redemptionPriceCapShort(selected, lang)}
         </Text>
       ) : null}
 
@@ -166,10 +251,22 @@ export default function RedemptionApplyScreenNative() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      <Pressable
+        style={styles.consentRow}
+        onPress={() => setConsent((v) => !v)}
+      >
+        <View style={[styles.checkbox, consent && styles.checkboxOn]} />
+        <Text style={styles.consentText}>
+          {isJa
+            ? REDEMPTION_APPLY_CONSENT.label.ja
+            : REDEMPTION_APPLY_CONSENT.label.en}
+        </Text>
+      </Pressable>
+
       <View style={styles.actions}>
         <Pressable
-          disabled={busy}
-          style={styles.primaryBtn}
+          disabled={busy || submitBlocked}
+          style={[styles.primaryBtn, submitBlocked && styles.btnDisabled]}
           onPress={() => void submit(false)}
         >
           <Text style={styles.primaryBtnText}>
@@ -212,6 +309,25 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: "rgba(236,254,255,0.85)",
   },
+  walletCard: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(0,0,0,0.28)",
+  },
+  walletLine: { fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
+  walletSub: {
+    marginTop: 4,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.45)",
+  },
+  walletWarn: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "rgba(253,164,175,0.95)",
+  },
   label: { fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 4 },
   kindRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
   kindChip: {
@@ -240,6 +356,30 @@ const styles = StyleSheet.create({
   },
   textarea: { minHeight: 72, textAlignVertical: "top" },
   error: { color: "rgba(253,164,175,0.9)", marginBottom: 8 },
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    marginTop: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "transparent",
+  },
+  checkboxOn: {
+    backgroundColor: "rgba(34,211,238,0.55)",
+    borderColor: "rgba(103,232,249,0.8)",
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.65)",
+  },
   actions: { flexDirection: "row", gap: 8, marginTop: 8, marginBottom: 24 },
   primaryBtn: {
     borderWidth: StyleSheet.hairlineWidth,
@@ -248,6 +388,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
+  btnDisabled: { opacity: 0.45 },
   primaryBtnText: {
     fontFamily: OX,
     fontSize: 11,

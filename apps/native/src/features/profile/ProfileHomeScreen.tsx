@@ -1392,6 +1392,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("ResultCardDesignPreview");
         else if (page === "splashLogoPreview" && __DEV__)
           navigation.navigate("SplashLogoPreview");
+        else if (page === "matchCardDesignPreview" && __DEV__)
+          navigation.navigate("MatchCardDesignPreview");
         else if (page === "teamStatsPreview" && __DEV__)
           navigation.navigate("TeamStatsPreview");
         else if (page === "playerStatsPreview" && __DEV__)

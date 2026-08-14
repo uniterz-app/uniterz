@@ -3,6 +3,7 @@
 
 import React from "react";
 import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
+import UnitRedemptionTermsSections from "@/app/component/legal/UnitRedemptionTermsSections";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -21,7 +22,7 @@ export default function MobileTermsPage() {
           ? "Uniterz におけるご利用条件を定めたページです。ご利用前に必ずご確認ください。"
           : "This page sets forth the terms and conditions for using Uniterz. Please review them carefully before using the Service."
       }
-      updatedAt="2026-03-23"
+      updatedAt="2026-08-13"
       variant="mobile"
     >
       <section className="space-y-6 text-sm leading-relaxed text-white/80">
@@ -357,6 +358,8 @@ export default function MobileTermsPage() {
             </>
           )}
         </div>
+
+        <UnitRedemptionTermsSections language={isJa ? "ja" : "en"} />
 
       </section>
     </LegalPageLayout>

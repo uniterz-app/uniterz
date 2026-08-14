@@ -13,6 +13,7 @@ import EventModal from "@/app/component/modals/EventModal";
 import { EVENT_MODAL_QUEUE } from "@/lib/events/syntheticEventNotices";
 import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 import { usePathname } from "next/navigation";
+import { isPublicLpPath } from "@/lib/lp/publicLpPaths";
 import { isAuthEntryRoute } from "@/lib/profileSetupRoute";
 import { normalizeLanguage } from "@/lib/i18n/language";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -39,7 +40,7 @@ export default function EventGate() {
   );
   const pendingReadIdsRef = useRef<Set<string>>(new Set());
   const pathname = usePathname();
-  const isPublicLp = pathname === "/lp" || pathname === "/mobile/lp";
+  const isPublicLp = isPublicLpPath(pathname);
   const { language, loading: languageLoading } = useUserLanguage(uid);
 
   useEffect(() => {

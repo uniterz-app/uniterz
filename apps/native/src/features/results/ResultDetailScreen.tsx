@@ -38,7 +38,9 @@ import {
   buildResultDetailViewFromLoad,
   loadResultPostDetailNative,
 } from "./loadResultPostDetailNative";
-import ResultDetailBodyNative from "./ResultDetailBodyNative";
+import ResultDetailBodyNative, {
+  type ResultDetailBodySections,
+} from "./ResultDetailBodyNative";
 import { buildResultDetailDesignPreviewView } from "./resultDetailDesignPreviewMock";
 import type { ResultDetailViewModel } from "../../../../../lib/result/buildResultDetailView";
 import { buildResultDetailViewModel } from "../../../../../lib/result/buildResultDetailView";
@@ -55,12 +57,14 @@ export default function ResultDetailScreen({
   language,
   onClose,
   onOpenProfile,
+  sections = "full",
 }: {
   visible: boolean;
   postId: string | null;
   language: "ja" | "en";
   onClose: () => void;
   onOpenProfile?: (handle: string) => void;
+  sections?: ResultDetailBodySections;
 }) {
   const isEn = language === "en";
   const reduceMotion = useReducedMotion() ?? false;
@@ -317,6 +321,7 @@ export default function ResultDetailScreen({
                             language={language}
                             view={view}
                             onOpenProfile={openProfile}
+                            sections={sections}
                           />
                         </Animated.View>
                       )}

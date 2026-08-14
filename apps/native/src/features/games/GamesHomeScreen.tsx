@@ -87,6 +87,7 @@ import {
   parseSeriesStandingFromRaw,
 } from "../../../../../lib/games/playoffSeriesUi";
 import GameDetailModal from "./GameDetailModal";
+import ResultDetailScreen from "../results/ResultDetailScreen";
 import {
   readEditModeHintShown,
   writeEditModeHintShown,
@@ -187,6 +188,7 @@ import {
   MATCH_CARD_METRIC_FONT,
   MATCH_CARD_SCORE_FONT,
 } from "./matchCardTypography";
+import { gameCardListStyles } from "./gameCardListStyles";
 
 function formatKickoffTime(
   startAt: Date | null,
@@ -481,6 +483,23 @@ function isSameLocalDay(a: Date, b: Date): boolean {
   );
 }
 
+/** 日付切替の最初の描画で、キャッシュ済みの予想済み ID を state より先に使う */
+function predictedIdsForVisibleGames(
+  uid: string | undefined,
+  gameIdSet: Set<string>,
+  stateIds: Set<string>
+): Set<string> {
+  const ids = new Set<string>();
+  if (uid && gameIdSet.size > 0) {
+    const peeked = peekScheduleMyPosts(uid, [...gameIdSet]);
+    for (const gid of Object.keys(peeked)) ids.add(gid);
+  }
+  for (const gid of stateIds) {
+    if (gameIdSet.has(gid)) ids.add(gid);
+  }
+  return ids;
+}
+
 export default function GamesHomeScreen({
   bottomReserveY = 0,
   routeParams,
@@ -513,6 +532,10 @@ export default function GamesHomeScreen({
     null
   );
   const [isPredictModalOpen, setIsPredictModalOpen] = useState(false);
+  /** 終了＋予想済みは現行リザルト詳細（新カード面）を開く */
+  const [resultDetailPostId, setResultDetailPostId] = useState<string | null>(
+    null
+  );
   const [tutorialPhase, setTutorialPhase] =
     useState<TutorialLivePhase | null>(null);
   /** Games 上のモック試合・コーチ表示（リザルト以降のフェーズでは出さない） */
@@ -597,6 +620,7 @@ export default function GamesHomeScreen({
     loading,
     error,
     games,
+    windowGameIds,
     peerGamesForSeries,
     dateKeysWithGames,
     hasWindowData,
@@ -995,7 +1019,8 @@ export default function GamesHomeScreen({
   );
   const selectedGameId = String(selectedGame?.id ?? "");
   const isEditingPrediction = Boolean(myPostIdByGameId[selectedGameId]);
-  const isGameDetailModalVisible = selectedGame != null && !isPredictModalOpen;
+  const isGameDetailModalVisible =
+    selectedGame != null && !isPredictModalOpen && resultDetailPostId == null;
 
   const gameIdSet = useMemo(
     () => new Set(games.map((g) => String(g.id ?? "")).filter(Boolean)),
@@ -1164,15 +1189,81 @@ export default function GamesHomeScreen({
     return () => clearInterval(timer);
   }, [selectedGame]);
 
+  const predictedGameIdsForList = useMemo(
+    () => predictedIdsForVisibleGames(fUser?.uid, gameIdSet, predictedGameIds),
+    [fUser?.uid, gameIdSet, predictedGameIds]
+  );
+  /** 未取得の予想を青で先塗りしない。キャッシュ済みなら即描画 */
+  const predictionPaintPending = Boolean(
+    fUser &&
+      gameIdSet.size > 0 &&
+      missingScheduleMyPostGameIds(fUser.uid, [...gameIdSet]).length > 0
+  );
+
   useEffect(() => {
     let alive = true;
+    async function fetchPostsForGameIds(need: string[]): Promise<ScheduleMyPostsMap> {
+      const found: ScheduleMyPostsMap = {};
+      if (need.length === 0) return found;
+      const snaps = [];
+      const IN_LIMIT = 10;
+      for (let i = 0; i < need.length; i += IN_LIMIT) {
+        const chunk = need.slice(i, i + IN_LIMIT);
+        snaps.push(
+          getDocs(
+            query(
+              collection(db, "posts"),
+              where("authorUid", "==", fUser!.uid),
+              where("gameId", "in", chunk),
+              where("schemaVersion", "==", 2)
+            )
+          )
+        );
+      }
+      const settled = await Promise.all(snaps);
+      for (const snap of settled) {
+        snap.docs.forEach((row) => {
+          const rowData = row.data();
+          const gameId = String(rowData?.gameId ?? "");
+          if (!gameId) return;
+          const winnerRaw = rowData?.prediction?.winner;
+          const homeRaw = rowData?.prediction?.score?.home;
+          const awayRaw = rowData?.prediction?.score?.away;
+          found[gameId] = {
+            postId: row.id,
+            winner:
+              winnerRaw === "home" ||
+              winnerRaw === "away" ||
+              winnerRaw === "draw"
+                ? winnerRaw
+                : undefined,
+            score:
+              typeof homeRaw === "number" && typeof awayRaw === "number"
+                ? { home: homeRaw, away: awayRaw }
+                : undefined,
+            comment:
+              typeof rowData?.comment === "string" ? rowData.comment : "",
+            updatedAt: rowData?.updatedAt ?? null,
+            goalScorer: rowData?.prediction?.goalScorer ?? null,
+            postStats:
+              rowData?.stats && typeof rowData.stats === "object"
+                ? (rowData.stats as Record<string, unknown>)
+                : null,
+          };
+        });
+      }
+      return found;
+    }
     async function loadMyPredictions() {
-      if (!fUser || gameIdSet.size === 0) {
+      if (!fUser) {
         setPredictedGameIds(new Set());
+        setMyPostIdByGameId({});
+        setMyPredictionByGameId({});
         return;
       }
+      const gameIds = gameIdsKey ? gameIdsKey.split(",") : [];
+      if (gameIds.length === 0) return;
       try {
-        const gameIds = gameIdsKey ? gameIdsKey.split(",") : [];
         // 予想保存後の再読込では absent を捨てて差分取得
         if (myPredictionsReloadNonce > 0) {
           clearScheduleMyPostsAbsent(fUser.uid, gameIds);
@@ -1218,59 +1309,19 @@ export default function GamesHomeScreen({
 
         applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
 
-        const need = missingScheduleMyPostGameIds(fUser.uid, gameIds);
-        if (need.length === 0) return;
+        const needDay = missingScheduleMyPostGameIds(fUser.uid, gameIds);
+        if (needDay.length > 0) {
+          const foundDay = await fetchPostsForGameIds(needDay);
+          if (!alive) return;
+          mergeScheduleMyPostsCache(fUser.uid, needDay, foundDay);
+          applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
+        }
 
-        const snaps = [];
-        const IN_LIMIT = 10;
-        for (let i = 0; i < need.length; i += IN_LIMIT) {
-          const chunk = need.slice(i, i + IN_LIMIT);
-          snaps.push(
-            getDocs(
-              query(
-                collection(db, "posts"),
-                where("authorUid", "==", fUser.uid),
-                where("gameId", "in", chunk),
-                where("schemaVersion", "==", 2)
-              )
-            )
-          );
-        }
-        const settled = await Promise.all(snaps);
+        const needWindow = missingScheduleMyPostGameIds(fUser.uid, windowGameIds);
+        if (needWindow.length === 0) return;
+        const foundWindow = await fetchPostsForGameIds(needWindow);
         if (!alive) return;
-        const found: ScheduleMyPostsMap = {};
-        for (const snap of settled) {
-          snap.docs.forEach((row) => {
-            const rowData = row.data();
-            const gameId = String(rowData?.gameId ?? "");
-            if (!gameId) return;
-            const winnerRaw = rowData?.prediction?.winner;
-            const homeRaw = rowData?.prediction?.score?.home;
-            const awayRaw = rowData?.prediction?.score?.away;
-            found[gameId] = {
-              postId: row.id,
-              winner:
-                winnerRaw === "home" ||
-                winnerRaw === "away" ||
-                winnerRaw === "draw"
-                  ? winnerRaw
-                  : undefined,
-              score:
-                typeof homeRaw === "number" && typeof awayRaw === "number"
-                  ? { home: homeRaw, away: awayRaw }
-                  : undefined,
-              comment:
-                typeof rowData?.comment === "string" ? rowData.comment : "",
-              updatedAt: rowData?.updatedAt ?? null,
-              goalScorer: rowData?.prediction?.goalScorer ?? null,
-              postStats:
-                rowData?.stats && typeof rowData.stats === "object"
-                  ? (rowData.stats as Record<string, unknown>)
-                  : null,
-            };
-          });
-        }
-        mergeScheduleMyPostsCache(fUser.uid, need, found);
+        mergeScheduleMyPostsCache(fUser.uid, needWindow, foundWindow);
         applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
       } catch {
         if (!alive) return;
@@ -1283,7 +1334,7 @@ export default function GamesHomeScreen({
     return () => {
       alive = false;
     };
-  }, [fUser, gameIdsKey, gameIdSet, myPredictionsReloadNonce]);
+  }, [fUser, gameIdsKey, gameIdSet, myPredictionsReloadNonce, windowGameIds]);
 
   const t = useMemo(() => getGamesTexts(language), [language]);
 
@@ -1573,7 +1624,22 @@ export default function GamesHomeScreen({
         }));
       }
     }
-    const existingPostId = editBootstrap?.postId ?? myPostIdByGameId[gameId];
+    const peekedPostId =
+      !editBootstrap?.postId && fUser?.uid
+        ? peekScheduleMyPosts(fUser.uid, [gameId])[gameId]?.postId
+        : undefined;
+    const existingPostId =
+      editBootstrap?.postId ?? myPostIdByGameId[gameId] ?? peekedPostId;
+    if (
+      gameId !== TUTORIAL_NBA_GAME_ID &&
+      resolveGameStatus(sourceGame) === "final" &&
+      existingPostId
+    ) {
+      setIsPredictModalOpen(false);
+      setSelectedGame(null);
+      setResultDetailPostId(existingPostId);
+      return;
+    }
     const existingPrediction = editBootstrap?.seed
       ? {
           winner: editBootstrap.seed.winner,
@@ -2064,7 +2130,7 @@ export default function GamesHomeScreen({
 
       <GestureDetector gesture={pageSwipeGesture}>
       <View>
-      {showInitialSkeleton ? (
+      {showInitialSkeleton || predictionPaintPending ? (
         <View style={styles.skeletonList}>
           {SKELETON_ROWS.map((row) => (
             <SkeletonScanNative key={row} style={styles.skeletonCard}>
@@ -2086,7 +2152,7 @@ export default function GamesHomeScreen({
         </Text>
       ) : null}
 
-      {!showInitialSkeleton && !error ? (
+      {!showInitialSkeleton && !predictionPaintPending && !error ? (
         <Animated.View
           key={`sched-${scheduleBlockKey}`}
           entering={
@@ -2101,10 +2167,10 @@ export default function GamesHomeScreen({
             games={filteredGames}
             enteringAnimationEnabled={webGamesMotion}
             entranceVariant={cardListEntranceVariant}
-            predictedGameIds={predictedGameIds}
+            predictedGameIds={predictedGameIdsForList}
             language={language}
             t={t}
-            styles={styles}
+            styles={{ ...styles, ...gameCardListStyles }}
             openPredictModal={openPredictModal}
             resolveGameTeamName={resolveGameTeamName}
             toCompactTeamName={toCompactTeamName}
@@ -2127,6 +2193,8 @@ export default function GamesHomeScreen({
             tutorialRegisterMatchCard={
               tutorialPhase === "tapCard" || tutorialPhase === "welcome"
             }
+            shellVariant="lineFrame"
+            pickupMark="left"
           />
         </Animated.View>
       ) : null}
@@ -2211,6 +2279,13 @@ export default function GamesHomeScreen({
           tutorialActive &&
           String(selectedGame?.id ?? "") === TUTORIAL_NBA_GAME_ID
         }
+      />
+      <ResultDetailScreen
+        visible={resultDetailPostId != null}
+        postId={resultDetailPostId}
+        language={language}
+        sections="cardAndLiveStats"
+        onClose={() => setResultDetailPostId(null)}
       />
 
       <TutorialLiveCoachNative
@@ -2702,7 +2777,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: spacing.xl,
     paddingTop: 0,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
   },
   gameCardOuter: {
     position: "relative",

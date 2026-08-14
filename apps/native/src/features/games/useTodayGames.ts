@@ -267,6 +267,12 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     [windowRows, selectedDate]
   );
 
+  /** 日付切替前に自分の予想キャッシュを温める用（表示中の日以外も含む） */
+  const windowGameIds = useMemo(
+    () => windowRows.map((g) => String(g.id ?? "")).filter(Boolean),
+    [windowRows]
+  );
+
   const dateKeysWithGames = useMemo(
     () => sortedUniqueDateKeysFromRows(windowRows),
     [windowRows]
@@ -641,6 +647,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     loading,
     error,
     games,
+    windowGameIds,
     peerGamesForSeries,
     dateKeysWithGames,
     hasWindowData,

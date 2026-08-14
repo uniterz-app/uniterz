@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 import Header from "@/app/component/Header";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
+import { isPublicLpPath } from "@/lib/lp/publicLpPaths";
 import {
   getAppBrandShelfHidden,
   subscribeAppBrandShelfHidden,
@@ -20,10 +21,7 @@ export default function AppChrome() {
 
   const shouldHideAll =
     pathname === "/" ||
-    pathname === "/lp" ||
-    pathname === "/lp-v2" ||
-    pathname === "/mobile/lp" ||
-    pathname === "/mobile/lp-v2" ||
+    isPublicLpPath(pathname) ||
     pathname === "/web" ||
     pathname === "/mobile" ||
     pathname === "/web/login" ||

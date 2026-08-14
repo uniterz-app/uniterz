@@ -163,6 +163,8 @@ export type ProfileStackParamList = {
   PlayerDetailPreview: { playerId?: string } | undefined;
   /** __DEV__ ライブ試合スタッツ（Team / Box Score） */
   LiveGameStatsPreview: undefined;
+  /** __DEV__ 試合一覧カード現行デザイン */
+  MatchCardDesignPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

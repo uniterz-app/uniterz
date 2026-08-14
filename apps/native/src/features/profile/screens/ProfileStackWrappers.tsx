@@ -36,6 +36,7 @@ import PlayerStatsPreviewScreenNative from "../../games/playerStats/PlayerStatsP
 import PlayerDetailPreviewScreenNative from "../../games/playerDetail/PlayerDetailPreviewScreenNative";
 import TeamDetailPreviewScreenNative from "../../games/teamDetail/TeamDetailPreviewScreenNative";
 import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPreviewScreenNative";
+import MatchCardDesignPreviewScreenNative from "../../games/MatchCardDesignPreviewScreenNative";
 import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
@@ -448,6 +449,19 @@ export function LiveGameStatsPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <LiveGameStatsPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function MatchCardDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <MatchCardDesignPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />

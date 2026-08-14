@@ -1,6 +1,7 @@
 "use client";
 
 import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
+import { REDEMPTION_PRIVACY_ADDITIONS } from "@/lib/legal/unitRedemptionLegalCopy";
 
 export default function WebPrivacyPage() {
   return (
@@ -8,7 +9,7 @@ export default function WebPrivacyPage() {
       variant="web"
       title="PRIVACY"
       description="Uniterz におけるユーザー情報の取り扱いについて説明するページです。"
-      updatedAt="2025-11-17"
+      updatedAt="2026-08-13"
     >
       <section>
         <h2 className="mb-1 text-base font-semibold">1. 基本方針</h2>
@@ -32,6 +33,7 @@ export default function WebPrivacyPage() {
           <li>
             分析・可視化データ（勝率、総合得点、統計指標 等）
           </li>
+          <li>{REDEMPTION_PRIVACY_ADDITIONS.collect.ja}</li>
           <li>アクセスログ（利用日時、端末情報、IPアドレス 等）</li>
         </ul>
       </section>
@@ -45,6 +47,7 @@ export default function WebPrivacyPage() {
           <li>不正利用・スパム等を防止するための監視・対応のため</li>
           <li>重要なお知らせやメンテナンス情報の通知のため</li>
           <li>サービス利用状況の分析・統計データ作成のため</li>
+          <li>{REDEMPTION_PRIVACY_ADDITIONS.purpose.ja}</li>
         </ul>
       </section>
 
@@ -78,6 +81,7 @@ export default function WebPrivacyPage() {
             </span>
             。
           </li>
+          <li>{REDEMPTION_PRIVACY_ADDITIONS.thirdParty.ja}</li>
         </ul>
       </section>
 

@@ -52,10 +52,16 @@
 
 ## 次にやること
 
-1. **商品交換** — Unit ロック本番化（弁護士後 `REDEMPTION_UNITS_LIVE`）/ 規約追記 / 運用習熟
-2. **月次レポート** — ledger 内訳接続（`MONTHLY_REPORT_UNITS_FROM_LEDGER`）・Pro Stats 孤児掃除
+1. ~~**商品交換** — Unit ロック本番化（弁護士後 `REDEMPTION_UNITS_LIVE`）/ 規約追記 / 運用習熟~~ ✅ 2026-08-13（弁護士 OK・LIVE ON・規約/プライバシー追記）
+2. **月次レポート** — ledger 内訳接続（`MONTHLY_REPORT_UNITS_FROM_LEDGER` は既に true）・Pro Stats 孤児掃除・表示仕上げ
 3. （任意）メニュー NEW バッジ / 遡及用 toast
 4. 開幕前: シーズン予想締切・報酬付与本番・Insight/アラート実データ
+
+### 商品交換 — 運用メモ（LIVE 後）
+
+- Admin: `/admin/redemptions` で審査 → ordered で Unit 消費
+- まとめ購入目安: 毎月 25 日前後
+- 申請プレビュー文言は `unitsLive` が true なら非表示
 
 ## やらないこと
 

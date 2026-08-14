@@ -1,15 +1,29 @@
-import { Platform, StyleSheet } from "react-native";
-import { colors, spacing } from "../../theme/tokens";
+/**
+ * Games 一覧 `GameCardList` が使うスタイル（`GamesHomeScreen` と同じ値）。
+ * 試合カード見た目の正。プレビューと一覧で共有する。
+ */
+import { StyleSheet } from "react-native";
+import { colors, spacing, typography } from "../../theme/tokens";
 import {
   liveMarkPillCyberBase,
   liveMarkTextCyberBase,
 } from "../../ui/liveMarkCyberStyles";
 import { MOBILE_GAMES_CARD_MAX_WIDTH } from "./gamesMobileLayout";
-import { DISPLAY_FONT_FAMILY, NUMERIC_FONT_FAMILY } from "./gameCardDisplayUtils";
-import { MATCH_CARD_SCORE_FONT } from "./matchCardTypography";
+import {
+  DISPLAY_FONT_FAMILY,
+  NUMERIC_FONT_FAMILY,
+} from "./gameCardDisplayUtils";
+import {
+  MATCH_CARD_DISPLAY_FONT,
+  MATCH_CARD_METRIC_FONT,
+  MATCH_CARD_SCORE_FONT,
+} from "./matchCardTypography";
 
-/** 試合一覧カード（GameCardList / 予想一覧）共通スタイル */
 export const gameCardListStyles = StyleSheet.create({
+  body: {
+    color: colors.textSecondary,
+    fontSize: typography.body,
+  },
   listArea: {
     marginTop: 4,
   },
@@ -17,13 +31,7 @@ export const gameCardListStyles = StyleSheet.create({
     gap: 10,
     paddingBottom: spacing.xl,
     paddingTop: 0,
-    paddingHorizontal: 4,
-  },
-  body: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    textAlign: "center",
-    paddingVertical: 24,
+    paddingHorizontal: 12,
   },
   gameCardOuter: {
     position: "relative",
@@ -31,10 +39,6 @@ export const gameCardListStyles = StyleSheet.create({
     width: "100%",
     maxWidth: MOBILE_GAMES_CARD_MAX_WIDTH,
     alignSelf: "center",
-  },
-  cardFineShellBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
   },
   cardPressableBody: {
     flex: 1,
@@ -45,36 +49,39 @@ export const gameCardListStyles = StyleSheet.create({
     paddingBottom: 0,
     gap: 2,
   },
+  cardMainContent: {
+    flexShrink: 0,
+  },
   cardFineInteriorContent: {
     paddingHorizontal: 8,
-    paddingTop: 4,
-    paddingBottom: 2,
-    gap: 2,
+    paddingTop: 2,
+    paddingBottom: 0,
+    gap: 1,
   },
   cardTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 4,
-    marginBottom: 3,
+    marginTop: 5,
+    marginBottom: 1,
     gap: spacing.xs,
   },
   roundLabelText: {
     flex: 1,
     color: "rgba(241,245,255,0.95)",
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: "800",
-    lineHeight: 24,
-    letterSpacing: 1,
+    lineHeight: 22,
+    letterSpacing: 1.6,
     textAlign: "center",
     includeFontPadding: false,
     textTransform: "uppercase",
-    fontFamily: DISPLAY_FONT_FAMILY,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
   },
   matchupGrid: {
     flexDirection: "row",
     alignItems: "stretch",
-    gap: 5,
+    gap: 4,
     marginTop: 0,
     marginBottom: 0,
   },
@@ -82,23 +89,18 @@ export const gameCardListStyles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
-    minHeight: 94,
+    minHeight: 84,
   },
   teamTopGroup: {
     alignItems: "center",
-    gap: 3,
-    marginTop: 3,
+    gap: 2,
+    marginTop: 2,
   },
   teamBottomGroup: {
     alignItems: "center",
     gap: 0,
-    marginTop: 2,
+    marginTop: 1,
     marginBottom: 0,
-  },
-  teamBottomGroupWc: {
-    width: 72,
-    alignItems: "center",
-    marginTop: 3,
   },
   sideLabel: {
     color: "rgba(255,255,255,0.85)",
@@ -130,25 +132,19 @@ export const gameCardListStyles = StyleSheet.create({
     marginBottom: 0,
     includeFontPadding: false,
     textTransform: "uppercase",
-    fontFamily: DISPLAY_FONT_FAMILY,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
     maxWidth: "100%",
     transform: [{ skewX: "-6deg" }],
   },
-  teamNameMainWc: {
-    width: 72,
-    maxWidth: 72,
-    paddingTop: 2,
-    lineHeight: 17,
-  },
   teamRecordText: {
-    color: "rgba(226,232,240,0.82)",
+    color: "rgba(226,232,240,0.7)",
     fontSize: 11,
     fontWeight: "700",
     lineHeight: 11,
-    marginTop: -1,
+    marginTop: 0,
     letterSpacing: 0.2,
     includeFontPadding: false,
-    fontFamily: NUMERIC_FONT_FAMILY,
+    fontFamily: MATCH_CARD_METRIC_FONT,
   },
   centerColumn: {
     flex: 1.05,
@@ -160,10 +156,10 @@ export const gameCardListStyles = StyleSheet.create({
   },
   centerScoreWrap: {
     width: "96%",
-    minHeight: 44,
+    minHeight: 36,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: 1,
     paddingTop: 0,
   },
   seriesText: {
@@ -192,9 +188,6 @@ export const gameCardListStyles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-  centerTextScore: {
-    textAlign: "center",
-  },
   centerTextScoreRow: {
     flexDirection: "row",
     flexWrap: "nowrap",
@@ -203,54 +196,71 @@ export const gameCardListStyles = StyleSheet.create({
     gap: 8,
     maxWidth: "100%",
   },
+  centerTextScoreRowWc: {
+    marginTop: 2,
+    gap: 10,
+  },
   centerTextScoreNum: {
     flexShrink: 0,
     color: "#ffffff",
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "900",
-    lineHeight: 22,
+    fontStyle: "italic",
+    lineHeight: 20,
     includeFontPadding: false,
     fontVariant: ["tabular-nums"],
     fontFamily: MATCH_CARD_SCORE_FONT,
-    letterSpacing: -0.4,
     textShadowColor: "rgba(0,0,0,0.4)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
+  centerTextScoreNumWc: {
+    fontSize: 22,
+    lineHeight: 24,
+  },
   centerScoreDash: {
     flexShrink: 0,
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 20,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 18,
     fontWeight: "900",
-    lineHeight: 22,
+    fontStyle: "italic",
+    lineHeight: 20,
     fontFamily: MATCH_CARD_SCORE_FONT,
   },
+  centerScoreDashWc: {
+    fontSize: 22,
+    lineHeight: 24,
+  },
   centerSubline: {
-    color: "rgba(255,255,255,0.78)",
+    color: "rgba(255,255,255,0.8)",
     fontSize: 12,
     lineHeight: 14,
     textAlign: "center",
     includeFontPadding: false,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+  },
+  centerSublineWc: {
+    fontSize: 11,
+    opacity: 0.8,
   },
   liveMarkWrap: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44,
-    gap: 4,
+    minHeight: 36,
+    gap: 3,
   },
   liveScoreStack: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
-    minHeight: 44,
+    gap: 1,
+    minHeight: 36,
   },
   liveMarkPill: liveMarkPillCyberBase,
   liveMarkText: liveMarkTextCyberBase,
-  /** 得点ブロックと league 仕切り棒の間 — Web mobile dense `mt-1.5 md:mt-2` */
   leagueDividerWrap: {
     width: "100%",
-    marginTop: "auto",
-    paddingTop: 8,
+    marginTop: 6,
+    paddingTop: 0,
   },
   leagueDivider: {
     height: 1,
@@ -259,47 +269,45 @@ export const gameCardListStyles = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
-  wcBroadcastRow: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    marginTop: 6,
-    paddingVertical: 4,
-  },
-  wcBroadcastLabel: {
-    flexShrink: 0,
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 12,
-    fontWeight: "600",
-    includeFontPadding: false,
-    fontFamily: DISPLAY_FONT_FAMILY,
-  },
   cardFooterShell: {
     width: "100%",
     paddingHorizontal: 10,
     paddingTop: 6,
     paddingBottom: 10,
   },
-  cardAction: {
-    width: "100%",
-    minHeight: 32,
+  lineFrameInterior: {
+    paddingHorizontal: 8,
+    paddingTop: 20,
+    paddingBottom: 18,
+  },
+  lineFrameTeamMark: {
+    width: 54,
+    height: 54,
     borderRadius: 0,
     borderWidth: 0,
-    overflow: "hidden",
-    position: "relative",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "transparent",
-    marginTop: 0,
+  },
+  lineFrameTeamName: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: "400",
+    textAlign: "center",
+    letterSpacing: 1.2,
+    lineHeight: 19,
+    marginTop: 2,
     marginBottom: 0,
-    paddingVertical: 0,
-    shadowColor: "transparent",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
+    includeFontPadding: false,
+    textTransform: "uppercase",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    maxWidth: "100%",
+    transform: [{ skewX: "-6deg" }],
+  },
+  lineFrameTeamColumn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    minHeight: 72,
   },
 });

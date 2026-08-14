@@ -4,7 +4,13 @@
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 import { ResultCardDesignFaceNative } from "./ResultCardDesignPreviewScreenNative";
+import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import LiveGameStatsPanelNative from "../games/live/LiveGameStatsPanelNative";
+import LiveGameStatsPlaceholderNative from "../games/live/LiveGameStatsPlaceholderNative";
 import ResultDetailScoreDonutNative from "./ResultDetailScoreDonutNative";
 import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
 import { RankingsAvatarNative } from "../rankings/RankingsAvatarAndTabs";
@@ -30,6 +36,14 @@ import type { ResultTopScorerMarketView } from "../../../../../lib/result/result
 import type { GamePointsTopEntryV1 } from "../../../../../lib/results/gamePointsTop";
 
 const ACCENT = "#00F5FF";
+
+async function loadGameDocForLiveStats(
+  gameId: string
+): Promise<Record<string, unknown> | null> {
+  const snap = await getDoc(doc(db, "games", gameId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
+}
 
 const TOP_SCORER_SLICE_COLORS = [
   "#00F5FF",
@@ -516,12 +530,19 @@ function ScoreBreakdownPanel({
   );
 }
 
+export type ResultDetailBodySections = "full" | "cardAndLiveStats";
+
 type Props = {
   language: "ja" | "en";
   view: ResultDetailViewModel;
   onOpenProfile?: (handle: string) => void;
   /** ScrollView の contentContainerStyle に足す余白 */
   contentPaddingBottom?: number;
+  /**
+   * `cardAndLiveStats` = 試合カードから開いたとき。
+   * リザルトカードの下にライブスタッツのみ（この試合 / 得点上位 / 内訳は出さない）。
+   */
+  sections?: ResultDetailBodySections;
 };
 
 /** Web 新リザルト詳細 / Native DEV プレビューと同じ構成 */
@@ -530,6 +551,7 @@ export default function ResultDetailBodyNative({
   view,
   onOpenProfile,
   contentPaddingBottom = 24,
+  sections = "full",
 }: Props) {
   const ja = language === "ja";
   const frameColor = hexToRgba(ACCENT, 0.4);
@@ -537,6 +559,19 @@ export default function ResultDetailBodyNative({
   const matchStats = view.matchStats;
   const cardBadge = view.card.outcomeBadge ?? "hit";
   const scoreRel = view.card.scoreRel;
+  const cardAndLiveStats = sections === "cardAndLiveStats";
+  const nbaGameId =
+    String(view.card.league ?? "").toLowerCase() === "nba"
+      ? view.card.gameId || null
+      : null;
+  const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
+    nbaGameId,
+    Boolean(nbaGameId) && cardAndLiveStats,
+    {
+      apiBaseUrl: getUniterzApiBaseUrl(),
+      loadGameDoc: loadGameDocForLiveStats,
+    }
+  );
 
   return (
     <View style={[styles.list, { paddingBottom: contentPaddingBottom }]}>
@@ -553,36 +588,56 @@ export default function ResultDetailBodyNative({
         />
       </WeeklyReportCardShell>
 
-      {matchStats ? (
+      {cardAndLiveStats ? (
         <>
           <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-          <MatchStatsPanel
-            ja={ja}
-            frameColor={frameColor}
-            stats={matchStats}
-            topScorerMarket={view.topScorerMarket}
-          />
+          {liveStatsReport ? (
+            <LiveGameStatsPanelNative
+              report={liveStatsReport}
+              language={ja ? "ja" : "en"}
+              omitScoreHeader
+            />
+          ) : (
+            <LiveGameStatsPlaceholderNative
+              language={ja ? "ja" : "en"}
+              loading={liveStatsLoading}
+            />
+          )}
         </>
-      ) : null}
-
-      {view.topEntries.length > 0 ? (
+      ) : (
         <>
+          {matchStats ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+              <MatchStatsPanel
+                ja={ja}
+                frameColor={frameColor}
+                stats={matchStats}
+                topScorerMarket={view.topScorerMarket}
+              />
+            </>
+          ) : null}
+
+          {view.topEntries.length > 0 ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+              <Top10Panel
+                ja={ja}
+                frameColor={frameColor}
+                entries={view.topEntries}
+                onOpenProfile={onOpenProfile}
+              />
+            </>
+          ) : null}
+
           <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-          <Top10Panel
+          <ScoreBreakdownPanel
             ja={ja}
             frameColor={frameColor}
-            entries={view.topEntries}
-            onOpenProfile={onOpenProfile}
+            breakdown={view.breakdown}
           />
         </>
-      ) : null}
-
-      <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-      <ScoreBreakdownPanel
-        ja={ja}
-        frameColor={frameColor}
-        breakdown={view.breakdown}
-      />
+      )}
     </View>
   );
 }

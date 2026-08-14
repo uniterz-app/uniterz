@@ -87,7 +87,8 @@ type Props = {
     | "playerStatsPreview"
     | "teamDetailPreview"
     | "playerDetailPreview"
-    | "liveGameStatsPreview") => void;
+    | "liveGameStatsPreview"
+    | "matchCardDesignPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -292,6 +293,7 @@ export default function ProfileSideMenuModal({
       | "teamDetailPreview"
       | "playerDetailPreview"
       | "liveGameStatsPreview"
+      | "matchCardDesignPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -748,6 +750,16 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("splashLogoPreview")}
                         >
                           スプラッシュ Logo
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="view-agenda-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("matchCardDesignPreview")
+                          }
+                        >
+                          試合カード線枠
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="chart-box-outline"
