@@ -23,10 +23,7 @@ import {
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
-import {
-  RankingsCyberPanel,
-  RankingsCyberSectionLabel,
-} from "@/app/component/rankings/RankingsCyberPanel";
+import LineFrameCard from "@/app/component/common/LineFrameCard";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
   fetchCommunityGroupDetail,
@@ -41,7 +38,6 @@ import { warmGroupLeaderboardProfiles } from "@/lib/communities/warmGroupLeaderb
 import EndGroupConfirmModal from "@/app/component/communities/EndGroupConfirmModal";
 import InviteShareModal from "@/app/component/communities/InviteShareModal";
 import CommunityGroupHeaderHero from "@/app/component/communities/CommunityGroupHeaderHero";
-import CommunityGroupZoneLabel from "@/app/component/communities/CommunityGroupZoneLabel";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -420,33 +416,22 @@ export default function CommunityGroupDetailView({
     variant,
   ]);
 
-  const rankingSection = (
-    <>
-      {useDenseLayout ? (
-        <div className="mb-2 px-3.5">
-          <CommunityGroupZoneLabel>{t.ranking}</CommunityGroupZoneLabel>
-        </div>
-      ) : (
-        <RankingsCyberSectionLabel subtle>{t.ranking}</RankingsCyberSectionLabel>
-      )}
-      {loadingRows ? (
-        <RankingsCyberPanel subtle compact className={useDenseLayout ? "mb-2" : undefined}>
-          <div className="space-y-2">
+  const rankingBody = loadingRows ? (
+        <div className="space-y-2 px-2.5 py-2">
             <div className="h-3 w-2/5 skeleton-scan rounded-none bg-cyan-400/10" />
             <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
             <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
             <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
-          </div>
-        </RankingsCyberPanel>
+        </div>
       ) : rows.length === 0 ? (
-        <p className="py-8 text-center text-sm text-white/45">
+        <p className="px-2.5 py-8 text-center text-sm text-white/45">
           {commMsg(language, {
             en: "No entries yet.",
             ja: "まだエントリーがありません。",
           })}
         </p>
       ) : useDenseLayout ? (
-        <div key={rankListAnimKey} className="-mt-1 mb-4 cyber-rank-list-panel">
+        <div key={rankListAnimKey} className="cyber-rank-list-panel">
           <motion.div
             variants={restContainer}
             initial={prefersReducedMotion ? "show" : "hidden"}
@@ -509,16 +494,24 @@ export default function CommunityGroupDetailView({
             ))}
           </motion.div>
         </div>
-      )}
-    </>
+      );
+
+  const rankingSection = (
+    <LineFrameCard
+      title={t.ranking}
+      className={useDenseLayout ? "mb-2" : "mb-4"}
+    >
+      {rankingBody}
+    </LineFrameCard>
   );
 
   const inviteOwnerPanel =
     summary?.isOwner && !summary.archived ? (
-      <RankingsCyberPanel subtle compact className={useDenseLayout ? "mt-1" : "mb-4"}>
-        <RankingsCyberSectionLabel subtle className={useDenseLayout ? "mb-2.5 pb-1.5" : undefined}>
-          {t.inviteLabel}
-        </RankingsCyberSectionLabel>
+      <LineFrameCard
+        title="INVITE"
+        className={useDenseLayout ? "mt-1" : "mb-4"}
+      >
+        <div className="px-2.5 pb-2.5 pt-1.5">
         {summary.inviteCode ? (
           <div className="flex flex-wrap items-center gap-2">
             <p
@@ -574,7 +567,8 @@ export default function CommunityGroupDetailView({
         >
           {t.endGroup}
         </button>
-      </RankingsCyberPanel>
+        </div>
+      </LineFrameCard>
     ) : null;
 
   const leaveMemberBtn =
@@ -594,7 +588,8 @@ export default function CommunityGroupDetailView({
 
   const webHeaderPanel =
     summary && !useDenseLayout ? (
-      <RankingsCyberPanel subtle className="mb-4">
+      <LineFrameCard title="GROUP" className="mb-4">
+        <div className="px-3 pb-3 pt-1.5">
         <h1
           className={[
             "font-bold leading-tight text-cyan-50/95",
@@ -633,7 +628,8 @@ export default function CommunityGroupDetailView({
         {summary.archived ? (
           <p className="mt-2 text-sm text-amber-200/90">{t.ended}</p>
         ) : null}
-      </RankingsCyberPanel>
+        </div>
+      </LineFrameCard>
     ) : null;
 
   const panelBody = (

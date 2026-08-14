@@ -6,6 +6,9 @@ import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BrandCyanLineAnimated from "./games/BrandCyanLineAnimated";
+import UniterzUMarkNative from "./units/UniterzUMarkNative";
+
+const U_MARK_SIZE = 40;
 
 const DISPLAY_FONT_FAMILY = Platform.select({
   ios: "BebasNeue_400Regular",
@@ -18,7 +21,8 @@ export const WORDMARK_SIZE = 22;
 const WORDMARK_TRACKING = WORDMARK_SIZE * 0.35;
 
 /** ロゴ + ライン + 上下パディング（safe area 除く） */
-export const UNITERZ_BRAND_SHELF_BODY_H = 8 + WORDMARK_SIZE + 2 + 4 + 6;
+export const UNITERZ_BRAND_SHELF_BODY_H =
+  8 + Math.max(WORDMARK_SIZE, U_MARK_SIZE) + 2 + 4 + 6;
 
 export function uniterzBrandShelfOffsetTop(insetsTop: number): number {
   return insetsTop + UNITERZ_BRAND_SHELF_BODY_H;
@@ -60,6 +64,10 @@ export default function UniterzBrandShelfNative({
       />
 
       <View style={styles.inner}>
+      <View style={styles.wordmarkRow}>
+        <View style={styles.uMark} accessibilityElementsHidden>
+          <UniterzUMarkNative size={U_MARK_SIZE} />
+        </View>
       <View style={styles.wordmarkStack}>
         <Text
           style={[styles.brandText, styles.brandExtrude]}
@@ -77,6 +85,7 @@ export default function UniterzBrandShelfNative({
         >
           {title}
         </Text>
+      </View>
       </View>
         <BrandCyanLineAnimated />
       </View>
@@ -102,6 +111,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 2,
     paddingHorizontal: 24,
+  },
+  wordmarkRow: {
+    position: "relative",
+    alignSelf: "stretch",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: U_MARK_SIZE,
+  },
+  uMark: {
+    position: "absolute",
+    left: 0,
+    top: "50%",
+    marginTop: -U_MARK_SIZE / 2,
   },
   wordmarkStack: {
     position: "relative",

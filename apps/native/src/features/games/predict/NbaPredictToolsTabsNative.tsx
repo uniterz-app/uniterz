@@ -69,8 +69,11 @@ export default function NbaPredictToolsTabsNative({
   onOpenTeamDetail,
 }: Props) {
   const t = getGamesTexts(language);
-  const [tab, setTab] = useState<NbaPredictToolsTab>("injuries");
+  const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
+  const selectTab = (next: NbaPredictToolsTab) => {
+    setTab((cur) => (cur === next ? null : next));
+  };
   const resolvedInjury =
     injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
   const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
@@ -96,7 +99,7 @@ export default function NbaPredictToolsTabsNative({
             <CyberSlantedTabNative
               label="INSIGHT"
               active={tab === "insight"}
-              onPress={() => setTab("insight")}
+              onPress={() => selectTab("insight")}
               compact
               fontWeight="700"
               accessibilityRole="tab"
@@ -105,7 +108,7 @@ export default function NbaPredictToolsTabsNative({
             <CyberSlantedTabNative
               label="INJURY"
               active={tab === "injuries"}
-              onPress={() => setTab("injuries")}
+              onPress={() => selectTab("injuries")}
               compact
               fontWeight="700"
               accessibilityRole="tab"
@@ -114,7 +117,7 @@ export default function NbaPredictToolsTabsNative({
             <CyberSlantedTabNative
               label="STATS"
               active={tab === "stats"}
-              onPress={() => setTab("stats")}
+              onPress={() => selectTab("stats")}
               compact
               fontWeight="700"
               accessibilityRole="tab"
@@ -123,7 +126,7 @@ export default function NbaPredictToolsTabsNative({
             <CyberSlantedTabNative
               label="ROSTER"
               active={tab === "roster"}
-              onPress={() => setTab("roster")}
+              onPress={() => selectTab("roster")}
               compact
               fontWeight="700"
               accessibilityRole="tab"
@@ -133,6 +136,7 @@ export default function NbaPredictToolsTabsNative({
         </View>
         </TutorialTargetNative>
 
+        {tab ? (
         <View style={styles.panel}>
           {tab === "insight" ? (
             isPro && !resolvedBrief ? (
@@ -178,6 +182,7 @@ export default function NbaPredictToolsTabsNative({
             <PendingPanel text={t.panelDataPending} />
           )}
         </View>
+        ) : null}
       </View>
     </TutorialTargetNative>
   );

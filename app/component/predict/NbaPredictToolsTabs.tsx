@@ -65,8 +65,11 @@ export default function NbaPredictToolsTabs({
   className = "",
 }: Props) {
   const m = t(language).predict;
-  const [tab, setTab] = useState<NbaPredictToolsTab>("injuries");
+  const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
   const router = useRouter();
+  const selectTab = (next: NbaPredictToolsTab) => {
+    setTab((cur) => (cur === next ? null : next));
+  };
   const resolvedInjury =
     injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
   const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
@@ -85,7 +88,7 @@ export default function NbaPredictToolsTabs({
             role="tab"
             label="INSIGHT"
             active={tab === "insight"}
-            onClick={() => setTab("insight")}
+            onClick={() => selectTab("insight")}
             compact
             fontWeight={900}
           />
@@ -93,7 +96,7 @@ export default function NbaPredictToolsTabs({
             role="tab"
             label="INJURY"
             active={tab === "injuries"}
-            onClick={() => setTab("injuries")}
+            onClick={() => selectTab("injuries")}
             compact
             fontWeight={900}
           />
@@ -101,7 +104,7 @@ export default function NbaPredictToolsTabs({
             role="tab"
             label="STATS"
             active={tab === "stats"}
-            onClick={() => setTab("stats")}
+            onClick={() => selectTab("stats")}
             compact
             fontWeight={900}
           />
@@ -109,13 +112,14 @@ export default function NbaPredictToolsTabs({
             role="tab"
             label="ROSTER"
             active={tab === "roster"}
-            onClick={() => setTab("roster")}
+            onClick={() => selectTab("roster")}
             compact
             fontWeight={900}
           />
         </CyberSlantedTabBar>
       </div>
 
+      {tab ? (
       <div className="mt-1.5 min-h-30 px-0.5">
         {tab === "insight" ? (
           isPro && !resolvedBrief ? (
@@ -154,6 +158,7 @@ export default function NbaPredictToolsTabs({
           <PendingPanel text={m.panelDataPending} />
         )}
       </div>
+      ) : null}
     </div>
   );
 }

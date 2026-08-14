@@ -13,11 +13,8 @@ import {
 } from "../../../../../lib/communities/leaderboardDisplayRow";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
-import {
-  RankingsCyberPanelNative,
-  RankingsCyberSectionLabelNative,
-} from "../rankings/RankingsCyberPanelNative";
 import RankingsListEntranceRowNative from "../rankings/RankingsListEntranceRowNative";
+import LineFrameCardNative from "../ui/LineFrameCardNative";
 import { RankingListCardNative } from "../rankings/RankingsRankingCards";
 import type { RankingsLanguage } from "../rankings/rankingsTexts";
 import {
@@ -28,8 +25,6 @@ import {
 } from "./communityGroupDetailCacheNative";
 import { communityApiUrl, communityAuthHeader, type CommunityGroupListPreview, type CommunityGroupSummary } from "./communityApiNative";
 import CommunityGroupHeaderHeroNative from "./CommunityGroupHeaderHeroNative";
-import CommunityGroupZoneLabelNative from "./CommunityGroupZoneLabelNative";
-import { COMMUNITY_GROUP_PANEL_PADDING_X } from "../../../../../lib/communities/communityGroupShell";
 import { RankingsShellGridOverlay } from "../rankings/rankingsUiDecorations";
 import { copyTextNative, shareTextNative } from "./copyTextNative";
 import { getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
@@ -278,47 +273,43 @@ export default function CommunityGroupDetailViewNative({
         />
       ) : null}
 
-      <View style={styles.rankingZoneLabel}>
-        <CommunityGroupZoneLabelNative>{t.ranking}</CommunityGroupZoneLabelNative>
-      </View>
-
-      {loadingRows ? (
-        <RankingsCyberPanelNative subtle compact style={styles.rankingSkeletonPanel}>
-          <SkeletonScanNative style={styles.skeletonLine} />
-          <SkeletonScanNative style={styles.skeletonRow} />
-          <SkeletonScanNative style={styles.skeletonRow} />
-          <SkeletonScanNative style={styles.skeletonRow} />
-        </RankingsCyberPanelNative>
-      ) : rankingCardRows.length === 0 ? (
-        <Text style={styles.emptyRank}>{t.noEntries}</Text>
-      ) : (
-        <View style={styles.rankingList}>
-          {rankingItems.map((item, i) => (
-            <RankingsListEntranceRowNative
-              key={item.row.uid ?? item.row.handle ?? `r-${item.rank}`}
-              index={i}
-              entranceKey={rankListEntranceKey}
-            >
-              <RankingListCardNative
-                row={item.row}
-                rank={item.rank}
-                metric={rankMetricForProfile}
-                language={lang}
-                animateCrown={item.rank === 1}
-                pageKey={rankListEntranceKey}
-                reduceMotion={reduceMotion}
-                onPress={onOpenProfile ? () => openProfile(item.row) : undefined}
-              />
-            </RankingsListEntranceRowNative>
-          ))}
-        </View>
-      )}
+      <LineFrameCardNative title={t.ranking}>
+        {loadingRows ? (
+          <View style={styles.frameInner}>
+            <SkeletonScanNative style={styles.skeletonLine} />
+            <SkeletonScanNative style={styles.skeletonRow} />
+            <SkeletonScanNative style={styles.skeletonRow} />
+            <SkeletonScanNative style={styles.skeletonRow} />
+          </View>
+        ) : rankingCardRows.length === 0 ? (
+          <Text style={styles.emptyRank}>{t.noEntries}</Text>
+        ) : (
+          <View style={styles.rankingList}>
+            {rankingItems.map((item, i) => (
+              <RankingsListEntranceRowNative
+                key={item.row.uid ?? item.row.handle ?? `r-${item.rank}`}
+                index={i}
+                entranceKey={rankListEntranceKey}
+              >
+                <RankingListCardNative
+                  row={item.row}
+                  rank={item.rank}
+                  metric={rankMetricForProfile}
+                  language={lang}
+                  animateCrown={item.rank === 1}
+                  pageKey={rankListEntranceKey}
+                  reduceMotion={reduceMotion}
+                  onPress={onOpenProfile ? () => openProfile(item.row) : undefined}
+                />
+              </RankingsListEntranceRowNative>
+            ))}
+          </View>
+        )}
+      </LineFrameCardNative>
 
       {summary?.isOwner && !summary.archived ? (
-        <RankingsCyberPanelNative subtle compact style={styles.invitePanel}>
-          <RankingsCyberSectionLabelNative subtle style={styles.sectionLabelInPanel}>
-            {t.inviteLabel}
-          </RankingsCyberSectionLabelNative>
+        <LineFrameCardNative title="INVITE">
+          <View style={styles.frameInner}>
           {summary.inviteCode ? (
             <View style={styles.inviteCodeRow}>
               <Text style={styles.inviteCode}>{summary.inviteCode}</Text>
@@ -350,7 +341,8 @@ export default function CommunityGroupDetailViewNative({
           >
             <Text style={styles.endGroupText}>{t.endGroup}</Text>
           </Pressable>
-        </RankingsCyberPanelNative>
+          </View>
+        </LineFrameCardNative>
       ) : null}
 
       {!summary?.isOwner && !summary?.archived ? (
@@ -399,13 +391,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  rankingZoneLabel: {
-    paddingHorizontal: COMMUNITY_GROUP_PANEL_PADDING_X,
-    marginBottom: 8,
-  },
-  sectionLabelInPanel: {
-    marginBottom: 10,
-    paddingBottom: 6,
+  frameInner: {
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 10,
   },
   inviteCodeRow: {
     flexDirection: "row",
@@ -484,9 +473,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "rgba(186,230,253,0.7)",
   },
-  rankingSkeletonPanel: {
-    marginBottom: 8,
-  },
   skeletonLine: {
     height: 12,
     width: "42%",
@@ -507,14 +493,6 @@ const styles = StyleSheet.create({
     marginVertical: 24,
   },
   rankingList: {
-    marginTop: -4,
-    marginBottom: 16,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(0,0,0,0.18)",
-  },
-  invitePanel: {
-    marginTop: 4,
   },
 });

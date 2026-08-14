@@ -6,6 +6,7 @@ import {
   resolveHeaderWordmark,
   type HeaderWordmark,
 } from "@/lib/ui/headerWordmark";
+import UniterzUMark from "@/app/component/units/UniterzUMark";
 
 type Props = {
   /** 未指定時は pathname から自動判定 */
@@ -34,8 +35,15 @@ export default function Header({ title }: Props) {
 
       {/* container */}
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col items-center gap-0.5 md:max-w-[900px] lg:max-w-[1200px]">
-        {/* UNITERZ：サイドアクセント + レター入場 */}
-        <div className="flex w-full items-center justify-center gap-3 md:gap-4">
+        {/* UNITERZ：左 U マーク + 中央ワードマーク */}
+        <div className="relative flex w-full items-center justify-center gap-3 md:gap-4">
+          <div className="absolute left-0 top-1/2 z-[1] -translate-y-1/2">
+            <UniterzUMark
+              size={40}
+              className="text-orange-100/90"
+              title="UNITERZ"
+            />
+          </div>
           {/* 左アクセント（線 + ダイヤ） */}
           <motion.div
             className="hidden h-px max-w-[110px] flex-1 origin-right bg-gradient-to-l from-cyan-200/45 to-transparent sm:block"
