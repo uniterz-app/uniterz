@@ -86,8 +86,15 @@ export default function ProfileEditKinetikHeaderTabs({
 }: Props) {
   const streakTier = getKinetikStreakTier(winStreak);
   const streakLabel = formatKinetikWinStreakLabel(winStreak, language);
-  const streakThemeKey: KinetikSlantTabThemeKey =
-    streakTier > 0 ? (`streak-${streakTier}` as const) : "streak-1";
+  const streakThemeKey: KinetikSlantTabThemeKey = (
+    {
+      0: "streak-1",
+      1: "streak-1",
+      2: "streak-2",
+      3: "streak-3",
+      4: "streak-4",
+    } as const
+  )[streakTier];
   const rankExplanation = rankBadge
     ? getKinetikRankBadgeExplanation(rankBadge, language)
     : null;
