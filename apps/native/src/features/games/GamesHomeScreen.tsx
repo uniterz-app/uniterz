@@ -127,10 +127,7 @@ import {
 import { setTutorialWelcomeHandoffNative } from "../tutorial/tutorialWelcomeHandoffNative";
 import { formatTutorialGamesSubstepProgress } from "../../../../../lib/tutorial/tutorialLiveProgress";
 import { featuresTrackProgressLabel } from "../../../../../lib/tutorial/tutorialHorizonSteps";
-import {
-  TUTORIAL_NBA_GAME_ID,
-  withTutorialNbaBackdropGames,
-} from "../../../../../lib/tutorial/tutorialNbaRawGame";
+import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
 import {
   isTutorialGamesSubstep,
@@ -663,19 +660,12 @@ export default function GamesHomeScreen({
   const reduceMotion = useReducedMotion() ?? false;
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
-  const filteredGames = useMemo(() => {
-    const list = applyNativeGamesFilter(games, gamesFilter, teamNameById);
-    return withTutorialNbaBackdropGames(
-      list,
-      tutorialActive && selectedLeague === "nba",
-      selectedDate
-    );
-  }, [games, gamesFilter, teamNameById, tutorialActive, selectedLeague, selectedDate]);
-  /** データ未取得時のみスケルトン。チュートリアルのモック試合があるときは先に見せる */
+  const filteredGames = useMemo(
+    () => applyNativeGamesFilter(games, gamesFilter, teamNameById),
+    [games, gamesFilter, teamNameById]
+  );
   const showInitialSkeleton =
-    (!preferredLeagueReady || loading) &&
-    !hasWindowData &&
-    filteredGames.length === 0;
+    (!preferredLeagueReady || loading) && !hasWindowData;
   const filterActive = useMemo(
     () => gamesFilterIsActive(gamesFilter),
     [gamesFilter]

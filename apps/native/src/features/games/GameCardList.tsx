@@ -23,8 +23,6 @@ import {
 } from "./useGameCardListRowEntrance";
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
 import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
-import { isTutorialNbaBackdropGameId } from "../../../../../lib/tutorial/tutorialNbaRawGame";
-
 function matchRoundSideCode(roundLabel: string): string {
   const u = roundLabel.toUpperCase();
   if (u.includes("PLAYOFF") || u.includes("プレーオフ")) return "PO";
@@ -225,7 +223,6 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
       delayPressIn={0}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
       onPress={() => {
-        if (isTutorialNbaBackdropGameId(String(game.id ?? ""))) return;
         void openPredictModal(game);
       }}
       onPressIn={() => {

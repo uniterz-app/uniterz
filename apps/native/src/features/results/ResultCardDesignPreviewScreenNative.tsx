@@ -15,9 +15,8 @@ import type { SharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
-import MatchListLineFrameNative, {
-  resultOutcomeLineFramePaint,
-} from "../games/MatchListLineFrameNative";
+import MatchListLineFrameNative from "../games/MatchListLineFrameNative";
+import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
 import { resolveTeamJerseyPalette } from "../games/teamColors";
 import {
   registerTutorialTarget,

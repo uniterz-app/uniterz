@@ -50,9 +50,8 @@ import {
 } from "./useTeamRecordLineNative";
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
 import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative";
-import MatchListLineFrameNative, {
-  resultOutcomeLineFramePaint,
-} from "./MatchListLineFrameNative";
+import MatchListLineFrameNative from "./MatchListLineFrameNative";
+import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
 import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
 import LiveGameStatsPanelNative from "./live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "./live/LiveGameStatsPlaceholderNative";

@@ -62,8 +62,6 @@ import {
   predictOverlayRoot,
 } from "@/lib/predict/predictPageMotion";
 import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
-import { isTutorialNbaBackdropGameId } from "@/lib/tutorial/tutorialNbaRawGame";
-
 const LiveGameStatsPanel = dynamic(
   () => import("./live/LiveGameStatsPanel"),
   { loading: () => null, ssr: false }
@@ -395,7 +393,6 @@ export default function ScheduleList({
 
   const open = useCallback(
     (gameId: string) => {
-      if (isTutorialNbaBackdropGameId(String(gameId))) return;
       openOverlayDirect(String(gameId));
     },
     [openOverlayDirect]
@@ -691,7 +688,7 @@ export default function ScheduleList({
     setOverlayLiveMarketBias(null);
   }, [openGameId]);
 
-  /** 既に表示できる試合があるときはスケルトンで隠さない（チュートリアルのモック挿入など） */
+  /** 既に表示できる試合があるときはスケルトンで隠さない */
   if (loading && !propsList.length) {
     return (
       <div className="grid gap-6 px-4 md:px-6 lg:px-8">

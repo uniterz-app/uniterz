@@ -84,7 +84,6 @@ import { writeTutorialLiveTrack, readTutorialLiveTrack } from "@/lib/tutorial/tu
 import { writeTutorialHorizonSubstep } from "@/lib/tutorial/tutorialHorizonSubstep";
 import { writeTutorialWelcomeHandoff, tutorialProfileHref } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import { featuresTrackProgressLabel } from "@/lib/tutorial/tutorialHorizonSteps";
-import { withTutorialNbaBackdropGames } from "@/lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
 import {
   fetchNextGameDayAfterLocalDay,
@@ -731,27 +730,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [games, teamFilterIds, teamFilterMatchMode, nameById]);
 
   const filteredGames = useMemo(() => {
-    const list =
-      marginMin == null && marginMax == null
-        ? gamesAfterTeamFilter
-        : gamesAfterTeamFilter.filter((g: Record<string, unknown>) =>
-            gameMatchesMarginBounds(g, marginMin, marginMax)
-          );
-
-    /** ウェルカム背景が NO DATA にならないよう、0 件ならモック 3 枚 */
-    return withTutorialNbaBackdropGames(
-      list,
-      tutorialActive && league === "nba",
-      selected ?? new Date()
+    if (marginMin == null && marginMax == null) return gamesAfterTeamFilter;
+    return gamesAfterTeamFilter.filter((g: Record<string, unknown>) =>
+      gameMatchesMarginBounds(g, marginMin, marginMax)
     );
-  }, [
-    gamesAfterTeamFilter,
-    marginMin,
-    marginMax,
-    tutorialActive,
-    league,
-    selected,
-  ]);
+  }, [gamesAfterTeamFilter, marginMin, marginMax]);
 
   /**
    * games は selectedDayKey で絞り込んだ取得済みウィンドウなので、
@@ -928,11 +911,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /** モバイル試合一覧はカード横幅を広げるため左右を詰める */
   const pagePad =
     dense && isMobile ? "px-0" : dense ? "px-3" : "px-4 md:px-6";
-  /** チュートリアル中はモック試合を先に出す（日程取得待ちの全面スケルトンで隠さない） */
-  const isInitialLoading =
-    loadingDays &&
-    monthRows.length === 0 &&
-    !(tutorialActive && league === "nba");
+  const isInitialLoading = loadingDays && monthRows.length === 0;
   const isSwitchingDate = !!selected && listLoading;
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
   const playoffViewHref = isMobile
@@ -1389,7 +1368,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           games={filteredGames}
           extraPeerGamesForSeriesInference={peerRowsForSeriesInference}
           dense={dense}
-          /** チュートリアル中はモック試合を先に見せる（取得待ちスケルトンで隠さない） */
           loading={listLoading && filteredGames.length === 0}
           league={league}
           emptyHint={scheduleEmptyHint}
