@@ -21,7 +21,7 @@ export default function OfficialLpLoginCta({
   className = "",
   onClick,
 }: OfficialLpLoginCtaProps) {
-  const [href, setHref] = useState(officialHero.ctaHrefWeb);
+  const [href, setHref] = useState<string>(officialHero.ctaHrefWeb);
 
   useEffect(() => {
     const sync = () => setHref(loginHref(window.innerWidth));
