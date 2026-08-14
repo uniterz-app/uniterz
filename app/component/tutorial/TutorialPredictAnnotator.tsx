@@ -382,7 +382,8 @@ export default function TutorialPredictAnnotator({
     let cancelled = false;
     /** ステップ切替で対象へクロール（reduced motion 時のみ即時） */
     const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
-    const lockUserScroll = step === "enter" || step === "scores";
+    /** 得点入力中も情報を見られるようスクロール可 */
+    const lockUserScroll = false;
     const calloutH =
       calloutBox?.height && calloutBox.height > 80 ? calloutBox.height : 220;
     const scrollOpts =
@@ -391,25 +392,25 @@ export default function TutorialPredictAnnotator({
             behavior,
             idealRatio: step === "sides" ? 0.38 : 0.34,
           }
-        : lockUserScroll
+        : step === "enter" || step === "scores"
           ? {
               behavior,
               align: "top" as const,
               topPad: CALLOUT_EDGE + calloutH + 10,
             }
-        : {
-            behavior,
-            idealRatio:
-              step === "tools"
-                ? 0.22
-                : step === "submit"
-                  ? 0.62
-                  : 0.36,
-          };
+          : {
+              behavior,
+              idealRatio:
+                step === "tools"
+                  ? 0.22
+                  : step === "submit"
+                    ? 0.62
+                    : 0.36,
+            };
     const scrollId =
       step === "sides" || step === "market"
         ? "predict-sides"
-        : lockUserScroll
+        : step === "enter" || step === "scores"
           ? "predict-scores"
           : targetId;
 

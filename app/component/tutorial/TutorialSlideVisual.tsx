@@ -5,9 +5,17 @@
  */
 
 import cn from "clsx";
+import { motion, useReducedMotion } from "framer-motion";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
-import { TUTORIAL_CYAN } from "@/lib/tutorial/tutorialMotion";
+import {
+  TUTORIAL_CYAN,
+  TUTORIAL_WELCOME_GATHER_EASE,
+  TUTORIAL_WELCOME_PART_S,
+  TUTORIAL_WELCOME_PATH_DELAY_S,
+  TUTORIAL_WELCOME_PATH_LOOP_S,
+} from "@/lib/tutorial/tutorialMotion";
 import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
+import TutorialWelcomeLogoLetters from "@/app/component/tutorial/TutorialWelcomeLogoLetters";
 
 type Props = {
   visual: TutorialVisualId;
@@ -147,40 +155,186 @@ function MockPredictForm() {
 }
 
 function MockResult() {
+  /** 本番新カード面と同じ情報構造（HIT・最終/予想・市場・Upset/Score） */
   return (
     <div
-      className="w-full border border-emerald-400/30 bg-[#060a10]/95 px-3 py-3"
+      className="w-full overflow-hidden border-[3px] bg-[#07090f] px-3 pb-3 pt-2.5"
       style={{
-        clipPath: CYBER_CHAMFER_CLIP,
-        WebkitClipPath: CYBER_CHAMFER_CLIP,
+        borderColor: "rgba(254,243,199,0.92)",
+        boxShadow: "0 0 18px rgba(251,191,36,0.55)",
       }}
     >
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-start justify-between gap-2">
         <span
           className={cn(
             nameOxanium.className,
-            "text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300/80"
+            "text-[9px] font-bold uppercase tracking-[0.16em] text-white/45"
           )}
         >
-          FINAL
+          REGULAR SEASON
         </span>
         <span
           className={cn(
             nameOxanium.className,
-            "rounded px-1.5 py-0.5 text-[9px] font-bold"
+            "px-2 py-0.5 text-[10px] font-black tracking-wide"
           )}
-          style={{ background: "#34d399", color: "#052e1a" }}
+          style={{ background: "#FBBF24", color: "#1a1200" }}
         >
-          HIT +12pt
+          HIT
         </span>
       </div>
-      <div className="flex items-center justify-between text-sm font-bold">
-        <span className="text-white/85">LAL</span>
-        <span className="tabular-nums text-white">110 — 104</span>
-        <span className="text-white/85">BOS</span>
+
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex w-[72px] flex-col items-center gap-1">
+          <span
+            className={cn(
+              nameOxanium.className,
+              "text-[8px] tracking-wider text-white/35"
+            )}
+          >
+            HOME
+          </span>
+          <div
+            className="h-8 w-7"
+            style={{
+              background:
+                "linear-gradient(160deg,#007A33 0%,#BA9653 55%,#FFFFFF 100%)",
+              clipPath:
+                "polygon(20% 0%,80% 0%,100% 18%,100% 100%,0% 100%,0% 18%)",
+            }}
+          />
+          <span
+            className={cn(
+              nameOxanium.className,
+              "text-[11px] font-black text-white"
+            )}
+            style={{ transform: "skewX(-10deg)" }}
+          >
+            CELTICS
+          </span>
+        </div>
+
+        <div className="flex flex-1 flex-col items-center">
+          <span
+            className={cn(
+              nameOxanium.className,
+              "text-[9px] font-bold tracking-[0.18em] text-white/40"
+            )}
+          >
+            FINAL
+          </span>
+          <div
+            className={cn(
+              nameOxanium.className,
+              "text-[26px] font-black leading-none tabular-nums text-white"
+            )}
+          >
+            108<span className="text-white/35"> — </span>112
+          </div>
+          <span className="mt-1 text-[9px] text-white/40">あなたの予想</span>
+          <div
+            className={cn(
+              nameOxanium.className,
+              "text-[15px] font-bold tabular-nums text-white/70"
+            )}
+          >
+            106<span className="text-white/30"> — </span>110
+          </div>
+        </div>
+
+        <div className="flex w-[72px] flex-col items-center gap-1">
+          <span
+            className={cn(
+              nameOxanium.className,
+              "text-[8px] tracking-wider text-white/35"
+            )}
+          >
+            AWAY
+          </span>
+          <div
+            className="h-8 w-7"
+            style={{
+              background:
+                "linear-gradient(160deg,#552583 0%,#FDB927 55%,#FFFFFF 100%)",
+              clipPath:
+                "polygon(20% 0%,80% 0%,100% 18%,100% 100%,0% 100%,0% 18%)",
+            }}
+          />
+          <span
+            className={cn(
+              nameOxanium.className,
+              "text-[11px] font-black text-white"
+            )}
+            style={{ transform: "skewX(-10deg)" }}
+          >
+            LAKERS
+          </span>
+        </div>
       </div>
-      <div className="mt-1.5 text-center text-[10px] text-white/45">
-        あなたの予想 108–102 · 勝敗的中
+
+      <div className="mt-2.5 flex h-2 overflow-hidden bg-white/10">
+        <div className="h-full bg-[#007A33]/80" style={{ width: "36%" }} />
+        <div className="h-full bg-[#FDB927]/90" style={{ width: "64%" }} />
+      </div>
+      <div
+        className={cn(
+          nameOxanium.className,
+          "mt-0.5 flex justify-between text-[8px] tracking-wider text-white/40"
+        )}
+      >
+        <span>36%</span>
+        <span>市場</span>
+        <span>64%</span>
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
+        <div className="border border-white/10 bg-white/[0.03] px-2 py-1.5">
+          <div
+            className={cn(
+              nameOxanium.className,
+              "text-[8px] tracking-wider text-white/40"
+            )}
+          >
+            UPSET
+          </div>
+          <div
+            className={cn(
+              nameOxanium.className,
+              "text-[16px] font-black tabular-nums text-white/55"
+            )}
+          >
+            --
+          </div>
+        </div>
+        <div className="border border-white/10 bg-white/[0.03] px-2 py-1.5">
+          <div className="flex items-center justify-between">
+            <span
+              className={cn(
+                nameOxanium.className,
+                "text-[8px] tracking-wider text-white/40"
+              )}
+            >
+              SCORE
+            </span>
+            <span
+              className={cn(
+                nameOxanium.className,
+                "text-[8px] font-bold text-amber-300/90"
+              )}
+            >
+              TOP 10%
+            </span>
+          </div>
+          <div
+            className={cn(
+              nameOxanium.className,
+              "text-[16px] font-black tabular-nums"
+            )}
+            style={{ color: TUTORIAL_CYAN }}
+          >
+            6.0
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -411,126 +565,144 @@ function MockTabs({ highlight }: { highlight?: string }) {
 }
 
 function MockWelcome() {
+  const reduceMotion = useReducedMotion() === true;
   const steps = [
     { n: "01", label: "予想", en: "PREDICT" },
     { n: "02", label: "的中", en: "HIT" },
     { n: "03", label: "ランク", en: "RANK" },
   ] as const;
   return (
-    <div
-      className="relative flex w-full flex-col items-center gap-2.5 overflow-hidden border border-cyan-400/25 bg-[rgba(3,10,18,0.55)] px-3 pb-3 pt-3.5"
-      style={{
-        backgroundImage:
-          "linear-gradient(180deg, rgba(0,245,255,0.14) 0%, transparent 42%, rgba(0,245,255,0.06) 100%)",
-      }}
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute left-0 top-0 h-3 w-3 border-l-2 border-t-2 border-cyan-300"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute right-0 top-0 h-3 w-3 border-r-2 border-t-2 border-cyan-300"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b-2 border-l-2 border-cyan-300"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b-2 border-r-2 border-cyan-300"
-      />
-      <span
-        className={cn(
-          nameOxanium.className,
-          "absolute left-3.5 top-2 text-[8px] font-black tracking-[0.28em] text-cyan-300/55"
-        )}
-      >
-        BRIEFING
-      </span>
-
-      <div className="relative mt-1.5 flex flex-col items-center gap-1.5">
+    <div className="relative flex w-full flex-col items-center gap-6 overflow-visible bg-transparent px-0.5 pb-0.5 pt-1.5">
+      <div className="relative mt-1 flex w-full flex-col items-center gap-2.5">
         <div
+          className="flex w-full max-w-[300px] items-center justify-center py-1"
           aria-hidden
-          className="absolute -top-1.5 h-[88px] w-[88px] rounded-full bg-cyan-400/10"
-          style={{ boxShadow: `0 0 28px ${TUTORIAL_CYAN}88` }}
-        />
-        <div
-          className="relative flex h-[76px] w-[76px] items-center justify-center rounded-[18px] border border-cyan-400/45 bg-cyan-400/[0.06]"
-          style={{ boxShadow: `0 0 18px ${TUTORIAL_CYAN}66` }}
         >
-          <div className="h-[66px] w-[66px] overflow-hidden rounded-[14px] border border-white/10">
-            {/* eslint-disable-next-line @next/next/no-img-element -- 静的ブランドマーク */}
-            <img
-              src="/logo/uniterz-u.svg"
-              alt=""
-              width={66}
-              height={66}
-              className="h-full w-full object-contain"
-              draggable={false}
-            />
-          </div>
+          <TutorialWelcomeLogoLetters />
         </div>
-        <div
+        <motion.div
           className={cn(
             nameOxanium.className,
-            "text-[30px] font-black tracking-[0.2em]"
+            "text-[9px] font-black tracking-[0.28em] text-cyan-300/75 drop-shadow-[0_8px_12px_rgba(0,0,0,0.7)]"
           )}
-          style={{
-            color: "#F2FEFF",
-            textShadow: `0 0 18px ${TUTORIAL_CYAN}77`,
+          initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: TUTORIAL_WELCOME_PART_S,
+            delay: reduceMotion ? 0 : 0.42,
+            ease: TUTORIAL_WELCOME_GATHER_EASE,
           }}
         >
-          UNITERZ
-        </div>
-        <div
-          className={cn(
-            nameOxanium.className,
-            "text-[9px] font-bold tracking-[0.22em] text-cyan-100/70"
-          )}
-        >
           SCORE PREDICTION PROTOCOL
-        </div>
+        </motion.div>
       </div>
 
-      <div
-        className="h-px w-[92%] bg-gradient-to-r from-transparent via-cyan-300 to-transparent"
-        style={{ boxShadow: `0 0 10px ${TUTORIAL_CYAN}66` }}
-        aria-hidden
-      />
-
-      <div className="relative flex w-full justify-between px-1 pt-1">
-        <div
+      <div className="relative flex w-full justify-between pt-2">
+        <motion.div
           aria-hidden
-          className="absolute left-[16%] right-[16%] top-2.5 h-px bg-cyan-400/35"
-        />
-        {steps.map((s) => (
-          <div key={s.n} className="flex flex-1 flex-col items-center gap-0.5">
-            <span
-              className="mb-0.5 h-1.5 w-1.5 rounded-full bg-cyan-300"
-              style={{ boxShadow: `0 0 8px ${TUTORIAL_CYAN}` }}
+          className="pointer-events-none absolute left-[38px] right-[38px] top-2 z-0 h-3.5 overflow-visible"
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            duration: TUTORIAL_WELCOME_PART_S,
+            delay: reduceMotion ? 0 : 0.52,
+            ease: TUTORIAL_WELCOME_GATHER_EASE,
+          }}
+        >
+          <svg
+            className="tutorial-welcome-path-svg"
+            viewBox="0 0 100 8"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <line
+              className="tutorial-welcome-path-track"
+              x1="0"
+              y1="4"
+              x2="100"
+              y2="4"
             />
-            <span
+            {reduceMotion ? null : (
+              <>
+                <line
+                  className="tutorial-welcome-path-bloom"
+                  x1="0"
+                  y1="4"
+                  x2="100"
+                  y2="4"
+                  pathLength="100"
+                  style={{
+                    animationDuration: `${TUTORIAL_WELCOME_PATH_LOOP_S}s`,
+                    animationDelay: `${TUTORIAL_WELCOME_PATH_DELAY_S}s`,
+                  }}
+                />
+                <line
+                  className="tutorial-welcome-path-charge"
+                  x1="0"
+                  y1="4"
+                  x2="100"
+                  y2="4"
+                  pathLength="100"
+                  style={{
+                    animationDuration: `${TUTORIAL_WELCOME_PATH_LOOP_S}s`,
+                    animationDelay: `${TUTORIAL_WELCOME_PATH_DELAY_S}s`,
+                  }}
+                />
+              </>
+            )}
+          </svg>
+        </motion.div>
+        {steps.map((s, i) => (
+          <motion.div
+            key={s.n}
+            className="relative z-[1] flex w-[76px] shrink-0 flex-col items-center"
+            initial={
+              reduceMotion
+                ? false
+                : { opacity: 0, y: 22, x: (i - 1) * 28 }
+            }
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            transition={{
+              duration: TUTORIAL_WELCOME_PART_S,
+              delay: reduceMotion ? 0 : 0.5 + i * 0.08,
+              ease: TUTORIAL_WELCOME_GATHER_EASE,
+            }}
+          >
+            <div
               className={cn(
-                nameOxanium.className,
-                "text-[10px] font-black tracking-[0.14em]"
+                "tutorial-welcome-path-lit flex flex-col items-center gap-1",
+                `tutorial-welcome-path-lit--${i + 1}`
               )}
-              style={{ color: TUTORIAL_CYAN }}
+              style={{
+                animationDuration: `${TUTORIAL_WELCOME_PATH_LOOP_S}s`,
+                animationDelay: `${TUTORIAL_WELCOME_PATH_DELAY_S}s`,
+              }}
             >
-              {s.n}
-            </span>
-            <span className={cn(jp.className, "text-[13px] font-bold text-white")}>
-              {s.label}
-            </span>
-            <span
-              className={cn(
-                nameOxanium.className,
-                "text-[8px] font-bold tracking-[0.16em] text-cyan-100/55"
-              )}
-            >
-              {s.en}
-            </span>
-          </div>
+              <span className="tutorial-welcome-path-node" aria-hidden>
+                <span className="tutorial-welcome-path-node-ring" />
+                <span className="tutorial-welcome-path-node-core" />
+              </span>
+              <span
+                className={cn(
+                  nameOxanium.className,
+                  "tutorial-welcome-path-num text-[10px] font-black tracking-[0.18em] text-cyan-300"
+                )}
+              >
+                {s.n}
+              </span>
+              <span className="text-[13px] font-bold leading-none text-white">
+                {s.label}
+              </span>
+              <span
+                className={cn(
+                  nameOxanium.className,
+                  "text-[8px] font-bold tracking-[0.2em] text-cyan-100/70"
+                )}
+              >
+                {s.en}
+              </span>
+            </div>
+          </motion.div>
         ))}
       </div>
     </div>
@@ -724,7 +896,13 @@ export default function TutorialSlideVisual({ visual, className }: Props) {
             : undefined;
 
   return (
-    <div className={cn("mx-auto w-full max-w-[280px]", className)}>
+    <div
+      className={cn(
+        "mx-auto w-full",
+        visual === "welcome" ? "max-w-none" : "max-w-[280px]",
+        className
+      )}
+    >
       {visual === "welcome" ? <MockWelcome /> : null}
       {visual === "matchCard" ? <MockMatchCard /> : null}
       {visual === "predictForm" ? <MockPredictForm /> : null}

@@ -62,6 +62,8 @@ export function ProfileKinetikFlipEar({
       onClick={ear.onToggle}
       aria-pressed={ear.pressed}
       aria-controls={ear.panelId}
+      /** 表（CAREER）だけチュートリアル穴の対象。裏の PROFILE 耳は測らない */
+      data-tutorial-target={ear.pressed ? undefined : "profile-career-tab"}
       className={[
         nameRajdhani.className,
         "absolute z-[8] flex items-center justify-center",

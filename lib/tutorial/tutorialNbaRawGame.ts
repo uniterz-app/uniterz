@@ -50,7 +50,7 @@ export function buildTutorialNbaRawGame(tipOff: Date): Record<string, unknown> {
     awayTeamName: g.away.name,
     score: null,
     /** Web `buildTutorialMatchCardProps` と同じ市場偏り */
-    marketBias: { homePct: 54, awayPct: 46 },
+    marketBias: { homePct: 36, awayPct: 64 },
     topScorerCandidates: [
       {
         playerId: "tutorial-tatum",

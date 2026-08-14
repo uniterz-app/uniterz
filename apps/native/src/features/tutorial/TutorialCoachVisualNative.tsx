@@ -1,11 +1,40 @@
 /**
  * Web `TutorialSlideVisual` 相当 — ライブコーチ用の図解。
  */
-import { Image, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, type ReactNode } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+  type SharedValue,
+} from "react-native-reanimated";
 import type { TutorialVisualId } from "../../../../../lib/tutorial/tutorialCopy";
-import { TUTORIAL_CYAN } from "../../../../../lib/tutorial/tutorialMotion";
+import {
+  TUTORIAL_CYAN,
+  TUTORIAL_WELCOME_PATH_CHARGE,
+  TUTORIAL_WELCOME_PATH_CLEAR_AT,
+  TUTORIAL_WELCOME_PATH_DELAY_MS,
+  TUTORIAL_WELCOME_PATH_LOOP_MS,
+  TUTORIAL_WELCOME_PATH_NODE_AT,
+} from "../../../../../lib/tutorial/tutorialMotion";
 import { fonts } from "../../theme/tokens";
+import TutorialWelcomeLogoNative, {
+  WelcomeGatherNative,
+} from "./TutorialWelcomeLogoNative";
+import { ResultCardDesignFaceNative } from "../results/ResultCardDesignPreviewScreenNative";
+import { buildResultCardFaceModel } from "../../../../../lib/result/buildResultCardFace";
+import {
+  buildTutorialDemoPick,
+  buildTutorialResultMarket,
+  buildTutorialResultPost,
+} from "../../../../../lib/tutorial/tutorialNbaUi";
 
 type Props = {
   visual: TutorialVisualId;
@@ -17,84 +46,198 @@ const WELCOME_STEPS = [
   { n: "03", label: "ランク", en: "RANK" },
 ] as const;
 
-/** 角括弧（HUD コーナー） */
-function WelcomeCorner({
-  top,
-  left,
-  right,
-  bottom,
+function WelcomePathLitNative({
+  progress,
+  index,
+  reduceMotion,
+  children,
 }: {
-  top?: boolean;
-  left?: boolean;
-  right?: boolean;
-  bottom?: boolean;
+  progress: SharedValue<number>;
+  index: 0 | 1 | 2;
+  reduceMotion: boolean;
+  children: ReactNode;
 }) {
+  const at = TUTORIAL_WELCOME_PATH_NODE_AT[index];
+  const clear = TUTORIAL_WELCOME_PATH_CLEAR_AT;
+  const lit = useAnimatedStyle(() => {
+    const on = reduceMotion
+      ? index === 0
+        ? 1
+        : 0.48
+      : interpolate(
+          progress.value,
+          [0, Math.max(0, at - 0.02), at, clear, Math.min(1, clear + 0.04), 1],
+          [0.62, 0.62, 1, 1, 0.62, 0.62]
+        );
+    return {
+      opacity: on,
+    };
+  });
+  return <Animated.View style={[styles.welcomeStepInner, lit]}>{children}</Animated.View>;
+}
+
+function WelcomePathNodeNative({
+  progress,
+  index,
+  reduceMotion,
+}: {
+  progress: SharedValue<number>;
+  index: 0 | 1 | 2;
+  reduceMotion: boolean;
+}) {
+  const at = TUTORIAL_WELCOME_PATH_NODE_AT[index];
+  const clear = TUTORIAL_WELCOME_PATH_CLEAR_AT;
+  const ringStyle = useAnimatedStyle(() => {
+    if (reduceMotion) return { opacity: 0, transform: [{ scale: 0.7 }] };
+    const t = progress.value;
+    if (t < at || t > clear) return { opacity: 0, transform: [{ scale: 0.7 }] };
+    return {
+      opacity: interpolate(
+        t,
+        [at, at + 0.02, at + 0.1],
+        [0, 0.95, 0],
+        Extrapolation.CLAMP
+      ),
+      transform: [
+        {
+          scale: interpolate(
+            t,
+            [at, at + 0.1],
+            [0.85, 1.55],
+            Extrapolation.CLAMP
+          ),
+        },
+      ],
+    };
+  });
+  const coreStyle = useAnimatedStyle(() => {
+    if (reduceMotion) {
+      return {
+        backgroundColor: index === 0 ? TUTORIAL_CYAN : "rgba(0,245,255,0.4)",
+      };
+    }
+    const t = progress.value;
+    const hot = t >= at && t < at + 0.06;
+    const on = t >= at && t < clear;
+    return {
+      backgroundColor: hot ? "#E8FFFF" : on ? TUTORIAL_CYAN : "rgba(0,245,255,0.4)",
+    };
+  });
   return (
-    <View
-      pointerEvents="none"
-      style={[
-        styles.welcomeCorner,
-        top ? { top: 0 } : { bottom: 0 },
-        left ? { left: 0 } : { right: 0 },
-        top && left ? styles.welcomeCornerTL : null,
-        top && right ? styles.welcomeCornerTR : null,
-        bottom && left ? styles.welcomeCornerBL : null,
-        bottom && right ? styles.welcomeCornerBR : null,
-      ]}
-    />
+    <View style={styles.welcomeNode}>
+      <Animated.View pointerEvents="none" style={[styles.welcomeNodeRing, ringStyle]} />
+      <Animated.View style={[styles.welcomeNodeCore, coreStyle]} />
+    </View>
   );
 }
 
 function MockWelcome() {
+  const reduceMotion = useReducedMotion() ?? false;
+  const pathP = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      pathP.value = 0;
+      return;
+    }
+    pathP.value = 0;
+    pathP.value = withDelay(
+      TUTORIAL_WELCOME_PATH_DELAY_MS,
+      withRepeat(
+        withTiming(1, {
+          duration: TUTORIAL_WELCOME_PATH_LOOP_MS,
+          easing: Easing.linear,
+        }),
+        -1,
+        false
+      )
+    );
+  }, [pathP, reduceMotion]);
+
+  const bloomStyle = useAnimatedStyle(() => {
+    if (reduceMotion) return { opacity: 0, transform: [{ scaleX: 0 }] };
+    return {
+      opacity: interpolate(
+        pathP.value,
+        [0, 0.04, 0.85, 0.9, 1],
+        [0.22, 0.22, 0.22, 0, 0]
+      ),
+      transform: [
+        {
+          scaleX: interpolate(
+            pathP.value,
+            [0, 0.08, 0.38, 0.68, 0.9, 0.9001, 1],
+            [0.02, 0.06, 0.5, 1, 1, 0.02, 0.02]
+          ),
+        },
+      ],
+    };
+  });
+
+  const chargeStyle = useAnimatedStyle(() => {
+    if (reduceMotion) return { opacity: 0, transform: [{ scaleX: 0 }] };
+    return {
+      opacity: interpolate(
+        pathP.value,
+        [0, 0.04, 0.85, 0.9, 1],
+        [1, 1, 1, 0, 0]
+      ),
+      transform: [
+        {
+          scaleX: interpolate(
+            pathP.value,
+            [0, 0.08, 0.38, 0.68, 0.9, 0.9001, 1],
+            [0.02, 0.06, 0.5, 1, 1, 0.02, 0.02]
+          ),
+        },
+      ],
+    };
+  });
+
   return (
     <View style={styles.welcomeStage}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={["rgba(0,245,255,0.14)", "transparent", "rgba(0,245,255,0.06)"]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <WelcomeCorner top left />
-      <WelcomeCorner top right />
-      <WelcomeCorner bottom left />
-      <WelcomeCorner bottom right />
-
-      <Text style={styles.welcomeBrief}>BRIEFING</Text>
-
       <View style={styles.welcomeHero}>
-        <View style={styles.welcomeHalo} />
-        <View style={styles.welcomeRingOuter}>
-          <View style={styles.welcomeRingInner}>
-            <Image
-              source={require("../../../assets/icon.png")}
-              style={styles.welcomeIcon}
-              accessibilityIgnoresInvertColors
-            />
-          </View>
-        </View>
-        <Text style={styles.welcomeWordmark}>UNITERZ</Text>
-        <Text style={styles.welcomeTag}>SCORE PREDICTION PROTOCOL</Text>
+        <TutorialWelcomeLogoNative width={300} />
+        <WelcomeGatherNative delayMs={420} fromY={14}>
+          <Text style={styles.welcomeTag}>SCORE PREDICTION PROTOCOL</Text>
+        </WelcomeGatherNative>
       </View>
 
-      <View style={styles.welcomeBeamRow}>
-        <LinearGradient
-          colors={["transparent", TUTORIAL_CYAN, "transparent"]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={styles.welcomeBeam}
-        />
-      </View>
-
-      <View style={styles.welcomeStepsTrack}>
-        <View style={styles.welcomeStepsLine} pointerEvents="none" />
-        {WELCOME_STEPS.map((s) => (
-          <View key={s.n} style={styles.welcomeStep}>
-            <View style={styles.welcomeStepDot} />
-            <Text style={styles.welcomeStepN}>{s.n}</Text>
-            <Text style={styles.welcomeStepLabel}>{s.label}</Text>
-            <Text style={styles.welcomeStepEn}>{s.en}</Text>
+      <View style={styles.welcomePath}>
+        <WelcomeGatherNative delayMs={520} fromY={0} style={styles.welcomePathRailWrap}>
+          <View style={styles.welcomePathRail} pointerEvents="none">
+            <View style={styles.welcomePathRailLine} />
+            {reduceMotion ? null : (
+              <View style={styles.welcomePathChargeClip}>
+                <Animated.View style={[styles.welcomePathBloom, bloomStyle]} />
+                <Animated.View style={[styles.welcomePathCharge, chargeStyle]} />
+              </View>
+            )}
           </View>
+        </WelcomeGatherNative>
+        {WELCOME_STEPS.map((s, i) => (
+          <WelcomeGatherNative
+            key={s.n}
+            delayMs={500 + i * 80}
+            fromY={22}
+            fromX={(i - 1) * 28}
+            style={styles.welcomeStep}
+          >
+            <WelcomePathLitNative
+              progress={pathP}
+              index={i as 0 | 1 | 2}
+              reduceMotion={reduceMotion}
+            >
+              <WelcomePathNodeNative
+                progress={pathP}
+                index={i as 0 | 1 | 2}
+                reduceMotion={reduceMotion}
+              />
+              <Text style={styles.welcomeStepN}>{s.n}</Text>
+              <Text style={styles.welcomeStepLabel}>{s.label}</Text>
+              <Text style={styles.welcomeStepEn}>{s.en}</Text>
+            </WelcomePathLitNative>
+          </WelcomeGatherNative>
         ))}
       </View>
     </View>
@@ -282,8 +425,28 @@ function MockHorizonCareer() {
   );
 }
 
+function MockResult() {
+  return (
+    <View style={styles.resultMockScale}>
+      <ResultCardDesignFaceNative
+        language="ja"
+        face={buildResultCardFaceModel(
+          buildTutorialResultPost(buildTutorialDemoPick()) as Record<
+            string,
+            unknown
+          > & { id?: string },
+          { market: buildTutorialResultMarket() }
+        )}
+        frameGlow
+        bare
+      />
+    </View>
+  );
+}
+
 export default function TutorialCoachVisualNative({ visual }: Props) {
   if (visual === "welcome") return <MockWelcome />;
+  if (visual === "result") return <MockResult />;
   if (visual === "rankings") return <MockRankings />;
   if (visual === "groups") return <MockGroups />;
   if (visual === "profile") return <MockProfile />;
@@ -303,163 +466,134 @@ const styles = StyleSheet.create({
   welcomeStage: {
     position: "relative",
     alignItems: "center",
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.22)",
-    backgroundColor: "rgba(3,10,18,0.55)",
-    paddingTop: 14,
-    paddingBottom: 12,
-    paddingHorizontal: 12,
-    gap: 10,
-  },
-  welcomeCorner: {
-    position: "absolute",
-    width: 12,
-    height: 12,
-    borderColor: TUTORIAL_CYAN,
-  },
-  welcomeCornerTL: {
-    borderTopWidth: 2,
-    borderLeftWidth: 2,
-  },
-  welcomeCornerTR: {
-    borderTopWidth: 2,
-    borderRightWidth: 2,
-  },
-  welcomeCornerBL: {
-    borderBottomWidth: 2,
-    borderLeftWidth: 2,
-  },
-  welcomeCornerBR: {
-    borderBottomWidth: 2,
-    borderRightWidth: 2,
-  },
-  welcomeBrief: {
-    position: "absolute",
-    top: 8,
-    left: 14,
-    fontFamily: fonts.metricExtra,
-    fontSize: 8,
-    letterSpacing: 2.4,
-    color: "rgba(0,245,255,0.55)",
+    overflow: "visible",
+    backgroundColor: "transparent",
+    paddingTop: 6,
+    paddingBottom: 2,
+    paddingHorizontal: 2,
+    gap: 24,
   },
   welcomeHero: {
     alignItems: "center",
-    marginTop: 6,
-    gap: 6,
-  },
-  welcomeHalo: {
-    position: "absolute",
-    top: -6,
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: "rgba(0,245,255,0.12)",
-    shadowColor: TUTORIAL_CYAN,
-    shadowOpacity: 0.85,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  welcomeRingOuter: {
-    width: 76,
-    height: 76,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.45)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,245,255,0.06)",
-    shadowColor: TUTORIAL_CYAN,
-    shadowOpacity: 0.55,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  welcomeRingInner: {
-    width: 66,
-    height: 66,
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-  welcomeIcon: {
-    width: 66,
-    height: 66,
-  },
-  welcomeWordmark: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 32,
-    letterSpacing: 6,
-    color: "#F2FEFF",
-    textShadowColor: "rgba(0,245,255,0.45)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
+    marginTop: 4,
+    gap: 10,
+    width: "100%",
   },
   welcomeTag: {
-    fontFamily: fonts.metric,
+    fontFamily: fonts.metricExtra,
     fontSize: 9,
-    letterSpacing: 2.2,
-    color: "rgba(165,243,252,0.72)",
+    letterSpacing: 2.6,
+    color: TUTORIAL_CYAN,
+    opacity: 0.75,
+    textShadowColor: "rgba(0,0,0,0.7)",
+    textShadowOffset: { width: 0, height: 6 },
+    textShadowRadius: 10,
   },
-  welcomeBeamRow: {
+  /** 本番 `ResultCardDesignFaceNative` をコーチ枠に収める */
+  resultMockScale: {
     width: "100%",
-    alignItems: "center",
-    paddingHorizontal: 8,
+    transform: [{ scale: 0.88 }],
   },
-  welcomeBeam: {
-    height: 1,
-    width: "92%",
-  },
-  welcomeStepsTrack: {
+  welcomePath: {
     flexDirection: "row",
     width: "100%",
     justifyContent: "space-between",
-    paddingHorizontal: 4,
-    paddingTop: 4,
+    paddingHorizontal: 0,
+    paddingTop: 8,
     position: "relative",
   },
-  welcomeStepsLine: {
+  welcomePathRailWrap: {
     position: "absolute",
-    left: "16%",
-    right: "16%",
-    top: 10,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(0,245,255,0.35)",
+    left: 38,
+    right: 38,
+    top: 8,
+    height: 14,
+    zIndex: 0,
+  },
+  welcomePathRail: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "visible",
+    justifyContent: "center",
+  },
+  welcomePathRailLine: {
+    height: 1,
+    width: "100%",
+    backgroundColor: "rgba(0,245,255,0.34)",
+  },
+  welcomePathChargeClip: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+  },
+  welcomePathBloom: {
+    position: "absolute",
+    left: 0,
+    top: 4,
+    height: 6,
+    width: "100%",
+    backgroundColor: TUTORIAL_WELCOME_PATH_CHARGE,
+    transformOrigin: "left center",
+  },
+  welcomePathCharge: {
+    position: "absolute",
+    left: 0,
+    top: 6,
+    height: 2,
+    width: "100%",
+    backgroundColor: TUTORIAL_WELCOME_PATH_CHARGE,
+    transformOrigin: "left center",
   },
   welcomeStep: {
-    flex: 1,
+    width: 76,
     alignItems: "center",
-    gap: 3,
+    zIndex: 1,
   },
-  welcomeStepDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: TUTORIAL_CYAN,
-    borderWidth: 2,
-    borderColor: "rgba(5,12,20,0.95)",
-    marginBottom: 2,
-    shadowColor: TUTORIAL_CYAN,
-    shadowOpacity: 0.9,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 0 },
+  welcomeStepInner: {
+    alignItems: "center",
+    gap: 4,
+  },
+  welcomeNode: {
+    width: 14,
+    height: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "45deg" }],
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.88)",
+    backgroundColor: "#050B12",
+    marginBottom: 8,
+    overflow: "visible",
+  },
+  welcomeNodeRing: {
+    position: "absolute",
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
+    borderWidth: 1,
+    borderColor: TUTORIAL_CYAN,
+  },
+  welcomeNodeCore: {
+    width: 5,
+    height: 5,
+    backgroundColor: "rgba(0,245,255,0.4)",
   },
   welcomeStepN: {
     fontFamily: fonts.metricExtra,
     fontSize: 10,
-    letterSpacing: 1.5,
+    letterSpacing: 1.8,
     color: TUTORIAL_CYAN,
   },
   welcomeStepLabel: {
     fontSize: 13,
     fontWeight: "700",
+    lineHeight: 15,
     color: "#F4FBFF",
   },
   welcomeStepEn: {
     fontFamily: fonts.metric,
     fontSize: 8,
-    letterSpacing: 1.4,
-    color: "rgba(165,243,252,0.55)",
+    letterSpacing: 1.8,
+    color: "rgba(165,243,252,0.7)",
   },
   horizonHead: {
     fontFamily: fonts.metricExtra,

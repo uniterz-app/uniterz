@@ -1,10 +1,7 @@
 /**
- * horizon 内のサブステップ（プロフィール ↔ Games の STATS 説明用）
+ * horizon 内のサブステップ
  */
-import {
-  HORIZON_FEATURE_STEP_COUNT,
-  TUTORIAL_HORIZON_STATS_STEP,
-} from "../../../../../lib/tutorial/tutorialHorizonSteps";
+import { HORIZON_FEATURE_STEP_COUNT } from "../../../../../lib/tutorial/tutorialHorizonSteps";
 
 type Listener = () => void;
 
@@ -35,4 +32,4 @@ export function subscribeTutorialHorizonSubstepNative(
   };
 }
 
-export { TUTORIAL_HORIZON_STATS_STEP, HORIZON_FEATURE_STEP_COUNT };
+export { HORIZON_FEATURE_STEP_COUNT };

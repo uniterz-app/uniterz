@@ -30,8 +30,8 @@ import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import TutorialLiveCoach from "@/app/component/tutorial/TutorialLiveCoach";
-import TutorialPulseHint from "@/app/component/tutorial/TutorialPulseHint";
-import TutorialResolvingOverlay from "@/app/component/tutorial/TutorialResolvingOverlay";
+import TutorialWelcomeWorldCamera from "@/app/component/tutorial/TutorialWelcomeWorldCamera";
+import Header from "@/app/component/Header";
 import usePageSwipe from "./usePageSwipe";
 import { gameRowStartDateKeyInTimeZone } from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
@@ -61,6 +61,7 @@ import {
 } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
 import { setAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
+import { tutorialSkipConfirmProps } from "@/lib/tutorial/tutorialSkipConfirmProps";
 import {
   fetchAppTutorialSeen,
   markAppTutorialSeen,
@@ -71,16 +72,19 @@ import {
   writeTutorialLivePhase,
   type TutorialLivePhase,
 } from "@/lib/tutorial/tutorialLivePhase";
-import { formatTutorialLiveProgress } from "@/lib/tutorial/tutorialLiveProgress";
+import { formatTutorialGamesSubstepProgress } from "@/lib/tutorial/tutorialLiveProgress";
 import {
-  buildTutorialNbaRawGame,
-  TUTORIAL_NBA_GAME_ID,
-} from "@/lib/tutorial/tutorialNbaRawGame";
-import { tutorialGradeFromPick } from "@/lib/tutorial/tutorialNbaUi";
-import {
-  clearTutorialLivePick,
-  writeTutorialLivePick,
-} from "@/lib/tutorial/tutorialLivePick";
+  isTutorialGamesSubstep,
+  isTutorialOnGamesHome,
+  nextTutorialGamesSubstep,
+  prevTutorialGamesSubstep,
+} from "@/lib/tutorial/tutorialGamesSubsteps";
+import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
+import { writeTutorialLiveTrack, readTutorialLiveTrack } from "@/lib/tutorial/tutorialLiveTrack";
+import { writeTutorialHorizonSubstep } from "@/lib/tutorial/tutorialHorizonSubstep";
+import { writeTutorialWelcomeHandoff, tutorialProfileHref } from "@/lib/tutorial/tutorialWelcomeHandoff";
+import { featuresTrackProgressLabel } from "@/lib/tutorial/tutorialHorizonSteps";
+import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
 import {
   fetchNextGameDayAfterLocalDay,
   fetchPreviousGameDayBeforeLocalDay,
@@ -182,6 +186,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
+  const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
   const dayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
   /* =========================
@@ -190,6 +195,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const [league, setLeague] = useState<League>("nba");
   const [tutorialPhase, setTutorialPhase] =
     useState<TutorialLivePhase | null>(null);
+  const [welcomeWorldFly, setWelcomeWorldFly] = useState(false);
+  const welcomeFlyDestRef = useRef<"full" | "features">("full");
+  const [welcomeFlyDest, setWelcomeFlyDest] = useState<"full" | "features" | null>(
+    null
+  );
+  const [welcomeHandoff, setWelcomeHandoff] = useState<"profile" | null>(null);
   const didInitLeague = useRef(false);
   const { preferredLeague, ready: preferredLeagueReady } =
     useUserPreferredLeague(user?.uid);
@@ -217,18 +228,16 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       if (
         existing === "results" ||
         existing === "rankings" ||
-        existing === "gotoGroups" ||
         existing === "groups" ||
-        existing === "gotoProfile" ||
-        existing === "profile"
+        existing === "profile" ||
+        existing === "horizon"
       ) {
         return;
       }
-      didInitLeague.current = true;
-      setLeague("nba");
       const start: TutorialLivePhase = existing ?? "welcome";
       writeTutorialLivePhase(start);
       setTutorialPhase(start);
+      if (start === "welcome") setTutorialWelcomeChromeHidden(true);
       setAppTutorialBlockingEvents(true);
     })();
     return () => {
@@ -254,34 +263,33 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     const uid = user?.uid ?? null;
     void markAppTutorialSeen(uid);
     writeTutorialLivePhase(null);
+    writeTutorialLiveTrack(null);
+    writeTutorialWelcomeHandoff(null);
     clearTutorialLivePick();
     setTutorialPhase(null);
     setAppTutorialBlockingEvents(false);
   }, [user?.uid]);
 
-  const tutorialActive =
-    tutorialPhase != null &&
-    tutorialPhase !== "done" &&
-    tutorialPhase !== "results" &&
-    tutorialPhase !== "resultDetail" &&
-    tutorialPhase !== "rankings" &&
-    tutorialPhase !== "gotoGroups" &&
-    tutorialPhase !== "groups" &&
-    tutorialPhase !== "gotoProfile" &&
-    tutorialPhase !== "profile" &&
-    tutorialPhase !== "horizon";
+  /** 試合タブ上の案内（welcome + 試合サブステップ）。他タブ以降は TutorialLiveHost 側 */
+  const tutorialActive = isTutorialOnGamesHome(tutorialPhase);
 
-  /** 投稿後 → 試合終了シミュ → リザルトへ直接遷移（goto 待機コーチなし） */
   useEffect(() => {
-    if (tutorialPhase !== "resolving") return;
-    const timer = window.setTimeout(() => {
-      setTutorialPhaseAndStore("results");
-      router.push(
-        pathname?.startsWith("/web") ? "/web/result" : "/mobile/result"
-      );
-    }, 1800);
-    return () => window.clearTimeout(timer);
-  }, [tutorialPhase, setTutorialPhaseAndStore, router, pathname]);
+    if (tutorialPhase !== "welcome") {
+      setWelcomeWorldFly(false);
+      setWelcomeFlyDest(null);
+    }
+  }, [tutorialPhase]);
+
+  useLayoutEffect(() => {
+    setTutorialWelcomeBrandHidden(true);
+    return () => setTutorialWelcomeBrandHidden(false);
+  }, []);
+
+  useLayoutEffect(() => {
+    const inWorld = tutorialPhase === "welcome" && welcomeHandoff !== "profile";
+    setTutorialWelcomeChromeHidden(inWorld && !welcomeWorldFly);
+    return () => setTutorialWelcomeChromeHidden(false);
+  }, [tutorialPhase, welcomeWorldFly, welcomeHandoff]);
 
   useEffect(() => {
     if (didInitLeague.current || !preferredLeagueReady) return;
@@ -302,20 +310,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const [selectedByLeague, setSelectedByLeague] = useState<
     Partial<Record<League, Date>>
   >({});
-
-  /** チュートリアル開始直後は日程 API 待ちでも「今日」を仮選択して一覧を出す */
-  useEffect(() => {
-    if (!tutorialActive || league !== "nba") return;
-    setSelectedByLeague((prev) => {
-      if (prev.nba) return prev;
-      const today =
-        parseDateKeyInTimeZone(
-          getTodayKeyInTimeZone(dayTimeZone),
-          dayTimeZone
-        ) ?? new Date();
-      return { ...prev, nba: today };
-    });
-  }, [tutorialActive, league, dayTimeZone]);
 
   const todayKey = useMemo(
     () => getTodayKeyInTimeZone(dayTimeZone),
@@ -743,30 +737,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
             gameMatchesMarginBounds(g, marginMin, marginMax)
           );
 
-    if (tutorialActive && league === "nba") {
-      const tipOff =
-        selected instanceof Date
-          ? (() => {
-              const d = new Date(selected);
-              d.setHours(21, 0, 0, 0);
-              if (d.getTime() <= Date.now()) {
-                return new Date(Date.now() + 2 * 60 * 60 * 1000);
-              }
-              return d;
-            })()
-          : new Date(Date.now() + 2 * 60 * 60 * 1000);
-      /** 練習試合だけ。他リーグの残りや本番カードが裏に混ざらないようにする */
-      return [buildTutorialNbaRawGame(tipOff)];
-    }
     return list;
-  }, [
-    gamesAfterTeamFilter,
-    marginMin,
-    marginMax,
-    tutorialActive,
-    league,
-    selected,
-  ]);
+  }, [gamesAfterTeamFilter, marginMin, marginMax]);
 
   /**
    * games は selectedDayKey で絞り込んだ取得済みウィンドウなので、
@@ -1177,16 +1149,76 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     />
   );
 
+  const welcomeBrandInWorld =
+    tutorialPhase === "welcome" && welcomeHandoff !== "profile";
+
   return (
     <div
-      ref={pageRef}
       className={[
-        "min-h-svh overflow-y-auto overscroll-x-contain",
+        "flex h-svh flex-col overscroll-x-contain",
+        tutorialPhase === "welcome" ? "overflow-visible" : "overflow-hidden",
         pagePad,
-        "pt-2 pb-bottom-nav text-white",
+        "pb-bottom-nav text-white",
       ].join(" ")}
-      style={{ touchAction: "pan-y" }}
     >
+      <TutorialWelcomeWorldCamera
+        active
+        flying={!welcomeBrandInWorld || welcomeWorldFly}
+        onFlyComplete={
+          welcomeBrandInWorld
+            ? () => {
+                const dest = welcomeFlyDestRef.current;
+                if (dest === "features") {
+                  writeTutorialLiveTrack("features");
+                  setTutorialPhaseAndStore("gamesStats");
+                  return;
+                }
+                writeTutorialLiveTrack("full");
+                setTutorialPhaseAndStore("games");
+              }
+            : undefined
+        }
+        overlay={
+          welcomeBrandInWorld ? (
+            <TutorialLiveCoach
+              open
+              embedInCamera
+              title={m.tutorial.practice.welcomeTitle}
+              body={m.tutorial.practice.welcomeBody}
+              skipLabel={m.tutorial.skip}
+              nextLabel={m.tutorial.practice.welcomeFullCta}
+              altNextLabel={m.tutorial.practice.welcomeFeaturesCta}
+              visual="welcome"
+              {...skipConfirm}
+              onSkip={completeTutorialFully}
+              onWelcomeFlyStart={(dest) => {
+                welcomeFlyDestRef.current = dest;
+                setWelcomeFlyDest(dest);
+                setWelcomeWorldFly(true);
+                if (dest === "features") writeTutorialLiveTrack("features");
+              }}
+              onNext={() => {
+                writeTutorialLiveTrack("full");
+                setTutorialPhaseAndStore("games");
+              }}
+              onAltNext={() => {
+                writeTutorialLiveTrack("features");
+                setTutorialPhaseAndStore("gamesStats");
+              }}
+            />
+          ) : null
+        }
+      >
+      <Header />
+      <div
+        ref={pageRef}
+        className={[
+          "min-h-0 flex-1",
+          tutorialPhase === "welcome" ? "overflow-visible" : "overflow-y-auto",
+          "pt-2",
+        ].join(" ")}
+        style={{ touchAction: "pan-y" }}
+      >
       <div className={gamesHeaderShellClass(isMobile)}>
         {isMobile ? (
           <div className={gamesHeaderMobileShellClass()}>
@@ -1325,45 +1357,19 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           games={filteredGames}
           extraPeerGamesForSeriesInference={peerRowsForSeriesInference}
           dense={dense}
-          /** チュートリアル中はモック試合を先に見せる（取得待ちスケルトンで隠さない） */
-          loading={
-            listLoading &&
-            !(tutorialActive && league === "nba" && filteredGames.length > 0)
-          }
+          loading={listLoading}
           league={league}
           emptyHint={scheduleEmptyHint}
           listShellIntro={listShellIntroLocked}
-          tutorialMarkFirstCard={
-            tutorialPhase === "tapCard" || tutorialPhase === "welcome"
-          }
-          tutorialModeGameId={
-            tutorialActive ? TUTORIAL_NBA_GAME_ID : null
-          }
-          forceCloseOverlay={
-            tutorialPhase === "posted" ||
-            tutorialPhase === "resolving" ||
-            tutorialPhase === "gotoResults"
-          }
-          onTutorialPredict={(payload) => {
-            const pick = payload;
-            const grade = tutorialGradeFromPick(pick);
-            writeTutorialLivePick(pick, grade);
-            setTutorialPhaseAndStore("posted");
-          }}
-          onOverlayGameIdChange={(id) => {
-            if (
-              id &&
-              String(id) === TUTORIAL_NBA_GAME_ID &&
-              (tutorialPhase === "tapCard" || tutorialPhase === "welcome")
-            ) {
-              setTutorialPhaseAndStore("predictWait");
-            }
-          }}
+          tutorialMarkFirstCard={tutorialActive}
         />
       </div>
     </motion.div>
   </>
 )}
+
+      </div>
+      </TutorialWelcomeWorldCamera>
 
       <ProfileMenuEdgeHandle
         onOpen={() =>
@@ -1372,77 +1378,95 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         ariaLabel={m.games.statsSection}
         label="STATS"
         tutorialTargetId="games-stats-edge"
+        hidden={tutorialPhase === "welcome"}
+        fadeIn
       />
 
-      {/* 本番画面上のチュートリアルコーチ */}
-      {tutorialPhase === "welcome" ? (
+      {/* 本番画面上のチュートリアルコーチ（welcome はカメラ overlay） */}
+      {isTutorialGamesSubstep(tutorialPhase) ? (
         <TutorialLiveCoach
           open
-          title={m.tutorial.practice.welcomeTitle}
-          body={m.tutorial.practice.welcomeBody}
-          skipLabel={m.tutorial.skip}
-          nextLabel={m.tutorial.next}
-          visual="welcome"
-          progressLabel={formatTutorialLiveProgress(
-            m.tutorial.practice.progressLabel,
-            "welcome"
-          )}
-          onSkip={completeTutorialFully}
-          onNext={() => setTutorialPhaseAndStore("tapCard")}
-        />
-      ) : null}
-
-      {tutorialPhase === "tapCard" ? (
-        <>
-          <TutorialLiveCoach
-            open
-            title={m.tutorial.practice.tapTitle}
-            body={m.tutorial.practice.tapBody}
-            skipLabel={m.tutorial.skip}
-            backLabel={m.tutorial.back}
-            target="match-card"
-            waitHint={m.tutorial.practice.tapHint}
-            showHoleRing={false}
-            progressLabel={formatTutorialLiveProgress(
-              m.tutorial.practice.progressLabel,
-              "tapCard"
-            )}
-            onSkip={completeTutorialFully}
-            onBack={() => setTutorialPhaseAndStore("welcome")}
-          />
-          <TutorialPulseHint
-            active
-            label={m.tutorial.pulseHint}
-          />
-        </>
-      ) : null}
-
-      {/* predictWait 中の案内は PredictionFormV2 内バナー */}
-
-      {tutorialPhase === "posted" ? (
-        <TutorialLiveCoach
-          open
-          title={m.tutorial.practice.postedTitle}
-          body={m.tutorial.practice.postedBody}
+          title={
+            tutorialPhase === "gamesPickup"
+              ? m.tutorial.practice.gamesPickupTitle
+              : tutorialPhase === "gamesStats"
+                ? m.tutorial.practice.gamesStatsTitle
+                : m.tutorial.practice.gamesTitle
+          }
+          body={
+            tutorialPhase === "gamesPickup"
+              ? m.tutorial.practice.gamesPickupBody
+              : tutorialPhase === "gamesStats"
+                ? m.tutorial.practice.gamesStatsBody
+                : m.tutorial.practice.gamesBody
+          }
           skipLabel={m.tutorial.skip}
           nextLabel={m.tutorial.next}
           backLabel={m.tutorial.back}
-          progressLabel={formatTutorialLiveProgress(
-            m.tutorial.practice.progressLabel,
-            "posted"
-          )}
+          target={
+            tutorialPhase === "gamesStats"
+              ? "games-stats-edge"
+              : tutorialPhase === "games" && filteredGames.length > 0
+                ? "match-card"
+                : null
+          }
+          visual={
+            tutorialPhase === "gamesStats"
+              ? null
+              : tutorialPhase === "gamesPickup" || filteredGames.length === 0
+                ? "matchCard"
+                : null
+          }
+          progressLabel={
+            readTutorialLiveTrack() === "features" &&
+            tutorialPhase === "gamesStats"
+              ? featuresTrackProgressLabel(
+                  m.tutorial.practice.horizonFeatureTag,
+                  0
+                )
+              : formatTutorialGamesSubstepProgress(
+                  m.tutorial.practice.progressLabel,
+                  tutorialPhase
+                )
+          }
+          accentTone={
+            readTutorialLiveTrack() === "features" &&
+            tutorialPhase === "gamesStats"
+              ? "feature"
+              : "cyan"
+          }
+          {...skipConfirm}
           onSkip={completeTutorialFully}
-          onBack={() => setTutorialPhaseAndStore("tapCard")}
-          onNext={() => setTutorialPhaseAndStore("resolving")}
+          onBack={() => {
+            if (
+              readTutorialLiveTrack() === "features" &&
+              tutorialPhase === "gamesStats"
+            ) {
+              setTutorialPhaseAndStore("welcome");
+              return;
+            }
+            setTutorialPhaseAndStore(prevTutorialGamesSubstep(tutorialPhase));
+          }}
+          onNext={() => {
+            if (
+              readTutorialLiveTrack() === "features" &&
+              tutorialPhase === "gamesStats"
+            ) {
+              writeTutorialHorizonSubstep(0);
+              setTutorialPhaseAndStore("horizon");
+              router.push(tutorialProfileHref(pathname));
+              return;
+            }
+            const next = nextTutorialGamesSubstep(tutorialPhase);
+            setTutorialPhaseAndStore(next);
+            if (next === "results") {
+              router.push(
+                pathname?.startsWith("/web") ? "/web/result" : "/mobile/result"
+              );
+            }
+          }}
         />
       ) : null}
-
-      <TutorialResolvingOverlay
-        open={tutorialPhase === "resolving"}
-        title={m.tutorial.practice.resolvingTitle}
-        body={m.tutorial.practice.resolvingBody}
-        spinLabel={m.tutorial.practice.resolvingSpin}
-      />
     </div>
   );
 }

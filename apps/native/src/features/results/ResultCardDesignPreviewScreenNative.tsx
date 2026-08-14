@@ -3,7 +3,7 @@
  * バッジは A（LEGEND 塗り）固定。UPSET 枠は濃い赤 / PERFECT は深い青。
  * 右辺 DETAIL タブ → 詳細プレビュー。Upset/Score は D + 相対ラベル。YOU なし。
  */
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Pressable,
   ScrollView,
@@ -16,6 +16,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import { PANEL_BG } from "../profile/reports/reportThemeNative";
 import { resolveTeamJerseyPalette } from "../games/teamColors";
+import {
+  registerTutorialTarget,
+} from "../tutorial/tutorialMeasureNative";
 import {
   MOBILE_RESULT_CARD_MAX_W,
   NUMERIC_FONT,
@@ -625,14 +628,38 @@ function StatBlock({
   ja,
   scorerIcon,
   scoreRel,
+  tutorialMetricsTargetId,
 }: {
   sample: Sample;
   ja: boolean;
   scorerIcon: ScorerIconId;
   scoreRel: ScoreRelKind;
+  tutorialMetricsTargetId?: string;
 }) {
+  const metricsRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (!tutorialMetricsTargetId) return;
+    return registerTutorialTarget(tutorialMetricsTargetId, () =>
+      new Promise((resolve) => {
+        const node = metricsRef.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width < 2 || height < 2) {
+            resolve(null);
+            return;
+          }
+          resolve({ x, y, width, height });
+        });
+      })
+    );
+  }, [tutorialMetricsTargetId]);
+
   return (
-    <View style={styles.statBlock}>
+    <View ref={metricsRef} collapsable={false} style={styles.statBlock}>
       <TopScorerRow sample={sample} scorerIcon={scorerIcon} />
       <UpsetScoreD sample={sample} ja={ja} scoreRel={scoreRel} />
     </View>
@@ -650,6 +677,7 @@ function Plan1Card({
   showDetailTab = false,
   frameGlow = true,
   bare = false,
+  tutorialMetricsTargetId,
 }: {
   sample: Sample;
   badge: OutcomeBadge;
@@ -660,6 +688,7 @@ function Plan1Card({
   showDetailTab?: boolean;
   frameGlow?: boolean;
   bare?: boolean;
+  tutorialMetricsTargetId?: string;
 }) {
   const body = (
     <View style={styles.pad}>
@@ -672,6 +701,7 @@ function Plan1Card({
         ja={ja}
         scorerIcon={scorerIcon}
         scoreRel={scoreRel}
+        tutorialMetricsTargetId={tutorialMetricsTargetId}
       />
     </View>
   );
@@ -704,6 +734,7 @@ export function ResultCardDesignFaceNative({
   frameGlow = false,
   showDetailTab = false,
   onOpenDetail,
+  tutorialMetricsTargetId,
 }: {
   language: "ja" | "en";
   badge?: OutcomeBadge;
@@ -736,6 +767,8 @@ export function ResultCardDesignFaceNative({
   frameGlow?: boolean;
   showDetailTab?: boolean;
   onOpenDetail?: () => void;
+  /** チュートリアル穴（Upset / Score 行） */
+  tutorialMetricsTargetId?: string;
 }) {
   const resolved: Sample = face
     ? (() => {
@@ -797,6 +830,7 @@ export function ResultCardDesignFaceNative({
       onOpenDetail={onOpenDetail}
       frameGlow={frameGlow}
       bare={bare}
+      tutorialMetricsTargetId={tutorialMetricsTargetId}
     />
   );
 }

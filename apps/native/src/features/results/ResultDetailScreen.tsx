@@ -45,6 +45,7 @@ import { buildResultDetailDesignPreviewView } from "./resultDetailDesignPreviewM
 import type { ResultDetailViewModel } from "../../../../../lib/result/buildResultDetailView";
 import { buildResultDetailViewModel } from "../../../../../lib/result/buildResultDetailView";
 import {
+  buildTutorialResultDetailOptions,
   buildTutorialResultPost,
   RESULT_DETAIL_DESIGN_PREVIEW_POST_ID,
   TUTORIAL_RESULT_POST_ID,
@@ -58,6 +59,8 @@ export default function ResultDetailScreen({
   onClose,
   onOpenProfile,
   sections = "full",
+  /** true: RN Modal を使わず親ツリーに載せる（チュートリアルコーチが前面に出る） */
+  embedInParent = false,
 }: {
   visible: boolean;
   postId: string | null;
@@ -65,6 +68,7 @@ export default function ResultDetailScreen({
   onClose: () => void;
   onOpenProfile?: (handle: string) => void;
   sections?: ResultDetailBodySections;
+  embedInParent?: boolean;
 }) {
   const isEn = language === "en";
   const reduceMotion = useReducedMotion() ?? false;
@@ -188,10 +192,15 @@ export default function ResultDetailScreen({
             return;
           }
           const built = buildTutorialResultPost(pick.pick, pick.grade);
+          const myPoints =
+            typeof built.stats?.pointsV3 === "number" ? built.stats.pointsV3 : 0;
           setView(
             buildResultDetailViewModel(
               { id: TUTORIAL_RESULT_POST_ID, ...(built as object) },
-              { viewer }
+              {
+                viewer,
+                ...buildTutorialResultDetailOptions(myPoints),
+              }
             )
           );
           return;
@@ -232,6 +241,110 @@ export default function ResultDetailScreen({
   const sheetScrollMaxHeight =
     Platform.OS === "ios" ? "88%" : "90%";
 
+  const body = modalChromeVisible ? (
+    <View
+      style={[styles.root, embedInParent ? styles.rootEmbedded : null]}
+      pointerEvents={layersVisible ? "auto" : "none"}
+    >
+      {layersVisible ? (
+        <>
+          <Animated.View
+            entering={backdropEnter}
+            exiting={backdropExit}
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="box-none"
+          >
+            {(Platform.OS === "ios" || Platform.OS === "android") && (
+              <BlurView
+                intensity={Platform.OS === "ios" ? 28 : 22}
+                tint="dark"
+                {...nativeBlurViewExtraProps()}
+                style={StyleSheet.absoluteFillObject}
+              />
+            )}
+            <View style={styles.backdropDim} pointerEvents="none" />
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={scheduleCloseAfterExitAnimation}
+              accessibilityRole="button"
+              accessibilityLabel={isEn ? "Close detail" : "詳細を閉じる"}
+            />
+          </Animated.View>
+
+          <Animated.View
+            entering={sheetEnter}
+            exiting={sheetExit}
+            style={styles.modalSheetWrap}
+            pointerEvents="box-none"
+          >
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              style={[
+                styles.kav,
+                {
+                  paddingTop: sheetTopPad,
+                  paddingBottom: Math.max(insets.bottom, spacing.md),
+                },
+              ]}
+              pointerEvents="box-none"
+            >
+              <ScrollView
+                style={[styles.scroll, { maxHeight: sheetScrollMaxHeight }]}
+                contentContainerStyle={[
+                  styles.scrollContent,
+                  { paddingBottom: bottomContentReserveY + spacing.md },
+                ]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                pointerEvents="auto"
+              >
+                <View style={styles.modalContent}>
+                  {loading ? (
+                    <View style={styles.centerFill}>
+                      <BlocksPulseLoader />
+                    </View>
+                  ) : missing || !view ? (
+                    <View style={styles.centerFill}>
+                      <Text style={styles.missingTitle}>
+                        {isEn ? "Post not found" : "投稿が見つかりません"}
+                      </Text>
+                      <Pressable
+                        onPress={scheduleCloseAfterExitAnimation}
+                        style={styles.primaryBtn}
+                      >
+                        <Text style={styles.primaryBtnText}>
+                          {isEn ? "Close" : "閉じる"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Animated.View entering={contentEnter} collapsable={false}>
+                      <ResultDetailBodyNative
+                        language={language}
+                        view={view}
+                        onOpenProfile={openProfile}
+                        sections={sections}
+                      />
+                    </Animated.View>
+                  )}
+                </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
+            <ProfileBackEdgeHandleNative
+              onPress={scheduleCloseAfterExitAnimation}
+              accessibilityLabel={isEn ? "Back" : "戻る"}
+            />
+          </Animated.View>
+        </>
+      ) : null}
+    </View>
+  ) : null;
+
+  if (embedInParent) {
+    if (!modalChromeVisible) return null;
+    return body;
+  }
+
   return (
     <Modal
       visible={modalChromeVisible}
@@ -239,104 +352,7 @@ export default function ResultDetailScreen({
       animationType="none"
       onRequestClose={scheduleCloseAfterExitAnimation}
     >
-      {modalChromeVisible ? (
-        <View
-          style={styles.root}
-          pointerEvents={layersVisible ? "auto" : "none"}
-        >
-          {layersVisible ? (
-            <>
-              <Animated.View
-                entering={backdropEnter}
-                exiting={backdropExit}
-                style={StyleSheet.absoluteFillObject}
-                pointerEvents="box-none"
-              >
-                {(Platform.OS === "ios" || Platform.OS === "android") && (
-                  <BlurView
-                    intensity={Platform.OS === "ios" ? 28 : 22}
-                    tint="dark"
-                    {...nativeBlurViewExtraProps()}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                )}
-                <View style={styles.backdropDim} pointerEvents="none" />
-                <Pressable
-                  style={StyleSheet.absoluteFillObject}
-                  onPress={scheduleCloseAfterExitAnimation}
-                  accessibilityRole="button"
-                  accessibilityLabel={isEn ? "Close detail" : "詳細を閉じる"}
-                />
-              </Animated.View>
-
-              <Animated.View
-                entering={sheetEnter}
-                exiting={sheetExit}
-                style={styles.modalSheetWrap}
-                pointerEvents="box-none"
-              >
-                <KeyboardAvoidingView
-                  behavior={Platform.OS === "ios" ? "padding" : undefined}
-                  style={[
-                    styles.kav,
-                    {
-                      paddingTop: sheetTopPad,
-                      paddingBottom: Math.max(insets.bottom, spacing.md),
-                    },
-                  ]}
-                  pointerEvents="box-none"
-                >
-                  <ScrollView
-                    style={[styles.scroll, { maxHeight: sheetScrollMaxHeight }]}
-                    contentContainerStyle={[
-                      styles.scrollContent,
-                      { paddingBottom: bottomContentReserveY + spacing.md },
-                    ]}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                    pointerEvents="auto"
-                  >
-                    <View style={styles.modalContent}>
-                      {loading ? (
-                        <View style={styles.centerFill}>
-                          <BlocksPulseLoader />
-                        </View>
-                      ) : missing || !view ? (
-                        <View style={styles.centerFill}>
-                          <Text style={styles.missingTitle}>
-                            {isEn ? "Post not found" : "投稿が見つかりません"}
-                          </Text>
-                          <Pressable
-                            onPress={scheduleCloseAfterExitAnimation}
-                            style={styles.primaryBtn}
-                          >
-                            <Text style={styles.primaryBtnText}>
-                              {isEn ? "Close" : "閉じる"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      ) : (
-                        <Animated.View entering={contentEnter} collapsable={false}>
-                          <ResultDetailBodyNative
-                            language={language}
-                            view={view}
-                            onOpenProfile={openProfile}
-                            sections={sections}
-                          />
-                        </Animated.View>
-                      )}
-                    </View>
-                  </ScrollView>
-                </KeyboardAvoidingView>
-                <ProfileBackEdgeHandleNative
-                  onPress={scheduleCloseAfterExitAnimation}
-                  accessibilityLabel={isEn ? "Back" : "戻る"}
-                />
-              </Animated.View>
-            </>
-          ) : null}
-        </View>
-      ) : null}
+      {body}
     </Modal>
   );
 }
@@ -344,6 +360,12 @@ export default function ResultDetailScreen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  /** チュートリアル時は親ツリーに載せてコーチ（zIndex 200）より後ろへ */
+  rootEmbedded: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 120,
+    elevation: 120,
   },
   modalSheetWrap: {
     flex: 1,

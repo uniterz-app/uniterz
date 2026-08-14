@@ -20,6 +20,7 @@ const BASE_LOCATIONS: [number, number, number, number, number] = [
 export default function BrandCyanLineAnimated() {
   return (
     <View style={styles.shadowWrap} pointerEvents="none">
+      <View style={styles.extrude} />
       <View style={styles.lineTrack}>
         <LinearGradient
           colors={BASE_STOPS}
@@ -37,20 +38,27 @@ const styles = StyleSheet.create({
   shadowWrap: {
     alignSelf: "stretch",
     width: "100%",
-    height: 2,
-    /** ロゴ直下（Web Header gap-0.5 相当） */
+    height: 4,
     marginTop: 2,
     borderRadius: 0,
     ...Platform.select({
       ios: {
-        shadowColor: "rgba(34,211,238,0.35)",
-        shadowOffset: { width: 0, height: 0 },
+        shadowColor: "rgba(34,211,238,0.45)",
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 1,
         shadowRadius: 8,
       },
       android: { elevation: 4 },
       default: {},
     }),
+  },
+  extrude: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+    backgroundColor: "#052028",
   },
   lineTrack: {
     zIndex: 1,

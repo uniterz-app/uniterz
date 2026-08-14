@@ -13,14 +13,14 @@ import { t } from "@/lib/i18n/t";
 import {
   readTutorialLivePhase,
   writeTutorialLivePhase,
+  TUTORIAL_LIVE_PHASE_EVENT,
   type TutorialLivePhase,
 } from "@/lib/tutorial/tutorialLivePhase";
+import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
 import {
-  clearTutorialLivePick,
-  readTutorialLivePick,
-  type TutorialLivePickPayload,
-} from "@/lib/tutorial/tutorialLivePick";
-import { tutorialGradeFromPick } from "@/lib/tutorial/tutorialNbaUi";
+  readTutorialLiveTrack,
+  writeTutorialLiveTrack,
+} from "@/lib/tutorial/tutorialLiveTrack";
 import { markAppTutorialSeen } from "@/lib/tutorial/tutorialSeen";
 import { setAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
 import { formatTutorialLiveProgress } from "@/lib/tutorial/tutorialLiveProgress";
@@ -31,10 +31,11 @@ import {
 } from "@/lib/tutorial/tutorialHorizonSubstep";
 import {
   buildHorizonFeatureSteps,
+  featuresTrackProgressLabel,
   horizonFeatureProgressLabel,
   horizonStepHost,
-  TUTORIAL_HORIZON_STATS_STEP,
 } from "@/lib/tutorial/tutorialHorizonSteps";
+import { tutorialSkipConfirmProps } from "@/lib/tutorial/tutorialSkipConfirmProps";
 
 type PageKind = "results" | "rankings" | "groups" | "profile" | "games";
 
@@ -48,23 +49,24 @@ export default function TutorialLiveHost({ page }: Props) {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
+  const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
   const [phase, setPhase] = useState<TutorialLivePhase | null>(null);
-  const [livePick, setLivePick] = useState<TutorialLivePickPayload | null>(null);
-  /** リザルト詳細: 0=スコア, 1=指標 */
-  const [resultDetailStep, setResultDetailStep] = useState(0);
-  /** 新機能紹介: 0=概要, 1=スクワッド, 2=UNIT, 3=キャリア */
+  /** 新機能紹介: 各機能2ステップ（概要→使い方） */
   const [horizonFeatureStep, setHorizonFeatureStep] = useState(0);
 
   useEffect(() => {
-    const p = readTutorialLivePhase();
-    setPhase(p);
-    if (p === "resultDetail") setResultDetailStep(0);
-    if (p === "horizon") {
-      setHorizonFeatureStep(readTutorialHorizonSubstep());
-    }
-    if (page === "results") {
-      setLivePick(readTutorialLivePick());
-    }
+    const sync = () => {
+      const p = readTutorialLivePhase();
+      setPhase(p);
+      if (p === "horizon") {
+        setHorizonFeatureStep(readTutorialHorizonSubstep());
+      }
+    };
+    sync();
+    window.addEventListener(TUTORIAL_LIVE_PHASE_EVENT, sync);
+    return () => {
+      window.removeEventListener(TUTORIAL_LIVE_PHASE_EVENT, sync);
+    };
   }, [pathname, page]);
 
   const setPhaseAndStore = useCallback((next: TutorialLivePhase | null) => {
@@ -75,9 +77,9 @@ export default function TutorialLiveHost({ page }: Props) {
   const finish = useCallback(() => {
     void markAppTutorialSeen(user?.uid ?? null);
     writeTutorialLivePhase(null);
+    writeTutorialLiveTrack(null);
     clearTutorialLivePick();
     setPhase(null);
-    setLivePick(null);
     setAppTutorialBlockingEvents(false);
   }, [user?.uid]);
 
@@ -88,114 +90,35 @@ export default function TutorialLiveHost({ page }: Props) {
 
   if (!phase) return null;
 
-  if (page === "results" && (phase === "results" || phase === "gotoResults")) {
-    if (phase === "gotoResults") {
-      queueMicrotask(() => setPhaseAndStore("results"));
-    }
-    if (!livePick) return null;
-    const grade = tutorialGradeFromPick(livePick.pick);
-    const hit = grade.outcome === "hit";
+  if (page === "results" && phase === "results") {
     return (
       <TutorialLiveCoach
-        open={phase === "results"}
-        title={
-          hit
-            ? m.tutorial.practice.resultHitTitle
-            : m.tutorial.practice.resultMissTitle
-        }
-        body={
-          hit
-            ? m.tutorial.practice.resultHitBody
-                .replace("{pts}", String(grade.points))
-                .replace(
-                  "{bonus}",
-                  grade.scoreExact ? m.tutorial.practice.resultScoreBonus : ""
-                )
-            : m.tutorial.practice.resultMissBody
-        }
+        open
+        title={m.tutorial.practice.resultsTitle}
+        body={m.tutorial.practice.resultsBody}
         nextLabel={m.tutorial.next}
         skipLabel={m.tutorial.skip}
         backLabel={m.tutorial.back}
         target="result-card"
-        waitHint={m.tutorial.practice.resultCardTapHint}
         progressLabel={progressLabelFor("results")}
         onNext={() => {
-          setResultDetailStep(0);
-          setPhaseAndStore("resultDetail");
-          requestTutorialResultDetailOpen();
-        }}
-        onTargetPress={() => {
-          setResultDetailStep(0);
-          setPhaseAndStore("resultDetail");
-          requestTutorialResultDetailOpen();
-        }}
-        onBack={() => {
-          setPhaseAndStore("posted");
-          router.push(`${prefix}/games`);
-        }}
-        onSkip={finish}
-      />
-    );
-  }
-
-  if (page === "results" && phase === "resultDetail") {
-    const p = m.tutorial.practice;
-    const detailSteps = [
-      {
-        title: p.resultDetailScoreTitle,
-        body: p.resultDetailScoreBody,
-        target: "result-detail-score" as const,
-      },
-      {
-        title: p.resultDetailStatsTitle,
-        body: p.resultDetailStatsBody,
-        target: "result-detail-stats" as const,
-      },
-    ];
-    const step = detailSteps[Math.min(resultDetailStep, detailSteps.length - 1)]!;
-    const isLast = resultDetailStep >= detailSteps.length - 1;
-
-    return (
-      <TutorialLiveCoach
-        open
-        title={step.title}
-        body={step.body}
-        nextLabel={m.tutorial.next}
-        skipLabel={m.tutorial.skip}
-        backLabel={m.tutorial.back}
-        target={step.target}
-        allowInteractBehind={isLast}
-        progressLabel={progressLabelFor("resultDetail")}
-        onNext={() => {
-          if (!isLast) {
-            setResultDetailStep((s) => s + 1);
-            return;
-          }
-          requestTutorialResultDetailClose();
-          /** goto 待機コーチを出さず、直接ランキングへ */
           setPhaseAndStore("rankings");
           router.push(`${prefix}/rankings`);
         }}
         onBack={() => {
-          if (resultDetailStep > 0) {
-            setResultDetailStep((s) => s - 1);
-            return;
-          }
-          requestTutorialResultDetailClose();
-          setPhaseAndStore("results");
+          setPhaseAndStore("games");
+          router.push(`${prefix}/games`);
         }}
+        {...skipConfirm}
         onSkip={finish}
       />
     );
   }
 
-  if (page === "rankings" && (phase === "rankings" || phase === "gotoRankings")) {
-    if (phase === "gotoRankings") {
-      queueMicrotask(() => setPhaseAndStore("rankings"));
-    }
+  if (page === "rankings" && phase === "rankings") {
     return (
       <TutorialLiveCoach
-        open={phase === "rankings"}
+        open
         title={m.tutorial.practice.rankingsTitle}
         body={m.tutorial.practice.rankingsBody}
         skipLabel={m.tutorial.skip}
@@ -203,6 +126,7 @@ export default function TutorialLiveHost({ page }: Props) {
         backLabel={m.tutorial.back}
         allowInteractBehind
         progressLabel={progressLabelFor("rankings")}
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           setPhaseAndStore("results");
@@ -216,20 +140,19 @@ export default function TutorialLiveHost({ page }: Props) {
     );
   }
 
-  if (page === "groups" && (phase === "groups" || phase === "gotoGroups")) {
-    if (phase === "gotoGroups") {
-      queueMicrotask(() => setPhaseAndStore("groups"));
-    }
+  if (page === "groups" && phase === "groups") {
     return (
       <TutorialLiveCoach
-        open={phase === "groups"}
+        open
         title={m.tutorial.practice.groupsTitle}
         body={m.tutorial.practice.groupsBody}
         skipLabel={m.tutorial.skip}
         nextLabel={m.tutorial.next}
         backLabel={m.tutorial.back}
+        target="groups-create"
         allowInteractBehind
         progressLabel={progressLabelFor("groups")}
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           setPhaseAndStore("rankings");
@@ -258,8 +181,7 @@ export default function TutorialLiveHost({ page }: Props) {
   const navigateHorizonTab = (step: number) => {
     const host = horizonStepHost(step);
     if (host === "groups") router.push(`${prefix}/leaderboards`);
-    else if (host === "profile") router.push(profileTutorialHref());
-    else router.push(`${prefix}/games`);
+    else router.push(profileTutorialHref());
   };
 
   const advanceHorizonStep = (next: number) => {
@@ -276,7 +198,9 @@ export default function TutorialLiveHost({ page }: Props) {
     const step = featureSteps[Math.min(horizonFeatureStep, featureSteps.length - 1)]!;
     const isLast = horizonFeatureStep >= featureSteps.length - 1;
     const featureProgress = horizonFeatureProgressLabel(
-      progressLabelFor("horizon"),
+      readTutorialLiveTrack() === "features"
+        ? null
+        : progressLabelFor("horizon"),
       p.horizonFeatureTag,
       horizonFeatureStep
     );
@@ -290,10 +214,15 @@ export default function TutorialLiveHost({ page }: Props) {
         backLabel={m.tutorial.back}
         visual={step.visual}
         progressLabel={featureProgress}
+        accentTone="feature"
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           if (horizonFeatureStep > 0) advanceHorizonStep(horizonFeatureStep - 1);
-          else {
+          else if (readTutorialLiveTrack() === "features") {
+            setPhaseAndStore("welcome");
+            router.push(`${prefix}/games`);
+          } else {
             setPhaseAndStore("profile");
             router.push(profileTutorialHref());
           }
@@ -309,10 +238,7 @@ export default function TutorialLiveHost({ page }: Props) {
     );
   }
 
-  if (page === "profile" && (phase === "profile" || phase === "gotoProfile")) {
-    if (phase === "gotoProfile") {
-      queueMicrotask(() => setPhaseAndStore("profile"));
-    }
+  if (page === "profile" && phase === "profile") {
     return (
       <TutorialLiveCoach
         open={phase === "profile"}
@@ -323,16 +249,17 @@ export default function TutorialLiveHost({ page }: Props) {
         backLabel={m.tutorial.back}
         allowInteractBehind
         progressLabel={progressLabelFor("profile")}
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           setPhaseAndStore("groups");
           router.push(`${prefix}/leaderboards`);
         }}
         onNext={() => {
+          writeTutorialLiveTrack("full");
           setHorizonFeatureStep(0);
           writeTutorialHorizonSubstep(0);
           setPhaseAndStore("horizon");
-          router.push(`${prefix}/leaderboards`);
         }}
       />
     );
@@ -344,11 +271,17 @@ export default function TutorialLiveHost({ page }: Props) {
     const featureSteps = buildHorizonFeatureSteps(p);
     const step = featureSteps[Math.min(horizonFeatureStep, featureSteps.length - 1)]!;
     const isLast = horizonFeatureStep >= featureSteps.length - 1;
-    const featureProgress = horizonFeatureProgressLabel(
-      progressLabelFor("horizon"),
-      p.horizonFeatureTag,
-      horizonFeatureStep
-    );
+    const featureProgress =
+      readTutorialLiveTrack() === "features"
+        ? featuresTrackProgressLabel(
+            p.horizonFeatureTag,
+            horizonFeatureStep + 1
+          )
+        : horizonFeatureProgressLabel(
+            progressLabelFor("horizon"),
+            p.horizonFeatureTag,
+            horizonFeatureStep
+          );
     return (
       <TutorialLiveCoach
         open
@@ -358,12 +291,19 @@ export default function TutorialLiveHost({ page }: Props) {
         nextLabel={isLast ? p.finishCta : m.tutorial.next}
         backLabel={m.tutorial.back}
         target={step.target}
-        visual={step.target ? null : step.visual}
+        visual={step.visual}
         progressLabel={featureProgress}
+        accentTone="feature"
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           if (horizonFeatureStep > 0) advanceHorizonStep(horizonFeatureStep - 1);
-          else setPhaseAndStore("profile");
+          else if (readTutorialLiveTrack() === "features") {
+            setPhaseAndStore("gamesStats");
+            router.push(`${prefix}/games`);
+          } else {
+            setPhaseAndStore("profile");
+          }
         }}
         onNext={() => {
           if (!isLast) advanceHorizonStep(horizonFeatureStep + 1);
@@ -371,52 +311,6 @@ export default function TutorialLiveHost({ page }: Props) {
             finish();
             router.push(`${prefix}/games`);
           }
-        }}
-      />
-    );
-  }
-
-  if (page === "games" && phase === "horizon") {
-    if (horizonStepHost(horizonFeatureStep) !== "games") return null;
-    const p = m.tutorial.practice;
-    const featureSteps = buildHorizonFeatureSteps(p);
-    const stepIndex = Math.min(horizonFeatureStep, featureSteps.length - 1);
-    const step = featureSteps[stepIndex]!;
-    const isLast = stepIndex === TUTORIAL_HORIZON_STATS_STEP;
-    const featureProgress = horizonFeatureProgressLabel(
-      progressLabelFor("horizon"),
-      p.horizonFeatureTag,
-      horizonFeatureStep
-    );
-    return (
-      <TutorialLiveCoach
-        open
-        title={step.title}
-        body={step.body}
-        skipLabel={m.tutorial.skip}
-        nextLabel={isLast ? p.finishCta : m.tutorial.next}
-        backLabel={m.tutorial.back}
-        target={step.target}
-        visual={step.target ? null : step.visual}
-        allowInteractBehind={!!step.target}
-        progressLabel={featureProgress}
-        onSkip={finish}
-        onBack={() => advanceHorizonStep(horizonFeatureStep - 1)}
-        onTargetPress={
-          isLast && step.target === "games-stats-edge"
-            ? () => {
-                finish();
-                router.push(
-                  pathname?.startsWith("/web")
-                    ? "/dev/stats-preview"
-                    : "/mobile/stats-preview"
-                );
-              }
-            : undefined
-        }
-        onNext={() => {
-          if (!isLast) advanceHorizonStep(horizonFeatureStep + 1);
-          else finish();
         }}
       />
     );

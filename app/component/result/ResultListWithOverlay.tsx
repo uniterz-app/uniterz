@@ -650,6 +650,12 @@ export default function ResultListWithOverlay({
     [filteredGrouped, dismissedPostIds]
   );
 
+  const firstResultCardId = useMemo(() => {
+    const day = visibleGrouped[0];
+    if (!day) return null;
+    return [...day.pending, ...day.final][0]?.id ?? null;
+  }, [visibleGrouped]);
+
   /** フィルター＋一覧除外適用後の件数（少件数時の入場アニメ・content-visibility 制御に使用） */
   const filteredTotalLoaded = useMemo(
     () =>
@@ -1571,7 +1577,9 @@ export default function ResultListWithOverlay({
                     <div
                       key={post.id}
                       data-tutorial-target={
-                        isTutorialPost ? "result-card" : undefined
+                        String(post.id) === String(firstResultCardId)
+                          ? "result-card"
+                          : undefined
                       }
                       className={
                         isSingleWebCard ? "w-full max-w-[640px]" : "w-full"
@@ -1586,7 +1594,9 @@ export default function ResultListWithOverlay({
                   <motion.div
                     key={post.id}
                     data-tutorial-target={
-                      isTutorialPost ? "result-card" : undefined
+                      String(post.id) === String(firstResultCardId)
+                        ? "result-card"
+                        : undefined
                     }
                     variants={resultCardSlotVariants}
                     custom={takeEntrySlot()}

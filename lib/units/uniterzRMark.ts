@@ -1,0 +1,17 @@
+/**
+ * 確定版 UNITERZ ロゴの R を、ワードマークのアーチを戻して直立させたマーク。
+ * 原稿: `public/brand/uniterz-logo.svg` の letter-R。
+ * 再生成: node scripts/generate-uniterz-r-mark.mjs
+ */
+
+export const UNITERZ_R_MARK_VIEWBOX = 1024 as const;
+
+export const UNITERZ_R_MARK_PATH = "M723.5,868.32L667.13,862.31L555.96,678.55L433.49,473.57L636.76,354.39L636.54,282.59L569.43,284.7L412.5,286.11L412.31,798.1L457.43,848.91C458.94,850.62 460.9,857.44 458.97,859.07L450.04,866.54L309.66,867.04L251.07,868.68C243.23,868.89 234.65,867.42 229.12,861.29L229.18,332.2L148.1,302.26L304.87,147.38L372.55,143.36L444.09,144.64L508.75,144.87L733.34,147.38L780.13,194.9L810.69,224.61L810.5,373.92L672.88,456.3L607.9,496.02L698.24,625.49L828.24,807.66L870.95,868.13L874.77,874.85C875.9,876.81 867.77,880.64 864.84,880.38L767.08,871.75L723.47,868.26Z";
+
+export const UNITERZ_R_MARK_ASSET = {
+  webSvgPath: "/brand/uniterz-r-mark.svg",
+  webPngPath: "/brand/uniterz-r-mark.png",
+  webPngBlackPath: "/brand/uniterz-r-mark-black.png",
+  width: 2048,
+  height: 2048,
+} as const;

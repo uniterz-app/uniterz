@@ -910,6 +910,12 @@ const zh: Messages = {
 
   tutorial: {
     skip: "跳过",
+    skipConfirmTitle: "Skip the tutorial?",
+    skipConfirmBody:
+      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
+    skipConfirmStay: "Keep going",
+    skipConfirmLeave: "Skip",
+    restartFromMenu: "Tutorial",
     back: "返回",
     next: "下一步",
     seeGames: "查看比赛",
@@ -933,7 +939,21 @@ const zh: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "命中决定名次。先用一场走完：提交→结果→排行。",
+        "命中得分、冲击**排行榜**。可选完整画面导览，或只看新功能。",
+      welcomeFullCta: "浏览各画面",
+      welcomeFeaturesCta: "只看新功能",
+      gamesTitle: "比赛",
+      gamesBody:
+        "这里列出今日赛程。**点按卡片**即可打开预测。胜负由比分自动决定。",
+      gamesPickupTitle: "精选比赛",
+      gamesPickupBody:
+        "每周指定的比赛。**Pick Up 排行榜**只统计这些预测。命中率榜需预测目前精选赛的 **65% 以上**。",
+      gamesStatsTitle: "STATS",
+      gamesStatsBody:
+        "右侧黄色 **STATS** 可查看球队/球员数据。从右缘滑动也能打开。",
+      resultsTitle: "结果",
+      resultsBody:
+        "赛后在这里对答案。**大数字是赛果，下方是你的预测。** 右上角为 HIT / MISS。",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -964,8 +984,9 @@ const zh: Messages = {
       predictBonusTitle: "Top scorer bonus",
       predictBonusBody:
         "Nail the game's top scorer for +2. When candidates are listed, pick a player.",
-      predictEnterTitle: "Enter your scores",
-      predictEnterBody: "Fill in both HOME and AWAY predicted scores.",
+      predictEnterTitle: "Read the intel, then predict",
+      predictEnterBody:
+        "Use the stats and player info as hints — enter scores for both **HOME and AWAY**.",
       predictEnterWait: "Enter both scores — submit lights up",
       predictSubmitTitle: "Submit here",
       predictSubmitBody:
@@ -993,21 +1014,24 @@ const zh: Messages = {
       gotoProfileBody: "Next up is the Profile tab. Tap it below.",
       resultHitTitle: "HIT!",
       resultHitBody:
-        "You got the winner right. {bonus}+{pts}pt is the idea. Results always shows this check.",
-      resultCardTapHint: "Tap the card to see details",
+        "Top-right **HIT** means you nailed the winner. Big numbers = **final**, below = **your pick**. Bottom **Upset / Score** are this game's points. {bonus}+{pts}pt.",
+      resultCardTapHint: "Tap DETAIL on the right for more",
+      resultCardTapHintWeb: "Tap the card for details",
       resultScoreBonus: "Exact score bonus! ",
       resultMissTitle: "MISS",
       resultMissBody:
-        "Winner was wrong. In the real app you'll also check Results. Try again next game.",
+        "Top-right **MISS** means the winner was wrong. Still use bottom **Upset / Score** for the next pick.",
       resultDetailTitle: "Inside Results",
       resultDetailBody:
         "Final score, your pick, and point breakdown live here. We'll walk through from the top.",
-      resultDetailScoreTitle: "Final vs your pick",
+      resultDetailScoreTitle:
+        "Reading the card",
       resultDetailScoreBody:
-        "The big numbers are the final score; below is your prediction. HIT if you got the winner, MISS if not.",
-      resultDetailStatsTitle: "Two metrics",
+        "**Big numbers = final. Below = your pick.** Top-right badge is HIT / MISS / PERFECT / UPSET.",
+      resultDetailStatsTitle:
+        "Upset & Score",
       resultDetailStatsBody:
-        "Upset is the underdog-hit bonus. Score is win points plus bonuses. Scroll for more.",
+        "**Upset** = underdog-hit bonus. **Score** = win points + bonuses — the two metrics under the card.",
       resultDetailMoreTitle: "More below",
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",

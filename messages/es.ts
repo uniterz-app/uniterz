@@ -929,6 +929,12 @@ const es: Messages = {
 
   tutorial: {
     skip: "Omitir",
+    skipConfirmTitle: "Skip the tutorial?",
+    skipConfirmBody:
+      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
+    skipConfirmStay: "Keep going",
+    skipConfirmLeave: "Skip",
+    restartFromMenu: "Tutorial",
     back: "Atrás",
     next: "Siguiente",
     seeGames: "Ver partidos",
@@ -952,7 +958,21 @@ const es: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "Los aciertos marcan tu ranking. Recorre un partido: publicar → Resultados → Ranking.",
+        "Predice partidos, suma puntos y sube en el **ranking**. Recorre cada pantalla, o solo las novedades.",
+      welcomeFullCta: "Ver la guía",
+      welcomeFeaturesCta: "Solo novedades",
+      gamesTitle: "Partidos",
+      gamesBody:
+        "Aquí están los partidos de hoy. **Toca una carta** para abrir el pronóstico. El ganador sale de los goles.",
+      gamesPickupTitle: "Partidos Pick Up",
+      gamesPickupBody:
+        "Partidos elegidos cada semana. El **ranking Pick Up** solo cuenta estos pronósticos. El ranking de acierto pide pronosticar el **65%+** de los Pick Up hasta ahora.",
+      gamesStatsTitle: "STATS",
+      gamesStatsBody:
+        "La pestaña amarilla **STATS** a la derecha abre estadísticas de equipos y jugadores. También puedes deslizar desde el borde derecho.",
+      resultsTitle: "Resultados",
+      resultsBody:
+        "Tras el partido, el recuento llega aquí. **Números grandes = final, abajo = tu pick.** Arriba a la derecha: HIT / MISS.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -983,8 +1003,9 @@ const es: Messages = {
       predictBonusTitle: "Top scorer bonus",
       predictBonusBody:
         "Nail the game's top scorer for +2. When candidates are listed, pick a player.",
-      predictEnterTitle: "Enter your scores",
-      predictEnterBody: "Fill in both HOME and AWAY predicted scores.",
+      predictEnterTitle: "Read the intel, then predict",
+      predictEnterBody:
+        "Use the stats and player info as hints — enter scores for both **HOME and AWAY**.",
       predictEnterWait: "Enter both scores — submit lights up",
       predictSubmitTitle: "Submit here",
       predictSubmitBody:
@@ -1012,21 +1033,24 @@ const es: Messages = {
       gotoProfileBody: "Next up is the Profile tab. Tap it below.",
       resultHitTitle: "HIT!",
       resultHitBody:
-        "You got the winner right. {bonus}+{pts}pt is the idea. Results always shows this check.",
-      resultCardTapHint: "Tap the card to see details",
+        "Top-right **HIT** means you nailed the winner. Big numbers = **final**, below = **your pick**. Bottom **Upset / Score** are this game's points. {bonus}+{pts}pt.",
+      resultCardTapHint: "Tap DETAIL on the right for more",
+      resultCardTapHintWeb: "Tap the card for details",
       resultScoreBonus: "Exact score bonus! ",
       resultMissTitle: "MISS",
       resultMissBody:
-        "Winner was wrong. In the real app you'll also check Results. Try again next game.",
+        "Top-right **MISS** means the winner was wrong. Still use bottom **Upset / Score** for the next pick.",
       resultDetailTitle: "Inside Results",
       resultDetailBody:
         "Final score, your pick, and point breakdown live here. We'll walk through from the top.",
-      resultDetailScoreTitle: "Final vs your pick",
+      resultDetailScoreTitle:
+        "Reading the card",
       resultDetailScoreBody:
-        "The big numbers are the final score; below is your prediction. HIT if you got the winner, MISS if not.",
-      resultDetailStatsTitle: "Two metrics",
+        "**Big numbers = final. Below = your pick.** Top-right badge is HIT / MISS / PERFECT / UPSET.",
+      resultDetailStatsTitle:
+        "Upset & Score",
       resultDetailStatsBody:
-        "Upset is the underdog-hit bonus. Score is win points plus bonuses. Scroll for more.",
+        "**Upset** = underdog-hit bonus. **Score** = win points + bonuses — the two metrics under the card.",
       resultDetailMoreTitle: "More below",
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",

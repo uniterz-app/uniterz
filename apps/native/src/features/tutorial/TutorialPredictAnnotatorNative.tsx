@@ -552,7 +552,8 @@ export default function TutorialPredictAnnotatorNative({
 
     let cancelled = false;
     let scrollPassDone = false;
-    const lockUserScroll = step === "enter" || step === "scores";
+    /** 得点入力中も情報タブ／ボーナスを見られるようスクロール可 */
+    const lockUserScroll = false;
 
     const measureAndCommit = async () => {
       const root = rootMeasureRef.current;
@@ -707,7 +708,8 @@ export default function TutorialPredictAnnotatorNative({
 
     const scrollToTarget = async (animated: boolean) => {
       setTutorialScrollEnabledNative(true);
-      if (lockUserScroll) {
+      /** 入力ステップはスコア欄をコールアウト下に寄せるが、その後のユーザー操作スクロールは許可 */
+      if (step === "enter" || step === "scores") {
         await scrollTutorialTargetIntoViewNative("predict-scores", {
           animated,
           align: "top",

@@ -4,6 +4,7 @@ import { Suspense, useMemo } from "react";
 import { useParams } from "next/navigation";
 import ProfilePageBase from "@/app/component/profile/ProfilePageBaseV2";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import TutorialWelcomeProfileFlyShell from "@/app/component/tutorial/TutorialWelcomeProfileFlyShell";
 import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
 
 function ProfilePageSkeleton() {
@@ -28,7 +29,9 @@ export default function Page() {
 
   return (
     <Suspense fallback={<ProfilePageSkeleton />}>
-      <ProfilePageBase handle={handle} variant="mobile" />
+      <TutorialWelcomeProfileFlyShell>
+        <ProfilePageBase handle={handle} variant="mobile" />
+      </TutorialWelcomeProfileFlyShell>
       <TutorialLiveHost page="profile" />
     </Suspense>
   );

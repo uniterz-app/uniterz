@@ -29,6 +29,7 @@ import {
 import SplashScreenNative from "./SplashScreenNative";
 import LineFormSplashScreenNative from "./LineFormSplashScreenNative";
 import LightningSplashScreenNative from "./LightningSplashScreenNative";
+import LettersSplashScreenNative from "./LettersSplashScreenNative";
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 const SNAP = Easing.bezier(0.2, 0.9, 0.2, 1);
@@ -612,6 +613,15 @@ export default function CyberLogoSplashScreenNative({
   const logoW = Math.min(winW * 0.86, 420);
   const logoH = logoW * LOGO_ASPECT;
   const common: Common = { playKey, staticPose, logoW, logoH };
+
+  if (variant === "letters") {
+    return (
+      <LettersSplashScreenNative
+        playKey={playKey}
+        forceStatic={forceStatic}
+      />
+    );
+  }
 
   if (variant === "form") {
     return (

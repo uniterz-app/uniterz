@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { GiCrossedSwords } from "react-icons/gi";
 import { FaTrophy, FaUsers } from "react-icons/fa";
 import { FiUser } from "react-icons/fi";
-import { useEffect, useLayoutEffect, useState, CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore, CSSProperties } from "react";
 import { useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
@@ -15,6 +15,11 @@ import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 import { useNavTabNotificationBadges } from "@/lib/hooks/useNavTabNotificationBadges";
 import NavBarNotificationDot from "@/app/component/NavBarNotificationDot";
 import { prefetchCumulativeRankingsList } from "@/lib/rankings/useCumulativeRankingsBulk";
+import {
+  getTutorialWelcomeChromeHidden,
+  subscribeTutorialWelcomeChromeHidden,
+} from "@/lib/tutorial/tutorialWelcomeChrome";
+import { TUTORIAL_WELCOME_CHROME_FADE_S } from "@/lib/tutorial/tutorialMotion";
 
 type Item = {
   href: string;
@@ -190,6 +195,11 @@ export default function NavBar() {
   const [introPhase, setIntroPhase] = useState<"pending" | "run" | "idle">(
     "pending"
   );
+  const welcomeChromeHidden = useSyncExternalStore(
+    subscribeTutorialWelcomeChromeHidden,
+    getTutorialWelcomeChromeHidden,
+    () => false
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -355,12 +365,17 @@ export default function NavBar() {
         style={{
           ...BarStyle.wrap,
           ...(playDockIntro ? { perspective: "720px" } : {}),
+          opacity: welcomeChromeHidden ? 0 : 1,
+          pointerEvents: welcomeChromeHidden ? "none" : "none",
+          transition: `opacity ${TUTORIAL_WELCOME_CHROME_FADE_S}s ease`,
         }}
+        aria-hidden={welcomeChromeHidden}
         aria-label="Bottom navigation"
       >
         <div
           style={{
             ...(isMobile ? BarStyle.barMobile : BarStyle.barWeb),
+            ...(welcomeChromeHidden ? { pointerEvents: "none" } : {}),
             ...(playDockIntro && !isMobile
               ? {
                   animation:

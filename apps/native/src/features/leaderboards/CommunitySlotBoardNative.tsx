@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -25,6 +25,7 @@ import {
   sanitizeHeaderImagePositionY,
 } from "../../../../../lib/communities/headerImagePosition";
 import { CommunityCrtSectionLabelNative } from "./CommunityCrtPartsNative";
+import TutorialTargetNative from "../tutorial/TutorialTargetNative";
 import CommunityMemberAvatarStackNative from "./CommunityMemberAvatarStackNative";
 import type { CommunityListGroup, CommunityListLimits } from "./communityApiNative";
 import { prefetchCommunityHeaderImageNative } from "./prefetchCommunityHeaderImageNative";
@@ -217,8 +218,16 @@ function GroupFilledSlotNative({
   );
 }
 
-function CreateEmptySlotNative({ label, onCreate }: { label: string; onCreate: () => void }) {
-  return (
+function CreateEmptySlotNative({
+  label,
+  onCreate,
+  tutorialTargetId,
+}: {
+  label: string;
+  onCreate: () => void;
+  tutorialTargetId?: string;
+}) {
+  const inner = (
     <Pressable
       onPress={onCreate}
       style={({ pressed }) => [
@@ -231,6 +240,8 @@ function CreateEmptySlotNative({ label, onCreate }: { label: string; onCreate: (
       <Text style={styles.emptyLabel}>{label}</Text>
     </Pressable>
   );
+  if (!tutorialTargetId) return inner;
+  return <TutorialTargetNative id={tutorialTargetId}>{inner}</TutorialTargetNative>;
 }
 
 function JoinEmptySlotNative({
@@ -245,6 +256,7 @@ function JoinEmptySlotNative({
   onCollapse,
   onPaste,
   onSubmit,
+  tutorialTargetId,
 }: {
   slotKey: string;
   expanded: boolean;
@@ -257,6 +269,7 @@ function JoinEmptySlotNative({
   onCollapse: () => void;
   onPaste: () => Promise<string | null>;
   onSubmit: (code: string) => Promise<void>;
+  tutorialTargetId?: string;
 }) {
   const [code, setCode] = useState("");
 
@@ -265,8 +278,15 @@ function JoinEmptySlotNative({
     if (pasted) setCode(pasted);
   }, [onPaste]);
 
+  const wrapTarget = (node: ReactNode) =>
+    tutorialTargetId ? (
+      <TutorialTargetNative id={tutorialTargetId}>{node}</TutorialTargetNative>
+    ) : (
+      node
+    );
+
   if (!expanded) {
-    return (
+    return wrapTarget(
       <Pressable
         onPress={onExpand}
         style={({ pressed }) => [
@@ -281,7 +301,7 @@ function JoinEmptySlotNative({
     );
   }
 
-  return (
+  return wrapTarget(
     <View style={[styles.joinExpanded, communityEmptyJoinSlotStyle]} key={slotKey}>
       <View style={styles.joinHeader}>
         <Text style={styles.joinCodeLabel}>INVITE_CODE:</Text>
@@ -372,6 +392,10 @@ export default function CommunitySlotBoardNative({
     return slots;
   }, [memberGroups, ownedGroups.length, limits.maxMemberships]);
 
+  const firstCreateKey = hostSlots.find((s) => s.kind === "create")?.key;
+  const firstJoinKey = memberSlots.find((s) => s.kind === "join")?.key;
+  const groupsCreateOnCreate = Boolean(firstCreateKey);
+
   const handleJoinSubmit = useCallback(
     async (code: string) => {
       await onPreviewJoin(code);
@@ -404,7 +428,14 @@ export default function CommunitySlotBoardNative({
                   onOpen={() => onOpenGroup(slot.group)}
                 />
               ) : (
-                <CreateEmptySlotNative key={slot.key} label={labels.createSlot} onCreate={onCreate} />
+                <CreateEmptySlotNative
+                  key={slot.key}
+                  label={labels.createSlot}
+                  onCreate={onCreate}
+                  tutorialTargetId={
+                    slot.key === firstCreateKey ? "groups-create" : undefined
+                  }
+                />
               )
             )}
           </View>
@@ -453,6 +484,11 @@ export default function CommunitySlotBoardNative({
                   onCollapse={() => setExpandedJoinSlot(null)}
                   onPaste={onPasteJoin}
                   onSubmit={handleJoinSubmit}
+                  tutorialTargetId={
+                    !groupsCreateOnCreate && slot.key === firstJoinKey
+                      ? "groups-create"
+                      : undefined
+                  }
                 />
               )
             )}

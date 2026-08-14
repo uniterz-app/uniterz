@@ -84,7 +84,26 @@ import {
   type ProfilePlanProBgVariant,
 } from "../../../../../lib/profile/profilePlanProBgVariants";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
+import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
+import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
+import {
+  readTutorialLivePhaseNative,
+  writeTutorialLivePhaseNative,
+} from "../tutorial/tutorialLivePhaseNative";
+import { setTutorialLiveTrackNative } from "../tutorial/tutorialLiveTrackNative";
+import { setTutorialHorizonSubstepNative } from "../tutorial/tutorialHorizonSubstepNative";
+import {
+  getTutorialWelcomeHandoffNative,
+  hydrateTutorialWelcomeHandoffNative,
+  setTutorialWelcomeHandoffNative,
+} from "../tutorial/tutorialWelcomeHandoffNative";
+import { markAppTutorialSeenNative } from "../tutorial/tutorialSeenNative";
+import { clearTutorialLivePickNative } from "../tutorial/tutorialLivePickNative";
+import { requestTutorialClearedNative } from "../tutorial/tutorialRestartEventsNative";
+import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
+import { t as i18nT } from "../../../../../lib/i18n/t";
 import type { Language } from "../../../../../lib/i18n/language";
+import { TUTORIAL_WELCOME_LAND_HOLD_MS } from "../../../../../lib/tutorial/tutorialMotion";
 import {
   fetchProfileViewCountNative,
   recordProfileViewNative,
@@ -160,6 +179,16 @@ export default function ProfileHomeScreen({
   /** メニューへ戻るときは fade せず即閉じる */
   const [settingsAnim, setSettingsAnim] = useState<"fade" | "none">("fade");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [welcomeFlyActive, setWelcomeFlyActive] = useState(
+    () =>
+      !isPublicProfileView &&
+      getTutorialWelcomeHandoffNative() === "profile"
+  );
+  const [welcomeFlying, setWelcomeFlying] = useState(false);
+  const welcomeFlyDoneRef = useRef(false);
+  const welcomeLandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   /** 設定 Modal を閉じたあとサイドメニューを開く（iOS は onDismiss 待ち） */
   const reopenMenuAfterSettingsRef = useRef(false);
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -450,6 +479,67 @@ export default function ProfileHomeScreen({
         setForceSkinUnlockPreview(true);
       }
     }, [])
+  );
+
+  const tutorialCopy = useMemo(
+    () => i18nT((language === "en" ? "en" : "ja") as Language),
+    [language]
+  );
+  const tutorialSkipConfirm = tutorialSkipConfirmProps(tutorialCopy.tutorial);
+
+  const finishWelcomeSkip = useCallback(() => {
+    void markAppTutorialSeenNative(myUid ?? null);
+    void writeTutorialLivePhaseNative(null);
+    setTutorialLiveTrackNative(null);
+    setTutorialWelcomeHandoffNative(null);
+    void clearTutorialLivePickNative();
+    setWelcomeFlyActive(false);
+    setWelcomeFlying(false);
+    requestTutorialClearedNative();
+  }, [myUid]);
+
+  const startWelcomeFly = useCallback(() => {
+    setWelcomeFlying(true);
+  }, []);
+
+  const goWelcomeFeaturesHorizon = useCallback(() => {
+    if (welcomeFlyDoneRef.current) return;
+    welcomeFlyDoneRef.current = true;
+    if (welcomeLandTimerRef.current != null) {
+      clearTimeout(welcomeLandTimerRef.current);
+    }
+    welcomeLandTimerRef.current = setTimeout(() => {
+      setTutorialWelcomeHandoffNative(null);
+      setTutorialLiveTrackNative("features");
+      setTutorialHorizonSubstepNative(0);
+      void writeTutorialLivePhaseNative("horizon");
+      setWelcomeFlyActive(false);
+      setWelcomeFlying(false);
+    }, TUTORIAL_WELCOME_LAND_HOLD_MS);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      const memOn =
+        !isPublicProfileView &&
+        getTutorialWelcomeHandoffNative() === "profile";
+      if (memOn) setWelcomeFlyActive(true);
+      void (async () => {
+        await hydrateTutorialWelcomeHandoffNative();
+        const phase = await readTutorialLivePhaseNative();
+        if (cancelled) return;
+        const on =
+          !isPublicProfileView &&
+          phase === "welcome" &&
+          getTutorialWelcomeHandoffNative() === "profile";
+        setWelcomeFlyActive(on);
+        if (!on) setWelcomeFlying(false);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [isPublicProfileView])
   );
   const {
     activeIds: skinUnlockIds,
@@ -946,6 +1036,31 @@ export default function ProfileHomeScreen({
 
   return (
     <View style={styles.screenRoot}>
+    <TutorialWelcomeWorldCameraNative
+      active={welcomeFlyActive}
+      flying={welcomeFlying}
+      onFlyComplete={goWelcomeFeaturesHorizon}
+      overlay={
+        welcomeFlyActive ? (
+          <TutorialLiveCoachNative
+            open
+            embedInCamera
+            autoWelcomeFly="features"
+            title={tutorialCopy.tutorial.practice.welcomeTitle}
+            body={tutorialCopy.tutorial.practice.welcomeBody}
+            skipLabel={tutorialCopy.tutorial.skip}
+            nextLabel={tutorialCopy.tutorial.practice.welcomeFullCta}
+            altNextLabel={tutorialCopy.tutorial.practice.welcomeFeaturesCta}
+            visual="welcome"
+            {...tutorialSkipConfirm}
+            onSkip={finishWelcomeSkip}
+            onWelcomeFlyStart={startWelcomeFly}
+            onNext={goWelcomeFeaturesHorizon}
+            onAltNext={goWelcomeFeaturesHorizon}
+          />
+        ) : null
+      }
+    >
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[
@@ -1015,12 +1130,13 @@ export default function ProfileHomeScreen({
         <ProfileBracketTabNative uid={targetUid} language={language} />
       )}
     </ScrollView>
+    </TutorialWelcomeWorldCameraNative>
 
     {isMe ? (
       <ProfileMenuEdgeHandleNative
         onOpen={() => setMenuOpen(true)}
         unreadCount={menuUnreadCount}
-        hidden={menuOpen}
+        hidden={menuOpen || welcomeFlyActive}
       />
     ) : null}
 
@@ -1319,7 +1435,7 @@ export default function ProfileHomeScreen({
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
-        else if (page === "restartTutorial" && __DEV__) {
+        else if (page === "restartTutorial") {
           void (async () => {
             const uid = fUser?.uid ?? null;
             const {

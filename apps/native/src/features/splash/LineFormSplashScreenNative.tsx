@@ -18,7 +18,8 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { G, Path } from "react-native-svg";
 import {
-  UNITERZ_LOGO_SPLASH_LTR_ORDER,
+  UNITERZ_LOGO_LETTER_PATH_OFFSETS,
+  UNITERZ_LOGO_LETTERS,
   UNITERZ_LOGO_SPLASH_PATHS,
   UNITERZ_LOGO_SPLASH_SPACE,
   UNITERZ_LOGO_SPLASH_STROKE_LEN,
@@ -34,6 +35,7 @@ const TOTAL_MS = 2400;
 const STROKE_LEN = UNITERZ_LOGO_SPLASH_STROKE_LEN;
 /** 先頭を走るトレーサーの長さ（viewBox 単位） */
 const TRACE_LEN = 140;
+const LETTER_COUNT = UNITERZ_LOGO_LETTERS.length;
 
 type Props = {
   playKey?: number;
@@ -51,13 +53,27 @@ function LogoFillPaths({ fill }: { fill: string }) {
   );
 }
 
-/** 左→右の描画順に基づく遅延（0〜約 0.22） */
+/** フラット path → 文字インデックス */
+function letterIndexForPath(pathIndex: number): number {
+  let letter = 0;
+  for (let i = 0; i < UNITERZ_LOGO_LETTER_PATH_OFFSETS.length; i++) {
+    const start = UNITERZ_LOGO_LETTER_PATH_OFFSETS[i]!;
+    const end =
+      i + 1 < UNITERZ_LOGO_LETTER_PATH_OFFSETS.length
+        ? UNITERZ_LOGO_LETTER_PATH_OFFSETS[i + 1]!
+        : UNITERZ_LOGO_SPLASH_PATHS.length;
+    if (pathIndex >= start && pathIndex < end) {
+      letter = i;
+      break;
+    }
+  }
+  return letter;
+}
+
+/** 文字単位の遅延（0〜約 0.22）— 同一文字内は同じタイミング */
 function delayForPathIndex(pathIndex: number): number {
-  const order = (UNITERZ_LOGO_SPLASH_LTR_ORDER as readonly number[]).indexOf(
-    pathIndex
-  );
-  const rank = order < 0 ? pathIndex : order;
-  return (rank / Math.max(UNITERZ_LOGO_SPLASH_LTR_ORDER.length - 1, 1)) * 0.22;
+  const letter = letterIndexForPath(pathIndex);
+  return (letter / Math.max(LETTER_COUNT - 1, 1)) * 0.22;
 }
 
 /**

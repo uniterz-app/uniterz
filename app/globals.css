@@ -4197,6 +4197,26 @@ body.splash-bg {
   animation: headerCyberLineSweep 9s ease-in-out infinite;
 }
 
+/* ヘッダーワードマーク：上ハイライト + 下押し出し（平面ステッカーにしない） */
+.header-wordmark-3d {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.4),
+    0 -1px 0 rgba(0, 0, 0, 0.38),
+    0 2px 0 rgba(16, 28, 36, 0.58),
+    0 3px 0 rgba(8, 14, 20, 0.42),
+    0 10px 18px rgba(0, 0, 0, 0.48),
+    0 0 22px rgba(103, 232, 249, 0.2);
+}
+
+/* シアンライン：芯の下に段差を付けてバーの厚みを出す */
+.header-cyber-line-core {
+  box-shadow:
+    0 1px 0 #0a3d48,
+    0 2px 0 #052028,
+    0 0 10px rgba(34, 211, 246, 0.55),
+    0 0 22px rgba(34, 211, 246, 0.28);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-header-cyber-sweep {
     animation: none;
@@ -8262,6 +8282,18 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
     box-shadow 0.2s ease;
 }
 
+.profile-menu-edge-handle--fade {
+  transition:
+    opacity 1.45s cubic-bezier(0.37, 0, 0.18, 1),
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.profile-menu-edge-handle--hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .profile-menu-edge-handle:hover {
   background: rgba(12, 18, 10, 0.98) !important;
   box-shadow: 0 0 20px rgba(250, 204, 21, 0.38);
@@ -9633,5 +9665,460 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   .profile-edit-kinetik-avatar-wrap--rib-pulse[class*="--tier-"]
     .profile-edit-kinetik-avatar__rib::after {
     opacity: 0.72;
+  }
+}
+
+/* welcome ステップ線：土台は常時 01–03。帯電は左→右へ描画するだけ（伸縮しない） */
+@keyframes tutorial-welcome-path-charge {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 1;
+  }
+  8% {
+    stroke-dashoffset: 94;
+  }
+  38% {
+    stroke-dashoffset: 50;
+  }
+  68% {
+    stroke-dashoffset: 0;
+  }
+  85% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  90% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  90.01%,
+  100% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+}
+
+@keyframes tutorial-welcome-path-node-1 {
+  0%,
+  7% {
+    opacity: 0.62;
+  }
+  8%,
+  85% {
+    opacity: 1;
+  }
+  86%,
+  100% {
+    opacity: 0.62;
+  }
+}
+
+@keyframes tutorial-welcome-path-node-2 {
+  0%,
+  37% {
+    opacity: 0.62;
+  }
+  38%,
+  85% {
+    opacity: 1;
+  }
+  86%,
+  100% {
+    opacity: 0.62;
+  }
+}
+
+@keyframes tutorial-welcome-path-node-3 {
+  0%,
+  67% {
+    opacity: 0.62;
+  }
+  68%,
+  85% {
+    opacity: 1;
+  }
+  86%,
+  100% {
+    opacity: 0.62;
+  }
+}
+
+@keyframes tutorial-welcome-path-ring-1 {
+  0%,
+  7% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  8% {
+    opacity: 0.95;
+    transform: scale(0.9);
+  }
+  18% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+  19%,
+  100% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes tutorial-welcome-path-ring-2 {
+  0%,
+  37% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  38% {
+    opacity: 0.95;
+    transform: scale(0.9);
+  }
+  48% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+  49%,
+  100% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes tutorial-welcome-path-ring-3 {
+  0%,
+  67% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  68% {
+    opacity: 0.95;
+    transform: scale(0.9);
+  }
+  78% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+  79%,
+  100% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes tutorial-welcome-path-core-1 {
+  0%,
+  7% {
+    background: rgba(0, 245, 255, 0.4);
+    box-shadow: none;
+  }
+  8%,
+  14% {
+    background: #e8ffff;
+    box-shadow: 0 0 7px #00f5ff;
+  }
+  15%,
+  85% {
+    background: #00f5ff;
+    box-shadow: 0 0 5px rgba(0, 245, 255, 0.75);
+  }
+  86%,
+  100% {
+    background: rgba(0, 245, 255, 0.4);
+    box-shadow: none;
+  }
+}
+
+@keyframes tutorial-welcome-path-core-2 {
+  0%,
+  37% {
+    background: rgba(0, 245, 255, 0.4);
+    box-shadow: none;
+  }
+  38%,
+  44% {
+    background: #e8ffff;
+    box-shadow: 0 0 7px #00f5ff;
+  }
+  45%,
+  85% {
+    background: #00f5ff;
+    box-shadow: 0 0 5px rgba(0, 245, 255, 0.75);
+  }
+  86%,
+  100% {
+    background: rgba(0, 245, 255, 0.4);
+    box-shadow: none;
+  }
+}
+
+@keyframes tutorial-welcome-path-core-3 {
+  0%,
+  67% {
+    background: rgba(0, 245, 255, 0.4);
+    box-shadow: none;
+  }
+  68%,
+  74% {
+    background: #e8ffff;
+    box-shadow: 0 0 7px #00f5ff;
+  }
+  75%,
+  85% {
+    background: #00f5ff;
+    box-shadow: 0 0 5px rgba(0, 245, 255, 0.75);
+  }
+  86%,
+  100% {
+    background: rgba(0, 245, 255, 0.4);
+    box-shadow: none;
+  }
+}
+
+.tutorial-welcome-path-svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tutorial-welcome-path-track {
+  fill: none;
+  stroke: rgba(0, 245, 255, 0.34);
+  stroke-width: 1.25;
+  stroke-linecap: round;
+}
+
+.tutorial-welcome-path-bloom {
+  fill: none;
+  stroke: #dffe00;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  opacity: 0.28;
+  filter: blur(1.1px);
+  animation: tutorial-welcome-path-charge 3.4s linear infinite;
+  animation-delay: 0.72s;
+}
+
+.tutorial-welcome-path-charge {
+  fill: none;
+  stroke: #dffe00;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: tutorial-welcome-path-charge 3.4s linear infinite;
+  animation-delay: 0.72s;
+}
+
+.tutorial-welcome-path-node {
+  position: relative;
+  display: flex;
+  width: 14px;
+  height: 14px;
+  margin-bottom: 8px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 245, 255, 0.88);
+  background: #050b12;
+  transform: rotate(45deg);
+  box-shadow: inset 0 0 5px rgba(0, 245, 255, 0.28);
+}
+
+.tutorial-welcome-path-node-core {
+  width: 5px;
+  height: 5px;
+  background: rgba(0, 245, 255, 0.4);
+}
+
+.tutorial-welcome-path-node-ring {
+  position: absolute;
+  inset: -3px;
+  border: 1px solid #00f5ff;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.tutorial-welcome-path-lit {
+  animation-duration: 3.4s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-delay: 0.72s;
+  animation-fill-mode: both;
+}
+
+.tutorial-welcome-path-lit--1 {
+  animation-name: tutorial-welcome-path-node-1;
+}
+
+.tutorial-welcome-path-lit--2 {
+  animation-name: tutorial-welcome-path-node-2;
+}
+
+.tutorial-welcome-path-lit--3 {
+  animation-name: tutorial-welcome-path-node-3;
+}
+
+.tutorial-welcome-path-lit--1 .tutorial-welcome-path-node-ring {
+  animation: tutorial-welcome-path-ring-1 3.4s linear infinite;
+  animation-delay: 0.72s;
+}
+
+.tutorial-welcome-path-lit--2 .tutorial-welcome-path-node-ring {
+  animation: tutorial-welcome-path-ring-2 3.4s linear infinite;
+  animation-delay: 0.72s;
+}
+
+.tutorial-welcome-path-lit--3 .tutorial-welcome-path-node-ring {
+  animation: tutorial-welcome-path-ring-3 3.4s linear infinite;
+  animation-delay: 0.72s;
+}
+
+.tutorial-welcome-path-lit--1 .tutorial-welcome-path-node-core {
+  animation: tutorial-welcome-path-core-1 3.4s linear infinite;
+  animation-delay: 0.72s;
+}
+
+.tutorial-welcome-path-lit--2 .tutorial-welcome-path-node-core {
+  animation: tutorial-welcome-path-core-2 3.4s linear infinite;
+  animation-delay: 0.72s;
+}
+
+.tutorial-welcome-path-lit--3 .tutorial-welcome-path-node-core {
+  animation: tutorial-welcome-path-core-3 3.4s linear infinite;
+  animation-delay: 0.72s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-welcome-path-bloom,
+  .tutorial-welcome-path-charge,
+  .tutorial-welcome-path-lit,
+  .tutorial-welcome-path-node-ring,
+  .tutorial-welcome-path-node-core {
+    animation: none !important;
+  }
+
+  .tutorial-welcome-path-lit--1 {
+    opacity: 1;
+  }
+
+  .tutorial-welcome-path-lit--2,
+  .tutorial-welcome-path-lit--3 {
+    opacity: 0.62;
+  }
+
+  .tutorial-welcome-path-lit--1 .tutorial-welcome-path-node-core {
+    background: #00f5ff;
+    box-shadow: 0 0 5px rgba(0, 245, 255, 0.75);
+  }
+}
+
+/* welcome CTA：面グラデ + 段階押し出し（直方体の棒影にしない） */
+.tutorial-welcome-cta {
+  position: relative;
+  width: 100%;
+  padding: 14px 0;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.12s ease;
+}
+
+.tutorial-welcome-cta:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.tutorial-welcome-cta:focus-visible {
+  outline: 2px solid #00f5ff;
+  outline-offset: 3px;
+}
+
+.tutorial-welcome-cta--alt:focus-visible {
+  outline-color: #ff4ec8;
+}
+
+.tutorial-welcome-cta--primary {
+  color: #050508;
+  border: 0;
+  background: linear-gradient(180deg, #b8ffff 0%, #00f5ff 42%, #00b4c4 100%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.62),
+    inset 0 -3px 6px rgba(0, 70, 90, 0.32),
+    0 1px 0 #00a8b8,
+    0 2px 0 #0094a4,
+    0 3px 0 #008090,
+    0 4px 0 #006c7c,
+    0 5px 0 #005868,
+    0 6px 0 #004454,
+    0 8px 0 #003844,
+    0 14px 24px rgba(0, 0, 0, 0.55),
+    0 0 28px rgba(0, 245, 255, 0.3);
+}
+
+.tutorial-welcome-cta--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.tutorial-welcome-cta--primary:active:not(:disabled) {
+  transform: translateY(5px);
+  filter: brightness(0.97);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -4px 8px rgba(0, 50, 70, 0.42),
+    0 1px 0 #006c7c,
+    0 2px 0 #004454,
+    0 8px 16px rgba(0, 0, 0, 0.5),
+    0 0 16px rgba(0, 245, 255, 0.2);
+}
+
+.tutorial-welcome-cta--alt {
+  color: #ff4ec8;
+  border: 1px solid #ff4ec8;
+  background: linear-gradient(
+    180deg,
+    rgba(58, 12, 44, 0.96) 0%,
+    rgba(10, 4, 14, 0.9) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 180, 230, 0.38),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.5),
+    0 1px 0 #c2188a,
+    0 2px 0 #a81476,
+    0 3px 0 #8e1064,
+    0 4px 0 #740c52,
+    0 5px 0 #5a0840,
+    0 6px 0 #40062e,
+    0 8px 0 #2a041e,
+    0 14px 24px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(255, 78, 200, 0.28);
+}
+
+.tutorial-welcome-cta--alt:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.tutorial-welcome-cta--alt:active:not(:disabled) {
+  transform: translateY(5px);
+  filter: brightness(0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 180, 230, 0.22),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.58),
+    0 1px 0 #8e1064,
+    0 2px 0 #5a0840,
+    0 8px 16px rgba(0, 0, 0, 0.48),
+    0 0 14px rgba(255, 78, 200, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-welcome-cta {
+    transition: none;
   }
 }

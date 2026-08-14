@@ -910,6 +910,12 @@ const ko: Messages = {
 
   tutorial: {
     skip: "건너뛰기",
+    skipConfirmTitle: "Skip the tutorial?",
+    skipConfirmBody:
+      "Are you sure?\nYou can review it again anytime from Tutorial in the side menu.",
+    skipConfirmStay: "Keep going",
+    skipConfirmLeave: "Skip",
+    restartFromMenu: "Tutorial",
     back: "뒤로",
     next: "다음",
     seeGames: "경기 보기",
@@ -933,7 +939,21 @@ const ko: Messages = {
       tabProfile: "Profile",
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
-        "적중이 순위가 된다. 한 경기로 게시→결과→랭킹 흐름을 체감하라.",
+        "경기를 예측해 포인트를 쌓고 **랭킹**을 겨루는 앱입니다. 각 화면 안내, 또는 새 기능만 고르세요.",
+      welcomeFullCta: "화면 안내",
+      welcomeFeaturesCta: "새 기능만",
+      gamesTitle: "경기",
+      gamesBody:
+        "오늘의 경기가 여기에 나옵니다. **카드를 탭**하면 예측 화면이 열립니다. 승패는 스코어에서 자동입니다.",
+      gamesPickupTitle: "픽업 게임",
+      gamesPickupBody:
+        "주마다 고른 경기입니다. **Pick Up 랭킹**은 이 경기 예측만 반영됩니다. 승률 랭킹은 픽업의 **65% 이상**을 예측한 사람이 대상입니다.",
+      gamesStatsTitle: "STATS",
+      gamesStatsBody:
+        "오른쪽 노란 **STATS**에서 팀/선수 스탯을 엽니다. 오른쪽 끝에서 스와이프해도 같습니다.",
+      resultsTitle: "결과",
+      resultsBody:
+        "경기 후 여기에서 맞춰 봅니다. **큰 숫자가 결과, 아래가 내 예측.** 오른쪽 위가 HIT / MISS입니다.",
       tapTitle: "Tap the match card",
       tapBody:
         "This is a mock NBA game. Tap the glowing card to start predicting. No real data is affected.",
@@ -964,8 +984,9 @@ const ko: Messages = {
       predictBonusTitle: "Top scorer bonus",
       predictBonusBody:
         "Nail the game's top scorer for +2. When candidates are listed, pick a player.",
-      predictEnterTitle: "Enter your scores",
-      predictEnterBody: "Fill in both HOME and AWAY predicted scores.",
+      predictEnterTitle: "Read the intel, then predict",
+      predictEnterBody:
+        "Use the stats and player info as hints — enter scores for both **HOME and AWAY**.",
       predictEnterWait: "Enter both scores — submit lights up",
       predictSubmitTitle: "Submit here",
       predictSubmitBody:
@@ -993,21 +1014,24 @@ const ko: Messages = {
       gotoProfileBody: "Next up is the Profile tab. Tap it below.",
       resultHitTitle: "HIT!",
       resultHitBody:
-        "You got the winner right. {bonus}+{pts}pt is the idea. Results always shows this check.",
-      resultCardTapHint: "Tap the card to see details",
+        "Top-right **HIT** means you nailed the winner. Big numbers = **final**, below = **your pick**. Bottom **Upset / Score** are this game's points. {bonus}+{pts}pt.",
+      resultCardTapHint: "Tap DETAIL on the right for more",
+      resultCardTapHintWeb: "Tap the card for details",
       resultScoreBonus: "Exact score bonus! ",
       resultMissTitle: "MISS",
       resultMissBody:
-        "Winner was wrong. In the real app you'll also check Results. Try again next game.",
+        "Top-right **MISS** means the winner was wrong. Still use bottom **Upset / Score** for the next pick.",
       resultDetailTitle: "Inside Results",
       resultDetailBody:
         "Final score, your pick, and point breakdown live here. We'll walk through from the top.",
-      resultDetailScoreTitle: "Final vs your pick",
+      resultDetailScoreTitle:
+        "Reading the card",
       resultDetailScoreBody:
-        "The big numbers are the final score; below is your prediction. HIT if you got the winner, MISS if not.",
-      resultDetailStatsTitle: "Two metrics",
+        "**Big numbers = final. Below = your pick.** Top-right badge is HIT / MISS / PERFECT / UPSET.",
+      resultDetailStatsTitle:
+        "Upset & Score",
       resultDetailStatsBody:
-        "Upset is the underdog-hit bonus. Score is win points plus bonuses. Scroll for more.",
+        "**Upset** = underdog-hit bonus. **Score** = win points + bonuses — the two metrics under the card.",
       resultDetailMoreTitle: "More below",
       resultDetailMoreBody:
         "Scroll for score distribution and more detail. Same layout in the real app.",

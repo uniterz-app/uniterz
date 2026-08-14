@@ -1,12 +1,21 @@
 /**
  * チュートリアル練習 — 本番 UI コンポーネントへ渡すモックデータ生成
+ *
+ * リザルトは本番と同様 `buildResultCardFaceModel` / `buildResultDetailViewModel`
+ * が読む settle 埋め込み形（marketMeta・scoreRel・pointsV3Detail 等）を返す。
  */
 
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import type { Profile } from "@/app/component/profile/useProfile";
 import type { RankingRowWithCountry } from "@/lib/rankings/rankingMetrics";
+import type { ResultCardFaceMarketInput } from "@/lib/result/buildResultCardFace";
+import { resolveResultScoreRelative } from "@/lib/result/resultScoreRelative";
 import type { PostWithMillis } from "@/lib/result/result-page-data";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
+import type {
+  GamePointsSummaryV1,
+  GamePointsTopEntryV1,
+} from "@/lib/results/gamePointsSummary";
 import {
   gradeTutorialNbaPick,
   TUTORIAL_NBA_MOCK_GAME,
@@ -15,6 +24,20 @@ import {
 } from "@/lib/tutorial/tutorialNbaMock";
 
 const game = TUTORIAL_NBA_MOCK_GAME;
+
+/** 図解・プレビュー用の固定予想（Lakers 勝ち寄り・最多得点者あり） */
+export function buildTutorialDemoPick(): TutorialPredictPick {
+  return {
+    winner: "away",
+    scoreHome: 106,
+    scoreAway: 110,
+    goalScorer: {
+      playerId: "tutorial-lebron",
+      teamId: game.away.teamId,
+      name: "LeBron James",
+    },
+  };
+}
 
 /** 予想前の試合カード（scheduled） */
 export function buildTutorialMatchCardProps(_opts?: {
@@ -47,7 +70,7 @@ export function buildTutorialMatchCardProps(_opts?: {
     disableCardMotion: true,
     heavyListEntry: false,
     showMarketBias: true,
-    marketBias: { homePct: 54, awayPct: 46 },
+    marketBias: { homePct: 36, awayPct: 64 },
     homeRecord: { wins: 48, losses: 20, rank: 2 },
     awayRecord: { wins: 42, losses: 26, rank: 6 },
     topScorerCandidates: [
@@ -95,13 +118,91 @@ export function buildTutorialFinalMatchCardProps(opts?: {
   };
 }
 
-/** 詳細の市場バー用 */
-export function buildTutorialResultMarket(): {
-  homeRate: number;
-  awayRate: number;
+/** チュートリアル用リザルト投稿 ID（一覧差し込み・ハイライト用） */
+export const TUTORIAL_RESULT_POST_ID = "tutorial-post-1";
+
+/**
+ * __DEV__ リザルトカード詳細プレビュー用 ID。
+ * チュートリアルの保存ピックに依存せず、常に固定モックを返す。
+ */
+export const RESULT_DETAIL_DESIGN_PREVIEW_POST_ID =
+  "__dev_result_detail_preview__";
+
+/** 詳細の市場バー用（0–1）。カード面は asMarketPct で 0–100 に正規化 */
+export function buildTutorialResultMarket(): ResultCardFaceMarketInput & {
   total: number;
 } {
-  return { homeRate: 0.54, awayRate: 0.46, total: 128 };
+  return {
+    homeRate: 0.36,
+    awayRate: 0.64,
+    homePct: 36,
+    awayPct: 64,
+    total: 128,
+  };
+}
+
+/**
+ * 詳細の中央値・相対ラベル・Top10 用サマリ。
+ * `buildTutorialPointsDistribution` と同じ母集団イメージ。
+ */
+export function buildTutorialPointsSummary(
+  myPoints: number
+): GamePointsSummaryV1 {
+  const pts = Number.isFinite(myPoints) ? myPoints : 0;
+  const max = Math.max(10.0, pts);
+  const top: GamePointsTopEntryV1[] = [
+    {
+      rank: 1,
+      postId: "tutorial-top-1",
+      uid: "u1",
+      handle: "ace_shot",
+      displayName: "ace_shot",
+      photoURL: null,
+      isPro: true,
+      points: max,
+    },
+    {
+      rank: 2,
+      postId: TUTORIAL_RESULT_POST_ID,
+      uid: "you",
+      handle: "you",
+      displayName: "you",
+      photoURL: null,
+      isPro: false,
+      points: pts,
+    },
+    {
+      rank: 3,
+      postId: "tutorial-top-3",
+      uid: "u3",
+      handle: "court_king",
+      displayName: "court_king",
+      photoURL: null,
+      isPro: false,
+      points: Math.max(0, Math.min(pts - 0.4, 7.5)),
+    },
+  ];
+  return {
+    v: 1,
+    n: 128,
+    median: 6.1,
+    max,
+    p95: 8.5,
+    p90: 7.2,
+    top,
+    updatedAtMillis: Date.now(),
+  };
+}
+
+/** Native / Web 詳細 VM 向けオプション */
+export function buildTutorialResultDetailOptions(myPoints: number) {
+  const match = buildTutorialMatchCardProps();
+  return {
+    market: buildTutorialResultMarket(),
+    pointsSummary: buildTutorialPointsSummary(myPoints),
+    leadingScorers: game.leadingScorers,
+    topScorerCandidates: match.topScorerCandidates,
+  };
 }
 
 /**
@@ -132,16 +233,6 @@ export function buildTutorialPointsDistribution(): GamePointsDistributionV1 {
   };
 }
 
-/** チュートリアル用リザルト投稿 ID（一覧差し込み・ハイライト用） */
-export const TUTORIAL_RESULT_POST_ID = "tutorial-post-1";
-
-/**
- * __DEV__ リザルトカード詳細プレビュー用 ID。
- * チュートリアルの保存ピックに依存せず、常に固定モックを返す。
- */
-export const RESULT_DETAIL_DESIGN_PREVIEW_POST_ID =
-  "__dev_result_detail_preview__";
-
 /** 詳細プレビュー用の固定予想（的中寄り） */
 export function buildResultDetailDesignPreviewPick(): TutorialPredictPick {
   const winner = game.finalHome >= game.finalAway ? "home" : "away";
@@ -169,6 +260,14 @@ export function buildTutorialResultPost(
   void grade;
   const now = Date.now();
   const d = settled.pointsV3Detail;
+  const hit = settled.outcome === "hit";
+  /** 練習初回は連勝 1。HIT 時のみバッジ経路に乗せる */
+  const activeWinStreak = hit ? 1 : 0;
+  const pointsSummary = buildTutorialPointsSummary(settled.points);
+  const scoreRel = hit
+    ? resolveResultScoreRelative(settled.points, pointsSummary)
+    : ("none" as const);
+
   return {
     id: TUTORIAL_RESULT_POST_ID,
     createdAtText: "now",
@@ -179,6 +278,9 @@ export function buildTutorialResultPost(
     gameId: game.id,
     league: "nba",
     status: "final",
+    /** `roundLabelFromPost` → REGULAR SEASON */
+    seasonPhase: "regular",
+    seasonRound: "REGULAR SEASON",
     home: {
       name: game.home.name,
       teamId: game.home.teamId,
@@ -198,9 +300,18 @@ export function buildTutorialResultPost(
       score: { home: pick.scoreHome, away: pick.scoreAway },
       ...(pick.goalScorer ? { goalScorer: pick.goalScorer } : {}),
     },
+    /** Lakers（AWAY）寄り — settle 埋め込みと同じ形 */
+    marketMeta: {
+      majoritySide: "away",
+      majorityRatio: 0.64,
+      homePct: 36,
+      awayPct: 64,
+    },
+    authorUid: "you",
+    authorHandle: "you",
     author: { name: "You", handle: "you" },
     stats: {
-      isWin: settled.outcome === "hit",
+      isWin: hit,
       hadUpsetGame: false,
       scoreError:
         Math.abs(pick.scoreHome - game.finalHome) +
@@ -210,7 +321,9 @@ export function buildTutorialResultPost(
       exactMatch: settled.scoreExact,
       upsetHit: false,
       upsetPoints: 0,
+      goalScorerBonus: settled.goalScorerBonus,
       pointsV3: settled.points,
+      scoreRel,
       pointsV3Detail: {
         winnerCorrect: d.winnerCorrect,
         winPoints: d.winPoints,
@@ -220,6 +333,7 @@ export function buildTutorialResultPost(
         upsetBonus: d.upsetBonus,
         streakBonus: d.streakBonus,
         goalScorerBonus: d.goalScorerBonus,
+        activeWinStreak,
         diffError: d.diffError,
         totalError: d.totalError,
         exactMatch: d.exactMatch,
@@ -227,7 +341,7 @@ export function buildTutorialResultPost(
       rankingReady: true,
       rankingFactor: 1,
     },
-  };
+  } as PostWithMillis;
 }
 
 export function buildTutorialRankingRows(

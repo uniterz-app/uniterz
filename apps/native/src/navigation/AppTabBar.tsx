@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import {
+  Animated,
   Dimensions,
   Image,
   Platform,
@@ -23,9 +24,10 @@ import {
 } from "../features/profile/useNativeProfileStats";
 import { registerTutorialTarget } from "../features/tutorial/tutorialMeasureNative";
 import {
-  readTutorialLivePhaseNative,
-  writeTutorialLivePhaseNative,
-} from "../features/tutorial/tutorialLivePhaseNative";
+  getTutorialWelcomeChromeHidden,
+  subscribeTutorialWelcomeChromeHidden,
+} from "../../../../lib/tutorial/tutorialWelcomeChrome";
+import { TUTORIAL_WELCOME_CHROME_FADE_MS } from "../../../../lib/tutorial/tutorialMotion";
 
 /** Web NavBar `data-tutorial-target` 相当 */
 const TUTORIAL_TARGET_BY_ROUTE: Record<string, string> = {
@@ -60,6 +62,20 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const lastPressAtRef = useRef(0);
   const { fUser } = useFirebaseUser();
   const myUid = fUser?.uid?.trim() ?? "";
+  const welcomeChromeHidden = useSyncExternalStore(
+    subscribeTutorialWelcomeChromeHidden,
+    getTutorialWelcomeChromeHidden,
+    () => false
+  );
+  const chromeOp = useRef(new Animated.Value(welcomeChromeHidden ? 0 : 1)).current;
+
+  useEffect(() => {
+    Animated.timing(chromeOp, {
+      toValue: welcomeChromeHidden ? 0 : 1,
+      duration: TUTORIAL_WELCOME_CHROME_FADE_MS,
+      useNativeDriver: true,
+    }).start();
+  }, [chromeOp, welcomeChromeHidden]);
 
   const activeRouteName = state.routes[state.index]?.name ?? "";
   const { showRankingBadge, showResultBadge } =
@@ -69,10 +85,21 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
     });
 
   return (
-    <View style={styles.overlay} pointerEvents="box-none">
-      <View
-        style={[styles.pillWrap, { left: pillSidePad, right: pillSidePad, bottom: 10 }]}
-        pointerEvents="box-none"
+    <View
+      style={styles.overlay}
+      pointerEvents={welcomeChromeHidden ? "none" : "box-none"}
+    >
+      <Animated.View
+        style={[
+          styles.pillWrap,
+          {
+            left: pillSidePad,
+            right: pillSidePad,
+            bottom: 10,
+            opacity: chromeOp,
+          },
+        ]}
+        pointerEvents={welcomeChromeHidden ? "none" : "box-none"}
       >
         <View style={styles.pillMax}>
           <NavBarChamferShellNative>
@@ -111,29 +138,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     target: route.key,
                     canPreventDefault: true,
                   });
-                  if (event.defaultPrevented) return;
-
-                  void (async () => {
-                    const phase = await readTutorialLivePhaseNative();
-                    if (phase === "gotoResults" && route.name === "ResultTab") {
-                      await writeTutorialLivePhaseNative("results");
-                    } else if (
-                      phase === "gotoRankings" &&
-                      route.name === "RankingsTab"
-                    ) {
-                      await writeTutorialLivePhaseNative("rankings");
-                    } else if (
-                      phase === "gotoGroups" &&
-                      route.name === "LeaderboardsTab"
-                    ) {
-                      await writeTutorialLivePhaseNative("groups");
-                    } else if (
-                      phase === "gotoProfile" &&
-                      route.name === "ProfileTab"
-                    ) {
-                      await writeTutorialLivePhaseNative("profile");
-                    }
-                  })();
+                    if (event.defaultPrevented) return;
 
                   if (route.name === "ProfileTab") {
                     navigation.navigate("ProfileTab", {
@@ -213,7 +218,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
             </View>
           </NavBarChamferShellNative>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }

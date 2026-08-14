@@ -10,16 +10,26 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
+import { TUTORIAL_STATS_EDGE_FADE_MS } from "../../../../../lib/tutorial/tutorialMotion";
 
 const OPEN_DX = 40;
 const CANCEL_DY = 24;
+const FADE_EASE = Easing.bezier(0.37, 0, 0.18, 1);
 
 export default function ProfileMenuEdgeHandleNative({
   onOpen,
   unreadCount = 0,
   /** サイドメニュー開中は非表示（ドロワーと文字が被らないようにする） */
   hidden = false,
+  /** 表示時にフェードイン（試合ページ着地など） */
+  fadeIn = false,
   /** 縦書きラベル（既定 MENU） */
   label = "MENU",
   /** チュートリアル穴測定 */
@@ -28,10 +38,31 @@ export default function ProfileMenuEdgeHandleNative({
   onOpen: () => void;
   unreadCount?: number;
   hidden?: boolean;
+  fadeIn?: boolean;
   label?: string;
   tutorialTargetId?: string;
 }) {
   const handleRef = useRef<View>(null);
+  const op = useSharedValue(hidden ? 0 : 1);
+
+  useEffect(() => {
+    if (hidden) {
+      op.value = 0;
+      return;
+    }
+    if (fadeIn) {
+      op.value = withTiming(1, {
+        duration: TUTORIAL_STATS_EDGE_FADE_MS,
+        easing: FADE_EASE,
+      });
+      return;
+    }
+    op.value = 1;
+  }, [fadeIn, hidden, op]);
+
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: op.value,
+  }));
 
   useEffect(() => {
     if (!tutorialTargetId || hidden) return;
@@ -64,20 +95,26 @@ export default function ProfileMenuEdgeHandleNative({
     })
   ).current;
 
-  if (hidden) return null;
+  if (hidden && !fadeIn) return null;
 
   return (
-    <>
+    <Animated.View
+      style={[styles.fadeRoot, fadeStyle]}
+      pointerEvents={hidden ? "none" : "box-none"}
+    >
       <View
         style={styles.edgeStrip}
         {...pan.panHandlers}
-        pointerEvents="box-only"
+        pointerEvents={hidden ? "none" : "box-only"}
       />
       <Pressable
         style={styles.handle}
         onPress={onOpen}
+        disabled={hidden}
         accessibilityRole="button"
         accessibilityLabel={label.toUpperCase()}
+        accessibilityElementsHidden={hidden}
+        importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}
         hitSlop={8}
       >
         <View ref={handleRef} collapsable={false} style={styles.handleMeasure}>
@@ -98,11 +135,16 @@ export default function ProfileMenuEdgeHandleNative({
         ) : null}
         </View>
       </Pressable>
-    </>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  fadeRoot: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "visible",
+    zIndex: 20,
+  },
   edgeStrip: {
     position: "absolute",
     right: 0,

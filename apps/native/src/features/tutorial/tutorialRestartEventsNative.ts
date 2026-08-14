@@ -1,5 +1,5 @@
 /**
- * DEV「チュートリアル再開」の同期。
+ * 「チュートリアル」再開の同期（サイドメニュー／DEV）。
  *
  * タブは `lazy: true` のため、Games 未訪問だと購読者がいない。
  * そのため in-memory イベントに加え、AsyncStorage トークンと
@@ -10,6 +10,7 @@ import { clearAppTutorialSeenNative } from "./tutorialSeenNative";
 import { writeTutorialLivePhaseNative } from "./tutorialLivePhaseNative";
 import { clearTutorialLivePickNative } from "./tutorialLivePickNative";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
+import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
 
 export const TUTORIAL_RESTART_TOKEN_KEY = "uniterz:tutorialLiveRestartAt:v1";
 
@@ -68,6 +69,7 @@ export async function consumeTutorialRestartTokenNative(): Promise<
 export async function prepareTutorialRestartNative(
   uid: string | null
 ): Promise<number> {
+  prefetchRankingsLogoGlb();
   await clearAppTutorialSeenNative(uid);
   await clearTutorialLivePickNative();
   if (uid) {

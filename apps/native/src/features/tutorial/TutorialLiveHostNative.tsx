@@ -11,34 +11,33 @@ import TutorialLiveCoachNative from "./TutorialLiveCoachNative";
 import {
   readTutorialLivePhaseNative,
   writeTutorialLivePhaseNative,
+  subscribeTutorialLivePhaseNative,
   type TutorialLivePhase,
 } from "./tutorialLivePhaseNative";
-import {
-  clearTutorialLivePickNative,
-  readTutorialLivePickNative,
-} from "./tutorialLivePickNative";
-import type { TutorialLivePickPayload } from "../../../../../lib/tutorial/tutorialLivePick";
-import { tutorialGradeFromPick } from "../../../../../lib/tutorial/tutorialNbaUi";
+import { clearTutorialLivePickNative } from "./tutorialLivePickNative";
 import { formatTutorialLiveProgress } from "../../../../../lib/tutorial/tutorialLiveProgress";
 import { markAppTutorialSeenNative } from "./tutorialSeenNative";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import {
-  requestTutorialResultDetailCloseNative,
-  requestTutorialResultDetailOpenNative,
-} from "./tutorialResultDetailEventsNative";
-import {
   getTutorialHorizonSubstepNative,
   setTutorialHorizonSubstepNative,
   subscribeTutorialHorizonSubstepNative,
-  TUTORIAL_HORIZON_STATS_STEP,
 } from "./tutorialHorizonSubstepNative";
 import { navigateNativeTabForHorizonStep } from "./tutorialHorizonNavigateNative";
 import {
+  getTutorialLiveTrackNative,
+  hydrateTutorialLiveTrackNative,
+  setTutorialLiveTrackNative,
+} from "./tutorialLiveTrackNative";
+import {
   buildHorizonFeatureSteps,
+  featuresTrackProgressLabel,
   horizonFeatureProgressLabel,
   horizonStepHost,
 } from "../../../../../lib/tutorial/tutorialHorizonSteps";
+import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import { subscribeTutorialRestartNative, requestTutorialClearedNative } from "./tutorialRestartEventsNative";
+import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
 
 type HostSurface = "results" | "rankings" | "groups" | "profile" | "games";
 
@@ -52,27 +51,23 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
   const navigation =
     useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const m = i18nT(language);
+  const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
   const [phase, setPhase] = useState<TutorialLivePhase | null>(null);
-  const [livePick, setLivePick] = useState<TutorialLivePickPayload | null>(
-    null
-  );
-  /** リザルト詳細: 0=スコア, 1=指標 */
-  const [resultDetailStep, setResultDetailStep] = useState(0);
-  /** 新機能紹介: 各機能2ステップ（概要→使い方）計8 */
+  /** 新機能紹介: 各機能2ステップ（概要→使い方） */
   const [horizonFeatureStep, setHorizonFeatureStep] = useState(0);
+
+  useEffect(() => {
+    prefetchRankingsLogoGlb();
+  }, []);
 
   const syncPhaseFromStore = useCallback(async () => {
     const p = await readTutorialLivePhaseNative();
+    await hydrateTutorialLiveTrackNative();
     setPhase(p && p !== "done" ? p : null);
-    if (p === "resultDetail") setResultDetailStep(0);
     if (p === "horizon") {
       setHorizonFeatureStep(getTutorialHorizonSubstepNative());
     }
-    if (page === "results") {
-      const pick = await readTutorialLivePickNative();
-      setLivePick(pick);
-    }
-  }, [page]);
+  }, []);
 
   /** タブはマウント維持のため、フォーカスのたびにフェーズを取り直す */
   useFocusEffect(
@@ -80,21 +75,17 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
       let cancelled = false;
       void (async () => {
         const p = await readTutorialLivePhaseNative();
+        await hydrateTutorialLiveTrackNative();
         if (cancelled) return;
         setPhase(p && p !== "done" ? p : null);
-        if (p === "resultDetail") setResultDetailStep(0);
         if (p === "horizon") {
           setHorizonFeatureStep(getTutorialHorizonSubstepNative());
-        }
-        if (page === "results") {
-          const pick = await readTutorialLivePickNative();
-          if (!cancelled) setLivePick(pick);
         }
       })();
       return () => {
         cancelled = true;
       };
-    }, [page])
+    }, [])
   );
 
   useEffect(() => {
@@ -105,10 +96,19 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
   useEffect(() => {
     return subscribeTutorialRestartNative(() => {
       setPhase(null);
-      setLivePick(null);
-      setResultDetailStep(0);
       setHorizonFeatureStep(0);
       setTutorialHorizonSubstepNative(0);
+      setTutorialLiveTrackNative(null);
+    });
+  }, []);
+
+  /** 同じ画面に居たままフェーズが変わったとき（welcome 追い抜き→horizon） */
+  useEffect(() => {
+    return subscribeTutorialLivePhaseNative((p) => {
+      setPhase(p && p !== "done" ? p : null);
+      if (p === "horizon") {
+        setHorizonFeatureStep(getTutorialHorizonSubstepNative());
+      }
     });
   }, []);
 
@@ -130,9 +130,9 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
   const finish = useCallback(() => {
     void markAppTutorialSeenNative(fUser?.uid ?? null);
     void writeTutorialLivePhaseNative(null);
+    setTutorialLiveTrackNative(null);
     void clearTutorialLivePickNative();
     setPhase(null);
-    setLivePick(null);
     requestTutorialClearedNative();
   }, [fUser?.uid]);
 
@@ -150,120 +150,41 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     [navigation]
   );
 
-  useEffect(() => {
-    if (!phase) return;
-    if (page === "results" && phase === "gotoResults") {
-      void setPhaseAndStore("results");
-    } else if (page === "rankings" && phase === "gotoRankings") {
-      void setPhaseAndStore("rankings");
-    } else if (page === "groups" && phase === "gotoGroups") {
-      void setPhaseAndStore("groups");
-    } else if (page === "profile" && phase === "gotoProfile") {
-      void setPhaseAndStore("profile");
-    }
-  }, [page, phase, setPhaseAndStore]);
-
   if (!phase) return null;
 
-  if (page === "results" && phase === "results" && livePick) {
-    const grade = tutorialGradeFromPick(livePick.pick);
-    const hit = grade.outcome === "hit";
+  if (page === "results" && phase === "results") {
     return (
       <TutorialLiveCoachNative
         open
-        title={
-          hit
-            ? m.tutorial.practice.resultHitTitle
-            : m.tutorial.practice.resultMissTitle
-        }
-        body={
-          hit
-            ? m.tutorial.practice.resultHitBody
-                .replace("{pts}", String(grade.points))
-                .replace(
-                  "{bonus}",
-                  grade.scoreExact ? m.tutorial.practice.resultScoreBonus : ""
-                )
-            : m.tutorial.practice.resultMissBody
-        }
+        title={m.tutorial.practice.resultsTitle}
+        body={m.tutorial.practice.resultsBody}
         nextLabel={m.tutorial.next}
         skipLabel={m.tutorial.skip}
         backLabel={m.tutorial.back}
         target="result-card"
-        waitHint={m.tutorial.practice.resultCardTapHint}
         progressLabel={progressLabelFor("results")}
         onNext={() => {
-          setResultDetailStep(0);
-          void setPhaseAndStore("resultDetail");
-          requestTutorialResultDetailOpenNative();
-        }}
-        onTargetPress={() => {
-          setResultDetailStep(0);
-          void setPhaseAndStore("resultDetail");
-          requestTutorialResultDetailOpenNative();
+          void (async () => {
+            await setPhaseAndStore("rankings");
+            navigation.navigate("RankingsTab", { screen: "RankingsHome" });
+          })();
         }}
         onBack={() => {
-          void setPhaseAndStore("posted");
-          navigation.navigate("GamesTab", { screen: "GamesHome" });
+          void (async () => {
+            await setPhaseAndStore("games");
+            navigation.navigate("GamesTab", { screen: "GamesHome" });
+          })();
         }}
+        {...skipConfirm}
         onSkip={finish}
       />
     );
   }
 
-  if (page === "results" && phase === "resultDetail") {
-    const p = m.tutorial.practice;
-    const detailSteps = [
-      {
-        title: p.resultDetailScoreTitle,
-        body: p.resultDetailScoreBody,
-        target: "result-detail-score" as const,
-      },
-      {
-        title: p.resultDetailStatsTitle,
-        body: p.resultDetailStatsBody,
-        target: "result-detail-stats" as const,
-      },
-    ];
-    const step = detailSteps[Math.min(resultDetailStep, detailSteps.length - 1)]!;
-    const isLast = resultDetailStep >= detailSteps.length - 1;
-
+  if (page === "rankings" && phase === "rankings") {
     return (
       <TutorialLiveCoachNative
         open
-        title={step.title}
-        body={step.body}
-        nextLabel={m.tutorial.next}
-        skipLabel={m.tutorial.skip}
-        backLabel={m.tutorial.back}
-        target={step.target}
-        progressLabel={progressLabelFor("resultDetail")}
-        onNext={() => {
-          if (!isLast) {
-            setResultDetailStep((s) => s + 1);
-            return;
-          }
-          requestTutorialResultDetailCloseNative();
-          void setPhaseAndStore("rankings");
-          navigation.navigate("RankingsTab", { screen: "RankingsHome" });
-        }}
-        onBack={() => {
-          if (resultDetailStep > 0) {
-            setResultDetailStep((s) => s - 1);
-            return;
-          }
-          requestTutorialResultDetailCloseNative();
-          void setPhaseAndStore("results");
-        }}
-        onSkip={finish}
-      />
-    );
-  }
-
-  if (page === "rankings" && (phase === "rankings" || phase === "gotoRankings")) {
-    return (
-      <TutorialLiveCoachNative
-        open={phase === "rankings" || phase === "gotoRankings"}
         title={m.tutorial.practice.rankingsTitle}
         body={m.tutorial.practice.rankingsBody}
         skipLabel={m.tutorial.skip}
@@ -271,6 +192,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         backLabel={m.tutorial.back}
         allowInteractBehind
         progressLabel={progressLabelFor("rankings")}
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           void (async () => {
@@ -290,17 +212,19 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     );
   }
 
-  if (page === "groups" && (phase === "groups" || phase === "gotoGroups")) {
+  if (page === "groups" && phase === "groups") {
     return (
       <TutorialLiveCoachNative
-        open={phase === "groups" || phase === "gotoGroups"}
+        open
         title={m.tutorial.practice.groupsTitle}
         body={m.tutorial.practice.groupsBody}
         skipLabel={m.tutorial.skip}
         nextLabel={m.tutorial.next}
         backLabel={m.tutorial.back}
+        target="groups-create"
         allowInteractBehind
         progressLabel={progressLabelFor("groups")}
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           void (async () => {
@@ -329,7 +253,9 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     const step = featureSteps[stepIndex]!;
     const isLast = horizonFeatureStep >= featureSteps.length - 1;
     const featureProgress = horizonFeatureProgressLabel(
-      progressLabelFor("horizon"),
+      getTutorialLiveTrackNative() === "features"
+        ? null
+        : progressLabelFor("horizon"),
       p.horizonFeatureTag,
       horizonFeatureStep
     );
@@ -344,6 +270,8 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         backLabel={m.tutorial.back}
         visual={step.visual}
         progressLabel={featureProgress}
+        accentTone="feature"
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           if (horizonFeatureStep > 0) {
@@ -351,6 +279,11 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
               horizonFeatureStep - 1,
               horizonStepHost(horizonFeatureStep)
             );
+            return;
+          }
+          if (getTutorialLiveTrackNative() === "features") {
+            void setPhaseAndStore("welcome");
+            navigation.navigate("GamesTab", { screen: "GamesHome" });
             return;
           }
           void setPhaseAndStore("profile");
@@ -371,13 +304,10 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     );
   }
 
-  if (
-    page === "profile" &&
-    (phase === "profile" || phase === "gotoProfile")
-  ) {
+  if (page === "profile" && phase === "profile") {
     return (
       <TutorialLiveCoachNative
-        open={phase === "profile" || phase === "gotoProfile"}
+        open
         title={m.tutorial.practice.profileTitle}
         body={m.tutorial.practice.profileBody}
         skipLabel={m.tutorial.skip}
@@ -385,6 +315,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         backLabel={m.tutorial.back}
         allowInteractBehind
         progressLabel={progressLabelFor("profile")}
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           void (async () => {
@@ -395,10 +326,10 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
           })();
         }}
         onNext={() => {
+          setTutorialLiveTrackNative("full");
           setHorizonFeatureStep(0);
           setTutorialHorizonSubstepNative(0);
           void setPhaseAndStore("horizon");
-          navigation.navigate("LeaderboardsTab", { screen: "LeaderboardsHome" });
         }}
       />
     );
@@ -411,11 +342,17 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     const stepIndex = Math.min(horizonFeatureStep, featureSteps.length - 1);
     const step = featureSteps[stepIndex]!;
     const isLast = horizonFeatureStep >= featureSteps.length - 1;
-    const featureProgress = horizonFeatureProgressLabel(
-      progressLabelFor("horizon"),
-      p.horizonFeatureTag,
-      horizonFeatureStep
-    );
+    const featureProgress =
+      getTutorialLiveTrackNative() === "features"
+        ? featuresTrackProgressLabel(
+            p.horizonFeatureTag,
+            horizonFeatureStep + 1
+          )
+        : horizonFeatureProgressLabel(
+            progressLabelFor("horizon"),
+            p.horizonFeatureTag,
+            horizonFeatureStep
+          );
 
     return (
       <TutorialLiveCoachNative
@@ -426,8 +363,10 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         nextLabel={isLast ? p.finishCta : m.tutorial.next}
         backLabel={m.tutorial.back}
         target={step.target}
-        visual={step.target ? null : step.visual}
+        visual={step.visual}
         progressLabel={featureProgress}
+        accentTone="feature"
+        {...skipConfirm}
         onSkip={finish}
         onBack={() => {
           if (horizonFeatureStep > 0) {
@@ -435,6 +374,11 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
               horizonFeatureStep - 1,
               horizonStepHost(horizonFeatureStep)
             );
+            return;
+          }
+          if (getTutorialLiveTrackNative() === "features") {
+            void setPhaseAndStore("gamesStats");
+            navigation.navigate("GamesTab", { screen: "GamesHome" });
             return;
           }
           void setPhaseAndStore("profile");
@@ -449,63 +393,6 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
           }
           finish();
           navigation.navigate("GamesTab", { screen: "GamesHome" });
-        }}
-      />
-    );
-  }
-
-  if (page === "games" && phase === "horizon") {
-    if (horizonStepHost(horizonFeatureStep) !== "games") return null;
-    const p = m.tutorial.practice;
-    const featureSteps = buildHorizonFeatureSteps(p);
-    const stepIndex = Math.min(horizonFeatureStep, featureSteps.length - 1);
-    const step = featureSteps[stepIndex]!;
-    const isLast = stepIndex === TUTORIAL_HORIZON_STATS_STEP;
-    const featureProgress = horizonFeatureProgressLabel(
-      progressLabelFor("horizon"),
-      p.horizonFeatureTag,
-      horizonFeatureStep
-    );
-
-    return (
-      <TutorialLiveCoachNative
-        open
-        title={step.title}
-        body={step.body}
-        skipLabel={m.tutorial.skip}
-        nextLabel={isLast ? p.finishCta : m.tutorial.next}
-        backLabel={m.tutorial.back}
-        target={step.target}
-        visual={step.target ? null : step.visual}
-        allowInteractBehind={!!step.target}
-        progressLabel={featureProgress}
-        onSkip={finish}
-        onBack={() => {
-          advanceHorizonStep(
-            horizonFeatureStep - 1,
-            horizonStepHost(horizonFeatureStep)
-          );
-        }}
-        onTargetPress={
-          isLast && step.target === "games-stats-edge"
-            ? () => {
-                finish();
-                navigation.navigate("GamesTab", {
-                  screen: "LeagueStats",
-                  params: { tab: "team" },
-                });
-              }
-            : undefined
-        }
-        onNext={() => {
-          if (!isLast) {
-            advanceHorizonStep(
-              horizonFeatureStep + 1,
-              horizonStepHost(horizonFeatureStep)
-            );
-            return;
-          }
-          finish();
         }}
       />
     );

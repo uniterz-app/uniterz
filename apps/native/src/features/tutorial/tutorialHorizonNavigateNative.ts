@@ -14,9 +14,5 @@ export function navigateNativeTabForHorizonStep(
     navigation.navigate("LeaderboardsTab", { screen: "LeaderboardsHome" });
     return;
   }
-  if (host === "profile") {
-    navigation.navigate("ProfileTab", { screen: "ProfileHome", params: {} });
-    return;
-  }
-  navigation.navigate("GamesTab", { screen: "GamesHome" });
+  navigation.navigate("ProfileTab", { screen: "ProfileHome", params: {} });
 }

@@ -9,6 +9,7 @@ import {
   CyberSlantedTabNative,
   type CyberSlantedTabThemeNative,
 } from "./CyberSlantedTabNative";
+import TutorialTargetNative from "../tutorial/TutorialTargetNative";
 
 export function RankingsPeriodTabsNative({
   period,
@@ -28,6 +29,7 @@ export function RankingsPeriodTabsNative({
     { key: "monthly", label: t.periodMonthly },
   ];
   return (
+    <TutorialTargetNative id="rankings-period">
     <CyberSlantedTabBarNative fill>
       {items.map((item) => (
         <CyberSlantedTabNative
@@ -41,5 +43,6 @@ export function RankingsPeriodTabsNative({
         />
       ))}
     </CyberSlantedTabBarNative>
+    </TutorialTargetNative>
   );
 }

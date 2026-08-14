@@ -32,7 +32,7 @@ export default function SplashLogoPreviewScreenNative({
   const insets = useSafeAreaInsets();
   const [playKey, setPlayKey] = useState(0);
   const [variantId, setVariantId] =
-    useState<UniterzLogoSplashVariantId>("form");
+    useState<UniterzLogoSplashVariantId>("letters");
   const isJa = language === "ja";
 
   const active = useMemo(

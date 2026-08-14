@@ -470,6 +470,14 @@ export default function ProfileSideMenuModal({
                   <CyberSideMenuSectionTitleNative>{labels.support}</CyberSideMenuSectionTitleNative>
                   <View style={styles.itemGroup}>
                     <SideMenuItemButtonNative
+                      icon="school-outline"
+                      dense
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("restartTutorial")}
+                    >
+                      {language === "ja" ? "チュートリアル" : "Tutorial"}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
                       icon="help-circle-outline"
                       dense
                       labelStyle={labelStyle}
@@ -596,14 +604,6 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("notificationDev")}
                         >
                           通知テスト
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="school-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("restartTutorial")}
-                        >
-                          チュートリアル再開
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="trophy-outline"

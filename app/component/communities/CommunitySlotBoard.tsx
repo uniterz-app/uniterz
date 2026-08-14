@@ -459,17 +459,20 @@ function CreateEmptySlot({
   onCreate,
   reduceMotion,
   isWeb,
+  tutorialTarget,
 }: {
   label: string;
   sizing: SlotSizing;
   onCreate: () => void;
   reduceMotion: boolean | null;
   isWeb: boolean;
+  tutorialTarget?: string;
 }) {
   return (
     <motion.button
       type="button"
       onClick={onCreate}
+      data-tutorial-target={tutorialTarget}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       className={[
         "flex w-full items-center justify-center gap-2 border border-dashed px-4 py-5 transition-colors hover:border-cyan-400/45 hover:bg-cyan-500/5",
@@ -509,6 +512,7 @@ function JoinEmptySlot({
   onCollapse,
   onPaste,
   onSubmit,
+  tutorialTarget,
 }: {
   slotKey: string;
   expanded: boolean;
@@ -524,6 +528,7 @@ function JoinEmptySlot({
   onCollapse: () => void;
   onPaste: () => Promise<string | null>;
   onSubmit: (code: string) => Promise<void>;
+  tutorialTarget?: string;
 }) {
   const [code, setCode] = useState("");
 
@@ -537,6 +542,7 @@ function JoinEmptySlot({
       <motion.button
         type="button"
         onClick={onExpand}
+        data-tutorial-target={tutorialTarget}
         whileTap={reduceMotion ? undefined : { scale: 0.98 }}
         className={[
           "flex w-full items-center justify-center gap-2 border border-dashed px-4 py-5 transition-colors hover:border-amber-400/40 hover:bg-amber-500/5",
@@ -564,6 +570,7 @@ function JoinEmptySlot({
   return (
     <div
       className={["border", sizing.pad].join(" ")}
+      data-tutorial-target={tutorialTarget}
       style={{
         ...communityCrtPanelStyle("amber"),
         clipPath: isWeb ? NOTCH_CLIP : undefined,
@@ -742,6 +749,10 @@ export default function CommunitySlotBoard({
     return slots;
   }, [memberGroups, ownedGroups.length, limits.maxMemberships]);
 
+  const firstCreateKey = hostSlots.find((s) => s.kind === "create")?.key;
+  const firstJoinKey = memberSlots.find((s) => s.kind === "join")?.key;
+  const groupsCreateTargetOnCreate = Boolean(firstCreateKey);
+
   const handleJoinSubmit = useCallback(
     async (code: string) => {
       await onPreviewJoin(code);
@@ -799,6 +810,11 @@ export default function CommunitySlotBoard({
                       onCreate={onCreate}
                       reduceMotion={reduceMotion}
                       isWeb={isWeb}
+                      tutorialTarget={
+                        slot.key === firstCreateKey
+                          ? "groups-create"
+                          : undefined
+                      }
                     />
                   )}
                 </li>
@@ -863,6 +879,11 @@ export default function CommunitySlotBoard({
                       joinBusy={joinBusy}
                       reduceMotion={reduceMotion}
                       isWeb={isWeb}
+                      tutorialTarget={
+                        !groupsCreateTargetOnCreate && slot.key === firstJoinKey
+                          ? "groups-create"
+                          : undefined
+                      }
                       onExpand={() => setExpandedJoinSlot(slot.key)}
                       onCollapse={() => setExpandedJoinSlot(null)}
                       onPaste={onPasteJoin}

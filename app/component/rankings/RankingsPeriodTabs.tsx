@@ -26,6 +26,7 @@ export default function RankingsPeriodTabs({
   const m = t(language).rankings;
 
   return (
+    <div data-tutorial-target="rankings-period">
     <CyberSlantedTabBar fill aria-label="Ranking period">
       <CyberSlantedTab
         role="tab"
@@ -52,5 +53,6 @@ export default function RankingsPeriodTabs({
         theme={tabTheme}
       />
     </CyberSlantedTabBar>
+    </div>
   );
 }

@@ -21,7 +21,7 @@ export default function Header({ title }: Props) {
   const wordmarkLetters = wordmark.split("");
 
   return (
-    <header className="relative z-10 overflow-hidden px-6 py-2 md:px-10 md:py-4 text-white">
+    <header className="relative z-10 overflow-visible px-6 py-2 md:px-10 md:py-4 text-white">
       {/* 背景は透過させ、上端だけうっすら暗くして文字の可読性を確保 */}
       <div
         className="pointer-events-none absolute inset-0"
@@ -61,8 +61,7 @@ export default function Header({ title }: Props) {
             aria-label={wordmark}
           >
             <div
-              className="text-orange-100/85"
-              style={{ textShadow: "0 0 22px rgba(103,232,249,0.16)" }}
+              className="header-wordmark-3d text-orange-100/90"
               aria-hidden
             >
               {animate ? (
@@ -117,7 +116,7 @@ export default function Header({ title }: Props) {
         {/* cyber line + light sweep（常時ループはここだけ） */}
         <div className="relative w-full">
           <motion.div
-            className="relative z-1 h-[2px] w-full overflow-hidden rounded-full"
+            className="header-cyber-line-core relative z-1 h-[2px] w-full overflow-hidden rounded-full"
             initial={animate ? { scaleX: 0.1, opacity: 0 } : false}
             animate={{ scaleX: 1, opacity: 1 }}
             transition={{ delay: 0.25, duration: 0.8, ease: [0.22, 0.61, 0.36, 1] }}

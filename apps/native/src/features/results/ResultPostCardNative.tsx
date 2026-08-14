@@ -592,6 +592,11 @@ export default function ResultPostCardNative({
     return (
       <Animated.View
         collapsable={false}
+        onLayout={
+          tutorialTargetId
+            ? () => notifyTutorialTargetsChanged()
+            : undefined
+        }
         style={[
           styles.listRowOuter,
           compactSpacing ? styles.cardOuterCompact : styles.cardOuter,
@@ -600,7 +605,15 @@ export default function ResultPostCardNative({
       >
         <View style={styles.resultCardPressable}>
           <View style={styles.cardCaptureWrap}>
-            <View ref={captureRef} collapsable={false}>
+            <View
+              ref={captureRef}
+              collapsable={false}
+              onLayout={
+                tutorialTargetId
+                  ? () => notifyTutorialTargetsChanged()
+                  : undefined
+              }
+            >
               <ResultCardDesignFaceNative
                 language={language}
                 face={faceModel}
@@ -608,8 +621,8 @@ export default function ResultPostCardNative({
                 showDetailTab
                 onOpenDetail={() => onOpenDetail(post.id)}
               />
-              <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
             </View>
+            <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </View>
         </View>
       </Animated.View>

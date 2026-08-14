@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import cn from "clsx";
 
 const EDGE_START_PX = 28;
 const OPEN_DX_PX = 48;
@@ -19,6 +20,8 @@ export default function ProfileMenuEdgeHandle({
   ariaLabel = "メニュー",
   /** サイドメニュー開中は非表示（ドロワーと文字が被らないようにする） */
   hidden = false,
+  /** 表示時にフェードイン（試合ページ着地など） */
+  fadeIn = false,
   /** 縦書きラベル（既定 MENU） */
   label = "MENU",
   /** チュートリアル穴測定（Web data-tutorial-target 相当） */
@@ -28,6 +31,7 @@ export default function ProfileMenuEdgeHandle({
   unreadCount?: number;
   ariaLabel?: string;
   hidden?: boolean;
+  fadeIn?: boolean;
   label?: string;
   tutorialTargetId?: string;
 }) {
@@ -81,15 +85,23 @@ export default function ProfileMenuEdgeHandle({
     };
   }, [onOpen, hidden]);
 
-  if (!mounted || hidden) return null;
+  if (!mounted) return null;
+
+  const show = !hidden;
 
   return createPortal(
     <button
       type="button"
-      className="profile-menu-edge-handle"
+      className={cn(
+        "profile-menu-edge-handle",
+        fadeIn && "profile-menu-edge-handle--fade",
+        !show && "profile-menu-edge-handle--hidden"
+      )}
       onClick={onOpen}
       aria-label={ariaLabel}
-      {...(tutorialTargetId
+      aria-hidden={!show}
+      tabIndex={show ? 0 : -1}
+      {...(tutorialTargetId && show
         ? { "data-tutorial-target": tutorialTargetId }
         : {})}
     >

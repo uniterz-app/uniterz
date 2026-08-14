@@ -4,6 +4,7 @@
  */
 import { createContext, useContext, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
 
 const RAJDHANI = "Rajdhani_600SemiBold";
 
@@ -66,14 +67,14 @@ export function ProfileKinetikFlipEarNative({
   const ear = useProfileKinetikFlipEar();
   if (!ear) return null;
 
-  return (
+  const button = (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: ear.pressed }}
       accessibilityLabel={ear.label}
       onPress={ear.onToggle}
       style={({ pressed }) => [
-        styles.ear,
+        ear.pressed ? styles.ear : styles.earFill,
         { borderColor },
         pressed ? styles.earPressed : null,
       ]}
@@ -83,6 +84,15 @@ export function ProfileKinetikFlipEarNative({
         {ear.label}
       </Text>
     </Pressable>
+  );
+
+  /** 表（CAREER）だけチュートリアル穴の対象。裏の PROFILE 耳は測らない */
+  if (ear.pressed) return button;
+
+  return (
+    <TutorialTargetNative id="profile-career-tab" style={styles.earPos}>
+      {button}
+    </TutorialTargetNative>
   );
 }
 
@@ -124,6 +134,25 @@ export function ProfileKinetikFlipEarTopEdgesNative({
 }
 
 const styles = StyleSheet.create({
+  earPos: {
+    position: "absolute",
+    top: 0,
+    right: KINETIK_FLIP_EAR.right,
+    zIndex: 8,
+    width: KINETIK_FLIP_EAR.width,
+    height: KINETIK_FLIP_EAR.height,
+  },
+  earFill: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    /** カードと同じ材質に見せる — 塗りなし */
+    backgroundColor: "transparent",
+    paddingHorizontal: 10,
+  },
   ear: {
     position: "absolute",
     top: 0,

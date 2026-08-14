@@ -3,16 +3,17 @@
  */
 
 import type { TutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
+import {
+  TUTORIAL_GAMES_SUBSTEPS,
+  isTutorialGamesSubstep,
+  type TutorialGamesSubstep,
+} from "@/lib/tutorial/tutorialGamesSubsteps";
 
-/** ユーザーに見せる主要ステップ順（goto* は到着先へマップ） */
+/** ユーザーに見せる主要ステップ順 */
 export const TUTORIAL_LIVE_PROGRESS_PHASES = [
   "welcome",
-  "tapCard",
-  "predictWait",
-  "posted",
-  "resolving",
+  "games",
   "results",
-  "resultDetail",
   "rankings",
   "groups",
   "profile",
@@ -22,26 +23,24 @@ export const TUTORIAL_LIVE_PROGRESS_PHASES = [
 export type TutorialLiveProgressPhase =
   (typeof TUTORIAL_LIVE_PROGRESS_PHASES)[number];
 
-const GOTO_TO_PROGRESS: Partial<
-  Record<TutorialLivePhase, TutorialLiveProgressPhase>
-> = {
-  gotoResults: "results",
-  gotoRankings: "rankings",
-  gotoGroups: "groups",
-  gotoProfile: "profile",
-};
+/** 試合タブ内サブステップは進捗バー上「試合」と同じ枠 */
+function progressPhaseKey(
+  phase: TutorialLivePhase
+): TutorialLiveProgressPhase | null {
+  if (phase === "gamesPickup" || phase === "gamesStats") return "games";
+  if (
+    (TUTORIAL_LIVE_PROGRESS_PHASES as readonly string[]).includes(phase)
+  ) {
+    return phase as TutorialLiveProgressPhase;
+  }
+  return null;
+}
 
 export function tutorialLiveProgressIndex(
   phase: TutorialLivePhase | null | undefined
 ): { current: number; total: number } | null {
   if (!phase || phase === "done") return null;
-  const key =
-    GOTO_TO_PROGRESS[phase] ??
-    (TUTORIAL_LIVE_PROGRESS_PHASES.includes(
-      phase as TutorialLiveProgressPhase
-    )
-      ? (phase as TutorialLiveProgressPhase)
-      : null);
+  const key = progressPhaseKey(phase);
   if (!key) return null;
   const idx = TUTORIAL_LIVE_PROGRESS_PHASES.indexOf(key);
   if (idx < 0) return null;
@@ -61,4 +60,15 @@ export function formatTutorialLiveProgress(
   return template
     .replace("{current}", String(idx.current))
     .replace("{total}", String(idx.total));
+}
+
+/** 試合タブ内: `2 / 7 · 2/3` */
+export function formatTutorialGamesSubstepProgress(
+  template: string,
+  phase: TutorialGamesSubstep
+): string | null {
+  const base = formatTutorialLiveProgress(template, "games");
+  if (!base || !isTutorialGamesSubstep(phase)) return base;
+  const idx = TUTORIAL_GAMES_SUBSTEPS.indexOf(phase);
+  return `${base} · ${idx + 1}/${TUTORIAL_GAMES_SUBSTEPS.length}`;
 }

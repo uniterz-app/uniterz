@@ -76,6 +76,8 @@ import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket
 import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useProfilePlayoffRankTrend } from "@/lib/profile/useProfilePlayoffRankTrend";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { readTutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
+import { readTutorialWelcomeHandoff } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import type { Language } from "@/lib/i18n/language";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
@@ -177,6 +179,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     null
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [welcomeProfileFly, setWelcomeProfileFly] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [bracketReveal, setBracketReveal] = useState(false);
 
@@ -187,6 +190,20 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       setDrawerOpen(true);
     }
   }, [isMe]);
+
+  useEffect(() => {
+    const sync = () => {
+      setWelcomeProfileFly(
+        readTutorialLivePhase() === "welcome" &&
+          readTutorialWelcomeHandoff() === "profile"
+      );
+    };
+    sync();
+    window.addEventListener("uniterz-tutorial-welcome-handoff", sync);
+    return () => {
+      window.removeEventListener("uniterz-tutorial-welcome-handoff", sync);
+    };
+  }, []);
 
   const { unreadCount: menuUnreadCount } = useAnnouncementsUnread({
     enabled: isMe,
@@ -221,7 +238,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     if (tab === "bracket") setTab("overview");
   }, [tab, setTab]);
 
-  if (isMe && loadingPlan) {
+  if (isMe && loadingPlan && !welcomeProfileFly) {
     return (
       <div className="flex justify-center p-4">
         <CandleChartLoader />
@@ -263,7 +280,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         <ProfileMenuEdgeHandle
           onOpen={() => setDrawerOpen(true)}
           unreadCount={menuUnreadCount}
-          hidden={drawerOpen}
+          hidden={drawerOpen || welcomeProfileFly}
         />
       ) : null}
 

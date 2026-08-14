@@ -2,6 +2,7 @@
  * 本番／DEV 共用 — リザルト詳細ボディ（カード面 + 中央値/最高 + Top10 + 内訳）。
  * `ResultDetailViewModel` をそのまま描画。
  */
+import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { doc, getDoc } from "firebase/firestore";
@@ -11,6 +12,10 @@ import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import LiveGameStatsPanelNative from "../games/live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "../games/live/LiveGameStatsPlaceholderNative";
+import {
+  notifyTutorialTargetsChanged,
+  registerTutorialTarget,
+} from "../tutorial/tutorialMeasureNative";
 import ResultDetailScoreDonutNative from "./ResultDetailScoreDonutNative";
 import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
 import { RankingsAvatarNative } from "../rankings/RankingsAvatarAndTabs";
@@ -572,21 +577,48 @@ export default function ResultDetailBodyNative({
       loadGameDoc: loadGameDocForLiveStats,
     }
   );
+  const cardTargetRef = useRef<View>(null);
+
+  useEffect(() => {
+    return registerTutorialTarget("result-detail-card", () =>
+      new Promise((resolve) => {
+        const node = cardTargetRef.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width < 2 || height < 2) {
+            resolve(null);
+            return;
+          }
+          resolve({ x, y, width, height });
+        });
+      })
+    );
+  }, []);
+
+  useEffect(() => {
+    notifyTutorialTargetsChanged();
+  }, [view]);
 
   return (
     <View style={[styles.list, { paddingBottom: contentPaddingBottom }]}>
-      <WeeklyReportCardShell
-        hideGrid
-        style={[styles.heroCard, { borderColor: ACCENT }]}
-      >
-        <ResultCardDesignFaceNative
-          language={language}
-          bare
-          badge={cardBadge}
-          scoreRel={scoreRel}
-          face={view.card}
-        />
-      </WeeklyReportCardShell>
+      <View ref={cardTargetRef} collapsable={false}>
+        <WeeklyReportCardShell
+          hideGrid
+          style={[styles.heroCard, { borderColor: ACCENT }]}
+        >
+          <ResultCardDesignFaceNative
+            language={language}
+            bare
+            badge={cardBadge}
+            scoreRel={scoreRel}
+            face={view.card}
+            tutorialMetricsTargetId="result-detail-metrics"
+          />
+        </WeeklyReportCardShell>
+      </View>
 
       {cardAndLiveStats ? (
         <>

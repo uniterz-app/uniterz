@@ -20,7 +20,7 @@ import { StyleSheet, View } from "react-native";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
-import { loadRankingsLogoGlbBuffer } from "./rankingsLogoGlbCache";
+import { loadRankingsLogoGlbBuffer, getCachedRankingsLogoGltfScene, ensureRankingsLogoGltfParsed } from "./rankingsLogoGlbCache";
 
 /**
  * three.js GLTFParser が `navigator.userAgent.match(...)` を前提にしている一方、
@@ -95,7 +95,11 @@ const THEME = {
   pointLightBColor: "#6f92b4",
 } as const;
 
-type NeonMat = THREE.MeshPhysicalMaterial & {
+type NeonMat = (
+  | THREE.MeshPhysicalMaterial
+  | THREE.MeshStandardMaterial
+  | THREE.MeshBasicMaterial
+) & {
   userData: {
     baseEmissiveIntensity: number;
     pulseOffset: number;
@@ -190,28 +194,63 @@ type LogoBuild = {
   glowMats: GlowMat[];
 };
 
-type LogoModelProps = { uri: string };
+type LogoModelProps = {
+  uri: string;
+  scale?: number;
+  /** false のとき正面固定（チュートリアル等） */
+  spinning?: boolean;
+  /** 追加ヨー（ラジアン）。正面の微調整用 */
+  yawOffset?: number;
+  /**
+   * 透明 Canvas（inline）向け。
+   * transparent マテリアルだと α クリア背景に沈んで「消えた」ように見える。
+   */
+  solidForInline?: boolean;
+  onReady?: () => void;
+};
 
-function LogoModel({ uri }: LogoModelProps) {
+function LogoModel({
+  uri,
+  scale = SCALE,
+  spinning = true,
+  yawOffset = 0,
+  solidForInline = false,
+  onReady,
+}: LogoModelProps) {
   const [gltf, setGltf] = useState<{ scene: THREE.Group } | null>(null);
   const spinRef = useRef<THREE.Group>(null);
   const orientRef = useRef<THREE.Group>(null);
   const emissiveMatsRef = useRef<NeonMat[]>([]);
   const glowMatsRef = useRef<GlowMat[]>([]);
+  const readySentRef = useRef(false);
   /** expo-gl 環境で THREE.Clock の elapsed が進まないことがあるため壁時計で駆動する */
   const animT0Ref = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setGltf(null);
-    const loader = new GLTFLoader();
+    /** 先読み済みなら null フラッシュせず即セット → 空きフレームを出さない */
+    const cached = getCachedRankingsLogoGltfScene();
+    if (cached) {
+      setGltf({ scene: cached });
+    } else {
+      setGltf(null);
+    }
+
     void (async () => {
       try {
+        const scene = await ensureRankingsLogoGltfParsed();
+        if (cancelled) return;
+        if (scene) {
+          setGltf({ scene });
+          return;
+        }
+        /** パースキャッシュ失敗時のみ従来パス */
         const loaded = await loadRankingsLogoGlbBuffer(uri);
         if (!loaded) {
           throw new Error("GLB取得失敗（同梱・キャッシュ・ネットワーク）");
         }
         if (cancelled) return;
+        const loader = new GLTFLoader();
         loader.parse(
           loaded.buffer,
           loaded.resourcePath,
@@ -221,10 +260,8 @@ function LogoModel({ uri }: LogoModelProps) {
           },
           (err) => {
             console.error("RankingsLogo3DCanvasNative GLTF parse:", err);
-            if (!cancelled) {
-              setGltf(null);
-            }
-          },
+            if (!cancelled) setGltf(null);
+          }
         );
       } catch (e) {
         if (!cancelled) {
@@ -249,29 +286,40 @@ function LogoModel({ uri }: LogoModelProps) {
       if (obj instanceof THREE.Mesh) meshes.push(obj);
     });
 
+    /** welcome inline: 「次へ」と同じ #00F5FF。白ライトで飛ばないよう Basic で色を固定 */
+    const baseColor = solidForInline ? "#00F5FF" : THEME.baseColor;
+    const emissiveColor = solidForInline ? "#00F5FF" : THEME.emissiveColor;
+    const emissiveIntensity = solidForInline ? 0 : THEME.emissiveIntensity;
+    const edgeOpacity = solidForInline ? 0.42 : 0.065;
+
     for (const obj of meshes) {
       obj.castShadow = false;
       obj.receiveShadow = false;
       obj.renderOrder = 1;
 
-      const baseMat = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color(THEME.baseColor),
-        emissive: new THREE.Color(THEME.emissiveColor),
-        emissiveIntensity: THEME.emissiveIntensity,
-        metalness: THEME.metalness,
-        roughness: THEME.roughness,
-        clearcoat: THEME.clearcoat,
-        clearcoatRoughness: THEME.clearcoatRoughness,
-        reflectivity: THEME.reflectivity,
-        transparent: true,
-        opacity: 0.92,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-        toneMapped: false,
-      }) as NeonMat;
+      const baseMat = (
+        solidForInline
+          ? new THREE.MeshBasicMaterial({
+              color: new THREE.Color(baseColor),
+              toneMapped: false,
+              side: THREE.DoubleSide,
+            })
+          : new THREE.MeshStandardMaterial({
+              color: new THREE.Color(baseColor),
+              emissive: new THREE.Color(emissiveColor),
+              emissiveIntensity,
+              metalness: THEME.metalness,
+              roughness: THEME.roughness,
+              transparent: true,
+              opacity: 0.92,
+              side: THREE.DoubleSide,
+              depthWrite: false,
+              toneMapped: false,
+            })
+      ) as NeonMat;
 
       baseMat.userData = {
-        baseEmissiveIntensity: THEME.emissiveIntensity,
+        baseEmissiveIntensity: emissiveIntensity,
         pulseOffset: Math.random() * Math.PI * 2,
         pulseSpeed: 0.62 + Math.random() * 0.06,
       };
@@ -281,9 +329,11 @@ function LogoModel({ uri }: LogoModelProps) {
 
       if (obj.geometry) {
         const edgeGlowMat = new THREE.MeshBasicMaterial({
-          color: new THREE.Color(THEME.edgeGlowColor),
+          color: new THREE.Color(
+            solidForInline ? "#00F5FF" : THEME.edgeGlowColor
+          ),
           transparent: true,
-          opacity: 0.065,
+          opacity: edgeOpacity,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
           side: THREE.DoubleSide,
@@ -291,7 +341,7 @@ function LogoModel({ uri }: LogoModelProps) {
         }) as GlowMat;
 
         edgeGlowMat.userData = {
-          baseOpacity: 0.065,
+          baseOpacity: edgeOpacity,
           pulseOffset: Math.random() * Math.PI * 2,
           pulseSpeed: 0.68 + Math.random() * 0.06,
         };
@@ -307,7 +357,7 @@ function LogoModel({ uri }: LogoModelProps) {
 
     centerRootFromMeshes(s);
     return { scene: s, emissiveMats, glowMats };
-  }, [gltf]);
+  }, [gltf, solidForInline]);
 
   useLayoutEffect(() => {
     if (!logoBuild) {
@@ -329,8 +379,22 @@ function LogoModel({ uri }: LogoModelProps) {
 
   useLayoutEffect(() => {
     if (!orientRef.current || !logoBuild) return;
-    orientRef.current.rotation.set(Math.PI / 2, 0, 0);
-  }, [logoBuild]);
+    /**
+     * GLB は XZ 平面に寝ている。X 軸 +90° で立て、カメラ正面（+Z）へ向ける。
+     * yawOffset で読みやすさを微調整。
+     */
+    orientRef.current.rotation.set(Math.PI / 2, yawOffset, 0);
+  }, [logoBuild, yawOffset]);
+
+  useEffect(() => {
+    if (!logoBuild || readySentRef.current) return;
+    readySentRef.current = true;
+    /** 1 フレーム描画後に ready（Canvas が空のまま onReady しない） */
+    const id = requestAnimationFrame(() => {
+      onReady?.();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [logoBuild, onReady]);
 
   // Web と同じ運動式。経過時間は performance.now() ベース（RN+expo-gl で Clock が止まる対策）
   useFrame(() => {
@@ -344,27 +408,37 @@ function LogoModel({ uri }: LogoModelProps) {
         : 0) || 0;
 
     if (spinRef.current) {
-      spinRef.current.rotation.y = t * ROTATE_SPEED;
-      spinRef.current.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE;
-      const phase = (t % BREATH_PERIOD_SEC) / BREATH_PERIOD_SEC; // 0..1
-      // 0->0.5で吸う(拡大)、0.5->1で吐く(縮小)
-      const inhale = phase < 0.5 ? phase / 0.5 : 1 - (phase - 0.5) / 0.5;
-      const eased = 0.5 - 0.5 * Math.cos(inhale * Math.PI);
-      // 拡大はせず、基準サイズから縮小して戻るだけにする
-      const breathScale = 1 - eased * BREATH_SCALE_AMPLITUDE;
-      spinRef.current.scale.setScalar(breathScale);
+      if (spinning) {
+        spinRef.current.rotation.y = t * ROTATE_SPEED;
+        spinRef.current.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE;
+        const phase = (t % BREATH_PERIOD_SEC) / BREATH_PERIOD_SEC; // 0..1
+        // 0->0.5で吸う(拡大)、0.5->1で吐く(縮小)
+        const inhale = phase < 0.5 ? phase / 0.5 : 1 - (phase - 0.5) / 0.5;
+        const eased = 0.5 - 0.5 * Math.cos(inhale * Math.PI);
+        // 拡大はせず、基準サイズから縮小して戻るだけにする
+        const breathScale = 1 - eased * BREATH_SCALE_AMPLITUDE;
+        spinRef.current.scale.setScalar(breathScale);
+      } else {
+        /** チュートリアル正面固定 — 浮遊／呼吸で面がブレないように止める */
+        spinRef.current.rotation.y = 0;
+        spinRef.current.position.y = 0;
+        spinRef.current.scale.setScalar(1);
+      }
     }
 
     for (const mat of emissiveMatsRef.current) {
+      if (!("emissiveIntensity" in mat)) continue;
       const { baseEmissiveIntensity, pulseOffset, pulseSpeed } = mat.userData;
       const pulse = (Math.sin(t * pulseSpeed + pulseOffset) + 1) * 0.5;
-      mat.emissiveIntensity = baseEmissiveIntensity + pulse * THEME.pulseAmount;
+      (mat as THREE.MeshStandardMaterial).emissiveIntensity =
+        baseEmissiveIntensity +
+        pulse * (spinning ? THEME.pulseAmount : THEME.pulseAmount * 18);
     }
 
     for (const mat of glowMatsRef.current) {
       const { baseOpacity, pulseOffset, pulseSpeed } = mat.userData;
       const pulse = (Math.sin(t * pulseSpeed + pulseOffset) + 1) * 0.5;
-      mat.opacity = baseOpacity + pulse * 0.007;
+      mat.opacity = baseOpacity + pulse * (spinning ? 0.007 : 0.05);
     }
   });
 
@@ -373,7 +447,7 @@ function LogoModel({ uri }: LogoModelProps) {
   }
 
   return (
-    <group position={POSITION} scale={SCALE}>
+    <group position={POSITION} scale={scale}>
       <group ref={spinRef}>
         <group ref={orientRef}>
           <primitive object={logoBuild.scene} />
@@ -383,62 +457,149 @@ function LogoModel({ uri }: LogoModelProps) {
   );
 }
 
-function LogoScene({ uri }: { uri: string }) {
+function LogoScene({
+  uri,
+  variant,
+  modelScale,
+  spinning,
+  yawOffset,
+  onReady,
+}: {
+  uri: string;
+  variant: "cyberBg" | "inline";
+  modelScale: number;
+  spinning: boolean;
+  yawOffset: number;
+  onReady?: () => void;
+}) {
+  const inline = variant === "inline";
   return (
     <>
       {/* 先頭で毎フレーム advance → useFrame（回転）が確実に駆動 */}
       <ExpoGlR3fFrameDriver />
-      <color attach="background" args={[THEME.bgColor]} />
-      <fog attach="fog" args={[THEME.fogColor, 11, 26]} />
-      <ambientLight intensity={THEME.ambientIntensity} />
+      {/**
+       * inline も不透明 BG。透明 Canvas + transparent マテリアルだと
+       * α 合成でロゴが「消えた」ように見える（チュートリアル welcome の主因）。
+       */}
+      <color attach="background" args={[inline ? "#060a10" : THEME.bgColor]} />
+      {inline ? null : <fog attach="fog" args={[THEME.fogColor, 11, 26]} />}
+      <ambientLight intensity={inline ? 0.15 : THEME.ambientIntensity} />
       <directionalLight
-        position={[4, 6, 8]}
-        intensity={THEME.directionalIntensity}
-        color="#dcfffd"
+        position={[3.5, 5.5, 7]}
+        intensity={inline ? 0.35 : THEME.directionalIntensity}
+        color={inline ? "#00F5FF" : "#e8fbff"}
       />
+      {/* 正面キー — 白飛び防止。シアン寄りのみ */}
+      {inline ? (
+        <>
+          <pointLight
+            position={[0, 0.4, 4.8]}
+            intensity={6}
+            color="#00F5FF"
+            distance={22}
+          />
+          <pointLight
+            position={[-2.2, 1.2, 3.5]}
+            intensity={4}
+            color="#00c8d8"
+            distance={18}
+          />
+        </>
+      ) : null}
       <pointLight
         position={[-4, 4, 7]}
-        intensity={THEME.pointLightAIntensity}
-        color={THEME.pointLightAColor}
+        intensity={THEME.pointLightAIntensity * (inline ? 0.55 : 1)}
+        color={inline ? "#00F5FF" : THEME.pointLightAColor}
         distance={24}
       />
       <pointLight
         position={[4, -1, 7]}
-        intensity={THEME.pointLightBIntensity}
-        color={THEME.pointLightBColor}
+        intensity={THEME.pointLightBIntensity * (inline ? 0.45 : 1)}
+        color={inline ? "#00b8c8" : THEME.pointLightBColor}
         distance={22}
       />
-      <pointLight position={[0, 2, -8]} intensity={0.8} color="#08202a" distance={18} />
-      <LogoModel uri={uri} />
+      <pointLight
+        position={[0, 2, -8]}
+        intensity={inline ? 0.6 : 0.8}
+        color="#042028"
+        distance={18}
+      />
+      <LogoModel
+        uri={uri}
+        scale={modelScale}
+        spinning={spinning}
+        yawOffset={yawOffset}
+        solidForInline={inline}
+        onReady={onReady}
+      />
     </>
   );
 }
 
-export default function RankingsLogo3DCanvasNative() {
-  const uri = useMemo(() => remoteLogoGltfUrl(), []);
+type RankingsLogo3DCanvasNativeProps = {
+  /** cyberBg=ランキング背景 / inline=透明キャンバス（チュートリアル等） */
+  variant?: "cyberBg" | "inline";
+  /** inline 時のモデル倍率（省略時 3.1） */
+  inlineScale?: number;
+  /** inline 時のカメラ Z（小さいほど寄る） */
+  inlineCameraZ?: number;
+  /** inline 時の視野角（大きいほど寄って大きく見える） */
+  inlineFov?: number;
+  /** Y 回転アニメ。チュートリアル正面固定は false */
+  spinning?: boolean;
+  /** 正面のヨー微調整（ラジアン） */
+  yawOffset?: number;
+  /** GLB パース＋マテリアル構築が終わり描画可能になったとき */
+  onReady?: () => void;
+};
+
+export default function RankingsLogo3DCanvasNative({
+  variant = "cyberBg",
+  inlineScale = 3.1,
+  inlineCameraZ = 6.4,
+  inlineFov = 28,
+  spinning = true,
+  yawOffset = 0,
+  onReady,
+}: RankingsLogo3DCanvasNativeProps) {
+  /** 同梱 GLB 優先のため、リモート URL が無くてもダミー URI で Canvas を立てる */
+  const uri = useMemo(
+    () => remoteLogoGltfUrl() ?? "bundled://uniterz-logo.glb",
+    []
+  );
+  const inline = variant === "inline";
+  const modelScale = inline ? inlineScale : SCALE;
+  const cameraZ = inline ? inlineCameraZ : 8;
+  const fov = inline ? inlineFov : 28;
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   return (
     <View style={styles.fill} collapsable={false}>
-      {uri ? (
-        <Canvas
-          style={styles.fill}
-          // expo-gl は内蔵ループと相性が悪いことがあるため never + 下記 Driver で advance
-          frameloop="never"
-          onCreated={() => {
-            advance(performance.now() / 1000);
-          }}
-          gl={{
-            antialias: true,
-            alpha: false,
-            powerPreference: "high-performance",
-          }}
-          camera={{ position: [0, 0, 8], fov: 28 }}
-        >
-          <LogoScene uri={uri} />
-        </Canvas>
-      ) : (
-        <View style={[styles.fill, { backgroundColor: THEME.bgColor }]} />
-      )}
+      <Canvas
+        style={styles.fill}
+        // expo-gl は内蔵ループと相性が悪いことがあるため never + 下記 Driver で advance
+        frameloop="never"
+        onCreated={() => {
+          advance(performance.now() / 1000);
+        }}
+        gl={{
+          antialias: true,
+          /** welcome inline も不透明（透明 α 合成でロゴ消失するのを防ぐ） */
+          alpha: false,
+          powerPreference: "high-performance",
+        }}
+        camera={{ position: [0, 0, cameraZ], fov, near: 0.1, far: 100 }}
+      >
+        <LogoScene
+          uri={uri}
+          variant={variant}
+          modelScale={modelScale}
+          spinning={spinning}
+          yawOffset={yawOffset}
+          onReady={() => onReadyRef.current?.()}
+        />
+      </Canvas>
     </View>
   );
 }

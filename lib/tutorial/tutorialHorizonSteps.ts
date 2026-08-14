@@ -3,11 +3,20 @@
  */
 import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
 
-export const HORIZON_FEATURE_STEP_COUNT = 8;
-/** 最終ステップ: 試合タブ STATS 実物誘導 */
-export const TUTORIAL_HORIZON_STATS_STEP = 7;
+/**
+ * グループバトル（スクワッド）案内。
+ * 機能公開まで false。戻すときは true にするだけ。
+ */
+export const HORIZON_INCLUDE_SQUAD_BATTLE = false;
 
-export type HorizonStepHost = "groups" | "profile" | "games";
+const HORIZON_SQUAD_STEP_COUNT = 2;
+const HORIZON_PROFILE_FEATURE_STEP_COUNT = 4;
+
+export const HORIZON_FEATURE_STEP_COUNT = HORIZON_INCLUDE_SQUAD_BATTLE
+  ? HORIZON_SQUAD_STEP_COUNT + HORIZON_PROFILE_FEATURE_STEP_COUNT
+  : HORIZON_PROFILE_FEATURE_STEP_COUNT;
+
+export type HorizonStepHost = "groups" | "profile";
 
 export type HorizonPracticeCopy = {
   horizonFeatureTag: string;
@@ -35,30 +44,34 @@ export type HorizonFeatureStep = {
   body: string;
   visual: TutorialVisualId | null;
   /** 実 UI を指すステップ */
-  target?: "games-stats-edge" | "profile-unit-coin";
+  target?: "games-stats-edge" | "profile-unit-coin" | "profile-career-tab";
 };
 
-/** 0–1: グループ / 2–5: プロフィール / 6–7: 試合 */
+/** スクワッド案内があるときだけ 0–1 がグループ。公開まで全部プロフィール */
 export function horizonStepHost(step: number): HorizonStepHost {
-  if (step <= 1) return "groups";
-  if (step <= 5) return "profile";
-  return "games";
+  if (HORIZON_INCLUDE_SQUAD_BATTLE && step <= 1) return "groups";
+  return "profile";
 }
 
 export function buildHorizonFeatureSteps(
   p: HorizonPracticeCopy
 ): HorizonFeatureStep[] {
+  const squad: HorizonFeatureStep[] = HORIZON_INCLUDE_SQUAD_BATTLE
+    ? [
+        {
+          title: p.horizonSquadWhatTitle,
+          body: p.horizonSquadWhatBody,
+          visual: "groups",
+        },
+        {
+          title: p.horizonSquadHowTitle,
+          body: p.horizonSquadHowBody,
+          visual: "groups",
+        },
+      ]
+    : [];
   return [
-    {
-      title: p.horizonSquadWhatTitle,
-      body: p.horizonSquadWhatBody,
-      visual: "groups",
-    },
-    {
-      title: p.horizonSquadHowTitle,
-      body: p.horizonSquadHowBody,
-      visual: "groups",
-    },
+    ...squad,
     {
       title: p.horizonUnitWhatTitle,
       body: p.horizonUnitWhatBody,
@@ -75,22 +88,13 @@ export function buildHorizonFeatureSteps(
       title: p.horizonCareerWhatTitle,
       body: p.horizonCareerWhatBody,
       visual: "horizon-career",
+      target: "profile-career-tab",
     },
     {
       title: p.horizonCareerHowTitle,
       body: p.horizonCareerHowBody,
       visual: "horizon-career",
-    },
-    {
-      title: p.horizonStatsWhatTitle,
-      body: p.horizonStatsWhatBody,
-      visual: "horizon-stats",
-    },
-    {
-      title: p.horizonStatsHowTitle,
-      body: p.horizonStatsHowBody,
-      visual: null,
-      target: "games-stats-edge",
+      target: "profile-career-tab",
     },
   ];
 }
@@ -100,6 +104,18 @@ export function horizonFeatureProgressLabel(
   tag: string,
   stepIndex: number
 ): string | null {
-  if (!baseProgress) return null;
+  if (!baseProgress) return `${tag} ${stepIndex + 1}/${HORIZON_FEATURE_STEP_COUNT}`;
   return `${baseProgress} · ${tag} ${stepIndex + 1}/${HORIZON_FEATURE_STEP_COUNT}`;
+}
+
+/** 新機能だけ: 試合 STATS のあと horizon（UNIT / キャリア） */
+export function featuresTrackTotalSteps(): number {
+  return HORIZON_FEATURE_STEP_COUNT + 1;
+}
+
+export function featuresTrackProgressLabel(
+  tag: string,
+  stepIndex: number
+): string {
+  return `${tag} ${stepIndex + 1}/${featuresTrackTotalSteps()}`;
 }

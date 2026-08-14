@@ -11,6 +11,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -26,10 +27,16 @@ import {
   TUTORIAL_COACH_CALLOUT_S,
   TUTORIAL_COACH_SCRIM_S,
   TUTORIAL_CYAN,
+  TUTORIAL_FEATURE_ACCENT,
+  TUTORIAL_FEATURE_ACCENT_DEEP,
+  TUTORIAL_FEATURE_ACCENT_SOFT,
   TUTORIAL_FLOAT_PERIOD_S,
   TUTORIAL_FLOAT_Y_PX,
   TUTORIAL_PULSE_PERIOD_S,
   TUTORIAL_SCRIM_OPACITY,
+  TUTORIAL_WELCOME_AUTO_FLY_DELAY_S,
+  TUTORIAL_WELCOME_GATHER_EASE,
+  TUTORIAL_WELCOME_PART_S,
 } from "@/lib/tutorial/tutorialMotion";
 import { scrollTutorialTargetIntoViewAsync } from "@/lib/tutorial/scrollTutorialTargetIntoView";
 import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
@@ -67,6 +74,17 @@ type Props = {
   /** 機能確認用: 前のステップへ戻る */
   onBack?: () => void;
   backLabel?: string;
+  /** welcome の二択など、次へと並べる副ボタン */
+  altNextLabel?: string;
+  onAltNext?: () => void;
+  /** welcome「画面を案内」/「新機能だけ」: カメラ前進の開始 */
+  onWelcomeFlyStart?: (dest: "full" | "features") => void;
+  /** welcome を試合ページと同じ 3D カメラに載せる。
+   * true のとき Portal / 独自暗幕 / 独自 fly をしない。
+   */
+  embedInCamera?: boolean;
+  /** プロフィール引き渡し時など、マウント後に自動でカメラ前進 */
+  autoWelcomeFly?: "full" | "features";
   /** 次へボタンを出さず、ユーザー操作待ちのとき */
   waitHint?: string | null;
   /** false で穴の枠線を出さない（PulseHint と二重になるとき） */
@@ -81,6 +99,11 @@ type Props = {
   visual?: TutorialVisualId | null;
   /** 主要フェーズ進捗（例: 3 / 11） */
   progressLabel?: string | null;
+  skipConfirmTitle?: string | null;
+  skipConfirmBody?: string | null;
+  skipConfirmStay?: string | null;
+  skipConfirmLeave?: string | null;
+  accentTone?: "cyan" | "feature";
   children?: ReactNode;
 };
 
@@ -171,9 +194,81 @@ const CENTER_CALLOUT_STYLE: CSSProperties = {
   transform: "translate(-50%, -50%)",
 };
 
+/** welcome はタブバー上の領域で中央揃え（画面全体の 50% だと沈む） */
+const WELCOME_CALLOUT_STYLE: CSSProperties = {
+  position: "fixed",
+  left: 0,
+  right: 0,
+  top: 0,
+  bottom:
+    "max(var(--bottom-nav-clearance), calc(26px + 72px + env(safe-area-inset-bottom, 0px)))",
+  zIndex: 1000061,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "28px 12px 16px",
+  boxSizing: "border-box",
+};
+
 const CALLOUT_GAP = 14;
 const CALLOUT_EST_H = 280;
 const CALLOUT_EDGE = 16 + TUTORIAL_FLOAT_Y_PX;
+
+function WelcomeFloat({
+  children,
+  delay = 0,
+  z = 28,
+  className,
+  active = true,
+  fromY = 28,
+  fromX = 0,
+  gather = true,
+}: {
+  children: ReactNode;
+  delay?: number;
+  z?: number;
+  className?: string;
+  active?: boolean;
+  fromY?: number;
+  fromX?: number;
+  gather?: boolean;
+}) {
+  const reduceMotion = useReducedMotion() === true;
+  if (!active) {
+    return <div className={className}>{children}</div>;
+  }
+  return (
+    <div
+      className={className}
+      style={{
+        transform: `translateZ(${z}px)`,
+        transformStyle: "preserve-3d",
+      }}
+    >
+      <motion.div
+        style={{
+          filter: [
+            `drop-shadow(0 ${10 + z * 0.14}px ${18 + z * 0.22}px rgba(0,0,0,0.62))`,
+            `drop-shadow(0 2px 0 rgba(0,0,0,0.35))`,
+          ].join(" "),
+        }}
+        initial={
+          reduceMotion || !gather
+            ? false
+            : { opacity: 0, y: fromY, x: fromX, scale: 0.96 }
+        }
+        animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+        transition={{
+          duration: TUTORIAL_WELCOME_PART_S,
+          delay,
+          ease: TUTORIAL_WELCOME_GATHER_EASE,
+        }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
 
 /** 中央に置くと穴を塞ぐ対象（試合カード等）は近くに寄せる */
 function buildNearTargetCalloutStyle(
@@ -224,23 +319,89 @@ export default function TutorialLiveCoach({
   onNext,
   onBack,
   backLabel,
+  altNextLabel,
+  onAltNext,
+  onWelcomeFlyStart,
+  embedInCamera = false,
+  autoWelcomeFly,
   waitHint = null,
   showHoleRing = true,
   allowInteractBehind = false,
   onTargetPress,
   visual = null,
   progressLabel = null,
+  skipConfirmTitle = null,
+  skipConfirmBody = null,
+  skipConfirmStay = null,
+  skipConfirmLeave = null,
+  accentTone = "cyan",
   children,
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const [hole, setHole] = useState<Rect | null>(null);
   const [focusRect, setFocusRect] = useState<Rect | null>(null);
   const [calloutBox, setCalloutBox] = useState<Rect | null>(null);
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+  /** welcome「画面を案内」: カメラがモーダルを追い抜いている */
+  const [welcomeFly, setWelcomeFly] = useState(false);
+  const welcomeFlyRef = useRef(false);
+  const onNextRef = useRef(onNext);
+  onNextRef.current = onNext;
+  const onAltNextRef = useRef(onAltNext);
+  onAltNextRef.current = onAltNext;
+  const onWelcomeFlyStartRef = useRef(onWelcomeFlyStart);
+  onWelcomeFlyStartRef.current = onWelcomeFlyStart;
   const reduceMotion = useReducedMotion() === true;
+  const isFeatureTone = accentTone === "feature";
+  const accent = isFeatureTone ? TUTORIAL_FEATURE_ACCENT : TUTORIAL_CYAN;
+  const accentSoft = isFeatureTone ? TUTORIAL_FEATURE_ACCENT_SOFT : "#5CFFF8";
+  const accentDeep = isFeatureTone ? TUTORIAL_FEATURE_ACCENT_DEEP : "#00D4E8";
+  const requestSkip = () => {
+    if (skipConfirmTitle && skipConfirmBody) {
+      setSkipConfirmOpen(true);
+      return;
+    }
+    onSkip();
+  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setSkipConfirmOpen(false);
+      setWelcomeFly(false);
+      welcomeFlyRef.current = false;
+    }
+  }, [open, title, target]);
+
+  const beginWelcomeGuide = useCallback(
+    (dest: "full" | "features") => {
+      if (welcomeFlyRef.current) return;
+      const finish =
+        dest === "features" ? onAltNextRef.current : onNextRef.current;
+      if (!finish) return;
+      if (reduceMotion || !onWelcomeFlyStartRef.current) {
+        finish();
+        return;
+      }
+      welcomeFlyRef.current = true;
+      onWelcomeFlyStartRef.current(dest);
+      setWelcomeFly(true);
+    },
+    [reduceMotion]
+  );
+
+  const didAutoFly = useRef(false);
+  useEffect(() => {
+    if (!autoWelcomeFly || !open || didAutoFly.current) return;
+    const id = window.setTimeout(() => {
+      didAutoFly.current = true;
+      beginWelcomeGuide(autoWelcomeFly);
+    }, TUTORIAL_WELCOME_AUTO_FLY_DELAY_S * 1000);
+    return () => window.clearTimeout(id);
+  }, [autoWelcomeFly, beginWelcomeGuide, open]);
 
   const measure = useCallback(() => {
     if (!target) {
@@ -339,17 +500,22 @@ export default function TutorialLiveCoach({
     };
   }, [open, measure, target, reduceMotion]);
 
-  if (!mounted) return null;
+  if (!mounted && !embedInCamera) return null;
 
   /** ターゲットなし／画面全体説明は全面ぼかし禁止 */
-  const softBackdrop = allowInteractBehind || !target;
+  const softBackdrop = allowInteractBehind;
   const isWelcomeBriefing = visual === "welcome" && !target;
   /**
    * - 画面全体説明: 下（背後を見せる）
    * - ナビ誘導・対象なし: 中央 + 誘導線
+   * - CAREER タブ: 中央カードを残しつつ実 UI を穴で囲む
    * - 試合カード等: 穴の近く（中央だと被る）
    */
-  const calloutStyle: CSSProperties = allowInteractBehind
+  const calloutStyle: CSSProperties = isWelcomeBriefing
+    ? embedInCamera
+      ? { ...WELCOME_CALLOUT_STYLE, position: "absolute" }
+      : WELCOME_CALLOUT_STYLE
+    : allowInteractBehind
     ? {
         position: "fixed",
         left: "50%",
@@ -359,7 +525,10 @@ export default function TutorialLiveCoach({
         zIndex: 1000061,
         transform: "translateX(-50%)",
       }
-    : !target || target.startsWith("nav-") || !hole
+    : !target ||
+        target.startsWith("nav-") ||
+        !hole ||
+        target === "profile-career-tab"
       ? CENTER_CALLOUT_STYLE
       : buildNearTargetCalloutStyle(hole, calloutBox?.height ?? CALLOUT_EST_H);
 
@@ -369,44 +538,35 @@ export default function TutorialLiveCoach({
     (Math.abs(focusRect.height - hole.height) > 16 ||
       Math.abs(focusRect.width - hole.width) > 16);
 
-  return createPortal(
+  const coachTree = (
     <AnimatePresence>
       {open ? (
         <motion.div
           key="tutorial-live-coach"
-          className="pointer-events-none fixed inset-0 z-[1000060]"
+          className={
+            embedInCamera
+              ? "pointer-events-none absolute inset-0 overflow-visible"
+              : "pointer-events-none fixed inset-0 z-[1000060] overflow-visible"
+          }
           style={{ isolation: "isolate" }}
         >
-          {/* 背景: welcome は briefing ディム／ソフトは下フェード／スポットライトは穴あき */}
+          {/* 背景: soft=下フェード／穴あり=スポット／welcome等=全面ディム */}
           {softBackdrop ? (
-            <>
-              {isWelcomeBriefing ? (
-                <motion.div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0"
-                  style={{ background: "rgba(2,6,12,0.58)" }}
-                  initial={reduceMotion ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: TUTORIAL_COACH_SCRIM_S, ease: EASE }}
-                />
-              ) : null}
-              <motion.div
-                aria-hidden
-                className={cn(
-                  "pointer-events-none absolute inset-x-0 bottom-0",
-                  isWelcomeBriefing ? "h-[55%]" : "h-[38%]"
-                )}
-                style={{
-                  background:
-                    "linear-gradient(to top, rgba(2,6,12,0.42) 0%, rgba(2,6,12,0.14) 55%, transparent 100%)",
-                }}
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: TUTORIAL_COACH_SCRIM_S, ease: EASE }}
-              />
-            </>
+            <motion.div
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute inset-x-0 bottom-0",
+                "h-[38%]"
+              )}
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(2,6,12,0.42) 0%, rgba(2,6,12,0.14) 55%, transparent 100%)",
+              }}
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: TUTORIAL_COACH_SCRIM_S, ease: EASE }}
+            />
           ) : hole ? (
             <motion.div
               className="pointer-events-none absolute inset-0"
@@ -470,8 +630,8 @@ export default function TutorialLiveCoach({
                   height: hole.height,
                   boxShadow: showHoleRing
                     ? showFocusNav
-                      ? `0 0 0 1px ${TUTORIAL_CYAN}55, 0 0 14px ${TUTORIAL_CYAN}22`
-                      : `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 22px ${TUTORIAL_CYAN}66`
+                      ? `0 0 0 1px ${accent}55, 0 0 14px ${accent}22`
+                      : `0 0 0 2px ${accent}, 0 0 22px ${accent}66`
                     : undefined,
                 }}
               />
@@ -493,16 +653,16 @@ export default function TutorialLiveCoach({
                     style={{
                       clipPath: CYBER_CHAMFER_CLIP,
                       WebkitClipPath: CYBER_CHAMFER_CLIP,
-                      boxShadow: `0 0 0 2px ${TUTORIAL_CYAN}`,
+                      boxShadow: `0 0 0 2px ${accent}`,
                     }}
                     animate={
                       reduceMotion
                         ? undefined
                         : {
                             boxShadow: [
-                              `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 12px ${TUTORIAL_CYAN}66`,
-                              `0 0 0 3px ${TUTORIAL_CYAN}, 0 0 26px ${TUTORIAL_CYAN}aa`,
-                              `0 0 0 2px ${TUTORIAL_CYAN}, 0 0 12px ${TUTORIAL_CYAN}66`,
+                              `0 0 0 2px ${accent}, 0 0 12px ${accent}66`,
+                              `0 0 0 3px ${accent}, 0 0 26px ${accent}aa`,
+                              `0 0 0 2px ${accent}, 0 0 12px ${accent}66`,
                             ],
                           }
                     }
@@ -518,9 +678,9 @@ export default function TutorialLiveCoach({
                       "absolute -top-3 left-1/2 max-w-[min(220px,70vw)] -translate-x-1/2 truncate rounded px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
                     )}
                     style={{
-                      background: TUTORIAL_CYAN,
+                      background: accent,
                       color: "#050508",
-                      boxShadow: `0 0 14px ${TUTORIAL_CYAN}99`,
+                      boxShadow: `0 0 14px ${accent}99`,
                     }}
                     animate={
                       reduceMotion ? undefined : { y: [0, -3, 0] }
@@ -554,17 +714,45 @@ export default function TutorialLiveCoach({
                 />
               ) : null}
             </motion.div>
-          ) : null}
+          ) : isWelcomeBriefing && embedInCamera ? null : (
+            <motion.div
+              aria-hidden
+              className="pointer-events-auto absolute inset-0"
+              style={
+                isWelcomeBriefing
+                  ? {
+                      background: "rgba(2, 6, 12, 0.4)",
+                      backdropFilter: "blur(10px) saturate(1.08)",
+                      WebkitBackdropFilter: "blur(10px) saturate(1.08)",
+                    }
+                  : {
+                      background: "rgba(2,6,12,0.72)",
+                    }
+              }
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: TUTORIAL_COACH_SCRIM_S, ease: EASE }}
+            />
+          )}
 
           {/* transform は外枠固定。motion は内側のみ（中央ズレ防止） */}
           <div
             id="tutorial-live-coach-callout"
             ref={calloutRef}
             className="pointer-events-auto"
-            style={calloutStyle}
+            style={{
+              ...calloutStyle,
+              ...(isWelcomeBriefing
+                ? { pointerEvents: welcomeFly ? "none" : "auto" }
+                : null),
+            }}
           >
             <motion.div
-              initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+              className={isWelcomeBriefing ? "w-full max-w-[440px]" : undefined}
+              initial={
+                reduceMotion || isWelcomeBriefing ? false : { opacity: 0, y: 16 }
+              }
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{
@@ -574,26 +762,34 @@ export default function TutorialLiveCoach({
               }}
             >
               <motion.div
-                className="relative isolate overflow-hidden border border-cyan-400/40 p-4"
-                style={{
-                  clipPath: CYBER_CHAMFER_CLIP,
-                  WebkitClipPath: CYBER_CHAMFER_CLIP,
-                  background: isWelcomeBriefing
-                    ? "rgba(4, 12, 20, 0.96)"
-                    : "rgba(6, 14, 24, 0.94)",
-                  boxShadow: isWelcomeBriefing
-                    ? `0 0 0 1px ${TUTORIAL_CYAN}55, 0 18px 52px rgba(0,0,0,0.5), 0 0 36px ${TUTORIAL_CYAN}28, inset 0 1px 0 rgba(255,255,255,0.14)`
-                    : `0 0 0 1px ${TUTORIAL_CYAN}33, 0 16px 48px rgba(0,0,0,0.45), 0 0 28px ${TUTORIAL_CYAN}20, inset 0 1px 0 rgba(255,255,255,0.14)`,
-                }}
+                className={cn(
+                  "relative isolate",
+                  isWelcomeBriefing
+                    ? "overflow-visible px-1 py-1"
+                    : "overflow-hidden border border-cyan-400/50 p-4"
+                )}
+                style={
+                  isWelcomeBriefing
+                    ? {
+                        background: "transparent",
+                        transformStyle: "preserve-3d",
+                      }
+                    : {
+                        clipPath: CYBER_CHAMFER_CLIP,
+                        WebkitClipPath: CYBER_CHAMFER_CLIP,
+                        background: "rgba(6, 14, 24, 0.94)",
+                        boxShadow: `0 0 0 1px ${accent}33, 0 16px 48px rgba(0,0,0,0.45), 0 0 28px ${accent}20, inset 0 1px 0 rgba(255,255,255,0.14)`,
+                      }
+                }
                 animate={
-                  !reduceMotion && visual === "welcome"
+                  !reduceMotion && visual === "welcome" && !isWelcomeBriefing
                     ? {
                         y: [0, -TUTORIAL_FLOAT_Y_PX, 0],
                       }
                     : undefined
                 }
                 transition={
-                  !reduceMotion && visual === "welcome"
+                  !reduceMotion && visual === "welcome" && !isWelcomeBriefing
                     ? {
                         duration: TUTORIAL_FLOAT_PERIOD_S,
                         repeat: Infinity,
@@ -602,121 +798,288 @@ export default function TutorialLiveCoach({
                     : undefined
                 }
               >
-                {isWelcomeBriefing ? (
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-3 top-0 h-0.5 bg-cyan-300"
-                    style={{ boxShadow: `0 0 10px ${TUTORIAL_CYAN}` }}
-                  />
-                ) : null}
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span
-                    className={cn(
-                      nameOxanium.className,
-                      "text-[9px] font-bold uppercase tracking-[0.2em]"
-                    )}
-                    style={{ color: TUTORIAL_CYAN }}
-                  >
-                    {progressLabel
-                      ? isWelcomeBriefing
-                        ? `Mission · ${progressLabel}`
-                        : `Tutorial · ${progressLabel}`
-                      : "Tutorial"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onSkip}
-                    className={cn(
-                      nameOxanium.className,
-                      "text-[10px] font-bold uppercase tracking-wider text-white/45"
-                    )}
-                  >
-                    {skipLabel}
-                  </button>
-                </div>
-                {visual ? (
-                  <div className="mb-3">
-                    <TutorialSlideVisual visual={visual} className="max-w-none" />
-                  </div>
-                ) : null}
-                <h2
-                  className={cn(
-                    jp.className,
-                    "mb-1 text-[17px] font-bold text-white"
-                  )}
+                <WelcomeFloat
+                  active={isWelcomeBriefing}
+                  delay={0.04}
+                  fromY={-22}
+                  z={22}
+                  className={cn("mb-1", isWelcomeBriefing && "mb-5")}
                 >
-                  {title}
-                </h2>
-                <TutorialRichBody
-                  text={body}
-                  className={cn(
-                    nameRajdhani.className,
-                    "mb-3 text-[14px] leading-relaxed text-white/80"
-                  )}
-                />
-                {children}
-                {waitHint ? (
-                  <p
-                    className={cn(
-                      nameRajdhani.className,
-                      "text-center text-[12px] text-cyan-200/75"
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={cn(
+                        nameOxanium.className,
+                        "text-[9px] font-bold uppercase tracking-[0.2em]"
+                      )}
+                      style={{ color: accent }}
+                    >
+                      {skipConfirmOpen
+                        ? "Confirm"
+                        : progressLabel
+                          ? isWelcomeBriefing
+                            ? `Mission · ${progressLabel}`
+                            : isFeatureTone
+                              ? `New · ${progressLabel}`
+                              : `Tutorial · ${progressLabel}`
+                          : isFeatureTone
+                            ? "New"
+                            : "Tutorial"}
+                    </span>
+                    {!skipConfirmOpen ? (
+                      <button
+                        type="button"
+                        onClick={requestSkip}
+                        className={cn(
+                          nameOxanium.className,
+                          "text-[10px] font-bold uppercase tracking-wider text-white/45"
+                        )}
+                      >
+                        {skipLabel}
+                      </button>
+                    ) : (
+                      <span />
                     )}
-                  >
-                    {waitHint}
-                  </p>
-                ) : null}
-                {onBack || (onNext && nextLabel) ? (
-                  <div className="mt-1 flex gap-2">
-                    {onBack && backLabel ? (
-                      <button
-                        type="button"
-                        onClick={onBack}
-                        className={cn(
-                          nameOxanium.className,
-                          onNext && nextLabel
-                            ? "shrink-0 border border-white/20 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white/70"
-                            : "w-full border border-white/20 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white/70"
-                        )}
-                        style={{
-                          clipPath: CYBER_CHAMFER_CLIP,
-                          WebkitClipPath: CYBER_CHAMFER_CLIP,
-                        }}
-                      >
-                        {backLabel}
-                      </button>
-                    ) : null}
-                    {onNext && nextLabel ? (
-                      <button
-                        type="button"
-                        onClick={onNext}
-                        className={cn(
-                          nameOxanium.className,
-                          "min-w-0 flex-1 py-2.5 text-[12px] font-black uppercase tracking-[0.12em]",
-                          isWelcomeBriefing && "py-3.5 tracking-[0.18em] text-[13px]"
-                        )}
-                        style={{
-                          background: isWelcomeBriefing
-                            ? `linear-gradient(90deg, #5CFFF8 0%, ${TUTORIAL_CYAN} 50%, #00D4E8 100%)`
-                            : TUTORIAL_CYAN,
-                          color: "#050508",
-                          clipPath: CYBER_CHAMFER_CLIP,
-                          WebkitClipPath: CYBER_CHAMFER_CLIP,
-                          boxShadow: isWelcomeBriefing
-                            ? `0 0 22px ${TUTORIAL_CYAN}66`
-                            : undefined,
-                        }}
-                      >
-                        {nextLabel}
-                      </button>
-                    ) : null}
                   </div>
-                ) : null}
+                </WelcomeFloat>
+                {skipConfirmOpen ? (
+                  <>
+                    <WelcomeFloat
+                      active={isWelcomeBriefing}
+                      delay={0.12}
+                      z={32}
+                      className="mb-1"
+                    >
+                      <h2
+                        className={cn(
+                          jp.className,
+                          "text-[17px] font-bold text-white"
+                        )}
+                        style={
+                          isWelcomeBriefing
+                            ? {
+                                textShadow: "0 10px 24px rgba(0,0,0,0.75)",
+                              }
+                            : undefined
+                        }
+                      >
+                        {skipConfirmTitle}
+                      </h2>
+                    </WelcomeFloat>
+                    <WelcomeFloat
+                      active={isWelcomeBriefing}
+                      delay={0.22}
+                      z={26}
+                      className="mb-3"
+                    >
+                      <TutorialRichBody
+                        text={skipConfirmBody ?? ""}
+                        className={cn(
+                          nameRajdhani.className,
+                          "text-[14px] leading-relaxed text-white/80"
+                        )}
+                      />
+                    </WelcomeFloat>
+                    <WelcomeFloat active={isWelcomeBriefing} delay={0.36} z={40}>
+                      <div className="mt-1 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSkipConfirmOpen(false)}
+                          className={cn(
+                            nameOxanium.className,
+                            "shrink-0 border border-white/20 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white/70"
+                          )}
+                          style={{
+                            clipPath: CYBER_CHAMFER_CLIP,
+                            WebkitClipPath: CYBER_CHAMFER_CLIP,
+                            boxShadow: isWelcomeBriefing
+                              ? "0 10px 22px rgba(0,0,0,0.5)"
+                              : undefined,
+                          }}
+                        >
+                          {skipConfirmStay}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSkipConfirmOpen(false);
+                            onSkip();
+                          }}
+                          className={cn(
+                            nameOxanium.className,
+                            "min-w-0 flex-1 py-2.5 text-[12px] font-black uppercase tracking-[0.12em]"
+                          )}
+                          style={{
+                            background: "rgba(248,113,113,0.92)",
+                            color: "#050508",
+                            clipPath: CYBER_CHAMFER_CLIP,
+                            WebkitClipPath: CYBER_CHAMFER_CLIP,
+                            boxShadow: isWelcomeBriefing
+                              ? "0 8px 0 #b91c1c, 0 16px 28px rgba(0,0,0,0.55)"
+                              : undefined,
+                          }}
+                        >
+                          {skipConfirmLeave ?? skipLabel}
+                        </button>
+                      </div>
+                    </WelcomeFloat>
+                  </>
+                ) : (
+                  <>
+                    {visual ? (
+                      <WelcomeFloat
+                        active={isWelcomeBriefing}
+                        delay={0}
+                        fromY={0}
+                        gather={false}
+                        z={48}
+                        className={isWelcomeBriefing ? "mb-7" : "mb-3"}
+                      >
+                        <TutorialSlideVisual visual={visual} className="max-w-none" />
+                      </WelcomeFloat>
+                    ) : null}
+                    {!isWelcomeBriefing ? (
+                    <WelcomeFloat
+                      active={isWelcomeBriefing}
+                      delay={0.62}
+                      fromY={26}
+                      z={36}
+                      className={isWelcomeBriefing ? "mb-2" : undefined}
+                    >
+                      <h2
+                        className={cn(
+                          jp.className,
+                          isWelcomeBriefing
+                            ? "text-center text-[22px] font-bold text-white text-balance"
+                            : "mb-1 text-[17px] font-bold text-white"
+                        )}
+                        style={
+                          isWelcomeBriefing
+                            ? {
+                                textShadow: "0 10px 24px rgba(0,0,0,0.75)",
+                              }
+                            : undefined
+                        }
+                      >
+                        {title}
+                      </h2>
+                    </WelcomeFloat>
+                    ) : null}
+                    <WelcomeFloat
+                      active={isWelcomeBriefing}
+                      delay={isWelcomeBriefing ? 0.62 : 0.78}
+                      fromY={22}
+                      z={28}
+                      className={isWelcomeBriefing ? "mb-7" : undefined}
+                    >
+                      <TutorialRichBody
+                        text={body}
+                        className={cn(
+                          isWelcomeBriefing ? jp.className : nameRajdhani.className,
+                          isWelcomeBriefing
+                            ? "text-center text-[14px] leading-relaxed text-white/90 break-keep"
+                            : "mb-3 text-[14px] leading-relaxed text-white/80"
+                        )}
+                      />
+                    </WelcomeFloat>
+                    {children}
+                    {waitHint ? (
+                      <p
+                        className={cn(
+                          nameRajdhani.className,
+                          "text-center text-[12px] text-cyan-200/75"
+                        )}
+                      >
+                        {waitHint}
+                      </p>
+                    ) : null}
+                    {isWelcomeBriefing && onNext && nextLabel && !autoWelcomeFly ? (
+                      <div className="flex flex-col gap-6">
+                        <WelcomeFloat delay={0.94} fromY={36} z={48}>
+                          <button
+                            type="button"
+                            onClick={() => beginWelcomeGuide("full")}
+                            disabled={welcomeFly}
+                            className={cn(
+                              jp.className,
+                              "tutorial-welcome-cta tutorial-welcome-cta--primary"
+                            )}
+                          >
+                            {nextLabel}
+                          </button>
+                        </WelcomeFloat>
+                        {onAltNext && altNextLabel ? (
+                          <WelcomeFloat delay={1.08} fromY={40} z={40}>
+                            <button
+                              type="button"
+                              onClick={() => beginWelcomeGuide("features")}
+                              disabled={welcomeFly}
+                              className={cn(
+                                jp.className,
+                                "tutorial-welcome-cta tutorial-welcome-cta--alt"
+                              )}
+                            >
+                              {altNextLabel}
+                            </button>
+                          </WelcomeFloat>
+                        ) : null}
+                      </div>
+                    ) : onBack || (onNext && nextLabel) ? (
+                      <div className="mt-1 flex gap-2">
+                        {onBack && backLabel ? (
+                          <button
+                            type="button"
+                            onClick={onBack}
+                            className={cn(
+                              nameOxanium.className,
+                              onNext && nextLabel
+                                ? "shrink-0 border border-white/20 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white/70"
+                                : "w-full border border-white/20 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white/70"
+                            )}
+                            style={{
+                              clipPath: CYBER_CHAMFER_CLIP,
+                              WebkitClipPath: CYBER_CHAMFER_CLIP,
+                            }}
+                          >
+                            {backLabel}
+                          </button>
+                        ) : null}
+                        {onNext && nextLabel ? (
+                          <button
+                            type="button"
+                            onClick={onNext}
+                            className={cn(
+                              nameOxanium.className,
+                              "min-w-0 flex-1 py-2.5 text-[12px] font-black uppercase tracking-[0.12em]",
+                              isFeatureTone &&
+                                "py-3.5 tracking-[0.18em] text-[13px]"
+                            )}
+                            style={{
+                              background: isFeatureTone
+                                ? `linear-gradient(90deg, ${accentSoft} 0%, ${accent} 50%, ${accentDeep} 100%)`
+                                : accent,
+                              color: "#050508",
+                              clipPath: CYBER_CHAMFER_CLIP,
+                              WebkitClipPath: CYBER_CHAMFER_CLIP,
+                              boxShadow: isFeatureTone
+                                ? `0 0 22px ${accent}66`
+                                : undefined,
+                            }}
+                          >
+                            {nextLabel}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </>
+                )}
               </motion.div>
             </motion.div>
           </div>
         </motion.div>
       ) : null}
-    </AnimatePresence>,
-    document.body
+    </AnimatePresence>
   );
+
+  if (embedInCamera) return coachTree;
+  return createPortal(coachTree, document.body);
 }

@@ -39,6 +39,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
+import { nameBebas } from "@/lib/fonts";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
 import { fetchWcTeamRecordMap } from "@/lib/legacyWcWebShims";
@@ -708,9 +709,17 @@ export default function ScheduleList({
     return (
       <div
         role="status"
-        className="rounded-xl border border-white/10 bg-white/4 px-4 py-12 text-center text-sm leading-relaxed text-white/70 md:px-6"
+        aria-label={emptyHint ?? m.games.noGames}
+        className="flex min-h-[min(52dvh,480px)] w-full items-center justify-center px-4"
       >
-        {emptyHint ?? m.games.noGames}
+        <p
+          className={[
+            nameBebas.className,
+            "text-center text-[clamp(1.75rem,6vw,2.75rem)] leading-none tracking-[0.2em] text-[#5c5c5c]",
+          ].join(" ")}
+        >
+          NO DATA
+        </p>
       </div>
     );
   }

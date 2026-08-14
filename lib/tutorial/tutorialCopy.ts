@@ -43,7 +43,7 @@ export const TUTORIAL_SLIDES: readonly TutorialSlide[] = [
   {
     id: "welcome",
     kicker: "WELCOME",
-    title: "UNITERZへようこそ",
+    title: "ウェルカム to UNITERZ",
     body: "試合の結果を予想してポイントを稼ぎ、ランキングを競うアプリです。まずは基本の流れを見てみましょう。",
     visual: "welcome",
   },

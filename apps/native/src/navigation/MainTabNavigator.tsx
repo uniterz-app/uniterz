@@ -18,6 +18,10 @@ import {
   subscribeAppBrandShelfHidden,
 } from "../../../../lib/ui/appBrandShelfVisibility";
 import {
+  getTutorialWelcomeBrandHidden,
+  subscribeTutorialWelcomeBrandHidden,
+} from "../../../../lib/tutorial/tutorialWelcomeChrome";
+import {
   GamesStackScreen,
   ResultStackScreen,
   RankingsStackScreen,
@@ -43,6 +47,11 @@ export default function MainTabNavigator() {
     getAppBrandShelfHidden,
     () => false
   );
+  const welcomeBrandHidden = useSyncExternalStore(
+    subscribeTutorialWelcomeBrandHidden,
+    getTutorialWelcomeBrandHidden,
+    () => false
+  );
 
   const syncWordmarkFromTabState = useCallback(
     (state: NavigationState | PartialState<NavigationState> | undefined) => {
@@ -60,8 +69,10 @@ export default function MainTabNavigator() {
       <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
       <View style={styles.root}>
-        {brandShelfHidden ? (
-          <View style={{ height: insets.top }} pointerEvents="none" />
+        {brandShelfHidden || welcomeBrandHidden ? (
+          welcomeBrandHidden ? null : (
+            <View style={{ height: insets.top }} pointerEvents="none" />
+          )
         ) : (
           <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
         )}

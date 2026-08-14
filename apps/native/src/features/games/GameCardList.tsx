@@ -22,6 +22,7 @@ import {
   type GameCardEntranceVariant,
 } from "./useGameCardListRowEntrance";
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
+import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
 
 function matchRoundSideCode(roundLabel: string): string {
   const u = roundLabel.toUpperCase();
@@ -603,7 +604,15 @@ export default function GameCardList(props: GameCardListProps) {
   return (
     <View style={styles.listArea}>
       <View style={styles.listContent}>
-        {games.length === 0 ? <Text style={styles.body}>{t.noGames}</Text> : null}
+        {games.length === 0 ? (
+          <View
+            accessibilityRole="text"
+            accessibilityLabel={t.noGames}
+            style={emptyStyles.wrap}
+          >
+            <Text style={emptyStyles.label}>NO DATA</Text>
+          </View>
+        ) : null}
         {games.map((game, idx) => {
           const rowKey = String(game.id ?? "") || `game-${idx}`;
           return (
@@ -628,5 +637,22 @@ const rowStyles = StyleSheet.create({
     position: "relative",
     width: "100%",
     overflow: "visible",
+  },
+});
+
+/** 試合 0 件 — 中央 NO DATA（枠・説明文なし） */
+const emptyStyles = StyleSheet.create({
+  wrap: {
+    minHeight: 420,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+  },
+  label: {
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 36,
+    letterSpacing: 4,
+    color: "#5c5c5c",
+    includeFontPadding: false,
   },
 });

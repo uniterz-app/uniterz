@@ -18,13 +18,13 @@ export type UniterzLogoScatterMark = {
 
 /**
  * プロフィール縦カード用。
- * 主役は確定版（128%・上寄せ）を維持。残りはサイズ・不透明度・ぼかしを変えて散らす。
+ * 主役はカード内に収まる大きさ。残りはサイズ・不透明度・ぼかしを変えて散らす。
  */
 export const PROFILE_UNITERZ_LOGO_SCATTER: readonly UniterzLogoScatterMark[] = [
   {
     id: "hero",
-    // 単体時代: width 128% / top -2%（中心換算 ≈ 27.7%）
-    widthPct: 1.28,
+    // 128% だと左右が切れ、中央を食いすぎる
+    widthPct: 0.78,
     cyPct: 0.277,
     cxPct: 0.5,
     opacity: 0.92,

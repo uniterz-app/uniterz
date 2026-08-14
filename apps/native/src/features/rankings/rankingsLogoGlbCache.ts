@@ -1,4 +1,6 @@
 import { Asset } from "expo-asset";
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { UNITERZ_LOGO_GLB_ASSET } from "../../rankingsLogoAsset";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
@@ -14,6 +16,25 @@ function gltfResourcePathFromRemoteUrl(uri: string): string {
   return i >= 0 ? uri.slice(0, i + 1) : "";
 }
 
+/**
+ * three.js GLTFParser が `navigator.userAgent.match(...)` を前提にしている一方、
+ * RN では `userAgent` が undefined のことがありパースが落ちる。
+ */
+function ensureNavigatorUserAgentForThreeGltf() {
+  if (typeof navigator === "undefined") return;
+  if (typeof navigator.userAgent === "string") return;
+  try {
+    Object.defineProperty(navigator, "userAgent", {
+      value: "",
+      configurable: true,
+      enumerable: true,
+      writable: true,
+    });
+  } catch {
+    /* skip */
+  }
+}
+
 let bundledBuffer: ArrayBuffer | null = null;
 let bundledInflight: Promise<ArrayBuffer | null> | null = null;
 
@@ -21,6 +42,10 @@ let cachedUri: string | null = null;
 let cachedBuffer: ArrayBuffer | null = null;
 let inflightUri: string | null = null;
 let inflightPromise: Promise<ArrayBuffer | null> | null = null;
+
+/** パース済みシーン（マテリアル適用前）。clone して使う */
+let parsedSceneRoot: THREE.Group | null = null;
+let parseInflight: Promise<THREE.Group | null> | null = null;
 
 async function fetchRemoteGlb(uri: string): Promise<ArrayBuffer | null> {
   try {
@@ -38,7 +63,10 @@ async function loadBundledGlbBuffer(): Promise<ArrayBuffer | null> {
   bundledInflight = (async () => {
     try {
       const asset = Asset.fromModule(UNITERZ_LOGO_GLB_ASSET);
-      await asset.downloadAsync();
+      /** 既にローカルなら downloadAsync を待たない */
+      if (!asset.localUri) {
+        await asset.downloadAsync();
+      }
       const uri = asset.localUri ?? asset.uri;
       if (!uri) return null;
       const res = await fetch(uri);
@@ -55,11 +83,75 @@ async function loadBundledGlbBuffer(): Promise<ArrayBuffer | null> {
   return bundledInflight;
 }
 
+function parseGlbToScene(
+  buffer: ArrayBuffer,
+  resourcePath: string
+): Promise<THREE.Group | null> {
+  ensureNavigatorUserAgentForThreeGltf();
+  const loader = new GLTFLoader();
+  return new Promise((resolve) => {
+    try {
+      loader.parse(
+        buffer,
+        resourcePath,
+        (parsed) => {
+          const scene = (parsed as { scene?: THREE.Group }).scene;
+          resolve(scene ?? null);
+        },
+        () => resolve(null)
+      );
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
 /**
- * 同梱 GLB を最優先で先読み。失敗時のみリモートを並列で温める。
+ * バッファ取得 → GLTF パースまで先に済ませる。
+ * チュートリアル welcome の初回表示遅れを防ぐ。
+ */
+export async function ensureRankingsLogoGltfParsed(): Promise<THREE.Group | null> {
+  if (parsedSceneRoot) return parsedSceneRoot;
+  if (parseInflight) return parseInflight;
+
+  parseInflight = (async () => {
+    const bundled = await loadBundledGlbBuffer();
+    if (bundled) {
+      const scene = await parseGlbToScene(bundled, "");
+      if (scene) {
+        parsedSceneRoot = scene;
+        return scene;
+      }
+    }
+    const remote = getRankingsLogoGlbRemoteUrl();
+    if (remote) {
+      const loaded = await loadRankingsLogoGlbBuffer(remote);
+      if (loaded) {
+        const scene = await parseGlbToScene(loaded.buffer, loaded.resourcePath);
+        if (scene) {
+          parsedSceneRoot = scene;
+          return scene;
+        }
+      }
+    }
+    return null;
+  })().finally(() => {
+    parseInflight = null;
+  });
+
+  return parseInflight;
+}
+
+/** 同期取得（先読み済みなら即表示できる） */
+export function getCachedRankingsLogoGltfScene(): THREE.Group | null {
+  return parsedSceneRoot;
+}
+
+/**
+ * 同梱 GLB を最優先で先読みし、可能ならパースまで進める。
  */
 export function prefetchRankingsLogoGlb(): void {
-  void loadBundledGlbBuffer();
+  void ensureRankingsLogoGltfParsed();
   const uri = getRankingsLogoGlbRemoteUrl();
   if (!uri) return;
   if (cachedUri === uri && cachedBuffer) return;

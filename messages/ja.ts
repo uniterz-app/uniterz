@@ -928,6 +928,12 @@ const ja = {
 
   tutorial: {
     skip: "スキップ",
+    skipConfirmTitle: "チュートリアルをスキップしますか？",
+    skipConfirmBody:
+      "本当にスキップしますか？\nあとからサイドメニューの「チュートリアル」から、もう一度確認できます。",
+    skipConfirmStay: "続ける",
+    skipConfirmLeave: "スキップする",
+    restartFromMenu: "チュートリアル",
     back: "戻る",
     next: "次へ",
     seeGames: "試合を見る",
@@ -952,9 +958,23 @@ const ja = {
       tabRankings: "ランキング",
       tabGroups: "グループ",
       tabProfile: "マイ",
-      welcomeTitle: "予想してポイントを稼ごう",
+      welcomeTitle: "ウェルカム to UNITERZ",
       welcomeBody:
-        "**的中で順位アップ。** まず1試合で投稿→リザルト→ランキングを体験します。",
+        "試合を予想してポイントを稼ぎ、**ランキング**を競うアプリです。\n各画面の案内か、新機能だけか選んでください。",
+      welcomeFullCta: "画面を案内",
+      welcomeFeaturesCta: "新機能だけ",
+      gamesTitle: "試合タブ",
+      gamesBody:
+        "今日の試合が並びます。**カードをタップ**すると予想画面が開きます。勝敗はスコアから自動です。",
+      gamesPickupTitle: "ピックアップゲーム",
+      gamesPickupBody:
+        "週ごとに選ばれた試合です。**Pick Up ランキング**はこの試合への予想だけで決まります。勝率ランキングは、ピックアップの **65%以上** に予想した人が対象です。",
+      gamesStatsTitle: "STATS",
+      gamesStatsBody:
+        "右端の黄色い **STATS** から、チームや選手のスタッツを開けます。右端をスワイプしても同じです。",
+      resultsTitle: "リザルト",
+      resultsBody:
+        "試合後、ここに答え合わせが出ます。**大きい数字が結果、下が自分の予想。** 右上が HIT / MISS です。",
       tapTitle: "光るカードをタップ",
       tapBody:
         "**モック試合**です（本番には影響しません）。カードをタップして予想を始めましょう。",
@@ -980,8 +1000,9 @@ const ja = {
       predictToolsWait: "上のタブをタップして切り替えられます",
       predictBonusTitle: "最多得点者ボーナス",
       predictBonusBody: "最多得点者を当てると **+2**。候補から選べます。",
-      predictEnterTitle: "得点を入力",
-      predictEnterBody: "**HOME と AWAY** の両方に予想得点を入れましょう。",
+      predictEnterTitle: "情報を見て予想しよう",
+      predictEnterBody:
+        "スタッツや選手情報をヒントに、**HOME / AWAY** の得点を入れてみましょう。",
       predictEnterWait: "両方入れると送信ボタンが光ります",
       predictSubmitTitle: "ここを押して投稿",
       predictSubmitBody: "予想を送ります。**HIT / MISS はリザルト**で確認できます。",
@@ -1010,21 +1031,23 @@ const ja = {
       gotoProfileBody: "次は **プロフィール**です。下のタブか「次へ」で進めます。",
       resultHitTitle: "HIT！的中",
       resultHitBody:
-        "勝敗的中です。**{bonus}+{pts}pt。** 予想が近いほどスコアも伸びます。",
-      resultCardTapHint: "カードをタップして詳細を見る",
+        "右上の **HIT** が的中サイン。中央の大きい数字が**最終スコア**、下が**あなたの予想**。下段の **Upset / Score** が今回の加点です。{bonus}+{pts}pt。",
+      resultCardTapHint: "右の DETAIL をタップして詳しく見る",
+      resultCardTapHintWeb: "カードをタップして詳細を見る",
       resultScoreBonus: "スコア完全一致ボーナス！",
       resultMissTitle: "MISS…はずれ",
-      resultMissBody: "勝敗は外れました。**リザルト**で確認し、次の試合で取り返しましょう。",
+      resultMissBody:
+        "右上の **MISS** は勝敗はずれ。それでも下段の **Upset / Score** で次の予想に活かせます。",
       resultDetailTitle: "リザルトの中身",
       resultDetailBody: "**最終スコア・予想・得点内訳**です。上から確認しましょう。",
-      resultDetailScoreTitle: "最終スコアと予想",
+      resultDetailScoreTitle: "カード面の見方",
       resultDetailScoreBody:
-        "**大きい数字が試合結果、下があなたの予想。** 勝敗的中で HIT です。",
-      resultDetailStatsTitle: "2つの指標",
+        "**大きい数字＝試合結果、下があなたの予想。** 右上バッジが HIT / MISS / PERFECT / UPSET です。",
+      resultDetailStatsTitle: "Upset と Score",
       resultDetailStatsBody:
-        "**アップセット**＝番狂わせ的中の加点。**スコア**＝勝敗点＋ボーナスの合計。",
+        "**Upset**＝番狂わせ的中の加点。**Score**＝勝敗点＋ボーナスの合計。カード下の2指標です。",
       resultDetailMoreTitle: "下にも続きがあります",
-      resultDetailMoreBody: "スクロールで得点分布など。**本番も同じ画面**です。",
+      resultDetailMoreBody: "スクロールで試合スタッツや得点内訳。**本番も同じ画面**です。",
       yourPickLabel: "あなたの予想",
       rankingsTitle: "ランキング",
       rankingsBody:

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import ResultListWithOverlay from "@/app/component/result/ResultListWithOverlay";
 import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
 import { useResultPagePosts } from "@/lib/hooks/useResultPagePosts";
-import { useTutorialResultListBoost } from "@/lib/hooks/useTutorialResultListBoost";
 import { LEAGUES } from "@/lib/leagues";
 import type { ResultListLeagueTab } from "@/lib/result/result-page-data";
 
@@ -39,12 +38,6 @@ export default function ResultPage() {
     setLeagueTab(tab);
   }, []);
 
-  const { grouped: listGrouped } = useTutorialResultListBoost(
-    language,
-    grouped,
-    setLeagueTab
-  );
-
   if (!authReady) {
     return (
       <div className="px-4 py-4 pb-bottom-nav">
@@ -56,7 +49,7 @@ export default function ResultPage() {
   if (!uid) return null;
 
   const listLoading =
-    leagueTab === null || (loading && listGrouped.length === 0);
+    leagueTab === null || (loading && grouped.length === 0);
 
   return (
     <div className="px-4 py-4 pb-bottom-nav">
@@ -64,7 +57,7 @@ export default function ResultPage() {
         leagueTab={leagueTab ?? defaultLeagueTab}
         onLeagueTabChange={handleLeagueTabChange}
         showResultLeagueTabs={showResultLeagueTabs}
-        grouped={listGrouped}
+        grouped={grouped}
         loading={listLoading}
         hasMore={hasMore}
         postsCacheCapped={postsCacheCapped}

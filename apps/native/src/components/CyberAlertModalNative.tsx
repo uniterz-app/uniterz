@@ -54,7 +54,7 @@ function variantIcon(variant: CyberAlertVariant): ReactNode {
       <MaterialCommunityIcons
         name="help-rhombus-outline"
         size={28}
-        color="rgba(56,189,248,0.65)"
+        color="rgba(251,191,36,0.9)"
       />
     );
   }
@@ -130,6 +130,17 @@ export default function CyberAlertModalNative({
 }: Props) {
   const displayTitle = title.trim() || (variant === "error" ? "ERROR" : "NOTICE");
   const showMessage = message.trim().length > 0;
+  const isConfirm = variant === "confirm";
+  const frameBorder = isConfirm
+    ? "rgba(251,191,36,0.42)"
+    : variant === "error"
+      ? "rgba(248,113,113,0.35)"
+      : "rgba(0,245,255,0.22)";
+  const frameShadow = isConfirm
+    ? "#fbbf24"
+    : variant === "error"
+      ? "#f87171"
+      : "#00f5ff";
   const actionButtons = useMemo(() => {
     if (buttons.length === 0) {
       return [{ text: "OK", style: "default" as const, onPress: undefined }];
@@ -159,11 +170,15 @@ export default function CyberAlertModalNative({
         <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
           <PredictOverlayChamferedFrameNative
             cut={PREDICT_OVERLAY_CYBER_FORM_CUT}
-            gradientColors={["rgba(8,12,20,0.96)", "rgba(5,8,14,0.98)"]}
+            gradientColors={
+              isConfirm
+                ? ["rgba(22,16,8,0.97)", "rgba(10,8,5,0.98)"]
+                : ["rgba(8,12,20,0.96)", "rgba(5,8,14,0.98)"]
+            }
             gradientLocations={[0, 1]}
-            borderColor="rgba(0,245,255,0.22)"
-            shadowColor="#00f5ff"
-            shadowOpacity={0.08}
+            borderColor={frameBorder}
+            shadowColor={frameShadow}
+            shadowOpacity={isConfirm ? 0.16 : 0.08}
             shadowRadius={24}
             style={styles.card}
             contentStyle={styles.cardContent}

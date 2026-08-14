@@ -25,6 +25,7 @@ import {
   UserPlus,
   Coins,
   ShoppingBag,
+  GraduationCap,
 } from "lucide-react";
 import {
   parseUserProfileFields,
@@ -54,6 +55,10 @@ import {
   clearSideMenuOrigin,
 } from "@/lib/navigation/sideMenuReturnNav";
 import { PRO_SKIN_PATH } from "@/lib/pro/proSkinRoutes";
+import { clearAppTutorialSeen } from "@/lib/tutorial/tutorialSeen";
+import { writeTutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
+import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
+import { setAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
 
 type Variant = "mobile" | "web";
 type SettingsMenuProps = {
@@ -187,6 +192,16 @@ export default function SettingsMenu({
   const pushFromMenu = (href: string) => {
     markNavigatedFromSideMenu();
     router.push(href);
+  };
+
+  const restartTutorialFromMenu = async () => {
+    const uid = user?.uid ?? null;
+    await clearAppTutorialSeen(uid);
+    clearTutorialLivePick();
+    writeTutorialLivePhase("welcome");
+    setAppTutorialBlockingEvents(true);
+    onRequestCloseMenu?.();
+    pushFromMenu(p("/web/games", "/mobile/games"));
   };
 
   // ===== styles =====
@@ -339,6 +354,18 @@ export default function SettingsMenu({
         </CyberSideMenuSectionTitle>
 
         <div className="flex flex-col gap-2">
+          <SideMenuItemButton
+            dense
+            icon={GraduationCap}
+            iconSize={15}
+            labelStyle={menuLabelFont}
+            onClick={() => void restartTutorialFromMenu()}
+          >
+            <span className={cn(isEn && "uppercase")}>
+              {m.tutorial.restartFromMenu}
+            </span>
+          </SideMenuItemButton>
+
           <SideMenuItemButton
             dense
             icon={HelpCircle}

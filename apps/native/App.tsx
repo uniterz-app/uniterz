@@ -31,8 +31,11 @@ import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
 import CyberAlertProvider from "./src/components/CyberAlertProvider";
 import { NATIVE_PAGE_SURFACE_COLOR } from "./src/features/background/nativeBackgroundPalette";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
+import { prefetchRankingsLogoGlb } from "./src/features/rankings/rankingsLogoGlbCache";
 
 ensureNativeSplashHeld();
+/** チュートリアル welcome / ランキング背景の 3D ロゴを起動直後から温める */
+prefetchRankingsLogoGlb();
 
 export default function App() {
   /**

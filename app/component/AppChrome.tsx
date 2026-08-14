@@ -10,12 +10,21 @@ import {
   getAppBrandShelfHidden,
   subscribeAppBrandShelfHidden,
 } from "@/lib/ui/appBrandShelfVisibility";
+import {
+  getTutorialWelcomeBrandHidden,
+  subscribeTutorialWelcomeBrandHidden,
+} from "@/lib/tutorial/tutorialWelcomeChrome";
 
 export default function AppChrome() {
   const pathname = usePathname() ?? "";
   const brandShelfHidden = useSyncExternalStore(
     subscribeAppBrandShelfHidden,
     getAppBrandShelfHidden,
+    () => false
+  );
+  const welcomeBrandHidden = useSyncExternalStore(
+    subscribeTutorialWelcomeBrandHidden,
+    getTutorialWelcomeBrandHidden,
     () => false
   );
 
@@ -38,7 +47,8 @@ export default function AppChrome() {
     pathname === "/mobile/rankings" ||
     pathname.startsWith("/web/communities/") ||
     pathname.startsWith("/mobile/communities/") ||
-    brandShelfHidden;
+    brandShelfHidden ||
+    welcomeBrandHidden;
 
   if (shouldHideAll) return null;
 

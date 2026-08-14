@@ -24,21 +24,6 @@ import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague, LEAGUES } from "../../../../../lib/leagues";
-import {
-  readTutorialLivePhaseNative,
-} from "../tutorial/tutorialLivePhaseNative";
-import {
-  readTutorialLivePickNative,
-} from "../tutorial/tutorialLivePickNative";
-import type { TutorialLivePickPayload } from "../../../../../lib/tutorial/tutorialLivePick";
-import {
-  buildTutorialResultPost,
-  TUTORIAL_RESULT_POST_ID,
-} from "../../../../../lib/tutorial/tutorialNbaUi";
-import { prependTutorialResultPost } from "../../../../../lib/tutorial/prependTutorialResultPost";
-import type { ResultDayGroup as LibResultDayGroup } from "../../../../../lib/result/result-page-data";
-import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
-import { setTutorialResultDetailHandlers } from "../tutorial/tutorialResultDetailEventsNative";
 import type { SectionList as SectionListType } from "react-native";
 import {
   isWcKnockoutGame,
@@ -363,77 +348,10 @@ export default function ResultHomeScreen({
     setLeagueTab(defaultLeagueTab);
   }, [flagsReady, defaultLeagueTab, leagueTab]);
 
-  const [tutorialBoost, setTutorialBoost] =
-    useState<TutorialLivePickPayload | null>(null);
   const resultListRef = useRef<SectionListType<PostWithMillis, SectionT>>(null);
   const resultScrollYRef = useRef(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      void (async () => {
-        const phase = await readTutorialLivePhaseNative();
-        if (cancelled) return;
-        if (phase === "results" || phase === "gotoResults" || phase === "resultDetail") {
-          const pick = await readTutorialLivePickNative();
-          if (cancelled) return;
-          setTutorialBoost(pick);
-          if (pick) setLeagueTab(LEAGUES.NBA);
-        } else {
-          setTutorialBoost(null);
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, [])
-  );
-
-  useEffect(() => {
-    if (!tutorialBoost) return;
-    return registerTutorialScrollHost({
-      getOffsetY: () => resultScrollYRef.current,
-      scrollBy: (dy, animated) => {
-        const list = resultListRef.current as unknown as {
-          getScrollResponder?: () => {
-            scrollTo?: (opts: { y: number; animated?: boolean }) => void;
-          } | null;
-          measureInWindow?: (
-            cb: (x: number, y: number, w: number, h: number) => void
-          ) => void;
-        } | null;
-        /** 連続 scrollBy で古い offset を使わない（枠ずれ防止） */
-        const y = Math.max(0, resultScrollYRef.current + dy);
-        resultScrollYRef.current = y;
-        list?.getScrollResponder?.()?.scrollTo?.({ y, animated });
-      },
-      getViewportInWindow: () =>
-        new Promise((resolve) => {
-          const list = resultListRef.current as unknown as {
-            measureInWindow?: (
-              cb: (x: number, y: number, w: number, h: number) => void
-            ) => void;
-          } | null;
-          if (!list?.measureInWindow) {
-            resolve(null);
-            return;
-          }
-          list.measureInWindow((_x, y, _w, h) => {
-            resolve(h > 32 ? { y, height: h } : null);
-          });
-        }),
-    });
-  }, [tutorialBoost]);
-
-  useEffect(() => {
-    return setTutorialResultDetailHandlers({
-      onOpen: () => setDetailPostId(TUTORIAL_RESULT_POST_ID),
-      onClose: () =>
-        setDetailPostId((cur) =>
-          cur === TUTORIAL_RESULT_POST_ID ? null : cur
-        ),
-    });
-  }, []);
+  const [tutorialListScrollEnabled, setTutorialListScrollEnabled] =
+    useState(true);
 
   const { grouped, loading, postsCacheCapped, refreshPosts, loadMore, removePostById } =
     useNativeResultPosts(uid, language, {
@@ -498,19 +416,12 @@ export default function ResultHomeScreen({
       })
       .filter((g) => g.pending.length > 0 || g.final.length > 0);
 
-    if (!tutorialBoost) return base;
-    return prependTutorialResultPost(
-      base as unknown as LibResultDayGroup[],
-      buildTutorialResultPost(tutorialBoost.pick, tutorialBoost.grade),
-      language === "en" ? "en" : "ja"
-    ) as unknown as ResultDayGroup[];
+    return base;
   }, [
     grouped,
     resultFilters,
     leagueTab,
     showResultLeagueTabs,
-    tutorialBoost,
-    language,
   ]);
 
   const sections: SectionT[] = useMemo(() => {
@@ -596,7 +507,7 @@ export default function ResultHomeScreen({
       hintText={t.cacheHint}
       filterLabel={t.filterFold}
       filterCollapseLabel={t.filterClose}
-      entranceArmed={entranceArmed && !tutorialBoost}
+      entranceArmed={entranceArmed}
       onFilterPress={onFilterPress}
       filterPanelOpen={resultFilters.detailOpen}
       filterActive={!isDefaultResultListFilters(resultFilters)}
@@ -689,6 +600,8 @@ export default function ResultHomeScreen({
           contentContainerStyle={listContentWithBottomPad}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
+          scrollEnabled={tutorialListScrollEnabled}
+          bounces={tutorialListScrollEnabled}
           scrollEventThrottle={16}
           onScroll={(e) => {
             resultScrollYRef.current = e.nativeEvent.contentOffset.y;
@@ -720,7 +633,7 @@ export default function ResultHomeScreen({
                 dateLabel={section.dateLabel}
                 dayPoints={dayPointsHeaderForNative(section.final, section.pending, language)}
                 entranceActive={
-                  entranceArmed && isInitialHeader && !tutorialBoost
+                  entranceArmed && isInitialHeader
                 }
                 sectionStaggerIndex={sectionIndex >= 0 ? sectionIndex : 0}
                 leadGap={sectionIndex > 0}
@@ -736,15 +649,13 @@ export default function ResultHomeScreen({
                 gameMarket={resolveResultPostGameMarket(item, marketsFromGames)}
                 language={language}
                 nowMs={listNowTick}
-                viewerUid={
-                  item.id === TUTORIAL_RESULT_POST_ID ? null : uid
-                }
+                viewerUid={uid}
                 listEnterIndex={section.baseFlatIndex + index}
-                entranceEnabled={entranceArmed && !tutorialBoost}
+                entranceEnabled={entranceArmed}
                 siblingOverlayOpen={detailPostId != null}
                 compactSpacing={isLastInSection}
                 tutorialTargetId={
-                  item.id === TUTORIAL_RESULT_POST_ID
+                  section.baseFlatIndex + index === 0
                     ? "result-card"
                     : undefined
                 }
@@ -752,11 +663,7 @@ export default function ResultHomeScreen({
                   setDetailPostId(id);
                 }}
                 onRequestDeleteConfirm={setDeleteConfirmPost}
-                onRequestPredictEdit={
-                  item.id === TUTORIAL_RESULT_POST_ID
-                    ? undefined
-                    : openPredictEditFromResult
-                }
+                onRequestPredictEdit={openPredictEditFromResult}
               />
             );
           }}
