@@ -90,6 +90,10 @@ import {
   rawPointsDistributionFromGameDoc,
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
+import { resolveGamePointsSummary } from "@/lib/results/gamePointsSummary";
+import { resolveResultTopEntries } from "@/lib/results/resolveResultTopEntries";
+import { enrichTopEntriesCountryFromUsers } from "@/lib/results/enrichTopEntriesCountryFromUsers";
+import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import {
   DEFAULT_RESULT_LIST_FILTERS,
@@ -99,10 +103,12 @@ import {
   type ResultListFilters,
 } from "@/lib/result/resultListFilterMatch";
 import {
+  resultCardLineFrameDrawDelaySec,
   resultCardPageSlot,
   resultPageSlotItem,
 } from "@/lib/result/resultCyberMotion";
 import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
 import {
   resolveResultPostPkScore,
@@ -110,7 +116,7 @@ import {
 } from "@/lib/games/useResultPostsPkScores";
 import { resolveWcTeamId } from "@/lib/legacyWcWebShims";
 import { toMatchCardProps } from "@/lib/games/transform";
-import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
+import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS, MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import {
   PREDICT_OVERLAY_BACKDROP,
   PREDICT_OVERLAY_FORM_PANEL,
@@ -305,6 +311,7 @@ export default function ResultListWithOverlay({
     useState<GamePointsDistributionV1 | null>(null);
   const [pointsDistributionLoading, setPointsDistributionLoading] =
     useState(false);
+  const [topEntries, setTopEntries] = useState<GamePointsTopEntryV1[]>([]);
   const [filters, setFilters] = useState<ResultListFilters>(() => ({
     ...DEFAULT_RESULT_LIST_FILTERS,
   }));
@@ -692,6 +699,7 @@ export default function ResultListWithOverlay({
     setMarket(null);
     setPointsDistribution(null);
     setPointsDistributionLoading(false);
+    setTopEntries([]);
   }, []);
 
   const dismissPostFromList = useCallback(
@@ -772,6 +780,7 @@ export default function ResultListWithOverlay({
       setMarket(null);
       setPointsDistribution(null);
       setPointsDistributionLoading(false);
+      setTopEntries([]);
     },
     []
   );
@@ -836,6 +845,7 @@ export default function ResultListWithOverlay({
       setDetailGame(null);
       setPointsDistributionLoading(false);
       setPointsDistribution(null);
+      setTopEntries([]);
       return;
     }
 
@@ -848,6 +858,7 @@ export default function ResultListWithOverlay({
       );
       setMarket(buildTutorialResultMarket());
       setPointsDistribution(buildTutorialPointsDistribution());
+      setTopEntries([]);
       setPointsDistributionLoading(false);
       return;
     }
@@ -863,6 +874,7 @@ export default function ResultListWithOverlay({
             setDetailGame(null);
             setMarket(null);
             setPointsDistribution(null);
+            setTopEntries([]);
           }
           return;
         }
@@ -873,6 +885,7 @@ export default function ResultListWithOverlay({
         );
         const marketRaw = d.market as Record<string, unknown> | undefined;
         const pdRaw = rawPointsDistributionFromGameDoc(d);
+        const parsedDistribution = parseGamePointsDistributionV1(pdRaw);
         if (!cancelled) {
           setDetailGame(game);
           if (marketRaw) {
@@ -884,13 +897,20 @@ export default function ResultListWithOverlay({
               total: marketRaw.total == null ? undefined : Number(marketRaw.total),
             });
           }
-          setPointsDistribution(parseGamePointsDistributionV1(pdRaw));
+          setPointsDistribution(parsedDistribution);
+          const rawTop = resolveResultTopEntries({
+            pointsSummary: resolveGamePointsSummary(d as Record<string, unknown>),
+            pointsDistribution: parsedDistribution,
+          });
+          const topWithCountry = await enrichTopEntriesCountryFromUsers(db, rawTop);
+          if (!cancelled) setTopEntries(topWithCountry);
         }
       } catch {
         if (!cancelled) {
           setDetailGame(null);
           setMarket(null);
           setPointsDistribution(null);
+          setTopEntries([]);
         }
       } finally {
         if (!cancelled) setPointsDistributionLoading(false);
@@ -1063,7 +1083,14 @@ export default function ResultListWithOverlay({
               isMobile ? "w-full" : "flex-1",
             ].join(" ")}
           >
-            <div className={isMobile ? "w-full" : RESULT_WEB_DAY_STRIP_WIDTH_CLASS}>
+            <div
+              className={[
+                "relative",
+                isMobile
+                  ? MOBILE_RESULT_CARD_OUTER_CLASS
+                  : RESULT_WEB_DAY_STRIP_WIDTH_CLASS,
+              ].join(" ")}
+            >
           <button
             type="button"
             aria-expanded={filterPanelOpen}
@@ -1545,6 +1572,7 @@ export default function ResultListWithOverlay({
             >
               {displayPosts.map((post) => {
                 const isTutorialPost = post.id === TUTORIAL_RESULT_POST_ID;
+                const entrySlot = takeEntrySlot();
                 const card = (
                   <ResultCard
                     post={post}
@@ -1569,6 +1597,11 @@ export default function ResultListWithOverlay({
                       isTutorialPost ? undefined : requestPredictEditFromCard
                     }
                     cardClockMs={listNowTick}
+                    lineFrameDrawDelaySec={
+                      prefersReducedMotion
+                        ? 0
+                        : resultCardLineFrameDrawDelaySec(entrySlot)
+                    }
                   />
                 );
 
@@ -1599,7 +1632,7 @@ export default function ResultListWithOverlay({
                         : undefined
                     }
                     variants={resultCardSlotVariants}
-                    custom={takeEntrySlot()}
+                    custom={entrySlot}
                     className={
                       isSingleWebCard ? "w-full max-w-[640px]" : "w-full"
                     }
@@ -1941,6 +1974,13 @@ export default function ResultListWithOverlay({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.22, ease: easeOut }}
                 >
+                  <ProfileMenuEdgeHandle
+                    onOpen={close}
+                    label="BACK"
+                    tone="back"
+                    overlay
+                    ariaLabel={language === "en" ? "Back" : "戻る"}
+                  />
                   <motion.div
                     className={`absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`}
                     onClick={close}
@@ -2010,6 +2050,7 @@ export default function ResultListWithOverlay({
                             market={market ?? undefined}
                             pointsDistribution={pointsDistribution}
                             pointsDistributionLoading={pointsDistributionLoading}
+                            topEntries={topEntries}
                             language={language}
                             inOverlay
                             hideMatchHeader
@@ -2025,6 +2066,7 @@ export default function ResultListWithOverlay({
                             market={market ?? undefined}
                             pointsDistribution={pointsDistribution}
                             pointsDistributionLoading={pointsDistributionLoading}
+                            topEntries={topEntries}
                             language={language}
                             inOverlay
                             hideMatchHeader

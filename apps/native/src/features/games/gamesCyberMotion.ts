@@ -64,3 +64,10 @@ export const GAMES_PAGE_RICH_CARD_COUNT = 3;
 /** Web `MatchCard` 入場スキャン光 */
 export const GAMES_ENTRY_SCAN_DURATION_MS = 620;
 export const GAMES_ENTRY_SCAN_DELAY_AFTER_SHELL_MS = 50;
+
+/**
+ * 線枠のパス描画（page 先頭3枚）。
+ * シェル開始直後に書き始め、チーム行の着地に終わる。
+ */
+export const GAMES_LINE_FRAME_DRAW_MS = 360;
+export const GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS = 32;

@@ -14,7 +14,6 @@ import {
   profileOverviewChartEmptyHintStyle,
   profileOverviewChartNoDataStyle,
   profileOverviewChartSubtitleStyle,
-  profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
 
 /** Ranking Progress 空チャート領域に近い高さ */
@@ -63,11 +62,11 @@ export default function ProfileDailyTrendChartNative({
 
   if (isEmpty) {
     return (
-      <ProfileOverviewChartCardNative>
+      <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.foreground}>
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{subtitle}</Text>
               <Pressable
                 onPress={openInfo}
                 hitSlop={10}
@@ -81,7 +80,6 @@ export default function ProfileDailyTrendChartNative({
                 />
               </Pressable>
             </View>
-            <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
           <View style={[styles.chartArea, { height: EMPTY_CHART_H }]}>
             <Text style={styles.noData}>NO DATA</Text>
@@ -93,12 +91,13 @@ export default function ProfileDailyTrendChartNative({
   }
 
   return (
-    <ProfileOverviewChartCardNative>
+    <ProfileOverviewChartCardNative topLabel={title}>
       <View style={styles.foreground}>
         <ProfileDailyComboChartNeuralNative
           data={limitedData}
           language={language}
           rankingLeague={rankingLeague}
+          hideTitle
         />
       </View>
     </ProfileOverviewChartCardNative>
@@ -119,9 +118,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  title: profileOverviewChartTitleStyle,
   subtitle: {
     ...profileOverviewChartSubtitleStyle,
+    flex: 1,
+    minWidth: 0,
     marginTop: 2,
   },
   chartArea: {

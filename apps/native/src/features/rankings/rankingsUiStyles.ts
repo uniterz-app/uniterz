@@ -251,7 +251,7 @@ export const rankingsUiStyles = StyleSheet.create({
   myRankProStack: {
     gap: 0,
   },
-  /** Pro 上段: ユーザー | 順位+スタッツ */
+  /** Pro 上段: 順位 | ユーザー | スタッツ */
   myRankProThreeCol: {
     flexDirection: "row",
     alignItems: "stretch",
@@ -295,10 +295,6 @@ export const rankingsUiStyles = StyleSheet.create({
     minWidth: 0,
     flexDirection: "row",
     alignItems: "stretch",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.28)",
-    borderRadius: 4,
     /** 得点 Alfa Slab の上端を切らない */
     overflow: "visible",
   },
@@ -312,9 +308,6 @@ export const rankingsUiStyles = StyleSheet.create({
     gap: 4,
     paddingVertical: 8,
     paddingHorizontal: 4,
-    borderRightWidth: 1,
-    borderRightColor: "rgba(245,215,142,0.2)",
-    backgroundColor: "rgba(0,0,0,0.16)",
   },
   myRankProRankCluster: {
     alignItems: "center",

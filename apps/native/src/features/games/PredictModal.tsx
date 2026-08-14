@@ -50,7 +50,9 @@ import {
 } from "./useTeamRecordLineNative";
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
 import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative";
-import PredictOverlayMatchCardShellNative from "./PredictOverlayMatchCardShellNative";
+import MatchListLineFrameNative, {
+  resultOutcomeLineFramePaint,
+} from "./MatchListLineFrameNative";
 import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
 import LiveGameStatsPanelNative from "./live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "./live/LiveGameStatsPlaceholderNative";
@@ -76,7 +78,7 @@ import {
   predictBlockFadeUpEnter,
   predictPanelRevealEnter,
 } from "./predictMotion";
-import PredictOverlayCloseButtonNative from "./PredictOverlayCloseButtonNative";
+import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 import PredictOverlayActionFabNative from "./PredictOverlayActionFabNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
 import { shareResultCardNative } from "../results/shareResultCardNative";
@@ -215,7 +217,7 @@ export function PredictMatchPreview({
   overlayCenterMode = false,
   onEditPrediction,
   showEditButton = false,
-  overlayUnifiedForm = false,
+  overlayUnifiedForm: _overlayUnifiedForm = false,
   hideCloseButton = false,
   myPostId = null,
   tutorialMode = false,
@@ -381,13 +383,6 @@ export function PredictMatchPreview({
 
   const previewBody = (
       <View pointerEvents="box-none" style={s.matchPreviewPaddedContent}>
-        {data.roundLabel ? (
-          <TutorialTargetNative id="predict-round">
-            <Text style={s.matchPreviewRoundPadded} numberOfLines={1}>
-              {data.roundLabel}
-            </Text>
-          </TutorialTargetNative>
-        ) : null}
         <TutorialTargetNative id="predict-sides">
         <View style={s.matchPreviewGrid}>
           {showOverlayVs ? (
@@ -710,17 +705,15 @@ export function PredictMatchPreview({
   return (
     <View style={s.matchPreviewWrap}>
       <View ref={captureRef} collapsable={false}>
-      {/** Web: `overlayUnifiedForm` 時は親フォーム面のみ。それ以外は `.predict-overlay-cyber-card` */}
-      {overlayUnifiedForm ? (
-        previewBody
-      ) : (
-        <PredictOverlayMatchCardShellNative
-          resultBadge={mergedFinal?.badge ?? null}
-          activeWinStreak={mergedFinal?.activeWinStreak ?? 0}
+      <TutorialTargetNative id="predict-round">
+        <MatchListLineFrameNative
+          topLabel={data.roundLabel || undefined}
+          predicted={Boolean(myPostId) && !mergedFinal}
+          paint={resultOutcomeLineFramePaint(mergedFinal?.badge)}
         >
           {previewBody}
-        </PredictOverlayMatchCardShellNative>
-      )}
+        </MatchListLineFrameNative>
+      </TutorialTargetNative>
       </View>
       {mergedFinal?.badge || mergedFinal?.streakBadge ? (
         <View
@@ -738,9 +731,9 @@ export function PredictMatchPreview({
           />
         </View>
       ) : null}
-      {(!hideCloseButton || showActionMenu) ? (
+      {showActionMenu ? (
         <PredictOverlayActionFabNative
-          showClose={!hideCloseButton}
+          showClose={false}
           onClose={onClose}
           closeLabel={closeLabel}
           showEdit={Boolean(showEditButton && onEditPrediction)}
@@ -814,6 +807,7 @@ type PredictModalProps = {
   isProUser?: boolean;
   /** チュートリアル練習用の案内バナー */
   tutorialMode?: boolean;
+  onOpenTeamDetail?: (teamId: string) => void;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -862,22 +856,14 @@ function GlassPanel({
 /** 統合オーバーレイ用の一枚カードラッパー */
 function PredictModalContentShell({
   unified,
-  onClose,
-  closeLabel,
   children,
 }: {
   unified: boolean;
-  onClose: () => void;
-  closeLabel: string;
   children: React.ReactNode;
 }) {
   if (!unified) return <>{children}</>;
   return (
     <PredictOverlayCyberFormPanelNative contentStyle={s.unifiedOverlayPanelContent}>
-      <PredictOverlayCloseButtonNative
-        onPress={onClose}
-        accessibilityLabel={closeLabel}
-      />
       {children}
     </PredictOverlayCyberFormPanelNative>
   );
@@ -919,6 +905,7 @@ export default function PredictModal({
   myPostId = null,
   isProUser = false,
   tutorialMode = false,
+  onOpenTeamDetail,
 }: PredictModalProps) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() ?? false;
@@ -1294,8 +1281,6 @@ export default function PredictModal({
                 <View style={s.modalContent}>
                   <PredictModalContentShell
                     unified={overlayUnifiedForm}
-                    onClose={scheduleCloseAfterExitAnimation}
-                    closeLabel={t.close}
                   >
                   {matchPreview ? (
                     <Animated.View entering={previewEnter} collapsable={false}>
@@ -1324,7 +1309,7 @@ export default function PredictModal({
                         }
                         onEditPrediction={() => setScoreFormExpanded(true)}
                         overlayUnifiedForm={overlayUnifiedForm}
-                        hideCloseButton={overlayUnifiedForm}
+                        hideCloseButton
                         myPostId={myPostId}
                       />
                     </Animated.View>
@@ -1358,6 +1343,7 @@ export default function PredictModal({
                       awayTeamName={
                         predictAwayTeamLabel || matchPreview?.awayCompact || "AWAY"
                       }
+                      onOpenTeamDetail={onOpenTeamDetail}
                     />
                   ) : (
               <View>
@@ -2010,6 +1996,10 @@ export default function PredictModal({
                 onSkip={() => setTutorialAnnotDismissed(true)}
               />
             ) : null}
+            <ProfileBackEdgeHandleNative
+              onPress={scheduleCloseAfterExitAnimation}
+              accessibilityLabel={language === "en" ? "Back" : "戻る"}
+            />
             </>
           ) : null}
         </View>
@@ -2247,14 +2237,15 @@ const s = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     color: "#f8fafc",
-    fontSize: 14,
-    lineHeight: 17,
-    fontWeight: "700",
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: "400",
     fontFamily: MATCH_CARD_DISPLAY_FONT,
-    letterSpacing: 1.12,
+    letterSpacing: 1.2,
     includeFontPadding: false,
     textTransform: "uppercase",
     textAlign: "center",
+    transform: [{ skewX: "-6deg" }],
   },
   predictSummaryScoreValue: {
     flex: 1,
@@ -2300,14 +2291,15 @@ const s = StyleSheet.create({
     gap: 8,
   },
   teamNameLabel: {
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 14,
-    lineHeight: 17,
-    fontWeight: "700",
+    color: "#F8FAFC",
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: "400",
     fontFamily: MATCH_CARD_DISPLAY_FONT,
-    letterSpacing: 1.12,
+    letterSpacing: 1.2,
     includeFontPadding: false,
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   soccerHint: {
     marginTop: 8,
@@ -2364,8 +2356,8 @@ const s = StyleSheet.create({
     zIndex: 2,
     width: "100%",
     paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 6,
+    paddingTop: 20,
+    paddingBottom: 10,
   },
   matchPreviewMarketBarWrap: {
     marginTop: 4,

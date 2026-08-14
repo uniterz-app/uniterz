@@ -4,6 +4,7 @@
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { GAMES_HEADER_CONTROL_HEIGHT } from "./gamesMobileLayout";
+import { CYBER_CHAMFER_ACCENT, CYBER_CHAMFER_STROKE } from "../../../../../lib/ui/cyberChamferAccent";
 
 const ICONS = {
   awards: require("../../../assets/games-drawer/awards.png") as number,
@@ -60,7 +61,12 @@ function HeaderIconButton({
         colors={["rgba(8,11,18,0.92)", "rgba(5,8,14,0.88)"]}
         style={StyleSheet.absoluteFillObject}
       />
-      <Image source={source} style={styles.icon} resizeMode="contain" />
+      <Image
+        source={source}
+        style={styles.icon}
+        resizeMode="contain"
+        tintColor={CYBER_CHAMFER_ACCENT}
+      />
     </Pressable>
   );
 }
@@ -76,7 +82,7 @@ const styles = StyleSheet.create({
     height: GAMES_HEADER_CONTROL_HEIGHT,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.34)",
+    borderColor: CYBER_CHAMFER_STROKE,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",

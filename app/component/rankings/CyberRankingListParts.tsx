@@ -5,8 +5,10 @@ import { nameBebas, nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import {
+  cyberMetricTag,
   cyberRankNumStyle,
   cyberRankPalette,
+  cyberRankQuietFrameColor,
   CYBER_LIST_CYAN,
 } from "@/lib/rankings/cyberRankVisual";
 import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
@@ -21,6 +23,8 @@ import RankingListProSkinFx, {
   type RankingListProSkinIntensity,
 } from "@/app/component/rankings/RankingListProSkinFx";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import type { Language } from "@/lib/i18n/language";
+import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import {
   formatListMetricDayDelta,
   listRowAvgText,
@@ -115,8 +119,7 @@ function cyberScoreColor(rank: number): string {
   if (rank === 1) return "#FFD65A";
   if (rank === 2) return "#FCD34D";
   if (rank === 3) return "#FB923C";
-  const t = Math.min(1, (rank - 4) / 14);
-  return `rgba(255, 43, 214, ${0.92 - t * 0.35})`;
+  return "rgba(255,255,255,0.96)";
 }
 
 function cyberScoreGlow(rank: number): string {
@@ -126,8 +129,7 @@ function cyberScoreGlow(rank: number): string {
   if (rank <= 3) {
     return "0 0 8px rgba(255,43,214,0.42)";
   }
-  const t = Math.min(1, (rank - 4) / 14);
-  return `0 0 ${8 + t * 4}px rgba(255,43,214,${0.38 - t * 0.22})`;
+  return "none";
 }
 
 export function CyberRankingScore({
@@ -163,7 +165,9 @@ export function CyberRankingScore({
   const valueStyle = {
     color,
     textShadow: plainWhite ? "none" : cyberScoreGlow(rank),
-  } as const;
+    transform: "skewX(-12deg)",
+    display: "inline-block" as const,
+  };
 
   const displayValue =
     metric === "winRate" || metric === "streak" || metric === "goalScorerHits"
@@ -189,6 +193,7 @@ function CyberListRowMeta({
   avgRow,
   compact,
   scoreLayout = "stack",
+  flagOnly = false,
 }: {
   countryCode?: string | null;
   posts: number;
@@ -200,6 +205,7 @@ function CyberListRowMeta({
   };
   compact?: boolean;
   scoreLayout?: CyberRankingScoreLayout;
+  flagOnly?: boolean;
 }) {
   const code = getCountryCode({ countryCode });
   const flagSrc = code ? FLAG_SRC[code] : undefined;
@@ -233,24 +239,28 @@ function CyberListRowMeta({
           decoding="async"
         />
       ) : null}
-      <span
-        className={[nameOxanium.className, "shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none"].join(
-          " "
-        )}
-        style={{ color: "rgba(255,255,255,0.42)", fontSize: metaSize }}
-      >
-        {volText}
-      </span>
-      {avgText ? (
-        <span
-          className={[nameOxanium.className, "min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none"].join(
-            " "
-          )}
-          style={{ color: "rgba(0,245,255,0.55)", fontSize: metaSize }}
-        >
-          {avgText}
-        </span>
-      ) : null}
+      {flagOnly ? null : (
+        <>
+          <span
+            className={[nameOxanium.className, "shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none"].join(
+              " "
+            )}
+            style={{ color: "rgba(255,255,255,0.42)", fontSize: metaSize }}
+          >
+            {volText}
+          </span>
+          {avgText ? (
+            <span
+              className={[nameOxanium.className, "min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none"].join(
+                " "
+              )}
+              style={{ color: "rgba(0,245,255,0.55)", fontSize: metaSize }}
+            >
+              {avgText}
+            </span>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -274,8 +284,13 @@ export function CyberRankingListRow({
   showFirstPlaceFrame = false,
   proSkinVariant = null,
   proSkinIntensity = "medium",
-  hideAccentBar = false,
   rankOverline = null,
+  rankDeltaPlaces,
+  language = "ja",
+  hideListMeta = false,
+  bare = false,
+  rankDisplayValue,
+  rankMuted = false,
 }: {
   rank: number;
   displayName: string;
@@ -301,14 +316,22 @@ export function CyberRankingListRow({
   /** Pro Skin — 実パターンを行背景に（未指定時は従来） */
   proSkinVariant?: ProfilePlanProBgVariant | null;
   proSkinIntensity?: RankingListProSkinIntensity;
-  /** My Rank Free など — 左アクセントバー非表示 */
+  /** 廃止（左アクセントバーは出さない）。呼び出し互換のため残す */
   hideAccentBar?: boolean;
-  /** 順位数字の上に置くラベル（例: YOUR RANK） */
   rankOverline?: string | null;
+  rankDeltaPlaces?: number | null;
+  language?: Language;
+  /** 試合得点上位など — VOL / 平均は出さず、国旗だけ出す */
+  hideListMeta?: boolean;
+  /** My Rank カード内 — リスト行の背景・下線・1位枠なし。配置だけ揃える */
+  bare?: boolean;
+  rankDisplayValue?: string;
+  rankMuted?: boolean;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame =
-    palette.firstPlaceFrame && (!subtleShell || showFirstPlaceFrame);
+    !bare && palette.firstPlaceFrame && (!subtleShell || showFirstPlaceFrame);
+  const quietFrame = bare ? null : cyberRankQuietFrameColor(rank);
   const nameJa = hasJaScript(displayName);
   const isWebScore = scoreLayout === "web" && !compact;
   const nameFontSize = rankingFontSizePx(
@@ -364,33 +387,28 @@ export function CyberRankingListRow({
   return (
     <article
       className={[
-        "relative flex items-stretch overflow-hidden",
+        "relative mb-[3px] flex items-stretch overflow-hidden",
         compact ? "min-h-[56px]" : isWebScore ? "min-h-[82px]" : "min-h-[72px]",
       ].join(" ")}
       style={{
-        background: proSkinVariant ? "transparent" : baseBg,
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        background:
+          bare || proSkinVariant || hideListMeta ? "transparent" : baseBg,
+        borderBottom: bare ? "none" : "1px solid rgba(255,255,255,0.06)",
+        marginBottom: bare ? 0 : undefined,
       }}
     >
-      {proSkinVariant ? (
+      {bare ? null : proSkinVariant ? (
         <RankingListProSkinFx
           variant={proSkinVariant}
           intensity={proSkinIntensity}
         />
       ) : null}
       {firstFrame ? <RankFirstBorderEdgeScan /> : null}
-
-      {!hideAccentBar ? (
-        <span
+      {quietFrame ? (
+        <div
           aria-hidden
-          className={[
-            "w-[3px] shrink-0",
-            firstFrame || proSkinVariant ? "relative z-10" : "",
-          ].join(" ")}
-          style={{
-            background: palette.accent,
-            boxShadow: `0 0 12px ${palette.accentGlow}`,
-          }}
+          className="pointer-events-none absolute inset-0 z-[6]"
+          style={{ boxShadow: `inset 0 0 0 1px ${quietFrame}` }}
         />
       ) : null}
 
@@ -410,8 +428,8 @@ export function CyberRankingListRow({
         <div
           className={[
             "relative flex shrink-0 flex-col items-center justify-center",
-            compact ? "h-9 w-[42px]" : "h-11 w-[52px] sm:w-[58px]",
-            rankOverline ? (compact ? "gap-1.5" : "gap-2") : "gap-0.5",
+            compact ? "min-h-9 w-[42px]" : "min-h-11 w-[52px] sm:w-[58px]",
+            rankOverline ? (compact ? "gap-1.5" : "gap-2") : "gap-0",
           ].join(" ")}
         >
           {rankOverline ? (
@@ -425,7 +443,17 @@ export function CyberRankingListRow({
               {rankOverline}
             </span>
           ) : null}
-          <CyberRankNumber rank={rank} compact={compact} />
+          <CyberRankNumber
+            rank={rank}
+            compact={compact}
+            displayValue={rankDisplayValue}
+            muted={rankMuted}
+          />
+          <RankDeltaBadge
+            delta={rankDeltaPlaces}
+            size="sm"
+            language={language}
+          />
         </div>
 
         <div
@@ -463,21 +491,23 @@ export function CyberRankingListRow({
             </div>
           ) : null}
           <div
-            className="relative shrink-0 overflow-hidden rounded-sm"
+            className={[
+              "relative shrink-0 rounded-sm",
+              firstFrame ? "cyber-rank-avatar-first-glow" : "",
+            ].join(" ")}
             style={{
               width: compact ? 36 : 44,
               height: compact ? 36 : 44,
-              border: firstFrame
-                ? "1px solid rgba(184,255,60,0.55)"
-                : "1px solid rgba(255,255,255,0.12)",
-              boxShadow: firstFrame ? "0 0 12px rgba(184,255,60,0.2)" : "none",
+              ...(firstFrame
+                ? null
+                : { border: "1px solid rgba(255,255,255,0.12)" }),
             }}
           >
             <RankingsAvatarCircle
               photoURL={photoURL}
               displayName={displayName}
               imageLoading={rank === 1 ? "eager" : "lazy"}
-              boxClassName="h-full w-full rounded-sm"
+              boxClassName="h-full w-full overflow-hidden rounded-sm"
               initialTextClassName={
                 nameJa
                   ? compact
@@ -510,14 +540,28 @@ export function CyberRankingListRow({
             </div>
             {nameExtra}
           </div>
-          <CyberListRowMeta
-            countryCode={countryCode}
-            posts={posts}
-            metric={metric}
-            avgRow={avgRow ?? {}}
-            compact={compact}
-            scoreLayout={scoreLayout}
-          />
+          {hideListMeta ? (
+            countryCode ? (
+              <CyberListRowMeta
+                countryCode={countryCode}
+                posts={0}
+                metric={metric}
+                avgRow={{}}
+                compact={compact}
+                scoreLayout={scoreLayout}
+                flagOnly
+              />
+            ) : null
+          ) : (
+            <CyberListRowMeta
+              countryCode={countryCode}
+              posts={posts}
+              metric={metric}
+              avgRow={avgRow ?? {}}
+              compact={compact}
+              scoreLayout={scoreLayout}
+            />
+          )}
         </div>
 
         <div className="flex shrink-0 flex-col items-end justify-center pl-1">

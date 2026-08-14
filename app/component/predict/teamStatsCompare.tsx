@@ -383,7 +383,7 @@ export function SymmetricalCompareRow({
   const rankBelowLineClass = compactHud
     ? [
         resultStatsMetricNumClass,
-        "text-[9px] text-white/52 md:text-[10px]",
+        "text-[12px] font-bold text-white/80 md:text-[13px]",
       ].join(" ")
     : emphasizedMetrics
       ? [

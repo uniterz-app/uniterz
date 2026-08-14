@@ -11,7 +11,7 @@ import {
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Pencil, X } from "lucide-react";
+import { Pencil } from "lucide-react";
 import {
   predictOverlayCornerAnchorClass,
   predictOverlayCornerButtonClasses,
@@ -72,7 +72,9 @@ import {
 } from "@/lib/fonts";
 import MatchCardOverlayMarketBar from "@/app/component/games/MatchCardOverlayMarketBar";
 import MatchListCyberDecor from "@/app/component/games/MatchListCyberDecor";
+import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
 import PredictOverlayCyberDecor from "@/app/component/predict/PredictOverlayCyberDecor";
+import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
 import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
   PREDICT_OVERLAY_CYBER_GRID_CLASS,
@@ -463,6 +465,8 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     showMarketBias && (inPredictOverlay || attachOverlayMarketBar);
   /** オーバーレイでは未開始試合の中央をキックオフ時刻ではなく VS にする */
   const overlayCenterMode = inPredictOverlay || attachOverlayMarketBar;
+  /** ラウンドラベルから線がカードを包む（試合一覧 Native 線枠と同じ） */
+  const useOverlayLineFrame = overlayCenterMode;
   const showMergedResult = Boolean(overlayCenterMode && resultPost);
   /** 予想オーバーレイ：未開始試合のキックオフ・放送局（予想有無に関わらず） */
   const showOverlayScheduleMeta = Boolean(
@@ -510,7 +514,9 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
             ? CYBER_GLASS_SHADOW
             : mergedResultAccent.shadow || CYBER_GLASS_SHADOW,
         ].join(" ")
-      : predictOverlayGlassBase;
+      : showMergedResult
+        ? predictOverlayGlassBase
+        : `${predictOverlayGlassBase} predict-overlay-cyber-card--bare`;
   const wcGoalScorerResult = null;
   const nbaTopScorerResult = useMemo(
     () => (resultPost ? resolveNbaTopScorerResultInfo(resultPost) : null),
@@ -1113,11 +1119,14 @@ const mergedPreKickoffScoreClass = [
           onPointerUp: () => setFullCardPressed(false),
           onPointerLeave: () => setFullCardPressed(false),
           onPointerCancel: () => setFullCardPressed(false),
+          onTouchStart: () => setFullCardPressed(true),
+          onTouchEnd: () => setFullCardPressed(false),
+          onTouchCancel: () => setFullCardPressed(false),
         }
       : {};
 
   const cardShellPressScale =
-    useFullCardHitLayer && fullCardPressed && !reduceMotion ? 0.985 : 1;
+    useFullCardHitLayer && fullCardPressed && !reduceMotion ? 0.99 : 1;
 
   const handleMakePrediction = async (e: React.MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
@@ -1204,7 +1213,8 @@ setNavigating(true);
 
   // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
   const shellClassName = [
-    "group/card relative overflow-hidden text-white",
+    "group/card relative text-white",
+    useOverlayLineFrame ? "overflow-visible" : "overflow-hidden",
     inPredictOverlay && isMobile
       ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
       : mobileDense
@@ -1213,7 +1223,7 @@ setNavigating(true);
     !useSplitGlassShell && !inPredictOverlay && !attachOverlayMarketBar
       ? webPanelClass
       : "",
-    !useSplitGlassShell && attachOverlayMarketBar
+    !useSplitGlassShell && attachOverlayMarketBar && !useOverlayLineFrame
       ? mergedOverlayGlassClass
       : "",
     !useSplitGlassShell && !inPredictOverlay && !attachOverlayMarketBar && isPredicted
@@ -1238,7 +1248,7 @@ setNavigating(true);
   ].join(" ");
 
   const glassShellClassName =
-    useSplitGlassShell && attachOverlayMarketBar
+    useSplitGlassShell && attachOverlayMarketBar && !useOverlayLineFrame
       ? ["pointer-events-none absolute inset-0 z-0", mergedOverlayGlassClass].join(
           " "
         )
@@ -1294,7 +1304,7 @@ setNavigating(true);
         layoutId: sharedLayoutId,
       };
 
-return (
+const card = (
 <Shell
   {...shellMotionProps}
   className={shellClassName}
@@ -1339,22 +1349,24 @@ return (
         <div className={glassShellClassName} aria-hidden />
       ) : null}
 
-      {showMergedResult && isResultHitFrameBadge(resultBadge) ? (
+      {showMergedResult && !useOverlayLineFrame && isResultHitFrameBadge(resultBadge) ? (
         <ResultHitCyberFrame />
       ) : null}
-      {showMergedResult && isResultPerfectFrameBadge(resultBadge) ? (
+      {showMergedResult && !useOverlayLineFrame && isResultPerfectFrameBadge(resultBadge) ? (
         <ResultPerfectCyberFrame />
       ) : null}
-      {showMergedResult && isResultStreakFrameBadge(resultBadge) ? (
+      {showMergedResult && !useOverlayLineFrame && isResultStreakFrameBadge(resultBadge) ? (
         <ResultStreakCyberFrame activeWinStreak={resultActiveWinStreak} />
       ) : null}
-      {showMergedResult && isResultUpsetFrameBadge(resultBadge) ? (
+      {showMergedResult && !useOverlayLineFrame && isResultUpsetFrameBadge(resultBadge) ? (
         <ResultUpsetCyberFrame />
       ) : null}
 
-      {attachOverlayMarketBar || (inPredictOverlay && !overlayUnifiedForm) ? (
+      {useOverlayLineFrame
+        ? null
+        : attachOverlayMarketBar || (inPredictOverlay && !overlayUnifiedForm) ? (
         <>
-          {attachOverlayMarketBar ? null : (
+          {attachOverlayMarketBar || !showMergedResult ? null : (
             <div
               className={[
                 "pointer-events-none absolute inset-0 z-[1]",
@@ -1370,7 +1382,7 @@ return (
             ].join(" ")}
             aria-hidden
           />
-          <PredictOverlayCyberDecor />
+          {showMergedResult ? <PredictOverlayCyberDecor /> : null}
         </>
       ) : overlayUnifiedForm && inPredictOverlay ? null : (
         <>
@@ -1447,7 +1459,11 @@ return (
         style={{ transformOrigin: "50% 50%" }}
         initial={entryTransition ? { opacity: 0 } : false}
         animate={{
-          opacity: entryTransition ? 1 : undefined,
+          opacity: entryTransition
+            ? 1
+            : useFullCardHitLayer && fullCardPressed && !reduceMotion
+              ? 0.96
+              : undefined,
           scale: cardShellPressScale,
         }}
         transition={contentShellTransition}
@@ -1463,35 +1479,6 @@ return (
             activeWinStreak={resultActiveWinStreak}
             isMobile={isMobile}
           />
-        </div>
-      ) : null}
-      {onClosePredictOverlay ? (
-        <div
-          className={[
-            "pointer-events-auto absolute z-[50]",
-            predictOverlayCornerAnchorClass(isMobile, "left"),
-          ].join(" ")}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            className={[
-              predictOverlayCornerButtonClasses(isMobile, "close"),
-              "relative z-[52]",
-            ].join(" ")}
-            aria-label={m.common.close}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onClosePredictOverlay();
-            }}
-          >
-            <X
-              className={isMobile ? "h-2.5 w-2.5" : "h-[14px] w-[14px]"}
-              strokeWidth={2.25}
-              aria-hidden
-            />
-          </button>
         </div>
       ) : null}
       {showMergedPredictEdit && resultPost ? (
@@ -1559,17 +1546,21 @@ return (
 
       <motion.div
         className={[
-          mobileDense
-            ? "mb-0 px-2 pb-0 pt-0"
-            : inPredictOverlay
-              ? "mb-0 px-4 pb-0 pt-1"
-              : dense
-                ? "mb-0.5 px-3 pt-2"
-                : "mb-0.5 px-4 pt-2",
+          useOverlayLineFrame
+            ? mobileDense
+              ? "mb-0 px-2 pb-0 pt-4"
+              : "mb-0 px-4 pb-0 pt-4"
+            : mobileDense
+              ? "mb-0 px-2 pb-0 pt-0"
+              : inPredictOverlay
+                ? "mb-0 px-4 pb-0 pt-1"
+                : dense
+                  ? "mb-0.5 px-3 pt-2"
+                  : "mb-0.5 px-4 pt-2",
         ].join(" ")}
         {...entryGroupProps(ENTRY_GROUP_HEADER)}
       >
-        {!!roundLabel && (
+        {!!roundLabel && !useOverlayLineFrame && (
           <div
             className={[
               "mc-round text-center font-bold",
@@ -1585,7 +1576,10 @@ return (
                     : // Web 試合カード：レギュラーシーズン等の帯ラベルを読みやすく大きめに
                       "mt-2 mb-0.5 text-xl tracking-[0.06em] md:text-2xl lg:text-3xl",
             ].join(" ")}
-            style={teamNameFont}
+            style={{
+              ...teamNameFont,
+              transform: "skewX(-10deg)",
+            }}
             data-tutorial-target={
               inPredictOverlay || attachOverlayMarketBar
                 ? "predict-round"
@@ -1600,11 +1594,13 @@ return (
           className={
             mobileDense
               ? "h-0 md:h-1"
-              : inPredictOverlay
-                ? league === "wc"
-                  ? "h-2 md:h-2.5"
-                  : "h-0.5 md:h-1"
-                : "h-2.5 md:h-3.5"
+              : useOverlayLineFrame
+                ? "h-1 md:h-1.5"
+                : inPredictOverlay
+                  ? league === "wc"
+                    ? "h-2 md:h-2.5"
+                    : "h-0.5 md:h-1"
+                  : "h-2.5 md:h-3.5"
           }
           aria-hidden
         />
@@ -2272,6 +2268,19 @@ return (
       )}
       </motion.div>
     </Shell>
+  );
+
+  if (!useOverlayLineFrame) return card;
+
+  return (
+    <MatchListLineFrame
+      topLabel={roundLabel}
+      predicted={Boolean(isPredicted && !showMergedResult)}
+      paint={resultOutcomeLineFramePaint(showMergedResult ? resultBadge : null)}
+      topLabelTutorialTarget="predict-round"
+    >
+      {card}
+    </MatchListLineFrame>
   );
 }
 

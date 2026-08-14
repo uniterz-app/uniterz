@@ -10,7 +10,8 @@ export const MOBILE_RESULT_SECTION_GAP = 6;
 export const MOBILE_RESULT_CARD_GAP = 8;
 /** 日付帯→先頭カード / 最終カード→次の日付帯 */
 export const MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP = 4;
-export const MOBILE_RESULT_CARD_MAX_W = 344;
+/** Web `MOBILE_LIST_CARD_MAX_W_CLASS`（23rem）= 試合カードと同じ */
+export const MOBILE_RESULT_CARD_MAX_W = 368;
 
 /** Web `ResultCard` scheduleDense（モバイル一覧） */
 export const MOBILE_RESULT_JERSEY_SIZE = 52;
@@ -284,7 +285,7 @@ export const resultFilterBarNative = StyleSheet.create({
     borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(0,245,255,0.2)",
-    backgroundColor: "rgba(9,13,20,0.95)",
+    backgroundColor: "#000",
     paddingVertical: 10,
     paddingHorizontal: 12,
     shadowColor: "#00f5ff",

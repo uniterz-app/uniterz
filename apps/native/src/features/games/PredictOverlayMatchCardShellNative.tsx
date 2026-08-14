@@ -89,8 +89,10 @@ export default function PredictOverlayMatchCardShellNative({
   const shellBorderColor = predictOverlayShellBorderColor(resultBadge, activeWinStreak);
   const shellBorderWidth = predictOverlayShellBorderWidth(resultBadge);
   const sweepVariant = predictOverlayShellSweepVariant(resultBadge, activeWinStreak);
+  /** Web `.predict-overlay-cyber-card--bare`：予定試合は塗り・枠なし */
+  const skipFilledShell = overlayUnifiedForm || !resultBadge;
 
-  if (overlayUnifiedForm) {
+  if (skipFilledShell) {
     return (
       <View style={[styles.root, style]}>
         {resultBadge && isResultHitFrameBadge(resultBadge) ? (

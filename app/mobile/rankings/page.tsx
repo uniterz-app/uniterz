@@ -414,7 +414,7 @@ export default function MobileRankingsPage() {
               onClick={() => setRankingsDrawerOpen(true)}
               aria-label={m.games.openMenu}
             />
-            <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+            <div className="flex min-w-0 flex-1 flex-col items-center">
               <RankingsPageTitleCyber
                 variant="horizon-chrome"
                 tone={nbaBoard === "open" ? "pro-league" : "default"}
@@ -427,7 +427,6 @@ export default function MobileRankingsPage() {
                 }
                 size="sm"
               />
-              <RankingsScheduleNotice language={language} />
             </div>
             <div className="h-10 w-10 shrink-0" aria-hidden />
           </div>
@@ -530,6 +529,7 @@ export default function MobileRankingsPage() {
 
           {effectiveCategory === "playoffs" && !openProLocked ? (
             <>
+              <RankingsScheduleNotice language={language} className="px-1" />
               <RankingsMetricRow
                 metrics={metricItems}
                 metric={metric}

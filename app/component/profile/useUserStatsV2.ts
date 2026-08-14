@@ -135,7 +135,7 @@ export function primeProfileStatsFromRankingRow(
     streakBonusSum: 0,
     upsetChanceCount: 0,
     upsetHitCount: 0,
-    activeWinStreak: row.streak ?? ext.activeWinStreak ?? 0,
+    activeWinStreak: 0,
   };
 
   mergeCacheEntry(statsCacheKey(safeUid, context.rankingLeague, context.wcStage), {

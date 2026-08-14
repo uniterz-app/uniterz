@@ -435,3 +435,81 @@ export function teamStatsForPreset(presetId: string): NbaTeamStatsBundle {
     NBA_TEAM_STATS_BY_PRESET["both-teams-rich"]!
   );
 }
+
+/** 2026-27 開幕 Celtics @ Pistons — 前季相当のモック */
+const PISTONS_CELTICS_OPENING_SEASON: NbaTeamStatsCompare = {
+  home: {
+    teamId: "nba-pistons",
+    teamName: "Pistons",
+    ppg: 118.4,
+    papg: 110.2,
+    diff: 8.2,
+    ortg: 118.1,
+    drtg: 109.6,
+    netrtg: 8.5,
+    pace: 99.8,
+    homeW: 33,
+    homeL: 8,
+    awayW: 28,
+    awayL: 13,
+    ranks: { ppg: 4, papg: 6, diff: 3, ortg: 4, drtg: 5, netrtg: 3, pace: 16 },
+  },
+  away: {
+    teamId: "nba-celtics",
+    teamName: "Celtics",
+    ppg: 116.8,
+    papg: 111.4,
+    diff: 5.4,
+    ortg: 117.2,
+    drtg: 111.1,
+    netrtg: 6.1,
+    pace: 97.9,
+    homeW: 32,
+    homeL: 9,
+    awayW: 25,
+    awayL: 16,
+    ranks: { ppg: 7, papg: 9, diff: 5, ortg: 6, drtg: 8, netrtg: 5, pace: 24 },
+  },
+};
+
+const PISTONS_CELTICS_OPENING_STATS = bundle(
+  PISTONS_CELTICS_OPENING_SEASON,
+  {
+    ppg: 3.1,
+    papg: -1.4,
+    ortg: 2.8,
+    drtg: -1.6,
+    pace: 0.7,
+    formW: 7,
+    formL: 3,
+    formResults: ["W", "W", "L", "W", "W", "W", "L", "W", "W", "L"],
+    ranks: { ppg: 3, papg: 5, diff: 2, ortg: 3, drtg: 6, netrtg: 2, pace: 14 },
+  },
+  {
+    ppg: 1.6,
+    papg: 0.8,
+    ortg: 1.2,
+    drtg: 0.9,
+    pace: -0.4,
+    formW: 6,
+    formL: 4,
+    formResults: ["W", "L", "W", "W", "L", "W", "W", "L", "W", "L"],
+    ranks: { ppg: 8, papg: 11, diff: 7, ortg: 7, drtg: 10, netrtg: 6, pace: 22 },
+  }
+);
+
+function matchupKey(homeTeamId: string, awayTeamId: string): string {
+  return `${homeTeamId.trim()}|${awayTeamId.trim()}`;
+}
+
+export const NBA_TEAM_STATS_BY_MATCHUP: Record<string, NbaTeamStatsBundle> = {
+  "nba-pistons|nba-celtics": PISTONS_CELTICS_OPENING_STATS,
+};
+
+export function teamStatsForMatchup(
+  homeTeamId: string | undefined,
+  awayTeamId: string | undefined
+): NbaTeamStatsBundle | null {
+  if (!homeTeamId || !awayTeamId) return null;
+  return NBA_TEAM_STATS_BY_MATCHUP[matchupKey(homeTeamId, awayTeamId)] ?? null;
+}

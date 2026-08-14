@@ -222,12 +222,14 @@ type Props = {
   data: ProfileDailyComboChartPoint[];
   language?: "ja" | "en";
   rankingLeague?: RankingLeagueSource;
+  hideTitle?: boolean;
 };
 
 export default function ProfileDailyComboChartNeuralNative({
   data,
   language = "ja",
   rankingLeague: _rankingLeague = "nba",
+  hideTitle = false,
 }: Props) {
   const { width: screenW } = useWindowDimensions();
   const copy = profileCopy(language);
@@ -292,12 +294,16 @@ export default function ProfileDailyComboChartNeuralNative({
     <View style={styles.root}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{copy.title}</Text>
+          {hideTitle ? (
+            <Text style={[styles.subtitle, styles.subtitleInRow]}>{copy.subtitle}</Text>
+          ) : (
+            <Text style={styles.title}>{copy.title}</Text>
+          )}
           <Pressable onPress={openChartInfo} hitSlop={10} accessibilityLabel={copy.chartInfo}>
             <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
           </Pressable>
         </View>
-        <Text style={styles.subtitle}>{copy.subtitle}</Text>
+        {hideTitle ? null : <Text style={styles.subtitle}>{copy.subtitle}</Text>}
       </View>
 
       <View style={styles.chartZone}>
@@ -499,6 +505,12 @@ const styles = StyleSheet.create({
     ...profileOverviewChartSubtitleStyle,
     marginTop: 6,
     marginBottom: 8,
+  },
+  subtitleInRow: {
+    flex: 1,
+    minWidth: 0,
+    marginTop: 0,
+    marginBottom: 0,
   },
   chartZone: { overflow: "hidden" },
   statsWrap: profileOverviewChartStatsWrapStyle,

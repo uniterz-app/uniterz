@@ -14,7 +14,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
-import { PREDICT_OVERLAY_SUBMIT_BTN_CUT } from "./matchListCyberClipPath";
 import { registerTutorialPredictSubmit } from "../tutorial/tutorialPredictSubmitBridgeNative";
 
 type Props = {
@@ -83,13 +82,13 @@ export default function PredictOverlaySubmitButtonNative({
       >
         <PredictOverlayChamferedFrameNative
           key={enabled ? "submit-on" : "submit-off"}
-          cut={PREDICT_OVERLAY_SUBMIT_BTN_CUT}
+          cut={0}
           gradientColors={
             enabled
               ? [
                   "rgba(0,245,255,0.34)",
-                  "rgba(0,210,240,0.48)",
-                  "rgba(0,140,180,0.58)",
+                  "rgba(0,190,230,0.44)",
+                  "rgba(0,110,155,0.54)",
                 ]
               : [
                   "rgba(148,163,184,0.07)",
@@ -97,9 +96,9 @@ export default function PredictOverlaySubmitButtonNative({
                   "rgba(51,65,85,0.17)",
                 ]
           }
-          gradientLocations={[0, 0.42, 1]}
+          gradientLocations={[0, 0.46, 1]}
           borderColor={
-            enabled ? "rgba(0,245,255,0.62)" : "rgba(148,163,184,0.2)"
+            enabled ? "rgba(0,245,255,0.52)" : "rgba(148,163,184,0.2)"
           }
           /**
            * RN の shadow/elevation は矩形のまま出るため、角切りボタンの下に
@@ -146,12 +145,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   label: {
-    color: "#f0fdff",
+    color: "rgba(224,255,255,0.98)",
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "700",
     letterSpacing: 0.8,
-    textShadowColor: "rgba(0,245,255,0.42)",
+    textShadowColor: "rgba(0,245,255,0.45)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 14,
   },

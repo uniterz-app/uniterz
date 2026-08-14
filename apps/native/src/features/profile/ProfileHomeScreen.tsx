@@ -79,6 +79,7 @@ import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profi
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import { parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
+import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
   type ProfilePlanProBgVariant,
@@ -276,48 +277,34 @@ export default function ProfileHomeScreen({
 
   const returnToPreviousScreen = useCallback(() => {
     if (fromResultDetail) {
-      const state = navigation.getState();
-      const current = state.routes[state.index]?.name;
-      // 同一スタック内 push（DEV プレビュー等）なら前画面へ pop。
-      // タブ跨ぎ navigate だと PublicProfile だけなので、Result タブへ戻す。
-      if (current === "PublicProfile" && state.index > 0) {
+      if (navigation.canGoBack()) {
         navigation.goBack();
         return;
       }
-      dismissPublicProfileRoute();
-      const postId = resultDetailPostId?.trim();
-      requestAnimationFrame(() => {
-        tabNavigation.navigate("ResultTab", {
-          screen: "ResultHome",
-          params: postId ? { reopenDetailPostId: postId } : undefined,
-        });
+      const id = resultDetailPostId?.trim();
+      tabNavigation.navigate("ResultTab", {
+        screen: "ResultHome",
+        params: id ? { reopenDetailPostId: id } : undefined,
       });
+      return;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
       return;
     }
     if (fromWeeklyReport) {
       dismissPublicProfileRoute();
       return;
     }
-    // 先にプロフィールスタックを片付けてからタブ切替する。
-    // （タブ切替後の reset が Profile を前面に出すのを避ける）
-    dismissPublicProfileRoute();
-    requestAnimationFrame(() => {
-      if (fromLeaderboards) {
-        const groupId = leaderboardsGroupId?.trim();
-        if (groupId) {
-          tabNavigation.navigate("LeaderboardsTab", {
-            screen: "LeaderboardsHome",
-            params: { reopenGroupId: groupId },
-          });
-        } else {
-          tabNavigation.navigate("LeaderboardsTab", {
-            screen: "LeaderboardsHome",
-          });
-        }
-      } else {
-        tabNavigation.navigate("RankingsTab", { screen: "RankingsHome" });
-      }
-    });
+    if (fromLeaderboards) {
+      const groupId = leaderboardsGroupId?.trim();
+      tabNavigation.navigate("LeaderboardsTab", {
+        screen: "LeaderboardsHome",
+        params: groupId ? { reopenGroupId: groupId } : undefined,
+      });
+      return;
+    }
+    tabNavigation.navigate("RankingsTab", { screen: "RankingsHome" });
   }, [
     dismissPublicProfileRoute,
     fromLeaderboards,
@@ -558,7 +545,7 @@ export default function ProfileHomeScreen({
   }, [dismissSkinUnlock]);
 
   const currentStreak = useMemo(() => {
-    if (isPublicProfileView && profileByHandle.currentStreak > 0) {
+    if (isPublicProfileView) {
       return profileByHandle.currentStreak;
     }
     const fromSummary = statsBundle.summary?.activeWinStreak;
@@ -567,8 +554,10 @@ export default function ProfileHomeScreen({
     }
     const st = statsBundle.stats as Record<string, unknown> | null;
     if (st != null) {
-      const v = Number(st.currentStreak ?? st.activeWinStreak);
-      if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
+      return currentSeasonWinStreak(
+        st.currentStreak ?? st.activeWinStreak,
+        st.streakSeasonKeyBasketball
+      );
     }
     return 0;
   }, [
@@ -1506,18 +1495,14 @@ export default function ProfileHomeScreen({
           navigation.navigate("UniterzLogoTypePreview");
         else if (page === "resultCardDesignPreview" && __DEV__)
           navigation.navigate("ResultCardDesignPreview");
+        else if (page === "resultBadgeDesignPreview" && __DEV__)
+          navigation.navigate("ResultBadgeDesignPreview");
+        else if (page === "resultStreakTagDesignPreview" && __DEV__)
+          navigation.navigate("ResultStreakTagDesignPreview");
+        else if (page === "navBarDesignPreview" && __DEV__)
+          navigation.navigate("NavBarDesignPreview");
         else if (page === "splashLogoPreview" && __DEV__)
           navigation.navigate("SplashLogoPreview");
-        else if (page === "matchCardDesignPreview" && __DEV__)
-          navigation.navigate("MatchCardDesignPreview");
-        else if (page === "teamStatsPreview" && __DEV__)
-          navigation.navigate("TeamStatsPreview");
-        else if (page === "playerStatsPreview" && __DEV__)
-          navigation.navigate("PlayerStatsPreview");
-        else if (page === "teamDetailPreview" && __DEV__)
-          navigation.navigate("TeamDetailPreview");
-        else if (page === "playerDetailPreview" && __DEV__)
-          navigation.navigate("PlayerDetailPreview");
         else if (page === "liveGameStatsPreview" && __DEV__)
           navigation.navigate("LiveGameStatsPreview");
       }}

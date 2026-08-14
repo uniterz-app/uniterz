@@ -237,152 +237,33 @@
   --mrc-stripe: rgba(255, 255, 255, 0.14);
 }
 
-/* MyRankCard Pro 仕様 — ゴールド四隅ブラケット + 右下チャムファー（案A） */
+/* MyRankCard Pro — 金の連続枠 + 中黒。四隅飾りなし */
 .my-rank-card-frame--pro-spec {
-  --mrc-pro-br-cut: 14px;
-  --mrc-pro-gold-hi: #f0cc72;
-  --mrc-pro-gold-mid: #d4af5a;
-  --mrc-pro-gold-dim: #a67c28;
-  --mrc-pro-gold-line: rgba(232, 198, 106, 0.88);
-  --mrc-pro-gold-glow: rgba(212, 175, 90, 0.28);
-  --mrc-edge-a: rgba(240, 204, 114, 0.42);
-  --mrc-edge-b: rgba(212, 175, 90, 0.34);
-  --mrc-edge-c: rgba(166, 124, 40, 0.28);
-  --mrc-edge-d: rgba(212, 175, 90, 0.32);
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - var(--mrc-pro-br-cut)),
-    calc(100% - var(--mrc-pro-br-cut)) 100%,
-    0 100%
-  );
-  background: linear-gradient(
-    148deg,
-    rgba(14, 12, 8, 0.99) 0%,
-    rgba(8, 7, 5, 1) 46%,
-    rgba(12, 10, 6, 1) 100%
-  );
-  box-shadow:
-    0 0 20px var(--mrc-pro-gold-glow),
-    0 0 48px rgba(166, 124, 40, 0.12),
-    inset 0 0 40px rgba(212, 175, 90, 0.04);
-}
-
-.my-rank-card-frame-pro-host {
-  --mrc-pro-br-cut: 14px;
-  width: 100%;
-  overflow: visible;
+  --mrc-pro-gold-line: #e8c66a;
+  --mrc-edge-a: #e8c66a;
+  --mrc-edge-b: #e8c66a;
+  --mrc-edge-c: #e8c66a;
+  --mrc-edge-d: #e8c66a;
+  border: 1px solid #e8c66a;
+  border-radius: 0;
+  background: #000;
+  box-shadow: none;
 }
 
 .my-rank-card-frame--pro-spec.my-rank-card-frame--rank-down,
 .my-rank-card-frame--pro-spec.my-rank-card-frame--rank-neutral {
-  --mrc-edge-a: rgba(240, 204, 114, 0.42);
-  --mrc-edge-b: rgba(212, 175, 90, 0.34);
-  --mrc-edge-c: rgba(166, 124, 40, 0.28);
-  --mrc-edge-d: rgba(212, 175, 90, 0.32);
+  --mrc-edge-a: #e8c66a;
+  --mrc-edge-b: #e8c66a;
+  --mrc-edge-c: #e8c66a;
+  --mrc-edge-d: #e8c66a;
 }
 
 .my-rank-card-frame--pro-spec .my-rank-card-frame__grid {
-  background-image: radial-gradient(
-    rgba(212, 175, 90, 0.09) 0.55px,
-    transparent 0.55px
-  );
-  background-size: 6px 6px;
-  opacity: 0.38;
-  mask-image: radial-gradient(
-    ellipse 120% 90% at 50% 42%,
-    black 0%,
-    rgba(0, 0, 0, 0.72) 100%
-  );
+  display: none;
 }
 
 .my-rank-card-frame--pro-spec .my-rank-card-frame__edge {
-  box-shadow:
-    inset 0 1px 0 rgba(240, 204, 114, 0.2),
-    inset 1px 0 0 rgba(212, 175, 90, 0.22),
-    inset 0 -1px 0 rgba(166, 124, 40, 0.14);
-}
-
-/* Pro — 左上・右上・左下ゴールド L ブラケット（右下は SVG チャムファー） */
-.my-rank-card-frame__pro-bracket {
-  z-index: 3;
-  pointer-events: none;
-  filter: drop-shadow(0 0 4px rgba(212, 175, 90, 0.22));
-}
-
-.my-rank-card-frame__pro-bracket--tl {
-  top: 0;
-  left: 0;
-  width: 26px;
-  height: 26px;
-  border-top: 1.5px solid var(--mrc-pro-gold-line);
-  border-left: 1.5px solid var(--mrc-pro-gold-line);
-  background: linear-gradient(
-    135deg,
-    rgba(240, 204, 114, 0.1) 0%,
-    transparent 55%
-  );
-}
-
-.my-rank-card-frame__pro-bracket--tr {
-  top: 0;
-  right: 0;
-  width: 26px;
-  height: 26px;
-  border-top: 1.5px solid var(--mrc-pro-gold-line);
-  border-right: 1.5px solid var(--mrc-pro-gold-line);
-  background: linear-gradient(
-    225deg,
-    rgba(240, 204, 114, 0.08) 0%,
-    transparent 55%
-  );
-}
-
-.my-rank-card-frame__pro-bracket--bl {
-  bottom: 0;
-  left: 0;
-  width: 26px;
-  height: 26px;
-  border-bottom: 1.5px solid var(--mrc-pro-gold-line);
-  border-left: 1.5px solid var(--mrc-pro-gold-line);
-  background: linear-gradient(
-    45deg,
-    rgba(166, 124, 40, 0.12) 0%,
-    transparent 55%
-  );
-}
-
-.my-rank-card-frame__pro-ambient {
-  z-index: 0;
-  background:
-    radial-gradient(
-      ellipse 70% 56% at 14% 10%,
-      rgba(240, 204, 114, 0.1) 0%,
-      transparent 68%
-    ),
-    radial-gradient(
-      ellipse 58% 48% at 92% 82%,
-      rgba(166, 124, 40, 0.08) 0%,
-      transparent 72%
-    );
-}
-
-.my-rank-card-frame__pro-scan {
-  z-index: 18;
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.34) 2px,
-    rgba(0, 0, 0, 0.34) 3px
-  );
-  opacity: 0.5;
-  mix-blend-mode: multiply;
-  mask-image: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.92) 0%,
-    rgba(0, 0, 0, 0.72) 100%
-  );
+  box-shadow: none;
 }
 
 .my-rank-card-frame__grid {
@@ -544,6 +425,37 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.18);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+/* 1位アバター枠グロー — 一定周期でゆっくり脈打つ */
+.cyber-rank-avatar-first-glow {
+  border: 1px solid rgba(184, 255, 60, 0.78);
+  box-shadow:
+    0 0 6px rgba(184, 255, 60, 0.5),
+    0 0 14px rgba(255, 214, 90, 0.28);
+  animation: cyber-rank-avatar-first-glow-pulse 4s ease-in-out infinite;
+}
+
+@keyframes cyber-rank-avatar-first-glow-pulse {
+  0%,
+  100% {
+    border-color: rgba(184, 255, 60, 0.48);
+    box-shadow:
+      0 0 4px rgba(184, 255, 60, 0.28),
+      0 0 8px rgba(255, 214, 90, 0.14);
+  }
+  50% {
+    border-color: rgba(184, 255, 60, 0.95);
+    box-shadow:
+      0 0 10px rgba(184, 255, 60, 0.82),
+      0 0 20px rgba(255, 214, 90, 0.42);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cyber-rank-avatar-first-glow {
+    animation: none;
+  }
 }
 
 /* サイドメニュー — サイバー HUD（ディープ + シアン） */
@@ -800,21 +712,22 @@
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
+/* 予定試合の予想オーバーレイ：MatchCard 面は塗りなし（背面に乗せる） */
+.predict-overlay-cyber-card--bare {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 .predict-overlay-cyber-grid {
   display: none;
 }
 
 .predict-overlay-cyber-form {
   border-radius: 0;
-  border: 1px solid rgba(0, 245, 255, 0.16);
-  background: linear-gradient(
-    168deg,
-    rgba(8, 12, 20, 0.94) 0%,
-    rgba(5, 8, 14, 0.92) 100%
-  );
-  box-shadow:
-    inset 0 1px 0 rgba(0, 245, 255, 0.1),
-    0 8px 22px rgba(0, 0, 0, 0.36);
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .predict-overlay-market-frame {
@@ -920,26 +833,9 @@
 
 /* 旧レイアウト互換: ScoreFields 外でクラス単体利用時 */
 .predict-overlay-score-input--framed {
-  clip-path: polygon(
-    6px 0%,
-    calc(100% - 6px) 0%,
-    100% 6px,
-    100% calc(100% - 6px),
-    calc(100% - 6px) 100%,
-    6px 100%,
-    0% calc(100% - 6px),
-    0% 6px
-  );
+  border-radius: 0;
   border: 1px solid rgba(0, 245, 255, 0.28);
-  background: linear-gradient(
-    180deg,
-    rgba(0, 245, 255, 0.08) 0%,
-    rgba(5, 10, 18, 0.92) 42%,
-    rgba(2, 5, 10, 0.96) 100%
-  );
-  box-shadow:
-    inset 0 1px 0 rgba(0, 245, 255, 0.16),
-    inset 0 0 18px rgba(0, 245, 255, 0.05);
+  background: #000;
 }
 
 .predict-overlay-score-input::-webkit-outer-spin-button,
@@ -1102,12 +998,7 @@
     0% 8px
   );
   border: 1px solid rgba(0, 245, 255, 0.2);
-  background: linear-gradient(
-    168deg,
-    rgba(9, 13, 20, 0.95) 0%,
-    rgba(6, 9, 15, 0.93) 52%,
-    rgba(4, 7, 12, 0.91) 100%
-  );
+  background: #000;
   color: rgba(226, 232, 240, 0.9);
   box-shadow:
     0 0 16px rgba(0, 245, 255, 0.06),
@@ -1146,12 +1037,7 @@
 
 .cyber-filter-bar--active {
   border-color: rgba(0, 245, 255, 0.42);
-  background: linear-gradient(
-    168deg,
-    rgba(8, 18, 28, 0.96) 0%,
-    rgba(6, 14, 22, 0.94) 52%,
-    rgba(4, 10, 18, 0.92) 100%
-  );
+  background: #000;
   box-shadow:
     0 0 22px rgba(0, 245, 255, 0.14),
     0 8px 28px rgba(0, 0, 0, 0.42),
@@ -1881,33 +1767,24 @@
   letter-spacing: 0.06em;
 }
 
-/* 予想オーバーレイ — 送信 CTA（角切り・シアングロー） */
+/* 予想オーバーレイ — 送信 CTA（試合カード CTA と同じ直角・シアン） */
 .predict-overlay-submit-btn {
   position: relative;
   overflow: hidden;
-  clip-path: polygon(
-    8px 0%,
-    calc(100% - 8px) 0%,
-    100% 8px,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    8px 100%,
-    0% calc(100% - 8px),
-    0% 8px
-  );
-  border: 1px solid rgba(0, 245, 255, 0.42);
+  border-radius: 0;
+  border: 1px solid rgba(0, 245, 255, 0.52);
   background: linear-gradient(
     180deg,
-    rgba(0, 245, 255, 0.26) 0%,
-    rgba(0, 190, 230, 0.36) 42%,
-    rgba(0, 110, 150, 0.46) 100%
+    rgba(0, 245, 255, 0.34) 0%,
+    rgba(0, 190, 230, 0.44) 46%,
+    rgba(0, 110, 155, 0.54) 100%
   );
   box-shadow:
-    0 0 22px rgba(0, 245, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 70, 100, 0.38);
-  color: #f0fdff;
-  text-shadow: 0 0 14px rgba(0, 245, 255, 0.42);
+    0 0 22px rgba(0, 245, 255, 0.28),
+    0 0 8px rgba(34, 211, 238, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  color: rgba(224, 255, 255, 0.98);
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.45);
   transition:
     box-shadow 0.2s ease,
     border-color 0.2s ease,
@@ -1916,11 +1793,17 @@
 }
 
 .predict-overlay-submit-btn:hover:not(:disabled) {
-  border-color: rgba(0, 245, 255, 0.58);
+  border-color: rgba(0, 245, 255, 0.68);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.4) 0%,
+    rgba(0, 200, 235, 0.5) 46%,
+    rgba(0, 120, 165, 0.58) 100%
+  );
   box-shadow:
-    0 0 28px rgba(0, 245, 255, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    inset 0 -1px 0 rgba(0, 70, 100, 0.38);
+    0 0 28px rgba(0, 245, 255, 0.36),
+    0 0 10px rgba(34, 211, 238, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 .predict-overlay-submit-btn:active:not(:disabled) {
@@ -2068,23 +1951,25 @@
   text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
 }
 
-/* 1位ランキング行 — 枠 EDGE SCAN（案D） */
+/* 1位ランキング行 — 旧エッジ光線が枠を一周する */
 .rank-first-flow-dim {
   box-shadow: inset 0 0 0 1px rgba(184, 255, 60, 0.32);
   opacity: 0.85;
 }
 
-.rank-first-flow--edge-scan {
+.rank-first-flow-loop {
   pointer-events: none;
 }
 
-.rank-first-flow--edge-scan::before,
-.rank-first-flow--edge-scan::after {
-  content: "";
+.rank-first-flow-loop__h,
+.rank-first-flow-loop__v {
   position: absolute;
-  height: 2px;
-  width: 38%;
+  pointer-events: none;
   filter: blur(0.2px);
+}
+
+.rank-first-flow-loop__h {
+  height: 2px;
   background: linear-gradient(
     90deg,
     transparent,
@@ -2096,39 +1981,8 @@
   box-shadow: 0 0 10px rgba(184, 255, 60, 0.55);
 }
 
-.rank-first-flow--edge-scan::before {
-  top: 0;
-  left: -40%;
-  animation: rank-first-edge-h 2.4s linear infinite;
-}
-
-.rank-first-flow--edge-scan::after {
-  bottom: 0;
-  left: 100%;
-  animation: rank-first-edge-h-rev 2.4s linear infinite;
-  opacity: 0.75;
-}
-
-@keyframes rank-first-edge-h {
-  to {
-    left: 100%;
-  }
-}
-
-@keyframes rank-first-edge-h-rev {
-  to {
-    left: -40%;
-  }
-}
-
-.rank-first-flow--edge-scan-v {
-  pointer-events: none;
-}
-
-.rank-first-flow--edge-scan-v span {
-  position: absolute;
+.rank-first-flow-loop__v {
   width: 2px;
-  height: 34%;
   background: linear-gradient(
     180deg,
     transparent,
@@ -2139,36 +1993,10 @@
   box-shadow: 0 0 8px rgba(255, 214, 90, 0.45);
 }
 
-.rank-first-flow--edge-scan-v span:first-child {
-  right: 0;
-  top: -36%;
-  animation: rank-first-edge-v 3s linear infinite;
-}
-
-.rank-first-flow--edge-scan-v span:last-child {
-  left: 0;
-  bottom: -36%;
-  animation: rank-first-edge-v-rev 3s linear infinite;
-  opacity: 0.65;
-}
-
-@keyframes rank-first-edge-v {
-  to {
-    top: 100%;
-  }
-}
-
-@keyframes rank-first-edge-v-rev {
-  to {
-    bottom: 100%;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .rank-first-flow--edge-scan::before,
-  .rank-first-flow--edge-scan::after,
-  .rank-first-flow--edge-scan-v span {
-    animation: none !important;
+  .rank-first-flow-loop__h,
+  .rank-first-flow-loop__v {
+    opacity: 0 !important;
   }
 }
 
@@ -4992,6 +4820,11 @@ body::before {
   border-top-color: transparent;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+/* マッチカード同型の線枠を外側で描くとき、内側の連続枠は消す */
+.profile-kinetik-panel--line-frame::before {
+  content: none;
 }
 
 .profile-kinetik-panel > :not(.profile-kinetik-frame-corner):not(.profile-plan-pro-bg):not(.profile-plan-pro-ambient):not(.profile-plan-pro-frame-sweep):not(.profile-plan-pro-frame-inner):not(.profile-plan-pro-frame-rail):not(.profile-plan-pro-frame-edge):not(.profile-kinetik-flip-ear-edge),
@@ -8297,6 +8130,36 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 .profile-menu-edge-handle:hover {
   background: rgba(12, 18, 10, 0.98) !important;
   box-shadow: 0 0 20px rgba(250, 204, 21, 0.38);
+}
+
+.profile-menu-edge-handle--back {
+  border-color: rgba(248, 250, 252, 0.42) !important;
+  border-left-color: rgba(248, 250, 252, 0.42) !important;
+  background: rgba(8, 10, 14, 0.94) !important;
+  color: rgba(248, 250, 252, 0.92) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.12);
+}
+
+.profile-menu-edge-handle--back:hover {
+  background: rgba(14, 16, 20, 0.98) !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.18);
+}
+
+.profile-menu-edge-handle--back .profile-menu-edge-handle__ch,
+.profile-menu-edge-handle--back .profile-menu-edge-handle__chev {
+  color: rgba(248, 250, 252, 0.92);
+}
+
+.profile-menu-edge-handle__chev {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 1px;
+}
+
+.profile-menu-edge-handle--overlay {
+  z-index: 100010 !important;
 }
 
 .profile-menu-edge-handle__ch {

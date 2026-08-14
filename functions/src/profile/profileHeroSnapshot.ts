@@ -6,7 +6,7 @@ import {
   nbaSeasonKeyFromDateJST,
 } from "../rankings/nbaSeason";
 
-export const PROFILE_HERO_SNAPSHOT_VERSION = 1;
+export const PROFILE_HERO_SNAPSHOT_VERSION = 2;
 
 export type ProfileHeroScopeStats = {
   posts: number;
@@ -150,9 +150,12 @@ function ranksFromCumulative(
 }
 
 function activeStreakFromCumulative(
-  cumulative: Record<string, unknown> | null | undefined
+  cumulative: Record<string, unknown> | null | undefined,
+  seasonKey: string
 ): number {
   if (!cumulative) return 0;
+  const key = cumulative.streakSeasonKeyBasketball;
+  if (typeof key !== "string" || key !== seasonKey) return 0;
   const signed =
     cumulative.activeWinStreakBasketball ??
     (cumulative.streakBySport as Record<string, unknown> | undefined)
@@ -174,7 +177,7 @@ export function buildProfileHeroSnapshotFromCumulative(
     v: PROFILE_HERO_SNAPSHOT_VERSION,
     seasonKey,
     updatedAtMs: Date.now(),
-    activeWinStreak: activeStreakFromCumulative(cumulative),
+    activeWinStreak: activeStreakFromCumulative(cumulative, seasonKey),
     ranks: ranksFromCumulative(cumulative),
     season,
     playoffs,

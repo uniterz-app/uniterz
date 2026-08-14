@@ -9,6 +9,7 @@ import Header from "@/app/component/Header";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import CommunityGroupDetailCard from "./CommunityGroupDetailCard";
 import CommunityGroupDetailView from "./CommunityGroupDetailView";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 
 type Props = {
   variant: "web" | "mobile";
@@ -37,43 +38,26 @@ export default function CommunityDetailClient({
           <Header />
         </div>
 
-        {!uid ? null : isMobile ? (
+        {!uid ? null : (
           <div className={`mx-auto max-w-[640px] px-3 pt-2 ${jp.className}`}>
-            <CommunityGroupDetailCard
-              language={language}
-              variant="page"
-              onBack={() => router.push(leaderboardsHref)}
-            >
+            <CommunityGroupDetailCard variant="page">
               <CommunityGroupDetailView
                 groupId={groupId}
                 language={language}
                 variant={variant}
                 headerBanner="wide_when_image"
                 inDetailCard
-              />
-            </CommunityGroupDetailCard>
-          </div>
-        ) : (
-          <div className={`mx-auto max-w-[640px] px-3 pt-2 ${jp.className}`}>
-            <CommunityGroupDetailCard
-              language={language}
-              variant="page"
-              backHeaderOverHero
-              onBack={() => router.push(leaderboardsHref)}
-            >
-              <CommunityGroupDetailView
-                groupId={groupId}
-                language={language}
-                variant={variant}
-                headerBanner="wide_when_image"
-                inDetailCard
-                heroBackOverImage
-                onBack={() => router.push(leaderboardsHref)}
               />
             </CommunityGroupDetailCard>
           </div>
         )}
       </div>
+      <ProfileMenuEdgeHandle
+        onOpen={() => router.push(leaderboardsHref)}
+        label="BACK"
+        tone="back"
+        ariaLabel={language === "en" ? "Back" : "戻る"}
+      />
     </div>
   );
 }

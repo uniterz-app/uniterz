@@ -8,6 +8,7 @@ import {
   streakApplyMarkerRef,
   streakResultFromUserSnap,
 } from "./updateUserStreakInternals";
+import { nbaSeasonKeyFromDateJST } from "./rankings/nbaSeason";
 
 /**
  * games/{gameId}: set `suppressStreakIncrementV2: true` to skip all streak writes for that game (no stats updates, no per-user markers).
@@ -65,6 +66,19 @@ function migrateStreakBySport(
   };
 }
 
+function toGameStartDate(v: unknown): Date | null {
+  if (v && typeof v === "object" && typeof (v as { toDate?: () => Date }).toDate === "function") {
+    try {
+      return (v as { toDate: () => Date }).toDate();
+    } catch {
+      return null;
+    }
+  }
+  if (v instanceof Date && Number.isFinite(v.getTime())) return v;
+  if (typeof v === "number" && Number.isFinite(v)) return new Date(v);
+  return null;
+}
+
 export async function updateUserStreak({
   db,
   gameId,
@@ -103,6 +117,11 @@ export async function updateUserStreak({
     gameSnap.get(SUPPRESS_STREAK_INCREMENT_V2_FIELD) === true;
 
   const sportKey = leagueToSport(settlementGame.league);
+  const basketballSeasonKey = nbaSeasonKeyFromDateJST(
+    toGameStartDate(gameSnap.get("startAt")) ??
+      toGameStartDate(gameSnap.get("startAtMs")) ??
+      new Date()
+  );
 
   if (suppressStreakForGame) {
     const entries = [...userResult.entries()];
@@ -142,6 +161,14 @@ export async function updateUserStreak({
         let maxB = st.maxBasketball;
         let maxF = st.maxFootball;
 
+        /** NBA 連勝はシーズンをまたがない（26-27 に前シーズンを持ち込まない） */
+        if (sportKey === "basketball") {
+          const storedSeason = String(snap.get("streakSeasonKeyBasketball") ?? "");
+          if (storedSeason !== basketballSeasonKey) {
+            curB = 0;
+          }
+        }
+
         if (sportKey === "football") {
           if (didWin) {
             curF = curF > 0 ? curF + 1 : 1;
@@ -176,6 +203,10 @@ export async function updateUserStreak({
         const currentForSport = sportKey === "football" ? curF : curB;
         const activeWinStreakBasketball = curB > 0 ? curB : 0;
         const activeWinStreakFootball = curF > 0 ? curF : 0;
+        const basketballSeasonPatch =
+          sportKey === "basketball"
+            ? { streakSeasonKeyBasketball: basketballSeasonKey }
+            : {};
 
         tx.set(
           userRef,
@@ -188,6 +219,7 @@ export async function updateUserStreak({
             maxWinStreakFootball: maxF,
             maxLoseStreak: maxLose,
             maxStreak: maxB,
+            ...basketballSeasonPatch,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -200,6 +232,7 @@ export async function updateUserStreak({
             currentStreak: curB,
             streakFootball: curF,
             maxStreak: maxB,
+            ...basketballSeasonPatch,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -214,6 +247,7 @@ export async function updateUserStreak({
             activeWinStreak,
             activeWinStreakBasketball,
             activeWinStreakFootball,
+            ...basketballSeasonPatch,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }

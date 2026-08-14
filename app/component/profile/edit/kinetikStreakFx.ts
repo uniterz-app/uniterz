@@ -9,8 +9,8 @@ export const KINETIK_STREAK_VARIANT: KinetikStreakVariant = "edge-march";
 
 export type KinetikStreakTier = 0 | 1 | 2 | 3 | 4;
 
-/** 連勝タグ・演出を出し始める最低連勝数 */
-export const KINETIK_STREAK_MIN_WINS = 4;
+/** 連勝タグを出し始める最低連勝数（リザルト IMPACT と同じ） */
+export const KINETIK_STREAK_MIN_WINS = 3;
 
 export function isKinetikWinStreakActive(streak: number): boolean {
   return Math.max(0, Math.floor(streak)) >= KINETIK_STREAK_MIN_WINS;
@@ -42,7 +42,7 @@ export function formatKinetikWinStreakLabel(
 ): string {
   const n = Math.max(0, Math.floor(streak));
   if (!isKinetikWinStreakActive(n)) return "";
-  return language === "en" ? `${n} WIN STREAK` : `${n}連勝`;
+  return `W${n}`;
 }
 
 /** 連勝タグタップ時に表示する説明文 */
@@ -51,14 +51,12 @@ export function getKinetikWinStreakExplanation(
   language: "ja" | "en" = "ja"
 ): string {
   const n = Math.max(0, Math.floor(streak));
-  const tier = getKinetikStreakTier(n);
-  const colorLabel = getKinetikStreakColorLabel(tier, language);
 
   if (language === "ja") {
-    return `${n}連勝\n\n確定した予想が連続で的中しています。4連勝以上で表示され、連勝が伸びるほどアバター枠の色が変化します（現在: ${colorLabel}）。`;
+    return `${n}連勝（W${n}）\n\n今シーズン確定した予想が連続で的中しています。3連勝以上で表示され、連勝が伸びるほど色が変わります（3–4 鋼 / 5–6 シアン / 7–9 金 / 10+ 紅）。`;
   }
 
-  return `${n} win streak\n\nYour confirmed picks have won ${n} games in a row. Shown at 4+ wins; avatar border color shifts as the streak grows (now: ${colorLabel}).`;
+  return `${n} win streak (W${n})\n\nConfirmed picks have won ${n} games in a row this season. Shown at 3+ wins; color shifts as the streak grows (3–4 steel / 5–6 cyber / 7–9 gold / 10+ hot).`;
 }
 
 export const KINETIK_STREAK_VARIANTS: {

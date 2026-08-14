@@ -1,74 +1,48 @@
 /** __DEV__ 試合カードプレビュー用 mock。一覧 `GameCardList` と同じ shape。 */
 
-function nbaSide(
-  teamId: string,
-  name: string,
-  wins: number,
-  losses: number,
-  rank: number
-) {
-  return { teamId, name, wins, losses, rank };
+import {
+  NBA_OPENING_NIGHT_PREVIEW_GAMES,
+  nbaOpeningNightKnicksSixers,
+  nbaOpeningNightPistonsCeltics,
+  nbaOpeningNightSpursThunder,
+} from "../../../../../lib/games/nbaOpeningNightPreviewGames";
+
+function nbaSide(teamId: string, name: string, wins = 0, losses = 0, rank?: number) {
+  return rank != null && rank > 0
+    ? { teamId, name, wins, losses, rank }
+    : { teamId, name, wins, losses };
 }
 
-const kickoffSoon = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
+export const matchCardPreviewOpeningPistonsCeltics =
+  nbaOpeningNightPistonsCeltics;
+export const matchCardPreviewOpeningKnicksSixers = nbaOpeningNightKnicksSixers;
+export const matchCardPreviewOpeningSpursThunder = nbaOpeningNightSpursThunder;
+export const matchCardPreviewOpeningNightGames = NBA_OPENING_NIGHT_PREVIEW_GAMES;
 
-export const MATCH_CARD_PREVIEW_SCHEDULED_ID = "preview-match-scheduled";
-export const MATCH_CARD_PREVIEW_PREDICTED_ID = "preview-match-predicted";
-export const MATCH_CARD_PREVIEW_PICKUP_ID = "preview-match-pickup";
+export const MATCH_CARD_PREVIEW_SCHEDULED_ID =
+  matchCardPreviewOpeningPistonsCeltics.id as string;
+export const MATCH_CARD_PREVIEW_PREDICTED_ID =
+  "preview-nba-20261021-bos-det-predicted";
+export const MATCH_CARD_PREVIEW_PICKUP_ID =
+  matchCardPreviewOpeningKnicksSixers.id as string;
 export const MATCH_CARD_PREVIEW_PICKUP_PREDICTED_ID =
-  "preview-match-pickup-predicted";
+  "preview-nba-20261021-okc-sas-predicted";
 
-export const matchCardPreviewScheduled: Record<string, unknown> = {
-  id: MATCH_CARD_PREVIEW_SCHEDULED_ID,
-  league: "nba",
-  status: "scheduled",
-  startAtJst: kickoffSoon,
-  roundLabel: "REGULAR SEASON",
-  home: nbaSide("nba-lakers", "Los Angeles Lakers", 48, 24, 3),
-  away: nbaSide("nba-celtics", "Boston Celtics", 51, 21, 2),
-  homeTeamName: "Los Angeles Lakers",
-  awayTeamName: "Boston Celtics",
-};
+export const matchCardPreviewScheduled = matchCardPreviewOpeningPistonsCeltics;
 
 export const matchCardPreviewPredicted: Record<string, unknown> = {
+  ...matchCardPreviewOpeningPistonsCeltics,
   id: MATCH_CARD_PREVIEW_PREDICTED_ID,
-  league: "nba",
-  status: "scheduled",
-  startAtJst: kickoffSoon,
-  roundLabel: "REGULAR SEASON",
-  home: nbaSide("nba-knicks", "New York Knicks", 44, 28, 6),
-  away: nbaSide("nba-76ers", "Philadelphia 76ers", 39, 33, 8),
-  homeTeamName: "New York Knicks",
-  awayTeamName: "Philadelphia 76ers",
 };
 
-export const matchCardPreviewPickup: Record<string, unknown> = {
-  id: MATCH_CARD_PREVIEW_PICKUP_ID,
-  league: "nba",
-  status: "scheduled",
-  isPickup: true,
-  pickupWeekKey: "2026-W42",
-  startAtJst: kickoffSoon,
-  roundLabel: "REGULAR SEASON",
-  home: nbaSide("nba-lakers", "Los Angeles Lakers", 48, 24, 3),
-  away: nbaSide("nba-celtics", "Boston Celtics", 51, 21, 2),
-  homeTeamName: "Los Angeles Lakers",
-  awayTeamName: "Boston Celtics",
-};
+export const matchCardPreviewPickup = matchCardPreviewOpeningKnicksSixers;
 
 export const matchCardPreviewPickupPredicted: Record<string, unknown> = {
+  ...matchCardPreviewOpeningSpursThunder,
   id: MATCH_CARD_PREVIEW_PICKUP_PREDICTED_ID,
-  league: "nba",
-  status: "scheduled",
-  isPickup: true,
-  pickupWeekKey: "2026-W42",
-  startAtJst: kickoffSoon,
-  roundLabel: "REGULAR SEASON",
-  home: nbaSide("nba-thunder", "Oklahoma City Thunder", 57, 15, 1),
-  away: nbaSide("nba-nuggets", "Denver Nuggets", 49, 23, 1),
-  homeTeamName: "Oklahoma City Thunder",
-  awayTeamName: "Denver Nuggets",
 };
+
+const kickoffSoon = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
 
 export const matchCardPreviewLive: Record<string, unknown> = {
   id: "preview-match-live",

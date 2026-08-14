@@ -15,7 +15,8 @@ import {
   type ProInsightGateBulletIcon,
 } from "@/lib/predict/proInsightGateCopy";
 import type { Language } from "@/lib/i18n/language";
-import { nameOxanium } from "@/lib/fonts";
+import { nameBebas, nameOxanium } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
@@ -364,10 +365,10 @@ export default function PredictProBriefPanel({
           </p>
           <p
             className={[
-              nameOxanium.className,
-              "truncate text-[18px] font-extrabold uppercase italic leading-none tracking-wide",
+              nameBebas.className,
+              "truncate text-[18px] font-bold uppercase leading-none",
             ].join(" ")}
-            style={{ color: homeColor }}
+            style={{ ...matchCardTeamNameStyle(true), color: homeColor }}
           >
             {homeNick}
           </p>
@@ -392,10 +393,10 @@ export default function PredictProBriefPanel({
           </p>
           <p
             className={[
-              nameOxanium.className,
-              "truncate text-[18px] font-extrabold uppercase italic leading-none tracking-wide",
+              nameBebas.className,
+              "truncate text-[18px] font-bold uppercase leading-none",
             ].join(" ")}
-            style={{ color: awayColor }}
+            style={{ ...matchCardTeamNameStyle(true), color: awayColor }}
           >
             {awayNick}
           </p>

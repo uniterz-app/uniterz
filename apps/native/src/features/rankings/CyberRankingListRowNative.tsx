@@ -1,6 +1,13 @@
-import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import type { ReactNode } from "react";
-import Animated from "react-native-reanimated";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, type ReactNode } from "react";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MobileMetric } from "../../../../../lib/rankings/rankingMetrics";
@@ -10,6 +17,7 @@ import { cyberScoreGlowLayers } from "../../../../../lib/rankings/cyberGlyphGlow
 import {
   cyberMetricTag,
   cyberRankPalette,
+  cyberRankQuietFrameColor,
   CYBER_LIST_CYAN,
   CYBER_LIST_MAGENTA,
 } from "../../../../../lib/rankings/cyberRankVisual";
@@ -39,8 +47,7 @@ function cyberScoreColor(rank: number): string {
   if (rank === 1) return "#FFD65A";
   if (rank === 2) return "#FCD34D";
   if (rank === 3) return "#FB923C";
-  const t = Math.min(1, (rank - 4) / 14);
-  return `rgba(255, 43, 214, ${0.92 - t * 0.35})`;
+  return "rgba(255,255,255,0.96)";
 }
 
 function scoreFontSize(rank: number): number {
@@ -72,20 +79,71 @@ function CyberRankingScoreNative({
       : formatMetricDecimals(counted, 1);
 
   return (
-    <CyberGlyphGlowTextNative
-      style={[
-        styles.scoreMain,
-        {
-          color,
-          fontSize,
-          lineHeight: scoreLineHeight(fontSize),
-          fontFamily: RANKING_SCORE_FONT,
-        },
-      ]}
-      layers={plainWhite ? [] : cyberScoreGlowLayers(rank)}
-    >
-      {displayValue}
-    </CyberGlyphGlowTextNative>
+    <View style={styles.scoreMainSkew}>
+      <CyberGlyphGlowTextNative
+        style={[
+          styles.scoreMain,
+          {
+            color,
+            fontSize,
+            lineHeight: scoreLineHeight(fontSize),
+            fontFamily: RANKING_SCORE_FONT,
+          },
+        ]}
+        layers={plainWhite ? [] : cyberScoreGlowLayers(rank)}
+      >
+        {displayValue}
+      </CyberGlyphGlowTextNative>
+    </View>
+  );
+}
+
+/** Web `.cyber-rank-avatar-first-glow` — 4s 一定周期 */
+const AVATAR_GLOW_PULSE_MS = 2000;
+
+/** Web `.cyber-rank-avatar-first-glow` — 1位アバター枠の脈動 */
+function RankFirstAvatarGlowNative({
+  children,
+  reduceMotion,
+}: {
+  children: ReactNode;
+  reduceMotion: boolean;
+}) {
+  const pulse = useSharedValue(reduceMotion ? 0.55 : 0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      pulse.value = 0.55;
+      return;
+    }
+    pulse.value = 0;
+    pulse.value = withRepeat(
+      withTiming(1, {
+        duration: AVATAR_GLOW_PULSE_MS,
+        easing: Easing.inOut(Easing.sin),
+      }),
+      -1,
+      true
+    );
+    return () => cancelAnimation(pulse);
+  }, [pulse, reduceMotion]);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowColor: "#B8FF3C",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.32 + pulse.value * 0.5,
+    shadowRadius: 5 + pulse.value * 7,
+  }));
+
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: 0.22 + pulse.value * 0.58,
+  }));
+
+  return (
+    <Animated.View style={[styles.avatarSquare, styles.avatarFirstGlow, glowStyle]}>
+      <Animated.View pointerEvents="none" style={[styles.avatarFirstHalo, haloStyle]} />
+      {children}
+    </Animated.View>
   );
 }
 
@@ -94,6 +152,7 @@ function ListRowMeta({
   posts,
   metric,
   avgRow,
+  flagOnly = false,
 }: {
   countryCode?: string | null;
   posts: number;
@@ -103,6 +162,7 @@ function ListRowMeta({
     avgMarginPrecision?: number;
     avgUpsetScore?: number;
   };
+  flagOnly?: boolean;
 }) {
   const flagUri = countryCode ? rankingFlagImageUri(countryCode) : null;
   const avgText = listRowAvgText(metric, avgRow);
@@ -112,8 +172,12 @@ function ListRowMeta({
       {flagUri ? (
         <Image source={{ uri: flagUri }} style={styles.flag} resizeMode="cover" />
       ) : null}
-      <Text style={styles.volText}>VOL:{posts}</Text>
-      {avgText ? <Text style={styles.avgText} numberOfLines={1}>{avgText}</Text> : null}
+      {flagOnly ? null : (
+        <>
+          <Text style={styles.volText}>VOL:{posts}</Text>
+          {avgText ? <Text style={styles.avgText} numberOfLines={1}>{avgText}</Text> : null}
+        </>
+      )}
     </View>
   );
 }
@@ -136,13 +200,16 @@ export function CyberRankingListRowNative({
   animateCrown = false,
   pageKey = "",
   reduceMotion = false,
-  hideAccentBar = false,
   rankOverline = null,
   plainWhiteScore = false,
   proSkinVariant = null,
   proSkinIntensity = "medium",
   /** プレビュー等 — スコアを任意スロットに差し替え */
   scoreSlot = null,
+  hideListMeta = false,
+  bare = false,
+  rankDisplayValue,
+  rankMuted = false,
 }: {
   rank: number;
   displayName: string;
@@ -165,7 +232,7 @@ export function CyberRankingListRowNative({
   animateCrown?: boolean;
   pageKey?: string;
   reduceMotion?: boolean;
-  /** My Rank Free — 左アクセントバー非表示 */
+  /** 廃止（左アクセントバーは出さない）。呼び出し互換のため残す */
   hideAccentBar?: boolean;
   /** 順位数字の上に置くラベル（例: YOUR RANK） */
   rankOverline?: string | null;
@@ -175,9 +242,16 @@ export function CyberRankingListRowNative({
   proSkinVariant?: ProfilePlanProBgVariant | null;
   proSkinIntensity?: RankingListProSkinIntensity;
   scoreSlot?: ReactNode;
+  /** Web `hideListMeta` — VOL / 平均は出さず、国旗だけ出す */
+  hideListMeta?: boolean;
+  /** My Rank カード内 — リスト行の背景・下線・1位枠なし。配置だけ揃える */
+  bare?: boolean;
+  rankDisplayValue?: string;
+  rankMuted?: boolean;
 }) {
   const palette = cyberRankPalette(rank);
-  const firstFrame = palette.firstPlaceFrame;
+  const firstFrame = !bare && palette.firstPlaceFrame;
+  const quietFrame = bare ? null : cyberRankQuietFrameColor(rank);
   const metricTag = cyberMetricTag(metric, language === "ja" ? "ja" : "en");
   const nameJa = hasJaScript(displayName);
   const nameFontSize = rankingFontSizePx(15, displayName);
@@ -192,13 +266,15 @@ export function CyberRankingListRowNative({
   const elevateContent = Boolean(firstFrame || proSkinVariant);
 
   const body = (
-    <View style={styles.article}>
-      {proSkinVariant ? (
-        <RankingListProSkinFxNative
-          variant={proSkinVariant}
-          intensity={proSkinIntensity}
-        />
-      ) : (
+    <View style={[styles.article, bare ? styles.articleBare : null]}>
+      {bare || proSkinVariant ? (
+        proSkinVariant && !bare ? (
+          <RankingListProSkinFxNative
+            variant={proSkinVariant}
+            intensity={proSkinIntensity}
+          />
+        ) : null
+      ) : hideListMeta ? null : (
         <LinearGradient
           pointerEvents="none"
           colors={[
@@ -212,16 +288,10 @@ export function CyberRankingListRowNative({
         />
       )}
       {firstFrame ? <RankFirstBorderEdgeScanNative /> : null}
-      {!hideAccentBar ? (
+      {quietFrame ? (
         <View
-          style={[
-            styles.accentBar,
-            elevateContent ? styles.contentAboveFx : null,
-            {
-              backgroundColor: palette.accent,
-              shadowColor: palette.accentGlow,
-            },
-          ]}
+          pointerEvents="none"
+          style={[styles.quietFrame, { borderColor: quietFrame }]}
         />
       ) : null}
       <View
@@ -237,7 +307,12 @@ export function CyberRankingListRowNative({
               {rankOverline}
             </Text>
           ) : null}
-          <CyberRankNumberNative rank={rank} />
+          <CyberRankNumberNative
+            rank={rank}
+            displayValue={rankDisplayValue}
+            muted={rankMuted}
+          />
+          <RankDeltaBadgeNative delta={rankDeltaPlaces} />
         </View>
 
         <View style={styles.avatarCol}>
@@ -253,16 +328,19 @@ export function CyberRankingListRowNative({
               <Text style={styles.plusLabel}>+++</Text>
             </Animated.View>
           ) : null}
-          <View
-            style={[
-              styles.avatarSquare,
-              firstFrame
-                ? { borderColor: "rgba(184,255,60,0.55)", shadowColor: "rgba(184,255,60,0.2)" }
-                : { borderColor: "rgba(255,255,255,0.12)" },
-            ]}
-          >
-            <RankingsAvatarNative photoURL={photoURL} label={displayName} size={44} square />
-          </View>
+          {firstFrame ? (
+            <RankFirstAvatarGlowNative reduceMotion={reduceMotion}>
+              <View style={styles.avatarCrop}>
+                <RankingsAvatarNative photoURL={photoURL} label={displayName} size={44} square />
+              </View>
+            </RankFirstAvatarGlowNative>
+          ) : (
+            <View style={[styles.avatarSquare, styles.avatarRestBorder]}>
+              <View style={styles.avatarCrop}>
+                <RankingsAvatarNative photoURL={photoURL} label={displayName} size={44} square />
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.mainCol}>
@@ -281,15 +359,22 @@ export function CyberRankingListRowNative({
             >
               {displayName}
             </Text>
-            <RankDeltaBadgeNative delta={rankDeltaPlaces} />
-            {isPro ? <ProCyberBadgeNative compact /> : null}
+            {isPro ? (
+              <ProCyberBadgeNative compact={!bare} emphasized={bare} />
+            ) : null}
           </View>
-          <ListRowMeta
-            countryCode={countryCode}
-            posts={posts}
-            metric={metric}
-            avgRow={avgRow ?? {}}
-          />
+          {hideListMeta ? (
+            countryCode ? (
+              <ListRowMeta countryCode={countryCode} posts={0} metric={metric} avgRow={{}} flagOnly />
+            ) : null
+          ) : (
+            <ListRowMeta
+              countryCode={countryCode}
+              posts={posts}
+              metric={metric}
+              avgRow={avgRow ?? {}}
+            />
+          )}
         </View>
 
         <View style={styles.scoreCol}>
@@ -314,7 +399,9 @@ export function CyberRankingListRowNative({
           ) : null}
         </View>
       </View>
-      <View style={[styles.bottomBorder, elevateContent ? styles.contentAboveFx : null]} />
+      {bare ? null : (
+        <View style={[styles.bottomBorder, elevateContent ? styles.contentAboveFx : null]} />
+      )}
     </View>
   );
 
@@ -322,6 +409,7 @@ export function CyberRankingListRowNative({
     return (
       <Pressable
         onPress={onPress}
+        delayPressIn={0}
         accessibilityRole="button"
         style={({ pressed }) => [pressed ? styles.rowPressed : null]}
       >
@@ -337,23 +425,24 @@ const styles = StyleSheet.create({
     position: "relative",
     minHeight: 72,
     overflow: "hidden",
+    marginBottom: 3,
+  },
+  articleBare: {
+    marginBottom: 0,
+    overflow: "visible",
   },
   contentAboveFx: {
     zIndex: 10,
   },
-  rowPressed: {
-    opacity: 0.88,
+  quietFrame: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 6,
+    borderWidth: 1,
+    opacity: 0.92,
   },
-  accentBar: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 12,
-    zIndex: 2,
+  rowPressed: {
+    opacity: 0.96,
+    transform: [{ scale: 0.99 }],
   },
   rowInner: {
     flexDirection: "row",
@@ -370,7 +459,7 @@ const styles = StyleSheet.create({
   },
   rankCol: {
     width: 52,
-    height: 44,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
@@ -426,11 +515,25 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 4,
     borderWidth: 1,
+    overflow: "visible",
+  },
+  avatarCrop: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 3,
     overflow: "hidden",
-    ...Platform.select({
-      ios: { shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.35, shadowRadius: 12 },
-      default: {},
-    }),
+  },
+  avatarRestBorder: {
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  avatarFirstGlow: {
+    borderColor: "rgba(184,255,60,0.78)",
+  },
+  avatarFirstHalo: {
+    ...StyleSheet.absoluteFillObject,
+    margin: -4,
+    borderRadius: 7,
+    backgroundColor: "rgba(184,255,60,0.28)",
   },
   mainCol: {
     flex: 1,
@@ -485,6 +588,9 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     paddingTop: 1,
     overflow: "visible",
+  },
+  scoreMainSkew: {
+    transform: [{ skewX: "-12deg" }],
   },
   scoreMain: {
     fontWeight: "700",

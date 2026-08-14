@@ -13,10 +13,11 @@ import {
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { Info } from "lucide-react";
-import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
 import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
 import styles from "./profileChartInfoFaq.module.css";
 import { isProfileChartAnimationOff } from "@/lib/profile/profileVisualEffects";
@@ -169,7 +170,7 @@ export default function ProfilePlayoffRankTrendChart({
   loading = false,
   visualEffectsLite = false,
   sectionTitle,
-  stackedSecondary = false,
+  stackedSecondary: _stackedSecondary = false,
   frozen = false,
 }: Props) {
   const msg = t(language);
@@ -380,7 +381,8 @@ export default function ProfilePlayoffRankTrendChart({
   }, [showLineLayer, rechartsAnimActive, lineLayerKey]);
 
   return (
-    <ProfileKinetikPanelFrame ref={ref} className="w-full p-3">
+    <ProfileOverviewLineFrame title={title}>
+    <ProfileKinetikPanelFrame ref={ref} className="profile-kinetik-panel--line-frame w-full p-3">
       {/* z をチャートより上にし、下方向の Info ツールチップが SVG に隠れないようにする */}
       <div className="relative z-20 px-1 pt-0.5">
         <div className="flex items-start justify-between gap-3">
@@ -394,15 +396,10 @@ export default function ProfilePlayoffRankTrendChart({
             ) : null}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <p
-                className={[
-                  nameRajdhani.className,
-                  "font-semibold tracking-wide text-white/95",
-                  stackedSecondary
-                    ? "text-base sm:text-lg"
-                    : "text-lg sm:text-[1.72rem]",
-                ].join(" ")}
+                className="min-w-0 flex-1 text-xs leading-relaxed sm:text-[14px]"
+                style={{ color: PROFILE_CHART_CYBER.subtitle }}
               >
-                {title}
+                {subtitle}
               </p>
               <div className={styles.wrap}>
                 <button
@@ -441,12 +438,6 @@ export default function ProfilePlayoffRankTrendChart({
             </div>
           ) : null}
         </div>
-        <p
-          className="mt-1.5 max-w-[520px] text-xs leading-relaxed sm:text-[14px]"
-          style={{ color: PROFILE_CHART_CYBER.subtitle }}
-        >
-          {subtitle}
-        </p>
       </div>
 
       <div className="relative z-0 mt-2 h-52 sm:h-56">
@@ -745,5 +736,6 @@ export default function ProfilePlayoffRankTrendChart({
         }
       `}</style>
     </ProfileKinetikPanelFrame>
+    </ProfileOverviewLineFrame>
   );
 }

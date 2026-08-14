@@ -1,6 +1,8 @@
 import { useId, type ReactNode } from "react";
 import { StyleSheet, View, type ViewStyle } from "react-native";
 import Svg, { Defs, Pattern, Rect, Path as SvgPath } from "react-native-svg";
+import MatchListLineFrameNative from "../games/MatchListLineFrameNative";
+import { PROFILE_OVERVIEW_LINE_FRAME_PAINT } from "@/lib/games/matchListLineFrame";
 import {
   PROFILE_OVERVIEW_CHART_GRID_OPACITY,
   profileOverviewChartShellStyle,
@@ -14,15 +16,29 @@ type Props = {
   children: ReactNode;
   style?: ViewStyle;
   minHeight?: number;
+  /** 指定時はマッチカードと同じ途切れパス＋左寄せラウンドラベル */
+  topLabel?: string;
 };
 
 /** Daily Combo と同系の Kinetik 枠 + 内側格子 */
-export default function ProfileOverviewChartCardNative({ children, style, minHeight }: Props) {
+export default function ProfileOverviewChartCardNative({
+  children,
+  style,
+  minHeight,
+  topLabel,
+}: Props) {
   const sid = useId().replace(/[^a-zA-Z0-9_]/g, "_");
   const gridPatternId = `profile_overview_chart_grid_${sid}`;
 
-  return (
-    <View style={[styles.card, style, minHeight != null ? { minHeight } : null]}>
+  const inner = (
+    <View
+      style={[
+        styles.card,
+        topLabel ? styles.cardInLineFrame : null,
+        style,
+        minHeight != null ? { minHeight } : null,
+      ]}
+    >
       <Svg
         width="100%"
         height="100%"
@@ -52,6 +68,18 @@ export default function ProfileOverviewChartCardNative({ children, style, minHei
       {children}
     </View>
   );
+
+  if (!topLabel) return inner;
+
+  return (
+    <MatchListLineFrameNative
+      topLabel={topLabel}
+      topLabelAlign="start"
+      paint={PROFILE_OVERVIEW_LINE_FRAME_PAINT}
+    >
+      {inner}
+    </MatchListLineFrameNative>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -60,5 +88,10 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     width: "100%",
     position: "relative",
+  },
+  cardInLineFrame: {
+    borderWidth: 0,
+    borderRadius: 0,
+    overflow: "hidden",
   },
 });

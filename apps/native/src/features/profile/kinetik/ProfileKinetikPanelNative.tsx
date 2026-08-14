@@ -46,7 +46,6 @@ import {
 import { KINETIK_AVATAR_MOBILE } from "./kinetikAvatarNativeMetrics";
 import {
   formatKinetikWinStreakLabel,
-  getKinetikStreakTier,
   getKinetikWinStreakExplanation,
 } from "../../../../../../app/component/profile/edit/kinetikStreakFx";
 import { getKinetikRankBadgeExplanation } from "../../../../../../app/component/profile/edit/kinetikRankBadge";
@@ -91,6 +90,7 @@ import {
 } from "./profileKinetikNativeTheme";
 import ProCyberBadgeNative from "./ProCyberBadgeNative";
 import ProfileKinetikAvatarWithStreakNative from "./ProfileKinetikAvatarWithStreakNative";
+import ResultImpactStreakTagNative from "../../results/ResultImpactStreakTagNative";
 import ProfilePlanProBackgroundNative from "./ProfilePlanProBackgroundNative";
 import {
   KINETIK_FLIP_EAR,
@@ -637,8 +637,6 @@ function KinetikHeaderTabsNative({
   const streakLabel = formatKinetikWinStreakLabel(winStreak, language);
   if (!rankBadge && !streakLabel) return null;
 
-  const streakTier = getKinetikStreakTier(winStreak);
-
   const showTagExplanation = useCallback(
     (message: string) => {
       const [title, ...rest] = message.split("\n");
@@ -664,20 +662,16 @@ function KinetikHeaderTabsNative({
         />
       ) : null}
       {streakLabel ? (
-        <KinetikSlantTabNative
-          label={streakLabel}
-          variant="outline"
-          streakTier={
-            streakTier > 0 ? (streakTier as 1 | 2 | 3 | 4) : undefined
-          }
-          explanation={getKinetikWinStreakExplanation(winStreak, language)}
-          language={language}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={streakLabel}
           onPress={() =>
-            showTagExplanation(
-              getKinetikWinStreakExplanation(winStreak, language)
-            )
+            showTagExplanation(getKinetikWinStreakExplanation(winStreak, language))
           }
-        />
+          style={({ pressed }) => [pressed ? { opacity: 0.85 } : null]}
+        >
+          <ResultImpactStreakTagNative winStreak={winStreak} />
+        </Pressable>
       ) : null}
     </View>
   );

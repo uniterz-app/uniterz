@@ -1,6 +1,6 @@
 # プレビュー → 本番 作業メモ（忘れ防止）
 
-> 最終更新: 2026-07-16  
+> 最終更新: 2026-08-15  
 > 目的: UI だけ先に作った機能の **本番反映・データ接続・ルール確定** を忘れないための単一メモ。  
 > **直近で順番に進める作業** → [§0 次の作業キュー](#0-次の作業キュー優先順)
 
@@ -156,6 +156,20 @@
 | 12 | **招待ページ** | ✅ | `/mobile/invite` · Native `Invite` · スタンプボード |
 | 13 | **Unit 履歴** | ✅ | `/mobile/units` · Native `UnitLedger` |
 | 14 | **商品交換（カタログ・申請・進捗・Admin）** | ✅ LIVE | `REDEMPTION_UNITS_LIVE=true`（2026-08-13 弁護士 OK 後）。設計: `unit-redemption-design.md` |
+| 15 | **グループページ UI を今のアプリの雰囲気に合わせる** | ⏳ 今後 | 一覧・詳細・オーバーレイを、Games / Rankings / Result / Profile と同じサイバー HUD に揃える。機能変更はしない |
+
+### 0.5 グループページ UI（今後）
+
+Games / Rankings / Result / Profile はサイバー HUD（斜めフレーム、黒地、シアン縁、IMPACT 系タグ）に揃っている。グループページはまだ旧い見た目のままなので、**雰囲気だけ**合わせる。
+
+| # | 対象 | メモ |
+|---|---|---|
+| 1 | グループ一覧 | Leaderboards / コミュニティ一覧 |
+| 2 | グループ詳細 | `CommunityGroupDetailView`（ヘッダー・メンバー・ランキングカード） |
+| 3 | グループオーバーレイ | `CommunityGroupOverlay` |
+| 4 | Native 追従 | 同じ画面の `*Native`（ピクセル完璧は対象外、7〜8割） |
+
+参照: `app/component/communities/CommunityGroup*` · `apps/native/src/features/leaderboards/CommunityGroup*`
 
 ### 進め方メモ
 
@@ -313,6 +327,7 @@
 
 | 日付 | 内容 |
 |---|---|
+| 2026-08-15 | **今後キューに追加**: グループページ UI を今のアプリの雰囲気に合わせる（§0.4 #15 / §0.5）。機能変更なし。一覧・詳細・オーバーレイ + Native 追従 |
 | 2026-07-27 | 月次レポート残作業を `pro-subscription-plan.md`「これからやるキュー」に整理（クセ接続→CONSISTENCY→前月比→8:00 cron→プッシュ→Report入口。Unit は弁護士後）。§0.2 #7 状態更新 |
 | 2026-07-23 | **Pro Plan 煮詰め反映**: `pro-subscription-plan.md` を正として全面更新。§0.1.a 課金コピーを Insight/アラート/レポート/Skin 中心に差し替え。Shadow・Gap は V1 外。週次・月次 V1 完成形・Achievement Skin・直前アラートを計画書へ |
 | 2026-07-18 | **26-27 シーズンキー移行 + ランキング大掃除**: ① 25-26 の `cumulative_ranking_snapshots` 全 52 doc を `cumulative_ranking_snapshots_archive/2025-26-playoffs/docs/` にコピー済み（`scripts/archive-cumulative-ranking-snapshots-2025-26.ts` 実行済み。`cumulative_stats` は温存 → バッジ影響なし）。② NBA 累計は `rankingBySeason["2026-27"]` バケットに精算加算（daily も同キー）、スナップショットは `s2026-27_<metric>` doc、snapshotRanks/履歴は `seasons.<key>` ブロック。Ranking Progress（trend API）もシーズンキーで絞り込み、7月の旧順位が混入しない。③ 削除: ラウンド別集計（`rankingByPlayoffRound`）・play_in 配管・NBA Bracket リーダーボード・旧 Monthly リーダーボード（cron/API/UI）・`useRanking` + `/api/cumulative-ranking` 単発版・Gap/Shadow の日次データ収集（`gapCohorts`。UI/API はライブ read で継続）。④ 一発運用スクリプト多数を `scripts/archive/` へ移動（tsconfig から除外） |

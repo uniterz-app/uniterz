@@ -221,17 +221,24 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   return (
     <AnimatedPressable
       collapsable={false}
+      delayPressIn={0}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
       onPress={() => void openPredictModal(game)}
       onPressIn={() => {
-        if (reduceMotion) return;
-        ent.pressed.value = withTiming(1, { duration: 90 });
+        ent.pressed.value = reduceMotion
+          ? 1
+          : withTiming(1, { duration: 90 });
       }}
       onPressOut={() => {
-        if (reduceMotion) return;
-        ent.pressed.value = withTiming(0, { duration: 160 });
+        ent.pressed.value = reduceMotion
+          ? 0
+          : withTiming(0, { duration: 160 });
       }}
-      style={[styles.gameCardOuter, ent.shellTransformStyle]}
+      style={[
+        styles.gameCardOuter,
+        ent.shellTransformStyle,
+        useLineFrame ? ent.shellOpacityStyle : null,
+      ]}
     >
       {/*
         測定・パルス枠はカード実寸（Clip）に一致させる。
@@ -249,6 +256,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
           topLabel={frameLabels.top || undefined}
           leftLabel={frameLabels.left}
           bottomLabel={ctaDisplayLabel}
+          strokeEnd={ent.frameStrokeEnd}
         >
           <View style={styles.lineFrameInterior}>
             <Animated.View style={ent.teamsGroupStyle}>

@@ -338,7 +338,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               </div>
               ) : null}
               {chartsInView && overviewStage >= 2 && resolvedUid ? (
-              <div className="min-w-0 overflow-hidden">
+              <div className="min-w-0 overflow-visible">
                 <StreakTrackerCardLazy
                   uid={resolvedUid}
                   language={language}
@@ -348,7 +348,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               </div>
               ) : null}
               {chartsInView && overviewStage >= 3 ? (
-              <div className="min-w-0 overflow-x-clip overflow-y-visible">
+              <div className="min-w-0 overflow-visible">
                 {dailyTrendLoading ? (
                   <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
                 ) : (

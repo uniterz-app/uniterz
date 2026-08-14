@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   ROW_STAGGER,
   SymmetricalCompareRow,
@@ -17,9 +18,13 @@ import type {
   NbaTeamStatsBundle,
 } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import { metricDelta } from "@/lib/predict/nbaTeamStatsForm";
-import { nameOxanium } from "@/lib/fonts";
+import { nbaTeamDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
+import { nameBebas, nameOxanium } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type WindowId = "season" | "last10";
 
@@ -27,6 +32,7 @@ type Props = {
   data: NbaTeamStatsBundle;
   /** Pro: SZN± 差分 + #順位（LAST 10） */
   isPro?: boolean;
+  language?: Language;
   className?: string;
 };
 
@@ -220,9 +226,10 @@ function sideProExtras(
 export default function NbaTeamStatsPanel({
   data,
   isPro = false,
+  language = "ja",
   className,
 }: Props) {
-  const [windowId, setWindowId] = useState<WindowId>("last10");
+  const [windowId, setWindowId] = useState<WindowId>("season");
   const active = windowId === "season" ? data.season : data.last10;
   const { home, away } = active;
   const seasonHome = data.season.home;
@@ -554,40 +561,77 @@ export default function NbaTeamStatsPanel({
         <CyberSlantedTabBar fill aria-label="Team stats window">
           <CyberSlantedTab
             role="tab"
-            label="LAST 10"
-            active={windowId === "last10"}
-            onClick={() => setWindowId("last10")}
-            compact
-            fontWeight={900}
-          />
-          <CyberSlantedTab
-            role="tab"
             label="SEASON"
             active={windowId === "season"}
             onClick={() => setWindowId("season")}
             compact
             fontWeight={900}
           />
+          <CyberSlantedTab
+            role="tab"
+            label="LAST 10"
+            active={windowId === "last10"}
+            onClick={() => setWindowId("last10")}
+            compact
+            fontWeight={900}
+          />
         </CyberSlantedTabBar>
       </div>
 
+      <p
+        className={[
+          nameOxanium.className,
+          "mb-1 px-0.5 text-center text-[11px] font-bold tracking-[0.06em] text-white/55",
+        ].join(" ")}
+      >
+        {t(language).predict.teamStatsMoreHint}
+      </p>
+
       <header className="mb-1.5 grid grid-cols-2 gap-2 px-0.5">
-        <p
-          className={[
-            nameOxanium.className,
-            "truncate text-center text-[11px] font-extrabold uppercase tracking-[0.12em] text-white",
-          ].join(" ")}
-        >
-          {teamLabel(home.teamId, home.teamName)}
-        </p>
-        <p
-          className={[
-            nameOxanium.className,
-            "truncate text-center text-[11px] font-extrabold uppercase tracking-[0.12em] text-white",
-          ].join(" ")}
-        >
-          {teamLabel(away.teamId, away.teamName)}
-        </p>
+        {home.teamId ? (
+          <Link
+            href={nbaTeamDetailPreviewHref(home.teamId)}
+            className={[
+              nameBebas.className,
+              "truncate text-center text-[15px] font-bold uppercase leading-tight text-cyan-200",
+            ].join(" ")}
+            style={matchCardTeamNameStyle(true)}
+          >
+            {teamLabel(home.teamId, home.teamName)} →
+          </Link>
+        ) : (
+          <p
+            className={[
+              nameBebas.className,
+              "truncate text-center text-[15px] font-bold uppercase leading-tight text-white",
+            ].join(" ")}
+            style={matchCardTeamNameStyle(true)}
+          >
+            {teamLabel(home.teamId, home.teamName)}
+          </p>
+        )}
+        {away.teamId ? (
+          <Link
+            href={nbaTeamDetailPreviewHref(away.teamId)}
+            className={[
+              nameBebas.className,
+              "truncate text-center text-[15px] font-bold uppercase leading-tight text-violet-200",
+            ].join(" ")}
+            style={matchCardTeamNameStyle(true)}
+          >
+            {teamLabel(away.teamId, away.teamName)} →
+          </Link>
+        ) : (
+          <p
+            className={[
+              nameBebas.className,
+              "truncate text-center text-[15px] font-bold uppercase leading-tight text-white",
+            ].join(" ")}
+            style={matchCardTeamNameStyle(true)}
+          >
+            {teamLabel(away.teamId, away.teamName)}
+          </p>
+        )}
       </header>
 
       {isPro && windowId === "last10" ? (

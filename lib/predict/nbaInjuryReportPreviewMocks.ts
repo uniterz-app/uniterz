@@ -213,3 +213,93 @@ export function injuryReportForPreset(presetId: string): NbaInjuryReport {
     NBA_INJURY_REPORT_BY_PRESET["both-teams-rich"]!
   );
 }
+
+function matchupKey(homeTeamId: string, awayTeamId: string): string {
+  return `${homeTeamId.trim()}|${awayTeamId.trim()}`;
+}
+
+/** 2026-27 開幕 Celtics @ Pistons（プレビュー用） */
+const PISTONS_CELTICS_OPENING_INJURY: NbaInjuryReport = {
+  asOfLabel: "Game day",
+  home: {
+    teamId: "nba-pistons",
+    teamName: "Pistons",
+    side: "home",
+    entries: [
+      {
+        player: {
+          id: 1631105,
+          firstName: "Jalen",
+          lastName: "Duren",
+          position: "C",
+          jerseyNumber: "0",
+        },
+        status: "Out",
+        returnDate: "1–2 Weeks",
+        injuryDetail: "Ankle / Sprain",
+        description:
+          "Duren (ankle) is out for the opener after a sprain in the final preseason game.",
+      },
+      {
+        player: {
+          id: 1631106,
+          firstName: "Ausar",
+          lastName: "Thompson",
+          position: "G-F",
+          jerseyNumber: "9",
+        },
+        status: "Questionable",
+        returnDate: "Day-to-Day",
+        injuryDetail: "Hip / Soreness",
+        description: "Thompson (hip) is questionable and will be a game-time decision.",
+      },
+    ],
+  },
+  away: {
+    teamId: "nba-celtics",
+    teamName: "Celtics",
+    side: "away",
+    entries: [
+      {
+        player: {
+          id: 1628369,
+          firstName: "Jayson",
+          lastName: "Tatum",
+          position: "F",
+          jerseyNumber: "0",
+        },
+        status: "Probable",
+        returnDate: "Next Game",
+        injuryDetail: "Achilles / Recovery",
+        description:
+          "Tatum (Achilles) is probable for the opener after a full practice.",
+      },
+      {
+        player: {
+          id: 202331,
+          firstName: "Paul",
+          lastName: "George",
+          position: "F",
+          jerseyNumber: "13",
+        },
+        status: "Questionable",
+        returnDate: "Day-to-Day",
+        injuryDetail: "Knee / Soreness",
+        description: "George (knee) is questionable in his Celtics debut.",
+      },
+    ],
+  },
+};
+
+/** homeTeamId|awayTeamId */
+export const NBA_INJURY_REPORT_BY_MATCHUP: Record<string, NbaInjuryReport> = {
+  "nba-pistons|nba-celtics": PISTONS_CELTICS_OPENING_INJURY,
+};
+
+export function injuryReportForMatchup(
+  homeTeamId: string | undefined,
+  awayTeamId: string | undefined
+): NbaInjuryReport | null {
+  if (!homeTeamId || !awayTeamId) return null;
+  return NBA_INJURY_REPORT_BY_MATCHUP[matchupKey(homeTeamId, awayTeamId)] ?? null;
+}

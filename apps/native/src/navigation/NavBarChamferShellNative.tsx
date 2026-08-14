@@ -26,27 +26,28 @@ import {
   insetChamferedRectPathD,
   NAV_BAR_CHAMFER_CUT,
 } from "../features/games/matchListCyberClipPath";
-/**
- * Native は BackdropBlur 越しに下地が強く透けるため、
- * Web トークン（0.52/0.58）より不透明度を上げる。
- */
+import { colors } from "../theme/tokens";
+
+/** A03 — 黒ドック。Native は BackdropBlur 越しに下地が透けるので不透明寄り。 */
 const NAV_BAR_MOBILE_FILL = [
-  "rgba(18,24,36,0.88)",
-  "rgba(10,14,24,0.92)",
+  colors.navBarFillStart,
+  colors.navBarFillEnd,
 ] as const;
 const NAV_BAR_MOBILE_SHEEN = [
-  "rgba(79,247,244,0.03)",
+  colors.navBarSheenStart,
   "rgba(255,255,255,0.01)",
   "rgba(255,255,255,0)",
 ] as const;
 /** Web `backdrop-filter: blur(4px)` 相当（強すぎると透け感が増すので控えめ） */
 const NAV_BAR_BACKDROP_BLUR = 3;
-/** Web ドック枠の薄い縁 */
-const NAV_BAR_BORDER = "rgba(255,255,255,0.10)";
+const NAV_BAR_BORDER = colors.navBarBorder;
 const NAV_BAR_BORDER_WIDTH = 1;
 
 type Props = {
   children: ReactNode;
+  fill?: readonly [string, string];
+  sheen?: readonly [string, string, string];
+  border?: string;
 };
 
 function makeSkiaPath(width: number, height: number, cut: number) {
@@ -71,7 +72,12 @@ function makeBorderRingPath(
 }
 
 /** Web mobile `NavBar` の `NAV_DOCK_CLIP`（14px 八角）相当 */
-export default function NavBarChamferShellNative({ children }: Props) {
+export default function NavBarChamferShellNative({
+  children,
+  fill = NAV_BAR_MOBILE_FILL,
+  sheen = NAV_BAR_MOBILE_SHEEN,
+  border = NAV_BAR_BORDER,
+}: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
 
   const skiaPath = useMemo(
@@ -130,7 +136,7 @@ export default function NavBarChamferShellNative({ children }: Props) {
                 <SkiaLinearGradient
                   start={vec(size.w * 0.5, 0)}
                   end={vec(size.w * 0.5, size.h)}
-                  colors={[...NAV_BAR_MOBILE_FILL]}
+                  colors={[...fill]}
                 />
               </Rect>
               <Rect
@@ -149,13 +155,13 @@ export default function NavBarChamferShellNative({ children }: Props) {
                 <SkiaLinearGradient
                   start={vec(size.w * 0.5, 0)}
                   end={vec(size.w * 0.5, size.h)}
-                  colors={[...NAV_BAR_MOBILE_SHEEN]}
+                  colors={[...sheen]}
                   positions={[0, 0.35, 0.55]}
                 />
               </Rect>
             </Group>
             {borderRingPath ? (
-              <Path path={borderRingPath} style="fill" color={NAV_BAR_BORDER} />
+              <Path path={borderRingPath} style="fill" color={border} />
             ) : null}
           </Canvas>
         </View>

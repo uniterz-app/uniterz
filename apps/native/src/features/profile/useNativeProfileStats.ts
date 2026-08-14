@@ -71,7 +71,7 @@ export type NativeProfileStatsState = {
   error: string | null;
 };
 
-const STATS_CACHE_VERSION = `v11:${profileOverviewSeasonKey()}:heroNoLegacy`;
+const STATS_CACHE_VERSION = `v12:${profileOverviewSeasonKey()}:heroSeasonStreak`;
 /** NBA 以外 / フォールバック */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const PROFILE_STATS_FETCH_TIMEOUT_MS = 20_000;

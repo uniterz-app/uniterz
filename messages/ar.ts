@@ -728,6 +728,7 @@ const ar: Messages = {
     marketBias: "ميل السوق",
     h2hAvgPoints: "معدل النقاط H2H",
     teamStats: "Team Stats",
+    teamStatsMoreHint: "المزيد من الإحصائيات في صفحة الفريق",
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "‏Insight متاح مع خطة Pro.",

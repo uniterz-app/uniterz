@@ -2270,6 +2270,13 @@ export default function GamesHomeScreen({
           setPredictSpectatorStartedNoPost(false);
           setSelectedGame(null);
         }}
+        onOpenTeamDetail={(teamId) => {
+          setIsPredictModalOpen(false);
+          setExpandScoreFormWhenEditing(false);
+          setPredictSpectatorStartedNoPost(false);
+          setSelectedGame(null);
+          navigation.navigate("TeamDetailPreview", { teamId });
+        }}
         spectatorStartedNoPost={predictSpectatorStartedNoPost}
         predictionEditLockedAfterKickoff={
           selectedGame != null && isGameStarted(selectedGame)
@@ -2919,6 +2926,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textTransform: "uppercase",
     fontFamily: MATCH_CARD_DISPLAY_FONT,
+    transform: [{ skewX: "-10deg" }],
   },
   matchupGrid: {
     flexDirection: "row",

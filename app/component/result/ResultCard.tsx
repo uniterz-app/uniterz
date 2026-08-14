@@ -39,7 +39,10 @@ import { resolveNbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerR
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
-import { RESULT_GLASS_CHIP, RESULT_HAIRLINE, isResultWinFrameBadge } from "@/lib/result/resultGlass";
+import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
+import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
+import { roundLabelFromPost } from "@/lib/result/buildResultCardFace";
+import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/resultLiveGame";
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
@@ -114,6 +117,8 @@ type Props = {
   showFrameSweep?: boolean;
   /** games から補完した PK 戦スコア（投稿に未保存のとき） */
   pkScore?: PkScore | null;
+  /** 線枠パス描画の開始遅延（秒）。一覧スロットと同期 */
+  lineFrameDrawDelaySec?: number;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -171,8 +176,9 @@ function ResultCardPresentationImpl({
   cardClockMs,
   embedded = false,
   visualEffectsLite = false,
-  showFrameSweep = false,
+  showFrameSweep: _showFrameSweep = false,
   pkScore: pkScoreProp = null,
+  lineFrameDrawDelaySec = 0,
 }: ResultCardPresentationProps) {
   const clock = useResultCardClockMs(cardClockMs);
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
@@ -457,21 +463,29 @@ function ResultCardPresentationImpl({
     ? "pointer-events-auto visible -translate-y-1/2 translate-x-0 opacity-100"
     : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover/card:pointer-events-auto group-hover/card:visible group-hover/card:translate-x-0 group-hover/card:opacity-100";
 
+  const roundLabel = roundLabelFromPost(post as unknown as Record<string, unknown>);
+  const lineFramePaint = resultOutcomeLineFramePaint(
+    badge === "streak" ? "streak" : badge
+  );
+
   return (
+    <MatchListLineFrame
+      topLabel={roundLabel}
+      paint={lineFramePaint}
+      animateDraw={!visualEffectsLite}
+      drawDelaySec={lineFrameDrawDelaySec}
+      onClick={embedded ? undefined : handle}
+      className={embedded ? undefined : "cursor-pointer select-none"}
+    >
     <ResultGlassShell
       onClick={embedded ? undefined : handle}
-      badge={badge}
-      activeWinStreak={activeWinStreak}
-      showSweep={
-        showFrameSweep &&
-        !visualEffectsLite &&
-        (badge === "streak" ||
-          badge === "upset" ||
-          isResultWinFrameBadge(badge))
-      }
+      badge={null}
+      activeWinStreak={0}
+      showSweep={false}
       dense={mobileScheduleDense}
       lift={!embedded}
       lite={visualEffectsLite}
+      roundedClassName=""
       className={[
         "group/card relative text-white",
         cornerFabOpen ? "overflow-visible" : "",
@@ -482,9 +496,12 @@ function ResultCardPresentationImpl({
             : "mx-auto w-full max-w-[1200px]",
         embedded ? "" : "cursor-pointer select-none",
       ].join(" ")}
-      extraPanelClassName={
-        cornerFabOpen ? "!overflow-visible" : ""
-      }
+      extraPanelClassName={[
+        cornerFabOpen ? "!overflow-visible" : "",
+        "!border-0 bg-transparent shadow-none",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       {showCornerControl ? (
         <div
@@ -667,13 +684,8 @@ function ResultCardPresentationImpl({
         </div>
       )}
 
-      {/* active:scale は本文のみ（角の除外ボタン押下でカード全体が沈まないよう） */}
-      <div
-        className={[
-          `relative z-10 ${contentPad}`,
-          visualEffectsLite ? "" : "transition-transform active:scale-[0.98]",
-        ].join(" ")}
-      >
+      {/* 押下スケールは MatchListLineFrame（試合カードと同じ 0.99 / 0.96） */}
+      <div className={`relative z-10 ${contentPad}`}>
       <div className="relative">
         <div
           className={`grid grid-cols-2 items-start ${
@@ -1073,6 +1085,7 @@ function ResultCardPresentationImpl({
       </div>
       </div>
     </ResultGlassShell>
+    </MatchListLineFrame>
   );
 }
 

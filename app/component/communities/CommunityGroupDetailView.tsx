@@ -79,9 +79,6 @@ export type CommunityGroupDetailViewProps = {
   /** ヘッダー画像更新後（一覧リフレッシュ用） */
   onImageUpdated?: () => void;
   onHeaderImageEditingChange?: (editing: boolean) => void;
-  /** Web — 「一覧へ」をヒーロー画像上に載せる */
-  heroBackOverImage?: boolean;
-  onBack?: () => void;
   className?: string;
 };
 
@@ -101,8 +98,6 @@ export default function CommunityGroupDetailView({
   onRequestEndGroup,
   onImageUpdated,
   onHeaderImageEditingChange,
-  heroBackOverImage = false,
-  onBack,
   className = "",
 }: CommunityGroupDetailViewProps) {
   const inDetailCard = inDetailCardProp || inOverlay || cardEmbedded;
@@ -378,20 +373,22 @@ export default function CommunityGroupDetailView({
         capTop={inDetailCard}
         onImageUpdated={handleHeaderImageUpdated}
         onImageEditingChange={onHeaderImageEditingChange}
-        overlayBackHeader={heroBackOverImage && isWeb && inDetailCard}
-        onBack={onBack}
       />
     ) : null;
 
   const rankMetricForProfile = communityMetricToMobile(metric);
   const profileStatsLeague = communityLeagueForProfile(summary?.rankingLeague);
 
-  const rankingCardRows = useMemo(
-    () => rows.map((r) => communityRowToRankingCardRow(r, metric)),
+  const rankingItems = useMemo(
+    () =>
+      rows.map((r) => ({
+        rank: r.rank,
+        row: communityRowToRankingCardRow(r, metric),
+      })),
     [rows, metric]
   );
-  const top3 = rankingCardRows.slice(0, 3);
-  const restRows = rankingCardRows.slice(3);
+  const top3 = rankingItems.slice(0, 3).map((item) => item.row);
+  const restRows = rankingItems.slice(3);
 
   const prefersReducedMotion = useReducedMotion();
 
@@ -455,11 +452,11 @@ export default function CommunityGroupDetailView({
             initial={prefersReducedMotion ? "show" : "hidden"}
             animate="show"
           >
-            {rankingCardRows.map((r, i) => (
-              <motion.div key={r.uid} variants={restItem} custom={i}>
+            {rankingItems.map((item) => (
+              <motion.div key={item.row.uid} variants={restItem} custom={item.rank}>
                 <RankingCard
-                  row={r}
-                  rank={i + 1}
+                  row={item.row}
+                  rank={item.rank}
                   metric={rankMetricForProfile}
                   rankingLeague={profileStatsLeague.rankingLeague}
                   wcStage={profileStatsLeague.wcStage}
@@ -493,11 +490,11 @@ export default function CommunityGroupDetailView({
             initial={prefersReducedMotion ? "show" : "hidden"}
             animate="show"
           >
-            {restRows.map((r, i) => (
-              <motion.div key={r.uid} variants={restItem} custom={i}>
+            {restRows.map((item) => (
+              <motion.div key={item.row.uid} variants={restItem} custom={item.rank}>
                 <RankingCard
-                  row={r}
-                  rank={i + 4}
+                  row={item.row}
+                  rank={item.rank}
                   metric={rankMetricForProfile}
                   rankingLeague={profileStatsLeague.rankingLeague}
                   wcStage={profileStatsLeague.wcStage}

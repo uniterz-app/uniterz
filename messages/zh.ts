@@ -717,6 +717,7 @@ const zh: Messages = {
     marketBias: "市场偏向",
     h2hAvgPoints: "H2H 场均得分",
     teamStats: "Team Stats",
+    teamStatsMoreHint: "更多数据请前往球队页面",
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight 需要 Pro 方案。",

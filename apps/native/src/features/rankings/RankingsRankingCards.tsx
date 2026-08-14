@@ -113,12 +113,18 @@ export function RankingListCardNative({
   metric,
   language,
   onPress,
+  animateCrown = false,
+  pageKey = "",
+  reduceMotion = false,
 }: {
   row: RankingRowWithCountry;
   rank: number;
   metric: MobileMetric;
   language: RankingsLanguage;
   onPress?: () => void;
+  animateCrown?: boolean;
+  pageKey?: string;
+  reduceMotion?: boolean;
 }) {
   return (
     <RankingRowCard
@@ -127,6 +133,9 @@ export function RankingListCardNative({
       metric={metric}
       language={language}
       onPress={onPress}
+      animateCrown={animateCrown}
+      pageKey={pageKey}
+      reduceMotion={reduceMotion}
     />
   );
 }

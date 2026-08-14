@@ -321,7 +321,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               </div>
               ) : null}
               {overviewStage >= 2 && resolvedUid ? (
-              <div className="min-w-0 overflow-hidden">
+              <div className="min-w-0 overflow-visible">
                 <StreakTrackerCardLazy
                   uid={resolvedUid}
                   language={language}
@@ -332,7 +332,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               </div>
               ) : null}
               {overviewStage >= 3 ? (
-              <div className="min-w-0 overflow-hidden">
+              <div className="min-w-0 overflow-visible">
                 {dailyTrendLoading ? (
                   <div className="h-56 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
                 ) : (

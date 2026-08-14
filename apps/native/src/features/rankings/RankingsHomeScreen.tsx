@@ -369,7 +369,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const openProfile = (row: RankingRowWithCountry) => {
     const key = profilePathKeyFromRow(row);
     if (!key) return;
-    navigateToPublicProfileNative(navigation, {
+    navigateToPublicProfileNative(stackNavigation, {
       handle: key,
       fromRankings: true,
     });
@@ -404,9 +404,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               title={pageTitle}
               tone={nbaBoard === "open" ? "pro-league" : "default"}
             />
-            <Text style={styles.scheduleNoticeInline} maxFontSizeMultiplier={1.1}>
-              {scheduleNoticeForUser(language)}
-            </Text>
           </View>
           <CyberChamferButtonNative
             size="sm"
@@ -520,6 +517,9 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           />
         ) : category === "playoffs" ? (
           <>
+            <Text style={styles.scheduleNoticeInline} maxFontSizeMultiplier={1.1}>
+              {scheduleNoticeForUser(language)}
+            </Text>
             <View style={styles.metricRowWrap}>
               <RankingsMetricRowNative
                 metrics={metricItems}
@@ -668,13 +668,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     paddingHorizontal: 4,
+    marginTop: 10,
+    marginBottom: 2,
   },
   section: {
     gap: 2,
     marginBottom: 0,
   },
   metricRowWrap: {
-    marginTop: 12,
+    marginTop: 6,
     marginBottom: 2,
     /** 発光のはみ出し用。行間は RankingsMetricRowNative 側で調整 */
     paddingVertical: 4,

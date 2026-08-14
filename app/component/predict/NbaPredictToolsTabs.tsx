@@ -11,8 +11,11 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
+import { proBriefForMatchup } from "@/lib/predict/nbaProBriefPreviewMocks";
 import type { NbaInjuryReport } from "@/lib/predict/nbaInjuryReport";
+import { injuryReportForMatchup } from "@/lib/predict/nbaInjuryReportPreviewMocks";
 import type { NbaTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
+import { teamStatsForMatchup } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "@/lib/predict/nbaRoster";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -64,6 +67,10 @@ export default function NbaPredictToolsTabs({
   const m = t(language).predict;
   const [tab, setTab] = useState<NbaPredictToolsTab>("injuries");
   const router = useRouter();
+  const resolvedInjury =
+    injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
+  const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
+  const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
 
   const openProSubscribe = () => {
     router.push("/mobile/pro/subscribe");
@@ -111,11 +118,11 @@ export default function NbaPredictToolsTabs({
 
       <div className="mt-1.5 min-h-30 px-0.5">
         {tab === "insight" ? (
-          isPro && !brief ? (
+          isPro && !resolvedBrief ? (
             <PendingPanel text={m.panelDataPending} />
           ) : (
             <PredictProBriefPanel
-              brief={brief}
+              brief={resolvedBrief}
               language={language}
               homeTeamId={homeTeamId ?? ""}
               awayTeamId={awayTeamId ?? ""}
@@ -126,19 +133,23 @@ export default function NbaPredictToolsTabs({
             />
           )
         ) : tab === "injuries" ? (
-          injuryReport ? (
-            <NbaInjuryReportPanel report={injuryReport} language={language} />
+          resolvedInjury ? (
+            <NbaInjuryReportPanel report={resolvedInjury} language={language} />
           ) : (
             <PendingPanel text={m.panelDataPending} />
           )
         ) : tab === "stats" ? (
-          teamStats ? (
-            <NbaTeamStatsPanel data={teamStats} isPro={isPro} />
+          resolvedStats ? (
+            <NbaTeamStatsPanel
+              data={resolvedStats}
+              isPro={isPro}
+              language={language}
+            />
           ) : (
             <PendingPanel text={m.panelDataPending} />
           )
         ) : roster ? (
-          <NbaRosterPanel report={roster} injuryReport={injuryReport} />
+          <NbaRosterPanel report={roster} injuryReport={resolvedInjury} />
         ) : (
           <PendingPanel text={m.panelDataPending} />
         )}

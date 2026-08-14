@@ -33,6 +33,7 @@ export const RESULT_DETAIL_DESIGN_TOP10: GamePointsTopEntryV1[] = [
     photoURL: MOCK_AVATAR(11),
     isPro: true,
     points: 9.85,
+    countryCode: "JP",
   },
   {
     rank: 2,
@@ -43,6 +44,7 @@ export const RESULT_DETAIL_DESIGN_TOP10: GamePointsTopEntryV1[] = [
     photoURL: MOCK_AVATAR(32),
     isPro: true,
     points: 9.4,
+    countryCode: "US",
   },
   {
     rank: 3,
@@ -53,6 +55,7 @@ export const RESULT_DETAIL_DESIGN_TOP10: GamePointsTopEntryV1[] = [
     photoURL: MOCK_AVATAR(15),
     isPro: false,
     points: 9.1,
+    countryCode: "KR",
   },
   {
     rank: 4,

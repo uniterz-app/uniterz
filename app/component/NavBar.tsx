@@ -63,12 +63,11 @@ const BarStyle = {
     pointerEvents: "none",
   } as CSSProperties,
 
-  // ページ背景（#0c0d12 付近）・カード（#1a1e2b 付近）に寄せ、シアン強調は抑える
+  // A03 — 黒ドック。選択アイコンはメニューと同じ黄
   barMobile: {
     position: "relative",
     overflow: "hidden",
-    background:
-      "linear-gradient(180deg, rgba(18,24,36,0.52) 0%, rgba(10,14,24,0.58) 100%)",
+    background: "#000000",
     borderRadius: 0,
     clipPath: NAV_DOCK_CLIP,
     WebkitClipPath: NAV_DOCK_CLIP,
@@ -78,7 +77,7 @@ const BarStyle = {
     gap: 6,
     border: "none",
     boxShadow:
-      "0 14px 24px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04)",
+      "0 14px 24px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.16)",
     backdropFilter: "saturate(106%) blur(4px)",
     WebkitBackdropFilter: "saturate(106%) blur(4px)",
     pointerEvents: "auto",
@@ -88,8 +87,7 @@ const BarStyle = {
   barWeb: {
     position: "relative",
     overflow: "hidden",
-    background:
-      "linear-gradient(180deg, rgba(18,22,32,0.45) 0%, rgba(8,10,16,0.50) 100%)",
+    background: "#000000",
     borderRadius: 0,
     clipPath: NAV_DOCK_CLIP,
     padding: "10px 16px",
@@ -98,7 +96,7 @@ const BarStyle = {
     gap: 8,
     border: "none",
     boxShadow:
-      "0 14px 36px rgba(0,0,0,0.52)",
+      "0 14px 36px rgba(0,0,0,0.62), inset 0 0 0 1px rgba(255,255,255,0.16)",
     backdropFilter: "saturate(105%) blur(9px)",
     WebkitBackdropFilter: "saturate(105%) blur(9px)",
     pointerEvents: "auto",
@@ -111,7 +109,7 @@ const BarStyle = {
     borderRadius: "inherit",
     pointerEvents: "none",
     background:
-      "linear-gradient(180deg, rgba(79,247,244,0.03) 0%, rgba(255,255,255,0.01) 35%, rgba(255,255,255,0.00) 55%)",
+      "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 35%, rgba(255,255,255,0.00) 55%)",
   } as CSSProperties,
 
   bottomGlow: {
@@ -269,15 +267,15 @@ export default function NavBar() {
         @keyframes popActive {
           0% {
             transform: scale(0.88);
-            filter: drop-shadow(0 0 0 rgba(103, 232, 249, 0));
+            filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
           }
           40% {
             transform: scale(1.2);
-            filter: drop-shadow(0 0 14px rgba(103, 232, 249, 0.5));
+            filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.45));
           }
           100% {
             transform: scale(1.08);
-            filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.22));
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.22));
           }
         }
         @keyframes utzNavDockIn {
@@ -440,7 +438,7 @@ export default function NavBar() {
                   opacity: 1,
                   ...(isMobile
                     ? {
-                        filter: "drop-shadow(0 0 6px rgba(186,230,253,0.42))",
+                        filter: "drop-shadow(0 0 6px rgba(255,255,255,0.35))",
                       }
                     : {}),
                 }
@@ -448,7 +446,7 @@ export default function NavBar() {
                   transform: "scale(0.92)",
                   position: "relative",
                   zIndex: 2,
-                  opacity: item.iconSrc ? 0.42 : 0.9,
+                  opacity: 0.9,
                 };
 
             const iconEnterDelay = 0.18 + index * 0.065;
@@ -498,19 +496,24 @@ export default function NavBar() {
                   }}
                 >
                   {item.iconSrc ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.iconSrc}
-                      alt=""
-                      width={renderSize}
-                      height={renderSize}
-                      draggable={false}
+                    <span
+                      aria-hidden
                       style={{
                         ...iconStyle,
                         width: renderSize,
                         height: renderSize,
-                        objectFit: "contain",
                         display: "block",
+                        backgroundColor: active
+                          ? "#ffffff"
+                          : "rgba(226,232,240,0.42)",
+                        WebkitMaskImage: `url(${item.iconSrc})`,
+                        maskImage: `url(${item.iconSrc})`,
+                        WebkitMaskRepeat: "no-repeat",
+                        maskRepeat: "no-repeat",
+                        WebkitMaskPosition: "center",
+                        maskPosition: "center",
+                        WebkitMaskSize: "contain",
+                        maskSize: "contain",
                       }}
                     />
                   ) : Icon ? (

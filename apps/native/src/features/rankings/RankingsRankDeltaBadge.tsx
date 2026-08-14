@@ -14,14 +14,40 @@ export function RankDeltaBadgeNative({
   /** 自分カード中央の大きい順位横は md */
   size?: "sm" | "md";
 }) {
-  if (typeof delta !== "number" || !Number.isFinite(delta) || delta === 0) {
+  if (typeof delta !== "number" || !Number.isFinite(delta)) {
     return null;
   }
-  const up = delta > 0;
-  const amount = Math.abs(Math.trunc(delta));
   const isMd = size === "md";
   const iconSize = isMd ? 15 : 11;
   const fontSize = isMd ? 13 : 10;
+
+  if (delta === 0) {
+    return (
+      <View
+        style={[styles.rankDeltaInline, isMd && styles.rankDeltaInlineMd]}
+        accessibilityRole="text"
+        accessibilityLabel="順位変動なし"
+      >
+        <MaterialCommunityIcons
+          name="minus"
+          size={iconSize}
+          color="rgba(255,255,255,0.45)"
+        />
+        <Text
+          style={[
+            styles.rankDeltaInlineAmount,
+            { fontSize, color: "rgba(255,255,255,0.45)" },
+          ]}
+          maxFontSizeMultiplier={1.2}
+        >
+          0
+        </Text>
+      </View>
+    );
+  }
+
+  const up = delta > 0;
+  const amount = Math.abs(Math.trunc(delta));
   const iconColor = up ? "rgba(74,222,128,0.96)" : "rgba(251,146,60,0.96)";
   const textColor = up ? "rgba(74,222,128,0.96)" : "rgba(251,146,60,0.96)";
 
@@ -32,7 +58,7 @@ export function RankDeltaBadgeNative({
       accessibilityLabel={up ? `順位アップ ${amount}` : `順位ダウン ${amount}`}
     >
       <MaterialCommunityIcons
-        name={up ? "arrow-up" : "arrow-down"}
+        name={up ? "arrow-top-right" : "arrow-bottom-right"}
         size={iconSize}
         color={iconColor}
       />

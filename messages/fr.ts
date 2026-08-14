@@ -729,6 +729,7 @@ const fr: Messages = {
     marketBias: "Tendance du marché",
     h2hAvgPoints: "PTS H2H / M",
     teamStats: "Team Stats",
+    teamStatsMoreHint: "Plus de stats sur la page de l'équipe",
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight est disponible avec Pro.",

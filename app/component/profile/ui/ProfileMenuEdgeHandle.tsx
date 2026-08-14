@@ -24,6 +24,10 @@ export default function ProfileMenuEdgeHandle({
   fadeIn = false,
   /** 縦書きラベル（既定 MENU） */
   label = "MENU",
+  /** BACK は白黒（MENU / STATS のゴールドと対） */
+  tone = "gold",
+  /** 予想オーバーレイより前面（z-index） */
+  overlay = false,
   /** チュートリアル穴測定（Web data-tutorial-target 相当） */
   tutorialTargetId,
 }: {
@@ -33,6 +37,8 @@ export default function ProfileMenuEdgeHandle({
   hidden?: boolean;
   fadeIn?: boolean;
   label?: string;
+  tone?: "gold" | "back";
+  overlay?: boolean;
   tutorialTargetId?: string;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -95,7 +101,9 @@ export default function ProfileMenuEdgeHandle({
       className={cn(
         "profile-menu-edge-handle",
         fadeIn && "profile-menu-edge-handle--fade",
-        !show && "profile-menu-edge-handle--hidden"
+        !show && "profile-menu-edge-handle--hidden",
+        tone === "back" && "profile-menu-edge-handle--back",
+        overlay && "profile-menu-edge-handle--overlay"
       )}
       onClick={onOpen}
       aria-label={ariaLabel}
@@ -105,6 +113,11 @@ export default function ProfileMenuEdgeHandle({
         ? { "data-tutorial-target": tutorialTargetId }
         : {})}
     >
+      {tone === "back" ? (
+        <span className="profile-menu-edge-handle__chev" aria-hidden>
+          ‹
+        </span>
+      ) : null}
       {label
         .toUpperCase()
         .split("")

@@ -1,10 +1,10 @@
 /**
  * 他人プロフィールへ遷移する。
- * ProfileHome（自分）が一瞬出てから切り替わるのを防ぐため、
- * Profile スタックを PublicProfile だけの状態で一気に差し替える。
+ * 今いるタブのスタックへ push し、タブ選択と BACK（goBack）を保つ。
+ * Profile タブへ差し替えるとナビのプロフィールが点灯し、BACK が壊れる。
  */
 import type { NavigationProp, ParamListBase } from "@react-navigation/native";
-import type { ProfileStackParamList } from "./types";
+import type { PublicProfileParams } from "./types";
 
 export type OpenPublicProfileParams = {
   handle: string;
@@ -15,15 +15,16 @@ export type OpenPublicProfileParams = {
   resultDetailPostId?: string;
 };
 
-export function navigateToPublicProfileNative(
-  navigation: NavigationProp<ParamListBase>,
-  params: OpenPublicProfileParams
-): void {
-  const handle = params.handle.trim();
-  if (!handle) return;
+type StackNav = NavigationProp<ParamListBase> & {
+  push?: (name: string, params: PublicProfileParams) => void;
+};
 
+function screenParamsFrom(
+  params: OpenPublicProfileParams,
+  handle: string
+): PublicProfileParams {
   const resultDetailPostId = params.resultDetailPostId?.trim();
-  const screenParams: ProfileStackParamList["PublicProfile"] = {
+  return {
     handle,
     ...(params.fromRankings ? { fromRankings: true } : {}),
     ...(params.fromLeaderboards ? { fromLeaderboards: true } : {}),
@@ -33,11 +34,51 @@ export function navigateToPublicProfileNative(
       ? { leaderboardsGroupId: params.leaderboardsGroupId }
       : {}),
   };
+}
 
-  navigation.navigate("ProfileTab", {
-    state: {
-      routes: [{ name: "PublicProfile", params: screenParams }],
-      index: 0,
-    },
-  });
+function openOnCurrentStack(
+  navigation: NavigationProp<ParamListBase>,
+  screenParams: PublicProfileParams
+): void {
+  const nav = navigation as StackNav;
+  if (typeof nav.push === "function") {
+    nav.push("PublicProfile", screenParams);
+    return;
+  }
+  navigation.navigate("PublicProfile" as never, screenParams as never);
+}
+
+export function navigateToPublicProfileNative(
+  navigation: NavigationProp<ParamListBase>,
+  params: OpenPublicProfileParams
+): void {
+  const handle = params.handle.trim();
+  if (!handle) return;
+
+  const screenParams = screenParamsFrom(params, handle);
+  const state = navigation.getState();
+  const routeNames = state?.routeNames ?? [];
+
+  if (routeNames.includes("PublicProfile")) {
+    openOnCurrentStack(navigation, screenParams);
+    return;
+  }
+
+  const currentTab = state?.routes[state.index]?.name;
+  if (
+    currentTab === "LeaderboardsTab" ||
+    currentTab === "RankingsTab" ||
+    currentTab === "ResultTab"
+  ) {
+    navigation.navigate(
+      currentTab as never,
+      { screen: "PublicProfile", params: screenParams } as never
+    );
+    return;
+  }
+
+  navigation.navigate(
+    "ProfileTab" as never,
+    { screen: "PublicProfile", params: screenParams } as never
+  );
 }

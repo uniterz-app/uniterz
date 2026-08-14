@@ -34,8 +34,8 @@ export default function WebOrMobileSplash({
     );
   }
 
-  // 公開LPは Firebase 待ちのスプラッシュを出さない（開けないように見えるのを防ぐ）
-  if (isPublicLpPath(pathname)) {
+  // 公開LP・電子公告などの法務ページは Firebase 待ちのスプラッシュを出さない
+  if (isPublicLpPath(pathname) || isGuestLegalPath(pathname)) {
     return (
       <div id="app-root" className="relative isolate min-h-0">
         {children}

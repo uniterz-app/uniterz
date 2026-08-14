@@ -14,10 +14,13 @@ import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./NbaTeamStatsPanelNative";
 import NbaRosterPanelNative from "./NbaRosterPanelNative";
 import type { PredictProBrief } from "../../../../../../lib/predict/predictProBrief";
+import { proBriefForMatchup } from "../../../../../../lib/predict/nbaProBriefPreviewMocks";
 import type { NbaInjuryReport } from "../../../../../../lib/predict/nbaInjuryReport";
 import type { NbaTeamStatsBundle } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
+import { teamStatsForMatchup } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "../../../../../../lib/predict/nbaRoster";
 import { injuryStatusByPlayerId } from "../../../../../../lib/predict/nbaInjuryReport";
+import { injuryReportForMatchup } from "../../../../../../lib/predict/nbaInjuryReportPreviewMocks";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
 import type { MainTabParamList } from "../../../navigation/types";
@@ -36,6 +39,7 @@ type Props = {
   injuryReport?: NbaInjuryReport | null;
   teamStats?: NbaTeamStatsBundle | null;
   roster?: NbaRosterReport | null;
+  onOpenTeamDetail?: (teamId: string) => void;
 };
 
 function PendingPanel({ text }: { text: string }) {
@@ -62,12 +66,17 @@ export default function NbaPredictToolsTabsNative({
   injuryReport = null,
   teamStats = null,
   roster = null,
+  onOpenTeamDetail,
 }: Props) {
   const t = getGamesTexts(language);
   const [tab, setTab] = useState<NbaPredictToolsTab>("injuries");
   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
-  const injuryById = injuryReport
-    ? injuryStatusByPlayerId(injuryReport)
+  const resolvedInjury =
+    injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
+  const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
+  const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
+  const injuryById = resolvedInjury
+    ? injuryStatusByPlayerId(resolvedInjury)
     : {};
 
   /** チュートリアル・オーバーレイからタブ切替（CyberSlantedTab は触らない） */
@@ -126,11 +135,11 @@ export default function NbaPredictToolsTabsNative({
 
         <View style={styles.panel}>
           {tab === "insight" ? (
-            isPro && !brief ? (
+            isPro && !resolvedBrief ? (
               <PendingPanel text={t.panelDataPending} />
             ) : (
               <PredictProBriefPanelNative
-                brief={brief}
+                brief={resolvedBrief}
                 language={language}
                 homeTeamId={homeTeamId ?? ""}
                 awayTeamId={awayTeamId ?? ""}
@@ -141,20 +150,21 @@ export default function NbaPredictToolsTabsNative({
               />
             )
           ) : tab === "injuries" ? (
-            injuryReport ? (
+            resolvedInjury ? (
               <NbaInjuryReportPanelNative
-                report={injuryReport}
+                report={resolvedInjury}
                 language={language}
               />
             ) : (
               <PendingPanel text={t.panelDataPending} />
             )
           ) : tab === "stats" ? (
-            teamStats ? (
+            resolvedStats ? (
               <NbaTeamStatsPanelNative
-                data={teamStats}
+                data={resolvedStats}
                 isPro={isPro}
                 language={language}
+                onOpenTeamDetail={onOpenTeamDetail}
               />
             ) : (
               <PendingPanel text={t.panelDataPending} />

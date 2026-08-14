@@ -23,6 +23,7 @@ export type GamePointsTopEntryAgg = {
   photoURL: string | null;
   isPro: boolean;
   points: number;
+  countryCode?: string | null;
 };
 
 export type GamePointsDistributionWithTopAgg = GamePointsDistributionAgg & {

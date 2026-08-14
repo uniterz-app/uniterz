@@ -10,6 +10,11 @@ import {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import {
+  GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS,
+  GAMES_LINE_FRAME_DRAW_MS,
+} from "../games/gamesCyberMotion";
+import { gamesCyberEaseBezier } from "../games/gamesPageMotion";
 
 /** 初回入場アニメを切るまでの猶予（スクロールで遅延マウントされたヘッダが誤爆しないよう余裕） */
 export const RESULT_HOME_ENTRANCE_ARM_MS = 4200;
@@ -228,6 +233,9 @@ export function useResultPostCardEntrance({
   const val2 = useSharedValue(skip ? 1 : 0);
 
   const hitFrameFlash = useSharedValue(0);
+  const frameStrokeEnd = useSharedValue(skip ? 1 : 0);
+  /** 試合カードと同じ押下（scale 0.99 / opacity 0.96） */
+  const pressed = useSharedValue(0);
 
   useEffect(() => {
     if (skip) {
@@ -255,6 +263,7 @@ export function useResultPostCardEntrance({
       val1.value = 1;
       val2.value = 1;
       hitFrameFlash.value = 0;
+      frameStrokeEnd.value = 1;
       return;
     }
 
@@ -264,6 +273,15 @@ export function useResultPostCardEntrance({
     shellOp.value = withDelay(d, withTiming(1, { duration: SHELL_OPACITY_MS, easing: easeOutCubic }));
     shellTy.value = withDelay(d, withTiming(0, { duration: SHELL_TY_MS, easing: easeOutCubic }));
     shellScaleY.value = withDelay(d, withTiming(1, { duration: SHELL_SCALEY_MS, easing: easeOutCubic }));
+
+    frameStrokeEnd.value = 0;
+    frameStrokeEnd.value = withDelay(
+      d + GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS,
+      withTiming(1, {
+        duration: GAMES_LINE_FRAME_DRAW_MS,
+        easing: gamesCyberEaseBezier,
+      })
+    );
 
     bodyGate.value = withDelay(
       d + BODY_GATE_DELAY_MS,
@@ -360,10 +378,18 @@ export function useResultPostCardEntrance({
     }
   }, [skip, d, hasFinalScore, isHit, isMiss, statRowMeta]);
 
-  const cardShellMotionStyle = useAnimatedStyle(() => ({
-    opacity: shellOp.value,
-    transform: [{ translateY: shellTy.value }, { scaleY: shellScaleY.value }],
-  }));
+  const cardShellMotionStyle = useAnimatedStyle(() => {
+    const pressS = interpolate(pressed.value, [0, 1], [1, 0.99]);
+    const pressO = interpolate(pressed.value, [0, 1], [1, 0.96]);
+    return {
+      opacity: shellOp.value * pressO,
+      transform: [
+        { translateY: shellTy.value },
+        { scaleY: shellScaleY.value },
+        { scale: pressS },
+      ],
+    };
+  });
 
   const gridUnderlayStyle = useAnimatedStyle(() => ({
     opacity: gridOp.value,
@@ -457,5 +483,7 @@ export function useResultPostCardEntrance({
     statValueStyles,
     hitFrameFlashStyle,
     showHitFrameFlash: isHit && !skip,
+    frameStrokeEnd,
+    pressed,
   };
 }

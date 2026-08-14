@@ -15,6 +15,7 @@ import {
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import type { GamesLanguage } from "../gamesI18n";
+import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
 
 type Props = {
   report: NbaInjuryReport;
@@ -189,13 +190,16 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", gap: 8 },
   column: { flex: 1, minWidth: 0, gap: 8 },
   columnTitle: {
-    fontFamily: OXANIUM,
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 1.4,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 15,
+    fontWeight: "400",
+    letterSpacing: 1.2,
+    lineHeight: 18,
     color: "#fff",
     textAlign: "center",
     textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   empty: {
     borderWidth: 1,

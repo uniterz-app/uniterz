@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
 import CommunityGroupDetailViewNative from "./CommunityGroupDetailViewNative";
@@ -13,6 +14,7 @@ import { communityPressableTapStyle } from "./communityCrtThemeNative";
 import CommunityGroupDetailCardNative, {
   communityGroupOverlayTopInset,
 } from "./CommunityGroupDetailCardNative";
+import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 
 type Props = {
   visible: boolean;
@@ -42,6 +44,17 @@ export default function CommunityGroupOverlayNative({
   const [endConfirmName, setEndConfirmName] = useState("");
   const [endingGroup, setEndingGroup] = useState(false);
   const [headerImageEditing, setHeaderImageEditing] = useState(false);
+  const [profileCoverHidden, setProfileCoverHidden] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setProfileCoverHidden(false);
+    }, [])
+  );
+
+  useEffect(() => {
+    if (!visible) setProfileCoverHidden(false);
+  }, [visible]);
 
   const confirmEndGroup = useCallback(async () => {
     if (!groupId) return;
@@ -70,9 +83,12 @@ export default function CommunityGroupOverlayNative({
 
   if (!visible || !groupId) return null;
 
+  const modalVisible = visible && !profileCoverHidden;
+  const backLabel = language === "en" ? "Back" : "戻る";
+
   return (
     <>
-      <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={onClose}>
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <View style={styles.overlay}>
             <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={m.common.close} />
@@ -85,7 +101,7 @@ export default function CommunityGroupOverlayNative({
               ]}
               showsVerticalScrollIndicator={false}
             >
-              <CommunityGroupDetailCardNative language={language} onBack={onClose}>
+              <CommunityGroupDetailCardNative>
                 <CommunityGroupDetailViewNative
                   groupId={groupId}
                   language={language}
@@ -107,12 +123,16 @@ export default function CommunityGroupOverlayNative({
                   onImageUpdated={onRefreshList}
                   onHeaderImageEditingChange={setHeaderImageEditing}
                   onOpenProfile={(handle) => {
-                    onClose();
+                    setProfileCoverHidden(true);
                     onOpenProfile?.(handle, groupId);
                   }}
                 />
               </CommunityGroupDetailCardNative>
             </ScrollView>
+            <ProfileBackEdgeHandleNative
+              onPress={onClose}
+              accessibilityLabel={backLabel}
+            />
           </View>
         </SafeAreaProvider>
       </Modal>

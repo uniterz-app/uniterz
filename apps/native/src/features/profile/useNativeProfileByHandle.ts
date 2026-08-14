@@ -16,6 +16,7 @@ import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey
 import { parseUserProfileFields, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
+import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
   type ProfilePlanProBgVariant,
@@ -110,10 +111,10 @@ function mapUserDoc(
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
     plan: data.plan === "pro" ? "pro" : "free",
     planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
-    currentStreak:
-      typeof data.currentStreak === "number" && Number.isFinite(data.currentStreak)
-        ? Math.max(0, Math.floor(data.currentStreak))
-        : 0,
+    currentStreak: currentSeasonWinStreak(
+      data.currentStreak,
+      data.streakSeasonKeyBasketball
+    ),
     maxStreak:
       typeof data.maxStreak === "number" && Number.isFinite(data.maxStreak)
         ? Math.max(0, Math.floor(data.maxStreak))

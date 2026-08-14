@@ -439,11 +439,7 @@ export default function TutorialPracticeTour({
                     )}
 
                     {phase === "groups" && (
-                      <CommunityGroupDetailCard
-                        language={language}
-                        onBack={() => {}}
-                        variant="page"
-                      >
+                      <CommunityGroupDetailCard variant="page">
                         <div className="px-4 pb-4 pt-2">
                           <p
                             className={cn(

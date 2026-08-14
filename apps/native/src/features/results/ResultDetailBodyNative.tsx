@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
@@ -17,20 +18,11 @@ import {
   registerTutorialTarget,
 } from "../tutorial/tutorialMeasureNative";
 import ResultDetailScoreDonutNative from "./ResultDetailScoreDonutNative";
-import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
-import { RankingsAvatarNative } from "../rankings/RankingsAvatarAndTabs";
+import { CyberRankingListRowNative } from "../rankings/CyberRankingListRowNative";
 import { MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
-import {
-  METRIC_FONT,
-  rankingNameFont,
-} from "../rankings/rankingsUiTheme";
-import {
-  hasJaScript,
-  rankingFontSizePx,
-} from "../../../../../lib/rankings/rankingJaTextSize";
+import { METRIC_FONT } from "../rankings/rankingsUiTheme";
 import { CYBER_LIST_CYAN } from "../../../../../lib/rankings/cyberRankVisual";
 import { WeeklyReportCardShell } from "../profile/reports/reportCardShellNative";
-import { PANEL_BG } from "../profile/reports/reportThemeNative";
 import { SCORE_BREAKDOWN_COLORS } from "../../../../../lib/result/resultScoreBreakdownColors";
 import type {
   ResultDetailBreakdownView,
@@ -39,6 +31,7 @@ import type {
 } from "../../../../../lib/result/buildResultDetailView";
 import type { ResultTopScorerMarketView } from "../../../../../lib/result/resultTopScorerMarket";
 import type { GamePointsTopEntryV1 } from "../../../../../lib/results/gamePointsTop";
+import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 
 const ACCENT = "#00F5FF";
 
@@ -268,78 +261,8 @@ function MatchStatsPanel({
   );
 }
 
-function Top10Row({
-  row,
-  onPress,
-  showDivider,
-}: {
-  row: GamePointsTopEntryV1;
-  onPress?: () => void;
-  showDivider?: boolean;
-}) {
-  const topThree = row.rank <= 3;
-  const nameJa = hasJaScript(row.displayName);
-  const nameFontSize = rankingFontSizePx(15, row.displayName);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${row.rank}. ${row.displayName}`}
-      onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [
-        styles.topRow,
-        row.rank === 1 ? styles.topRowFirst : null,
-        pressed ? styles.topRowPressed : null,
-      ]}
-    >
-      <Text style={[styles.topRank, topThree ? styles.topRankTopThree : null]}>
-        {row.rank}
-      </Text>
-      <View style={styles.topAvatarCol}>
-        {row.rank === 1 ? (
-          <View style={styles.topCrownOverlay}>
-            <MaterialCommunityIcons name="crown" size={12} color="#F4C542" />
-          </View>
-        ) : null}
-        <View style={styles.topAvatarFrame}>
-          <RankingsAvatarNative
-            photoURL={row.photoURL}
-            label={row.displayName}
-            size={36}
-            square
-          />
-        </View>
-      </View>
-      <View style={styles.topNameCol}>
-        <View style={styles.topNameRow}>
-          <Text
-            style={[
-              styles.topName,
-              {
-                fontSize: nameFontSize,
-                letterSpacing: nameJa ? 0.4 : 0.6,
-                fontFamily: rankingNameFont(row.displayName),
-                textTransform: nameJa ? "none" : "uppercase",
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {row.displayName}
-          </Text>
-          {row.isPro ? <ProCyberBadgeNative compact /> : null}
-        </View>
-      </View>
-      <Text style={[styles.topPoints, topThree ? styles.topPointsHot : null]}>
-        {fmtPt(row.points)}
-      </Text>
-      {showDivider ? <View style={styles.topRowDivider} /> : null}
-    </Pressable>
-  );
-}
-
 function Top10Panel({
   ja,
-  frameColor,
   entries,
   onOpenProfile,
 }: {
@@ -348,27 +271,40 @@ function Top10Panel({
   entries: GamePointsTopEntryV1[];
   onOpenProfile?: (handle: string) => void;
 }) {
+  const reduceMotion = useReducedMotion() ?? false;
   if (entries.length === 0) return null;
   return (
     <View style={styles.sectionBlock}>
       <SectionHeader title={ja ? "得点上位" : "TOP SCORES"} accent={ACCENT} />
-      <WeeklyReportCardShell
-        hideGrid
-        style={[styles.sectionCard, { borderColor: frameColor }]}
-      >
-        <View style={styles.topList}>
-          {entries.map((row, index) => (
-            <Top10Row
+      <View>
+        {entries.map((row) => {
+          const profileKey = profilePathKeyFromRow({
+            uid: row.uid,
+            handle: row.handle === "—" ? "" : row.handle,
+          });
+          return (
+            <CyberRankingListRowNative
               key={`${row.rank}-${row.postId}`}
-              row={row}
-              showDivider={index < entries.length - 1}
+              rank={row.rank}
+              displayName={row.displayName}
+              photoURL={row.photoURL}
+              metric="totalScore"
+              counted={row.points}
+              countryCode={row.countryCode}
+              language={ja ? "ja" : "en"}
+              isPro={row.isPro}
+              hideListMeta
+              animateCrown={row.rank === 1}
+              reduceMotion={reduceMotion}
               onPress={
-                onOpenProfile ? () => onOpenProfile(row.handle) : undefined
+                onOpenProfile && profileKey
+                  ? () => onOpenProfile(profileKey)
+                  : undefined
               }
             />
-          ))}
-        </View>
-      </WeeklyReportCardShell>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -676,14 +612,14 @@ export default function ResultDetailBodyNative({
 
 const styles = StyleSheet.create({
   list: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 0,
     paddingTop: 4,
   },
   heroCard: {
-    borderWidth: 1,
-    backgroundColor: PANEL_BG,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    backgroundColor: "transparent",
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    overflow: "visible",
   },
   divider: {
     height: StyleSheet.hairlineWidth,
@@ -696,6 +632,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    paddingHorizontal: 12,
   },
   sectionTitle: {
     fontFamily: METRIC_FONT,
@@ -710,7 +647,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     borderWidth: 1,
-    backgroundColor: PANEL_BG,
+    backgroundColor: "transparent",
     paddingHorizontal: 12,
     paddingVertical: 12,
     gap: 10,
@@ -885,92 +822,6 @@ const styles = StyleSheet.create({
   },
   myPickHitOff: {
     color: "rgba(148,163,184,0.75)",
-  },
-  topList: {
-    gap: 0,
-  },
-  topRow: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-  },
-  topRowFirst: {
-    paddingTop: 18,
-  },
-  topRowPressed: {
-    opacity: 0.82,
-  },
-  topRank: {
-    width: 22,
-    fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 14,
-    fontWeight: "900",
-    fontStyle: "italic",
-    color: "rgba(148,163,184,0.85)",
-    textAlign: "center",
-  },
-  topRankTopThree: {
-    color: "#FFD65A",
-  },
-  topAvatarCol: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  topCrownOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: "100%",
-    marginBottom: 1,
-    alignItems: "center",
-    zIndex: 3,
-  },
-  topAvatarFrame: {
-    width: 36,
-    height: 36,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    overflow: "hidden",
-  },
-  topNameCol: {
-    flex: 1,
-    minWidth: 0,
-    justifyContent: "center",
-  },
-  topNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    minWidth: 0,
-  },
-  topName: {
-    flexShrink: 1,
-    color: "#F8FAFC",
-    fontWeight: "700",
-  },
-  topPoints: {
-    fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 16,
-    fontWeight: "900",
-    fontStyle: "italic",
-    color: "rgba(226,232,240,0.92)",
-  },
-  topPointsHot: {
-    color: CYBER_LIST_CYAN,
-  },
-  topRowDivider: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 1,
-    backgroundColor: "rgba(0, 245, 255, 0.22)",
   },
   breakdownRow: {
     flexDirection: "row",

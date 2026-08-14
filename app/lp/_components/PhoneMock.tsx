@@ -188,7 +188,6 @@ export default function PhoneMock({
           <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-[9%] bg-[linear-gradient(90deg,rgba(255,255,255,0.016)_0%,rgba(255,255,255,0.005)_36%,rgba(255,255,255,0)_100%)]" />
           <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-[7%] bg-[linear-gradient(270deg,rgba(255,255,255,0.012)_0%,rgba(255,255,255,0.004)_34%,rgba(255,255,255,0)_100%)]" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[10%] bg-linear-to-t from-black/16 to-transparent" />
-
           <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.05),transparent_28%)]" />
         </div>
 

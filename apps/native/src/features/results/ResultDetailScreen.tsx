@@ -17,7 +17,7 @@ import {
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NavigationProp, ParamListBase } from "@react-navigation/native";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
@@ -74,6 +74,7 @@ export default function ResultDetailScreen({
   const reduceMotion = useReducedMotion() ?? false;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const hostFocused = useIsFocused();
   const { fUser } = useFirebaseUser();
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const [loading, setLoading] = useState(false);
@@ -90,13 +91,14 @@ export default function ResultDetailScreen({
   const sheetExit = reduceMotion ? undefined : predictModalSheetExit();
   const contentEnter = reduceMotion ? undefined : predictModalPreviewEnter();
 
-  const modalChromeVisible = visible || exitingUi;
+  /** プロフィールへ push したときは詳細を閉じず、ホストがフォーカスを失ったら Modal だけ隠す */
+  const modalShown = visible && hostFocused;
+  const modalChromeVisible = modalShown || exitingUi;
 
   const openProfile =
     onOpenProfile ??
     ((handle: string) => {
       const detailPostId = postId?.trim() ?? "";
-      onClose();
       navigateToPublicProfileNative(navigation, {
         handle,
         fromResultDetail: true,
@@ -129,7 +131,7 @@ export default function ResultDetailScreen({
   }
 
   useLayoutEffect(() => {
-    if (visible) {
+    if (modalShown) {
       setLayersVisible(true);
       setExitingUi(false);
       closeAnimLockRef.current = false;
@@ -146,7 +148,7 @@ export default function ResultDetailScreen({
       clearTimeout(closeAnimTimerRef.current);
       closeAnimTimerRef.current = null;
     }
-  }, [visible]);
+  }, [modalShown]);
 
   useEffect(
     () => () => {
@@ -159,7 +161,7 @@ export default function ResultDetailScreen({
   );
 
   useEffect(() => {
-    if (!visible || !postId) {
+    if (!postId) {
       reset();
       return;
     }
@@ -226,7 +228,7 @@ export default function ResultDetailScreen({
     return () => {
       alive = false;
     };
-  }, [visible, postId, reset, fUser?.uid, fUser?.displayName, fUser?.photoURL]);
+  }, [postId, reset, fUser?.uid, fUser?.displayName, fUser?.photoURL]);
 
   useEffect(() => {
     if (!modalChromeVisible) return;

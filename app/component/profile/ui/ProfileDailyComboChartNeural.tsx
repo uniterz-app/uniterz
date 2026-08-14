@@ -206,6 +206,7 @@ export type ProfileDailyComboChartNeuralProps = {
   rankingLeague?: RankingLeagueSource;
   layout?: "web" | "mobile";
   visualEffectsLite?: boolean;
+  hideTitle?: boolean;
 };
 
 export default function ProfileDailyComboChartNeural({
@@ -214,6 +215,7 @@ export default function ProfileDailyComboChartNeural({
   rankingLeague = "nba",
   layout = "web",
   visualEffectsLite = false,
+  hideTitle = false,
 }: ProfileDailyComboChartNeuralProps) {
   const narrowViewport = useNarrowViewport(layout === "mobile");
   const isCompactChart = layout === "mobile" || narrowViewport || visualEffectsLite;
@@ -304,14 +306,18 @@ export default function ProfileDailyComboChartNeural({
     <div className="dcc-neural w-full min-w-0">
       <div className="relative z-20 mb-2 px-0.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p
-            className={[
-              nameRajdhani.className,
-              "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
-            ].join(" ")}
-          >
-            {title}
-          </p>
+          {hideTitle ? (
+            <p className="min-w-0 flex-1 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>
+          ) : (
+            <p
+              className={[
+                nameRajdhani.className,
+                "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
+              ].join(" ")}
+            >
+              {title}
+            </p>
+          )}
           <div className={chartInfoStyles.wrap}>
             <button
               type="button"
@@ -325,7 +331,9 @@ export default function ProfileDailyComboChartNeural({
             </div>
           </div>
         </div>
-        <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>
+        {hideTitle ? null : (
+          <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>
+        )}
       </div>
 
       <div className="dcc-neural__panel">

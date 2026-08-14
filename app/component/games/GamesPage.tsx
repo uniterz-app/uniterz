@@ -917,7 +917,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     dense && isMobile ? "px-0" : dense ? "px-3" : "px-4 md:px-6";
   /** チュートリアル中はモック試合を先に出す（日程取得待ちの全面スケルトンで隠さない） */
   const isInitialLoading =
-    loadingDays && !(tutorialActive && league === "nba");
+    loadingDays &&
+    monthRows.length === 0 &&
+    !(tutorialActive && league === "nba");
   const isSwitchingDate = !!selected && listLoading;
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
   const playoffViewHref = isMobile
@@ -1357,7 +1359,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           games={filteredGames}
           extraPeerGamesForSeriesInference={peerRowsForSeriesInference}
           dense={dense}
-          loading={listLoading}
+          /** チュートリアル中はモック試合を先に見せる（取得待ちスケルトンで隠さない） */
+          loading={listLoading && filteredGames.length === 0}
           league={league}
           emptyHint={scheduleEmptyHint}
           listShellIntro={listShellIntroLocked}

@@ -1,254 +1,347 @@
-/** Web `predictionScoringRules` の basketball 版本体（総合得点 / アップセット得点） */
+/** Web `predictionScoringRules` 相当（BASE / BONUS / UPSET PTS） */
 import { StyleSheet, Text, View } from "react-native";
 import type { GamesLanguage } from "./gamesI18n";
+import {
+  MATCH_CARD_DISPLAY_FONT,
+  MATCH_CARD_METRIC_FONT,
+} from "./matchCardTypography";
 
-const CYAN = "rgba(103,232,249,0.95)";
-const YELLOW = "#fde047";
-const ROSE = "rgba(253,164,175,0.85)";
+type Sport = "nba" | "wc";
 
-function Em({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.em}>{children}</Text>;
+function HudKicker({ children }: { children: string }) {
+  return <Text style={styles.kicker}>{children}</Text>;
 }
-function Num({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.num}>{children}</Text>;
+function HudTitle({ children }: { children: string }) {
+  return <Text style={styles.title}>{children}</Text>;
 }
-function Zero({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.zero}>{children}</Text>;
+function HudIntro({ children }: { children: string }) {
+  return <Text style={styles.intro}>{children}</Text>;
 }
 
-function Section({
-  title,
-  intro,
-  children,
+function HudRow({
+  label,
+  pts,
+  hint,
+  tone = "default",
 }: {
-  title: string;
-  intro: string;
-  children: React.ReactNode;
+  label: string;
+  pts: string;
+  hint?: string;
+  tone?: "default" | "warn" | "accent";
 }) {
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionIntro}>{intro}</Text>
-      <View style={styles.blockList}>{children}</View>
+    <View
+      style={[
+        styles.row,
+        tone === "warn" && styles.rowWarn,
+        tone === "accent" && styles.rowAccent,
+      ]}
+    >
+      <View style={styles.rowTop}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        <Text
+          style={[styles.rowPts, tone === "warn" && styles.rowPtsWarn]}
+        >
+          {pts}
+        </Text>
+      </View>
+      {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
     </View>
   );
 }
 
-function WarnBlock({ children }: { children: React.ReactNode }) {
-  return <View style={[styles.block, styles.warnBlock]}>{children}</View>;
-}
-function HighlightBlock({ children }: { children: React.ReactNode }) {
-  return <View style={[styles.block, styles.highlightBlock]}>{children}</View>;
-}
-function RuleBlock({ children }: { children: React.ReactNode }) {
-  return <View style={styles.block}>{children}</View>;
-}
-function Subhead({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.subhead}>{children}</Text>;
-}
-function Body({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.body}>{children}</Text>;
-}
-function Muted({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.muted}>{children}</Text>;
-}
-
-function BasketballBodyJa() {
+function UpsetSection({ ja }: { ja: boolean }) {
   return (
-    <>
-      <Section
-        title="総合得点"
-        intro="リザルトやランキングで使う、試合ごとのメインのポイントです。"
-      >
-        <WarnBlock>
-          <Body>
-            <Em>勝者予想が外れた試合</Em>は <Zero>0点</Zero>。連勝・アップセットのボーナスもつきません。
-          </Body>
-        </WarnBlock>
-        <HighlightBlock>
-          <Subhead>勝者が合っているとき（基本点・最大10点）</Subhead>
-          <Body>1. <Em>勝者</Em> … <Num>+4点</Num></Body>
-          <Body>
-            2. <Em>得失点差</Em> … 最大 <Num>+4点</Num>（差のズレが大きいほど減点／ズレ15以上は0点）
-          </Body>
-          <Body>
-            3. <Em>合計得点</Em> … 最大 <Num>+2点</Num>（合計が近いほど高得点）
-          </Body>
-        </HighlightBlock>
-        <RuleBlock>
-          <Subhead>ボーナス（基本点に上乗せ）</Subhead>
-          <Body>
-            <Em>アップセットボーナス</Em> … <Num>+2点</Num>（市場 <Num>45%以下</Num> の側を的中）
-          </Body>
-          <Body>
-            <Em>連勝ボーナス</Em> … 3〜4連勝 <Num>+1</Num> / 5〜6連勝 <Num>+2</Num> / 7連勝以上 <Num>+3</Num>
-          </Body>
-          <Muted>2連勝以下は0点</Muted>
-        </RuleBlock>
-        <RuleBlock>
-          <Body>
-            <Em>総合得点</Em> ＝ 基本点 ＋ ボーナス（<Num>10点超</Num> になることもあります）
-          </Body>
-        </RuleBlock>
-      </Section>
-
-      <Section
-        title="アップセット得点"
-        intro="波乱した試合で、少数派予想が当たったときの加点です。"
-      >
-        <HighlightBlock>
-          <Subhead>① 条件</Subhead>
-          <Body>
-            予想が<Em>少数派</Em>（市場 <Num>45%以下</Num>）かつ<Em>的中</Em>で加算。
-          </Body>
-        </HighlightBlock>
-        <HighlightBlock>
-          <Subhead>② 点数</Subhead>
-          <Body>多数派 <Num>55%未満</Num> … <Num>0点</Num></Body>
-          <Body><Num>55%以上〜90%未満</Num> … 支持率が高いほど加点</Body>
-          <Body>多数派 <Num>90%以上</Num> … <Num>10点</Num></Body>
-        </HighlightBlock>
-        <RuleBlock>
-          <Body>
-            同条件で総合得点には別途 <Num>+2点</Num> のUPSETボーナスも付きます。
-          </Body>
-        </RuleBlock>
-      </Section>
-    </>
+    <View style={styles.section}>
+      <HudKicker>{ja ? "別指標" : "Separate metric"}</HudKicker>
+      <HudTitle>UPSET PTS</HudTitle>
+      <HudIntro>
+        {ja
+          ? "総合得点の UPSET +2 とは別。少数派を当てたときの加点です。"
+          : "Separate from the +2 upset bonus on total score."}
+      </HudIntro>
+      <HudRow
+        tone="accent"
+        label="HIT"
+        pts={ja ? "条件達成で加算" : "if hit"}
+        hint={
+          ja
+            ? "市場45%以下の少数派を的中したとき。"
+            : "Minority side at 45% or below, and you hit it."
+        }
+      />
+      <HudRow
+        label="SCALE"
+        pts="0 → 10"
+        hint={
+          ja
+            ? "多数派が55%未満は0点。55〜90%は支持率に応じて加点。90%以上は10点。"
+            : "Majority under 55% → 0. 55–90% scales up. 90%+ → 10."
+        }
+      />
+    </View>
   );
 }
 
-function BasketballBodyEn() {
+function BasketballBody({ ja }: { ja: boolean }) {
   return (
-    <>
-      <Section
-        title="Total score"
-        intro="Main points per game on results and leaderboards."
-      >
-        <WarnBlock>
-          <Body>
-            Wrong <Em>winner</Em> → <Zero>0</Zero> for that game (no streak or upset bonuses).
-          </Body>
-        </WarnBlock>
-        <HighlightBlock>
-          <Subhead>When the winner is correct (base, max 10)</Subhead>
-          <Body>1. <Em>Winner</Em> … <Num>+4</Num></Body>
-          <Body>2. <Em>Point margin</Em> … up to <Num>+4</Num> (closer → more; error ≥15 → 0)</Body>
-          <Body>3. <Em>Combined total</Em> … up to <Num>+2</Num></Body>
-        </HighlightBlock>
-        <RuleBlock>
-          <Subhead>Bonuses (added on top)</Subhead>
-          <Body>
-            <Em>Upset bonus</Em> … <Num>+2</Num> (correct pick on <Num>45% or below</Num> side)
-          </Body>
-          <Body>
-            <Em>Win-streak</Em> … 3–4 <Num>+1</Num> / 5–6 <Num>+2</Num> / 7+ <Num>+3</Num>
-          </Body>
-          <Muted>0 at 2 wins or below</Muted>
-        </RuleBlock>
-        <RuleBlock>
-          <Body>
-            <Em>Total score</Em> = base + bonuses (can exceed <Num>10</Num>)
-          </Body>
-        </RuleBlock>
-      </Section>
+    <View style={styles.wrap}>
+      <View style={styles.section}>
+        <HudKicker>{ja ? "試合ごとのメイン点" : "Per game"}</HudKicker>
+        <HudTitle>BASE</HudTitle>
+        <HudIntro>
+          {ja
+            ? "勝者が当たったときだけ基本点が入ります。外すとその試合は0点です。"
+            : "Base points only apply when the winner is correct. Miss it and the game is 0."}
+        </HudIntro>
+        <HudRow
+          tone="warn"
+          label="WINNER MISS"
+          pts={ja ? "0点" : "0"}
+          hint={
+            ja
+              ? "勝者を外すと連勝・アップセットのボーナスもつきません。"
+              : "No streak or upset bonuses on a missed winner."
+          }
+        />
+        <HudRow
+          tone="accent"
+          label="WINNER"
+          pts="+4"
+          hint={ja ? "ホーム勝 / アウェイ勝" : "Home or away winner"}
+        />
+        <HudRow
+          label="MARGIN"
+          pts={ja ? "最大 +4" : "up to +4"}
+          hint={
+            ja
+              ? "得失点差のズレが小さいほど高い。誤差0で満点、15以上で0点。"
+              : "Closer margin → more points. Exact = max. Error 15+ → 0."
+          }
+        />
+        <HudRow
+          label="TOTAL"
+          pts={ja ? "最大 +2" : "up to +2"}
+          hint={
+            ja
+              ? "両チーム合計のズレが小さいほど高い。誤差0で満点、11以上で0点。"
+              : "Combined points. Exact = max. Error 11+ → 0."
+          }
+        />
+      </View>
 
-      <Section
-        title="Upset points"
-        intro="When an upset happens and your minority pick wins."
-      >
-        <HighlightBlock>
-          <Subhead>① When you earn upset points</Subhead>
-          <Body>
-            Minority side (<Num>45% or below</Num>) + <Em>hit</Em>.
-          </Body>
-        </HighlightBlock>
-        <HighlightBlock>
-          <Subhead>② How many points</Subhead>
-          <Body>Majority <Num>&lt;55%</Num> … <Num>0</Num></Body>
-          <Body><Num>55–90%</Num> … scales up with share</Body>
-          <Body>Majority <Num>90%+</Num> … <Num>10</Num></Body>
-        </HighlightBlock>
-        <RuleBlock>
-          <Body>
-            The same hit also adds <Num>+2</Num> upset bonus to total score.
-          </Body>
-        </RuleBlock>
-      </Section>
-    </>
+      <View style={styles.section}>
+        <HudKicker>{ja ? "基本点に上乗せ" : "Added on top"}</HudKicker>
+        <HudTitle>BONUS</HudTitle>
+        <HudIntro>
+          {ja
+            ? "基本点に加算。合計は10点を超えることがあります。"
+            : "Stacked on base. Total can exceed 10."}
+        </HudIntro>
+        <HudRow
+          tone="accent"
+          label="TOP SCORER"
+          pts="+2"
+          hint={
+            ja
+              ? "最多得点者を的中（勝者予想とは別枠）。"
+              : "Hit the game’s top scorer (separate from the winner pick)."
+          }
+        />
+        <HudRow
+          label="UPSET"
+          pts="+2"
+          hint={
+            ja
+              ? "市場の偏りが45%以下の側を的中した番狂わせ。"
+              : "Hit the market side at 45% or below."
+          }
+        />
+        <HudRow
+          label="STREAK"
+          pts="+1 / +2 / +3"
+          hint={
+            ja
+              ? "3〜4連勝 +1 · 5〜6連勝 +2 · 7連勝以上 +3。2連勝以下は0点。"
+              : "3–4 wins +1 · 5–6 +2 · 7+ +3. Two or fewer = 0."
+          }
+        />
+      </View>
+
+      <UpsetSection ja={ja} />
+    </View>
+  );
+}
+
+function FootballBody({ ja }: { ja: boolean }) {
+  return (
+    <View style={styles.wrap}>
+      <View style={styles.section}>
+        <HudKicker>{ja ? "試合ごとのメイン点" : "Per game"}</HudKicker>
+        <HudTitle>BASE</HudTitle>
+        <HudIntro>
+          {ja
+            ? "採点スコアは規定時間＋延長（PKの本数は含みません）。勝者が外れると基本点は0点です。"
+            : "Line score is regulation + extra time (no penalty shootout goals). Miss the winner and base is 0."}
+        </HudIntro>
+        <HudRow
+          tone="warn"
+          label="WINNER MISS"
+          pts={ja ? "0点" : "0"}
+          hint={
+            ja
+              ? "得点者ボーナスは別枠で加点あり。"
+              : "Goal-scorer bonus can still apply."
+          }
+        />
+        <HudRow tone="accent" label="WINNER" pts="+4" />
+        <HudRow
+          label="HOME"
+          pts="+2"
+          hint={ja ? "ホーム得点が完全一致。" : "Exact home goals."}
+        />
+        <HudRow
+          label="AWAY"
+          pts="+2"
+          hint={ja ? "アウェイ得点が完全一致。" : "Exact away goals."}
+        />
+        <HudRow
+          label="MARGIN"
+          pts="+2"
+          hint={
+            ja
+              ? "得失点差が完全一致。"
+              : "Exact goal difference."
+          }
+        />
+      </View>
+
+      <View style={styles.section}>
+        <HudKicker>{ja ? "基本点に上乗せ" : "Added on top"}</HudKicker>
+        <HudTitle>BONUS</HudTitle>
+        <HudIntro>{ja ? "基本点に加算します。" : "Stacked on base points."}</HudIntro>
+        <HudRow
+          tone="accent"
+          label="GOAL SCORER"
+          pts="+2"
+          hint={
+            ja
+              ? "ゴールする選手を1人的中（オウンゴール除く。勝者予想とは別枠）。"
+              : "Pick one scorer. Own goals excluded. Separate from winner."
+          }
+        />
+        <HudRow
+          label="UPSET"
+          pts="+2"
+          hint={
+            ja
+              ? "市場の偏りが45%以下の側を的中した番狂わせ。"
+              : "Hit the market side at 45% or below."
+          }
+        />
+        <HudRow
+          label="STREAK"
+          pts="+1 / +2 / +3"
+          hint={
+            ja
+              ? "3〜4連勝 +1 · 5〜6連勝 +2 · 7連勝以上 +3。2連勝以下は0点。"
+              : "3–4 wins +1 · 5–6 +2 · 7+ +3. Two or fewer = 0."
+          }
+        />
+      </View>
+
+      <UpsetSection ja={ja} />
+    </View>
   );
 }
 
 export default function PredictionScoringRulesBodyNative({
   language,
+  league = "nba",
 }: {
   language: GamesLanguage;
+  league?: Sport;
 }) {
-  return (
-    <View style={styles.wrap}>
-      {language === "en" ? <BasketballBodyEn /> : <BasketballBodyJa />}
-    </View>
+  const ja = language !== "en";
+  return league === "wc" ? (
+    <FootballBody ja={ja} />
+  ) : (
+    <BasketballBody ja={ja} />
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 16 },
+  wrap: { gap: 20 },
   section: { gap: 6 },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "rgba(255,255,255,0.95)",
+  kicker: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.45)",
   },
-  sectionIntro: {
+  title: {
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: "400",
+    letterSpacing: 1.4,
+    color: "#fff",
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
+  },
+  intro: {
     fontSize: 12,
     lineHeight: 17,
     color: "rgba(255,255,255,0.55)",
+    marginBottom: 4,
   },
-  blockList: { gap: 8 },
-  block: {
-    borderRadius: 8,
+  row: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "rgba(255,255,255,0.02)",
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    gap: 3,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 4,
   },
-  warnBlock: {
-    borderColor: "rgba(244,63,94,0.15)",
+  rowWarn: {
+    borderColor: "rgba(251,113,133,0.35)",
     backgroundColor: "rgba(244,63,94,0.06)",
   },
-  highlightBlock: {
-    backgroundColor: "rgba(34,211,238,0.06)",
+  rowAccent: {
+    borderColor: "rgba(0,245,255,0.28)",
+    backgroundColor: "rgba(0,245,255,0.05)",
   },
-  subhead: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.85)",
-    marginBottom: 2,
+  rowTop: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 12,
   },
-  body: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(255,255,255,0.75)",
+  rowLabel: {
+    flex: 1,
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.88)",
   },
-  muted: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: "rgba(255,255,255,0.55)",
-  },
-  em: {
-    fontWeight: "700",
-    color: CYAN,
-  },
-  num: {
-    fontWeight: "700",
-    color: YELLOW,
+  rowPts: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#FDE047",
     fontVariant: ["tabular-nums"],
   },
-  zero: {
-    fontWeight: "700",
-    color: ROSE,
-    fontVariant: ["tabular-nums"],
+  rowPtsWarn: {
+    color: "#FDA4AF",
+  },
+  rowHint: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgba(255,255,255,0.5)",
   },
 });

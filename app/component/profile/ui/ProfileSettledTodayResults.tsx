@@ -7,7 +7,8 @@ import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTo
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
-import { jp, nameRajdhani } from "@/lib/fonts";
+import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
+import { jp } from "@/lib/fonts";
 import {
   type ProfileVisualEffects,
   isProfileVisualLite,
@@ -52,21 +53,13 @@ export default function ProfileSettledTodayResults({
       : posts;
 
   return (
-    <ProfileKinetikPanelFrame as="section" className="block w-full min-w-0 p-3">
+    <ProfileOverviewLineFrame title={title}>
+    <ProfileKinetikPanelFrame as="section" className="profile-kinetik-panel--line-frame block w-full min-w-0 p-3">
       <div>
-          <h3
-            className={[
-              nameRajdhani.className,
-              "font-semibold tracking-wide text-white/95",
-              isMobile ? "text-lg" : "text-xl sm:text-[1.72rem]",
-            ].join(" ")}
-          >
-            {title}
-          </h3>
           <p
             className={[
               language === "ja" ? jp.className : "",
-              "mt-1.5 max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[14px]",
+              "max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[14px]",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -103,5 +96,6 @@ export default function ProfileSettledTodayResults({
           </div>
         )}
     </ProfileKinetikPanelFrame>
+    </ProfileOverviewLineFrame>
   );
 }

@@ -15,7 +15,8 @@ import {
 } from "@/lib/predict/nbaInjuryReport";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
-import { nameOxanium } from "@/lib/fonts";
+import { nameBebas, nameOxanium } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import type { Language } from "@/lib/i18n/language";
 
 type Props = {
@@ -287,9 +288,10 @@ function TeamInjuryColumn({
       <header className="mb-1.5 px-0.5 text-center">
         <p
           className={[
-            nameOxanium.className,
-            "truncate text-[12px] font-extrabold uppercase tracking-[0.12em] text-white md:text-[11px]",
+            nameBebas.className,
+            "truncate text-[15px] font-bold uppercase leading-tight text-white md:text-[18px]",
           ].join(" ")}
+          style={matchCardTeamNameStyle(true)}
         >
           {label}
         </p>

@@ -755,10 +755,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.caption,
   },
-  /** 絞り込み・日付帯・リザルトカードで共通の横幅（`listContent` の内側いっぱい） */
+  /** 絞り込み・日付帯・リザルトカードで共通の横幅 */
   listRowOuter: {
-    alignSelf: "stretch",
+    alignSelf: "center",
     width: "100%",
+    maxWidth: MOBILE_RESULT_CARD_MAX_W,
   },
   filterBar: {
     flexDirection: "row",

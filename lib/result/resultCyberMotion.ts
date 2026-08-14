@@ -1,5 +1,8 @@
 import type { Variants } from "framer-motion";
-import { GAMES_CYBER_EASE, GAMES_CYBER_EASE_SNAP } from "@/app/component/games/cyberMotion";
+import {
+  GAMES_CYBER_EASE,
+  GAMES_CYBER_EASE_SNAP,
+} from "@/app/component/games/cyberMotion";
 
 /** 一覧先頭のリード（秒） */
 export const RESULT_LIST_LEAD_IN_SEC = 0.04;
@@ -43,6 +46,11 @@ function slotDelay(slot: number): number {
     RESULT_LIST_LEAD_IN_SEC + slot * RESULT_PAGE_SLOT_GAP_SEC,
     RESULT_PAGE_SLOT_MAX_DELAY_SEC,
   );
+}
+
+/** リザルトカード線枠の描画開始（スロット入場と同期。線枠側で +32ms） */
+export function resultCardLineFrameDrawDelaySec(slot: number): number {
+  return slotDelay(slot);
 }
 
 /** ページ全体を上から順に（custom = スロット番号）— タブ・フィルタ等 */

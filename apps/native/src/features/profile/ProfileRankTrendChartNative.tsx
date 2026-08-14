@@ -21,7 +21,6 @@ import {
   profileOverviewChartStatCellStyle,
   profileOverviewChartStatsWrapStyle,
   profileOverviewChartSubtitleStyle,
-  profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { PROFILE_CHART_CYBER } from "./profileOverviewChartCyberTheme";
@@ -397,7 +396,7 @@ export default function ProfileRankTrendChartNative({
 
   if (rowW <= 0) {
     return (
-      <ProfileOverviewChartCardNative>
+      <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.measureInner} onLayout={onLayout}>
           <View style={styles.cardForeground}>
             <ChartHeader
@@ -417,7 +416,7 @@ export default function ProfileRankTrendChartNative({
 
   if (loading) {
     return (
-      <ProfileOverviewChartCardNative>
+      <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.measureInner} onLayout={onLayout}>
           <View style={styles.cardForeground}>
             <ChartHeader
@@ -439,7 +438,7 @@ export default function ProfileRankTrendChartNative({
 
   if (chartRows.length === 0) {
     return (
-      <ProfileOverviewChartCardNative>
+      <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.measureInner} onLayout={onLayout}>
           <View style={styles.cardForeground}>
             <ChartHeader
@@ -461,7 +460,7 @@ export default function ProfileRankTrendChartNative({
   }
 
   return (
-    <ProfileOverviewChartCardNative>
+    <ProfileOverviewChartCardNative topLabel={title}>
       <View style={styles.measureInner} onLayout={onLayout}>
         <View style={styles.cardForeground}>
           <ChartHeader
@@ -712,12 +711,10 @@ export default function ProfileRankTrendChartNative({
 }
 
 function ChartHeader({
-  title,
   subtitle,
   onInfoPress,
   isJa,
   sectionTitle,
-  stackedSecondary = false,
   currentRank,
   currentRankIsTop20,
 }: {
@@ -742,14 +739,7 @@ function ChartHeader({
       <View style={styles.headerRow}>
         <View style={styles.headerMain}>
           <View style={styles.titleRow}>
-            <Text
-              style={[
-                styles.cardTitle,
-                stackedSecondary ? styles.cardTitleCompact : undefined,
-              ]}
-            >
-              {title}
-            </Text>
+            <Text style={styles.subtitleInHeader}>{subtitle}</Text>
             <Pressable onPress={onInfoPress} hitSlop={10} accessibilityRole="button">
               <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
             </Pressable>
@@ -777,7 +767,6 @@ function ChartHeader({
           </View>
         ) : null}
       </View>
-      <Text style={styles.subtitle}>{subtitle}</Text>
     </>
   );
 }
@@ -873,14 +862,10 @@ const styles = StyleSheet.create({
       default: "sans-serif",
     }),
   },
-  cardTitle: profileOverviewChartTitleStyle,
-  cardTitleCompact: {
-    fontSize: 16,
-  },
-  subtitle: {
+  subtitleInHeader: {
     ...profileOverviewChartSubtitleStyle,
-    marginTop: 6,
-    marginBottom: 8,
+    flex: 1,
+    minWidth: 0,
     paddingHorizontal: 2,
     maxWidth: 520,
   },

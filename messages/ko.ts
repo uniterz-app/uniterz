@@ -717,6 +717,7 @@ const ko: Messages = {
     marketBias: "시장 편향",
     h2hAvgPoints: "H2H 평균 득점",
     teamStats: "Team Stats",
+    teamStatsMoreHint: "더 자세한 스탯은 팀 페이지에서",
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight는 Pro 플랜에서 이용할 수 있습니다",

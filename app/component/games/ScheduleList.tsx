@@ -29,6 +29,7 @@ import {
 import { toMatchCardProps } from "@/lib/games/transform";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import dynamic from "next/dynamic";
 
 const PredictionFormV2 = dynamic(() => import("../predict/PredictionFormV2"), {
@@ -742,6 +743,13 @@ export default function ScheduleList({
         variants={overlayMotionEnabled ? predictOverlayRoot : undefined}
         {...overlayPresenceProps}
       >
+        <ProfileMenuEdgeHandle
+          onOpen={close}
+          label="BACK"
+          tone="back"
+          overlay
+          ariaLabel={language === "en" ? "Back" : "戻る"}
+        />
         <motion.div
           className={[
             `absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`,

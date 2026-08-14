@@ -16,6 +16,7 @@ import {
   type ResultDetailViewModel,
 } from "@/lib/result/buildResultDetailView";
 import { resolveTopScorerMarketView } from "@/lib/result/buildTopScorerMarketEmbed";
+import { enrichTopEntriesCountryFromUsers } from "@/lib/results/enrichTopEntriesCountryFromUsers";
 
 export type ResultPostDetailMarket = {
   homeRate: number;
@@ -79,14 +80,23 @@ export async function loadResultPostDetailClient(
     total: mkt?.total ?? 0,
   };
 
+  const pointsDistribution = parseGamePointsDistributionV1(
+    rawPointsDistributionFromGameDoc(gameData)
+  );
+  const pointsSummary = resolveGamePointsSummary(gameData);
+  if (pointsSummary?.top.length) {
+    pointsSummary.top = await enrichTopEntriesCountryFromUsers(
+      db,
+      pointsSummary.top
+    );
+  }
+
   return {
     ok: true,
     post,
     market,
-    pointsSummary: resolveGamePointsSummary(gameData),
-    pointsDistribution: parseGamePointsDistributionV1(
-      rawPointsDistributionFromGameDoc(gameData)
-    ),
+    pointsSummary,
+    pointsDistribution,
     game: gameData,
   };
 }

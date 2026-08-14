@@ -1,30 +1,19 @@
-/** グループ詳細の共通シェル — 「一覧へ」＋カード枠＋中身 */
+/** グループ詳細の共通シェル — カード枠＋中身（戻りは右端 BACK タブ） */
 import type { ReactNode } from "react";
 import { Platform, StyleSheet, View, type ViewStyle } from "react-native";
-import type { Language } from "../../../../../lib/i18n/language";
 import { COMMUNITY_GROUP_HERO_BG } from "../../../../../lib/communities/communityGroupHeroLayout";
 import { COMMUNITY_GROUP_DETAIL_CARD_RADIUS } from "../../../../../lib/communities/communityGroupShell";
-import CommunityGroupListBackHeaderNative from "./CommunityGroupListBackHeaderNative";
 
 type Props = {
-  language: Language;
-  onBack: () => void;
   children: ReactNode;
   style?: ViewStyle;
 };
 
 export default function CommunityGroupDetailCardNative({
-  language,
-  onBack,
   children,
   style,
 }: Props) {
-  return (
-    <View style={[styles.card, style]}>
-      <CommunityGroupListBackHeaderNative language={language} onPress={onBack} />
-      {children}
-    </View>
-  );
+  return <View style={[styles.card, style]}>{children}</View>;
 }
 
 /** Modal 内 safe area — insets.top が 0 のときの下限 */

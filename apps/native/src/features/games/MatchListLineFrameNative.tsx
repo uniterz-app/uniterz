@@ -1,5 +1,5 @@
 /**
- * 試合一覧の線枠シェル。塗りカードではなく、上下ラベルで途切れた角丸ストローク。
+ * 試合一覧の線枠シェル。塗りカードではなく、上下ラベルで途切れた直角ストローク。
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
@@ -11,31 +11,31 @@ import {
   type ViewStyle,
 } from "react-native";
 import { Canvas, Path, Skia } from "@shopify/react-native-skia";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { MATCH_CARD_METRIC_FONT } from "./matchCardTypography";
-import { interruptedRoundedRectStrokeD } from "./matchListLineFramePath";
+import {
+  interruptedRoundedRectStrokeHalves,
+  MATCH_LINE_FRAME_TOP_GAP_START_INSET,
+  matchLineFrameLabelMaxWidth,
+  matchLineFramePaint,
+} from "@/lib/games/matchListLineFrame";
 
-export const MATCH_LINE_FRAME_BLUE = "#3D9EFF";
-export const MATCH_LINE_FRAME_GOLD = "#E8C547";
-/** 通常 · 予想済み */
-export const MATCH_LINE_FRAME_BLUE_MUTED = "#7D93AE";
-/** ピックアップ · 予想済み */
-export const MATCH_LINE_FRAME_GOLD_MUTED = "#A68B32";
+export {
+  MATCH_LINE_FRAME_BLUE,
+  MATCH_LINE_FRAME_GOLD,
+  MATCH_LINE_FRAME_BLUE_MUTED,
+  MATCH_LINE_FRAME_GOLD_MUTED,
+  matchLineFramePaint,
+  resultOutcomeLineFramePaint,
+} from "@/lib/games/matchListLineFrame";
 
-export function matchLineFramePaint(opts: {
-  pickup: boolean;
-  predicted: boolean;
-}): { color: string; glow: string } {
-  if (opts.pickup) {
-    return opts.predicted
-      ? { color: MATCH_LINE_FRAME_GOLD_MUTED, glow: "rgba(166,139,50,0.24)" }
-      : { color: MATCH_LINE_FRAME_GOLD, glow: "rgba(232,197,71,0.28)" };
-  }
-  return opts.predicted
-    ? { color: MATCH_LINE_FRAME_BLUE_MUTED, glow: "rgba(125,147,174,0.22)" }
-    : { color: MATCH_LINE_FRAME_BLUE, glow: "rgba(61,158,255,0.32)" };
-}
-
-const RADIUS = 14;
+const RADIUS = 0;
 const STROKE = 1.5;
 const LABEL_GAP_PAD = 16;
 const MIN_TICK_GAP = 12;
@@ -44,22 +44,33 @@ const CTA_WIDTH_PROBE = "REGULAR SEASON";
 type Props = {
   children: ReactNode;
   topLabel?: string;
+  /** 上辺ラベル位置。プロフィール概要は start */
+  topLabelAlign?: "center" | "start";
   /** ピックアップ時の左辺略号（RS / PO） */
   leftLabel?: string;
-  bottomLabel: string;
+  /** 省略時は下辺 CTA なし（リザルトカードなど） */
+  bottomLabel?: string;
   predicted?: boolean;
   pickup?: boolean;
+  /** 指定時は pickup / predicted より優先（HIT / MISS など） */
+  paint?: { color: string; glow: string };
   style?: StyleProp<ViewStyle>;
+  /**
+   * 0→1 で線枠をパスに沿って描く。未指定は最初から全線。
+   * ラウンドラベル左右から同時に半周し、下の CTA で合わせる。
+   */
+  strokeEnd?: SharedValue<number>;
 };
 
-function makePath(
+function makeHalves(
   width: number,
   height: number,
   topGap: number,
   bottomGap: number,
-  leftGap: number
+  leftGap: number,
+  topGapAlign: "center" | "start"
 ) {
-  const d = interruptedRoundedRectStrokeD({
+  const halves = interruptedRoundedRectStrokeHalves({
     width,
     height,
     radius: RADIUS,
@@ -67,42 +78,58 @@ function makePath(
     topGap,
     bottomGap,
     leftGap,
+    topGapAlign,
+    topGapStartInset: MATCH_LINE_FRAME_TOP_GAP_START_INSET,
   });
-  if (!d) return null;
-  return Skia.Path.MakeFromSVGString(d);
+  if (!halves) return null;
+  const left = Skia.Path.MakeFromSVGString(halves.left);
+  const right = Skia.Path.MakeFromSVGString(halves.right);
+  if (!left || !right) return null;
+  return { left, right };
 }
 
 export default function MatchListLineFrameNative({
   children,
   topLabel,
+  topLabelAlign = "center",
   leftLabel,
   bottomLabel,
   predicted = false,
   pickup = false,
+  paint,
   style,
+  strokeEnd,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [topLabelW, setTopLabelW] = useState(0);
   const [ctaFixedW, setCtaFixedW] = useState(0);
   const [bottomCtaH, setBottomCtaH] = useState(0);
   const [leftLabelH, setLeftLabelH] = useState(0);
-  const { color, glow } = matchLineFramePaint({ pickup, predicted });
+  const { color, glow } = paint ?? matchLineFramePaint({ pickup, predicted });
 
+  const showCta = Boolean(bottomLabel);
+  const labelMaxW = matchLineFrameLabelMaxWidth({
+    frameWidth: size.w,
+    align: topLabelAlign,
+  });
   const topGap =
     topLabel && topLabelW > 0
       ? topLabelW + LABEL_GAP_PAD
       : MIN_TICK_GAP;
-  const bottomGap =
-    ctaFixedW > 0 ? ctaFixedW + LABEL_GAP_PAD : 88;
+  const bottomGap = !showCta
+    ? 0
+    : ctaFixedW > 0
+      ? ctaFixedW + LABEL_GAP_PAD
+      : 88;
   const leftGap =
     leftLabel && leftLabelH > 0 ? leftLabelH + LABEL_GAP_PAD : 0;
 
-  const skiaPath = useMemo(
+  const skiaHalves = useMemo(
     () =>
       size.w > 0 && size.h > 0
-        ? makePath(size.w, size.h, topGap, bottomGap, leftGap)
+        ? makeHalves(size.w, size.h, topGap, bottomGap, leftGap, topLabelAlign)
         : null,
-    [size.w, size.h, topGap, bottomGap, leftGap]
+    [size.w, size.h, topGap, bottomGap, leftGap, topLabelAlign]
   );
 
   function onLayout(e: LayoutChangeEvent) {
@@ -114,33 +141,89 @@ export default function MatchListLineFrameNative({
   }
 
   const hasSize = size.w > 0 && size.h > 0;
+  const fallbackStrokeEnd = useSharedValue(1);
+  const strokeProgress = strokeEnd ?? fallbackStrokeEnd;
+
+  const topLabelAnim = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      strokeProgress.value,
+      [0, 0.12],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+  }));
+  const leftLabelAnim = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      strokeProgress.value,
+      [0.42, 0.58],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+  }));
+  const ctaAnim = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      strokeProgress.value,
+      [0.82, 1],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+  }));
 
   return (
-    <View style={[styles.root, style]} onLayout={onLayout}>
-      {hasSize && skiaPath ? (
+    <View
+      pointerEvents="box-none"
+      style={[styles.root, !showCta ? styles.rootNoCta : null, style]}
+      onLayout={onLayout}
+    >
+      {hasSize && skiaHalves ? (
         <Canvas
           pointerEvents="none"
           style={[styles.canvas, { width: size.w, height: size.h }]}
         >
           <Path
-            path={skiaPath}
+            path={skiaHalves.right}
             style="stroke"
             strokeWidth={5}
             color={glow}
             strokeCap="round"
-            strokeJoin="round"
+            strokeJoin="miter"
+            start={0}
+            end={strokeProgress as unknown as number}
           />
           <Path
-            path={skiaPath}
+            path={skiaHalves.left}
+            style="stroke"
+            strokeWidth={5}
+            color={glow}
+            strokeCap="round"
+            strokeJoin="miter"
+            start={0}
+            end={strokeProgress as unknown as number}
+          />
+          <Path
+            path={skiaHalves.right}
             style="stroke"
             strokeWidth={STROKE}
             color={color}
             strokeCap="round"
-            strokeJoin="round"
+            strokeJoin="miter"
+            start={0}
+            end={strokeProgress as unknown as number}
+          />
+          <Path
+            path={skiaHalves.left}
+            style="stroke"
+            strokeWidth={STROKE}
+            color={color}
+            strokeCap="round"
+            strokeJoin="miter"
+            start={0}
+            end={strokeProgress as unknown as number}
           />
         </Canvas>
       ) : null}
 
+      {showCta ? (
       <View pointerEvents="none" style={styles.ctaWidthProbe}>
         <View
           onLayout={(e) => {
@@ -151,9 +234,13 @@ export default function MatchListLineFrameNative({
           <Text style={styles.label}>{CTA_WIDTH_PROBE}</Text>
         </View>
       </View>
+      ) : null}
 
       {leftLabel ? (
-        <View pointerEvents="none" style={styles.leftLabelWrap}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.leftLabelWrap, leftLabelAnim]}
+        >
           <View
             onLayout={(e) => {
               const h = e.nativeEvent.layout.height;
@@ -171,30 +258,50 @@ export default function MatchListLineFrameNative({
               )
             )}
           </View>
-        </View>
+        </Animated.View>
       ) : null}
 
       {topLabel ? (
-        <View pointerEvents="none" style={styles.topLabelWrap}>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.topLabelWrap,
+            topLabelAlign === "start" ? styles.topLabelWrapStart : null,
+            topLabelAnim,
+          ]}
+        >
           <View
             onLayout={(e) => {
               const w = e.nativeEvent.layout.width;
               if (Math.abs(w - topLabelW) > 0.5) setTopLabelW(w);
             }}
           >
-            <Text style={[styles.label, { color }]} numberOfLines={1}>
+            <Text
+              style={[
+                styles.label,
+                { color },
+                styles.labelSkew,
+                topLabelAlign === "start" ? styles.labelStart : null,
+                labelMaxW > 0 ? { maxWidth: labelMaxW } : null,
+              ]}
+              numberOfLines={1}
+            >
               {topLabel}
             </Text>
           </View>
-        </View>
+        </Animated.View>
       ) : null}
 
-      <View style={styles.content}>{children}</View>
+      <View pointerEvents="auto" style={styles.content}>
+        {children}
+      </View>
 
-      <View
+      {showCta ? (
+      <Animated.View
         pointerEvents="none"
         style={[
           styles.bottomCtaWrap,
+          ctaAnim,
           bottomCtaH > 0
             ? { transform: [{ translateY: bottomCtaH / 2 - STROKE }] }
             : null,
@@ -215,10 +322,11 @@ export default function MatchListLineFrameNative({
           ]}
         >
           <Text style={[styles.ctaLabel, { color }]} numberOfLines={1}>
-            {bottomLabel}
+            {bottomLabel ?? ""}
           </Text>
         </View>
-      </View>
+      </Animated.View>
+      ) : null}
     </View>
   );
 }
@@ -231,8 +339,13 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 18,
   },
+  rootNoCta: {
+    marginBottom: 0,
+  },
   canvas: {
     ...StyleSheet.absoluteFillObject,
+    pointerEvents: "none",
+    zIndex: 2,
   },
   content: {
     position: "relative",
@@ -276,6 +389,10 @@ const styles = StyleSheet.create({
     zIndex: 3,
     transform: [{ translateY: -10 }],
   },
+  topLabelWrapStart: {
+    left: MATCH_LINE_FRAME_TOP_GAP_START_INSET + LABEL_GAP_PAD / 2,
+    alignItems: "flex-start",
+  },
   bottomCtaWrap: {
     position: "absolute",
     bottom: 0,
@@ -295,6 +412,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: "100%",
   },
+  labelSkew: {
+    transform: [{ skewX: "-10deg" }],
+  },
+  labelStart: {
+    textAlign: "left",
+  },
   ctaWidthProbe: {
     position: "absolute",
     opacity: 0,
@@ -304,7 +427,7 @@ const styles = StyleSheet.create({
   },
   cta: {
     borderWidth: 1.5,
-    borderRadius: 8,
+    borderRadius: 0,
     paddingHorizontal: 18,
     paddingVertical: 7,
     minWidth: 88,

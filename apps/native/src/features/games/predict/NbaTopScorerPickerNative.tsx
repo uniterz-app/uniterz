@@ -10,6 +10,7 @@ import { TEAM_SHORT } from "../../../../../../lib/team-short";
 import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
+import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
 
 type Props = {
   candidates: NbaTopScorerCandidate[];
@@ -116,16 +117,12 @@ export default function NbaTopScorerPickerNative({
 const styles = StyleSheet.create({
   root: {
     marginTop: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.03)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 0,
+    paddingVertical: 4,
   },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
     marginBottom: 8,
@@ -133,16 +130,27 @@ const styles = StyleSheet.create({
   headerText: {
     flex: 1,
     minWidth: 0,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    gap: 8,
   },
   title: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 12,
-    fontWeight: "600",
+    color: "#fff",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: "400",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   hint: {
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.5)",
     fontSize: 10,
-    marginTop: 2,
+    fontWeight: "700",
+    letterSpacing: 0.6,
   },
   clear: {
     color: "rgba(34,211,238,0.85)",

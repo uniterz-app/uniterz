@@ -74,7 +74,7 @@ function compactTeamDisplayName(
   return id.toUpperCase() || "—";
 }
 
-function roundLabelFromPost(post: Record<string, unknown>): string {
+export function roundLabelFromPost(post: Record<string, unknown>): string {
   const seasonRound = post.seasonRound;
   if (typeof seasonRound === "string" && seasonRound.trim()) {
     return seasonRound.trim().toUpperCase();

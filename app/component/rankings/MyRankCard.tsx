@@ -32,7 +32,6 @@ import {
 } from "@/app/component/rankings/MyRankCardFrame";
 import { listRowAvgText } from "@/lib/rankings/listRowMetricMeta";
 import {
-  computeMyRankTopPercent,
   deriveMyRankListAvgRow,
   MY_RANK_METRIC_HUD_LABEL,
   myRankCardAccent,
@@ -40,9 +39,7 @@ import {
   type MyRankStatsSource,
 } from "@/lib/rankings/myRankCardFocus";
 import {
-  formatRankTierGapForHud,
   type RankTierGapHint,
-  type RankTierGapHudText,
 } from "@/lib/rankings/rankTierMilestone";
 import MyRankRankingProgress from "@/app/component/rankings/MyRankRankingProgress";
 import {
@@ -388,44 +385,6 @@ function MetricHudInline({
   );
 }
 
-function RankTierGapUnderAvatar({
-  hud,
-  gapTextSize,
-  invisible = false,
-}: {
-  hud: RankTierGapHudText;
-  gapTextSize: string;
-  invisible?: boolean;
-}) {
-  const bodyColor = "rgba(140,240,255,0.88)";
-
-  return (
-    <p
-      className={[
-        nameOxanium.className,
-        "text-left whitespace-nowrap font-bold leading-none tabular-nums",
-        invisible ? "invisible" : "",
-      ].join(" ")}
-      style={{ fontSize: gapTextSize, color: bodyColor }}
-      aria-hidden={invisible || undefined}
-    >
-      {hud.segments.map((segment, index) => (
-        <span
-          key={index}
-          style={
-            segment.tone === "tier"
-              ? { color: GOLD }
-              : undefined
-          }
-        >
-          {segment.text}
-        </span>
-      ))}
-      {!hud.segments.length ? "\u00a0" : null}
-    </p>
-  );
-}
-
 function MyRankCardFooter({
   badgeLabel,
   dateLine,
@@ -599,23 +558,7 @@ export default function MyRankCard({
       ? rank!
       : rankCount;
 
-  const topPercent =
-    !loading &&
-    !freeTier &&
-    rank != null &&
-    typeof totalEntries === "number" &&
-    totalEntries > 0
-      ? computeMyRankTopPercent(rank, totalEntries, {
-          showMax: proTier ? null : undefined,
-        })
-      : null;
-
-  const entriesDisplay =
-    !loading &&
-    typeof totalEntries === "number" &&
-    totalEntries > 0
-      ? totalEntries.toLocaleString(language === "ja" ? "ja-JP" : "en-US")
-      : null;
+  void totalEntries;
 
   const streakN =
     typeof streak === "number" && streak >= STREAK_SWEEP_MIN ? streak : null;
@@ -668,22 +611,8 @@ export default function MyRankCard({
     accent.primary
   );
 
-  const metaSize = layout === "web" ? 13 : 11;
-  const topPercentLabel =
-    topPercent != null
-      ? m.rankings.topPercent.replace("{n}", topPercent)
-      : null;
+  void rankTierGap;
 
-  const rankTierGapHud =
-    metric === "totalScore" && rankTierGap
-      ? formatRankTierGapForHud(
-          rankTierGap,
-          language === "en" ? "en" : "ja"
-        )
-      : null;
-
-  const showRankTierGapHud = proTier && rankTierGapHud != null;
-  const gapTextSize = layout === "web" ? "11px" : "10px";
   const showRankingProgress =
     !freeTier &&
     !hideRankProgress &&
@@ -839,8 +768,12 @@ export default function MyRankCard({
           </div>
         ) : null}
 
-        <GlassSheen />
-        <ScanTexture />
+        {proSpecFrame ? null : (
+          <>
+            <GlassSheen />
+            <ScanTexture />
+          </>
+        )}
 
         {tiltEnabled ? (
           <div
@@ -880,148 +813,61 @@ export default function MyRankCard({
           <span className="sr-only">{m.rankings.loadingRankStats}</span>
         )}
 
-        {/* 上段2列: ユーザー | 順位+スタッツ / 下段: Progress */}
+        {/* 上段: リスト行と同じ配置 / 下段: Pro 専用 */}
         <div className="relative z-10 flex flex-col">
-          <div className="flex min-h-[96px] items-stretch gap-1.5 px-2 py-2">
-          <div className="flex w-[92px] shrink-0 flex-col items-center gap-1.5 pt-0.5">
+          {loading || statsPending ? (
             <div
-              className="relative h-11 w-11 overflow-hidden rounded-sm"
-              style={{
-                border: "1px solid rgba(245,215,142,0.4)",
-                background: "rgba(0,0,0,0.4)",
-              }}
+              className="px-3 py-4 text-[11px] text-white/40"
+              aria-busy
             >
-              <RankingsAvatarCircle
-                photoURL={photoURL}
-                displayName={displayName}
-                boxClassName="h-full w-full"
-                initialTextClassName="text-[12px]"
-                gateReady={ready}
-                shape="square"
-              />
+              {m.rankings.loadingRankStats}
             </div>
-            <div
-              className={[
-                jp.className,
-                "w-full text-center text-[12px] font-black leading-tight text-white",
-              ].join(" ")}
-            >
-              <span className="line-clamp-2 break-all">{displayName}</span>
-            </div>
-            {showProBadge ? (
-              <ProCyberBadge
-                {...proBadgeStaticMotion}
-                compact
-                ariaLabel={m.common.proMember}
-              />
-            ) : null}
-          </div>
-
-            <div
-              className="flex min-w-0 flex-[1.6] overflow-hidden rounded-sm border"
-              style={{
-                borderColor: "rgba(255,255,255,0.1)",
-                background: "rgba(0,0,0,0.28)",
-              }}
-            >
-              <div
-                className="flex flex-1 flex-col items-center justify-center gap-1 border-r px-1 py-2"
-                style={{
-                  borderColor: "rgba(245,215,142,0.2)",
-                  background: "rgba(0,0,0,0.16)",
-                }}
-              >
-                <div className="flex flex-col items-center">
-                  <div className="flex items-center justify-center gap-0.5">
-                    <span
-                      className={[
-                        nameOxanium.className,
-                        "inline-block text-[16px] font-bold text-white/55",
-                      ].join(" ")}
-                      style={{ transform: "skewX(-12deg)" }}
-                    >
-                      #
-                    </span>
-                    <CyberRankNumber
-                      rank={
-                        rankVisualMuted
-                          ? 4
-                          : motionOff
-                            ? rank!
-                            : rankCount
-                      }
-                      compact={layout === "mobile"}
-                      variant="tower"
-                      displayValue={
-                        rankVisualMuted
-                          ? loading
-                            ? "--"
-                            : statsPending
-                              ? STATS_PENDING_MARK
-                              : "--"
-                          : undefined
-                      }
-                      muted={rankVisualMuted}
-                    />
-                  </div>
-                  {entriesDisplay ? (
-                    <span
-                      className={[
-                        nameOxanium.className,
-                        "inline-block text-[11px] font-semibold tabular-nums text-white/45 leading-none",
-                      ].join(" ")}
-                      style={{ marginTop: -3, transform: "skewX(-12deg)" }}
-                    >
-                      / {entriesDisplay}
-                    </span>
-                  ) : null}
-                </div>
-                {topPercentLabel ? (
-                  <span
-                    className={[
-                      nameOxanium.className,
-                      "text-[9px] font-bold uppercase tracking-wide",
-                    ].join(" ")}
-                    style={{ color: GOLD }}
-                  >
-                    {topPercentLabel}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="flex min-w-0 flex-1 flex-col items-end justify-center gap-1 px-2 py-2">
-                <MetricHudInline
+          ) : (
+            <CyberRankingListRow
+              rank={rank != null && rank >= 1 ? rank : 99}
+              displayName={displayName}
+              photoURL={photoURL}
+              metric={metric}
+              metricTag={cyberMetricTag(metric, language)}
+              posts={posts}
+              countryCode={countryCode}
+              avgRow={avgRow ?? undefined}
+              compact={layout === "mobile"}
+              scoreLayout={layout === "web" ? "web" : "stack"}
+              hideAccentBar
+              rankDeltaPlaces={
+                typeof rankDeltaPlaces === "number" &&
+                Number.isFinite(rankDeltaPlaces)
+                  ? rankDeltaPlaces
+                  : 0
+              }
+              language={language}
+              rankDisplayValue={
+                rank != null && rank >= 1 ? undefined : "--"
+              }
+              rankMuted={!(rank != null && rank >= 1)}
+              nameExtra={
+                showProBadge ? (
+                  <ProCyberBadge
+                    {...proBadgeStaticMotion}
+                    emphasized
+                    ariaLabel={m.common.proMember}
+                  />
+                ) : null
+              }
+              scoreSlot={
+                <CyberRankingScore
+                  rank={rank != null && rank >= 1 ? rank : 99}
                   metric={metric}
-                  metricValue={metricValueDisplay}
-                  metricValueColor={
-                    loading || statsPending
-                      ? "rgba(255,255,255,0.92)"
-                      : metricAccent.value
-                  }
-                  dayDeltaNode={dayDeltaNode}
-                  statValueSize={layout === "web" ? "30px" : "26px"}
-                  unitSize={layout === "web" ? "13px" : "12px"}
-                  dayDeltaSize="10px"
+                  counted={value}
+                  compact={layout === "mobile"}
+                  scoreLayout={layout === "web" ? "web" : "stack"}
+                  plainWhite={!(rank != null && rank >= 1)}
                 />
-                <RankMetaStrip
-                  posts={posts}
-                  metric={metric}
-                  avgRow={avgRow}
-                  metaSize={9}
-                  flush
-                  alignEnd
-                />
-                {showRankTierGapHud && rankTierGapHud ? (
-                  <div className="w-full text-right">
-                    <RankTierGapUnderAvatar
-                      hud={rankTierGapHud}
-                      gapTextSize={gapTextSize}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
+              }
+              bare
+            />
+          )}
 
           {showRankingProgress ? (
             <div

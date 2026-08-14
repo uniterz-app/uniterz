@@ -20,7 +20,6 @@ import {
   profileOverviewChartStatCellStyle,
   profileOverviewChartStatsWrapStyle,
   profileOverviewChartSubtitleStyle,
-  profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
 import { streakChartLayoutMaxAbs } from "../../../../../lib/profile/streakTrackerChartLayout";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -152,17 +151,16 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
 
   if (loading) {
     return (
-      <ProfileOverviewChartCardNative>
+      <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.foreground}>
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
               <View style={styles.titleWithInfo}>
-                <Text style={styles.title}>{title}</Text>
+                <Text style={styles.subtitle}>{subtitle}</Text>
                 <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
                   <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
                 </Pressable>
               </View>
-              <Text style={styles.subtitle}>{subtitle}</Text>
             </View>
           </View>
           <ChartGlassShell>
@@ -177,10 +175,14 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
 
   if (points.length === 0) {
     return (
-      <ProfileOverviewChartCardNative>
+      <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.foreground}>
-          <HeaderRow title={title} onInfoPress={openInfo} />
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <View style={styles.titleWithInfo}>
+            <Text style={styles.subtitle}>{subtitle}</Text>
+            <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
+              <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
+            </Pressable>
+          </View>
           <View style={[styles.noDataBox, { minHeight: PLOT_H + 40 }]}>
             <Text style={styles.noData}>NO DATA</Text>
             <Text style={styles.noDataHint}>
@@ -193,17 +195,16 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   }
 
   return (
-    <ProfileOverviewChartCardNative>
+    <ProfileOverviewChartCardNative topLabel={title}>
       <View style={styles.foreground}>
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             <View style={styles.titleWithInfo}>
-              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{subtitle}</Text>
               <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
                 <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
               </Pressable>
             </View>
-            <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
           <View style={styles.badgeCol}>
             <View
@@ -343,17 +344,6 @@ function ChartGlassShell({ children }: { children: ReactNode }) {
   return <View style={styles.chartShellCyber}>{children}</View>;
 }
 
-function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => void }) {
-  return (
-    <View style={styles.titleWithInfo}>
-      <Text style={styles.title}>{title}</Text>
-      <Pressable onPress={onInfoPress} hitSlop={10}>
-        <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
-      </Pressable>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   foreground: {
     position: "relative",
@@ -378,10 +368,12 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
   },
-  title: profileOverviewChartTitleStyle,
   subtitle: {
     ...profileOverviewChartSubtitleStyle,
-    marginTop: 6,
+    flex: 1,
+    minWidth: 0,
+    marginTop: 0,
+    marginBottom: 4,
     maxWidth: 560,
   },
   badgeCol: {

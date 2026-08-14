@@ -116,16 +116,16 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                       opacity: 1,
                       ...(Platform.OS === "ios"
                         ? {
-                            shadowColor: "rgba(186,230,253,0.42)",
+                            shadowColor: "rgba(255,255,255,0.55)",
                             shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 1,
+                            shadowOpacity: 0.55,
                             shadowRadius: 6,
                           }
                         : { elevation: 6 }),
                     }
                   : {
                       transform: [{ scale: 0.92 }],
-                      opacity: isResult ? 0.42 : 0.9,
+                      opacity: 0.9,
                     };
 
                 const onPress = () => {
@@ -189,6 +189,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                             iconStyle,
                           ]}
                           resizeMode="contain"
+                          tintColor={iconColor}
                         />
                       ) : route.name === "LeaderboardsTab" ? (
                         <MaterialIcons
@@ -317,6 +318,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: colors.notificationDot,
     borderWidth: 2,
-    borderColor: "rgba(10,14,24,0.85)",
+    borderColor: "rgba(0,0,0,0.85)",
   },
 });

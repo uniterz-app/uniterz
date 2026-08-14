@@ -17,7 +17,9 @@ import NbaSeasonRestartMaintenanceOverlay from "@/app/component/common/NbaSeason
 import {
   APP_MAINTENANCE_MODE,
   APP_NBA_SEASON_RESTART_OVERLAY,
+  isMaintenanceExemptPath,
 } from "@/lib/app/maintenanceMode";
+import { headers } from "next/headers";
 import AppChrome from "@/app/component/AppChrome";
 import AppContentShell from "@/app/component/AppContentShell";
 import AppPageBackground from "@/app/component/AppPageBackground";
@@ -40,13 +42,15 @@ export const viewport: Viewport = {
   interactiveWidget: "overlays-content",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const maintenance = APP_MAINTENANCE_MODE;
-  const seasonRestartOverlay = APP_NBA_SEASON_RESTART_OVERLAY;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const exempt = isMaintenanceExemptPath(pathname);
+  const maintenance = APP_MAINTENANCE_MODE && !exempt;
+  const seasonRestartOverlay = APP_NBA_SEASON_RESTART_OVERLAY && !exempt;
 
   return (
     <html lang="ja">

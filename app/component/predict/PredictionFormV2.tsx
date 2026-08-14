@@ -68,7 +68,7 @@ import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "@/lib/predict/nextGameModalPrefs";
-import { matchScoreClass, nameOxanium } from "@/lib/fonts";
+import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { PREDICT_OVERLAY_FORM_PANEL } from "@/lib/ui/matchOverlayGlass";
 import {
@@ -347,7 +347,10 @@ export default function PredictionFormV2({
 
   const homeLabel = getMobileTeamLabel(game.league, homeL1, homeL2);
   const awayLabel = getMobileTeamLabel(game.league, awayL1, awayL2);
-  const predictTeamNameTy = bracketMarketTeamTypography(isMobile);
+  const predictTeamNameTy = {
+    ...bracketMarketTeamTypography(isMobile),
+    transform: "skewX(-6deg)",
+  };
 
   useEffect(() => {
     const h = Number(scoreHome);
@@ -1579,7 +1582,7 @@ export default function PredictionFormV2({
                 <div className="relative z-1 grid grid-cols-2 gap-3">
                   <div>
                     <div
-                      className="mb-2 text-sm font-bold text-white/88"
+                      className={`${nameBebas.className} mb-2 text-[15px] font-bold uppercase leading-tight text-white/88 md:text-[18px]`}
                       style={predictTeamNameTy}
                     >
                       {homeLabel}
@@ -1596,7 +1599,7 @@ export default function PredictionFormV2({
 
                   <div>
                     <div
-                      className="mb-2 text-sm font-bold text-white/88"
+                      className={`${nameBebas.className} mb-2 text-[15px] font-bold uppercase leading-tight text-white/88 md:text-[18px]`}
                       style={predictTeamNameTy}
                     >
                       {awayLabel}

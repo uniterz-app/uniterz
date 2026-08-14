@@ -26,13 +26,14 @@ export async function enrichGamePointsTopFromUsers(
 
   const refs = uids.map((uid) => db.collection("users").doc(uid));
   const snaps = await db.getAll(...refs);
-  const byUid = new Map<
+    const byUid = new Map<
     string,
     {
       handle: string | null;
       displayName: string | null;
       photoURL: string | null;
       isPro: boolean;
+      countryCode: string | null;
     }
   >();
 
@@ -51,6 +52,7 @@ export async function enrichGamePointsTopFromUsers(
       displayName,
       photoURL,
       isPro: d.isPro === true || d.plan === "pro",
+      countryCode: pickNonEmpty(d.countryCode)?.toUpperCase() ?? null,
     });
   }
 
@@ -67,6 +69,7 @@ export async function enrichGamePointsTopFromUsers(
       displayName,
       photoURL: p.photoURL ?? row.photoURL ?? null,
       isPro: p.isPro || row.isPro,
+      countryCode: p.countryCode ?? row.countryCode ?? null,
     };
   });
 }

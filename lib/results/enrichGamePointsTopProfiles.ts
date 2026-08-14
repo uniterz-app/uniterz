@@ -10,6 +10,7 @@ export type GamePointsTopProfileLite = {
   photoURL?: string | null;
   plan?: string | null;
   isPro?: boolean;
+  countryCode?: string | null;
 };
 
 function pickNonEmpty(v: unknown): string | null {
@@ -35,6 +36,7 @@ export function profileLiteFromUserDoc(
     photoURL,
     plan: pickNonEmpty(data.plan),
     isPro: data.isPro === true || data.plan === "pro",
+    countryCode: pickNonEmpty(data.countryCode)?.toUpperCase() ?? null,
   };
 }
 
@@ -57,12 +59,17 @@ export function enrichGamePointsTopEntries(
     const photoURL =
       pickNonEmpty(profile.photoURL) ?? row.photoURL ?? null;
     const isPro = profile.isPro === true || row.isPro;
+    const countryCode =
+      pickNonEmpty(profile.countryCode)?.toUpperCase() ??
+      row.countryCode ??
+      null;
     return {
       ...row,
       handle,
       displayName,
       photoURL,
       isPro,
+      countryCode,
     };
   });
 }

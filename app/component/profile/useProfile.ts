@@ -26,6 +26,7 @@ import { parseMemberSinceMs } from "@/lib/profile/parseMemberSinceMs";
 import type { RankingRowWithCountry, MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
+import { currentSeasonWinStreak } from "@/lib/profile/currentSeasonWinStreak";
 
 export type Profile = {
   displayName: string;
@@ -149,7 +150,7 @@ export function primeProfileCacheFromRankingRow(
       handle,
       bio: "",
       photoURL: typeof row.photoURL === "string" ? row.photoURL : "",
-      currentStreak: row.streak ?? 0,
+      currentStreak: 0,
       maxStreak: 0,
       plan: row.plan === "pro" ? "pro" : "free",
     },
@@ -260,8 +261,10 @@ export function useProfile(handle: string) {
             handle: userHandle,
             bio: typeof d.bio === "string" ? d.bio : "",
             photoURL: typeof d.photoURL === "string" ? d.photoURL : "",
-            currentStreak:
-              typeof d.currentStreak === "number" ? d.currentStreak : 0,
+            currentStreak: currentSeasonWinStreak(
+              d.currentStreak,
+              d.streakSeasonKeyBasketball
+            ),
             maxStreak: typeof d.maxStreak === "number" ? d.maxStreak : 0,
             plan,
             planProBgVariant: parseUserPlanProBgVariant(d.planProBgVariant),

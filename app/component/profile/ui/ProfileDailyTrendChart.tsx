@@ -4,9 +4,10 @@ import { useMemo } from "react";
 import { Info } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import { nameOxanium, nameRajdhani } from "@/lib/fonts";
+import { nameOxanium } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
 import ProfileDailyComboChartNeural from "@/app/component/profile/ui/ProfileDailyComboChartNeural";
 import {
   type ProfileVisualEffects,
@@ -70,7 +71,8 @@ export default function ProfileDailyTrendChart({
   const isEmpty = limitedData.length === 0;
 
   return (
-    <ProfileKinetikPanelFrame className="relative overflow-x-clip p-3 sm:p-4">
+    <ProfileOverviewLineFrame title={title}>
+    <ProfileKinetikPanelFrame className="profile-kinetik-panel--line-frame relative overflow-x-clip p-3 sm:p-4">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.36]"
         style={PROFILE_SHELL_GRID_STYLE}
@@ -81,13 +83,8 @@ export default function ProfileDailyTrendChart({
           <div role="status">
             <div className="relative z-20 mb-2 px-0.5">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <p
-                  className={[
-                    nameRajdhani.className,
-                    "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
-                  ].join(" ")}
-                >
-                  {title}
+                <p className="min-w-0 flex-1 text-[11px] text-white/60 sm:text-xs">
+                  {subtitle}
                 </p>
                 <div className={chartInfoStyles.wrap}>
                   <button
@@ -102,9 +99,6 @@ export default function ProfileDailyTrendChart({
                   </div>
                 </div>
               </div>
-              <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">
-                {subtitle}
-              </p>
             </div>
             <div className="grid min-h-44 place-items-center px-3">
               <p
@@ -127,9 +121,11 @@ export default function ProfileDailyTrendChart({
             rankingLeague={rankingLeague}
             layout={layout}
             visualEffectsLite={isProfileVisualLite(visualEffects)}
+            hideTitle
           />
         )}
       </div>
     </ProfileKinetikPanelFrame>
+    </ProfileOverviewLineFrame>
   );
 }

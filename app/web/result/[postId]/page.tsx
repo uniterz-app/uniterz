@@ -13,6 +13,8 @@ import {
   type ResultPostDetailMarket,
 } from "@/lib/result/loadResultPostDetailClient";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
+import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
+import { resolveResultTopEntries } from "@/lib/results/resolveResultTopEntries";
 
 type DetailState =
   | { status: "loading" }
@@ -22,6 +24,7 @@ type DetailState =
       post: PredictionPostV2;
       market: ResultPostDetailMarket | null;
       pointsDistribution: GamePointsDistributionV1 | null;
+      topEntries: GamePointsTopEntryV1[];
     };
 
 export default function WebResultPostPage() {
@@ -57,6 +60,10 @@ export default function WebResultPostPage() {
           post: r.post,
           market: r.market,
           pointsDistribution: r.pointsDistribution,
+          topEntries: resolveResultTopEntries({
+            pointsSummary: r.pointsSummary,
+            pointsDistribution: r.pointsDistribution,
+          }),
         });
       } catch (e) {
         console.error(e);
@@ -91,6 +98,7 @@ export default function WebResultPostPage() {
         post={state.post}
         market={state.market ?? undefined}
         pointsDistribution={state.pointsDistribution}
+        topEntries={state.topEntries}
         language={language}
         viewerUid={uid}
         gamesRoutePrefix="/web"

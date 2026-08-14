@@ -27,6 +27,7 @@ import {
   OXANIUM_700,
   OXANIUM_800,
 } from "../../profile/reports/reportThemeNative";
+import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
 
 type Props = {
@@ -443,10 +444,14 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   titleNick: {
-    fontFamily: OXANIUM_800,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
     fontSize: 18,
-    fontStyle: "italic",
-    letterSpacing: 0.6,
+    fontWeight: "400",
+    lineHeight: 20,
+    letterSpacing: 1.44,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   proBadgeWrap: {
     alignItems: "center",

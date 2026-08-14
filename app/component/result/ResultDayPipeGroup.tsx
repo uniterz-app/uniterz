@@ -386,7 +386,7 @@ export function ResultDayPipeGroup({
           </div>
   );
 
-  /** 日付帯：モバイルはページ横いっぱいのバナー、Web はコンテンツ幅いっぱい */
+  /** 日付帯：リザルトカードと同じ幅 */
   const dateStrip = isMobile ? (
     <div className={MOBILE_RESULT_DAY_STRIP_OUTER_CLASS}>
       <div className={resultDayStripPanelClass(true)}>

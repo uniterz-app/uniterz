@@ -1,6 +1,6 @@
 /**
  * __DEV__ リザルトカード — 案1（3層スキャン）専用プレビュー。
- * バッジは A（LEGEND 塗り）固定。UPSET 枠は濃い赤 / PERFECT は深い青。
+ * バッジは IMPACT（イタリック + 斜めアンダー）。UPSET 枠は濃い赤 / PERFECT は深い青。
  * 右辺 DETAIL タブ → 詳細プレビュー。Upset/Score は D + 相対ラベル。YOU なし。
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -11,10 +11,13 @@ import {
   Text,
   View,
 } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
-import { PANEL_BG } from "../profile/reports/reportThemeNative";
+import MatchListLineFrameNative, {
+  resultOutcomeLineFramePaint,
+} from "../games/MatchListLineFrameNative";
 import { resolveTeamJerseyPalette } from "../games/teamColors";
 import {
   registerTutorialTarget,
@@ -29,7 +32,13 @@ import {
   MATCH_CARD_SCORE_FONT,
 } from "../games/matchCardTypography";
 import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
+import { streakTagTone } from "@/lib/result/streakTagTone";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
+import {
+  ImpactTag,
+  OUTCOME_LABEL,
+  OUTCOME_TONE,
+} from "./resultBadgeDesignPreviewPatterns";
 
 type OutcomeBadge = "hit" | "perfect" | "upset" | "miss";
 
@@ -107,100 +116,16 @@ function scoreRelText(kind: ScoreRelKind): string | null {
   }
 }
 
-const FRAME_BY_BADGE: Record<
-  OutcomeBadge,
-  {
-    borderColor: string;
-    shadowColor: string;
-    shadowOpacity: number;
-    shadowRadius: number;
-  }
-> = {
-  hit: {
-    borderColor: "rgba(254,243,199,0.92)",
-    shadowColor: "rgba(251,191,36,1)",
-    shadowOpacity: 0.72,
-    shadowRadius: 18,
-  },
-  perfect: {
-    borderColor: "rgba(37,99,235,0.95)",
-    shadowColor: "rgba(29,78,216,1)",
-    shadowOpacity: 0.78,
-    shadowRadius: 20,
-  },
-  upset: {
-    borderColor: "rgba(185,28,28,0.98)",
-    shadowColor: "rgba(153,27,27,1)",
-    shadowOpacity: 0.82,
-    shadowRadius: 20,
-  },
-  miss: {
-    borderColor: "rgba(107,114,128,0.55)",
-    shadowColor: "rgba(100,116,139,0.35)",
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-  },
-};
-
-const STREAK_OPTS = [0, 3, 5, 7] as const;
-
-/** 連勝タグ — HIT と同系の黄（日英共通 W{n}）。グローは HIT より弱め */
-const STREAK_TONE = {
-  accent: "#FCD34D",
-  fillText: "#1A1200",
-  glow: "rgba(252,211,77,0.22)",
+const RESULT_LINE_FRAME_PAINT = {
+  hit: resultOutcomeLineFramePaint("hit")!,
+  perfect: resultOutcomeLineFramePaint("perfect")!,
+  upset: resultOutcomeLineFramePaint("upset")!,
+  miss: resultOutcomeLineFramePaint("miss")!,
 } as const;
 
+const STREAK_OPTS = [0, 3, 5, 7, 10] as const;
+
 const BADGE_OPTS: OutcomeBadge[] = ["hit", "perfect", "upset", "miss"];
-
-const BADGE_LABEL: Record<OutcomeBadge, string> = {
-  hit: "HIT",
-  perfect: "PERFECT",
-  upset: "UPSET",
-  miss: "MISS",
-};
-
-/** バッジ配色（プレビュー案共通）
- * LEGEND 塗り: accent 塗り + fillText（暗い字）
- * outline: 枠/文字 = accent
- */
-const BADGE_TONE: Record<
-  OutcomeBadge,
-  { accent: string; soft: string; text: string; fill: string; fillText: string; glow: string }
-> = {
-  hit: {
-    accent: "#FCD34D",
-    soft: "rgba(251,191,36,0.22)",
-    text: "#FFFBEB",
-    fill: "rgba(120,53,15,0.55)",
-    fillText: "#1A1200",
-    glow: "rgba(252,211,77,0.22)",
-  },
-  perfect: {
-    accent: "#3B82F6",
-    soft: "rgba(37,99,235,0.28)",
-    text: "#EFF6FF",
-    fill: "rgba(30,58,138,0.55)",
-    fillText: "#06101F",
-    glow: "rgba(37,99,235,0.5)",
-  },
-  upset: {
-    accent: "#DC2626",
-    soft: "rgba(185,28,28,0.28)",
-    text: "#FEF2F2",
-    fill: "rgba(127,29,29,0.6)",
-    fillText: "#1A0505",
-    glow: "rgba(185,28,28,0.55)",
-  },
-  miss: {
-    accent: "#94A3B8",
-    soft: "rgba(148,163,184,0.18)",
-    text: "#E2E8F0",
-    fill: "rgba(30,41,59,0.7)",
-    fillText: "#0B1018",
-    glow: "rgba(148,163,184,0.35)",
-  },
-};
 
 type ScorerIconId = "check" | "checkBold" | "shield";
 
@@ -234,45 +159,63 @@ function hexWithAlpha(hex: string, alphaHex: string): string {
 const DETAIL_SPINE = {
   width: 18,
   height: 80,
-  top: 68,
+  top: 80,
 } as const;
 
 /** プレビュー用・直角長方形シェル（角切りなし）+ 任意で右辺 DETAIL */
 function RectShell({
   badge,
+  topLabel,
   onOpenDetail,
   showDetailTab = false,
   frameGlow = true,
+  strokeEnd,
   children,
 }: {
   badge: OutcomeBadge;
+  topLabel?: string;
   onOpenDetail?: () => void;
   showDetailTab?: boolean;
   /** false なら詳細向け — 枠グローなし・枠色もニュートラル */
   frameGlow?: boolean;
+  strokeEnd?: SharedValue<number>;
   children: ReactNode;
 }) {
-  const frame = FRAME_BY_BADGE[badge];
+  const paint = RESULT_LINE_FRAME_PAINT[badge];
   const stroke = RESULT_CYBER_FRAME_STROKE_WIDTH;
-  const detailTab = Boolean(showDetailTab && onOpenDetail);
-  const borderColor = frameGlow
-    ? frame.borderColor
-    : "rgba(148,163,184,0.22)";
-  return (
-    <View style={styles.rectShellWrap}>
+  const detailTab = Boolean(showDetailTab);
+  const inner = (
+    <View
+      style={[
+        styles.rectShell,
+        frameGlow
+          ? {
+              shadowColor: paint.color,
+              shadowOpacity: 0.28,
+              shadowRadius: 10,
+              elevation: 3,
+            }
+          : {
+              shadowOpacity: 0,
+              elevation: 0,
+            },
+      ]}
+    >
+      <View style={styles.rectBody}>{children}</View>
+    </View>
+  );
+  const shell = (
+    <>
       {detailTab ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="DETAIL"
-          onPress={onOpenDetail}
-          hitSlop={8}
-          style={({ pressed }) => [
+        <View
+          pointerEvents="none"
+          style={[
             styles.detailSpine,
             {
               borderWidth: stroke,
               borderLeftWidth: 0,
+              borderColor: paint.color,
             },
-            pressed ? styles.detailSpinePressed : null,
           ]}
         >
           <View style={styles.detailSpineTextCol}>
@@ -282,31 +225,33 @@ function RectShell({
               </Text>
             ))}
           </View>
-        </Pressable>
+        </View>
       ) : null}
-      <View
-        style={[
-          styles.rectShell,
-          {
-            borderColor,
-            borderWidth: stroke,
-            ...(frameGlow
-              ? {
-                  shadowColor: frame.shadowColor,
-                  shadowOpacity: frame.shadowOpacity,
-                  shadowRadius: frame.shadowRadius,
-                  elevation: 8,
-                }
-              : {
-                  shadowOpacity: 0,
-                  elevation: 0,
-                }),
-          },
-        ]}
+      <MatchListLineFrameNative
+        topLabel={topLabel}
+        paint={paint}
+        strokeEnd={strokeEnd}
       >
-        <View style={styles.rectBody}>{children}</View>
-      </View>
-    </View>
+        {inner}
+      </MatchListLineFrameNative>
+    </>
+  );
+  if (!onOpenDetail) {
+    return <View style={styles.rectShellWrap}>{shell}</View>;
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Open result detail"
+      delayPressIn={0}
+      onPress={onOpenDetail}
+      style={({ pressed }) => [
+        styles.rectShellWrap,
+        pressed ? styles.cardPressed : null,
+      ]}
+    >
+      {shell}
+    </Pressable>
   );
 }
 
@@ -322,100 +267,24 @@ function TopBar({
     <View style={styles.topBar}>
       <View style={styles.topLeftSlot}>
         {showStreak ? (
-          <LegendFilledTag
+          <ImpactTag
             label={`W${sample.winStreak}`}
-            accent={STREAK_TONE.accent}
-            fillText={STREAK_TONE.fillText}
-            glow={STREAK_TONE.glow}
-            glowOpacity={0.7}
-            glowRadius={8}
+            color={streakTagTone(sample.winStreak).accent}
           />
         ) : null}
       </View>
-      <View style={styles.roundTitleWrap}>
-        <Text style={styles.roundTitle} numberOfLines={1}>
-          {sample.roundLabel}
-        </Text>
-      </View>
       <View style={styles.topBadgeSlot}>
-        <LegendOutcomeBadge kind={badge} />
+        <ImpactOutcomeBadge kind={badge} />
       </View>
     </View>
   );
 }
 
-/** 採用案 A — 本番 LEGEND filled（塗り + スキャン線） */
-const LEGEND_TAB_H = 26;
-const LEGEND_SCAN_STEP = 3;
-const LEGEND_SCAN_START = 2;
-const LEGEND_SKEW = "-14deg";
-const LEGEND_SKEW_INV = "14deg";
-
-function LegendTabScan() {
-  const count = Math.max(
-    0,
-    Math.floor((LEGEND_TAB_H - LEGEND_SCAN_START - 1) / LEGEND_SCAN_STEP) + 1
-  );
+function ImpactOutcomeBadge({ kind }: { kind: OutcomeBadge }) {
   return (
-    <View style={styles.legendScanLayer} pointerEvents="none">
-      {Array.from({ length: count }, (_, i) => (
-        <View
-          key={i}
-          style={[
-            styles.legendScanLine,
-            { top: LEGEND_SCAN_START + i * LEGEND_SCAN_STEP },
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
-
-function LegendFilledTag({
-  label,
-  accent,
-  fillText,
-  glow,
-  glowOpacity = 1,
-  glowRadius = 16,
-}: {
-  label: string;
-  accent: string;
-  fillText: string;
-  glow: string;
-  glowOpacity?: number;
-  glowRadius?: number;
-}) {
-  return (
-    <View
-      style={[
-        styles.legendOuter,
-        {
-          shadowColor: glow,
-          shadowOpacity: glowOpacity,
-          shadowRadius: glowRadius,
-        },
-      ]}
-    >
-      <View style={[styles.legendTab, { backgroundColor: accent }]}>
-        <LegendTabScan />
-        <Text style={[styles.legendTabText, { color: fillText }]}>{label}</Text>
-      </View>
-    </View>
-  );
-}
-
-function LegendOutcomeBadge({ kind }: { kind: OutcomeBadge }) {
-  const tone = BADGE_TONE[kind];
-  const softGlow = kind === "hit";
-  return (
-    <LegendFilledTag
-      label={BADGE_LABEL[kind]}
-      accent={tone.accent}
-      fillText={tone.fillText}
-      glow={tone.glow}
-      glowOpacity={softGlow ? 0.7 : 1}
-      glowRadius={softGlow ? 8 : 16}
+    <ImpactTag
+      label={OUTCOME_LABEL[kind]}
+      color={OUTCOME_TONE[kind].accent}
     />
   );
 }
@@ -678,6 +547,7 @@ function Plan1Card({
   frameGlow = true,
   bare = false,
   tutorialMetricsTargetId,
+  strokeEnd,
 }: {
   sample: Sample;
   badge: OutcomeBadge;
@@ -689,6 +559,7 @@ function Plan1Card({
   frameGlow?: boolean;
   bare?: boolean;
   tutorialMetricsTargetId?: string;
+  strokeEnd?: SharedValue<number>;
 }) {
   const body = (
     <View style={styles.pad}>
@@ -707,15 +578,25 @@ function Plan1Card({
   );
 
   if (bare) {
-    return <View style={styles.bareFace}>{body}</View>;
+    return (
+      <MatchListLineFrameNative
+        topLabel={sample.roundLabel}
+        paint={RESULT_LINE_FRAME_PAINT[badge]}
+        strokeEnd={strokeEnd}
+      >
+        <View style={styles.bareFace}>{body}</View>
+      </MatchListLineFrameNative>
+    );
   }
 
   return (
     <RectShell
       badge={badge}
+      topLabel={sample.roundLabel}
       onOpenDetail={onOpenDetail}
       showDetailTab={showDetailTab}
       frameGlow={frameGlow}
+      strokeEnd={strokeEnd}
     >
       {body}
     </RectShell>
@@ -735,6 +616,7 @@ export function ResultCardDesignFaceNative({
   showDetailTab = false,
   onOpenDetail,
   tutorialMetricsTargetId,
+  strokeEnd,
 }: {
   language: "ja" | "en";
   badge?: OutcomeBadge;
@@ -769,6 +651,7 @@ export function ResultCardDesignFaceNative({
   onOpenDetail?: () => void;
   /** チュートリアル穴（Upset / Score 行） */
   tutorialMetricsTargetId?: string;
+  strokeEnd?: SharedValue<number>;
 }) {
   const resolved: Sample = face
     ? (() => {
@@ -831,6 +714,7 @@ export function ResultCardDesignFaceNative({
       frameGlow={frameGlow}
       bare={bare}
       tutorialMetricsTargetId={tutorialMetricsTargetId}
+      strokeEnd={strokeEnd}
     />
   );
 }
@@ -962,16 +846,16 @@ export default function ResultCardDesignPreviewScreenNative({
       >
         <View style={styles.section}>
           <Text style={styles.sectionName}>
-            {ja ? "採用 · LEGEND バッジ" : "Locked · LEGEND badge"}
+            {ja ? "試用 · IMPACT バッジ" : "Trial · IMPACT badge"}
           </Text>
           <Text style={styles.sectionBlurb}>
             {ja
-              ? "HIT=金 / PERFECT=深い青 / UPSET=濃い赤 / MISS=灰。枠も同系統。"
-              : "HIT=gold / PERFECT=deep blue / UPSET=deep red / MISS=slate."}
+              ? "イタリック + 斜めアンダー。HIT=金 / PERFECT=青 / UPSET=赤 / MISS=鋼。"
+              : "Italic + slash underline. HIT=gold / PERFECT=blue / UPSET=red / MISS=steel."}
           </Text>
           <View style={styles.badgeGalleryRow}>
             {BADGE_OPTS.map((k) => (
-              <LegendOutcomeBadge key={k} kind={k} />
+              <ImpactOutcomeBadge key={k} kind={k} />
             ))}
           </View>
           <Plan1Card
@@ -989,7 +873,7 @@ export default function ResultCardDesignPreviewScreenNative({
   );
 }
 
-const CARD_W = Math.min(MOBILE_RESULT_CARD_MAX_W, 360);
+const CARD_W = MOBILE_RESULT_CARD_MAX_W;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#05080e" },
@@ -1075,6 +959,10 @@ const styles = StyleSheet.create({
     width: "100%",
     overflow: "visible",
   },
+  cardPressed: {
+    opacity: 0.96,
+    transform: [{ scale: 0.99 }],
+  },
   detailSpine: {
     position: "absolute",
     top: DETAIL_SPINE.top,
@@ -1110,7 +998,7 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 0,
     overflow: "hidden",
-    backgroundColor: PANEL_BG,
+    backgroundColor: "transparent",
     shadowOffset: { width: 0, height: 0 },
   },
   bareFace: {
@@ -1138,27 +1026,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 8,
     minHeight: 28,
   },
   topLeftSlot: {
     minWidth: 52,
     maxWidth: 96,
     alignItems: "flex-start",
-  },
-  roundTitleWrap: {
-    flex: 1,
-    marginHorizontal: 8,
-    alignItems: "center",
-    transform: [{ skewX: "-10deg" }],
-  },
-  roundTitle: {
-    textAlign: "center",
-    fontFamily: MATCH_CARD_METRIC_FONT,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.6,
-    color: "rgba(253,230,138,0.85)",
   },
   topBadgeSlot: { maxWidth: 96, alignItems: "flex-end" },
 
@@ -1412,46 +1286,6 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 4,
     marginBottom: 10,
-  },
-
-  /** A · LEGEND filled — 本番 Kinetik slant tab 準拠 */
-  legendOuter: {
-    flexShrink: 0,
-    overflow: "visible",
-    shadowOffset: { width: 0, height: 0 },
-  },
-  legendTab: {
-    position: "relative",
-    overflow: "hidden",
-    height: LEGEND_TAB_H,
-    minHeight: LEGEND_TAB_H,
-    maxHeight: LEGEND_TAB_H,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    transform: [{ skewX: LEGEND_SKEW }],
-  },
-  legendScanLayer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-  },
-  legendScanLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(0,0,0,0.14)",
-  },
-  legendTabText: {
-    position: "relative",
-    zIndex: 1,
-    fontFamily: MATCH_CARD_METRIC_FONT,
-    fontSize: 8,
-    fontWeight: "700",
-    letterSpacing: 1.1,
-    lineHeight: 10,
-    includeFontPadding: false,
-    transform: [{ skewX: LEGEND_SKEW_INV }],
   },
 
   /** C · HUD bar */

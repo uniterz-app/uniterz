@@ -11,6 +11,7 @@ export type GamePointsTopEntryV1 = {
   photoURL: string | null;
   isPro: boolean;
   points: number;
+  countryCode?: string | null;
 };
 
 function isFiniteNum(x: unknown): x is number {
@@ -37,6 +38,10 @@ export function parseGamePointsTopEntries(
       typeof o.displayName === "string" && o.displayName.trim()
         ? o.displayName.trim()
         : handle;
+    const countryRaw =
+      typeof o.countryCode === "string" && o.countryCode.trim()
+        ? o.countryCode.trim().toUpperCase()
+        : null;
     out.push({
       rank: Math.max(1, Math.floor(o.rank)),
       postId: o.postId.trim(),
@@ -49,6 +54,7 @@ export function parseGamePointsTopEntries(
           : null,
       isPro: o.isPro === true,
       points: o.points,
+      countryCode: countryRaw,
     });
   }
   return out.sort((a, b) => a.rank - b.rank).slice(0, 10);
@@ -61,6 +67,7 @@ export function authorMetaFromResultPost(data: Record<string, unknown>): {
   displayName: string;
   photoURL: string | null;
   isPro: boolean;
+  countryCode: string | null;
 } {
   const uid =
     typeof data.authorUid === "string" && data.authorUid.trim()
@@ -91,5 +98,19 @@ export function authorMetaFromResultPost(data: Record<string, unknown>): {
     data.authorIsPro === true ||
     author?.plan === "pro" ||
     author?.isPro === true;
-  return { uid, handle, displayName, photoURL, isPro };
+  const countryRaw =
+    (typeof data.authorCountryCode === "string" && data.authorCountryCode.trim()
+      ? data.authorCountryCode.trim()
+      : null) ??
+    (typeof author?.countryCode === "string" && author.countryCode.trim()
+      ? author.countryCode.trim()
+      : null);
+  return {
+    uid,
+    handle,
+    displayName,
+    photoURL,
+    isPro,
+    countryCode: countryRaw ? countryRaw.toUpperCase() : null,
+  };
 }

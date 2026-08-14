@@ -14,6 +14,8 @@ type Props = ProCyberBadgeMotionProps & {
   ariaLabel: string;
   /** ランキング一覧などでサイズを一段小さく */
   compact?: boolean;
+  /** マイランクカード — compact より少しだけ大きく */
+  emphasized?: boolean;
   /** プロフィールカード — compact より一段大きく */
   premium?: boolean;
 };
@@ -170,25 +172,30 @@ export function ProCyberBadge({
   animate,
   transition,
   compact = false,
+  emphasized = false,
   premium = false,
 }: Props) {
   const rid = useId().replace(/[^a-zA-Z0-9-_]/g, "x");
 
-  // compact: 一覧用 / premium: プロフィール名横 — 名前と並ぶ見やすいサイズ
+  // compact: 一覧 / emphasized: マイランク / premium: プロフィール名横
   const tagClass = premium
     ? "relative inline-flex h-[20px] items-center gap-[3px] px-[4px] sm:h-[22px] sm:px-[5px]"
-    : compact
-      ? "relative inline-flex h-[16px] items-center gap-[2.5px] px-[3px] sm:h-[17px] sm:px-[3.5px]"
-      : "relative inline-flex h-[18px] items-center gap-[3px] px-[4px]";
+    : emphasized
+      ? "relative inline-flex h-[19px] items-center gap-[3px] px-[4px]"
+      : compact
+        ? "relative inline-flex h-[16px] items-center gap-[2.5px] px-[3px] sm:h-[17px] sm:px-[3.5px]"
+        : "relative inline-flex h-[18px] items-center gap-[3px] px-[4px]";
   const bracketClass =
     "pointer-events-none absolute inset-0 h-full w-full overflow-visible";
   const markClass = premium
     ? "relative z-[1] h-[11px] w-[11px] shrink-0 sm:h-[12px] sm:w-[12px]"
-    : compact
-      ? "relative z-[1] h-[8.5px] w-[8.5px] shrink-0 sm:h-[9px] sm:w-[9px]"
-      : "relative z-[1] h-[9px] w-[9px] shrink-0";
-  const wordSize = premium ? "8.5px" : compact ? "7px" : "7px";
-  const bracketStroke = premium ? 1.15 : compact ? 1.15 : 0.95;
+    : emphasized
+      ? "relative z-[1] h-[10px] w-[10px] shrink-0"
+      : compact
+        ? "relative z-[1] h-[8.5px] w-[8.5px] shrink-0 sm:h-[9px] sm:w-[9px]"
+        : "relative z-[1] h-[9px] w-[9px] shrink-0";
+  const wordSize = premium ? "8.5px" : emphasized ? "8px" : compact ? "7px" : "7px";
+  const bracketStroke = premium ? 1.15 : emphasized || compact ? 1.15 : 0.95;
 
   return (
     <motion.span
@@ -216,7 +223,7 @@ export function ProCyberBadge({
           fontFamily: proBadgeWordFamily,
           fontSize: wordSize,
           fontWeight: 400,
-          letterSpacing: premium || compact ? "0.04em" : "0.07em",
+          letterSpacing: premium || emphasized || compact ? "0.04em" : "0.07em",
           color: PRO_GOLD.mid,
           backgroundImage: `linear-gradient(180deg, ${PRO_GOLD.bright} 0%, ${PRO_GOLD.mid} 48%, ${PRO_GOLD.deep} 100%)`,
           WebkitBackgroundClip: "text",

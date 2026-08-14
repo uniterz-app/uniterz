@@ -14,6 +14,7 @@ export type GamePointsTopEntryAgg = {
   photoURL: string | null;
   isPro: boolean;
   points: number;
+  countryCode?: string | null;
 };
 
 /** games.pointsSummary — 分布 bins なし */

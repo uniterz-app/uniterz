@@ -18,6 +18,7 @@ import {
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { TEAM_SHORT } from "../../../../../../lib/team-short";
+import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
 
 type Props = {
   report: NbaRosterReport;
@@ -440,11 +441,15 @@ const styles = StyleSheet.create({
   },
   teamName: {
     flex: 1,
-    fontFamily: OXANIUM,
-    fontSize: 14,
-    fontWeight: "800",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: "400",
     color: "#fff",
-    letterSpacing: 0.4,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   availability: {
     fontFamily: OXANIUM,

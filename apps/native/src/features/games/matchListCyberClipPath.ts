@@ -11,8 +11,8 @@ export const PREDICT_OVERLAY_CYBER_CUT = 12;
 export const PREDICT_OVERLAY_CYBER_DECK_CUT = 8;
 /** Web `.predict-overlay-cyber-form`（globals.css） */
 export const PREDICT_OVERLAY_CYBER_FORM_CUT = 10;
-/** Web `.predict-overlay-score-input`（globals.css） */
-export const PREDICT_OVERLAY_SCORE_INPUT_CUT = 6;
+/** Web `.predict-overlay-score-input` — 直角の四角（角切りなし） */
+export const PREDICT_OVERLAY_SCORE_INPUT_CUT = 0;
 /** Web `.predict-overlay-submit-btn`（globals.css） */
 export const PREDICT_OVERLAY_SUBMIT_BTN_CUT = 8;
 /** Web `.predict-overlay-close-btn`（globals.css） */

@@ -52,15 +52,28 @@ export type GamesStackParamList = {
   PlayerDetailPreview: { playerId?: string } | undefined;
 };
 
+/** 他人プロフィール。Profile / Rankings / Leaderboards / Result 各スタックで共用 */
+export type PublicProfileParams = {
+  handle: string;
+  fromRankings?: boolean;
+  fromLeaderboards?: boolean;
+  leaderboardsGroupId?: string;
+  fromWeeklyReport?: boolean;
+  fromResultDetail?: boolean;
+  resultDetailPostId?: string;
+};
+
 export type ResultStackParamList = {
   ResultHome: { reopenDetailPostId?: string } | undefined;
   ResultDetail: { postId: string };
+  PublicProfile: PublicProfileParams;
 };
 
 export type RankingsStackParamList = {
   RankingsHome: undefined;
   /** SQUAD BATTLE UI プレビュー（モック） */
   SquadBattlePreview: undefined;
+  PublicProfile: PublicProfileParams;
 };
 
 export type LeaderboardsStackParamList = {
@@ -68,6 +81,7 @@ export type LeaderboardsStackParamList = {
   CommunityDetail: { groupId: string };
   /** SQUAD BATTLE UI プレビュー（モック） */
   SquadBattlePreview: undefined;
+  PublicProfile: PublicProfileParams;
 };
 
 export type ProfileStackParamList = {
@@ -95,18 +109,7 @@ export type ProfileStackParamList = {
   ProfilePassword: undefined;
   ProSkin: undefined;
   DeleteAccount: undefined;
-  PublicProfile: {
-    handle: string;
-    fromRankings?: boolean;
-    fromLeaderboards?: boolean;
-    leaderboardsGroupId?: string;
-    /** 週次レポートのライバル一覧から遷移 */
-    fromWeeklyReport?: boolean;
-    /** リザルト詳細（得点上位等）から遷移 */
-    fromResultDetail?: boolean;
-    /** 戻るときに再開するリザルト詳細の投稿 ID */
-    resultDetailPostId?: string;
-  };
+  PublicProfile: PublicProfileParams;
   Badges: undefined;
   Invite: undefined;
   UnitLedger: undefined;
@@ -149,6 +152,10 @@ export type ProfileStackParamList = {
   UniterzLogoTypePreview: undefined;
   /** __DEV__ リザルトカード見た目案 */
   ResultCardDesignPreview: undefined;
+  /** __DEV__ リザルト右上バッジ見た目案 */
+  ResultBadgeDesignPreview: undefined;
+  /** __DEV__ リザルト左上連勝タグ見た目案 */
+  ResultStreakTagDesignPreview: undefined;
   /** __DEV__ リザルト詳細デザイン用プレビュー */
   ResultDetailDesignPreview: undefined;
   /** __DEV__ サイバーロゴスプラッシュ */
@@ -165,6 +172,12 @@ export type ProfileStackParamList = {
   LiveGameStatsPreview: undefined;
   /** __DEV__ 試合一覧カード現行デザイン */
   MatchCardDesignPreview: undefined;
+  /** __DEV__ 下部ナビ見た目案 */
+  NavBarDesignPreview: undefined;
+  /** __DEV__ LP 用ランキング画面（総合スコアモック） */
+  LpRankingPreview: undefined;
+  /** __DEV__ ランキングリスト見た目案 */
+  RankingListDesignPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

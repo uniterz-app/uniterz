@@ -12,7 +12,6 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
-import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
@@ -149,7 +148,7 @@ export default function RankingCard({
   return (
     <Link
       href={profileHref}
-      className="block min-w-0"
+      className="block min-w-0 origin-center transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95"
       prefetch
       onPointerEnter={warmProfileRoute}
       onFocus={warmProfileRoute}
@@ -177,17 +176,16 @@ export default function RankingCard({
         proSkinVariant={proSkinVariant}
         proSkinIntensity="medium"
         nameExtra={
-          <>
-            <RankDeltaBadge delta={r.rankDeltaPlaces} language={language} />
-            {r.plan === "pro" ? (
-              <ProCyberBadge
-                {...proBadgeStaticMotion}
-                compact
-                ariaLabel={t(language).common.proMember}
-              />
-            ) : null}
-          </>
+          r.plan === "pro" ? (
+            <ProCyberBadge
+              {...proBadgeStaticMotion}
+              compact
+              ariaLabel={t(language).common.proMember}
+            />
+          ) : null
         }
+        rankDeltaPlaces={r.rankDeltaPlaces}
+        language={language}
         scoreSlot={
           <CyberRankingScore
             rank={rank}

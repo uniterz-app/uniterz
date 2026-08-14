@@ -27,6 +27,8 @@ import UnitEarnOverlayAnimPreviewScreenNative from "../mobileScreens/UnitEarnOve
 import UnitEarnOverlayFontPreviewScreenNative from "../mobileScreens/UnitEarnOverlayFontPreviewScreenNative";
 import UniterzLogoTypePreviewScreenNative from "../mobileScreens/UniterzLogoTypePreviewScreenNative";
 import ResultCardDesignPreviewScreenNative from "../../results/ResultCardDesignPreviewScreenNative";
+import ResultBadgeDesignPreviewScreenNative from "../../results/ResultBadgeDesignPreviewScreenNative";
+import ResultStreakTagDesignPreviewScreenNative from "../../results/ResultStreakTagDesignPreviewScreenNative";
 import ResultDetailDesignPreviewScreenNative from "../../results/ResultDetailDesignPreviewScreenNative";
 import ResultDetailScreen from "../../results/ResultDetailScreen";
 import { RESULT_DETAIL_DESIGN_PREVIEW_POST_ID } from "../../../../../../lib/tutorial/tutorialNbaUi";
@@ -37,6 +39,9 @@ import PlayerDetailPreviewScreenNative from "../../games/playerDetail/PlayerDeta
 import TeamDetailPreviewScreenNative from "../../games/teamDetail/TeamDetailPreviewScreenNative";
 import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPreviewScreenNative";
 import MatchCardDesignPreviewScreenNative from "../../games/MatchCardDesignPreviewScreenNative";
+import LpRankingPreviewScreenNative from "../../rankings/LpRankingPreviewScreenNative";
+import RankingListDesignPreviewScreenNative from "../../rankings/RankingListDesignPreviewScreenNative";
+import NavBarDesignPreviewScreenNative from "../../../navigation/NavBarDesignPreviewScreenNative";
 import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
@@ -319,6 +324,32 @@ export function UniterzLogoTypePreviewScreenWrapper() {
   );
 }
 
+export function ResultBadgeDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ResultBadgeDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ResultStreakTagDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ResultStreakTagDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
 export function ResultCardDesignPreviewScreenWrapper() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -340,8 +371,11 @@ export function ResultCardDesignPreviewScreenWrapper() {
         language={lang}
         onClose={() => setDetailOpen(false)}
         onOpenProfile={(handle) => {
-          setDetailOpen(false);
-          navigation.push("PublicProfile", { handle, fromResultDetail: true });
+          navigation.push("PublicProfile", {
+            handle,
+            fromResultDetail: true,
+            resultDetailPostId: RESULT_DETAIL_DESIGN_PREVIEW_POST_ID,
+          });
         }}
       />
     </View>
@@ -462,6 +496,45 @@ export function MatchCardDesignPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <MatchCardDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function LpRankingPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <LpRankingPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function RankingListDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <RankingListDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function NavBarDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <NavBarDesignPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />

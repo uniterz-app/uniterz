@@ -164,6 +164,12 @@ function ResultStackScreen() {
             require("../features/results/ResultDetailStackScreen").default
           }
         />
+        <ResultStack.Screen
+          name="PublicProfile"
+          getComponent={() =>
+            require("../features/profile/screens/PublicProfileScreenNative").default
+          }
+        />
       </ResultStack.Navigator>
     </NativeStackBackdrop>
   );
@@ -181,6 +187,12 @@ function RankingsStackScreen() {
           name="SquadBattlePreview"
           getComponent={() =>
             require("../features/squads/SquadBattleScreenNative").default
+          }
+        />
+        <RankingsStack.Screen
+          name="PublicProfile"
+          getComponent={() =>
+            require("../features/profile/screens/PublicProfileScreenNative").default
           }
         />
       </RankingsStack.Navigator>
@@ -206,6 +218,12 @@ function LeaderboardsStackScreen() {
           name="SquadBattlePreview"
           getComponent={() =>
             require("../features/squads/SquadBattleScreenNative").default
+          }
+        />
+        <LeaderboardsStack.Screen
+          name="PublicProfile"
+          getComponent={() =>
+            require("../features/profile/screens/PublicProfileScreenNative").default
           }
         />
       </LeaderboardsStack.Navigator>
@@ -492,6 +510,24 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="ResultBadgeDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ResultBadgeDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="ResultStreakTagDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ResultStreakTagDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="ResultDetailDesignPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
@@ -559,6 +595,33 @@ function ProfileStackScreen() {
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
                 .MatchCardDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="LpRankingPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .LpRankingPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="RankingListDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .RankingListDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="NavBarDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .NavBarDesignPreviewScreenWrapper
             }
           />
         ) : null}

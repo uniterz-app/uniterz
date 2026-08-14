@@ -115,9 +115,7 @@ export default function SettingsMenu({
   const handleLogout = async () => {
     clearSideMenuOrigin();
     await signOut(auth);
-    router.push(
-      resolvedVariant === "web" ? "/web/login" : "/mobile/login"
-    );
+    router.push(resolvedVariant === "web" ? "/lp" : "/mobile/login");
   };
 
   // ===== paths（すべて resolvedVariant ベース）=====

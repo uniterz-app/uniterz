@@ -26,7 +26,6 @@ type Props = {
   userPredictionWinner?: MarketKey | null;
 };
 
-const CYBER_TAB_CYAN = "#22d3ee";
 const MARKET_BAR_SEGMENTS = 20;
 const DRAW_ACCENT = "#c8d0dc";
 const DRAW_SEG_ACCENT = "#9ca3af";
@@ -431,14 +430,18 @@ export default function MatchCardOverlayMarketBarNative({
   return (
     <View style={styles.root}>
       <View style={[styles.headerRow, compact && styles.headerRowCompact]}>
-        <View style={styles.headerLeft}>
-          <View style={styles.headerLine} />
-          <Text style={[styles.headerTitle, compact && styles.headerTitleCompact]}>
-            {marketBiasLabel}
-          </Text>
-        </View>
+        <Text
+          style={[styles.headerTitle, compact && styles.headerTitleCompact]}
+        >
+          -{marketBiasLabel}-
+        </Text>
         {total > 0 && !fromFallback ? (
-          <Text style={[styles.totalText, compact && styles.totalTextCompact]}>
+          <Text
+            style={[
+              styles.totalText,
+              compact && styles.totalTextCompact,
+            ]}
+          >
             {totalLabel}
             <Text style={styles.totalNum}>{total}</Text>
           </Text>
@@ -513,22 +516,13 @@ export default function MatchCardOverlayMarketBarNative({
 const styles = StyleSheet.create({
   root: { width: "100%" },
   headerRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 0,
-    gap: 8,
+    minHeight: 12,
   },
-  headerRowCompact: { marginBottom: 0 },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
-  headerLine: {
-    width: 8,
-    height: 1,
-    backgroundColor: CYBER_TAB_CYAN,
-    shadowColor: CYBER_TAB_CYAN,
-    shadowOpacity: 0.55,
-    shadowRadius: 6,
-  },
+  headerRowCompact: { marginBottom: 0, minHeight: 10 },
   headerTitle: {
     fontFamily: MATCH_CARD_METRIC_FONT,
     color: "rgba(0,245,255,0.55)",
@@ -536,9 +530,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
+    textAlign: "center",
   },
   headerTitleCompact: { fontSize: 8 },
   totalText: {
+    position: "absolute",
+    right: 0,
+    top: 0,
     fontFamily: MATCH_CARD_METRIC_FONT,
     color: "rgba(255,255,255,0.7)",
     fontSize: 11,

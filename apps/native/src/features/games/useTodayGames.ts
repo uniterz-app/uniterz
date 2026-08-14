@@ -20,6 +20,10 @@ import {
 } from "../../../../../lib/games/gamesWindowRange";
 import { toDateOrNull } from "../../../../../lib/games/transform";
 import { sortGamesByKickoffAsc } from "../../../../../lib/games/sortGamesByKickoff";
+import {
+  mergeNbaOpeningNightPreviewGames,
+  NBA_OPENING_NIGHT_PREVIEW_DATE_KEY,
+} from "../../../../../lib/games/nbaOpeningNightPreviewGames";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 
 export type SupportedLeague = "nba" | "bj" | "j1" | "pl" | "wc";
@@ -213,7 +217,13 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
   const [error, setError] = useState<string | null>(null);
   const [windowRows, setWindowRows] = useState<NativeGameRow[]>([]);
   const [peerRowsForSeries, setPeerRowsForSeries] = useState<NativeGameRow[]>([]);
-  const [selectedDate, setSelectedDateState] = useState<Date>(() => new Date());
+  const [selectedDate, setSelectedDateState] = useState<Date>(
+    () =>
+      parseDateKeyInTimeZone(
+        NBA_OPENING_NIGHT_PREVIEW_DATE_KEY,
+        TIMEZONE_JST
+      ) ?? new Date()
+  );
   const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("nba");
   const [refreshNonce, setRefreshNonce] = useState(0);
 
@@ -261,25 +271,43 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     [selectedLeague, dateKey]
   );
 
+  const displayRows = useMemo(
+    () =>
+      mergeNbaOpeningNightPreviewGames(
+        selectedLeague,
+        windowRows
+      ) as NativeGameRow[],
+    [selectedLeague, windowRows]
+  );
+
+  const displayPeerRows = useMemo(
+    () =>
+      mergeNbaOpeningNightPreviewGames(
+        selectedLeague,
+        peerRowsForSeries
+      ) as NativeGameRow[],
+    [selectedLeague, peerRowsForSeries]
+  );
+
   const games = useMemo(
     () =>
-      sortGamesByKickoffAsc(filterGamesForDay(windowRows, selectedDate)),
-    [windowRows, selectedDate]
+      sortGamesByKickoffAsc(filterGamesForDay(displayRows, selectedDate)),
+    [displayRows, selectedDate]
   );
 
   /** 日付切替前に自分の予想キャッシュを温める用（表示中の日以外も含む） */
   const windowGameIds = useMemo(
-    () => windowRows.map((g) => String(g.id ?? "")).filter(Boolean),
-    [windowRows]
+    () => displayRows.map((g) => String(g.id ?? "")).filter(Boolean),
+    [displayRows]
   );
 
   const dateKeysWithGames = useMemo(
-    () => sortedUniqueDateKeysFromRows(windowRows),
-    [windowRows]
+    () => sortedUniqueDateKeysFromRows(displayRows),
+    [displayRows]
   );
 
-  const hasWindowData = windowRows.length > 0;
-  const peerGamesForSeries = peerRowsForSeries;
+  const hasWindowData = displayRows.length > 0;
+  const peerGamesForSeries = displayPeerRows;
 
   function moveDay(offset: number) {
     setSelectedDate((prev) => {
@@ -454,7 +482,13 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
           leagueChanged
             ? (selectedByLeagueRef.current[selectedLeague] ?? null)
             : selectedDate;
-        const landing = resolveLandingDate(rows, preferred);
+        const landing = resolveLandingDate(
+          mergeNbaOpeningNightPreviewGames(
+            selectedLeague,
+            rows
+          ) as NativeGameRow[],
+          preferred
+        );
         if (landing) {
           setSelectedDateState(landing);
           selectedByLeagueRef.current[selectedLeague] = landing;
@@ -468,6 +502,10 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
         lastSuccessfulRefreshNonceRef.current = null;
         setWindowRows([]);
         setPeerRowsForSeries([]);
+        /** NBA プレビュー試合があれば一覧は出す */
+        if (selectedLeague === "nba") {
+          setError(null);
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -635,13 +673,13 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     if (dateKeysWithGames.length === 0) return;
     if (dateKeysWithGames.includes(dateKey)) return;
 
-    const landing = resolveLandingDate(windowRows, selectedDate);
+    const landing = resolveLandingDate(displayRows, selectedDate);
     if (!landing) return;
     const landingKey = toDateKeyInTimeZone(landing, TIMEZONE_JST);
     if (landingKey === dateKey) return;
     setSelectedDateState(landing);
     selectedByLeagueRef.current[selectedLeague] = landing;
-  }, [loading, dateKeysWithGames, dateKey, windowRows, selectedDate, selectedLeague]);
+  }, [loading, dateKeysWithGames, dateKey, displayRows, selectedDate, selectedLeague]);
 
   return {
     loading,

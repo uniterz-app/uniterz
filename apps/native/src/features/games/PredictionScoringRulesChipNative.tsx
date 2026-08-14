@@ -9,6 +9,11 @@ import {
 } from "react-native";
 import type { GamesLanguage } from "./gamesI18n";
 import PredictionScoringRulesBodyNative from "./PredictionScoringRulesBodyNative";
+import {
+  MATCH_CARD_DISPLAY_FONT,
+  MATCH_CARD_METRIC_FONT,
+} from "./matchCardTypography";
+import PredictOverlaySubmitButtonNative from "./PredictOverlaySubmitButtonNative";
 
 type Props = {
   language: GamesLanguage;
@@ -27,6 +32,7 @@ export default function PredictionScoringRulesChipNative({
   rulesFootNote,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const ja = language !== "en";
 
   return (
     <>
@@ -53,26 +59,33 @@ export default function PredictionScoringRulesChipNative({
             accessibilityRole="button"
             accessibilityLabel={closeLabel}
           />
-          <View style={styles.card}>
-            <Text style={styles.title}>{accessibilityLabel}</Text>
-            <View style={styles.divider} />
+          <View style={styles.sheet}>
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>SCORING RULES</Text>
+              <Text style={styles.headerHint}>
+                {ja ? "採点ルール" : "How points are scored"}
+              </Text>
+            </View>
             <ScrollView
               style={styles.scroll}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
-              <PredictionScoringRulesBodyNative language={language} />
+              <PredictionScoringRulesBodyNative
+                language={language}
+                league={league}
+              />
               {rulesFootNote ? (
                 <Text style={styles.footnote}>{rulesFootNote}</Text>
               ) : null}
             </ScrollView>
-            <Pressable
-              onPress={() => setOpen(false)}
-              style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
-              accessibilityRole="button"
-            >
-              <Text style={styles.closeBtnText}>{closeLabel}</Text>
-            </Pressable>
+            <View style={styles.footer}>
+              <PredictOverlaySubmitButtonNative
+                label={closeLabel}
+                enabled
+                onPress={() => setOpen(false)}
+              />
+            </View>
           </View>
         </View>
       </Modal>
@@ -88,10 +101,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
-    backgroundColor: "rgba(34,211,238,0.1)",
+    borderColor: "rgba(0,245,255,0.45)",
+    backgroundColor: "rgba(0,245,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -100,10 +113,11 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   chipIcon: {
-    color: "rgba(207,250,254,0.95)",
-    fontSize: 15,
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    color: "rgba(224,255,255,0.95)",
+    fontSize: 14,
     fontWeight: "800",
-    lineHeight: 17,
+    lineHeight: 16,
   },
   backdrop: {
     flex: 1,
@@ -112,68 +126,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 24,
   },
-  card: {
+  sheet: {
     maxHeight: "88%",
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "#0c1419",
+    borderColor: "rgba(0,245,255,0.22)",
+    backgroundColor: "#05080c",
     overflow: "hidden",
   },
-  title: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "800",
-    textAlign: "center",
+  header: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    gap: 8,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 10,
+    paddingBottom: 12,
   },
-  divider: {
-    height: 1,
-    marginHorizontal: 16,
-    backgroundColor: "rgba(34,211,238,0.25)",
+  headerTitle: {
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: "400",
+    letterSpacing: 1.4,
+    color: "#fff",
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
+  },
+  headerHint: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.45)",
   },
   scroll: {
     flexGrow: 0,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingBottom: 12,
     gap: 10,
   },
-  fallback: {
-    color: "rgba(255,255,255,0.72)",
-    fontSize: 13,
-    lineHeight: 19,
-  },
   footnote: {
-    marginTop: 4,
-    borderLeftWidth: 2,
-    borderLeftColor: "rgba(34,211,238,0.3)",
-    paddingLeft: 10,
+    marginTop: 8,
     color: "rgba(255,255,255,0.45)",
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 11,
+    lineHeight: 16,
   },
-  closeBtn: {
-    marginHorizontal: 16,
-    marginBottom: 14,
-    marginTop: 4,
-    minHeight: 42,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.28)",
-    backgroundColor: "rgba(34,211,238,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  closeBtnPressed: {
-    opacity: 0.88,
-  },
-  closeBtnText: {
-    color: "rgba(207,250,254,0.95)",
-    fontSize: 14,
-    fontWeight: "700",
+  footer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 4,
   },
 });

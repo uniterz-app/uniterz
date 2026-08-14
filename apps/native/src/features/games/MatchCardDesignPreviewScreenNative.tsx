@@ -22,6 +22,7 @@ import {
   matchCardPreviewFinal,
   matchCardPreviewFinalOt,
   matchCardPreviewLive,
+  matchCardPreviewOpeningNightGames,
   matchCardPreviewPickup,
   matchCardPreviewPickupPredicted,
   matchCardPreviewPlayoff,
@@ -41,37 +42,44 @@ type PreviewSection = {
   id: string;
   titleJa: string;
   titleEn: string;
-  game: Record<string, unknown>;
+  games: Record<string, unknown>[];
   predicted?: boolean;
   pickupMark?: "top" | "left";
 };
 
 const SECTIONS: PreviewSection[] = [
   {
+    id: "opening-slate",
+    titleJa: "2026-27 開幕トリプルヘッダー（ピックアップ2）",
+    titleEn: "2026-27 opening tripleheader (2 pickup)",
+    games: matchCardPreviewOpeningNightGames,
+    pickupMark: "left",
+  },
+  {
     id: "scheduled",
     titleJa: "通常 · 未予想",
     titleEn: "Standard · not predicted",
-    game: matchCardPreviewScheduled,
+    games: [matchCardPreviewScheduled],
   },
   {
     id: "predicted",
     titleJa: "通常 · 予想済み",
     titleEn: "Standard · predicted",
-    game: matchCardPreviewPredicted,
+    games: [matchCardPreviewPredicted],
     predicted: true,
   },
   {
     id: "pickup",
     titleJa: "ピックアップ · 未予想",
     titleEn: "Pickup · not predicted",
-    game: matchCardPreviewPickup,
+    games: [matchCardPreviewPickup],
     pickupMark: "left",
   },
   {
     id: "pickup-predicted",
     titleJa: "ピックアップ · 予想済み",
     titleEn: "Pickup · predicted",
-    game: matchCardPreviewPickupPredicted,
+    games: [matchCardPreviewPickupPredicted],
     predicted: true,
     pickupMark: "left",
   },
@@ -79,25 +87,25 @@ const SECTIONS: PreviewSection[] = [
     id: "live",
     titleJa: "LIVE（線色は通常 · 未予想と同じ）",
     titleEn: "LIVE (same line as standard open)",
-    game: matchCardPreviewLive,
+    games: [matchCardPreviewLive],
   },
   {
     id: "final",
     titleJa: "FINAL（線色は通常 · 未予想と同じ）",
     titleEn: "FINAL (same line as standard open)",
-    game: matchCardPreviewFinal,
+    games: [matchCardPreviewFinal],
   },
   {
     id: "final-ot",
     titleJa: "FINAL · OT",
     titleEn: "FINAL · OT",
-    game: matchCardPreviewFinalOt,
+    games: [matchCardPreviewFinalOt],
   },
   {
     id: "playoff",
     titleJa: "プレーオフ · シリーズ",
     titleEn: "Playoffs · series",
-    game: matchCardPreviewPlayoff,
+    games: [matchCardPreviewPlayoff],
   },
 ];
 
@@ -122,8 +130,8 @@ export default function MatchCardDesignPreviewScreenNative({
       eyebrow="PREVIEW"
       subtitle={
         isJa
-          ? "線色はピックアップがゴールド、通常が青。予想済みは同系の落ち着いた色。LIVE / FINAL は変えない。"
-          : "Pickup = gold, standard = blue. Predicted uses a muted shade. LIVE / FINAL do not change the line."
+          ? "2026-27 開幕3試合。ピックアップはゴールド、通常は青。予想済みは同系の落ち着いた色。"
+          : "2026-27 opening 3. Pickup = gold, standard = blue. Predicted uses a muted shade."
       }
       appBackground
       onClose={onClose}
@@ -138,7 +146,7 @@ export default function MatchCardDesignPreviewScreenNative({
               {isJa ? section.titleJa : section.titleEn}
             </Text>
             <GameCardList
-              games={[section.game]}
+              games={section.games}
               enteringAnimationEnabled={false}
               predictedGameIds={
                 section.predicted ? predictedGameIds : new Set()

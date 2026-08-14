@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { m, useInView, useReducedMotion } from "framer-motion";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
 import { streakChartLayoutMaxAbs } from "@/lib/profile/streakTrackerChartLayout";
 import {
   useProfileStreakTracker,
@@ -13,7 +14,7 @@ import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope
 import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { jp, nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
+import { jp, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
@@ -273,22 +274,23 @@ export default function StreakTrackerCard({
   const plotColGapPx = layout === "web" ? 4 : 2;
 
   return (
-    <ProfileKinetikPanelFrame className={S.outerPad}>
+    <ProfileOverviewLineFrame title={msg.profile.last20Tracker}>
+    <ProfileKinetikPanelFrame className={`${S.outerPad} profile-kinetik-panel--line-frame`}>
       <div className="relative z-1">
         <div className="relative z-20 mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <div
+              <p
                 className={[
-                  nameRajdhani.className,
-                  "font-semibold tracking-wide text-white/95",
-                  layout === "web"
-                    ? "text-xl sm:text-[1.72rem]"
-                    : "text-lg",
-                ].join(" ")}
+                  language === "ja" ? jp.className : "",
+                  "min-w-0 flex-1 text-xs leading-relaxed sm:text-[14px]",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={{ color: PROFILE_CHART_CYBER.subtitle }}
               >
-                {msg.profile.last20Tracker}
-              </div>
+                {subtitle}
+              </p>
               <div className={styles.wrap}>
                 <button
                   type="button"
@@ -302,17 +304,6 @@ export default function StreakTrackerCard({
                 </div>
               </div>
             </div>
-            <p
-              className={[
-                language === "ja" ? jp.className : "",
-                "mt-1.5 max-w-[560px] text-xs leading-relaxed sm:text-[14px]",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={{ color: PROFILE_CHART_CYBER.subtitle }}
-            >
-              {subtitle}
-            </p>
           </div>
           <div className="flex flex-col items-center self-end text-center">
             <div
@@ -680,6 +671,7 @@ export default function StreakTrackerCard({
         ) : null}
       </div>
     </ProfileKinetikPanelFrame>
+    </ProfileOverviewLineFrame>
   );
 }
 

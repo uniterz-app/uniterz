@@ -48,3 +48,17 @@ export const GAMES_LIST_REST_CARDS_DELAY_SEC =
 export const GAMES_CYBER_ENTRY_DURATION_MS = Math.round(
   GAMES_CYBER_ENTRY_DURATION_SEC * 1000,
 );
+
+/**
+ * 線枠のパス描画（ラウンドラベル左右から半周）。
+ * シェル開始直後に書き始め、チーム行の着地に終わる。
+ */
+export const GAMES_LINE_FRAME_DRAW_SEC = 0.36;
+export const GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_SEC = 0.032;
+export const GAMES_LINE_FRAME_DRAW_MS = Math.round(
+  GAMES_LINE_FRAME_DRAW_SEC * 1000,
+);
+export const GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS = Math.round(
+  GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_SEC * 1000,
+);
+

@@ -21,6 +21,8 @@ import {
   GAMES_DAY_SWITCH_ROW_TRANSLATE_MS,
   GAMES_ENTRY_SCAN_DELAY_AFTER_SHELL_MS,
   GAMES_ENTRY_SCAN_DURATION_MS,
+  GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS,
+  GAMES_LINE_FRAME_DRAW_MS,
   GAMES_LIST_CARDS_LEAD_IN_MS,
   GAMES_LIST_REST_CARDS_DELAY_MS,
   GAMES_PAGE_REST_CARD_DURATION_MS,
@@ -78,6 +80,7 @@ type EntranceBaseline = {
   footerGlow: number;
   scanTranslateY: number;
   scanOpacity: number;
+  frameStrokeEnd: number;
 };
 
 function groupDelayMs(rowIndex: number, group: number) {
@@ -163,6 +166,7 @@ function computeEntranceBaseline({
     footerGlow: showPredictPrimaryGlow ? 1 : 0,
     scanTranslateY: 0,
     scanOpacity: 0,
+    frameStrokeEnd: 1,
   };
 
   if (skip) return visible;
@@ -209,6 +213,7 @@ function computeEntranceBaseline({
     footerGlow: 0,
     scanTranslateY: -88,
     scanOpacity: 0,
+    frameStrokeEnd: 0,
   };
 }
 
@@ -267,6 +272,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
 
   const scanTranslateY = useSharedValue(baseline.scanTranslateY);
   const scanOpacity = useSharedValue(baseline.scanOpacity);
+  const frameStrokeEnd = useSharedValue(baseline.frameStrokeEnd);
 
   const pressed = useSharedValue(0);
   const prevFooterGlowRef = useRef(showPredictPrimaryGlow);
@@ -296,6 +302,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
       footerGlow.value = showPredictPrimaryGlow ? 1 : 0;
       scanTranslateY.value = 0;
       scanOpacity.value = 0;
+      frameStrokeEnd.value = 1;
     };
 
     if (skip) {
@@ -306,6 +313,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
     if (isDaySwitch) {
       scanOpacity.value = 0;
       scanTranslateY.value = 0;
+      frameStrokeEnd.value = 1;
       const delayMs = Math.min(
         rowIndex * GAMES_DAY_SWITCH_ROW_STAGGER_MS,
         GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS
@@ -342,6 +350,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
     if (isPageRest) {
       scanOpacity.value = 0;
       scanTranslateY.value = 0;
+      frameStrokeEnd.value = 1;
       const delayMs =
         GAMES_LIST_REST_CARDS_DELAY_MS +
         (rowIndex - GAMES_PAGE_RICH_CARD_COUNT) * PAGE_REST_CARD_STAGGER_MS;
@@ -501,6 +510,15 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
         shellDelay + GAMES_ENTRY_SCAN_DELAY_AFTER_SHELL_MS
       );
 
+      frameStrokeEnd.value = 0;
+      frameStrokeEnd.value = withDelay(
+        shellDelay + GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS,
+        withTiming(1, {
+          duration: GAMES_LINE_FRAME_DRAW_MS,
+          easing: gamesCyberEaseBezier,
+        })
+      );
+
       return () => {
         cancelAnimation(shellOpacity);
         cancelAnimation(shellTranslateY);
@@ -525,6 +543,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
         cancelAnimation(footerGlow);
         cancelAnimation(scanTranslateY);
         cancelAnimation(scanOpacity);
+        cancelAnimation(frameStrokeEnd);
       };
     }
 
@@ -548,14 +567,17 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
   }, [skip, showPredictPrimaryGlow, footerGlow]);
 
   const shellTransformStyle = useAnimatedStyle(() => {
-    const pressS = interpolate(pressed.value, [0, 1], [1, 0.985]);
+    const pressS = interpolate(pressed.value, [0, 1], [1, 0.99]);
+    const pressO = interpolate(pressed.value, [0, 1], [1, 0.96]);
     return {
+      opacity: pressO,
       transform: [{ translateY: shellTranslateY.value }, { scale: pressS }],
     };
   });
 
   const shellOpacityStyle = useAnimatedStyle(() => ({
-    opacity: shellOpacity.value,
+    opacity:
+      shellOpacity.value * interpolate(pressed.value, [0, 1], [1, 0.96]),
   }));
 
   const borderStrokeStyle = useAnimatedStyle(() => ({
@@ -640,5 +662,6 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
     centerBlockStyle,
     dividerStyle,
     footerStyle,
+    frameStrokeEnd,
   };
 }

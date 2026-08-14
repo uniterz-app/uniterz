@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import type { Language } from "@/lib/i18n/language";
 import type { ScoringSport } from "@/lib/scoring/leagueScoringSport";
 
@@ -24,449 +26,371 @@ export function ScoringRulesDisplayProvider({
 
 function useScoringRulesUi() {
   const size = useContext(ScoringRulesDisplayContext);
-  const isWeb = size === "web";
-  return {
-    sectionTitle: isWeb
-      ? "mb-2 text-lg font-bold text-white/95 sm:text-xl"
-      : "mb-1.5 text-base font-bold text-white/95 sm:text-lg",
-    sectionIntro: isWeb
-      ? "mb-2.5 text-sm leading-relaxed text-white/55 sm:text-[15px]"
-      : "mb-2 text-[12px] leading-relaxed text-white/55 sm:text-sm",
-    block: isWeb
-      ? "rounded-lg border border-white/[0.07] px-3.5 py-2.5 text-sm leading-relaxed text-white/75 sm:text-[15px]"
-      : "rounded-lg border border-white/[0.07] px-2.5 py-2.5 text-[12px] leading-relaxed text-white/75 sm:text-sm",
-    blockListGap: isWeb ? "space-y-2.5" : "space-y-2",
-    sectionGap: isWeb ? "space-y-5" : "space-y-4",
-    subhead: isWeb
-      ? "mb-2 font-semibold text-white/85 text-sm sm:text-base"
-      : "mb-1.5 font-semibold text-white/85 text-[13px] sm:text-sm",
-    muted: isWeb
-      ? "text-white/60 text-[13px] sm:text-sm"
-      : "text-white/60 text-[12px] sm:text-[13px]",
-    mutedSm: isWeb
-      ? "text-white/55 text-[13px] sm:text-sm"
-      : "text-white/55 text-[12px] sm:text-[13px]",
-    listSpacing: isWeb ? "space-y-2" : "space-y-1.5",
-  };
+  const compact = size !== "web";
+  return { compact };
 }
 
-function BlockSubhead({ children }: { children: ReactNode }) {
-  const ui = useScoringRulesUi();
-  return <p className={ui.subhead}>{children}</p>;
-}
-
-function Em({ children }: { children: ReactNode }) {
+function HudKicker({ children }: { children: ReactNode }) {
   return (
-    <span className="font-semibold text-cyan-200/95 [text-shadow:0_0_24px_rgba(34,211,238,0.12)]">
-      {children}
-    </span>
-  );
-}
-
-function Num({ children }: { children: ReactNode }) {
-  return (
-    <span className="font-semibold tabular-nums text-yellow-300">{children}</span>
-  );
-}
-
-function Zero({ children }: { children: ReactNode }) {
-  return (
-    <span className="font-semibold tabular-nums text-rose-300/85">{children}</span>
-  );
-}
-
-function SectionTitle({ children }: { children: ReactNode }) {
-  const ui = useScoringRulesUi();
-  return <h3 className={ui.sectionTitle}>{children}</h3>;
-}
-
-function SectionIntro({ children }: { children: ReactNode }) {
-  const ui = useScoringRulesUi();
-  return <p className={ui.sectionIntro}>{children}</p>;
-}
-
-function RuleBlock({ children }: { children: ReactNode }) {
-  const ui = useScoringRulesUi();
-  return <li className={[ui.block, "bg-white/2"].join(" ")}>{children}</li>;
-}
-
-function HighlightBlock({ children }: { children: ReactNode }) {
-  const ui = useScoringRulesUi();
-  return (
-    <li className={[ui.block, "bg-linear-to-r from-cyan-500/7 to-transparent"].join(" ")}>
-      {children}
-    </li>
-  );
-}
-
-function WarnBlock({ children }: { children: ReactNode }) {
-  const ui = useScoringRulesUi();
-  return (
-    <li
+    <p
       className={[
-        ui.block,
-        "border-rose-500/15 bg-linear-to-r from-rose-500/6 to-transparent",
+        nameOxanium.className,
+        "text-[9px] font-bold uppercase tracking-[0.16em] text-white/45",
       ].join(" ")}
     >
       {children}
-    </li>
+    </p>
   );
 }
 
-function TotalScoreBonusRulesJa({ showWcGoalScorer = false }: { showWcGoalScorer?: boolean }) {
-  const ui = useScoringRulesUi();
+function HudTitle({ children }: { children: ReactNode }) {
   return (
-    <ul className={["list-disc pl-4 text-white/70", ui.listSpacing].join(" ")}>
-      {showWcGoalScorer ? (
-        <li className="space-y-1">
-          <span>
-            <Em>得点者ボーナス</Em> … <Num>+2点</Num>
-          </span>
-          <p className={ui.muted}>
-            ゴールする選手を1人予想して的中（オウンゴール除く。勝者予想とは別枠）
-          </p>
-        </li>
+    <h3
+      className={[
+        nameBebas.className,
+        "text-[18px] font-bold uppercase leading-none text-white md:text-[20px]",
+      ].join(" ")}
+      style={matchCardTeamNameStyle(true)}
+    >
+      {children}
+    </h3>
+  );
+}
+
+function HudIntro({ children }: { children: ReactNode }) {
+  const { compact } = useScoringRulesUi();
+  return (
+    <p
+      className={[
+        "leading-relaxed text-white/55",
+        compact ? "text-[12px]" : "text-[13px]",
+      ].join(" ")}
+    >
+      {children}
+    </p>
+  );
+}
+
+function HudRow({
+  label,
+  pts,
+  hint,
+  tone = "default",
+}: {
+  label: string;
+  pts: string;
+  hint?: string;
+  tone?: "default" | "warn" | "accent";
+}) {
+  const { compact } = useScoringRulesUi();
+  const border =
+    tone === "warn"
+      ? "border-rose-400/35 bg-rose-500/[0.06]"
+      : tone === "accent"
+        ? "border-cyan-400/28 bg-cyan-500/[0.05]"
+        : "border-white/12 bg-white/[0.03]";
+  const ptsColor =
+    tone === "warn" ? "text-rose-300" : "text-[#FDE047]";
+
+  return (
+    <div className={["border px-3 py-2", border].join(" ")}>
+      <div className="flex items-baseline justify-between gap-3">
+        <span
+          className={[
+            nameOxanium.className,
+            "min-w-0 font-extrabold uppercase tracking-[0.1em] text-white/88",
+            compact ? "text-[10px]" : "text-[11px]",
+          ].join(" ")}
+        >
+          {label}
+        </span>
+        <span
+          className={[
+            resultStatsMetricNumClass,
+            "shrink-0",
+            compact ? "text-[13px]" : "text-sm",
+            ptsColor,
+          ].join(" ")}
+        >
+          {pts}
+        </span>
+      </div>
+      {hint ? (
+        <p
+          className={[
+            "mt-1 leading-relaxed text-white/50",
+            compact ? "text-[11px]" : "text-[12px]",
+          ].join(" ")}
+        >
+          {hint}
+        </p>
       ) : null}
-      <li className="space-y-1">
-        <span>
-          <Em>アップセットボーナス</Em> … <Num>+2点</Num>
-        </span>
-        <p className={ui.muted}>
-          市場の <Num>45%以下</Num> の側を予想して的中した番狂わせ試合
-        </p>
-      </li>
-      <li className="space-y-1">
-        <span>
-          <Em>連勝ボーナス</Em>
-        </span>
-        <ul className={["list-disc pl-4", ui.muted].join(" ")}>
-          <li>
-            3〜4連勝 … <Num>+1点</Num>
-          </li>
-          <li>
-            5〜6連勝 … <Num>+2点</Num>
-          </li>
-          <li>
-            7連勝以上 … <Num>+3点</Num>
-          </li>
-        </ul>
-        <p className={ui.mutedSm}>2連勝以下は0点</p>
-      </li>
-    </ul>
+    </div>
   );
 }
 
-function TotalScoreBonusRulesEn({ showWcGoalScorer = false }: { showWcGoalScorer?: boolean }) {
-  const ui = useScoringRulesUi();
+function SectionStack({ children }: { children: ReactNode }) {
+  return <div className="space-y-5">{children}</div>;
+}
+
+function RowStack({ children }: { children: ReactNode }) {
+  return <div className="space-y-1.5">{children}</div>;
+}
+
+function SectionHead({
+  kicker,
+  title,
+  intro,
+}: {
+  kicker: string;
+  title: string;
+  intro: string;
+}) {
   return (
-    <ul className={["list-disc pl-4 text-white/70", ui.listSpacing].join(" ")}>
-      {showWcGoalScorer ? (
-        <li className="space-y-1">
-          <span>
-            <Em>Goal scorer bonus</Em> … <Num>+2</Num>
-          </span>
-          <p className={ui.muted}>
-            Pick one scorer; +2 if they score (own goals excluded; separate from winner pick)
-          </p>
-        </li>
-      ) : null}
-      <li className="space-y-1">
-        <span>
-          <Em>Upset bonus</Em> … <Num>+2</Num>
-        </span>
-        <p className={ui.muted}>
-          Upset game + correct pick on the <Num>45% or below</Num> market side
-        </p>
-      </li>
-      <li className="space-y-1">
-        <span>
-          <Em>Win-streak bonus</Em>
-        </span>
-        <ul className={["list-disc pl-4", ui.muted].join(" ")}>
-          <li>
-            3–4 wins … <Num>+1</Num>
-          </li>
-          <li>
-            5–6 wins … <Num>+2</Num>
-          </li>
-          <li>
-            7+ wins … <Num>+3</Num>
-          </li>
-        </ul>
-        <p className={ui.mutedSm}>0 at 2 wins or below</p>
-      </li>
-    </ul>
+    <div className="mb-2.5 space-y-1">
+      <HudKicker>{kicker}</HudKicker>
+      <HudTitle>{title}</HudTitle>
+      <HudIntro>{intro}</HudIntro>
+    </div>
   );
 }
 
-function BasketballTotalRulesJa() {
+function BasketballRules({ ja }: { ja: boolean }) {
   return (
-    <ul className="space-y-2">
-      <WarnBlock>
-        <Em>勝者予想が外れた試合</Em>は <Zero>0点</Zero>。連勝・アップセットのボーナスもつきません。
-      </WarnBlock>
-      <HighlightBlock>
-        <BlockSubhead>勝者が合っているとき（基本点・最大10点）</BlockSubhead>
-        <ol className="list-decimal space-y-1.5 pl-4">
-          <li>
-            <Em>勝者</Em> … <Num>+4点</Num>（ホーム勝／アウェイ勝の当てはずれ）
-          </li>
-          <li>
-            <Em>得失点差</Em> … 最大 <Num>+4点</Num>
-            <br />
-            <span className="text-white/60">
-              差のズレが小さいほど高得点。誤差 0 で満点、15 以上で 0 点までなだらかに減点（小数点あり）。
-            </span>
-          </li>
-          <li>
-            <Em>合計得点</Em>（両チームの点数の合計）… 最大 <Num>+2点</Num>
-            <br />
-            <span className="text-white/60">
-              合計のズレが小さいほど高得点。誤差 0 で満点、11 以上で 0 点までなだらかに減点（小数点あり）。
-            </span>
-          </li>
-        </ol>
-      </HighlightBlock>
-      <RuleBlock>
-        <BlockSubhead>ボーナス（基本点に上乗せ）</BlockSubhead>
-        <TotalScoreBonusRulesJa />
-      </RuleBlock>
-      <RuleBlock>
-        <Em>総合得点</Em> ＝ 基本点 ＋ ボーナス（ボーナスで <Num>10点超</Num> になることもあります）
-      </RuleBlock>
-    </ul>
+    <SectionStack>
+      <section>
+        <SectionHead
+          kicker={ja ? "試合ごとのメイン点" : "Per game"}
+          title="BASE"
+          intro={
+            ja
+              ? "勝者が当たったときだけ基本点が入ります。外すとその試合は0点です。"
+              : "Base points only apply when the winner is correct. Miss it and the game is 0."
+          }
+        />
+        <RowStack>
+          <HudRow
+            tone="warn"
+            label={ja ? "WINNER MISS" : "WINNER MISS"}
+            pts={ja ? "0点" : "0"}
+            hint={
+              ja
+                ? "勝者を外すと連勝・アップセットのボーナスもつきません。"
+                : "No streak or upset bonuses on a missed winner."
+            }
+          />
+          <HudRow
+            tone="accent"
+            label="WINNER"
+            pts={ja ? "+4" : "+4"}
+            hint={ja ? "ホーム勝 / アウェイ勝" : "Home or away winner"}
+          />
+          <HudRow
+            label="MARGIN"
+            pts={ja ? "最大 +4" : "up to +4"}
+            hint={
+              ja
+                ? "得失点差のズレが小さいほど高い。誤差0で満点、15以上で0点（小数あり）。"
+                : "Closer margin → more points. Exact = max. Error 15+ → 0."
+            }
+          />
+          <HudRow
+            label="TOTAL"
+            pts={ja ? "最大 +2" : "up to +2"}
+            hint={
+              ja
+                ? "両チーム合計のズレが小さいほど高い。誤差0で満点、11以上で0点（小数あり）。"
+                : "Combined points. Exact = max. Error 11+ → 0."
+            }
+          />
+        </RowStack>
+      </section>
+
+      <section>
+        <SectionHead
+          kicker={ja ? "基本点に上乗せ" : "Added on top"}
+          title="BONUS"
+          intro={
+            ja
+              ? "基本点に加算。合計は10点を超えることがあります。"
+              : "Stacked on base. Total can exceed 10."
+          }
+        />
+        <RowStack>
+          <HudRow
+            tone="accent"
+            label="TOP SCORER"
+            pts="+2"
+            hint={
+              ja
+                ? "最多得点者を的中（勝者予想とは別枠）。"
+                : "Hit the game’s top scorer (separate from the winner pick)."
+            }
+          />
+          <HudRow
+            label="UPSET"
+            pts="+2"
+            hint={
+              ja
+                ? "市場の偏りが45%以下の側を的中した番狂わせ。"
+                : "Hit the market side at 45% or below."
+            }
+          />
+          <HudRow
+            label="STREAK"
+            pts="+1 / +2 / +3"
+            hint={
+              ja
+                ? "3〜4連勝 +1 · 5〜6連勝 +2 · 7連勝以上 +3。2連勝以下は0点。"
+                : "3–4 wins +1 · 5–6 +2 · 7+ +3. Two or fewer = 0."
+            }
+          />
+        </RowStack>
+      </section>
+
+      <UpsetSection ja={ja} />
+    </SectionStack>
   );
 }
 
-function BasketballTotalRulesEn() {
+function FootballRules({
+  ja,
+  showWcGoalScorer,
+  includeUpset = true,
+}: {
+  ja: boolean;
+  showWcGoalScorer: boolean;
+  includeUpset?: boolean;
+}) {
   return (
-    <ul className="space-y-2">
-      <WarnBlock>
-        Wrong <Em>winner</Em> → <Zero>0</Zero> for that game (no streak or upset bonuses).
-      </WarnBlock>
-      <HighlightBlock>
-        <BlockSubhead>When the winner is correct (base, max 10)</BlockSubhead>
-        <ol className="list-decimal space-y-1.5 pl-4">
-          <li>
-            <Em>Winner</Em> … <Num>+4</Num>
-          </li>
-          <li>
-            <Em>Point margin</Em> … up to <Num>+4</Num> (smooth decay to 0 by error 15; decimals OK)
-          </li>
-          <li>
-            <Em>Combined total</Em> (home + away points) … up to <Num>+2</Num> (smooth decay to 0 by
-            error 11; decimals OK)
-          </li>
-        </ol>
-      </HighlightBlock>
-      <RuleBlock>
-        <BlockSubhead>Bonuses (added on top)</BlockSubhead>
-        <TotalScoreBonusRulesEn />
-      </RuleBlock>
-      <RuleBlock>
-        <Em>Total score</Em> = base + bonuses (can exceed <Num>10</Num>)
-      </RuleBlock>
-    </ul>
+    <SectionStack>
+      <section>
+        <SectionHead
+          kicker={ja ? "試合ごとのメイン点" : "Per game"}
+          title="BASE"
+          intro={
+            ja
+              ? "採点スコアは規定時間＋延長（PKの本数は含みません）。勝者が外れると基本点は0点です。"
+              : "Line score is regulation + extra time (no penalty shootout goals). Miss the winner and base is 0."
+          }
+        />
+        <RowStack>
+          <HudRow
+            tone="warn"
+            label="WINNER MISS"
+            pts={ja ? "0点" : "0"}
+            hint={
+              showWcGoalScorer
+                ? ja
+                  ? "得点者ボーナスは別枠で加点あり。"
+                  : "Goal-scorer bonus can still apply."
+                : ja
+                  ? "ボーナスもつきません。"
+                  : "No bonuses either."
+            }
+          />
+          <HudRow tone="accent" label="WINNER" pts="+4" />
+          <HudRow
+            label="HOME"
+            pts="+2"
+            hint={ja ? "ホーム得点が完全一致。" : "Exact home goals."}
+          />
+          <HudRow
+            label="AWAY"
+            pts="+2"
+            hint={ja ? "アウェイ得点が完全一致。" : "Exact away goals."}
+          />
+          <HudRow
+            label="MARGIN"
+            pts="+2"
+            hint={
+              ja
+                ? "得失点差が完全一致。例）1–1 vs 0–0 は引き分け+4と差+2で基本6点。"
+                : "Exact goal difference. e.g. 1–1 vs 0–0 → draw +4 and margin +2 = base 6."
+            }
+          />
+        </RowStack>
+      </section>
+
+      <section>
+        <SectionHead
+          kicker={ja ? "基本点に上乗せ" : "Added on top"}
+          title="BONUS"
+          intro={ja ? "基本点に加算します。" : "Stacked on base points."}
+        />
+        <RowStack>
+          {showWcGoalScorer ? (
+            <HudRow
+              tone="accent"
+              label="GOAL SCORER"
+              pts="+2"
+              hint={
+                ja
+                  ? "ゴールする選手を1人的中（オウンゴール除く。勝者予想とは別枠）。"
+                  : "Pick one scorer. Own goals excluded. Separate from winner."
+              }
+            />
+          ) : null}
+          <HudRow
+            label="UPSET"
+            pts="+2"
+            hint={
+              ja
+                ? "市場の偏りが45%以下の側を的中した番狂わせ。"
+                : "Hit the market side at 45% or below."
+            }
+          />
+          <HudRow
+            label="STREAK"
+            pts="+1 / +2 / +3"
+            hint={
+              ja
+                ? "3〜4連勝 +1 · 5〜6連勝 +2 · 7連勝以上 +3。2連勝以下は0点。"
+                : "3–4 wins +1 · 5–6 +2 · 7+ +3. Two or fewer = 0."
+            }
+          />
+        </RowStack>
+      </section>
+
+      {includeUpset ? <UpsetSection ja={ja} /> : null}
+    </SectionStack>
   );
 }
 
-function FootballTotalRulesJa({ showWcGoalScorer = false }: { showWcGoalScorer?: boolean }) {
+function UpsetSection({ ja }: { ja: boolean }) {
   return (
-    <ul className="space-y-2">
-      <WarnBlock>
-        <Em>勝者予想が外れた試合</Em>は基本点 <Zero>0点</Zero>
-        {showWcGoalScorer
-          ? "（得点者ボーナスは別枠で加点あり）。"
-          : "（ボーナスもなし）。"}
-      </WarnBlock>
-      <RuleBlock>
-        <span className="text-white/60">
-          採点に使うスコアは<Em>規定時間＋延長</Em>の結果（PK戦の本数は含みません）。
-        </span>
-      </RuleBlock>
-      <HighlightBlock>
-        <BlockSubhead>勝者が合っているとき（基本点・最大10点）</BlockSubhead>
-        <ol className="list-decimal space-y-1.5 pl-4">
-          <li>
-            <Em>勝者</Em> … <Num>+4点</Num>
-          </li>
-          <li>
-            <Em>HOME得点</Em> … <Num>+2点</Num>
-            <p className="mt-1 text-white/60">
-              ホームの得点が予想と結果で<Em>完全一致</Em>したら加点します。
-            </p>
-          </li>
-          <li>
-            <Em>AWAY得点</Em> … <Num>+2点</Num>
-            <p className="mt-1 text-white/60">
-              アウェイの得点が予想と結果で<Em>完全一致</Em>したら加点します。
-            </p>
-          </li>
-          <li>
-            <Em>得失点差</Em> … <Num>+2点</Num>
-            <p className="mt-1 text-white/60">
-              ホームとアウェイの得点差が予想と結果で<Em>完全一致</Em>したら加点します。
-            </p>
-            <p className="mt-1 text-white/55">
-              例）予想 <Num>1–1</Num>・結果 <Num>0–0</Num> → 引き分け <Num>+4</Num>、得失点差 <Num>+2</Num> → 基本点{" "}
-              <Num>6点</Num>
-              <br />
-              例）予想 <Num>2–0</Num>・結果 <Num>2–1</Num> → HOME <Num>+2</Num> → 基本点 <Num>6点</Num>
-              <br />
-              例）予想 <Num>2–0</Num>・結果 <Num>2–0</Num> → <Num>4+2+2+2=10点</Num>
-              <br />
-              例）予想 <Num>3–2</Num>・結果 <Num>2–1</Num> → 勝者＋得失点差 → 基本点 <Num>6点</Num>
-            </p>
-          </li>
-        </ol>
-      </HighlightBlock>
-      <RuleBlock>
-        <BlockSubhead>ボーナス（基本点に上乗せ）</BlockSubhead>
-        <TotalScoreBonusRulesJa showWcGoalScorer={showWcGoalScorer} />
-      </RuleBlock>
-      <RuleBlock>
-        <Em>総合得点</Em> ＝ 基本点 ＋ ボーナス
-      </RuleBlock>
-    </ul>
-  );
-}
-
-function FootballTotalRulesEn({ showWcGoalScorer = false }: { showWcGoalScorer?: boolean }) {
-  return (
-    <ul className="space-y-2">
-      <WarnBlock>
-        Wrong <Em>winner</Em> → <Zero>0</Zero> base
-        {showWcGoalScorer
-          ? " (goal scorer bonus is separate)."
-          : " (no bonuses)."}
-      </WarnBlock>
-      <RuleBlock>
-        Line score = <Em>regulation + extra time</Em> (penalty shootout goals not counted).
-      </RuleBlock>
-      <HighlightBlock>
-        <BlockSubhead>When the winner is correct (base, max 10)</BlockSubhead>
-        <ol className="list-decimal space-y-1.5 pl-4">
-          <li>
-            <Em>Winner</Em> … <Num>+4</Num>
-          </li>
-          <li>
-            <Em>HOME goals</Em> … <Num>+2</Num>
-            <p className="mt-1 text-white/60">
-              +2 if the home team&apos;s goals <Em>exactly</Em> match your pick and the result.
-            </p>
-          </li>
-          <li>
-            <Em>AWAY goals</Em> … <Num>+2</Num>
-            <p className="mt-1 text-white/60">
-              +2 if the away team&apos;s goals <Em>exactly</Em> match your pick and the result.
-            </p>
-          </li>
-          <li>
-            <Em>Goal difference</Em> … <Num>+2</Num>
-            <p className="mt-1 text-white/60">
-              +2 if the goal difference <Em>exactly</Em> matches your pick and the result.
-            </p>
-            <p className="mt-1 text-white/55">
-              e.g. pick <Num>1–1</Num>, result <Num>0–0</Num> → draw <Num>+4</Num>, goal diff <Num>+2</Num> → base{" "}
-              <Num>6</Num>
-              <br />
-              e.g. pick <Num>2–0</Num>, result <Num>2–1</Num> → HOME <Num>+2</Num> → base <Num>6</Num>
-              <br />
-              e.g. pick <Num>2–0</Num>, result <Num>2–0</Num> → <Num>4+2+2+2=10</Num>
-              <br />
-              e.g. pick <Num>3–2</Num>, result <Num>2–1</Num> → winner + goal diff → base <Num>6</Num>
-            </p>
-          </li>
-        </ol>
-      </HighlightBlock>
-      <RuleBlock>
-        <BlockSubhead>Bonuses (added on top)</BlockSubhead>
-        <TotalScoreBonusRulesEn showWcGoalScorer={showWcGoalScorer} />
-      </RuleBlock>
-      <RuleBlock>
-        <Em>Total score</Em> = base + bonuses
-      </RuleBlock>
-    </ul>
-  );
-}
-
-function UpsetPointsRulesJa() {
-  return (
-    <ul className="space-y-2">
-      <RuleBlock>
-        総合得点に足される<Em>UPSETボーナス（+2点）</Em>とは別の指標です（条件はほぼ同じ）。
-      </RuleBlock>
-      <HighlightBlock>
-        <BlockSubhead>① アップセット得点が付く条件</BlockSubhead>
-        <p className="text-white/70">
-          あなたの予想が<Em>少数派</Em>（市場の <Num>45%以下</Num> の側）で、かつ<Em>的中</Em>していれば、アップセット得点が加算されます。
-        </p>
-      </HighlightBlock>
-      <HighlightBlock>
-        <BlockSubhead>② 何点付くか</BlockSubhead>
-        <p className="text-white/70">
-          <Em>多数派だった側</Em>の市場支持率（％）が高いほど、アップセット得点は高くなります。
-        </p>
-        <ul className="mt-1.5 list-disc space-y-1 pl-4 text-white/70">
-          <li>
-            多数派が <Num>55%未満</Num> … <Num>0点</Num>
-          </li>
-          <li>
-            <Num>55%以上〜90%未満</Num> … 支持率が高いほど加点（段階的）
-          </li>
-          <li>
-            多数派が <Num>90%以上</Num> … <Num>10点</Num>
-          </li>
-        </ul>
-        <p className="mt-1.5 text-white/55">
-          例）ホームが市場 <Num>70%</Num> の多数派なのにアウェイが勝利 → あなたがアウェイ勝で当てていれば、おおよそ{" "}
-          <Num>8点</Num> 前後
-        </p>
-      </HighlightBlock>
-      <RuleBlock>
-        同じ条件を満たすと、総合得点には別途 <Num>+2点</Num> のUPSETボーナスも付きます。
-      </RuleBlock>
-    </ul>
-  );
-}
-
-function UpsetPointsRulesEn() {
-  return (
-    <ul className="space-y-2">
-      <RuleBlock>
-        Separate from the <Em>+2 upset bonus</Em> on total score (similar conditions).
-      </RuleBlock>
-      <HighlightBlock>
-        <BlockSubhead>① When you earn upset points</BlockSubhead>
-        <p className="text-white/70">
-          If your pick is a <Em>minority</Em> side (<Num>45% or below</Num> on the market) and you{" "}
-          <Em>hit</Em>, upset points are added.
-        </p>
-      </HighlightBlock>
-      <HighlightBlock>
-        <BlockSubhead>② How many points</BlockSubhead>
-        <p className="text-white/70">
-          Based on the <Em>majority side’s</Em> market share (how strong the wrong crowd was):
-        </p>
-        <ul className="mt-1.5 list-disc space-y-1 pl-4 text-white/70">
-          <li>
-            Majority <Num>&lt;55%</Num> … <Num>0</Num>
-          </li>
-          <li>
-            <Num>55–90%</Num> … scales up with share
-          </li>
-          <li>
-            Majority <Num>90%+</Num> … <Num>10</Num>
-          </li>
-        </ul>
-        <p className="mt-1.5 text-white/55">
-          e.g. 70% home majority but away wins → correct away pick scores around <Num>8</Num>
-        </p>
-      </HighlightBlock>
-      <RuleBlock>
-        The same hit also adds <Num>+2</Num> upset bonus to total score.
-      </RuleBlock>
-    </ul>
+    <section>
+      <SectionHead
+        kicker={ja ? "別指標" : "Separate metric"}
+        title="UPSET PTS"
+        intro={
+          ja
+            ? "総合得点の UPSET +2 とは別。少数派を当てたときの加点です。"
+            : "Separate from the +2 upset bonus on total score."
+        }
+      />
+      <RowStack>
+        <HudRow
+          tone="accent"
+          label="HIT"
+          pts={ja ? "条件達成で加算" : "if hit"}
+          hint={
+            ja
+              ? "市場45%以下の少数派を的中したとき。"
+              : "Minority side at 45% or below, and you hit it."
+          }
+        />
+        <HudRow
+          label="SCALE"
+          pts="0 → 10"
+          hint={
+            ja
+              ? "多数派が55%未満は0点。55〜90%は支持率に応じて加点。90%以上は10点。"
+              : "Majority under 55% → 0. 55–90% scales up. 90%+ → 10."
+          }
+        />
+      </RowStack>
+    </section>
   );
 }
 
@@ -478,11 +402,12 @@ export function FootballTotalScoreRulesOnly({
   language: Language;
   showWcGoalScorer?: boolean;
 }) {
-  const isEn = language === "en";
-  return isEn ? (
-    <FootballTotalRulesEn showWcGoalScorer={showWcGoalScorer} />
-  ) : (
-    <FootballTotalRulesJa showWcGoalScorer={showWcGoalScorer} />
+  return (
+    <FootballRules
+      ja={language !== "en"}
+      showWcGoalScorer={showWcGoalScorer}
+      includeUpset={false}
+    />
   );
 }
 
@@ -496,42 +421,12 @@ export function PredictionScoringFullRulesBody({
   language: Language;
   league?: string;
 }) {
+  const ja = language !== "en";
   const showWcGoalScorer = String(league ?? "").toLowerCase() === "wc";
-  const isEn = language === "en";
-  const totalTitle = isEn ? "Total score" : "総合得点";
-  const upsetTitle = isEn ? "Upset points" : "アップセット得点";
-  const totalIntro = isEn
-    ? "Main points per game on results and leaderboards."
-    : "リザルトやランキングで使う、試合ごとのメインのポイントです。";
-  const upsetIntro = isEn
-    ? "When an upset happens and your minority pick wins."
-    : "波乱した試合で、少数派予想が当たったときの加点です。";
 
-  const total =
-    sport === "football"
-      ? isEn
-        ? <FootballTotalRulesEn showWcGoalScorer={showWcGoalScorer} />
-        : <FootballTotalRulesJa showWcGoalScorer={showWcGoalScorer} />
-      : isEn
-        ? <BasketballTotalRulesEn />
-        : <BasketballTotalRulesJa />;
-
-  const upset = isEn ? <UpsetPointsRulesEn /> : <UpsetPointsRulesJa />;
-
-  const ui = useScoringRulesUi();
-
-  return (
-    <div className={ui.sectionGap}>
-      <div>
-        <SectionTitle>{totalTitle}</SectionTitle>
-        <SectionIntro>{totalIntro}</SectionIntro>
-        {total}
-      </div>
-      <div>
-        <SectionTitle>{upsetTitle}</SectionTitle>
-        <SectionIntro>{upsetIntro}</SectionIntro>
-        {upset}
-      </div>
-    </div>
+  return sport === "football" ? (
+    <FootballRules ja={ja} showWcGoalScorer={showWcGoalScorer} />
+  ) : (
+    <BasketballRules ja={ja} />
   );
 }

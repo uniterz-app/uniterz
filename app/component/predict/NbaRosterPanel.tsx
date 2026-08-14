@@ -21,7 +21,9 @@ import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
-import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
+import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 
 type Props = {
   report: NbaRosterReport;
@@ -62,7 +64,9 @@ const STAT_COLS = [
 const EMPHASIS_KEYS = new Set(["pts", "fg", "fg3", "fga", "fg3a"]);
 
 function teamFullLabel(teamId: string, fallback: string): string {
-  return (NBA_TEAM_NAME_BY_ID[teamId] ?? fallback).toUpperCase();
+  const full = NBA_TEAM_NAME_BY_ID[teamId];
+  if (full) return getMobileTeamName("nba", full).toUpperCase();
+  return fallback.toUpperCase();
 }
 
 function teamAbbr(teamId: string): string {
@@ -359,9 +363,10 @@ function TeamRosterCard({
           ) : null}
           <p
             className={[
-              nameOxanium.className,
-              "min-w-0 truncate text-[12px] font-extrabold uppercase tracking-[0.06em] text-white",
+              nameBebas.className,
+              "min-w-0 truncate text-[15px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
+            style={matchCardTeamNameStyle(true)}
           >
             {title}
           </p>

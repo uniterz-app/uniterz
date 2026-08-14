@@ -16,6 +16,7 @@ import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
 import CommunityGroupDetailCard from "./CommunityGroupDetailCard";
 import CommunityGroupDetailView from "./CommunityGroupDetailView";
 import EndGroupConfirmModal from "./EndGroupConfirmModal";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import {
   invalidateCommunityGroupDetail,
   type CommunityGroupListPreview,
@@ -158,9 +159,7 @@ export default function CommunityGroupOverlay({
       onClick={(e) => e.stopPropagation()}
     >
       <CommunityGroupDetailCard
-        language={language}
         variant="overlay"
-        backHeaderOverHero={!isMobile}
         className={
           isMobile
             ? ""
@@ -171,16 +170,9 @@ export default function CommunityGroupOverlay({
                 "shadow-[0_14px_36px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.12)]",
               ].join(" ")
         }
-        onBack={() => {
-          if (!endConfirmOpen) onClose();
-        }}
       >
         <CommunityGroupDetailView
           inDetailCard
-          heroBackOverImage={!isMobile}
-          onBack={() => {
-            if (!endConfirmOpen) onClose();
-          }}
           groupId={groupId!}
           listPreview={listPreview}
           language={language}
@@ -224,6 +216,16 @@ export default function CommunityGroupOverlay({
               onClick={() => {
                 if (!endConfirmOpen) onClose();
               }}
+            />
+
+            <ProfileMenuEdgeHandle
+              onOpen={() => {
+                if (!endConfirmOpen) onClose();
+              }}
+              label="BACK"
+              tone="back"
+              overlay
+              ariaLabel={language === "en" ? "Back" : "戻る"}
             />
 
             {overlayMotionEnabled ? (

@@ -6,7 +6,7 @@ import "./official-lp.css";
 export const metadata: Metadata = {
   title: "Uniterz — Sports Prediction App",
   description:
-    "Uniterz は NBA などの試合を予想し、ユーザー同士で競うスポーツ予想アプリです。ギャンブルではありません。現金を賭けること、Unit の購入・換金はできません。",
+    "Uniterz は、NBAなどの試合結果を無料で予想し、成績をランキングで競うスポーツ予想アプリです。現金を賭けること、Unit の購入・換金はできません。",
 };
 
 export default function OfficialLandingPage() {

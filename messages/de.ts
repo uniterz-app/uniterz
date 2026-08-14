@@ -727,6 +727,7 @@ const de: Messages = {
     marketBias: "Markttendenz",
     h2hAvgPoints: "H2H Pkt. / S",
     teamStats: "Team Stats",
+    teamStatsMoreHint: "Mehr Stats auf der Teamseite",
     injuries: "Injury Report",
     rosterTab: "Roster",
     insightProOnly: "Insight ist mit Pro verfügbar.",

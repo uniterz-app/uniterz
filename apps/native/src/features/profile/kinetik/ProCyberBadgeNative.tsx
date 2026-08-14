@@ -19,6 +19,8 @@ import Svg, {
 type Props = {
   /** プロフィールカード用 — 一段大 */
   premium?: boolean;
+  /** マイランクカード — compact より少しだけ大きく */
+  emphasized?: boolean;
   compact?: boolean;
 };
 
@@ -149,20 +151,26 @@ function ProCornerBracketFrameNative() {
 
 export default function ProCyberBadgeNative({
   premium = false,
+  emphasized = false,
   compact = false,
 }: Props) {
-  // premium: プロフィール名横 — 名前(16)と並ぶ見やすいサイズ
-  // compact: ランキング一覧 — 少し大きめ（旧 7/6/14 は小さすぎ）
-  const markSize = premium ? 12 : 9;
-  const wordSize = premium ? 9 : compact ? 7.5 : 7;
-  const height = premium ? 22 : compact ? 17 : 18;
+  // premium: プロフィール名横 / emphasized: マイランク / compact: 一覧
+  const markSize = premium ? 12 : emphasized ? 10 : 9;
+  const wordSize = premium ? 9 : emphasized ? 8 : compact ? 7.5 : 7;
+  const height = premium ? 22 : emphasized ? 19 : compact ? 17 : 18;
 
   return (
     <View
       style={[
         styles.tag,
         { height },
-        premium ? styles.tagPremium : compact ? styles.tagCompact : null,
+        premium
+          ? styles.tagPremium
+          : emphasized
+            ? styles.tagEmphasized
+            : compact
+              ? styles.tagCompact
+              : null,
       ]}
       accessibilityLabel="PRO"
     >
@@ -192,6 +200,10 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   tagPremium: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  tagEmphasized: {
     paddingHorizontal: 4,
     paddingVertical: 2,
   },

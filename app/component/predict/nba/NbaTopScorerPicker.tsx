@@ -8,7 +8,8 @@ import {
 } from "@/lib/nba/topScorer";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { matchScoreClass, nameOxanium } from "@/lib/fonts";
+import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 
@@ -55,21 +56,24 @@ export default function NbaTopScorerPicker({
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <div>
+    <div className="mt-3 px-0 py-1">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <div
             className={[
-              "font-semibold text-white/90",
-              isMobile ? "text-xs" : "text-sm",
+              nameBebas.className,
+              "shrink-0 font-bold uppercase leading-none text-white",
+              isMobile ? "text-[15px]" : "text-[18px]",
             ].join(" ")}
+            style={matchCardTeamNameStyle(true)}
           >
             {m.nbaTopScorerTitle}
           </div>
           <div
             className={[
-              "text-white/45",
-              isMobile ? "text-[10px]" : "text-[11px]",
+              nameOxanium.className,
+              "shrink-0 font-bold uppercase tracking-[0.08em] text-white/50",
+              isMobile ? "text-[9px]" : "text-[10px]",
             ].join(" ")}
           >
             {m.nbaTopScorerBonusHint}

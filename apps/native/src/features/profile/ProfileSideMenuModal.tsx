@@ -82,13 +82,11 @@ type Props = {
     | "unitEarnOverlayFontPreview"
     | "uniterzLogoTypePreview"
     | "resultCardDesignPreview"
+    | "resultBadgeDesignPreview"
+    | "resultStreakTagDesignPreview"
+    | "navBarDesignPreview"
     | "splashLogoPreview"
-    | "teamStatsPreview"
-    | "playerStatsPreview"
-    | "teamDetailPreview"
-    | "playerDetailPreview"
-    | "liveGameStatsPreview"
-    | "matchCardDesignPreview") => void;
+    | "liveGameStatsPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -287,13 +285,11 @@ export default function ProfileSideMenuModal({
       | "unitEarnOverlayFontPreview"
       | "uniterzLogoTypePreview"
       | "resultCardDesignPreview"
+      | "resultBadgeDesignPreview"
+      | "resultStreakTagDesignPreview"
+      | "navBarDesignPreview"
       | "splashLogoPreview"
-      | "teamStatsPreview"
-      | "playerStatsPreview"
-      | "teamDetailPreview"
-      | "playerDetailPreview"
       | "liveGameStatsPreview"
-      | "matchCardDesignPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -744,54 +740,40 @@ export default function ProfileSideMenuModal({
                           リザルトカード案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
+                          icon="bookmark-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("resultBadgeDesignPreview")
+                          }
+                        >
+                          リザルトバッジ案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="fire"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("resultStreakTagDesignPreview")
+                          }
+                        >
+                          連勝タグ案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="tab"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("navBarDesignPreview")}
+                        >
+                          Nav Bar 案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
                           icon="flash-outline"
                           dense
                           labelStyle={labelStyle}
                           onPress={() => openUserPage("splashLogoPreview")}
                         >
                           スプラッシュ Logo
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="view-agenda-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("matchCardDesignPreview")
-                          }
-                        >
-                          試合カード線枠
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="chart-box-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("teamStatsPreview")}
-                        >
-                          リーグ Team Stats
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="account-multiple-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("playerStatsPreview")}
-                        >
-                          リーグ Player Stats
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="shield-account-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("teamDetailPreview")}
-                        >
-                          Team Detail 再構築
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="account-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("playerDetailPreview")}
-                        >
-                          Player Detail 叩き台
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="scoreboard-outline"

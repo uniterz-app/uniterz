@@ -10,8 +10,9 @@ import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { readStoredRankFromSnapshotRanks } from "@/lib/rankings/server/readSnapshotRanksFromCumulative";
 import type { ProfileSummaryForCards } from "@/lib/profile/resolveLiveProfileSummary";
 import type { ProfileKinetikMetricsPeriod } from "@/lib/profile/useNbaKinetikMonthlyStats";
+import { currentSeasonWinStreak } from "@/lib/profile/currentSeasonWinStreak";
 
-export const PROFILE_HERO_SNAPSHOT_VERSION = 1 as const;
+export const PROFILE_HERO_SNAPSHOT_VERSION = 2 as const;
 
 export type ProfileHeroScopeStats = {
   posts: number;
@@ -144,7 +145,11 @@ export function buildProfileHeroSnapshotFromCumulative(
     v: PROFILE_HERO_SNAPSHOT_VERSION,
     seasonKey,
     updatedAtMs: Date.now(),
-    activeWinStreak: activeStreakFromCumulative(cumulative),
+    activeWinStreak: currentSeasonWinStreak(
+      activeStreakFromCumulative(cumulative),
+      cumulative?.streakSeasonKeyBasketball,
+      seasonKey
+    ),
     ranks: ranksFromCumulative(cumulative),
     season,
     playoffs,

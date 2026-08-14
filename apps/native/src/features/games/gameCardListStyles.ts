@@ -77,6 +77,7 @@ export const gameCardListStyles = StyleSheet.create({
     includeFontPadding: false,
     textTransform: "uppercase",
     fontFamily: MATCH_CARD_DISPLAY_FONT,
+    transform: [{ skewX: "-10deg" }],
   },
   matchupGrid: {
     flexDirection: "row",

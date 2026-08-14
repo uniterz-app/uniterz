@@ -1,7 +1,8 @@
 "use client";
 
-import type { InputHTMLAttributes } from "react";
-import { matchScoreClass, nameOxanium } from "@/lib/fonts";
+import type { CSSProperties, InputHTMLAttributes } from "react";
+import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { League } from "@/lib/leagues";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import {
@@ -10,6 +11,13 @@ import {
 } from "@/lib/team-colors";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { PREDICT_OVERLAY_SCORE_INPUT_CLASS } from "@/lib/ui/predictOverlayCyber";
+
+/** 試合カードのチーム名（Bebas + skewX(-6deg)）と揃える */
+const overlayTeamNameStyle: CSSProperties = {
+  ...bracketMarketTeamTypography(true),
+  transform: "skewX(-6deg)",
+  color: "#F8FAFC",
+};
 
 type SideField = {
   side: "home" | "away";
@@ -93,8 +101,6 @@ function ScoreField({
 }: SideField) {
   const primary = sideAccent(teamId, side);
   const border = hexToRgba(primary, 0.55);
-  const fill = hexToRgba(primary, 0.07);
-  const inset = hexToRgba(primary, 0.28);
   const sideLabel = side === "home" ? "HOME" : "AWAY";
   const teamName = englishHudTeamName(teamId, label);
   const title = `${sideLabel}: ${teamName}`;
@@ -104,36 +110,30 @@ function ScoreField({
       <span
         className={[
           nameOxanium.className,
-          "truncate px-0.5 text-[9px] font-extrabold uppercase tracking-[0.14em]",
+          "px-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-white/45",
         ].join(" ")}
+      >
+        {sideLabel}
+      </span>
+      <span
+        className={[
+          nameBebas.className,
+          "truncate px-0.5 text-[15px] font-bold uppercase leading-tight md:text-[18px]",
+        ].join(" ")}
+        style={overlayTeamNameStyle}
         title={title}
       >
-        <span className="text-white/90">{sideLabel}:</span>
-        <span style={{ color: hexToRgba(primary, 0.95) }}>{teamName}</span>
+        {teamName}
       </span>
 
       <span
-        className="relative block overflow-hidden transition-[border-color,box-shadow] duration-150 group-focus-within:brightness-110"
+        className="relative block overflow-hidden transition-[border-color] duration-150 group-focus-within:brightness-110"
         style={{
-          transform: "skewX(-12deg)",
           border: `1px solid ${border}`,
-          background: `linear-gradient(180deg, ${fill} 0%, rgba(6,11,18,0.94) 55%, rgba(3,7,14,0.97) 100%)`,
-          boxShadow: `inset 0 1px 0 ${inset}`,
+          borderRadius: 0,
+          background: "#000",
         }}
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-70"
-          style={{
-            backgroundImage: `repeating-linear-gradient(
-              0deg,
-              transparent,
-              transparent 2px,
-              rgba(0, 0, 0, 0.18) 2px,
-              rgba(0, 0, 0, 0.18) 3px
-            )`,
-          }}
-        />
         <input
           type="number"
           inputMode="numeric"
@@ -149,7 +149,6 @@ function ScoreField({
             "relative z-[1] w-full bg-transparent px-3 py-2.5 text-center text-[18px] font-black leading-none outline-none md:text-[20px]",
           ].join(" ")}
           style={{
-            transform: "skewX(12deg)",
             caretColor: primary,
             color: "#F0FDFF",
           }}

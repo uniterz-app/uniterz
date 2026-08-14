@@ -15,7 +15,6 @@ import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
 import { NATIVE_SETTLED_TODAY_MAX } from "./loadProfileSettledTodayNative";
 import {
   profileOverviewChartSubtitleStyle,
-  profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
 import {
   buildSettledTodayDesignPreviewPosts,
@@ -91,9 +90,8 @@ export default function ProfileSettledTodayResultsNative({
 
   return (
     <View style={styles.stretch}>
-    <ProfileOverviewChartCardNative style={styles.card}>
+    <ProfileOverviewChartCardNative style={styles.card} topLabel={title}>
       <View>
-        <Text style={profileOverviewChartTitleStyle}>{title}</Text>
         <Text style={[profileOverviewChartSubtitleStyle, styles.subtitle]}>
           {subtitle}
         </Text>

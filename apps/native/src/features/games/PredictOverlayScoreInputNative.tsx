@@ -7,7 +7,6 @@ import {
   Platform,
   StyleSheet,
   TextInput,
-  View,
   type TextInputProps,
 } from "react-native";
 import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
@@ -59,7 +58,7 @@ export default function PredictOverlayScoreInputNative({
   return (
     <PredictOverlayChamferedFrameNative
       cut={PREDICT_OVERLAY_SCORE_INPUT_CUT}
-      gradientColors={["rgba(5,10,18,0.92)", "rgba(3,7,14,0.96)"]}
+      gradientColors={["#000000", "#000000"]}
       gradientLocations={[0, 1]}
       borderColor="rgba(0,245,255,0.24)"
       shadowColor="#00f5ff"
@@ -69,7 +68,6 @@ export default function PredictOverlayScoreInputNative({
       contentStyle={styles.content}
       overflowHidden
     >
-      <View pointerEvents="none" style={styles.insetLeftGlow} />
       <TextInput
         ref={inputRef}
         {...props}
@@ -100,15 +98,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 14,
     paddingVertical: 0,
-  },
-  insetLeftGlow: {
-    position: "absolute",
-    left: 0,
-    top: 8,
-    bottom: 8,
-    width: 3,
-    backgroundColor: "rgba(0,245,255,0.32)",
-    zIndex: 1,
   },
   input: {
     width: "100%",

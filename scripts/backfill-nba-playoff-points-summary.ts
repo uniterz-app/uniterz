@@ -273,6 +273,7 @@ async function main() {
         photoURL: author.photoURL,
         isPro: author.isPro,
         points: pts,
+        countryCode: author.countryCode,
       });
     }
 

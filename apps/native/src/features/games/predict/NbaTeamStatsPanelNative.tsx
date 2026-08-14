@@ -1,6 +1,6 @@
 /** Web `NbaTeamStatsPanel` 相当（SymmetricalCompareRow レイアウト） */
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type {
   NbaTeamStatsBundle,
@@ -14,7 +14,9 @@ import {
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
+import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
+import { getGamesTexts } from "../gamesI18n";
 
 type WindowId = "season" | "last10";
 type MetaTone = "up" | "down" | "flat";
@@ -23,6 +25,7 @@ type Props = {
   data: NbaTeamStatsBundle;
   isPro?: boolean;
   language: GamesLanguage;
+  onOpenTeamDetail?: (teamId: string) => void;
 };
 
 const LEAGUE_RANK_SEGMENTS = 6;
@@ -624,8 +627,11 @@ function buildSplitRows(home: NbaTeamStatSide, away: NbaTeamStatSide): RowSpec[]
 export default function NbaTeamStatsPanelNative({
   data,
   isPro = false,
+  language,
+  onOpenTeamDetail,
 }: Props) {
-  const [windowId, setWindowId] = useState<WindowId>("last10");
+  const t = getGamesTexts(language);
+  const [windowId, setWindowId] = useState<WindowId>("season");
   const active = windowId === "season" ? data.season : data.last10;
   const { home, away } = active;
 
@@ -649,28 +655,54 @@ export default function NbaTeamStatsPanelNative({
     <View style={styles.shell}>
       <CyberSlantedTabBarNative fill>
         <CyberSlantedTabNative
-          label="LAST 10"
-          active={windowId === "last10"}
-          onPress={() => setWindowId("last10")}
-          compact
-          fontWeight="700"
-        />
-        <CyberSlantedTabNative
           label="SEASON"
           active={windowId === "season"}
           onPress={() => setWindowId("season")}
           compact
           fontWeight="700"
         />
+        <CyberSlantedTabNative
+          label="LAST 10"
+          active={windowId === "last10"}
+          onPress={() => setWindowId("last10")}
+          compact
+          fontWeight="700"
+        />
       </CyberSlantedTabBarNative>
 
+      {onOpenTeamDetail ? (
+        <Text style={styles.moreHint}>{t.teamStatsMoreHint}</Text>
+      ) : null}
+
       <View style={styles.teamHeaderRow}>
-        <Text style={styles.teamHeader} numberOfLines={1}>
-          {teamLabel(home.teamId, home.teamName)}
-        </Text>
-        <Text style={styles.teamHeader} numberOfLines={1}>
-          {teamLabel(away.teamId, away.teamName)}
-        </Text>
+        {onOpenTeamDetail && home.teamId ? (
+          <Pressable
+            onPress={() => onOpenTeamDetail(home.teamId)}
+            style={styles.teamHeaderHit}
+          >
+            <Text style={[styles.teamHeader, styles.teamHeaderHome]} numberOfLines={1}>
+              {teamLabel(home.teamId, home.teamName)} →
+            </Text>
+          </Pressable>
+        ) : (
+          <Text style={styles.teamHeader} numberOfLines={1}>
+            {teamLabel(home.teamId, home.teamName)}
+          </Text>
+        )}
+        {onOpenTeamDetail && away.teamId ? (
+          <Pressable
+            onPress={() => onOpenTeamDetail(away.teamId)}
+            style={styles.teamHeaderHit}
+          >
+            <Text style={[styles.teamHeader, styles.teamHeaderAway]} numberOfLines={1}>
+              {teamLabel(away.teamId, away.teamName)} →
+            </Text>
+          </Pressable>
+        ) : (
+          <Text style={styles.teamHeader} numberOfLines={1}>
+            {teamLabel(away.teamId, away.teamName)}
+          </Text>
+        )}
       </View>
 
       <View style={styles.body}>
@@ -704,15 +736,38 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 2,
   },
+  moreHint: {
+    marginTop: 4,
+    marginBottom: 4,
+    paddingHorizontal: 2,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textAlign: "center",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+  },
+  teamHeaderHit: {
+    flex: 1,
+  },
+  teamHeaderHome: {
+    color: "rgba(165,243,252,0.95)",
+  },
+  teamHeaderAway: {
+    color: "rgba(221,214,254,0.95)",
+  },
   teamHeader: {
     flex: 1,
-    fontFamily: OXANIUM,
-    fontSize: 12,
-    fontWeight: "800",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 15,
+    fontWeight: "400",
     letterSpacing: 1.2,
+    lineHeight: 18,
     color: "#fff",
     textAlign: "center",
     textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
   metricRow: {
     borderBottomWidth: 1,
@@ -783,9 +838,10 @@ const styles = StyleSheet.create({
   metaFlat: { color: "rgba(255,255,255,0.4)" },
   rankBelow: {
     fontFamily: OXANIUM,
-    fontSize: 11,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.52)",
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.8)",
     fontVariant: ["tabular-nums"],
   },
   recordBelow: {

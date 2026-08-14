@@ -11,7 +11,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { useReducedMotion } from "react-native-reanimated";
+import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
@@ -603,7 +603,24 @@ export default function ResultPostCardNative({
           entrance.cardShellMotionStyle,
         ]}
       >
-        <View style={styles.resultCardPressable}>
+        <AnimatedResultCardPressable
+          collapsable={false}
+          delayPressIn={0}
+          accessibilityRole="button"
+          accessibilityLabel={isEn ? "Open result detail" : "リザルト詳細を開く"}
+          style={styles.resultCardPressable}
+          onPressIn={() => {
+            entrance.pressed.value = reduceMotionList
+              ? 1
+              : withTiming(1, { duration: 90 });
+          }}
+          onPressOut={() => {
+            entrance.pressed.value = reduceMotionList
+              ? 0
+              : withTiming(0, { duration: 160 });
+          }}
+          onPress={() => onOpenDetail(post.id)}
+        >
           <View style={styles.cardCaptureWrap}>
             <View
               ref={captureRef}
@@ -619,12 +636,12 @@ export default function ResultPostCardNative({
                 face={faceModel}
                 frameGlow
                 showDetailTab
-                onOpenDetail={() => onOpenDetail(post.id)}
+                strokeEnd={entrance.frameStrokeEnd}
               />
             </View>
             <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </View>
-        </View>
+        </AnimatedResultCardPressable>
       </Animated.View>
     );
   }
@@ -646,7 +663,18 @@ export default function ResultPostCardNative({
     >
       <AnimatedResultCardPressable
         collapsable={false}
-        style={({ pressed }) => [styles.resultCardPressable, pressed && styles.cardPressed]}
+        delayPressIn={0}
+        style={styles.resultCardPressable}
+        onPressIn={() => {
+          entrance.pressed.value = reduceMotionList
+            ? 1
+            : withTiming(1, { duration: 90 });
+        }}
+        onPressOut={() => {
+          entrance.pressed.value = reduceMotionList
+            ? 0
+            : withTiming(0, { duration: 160 });
+        }}
         onPress={() => {
           /** Web：FAB 外タップでメニューを閉じる（詳細は閉じた後のタップで） */
           if (cornerFabOpen) {
@@ -965,6 +993,7 @@ export default function ResultPostCardNative({
 const styles = StyleSheet.create({
   listRowOuter: {
     width: "100%",
+    overflow: "visible",
   },
   cardOuter: {
     marginBottom: MOBILE_RESULT_CARD_GAP,
@@ -975,10 +1004,7 @@ const styles = StyleSheet.create({
   resultCardPressable: {
     flexShrink: 0,
     position: "relative",
-  },
-  cardPressed: {
-    opacity: 0.96,
-    transform: [{ scale: 0.99 }],
+    overflow: "visible",
   },
   cardShell: {
     position: "relative",
@@ -1019,6 +1045,7 @@ const styles = StyleSheet.create({
   },
   cardCaptureWrap: {
     position: "relative",
+    overflow: "visible",
   },
   /** 左上：Web mobile `CyberMenuButton` + 右／下フライアウト */
   leftActionCluster: {
