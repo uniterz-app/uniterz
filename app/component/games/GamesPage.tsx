@@ -84,6 +84,7 @@ import { writeTutorialLiveTrack, readTutorialLiveTrack } from "@/lib/tutorial/tu
 import { writeTutorialHorizonSubstep } from "@/lib/tutorial/tutorialHorizonSubstep";
 import { writeTutorialWelcomeHandoff, tutorialProfileHref } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import { featuresTrackProgressLabel } from "@/lib/tutorial/tutorialHorizonSteps";
+import { withTutorialNbaBackdropGames } from "@/lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
 import {
   fetchNextGameDayAfterLocalDay,
@@ -730,15 +731,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [games, teamFilterIds, teamFilterMatchMode, nameById]);
 
   const filteredGames = useMemo(() => {
-    let list =
+    const list =
       marginMin == null && marginMax == null
         ? gamesAfterTeamFilter
         : gamesAfterTeamFilter.filter((g: Record<string, unknown>) =>
             gameMatchesMarginBounds(g, marginMin, marginMax)
           );
 
-    return list;
-  }, [gamesAfterTeamFilter, marginMin, marginMax]);
+    /** ウェルカム背景が NO DATA にならないよう、0 件ならモック 3 枚 */
+    return withTutorialNbaBackdropGames(
+      list,
+      tutorialActive && league === "nba",
+      selected ?? new Date()
+    );
+  }, [
+    gamesAfterTeamFilter,
+    marginMin,
+    marginMax,
+    tutorialActive,
+    league,
+    selected,
+  ]);
 
   /**
    * games は selectedDayKey で絞り込んだ取得済みウィンドウなので、
@@ -1158,7 +1171,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     <div
       className={[
         "flex h-svh flex-col overscroll-x-contain",
-        tutorialPhase === "welcome" ? "overflow-visible" : "overflow-hidden",
+        welcomeBrandInWorld && !welcomeWorldFly
+          ? "overflow-hidden"
+          : tutorialPhase === "welcome"
+            ? "overflow-visible"
+            : "overflow-hidden",
         pagePad,
         "pb-bottom-nav text-white",
       ].join(" ")}
@@ -1216,10 +1233,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         ref={pageRef}
         className={[
           "min-h-0 flex-1",
-          tutorialPhase === "welcome" ? "overflow-visible" : "overflow-y-auto",
+          welcomeBrandInWorld && !welcomeWorldFly
+            ? "overflow-hidden"
+            : tutorialPhase === "welcome"
+              ? "overflow-visible"
+              : "overflow-y-auto",
           "pt-2",
         ].join(" ")}
-        style={{ touchAction: "pan-y" }}
+        style={{
+          touchAction:
+            welcomeBrandInWorld && !welcomeWorldFly ? "none" : "pan-y",
+          overscrollBehavior: welcomeBrandInWorld && !welcomeWorldFly ? "none" : undefined,
+        }}
+        onWheel={
+          welcomeBrandInWorld && !welcomeWorldFly
+            ? (e) => e.preventDefault()
+            : undefined
+        }
       >
       <div className={gamesHeaderShellClass(isMobile)}>
         {isMobile ? (

@@ -407,27 +407,6 @@ export default function TutorialLiveCoachNative({
     }
     /** 追い抜き中は入場アニメで上書きしない */
     if (welcomeFlyingRef.current) return;
-    /**
-     * 対象あり: 枠の測位完了まで吹き出しを隠す。
-     * 対象なし（welcome）: すぐ出す。
-     */
-    if (target && !spotlightReady) {
-      cancelAnimation(calloutOp);
-      cancelAnimation(calloutY);
-      cancelAnimation(floatY);
-      calloutOp.value = 0;
-      calloutY.value = 14;
-      floatY.value = 0;
-      if (reduceMotion) {
-        scrimOp.value = 1;
-      } else {
-        scrimOp.value = withTiming(1, {
-          duration: TUTORIAL_COACH_SCRIM_MS,
-          easing: Easing.out(Easing.cubic),
-        });
-      }
-      return;
-    }
     if (reduceMotion) {
       scrimOp.value = 1;
       calloutOp.value = 1;
@@ -482,7 +461,6 @@ export default function TutorialLiveCoachNative({
   }, [
     open,
     target,
-    spotlightReady,
     reduceMotion,
     enableFloat,
     scrimOp,
@@ -503,7 +481,8 @@ export default function TutorialLiveCoachNative({
       setHole(null);
       holeRef.current = null;
       setSpotlightReady(true);
-      setTutorialScrollEnabledNative(true);
+      /** welcome 静止中は試合リストを動かさない */
+      setTutorialScrollEnabledNative(visual !== "welcome");
       return;
     }
     let cancelled = false;
@@ -625,8 +604,8 @@ export default function TutorialLiveCoachNative({
       target === "result-card" || isResultDetailTarget
         ? 720
         : reduceMotion
-          ? 280
-          : 620
+          ? 160
+          : 240
     );
     /**
      * 詳細ターゲットは Modal 内で遅れて mount する。
@@ -636,7 +615,7 @@ export default function TutorialLiveCoachNative({
       () => {
         if (!cancelled) setSpotlightReady(true);
       },
-      isResultDetailTarget ? 480 : 2800
+      isResultDetailTarget ? 480 : 360
     );
     const unsub = subscribeTutorialTargets(() => void run(false));
     return () => {
@@ -648,7 +627,7 @@ export default function TutorialLiveCoachNative({
         setTutorialScrollEnabledNative(true);
       }
     };
-  }, [open, target, reduceMotion, insets.top]);
+  }, [open, target, visual, reduceMotion, insets.top]);
 
   const calloutPos = useMemo(() => {
     const width = Math.min(
@@ -903,6 +882,10 @@ export default function TutorialLiveCoachNative({
           ) : null}
           {showHoleRing ? renderHoleRing(hy, hx, hw, hh) : null}
         </Animated.View>
+      ) : isWelcomeBriefing && embedInCamera ? (
+        welcomeFlying ? null : (
+          <View pointerEvents="auto" style={styles.welcomeEmbedScrim} />
+        )
       ) : isWelcomeBriefing && !embedInCamera ? (
         <Animated.View
           style={[StyleSheet.absoluteFillObject, scrimStyle]}
@@ -1286,7 +1269,12 @@ const styles = StyleSheet.create({
   },
   welcomeBlurDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2,6,12,0.16)",
+    backgroundColor: "rgba(2, 6, 12, 0.16)",
+  },
+  /** CTA と同じ面。カメラ暗幕は transform された試合面より背面に抜ける */
+  welcomeEmbedScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(2, 6, 12, 0.28)",
   },
   scrimPanel: {
     position: "absolute",

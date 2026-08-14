@@ -127,6 +127,10 @@ import {
 import { setTutorialWelcomeHandoffNative } from "../tutorial/tutorialWelcomeHandoffNative";
 import { formatTutorialGamesSubstepProgress } from "../../../../../lib/tutorial/tutorialLiveProgress";
 import { featuresTrackProgressLabel } from "../../../../../lib/tutorial/tutorialHorizonSteps";
+import {
+  TUTORIAL_NBA_GAME_ID,
+  withTutorialNbaBackdropGames,
+} from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
 import {
   isTutorialGamesSubstep,
@@ -548,12 +552,17 @@ export default function GamesHomeScreen({
   );
   const [tutorialPhase, setTutorialPhase] =
     useState<TutorialLivePhase | null>(null);
+  const [tutorialUserScrollEnabled, setTutorialUserScrollEnabled] = useState(true);
   const [welcomeWorldFly, setWelcomeWorldFly] = useState(false);
   const welcomeFlyDestRef = useRef<"full" | "features">("full");
   const [welcomeFlyDest, setWelcomeFlyDest] = useState<"full" | "features" | null>(
     null
   );
   const [welcomeHandoff, setWelcomeHandoff] = useState<"profile" | null>(null);
+  const welcomeResting =
+    tutorialPhase === "welcome" &&
+    welcomeHandoff !== "profile" &&
+    !welcomeWorldFly;
   /** 試合タブ上の案内（welcome + 試合サブステップ）。他タブ以降は TutorialLiveHost 側 */
   const tutorialActive = isTutorialOnGamesHome(tutorialPhase);
 
@@ -574,6 +583,7 @@ export default function GamesHomeScreen({
     if (!tutorialActive || isPredictModalOpen) return;
     return registerTutorialScrollHost({
       getOffsetY: () => mainScrollYRef.current,
+      setScrollEnabled: setTutorialUserScrollEnabled,
       scrollBy: (dy, animated) => {
         const y = Math.max(0, mainScrollYRef.current + dy);
         mainScrollYRef.current = y;
@@ -654,8 +664,13 @@ export default function GamesHomeScreen({
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
   const filteredGames = useMemo(() => {
-    return applyNativeGamesFilter(games, gamesFilter, teamNameById);
-  }, [games, gamesFilter, teamNameById]);
+    const list = applyNativeGamesFilter(games, gamesFilter, teamNameById);
+    return withTutorialNbaBackdropGames(
+      list,
+      tutorialActive && selectedLeague === "nba",
+      selectedDate
+    );
+  }, [games, gamesFilter, teamNameById, tutorialActive, selectedLeague, selectedDate]);
   /** データ未取得時のみスケルトン。チュートリアルのモック試合があるときは先に見せる */
   const showInitialSkeleton =
     (!preferredLeagueReady || loading) &&
@@ -1465,7 +1480,7 @@ export default function GamesHomeScreen({
   const pageSwipeGesture = useGamesPageSwipe({
     onSwipeLeft: goNextGameDay,
     onSwipeRight: goPrevGameDay,
-    enabled: !loading,
+    enabled: !loading && !welcomeResting,
   });
 
   const predictOverlayMarketBar = useMemo(() => {
@@ -2052,6 +2067,7 @@ export default function GamesHomeScreen({
         contentContainerStyle={mainScrollContentStyle}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
+        scrollEnabled={!welcomeResting && tutorialUserScrollEnabled}
         onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
           mainScrollYRef.current = e.nativeEvent.contentOffset.y;
         }}

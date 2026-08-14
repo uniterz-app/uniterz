@@ -23,6 +23,7 @@ import {
 } from "./useGameCardListRowEntrance";
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
 import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
+import { isTutorialNbaBackdropGameId } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 
 function matchRoundSideCode(roundLabel: string): string {
   const u = roundLabel.toUpperCase();
@@ -223,7 +224,10 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
       collapsable={false}
       delayPressIn={0}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
-      onPress={() => void openPredictModal(game)}
+      onPress={() => {
+        if (isTutorialNbaBackdropGameId(String(game.id ?? ""))) return;
+        void openPredictModal(game);
+      }}
       onPressIn={() => {
         ent.pressed.value = reduceMotion
           ? 1

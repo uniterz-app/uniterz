@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * welcome の単一カメラ。試合ページ（遠）とモーダル（近）を同じ前進量で動かす。
- * 暗幕は 2D で世界とモーダルの間に置き、fly 中に消して世界の接近を見せる。
+ * 試合面・暗幕・CTA を同じ perspective の 3D 空間に置く。
+ * 世界は奥（translateZ -520）、暗幕と CTA は手前。
+ * 2D の兄弟にすると、カードの GPU レイヤーが CTA より前面に合成される。
  */
 import { type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
@@ -10,6 +11,7 @@ import {
   TUTORIAL_WELCOME_CAMERA_Z_PX,
   TUTORIAL_WELCOME_FLY_EASE,
   TUTORIAL_WELCOME_FLY_S,
+  TUTORIAL_WELCOME_MODAL_PASS_SCALE,
   TUTORIAL_WELCOME_PASS_FADE_AT,
   TUTORIAL_WELCOME_WORLD_BLUR_PX,
   TUTORIAL_WELCOME_WORLD_REST_RX_DEG,
@@ -24,11 +26,13 @@ type Props = {
   children: ReactNode;
 };
 
-const SCRIM_STYLE = {
-  height: "100svh",
-  background:
-    "radial-gradient(ellipse 80% 62% at 50% 38%, rgba(2, 6, 12, 0.06) 0%, rgba(2, 6, 12, 0.28) 58%, rgba(2, 6, 12, 0.52) 100%)",
-} as const;
+const PERSPECTIVE_PX = 1400;
+/** 暗幕は世界より手前。CTA はさらに手前 */
+const SCRIM_Z_PX = 48;
+const OVERLAY_Z_PX = 96;
+
+const SCRIM_FILL =
+  "linear-gradient(to bottom, rgba(2, 6, 12, 0.55) 0%, rgba(2, 6, 12, 0.72) 42%, rgba(2, 6, 12, 0.86) 100%)";
 
 const CAMERA_TRANSITION = {
   duration: TUTORIAL_WELCOME_FLY_S,
@@ -46,22 +50,28 @@ export default function TutorialWelcomeWorldCamera({
   if (!active) {
     return <>{children}</>;
   }
+
+  const restFilter = `blur(${TUTORIAL_WELCOME_WORLD_BLUR_PX}px) brightness(0.55)`;
+
   if (reduceMotion) {
     return (
       <div className="relative flex min-h-0 flex-1 flex-col" style={{ minHeight: "100%" }}>
         <div
-          style={{
-            filter: `blur(${TUTORIAL_WELCOME_WORLD_BLUR_PX}px) brightness(0.9)`,
-          }}
+          className="pointer-events-none flex min-h-0 flex-1 flex-col"
+          style={{ filter: restFilter }}
         >
           {children}
         </div>
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-0 right-0 top-0"
-          style={SCRIM_STYLE}
-        />
-        {overlay}
+        {overlay ? (
+          <>
+            <div
+              aria-hidden
+              className="pointer-events-auto absolute inset-0"
+              style={{ background: SCRIM_FILL }}
+            />
+            <div className="pointer-events-none absolute inset-0">{overlay}</div>
+          </>
+        ) : null}
       </div>
     );
   }
@@ -73,14 +83,18 @@ export default function TutorialWelcomeWorldCamera({
       className="relative flex min-h-0 flex-1 flex-col"
       style={{
         minHeight: "100%",
-        perspective: 1400,
+        perspective: PERSPECTIVE_PX,
         perspectiveOrigin: "50% 36%",
-        overflow: "visible",
         transformStyle: "preserve-3d",
+        overflow: flying ? "visible" : "hidden",
       }}
     >
       <motion.div
-        className="flex min-h-0 flex-1 flex-col"
+        className={
+          flying
+            ? "flex min-h-0 flex-1 flex-col"
+            : "pointer-events-none flex min-h-0 flex-1 flex-col"
+        }
         style={{
           transformOrigin: "50% 36%",
           transformStyle: "preserve-3d",
@@ -103,64 +117,62 @@ export default function TutorialWelcomeWorldCamera({
           }}
           transition={CAMERA_TRANSITION}
         >
-          <motion.div
-            className="flex min-h-0 flex-1 flex-col"
-            initial={false}
-            animate={{
-              filter: flying
-                ? "blur(0px) brightness(1)"
-                : `blur(${TUTORIAL_WELCOME_WORLD_BLUR_PX}px) brightness(0.9)`,
-            }}
-            transition={CAMERA_TRANSITION}
-            style={{ willChange: "filter" }}
-          >
-            {children}
-          </motion.div>
+          {children}
         </motion.div>
       </motion.div>
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute left-0 right-0 top-0"
-        style={SCRIM_STYLE}
-        initial={false}
-        animate={{ opacity: flying ? 0 : 1 }}
-        transition={{
-          duration: flying ? TUTORIAL_WELCOME_FLY_S * 0.38 : 0.4,
-          ease: TUTORIAL_WELCOME_FLY_EASE,
-        }}
-      />
+
       {overlay ? (
-        <motion.div
-          className="pointer-events-none absolute left-0 right-0 top-0"
-          style={{
-            height: "100svh",
-            transformOrigin: "50% 42%",
-            transformStyle: "preserve-3d",
-            willChange: "transform, opacity",
-          }}
-          initial={false}
-          animate={{
-            z: cameraZ,
-            opacity: flying ? 0 : 1,
-          }}
-          transition={{
-            ...CAMERA_TRANSITION,
-            opacity: {
-              duration: flying
-                ? TUTORIAL_WELCOME_FLY_S * (1 - TUTORIAL_WELCOME_PASS_FADE_AT)
-                : 0.2,
-              delay: flying
-                ? TUTORIAL_WELCOME_FLY_S * TUTORIAL_WELCOME_PASS_FADE_AT
-                : 0,
+        <>
+          <motion.div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background: SCRIM_FILL,
+              transformStyle: "preserve-3d",
+              pointerEvents: flying ? "none" : "auto",
+            }}
+            initial={false}
+            animate={{
+              z: SCRIM_Z_PX,
+              opacity: flying ? 0 : 1,
+            }}
+            transition={{
+              duration: flying ? TUTORIAL_WELCOME_FLY_S * 0.38 : 0.4,
               ease: TUTORIAL_WELCOME_FLY_EASE,
-            },
-          }}
-          onAnimationComplete={() => {
-            if (flying) onFlyComplete?.();
-          }}
-        >
-          {overlay}
-        </motion.div>
+            }}
+          />
+          <motion.div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              transformStyle: "preserve-3d",
+              transformOrigin: "50% 42%",
+              willChange: "transform, opacity",
+            }}
+            initial={false}
+            animate={{
+              z: OVERLAY_Z_PX,
+              opacity: flying ? 0 : 1,
+              scale: flying ? TUTORIAL_WELCOME_MODAL_PASS_SCALE : 1,
+            }}
+            transition={{
+              ...CAMERA_TRANSITION,
+              opacity: {
+                duration: flying
+                  ? TUTORIAL_WELCOME_FLY_S * (1 - TUTORIAL_WELCOME_PASS_FADE_AT)
+                  : 0.2,
+                delay: flying
+                  ? TUTORIAL_WELCOME_FLY_S * TUTORIAL_WELCOME_PASS_FADE_AT
+                  : 0,
+                ease: TUTORIAL_WELCOME_FLY_EASE,
+              },
+            }}
+            onAnimationComplete={() => {
+              if (flying) onFlyComplete?.();
+            }}
+          >
+            {overlay}
+          </motion.div>
+        </>
       ) : null}
     </div>
   );

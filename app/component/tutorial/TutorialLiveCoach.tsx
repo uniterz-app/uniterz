@@ -714,7 +714,22 @@ export default function TutorialLiveCoach({
                 />
               ) : null}
             </motion.div>
-          ) : isWelcomeBriefing && embedInCamera ? null : (
+          ) : isWelcomeBriefing && embedInCamera ? (
+            welcomeFly ? null : (
+              <div
+                aria-hidden
+                className="pointer-events-auto absolute inset-0"
+                style={{
+                  /**
+                   * カメラ側の暗幕は 3D 試合面より背面に合成される。
+                   * CTA と同じコーチ面に塗らないとカードが生で見える。
+                   */
+                  background:
+                    "linear-gradient(to bottom, rgba(2, 6, 12, 0.78) 0%, rgba(2, 6, 12, 0.9) 42%, rgba(2, 6, 12, 0.96) 100%)",
+                }}
+              />
+            )
+          ) : (
             <motion.div
               aria-hidden
               className="pointer-events-auto absolute inset-0"

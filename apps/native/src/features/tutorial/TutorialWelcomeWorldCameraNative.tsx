@@ -1,9 +1,14 @@
 /**
  * Web `TutorialWelcomeWorldCamera` 相当 —
  * 試合ページ（遠）と welcome（近）を同じ progress で動かす。
+ *
+ * Native に translateZ はない。奥行きは
+ * perspective + scale(0.8) + rotateX(6deg) で Web の Z -520 を近似する。
+ * transform は worldCage の中だけに閉じ、CTA はケージの外に置く。
  */
 import { useEffect, useRef, type ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import Animated, {
@@ -103,7 +108,6 @@ export default function TutorialWelcomeWorldCameraNative({
       [1, 1, 0]
     ),
     transform: [
-      { perspective: 1400 },
       {
         scale: interpolate(p.value, [0, 1], [1, TUTORIAL_WELCOME_MODAL_PASS_SCALE]),
       },
@@ -114,52 +118,49 @@ export default function TutorialWelcomeWorldCameraNative({
     opacity: interpolate(p.value, [0, 0.38], [1, 0]),
   }));
 
-  if (reduceMotion) {
-    return (
-      <View style={[styles.root, style]}>
-        <View style={styles.world}>{children}</View>
-        {active && overlay ? (
-          <>
-            <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-              <BlurView
-                intensity={TUTORIAL_WELCOME_WORLD_BLUR_NATIVE}
-                tint="default"
-                {...nativeBlurViewExtraProps()}
-                style={styles.dofBlur}
-              />
-              <View style={styles.scrim} />
-            </View>
-            <View pointerEvents="box-none" style={styles.modalSlot}>
-              {overlay}
-            </View>
-          </>
-        ) : null}
-      </View>
-    );
-  }
+  const hud = overlay ? (
+    <>
+      <Animated.View
+        pointerEvents={flying ? "none" : "auto"}
+        style={[styles.scrimSlot, reduceMotion ? null : scrimStyle]}
+      >
+        <BlurView
+          intensity={TUTORIAL_WELCOME_WORLD_BLUR_NATIVE}
+          tint="dark"
+          {...nativeBlurViewExtraProps()}
+          style={styles.dofBlur}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            "rgba(2, 6, 12, 0.42)",
+            "rgba(2, 6, 12, 0.58)",
+            "rgba(2, 6, 12, 0.72)",
+          ]}
+          locations={[0, 0.38, 1]}
+          style={styles.scrim}
+        />
+      </Animated.View>
+      <Animated.View
+        pointerEvents={flying ? "none" : "box-none"}
+        style={[styles.modalSlot, reduceMotion ? null : modalStyle]}
+      >
+        {overlay}
+      </Animated.View>
+    </>
+  ) : null;
 
   return (
     <View style={[styles.root, style]}>
-      <Animated.View style={[styles.world, worldStyle]}>{children}</Animated.View>
-      {active && overlay ? (
-        <>
-          <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, scrimStyle]}>
-            <BlurView
-              intensity={TUTORIAL_WELCOME_WORLD_BLUR_NATIVE}
-              tint="default"
-              {...nativeBlurViewExtraProps()}
-              style={styles.dofBlur}
-            />
-            <View style={styles.scrim} />
-          </Animated.View>
-          <Animated.View
-            pointerEvents={flying ? "none" : "box-none"}
-            style={[styles.modalSlot, modalStyle]}
-          >
-            {overlay}
-          </Animated.View>
-        </>
-      ) : null}
+      <View
+        pointerEvents={active && overlay && !flying ? "none" : "auto"}
+        style={styles.worldCage}
+      >
+        <Animated.View style={[styles.world, reduceMotion ? null : worldStyle]}>
+          {children}
+        </Animated.View>
+      </View>
+      {active ? hud : null}
     </View>
   );
 }
@@ -167,20 +168,35 @@ export default function TutorialWelcomeWorldCameraNative({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    overflow: "visible",
+    overflow: "hidden",
+  },
+  /**
+   * transform された試合面をこのケージ内に閉じる。
+   * CTA はケージの兄弟なので、カードの GPU レイヤーが前面に抜けない。
+   */
+  worldCage: {
+    flex: 1,
+    overflow: "hidden",
+    zIndex: 0,
   },
   world: {
     flex: 1,
   },
   scrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2, 6, 12, 0.12)",
   },
   dofBlur: {
     ...StyleSheet.absoluteFillObject,
   },
+  scrimSlot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 80,
+    elevation: 80,
+  },
   modalSlot: {
     ...StyleSheet.absoluteFillObject,
     overflow: "visible",
+    zIndex: 81,
+    elevation: 81,
   },
 });

@@ -62,6 +62,7 @@ import {
   predictOverlayRoot,
 } from "@/lib/predict/predictPageMotion";
 import { useLiveGameStats } from "@/lib/games/useLiveGameStats";
+import { isTutorialNbaBackdropGameId } from "@/lib/tutorial/tutorialNbaRawGame";
 
 const LiveGameStatsPanel = dynamic(
   () => import("./live/LiveGameStatsPanel"),
@@ -394,6 +395,7 @@ export default function ScheduleList({
 
   const open = useCallback(
     (gameId: string) => {
+      if (isTutorialNbaBackdropGameId(String(gameId))) return;
       openOverlayDirect(String(gameId));
     },
     [openOverlayDirect]

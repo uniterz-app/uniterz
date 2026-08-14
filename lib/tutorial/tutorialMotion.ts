@@ -118,9 +118,9 @@ export const TUTORIAL_WELCOME_LAND_HOLD_S = 0.48;
 export const TUTORIAL_WELCOME_LAND_HOLD_MS = Math.round(
   TUTORIAL_WELCOME_LAND_HOLD_S * 1000
 );
-/** 遠景（試合ページ）の被写界深度。fly で 0 に戻す。形が残る程度に留める */
-export const TUTORIAL_WELCOME_WORLD_BLUR_PX = 12;
-export const TUTORIAL_WELCOME_WORLD_BLUR_NATIVE = 28;
+/** 遠景（試合ページ）の被写界深度。fly で 0 に戻す。文字は読めずカードの形だけ残す */
+export const TUTORIAL_WELCOME_WORLD_BLUR_PX = 48;
+export const TUTORIAL_WELCOME_WORLD_BLUR_NATIVE = 90;
 /** STATS 端タブ：試合ページ着地後のフェード（急に出さない） */
 export const TUTORIAL_STATS_EDGE_FADE_S = 1.45;
 export const TUTORIAL_STATS_EDGE_FADE_MS = Math.round(
@@ -217,12 +217,12 @@ export const TUTORIAL_COACH_SCRIM_MS = 420;
 export const TUTORIAL_COACH_SCRIM_S = TUTORIAL_COACH_SCRIM_MS / 1000;
 
 /** コーチ吹き出しの開始ディレイ */
-export const TUTORIAL_COACH_CALLOUT_DELAY_MS = 260;
+export const TUTORIAL_COACH_CALLOUT_DELAY_MS = 0;
 export const TUTORIAL_COACH_CALLOUT_DELAY_S =
   TUTORIAL_COACH_CALLOUT_DELAY_MS / 1000;
 
 /** コーチ吹き出しフェード */
-export const TUTORIAL_COACH_CALLOUT_MS = 560;
+export const TUTORIAL_COACH_CALLOUT_MS = 220;
 export const TUTORIAL_COACH_CALLOUT_S = TUTORIAL_COACH_CALLOUT_MS / 1000;
 
 /** 予想注釈の z-index（ScheduleList overlay=100000 / LiveCoach=1000060 より上） */

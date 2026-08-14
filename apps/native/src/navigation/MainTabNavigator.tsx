@@ -1,13 +1,19 @@
 import { StyleSheet, View } from "react-native";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigationState, PartialState } from "@react-navigation/native";
+import { useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AppTabBar from "./AppTabBar";
 import type { MainTabParamList } from "./types";
+import {
+  forTabPagerSlide,
+  tabPagerTransitionSpec,
+} from "./tabPagerTransition";
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
 import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
+import { colors } from "../theme/tokens";
 import {
   DEFAULT_HEADER_WORDMARK,
   resolveHeaderWordmarkFromMainTab,
@@ -41,6 +47,7 @@ function resolveTabWordmark(
 
 export default function MainTabNavigator() {
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReducedMotion() === true;
   const [wordmark, setWordmark] = useState(DEFAULT_HEADER_WORDMARK);
   const brandShelfHidden = useSyncExternalStore(
     subscribeAppBrandShelfHidden,
@@ -58,6 +65,18 @@ export default function MainTabNavigator() {
       setWordmark(resolveTabWordmark(state));
     },
     []
+  );
+
+  /** animation を付けず transitionSpec のみ → hasAnimation が true（none だと遷移中に非表示になる） */
+  const tabTransitionOptions = useMemo(
+    () =>
+      reduceMotion
+        ? { animation: "none" as const }
+        : {
+            sceneStyleInterpolator: forTabPagerSlide,
+            transitionSpec: tabPagerTransitionSpec,
+          },
+    [reduceMotion]
   );
 
   useEffect(() => {
@@ -88,10 +107,12 @@ export default function MainTabNavigator() {
               headerShown: false,
               tabBarShowLabel: false,
               tabBarStyle: { display: "none" },
-              sceneStyle: { backgroundColor: "transparent" },
+              // 不透明にしてスライド中に裏タブが透けないようにする
+              sceneStyle: { backgroundColor: colors.bgPrimary },
               // 初回だけ遅延マウント。freezeOnBlur はタブ連打で解凍が積み上がりフリーズするためオフ
               lazy: true,
               freezeOnBlur: false,
+              ...tabTransitionOptions,
             }}
             initialRouteName="GamesTab"
           >
