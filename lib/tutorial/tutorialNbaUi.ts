@@ -130,6 +130,8 @@ export const RESULT_DETAIL_DESIGN_PREVIEW_POST_ID =
 
 /** 詳細の市場バー用（0–1）。カード面は asMarketPct で 0–100 に正規化 */
 export function buildTutorialResultMarket(): ResultCardFaceMarketInput & {
+  homeRate: number;
+  awayRate: number;
   total: number;
 } {
   return {
