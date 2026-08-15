@@ -272,6 +272,14 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   /** 試合タブ上の案内（welcome + 試合サブステップ）。他タブ以降は TutorialLiveHost 側 */
   const tutorialActive = isTutorialOnGamesHome(tutorialPhase);
+  /** welcome 世界にコーチを出す期間（カメラ遠景 + オーバーレイ） */
+  const welcomeBrandInWorld =
+    tutorialPhase === "welcome" && welcomeHandoff !== "profile";
+  /**
+   * 試合タブ上のチュートリアル中だけブランド棚を世界カメラ内へ。
+   * ルート離脱時の cleanup で外側棚に戻る。welcome→games 着地では載せ替えない。
+   */
+  const brandShelfInCamera = tutorialActive;
 
   useEffect(() => {
     if (tutorialPhase !== "welcome") {
@@ -281,9 +289,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [tutorialPhase]);
 
   useLayoutEffect(() => {
-    setTutorialWelcomeBrandHidden(true);
+    setTutorialWelcomeBrandHidden(brandShelfInCamera);
     return () => setTutorialWelcomeBrandHidden(false);
-  }, []);
+  }, [brandShelfInCamera]);
 
   useLayoutEffect(() => {
     const inWorld = tutorialPhase === "welcome" && welcomeHandoff !== "profile";
@@ -1143,9 +1151,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     />
   );
 
-  const welcomeBrandInWorld =
-    tutorialPhase === "welcome" && welcomeHandoff !== "profile";
-
   return (
     <div
       className={[
@@ -1207,7 +1212,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           ) : null
         }
       >
-      <Header />
+      {brandShelfInCamera ? <Header /> : null}
       <div
         ref={pageRef}
         className={[

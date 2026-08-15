@@ -560,8 +560,16 @@ export default function GamesHomeScreen({
     tutorialPhase === "welcome" &&
     welcomeHandoff !== "profile" &&
     !welcomeWorldFly;
+  /** welcome 世界にコーチを出す期間（カメラ遠景 + オーバーレイ） */
+  const welcomeBrandInWorld =
+    tutorialPhase === "welcome" && welcomeHandoff !== "profile";
   /** 試合タブ上の案内（welcome + 試合サブステップ）。他タブ以降は TutorialLiveHost 側 */
   const tutorialActive = isTutorialOnGamesHome(tutorialPhase);
+  /**
+   * 試合タブ上のチュートリアル中だけブランド棚を世界カメラ内へ。
+   * 他タブへ出る / チュートリアル終了で外側の固定棚に戻す（着地での載せ替えはしない）。
+   */
+  const brandShelfInCamera = tutorialActive;
 
   useEffect(() => {
     if (tutorialPhase !== "welcome") {
@@ -753,12 +761,12 @@ export default function GamesHomeScreen({
     navigation.setParams({ restartTutorialAt: undefined });
   }, [routeParams?.restartTutorialAt, applyTutorialRestart, navigation]);
 
-  /** 試合一覧が表示中はブランド棚を画面内に置く（着地で外ヘッダーへ載せ替えない） */
+  /** 試合タブ上のチュートリアル中だけ外側棚を隠す。他タブへ blur したら cleanup で戻る */
   useFocusEffect(
     useCallback(() => {
-      setTutorialWelcomeBrandHidden(true);
+      setTutorialWelcomeBrandHidden(brandShelfInCamera);
       return () => setTutorialWelcomeBrandHidden(false);
-    }, [])
+    }, [brandShelfInCamera])
   );
 
   /** DEV「チュートリアル再開」など、他画面からフェーズが書き込まれた場合に同期 */
@@ -1995,9 +2003,6 @@ export default function GamesHomeScreen({
     }
   }
 
-  const welcomeBrandInWorld =
-    tutorialPhase === "welcome" && welcomeHandoff !== "profile";
-
   return (
     <View style={styles.screenRoot}>
       <View style={screenShellStyle}>
@@ -2050,7 +2055,9 @@ export default function GamesHomeScreen({
         }
       >
       <View style={styles.welcomeWorldColumn}>
-      <UniterzBrandShelfNative includeSafeAreaTop title="UNITERZ" />
+      {brandShelfInCamera ? (
+        <UniterzBrandShelfNative includeSafeAreaTop title="UNITERZ" />
+      ) : null}
       <ScrollView
         ref={mainScrollRef}
         style={styles.mainScroll}
