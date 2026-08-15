@@ -26,6 +26,7 @@ import UnitEarnModalDesignPreviewScreenNative from "../mobileScreens/UnitEarnMod
 import UnitEarnOverlayAnimPreviewScreenNative from "../mobileScreens/UnitEarnOverlayAnimPreviewScreenNative";
 import UnitEarnOverlayFontPreviewScreenNative from "../mobileScreens/UnitEarnOverlayFontPreviewScreenNative";
 import UniterzLogoTypePreviewScreenNative from "../mobileScreens/UniterzLogoTypePreviewScreenNative";
+import UniterzProBadgePreviewScreenNative from "../mobileScreens/UniterzProBadgePreviewScreenNative";
 import ResultCardDesignPreviewScreenNative from "../../results/ResultCardDesignPreviewScreenNative";
 import ResultBadgeDesignPreviewScreenNative from "../../results/ResultBadgeDesignPreviewScreenNative";
 import ResultStreakTagDesignPreviewScreenNative from "../../results/ResultStreakTagDesignPreviewScreenNative";
@@ -318,6 +319,19 @@ export function UniterzLogoTypePreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <UniterzLogoTypePreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function UniterzProBadgePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <UniterzProBadgePreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />

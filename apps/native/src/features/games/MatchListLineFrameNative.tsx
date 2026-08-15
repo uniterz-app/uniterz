@@ -1,7 +1,7 @@
 /**
  * 試合一覧の線枠シェル。塗りカードではなく、上下ラベルで途切れた直角ストローク。
  */
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   type LayoutChangeEvent,
   type StyleProp,
@@ -25,6 +25,7 @@ import {
   matchLineFrameLabelMaxWidth,
   matchLineFramePaint,
 } from "@/lib/games/matchListLineFrame";
+import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 
 export {
   MATCH_LINE_FRAME_BLUE,
@@ -60,6 +61,10 @@ type Props = {
    * ラウンドラベル左右から同時に半周し、下の CTA で合わせる。
    */
   strokeEnd?: SharedValue<number>;
+  /** 左辺ラベルをチュートリアル測定対象にする */
+  leftLabelTutorialTarget?: string | null;
+  /** 左辺ラベルを強調（チュートリアル用） */
+  leftLabelPulse?: boolean;
 };
 
 function makeHalves(
@@ -99,13 +104,33 @@ export default function MatchListLineFrameNative({
   paint,
   style,
   strokeEnd,
+  leftLabelTutorialTarget = null,
+  leftLabelPulse = false,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [topLabelW, setTopLabelW] = useState(0);
   const [ctaFixedW, setCtaFixedW] = useState(0);
   const [bottomCtaH, setBottomCtaH] = useState(0);
   const [leftLabelH, setLeftLabelH] = useState(0);
+  const leftLabelMeasureRef = useRef<View>(null);
   const { color, glow } = paint ?? matchLineFramePaint({ pickup, predicted });
+
+  useEffect(() => {
+    if (!leftLabelTutorialTarget || !leftLabel) return;
+    return registerTutorialTarget(leftLabelTutorialTarget, () =>
+      new Promise((resolve) => {
+        const node = leftLabelMeasureRef.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width > 0 && height > 0) resolve({ x, y, width, height });
+          else resolve(null);
+        });
+      })
+    );
+  }, [leftLabel, leftLabelTutorialTarget]);
 
   const showCta = Boolean(bottomLabel);
   const labelMaxW = matchLineFrameLabelMaxWidth({
@@ -242,6 +267,8 @@ export default function MatchListLineFrameNative({
           style={[styles.leftLabelWrap, leftLabelAnim]}
         >
           <View
+            ref={leftLabelMeasureRef}
+            collapsable={false}
             onLayout={(e) => {
               const h = e.nativeEvent.layout.height;
               if (Math.abs(h - leftLabelH) > 0.5) setLeftLabelH(h);
@@ -252,7 +279,14 @@ export default function MatchListLineFrameNative({
               ch === " " ? (
                 <View key={`sp-${i}`} style={styles.leftLabelSpace} />
               ) : (
-                <Text key={`${ch}-${i}`} style={[styles.leftLabelChar, { color }]}>
+                <Text
+                  key={`${ch}-${i}`}
+                  style={[
+                    styles.leftLabelChar,
+                    { color },
+                    leftLabelPulse ? styles.leftLabelCharEmphasis : null,
+                  ]}
+                >
                   {ch}
                 </Text>
               )
@@ -368,14 +402,21 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   leftLabelChar: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     letterSpacing: 0,
-    lineHeight: 13,
+    lineHeight: 14,
     includeFontPadding: false,
     textTransform: "uppercase",
     fontFamily: MATCH_CARD_METRIC_FONT,
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  leftLabelCharEmphasis: {
+    fontSize: 14,
+    lineHeight: 15,
   },
   leftLabelSpace: {
     height: 5,

@@ -14,6 +14,7 @@ import {
   matchLineFrameLabelMaxWidth,
   matchLineFramePaint,
 } from "@/lib/games/matchListLineFrame";
+import MatchPickupSideLabel from "@/app/component/games/MatchPickupSideLabel";
 
 const STROKE = 1.5;
 const LABEL_GAP_PAD = 16;
@@ -26,9 +27,12 @@ type Props = {
   topLabelAlign?: "center" | "start";
   predicted?: boolean;
   pickup?: boolean;
+  /** 左辺縦ラベル（ピックアップは `PICK UP`） */
+  leftLabel?: string;
   paint?: { color: string; glow: string };
   className?: string;
   topLabelTutorialTarget?: string;
+  leftLabelTutorialTarget?: string;
   /** ラウンドラベルから左右パスを描く登場アニメ */
   animateDraw?: boolean;
   /** 描画開始の遅延（秒） */
@@ -46,17 +50,21 @@ export default function MatchListLineFrame({
   topLabelAlign = "center",
   predicted = false,
   pickup = false,
+  leftLabel,
   paint,
   className,
   topLabelTutorialTarget,
+  leftLabelTutorialTarget,
   animateDraw = false,
   drawDelaySec = 0,
   onClick,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
+  const leftLabelRef = useRef<HTMLSpanElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [topLabelW, setTopLabelW] = useState(0);
+  const [leftLabelH, setLeftLabelH] = useState(0);
   const reduceMotion = useReducedMotion();
   const { color, glow } = paint ?? matchLineFramePaint({ pickup, predicted });
   const shouldDraw = animateDraw && !reduceMotion;
@@ -88,14 +96,17 @@ export default function MatchListLineFrame({
       );
       const labelW = labelRef.current?.getBoundingClientRect().width ?? 0;
       setTopLabelW((prev) => (Math.abs(prev - labelW) < 0.5 ? prev : labelW));
+      const leftH = leftLabelRef.current?.getBoundingClientRect().height ?? 0;
+      setLeftLabelH((prev) => (Math.abs(prev - leftH) < 0.5 ? prev : leftH));
     };
 
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(root);
     if (labelRef.current) ro.observe(labelRef.current);
+    if (leftLabelRef.current) ro.observe(leftLabelRef.current);
     return () => ro.disconnect();
-  }, [topLabel]);
+  }, [topLabel, leftLabel]);
 
   const labelMaxW = matchLineFrameLabelMaxWidth({
     frameWidth: size.w,
@@ -103,6 +114,8 @@ export default function MatchListLineFrame({
   });
   const topGap =
     topLabel && topLabelW > 0 ? topLabelW + LABEL_GAP_PAD : MIN_TICK_GAP;
+  const leftGap =
+    leftLabel && leftLabelH > 0 ? leftLabelH + LABEL_GAP_PAD : 0;
   const halves =
     size.w > 0 && size.h > 0
       ? interruptedRoundedRectStrokeHalves({
@@ -112,6 +125,7 @@ export default function MatchListLineFrame({
           inset: STROKE / 2,
           topGap,
           bottomGap: 0,
+          leftGap,
           topGapAlign: topLabelAlign,
           topGapStartInset: MATCH_LINE_FRAME_TOP_GAP_START_INSET,
         })
@@ -219,6 +233,14 @@ export default function MatchListLineFrame({
               {...pathMotion}
             />
           </svg>
+        ) : null}
+
+        {leftLabel ? (
+          <MatchPickupSideLabel
+            color={color}
+            tutorialTarget={leftLabelTutorialTarget}
+            measureRef={leftLabelRef}
+          />
         ) : null}
 
         {topLabel ? (

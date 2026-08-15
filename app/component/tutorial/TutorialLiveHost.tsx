@@ -31,7 +31,6 @@ import {
 } from "@/lib/tutorial/tutorialHorizonSubstep";
 import {
   buildHorizonFeatureSteps,
-  featuresTrackProgressLabel,
   horizonFeatureProgressLabel,
   horizonStepHost,
 } from "@/lib/tutorial/tutorialHorizonSteps";
@@ -273,10 +272,7 @@ export default function TutorialLiveHost({ page }: Props) {
     const isLast = horizonFeatureStep >= featureSteps.length - 1;
     const featureProgress =
       readTutorialLiveTrack() === "features"
-        ? featuresTrackProgressLabel(
-            p.horizonFeatureTag,
-            horizonFeatureStep + 1
-          )
+        ? null
         : horizonFeatureProgressLabel(
             progressLabelFor("horizon"),
             p.horizonFeatureTag,

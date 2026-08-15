@@ -99,13 +99,13 @@ export function buildHorizonFeatureSteps(
   ];
 }
 
+/** サブ進捗（`新機能 1/4`）は出さず、主要進捗のみ */
 export function horizonFeatureProgressLabel(
   baseProgress: string | null,
-  tag: string,
-  stepIndex: number
+  _tag: string,
+  _stepIndex: number
 ): string | null {
-  if (!baseProgress) return `${tag} ${stepIndex + 1}/${HORIZON_FEATURE_STEP_COUNT}`;
-  return `${baseProgress} · ${tag} ${stepIndex + 1}/${HORIZON_FEATURE_STEP_COUNT}`;
+  return baseProgress;
 }
 
 /** 新機能だけ: 試合 STATS のあと horizon（UNIT / キャリア） */
@@ -113,9 +113,10 @@ export function featuresTrackTotalSteps(): number {
   return HORIZON_FEATURE_STEP_COUNT + 1;
 }
 
+/** サブ進捗分数は出さない（タグのみ） */
 export function featuresTrackProgressLabel(
   tag: string,
-  stepIndex: number
+  _stepIndex: number
 ): string {
-  return `${tag} ${stepIndex + 1}/${featuresTrackTotalSteps()}`;
+  return tag;
 }

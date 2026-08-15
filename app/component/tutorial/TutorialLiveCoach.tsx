@@ -28,8 +28,6 @@ import {
   TUTORIAL_COACH_SCRIM_S,
   TUTORIAL_CYAN,
   TUTORIAL_FEATURE_ACCENT,
-  TUTORIAL_FEATURE_ACCENT_DEEP,
-  TUTORIAL_FEATURE_ACCENT_SOFT,
   TUTORIAL_FLOAT_PERIOD_S,
   TUTORIAL_FLOAT_Y_PX,
   TUTORIAL_PULSE_PERIOD_S,
@@ -42,6 +40,10 @@ import { scrollTutorialTargetIntoViewAsync } from "@/lib/tutorial/scrollTutorial
 import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
 import TutorialSlideVisual from "@/app/component/tutorial/TutorialSlideVisual";
 import TutorialRichBody from "@/app/component/tutorial/TutorialRichBody";
+import {
+  CyberSlantedTab,
+  CyberSlantedTabBar,
+} from "@/app/component/rankings/CyberSlantedTab";
 
 const CYBER_CHAMFER_CLIP =
   "polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px)";
@@ -53,6 +55,8 @@ const PAD_MATCH_CARD = 14;
 const PAD_SIDES = 10;
 /** UNIT 残高のカプセル枠 */
 const PAD_UNIT_COIN = 8;
+/** 左辺 PICK UP は文字だけを囲む */
+const PAD_PICKUP_LABEL = 5;
 
 const SCRIM_STYLE: CSSProperties = {
   /** blur はフェード中にカクつくので単色のみ */
@@ -157,7 +161,9 @@ function readRect(target: string): Rect | null {
       ? readRawRect(target, PAD_MATCH_CARD)
       : target === "profile-unit-coin"
         ? readRawRect(target, PAD_UNIT_COIN)
-        : readRawRect(target);
+        : target === "match-pickup-label"
+          ? readRawRect(target, PAD_PICKUP_LABEL)
+          : readRawRect(target);
   if (!primary) return null;
 
   if (target === "result-detail-score") {
@@ -354,8 +360,6 @@ export default function TutorialLiveCoach({
   const reduceMotion = useReducedMotion() === true;
   const isFeatureTone = accentTone === "feature";
   const accent = isFeatureTone ? TUTORIAL_FEATURE_ACCENT : TUTORIAL_CYAN;
-  const accentSoft = isFeatureTone ? TUTORIAL_FEATURE_ACCENT_SOFT : "#5CFFF8";
-  const accentDeep = isFeatureTone ? TUTORIAL_FEATURE_ACCENT_DEEP : "#00D4E8";
   const requestSkip = () => {
     if (skipConfirmTitle && skipConfirmBody) {
       setSkipConfirmOpen(true);
@@ -515,7 +519,7 @@ export default function TutorialLiveCoach({
     ? embedInCamera
       ? { ...WELCOME_CALLOUT_STYLE, position: "absolute" }
       : WELCOME_CALLOUT_STYLE
-    : allowInteractBehind
+    : allowInteractBehind || target === "match-pickup-label"
     ? {
         position: "fixed",
         left: "50%",
@@ -620,6 +624,8 @@ export default function TutorialLiveCoach({
                 className={
                   target === "profile-unit-coin"
                     ? "pointer-events-none absolute rounded-full"
+                    : target === "match-pickup-label"
+                      ? "pointer-events-none absolute rounded-md"
                     : "pointer-events-none absolute rounded-xl"
                 }
                 /** 位置は即時反映（スクロールと枠アニメがずれるのを防ぐ） */
@@ -895,47 +901,27 @@ export default function TutorialLiveCoach({
                       />
                     </WelcomeFloat>
                     <WelcomeFloat active={isWelcomeBriefing} delay={0.36} z={40}>
-                      <div className="mt-1 flex gap-2">
-                        <button
-                          type="button"
+                      <CyberSlantedTabBar fill aria-label="Tutorial skip" className="mt-1 py-1">
+                        <CyberSlantedTab
+                          label={skipConfirmStay ?? "OK"}
+                          active={false}
                           onClick={() => setSkipConfirmOpen(false)}
-                          className={cn(
-                            nameOxanium.className,
-                            "shrink-0 border border-white/20 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white/70"
-                          )}
-                          style={{
-                            clipPath: CYBER_CHAMFER_CLIP,
-                            WebkitClipPath: CYBER_CHAMFER_CLIP,
-                            boxShadow: isWelcomeBriefing
-                              ? "0 10px 22px rgba(0,0,0,0.5)"
-                              : undefined,
-                          }}
-                        >
-                          {skipConfirmStay}
-                        </button>
-                        <button
-                          type="button"
+                        />
+                        <CyberSlantedTab
+                          label={skipConfirmLeave ?? skipLabel ?? "Skip"}
+                          active
                           onClick={() => {
                             setSkipConfirmOpen(false);
                             onSkip();
                           }}
-                          className={cn(
-                            nameOxanium.className,
-                            "min-w-0 flex-1 py-2.5 text-[12px] font-black uppercase tracking-[0.12em]"
-                          )}
-                          style={{
-                            background: "rgba(248,113,113,0.92)",
-                            color: "#050508",
-                            clipPath: CYBER_CHAMFER_CLIP,
-                            WebkitClipPath: CYBER_CHAMFER_CLIP,
-                            boxShadow: isWelcomeBriefing
-                              ? "0 8px 0 #b91c1c, 0 16px 28px rgba(0,0,0,0.55)"
-                              : undefined,
+                          theme={{
+                            accent: "#f87171",
+                            activeText: "#050508",
+                            inactiveText: "#f87171",
+                            inactiveBorder: "rgba(248,113,113,0.55)",
                           }}
-                        >
-                          {skipConfirmLeave ?? skipLabel}
-                        </button>
-                      </div>
+                        />
+                      </CyberSlantedTabBar>
                     </WelcomeFloat>
                   </>
                 ) : (
@@ -984,7 +970,7 @@ export default function TutorialLiveCoach({
                       delay={isWelcomeBriefing ? 0.62 : 0.78}
                       fromY={22}
                       z={28}
-                      className={isWelcomeBriefing ? "mb-7" : undefined}
+                      className={isWelcomeBriefing ? "mb-7" : "mb-3"}
                     >
                       <TutorialRichBody
                         text={body}
@@ -1039,51 +1025,40 @@ export default function TutorialLiveCoach({
                         ) : null}
                       </div>
                     ) : onBack || (onNext && nextLabel) ? (
-                      <div className="mt-1 flex gap-2">
+                      <CyberSlantedTabBar fill aria-label="Tutorial actions" className="mt-1 py-1">
                         {onBack && backLabel ? (
-                          <button
-                            type="button"
+                          <CyberSlantedTab
+                            label={backLabel}
+                            active={!(onNext && nextLabel)}
                             onClick={onBack}
-                            className={cn(
-                              nameOxanium.className,
-                              onNext && nextLabel
-                                ? "shrink-0 border border-white/20 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white/70"
-                                : "w-full border border-white/20 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white/70"
-                            )}
-                            style={{
-                              clipPath: CYBER_CHAMFER_CLIP,
-                              WebkitClipPath: CYBER_CHAMFER_CLIP,
-                            }}
-                          >
-                            {backLabel}
-                          </button>
+                            theme={
+                              isFeatureTone
+                                ? {
+                                    accent,
+                                    inactiveText: accent,
+                                    inactiveBorder: `${accent}99`,
+                                  }
+                                : undefined
+                            }
+                          />
                         ) : null}
                         {onNext && nextLabel ? (
-                          <button
-                            type="button"
+                          <CyberSlantedTab
+                            label={nextLabel}
+                            active
                             onClick={onNext}
-                            className={cn(
-                              nameOxanium.className,
-                              "min-w-0 flex-1 py-2.5 text-[12px] font-black uppercase tracking-[0.12em]",
-                              isFeatureTone &&
-                                "py-3.5 tracking-[0.18em] text-[13px]"
-                            )}
-                            style={{
-                              background: isFeatureTone
-                                ? `linear-gradient(90deg, ${accentSoft} 0%, ${accent} 50%, ${accentDeep} 100%)`
-                                : accent,
-                              color: "#050508",
-                              clipPath: CYBER_CHAMFER_CLIP,
-                              WebkitClipPath: CYBER_CHAMFER_CLIP,
-                              boxShadow: isFeatureTone
-                                ? `0 0 22px ${accent}66`
-                                : undefined,
-                            }}
-                          >
-                            {nextLabel}
-                          </button>
+                            theme={
+                              isFeatureTone
+                                ? {
+                                    accent,
+                                    activeText: "#050508",
+                                    activeShadow: `0 0 16px ${accent}66`,
+                                  }
+                                : undefined
+                            }
+                          />
                         ) : null}
-                      </div>
+                      </CyberSlantedTabBar>
                     ) : null}
                   </>
                 )}

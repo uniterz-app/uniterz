@@ -81,6 +81,7 @@ type Props = {
     | "unitEarnOverlayAnimPreview"
     | "unitEarnOverlayFontPreview"
     | "uniterzLogoTypePreview"
+    | "uniterzProBadgePreview"
     | "resultCardDesignPreview"
     | "resultBadgeDesignPreview"
     | "resultStreakTagDesignPreview"
@@ -284,6 +285,7 @@ export default function ProfileSideMenuModal({
       | "unitEarnOverlayAnimPreview"
       | "unitEarnOverlayFontPreview"
       | "uniterzLogoTypePreview"
+    | "uniterzProBadgePreview"
       | "resultCardDesignPreview"
       | "resultBadgeDesignPreview"
       | "resultStreakTagDesignPreview"
@@ -728,6 +730,16 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           UNITERZ Logo
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="shield-star-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("uniterzProBadgePreview")
+                          }
+                        >
+                          UNITERZ PRO バッジ
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="card-bulleted-outline"

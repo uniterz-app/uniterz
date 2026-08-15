@@ -31,7 +31,6 @@ import {
 } from "./tutorialLiveTrackNative";
 import {
   buildHorizonFeatureSteps,
-  featuresTrackProgressLabel,
   horizonFeatureProgressLabel,
   horizonStepHost,
 } from "../../../../../lib/tutorial/tutorialHorizonSteps";
@@ -342,17 +341,13 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     const stepIndex = Math.min(horizonFeatureStep, featureSteps.length - 1);
     const step = featureSteps[stepIndex]!;
     const isLast = horizonFeatureStep >= featureSteps.length - 1;
-    const featureProgress =
+    const featureProgress = horizonFeatureProgressLabel(
       getTutorialLiveTrackNative() === "features"
-        ? featuresTrackProgressLabel(
-            p.horizonFeatureTag,
-            horizonFeatureStep + 1
-          )
-        : horizonFeatureProgressLabel(
-            progressLabelFor("horizon"),
-            p.horizonFeatureTag,
-            horizonFeatureStep
-          );
+        ? null
+        : progressLabelFor("horizon"),
+      p.horizonFeatureTag,
+      horizonFeatureStep
+    );
 
     return (
       <TutorialLiveCoachNative

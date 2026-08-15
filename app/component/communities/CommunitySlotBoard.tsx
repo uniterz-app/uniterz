@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Clipboard, Plus } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { jp } from "@/lib/fonts";
@@ -17,10 +17,10 @@ import {
 import { headerImageObjectPosition } from "@/lib/communities/headerImagePosition";
 import CommunityMemberAvatarStack from "@/app/component/communities/CommunityMemberAvatarStack";
 import {
+  CommunityCrtSectionLabel,
   communityCrtMono,
   communityCrtPanelStyle,
 } from "@/app/component/communities/CommunityCrtTheme";
-import LineFrameCard from "@/app/component/common/LineFrameCard";
 import { preserveScrollOnInputFocus } from "@/lib/dom/preserveScrollOnInputFocus";
 import SquadBattleGroupEntry from "@/app/component/squads/SquadBattleGroupEntry";
 
@@ -132,35 +132,6 @@ type Props = {
     slotCount: (used: number, max: number) => string;
   };
 };
-
-function lineFrameTitle(label: string) {
-  return label.replace(/^>+\s*/, "").trim();
-}
-
-function SlotSectionFrame({
-  title,
-  suffix,
-  children,
-}: {
-  title: string;
-  suffix?: string;
-  children: ReactNode;
-}) {
-  return (
-    <LineFrameCard title={lineFrameTitle(title)}>
-      <div className="px-2.5 pb-2.5 pt-1.5">
-        {suffix ? (
-          <div className="mb-2 flex justify-end">
-            <span className="font-mono text-[11px] tabular-nums tracking-[0.16em] text-white/40">
-              {suffix}
-            </span>
-          </div>
-        ) : null}
-        {children}
-      </div>
-    </LineFrameCard>
-  );
-}
 
 function slotAccent(isOwner: boolean) {
   return isOwner
@@ -806,10 +777,12 @@ export default function CommunitySlotBoard({
         ) : null}
 
         <section>
-          <SlotSectionFrame
-            title={labels.hostSection}
+          <CommunityCrtSectionLabel
+            large
             suffix={labels.slotCount(ownedGroups.length, limits.maxOwned)}
           >
+            {labels.hostSection}
+          </CommunityCrtSectionLabel>
           {loading ? (
             <LoadingSlots count={limits.maxOwned} sizing={sizing} isWeb={isWeb} />
           ) : (
@@ -848,17 +821,18 @@ export default function CommunitySlotBoard({
               ))}
             </ul>
           )}
-          </SlotSectionFrame>
         </section>
 
-        <section className="mt-4">
-          <SlotSectionFrame
-            title={labels.memberSection}
+        <section className="mt-6">
+          <CommunityCrtSectionLabel
+            large
             suffix={labels.slotCount(
               limits.membershipCount - ownedGroups.length,
               Math.max(0, limits.maxMemberships - ownedGroups.length)
             )}
           >
+            {labels.memberSection}
+          </CommunityCrtSectionLabel>
           {loading ? (
             <LoadingSlots
               count={Math.min(4, limits.maxMemberships)}
@@ -920,7 +894,6 @@ export default function CommunitySlotBoard({
               ))}
             </ul>
           )}
-          </SlotSectionFrame>
         </section>
     </div>
   );

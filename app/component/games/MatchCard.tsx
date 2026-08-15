@@ -73,8 +73,12 @@ import {
 import MatchCardOverlayMarketBar from "@/app/component/games/MatchCardOverlayMarketBar";
 import MatchListCyberDecor from "@/app/component/games/MatchListCyberDecor";
 import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
+import MatchPickupSideLabel from "@/app/component/games/MatchPickupSideLabel";
 import PredictOverlayCyberDecor from "@/app/component/predict/PredictOverlayCyberDecor";
-import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
+import {
+  matchLineFramePaint,
+  resultOutcomeLineFramePaint,
+} from "@/lib/games/matchListLineFrame";
 import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
   PREDICT_OVERLAY_CYBER_GRID_CLASS,
@@ -217,6 +221,10 @@ homeRecord?: {
   language?: Language;
   /** NBA: 最多得点者予想の候補選手 */
   topScorerCandidates?: import("@/lib/nba/topScorer").NbaTopScorerCandidate[] | null;
+  /** NBA ピックアップ試合。左辺に `PICK UP` を出す */
+  isPickup?: boolean;
+  /** 先頭カードの左辺 `PICK UP` をチュートリアル測定する */
+  tutorialPickupLabelTarget?: string;
 };
 
 
@@ -427,6 +435,8 @@ function MatchCardView({
   onRequestPredictEdit,
   onClosePredictOverlay,
   language,
+  isPickup = false,
+  tutorialPickupLabelTarget,
 }: MatchCardProps & { language: Language }) {
   const router = useRouter();
 
@@ -1214,7 +1224,7 @@ setNavigating(true);
   // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
   const shellClassName = [
     "group/card relative text-white",
-    useOverlayLineFrame ? "overflow-visible" : "overflow-hidden",
+    useOverlayLineFrame || isPickup ? "overflow-visible" : "overflow-hidden",
     inPredictOverlay && isMobile
       ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
       : mobileDense
@@ -1347,6 +1357,13 @@ const card = (
 
       {glassShellClassName ? (
         <div className={glassShellClassName} aria-hidden />
+      ) : null}
+
+      {isPickup && !useOverlayLineFrame ? (
+        <MatchPickupSideLabel
+          color={matchLineFramePaint({ pickup: true, predicted: Boolean(isPredicted) }).color}
+          tutorialTarget={tutorialPickupLabelTarget}
+        />
       ) : null}
 
       {showMergedResult && !useOverlayLineFrame && isResultHitFrameBadge(resultBadge) ? (
@@ -2276,8 +2293,11 @@ const card = (
     <MatchListLineFrame
       topLabel={roundLabel}
       predicted={Boolean(isPredicted && !showMergedResult)}
+      pickup={isPickup}
+      leftLabel={isPickup ? "PICK UP" : undefined}
       paint={resultOutcomeLineFramePaint(showMergedResult ? resultBadge : null)}
       topLabelTutorialTarget="predict-round"
+      leftLabelTutorialTarget={tutorialPickupLabelTarget}
     >
       {card}
     </MatchListLineFrame>

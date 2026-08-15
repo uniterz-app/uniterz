@@ -4,7 +4,6 @@
 
 import type { TutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
 import {
-  TUTORIAL_GAMES_SUBSTEPS,
   isTutorialGamesSubstep,
   type TutorialGamesSubstep,
 } from "@/lib/tutorial/tutorialGamesSubsteps";
@@ -62,13 +61,11 @@ export function formatTutorialLiveProgress(
     .replace("{total}", String(idx.total));
 }
 
-/** 試合タブ内: `2 / 7 · 2/3` */
+/** 試合タブ内サブステップも主要進捗のみ（`2 / 7`）。` · 2/3` は出さない */
 export function formatTutorialGamesSubstepProgress(
   template: string,
   phase: TutorialGamesSubstep
 ): string | null {
-  const base = formatTutorialLiveProgress(template, "games");
-  if (!base || !isTutorialGamesSubstep(phase)) return base;
-  const idx = TUTORIAL_GAMES_SUBSTEPS.indexOf(phase);
-  return `${base} · ${idx + 1}/${TUTORIAL_GAMES_SUBSTEPS.length}`;
+  if (!isTutorialGamesSubstep(phase)) return null;
+  return formatTutorialLiveProgress(template, "games");
 }

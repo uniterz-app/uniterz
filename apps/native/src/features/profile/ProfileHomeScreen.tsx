@@ -1453,6 +1453,13 @@ export default function ProfileHomeScreen({
               cursor = parent as { getParent?: () => unknown };
             }
             const nav = tabNav ?? tabNavigation;
+            /**
+             * armTutorialTabTransitionQuiet の購読反映を1フレーム待つ。
+             * 同ティックで navigate するとスライド付きのまま welcome が載る。
+             */
+            await new Promise<void>((resolve) => {
+              requestAnimationFrame(() => resolve());
+            });
             nav.navigate({
               name: "GamesTab",
               params: {
@@ -1493,6 +1500,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("UnitEarnOverlayFontPreview");
         else if (page === "uniterzLogoTypePreview" && __DEV__)
           navigation.navigate("UniterzLogoTypePreview");
+        else if (page === "uniterzProBadgePreview" && __DEV__)
+          navigation.navigate("UniterzProBadgePreview");
         else if (page === "resultCardDesignPreview" && __DEV__)
           navigation.navigate("ResultCardDesignPreview");
         else if (page === "resultBadgeDesignPreview" && __DEV__)

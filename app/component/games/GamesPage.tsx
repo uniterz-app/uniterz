@@ -83,7 +83,6 @@ import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
 import { writeTutorialLiveTrack, readTutorialLiveTrack } from "@/lib/tutorial/tutorialLiveTrack";
 import { writeTutorialHorizonSubstep } from "@/lib/tutorial/tutorialHorizonSubstep";
 import { writeTutorialWelcomeHandoff, tutorialProfileHref } from "@/lib/tutorial/tutorialWelcomeHandoff";
-import { featuresTrackProgressLabel } from "@/lib/tutorial/tutorialHorizonSteps";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
 import {
   fetchNextGameDayAfterLocalDay,
@@ -1173,7 +1172,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 const dest = welcomeFlyDestRef.current;
                 if (dest === "features") {
                   writeTutorialLiveTrack("features");
-                  setTutorialPhaseAndStore("gamesStats");
+                  setTutorialPhaseAndStore("gamesPickup");
                   return;
                 }
                 writeTutorialLiveTrack("full");
@@ -1206,7 +1205,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               }}
               onAltNext={() => {
                 writeTutorialLiveTrack("features");
-                setTutorialPhaseAndStore("gamesStats");
+                setTutorialPhaseAndStore("gamesPickup");
               }}
             />
           ) : null
@@ -1378,6 +1377,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           emptyHint={scheduleEmptyHint}
           listShellIntro={listShellIntroLocked}
           tutorialMarkFirstCard={tutorialActive}
+          tutorialRegisterPickupLabel={tutorialPhase === "gamesPickup"}
         />
       </div>
     </motion.div>
@@ -1422,32 +1422,31 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           target={
             tutorialPhase === "gamesStats"
               ? "games-stats-edge"
-              : tutorialPhase === "games" && filteredGames.length > 0
-                ? "match-card"
-                : null
+              : tutorialPhase === "gamesPickup" && filteredGames.length > 0
+                ? "match-pickup-label"
+                : tutorialPhase === "games" && filteredGames.length > 0
+                  ? "match-card"
+                  : null
           }
           visual={
             tutorialPhase === "gamesStats"
               ? null
-              : tutorialPhase === "gamesPickup" || filteredGames.length === 0
-                ? "matchCard"
-                : null
+              : tutorialPhase === "gamesPickup"
+                ? filteredGames.length === 0
+                  ? "matchCard"
+                  : null
+                : filteredGames.length === 0
+                  ? "matchCard"
+                  : null
           }
-          progressLabel={
-            readTutorialLiveTrack() === "features" &&
-            tutorialPhase === "gamesStats"
-              ? featuresTrackProgressLabel(
-                  m.tutorial.practice.horizonFeatureTag,
-                  0
-                )
-              : formatTutorialGamesSubstepProgress(
-                  m.tutorial.practice.progressLabel,
-                  tutorialPhase
-                )
-          }
+          progressLabel={formatTutorialGamesSubstepProgress(
+            m.tutorial.practice.progressLabel,
+            tutorialPhase
+          )}
           accentTone={
-            readTutorialLiveTrack() === "features" &&
-            tutorialPhase === "gamesStats"
+            tutorialPhase === "gamesPickup" ||
+            (readTutorialLiveTrack() === "features" &&
+              tutorialPhase === "gamesStats")
               ? "feature"
               : "cyan"
           }
@@ -1456,7 +1455,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           onBack={() => {
             if (
               readTutorialLiveTrack() === "features" &&
-              tutorialPhase === "gamesStats"
+              tutorialPhase === "gamesPickup"
             ) {
               setTutorialPhaseAndStore("welcome");
               return;

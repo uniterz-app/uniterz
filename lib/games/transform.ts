@@ -15,6 +15,7 @@ import {
 } from "@/lib/games/playoffSeriesUi";
 import { resolvePkScore } from "@/lib/games/pkScore";
 import { normalizeNbaTopScorerCandidates } from "@/lib/nba/topScorer";
+import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
 
 /** プレーオフ：Firestore に seriesStanding が無いときの既定（0-0） */
 const PLAYOFF_SERIES_STANDING_FALLBACK = { homeWins: 0, awayWins: 0 } as const;
@@ -375,6 +376,8 @@ export type GameDoc = {
   advancingTeamId?: string | null;
   /** PK 戦の本数（規定・延長スコアとは別） */
   pkScore?: { home?: number; away?: number } | null;
+  isPickup?: unknown;
+  pickupWeekKey?: unknown;
 };
 
 /** MatchCardProps へ整形 */
@@ -520,5 +523,6 @@ export function toMatchCardProps(
             (raw as { topScorerCandidates?: unknown })?.topScorerCandidates
           )
         : undefined,
+    isPickup: isNbaPickupGame(raw),
   };
 }

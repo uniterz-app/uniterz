@@ -11,6 +11,7 @@ import { writeTutorialLivePhaseNative } from "./tutorialLivePhaseNative";
 import { clearTutorialLivePickNative } from "./tutorialLivePickNative";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
+import { armTutorialTabTransitionQuiet } from "../../../../../lib/tutorial/tutorialTabTransitionQuiet";
 
 export const TUTORIAL_RESTART_TOKEN_KEY = "uniterz:tutorialLiveRestartAt:v1";
 
@@ -69,6 +70,8 @@ export async function consumeTutorialRestartTokenNative(): Promise<
 export async function prepareTutorialRestartNative(
   uid: string | null
 ): Promise<number> {
+  /** ナビ前にタブスライドを止め、welcome 合成の黒画面を避ける */
+  armTutorialTabTransitionQuiet();
   prefetchRankingsLogoGlb();
   await clearAppTutorialSeenNative(uid);
   await clearTutorialLivePickNative();

@@ -24,8 +24,8 @@ import {
   headerImageNativeMarginTop,
   sanitizeHeaderImagePositionY,
 } from "../../../../../lib/communities/headerImagePosition";
+import { CommunityCrtSectionLabelNative } from "./CommunityCrtPartsNative";
 import TutorialTargetNative from "../tutorial/TutorialTargetNative";
-import LineFrameCardNative from "../ui/LineFrameCardNative";
 import CommunityMemberAvatarStackNative from "./CommunityMemberAvatarStackNative";
 import type { CommunityListGroup, CommunityListLimits } from "./communityApiNative";
 import { prefetchCommunityHeaderImageNative } from "./prefetchCommunityHeaderImageNative";
@@ -410,11 +410,10 @@ export default function CommunitySlotBoardNative({
         <SquadBattleGroupEntryNative language={language} onOpen={onOpenSquadBattle} />
       ) : null}
 
-      <LineFrameCardNative title={labels.hostSection.replace(/^>+\s*/, "").trim()}>
-        <View style={styles.sectionInner}>
-          <Text style={styles.slotCount}>
-            {labels.slotCount(ownedGroups.length, limits.maxOwned)}
-          </Text>
+      <View style={styles.section}>
+        <CommunityCrtSectionLabelNative suffix={labels.slotCount(ownedGroups.length, limits.maxOwned)}>
+          {labels.hostSection}
+        </CommunityCrtSectionLabelNative>
         {loading ? (
           <LoadingSlotsNative count={limits.maxOwned} />
         ) : (
@@ -441,19 +440,17 @@ export default function CommunitySlotBoardNative({
             )}
           </View>
         )}
-        </View>
-      </LineFrameCardNative>
+      </View>
 
-      <LineFrameCardNative
-        title={labels.memberSection.replace(/^>+\s*/, "").trim()}
-      >
-        <View style={styles.sectionInner}>
-          <Text style={styles.slotCount}>
-            {labels.slotCount(
-              limits.membershipCount - ownedGroups.length,
-              Math.max(0, limits.maxMemberships - ownedGroups.length)
-            )}
-          </Text>
+      <View style={[styles.section, styles.sectionGap]}>
+        <CommunityCrtSectionLabelNative
+          suffix={labels.slotCount(
+            limits.membershipCount - ownedGroups.length,
+            Math.max(0, limits.maxMemberships - ownedGroups.length)
+          )}
+        >
+          {labels.memberSection}
+        </CommunityCrtSectionLabelNative>
         {loading ? (
           <LoadingSlotsNative count={Math.min(4, limits.maxMemberships)} />
         ) : memberSlots.length === 0 ? (
@@ -497,8 +494,7 @@ export default function CommunitySlotBoardNative({
             )}
           </View>
         )}
-        </View>
-      </LineFrameCardNative>
+      </View>
     </View>
   );
 }
@@ -508,18 +504,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 8,
   },
-  sectionInner: {
-    paddingHorizontal: 10,
-    paddingTop: 6,
-    paddingBottom: 10,
-  },
-  slotCount: {
-    alignSelf: "flex-end",
-    marginBottom: 8,
-    fontSize: 11,
-    fontFamily: communityMono,
-    letterSpacing: 1.6,
-    color: "rgba(255,255,255,0.4)",
+  section: {},
+  sectionGap: {
+    marginTop: 24,
   },
   slotList: {
     gap: 8,

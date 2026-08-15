@@ -645,8 +645,8 @@ export const rankingsUiStyles = StyleSheet.create({
   },
   /** Free — ProCyberBadgeNative premium 相当の invisible spacer */
   proBadgeSpacer: {
-    width: 40,
-    height: 22,
+    width: 44,
+    height: 18,
     flexShrink: 0,
     opacity: 0,
   },

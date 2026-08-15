@@ -29,13 +29,14 @@ import Animated, {
 } from "react-native-reanimated";
 import { fonts } from "../../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
-import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+  type CyberSlantedTabThemeNative,
+} from "../rankings/CyberSlantedTabNative";
 import {
   TUTORIAL_CYAN,
   TUTORIAL_FEATURE_ACCENT,
-  TUTORIAL_FEATURE_ACCENT_DEEP,
-  TUTORIAL_FEATURE_ACCENT_SOFT,
   TUTORIAL_WELCOME_CTA_CYAN_EXTRUDE,
   TUTORIAL_WELCOME_CTA_CYAN_FACE,
   TUTORIAL_WELCOME_CTA_MAGENTA_EXTRUDE,
@@ -299,8 +300,6 @@ export default function TutorialLiveCoachNative({
   onWelcomeFlyStartRef.current = onWelcomeFlyStart;
   const isFeatureTone = accentTone === "feature";
   const accent = isFeatureTone ? TUTORIAL_FEATURE_ACCENT : TUTORIAL_CYAN;
-  const accentSoft = isFeatureTone ? TUTORIAL_FEATURE_ACCENT_SOFT : "#5CFFF8";
-  const accentDeep = isFeatureTone ? TUTORIAL_FEATURE_ACCENT_DEEP : "#00D4E8";
   const requestSkip = () => {
     if (skipConfirmTitle && skipConfirmBody) {
       setSkipConfirmOpen(true);
@@ -323,6 +322,7 @@ export default function TutorialLiveCoachNative({
   const cardTapTarget =
     !!onTargetPress &&
     (target === "match-card" || target === "result-card");
+  const isMatchPickupLabelTarget = target === "match-pickup-label";
   const isResultDetailTarget =
     target === "result-detail-score" ||
     target === "result-detail-stats" ||
@@ -340,6 +340,7 @@ export default function TutorialLiveCoachNative({
    * ソフト背景（ぼかしなし）:
    * - allowInteractBehind
    * - 試合・リザルト一覧カード
+   * - ピックアップ左辺ラベル
    * welcome は全面ディム（soft にしない）
    */
   const softBackdrop =
@@ -348,7 +349,10 @@ export default function TutorialLiveCoachNative({
       (target === "match-card" || target === "result-card"));
   /** カード誘導・UNIT コインはコールアウトを下固定し、穴／自己紹介と重ねない */
   const calloutPinnedBottom =
-    allowInteractBehind || cardTapTarget || target === "profile-unit-coin";
+    allowInteractBehind ||
+    cardTapTarget ||
+    isMatchPickupLabelTarget ||
+    target === "profile-unit-coin";
   /** welcome / 詳細は中央。他は穴の近く */
   const preferCenterCallout =
     isWelcomeBriefing ||
@@ -495,7 +499,9 @@ export default function TutorialLiveCoachNative({
 
     /** カード枠合わせ中にユーザーがスクロールすると枠がズレる */
     const lockListScroll =
-      target === "result-card" || target === "match-card";
+      target === "result-card" ||
+      target === "match-card" ||
+      target === "match-pickup-label";
     if (lockListScroll) {
       setTutorialScrollEnabledNative(false);
     } else {
@@ -526,7 +532,9 @@ export default function TutorialLiveCoachNative({
          * クロール中に下固定モーダルだけ先に出ると「枠の動きと合わない」。
          */
         const snapCard =
-          target === "result-card" || target === "match-card";
+          target === "result-card" ||
+          target === "match-card" ||
+          target === "match-pickup-label";
         if (target === "result-card") {
           await scrollTutorialTargetIntoViewNative(target, {
             animated: false,
@@ -572,6 +580,16 @@ export default function TutorialLiveCoachNative({
       if (cancelled || !r) {
         if (!cancelled) commitHole(null);
         return;
+      }
+      /** 左辺 PICK UP の文字だけを囲む（カード内側の空きには広げない） */
+      if (target === "match-pickup-label") {
+        const pad = 5;
+        r = {
+          x: r.x - pad,
+          y: r.y - pad,
+          width: r.width + pad * 2,
+          height: r.height + pad * 2,
+        };
       }
       await new Promise<void>((resolve) => {
         const node = rootRef.current;
@@ -705,7 +723,7 @@ export default function TutorialLiveCoachNative({
 
   /** 新カード面は直角枠。穴パッドはカード枠線に重ねるため 0 */
   const pad =
-    target === "result-card" || isResultDetailTarget
+    target === "result-card" || isResultDetailTarget || isMatchPickupLabelTarget
       ? 0
       : target === "match-card"
         ? 2
@@ -752,6 +770,7 @@ export default function TutorialLiveCoachNative({
           styles.holeRing,
           { borderColor: accent, shadowColor: accent },
           roundPill ? styles.holeRingPill : null,
+          isMatchPickupLabelTarget ? styles.holeRingPickup : null,
           {
             top,
             left,
@@ -891,13 +910,11 @@ export default function TutorialLiveCoachNative({
           style={[StyleSheet.absoluteFillObject, scrimStyle]}
           pointerEvents={welcomeFlying ? "none" : "auto"}
         >
-          <BlurView
-            intensity={48}
-            tint="dark"
-            {...nativeBlurViewExtraProps()}
-            style={StyleSheet.absoluteFillObject}
-          />
+          {/**
+           * BlurView はタブ scene の Animated と重なると iOS で黒画面になるため使わない。
+           */}
           <View pointerEvents="none" style={styles.welcomeBlurDim} />
+          <View pointerEvents="none" style={styles.welcomeEmbedScrim} />
         </Animated.View>
       ) : isWelcomeBriefing ? null : (
         /** 穴未測でも全面ディム（半透明モーダル＋プロフィール文字の透けを防ぐ） */
@@ -1012,31 +1029,27 @@ export default function TutorialLiveCoachNative({
                     />
                   </WelcomeFloatNative>
                   <WelcomeFloatNative active={isWelcomeBriefing} delayMs={360}>
-                    <View style={styles.ctaRow}>
-                      <Pressable
-                        style={[styles.backBtn, styles.backBtnAlone]}
+                    <CyberSlantedTabBarNative fill style={styles.ctaSegBar}>
+                      <CyberSlantedTabNative
+                        label={skipConfirmStay ?? "OK"}
+                        active={false}
                         onPress={() => setSkipConfirmOpen(false)}
-                      >
-                        <Text style={styles.backText}>
-                          {skipConfirmStay ?? "OK"}
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        style={[
-                          styles.cta,
-                          styles.ctaSkipConfirm,
-                          isWelcomeBriefing ? styles.ctaSkipConfirmFloat : null,
-                        ]}
+                      />
+                      <CyberSlantedTabNative
+                        label={skipConfirmLeave ?? skipLabel ?? "Skip"}
+                        active
                         onPress={() => {
                           setSkipConfirmOpen(false);
                           onSkip();
                         }}
-                      >
-                        <Text style={styles.ctaText}>
-                          {skipConfirmLeave ?? skipLabel}
-                        </Text>
-                      </Pressable>
-                    </View>
+                        theme={{
+                          accent: "#f87171",
+                          activeText: "#050508",
+                          inactiveText: "#f87171",
+                          inactiveBorder: "rgba(248,113,113,0.55)",
+                        }}
+                      />
+                    </CyberSlantedTabBarNative>
                   </WelcomeFloatNative>
                 </>
               ) : (
@@ -1057,21 +1070,21 @@ export default function TutorialLiveCoachNative({
                     </WelcomeFloatNative>
                   ) : null}
                   {!isWelcomeBriefing ? (
-                  <WelcomeFloatNative
-                    active={isWelcomeBriefing}
-                    delayMs={620}
-                    fromY={26}
-                    style={isWelcomeBriefing ? styles.welcomeLayerTitle : undefined}
-                  >
-                    <Text
-                      style={[
-                        styles.title,
-                        isWelcomeBriefing ? styles.titleWelcome : null,
-                      ]}
+                    <WelcomeFloatNative
+                      active={isWelcomeBriefing}
+                      delayMs={620}
+                      fromY={26}
+                      style={isWelcomeBriefing ? styles.welcomeLayerTitle : undefined}
                     >
-                      {title}
-                    </Text>
-                  </WelcomeFloatNative>
+                      <Text
+                        style={[
+                          styles.title,
+                          isWelcomeBriefing ? styles.titleWelcome : null,
+                        ]}
+                      >
+                        {title}
+                      </Text>
+                    </WelcomeFloatNative>
                   ) : null}
                   <WelcomeFloatNative
                     active={isWelcomeBriefing}
@@ -1110,45 +1123,40 @@ export default function TutorialLiveCoachNative({
                       ) : null}
                     </View>
                   ) : onBack || (onNext && nextLabel) ? (
-                    <View style={styles.ctaRow}>
+                    <CyberSlantedTabBarNative fill style={styles.ctaSegBar}>
                       {onBack && backLabel ? (
-                        <Pressable
-                          style={[
-                            styles.backBtn,
-                            !(onNext && nextLabel) && styles.backBtnAlone,
-                          ]}
+                        <CyberSlantedTabNative
+                          label={backLabel}
+                          active={!(onNext && nextLabel)}
                           onPress={onBack}
-                        >
-                          <Text style={styles.backText}>{backLabel}</Text>
-                        </Pressable>
+                          theme={
+                            isFeatureTone
+                              ? ({
+                                  accent,
+                                  inactiveText: accent,
+                                  inactiveBorder: `${accent}99`,
+                                } satisfies CyberSlantedTabThemeNative)
+                              : undefined
+                          }
+                        />
                       ) : null}
                       {onNext && nextLabel ? (
-                        <Pressable
-                          style={[
-                            styles.cta,
-                            isFeatureTone ? styles.ctaWelcome : null,
-                          ]}
+                        <CyberSlantedTabNative
+                          label={nextLabel}
+                          active
                           onPress={onNext}
-                        >
-                          {isFeatureTone ? (
-                            <LinearGradient
-                              colors={[accentSoft, accent, accentDeep]}
-                              start={{ x: 0, y: 0.5 }}
-                              end={{ x: 1, y: 0.5 }}
-                              style={StyleSheet.absoluteFillObject}
-                            />
-                          ) : null}
-                          <Text
-                            style={[
-                              styles.ctaText,
-                              isFeatureTone ? styles.ctaTextWelcome : null,
-                            ]}
-                          >
-                            {nextLabel}
-                          </Text>
-                        </Pressable>
+                          theme={
+                            isFeatureTone
+                              ? ({
+                                  accent,
+                                  activeText: "#050508",
+                                  activeShadow: `0 0 16px ${accent}66`,
+                                } satisfies CyberSlantedTabThemeNative)
+                              : undefined
+                          }
+                        />
                       ) : null}
-                    </View>
+                    </CyberSlantedTabBarNative>
                   ) : null}
                 </>
               )}
@@ -1303,6 +1311,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.55,
     shadowRadius: 10,
   },
+  holeRingPickup: {
+    borderRadius: 6,
+    borderWidth: 2.5,
+    shadowOpacity: 0.85,
+    shadowRadius: 12,
+  },
   holeRingPill: {
     shadowOpacity: 0.7,
     shadowRadius: 14,
@@ -1318,6 +1332,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     overflow: "visible",
   },
+  /**
+   * 通常ステップ: シアン板枠モーダル。
+   * welcome だけ枠なしフローティング。
+   */
   calloutChrome: {
     position: "relative",
     overflow: "hidden",
@@ -1436,6 +1454,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginTop: 4,
+  },
+  /** 予想ツール等と同じ CyberSlanted 選択セグメント */
+  ctaSegBar: {
+    marginTop: 4,
+    paddingVertical: 2,
   },
   ctaCol: {
     flexDirection: "column",

@@ -28,6 +28,10 @@ import {
   subscribeTutorialWelcomeBrandHidden,
 } from "../../../../lib/tutorial/tutorialWelcomeChrome";
 import {
+  getTutorialTabTransitionQuiet,
+  subscribeTutorialTabTransitionQuiet,
+} from "../../../../lib/tutorial/tutorialTabTransitionQuiet";
+import {
   GamesStackScreen,
   ResultStackScreen,
   RankingsStackScreen,
@@ -59,6 +63,11 @@ export default function MainTabNavigator() {
     getTutorialWelcomeBrandHidden,
     () => false
   );
+  const tabTransitionQuiet = useSyncExternalStore(
+    subscribeTutorialTabTransitionQuiet,
+    getTutorialTabTransitionQuiet,
+    () => false
+  );
 
   const syncWordmarkFromTabState = useCallback(
     (state: NavigationState | PartialState<NavigationState> | undefined) => {
@@ -67,16 +76,19 @@ export default function MainTabNavigator() {
     []
   );
 
-  /** animation を付けず transitionSpec のみ → hasAnimation が true（none だと遷移中に非表示になる） */
+  /**
+   * animation を付けず transitionSpec のみ → hasAnimation が true（none だと遷移中に非表示になる）。
+   * チュートリアル再開中は none（タブスライド × welcome 合成で iOS 黒画面になるため）。
+   */
   const tabTransitionOptions = useMemo(
     () =>
-      reduceMotion
+      reduceMotion || tabTransitionQuiet
         ? { animation: "none" as const }
         : {
             sceneStyleInterpolator: forTabPagerSlide,
             transitionSpec: tabPagerTransitionSpec,
           },
-    [reduceMotion]
+    [reduceMotion, tabTransitionQuiet]
   );
 
   useEffect(() => {

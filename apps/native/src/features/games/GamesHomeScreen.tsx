@@ -126,7 +126,6 @@ import {
 } from "../tutorial/tutorialLiveTrackNative";
 import { setTutorialWelcomeHandoffNative } from "../tutorial/tutorialWelcomeHandoffNative";
 import { formatTutorialGamesSubstepProgress } from "../../../../../lib/tutorial/tutorialLiveProgress";
-import { featuresTrackProgressLabel } from "../../../../../lib/tutorial/tutorialHorizonSteps";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
 import {
@@ -729,6 +728,10 @@ export default function GamesHomeScreen({
     setSelectedGame(null);
     setExpandScoreFormWhenEditing(false);
     setPredictSpectatorStartedNoPost(false);
+    setWelcomeWorldFly(false);
+    setWelcomeFlyDest(null);
+    setWelcomeHandoff(null);
+    setTutorialWelcomeHandoffNative(null);
     setTutorialPhase("welcome");
     void writeTutorialLivePhaseNative("welcome");
     setTutorialLiveTrackNative(null);
@@ -2015,7 +2018,7 @@ export default function GamesHomeScreen({
                 const dest = welcomeFlyDestRef.current;
                 if (dest === "features") {
                   setTutorialLiveTrackNative("features");
-                  setTutorialPhaseAndStore("gamesStats");
+                  setTutorialPhaseAndStore("gamesPickup");
                   return;
                 }
                 setTutorialLiveTrackNative("full");
@@ -2048,7 +2051,7 @@ export default function GamesHomeScreen({
               }}
               onAltNext={() => {
                 setTutorialLiveTrackNative("features");
-                setTutorialPhaseAndStore("gamesStats");
+                setTutorialPhaseAndStore("gamesPickup");
               }}
             />
           ) : null
@@ -2214,6 +2217,7 @@ export default function GamesHomeScreen({
             tutorialRegisterMatchCard={
               tutorialPhase === "tapCard" || tutorialPhase === "welcome"
             }
+            tutorialRegisterPickupLabel={tutorialPhase === "gamesPickup"}
             shellVariant="lineFrame"
             pickupMark="left"
           />
@@ -2336,34 +2340,35 @@ export default function GamesHomeScreen({
         target={
           tutorialPhase === "gamesStats"
             ? "games-stats-edge"
-            : tutorialPhase === "games" && filteredGames.length > 0
-              ? "match-card"
-              : null
+            : tutorialPhase === "gamesPickup" && filteredGames.length > 0
+              ? "match-pickup-label"
+              : tutorialPhase === "games" && filteredGames.length > 0
+                ? "match-card"
+                : null
         }
         visual={
           tutorialPhase === "gamesStats"
             ? null
-            : tutorialPhase === "gamesPickup" || filteredGames.length === 0
-              ? "matchCard"
-              : null
+            : tutorialPhase === "gamesPickup"
+              ? filteredGames.length === 0
+                ? "matchCard"
+                : null
+              : filteredGames.length === 0
+                ? "matchCard"
+                : null
         }
         progressLabel={
           !isTutorialGamesSubstep(tutorialPhase)
             ? null
-            : getTutorialLiveTrackNative() === "features" &&
-                tutorialPhase === "gamesStats"
-              ? featuresTrackProgressLabel(
-                  tutorialCopy.tutorial.practice.horizonFeatureTag,
-                  0
-                )
-              : formatTutorialGamesSubstepProgress(
-                  tutorialCopy.tutorial.practice.progressLabel,
-                  tutorialPhase
-                )
+            : formatTutorialGamesSubstepProgress(
+                tutorialCopy.tutorial.practice.progressLabel,
+                tutorialPhase
+              )
         }
         accentTone={
-          getTutorialLiveTrackNative() === "features" &&
-          tutorialPhase === "gamesStats"
+          tutorialPhase === "gamesPickup" ||
+          (getTutorialLiveTrackNative() === "features" &&
+            tutorialPhase === "gamesStats")
             ? "feature"
             : "cyan"
         }
@@ -2373,7 +2378,7 @@ export default function GamesHomeScreen({
           if (!isTutorialGamesSubstep(tutorialPhase)) return;
           if (
             getTutorialLiveTrackNative() === "features" &&
-            tutorialPhase === "gamesStats"
+            tutorialPhase === "gamesPickup"
           ) {
             setTutorialPhaseAndStore("welcome");
             return;

@@ -5,12 +5,13 @@
  * Native に translateZ はない。奥行きは
  * perspective + scale(0.8) + rotateX(6deg) で Web の Z -520 を近似する。
  * transform は worldCage の中だけに閉じ、CTA はケージの外に置く。
+ *
+ * 注意: 暗幕に BlurView を載せない。
+ * 親タブ scene の RN Animated（translateX）と重なると iOS で真っ黒になる。
  */
 import { useEffect, useRef, type ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
-import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import Animated, {
   Easing,
   cancelAnimation,
@@ -25,7 +26,6 @@ import {
   TUTORIAL_WELCOME_FLY_MS,
   TUTORIAL_WELCOME_MODAL_PASS_SCALE,
   TUTORIAL_WELCOME_PASS_FADE_AT,
-  TUTORIAL_WELCOME_WORLD_BLUR_NATIVE,
   TUTORIAL_WELCOME_WORLD_REST_RX_DEG,
   TUTORIAL_WELCOME_WORLD_REST_SCALE,
 } from "../../../../../lib/tutorial/tutorialMotion";
@@ -65,11 +65,13 @@ export default function TutorialWelcomeWorldCameraNative({
       return;
     }
     if (flying) {
+      /** 通常時（welcome 外）の flying=true では着地コールバックを呼ばない */
+      const shouldNotifyFlyComplete = Boolean(onFlyCompleteRef.current);
       p.value = withTiming(
         1,
         { duration: TUTORIAL_WELCOME_FLY_MS, easing: FLY_EASE },
         (done) => {
-          if (done) runOnJS(finishFly)();
+          if (done && shouldNotifyFlyComplete) runOnJS(finishFly)();
         }
       );
       return;
@@ -124,12 +126,11 @@ export default function TutorialWelcomeWorldCameraNative({
         pointerEvents={flying ? "none" : "auto"}
         style={[styles.scrimSlot, reduceMotion ? null : scrimStyle]}
       >
-        <BlurView
-          intensity={TUTORIAL_WELCOME_WORLD_BLUR_NATIVE}
-          tint="dark"
-          {...nativeBlurViewExtraProps()}
-          style={styles.dofBlur}
-        />
+        {/**
+         * BlurView 禁止（タブ scene の Animated と合成すると iOS 黒画面）。
+         * グラデ＋ベタで DOF 相当の暗さを出す。
+         */}
+        <View pointerEvents="none" style={styles.dofFill} />
         <LinearGradient
           pointerEvents="none"
           colors={[
@@ -185,8 +186,9 @@ const styles = StyleSheet.create({
   scrim: {
     ...StyleSheet.absoluteFillObject,
   },
-  dofBlur: {
+  dofFill: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(2, 6, 12, 0.55)",
   },
   scrimSlot: {
     ...StyleSheet.absoluteFillObject,

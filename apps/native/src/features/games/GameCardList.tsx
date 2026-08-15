@@ -13,6 +13,7 @@ import MatchListCyberClipNative from "./MatchListCyberClipNative";
 import MatchListCyberDecorNative from "./MatchListCyberDecorNative";
 import MatchListLineFrameNative from "./MatchListLineFrameNative";
 import { isNbaPickupGame } from "../../../../../lib/nba/isPickupGame";
+import { resolveTutorialPickupGameId } from "../../../../../lib/tutorial/tutorialPickupGame";
 import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
@@ -87,6 +88,8 @@ type GameCardListProps = {
   tutorialPulseLabel?: string;
   /** `match-card` 測定を登録（ライブチュートリアル） */
   tutorialRegisterMatchCard?: boolean;
+  /** 実ピックアップ試合の左辺 `PICK UP` を `match-pickup-label` として登録 */
+  tutorialRegisterPickupLabel?: boolean;
   /** `lineFrame` = 塗りなし・上下ラベルで途切れた線枠。本番一覧の既定 */
   shellVariant?: "cyber" | "lineFrame";
   /** ピックアップ表記。本番は左辺 `PICK UP` */
@@ -99,6 +102,8 @@ type GameCardListRowProps = GameCardListProps & {
   rowIndex: number;
   enteringAnimationEnabled: boolean;
   entranceVariant: GameCardEntranceVariant;
+  /** 案内する実ピックアップ試合 */
+  tutorialPickupGameId?: string | null;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -129,6 +134,8 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
     tutorialPulseFirstCard = false,
     tutorialPulseLabel,
     tutorialRegisterMatchCard = false,
+    tutorialRegisterPickupLabel = false,
+    tutorialPickupGameId = null,
     shellVariant = "lineFrame",
     pickupMark = "left",
   } = props;
@@ -180,6 +187,11 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
   const isPickup = isNbaPickupGame(game);
   const frameLabels = resolveLineFrameLabels(roundLabel, isPickup, pickupMark);
+  const registerPickupLabel =
+    tutorialRegisterPickupLabel &&
+    isPickup &&
+    Boolean(tutorialPickupGameId) &&
+    String(game.id ?? "") === tutorialPickupGameId;
   const isKnockout = false;
   const seriesLabel = resolveSeriesLabel(game);
   const seriesPair = resolveSeriesPair(game);
@@ -258,6 +270,10 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
           leftLabel={frameLabels.left}
           bottomLabel={ctaDisplayLabel}
           strokeEnd={ent.frameStrokeEnd}
+          leftLabelTutorialTarget={
+            registerPickupLabel ? "match-pickup-label" : null
+          }
+          leftLabelPulse={registerPickupLabel}
         >
           <View style={styles.lineFrameInterior}>
             <Animated.View style={ent.teamsGroupStyle}>
@@ -609,6 +625,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
 
 export default function GameCardList(props: GameCardListProps) {
   const { games, t, styles, enteringAnimationEnabled = true, entranceVariant = "full" } = props;
+  const tutorialPickupGameId = resolveTutorialPickupGameId(games);
 
   return (
     <View style={styles.listArea}>
@@ -632,6 +649,7 @@ export default function GameCardList(props: GameCardListProps) {
               entranceVariant={entranceVariant}
               game={game}
               rowIndex={idx}
+              tutorialPickupGameId={tutorialPickupGameId}
             />
           );
         })}

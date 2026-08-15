@@ -27,6 +27,7 @@ import {
   GAMES_LIST_REST_CARDS_DELAY_SEC,
 } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
+import { resolveTutorialPickupGameId } from "@/lib/tutorial/tutorialPickupGame";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
 import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
@@ -152,6 +153,7 @@ export default function ScheduleList({
   extraPeerGamesForSeriesInference = null,
   /** 先頭試合カードにチュートリアル用 data 属性を付与 */
   tutorialMarkFirstCard = false,
+  tutorialRegisterPickupLabel = false,
   /** 新規予想投稿成功時（親のチュートリアル完了など） */
   onPredictionPosted = null,
   tutorialModeGameId = null,
@@ -169,6 +171,8 @@ export default function ScheduleList({
   listShellIntro?: "page" | "daySwitch";
   extraPeerGamesForSeriesInference?: GameItemRaw[] | null;
   tutorialMarkFirstCard?: boolean;
+  /** 実ピックアップ試合の左辺 `PICK UP` を `match-pickup-label` として登録 */
+  tutorialRegisterPickupLabel?: boolean;
   onPredictionPosted?: (() => void) | null;
   /** チュートリアル試合 ID — この試合の予想は API をスキップ */
   tutorialModeGameId?: string | null;
@@ -256,6 +260,11 @@ export default function ScheduleList({
   const gameIds = useMemo(() => {
     return propsList.map((p) => String(p.id));
   }, [propsList]);
+
+  const tutorialPickupGameId = useMemo(
+    () => resolveTutorialPickupGameId(propsList),
+    [propsList]
+  );
 
   /** 当日オーバーレイ内で、すでに予想済みの試合（次試合モーダルでスキップ） */
   const overlayPredictedGameIds = useMemo(
@@ -1020,6 +1029,14 @@ export default function ScheduleList({
     const card = (
       <MatchCard
         {...props}
+        isPickup={Boolean(props.isPickup)}
+        tutorialPickupLabelTarget={
+          tutorialRegisterPickupLabel &&
+          Boolean(props.isPickup) &&
+          String(props.id) === tutorialPickupGameId
+            ? "match-pickup-label"
+            : undefined
+        }
         language={language}
         className={
           hideListCardForOverlay ? "invisible select-none" : undefined

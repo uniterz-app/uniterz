@@ -118,9 +118,13 @@ export const TUTORIAL_WELCOME_LAND_HOLD_S = 0.48;
 export const TUTORIAL_WELCOME_LAND_HOLD_MS = Math.round(
   TUTORIAL_WELCOME_LAND_HOLD_S * 1000
 );
-/** 遠景（試合ページ）の被写界深度。fly で 0 に戻す。文字は読めずカードの形だけ残す */
-export const TUTORIAL_WELCOME_WORLD_BLUR_PX = 48;
-export const TUTORIAL_WELCOME_WORLD_BLUR_NATIVE = 90;
+/**
+ * 遠景（試合ページ）の被写界深度。fly で 0 に戻す。
+ * カードの形は残し、文字は読めない程度。強すぎると色のシミになる。
+ */
+export const TUTORIAL_WELCOME_WORLD_BLUR_PX = 18;
+/** Native `filter: blur`（pt）。BlurView intensity ではない */
+export const TUTORIAL_WELCOME_WORLD_BLUR_NATIVE = 14;
 /** STATS 端タブ：試合ページ着地後のフェード（急に出さない） */
 export const TUTORIAL_STATS_EDGE_FADE_S = 1.45;
 export const TUTORIAL_STATS_EDGE_FADE_MS = Math.round(
