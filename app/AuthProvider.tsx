@@ -36,7 +36,9 @@ export default function AuthProvider({
 
     const load = async () => {
       const data = await getUserDocDataCached(fUser.uid);
-      const h = data?.handle || data?.slug || null;
+      const raw = data?.handle ?? data?.slug;
+      const h =
+        typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : null;
       setHandle(h);
     };
 
