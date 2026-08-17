@@ -6,6 +6,11 @@
   overflow: visible;
 }
 
+/* Native `rectShellWrapWithDetail` — タブのはみ出し分をヒット領域に含める */
+.wrapWithDetail {
+  padding-right: 17px;
+}
+
 .detailSpine {
   position: absolute;
   top: 80px;
