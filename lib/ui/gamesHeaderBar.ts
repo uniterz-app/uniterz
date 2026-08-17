@@ -81,7 +81,7 @@ export function gamesHeaderTitleCenterClass(isMobile: boolean): string {
 
 export function gamesHeaderMobileSideLeftClass(): string {
   return [
-    "z-20 flex shrink-0 items-center",
+    "relative z-40 flex shrink-0 items-center pointer-events-auto touch-manipulation",
     GAMES_HEADER_CONTROL_H,
   ].join(" ");
 }
@@ -118,7 +118,7 @@ export function gamesHeaderRowClass(isMobile: boolean): string {
 
 export function gamesHeaderDesktopSideLeftClass(): string {
   return [
-    "absolute left-2 top-0 z-20 flex items-start",
+    "absolute left-2 top-0 z-40 flex items-start pointer-events-auto touch-manipulation",
     GAMES_HEADER_CONTROL_H_LG,
   ].join(" ");
 }

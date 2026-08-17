@@ -43,6 +43,7 @@ import ResultCard, {
 import {
   buildTutorialFinalMatchCardProps,
   buildTutorialPointsDistribution,
+  buildTutorialResultDetailOptions,
   buildTutorialResultMarket,
   TUTORIAL_RESULT_POST_ID,
 } from "@/lib/tutorial/tutorialNbaUi";
@@ -53,9 +54,10 @@ import {
 const ResultDetail = dynamic(
   () => import("@/app/component/result/ResultDetail")
 );
-const MobileResultDetail = dynamic(
-  () => import("@/app/component/result/mobile/MobileResultDetail")
-);
+import ResultDetailBody from "@/app/component/result/ResultDetailBody";
+import { buildResultDetailViewModel } from "@/lib/result/buildResultDetailView";
+import type { ResultDetailViewModel } from "@/lib/result/buildResultDetailView";
+import { resolveTopScorerMarketView } from "@/lib/result/buildTopScorerMarketEmbed";
 import {
   ResultDayPipeGroup,
   type ResultDayPointsHeader,
@@ -316,6 +318,8 @@ export default function ResultListWithOverlay({
   const [pointsDistributionLoading, setPointsDistributionLoading] =
     useState(false);
   const [topEntries, setTopEntries] = useState<GamePointsTopEntryV1[]>([]);
+  const [resultDetailView, setResultDetailView] =
+    useState<ResultDetailViewModel | null>(null);
   const [filters, setFilters] = useState<ResultListFilters>(() => ({
     ...DEFAULT_RESULT_LIST_FILTERS,
   }));
@@ -705,6 +709,7 @@ export default function ResultListWithOverlay({
     setPointsDistribution(null);
     setPointsDistributionLoading(false);
     setTopEntries([]);
+    setResultDetailView(null);
   }, []);
 
   const dismissPostFromList = useCallback(
@@ -786,6 +791,7 @@ export default function ResultListWithOverlay({
       setPointsDistribution(null);
       setPointsDistributionLoading(false);
       setTopEntries([]);
+      setResultDetailView(null);
     },
     []
   );
@@ -848,6 +854,7 @@ export default function ResultListWithOverlay({
     const post = selectedPost;
     if (!post?.gameId) {
       setDetailGame(null);
+      setResultDetailView(null);
       setPointsDistributionLoading(false);
       setPointsDistribution(null);
       setTopEntries([]);
@@ -864,6 +871,16 @@ export default function ResultListWithOverlay({
       setMarket(buildTutorialResultMarket());
       setPointsDistribution(buildTutorialPointsDistribution());
       setTopEntries([]);
+      const tutorialDetail = buildTutorialResultDetailOptions(6);
+      setResultDetailView(
+        buildResultDetailViewModel(post as Record<string, unknown>, {
+          market: tutorialDetail.market,
+          pointsSummary: tutorialDetail.pointsSummary,
+          leadingScorers: tutorialDetail.leadingScorers,
+          topScorerCandidates: tutorialDetail.topScorerCandidates,
+          topScorerMarket: null,
+        })
+      );
       setPointsDistributionLoading(false);
       return;
     }
@@ -880,6 +897,7 @@ export default function ResultListWithOverlay({
         if (!exists || !d) {
           if (!cancelled) {
             setDetailGame(null);
+            setResultDetailView(null);
             setMarket(null);
             setPointsDistribution(null);
             setTopEntries([]);
@@ -894,28 +912,52 @@ export default function ResultListWithOverlay({
         const marketRaw = d.market as Record<string, unknown> | undefined;
         const pdRaw = rawPointsDistributionFromGameDoc(d);
         const parsedDistribution = parseGamePointsDistributionV1(pdRaw);
+        const pointsSummary = resolveGamePointsSummary(
+          d as Record<string, unknown>
+        );
         if (!cancelled) {
           setDetailGame(game);
-          if (marketRaw) {
-            setMarket({
-              homeRate: Number(marketRaw.homeRate ?? 0),
-              awayRate: Number(marketRaw.awayRate ?? 0),
-              drawRate:
-                marketRaw.drawRate == null ? undefined : Number(marketRaw.drawRate),
-              total: marketRaw.total == null ? undefined : Number(marketRaw.total),
-            });
-          }
+          const marketInput = marketRaw
+            ? {
+                homeRate: Number(marketRaw.homeRate ?? 0),
+                awayRate: Number(marketRaw.awayRate ?? 0),
+                drawRate:
+                  marketRaw.drawRate == null
+                    ? undefined
+                    : Number(marketRaw.drawRate),
+                total:
+                  marketRaw.total == null ? undefined : Number(marketRaw.total),
+              }
+            : null;
+          if (marketInput) setMarket(marketInput);
           setPointsDistribution(parsedDistribution);
           const rawTop = resolveResultTopEntries({
-            pointsSummary: resolveGamePointsSummary(d as Record<string, unknown>),
+            pointsSummary,
             pointsDistribution: parsedDistribution,
           });
           const topWithCountry = await enrichTopEntriesCountryFromUsers(db, rawTop);
-          if (!cancelled) setTopEntries(topWithCountry);
+          if (!cancelled) {
+            setTopEntries(topWithCountry);
+            const topScorerMarket = resolveTopScorerMarketView(
+              d as Record<string, unknown>,
+              post as Record<string, unknown>
+            );
+            setResultDetailView(
+              buildResultDetailViewModel(post as Record<string, unknown>, {
+                market: marketInput,
+                pointsSummary,
+                leadingScorers: (d as Record<string, unknown>).leadingScorers,
+                topScorerCandidates: (d as Record<string, unknown>).topScorerCandidates,
+                topScorerMarket,
+                viewer: viewerUid ? { uid: viewerUid } : null,
+              })
+            );
+          }
         }
       } catch {
         if (!cancelled) {
           setDetailGame(null);
+          setResultDetailView(null);
           setMarket(null);
           setPointsDistribution(null);
           setTopEntries([]);
@@ -928,7 +970,7 @@ export default function ResultListWithOverlay({
     return () => {
       cancelled = true;
     };
-  }, [openPostId, selectedPost, isMobile, language]);
+  }, [openPostId, selectedPost, isMobile, language, viewerUid]);
 
   /** チュートリアルから詳細の開閉を依頼 */
   useEffect(() => {
@@ -2022,69 +2064,70 @@ export default function ResultListWithOverlay({
                         ].join(" ")}
                       >
                         {detailGame && displayDetailResultPost ? (
-                          <MatchCard
-                            {...detailGame}
-                            {...overlayMatchCardRecords}
-                            language={language}
-                            resultPost={displayDetailResultPost}
-                            resultRatingBarsImmediate
-                            myPostId={selectedPost.id}
-                            userPredictionWinner={
-                              selectedPost.prediction?.winner ?? null
-                            }
-                            onClosePredictOverlay={close}
-                            sharedLayoutId={undefined}
-                            sharedTransitionBaseKey={undefined}
-                            disableCardMotion
-                            hideActions
-                            inPredictOverlay
-                            overlayUnifiedForm
-                            showMarketBias
-                            marketBias={detailGame.marketBias}
-                            className={
-                              isMobile
-                                ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
-                                : undefined
-                            }
-                          />
+                          isMobile ? (
+                            resultDetailView ? (
+                              <ResultDetailBody
+                                language={language}
+                                view={resultDetailView}
+                                gamesRoutePrefix={gamesRoutePrefix}
+                              />
+                            ) : (
+                              <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
+                                <CandleChartLoader
+                                  label={m.results.loadingMatch}
+                                />
+                              </div>
+                            )
+                          ) : (
+                            <>
+                              <MatchCard
+                                {...detailGame}
+                                {...overlayMatchCardRecords}
+                                language={language}
+                                resultPost={displayDetailResultPost}
+                                resultRatingBarsImmediate
+                                myPostId={selectedPost.id}
+                                userPredictionWinner={
+                                  selectedPost.prediction?.winner ?? null
+                                }
+                                onClosePredictOverlay={close}
+                                sharedLayoutId={undefined}
+                                sharedTransitionBaseKey={undefined}
+                                disableCardMotion
+                                hideActions
+                                inPredictOverlay
+                                overlayUnifiedForm
+                                showMarketBias
+                                marketBias={detailGame.marketBias}
+                                className={
+                                  isMobile
+                                    ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
+                                    : undefined
+                                }
+                              />
+                              <ResultDetail
+                                post={selectedPost}
+                                market={market ?? undefined}
+                                pointsDistribution={pointsDistribution}
+                                pointsDistributionLoading={
+                                  pointsDistributionLoading
+                                }
+                                topEntries={topEntries}
+                                language={language}
+                                inOverlay
+                                hideMatchHeader
+                                hideMarketCard
+                                viewerUid={viewerUid}
+                                gamesRoutePrefix={gamesRoutePrefix}
+                                cardClockMs={listNowTick}
+                                onRequestPredictEdit={requestPredictEditFromCard}
+                              />
+                            </>
+                          )
                         ) : (
                           <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
                             <CandleChartLoader label={m.results.loadingMatch} />
                           </div>
-                        )}
-
-                        {isMobile ? (
-                          <MobileResultDetail
-                            post={selectedPost}
-                            market={market ?? undefined}
-                            pointsDistribution={pointsDistribution}
-                            pointsDistributionLoading={pointsDistributionLoading}
-                            topEntries={topEntries}
-                            language={language}
-                            inOverlay
-                            hideMatchHeader
-                            hideMarketCard
-                            viewerUid={viewerUid}
-                            gamesRoutePrefix={gamesRoutePrefix}
-                            cardClockMs={listNowTick}
-                            onRequestPredictEdit={requestPredictEditFromCard}
-                          />
-                        ) : (
-                          <ResultDetail
-                            post={selectedPost}
-                            market={market ?? undefined}
-                            pointsDistribution={pointsDistribution}
-                            pointsDistributionLoading={pointsDistributionLoading}
-                            topEntries={topEntries}
-                            language={language}
-                            inOverlay
-                            hideMatchHeader
-                            hideMarketCard
-                            viewerUid={viewerUid}
-                            gamesRoutePrefix={gamesRoutePrefix}
-                            cardClockMs={listNowTick}
-                            onRequestPredictEdit={requestPredictEditFromCard}
-                          />
                         )}
                       </div>
                     </div>

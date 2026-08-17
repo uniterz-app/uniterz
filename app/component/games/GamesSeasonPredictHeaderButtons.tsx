@@ -60,7 +60,7 @@ function HeaderIconButton({
       title={label}
       className={[
         nameOxanium.className,
-        "relative flex aspect-square items-center justify-center overflow-hidden rounded-[5px] border border-yellow-400/40 bg-[rgba(8,11,18,0.92)] shadow-[0_0_10px_rgba(250,204,21,0.14)] transition hover:border-yellow-300/60 active:opacity-85",
+        "relative z-[1] flex aspect-square items-center justify-center overflow-hidden rounded-[5px] border border-yellow-400/40 bg-[rgba(8,11,18,0.92)] shadow-[0_0_10px_rgba(250,204,21,0.14)] transition hover:border-yellow-300/60 active:opacity-85 touch-manipulation cursor-pointer",
         heightClass,
       ].join(" ")}
     >
