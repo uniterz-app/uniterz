@@ -1,9 +1,9 @@
-// app/m/(with-nav)/games/[id]/predict/page.tsx
 "use client";
 
 import dynamic from "next/dynamic";
 import { Suspense, useEffect, useLayoutEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -32,6 +32,7 @@ const PredictionForm = dynamic(
 type GameProps = ReturnType<typeof toMatchCardProps>;
 
 export default function Page() {
+  const router = useRouter();
   // ---- Hooks（順序固定）----
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -126,13 +127,22 @@ export default function Page() {
   };
 
   return (
-    <Suspense fallback={<PredictRouteShell />}>
-      <PredictionForm
-        dense
-        game={gameProps}
-        user={user}
-        predictEditTriggerNonce={predictEditTriggerNonce}
+    <>
+      <Suspense fallback={<PredictRouteShell />}>
+        <PredictionForm
+          dense
+          game={gameProps}
+          user={user}
+          predictEditTriggerNonce={predictEditTriggerNonce}
+        />
+      </Suspense>
+      <ProfileMenuEdgeHandle
+        onOpen={() => router.back()}
+        label="BACK"
+        tone="back"
+        ariaLabel={language === "en" ? "Back" : "戻る"}
+        overlay
       />
-    </Suspense>
+    </>
   );
 }

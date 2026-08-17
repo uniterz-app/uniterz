@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import MobileResultDetail from "@/app/component/result/mobile/MobileResultDetail";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -29,6 +30,7 @@ type DetailState =
 
 export default function MobileResultPostPage() {
   const params = useParams();
+  const router = useRouter();
   const postId = params?.postId as string;
 
   const [uid, setUid] = useState<string | null>(null);
@@ -93,7 +95,7 @@ export default function MobileResultPostPage() {
   }
 
   return (
-    <div className="px-4 py-4">
+    <div className="relative px-4 py-4">
       <MobileResultDetail
         post={state.post}
         market={state.market ?? undefined}
@@ -102,6 +104,13 @@ export default function MobileResultPostPage() {
         language={language}
         viewerUid={uid}
         gamesRoutePrefix="/mobile"
+      />
+      <ProfileMenuEdgeHandle
+        onOpen={() => router.back()}
+        label="BACK"
+        tone="back"
+        ariaLabel={language === "en" ? "Back" : "戻る"}
+        overlay
       />
     </div>
   );

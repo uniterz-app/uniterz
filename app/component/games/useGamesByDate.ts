@@ -9,6 +9,7 @@ import {
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
 import { fetchGamesWindowShared } from "@/lib/games/fetchGamesWindowShared";
+import { toDateOrNull } from "@/lib/games/transform";
 
 const GAMES_BY_DAY_CACHE_TTL_MS = 5 * 60 * 1000;
 const GAMES_BY_MONTH_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -31,20 +32,8 @@ export function gameRowStartDateKeyInTimeZone(
   game: { startAtJst?: unknown },
   timeZone: string,
 ): string | null {
-  const t = game?.startAtJst;
-  if (!t) return null;
-  let d: Date | null = null;
-  if (t instanceof Date) d = t;
-  else if (typeof (t as { toDate?: () => Date }).toDate === "function")
-    d = (t as { toDate: () => Date }).toDate();
-  else if (
-    typeof t === "object" &&
-    t !== null &&
-    typeof (t as { __ts?: unknown }).__ts === "number"
-  ) {
-    d = new Date((t as { __ts: number }).__ts);
-  }
-  if (!d || Number.isNaN(+d)) return null;
+  const d = toDateOrNull(game?.startAtJst);
+  if (!d) return null;
   return toDateKeyInTimeZone(d, timeZone);
 }
 
