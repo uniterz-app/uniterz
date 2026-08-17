@@ -9,8 +9,8 @@ import NbaSeasonStandingsViewPanel from "@/app/component/predict/season/NbaSeaso
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { fetchProfileSeasonAwards } from "@/lib/api/fetchSeasonAwards";
 import { fetchProfileSeasonStandings } from "@/lib/api/fetchSeasonStandings";
-import { nameBebas } from "@/lib/fonts";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import type {
   NbaAwardCandidate,
@@ -117,21 +117,13 @@ export default function ProfileAwardsTab({
     return (
       <div
         className={[
-          CYBER_GLASS_PANEL,
-          "mt-4 space-y-3 p-6 text-center",
+          "mt-4 space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-7 text-center",
           className,
         ]
           .filter(Boolean)
           .join(" ")}
       >
-        <p
-          className={[
-            nameBebas.className,
-            "text-[clamp(1.75rem,9vw,2.7rem)] leading-none tracking-[0.22em] text-white/55",
-          ].join(" ")}
-        >
-          NO DATA
-        </p>
+        <CyberNoDataLabel variant="awards" />
         <p className="text-sm text-white/45">
           {isJa
             ? "提出済みのシーズン予想がありません"

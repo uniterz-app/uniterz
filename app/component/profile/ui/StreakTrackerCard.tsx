@@ -14,9 +14,9 @@ import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope
 import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { jp, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
+import { jp, resultStatsMetricNumClass } from "@/lib/fonts";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import ProfileStreakPlotGrid from "@/app/component/profile/ui/ProfileStreakPlotGrid";
 import { useCountUp } from "@/lib/hooks/useCountUp";
@@ -378,15 +378,7 @@ export default function StreakTrackerCard({
                 role="status"
                 className={`grid place-items-center px-4 text-center ${S.loadingEmptyH}`}
               >
-                <p
-                  className={[
-                    nameBebas.className,
-                    "text-center text-[clamp(1.1rem,3.5vw,1.65rem)] leading-none tracking-[0.18em]",
-                  ].join(" ")}
-                  style={cyberNoDataLabelStyle}
-                >
-                  NO DATA
-                </p>
+                <CyberNoDataLabel variant="chart" />
                 <p className="mt-2 max-w-[240px] text-center text-[10px] text-white/45 sm:text-xs">
                   {emptyHint}
                 </p>

@@ -29,6 +29,8 @@ export type GamesStackParamList = {
         openMenu?: boolean;
         /** DEV「チュートリアル再開」— 変更のたび welcome を強制 */
         restartTutorialAt?: number;
+        /** チーム詳細から予想モーダル復帰時に STATS 等タブを開く */
+        openPredictNbaToolsTab?: "insight" | "injuries" | "stats" | "roster";
       }
     | undefined;
   GamePredict: { gameId: string };
@@ -47,7 +49,16 @@ export type GamesStackParamList = {
   /** @deprecated LeagueStats tab=player へ */
   LeaguePlayerStats: undefined;
   /** Team Stats からのチーム詳細（モック） */
-  TeamDetailPreview: { teamId?: string } | undefined;
+  TeamDetailPreview:
+    | {
+        teamId?: string;
+        /** 予想オーバーレイから開いた → goBack でモーダル再表示 */
+        returnToPredictOverlay?: boolean;
+        predictToolsTab?: "insight" | "injuries" | "stats" | "roster";
+        /** @deprecated returnToPredictOverlay を優先 */
+        returnToPredictGameId?: string;
+      }
+    | undefined;
   /** Player Stats からの選手詳細（モック） */
   PlayerDetailPreview: { playerId?: string } | undefined;
 };

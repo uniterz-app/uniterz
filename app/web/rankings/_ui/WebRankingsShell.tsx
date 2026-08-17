@@ -48,9 +48,8 @@ import {
   isRankingsCategoryParam,
 } from "@/lib/navigation/rankingsProfileFrom";
 import { t } from "@/lib/i18n/t";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
-import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
+import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs";
 import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import { PRO_LEAGUE_TAB_THEME } from "@/lib/rankings/proLeagueAtmosphere";
@@ -517,21 +516,9 @@ export default function WebRankingsShell() {
         )}
 
         {openProLocked ? null : rankingHasNoEntries ? (
-          <div
-            role="status"
-            className="flex min-h-[min(65dvh,520px)] items-center justify-center px-4 text-center"
-          >
-            <p
-              className={[
-                nameBebas.className,
-                "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
-                nbaBoard === "open" ? "rankings-pro-league-no-data" : "",
-              ].join(" ")}
-              style={nbaBoard === "open" ? undefined : cyberNoDataLabelStyle}
-            >
-              NO DATA
-            </p>
-          </div>
+          <CyberNoDataPage
+            variant={nbaBoard === "open" ? "rankingsPro" : "rankings"}
+          />
         ) : listContentReady ? (
           <AnimatePresence mode="wait">
             <motion.div key={pageKey} className="relative">

@@ -239,7 +239,6 @@ export default function MatchListLineFrame({
 
         {halves ? (
           <svg
-            key={`${Math.round(size.w)}-${Math.round(size.h)}-${Math.round(topGap)}-${Math.round(bottomGap)}`}
             className="pointer-events-none absolute inset-0 z-[2] overflow-visible"
             width={size.w}
             height={size.h}

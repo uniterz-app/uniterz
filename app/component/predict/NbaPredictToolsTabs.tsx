@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import PredictProBriefPanel from "@/app/component/predict/PredictProBriefPanel";
 import NbaInjuryReportPanel from "@/app/component/predict/NbaInjuryReportPanel";
 import NbaTeamStatsPanel from "@/app/component/predict/NbaTeamStatsPanel";
@@ -35,6 +35,10 @@ type Props = {
   injuryReport?: NbaInjuryReport | null;
   teamStats?: NbaTeamStatsBundle | null;
   roster?: NbaRosterReport | null;
+  /** 予想入力から STATS → チーム詳細へ行ったあと戻れるようにする */
+  fromPredictGameId?: string;
+  /** Games オーバーレイ vs /predict 専用ルート */
+  predictReturnMode?: "overlay" | "route";
   className?: string;
 };
 
@@ -62,11 +66,26 @@ export default function NbaPredictToolsTabs({
   injuryReport = null,
   teamStats = null,
   roster = null,
+  fromPredictGameId,
+  predictReturnMode = "route",
   className = "",
 }: Props) {
   const m = t(language).predict;
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
   const router = useRouter();
+
+  useEffect(() => {
+    const pt = searchParams.get("predictTools");
+    if (
+      pt === "insight" ||
+      pt === "injuries" ||
+      pt === "stats" ||
+      pt === "roster"
+    ) {
+      setTab(pt);
+    }
+  }, [searchParams]);
   const selectTab = (next: NbaPredictToolsTab) => {
     setTab((cur) => (cur === next ? null : next));
   };
@@ -148,6 +167,8 @@ export default function NbaPredictToolsTabs({
               data={resolvedStats}
               isPro={isPro}
               language={language}
+              fromPredictGameId={fromPredictGameId}
+              predictReturnMode={predictReturnMode}
             />
           ) : (
             <PendingPanel text={m.panelDataPending} />

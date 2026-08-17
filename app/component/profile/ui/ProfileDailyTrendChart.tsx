@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { Language } from "@/lib/i18n/language";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import { nameOxanium } from "@/lib/fonts";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
@@ -84,14 +84,7 @@ export default function ProfileDailyTrendChart({
               </div>
             </div>
             <div className="grid min-h-44 place-items-center px-3">
-              <p
-                className={[
-                  nameOxanium.className,
-                  "text-center text-[22px] font-bold leading-none tracking-[0.12em] text-white/35",
-                ].join(" ")}
-              >
-                NO DATA
-              </p>
+              <CyberNoDataLabel variant="chart" />
               <p className="mt-2.5 max-w-[260px] text-center text-[11px] leading-snug text-white/42">
                 {emptyHint}
               </p>

@@ -171,6 +171,10 @@ export function MyRankCardNative({
     });
   }, [canShare, sharing, handleShare, onShareStateChange, freeTier]);
 
+  if (loading || statsPending) {
+    return null;
+  }
+
   if (freeTier) {
     const listRank = rank != null && rank >= 1 ? rank : 99;
     return (
@@ -182,27 +186,21 @@ export function MyRankCardNative({
           drawKey={cardResetKey}
         >
           <View style={styles.myRankFreeBody}>
-            {loading || statsPending || rank == null ? (
-              <View style={styles.myRankFreeLoading}>
-                <Text style={styles.myRankFreeLoadingText}>···</Text>
-              </View>
-            ) : (
-              <CyberRankingListRowNative
-                rank={listRank}
-                displayName={displayName.trim() || "?"}
-                photoURL={photoURL}
-                metric={metric}
-                counted={value}
-                posts={posts}
-                avgRow={avgRow}
-                language={language}
-                isPro={false}
-                rankDeltaPlaces={null}
-                hideAccentBar
-                rankOverline={t.yourRank}
-                plainWhiteScore
-              />
-            )}
+            <CyberRankingListRowNative
+              rank={listRank}
+              displayName={displayName.trim() || "?"}
+              photoURL={photoURL}
+              metric={metric}
+              counted={value}
+              posts={posts}
+              avgRow={avgRow}
+              language={language}
+              isPro={false}
+              rankDeltaPlaces={null}
+              hideAccentBar
+              rankOverline={t.yourRank}
+              plainWhiteScore
+            />
           </View>
         </MyRankCardFrameNative>
       </View>
@@ -221,11 +219,6 @@ export function MyRankCardNative({
           >
             {/* 上段: リスト行と同じ配置 / 下段: Pro 専用 */}
             <View style={styles.myRankProStack}>
-              {loading || statsPending ? (
-                <View style={styles.myRankFreeLoading}>
-                  <Text style={styles.myRankFreeLoadingText}>···</Text>
-                </View>
-              ) : (
                 <CyberRankingListRowNative
                   rank={rank != null && rank >= 1 ? rank : 99}
                   displayName={displayName.trim() || "?"}
@@ -250,14 +243,13 @@ export function MyRankCardNative({
                   rankMuted={!(rank != null && rank >= 1)}
                   plainWhiteScore={!(rank != null && rank >= 1)}
                 />
-              )}
 
               {showRankingProgress ? (
                 <View style={styles.myRankProProgressBand}>
                   <MyRankRankingProgressNative
                     points={progressPoints}
                     maxSnapshots={progressSnapshotLimit}
-                    loading={loading || rankProgressLoading}
+                    loading={rankProgressLoading}
                     language={language === "en" ? "en" : "ja"}
                     emptyHint={t.rankingProgressNoData}
                     numbersOnly
