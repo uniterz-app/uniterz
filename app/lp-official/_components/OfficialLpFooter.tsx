@@ -12,8 +12,8 @@ export default function OfficialLpFooter() {
           <a href={officialSite.privacyHref}>プライバシーポリシー</a>
           <a href={officialSite.tokushohoHref}>特定商取引法に基づく表記</a>
           <a href={officialSite.electronicNoticeHref}>電子公告</a>
-          <a href="#company">Company</a>
-          <a href="#contact">Contact</a>
+          <a href={officialSite.companyHref}>運営会社</a>
+          <a href="/lp#contact">お問い合わせ</a>
         </nav>
 
         <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-[#8b97ad]">

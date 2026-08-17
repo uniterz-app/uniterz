@@ -1,6 +1,6 @@
 /**
  * 公式 LP の表示コピーと会社情報。
- * 法人名・所在地などはここだけ直せば Company / Footer / JSON-LD に反映される。
+ * 法人名・所在地などはここだけ直せば運営会社ページ / Footer / JSON-LD に反映される。
  *
  * 法務表現は弁護士レビュー（適法に実装可能、との結論）の範囲に限定する。
  * 法人情報の未確定項目は「準備中」のまま公開する。
@@ -28,6 +28,7 @@ export const officialSite = {
   termsHref: "/mobile/terms",
   privacyHref: "/mobile/privacy",
   tokushohoHref: "/lp-official/tokushoho",
+  companyHref: "/lp-official/company",
   electronicNoticeHref: "/web/electronic-notice",
   appStore: {
     status: "comingSoon" as const,
@@ -43,7 +44,6 @@ export const officialSite = {
     { id: "how", label: "How It Works" },
     { id: "pro", label: "Pro" },
     { id: "faq", label: "FAQ" },
-    { id: "company", label: "Company" },
     { id: "contact", label: "Contact" },
   ],
   company: {
@@ -454,6 +454,7 @@ export const officialLegal = {
     { label: "プライバシーポリシー", href: "/mobile/privacy" },
     { label: "特定商取引法に基づく表記", href: "/lp-official/tokushoho" },
     { label: "電子公告", href: "/web/electronic-notice" },
+    { label: "運営会社", href: "/lp-official/company" },
   ],
 } as const;
 

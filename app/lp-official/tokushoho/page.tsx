@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { officialSite, officialTokushoho } from "@/lib/lp/officialSiteContent";
 import { TOKUSHOHO_UPDATED_AT } from "@/lib/legal/tokushohoCopy";
 import OfficialLpLogo from "../_components/OfficialLpLogo";
+import OfficialLpBackTab from "../_components/OfficialLpBackTab";
 import "../official-lp.css";
 
 export const metadata: Metadata = {
@@ -20,11 +21,9 @@ export default function TokushohoPage() {
           <a href="/lp" className="olp-logo">
             <OfficialLpLogo />
           </a>
-          <a href="/lp#contact" className="olp-btn olp-btn-ghost">
-            Contact
-          </a>
         </div>
       </header>
+      <OfficialLpBackTab />
       <main className="olp-section">
         <div className="olp-wrap">
           <p className="olp-h2-en olp-metric">Legal Notice</p>
@@ -53,6 +52,7 @@ export default function TokushohoPage() {
           <nav className="olp-legal-links" aria-label="関連ページ">
             <a href={officialSite.termsHref}>利用規約</a>
             <a href={officialSite.privacyHref}>プライバシーポリシー</a>
+            <a href={officialSite.companyHref}>運営会社</a>
             <a href="/lp#contact">お問い合わせ</a>
           </nav>
         </div>

@@ -15,7 +15,6 @@ import OfficialLpNoGambling from "./OfficialLpNoGambling";
 import OfficialLpLegal from "./OfficialLpLegal";
 import OfficialLpFairness from "./OfficialLpFairness";
 import OfficialLpFaq from "./OfficialLpFaq";
-import OfficialLpCompany from "./OfficialLpCompany";
 import OfficialLpContact from "./OfficialLpContact";
 import OfficialLpFooter from "./OfficialLpFooter";
 
@@ -58,7 +57,6 @@ export default function OfficialLpPage() {
         <OfficialLpLegal />
         <OfficialLpFairness />
         <OfficialLpFaq />
-        <OfficialLpCompany />
         <OfficialLpContact />
       </main>
       <OfficialLpFooter />

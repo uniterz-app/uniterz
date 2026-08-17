@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { officialSite } from "@/lib/lp/officialSiteContent";
 import OfficialLpLogo from "@/app/lp-official/_components/OfficialLpLogo";
+import OfficialLpBackTab from "@/app/lp-official/_components/OfficialLpBackTab";
 import "@/app/lp-official/official-lp.css";
 
 export const metadata: Metadata = {
@@ -22,11 +23,9 @@ export default function WebElectronicNoticePage() {
           <a href="/lp" className="olp-logo">
             <OfficialLpLogo />
           </a>
-          <a href="/lp" className="olp-btn olp-btn-ghost">
-            トップ
-          </a>
         </div>
       </header>
+      <OfficialLpBackTab />
       <main className="olp-section">
         <div className="olp-wrap">
           <p className="olp-h2-en olp-metric">Electronic Notice</p>
@@ -66,6 +65,7 @@ export default function WebElectronicNoticePage() {
           </dl>
           <nav className="olp-legal-links" aria-label="関連ページ">
             <a href="/lp">公式サイト</a>
+            <a href={officialSite.companyHref}>運営会社</a>
             <a href={officialSite.tokushohoHref}>特定商取引法に基づく表記</a>
             <a href="/lp#contact">お問い合わせ</a>
           </nav>
