@@ -5,7 +5,7 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { PRO_SKIN_REFERRAL_MILESTONES } from "@/lib/profile/proSkinMilestoneCatalog";
 import { PRO_SKIN_UNLOCK_FROM_SEASON_KEY } from "@/lib/profile/proSkinUnlock";
-import { incrementProSkinHolderCounts } from "@/lib/profile/proSkinUnlockServer";
+import { incrementProSkinHolderCounts, syncCareerUnlockedSkinCount } from "@/lib/profile/proSkinUnlockServer";
 import {
   REFERRAL_INVITEE_UNITS,
   REFERRAL_MILESTONES,
@@ -65,6 +65,8 @@ export type SettleReferralResult =
       completedOrdinal: number;
       /** Pro 紹介者へ新規解放した Wave 招待スキン */
       newlyUnlockedSkinIds?: string[];
+      referrerUid?: string;
+      unlockedSkinIds?: string[];
     }
   | { ok: false; error: string };
 
@@ -301,26 +303,37 @@ export async function settleReferralRelation(
       }
 
       const newlyUnlockedSkinIds: string[] = [];
+      const unlocked = new Set<string>(
+        Array.isArray(referrerSnap.data()?.proSkinUnlockedIds)
+          ? (referrerSnap.data()?.proSkinUnlockedIds as unknown[]).filter(
+              (x): x is string => typeof x === "string"
+            )
+          : []
+      );
+      const prevHeld = new Set<string>([
+        ...unlocked,
+        ...(Array.isArray(referrerSnap.data()?.proSkinHeldIds)
+          ? (referrerSnap.data()?.proSkinHeldIds as unknown[]).filter(
+              (x): x is string => typeof x === "string"
+            )
+          : []),
+      ]);
       if (!alreadyCompleted && isProUser(referrerSnap.data())) {
-        const unlocked = new Set<string>(
-          Array.isArray(referrerSnap.data()?.proSkinUnlockedIds)
-            ? (referrerSnap.data()?.proSkinUnlockedIds as unknown[]).filter(
-                (x): x is string => typeof x === "string"
-              )
-            : []
-        );
         for (const skin of PRO_SKIN_REFERRAL_MILESTONES) {
-          if (completedOrdinal !== skin.completedCount) continue;
-          if (unlocked.has(skin.id)) continue;
+          if (completedOrdinal < skin.completedCount) continue;
           unlocked.add(skin.id);
+          if (prevHeld.has(skin.id)) continue;
           newlyUnlockedSkinIds.push(skin.id);
         }
-        if (newlyUnlockedSkinIds.length > 0) {
+        if (newlyUnlockedSkinIds.length > 0 || unlocked.size > prevHeld.size) {
           referrerPatch.proSkinUnlockedIds = [...unlocked];
+          referrerPatch.proSkinHeldIds = [...new Set([...prevHeld, ...unlocked])];
           referrerPatch.proSkinUnlockSeason = PRO_SKIN_UNLOCK_FROM_SEASON_KEY;
-          referrerPatch.proSkinUnlockNoticeIds = FieldValue.arrayUnion(
-            ...newlyUnlockedSkinIds
-          );
+          if (newlyUnlockedSkinIds.length > 0) {
+            referrerPatch.proSkinUnlockNoticeIds = FieldValue.arrayUnion(
+              ...newlyUnlockedSkinIds
+            );
+          }
         }
       }
 
@@ -367,6 +380,8 @@ export async function settleReferralRelation(
         referrerMilestoneGranted,
         completedOrdinal,
         newlyUnlockedSkinIds,
+        referrerUid,
+        unlockedSkinIds: [...unlocked],
       };
     });
 
@@ -380,6 +395,17 @@ export async function settleReferralRelation(
         await incrementProSkinHolderCounts(db, result.newlyUnlockedSkinIds);
       } catch (err) {
         console.warn("referral pro-skin holder count update failed:", err);
+      }
+      if (result.referrerUid && result.unlockedSkinIds) {
+        try {
+          await syncCareerUnlockedSkinCount(
+            db,
+            result.referrerUid,
+            result.unlockedSkinIds
+          );
+        } catch (err) {
+          console.warn("referral pro-skin career count update failed:", err);
+        }
       }
     }
 

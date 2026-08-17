@@ -9,6 +9,7 @@ import {
 } from "@/lib/profile/profilePlanProAdoptedBgVariants";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import {
+  PRO_IMMEDIATE_SKIN_IDS,
   PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_RANK_MILESTONES,
   PRO_SKIN_REFERRAL_MILESTONES,
@@ -163,22 +164,9 @@ export function userDataIsPro(userData: Record<string, unknown> | null | undefin
 }
 
 /** Pro 即解放 ×14 */
-const PRO_IMMEDIATE_IDS = new Set<ProfilePlanProBgVariant>([
-  "atmos",
-  "parallax",
-  "wave-riot-shard",
-  "wave-uniterz-logo",
-  "wave-mono-hex",
-  "beast-titanium",
-  "beast-panther",
-  "beast-crocodile",
-  "scale-mamba",
-  "scale-python",
-  "form-hexveil",
-  "scale-diamondback",
-  "beast-shark",
-  "form-diamondgrid",
-]);
+const PRO_IMMEDIATE_IDS = new Set<ProfilePlanProBgVariant>(
+  PRO_IMMEDIATE_SKIN_IDS
+);
 
 /** id → 解放条件（表示順は ADOPTED に委譲） */
 const UNLOCK_RULE_BY_ID: Map<ProfilePlanProBgVariant, ProSkinUnlockRule> =

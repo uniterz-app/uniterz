@@ -3,22 +3,18 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
 import {
   filterUnseenMilestoneUnlocks,
-  parseProSkinUnlockNoticeIds,
   parseProSkinUnlockSeenIds,
   PRO_SKIN_UNLOCK_NOTICE_PREVIEW_IDS,
   proSkinUnlockNoticeSeenKey,
   serializeProSkinUnlockSeenIds,
 } from "../../../../../../lib/profile/proSkinUnlockNotice";
-import {
-  parseProSkinOwnerCounts,
-  PRO_SKIN_OWNER_COUNTS_DOC_PATH,
-} from "../../../../../../lib/profile/proSkinOwnerCountsClient";
 import type { ProfilePlanProBgVariant } from "../../../../../../lib/profile/profilePlanProBgVariants";
-import { dismissMeProSkinNoticesNative } from "../accountApiNative";
+import {
+  dismissMeProSkinNoticesNative,
+  fetchProSkinStatusNative,
+} from "../accountApiNative";
 
 async function readSeen(uid: string): Promise<Set<string>> {
   try {
@@ -40,16 +36,6 @@ async function writeSeen(uid: string, ids: Set<string>): Promise<void> {
   }
 }
 
-async function loadOwnerCounts(): Promise<Record<string, number>> {
-  try {
-    const snap = await getDoc(doc(db, PRO_SKIN_OWNER_COUNTS_DOC_PATH));
-    if (!snap.exists()) return {};
-    return parseProSkinOwnerCounts(snap.data());
-  } catch {
-    return {};
-  }
-}
-
 export function useProSkinUnlockOverlayNative(opts: {
   uid: string | null | undefined;
   enabled: boolean;
@@ -62,7 +48,7 @@ export function useProSkinUnlockOverlayNative(opts: {
   preview: boolean;
   dismiss: () => void;
 } {
-  const { uid, enabled, forcePreview = false, userDoc } = opts;
+  const { uid, enabled, forcePreview = false } = opts;
   const [activeIds, setActiveIds] = useState<ProfilePlanProBgVariant[] | null>(
     null
   );
@@ -76,28 +62,22 @@ export function useProSkinUnlockOverlayNative(opts: {
       setPreview(false);
       return;
     }
-    if (!forcePreview && userDoc === undefined) {
-      return;
-    }
     let alive = true;
 
     void (async () => {
-      const counts = await loadOwnerCounts();
-      if (!alive) return;
-      setOwnerCounts(counts);
-
-      if (forcePreview) {
-        setPreview(true);
-        setActiveIds([...PRO_SKIN_UNLOCK_NOTICE_PREVIEW_IDS]);
-        return;
-      }
       try {
-        const data = userDoc ?? {};
-        const notice = parseProSkinUnlockNoticeIds(
-          data.proSkinUnlockNoticeIds
-        );
+        const status = await fetchProSkinStatusNative();
+        if (!alive) return;
+        setOwnerCounts(status.ownerCounts ?? {});
+
+        if (forcePreview) {
+          setPreview(true);
+          setActiveIds([...PRO_SKIN_UNLOCK_NOTICE_PREVIEW_IDS]);
+          return;
+        }
+
         const unseen = filterUnseenMilestoneUnlocks(
-          notice,
+          status.noticeIds ?? [],
           await readSeen(uid)
         );
         if (!alive) return;
@@ -105,6 +85,7 @@ export function useProSkinUnlockOverlayNative(opts: {
         setActiveIds(unseen.length > 0 ? unseen : null);
       } catch {
         if (!alive) return;
+        setOwnerCounts({});
         setActiveIds(null);
       }
     })();
@@ -112,7 +93,7 @@ export function useProSkinUnlockOverlayNative(opts: {
     return () => {
       alive = false;
     };
-  }, [uid, enabled, forcePreview, userDoc]);
+  }, [uid, enabled, forcePreview]);
 
   const dismiss = useCallback(() => {
     if (!uid || !activeIds) {

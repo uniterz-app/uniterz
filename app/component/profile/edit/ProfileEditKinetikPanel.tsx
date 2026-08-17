@@ -1538,7 +1538,7 @@ export default function ProfileEditKinetikPanel({
             </div>
           </div>
           {bio?.trim() ? (
-            <p className="profile-edit-kinetik-header__bio profile-edit-kinetik-header__bio--pro-mobile mt-2.5 line-clamp-3 text-xs leading-relaxed text-white/55">
+            <p className="profile-edit-kinetik-header__bio profile-edit-kinetik-header__bio--pro-mobile mt-2.5 line-clamp-3 text-xs leading-relaxed text-white/80">
               {bio.trim()}
             </p>
           ) : null}
@@ -1615,7 +1615,7 @@ export default function ProfileEditKinetikPanel({
             />
           </div>
           {bio?.trim() ? (
-            <p className="profile-edit-kinetik-header__bio mt-3 line-clamp-3 text-xs leading-relaxed text-white/50">
+            <p className="profile-edit-kinetik-header__bio mt-3 line-clamp-3 text-xs leading-relaxed text-white/80">
               {bio.trim()}
             </p>
           ) : null}

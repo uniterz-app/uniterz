@@ -11,7 +11,7 @@ exports.emptyHeroSnapshot = emptyHeroSnapshot;
 const nbaSeason_1 = require("../rankings/nbaSeason");
 Object.defineProperty(exports, "CURRENT_NBA_SEASON_KEY", { enumerable: true, get: function () { return nbaSeason_1.CURRENT_NBA_SEASON_KEY; } });
 Object.defineProperty(exports, "nbaSeasonKeyFromDateJST", { enumerable: true, get: function () { return nbaSeason_1.nbaSeasonKeyFromDateJST; } });
-exports.PROFILE_HERO_SNAPSHOT_VERSION = 1;
+exports.PROFILE_HERO_SNAPSHOT_VERSION = 2;
 function safeInt(v) {
     const n = typeof v === "number" ? v : Number(v);
     return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
@@ -97,9 +97,12 @@ function ranksFromCumulative(cumulative) {
         rankDeltaPlaces: null,
     };
 }
-function activeStreakFromCumulative(cumulative) {
+function activeStreakFromCumulative(cumulative, seasonKey) {
     var _a, _b, _c, _d, _e;
     if (!cumulative)
+        return 0;
+    const key = cumulative.streakSeasonKeyBasketball;
+    if (typeof key !== "string" || key !== seasonKey)
         return 0;
     const signed = (_e = (_d = (_c = (_a = cumulative.activeWinStreakBasketball) !== null && _a !== void 0 ? _a : (_b = cumulative.streakBySport) === null || _b === void 0 ? void 0 : _b.basketball) !== null && _c !== void 0 ? _c : cumulative.currentStreak) !== null && _d !== void 0 ? _d : cumulative.activeWinStreak) !== null && _e !== void 0 ? _e : 0;
     return typeof signed === "number" && signed > 0 ? Math.floor(signed) : 0;
@@ -112,7 +115,7 @@ function buildProfileHeroSnapshotFromCumulative(cumulative, seasonKey = nbaSeaso
         v: exports.PROFILE_HERO_SNAPSHOT_VERSION,
         seasonKey,
         updatedAtMs: Date.now(),
-        activeWinStreak: activeStreakFromCumulative(cumulative),
+        activeWinStreak: activeStreakFromCumulative(cumulative, seasonKey),
         ranks: ranksFromCumulative(cumulative),
         season,
         playoffs,

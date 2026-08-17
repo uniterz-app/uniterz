@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isNbaPeriodFinalForProSkinGrants = isNbaPeriodFinalForProSkinGrants;
 exports.grantProSkinRankUnlocksForPeriod = grantProSkinRankUnlocksForPeriod;
@@ -11,11 +44,12 @@ exports.grantProSkinRankUnlocksAfterPeriodSnapshots = grantProSkinRankUnlocksAft
  * - 回数系は `users.proSkinProgress.periodWins` を加算（Free も積む）
  * - Pro のときだけ unlocked + notice
  * - Free→Pro 遡及は ensurePersisted（notice なし）
- * - 冪等: meta/proSkinPeriodGrants — status=done のみスキップ。running 停滞はリトライ可
+ * - 冪等: meta/proSkinPeriodGrants/locks/{period}_{label} — status=done のみスキップ。running 停滞はリトライ可
  */
 const firestore_1 = require("firebase-admin/firestore");
 const nbaPeriod_1 = require("../rankings/nbaPeriod");
 const nbaSeason_1 = require("../rankings/nbaSeason");
+const countMilestoneUnlockedProSkins_1 = require("./countMilestoneUnlockedProSkins");
 const proSkinMilestoneCatalog_1 = require("./proSkinMilestoneCatalog");
 const OWNER_COUNTS_DOC = "meta/proSkinOwnerCounts";
 /** running のままこの時間を超えたらリトライ許可 */
@@ -103,7 +137,7 @@ async function incrementHolderCounts(newlyBySkin) {
  */
 async function claimPeriodGrant(opts) {
     const db = (0, firestore_1.getFirestore)();
-    const grantRef = db.doc(`meta/proSkinPeriodGrants/${opts.period}_${opts.labelKey}`);
+    const grantRef = db.doc((0, proSkinMilestoneCatalog_1.proSkinPeriodGrantLockDocPath)(opts.period, opts.labelKey));
     return db.runTransaction(async (tx) => {
         var _a;
         const snap = await tx.get(grantRef);
@@ -150,7 +184,7 @@ async function grantProSkinRankUnlocksForPeriod(opts) {
     if (!claimed)
         return { granted: false, unlockedUsers: 0 };
     const db = (0, firestore_1.getFirestore)();
-    const grantRef = db.doc(`meta/proSkinPeriodGrants/${opts.period}_${opts.labelKey}`);
+    const grantRef = db.doc((0, proSkinMilestoneCatalog_1.proSkinPeriodGrantLockDocPath)(opts.period, opts.labelKey));
     const rules = proSkinMilestoneCatalog_1.PRO_SKIN_RANK_MILESTONES.filter((r) => r.period === opts.period);
     const periodWinRules = proSkinMilestoneCatalog_1.PRO_SKIN_PERIOD_WIN_MILESTONES.filter((r) => r.period === opts.period);
     if (rules.length === 0 && periodWinRules.length === 0) {
@@ -228,10 +262,12 @@ async function grantProSkinRankUnlocksForPeriod(opts) {
         const userRef = db.doc(`users/${uid}`);
         let newlyUnlocked = [];
         let wroteEarn = false;
+        let careerCount = 0;
         await db.runTransaction(async (tx) => {
             var _a, _b;
             newlyUnlocked = [];
             wroteEarn = false;
+            careerCount = 0;
             const userSnap = await tx.get(userRef);
             const user = (userSnap.exists ? userSnap.data() : {});
             const patch = {
@@ -256,6 +292,13 @@ async function grantProSkinRankUnlocksForPeriod(opts) {
             const unlocked = new Set(Array.isArray(user.proSkinUnlockedIds)
                 ? user.proSkinUnlockedIds.filter((x) => typeof x === "string")
                 : []);
+            const origUnlockedSize = unlocked.size;
+            const prevHeld = new Set([
+                ...unlocked,
+                ...(Array.isArray(user.proSkinHeldIds)
+                    ? user.proSkinHeldIds.filter((x) => typeof x === "string")
+                    : []),
+            ]);
             if (winKeys && winKeys.size > 0) {
                 for (const key of winKeys) {
                     const prev = Number((_a = periodWinsRaw[key]) !== null && _a !== void 0 ? _a : 0);
@@ -283,7 +326,8 @@ async function grantProSkinRankUnlocksForPeriod(opts) {
                         const wins = Number((_b = periodWinsRaw[key]) !== null && _b !== void 0 ? _b : 0);
                         if (wins >= rule.wins && !unlocked.has(rule.id)) {
                             unlocked.add(rule.id);
-                            newlyUnlocked.push(rule.id);
+                            if (!prevHeld.has(rule.id))
+                                newlyUnlocked.push(rule.id);
                         }
                     }
                 }
@@ -292,17 +336,22 @@ async function grantProSkinRankUnlocksForPeriod(opts) {
                 for (const id of skinIds) {
                     if (!unlocked.has(id)) {
                         unlocked.add(id);
-                        newlyUnlocked.push(id);
+                        if (!prevHeld.has(id))
+                            newlyUnlocked.push(id);
                     }
                 }
             }
-            if (newlyUnlocked.length > 0 || (isProUser(user) && skinIds.length > 0)) {
+            if (newlyUnlocked.length > 0 ||
+                unlocked.size !== origUnlockedSize ||
+                (isProUser(user) && skinIds.length > 0)) {
                 patch.proSkinUnlockedIds = [...unlocked];
+                patch.proSkinHeldIds = [...new Set([...prevHeld, ...unlocked])];
             }
             if (newlyUnlocked.length > 0) {
                 patch.proSkinUnlockNoticeIds = firestore_1.FieldValue.arrayUnion(...newlyUnlocked);
             }
             tx.set(userRef, patch, { merge: true });
+            careerCount = (0, countMilestoneUnlockedProSkins_1.countMilestoneUnlockedProSkins)([...unlocked]);
         });
         if (wroteEarn)
             earnedUsers += 1;
@@ -311,6 +360,15 @@ async function grantProSkinRankUnlocksForPeriod(opts) {
         unlockedUsers += 1;
         for (const id of newlyUnlocked) {
             holderIncrements.set(id, ((_e = holderIncrements.get(id)) !== null && _e !== void 0 ? _e : 0) + 1);
+        }
+        if (careerCount > 0) {
+            try {
+                const { syncUserCareerUnlockedSkinCount } = await Promise.resolve().then(() => __importStar(require("./syncUserCareer")));
+                await syncUserCareerUnlockedSkinCount(uid, careerCount);
+            }
+            catch (err) {
+                console.warn("[grantProSkinRankUnlocks] career skin sync failed", err);
+            }
         }
     }
     await incrementHolderCounts(holderIncrements);

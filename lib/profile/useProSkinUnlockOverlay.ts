@@ -5,21 +5,15 @@
  * `?forceSkinUnlock=1` でプレビュー強制。
  */
 import { useCallback, useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { fetchProSkinStatus } from "@/lib/api/fetchProSkinStatus";
 import { dismissMeProSkinNotices } from "@/lib/api/saveMeProSkin";
 import {
   filterUnseenMilestoneUnlocks,
-  parseProSkinUnlockNoticeIds,
   parseProSkinUnlockSeenIds,
   PRO_SKIN_UNLOCK_NOTICE_PREVIEW_IDS,
   proSkinUnlockNoticeSeenKey,
   serializeProSkinUnlockSeenIds,
 } from "@/lib/profile/proSkinUnlockNotice";
-import {
-  parseProSkinOwnerCounts,
-  PRO_SKIN_OWNER_COUNTS_DOC_PATH,
-} from "@/lib/profile/proSkinOwnerCountsClient";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 
 function readSeen(uid: string): Set<string> {
@@ -56,16 +50,6 @@ function forcePreviewFromQuery(): boolean {
   }
 }
 
-async function loadOwnerCounts(): Promise<Record<string, number>> {
-  try {
-    const snap = await getDoc(doc(db, PRO_SKIN_OWNER_COUNTS_DOC_PATH));
-    if (!snap.exists()) return {};
-    return parseProSkinOwnerCounts(snap.data());
-  } catch {
-    return {};
-  }
-}
-
 export function useProSkinUnlockOverlay(opts: {
   uid: string | null;
   enabled: boolean;
@@ -92,31 +76,26 @@ export function useProSkinUnlockOverlay(opts: {
     let alive = true;
 
     void (async () => {
-      const counts = await loadOwnerCounts();
-      if (!alive) return;
-      setOwnerCounts(counts);
-
-      if (forcePreviewFromQuery()) {
-        setPreview(true);
-        setActiveIds([...PRO_SKIN_UNLOCK_NOTICE_PREVIEW_IDS]);
-        return;
-      }
-
       try {
-        const snap = await getDoc(doc(db, "users", uid));
+        const status = await fetchProSkinStatus();
         if (!alive) return;
-        const data = snap.exists()
-          ? (snap.data() as Record<string, unknown>)
-          : {};
-        // ライブ達成キューのみ（Free→Pro 遡及は notice に載らない）
-        const notice = parseProSkinUnlockNoticeIds(
-          data.proSkinUnlockNoticeIds
+        setOwnerCounts(status.ownerCounts ?? {});
+
+        if (forcePreviewFromQuery()) {
+          setPreview(true);
+          setActiveIds([...PRO_SKIN_UNLOCK_NOTICE_PREVIEW_IDS]);
+          return;
+        }
+
+        const unseen = filterUnseenMilestoneUnlocks(
+          status.noticeIds ?? [],
+          readSeen(uid)
         );
-        const unseen = filterUnseenMilestoneUnlocks(notice, readSeen(uid));
         setPreview(false);
         setActiveIds(unseen.length > 0 ? unseen : null);
       } catch {
         if (!alive) return;
+        setOwnerCounts({});
         setActiveIds(null);
       }
     })();

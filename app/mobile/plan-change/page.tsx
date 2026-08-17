@@ -144,7 +144,7 @@ export default function PlanChangePage() {
   const panelClass = [
     "relative w-full overflow-hidden border border-amber-300/35",
     "bg-[linear-gradient(165deg,rgba(18,16,12,0.96)_0%,rgba(8,10,16,0.98)_55%,rgba(5,8,14,0.99)_100%)]",
-    "px-4 pb-6 pt-2 sm:px-5 sm:pb-7 sm:pt-3",
+    "px-4 pb-6 pt-6 sm:px-5 sm:pb-7 sm:pt-7",
     "shadow-[0_20px_52px_rgba(0,0,0,0.55),0_0_28px_rgba(212,175,90,0.1)]",
   ].join(" ");
   const panelStyle = {
@@ -206,7 +206,7 @@ export default function PlanChangePage() {
     >
       <div className={panelClass} style={panelStyle}>
         <div className="mb-5 flex flex-col items-center text-center">
-          <div className="-mb-8 -mt-6 w-[220px]">
+          <div className="mb-2 w-[220px]">
             <UniterzLogo width="100%" />
           </div>
           <ProCyberBadge ariaLabel="UNITERZ Pro" premium />

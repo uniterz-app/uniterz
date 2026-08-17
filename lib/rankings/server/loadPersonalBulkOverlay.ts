@@ -12,7 +12,7 @@ import {
   type SnapshotRankMetric,
 } from "@/lib/rankings/server/readSnapshotRanksFromCumulative";
 import { minPostsForWinRate } from "@/lib/rankings/winRateMinPosts";
-import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
+import { parseEquippedProSkinFromUserDoc } from "@/lib/profile/profilePlanProBgVariantField";
 
 type RankMetric = BulkRankingMetric;
 
@@ -119,10 +119,7 @@ function buildMyRow(
     photoURL: (data.photoURL as string | null | undefined) ?? null,
     countryCode: (data.countryCode as string | null | undefined) ?? null,
     plan: data.plan === "pro" ? "pro" : "free",
-    planProBgVariant:
-      data.plan === "pro"
-        ? parseUserPlanProBgVariant(data.planProBgVariant)
-        : undefined,
+    planProBgVariant: parseEquippedProSkinFromUserDoc(data),
     totalPosts: rk.totalPosts,
     totalWins: rk.totalWins,
     winRate: rk.winRate,

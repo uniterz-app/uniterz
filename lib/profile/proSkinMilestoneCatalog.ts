@@ -11,6 +11,36 @@
  */
 export const PRO_SKIN_UNLOCK_FROM_SEASON_KEY = "2026-27";
 
+/** Pro 加入だけで解放（CAREER のマイルストーン数からは除外） */
+export const PRO_IMMEDIATE_SKIN_IDS = [
+  "atmos",
+  "parallax",
+  "wave-riot-shard",
+  "wave-uniterz-logo",
+  "wave-mono-hex",
+  "beast-titanium",
+  "beast-panther",
+  "beast-crocodile",
+  "scale-mamba",
+  "scale-python",
+  "form-hexveil",
+  "scale-diamondback",
+  "beast-shark",
+  "form-diamondgrid",
+] as const;
+
+/**
+ * 期間確定 grant の冪等ロック。
+ * `meta/{doc}/locks/{id}`（4 セグメント）— 3 セグメントの doc パスは Firestore で無効。
+ */
+export function proSkinPeriodGrantLockDocPath(
+  period: string,
+  labelKey: string
+): string {
+  const id = `${period}_${labelKey}`.replace(/\//g, "_");
+  return `meta/proSkinPeriodGrants/locks/${id}`;
+}
+
 export type ProSkinThresholdMilestone = {
   id: string;
   kind: "streak" | "posts" | "exactHits";
