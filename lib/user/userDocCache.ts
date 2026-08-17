@@ -54,3 +54,14 @@ export async function getUserDocDataCached(
 export function invalidateUserDocCache(uid?: string) {
   invalidateUserDocMemory(uid);
 }
+
+/** users doc の handle / slug を表示・URL 用の string に絞る */
+export function readUserHandleFromDoc(
+  data: Record<string, unknown> | null | undefined
+): string | null {
+  if (!data) return null;
+  const raw = data.handle ?? data.slug ?? data.username;
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}

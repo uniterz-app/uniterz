@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { getUserDocDataCached, readUserHandleFromDoc } from "@/lib/user/userDocCache";
 
 type AuthContextType = {
   status: "loading" | "guest" | "ready";
@@ -36,10 +36,7 @@ export default function AuthProvider({
 
     const load = async () => {
       const data = await getUserDocDataCached(fUser.uid);
-      const raw = data?.handle ?? data?.slug;
-      const h =
-        typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : null;
-      setHandle(h);
+      setHandle(readUserHandleFromDoc(data));
     };
 
     load();

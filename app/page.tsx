@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import CssAnimatedSplashScreen from "@/app/component/splash/CssAnimatedSplashScreen";
 import { MIN_SPLASH_DURATION_MS } from "@/app/component/splash/splashTiming";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { getUserDocDataCached, readUserHandleFromDoc } from "@/lib/user/userDocCache";
 
 export default function Page() {
   const router = useRouter();
@@ -33,8 +33,7 @@ export default function Page() {
     (async () => {
       const data = await getUserDocDataCached(fUser.uid);
       if (cancelled) return;
-      const h = data?.handle || data?.slug || null;
-      setHandle(h);
+      setHandle(readUserHandleFromDoc(data));
       setHandleResolved(true);
     })();
 

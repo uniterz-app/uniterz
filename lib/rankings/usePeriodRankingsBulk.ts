@@ -273,6 +273,7 @@ export function usePeriodRankingsBulk(
     personalPending: period ? personalPending : false,
     myUid: uid,
     byMetric: period ? byMetric : {},
+    myMetricValueDeltas: null,
     ensureMetric,
     range: period ? range : null,
     availableLabels: period ? availableLabels : [],
