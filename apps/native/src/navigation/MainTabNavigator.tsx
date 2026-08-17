@@ -12,7 +12,6 @@ import {
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
 import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
-import { colors } from "../theme/tokens";
 import {
   DEFAULT_HEADER_WORDMARK,
   resolveHeaderWordmarkFromMainTab,
@@ -113,8 +112,8 @@ export default function MainTabNavigator() {
               headerShown: false,
               tabBarShowLabel: false,
               tabBarStyle: { display: "none" },
-              // 不透明にしてスライド中に裏タブが透けないようにする
-              sceneStyle: { backgroundColor: colors.bgPrimary },
+              // AppShell のメッシュ背景を通す（不透明 #090c15 だとヘッダー下だけ塗り潰される）
+              sceneStyle: { backgroundColor: "transparent" },
               // 初回だけ遅延マウント。freezeOnBlur はタブ連打で解凍が積み上がりフリーズするためオフ
               lazy: true,
               freezeOnBlur: false,
