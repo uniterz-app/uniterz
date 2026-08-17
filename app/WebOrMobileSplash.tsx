@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import AuthGate from "@/app/AuthGate";
 import NavBar from "@/app/component/NavBar";
+import { APP_WEB_APP_MAINTENANCE } from "@/lib/app/maintenanceMode";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
 import { isPublicLpPath } from "@/lib/lp/publicLpPaths";
@@ -10,6 +11,7 @@ import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 
 /** 下部ナビを出さないルート（ゲスト向け文言ページ・初回プロフィールセットアップ） */
 function shouldShowBottomNavBar(pathname: string | null | undefined): boolean {
+  if (APP_WEB_APP_MAINTENANCE) return false;
   if (!pathname) return true;
   if (isGuestLegalPath(pathname)) return false;
   if (isGuestPreviewPath(pathname)) return false;

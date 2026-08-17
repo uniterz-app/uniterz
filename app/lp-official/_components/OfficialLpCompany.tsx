@@ -12,20 +12,18 @@ const FIELDS = [
 
 export default function OfficialLpCompany() {
   return (
-    <section id="company" className="olp-section">
-      <div className="olp-wrap">
-        <p className="olp-h2-en olp-metric">Company</p>
-        <h2 className="olp-h2">運営会社</h2>
-        <p className="olp-lead">{officialSite.company.note}</p>
-        <dl className="olp-dl">
-          {FIELDS.map((field) => (
-            <div key={field.label}>
-              <dt>{field.label}</dt>
-              <dd>{field.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </section>
+    <>
+      <p className="olp-h2-en olp-metric">Company</p>
+      <h1 className="olp-h2">運営会社</h1>
+      <p className="olp-lead">{officialSite.company.note}</p>
+      <dl className="olp-dl">
+        {FIELDS.map((field) => (
+          <div key={field.label}>
+            <dt>{field.label}</dt>
+            <dd>{field.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </>
   );
 }
