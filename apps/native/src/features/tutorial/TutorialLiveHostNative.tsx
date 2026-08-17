@@ -36,6 +36,7 @@ import {
 } from "../../../../../lib/tutorial/tutorialHorizonSteps";
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import { subscribeTutorialRestartNative, requestTutorialClearedNative } from "./tutorialRestartEventsNative";
+import { setTutorialWelcomeAudienceNative } from "./tutorialWelcomeAudienceNative";
 import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
 
 type HostSurface = "results" | "rankings" | "groups" | "profile" | "games";
@@ -130,6 +131,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
     void markAppTutorialSeenNative(fUser?.uid ?? null);
     void writeTutorialLivePhaseNative(null);
     setTutorialLiveTrackNative(null);
+    setTutorialWelcomeAudienceNative(null);
     void clearTutorialLivePickNative();
     setPhase(null);
     requestTutorialClearedNative();

@@ -954,6 +954,8 @@ const pt: Messages = {
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
         "Preveja jogos, some pontos e suba no **ranking**. Tour de cada tela, ou só as novidades.",
+      welcomeReturningBody:
+        "Tour de cada tela, ou só as **novidades**.",
       welcomeFullCta: "Ver o guia",
       welcomeFeaturesCta: "Só novidades",
       gamesTitle: "Jogos",

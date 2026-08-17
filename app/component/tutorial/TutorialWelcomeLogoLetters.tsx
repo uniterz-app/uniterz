@@ -3,6 +3,7 @@
 /**
  * welcome 用 — 文字が画面外から飛んできて揃い、輪郭だけ発光する。
  */
+import { useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   UNITERZ_LOGO_FILL_LETTERS,
@@ -14,6 +15,7 @@ import {
   TUTORIAL_WELCOME_GATHER_S,
   TUTORIAL_WELCOME_GLOW_S,
 } from "@/lib/tutorial/tutorialMotion";
+import { getLockedTutorialWelcomeIntroPlay } from "@/lib/tutorial/tutorialWelcomeSkipIntro";
 
 type Props = {
   className?: string;
@@ -25,6 +27,8 @@ const SHADOW = "drop-shadow(0 14px 18px rgba(0,0,0,0.7))";
 
 export default function TutorialWelcomeLogoLetters({ className }: Props) {
   const reduceMotion = useReducedMotion() === true;
+  const playIntroRef = useRef(getLockedTutorialWelcomeIntroPlay());
+  const skipIntro = !playIntroRef.current;
   const vb = `0 0 ${UNITERZ_LOGO_FILL_VIEWBOX.width} ${UNITERZ_LOGO_FILL_VIEWBOX.height}`;
   const vw = typeof window !== "undefined" ? window.innerWidth : 390;
   const vh = typeof window !== "undefined" ? window.innerHeight : 844;
@@ -49,7 +53,7 @@ export default function TutorialWelcomeLogoLetters({ className }: Props) {
             className="pointer-events-none absolute inset-0"
             style={{ filter: SHADOW }}
             initial={
-              reduceMotion
+              reduceMotion || skipIntro
                 ? false
                 : {
                     opacity: 1,
@@ -64,7 +68,7 @@ export default function TutorialWelcomeLogoLetters({ className }: Props) {
               x: 0,
               y: 0,
               rotate: 0,
-              scale: reduceMotion ? 1 : [0.86, 1, 1.06, 1],
+              scale: reduceMotion || skipIntro ? 1 : [0.86, 1, 1.06, 1],
             }}
             transition={{
               x: {
@@ -105,7 +109,7 @@ export default function TutorialWelcomeLogoLetters({ className }: Props) {
               aria-hidden
               initial={{ opacity: 0 }}
               animate={
-                reduceMotion ? { opacity: 0 } : { opacity: [0, 0, 1, 0] }
+                reduceMotion || skipIntro ? { opacity: 0 } : { opacity: [0, 0, 1, 0] }
               }
               transition={{
                 duration: TUTORIAL_WELCOME_GATHER_S + TUTORIAL_WELCOME_GLOW_S,

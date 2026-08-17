@@ -102,10 +102,12 @@ import {
 import { markAppTutorialSeenNative } from "../tutorial/tutorialSeenNative";
 import { clearTutorialLivePickNative } from "../tutorial/tutorialLivePickNative";
 import { requestTutorialClearedNative } from "../tutorial/tutorialRestartEventsNative";
+import { setTutorialWelcomeAudienceNative } from "../tutorial/tutorialWelcomeAudienceNative";
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import type { Language } from "../../../../../lib/i18n/language";
 import { TUTORIAL_WELCOME_LAND_HOLD_MS } from "../../../../../lib/tutorial/tutorialMotion";
+import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
 import {
   fetchProfileViewCountNative,
   recordProfileViewNative,
@@ -504,6 +506,7 @@ export default function ProfileHomeScreen({
     void writeTutorialLivePhaseNative(null);
     setTutorialLiveTrackNative(null);
     setTutorialWelcomeHandoffNative(null);
+    setTutorialWelcomeAudienceNative(null);
     void clearTutorialLivePickNative();
     setWelcomeFlyActive(false);
     setWelcomeFlying(false);
@@ -1471,6 +1474,7 @@ export default function ProfileHomeScreen({
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
         else if (page === "restartTutorial") {
+          setTutorialRestartCover(true);
           void (async () => {
             const uid = fUser?.uid ?? null;
             const {

@@ -8,6 +8,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearAppTutorialSeenNative } from "./tutorialSeenNative";
 import { writeTutorialLivePhaseNative } from "./tutorialLivePhaseNative";
+import { setTutorialWelcomeChromeHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
+import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
+import { beginTutorialWelcomeIntroSession } from "../../../../../lib/tutorial/tutorialWelcomeSkipIntro";
+import { markTutorialWelcomeReturningNative } from "./tutorialWelcomeAudienceNative";
 import { clearTutorialLivePickNative } from "./tutorialLivePickNative";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
@@ -72,6 +76,10 @@ export async function prepareTutorialRestartNative(
 ): Promise<number> {
   /** ナビ前にタブスライドを止め、welcome 合成の黒画面を避ける */
   armTutorialTabTransitionQuiet();
+  setTutorialRestartCover(true);
+  beginTutorialWelcomeIntroSession();
+  markTutorialWelcomeReturningNative();
+  setTutorialWelcomeChromeHidden(true);
   prefetchRankingsLogoGlb();
   await clearAppTutorialSeenNative(uid);
   await clearTutorialLivePickNative();
@@ -87,13 +95,10 @@ export async function prepareTutorialRestartNative(
   return at;
 }
 
-/** ナビ後に Games がマウントされるまでイベントを再送 */
+/** ナビ後に Games がマウントされるまで1回だけ再送（集合を途中から見せない） */
 export function pulseTutorialRestartNative(): void {
   requestTutorialRestartNative();
-  const delays = [0, 50, 150, 400, 900];
-  for (const ms of delays) {
-    setTimeout(() => requestTutorialRestartNative(), ms);
-  }
+  setTimeout(() => requestTutorialRestartNative(), 80);
 }
 
 const clearListeners = new Set<Listener>();

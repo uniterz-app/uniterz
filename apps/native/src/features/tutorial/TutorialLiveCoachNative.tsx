@@ -49,7 +49,9 @@ import {
   TUTORIAL_SCRIM_OPACITY,
   TUTORIAL_WELCOME_AUTO_FLY_DELAY_MS,
   TUTORIAL_WELCOME_PART_MS,
+  type TutorialWelcomeFlyDest,
 } from "../../../../../lib/tutorial/tutorialMotion";
+import { isPinnedTutorialTarget } from "../../../../../lib/tutorial/scrollTutorialTargetIntoView";
 import {
   measureTutorialTarget,
   scrollTutorialTargetIntoViewNative,
@@ -58,6 +60,11 @@ import {
   type TutorialMeasureRect,
 } from "./tutorialMeasureNative";
 import type { TutorialVisualId } from "../../../../../lib/tutorial/tutorialCopy";
+import {
+  getLockedTutorialWelcomeIntroPlay,
+  lockTutorialWelcomeIntroPlay,
+  releaseTutorialWelcomeIntroLock,
+} from "../../../../../lib/tutorial/tutorialWelcomeSkipIntro";
 import TutorialCoachVisualNative from "./TutorialCoachVisualNative";
 import TutorialRichBodyNative from "./TutorialRichBodyNative";
 import { chamferedRectPathD, PREDICT_OVERLAY_CYBER_CUT } from "../games/matchListCyberClipPath";
@@ -79,13 +86,15 @@ function WelcomeFloatNative({
   children: ReactNode;
 }) {
   const reduceMotion = useReducedMotion();
-  const y = useSharedValue(active && fade ? fromY : 0);
-  const op = useSharedValue(active && fade ? 0 : 1);
+  const playIntroRef = useRef(getLockedTutorialWelcomeIntroPlay());
+  const skipIntro = !playIntroRef.current;
+  const y = useSharedValue(active && fade && !skipIntro ? fromY : 0);
+  const op = useSharedValue(active && fade && !skipIntro ? 0 : 1);
 
   useEffect(() => {
     cancelAnimation(y);
     cancelAnimation(op);
-    if (!active || reduceMotion || !fade) {
+    if (!active || reduceMotion || !fade || skipIntro) {
       y.value = 0;
       op.value = 1;
       return;
@@ -108,7 +117,7 @@ function WelcomeFloatNative({
       cancelAnimation(y);
       cancelAnimation(op);
     };
-  }, [active, delayMs, fade, fromY, op, reduceMotion, y]);
+  }, [active, delayMs, fade, fromY, op, reduceMotion, skipIntro, y]);
 
   const anim = useAnimatedStyle(() => ({
     opacity: op.value,
@@ -222,7 +231,7 @@ type Props = {
   altNextLabel?: string;
   onAltNext?: () => void;
   /** welcome「画面を案内」/「新機能だけ」: カメラ前進の開始 */
-  onWelcomeFlyStart?: (dest: "full" | "features") => void;
+  onWelcomeFlyStart?: (dest: TutorialWelcomeFlyDest) => void;
   /**
    * welcome を試合ページと同じカメラに載せる。
    * true のとき独自暗幕 / 独自 fly をしない。
@@ -331,6 +340,16 @@ export default function TutorialLiveCoachNative({
     target === "result-detail-metrics";
   /** 最初の briefing — 背面を落として競技導入の場にする */
   const isWelcomeBriefing = visual === "welcome" && !target;
+  const didLockWelcomeIntroRef = useRef(false);
+  useEffect(() => {
+    if (!isWelcomeBriefing) return;
+    return () => releaseTutorialWelcomeIntroLock();
+  }, [isWelcomeBriefing]);
+  /** 再描画で新しい入場セッションを先食いしない。マウント時だけロック */
+  if (isWelcomeBriefing && !didLockWelcomeIntroRef.current) {
+    lockTutorialWelcomeIntroPlay();
+    didLockWelcomeIntroRef.current = true;
+  }
   /**
    * リザルト詳細は RN Modal 上にあるため、コーチも Modal に載せる。
    * welcome は Modal にすると expo-gl（3D ロゴ）が描画されないので同一ツリー＋全面ディム。
@@ -375,10 +394,14 @@ export default function TutorialLiveCoachNative({
   /** welcome は expo-gl を載せるため、親の transform 浮遊は使わない */
   const enableFloat = false;
 
-  const beginWelcomeGuide = useCallback((dest: "full" | "features") => {
+  const beginWelcomeGuide = useCallback((dest: TutorialWelcomeFlyDest) => {
     if (welcomeFlyingRef.current) return;
     const finish =
-      dest === "features" ? onAltNextRef.current : onNextRef.current;
+      dest === "skip"
+        ? onSkip
+        : dest === "features"
+          ? onAltNextRef.current
+          : onNextRef.current;
     if (!finish) return;
     if (reduceMotion || !onWelcomeFlyStartRef.current) {
       finish();
@@ -387,7 +410,7 @@ export default function TutorialLiveCoachNative({
     welcomeFlyingRef.current = true;
     setWelcomeFlying(true);
     onWelcomeFlyStartRef.current(dest);
-  }, [reduceMotion]);
+  }, [onSkip, reduceMotion]);
 
   const didAutoFly = useRef(false);
   useEffect(() => {
@@ -509,9 +532,12 @@ export default function TutorialLiveCoachNative({
     }
 
     /** スクロール中に旧枠が残るとモーダルとズレて見えるので一旦消す */
-    setSpotlightReady(false);
-    setHole(null);
-    holeRef.current = null;
+    const pinned = isPinnedTutorialTarget(target);
+    if (!pinned) {
+      setSpotlightReady(false);
+      setHole(null);
+      holeRef.current = null;
+    }
 
     const commitHole = (next: TutorialMeasureRect | null) => {
       if (next == null) {
@@ -526,7 +552,12 @@ export default function TutorialLiveCoachNative({
 
     const run = async (doScroll: boolean) => {
       /** 詳細オーバーレイ上の対象は一覧 ScrollHost を動かさない（枠ずれの元） */
-      if (doScroll && !target.startsWith("nav-") && !isResultDetailTarget) {
+      if (
+        doScroll &&
+        !isPinnedTutorialTarget(target) &&
+        !target.startsWith("nav-") &&
+        !isResultDetailTarget
+      ) {
         /**
          * カード誘導は Web 同様に即時寄せ。
          * クロール中に下固定モーダルだけ先に出ると「枠の動きと合わない」。
@@ -617,29 +648,33 @@ export default function TutorialLiveCoachNative({
     };
     void run(true);
     /** スクロール定着後の再測は1回だけ（多重再測はカクつきの元） */
-    const t1 = setTimeout(
-      () => void run(false),
-      target === "result-card" || isResultDetailTarget
-        ? 720
-        : reduceMotion
-          ? 160
-          : 240
-    );
+    const t1 = pinned
+      ? null
+      : setTimeout(
+          () => void run(false),
+          target === "result-card" || isResultDetailTarget
+            ? 720
+            : reduceMotion
+              ? 160
+              : 240
+        );
     /**
      * 詳細ターゲットは Modal 内で遅れて mount する。
      * 測位が取れなくても吹き出し（次へ）は出す。
      */
-    const readyFallback = setTimeout(
-      () => {
-        if (!cancelled) setSpotlightReady(true);
-      },
-      isResultDetailTarget ? 480 : 360
-    );
+    const readyFallback = pinned
+      ? null
+      : setTimeout(
+          () => {
+            if (!cancelled) setSpotlightReady(true);
+          },
+          isResultDetailTarget ? 480 : 360
+        );
     const unsub = subscribeTutorialTargets(() => void run(false));
     return () => {
       cancelled = true;
-      clearTimeout(t1);
-      clearTimeout(readyFallback);
+      if (t1) clearTimeout(t1);
+      if (readyFallback) clearTimeout(readyFallback);
       unsub();
       if (lockListScroll) {
         setTutorialScrollEnabledNative(true);
@@ -1039,6 +1074,11 @@ export default function TutorialLiveCoachNative({
                         label={skipConfirmLeave ?? skipLabel ?? "Skip"}
                         active
                         onPress={() => {
+                          if (isWelcomeBriefing) {
+                            // 確認を閉じるとロゴが再マウントされ集合が走る。fly 中は親がコーチを外す。
+                            beginWelcomeGuide("skip");
+                            return;
+                          }
                           setSkipConfirmOpen(false);
                           onSkip();
                         }}
@@ -1279,10 +1319,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(2, 6, 12, 0.16)",
   },
-  /** CTA と同じ面。カメラ暗幕は transform された試合面より背面に抜ける */
+  /** CTA と同じ面。カメラ暗幕が試合面の後ろに抜けても隠す */
   welcomeEmbedScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2, 6, 12, 0.28)",
+    backgroundColor: "#02060c",
   },
   scrimPanel: {
     position: "absolute",

@@ -956,6 +956,8 @@ const de: Messages = {
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
         "Tippe Spiele, sammle Punkte und steige im **Ranking**. Rundgang durch die Screens, oder nur neue Features.",
+      welcomeReturningBody:
+        "Rundgang durch die Screens, oder nur **neue Features**.",
       welcomeFullCta: "Einführung ansehen",
       welcomeFeaturesCta: "Nur neue Features",
       gamesTitle: "Spiele",

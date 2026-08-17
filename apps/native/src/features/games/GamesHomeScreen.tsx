@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { GamesStackParamList } from "../../navigation/types";
 import { GestureDetector } from "react-native-gesture-handler";
@@ -30,12 +30,17 @@ import {
 } from "../../../../../lib/time/zonedTime";
 import { fetchMonthHasGames } from "../../../../../lib/games/fetchMonthHasGames";
 import {
+  fetchNearestGameDayToLocalDay,
+  pickNearestDateKey,
+} from "../../../../../lib/games/fetchNextGameDayAfter";
+import {
   clearScheduleMyPostsAbsent,
   mergeScheduleMyPostsCache,
   missingScheduleMyPostGameIds,
   peekScheduleMyPosts,
   type ScheduleMyPostsMap,
 } from "../../../../../lib/games/scheduleMyPostsCache";
+import { isLocalOnlyScheduleGameId } from "../../../../../lib/games/localOnlyScheduleGameId";
 import {
   resolveGameLiveMeta,
   resolveGameScore,
@@ -113,7 +118,9 @@ import {
 } from "../tutorial/tutorialSeenNative";
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
 import {
+  getTutorialLivePhaseNativeMemory,
   readTutorialLivePhaseNative,
+  subscribeTutorialLivePhaseNative,
   writeTutorialLivePhaseNative,
   type TutorialLivePhase,
 } from "../tutorial/tutorialLivePhaseNative";
@@ -129,6 +136,19 @@ import { formatTutorialGamesSubstepProgress } from "../../../../../lib/tutorial/
 import { tutorialSelectPredictToolsTab } from "../tutorial/tutorialPredictToolsBridgeNative";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
+import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
+import {
+  beginTutorialWelcomeIntroSession,
+  getTutorialWelcomeIntroSession,
+} from "../../../../../lib/tutorial/tutorialWelcomeSkipIntro";
+import type { TutorialWelcomeFlyDest } from "../../../../../lib/tutorial/tutorialMotion";
+import { tutorialWelcomeBriefingProps } from "../../../../../lib/tutorial/tutorialWelcomeAudience";
+import {
+  ensureTutorialWelcomeFirstNative,
+  getTutorialWelcomeAudienceNativeMemory,
+  setTutorialWelcomeAudienceNative,
+  type TutorialWelcomeAudience,
+} from "../tutorial/tutorialWelcomeAudienceNative";
 import {
   isTutorialGamesSubstep,
   isTutorialOnGamesHome,
@@ -522,6 +542,9 @@ export default function GamesHomeScreen({
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const tabNavigation =
     useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const isFocused = useIsFocused();
+  const isFocusedRef = useRef(isFocused);
+  isFocusedRef.current = isFocused;
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
   const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
@@ -538,6 +561,7 @@ export default function GamesHomeScreen({
   /** preferredLeague（と表示名・言語）確定まで games フェッチを止める */
   const [preferredLeagueReady, setPreferredLeagueReady] = useState(false);
   const skipAutoAdvanceRef = useRef(false);
+  const tutorialNearestFetchRef = useRef<number | null>(null);
   const suppressAutoAdvanceForTodayRef = useRef(false);
   const [selectedGame, setSelectedGame] = useState<Record<string, unknown> | null>(
     null
@@ -548,14 +572,20 @@ export default function GamesHomeScreen({
     null
   );
   const [tutorialPhase, setTutorialPhase] =
-    useState<TutorialLivePhase | null>(null);
+    useState<TutorialLivePhase | null>(() => getTutorialLivePhaseNativeMemory());
   const [tutorialUserScrollEnabled, setTutorialUserScrollEnabled] = useState(true);
   const [welcomeWorldFly, setWelcomeWorldFly] = useState(false);
-  const welcomeFlyDestRef = useRef<"full" | "features">("full");
-  const [welcomeFlyDest, setWelcomeFlyDest] = useState<"full" | "features" | null>(
-    null
-  );
+  const welcomeFlyDestRef = useRef<TutorialWelcomeFlyDest>("full");
+  const [welcomeFlyDest, setWelcomeFlyDest] = useState<
+    TutorialWelcomeFlyDest | null
+  >(null);
   const [welcomeHandoff, setWelcomeHandoff] = useState<"profile" | null>(null);
+  /** サイドメニュー再開で集合入場を載せ替えるための世代 */
+  const [welcomeIntroSession, setWelcomeIntroSession] = useState(
+    getTutorialWelcomeIntroSession
+  );
+  const [welcomeAudience, setWelcomeAudience] =
+    useState<TutorialWelcomeAudience>(getTutorialWelcomeAudienceNativeMemory);
   const welcomeResting =
     tutorialPhase === "welcome" &&
     welcomeHandoff !== "profile" &&
@@ -580,9 +610,11 @@ export default function GamesHomeScreen({
 
   useLayoutEffect(() => {
     const inWorld = tutorialPhase === "welcome" && welcomeHandoff !== "profile";
-    setTutorialWelcomeChromeHidden(inWorld && !welcomeWorldFly);
+    /** 飛行中もナビは出さない。着地（welcome 終了）でフェードイン */
+    setTutorialWelcomeChromeHidden(inWorld);
+    if (inWorld && isFocused) setTutorialRestartCover(false);
     return () => setTutorialWelcomeChromeHidden(false);
-  }, [tutorialPhase, welcomeWorldFly, welcomeHandoff]);
+  }, [tutorialPhase, welcomeHandoff, isFocused]);
 
   useEffect(() => {
     if (!tutorialActive || isPredictModalOpen) return;
@@ -670,7 +702,7 @@ export default function GamesHomeScreen({
     setSelectedLeague,
     goPrevDay,
     goNextDay,
-  } = useTodayGames({ enabled: preferredLeagueReady });
+  } = useTodayGames({ enabled: true });
   const reduceMotion = useReducedMotion() ?? false;
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
@@ -722,15 +754,19 @@ export default function GamesHomeScreen({
         return;
       }
       const start: TutorialLivePhase = existing ?? "welcome";
+      const audience = await ensureTutorialWelcomeFirstNative();
       await writeTutorialLivePhaseNative(start);
-      if (!cancelled) setTutorialPhase(start);
+      if (!cancelled) {
+        setTutorialPhase(start);
+        setWelcomeAudience(audience);
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, [fUser?.uid, authStatus, setSelectedLeague]);
 
-  const applyTutorialRestart = useCallback(() => {
+  const enterWelcomeUi = useCallback(() => {
     setIsPredictModalOpen(false);
     setSelectedGame(null);
     setExpandScoreFormWhenEditing(false);
@@ -740,16 +776,35 @@ export default function GamesHomeScreen({
     setWelcomeHandoff(null);
     setTutorialWelcomeHandoffNative(null);
     setTutorialPhase("welcome");
-    void writeTutorialLivePhaseNative("welcome");
     setTutorialLiveTrackNative(null);
+    setWelcomeAudience(getTutorialWelcomeAudienceNativeMemory());
+    setWelcomeIntroSession(getTutorialWelcomeIntroSession());
   }, []);
 
-  /** DEV「チュートリアル再開」— フォーカスに依存せず強制で welcome へ */
+  const applyTutorialRestart = useCallback(() => {
+    enterWelcomeUi();
+    void writeTutorialLivePhaseNative("welcome");
+  }, [enterWelcomeUi]);
+
+  /** DEV「チュートリアル再開」— 表に出ているときだけ welcome へ（裏で集合を始めない） */
   useEffect(() => {
     return subscribeTutorialRestartNative(() => {
+      if (!isFocusedRef.current) return;
       applyTutorialRestart();
     });
   }, [applyTutorialRestart]);
+
+  /** サイドメニュー再開: 試合タブが表になるまで集合入場を始めない */
+  useEffect(() => {
+    return subscribeTutorialLivePhaseNative((phase) => {
+      if (phase === "welcome") {
+        if (!isFocusedRef.current) return;
+        enterWelcomeUi();
+        return;
+      }
+      setTutorialPhase(phase);
+    });
+  }, [enterWelcomeUi]);
 
   /** 他タブで完了・スキップしたとき、モック試合を即消す */
   useEffect(() => {
@@ -820,6 +875,7 @@ export default function GamesHomeScreen({
     void writeTutorialLivePhaseNative(null);
     setTutorialLiveTrackNative(null);
     setTutorialWelcomeHandoffNative(null);
+    setTutorialWelcomeAudienceNative(null);
     void clearTutorialLivePickNative();
     setTutorialPhase(null);
     requestTutorialClearedNative();
@@ -830,6 +886,10 @@ export default function GamesHomeScreen({
     [language]
   );
   const skipConfirm = tutorialSkipConfirmProps(tutorialCopy.tutorial);
+  const welcomeBriefing = tutorialWelcomeBriefingProps(
+    tutorialCopy.tutorial.practice,
+    welcomeAudience
+  );
 
   useEffect(() => {
     if (didInitPreferredLeagueRef.current || authStatus === "loading") return;
@@ -1232,11 +1292,29 @@ export default function GamesHomeScreen({
     () => predictedIdsForVisibleGames(fUser?.uid, gameIdSet, predictedGameIds),
     [fUser?.uid, gameIdSet, predictedGameIds]
   );
-  /** 未取得の予想を青で先塗りしない。キャッシュ済みなら即描画 */
+  const missingRemotePredictionIds = useMemo(() => {
+    if (!fUser || gameIdSet.size === 0) return [];
+    return missingScheduleMyPostGameIds(fUser.uid, [...gameIdSet]).filter(
+      (id) => !isLocalOnlyScheduleGameId(id)
+    );
+  }, [fUser, gameIdSet]);
+  const [predictionWaitExpired, setPredictionWaitExpired] = useState(false);
+  useEffect(() => {
+    if (missingRemotePredictionIds.length === 0) {
+      setPredictionWaitExpired(false);
+      return;
+    }
+    const t = setTimeout(() => setPredictionWaitExpired(true), 1200);
+    return () => clearTimeout(t);
+  }, [missingRemotePredictionIds]);
+  /**
+   * 未取得の予想を青で先塗りしない。ただしチュートリアル中やプレビュー試合、
+   * 1.2s 超過では一覧を隠さない（穴が測れず案内が中央モーダルのまま固まる）。
+   */
   const predictionPaintPending = Boolean(
-    fUser &&
-      gameIdSet.size > 0 &&
-      missingScheduleMyPostGameIds(fUser.uid, [...gameIdSet]).length > 0
+    !tutorialActive &&
+      missingRemotePredictionIds.length > 0 &&
+      !predictionWaitExpired
   );
 
   useEffect(() => {
@@ -1302,10 +1380,17 @@ export default function GamesHomeScreen({
       }
       const gameIds = gameIdsKey ? gameIdsKey.split(",") : [];
       if (gameIds.length === 0) return;
+      const localOnlyIds = gameIds.filter((id) => isLocalOnlyScheduleGameId(id));
+      if (localOnlyIds.length > 0) {
+        mergeScheduleMyPostsCache(fUser.uid, localOnlyIds, {});
+      }
       try {
         // 予想保存後の再読込では absent を捨てて差分取得
         if (myPredictionsReloadNonce > 0) {
-          clearScheduleMyPostsAbsent(fUser.uid, gameIds);
+          clearScheduleMyPostsAbsent(
+            fUser.uid,
+            gameIds.filter((id) => !isLocalOnlyScheduleGameId(id))
+          );
         }
         const applyMap = (found: ScheduleMyPostsMap) => {
           const ids = new Set<string>();
@@ -1348,7 +1433,9 @@ export default function GamesHomeScreen({
 
         applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
 
-        const needDay = missingScheduleMyPostGameIds(fUser.uid, gameIds);
+        const needDay = missingScheduleMyPostGameIds(fUser.uid, gameIds).filter(
+          (id) => !isLocalOnlyScheduleGameId(id)
+        );
         if (needDay.length > 0) {
           const foundDay = await fetchPostsForGameIds(needDay);
           if (!alive) return;
@@ -1356,7 +1443,10 @@ export default function GamesHomeScreen({
           applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
         }
 
-        const needWindow = missingScheduleMyPostGameIds(fUser.uid, windowGameIds);
+        const needWindow = missingScheduleMyPostGameIds(
+          fUser.uid,
+          windowGameIds
+        ).filter((id) => !isLocalOnlyScheduleGameId(id));
         if (needWindow.length === 0) return;
         const foundWindow = await fetchPostsForGameIds(needWindow);
         if (!alive) return;
@@ -1364,6 +1454,10 @@ export default function GamesHomeScreen({
         applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
       } catch {
         if (!alive) return;
+        const remoteIds = gameIds.filter((id) => !isLocalOnlyScheduleGameId(id));
+        if (remoteIds.length > 0) {
+          mergeScheduleMyPostsCache(fUser.uid, remoteIds, {});
+        }
         setPredictedGameIds(new Set());
         setMyPostIdByGameId({});
         setMyPredictionByGameId({});
@@ -1438,6 +1532,67 @@ export default function GamesHomeScreen({
     if (!allFinished) return;
     setSelectedDate((prev) => addDays(prev, 1));
   }, [loading, games, selectedDate, setSelectedDate, today]);
+
+  /**
+   * チュートリアルは専用試合を持たない。
+   * 開始日（今日）に一番近い本番の試合日へ寄せ、その日のカードで案内する。
+   */
+  useEffect(() => {
+    if (!tutorialActive) {
+      tutorialNearestFetchRef.current = null;
+      return;
+    }
+    const todayKey = toDateKeyInTimeZone(today, TIMEZONE_JST);
+    const current = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+    if (filteredGames.length === 0) {
+      const memoryNearest = pickNearestDateKey(todayKey, dateKeysForDayStrip);
+      if (memoryNearest && memoryNearest !== current) {
+        const next = parseDateKeyInTimeZone(memoryNearest, TIMEZONE_JST);
+        if (next) setSelectedDate(next);
+      }
+    }
+    if (tutorialNearestFetchRef.current === welcomeIntroSession) return;
+    tutorialNearestFetchRef.current = welcomeIntroSession;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const apiDay = await fetchNearestGameDayToLocalDay({
+          league: selectedLeague,
+          timeZone: TIMEZONE_JST,
+          day: today,
+          apiBaseUrl: getUniterzApiBaseUrl(),
+        });
+        if (cancelled) return;
+        const apiKey = apiDay
+          ? toDateKeyInTimeZone(apiDay, TIMEZONE_JST)
+          : null;
+        const nearest = pickNearestDateKey(todayKey, [
+          ...dateKeysForDayStrip,
+          ...(apiKey ? [apiKey] : []),
+        ]);
+        if (!nearest) return;
+        const selectedKey = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+        if (nearest === selectedKey) return;
+        const next = parseDateKeyInTimeZone(nearest, TIMEZONE_JST);
+        if (next) setSelectedDate(next);
+      } catch {
+        /* 最寄り探索失敗でも案内は続ける */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    tutorialActive,
+    welcomeIntroSession,
+    today,
+    dateKeysForDayStrip,
+    selectedDate,
+    selectedLeague,
+    filteredGames.length,
+    setSelectedDate,
+  ]);
 
   function selectDateManually(nextDate: Date) {
     skipAutoAdvanceRef.current = true;
@@ -2057,12 +2212,16 @@ export default function GamesHomeScreen({
     <View style={styles.screenRoot}>
       <View style={screenShellStyle}>
       <TutorialWelcomeWorldCameraNative
-        active
-        flying={!welcomeBrandInWorld || welcomeWorldFly}
+        active={welcomeBrandInWorld}
+        flying={welcomeWorldFly}
         onFlyComplete={
           welcomeBrandInWorld
             ? () => {
                 const dest = welcomeFlyDestRef.current;
+                if (dest === "skip") {
+                  completeTutorialFully();
+                  return;
+                }
                 if (dest === "features") {
                   setTutorialLiveTrackNative("features");
                   setTutorialPhaseAndStore("gamesPickup");
@@ -2075,32 +2234,37 @@ export default function GamesHomeScreen({
         }
         overlay={
           welcomeBrandInWorld ? (
-            <TutorialLiveCoachNative
-              open
-              embedInCamera
-              title={tutorialCopy.tutorial.practice.welcomeTitle}
-              body={tutorialCopy.tutorial.practice.welcomeBody}
-              skipLabel={tutorialCopy.tutorial.skip}
-              nextLabel={tutorialCopy.tutorial.practice.welcomeFullCta}
-              altNextLabel={tutorialCopy.tutorial.practice.welcomeFeaturesCta}
-              visual="welcome"
-              {...skipConfirm}
-              onSkip={completeTutorialFully}
-              onWelcomeFlyStart={(dest) => {
-                welcomeFlyDestRef.current = dest;
-                setWelcomeFlyDest(dest);
-                setWelcomeWorldFly(true);
-                if (dest === "features") setTutorialLiveTrackNative("features");
-              }}
-              onNext={() => {
-                setTutorialLiveTrackNative("full");
-                setTutorialPhaseAndStore("games");
-              }}
-              onAltNext={() => {
-                setTutorialLiveTrackNative("features");
-                setTutorialPhaseAndStore("gamesPickup");
-              }}
-            />
+            welcomeFlyDest === "skip" ? (
+              <View pointerEvents="none" />
+            ) : (
+              <TutorialLiveCoachNative
+                key={`welcome-intro-${welcomeIntroSession}`}
+                open
+                embedInCamera
+                title={welcomeBriefing.title}
+                body={welcomeBriefing.body}
+                skipLabel={tutorialCopy.tutorial.skip}
+                nextLabel={welcomeBriefing.nextLabel}
+                altNextLabel={welcomeBriefing.altNextLabel}
+                visual="welcome"
+                {...skipConfirm}
+                onSkip={completeTutorialFully}
+                onWelcomeFlyStart={(dest) => {
+                  welcomeFlyDestRef.current = dest;
+                  setWelcomeFlyDest(dest);
+                  setWelcomeWorldFly(true);
+                  if (dest === "features") setTutorialLiveTrackNative("features");
+                }}
+                onNext={() => {
+                  setTutorialLiveTrackNative("full");
+                  setTutorialPhaseAndStore("games");
+                }}
+                onAltNext={() => {
+                  setTutorialLiveTrackNative("features");
+                  setTutorialPhaseAndStore("gamesPickup");
+                }}
+              />
+            )
           ) : null
         }
       >
@@ -2261,9 +2425,7 @@ export default function GamesHomeScreen({
                 ? tutorialCopy.tutorial.pulseHint
                 : undefined
             }
-            tutorialRegisterMatchCard={
-              tutorialPhase === "tapCard" || tutorialPhase === "welcome"
-            }
+            tutorialRegisterMatchCard={tutorialPhase === "tapCard"}
             tutorialRegisterPickupLabel={tutorialPhase === "gamesPickup"}
             shellVariant="lineFrame"
             pickupMark="left"
@@ -2396,9 +2558,7 @@ export default function GamesHomeScreen({
             ? "games-stats-edge"
             : tutorialPhase === "gamesPickup" && filteredGames.length > 0
               ? "match-pickup-label"
-              : tutorialPhase === "games" && filteredGames.length > 0
-                ? "match-card"
-                : null
+              : null
         }
         visual={
           tutorialPhase === "gamesStats"
@@ -2434,10 +2594,15 @@ export default function GamesHomeScreen({
             getTutorialLiveTrackNative() === "features" &&
             tutorialPhase === "gamesPickup"
           ) {
+            setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
             setTutorialPhaseAndStore("welcome");
             return;
           }
-          setTutorialPhaseAndStore(prevTutorialGamesSubstep(tutorialPhase));
+          const prev = prevTutorialGamesSubstep(tutorialPhase);
+          if (prev === "welcome") {
+            setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
+          }
+          setTutorialPhaseAndStore(prev);
         }}
         onNext={() => {
           if (!isTutorialGamesSubstep(tutorialPhase)) return;

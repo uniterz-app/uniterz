@@ -959,6 +959,8 @@ const fr: Messages = {
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
         "Pronostique, gagne des points et grimpe au **classement**. Tour des écrans, ou seulement les nouveautés.",
+      welcomeReturningBody:
+        "Tour des écrans, ou seulement les **nouveautés**.",
       welcomeFullCta: "Voir le guide",
       welcomeFeaturesCta: "Nouveautés seulement",
       gamesTitle: "Matchs",

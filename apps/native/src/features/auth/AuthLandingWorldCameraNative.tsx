@@ -1,14 +1,7 @@
 /**
- * Web `TutorialWelcomeWorldCamera` 相当 —
- * 試合ページ（遠）と welcome（近）を同じ progress で動かす。
- *
- * Native に translateZ はない。奥行きは
- * perspective + scale(0.8) + rotateX(6deg) で Web の Z -520 を近似する。
- * transform は worldCage の中だけに閉じ、CTA はケージの外に置く。
- *
- * welcome 静止中は不透明の暗幕で試合面を隠す。
- * fly で暗幕をカメラ前進に合わせて開け、着地を見せてから完了する。
- * BlurView / filter:blur / BackdropBlur は使わない。
+ * 認証 Landing → フォームの 3D プッシュイン。
+ * チュートリアル World Camera と同じ progress 1本。
+ * 戻りはスナップせず逆飛行する。
  */
 import { useEffect, useRef, type ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
@@ -32,6 +25,7 @@ import {
   TUTORIAL_WELCOME_WORLD_REST_RX_DEG,
   TUTORIAL_WELCOME_WORLD_REST_SCALE,
 } from "../../../../../lib/tutorial/tutorialMotion";
+import { AUTH_LANDING } from "./authLandingPalette";
 
 type Props = {
   active: boolean;
@@ -43,9 +37,8 @@ type Props = {
 };
 
 const FLY_EASE = Easing.bezier(0.42, 0, 0.18, 1);
-const WORLD_VOID = "#02060c";
 
-export default function TutorialWelcomeWorldCameraNative({
+export default function AuthLandingWorldCameraNative({
   active,
   flying,
   overlay,
@@ -85,25 +78,23 @@ export default function TutorialWelcomeWorldCameraNative({
     if (!flying) didNotifyRef.current = false;
     if (reduceMotion) {
       p.value = flying || !active ? 1 : 0;
+      if (flying) finishFly();
       return;
     }
     if (flying) {
-      /** 通常時（welcome 外）の flying=true では着地コールバックを呼ばない */
-      const shouldNotifyFlyComplete = Boolean(onFlyCompleteRef.current);
       p.value = withTiming(
         1,
         { duration: TUTORIAL_WELCOME_FLY_MS, easing: FLY_EASE },
         (done) => {
-          if (done && shouldNotifyFlyComplete) runOnJS(finishFly)();
+          if (done) runOnJS(finishFly)();
         }
       );
       return;
     }
-    /**
-     * 遠景へはスナップ。プロフィールタブは裏で p=1 のまま居ることがあり、
-     * withTiming(0) すると一旦ズームアウトしてから前進して崩れる。
-     */
-    p.value = active ? 0 : 1;
+    p.value = withTiming(active ? 0 : 1, {
+      duration: TUTORIAL_WELCOME_FLY_MS,
+      easing: FLY_EASE,
+    });
   }, [active, flying, p, reduceMotion]);
 
   const worldStyle = useAnimatedStyle(() => ({
@@ -185,10 +176,6 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden",
   },
-  /**
-   * transform された試合面をこのケージ内に閉じる。
-   * CTA はケージの兄弟なので、カードの GPU レイヤーが前面に抜けない。
-   */
   worldCage: {
     flex: 1,
     overflow: "hidden",
@@ -199,7 +186,7 @@ const styles = StyleSheet.create({
   },
   scrimFill: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: WORLD_VOID,
+    backgroundColor: AUTH_LANDING.void,
   },
   scrimSlot: {
     ...StyleSheet.absoluteFillObject,

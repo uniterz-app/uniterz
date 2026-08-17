@@ -962,6 +962,8 @@ const ja = {
       welcomeTitle: "ウェルカム to UNITERZ",
       welcomeBody:
         "試合を予想してポイントを稼ぎ、**ランキング**を競うアプリです。\n各画面の案内か、新機能だけか選んでください。",
+      welcomeReturningBody:
+        "各画面の全体案内か、UNIT・キャリアなどの**新機能だけ**か選んでください。",
       welcomeFullCta: "画面を案内",
       welcomeFeaturesCta: "新機能だけ",
       gamesTitle: "試合タブ",

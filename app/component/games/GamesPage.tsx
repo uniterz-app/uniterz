@@ -69,6 +69,7 @@ import {
   readAppTutorialSeenLocal,
 } from "@/lib/tutorial/tutorialSeen";
 import {
+  TUTORIAL_LIVE_PHASE_EVENT,
   readTutorialLivePhase,
   writeTutorialLivePhase,
   type TutorialLivePhase,
@@ -85,9 +86,24 @@ import { writeTutorialLiveTrack, readTutorialLiveTrack } from "@/lib/tutorial/tu
 import { writeTutorialHorizonSubstep } from "@/lib/tutorial/tutorialHorizonSubstep";
 import { writeTutorialWelcomeHandoff, tutorialProfileHref } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
+import { setTutorialRestartCover } from "@/lib/tutorial/tutorialRestartCover";
 import {
+  beginTutorialWelcomeIntroSession,
+  getTutorialWelcomeIntroSession,
+} from "@/lib/tutorial/tutorialWelcomeSkipIntro";
+import {
+  ensureTutorialWelcomeFirst,
+  resolveTutorialWelcomeAudience,
+  tutorialWelcomeBriefingProps,
+  writeTutorialWelcomeAudience,
+  type TutorialWelcomeAudience,
+} from "@/lib/tutorial/tutorialWelcomeAudience";
+import type { TutorialWelcomeFlyDest } from "@/lib/tutorial/tutorialMotion";
+import {
+  fetchNearestGameDayToLocalDay,
   fetchNextGameDayAfterLocalDay,
   fetchPreviousGameDayBeforeLocalDay,
+  pickNearestDateKey,
 } from "@/lib/games/fetchNextGameDayAfter";
 import {
   gameInvolvesAnyTeam,
@@ -207,13 +223,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ========================= */
   const [league, setLeague] = useState<League>("nba");
   const [tutorialPhase, setTutorialPhase] =
-    useState<TutorialLivePhase | null>(null);
+    useState<TutorialLivePhase | null>(() => readTutorialLivePhase());
   const [welcomeWorldFly, setWelcomeWorldFly] = useState(false);
-  const welcomeFlyDestRef = useRef<"full" | "features">("full");
-  const [welcomeFlyDest, setWelcomeFlyDest] = useState<"full" | "features" | null>(
-    null
-  );
+  const welcomeFlyDestRef = useRef<TutorialWelcomeFlyDest>("full");
+  const [welcomeFlyDest, setWelcomeFlyDest] = useState<
+    TutorialWelcomeFlyDest | null
+  >(null);
   const [welcomeHandoff, setWelcomeHandoff] = useState<"profile" | null>(null);
+  /** サイドメニュー再開で集合入場を載せ替えるための世代 */
+  const [welcomeIntroSession, setWelcomeIntroSession] = useState(
+    getTutorialWelcomeIntroSession
+  );
+  const [welcomeAudience, setWelcomeAudience] =
+    useState<TutorialWelcomeAudience>(resolveTutorialWelcomeAudience);
+  const welcomeBriefing = tutorialWelcomeBriefingProps(
+    m.tutorial.practice,
+    welcomeAudience
+  );
   const didInitLeague = useRef(false);
   const { preferredLeague, ready: preferredLeagueReady } =
     useUserPreferredLeague(user?.uid);
@@ -248,8 +274,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         return;
       }
       const start: TutorialLivePhase = existing ?? "welcome";
+      const audience = ensureTutorialWelcomeFirst();
       writeTutorialLivePhase(start);
       setTutorialPhase(start);
+      setWelcomeAudience(audience);
       if (start === "welcome") setTutorialWelcomeChromeHidden(true);
       setAppTutorialBlockingEvents(true);
     })();
@@ -278,6 +306,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     writeTutorialLivePhase(null);
     writeTutorialLiveTrack(null);
     writeTutorialWelcomeHandoff(null);
+    writeTutorialWelcomeAudience(null);
     clearTutorialLivePick();
     setTutorialPhase(null);
     setAppTutorialBlockingEvents(false);
@@ -301,6 +330,25 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     }
   }, [tutorialPhase]);
 
+  /** サイドメニュー再開: 試合面を出さず、最初の描画から welcome にする */
+  useEffect(() => {
+    const sync = () => {
+      const next = readTutorialLivePhase();
+      setTutorialPhase(next);
+      if (next === "welcome") {
+        setWelcomeWorldFly(false);
+        setWelcomeFlyDest(null);
+        setWelcomeHandoff(null);
+        setWelcomeIntroSession(getTutorialWelcomeIntroSession());
+        setWelcomeAudience(resolveTutorialWelcomeAudience());
+        setTutorialWelcomeChromeHidden(true);
+        setTutorialRestartCover(false);
+      }
+    };
+    window.addEventListener(TUTORIAL_LIVE_PHASE_EVENT, sync);
+    return () => window.removeEventListener(TUTORIAL_LIVE_PHASE_EVENT, sync);
+  }, []);
+
   useLayoutEffect(() => {
     setTutorialWelcomeBrandHidden(brandShelfInCamera);
     return () => setTutorialWelcomeBrandHidden(false);
@@ -308,9 +356,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   useLayoutEffect(() => {
     const inWorld = tutorialPhase === "welcome" && welcomeHandoff !== "profile";
-    setTutorialWelcomeChromeHidden(inWorld && !welcomeWorldFly);
+    /** 飛行中もナビは出さない。着地（welcome 終了）でフェードイン */
+    setTutorialWelcomeChromeHidden(inWorld);
+    if (inWorld) setTutorialRestartCover(false);
     return () => setTutorialWelcomeChromeHidden(false);
-  }, [tutorialPhase, welcomeWorldFly, welcomeHandoff]);
+  }, [tutorialPhase, welcomeHandoff]);
 
   useEffect(() => {
     if (didInitLeague.current || !preferredLeagueReady) return;
@@ -777,6 +827,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
    */
   const listLoading = loading;
   const didResolveEmptyDayRef = useRef<Partial<Record<League, string>>>({});
+  /** チュートリアル開始日の最寄り試合日は、入場セッションごとに1回だけ解決する */
+  const tutorialNearestFetchRef = useRef<number | null>(null);
 
   const hasAnyListFilter =
     teamFilterIds.length > 0 || marginMin != null || marginMax != null;
@@ -877,6 +929,75 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ]);
 
   /**
+   * チュートリアルは専用試合を持たない。
+   * 開始日（今日）に一番近い本番の試合日へ寄せ、その日のカードで案内する。
+   */
+  useEffect(() => {
+    if (!tutorialActive) {
+      tutorialNearestFetchRef.current = null;
+      return;
+    }
+    const stripKeys = gameDaysForStrip.map((d) =>
+      toDateKeyInTimeZone(d, dayTimeZone)
+    );
+    const selectedKey = selected
+      ? toDateKeyInTimeZone(selected, dayTimeZone)
+      : "";
+    if (filteredGames.length === 0) {
+      const memoryNearest = pickNearestDateKey(todayKey, stripKeys);
+      if (memoryNearest && memoryNearest !== selectedKey) {
+        const d = parseDateKeyInTimeZone(memoryNearest, dayTimeZone);
+        if (d) setSelectedAndSync(d);
+      }
+    }
+    if (tutorialNearestFetchRef.current === welcomeIntroSession) return;
+    tutorialNearestFetchRef.current = welcomeIntroSession;
+
+    const anchor =
+      parseDateKeyInTimeZone(todayKey, dayTimeZone) ?? new Date();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const apiDay = await fetchNearestGameDayToLocalDay({
+          league,
+          timeZone: dayTimeZone,
+          day: anchor,
+        });
+        if (cancelled) return;
+        const apiKey = apiDay
+          ? toDateKeyInTimeZone(apiDay, dayTimeZone)
+          : null;
+        const nearest = pickNearestDateKey(todayKey, [
+          ...stripKeys,
+          ...(apiKey ? [apiKey] : []),
+        ]);
+        if (!nearest) return;
+        const current = selected
+          ? toDateKeyInTimeZone(selected, dayTimeZone)
+          : "";
+        if (nearest === current) return;
+        const d = parseDateKeyInTimeZone(nearest, dayTimeZone);
+        if (d) setSelectedAndSync(d);
+      } catch {
+        /* 最寄り探索失敗でも案内は続ける */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    tutorialActive,
+    welcomeIntroSession,
+    todayKey,
+    league,
+    dayTimeZone,
+    gameDaysForStrip,
+    selected,
+    filteredGames.length,
+    setSelectedAndSync,
+  ]);
+
+  /**
    * 今日に試合が無く、かつ近傍ウィンドウ（±5日）にも試合が無いときは
    * 次の試合日へ、無ければ直近の過去試合日へ自動ジャンプする。
    */
@@ -944,7 +1065,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /** モバイル試合一覧はカード横幅を広げるため左右を詰める */
   const pagePad =
     dense && isMobile ? "px-0" : dense ? "px-3" : "px-4 md:px-6";
-  const isInitialLoading = loadingDays && monthRows.length === 0;
+  const isInitialLoading =
+    loadingDays && monthRows.length === 0 && !tutorialActive;
   const isSwitchingDate = !!selected && listLoading;
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
   const playoffViewHref = isMobile
@@ -1185,12 +1307,16 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ].join(" ")}
     >
       <TutorialWelcomeWorldCamera
-        active={tutorialPhase === "welcome"}
-        flying={!welcomeBrandInWorld || welcomeWorldFly}
+        active={welcomeBrandInWorld}
+        flying={welcomeWorldFly}
         onFlyComplete={
           welcomeBrandInWorld
             ? () => {
                 const dest = welcomeFlyDestRef.current;
+                if (dest === "skip") {
+                  completeTutorialFully();
+                  return;
+                }
                 if (dest === "features") {
                   writeTutorialLiveTrack("features");
                   setTutorialPhaseAndStore("gamesPickup");
@@ -1203,32 +1329,37 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         }
         overlay={
           welcomeBrandInWorld ? (
-            <TutorialLiveCoach
-              open
-              embedInCamera
-              title={m.tutorial.practice.welcomeTitle}
-              body={m.tutorial.practice.welcomeBody}
-              skipLabel={m.tutorial.skip}
-              nextLabel={m.tutorial.practice.welcomeFullCta}
-              altNextLabel={m.tutorial.practice.welcomeFeaturesCta}
-              visual="welcome"
-              {...skipConfirm}
-              onSkip={completeTutorialFully}
-              onWelcomeFlyStart={(dest) => {
-                welcomeFlyDestRef.current = dest;
-                setWelcomeFlyDest(dest);
-                setWelcomeWorldFly(true);
-                if (dest === "features") writeTutorialLiveTrack("features");
-              }}
-              onNext={() => {
-                writeTutorialLiveTrack("full");
-                setTutorialPhaseAndStore("games");
-              }}
-              onAltNext={() => {
-                writeTutorialLiveTrack("features");
-                setTutorialPhaseAndStore("gamesPickup");
-              }}
-            />
+            welcomeFlyDest === "skip" ? (
+              <div aria-hidden className="pointer-events-none" />
+            ) : (
+              <TutorialLiveCoach
+                key={`welcome-intro-${welcomeIntroSession}`}
+                open
+                embedInCamera
+                title={welcomeBriefing.title}
+                body={welcomeBriefing.body}
+                skipLabel={m.tutorial.skip}
+                nextLabel={welcomeBriefing.nextLabel}
+                altNextLabel={welcomeBriefing.altNextLabel}
+                visual="welcome"
+                {...skipConfirm}
+                onSkip={completeTutorialFully}
+                onWelcomeFlyStart={(dest) => {
+                  welcomeFlyDestRef.current = dest;
+                  setWelcomeFlyDest(dest);
+                  setWelcomeWorldFly(true);
+                  if (dest === "features") writeTutorialLiveTrack("features");
+                }}
+                onNext={() => {
+                  writeTutorialLiveTrack("full");
+                  setTutorialPhaseAndStore("games");
+                }}
+                onAltNext={() => {
+                  writeTutorialLiveTrack("features");
+                  setTutorialPhaseAndStore("gamesPickup");
+                }}
+              />
+            )
           ) : null
         }
       >
@@ -1446,9 +1577,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               ? "games-stats-edge"
               : tutorialPhase === "gamesPickup" && filteredGames.length > 0
                 ? "match-pickup-label"
-                : tutorialPhase === "games" && filteredGames.length > 0
-                  ? "match-card"
-                  : null
+                : null
           }
           visual={
             tutorialPhase === "gamesStats"
@@ -1479,10 +1608,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               readTutorialLiveTrack() === "features" &&
               tutorialPhase === "gamesPickup"
             ) {
+              setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
               setTutorialPhaseAndStore("welcome");
               return;
             }
-            setTutorialPhaseAndStore(prevTutorialGamesSubstep(tutorialPhase));
+            const prev = prevTutorialGamesSubstep(tutorialPhase);
+            if (prev === "welcome") {
+              setWelcomeIntroSession(beginTutorialWelcomeIntroSession());
+            }
+            setTutorialPhaseAndStore(prev);
           }}
           onNext={() => {
             if (

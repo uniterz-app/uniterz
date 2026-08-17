@@ -968,6 +968,8 @@ const en: Messages = {
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
         "Predict games, earn points, and climb the **rankings**. Take a tour of each screen, or jump to new features only.",
+      welcomeReturningBody:
+        "Take a tour of each screen, or jump to **new features** only.",
       welcomeFullCta: "Show me around",
       welcomeFeaturesCta: "New features only",
       gamesTitle: "Games",

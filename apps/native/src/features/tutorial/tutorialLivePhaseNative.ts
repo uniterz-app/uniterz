@@ -14,6 +14,13 @@ type PhaseListener = (phase: TutorialLivePhase | null) => void;
 
 const listeners = new Set<PhaseListener>();
 
+/** write / read 済みの最新値。Games 初回描画で試合面を出さないために使う */
+let cachedPhase: TutorialLivePhase | null = null;
+
+export function getTutorialLivePhaseNativeMemory(): TutorialLivePhase | null {
+  return cachedPhase;
+}
+
 export function subscribeTutorialLivePhaseNative(
   fn: PhaseListener
 ): () => void {
@@ -36,9 +43,11 @@ function notifyPhase(phase: TutorialLivePhase | null): void {
 export async function readTutorialLivePhaseNative(): Promise<TutorialLivePhase | null> {
   try {
     const v = await AsyncStorage.getItem(TUTORIAL_LIVE_PHASE_KEY);
-    return normalizeTutorialLivePhase(v);
+    const phase = normalizeTutorialLivePhase(v);
+    cachedPhase = phase;
+    return phase;
   } catch {
-    return null;
+    return cachedPhase;
   }
 }
 
@@ -46,6 +55,7 @@ export async function writeTutorialLivePhaseNative(
   phase: TutorialLivePhase | null
 ): Promise<void> {
   const next = !phase || phase === "done" ? null : phase;
+  cachedPhase = next;
   notifyPhase(next);
   try {
     if (!next) {

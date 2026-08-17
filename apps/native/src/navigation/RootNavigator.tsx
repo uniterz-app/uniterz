@@ -9,7 +9,7 @@ import SignupScreenNative from "../features/auth/SignupScreenNative";
 import ResetPasswordScreenNative from "../features/auth/ResetPasswordScreenNative";
 import OnboardingScreenNative from "../features/auth/OnboardingScreenNative";
 import AuthEntryScreen from "../features/auth/AuthEntryScreen";
-import LandingScreenNative from "../features/legal/LandingScreenNative";
+import AuthLandingFlyShellNative from "../features/auth/AuthLandingFlyShellNative";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -29,7 +29,7 @@ function AuthNavigator() {
         initialRouteName="Landing"
         screenOptions={{ ...transparentStack, animation: "fade" }}
       >
-        <AuthStack.Screen name="Landing" component={LandingScreenNative} />
+        <AuthStack.Screen name="Landing" component={AuthLandingFlyShellNative} />
         <AuthStack.Screen name="Login" component={AuthEntryScreen} />
         <AuthStack.Screen name="Signup" component={SignupScreenNative} />
         <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreenNative} />

@@ -27,6 +27,7 @@ import RootNavigator from "./src/navigation/RootNavigator";
 import { navigationRef } from "./src/navigation/navigationRef";
 import { useNativeShareDeepLinks } from "./src/navigation/useNativeShareDeepLinks";
 import AppShellNative from "./src/components/AppShellNative";
+import TutorialRestartCoverNative from "./src/features/tutorial/TutorialRestartCoverNative";
 import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
 import CyberAlertProvider from "./src/components/CyberAlertProvider";
 import { NATIVE_PAGE_SURFACE_COLOR } from "./src/features/background/nativeBackgroundPalette";
@@ -101,6 +102,7 @@ export default function App() {
             >
               <RootNavigator />
               <StatusBar style="light" />
+              <TutorialRestartCoverNative />
             </NavigationContainer>
           </AppShellNative>
           </CyberAlertProvider>

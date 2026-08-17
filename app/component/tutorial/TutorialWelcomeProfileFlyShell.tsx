@@ -29,6 +29,7 @@ import {
   readTutorialWelcomeHandoff,
   writeTutorialWelcomeHandoff,
 } from "@/lib/tutorial/tutorialWelcomeHandoff";
+import { writeTutorialWelcomeAudience } from "@/lib/tutorial/tutorialWelcomeAudience";
 import TutorialWelcomeWorldCamera from "@/app/component/tutorial/TutorialWelcomeWorldCamera";
 import TutorialLiveCoach from "@/app/component/tutorial/TutorialLiveCoach";
 
@@ -67,6 +68,7 @@ export default function TutorialWelcomeProfileFlyShell({
     writeTutorialLivePhase(null);
     writeTutorialLiveTrack(null);
     writeTutorialWelcomeHandoff(null);
+    writeTutorialWelcomeAudience(null);
     clearTutorialLivePick();
     setActive(false);
     setAppTutorialBlockingEvents(false);

@@ -4,16 +4,20 @@
  * 試合面・暗幕・CTA を同じ perspective の 3D 空間に置く。
  * 世界は奥（translateZ -520）、暗幕と CTA は手前。
  * 2D の兄弟にすると、カードの GPU レイヤーが CTA より前面に合成される。
+ *
+ * welcome 静止中は試合面を見せない（不透明の暗幕）。
+ * fly で暗幕をカメラ前進に合わせて開け、着地を見せてから完了する。
  */
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   TUTORIAL_WELCOME_CAMERA_Z_PX,
   TUTORIAL_WELCOME_FLY_EASE,
   TUTORIAL_WELCOME_FLY_S,
+  TUTORIAL_WELCOME_LAND_HOLD_MS,
   TUTORIAL_WELCOME_MODAL_PASS_SCALE,
   TUTORIAL_WELCOME_PASS_FADE_AT,
-  TUTORIAL_WELCOME_WORLD_BLUR_PX,
+  TUTORIAL_WELCOME_SCRIM_CLEAR_AT,
   TUTORIAL_WELCOME_WORLD_REST_RX_DEG,
   TUTORIAL_WELCOME_WORLD_Z_PX,
 } from "@/lib/tutorial/tutorialMotion";
@@ -31,13 +35,25 @@ const PERSPECTIVE_PX = 1400;
 const SCRIM_Z_PX = 48;
 const OVERLAY_Z_PX = 96;
 
-const SCRIM_FILL =
-  "linear-gradient(to bottom, rgba(2, 6, 12, 0.55) 0%, rgba(2, 6, 12, 0.72) 42%, rgba(2, 6, 12, 0.86) 100%)";
+const WORLD_VOID = "#02060c";
 
 const CAMERA_TRANSITION = {
   duration: TUTORIAL_WELCOME_FLY_S,
   ease: TUTORIAL_WELCOME_FLY_EASE,
 } as const;
+
+function RestingShell({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="relative flex min-h-0 flex-1 flex-col"
+      style={{ minHeight: "100%" }}
+    >
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function TutorialWelcomeWorldCamera({
   active,
@@ -47,19 +63,37 @@ export default function TutorialWelcomeWorldCamera({
   children,
 }: Props) {
   const reduceMotion = useReducedMotion() === true;
-  if (!active) {
-    return <>{children}</>;
-  }
+  const didCompleteRef = useRef(false);
+  const landTimerRef = useRef<number | null>(null);
+  const onFlyCompleteRef = useRef(onFlyComplete);
+  onFlyCompleteRef.current = onFlyComplete;
 
-  const restFilter = `blur(${TUTORIAL_WELCOME_WORLD_BLUR_PX}px) brightness(0.55)`;
+  useEffect(() => {
+    didCompleteRef.current = false;
+    return () => {
+      if (landTimerRef.current != null) {
+        window.clearTimeout(landTimerRef.current);
+        landTimerRef.current = null;
+      }
+    };
+  }, [flying]);
+
+  const notifyFlyComplete = () => {
+    if (!flying || didCompleteRef.current) return;
+    didCompleteRef.current = true;
+    landTimerRef.current = window.setTimeout(() => {
+      onFlyCompleteRef.current?.();
+    }, TUTORIAL_WELCOME_LAND_HOLD_MS);
+  };
+
+  if (!active) {
+    return <RestingShell>{children}</RestingShell>;
+  }
 
   if (reduceMotion) {
     return (
       <div className="relative flex min-h-0 flex-1 flex-col" style={{ minHeight: "100%" }}>
-        <div
-          className="pointer-events-none flex min-h-0 flex-1 flex-col"
-          style={{ filter: restFilter }}
-        >
+        <div className="pointer-events-none flex min-h-0 flex-1 flex-col">
           {children}
         </div>
         {overlay ? (
@@ -67,7 +101,7 @@ export default function TutorialWelcomeWorldCamera({
             <div
               aria-hidden
               className="pointer-events-auto absolute inset-0"
-              style={{ background: SCRIM_FILL }}
+              style={{ background: WORLD_VOID }}
             />
             <div className="pointer-events-none absolute inset-0">{overlay}</div>
           </>
@@ -127,9 +161,9 @@ export default function TutorialWelcomeWorldCamera({
             aria-hidden
             className="absolute inset-0"
             style={{
-              background: SCRIM_FILL,
+              background: WORLD_VOID,
               transformStyle: "preserve-3d",
-              pointerEvents: flying ? "none" : "auto",
+              pointerEvents: "none",
             }}
             initial={false}
             animate={{
@@ -137,7 +171,9 @@ export default function TutorialWelcomeWorldCamera({
               opacity: flying ? 0 : 1,
             }}
             transition={{
-              duration: flying ? TUTORIAL_WELCOME_FLY_S * 0.38 : 0.4,
+              duration: flying
+                ? TUTORIAL_WELCOME_FLY_S * TUTORIAL_WELCOME_SCRIM_CLEAR_AT
+                : 0.4,
               ease: TUTORIAL_WELCOME_FLY_EASE,
             }}
           />
@@ -166,9 +202,7 @@ export default function TutorialWelcomeWorldCamera({
                 ease: TUTORIAL_WELCOME_FLY_EASE,
               },
             }}
-            onAnimationComplete={() => {
-              if (flying) onFlyComplete?.();
-            }}
+            onAnimationComplete={notifyFlyComplete}
           >
             {overlay}
           </motion.div>

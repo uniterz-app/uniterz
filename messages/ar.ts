@@ -960,6 +960,8 @@ const ar: Messages = {
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
         "توقّع المباريات، اجمع النقاط، وتنافس على **التصنيف**. جولة لكل الشاشات، أو الميزات الجديدة فقط.",
+      welcomeReturningBody:
+        "جولة لكل الشاشات، أو **الميزات الجديدة** فقط.",
       welcomeFullCta: "شرح الشاشات",
       welcomeFeaturesCta: "الميزات الجديدة فقط",
       gamesTitle: "المباريات",

@@ -8,6 +8,11 @@ const DELTA_EPS = 20;
 /** smooth スクロール完了待ち（scrollend 非対応ブラウザ向け） */
 const SCROLL_SETTLE_MS = 480;
 
+/** 画面に固定。スクロールすると裏のリストだけ動き、モーダル出現がカクつく */
+export function isPinnedTutorialTarget(targetId: string): boolean {
+  return targetId === "games-stats-edge" || targetId.startsWith("nav-");
+}
+
 function findScrollParent(el: HTMLElement): HTMLElement | null {
   let node: HTMLElement | null = el.parentElement;
   while (node && node !== document.body) {
@@ -100,6 +105,9 @@ export function scrollTutorialTargetIntoView(
     `[data-tutorial-target="${targetId}"]`
   ) as HTMLElement | null;
   if (!el) return false;
+  if (isPinnedTutorialTarget(targetId)) return false;
+  const pin = window.getComputedStyle(el).position;
+  if (pin === "fixed" || pin === "sticky") return false;
 
   const behavior = opts?.behavior ?? "smooth";
   const rect = el.getBoundingClientRect();
