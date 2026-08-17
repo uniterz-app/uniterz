@@ -66,6 +66,13 @@ function readCache(uid: string, period: ProfileKinetikMetricsPeriod) {
   return hit.data;
 }
 
+export function peekNbaKinetikPeriodStatsCache(
+  uid: string,
+  period: ProfileKinetikMetricsPeriod
+): NbaPeriodKinetikStats | null {
+  return readCache(uid.trim(), period);
+}
+
 function windowCacheKey(
   uid: string,
   board: ProfileKinetikBoard,

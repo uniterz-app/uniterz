@@ -14,6 +14,7 @@ import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
+import { warmPublicProfileFromListEntry } from "@/app/component/profile/useProfile";
 
 type Props = {
   entries: GamePointsTopEntryV1[];
@@ -42,6 +43,18 @@ export default function ResultTopScoresList({
             uid: entry.uid,
             handle: entry.handle === "—" ? "" : entry.handle,
           });
+          const warm = () => {
+            if (!profileKey) return;
+            warmPublicProfileFromListEntry({
+              routeKey: profileKey,
+              uid: entry.uid,
+              handle: entry.handle === "—" ? "" : entry.handle,
+              displayName: entry.displayName,
+              photoURL: entry.photoURL,
+              plan: entry.isPro ? "pro" : "free",
+              countryCode: entry.countryCode,
+            });
+          };
           const row = (
             <CyberRankingListRow
               rank={entry.rank}
@@ -77,6 +90,8 @@ export default function ResultTopScoresList({
               key={`${entry.rank}-${entry.postId}`}
               href={`${gamesRoutePrefix}/u/${encodeURIComponent(profileKey)}`}
               className="block min-w-0 origin-center transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95"
+              onPointerDown={warm}
+              onFocus={warm}
             >
               {row}
             </Link>

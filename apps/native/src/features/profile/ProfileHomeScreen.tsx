@@ -799,12 +799,16 @@ export default function ProfileHomeScreen({
 
   useEffect(() => {
     if (!isPublicProfileView) return;
-    if (profileByHandle.loading) {
+    if (profileByHandle.loading && !profileByHandle.identityReady) {
       setProfileLoading(true);
       return;
     }
     if (profileByHandle.notFound) {
       setProfileLoading(false);
+      return;
+    }
+    if (!profileByHandle.identityReady && profileByHandle.loading) {
+      setProfileLoading(true);
       return;
     }
     setDisplayName(profileByHandle.displayName);
@@ -1030,7 +1034,7 @@ export default function ProfileHomeScreen({
     );
   }
 
-  if (isPublicProfileView && profileByHandle.loading) {
+  if (isPublicProfileView && profileByHandle.loading && !profileByHandle.identityReady) {
     return (
       <View style={styles.screenRoot}>
         <ScrollView

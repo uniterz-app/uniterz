@@ -155,6 +155,24 @@ export function primeProfileStatsFromRankingRow(
   });
 }
 
+/** プロフィール overview 初回描画用（ランキング prime / hero seed） */
+export function peekPrimedProfileStatsSummary(
+  uid: string | null | undefined,
+  rankingLeague: RankingLeagueSource = "nba"
+): {
+  summary: SummaryForCardsV2;
+  summaryRanks: SummaryRanksV2 | null;
+} | null {
+  const safeUid = uid?.trim();
+  if (!safeUid) return null;
+  const cached = readValidCache(statsCacheKey(safeUid, rankingLeague));
+  if (!cached?.summary) return null;
+  return {
+    summary: cached.summary,
+    summaryRanks: cached.summaryRanks,
+  };
+}
+
 function statsCacheKey(
   uid: string,
   rankingLeague: RankingLeagueSource,

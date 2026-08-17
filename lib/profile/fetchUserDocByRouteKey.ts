@@ -9,6 +9,10 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { looksLikeFirestoreUid } from "./profilePathKey";
+import {
+  peekUserDocMemoryEntry,
+  setUserDocMemory,
+} from "../user/userDocMemoryCache";
 
 export function normalizeProfileRouteKey(raw: string): string {
   return raw.trim().replace(/^@+/u, "");
@@ -28,9 +32,22 @@ async function userDocByUid(
   db: Firestore,
   uid: string
 ): Promise<{ id: string; data: Record<string, unknown> } | null> {
-  const snap = await getDoc(doc(db, "users", uid));
-  if (!snap.exists()) return null;
-  return { id: snap.id, data: snap.data() as Record<string, unknown> };
+  const safeUid = uid.trim();
+  if (!safeUid) return null;
+
+  const mem = peekUserDocMemoryEntry(safeUid);
+  if (mem) {
+    return mem.exists ? { id: safeUid, data: mem.data } : null;
+  }
+
+  const snap = await getDoc(doc(db, "users", safeUid));
+  if (!snap.exists()) {
+    setUserDocMemory(safeUid, { exists: false, data: {} });
+    return null;
+  }
+  const data = snap.data() as Record<string, unknown>;
+  setUserDocMemory(safeUid, { exists: true, data });
+  return { id: snap.id, data };
 }
 
 async function userDocByField(
@@ -43,12 +60,15 @@ async function userDocByField(
   );
   if (snap.empty) return null;
   const d = snap.docs[0]!;
-  return { id: d.id, data: d.data() as Record<string, unknown> };
+  const data = d.data() as Record<string, unknown>;
+  setUserDocMemory(d.id, { exists: true, data });
+  return { id: d.id, data };
 }
 
 /**
  * プロフィール URL / カード ID から users ドキュメントを解決する。
  * カードの `ID: @XXXX` は slug（小文字）で、ハンドルとは別フィールドのことがある。
+ * uid 解決は `userDocMemoryCache` を共有（二重 getDoc を避ける）。
  */
 export async function fetchUserDocByRouteKey(
   db: Firestore,

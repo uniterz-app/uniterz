@@ -35,9 +35,9 @@ import {
 import type { RankingRow } from "../../../../../lib/rankings/cumulativeRankingRow";
 import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
 import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
-import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 import type { MainTabParamList, RankingsStackParamList } from "../../navigation/types";
 import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
+import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
@@ -350,7 +350,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const listEntranceKey = `${rankingsLeague}-${category}-${metric}-${round}`;
 
   const openProfile = (row: RankingRowWithCountry) => {
-    const key = profilePathKeyFromRow(row);
+    const key = warmPublicProfileFromRankingRowNative(row);
     if (!key) return;
     navigateToPublicProfileNative(stackNavigation, {
       handle: key,

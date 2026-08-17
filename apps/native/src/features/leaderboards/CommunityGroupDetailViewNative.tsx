@@ -11,7 +11,7 @@ import {
   communityMetricToMobile,
   communityRowToRankingCardRow,
 } from "../../../../../lib/communities/leaderboardDisplayRow";
-import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
+import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import {
   RankingsCyberPanelNative,
@@ -250,7 +250,10 @@ export default function CommunityGroupDetailViewNative({
 
   const openProfile = useCallback(
     (row: (typeof rankingCardRows)[number]) => {
-      const handle = profilePathKeyFromRow(row);
+      const handle = warmPublicProfileFromRankingRowNative(row, {
+        // グループ行は期間集計のためカード全体スタッツには載せない
+        skipStatsPrime: true,
+      });
       if (handle && onOpenProfile) onOpenProfile(handle);
     },
     [onOpenProfile]

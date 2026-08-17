@@ -97,10 +97,7 @@ function readProfileCache(key: string): ProfileLoadState | null {
   const cached = profileCache.get(normalizeProfileCacheKey(key));
   if (!cached) return null;
   if (Date.now() - cached.at > PROFILE_CACHE_TTL_MS) return null;
-  return {
-    userDocReady: false,
-    ...cached.state,
-  };
+  return { ...cached.state };
 }
 
 function writeProfileCache(
@@ -141,7 +138,8 @@ export function primeProfileCacheFromRankingRow(
 
   writeProfileCache([routeKey, uid, handle], {
     loading: false,
-    userDocReady: false,
+    // uid がある identity は即描画可（users 本文は裏で上書き）
+    userDocReady: uid.length > 0,
     targetUid: uid || null,
     counts: { posts: row.posts ?? 0 },
     user: {
@@ -169,6 +167,83 @@ export function primeProfileCacheFromRankingRow(
     );
     prefetchProfileSettledTodayResults(uid, statsContext);
   }
+}
+
+/** リザルト得点上位など、ランキング行以外からの identity + users warm */
+export function warmPublicProfileFromListEntry(input: {
+  routeKey: string;
+  uid?: string | null;
+  handle?: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
+  plan?: "free" | "pro" | boolean | null;
+  countryCode?: string | null;
+  posts?: number | null;
+}): void {
+  const uid = typeof input.uid === "string" ? input.uid.trim() : "";
+  const handle = typeof input.handle === "string" ? input.handle.trim() : "";
+  const displayName =
+    typeof input.displayName === "string" && input.displayName.trim()
+      ? input.displayName.trim()
+      : handle || "User";
+  const plan: "free" | "pro" =
+    input.plan === true || input.plan === "pro" ? "pro" : "free";
+
+  writeProfileCache([input.routeKey, uid, handle], {
+    loading: false,
+    userDocReady: uid.length > 0,
+    targetUid: uid || null,
+    counts: { posts: input.posts ?? 0 },
+    user: {
+      displayName,
+      handle,
+      bio: "",
+      photoURL: typeof input.photoURL === "string" ? input.photoURL : "",
+      currentStreak: 0,
+      maxStreak: 0,
+      plan,
+      countryCode:
+        typeof input.countryCode === "string" ? input.countryCode : null,
+    },
+  });
+
+  if (!uid) return;
+  void (async () => {
+    const { getUserDocDataCached } = await import("@/lib/user/userDocCache");
+    const data = await getUserDocDataCached(uid);
+    if (!data) return;
+    seedProfileHeroFromUserDoc(uid, data);
+    const { displayName: dn, handle: hn } = parseUserProfileFields(data);
+    writeProfileCache([input.routeKey, uid, hn], {
+      loading: false,
+      userDocReady: true,
+      targetUid: uid,
+      counts: {
+        posts:
+          typeof (data.counts as { posts?: number } | undefined)?.posts ===
+          "number"
+            ? (data.counts as { posts: number }).posts
+            : 0,
+      },
+      user: {
+        displayName: dn,
+        handle: hn,
+        bio: typeof data.bio === "string" ? data.bio : "",
+        photoURL: typeof data.photoURL === "string" ? data.photoURL : "",
+        currentStreak: currentSeasonWinStreak(
+          data.currentStreak,
+          data.streakSeasonKeyBasketball
+        ),
+        maxStreak: typeof data.maxStreak === "number" ? data.maxStreak : 0,
+        plan: data.plan === "pro" ? "pro" : "free",
+        planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
+        countryCode:
+          typeof data.countryCode === "string" ? data.countryCode : null,
+        memberSinceMs: parseMemberSinceMs(data),
+        unitBalance: parseUserUnitBalance(data),
+      },
+    });
+  })();
 }
 
 export function useProfile(handle: string) {

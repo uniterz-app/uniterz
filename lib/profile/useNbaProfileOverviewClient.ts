@@ -23,6 +23,8 @@ import {
 } from "@/lib/profile/profileOverviewSeason";
 import { preferredNbaKinetikPeriod } from "@/lib/rankings/nbaSeason";
 import type { ProfileKinetikMetricsPeriod } from "@/lib/profile/useNbaKinetikMonthlyStats";
+import { peekPrimedProfileStatsSummary } from "@/app/component/profile/useUserStatsV2";
+import { peekNbaKinetikPeriodStatsCache } from "@/lib/profile/useNbaKinetikMonthlyStats";
 
 export type NbaProfileOverviewClientState = {
   loading: boolean;
@@ -45,6 +47,40 @@ const idle: NbaProfileOverviewClientState = {
   chartsPath: null,
   overviewSeasonKey: profileOverviewSeasonKey(),
 };
+
+function initialOverviewState(
+  uid: string | null | undefined,
+  period: ProfileKinetikMetricsPeriod
+): NbaProfileOverviewClientState {
+  const safeUid = uid?.trim();
+  if (!safeUid) return { ...idle, loading: false };
+
+  const primed = peekPrimedProfileStatsSummary(safeUid, "nba");
+  if (primed?.summary) {
+    return {
+      ...idle,
+      loading: true,
+      summary: primed.summary as NbaProfileCardPhaseClient["summary"],
+      summaryRanks:
+        (primed.summaryRanks as NbaProfileCardPhaseClient["summaryRanks"]) ??
+        null,
+    };
+  }
+
+  const kinetik = peekNbaKinetikPeriodStatsCache(safeUid, period);
+  if (kinetik?.summary) {
+    return {
+      ...idle,
+      loading: true,
+      summary: kinetik.summary as NbaProfileCardPhaseClient["summary"],
+      summaryRanks:
+        (kinetik.summaryRanks as NbaProfileCardPhaseClient["summaryRanks"]) ??
+        null,
+    };
+  }
+
+  return idle;
+}
 
 const OVERVIEW_FETCH_TIMEOUT_MS = 20_000;
 
@@ -82,7 +118,9 @@ export function useNbaProfileOverviewClient(
 ): NbaProfileOverviewClientState {
   const enabled = options?.enabled ?? true;
   const period = options?.period ?? preferredNbaKinetikPeriod();
-  const [state, setState] = useState<NbaProfileOverviewClientState>(idle);
+  const [state, setState] = useState<NbaProfileOverviewClientState>(() =>
+    enabled ? initialOverviewState(uid, period) : { ...idle, loading: false }
+  );
 
   useEffect(() => {
     if (!enabled || !uid?.trim()) {

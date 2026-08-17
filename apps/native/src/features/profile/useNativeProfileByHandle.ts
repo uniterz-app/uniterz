@@ -4,11 +4,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { db } from "../../lib/firebase";
 import { fetchUserDocByRouteKey } from "../../../../../lib/profile/fetchUserDocByRouteKey";
-import { parseUserProfileFields, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
+import {
+  parseUserProfileFields,
+  parseUserUnitBalance,
+} from "../../../../../lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
 import { seedProfileHeroFromUserDoc } from "../../../../../lib/profile/seedProfileHeroFromUserDoc";
+import {
+  peekPublicProfileIdentity,
+  primePublicProfileIdentity,
+} from "../../../../../lib/profile/publicProfileIdentityCache";
+import { peekUserDocMemory } from "../../../../../lib/user/userDocMemoryCache";
+import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
 import { seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
@@ -18,6 +27,8 @@ import {
 export type NativeProfileByHandleState = {
   loading: boolean;
   notFound: boolean;
+  /** identity だけ先に揃っている（カード即描画可） */
+  identityReady: boolean;
   targetUid: string | null;
   displayName: string;
   handle: string;
@@ -37,6 +48,7 @@ export type NativeProfileByHandleState = {
 const idleState: NativeProfileByHandleState = {
   loading: false,
   notFound: false,
+  identityReady: false,
   targetUid: null,
   displayName: "",
   handle: "",
@@ -67,6 +79,7 @@ function mapUserDoc(
   return {
     loading: false,
     notFound: false,
+    identityReady: true,
     targetUid: id,
     displayName,
     handle: typeof data.handle === "string" ? data.handle.trim() : handle,
@@ -89,6 +102,34 @@ function mapUserDoc(
   };
 }
 
+function seedFromCaches(decoded: string): NativeProfileByHandleState | null {
+  if (looksLikeFirestoreUid(decoded)) {
+    const mem = peekUserDocMemory(decoded);
+    if (mem) return mapUserDoc(decoded, mem);
+  }
+
+  const identity = peekPublicProfileIdentity(decoded);
+  if (!identity) return null;
+
+  if (identity.targetUid) {
+    const mem = peekUserDocMemory(identity.targetUid);
+    if (mem) return mapUserDoc(identity.targetUid, mem);
+  }
+
+  return {
+    ...idleState,
+    loading: true,
+    identityReady: true,
+    targetUid: identity.targetUid,
+    displayName: identity.displayName,
+    handle: identity.handle || decoded,
+    bio: identity.bio,
+    avatarUrl: identity.photoURL,
+    plan: identity.plan,
+    countryCode: identity.countryCode,
+  };
+}
+
 export function useNativeProfileByHandle(routeKey: string | undefined | null) {
   const decoded = useMemo(() => {
     const raw = typeof routeKey === "string" ? routeKey.trim() : "";
@@ -100,11 +141,10 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
     }
   }, [routeKey]);
 
-  const [state, setState] = useState<NativeProfileByHandleState>(() =>
-    decoded
-      ? { ...idleState, loading: true }
-      : idleState
-  );
+  const [state, setState] = useState<NativeProfileByHandleState>(() => {
+    if (!decoded) return idleState;
+    return seedFromCaches(decoded) ?? { ...idleState, loading: true };
+  });
 
   useEffect(() => {
     if (!decoded) {
@@ -113,7 +153,17 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
     }
 
     let cancelled = false;
-    setState((prev) => ({ ...prev, loading: true, notFound: false }));
+    const seeded = seedFromCaches(decoded);
+    if (seeded) {
+      setState(seeded);
+    } else {
+      setState((prev) => ({
+        ...prev,
+        loading: true,
+        notFound: false,
+        identityReady: false,
+      }));
+    }
 
     void (async () => {
       try {
@@ -129,9 +179,21 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
           return;
         }
 
-        setState(mapUserDoc(docSnap.id, docSnap.data));
+        const mapped = mapUserDoc(docSnap.id, docSnap.data);
+        setState(mapped);
         seedNativeProfileStatsFromUserDoc(docSnap.id, docSnap.data);
         seedProfileHeroFromUserDoc(docSnap.id, docSnap.data);
+        primePublicProfileIdentity({
+          routeKey: decoded,
+          uid: docSnap.id,
+          handle: mapped.handle,
+          displayName: mapped.displayName,
+          bio: mapped.bio,
+          photoURL: mapped.avatarUrl,
+          plan: mapped.plan,
+          countryCode: mapped.countryCode,
+          fromUserDoc: true,
+        });
       } catch {
         if (cancelled) return;
         setState({
