@@ -81,8 +81,8 @@ export default function ProfileSettledTodayResults({
           <div
             className={
               isMobile
-                ? "mt-4 flex flex-col gap-3 overflow-visible pr-5"
-                : "mt-4 grid grid-cols-1 gap-4 overflow-visible pr-5 sm:grid-cols-2"
+                ? "mt-4 flex flex-col gap-3 overflow-visible"
+                : "mt-4 grid grid-cols-1 gap-4 overflow-visible sm:grid-cols-2"
             }
           >
             {visiblePosts.map((post) => (

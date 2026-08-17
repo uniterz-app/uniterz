@@ -15,6 +15,7 @@ import {
   fetchMeSeasonAwards,
   saveMeSeasonAwards,
 } from "@/lib/api/fetchSeasonAwards";
+import { fetchMeSeasonStandings } from "@/lib/api/fetchSeasonStandings";
 import { auth } from "@/lib/firebase";
 import { nameOxanium } from "@/lib/fonts";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -99,14 +100,18 @@ export default function SeasonAwardsPage() {
       setValue(data.prediction);
       setCandidates(data.candidates ?? []);
       setMode("view");
-      // 順位予想 API 未配線のため、現状は常に案内
-      setStandingsNudgeOpen(true);
+      try {
+        const existing = await fetchMeSeasonStandings(season);
+        if (!existing.prediction) setStandingsNudgeOpen(true);
+      } catch {
+        setStandingsNudgeOpen(true);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "submit failed");
     } finally {
       setSubmitting(false);
     }
-  }, [value, submitting]);
+  }, [value, submitting, season]);
 
   return (
     <GamesNbaSubpageShell
@@ -198,7 +203,7 @@ export default function SeasonAwardsPage() {
                 type="button"
                 onClick={() => {
                   setStandingsNudgeOpen(false);
-                  router.push("/mobile/season-standings-preview");
+                  router.push("/mobile/season-standings");
                 }}
                 className={[
                   nameOxanium.className,

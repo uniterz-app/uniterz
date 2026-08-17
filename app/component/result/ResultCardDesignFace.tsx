@@ -52,6 +52,13 @@ const BIAS_SEGS = 16;
 const BIAS_SEG_STAGGER_MS = 32;
 const RESULT_FACE_AFTER_FRAME_PAD_SEC = 0.08;
 
+/** Native `RESULT_CARD_DETAIL_SPINE` — 右辺 DETAIL タブ */
+const RESULT_CARD_DETAIL_SPINE = {
+  width: 18,
+  height: 80,
+  top: 80,
+} as const;
+
 type OutcomeBadge = keyof typeof OUTCOME_LABEL;
 
 function scoreRelText(kind: ResultScoreRelKind): string | null {
@@ -146,7 +153,12 @@ export default function ResultCardDesignFace({
   const scorerHit = face.topScorerHit === true;
 
   return (
-    <MatchListLineFrame
+    <div
+      className={
+        showDetailTab ? `${styles.wrap} ${styles.wrapWithDetail}` : styles.wrap
+      }
+    >
+      <MatchListLineFrame
       topLabel={face.roundLabel}
       paint={paint}
       animateDraw={shouldDraw}
@@ -158,7 +170,14 @@ export default function ResultCardDesignFace({
       {showDetailTab ? (
         <div
           className={styles.detailSpine}
-          style={{ borderWidth: 1.5, borderColor: paint.color }}
+          style={{
+            top: RESULT_CARD_DETAIL_SPINE.top,
+            right: -(RESULT_CARD_DETAIL_SPINE.width - 1),
+            width: RESULT_CARD_DETAIL_SPINE.width,
+            height: RESULT_CARD_DETAIL_SPINE.height,
+            borderWidth: 1.5,
+            borderColor: paint.color,
+          }}
           aria-hidden
         >
           <div className={`${styles.detailSpineTextCol} ${nameOxanium.className}`}>
@@ -406,6 +425,7 @@ export default function ResultCardDesignFace({
           </motion.div>
         </div>
       </div>
-    </MatchListLineFrame>
+      </MatchListLineFrame>
+    </div>
   );
 }

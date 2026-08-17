@@ -1609,6 +1609,7 @@ export default function ResultListWithOverlay({
                 {
                   contentVisibility: "auto",
                   containIntrinsicSize: "auto 600px",
+                  overflow: "visible",
                 } as CSSProperties
               }
             >
