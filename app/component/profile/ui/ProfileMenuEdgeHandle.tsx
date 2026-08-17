@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import cn from "clsx";
+import { ChevronLeft } from "lucide-react";
 
 const EDGE_START_PX = 28;
 const OPEN_DX_PX = 48;
@@ -114,9 +115,12 @@ export default function ProfileMenuEdgeHandle({
         : {})}
     >
       {tone === "back" ? (
-        <span className="profile-menu-edge-handle__chev" aria-hidden>
-          ‹
-        </span>
+        <ChevronLeft
+          className="profile-menu-edge-handle__chev"
+          size={11}
+          strokeWidth={2.4}
+          aria-hidden
+        />
       ) : null}
       {label
         .toUpperCase()

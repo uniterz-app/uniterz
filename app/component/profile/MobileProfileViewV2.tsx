@@ -250,7 +250,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   return (
     <LazyMotion features={domAnimation}>
-    <div className="mx-auto min-h-screen max-w-[640px] px-4 py-4 pb-bottom-nav text-white">
+    <div className="relative min-h-svh overflow-x-clip overflow-y-auto overscroll-y-contain touch-pan-y pb-bottom-nav text-white [-webkit-overflow-scrolling:touch]">
+    <div className="mx-auto max-w-[640px] px-4 py-4">
       <Suspense fallback={null}>
         <RankingsReturnNavLink language={language} />
       </Suspense>
@@ -484,6 +485,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           onDismiss={dismissSkinUnlock}
         />
       ) : null}
+    </div>
     </div>
     </LazyMotion>
   );

@@ -171,6 +171,7 @@ function RankRow({
                 nameOxanium.className,
                 "block text-[12px] font-extrabold uppercase tracking-[0.05em] text-white",
               ].join(" ")}
+              style={{ transform: "skewX(-6deg)" }}
             >
               {fullName(teamId)}
             </span>
