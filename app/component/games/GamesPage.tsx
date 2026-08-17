@@ -1095,7 +1095,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const renderSeasonPredictButtons = () => (
     <motion.div
-      className="flex items-center justify-center"
+      className="pointer-events-auto relative z-40 flex items-center justify-center touch-manipulation"
       {...topBarEntry(0, -10)}
     >
       <GamesSeasonPredictHeaderButtons
@@ -1190,7 +1190,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ].join(" ")}
     >
       <TutorialWelcomeWorldCamera
-        active
+        active={tutorialPhase === "welcome"}
         flying={!welcomeBrandInWorld || welcomeWorldFly}
         onFlyComplete={
           welcomeBrandInWorld
