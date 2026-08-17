@@ -12,8 +12,8 @@ import {
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import type { MyRankProgressPoint } from "@/lib/rankings/myRankRankingProgress";
 
@@ -233,15 +233,7 @@ export default function MyRankRankingProgress({
           </div>
         ) : isEmpty ? (
           <div className="absolute inset-0 grid place-items-center px-2" role="status">
-            <p
-              className={[
-                nameBebas.className,
-                "text-center text-[1rem] leading-none tracking-[0.14em]",
-              ].join(" ")}
-              style={cyberNoDataLabelStyle}
-            >
-              NO DATA
-            </p>
+            <CyberNoDataLabel variant="progress" />
             <p className="mt-1 max-w-[220px] text-center text-[9px] leading-snug text-white/40">
               {emptyHint}
             </p>

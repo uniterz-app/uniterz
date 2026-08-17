@@ -15,8 +15,6 @@ import PlayoffBracketTeamProgressMarket from "@/app/component/predict/market/Pla
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { nameBebas } from "@/lib/fonts";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 
 type MarketCountMap = Record<string, number>;
 
@@ -112,17 +110,9 @@ export default function PlayoffBracketMarket({
     return (
       <div
         role="status"
-        className="mx-auto flex min-h-[70dvh] w-full max-w-5xl items-center justify-center px-4 text-white"
+        className="mx-auto w-full max-w-5xl px-4 pt-8 text-white"
       >
-        <p
-          className={[
-            nameBebas.className,
-            "text-center text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
-          ].join(" ")}
-          style={cyberNoDataLabelStyle}
-        >
-          NO DATA
-        </p>
+        <p className="mt-8 text-center text-[14px] text-white/50">NO DATA</p>
       </div>
     );
   }

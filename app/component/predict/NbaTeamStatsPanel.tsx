@@ -19,6 +19,7 @@ import type {
 } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import { metricDelta } from "@/lib/predict/nbaTeamStatsForm";
 import { nbaTeamDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
+import { stashPredictTeamDetailReturn } from "@/lib/predict/predictTeamDetailReturn";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
@@ -34,6 +35,9 @@ type Props = {
   isPro?: boolean;
   language?: Language;
   className?: string;
+  /** 予想入力から開いたとき、チーム詳細の戻る先 */
+  fromPredictGameId?: string;
+  predictReturnMode?: "overlay" | "route";
 };
 
 function fmtRank(rank: number | undefined): string | null {
@@ -228,7 +232,24 @@ export default function NbaTeamStatsPanel({
   isPro = false,
   language = "ja",
   className,
+  fromPredictGameId,
+  predictReturnMode,
 }: Props) {
+  const resolvedReturnMode =
+    predictReturnMode ?? (fromPredictGameId ? "overlay" : "route");
+  const teamDetailHref = (teamId: string) =>
+    nbaTeamDetailPreviewHref(teamId, {
+      fromPredict: fromPredictGameId,
+      predictToolsTab: fromPredictGameId ? "stats" : undefined,
+    });
+  const stashReturnBeforeTeamNav = () => {
+    if (!fromPredictGameId) return;
+    stashPredictTeamDetailReturn({
+      gameId: fromPredictGameId,
+      predictToolsTab: "stats",
+      returnMode: resolvedReturnMode,
+    });
+  };
   const [windowId, setWindowId] = useState<WindowId>("season");
   const active = windowId === "season" ? data.season : data.last10;
   const { home, away } = active;
@@ -590,7 +611,8 @@ export default function NbaTeamStatsPanel({
       <header className="mb-1.5 grid grid-cols-2 gap-2 px-0.5">
         {home.teamId ? (
           <Link
-            href={nbaTeamDetailPreviewHref(home.teamId)}
+            href={teamDetailHref(home.teamId)}
+            onClick={stashReturnBeforeTeamNav}
             className={[
               nameBebas.className,
               "truncate text-center text-[15px] font-bold uppercase leading-tight text-cyan-200",
@@ -612,7 +634,8 @@ export default function NbaTeamStatsPanel({
         )}
         {away.teamId ? (
           <Link
-            href={nbaTeamDetailPreviewHref(away.teamId)}
+            href={teamDetailHref(away.teamId)}
+            onClick={stashReturnBeforeTeamNav}
             className={[
               nameBebas.className,
               "truncate text-center text-[15px] font-bold uppercase leading-tight text-violet-200",

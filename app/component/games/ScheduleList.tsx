@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   AnimatePresence,
   LayoutGroup,
@@ -17,7 +17,7 @@ import {
 } from "@/lib/viewTransition";
 import type { League } from "@/lib/leagues";
 import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 
 import MatchCard, { type MatchCardProps } from "./MatchCard";
 import ScheduleSharedTransitionLayout from "./ScheduleSharedTransitionLayout";
@@ -27,6 +27,7 @@ import {
   GAMES_LIST_REST_CARDS_DELAY_SEC,
 } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
+import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { resolveTutorialPickupGameId } from "@/lib/tutorial/tutorialPickupGame";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
@@ -41,7 +42,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
-import { nameBebas } from "@/lib/fonts";
+import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
 import { fetchWcTeamRecordMap } from "@/lib/legacyWcWebShims";
@@ -161,6 +162,8 @@ export default function ScheduleList({
   onOverlayGameIdChange,
   /** true のとき予想オーバーレイを即閉じ（チュートリアル投稿後など） */
   forceCloseOverlay = false,
+  /** チーム詳細から戻る — 予想オーバーレイを開く */
+  deepLinkOpenPredictGameId = null,
 }: {
   games: GameItemRaw[];
   dense?: boolean;
@@ -186,8 +189,19 @@ export default function ScheduleList({
   ) => void;
   onOverlayGameIdChange?: (gameId: string | null) => void;
   forceCloseOverlay?: boolean;
+  deepLinkOpenPredictGameId?: string | null;
 }) {
+  const searchParams = useSearchParams();
+  const openPredictFromUrl = searchParams.get("openPredict");
   const [openGameId, setOpenGameId] = useState<string | null>(null);
+  const [overlayFallbackProps, setOverlayFallbackProps] =
+    useState<MatchCardProps | null>(null);
+
+  useEffect(() => {
+    const id = (deepLinkOpenPredictGameId ?? openPredictFromUrl)?.trim();
+    if (!id || !/^[a-zA-Z0-9_-]{1,128}$/.test(id)) return;
+    setOpenGameId(id);
+  }, [deepLinkOpenPredictGameId, openPredictFromUrl]);
 
   useEffect(() => {
     onOverlayGameIdChange?.(openGameId);
@@ -287,10 +301,40 @@ export default function ScheduleList({
     return propsList.find((p) => String(p.id) === String(openGameId)) ?? null;
   }, [propsList, openGameId]);
 
+  const overlayGameProps = selectedProps ?? overlayFallbackProps;
+
+  useEffect(() => {
+    if (!openGameId || selectedProps) {
+      setOverlayFallbackProps(null);
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      try {
+        const snap = await getDoc(doc(db, "games", openGameId));
+        if (!alive || !snap.exists()) return;
+        const raw = { id: snap.id, ...snap.data() } as Record<string, unknown>;
+        const peers = await fetchPlayoffSeriesPeerGames(raw);
+        if (!alive) return;
+        setOverlayFallbackProps(
+          toMatchCardProps(raw, {
+            dense,
+            peerGamesForSeriesInference: peers,
+          }) as MatchCardProps
+        );
+      } catch {
+        if (alive) setOverlayFallbackProps(null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [openGameId, selectedProps, dense]);
+
   const liveStatsEnabled = Boolean(
     openGameId &&
-      selectedProps?.league === "nba" &&
-      (selectedProps?.status === "live" || selectedProps?.status === "final")
+      overlayGameProps?.league === "nba" &&
+      (overlayGameProps?.status === "live" || overlayGameProps?.status === "final")
   );
   const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     liveStatsEnabled && openGameId ? String(openGameId) : null,
@@ -716,20 +760,10 @@ export default function ScheduleList({
 
   if (!propsList.length) {
     return (
-      <div
-        role="status"
+      <CyberNoDataPage
+        variant="games"
         aria-label={emptyHint ?? m.games.noGames}
-        className="flex min-h-[min(52dvh,480px)] w-full items-center justify-center px-4"
-      >
-        <p
-          className={[
-            nameBebas.className,
-            "text-center text-[clamp(1.75rem,6vw,2.75rem)] leading-none tracking-[0.2em] text-[#5c5c5c]",
-          ].join(" ")}
-        >
-          NO DATA
-        </p>
-      </div>
+      />
     );
   }
 
@@ -744,7 +778,7 @@ export default function ScheduleList({
     : { initial: false as const };
 
   const overlayContent =
-    openGameId && selectedProps ? (
+    openGameId && overlayGameProps ? (
       <motion.div
         key={String(openGameId)}
         className="fixed inset-0 z-[100000] overflow-hidden"
@@ -811,7 +845,7 @@ export default function ScheduleList({
               "mx-auto w-full overflow-x-hidden",
               isMobile
                 ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
-                : selectedProps.league === "wc"
+                : overlayGameProps.league === "wc"
                   ? "max-w-7xl px-4 pb-24 pt-6 sm:px-8 md:px-10 lg:px-12"
                   : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
             ].join(" ")}
@@ -833,15 +867,15 @@ export default function ScheduleList({
                 }
               >
                 <MatchCard
-                  {...selectedProps}
+                  {...overlayGameProps}
                   language={language}
                   resultPost={overlayResultPost}
                   userPredictionWinner={overlayUserPredictionWinner}
                   resultRatingBarsImmediate
                   marketBias={
-                    overlayLiveMarketBias ?? selectedProps.marketBias
+                    overlayLiveMarketBias ?? overlayGameProps.marketBias
                   }
-                  myPostId={myPostMap[String(selectedProps.id)] ?? null}
+                  myPostId={myPostMap[String(overlayGameProps.id)] ?? null}
                   onRequestPredictEdit={
                     overlayResultPost
                       ? () => setPredictEditTriggerNonce((n) => n + 1)
@@ -849,19 +883,19 @@ export default function ScheduleList({
                   }
                   onClosePredictOverlay={close}
                   homeRecord={
-                    selectedProps.home?.teamId
-                      ? teamRecordMap[selectedProps.home.teamId] ?? null
+                    overlayGameProps.home?.teamId
+                      ? teamRecordMap[overlayGameProps.home.teamId] ?? null
                       : null
                   }
                   awayRecord={
-                    selectedProps.away?.teamId
-                      ? teamRecordMap[selectedProps.away.teamId] ?? null
+                    overlayGameProps.away?.teamId
+                      ? teamRecordMap[overlayGameProps.away.teamId] ?? null
                       : null
                   }
                   sharedLayoutId={undefined}
                   sharedTransitionBaseKey={
                     vtUi
-                      ? safeViewTransitionToken(String(selectedProps.id))
+                      ? safeViewTransitionToken(String(overlayGameProps.id))
                       : undefined
                   }
                   disableCardMotion
@@ -898,13 +932,13 @@ export default function ScheduleList({
               <PredictionFormV2
                 key={String(openGameId)}
                 dense={dense}
-                game={selectedProps}
+                game={overlayGameProps}
                 user={{ name: "You" }}
                 embedded
                 inOverlay
                 tutorialMode={
                   !!tutorialModeGameId &&
-                  String(selectedProps.id) === String(tutorialModeGameId)
+                  String(overlayGameProps.id) === String(tutorialModeGameId)
                 }
                 onTutorialSubmit={(payload) => {
                   if (
@@ -925,18 +959,18 @@ export default function ScheduleList({
                   setOpenGameId(null);
                 }}
                 overlayHomeRecord={
-                  selectedProps.home?.teamId
-                    ? teamRecordMap[selectedProps.home.teamId] ?? null
+                  overlayGameProps.home?.teamId
+                    ? teamRecordMap[overlayGameProps.home.teamId] ?? null
                     : null
                 }
                 overlayAwayRecord={
-                  selectedProps.away?.teamId
-                    ? teamRecordMap[selectedProps.away.teamId] ?? null
+                  overlayGameProps.away?.teamId
+                    ? teamRecordMap[overlayGameProps.away.teamId] ?? null
                     : null
                 }
                 predictEditTriggerNonce={predictEditTriggerNonce}
                 overlayExistingPostId={
-                  myPostMap[String(selectedProps.id)] ?? null
+                  myPostMap[String(overlayGameProps.id)] ?? null
                 }
                 onExistingResultPostChange={setOverlayResultPost}
                 onUserPredictionWinnerChange={setOverlayUserPredictionWinner}
@@ -960,7 +994,7 @@ export default function ScheduleList({
                   if (open) setDisableReturnLayout(true);
                 }}
                 onPostCreated={(payload) => {
-                  const gameId = selectedProps?.id;
+                  const gameId = overlayGameProps?.id;
                   if (gameId && payload?.id) {
                     setMyPostMap((prev) => ({
                       ...prev,

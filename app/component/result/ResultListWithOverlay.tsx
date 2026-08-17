@@ -27,6 +27,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCache";
@@ -1558,25 +1559,15 @@ export default function ResultListWithOverlay({
           )}
         </AnimatePresence>
 
-        {/* リザルト投稿が一件もないとき：背景なし・グロー付き NO DATA をエリア中央に */}
+        {/* リザルト投稿が一件もないとき：Native と同じ中央 NO DATA */}
         {!loading && totalLoaded === 0 ? (
           <motion.div
             key="empty-no-posts"
-            role="status"
             initial={off ?? { opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.35, ease: easeOut }}
-            className="flex min-h-[min(70dvh,620px)] w-full items-center justify-center px-4"
           >
-            <p
-              className={[
-                nameBebas.className,
-                "text-center text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
-              ].join(" ")}
-              style={cyberNoDataLabelStyle}
-            >
-              NO DATA
-            </p>
+            <CyberNoDataPage variant="results" />
           </motion.div>
         ) : null}
 

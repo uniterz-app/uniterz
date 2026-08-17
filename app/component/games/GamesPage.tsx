@@ -182,6 +182,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const season = searchParams.get("season") ?? getCurrentPlayoffSeason();
   const dateParam = searchParams.get("date");
+  const deepLinkOpenPredictGameId = searchParams.get("openPredict");
 
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
@@ -1398,6 +1399,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           listShellIntro={listShellIntroLocked}
           tutorialMarkFirstCard={tutorialActive}
           tutorialRegisterPickupLabel={tutorialPhase === "gamesPickup"}
+          deepLinkOpenPredictGameId={deepLinkOpenPredictGameId}
         />
       </div>
     </motion.div>

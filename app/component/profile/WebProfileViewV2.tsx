@@ -79,9 +79,8 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { readTutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
 import { readTutorialWelcomeHandoff } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import type { Language } from "@/lib/i18n/language";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
-import { nameBebas } from "@/lib/fonts";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import {
   clearSideMenuOrigin,
@@ -367,15 +366,12 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               <CandleChartLoader />
             </div>
           ) : !playoffDisplayData ? (
-            <div className={`${CYBER_GLASS_PANEL} p-6 text-center`}>
-              <p
-                className={[
-                  nameBebas.className,
-                  "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
-                ].join(" ")}
-                style={cyberNoDataLabelStyle}
-              >
-                NO DATA
+            <div className="rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.55)] px-6 py-6 text-center">
+              <CyberNoDataLabel variant="bracket" />
+              <p className="mt-2 text-sm text-white/45">
+                {language === "ja"
+                  ? "提出済みのプレーオフブラケットがありません"
+                  : "No playoff bracket submitted"}
               </p>
             </div>
           ) : (

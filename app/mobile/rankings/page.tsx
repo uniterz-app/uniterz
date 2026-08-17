@@ -36,9 +36,8 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { t } from "@/lib/i18n/t";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
-import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
+import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { useSearchParams } from "next/navigation";
 import {
   RANKINGS_TAB_METRIC_PARAM,
@@ -547,21 +546,9 @@ export default function MobileRankingsPage() {
         )}
 
         {openProLocked ? null : rankingHasNoEntries ? (
-          <div
-            role="status"
-            className="flex min-h-[min(62dvh,520px)] items-center justify-center px-4 text-center"
-          >
-            <p
-              className={[
-                nameBebas.className,
-                "text-[clamp(1.75rem,10vw,2.7rem)] leading-none tracking-[0.22em]",
-                nbaBoard === "open" ? "rankings-pro-league-no-data" : "",
-              ].join(" ")}
-              style={nbaBoard === "open" ? undefined : cyberNoDataLabelStyle}
-            >
-              NO DATA
-            </p>
-          </div>
+          <CyberNoDataPage
+            variant={nbaBoard === "open" ? "rankingsPro" : "rankings"}
+          />
         ) : listContentReady ? (
           <div className="max-w-full overflow-x-clip">
           <AnimatePresence mode="wait">

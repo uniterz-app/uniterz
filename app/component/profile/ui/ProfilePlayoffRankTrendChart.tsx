@@ -12,8 +12,8 @@ import {
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
@@ -431,15 +431,7 @@ export default function ProfilePlayoffRankTrendChart({
           </div>
         ) : isEmpty ? (
           <div className="absolute inset-0 grid place-items-center px-3" role="status">
-            <p
-              className={[
-                nameBebas.className,
-                "text-center text-[clamp(1.1rem,3.5vw,1.65rem)] leading-none tracking-[0.18em]",
-              ].join(" ")}
-              style={cyberNoDataLabelStyle}
-            >
-              NO DATA
-            </p>
+            <CyberNoDataLabel variant="chart" />
             <p className="mt-2 max-w-[240px] text-center text-[10px] text-white/45 sm:text-xs">
               {emptyHint}
             </p>

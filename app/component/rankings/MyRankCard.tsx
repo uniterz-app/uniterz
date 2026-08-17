@@ -654,42 +654,39 @@ export default function MyRankCard({
       ? (ui.outerPadWide as string)
       : (ui.outerPad as string);
 
+  /** 読み込み枠でパスを一度描くと、データ到着後にサイズが変わって再描画される */
+  if (!ready || statsPending) {
+    return null;
+  }
+
   if (freeTier) {
     const listRank = rank != null && rank >= 1 ? rank : 99;
-    const freeInner =
-      loading || statsPending || rank == null ? (
-        <div
-          className="rounded-sm border border-white/10 bg-black/20 px-3 py-4 text-[11px] text-white/40"
-          aria-busy
-        >
-          {m.rankings.loadingRankStats}
-        </div>
-      ) : (
-        <CyberRankingListRow
-          rank={listRank}
-          displayName={displayName}
-          photoURL={photoURL}
-          metric={metric}
-          metricTag={cyberMetricTag(metric, language)}
-          posts={posts}
-          countryCode={countryCode}
-          avgRow={avgRow}
-          compact={layout === "mobile"}
-          scoreLayout={layout === "web" ? "web" : "stack"}
-          hideAccentBar
-          rankOverline={m.rankings.yourRank}
-          scoreSlot={
-            <CyberRankingScore
-              rank={listRank}
-              metric={metric}
-              counted={value}
-              compact={layout === "mobile"}
-              scoreLayout={layout === "web" ? "web" : "stack"}
-              plainWhite
-            />
-          }
-        />
-      );
+    const freeInner = (
+      <CyberRankingListRow
+        rank={listRank}
+        displayName={displayName}
+        photoURL={photoURL}
+        metric={metric}
+        metricTag={cyberMetricTag(metric, language)}
+        posts={posts}
+        countryCode={countryCode}
+        avgRow={avgRow}
+        compact={layout === "mobile"}
+        scoreLayout={layout === "web" ? "web" : "stack"}
+        hideAccentBar
+        rankOverline={m.rankings.yourRank}
+        scoreSlot={
+          <CyberRankingScore
+            rank={listRank}
+            metric={metric}
+            counted={value}
+            compact={layout === "mobile"}
+            scoreLayout={layout === "web" ? "web" : "stack"}
+            plainWhite
+          />
+        }
+      />
+    );
 
     const freeBody = (
       <MyRankCardFrame
@@ -718,7 +715,6 @@ export default function MyRankCard({
     >
       <div
         className="relative overflow-hidden"
-        aria-busy={statsScramble || undefined}
       >
         {streakSweep ? (
           <div
@@ -793,20 +789,8 @@ export default function MyRankCard({
           style={{ background: "rgba(34,211,238,0.04)" }}
         />
 
-        {statsScramble && !loading && (
-          <span className="sr-only">{m.rankings.loadingRankStats}</span>
-        )}
-
         {/* 上段: リスト行と同じ配置 / 下段: Pro 専用 */}
         <div className="relative z-10 flex flex-col">
-          {loading || statsPending ? (
-            <div
-              className="px-3 py-4 text-[11px] text-white/40"
-              aria-busy
-            >
-              {m.rankings.loadingRankStats}
-            </div>
-          ) : (
             <CyberRankingListRow
               rank={rank != null && rank >= 1 ? rank : 99}
               displayName={displayName}
@@ -851,7 +835,6 @@ export default function MyRankCard({
               }
               bare
             />
-          )}
 
           {showRankingProgress ? (
             <div
@@ -861,7 +844,7 @@ export default function MyRankCard({
               <MyRankRankingProgress
                 points={progressPoints}
                 maxSnapshots={progressSnapshotLimit}
-                loading={loading || rankProgressLoading}
+                loading={rankProgressLoading}
                 language={language}
                 layout={layout}
                 numbersOnly
