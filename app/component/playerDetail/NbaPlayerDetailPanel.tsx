@@ -80,6 +80,9 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+/** セクション見出し — チームカラーではなく白で統一 */
+const SECTION_HEADING_CLASS = `${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em] text-white`;
+
 function zoneById(
   zones: NbaPlayerShotZone[],
   id: NbaPlayerShotZone["id"]
@@ -133,20 +136,11 @@ function ShotZoneHeat({
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2">
-        <h2
-          className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-          style={{ color: hexToRgba(accent, 0.8) }}
-        >
-          SHOT CHART
-        </h2>
-        <div
-          className="h-px flex-1"
-          style={{ backgroundColor: hexToRgba(accent, 0.35) }}
-        />
+        <h2 className={SECTION_HEADING_CLASS}>SHOT CHART</h2>
+        <div className="h-px flex-1 bg-white/35" />
       </div>
       <p
-        className={`${nameOxanium.className} text-[9px] font-bold tracking-[0.14em]`}
-        style={{ color: hexToRgba(accent, 0.65) }}
+        className={`${nameOxanium.className} text-[9px] font-bold tracking-[0.14em] text-white/65`}
       >
         2024-25 SEASON
       </p>
@@ -643,12 +637,7 @@ function SeasonHistoryTable({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2
-          className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-          style={{ color: hexToRgba(accent, 0.75) }}
-        >
-          Season Averages · Career
-        </h2>
+        <h2 className={SECTION_HEADING_CLASS}>Season Averages · Career</h2>
         <div
           className="flex overflow-hidden border"
           style={{ borderColor: hexToRgba(accent, 0.35) }}
@@ -768,10 +757,7 @@ function PlayerVenueSplitsSection({
 }) {
   return (
     <section className="space-y-2">
-      <h2
-        className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-        style={{ color: hexToRgba(accent, 0.75) }}
-      >
+      <h2 className={SECTION_HEADING_CLASS}>
         {isJa ? "ホーム / アウェイ" : "Home / Away"}
       </h2>
       <div
@@ -839,10 +825,7 @@ function PlayerVsOpponentSection({
   if (!samples.length) return null;
   return (
     <section className="space-y-2">
-      <h2
-        className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-        style={{ color: hexToRgba(accent, 0.75) }}
-      >
+      <h2 className={SECTION_HEADING_CLASS}>
         {isJa ? "対戦相手別（平均）" : "Vs Opponent (Avg)"}
       </h2>
       <p className={`${nameOxanium.className} text-[10px] text-white/40`}>
@@ -920,7 +903,7 @@ function GameLogs({
         className="flex w-full items-center gap-2 text-left"
       >
         <span
-          className={`${nameOxanium.className} flex-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/40`}
+          className={`${SECTION_HEADING_CLASS} flex-1 text-white`}
         >
           GAME LOGS (LAST {logs.length})
         </span>
@@ -1148,12 +1131,7 @@ export default function NbaPlayerDetailPanel({
       ) : null}
 
       <section className="space-y-3">
-        <h2
-          className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-          style={{ color: hexToRgba(jerseyPrimary, 0.75) }}
-        >
-          SEASON AVERAGES
-        </h2>
+        <h2 className={SECTION_HEADING_CLASS}>SEASON AVERAGES</h2>
         <div
           className="grid grid-cols-3 overflow-hidden border bg-black/50"
           style={{ borderColor: hexToRgba(jerseyPrimary, 0.4) }}
@@ -1211,12 +1189,7 @@ export default function NbaPlayerDetailPanel({
       />
 
       <section className="space-y-2">
-        <h2
-          className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-          style={{ color: hexToRgba(jerseyPrimary, 0.75) }}
-        >
-          Advanced
-        </h2>
+        <h2 className={SECTION_HEADING_CLASS}>Advanced</h2>
         <div
           className="flex items-start border bg-black/50"
           style={{ borderColor: hexToRgba(jerseyPrimary, 0.4) }}
@@ -1285,12 +1258,7 @@ export default function NbaPlayerDetailPanel({
             style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
           />
           <section className="space-y-3">
-            <h2
-              className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-              style={{ color: hexToRgba(jerseyPrimary, 0.75) }}
-            >
-              CONTRACT
-            </h2>
+            <h2 className={SECTION_HEADING_CLASS}>CONTRACT</h2>
             <div
               className="space-y-2 border bg-black/45 p-3.5"
               style={{ borderColor: hexToRgba(jerseyPrimary, 0.3) }}
@@ -1390,12 +1358,7 @@ export default function NbaPlayerDetailPanel({
         style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
       />
       <section className="space-y-3">
-        <h2
-          className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-          style={{ color: hexToRgba(jerseyPrimary, 0.75) }}
-        >
-          Awards
-        </h2>
+        <h2 className={SECTION_HEADING_CLASS}>Awards</h2>
         <div
           className="overflow-hidden border bg-black/40"
           style={{ borderColor: hexToRgba(jerseyPrimary, 0.25) }}
@@ -1437,12 +1400,7 @@ export default function NbaPlayerDetailPanel({
         style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
       />
       <section className="space-y-3">
-        <h2
-          className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-          style={{ color: hexToRgba(jerseyPrimary, 0.75) }}
-        >
-          More
-        </h2>
+        <h2 className={SECTION_HEADING_CLASS}>More</h2>
         <div
           className="overflow-hidden border bg-black/40"
           style={{ borderColor: hexToRgba(jerseyPrimary, 0.25) }}
@@ -1493,8 +1451,7 @@ export default function NbaPlayerDetailPanel({
       </section>
 
       <p
-        className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em]`}
-        style={{ color: hexToRgba(jerseyPrimary, 0.4) }}
+        className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}
       >
         {detail.asOfLabel} · Preview
       </p>
