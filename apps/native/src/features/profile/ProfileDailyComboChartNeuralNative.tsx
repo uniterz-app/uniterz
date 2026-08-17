@@ -2,11 +2,9 @@
  * Web `ProfileDailyComboChartNeural` の React Native 移植（mobile / compact レイアウト）。
  */
 import { useEffect, useMemo, useState } from "react";
-import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Pressable, StyleSheet, Text, useWindowDimensions, View,
+  StyleSheet, Text, useWindowDimensions, View,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
 import type { ProfileDailyTrendRow } from "../../../../../lib/profile/profileDailyTrendRow";
@@ -205,9 +203,6 @@ function profileCopy(language: "ja" | "en") {
   return {
     title: "Daily Combo Chart",
     subtitle: isJa ? "過去10日のスタッツの推移" : "Trend of stats over the last 10 days",
-    chartInfo: isJa
-      ? "カラーバー＝日ごとの投稿数・的中数。黄緑の線＝累積の総合得点。棒をタップすると下に内訳を表示します。"
-      : "Color bars: daily posts and correct picks. Lime line: cumulative total points. Tap a bar for that day's breakdown.",
     hitsPosts: isJa ? "的中 / 投稿" : "Hits / Posts",
     totalPts: isJa ? "総合得点" : "Total Points",
     upset: isJa ? "アップセット" : "Upset",
@@ -286,10 +281,6 @@ export default function ProfileDailyComboChartNeuralNative({
   const linePath = buildLinePath(linePoints);
   const svgHeight = (screenW * H) / W;
 
-  const openChartInfo = () => {
-    cyberAlert(copy.title, copy.chartInfo);
-  };
-
   return (
     <View style={styles.root}>
       <View style={styles.header}>
@@ -299,9 +290,6 @@ export default function ProfileDailyComboChartNeuralNative({
           ) : (
             <Text style={styles.title}>{copy.title}</Text>
           )}
-          <Pressable onPress={openChartInfo} hitSlop={10} accessibilityLabel={copy.chartInfo}>
-            <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
-          </Pressable>
         </View>
         {hideTitle ? null : <Text style={styles.subtitle}>{copy.subtitle}</Text>}
       </View>

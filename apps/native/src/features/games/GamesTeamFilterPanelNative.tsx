@@ -10,12 +10,9 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { spacing } from "../../theme/tokens";
-import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import type { ScheduleTeamOption } from "./useScheduleTeamsNative";
 import type { GamesFilterState } from "./applyNativeGamesFilter";
 import CountryFlagNative from "./CountryFlagNative";
@@ -26,12 +23,17 @@ import {
 } from "../../../../../lib/games/gamesFilterHelp";
 import jaMessages from "../../../../../messages/ja";
 import enMessages from "../../../../../messages/en";
-import GamesFilterPanelDecorNative from "./GamesFilterPanelDecorNative";
-import PredictOverlayCornerButtonNative from "./PredictOverlayCornerButtonNative";
-import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
+import type { League } from "../../../../../lib/leagues";
 import {
-  PREDICT_OVERLAY_SUBMIT_BTN_CUT,
-} from "./matchListCyberClipPath";
+  getTeamPrimaryColor,
+  softenTeamUiColor,
+  teamColorOnFill,
+  teamColorRgba,
+} from "../../../../../lib/team-colors";
+import {
+  MATCH_CARD_BRACKET_LETTER_SPACING_15,
+  MATCH_CARD_BRACKET_TEXT,
+} from "./matchCardTypography";
 
 const OXANIUM_BOLD = Platform.select({
   ios: "Oxanium_700Bold",
@@ -46,6 +48,7 @@ type Props = {
   teams: ScheduleTeamOption[];
   onApply: (filter: GamesFilterState) => void;
   initial: GamesFilterState;
+  league: League;
 };
 
 function parseMarginDraft(s: string): number | null {
@@ -69,6 +72,7 @@ export default function GamesTeamFilterPanelNative({
   teams,
   onApply,
   initial,
+  league,
 }: Props) {
   const isJa = language === "ja";
   const insets = useSafeAreaInsets();
@@ -179,33 +183,12 @@ export default function GamesTeamFilterPanelNative({
           exiting={SlideOutDown.duration(220)}
           style={[styles.sheet, dualSelected && styles.sheetDual]}
         >
-          {(Platform.OS === "ios" || Platform.OS === "android") && (
-            <BlurView
-              intensity={Platform.OS === "ios" ? 28 : 20}
-              tint="dark"
-              {...nativeBlurViewExtraProps()}
-              style={StyleSheet.absoluteFillObject}
-            />
-          )}
-          <LinearGradient
-            colors={["rgba(9,13,20,0.97)", "rgba(6,9,15,0.95)", "rgba(4,7,12,0.93)"]}
-            locations={[0, 0.48, 1]}
-            style={StyleSheet.absoluteFillObject}
-            pointerEvents="none"
-          />
-          <GamesFilterPanelDecorNative />
-
           <View style={styles.panelShell}>
             <View style={styles.handleRow} accessibilityElementsHidden>
               <View style={styles.handle} />
             </View>
 
             <View style={styles.headerRow}>
-              <LinearGradient
-                colors={["rgba(0,245,255,0.07)", "transparent"]}
-                style={StyleSheet.absoluteFillObject}
-                pointerEvents="none"
-              />
               <View style={styles.headerTextCol}>
                 <Text style={styles.kicker}>{labels.kicker}</Text>
                 <Text style={styles.title}>{labels.title}</Text>
@@ -216,38 +199,24 @@ export default function GamesTeamFilterPanelNative({
                   accessibilityRole="button"
                   accessibilityState={{ expanded: helpOpen }}
                   accessibilityLabel={helpButtonLabel}
+                  style={[styles.helpBtn, helpOpen && styles.helpBtnActive]}
                 >
-                  <PredictOverlayChamferedFrameNative
-                    cut={6}
-                    gradientColors={
-                      helpOpen
-                        ? ["rgba(0,245,255,0.1)", "rgba(0,245,255,0.08)"]
-                        : ["rgba(255,255,255,0.04)", "rgba(255,255,255,0.03)"]
-                    }
-                    borderColor={
-                      helpOpen ? "rgba(0,245,255,0.38)" : "rgba(255,255,255,0.12)"
-                    }
-                    shadowColor={helpOpen ? "#00f5ff" : "#000"}
-                    shadowOpacity={helpOpen ? 0.12 : 0}
-                    shadowRadius={helpOpen ? 14 : 0}
-                    style={styles.helpBtnFrame}
-                    contentStyle={styles.helpBtnContent}
-                  >
-                    <MaterialCommunityIcons
-                      name="help-circle-outline"
-                      size={15}
-                      color={helpOpen ? "rgba(224,252,255,0.95)" : "rgba(255,255,255,0.78)"}
-                    />
-                    <Text style={[styles.helpBtnText, helpOpen && styles.helpBtnTextActive]}>
-                      {helpButtonLabel}
-                    </Text>
-                  </PredictOverlayChamferedFrameNative>
+                  <MaterialCommunityIcons
+                    name="help-circle-outline"
+                    size={15}
+                    color={helpOpen ? "#050505" : "rgba(255,255,255,0.82)"}
+                  />
+                  <Text style={[styles.helpBtnText, helpOpen && styles.helpBtnTextActive]}>
+                    {helpButtonLabel}
+                  </Text>
                 </Pressable>
-                <PredictOverlayCornerButtonNative
-                  embedded
+                <Pressable
                   onPress={onClose}
                   accessibilityLabel={labels.close}
-                />
+                  style={styles.closeBtn}
+                >
+                  <MaterialCommunityIcons name="close" size={18} color="rgba(255,255,255,0.88)" />
+                </Pressable>
               </View>
             </View>
 
@@ -266,20 +235,27 @@ export default function GamesTeamFilterPanelNative({
                 <View style={styles.chipRow}>
                   {state.selectedTeamIds.map((id) => {
                     const name = teams.find((t) => t.id === id)?.name ?? id;
+                    const accent = softenTeamUiColor(getTeamPrimaryColor(league, id));
                     return (
                       <Pressable
                         key={id}
-                        style={styles.selectedChip}
+                        style={[
+                          styles.selectedChip,
+                          {
+                            borderColor: accent,
+                            backgroundColor: teamColorRgba(accent, 0.22),
+                          },
+                        ]}
                         onPress={() => toggleTeam(id)}
                       >
                         <FilterTeamFlagNative teamId={id} />
-                        <Text style={styles.selectedChipText} numberOfLines={1}>
+                        <Text style={[styles.selectedChipText, MATCH_CARD_BRACKET_TEXT]} numberOfLines={1}>
                           {name}
                         </Text>
                         <MaterialCommunityIcons
                           name="close"
                           size={12}
-                          color="rgba(165,243,252,0.85)"
+                          color="#fff"
                         />
                       </Pressable>
                     );
@@ -317,23 +293,13 @@ export default function GamesTeamFilterPanelNative({
             <View style={styles.teamSearchPrimary}>
               <View style={[styles.searchSection, dualSelected && styles.searchSectionDual]}>
                 <View style={styles.searchKickerRow}>
-                  <View style={styles.searchKickerMark} />
                   <Text style={styles.searchKicker}>{labels.teamSearch}</Text>
                 </View>
                 <View style={styles.searchWrap}>
-                  {(Platform.OS === "ios" || Platform.OS === "android") && (
-                    <BlurView
-                      intensity={Platform.OS === "ios" ? 10 : 8}
-                      tint="dark"
-                      {...nativeBlurViewExtraProps()}
-                      style={StyleSheet.absoluteFillObject}
-                    />
-                  )}
-                  <View style={styles.searchGlassTint} pointerEvents="none" />
                   <MaterialCommunityIcons
                     name="magnify"
                     size={15}
-                    color="rgba(103,232,249,0.45)"
+                    color="rgba(255,255,255,0.4)"
                     style={styles.searchIcon}
                   />
                   <TextInput
@@ -353,18 +319,42 @@ export default function GamesTeamFilterPanelNative({
               >
                 {filteredTeams.map((team) => {
                   const sel = state.selectedTeamIds.includes(team.id);
+                  const accent = softenTeamUiColor(getTeamPrimaryColor(league, team.id));
                   return (
                     <Pressable
                       key={team.id}
-                      style={[styles.teamRow, sel && styles.teamRowSelected]}
+                      style={[
+                        styles.teamRow,
+                        sel && {
+                          borderColor: accent,
+                          backgroundColor: teamColorRgba(accent, 0.22),
+                        },
+                      ]}
                       onPress={() => toggleTeam(team.id)}
                     >
-                      <View style={[styles.teamCheck, sel && styles.teamCheckSelected]}>
-                        {sel ? <Text style={styles.teamCheckMark}>✓</Text> : null}
+                      <View
+                        style={[
+                          styles.teamCheck,
+                          sel && {
+                            borderColor: accent,
+                            backgroundColor: accent,
+                          },
+                        ]}
+                      >
+                        {sel ? (
+                          <Text style={[styles.teamCheckMark, { color: teamColorOnFill(accent) }]}>
+                            ✓
+                          </Text>
+                        ) : null}
                       </View>
                       <FilterTeamFlagNative teamId={team.id} />
                       <Text
-                        style={[styles.teamName, sel && styles.teamNameSelected]}
+                        style={[
+                          styles.teamName,
+                          MATCH_CARD_BRACKET_TEXT,
+                          { letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15 },
+                          sel && styles.teamNameSelected,
+                        ]}
                         numberOfLines={1}
                       >
                         {team.name}
@@ -380,35 +370,9 @@ export default function GamesTeamFilterPanelNative({
 
             <View style={[styles.marginSection, dualSelected && styles.marginSectionDual]}>
               <View style={styles.marginGlass}>
-                {(Platform.OS === "ios" || Platform.OS === "android") && (
-                  <BlurView
-                    intensity={Platform.OS === "ios" ? 12 : 10}
-                    tint="dark"
-                    {...nativeBlurViewExtraProps()}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                )}
-                <LinearGradient
-                  colors={[
-                    "rgba(255,255,255,0.055)",
-                    "rgba(255,255,255,0.018)",
-                    "rgba(0,245,255,0.025)",
-                  ]}
-                  locations={[0, 0.55, 1]}
-                  style={StyleSheet.absoluteFillObject}
-                  pointerEvents="none"
-                />
-                <LinearGradient
-                  colors={["transparent", "rgba(0,245,255,0.32)", "transparent"]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.marginGlassBeam}
-                  pointerEvents="none"
-                />
                 <View style={[styles.marginGlassContent, dualSelected && styles.marginGlassContentDual]}>
                   <View style={styles.marginInline}>
                     <View style={styles.marginKickerRow}>
-                      <View style={styles.marginKickerMark} />
                       <Text style={styles.marginKicker}>{labels.marginRange}</Text>
                     </View>
                     <View style={styles.marginRow}>
@@ -441,46 +405,17 @@ export default function GamesTeamFilterPanelNative({
             </View>
 
             <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-              <LinearGradient
-                colors={["transparent", "rgba(0,245,255,0.04)"]}
-                style={StyleSheet.absoluteFillObject}
-                pointerEvents="none"
-              />
               <Pressable
                 disabled={!canClear}
                 onPress={handleClearAll}
                 style={!canClear ? styles.clearBtnDisabledWrap : undefined}
               >
-                <PredictOverlayChamferedFrameNative
-                  cut={6}
-                  gradientColors={["rgba(255,255,255,0.03)", "rgba(255,255,255,0.02)"]}
-                  borderColor="rgba(255,255,255,0.12)"
-                  style={styles.clearBtnFrame}
-                  contentStyle={styles.clearBtnContent}
-                >
-                  <Text style={[styles.clearBtnText, !canClear && styles.clearBtnTextDisabled]}>
-                    {labels.clearAll}
-                  </Text>
-                </PredictOverlayChamferedFrameNative>
+                <Text style={[styles.clearBtnText, !canClear && styles.clearBtnTextDisabled]}>
+                  {labels.clearAll}
+                </Text>
               </Pressable>
-              <Pressable onPress={handleDone} style={styles.doneBtnWrap}>
-                <PredictOverlayChamferedFrameNative
-                  cut={PREDICT_OVERLAY_SUBMIT_BTN_CUT}
-                  gradientColors={[
-                    "rgba(0,245,255,0.26)",
-                    "rgba(0,190,230,0.36)",
-                    "rgba(0,110,150,0.46)",
-                  ]}
-                  gradientLocations={[0, 0.42, 1]}
-                  borderColor="rgba(0,245,255,0.42)"
-                  shadowColor="#00f5ff"
-                  shadowOpacity={0.2}
-                  shadowRadius={22}
-                  style={styles.doneBtnFrame}
-                  contentStyle={styles.doneBtnContent}
-                >
-                  <Text style={styles.doneBtnText}>{labels.done}</Text>
-                </PredictOverlayChamferedFrameNative>
+              <Pressable onPress={handleDone} style={styles.doneBtn}>
+                <Text style={styles.doneBtnText}>{labels.done}</Text>
               </Pressable>
             </View>
           </View>
@@ -505,14 +440,9 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     borderWidth: 1,
     borderBottomWidth: 0,
-    borderColor: "rgba(0,245,255,0.22)",
-    backgroundColor: "rgba(9,13,20,0.97)",
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "#050505",
     overflow: "hidden",
-    shadowColor: "#00f5ff",
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 12,
   },
   sheetDual: {
     height: "80%",
@@ -536,11 +466,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(34,211,238,0.35)",
-    shadowColor: "#22d3ee",
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
+    backgroundColor: "rgba(255,255,255,0.25)",
   },
   headerRow: {
     flexDirection: "row",
@@ -551,7 +477,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,245,255,0.14)",
+    borderBottomColor: "rgba(255,255,255,0.12)",
     overflow: "hidden",
   },
   headerTextCol: {
@@ -561,14 +487,11 @@ const styles = StyleSheet.create({
   },
   kicker: {
     fontFamily: OXANIUM_BOLD,
-    color: "rgba(34,211,238,0.58)",
+    color: "rgba(255,255,255,0.42)",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 3.2,
     textTransform: "uppercase",
-    textShadowColor: "rgba(0,245,255,0.25)",
-    textShadowRadius: 12,
-    textShadowOffset: { width: 0, height: 0 },
   },
   title: {
     color: "rgba(255,255,255,0.95)",
@@ -582,32 +505,45 @@ const styles = StyleSheet.create({
     gap: 6,
     flexShrink: 0,
   },
-  helpBtnFrame: {
-    minWidth: 72,
-  },
-  helpBtnContent: {
+  helpBtn: {
     minHeight: 36,
+    minWidth: 72,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
     paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "transparent",
+  },
+  helpBtnActive: {
+    borderColor: "#fff",
+    backgroundColor: "#fff",
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   helpBtnText: {
-    color: "rgba(255,255,255,0.78)",
+    color: "rgba(255,255,255,0.82)",
     fontSize: 11,
     fontWeight: "600",
   },
   helpBtnTextActive: {
-    color: "rgba(224,252,255,0.95)",
+    color: "#050505",
   },
   helpPanel: {
     gap: 8,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,245,255,0.1)",
-    backgroundColor: "rgba(0,245,255,0.04)",
+    borderBottomColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   helpParagraph: {
     color: "rgba(255,255,255,0.5)",
@@ -620,7 +556,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 7,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,245,255,0.1)",
+    borderBottomColor: "rgba(255,255,255,0.1)",
   },
   selectionBarDual: {
     paddingTop: 6,
@@ -636,7 +572,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   scopeLabel: {
-    color: "rgba(148,163,184,0.78)",
+    color: "rgba(255,255,255,0.45)",
     fontSize: 10,
     fontWeight: "600",
     letterSpacing: 1.2,
@@ -646,8 +582,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 4,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "#000",
     padding: 2,
   },
   modeBtnCompact: {
@@ -670,24 +606,23 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.32)",
-    backgroundColor: "rgba(0,245,255,0.1)",
+    borderColor: "#fff",
+    backgroundColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
   selectedChipText: {
-    color: "rgba(224,252,255,0.94)",
-    fontSize: 11,
-    fontWeight: "600",
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "400",
     maxWidth: 200,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
   },
   modeBtnActive: {
-    backgroundColor: "rgba(0,245,255,0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.32)",
+    backgroundColor: "#fff",
   },
   modeBtnTextActive: {
-    color: "rgba(224,252,255,0.96)",
+    color: "#050505",
   },
   searchSection: {
     paddingHorizontal: 8,
@@ -717,7 +652,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
   searchKicker: {
-    color: "rgba(148,163,184,0.82)",
+    color: "rgba(255,255,255,0.48)",
     fontSize: 10,
     fontWeight: "600",
     letterSpacing: 1.6,
@@ -728,8 +663,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.16)",
-    backgroundColor: "rgba(0,0,0,0.12)",
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "#000",
   },
   searchGlassTint: {
     ...StyleSheet.absoluteFillObject,
@@ -772,10 +707,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   teamRowSelected: {
-    borderColor: "rgba(0,245,255,0.38)",
-    borderLeftWidth: 3,
-    borderLeftColor: "rgba(0,245,255,0.55)",
-    backgroundColor: "rgba(0,245,255,0.08)",
+    borderColor: "#fff",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
   teamRowDisabled: {
     opacity: 0.38,
@@ -790,18 +723,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   teamCheckSelected: {
-    borderColor: "rgba(0,245,255,0.5)",
-    backgroundColor: "rgba(0,245,255,0.18)",
+    borderColor: "#fff",
+    backgroundColor: "#fff",
   },
   teamCheckMark: {
-    color: "rgba(224,252,255,0.98)",
+    color: "#050505",
     fontSize: 10,
     fontWeight: "800",
   },
   teamName: {
     flex: 1,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 14,
+    fontSize: 16,
   },
   teamNameSelected: {
     color: "#fff",
@@ -818,7 +751,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,245,255,0.1)",
+    borderTopColor: "rgba(255,255,255,0.1)",
   },
   marginSectionDual: {
     paddingVertical: 4,
@@ -826,9 +759,9 @@ const styles = StyleSheet.create({
   marginGlass: {
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.16)",
+    borderColor: "rgba(255,255,255,0.14)",
     borderRadius: 0,
-    backgroundColor: "rgba(255,255,255,0.02)",
+    backgroundColor: "#000",
     shadowColor: "#000",
     shadowOpacity: 0.16,
     shadowRadius: 14,
@@ -872,7 +805,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
   marginKicker: {
-    color: "rgba(148,163,184,0.82)",
+    color: "rgba(255,255,255,0.48)",
     fontSize: 9,
     fontWeight: "600",
     letterSpacing: 1.4,
@@ -890,7 +823,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   marginLabel: {
-    color: "rgba(165,243,252,0.5)",
+    color: "rgba(255,255,255,0.45)",
     fontSize: 9,
     lineHeight: 11,
   },
@@ -915,7 +848,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,245,255,0.12)",
+    borderTopColor: "rgba(255,255,255,0.12)",
     paddingHorizontal: spacing.md,
     paddingTop: 12,
     overflow: "hidden",
@@ -933,32 +866,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   clearBtnText: {
-    color: "rgba(255,255,255,0.72)",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 12,
     fontWeight: "600",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
   },
   clearBtnTextDisabled: {
-    color: "rgba(255,255,255,0.72)",
+    color: "rgba(255,255,255,0.55)",
   },
-  doneBtnWrap: {
-    flexShrink: 0,
-  },
-  doneBtnFrame: {
+  doneBtn: {
     minWidth: 104,
-  },
-  doneBtnContent: {
     minHeight: 40,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 18,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#fff",
   },
   doneBtnText: {
-    color: "#f0fdff",
+    color: "#050505",
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.7,
-    textShadowColor: "rgba(0,245,255,0.42)",
-    textShadowRadius: 14,
-    textShadowOffset: { width: 0, height: 0 },
   },
 });

@@ -7,6 +7,12 @@ import type { Language } from "@/lib/i18n/language";
 import { DATE_LOCALE } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { nameOxanium } from "@/lib/fonts";
+import {
+  badgeParticipantLabel,
+  formatBadgeParticipantCount,
+  readBadgeParticipantCount,
+} from "@/lib/badges/badgeCohort";
+import VelvetTuftField from "./VelvetTuftField";
 import "./badgeDetailModal.css";
 
 function subscribeToBody() {
@@ -55,6 +61,7 @@ export default function BadgeDetailModal({
 }: BadgeDetailModalProps) {
   const m = t(language);
   const awardedMs = resolveAwardedMs(badge);
+  const participantCount = readBadgeParticipantCount(badge);
   const portalRoot = useDocumentBody();
   const isJa = language === "ja";
 
@@ -85,8 +92,6 @@ export default function BadgeDetailModal({
         className="badge-detail-modal__panel"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="badge-detail-modal__accent" aria-hidden />
-
         <button
           type="button"
           className="badge-detail-modal__close"
@@ -96,7 +101,10 @@ export default function BadgeDetailModal({
           <X className="size-4" strokeWidth={1.75} aria-hidden />
         </button>
 
-        <div className="badge-detail-modal__body">
+        <div className="badge-detail-modal__hero-stage">
+          <div className="badge-detail-modal__quilt" aria-hidden>
+            <VelvetTuftField />
+          </div>
           {badge.icon ? (
             <div className="badge-detail-modal__hero">
               <div className="badge-detail-modal__hero-glow" aria-hidden />
@@ -110,39 +118,57 @@ export default function BadgeDetailModal({
               />
             </div>
           ) : null}
+        </div>
 
-          <div className="badge-detail-modal__divider" aria-hidden />
+        <div className="badge-detail-modal__copy">
+          <p className="badge-detail-modal__kicker">
+            {isJa ? "バッジ" : "Badge"}
+          </p>
 
-          <div className="badge-detail-modal__copy">
-            <p className="badge-detail-modal__kicker">
-              {isJa ? "バッジ" : "Badge"}
-            </p>
+          <h2
+            id="badge-detail-modal-title"
+            className={[nameOxanium.className, "badge-detail-modal__title"].join(" ")}
+          >
+            {badge.title ?? badge.id}
+          </h2>
 
-            <h2
-              id="badge-detail-modal-title"
-              className={[nameOxanium.className, "badge-detail-modal__title"].join(" ")}
-            >
-              {badge.title ?? badge.id}
-            </h2>
+          {badge.description ? (
+            <p className="badge-detail-modal__desc">{badge.description}</p>
+          ) : null}
 
-            {badge.description ? (
-              <p className="badge-detail-modal__desc">{badge.description}</p>
-            ) : null}
-
-            {awardedMs != null ? (
-              <p className="badge-detail-modal__meta">
-                <span className="badge-detail-modal__meta-label">
-                  {isJa ? "付与日" : "Granted"}
-                </span>
-                <span className="badge-detail-modal__meta-value" aria-hidden>
-                  ·
-                </span>
-                <span className="badge-detail-modal__meta-value">
-                  {new Date(awardedMs).toLocaleDateString(DATE_LOCALE[language])}
-                </span>
-              </p>
-            ) : null}
-          </div>
+          {awardedMs != null || participantCount != null ? (
+            <div className="badge-detail-modal__meta">
+              {awardedMs != null ? (
+                <p className="badge-detail-modal__meta-row">
+                  <span className="badge-detail-modal__meta-label">
+                    {isJa ? "付与日" : "Granted"}
+                  </span>
+                  <span className="badge-detail-modal__meta-value" aria-hidden>
+                    ·
+                  </span>
+                  <span className="badge-detail-modal__meta-value">
+                    {new Date(awardedMs).toLocaleDateString(DATE_LOCALE[language])}
+                  </span>
+                </p>
+              ) : null}
+              {participantCount != null ? (
+                <p className="badge-detail-modal__meta-row">
+                  <span className="badge-detail-modal__meta-label">
+                    {badgeParticipantLabel(isJa ? "ja" : "en")}
+                  </span>
+                  <span className="badge-detail-modal__meta-value" aria-hidden>
+                    ·
+                  </span>
+                  <span className="badge-detail-modal__meta-value">
+                    {formatBadgeParticipantCount(
+                      participantCount,
+                      isJa ? "ja" : "en",
+                    )}
+                  </span>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

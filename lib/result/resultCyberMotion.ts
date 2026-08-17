@@ -81,17 +81,13 @@ export const resultDayHeaderPageSlot: Variants = {
   }),
 };
 
-/** リザルトカード：下からスナップ（フラットスロット列用） */
+/** リザルトカード：行は動かさない（試合カード先頭と同様。線枠の pathLength が見えるように） */
 export const resultCardPageSlot: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  show: (slot: number) => ({
+  hidden: { opacity: 1, y: 0 },
+  show: () => ({
     opacity: 1,
     y: 0,
-    transition: {
-      delay: slotDelay(slot),
-      duration: RESULT_CARD_DURATION_SEC,
-      ease: GAMES_CYBER_EASE_SNAP,
-    },
+    transition: { duration: 0 },
   }),
 };
 

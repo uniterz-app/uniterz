@@ -4,7 +4,8 @@
  * リーグ視点 Player Stats Leaders（モック）— Native `NbaLeaguePlayerStatLeadersPanelNative` 相当
  */
 import { useMemo, useState } from "react";
-import { nameOxanium } from "@/lib/fonts";
+import { nameOxanium, nameBebas } from "@/lib/fonts";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { TEAM_SHORT } from "@/lib/team-short";
 import {
   CyberSlantedTab,
@@ -24,6 +25,8 @@ type Props = {
   language?: "ja" | "en";
   onSelectPlayer?: (playerId: string) => void;
 };
+
+const playerNameTy = bracketMarketTeamTypography(true);
 
 export default function NbaLeaguePlayerStatLeadersPanel({
   language = "ja",
@@ -116,8 +119,8 @@ export default function NbaLeaguePlayerStatLeadersPanel({
               {i + 1}
             </span>
             <span
-              className={`${nameOxanium.className} min-w-0 flex-1 truncate text-[13px] font-bold`}
-              style={{ transform: "skewX(-6deg)" }}
+              className={`${nameBebas.className} min-w-0 flex-1 truncate text-[18px] leading-tight text-white`}
+              style={{ ...playerNameTy, transform: "skewX(-6deg)" }}
             >
               {row.playerName}
             </span>

@@ -21,7 +21,9 @@ export function formatKinetikMetricCount(
 }
 
 /**
- * キネティック指標カード用: pending 中は "—"、表示時はカウントアップ。
+ * キネティック指標カード用:
+ * pending 中は 0 表示（「—」で穴を空けない）→ 本値が来たら 0 からカウントアップ。
+ * 到着が遅れても「わざと数えてる」感じで待ちをごまかせる。
  */
 export function useKinetikMetricCountUp(
   pending: boolean,
@@ -29,7 +31,8 @@ export function useKinetikMetricCountUp(
   format: KinetikMetricCountFormat,
   decimals = 0,
   reduceMotion = false,
-  duration = 900
+  /** 遅い stats 到着を隠すため、入場は少し長め */
+  duration = 1100
 ): string {
   const safeTarget = Number.isFinite(target) ? target : 0;
   const countEnabled = !pending && !reduceMotion;
@@ -42,7 +45,9 @@ export function useKinetikMetricCountUp(
     whenDisabled
   );
 
-  if (pending) return "—";
+  if (pending) {
+    return formatKinetikMetricCount(0, format, decimals);
+  }
   if (reduceMotion) {
     return formatKinetikMetricCount(safeTarget, format, decimals);
   }

@@ -28,5 +28,7 @@ const styles = StyleSheet.create({
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
     borderRadius: COMMUNITY_GROUP_DETAIL_CARD_RADIUS,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.16)",
   },
 });

@@ -96,7 +96,7 @@ export default function NbaSeasonAwardsViewPanel({
         </p>
       </header>
 
-      <ul className="overflow-hidden rounded-[2px] border border-amber-300/20 bg-[rgba(4,9,16,0.97)]">
+      <ul className="overflow-hidden rounded-[2px] border border-amber-300/20 bg-black">
         {NBA_SEASON_AWARD_DEFS.map((def, index) => {
           const picked = resolveCandidate(prediction.picks[def.id], list);
           const officialId = officialByAward?.[def.id];

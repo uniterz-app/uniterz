@@ -52,6 +52,10 @@ import { cyberAlert } from "../../components/cyberAlert";
 import type { PostWithMillis } from "./nativeResultModel";
 import { canDismissResultListPostNow } from "./nativeResultModel";
 import ResultGlassShellNative from "./ResultGlassShellNative";
+import MatchListLineFrameNative, {
+  resultOutcomeLineFramePaint,
+} from "../games/MatchListLineFrameNative";
+import { roundLabelFromPost } from "../../../../../lib/result/buildResultCardFace";
 import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
 import ResultPerfectCyberFrameNative from "./ResultPerfectCyberFrameNative";
 import ResultStreakCyberFrameNative from "./ResultStreakCyberFrameNative";
@@ -75,6 +79,7 @@ import {
   resultCardShellNative,
 } from "./resultMobileUiNative";
 import {
+  RESULT_CARD_STAGGER_MS,
   useResultPostCardEntrance,
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
@@ -83,6 +88,7 @@ import { buildResultCardFaceModel } from "../../../../../lib/result/buildResultC
 import {
   ResultCardDesignFaceNative,
 } from "./ResultCardDesignPreviewScreenNative";
+import { useResultFaceMatchEntrance } from "./useResultFaceMatchEntrance";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 const JERSEY_WIDTH_SCALE = MOBILE_RESULT_JERSEY_WIDTH_SCALE;
@@ -518,12 +524,15 @@ export default function ResultPostCardNative({
   const entrance = useResultPostCardEntrance({
     rowIndex: listEnterIndex,
     /** チュートリアル穴は Reanimated の scaleY と測位が食い違うので入場モーションを切る */
-    entranceEnabled:
-      entranceEnabled && !pauseListFx && !tutorialTargetId,
+    entranceEnabled: entranceEnabled && !pauseListFx,
     reduceMotion: reduceMotionList,
     badge,
     hasFinalScore: hasFinal,
     statRowMeta: statRowEntranceMeta,
+  });
+  const faceMotion = useResultFaceMatchEntrance({
+    enabled: !reduceMotionList && entranceEnabled && !pauseListFx,
+    drawDelayMs: listEnterIndex * RESULT_CARD_STAGGER_MS,
   });
 
   const frameStyle =
@@ -567,6 +576,10 @@ export default function ResultPostCardNative({
         elevation: (frameStyle as ViewStyle).elevation,
       }
     : null;
+  const roundLabel = roundLabelFromPost(post as unknown as Record<string, unknown>);
+  const lineFramePaint = resultOutcomeLineFramePaint(
+    badge === "streak" ? "streak" : badge
+  );
 
   const faceModel = useMemo(
     () =>
@@ -636,7 +649,9 @@ export default function ResultPostCardNative({
                 face={faceModel}
                 frameGlow
                 showDetailTab
-                strokeEnd={entrance.frameStrokeEnd}
+                animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
+                drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
+                motion={faceMotion}
               />
             </View>
             <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
@@ -686,9 +701,15 @@ export default function ResultPostCardNative({
       >
       <View style={styles.cardCaptureWrap}>
       <View collapsable={false}>
+      <MatchListLineFrameNative
+        topLabel={roundLabel}
+        paint={lineFramePaint}
+        animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
+        drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
+      >
       <ResultGlassShellNative
         borderColor={shellBorderColor}
-        strokeWidth={shellStrokeWidth}
+        strokeWidth={0}
         shellStyle={[styles.cardShell, shellShadowStyle]}
         overflowVisible={
           Boolean(shellOverflowStyle) || shellStrokeWidth > 1
@@ -934,6 +955,7 @@ export default function ResultPostCardNative({
           <ResultStreakCyberFrameNative activeWinStreak={activeWinStreak} />
         ) : null}
       </ResultGlassShellNative>
+      </MatchListLineFrameNative>
       </View>
 
       {showCornerControl ? (

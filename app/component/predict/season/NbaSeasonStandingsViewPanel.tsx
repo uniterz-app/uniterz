@@ -119,7 +119,7 @@ export default function NbaSeasonStandingsViewPanel({
         </p>
       </header>
 
-      <div className="overflow-hidden rounded-[2px] border border-cyan-300/20 bg-[rgba(4,9,16,0.97)]">
+      <div className="overflow-hidden rounded-[2px] border border-cyan-300/20 bg-black">
         <div
           className={[
             "grid border-b border-white/[0.1]",

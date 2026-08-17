@@ -1047,6 +1047,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         compactHeader={headerMobile}
         language={language}
         layoutMobile={isMobile}
+        league={league}
       />
     </motion.div>
   );

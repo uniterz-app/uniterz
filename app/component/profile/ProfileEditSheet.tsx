@@ -14,9 +14,11 @@ import CyberAuthField from "@/app/component/auth/CyberAuthField";
 import CyberAuthTextarea from "@/app/component/auth/CyberAuthTextarea";
 import CyberAuthSelect from "@/app/component/auth/CyberAuthSelect";
 import {
-  SETTINGS_POOLS_BG_BASE,
-  SETTINGS_POOLS_BG_IMAGE,
-} from "@/lib/ui/settingsPoolsBackground";
+  APP_MESH_BG_FALLBACK,
+  APP_MESH_BG_PUBLIC_PATH,
+  APP_MESH_BG_TILE_HEIGHT_PX,
+  APP_MESH_BG_TILE_WIDTH_PX,
+} from "@/lib/app/appMeshBackground";
 import type { Language } from "@/lib/i18n/language";
 import {
   ALL_LANGUAGES,
@@ -270,12 +272,11 @@ export default function ProfileEditSheet({
         onPointerUp={() => setSavePressed(false)}
         onPointerCancel={() => setSavePressed(false)}
         className={[
-          "mt-1 flex w-full items-center justify-center gap-2 rounded-none border border-cyan-400/35 px-3.5 py-3 font-bold tracking-wide text-white",
-          "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
-          "shadow-[0_0_24px_rgba(0,245,255,0.22),0_10px_30px_rgba(124,58,237,0.2)]",
-          "transition-[transform,filter,opacity] duration-100 ease-out",
-          savePressed && !uploading ? "scale-[0.97]" : "scale-100",
-          uploading ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+          "predict-overlay-submit-btn mt-1 flex w-full items-center justify-center gap-2 px-3.5 py-3 text-sm font-bold tracking-wide",
+          savePressed && !uploading ? "scale-[0.98]" : "",
+          uploading
+            ? "predict-overlay-submit-btn--disabled cursor-not-allowed"
+            : "cursor-pointer",
         ].join(" ")}
       >
         <span>
@@ -283,9 +284,6 @@ export default function ProfileEditSheet({
             ? t(language).profile.uploading
             : t(language).profile.saveChanges}
         </span>
-        {!uploading ? (
-          <span className="text-lg leading-none">↗</span>
-        ) : null}
       </button>
     </form>
   );
@@ -314,16 +312,27 @@ export default function ProfileEditSheet({
       className="fixed inset-0 isolate min-h-dvh overflow-y-auto overscroll-contain"
       style={{ zIndex: 2147483000 }}
     >
-      {/* クラス依存せず不透明ベース + Pools を必ず塗る（プロフィール透け防止） */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0"
-        style={{
-          backgroundColor: SETTINGS_POOLS_BG_BASE,
-          backgroundImage: SETTINGS_POOLS_BG_IMAGE,
-          backgroundRepeat: "no-repeat",
-        }}
-      />
+        className="pointer-events-none fixed inset-0 overflow-hidden"
+        style={{ backgroundColor: APP_MESH_BG_FALLBACK }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url(${APP_MESH_BG_PUBLIC_PATH})`,
+            backgroundRepeat: "repeat",
+            backgroundSize: `${APP_MESH_BG_TILE_WIDTH_PX}px ${APP_MESH_BG_TILE_HEIGHT_PX}px`,
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.22) 0%, transparent 18%, transparent 78%, rgba(0,0,0,0.32) 100%)",
+          }}
+        />
+      </div>
       <CyberSubpageShell
         bare
         eyebrow="PROFILE"

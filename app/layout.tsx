@@ -58,7 +58,7 @@ export default async function RootLayout({
       <body
         className={`${jp.className} ${authCondensed.variable}`}
         style={{
-          backgroundColor: "#021208",
+          backgroundColor: "#050508",
           margin: 0,
           padding: 0,
         }}

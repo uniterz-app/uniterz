@@ -13,6 +13,13 @@ import {
   GAMES_WINDOW_PLUS_MINUS_DEFAULT,
 } from "../../../../../lib/games/gamesWindowConstants";
 import {
+  buildGamesWindowRowsCacheKey,
+  findCoveringGamesWindowRows,
+  patchGamesWindowRowsCache,
+  readGamesWindowRowsCache,
+  writeGamesWindowRowsCache,
+} from "../../../../../lib/games/gamesWindowRowsMemoryCache";
+import {
   mergeGameRowsById,
   needsBackwardWindowExtend,
   needsForwardWindowExtend,
@@ -31,60 +38,17 @@ export type SupportedLeague = "nba" | "bj" | "j1" | "pl" | "wc";
 /** Web `useGameDays` 相当: アンカー±5日（計11暦日）。端で +2 延長 */
 const GAME_DAYS_PLUS_MINUS = GAMES_WINDOW_PLUS_MINUS_DEFAULT;
 
-/** Web `useGameDays` の gameDaysRowsCache と同趣旨 */
-const GAMES_WINDOW_CACHE_TTL_MS = 5 * 60 * 1000;
-
-type GamesWindowCacheEntry = {
-  rows: NativeGameRow[];
-  peerRows: NativeGameRow[];
-  /** 非 WC: アンカー日キー / WC: 固定窓キー */
-  windowKey: string;
-  startKey: string;
-  endKey: string;
-  savedAt: number;
-};
-
-const gamesWindowCache = new Map<string, GamesWindowCacheEntry>();
-
-function gamesWindowCacheKey(league: SupportedLeague, windowKey: string): string {
-  return league === "wc"
-    ? `${league}|wc-page-window-v1`
-    : `${league}|${windowKey}|pm${GAME_DAYS_PLUS_MINUS}`;
-}
-
-/** アンカー日の ±N 日窓が selectedDateKey を覆うか（end は半開区間） */
-function anchorWindowCoversDateKey(
-  entry: Pick<GamesWindowCacheEntry, "windowKey" | "startKey" | "endKey">,
+/** メモリ上の窓が selectedDateKey を覆うか（end は半開区間） */
+function windowBoundsCoverDateKey(
+  bounds: { startKey: string; endKey: string },
   selectedDateKey: string
 ): boolean {
-  if (entry.startKey && entry.endKey) {
-    return selectedDateKey >= entry.startKey && selectedDateKey < entry.endKey;
-  }
-  const anchor = parseDateKeyInTimeZone(entry.windowKey, TIMEZONE_JST);
-  if (!anchor) return false;
-  const { start, end } = getPlusMinusDaysRangeInTimeZone(
-    anchor,
-    TIMEZONE_JST,
-    GAME_DAYS_PLUS_MINUS
+  return (
+    !!bounds.startKey &&
+    !!bounds.endKey &&
+    selectedDateKey >= bounds.startKey &&
+    selectedDateKey < bounds.endKey
   );
-  const startKey = toDateKeyInTimeZone(start, TIMEZONE_JST);
-  const endKey = toDateKeyInTimeZone(end, TIMEZONE_JST);
-  return selectedDateKey >= startKey && selectedDateKey < endKey;
-}
-
-/** 同一リーグで selectedDate を覆う新鮮なキャッシュを探す（日付チップ移動の再取得を抑える） */
-function findCoveringGamesCache(
-  league: SupportedLeague,
-  selectedDateKey: string
-): GamesWindowCacheEntry | null {
-  const now = Date.now();
-  for (const [key, entry] of gamesWindowCache.entries()) {
-    if (!key.startsWith(`${league}|`)) continue;
-    if (now - entry.savedAt >= GAMES_WINDOW_CACHE_TTL_MS) continue;
-    if (!anchorWindowCoversDateKey(entry, selectedDateKey)) continue;
-    return entry;
-  }
-  return null;
 }
 
 export type NativeGameRow = {
@@ -354,7 +318,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
       (isWc
         ? wcWindowLoadedRef.current
         : windowBoundsRef.current != null &&
-          anchorWindowCoversDateKey(windowBoundsRef.current, dateKey));
+          windowBoundsCoverDateKey(windowBoundsRef.current, dateKey));
 
     if (memoryCovers) {
       setLoading(false);
@@ -363,12 +327,19 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     }
 
     const covering = !forceRefresh
-      ? findCoveringGamesCache(selectedLeague, dateKey)
+      ? findCoveringGamesWindowRows({
+          league: selectedLeague,
+          timeZone: TIMEZONE_JST,
+          selectedDateKey: dateKey,
+          plusMinus: GAME_DAYS_PLUS_MINUS,
+        })
       : null;
-      if (covering) {
-      setWindowRows(covering.rows);
+    if (covering) {
+      setWindowRows(covering.rows as NativeGameRow[]);
       setPeerRowsForSeries(
-        covering.peerRows.length ? covering.peerRows : covering.rows
+        (covering.peerRows.length
+          ? covering.peerRows
+          : covering.rows) as NativeGameRow[]
       );
       windowBoundsRef.current = {
         windowKey: covering.windowKey,
@@ -382,16 +353,22 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
       return;
     }
 
-    const cacheKey = gamesWindowCacheKey(selectedLeague, fetchWindowKey);
-    const cached = gamesWindowCache.get(cacheKey);
-    const cacheFresh =
-      !!cached && Date.now() - cached.savedAt < GAMES_WINDOW_CACHE_TTL_MS;
+    const cacheKey = buildGamesWindowRowsCacheKey({
+      league: selectedLeague,
+      timeZone: TIMEZONE_JST,
+      windowKey: fetchWindowKey,
+      plusMinus: GAME_DAYS_PLUS_MINUS,
+      isWc,
+    });
+    const cached = readGamesWindowRowsCache(cacheKey);
 
     /** Web `useGameDays` 相当: TTL 内ならネット再取得しない */
-    if (cacheFresh && cached && !forceRefresh) {
-      setWindowRows(cached.rows);
+    if (cached && !forceRefresh) {
+      setWindowRows(cached.rows as NativeGameRow[]);
       setPeerRowsForSeries(
-        cached.peerRows.length ? cached.peerRows : cached.rows
+        (cached.peerRows.length
+          ? cached.peerRows
+          : cached.rows) as NativeGameRow[]
       );
       windowBoundsRef.current = {
         windowKey: cached.windowKey,
@@ -469,13 +446,12 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
         setWindowRows(rows);
         setPeerRowsForSeries(peerRows);
 
-        gamesWindowCache.set(cacheKey, {
+        writeGamesWindowRowsCache(cacheKey, {
           rows,
           peerRows,
           windowKey: fetchWindowKey,
           startKey: rangeStartKey,
           endKey: rangeEndKey,
-          savedAt: Date.now(),
         });
 
         const preferred =
@@ -628,24 +604,22 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
           endKey: nextEnd,
         };
 
-        const cacheKey = gamesWindowCacheKey(
-          selectedLeague,
-          bounds.windowKey
-        );
-        const prevCache = gamesWindowCache.get(cacheKey);
-        gamesWindowCache.set(cacheKey, {
-          rows: mergeGameRowsById(
-            prevCache?.rows ?? [],
-            mergedExtra
-          ) as NativeGameRow[],
+        const cacheKey = buildGamesWindowRowsCacheKey({
+          league: selectedLeague,
+          timeZone: TIMEZONE_JST,
+          windowKey: bounds.windowKey,
+          plusMinus: GAME_DAYS_PLUS_MINUS,
+        });
+        const prevCache = readGamesWindowRowsCache(cacheKey);
+        patchGamesWindowRowsCache(cacheKey, {
+          rows: mergeGameRowsById(prevCache?.rows ?? [], mergedExtra),
           peerRows: mergeGameRowsById(
             prevCache?.peerRows ?? prevCache?.rows ?? [],
             mergedExtraPeers.length ? mergedExtraPeers : mergedExtra
-          ) as NativeGameRow[],
-          windowKey: bounds.windowKey,
+          ),
           startKey: nextStart,
           endKey: nextEnd,
-          savedAt: Date.now(),
+          windowKey: bounds.windowKey,
         });
       } catch (e) {
         if (!alive || ac.signal.aborted) return;

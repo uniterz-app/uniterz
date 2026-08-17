@@ -36,8 +36,7 @@ async function optionalUid(req: Request): Promise<string | null> {
 type PeriodOnly = Exclude<RankingPeriod, "season">;
 
 /**
- * 一覧は全員共通。uid は付けない（My Rank は別経路）。
- * users merge / 個人 overlay なし。
+ * 一覧は全員共通。uid は付けない（My Rank は personalOnly 経路）。
  */
 async function loadSharedPayload(
   period: PeriodOnly,
@@ -70,6 +69,9 @@ export async function GET(req: Request) {
     }
     const period = periodRaw as PeriodOnly;
     const division = parseRankingDivision(url.searchParams.get("division"));
+    const personalOnly =
+      url.searchParams.get("personalOnly") === "1" ||
+      url.searchParams.get("personalOnly") === "true";
 
     const uid = await optionalUid(req);
 
@@ -95,6 +97,70 @@ export async function GET(req: Request) {
       labelRaw && isValidPeriodLabel(period, labelRaw) && labelRaw <= currentLabel
         ? labelRaw
         : currentLabel;
+
+    /**
+     * My Rank overlay — 一覧の共有キャッシュは汚さない。
+     * top50 外でも ranks + 自分の daily から myRank / myRow を返す。
+     */
+    if (personalOnly) {
+      if (!uid) {
+        return NextResponse.json(
+          { ok: false, error: "unauthorized" },
+          { status: 401 }
+        );
+      }
+      const snapshot = await readNbaPeriodRankingSnapshots({
+        period,
+        label,
+        uid,
+        division,
+      });
+      if (!snapshot) {
+        return NextResponse.json(
+          {
+            ok: true,
+            period,
+            label,
+            division,
+            personalOnly: true,
+            range: null,
+            byMetric: {},
+          },
+          {
+            headers: {
+              "Cache-Control": "private, max-age=0, must-revalidate",
+            },
+          }
+        );
+      }
+      const byMetric: Record<string, unknown> = {};
+      for (const [metric, payload] of Object.entries(snapshot.byMetric)) {
+        byMetric[metric] = {
+          ok: payload.ok,
+          rows: [],
+          count: payload.count,
+          myRank: payload.myRank,
+          myRow: payload.myRow,
+          myRankDeltaPlaces: payload.myRankDeltaPlaces,
+        };
+      }
+      return NextResponse.json(
+        {
+          ok: true,
+          period: snapshot.period,
+          label,
+          division,
+          personalOnly: true,
+          range: snapshot.range,
+          byMetric,
+        },
+        {
+          headers: {
+            "Cache-Control": "private, max-age=60, must-revalidate",
+          },
+        }
+      );
+    }
 
     const labelsPromise: Promise<string[]> = unstable_cache(
       async (): Promise<string[]> =>

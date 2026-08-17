@@ -1,58 +1,56 @@
 "use client";
 
-import { doc, getDoc, type DocumentData } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
-const USER_DOC_CACHE_TTL_MS = 60 * 1000;
-
-type CacheEntry = {
-  data: DocumentData | null;
-  expiresAt: number;
-};
-
-const userDocCache = new Map<string, CacheEntry>();
-const userDocInFlight = new Map<string, Promise<DocumentData | null>>();
+import {
+  clearUserDocMemoryInflight,
+  getUserDocMemoryInflight,
+  invalidateUserDocMemory,
+  peekUserDocMemoryEntry,
+  setUserDocMemory,
+  setUserDocMemoryInflight,
+} from "@/lib/user/userDocMemoryCache";
 
 export async function getUserDocDataCached(
   uid: string,
   options?: { force?: boolean }
-): Promise<DocumentData | null> {
+): Promise<Record<string, unknown> | null> {
+  const safeUid = uid.trim();
+  if (!safeUid) return null;
   const force = options?.force === true;
-  const now = Date.now();
 
   if (!force) {
-    const cached = userDocCache.get(uid);
-    if (cached && cached.expiresAt > now) return cached.data;
+    const cached = peekUserDocMemoryEntry(safeUid);
+    if (cached) return cached.exists ? cached.data : null;
   }
 
-  const existing = userDocInFlight.get(uid);
-  if (existing) return existing;
+  const existing = getUserDocMemoryInflight(safeUid);
+  if (existing) {
+    const loaded = await existing;
+    return loaded?.exists ? loaded.data : null;
+  }
 
-  const task = (async () => {
-    const snap = await getDoc(doc(db, "users", uid));
-    const data = snap.exists() ? snap.data() : null;
-    userDocCache.set(uid, {
-      data,
-      expiresAt: Date.now() + USER_DOC_CACHE_TTL_MS,
+  const promise = getDoc(doc(db, "users", safeUid))
+    .then((snap) => {
+      const entry = {
+        exists: snap.exists(),
+        data: snap.exists()
+          ? (snap.data() as Record<string, unknown>)
+          : {},
+      };
+      setUserDocMemory(safeUid, entry);
+      return entry;
+    })
+    .catch(() => null)
+    .finally(() => {
+      clearUserDocMemoryInflight(safeUid);
     });
-    return data;
-  })();
 
-  userDocInFlight.set(uid, task);
-  try {
-    return await task;
-  } finally {
-    userDocInFlight.delete(uid);
-  }
+  setUserDocMemoryInflight(safeUid, promise);
+  const loaded = await promise;
+  return loaded?.exists ? loaded.data : null;
 }
 
 export function invalidateUserDocCache(uid?: string) {
-  if (uid) {
-    userDocCache.delete(uid);
-    userDocInFlight.delete(uid);
-    return;
-  }
-  userDocCache.clear();
-  userDocInFlight.clear();
+  invalidateUserDocMemory(uid);
 }
-

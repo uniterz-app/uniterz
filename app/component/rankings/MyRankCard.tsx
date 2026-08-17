@@ -108,9 +108,6 @@ const STREAK_SWEEP_MIN = 3;
 const STATS_PENDING_MARK = "···";
 const RANK_COUNT_DURATION_MS = 520;
 
-const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
-const ENTER_DURATION = 0.28;
-
 const LAYOUT = {
   mobile: {
     outerPad: "max-w-full overflow-x-clip px-2 pt-3",
@@ -481,7 +478,7 @@ export default function MyRankCard({
   countryCode = null,
   miniMetrics,
   leagueLabel,
-  cardResetKey: _cardResetKey,
+  cardResetKey,
   layout = "mobile",
   animateRank = true,
   statsSource = null,
@@ -493,7 +490,6 @@ export default function MyRankCard({
   hideRankProgress = false,
   estimatedUnits = null,
 }: Props) {
-  void _cardResetKey;
   const ui = LAYOUT[layout];
   const m = t(language);
   const reduceMotion = useReducedMotion();
@@ -699,7 +695,9 @@ export default function MyRankCard({
       <MyRankCardFrame
         tone="neutral"
         hideLeftEdge
-        className="w-full overflow-hidden"
+        animateDraw={!motionOff}
+        drawKey={cardResetKey}
+        className="w-full overflow-visible"
       >
         <div className="relative z-10 px-1.5 py-1.5">
           {freeInner}
@@ -707,30 +705,16 @@ export default function MyRankCard({
       </MyRankCardFrame>
     );
 
-    if (motionOff) {
-      return <div className={outerPad}>{freeBody}</div>;
-    }
-
-    return (
-      <motion.div
-        className={outerPad}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          opacity: { duration: ENTER_DURATION, ease: ENTER_EASE },
-          y: { duration: ENTER_DURATION, ease: ENTER_EASE },
-        }}
-      >
-        {freeBody}
-      </motion.div>
-    );
+    return <div className={outerPad}>{freeBody}</div>;
   }
 
   const body = (
     <MyRankCardFrame
       tone={frameTone}
       proSpec={proSpecFrame}
-      className="w-full overflow-hidden"
+      animateDraw={!motionOff}
+      drawKey={cardResetKey}
+      className="w-full overflow-visible"
     >
       <div
         className="relative overflow-hidden"
@@ -955,27 +939,5 @@ export default function MyRankCard({
     </div>
   );
 
-  if (motionOff) {
-    return <div className={outerPad}>{tiltWrapped}</div>;
-  }
-
-  return (
-    <motion.div
-      className={outerPad}
-      initial={{
-        opacity: 0,
-        y: 12,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-      }}
-      transition={{
-        opacity: { duration: ENTER_DURATION, ease: ENTER_EASE },
-        y: { duration: ENTER_DURATION, ease: ENTER_EASE },
-      }}
-    >
-      {tiltWrapped}
-    </motion.div>
-  );
+  return <div className={outerPad}>{tiltWrapped}</div>;
 }

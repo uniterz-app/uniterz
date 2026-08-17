@@ -8,6 +8,7 @@ export type MasterBadge = {
   title: string;
   description: string;
   icon?: string;
+  participantCount?: number;
 };
 
 const MASTER_BADGES_TTL_MS = 30 * 60 * 1000;

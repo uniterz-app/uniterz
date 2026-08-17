@@ -3,6 +3,7 @@
  */
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { getCachedGameDocForResult } from "../../../../../lib/result/resultDetailFirestoreCache";
 import {
   parseGamePointsDistributionV1,
   rawPointsDistributionFromGameDoc,
@@ -18,31 +19,6 @@ import {
 } from "../../../../../lib/result/buildResultDetailView";
 import { resolveTopScorerMarketView } from "../../../../../lib/result/buildTopScorerMarketEmbed";
 import { enrichTopEntriesCountryFromUsers } from "../../../../../lib/results/enrichTopEntriesCountryFromUsers";
-
-const GAME_DOC_TTL_MS = 3 * 60 * 1000;
-
-type GameCacheEntry = {
-  at: number;
-  exists: boolean;
-  data: Record<string, unknown> | null;
-};
-
-const gameDocCache = new Map<string, GameCacheEntry>();
-
-async function getCachedGameDocForResultNative(
-  gameId: string
-): Promise<{ exists: boolean; data: Record<string, unknown> | null }> {
-  const hit = gameDocCache.get(gameId);
-  const now = Date.now();
-  if (hit && now - hit.at < GAME_DOC_TTL_MS) {
-    return { exists: hit.exists, data: hit.data };
-  }
-  const snap = await getDoc(doc(db, "games", gameId));
-  const exists = snap.exists();
-  const data = exists ? (snap.data() as Record<string, unknown>) : null;
-  gameDocCache.set(gameId, { at: now, exists, data });
-  return { exists, data };
-}
 
 export type ResultPostDetailMarket = {
   homeRate: number;
@@ -93,7 +69,7 @@ export async function loadResultPostDetailNative(
   }
 
   const { exists: gameExists, data: gameData } =
-    await getCachedGameDocForResultNative(gid.trim());
+    await getCachedGameDocForResult(gid.trim(), db);
 
   if (!gameExists || !gameData) {
     return {

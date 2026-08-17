@@ -1,22 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useReducedMotion } from "framer-motion";
+import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
+import {
+  myRankCardAccent,
+  resolveMyRankCardFrameTone,
+  type MyRankCardFrameTone,
+} from "@/lib/rankings/myRankCardFocus";
 
-/** 前日比順位 — 枠アクセント（上昇=ライム / 下降=シアン / 変動なし=ニュートラル） */
-export type MyRankCardFrameTone = "up" | "down" | "neutral";
-
-export function resolveMyRankCardFrameTone(
-  rankDeltaPlaces?: number | null
-): MyRankCardFrameTone {
-  if (
-    typeof rankDeltaPlaces !== "number" ||
-    !Number.isFinite(rankDeltaPlaces) ||
-    rankDeltaPlaces === 0
-  ) {
-    return "neutral";
-  }
-  return rankDeltaPlaces > 0 ? "up" : "down";
-}
+export type { MyRankCardFrameTone };
+export { resolveMyRankCardFrameTone };
 
 const TONE_CLASS: Record<MyRankCardFrameTone, string> = {
   up: "",
@@ -24,27 +18,46 @@ const TONE_CLASS: Record<MyRankCardFrameTone, string> = {
   neutral: "my-rank-card-frame--rank-neutral",
 };
 
-/** MyRankCard 外枠 — Pro は金枠・中黒。Free はニュートラル枠。 */
+const PRO_GOLD = "#E8C66A";
+
+function linePaint(proSpec: boolean, tone: MyRankCardFrameTone) {
+  if (proSpec) {
+    return { color: PRO_GOLD, glow: "rgba(232,198,106,0.32)" };
+  }
+  const accent = myRankCardAccent(tone);
+  return { color: accent.primary, glow: accent.dim };
+}
+
+/** MyRankCard 外枠 — マッチ／リザルトと同じ線枠パス。塗りは透明。 */
 export function MyRankCardFrame({
   children,
   className = "",
   tone = "up",
   proSpec = false,
   hideLeftEdge = false,
+  animateDraw = true,
+  drawKey,
 }: {
   children: ReactNode;
   className?: string;
   tone?: MyRankCardFrameTone;
-  /** Pro 仕様 — 金の連続枠 + 黒塗り */
+  /** Pro 仕様 — 金の連続枠（塗りは透明） */
   proSpec?: boolean;
-  /** Free — 左端アクセント色を出さない */
+  /** Free — 左端アクセント色を出さない（線枠では未使用） */
   hideLeftEdge?: boolean;
+  /** マッチカードと同じパス描画 */
+  animateDraw?: boolean;
+  /** 指標切替などで描画をやり直すキー */
+  drawKey?: string;
 }) {
+  void hideLeftEdge;
+  const reduceMotion = useReducedMotion() === true;
+  const draw = animateDraw && !reduceMotion;
+  const paint = linePaint(proSpec, tone);
   const frameClass = [
-    "my-rank-card-frame relative",
+    "my-rank-card-frame my-rank-card-frame--line-stroke relative",
     TONE_CLASS[tone],
     proSpec ? "my-rank-card-frame--pro-spec" : "",
-    hideLeftEdge ? "my-rank-card-frame--no-left-edge" : "",
     className,
   ]
     .filter(Boolean)
@@ -52,19 +65,21 @@ export function MyRankCardFrame({
 
   return (
     <div className={frameClass}>
-      {proSpec ? null : (
-        <>
+      <MatchListLineFrame
+        key={drawKey ?? "my-rank-frame"}
+        flush
+        closedTop
+        animateDraw={draw}
+        paint={paint}
+      >
+        {proSpec ? null : (
           <div
             aria-hidden
             className="my-rank-card-frame__grid pointer-events-none absolute inset-0"
           />
-          <div
-            aria-hidden
-            className="my-rank-card-frame__edge pointer-events-none absolute inset-0"
-          />
-        </>
-      )}
-      <div className="relative z-10">{children}</div>
+        )}
+        <div className="relative z-10">{children}</div>
+      </MatchListLineFrame>
     </div>
   );
 }

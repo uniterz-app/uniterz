@@ -23,7 +23,6 @@ import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabel
 import RankingsDivisionTabs from "@/app/component/rankings/RankingsDivisionTabs";
 import RankingsProLeagueTeaser from "@/app/component/rankings/RankingsProLeagueTeaser";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
-import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import Header from "@/app/component/Header";
 import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import { useWebRankings } from "../_lib/useWebRankings";
@@ -53,7 +52,7 @@ import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs";
-import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import { PRO_LEAGUE_TAB_THEME } from "@/lib/rankings/proLeagueAtmosphere";
 import { buildMyRankMiniMetrics } from "@/lib/rankings/buildMyRankMiniMetrics";
 import type { RankingRow } from "@/lib/rankings/cumulativeRankingRow";
@@ -387,28 +386,6 @@ export default function WebRankingsShell() {
       </div>
 
       <div className="mx-auto max-w-[920px] space-y-3 px-3 pt-2">
-        <div className="flex items-start gap-2">
-          <CyberMenuButton
-            size="sm"
-            onClick={() => setRankingsDrawerOpen(true)}
-            aria-label={m.games.openMenu}
-          />
-          <div className="flex min-w-0 flex-1 flex-col items-center">
-            <RankingsPageTitleCyber
-              variant="horizon-chrome"
-              tone={nbaBoard === "open" ? "pro-league" : "default"}
-              title={
-                nbaBoard === "open"
-                  ? m.rankings.divisionOpen
-                  : nbaBoard === "playoffs"
-                    ? m.rankings.nbaBoardPlayoffs
-                    : m.rankings.nbaBoardRegular
-              }
-              size="sm"
-            />
-          </div>
-          <div className="h-10 w-10 shrink-0" aria-hidden />
-        </div>
         <div className="space-y-0.5">
           {nbaBoard === "regular" || nbaBoard === "open" ? (
             <RankingsDivisionTabs
@@ -609,6 +586,13 @@ export default function WebRankingsShell() {
         ) : null}
       </div>
 
+      <ProfileMenuEdgeHandle
+        onOpen={() => setRankingsDrawerOpen(true)}
+        ariaLabel={m.games.openMenu}
+        label="MENU"
+        hidden={rankingsDrawerOpen}
+        fadeIn
+      />
       <SideMenuDrawer
         open={rankingsDrawerOpen}
         onClose={() => setRankingsDrawerOpen(false)}

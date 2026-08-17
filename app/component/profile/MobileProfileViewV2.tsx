@@ -248,14 +248,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     if (tab === "bracket") setTab("overview");
   }, [tab, setTab]);
 
-  if (isMe && loadingPlan && !welcomeProfileFly) {
-    return (
-      <div className="flex justify-center p-4">
-        <CandleChartLoader />
-      </div>
-    );
-  }
-
   return (
     <LazyMotion features={domAnimation}>
     <div className="mx-auto min-h-screen max-w-[640px] px-4 py-4 pb-bottom-nav text-white">

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
+import PredictOverlaySubmitButtonNative from "../../games/PredictOverlaySubmitButtonNative";
 import { auth } from "../../../lib/firebase";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 
@@ -103,13 +104,14 @@ export default function ProfilePasswordScreenNative() {
           onChangeText={setConfirm}
           placeholderTextColor="rgba(255,255,255,0.35)"
         />
-        <Pressable
-          style={[styles.cta, saving && { opacity: 0.7 }]}
-          onPress={() => void handleSave()}
-          disabled={saving}
-        >
-          <Text style={styles.ctaLabel}>{saving ? labels.saving : labels.save}</Text>
-        </Pressable>
+        <View style={styles.ctaWrap}>
+          <PredictOverlaySubmitButtonNative
+            label={labels.save}
+            disabledLabel={labels.saving}
+            enabled={!saving}
+            onPress={() => void handleSave()}
+          />
+        </View>
       </View>
     </LegalPageLayoutNative>
   );
@@ -117,32 +119,21 @@ export default function ProfilePasswordScreenNative() {
 
 const styles = StyleSheet.create({
   formCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(15,23,42,0.5)",
-    padding: 20,
     gap: 8,
   },
   label: { fontSize: 12, fontWeight: "600", color: "rgba(255,255,255,0.75)", marginTop: 4 },
   input: {
+    minHeight: 40,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderColor: "rgba(0, 245, 255, 0.28)",
+    borderRadius: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     color: "#fff",
     fontSize: 14,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
-  cta: {
+  ctaWrap: {
     marginTop: 12,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    backgroundColor: "rgba(0,245,255,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.35)",
   },
-  ctaLabel: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

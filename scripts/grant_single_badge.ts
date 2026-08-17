@@ -1,6 +1,7 @@
 /**
  * npx tsx scripts/grant-winrate-rank3-test.ts
  *
+ * ランキングバッジは meta.participantCount にその回の母数を入れること。
  * 2025年12月 勝率3位バッジを
  * 特定ユーザー1名にのみ付与（動作確認用）
  */

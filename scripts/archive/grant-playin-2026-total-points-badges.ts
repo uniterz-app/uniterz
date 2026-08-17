@@ -21,6 +21,7 @@
 import adminPkg from "firebase-admin";
 const admin = adminPkg;
 import fs from "fs";
+import { stampMasterBadgeParticipantCount } from "../../lib/badges/server/stampMasterBadgeParticipantCount";
 
 const serviceAccount = JSON.parse(
   fs.readFileSync("service-account.json", "utf8")
@@ -70,6 +71,8 @@ async function main() {
     process.exit(1);
   }
 
+  const participantCount = Number(snap.data()?.totalCount ?? 0) || 0;
+
   const rows = (snap.data()?.rows ?? []) as SnapshotRow[];
   if (!Array.isArray(rows) || rows.length === 0) {
     console.error("snapshot rows empty");
@@ -114,6 +117,7 @@ async function main() {
             phase: "play_in",
             metric: "totalPoints",
             rank,
+            ...(participantCount > 0 ? { participantCount } : {}),
             source: "playin_2026_total_points_grant",
           },
         },
@@ -131,6 +135,10 @@ async function main() {
 
   if (!DRY_RUN && ops > 0) {
     await batch.commit();
+  }
+
+  if (!DRY_RUN && participantCount > 0) {
+    await stampMasterBadgeParticipantCount(db, summary.keys(), participantCount);
   }
 
   const inTop20 = rows.filter((r) => {

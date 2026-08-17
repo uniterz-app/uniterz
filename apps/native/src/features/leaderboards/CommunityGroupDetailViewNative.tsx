@@ -366,7 +366,7 @@ export default function CommunityGroupDetailViewNative({
 
   return (
     <View style={styles.root}>
-      <RankingsShellGridOverlay borderRadius={16} />
+      <RankingsShellGridOverlay borderRadius={0} />
       {scrollEnabled ? (
         <ScrollView contentContainerStyle={scrollStyle} showsVerticalScrollIndicator={false}>
           {content}
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   root: {
     minHeight: 320,
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
-    borderRadius: 16,
+    borderRadius: 0,
     overflow: "hidden",
   },
   scroll: {
@@ -486,6 +486,7 @@ const styles = StyleSheet.create({
   },
   rankingSkeletonPanel: {
     marginBottom: 8,
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
   skeletonLine: {
     height: 12,
@@ -512,9 +513,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(0,0,0,0.18)",
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
   invitePanel: {
     marginTop: 4,
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
 });

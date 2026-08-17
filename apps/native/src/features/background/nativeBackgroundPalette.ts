@@ -11,7 +11,7 @@ import {
 export const NATIVE_BG_GRADIENT = GAMES_PAGE_BG_GRADIENT;
 
 /** ルートフォールバック・カード角の透過先 */
-export const NATIVE_PAGE_SURFACE_COLOR = GAMES_PAGE_BG_GRADIENT.top;
+export const NATIVE_PAGE_SURFACE_COLOR = "#050508";
 
 export const NATIVE_BG_TINTS = GAMES_PAGE_BG_TINTS;
 

@@ -31,7 +31,7 @@ export default function CommunityGroupHeaderHero({
   language,
   summary,
   onImageUpdated,
-  capTop = false,
+  capTop: _capTop = false,
   onImageEditingChange,
 }: Props) {
   const [imageEditing, setImageEditing] = useState(false);
@@ -91,11 +91,11 @@ export default function CommunityGroupHeaderHero({
 
   return (
     <div
-      className={["relative mb-4", capTop ? "" : "rounded-t-xl"].join(" ")}
+      className="relative mb-4"
       style={{ backgroundColor: COMMUNITY_GROUP_HERO_BG }}
     >
       <div
-        className={["relative overflow-hidden", capTop ? "" : "rounded-t-xl"].join(" ")}
+        className="relative overflow-hidden"
         style={{ height: imageAreaHeight }}
       >
         {imageBand}

@@ -20,8 +20,6 @@ import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import ProfileStreakPlotGrid from "@/app/component/profile/ui/ProfileStreakPlotGrid";
 import { useCountUp } from "@/lib/hooks/useCountUp";
-import { Info } from "lucide-react";
-import styles from "./profileChartInfoFaq.module.css";
 import {
   isProfileChartAnimationOff,
 } from "@/lib/profile/profileVisualEffects";
@@ -257,8 +255,6 @@ export default function StreakTrackerCard({
   const blockStagger = layout === "web" ? 0.098 : 0.078;
 
   const subtitle = msg.profile.last20TrackerDesc.replace("{n}", String(STREAK_TRACKER_LAST_N));
-  /** Info 用（表示サブタイトルと同じ文言のみ） */
-  const chartInfoTooltipMsg = subtitle;
   const emptyHint = subtitle;
 
   const statWinLabel = msg.profile.bestWStreak;
@@ -291,18 +287,6 @@ export default function StreakTrackerCard({
               >
                 {subtitle}
               </p>
-              <div className={styles.wrap}>
-                <button
-                  type="button"
-                  className={styles.faqButton}
-                  aria-label={chartInfoTooltipMsg}
-                >
-                  <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
-                </button>
-                <div className={styles.tooltip} aria-hidden>
-                  {chartInfoTooltipMsg}
-                </div>
-              </div>
             </div>
           </div>
           <div className="flex flex-col items-center self-end text-center">

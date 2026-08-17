@@ -2,21 +2,14 @@
  * Web `useProfile` の Firestore 解決（handle / uid → users ドキュメント）。
  */
 import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  where,
-} from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
+import { fetchUserDocByRouteKey } from "../../../../../lib/profile/fetchUserDocByRouteKey";
 import { parseUserProfileFields, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
+import { seedProfileHeroFromUserDoc } from "../../../../../lib/profile/seedProfileHeroFromUserDoc";
+import { seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
 import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
   type ProfilePlanProBgVariant,
@@ -58,34 +51,6 @@ const idleState: NativeProfileByHandleState = {
   memberSinceMs: null,
   unitBalance: 0,
 };
-
-async function fetchUserDocByRouteKey(
-  decodedHandle: string
-): Promise<{ id: string; data: Record<string, unknown> } | null> {
-  if (looksLikeFirestoreUid(decodedHandle)) {
-    const byUid = await getDoc(doc(db, "users", decodedHandle));
-    if (byUid.exists()) {
-      return { id: byUid.id, data: byUid.data() as Record<string, unknown> };
-    }
-  }
-
-  const snap = await getDocs(
-    query(collection(db, "users"), where("handle", "==", decodedHandle), limit(1))
-  );
-  if (!snap.empty) {
-    const d = snap.docs[0]!;
-    return { id: d.id, data: d.data() as Record<string, unknown> };
-  }
-
-  if (!looksLikeFirestoreUid(decodedHandle)) {
-    const byUid = await getDoc(doc(db, "users", decodedHandle));
-    if (byUid.exists()) {
-      return { id: byUid.id, data: byUid.data() as Record<string, unknown> };
-    }
-  }
-
-  return null;
-}
 
 function mapUserDoc(
   id: string,
@@ -152,7 +117,7 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
 
     void (async () => {
       try {
-        const docSnap = await fetchUserDocByRouteKey(decoded);
+        const docSnap = await fetchUserDocByRouteKey(db, decoded);
         if (cancelled) return;
 
         if (!docSnap) {
@@ -165,6 +130,8 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
         }
 
         setState(mapUserDoc(docSnap.id, docSnap.data));
+        seedNativeProfileStatsFromUserDoc(docSnap.id, docSnap.data);
+        seedProfileHeroFromUserDoc(docSnap.id, docSnap.data);
       } catch {
         if (cancelled) return;
         setState({

@@ -65,8 +65,8 @@ export default function CommunityDetailScreenNative() {
     return (
       <MobilePageShell
         title="GROUP"
-        appBackground
         onClose={() => navigation.goBack()}
+        backgroundColor="#000000"
       >
         <Text style={styles.signIn}>
           {language === "en" ? "Sign in to view this group." : "グループを表示するにはログインしてください。"}
@@ -79,8 +79,8 @@ export default function CommunityDetailScreenNative() {
     <>
       <MobilePageShell
         title="GROUP DETAIL"
-        appBackground
         onClose={() => navigation.goBack()}
+        backgroundColor="#000000"
       >
         <ScrollView
           scrollEnabled={!headerImageEditing}

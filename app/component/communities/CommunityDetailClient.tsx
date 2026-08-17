@@ -32,8 +32,8 @@ export default function CommunityDetailClient({
   }, []);
 
   return (
-    <div className="relative min-h-screen">
-      <div className="relative z-10 min-h-screen pb-bottom-nav">
+    <div className="relative min-h-screen bg-black">
+      <div className="relative z-10 min-h-screen bg-black pb-bottom-nav">
         <div className="sticky top-0 z-40">
           <Header />
         </div>

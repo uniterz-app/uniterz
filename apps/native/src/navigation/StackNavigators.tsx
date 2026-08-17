@@ -528,6 +528,15 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="ResultStampDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ResultStampDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="ResultStreakTagDesignPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
@@ -604,6 +613,15 @@ function ProfileStackScreen() {
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
                 .MatchCardDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="ProfileKinetikMetricsPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ProfileKinetikMetricsPreviewScreenWrapper
             }
           />
         ) : null}

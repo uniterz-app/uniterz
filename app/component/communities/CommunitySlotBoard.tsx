@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Clipboard, Plus } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
-import { jp } from "@/lib/fonts";
+import { jp, nameOxanium } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { formatCommunityCompetitionLine } from "@/lib/communities/competitionDisplay";
 import type { CommunityLeague, CommunityMetric, CommunityPeriodType } from "@/lib/communities/types";
@@ -24,7 +24,7 @@ import {
 import { preserveScrollOnInputFocus } from "@/lib/dom/preserveScrollOnInputFocus";
 import SquadBattleGroupEntry from "@/app/component/squads/SquadBattleGroupEntry";
 
-const CYAN = "#22d3ee";
+const CYAN = "#00F5FF";
 const AMBER = "#fbbf24";
 const NOTCH_CLIP =
   "polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)";
@@ -133,20 +133,6 @@ type Props = {
   };
 };
 
-function slotAccent(isOwner: boolean) {
-  return isOwner
-    ? {
-        color: AMBER,
-        bar: "rgba(251,191,36,0.85)",
-        glow: "0 0 8px rgba(251,191,36,0.8), 0 0 16px rgba(251,191,36,0.35)",
-      }
-    : {
-        color: CYAN,
-        bar: CYAN,
-        glow: `0 0 8px rgba(34,211,238,0.8), 0 0 16px rgba(34,211,238,0.35)`,
-      };
-}
-
 function SlotCardImageBackground({
   headerImageUrl,
   headerImagePositionY = 50,
@@ -187,35 +173,30 @@ function SlotCardImageBackground({
 function RoleBadge({
   isOwner,
   label,
+  className,
 }: {
   isOwner: boolean;
   label: string;
+  className: string;
 }) {
   return (
     <span
       className={[
-        "shrink-0 border px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em]",
+        "shrink-0 border px-1.5 font-medium uppercase tracking-widest",
         communityCrtMono.className,
+        className,
       ].join(" ")}
       style={
         isOwner
           ? {
-              borderColor: "rgba(251,191,36,0.65)",
-              color: "#fde68a",
-              background: "rgba(4,8,18,0.82)",
-              boxShadow:
-                "0 2px 12px rgba(0,0,0,0.55), 0 0 14px rgba(251,191,36,0.35)",
-              backdropFilter: "blur(6px)",
-              textShadow: "0 1px 3px rgba(0,0,0,0.85)",
+              borderColor: "rgba(251,191,36,0.45)",
+              color: "rgba(251,191,36,0.9)",
+              background: "rgba(251,191,36,0.08)",
             }
           : {
-              borderColor: "rgba(34,211,238,0.45)",
-              color: "#e0f2fe",
-              background: "rgba(4,8,18,0.82)",
-              boxShadow:
-                "0 2px 12px rgba(0,0,0,0.55), 0 0 14px rgba(34,211,238,0.28)",
-              backdropFilter: "blur(6px)",
-              textShadow: "0 1px 3px rgba(0,0,0,0.85)",
+              borderColor: "rgba(0,245,255,0.3)",
+              color: "rgba(186,230,253,0.75)",
+              background: "rgba(0,245,255,0.06)",
             }
       }
     >
@@ -230,6 +211,7 @@ function GroupSlotTextBlock({
   labels,
   isOwner,
   stackSize,
+  roleBadgeClass,
   className = "",
 }: {
   g: CommunityListGroup;
@@ -237,6 +219,7 @@ function GroupSlotTextBlock({
   labels: Props["labels"];
   isOwner: boolean;
   stackSize: string;
+  roleBadgeClass: string;
   className?: string;
 }) {
   return (
@@ -245,10 +228,15 @@ function GroupSlotTextBlock({
         <RoleBadge
           isOwner={isOwner}
           label={isOwner ? labels.owner : labels.member}
+          className={roleBadgeClass}
         />
       </div>
       <p
-        className="truncate text-[19px] font-extrabold leading-tight tracking-[0.03em] text-white sm:text-xl"
+        className={[
+          "truncate text-[19px] font-extrabold leading-tight tracking-[0.04em] text-white sm:text-xl",
+          nameOxanium.className,
+          jp.className,
+        ].join(" ")}
         style={{ textShadow: `0 1px 12px rgba(0,0,0,0.55), 0 0 20px ${isOwner ? AMBER : CYAN}18` }}
       >
         {g.name}
@@ -302,7 +290,6 @@ function GroupFilledSlotMobile({
   onPrefetchGroup?: () => void;
 }) {
   const isOwner = g.role === "owner";
-  const accent = slotAccent(isOwner);
   const hasBgImage = Boolean(g.headerImageUrl);
   return (
     <button
@@ -313,7 +300,7 @@ function GroupFilledSlotMobile({
       onPointerDown={onPrefetchGroup}
       onPointerEnter={onPrefetchGroup}
       onFocus={onPrefetchGroup}
-      className="group/slot relative flex w-full overflow-hidden border border-cyan-400/16 text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
+      className="group/slot relative flex w-full overflow-hidden border border-[rgba(0,245,255,0.16)] text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
       style={{
         background: hasBgImage ? COMMUNITY_GROUP_SLOT_CARD_BG : "rgba(2,8,18,0.72)",
       }}
@@ -323,14 +310,6 @@ function GroupFilledSlotMobile({
         headerImagePositionY={g.headerImagePositionY}
         isOwner={isOwner}
       />
-      <span
-        className="relative z-10 w-[3px] shrink-0"
-        style={{
-          background: accent.bar,
-          boxShadow: accent.glow,
-        }}
-        aria-hidden
-      />
       <div className="relative z-10 flex min-w-0 flex-1 items-stretch">
         <GroupSlotTextBlock
           g={g}
@@ -338,6 +317,7 @@ function GroupFilledSlotMobile({
           labels={labels}
           isOwner={isOwner}
           stackSize={sizing.avatarStack}
+          roleBadgeClass={sizing.roleBadge}
           className="min-w-0 flex-1 px-3.5 py-3"
         />
       </div>
@@ -361,7 +341,6 @@ function GroupFilledSlotWeb({
   onPrefetchGroup?: () => void;
 }) {
   const isOwner = g.role === "owner";
-  const accent = slotAccent(isOwner);
   const hasBgImage = Boolean(g.headerImageUrl);
   return (
     <button
@@ -379,25 +358,17 @@ function GroupFilledSlotWeb({
           ? COMMUNITY_GROUP_SLOT_CARD_BG
           : "linear-gradient(145deg, rgba(34,211,238,0.06) 0%, rgba(2,8,18,0.78) 42%, rgba(0,0,0,0.28) 100%)",
         border: isOwner
-          ? "1px solid rgba(251,191,36,0.22)"
-          : "1px solid rgba(34,211,238,0.16)",
+          ? "1px solid rgba(251,191,36,0.28)"
+          : "1px solid rgba(0,245,255,0.18)",
         boxShadow: isOwner
-          ? "0 0 18px rgba(251,191,36,0.12), inset 0 0 0 1px rgba(251,191,36,0.08)"
-          : "0 0 18px rgba(34,211,238,0.1), inset 0 0 0 1px rgba(34,211,238,0.06)",
+          ? "0 0 18px rgba(251,191,36,0.12), inset 0 1px 0 rgba(251,191,36,0.1)"
+          : "0 0 18px rgba(0,245,255,0.08), inset 0 1px 0 rgba(0,245,255,0.1)",
       }}
     >
       <SlotCardImageBackground
         headerImageUrl={g.headerImageUrl}
         headerImagePositionY={g.headerImagePositionY}
         isOwner={isOwner}
-      />
-      <span
-        className="absolute bottom-0 left-0 top-0 z-10 w-[3px]"
-        style={{
-          background: accent.bar,
-          boxShadow: accent.glow,
-        }}
-        aria-hidden
       />
       <div className="relative z-10 px-3.5 pb-3.5 pt-3 sm:px-5 sm:pb-4 sm:pt-3.5">
         <GroupSlotTextBlock
@@ -406,6 +377,7 @@ function GroupFilledSlotWeb({
           labels={labels}
           isOwner={isOwner}
           stackSize={sizing.avatarStack}
+          roleBadgeClass={sizing.roleBadge}
         />
       </div>
     </button>
@@ -475,7 +447,7 @@ function CreateEmptySlot({
       data-tutorial-target={tutorialTarget}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       className={[
-        "flex w-full items-center justify-center gap-2 border border-dashed px-4 py-5 transition-colors hover:border-cyan-400/45 hover:bg-cyan-500/5",
+        "flex w-full items-center justify-center gap-2 border border-dashed px-4 py-5 transition-colors hover:border-[rgba(0,245,255,0.45)] hover:bg-[rgba(0,245,255,0.05)]",
         isWeb ? "min-h-[148px]" : sizing.emptyMinH,
       ].join(" ")}
       style={{
@@ -489,7 +461,7 @@ function CreateEmptySlot({
           "text-center font-medium text-cyan-100/80",
           sizing.emptyLabel,
         ].join(" ")}
-        style={{ textShadow: "0 0 10px rgba(34,211,238,0.25)" }}
+        style={{ textShadow: "0 0 10px rgba(0,245,255,0.25)" }}
       >
         {label}
       </span>
@@ -628,8 +600,8 @@ function JoinEmptySlot({
               sizing.joinBtn,
             ].join(" ")}
             style={{
-              borderColor: "rgba(34,211,238,0.35)",
-              color: "rgba(34,211,238,0.9)",
+              borderColor: "rgba(0,245,255,0.35)",
+              color: "rgba(0,245,255,0.9)",
             }}
           >
             <Clipboard className="h-4 w-4 shrink-0" aria-hidden />

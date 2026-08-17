@@ -10,9 +10,13 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+import { readGrantParticipantCount } from "@/lib/badges/badgeGrant";
+
 export type UserGrantedBadge = {
   badgeId: string;
   grantedAt: Date | null;
+  /** 付与時点のランキング母数。未記録は null */
+  participantCount: number | null;
 };
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -56,6 +60,7 @@ export function useUserBadges(uid: string | null) {
               data.grantedAt instanceof Timestamp
                 ? data.grantedAt.toDate()
                 : null,
+            participantCount: readGrantParticipantCount(data),
           };
         });
 

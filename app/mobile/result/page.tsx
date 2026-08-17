@@ -16,6 +16,7 @@ export default function ResultPage() {
     language,
     grouped,
     loading,
+    hasFetchedOnce,
     hasMore,
     postsCacheCapped,
     sentinelRef,
@@ -49,7 +50,9 @@ export default function ResultPage() {
   if (!uid) return null;
 
   const listLoading =
-    leagueTab === null || (loading && grouped.length === 0);
+    leagueTab === null ||
+    !hasFetchedOnce ||
+    (loading && grouped.length === 0);
 
   return (
     <div className="px-[18px] py-4 pb-bottom-nav">

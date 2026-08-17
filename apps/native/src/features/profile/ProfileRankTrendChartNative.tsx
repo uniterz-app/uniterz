@@ -2,11 +2,9 @@
  * Web `ProfilePlayoffRankTrendChart`（Ranking Progress）に準拠。
  */
 import { useMemo, useState } from "react";
-import { cyberAlert } from "../../components/cyberAlert";
 import {
-  LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View,
+  LayoutChangeEvent, Platform, StyleSheet, Text, View,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Canvas, Circle, Group, Path, Skia } from "@shopify/react-native-skia";
 import type { RankPlayoffTrendPointNative } from "./profileApi";
 import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
@@ -382,7 +380,6 @@ export default function ProfileRankTrendChartNative({
     : isJa
       ? "最新10件のランキングの変動を表示"
       : "Shows ranking changes over recent snapshots";
-  const chartInfoTooltipMsg = subtitle;
   const emptyHint = isJa
     ? "ランキングの日次スナップショットが溜まると表示されます"
     : "Rank snapshots appear after scheduled updates.";
@@ -392,8 +389,6 @@ export default function ProfileRankTrendChartNative({
     trendSummary.currentRank >= 1 &&
     trendSummary.currentRank <= 20;
 
-  const openInfo = () => cyberAlert(title, chartInfoTooltipMsg);
-
   if (rowW <= 0) {
     return (
       <ProfileOverviewChartCardNative topLabel={title}>
@@ -402,7 +397,6 @@ export default function ProfileRankTrendChartNative({
             <ChartHeader
               title={title}
               subtitle={subtitle}
-              onInfoPress={openInfo}
               isJa={isJa}
               sectionTitle={sectionTitle}
               stackedSecondary={stackedSecondary}
@@ -422,7 +416,6 @@ export default function ProfileRankTrendChartNative({
             <ChartHeader
               title={title}
               subtitle={subtitle}
-              onInfoPress={openInfo}
               isJa={isJa}
               sectionTitle={sectionTitle}
               stackedSecondary={stackedSecondary}
@@ -444,7 +437,6 @@ export default function ProfileRankTrendChartNative({
             <ChartHeader
               title={title}
               subtitle={subtitle}
-              onInfoPress={openInfo}
               isJa={isJa}
               sectionTitle={sectionTitle}
               stackedSecondary={stackedSecondary}
@@ -466,7 +458,6 @@ export default function ProfileRankTrendChartNative({
           <ChartHeader
             title={title}
             subtitle={subtitle}
-            onInfoPress={openInfo}
             isJa={isJa}
             sectionTitle={sectionTitle}
             stackedSecondary={stackedSecondary}
@@ -712,7 +703,6 @@ export default function ProfileRankTrendChartNative({
 
 function ChartHeader({
   subtitle,
-  onInfoPress,
   isJa,
   sectionTitle,
   currentRank,
@@ -720,7 +710,6 @@ function ChartHeader({
 }: {
   title: string;
   subtitle: string;
-  onInfoPress: () => void;
   isJa: boolean;
   sectionTitle?: string;
   stackedSecondary?: boolean;
@@ -740,9 +729,6 @@ function ChartHeader({
         <View style={styles.headerMain}>
           <View style={styles.titleRow}>
             <Text style={styles.subtitleInHeader}>{subtitle}</Text>
-            <Pressable onPress={onInfoPress} hitSlop={10} accessibilityRole="button">
-              <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
-            </Pressable>
           </View>
         </View>
         {currentRank != null ? (

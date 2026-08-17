@@ -207,13 +207,43 @@ async function buildMyPeriodRow(
 
   if (posts <= 0) return null;
 
+  let displayName = "user";
+  let handle: string | null = null;
+  let photoURL: string | null = null;
+  let countryCode: string | null = null;
+  let plan: "free" | "pro" | null = null;
+  try {
+    const userSnap = await db.collection("users").doc(uid).get();
+    if (userSnap.exists) {
+      const u = userSnap.data() as Record<string, unknown>;
+      const name =
+        typeof u.displayName === "string" ? u.displayName.trim() : "";
+      const h = typeof u.handle === "string" ? u.handle.trim() : "";
+      displayName = name || h || "user";
+      handle = h || null;
+      photoURL =
+        typeof u.photoURL === "string" && u.photoURL.trim()
+          ? u.photoURL.trim()
+          : typeof u.avatarUrl === "string" && u.avatarUrl.trim()
+            ? u.avatarUrl.trim()
+            : null;
+      countryCode =
+        typeof u.countryCode === "string" && u.countryCode.trim()
+          ? u.countryCode.trim()
+          : null;
+      plan = u.plan === "pro" ? "pro" : u.plan === "free" ? "free" : null;
+    }
+  } catch {
+    /* identity はフォールバックのまま */
+  }
+
   return {
     uid,
-    displayName: "user",
-    handle: null,
-    photoURL: null,
-    countryCode: null,
-    plan: null,
+    displayName,
+    handle,
+    photoURL,
+    countryCode,
+    plan,
     totalPosts: posts,
     totalWins: wins,
     totalPoints,

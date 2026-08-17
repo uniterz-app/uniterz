@@ -7,6 +7,7 @@ import type { CommunityGroupSummary } from "./communityApiNative";
 import MatchListCyberClipNative from "../games/MatchListCyberClipNative";
 import { communityMono } from "./communityCrtThemeNative";
 import CommunityGroupZoneLabelNative from "./CommunityGroupZoneLabelNative";
+import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
 
 type Props = {
   summary: CommunityGroupSummary;
@@ -40,9 +41,11 @@ function ConditionChip({
 
   return (
     <View style={[styles.chip, overlay && styles.chipOverlay, wide && styles.chipWide]}>
-      <View style={[styles.chipAccent, accentStyle]} />
+      <View style={[styles.chipHair, accentStyle]} />
       <View style={styles.chipBody}>
-        <Text style={styles.chipLabel}>{label}</Text>
+        <Text style={[styles.chipLabel, accent === "amber" ? styles.chipLabelAmber : accent === "emerald" ? styles.chipLabelEmerald : null]}>
+          {label}
+        </Text>
         <Text style={styles.chipValue} numberOfLines={wide ? 2 : 1}>
           {value}
         </Text>
@@ -195,11 +198,12 @@ const styles = StyleSheet.create({
     marginVertical: 9,
   },
   groupName: {
-    fontSize: 22,
-    fontWeight: "700",
-    lineHeight: 28,
-    color: "rgba(248,250,252,0.96)",
-    letterSpacing: 0.2,
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 24,
+    fontWeight: "800",
+    lineHeight: 30,
+    color: "rgba(248,250,252,0.98)",
+    letterSpacing: 0.6,
   },
   description: {
     fontSize: 13,
@@ -210,45 +214,37 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginHorizontal: -COMMUNITY_GROUP_PANEL_PADDING_X,
   },
   chip: {
     width: "48%",
     flexGrow: 0,
     flexBasis: "48%",
-    flexDirection: "row",
     borderWidth: 1,
     borderColor: "rgba(34,211,238,0.16)",
-    backgroundColor: "rgba(2,8,18,0.72)",
+    backgroundColor: "#000000",
     minHeight: 52,
-    overflow: "visible",
+    overflow: "hidden",
   },
   chipOverlay: {
-    backgroundColor: "rgba(2,8,18,0.38)",
+    backgroundColor: "#000000",
     borderColor: "rgba(34,211,238,0.2)",
   },
   chipWide: {
     width: "100%",
     flexBasis: "100%",
   },
-  chipAccent: {
-    width: 3,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.85,
-    shadowRadius: 8,
-    elevation: 5,
+  chipHair: {
+    height: 1,
+    width: "100%",
   },
   chipAccentCyan: {
-    backgroundColor: "rgba(34,211,238,0.85)",
-    shadowColor: "#22d3ee",
+    backgroundColor: "rgba(0,245,255,0.85)",
   },
   chipAccentAmber: {
     backgroundColor: "rgba(251,191,36,0.85)",
-    shadowColor: "#fbbf24",
   },
   chipAccentEmerald: {
     backgroundColor: "rgba(52,211,153,0.85)",
-    shadowColor: "#34d399",
   },
   chipBody: {
     flex: 1,
@@ -262,9 +258,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.6,
     textTransform: "uppercase",
-    color: "rgba(165,243,252,0.55)",
+    color: "rgba(165,243,252,0.7)",
+  },
+  chipLabelAmber: {
+    color: "rgba(253,230,138,0.8)",
+  },
+  chipLabelEmerald: {
+    color: "rgba(167,243,208,0.8)",
   },
   chipValue: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 17,

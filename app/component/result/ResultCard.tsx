@@ -41,7 +41,12 @@ import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
 import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
 import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
-import { roundLabelFromPost } from "@/lib/result/buildResultCardFace";
+import {
+  buildResultCardFaceModel,
+  roundLabelFromPost,
+} from "@/lib/result/buildResultCardFace";
+import type { GameMarketRates } from "@/lib/games/fetchGameMarkets";
+import ResultCardDesignFace from "@/app/component/result/ResultCardDesignFace";
 import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/resultLiveGame";
@@ -119,6 +124,8 @@ type Props = {
   pkScore?: PkScore | null;
   /** 線枠パス描画の開始遅延（秒）。一覧スロットと同期 */
   lineFrameDrawDelaySec?: number;
+  /** games.market 補完（新カード面の市場偏り） */
+  gameMarket?: GameMarketRates | null;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -179,6 +186,7 @@ function ResultCardPresentationImpl({
   showFrameSweep: _showFrameSweep = false,
   pkScore: pkScoreProp = null,
   lineFrameDrawDelaySec = 0,
+  gameMarket = null,
 }: ResultCardPresentationProps) {
   const clock = useResultCardClockMs(cardClockMs);
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
@@ -467,6 +475,45 @@ function ResultCardPresentationImpl({
   const lineFramePaint = resultOutcomeLineFramePaint(
     badge === "streak" ? "streak" : badge
   );
+
+  const faceModel = useMemo(
+    () =>
+      buildResultCardFaceModel(
+        { ...(post as unknown as Record<string, unknown>), id: post.id },
+        gameMarket
+          ? {
+              market: {
+                homeRate: gameMarket.homeRate,
+                awayRate: gameMarket.awayRate,
+              },
+            }
+          : undefined
+      ),
+    [post, gameMarket]
+  );
+
+  if (!isWc && hasFinal) {
+    return (
+      <div
+        className={
+          embedded
+            ? "w-full overflow-visible"
+            : isMobile
+              ? `${MOBILE_RESULT_CARD_OUTER_CLASS} overflow-visible`
+              : "mx-auto w-full max-w-[1200px] overflow-visible"
+        }
+      >
+        <ResultCardDesignFace
+          language={language}
+          face={faceModel}
+          showDetailTab={!embedded}
+          animateDraw={!visualEffectsLite}
+          drawDelaySec={lineFrameDrawDelaySec}
+          onOpen={embedded ? undefined : handle}
+        />
+      </div>
+    );
+  }
 
   return (
     <MatchListLineFrame

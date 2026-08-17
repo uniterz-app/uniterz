@@ -5,13 +5,11 @@
  */
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Info } from "lucide-react";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
-import chartInfoStyles from "./profileChartInfoFaq.module.css";
 import "./profileDailyComboChart.css";
 
 export type ProfileDailyComboChartPoint = {
@@ -258,7 +256,6 @@ export default function ProfileDailyComboChartNeural({
 
   const title = msg.profile.dailyComboChart;
   const subtitle = msg.profile.dailyComboChartDesc;
-  const chartInfoTooltipMsg = msg.profile.dailyComboChartInfo;
 
   const statLabels = {
     hitsPosts: msg.profile.hitsSlashPosts,
@@ -318,18 +315,6 @@ export default function ProfileDailyComboChartNeural({
               {title}
             </p>
           )}
-          <div className={chartInfoStyles.wrap}>
-            <button
-              type="button"
-              className={chartInfoStyles.faqButton}
-              aria-label={chartInfoTooltipMsg}
-            >
-              <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
-            </button>
-            <div className={chartInfoStyles.tooltip} aria-hidden>
-              {chartInfoTooltipMsg}
-            </div>
-          </div>
         </div>
         {hideTitle ? null : (
           <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>

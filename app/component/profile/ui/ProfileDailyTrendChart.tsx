@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Info } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { nameOxanium } from "@/lib/fonts";
@@ -13,7 +12,6 @@ import {
   type ProfileVisualEffects,
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
-import chartInfoStyles from "./profileChartInfoFaq.module.css";
 
 export type ProfileDailyTrendPoint = {
   date: string;
@@ -49,9 +47,6 @@ export default function ProfileDailyTrendChart({
   const subtitle = isJa
     ? "過去10日のスタッツの推移"
     : "Trend of stats over the last 10 days";
-  const chartInfo = isJa
-    ? "カラーバー＝日ごとの投稿数・的中数。黄緑の線＝累積の総合得点。"
-    : "Color bars: daily posts and correct picks. Lime line: cumulative total points.";
   const emptyHint = isJa
     ? "シーズンの日次スタッツが溜まると表示されます"
     : "Daily season stats appear after you settle picks.";
@@ -86,18 +81,6 @@ export default function ProfileDailyTrendChart({
                 <p className="min-w-0 flex-1 text-[11px] text-white/60 sm:text-xs">
                   {subtitle}
                 </p>
-                <div className={chartInfoStyles.wrap}>
-                  <button
-                    type="button"
-                    className={chartInfoStyles.faqButton}
-                    aria-label={chartInfo}
-                  >
-                    <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
-                  </button>
-                  <div className={chartInfoStyles.tooltip} aria-hidden>
-                    {chartInfo}
-                  </div>
-                </div>
               </div>
             </div>
             <div className="grid min-h-44 place-items-center px-3">

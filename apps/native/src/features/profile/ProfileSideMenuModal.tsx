@@ -84,10 +84,12 @@ type Props = {
     | "uniterzProBadgePreview"
     | "resultCardDesignPreview"
     | "resultBadgeDesignPreview"
+    | "resultStampDesignPreview"
     | "resultStreakTagDesignPreview"
     | "navBarDesignPreview"
     | "splashLogoPreview"
-    | "liveGameStatsPreview") => void;
+    | "liveGameStatsPreview"
+    | "profileKinetikMetricsPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -288,10 +290,12 @@ export default function ProfileSideMenuModal({
     | "uniterzProBadgePreview"
       | "resultCardDesignPreview"
       | "resultBadgeDesignPreview"
+      | "resultStampDesignPreview"
       | "resultStreakTagDesignPreview"
       | "navBarDesignPreview"
       | "splashLogoPreview"
       | "liveGameStatsPreview"
+      | "profileKinetikMetricsPreview"
   ) {
     onClose();
     onOpenInApp(page);
@@ -762,6 +766,16 @@ export default function ProfileSideMenuModal({
                           リザルトバッジ案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
+                          icon="certificate-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("resultStampDesignPreview")
+                          }
+                        >
+                          リザルトスタンプ案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
                           icon="fire"
                           dense
                           labelStyle={labelStyle}
@@ -770,6 +784,16 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           連勝タグ案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="view-grid-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("profileKinetikMetricsPreview")
+                          }
+                        >
+                          プロフィール 2x2 案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="tab"

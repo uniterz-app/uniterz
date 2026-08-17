@@ -10,6 +10,12 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import type { ResolvedBadgeNative } from "./useNativeProfileBadges";
+import VelvetTuftFieldNative from "./VelvetTuftFieldNative";
+import {
+  badgeParticipantLabel,
+  formatBadgeParticipantCount,
+  readBadgeParticipantCount,
+} from "../../../../../lib/badges/badgeCohort";
 
 type Props = {
   visible: boolean;
@@ -73,34 +79,50 @@ export default function ProfileBadgeDetailModal({
   if (!badge) return null;
 
   const awardedLabel = isJa ? "付与日" : "Granted";
+  const lang = isJa ? "ja" : "en";
+  const participantCount = readBadgeParticipantCount(badge);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.accent} />
-
           <Pressable style={styles.closeBtn} onPress={onClose} accessibilityRole="button">
             <Text style={styles.closeGlyph}>×</Text>
           </Pressable>
 
-          {badge.icon ? <BadgeHeroNative icon={badge.icon} /> : null}
+          <View style={styles.heroStage}>
+            <VelvetTuftFieldNative contained />
+            {badge.icon ? <BadgeHeroNative icon={badge.icon} /> : null}
+          </View>
 
-          <View style={styles.divider} />
+          <View style={styles.copy}>
+            <Text style={styles.kicker}>{isJa ? "バッジ" : "Badge"}</Text>
+            <Text style={styles.title}>{badge.title}</Text>
+            {badge.description ? <Text style={styles.desc}>{badge.description}</Text> : null}
 
-          <Text style={styles.kicker}>{isJa ? "バッジ" : "Badge"}</Text>
-          <Text style={styles.title}>{badge.title}</Text>
-          {badge.description ? <Text style={styles.desc}>{badge.description}</Text> : null}
-
-          {badge.grantedAt ? (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>{awardedLabel}</Text>
-              <Text style={styles.metaDot}>·</Text>
-              <Text style={styles.metaValue}>
-                {badge.grantedAt.toLocaleDateString(isJa ? "ja-JP" : "en-US")}
-              </Text>
-            </View>
-          ) : null}
+            {badge.grantedAt || participantCount != null ? (
+              <View style={styles.metaBlock}>
+                {badge.grantedAt ? (
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>{awardedLabel}</Text>
+                    <Text style={styles.metaDot}>·</Text>
+                    <Text style={styles.metaValue}>
+                      {badge.grantedAt.toLocaleDateString(isJa ? "ja-JP" : "en-US")}
+                    </Text>
+                  </View>
+                ) : null}
+                {participantCount != null ? (
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>{badgeParticipantLabel(lang)}</Text>
+                    <Text style={styles.metaDot}>·</Text>
+                    <Text style={styles.metaValue}>
+                      {formatBadgeParticipantCount(participantCount, lang)}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -110,7 +132,7 @@ export default function ProfileBadgeDetailModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(2,5,10,0.82)",
+    backgroundColor: "rgba(0,0,0,0.78)",
     justifyContent: "center",
     padding: 18,
   },
@@ -119,34 +141,40 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 328,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(201,162,39,0.38)",
     borderRadius: 3,
-    backgroundColor: "rgba(6,12,22,0.97)",
-    paddingTop: 24,
-    paddingHorizontal: 18,
-    paddingBottom: 18,
+    backgroundColor: "#070707",
     overflow: "hidden",
   },
-  accent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "42%",
-    height: 2,
-    backgroundColor: "rgba(34,211,238,0.9)",
-    opacity: 0.85,
+  heroStage: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 24,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+    overflow: "hidden",
+  },
+  copy: {
+    backgroundColor: "#070707",
+    paddingTop: 15,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(201,162,39,0.28)",
   },
   closeBtn: {
     position: "absolute",
     top: 8,
     right: 8,
+    zIndex: 4,
     width: 32,
     height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
   closeGlyph: {
-    color: "rgba(255,255,255,0.42)",
+    color: "rgba(244,224,176,0.42)",
     fontSize: 22,
     lineHeight: 24,
     marginTop: -2,
@@ -157,23 +185,18 @@ const styles = StyleSheet.create({
     height: 140,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 1,
   },
   heroGlow: {
     position: "absolute",
     width: "64%",
     height: "64%",
     borderRadius: 999,
-    backgroundColor: "rgba(34,211,238,0.12)",
+    backgroundColor: "rgba(236,212,138,0.16)",
   },
   icon: {
     width: 140,
     height: 140,
-  },
-  divider: {
-    height: 1,
-    marginTop: 16,
-    marginBottom: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
   },
   kicker: {
     fontFamily: MONO,
@@ -181,50 +204,56 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 1.2,
     textTransform: "uppercase",
-    color: "rgba(34,211,238,0.55)",
+    color: "rgba(244,224,176,0.72)",
     marginBottom: 6,
   },
   title: {
-    color: "rgba(248,250,252,0.96)",
+    color: "rgba(252,246,232,0.96)",
     fontSize: 17,
     lineHeight: 23,
     fontWeight: "700",
     fontFamily: OXANIUM_BOLD,
+    textShadowColor: "rgba(0,0,0,0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
   },
   desc: {
     marginTop: 6,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(244,224,176,0.48)",
     fontSize: 12,
     lineHeight: 18,
+  },
+  metaBlock: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(201,162,39,0.18)",
+    gap: 6,
   },
   metaRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
     gap: 6,
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.07)",
   },
   metaLabel: {
     fontFamily: MONO,
     fontSize: 9,
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: "rgba(255,255,255,0.34)",
+    color: "rgba(244,224,176,0.38)",
   },
   metaDot: {
     fontFamily: MONO,
     fontSize: 9,
-    color: "rgba(255,255,255,0.34)",
+    color: "rgba(244,224,176,0.38)",
   },
   metaValue: {
     fontFamily: MONO,
     fontSize: 9,
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: "rgba(255,255,255,0.58)",
+    color: "rgba(244,224,176,0.62)",
     fontVariant: ["tabular-nums"],
   },
 });

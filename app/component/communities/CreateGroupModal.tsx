@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { Language } from "@/lib/i18n/language";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, storage } from "@/lib/firebase";
-import { jp } from "@/lib/fonts";
+import { jp, nameOxanium } from "@/lib/fonts";
 import { toast } from "@/app/component/ui/toast";
 import {
   COMMUNITY_LEAGUES,
@@ -24,7 +24,6 @@ import {
 import CommunityTeamPicker from "@/app/component/communities/CommunityTeamPicker";
 import {
   communityCrtMono,
-  communityCrtPanelStyle,
 } from "@/app/component/communities/CommunityCrtTheme";
 import { useScheduleTeams } from "@/lib/games/useScheduleTeams";
 import { LEAGUES, type League } from "@/lib/leagues";
@@ -329,13 +328,15 @@ export default function CreateGroupModal({
   if (!open || !mounted) return null;
 
   const fieldClass = [
-    "w-full rounded-none border border-white/12 bg-black/40 text-cyan-50/90",
-    "focus:border-cyan-400/25 focus:outline-none focus:ring-1 focus:ring-cyan-400/12",
+    "w-full rounded-none border border-white/22 bg-black text-white",
+    "focus:border-white/70 focus:outline-none focus:ring-1 focus:ring-white/25",
+    jp.className,
     isWeb ? "px-3 py-2.5 text-base" : "px-2.5 py-2 text-sm",
   ].join(" ");
 
   const labelClass = [
-    "block font-medium uppercase tracking-[0.14em] text-white/50",
+    "block font-semibold uppercase tracking-[0.16em] text-white/55",
+    communityCrtMono.className,
     isWeb ? "text-xs" : "text-[10px]",
   ].join(" ");
 
@@ -350,20 +351,18 @@ export default function CreateGroupModal({
         aria-label={language === "en" ? "Close" : "閉じる"}
         onClick={closeReset}
         disabled={busy}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm disabled:pointer-events-none"
+        className="absolute inset-0 bg-black/80 disabled:pointer-events-none"
       />
       <div className="pointer-events-none fixed inset-0 z-10 flex items-center justify-center p-3 pb-[max(0.75rem,var(--bottom-nav-clearance))] sm:p-4">
         <div
           className={[
-            "pointer-events-auto relative isolate flex w-full flex-col overflow-hidden border",
+            "pointer-events-auto relative isolate flex w-full flex-col overflow-hidden border border-white/22 bg-black",
             "h-[min(34rem,calc(100svh-var(--bottom-nav-clearance)-1.5rem))] sm:h-[min(34rem,calc(100svh-2rem))]",
             isWeb ? "max-w-2xl" : "max-w-md",
-            communityCrtMono.className,
             jp.className,
           ].join(" ")}
           style={{
-            ...communityCrtPanelStyle("subtle"),
-            boxShadow: "0 14px 36px rgba(0,0,0,0.48)",
+            boxShadow: "0 14px 36px rgba(0,0,0,0.72)",
             touchAction: "manipulation",
           }}
           onClick={(e) => e.stopPropagation()}
@@ -371,13 +370,14 @@ export default function CreateGroupModal({
           <div className="relative z-10 flex min-h-0 flex-1 flex-col">
           <div
             className={[
-              "shrink-0 border-b border-white/10",
+              "shrink-0 border-b border-white/14",
               isWeb ? "px-6 py-4" : "px-4 py-3",
             ].join(" ")}
           >
             <h2
               className={[
-                "font-bold tracking-[0.04em] text-cyan-50/95",
+                nameOxanium.className,
+                "font-bold tracking-[0.06em] text-white",
                 isWeb ? "text-xl" : "text-base",
               ].join(" ")}
             >
@@ -385,8 +385,8 @@ export default function CreateGroupModal({
             </h2>
             <p
               className={[
-                "mt-2 leading-relaxed text-white/40",
-                isWeb ? "text-xs" : "text-[10px]",
+                "mt-2 leading-relaxed text-white/58",
+                isWeb ? "text-xs" : "text-[11px]",
               ].join(" ")}
             >
               {t.planLimits}
@@ -420,7 +420,7 @@ export default function CreateGroupModal({
             placeholder={t.descriptionPh}
             className={[
               fieldClass,
-              "resize-none leading-relaxed placeholder:text-white/30",
+              "resize-none leading-relaxed placeholder:text-white/55",
               isWeb ? "placeholder:text-sm" : "placeholder:text-xs",
             ].join(" ")}
           />
@@ -431,14 +431,15 @@ export default function CreateGroupModal({
             accept="image/*"
             onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
             className={[
-              "text-cyan-100/60 file:mr-2 file:rounded-none file:border file:border-white/12 file:bg-white/5 file:px-2 file:py-1 file:text-cyan-100/80",
+              "text-white/70 file:mr-2 file:rounded-none file:border file:border-white/28 file:bg-black file:px-2 file:py-1 file:font-semibold file:text-white",
+              nameOxanium.className,
               isWeb ? "text-sm file:text-sm" : "text-xs",
             ].join(" ")}
           />
           {preview && (
             <div
               className={[
-                "aspect-square w-full overflow-hidden border border-white/10 bg-black/35",
+                "aspect-square w-full overflow-hidden border border-white/18 bg-black",
                 isWeb ? "max-w-[200px]" : "max-w-[120px]",
               ].join(" ")}
             >
@@ -453,8 +454,8 @@ export default function CreateGroupModal({
 
           <p
             className={[
-              "leading-relaxed text-white/45",
-              isWeb ? "text-xs" : "text-[10px]",
+              "leading-relaxed text-white/58",
+              isWeb ? "text-xs" : "text-[11px]",
             ].join(" ")}
           >
             {t.scoringNote}
@@ -505,8 +506,8 @@ export default function CreateGroupModal({
           {metric === "activeWinStreak" && (
             <p
               className={[
-                "text-white/55",
-                isWeb ? "text-xs" : "text-[10px]",
+                "text-white/58",
+                isWeb ? "text-xs" : "text-[11px]",
               ].join(" ")}
             >
               {t.streakNote}
@@ -517,7 +518,7 @@ export default function CreateGroupModal({
 
           <div
             className={[
-              "flex shrink-0 justify-end gap-2 border-t border-white/10",
+              "flex shrink-0 justify-end gap-2 border-t border-white/14",
               isWeb ? "px-6 py-4" : "px-4 py-3",
             ].join(" ")}
           >
@@ -526,7 +527,8 @@ export default function CreateGroupModal({
               onClick={closeReset}
               disabled={busy}
               className={[
-                "rounded-none border border-white/12 text-white/65 disabled:cursor-not-allowed disabled:opacity-40",
+                "rounded-none border border-white/28 bg-black font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40",
+                nameOxanium.className,
                 isWeb ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-xs",
               ].join(" ")}
             >
@@ -540,8 +542,9 @@ export default function CreateGroupModal({
               whileTap={reduceMotion ? undefined : { scale: 0.97 }}
               transition={{ duration: 0.1 }}
               className={[
-                "rounded-none border border-cyan-400/28 bg-cyan-500/14 font-semibold text-cyan-50/95",
-                "disabled:cursor-not-allowed disabled:opacity-50",
+                "rounded-none border border-white bg-white font-semibold text-black",
+                "disabled:cursor-not-allowed disabled:opacity-40",
+                nameOxanium.className,
                 isWeb ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-xs",
               ].join(" ")}
             >

@@ -52,8 +52,9 @@ import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
 import { CyberSubpageHeaderNative } from "../../ui/CyberSubpageShellNative";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
-import SettingsPoolsBackdropNative from "./SettingsPoolsBackdropNative";
-import { SETTINGS_POOLS_BG_BASE } from "../../../../../lib/ui/settingsPoolsBackground";
+import GamesPageBackgroundNative from "../background/GamesPageBackgroundNative";
+import { APP_MESH_BG_FALLBACK } from "../../../../../lib/app/appMeshBackground";
+import PredictOverlaySubmitButtonNative from "../games/PredictOverlaySubmitButtonNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -76,7 +77,6 @@ import {
 } from "../../../../../lib/profile/profileGamblingTerms";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
-import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import { parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
@@ -84,6 +84,7 @@ import {
   PROFILE_PLAN_PRO_BG_DEFAULT,
   type ProfilePlanProBgVariant,
 } from "../../../../../lib/profile/profilePlanProBgVariants";
+import { peekOwnProfileSeedNative, seedOwnProfileFromUserDocNative } from "./seedOwnProfileFromUserDocNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
 import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
@@ -319,19 +320,43 @@ export default function ProfileHomeScreen({
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
 
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [handle, setHandle] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [language, setLanguage] = useState<"ja" | "en">("ja");
-  const [countryCode, setCountryCode] = useState("");
-  const [plan, setPlan] = useState<"free" | "pro">("free");
+  /** Games 起動時 prefetch 済みなら、1 フレーム目から完成形のカードを出す */
+  const ownSeedAtMount = useMemo(() => {
+    if (isPublicProfileView) return null;
+    return peekOwnProfileSeedNative(myUid);
+  }, [isPublicProfileView, myUid]);
+
+  const [profileLoading, setProfileLoading] = useState(
+    () => !isPublicProfileView && !ownSeedAtMount
+  );
+  const [displayName, setDisplayName] = useState(
+    () => ownSeedAtMount?.displayName ?? ""
+  );
+  const [bio, setBio] = useState(() => ownSeedAtMount?.bio ?? "");
+  const [handle, setHandle] = useState(() => ownSeedAtMount?.handle ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(
+    () => ownSeedAtMount?.avatarUrl ?? ""
+  );
+  const [language, setLanguage] = useState<"ja" | "en">(
+    () => ownSeedAtMount?.language ?? "ja"
+  );
+  const [countryCode, setCountryCode] = useState(
+    () => ownSeedAtMount?.countryCode ?? ""
+  );
+  const [plan, setPlan] = useState<"free" | "pro">(
+    () => ownSeedAtMount?.plan ?? "free"
+  );
   const [planProBgVariant, setPlanProBgVariant] =
-    useState<ProfilePlanProBgVariant>(PROFILE_PLAN_PRO_BG_DEFAULT);
-  const [memberSinceMs, setMemberSinceMs] = useState<number | null>(null);
+    useState<ProfilePlanProBgVariant>(
+      () => ownSeedAtMount?.planProBgVariant ?? PROFILE_PLAN_PRO_BG_DEFAULT
+    );
+  const [memberSinceMs, setMemberSinceMs] = useState<number | null>(
+    () => ownSeedAtMount?.memberSinceMs ?? null
+  );
   /** null = 未読込（獲得演出の誤発火防止） */
-  const [unitBalance, setUnitBalance] = useState<number | null>(null);
+  const [unitBalance, setUnitBalance] = useState<number | null>(
+    () => (ownSeedAtMount ? ownSeedAtMount.unitBalance : null)
+  );
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -352,7 +377,7 @@ export default function ProfileHomeScreen({
 
   /** 自分プロフィールは routeHandle 無し。plan hook の getDoc より先に確定できる */
   const isMe = !isPublicProfileView && !!myUid && myUid === targetUid;
-  const [myPlanReady, setMyPlanReady] = useState(false);
+  const [myPlanReady, setMyPlanReady] = useState(() => !!ownSeedAtMount);
   /** users/{uid} — Pro Skin overlay 等への共有（重複 read 回避） */
   const [myUserDoc, setMyUserDoc] = useState<
     Record<string, unknown> | null | undefined
@@ -658,42 +683,64 @@ export default function ProfileHomeScreen({
         setMyUserDoc(null);
         return;
       }
-      setProfileLoading(true);
-      setMyPlanReady(false);
-      if (peekProfileUserDocNative(myUid) === undefined) {
+
+      const warm = peekOwnProfileSeedNative(myUid);
+      if (warm) {
+        setMyUserDoc(warm.data);
+        setDisplayName(warm.displayName);
+        setBio(warm.bio);
+        setHandle(warm.handle);
+        setAvatarUrl(warm.avatarUrl);
+        setLanguage(warm.language);
+        setCountryCode(warm.countryCode);
+        setPlan(warm.plan);
+        setPlanProBgVariant(warm.planProBgVariant);
+        setMemberSinceMs(warm.memberSinceMs);
+        setUnitBalance(warm.unitBalance);
+        seedNativeProfileStatsFromUserDoc(myUid, warm.data);
+        setProfileLoading(false);
+        setMyPlanReady(true);
+      } else {
+        setProfileLoading(true);
+        setMyPlanReady(false);
         setMyUserDoc(undefined);
       }
+
       try {
         const loaded = await loadProfileUserDocNative(myUid);
         if (!alive) return;
-        const data = loaded?.data ?? {};
-        const snapExists = loaded?.exists ?? false;
+        if (!loaded) {
+          setMyUserDoc(null);
+          return;
+        }
+        const data = loaded.data;
+        const snapExists = loaded.exists;
+        const seed = seedOwnProfileFromUserDocNative(
+          data,
+          auth.currentUser?.photoURL
+        );
         setMyUserDoc(data);
-        const fromDoc =
-          typeof data.displayName === "string" ? data.displayName.trim() : "";
-        const fromAuth = auth.currentUser?.displayName?.trim() ?? "";
-        /** Web はヒーロー名にハンドルを使わない。Firestore が空のときは Auth の表示名を補う */
-        setDisplayName(fromDoc || fromAuth);
-        setBio(typeof data.bio === "string" ? data.bio : "");
-        setHandle(typeof data.handle === "string" ? data.handle : "");
-        const fromFirestorePhoto =
-          typeof data.photoURL === "string" && data.photoURL.trim().length > 0
-            ? data.photoURL.trim()
-            : typeof data.avatarUrl === "string" && data.avatarUrl.trim().length > 0
-              ? data.avatarUrl.trim()
-              : "";
-        const authPhoto = auth.currentUser?.photoURL?.trim() ?? "";
-        setAvatarUrl(fromFirestorePhoto || authPhoto);
-        setLanguage(data.language === "en" ? "en" : "ja");
-        setCountryCode(typeof data.countryCode === "string" ? data.countryCode : "");
+        setDisplayName(seed.displayName);
+        setBio(seed.bio);
+        setHandle(seed.handle);
+        setAvatarUrl(seed.avatarUrl);
+        setLanguage(seed.language);
+        setCountryCode(seed.countryCode);
+        setPlan(seed.plan);
+        setPlanProBgVariant(seed.planProBgVariant);
+        setMemberSinceMs(seed.memberSinceMs);
+        setUnitBalance(seed.unitBalance);
+        if (snapExists) {
+          seedNativeProfileStatsFromUserDoc(myUid, data);
+        }
+        // 期限解決を待たずカードを出す（空→埋めで伸びない）
+        setProfileLoading(false);
+
         const resolvedPlan = snapExists
           ? await resolveAndExpireMyPlan(myUid, data)
           : "free";
         if (!alive) return;
         setPlan(resolvedPlan);
-        setPlanProBgVariant(parseUserPlanProBgVariant(data.planProBgVariant));
-        setMemberSinceMs(parseMemberSinceMs(data));
-        setUnitBalance(parseUserUnitBalance(data));
         setMyPlanReady(true);
       } finally {
         if (!alive) return;
@@ -1059,12 +1106,9 @@ export default function ProfileHomeScreen({
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
+      {isPublicProfileView || !profileLoading ? (
       <ProfileKinetikHeroNative
-        displayName={
-          displayName.trim() ||
-          (!isPublicProfileView ? fUser?.displayName?.trim() : "") ||
-          "—"
-        }
+        displayName={displayName.trim() || handle.trim()}
         handle={handle.trim()}
         avatarUrl={
           avatarUrl.trim() ||
@@ -1098,6 +1142,7 @@ export default function ProfileHomeScreen({
           isMe ? () => navigation.navigate("UnitLedger") : undefined
         }
       />
+      ) : null}
 
       {renderTabs()}
 
@@ -1150,7 +1195,7 @@ export default function ProfileHomeScreen({
       {...(Platform.OS === "ios" ? ({ presentationStyle: "overFullScreen" } as const) : {})}
     >
       <View style={styles.profileModalRoot}>
-        <SettingsPoolsBackdropNative />
+        <GamesPageBackgroundNative lite />
         <SafeAreaView style={styles.profileModalSafe}>
           <View style={styles.profileModalLayer}>
             <KeyboardAvoidingView
@@ -1164,6 +1209,7 @@ export default function ProfileHomeScreen({
                 subtitle={t.settingsSubtitle}
                 onBack={returnFromSettingsToMenu}
                 edgeBack
+                hideBrandShelf={false}
               />
               <ProfileBackEdgeHandleNative
                 onPress={returnFromSettingsToMenu}
@@ -1287,16 +1333,12 @@ export default function ProfileHomeScreen({
                     </Pressable>
                   </View>
 
-                  <Pressable
-                    style={[
-                      styles.saveButton,
-                      (saving || uploadingAvatar) && styles.buttonDisabled,
-                    ]}
+                  <PredictOverlaySubmitButtonNative
+                    label={t.save}
+                    disabledLabel={t.saving}
+                    enabled={!saving && !uploadingAvatar}
                     onPress={() => void handleSaveProfile()}
-                    disabled={saving || uploadingAvatar}
-                  >
-                    <Text style={styles.saveText}>{saving ? t.saving : t.save}</Text>
-                  </Pressable>
+                  />
                 </View>
               </ScrollView>
             </KeyboardAvoidingView>
@@ -1506,6 +1548,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("ResultCardDesignPreview");
         else if (page === "resultBadgeDesignPreview" && __DEV__)
           navigation.navigate("ResultBadgeDesignPreview");
+        else if (page === "resultStampDesignPreview" && __DEV__)
+          navigation.navigate("ResultStampDesignPreview");
         else if (page === "resultStreakTagDesignPreview" && __DEV__)
           navigation.navigate("ResultStreakTagDesignPreview");
         else if (page === "navBarDesignPreview" && __DEV__)
@@ -1514,6 +1558,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("SplashLogoPreview");
         else if (page === "liveGameStatsPreview" && __DEV__)
           navigation.navigate("LiveGameStatsPreview");
+        else if (page === "profileKinetikMetricsPreview" && __DEV__)
+          navigation.navigate("ProfileKinetikMetricsPreview");
       }}
     />
     <ProfileBadgeDetailModal
@@ -1791,10 +1837,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingVertical: spacing.lg,
   },
-  /** Web `settings-bg-pools` 相当のフルページ設定 */
   profileModalRoot: {
     flex: 1,
-    backgroundColor: SETTINGS_POOLS_BG_BASE,
+    backgroundColor: APP_MESH_BG_FALLBACK,
   },
   profileModalSafe: {
     flex: 1,
@@ -1939,32 +1984,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  /** Web プロフィール保存ボタン（角ばり）に相当 */
-  saveButton: {
-    minHeight: 42,
-    borderRadius: 0,
-    borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgb(59,130,246)",
-    marginTop: 6,
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgb(59,130,246)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-      },
-      android: { elevation: 6 },
-      default: {},
-    }),
-  },
-  saveText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
   modalBackdropFill: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.55)",
@@ -2017,23 +2036,5 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "rgba(248,250,252,0.95)",
     fontSize: 15,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  logoutButton: {
-    minHeight: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(15,21,38,0.84)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: spacing.md,
-  },
-  logoutText: {
-    color: colors.textPrimary,
-    fontSize: typography.body,
-    fontWeight: "700",
   },
 });

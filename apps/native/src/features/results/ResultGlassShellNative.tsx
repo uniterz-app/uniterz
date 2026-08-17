@@ -128,8 +128,8 @@ export default function ResultGlassShellNative({
 
   const borderRingPath = useMemo(
     () =>
-      size.w > 0 && size.h > 0
-        ? makeBorderRingPath(size.w, size.h, Math.max(1, strokeWidth))
+      strokeWidth > 0 && size.w > 0 && size.h > 0
+        ? makeBorderRingPath(size.w, size.h, strokeWidth)
         : null,
     [size.w, size.h, strokeWidth]
   );

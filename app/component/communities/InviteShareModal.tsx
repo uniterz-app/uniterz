@@ -7,6 +7,7 @@ import type { Language } from "@/lib/i18n/language";
 import { toast } from "@/app/component/ui/toast";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import { CommunityModalGridBackdrop } from "@/app/component/communities/CommunityModalGridBackdrop";
+import { COMMUNITY_MODAL_CARD_CLASS } from "@/app/component/communities/CommunityCrtTheme";
 import { copyTextToClipboard } from "@/lib/clipboard/copyText";
 import {
   buildCommunityInviteShareText,
@@ -114,13 +115,13 @@ export default function InviteShareModal({
       <CommunityModalGridBackdrop onClick={onClose} />
       <div className="pointer-events-none fixed inset-0 z-10 flex items-center justify-center p-4 pb-[max(1rem,var(--bottom-nav-clearance))]">
         <div
-          className="pointer-events-auto relative isolate w-full max-w-sm overflow-hidden rounded-2xl border border-white/12 bg-[#0c1419]/95 px-5 py-6 shadow-[0_18px_44px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+          className={`pointer-events-auto w-full max-w-sm ${COMMUNITY_MODAL_CARD_CLASS} px-5 py-6`}
           onClick={(e) => e.stopPropagation()}
         >
           <ShellGridOverlay />
           {copiedNotice ? (
             <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center">
-              <div className="rounded-xl border border-emerald-300/35 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.35)]">
+              <div className="rounded-none border border-emerald-300/35 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.35)]">
                 {t.copied}
               </div>
             </div>
@@ -150,7 +151,7 @@ export default function InviteShareModal({
               <button
                 type="button"
                 onClick={onOpenLine}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-blue-50"
+                className="flex w-full items-center justify-center gap-2 rounded-none border border-[rgba(0,245,255,0.35)] bg-[rgba(0,245,255,0.12)] px-4 py-2.5 text-sm font-semibold text-cyan-50"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden />
                 {t.line}
@@ -158,7 +159,7 @@ export default function InviteShareModal({
               <button
                 type="button"
                 onClick={() => onOpenExternal(urls.xUrl)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white/90"
+                className="flex w-full items-center justify-center gap-2 rounded-none border border-[rgba(0,245,255,0.22)] bg-[rgba(0,245,255,0.06)] px-4 py-2.5 text-sm font-semibold text-cyan-50/90"
               >
                 <X className="h-4 w-4" aria-hidden />
                 {t.x}
@@ -167,7 +168,7 @@ export default function InviteShareModal({
                 type="button"
                 onClick={() => void onCopy()}
                 disabled={copyBusy}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 py-2.5 text-sm font-semibold text-white/90 disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-none border border-[rgba(0,245,255,0.22)] bg-[rgba(0,245,255,0.06)] px-4 py-2.5 text-sm font-semibold text-cyan-50/90 disabled:opacity-60"
               >
                 <Copy className="h-4 w-4" aria-hidden />
                 {t.copy}

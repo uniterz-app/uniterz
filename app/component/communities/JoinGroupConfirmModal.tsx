@@ -11,6 +11,7 @@ import type {
 } from "@/lib/communities/types";
 import { formatCommunityCompetitionLine } from "@/lib/communities/competitionDisplay";
 import { CommunityModalGridBackdrop } from "@/app/component/communities/CommunityModalGridBackdrop";
+import { COMMUNITY_MODAL_CARD_CLASS } from "@/app/component/communities/CommunityCrtTheme";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 export type JoinGroupPreview = {
@@ -99,7 +100,7 @@ export default function JoinGroupConfirmModal({
       />
       <div className="pointer-events-none fixed inset-0 z-10 flex items-center justify-center p-4 pb-[max(1rem,var(--bottom-nav-clearance))]">
         <div
-          className={`pointer-events-auto relative isolate w-full max-w-md overflow-hidden rounded-2xl border border-white/12 bg-[#0c1419]/95 shadow-[0_18px_44px_rgba(0,0,0,0.55)] backdrop-blur-xl ${jp.className}`}
+          className={`pointer-events-auto w-full max-w-md ${COMMUNITY_MODAL_CARD_CLASS} ${jp.className}`}
           onClick={(e) => e.stopPropagation()}
         >
           <ShellGridOverlay />
@@ -111,7 +112,7 @@ export default function JoinGroupConfirmModal({
               {labels.title}
             </h2>
 
-            <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/25">
+            <div className="mt-4 overflow-hidden rounded-none border border-[rgba(0,245,255,0.16)] bg-black/40">
               <div className="aspect-[16/9] w-full bg-black/40">
                 {preview.headerImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -174,7 +175,7 @@ export default function JoinGroupConfirmModal({
                 </div>
 
                 {alreadyMember ? (
-                  <p className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-100/90">
+                  <p className="rounded-none border border-[rgba(0,245,255,0.25)] bg-[rgba(0,245,255,0.08)] px-3 py-2 text-sm text-cyan-100/90">
                     {m.community.alreadyMember}
                   </p>
                 ) : null}
@@ -186,7 +187,7 @@ export default function JoinGroupConfirmModal({
                 type="button"
                 disabled={busy}
                 onClick={onBack}
-                className="flex-1 rounded-xl border border-white/15 bg-white/8 px-4 py-2.5 text-sm font-semibold text-white/90 disabled:opacity-40"
+                className="flex-1 rounded-none border border-[rgba(0,245,255,0.22)] bg-[rgba(0,245,255,0.06)] px-4 py-2.5 text-sm font-semibold text-cyan-50/90 disabled:opacity-40"
               >
                 {m.common.back}
               </button>
@@ -195,7 +196,7 @@ export default function JoinGroupConfirmModal({
                   type="button"
                   disabled={busy}
                   onClick={onJoin}
-                  className="flex-1 rounded-xl border border-emerald-400/35 bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-50 disabled:opacity-40"
+                  className="flex-1 rounded-none border border-[rgba(0,245,255,0.45)] bg-[rgba(0,245,255,0.16)] px-4 py-2.5 text-sm font-semibold text-[#050508] disabled:opacity-40"
                 >
                   {busy ? m.community.joining : m.community.joinGroup}
                 </button>

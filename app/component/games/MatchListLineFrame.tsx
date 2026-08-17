@@ -38,6 +38,12 @@ type Props = {
   /** 描画開始の遅延（秒） */
   drawDelaySec?: number;
   onClick?: MouseEventHandler<HTMLDivElement>;
+  /** 上辺ラベル用の外側パディングを付けない（My Rank など） */
+  flush?: boolean;
+  /** false なら中身は枠描画中も表示（既定は描画後にフェードイン） */
+  fadeContent?: boolean;
+  /** 上辺を閉じる（My Rank。左右から同時に描いて中央で接続） */
+  closedTop?: boolean;
 };
 
 /**
@@ -58,6 +64,9 @@ export default function MatchListLineFrame({
   animateDraw = false,
   drawDelaySec = 0,
   onClick,
+  flush = false,
+  fadeContent = true,
+  closedTop = false,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
@@ -112,12 +121,15 @@ export default function MatchListLineFrame({
     frameWidth: size.w,
     align: topLabelAlign,
   });
-  const topGap =
-    topLabel && topLabelW > 0 ? topLabelW + LABEL_GAP_PAD : MIN_TICK_GAP;
+  const topGap = closedTop
+    ? 0
+    : topLabel && topLabelW > 0
+      ? topLabelW + LABEL_GAP_PAD
+      : MIN_TICK_GAP;
   const leftGap =
     leftLabel && leftLabelH > 0 ? leftLabelH + LABEL_GAP_PAD : 0;
   const halves =
-    size.w > 0 && size.h > 0
+    size.w > 0 && size.h > 0 && (!topLabel || topLabelW > 0)
       ? interruptedRoundedRectStrokeHalves({
           width: size.w,
           height: size.h,
@@ -151,7 +163,9 @@ export default function MatchListLineFrame({
 
   return (
     <div
-      className={["relative w-full overflow-visible pt-3.5", className].filter(Boolean).join(" ")}
+      className={["relative w-full overflow-visible", flush ? "" : "pt-3.5", className]
+        .filter(Boolean)
+        .join(" ")}
       style={
         pressable
           ? {
@@ -185,6 +199,7 @@ export default function MatchListLineFrame({
       <div ref={rootRef} className="relative w-full overflow-visible">
         {halves ? (
           <svg
+            key={`${Math.round(size.w)}-${Math.round(size.h)}-${Math.round(topGap)}`}
             className="pointer-events-none absolute inset-0 z-[2] overflow-visible"
             width={size.w}
             height={size.h}
@@ -282,7 +297,26 @@ export default function MatchListLineFrame({
           </div>
         ) : null}
 
-        <div className="relative z-[1] pointer-events-auto">{children}</div>
+        <motion.div
+          className="relative z-[1] pointer-events-auto"
+          initial={shouldDraw && fadeContent ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={
+            shouldDraw && fadeContent
+              ? {
+                  duration: 0.28,
+                  delay:
+                    drawDelaySec +
+                    GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_SEC +
+                    GAMES_LINE_FRAME_DRAW_SEC +
+                    0.04,
+                  ease: GAMES_CYBER_EASE,
+                }
+              : { duration: 0 }
+          }
+        >
+          {children}
+        </motion.div>
       </div>
     </div>
   );

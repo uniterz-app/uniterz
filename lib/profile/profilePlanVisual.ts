@@ -5,6 +5,12 @@ export const PROFILE_PLAN_PRO_CLASS = "profile-kinetik-panel--plan-pro";
 /** PRO メトリクスカード共通クラス */
 export const PROFILE_PLAN_PRO_METRIC_CARD_CLASS = "profile-plan-pro-metric-card";
 
+/** 2x2 メトリクス — My Rank Pro と同系の金。Free は鋼白の二重枠 */
+export const PROFILE_METRIC_GOLD = "#E8C66A";
+export const PROFILE_METRIC_GOLD_MUTED = "rgba(232, 198, 106, 0.62)";
+export const PROFILE_METRIC_GOLD_INNER = "rgba(232, 198, 106, 0.45)";
+export const PROFILE_METRIC_STEEL_INNER = "rgba(255, 255, 255, 0.28)";
+
 export const PROFILE_PLAN_PRO_CYAN = "#22d3ee";
 export const PROFILE_PLAN_PRO_PURPLE = "#a78bfa";
 

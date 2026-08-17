@@ -29,6 +29,7 @@ import UniterzLogoTypePreviewScreenNative from "../mobileScreens/UniterzLogoType
 import UniterzProBadgePreviewScreenNative from "../mobileScreens/UniterzProBadgePreviewScreenNative";
 import ResultCardDesignPreviewScreenNative from "../../results/ResultCardDesignPreviewScreenNative";
 import ResultBadgeDesignPreviewScreenNative from "../../results/ResultBadgeDesignPreviewScreenNative";
+import ResultStampDesignPreviewScreenNative from "../../results/ResultStampDesignPreviewScreenNative";
 import ResultStreakTagDesignPreviewScreenNative from "../../results/ResultStreakTagDesignPreviewScreenNative";
 import ResultDetailDesignPreviewScreenNative from "../../results/ResultDetailDesignPreviewScreenNative";
 import ResultDetailScreen from "../../results/ResultDetailScreen";
@@ -43,6 +44,7 @@ import MatchCardDesignPreviewScreenNative from "../../games/MatchCardDesignPrevi
 import LpRankingPreviewScreenNative from "../../rankings/LpRankingPreviewScreenNative";
 import RankingListDesignPreviewScreenNative from "../../rankings/RankingListDesignPreviewScreenNative";
 import NavBarDesignPreviewScreenNative from "../../../navigation/NavBarDesignPreviewScreenNative";
+import ProfileKinetikMetricsPreviewScreenNative from "../kinetik/ProfileKinetikMetricsPreviewScreenNative";
 import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
@@ -351,6 +353,19 @@ export function ResultBadgeDesignPreviewScreenWrapper() {
   );
 }
 
+export function ResultStampDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ResultStampDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
 export function ResultStreakTagDesignPreviewScreenWrapper() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -510,6 +525,19 @@ export function MatchCardDesignPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <MatchCardDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ProfileKinetikMetricsPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ProfileKinetikMetricsPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />

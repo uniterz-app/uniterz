@@ -7,16 +7,7 @@ import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { prefetchProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
 import { primeProfileStatsFromRankingRow } from "./useUserStatsV2";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  query,
-  where,
-  getDocs,
-  limit,
-} from "firebase/firestore";
-import { looksLikeFirestoreUid } from "@/lib/profile/profilePathKey";
+import { fetchUserDocByRouteKey } from "@/lib/profile/fetchUserDocByRouteKey";
 import {
   parseUserProfileFields,
   parseUserUnitBalance,
@@ -27,6 +18,7 @@ import type { RankingRowWithCountry, MobileMetric } from "@/lib/rankings/ranking
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
 import { currentSeasonWinStreak } from "@/lib/profile/currentSeasonWinStreak";
+import { seedProfileHeroFromUserDoc } from "@/lib/profile/seedProfileHeroFromUserDoc";
 
 export type Profile = {
   displayName: string;
@@ -75,6 +67,8 @@ const EMPTY_COUNTS: Counts = {
 
 type ProfileLoadState = {
   loading: boolean;
+  /** Firestore users 本文。ランキング先行キャッシュでは false */
+  userDocReady: boolean;
   targetUid: string | null;
   user: UserState;
   counts: Counts;
@@ -82,6 +76,7 @@ type ProfileLoadState = {
 
 const initialLoadState: ProfileLoadState = {
   loading: true,
+  userDocReady: false,
   targetUid: null,
   user: null,
   counts: EMPTY_COUNTS,
@@ -102,7 +97,10 @@ function readProfileCache(key: string): ProfileLoadState | null {
   const cached = profileCache.get(normalizeProfileCacheKey(key));
   if (!cached) return null;
   if (Date.now() - cached.at > PROFILE_CACHE_TTL_MS) return null;
-  return cached.state;
+  return {
+    userDocReady: false,
+    ...cached.state,
+  };
 }
 
 function writeProfileCache(
@@ -143,6 +141,7 @@ export function primeProfileCacheFromRankingRow(
 
   writeProfileCache([routeKey, uid, handle], {
     loading: false,
+    userDocReady: false,
     targetUid: uid || null,
     counts: { posts: row.posts ?? 0 },
     user: {
@@ -172,38 +171,6 @@ export function primeProfileCacheFromRankingRow(
   }
 }
 
-async function fetchUserDocByRouteKey(
-  decodedHandle: string
-): Promise<{ id: string; data: Record<string, unknown> } | null> {
-  if (looksLikeFirestoreUid(decodedHandle)) {
-    const byUid = await getDoc(doc(db, "users", decodedHandle));
-    if (byUid.exists()) {
-      return { id: byUid.id, data: byUid.data() as Record<string, unknown> };
-    }
-  }
-
-  const snap = await getDocs(
-    query(
-      collection(db, "users"),
-      where("handle", "==", decodedHandle),
-      limit(1)
-    )
-  );
-  if (!snap.empty) {
-    const d = snap.docs[0]!;
-    return { id: d.id, data: d.data() as Record<string, unknown> };
-  }
-
-  if (!looksLikeFirestoreUid(decodedHandle)) {
-    const byUid = await getDoc(doc(db, "users", decodedHandle));
-    if (byUid.exists()) {
-      return { id: byUid.id, data: byUid.data() as Record<string, unknown> };
-    }
-  }
-
-  return null;
-}
-
 export function useProfile(handle: string) {
   const decodedHandle = useMemo(() => decodeURIComponent(handle), [handle]);
 
@@ -229,13 +196,14 @@ export function useProfile(handle: string) {
 
     (async () => {
       try {
-        const docSnap = await fetchUserDocByRouteKey(decodedHandle);
+        const docSnap = await fetchUserDocByRouteKey(db, decodedHandle);
 
         if (cancelled) return;
 
         if (!docSnap) {
           setState({
             loading: false,
+            userDocReady: true,
             targetUid: null,
             user: null,
             counts: EMPTY_COUNTS,
@@ -250,8 +218,11 @@ export function useProfile(handle: string) {
         const plan: "free" | "pro" = rawPlan === "pro" ? "pro" : "free";
         const countsRaw = d.counts as { posts?: number } | undefined;
 
+        seedProfileHeroFromUserDoc(docSnap.id, d);
+
         const nextState: ProfileLoadState = {
           loading: false,
+          userDocReady: true,
           targetUid: docSnap.id,
           counts: {
             posts: countsRaw?.posts ?? 0,
@@ -287,7 +258,7 @@ export function useProfile(handle: string) {
     };
   }, [decodedHandle]);
 
-  const { user, counts, targetUid, loading } = state;
+  const { user, counts, targetUid, loading, userDocReady } = state;
 
   const profile: Profile = useMemo(() => {
     const u = user ?? {};
@@ -317,6 +288,7 @@ export function useProfile(handle: string) {
   return {
     profile,
     loading,
+    userDocReady,
     counts,
     targetUid,
   };

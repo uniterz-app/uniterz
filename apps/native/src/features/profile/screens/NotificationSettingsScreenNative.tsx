@@ -367,10 +367,10 @@ export default function NotificationSettingsScreenNative() {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(9,14,24,0.92)",
+    borderColor: "rgba(0,245,255,0.18)",
+    backgroundColor: "rgba(0,0,0,0.28)",
     padding: 14,
     marginBottom: 12,
     gap: 10,
@@ -400,11 +400,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionBtn: {
-    borderRadius: 10,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(103,232,249,0.4)",
-    backgroundColor: "rgba(6,182,212,0.12)",
-    paddingVertical: 10,
+    borderColor: "rgba(0,245,255,0.52)",
+    backgroundColor: "rgba(0,190,230,0.28)",
+    paddingVertical: 12,
     alignItems: "center",
   },
   actionBtnText: {

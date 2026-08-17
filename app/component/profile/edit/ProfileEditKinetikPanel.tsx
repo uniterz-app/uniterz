@@ -38,7 +38,6 @@ import {
 import "@/app/component/profile/pro/profilePlanProLuxuryVariants.css";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
-import { PROFILE_PLAN_PRO_METRIC_CARD_CLASS } from "@/lib/profile/profilePlanVisual";
 import ProfilePlanProMetricsVariant from "@/app/component/profile/pro/ProfilePlanProMetricsVariant";
 import type { ProfilePlanProMetricLayoutVariant } from "@/lib/profile/profilePlanProMetricLayoutVariants";
 import { resolveKinetikRankBadge, resolveKinetikMenuAccent, resolveKinetikProfileAccent } from "./kinetikRankBadge";
@@ -150,11 +149,15 @@ function KinetikSegBar({
             ].join(" ")}
             style={{
               transformOrigin: "left center",
-              background: lit ? colors.fill : "rgba(255,255,255,0.08)",
+              background: lit
+                ? isPlanPro
+                  ? colors.fill
+                  : "rgba(255,255,255,0.92)"
+                : "rgba(255,255,255,0.12)",
               boxShadow: lit
                 ? isPlanPro
                   ? `0 0 8px color-mix(in srgb, ${colors.glow} 40%, transparent), inset 0 1px 0 rgba(255,255,255,0.28)`
-                  : `0 0 6px ${colors.glow}`
+                  : "none"
                 : undefined,
             }}
           />
@@ -178,13 +181,13 @@ function MetricCard({
   layout,
   delay,
   segmentsReady = true,
-  showSegBar = true,
+  showSegBar = false,
   unit,
   unitHint,
   dayDelta,
   dayDeltaTitle,
   dayDeltaTone,
-  rankBelowSegBar = false,
+  rankBelowSegBar: _rankBelowSegBar = false,
   reduceUiMotion = false,
   isPlanPro = false,
   language = "ja",
@@ -231,19 +234,19 @@ function MetricCard({
     : valuesPending
       ? "—"
       : (value ?? "—");
-  const colors = ACCENT[accent];
   const valueHasUnit = displayValue.includes("%");
   const labelLatinUpper = kinetikMetricLabelUsesLatinUppercase(label);
-  const showRankInline = rankLabel && segmentsReady && !rankBelowSegBar;
-  const showRankBelow = rankLabel && segmentsReady && rankBelowSegBar;
+  const showRankInline = Boolean(rankLabel && segmentsReady);
 
-  const rankBadge = showRankInline || showRankBelow ? (
+  const rankBadge = showRankInline ? (
     <motion.span
       className={[
         nameOxanium.className,
-        "shrink-0 border border-white/12 bg-transparent font-semibold tracking-[0.08em] text-white/55",
-        rankBelowSegBar ? "inline-block" : "mb-px",
-        isPlanPro ? "profile-plan-pro-metric-rank" : "",
+        "shrink-0 border bg-transparent font-semibold tracking-[0.08em]",
+        isPlanPro
+          ? "border-[rgba(232,198,106,0.45)] text-[rgba(232,198,106,0.88)]"
+          : "border-white/12 text-white/55",
+        "mb-px",
         layout === "web"
           ? "px-2 py-0.5 text-[11px]"
           : "px-1.5 py-[2px] text-[9px]",
@@ -263,48 +266,23 @@ function MetricCard({
   return (
     <motion.div
       className={[
-        "relative border border-white/10 bg-transparent",
-        isPlanPro
-          ? `${PROFILE_PLAN_PRO_METRIC_CARD_CLASS} profile-plan-pro-metric-card--${accent}`
-          : "",
+        "relative overflow-hidden border bg-black",
+        isPlanPro ? "profile-metric-card--gold" : "profile-metric-card--steel",
         layout === "web" ? "p-4 md:p-5" : "p-3.5",
       ].join(" ")}
       initial={reduceMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, delay: reduceMotion ? 0 : delay, ease: [0.22, 1, 0.36, 1] }}
     >
-      {isPlanPro ? (
-        <span
-          className="profile-plan-pro-metric-card__bar-bloom"
-          style={{
-            background: `linear-gradient(90deg, ${colors.glow} 0%, transparent 72%)`,
-          }}
-          aria-hidden
-        />
-      ) : null}
-      <div
-        className={[
-          "absolute top-3 bottom-3 left-0",
-          isPlanPro ? "profile-plan-pro-metric-card__bar w-[4px]" : "w-[2px]",
-        ].join(" ")}
-        style={{
-          background: colors.line,
-          /** Pro は矩形シャドウを使わず bloom グラデでにじませる */
-          boxShadow: isPlanPro ? "none" : `0 0 8px ${colors.glow}`,
-        }}
-        aria-hidden
-      />
-      {isPlanPro ? (
-        <span className="profile-plan-pro-metric-card__sheen" aria-hidden />
-      ) : null}
-      <div className="relative z-[1] flex min-w-0 items-center gap-1 pl-2.5 pr-0.5">
+      <span className="profile-metric-card__inner-frame" aria-hidden />
+      <div className="relative z-[1] flex min-w-0 items-center gap-1 pr-0.5">
         <div className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden">
           <p
             className={[
               nameOxanium.className,
               "min-w-0 truncate whitespace-nowrap",
               labelLatinUpper ? "uppercase tracking-[0.14em]" : "tracking-[0.06em]",
-              isPlanPro ? "profile-plan-pro-metric-card__label" : "",
+              isPlanPro ? "profile-metric-card__label" : "",
               layout === "web"
                 ? "text-[11px] text-white/72 md:text-xs md:text-white/78"
                 : "text-[9px] text-white/62",
@@ -317,7 +295,7 @@ function MetricCard({
               className={[
                 nameOxanium.className,
                 "shrink-0 whitespace-nowrap uppercase tracking-[0.08em]",
-                isPlanPro ? "profile-plan-pro-metric-card__unit-hint" : "text-white/38",
+                isPlanPro ? "profile-metric-card__unit-hint" : "text-white/38",
                 layout === "web" ? "text-[9px]" : "text-[8px]",
               ].join(" ")}
             >
@@ -329,18 +307,17 @@ function MetricCard({
       <div
         className={[
           nameOxanium.className,
-          "relative z-[1] mt-1.5 flex flex-wrap items-end gap-x-1.5 gap-y-0.5 pl-2.5 leading-none",
+          "relative z-[1] mt-1.5 flex flex-wrap items-end gap-x-1.5 gap-y-0.5 leading-none",
         ].join(" ")}
       >
         <span
           className={[
-            "font-semibold tabular-nums tracking-tight",
-            isPlanPro ? "profile-plan-pro-metric-card__value" : "",
+            "profile-metric-card__value inline-block origin-bottom-left font-semibold tabular-nums tracking-tight",
+            isPlanPro ? "" : "text-white/[0.92]",
             layout === "mobile"
               ? "text-[17px]"
               : "text-[30px] md:text-[32px]",
           ].join(" ")}
-          style={{ color: isPlanPro ? colors.line : colors.text }}
         >
           {displayValue}
         </span>
@@ -349,7 +326,7 @@ function MetricCard({
             className={[
               nameOxanium.className,
               "mb-0.5 font-medium tracking-[0.06em] uppercase",
-              isPlanPro ? "profile-plan-pro-metric-card__unit" : "text-white/45",
+              isPlanPro ? "profile-metric-card__unit" : "text-white/45",
               layout === "web" ? "text-[11px] md:text-xs" : "text-[9px]",
             ].join(" ")}
           >
@@ -378,7 +355,7 @@ function MetricCard({
         {showRankInline ? rankBadge : null}
       </div>
       {showSegBar ? (
-        <div className="relative z-[1] mt-2.5 pl-2.5">
+        <div className="relative z-[1] mt-2.5">
           {segmentsReady ? (
             <KinetikSegBar
               key={`${accent}-${filledSegs}-${rankLabel ?? "none"}`}
@@ -393,15 +370,12 @@ function MetricCard({
           )}
         </div>
       ) : null}
-      {showRankBelow ? (
-        <div className="relative z-[1] mt-2 pl-2.5">{rankBadge}</div>
-      ) : null}
       {footnote ? (
         <p
           className={[
             nameOxanium.className,
-            "relative z-[1] mt-1.5 pl-2.5 leading-tight tabular-nums",
-            isPlanPro ? "profile-plan-pro-metric-card__footnote" : "",
+            "relative z-[1] mt-1.5 leading-tight tabular-nums",
+            isPlanPro ? "profile-metric-card__footnote" : "",
             layout === "mobile"
               ? "text-[10px] tracking-[0.06em] text-white/62"
               : "text-[14px] tracking-[0.08em] text-white/78 md:text-[15px]",
@@ -1309,15 +1283,16 @@ export default function ProfileEditKinetikPanel({
       />
     ) : null;
 
-  const viewUnderAvatar =
-    profileViewCount != null ? (
-      <div className="profile-edit-kinetik-avatar-views mt-1.5">
+  const viewUnderAvatar = (
+    <div className="profile-edit-kinetik-avatar-views mt-1.5 min-h-[22px]">
+      {profileViewCount != null ? (
         <ProfileKinetikViewCountChip
           viewCount={profileViewCount}
           viewCountAriaLabel={profileViewCountAria}
         />
-      </div>
-    ) : null;
+      ) : null}
+    </div>
+  );
 
   const metricsScopeHeader = (
     <div
@@ -1458,7 +1433,12 @@ export default function ProfileEditKinetikPanel({
                     variant="proBridge"
                   />
                 </div>
-              ) : null}
+              ) : (
+                <div
+                  className="profile-edit-kinetik-badge-bridge profile-edit-kinetik-badge-bridge--empty mt-3 w-full"
+                  aria-hidden
+                />
+              )}
               <div className="mt-auto pt-4">
                 <ProfileKinetikIdentityJoinIdRow
                   memberSinceLabel={memberSinceLabel}
@@ -1642,13 +1622,15 @@ export default function ProfileEditKinetikPanel({
         </div>
       )}
 
-      {!isPro && badges.length > 0 ? (
-        <div className="mt-4">
-          <ProfileEditKinetikBadgeRow
-            badges={badges}
-            layout={layout}
-            onBadgeClick={handleBadgeClick}
-          />
+      {!isPro ? (
+        <div className="profile-edit-kinetik-badges mt-4 min-h-11">
+          {badges.length > 0 ? (
+            <ProfileEditKinetikBadgeRow
+              badges={badges}
+              layout={layout}
+              onBadgeClick={handleBadgeClick}
+            />
+          ) : null}
         </div>
       ) : null}
 

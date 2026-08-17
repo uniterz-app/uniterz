@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { acquireAppBrandShelfHidden } from "@/lib/ui/appBrandShelfVisibility";
 import { createPortal } from "react-dom";
 import { ChevronLeft, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -206,6 +207,11 @@ export type CyberSubpageHeaderProps = {
   /** 戻るボタンの aria-label */
   backAriaLabel?: string;
   className?: string;
+  /**
+   * グローバル UNITERZ 棚を隠す（既定 true）。
+   * モーダル内で SafeArea 済みのときは false。
+   */
+  hideBrandShelf?: boolean;
 };
 
 /**
@@ -220,16 +226,23 @@ export function CyberSubpageHeader({
   onBack,
   backAriaLabel = "戻る",
   className,
+  hideBrandShelf = true,
 }: CyberSubpageHeaderProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const reduceMotion = useReducedMotion() === true;
+
+  useLayoutEffect(() => {
+    if (!hideBrandShelf) return;
+    return acquireAppBrandShelfHidden();
+  }, [hideBrandShelf]);
   const titleVariant = titleHasCjk(title) ? "jp-chrome" : "horizon-chrome";
   const hasRightCluster = Boolean(subtitle || headerTrailing);
 
   return (
     <motion.div
       className={cn(
-        "sticky top-0 z-30 border-b border-[rgba(0,245,255,0.14)] bg-[#050b14]/90 backdrop-blur-md supports-backdrop-filter:bg-[#050b14]/78",
+        "sticky top-0 z-30 border-b border-[rgba(0,245,255,0.14)] bg-black",
+        hideBrandShelf && "pt-[env(safe-area-inset-top)]",
         className
       )}
       initial={reduceMotion ? false : { opacity: 0, y: -8 }}
@@ -237,10 +250,6 @@ export function CyberSubpageHeader({
       transition={{ duration: 0.3, ease: GAMES_CYBER_EASE }}
     >
       <div className="relative flex items-center gap-3 px-3 py-2.5">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-0 top-2 bottom-2 w-[2px] bg-[rgba(0,245,255,0.55)] shadow-[0_0_10px_rgba(0,245,255,0.45)]"
-        />
         <motion.button
           type="button"
           onClick={onBack}
@@ -324,6 +333,8 @@ type ShellProps = CyberSubpageHeaderProps & {
   contentClassName?: string;
   /** 背景グリッド等を出さない（カード内埋め込み） */
   bare?: boolean;
+  /** ページ全面の背景。指定時は既定のサイバーグリッドを出さない */
+  backdrop?: ReactNode;
 };
 
 /**
@@ -333,6 +344,7 @@ export default function CyberSubpageShell({
   children,
   contentClassName,
   bare = false,
+  backdrop,
   ...headerProps
 }: ShellProps) {
   const reduceMotion = useReducedMotion() === true;
@@ -342,11 +354,16 @@ export default function CyberSubpageShell({
       className={cn(
         "relative overflow-x-hidden text-white",
         bare
-          ? "min-h-dvh bg-transparent pb-bottom-nav"
-          : "min-h-screen bg-[#050b14] pb-bottom-nav"
+          ? "min-h-dvh pb-bottom-nav"
+          : "min-h-screen pb-bottom-nav",
+        backdrop ? "bg-[#070707]" : "bg-transparent"
       )}
     >
-      {!bare ? (
+      {backdrop ? (
+        <div className="badge-page-quilt" aria-hidden>
+          {backdrop}
+        </div>
+      ) : !bare ? (
         <>
           <div
             aria-hidden
@@ -370,7 +387,7 @@ export default function CyberSubpageShell({
         {...headerProps}
         className={
           bare
-            ? "bg-[#050b14]/88 backdrop-blur-md supports-backdrop-filter:bg-[#050b14]/72"
+            ? "bg-black"
             : undefined
         }
       />

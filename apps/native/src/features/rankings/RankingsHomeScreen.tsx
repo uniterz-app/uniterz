@@ -9,11 +9,11 @@ import {
   Text,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import {
   PRO_LEAGUE_ATMOSPHERE,
   PRO_LEAGUE_TAB_THEME,
 } from "../../../../../lib/rankings/proLeagueAtmosphere";
+import RankingsProLeagueMeshBackgroundNative from "./RankingsProLeagueMeshBackgroundNative";
 import {
   type MobileMetric,
 } from "../../../../../lib/rankings/rankingMetrics";
@@ -43,8 +43,7 @@ import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRa
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
 import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
 import RankingsDrawerMenuNative from "./RankingsDrawerMenuNative";
-import CyberMenuButton from "../../ui/CyberMenuButton";
-import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
+import ProfileMenuEdgeHandleNative from "../profile/ProfileMenuEdgeHandleNative";
 import { CandleChartLoaderNative } from "../../components/CandleChartLoaderNative";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
@@ -52,7 +51,6 @@ import { useNativeOpenSeasonRankingsBulk } from "./useNativeOpenSeasonRankingsBu
 import { useNativePeriodRankingsBulk } from "./useNativePeriodRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
-import { RankingsPageTitleCyberNative } from "./RankingsPageTitleCyberNative";
 import {
   MyRankCardNative,
   PlayoffRoundTabsNative,
@@ -62,7 +60,6 @@ import {
 } from "./RankingsUiParts";
 import { RankingsPeriodTabsNative } from "./RankingsPeriodTabsNative";
 import { RankingsPeriodLabelNavNative } from "./RankingsPeriodLabelNavNative";
-import type { MyRankCardShareState } from "./RankingsMyRankCardNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
 import { useNativeMyRankProgress } from "./useNativeMyRankProgress";
 import { useNativeMyRankCardFast } from "./useNativeMyRankCardFast";
@@ -98,7 +95,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
   const rankingsLeague = "nba" as const;
   const [nbaBoard, setNbaBoard] = useState<NbaRankingBoard>("regular");
   const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>("weekly");
@@ -213,12 +209,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         myRankCardFastEnabled && cardFast.rankProgressSeedComplete,
     });
 
-  useEffect(() => {
-    if (category !== "playoffs") {
-      setRankShare(null);
-    }
-  }, [category]);
-
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
 
@@ -331,13 +321,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     !listReady &&
     !(myRankCardFastEnabled && !cardFast.loading && cardFast.myRow != null);
 
-  const pageTitle =
-    nbaBoard === "open"
-      ? t.divisionOpen
-      : nbaBoard === "playoffs"
-        ? t.nbaBoardPlayoffs
-        : t.nbaBoardRegular;
-
   const myTotalPoints =
     typeof myStatsRow?.totalPoints === "number" ? myStatsRow.totalPoints : 0;
   const totalPointsRows = useMemo(() => {
@@ -377,14 +360,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   return (
     <View style={styles.root}>
-      {nbaBoard === "open" ? (
-        <LinearGradient
-          pointerEvents="none"
-          colors={["#0c0716", PRO_LEAGUE_ATMOSPHERE.bgDeep, "#050308"]}
-          locations={[0, 0.55, 1]}
-          style={StyleSheet.absoluteFillObject}
-        />
-      ) : null}
+      {nbaBoard === "open" ? <RankingsProLeagueMeshBackgroundNative /> : null}
       <ScrollView
         style={styles.scrollLayer}
         contentContainerStyle={[
@@ -393,29 +369,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleRow}>
-          <CyberMenuButton
-            size="sm"
-            accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
-            onPress={() => setMenuOpen(true)}
-          />
-          <View style={styles.titleCenterCol}>
-            <RankingsPageTitleCyberNative
-              title={pageTitle}
-              tone={nbaBoard === "open" ? "pro-league" : "default"}
-            />
-          </View>
-          <CyberChamferButtonNative
-            size="sm"
-            embedded
-            variant="share"
-            onPress={() => rankShare?.share()}
-            disabled={!rankShare?.canShare || rankShare?.sharing}
-            accessibilityLabel={t.shareMyRank}
-            style={styles.titleSideBtn}
-          />
-        </View>
-
         <View style={styles.section}>
           {showNbaPeriodTabs ? (
             <RankingsDivisionTabsNative
@@ -478,6 +431,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 }}
                 language={language}
                 mobileWide
+                cardResetKey={listEntranceKey}
                 leagueLabel={
                   nbaBoard === "open"
                     ? "PRO LEAGUE"
@@ -485,7 +439,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                       ? "PLAYOFFS"
                       : "NBA"
                 }
-                onShareStateChange={setRankShare}
                 rankTierGap={myRankCardTier === "pro" ? rankTierGap : null}
                 rankProgress={
                   rankProgressEnabled ? (myRankProgressPoints ?? []) : undefined
@@ -595,6 +548,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           </>
         ) : null}
       </ScrollView>
+      <ProfileMenuEdgeHandleNative
+        onOpen={() => setMenuOpen(true)}
+        label="MENU"
+        hidden={menuOpen}
+        fadeIn
+      />
       <SideMenuDrawerNative open={menuOpen} onClose={() => setMenuOpen(false)}>
         <RankingsDrawerMenuNative
           league={rankingsLeague}
@@ -646,21 +605,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 10,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 8,
-    gap: 8,
-  },
-  titleCenterCol: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: "center",
-    gap: 2,
-  },
-  titleSideBtn: {
-    flexShrink: 0,
   },
   scheduleNoticeInline: {
     textAlign: "center",

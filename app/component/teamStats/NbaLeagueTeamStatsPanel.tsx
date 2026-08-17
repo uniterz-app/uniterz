@@ -499,7 +499,7 @@ export default function NbaLeagueTeamStatsPanel({
                     <span
                       className={[
                         nameBebas.className,
-                        "truncate text-[15px] leading-tight text-white",
+                        "truncate text-[18px] leading-tight text-white",
                       ].join(" ")}
                       style={teamNameTy}
                     >

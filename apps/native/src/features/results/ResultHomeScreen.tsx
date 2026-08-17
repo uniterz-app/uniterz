@@ -13,12 +13,14 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
-import { doc, getDoc } from "firebase/firestore";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { Language } from "../../../../../lib/i18n/language";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
-import { db } from "../../lib/firebase";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import {
+  loadProfileUserDocNative,
+  peekProfileUserDocNative,
+} from "../profile/profileUserDocCacheNative";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
@@ -287,10 +289,14 @@ export default function ResultHomeScreen({
     async function loadLang() {
       if (!uid) return;
       try {
-        const snap = await getDoc(doc(db, "users", uid));
+        const peek = peekProfileUserDocNative(uid);
+        if (peek) {
+          if (!alive) return;
+          setLanguage(peek.language === "en" ? "en" : "ja");
+        }
+        const loaded = await loadProfileUserDocNative(uid);
         if (!alive) return;
-        const row = snap.data() as { language?: unknown } | undefined;
-        setLanguage(row?.language === "en" ? "en" : "ja");
+        setLanguage(loaded?.data?.language === "en" ? "en" : "ja");
       } catch {
         if (!alive) return;
         setLanguage("ja");
@@ -353,7 +359,7 @@ export default function ResultHomeScreen({
   const [tutorialListScrollEnabled, setTutorialListScrollEnabled] =
     useState(true);
 
-  const { grouped, loading, postsCacheCapped, refreshPosts, loadMore, removePostById } =
+  const { grouped, loading, hasFetchedOnce, postsCacheCapped, refreshPosts, loadMore, removePostById } =
     useNativeResultPosts(uid, language, {
       league: leagueTab,
       enabled: leagueTab !== null,
@@ -525,7 +531,7 @@ export default function ResultHomeScreen({
   const onRefresh = useCallback(async () => {
     setManualRefreshing(true);
     try {
-      await refreshPosts();
+      await refreshPosts({ force: true });
     } finally {
       setManualRefreshing(false);
     }
@@ -559,14 +565,16 @@ export default function ResultHomeScreen({
   }, [deleteConfirmPost, language, removePostById]);
 
   const listEmpty =
-    !loading && filteredGrouped.length === 0 ? (
+    hasFetchedOnce && !loading && filteredGrouped.length === 0 ? (
       <View style={styles.emptyNoDataWrap}>
         <Text style={styles.emptyNoDataText}>NO DATA</Text>
       </View>
     ) : null;
 
   const showInitialSpinner =
-    leagueTab === null || (loading && grouped.length === 0);
+    leagueTab === null ||
+    !hasFetchedOnce ||
+    (loading && grouped.length === 0);
 
   /** 下端はスクロール内容側のパディングのみ（親に付けるとナビ下が塗りつぶされリストが届かない） */
   const listContentWithBottomPad = useMemo(

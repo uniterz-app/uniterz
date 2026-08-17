@@ -114,6 +114,10 @@ import {
   resolveResultPostPkScore,
   useResultPostsPkScores,
 } from "@/lib/games/useResultPostsPkScores";
+import {
+  resolveResultPostGameMarket,
+  useResultPostsGameMarkets,
+} from "@/lib/games/useResultPostsGameMarkets";
 import { resolveWcTeamId } from "@/lib/legacyWcWebShims";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS, MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
@@ -679,6 +683,7 @@ export default function ResultListWithOverlay({
     [visibleGrouped]
   );
   const pkFromGames = useResultPostsPkScores(visiblePostsFlat);
+  const marketsFromGames = useResultPostsGameMarkets(visiblePostsFlat);
 
   const selectedPost = useMemo(() => {
     if (!openPostId) return null;
@@ -867,7 +872,10 @@ export default function ResultListWithOverlay({
     setPointsDistributionLoading(true);
     (async () => {
       try {
-        const { exists, data: d } = await getCachedGameDocForResult(post.gameId);
+        const { exists, data: d } = await getCachedGameDocForResult(
+          post.gameId,
+          db
+        );
         if (cancelled) return;
         if (!exists || !d) {
           if (!cancelled) {
@@ -1577,6 +1585,7 @@ export default function ResultListWithOverlay({
                   <ResultCard
                     post={post}
                     pkScore={resolveResultPostPkScore(post, pkFromGames)}
+                    gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
                     onOpen={open}
                     language={language}
                     platform={platform}

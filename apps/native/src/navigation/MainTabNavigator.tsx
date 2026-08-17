@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigationState, PartialState } from "@react-navigation/native";
 import { useReducedMotion } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AppTabBar from "./AppTabBar";
 import type { MainTabParamList } from "./types";
 import {
@@ -50,7 +49,6 @@ function resolveTabWordmark(
 }
 
 export default function MainTabNavigator() {
-  const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() === true;
   const [wordmark, setWordmark] = useState(DEFAULT_HEADER_WORDMARK);
   const brandShelfHidden = useSyncExternalStore(
@@ -100,11 +98,7 @@ export default function MainTabNavigator() {
       <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
       <View style={styles.root}>
-        {brandShelfHidden || welcomeBrandHidden ? (
-          welcomeBrandHidden ? null : (
-            <View style={{ height: insets.top }} pointerEvents="none" />
-          )
-        ) : (
+        {brandShelfHidden || welcomeBrandHidden ? null : (
           <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
         )}
         <View style={styles.tabHost}>

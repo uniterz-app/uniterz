@@ -4,6 +4,10 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultCard from "@/app/component/result/ResultCard";
 import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
+import {
+  resolveResultPostGameMarket,
+  useResultPostsGameMarkets,
+} from "@/lib/games/useResultPostsGameMarkets";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
@@ -51,6 +55,7 @@ export default function ProfileSettledTodayResults({
     isMobile && posts.length > MOBILE_SETTLED_TODAY_MAX
       ? posts.slice(0, MOBILE_SETTLED_TODAY_MAX)
       : posts;
+  const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
 
   return (
     <ProfileOverviewLineFrame title={title}>
@@ -76,8 +81,8 @@ export default function ProfileSettledTodayResults({
           <div
             className={
               isMobile
-                ? "mt-4 flex flex-col gap-3"
-                : "mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+                ? "mt-4 flex flex-col gap-3 overflow-visible pr-5"
+                : "mt-4 grid grid-cols-1 gap-4 overflow-visible pr-5 sm:grid-cols-2"
             }
           >
             {visiblePosts.map((post) => (
@@ -91,6 +96,8 @@ export default function ProfileSettledTodayResults({
                 viewerUid={viewerUid}
                 gamesRoutePrefix={gamesRoutePrefix}
                 visualEffectsLite={visualEffectsLite}
+                gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
+                href={`${gamesRoutePrefix}/result/${post.id}`}
               />
             ))}
           </div>

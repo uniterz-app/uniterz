@@ -8,6 +8,8 @@ export const KINETIK_GREEN = "#a8ff2a";
 export const KINETIK_MAGENTA = "#ff2bd6";
 export const KINETIK_CYAN = "#22d3ee";
 export const KINETIK_RED = "#ff4757";
+/** Web `PROFILE_METRIC_GOLD` / My Rank Pro と同値 */
+export const KINETIK_METRIC_GOLD = "#E8C66A";
 
 export type KinetikMetricAccent = "green" | "magenta" | "cyan" | "red";
 

@@ -156,6 +156,8 @@ export type ProfileStackParamList = {
   ResultCardDesignPreview: undefined;
   /** __DEV__ リザルト右上バッジ見た目案 */
   ResultBadgeDesignPreview: undefined;
+  /** __DEV__ リザルト右上スタンプ見た目案 */
+  ResultStampDesignPreview: undefined;
   /** __DEV__ リザルト左上連勝タグ見た目案 */
   ResultStreakTagDesignPreview: undefined;
   /** __DEV__ リザルト詳細デザイン用プレビュー */
@@ -174,6 +176,8 @@ export type ProfileStackParamList = {
   LiveGameStatsPreview: undefined;
   /** __DEV__ 試合一覧カード現行デザイン */
   MatchCardDesignPreview: undefined;
+  /** __DEV__ プロフィール 2x2 メトリクス Free / Pro 現行 */
+  ProfileKinetikMetricsPreview: undefined;
   /** __DEV__ 下部ナビ見た目案 */
   NavBarDesignPreview: undefined;
   /** __DEV__ LP 用ランキング画面（総合スコアモック） */

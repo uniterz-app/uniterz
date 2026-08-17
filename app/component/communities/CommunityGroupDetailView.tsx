@@ -42,6 +42,7 @@ import EndGroupConfirmModal from "@/app/component/communities/EndGroupConfirmMod
 import InviteShareModal from "@/app/component/communities/InviteShareModal";
 import CommunityGroupHeaderHero from "@/app/component/communities/CommunityGroupHeaderHero";
 import CommunityGroupZoneLabel from "@/app/component/communities/CommunityGroupZoneLabel";
+import { COMMUNITY_GROUP_HERO_BG } from "@/lib/communities/communityGroupHeroLayout";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -54,6 +55,11 @@ function commMsg(lang: Language, m: { ja: string; en: string }) {
   if (lang === "en") return m.en;
   return m.ja;
 }
+
+const GROUP_DETAIL_PANEL_SHELL = {
+  background: COMMUNITY_GROUP_HERO_BG,
+  boxShadow: "none",
+} as const;
 
 export type CommunityGroupDetailViewProps = {
   groupId: string;
@@ -430,7 +436,12 @@ export default function CommunityGroupDetailView({
         <RankingsCyberSectionLabel subtle>{t.ranking}</RankingsCyberSectionLabel>
       )}
       {loadingRows ? (
-        <RankingsCyberPanel subtle compact className={useDenseLayout ? "mb-2" : undefined}>
+        <RankingsCyberPanel
+          subtle
+          compact
+          className={useDenseLayout ? "mb-2" : undefined}
+          shellStyle={GROUP_DETAIL_PANEL_SHELL}
+        >
           <div className="space-y-2">
             <div className="h-3 w-2/5 skeleton-scan rounded-none bg-cyan-400/10" />
             <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
@@ -446,7 +457,11 @@ export default function CommunityGroupDetailView({
           })}
         </p>
       ) : useDenseLayout ? (
-        <div key={rankListAnimKey} className="-mt-1 mb-4 cyber-rank-list-panel">
+        <div
+          key={rankListAnimKey}
+          className="-mt-1 mb-4 cyber-rank-list-panel"
+          style={{ background: COMMUNITY_GROUP_HERO_BG }}
+        >
           <motion.div
             variants={restContainer}
             initial={prefersReducedMotion ? "show" : "hidden"}
@@ -472,7 +487,11 @@ export default function CommunityGroupDetailView({
           </motion.div>
         </div>
       ) : (
-        <div key={rankListAnimKey} className="cyber-rank-list-panel">
+        <div
+          key={rankListAnimKey}
+          className="cyber-rank-list-panel"
+          style={{ background: COMMUNITY_GROUP_HERO_BG }}
+        >
           <TopPodium
             rows={top3}
             metric={rankMetricForProfile}
@@ -515,7 +534,12 @@ export default function CommunityGroupDetailView({
 
   const inviteOwnerPanel =
     summary?.isOwner && !summary.archived ? (
-      <RankingsCyberPanel subtle compact className={useDenseLayout ? "mt-1" : "mb-4"}>
+      <RankingsCyberPanel
+        subtle
+        compact
+        className={useDenseLayout ? "mt-1" : "mb-4"}
+        shellStyle={GROUP_DETAIL_PANEL_SHELL}
+      >
         <RankingsCyberSectionLabel subtle className={useDenseLayout ? "mb-2.5 pb-1.5" : undefined}>
           {t.inviteLabel}
         </RankingsCyberSectionLabel>
@@ -594,7 +618,7 @@ export default function CommunityGroupDetailView({
 
   const webHeaderPanel =
     summary && !useDenseLayout ? (
-      <RankingsCyberPanel subtle className="mb-4">
+      <RankingsCyberPanel subtle className="mb-4" shellStyle={GROUP_DETAIL_PANEL_SHELL}>
         <h1
           className={[
             "font-bold leading-tight text-cyan-50/95",
@@ -730,7 +754,7 @@ export default function CommunityGroupDetailView({
       <div
         className={[
           `relative flex flex-col ${jp.className}`,
-          inDetailCard ? "min-h-0" : "min-h-0 flex-1",
+          inDetailCard ? "min-h-0 bg-black" : "min-h-0 flex-1 bg-black",
           className,
         ]
           .filter(Boolean)
