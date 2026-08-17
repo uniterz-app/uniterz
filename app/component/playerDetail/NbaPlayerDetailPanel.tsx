@@ -137,7 +137,7 @@ function ShotZoneHeat({
           className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
           style={{ color: hexToRgba(accent, 0.8) }}
         >
-          Shot Chart
+          SHOT CHART
         </h2>
         <div
           className="h-px flex-1"
@@ -922,7 +922,7 @@ function GameLogs({
         <span
           className={`${nameOxanium.className} flex-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/40`}
         >
-          Game Logs (Last {logs.length})
+          GAME LOGS (LAST {logs.length})
         </span>
         <span
           className={`${nameOxanium.className} text-[13px] font-extrabold tabular-nums text-white`}
@@ -1152,7 +1152,7 @@ export default function NbaPlayerDetailPanel({
           className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
           style={{ color: hexToRgba(jerseyPrimary, 0.75) }}
         >
-          Season Averages
+          SEASON AVERAGES
         </h2>
         <div
           className="grid grid-cols-3 overflow-hidden border bg-black/50"
@@ -1289,7 +1289,7 @@ export default function NbaPlayerDetailPanel({
               className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
               style={{ color: hexToRgba(jerseyPrimary, 0.75) }}
             >
-              Contract
+              CONTRACT
             </h2>
             <div
               className="space-y-2 border bg-black/45 p-3.5"
@@ -1298,7 +1298,7 @@ export default function NbaPlayerDetailPanel({
               <div className="flex items-end justify-between">
                 <div>
                   <p className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}>
-                    {isJa ? "今季年俸" : "This Season"}
+                    {isJa ? "今季年俸" : "THIS SEASON"}
                   </p>
                   <p className={`${nameOxanium.className} text-[26px] font-extrabold`}>
                     {formatSalaryUsd(currentSalary.baseSalary)}
@@ -1306,7 +1306,7 @@ export default function NbaPlayerDetailPanel({
                 </div>
                 <div className="text-right">
                   <p className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}>
-                    Rank
+                    RANK
                   </p>
                   <p
                     className={`${nameOxanium.className} text-[22px] font-extrabold`}

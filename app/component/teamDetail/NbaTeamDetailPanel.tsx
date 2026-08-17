@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Flame, Snowflake } from "lucide-react";
-import { nameOxanium } from "@/lib/fonts";
+import { nameOxanium, nameBebas } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
 import { NbaTeamRosterCard } from "@/app/component/predict/NbaRosterPanel";
@@ -46,6 +47,7 @@ const BAR_OFFENSE = "#5cf0b5";
 const METRIC_OFFENSE = "#FF3D5A";
 const METRIC_DEFENSE = "#3BA0FF";
 const LEAGUE_RANK_SEGMENTS = 6;
+const teamNickTy = matchCardTeamNameStyle(true);
 
 function hexToRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "");
@@ -77,6 +79,51 @@ function leagueRankSegPct(rank: number): number {
   const r = Math.max(1, Math.min(30, rank));
   const bucket = Math.min(LEAGUE_RANK_SEGMENTS - 1, Math.floor((r - 1) / 5));
   return ((LEAGUE_RANK_SEGMENTS - bucket) / LEAGUE_RANK_SEGMENTS) * 100;
+}
+
+function winPctLabel(wins: number, losses: number): string {
+  const n = wins + losses;
+  if (n <= 0) return ".000";
+  return (wins / n).toFixed(3).replace(/^0/, "");
+}
+
+function SplitCard({
+  label,
+  wins,
+  losses,
+  labelColor,
+  accent,
+}: {
+  label: string;
+  wins: number;
+  losses: number;
+  labelColor?: string;
+  accent: string;
+}) {
+  return (
+    <div
+      className="flex-1 space-y-1 border bg-black/40 px-3 py-2.5"
+      style={{ borderColor: hexToRgba(accent, 0.3) }}
+    >
+      <p
+        className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em]`}
+        style={{ color: labelColor ?? hexToRgba(accent, 0.75) }}
+      >
+        {label}
+      </p>
+      <div className="flex items-baseline gap-2">
+        <p
+          className={`${nameOxanium.className} text-[18px] font-extrabold tabular-nums`}
+          style={{ transform: "skewX(-8deg)" }}
+        >
+          {wins}-{losses}
+        </p>
+        <p className={`${nameOxanium.className} text-[12px] font-bold text-white/45`}>
+          {winPctLabel(wins, losses)}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function SectionTitle({
@@ -295,7 +342,7 @@ function Injuries({
 }) {
   return (
     <section className="space-y-2.5">
-      <SectionTitle title="Injuries" accent={accent} />
+      <SectionTitle title="INJURIES" accent={accent} />
       <div
         className="overflow-hidden border bg-black/40"
         style={{ borderColor: hexToRgba(accent, 0.35) }}
@@ -359,7 +406,7 @@ function OpponentStats({
 
   return (
     <section className="space-y-2.5">
-      <SectionTitle title="Opponents Stats" accent={accent} />
+      <SectionTitle title="OPPONENTS STATS" accent={accent} />
       <p
         className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.12em] text-white/40`}
         style={{ transform: "skewX(-6deg)" }}
@@ -452,7 +499,7 @@ function PerformanceMetrics({
   if (!ortg && !drtg) return null;
   return (
     <section className="space-y-2.5">
-      <SectionTitle title="Performance Metrics" accent={accent} />
+      <SectionTitle title="PERFORMANCE METRICS" accent={accent} />
       <div
         className="space-y-3.5 border bg-black/40 px-3 py-3"
         style={{ borderColor: hexToRgba(accent, 0.4) }}
@@ -463,7 +510,7 @@ function PerformanceMetrics({
               <span
                 className={`${nameOxanium.className} text-[12px] font-bold uppercase tracking-wide text-white/88`}
               >
-                Offensive Rating
+                OFFENSIVE RATING
               </span>
               <span
                 className={`${nameOxanium.className} text-[13px] font-extrabold tabular-nums`}
@@ -492,7 +539,7 @@ function PerformanceMetrics({
               <span
                 className={`${nameOxanium.className} text-[12px] font-bold uppercase tracking-wide text-white/88`}
               >
-                Defensive Rating
+                DEFENSIVE RATING
               </span>
               <span
                 className={`${nameOxanium.className} text-[13px] font-extrabold tabular-nums`}
@@ -530,7 +577,7 @@ function Upcoming({
   if (games.length === 0) return null;
   return (
     <section className="space-y-2.5">
-      <SectionTitle title="Upcoming" accent={accent} />
+      <SectionTitle title="UPCOMING" accent={accent} />
       <div
         className="overflow-hidden border bg-black/40"
         style={{ borderColor: hexToRgba(accent, 0.3) }}
@@ -577,7 +624,7 @@ function PayrollCard({
   const slices = payrollDisplaySlices(payroll.lines, accent, 5);
   return (
     <section className="space-y-2.5">
-      <SectionTitle title="Payroll" accent={accent} />
+      <SectionTitle title="PAYROLL" accent={accent} />
       <div
         className="space-y-2 border bg-black/45 p-3.5"
         style={{ borderColor: hexToRgba(accent, 0.45) }}
@@ -755,14 +802,17 @@ export default function NbaTeamDetailPanel({
               >
                 {confLine}
               </p>
-              <p className={`${nameOxanium.className} text-[12px] font-bold uppercase tracking-wide text-white/55`}>
-                {detail.cityEn}
-              </p>
               <p
-                className={`${nameOxanium.className} text-[24px] font-extrabold uppercase`}
+                className={`${nameOxanium.className} text-[12px] font-bold uppercase tracking-[0.18em] text-white/55`}
                 style={{ transform: "skewX(-6deg)" }}
               >
-                {detail.nickEn}
+                {detail.cityEn.toUpperCase()}
+              </p>
+              <p
+                className={`${nameBebas.className} text-[26px] uppercase leading-none text-white`}
+                style={teamNickTy}
+              >
+                {detail.nickEn.toUpperCase()}
               </p>
             </div>
             <TeamHeroStreakBadge
@@ -795,7 +845,8 @@ export default function NbaTeamDetailPanel({
               Rank
             </p>
             <p className={`${nameOxanium.className} text-[22px] font-extrabold`} style={{ color: accent, transform: "skewX(-8deg)" }}>
-              #{String(detail.conferenceRank).padStart(2, "0")}
+              #{String(detail.conferenceRank).padStart(2, "0")}{" "}
+              <span className="text-[13px] text-white/55">Seed</span>
             </p>
           </div>
         </div>
@@ -825,7 +876,7 @@ export default function NbaTeamDetailPanel({
       />
 
       <section className="space-y-2.5">
-        <SectionTitle title="Advanced Metrics" accent={accent} />
+        <SectionTitle title="ADVANCED METRICS" accent={accent} />
         <div
           className="grid grid-cols-3 overflow-hidden border bg-black/50"
           style={{ borderColor: hexToRgba(accent, 0.4) }}
@@ -853,7 +904,10 @@ export default function NbaTeamDetailPanel({
                   #{m.leagueRank}
                 </span>
               </div>
-              <p className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}>
+              <p
+                className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}
+                style={{ transform: "skewX(-8deg)" }}
+              >
                 {m.display}
               </p>
             </div>
@@ -907,6 +961,45 @@ export default function NbaTeamDetailPanel({
         style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
 
+      <section className="space-y-2.5">
+        <SectionTitle title="SPLITS" accent={accent} />
+        <div className="flex gap-2">
+          <SplitCard
+            label="HOME"
+            wins={detail.homeAwaySplit.home.wins}
+            losses={detail.homeAwaySplit.home.losses}
+            accent={accent}
+          />
+          <SplitCard
+            label="AWAY"
+            wins={detail.homeAwaySplit.away.wins}
+            losses={detail.homeAwaySplit.away.losses}
+            accent={accent}
+          />
+        </div>
+        <div className="flex gap-2">
+          <SplitCard
+            label="VS EAST"
+            wins={detail.conferenceSplit.vsEast.wins}
+            losses={detail.conferenceSplit.vsEast.losses}
+            labelColor="#EF3B24"
+            accent={accent}
+          />
+          <SplitCard
+            label="VS WEST"
+            wins={detail.conferenceSplit.vsWest.wins}
+            losses={detail.conferenceSplit.vsWest.losses}
+            labelColor="#007AC1"
+            accent={accent}
+          />
+        </div>
+      </section>
+
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+      />
+
       <PayrollCard payroll={detail.payroll} accent={accent} isJa={isJa} />
 
       <div
@@ -915,7 +1008,7 @@ export default function NbaTeamDetailPanel({
       />
 
       <section className="space-y-2.5">
-        <SectionTitle title="Roster" accent={accent} />
+        <SectionTitle title="ROSTER" accent={accent} />
         <div
           className="border bg-black/40 p-2"
           style={{ borderColor: frame }}
@@ -935,7 +1028,7 @@ export default function NbaTeamDetailPanel({
         className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em]`}
         style={{ color: hexToRgba(accent, 0.4) }}
       >
-        {detail.asOfLabel} · Preview
+        {detail.asOfLabel} · PREVIEW
       </p>
     </div>
   );

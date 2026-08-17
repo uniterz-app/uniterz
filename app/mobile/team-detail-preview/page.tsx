@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import MobilePageShell from "@/app/component/common/MobilePageShell";
 import NbaTeamDetailPanel from "@/app/component/teamDetail/NbaTeamDetailPanel";
 
 function Inner() {
@@ -12,11 +13,18 @@ function Inner() {
 
 /** Team Detail 叩き台（モック） */
 export default function MobileTeamDetailPreviewPage() {
+  const router = useRouter();
+
   return (
-    <main className="min-h-dvh bg-app px-4 pb-bottom-nav pt-4 text-white">
-      <Suspense fallback={null}>
+    <Suspense fallback={null}>
+      <MobilePageShell
+        title="Team Detail"
+        eyebrow="PREVIEW"
+        subtitle="再構築プレビュー · 指標リーグ順位つき"
+        onClose={() => router.back()}
+      >
         <Inner />
-      </Suspense>
-    </main>
+      </MobilePageShell>
+    </Suspense>
   );
 }

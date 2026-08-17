@@ -1,8 +1,8 @@
-// app/component/profile/ui/RankingsReturnNavLink.tsx
 "use client";
 
 import { ArrowLeft } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import {
   PROFILE_FROM_PARAM,
   PROFILE_FROM_COMMUNITY_ID_PARAM,
@@ -58,17 +58,30 @@ export default function RankingsReturnNavLink({ language }: Props) {
       ? m.profile.backToGroupRankings
       : m.profile.backToRankings;
 
+  const goBack = () => {
+    if (isReportReturn) {
+      router.back();
+      return;
+    }
+    router.push(href);
+  };
+
+  if (prefix === "/mobile" || pathname.startsWith("/m/")) {
+    return (
+      <ProfileMenuEdgeHandle
+        onOpen={goBack}
+        label="BACK"
+        tone="back"
+        ariaLabel={label}
+      />
+    );
+  }
+
   return (
     <button
       type="button"
       aria-label={label}
-      onClick={() => {
-        if (isReportReturn) {
-          router.back();
-          return;
-        }
-        router.push(href);
-      }}
+      onClick={goBack}
       className={[
         "mb-4 inline-flex items-center gap-2 rounded-lg border border-cyan-200/20",
         "bg-white/5 px-3 py-2 text-sm font-medium text-cyan-50/95",
