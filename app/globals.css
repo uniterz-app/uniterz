@@ -5127,10 +5127,12 @@ body::before {
   position: relative;
   width: 100%;
   max-width: 100%;
-  /* overflow-x が visible 以外だと overflow-y:visible は auto 扱いになり縦が切れる */
+  /* overflow-x:auto 時に overflow-y:auto だと縦パンがここに吸われページがスクロールしない */
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
   scrollbar-width: none;
   scroll-snap-type: x proximity;
   padding-bottom: 6px;
@@ -5267,8 +5269,15 @@ body::before {
   overflow: visible;
   background: transparent;
   flex-shrink: 0;
+  touch-action: pan-y;
   /* ステージ高さの余りはメトリクス側へ（バッジ帯を伸ばさない） */
   margin-top: auto;
+}
+
+.profile-plan-pro-metrics-grid,
+.profile-metric-card--steel,
+.profile-metric-card--gold {
+  touch-action: pan-y;
 }
 
 .profile-plan-pro--mobile-stage .profile-plan-pro-metric-card {
@@ -8025,19 +8034,19 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   position: fixed !important;
   right: 0 !important;
   left: auto !important;
-  top: 50% !important;
+  top: 46% !important;
   transform: translateY(-50%) !important;
   z-index: 35 !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 3px;
-  width: 20px !important;
-  min-width: 20px !important;
+  gap: 2px;
+  width: 19px !important;
+  min-width: 19px !important;
   height: auto !important;
-  min-height: 78px;
-  padding: 10px 0 !important;
+  min-height: 0;
+  padding: 7px 0 !important;
   margin: 0 !important;
   border: 1px solid rgba(250, 204, 21, 0.55) !important;
   border-right: none !important;
@@ -8089,10 +8098,13 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 
 .profile-menu-edge-handle__chev {
   display: block;
-  font-size: 11px;
-  font-weight: 700;
   line-height: 1;
   margin-bottom: 1px;
+  color: inherit;
+}
+
+.profile-menu-edge-handle--back .profile-menu-edge-handle__chev {
+  color: rgba(248, 250, 252, 0.92);
 }
 
 .profile-menu-edge-handle--overlay {
@@ -8101,12 +8113,17 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 
 .profile-menu-edge-handle__ch {
   display: block;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-family: "Oxanium", ui-sans-serif, system-ui, sans-serif;
+  font-size: 7px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 8px;
   letter-spacing: 0;
   color: #facc15;
+}
+
+.profile-menu-edge-handle--back .profile-menu-edge-handle__ch {
+  font-size: 7px;
+  line-height: 8px;
 }
 
 .profile-menu-edge-handle__badge {

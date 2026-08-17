@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Fragment } from "react";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { fetchTeamsByLeagueShared } from "@/lib/games/fetchTeamsByLeagueShared";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -240,7 +240,7 @@ function TeamRow({
   compact: boolean;
   layoutMobile: boolean;
 }) {
-  const teamNameTy = bracketMarketTeamTypography(layoutMobile);
+  const teamNameTy = matchCardTeamNameStyle(layoutMobile);
   const [rate, setRate] = useState(0);
 
   const { wins: teamWins, losses: teamLosses } = nbaRegularSeasonWinsLosses(team);

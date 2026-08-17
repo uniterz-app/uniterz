@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { acquireAppBrandShelfHidden } from "@/lib/ui/appBrandShelfVisibility";
 import { createPortal } from "react-dom";
 import { ChevronLeft, X } from "lucide-react";
@@ -9,6 +10,7 @@ import cn from "clsx";
 import { nameOxanium, jp } from "@/lib/fonts";
 import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import { GAMES_CYBER_EASE } from "@/app/component/games/cyberMotion";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 
 /** サイバー風のはてな（グロー付き ? のみ） */
 function CyberHelpMark({ active }: { active: boolean }) {
@@ -206,6 +208,10 @@ export type CyberSubpageHeaderProps = {
   onBack: () => void;
   /** 戻るボタンの aria-label */
   backAriaLabel?: string;
+  /** Native 同様 — 左ヘッダー戻るを隠し右端 BACK タブを出す */
+  edgeBack?: boolean;
+  /** 左戻るボタンを非表示（edgeBack と併用） */
+  hideBack?: boolean;
   className?: string;
   /**
    * グローバル UNITERZ 棚を隠す（既定 true）。
@@ -225,6 +231,8 @@ export function CyberSubpageHeader({
   headerTrailing,
   onBack,
   backAriaLabel = "戻る",
+  edgeBack,
+  hideBack = false,
   className,
   hideBrandShelf = true,
 }: CyberSubpageHeaderProps) {
@@ -237,6 +245,7 @@ export function CyberSubpageHeader({
   }, [hideBrandShelf]);
   const titleVariant = titleHasCjk(title) ? "jp-chrome" : "horizon-chrome";
   const hasRightCluster = Boolean(subtitle || headerTrailing);
+  const showLeftBack = !hideBack && !edgeBack;
 
   return (
     <motion.div
@@ -250,6 +259,7 @@ export function CyberSubpageHeader({
       transition={{ duration: 0.3, ease: GAMES_CYBER_EASE }}
     >
       <div className="relative flex items-center gap-3 px-3 py-2.5">
+        {showLeftBack ? (
         <motion.button
           type="button"
           onClick={onBack}
@@ -265,6 +275,9 @@ export function CyberSubpageHeader({
         >
           <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
         </motion.button>
+        ) : (
+          <div className="h-10 w-10 shrink-0" aria-hidden />
+        )}
         <motion.div
           className={cn(
             "pointer-events-none absolute inset-0 flex flex-col items-center justify-center",
@@ -345,8 +358,15 @@ export default function CyberSubpageShell({
   contentClassName,
   bare = false,
   backdrop,
+  edgeBack: edgeBackProp,
+  hideBack: hideBackProp,
   ...headerProps
 }: ShellProps) {
+  const pathname = usePathname() ?? "";
+  const isMobileRoute =
+    pathname.startsWith("/mobile") || pathname.startsWith("/m/");
+  const edgeBack = edgeBackProp ?? isMobileRoute;
+  const hideBack = hideBackProp ?? edgeBack;
   const reduceMotion = useReducedMotion() === true;
 
   return (
@@ -385,12 +405,23 @@ export default function CyberSubpageShell({
 
       <CyberSubpageHeader
         {...headerProps}
+        edgeBack={edgeBack}
+        hideBack={hideBack}
         className={
           bare
             ? "bg-black"
             : undefined
         }
       />
+
+      {edgeBack ? (
+        <ProfileMenuEdgeHandle
+          onOpen={headerProps.onBack}
+          label="BACK"
+          tone="back"
+          ariaLabel={headerProps.backAriaLabel ?? "戻る"}
+        />
+      ) : null}
 
       <motion.div
         className={cn(

@@ -84,6 +84,7 @@ function TeamCell({
           nameOxanium.className,
           "min-w-0 flex-1 truncate text-[12px] font-extrabold uppercase tracking-[0.02em] text-white",
         ].join(" ")}
+        style={{ transform: "skewX(-6deg)" }}
       >
         {getNbaTeamNicknameById(teamId)}
       </p>

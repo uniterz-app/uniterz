@@ -419,7 +419,7 @@ export default function StreakTrackerCard({
                   ))}
                 </m.div>
 
-                <div className="relative min-h-0 min-w-0 flex-1 overflow-x-auto">
+                <div className="relative min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain [-webkit-overflow-scrolling:touch]">
                   <div
                     className="flex min-w-0 flex-col"
                     style={{

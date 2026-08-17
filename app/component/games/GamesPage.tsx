@@ -40,6 +40,7 @@ import type { League } from "@/lib/leagues";
 import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
 import { preferredLeagueToGamesLeague } from "@/lib/user/preferredLeague";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { nbaOpeningNightDefaultDateKey } from "@/lib/games/nbaOpeningNightPreviewGames";
 import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -187,6 +188,18 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const m = t(language);
   const skipConfirm = tutorialSkipConfirmProps(m.tutorial);
   const dayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+  const isMobileRoute = Boolean(
+    pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
+  );
+  const openingNightDefaultDay = useMemo(() => {
+    if (!isMobileRoute) return null;
+    return (
+      parseDateKeyInTimeZone(
+        nbaOpeningNightDefaultDateKey(dayTimeZone),
+        dayTimeZone
+      ) ?? null
+    );
+  }, [isMobileRoute, dayTimeZone]);
 
   /* =========================
      League
@@ -333,13 +346,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [dayTimeZone]
   );
 
-  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → URL date → 今日 */
+  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → URL date → Opening Night（mobile）→ 今日 */
   const anchorForGameDays = useMemo(() => {
     const stored = selectedByLeague[league];
     if (stored) return stored;
     if (initialDateParamDay) return initialDateParamDay;
+    if (openingNightDefaultDay && league === "nba") {
+      return openingNightDefaultDay;
+    }
     return parseDateKeyInTimeZone(todayKey, dayTimeZone) ?? new Date();
-  }, [dayTimeZone, league, selectedByLeague, todayKey, initialDateParamDay]);
+  }, [
+    dayTimeZone,
+    league,
+    selectedByLeague,
+    todayKey,
+    initialDateParamDay,
+    openingNightDefaultDay,
+  ]);
 
   /* =========================
      Game days（アンカー日の暦日±5日を取得しストリップ用。端で+2延長）
@@ -528,16 +551,19 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ========================= */
   const selected = useMemo(() => {
     const stored = selectedByLeague[league] ?? null;
+    const seededDay =
+      openingNightDefaultDay && league === "nba" ? openingNightDefaultDay : null;
     if (!gameDaysForStrip.length) {
       /** 近傍に試合が無くても月ヘッダ・空状態を出す（selected 欠落でスケルトン固定しない） */
       return (
         stored ??
         initialDateParamDay ??
+        seededDay ??
         parseDateKeyInTimeZone(todayKey, dayTimeZone) ??
         new Date()
       );
     }
-    const stateSelected = stored ?? initialDateParamDay;
+    const stateSelected = stored ?? initialDateParamDay ?? seededDay;
     return findInitialGameDay({
       gameDays: gameDaysForStrip,
       stateSelected,
@@ -555,6 +581,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     dayTimeZone,
     initialDateParamDay,
     allFinalDayKeys,
+    openingNightDefaultDay,
   ]);
 
   /* =========================
@@ -904,9 +931,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Paths（pagePad より先に必要）
   ========================= */
-  const isMobile = Boolean(
-    pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
-  );
+  const isMobile = isMobileRoute;
   /** 試合一覧・ヘッダの入場（`prefers-reduced-motion` か、保険タイマー満了でオフ） */
   const webGamesMotion = !reduceMotion && !entryAnimationsExpired;
 
