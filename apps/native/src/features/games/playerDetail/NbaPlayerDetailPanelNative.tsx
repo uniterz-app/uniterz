@@ -365,17 +365,12 @@ function ShotZoneHeatmap({
   return (
     <View style={styles.heatWrap}>
       <View style={styles.advTitleRow}>
-        <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.8) }]}>
+        <Text style={styles.advTitle}>
           SHOT CHART
         </Text>
-        <View
-          style={[
-            styles.advTitleLine,
-            { backgroundColor: hexToRgba(accent, 0.35) },
-          ]}
-        />
+        <View style={styles.advTitleLine} />
       </View>
-      <Text style={[styles.heatSeason, { color: hexToRgba(accent, 0.65) }]}>
+      <Text style={styles.heatSeason}>
         2024-25 SEASON
       </Text>
       <View
@@ -578,11 +573,11 @@ function PlayerVenueSplitsSectionNative({
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
-        <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.75) }]}>
+        <Text style={styles.advTitle}>
           {isJa ? "ホーム / アウェイ" : "HOME / AWAY"}
         </Text>
         <View
-          style={[styles.advTitleLine, { backgroundColor: hexToRgba(accent, 0.35) }]}
+          style={styles.advTitleLine}
         />
       </View>
       <View style={[styles.splitTable, { borderColor: frame }]}>
@@ -626,11 +621,11 @@ function PlayerVsOpponentSectionNative({
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
-        <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.75) }]}>
+        <Text style={styles.advTitle}>
           {isJa ? "対戦相手別（平均）" : "VS OPPONENT (AVG)"}
         </Text>
         <View
-          style={[styles.advTitleLine, { backgroundColor: hexToRgba(accent, 0.35) }]}
+          style={styles.advTitleLine}
         />
       </View>
       <Text style={styles.splitHint}>
@@ -680,15 +675,10 @@ function SeasonMetricsGrid({
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
-        <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.75) }]}>
+        <Text style={styles.advTitle}>
           SEASON AVERAGES
         </Text>
-        <View
-          style={[
-            styles.advTitleLine,
-            { backgroundColor: hexToRgba(accent, 0.35) },
-          ]}
-        />
+        <View style={styles.advTitleLine} />
       </View>
       <View
         style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}
@@ -749,15 +739,10 @@ function AdvancedMetricsRow({
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
-        <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.75) }]}>
+        <Text style={styles.advTitle}>
           ADVANCED
         </Text>
-        <View
-          style={[
-            styles.advTitleLine,
-            { backgroundColor: hexToRgba(accent, 0.35) },
-          ]}
-        />
+        <View style={styles.advTitleLine} />
       </View>
       <View
         style={[styles.advancedRow, { borderColor: hexToRgba(accent, 0.4) }]}
@@ -879,7 +864,7 @@ function SeasonHistorySection({
   return (
     <View style={styles.careerWrap}>
       <View style={styles.careerHeadRow}>
-        <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.75) }]}>
+        <Text style={styles.advTitle}>
           SEASON AVERAGES · CAREER
         </Text>
         <View style={[styles.careerTabs, { borderColor: frame }]}>
@@ -1291,8 +1276,6 @@ export default function NbaPlayerDetailPanelNative({
   const currentSalary = detail.contract?.seasons[0] ?? null;
   const accent = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const dividerColor = hexToRgba(accent, 0.22);
-  const titleColor = hexToRgba(accent, 0.75);
-  const titleLine = hexToRgba(accent, 0.35);
   const frameColor = hexToRgba(accent, 0.35);
 
   return (
@@ -1362,12 +1345,10 @@ export default function NbaPlayerDetailPanelNative({
           <>
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
             <View style={styles.advTitleRow}>
-              <Text style={[styles.advTitle, { color: titleColor }]}>
+              <Text style={styles.advTitle}>
                 CONTRACT
               </Text>
-              <View
-                style={[styles.advTitleLine, { backgroundColor: titleLine }]}
-              />
+              <View style={styles.advTitleLine} />
             </View>
             <View
               style={[styles.contractCard, { borderColor: frameColor }]}
@@ -1392,13 +1373,13 @@ export default function NbaPlayerDetailPanelNative({
                 <Text style={styles.contractMeta}>
                   {detail.contract.contractType}
                 </Text>
-                <Text style={[styles.contractMetaDot, { color: titleLine }]}>
+                <Text style={styles.contractMetaDot}>
                   ·
                 </Text>
                 <Text style={styles.contractMeta}>
                   {isJa ? "残" : "REM"} {detail.contract.yearsRemaining} YR
                 </Text>
-                <Text style={[styles.contractMetaDot, { color: titleLine }]}>
+                <Text style={styles.contractMetaDot}>
                   ·
                 </Text>
                 <Text style={styles.contractMeta}>
@@ -1463,10 +1444,8 @@ export default function NbaPlayerDetailPanelNative({
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <View style={styles.advTitleRow}>
-          <Text style={[styles.advTitle, { color: titleColor }]}>AWARDS</Text>
-          <View
-            style={[styles.advTitleLine, { backgroundColor: titleLine }]}
-          />
+          <Text style={styles.advTitle}>AWARDS</Text>
+          <View style={styles.advTitleLine} />
         </View>
         <View style={[styles.infoCard, { borderColor: frameColor }]}>
           {detail.awards.length > 0 ? (
@@ -1487,10 +1466,8 @@ export default function NbaPlayerDetailPanelNative({
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <View style={styles.advTitleRow}>
-          <Text style={[styles.advTitle, { color: titleColor }]}>MORE</Text>
-          <View
-            style={[styles.advTitleLine, { backgroundColor: titleLine }]}
-          />
+          <Text style={styles.advTitle}>MORE</Text>
+          <View style={styles.advTitleLine} />
         </View>
         <View style={[styles.infoCard, { borderColor: frameColor }]}>
           <InfoRow
@@ -1521,7 +1498,7 @@ export default function NbaPlayerDetailPanelNative({
         </View>
 
         <Text
-          style={[styles.footerAsOf, { color: hexToRgba(accent, 0.4) }]}
+          style={styles.footerAsOf}
         >
           {detail.asOfLabel} · PREVIEW
         </Text>
@@ -1654,7 +1631,7 @@ const styles = StyleSheet.create({
   },
   sectionTitleInline: {
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.38)",
+    color: "#FFFFFF",
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.6,
@@ -1762,10 +1739,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.6,
     textTransform: "uppercase",
+    color: "#FFFFFF",
   },
   advTitleLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255,255,255,0.35)",
   },
   splitHint: {
     fontFamily: METRIC_FONT,
@@ -1945,7 +1924,7 @@ const styles = StyleSheet.create({
   },
   heatSeason: {
     fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.4)",
+    color: "rgba(255,255,255,0.65)",
     fontSize: 9,
     letterSpacing: 1.2,
     fontWeight: "700",
@@ -2189,6 +2168,7 @@ const styles = StyleSheet.create({
   },
   contractMetaDot: {
     fontSize: 11,
+    color: "rgba(255,255,255,0.62)",
   },
   contractTotal: {
     fontFamily: METRIC_FONT,
@@ -2312,6 +2292,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.4,
     textTransform: "uppercase",
+    color: "rgba(255,255,255,0.4)",
     textAlign: "center",
   },
 });
