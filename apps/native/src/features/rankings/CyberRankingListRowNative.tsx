@@ -210,6 +210,7 @@ export function CyberRankingListRowNative({
   bare = false,
   rankDisplayValue,
   rankMuted = false,
+  nameExtra = null,
 }: {
   rank: number;
   displayName: string;
@@ -248,6 +249,8 @@ export function CyberRankingListRowNative({
   bare?: boolean;
   rankDisplayValue?: string;
   rankMuted?: boolean;
+  /** Web `nameExtra` — 指定時は isPro バッジの代わりにこれを出す */
+  nameExtra?: ReactNode;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = !bare && palette.firstPlaceFrame;
@@ -359,9 +362,11 @@ export function CyberRankingListRowNative({
             >
               {displayName}
             </Text>
-            {isPro ? (
-              <ProCyberBadgeNative compact={!bare} emphasized={bare} />
-            ) : null}
+            {nameExtra != null
+              ? nameExtra
+              : isPro ? (
+                  <ProCyberBadgeNative compact={!bare} emphasized={bare} />
+                ) : null}
           </View>
           {hideListMeta ? (
             countryCode ? (

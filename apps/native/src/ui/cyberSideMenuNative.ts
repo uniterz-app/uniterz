@@ -6,15 +6,15 @@ export const CYBER_TAB_CYAN = "#00F5FF";
 export const CYBER_SIDE_MENU_PANEL = {
   borderColor: "rgba(0, 245, 255, 0.28)",
   /** サイバー HUD（縦方向のベース） */
-  backgroundGradient: ["#041018", "#030b12", "#02070e"] as const,
+  backgroundGradient: ["#000000", "#000000", "#000000"] as const,
   /**
    * 左→右のフェード（ドロワー背景用）
    * 透明化は途中で下げ止めて「面」を保つ（Web `--edge` と同期）
    */
   backgroundFadeHorizontal: [
-    "rgba(4, 16, 24, 0.97)",
-    "rgba(3, 12, 19, 0.92)",
-    "rgba(2, 8, 15, 0.84)",
+    "rgba(0, 0, 0, 0.98)",
+    "rgba(0, 0, 0, 0.96)",
+    "rgba(0, 0, 0, 0.92)",
   ] as const,
   backgroundFadeHorizontalLocations: [0, 0.48, 1] as const,
   shadowColor: "#00F5FF",
@@ -31,12 +31,12 @@ export const CYBER_SIDE_MENU_PANEL = {
 
 export const CYBER_SIDE_MENU_ITEM = {
   /** 非選択はトーンを落とし、コントラストを選択行に集める */
-  bg: "rgba(4, 20, 30, 0.72)",
-  border: "rgba(0, 245, 255, 0.1)",
-  borderHover: "rgba(0, 245, 255, 0.4)",
-  borderActive: "rgba(0, 245, 255, 0.75)",
+  bg: "#000000",
+  border: "rgba(255, 255, 255, 0.22)",
+  borderHover: "rgba(255, 255, 255, 0.45)",
+  borderActive: "rgba(255, 255, 255, 0.75)",
   bgActive: "rgba(0, 56, 72, 0.94)",
-  iconDefault: "rgba(0, 245, 255, 0.85)",
+  iconDefault: "rgba(255, 255, 255, 0.92)",
   dangerBorder: "rgba(251, 113, 133, 0.22)",
   dangerBorderActive: "rgba(251, 113, 133, 0.55)",
   dangerBgActive: "rgba(251, 113, 133, 0.1)",

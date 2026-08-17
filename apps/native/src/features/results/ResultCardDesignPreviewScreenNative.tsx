@@ -166,11 +166,13 @@ function hexWithAlpha(hex: string, alphaHex: string): string {
 }
 
 /** 右辺 DETAIL タブ（背表紙タブ型・ニュートラル枠） */
-const DETAIL_SPINE = {
+export const RESULT_CARD_DETAIL_SPINE = {
   width: 18,
   height: 80,
   top: 80,
 } as const;
+
+const DETAIL_SPINE = RESULT_CARD_DETAIL_SPINE;
 
 /** プレビュー用・直角長方形シェル（角切りなし）+ 任意で右辺 DETAIL */
 function RectShell({
@@ -182,6 +184,7 @@ function RectShell({
   animateDraw = false,
   drawDelayMs = 0,
   motion,
+  detailSpineStyle,
   children,
 }: {
   badge: OutcomeBadge;
@@ -194,6 +197,8 @@ function RectShell({
   animateDraw?: boolean;
   drawDelayMs?: number;
   motion?: ResultFaceMatchEntranceStyles;
+  /** 親 Pressable の押下と連動させる DETAIL タブ見た目 */
+  detailSpineStyle?: object;
   children: ReactNode;
 }) {
   const paint = RESULT_LINE_FRAME_PAINT[badge];
@@ -224,6 +229,7 @@ function RectShell({
                 borderColor: paint.color,
               },
               motion?.headerGroupStyle,
+              detailSpineStyle,
             ]}
           >
             <View style={styles.detailSpineTextCol}>
@@ -250,6 +256,7 @@ function RectShell({
       onPress={onOpenDetail}
       style={({ pressed }) => [
         styles.rectShellWrap,
+        detailTab ? styles.rectShellWrapWithDetail : null,
         pressed ? styles.cardPressed : null,
       ]}
     >
@@ -635,6 +642,7 @@ function Plan1Card({
   animateDraw = false,
   drawDelayMs = 0,
   motion,
+  detailSpineStyle,
 }: {
   sample: Sample;
   badge: OutcomeBadge;
@@ -650,6 +658,7 @@ function Plan1Card({
   animateDraw?: boolean;
   drawDelayMs?: number;
   motion?: ResultFaceMatchEntranceStyles;
+  detailSpineStyle?: object;
 }) {
   const body = (
     <View style={styles.pad}>
@@ -699,6 +708,7 @@ function Plan1Card({
       animateDraw={animateDraw}
       drawDelayMs={drawDelayMs}
       motion={motion}
+      detailSpineStyle={detailSpineStyle}
     >
       {body}
     </RectShell>
@@ -722,6 +732,7 @@ export function ResultCardDesignFaceNative({
   animateDraw = false,
   drawDelayMs = 0,
   motion,
+  detailSpineStyle,
 }: {
   language: "ja" | "en";
   badge?: OutcomeBadge;
@@ -760,6 +771,7 @@ export function ResultCardDesignFaceNative({
   animateDraw?: boolean;
   drawDelayMs?: number;
   motion?: ResultFaceMatchEntranceStyles;
+  detailSpineStyle?: object;
 }) {
   const resolved: Sample = face
     ? (() => {
@@ -826,6 +838,7 @@ export function ResultCardDesignFaceNative({
       animateDraw={animateDraw}
       drawDelayMs={drawDelayMs}
       motion={motion}
+      detailSpineStyle={detailSpineStyle}
     />
   );
 }
@@ -1069,6 +1082,10 @@ const styles = StyleSheet.create({
   rectShellWrap: {
     width: "100%",
     overflow: "visible",
+  },
+  /** DETAIL タブのはみ出し分をヒット領域に含める */
+  rectShellWrapWithDetail: {
+    paddingRight: DETAIL_SPINE.width - 1,
   },
   cardPressed: {
     opacity: 0.96,

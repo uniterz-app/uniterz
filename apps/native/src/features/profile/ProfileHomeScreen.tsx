@@ -1548,6 +1548,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("UniterzLogoTypePreview");
         else if (page === "uniterzProBadgePreview" && __DEV__)
           navigation.navigate("UniterzProBadgePreview");
+        else if (page === "proBadgeComparePreview" && __DEV__)
+          navigation.navigate("ProBadgeComparePreview");
         else if (page === "resultCardDesignPreview" && __DEV__)
           navigation.navigate("ResultCardDesignPreview");
         else if (page === "resultBadgeDesignPreview" && __DEV__)

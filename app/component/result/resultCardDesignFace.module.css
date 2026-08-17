@@ -16,7 +16,8 @@
   height: 80px;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
+  /* はみ出し領域でもクリックを受け取り、親の onOpen へバブルさせる */
+  pointer-events: auto;
   background: #070b12;
   border-style: solid;
   border-left-width: 0;

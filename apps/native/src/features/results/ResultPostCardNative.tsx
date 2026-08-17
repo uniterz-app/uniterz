@@ -11,7 +11,12 @@ import {
   type ViewStyle,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  withTiming,
+} from "react-native-reanimated";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
@@ -87,6 +92,7 @@ import { shareResultCardNative } from "./shareResultCardNative";
 import { buildResultCardFaceModel } from "../../../../../lib/result/buildResultCardFace";
 import {
   ResultCardDesignFaceNative,
+  RESULT_CARD_DETAIL_SPINE,
 } from "./ResultCardDesignPreviewScreenNative";
 import { useResultFaceMatchEntrance } from "./useResultFaceMatchEntrance";
 
@@ -534,6 +540,9 @@ export default function ResultPostCardNative({
     enabled: !reduceMotionList && entranceEnabled && !pauseListFx,
     drawDelayMs: listEnterIndex * RESULT_CARD_STAGGER_MS,
   });
+  const detailSpinePressStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(entrance.pressed.value, [0, 1], [1, 0.85]),
+  }));
 
   const frameStyle =
     badge === "upset"
@@ -622,6 +631,7 @@ export default function ResultPostCardNative({
           accessibilityRole="button"
           accessibilityLabel={isEn ? "Open result detail" : "リザルト詳細を開く"}
           style={styles.resultCardPressable}
+          hitSlop={{ right: RESULT_CARD_DETAIL_SPINE.width - 1 }}
           onPressIn={() => {
             entrance.pressed.value = reduceMotionList
               ? 1
@@ -652,6 +662,7 @@ export default function ResultPostCardNative({
                 animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
                 drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
                 motion={faceMotion}
+                detailSpineStyle={detailSpinePressStyle}
               />
             </View>
             <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />

@@ -510,6 +510,15 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="ProBadgeComparePreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ProBadgeComparePreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="ResultCardDesignPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

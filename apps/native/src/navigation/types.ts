@@ -152,6 +152,8 @@ export type ProfileStackParamList = {
   UniterzLogoTypePreview: undefined;
   /** __DEV__ 課金 PRO タグ案 */
   UniterzProBadgePreview: undefined;
+  /** __DEV__ 現行 vs 旧 Pro バッジ比較 */
+  ProBadgeComparePreview: undefined;
   /** __DEV__ リザルトカード見た目案 */
   ResultCardDesignPreview: undefined;
   /** __DEV__ リザルト右上バッジ見た目案 */
