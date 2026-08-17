@@ -4,7 +4,9 @@ export type NbaPredictToolsTabId =
   | "stats"
   | "roster";
 
-export function isSafeFirestoreDocId(id: string | null): id is string {
+export function isSafeFirestoreDocId(
+  id: string | null | undefined
+): id is string {
   return id != null && /^[a-zA-Z0-9_-]{1,128}$/.test(id);
 }
 
