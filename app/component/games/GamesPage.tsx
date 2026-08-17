@@ -1103,13 +1103,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         awardsLabel={m.games.awardsPredict}
         standingsLabel={m.games.standingsPredict}
         onAwards={() => router.push("/mobile/season-awards")}
-        onStandings={() =>
-          router.push(
-            isMobile
-              ? "/mobile/season-standings-preview"
-              : "/dev/season-standings-preview"
-          )
-        }
+        onStandings={() => router.push("/mobile/season-standings")}
       />
     </motion.div>
   );
