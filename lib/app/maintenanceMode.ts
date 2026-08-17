@@ -18,6 +18,7 @@ export const APP_NBA_SEASON_RESTART_OVERLAY = false;
 /**
  * true のとき Web のアプリ本体（/web と /mobile の games など）だけメンテを出す。
  * Native は対象外。LP・ログイン・登録・電子公告は出る。
+ * 本番反映: 2026-08-18
  */
 export const APP_WEB_APP_MAINTENANCE = true;
 
