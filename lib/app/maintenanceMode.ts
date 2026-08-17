@@ -16,8 +16,8 @@ export const APP_MAINTENANCE_MODE = false;
 export const APP_NBA_SEASON_RESTART_OVERLAY = false;
 
 /**
- * true のとき Web のアプリ本体（games など）だけ来季メンテを出す。
- * LP・ログイン・登録・電子公告は出る。
+ * true のとき Web のアプリ本体（/web と /mobile の games など）だけメンテを出す。
+ * Native は対象外。LP・ログイン・登録・電子公告は出る。
  */
 export const APP_WEB_APP_MAINTENANCE = true;
 
@@ -30,16 +30,18 @@ export function isMaintenanceExemptPath(
   return false;
 }
 
-/** Web ログイン後のアプリだけ止めるパス */
+/** Web ログイン後のアプリだけ止めるパス（/web・/mobile） */
 export function isWebAppMaintenancePath(
   pathname: string | null | undefined
 ): boolean {
   const path = normalizeRoutePath(pathname);
-  if (!path.startsWith("/web")) return false;
-  if (path === "/web") return false;
+  const isWeb = path.startsWith("/web");
+  const isMobile = path.startsWith("/mobile");
+  if (!isWeb && !isMobile) return false;
+  if (path === "/web" || path === "/mobile") return false;
   if (isMaintenanceExemptPath(path)) return false;
   if (isAuthEntryRoute(path)) return false;
-  if (path.startsWith("/web/r/")) return false;
+  if (path.startsWith("/web/r/") || path.startsWith("/mobile/r/")) return false;
   if (isGuestPreviewPath(path)) return false;
   return true;
 }
