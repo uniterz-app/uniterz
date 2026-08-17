@@ -1,16 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-
-/** NavBar (999999) / Toast / チュートリアルより前面。操作不能にする */
-const MAINTENANCE_Z = 2147483646;
+import { useEffect } from "react";
 
 export default function WebAppSeasonMaintenanceOverlay() {
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
     const { overflow, touchAction } = document.body.style;
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "none";
@@ -20,14 +13,12 @@ export default function WebAppSeasonMaintenanceOverlay() {
     };
   }, []);
 
-  if (!mounted) return null;
-
-  return createPortal(
+  return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: MAINTENANCE_Z,
+        zIndex: 2147483646,
         background: "#050508",
         display: "flex",
         alignItems: "center",
@@ -40,9 +31,7 @@ export default function WebAppSeasonMaintenanceOverlay() {
         overscrollBehavior: "none",
       }}
       onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-      }}
+      onPointerDown={(e) => e.stopPropagation()}
       role="dialog"
       aria-modal
       aria-labelledby="web-season-maintenance-title"
@@ -73,7 +62,6 @@ export default function WebAppSeasonMaintenanceOverlay() {
           公式サイトへ
         </a>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
