@@ -14,10 +14,14 @@ import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import EventGate from "@/app/component/common/EventGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 import NbaSeasonRestartMaintenanceOverlay from "@/app/component/common/NbaSeasonRestartMaintenanceOverlay";
+import WebAppSeasonMaintenanceOverlay from "@/app/component/common/WebAppSeasonMaintenanceOverlay";
+import WebAppMaintenanceGate from "@/app/component/common/WebAppMaintenanceGate";
 import {
   APP_MAINTENANCE_MODE,
   APP_NBA_SEASON_RESTART_OVERLAY,
+  APP_WEB_APP_MAINTENANCE,
   isMaintenanceExemptPath,
+  shouldReplaceWebAppWithMaintenance,
 } from "@/lib/app/maintenanceMode";
 import { headers } from "next/headers";
 import AppChrome from "@/app/component/AppChrome";
@@ -51,6 +55,7 @@ export default async function RootLayout({
   const exempt = isMaintenanceExemptPath(pathname);
   const maintenance = APP_MAINTENANCE_MODE && !exempt;
   const seasonRestartOverlay = APP_NBA_SEASON_RESTART_OVERLAY && !exempt;
+  const webAppClosed = shouldReplaceWebAppWithMaintenance(pathname);
 
   return (
     <html lang="ja">
@@ -67,11 +72,13 @@ export default async function RootLayout({
           <MaintenanceOverlay />
         ) : seasonRestartOverlay ? (
           <NbaSeasonRestartMaintenanceOverlay />
+        ) : webAppClosed ? (
+          <WebAppSeasonMaintenanceOverlay />
         ) : (
           <>
             <SplashGlbPreload />
             <AppPageBackground />
-            <EventGate />
+            {APP_WEB_APP_MAINTENANCE ? null : <EventGate />}
 
             <AppContentShell>
               <AppProviders>
@@ -79,6 +86,7 @@ export default async function RootLayout({
                   <AppChrome />
                   {children}
                 </WebOrMobileSplash>
+                <WebAppMaintenanceGate />
               </AppProviders>
             </AppContentShell>
 
