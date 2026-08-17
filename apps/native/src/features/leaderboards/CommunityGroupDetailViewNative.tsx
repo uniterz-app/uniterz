@@ -11,7 +11,7 @@ import {
   communityMetricToMobile,
   communityRowToRankingCardRow,
 } from "../../../../../lib/communities/leaderboardDisplayRow";
-import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
+import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import {
   RankingsCyberPanelNative,
@@ -250,7 +250,10 @@ export default function CommunityGroupDetailViewNative({
 
   const openProfile = useCallback(
     (row: (typeof rankingCardRows)[number]) => {
-      const handle = profilePathKeyFromRow(row);
+      const handle = warmPublicProfileFromRankingRowNative(row, {
+        // グループ行は期間集計のためカード全体スタッツには載せない
+        skipStatsPrime: true,
+      });
       if (handle && onOpenProfile) onOpenProfile(handle);
     },
     [onOpenProfile]
@@ -366,7 +369,7 @@ export default function CommunityGroupDetailViewNative({
 
   return (
     <View style={styles.root}>
-      <RankingsShellGridOverlay borderRadius={16} />
+      <RankingsShellGridOverlay borderRadius={0} />
       {scrollEnabled ? (
         <ScrollView contentContainerStyle={scrollStyle} showsVerticalScrollIndicator={false}>
           {content}
@@ -382,7 +385,7 @@ const styles = StyleSheet.create({
   root: {
     minHeight: 320,
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
-    borderRadius: 16,
+    borderRadius: 0,
     overflow: "hidden",
   },
   scroll: {
@@ -486,6 +489,7 @@ const styles = StyleSheet.create({
   },
   rankingSkeletonPanel: {
     marginBottom: 8,
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
   skeletonLine: {
     height: 12,
@@ -512,9 +516,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(0,0,0,0.18)",
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
   invitePanel: {
     marginTop: 4,
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
 });

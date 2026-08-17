@@ -10,7 +10,7 @@ import { useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { getUserDocDataCached, readUserHandleFromDoc } from "@/lib/user/userDocCache";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 import { useNavTabNotificationBadges } from "@/lib/hooks/useNavTabNotificationBadges";
 import NavBarNotificationDot from "@/app/component/NavBarNotificationDot";
@@ -224,7 +224,7 @@ export default function NavBar() {
 
       try {
         const data = await getUserDocDataCached(user.uid);
-        const h = data?.handle || data?.slug;
+        const h = readUserHandleFromDoc(data);
         setMyHref(
           h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`
         );

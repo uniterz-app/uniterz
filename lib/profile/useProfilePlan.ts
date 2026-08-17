@@ -63,10 +63,18 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
           return;
         }
 
-        let nextPlan = data.plan ?? "free";
+        let nextPlan: "free" | "pro" = data.plan === "pro" ? "pro" : "free";
 
         if (isMe) {
-          const proUntilMs = data.proUntil?.toMillis?.();
+          const proUntilRaw = data.proUntil;
+          const proUntilMs =
+            proUntilRaw &&
+            typeof proUntilRaw === "object" &&
+            "toMillis" in proUntilRaw &&
+            typeof (proUntilRaw as { toMillis?: unknown }).toMillis ===
+              "function"
+              ? (proUntilRaw as { toMillis: () => number }).toMillis()
+              : undefined;
           const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
 
           if (

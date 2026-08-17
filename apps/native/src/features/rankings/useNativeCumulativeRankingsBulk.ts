@@ -46,6 +46,8 @@ type ListCacheEntry = {
 
 const listCache = new Map<string, ListCacheEntry>();
 const scopeSnapshotGeneration = new Map<string, string>();
+/** 同一 scope の同時 totalPoints 取得を1本に */
+const listInflight = new Map<string, Promise<BulkFetchResult | null>>();
 
 function scopeKey(
   phase: RankingPhase,
@@ -165,42 +167,83 @@ async function resolveSharedList(
   round: PlayoffRoundKey,
   wcStage: WcRankingStage | null
 ): Promise<BulkFetchResult | null> {
-  const partial = await fetchSharedList(metrics, phase, round, wcStage);
-  if (!partial) return null;
-
-  const cachedGen = readScopeSnapshotGeneration(phase, round, wcStage);
-  if (!isNewerSnapshotGeneration(partial.snapshotGeneration, cachedGen)) {
-    writeScopeSnapshotGeneration(
-      phase,
-      round,
-      wcStage,
-      partial.snapshotGeneration
-    );
-    return partial;
+  const inflightKey =
+    metrics === INITIAL_RANKING_METRICS
+      ? `${scopeKey(phase, round, wcStage)}|${INITIAL_RANKING_METRICS}`
+      : null;
+  if (inflightKey) {
+    const pending = listInflight.get(inflightKey);
+    if (pending) return pending;
   }
 
-  clearScopeSnapshotGeneration(phase, round, wcStage);
-  const allMetrics = allRankingMetricsParam();
-  if (metrics === allMetrics) {
-    writeScopeSnapshotGeneration(
-      phase,
-      round,
-      wcStage,
-      partial.snapshotGeneration
-    );
-    return partial;
-  }
+  const run = (async (): Promise<BulkFetchResult | null> => {
+    const partial = await fetchSharedList(metrics, phase, round, wcStage);
+    if (!partial) return null;
 
-  const refreshed = await fetchSharedList(allMetrics, phase, round, wcStage);
-  if (refreshed?.snapshotGeneration) {
-    writeScopeSnapshotGeneration(
-      phase,
-      round,
-      wcStage,
-      refreshed.snapshotGeneration
-    );
+    const cachedGen = readScopeSnapshotGeneration(phase, round, wcStage);
+    if (!isNewerSnapshotGeneration(partial.snapshotGeneration, cachedGen)) {
+      writeScopeSnapshotGeneration(
+        phase,
+        round,
+        wcStage,
+        partial.snapshotGeneration
+      );
+      return partial;
+    }
+
+    clearScopeSnapshotGeneration(phase, round, wcStage);
+    const allMetrics = allRankingMetricsParam();
+    if (metrics === allMetrics) {
+      writeScopeSnapshotGeneration(
+        phase,
+        round,
+        wcStage,
+        partial.snapshotGeneration
+      );
+      return partial;
+    }
+
+    const refreshed = await fetchSharedList(allMetrics, phase, round, wcStage);
+    if (refreshed?.snapshotGeneration) {
+      writeScopeSnapshotGeneration(
+        phase,
+        round,
+        wcStage,
+        refreshed.snapshotGeneration
+      );
+    }
+    return refreshed ?? partial;
+  })();
+
+  if (inflightKey) {
+    listInflight.set(inflightKey, run);
+    try {
+      return await run;
+    } finally {
+      listInflight.delete(inflightKey);
+    }
   }
-  return refreshed ?? partial;
+  return run;
+}
+
+/** ランキングタブ押下前に匿名 totalPoints を温める（Web prefetchCumulativeRankingsList 相当） */
+export function prefetchNativeCumulativeRankingsList(
+  phase: RankingPhase = "playoffs",
+  round: PlayoffRoundKey = "overall",
+  wcStage: WcRankingStage | null = null
+): void {
+  if (readListCache(phase, round, wcStage)) return;
+  const inflightKey = `${scopeKey(phase, round, wcStage)}|${INITIAL_RANKING_METRICS}`;
+  if (listInflight.has(inflightKey)) return;
+  void resolveSharedList(INITIAL_RANKING_METRICS, phase, round, wcStage).then(
+    (partial) => {
+      if (!partial) return;
+      writeListCache(phase, round, wcStage, {
+        byMetric: partial.byMetric,
+        snapshotGeneration: partial.snapshotGeneration,
+      });
+    }
+  );
 }
 
 export function useNativeCumulativeRankingsBulk(
@@ -252,10 +295,14 @@ export function useNativeCumulativeRankingsBulk(
     if (cached) {
       setByMetric(cached.byMetric);
       setLoading(false);
-    } else {
-      setByMetric(null);
-      setLoading(true);
+      // TTL 内はネット再取得しない（prefetch / 再訪の二重打ち防止）
+      return () => {
+        cancelled = true;
+      };
     }
+
+    setByMetric(null);
+    setLoading(true);
 
     void (async () => {
       const g = ++mountPrimaryGenRef.current;

@@ -517,7 +517,6 @@ export default function SettingsMenu({
               )}
               aria-label={`${identityName} · ${planLabel}`}
             >
-              <span aria-hidden className="side-menu-identity__rail" />
               <span aria-hidden className="side-menu-identity__scan" />
 
               <span

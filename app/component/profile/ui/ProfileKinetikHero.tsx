@@ -176,7 +176,7 @@ export default function ProfileKinetikHero({
   const kinetikLanguage = toKinetikPanelLanguage(language);
   const statsPending =
     metricsTab === "total"
-      ? periodLoading && !periodData
+      ? periodLoading && !periodData && !summary
       : windowLoading && !windowData;
   const careerPending = careerDocLoading && !career;
 

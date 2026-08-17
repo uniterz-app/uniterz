@@ -2,7 +2,7 @@
  * Web `CyberSubpageShell` 相当。
  * 戻る（角切り）+ eyebrow + サイバー題名（中央）+ 説明は右上はてな（オーバーレイ）。
  */
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useState, type ReactNode } from "react";
 import {
   Modal,
   Platform,
@@ -14,6 +14,8 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { acquireAppBrandShelfHidden } from "../../../../lib/ui/appBrandShelfVisibility";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { RankingsPageTitleCyberNative } from "../features/rankings/RankingsPageTitleCyberNative";
@@ -129,6 +131,11 @@ export type CyberSubpageHeaderNativeProps = {
   hideBack?: boolean;
   /** 埋め込み時は sticky/背景を弱める */
   embedded?: boolean;
+  /**
+   * グローバル UNITERZ 棚を隠す。
+   * 既定は埋め込み以外 true。Settings モーダルなど SafeArea 済みは false。
+   */
+  hideBrandShelf?: boolean;
 };
 
 /** Web `CyberSubpageHeader` 相当 */
@@ -141,25 +148,36 @@ export function CyberSubpageHeaderNative({
   edgeBack = true,
   hideBack,
   embedded = false,
+  hideBrandShelf,
 }: CyberSubpageHeaderNativeProps) {
   const useEdgeBack = hideBack ?? edgeBack;
+  const hideShelf = hideBrandShelf ?? !embedded;
+  const insets = useSafeAreaInsets();
   const [helpOpen, setHelpOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const motionOn = reduceMotion !== true;
   const hasRightCluster = Boolean(subtitle || headerTrailing);
+
+  useLayoutEffect(() => {
+    if (!hideShelf) return;
+    return acquireAppBrandShelfHidden();
+  }, [hideShelf]);
 
   const HeaderWrap = embedded ? View : Animated.View;
   const TitleWrap = embedded ? View : Animated.View;
 
   return (
     <HeaderWrap
-      style={[styles.headerWrap, embedded && styles.headerWrapEmbedded]}
+      style={[
+        styles.headerWrap,
+        embedded && styles.headerWrapEmbedded,
+        hideShelf ? { paddingTop: insets.top } : null,
+      ]}
       {...(!embedded && motionOn
         ? { entering: nbaSubpageHeaderEntering }
         : {})}
     >
       <View style={styles.header}>
-        <View style={styles.rail} pointerEvents="none" />
         {useEdgeBack ? (
           <View style={styles.sideSpacer} pointerEvents="none" />
         ) : (
@@ -278,6 +296,7 @@ export default function CyberSubpageShellNative({
         onBack={onBack}
         edgeBack={useEdgeBack}
         hideBack={useEdgeBack}
+        hideBrandShelf
       />
 
       <Animated.View
@@ -302,10 +321,10 @@ const styles = StyleSheet.create({
   headerWrap: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(0, 245, 255, 0.14)",
-    backgroundColor: "rgba(5, 11, 20, 0.9)",
+    backgroundColor: "#000000",
   },
   headerWrapEmbedded: {
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    backgroundColor: "#000000",
   },
   header: {
     position: "relative",
@@ -315,24 +334,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     minHeight: 56,
-  },
-  rail: {
-    position: "absolute",
-    left: 0,
-    top: 8,
-    bottom: 8,
-    width: 2,
-    zIndex: 3,
-    backgroundColor: "rgba(0, 245, 255, 0.55)",
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgba(0, 245, 255, 0.45)",
-        shadowOffset: { width: 0, height: 0 },
-        shadowRadius: 5,
-        shadowOpacity: 1,
-      },
-      default: {},
-    }),
   },
   iconBtn: {
     zIndex: 3,

@@ -68,14 +68,15 @@ export function planDisplayNameFull(
   return proPlanDisplayName(plan, lang);
 }
 
-export function firestoreDate(
-  raw: { toDate?: () => Date } | Date | null | undefined
-): Date | null {
+export function firestoreDate(raw: unknown): Date | null {
   if (!raw) return null;
   if (raw instanceof Date) return Number.isFinite(raw.getTime()) ? raw : null;
-  if (typeof raw.toDate === "function") {
-    const d = raw.toDate();
-    return d instanceof Date && Number.isFinite(d.getTime()) ? d : null;
+  if (typeof raw === "object" && raw !== null && "toDate" in raw) {
+    const toDate = (raw as { toDate?: unknown }).toDate;
+    if (typeof toDate === "function") {
+      const d = (toDate as () => Date).call(raw);
+      return d instanceof Date && Number.isFinite(d.getTime()) ? d : null;
+    }
   }
   return null;
 }

@@ -108,9 +108,6 @@ const STREAK_SWEEP_MIN = 3;
 const STATS_PENDING_MARK = "···";
 const RANK_COUNT_DURATION_MS = 520;
 
-const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
-const ENTER_DURATION = 0.28;
-
 const LAYOUT = {
   mobile: {
     outerPad: "max-w-full overflow-x-clip px-2 pt-3",
@@ -481,7 +478,7 @@ export default function MyRankCard({
   countryCode = null,
   miniMetrics,
   leagueLabel,
-  cardResetKey: _cardResetKey,
+  cardResetKey,
   layout = "mobile",
   animateRank = true,
   statsSource = null,
@@ -493,7 +490,6 @@ export default function MyRankCard({
   hideRankProgress = false,
   estimatedUnits = null,
 }: Props) {
-  void _cardResetKey;
   const ui = LAYOUT[layout];
   const m = t(language);
   const reduceMotion = useReducedMotion();
@@ -658,48 +654,47 @@ export default function MyRankCard({
       ? (ui.outerPadWide as string)
       : (ui.outerPad as string);
 
+  /** 読み込み枠でパスを一度描くと、データ到着後にサイズが変わって再描画される */
+  if (!ready || statsPending) {
+    return null;
+  }
+
   if (freeTier) {
     const listRank = rank != null && rank >= 1 ? rank : 99;
-    const freeInner =
-      loading || statsPending || rank == null ? (
-        <div
-          className="rounded-sm border border-white/10 bg-black/20 px-3 py-4 text-[11px] text-white/40"
-          aria-busy
-        >
-          {m.rankings.loadingRankStats}
-        </div>
-      ) : (
-        <CyberRankingListRow
-          rank={listRank}
-          displayName={displayName}
-          photoURL={photoURL}
-          metric={metric}
-          metricTag={cyberMetricTag(metric, language)}
-          posts={posts}
-          countryCode={countryCode}
-          avgRow={avgRow}
-          compact={layout === "mobile"}
-          scoreLayout={layout === "web" ? "web" : "stack"}
-          hideAccentBar
-          rankOverline={m.rankings.yourRank}
-          scoreSlot={
-            <CyberRankingScore
-              rank={listRank}
-              metric={metric}
-              counted={value}
-              compact={layout === "mobile"}
-              scoreLayout={layout === "web" ? "web" : "stack"}
-              plainWhite
-            />
-          }
-        />
-      );
+    const freeInner = (
+      <CyberRankingListRow
+        rank={listRank}
+        displayName={displayName}
+        photoURL={photoURL}
+        metric={metric}
+        metricTag={cyberMetricTag(metric, language)}
+        posts={posts}
+        countryCode={countryCode}
+        avgRow={avgRow}
+        compact={layout === "mobile"}
+        scoreLayout={layout === "web" ? "web" : "stack"}
+        hideAccentBar
+        rankOverline={m.rankings.yourRank}
+        scoreSlot={
+          <CyberRankingScore
+            rank={listRank}
+            metric={metric}
+            counted={value}
+            compact={layout === "mobile"}
+            scoreLayout={layout === "web" ? "web" : "stack"}
+            plainWhite
+          />
+        }
+      />
+    );
 
     const freeBody = (
       <MyRankCardFrame
         tone="neutral"
         hideLeftEdge
-        className="w-full overflow-hidden"
+        animateDraw={!motionOff}
+        drawKey={cardResetKey}
+        className="w-full overflow-visible"
       >
         <div className="relative z-10 px-1.5 py-1.5">
           {freeInner}
@@ -707,34 +702,19 @@ export default function MyRankCard({
       </MyRankCardFrame>
     );
 
-    if (motionOff) {
-      return <div className={outerPad}>{freeBody}</div>;
-    }
-
-    return (
-      <motion.div
-        className={outerPad}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          opacity: { duration: ENTER_DURATION, ease: ENTER_EASE },
-          y: { duration: ENTER_DURATION, ease: ENTER_EASE },
-        }}
-      >
-        {freeBody}
-      </motion.div>
-    );
+    return <div className={outerPad}>{freeBody}</div>;
   }
 
   const body = (
     <MyRankCardFrame
       tone={frameTone}
       proSpec={proSpecFrame}
-      className="w-full overflow-hidden"
+      animateDraw={!motionOff}
+      drawKey={cardResetKey}
+      className="w-full overflow-visible"
     >
       <div
         className="relative overflow-hidden"
-        aria-busy={statsScramble || undefined}
       >
         {streakSweep ? (
           <div
@@ -809,20 +789,8 @@ export default function MyRankCard({
           style={{ background: "rgba(34,211,238,0.04)" }}
         />
 
-        {statsScramble && !loading && (
-          <span className="sr-only">{m.rankings.loadingRankStats}</span>
-        )}
-
         {/* 上段: リスト行と同じ配置 / 下段: Pro 専用 */}
         <div className="relative z-10 flex flex-col">
-          {loading || statsPending ? (
-            <div
-              className="px-3 py-4 text-[11px] text-white/40"
-              aria-busy
-            >
-              {m.rankings.loadingRankStats}
-            </div>
-          ) : (
             <CyberRankingListRow
               rank={rank != null && rank >= 1 ? rank : 99}
               displayName={displayName}
@@ -867,7 +835,6 @@ export default function MyRankCard({
               }
               bare
             />
-          )}
 
           {showRankingProgress ? (
             <div
@@ -877,7 +844,7 @@ export default function MyRankCard({
               <MyRankRankingProgress
                 points={progressPoints}
                 maxSnapshots={progressSnapshotLimit}
-                loading={loading || rankProgressLoading}
+                loading={rankProgressLoading}
                 language={language}
                 layout={layout}
                 numbersOnly
@@ -955,27 +922,5 @@ export default function MyRankCard({
     </div>
   );
 
-  if (motionOff) {
-    return <div className={outerPad}>{tiltWrapped}</div>;
-  }
-
-  return (
-    <motion.div
-      className={outerPad}
-      initial={{
-        opacity: 0,
-        y: 12,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-      }}
-      transition={{
-        opacity: { duration: ENTER_DURATION, ease: ENTER_EASE },
-        y: { duration: ENTER_DURATION, ease: ENTER_EASE },
-      }}
-    >
-      {tiltWrapped}
-    </motion.div>
-  );
+  return <div className={outerPad}>{tiltWrapped}</div>;
 }

@@ -4,7 +4,6 @@
 import { useMemo, useState } from "react";
 import { useProfile, type Profile } from "./useProfile";
 
-import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import MobileProfileViewV2 from "./MobileProfileViewV2";
 import WebProfileViewV2 from "./WebProfileViewV2";
 
@@ -29,6 +28,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   const {
     profile,
     loading,
+    userDocReady,
     targetUid,
   } = useProfile(handle);
 
@@ -90,22 +90,17 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     return overview.summaryRanks as SummaryRanksV2;
   }, [overview.summaryRanks]);
 
-  if (loading && !targetUid) {
-    return (
-      <div className="flex justify-center" style={{ padding: 24 }}>
-        <CandleChartLoader />
-      </div>
-    );
+  if (!userDocReady) {
+    if (!loading && !targetUid) {
+      return <div style={{ padding: 24 }}>Not found</div>;
+    }
+    return <div className="min-h-screen" aria-busy="true" />;
   }
-  if (!loading && !targetUid) {
+  if (!targetUid) {
     return <div style={{ padding: 24 }}>Not found</div>;
   }
   if (!mergedProfile) {
-    return (
-      <div className="flex justify-center" style={{ padding: 24 }}>
-        <CandleChartLoader />
-      </div>
-    );
+    return <div className="min-h-screen" aria-busy="true" />;
   }
 
   const viewProps: ProfileViewPropsV2 = {

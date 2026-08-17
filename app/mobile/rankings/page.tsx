@@ -20,10 +20,8 @@ import MyRankCard from "@/app/component/rankings/MyRankCard";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
-import {
-  type RankingsCategory,
-} from "@/app/component/rankings/RankingsCategoryTabs";
-import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
+import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs.types";
 import Header from "@/app/component/Header";
 import {
   API_METRIC_BY_MOBILE,
@@ -38,9 +36,8 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { t } from "@/lib/i18n/t";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
-import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
+import { CyberNoDataPage } from "@/app/component/common/CyberNoDataLabel";
 import { useSearchParams } from "next/navigation";
 import {
   RANKINGS_TAB_METRIC_PARAM,
@@ -49,7 +46,6 @@ import {
   isMobileMetricParam,
   isRankingsCategoryParam,
 } from "@/lib/navigation/rankingsProfileFrom";
-import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import {
   buildRankingsPageKey,
   computeRankingHasNoEntries,
@@ -408,29 +404,6 @@ export default function MobileRankingsPage() {
       </div>
 
       <div className="max-w-full space-y-3 overflow-x-clip px-3 pt-2">
-          <div className="flex items-start gap-2">
-            <CyberMenuButton
-              size="md"
-              onClick={() => setRankingsDrawerOpen(true)}
-              aria-label={m.games.openMenu}
-            />
-            <div className="flex min-w-0 flex-1 flex-col items-center">
-              <RankingsPageTitleCyber
-                variant="horizon-chrome"
-                tone={nbaBoard === "open" ? "pro-league" : "default"}
-                title={
-                  nbaBoard === "open"
-                    ? m.rankings.divisionOpen
-                    : nbaBoard === "playoffs"
-                      ? m.rankings.nbaBoardPlayoffs
-                      : m.rankings.nbaBoardRegular
-                }
-                size="sm"
-              />
-            </div>
-            <div className="h-10 w-10 shrink-0" aria-hidden />
-          </div>
-
           <div className="space-y-0.5">
             {nbaBoard === "regular" || nbaBoard === "open" ? (
               <RankingsDivisionTabs
@@ -573,21 +546,9 @@ export default function MobileRankingsPage() {
         )}
 
         {openProLocked ? null : rankingHasNoEntries ? (
-          <div
-            role="status"
-            className="flex min-h-[min(62dvh,520px)] items-center justify-center px-4 text-center"
-          >
-            <p
-              className={[
-                nameBebas.className,
-                "text-[clamp(1.75rem,10vw,2.7rem)] leading-none tracking-[0.22em]",
-                nbaBoard === "open" ? "rankings-pro-league-no-data" : "",
-              ].join(" ")}
-              style={nbaBoard === "open" ? undefined : cyberNoDataLabelStyle}
-            >
-              NO DATA
-            </p>
-          </div>
+          <CyberNoDataPage
+            variant={nbaBoard === "open" ? "rankingsPro" : "rankings"}
+          />
         ) : listContentReady ? (
           <div className="max-w-full overflow-x-clip">
           <AnimatePresence mode="wait">
@@ -641,6 +602,13 @@ export default function MobileRankingsPage() {
           </div>
         ) : null}
 
+      <ProfileMenuEdgeHandle
+        onOpen={() => setRankingsDrawerOpen(true)}
+        ariaLabel={m.games.openMenu}
+        label="MENU"
+        hidden={rankingsDrawerOpen}
+        fadeIn
+      />
       <SideMenuDrawer
         open={rankingsDrawerOpen}
         onClose={() => setRankingsDrawerOpen(false)}

@@ -12,14 +12,12 @@ import {
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { Info } from "lucide-react";
-import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
 import ProfileEditKinetikGlitchTitle from "@/app/component/profile/edit/ProfileEditKinetikGlitchTitle";
-import styles from "./profileChartInfoFaq.module.css";
 import { isProfileChartAnimationOff } from "@/lib/profile/profileVisualEffects";
 
 export type ProfilePlayoffRankTrendRow = {
@@ -181,8 +179,6 @@ export default function ProfilePlayoffRankTrendChart({
       ? "グループステージ終了 — 最終スナップショット"
       : "Group stage complete — final snapshot"
     : msg.profile.rankingProgressDesc;
-  /** Info 用（サブタイトルと同じ文言のみ。他 UI は従来のまま） */
-  const chartInfoTooltipMsg = subtitle;
   const emptyHint = msg.profile.rankingProgressNoData;
 
   const ref = useRef<HTMLDivElement>(null);
@@ -401,18 +397,6 @@ export default function ProfilePlayoffRankTrendChart({
               >
                 {subtitle}
               </p>
-              <div className={styles.wrap}>
-                <button
-                  type="button"
-                  className={styles.faqButton}
-                  aria-label={chartInfoTooltipMsg}
-                >
-                  <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
-                </button>
-                <div className={styles.tooltip} aria-hidden>
-                  {chartInfoTooltipMsg}
-                </div>
-              </div>
             </div>
           </div>
           {!loading && chartRows.length > 0 && trendSummary.currentRank != null ? (
@@ -447,15 +431,7 @@ export default function ProfilePlayoffRankTrendChart({
           </div>
         ) : isEmpty ? (
           <div className="absolute inset-0 grid place-items-center px-3" role="status">
-            <p
-              className={[
-                nameBebas.className,
-                "text-center text-[clamp(1.1rem,3.5vw,1.65rem)] leading-none tracking-[0.18em]",
-              ].join(" ")}
-              style={cyberNoDataLabelStyle}
-            >
-              NO DATA
-            </p>
+            <CyberNoDataLabel variant="chart" />
             <p className="mt-2 max-w-[240px] text-center text-[10px] text-white/45 sm:text-xs">
               {emptyHint}
             </p>

@@ -10,7 +10,7 @@ export default function CommunityGroupZoneLabelNative({ children }: { children: 
       <Text style={styles.label}>{children}</Text>
       <View style={styles.lineWrap}>
         <LinearGradient
-          colors={["rgba(34,211,238,0.6)", "rgba(34,211,238,0.24)", "transparent"]}
+          colors={["rgba(0,245,255,0.6)", "rgba(0,245,255,0.24)", "transparent"]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={styles.line}
@@ -30,9 +30,9 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 1,
-    backgroundColor: "rgba(34,211,238,0.85)",
+    backgroundColor: "rgba(0,245,255,0.85)",
     transform: [{ rotate: "45deg" }],
-    shadowColor: "#22d3ee",
+    shadowColor: "#00F5FF",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 4,

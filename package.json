@@ -47,6 +47,8 @@
     "badges:poall:revoke-test": "tsx scripts/archive/revoke-po-2026-all-test-grants.ts",
     "badges:poall:grant:dry": "DRY_RUN=1 tsx scripts/archive/grant-po-2026-all-total-points-badges.ts",
     "badges:poall:grant": "tsx scripts/archive/grant-po-2026-all-total-points-badges.ts",
+    "badges:backfill-participant-counts:dry": "tsx scripts/backfill-badge-participant-counts.ts --dry-run",
+    "badges:backfill-participant-counts": "tsx scripts/backfill-badge-participant-counts.ts",
     "badges:wcgp:seed": "tsx scripts/archive/seed-wc-2026-gp-badges.ts",
     "badges:wcgp:grant-test": "tsx scripts/archive/grant-wc-2026-gp-badges-test.ts",
     "badges:wcgp:revoke-test": "tsx scripts/archive/revoke-wc-2026-gp-test-grants.ts",

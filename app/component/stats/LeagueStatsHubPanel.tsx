@@ -14,24 +14,43 @@ import NbaLeagueTeamStatsPanel from "@/app/component/teamStats/NbaLeagueTeamStat
 import NbaLeaguePlayerStatLeadersPanel from "@/app/component/playerStats/NbaLeaguePlayerStatLeadersPanel";
 import NbaStatsSearchBar from "@/app/component/stats/NbaStatsSearchBar";
 import { nameOxanium } from "@/lib/fonts";
+import MobilePageShell from "@/app/component/common/MobilePageShell";
 
 type TabId = "team" | "player";
 
 type Props = {
   language?: "ja" | "en";
   initialTab?: TabId;
+  /** MobilePageShell 内では見出しを出さない */
+  embedded?: boolean;
+  /** Native `LeagueStatsHubScreenNative` 相当のフルシェル */
+  shell?: boolean;
+  onClose?: () => void;
 };
 
 export default function LeagueStatsHubPanel({
   language = "ja",
   initialTab = "team",
+  embedded = false,
+  shell = false,
+  onClose,
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>(initialTab);
+  const isJa = language === "ja";
   const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
+  const subtitle =
+    tab === "team"
+      ? isJa
+        ? "共有 API から取得（未 seed 時はモック）。"
+        : "Loaded via shared API (mock until seeded)."
+      : isJa
+        ? "指標トップリーダー（モック）"
+        : "Stat leaderboards (mock).";
 
-  return (
+  const body = (
     <div className="space-y-3 text-white">
+      {!embedded && !shell ? (
       <div className="space-y-1 text-center">
         <p
           className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.2em] text-white/55`}
@@ -45,6 +64,7 @@ export default function LeagueStatsHubPanel({
           {title}
         </h1>
       </div>
+      ) : null}
 
       <CyberSlantedTabBar fill aria-label="Stats tabs">
         <CyberSlantedTab
@@ -99,4 +119,19 @@ export default function LeagueStatsHubPanel({
       )}
     </div>
   );
+
+  if (shell) {
+    return (
+      <MobilePageShell
+        title={title}
+        eyebrow="STATS"
+        subtitle={subtitle}
+        onClose={onClose ?? (() => router.back())}
+      >
+        {body}
+      </MobilePageShell>
+    );
+  }
+
+  return body;
 }

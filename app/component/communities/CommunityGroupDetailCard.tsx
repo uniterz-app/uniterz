@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import { COMMUNITY_GROUP_HERO_BG } from "@/lib/communities/communityGroupHeroLayout";
+import { MATCH_LIST_CYBER_CARD_CLASS } from "@/lib/ui/matchListCardCyber";
+import { RANKINGS_CARD_NOTCH_CLIP } from "@/lib/rankings/rankingsCyberTheme";
 
 type Props = {
   children: ReactNode;
@@ -19,15 +21,25 @@ export default function CommunityGroupDetailCard({
   variant = "overlay",
   className = "",
 }: Props) {
-  const shadow =
-    "shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_48px_-8px_rgba(34,211,238,0.18)]";
-
   return (
     <div
-      className={["relative overflow-hidden rounded-2xl", shadow, className]
+      className={[
+        "relative overflow-hidden",
+        MATCH_LIST_CYBER_CARD_CLASS,
+        className,
+      ]
         .filter(Boolean)
         .join(" ")}
-      style={{ backgroundColor: COMMUNITY_GROUP_HERO_BG }}
+      style={{
+        background: COMMUNITY_GROUP_HERO_BG,
+        backgroundColor: COMMUNITY_GROUP_HERO_BG,
+        ...(variant === "overlay"
+          ? {
+              clipPath: RANKINGS_CARD_NOTCH_CLIP,
+              WebkitClipPath: RANKINGS_CARD_NOTCH_CLIP,
+            }
+          : null),
+      }}
     >
       {children}
     </div>

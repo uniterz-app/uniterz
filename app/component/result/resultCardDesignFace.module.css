@@ -1,0 +1,431 @@
+/* Native `ResultCardDesignFaceNative` / Plan1Card 相当 */
+
+.wrap {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
+/* Native `rectShellWrapWithDetail` — タブのはみ出し分をヒット領域に含める */
+.wrapWithDetail {
+  padding-right: 17px;
+}
+
+.detailSpine {
+  position: absolute;
+  top: 80px;
+  right: -17px;
+  z-index: 24;
+  display: flex;
+  width: 18px;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+  /* はみ出し領域でもクリックを受け取り、親の onOpen へバブルさせる */
+  pointer-events: auto;
+  background: #070b12;
+  border-style: solid;
+  border-left-width: 0;
+}
+
+.detailSpineTextCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.detailSpineChar {
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 9px;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.body {
+  position: relative;
+  z-index: 1;
+}
+
+.pad {
+  padding: 10px 10px 12px;
+}
+
+.layerDivider {
+  width: 100%;
+  height: 1px;
+  margin-top: 4px;
+  margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.topBar {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.topLeftSlot {
+  min-width: 52px;
+  max-width: 96px;
+  align-items: flex-start;
+}
+
+.topBadgeSlot {
+  max-width: 96px;
+  text-align: right;
+}
+
+.impactWrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.impactText {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  font-style: italic;
+  line-height: 1;
+}
+
+.impactSlash {
+  align-self: stretch;
+  height: 2px;
+  margin-top: 1px;
+  transform: rotate(-8deg);
+}
+
+.matchRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.matchSide {
+  display: flex;
+  width: 92px;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.homeAwayLabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  color: rgba(226, 232, 240, 0.45);
+}
+
+.teamNameSlant {
+  margin-top: 4px;
+  width: 100%;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 1.04px;
+  text-transform: uppercase;
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.skewWrap {
+  align-self: center;
+  transform: skewX(-10deg);
+}
+
+.matchCenter {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+  gap: 2px;
+}
+
+.finalStatus {
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: rgba(248, 250, 252, 0.75);
+}
+
+.finalScore {
+  font-size: 22px;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 24px;
+  letter-spacing: -0.5px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.finalDash {
+  font-size: 18px;
+  font-weight: 900;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.predCaption {
+  font-size: 10px;
+  color: rgba(226, 232, 240, 0.45);
+}
+
+.predScore {
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 17px;
+  letter-spacing: -0.4px;
+  color: rgba(253, 224, 71, 0.95);
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.32);
+}
+
+.predDash {
+  font-size: 13px;
+  font-weight: 900;
+  font-style: italic;
+  color: rgba(253, 224, 71, 0.95);
+}
+
+.biasRoot {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.biasPctHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 0 28px;
+}
+
+.biasPctHeaderNum {
+  min-width: 48px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.biasPctHeaderNumAway {
+  margin-right: -6px;
+  text-align: right;
+}
+
+.biasPctHeaderMid {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(0, 245, 255, 0.55);
+}
+
+.biasBarInner {
+  display: flex;
+  width: 100%;
+  gap: 2px;
+  padding: 2px;
+}
+
+.biasSegSlot {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.biasSegSkew {
+  transform: skewX(-16deg);
+}
+
+.biasSegFace {
+  width: 100%;
+  height: 10px;
+  border-width: 1px;
+  border-style: solid;
+  transform-origin: left center;
+}
+
+.statBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.splitRow {
+  display: flex;
+  align-items: stretch;
+  padding: 2px 0;
+}
+
+.splitSide {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.splitSideMuted {
+  opacity: 0.55;
+}
+
+.splitRule {
+  width: 1px;
+  margin: 2px 0;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.splitLabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.splitValue {
+  font-size: 22px;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 26px;
+  letter-spacing: -0.4px;
+  color: #f8fafc;
+}
+
+.splitValueUpset {
+  color: #dc2626;
+}
+
+.splitValueScore {
+  color: #fbbf24;
+}
+
+.splitValueEmpty {
+  color: rgba(148, 163, 184, 0.55);
+}
+
+.splitRel {
+  margin-top: 1px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.55);
+}
+
+.splitRelHot {
+  color: #fbbf24;
+}
+
+.splitRelSpacer {
+  font-size: 9px;
+  line-height: 12px;
+  opacity: 0;
+}
+
+.scorerBlock {
+  margin-bottom: 4px;
+}
+
+.scorerValueRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scorerLabel {
+  width: 78px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.scorerNameWrap {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.scorerNameSkew {
+  max-width: 100%;
+  transform: skewX(-10deg);
+}
+
+.scorerName {
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #f8fafc;
+}
+
+.scorerHitCluster {
+  display: flex;
+  width: 78px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.scorerHit {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  line-height: 14px;
+}
+
+.scorerHitOn {
+  color: #fbbf24;
+}
+
+.scorerHitOff {
+  color: rgba(148, 163, 184, 0.55);
+}
+
+@keyframes biasSegIn {
+  from {
+    opacity: 0;
+    transform: scaleX(0.12);
+  }
+  to {
+    opacity: var(--seg-op, 1);
+    transform: scaleX(1);
+  }
+}
+
+.biasSegFaceAnimate {
+  opacity: 0;
+  animation: biasSegIn 0.22s linear both;
+  animation-delay: var(--seg-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biasSegFaceAnimate {
+    animation: none;
+    opacity: var(--seg-op, 1);
+    transform: none;
+  }
+}

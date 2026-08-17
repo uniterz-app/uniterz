@@ -31,7 +31,7 @@
    任意：色のユーティリティ
 -------------------------------- */
 :root {
-  --color-app-bg: #021208;
+  --color-app-bg: #050508;
   --color-card-bg: #334155;
   /* Fixed bottom NavBar: offset + pill height (~56–64px) + home indicator */
   --bottom-nav-clearance: calc(12px + 72px + env(safe-area-inset-bottom, 0px));
@@ -50,6 +50,14 @@
 /* レイアウト用：実背景はルートの AppPageBackground。ここは透過して重ねる */
 .bg-app {
   background: transparent;
+}
+
+/* アプリ全体メッシュ背景（タイルサイズは lib/app/appMeshBackground.ts と揃える） */
+.app-mesh-page-tile {
+  background-color: #050508;
+  background-image: url("/bg/app-mesh.png");
+  background-repeat: repeat;
+  background-size: 56px 32px;
 }
 
 /* -------------------------------
@@ -203,12 +211,7 @@
   --mrc-corner-plus: rgba(184, 255, 60, 0.32);
   --mrc-corner-plus-bl: rgba(184, 255, 60, 0.3);
   --mrc-stripe: rgba(184, 255, 60, 0.28);
-  background: linear-gradient(
-    165deg,
-    rgba(14, 16, 22, 0.98) 0%,
-    rgba(9, 11, 16, 0.99) 52%,
-    rgba(6, 7, 10, 1) 100%
-  );
+  background: transparent;
 }
 
 .my-rank-card-frame--rank-down {
@@ -237,7 +240,7 @@
   --mrc-stripe: rgba(255, 255, 255, 0.14);
 }
 
-/* MyRankCard Pro — 金の連続枠 + 中黒。四隅飾りなし */
+/* MyRankCard Pro — 金の連続枠。塗りは透明（ページ背景が透ける） */
 .my-rank-card-frame--pro-spec {
   --mrc-pro-gold-line: #e8c66a;
   --mrc-edge-a: #e8c66a;
@@ -246,8 +249,18 @@
   --mrc-edge-d: #e8c66a;
   border: 1px solid #e8c66a;
   border-radius: 0;
-  background: #000;
+  background: transparent;
   box-shadow: none;
+}
+
+/* 線枠パス描画時は CSS の矩形ボーダーを出さない */
+.my-rank-card-frame--line-stroke {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.my-rank-card-frame--line-stroke .my-rank-card-frame__edge {
+  display: none;
 }
 
 .my-rank-card-frame--pro-spec.my-rank-card-frame--rank-down,
@@ -458,15 +471,10 @@
   }
 }
 
-/* サイドメニュー — サイバー HUD（ディープ + シアン） */
+/* サイドメニュー — サイバー HUD（黒ベース + シアン） */
 .cyber-side-menu-panel {
   border: 1px solid rgba(0, 245, 255, 0.28);
-  background: linear-gradient(
-    168deg,
-    #041018 0%,
-    #030b12 48%,
-    #02070e 100%
-  );
+  background: #000000;
   box-shadow:
     0 0 40px rgba(0, 245, 255, 0.1),
     0 22px 56px rgba(0, 0, 0, 0.55),
@@ -479,9 +487,9 @@
   border: none;
   background: linear-gradient(
     90deg,
-    rgba(4, 16, 24, 0.97) 0%,
-    rgba(3, 12, 19, 0.92) 48%,
-    rgba(2, 8, 15, 0.84) 100%
+    rgba(0, 0, 0, 0.98) 0%,
+    rgba(0, 0, 0, 0.96) 48%,
+    rgba(0, 0, 0, 0.92) 100%
   ) !important;
   box-shadow: 14px 0 42px rgba(0, 0, 0, 0.5);
 }
@@ -549,11 +557,7 @@
   isolation: isolate;
   overflow: hidden;
   border-left: none;
-  background: linear-gradient(
-    90deg,
-    rgba(4, 20, 30, 0.72),
-    rgba(3, 12, 20, 0.6)
-  );
+  background: #000000;
   clip-path: polygon(
     0 0,
     calc(100% - 10px) 0,
@@ -580,15 +584,15 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: #00f5ff;
-  box-shadow: 0 0 12px rgba(0, 245, 255, 0.8);
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.45);
   z-index: 2;
 }
 
 /* 選択行の ▸ インジケータ */
 .cyber-side-menu-caret {
-  color: #00f5ff;
-  text-shadow: 0 0 8px rgba(0, 245, 255, 0.8);
+  color: #ffffff;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
   animation: cyber-side-menu-caret-pulse 1.8s ease-in-out infinite;
 }
 
@@ -608,14 +612,10 @@
   top: 0;
   bottom: 0;
   width: 54px;
-  /* シアン HUD 台座（非選択は控えめ） */
-  background: linear-gradient(
-    105deg,
-    rgba(0, 42, 56, 0.7) 0%,
-    rgba(4, 16, 24, 0.75) 100%
-  );
-  border-right: 1px solid rgba(0, 245, 255, 0.26);
-  box-shadow: inset 0 0 14px rgba(0, 245, 255, 0.06);
+  /* アイコン台座（非選択は黒） */
+  background: #000000;
+  border-right: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.04);
   transform: skewX(-14deg);
   transform-origin: center center;
   transition:
@@ -627,24 +627,16 @@
 
 .cyber-side-menu-item__chip--active,
 .cyber-side-menu-item--active .cyber-side-menu-item__chip {
-  background: linear-gradient(
-    105deg,
-    rgba(0, 80, 98, 0.95) 0%,
-    rgba(0, 36, 52, 0.96) 100%
-  );
-  border-color: rgba(0, 245, 255, 0.85);
+  background: #000000;
+  border-color: rgba(255, 255, 255, 0.55);
   box-shadow:
-    inset 0 0 20px rgba(0, 245, 255, 0.14),
-    0 0 12px rgba(0, 245, 255, 0.2);
+    inset 0 0 16px rgba(255, 255, 255, 0.06),
+    0 0 8px rgba(255, 255, 255, 0.08);
 }
 
 .cyber-side-menu-item:hover .cyber-side-menu-item__chip:not(.cyber-side-menu-item__chip--active) {
-  background: linear-gradient(
-    105deg,
-    rgba(0, 64, 82, 0.94) 0%,
-    rgba(4, 22, 34, 0.95) 100%
-  );
-  border-color: rgba(0, 245, 255, 0.62);
+  background: #000000;
+  border-color: rgba(255, 255, 255, 0.45);
 }
 
 /* 後方互換 — スキンピッカー等の旧装飾 */
@@ -671,10 +663,10 @@
   background: linear-gradient(
     180deg,
     transparent,
-    rgba(0, 245, 255, 0.9),
+    rgba(255, 255, 255, 0.9),
     transparent
   );
-  box-shadow: 0 0 8px rgba(0, 245, 255, 0.55);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
   opacity: 0.85;
   pointer-events: none;
 }
@@ -683,7 +675,7 @@
   position: absolute;
   width: 7px;
   height: 7px;
-  border-color: rgba(0, 245, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.55);
   pointer-events: none;
   opacity: 0.85;
 }
@@ -1190,6 +1182,14 @@
   pointer-events: none;
 }
 
+/* 試合一覧の絞り込み — 黒白基調。チーム色は行・チップのみ */
+.games-filter-panel {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #050505;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.62);
+}
+
 /* 試合絞り込みモーダル — 方眼・角切り・セクション見出し */
 .games-filter-panel-shell {
   position: relative;
@@ -1201,30 +1201,10 @@
 }
 
 .games-filter-panel-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(0, 245, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 245, 255, 0.05) 1px, transparent 1px);
-  background-size: 14px 14px;
-  mask-image: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.92) 0%,
-    rgba(0, 0, 0, 0.35) 72%,
-    transparent 100%
-  );
+  display: none;
 }
 
 .games-filter-panel--sheet {
-  clip-path: polygon(
-    18px 0%,
-    calc(100% - 18px) 0%,
-    100% 18px,
-    100% 100%,
-    0% 100%,
-    0% 18px
-  );
   border-bottom: none;
 }
 
@@ -1232,10 +1212,9 @@
   margin-bottom: 4px;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.32em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(34, 211, 238, 0.58);
-  text-shadow: 0 0 12px rgba(0, 245, 255, 0.25);
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .games-filter-panel-header {
@@ -1243,13 +1222,9 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(0, 245, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   padding: 14px 16px 12px;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 245, 255, 0.07) 0%,
-    transparent 100%
-  );
+  background: transparent;
 }
 
 .games-filter-icon-btn {
@@ -1258,40 +1233,28 @@
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
   padding: 0 0.625rem;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.82);
   transition:
     border-color 0.2s ease,
     background 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
-  clip-path: polygon(
-    6px 0%,
-    calc(100% - 6px) 0%,
-    100% 6px,
-    100% calc(100% - 6px),
-    calc(100% - 6px) 100%,
-    6px 100%,
-    0% calc(100% - 6px),
-    0% 6px
-  );
+    color 0.2s ease;
 }
 
 .games-filter-icon-btn:hover {
-  border-color: rgba(0, 245, 255, 0.28);
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .games-filter-icon-btn--active {
-  border-color: rgba(0, 245, 255, 0.38);
-  background: rgba(0, 245, 255, 0.1);
-  color: rgba(224, 252, 255, 0.95);
-  box-shadow: 0 0 14px rgba(0, 245, 255, 0.12);
+  border-color: #fff;
+  background: #fff;
+  color: #050505;
 }
 
 .games-filter-icon-btn--square {
@@ -1305,34 +1268,27 @@
   gap: 8px;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.82);
+  color: rgba(255, 255, 255, 0.48);
 }
 
 .games-filter-section-label::before {
-  content: "";
-  width: 5px;
-  height: 5px;
-  flex-shrink: 0;
-  background: rgba(0, 245, 255, 0.75);
-  box-shadow: 0 0 8px rgba(0, 245, 255, 0.45);
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  content: none;
 }
 
 .games-filter-search {
   width: 100%;
-  border: 1px solid rgba(0, 245, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 0;
   clip-path: none;
-  background: rgba(0, 0, 0, 0.36);
+  background: #000;
   padding: 0.375rem 0.625rem 0.375rem 2rem;
   line-height: 1.2;
   color: rgba(255, 255, 255, 0.92);
   outline: none;
   transition:
     border-color 0.2s ease,
-    box-shadow 0.2s ease,
     background 0.2s ease;
 }
 
@@ -1341,34 +1297,22 @@
 }
 
 .games-filter-search:focus {
-  border-color: rgba(0, 245, 255, 0.38);
-  background: rgba(0, 0, 0, 0.52);
-  box-shadow: 0 0 18px rgba(0, 245, 255, 0.1);
+  border-color: #fff;
+  background: #000;
 }
 
 .games-filter-input {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #000;
   padding: 0.5rem 0.625rem;
   color: rgba(255, 255, 255, 0.9);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  clip-path: polygon(
-    6px 0%,
-    calc(100% - 6px) 0%,
-    100% 6px,
-    100% calc(100% - 6px),
-    calc(100% - 6px) 100%,
-    6px 100%,
-    0% calc(100% - 6px),
-    0% 6px
-  );
+  transition: border-color 0.2s ease;
 }
 
 .games-filter-input:focus {
-  border-color: rgba(0, 245, 255, 0.35);
-  box-shadow: 0 0 12px rgba(0, 245, 255, 0.08);
+  border-color: #fff;
 }
 
 /* 点差の幅 — ガラス面 */
@@ -1377,37 +1321,14 @@
   isolation: isolate;
   overflow: hidden;
   padding: 0.375rem 0.5rem;
-  border: 1px solid rgba(0, 245, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 0;
   clip-path: none;
-  background:
-    linear-gradient(
-      168deg,
-      rgba(255, 255, 255, 0.055) 0%,
-      rgba(255, 255, 255, 0.018) 100%
-    ),
-    rgba(0, 245, 255, 0.025);
-  backdrop-filter: blur(10px) saturate(145%);
-  -webkit-backdrop-filter: blur(10px) saturate(145%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    0 4px 14px rgba(0, 0, 0, 0.16);
+  background: #000;
 }
 
 .games-filter-margin-glass::before {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(0, 245, 255, 0.32) 50%,
-    transparent 100%
-  );
-  pointer-events: none;
+  content: none;
 }
 
 .games-filter-margin-wrap {
@@ -1431,17 +1352,12 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.82);
+  color: rgba(255, 255, 255, 0.48);
   white-space: nowrap;
 }
 
 .games-filter-margin-kicker-mark {
-  width: 5px;
-  height: 5px;
-  flex-shrink: 0;
-  background: rgba(0, 245, 255, 0.75);
-  box-shadow: 0 0 8px rgba(0, 245, 255, 0.45);
-  transform: rotate(45deg);
+  display: none;
 }
 
 .games-filter-margin-fields {
@@ -1462,26 +1378,20 @@
 .games-filter-margin-field > span {
   font-size: 9px;
   line-height: 1;
-  color: rgba(165, 243, 252, 0.5);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .games-filter-input--glass {
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.18);
   border-radius: 0;
   clip-path: none;
-  background: rgba(255, 255, 255, 0.045);
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: #050505;
   padding: 0.3125rem 0.5rem;
 }
 
 .games-filter-input--glass:focus {
-  border-color: rgba(0, 245, 255, 0.42);
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 0 16px rgba(0, 245, 255, 0.14);
+  border-color: #fff;
+  background: #000;
 }
 
 .games-filter-team-search-primary {
@@ -1524,7 +1434,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  border-bottom: 1px solid rgba(0, 245, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.5rem 0.5rem 0.4375rem;
 }
 
@@ -1550,7 +1460,7 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.78);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .games-filter-seg-track--compact {
@@ -1600,16 +1510,8 @@
 }
 
 .games-filter-team-row--selected {
-  border-color: rgba(0, 245, 255, 0.38);
-  background: linear-gradient(
-    90deg,
-    rgba(0, 245, 255, 0.16) 0%,
-    rgba(0, 245, 255, 0.03) 58%,
-    transparent 100%
-  );
-  box-shadow:
-    inset 3px 0 0 rgba(0, 245, 255, 0.55),
-    0 0 16px rgba(0, 245, 255, 0.08);
+  border-color: var(--team-accent, #fff);
+  background: var(--team-accent-fill, rgba(255, 255, 255, 0.08));
 }
 
 .games-filter-team-row:disabled {
@@ -1633,28 +1535,17 @@
 }
 
 .games-filter-check--on {
-  border-color: rgba(0, 245, 255, 0.5);
-  background: rgba(0, 245, 255, 0.18);
-  color: rgba(224, 252, 255, 0.98);
-  box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
+  border-color: var(--team-accent, #fff);
+  background: var(--team-accent, #fff);
+  color: var(--team-check, #050505);
 }
 
 .games-filter-seg-track {
   display: flex;
   gap: 0.375rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #000;
   padding: 0.25rem;
-  clip-path: polygon(
-    8px 0%,
-    calc(100% - 8px) 0%,
-    100% 8px,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    8px 100%,
-    0% calc(100% - 8px),
-    0% 8px
-  );
 }
 
 .games-filter-seg-btn {
@@ -1666,18 +1557,7 @@
   color: rgba(255, 255, 255, 0.55);
   transition:
     background 0.18s ease,
-    color 0.18s ease,
-    box-shadow 0.18s ease;
-  clip-path: polygon(
-    5px 0%,
-    calc(100% - 5px) 0%,
-    100% 5px,
-    100% calc(100% - 5px),
-    calc(100% - 5px) 100%,
-    5px 100%,
-    0% calc(100% - 5px),
-    0% 5px
-  );
+    color 0.18s ease;
 }
 
 .games-filter-seg-btn:hover {
@@ -1686,29 +1566,28 @@
 }
 
 .games-filter-seg-btn--active {
-  border: 1px solid rgba(0, 245, 255, 0.32);
-  background: rgba(0, 245, 255, 0.14);
-  color: rgba(224, 252, 255, 0.96);
-  box-shadow: 0 0 14px rgba(0, 245, 255, 0.1);
+  border: 1px solid #fff;
+  background: #fff;
+  color: #050505;
 }
 
 .games-filter-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  border: 1px solid rgba(0, 245, 255, 0.32);
+  border: 1px solid var(--team-accent, #fff);
   border-radius: 0;
   clip-path: none;
-  background: rgba(0, 245, 255, 0.1);
+  background: var(--team-accent-fill, rgba(255, 255, 255, 0.1));
   padding: 0.25rem 0.625rem;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(224, 252, 255, 0.94);
+  color: #fff;
   transition: background 0.18s ease;
 }
 
 .games-filter-chip:hover {
-  background: rgba(0, 245, 255, 0.18);
+  background: var(--team-accent-fill-strong, rgba(255, 255, 255, 0.18));
 }
 
 .games-filter-footer {
@@ -1717,42 +1596,23 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  border-top: 1px solid rgba(0, 245, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0.75rem 1rem;
-  background: linear-gradient(
-    0deg,
-    rgba(0, 245, 255, 0.04) 0%,
-    transparent 100%
-  );
+  background: #050505;
 }
 
 .games-filter-clear-btn {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: transparent;
+  padding: 0.5rem 0.25rem;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.72);
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease;
-  clip-path: polygon(
-    6px 0%,
-    calc(100% - 6px) 0%,
-    100% 6px,
-    100% calc(100% - 6px),
-    calc(100% - 6px) 100%,
-    6px 100%,
-    0% calc(100% - 6px),
-    0% 6px
-  );
+  color: rgba(255, 255, 255, 0.55);
+  transition: color 0.18s ease;
 }
 
 .games-filter-clear-btn:enabled:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
+  color: #fff;
 }
 
 .games-filter-clear-btn:disabled {
@@ -1761,10 +1621,13 @@
 
 .games-filter-done-btn {
   min-width: 6.5rem;
-  padding: 0.5rem 1.125rem;
+  padding: 0.55rem 1.125rem;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
+  border: 1px solid #fff;
+  background: #fff;
+  color: #050505;
 }
 
 /* 予想オーバーレイ — 送信 CTA（試合カード CTA と同じ直角・シアン） */
@@ -3140,60 +3003,61 @@ body.splash-bg {
 }
 
 /* ============================================================
-   バッジパレット（宝石トレイ / 木枠・金縁・ベルベット）
+   バッジパレット（黒×金ダイヤキルト — ページ背景）
    ============================================================ */
 
+.badge-page-quilt {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background-color: #070707;
+  background-image:
+    radial-gradient(circle at 0 0, #ecd48a 0 0.9px, #c9a227 1.2px, transparent 1.7px),
+    radial-gradient(circle at 24px 24px, #ecd48a 0 0.9px, #c9a227 1.2px, transparent 1.7px),
+    linear-gradient(45deg, transparent 49.35%, rgba(186, 144, 52, 0.72) 49.7%, rgba(186, 144, 52, 0.72) 50.3%, transparent 50.65%),
+    linear-gradient(-45deg, transparent 49.35%, rgba(186, 144, 52, 0.72) 49.7%, rgba(186, 144, 52, 0.72) 50.3%, transparent 50.65%),
+    radial-gradient(ellipse 62% 58% at 50% 42%, #161616 0%, #070707 72%);
+  background-size: 48px 48px;
+}
+
 .jewel-tray {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 1100px;
-  aspect-ratio: 16 / 10;
   margin: 0 auto;
-  padding: 28px;
-  background: linear-gradient(145deg, #2a0d08, #5a1b10 45%, #180706);
-  border-radius: 18px;
-  box-shadow:
-    0 18px 35px rgba(0, 0, 0, 0.45),
-    inset 0 0 18px rgba(255, 255, 255, 0.08),
-    inset 0 0 35px rgba(0, 0, 0, 0.65);
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .jewel-tray--mobile {
   max-width: 100%;
-  aspect-ratio: auto;
-  min-height: 0;
-  padding: 16px;
-  border-radius: 14px;
-}
-
-.gold-frame {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  padding: 12px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #6b420d, #f3c75d 30%, #7b4a0d 60%, #ffe08a);
-  box-shadow:
-    inset 0 0 8px rgba(0, 0, 0, 0.7),
-    0 0 10px rgba(255, 205, 90, 0.25);
 }
 
 .jewel-tray-meta {
+  position: relative;
+  z-index: 4;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 10px;
-  padding: 0 4px 8px;
-  border-bottom: 1px solid rgba(139, 26, 40, 0.55);
+  margin: 0;
+  padding: 4px 4px 14px;
+  border: none;
+  background: none;
 }
 
 .jewel-tray-meta h2 {
   font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.12em;
-  color: rgba(240, 212, 200, 0.9);
+  letter-spacing: 0.14em;
+  color: rgba(244, 224, 176, 0.88);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
 }
 
 .jewel-tray-meta p {
@@ -3201,51 +3065,61 @@ body.splash-bg {
   font-family: ui-monospace, monospace;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: rgba(232, 196, 184, 0.75);
+  color: rgba(212, 175, 55, 0.72);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
+.velvet-tuft-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .velvet-grid {
-  flex: 1;
-  min-height: 0;
+  position: relative;
+  z-index: 2;
   width: 100%;
-  padding: 16px;
+  padding: 0;
   display: grid;
   grid-template-columns: repeat(var(--jewel-cols, 6), 1fr);
   grid-template-rows: repeat(var(--jewel-rows, 5), 1fr);
   gap: 14px;
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(180, 20, 45, 0.35), transparent 35%),
-    linear-gradient(145deg, #2a0008, #540012 55%, #190005);
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.75);
   list-style: none;
   margin: 0;
+  background: transparent;
 }
 
 .jewel-tray--mobile .velvet-grid {
   gap: 10px;
-  padding: 12px;
+  height: auto;
+  grid-template-rows: none;
+  grid-auto-rows: auto;
 }
 
 .velvet-slot {
+  position: relative;
+  z-index: 2;
   min-width: 0;
   min-height: 0;
   border: none;
-  border-radius: 12px;
-  background:
-    radial-gradient(circle at 35% 25%, rgba(150, 20, 40, 0.35), transparent 40%),
-    linear-gradient(145deg, #5c0014, #250006);
-  box-shadow:
-    inset 0 3px 8px rgba(255, 255, 255, 0.06),
-    inset 0 -8px 16px rgba(0, 0, 0, 0.45),
-    0 3px 8px rgba(0, 0, 0, 0.5);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.jewel-tray--mobile .velvet-slot {
+  aspect-ratio: 1;
 }
 
 .velvet-slot--button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 6px;
   cursor: pointer;
   outline: none;
   transition:
@@ -3253,35 +3127,52 @@ body.splash-bg {
     transform 0.15s ease;
 }
 
+.velvet-slot--button::before {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 10%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, transparent 72%);
+  filter: blur(3px);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .velvet-slot--button:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.06);
 }
 
 .velvet-slot--button:focus-visible {
-  box-shadow:
-    inset 0 3px 8px rgba(255, 255, 255, 0.06),
-    inset 0 -8px 16px rgba(0, 0, 0, 0.45),
-    0 3px 8px rgba(0, 0, 0, 0.5),
-    0 0 0 2px rgba(243, 199, 93, 0.75);
+  box-shadow: 0 0 0 2px rgba(244, 215, 138, 0.8);
 }
 
 .velvet-slot--button:active {
-  transform: scale(0.98);
+  transform: scale(0.97) translateY(1px);
 }
 
 .velvet-slot--button img {
-  width: 100%;
-  height: 100%;
+  position: relative;
+  z-index: 1;
+  width: 82%;
+  height: 82%;
   object-fit: contain;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  filter:
+    drop-shadow(0 8px 12px rgba(0, 0, 0, 0.72))
+    drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
 }
 
 .jewel-tray-empty {
-  margin: 0 4px 12px;
+  position: relative;
+  z-index: 4;
+  margin: 0 0 12px;
   text-align: center;
   font-size: 14px;
   line-height: 1.5;
-  color: rgba(232, 196, 184, 0.7);
+  color: rgba(232, 214, 168, 0.78);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
 }
 
 /* ============================================================
@@ -5236,10 +5127,12 @@ body::before {
   position: relative;
   width: 100%;
   max-width: 100%;
-  /* overflow-x が visible 以外だと overflow-y:visible は auto 扱いになり縦が切れる */
+  /* overflow-x:auto 時に overflow-y:auto だと縦パンがここに吸われページがスクロールしない */
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
   scrollbar-width: none;
   scroll-snap-type: x proximity;
   padding-bottom: 6px;
@@ -5376,22 +5269,22 @@ body::before {
   overflow: visible;
   background: transparent;
   flex-shrink: 0;
+  touch-action: pan-y;
   /* ステージ高さの余りはメトリクス側へ（バッジ帯を伸ばさない） */
   margin-top: auto;
 }
 
+.profile-plan-pro-metrics-grid,
+.profile-metric-card--steel,
+.profile-metric-card--gold {
+  touch-action: pan-y;
+}
+
 .profile-plan-pro--mobile-stage .profile-plan-pro-metric-card {
-  background: linear-gradient(
-    155deg,
-    rgba(10, 24, 40, 0.58) 0%,
-    rgba(5, 14, 26, 0.42) 48%,
-    rgba(4, 10, 20, 0.52) 100%
-  );
-  backdrop-filter: blur(14px);
-  border-color: rgba(255, 255, 255, 0.07) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 8px 20px rgba(0, 0, 0, 0.4);
+  background: #000000;
+  backdrop-filter: none;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none;
 }
 
 .profile-plan-pro--mobile-stage .profile-plan-pro-metrics-grid {
@@ -5637,23 +5530,84 @@ body::before {
   );
 }
 
+/* 2x2 メトリクス — F 金/鋼。左バーなし・二重枠・セグメントなし */
+.profile-metric-card--steel,
+.profile-metric-card--gold {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: #000000;
+  border: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none;
+}
+
+.profile-metric-card--steel::after,
+.profile-metric-card--gold::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.profile-metric-card--steel::after {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.profile-metric-card--gold::after {
+  border: 1px solid #c9a84b;
+}
+
+.profile-metric-card__inner-frame {
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.profile-metric-card--gold .profile-metric-card__inner-frame {
+  border-color: rgba(232, 198, 106, 0.45);
+}
+
+.profile-metric-card--gold .profile-metric-card__label {
+  color: rgba(232, 198, 106, 0.72) !important;
+}
+
+.profile-metric-card--gold .profile-metric-card__unit-hint {
+  color: rgba(232, 198, 106, 0.5) !important;
+}
+
+.profile-metric-card__value {
+  display: inline-block;
+  transform: skewX(-12deg);
+  transform-origin: bottom left;
+}
+
+.profile-metric-card--gold .profile-metric-card__value {
+  color: #e8c66a;
+}
+
+.profile-metric-card--gold .profile-metric-card__unit {
+  color: rgba(232, 198, 106, 0.62) !important;
+}
+
+.profile-metric-card--gold .profile-metric-card__footnote {
+  color: rgba(232, 198, 106, 0.55) !important;
+}
+
 /* PRO メトリクスカード — 外周の色枠グローは出さない（左バー＋角だけ光らせる） */
 .profile-plan-pro-metric-card {
   position: relative;
   overflow: hidden;
   isolation: isolate;
   --metric-accent-solid: #22d3ee;
-  background: linear-gradient(
-    155deg,
-    rgba(10, 24, 40, 0.92) 0%,
-    rgba(5, 14, 26, 0.78) 48%,
-    rgba(4, 10, 20, 0.86) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.07) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 24px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(12px);
+  background: #000000;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .profile-plan-pro-metric-card__sheen {
@@ -5700,34 +5654,26 @@ body::before {
 
 .profile-plan-pro-metric-card--green {
   --metric-accent-glow: rgba(168, 255, 42, 0.14);
-  border-color: rgba(255, 255, 255, 0.07) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 24px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none;
 }
 
 .profile-plan-pro-metric-card--magenta {
   --metric-accent-glow: rgba(255, 43, 214, 0.12);
-  border-color: rgba(255, 255, 255, 0.07) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 24px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none;
 }
 
 .profile-plan-pro-metric-card--cyan {
   --metric-accent-glow: rgba(34, 211, 238, 0.12);
-  border-color: rgba(255, 255, 255, 0.07) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 24px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none;
 }
 
 .profile-plan-pro-metric-card--red {
   --metric-accent-glow: rgba(248, 113, 113, 0.12);
-  border-color: rgba(255, 255, 255, 0.07) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 24px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: none;
 }
 
 .profile-plan-pro-metric-card .profile-plan-pro-metric-rank {
@@ -7591,7 +7537,7 @@ body::before {
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.78);
   line-height: 1;
 }
 
@@ -8088,19 +8034,19 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   position: fixed !important;
   right: 0 !important;
   left: auto !important;
-  top: 50% !important;
+  top: 46% !important;
   transform: translateY(-50%) !important;
   z-index: 35 !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 3px;
-  width: 20px !important;
-  min-width: 20px !important;
+  gap: 2px;
+  width: 19px !important;
+  min-width: 19px !important;
   height: auto !important;
-  min-height: 78px;
-  padding: 10px 0 !important;
+  min-height: 0;
+  padding: 7px 0 !important;
   margin: 0 !important;
   border: 1px solid rgba(250, 204, 21, 0.55) !important;
   border-right: none !important;
@@ -8152,10 +8098,13 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 
 .profile-menu-edge-handle__chev {
   display: block;
-  font-size: 11px;
-  font-weight: 700;
   line-height: 1;
   margin-bottom: 1px;
+  color: inherit;
+}
+
+.profile-menu-edge-handle--back .profile-menu-edge-handle__chev {
+  color: rgba(248, 250, 252, 0.92);
 }
 
 .profile-menu-edge-handle--overlay {
@@ -8164,12 +8113,17 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 
 .profile-menu-edge-handle__ch {
   display: block;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 8px;
+  font-family: "Oxanium", ui-sans-serif, system-ui, sans-serif;
+  font-size: 7px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 8px;
   letter-spacing: 0;
   color: #facc15;
+}
+
+.profile-menu-edge-handle--back .profile-menu-edge-handle__ch {
+  font-size: 7px;
+  line-height: 8px;
 }
 
 .profile-menu-edge-handle__badge {
@@ -8302,14 +8256,8 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   padding: 11px 12px 11px 14px;
   overflow: hidden;
   text-align: left;
-  border: 1px solid rgba(0, 245, 255, 0.38);
-  background:
-    linear-gradient(
-      115deg,
-      rgba(0, 62, 78, 0.55) 0%,
-      rgba(4, 16, 26, 0.94) 38%,
-      rgba(2, 10, 16, 0.96) 100%
-    );
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: #000000;
   clip-path: polygon(
     0 0,
     calc(100% - 12px) 0,
@@ -8318,9 +8266,8 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
     0 100%
   );
   box-shadow:
-    0 0 24px rgba(0, 245, 255, 0.12),
-    inset 0 1px 0 rgba(0, 245, 255, 0.16),
-    inset 0 0 28px rgba(0, 245, 255, 0.04);
+    0 0 16px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -8328,18 +8275,17 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 }
 
 .side-menu-identity.is-pro {
-  border-color: rgba(0, 245, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.38);
   box-shadow:
-    0 0 32px rgba(0, 245, 255, 0.2),
-    inset 0 1px 0 rgba(0, 245, 255, 0.22),
-    inset 0 0 36px rgba(0, 245, 255, 0.08);
+    0 0 20px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .side-menu-identity:hover {
-  border-color: rgba(0, 245, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.55);
   box-shadow:
-    0 0 36px rgba(0, 245, 255, 0.22),
-    inset 0 1px 0 rgba(0, 245, 255, 0.24);
+    0 0 24px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .side-menu-identity:active {
@@ -8347,14 +8293,7 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 }
 
 .side-menu-identity__rail {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #00f5ff;
-  box-shadow: 0 0 12px rgba(0, 245, 255, 0.85);
-  z-index: 2;
+  display: none;
 }
 
 .side-menu-identity__scan {
@@ -8362,13 +8301,13 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.45;
+  opacity: 0.28;
   background-image: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 245, 255, 0.035) 2px,
-    rgba(0, 245, 255, 0.035) 3px
+    rgba(255, 255, 255, 0.03) 2px,
+    rgba(255, 255, 255, 0.03) 3px
   );
 }
 
@@ -8381,33 +8320,29 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   height: 40px;
   flex-shrink: 0;
   overflow: hidden;
-  border: 1px solid rgba(0, 245, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 2px;
-  background: rgba(0, 30, 42, 0.95);
-  box-shadow:
-    0 0 14px rgba(0, 245, 255, 0.35),
-    inset 0 0 10px rgba(0, 245, 255, 0.12);
+  background: #000000;
+  box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.04);
 }
 
 .side-menu-identity__avatar.is-pro {
-  border-color: rgba(0, 245, 255, 0.9);
-  box-shadow:
-    0 0 18px rgba(0, 245, 255, 0.55),
-    inset 0 0 12px rgba(0, 245, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.06);
 }
 
 .side-menu-identity__ring {
   position: absolute;
   inset: -3px;
   border-radius: 2px;
-  border: 1px solid rgba(0, 245, 255, 0.25);
-  box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none;
   animation: side-menu-identity-ring 2.4s ease-in-out infinite;
   pointer-events: none;
 }
 
 .side-menu-identity__avatar.is-pro .side-menu-identity__ring {
-  border-color: rgba(0, 245, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 @keyframes side-menu-identity-ring {
@@ -8431,9 +8366,9 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 .side-menu-identity__initial {
   font-size: 15px;
   font-weight: 800;
-  color: rgba(0, 245, 255, 0.95);
+  color: rgba(255, 255, 255, 0.92);
   line-height: 1;
-  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+  text-shadow: none;
 }
 
 .side-menu-identity__meta {
@@ -8461,7 +8396,7 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   font-weight: 800;
   color: #fff;
   line-height: 1.15;
-  text-shadow: 0 0 14px rgba(0, 245, 255, 0.2);
+  text-shadow: none;
 }
 
 .side-menu-identity__badge {
@@ -8485,7 +8420,7 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.16em;
-  color: rgba(0, 245, 255, 0.55);
+  color: rgba(255, 255, 255, 0.55);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -8495,9 +8430,9 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   height: 5px;
   flex-shrink: 0;
   transform: rotate(45deg);
-  border: 1px solid rgba(0, 245, 255, 0.7);
-  background: rgba(0, 245, 255, 0.35);
-  box-shadow: 0 0 6px rgba(0, 245, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
   animation: side-menu-identity-ring 2s ease-in-out infinite;
 }
 
@@ -8506,8 +8441,8 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   z-index: 1;
   flex-shrink: 0;
   font-size: 12px;
-  color: #00f5ff;
-  text-shadow: 0 0 10px rgba(0, 245, 255, 0.8);
+  color: #ffffff;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
   animation: side-menu-identity-ring 1.8s ease-in-out infinite;
 }
 

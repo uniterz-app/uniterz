@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore";
 
 import MatchCard from "@/app/component/games/MatchCard";
+import MobilePageShell from "@/app/component/common/MobilePageShell";
 
 // ★ 新しい勝敗分布ドーナツ（V2）
 import GamePredictionDistributionV2 from "@/app/component/predict/GamePredictionDistribution";
@@ -13,15 +14,12 @@ import GamePredictionDistributionV2 from "@/app/component/predict/GamePrediction
 import { toMatchCardProps } from "@/lib/games/transform";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { Pencil } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
-import { ArrowLeft } from "lucide-react";
-
 
 type MatchCardLoaded = ReturnType<typeof toMatchCardProps> & {
   hideActions: true;
@@ -108,51 +106,43 @@ export default function Page() {
       ? getTeamPrimaryColor(leagueNorm, matchProps.away.teamId)
       : "#f43f5e";
 
+  const title = useMemo(() => {
+    if (!matchProps) {
+      return language === "ja" ? "コミュニティ予想" : "Community picks";
+    }
+    return `${awayName} vs ${homeName}`;
+  }, [matchProps, homeName, awayName, language]);
+
   return (
-    <div className="mx-auto max-w-3xl px-3 py-3">
+    <MobilePageShell
+      eyebrow="GAMES"
+      title={title}
+      onClose={() => router.back()}
+      backAriaLabel={m.common.back}
+    >
       <h1 className="sr-only">Predictions (Mobile) for {gameId}</h1>
 
-      {/* ← 戻る（アイコンのみ） */}
-<button
-  onClick={() => router.back()}
-  className="
-    mb-2
-    p-1
-    text-gray-500
-    active:scale-95 transition-transform
-  "
-  aria-label={m.common.back}
->
-  <ArrowLeft size={28} />
-</button>
-
-
-      {/* ゲームカード */}
       {!loading && matchProps && (
         <MatchCard {...matchProps} language={language} />
       )}
 
-      {/* 🎯 V2 勝敗ドーナツグラフ */}
       <div className="mt-2">
         {leagueNorm && (
-  <GamePredictionDistributionV2
-    gameId={gameId}
-    league={leagueNorm}
-    homeName={homeName}
-    awayName={awayName}
-    homeColor={homeColor}
-    awayColor={awayColor}
-  />
-)}
+          <GamePredictionDistributionV2
+            gameId={gameId}
+            league={leagueNorm}
+            homeName={homeName}
+            awayName={awayName}
+            homeColor={homeColor}
+            awayColor={awayColor}
+          />
+        )}
       </div>
 
-      {/* 投稿一覧（TODO: コンポーネント実装） */}
-
-      {/* 🔥 初投稿ボタン（ログイン済みのみ表示） */}
-{uid && hasMyPost === false && (
-  <button
-    onClick={() => router.push(`/mobile/games/${gameId}/predict`)}
-    className="
+      {uid && hasMyPost === false && (
+        <button
+          onClick={() => router.push(`/mobile/games/${gameId}/predict`)}
+          className="
       fixed bottom-24 right-6 z-50
       w-13 h-13 rounded-full
       bg-yellow-400 text-white
@@ -160,11 +150,11 @@ export default function Page() {
       shadow-xl
       active:scale-90 transition-transform
     "
-    aria-label={m.games.predict}
-  >
-    <Pencil size={22} strokeWidth={3} />
-  </button>
-)}
-    </div>
+          aria-label={m.games.predict}
+        >
+          <Pencil size={22} strokeWidth={3} />
+        </button>
+      )}
+    </MobilePageShell>
   );
 }

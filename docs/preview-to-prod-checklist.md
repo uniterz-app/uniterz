@@ -156,11 +156,15 @@
 | 12 | **招待ページ** | ✅ | `/mobile/invite` · Native `Invite` · スタンプボード |
 | 13 | **Unit 履歴** | ✅ | `/mobile/units` · Native `UnitLedger` |
 | 14 | **商品交換（カタログ・申請・進捗・Admin）** | ✅ LIVE | `REDEMPTION_UNITS_LIVE=true`（2026-08-13 弁護士 OK 後）。設計: `unit-redemption-design.md` |
-| 15 | **グループページ UI を今のアプリの雰囲気に合わせる** | ⏳ 今後 | 一覧・詳細・オーバーレイを、Games / Rankings / Result / Profile と同じサイバー HUD に揃える。機能変更はしない |
+| 15 | **グループページ UI を今のアプリの雰囲気に合わせる** | ✅ 第一弾 | 一覧・詳細・オーバーレイを Games / Rankings と同じ直角 HUD（シアン縁・IMPACT 系タグ・角丸なし）。機能変更なし。仕上げは #18 |
+| 16 | **ヘッダー二重表示の解消** | ✅ | サブページ `CyberSubpageHeader` マウント中はグローバル棚を隠す。Games は一覧表示中、外の棚を隠してページ内 Header を出す |
+| 17 | **文字デザインの統一** | ⏳ 次 | 見出し・ラベル・本文のフォント・サイズ・トラッキング・斜め titling を Games / Rankings / Result / Profile に揃える |
+| 18 | **グループページの調整** | ⏳ 次 | #15 の続き。カード・余白・ラベル・モーダルを今の雰囲気にさらに寄せる。機能はそのまま |
+| 19 | **チームスタッツ / プレイヤースタッツページの調整** | ⏳ 次 | TEAM STATS / PLAYER STATS（ハブ・一覧・詳細）を同じサイバー HUD に揃える。機能はそのまま |
 
-### 0.5 グループページ UI（今後）
+### 0.5 グループページ UI
 
-Games / Rankings / Result / Profile はサイバー HUD（斜めフレーム、黒地、シアン縁、IMPACT 系タグ）に揃っている。グループページはまだ旧い見た目のままなので、**雰囲気だけ**合わせる。
+第一弾は直角 HUD に寄せ済み。**#18 で仕上げ**（余白・文字・カード・モーダル）。
 
 | # | 対象 | メモ |
 |---|---|---|
@@ -170,6 +174,42 @@ Games / Rankings / Result / Profile はサイバー HUD（斜めフレーム、�
 | 4 | Native 追従 | 同じ画面の `*Native`（ピクセル完璧は対象外、7〜8割） |
 
 参照: `app/component/communities/CommunityGroup*` · `apps/native/src/features/leaderboards/CommunityGroup*`
+
+### 0.6 ヘッダー二重表示
+
+試合サブページ（TEAM DETAIL / TEAM STATS / PLAYER DETAIL など）で、上部ブランド棚とサブページ見出しが同時に出ないようにした。
+
+| # | 対象 | メモ |
+|---|---|---|
+| 1 | グローバル棚 | `CyberSubpageHeader` マウント中は `acquireAppBrandShelfHidden` で隠す |
+| 2 | サブページ見出し | `CyberSubpageHeader` / `CyberSubpageHeaderNative` が単独のページ見出し |
+| 3 | ページ内の二重 `Header` | Games は一覧表示中、外の棚を隠してページ内 `Header` を出す（welcome カメラ用）。Rankings / Community detail は従来どおりページ側が所有 |
+
+Web / Native 同じルール。Settings モーダルは SafeArea 済みのため棚は隠さない。
+
+### 0.7 文字デザインの統一（次）
+
+ページごとにフォント・字間・見出しの傾きが違うので、Games / Rankings / Result / Profile の titling に揃える。
+
+| # | 対象 | メモ |
+|---|---|---|
+| 1 | ページ見出し | `RankingsPageTitleCyber` 系（斜め・Oxanium / Bebas） |
+| 2 | ゾーンラベル | TITLE / MEMO / RANKING などの HUD ラベル |
+| 3 | 本文・数字 | カード内の本文・スコア・順位 |
+| 4 | Native 追従 | 同じトークン・サイズ |
+
+### 0.8 チーム / プレイヤースタッツ（次）
+
+`LeagueStatsHub` · Team Stats · Player Stats を今のカード・ヘッダー・文字に合わせる。機能変更はしない。
+
+| # | 対象 | メモ |
+|---|---|---|
+| 1 | STATS ハブ | TEAM / PLAYER 切替、検索バー |
+| 2 | チームスタッツ一覧 | 指標ソート・カンファレンスタブ |
+| 3 | プレイヤースタッツ一覧 | リーダボード |
+| 4 | Native 追従 | `LeagueStatsHubScreenNative` ほか |
+
+参照: `app/component/stats/` · `app/component/teamStats/` · `app/component/playerStats/` · `apps/native/src/features/games/stats/`
 
 ### 進め方メモ
 
@@ -327,7 +367,8 @@ Games / Rankings / Result / Profile はサイバー HUD（斜めフレーム、�
 
 | 日付 | 内容 |
 |---|---|
-| 2026-08-15 | **今後キューに追加**: グループページ UI を今のアプリの雰囲気に合わせる（§0.4 #15 / §0.5）。機能変更なし。一覧・詳細・オーバーレイ + Native 追従 |
+| 2026-08-15 | **次キューに追加**: 文字デザインの統一（§0.4 #17 / §0.7）· グループページ調整（#18）· チーム/プレイヤースタッツ調整（#19 / §0.8） |
+| 2026-08-15 | **グループページ UI をサイバー HUD に寄せる**（§0.4 #15 / §0.5）。機能変更なし。一覧・詳細・オーバーレイ + Native 追従 |
 | 2026-07-27 | 月次レポート残作業を `pro-subscription-plan.md`「これからやるキュー」に整理（クセ接続→CONSISTENCY→前月比→8:00 cron→プッシュ→Report入口。Unit は弁護士後）。§0.2 #7 状態更新 |
 | 2026-07-23 | **Pro Plan 煮詰め反映**: `pro-subscription-plan.md` を正として全面更新。§0.1.a 課金コピーを Insight/アラート/レポート/Skin 中心に差し替え。Shadow・Gap は V1 外。週次・月次 V1 完成形・Achievement Skin・直前アラートを計画書へ |
 | 2026-07-18 | **26-27 シーズンキー移行 + ランキング大掃除**: ① 25-26 の `cumulative_ranking_snapshots` 全 52 doc を `cumulative_ranking_snapshots_archive/2025-26-playoffs/docs/` にコピー済み（`scripts/archive-cumulative-ranking-snapshots-2025-26.ts` 実行済み。`cumulative_stats` は温存 → バッジ影響なし）。② NBA 累計は `rankingBySeason["2026-27"]` バケットに精算加算（daily も同キー）、スナップショットは `s2026-27_<metric>` doc、snapshotRanks/履歴は `seasons.<key>` ブロック。Ranking Progress（trend API）もシーズンキーで絞り込み、7月の旧順位が混入しない。③ 削除: ラウンド別集計（`rankingByPlayoffRound`）・play_in 配管・NBA Bracket リーダーボード・旧 Monthly リーダーボード（cron/API/UI）・`useRanking` + `/api/cumulative-ranking` 単発版・Gap/Shadow の日次データ収集（`gapCohorts`。UI/API はライブ read で継続）。④ 一発運用スクリプト多数を `scripts/archive/` へ移動（tsconfig から除外） |

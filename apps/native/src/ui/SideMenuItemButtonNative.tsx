@@ -11,7 +11,6 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   CYBER_SIDE_MENU_ITEM,
-  CYBER_TAB_CYAN,
   SIDE_MENU_LABEL_FONT,
   SIDE_MENU_LABEL_FONT_JA,
 } from "./cyberSideMenuNative";
@@ -53,7 +52,7 @@ export default function SideMenuItemButtonNative({
   const sz = dense ? Math.max(14, iconSize - 3) : Math.max(16, iconSize - 1);
   /** カスタム PNG は枠いっぱい近くまで拡大 */
   const imgSz = dense ? 28 : 32;
-  const accent = isDanger ? "#fb7185" : CYBER_TAB_CYAN;
+  const accent = isDanger ? "#fb7185" : "#ffffff";
 
   return (
     <Pressable onPress={onPress} style={styles.pressable}>
@@ -106,9 +105,7 @@ export default function SideMenuItemButtonNative({
                   color={
                     isDanger
                       ? CYBER_SIDE_MENU_ITEM.dangerIcon
-                      : active
-                        ? CYBER_TAB_CYAN
-                        : CYBER_SIDE_MENU_ITEM.iconDefault
+                      : CYBER_SIDE_MENU_ITEM.iconDefault
                   }
                 />
               ) : null}
@@ -205,10 +202,10 @@ const styles = StyleSheet.create({
   active: {
     borderColor: CYBER_SIDE_MENU_ITEM.borderActive,
     backgroundColor: CYBER_SIDE_MENU_ITEM.bgActive,
-    shadowColor: CYBER_TAB_CYAN,
+    shadowColor: "#ffffff",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.26,
-    shadowRadius: 30,
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
   },
   activeDanger: {
     borderColor: CYBER_SIDE_MENU_ITEM.dangerBorderActive,
@@ -230,14 +227,14 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 54,
-    backgroundColor: "rgba(0, 42, 56, 0.7)",
+    backgroundColor: "#000000",
     borderRightWidth: 1,
-    borderRightColor: "rgba(0, 245, 255, 0.26)",
+    borderRightColor: "rgba(255, 255, 255, 0.28)",
     transform: [{ skewX: "-14deg" }],
   },
   chipActive: {
-    backgroundColor: "rgba(0, 70, 88, 0.96)",
-    borderRightColor: "rgba(0, 245, 255, 0.85)",
+    backgroundColor: "#000000",
+    borderRightColor: "rgba(255, 255, 255, 0.55)",
   },
   iconCol: {
     width: 48,
@@ -293,11 +290,11 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 3,
-    backgroundColor: CYBER_TAB_CYAN,
-    shadowColor: CYBER_TAB_CYAN,
+    backgroundColor: "#ffffff",
+    shadowColor: "#ffffff",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
     zIndex: 2,
   },
   activeCaret: {
@@ -306,8 +303,8 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     fontSize: 10,
     lineHeight: 12,
-    color: CYBER_TAB_CYAN,
-    textShadowColor: "rgba(0, 245, 255, 0.8)",
-    textShadowRadius: 8,
+    color: "#ffffff",
+    textShadowColor: "rgba(255, 255, 255, 0.45)",
+    textShadowRadius: 6,
   },
 });

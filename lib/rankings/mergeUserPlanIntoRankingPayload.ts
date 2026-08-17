@@ -1,5 +1,5 @@
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
+import { parseEquippedProSkinFromUserDoc } from "@/lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 
 type RowLike = Record<string, unknown> & { uid?: string };
@@ -101,6 +101,7 @@ async function loadUserMergeFieldsByUid(
         displayName?: string;
         photoURL?: string | null;
         planProBgVariant?: unknown;
+        proSkinUnlockedIds?: unknown;
       };
       const plan = planFromUserDoc(data);
       out.set(id, {
@@ -112,10 +113,7 @@ async function loadUserMergeFieldsByUid(
           typeof data.photoURL === "string" && data.photoURL.trim()
             ? data.photoURL.trim()
             : null,
-        planProBgVariant:
-          plan === "pro"
-            ? parseUserPlanProBgVariant(data.planProBgVariant)
-            : undefined,
+        planProBgVariant: parseEquippedProSkinFromUserDoc(data),
       });
     });
   }

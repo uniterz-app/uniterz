@@ -2,11 +2,9 @@
  * Web `StreakTrackerCard`（Last20 Tracker）に準拠したネイティブ版。
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { cyberAlert } from "../../components/cyberAlert";
 import {
-  LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View,
+  LayoutChangeEvent, Platform, StyleSheet, Text, View,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { STREAK_TRACKER_LAST_N, type StreakTrackerPointNative } from "./useNativeStreakTracker";
 import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
 import {
@@ -147,8 +145,6 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   const halfH = PLOT_H / 2;
   const blockH = Math.max(2, (halfH - (maxAbs - 1) * BLOCK_GAP_PX) / maxAbs);
 
-  const openInfo = () => cyberAlert(title, subtitle);
-
   if (loading) {
     return (
       <ProfileOverviewChartCardNative topLabel={title}>
@@ -157,9 +153,6 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
             <View style={styles.headerLeft}>
               <View style={styles.titleWithInfo}>
                 <Text style={styles.subtitle}>{subtitle}</Text>
-                <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
-                  <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
-                </Pressable>
               </View>
             </View>
           </View>
@@ -179,9 +172,6 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
         <View style={styles.foreground}>
           <View style={styles.titleWithInfo}>
             <Text style={styles.subtitle}>{subtitle}</Text>
-            <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
-              <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
-            </Pressable>
           </View>
           <View style={[styles.noDataBox, { minHeight: PLOT_H + 40 }]}>
             <Text style={styles.noData}>NO DATA</Text>
@@ -201,9 +191,6 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
           <View style={styles.headerLeft}>
             <View style={styles.titleWithInfo}>
               <Text style={styles.subtitle}>{subtitle}</Text>
-              <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
-                <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
-              </Pressable>
             </View>
           </View>
           <View style={styles.badgeCol}>

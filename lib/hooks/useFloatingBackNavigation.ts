@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { getUserDocDataCached, readUserHandleFromDoc } from "@/lib/user/userDocCache";
 import {
   clearSideMenuOrigin,
   hasSideMenuOrigin,
@@ -39,10 +39,10 @@ export function useFloatingBackNavigation() {
     let alive = true;
     getUserDocDataCached(uid).then((data) => {
       if (!alive) return;
-      const h = data?.handle || data?.slug;
+      const h = readUserHandleFromDoc(data);
       setProfileHref(
         h
-          ? `${prefix}/u/${encodeURIComponent(String(h))}`
+          ? `${prefix}/u/${encodeURIComponent(h)}`
           : `${prefix}/mypage`
       );
     });

@@ -3,7 +3,6 @@
 import type { LucideIcon } from "lucide-react";
 import cn from "clsx";
 import type { CSSProperties, ReactNode } from "react";
-import { CYBER_TAB_CYAN } from "@/app/component/rankings/CyberSlantedTab";
 
 type Props = {
   onClick: () => void;
@@ -54,7 +53,7 @@ export default function SideMenuItemButton({
       : "h-7 w-7";
   const textSize = dense ? "text-sm" : "text-[15px]";
   const isDanger = tone === "danger";
-  const accent = isDanger ? "#fb7185" : CYBER_TAB_CYAN;
+  const accent = isDanger ? "#fb7185" : "#ffffff";
 
   return (
     <button
@@ -67,12 +66,12 @@ export default function SideMenuItemButton({
         active
           ? isDanger
             ? "cyber-side-menu-item--active border-rose-400/55 bg-rose-500/[0.1]"
-            : "cyber-side-menu-item--active border-[rgba(0,245,255,0.75)]"
+            : "cyber-side-menu-item--active border-white/75"
           : isDanger
             ? "border-white/10 bg-[#0a0e14]/95 hover:border-rose-400/38"
-            : "border-[rgba(0,245,255,0.1)] hover:border-[rgba(0,245,255,0.4)]",
+            : "border-white/22 hover:border-white/45",
         "transition-[border-color,box-shadow,background-color] duration-200",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/35",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35",
         "active:brightness-[0.96]",
         className
       )}
@@ -80,8 +79,8 @@ export default function SideMenuItemButton({
         boxShadow: active
           ? isDanger
             ? "0 0 22px rgba(251,113,133,0.16), inset 0 1px 0 rgba(255,255,255,0.06)"
-            : "0 0 30px rgba(0,245,255,0.26), inset 0 0 22px rgba(0,245,255,0.1), inset 0 0 0 1px rgba(0,245,255,0.2)"
-          : "inset 0 1px 0 rgba(0,245,255,0.05)",
+            : "0 0 24px rgba(255,255,255,0.12), inset 0 0 18px rgba(255,255,255,0.04), inset 0 0 0 1px rgba(255,255,255,0.18)"
+          : "inset 0 1px 0 rgba(255,255,255,0.05)",
       }}
     >
       {!isDanger ? (
@@ -119,9 +118,7 @@ export default function SideMenuItemButton({
               style={{
                 color: isDanger
                   ? "rgba(251,180,188,0.95)"
-                  : active
-                    ? CYBER_TAB_CYAN
-                    : "rgba(0,245,255,0.78)",
+                  : "rgba(255,255,255,0.92)",
               }}
               strokeWidth={2}
             />

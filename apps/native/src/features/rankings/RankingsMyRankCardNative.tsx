@@ -47,7 +47,7 @@ export function MyRankCardNative({
   statsSource,
   leagueLabel,
   mobileWide = false,
-  cardResetKey: _cardResetKey,
+  cardResetKey,
   onShareStateChange,
   rankTierGap = null,
   rankProgress,
@@ -84,7 +84,6 @@ export function MyRankCardNative({
   hideRankProgress?: boolean;
   estimatedUnits?: EstimatedPeriodUnits | null;
 }) {
-  void _cardResetKey;
   const t = rankingsTexts(language);
   const freeTier = displayTier === "free";
   const proTier = displayTier === "pro";
@@ -172,33 +171,36 @@ export function MyRankCardNative({
     });
   }, [canShare, sharing, handleShare, onShareStateChange, freeTier]);
 
+  if (loading || statsPending) {
+    return null;
+  }
+
   if (freeTier) {
     const listRank = rank != null && rank >= 1 ? rank : 99;
     return (
       <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
-        <MyRankCardFrameNative tone="neutral" hideLeftEdge>
+        <MyRankCardFrameNative
+          tone="neutral"
+          hideLeftEdge
+          animateDraw
+          drawKey={cardResetKey}
+        >
           <View style={styles.myRankFreeBody}>
-            {loading || statsPending || rank == null ? (
-              <View style={styles.myRankFreeLoading}>
-                <Text style={styles.myRankFreeLoadingText}>···</Text>
-              </View>
-            ) : (
-              <CyberRankingListRowNative
-                rank={listRank}
-                displayName={displayName.trim() || "?"}
-                photoURL={photoURL}
-                metric={metric}
-                counted={value}
-                posts={posts}
-                avgRow={avgRow}
-                language={language}
-                isPro={false}
-                rankDeltaPlaces={null}
-                hideAccentBar
-                rankOverline={t.yourRank}
-                plainWhiteScore
-              />
-            )}
+            <CyberRankingListRowNative
+              rank={listRank}
+              displayName={displayName.trim() || "?"}
+              photoURL={photoURL}
+              metric={metric}
+              counted={value}
+              posts={posts}
+              avgRow={avgRow}
+              language={language}
+              isPro={false}
+              rankDeltaPlaces={null}
+              hideAccentBar
+              rankOverline={t.yourRank}
+              plainWhiteScore
+            />
           </View>
         </MyRankCardFrameNative>
       </View>
@@ -209,14 +211,14 @@ export function MyRankCardNative({
     <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
       <View style={styles.myRankCaptureWrap}>
         <View ref={captureRef} collapsable={false}>
-          <MyRankCardFrameNative tone={frameTone} proSpec={proTier}>
+          <MyRankCardFrameNative
+            tone={frameTone}
+            proSpec={proTier}
+            animateDraw
+            drawKey={cardResetKey}
+          >
             {/* 上段: リスト行と同じ配置 / 下段: Pro 専用 */}
             <View style={styles.myRankProStack}>
-              {loading || statsPending ? (
-                <View style={styles.myRankFreeLoading}>
-                  <Text style={styles.myRankFreeLoadingText}>···</Text>
-                </View>
-              ) : (
                 <CyberRankingListRowNative
                   rank={rank != null && rank >= 1 ? rank : 99}
                   displayName={displayName.trim() || "?"}
@@ -241,14 +243,13 @@ export function MyRankCardNative({
                   rankMuted={!(rank != null && rank >= 1)}
                   plainWhiteScore={!(rank != null && rank >= 1)}
                 />
-              )}
 
               {showRankingProgress ? (
                 <View style={styles.myRankProProgressBand}>
                   <MyRankRankingProgressNative
                     points={progressPoints}
                     maxSnapshots={progressSnapshotLimit}
-                    loading={loading || rankProgressLoading}
+                    loading={rankProgressLoading}
                     language={language === "en" ? "en" : "ja"}
                     emptyHint={t.rankingProgressNoData}
                     numbersOnly

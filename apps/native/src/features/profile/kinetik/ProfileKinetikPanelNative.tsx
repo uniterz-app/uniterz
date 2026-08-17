@@ -9,7 +9,7 @@ import {
 } from "react";
 import { cyberAlert } from "../../../components/cyberAlert";
 import {
-  Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, type StyleProp, type ViewStyle,
+  Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle,
 } from "react-native";
 import UnitEarnOverlayNative from "../UnitEarnOverlayNative";
 import { useUnitEarnOverlayNative } from "../useUnitEarnOverlayNative";
@@ -80,7 +80,7 @@ import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
 import { buildProfileShareUrl } from "../../../../../../lib/share/shareAppUrls";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import {
-  KINETIK_METRIC_ACCENT,
+  KINETIK_METRIC_GOLD,
   KINETIK_SLANT_TAB_RANK,
   KINETIK_SLANT_TAB_ROW_H,
   KINETIK_SLANT_TAB_STREAK,
@@ -140,140 +140,25 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
-/** Web `color-mix(in srgb, accent X%, white)` の近似 */
-function mixAccentWithWhite(hex: string, accentRatio: number): string {
-  const h = hex.replace("#", "").trim();
-  if (h.length !== 6) return hex;
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  if (![r, g, b].every(Number.isFinite)) return hex;
-  const t = 1 - accentRatio;
-  return `rgb(${Math.round(r * accentRatio + 255 * t)},${Math.round(g * accentRatio + 255 * t)},${Math.round(b * accentRatio + 255 * t)})`;
-}
-
-function KinetikSegBar({
-  filled,
-  total = 5,
-  accent,
-  isPlanPro = false,
+function MetricRectFrameNative({
+  color,
+  inset,
 }: {
-  filled: number;
-  total?: number;
-  accent: KinetikMetricAccent;
-  isPlanPro?: boolean;
+  color: string;
+  inset: number;
 }) {
-  const colors = KINETIK_METRIC_ACCENT[accent];
+  const edge = { backgroundColor: color } as const;
   return (
-    <View style={[styles.segRow, isPlanPro ? styles.segRowPlanPro : null]}>
-      {Array.from({ length: total }).map((_, i) => {
-        const lit = i < filled;
-        return (
-          <View
-            key={i}
-            style={[
-              styles.seg,
-              isPlanPro && styles.segPlanPro,
-              {
-                backgroundColor: lit ? colors.fill : "rgba(255,255,255,0.08)",
-                /** Pro は矩形シャドウを付けず、色面だけで示す */
-                shadowColor: lit && !isPlanPro ? colors.glow : "transparent",
-                shadowOpacity: lit && !isPlanPro ? 0.55 : 0,
-                shadowRadius: lit && !isPlanPro ? 4 : 0,
-                shadowOffset: { width: 0, height: 0 },
-              },
-            ]}
-          />
-        );
-      })}
+    <View
+      pointerEvents="none"
+      style={[styles.metricFrameHost, { top: inset, right: inset, bottom: inset, left: inset }]}
+    >
+      <View style={[styles.metricFrameH, styles.metricFrameTop, edge]} />
+      <View style={[styles.metricFrameH, styles.metricFrameBottom, edge]} />
+      <View style={[styles.metricFrameV, styles.metricFrameLeft, edge]} />
+      <View style={[styles.metricFrameV, styles.metricFrameRight, edge]} />
     </View>
   );
-}
-
-/**
- * Web bar-bloom は glow(0.35) + blur(6px)。
- * ぼかしなしだと強すぎるので、開始アルファを下げた色を返す。
- */
-function metricBarBloomColor(glow: string): string {
-  const m = glow.match(
-    /^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/i
-  );
-  if (!m) return "rgba(34,211,238,0.12)";
-  const r = Number(m[1]);
-  const g = Number(m[2]);
-  const b = Number(m[3]);
-  return `rgba(${r},${g},${b},0.12)`;
-}
-
-/** Web `profile-plan-pro-metric-card__value` の drop-shadow(0 0 3px …) 相当 */
-function metricValuePlanProAccentStyle(
-  accent: KinetikMetricAccent
-): { color: string; textShadowColor: string; textShadowRadius: number } {
-  const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#f8fafc";
-  const glow =
-    accent === "green"
-      ? "rgba(168,255,42,0.14)"
-      : accent === "magenta"
-        ? "rgba(255,43,214,0.12)"
-        : accent === "red"
-          ? "rgba(248,113,113,0.12)"
-          : "rgba(34,211,238,0.14)";
-  return {
-    color: line,
-    textShadowColor: glow,
-    textShadowRadius: 3,
-  };
-}
-
-/** Web `profile-plan-pro-metric-card__label` — accent 72% + white */
-function metricLabelPlanProAccentStyle(
-  accent: KinetikMetricAccent
-): {
-  color: string;
-  textShadowColor: string;
-  textShadowOffset: { width: number; height: number };
-  textShadowRadius: number;
-} {
-  const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#22d3ee";
-  return {
-    color: mixAccentWithWhite(line, 0.72),
-    textShadowColor: "rgba(255,255,255,0.08)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 3,
-  };
-}
-
-/** Web `profile-plan-pro-metric-card__unit-hint` — accent 42% + white/35 */
-function metricUnitHintPlanProAccentStyle(
-  accent: KinetikMetricAccent
-): { color: string } {
-  const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#22d3ee";
-  return { color: mixAccentWithWhite(line, 0.42) };
-}
-
-/** Web `profile-plan-pro-metric-card__unit` — accent 55% + white/40 */
-function metricUnitPlanProAccentStyle(
-  accent: KinetikMetricAccent
-): { color: string } {
-  const line = KINETIK_METRIC_ACCENT[accent]?.line ?? "#22d3ee";
-  return { color: mixAccentWithWhite(line, 0.55) };
-}
-
-function metricCardPlanProAccentStyle(
-  accent: KinetikMetricAccent
-): ViewStyle | undefined {
-  switch (accent) {
-    case "green":
-      return styles.metricCardPlanProGreen;
-    case "magenta":
-      return styles.metricCardPlanProMagenta;
-    case "cyan":
-      return styles.metricCardPlanProCyan;
-    case "red":
-      return styles.metricCardPlanProRed;
-    default:
-      return undefined;
-  }
 }
 
 function KinetikMetricCardNative({
@@ -285,18 +170,18 @@ function KinetikMetricCardNative({
   valuesPending = false,
   rankLabel,
   footnote,
-  accent,
-  filledSegs = 0,
-  showSegBar = true,
+  accent: _accent,
+  filledSegs: _filledSegs,
+  showSegBar: _showSegBar = false,
   segmentsReady = true,
   unit,
   unitHint,
   dayDelta,
   dayDeltaTone,
-  rankBelowSegBar = false,
+  rankBelowSegBar: _rankBelowSegBar = false,
   compact = false,
   isPlanPro = false,
-  language = "ja",
+  language: _language = "ja",
 }: {
   label: string;
   value?: string;
@@ -326,30 +211,29 @@ function KinetikMetricCardNative({
     countTarget ?? 0,
     countFormat ?? "int",
     countDecimals,
-    reduceMotion,
-    420
+    reduceMotion
   );
   const displayValue = useCount
     ? countedValue
     : valuesPending
       ? "—"
       : (value ?? "—");
-  const colors = KINETIK_METRIC_ACCENT[accent];
   const valueHasUnit = displayValue.includes("%");
   const labelLatinUpper = kinetikMetricLabelUsesLatinUppercase(label);
+  const goldInk = isPlanPro ? KINETIK_METRIC_GOLD : "#FFFFFF";
+  const goldMuted = isPlanPro ? "rgba(232,198,106,0.62)" : "rgba(255,255,255,0.55)";
   const rankBadge =
     rankLabel && segmentsReady ? (
       <View
         style={[
           styles.metricRankBadge,
-          rankBelowSegBar && styles.metricRankBelow,
-          isPlanPro && styles.metricRankBadgePlanPro,
+          isPlanPro && styles.metricRankBadgeGold,
         ]}
       >
         <Text
           style={[
             styles.metricRankBadgeText,
-            isPlanPro && styles.metricRankBadgeTextPlanPro,
+            isPlanPro && styles.metricRankBadgeTextGold,
           ]}
         >
           {rankLabel}
@@ -362,75 +246,22 @@ function KinetikMetricCardNative({
       style={[
         styles.metricCard,
         compact && styles.metricCardCompact,
-        isPlanPro && styles.metricCardPlanPro,
-        isPlanPro ? metricCardPlanProAccentStyle(accent) : undefined,
       ]}
     >
-      {isPlanPro ? (
-        <>
-          <LinearGradient
-            pointerEvents="none"
-            colors={[
-              "rgba(10,24,40,0.92)",
-              "rgba(5,14,26,0.78)",
-              "rgba(4,10,20,0.86)",
-            ]}
-            locations={[0, 0.48, 1]}
-            start={{ x: 0.15, y: 0 }}
-            end={{ x: 0.9, y: 1 }}
-            style={styles.metricCardPlanProFill}
-          />
-          <LinearGradient
-            pointerEvents="none"
-            colors={[
-              "rgba(255,255,255,0.09)",
-              "transparent",
-              "transparent",
-              "rgba(167,139,250,0.05)",
-            ]}
-            locations={[0, 0.34, 0.66, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.metricCardPlanProSheen}
-          />
-          {/**
-           * Web `.profile-plan-pro-metric-card__bar-bloom` は blur(6px)+opacity 0.72。
-           * RN に同等 blur がないので、開始色を薄く・72% で消し・全体 opacity を下げて近似する。
-           */}
-          <LinearGradient
-            pointerEvents="none"
-            colors={[metricBarBloomColor(colors.glow), "transparent"]}
-            locations={[0, 0.72]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={[
-              styles.metricAccentBloom,
-              compact && styles.metricAccentBloomCompact,
-            ]}
-          />
-        </>
-      ) : null}
-      <View
-        style={[
-          styles.metricAccentBar,
-          compact && styles.metricAccentBarCompact,
-          isPlanPro && styles.metricAccentBarPlanPro,
-          {
-            backgroundColor: colors.line,
-            shadowColor: isPlanPro ? "transparent" : colors.glow,
-            shadowOpacity: isPlanPro ? 0 : 0.7,
-            shadowRadius: isPlanPro ? 0 : 8,
-            shadowOffset: { width: 0, height: 0 },
-          },
-        ]}
+      <MetricRectFrameNative
+        color={isPlanPro ? "#C9A84B" : "rgba(255,255,255,0.22)"}
+        inset={1}
+      />
+      <MetricRectFrameNative
+        color={isPlanPro ? "rgba(201,168,75,0.55)" : "rgba(255,255,255,0.28)"}
+        inset={4}
       />
       <View style={styles.metricLabelRow}>
         <Text
           style={[
             styles.metricLabel,
             labelLatinUpper ? styles.metricLabelLatin : styles.metricLabelCjk,
-            isPlanPro ? styles.metricLabelPlanPro : null,
-            isPlanPro ? metricLabelPlanProAccentStyle(accent) : null,
+            { color: isPlanPro ? "rgba(232,198,106,0.72)" : "rgba(255,255,255,0.62)" },
           ]}
           numberOfLines={1}
         >
@@ -440,8 +271,7 @@ function KinetikMetricCardNative({
           <Text
             style={[
               styles.metricUnitHint,
-              isPlanPro ? styles.metricUnitHintPlanPro : null,
-              isPlanPro ? metricUnitHintPlanProAccentStyle(accent) : null,
+              { color: isPlanPro ? "rgba(232,198,106,0.5)" : "rgba(255,255,255,0.38)" },
             ]}
             numberOfLines={1}
           >
@@ -450,25 +280,9 @@ function KinetikMetricCardNative({
         ) : null}
       </View>
       <View style={[styles.metricValueRow, compact && styles.metricValueRowCompact]}>
-        <Text
-          style={[
-            styles.metricValue,
-            isPlanPro ? styles.metricValuePlanPro : null,
-            isPlanPro ? metricValuePlanProAccentStyle(accent) : null,
-          ]}
-        >
-          {displayValue}
-        </Text>
+        <Text style={[styles.metricValue, { color: goldInk }]}>{displayValue}</Text>
         {unit && !valueHasUnit ? (
-          <Text
-            style={[
-              styles.metricUnit,
-              isPlanPro ? styles.metricUnitPlanPro : null,
-              isPlanPro ? metricUnitPlanProAccentStyle(accent) : null,
-            ]}
-          >
-            {unit}
-          </Text>
+          <Text style={[styles.metricUnit, { color: goldMuted }]}>{unit}</Text>
         ) : null}
         {dayDelta ? (
           <Text
@@ -484,29 +298,13 @@ function KinetikMetricCardNative({
             {dayDelta}
           </Text>
         ) : null}
-        {rankLabel && !rankBelowSegBar ? rankBadge : null}
+        {rankBadge}
       </View>
-      {showSegBar ? (
-        <View style={styles.metricSegWrap}>
-          {segmentsReady ? (
-            <KinetikSegBar filled={filledSegs} accent={accent} isPlanPro={isPlanPro} />
-          ) : (
-            <View style={styles.metricSegPlaceholder} />
-          )}
-        </View>
-      ) : null}
-      {rankBelowSegBar ? <View style={styles.metricRankWrap}>{rankBadge}</View> : null}
       {footnote ? (
         <Text
           style={[
             styles.metricFootnote,
-            isPlanPro ? styles.metricFootnotePlanPro : null,
-            isPlanPro
-              ? {
-                  borderLeftColor: metricValuePlanProAccentStyle(accent).color,
-                  color: "rgba(255,255,255,0.74)",
-                }
-              : null,
+            { color: isPlanPro ? "rgba(232,198,106,0.55)" : "rgba(255,255,255,0.62)" },
           ]}
         >
           {footnote}
@@ -833,7 +631,10 @@ function KinetikBadgeFloatWrapNative({
   children: ReactNode;
 }) {
   return (
-    <KinetikBadgeProBridgeWrapNative index={index} paused={paused}>
+    <KinetikBadgeProBridgeWrapNative
+      index={index}
+      paused={paused}
+    >
       {children}
     </KinetikBadgeProBridgeWrapNative>
   );
@@ -1331,27 +1132,37 @@ function KinetikIdentityJoinIdRowNative({
   shareLabel: string;
   onShare: () => void;
 }) {
-  if (!memberSinceLabel && !idLabel) {
-    return null;
-  }
-
   return (
     <View style={styles.identityJoinIdRow}>
       {memberSinceLabel ? (
         <KinetikFooterRef style={[styles.footerRefIdentity, styles.footerRefJoin]}>
           <Text style={styles.footerRefTextIdentity}>{memberSinceLabel}</Text>
         </KinetikFooterRef>
-      ) : null}
-      <KinetikIdentityIdChipNative
-        idLabel={idLabel}
-        shareCopied={shareCopied}
-        copiedLabel={copiedLabel}
-        shareLabel={shareLabel}
-        onShare={onShare}
-        pressableStyle={styles.identityIdPressInline}
-        footerRefStyle={styles.footerRefId}
-        compact
-      />
+      ) : (
+        <View
+          style={[styles.footerRefIdentity, styles.footerRefJoin, styles.footerJoinSlot]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      )}
+      {idLabel ? (
+        <KinetikIdentityIdChipNative
+          idLabel={idLabel}
+          shareCopied={shareCopied}
+          copiedLabel={copiedLabel}
+          shareLabel={shareLabel}
+          onShare={onShare}
+          pressableStyle={styles.identityIdPressInline}
+          footerRefStyle={styles.footerRefId}
+          compact
+        />
+      ) : (
+        <View
+          style={[styles.footerRefIdentity, styles.footerRefId, styles.footerIdSlot]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      )}
     </View>
   );
 }
@@ -1586,17 +1397,22 @@ export default function ProfileKinetikPanelNative({
     totalPointsRank: activeTotalPointsRank,
     rankBadge,
   });
+  const goldMonogramSkin = planProBgVariant === "wave-gold-monogram";
   const proFrameTheme = isPro ? kinetikPlanProFrameTheme(profileAccent) : null;
   const panelBorder = kinetikPanelBorderColor(profileAccent);
   const flipEar = useProfileKinetikFlipEar();
   const reduceMotion = useReducedMotion();
+  const { width: windowW } = useWindowDimensions();
   /**
    * 獲得演出中は Pro 背景ループも止める（SvgSkinHud は再開時に入場をやり直さない）。
    * バッジ／金庫の常時ループも earnFxPaused で止める。
    */
   const animatePlanProBg =
     isPro && reduceMotion !== true && !earnFxPaused;
-  const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
+  const [frameSize, setFrameSize] = useState(() => ({
+    width: Math.max(0, windowW - 24),
+    height: isPro ? 520 : 0,
+  }));
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
   const profileViewCountAria =
     profileViewCount == null
@@ -1792,11 +1608,11 @@ export default function ProfileKinetikPanelNative({
         flipEar ? styles.frameOuterNotched : null,
         isPro && proFrameTheme
           ? {
-              shadowColor: proFrameTheme.strong,
+              shadowColor: goldMonogramSkin ? "#000" : proFrameTheme.strong,
               shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.28,
-              shadowRadius: 18,
-              elevation: 6,
+              shadowOpacity: goldMonogramSkin ? 0.35 : 0.28,
+              shadowRadius: goldMonogramSkin ? 12 : 18,
+              elevation: goldMonogramSkin ? 4 : 6,
             }
           : null,
         isPro ? styles.frameOuterPlanPro : null,
@@ -1807,7 +1623,9 @@ export default function ProfileKinetikPanelNative({
         setFrameSize({ width, height });
       }}
     >
-      {flipEar ? <ProfileKinetikFlipEarTopEdgesNative borderColor={panelBorder} /> : null}
+      {flipEar ? (
+        <ProfileKinetikFlipEarTopEdgesNative borderColor={panelBorder} />
+      ) : null}
       {isPro && frameSize.width > 0 ? (
         <ProfilePlanProBackgroundNative
           width={frameSize.width}
@@ -1855,15 +1673,17 @@ export default function ProfileKinetikPanelNative({
               accentKey={menuAccent}
               isPlanPro={isPro}
             />
-            {profileViewCount != null ? (
-              <View style={styles.avatarViews}>
+            <View style={styles.avatarViews}>
+              {profileViewCount != null ? (
                 <KinetikViewCountChipNative
                   viewCount={profileViewCount}
                   viewCountAriaLabel={profileViewCountAria}
                   underAvatar
                 />
-              </View>
-            ) : null}
+              ) : (
+                <View style={styles.viewCountChipSlot} />
+              )}
+            </View>
           </View>
           <View style={styles.headerMeta}>
             <KinetikHeaderHatch />
@@ -2295,6 +2115,15 @@ const styles = StyleSheet.create({
     gap: 8,
     alignSelf: "flex-start",
     maxWidth: "100%",
+    minHeight: 22,
+  },
+  footerJoinSlot: {
+    minWidth: 72,
+    opacity: 0,
+  },
+  footerIdSlot: {
+    minWidth: 64,
+    opacity: 0,
   },
   footerRefJoin: {
     flexShrink: 0,
@@ -2327,7 +2156,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 0.45,
     textTransform: "uppercase",
-    color: "rgba(255,255,255,0.42)",
+    color: "rgba(255,255,255,0.78)",
     lineHeight: 10,
     fontVariant: ["tabular-nums"],
   },
@@ -2440,6 +2269,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
     width: KINETIK_AVATAR_MOBILE.size,
     alignItems: "stretch",
+    minHeight: 22,
+  },
+  viewCountChipSlot: {
+    height: 22,
   },
   /** アバター直下 — 横幅フル */
   viewCountChipUnderAvatar: {
@@ -2468,7 +2301,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 12,
     lineHeight: 17,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.78)",
   },
   menuBadge: {
     position: "absolute",
@@ -2529,7 +2362,7 @@ const styles = StyleSheet.create({
     gap: 4,
     alignItems: "center",
   },
-  badgeRowEmpty: { marginTop: 8, minHeight: 4 },
+  badgeRowEmpty: { marginTop: 14, minHeight: 44 },
   badgeBridgePro: {
     flexGrow: 0,
     flexShrink: 0,
@@ -2697,71 +2530,42 @@ const styles = StyleSheet.create({
     width: "47%",
     flexGrow: 1,
     minHeight: 104,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "#000000",
     padding: 16,
     position: "relative",
+    overflow: "hidden",
+    borderWidth: 0,
+    shadowColor: "transparent",
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   metricCardCompact: {
     minHeight: 76,
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
-  metricCardPlanPro: {
-    /** 塗りは Fill。色付き外周枠は出さず、黒落ち影のみ */
-    backgroundColor: "transparent",
-    borderColor: "rgba(255,255,255,0.07)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.42,
-    shadowRadius: 12,
-    elevation: 3,
-    overflow: "hidden",
-  },
-  metricCardPlanProFill: {
-    ...StyleSheet.absoluteFillObject,
+  /** 外縁は黒のまま。金線を 1px 内側に置いてスキンへ滲まないようにする */
+  metricFrameHost: {
+    position: "absolute",
     zIndex: 0,
   },
-  /** Web `.profile-plan-pro-metric-card__sheen` */
-  metricCardPlanProSheen: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-    opacity: 0.45,
-  },
-  metricCardPlanProGreen: {
-    borderColor: "rgba(255,255,255,0.07)",
-  },
-  metricCardPlanProMagenta: {
-    borderColor: "rgba(255,255,255,0.07)",
-  },
-  metricCardPlanProCyan: {
-    borderColor: "rgba(255,255,255,0.07)",
-  },
-  metricCardPlanProRed: {
-    borderColor: "rgba(255,255,255,0.07)",
-  },
-  metricAccentBarPlanPro: {
-    width: 4,
-    borderRadius: 2,
-    zIndex: 1,
-  },
-  /** Web `.profile-plan-pro-metric-card__bar-bloom` — 右へ溶ける左バー光（弱め近似） */
-  metricAccentBloom: {
+  metricFrameH: {
     position: "absolute",
     left: 0,
-    top: 10,
-    bottom: 10,
-    width: 36,
-    zIndex: 0,
-    borderTopRightRadius: 18,
-    borderBottomRightRadius: 18,
-    opacity: 0.42,
+    right: 0,
+    height: 1,
   },
-  metricAccentBloomCompact: {
-    top: 8,
-    bottom: 8,
-    width: 28,
+  metricFrameV: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 1,
   },
+  metricFrameTop: { top: 0 },
+  metricFrameBottom: { bottom: 0 },
+  metricFrameLeft: { left: 0 },
+  metricFrameRight: { right: 0 },
   metricLabelPlanPro: {
     fontWeight: "700",
     zIndex: 1,
@@ -2791,6 +2595,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
   },
+  metricRankBadgeGold: {
+    borderColor: "rgba(232,198,106,0.45)",
+    backgroundColor: "transparent",
+  },
+  metricRankBadgeTextGold: {
+    color: "rgba(232,198,106,0.88)",
+  },
   metricAccentBar: {
     position: "absolute",
     left: 0,
@@ -2810,7 +2621,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingLeft: 10,
+    paddingLeft: 0,
     paddingRight: 4,
     minWidth: 0,
     zIndex: 1,
@@ -2844,7 +2655,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     gap: 5,
     marginTop: 8,
-    paddingLeft: 10,
+    paddingLeft: 0,
     zIndex: 1,
   },
   metricValueRowCompact: {
@@ -2855,6 +2666,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     color: "rgba(255,255,255,0.92)",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-12deg" }],
   },
   metricUnit: {
     fontFamily: OXANIUM_BOLD,
@@ -2897,7 +2709,7 @@ const styles = StyleSheet.create({
   segPlanPro: { height: 6, borderRadius: 2 },
   metricFootnote: {
     marginTop: 8,
-    paddingLeft: 10,
+    paddingLeft: 0,
     fontFamily: OXANIUM_BOLD,
     fontSize: 11,
     color: "rgba(255,255,255,0.62)",
@@ -2946,7 +2758,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 1.26,
     textTransform: "uppercase",
-    color: "rgba(255,255,255,0.42)",
+    color: "rgba(255,255,255,0.78)",
     lineHeight: 9,
   },
 });

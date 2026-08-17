@@ -6,7 +6,7 @@
  * - 回数系は `users.proSkinProgress.periodWins` を加算（Free も積む）
  * - Pro のときだけ unlocked + notice
  * - Free→Pro 遡及は ensurePersisted（notice なし）
- * - 冪等: meta/proSkinPeriodGrants — status=done のみスキップ。running 停滞はリトライ可
+ * - 冪等: meta/proSkinPeriodGrants/locks/{period}_{label} — status=done のみスキップ。running 停滞はリトライ可
  */
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import {
@@ -19,10 +19,12 @@ import {
   type NbaRankingPeriod,
 } from "../rankings/nbaPeriod";
 import { nbaSeasonKeyFromDateJST } from "../rankings/nbaSeason";
+import { countMilestoneUnlockedProSkins } from "./countMilestoneUnlockedProSkins";
 import {
   PRO_SKIN_PERIOD_WIN_MILESTONES,
   PRO_SKIN_RANK_MILESTONES,
   PRO_SKIN_UNLOCK_FROM_SEASON_KEY,
+  proSkinPeriodGrantLockDocPath,
   proSkinPeriodWinCounterKey,
 } from "./proSkinMilestoneCatalog";
 
@@ -141,7 +143,7 @@ async function claimPeriodGrant(opts: {
 }): Promise<boolean> {
   const db = getFirestore();
   const grantRef = db.doc(
-    `meta/proSkinPeriodGrants/${opts.period}_${opts.labelKey}`
+    proSkinPeriodGrantLockDocPath(opts.period, opts.labelKey)
   );
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(grantRef);
@@ -203,7 +205,7 @@ export async function grantProSkinRankUnlocksForPeriod(opts: {
 
   const db = getFirestore();
   const grantRef = db.doc(
-    `meta/proSkinPeriodGrants/${opts.period}_${opts.labelKey}`
+    proSkinPeriodGrantLockDocPath(opts.period, opts.labelKey)
   );
 
   const rules = PRO_SKIN_RANK_MILESTONES.filter(
@@ -307,9 +309,11 @@ export async function grantProSkinRankUnlocksForPeriod(opts: {
     const userRef = db.doc(`users/${uid}`);
     let newlyUnlocked: string[] = [];
     let wroteEarn = false;
+    let careerCount = 0;
     await db.runTransaction(async (tx) => {
       newlyUnlocked = [];
       wroteEarn = false;
+      careerCount = 0;
       const userSnap = await tx.get(userRef);
       const user = (userSnap.exists ? userSnap.data() : {}) as Record<
         string,
@@ -353,6 +357,13 @@ export async function grantProSkinRankUnlocksForPeriod(opts: {
             )
           : []
       );
+      const origUnlockedSize = unlocked.size;
+      const prevHeld = new Set<string>([
+        ...unlocked,
+        ...(Array.isArray(user.proSkinHeldIds)
+          ? user.proSkinHeldIds.filter((x): x is string => typeof x === "string")
+          : []),
+      ]);
 
       if (winKeys && winKeys.size > 0) {
         for (const key of winKeys) {
@@ -382,7 +393,7 @@ export async function grantProSkinRankUnlocksForPeriod(opts: {
             const wins = Number(periodWinsRaw[key] ?? 0);
             if (wins >= rule.wins && !unlocked.has(rule.id)) {
               unlocked.add(rule.id);
-              newlyUnlocked.push(rule.id);
+              if (!prevHeld.has(rule.id)) newlyUnlocked.push(rule.id);
             }
           }
         }
@@ -392,25 +403,41 @@ export async function grantProSkinRankUnlocksForPeriod(opts: {
         for (const id of skinIds) {
           if (!unlocked.has(id)) {
             unlocked.add(id);
-            newlyUnlocked.push(id);
+            if (!prevHeld.has(id)) newlyUnlocked.push(id);
           }
         }
       }
 
-      if (newlyUnlocked.length > 0 || (isProUser(user) && skinIds.length > 0)) {
+      if (
+        newlyUnlocked.length > 0 ||
+        unlocked.size !== origUnlockedSize ||
+        (isProUser(user) && skinIds.length > 0)
+      ) {
         patch.proSkinUnlockedIds = [...unlocked];
+        patch.proSkinHeldIds = [...new Set([...prevHeld, ...unlocked])];
       }
       if (newlyUnlocked.length > 0) {
         patch.proSkinUnlockNoticeIds = FieldValue.arrayUnion(...newlyUnlocked);
       }
 
       tx.set(userRef, patch, { merge: true });
+      careerCount = countMilestoneUnlockedProSkins([...unlocked]);
     });
     if (wroteEarn) earnedUsers += 1;
     if (newlyUnlocked.length === 0) continue;
     unlockedUsers += 1;
     for (const id of newlyUnlocked) {
       holderIncrements.set(id, (holderIncrements.get(id) ?? 0) + 1);
+    }
+    if (careerCount > 0) {
+      try {
+        const { syncUserCareerUnlockedSkinCount } = await import(
+          "./syncUserCareer"
+        );
+        await syncUserCareerUnlockedSkinCount(uid, careerCount);
+      } catch (err) {
+        console.warn("[grantProSkinRankUnlocks] career skin sync failed", err);
+      }
     }
   }
 

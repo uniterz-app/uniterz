@@ -1,7 +1,7 @@
 /**
  * 試合一覧の線枠シェル。塗りカードではなく、上下ラベルで途切れた直角ストローク。
  */
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   type LayoutChangeEvent,
   type StyleProp,
@@ -12,13 +12,21 @@ import {
 } from "react-native";
 import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import Animated, {
+  cancelAnimation,
   Extrapolation,
   interpolate,
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
+  withTiming,
 } from "react-native-reanimated";
 import { MATCH_CARD_METRIC_FONT } from "./matchCardTypography";
+import {
+  GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS,
+  GAMES_LINE_FRAME_DRAW_MS,
+} from "./gamesCyberMotion";
+import { gamesCyberEaseBezier } from "./gamesPageMotion";
 import {
   interruptedRoundedRectStrokeHalves,
   MATCH_LINE_FRAME_TOP_GAP_START_INSET,
@@ -59,12 +67,26 @@ type Props = {
   /**
    * 0→1 で線枠をパスに沿って描く。未指定は最初から全線。
    * ラウンドラベル左右から同時に半周し、下の CTA で合わせる。
+   * `animateDraw` 指定時は無視（計測後にこちらで描画する）。
    */
   strokeEnd?: SharedValue<number>;
   /** 左辺ラベルをチュートリアル測定対象にする */
   leftLabelTutorialTarget?: string | null;
   /** 左辺ラベルを強調（チュートリアル用） */
   leftLabelPulse?: boolean;
+  /**
+   * true: サイズとラベル幅が取れてから、左右パスを 0→1 で描く。
+   * 親の SharedValue より先に Canvas が無いと描画が見えないため、枠側で開始する。
+   */
+  animateDraw?: boolean;
+  /** `animateDraw` の追加遅延（ms）。一覧スタッガー用 */
+  drawDelayMs?: number;
+  /** 上辺ラベル用の外側マージンを付けない（My Rank など） */
+  flush?: boolean;
+  /** 上辺を閉じる（My Rank。左右から同時に描いて中央で接続） */
+  closedTop?: boolean;
+  /** Web 相当。枠パスのあと中身をフェードイン */
+  fadeContent?: boolean;
 };
 
 function makeHalves(
@@ -106,6 +128,11 @@ export default function MatchListLineFrameNative({
   strokeEnd,
   leftLabelTutorialTarget = null,
   leftLabelPulse = false,
+  animateDraw = false,
+  drawDelayMs = 0,
+  flush = false,
+  closedTop = false,
+  fadeContent = false,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [topLabelW, setTopLabelW] = useState(0);
@@ -137,8 +164,9 @@ export default function MatchListLineFrameNative({
     frameWidth: size.w,
     align: topLabelAlign,
   });
-  const topGap =
-    topLabel && topLabelW > 0
+  const topGap = closedTop
+    ? 0
+    : topLabel && topLabelW > 0
       ? topLabelW + LABEL_GAP_PAD
       : MIN_TICK_GAP;
   const bottomGap = !showCta
@@ -166,8 +194,88 @@ export default function MatchListLineFrameNative({
   }
 
   const hasSize = size.w > 0 && size.h > 0;
+  const labelReady = !topLabel || topLabelW > 0;
+  const ctaReady = !showCta || ctaFixedW > 0;
+  const ready =
+    hasSize &&
+    skiaHalves != null &&
+    labelReady &&
+    (animateDraw ? ctaReady : true);
+
   const fallbackStrokeEnd = useSharedValue(1);
-  const strokeProgress = strokeEnd ?? fallbackStrokeEnd;
+  const localDrawEnd = useSharedValue(animateDraw ? 0 : 1);
+  const canvasReveal = useSharedValue(animateDraw ? 0 : 1);
+  const contentOpacity = useSharedValue(animateDraw && fadeContent ? 0 : 1);
+  const strokeProgress = animateDraw
+    ? localDrawEnd
+    : (strokeEnd ?? fallbackStrokeEnd);
+
+  useLayoutEffect(() => {
+    if (!animateDraw) {
+      localDrawEnd.value = 1;
+      canvasReveal.value = 1;
+      contentOpacity.value = 1;
+      return;
+    }
+    if (!ready) {
+      localDrawEnd.value = 0;
+      canvasReveal.value = 0;
+      if (fadeContent) contentOpacity.value = 0;
+      return;
+    }
+    /** Skia の初回フレームは不透明黒になりやすい。隠してから枠を描く */
+    localDrawEnd.value = 0;
+    canvasReveal.value = 0;
+    if (fadeContent) contentOpacity.value = 0;
+    const delay = Math.max(0, drawDelayMs);
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        canvasReveal.value = 1;
+        localDrawEnd.value = withDelay(
+          delay,
+          withTiming(1, {
+            duration: GAMES_LINE_FRAME_DRAW_MS,
+            easing: gamesCyberEaseBezier,
+          })
+        );
+        if (fadeContent) {
+          contentOpacity.value = withDelay(
+            delay +
+              GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS +
+              GAMES_LINE_FRAME_DRAW_MS +
+              40,
+            withTiming(1, {
+              duration: 280,
+              easing: gamesCyberEaseBezier,
+            })
+          );
+        } else {
+          contentOpacity.value = 1;
+        }
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      cancelAnimation(contentOpacity);
+    };
+  }, [
+    animateDraw,
+    fadeContent,
+    ready,
+    drawDelayMs,
+    localDrawEnd,
+    canvasReveal,
+    contentOpacity,
+  ]);
+
+  const canvasRevealStyle = useAnimatedStyle(() => ({
+    opacity: canvasReveal.value,
+  }));
+  const contentFadeStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+  }));
 
   const topLabelAnim = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -194,60 +302,81 @@ export default function MatchListLineFrameNative({
     ),
   }));
 
+  const strokePaths =
+    ready && skiaHalves ? (
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.canvas,
+          { width: size.w, height: size.h },
+          canvasRevealStyle,
+        ]}
+      >
+        <Canvas
+          opaque={false}
+          pointerEvents="none"
+          style={{
+            width: size.w,
+            height: size.h,
+            backgroundColor: "transparent",
+          }}
+        >
+        <Path
+          path={skiaHalves.right}
+          style="stroke"
+          strokeWidth={5}
+          color={glow}
+          strokeCap="round"
+          strokeJoin="miter"
+          start={0}
+          end={strokeProgress as unknown as number}
+        />
+        <Path
+          path={skiaHalves.left}
+          style="stroke"
+          strokeWidth={5}
+          color={glow}
+          strokeCap="round"
+          strokeJoin="miter"
+          start={0}
+          end={strokeProgress as unknown as number}
+        />
+        <Path
+          path={skiaHalves.right}
+          style="stroke"
+          strokeWidth={STROKE}
+          color={color}
+          strokeCap="round"
+          strokeJoin="miter"
+          start={0}
+          end={strokeProgress as unknown as number}
+        />
+        <Path
+          path={skiaHalves.left}
+          style="stroke"
+          strokeWidth={STROKE}
+          color={color}
+          strokeCap="round"
+          strokeJoin="miter"
+          start={0}
+          end={strokeProgress as unknown as number}
+        />
+        </Canvas>
+      </Animated.View>
+    ) : null;
+
   return (
     <View
+      collapsable={false}
       pointerEvents="box-none"
-      style={[styles.root, !showCta ? styles.rootNoCta : null, style]}
+      style={[
+        styles.root,
+        !showCta ? styles.rootNoCta : null,
+        flush ? styles.rootFlush : null,
+        style,
+      ]}
       onLayout={onLayout}
     >
-      {hasSize && skiaHalves ? (
-        <Canvas
-          pointerEvents="none"
-          style={[styles.canvas, { width: size.w, height: size.h }]}
-        >
-          <Path
-            path={skiaHalves.right}
-            style="stroke"
-            strokeWidth={5}
-            color={glow}
-            strokeCap="round"
-            strokeJoin="miter"
-            start={0}
-            end={strokeProgress as unknown as number}
-          />
-          <Path
-            path={skiaHalves.left}
-            style="stroke"
-            strokeWidth={5}
-            color={glow}
-            strokeCap="round"
-            strokeJoin="miter"
-            start={0}
-            end={strokeProgress as unknown as number}
-          />
-          <Path
-            path={skiaHalves.right}
-            style="stroke"
-            strokeWidth={STROKE}
-            color={color}
-            strokeCap="round"
-            strokeJoin="miter"
-            start={0}
-            end={strokeProgress as unknown as number}
-          />
-          <Path
-            path={skiaHalves.left}
-            style="stroke"
-            strokeWidth={STROKE}
-            color={color}
-            strokeCap="round"
-            strokeJoin="miter"
-            start={0}
-            end={strokeProgress as unknown as number}
-          />
-        </Canvas>
-      ) : null}
-
       {showCta ? (
       <View pointerEvents="none" style={styles.ctaWidthProbe}>
         <View
@@ -260,6 +389,12 @@ export default function MatchListLineFrameNative({
         </View>
       </View>
       ) : null}
+
+      <Animated.View pointerEvents="auto" style={[styles.content, contentFadeStyle]}>
+        {children}
+      </Animated.View>
+
+      {strokePaths}
 
       {leftLabel ? (
         <Animated.View
@@ -326,10 +461,6 @@ export default function MatchListLineFrameNative({
         </Animated.View>
       ) : null}
 
-      <View pointerEvents="auto" style={styles.content}>
-        {children}
-      </View>
-
       {showCta ? (
       <Animated.View
         pointerEvents="none"
@@ -376,10 +507,15 @@ const styles = StyleSheet.create({
   rootNoCta: {
     marginBottom: 0,
   },
+  rootFlush: {
+    marginTop: 0,
+    marginBottom: 0,
+  },
   canvas: {
     ...StyleSheet.absoluteFillObject,
     pointerEvents: "none",
     zIndex: 2,
+    backgroundColor: "transparent",
   },
   content: {
     position: "relative",

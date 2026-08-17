@@ -37,7 +37,7 @@ import {
   RANK_DISPLAY_FONT,
 } from "../../rankings/rankingsUiTheme";
 import {
-  MATCH_CARD_BRACKET_LETTER_SPACING_12,
+  MATCH_CARD_BRACKET_LETTER_SPACING_15,
   MATCH_CARD_BRACKET_TEXT,
 } from "../matchCardTypography";
 import { CYBER_SIDE_MENU_PANEL } from "../../../ui/cyberSideMenuNative";
@@ -504,8 +504,8 @@ const styles = StyleSheet.create({
     ...MATCH_CARD_BRACKET_TEXT,
     flexShrink: 1,
     color: "rgba(255,255,255,0.92)",
-    fontSize: 15,
-    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_12,
+    fontSize: 18,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
     textTransform: "uppercase",
     transform: [{ skewX: "-6deg" }],
   },

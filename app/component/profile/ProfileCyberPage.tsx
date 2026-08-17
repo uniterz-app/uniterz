@@ -14,6 +14,8 @@ type Props = {
   subtitle?: string;
   eyebrow?: string;
   contentClassName?: string;
+  /** ページ全面の背景 */
+  backdrop?: ReactNode;
   children: ReactNode;
 };
 
@@ -26,6 +28,7 @@ export default function ProfileCyberPage({
   subtitle,
   eyebrow = "PROFILE",
   contentClassName,
+  backdrop,
   children,
 }: Props) {
   const { fUser: user } = useFirebaseUser();
@@ -43,6 +46,7 @@ export default function ProfileCyberPage({
       onBack={goBack}
       backAriaLabel={backAria}
       contentClassName={contentClassName}
+      backdrop={backdrop}
     >
       {children}
     </CyberSubpageShell>

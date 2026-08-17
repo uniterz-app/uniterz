@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X, ArrowDown, ArrowUp } from "lucide-react";
 import { nameOxanium, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
@@ -38,8 +38,19 @@ function nick(row: NbaLeagueTeamStatRow): string {
   return getMobileTeamName("nba", row.teamName).toUpperCase();
 }
 
-/** 順位表・マッチカードと同じ NBA チーム短名 */
-const teamNameTy = bracketMarketTeamTypography(true);
+function hexToRgba(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return `rgba(92,240,181,${alpha})`;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/** 順位表・マッチカードと同じ NBA チーム短名 + 傾き */
+const teamNameTy = matchCardTeamNameStyle(true);
+const metricCellSkew = { transform: "skewX(-6deg)" } as const;
+const rankCellSkew = { transform: "skewX(-10deg)" } as const;
 
 function rankNumberClass(rank: number): string {
   if (rank <= 6) {
@@ -74,6 +85,7 @@ function MetricChip({
           ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508]"
           : "border-[#00F5FF]/30 bg-[rgba(4,20,30,0.72)] text-[#00F5FF] hover:border-[#00F5FF]/50",
       ].join(" ")}
+      style={metricCellSkew}
     >
       {label}
     </button>
@@ -294,20 +306,24 @@ export default function NbaLeagueTeamStatsPanel({
         className,
       ].join(" ")}
     >
-      <header className="mb-4 space-y-1.5">
-        <div className="flex items-end justify-between gap-3">
-          <p className="text-[12px] leading-snug text-white/55">
-            リーグ全体を指標で並べ替え。行をタップして最大 2 チームを比較。
-          </p>
-          <span
-            className={[
-              nameOxanium.className,
-              "shrink-0 text-[9px] font-bold uppercase tracking-[0.16em] text-[#00F5FF]/45",
-            ].join(" ")}
-          >
-            {bundle.asOfLabel}
-          </span>
-        </div>
+      <header className="mb-3 space-y-1.5">
+        <p
+          className={[
+            nameOxanium.className,
+            "text-right text-[9px] font-bold uppercase tracking-[0.16em] text-[#00F5FF]/45",
+          ].join(" ")}
+        >
+          {bundle.asOfLabel}
+        </p>
+        <p className="text-[11px] leading-snug text-white/52">
+          {onSelectTeam
+            ? isJa
+              ? "リーグ全体を指標で並べ替え。チームをタップして詳細へ。"
+              : "Sort the league by metric. Tap a team for detail."
+            : isJa
+              ? "リーグ全体を指標で並べ替え。行をタップして最大 2 チームを比較。"
+              : "Sort the league by metric. Tap rows to compare up to 2 teams."}
+        </p>
       </header>
 
       <div className="mb-3">
@@ -350,12 +366,9 @@ export default function NbaLeagueTeamStatsPanel({
         </CyberSlantedTabBar>
       </div>
 
-      <div className="mb-3 space-y-1.5">
+      <div className="mb-2 space-y-1.5">
         {NBA_LEAGUE_TEAM_STAT_METRIC_ROWS.map((row, rowIdx) => (
-          <div
-            key={rowIdx}
-            className="grid grid-cols-3 gap-1.5 sm:grid-cols-6"
-          >
+          <div key={rowIdx} className="grid grid-cols-6 gap-1.5">
             {row.map((m) => (
               <MetricChip
                 key={m.id}
@@ -461,6 +474,8 @@ export default function NbaLeagueTeamStatsPanel({
             const rank = index + 1;
             const selected = picked.includes(row.teamId);
             const primary = metricValue(row, metric);
+            const teamPrimary =
+              getTeamPrimaryColor("nba", row.teamId) ?? "#5cf0b5";
             return (
               <motion.li
                 key={row.teamId}
@@ -471,6 +486,7 @@ export default function NbaLeagueTeamStatsPanel({
                   duration: reduceMotion ? 0 : 0.18,
                   delay: reduceMotion ? 0 : Math.min(index, 12) * 0.012,
                 }}
+                className="relative overflow-hidden"
               >
                 <button
                   type="button"
@@ -480,18 +496,22 @@ export default function NbaLeagueTeamStatsPanel({
                       : togglePick(row.teamId)
                   }
                   className={[
-                    "grid w-full grid-cols-[28px_minmax(0,1.2fr)_64px_52px_52px] items-center gap-1 px-2 py-2.5 text-left transition",
+                    "relative grid w-full grid-cols-[28px_minmax(0,1.2fr)_64px_52px_52px] items-center gap-1 px-2 py-2.5 text-left transition",
                     !onSelectTeam && selected
                       ? "bg-[rgba(0,56,72,0.55)]"
                       : "bg-transparent hover:bg-white/[0.03] active:bg-white/[0.05]",
                   ].join(" ")}
+                  style={{
+                    backgroundImage: `linear-gradient(90deg, ${hexToRgba(teamPrimary, 0.18)} 0%, ${hexToRgba(teamPrimary, 0.1)} 50%, transparent 100%)`,
+                  }}
                 >
                   <span
                     className={[
                       resultStatsMetricNumClass,
-                      "w-7 text-[11px] font-black tabular-nums leading-none",
+                      "w-7 text-[15px] font-black tabular-nums leading-none",
                       rankNumberClass(rank),
                     ].join(" ")}
+                    style={rankCellSkew}
                   >
                     {rank}
                   </span>
@@ -499,7 +519,7 @@ export default function NbaLeagueTeamStatsPanel({
                     <span
                       className={[
                         nameBebas.className,
-                        "truncate text-[15px] leading-tight text-white",
+                        "truncate text-[18px] leading-tight text-white",
                       ].join(" ")}
                       style={teamNameTy}
                     >
@@ -519,8 +539,9 @@ export default function NbaLeagueTeamStatsPanel({
                   <span
                     className={[
                       resultStatsMetricNumClass,
-                      "text-right text-[13px] font-black tabular-nums text-[#00F5FF]",
+                      "text-right text-[14px] font-black tabular-nums text-[#00F5FF]",
                     ].join(" ")}
+                    style={metricCellSkew}
                   >
                     {formatMetricValue(metric, primary)}
                   </span>
@@ -529,6 +550,7 @@ export default function NbaLeagueTeamStatsPanel({
                       resultStatsMetricNumClass,
                       "text-right text-[11px] font-semibold tabular-nums text-white/55",
                     ].join(" ")}
+                    style={metricCellSkew}
                   >
                     {row.wins}-{row.losses}
                   </span>
@@ -537,6 +559,7 @@ export default function NbaLeagueTeamStatsPanel({
                       resultStatsMetricNumClass,
                       "text-right text-[11px] font-semibold tabular-nums text-white/55",
                     ].join(" ")}
+                    style={metricCellSkew}
                   >
                     {formatMetricValue("netrtg", row.netrtg)}
                   </span>

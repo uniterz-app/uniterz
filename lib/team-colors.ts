@@ -236,6 +236,31 @@ export function getTeamJerseySecondaryColor(
   return getTeamSecondaryColor(league, teamId);
 }
 
+/** `#RRGGBB` → `rgba(...)`。UI の薄い塗り用。 */
+export function teamColorRgba(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return `rgba(255,255,255,${alpha})`;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) {
+    return `rgba(255,255,255,${alpha})`;
+  }
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/** 塗りつぶし上の文字色（チェック等） */
+export function teamColorOnFill(hex: string): "#050505" | "#ffffff" {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return "#ffffff";
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return "#ffffff";
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return lum > 0.62 ? "#050505" : "#ffffff";
+}
+
 export function getTeamSecondaryColor(
   league: League,
   teamId: string | null | undefined

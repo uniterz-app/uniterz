@@ -14,14 +14,12 @@ import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope
 import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { jp, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
+import { jp, resultStatsMetricNumClass } from "@/lib/fonts";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import ProfileStreakPlotGrid from "@/app/component/profile/ui/ProfileStreakPlotGrid";
 import { useCountUp } from "@/lib/hooks/useCountUp";
-import { Info } from "lucide-react";
-import styles from "./profileChartInfoFaq.module.css";
 import {
   isProfileChartAnimationOff,
 } from "@/lib/profile/profileVisualEffects";
@@ -257,8 +255,6 @@ export default function StreakTrackerCard({
   const blockStagger = layout === "web" ? 0.098 : 0.078;
 
   const subtitle = msg.profile.last20TrackerDesc.replace("{n}", String(STREAK_TRACKER_LAST_N));
-  /** Info 用（表示サブタイトルと同じ文言のみ） */
-  const chartInfoTooltipMsg = subtitle;
   const emptyHint = subtitle;
 
   const statWinLabel = msg.profile.bestWStreak;
@@ -291,18 +287,6 @@ export default function StreakTrackerCard({
               >
                 {subtitle}
               </p>
-              <div className={styles.wrap}>
-                <button
-                  type="button"
-                  className={styles.faqButton}
-                  aria-label={chartInfoTooltipMsg}
-                >
-                  <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
-                </button>
-                <div className={styles.tooltip} aria-hidden>
-                  {chartInfoTooltipMsg}
-                </div>
-              </div>
             </div>
           </div>
           <div className="flex flex-col items-center self-end text-center">
@@ -394,15 +378,7 @@ export default function StreakTrackerCard({
                 role="status"
                 className={`grid place-items-center px-4 text-center ${S.loadingEmptyH}`}
               >
-                <p
-                  className={[
-                    nameBebas.className,
-                    "text-center text-[clamp(1.1rem,3.5vw,1.65rem)] leading-none tracking-[0.18em]",
-                  ].join(" ")}
-                  style={cyberNoDataLabelStyle}
-                >
-                  NO DATA
-                </p>
+                <CyberNoDataLabel variant="chart" />
                 <p className="mt-2 max-w-[240px] text-center text-[10px] text-white/45 sm:text-xs">
                   {emptyHint}
                 </p>
@@ -435,7 +411,7 @@ export default function StreakTrackerCard({
                   ))}
                 </m.div>
 
-                <div className="relative min-h-0 min-w-0 flex-1 overflow-x-auto">
+                <div className="relative min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain [-webkit-overflow-scrolling:touch]">
                   <div
                     className="flex min-w-0 flex-col"
                     style={{

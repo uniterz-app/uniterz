@@ -5,6 +5,7 @@ export type MasterBadgeDto = {
   title: string;
   description: string;
   icon?: string;
+  participantCount?: number;
 };
 
 export async function fetchMasterBadgesShared(opts?: {

@@ -79,8 +79,8 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { readTutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
 import { readTutorialWelcomeHandoff } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import type { Language } from "@/lib/i18n/language";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import {
   clearSideMenuOrigin,
@@ -99,7 +99,6 @@ import {
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
 import { useProfileViewCount } from "@/lib/profile/useProfileViewCount";
-import { nameBebas } from "@/lib/fonts";
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -248,17 +247,10 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     if (tab === "bracket") setTab("overview");
   }, [tab, setTab]);
 
-  if (isMe && loadingPlan && !welcomeProfileFly) {
-    return (
-      <div className="flex justify-center p-4">
-        <CandleChartLoader />
-      </div>
-    );
-  }
-
   return (
     <LazyMotion features={domAnimation}>
-    <div className="mx-auto min-h-screen max-w-[640px] px-4 py-4 pb-bottom-nav text-white">
+    <div className="relative min-h-svh overflow-x-clip overflow-y-auto overscroll-y-contain touch-pan-y pb-bottom-nav text-white [-webkit-overflow-scrolling:touch]">
+    <div className="mx-auto max-w-[640px] px-4 py-4">
       <Suspense fallback={null}>
         <RankingsReturnNavLink language={language} />
       </Suspense>
@@ -392,15 +384,12 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               <CandleChartLoader />
             </div>
           ) : !playoffDisplayData ? (
-            <div className={`${CYBER_GLASS_PANEL} mt-4 space-y-3 p-6 text-center`}>
-              <p
-                className={[
-                  nameBebas.className,
-                  "text-[clamp(1.75rem,9vw,2.7rem)] leading-none tracking-[0.22em]",
-                ].join(" ")}
-                style={cyberNoDataLabelStyle}
-              >
-                NO DATA
+            <div className="mt-4 rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.55)] px-6 py-6 text-center">
+              <CyberNoDataLabel variant="bracket" />
+              <p className="mt-2 text-sm text-white/45">
+                {language === "ja"
+                  ? "提出済みのプレーオフブラケットがありません"
+                  : "No playoff bracket submitted"}
               </p>
             </div>
           ) : (
@@ -492,6 +481,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           onDismiss={dismissSkinUnlock}
         />
       ) : null}
+    </div>
     </div>
     </LazyMotion>
   );

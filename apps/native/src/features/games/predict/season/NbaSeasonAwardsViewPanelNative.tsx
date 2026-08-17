@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     borderWidth: 1,
     borderColor: "rgba(252,211,77,0.2)",
-    backgroundColor: "rgba(4,9,16,0.97)",
+    backgroundColor: "#000000",
     overflow: "hidden",
   },
   row: {

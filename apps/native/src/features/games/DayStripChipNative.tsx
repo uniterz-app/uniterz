@@ -4,8 +4,8 @@ import {
   DAY_CHIP_BORDER_DEFAULT,
   DAY_CHIP_BORDER_SELECTED,
   DAY_CHIP_BORDER_TODAY,
+  DAY_CHIP_FILL_SELECTED,
   DAY_CHIP_GRADIENT_DEFAULT,
-  DAY_CHIP_GRADIENT_SELECTED,
   DAY_STRIP_CHIP_SIZE,
 } from "./gamesDayStripTokens";
 
@@ -24,7 +24,7 @@ type Props = {
 
 /**
  * Web `DayStrip` の日付丸ボタン相当。
- * inset ハイライト・内側リング・シアン/ゴールド光彩を RN 向けにレイヤー分解。
+ * 選択中はフラットなオレンジ塗り。未選択のみ薄いハイライト。
  */
 export default function DayStripChipNative({
   dayNum,
@@ -45,7 +45,6 @@ export default function DayStripChipNative({
       accessibilityState={{ selected }}
       style={({ pressed }) => [
         s.pressable,
-        selected && s.pressableSelected,
         pressed && s.pressablePressed,
       ]}
     >
@@ -53,50 +52,42 @@ export default function DayStripChipNative({
         style={[
           s.circle,
           { borderColor },
+          selected && s.circleSelected,
           selected && s.circleSelectedShadow,
           isToday && !selected && s.circleTodayShadow,
         ]}
       >
-        <LinearGradient
-          colors={
-            selected
-              ? [...DAY_CHIP_GRADIENT_SELECTED]
-              : [...DAY_CHIP_GRADIENT_DEFAULT]
-          }
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <LinearGradient
-          colors={[
-            selected ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
-            "rgba(255,255,255,0)",
-          ]}
-          locations={selected ? [0, 0.55] : [0, 0.6]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          pointerEvents="none"
-          style={StyleSheet.absoluteFillObject}
-        />
-        {/* Web `inset 0 1px 0 rgba(255,255,255,*)` 相当 */}
-        <View
-          pointerEvents="none"
-          style={[
-            s.insetTopHighlight,
-            selected
-              ? s.insetTopHighlightSelected
-              : isToday
-                ? s.insetTopHighlightToday
-                : s.insetTopHighlightDefault,
-          ]}
-        />
-        {selected ? (
-          <View pointerEvents="none" style={s.innerRingSelected} />
+        {!selected ? (
+          <LinearGradient
+            colors={[...DAY_CHIP_GRADIENT_DEFAULT]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        ) : null}
+        {!selected ? (
+          <LinearGradient
+            colors={["rgba(255,255,255,0.07)", "rgba(255,255,255,0)"]}
+            locations={[0, 0.6]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            pointerEvents="none"
+            style={StyleSheet.absoluteFillObject}
+          />
+        ) : null}
+        {!selected ? (
+          <View
+            pointerEvents="none"
+            style={[
+              s.insetTopHighlight,
+              isToday ? s.insetTopHighlightToday : s.insetTopHighlightDefault,
+            ]}
+          />
         ) : null}
         {isToday && !selected ? (
           <View pointerEvents="none" style={s.innerRingToday} />
         ) : null}
-        <Text style={[s.dayNum, selected && s.dayNumSelected]}>{dayNum}</Text>
+        <Text style={s.dayNum}>{dayNum}</Text>
       </View>
     </Pressable>
   );
@@ -106,9 +97,6 @@ const s = StyleSheet.create({
   pressable: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  pressableSelected: {
-    transform: [{ translateY: -1 }, { scale: 1.02 }],
   },
   pressablePressed: {
     opacity: 0.92,
@@ -123,12 +111,16 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  circleSelected: {
+    backgroundColor: DAY_CHIP_FILL_SELECTED,
+    overflow: "visible",
+  },
   circleSelectedShadow: {
-    shadowColor: "rgb(34, 211, 238)",
+    shadowColor: "rgb(126, 34, 206)",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.14,
-    shadowRadius: 7,
-    elevation: 3,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 4,
   },
   circleTodayShadow: {
     shadowColor: "rgb(250, 204, 21)",
@@ -150,16 +142,6 @@ const s = StyleSheet.create({
   insetTopHighlightToday: {
     backgroundColor: "rgba(255,255,255,0.08)",
   },
-  insetTopHighlightSelected: {
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  innerRingSelected: {
-    ...StyleSheet.absoluteFillObject,
-    margin: 1,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.14)",
-  },
   innerRingToday: {
     ...StyleSheet.absoluteFillObject,
     margin: 1,
@@ -177,11 +159,5 @@ const s = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.22)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 0,
-  },
-  dayNumSelected: {
-    color: "#ecfeff",
-    textShadowColor: "rgba(34,211,238,0.22)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 5,
   },
 });

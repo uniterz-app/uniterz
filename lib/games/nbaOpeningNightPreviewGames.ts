@@ -5,6 +5,7 @@
 
 import { mergeGameRowsById } from "@/lib/games/gamesWindowRange";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
+import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 /** キックオフの JST 暦日 */
 export const NBA_OPENING_NIGHT_PREVIEW_DATE_KEY = "2026-10-21";
@@ -85,4 +86,12 @@ export function mergeNbaOpeningNightPreviewGames(
 ): Record<string, unknown>[] {
   if (String(league ?? "").toLowerCase() !== "nba") return [...rows];
   return mergeGameRowsById(rows, NBA_OPENING_NIGHT_PREVIEW_GAMES);
+}
+
+/** 表示 TZ の Opening Night 暦日（JST→10/21、ET→10/20） */
+export function nbaOpeningNightDefaultDateKey(timeZone: string): string {
+  return toDateKeyInTimeZone(
+    new Date("2026-10-21T08:00:00+09:00"),
+    timeZone
+  );
 }

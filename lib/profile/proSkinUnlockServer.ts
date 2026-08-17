@@ -23,6 +23,7 @@ import {
 } from "@/lib/profile/proSkinProgress";
 import {
   applyProSkinTitleCollections,
+  countMilestoneUnlockedProSkins,
   EMPTY_PRO_SKIN_RANK_MAP,
   emptyProSkinUnlockProgress,
   getProSkinUnlockEntry,
@@ -36,6 +37,10 @@ import {
   userDataIsPro,
 } from "@/lib/profile/proSkinUnlock";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import {
+  USER_CAREER_COLLECTION,
+  USER_CAREER_SCHEMA_VERSION,
+} from "@/lib/profile/userCareer";
 
 export const PRO_SKIN_OWNER_COUNTS_DOC = "meta/proSkinOwnerCounts";
 
@@ -47,6 +52,14 @@ function safeInt(v: unknown): number {
 function readPersistedUnlockIds(raw: unknown): Set<string> {
   if (!Array.isArray(raw)) return new Set();
   return new Set(raw.filter((x): x is string => typeof x === "string"));
+}
+
+/** 一度でも解放した ID（失効後も保持人数の正） */
+export function readProSkinHeldIds(userData: Record<string, unknown>): Set<string> {
+  return new Set([
+    ...readPersistedUnlockIds(userData.proSkinHeldIds),
+    ...readPersistedUnlockIds(userData.proSkinUnlockedIds),
+  ]);
 }
 
 /** users.proSkinRankEarnedIds — 期間確定時に Free/Pro 共通で積む薄い権利 */
@@ -268,50 +281,77 @@ export function isProSkinIdUnlockedForUser(
 export async function ensurePersistedProSkinUnlocks(
   db: Firestore,
   uid: string,
-  userData: Record<string, unknown>,
-  progress: ProSkinUnlockProgress
+  _userData: Record<string, unknown>,
+  _progress: ProSkinUnlockProgress
 ): Promise<ProfilePlanProBgVariant[]> {
-  const storedSeason = readStoredUnlockSeason(userData);
-  const persisted = readPersistedUnlockIds(userData.proSkinUnlockedIds);
-  const rankEarned = readProSkinRankEarnedIds(userData.proSkinRankEarnedIds);
-  const sanitized = sanitizePersistedUnlockIds(
-    persisted,
-    progress,
-    storedSeason,
-    rankEarned
-  );
-  const withLive = mergeProSkinUnlockedIds(
-    progress,
-    new Set(sanitized),
-    rankEarned
-  );
+  const userRef = db.doc(`users/${uid}`);
+  const countsRef = db.doc(PRO_SKIN_OWNER_COUNTS_DOC);
+  let withLive: ProfilePlanProBgVariant[] = [];
+  let newlyUnlocked: ProfilePlanProBgVariant[] = [];
 
-  const newlyUnlocked = withLive.filter((id) => !persisted.has(id));
-  const seasonNeedsStamp =
-    !isProSkinUnlockSeasonKeyEligible(storedSeason) ||
-    storedSeason !== PRO_SKIN_UNLOCK_FROM_SEASON_KEY;
-  const changed =
-    newlyUnlocked.length > 0 ||
-    withLive.length !== persisted.size ||
-    withLive.some((id) => !persisted.has(id)) ||
-    seasonNeedsStamp;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const userData = (snap.data() ?? {}) as Record<string, unknown>;
+    const progress = progressFromUserDocOnly(userData);
+    const storedSeason = readStoredUnlockSeason(userData);
+    const persisted = readPersistedUnlockIds(userData.proSkinUnlockedIds);
+    const prevHeld = readProSkinHeldIds(userData);
+    const rankEarned = readProSkinRankEarnedIds(userData.proSkinRankEarnedIds);
+    const sanitized = sanitizePersistedUnlockIds(
+      persisted,
+      progress,
+      storedSeason,
+      rankEarned
+    );
+    withLive = mergeProSkinUnlockedIds(
+      progress,
+      new Set(sanitized),
+      rankEarned
+    );
+    newlyUnlocked = withLive.filter((id) => !prevHeld.has(id));
+    const nextHeld = [...new Set([...prevHeld, ...withLive])];
+    const heldChanged = nextHeld.length !== prevHeld.size;
+    const seasonNeedsStamp =
+      !isProSkinUnlockSeasonKeyEligible(storedSeason) ||
+      storedSeason !== PRO_SKIN_UNLOCK_FROM_SEASON_KEY;
+    const changed =
+      newlyUnlocked.length > 0 ||
+      heldChanged ||
+      withLive.length !== persisted.size ||
+      withLive.some((id) => !persisted.has(id)) ||
+      seasonNeedsStamp;
 
-  if (changed) {
-    await db.doc(`users/${uid}`).set(
+    if (newlyUnlocked.length > 0) {
+      await tx.get(countsRef);
+    }
+    if (!changed) return;
+
+    tx.set(
+      userRef,
       {
         proSkinUnlockedIds: withLive,
+        proSkinHeldIds: nextHeld,
         proSkinUnlockSeason: PRO_SKIN_UNLOCK_FROM_SEASON_KEY,
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     );
-  }
+    if (newlyUnlocked.length > 0) {
+      const updates: Record<string, unknown> = {
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      for (const id of newlyUnlocked) {
+        updates[`counts.${id}`] = FieldValue.increment(1);
+      }
+      tx.set(countsRef, updates, { merge: true });
+    }
+  });
 
   if (newlyUnlocked.length > 0) {
     try {
-      await incrementProSkinHolderCounts(db, newlyUnlocked);
+      await syncCareerUnlockedSkinCount(db, uid, withLive);
     } catch (err) {
-      console.warn("pro-skin holder count update failed:", err);
+      console.warn("pro-skin career count update failed:", err);
     }
   }
 
@@ -345,6 +385,42 @@ export async function incrementProSkinHolderCounts(
     updates[`counts.${id}`] = FieldValue.increment(1);
   }
   await ref.set(updates, { merge: true });
+}
+
+/** CAREER 面のマイルストーン所持数を users の解放リストに合わせる */
+export async function syncCareerUnlockedSkinCount(
+  db: Firestore,
+  uid: string,
+  unlockedIds: readonly string[]
+): Promise<void> {
+  const n = countMilestoneUnlockedProSkins(unlockedIds);
+  const ref = db.doc(`${USER_CAREER_COLLECTION}/${uid}`);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = (snap.data() ?? {}) as Record<string, unknown>;
+    const summaryObj =
+      data.summary && typeof data.summary === "object"
+        ? ({ ...(data.summary as Record<string, unknown>) } as Record<
+            string,
+            unknown
+          >)
+        : ({} as Record<string, unknown>);
+    const prev = safeInt(summaryObj.unlockedSkinCount);
+    if (n === prev) return;
+    summaryObj.unlockedSkinCount = n;
+    tx.set(
+      ref,
+      {
+        v: USER_CAREER_SCHEMA_VERSION,
+        uid,
+        summary: summaryObj,
+        updatedAtMs: Date.now(),
+        source: "skin",
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  });
 }
 
 export { readPersistedUnlockIds };

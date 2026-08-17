@@ -11,11 +11,15 @@ import {
   METRIC_FONT,
   RANK_DISPLAY_FONT,
 } from "../../rankings/rankingsUiTheme";
-import { getNbaPlayerStatLeadersMock } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import {
+  MATCH_CARD_BRACKET_LETTER_SPACING_15,
+  MATCH_CARD_BRACKET_TEXT,
+} from "../matchCardTypography";
 import {
   NBA_PLAYER_STAT_LEADER_METRICS,
   NBA_PLAYER_STAT_LEADER_METRIC_ROWS,
   formatPlayerLeaderValue,
+  getNbaPlayerStatLeadersMock,
   type NbaPlayerStatLeaderMetric,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
@@ -315,10 +319,10 @@ const styles = StyleSheet.create({
   tdPlayer: {
     flex: 1.2,
     color: "rgba(255,255,255,0.92)",
-    fontFamily: METRIC_FONT,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.2,
+    ...MATCH_CARD_BRACKET_TEXT,
+    fontSize: 18,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    textTransform: "uppercase",
     transform: [{ skewX: "-6deg" }],
   },
   tdGp: {

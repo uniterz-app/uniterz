@@ -112,13 +112,8 @@ const styles = StyleSheet.create({
     width: "100%",
     overflow: "hidden",
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
   },
-  heroCapTop: {
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-  },
+  heroCapTop: {},
   panelOnly: {
     marginBottom: 16,
   },
@@ -127,13 +122,8 @@ const styles = StyleSheet.create({
     height: COMMUNITY_GROUP_HERO_IMAGE_HEIGHT,
     position: "relative",
     overflow: "hidden",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
   },
-  imageLayerCapTop: {
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-  },
+  imageLayerCapTop: {},
   scrim: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 4,

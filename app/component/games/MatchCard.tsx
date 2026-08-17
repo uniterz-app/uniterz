@@ -79,6 +79,7 @@ import {
   matchLineFramePaint,
   resultOutcomeLineFramePaint,
 } from "@/lib/games/matchListLineFrame";
+import { resolveLineFrameLabels } from "@/lib/games/matchLineFrameLabels";
 import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
   PREDICT_OVERLAY_CYBER_GRID_CLASS,
@@ -467,16 +468,22 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   const mobileDense = listScheduleDense && isMobile;
   const showWcBroadcastRow = false;
   const wcBroadcastCompact = mobileDense || inPredictOverlay;
-  /** 予想オーバーレイは下にフォームが続くため、発光仕切り線は出さない */
-  const showDividerLine =
-    !hideLine && !inPredictOverlay && !attachOverlayMarketBar;
   /** 予想オーバーレイでは市場棒グラフのみ追加（カード本体は一覧レイアウト） */
   const showOverlayMarketBar =
     showMarketBias && (inPredictOverlay || attachOverlayMarketBar);
   /** オーバーレイでは未開始試合の中央をキックオフ時刻ではなく VS にする */
   const overlayCenterMode = inPredictOverlay || attachOverlayMarketBar;
+  /** モバイル一覧は Native 線枠シェル（塗りなし・上下ラベル） */
+  const showListLineFrame = mobileDense && !overlayCenterMode;
+  /** 予想オーバーレイは下にフォームが続くため、発光仕切り線は出さない */
+  const showDividerLine =
+    !hideLine && !inPredictOverlay && !attachOverlayMarketBar && !showListLineFrame;
   /** ラウンドラベルから線がカードを包む（試合一覧 Native 線枠と同じ） */
-  const useOverlayLineFrame = overlayCenterMode;
+  const useLineFrameShell = overlayCenterMode || mobileDense;
+  const lineFrameLabels = useMemo(
+    () => resolveLineFrameLabels(roundLabel ?? "", isPickup, "left"),
+    [roundLabel, isPickup]
+  );
   const showMergedResult = Boolean(overlayCenterMode && resultPost);
   /** 予想オーバーレイ：未開始試合のキックオフ・放送局（予想有無に関わらず） */
   const showOverlayScheduleMeta = Boolean(
@@ -672,13 +679,15 @@ const marketMajority = useMemo(() => {
       : dense
         ? "w-[4.5rem] md:w-[5.5rem]"
         : "w-[4.75rem] md:w-[6.25rem]";
-  const teamMarkSizeJersey = dense
-    ? isMobile
-      ? "jersey-icon w-[3.875rem] h-[3.875rem] md:w-20 md:h-20"
-      : "jersey-icon w-16 h-16 md:w-20 md:h-20"
-    : isMobile
-      ? "jersey-icon w-[4.125rem] h-[4.125rem] md:w-24 md:h-24"
-      : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
+  const teamMarkSizeJersey = showListLineFrame
+    ? "jersey-icon w-[3.375rem] h-[3.375rem]"
+    : dense
+      ? isMobile
+        ? "jersey-icon w-[3.875rem] h-[3.875rem] md:w-20 md:h-20"
+        : "jersey-icon w-16 h-16 md:w-20 md:h-20"
+      : isMobile
+        ? "jersey-icon w-[4.125rem] h-[4.125rem] md:w-24 md:h-24"
+        : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
 
   // Tailwind に text-1.xl は無いので既に修正済み
   const scoreText = dense
@@ -690,6 +699,12 @@ const marketMajority = useMemo(() => {
       : "text-xl md:text-5xl";
   const teamText = dense ? "text-sm md:text-base" : "text-base md:text-xl";
   const recordText = dense ? "text-[12px]" : "text-sm";
+  const lineFrameTeamNameClass =
+    "text-[17px] font-normal leading-[19px] tracking-[0.075em]";
+  const lineFrameTeamNameStyle: React.CSSProperties = {
+    ...teamNameFont,
+    transform: "skewX(-6deg)",
+  };
   const Icon =
     league === "nba" || league === "bj" ? Jersey : Soccer;
 
@@ -784,6 +799,17 @@ const marketMajority = useMemo(() => {
     }
     return false;
   })();
+
+  const lineFrameBottomLabel =
+    showListLineFrame && !hideActions
+      ? status === "final"
+        ? m.games.finalLabel
+        : isGameStarted
+          ? m.games.live
+          : isPredicted
+            ? m.games.predicted
+            : m.games.predict
+      : undefined;
 
   // ▼ LIVE判定（scoreが無くてもLIVE）
 // ▼ 自動LIVE判定（開始時刻を過ぎたらLIVE）
@@ -1224,19 +1250,23 @@ setNavigating(true);
   // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
   const shellClassName = [
     "group/card relative text-white",
-    useOverlayLineFrame || isPickup ? "overflow-visible" : "overflow-hidden",
+    useLineFrameShell || isPickup ? "overflow-visible" : "overflow-hidden",
     inPredictOverlay && isMobile
       ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
       : mobileDense
         ? MOBILE_LIST_CARD_OUTER_CLASS
         : "mx-auto max-w-[1200px] w-full",
-    !useSplitGlassShell && !inPredictOverlay && !attachOverlayMarketBar
+    !useSplitGlassShell && !inPredictOverlay && !attachOverlayMarketBar && !showListLineFrame
       ? webPanelClass
       : "",
-    !useSplitGlassShell && attachOverlayMarketBar && !useOverlayLineFrame
+    !useSplitGlassShell && attachOverlayMarketBar && !useLineFrameShell
       ? mergedOverlayGlassClass
       : "",
-    !useSplitGlassShell && !inPredictOverlay && !attachOverlayMarketBar && isPredicted
+    !useSplitGlassShell &&
+    !inPredictOverlay &&
+    !attachOverlayMarketBar &&
+    !showListLineFrame &&
+    isPredicted
       ? "match-list-cyber-card--predicted"
       : "",
     disableCardMotion
@@ -1257,8 +1287,9 @@ setNavigating(true);
     className || "",
   ].join(" ");
 
-  const glassShellClassName =
-    useSplitGlassShell && attachOverlayMarketBar && !useOverlayLineFrame
+  const glassShellClassName = showListLineFrame
+    ? null
+    : useSplitGlassShell && attachOverlayMarketBar && !useLineFrameShell
       ? ["pointer-events-none absolute inset-0 z-0", mergedOverlayGlassClass].join(
           " "
         )
@@ -1359,27 +1390,27 @@ const card = (
         <div className={glassShellClassName} aria-hidden />
       ) : null}
 
-      {isPickup && !useOverlayLineFrame ? (
+      {isPickup && !useLineFrameShell ? (
         <MatchPickupSideLabel
           color={matchLineFramePaint({ pickup: true, predicted: Boolean(isPredicted) }).color}
           tutorialTarget={tutorialPickupLabelTarget}
         />
       ) : null}
 
-      {showMergedResult && !useOverlayLineFrame && isResultHitFrameBadge(resultBadge) ? (
+      {showMergedResult && !useLineFrameShell && isResultHitFrameBadge(resultBadge) ? (
         <ResultHitCyberFrame />
       ) : null}
-      {showMergedResult && !useOverlayLineFrame && isResultPerfectFrameBadge(resultBadge) ? (
+      {showMergedResult && !useLineFrameShell && isResultPerfectFrameBadge(resultBadge) ? (
         <ResultPerfectCyberFrame />
       ) : null}
-      {showMergedResult && !useOverlayLineFrame && isResultStreakFrameBadge(resultBadge) ? (
+      {showMergedResult && !useLineFrameShell && isResultStreakFrameBadge(resultBadge) ? (
         <ResultStreakCyberFrame activeWinStreak={resultActiveWinStreak} />
       ) : null}
-      {showMergedResult && !useOverlayLineFrame && isResultUpsetFrameBadge(resultBadge) ? (
+      {showMergedResult && !useLineFrameShell && isResultUpsetFrameBadge(resultBadge) ? (
         <ResultUpsetCyberFrame />
       ) : null}
 
-      {useOverlayLineFrame
+      {useLineFrameShell
         ? null
         : attachOverlayMarketBar || (inPredictOverlay && !overlayUnifiedForm) ? (
         <>
@@ -1419,7 +1450,8 @@ const card = (
   marketBias &&
   status !== "final" &&
   !inPredictOverlay &&
-  !attachOverlayMarketBar && (
+  !attachOverlayMarketBar &&
+  !showListLineFrame && (
   <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
     {/* HOME 側バー */}
     <div
@@ -1561,9 +1593,10 @@ const card = (
 })()}
 
 
+      {!showListLineFrame ? (
       <motion.div
         className={[
-          useOverlayLineFrame
+          useLineFrameShell
             ? mobileDense
               ? "mb-0 px-2 pb-0 pt-4"
               : "mb-0 px-4 pb-0 pt-4"
@@ -1577,7 +1610,7 @@ const card = (
         ].join(" ")}
         {...entryGroupProps(ENTRY_GROUP_HEADER)}
       >
-        {!!roundLabel && !useOverlayLineFrame && (
+        {!!roundLabel && !useLineFrameShell && (
           <div
             className={[
               "mc-round text-center font-bold",
@@ -1611,7 +1644,7 @@ const card = (
           className={
             mobileDense
               ? "h-0 md:h-1"
-              : useOverlayLineFrame
+              : useLineFrameShell
                 ? "h-1 md:h-1.5"
                 : inPredictOverlay
                   ? league === "wc"
@@ -1622,11 +1655,14 @@ const card = (
           aria-hidden
         />
       </motion.div>
+      ) : null}
 
       <div
         className={`grid min-w-0 grid-cols-3 ${
           mobileDense
-            ? "items-center gap-0 px-2 py-0"
+            ? showListLineFrame
+              ? "items-center gap-0 px-2 pt-5 pb-[18px]"
+              : "items-center gap-0 px-2 py-0"
             : inPredictOverlay
               ? "items-start gap-1.5 px-4 py-1"
               : dense
@@ -1719,8 +1755,12 @@ const card = (
       {league === "nba" ? (
         // ★ NBA（mobile）→ nickname(line2) だけ
         <div
-          className="text-[15px] font-bold md:text-[18px]"
-          style={teamNameFont}
+          className={
+            showListLineFrame
+              ? lineFrameTeamNameClass
+              : "text-[15px] font-bold md:text-[18px]"
+          }
+          style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
         >
           {homeL2 || homeL1}
         </div>
@@ -1728,14 +1768,22 @@ const card = (
         // ★ Bリーグ（mobile）→ 2行表示
         <>
           <div
-            className="text-[15px] font-bold md:text-[18px]"
-            style={teamNameFont}
+            className={
+              showListLineFrame
+                ? lineFrameTeamNameClass
+                : "text-[15px] font-bold md:text-[18px]"
+            }
+            style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
             {homeL1}
           </div>
           <div
-            className="text-[15px] font-bold md:text-[18px]"
-            style={teamNameFont}
+            className={
+              showListLineFrame
+                ? lineFrameTeamNameClass
+                : "text-[15px] font-bold md:text-[18px]"
+            }
+            style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
             {homeL2}
           </div>
@@ -1743,13 +1791,17 @@ const card = (
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className={wcListNameTextClass(league, isMobile, mobileDense)}
+          className={
+            showListLineFrame
+              ? lineFrameTeamNameClass
+              : wcListNameTextClass(league, isMobile, mobileDense)
+          }
           style={wcListNameFontStyle(
             league,
             isMobile,
             mobileDense,
             wcTeamNameFont,
-            teamNameFont
+            showListLineFrame ? lineFrameTeamNameStyle : teamNameFont
           )}
         >
           {joinTeamNameLines(homeL1, homeL2)}
@@ -1969,8 +2021,12 @@ const card = (
       {league === "nba" ? (
         // ★ NBA（mobile）→ nickname(line2) だけ
         <div
-          className="text-[15px] font-bold md:text-[18px]"
-          style={teamNameFont}
+          className={
+            showListLineFrame
+              ? lineFrameTeamNameClass
+              : "text-[15px] font-bold md:text-[18px]"
+          }
+          style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
         >
           {awayL2 || awayL1}
         </div>
@@ -1978,14 +2034,22 @@ const card = (
         // ★ Bリーグ（mobile）→ 2行
         <>
           <div
-            className="text-[15px] font-bold md:text-[18px]"
-            style={teamNameFont}
+            className={
+              showListLineFrame
+                ? lineFrameTeamNameClass
+                : "text-[15px] font-bold md:text-[18px]"
+            }
+            style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
             {awayL1}
           </div>
           <div
-            className="text-[15px] font-bold md:text-[18px]"
-            style={teamNameFont}
+            className={
+              showListLineFrame
+                ? lineFrameTeamNameClass
+                : "text-[15px] font-bold md:text-[18px]"
+            }
+            style={showListLineFrame ? lineFrameTeamNameStyle : teamNameFont}
           >
             {awayL2}
           </div>
@@ -1993,13 +2057,17 @@ const card = (
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className={wcListNameTextClass(league, isMobile, mobileDense)}
+          className={
+            showListLineFrame
+              ? lineFrameTeamNameClass
+              : wcListNameTextClass(league, isMobile, mobileDense)
+          }
           style={wcListNameFontStyle(
             league,
             isMobile,
             mobileDense,
             wcTeamNameFont,
-            teamNameFont
+            showListLineFrame ? lineFrameTeamNameStyle : teamNameFont
           )}
         >
           {joinTeamNameLines(awayL1, awayL2)}
@@ -2226,7 +2294,7 @@ const card = (
 )}
 
       {/* ボタン行 */}
-      {!hideActions && (
+      {!hideActions && !showListLineFrame && (
         <motion.div
           className={
             mobileDense
@@ -2287,16 +2355,19 @@ const card = (
     </Shell>
   );
 
-  if (!useOverlayLineFrame) return card;
+  if (!useLineFrameShell) return card;
 
   return (
     <MatchListLineFrame
-      topLabel={roundLabel}
+      topLabel={lineFrameLabels.top || undefined}
+      leftLabel={lineFrameLabels.left}
+      bottomLabel={lineFrameBottomLabel}
       predicted={Boolean(isPredicted && !showMergedResult)}
       pickup={isPickup}
-      leftLabel={isPickup ? "PICK UP" : undefined}
       paint={resultOutcomeLineFramePaint(showMergedResult ? resultBadge : null)}
-      topLabelTutorialTarget="predict-round"
+      topLabelTutorialTarget={
+        inPredictOverlay || attachOverlayMarketBar ? "predict-round" : undefined
+      }
       leftLabelTutorialTarget={tutorialPickupLabelTarget}
     >
       {card}

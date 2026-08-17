@@ -84,12 +84,15 @@ type Props = {
     | "unitEarnOverlayFontPreview"
     | "uniterzLogoTypePreview"
     | "uniterzProBadgePreview"
+    | "proBadgeComparePreview"
     | "resultCardDesignPreview"
     | "resultBadgeDesignPreview"
+    | "resultStampDesignPreview"
     | "resultStreakTagDesignPreview"
     | "navBarDesignPreview"
     | "splashLogoPreview"
-    | "liveGameStatsPreview") => void;
+    | "liveGameStatsPreview"
+    | "profileKinetikMetricsPreview") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -288,12 +291,15 @@ export default function ProfileSideMenuModal({
       | "unitEarnOverlayFontPreview"
       | "uniterzLogoTypePreview"
     | "uniterzProBadgePreview"
+    | "proBadgeComparePreview"
       | "resultCardDesignPreview"
       | "resultBadgeDesignPreview"
+      | "resultStampDesignPreview"
       | "resultStreakTagDesignPreview"
       | "navBarDesignPreview"
       | "splashLogoPreview"
       | "liveGameStatsPreview"
+      | "profileKinetikMetricsPreview"
   ) {
     if (page === "restartTutorial") {
       setTutorialRestartCover(true);
@@ -748,6 +754,16 @@ export default function ProfileSideMenuModal({
                           UNITERZ PRO バッジ
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
+                          icon="compare"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("proBadgeComparePreview")
+                          }
+                        >
+                          Pro バッジ比較
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
                           icon="card-bulleted-outline"
                           dense
                           labelStyle={labelStyle}
@@ -768,6 +784,16 @@ export default function ProfileSideMenuModal({
                           リザルトバッジ案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
+                          icon="certificate-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("resultStampDesignPreview")
+                          }
+                        >
+                          リザルトスタンプ案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
                           icon="fire"
                           dense
                           labelStyle={labelStyle}
@@ -776,6 +802,16 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           連勝タグ案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="view-grid-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("profileKinetikMetricsPreview")
+                          }
+                        >
+                          プロフィール 2x2 案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="tab"
@@ -839,8 +875,6 @@ export default function ProfileSideMenuModal({
                       accessibilityRole="button"
                       accessibilityLabel={`${identityName} · ${planLabel}`}
                     >
-                      <View style={styles.identityRail} pointerEvents="none" />
-
                       <View
                         style={[
                           styles.identityAvatar,
@@ -1013,34 +1047,22 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.38)",
-    backgroundColor: "rgba(4, 18, 28, 0.96)",
-    shadowColor: "#00F5FF",
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
+    borderColor: "rgba(255, 255, 255, 0.22)",
+    backgroundColor: "#000000",
+    shadowColor: "#ffffff",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
     elevation: 4,
   },
   identityPro: {
-    borderColor: "rgba(0, 245, 255, 0.55)",
-    shadowOpacity: 0.28,
-    shadowRadius: 22,
+    borderColor: "rgba(255, 255, 255, 0.38)",
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
   },
   identityPressed: {
-    borderColor: "rgba(0, 245, 255, 0.7)",
+    borderColor: "rgba(255, 255, 255, 0.55)",
     opacity: 0.95,
-  },
-  identityRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: "#00F5FF",
-    shadowColor: "#00F5FF",
-    shadowOpacity: 0.85,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
   },
   identityAvatar: {
     width: 40,
@@ -1050,17 +1072,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.65)",
-    backgroundColor: "rgba(0, 30, 42, 0.95)",
-    shadowColor: "#00F5FF",
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
+    borderColor: "rgba(255, 255, 255, 0.45)",
+    backgroundColor: "#000000",
+    shadowColor: "#ffffff",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
   },
   identityAvatarPro: {
-    borderColor: "rgba(0, 245, 255, 0.9)",
-    shadowOpacity: 0.6,
-    shadowRadius: 14,
+    borderColor: "rgba(255, 255, 255, 0.65)",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
   },
   identityImg: {
     width: "100%",
@@ -1069,7 +1091,7 @@ const styles = StyleSheet.create({
   identityInitial: {
     fontSize: 15,
     fontWeight: "800",
-    color: "rgba(0, 245, 255, 0.95)",
+    color: "rgba(255, 255, 255, 0.92)",
   },
   identityMeta: {
     flex: 1,
@@ -1115,8 +1137,8 @@ const styles = StyleSheet.create({
     height: 5,
     transform: [{ rotate: "45deg" }],
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 255, 0.7)",
-    backgroundColor: "rgba(0, 245, 255, 0.35)",
+    borderColor: "rgba(255, 255, 255, 0.55)",
+    backgroundColor: "rgba(255, 255, 255, 0.28)",
   },
   identitySub: {
     flexShrink: 1,
@@ -1124,14 +1146,14 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 0.14 * 8,
-    color: "rgba(0, 245, 255, 0.55)",
+    color: "rgba(255, 255, 255, 0.55)",
     textTransform: "uppercase",
   },
   identityCaret: {
     flexShrink: 0,
     fontSize: 12,
-    color: "#00F5FF",
-    textShadowColor: "rgba(0, 245, 255, 0.8)",
-    textShadowRadius: 8,
+    color: "#ffffff",
+    textShadowColor: "rgba(255, 255, 255, 0.35)",
+    textShadowRadius: 6,
   },
 });

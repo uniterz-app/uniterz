@@ -133,6 +133,7 @@ import {
 } from "../tutorial/tutorialLiveTrackNative";
 import { setTutorialWelcomeHandoffNative } from "../tutorial/tutorialWelcomeHandoffNative";
 import { formatTutorialGamesSubstepProgress } from "../../../../../lib/tutorial/tutorialLiveProgress";
+import { tutorialSelectPredictToolsTab } from "../tutorial/tutorialPredictToolsBridgeNative";
 import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
 import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
 import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
@@ -642,6 +643,12 @@ export default function GamesHomeScreen({
   /** リザルトからの深リンク: 予想済みでも最初からスコア入力を出す */
   const [expandScoreFormWhenEditing, setExpandScoreFormWhenEditing] = useState(false);
   const predictDeepLinkProcessingRef = useRef<string | null>(null);
+  /** 予想 STATS → チーム詳細 → BACK でオーバーレイを再開 */
+  const reopenPredictAfterTeamDetailRef = useRef(false);
+  const pendingPredictGameRef = useRef<Record<string, unknown> | null>(null);
+  const pendingPredictNbaToolsTabRef = useRef<
+    "insight" | "injuries" | "stats" | "roster"
+  >("stats");
   /** 試合終了・未投稿で開くモバイル Web オーバーレイ相当（スコア入力なし） */
   /** Web `PredictionFormV2` overlay：開始済みかつ自分の投稿なし → スコア入力・送信ブロックを出さない */
   const [predictSpectatorStartedNoPost, setPredictSpectatorStartedNoPost] =
@@ -1092,7 +1099,29 @@ export default function GamesHomeScreen({
   const selectedGameId = String(selectedGame?.id ?? "");
   const isEditingPrediction = Boolean(myPostIdByGameId[selectedGameId]);
   const isGameDetailModalVisible =
-    selectedGame != null && !isPredictModalOpen && resultDetailPostId == null;
+    selectedGame != null &&
+    !isPredictModalOpen &&
+    resultDetailPostId == null &&
+    !reopenPredictAfterTeamDetailRef.current;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!reopenPredictAfterTeamDetailRef.current) return;
+      const game = pendingPredictGameRef.current;
+      if (!game) {
+        reopenPredictAfterTeamDetailRef.current = false;
+        return;
+      }
+      pendingPredictGameRef.current = null;
+      setIsPredictModalOpen(true);
+      setSelectedGame(game);
+      const tab = pendingPredictNbaToolsTabRef.current;
+      requestAnimationFrame(() => {
+        reopenPredictAfterTeamDetailRef.current = false;
+        tutorialSelectPredictToolsTab(tab);
+      });
+    }, [])
+  );
 
   const gameIdSet = useMemo(
     () => new Set(games.map((g) => String(g.id ?? "")).filter(Boolean)),
@@ -1949,11 +1978,13 @@ export default function GamesHomeScreen({
         const postId = routeParams?.openPredictPostId?.trim();
         const seed = routeParams?.openPredictSeed;
         const expandScoreForm = routeParams?.expandScoreForm;
+        const openPredictNbaToolsTab = routeParams?.openPredictNbaToolsTab;
         navigation.setParams({
           openPredictGameId: undefined,
           expandScoreForm: undefined,
           openPredictPostId: undefined,
           openPredictSeed: undefined,
+          openPredictNbaToolsTab: undefined,
         });
         if (!snap.exists()) return;
         const raw = { id: gameId, ...snap.data() } as Record<string, unknown>;
@@ -1973,6 +2004,16 @@ export default function GamesHomeScreen({
               }
             : undefined;
         await openPredictModal(raw, editBootstrap);
+        if (
+          openPredictNbaToolsTab === "insight" ||
+          openPredictNbaToolsTab === "injuries" ||
+          openPredictNbaToolsTab === "stats" ||
+          openPredictNbaToolsTab === "roster"
+        ) {
+          requestAnimationFrame(() => {
+            tutorialSelectPredictToolsTab(openPredictNbaToolsTab);
+          });
+        }
       } finally {
         if (predictDeepLinkProcessingRef.current === gameId) {
           predictDeepLinkProcessingRef.current = null;
@@ -1985,7 +2026,13 @@ export default function GamesHomeScreen({
     };
     // openPredictModal は state 更新主体のため deps に含めない
     // eslint-disable-next-line react-hooks/exhaustive-deps -- routeParams の深リンクのみ
-  }, [routeParams?.openPredictGameId, routeParams?.expandScoreForm, authStatus, navigation]);
+  }, [
+    routeParams?.openPredictGameId,
+    routeParams?.expandScoreForm,
+    routeParams?.openPredictNbaToolsTab,
+    authStatus,
+    navigation,
+  ]);
 
   async function handleNextGameModalYes(dontShowAgain: boolean) {
     if (dontShowAgain) await writePredictNextGameModalSkip();
@@ -2450,11 +2497,18 @@ export default function GamesHomeScreen({
           setSelectedGame(null);
         }}
         onOpenTeamDetail={(teamId) => {
+          reopenPredictAfterTeamDetailRef.current = true;
+          pendingPredictNbaToolsTabRef.current = "stats";
+          pendingPredictGameRef.current = selectedGame;
           setIsPredictModalOpen(false);
           setExpandScoreFormWhenEditing(false);
           setPredictSpectatorStartedNoPost(false);
           setSelectedGame(null);
-          navigation.navigate("TeamDetailPreview", { teamId });
+          navigation.navigate("TeamDetailPreview", {
+            teamId,
+            returnToPredictOverlay: true,
+            predictToolsTab: "stats",
+          });
         }}
         spectatorStartedNoPost={predictSpectatorStartedNoPost}
         predictionEditLockedAfterKickoff={
@@ -2607,6 +2661,7 @@ export default function GamesHomeScreen({
         teams={scheduleTeams}
         initial={gamesFilter}
         onApply={setGamesFilter}
+        league={selectedLeague}
       />
       <ProfileMenuEdgeHandleNative
         onOpen={() => navigation.navigate("LeagueStats", { tab: "team" })}

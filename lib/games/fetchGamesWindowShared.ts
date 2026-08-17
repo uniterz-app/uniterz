@@ -1,6 +1,7 @@
 /**
  * 共通試合窓 API クライアント（Web / Native 共用）。
  * 予想・Pro は別。ここはカード共通データのみ。
+ * TTL + inflight で同一窓の二重 fetch を抑える。
  */
 
 import type { League } from "@/lib/leagues";
@@ -31,9 +32,42 @@ export type FetchGamesWindowParams = {
   limit?: number;
   /** false でシリーズ peer を省略（存在チェック用） */
   includePeers?: boolean;
+  /** true でメモリキャッシュを使わない */
+  force?: boolean;
 };
 
-export async function fetchGamesWindowShared(
+const GAMES_WINDOW_FETCH_TTL_MS = 5 * 60 * 1000;
+
+type CacheEntry = {
+  at: number;
+  value: FetchGamesWindowResult;
+};
+
+const resultCache = new Map<string, CacheEntry>();
+const resultInflight = new Map<string, Promise<FetchGamesWindowResult>>();
+
+function abortError(): Error {
+  const err = new Error("Aborted");
+  err.name = "AbortError";
+  return err;
+}
+
+function buildGamesWindowCacheKey(params: FetchGamesWindowParams): string {
+  const base = (params.apiBaseUrl ?? "").replace(/\/$/, "");
+  const parts = [
+    base,
+    params.league,
+    params.timeZone,
+    params.fromDateKey && params.toDateKey
+      ? `from:${params.fromDateKey}:to:${params.toDateKey}`
+      : `anchor:${params.anchorDateKey ?? ""}:pm:${params.plusMinus ?? GAMES_WINDOW_PLUS_MINUS_DEFAULT}`,
+    typeof params.limit === "number" ? `limit:${params.limit}` : "",
+    params.includePeers === false ? "peers:0" : "peers:1",
+  ];
+  return parts.join("|");
+}
+
+async function fetchGamesWindowNetwork(
   params: FetchGamesWindowParams
 ): Promise<FetchGamesWindowResult> {
   const q = new URLSearchParams({
@@ -60,17 +94,14 @@ export async function fetchGamesWindowShared(
   const controller = new AbortController();
   const timeoutMs = 8_000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  if (params.signal) {
-    if (params.signal.aborted) controller.abort();
-    else {
-      params.signal.addEventListener("abort", () => controller.abort(), {
-        once: true,
-      });
-    }
-  }
+  // 共有 inflight 中に片方が abort しても他方を殺さない（timeout のみ）
+  const callerSignal = params.signal;
 
   let res: Response;
   try {
+    if (callerSignal?.aborted) {
+      throw abortError();
+    }
     res = await fetch(url, {
       method: "GET",
       cache: "default",
@@ -78,6 +109,10 @@ export async function fetchGamesWindowShared(
     });
   } finally {
     clearTimeout(timeoutId);
+  }
+
+  if (callerSignal?.aborted) {
+    throw abortError();
   }
 
   const text = await res.text().catch(() => "");
@@ -118,4 +153,40 @@ export async function fetchGamesWindowShared(
     anchorDateKey: json.anchorDateKey ?? params.anchorDateKey ?? null,
     range: { startKey, endKey },
   };
+}
+
+export async function fetchGamesWindowShared(
+  params: FetchGamesWindowParams
+): Promise<FetchGamesWindowResult> {
+  const key = buildGamesWindowCacheKey(params);
+  const force = params.force === true;
+
+  if (!force) {
+    const hit = resultCache.get(key);
+    if (hit && Date.now() - hit.at < GAMES_WINDOW_FETCH_TTL_MS) {
+      if (params.signal?.aborted) {
+        throw abortError();
+      }
+      return hit.value;
+    }
+    const pending = resultInflight.get(key);
+    if (pending) {
+      if (params.signal?.aborted) {
+        throw abortError();
+      }
+      return pending;
+    }
+  }
+
+  const promise = fetchGamesWindowNetwork(params)
+    .then((value) => {
+      resultCache.set(key, { at: Date.now(), value });
+      return value;
+    })
+    .finally(() => {
+      resultInflight.delete(key);
+    });
+
+  resultInflight.set(key, promise);
+  return promise;
 }

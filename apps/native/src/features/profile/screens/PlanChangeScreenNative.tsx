@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 12, flexGrow: 1 },
   hero: { alignItems: "center", marginBottom: 18 },
-  wordmark: { marginTop: -20, marginBottom: -32 },
+  wordmark: { marginBottom: 8 },
   title: {
     marginTop: 14,
     fontFamily: fonts.metric,

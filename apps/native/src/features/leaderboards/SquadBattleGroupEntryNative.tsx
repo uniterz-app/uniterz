@@ -96,8 +96,6 @@ export default function SquadBattleGroupEntryNative({
             style={StyleSheet.absoluteFillObject}
           />
 
-          <View style={styles.leftBar} pointerEvents="none" />
-
           <View style={styles.row}>
             <View style={styles.iconWrap}>
               {/* 枠は画像内に焼き込み済み — UI 側に枠を重ねない */}
@@ -157,18 +155,6 @@ const styles = StyleSheet.create({
     paddingRight: 10,
     overflow: "hidden",
     justifyContent: "center",
-  },
-  leftBar: {
-    position: "absolute",
-    left: 0,
-    top: 12,
-    bottom: 12,
-    width: 3,
-    backgroundColor: GOLD,
-    shadowColor: GOLD,
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
   },
   row: {
     flexDirection: "row",

@@ -84,6 +84,7 @@ function TeamCell({
           nameOxanium.className,
           "min-w-0 flex-1 truncate text-[12px] font-extrabold uppercase tracking-[0.02em] text-white",
         ].join(" ")}
+        style={{ transform: "skewX(-6deg)" }}
       >
         {getNbaTeamNicknameById(teamId)}
       </p>
@@ -119,7 +120,7 @@ export default function NbaSeasonStandingsViewPanel({
         </p>
       </header>
 
-      <div className="overflow-hidden rounded-[2px] border border-cyan-300/20 bg-[rgba(4,9,16,0.97)]">
+      <div className="overflow-hidden rounded-[2px] border border-cyan-300/20 bg-black">
         <div
           className={[
             "grid border-b border-white/[0.1]",

@@ -52,7 +52,8 @@ export async function loadResultPostDetailClient(
   } as PredictionPostV2;
 
   const { exists: gameExists, data: gameData } = await getCachedGameDocForResult(
-    post.gameId
+    post.gameId,
+    db
   );
 
   if (!gameExists || !gameData) {

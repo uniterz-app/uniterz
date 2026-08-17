@@ -51,6 +51,19 @@ function safeInt(v) {
     const n = typeof v === "number" ? v : Number(v);
     return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
 }
+function parsePeriodWins(raw) {
+    if (!raw || typeof raw !== "object")
+        return {};
+    const out = {};
+    for (const [k, v] of Object.entries(raw)) {
+        if (typeof k !== "string" || !k)
+            continue;
+        const n = safeInt(v);
+        if (n > 0)
+            out[k] = n;
+    }
+    return out;
+}
 function isProUser(user) {
     if (user.plan !== "pro")
         return false;
@@ -118,14 +131,27 @@ async function syncProSkinProgressOnNbaSettle(opts) {
         const prevRaw = user.proSkinProgress;
         const prevSeason = typeof (prevRaw === null || prevRaw === void 0 ? void 0 : prevRaw.seasonKey) === "string" ? prevRaw.seasonKey : "";
         const lastPostId = typeof (prevRaw === null || prevRaw === void 0 ? void 0 : prevRaw.lastPostId) === "string" ? prevRaw.lastPostId : "";
-        if (lastPostId === opts.postId)
-            return;
+        const lastExactHit = (prevRaw === null || prevRaw === void 0 ? void 0 : prevRaw.lastExactHit) === true;
         const sameSeason = prevSeason === nbaSeasonKey;
+        const prevPeriodWins = sameSeason ? parsePeriodWins(prevRaw === null || prevRaw === void 0 ? void 0 : prevRaw.periodWins) : {};
+        const isCorrection = lastPostId === opts.postId;
+        if (isCorrection && lastExactHit === opts.exactHit)
+            return;
         const prevPosts = sameSeason ? safeInt(prevRaw === null || prevRaw === void 0 ? void 0 : prevRaw.posts) : 0;
         const prevExactHits = sameSeason ? safeInt(prevRaw === null || prevRaw === void 0 ? void 0 : prevRaw.exactHits) : 0;
         const prevMaxWinStreak = sameSeason ? safeInt(prevRaw === null || prevRaw === void 0 ? void 0 : prevRaw.maxWinStreak) : 0;
-        const posts = prevPosts + 1;
-        const exactHits = prevExactHits + (opts.exactHit ? 1 : 0);
+        const posts = isCorrection ? prevPosts : prevPosts + 1;
+        let exactHits = prevExactHits;
+        if (isCorrection) {
+            if (!lastExactHit && opts.exactHit)
+                exactHits += 1;
+            else if (lastExactHit && !opts.exactHit) {
+                exactHits = Math.max(0, exactHits - 1);
+            }
+        }
+        else if (opts.exactHit) {
+            exactHits += 1;
+        }
         let maxWinStreak = prevMaxWinStreak;
         const streak = Math.max(0, Math.floor(opts.activeWinStreak || 0));
         if (streak > maxWinStreak)
@@ -134,6 +160,12 @@ async function syncProSkinProgressOnNbaSettle(opts) {
         const unlocked = new Set(Array.isArray(user.proSkinUnlockedIds)
             ? user.proSkinUnlockedIds.filter((x) => typeof x === "string")
             : []);
+        const prevHeld = new Set([
+            ...unlocked,
+            ...(Array.isArray(user.proSkinHeldIds)
+                ? user.proSkinHeldIds.filter((x) => typeof x === "string")
+                : []),
+        ]);
         /** Pro 中に閾値を「今回初めて」跨いだ ID のみモーダル対象 */
         const liveNoticeIds = [];
         if (isPro) {
@@ -149,7 +181,7 @@ async function syncProSkinProgressOnNbaSettle(opts) {
                         ? posts >= row.threshold
                         : exactHits >= row.threshold;
                 if (nowOk) {
-                    if (!unlocked.has(row.id))
+                    if (!prevHeld.has(row.id))
                         newlyUnlockedIds.push(row.id);
                     unlocked.add(row.id);
                     if (!prevOk)
@@ -157,16 +189,20 @@ async function syncProSkinProgressOnNbaSettle(opts) {
                 }
             }
         }
+        const held = new Set([...prevHeld, ...unlocked]);
         const patch = {
             proSkinProgress: {
                 seasonKey: nbaSeasonKey,
                 posts,
                 exactHits,
                 maxWinStreak,
+                periodWins: prevPeriodWins,
                 updatedAtMs: Date.now(),
                 lastPostId: opts.postId,
+                lastExactHit: opts.exactHit,
             },
             proSkinUnlockedIds: [...unlocked],
+            proSkinHeldIds: [...held],
             proSkinUnlockSeason: proSkinMilestoneCatalog_1.PRO_SKIN_UNLOCK_FROM_SEASON_KEY,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         };

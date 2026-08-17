@@ -1142,6 +1142,8 @@ export default function PredictionFormV2({
                 awayTeamId={game.away.teamId}
                 homeTeamName={homeSafe.name}
                 awayTeamName={awaySafe.name}
+                fromPredictGameId={gameId}
+                predictReturnMode={inOverlay ? "overlay" : "route"}
               />
             </div>
           </motion.div>

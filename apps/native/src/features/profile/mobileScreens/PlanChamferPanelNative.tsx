@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 18,
-    paddingTop: 8,
+    paddingTop: 22,
     paddingBottom: 26,
   },
   ctaOuter: {

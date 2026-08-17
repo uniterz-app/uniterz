@@ -18,10 +18,12 @@ import {
   loadProfileUserDocNative,
   peekProfileUserDocNative,
 } from "../features/profile/profileUserDocCacheNative";
+import { prefetchNativeProfileBadges } from "../features/profile/useNativeProfileBadges";
 import {
   prefetchNativeProfileStats,
   seedNativeProfileStatsFromUserDoc,
 } from "../features/profile/useNativeProfileStats";
+import { prefetchNativeCumulativeRankingsList } from "../features/rankings/useNativeCumulativeRankingsBulk";
 import { registerTutorialTarget } from "../features/tutorial/tutorialMeasureNative";
 import {
   getTutorialWelcomeChromeHidden,
@@ -160,6 +162,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                   const peek = peekProfileUserDocNative(myUid);
                   if (peek) seedNativeProfileStatsFromUserDoc(myUid, peek);
                   void prefetchNativeProfileStats(myUid);
+                  void prefetchNativeProfileBadges(myUid);
                   void loadProfileUserDocNative(myUid).then((loaded) => {
                     if (loaded?.exists) {
                       seedNativeProfileStatsFromUserDoc(myUid, loaded.data);
@@ -167,13 +170,25 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                   });
                 };
 
+                const warmRankingsTab = () => {
+                  if (route.name !== "RankingsTab") return;
+                  prefetchNativeCumulativeRankingsList();
+                };
+
+                const onPressIn =
+                  route.name === "ProfileTab"
+                    ? warmProfileTab
+                    : route.name === "RankingsTab"
+                      ? warmRankingsTab
+                      : undefined;
+
                 return (
                   <TutorialTabButton
                     key={route.key}
                     tutorialTarget={tutorialTarget}
                     accessibilityState={active ? { selected: true } : {}}
                     accessibilityLabel={options.tabBarAccessibilityLabel}
-                    onPressIn={warmProfileTab}
+                    onPressIn={onPressIn}
                     onPress={onPress}
                     style={[styles.tabButton, active && styles.tabButtonActive]}
                   >

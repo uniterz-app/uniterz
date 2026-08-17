@@ -1,34 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import MobileResultDetail from "@/app/component/result/mobile/MobileResultDetail";
-import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
+import ResultDetailBody from "@/app/component/result/ResultDetailBody";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   loadResultPostDetailClient,
-  type ResultPostDetailMarket,
+  buildResultDetailViewFromLoad,
+  type LoadResultPostDetailClientResult,
 } from "@/lib/result/loadResultPostDetailClient";
-import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
-import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
-import { resolveResultTopEntries } from "@/lib/results/resolveResultTopEntries";
 
 type DetailState =
   | { status: "loading" }
   | { status: "missing" }
   | {
       status: "ready";
-      post: PredictionPostV2;
-      market: ResultPostDetailMarket | null;
-      pointsDistribution: GamePointsDistributionV1 | null;
-      topEntries: GamePointsTopEntryV1[];
+      loaded: Extract<LoadResultPostDetailClientResult, { ok: true }>;
     };
 
 export default function MobileResultPostPage() {
   const params = useParams();
+  const router = useRouter();
   const postId = params?.postId as string;
 
   const [uid, setUid] = useState<string | null>(null);
@@ -57,13 +53,7 @@ export default function MobileResultPostPage() {
         }
         setState({
           status: "ready",
-          post: r.post,
-          market: r.market,
-          pointsDistribution: r.pointsDistribution,
-          topEntries: resolveResultTopEntries({
-            pointsSummary: r.pointsSummary,
-            pointsDistribution: r.pointsDistribution,
-          }),
+          loaded: r,
         });
       } catch (e) {
         console.error(e);
@@ -92,16 +82,22 @@ export default function MobileResultPostPage() {
     );
   }
 
+  const view =
+    state.status === "ready"
+      ? buildResultDetailViewFromLoad(state.loaded, { uid })
+      : null;
+
   return (
-    <div className="px-4 py-4">
-      <MobileResultDetail
-        post={state.post}
-        market={state.market ?? undefined}
-        pointsDistribution={state.pointsDistribution}
-        topEntries={state.topEntries}
-        language={language}
-        viewerUid={uid}
-        gamesRoutePrefix="/mobile"
+    <div className="relative px-4 py-4">
+      {view ? (
+        <ResultDetailBody language={language} view={view} gamesRoutePrefix="/mobile" />
+      ) : null}
+      <ProfileMenuEdgeHandle
+        onOpen={() => router.back()}
+        label="BACK"
+        tone="back"
+        ariaLabel={language === "en" ? "Back" : "戻る"}
+        overlay
       />
     </div>
   );

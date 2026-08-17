@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PRO_SKIN_PERIOD_WIN_MILESTONES = exports.PRO_SKIN_REFERRAL_MILESTONES = exports.PRO_SKIN_RANK_MILESTONES = exports.PRO_SKIN_THRESHOLD_MILESTONES = exports.PRO_SKIN_UNLOCK_FROM_SEASON_KEY = void 0;
+exports.PRO_SKIN_PERIOD_WIN_MILESTONES = exports.PRO_SKIN_REFERRAL_MILESTONES = exports.PRO_SKIN_RANK_MILESTONES = exports.PRO_SKIN_THRESHOLD_MILESTONES = exports.PRO_IMMEDIATE_SKIN_IDS = exports.PRO_SKIN_UNLOCK_FROM_SEASON_KEY = void 0;
+exports.proSkinPeriodGrantLockDocPath = proSkinPeriodGrantLockDocPath;
 exports.proSkinPeriodWinCounterKey = proSkinPeriodWinCounterKey;
 // synced from lib/profile/proSkinMilestoneCatalog.ts — run npm run sync:pro-skin-milestone-catalog
 /**
@@ -15,6 +16,31 @@ exports.proSkinPeriodWinCounterKey = proSkinPeriodWinCounterKey;
  * - 招待系 → referral settle で completedCount 到達時に解放
  */
 exports.PRO_SKIN_UNLOCK_FROM_SEASON_KEY = "2026-27";
+/** Pro 加入だけで解放（CAREER のマイルストーン数からは除外） */
+exports.PRO_IMMEDIATE_SKIN_IDS = [
+    "atmos",
+    "parallax",
+    "wave-riot-shard",
+    "wave-uniterz-logo",
+    "wave-mono-hex",
+    "beast-titanium",
+    "beast-panther",
+    "beast-crocodile",
+    "scale-mamba",
+    "scale-python",
+    "form-hexveil",
+    "scale-diamondback",
+    "beast-shark",
+    "form-diamondgrid",
+];
+/**
+ * 期間確定 grant の冪等ロック。
+ * `meta/{doc}/locks/{id}`（4 セグメント）— 3 セグメントの doc パスは Firestore で無効。
+ */
+function proSkinPeriodGrantLockDocPath(period, labelKey) {
+    const id = `${period}_${labelKey}`.replace(/\//g, "_");
+    return `meta/proSkinPeriodGrants/locks/${id}`;
+}
 /**
  * 努力・精度（連勝 / Perfect / 予想）
  * Crimson Shard / Signal Mosaic はマイルストーン（スクショ指定）

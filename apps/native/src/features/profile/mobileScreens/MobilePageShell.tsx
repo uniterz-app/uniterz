@@ -17,6 +17,8 @@ type Props = {
   eyebrow?: string;
   /** Web ルート `AppPageBackground` を背面に見せる */
   appBackground?: boolean;
+  /** ページ面の塗り（既定は `#0A1118`） */
+  backgroundColor?: string;
   /**
    * MainTab の UNITERZ ブランド棚の下で使うとき true（既定）。
    * 互換のため残す（余白はブランド棚側で確保済み）。
@@ -36,6 +38,7 @@ export default function MobilePageShell({
   subtitle,
   eyebrow = "PROFILE",
   appBackground = false,
+  backgroundColor,
   edgeBack = true,
   children,
 }: Props) {
@@ -47,6 +50,7 @@ export default function MobilePageShell({
       style={[
         styles.root,
         appBackground && styles.rootAppBackground,
+        backgroundColor ? { backgroundColor } : null,
         { width },
       ]}
     >

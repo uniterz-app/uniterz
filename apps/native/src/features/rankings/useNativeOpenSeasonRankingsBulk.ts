@@ -1,5 +1,6 @@
 /**
  * Web `useOpenSeasonRankingsBulk` 相当 — NBA 無差別級シーズン（Pro 限定）
+ * 短い TTL + inflight。uid hydrate での二重取得を抑える。
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -8,6 +9,15 @@ import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import type { BulkMetricPayload } from "./useNativeCumulativeRankingsBulk";
 import { allRankingMetricsParam } from "../../../../../lib/rankings/rankingBulkMetrics";
+
+type OpenSeasonResult = {
+  byMetric: Record<string, BulkMetricPayload>;
+  proRequired: boolean;
+};
+
+const OPEN_CACHE_TTL_MS = 5 * 60 * 1000;
+let openCache: { at: number; value: OpenSeasonResult } | null = null;
+let openInflight: Promise<OpenSeasonResult> | null = null;
 
 export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
   const [uid, setUid] = useState<string | null>(null);
@@ -28,51 +38,84 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
       setListReady(true);
       return;
     }
+    if (!uid) {
+      setListReady(false);
+      return;
+    }
+
+    if (
+      openCache &&
+      Date.now() - openCache.at < OPEN_CACHE_TTL_MS &&
+      !openCache.value.proRequired
+    ) {
+      setByMetric(openCache.value.byMetric);
+      setProRequired(false);
+      setListReady(true);
+      return;
+    }
+
     setListReady(false);
     setProRequired(false);
-    try {
-      const base = getUniterzApiBaseUrl();
-      if (!base) {
-        setByMetric({});
-        return;
-      }
-      const token = await auth.currentUser?.getIdToken().catch(() => null);
-      const params = new URLSearchParams({
-        division: "open",
-        metrics: allRankingMetricsParam(),
-      });
-      const res = await fetch(
-        `${base}/api/cumulative-ranking/bulk?${params.toString()}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          cache: "no-store",
+
+    const run =
+      openInflight ??
+      (async (): Promise<OpenSeasonResult> => {
+        try {
+          const base = getUniterzApiBaseUrl();
+          if (!base) return { byMetric: {}, proRequired: false };
+          const token = await auth.currentUser?.getIdToken().catch(() => null);
+          const params = new URLSearchParams({
+            division: "open",
+            metrics: allRankingMetricsParam(),
+          });
+          const res = await fetch(
+            `${base}/api/cumulative-ranking/bulk?${params.toString()}`,
+            {
+              headers: token
+                ? { Authorization: `Bearer ${token}` }
+                : undefined,
+              cache: "no-store",
+            }
+          );
+          const json = (await res.json()) as {
+            ok?: boolean;
+            error?: string;
+            byMetric?: Record<string, BulkMetricPayload>;
+          };
+          if (res.status === 403 && json?.error === "pro_required") {
+            return { byMetric: {}, proRequired: true };
+          }
+          if (!res.ok || !json?.ok) {
+            return { byMetric: {}, proRequired: false };
+          }
+          return {
+            byMetric: json.byMetric ?? {},
+            proRequired: false,
+          };
+        } catch {
+          return { byMetric: {}, proRequired: false };
         }
-      );
-      const json = (await res.json()) as {
-        ok?: boolean;
-        error?: string;
-        byMetric?: Record<string, BulkMetricPayload>;
-      };
-      if (res.status === 403 && json?.error === "pro_required") {
-        setByMetric({});
-        setProRequired(true);
-        return;
+      })().finally(() => {
+        openInflight = null;
+      });
+
+    if (!openInflight) openInflight = run;
+
+    try {
+      const value = await run;
+      if (!value.proRequired) {
+        openCache = { at: Date.now(), value };
       }
-      if (!res.ok || !json?.ok) {
-        setByMetric({});
-        return;
-      }
-      setByMetric(json.byMetric ?? {});
-    } catch {
-      setByMetric({});
+      setByMetric(value.byMetric);
+      setProRequired(value.proRequired);
     } finally {
       setListReady(true);
     }
-  }, [enabled]);
+  }, [enabled, uid]);
 
   useEffect(() => {
     void load();
-  }, [load, uid]);
+  }, [load]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* open season bulk loads all metrics at once */

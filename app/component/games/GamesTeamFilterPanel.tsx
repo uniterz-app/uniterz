@@ -1,19 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, SlidersHorizontal, CircleHelp, X } from "lucide-react";
 import cn from "clsx";
-import {
-  CYBER_FILTER_PANEL_CLASS,
-} from "@/lib/ui/cyberFilterBar";
 import { gamesHeaderFilterButtonClasses } from "@/lib/ui/gamesHeaderBar";
 import type { ScheduleTeamOption } from "@/lib/games/useScheduleTeams";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import {
+  bracketMarketTeamTypography,
+  matchCardTeamNameStyle,
+} from "@/lib/games/teamDisplayTypography";
 import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
+import type { League } from "@/lib/leagues";
+import {
+  getTeamPrimaryColor,
+  softenTeamUiColor,
+  teamColorOnFill,
+  teamColorRgba,
+} from "@/lib/team-colors";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import { teamIdToWcCountry } from "@/lib/legacyWcWebShims";
 import {
@@ -21,6 +28,22 @@ import {
   gamesFilterHelpParagraphs,
 } from "@/lib/games/gamesFilterHelp";
 import { nameOxanium } from "@/lib/fonts";
+
+const GAMES_FILTER_PANEL_CLASS = "games-filter-panel";
+
+function teamFilterAccent(league: League, teamId: string) {
+  return softenTeamUiColor(getTeamPrimaryColor(league, teamId));
+}
+
+function teamFilterAccentVars(league: League, teamId: string): CSSProperties {
+  const accent = teamFilterAccent(league, teamId);
+  return {
+    ["--team-accent" as string]: accent,
+    ["--team-accent-fill" as string]: teamColorRgba(accent, 0.22),
+    ["--team-accent-fill-strong" as string]: teamColorRgba(accent, 0.34),
+    ["--team-check" as string]: teamColorOnFill(accent),
+  };
+}
 
 type Props = {
   teams: ScheduleTeamOption[];
@@ -41,6 +64,7 @@ type Props = {
   compactHeader?: boolean;
   language: Language;
   layoutMobile: boolean;
+  league: League;
 };
 
 function parseMarginDraft(s: string): number | null {
@@ -79,10 +103,12 @@ export default function GamesTeamFilterPanel({
   compactHeader = false,
   language,
   layoutMobile,
+  league,
 }: Props) {
   const m = t(language);
   const reduceMotion = useReducedMotion();
   const tabFont = bracketMarketTeamTypography(layoutMobile);
+  const teamNameFont = matchCardTeamNameStyle(layoutMobile);
   /** モバイルで number/search 入力にフォーカスしたとき、16px 未満だと iOS がページを拡大するのを防ぐ */
   const filterInputTextClass = layoutMobile
     ? "text-[16px] leading-normal"
@@ -175,11 +201,10 @@ export default function GamesTeamFilterPanel({
 
   const panelBody = (
     <div className="games-filter-panel-shell">
-      <div className="games-filter-panel-grid" aria-hidden />
       <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
         {layoutMobile && (
           <div className="flex justify-center pt-2 pb-1" aria-hidden>
-            <div className="h-1 w-12 rounded-full bg-cyan-400/35 shadow-[0_0_10px_rgba(34,211,238,0.35)]" />
+            <div className="h-1 w-12 rounded-full bg-white/25" />
           </div>
         )}
 
@@ -231,7 +256,7 @@ export default function GamesTeamFilterPanel({
               animate={{ height: "auto", opacity: 1 }}
               exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
               transition={{ duration: reduceMotion ? 0 : 0.18 }}
-              className="overflow-hidden border-b border-cyan-400/10 bg-cyan-500/[0.04]"
+              className="overflow-hidden border-b border-white/10 bg-white/[0.04]"
             >
               <div className="space-y-2 px-4 py-3 md:px-5">
                 {helpParagraphs.map((paragraph) => (
@@ -263,7 +288,7 @@ export default function GamesTeamFilterPanel({
                     type="button"
                     onClick={() => toggle(id)}
                     className="games-filter-chip"
-                    style={tabFont}
+                    style={{ ...teamNameFont, ...teamFilterAccentVars(league, id) }}
                   >
                     <FilterTeamFlag teamId={id} />
                     <span className="max-w-[200px] truncate">{name}</span>
@@ -318,7 +343,7 @@ export default function GamesTeamFilterPanel({
             </p>
             <div className="relative">
               <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-cyan-300/45"
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40"
                 aria-hidden
               />
               <input
@@ -350,6 +375,7 @@ export default function GamesTeamFilterPanel({
                       "games-filter-team-row",
                       sel && "games-filter-team-row--selected",
                     )}
+                    style={sel ? teamFilterAccentVars(league, t.id) : undefined}
                   >
                     <span
                       className={cn(
@@ -367,7 +393,7 @@ export default function GamesTeamFilterPanel({
                         dense ? "text-xs" : "text-sm",
                         sel ? "text-white" : "text-white/88",
                       )}
-                      style={tabFont}
+                      style={teamNameFont}
                     >
                       {t.name}
                     </span>
@@ -385,7 +411,7 @@ export default function GamesTeamFilterPanel({
 
         <div
           className={cn(
-            "games-filter-margin-wrap border-t border-cyan-400/10",
+            "games-filter-margin-wrap border-t border-white/10",
             activeCount === 2 && "games-filter-margin-wrap--dual",
           )}
         >
@@ -456,7 +482,7 @@ export default function GamesTeamFilterPanel({
               setOpen(false);
               setQ("");
             }}
-            className="games-filter-done-btn predict-overlay-submit-btn"
+            className="games-filter-done-btn"
             style={tabFont}
           >
             {m.common.done}
@@ -489,7 +515,7 @@ export default function GamesTeamFilterPanel({
           aria-modal="true"
           aria-labelledby="games-team-filter-title"
           className={cn(
-            CYBER_FILTER_PANEL_CLASS,
+            GAMES_FILTER_PANEL_CLASS,
             "games-filter-panel--sheet",
             "fixed inset-x-0 bottom-0 z-[1000001] flex w-full flex-col",
             activeCount === 2
@@ -527,7 +553,7 @@ export default function GamesTeamFilterPanel({
             aria-modal="true"
             aria-labelledby="games-team-filter-title"
             className={cn(
-              CYBER_FILTER_PANEL_CLASS,
+              GAMES_FILTER_PANEL_CLASS,
               "pointer-events-auto flex max-h-[min(80vh,620px)] w-[min(420px,calc(100vw-1.5rem))] flex-col overflow-hidden text-white",
             )}
             initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}

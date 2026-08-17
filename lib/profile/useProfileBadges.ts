@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { pickBadgeParticipantCount } from "@/lib/badges/badgeGrant";
 import { useUserBadges } from "@/app/component/badges/useUserBadges";
 import {
   useMasterBadges,
@@ -26,10 +27,15 @@ export function useProfileBadges(targetUid: string | null) {
       .map((ub) => {
         const master = masterBadges.find((m) => m.id === ub.badgeId);
         if (!master) return null;
+        const participantCount = pickBadgeParticipantCount(
+          ub.participantCount,
+          master.participantCount,
+        );
 
         return {
           ...master,
           grantedAt: ub.grantedAt ?? null,
+          ...(participantCount != null ? { participantCount } : {}),
         };
       })
       .filter((b): b is ResolvedBadge => b !== null);

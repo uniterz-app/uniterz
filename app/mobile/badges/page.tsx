@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { pickBadgeParticipantCount } from "@/lib/badges/badgeGrant";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserBadges } from "@/app/component/badges/useUserBadges";
 import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
@@ -11,6 +12,7 @@ import { t } from "@/lib/i18n/t";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import BadgePalette from "@/app/component/badges/BadgePalette";
+import VelvetTuftField from "@/app/component/badges/VelvetTuftField";
 
 import BadgeDetailModal from "./BadgeDetailModal";
 
@@ -42,9 +44,14 @@ export default function MobileBadgesPage() {
       const master = masterBadges.find((mb) => mb.id === ub.badgeId);
       if (!master) return null;
 
+      const participantCount = pickBadgeParticipantCount(
+        ub.participantCount,
+        master.participantCount,
+      );
       return {
         ...master,
         grantedAt: ub.grantedAt,
+        ...(participantCount != null ? { participantCount } : {}),
       };
     })
     .filter((b): b is ResolvedBadge => b !== null);
@@ -57,7 +64,8 @@ export default function MobileBadgesPage() {
           ? "Browse badges you’ve earned. Tap one for details."
           : "獲得したバッジを一覧できます。タップで詳細を表示します。"
       }
-      contentClassName="max-w-lg px-4 py-4"
+      contentClassName="max-w-lg px-3 py-4"
+      backdrop={<VelvetTuftField />}
     >
       <BadgePalette
         badges={resolvedBadges}

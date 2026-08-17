@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigationState, PartialState } from "@react-navigation/native";
 import { useReducedMotion } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AppTabBar from "./AppTabBar";
 import type { MainTabParamList } from "./types";
 import {
@@ -13,7 +12,6 @@ import {
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
 import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
-import { colors } from "../theme/tokens";
 import {
   DEFAULT_HEADER_WORDMARK,
   resolveHeaderWordmarkFromMainTab,
@@ -50,7 +48,6 @@ function resolveTabWordmark(
 }
 
 export default function MainTabNavigator() {
-  const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() === true;
   const [wordmark, setWordmark] = useState(DEFAULT_HEADER_WORDMARK);
   const brandShelfHidden = useSyncExternalStore(
@@ -100,11 +97,7 @@ export default function MainTabNavigator() {
       <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
       <View style={styles.root}>
-        {brandShelfHidden || welcomeBrandHidden ? (
-          welcomeBrandHidden ? null : (
-            <View style={{ height: insets.top }} pointerEvents="none" />
-          )
-        ) : (
+        {brandShelfHidden || welcomeBrandHidden ? null : (
           <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
         )}
         <View style={styles.tabHost}>
@@ -119,8 +112,8 @@ export default function MainTabNavigator() {
               headerShown: false,
               tabBarShowLabel: false,
               tabBarStyle: { display: "none" },
-              // 不透明にしてスライド中に裏タブが透けないようにする
-              sceneStyle: { backgroundColor: colors.bgPrimary },
+              // AppShell のメッシュ背景を通す（不透明 #090c15 だとヘッダー下だけ塗り潰される）
+              sceneStyle: { backgroundColor: "transparent" },
               // 初回だけ遅延マウント。freezeOnBlur はタブ連打で解凍が積み上がりフリーズするためオフ
               lazy: true,
               freezeOnBlur: false,

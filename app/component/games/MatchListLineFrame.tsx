@@ -19,6 +19,8 @@ import MatchPickupSideLabel from "@/app/component/games/MatchPickupSideLabel";
 const STROKE = 1.5;
 const LABEL_GAP_PAD = 16;
 const MIN_TICK_GAP = 12;
+/** Native `MatchListLineFrameNative` — 下辺 CTA 幅のプローブ文字列 */
+const CTA_WIDTH_PROBE = "REGULAR SEASON";
 
 type Props = {
   children: ReactNode;
@@ -29,6 +31,8 @@ type Props = {
   pickup?: boolean;
   /** 左辺縦ラベル（ピックアップは `PICK UP`） */
   leftLabel?: string;
+  /** 下辺中央 CTA（試合一覧の PREDICT 等）。枠の下辺を途切れさせる */
+  bottomLabel?: string;
   paint?: { color: string; glow: string };
   className?: string;
   topLabelTutorialTarget?: string;
@@ -38,6 +42,12 @@ type Props = {
   /** 描画開始の遅延（秒） */
   drawDelaySec?: number;
   onClick?: MouseEventHandler<HTMLDivElement>;
+  /** 上辺ラベル用の外側パディングを付けない（My Rank など） */
+  flush?: boolean;
+  /** false なら中身は枠描画中も表示（既定は描画後にフェードイン） */
+  fadeContent?: boolean;
+  /** 上辺を閉じる（My Rank。左右から同時に描いて中央で接続） */
+  closedTop?: boolean;
 };
 
 /**
@@ -51,6 +61,7 @@ export default function MatchListLineFrame({
   predicted = false,
   pickup = false,
   leftLabel,
+  bottomLabel,
   paint,
   className,
   topLabelTutorialTarget,
@@ -58,13 +69,21 @@ export default function MatchListLineFrame({
   animateDraw = false,
   drawDelaySec = 0,
   onClick,
+  flush = false,
+  fadeContent = true,
+  closedTop = false,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
   const leftLabelRef = useRef<HTMLSpanElement>(null);
+  const ctaProbeRef = useRef<HTMLSpanElement>(null);
+  const bottomCtaRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [topLabelW, setTopLabelW] = useState(0);
   const [leftLabelH, setLeftLabelH] = useState(0);
+  const [ctaFixedW, setCtaFixedW] = useState(0);
+  const [bottomCtaH, setBottomCtaH] = useState(0);
+  const showCta = Boolean(bottomLabel);
   const reduceMotion = useReducedMotion();
   const { color, glow } = paint ?? matchLineFramePaint({ pickup, predicted });
   const shouldDraw = animateDraw && !reduceMotion;
@@ -105,26 +124,43 @@ export default function MatchListLineFrame({
     ro.observe(root);
     if (labelRef.current) ro.observe(labelRef.current);
     if (leftLabelRef.current) ro.observe(leftLabelRef.current);
+    if (ctaProbeRef.current) ro.observe(ctaProbeRef.current);
+    if (bottomCtaRef.current) ro.observe(bottomCtaRef.current);
     return () => ro.disconnect();
-  }, [topLabel, leftLabel]);
+  }, [topLabel, leftLabel, bottomLabel, showCta]);
+
+  useLayoutEffect(() => {
+    const probeW = ctaProbeRef.current?.getBoundingClientRect().width ?? 0;
+    setCtaFixedW((prev) => (Math.abs(prev - probeW) < 0.5 ? prev : probeW));
+    const ctaH = bottomCtaRef.current?.getBoundingClientRect().height ?? 0;
+    setBottomCtaH((prev) => (Math.abs(prev - ctaH) < 0.5 ? prev : ctaH));
+  }, [bottomLabel, showCta]);
 
   const labelMaxW = matchLineFrameLabelMaxWidth({
     frameWidth: size.w,
     align: topLabelAlign,
   });
-  const topGap =
-    topLabel && topLabelW > 0 ? topLabelW + LABEL_GAP_PAD : MIN_TICK_GAP;
+  const topGap = closedTop
+    ? 0
+    : topLabel && topLabelW > 0
+      ? topLabelW + LABEL_GAP_PAD
+      : MIN_TICK_GAP;
+  const bottomGap = !showCta
+    ? 0
+    : ctaFixedW > 0
+      ? ctaFixedW + LABEL_GAP_PAD
+      : 88;
   const leftGap =
     leftLabel && leftLabelH > 0 ? leftLabelH + LABEL_GAP_PAD : 0;
   const halves =
-    size.w > 0 && size.h > 0
+    size.w > 0 && size.h > 0 && (!topLabel || topLabelW > 0)
       ? interruptedRoundedRectStrokeHalves({
           width: size.w,
           height: size.h,
           radius: 0,
           inset: STROKE / 2,
           topGap,
-          bottomGap: 0,
+          bottomGap,
           leftGap,
           topGapAlign: topLabelAlign,
           topGapStartInset: MATCH_LINE_FRAME_TOP_GAP_START_INSET,
@@ -151,7 +187,14 @@ export default function MatchListLineFrame({
 
   return (
     <div
-      className={["relative w-full overflow-visible pt-3.5", className].filter(Boolean).join(" ")}
+      className={[
+        "relative w-full overflow-visible",
+        flush ? "" : "pt-3.5",
+        showCta ? "mb-[18px]" : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={
         pressable
           ? {
@@ -183,6 +226,17 @@ export default function MatchListLineFrame({
       tabIndex={onClick ? 0 : undefined}
     >
       <div ref={rootRef} className="relative w-full overflow-visible">
+        {showCta ? (
+          <div className="pointer-events-none absolute left-0 top-0 z-0 opacity-0" aria-hidden>
+            <span
+              ref={ctaProbeRef}
+              className={`${nameOxanium.className} text-[15px] font-bold uppercase leading-[18px] tracking-[0.08em]`}
+            >
+              {CTA_WIDTH_PROBE}
+            </span>
+          </div>
+        ) : null}
+
         {halves ? (
           <svg
             className="pointer-events-none absolute inset-0 z-[2] overflow-visible"
@@ -282,7 +336,50 @@ export default function MatchListLineFrame({
           </div>
         ) : null}
 
-        <div className="relative z-[1] pointer-events-auto">{children}</div>
+        <motion.div
+          className="relative z-[1] pointer-events-auto"
+          initial={shouldDraw && fadeContent ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={
+            shouldDraw && fadeContent
+              ? {
+                  duration: 0.28,
+                  delay:
+                    drawDelaySec +
+                    GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_SEC +
+                    GAMES_LINE_FRAME_DRAW_SEC +
+                    0.04,
+                  ease: GAMES_CYBER_EASE,
+                }
+              : { duration: 0 }
+          }
+        >
+          {children}
+        </motion.div>
+
+        {showCta ? (
+          <div
+            className="pointer-events-none absolute bottom-0 left-6 right-6 z-[3] flex justify-center"
+            style={
+              bottomCtaH > 0
+                ? { transform: `translateY(${bottomCtaH / 2 - STROKE}px)` }
+                : undefined
+            }
+          >
+            <div
+              ref={bottomCtaRef}
+              className={`${nameOxanium.className} flex min-w-[5.5rem] items-center justify-center border-[1.5px] bg-transparent px-[18px] py-[7px] text-[13px] font-bold uppercase leading-4 tracking-[0.09em]`}
+              style={{
+                borderColor: color,
+                color,
+                width: ctaFixedW > 0 ? ctaFixedW : undefined,
+                minWidth: ctaFixedW > 0 ? ctaFixedW : undefined,
+              }}
+            >
+              {bottomLabel}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

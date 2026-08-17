@@ -8,7 +8,7 @@ function pickNonEmpty(v) {
     return s ? s : null;
 }
 async function enrichGamePointsTopFromUsers(db, top) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g;
     const uids = [
         ...new Set(top
             .map((r) => (typeof r.uid === "string" ? r.uid.trim() : ""))
@@ -31,10 +31,11 @@ async function enrichGamePointsTopFromUsers(db, top) {
             displayName,
             photoURL,
             isPro: d.isPro === true || d.plan === "pro",
+            countryCode: (_g = (_f = pickNonEmpty(d.countryCode)) === null || _f === void 0 ? void 0 : _f.toUpperCase()) !== null && _g !== void 0 ? _g : null,
         });
     }
     return top.map((row) => {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f, _g;
         const uid = typeof row.uid === "string" ? row.uid.trim() : "";
         if (!uid)
             return row;
@@ -44,7 +45,7 @@ async function enrichGamePointsTopFromUsers(db, top) {
         const handle = (_a = p.handle) !== null && _a !== void 0 ? _a : row.handle;
         const displayName = (_c = (_b = p.displayName) !== null && _b !== void 0 ? _b : handle) !== null && _c !== void 0 ? _c : row.displayName;
         return Object.assign(Object.assign({}, row), { handle,
-            displayName, photoURL: (_e = (_d = p.photoURL) !== null && _d !== void 0 ? _d : row.photoURL) !== null && _e !== void 0 ? _e : null, isPro: p.isPro || row.isPro });
+            displayName, photoURL: (_e = (_d = p.photoURL) !== null && _d !== void 0 ? _d : row.photoURL) !== null && _e !== void 0 ? _e : null, isPro: p.isPro || row.isPro, countryCode: (_g = (_f = p.countryCode) !== null && _f !== void 0 ? _f : row.countryCode) !== null && _g !== void 0 ? _g : null });
     });
 }
 //# sourceMappingURL=enrichGamePointsTopFromUsers.js.map

@@ -8,6 +8,7 @@ import {
   rankingTeamsLabel,
 } from "@/lib/communities/labels";
 import type { CommunityGroupSummary } from "@/app/component/communities/communityGroupDetailCache";
+import { nameOxanium, jp } from "@/lib/fonts";
 import { MATCH_LIST_CYBER_CARD_CLASS, MATCH_LIST_CYBER_GRID_CLASS } from "@/lib/ui/matchListCardCyber";
 import { communityCrtMono } from "./CommunityCrtTheme";
 import CommunityGroupZoneLabel from "./CommunityGroupZoneLabel";
@@ -40,28 +41,35 @@ function ConditionChip({
   wide?: boolean;
   overlay?: boolean;
 }) {
-  const accentClass =
+  const hair =
     accent === "amber"
-      ? "bg-amber-400/85 shadow-[0_0_8px_rgba(251,191,36,0.8),0_0_16px_rgba(251,191,36,0.35)]"
+      ? "bg-amber-400/85 shadow-[0_0_8px_rgba(251,191,36,0.55)]"
       : accent === "emerald"
-        ? "bg-emerald-400/85 shadow-[0_0_8px_rgba(52,211,153,0.8),0_0_16px_rgba(52,211,153,0.35)]"
-        : "bg-cyan-400/85 shadow-[0_0_8px_rgba(34,211,238,0.8),0_0_16px_rgba(34,211,238,0.35)]";
+        ? "bg-emerald-400/85 shadow-[0_0_8px_rgba(52,211,153,0.55)]"
+        : "bg-[#00F5FF]/85 shadow-[0_0_8px_rgba(0,245,255,0.55)]";
+  const labelColor =
+    accent === "amber"
+      ? "text-amber-200/80"
+      : accent === "emerald"
+        ? "text-emerald-200/80"
+        : "text-cyan-200/70";
 
   return (
     <div
       className={[
-        "flex min-h-[52px] overflow-visible border",
+        "relative flex min-h-[52px] overflow-hidden border",
         overlay
-          ? "border-cyan-400/20 bg-[rgba(2,8,18,0.38)] backdrop-blur-sm"
-          : "border-cyan-400/16 bg-[rgba(2,8,18,0.72)]",
+          ? "border-cyan-400/20 bg-black"
+          : "border-cyan-400/16 bg-black",
         wide ? "col-span-2 w-full" : "min-w-0 w-full",
       ].join(" ")}
     >
-      <span className={["w-[3px] shrink-0", accentClass].join(" ")} aria-hidden />
+      <span className={["absolute inset-x-0 top-0 h-px", hair].join(" ")} aria-hidden />
       <div className="flex flex-1 flex-col justify-center gap-0.5 px-2.5 py-2">
         <span
           className={[
-            "font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-cyan-200/55",
+            "font-mono text-[8px] font-bold uppercase tracking-[0.16em]",
+            labelColor,
             communityCrtMono.className,
           ].join(" ")}
         >
@@ -69,6 +77,7 @@ function ConditionChip({
         </span>
         <span
           className={[
+            nameOxanium.className,
             "text-[13px] font-bold leading-4 text-cyan-50/95",
             wide ? "line-clamp-2" : "truncate",
           ].join(" ")}
@@ -161,8 +170,10 @@ export default function CommunityGroupHeaderPanel({
           <CommunityGroupZoneLabel>{labels.title}</CommunityGroupZoneLabel>
           <h1
             className={[
-              "font-bold leading-tight tracking-[0.02em] text-slate-50/96",
-              compact ? "text-lg sm:text-xl" : "text-xl sm:text-[22px]",
+              nameOxanium.className,
+              jp.className,
+              "font-extrabold leading-tight tracking-[0.04em] text-slate-50",
+              compact ? "text-[22px] sm:text-2xl" : "text-2xl sm:text-[26px]",
             ].join(" ")}
           >
             {summary.name}
@@ -182,7 +193,7 @@ export default function CommunityGroupHeaderPanel({
 
         <div className="space-y-2">
           <CommunityGroupZoneLabel>{labels.conditions}</CommunityGroupZoneLabel>
-          <div className="-mx-3.5 grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {conditions.map((item) => (
               <ConditionChip
                 key={item.key}

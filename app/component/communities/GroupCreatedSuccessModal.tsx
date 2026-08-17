@@ -9,6 +9,7 @@ import { toast } from "@/app/component/ui/toast";
 import { copyTextToClipboard } from "@/lib/clipboard/copyText";
 import { shareCommunityInvite } from "@/lib/communities/inviteShare";
 import { CommunityModalGridBackdrop } from "@/app/component/communities/CommunityModalGridBackdrop";
+import { COMMUNITY_MODAL_CARD_CLASS } from "@/app/component/communities/CommunityCrtTheme";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import InviteShareModal from "@/app/component/communities/InviteShareModal";
 
@@ -132,12 +133,12 @@ export default function GroupCreatedSuccessModal({
       />
       <div className="pointer-events-none fixed inset-0 z-10 flex items-center justify-center p-4 pb-[max(1rem,var(--bottom-nav-clearance))]">
       <div
-        className={`pointer-events-auto relative isolate w-full max-w-sm overflow-hidden rounded-2xl border border-white/12 bg-[#0c1419]/95 px-5 py-6 shadow-[0_18px_44px_rgba(0,0,0,0.55)] backdrop-blur-xl ${jp.className}`}
+        className={`pointer-events-auto w-full max-w-sm ${COMMUNITY_MODAL_CARD_CLASS} px-5 py-6 ${jp.className}`}
         onClick={(e) => e.stopPropagation()}
       >
         <ShellGridOverlay />
         <div className="relative z-10">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center border border-[rgba(0,245,255,0.35)] bg-[rgba(0,245,255,0.12)] text-[#00F5FF]">
           <Check className="h-6 w-6" strokeWidth={2.5} aria-hidden />
         </div>
 
@@ -168,7 +169,7 @@ export default function GroupCreatedSuccessModal({
           <button
             type="button"
             onClick={() => void shareCode()}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-blue-400/35 bg-blue-500/20 px-4 py-2.5 text-sm font-semibold text-blue-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-none border border-[rgba(0,245,255,0.35)] bg-[rgba(0,245,255,0.12)] px-4 py-2.5 text-sm font-semibold text-cyan-50"
           >
             <Share2 className="h-4 w-4" aria-hidden />
             {t.share}
@@ -176,7 +177,7 @@ export default function GroupCreatedSuccessModal({
           <button
             type="button"
             onClick={() => void copyCode()}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 py-2.5 text-sm font-semibold text-white/90"
+            className="flex flex-1 items-center justify-center gap-2 rounded-none border border-[rgba(0,245,255,0.22)] bg-[rgba(0,245,255,0.06)] px-4 py-2.5 text-sm font-semibold text-cyan-50/90"
           >
             <Copy className="h-4 w-4" aria-hidden />
             {t.copy}
@@ -186,7 +187,7 @@ export default function GroupCreatedSuccessModal({
         <button
           type="button"
           onClick={onClose}
-          className="mt-3 w-full rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30"
+          className="mt-3 w-full rounded-none border border-[rgba(0,245,255,0.52)] bg-[linear-gradient(180deg,rgba(0,245,255,0.34)_0%,rgba(0,190,230,0.44)_46%,rgba(0,110,155,0.54)_100%)] px-4 py-2.5 text-sm font-semibold text-[#050508]"
         >
           {t.ok}
         </button>

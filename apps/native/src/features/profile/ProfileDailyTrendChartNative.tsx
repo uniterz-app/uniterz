@@ -3,9 +3,7 @@
  * 空状態は Ranking Progress / Last20 と同じ NO DATA デザイン。
  */
 import { useMemo } from "react";
-import { cyberAlert } from "../../components/cyberAlert";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { StyleSheet, Text, View } from "react-native";
 import type { ProfileDailyTrendRow } from "../../../../../lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
 import ProfileDailyComboChartNeuralNative from "./ProfileDailyComboChartNeuralNative";
@@ -38,9 +36,6 @@ export default function ProfileDailyTrendChartNative({
   const subtitle = isJa
     ? "過去10日のスタッツの推移"
     : "Trend of stats over the last 10 days";
-  const chartInfo = isJa
-    ? "カラーバー＝日ごとの投稿数・的中数。黄緑の線＝累積の総合得点。棒をタップすると下に内訳を表示します。"
-    : "Color bars: daily posts and correct picks. Lime line: cumulative total points. Tap a bar for that day's breakdown.";
   const emptyHint = isJa
     ? "シーズンの日次スタッツが溜まると表示されます"
     : "Daily season stats appear after you settle picks.";
@@ -58,7 +53,6 @@ export default function ProfileDailyTrendChartNative({
   }, [data, range]);
 
   const isEmpty = limitedData.length === 0;
-  const openInfo = () => cyberAlert(title, chartInfo);
 
   if (isEmpty) {
     return (
@@ -67,18 +61,6 @@ export default function ProfileDailyTrendChartNative({
           <View style={styles.header}>
             <View style={styles.titleRow}>
               <Text style={styles.subtitle}>{subtitle}</Text>
-              <Pressable
-                onPress={openInfo}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={chartInfo}
-              >
-                <MaterialCommunityIcons
-                  name="information-outline"
-                  size={18}
-                  color="rgba(0,245,255,0.55)"
-                />
-              </Pressable>
             </View>
           </View>
           <View style={[styles.chartArea, { height: EMPTY_CHART_H }]}>

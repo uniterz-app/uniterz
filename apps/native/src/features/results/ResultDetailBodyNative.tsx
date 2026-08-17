@@ -32,6 +32,7 @@ import type {
 import type { ResultTopScorerMarketView } from "../../../../../lib/result/resultTopScorerMarket";
 import type { GamePointsTopEntryV1 } from "../../../../../lib/results/gamePointsTop";
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
+import { warmPublicProfileNative } from "../profile/warmPublicProfileNative";
 
 const ACCENT = "#00F5FF";
 
@@ -298,7 +299,19 @@ function Top10Panel({
               reduceMotion={reduceMotion}
               onPress={
                 onOpenProfile && profileKey
-                  ? () => onOpenProfile(profileKey)
+                  ? () => {
+                      warmPublicProfileNative({
+                        routeKey: profileKey,
+                        uid: row.uid,
+                        handle: row.handle === "—" ? "" : row.handle,
+                        displayName: row.displayName,
+                        photoURL: row.photoURL,
+                        plan: row.isPro ? "pro" : "free",
+                        countryCode: row.countryCode,
+                        skipStatsPrime: true,
+                      });
+                      onOpenProfile(profileKey);
+                    }
                   : undefined
               }
             />

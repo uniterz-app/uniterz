@@ -9,8 +9,8 @@ import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
 import { markAnnouncementRead } from "@/lib/announcements/markAnnouncementRead";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
-import { ChevronLeft } from "lucide-react";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import MobilePageShell from "@/app/component/common/MobilePageShell";
 import EventNoticeBody from "@/app/component/events/EventNoticeBody";
 import {
   getSyntheticEventById,
@@ -103,9 +103,16 @@ export default function MobileAnnouncementDetailPage() {
 
   if (loadState === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0B0F17] p-4 text-white">
-        <CandleChartLoader label={m.common.loading} />
-      </div>
+      <MobilePageShell
+        title="NEWS"
+        subtitle={m.settings.news}
+        onClose={() => router.back()}
+        backAriaLabel={m.common.back}
+      >
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <CandleChartLoader label={m.common.loading} />
+        </div>
+      </MobilePageShell>
     );
   }
 
@@ -118,11 +125,16 @@ export default function MobileAnnouncementDetailPage() {
     (syntheticEvent && !syntheticContent)
   ) {
     return (
-      <div className="min-h-screen bg-[#0B0F17] text-white p-4">
+      <MobilePageShell
+        title="NEWS"
+        subtitle={m.settings.news}
+        onClose={() => router.back()}
+        backAriaLabel={m.common.back}
+      >
         <p className="text-center text-white/60">
           {m.settings.announcementNotFound}
         </p>
-      </div>
+      </MobilePageShell>
     );
   }
 
@@ -142,33 +154,13 @@ export default function MobileAnnouncementDetailPage() {
     : (a!.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
 
   return (
-    <div className="relative min-h-screen text-white">
-      {/* 背景 */}
-      <div className="absolute inset-0 -z-10 bg-[#0B0F17]" />
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-70"
-        style={{
-          background:
-            "radial-gradient(60% 45% at 15% 0%, rgba(0,229,255,0.10) 0%, rgba(0,0,0,0) 60%), radial-gradient(50% 40% at 100% 10%, rgba(164,77,255,0.08) 0%, rgba(0,0,0,0) 60%)",
-        }}
-      />
-
-      {/* ヘッダー */}
-      <div className="sticky top-0 z-10 backdrop-blur supports-backdrop-filter:bg-[#0B0F17]/70 border-b border-white/5">
-        <div className="flex items-center gap-3 px-3 py-3">
-          <button
-            onClick={() => router.back()}
-            className="p-1 rounded-full bg-white/10 hover:bg-white/15 active:scale-95"
-            aria-label={m.common.back}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-base font-bold">{m.settings.news}</h1>
-        </div>
-      </div>
-
-      {/* 本文 */}
-      <div className="p-4">
+    <MobilePageShell
+      title="NEWS"
+      subtitle={m.settings.news}
+      onClose={() => router.back()}
+      backAriaLabel={m.common.back}
+    >
+      <div className="space-y-3">
         {syntheticEvent && syntheticContent ? (
           <>
             <div className="flex items-center gap-2">
@@ -181,7 +173,7 @@ export default function MobileAnnouncementDetailPage() {
                 {formatDate(postedAtTs)}
               </span>
             </div>
-            <div className="mt-3 rounded-xl border border-white/10 overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)] bg-[#120818]/90">
+            <div className="rounded-xl border border-white/10 overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)] bg-[#120818]/90">
               <EventNoticeBody
                 event={syntheticContent}
                 heroHeight={192}
@@ -202,7 +194,7 @@ export default function MobileAnnouncementDetailPage() {
               />
             )}
 
-            <div className="mt-3 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <span
                 className={`px-2.5 py-1 rounded-full text-[11px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
               >
@@ -213,14 +205,14 @@ export default function MobileAnnouncementDetailPage() {
               </span>
             </div>
 
-            <h2 className="text-lg font-bold mt-2 leading-tight">{title}</h2>
+            <h2 className="text-lg font-bold leading-tight">{title}</h2>
 
-            <p className="mt-3 text-[15px] leading-relaxed whitespace-pre-wrap text-white/90">
+            <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-white/90">
               {a!.body ?? ""}
             </p>
           </>
         )}
       </div>
-    </div>
+    </MobilePageShell>
   );
 }

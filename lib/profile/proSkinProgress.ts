@@ -32,6 +32,8 @@ export type ProSkinProgressSnapshot = {
   updatedAtMs?: number;
   /** settle 冪等用 */
   lastPostId?: string;
+  /** 同一 post の exactHit 訂正用 */
+  lastExactHit?: boolean;
 };
 
 function safeInt(v: unknown): number {
@@ -78,6 +80,8 @@ export function parseProSkinProgressSnapshot(
     periodWins: parsePeriodWins(o.periodWins),
     updatedAtMs: safeInt(o.updatedAtMs) || undefined,
     lastPostId: typeof o.lastPostId === "string" ? o.lastPostId : undefined,
+    lastExactHit:
+      typeof o.lastExactHit === "boolean" ? o.lastExactHit : undefined,
   };
 }
 

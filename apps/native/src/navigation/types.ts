@@ -29,6 +29,8 @@ export type GamesStackParamList = {
         openMenu?: boolean;
         /** DEV「チュートリアル再開」— 変更のたび welcome を強制 */
         restartTutorialAt?: number;
+        /** チーム詳細から予想モーダル復帰時に STATS 等タブを開く */
+        openPredictNbaToolsTab?: "insight" | "injuries" | "stats" | "roster";
       }
     | undefined;
   GamePredict: { gameId: string };
@@ -47,7 +49,16 @@ export type GamesStackParamList = {
   /** @deprecated LeagueStats tab=player へ */
   LeaguePlayerStats: undefined;
   /** Team Stats からのチーム詳細（モック） */
-  TeamDetailPreview: { teamId?: string } | undefined;
+  TeamDetailPreview:
+    | {
+        teamId?: string;
+        /** 予想オーバーレイから開いた → goBack でモーダル再表示 */
+        returnToPredictOverlay?: boolean;
+        predictToolsTab?: "insight" | "injuries" | "stats" | "roster";
+        /** @deprecated returnToPredictOverlay を優先 */
+        returnToPredictGameId?: string;
+      }
+    | undefined;
   /** Player Stats からの選手詳細（モック） */
   PlayerDetailPreview: { playerId?: string } | undefined;
 };
@@ -152,10 +163,14 @@ export type ProfileStackParamList = {
   UniterzLogoTypePreview: undefined;
   /** __DEV__ 課金 PRO タグ案 */
   UniterzProBadgePreview: undefined;
+  /** __DEV__ 現行 vs 旧 Pro バッジ比較 */
+  ProBadgeComparePreview: undefined;
   /** __DEV__ リザルトカード見た目案 */
   ResultCardDesignPreview: undefined;
   /** __DEV__ リザルト右上バッジ見た目案 */
   ResultBadgeDesignPreview: undefined;
+  /** __DEV__ リザルト右上スタンプ見た目案 */
+  ResultStampDesignPreview: undefined;
   /** __DEV__ リザルト左上連勝タグ見た目案 */
   ResultStreakTagDesignPreview: undefined;
   /** __DEV__ リザルト詳細デザイン用プレビュー */
@@ -174,6 +189,8 @@ export type ProfileStackParamList = {
   LiveGameStatsPreview: undefined;
   /** __DEV__ 試合一覧カード現行デザイン */
   MatchCardDesignPreview: undefined;
+  /** __DEV__ プロフィール 2x2 メトリクス Free / Pro 現行 */
+  ProfileKinetikMetricsPreview: undefined;
   /** __DEV__ 下部ナビ見た目案 */
   NavBarDesignPreview: undefined;
   /** __DEV__ LP 用ランキング画面（総合スコアモック） */

@@ -3,9 +3,9 @@
  * 順位・指標値・Ranking Progress seed を同梱。
  */
 import type { Firestore } from "firebase/firestore";
-import { parseProfileChartsBundle } from "@/lib/profile/profileChartsBundle";
-import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
 import { loadCumulativeDataClient } from "@/lib/profile/fetchNbaProfileCardPhaseClient";
+import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
+import { loadProfileChartsBundleClient } from "@/lib/profile/profileChartsStorage";
 import { pickNbaCumulativeRankingSlice } from "@/lib/rankings/pickNbaStatsBucket";
 import type { MyRankProgressPoint } from "@/lib/rankings/myRankRankingProgress";
 import { readStoredRankFromSnapshotRanks } from "@/lib/rankings/server/readSnapshotRanksFromCumulative";
@@ -100,7 +100,13 @@ export async function fetchMyRankCardFastClient(
 
     const myRank = readStoredRankFromSnapshotRanks(data, "totalPoints");
     const myRow = buildNbaMyRow(safeUid, data, myRank);
-    const charts = parseProfileChartsBundle(data, profileOverviewSeasonKey());
+    const seasonKey = profileOverviewSeasonKey();
+    const charts = await loadProfileChartsBundleClient(
+      db,
+      safeUid,
+      seasonKey,
+      data
+    );
     const rankProgressPoints = (charts?.rankTrend ??
       []) as MyRankProgressPoint[];
 
@@ -110,7 +116,7 @@ export async function fetchMyRankCardFastClient(
       myRow,
       plan: myRow.plan,
       rankProgressPoints,
-      // Progress 用の別 API は打たない（コスト優先）
+      // subcollection / 親 fallback を読んだので別 API は打たない
       rankProgressSeedComplete: true,
     };
   } catch {

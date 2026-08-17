@@ -25,6 +25,7 @@ import adminPkg from "firebase-admin";
 const admin = adminPkg;
 import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import fs from "fs";
+import { stampMasterBadgeParticipantCount } from "../../lib/badges/server/stampMasterBadgeParticipantCount";
 
 const serviceAccount = JSON.parse(
   fs.readFileSync("service-account.json", "utf8")
@@ -160,6 +161,7 @@ async function main() {
             metric: "totalPoints",
             round: "r2",
             rank,
+            participantCount: rows.length,
             source: "po_2026_2nd_round_total_points_grant",
           },
         },
@@ -177,6 +179,10 @@ async function main() {
 
   if (!DRY_RUN && ops > 0) {
     await batch.commit();
+  }
+
+  if (!DRY_RUN) {
+    await stampMasterBadgeParticipantCount(db, summary.keys(), rows.length);
   }
 
   console.log(

@@ -1,5 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
 
 const GamesPage = dynamic(() => import("@/app/component/games/GamesPage"), {
@@ -9,7 +10,9 @@ const GamesPage = dynamic(() => import("@/app/component/games/GamesPage"), {
 export default function Page() {
   return (
     <>
-      <GamesPage dense />
+      <Suspense fallback={null}>
+        <GamesPage dense />
+      </Suspense>
       <TutorialLiveHost page="games" />
     </>
   );

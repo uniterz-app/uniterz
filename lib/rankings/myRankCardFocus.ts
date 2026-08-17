@@ -1,6 +1,21 @@
 import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
-import type { MyRankCardFrameTone } from "@/app/component/rankings/MyRankCardFrame";
 import { RANKINGS_CYAN } from "@/lib/rankings/rankingsCyberTheme";
+
+/** 前日比順位 — 枠アクセント（上昇=ライム / 下降=シアン / 変動なし=ニュートラル） */
+export type MyRankCardFrameTone = "up" | "down" | "neutral";
+
+export function resolveMyRankCardFrameTone(
+  rankDeltaPlaces?: number | null
+): MyRankCardFrameTone {
+  if (
+    typeof rankDeltaPlaces !== "number" ||
+    !Number.isFinite(rankDeltaPlaces) ||
+    rankDeltaPlaces === 0
+  ) {
+    return "neutral";
+  }
+  return rankDeltaPlaces > 0 ? "up" : "down";
+}
 
 const LIME = "#b8ff3c";
 const LIME_DIM = "rgba(184,255,60,0.35)";

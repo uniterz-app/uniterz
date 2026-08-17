@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   badgeBlock: { alignItems: "center", marginBottom: 10 },
-  wordmark: { marginTop: -16, marginBottom: -36 },
+  wordmark: { marginBottom: 8 },
   freeMark: {
     width: 56,
     height: 56,

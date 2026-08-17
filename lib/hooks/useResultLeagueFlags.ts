@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import {
   defaultResultListLeagueTab,
   parseUserResultLeagueFlags,
@@ -37,13 +36,9 @@ export function useResultLeagueFlags(uid: string | null): {
 
     void (async () => {
       try {
-        const snap = await getDoc(doc(db, "users", uid));
+        const data = await getUserDocDataCached(uid);
         if (cancelled) return;
-        setFlags(
-          snap.exists()
-            ? parseUserResultLeagueFlags(snap.data())
-            : EMPTY_FLAGS
-        );
+        setFlags(data ? parseUserResultLeagueFlags(data) : EMPTY_FLAGS);
       } catch {
         if (!cancelled) setFlags(EMPTY_FLAGS);
       } finally {

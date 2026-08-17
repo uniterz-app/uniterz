@@ -96,9 +96,17 @@
 .profile-kinetik-panel:has(.profile-plan-pro-bg--wave-gold-monogram),
 .profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-gold-monogram) {
   background: linear-gradient(165deg, #050400 0%, #161208 48%, #020200 100%);
-  --kinetik-frame: rgba(234, 179, 8, 0.38);
-  --kinetik-frame-strong: rgba(253, 224, 71, 0.65);
-  --kinetik-frame-dim: rgba(180, 140, 30, 0.28);
+  --kinetik-frame: rgba(201, 162, 39, 0.42);
+  --kinetik-frame-strong: rgba(232, 198, 106, 0.72);
+  --kinetik-frame-dim: rgba(180, 140, 30, 0.14);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.5),
+    0 0 0 1px var(--kinetik-frame);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--wave-gold-monogram) .profile-plan-pro-frame-corner,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--wave-gold-monogram) .profile-plan-pro-frame-corner {
+  filter: none;
 }
 
 .profile-kinetik-panel:has(.profile-plan-pro-bg--wave-parchment-crest),

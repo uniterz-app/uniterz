@@ -88,7 +88,12 @@ export default function CommunityGroupOverlayNative({
 
   return (
     <>
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={onClose}>
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={onClose}
+      >
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <View style={styles.overlay}>
             <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={m.common.close} />
@@ -191,7 +196,7 @@ function EndGroupConfirmModalNative({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.78)",
+    backgroundColor: "#000000",
   },
   scroll: {
     flex: 1,

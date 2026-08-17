@@ -2,9 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  type TextStyle,
 } from "react-native";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import type { Language } from "../../../../../lib/i18n/language";
@@ -23,13 +23,12 @@ import {
 } from "../../../../../lib/communities/limitValues";
 import { storage } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
-import { RankingsShellGridOverlay } from "../rankings/rankingsUiDecorations";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
 import type { CreatedCommunityGroup } from "./communityApiNative";
 import { communityApiUrl, communityAuthHeader } from "./communityApiNative";
 import {
-  communityFieldLabelStyle,
-  communityModalCardStyle,
+  communityMono,
   communityPressableTapStyle,
 } from "./communityCrtThemeNative";
 import CommunityTeamPickerNative from "./CommunityTeamPickerNative";
@@ -43,13 +42,35 @@ type Props = {
   onCreated: (group?: CreatedCommunityGroup | null, inviteCode?: string) => void;
 };
 
-const GLASS_FIELD = {
+const FIELD = {
   borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.14)",
-  backgroundColor: "rgba(255,255,255,0.06)",
+  borderColor: "rgba(255,255,255,0.22)",
+  backgroundColor: "#000000",
   paddingHorizontal: 10,
   paddingVertical: 8,
 } as const;
+
+const LABEL: TextStyle = {
+  fontFamily: communityMono,
+  fontSize: 10,
+  fontWeight: "600",
+  letterSpacing: 1.6,
+  textTransform: "uppercase",
+  color: "rgba(255,255,255,0.55)",
+  marginBottom: 6,
+};
+
+const JP_BODY = Platform.select({
+  ios: "NotoSansJP_400Regular",
+  android: "NotoSansJP_400Regular",
+  default: "NotoSansJP_400Regular",
+});
+
+const JP_MED = Platform.select({
+  ios: "NotoSansJP_600SemiBold",
+  android: "NotoSansJP_600SemiBold",
+  default: "NotoSansJP_600SemiBold",
+});
 
 export default function CreateGroupModalNative({ visible, language, onClose, onCreated }: Props) {
   const { fUser } = useFirebaseUser();
@@ -210,44 +231,10 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
         </Pressable>
 
         <View style={styles.card}>
-          {(Platform.OS === "ios" || Platform.OS === "android") && (
-            <BlurView
-              intensity={Platform.OS === "ios" ? 28 : 16}
-              tint="dark"
-              {...nativeBlurViewExtraProps()}
-              style={StyleSheet.absoluteFillObject}
-            />
-          )}
-          <LinearGradient
-            pointerEvents="none"
-            colors={[
-              "rgba(255,255,255,0.14)",
-              "rgba(255,255,255,0.05)",
-              "rgba(5,12,24,0.55)",
-              "rgba(5,8,20,0.72)",
-            ]}
-            locations={[0, 0.18, 0.55, 1]}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <LinearGradient
-            pointerEvents="none"
-            colors={["rgba(34,211,238,0.08)", "transparent"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cornerSheen}
-          />
-          <View pointerEvents="none" style={styles.insetHighlight} />
-          <RankingsShellGridOverlay borderRadius={16} />
-
           <View style={styles.cardInner}>
             <View style={styles.header}>
-              <View style={styles.titleRow}>
-                <View style={styles.titleAccent} />
-                <View style={styles.titleBlock}>
-                  <Text style={styles.title}>{t.title}</Text>
-                  <Text style={styles.planLimits}>{t.planLimits}</Text>
-                </View>
-              </View>
+              <Text style={styles.title}>{t.title}</Text>
+              <Text style={styles.planLimits}>{t.planLimits}</Text>
             </View>
 
             <ScrollView
@@ -256,26 +243,26 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <Text style={communityFieldLabelStyle}>{t.name}</Text>
+              <Text style={LABEL}>{t.name}</Text>
               <TextInput
                 value={name}
                 onChangeText={setName}
                 maxLength={60}
-                style={[GLASS_FIELD, styles.input]}
+                style={[FIELD, styles.input]}
               />
 
-              <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.description}</Text>
+              <Text style={[LABEL, styles.gapTop]}>{t.description}</Text>
               <TextInput
                 value={description}
                 onChangeText={setDescription}
                 maxLength={280}
                 multiline
                 placeholder={t.descriptionPh}
-                placeholderTextColor="rgba(255,255,255,0.28)"
-                style={[GLASS_FIELD, styles.textarea]}
+                placeholderTextColor="rgba(255,255,255,0.55)"
+                style={[FIELD, styles.textarea]}
               />
 
-              <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.header}</Text>
+              <Text style={[LABEL, styles.gapTop]}>{t.header}</Text>
               <Pressable
                 onPress={() => void pickImage()}
                 style={({ pressed }) => [styles.pickBtn, pressed && communityPressableTapStyle(true)]}
@@ -286,7 +273,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
 
               <Text style={[styles.note, styles.gapTop]}>{t.scoringNote}</Text>
 
-              <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.league}</Text>
+              <Text style={[LABEL, styles.gapTop]}>{t.league}</Text>
               <OptionRow
                 options={COMMUNITY_LEAGUES.map((k) => ({ key: k, label: leagueLabel(k, language) }))}
                 value={league}
@@ -298,7 +285,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
 
               {showTeamPicker ? (
                 <>
-                  <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.teams}</Text>
+                  <Text style={[LABEL, styles.gapTop]}>{t.teams}</Text>
                   <CommunityTeamPickerNative
                     teams={teams}
                     selectedIds={teamIds}
@@ -308,7 +295,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
                 </>
               ) : null}
 
-              <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.metric}</Text>
+              <Text style={[LABEL, styles.gapTop]}>{t.metric}</Text>
               <OptionRow
                 options={COMMUNITY_METRICS.map((k) => ({ key: k, label: metricLabel(k, language) }))}
                 value={metric}
@@ -334,13 +321,6 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
                   pressed && !(busy || name.trim().length < 1) && communityPressableTapStyle(true),
                 ]}
               >
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={["rgba(34,211,238,0.22)", "rgba(34,211,238,0.1)"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
                 <Text style={styles.submitText}>{busy ? t.creating : t.submit}</Text>
               </Pressable>
             </View>
@@ -374,13 +354,6 @@ function OptionRow({
               pressed && communityPressableTapStyle(true),
             ]}
           >
-            {active ? (
-              <LinearGradient
-                pointerEvents="none"
-                colors={["rgba(34,211,238,0.18)", "rgba(34,211,238,0.06)"]}
-                style={StyleSheet.absoluteFillObject}
-              />
-            ) : null}
             <Text style={[styles.optionText, active && styles.optionTextActive]}>{opt.label}</Text>
           </Pressable>
         );
@@ -396,72 +369,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 16,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.78)",
   },
   backdropDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.38)",
+    backgroundColor: "rgba(0,0,0,0.55)",
   },
   card: {
-    ...communityModalCardStyle,
     width: "100%",
     maxWidth: 400,
     maxHeight: "88%",
     flexDirection: "column",
-    borderColor: "rgba(255,255,255,0.16)",
-    backgroundColor: "rgba(8,14,28,0.42)",
-  },
-  cornerSheen: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.85,
-  },
-  insetHighlight: {
-    position: "absolute",
-    top: 0,
-    left: 12,
-    right: 12,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.22)",
-    borderRadius: 1,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "#000000",
   },
   cardInner: {
     position: "relative",
     zIndex: 2,
     flexShrink: 1,
     maxHeight: "100%",
+    backgroundColor: "#000000",
   },
   header: {
     paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    gap: 10,
-  },
-  titleBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  titleAccent: {
-    width: 3,
-    borderRadius: 2,
-    backgroundColor: "rgba(34,211,238,0.75)",
+    borderBottomColor: "rgba(255,255,255,0.14)",
   },
   title: {
-    fontSize: 16,
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 20,
     fontWeight: "700",
-    letterSpacing: 0.4,
-    color: "rgba(236,254,255,0.96)",
+    letterSpacing: 0.8,
+    color: "#FFFFFF",
   },
   planLimits: {
     marginTop: 8,
-    fontSize: 10,
-    lineHeight: 16,
-    color: "rgba(255,255,255,0.42)",
+    fontFamily: JP_BODY,
+    fontSize: 11,
+    lineHeight: 17,
+    color: "rgba(255,255,255,0.58)",
   },
   scroll: {
     flexGrow: 0,
@@ -472,11 +422,13 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   input: {
-    color: "rgba(236,254,255,0.92)",
-    fontSize: 14,
+    fontFamily: JP_MED,
+    color: "#FFFFFF",
+    fontSize: 15,
   },
   textarea: {
-    color: "rgba(236,254,255,0.92)",
+    fontFamily: JP_BODY,
+    color: "#FFFFFF",
     fontSize: 14,
     minHeight: 72,
     textAlignVertical: "top",
@@ -486,28 +438,30 @@ const styles = StyleSheet.create({
   },
   pickBtn: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.28)",
+    backgroundColor: "#000000",
     paddingVertical: 10,
     alignItems: "center",
-    overflow: "hidden",
   },
   pickBtnText: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 12,
-    color: "rgba(186,230,253,0.88)",
+    letterSpacing: 1.2,
+    color: "#FFFFFF",
   },
   preview: {
     marginTop: 8,
     width: 120,
     height: 120,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "#000000",
   },
   note: {
-    fontSize: 10,
-    lineHeight: 16,
-    color: "rgba(255,255,255,0.45)",
+    fontFamily: JP_BODY,
+    fontSize: 11,
+    lineHeight: 17,
+    color: "rgba(255,255,255,0.58)",
   },
   optionWrap: {
     flexDirection: "row",
@@ -516,22 +470,23 @@ const styles = StyleSheet.create({
   },
   optionChip: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    overflow: "hidden",
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "#000000",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
   optionChipActive: {
-    borderColor: "rgba(34,211,238,0.42)",
+    borderColor: "#FFFFFF",
+    backgroundColor: "#FFFFFF",
   },
   optionText: {
-    fontSize: 11,
+    fontFamily: JP_MED,
+    fontSize: 12,
     color: "rgba(255,255,255,0.62)",
   },
   optionTextActive: {
-    color: "rgba(186,230,253,0.96)",
-    fontWeight: "600",
+    color: "#000000",
+    fontWeight: "700",
   },
   footer: {
     flexDirection: "row",
@@ -539,35 +494,37 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.12)",
+    borderTopColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "#000000",
   },
   cancelBtn: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.28)",
+    backgroundColor: "#000000",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    overflow: "hidden",
   },
   cancelText: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.72)",
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 13,
+    letterSpacing: 0.8,
+    color: "#FFFFFF",
   },
   submitBtn: {
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.34)",
-    backgroundColor: "rgba(34,211,238,0.1)",
+    borderColor: "#FFFFFF",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    overflow: "hidden",
   },
   submitDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   submitText: {
-    fontSize: 12,
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 13,
     fontWeight: "700",
-    color: "rgba(236,254,255,0.96)",
+    letterSpacing: 0.8,
+    color: "#000000",
   },
 });

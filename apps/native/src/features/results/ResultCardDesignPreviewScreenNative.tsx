@@ -3,7 +3,7 @@
  * バッジは IMPACT（イタリック + 斜めアンダー）。UPSET 枠は濃い赤 / PERFECT は深い青。
  * 右辺 DETAIL タブ → 詳細プレビュー。Upset/Score は D + 相対ラベル。YOU なし。
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   Pressable,
   ScrollView,
@@ -11,7 +11,16 @@ import {
   Text,
   View,
 } from "react-native";
-import type { SharedValue } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
@@ -38,6 +47,8 @@ import {
   OUTCOME_LABEL,
   OUTCOME_TONE,
 } from "./resultBadgeDesignPreviewPatterns";
+import type { ResultFaceMatchEntranceStyles } from "./useResultFaceMatchEntrance";
+import { resultFaceGroupDelayMs } from "./useResultFaceMatchEntrance";
 
 type OutcomeBadge = "hit" | "perfect" | "upset" | "miss";
 
@@ -155,11 +166,13 @@ function hexWithAlpha(hex: string, alphaHex: string): string {
 }
 
 /** 右辺 DETAIL タブ（背表紙タブ型・ニュートラル枠） */
-const DETAIL_SPINE = {
+export const RESULT_CARD_DETAIL_SPINE = {
   width: 18,
   height: 80,
   top: 80,
 } as const;
+
+const DETAIL_SPINE = RESULT_CARD_DETAIL_SPINE;
 
 /** プレビュー用・直角長方形シェル（角切りなし）+ 任意で右辺 DETAIL */
 function RectShell({
@@ -167,70 +180,67 @@ function RectShell({
   topLabel,
   onOpenDetail,
   showDetailTab = false,
-  frameGlow = true,
   strokeEnd,
+  animateDraw = false,
+  drawDelayMs = 0,
+  motion,
+  detailSpineStyle,
   children,
 }: {
   badge: OutcomeBadge;
   topLabel?: string;
   onOpenDetail?: () => void;
   showDetailTab?: boolean;
-  /** false なら詳細向け — 枠グローなし・枠色もニュートラル */
+  /** 線枠グローは MatchListLineFrame。elevation は Skia を覆うので使わない */
   frameGlow?: boolean;
   strokeEnd?: SharedValue<number>;
+  animateDraw?: boolean;
+  drawDelayMs?: number;
+  motion?: ResultFaceMatchEntranceStyles;
+  /** 親 Pressable の押下と連動させる DETAIL タブ見た目 */
+  detailSpineStyle?: object;
   children: ReactNode;
 }) {
   const paint = RESULT_LINE_FRAME_PAINT[badge];
   const stroke = RESULT_CYBER_FRAME_STROKE_WIDTH;
   const detailTab = Boolean(showDetailTab);
   const inner = (
-    <View
-      style={[
-        styles.rectShell,
-        frameGlow
-          ? {
-              shadowColor: paint.color,
-              shadowOpacity: 0.28,
-              shadowRadius: 10,
-              elevation: 3,
-            }
-          : {
-              shadowOpacity: 0,
-              elevation: 0,
-            },
-      ]}
-    >
+    <View style={styles.rectShell}>
       <View style={styles.rectBody}>{children}</View>
     </View>
   );
   const shell = (
     <>
-      {detailTab ? (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.detailSpine,
-            {
-              borderWidth: stroke,
-              borderLeftWidth: 0,
-              borderColor: paint.color,
-            },
-          ]}
-        >
-          <View style={styles.detailSpineTextCol}>
-            {"DETAIL".split("").map((ch) => (
-              <Text key={ch} style={styles.detailSpineChar}>
-                {ch}
-              </Text>
-            ))}
-          </View>
-        </View>
-      ) : null}
       <MatchListLineFrameNative
         topLabel={topLabel}
         paint={paint}
         strokeEnd={strokeEnd}
+        animateDraw={animateDraw}
+        drawDelayMs={drawDelayMs}
       >
+        {detailTab ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.detailSpine,
+              {
+                borderWidth: stroke,
+                borderLeftWidth: 0,
+                borderColor: paint.color,
+              },
+              motion?.headerGroupStyle,
+              detailSpineStyle,
+            ]}
+          >
+            <View style={styles.detailSpineTextCol}>
+              {"DETAIL".split("").map((ch) => (
+                <Text key={ch} style={styles.detailSpineChar}>
+                  {ch}
+                </Text>
+              ))}
+            </View>
+          </Animated.View>
+        ) : null}
         {inner}
       </MatchListLineFrameNative>
     </>
@@ -246,6 +256,7 @@ function RectShell({
       onPress={onOpenDetail}
       style={({ pressed }) => [
         styles.rectShellWrap,
+        detailTab ? styles.rectShellWrapWithDetail : null,
         pressed ? styles.cardPressed : null,
       ]}
     >
@@ -257,13 +268,15 @@ function RectShell({
 function TopBar({
   sample,
   badge,
+  motion,
 }: {
   sample: Sample;
   badge: OutcomeBadge;
+  motion?: ResultFaceMatchEntranceStyles;
 }) {
   const showStreak = sample.winStreak >= 3;
   return (
-    <View style={styles.topBar}>
+    <Animated.View style={[styles.topBar, motion?.headerGroupStyle]}>
       <View style={styles.topLeftSlot}>
         {showStreak ? (
           <ImpactTag
@@ -275,7 +288,7 @@ function TopBar({
       <View style={styles.topBadgeSlot}>
         <ImpactOutcomeBadge kind={badge} />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -288,22 +301,32 @@ function ImpactOutcomeBadge({ kind }: { kind: OutcomeBadge }) {
   );
 }
 
-function MatchBlock({ sample, ja }: { sample: Sample; ja: boolean }) {
+function MatchBlock({
+  sample,
+  ja,
+  motion,
+}: {
+  sample: Sample;
+  ja: boolean;
+  motion?: ResultFaceMatchEntranceStyles;
+}) {
   return (
-    <View style={styles.matchRow}>
+    <Animated.View style={[styles.matchRow, motion?.teamsGroupStyle]}>
       <View style={styles.matchSide}>
         <Text style={styles.homeAwayLabel}>HOME</Text>
-        <JerseyMarkAdaptive
-          accent={sample.homeJersey.primary}
-          accentEnd={sample.homeJersey.secondary}
-          size={42}
-        />
+        <Animated.View style={motion?.homeJerseyStyle}>
+          <JerseyMarkAdaptive
+            accent={sample.homeJersey.primary}
+            accentEnd={sample.homeJersey.secondary}
+            size={42}
+          />
+        </Animated.View>
         <View style={styles.skewWrap}>
           <Text style={styles.teamNameSlant}>{sample.homeName}</Text>
         </View>
       </View>
 
-      <View style={styles.matchCenter}>
+      <Animated.View style={[styles.matchCenter, motion?.centerBlockStyle]}>
         <View style={styles.skewWrap}>
           <Text style={styles.finalStatus}>FINAL</Text>
         </View>
@@ -320,29 +343,105 @@ function MatchBlock({ sample, ja }: { sample: Sample; ja: boolean }) {
           <Text style={styles.predDash}> — </Text>
           {sample.predAway}
         </Text>
-      </View>
+      </Animated.View>
 
       <View style={styles.matchSide}>
         <Text style={styles.homeAwayLabel}>AWAY</Text>
-        <JerseyMarkAdaptive
-          accent={sample.awayJersey.primary}
-          accentEnd={sample.awayJersey.secondary}
-          size={42}
-        />
+        <Animated.View style={motion?.awayJerseyStyle}>
+          <JerseyMarkAdaptive
+            accent={sample.awayJersey.primary}
+            accentEnd={sample.awayJersey.secondary}
+            size={42}
+          />
+        </Animated.View>
         <View style={styles.skewWrap}>
           <Text style={styles.teamNameSlant}>{sample.awayName}</Text>
         </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+const BIAS_SEGS = 16;
+const BIAS_SEG_STAGGER_MS = 32;
+
+function BiasSegFace({
+  index,
+  progress,
+  accent,
+  targetOp,
+  animate,
+}: {
+  index: number;
+  progress: SharedValue<number>;
+  accent: string;
+  targetOp: number;
+  animate: boolean;
+}) {
+  const style = useAnimatedStyle(() => {
+    if (!animate) {
+      return { opacity: targetOp, transform: [{ scaleX: 1 }] };
+    }
+    const t = interpolate(
+      progress.value,
+      [index, index + 0.8],
+      [0, 1],
+      Extrapolation.CLAMP
+    );
+    return {
+      opacity: t * targetOp,
+      transform: [{ scaleX: 0.12 + t * 0.88 }],
+    };
+  });
+  return (
+    <View style={styles.biasSegSlot}>
+      <View style={styles.biasSegSkew}>
+        <Animated.View
+          style={[
+            styles.biasSegFace,
+            {
+              borderColor: hexWithAlpha(accent, "88"),
+              backgroundColor: accent,
+            },
+            style,
+          ]}
+        />
       </View>
     </View>
   );
 }
 
-function MarketBias({ sample, ja }: { sample: Sample; ja: boolean }) {
-  const segs = 16;
+function MarketBias({
+  sample,
+  ja,
+  animate = false,
+  revealDelayMs = 0,
+}: {
+  sample: Sample;
+  ja: boolean;
+  animate?: boolean;
+  revealDelayMs?: number;
+}) {
   const homeSegs = Math.max(
     1,
-    Math.round((sample.marketHomePct / 100) * segs)
+    Math.round((sample.marketHomePct / 100) * BIAS_SEGS)
   );
+  const progress = useSharedValue(animate ? 0 : BIAS_SEGS);
+
+  useLayoutEffect(() => {
+    if (!animate) {
+      progress.value = BIAS_SEGS;
+      return;
+    }
+    progress.value = 0;
+    progress.value = withDelay(
+      revealDelayMs,
+      withTiming(BIAS_SEGS, {
+        duration: BIAS_SEGS * BIAS_SEG_STAGGER_MS,
+        easing: Easing.linear,
+      })
+    );
+  }, [animate, revealDelayMs, progress]);
 
   return (
     <View style={styles.biasRoot}>
@@ -366,24 +465,17 @@ function MarketBias({ sample, ja }: { sample: Sample; ja: boolean }) {
 
       <View style={styles.biasBarOuter}>
         <View style={styles.biasBarInner}>
-          {Array.from({ length: segs }).map((_, i) => {
+          {Array.from({ length: BIAS_SEGS }).map((_, i) => {
             const home = i < homeSegs;
-            const accent = home ? sample.homeAccent : "#9CA3AF";
             return (
-              <View key={i} style={styles.biasSegSlot}>
-                <View style={styles.biasSegSkew}>
-                  <View
-                    style={[
-                      styles.biasSegFace,
-                      {
-                        borderColor: hexWithAlpha(accent, "88"),
-                        backgroundColor: accent,
-                        opacity: home ? 0.95 : 0.55,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
+              <BiasSegFace
+                key={i}
+                index={i}
+                progress={progress}
+                accent={home ? sample.homeAccent : "#9CA3AF"}
+                targetOp={home ? 0.95 : 0.55}
+                animate={animate}
+              />
             );
           })}
         </View>
@@ -547,6 +639,10 @@ function Plan1Card({
   bare = false,
   tutorialMetricsTargetId,
   strokeEnd,
+  animateDraw = false,
+  drawDelayMs = 0,
+  motion,
+  detailSpineStyle,
 }: {
   sample: Sample;
   badge: OutcomeBadge;
@@ -559,20 +655,31 @@ function Plan1Card({
   bare?: boolean;
   tutorialMetricsTargetId?: string;
   strokeEnd?: SharedValue<number>;
+  animateDraw?: boolean;
+  drawDelayMs?: number;
+  motion?: ResultFaceMatchEntranceStyles;
+  detailSpineStyle?: object;
 }) {
   const body = (
     <View style={styles.pad}>
-      <TopBar sample={sample} badge={badge} />
-      <MatchBlock sample={sample} ja={ja} />
-      <View style={styles.layerDivider} />
-      <MarketBias sample={sample} ja={ja} />
-      <StatBlock
-        sample={sample}
-        ja={ja}
-        scorerIcon={scorerIcon}
-        scoreRel={scoreRel}
-        tutorialMetricsTargetId={tutorialMetricsTargetId}
-      />
+      <TopBar sample={sample} badge={badge} motion={motion} />
+      <MatchBlock sample={sample} ja={ja} motion={motion} />
+      <Animated.View style={[styles.layerDivider, motion?.dividerStyle]} />
+      <Animated.View style={motion?.footerGroupStyle}>
+        <MarketBias
+          sample={sample}
+          ja={ja}
+          animate={animateDraw}
+          revealDelayMs={resultFaceGroupDelayMs(drawDelayMs, 2) + 60}
+        />
+        <StatBlock
+          sample={sample}
+          ja={ja}
+          scorerIcon={scorerIcon}
+          scoreRel={scoreRel}
+          tutorialMetricsTargetId={tutorialMetricsTargetId}
+        />
+      </Animated.View>
     </View>
   );
 
@@ -582,6 +689,8 @@ function Plan1Card({
         topLabel={sample.roundLabel}
         paint={RESULT_LINE_FRAME_PAINT[badge]}
         strokeEnd={strokeEnd}
+        animateDraw={animateDraw}
+        drawDelayMs={drawDelayMs}
       >
         <View style={styles.bareFace}>{body}</View>
       </MatchListLineFrameNative>
@@ -596,6 +705,10 @@ function Plan1Card({
       showDetailTab={showDetailTab}
       frameGlow={frameGlow}
       strokeEnd={strokeEnd}
+      animateDraw={animateDraw}
+      drawDelayMs={drawDelayMs}
+      motion={motion}
+      detailSpineStyle={detailSpineStyle}
     >
       {body}
     </RectShell>
@@ -616,6 +729,10 @@ export function ResultCardDesignFaceNative({
   onOpenDetail,
   tutorialMetricsTargetId,
   strokeEnd,
+  animateDraw = false,
+  drawDelayMs = 0,
+  motion,
+  detailSpineStyle,
 }: {
   language: "ja" | "en";
   badge?: OutcomeBadge;
@@ -651,6 +768,10 @@ export function ResultCardDesignFaceNative({
   /** チュートリアル穴（Upset / Score 行） */
   tutorialMetricsTargetId?: string;
   strokeEnd?: SharedValue<number>;
+  animateDraw?: boolean;
+  drawDelayMs?: number;
+  motion?: ResultFaceMatchEntranceStyles;
+  detailSpineStyle?: object;
 }) {
   const resolved: Sample = face
     ? (() => {
@@ -714,6 +835,10 @@ export function ResultCardDesignFaceNative({
       bare={bare}
       tutorialMetricsTargetId={tutorialMetricsTargetId}
       strokeEnd={strokeEnd}
+      animateDraw={animateDraw}
+      drawDelayMs={drawDelayMs}
+      motion={motion}
+      detailSpineStyle={detailSpineStyle}
     />
   );
 }
@@ -958,6 +1083,10 @@ const styles = StyleSheet.create({
     width: "100%",
     overflow: "visible",
   },
+  /** DETAIL タブのはみ出し分をヒット領域に含める */
+  rectShellWrapWithDetail: {
+    paddingRight: DETAIL_SPINE.width - 1,
+  },
   cardPressed: {
     opacity: 0.96,
     transform: [{ scale: 0.99 }],
@@ -1016,6 +1145,7 @@ const styles = StyleSheet.create({
   },
   layerDivider: {
     height: StyleSheet.hairlineWidth,
+    width: "100%",
     backgroundColor: "rgba(255,255,255,0.1)",
     marginTop: 4,
     marginBottom: 6,
@@ -1159,9 +1289,18 @@ const styles = StyleSheet.create({
     padding: 2,
     gap: 2,
   },
-  biasSegSlot: { flex: 1, minWidth: 0 },
+  biasSegSlot: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+  },
   biasSegSkew: { transform: [{ skewX: "-16deg" }] },
-  biasSegFace: { height: 10, width: "100%", borderWidth: 1 },
+  biasSegFace: {
+    height: 10,
+    width: "100%",
+    borderWidth: 1,
+    transformOrigin: "left center",
+  },
 
   statBlock: { gap: 6, paddingTop: 0 },
 

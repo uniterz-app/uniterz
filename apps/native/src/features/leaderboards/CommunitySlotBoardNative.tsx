@@ -39,6 +39,7 @@ import {
   communityPressableFilledStyle,
   communityPressableTapStyle,
 } from "./communityCrtThemeNative";
+import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
 
 type Props = {
   language: Language;
@@ -135,11 +136,11 @@ function SlotCardImageBackgroundNative({
 
 function RoleBadgeNative({ isOwner, label }: { isOwner: boolean; label: string }) {
   return (
-    <View style={isOwner ? communityCrtStyles.roleBadgeOwner : communityCrtStyles.roleBadgeMember}>
+    <View style={[styles.roleBadge, isOwner ? styles.roleBadgeOwner : styles.roleBadgeMember]}>
       <Text
         style={[
-          isOwner ? communityCrtStyles.roleBadgeTextOwner : communityCrtStyles.roleBadgeTextMember,
           styles.roleBadgeText,
+          isOwner ? styles.roleBadgeTextOwner : styles.roleBadgeTextMember,
         ]}
       >
         {label}
@@ -189,14 +190,7 @@ function GroupFilledSlotNative({
           headerImagePositionY={g.headerImagePositionY}
           isOwner={isOwner}
         />
-        <View style={styles.filledRow}>
-          <View
-            style={[
-              styles.filledAccent,
-              isOwner ? styles.filledAccentOwner : styles.filledAccentMember,
-            ]}
-          />
-          <View style={styles.filledInner}>
+        <View style={styles.filledInner}>
             <View style={styles.slotTopRow}>
               <RoleBadgeNative isOwner={isOwner} label={isOwner ? labels.owner : labels.member} />
             </View>
@@ -211,7 +205,6 @@ function GroupFilledSlotNative({
                 <CommunityMemberAvatarStackNative previews={g.memberPreviews ?? []} size={28} />
               </View>
             ) : null}
-          </View>
         </View>
       </View>
     </Pressable>
@@ -236,7 +229,7 @@ function CreateEmptySlotNative({
         communityPressableTapStyle(pressed),
       ]}
     >
-      <MaterialCommunityIcons name="plus" size={16} color="rgba(34,211,238,0.55)" />
+      <MaterialCommunityIcons name="plus" size={16} color="rgba(0,245,255,0.55)" />
       <Text style={styles.emptyLabel}>{label}</Text>
     </Pressable>
   );
@@ -324,7 +317,7 @@ function JoinEmptySlotNative({
           onPress={() => void handlePaste()}
           style={({ pressed }) => [styles.joinPasteBtn, pressed && { opacity: 0.85 }]}
         >
-          <MaterialCommunityIcons name="content-paste" size={14} color="rgba(34,211,238,0.9)" />
+          <MaterialCommunityIcons name="content-paste" size={14} color="rgba(0,245,255,0.9)" />
           <Text style={styles.joinPasteText}>{pasteLabel}</Text>
         </Pressable>
         <Pressable
@@ -522,31 +515,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
-  filledRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    position: "relative",
-    zIndex: 2,
-  },
   filledSlotWithImage: {
     backgroundColor: COMMUNITY_GROUP_SLOT_CARD_BG,
   },
   filledSlotOwner: {
-    borderColor: "rgba(251,191,36,0.22)",
+    borderColor: "rgba(251,191,36,0.28)",
   },
   filledSlotMember: {
-    borderColor: "rgba(34,211,238,0.16)",
-  },
-  filledAccent: {
-    width: 3,
-    flexShrink: 0,
-    zIndex: 3,
-  },
-  filledAccentOwner: {
-    backgroundColor: "rgba(251,191,36,0.85)",
-  },
-  filledAccentMember: {
-    backgroundColor: CRT_CYAN,
+    borderColor: "rgba(0,245,255,0.18)",
   },
   filledInner: {
     flex: 1,
@@ -554,23 +530,45 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 14,
+    position: "relative",
+    zIndex: 2,
   },
   slotTopRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
     marginBottom: 2,
   },
+  roleBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  roleBadgeOwner: {
+    borderColor: "rgba(251,191,36,0.45)",
+    backgroundColor: "rgba(251,191,36,0.08)",
+  },
+  roleBadgeMember: {
+    borderColor: "rgba(0,245,255,0.3)",
+    backgroundColor: "rgba(0,245,255,0.06)",
+  },
   roleBadgeText: {
     fontFamily: communityMono,
     fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 2,
+    fontWeight: "500",
+    letterSpacing: 1.4,
     textTransform: "uppercase",
   },
+  roleBadgeTextOwner: {
+    color: "rgba(251,191,36,0.9)",
+  },
+  roleBadgeTextMember: {
+    color: "rgba(186,230,253,0.75)",
+  },
   groupName: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 20,
     fontWeight: "800",
-    letterSpacing: 0.4,
+    letterSpacing: 0.6,
     color: "rgba(255,255,255,0.96)",
     textShadowColor: "rgba(0,0,0,0.55)",
     textShadowOffset: { width: 0, height: 1 },
@@ -653,13 +651,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
+    borderColor: "rgba(0,245,255,0.35)",
     paddingVertical: 6,
   },
   joinPasteText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "rgba(34,211,238,0.9)",
+    color: "rgba(0,245,255,0.9)",
   },
   joinSubmitBtn: {
     flex: 1,

@@ -3,7 +3,9 @@ import type { Variants } from "framer-motion";
 import { useEffect,useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import { Home, Plane, ChevronLeft } from "lucide-react";
+import { Home, Plane } from "lucide-react";
+
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 
 import { Alfa_Slab_One } from "next/font/google";
 const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
@@ -475,16 +477,12 @@ export default function TeamDetailView({ team }: Props) {
     `,
   }}
 >
-    <div className="relative z-10 flex items-center -mt-1 mb-0.5">
-      <button
-        type="button"
-        onClick={goBackFromTeamDetail}
-        className="rounded-full p-2 text-white/85 transition-colors hover:bg-white/12 hover:text-white active:scale-95"
-        aria-label="試合予想のスタンディングへ戻る"
-      >
-        <ChevronLeft className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-      </button>
-    </div>
+    <ProfileMenuEdgeHandle
+      onOpen={goBackFromTeamDetail}
+      label="BACK"
+      tone="back"
+      ariaLabel="試合予想のスタンディングへ戻る"
+    />
 
     {/* ===== ベースのネオン発光 ===== */}
     <div

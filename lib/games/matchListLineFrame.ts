@@ -128,22 +128,28 @@ function frameGeom(opts: FrameStrokeOpts): FrameGeom | null {
     6,
     opts.topGapStartInset ?? MATCH_LINE_FRAME_TOP_GAP_START_INSET
   );
-  let topGap = Math.min(Math.max(opts.topGap, 8), maxHGap);
-  let topGapLeft = cx - topGap / 2;
-  let topGapRight = cx + topGap / 2;
-  if (opts.topGapAlign === "start") {
-    const minRightTick = MATCH_LINE_FRAME_MIN_RIGHT_TICK;
-    const maxStartGap = Math.max(8, right - left - startInset - minRightTick);
-    topGap = Math.min(topGap, maxStartGap);
-    topGapLeft = left + startInset;
-    topGapRight = topGapLeft + topGap;
-  }
   const botGap =
     opts.bottomGap <= 0 ? 0 : Math.min(Math.max(opts.bottomGap, 8), maxHGap);
   const leftGap =
     !opts.leftGap || opts.leftGap <= 0
       ? 0
       : Math.min(Math.max(opts.leftGap, 8), maxVGap);
+
+  let topGap = 0;
+  let topGapLeft = cx;
+  let topGapRight = cx;
+  if (opts.topGap > 0) {
+    topGap = Math.min(Math.max(opts.topGap, 8), maxHGap);
+    topGapLeft = cx - topGap / 2;
+    topGapRight = cx + topGap / 2;
+    if (opts.topGapAlign === "start") {
+      const minRightTick = MATCH_LINE_FRAME_MIN_RIGHT_TICK;
+      const maxStartGap = Math.max(8, right - left - startInset - minRightTick);
+      topGap = Math.min(topGap, maxStartGap);
+      topGapLeft = left + startInset;
+      topGapRight = topGapLeft + topGap;
+    }
+  }
 
   return {
     left,

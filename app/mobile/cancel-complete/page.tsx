@@ -7,10 +7,11 @@ import { useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
 import { motion, useReducedMotion } from "framer-motion";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
-import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { getUserDocDataCached, readUserHandleFromDoc } from "@/lib/user/userDocCache";
 import { nameOxanium } from "@/lib/fonts";
 import { PRO_SUCCESS_ACCENT } from "@/lib/pro/proSuccessAccent";
 import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "@/lib/pro/proSubscribeSuccessMotion";
+import { firestoreDate } from "@/lib/pro/planChangeDisplay";
 
 /** 解約完了 — Trial ON / 課金成功と同型レイアウト・レッドアクセント */
 const A = PRO_SUCCESS_ACCENT.cancel;
@@ -55,13 +56,13 @@ export default function CancelCompletePage() {
       const data = await getUserDocDataCached(user.uid);
       if (!data) return;
 
-      if (data.handle) {
-        setHandle(data.handle);
-      }
+      const h = readUserHandleFromDoc(data);
+      if (h) setHandle(h);
 
-      if (data.proUntil) {
+      const until = firestoreDate(data.proUntil);
+      if (until) {
         setProUntil(
-          data.proUntil.toDate().toLocaleDateString("ja-JP", {
+          until.toLocaleDateString("ja-JP", {
             year: "numeric",
             month: "short",
             day: "numeric",

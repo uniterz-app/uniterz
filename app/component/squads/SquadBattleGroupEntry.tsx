@@ -125,17 +125,6 @@ export default function SquadBattleGroupEntry({
           />
         ) : null}
 
-        {/* 左の発光レール */}
-        <span
-          aria-hidden
-          className="absolute bottom-3 left-0 top-3 w-[3px]"
-          style={{
-            background:
-              "linear-gradient(180deg, transparent, #FBBF24 18%, #FDE68A 50%, #FBBF24 82%, transparent)",
-            boxShadow: "0 0 14px rgba(251,191,36,0.85)",
-          }}
-        />
-
         <div
           className={cn(
             "relative z-[1] flex w-full items-center gap-3",

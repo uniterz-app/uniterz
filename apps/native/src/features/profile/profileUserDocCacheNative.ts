@@ -1,35 +1,26 @@
 /**
- * users/{uid} — プロフィール初回表示用のメモリキャッシュ（重複 getDoc 回避）。
+ * users/{uid} — プロフィール初回表示用（共有メモリ + Native Firestore）。
  */
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-
-const DOC_TTL_MS = 10 * 60_000;
-
-type UserDocEntry = {
-  at: number;
-  exists: boolean;
-  data: Record<string, unknown>;
-};
-
-const docCache = new Map<string, UserDocEntry>();
-const docInflight = new Map<
-  string,
-  Promise<{ exists: boolean; data: Record<string, unknown> } | null>
->();
+import {
+  clearUserDocMemoryInflight,
+  getUserDocMemoryInflight,
+  invalidateUserDocMemory,
+  peekUserDocMemory,
+  peekUserDocMemoryEntry,
+  setUserDocMemory,
+  setUserDocMemoryInflight,
+} from "../../../../../lib/user/userDocMemoryCache";
 
 export function peekProfileUserDocNative(
   uid: string
 ): Record<string, unknown> | null | undefined {
-  const safeUid = uid.trim();
-  if (!safeUid) return undefined;
-  const hit = docCache.get(safeUid);
-  if (!hit || Date.now() - hit.at >= DOC_TTL_MS) return undefined;
-  return hit.exists ? hit.data : null;
+  return peekUserDocMemory(uid);
 }
 
 export function invalidateProfileUserDocNative(uid: string): void {
-  docCache.delete(uid.trim());
+  invalidateUserDocMemory(uid);
 }
 
 export async function loadProfileUserDocNative(
@@ -38,31 +29,30 @@ export async function loadProfileUserDocNative(
   const safeUid = uid.trim();
   if (!safeUid) return null;
 
-  const hit = docCache.get(safeUid);
-  if (hit && Date.now() - hit.at < DOC_TTL_MS) {
+  const hit = peekUserDocMemoryEntry(safeUid);
+  if (hit) {
     return { exists: hit.exists, data: hit.data };
   }
 
-  const existing = docInflight.get(safeUid);
+  const existing = getUserDocMemoryInflight(safeUid);
   if (existing) return existing;
 
   const promise = getDoc(doc(db, "users", safeUid))
     .then((snap) => {
-      const entry: UserDocEntry = {
-        at: Date.now(),
+      const entry = {
         exists: snap.exists(),
         data: snap.exists()
           ? (snap.data() as Record<string, unknown>)
           : {},
       };
-      docCache.set(safeUid, entry);
-      return { exists: entry.exists, data: entry.data };
+      setUserDocMemory(safeUid, entry);
+      return entry;
     })
     .catch(() => null)
     .finally(() => {
-      docInflight.delete(safeUid);
+      clearUserDocMemoryInflight(safeUid);
     });
 
-  docInflight.set(safeUid, promise);
+  setUserDocMemoryInflight(safeUid, promise);
   return promise;
 }

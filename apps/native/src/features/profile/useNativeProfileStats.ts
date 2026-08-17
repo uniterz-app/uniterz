@@ -394,6 +394,90 @@ export function seedNativeProfileStatsFromUserDoc(
 }
 
 /**
+ * ランキング / 得点上位行からカード数字を先読み（hero が来るまでの仮）。
+ * グループ期間集計は skip 側で呼ばないこと。
+ */
+export function primeNativeProfileStatsFromRankingRow(
+  uid: string,
+  row: {
+    posts?: number | null;
+    winRate?: number | null;
+    totalScore?: number | null;
+    totalPoints?: number | null;
+    upsetScore?: number | null;
+    totalUpset?: number | null;
+    totalExactHits?: number | null;
+    goalScorerHits?: number | null;
+    totalGoalScorerHits?: number | null;
+    rankDeltaPlaces?: number | null;
+  },
+  rankingLeague: RankingLeagueSource = "nba",
+  rankHints?: {
+    totalPointsRank?: number | null;
+    totalPointsDenominator?: number | null;
+  }
+): void {
+  const safeUid = uid.trim();
+  if (!safeUid || rankingLeague !== "nba") return;
+
+  const cacheKey = statsCacheKey(safeUid, rankingLeague);
+  if (readValidCache(cacheKey, rankingLeague)?.summary) return;
+
+  const posts = typeof row.posts === "number" ? Math.max(0, row.posts) : 0;
+  const winRateRaw = typeof row.winRate === "number" ? row.winRate : 0;
+  const winRate = winRateRaw <= 1 ? winRateRaw : winRateRaw / 100;
+  const totalPoints =
+    (typeof row.totalPoints === "number" ? row.totalPoints : null) ??
+    (typeof row.totalScore === "number" ? row.totalScore : 0);
+  const totalUpset =
+    (typeof row.totalUpset === "number" ? row.totalUpset : null) ??
+    (typeof row.upsetScore === "number" ? row.upsetScore : 0);
+  const goalScorerHitCount =
+    (typeof row.goalScorerHits === "number" ? row.goalScorerHits : null) ??
+    (typeof row.totalGoalScorerHits === "number"
+      ? row.totalGoalScorerHits
+      : 0);
+
+  const summary: ProfileSummaryNative = {
+    posts,
+    fullPosts: posts,
+    recent3Posts: Math.min(3, posts),
+    wins: Math.round(winRate * posts),
+    winRate,
+    exactHitCount:
+      typeof row.totalExactHits === "number" ? row.totalExactHits : 0,
+    goalScorerHitCount,
+    upsetPointsSum: totalUpset,
+    pointsSumV3: totalPoints,
+    basePointsSum: totalPoints,
+    upsetBonusSum: 0,
+    streakBonusSum: 0,
+    upsetChanceCount: 0,
+    upsetHitCount: 0,
+    activeWinStreak: 0,
+  };
+
+  mergeCacheEntry(cacheKey, {
+    summary,
+    ...(rankHints?.totalPointsRank != null
+      ? {
+          summaryRanks: {
+            totalPrecision: null,
+            totalUpset: null,
+            totalPoints: rankHints.totalPointsRank,
+            totalPointsDenominator:
+              rankHints.totalPointsDenominator ?? null,
+            rankDeltaPlaces:
+              typeof row.rankDeltaPlaces === "number"
+                ? row.rankDeltaPlaces
+                : null,
+          },
+        }
+      : {}),
+  });
+}
+
+/**
  * Overview charts subcollection を先読み（cumulative 親 doc は読まない）。
  */
 export async function prefetchNativeProfileCharts(
