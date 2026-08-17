@@ -17,6 +17,7 @@ import {
   type TutorialLivePhase,
 } from "@/lib/tutorial/tutorialLivePhase";
 import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
+import { writeTutorialWelcomeAudience } from "@/lib/tutorial/tutorialWelcomeAudience";
 import {
   readTutorialLiveTrack,
   writeTutorialLiveTrack,
@@ -77,6 +78,7 @@ export default function TutorialLiveHost({ page }: Props) {
     void markAppTutorialSeen(user?.uid ?? null);
     writeTutorialLivePhase(null);
     writeTutorialLiveTrack(null);
+    writeTutorialWelcomeAudience(null);
     clearTutorialLivePick();
     setPhase(null);
     setAppTutorialBlockingEvents(false);

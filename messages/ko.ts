@@ -941,6 +941,8 @@ const ko: Messages = {
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
         "경기를 예측해 포인트를 쌓고 **랭킹**을 겨루는 앱입니다. 각 화면 안내, 또는 새 기능만 고르세요.",
+      welcomeReturningBody:
+        "각 화면 안내, 또는 **새 기능만** 고르세요.",
       welcomeFullCta: "화면 안내",
       welcomeFeaturesCta: "새 기능만",
       gamesTitle: "경기",

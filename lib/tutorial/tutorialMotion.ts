@@ -95,6 +95,8 @@ export const TUTORIAL_WELCOME_GLOW_MS = Math.round(TUTORIAL_WELCOME_GLOW_S * 100
 export const TUTORIAL_WELCOME_FLY_S = 0.96;
 export const TUTORIAL_WELCOME_FLY_MS = Math.round(TUTORIAL_WELCOME_FLY_S * 1000);
 export const TUTORIAL_WELCOME_FLY_EASE = [0.42, 0, 0.18, 1] as const;
+/** skip は見た目 full と同じ前進。着地後にチュートリアルを閉じる */
+export type TutorialWelcomeFlyDest = "full" | "features" | "skip";
 /** カメラ前進量（px）。世界の初期 Z と打ち消し合って等倍に着地 */
 export const TUTORIAL_WELCOME_CAMERA_Z_PX = 520;
 export const TUTORIAL_WELCOME_WORLD_Z_PX = -520;
@@ -104,6 +106,11 @@ export const TUTORIAL_WELCOME_WORLD_REST_RX_DEG = 6;
 export const TUTORIAL_WELCOME_MODAL_PASS_SCALE = 2.15;
 /** 通過の後半でモーダルを消す */
 export const TUTORIAL_WELCOME_PASS_FADE_AT = 0.52;
+/**
+ * 暗幕を開け終わる地点（fly 進行 0→1）。
+ * 短いと試合面が途中で飛び出す。着地前には透明にする。
+ */
+export const TUTORIAL_WELCOME_SCRIM_CLEAR_AT = 0.78;
 /**
  * プロフィール引き渡し後の自動前進。
  * ロゴ集合＋輪郭発光が終わってから動かす（120ms だと発光前に切れる）
@@ -119,12 +126,11 @@ export const TUTORIAL_WELCOME_LAND_HOLD_MS = Math.round(
   TUTORIAL_WELCOME_LAND_HOLD_S * 1000
 );
 /**
- * 遠景（試合ページ）の被写界深度。fly で 0 に戻す。
- * カードの形は残し、文字は読めない程度。強すぎると色のシミになる。
+ * welcome 静止中は試合面を見せない（不透明暗幕）。
+ * ボケは使わない。定数は旧プレビュー互換で残す。
  */
-export const TUTORIAL_WELCOME_WORLD_BLUR_PX = 18;
-/** Native `filter: blur`（pt）。BlurView intensity ではない */
-export const TUTORIAL_WELCOME_WORLD_BLUR_NATIVE = 14;
+export const TUTORIAL_WELCOME_WORLD_BLUR_PX = 0;
+export const TUTORIAL_WELCOME_WORLD_BLUR_NATIVE = 0;
 /** STATS 端タブ：試合ページ着地後のフェード（急に出さない） */
 export const TUTORIAL_STATS_EDGE_FADE_S = 1.45;
 export const TUTORIAL_STATS_EDGE_FADE_MS = Math.round(

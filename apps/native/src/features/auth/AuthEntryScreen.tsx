@@ -33,8 +33,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { AuthStackParamList } from "../../navigation/types";
 import AuthLandingBackgroundNative from "./AuthLandingBackgroundNative";
+import { AUTH_LANDING } from "./authLandingPalette";
 
 type AuthMode = "login" | "signup";
+
+export type AuthEntryScreenProps = {
+  embedded?: boolean;
+  initialMode?: AuthMode;
+  interactive?: boolean;
+  onBack?: () => void;
+};
 
 const BTN_SKEW = "-10deg";
 const BTN_UNSKEW = "10deg";
@@ -71,9 +79,9 @@ function HorizonRule() {
       <LinearGradient
         colors={[
           "transparent",
-          "rgba(160,245,255,0.45)",
-          "rgba(255,255,255,0.95)",
-          "rgba(160,245,255,0.45)",
+          AUTH_LANDING.accentLine,
+          AUTH_LANDING.ink,
+          AUTH_LANDING.accentLine,
           "transparent",
         ]}
         locations={[0, 0.25, 0.5, 0.75, 1]}
@@ -86,12 +94,21 @@ function HorizonRule() {
   );
 }
 
-export default function AuthEntryScreen() {
+export default function AuthEntryScreen({
+  embedded = false,
+  initialMode: initialModeProp,
+  interactive = true,
+  onBack,
+}: AuthEntryScreenProps = {}) {
   const formWidth = Math.min(340, Dimensions.get("window").width - 40);
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const insets = useSafeAreaInsets();
-  const route = useRoute<RouteProp<AuthStackParamList, "Login">>();
-  const initialMode = route.params?.initialMode ?? "login";
+  const route = useRoute();
+  const routeInitial =
+    route.name === "Login"
+      ? (route as RouteProp<AuthStackParamList, "Login">).params?.initialMode
+      : undefined;
+  const initialMode = initialModeProp ?? routeInitial ?? "login";
 
   const { status, fUser } = useFirebaseUser();
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -225,6 +242,10 @@ export default function AuthEntryScreen() {
   if (status === "ready" && fUser) return null;
 
   const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
@@ -239,19 +260,24 @@ export default function AuthEntryScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.root}>
-        <AuthLandingBackgroundNative />
+      <View
+        style={[styles.root, embedded && styles.rootEmbedded]}
+        pointerEvents={interactive ? "auto" : "none"}
+      >
+        {embedded ? null : <AuthLandingBackgroundNative />}
 
-        <Pressable
-          style={[styles.backBtn, { top: insets.top + 8, left: spacing.md }]}
-          onPress={handleBack}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Back to landing"
-        >
-          <MaterialCommunityIcons name="chevron-left" size={24} color="rgba(0,245,255,0.78)" />
-          <Text style={styles.backLabel}>BACK</Text>
-        </Pressable>
+        {interactive ? (
+          <Pressable
+            style={[styles.backBtn, { top: insets.top + 8, left: spacing.md }]}
+            onPress={handleBack}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Back to landing"
+          >
+            <MaterialCommunityIcons name="chevron-left" size={24} color={AUTH_LANDING.accentSoft} />
+            <Text style={styles.backLabel}>BACK</Text>
+          </Pressable>
+        ) : null}
 
         <View
           style={[
@@ -280,7 +306,7 @@ export default function AuthEntryScreen() {
 
             <View style={[styles.field, styles.fieldEmail]}>
               <LinearGradient
-                colors={["rgba(0,245,255,0.22)", "transparent"]}
+                colors={[AUTH_LANDING.accentLine, "transparent"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.fieldTopGlow}
@@ -298,19 +324,19 @@ export default function AuthEntryScreen() {
                 autoComplete="email"
               />
               <View style={styles.fieldIcon} pointerEvents="none">
-                <MaterialCommunityIcons name="email-outline" size={18} color="rgba(120,230,255,0.7)" />
+                <MaterialCommunityIcons name="email-outline" size={18} color={AUTH_LANDING.accentSoft} />
               </View>
             </View>
 
             <View style={[styles.field, styles.fieldPassword]}>
               <LinearGradient
-                colors={["rgba(217,70,239,0.28)", "transparent"]}
+                colors={[AUTH_LANDING.accentLine, "transparent"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.fieldTopGlow}
                 pointerEvents="none"
               />
-              <View style={[styles.fieldRail, styles.fieldRailMagenta]} />
+              <View style={[styles.fieldRail, styles.fieldRailCyan]} />
               <TextInput
                 style={[styles.input, styles.inputWithRight]}
                 placeholder={mode === "signup" ? "Password (6+ characters)" : "Password"}
@@ -328,7 +354,7 @@ export default function AuthEntryScreen() {
                 <MaterialCommunityIcons
                   name={showPassword ? "eye-outline" : "eye-off-outline"}
                   size={16}
-                  color="rgba(230,160,255,0.7)"
+                  color={AUTH_LANDING.accentSoft}
                 />
               </Pressable>
             </View>
@@ -342,20 +368,14 @@ export default function AuthEntryScreen() {
                   onPressOut={pressOut}
                   disabled={submitting}
                 >
-                  <LinearGradient
-                    colors={["rgba(0,200,220,0.35)", "rgba(180,60,220,0.28)", "rgba(8,14,22,0.96)"]}
-                    locations={[0, 0.45, 1]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={styles.ctaBorder}
-                  >
+                  <View style={styles.ctaBorder}>
                     <View style={styles.ctaFill}>
                       <View style={styles.ctaRail} pointerEvents="none" />
                       <View style={styles.ctaLabelWrap}>
                         <Text style={styles.ctaLabel}>{submitting ? submittingLabel : cta}</Text>
                       </View>
                     </View>
-                  </LinearGradient>
+                  </View>
                 </Pressable>
               </Animated.View>
             </View>
@@ -392,7 +412,10 @@ export default function AuthEntryScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#041418",
+    backgroundColor: AUTH_LANDING.canvas,
+  },
+  rootEmbedded: {
+    backgroundColor: "transparent",
   },
   backBtn: {
     position: "absolute",
@@ -403,7 +426,7 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   backLabel: {
-    color: "rgba(0,245,255,0.78)",
+    color: AUTH_LANDING.accentSoft,
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 1.6,
@@ -420,7 +443,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   brandWordmark: {
-    color: "#e6e4de",
+    color: AUTH_LANDING.ink,
     fontFamily: "BebasNeue_400Regular",
     textAlign: "center",
     letterSpacing: 5,
@@ -477,10 +500,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   fieldEmail: {
-    borderColor: "rgba(0,220,255,0.28)",
+    borderColor: AUTH_LANDING.accentDim,
   },
   fieldPassword: {
-    borderColor: "rgba(217,70,239,0.28)",
+    borderColor: AUTH_LANDING.accentDim,
   },
   fieldTopGlow: {
     position: "absolute",
@@ -497,10 +520,7 @@ const styles = StyleSheet.create({
     width: 2,
   },
   fieldRailCyan: {
-    backgroundColor: "rgba(0,245,255,0.65)",
-  },
-  fieldRailMagenta: {
-    backgroundColor: "rgba(232,121,249,0.7)",
+    backgroundColor: AUTH_LANDING.accentSoft,
   },
   input: {
     paddingHorizontal: 16,
@@ -547,15 +567,16 @@ const styles = StyleSheet.create({
   ctaBorder: {
     width: "100%",
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.4)",
+    borderColor: AUTH_LANDING.accent,
     overflow: "hidden",
+    backgroundColor: AUTH_LANDING.accent,
   },
   ctaFill: {
     minHeight: 52,
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
-    backgroundColor: "rgba(8,14,22,0.55)",
+    backgroundColor: AUTH_LANDING.accent,
   },
   ctaRail: {
     position: "absolute",
@@ -563,7 +584,8 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 2,
-    backgroundColor: "rgba(255,200,120,0.7)",
+    backgroundColor: AUTH_LANDING.onAccent,
+    opacity: 0.28,
   },
   ctaLabelWrap: {
     transform: [{ skewX: BTN_UNSKEW }],
@@ -574,7 +596,7 @@ const styles = StyleSheet.create({
     fontFamily: "BebasNeue_400Regular",
     fontSize: 24,
     letterSpacing: 4,
-    color: "#e8eaed",
+    color: AUTH_LANDING.onAccent,
   },
   footer: {
     marginTop: 8,
@@ -588,11 +610,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   helperLinkInline: {
-    color: "rgba(0,245,255,0.85)",
+    color: AUTH_LANDING.accentSoft,
     textDecorationLine: "underline",
   },
   helperLink: {
-    color: "rgba(0,245,255,0.85)",
+    color: AUTH_LANDING.accentSoft,
     fontFamily: "BebasNeue_400Regular",
     fontSize: 18,
     letterSpacing: 1.4,

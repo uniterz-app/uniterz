@@ -35,8 +35,14 @@ import {
   TUTORIAL_WELCOME_AUTO_FLY_DELAY_S,
   TUTORIAL_WELCOME_GATHER_EASE,
   TUTORIAL_WELCOME_PART_S,
+  type TutorialWelcomeFlyDest,
 } from "@/lib/tutorial/tutorialMotion";
-import { scrollTutorialTargetIntoViewAsync } from "@/lib/tutorial/scrollTutorialTargetIntoView";
+import { scrollTutorialTargetIntoViewAsync, isPinnedTutorialTarget } from "@/lib/tutorial/scrollTutorialTargetIntoView";
+import {
+  getLockedTutorialWelcomeIntroPlay,
+  lockTutorialWelcomeIntroPlay,
+  releaseTutorialWelcomeIntroLock,
+} from "@/lib/tutorial/tutorialWelcomeSkipIntro";
 import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
 import TutorialSlideVisual from "@/app/component/tutorial/TutorialSlideVisual";
 import TutorialRichBody from "@/app/component/tutorial/TutorialRichBody";
@@ -82,7 +88,7 @@ type Props = {
   altNextLabel?: string;
   onAltNext?: () => void;
   /** welcome「画面を案内」/「新機能だけ」: カメラ前進の開始 */
-  onWelcomeFlyStart?: (dest: "full" | "features") => void;
+  onWelcomeFlyStart?: (dest: TutorialWelcomeFlyDest) => void;
   /** welcome を試合ページと同じ 3D カメラに載せる。
    * true のとき Portal / 独自暗幕 / 独自 fly をしない。
    */
@@ -240,6 +246,8 @@ function WelcomeFloat({
   gather?: boolean;
 }) {
   const reduceMotion = useReducedMotion() === true;
+  const playIntroRef = useRef(getLockedTutorialWelcomeIntroPlay());
+  const skipIntro = !playIntroRef.current;
   if (!active) {
     return <div className={className}>{children}</div>;
   }
@@ -259,14 +267,14 @@ function WelcomeFloat({
           ].join(" "),
         }}
         initial={
-          reduceMotion || !gather
+          reduceMotion || !gather || skipIntro
             ? false
             : { opacity: 0, y: fromY, x: fromX, scale: 0.96 }
         }
         animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
         transition={{
           duration: TUTORIAL_WELCOME_PART_S,
-          delay,
+          delay: skipIntro ? 0 : delay,
           ease: TUTORIAL_WELCOME_GATHER_EASE,
         }}
       >
@@ -358,6 +366,12 @@ export default function TutorialLiveCoach({
   const onWelcomeFlyStartRef = useRef(onWelcomeFlyStart);
   onWelcomeFlyStartRef.current = onWelcomeFlyStart;
   const reduceMotion = useReducedMotion() === true;
+  const isWelcomeBriefing = visual === "welcome" && !target;
+  const didLockWelcomeIntroRef = useRef(false);
+  useEffect(() => {
+    if (!isWelcomeBriefing) return;
+    return () => releaseTutorialWelcomeIntroLock();
+  }, [isWelcomeBriefing]);
   const isFeatureTone = accentTone === "feature";
   const accent = isFeatureTone ? TUTORIAL_FEATURE_ACCENT : TUTORIAL_CYAN;
   const requestSkip = () => {
@@ -381,10 +395,14 @@ export default function TutorialLiveCoach({
   }, [open, title, target]);
 
   const beginWelcomeGuide = useCallback(
-    (dest: "full" | "features") => {
+    (dest: TutorialWelcomeFlyDest) => {
       if (welcomeFlyRef.current) return;
       const finish =
-        dest === "features" ? onAltNextRef.current : onNextRef.current;
+        dest === "skip"
+          ? onSkip
+          : dest === "features"
+            ? onAltNextRef.current
+            : onNextRef.current;
       if (!finish) return;
       if (reduceMotion || !onWelcomeFlyStartRef.current) {
         finish();
@@ -394,7 +412,7 @@ export default function TutorialLiveCoach({
       onWelcomeFlyStartRef.current(dest);
       setWelcomeFly(true);
     },
-    [reduceMotion]
+    [onSkip, reduceMotion]
   );
 
   const didAutoFly = useRef(false);
@@ -449,17 +467,29 @@ export default function TutorialLiveCoach({
       });
     };
 
+    let raf = 0;
     const onResize = () => {
       if (cancelled) return;
-      measure();
-      syncCalloutBox();
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        if (cancelled) return;
+        measure();
+        syncCalloutBox();
+      });
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
 
+    const pinned = Boolean(target && isPinnedTutorialTarget(target));
+    if (pinned) {
+      measure();
+      syncCalloutBox();
+    }
+
     void (async () => {
-      /** 固定ナビはスクロール不要。リザルト詳細はカード上端（sides）へ */
-      if (target && !target.startsWith("nav-")) {
+      /** 固定ナビ／右端 STATS はスクロール不要。リザルト詳細はカード上端（sides）へ */
+      if (target && !pinned) {
         const scrollId =
           (target === "result-detail-score" ||
             target === "result-detail-stats") &&
@@ -490,17 +520,21 @@ export default function TutorialLiveCoach({
       syncCalloutBox();
     })();
 
-    const t1 = window.setTimeout(() => {
-      if (!cancelled) {
-        measure();
-        syncCalloutBox();
-      }
-    }, target === "result-card" ? 640 : 520);
+    const t1 =
+      pinned
+        ? 0
+        : window.setTimeout(() => {
+            if (!cancelled) {
+              measure();
+              syncCalloutBox();
+            }
+          }, target === "result-card" ? 640 : 520);
     return () => {
       cancelled = true;
+      if (raf) window.cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
-      window.clearTimeout(t1);
+      if (t1) window.clearTimeout(t1);
     };
   }, [open, measure, target, reduceMotion]);
 
@@ -508,7 +542,11 @@ export default function TutorialLiveCoach({
 
   /** ターゲットなし／画面全体説明は全面ぼかし禁止 */
   const softBackdrop = allowInteractBehind;
-  const isWelcomeBriefing = visual === "welcome" && !target;
+  /** 再描画で新しい入場セッションを先食いしない。マウント時だけロック */
+  if (isWelcomeBriefing && !didLockWelcomeIntroRef.current) {
+    lockTutorialWelcomeIntroPlay();
+    didLockWelcomeIntroRef.current = true;
+  }
   /**
    * - 画面全体説明: 下（背後を見せる）
    * - ナビ誘導・対象なし: 中央 + 誘導線
@@ -728,10 +766,9 @@ export default function TutorialLiveCoach({
                 style={{
                   /**
                    * カメラ側の暗幕は 3D 試合面より背面に合成される。
-                   * CTA と同じコーチ面に塗らないとカードが生で見える。
+                   * CTA と同じ面を不透明にして試合面を隠す。
                    */
-                  background:
-                    "linear-gradient(to bottom, rgba(2, 6, 12, 0.78) 0%, rgba(2, 6, 12, 0.9) 42%, rgba(2, 6, 12, 0.96) 100%)",
+                  background: "#02060c",
                 }}
               />
             )
@@ -911,6 +948,11 @@ export default function TutorialLiveCoach({
                           label={skipConfirmLeave ?? skipLabel ?? "Skip"}
                           active
                           onClick={() => {
+                            if (isWelcomeBriefing) {
+                              // 確認を閉じるとロゴが再マウントされ集合が走る。fly 中は親がコーチを外す。
+                              beginWelcomeGuide("skip");
+                              return;
+                            }
                             setSkipConfirmOpen(false);
                             onSkip();
                           }}

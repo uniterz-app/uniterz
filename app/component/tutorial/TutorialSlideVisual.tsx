@@ -4,6 +4,7 @@
  * チュートリアル用の簡易図解イラスト（試合カード・タブ等のモック）
  */
 
+import { useRef } from "react";
 import cn from "clsx";
 import { motion, useReducedMotion } from "framer-motion";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/tutorial/tutorialMotion";
 import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
 import TutorialWelcomeLogoLetters from "@/app/component/tutorial/TutorialWelcomeLogoLetters";
+import { getLockedTutorialWelcomeIntroPlay } from "@/lib/tutorial/tutorialWelcomeSkipIntro";
 
 type Props = {
   visual: TutorialVisualId;
@@ -566,6 +568,9 @@ function MockTabs({ highlight }: { highlight?: string }) {
 
 function MockWelcome() {
   const reduceMotion = useReducedMotion() === true;
+  const playIntroRef = useRef(getLockedTutorialWelcomeIntroPlay());
+  const skipIntro = !playIntroRef.current;
+  const snapIn = reduceMotion || skipIntro;
   const steps = [
     { n: "01", label: "予想", en: "PREDICT" },
     { n: "02", label: "的中", en: "HIT" },
@@ -585,11 +590,11 @@ function MockWelcome() {
             nameOxanium.className,
             "text-[9px] font-black tracking-[0.28em] text-cyan-300/75 drop-shadow-[0_8px_12px_rgba(0,0,0,0.7)]"
           )}
-          initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+          initial={snapIn ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{
             duration: TUTORIAL_WELCOME_PART_S,
-            delay: reduceMotion ? 0 : 0.42,
+            delay: snapIn ? 0 : 0.42,
             ease: TUTORIAL_WELCOME_GATHER_EASE,
           }}
         >
@@ -601,11 +606,11 @@ function MockWelcome() {
         <motion.div
           aria-hidden
           className="pointer-events-none absolute left-[38px] right-[38px] top-2 z-0 h-3.5 overflow-visible"
-          initial={reduceMotion ? false : { opacity: 0 }}
+          initial={snapIn ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{
             duration: TUTORIAL_WELCOME_PART_S,
-            delay: reduceMotion ? 0 : 0.52,
+            delay: snapIn ? 0 : 0.52,
             ease: TUTORIAL_WELCOME_GATHER_EASE,
           }}
         >
@@ -657,14 +662,12 @@ function MockWelcome() {
             key={s.n}
             className="relative z-[1] flex w-[76px] shrink-0 flex-col items-center"
             initial={
-              reduceMotion
-                ? false
-                : { opacity: 0, y: 22, x: (i - 1) * 28 }
+              snapIn ? false : { opacity: 0, y: 22, x: (i - 1) * 28 }
             }
             animate={{ opacity: 1, y: 0, x: 0 }}
             transition={{
               duration: TUTORIAL_WELCOME_PART_S,
-              delay: reduceMotion ? 0 : 0.5 + i * 0.08,
+              delay: snapIn ? 0 : 0.5 + i * 0.08,
               ease: TUTORIAL_WELCOME_GATHER_EASE,
             }}
           >

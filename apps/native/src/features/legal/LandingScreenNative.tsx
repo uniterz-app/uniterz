@@ -22,11 +22,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { AuthStackParamList } from "../../navigation/types";
 import { spacing } from "../../theme/tokens";
 import AuthLandingBackgroundNative from "../auth/AuthLandingBackgroundNative";
+import { AUTH_LANDING } from "../auth/authLandingPalette";
 import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
 
 const BTN_SKEW = "-10deg";
 const BTN_UNSKEW = "10deg";
-const CYBER_CYAN_SOFT = "rgba(0, 245, 255, 0.78)";
+
+export type LandingScreenNativeProps = {
+  /** シェル側で背景を描くとき */
+  hideBackground?: boolean;
+  /** シェル側でスプラッシュを閉じるとき */
+  skipBootSplash?: boolean;
+  onGetStarted?: () => void;
+  onLogIn?: () => void;
+};
 
 type LandingSkewBtnProps = {
   label: string;
@@ -135,7 +144,12 @@ function LandingSkewBtn({
   );
 }
 
-export default function LandingScreenNative() {
+export default function LandingScreenNative({
+  hideBackground = false,
+  skipBootSplash = false,
+  onGetStarted,
+  onLogIn,
+}: LandingScreenNativeProps = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = Dimensions.get("window");
@@ -172,7 +186,7 @@ export default function LandingScreenNative() {
   const ghostRailPulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    hideNativeBootSplash();
+    if (!skipBootSplash) hideNativeBootSplash();
 
     const easeOut = Easing.bezier(0.22, 1, 0.36, 1);
     const easeInOut = Easing.bezier(0.45, 0, 0.55, 1);
@@ -355,6 +369,7 @@ export default function LandingScreenNative() {
     primaryOpacity,
     primaryRailSweep,
     primaryX,
+    skipBootSplash,
     whisperOpacity,
   ]);
 
@@ -498,7 +513,7 @@ export default function LandingScreenNative() {
   const makePress = (scale: Animated.Value) => ({
     in: () => {
       Animated.spring(scale, {
-        toValue: 0.97,
+        toValue: 0.98,
         useNativeDriver: true,
         speed: 24,
         bounciness: 0,
@@ -516,9 +531,24 @@ export default function LandingScreenNative() {
   const primaryPress = makePress(primaryScale);
   const ghostPress = makePress(ghostScale);
 
+  const handleGetStarted = () => {
+    if (onGetStarted) {
+      onGetStarted();
+      return;
+    }
+    navigation.navigate("Login", { initialMode: "signup" });
+  };
+  const handleLogIn = () => {
+    if (onLogIn) {
+      onLogIn();
+      return;
+    }
+    navigation.navigate("Login");
+  };
+
   return (
-    <View style={styles.root}>
-      <AuthLandingBackgroundNative />
+    <View style={[styles.root, hideBackground && styles.rootEmbedded]}>
+      {hideBackground ? null : <AuthLandingBackgroundNative />}
 
       <Animated.View pointerEvents="none" style={[styles.curtain, { opacity: curtain }]} />
 
@@ -577,9 +607,9 @@ export default function LandingScreenNative() {
                   <LinearGradient
                     colors={[
                       "transparent",
-                      "rgba(160,245,255,0.4)",
-                      "rgba(255,255,255,0.95)",
-                      "rgba(160,245,255,0.4)",
+                      "rgba(0,245,255,0.45)",
+                      "rgba(233,253,255,0.95)",
+                      "rgba(0,245,255,0.45)",
                       "transparent",
                     ]}
                     locations={[0, 0.28, 0.5, 0.72, 1]}
@@ -597,9 +627,9 @@ export default function LandingScreenNative() {
                     <LinearGradient
                       colors={[
                         "transparent",
-                        "rgba(255,255,255,0.55)",
-                        "rgba(160,245,255,0.85)",
-                        "rgba(255,255,255,0.55)",
+                        "rgba(233,253,255,0.55)",
+                        AUTH_LANDING.accent,
+                        "rgba(233,253,255,0.55)",
                         "transparent",
                       ]}
                       locations={[0, 0.3, 0.5, 0.7, 1]}
@@ -646,7 +676,7 @@ export default function LandingScreenNative() {
                 pressScale={primaryScale}
                 railSweep={primaryRailSweep}
                 railPulse={primaryRailPulse}
-                onPress={() => navigation.navigate("Login", { initialMode: "signup" })}
+                onPress={handleGetStarted}
                 onPressIn={primaryPress.in}
                 onPressOut={primaryPress.out}
               />
@@ -659,7 +689,7 @@ export default function LandingScreenNative() {
                 pressScale={ghostScale}
                 railSweep={ghostRailSweep}
                 railPulse={ghostRailPulse}
-                onPress={() => navigation.navigate("Login")}
+                onPress={handleLogIn}
                 onPressIn={ghostPress.in}
                 onPressOut={ghostPress.out}
               />
@@ -674,12 +704,15 @@ export default function LandingScreenNative() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#041418",
+    backgroundColor: AUTH_LANDING.canvas,
+  },
+  rootEmbedded: {
+    backgroundColor: "transparent",
   },
   curtain: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 3,
-    backgroundColor: "#02080c",
+    backgroundColor: AUTH_LANDING.void,
   },
   screen: {
     flex: 1,
@@ -707,7 +740,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   eyebrow: {
-    color: "rgba(165,243,252,0.72)",
+    color: AUTH_LANDING.muted,
     fontSize: 11,
     letterSpacing: 2.8,
     textTransform: "uppercase",
@@ -718,12 +751,12 @@ const styles = StyleSheet.create({
     fontSize: 72,
     letterSpacing: 7,
     lineHeight: 72,
-    color: "#e6e4de",
+    color: AUTH_LANDING.ink,
     textAlign: "center",
   },
   heroGlow: {
     position: "absolute",
-    textShadowColor: "rgba(34,211,238,0.75)",
+    textShadowColor: "rgba(0,245,255,0.75)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 32,
   },
@@ -757,8 +790,8 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "rgba(120,240,255,0.22)",
-    shadowColor: "rgba(120,240,255,0.9)",
+    backgroundColor: AUTH_LANDING.accentFill,
+    shadowColor: AUTH_LANDING.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 12,
@@ -768,8 +801,8 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: "rgba(255,255,255,0.95)",
-    shadowColor: "rgba(160,245,255,1)",
+    backgroundColor: AUTH_LANDING.ink,
+    shadowColor: AUTH_LANDING.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 8,
@@ -779,7 +812,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 3.2,
     textTransform: "lowercase",
-    color: "rgba(186,230,253,0.55)",
+    color: AUTH_LANDING.muted,
     textAlign: "center",
     fontStyle: "italic",
   },
@@ -804,27 +837,27 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   ctaBtnBorderPrimary: {
-    borderColor: "rgba(0,245,255,0.34)",
-    backgroundColor: "rgba(8,14,22,0.96)",
+    borderColor: AUTH_LANDING.accent,
+    backgroundColor: AUTH_LANDING.accent,
   },
   ctaBtnBorderGhost: {
-    borderColor: "rgba(0,245,255,0.22)",
-    backgroundColor: "rgba(8,14,22,0.48)",
+    borderColor: AUTH_LANDING.accentLine,
+    backgroundColor: "rgba(8,17,22,0.48)",
   },
   ctaBtnGlow: {
     ...StyleSheet.absoluteFillObject,
   },
   ctaBtnGlowPrimary: {
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.55)",
-    shadowColor: "rgba(0,245,255,0.8)",
+    borderColor: AUTH_LANDING.ink,
+    shadowColor: AUTH_LANDING.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 12,
+    shadowRadius: 14,
   },
   ctaBtnGlowGhost: {
     borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.35)",
+    borderColor: AUTH_LANDING.accentLine,
   },
   ctaBtnFill: {
     minHeight: 52,
@@ -834,10 +867,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   ctaBtnFillPrimary: {
-    backgroundColor: "rgba(8,14,22,0.96)",
+    backgroundColor: AUTH_LANDING.accent,
   },
   ctaBtnFillGhost: {
-    backgroundColor: "rgba(8,14,22,0.48)",
+    backgroundColor: "rgba(8,17,22,0.48)",
   },
   ctaLabelWrap: {
     transform: [{ skewX: BTN_UNSKEW }],
@@ -851,7 +884,8 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 2,
-    backgroundColor: "rgba(0,245,255,0.7)",
+    backgroundColor: AUTH_LANDING.onAccent,
+    opacity: 0.28,
     zIndex: 2,
   },
   btnRailSweep: {
@@ -859,8 +893,8 @@ const styles = StyleSheet.create({
     left: 0,
     width: 2,
     height: 18,
-    backgroundColor: "rgba(200,255,255,0.95)",
-    shadowColor: "rgba(34,211,238,1)",
+    backgroundColor: AUTH_LANDING.ink,
+    shadowColor: AUTH_LANDING.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 8,
@@ -870,10 +904,10 @@ const styles = StyleSheet.create({
     fontFamily: "BebasNeue_400Regular",
     fontSize: 28,
     letterSpacing: 5,
-    color: "#e8eaed",
+    color: AUTH_LANDING.onAccent,
   },
   ctaSecondaryLabel: {
-    color: CYBER_CYAN_SOFT,
+    color: AUTH_LANDING.accent,
     fontFamily: "BebasNeue_400Regular",
     fontSize: 20,
     letterSpacing: 4,

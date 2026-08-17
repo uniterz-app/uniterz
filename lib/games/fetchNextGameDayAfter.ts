@@ -130,3 +130,59 @@ export async function fetchPreviousGameDayBeforeLocalDay(params: {
   }
   return null;
 }
+
+/**
+ * アンカー日に一番近い試合日キー。同距離なら未来側。
+ * チュートリアルは専用試合を持たず、開始日の最寄りカードで案内する。
+ */
+export function pickNearestDateKey(
+  anchorKey: string,
+  keys: readonly string[]
+): string | null {
+  const unique = [...new Set(keys.filter(Boolean))].sort();
+  if (unique.length === 0) return null;
+  if (unique.includes(anchorKey)) return anchorKey;
+
+  const anchor = parseDateKeyInTimeZone(anchorKey, "UTC");
+  if (!anchor) return unique[0] ?? null;
+  const anchorTs = anchor.getTime();
+
+  let best: string | null = null;
+  let bestAbs = Number.POSITIVE_INFINITY;
+  for (const key of unique) {
+    const d = parseDateKeyInTimeZone(key, "UTC");
+    if (!d) continue;
+    const abs = Math.abs(d.getTime() - anchorTs);
+    if (abs < bestAbs) {
+      best = key;
+      bestAbs = abs;
+      continue;
+    }
+    if (abs === bestAbs && best && key >= anchorKey) {
+      best = key;
+    }
+  }
+  return best;
+}
+
+/** 指定暦日の前後を探し、一番近い試合日を返す（当日は含まない） */
+export async function fetchNearestGameDayToLocalDay(params: {
+  league: League;
+  timeZone: string;
+  day: Date;
+  apiBaseUrl?: string | null;
+  signal?: AbortSignal;
+}): Promise<Date | null> {
+  const [next, prev] = await Promise.all([
+    fetchNextGameDayAfterLocalDay(params),
+    fetchPreviousGameDayBeforeLocalDay(params),
+  ]);
+  const keys: string[] = [];
+  if (next) keys.push(toDateKeyInTimeZone(next, params.timeZone));
+  if (prev) keys.push(toDateKeyInTimeZone(prev, params.timeZone));
+  const nearest = pickNearestDateKey(
+    toDateKeyInTimeZone(params.day, params.timeZone),
+    keys
+  );
+  return nearest ? parseDateKeyInTimeZone(nearest, params.timeZone) : null;
+}

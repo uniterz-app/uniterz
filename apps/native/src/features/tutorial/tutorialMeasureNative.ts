@@ -2,6 +2,7 @@
  * チュートリアル対象の measureInWindow 登録（Web data-tutorial-target 相当）
  */
 import { Dimensions } from "react-native";
+import { isPinnedTutorialTarget } from "../../../../../lib/tutorial/scrollTutorialTargetIntoView";
 
 export type TutorialMeasureRect = {
   x: number;
@@ -121,6 +122,7 @@ export async function scrollTutorialTargetIntoViewNative(
     topPad?: number;
   }
 ): Promise<boolean> {
+  if (isPinnedTutorialTarget(id)) return false;
   if (!scrollHost) return false;
   const rect = await measureTutorialTarget(id);
   if (!rect || rect.width < 1 || rect.height < 1) return false;

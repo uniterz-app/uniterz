@@ -941,6 +941,8 @@ const zh: Messages = {
       welcomeTitle: "Welcome to UNITERZ",
       welcomeBody:
         "命中得分、冲击**排行榜**。可选完整画面导览，或只看新功能。",
+      welcomeReturningBody:
+        "可选完整画面导览，或只看**新功能**。",
       welcomeFullCta: "浏览各画面",
       welcomeFeaturesCta: "只看新功能",
       gamesTitle: "比赛",

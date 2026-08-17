@@ -14,6 +14,11 @@ import {
   getTutorialWelcomeBrandHidden,
   subscribeTutorialWelcomeBrandHidden,
 } from "@/lib/tutorial/tutorialWelcomeChrome";
+import {
+  getTutorialRestartCover,
+  getTutorialRestartCoverColor,
+  subscribeTutorialRestartCover,
+} from "@/lib/tutorial/tutorialRestartCover";
 
 export default function AppChrome() {
   const pathname = usePathname() ?? "";
@@ -27,6 +32,11 @@ export default function AppChrome() {
     getTutorialWelcomeBrandHidden,
     () => false
   );
+  const restartCover = useSyncExternalStore(
+    subscribeTutorialRestartCover,
+    getTutorialRestartCover,
+    () => false
+  );
 
   const shouldHideAll =
     pathname === "/" ||
@@ -34,8 +44,8 @@ export default function AppChrome() {
     pathname === "/web" ||
     pathname === "/mobile" ||
     pathname === "/web/login" ||
-    pathname === "/web/signup" ||
     pathname === "/mobile/login" ||
+    pathname === "/web/signup" ||
     pathname === "/mobile/signup" ||
     pathname === "/web/reset" ||
     pathname === "/mobile/reset" ||
@@ -50,8 +60,25 @@ export default function AppChrome() {
     brandShelfHidden ||
     welcomeBrandHidden;
 
-  if (shouldHideAll) return null;
+  const cover = restartCover ? (
+    <div
+      aria-hidden
+      className="fixed inset-0"
+      style={{
+        background: getTutorialRestartCoverColor(),
+        zIndex: 200000,
+        pointerEvents: "auto",
+      }}
+    />
+  ) : null;
+
+  if (shouldHideAll) return cover;
 
   // 下部ナビは WebOrMobileSplash でのみ描画（二重 portal 防止）
-  return <>{!shouldHideHeader && <Header />}</>;
+  return (
+    <>
+      {cover}
+      {!shouldHideHeader ? <Header /> : null}
+    </>
+  );
 }

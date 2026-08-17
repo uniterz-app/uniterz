@@ -59,6 +59,10 @@ import { clearAppTutorialSeen } from "@/lib/tutorial/tutorialSeen";
 import { writeTutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
 import { clearTutorialLivePick } from "@/lib/tutorial/tutorialLivePick";
 import { setAppTutorialBlockingEvents } from "@/lib/tutorial/tutorialBlockingEvents";
+import { setTutorialWelcomeChromeHidden } from "@/lib/tutorial/tutorialWelcomeChrome";
+import { setTutorialRestartCover } from "@/lib/tutorial/tutorialRestartCover";
+import { beginTutorialWelcomeIntroSession } from "@/lib/tutorial/tutorialWelcomeSkipIntro";
+import { markTutorialWelcomeReturning } from "@/lib/tutorial/tutorialWelcomeAudience";
 
 type Variant = "mobile" | "web";
 type SettingsMenuProps = {
@@ -192,14 +196,22 @@ export default function SettingsMenu({
     router.push(href);
   };
 
-  const restartTutorialFromMenu = async () => {
+  const restartTutorialFromMenu = () => {
     const uid = user?.uid ?? null;
-    await clearAppTutorialSeen(uid);
+    /** メニュー閉鎖とルート切替の下にプロフィールを出さない */
+    setTutorialRestartCover(true);
+    setTutorialWelcomeChromeHidden(true);
+    void clearAppTutorialSeen(uid);
     clearTutorialLivePick();
+    markTutorialWelcomeReturning();
+    beginTutorialWelcomeIntroSession();
     writeTutorialLivePhase("welcome");
     setAppTutorialBlockingEvents(true);
     onRequestCloseMenu?.();
-    pushFromMenu(p("/web/games", "/mobile/games"));
+    const gamesHref = p("/web/games", "/mobile/games");
+    if (pathname !== gamesHref) {
+      pushFromMenu(gamesHref);
+    }
   };
 
   // ===== styles =====
@@ -357,7 +369,7 @@ export default function SettingsMenu({
             icon={GraduationCap}
             iconSize={15}
             labelStyle={menuLabelFont}
-            onClick={() => void restartTutorialFromMenu()}
+            onClick={() => restartTutorialFromMenu()}
           >
             <span className={cn(isEn && "uppercase")}>
               {m.tutorial.restartFromMenu}

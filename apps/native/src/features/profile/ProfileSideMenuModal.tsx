@@ -14,6 +14,8 @@ import { auth } from "../../lib/firebase";
 import { ADMIN_UID } from "../../../../../lib/constants";
 import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
+import { setTutorialWelcomeChromeHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
 import CyberSideMenuPanelNative from "../../ui/CyberSideMenuPanelNative";
 import CyberSideMenuSectionTitleNative from "../../ui/CyberSideMenuSectionTitleNative";
 import SideMenuItemButtonNative, {
@@ -293,6 +295,10 @@ export default function ProfileSideMenuModal({
       | "splashLogoPreview"
       | "liveGameStatsPreview"
   ) {
+    if (page === "restartTutorial") {
+      setTutorialRestartCover(true);
+      setTutorialWelcomeChromeHidden(true);
+    }
     onClose();
     onOpenInApp(page);
   }

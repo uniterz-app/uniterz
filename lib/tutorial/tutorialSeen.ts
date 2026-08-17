@@ -143,15 +143,16 @@ export async function markAppTutorialSeen(
 /**
  * 既読を完全リセット（local + Firestore）。
  * プレビューから本番ツアーをやり直すときに使う。
+ * Firestore は待たない（メニュー再開がネットワークで固まらないようにする）。
  */
 export async function clearAppTutorialSeen(
   uid: string | null | undefined
 ): Promise<void> {
   clearAppTutorialSeenLocal(uid);
   if (!uid) return;
-  try {
-    await deleteDoc(doc(db, `users/${uid}/reads`, APP_TUTORIAL_READ_ID));
-  } catch {
-    /* 未作成・権限なしは無視 */
-  }
+  void deleteDoc(doc(db, `users/${uid}/reads`, APP_TUTORIAL_READ_ID)).catch(
+    () => {
+      /* 未作成・権限なし・オフラインは無視 */
+    }
+  );
 }
