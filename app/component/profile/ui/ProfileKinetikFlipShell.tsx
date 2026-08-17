@@ -71,11 +71,13 @@ export default function ProfileKinetikFlipShell({
         transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
       };
 
+  /** 子の skew / float（バッジ・タブ）が裏面に突き抜けないよう face を平坦化する */
   const faceBase: CSSProperties | undefined = reduceMotion
     ? undefined
     : {
         backfaceVisibility: "hidden",
         WebkitBackfaceVisibility: "hidden",
+        transformStyle: "flat",
       };
 
   const backFaceStyle: CSSProperties = reduceMotion
@@ -89,8 +91,10 @@ export default function ProfileKinetikFlipShell({
         inset: 0,
         display: "flex",
         flexDirection: "column",
-        transform: "rotateY(180deg)",
-        overflowY: "auto",
+        transform: "rotateY(180deg) translateZ(0.5px)",
+        overflow: "hidden",
+        pointerEvents: flipped ? "auto" : "none",
+        backgroundColor: "#061018",
       };
 
   const frontFaceStyle: CSSProperties = reduceMotion
@@ -99,7 +103,12 @@ export default function ProfileKinetikFlipShell({
       }
     : {
         ...faceBase,
+        transform: "translateZ(0.5px)",
+        pointerEvents: flipped ? "none" : "auto",
       };
+
+  const faceClass =
+    "profile-kinetik-flip-face relative w-full min-w-0 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [&_*]:[backface-visibility:hidden] [&_*]:[-webkit-backface-visibility:hidden]";
 
   return (
     <div className={["w-full min-w-0", className].filter(Boolean).join(" ")}>
@@ -110,14 +119,16 @@ export default function ProfileKinetikFlipShell({
           style={cardStyle}
           data-flipped={flipped ? "true" : "false"}
         >
-          <div style={frontFaceStyle} className="relative w-full min-w-0">
+          <div style={frontFaceStyle} className={faceClass}>
             <ProfileKinetikFlipEarProvider value={frontEar}>
               {front}
             </ProfileKinetikFlipEarProvider>
           </div>
-          <div style={backFaceStyle} className="relative w-full min-w-0">
+          <div style={backFaceStyle} className={faceClass}>
             <ProfileKinetikFlipEarProvider value={backEar}>
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col">{back}</div>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+                {back}
+              </div>
             </ProfileKinetikFlipEarProvider>
           </div>
         </div>
