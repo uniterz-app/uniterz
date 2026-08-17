@@ -51,14 +51,12 @@ const S1_TYPE_IDS = new Set<AnalysisTypeId>([
 ]);
 const AXIS_ORDER: Array<keyof RadarAxisLevels> = [
   "winRate",
-  "precision",
   "volume",
   "upset",
   "streak",
 ];
 const AXIS_LABEL_JA: Record<keyof RadarAxisLevels, string> = {
   winRate: "勝率",
-  precision: "精度",
   volume: "投稿量",
   upset: "Upset対応",
   streak: "継続力",

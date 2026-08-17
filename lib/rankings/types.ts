@@ -7,7 +7,6 @@ export type LeagueTab = "nba" | "b1";
 // ========== 指標 ==========
 export type Metric =
   | "winRate"
-  | "avgPrecision"
   | "streak"
   
   
@@ -20,11 +19,12 @@ export type RankingRow = {
   photoURL?: string;
   /** 累積ランキング API などで付与（未設定は free 扱い） */
   plan?: "free" | "pro";
+  /** Pro Skin（users.planProBgVariant）。Pro 以外は無視 */
+  planProBgVariant?: string;
 
   posts: number; // 期間内投稿数
   winRate?: number; // 0..1
   accuracy?: number;
-  avgPrecision?: number;
   streak?: number;
 };
 

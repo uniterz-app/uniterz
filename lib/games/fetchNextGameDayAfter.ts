@@ -1,22 +1,45 @@
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  Timestamp,
-  where,
-} from "firebase/firestore";
-
-import { db } from "@/lib/firebase";
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
-import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import {
   getDayRangeInTimeZone,
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
+import { fetchGamesWindowShared } from "@/lib/games/fetchGamesWindowShared";
+import { GAMES_NEAREST_DAY_LOOKAHEAD_DAYS } from "@/lib/games/gamesWindowConstants";
+import { shiftDateKeyInTimeZone } from "@/lib/games/gamesWindowRange";
+import { toDateOrNull } from "@/lib/games/transform";
+
+/** window 1本あたりの探索日数（games/window の limit 200 を超えない幅） */
+const CHUNK_DAYS = 14;
+
+function earliestDateKeyFromRows(
+  rows: Record<string, unknown>[],
+  timeZone: string
+): string | null {
+  let best: string | null = null;
+  for (const row of rows) {
+    const d = toDateOrNull(row.startAtJst);
+    if (!d) continue;
+    const key = toDateKeyInTimeZone(d, timeZone);
+    if (!best || key < best) best = key;
+  }
+  return best;
+}
+
+function latestDateKeyFromRows(
+  rows: Record<string, unknown>[],
+  timeZone: string
+): string | null {
+  let best: string | null = null;
+  for (const row of rows) {
+    const d = toDateOrNull(row.startAtJst);
+    if (!d) continue;
+    const key = toDateKeyInTimeZone(d, timeZone);
+    if (!best || key > best) best = key;
+  }
+  return best;
+}
 
 /**
  * 指定暦日の終端（翌日0時排他）より後に始まる最初の試合の「暦日0時」（timeZone 基準）。
@@ -27,32 +50,40 @@ export async function fetchNextGameDayAfterLocalDay(params: {
   timeZone: string;
   /** この日を終えたあと（翌0時以降）の試合を探す */
   day: Date;
+  apiBaseUrl?: string | null;
+  signal?: AbortSignal;
 }): Promise<Date | null> {
   const league = normalizeLeague(params.league);
   const { end } = getDayRangeInTimeZone(params.day, params.timeZone);
-
-  const q = query(
-    collection(db, "games"),
-    where("league", "==", league),
-    where("season", "==", GAME_SCHEDULE_SEASON),
-    where("startAtJst", ">=", Timestamp.fromDate(end)),
-    orderBy("startAtJst", "asc"),
-    limit(1)
+  let fromDateKey = toDateKeyInTimeZone(end, params.timeZone);
+  const horizon = shiftDateKeyInTimeZone(
+    fromDateKey,
+    params.timeZone,
+    GAMES_NEAREST_DAY_LOOKAHEAD_DAYS
   );
+  if (!horizon || horizon <= fromDateKey) return null;
 
-  const snap = await getDocs(q);
-  const doc0 = snap.docs[0];
-  if (!doc0) return null;
+  while (fromDateKey < horizon) {
+    const toDateKey =
+      shiftDateKeyInTimeZone(fromDateKey, params.timeZone, CHUNK_DAYS) ??
+      horizon;
+    const sliceEnd = toDateKey < horizon ? toDateKey : horizon;
+    if (sliceEnd <= fromDateKey) break;
 
-  const t = doc0.data()?.startAtJst;
-  let d: Date | null = null;
-  if (t instanceof Timestamp) d = t.toDate();
-  else if (typeof t?.toDate === "function") d = t.toDate();
-  else if (t instanceof Date) d = t;
-  if (!d) return null;
-
-  const key = toDateKeyInTimeZone(d, params.timeZone);
-  return parseDateKeyInTimeZone(key, params.timeZone);
+    const payload = await fetchGamesWindowShared({
+      league,
+      timeZone: params.timeZone,
+      fromDateKey,
+      toDateKey: sliceEnd,
+      apiBaseUrl: params.apiBaseUrl,
+      signal: params.signal,
+      includePeers: false,
+    });
+    const key = earliestDateKeyFromRows(payload.rows, params.timeZone);
+    if (key) return parseDateKeyInTimeZone(key, params.timeZone);
+    fromDateKey = sliceEnd;
+  }
+  return null;
 }
 
 /**
@@ -64,30 +95,38 @@ export async function fetchPreviousGameDayBeforeLocalDay(params: {
   timeZone: string;
   /** この日の前（当日0時より前）の試合を探す */
   day: Date;
+  apiBaseUrl?: string | null;
+  signal?: AbortSignal;
 }): Promise<Date | null> {
   const league = normalizeLeague(params.league);
   const { start } = getDayRangeInTimeZone(params.day, params.timeZone);
-
-  const q = query(
-    collection(db, "games"),
-    where("league", "==", league),
-    where("season", "==", GAME_SCHEDULE_SEASON),
-    where("startAtJst", "<", Timestamp.fromDate(start)),
-    orderBy("startAtJst", "desc"),
-    limit(1)
+  let toDateKey = toDateKeyInTimeZone(start, params.timeZone);
+  const horizon = shiftDateKeyInTimeZone(
+    toDateKey,
+    params.timeZone,
+    -GAMES_NEAREST_DAY_LOOKAHEAD_DAYS
   );
+  if (!horizon || horizon >= toDateKey) return null;
 
-  const snap = await getDocs(q);
-  const doc0 = snap.docs[0];
-  if (!doc0) return null;
+  while (toDateKey > horizon) {
+    const fromDateKey =
+      shiftDateKeyInTimeZone(toDateKey, params.timeZone, -CHUNK_DAYS) ??
+      horizon;
+    const sliceStart = fromDateKey > horizon ? fromDateKey : horizon;
+    if (sliceStart >= toDateKey) break;
 
-  const t = doc0.data()?.startAtJst;
-  let d: Date | null = null;
-  if (t instanceof Timestamp) d = t.toDate();
-  else if (typeof t?.toDate === "function") d = t.toDate();
-  else if (t instanceof Date) d = t;
-  if (!d) return null;
-
-  const key = toDateKeyInTimeZone(d, params.timeZone);
-  return parseDateKeyInTimeZone(key, params.timeZone);
+    const payload = await fetchGamesWindowShared({
+      league,
+      timeZone: params.timeZone,
+      fromDateKey: sliceStart,
+      toDateKey,
+      apiBaseUrl: params.apiBaseUrl,
+      signal: params.signal,
+      includePeers: false,
+    });
+    const key = latestDateKeyFromRows(payload.rows, params.timeZone);
+    if (key) return parseDateKeyInTimeZone(key, params.timeZone);
+    toDateKey = sliceStart;
+  }
+  return null;
 }

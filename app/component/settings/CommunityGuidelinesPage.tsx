@@ -170,7 +170,7 @@ export default function CommunityGuidelinesPage({
   return (
     <LegalPageLayout
       variant={variant}
-      title={m.settings.communityGuidelines}
+      title="GUIDELINES"
       description={
         language === "ja"
           ? "スポーツ予想ファンタジーゲームを健全に楽しむために"

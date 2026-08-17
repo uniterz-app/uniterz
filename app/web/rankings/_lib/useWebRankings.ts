@@ -4,22 +4,26 @@ import { useMemo, useState, useEffect } from "react";
 import type {
   MobileMetric,
   RankingRowWithCountry,
-} from "@/app/component/rankings/_data/mockRows";
+} from "@/lib/rankings/rankingMetrics";
 import {
   NBA_RANKING_METRICS,
   WC_RANKING_METRICS,
-} from "@/app/component/rankings/_data/mockRows";
+} from "@/lib/rankings/rankingMetrics";
 import { buildRankingTabMetrics } from "@/lib/rankings/wcVisibleMetrics";
 import {
   API_METRIC_BY_MOBILE,
   type RankingApiRow,
   toMobileRows,
 } from "@/lib/rankings/rankingTransform";
-import type { RankingRow } from "@/lib/rankings/useRanking";
+import type { RankingRow } from "@/lib/rankings/cumulativeRankingRow";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
+import { usePeriodRankingsBulk } from "@/lib/rankings/usePeriodRankingsBulk";
+import { useOpenSeasonRankingsBulk } from "@/lib/rankings/useOpenSeasonRankingsBulk";
+import type { RankingPeriod } from "@/lib/rankings/rankingPeriod";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import type { RankingDivision } from "@/lib/rankings/rankingDivision";
 import { resolveMyRankForCard } from "@/lib/rankings/rankingsPageShared";
 import { sortRankingRowsByMetric } from "@/lib/rankings/sortRankingRows";
 
@@ -67,13 +71,21 @@ const EMPTY_MAP: Record<MobileMetric, WebRankingRow[]> = {
 export function useWebRankings(
   phase: RankingPhase = "playoffs",
   round: PlayoffRoundKey = "overall",
-  wcStage: WcRankingStage | null = null
+  wcStage: WcRankingStage | null = null,
+  /** NBA weekly/monthly ボード。null ならシーズン累積を使う */
+  period: Exclude<RankingPeriod, "season"> | null = null,
+  /** 過去期間のラベル。null なら現在期間 */
+  periodLabel: string | null = null,
+  /** PRO LEAGUE など。period / open シーズン用 */
+  division: RankingDivision = "standard",
+  /** PRO LEAGUE のシーズン累積ボード */
+  useOpenSeason = false
 ) {
   const availableMetrics = wcStage ? WC_RANKING_METRICS : NBA_RANKING_METRICS;
 
   const visibleMetrics = useMemo(
-    () => buildRankingTabMetrics(wcStage ? "worldcup" : "nba"),
-    [wcStage]
+    () => buildRankingTabMetrics("nba"),
+    []
   );
 
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
@@ -84,8 +96,21 @@ export function useWebRankings(
     }
   }, [metric, availableMetrics]);
 
+  const seasonBulk = useCumulativeRankingsBulk(
+    phase,
+    round,
+    wcStage,
+    !period && !useOpenSeason
+  );
+  const openSeasonBulk = useOpenSeasonRankingsBulk(useOpenSeason);
+  const periodBulk = usePeriodRankingsBulk(period, periodLabel, division);
+  const activeBulk = useOpenSeason
+    ? openSeasonBulk
+    : period
+      ? periodBulk
+      : seasonBulk;
   const { listReady, personalPending, myUid, byMetric, myMetricValueDeltas, ensureMetric } =
-    useCumulativeRankingsBulk(phase, round, wcStage);
+    activeBulk;
 
   useEffect(() => {
     void ensureMetric(API_METRIC_BY_MOBILE[metric]);
@@ -150,5 +175,8 @@ export function useWebRankings(
     byMetric,
     myMetricValueDeltas,
     ensureMetric,
+    periodAvailableLabels: periodBulk.availableLabels,
+    periodActiveLabel: periodBulk.activeLabel,
+    proRequired: openSeasonBulk.proRequired || periodBulk.proRequired,
   };
 }

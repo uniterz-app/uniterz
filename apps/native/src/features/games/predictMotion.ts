@@ -112,6 +112,15 @@ export function predictModalSheetEnter() {
     });
 }
 
+/** チュートリアル用: スライドなしのゆったりフェード（注釈と被らない） */
+export function predictModalTutorialBackdropEnter() {
+  return FadeIn.duration(560).easing(predictOverlayEaseOut);
+}
+
+export function predictModalTutorialSheetEnter() {
+  return FadeIn.duration(640).delay(140).easing(predictOverlayEaseOut);
+}
+
 /** Web `predictOverlayCard`（上から -12px → 0） */
 export function predictModalPreviewEnter() {
   return FadeInDown.duration(PREDICT_OVERLAY.cardEnterDurationMs)

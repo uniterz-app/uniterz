@@ -44,7 +44,13 @@ type GlowMat = THREE.MeshBasicMaterial & {
   };
 };
 
-function MiniLogo() {
+function MiniLogo({
+  scale = 2.5,
+  spin = true,
+}: {
+  scale?: number;
+  spin?: boolean;
+}) {
   const spinRef = useRef<THREE.Group>(null);
   const orientRef = useRef<THREE.Group>(null);
   const emissiveMatsRef = useRef<NeonMat[]>([]);
@@ -119,7 +125,7 @@ function MiniLogo() {
     const t = state.clock.elapsedTime;
 
     if (spinRef.current) {
-      spinRef.current.rotation.y = t * ROTATE_SPEED;
+      spinRef.current.rotation.y = spin ? t * ROTATE_SPEED : 0;
       spinRef.current.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE;
       const phase = (t % BREATH_PERIOD_SEC) / BREATH_PERIOD_SEC;
       const inhale = phase < 0.5 ? phase / 0.5 : 1 - (phase - 0.5) / 0.5;
@@ -142,7 +148,7 @@ function MiniLogo() {
   });
 
   return (
-    <group position={[0, -0.02, 0]} scale={2.5}>
+    <group position={[0, -0.02, 0]} scale={scale}>
       <group ref={spinRef}>
         <group ref={orientRef} rotation={[Math.PI / 2, 0, 0]}>
           <Center>
@@ -158,20 +164,27 @@ useGLTF.preload("/logo/uniterz-logo.glb");
 
 type InlineUniterz3DObjectProps = {
   className?: string;
+  /** hero=チュートリアル等で寄った大サイズ */
+  size?: "default" | "hero";
 };
 
 export default function InlineUniterz3DObject({
   className = "",
+  size = "default",
 }: InlineUniterz3DObjectProps) {
+  const hero = size === "hero";
   return (
     <div className={`pointer-events-none relative ${className}`}>
       <Canvas
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-        camera={{ position: [0, 0, 6], fov: 28 }}
+        camera={{ position: [0, 0, hero ? 3.6 : 6], fov: hero ? 30 : 28 }}
       >
-        <ambientLight intensity={0.045} />
-        <directionalLight position={[4, 6, 8]} intensity={0.62} color="#dcfffd" />
+        <ambientLight intensity={hero ? 0.18 : 0.045} />
+        <directionalLight position={[4, 6, 8]} intensity={hero ? 1.05 : 0.62} color="#dcfffd" />
+        {hero ? (
+          <pointLight position={[0, 0.6, 5.5]} intensity={12} color="#c8e7ff" distance={20} />
+        ) : null}
         <pointLight
           position={[-4, 4, 7]}
           intensity={8.0}
@@ -185,7 +198,7 @@ export default function InlineUniterz3DObject({
           distance={22}
         />
         <pointLight position={[0, 2, -8]} intensity={0.8} color="#08202a" distance={18} />
-        <MiniLogo />
+        <MiniLogo scale={hero ? 7.2 : 2.5} spin={hero ? false : true} />
       </Canvas>
       <div
         className="absolute inset-0"

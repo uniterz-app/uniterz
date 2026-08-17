@@ -1,0 +1,36 @@
+---
+description: 選択タブ（CyberSlantedTab）はユーザー指示があるまで絶対に変更しない。
+globs: "**/CyberSlantedTab*.{tsx,ts},**/cyber-slanted-tab/**,**/generate-cyber-slanted-tab-assets.mjs,**/RankingsMetricRowNative.tsx,**/WcRankingStageTabsNative.tsx,**/RankingsAvatarAndTabs.tsx"
+alwaysApply: true
+---
+
+# CyberSlantedTab / 選択タブ — 絶対凍結
+
+ユーザー指示: **これ以上いじらない。次にユーザーが明示的に指示するまで一切変更禁止。**
+
+## 触ってよい条件
+
+次のいずれかがユーザー発話に**明示**されたときだけ:
+
+- 「選択タブを直して」「CyberSlantedTab を変更して」など対象を特定した指示
+- 素材再生成・サイズ・隙間・光・色の変更を**具体的に**依頼したとき
+
+それ以外（勝手な微調整・パリティ作業のついで・見た目の改善提案の実装）は **禁止**。
+
+## 凍結対象（読んでも書くな）
+
+- `app/component/rankings/CyberSlantedTab.tsx`（Web）
+- `apps/native/src/features/rankings/CyberSlantedTabNative.tsx`
+- `apps/native/assets/cyber-slanted-tab/**` および同梱コピー
+- `scripts/generate-cyber-slanted-tab-assets.mjs`
+- 選択タブの高さ・幅・gap・padding・発光・スキャン線・skew を変える周辺（例: メトリクタブ行の行間を「タブ見た目のため」にいじる）
+
+## 確定デザイン（参照のみ）
+
+| 状態 | 背景 | 文字 | 枠 | 装飾 |
+|---|---|---|---|---|
+| 選択 | アクセント塗り（既定 `#00F5FF`） | `#050508` | なし | 黒スキャン横線 + 光 |
+| 非選択 | 透明 | アクセント | アクセント 1px | なし |
+
+- skew: `-14deg`
+- Native 選択: 焼き込み PNG + RN で skew。shadow / BlurMask で光を再発明しない

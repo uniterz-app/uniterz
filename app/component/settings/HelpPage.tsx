@@ -30,7 +30,7 @@ type FAQItem = {
 };
 
 type ScoringSectionItem = {
-  id: "winRate" | "totalPoints" | "scorePrecision" | "upsetPoints";
+  id: "winRate" | "totalPoints" | "upsetPoints";
   title: string;
   content: React.ReactNode;
 };
@@ -181,29 +181,6 @@ function ScoringLogicAnswerJa() {
       ),
     },
     {
-      id: "scorePrecision",
-      title: "スコア精度",
-      content: (
-        <div className="space-y-1">
-          <p>
-            <span className="font-semibold text-emerald-300">1試合 0〜10点</span>
-            ：
-            <span className="font-semibold text-cyan-300">HOME得点差（最大3）</span>
-            ＋
-            <span className="font-semibold text-cyan-300">AWAY得点差（最大3）</span>
-            ＋
-            <span className="font-semibold text-cyan-300">得失点差（最大4）</span>。
-          </p>
-          <p>
-            <span className="font-semibold text-emerald-300">誤差0で満点</span>
-            、誤差1〜11で段階的に減点、誤差12以上は
-            <span className="font-semibold text-red-300">0点</span>
-            です。
-          </p>
-        </div>
-      ),
-    },
-    {
       id: "upsetPoints",
       title: "アップセット得点",
       content: (
@@ -231,7 +208,7 @@ function ScoringLogicAnswerJa() {
   return (
     <div className="space-y-3 text-sm leading-relaxed text-white/80">
       <p>
-        採点ロジックは下記4項目に分かれています。項目をタップすると詳細が開きます。
+        採点ロジックは下記3項目に分かれています。項目をタップすると詳細が開きます。
       </p>
       <ScoringLogicSections items={items} defaultOpenId="totalPoints" />
     </div>
@@ -289,27 +266,6 @@ function ScoringLogicAnswerEn() {
           <p>
             Miss the winner and
             <span className="font-semibold text-red-300"> total points become 0</span>.
-          </p>
-        </div>
-      ),
-    },
-    {
-      id: "scorePrecision",
-      title: "Score Precision",
-      content: (
-        <div className="space-y-1">
-          <p>
-            <span className="font-semibold text-emerald-300">0–10 per match</span>:{" "}
-            <span className="font-semibold text-cyan-300">HOME score difference (max 3)</span>{" "}
-            +{" "}
-            <span className="font-semibold text-cyan-300">AWAY score difference (max 3)</span>{" "}
-            +{" "}
-            <span className="font-semibold text-cyan-300">point-difference gap (max 4)</span>.
-          </p>
-          <p>
-            <span className="font-semibold text-emerald-300">0 error = full points</span>, 1–11
-            are reduced step by step, and 12+ becomes
-            <span className="font-semibold text-red-300"> 0</span>.
           </p>
         </div>
       ),
@@ -381,9 +337,6 @@ const faqsJa: FAQItem[] = [
             <b className="text-white/88">勝率</b>：勝敗予想の的中率
           </li>
           <li>
-            <b className="text-white/88">スコア精度</b>：スコア予想と結果のズレ
-          </li>
-          <li>
             <b className="text-white/88">アップセット得点</b>：番狂わせを読み切る力
           </li>
           <li>
@@ -415,10 +368,9 @@ const faqsJa: FAQItem[] = [
         </p>
         <ul className="list-disc space-y-1 pl-5 text-white/72">
           <li>勝率ランキング</li>
-          <li>スコア精度ランキング</li>
           <li>総合得点ランキング</li>
           <li>アップセット得点ランキング</li>
-          <li>連勝ランキング</li>
+          <li>最多得点者的中ランキング</li>
         </ul>
         <p>
           グローバルランキングは
@@ -599,7 +551,7 @@ export default function HelpPage({ variant }: { variant: Variant }) {
   return (
     <LegalPageLayout
       variant={variant}
-      title={m.settings.helpAndGuide}
+      title="HELP"
       description={m.settings.helpDescription}
       updatedAt="2026-06-24"
     >

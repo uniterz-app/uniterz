@@ -6,28 +6,32 @@
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
-  isWcRankingStage,
-  type WcRankingStage,
-} from "@/lib/rankings/wcRankingStage";
+  pickNbaPlayoffsDailyIncBucket,
+  pickNbaSeasonKeyDailyIncBucket,
+} from "@/lib/rankings/pickNbaStatsBucket";
 import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 export type ProfileDailyTrendContext = {
   rankingLeague: RankingLeagueSource;
-  wcStage?: WcRankingStage;
+  /** NBA プロフィール: season = 明示キー（省略時は現行） */
+  nbaPeriod?: "season" | "playoffs";
+  /** rankingBySeason.<key> を直接指定（overview 前シーズン確認用） */
+  nbaSeasonKey?: string;
 };
 
 export function resolveProfileDailyTrendContext(
-  rankingLeague: RankingLeagueSource,
-  wcStage?: WcRankingStage
+  _rankingLeague: RankingLeagueSource = "nba",
+  _wcStage?: unknown,
+  nbaPeriod?: "season" | "playoffs",
+  nbaSeasonKey?: string
 ): ProfileDailyTrendContext {
-  if (rankingLeague === "worldcup") {
-    const stage =
-      wcStage && isWcRankingStage(wcStage) ? wcStage : ("overall" as const);
-    return { rankingLeague, wcStage: stage };
-  }
-  return { rankingLeague: "nba" };
+  return {
+    rankingLeague: "nba",
+    nbaPeriod: nbaPeriod ?? "season",
+    ...(nbaSeasonKey ? { nbaSeasonKey } : {}),
+  };
 }
 
 function safeInt(v: unknown): number {
@@ -39,24 +43,13 @@ function dailyBucketFromDoc(
   d: Record<string, unknown>,
   ctx: ProfileDailyTrendContext
 ): Record<string, unknown> {
-  if (ctx.rankingLeague === "worldcup") {
-    const stage = ctx.wcStage ?? "overall";
-    const byWc = readDailyWcStageBucket(d, stage);
-    const leagues = (d.leagues ?? {}) as Record<string, Record<string, unknown>>;
-    const hasWcPosts = safeInt(byWc.posts) > 0;
-    if (hasWcPosts) return byWc as Record<string, unknown>;
-    const overall = readDailyWcStageBucket(d, "overall");
-    if (stage !== "overall" && safeInt(overall.posts) > 0) {
-      return overall as Record<string, unknown>;
-    }
-    return ((stage === "overall" ? leagues.wc : null) ??
-      {}) as Record<string, unknown>;
+  if (ctx.nbaPeriod === "playoffs") {
+    return pickNbaPlayoffsDailyIncBucket(d);
   }
-  const byPhase = (d.rankingByPhase ?? {}) as Record<
-    string,
-    Record<string, unknown>
-  >;
-  return (byPhase.playoffs ?? {}) as Record<string, unknown>;
+  return pickNbaSeasonKeyDailyIncBucket(
+    d,
+    ctx.nbaSeasonKey ?? CURRENT_NBA_SEASON_KEY
+  );
 }
 
 type Bucket = {
@@ -66,7 +59,6 @@ type Bucket = {
   upsetHitCount: number;
   upsetOpportunityCount: number;
   upsetPointsSum: number;
-  scorePrecisionSum: number;
   exactHitCount: number;
   pointsSumV3: number;
   upsetBonusSum: number;
@@ -79,7 +71,7 @@ export type SummaryForCardsRollup = {
   recent3Posts: number;
   wins: number;
   winRate: number;
-  scorePrecisionSum: number;
+  exactHitCount: number;
   upsetPointsSum: number;
   pointsSumV3: number;
   upsetChanceCount: number;
@@ -96,7 +88,6 @@ const empty = (): Bucket => ({
   upsetHitCount: 0,
   upsetOpportunityCount: 0,
   upsetPointsSum: 0,
-  scorePrecisionSum: 0,
   exactHitCount: 0,
   pointsSumV3: 0,
   upsetBonusSum: 0,
@@ -116,7 +107,6 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   base.upsetHitCount += safeInt(v.upsetHitCount);
   base.upsetOpportunityCount += safeInt(v.upsetOpportunityCount);
   base.upsetPointsSum += safeNum(v.upsetPointsSum);
-  base.scorePrecisionSum += safeNum(v.scorePrecisionSum);
   base.exactHitCount += safeInt(v.exactHitCount);
   base.pointsSumV3 += safeNum(v.pointsSumV3);
   base.upsetBonusSum += safeNum(v.upsetBonusSum);
@@ -124,14 +114,8 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   return base;
 }
 
-function precisionSumFromBucket(
-  bucket: Partial<Bucket>,
-  ctx: ProfileDailyTrendContext
-): number {
-  if (ctx.rankingLeague === "worldcup") {
-    return safeInt(bucket.exactHitCount);
-  }
-  return safeNum(bucket.scorePrecisionSum);
+function exactHitCountFromBucket(_bucket: Partial<Bucket>): number {
+  return 0;
 }
 
 function computeForCards(
@@ -152,7 +136,7 @@ function computeForCards(
     recent3Posts: 0,
     wins,
     winRate: posts ? wins / posts : 0,
-    scorePrecisionSum: precisionSumFromBucket(b, ctx),
+    exactHitCount: exactHitCountFromBucket(b),
     upsetPointsSum: safeNum(b.upsetPointsSum),
     pointsSumV3,
     upsetChanceCount: safeInt(b.upsetOpportunityCount),
@@ -241,7 +225,7 @@ export function dailyTrendRowFromDailySnap(
   const wins = safeInt(bucket.wins);
   const pointsV3 = safeNum(bucket.pointsSumV3);
   const upsetPoints = safeNum(bucket.upsetPointsSum);
-  const scorePrecisionSum = precisionSumFromBucket(bucket, ctx);
+  const exactHitCount = exactHitCountFromBucket(bucket);
 
   return {
     date,
@@ -250,7 +234,7 @@ export function dailyTrendRowFromDailySnap(
     pointsV3,
     upsetPoints,
     winRate: posts > 0 ? wins / posts : 0,
-    scorePrecision: scorePrecisionSum,
+    exactHitCount,
   };
 }
 
@@ -276,9 +260,21 @@ export function buildDailyTrendFromDailySnaps(
   ctx: ProfileDailyTrendContext = { rankingLeague: "nba" }
 ): ProfileDailyTrendRow[] {
   const rows: ProfileDailyTrendRow[] = [];
+  const requireActivity = ctx.rankingLeague === "nba" && ctx.nbaPeriod != null;
   for (const snap of snaps) {
     const row = dailyTrendRowFromDailySnap(snap, ctx);
-    if (row) rows.push(row);
+    if (!row) continue;
+    if (
+      requireActivity &&
+      !(
+        row.posts > 0 ||
+        Math.abs(row.pointsV3) > 1e-9 ||
+        Math.abs(row.upsetPoints) > 1e-9
+      )
+    ) {
+      continue;
+    }
+    rows.push(row);
   }
   rows.sort((a, b) => a.date.localeCompare(b.date));
   return rows;

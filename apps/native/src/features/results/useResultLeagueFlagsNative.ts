@@ -1,7 +1,9 @@
-/** Web `useResultLeagueFlags` のネイティブ向けコピー（@/ 依存回避） */
+/** Web `useResultLeagueFlags` 相当 — Profile と同じ users メモリを共有 */
 import { useEffect, useMemo, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import {
+  loadProfileUserDocNative,
+  peekProfileUserDocNative,
+} from "../profile/profileUserDocCacheNative";
 import {
   defaultResultListLeagueTab,
   parseUserResultLeagueFlags,
@@ -16,8 +18,15 @@ const EMPTY_FLAGS: UserResultLeagueFlags = {
 };
 
 export function useResultLeagueFlagsNative(uid: string | null) {
-  const [flags, setFlags] = useState<UserResultLeagueFlags>(EMPTY_FLAGS);
-  const [flagsReady, setFlagsReady] = useState(false);
+  const [flags, setFlags] = useState<UserResultLeagueFlags>(() => {
+    if (!uid) return EMPTY_FLAGS;
+    const peek = peekProfileUserDocNative(uid);
+    return peek ? parseUserResultLeagueFlags(peek) : EMPTY_FLAGS;
+  });
+  const [flagsReady, setFlagsReady] = useState(() => {
+    if (!uid) return false;
+    return peekProfileUserDocNative(uid) !== undefined;
+  });
 
   useEffect(() => {
     if (!uid) {
@@ -26,12 +35,22 @@ export function useResultLeagueFlagsNative(uid: string | null) {
       return;
     }
     let cancelled = false;
-    setFlagsReady(false);
+    const peek = peekProfileUserDocNative(uid);
+    if (peek) {
+      setFlags(parseUserResultLeagueFlags(peek));
+      setFlagsReady(true);
+    } else {
+      setFlagsReady(false);
+    }
     void (async () => {
       try {
-        const snap = await getDoc(doc(db, "users", uid));
+        const loaded = await loadProfileUserDocNative(uid);
         if (cancelled) return;
-        setFlags(snap.exists() ? parseUserResultLeagueFlags(snap.data()) : EMPTY_FLAGS);
+        setFlags(
+          loaded?.exists
+            ? parseUserResultLeagueFlags(loaded.data)
+            : EMPTY_FLAGS
+        );
       } catch {
         if (!cancelled) setFlags(EMPTY_FLAGS);
       } finally {
@@ -43,8 +62,14 @@ export function useResultLeagueFlagsNative(uid: string | null) {
     };
   }, [uid]);
 
-  const showResultLeagueTabs = useMemo(() => shouldShowResultLeagueTabs(flags), [flags]);
-  const defaultLeagueTab = useMemo(() => defaultResultListLeagueTab(flags), [flags]);
+  const showResultLeagueTabs = useMemo(
+    () => shouldShowResultLeagueTabs(flags),
+    [flags]
+  );
+  const defaultLeagueTab = useMemo(
+    () => defaultResultListLeagueTab(flags),
+    [flags]
+  );
 
   return { flags, flagsReady, showResultLeagueTabs, defaultLeagueTab };
 }

@@ -18,29 +18,45 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { normalizeLeague } from "@/lib/leagues";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
-import NbaPostseasonMatchupPanel, {
-  H2hSeasonRecordRow,
-} from "@/app/component/predict/NbaPostseasonMatchupPanel";
-import { shouldFlipH2hToMatchHomeAway } from "@/lib/data/nba/h2h/h2hAlignSides";
-import { resolveNbaH2HPack } from "@/lib/data/nba/h2h/resolveNbaH2HPack";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
-import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
-import WcTeamProfilePanel from "@/app/component/predict/wc/WcTeamProfilePanel";
-import WcPastResultsPanel from "@/app/component/predict/wc/WcPastResultsPanel";
-import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
-import WcMatchPreviewPanel from "@/app/component/predict/wc/WcMatchPreviewPanel";
-import WcKnockoutChallengeModal from "@/app/component/predict/wc/WcKnockoutChallengeModal";
-import { useWcKnockoutChallengePrompt } from "@/lib/wc/useWcKnockoutChallengePrompt";
-import { hasWcMatchPreview } from "@/lib/wc/matchPreviews";
-import WcGoalScorerPicker from "@/app/component/predict/wc/WcGoalScorerPicker";
+import NbaPredictToolsTabs from "@/app/component/predict/NbaPredictToolsTabs";
+function WcTeamProfilePanel(_props: Record<string, unknown>) {
+  return null;
+}
+function WcPastResultsPanel(_props: Record<string, unknown>) {
+  return null;
+}
+function WcStandingPanel(_props: Record<string, unknown>) {
+  return null;
+}
+function WcMatchPreviewPanel(_props: Record<string, unknown>) {
+  return null;
+}
+function WcKnockoutChallengeModal(_props: Record<string, unknown>) {
+  return null;
+}
+function WcGoalScorerPicker(_props: Record<string, unknown>) {
+  return null;
+}
+import { useWcKnockoutChallengePrompt, hasWcMatchPreview } from "@/lib/legacyWcWebShims";
+import NbaTopScorerPicker from "@/app/component/predict/nba/NbaTopScorerPicker";
+import {
+  normalizeNbaTopScorerCandidates,
+  normalizeNbaTopScorerPick,
+  type NbaTopScorerPick,
+} from "@/lib/nba/topScorer";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import {
-  isWcGoalScorerPickValidForPredictedScore,
+  normalizeWcGoalScorerPick,
   type WcGoalScorerPick,
-} from "@/lib/wc/goalScorer";
+} from "@/lib/legacyWcWebShims";
+import {
+  buildClientPredictionPayload,
+  validateClientPrediction,
+} from "@/lib/predict/clientPredictionSubmit";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
@@ -52,7 +68,7 @@ import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "@/lib/predict/nextGameModalPrefs";
-import { matchScoreClass, nameOxanium } from "@/lib/fonts";
+import { matchScoreClass, nameBebas, nameOxanium } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { PREDICT_OVERLAY_FORM_PANEL } from "@/lib/ui/matchOverlayGlass";
 import {
@@ -63,6 +79,10 @@ import {
 } from "@/lib/ui/predictOverlayCyber";
 import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
+import TutorialPredictAnnotator from "@/app/component/tutorial/TutorialPredictAnnotator";
+import { TUTORIAL_CYAN } from "@/lib/tutorial/tutorialMotion";
+import PredictOverlayScoreFields from "@/app/component/predict/PredictOverlayScoreFields";
+import { useUserPlan } from "@/hooks/useUserPlan";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
@@ -126,16 +146,23 @@ type Props = {
   onPredictEditEnd?: () => void;
   /** 親の predict-overlay-cyber-form 一枚に内包するとき（内側のフォーム面を出さない） */
   overlayUnifiedForm?: boolean;
+  /** オーバーレイ: MatchCard から渡すホーム戦績（Pro Info チーム文脈用） */
+  overlayHomeRecord?: MatchCardProps["homeRecord"];
+  /** オーバーレイ: MatchCard から渡すアウェイ戦績（Pro Info チーム文脈用） */
+  overlayAwayRecord?: MatchCardProps["awayRecord"];
+  /**
+   * チュートリアル練習用。API / 認証をスキップして onTutorialSubmit に渡す。
+   */
+  tutorialMode?: boolean;
+  onTutorialSubmit?: (payload: {
+    winner: "home" | "away" | "draw";
+    scoreHome: number;
+    scoreAway: number;
+    goalScorer?: { playerId: string; teamId: string } | null;
+  }) => void;
 };
 
 type Winner = "home" | "away" | "draw";
-
-type H2HRecordLine = {
-  leftTeamDisplay: string;
-  rightTeamDisplay: string;
-  leftWins: number;
-  rightWins: number;
-};
 
 /** MatchCard と同趣旨：試合開始済み（未投稿ならスコア予想 UI を出さない） */
 function isMatchStartedForPredict(game: MatchCardProps): boolean {
@@ -149,46 +176,6 @@ function isMatchStartedForPredict(game: MatchCardProps): boolean {
     }
   }
   return false;
-}
-
-function computeRecordByGames(
-  games: Array<{
-    leftTeamDisplay: string;
-    rightTeamDisplay: string;
-    scoreLeft: number | null;
-    scoreRight: number | null;
-  }>,
-  homeTeamName?: string,
-  awayTeamName?: string
-): H2HRecordLine | null {
-  if (!games.length) return null;
-  const first = games[0];
-  const flip = first
-    ? shouldFlipH2hToMatchHomeAway({
-        leftTeamDisplay: first.leftTeamDisplay,
-        rightTeamDisplay: first.rightTeamDisplay,
-        homeTeamName,
-        awayTeamName,
-      })
-    : false;
-  const normalized = flip
-    ? games.map((g) => ({
-        leftTeamDisplay: g.rightTeamDisplay,
-        rightTeamDisplay: g.leftTeamDisplay,
-        scoreLeft: g.scoreRight,
-        scoreRight: g.scoreLeft,
-      }))
-    : games;
-
-  const { leftTeamDisplay, rightTeamDisplay } = normalized[0];
-  let leftWins = 0;
-  let rightWins = 0;
-  for (const g of normalized) {
-    if (g.scoreLeft == null || g.scoreRight == null) continue;
-    if (g.scoreLeft > g.scoreRight) leftWins += 1;
-    else if (g.scoreRight > g.scoreLeft) rightWins += 1;
-  }
-  return { leftTeamDisplay, rightTeamDisplay, leftWins, rightWins };
 }
 
 export default function PredictionFormV2({
@@ -211,7 +198,13 @@ export default function PredictionFormV2({
   predictEditTriggerNonce = 0,
   onPredictEditEnd,
   overlayUnifiedForm = false,
+  overlayHomeRecord: _overlayHomeRecord,
+  overlayAwayRecord: _overlayAwayRecord,
+  tutorialMode = false,
+  onTutorialSubmit,
 }: Props) {
+  void _overlayHomeRecord;
+  void _overlayAwayRecord;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -235,14 +228,19 @@ export default function PredictionFormV2({
   const [pkWinner, setPkWinner] = useState<"home" | "away" | null>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
-  const [goalScorerPick, setGoalScorerPick] = useState<WcGoalScorerPick | null>(
-    null
-  );
+  const [goalScorerPick, setGoalScorerPick] = useState<
+    WcGoalScorerPick | NbaTopScorerPick | null
+  >(null);
   const [submitting, setSubmitting] = useState(false);
   const [toolsTab, setToolsTab] = useState<
-    null | "stats" | "market" | "standings" | "h2h" | "preview" | "results"
+    null | "stats" | "market" | "standings" | "preview" | "results"
   >(null);
   const [marketChartKey, setMarketChartKey] = useState(0);
+  const [tutorialAnnotDismissed, setTutorialAnnotDismissed] = useState(false);
+
+  useEffect(() => {
+    if (tutorialMode) setTutorialAnnotDismissed(false);
+  }, [tutorialMode]);
   /** Games オーバーレイ: 投稿後モーダル用の次試合 */
   const [nextGamePreview, setNextGamePreview] = useState<MatchCardProps | null>(
     null
@@ -272,10 +270,12 @@ export default function PredictionFormV2({
   const formTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const isWc = game.league === "wc";
+  const isNba = game.league === "nba";
   const showWcMatchPreview = isWc && hasWcMatchPreview(gameId);
   const isSoccer = game.league === "pl" || game.league === "j1" || isWc;
   /** WC ノックアウト：引き分け「結果」は存在しない（同点は PK 決着）ため市場表示から引き分けを除外 */
   const isKnockout = isWcKnockoutGame(game);
+  const { isPro: isProUser } = useUserPlan(auth.currentUser?.uid ?? undefined);
   /** 引き分けを許可するサッカー試合か（グループリーグ・リーグ戦のみ） */
   const drawAllowed = isSoccer && !isKnockout;
   /** ノックアウト予想フローで UNITERZ ノックアウトチャレンジ告知を生涯1回表示 */
@@ -286,13 +286,10 @@ export default function PredictionFormV2({
     scoreHome !== "" &&
     scoreAway !== "" &&
     Number(scoreHome) === Number(scoreAway);
-  // WC は Standings タブ（グループ順位 + FIFA ランク）を常に出す
-  const showStandings = game.league === "nba" || isWc;
-  /** Playoffs / Play-In: 直接対決 / 市場 / 詳細スタッツの3タブ（順位表タブなし） */
-  const isNbaPostseasonTools =
-    game.league === "nba" &&
-    (game.seasonPhase === "playoffs" || game.seasonPhase === "play_in");
-  const showStandingsTab = showStandings && !isNbaPostseasonTools;
+  // WC は Standings タブ（グループ順位 + FIFA ランク）を常に出す。
+  // NBA は旧ツールタブ廃止（Insight / Injury / Team Stats / Roster の新タブに移行）
+  const showStandings = isWc;
+  const showStandingsTab = showStandings;
 
   const homeSafe = game?.home ?? { name: "Home", colorHex: "#0ea5e9" };
   const awaySafe = game?.away ?? { name: "Away", colorHex: "#f43f5e" };
@@ -314,32 +311,6 @@ export default function PredictionFormV2({
   const [homeL1, homeL2] = splitTeamNameByLeague(game.league, homeSafe.name);
   const [awayL1, awayL2] = splitTeamNameByLeague(game.league, awaySafe.name);
 
-  const nbaH2HPack = useMemo(() => {
-    if (!isNbaPostseasonTools) return null;
-    return resolveNbaH2HPack(
-      game.home.teamId,
-      game.away.teamId,
-      game.home.name,
-      game.away.name
-    );
-  }, [
-    isNbaPostseasonTools,
-    game.home.teamId,
-    game.away.teamId,
-    game.home.name,
-    game.away.name,
-  ]);
-  const h2hPoRecord = useMemo(() => {
-    const poGames =
-      nbaH2HPack?.games?.filter((g) => Boolean(g.seriesGameLabel)) ?? [];
-    return computeRecordByGames(poGames, game.home.name, game.away.name);
-  }, [nbaH2HPack?.games, game.home.name, game.away.name]);
-  const h2hRsRecordForSeriesTrend = useMemo(() => {
-    const rsGames =
-      nbaH2HPack?.games?.filter((g) => !g.seriesGameLabel) ?? [];
-    return computeRecordByGames(rsGames, game.home.name, game.away.name);
-  }, [nbaH2HPack?.games, game.home.name, game.away.name]);
-
   useEffect(() => {
     if (!onMarketDistributionChange) return;
     const total =
@@ -356,12 +327,6 @@ export default function PredictionFormV2({
   useEffect(() => {
     onStandingsOpenChange?.(toolsTab === "standings");
   }, [toolsTab, onStandingsOpenChange]);
-
-  useEffect(() => {
-    if (isNbaPostseasonTools && toolsTab === "standings") {
-      setToolsTab(null);
-    }
-  }, [isNbaPostseasonTools, toolsTab]);
 
   // チーム詳細から戻ったとき ?standings=1 でスタンディングを開いた状態にする
   useEffect(() => {
@@ -382,7 +347,10 @@ export default function PredictionFormV2({
 
   const homeLabel = getMobileTeamLabel(game.league, homeL1, homeL2);
   const awayLabel = getMobileTeamLabel(game.league, awayL1, awayL2);
-  const predictTeamNameTy = bracketMarketTeamTypography(isMobile);
+  const predictTeamNameTy = {
+    ...bracketMarketTeamTypography(isMobile),
+    transform: "skewX(-6deg)",
+  };
 
   useEffect(() => {
     const h = Number(scoreHome);
@@ -656,7 +624,10 @@ export default function PredictionFormV2({
       if (!pred) return;
       setScoreHome(String(pred.score.home));
       setScoreAway(String(pred.score.away));
-      setGoalScorerPick(pred.goalScorer ?? null);
+      setGoalScorerPick(
+        normalizeWcGoalScorerPick(pred.goalScorer) ??
+          normalizeNbaTopScorerPick(pred.goalScorer)
+      );
       setWinner(pred.winner);
       // ノックアウトで同点（PK 決着）の既存予想は勝ち上がり側を復元
       if (
@@ -695,31 +666,31 @@ export default function PredictionFormV2({
     return { home: h, away: a };
   }, [scoreHome, scoreAway]);
 
+  const nbaTopScorerCandidates = useMemo(
+    () =>
+      normalizeNbaTopScorerCandidates(
+        game.topScorerCandidates ??
+          (game as { topScorerCandidates?: unknown }).topScorerCandidates
+      ),
+    [game]
+  );
+
   const buildPredictionPayload = (
     h: number,
-    a: number
+    a: number,
+    resolvedWinner: "home" | "away" | "draw"
   ): {
     winner: Winner;
     score: { home: number; away: number };
-    goalScorer?: WcGoalScorerPick | null;
+    goalScorer?: WcGoalScorerPick | NbaTopScorerPick | null;
   } => {
-    const score = { home: h, away: a };
-    const goalScorer =
-      isWc &&
-      goalScorerPick &&
-      isWcGoalScorerPickValidForPredictedScore(
-        goalScorerPick,
-        score,
-        game.home?.teamId,
-        game.away?.teamId
-      )
-        ? goalScorerPick
-        : null;
-    return {
-      winner: winner!,
-      score,
-      ...(isWc ? { goalScorer } : {}),
-    };
+    return buildClientPredictionPayload({
+      validated: { winner: resolvedWinner, score: { home: h, away: a } },
+      league: game.league,
+      goalScorerPick,
+      homeTeamId: game.home?.teamId,
+      awayTeamId: game.away?.teamId,
+    });
   };
 
   const overlayEmbedded = embedded && inOverlay;
@@ -747,12 +718,13 @@ export default function PredictionFormV2({
       ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-4 py-3`
       : `relative w-full overflow-hidden rounded-2xl ${standaloneGlassFill} px-4 py-3`;
 
+  /** 試合カードと同幅。上下は詰めてセグメントを近づける */
   const glassCardStatsPanel = overlayUnified
-    ? "relative w-full overflow-hidden px-3 py-2 md:px-4 md:py-2.5"
+    ? "relative w-full overflow-visible px-0 py-0 md:px-0"
     : overlayEmbedded
-      ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-3 py-2.5`
+      ? `relative w-full overflow-visible ${PREDICT_OVERLAY_FORM_PANEL} px-0 py-1`
       : isMobile
-        ? `relative w-full overflow-hidden rounded-xl ${standaloneGlassFill} px-3 py-2.5`
+        ? `relative w-full overflow-visible rounded-xl ${standaloneGlassFill} px-0 py-1`
         : glassCard;
 
   const toolButtonInactiveClass = overlayEmbedded
@@ -799,43 +771,59 @@ export default function PredictionFormV2({
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
-    const me = auth.currentUser;
-    if (!me) return;
-
     const h = Number(scoreHome);
     const a = Number(scoreAway);
 
-    if (Number.isNaN(h) || Number.isNaN(a)) {
+    const validated = validateClientPrediction({
+      winner,
+      scoreHome: h,
+      scoreAway: a,
+      league: game.league,
+      knockout: isKnockout,
+      pkWinner,
+    });
+    if (!validated.ok) {
+      if (validated.code === "knockout_pk_winner_required") {
+        alert(
+          language === "ja"
+            ? "同点予想のため、PKで勝ち上がるチームを選んでください。"
+            : "Pick which team advances on penalties."
+        );
+        return;
+      }
       alert(m.predict.enterValidScores);
       return;
     }
 
-    const isPkTie = isKnockout && h === a;
+    const predictionPayload = buildPredictionPayload(
+      validated.value.score.home,
+      validated.value.score.away,
+      validated.value.winner
+    );
 
-    if (isPkTie && !pkWinner) {
-      alert(
-        language === "ja"
-          ? "同点予想のため、PKで勝ち上がるチームを選んでください。"
-          : "Pick which team advances on penalties."
-      );
+    /** チュートリアル: 認証・API をスキップ */
+    if (tutorialMode) {
+      try {
+        setSubmitting(true);
+        onTutorialSubmit?.({
+          winner: validated.value.winner,
+          scoreHome: validated.value.score.home,
+          scoreAway: validated.value.score.away,
+          goalScorer:
+            isNba && predictionPayload.goalScorer
+              ? (predictionPayload.goalScorer as NbaTopScorerPick)
+              : null,
+        });
+        toast.success(m.predict.predictionSubmitted);
+        onPostCreated?.({ id: "tutorial-local", at: new Date() });
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
-    // PK 決着（同点）以外は、勝者とスコアの整合性を確認する
-    if (!isPkTie) {
-      if (winner === "home" && h <= a) {
-        alert(m.predict.enterValidScores);
-        return;
-      }
-      if (winner === "away" && a <= h) {
-        alert(m.predict.enterValidScores);
-        return;
-      }
-      if (drawAllowed && winner === "draw" && h !== a) {
-        alert(m.predict.enterValidScores);
-        return;
-      }
-    }
+    const me = auth.currentUser;
+    if (!me) return;
 
     try {
       setSubmitting(true);
@@ -859,7 +847,7 @@ export default function PredictionFormV2({
               Authorization: `Bearer ${idToken}`,
             },
             body: JSON.stringify({
-              prediction: buildPredictionPayload(h, a),
+              prediction: predictionPayload,
             }),
           }
         );
@@ -880,7 +868,7 @@ export default function PredictionFormV2({
           throw new Error(detailPatch || `更新失敗 (${res.status})`);
         }
         toast.success(m.predict.predictionUpdated);
-        const nextPrediction = buildPredictionPayload(h, a);
+        const nextPrediction = predictionPayload;
         let mergedPostForOverlay: PredictionPostV2 | null = null;
         setExistingSnapshot((prev) => {
           if (typeof prev !== "object" || prev === null || !("post" in prev)) {
@@ -907,9 +895,8 @@ export default function PredictionFormV2({
 
       const body = {
         gameId: (game as any).id,
-        league: game.league,
-        authorUid: me.uid,
-        prediction: buildPredictionPayload(h, a),
+        prediction: predictionPayload,
+        comment: "",
       };
 
       const res = await fetch("/api/posts_v2", {
@@ -1113,8 +1100,8 @@ export default function PredictionFormV2({
           "overflow-x-hidden",
           overlayEmbedded
             ? isMobile
-              ? "space-y-3 pt-2"
-              : "space-y-3 pt-2.5"
+              ? "space-y-1.5 pt-1.5"
+              : "space-y-2 pt-2"
             : "space-y-4",
         ].join(" ")}
       >
@@ -1144,6 +1131,21 @@ export default function PredictionFormV2({
           </motion.div>
         ) : null}
 
+        {isNba && !isGameStarted ? (
+          /* 開始前のみ: Insight / Injury / Stats / Roster */
+          <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
+            <div className="relative z-1">
+              <NbaPredictToolsTabs
+                language={language}
+                isPro={isProUser}
+                homeTeamId={game.home.teamId}
+                awayTeamId={game.away.teamId}
+                homeTeamName={homeSafe.name}
+                awayTeamName={awaySafe.name}
+              />
+            </div>
+          </motion.div>
+        ) : !isNba ? (
         <motion.div
           {...fadeUpMotionProps}
           className={
@@ -1159,19 +1161,14 @@ export default function PredictionFormV2({
           <button
             type="button"
             onClick={() =>
-              setToolsTab((t) => {
-                if (isNbaPostseasonTools) return t === "h2h" ? null : "h2h";
-                return t === "stats" ? null : "stats";
-              })
+              setToolsTab((t) => (t === "stats" ? null : "stats"))
             }
             className={
               overlayEmbedded
-                ? overlayToolButtonClass(
-                    isNbaPostseasonTools ? toolsTab === "h2h" : toolsTab === "stats"
-                  )
+                ? overlayToolButtonClass(toolsTab === "stats")
                 : [
                     toolButtonBase,
-                    (isNbaPostseasonTools ? toolsTab === "h2h" : toolsTab === "stats")
+                    toolsTab === "stats"
                       ? "border-cyan-300/35 bg-cyan-300/12 text-white"
                       : toolButtonInactiveClass,
                   ].join(" ")
@@ -1184,11 +1181,7 @@ export default function PredictionFormV2({
               ].join(" ")}
             >
               <span className={isMobile ? "truncate" : ""}>
-                {isNbaPostseasonTools
-                  ? m.predict.h2hStats
-                  : isWc
-                    ? m.predict.teamProfile
-                    : m.predict.teamStats}
+                {isWc ? m.predict.teamProfile : m.predict.teamStats}
               </span>
             </span>
           </button>
@@ -1272,96 +1265,32 @@ export default function PredictionFormV2({
           <button
             type="button"
             onClick={() => {
-              if (isNbaPostseasonTools) {
-                setToolsTab((t) => (t === "stats" ? null : "stats"));
-                return;
-              }
               if (!showStandings) return;
               setToolsTab((t) => (t === "standings" ? null : "standings"));
             }}
-            disabled={!isNbaPostseasonTools && !showStandings}
+            disabled={!showStandings}
             className={
               overlayEmbedded
                 ? overlayToolButtonClass(
-                    isNbaPostseasonTools ? toolsTab === "stats" : toolsTab === "standings",
-                    !isNbaPostseasonTools && !showStandings
+                    toolsTab === "standings",
+                    !showStandings
                   )
                 : [
                     toolButtonBase,
-                    (isNbaPostseasonTools ? toolsTab === "stats" : toolsTab === "standings")
+                    toolsTab === "standings"
                       ? "border-cyan-300/35 bg-cyan-300/12 text-white"
-                      : isNbaPostseasonTools || showStandings
+                      : showStandings
                         ? toolButtonInactiveClass
                         : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
                   ].join(" ")
             }
           >
             <span className={isMobile ? "truncate" : ""}>
-              {isNbaPostseasonTools
-                ? m.predict.teamStats
-                : m.predict.groupStandings}
+              {m.predict.groupStandings}
             </span>
           </button>
         </motion.div>
-
-        {toolsTab === "h2h" && isNbaPostseasonTools && (
-          <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
-            <div className="relative z-1">
-              <div
-                className={[
-                  isMobile ? "mb-2 space-y-1.5" : "mb-3 space-y-2",
-                  "text-center",
-                ].join(" ")}
-              >
-                <div
-                  className={[
-                    isMobile ? "text-xs" : "text-sm",
-                    "font-semibold text-white/90",
-                  ].join(" ")}
-                >
-                  {m.predict.seriesTrend}
-                </div>
-                {h2hPoRecord ? (
-                  <div className="text-center">
-                    <H2hSeasonRecordRow
-                      leftTeamDisplay={h2hPoRecord.leftTeamDisplay}
-                      rightTeamDisplay={h2hPoRecord.rightTeamDisplay}
-                      leftWins={h2hPoRecord.leftWins}
-                      rightWins={h2hPoRecord.rightWins}
-                    />
-                  </div>
-                ) : h2hRsRecordForSeriesTrend ? (
-                  <div className="text-center">
-                    <H2hSeasonRecordRow
-                      phaseLabel="RS"
-                      leftTeamDisplay={h2hRsRecordForSeriesTrend.leftTeamDisplay}
-                      rightTeamDisplay={
-                        h2hRsRecordForSeriesTrend.rightTeamDisplay
-                      }
-                      leftWins={h2hRsRecordForSeriesTrend.leftWins}
-                      rightWins={h2hRsRecordForSeriesTrend.rightWins}
-                    />
-                  </div>
-                ) : null}
-              </div>
-              <div
-                className={
-                  isMobile
-                    ? "border-t border-white/10 pt-2"
-                    : "border-t border-white/10 pt-3"
-                }
-              >
-                <NbaPostseasonMatchupPanel
-                  language={language}
-                  seriesGames={nbaH2HPack?.games}
-                  h2hAverages={nbaH2HPack?.h2hAverages}
-                  homeTeamName={game.home.name}
-                  awayTeamName={game.away.name}
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
+        ) : null}
 
         {toolsTab === "stats" && (
           <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
@@ -1460,8 +1389,6 @@ export default function PredictionFormV2({
                   language={language}
                   isMobile={isMobile}
                 />
-              ) : showStandings ? (
-                <NbaStandingsPanel compact={isMobile} />
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/3 px-4 py-4 text-sm text-white/65">
                   {m.predict.standingsNotAvailable}
@@ -1550,9 +1477,42 @@ export default function PredictionFormV2({
 
         {overlayFormLayout.showScoreForm ? (
           <>
+            {tutorialMode ? (
+              <TutorialPredictAnnotator
+                open={!tutorialAnnotDismissed}
+                overviewTitle={m.tutorial.practice.predictOverviewTitle}
+                overviewBody={m.tutorial.practice.predictOverviewBody}
+                sidesTitle={m.tutorial.practice.predictSidesTitle}
+                sidesBody={m.tutorial.practice.predictSidesBody}
+                marketTitle={m.tutorial.practice.predictMarketTitle}
+                marketBody={m.tutorial.practice.predictMarketBody}
+                toolsTitle={m.tutorial.practice.predictToolsTitle}
+                toolsBody={m.tutorial.practice.predictToolsBody}
+                scoresTitle={m.tutorial.practice.predictScoresTitle}
+                scoresBody={m.tutorial.practice.predictScoresBody}
+                bonusTitle={m.tutorial.practice.predictBonusTitle}
+                bonusBody={m.tutorial.practice.predictBonusBody}
+                enterTitle={m.tutorial.practice.predictEnterTitle}
+                enterBody={m.tutorial.practice.predictEnterBody}
+                submitTitle={m.tutorial.practice.predictSubmitTitle}
+                submitBody={m.tutorial.practice.predictSubmitBody}
+                nextLabel={m.tutorial.next}
+                skipLabel={m.tutorial.skip}
+                enterWaitHint={m.tutorial.practice.predictEnterWait}
+                submitWaitHint={m.tutorial.practice.predictSubmitWait}
+                toolsWaitHint={m.tutorial.practice.predictToolsWait}
+                enterReady={scoreHome !== "" && scoreAway !== ""}
+                backLabel={m.tutorial.back}
+                onSkip={() => setTutorialAnnotDismissed(true)}
+              />
+            ) : null}
             <motion.div
               {...fadeUpMotionProps}
-              className={`relative space-y-4 pt-1 ${glassCard}`}
+              className={`relative space-y-4 pt-1 ${glassCard} ${
+                tutorialMode
+                  ? "ring-1 ring-cyan-300/40 shadow-[0_0_18px_rgba(0,245,255,0.18)]"
+                  : ""
+              }`}
             >
               <PredictionScoringRulesChip
                 league={game.league}
@@ -1595,41 +1555,66 @@ export default function PredictionFormV2({
                 </div>
               ) : null}
 
-              <div className="relative z-1 grid grid-cols-2 gap-3">
-                <div>
-                  <div
-                    className="mb-2 text-sm font-bold text-white/88"
-                    style={predictTeamNameTy}
-                  >
-                    {homeLabel}
+              <div
+                data-tutorial-target={
+                  tutorialMode ? "predict-scores" : undefined
+                }
+                className="relative z-1 space-y-4"
+              >
+              {overlayEmbedded ? (
+                <PredictOverlayScoreFields
+                  home={{
+                    label: homeLabel,
+                    teamId: game.home?.teamId,
+                    value: scoreHome,
+                    onChange: setScoreHome,
+                    placeholder: m.predict.scorePlaceholder,
+                  }}
+                  away={{
+                    label: awayLabel,
+                    teamId: game.away?.teamId,
+                    value: scoreAway,
+                    onChange: setScoreAway,
+                    placeholder: m.predict.scorePlaceholder,
+                  }}
+                />
+              ) : (
+                <div className="relative z-1 grid grid-cols-2 gap-3">
+                  <div>
+                    <div
+                      className={`${nameBebas.className} mb-2 text-[15px] font-bold uppercase leading-tight text-white/88 md:text-[18px]`}
+                      style={predictTeamNameTy}
+                    >
+                      {homeLabel}
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      className={scoreInputClass}
+                      placeholder={m.predict.scorePlaceholder}
+                      value={scoreHome}
+                      onChange={(e) => setScoreHome(e.target.value)}
+                    />
                   </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    className={scoreInputClass}
-                    placeholder={m.predict.scorePlaceholder}
-                    value={scoreHome}
-                    onChange={(e) => setScoreHome(e.target.value)}
-                  />
-                </div>
 
-                <div>
-                  <div
-                    className="mb-2 text-sm font-bold text-white/88"
-                    style={predictTeamNameTy}
-                  >
-                    {awayLabel}
+                  <div>
+                    <div
+                      className={`${nameBebas.className} mb-2 text-[15px] font-bold uppercase leading-tight text-white/88 md:text-[18px]`}
+                      style={predictTeamNameTy}
+                    >
+                      {awayLabel}
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      className={scoreInputClass}
+                      placeholder={m.predict.scorePlaceholder}
+                      value={scoreAway}
+                      onChange={(e) => setScoreAway(e.target.value)}
+                    />
                   </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    className={scoreInputClass}
-                    placeholder={m.predict.scorePlaceholder}
-                    value={scoreAway}
-                    onChange={(e) => setScoreAway(e.target.value)}
-                  />
                 </div>
-              </div>
+              )}
 
               {knockoutScoreTie ? (
                 <div className="relative z-1 space-y-2">
@@ -1682,6 +1667,7 @@ export default function PredictionFormV2({
                   </div>
                 </div>
               ) : null}
+              </div>
 
               {showScoreEdit && effectivePostId ? (
                 <button
@@ -1714,9 +1700,37 @@ export default function PredictionFormV2({
                   gameId={gameId}
                 />
               ) : null}
+
+              {isNba ? (
+                <div
+                  data-tutorial-target={
+                    tutorialMode ? "predict-bonus" : undefined
+                  }
+                >
+                  <NbaTopScorerPicker
+                    homeTeamId={game.home?.teamId}
+                    awayTeamId={game.away?.teamId}
+                    homeLabel={homeLabel}
+                    awayLabel={awayLabel}
+                    candidates={nbaTopScorerCandidates}
+                    value={
+                      goalScorerPick
+                        ? normalizeNbaTopScorerPick(goalScorerPick)
+                        : null
+                    }
+                    onChange={setGoalScorerPick}
+                    language={language}
+                    isMobile={isMobile}
+                  />
+                </div>
+              ) : null}
             </motion.div>
 
-            <motion.div {...fadeUpMotionProps} className="pt-0">
+            <motion.div
+              {...fadeUpMotionProps}
+              className="pt-0"
+              data-tutorial-target={tutorialMode ? "predict-submit" : undefined}
+            >
               <button
                 disabled={!canSubmit}
                 onClick={handleSubmit}
@@ -1725,7 +1739,15 @@ export default function PredictionFormV2({
                     ? PREDICT_OVERLAY_SUBMIT_BTN_CLASS
                     : PREDICT_OVERLAY_SUBMIT_BTN_DISABLED_CLASS,
                   "flex h-12 w-full items-center justify-center text-sm font-bold tracking-[0.06em]",
+                  tutorialMode && canSubmit
+                    ? "animate-pulse shadow-[0_0_22px_rgba(0,245,255,0.45)]"
+                    : "",
                 ].join(" ")}
+                style={
+                  tutorialMode && canSubmit
+                    ? { boxShadow: `0 0 22px ${TUTORIAL_CYAN}66` }
+                    : undefined
+                }
               >
                 {canSubmit ? (
                   <span

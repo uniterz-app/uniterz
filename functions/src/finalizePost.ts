@@ -1,10 +1,12 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
-import { buildWindowCacheForUser } from "./stats/buildUserStatsWindowCache";
-import { computePostSettlement } from "./computePostSettlement";
+import {
+  computePostSettlement,
+  type PostSettlementComputed,
+} from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
-import { buildPostMatchGoalScorersFromGame } from "./wc/matchGoalScorersDisplay";
-import { resolveWcStageFromGame } from "./wc/resolveWcStage";
+import { isNbaPickupGame } from "./rankings/isPickupGame";
+import type { ResultScoreRelAgg } from "./aggregateGamePointsDistribution";
 
 export async function finalizePost({
   postDoc,
@@ -15,6 +17,8 @@ export async function finalizePost({
   batch,
   userUpdateTasks,
   streakResultMap,
+  scoreRel = "none",
+  settlement: settlementIn,
 }: {
   postDoc: FirebaseFirestore.QueryDocumentSnapshot;
   game: any;
@@ -24,6 +28,10 @@ export async function finalizePost({
   batch: FirebaseFirestore.WriteBatch;
   userUpdateTasks: Promise<any>[];
   streakResultMap: Map<string, UpdatedUserStreakResult>;
+  /** カード一覧用。games を読まずに #1/TOP5%/TOP10% を出す */
+  scoreRel?: ResultScoreRelAgg;
+  /** サマリ構築時の結果を再利用（再計算しない） */
+  settlement?: PostSettlementComputed;
 }) {
   const p = postDoc.data();
   if (p.settledAt) return;
@@ -39,42 +47,35 @@ export async function finalizePost({
     streakBonus,
     goalScorerBonus,
     activeWinStreak,
-  } = computePostSettlement({
-    p,
-    game: {
-      homeScore: final.home,
-      awayScore: final.away,
-      league: game.league,
-      homeTeamId: game.homeTeamId,
-      awayTeamId: game.awayTeamId,
-      regulationEtScore: game.regulationEtScore,
-      advancingTeamId: game.advancingTeamId,
-      knockout: game.knockout,
-      countsForRanking: game.countsForRanking,
-      goalScorers: game.goalScorers,
-    },
-    market,
-    hadUpsetGame,
-    streakResultMap,
-  });
+  } =
+    settlementIn ??
+    computePostSettlement({
+      p,
+      game: {
+        homeScore: final.home,
+        awayScore: final.away,
+        league: game.league,
+        homeTeamId: game.homeTeamId,
+        awayTeamId: game.awayTeamId,
+        regulationEtScore: game.regulationEtScore,
+        advancingTeamId: game.advancingTeamId,
+        knockout: game.knockout,
+        countsForRanking: game.countsForRanking,
+        goalScorers: game.goalScorers,
+        leadingScorers: game.leadingScorers,
+      },
+      market,
+      hadUpsetGame,
+      streakResultMap,
+    });
 
   const countsForRanking = game?.countsForRanking !== false;
-  const resolvedWcStage = resolveWcStageFromGame({
-    knockout: game?.knockout,
-    roundLabel: game?.roundLabel,
-    wcStage: game?.wcStage,
-  });
+  const isPickup = isNbaPickupGame(game);
 
   const now = Timestamp.now();
 
   const isWc = String(game.league ?? "").toLowerCase() === "wc";
-  const matchGoalScorers = isWc
-    ? buildPostMatchGoalScorersFromGame(
-        game.goalScorers,
-        game.homeTeamId,
-        game.awayTeamId
-      )
-    : [];
+  const matchGoalScorers: unknown[] = [];
 
   const pkScoreRaw = game?.pkScore;
   const pkScore =
@@ -103,13 +104,24 @@ export async function finalizePost({
     marketMeta: {
       majoritySide: market.majoritySide,
       majorityRatio: market.majorityRatio,
+      // カード一覧が games を読まずに市場%を出せるよう埋め込み（0–100）
+      homePct:
+        typeof market.homeRate === "number" && Number.isFinite(market.homeRate)
+          ? Math.round(market.homeRate * 1000) / 10
+          : null,
+      awayPct:
+        typeof market.awayRate === "number" && Number.isFinite(market.awayRate)
+          ? Math.round(market.awayRate * 1000) / 10
+          : null,
+      drawPct:
+        typeof market.drawRate === "number" && Number.isFinite(market.drawRate)
+          ? Math.round(market.drawRate * 1000) / 10
+          : null,
     },
 
     stats: {
       isWin: result.isWin,
       scoreError: result.scoreError,
-      scorePrecision: result.scorePrecision,
-      scorePrecisionDetail: result.scorePrecisionDetail,
       marketCount: market.total,
       marketMajority: result.marketMajority,
       isMajorityPick: result.isMajorityPick,
@@ -124,8 +136,11 @@ export async function finalizePost({
       exactMatch: Boolean((baseScore as { exactMatch?: boolean }).exactMatch),
 
       countedForRanking: countsForRanking,
+      countedForPickup: countsForRanking && isPickup,
 
       pointsV3: totalPoints,
+      /** カード相対ラベル（一覧が games を読まないための埋め込み） */
+      scoreRel,
       pointsV3Detail: {
         basePoints: baseScore.basePoints,
         winnerCorrect: baseScore.winnerCorrect,
@@ -152,38 +167,96 @@ export async function finalizePost({
 
     seasonPhase: game?.seasonPhase ?? null,
     seasonRound: game?.seasonRound ?? null,
-    wcStage: resolvedWcStage,
+    wcStage: null,
   });
 
   const uid = p.authorUid;
+  const exactHit = Boolean((baseScore as { exactMatch?: boolean }).exactMatch);
   userUpdateTasks.push(
-    applyPostToUserStatsV2({
-      uid,
-      postId: postDoc.id,
-      createdAt: p.createdAt,
-      startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
-      league: game.league,
+    (async () => {
+      await applyPostToUserStatsV2({
+        uid,
+        postId: postDoc.id,
+        createdAt: p.createdAt,
+        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+        league: game.league,
 
-      isWin: result.isWin,
-      scoreError: result.scoreError,
-      scorePrecision: isWc ? 0 : result.scorePrecision,
-      hadUpsetGame,
+        isWin: result.isWin,
+        scoreError: result.scoreError,
+        hadUpsetGame,
 
-      upsetHit: result.upsetHit,
-      upsetPoints,
-      upsetBonus,
-      streakBonus,
-      goalScorerBonus,
-      goalScorerHit: goalScorerBonus > 0,
-      exactHit: isWc && Boolean((baseScore as { exactMatch?: boolean }).exactMatch),
+        upsetHit: result.upsetHit,
+        upsetPoints,
+        upsetBonus,
+        streakBonus,
+        goalScorerBonus,
+        goalScorerHit: goalScorerBonus > 0,
+        exactHit,
 
-      points: totalPoints,
-      countsForRanking,
-      seasonPhase: game?.seasonPhase ?? null,
-      seasonRound: game?.seasonRound ?? null,
-      wcStage: resolvedWcStage,
-      homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
-      awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
-    }).then(() => buildWindowCacheForUser(uid))
+        points: totalPoints,
+        countsForRanking,
+        isPickup,
+        seasonPhase: game?.seasonPhase ?? null,
+        wcStage: null,
+        homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
+        awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
+      });
+
+      const { syncProSkinProgressOnNbaSettle } = await import(
+        "./profile/syncProSkinProgressOnNbaSettle"
+      );
+      await syncProSkinProgressOnNbaSettle({
+        uid,
+        postId: postDoc.id,
+        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+        league: game.league,
+        countsForRanking,
+        seasonPhase: game?.seasonPhase ?? null,
+        exactHit,
+        activeWinStreak,
+      });
+
+      const { syncProfileHeroSnapshotOnNbaSettle } = await import(
+        "./profile/syncProfileHeroSnapshotOnNbaSettle"
+      );
+      await syncProfileHeroSnapshotOnNbaSettle({
+        uid,
+        postId: postDoc.id,
+        startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+        league: game.league,
+        countsForRanking,
+        isPickup,
+        seasonPhase: game?.seasonPhase ?? null,
+        isWin: result.isWin,
+        points: totalPoints,
+        upsetPoints,
+        upsetBonus,
+        streakBonus,
+        goalScorerHit: goalScorerBonus > 0,
+        hadUpsetGame,
+        upsetHit: result.upsetHit,
+        activeWinStreak,
+      });
+
+      try {
+        const { syncUserCareerOnNbaSettle } = await import(
+          "./profile/syncUserCareer"
+        );
+        const streakInfo = streakResultMap.get(uid);
+        await syncUserCareerOnNbaSettle({
+          uid,
+          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
+          league: game.league,
+          countsForRanking,
+          seasonPhase: game?.seasonPhase ?? null,
+          isWin: result.isWin,
+          exactHit,
+          activeWinStreak,
+          maxWinStreak: streakInfo?.maxWinStreak,
+        });
+      } catch (careerErr) {
+        console.warn("[finalizePost] user_career settle sync failed", careerErr);
+      }
+    })()
   );
 }

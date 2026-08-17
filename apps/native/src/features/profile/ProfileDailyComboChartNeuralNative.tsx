@@ -2,11 +2,9 @@
  * Web `ProfileDailyComboChartNeural` の React Native 移植（mobile / compact レイアウト）。
  */
 import { useEffect, useMemo, useState } from "react";
-import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Pressable, StyleSheet, Text, useWindowDimensions, View,
+  StyleSheet, Text, useWindowDimensions, View,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
 import type { ProfileDailyTrendRow } from "../../../../../lib/profile/profileDailyTrendRow";
@@ -200,24 +198,12 @@ function buildLinePath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-function profileCopy(language: "ja" | "en", isWc: boolean) {
+function profileCopy(language: "ja" | "en") {
   const isJa = language === "ja";
   return {
     title: "Daily Combo Chart",
     subtitle: isJa ? "過去10日のスタッツの推移" : "Trend of stats over the last 10 days",
-    chartInfo: isJa
-      ? "カラーバー＝日ごとの投稿数・的中数。黄緑の線＝累積の総合得点。棒をタップすると下に内訳を表示します。"
-      : "Color bars: daily posts and correct picks. Lime line: cumulative total points. Tap a bar for that day's breakdown.",
     hitsPosts: isJa ? "的中 / 投稿" : "Hits / Posts",
-    scorePrec: isWc
-      ? isJa
-        ? "完全的中"
-        : "Exact Score Hits"
-      : isJa
-        ? "スコア精度"
-        : "Score Precision",
-    scorePrecUnit: isWc ? (isJa ? "試合" : "matches") : "pts",
-    scorePrecDecimals: isWc ? 0 : 1,
     totalPts: isJa ? "総合得点" : "Total Points",
     upset: isJa ? "アップセット" : "Upset",
     unitCount: isJa ? "件" : "items",
@@ -231,16 +217,17 @@ type Props = {
   data: ProfileDailyComboChartPoint[];
   language?: "ja" | "en";
   rankingLeague?: RankingLeagueSource;
+  hideTitle?: boolean;
 };
 
 export default function ProfileDailyComboChartNeuralNative({
   data,
   language = "ja",
-  rankingLeague = "worldcup",
+  rankingLeague: _rankingLeague = "nba",
+  hideTitle = false,
 }: Props) {
   const { width: screenW } = useWindowDimensions();
-  const isWcTrend = rankingLeague === "worldcup";
-  const copy = profileCopy(language, isWcTrend);
+  const copy = profileCopy(language);
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const chartRows = useMemo(() => buildCumulative(rows), [rows]);
 
@@ -294,20 +281,17 @@ export default function ProfileDailyComboChartNeuralNative({
   const linePath = buildLinePath(linePoints);
   const svgHeight = (screenW * H) / W;
 
-  const openChartInfo = () => {
-    cyberAlert(copy.title, copy.chartInfo);
-  };
-
   return (
     <View style={styles.root}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{copy.title}</Text>
-          <Pressable onPress={openChartInfo} hitSlop={10} accessibilityLabel={copy.chartInfo}>
-            <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
-          </Pressable>
+          {hideTitle ? (
+            <Text style={[styles.subtitle, styles.subtitleInRow]}>{copy.subtitle}</Text>
+          ) : (
+            <Text style={styles.title}>{copy.title}</Text>
+          )}
         </View>
-        <Text style={styles.subtitle}>{copy.subtitle}</Text>
+        {hideTitle ? null : <Text style={styles.subtitle}>{copy.subtitle}</Text>}
       </View>
 
       <View style={styles.chartZone}>
@@ -465,18 +449,6 @@ export default function ProfileDailyComboChartNeuralNative({
               </View>
             </View>
             <View style={[styles.statCell, styles.statCellBorderR]}>
-              <Text style={styles.statLabel}>{copy.scorePrec}</Text>
-              <View style={styles.statValueRow}>
-                <Text style={styles.statValue}>
-                  {formatMetricDecimals(
-                    clampNum(selectedRow.scorePrecision),
-                    copy.scorePrecDecimals
-                  )}
-                </Text>
-                <Text style={styles.statUnit}>{copy.scorePrecUnit}</Text>
-              </View>
-            </View>
-            <View style={[styles.statCell, styles.statCellBorderR]}>
               <Text style={styles.statLabel}>{copy.totalPts}</Text>
               <View style={styles.statValueRow}>
                 <Text style={styles.statValue}>
@@ -521,6 +493,12 @@ const styles = StyleSheet.create({
     ...profileOverviewChartSubtitleStyle,
     marginTop: 6,
     marginBottom: 8,
+  },
+  subtitleInRow: {
+    flex: 1,
+    minWidth: 0,
+    marginTop: 0,
+    marginBottom: 0,
   },
   chartZone: { overflow: "hidden" },
   statsWrap: profileOverviewChartStatsWrapStyle,

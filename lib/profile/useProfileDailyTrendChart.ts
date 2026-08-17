@@ -14,8 +14,10 @@ export function useProfileDailyTrendChart(
   targetUid: string | null,
   options?: {
     enabled?: boolean;
-    /** user-stats API から渡すときは Firestore の日次取得をスキップ */
+    /** profileCharts / user-stats から渡すとき Firestore 日次取得をスキップ */
     seedRows?: ProfileDailyTrendRow[] | null;
+    /** true なら空配列も「確定 seed」として独立 fetch しない */
+    seedComplete?: boolean;
     rankingLeague?: RankingLeagueSource;
     wcStage?: WcRankingStage;
   }
@@ -23,14 +25,14 @@ export function useProfileDailyTrendChart(
   const enabled = options?.enabled ?? true;
   const trendCtx = resolveProfileDailyTrendContext(
     options?.rankingLeague ?? "nba",
-    options?.wcStage
+    options?.wcStage,
+    (options?.rankingLeague ?? "nba") === "nba" ? "season" : undefined
   );
   const seedRows = options?.seedRows;
-  /** user-stats API は league/wcStage 済みの rows を返すため、seed を優先する */
+  const seedComplete = options?.seedComplete === true;
   const useSeed =
-    Array.isArray(seedRows) &&
-    seedRows.length > 0 &&
-    enabled;
+    enabled &&
+    (seedComplete || (Array.isArray(seedRows) && seedRows.length > 0));
 
   const uidForDailyTrend =
     useSeed || !enabled ? undefined : targetUid ?? undefined;
@@ -42,10 +44,11 @@ export function useProfileDailyTrendChart(
     loading,
   } = useUserStatsDailyTrend(uidForDailyTrend, fetchEnabled, {
     rankingLeague: trendCtx.rankingLeague,
-    wcStage: trendCtx.wcStage,
   });
 
-  const sourceRows = useSeed ? seedRows! : (dailyTrend ?? []);
+  const sourceRows = useSeed
+    ? (seedRows ?? [])
+    : (dailyTrend ?? []);
 
   const chartData: ProfileDailyTrendChartRow[] = useMemo(() => {
     return sourceRows.map((row) => ({
@@ -54,7 +57,7 @@ export function useProfileDailyTrendChart(
       posts: row.posts ?? 0,
       wins: row.wins ?? 0,
       pointsV3: row.pointsV3 ?? 0,
-      scorePrecision: row.scorePrecision ?? 0,
+      exactHitCount: row.exactHitCount ?? 0,
       upsetPoints: row.upsetPoints ?? 0,
       winRate: row.winRate ?? (row.posts > 0 ? row.wins / row.posts : 0),
     }));

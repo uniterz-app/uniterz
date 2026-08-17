@@ -5,18 +5,10 @@ import { predictionWin } from "./predictionWin";
 import type { SettlementGameInput } from "./settlementGame";
 import { leagueToSport } from "./settlementGame";
 import {
-  applyWcSlotStreakWhenComplete,
-  isWcLeague,
-  resolveTriggerKickoffMs,
-  rescoreEarlierWcSlotPosts,
-  wcSlotActiveForUser,
-  wcSlotStreakDeferredMap,
-  type WcSlotStreakApplyResult,
-} from "./wc/wcSlotStreak";
-import {
   streakApplyMarkerRef,
   streakResultFromUserSnap,
 } from "./updateUserStreakInternals";
+import { nbaSeasonKeyFromDateJST } from "./rankings/nbaSeason";
 
 /**
  * games/{gameId}: set `suppressStreakIncrementV2: true` to skip all streak writes for that game (no stats updates, no per-user markers).
@@ -74,25 +66,38 @@ function migrateStreakBySport(
   };
 }
 
-export type UpdateUserStreakOutcome = {
-  streakResultMap: Map<string, UpdatedUserStreakResult>;
-  wcSlotRescore: Pick<WcSlotStreakApplyResult, "perUserPerGameActive"> | null;
-};
+function toGameStartDate(v: unknown): Date | null {
+  if (v && typeof v === "object" && typeof (v as { toDate?: () => Date }).toDate === "function") {
+    try {
+      return (v as { toDate: () => Date }).toDate();
+    } catch {
+      return null;
+    }
+  }
+  if (v instanceof Date && Number.isFinite(v.getTime())) return v;
+  if (typeof v === "number" && Number.isFinite(v)) return new Date(v);
+  return null;
+}
 
 export async function updateUserStreak({
   db,
   gameId,
   settlementGame,
+  postsSnap: postsSnapInput,
 }: {
   db: FirebaseFirestore.Firestore;
   gameId: string;
   settlementGame: SettlementGameInput;
-}): Promise<UpdateUserStreakOutcome> {
-  const postsSnap = await db
-    .collection("posts")
-    .where("gameId", "==", gameId)
-    .where("schemaVersion", "==", 2)
-    .get();
+  /** fetchGameContext で取得済みの posts — 省略時のみ再クエリ */
+  postsSnap?: FirebaseFirestore.QuerySnapshot;
+}): Promise<Map<string, UpdatedUserStreakResult>> {
+  const postsSnap =
+    postsSnapInput ??
+    (await db
+      .collection("posts")
+      .where("gameId", "==", gameId)
+      .where("schemaVersion", "==", 2)
+      .get());
 
   const userResult = new Map<string, boolean>();
 
@@ -111,8 +116,14 @@ export async function updateUserStreak({
   const suppressStreakForGame =
     gameSnap.get(SUPPRESS_STREAK_INCREMENT_V2_FIELD) === true;
 
+  const sportKey = leagueToSport(settlementGame.league);
+  const basketballSeasonKey = nbaSeasonKeyFromDateJST(
+    toGameStartDate(gameSnap.get("startAt")) ??
+      toGameStartDate(gameSnap.get("startAtMs")) ??
+      new Date()
+  );
+
   if (suppressStreakForGame) {
-    const sportKey = leagueToSport(settlementGame.league);
     const entries = [...userResult.entries()];
     await Promise.all(
       entries.map(async ([uid, didWin]) => {
@@ -123,46 +134,7 @@ export async function updateUserStreak({
         );
       })
     );
-    return { streakResultMap: updatedMap, wcSlotRescore: null };
-  }
-
-  const sportKey = leagueToSport(settlementGame.league);
-
-  /** WC: 同時キックオフスロット単位で連勝を一括反映 */
-  if (sportKey === "football" && isWcLeague(settlementGame.league)) {
-    const kickoffMs = resolveTriggerKickoffMs(gameSnap);
-    if (kickoffMs != null) {
-      const { resultMap, perUserPerGameActive, slotCompleted } =
-        await applyWcSlotStreakWhenComplete(
-          db,
-          gameId,
-          kickoffMs,
-          userResult
-        );
-
-      for (const [uid, base] of resultMap) {
-        const active = wcSlotActiveForUser(
-          perUserPerGameActive,
-          uid,
-          gameId,
-          base.activeWinStreak
-        );
-        updatedMap.set(uid, {
-          ...base,
-          activeWinStreak: active,
-        });
-      }
-      return {
-        streakResultMap: updatedMap,
-        wcSlotRescore: slotCompleted
-          ? { perUserPerGameActive }
-          : null,
-      };
-    }
-
-    const deferred = await wcSlotStreakDeferredMap(db, userResult);
-    deferred.forEach((v, k) => updatedMap.set(k, v));
-    return { streakResultMap: updatedMap, wcSlotRescore: null };
+    return updatedMap;
   }
 
   for (const [uid, didWin] of userResult.entries()) {
@@ -188,6 +160,14 @@ export async function updateUserStreak({
         let curF = st.football;
         let maxB = st.maxBasketball;
         let maxF = st.maxFootball;
+
+        /** NBA 連勝はシーズンをまたがない（26-27 に前シーズンを持ち込まない） */
+        if (sportKey === "basketball") {
+          const storedSeason = String(snap.get("streakSeasonKeyBasketball") ?? "");
+          if (storedSeason !== basketballSeasonKey) {
+            curB = 0;
+          }
+        }
 
         if (sportKey === "football") {
           if (didWin) {
@@ -223,6 +203,10 @@ export async function updateUserStreak({
         const currentForSport = sportKey === "football" ? curF : curB;
         const activeWinStreakBasketball = curB > 0 ? curB : 0;
         const activeWinStreakFootball = curF > 0 ? curF : 0;
+        const basketballSeasonPatch =
+          sportKey === "basketball"
+            ? { streakSeasonKeyBasketball: basketballSeasonKey }
+            : {};
 
         tx.set(
           userRef,
@@ -235,6 +219,7 @@ export async function updateUserStreak({
             maxWinStreakFootball: maxF,
             maxLoseStreak: maxLose,
             maxStreak: maxB,
+            ...basketballSeasonPatch,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -247,6 +232,7 @@ export async function updateUserStreak({
             currentStreak: curB,
             streakFootball: curF,
             maxStreak: maxB,
+            ...basketballSeasonPatch,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -261,6 +247,7 @@ export async function updateUserStreak({
             activeWinStreak,
             activeWinStreakBasketball,
             activeWinStreakFootball,
+            ...basketballSeasonPatch,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -284,5 +271,5 @@ export async function updateUserStreak({
     updatedMap.set(uid, updated);
   }
 
-  return { streakResultMap: updatedMap, wcSlotRescore: null };
+  return updatedMap;
 }

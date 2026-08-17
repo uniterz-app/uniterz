@@ -4,7 +4,7 @@
  * ネオン・HUD装飾は使わず、状態は縁色と微かな残光だけで表現する。
  */
 
-import { normalizeWinStreak } from "@/lib/ui/winStreakBadge";
+import { normalizeWinStreak } from "@/lib/ui/normalizeWinStreak";
 
 export type ResultCardBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 
@@ -159,7 +159,7 @@ export function resultBadgeAccent(
   if (badge === "hit") {
     return {
       frameBorder: "",
-      edge: "border-yellow-300/40",
+      edge: "border-amber-200/55",
       shadow: RESULT_HIT_FRAME_SHELL_SHADOW,
     };
   }
@@ -192,7 +192,11 @@ export function resultStreakShellAccent(activeWinStreak: unknown): {
 export type ResultStreakFrameTokens = {
   tier: ResultStreakTier;
   frameBorder: string;
+  /** 内側ハイライトのみ（外側は bloomClass） */
   frameGlow: string;
+  /** drop-shadow ブルーム用クラス */
+  bloomClass: string;
+  bloomBorderClass: string;
   shellShadow: string;
   topLine: string;
   overlayGradient: string;
@@ -211,53 +215,59 @@ export function resultStreakFrameTokens(
   if (tier === "gold") {
     return {
       tier,
-      frameBorder: "border border-amber-400/88",
+      frameBorder: "border border-amber-300/95",
       frameGlow:
-        "shadow-[0_0_14px_rgba(251,191,36,0.48),0_0_28px_-8px_rgba(249,115,22,0.34),inset_0_0_0_1px_rgba(253,224,71,0.52),inset_0_1px_0_rgba(255,237,180,0.34)]",
+        "shadow-[inset_0_0_0_1px_rgba(254,243,199,0.55),inset_0_1px_0_rgba(255,251,235,0.4),inset_0_-1px_0_rgba(245,158,11,0.28)]",
+      bloomClass: "result-streak-frame-bloom--gold",
+      bloomBorderClass: "border border-amber-200/90",
       shellShadow:
-        "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_16px_rgba(251,191,36,0.38),0_0_32px_-10px_rgba(249,115,22,0.26),inset_0_0_0_1px_rgba(253,224,71,0.46),inset_0_1px_0_rgba(255,237,180,0.28)]",
+        "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_16px_rgba(251,191,36,0.48),0_0_32px_-6px_rgba(249,115,22,0.32),inset_0_0_0_1px_rgba(253,224,71,0.46),inset_0_1px_0_rgba(255,237,180,0.28)]",
       topLine:
         "bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.92)_38%,rgba(253,224,71,0.95)_58%,transparent_100%)]",
       overlayGradient:
         "bg-[linear-gradient(180deg,rgba(251,191,36,0.2)_0%,rgba(249,115,22,0.1)_42%,transparent_70%)]",
-      cornerClass: "border-amber-300/92",
+      cornerClass: "border-amber-200/95 result-streak-frame-corner--gold",
       sweepClass: "result-card-streak-sweep--gold",
-      edge: "border-amber-300/50",
+      edge: "border-amber-200/55",
     };
   }
 
   if (tier === "platinum") {
     return {
       tier,
-      frameBorder: "border border-cyan-400/86",
+      frameBorder: "border border-cyan-300/95",
       frameGlow:
-        "shadow-[0_0_14px_rgba(34,211,238,0.44),0_0_28px_-8px_rgba(0,245,255,0.3),inset_0_0_0_1px_rgba(103,232,249,0.5),inset_0_1px_0_rgba(186,250,255,0.32)]",
+        "shadow-[inset_0_0_0_1px_rgba(207,250,254,0.55),inset_0_1px_0_rgba(236,254,255,0.4),inset_0_-1px_0_rgba(8,145,178,0.28)]",
+      bloomClass: "result-streak-frame-bloom--platinum",
+      bloomBorderClass: "border border-cyan-200/90",
       shellShadow:
-        "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_16px_rgba(34,211,238,0.36),0_0_32px_-10px_rgba(0,245,255,0.24),inset_0_0_0_1px_rgba(103,232,249,0.44),inset_0_1px_0_rgba(186,250,255,0.26)]",
+        "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_16px_rgba(34,211,238,0.48),0_0_32px_-6px_rgba(0,245,255,0.32),inset_0_0_0_1px_rgba(103,232,249,0.44),inset_0_1px_0_rgba(186,250,255,0.26)]",
       topLine:
         "bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.9)_38%,rgba(125,211,252,0.95)_58%,transparent_100%)]",
       overlayGradient:
         "bg-[linear-gradient(180deg,rgba(34,211,238,0.18)_0%,rgba(8,145,178,0.1)_42%,transparent_70%)]",
-      cornerClass: "border-cyan-300/90",
+      cornerClass: "border-cyan-200/95 result-streak-frame-corner--platinum",
       sweepClass: "result-card-streak-sweep--platinum",
-      edge: "border-cyan-300/48",
+      edge: "border-cyan-200/55",
     };
   }
 
   return {
     tier: "silver",
-    frameBorder: "border border-slate-300/82",
+    frameBorder: "border border-slate-200/92",
     frameGlow:
-      "shadow-[0_0_12px_rgba(148,163,184,0.38),0_0_24px_-8px_rgba(100,116,139,0.28),inset_0_0_0_1px_rgba(226,232,240,0.48),inset_0_1px_0_rgba(248,250,252,0.3)]",
+      "shadow-[inset_0_0_0_1px_rgba(248,250,252,0.5),inset_0_1px_0_rgba(255,255,255,0.36),inset_0_-1px_0_rgba(100,116,139,0.28)]",
+    bloomClass: "result-streak-frame-bloom--silver",
+    bloomBorderClass: "border border-slate-100/85",
     shellShadow:
-      "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_14px_rgba(148,163,184,0.32),0_0_28px_-10px_rgba(100,116,139,0.2),inset_0_0_0_1px_rgba(226,232,240,0.42),inset_0_1px_0_rgba(248,250,252,0.24)]",
+      "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_16px_rgba(148,163,184,0.42),0_0_28px_-6px_rgba(100,116,139,0.28),inset_0_0_0_1px_rgba(226,232,240,0.42),inset_0_1px_0_rgba(248,250,252,0.24)]",
     topLine:
       "bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.88)_38%,rgba(226,232,240,0.92)_58%,transparent_100%)]",
     overlayGradient:
       "bg-[linear-gradient(180deg,rgba(148,163,184,0.16)_0%,rgba(71,85,105,0.08)_42%,transparent_70%)]",
-    cornerClass: "border-slate-200/88",
+    cornerClass: "border-slate-100/95 result-streak-frame-corner--silver",
     sweepClass: "result-card-streak-sweep--silver",
-    edge: "border-slate-200/45",
+    edge: "border-slate-200/50",
   };
 }
 
@@ -297,12 +307,15 @@ function resultCyberBadgeSize(
     : "text-[10px] px-3 py-[3px] tracking-[0.14em]";
 }
 
-/** HIT カード外枠（1px） */
-export const RESULT_HIT_FRAME_BORDER = "border border-yellow-400/76";
+/** HIT カード外枠 — 明るいコア線 */
+export const RESULT_HIT_FRAME_BORDER = "border border-amber-300/95";
 
-/** HIT 枠オーバーレイ：内側ハイライト + 控えめな外側グロー */
+/**
+ * HIT 枠オーバーレイ：内側ハイライト。
+ * 外側ブルームは clip-path で切れるため `.result-hit-frame-bloom`（drop-shadow）側で付与。
+ */
 export const RESULT_HIT_FRAME_GLOW =
-  "shadow-[0_0_11px_rgba(251,191,36,0.36),0_0_22px_-8px_rgba(253,224,71,0.24),inset_0_0_0_1px_rgba(253,224,71,0.42),inset_0_1px_0_rgba(253,224,71,0.26)]";
+  "shadow-[inset_0_0_0_1px_rgba(254,243,199,0.55),inset_0_1px_0_rgba(255,251,235,0.42),inset_0_-1px_0_rgba(245,158,11,0.28)]";
 
 /** @deprecated ResultHitCyberFrame を使用 */
 export const RESULT_HIT_FRAME_OVERLAY = [
@@ -316,28 +329,28 @@ export function withResultHitCyberClip(glassClass: string): string {
   return glassClass.replace(/\brounded-2xl\b/, RESULT_HIT_CYBER_CLIP);
 }
 
-/** HIT シェル影：接地影 + 浅い外側グロー + inset */
+/** HIT シェル影：接地影 + 外側グロー + inset */
 export const RESULT_HIT_FRAME_SHELL_SHADOW =
-  "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_12px_rgba(251,191,36,0.30),0_0_24px_-10px_rgba(253,224,71,0.18),inset_0_0_0_1px_rgba(253,224,71,0.38),inset_0_1px_0_rgba(253,224,71,0.22)]";
+  "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_16px_rgba(251,191,36,0.48),0_0_32px_-6px_rgba(253,224,71,0.32),inset_0_0_0_1px_rgba(254,243,199,0.45),inset_0_1px_0_rgba(255,251,235,0.32)]";
 
 /** HIT カード上部のハイライトライン */
 export const RESULT_HIT_TOP_LINE =
-  "bg-[linear-gradient(90deg,transparent_0%,rgba(253,224,71,0.92)_50%,transparent_100%)]";
+  "bg-[linear-gradient(90deg,transparent_0%,rgba(255,251,235,0.95)_42%,rgba(253,224,71,0.98)_58%,transparent_100%)]";
 
 /** HIT カード内側のゴールドティント（上部中心） */
 export const RESULT_HIT_OVERLAY_GRADIENT =
-  "bg-[linear-gradient(180deg,rgba(252,211,77,0.18)_0%,rgba(251,191,36,0.09)_42%,transparent_70%)]";
+  "bg-[linear-gradient(180deg,rgba(253,224,71,0.22)_0%,rgba(251,191,36,0.12)_42%,transparent_70%)]";
 
-/** PERFECT カード外枠（1px） */
-export const RESULT_PERFECT_FRAME_BORDER = "border border-violet-400/80";
+/** PERFECT カード外枠 — 明るいコア線 */
+export const RESULT_PERFECT_FRAME_BORDER = "border border-violet-300/95";
 
-/** PERFECT 枠オーバーレイ */
+/** PERFECT 枠：内側ハイライト（外側ブルームは drop-shadow） */
 export const RESULT_PERFECT_FRAME_GLOW =
-  "shadow-[0_0_12px_rgba(167,139,250,0.42),0_0_24px_-8px_rgba(139,92,246,0.3),inset_0_0_0_1px_rgba(196,181,253,0.48),inset_0_1px_0_rgba(221,214,254,0.3)]";
+  "shadow-[inset_0_0_0_1px_rgba(237,233,254,0.55),inset_0_1px_0_rgba(245,243,255,0.4),inset_0_-1px_0_rgba(139,92,246,0.28)]";
 
 /** PERFECT シェル影 */
 export const RESULT_PERFECT_FRAME_SHELL_SHADOW =
-  "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_14px_rgba(167,139,250,0.34),0_0_28px_-10px_rgba(139,92,246,0.22),inset_0_0_0_1px_rgba(196,181,253,0.42),inset_0_1px_0_rgba(221,214,254,0.24)]";
+  "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_16px_rgba(167,139,250,0.48),0_0_32px_-6px_rgba(139,92,246,0.32),inset_0_0_0_1px_rgba(221,214,254,0.45),inset_0_1px_0_rgba(245,243,255,0.3)]";
 
 /** PERFECT カード上部のハイライトライン */
 export const RESULT_PERFECT_TOP_LINE =
@@ -347,16 +360,16 @@ export const RESULT_PERFECT_TOP_LINE =
 export const RESULT_PERFECT_OVERLAY_GRADIENT =
   "bg-[linear-gradient(180deg,rgba(167,139,250,0.18)_0%,rgba(124,58,237,0.1)_42%,transparent_70%)]";
 
-/** UPSET カード外枠（1px） */
-export const RESULT_UPSET_FRAME_BORDER = "border border-red-500/82";
+/** UPSET カード外枠 — 明るいコア線 */
+export const RESULT_UPSET_FRAME_BORDER = "border border-red-300/95";
 
-/** UPSET 枠オーバーレイ */
+/** UPSET 枠：内側ハイライト（外側ブルームは drop-shadow） */
 export const RESULT_UPSET_FRAME_GLOW =
-  "shadow-[0_0_12px_rgba(248,113,113,0.44),0_0_24px_-8px_rgba(239,68,68,0.3),inset_0_0_0_1px_rgba(252,165,165,0.48),inset_0_1px_0_rgba(254,202,202,0.3)]";
+  "shadow-[inset_0_0_0_1px_rgba(254,226,226,0.55),inset_0_1px_0_rgba(254,242,242,0.4),inset_0_-1px_0_rgba(239,68,68,0.28)]";
 
 /** UPSET シェル影 */
 export const RESULT_UPSET_FRAME_SHELL_SHADOW =
-  "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_14px_rgba(248,113,113,0.34),0_0_28px_-10px_rgba(239,68,68,0.22),inset_0_0_0_1px_rgba(252,165,165,0.42),inset_0_1px_0_rgba(254,202,202,0.24)]";
+  "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_16px_rgba(248,113,113,0.48),0_0_32px_-6px_rgba(239,68,68,0.32),inset_0_0_0_1px_rgba(254,202,202,0.45),inset_0_1px_0_rgba(254,242,242,0.3)]";
 
 /** UPSET カード上部のハイライトライン */
 export const RESULT_UPSET_TOP_LINE =
@@ -366,7 +379,7 @@ export const RESULT_UPSET_TOP_LINE =
 export const RESULT_UPSET_OVERLAY_GRADIENT =
   "bg-[linear-gradient(180deg,rgba(248,113,113,0.18)_0%,rgba(185,28,28,0.1)_42%,transparent_70%)]";
 
-/** HIT バッジ：ゴールド・サイバー角切り */
+/** HIT バッジ：ゴールド・サイバー角切り（枠は drop-shadow で発光） */
 export function resultHitBadgeClass(
   compact: boolean,
   opts?: { subtle?: boolean }
@@ -375,13 +388,14 @@ export function resultHitBadgeClass(
   return [
     RESULT_CYBER_BADGE_BASE,
     RESULT_HIT_CYBER_CLIP_SM,
+    "result-hit-badge-glow",
     resultCyberBadgeSize(compact, subtle),
-    "border border-amber-400/62",
-    "bg-[linear-gradient(180deg,rgba(251,191,36,0.3)_0%,rgba(120,53,15,0.16)_40%,rgba(0,0,0,0.42)_100%)]",
+    "border border-amber-300/90",
+    "bg-[linear-gradient(180deg,rgba(251,191,36,0.38)_0%,rgba(120,53,15,0.2)_40%,rgba(0,0,0,0.42)_100%)]",
     "text-amber-50",
     subtle
-      ? "shadow-[inset_3px_0_0_rgba(253,224,71,0.5),inset_0_1px_0_rgba(255,255,255,0.16),0_0_10px_rgba(251,191,36,0.24)]"
-      : "shadow-[inset_3px_0_0_rgba(253,224,71,0.58),inset_0_1px_0_rgba(255,255,255,0.2),0_0_12px_rgba(251,191,36,0.3)]",
+      ? "shadow-[inset_3px_0_0_rgba(253,224,71,0.72),inset_0_1px_0_rgba(255,255,255,0.28)]"
+      : "shadow-[inset_3px_0_0_rgba(253,224,71,0.82),inset_0_1px_0_rgba(255,255,255,0.32)]",
   ].join(" ");
 }
 

@@ -9,7 +9,6 @@ type MonthlyRaw = {
   posts?: number;
   wins?: number;
   winRate?: number;
-  avgPrecision?: number;
   avgPointsV3?: number;
   pointsSumV3?: number;
   upsetPointsSum?: number;
@@ -86,7 +85,6 @@ export default function ProfilePrevMonthSummaryNative({
   }
 
   const winRate = raw.winRate ?? 0;
-  const avgPrecision = raw.avgPrecision ?? 0;
   const upsetSum = raw.upsetPointsSum ?? 0;
   const upsetHit =
     typeof raw.upsetHit === "number" && Number.isFinite(raw.upsetHit)
@@ -186,17 +184,6 @@ export default function ProfilePrevMonthSummaryNative({
             ? `${winRate * 100 - oldRaw.winRate * 100 >= 0 ? "+" : ""}${Math.round(
                 winRate * 100 - oldRaw.winRate * 100
               )}%`
-            : null
-        }
-      />
-      <MetricRow
-        label={isJa ? "精度" : "Precision"}
-        value={avgPrecision.toFixed(1)}
-        delta={
-          oldRaw.avgPrecision != null
-            ? `${avgPrecision - oldRaw.avgPrecision >= 0 ? "+" : ""}${(
-                avgPrecision - oldRaw.avgPrecision
-              ).toFixed(1)}`
             : null
         }
       />

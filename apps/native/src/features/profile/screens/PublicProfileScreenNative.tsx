@@ -2,11 +2,11 @@
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import ProfileHomeScreen from "../ProfileHomeScreen";
-import type { ProfileStackParamList } from "../../../navigation/types";
+import type { PublicProfileParams } from "../../../navigation/types";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 
 export default function PublicProfileScreenNative() {
-  const route = useRoute<RouteProp<ProfileStackParamList, "PublicProfile">>();
+  const route = useRoute<RouteProp<{ PublicProfile: PublicProfileParams }, "PublicProfile">>();
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const handle = route.params?.handle ?? "";
 
@@ -17,6 +17,9 @@ export default function PublicProfileScreenNative() {
       routeHandle={handle}
       fromRankings={route.params?.fromRankings === true}
       fromLeaderboards={route.params?.fromLeaderboards === true}
+      fromWeeklyReport={route.params?.fromWeeklyReport === true}
+      fromResultDetail={route.params?.fromResultDetail === true}
+      resultDetailPostId={route.params?.resultDetailPostId}
       leaderboardsGroupId={route.params?.leaderboardsGroupId}
     />
   );

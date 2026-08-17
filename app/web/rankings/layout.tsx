@@ -2,7 +2,7 @@
 
 /**
  * Web ランキング:
- * - 背景はルートの AppPageBackground（GamesPageBackground）に任せる
+ * - 背景はルートの AppPageBackground（メッシュ）に任せる
  * - 長いリストは内側のラッパーだけがスクロールする
  */
 export default function WebRankingsLayout({

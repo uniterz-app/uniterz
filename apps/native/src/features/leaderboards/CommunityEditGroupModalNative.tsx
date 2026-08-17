@@ -203,7 +203,7 @@ export default function CommunityEditGroupModalNative({
             style={StyleSheet.absoluteFillObject}
           />
           <View pointerEvents="none" style={styles.insetHighlight} />
-          <RankingsShellGridOverlay borderRadius={16} />
+          <RankingsShellGridOverlay borderRadius={0} />
 
           <View style={styles.cardInner}>
             <Text style={styles.title}>{t.title}</Text>

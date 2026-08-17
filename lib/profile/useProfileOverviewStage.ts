@@ -22,15 +22,17 @@ export function useProfileOverviewStage(
       return;
     }
 
+    const schedule = globalThis.setTimeout.bind(globalThis);
+    const cancel = globalThis.clearTimeout.bind(globalThis);
     const timers = [
-      window.setTimeout(() => setStage(1), 0),
-      window.setTimeout(() => setStage(2), stepMs),
-      window.setTimeout(() => setStage(3), stepMs * 2),
-      window.setTimeout(() => setStage(4), stepMs * 3),
+      schedule(() => setStage(1), 0),
+      schedule(() => setStage(2), stepMs),
+      schedule(() => setStage(3), stepMs * 2),
+      schedule(() => setStage(4), stepMs * 3),
     ];
 
     return () => {
-      timers.forEach((id) => window.clearTimeout(id));
+      timers.forEach((id) => cancel(id));
     };
   }, [ready, stepMs, instant]);
 

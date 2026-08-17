@@ -42,6 +42,7 @@ import EndGroupConfirmModal from "@/app/component/communities/EndGroupConfirmMod
 import InviteShareModal from "@/app/component/communities/InviteShareModal";
 import CommunityGroupHeaderHero from "@/app/component/communities/CommunityGroupHeaderHero";
 import CommunityGroupZoneLabel from "@/app/component/communities/CommunityGroupZoneLabel";
+import { COMMUNITY_GROUP_HERO_BG } from "@/lib/communities/communityGroupHeroLayout";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -54,6 +55,11 @@ function commMsg(lang: Language, m: { ja: string; en: string }) {
   if (lang === "en") return m.en;
   return m.ja;
 }
+
+const GROUP_DETAIL_PANEL_SHELL = {
+  background: COMMUNITY_GROUP_HERO_BG,
+  boxShadow: "none",
+} as const;
 
 export type CommunityGroupDetailViewProps = {
   groupId: string;
@@ -79,9 +85,6 @@ export type CommunityGroupDetailViewProps = {
   /** ヘッダー画像更新後（一覧リフレッシュ用） */
   onImageUpdated?: () => void;
   onHeaderImageEditingChange?: (editing: boolean) => void;
-  /** Web — 「一覧へ」をヒーロー画像上に載せる */
-  heroBackOverImage?: boolean;
-  onBack?: () => void;
   className?: string;
 };
 
@@ -101,8 +104,6 @@ export default function CommunityGroupDetailView({
   onRequestEndGroup,
   onImageUpdated,
   onHeaderImageEditingChange,
-  heroBackOverImage = false,
-  onBack,
   className = "",
 }: CommunityGroupDetailViewProps) {
   const inDetailCard = inDetailCardProp || inOverlay || cardEmbedded;
@@ -378,20 +379,22 @@ export default function CommunityGroupDetailView({
         capTop={inDetailCard}
         onImageUpdated={handleHeaderImageUpdated}
         onImageEditingChange={onHeaderImageEditingChange}
-        overlayBackHeader={heroBackOverImage && isWeb && inDetailCard}
-        onBack={onBack}
       />
     ) : null;
 
   const rankMetricForProfile = communityMetricToMobile(metric);
   const profileStatsLeague = communityLeagueForProfile(summary?.rankingLeague);
 
-  const rankingCardRows = useMemo(
-    () => rows.map((r) => communityRowToRankingCardRow(r, metric)),
+  const rankingItems = useMemo(
+    () =>
+      rows.map((r) => ({
+        rank: r.rank,
+        row: communityRowToRankingCardRow(r, metric),
+      })),
     [rows, metric]
   );
-  const top3 = rankingCardRows.slice(0, 3);
-  const restRows = rankingCardRows.slice(3);
+  const top3 = rankingItems.slice(0, 3).map((item) => item.row);
+  const restRows = rankingItems.slice(3);
 
   const prefersReducedMotion = useReducedMotion();
 
@@ -433,7 +436,12 @@ export default function CommunityGroupDetailView({
         <RankingsCyberSectionLabel subtle>{t.ranking}</RankingsCyberSectionLabel>
       )}
       {loadingRows ? (
-        <RankingsCyberPanel subtle compact className={useDenseLayout ? "mb-2" : undefined}>
+        <RankingsCyberPanel
+          subtle
+          compact
+          className={useDenseLayout ? "mb-2" : undefined}
+          shellStyle={GROUP_DETAIL_PANEL_SHELL}
+        >
           <div className="space-y-2">
             <div className="h-3 w-2/5 skeleton-scan rounded-none bg-cyan-400/10" />
             <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
@@ -449,17 +457,21 @@ export default function CommunityGroupDetailView({
           })}
         </p>
       ) : useDenseLayout ? (
-        <div key={rankListAnimKey} className="-mt-1 mb-4 cyber-rank-list-panel">
+        <div
+          key={rankListAnimKey}
+          className="-mt-1 mb-4 cyber-rank-list-panel"
+          style={{ background: COMMUNITY_GROUP_HERO_BG }}
+        >
           <motion.div
             variants={restContainer}
             initial={prefersReducedMotion ? "show" : "hidden"}
             animate="show"
           >
-            {rankingCardRows.map((r, i) => (
-              <motion.div key={r.uid} variants={restItem} custom={i}>
+            {rankingItems.map((item) => (
+              <motion.div key={item.row.uid} variants={restItem} custom={item.rank}>
                 <RankingCard
-                  row={r}
-                  rank={i + 1}
+                  row={item.row}
+                  rank={item.rank}
                   metric={rankMetricForProfile}
                   rankingLeague={profileStatsLeague.rankingLeague}
                   wcStage={profileStatsLeague.wcStage}
@@ -475,7 +487,11 @@ export default function CommunityGroupDetailView({
           </motion.div>
         </div>
       ) : (
-        <div key={rankListAnimKey} className="cyber-rank-list-panel">
+        <div
+          key={rankListAnimKey}
+          className="cyber-rank-list-panel"
+          style={{ background: COMMUNITY_GROUP_HERO_BG }}
+        >
           <TopPodium
             rows={top3}
             metric={rankMetricForProfile}
@@ -493,11 +509,11 @@ export default function CommunityGroupDetailView({
             initial={prefersReducedMotion ? "show" : "hidden"}
             animate="show"
           >
-            {restRows.map((r, i) => (
-              <motion.div key={r.uid} variants={restItem} custom={i}>
+            {restRows.map((item) => (
+              <motion.div key={item.row.uid} variants={restItem} custom={item.rank}>
                 <RankingCard
-                  row={r}
-                  rank={i + 4}
+                  row={item.row}
+                  rank={item.rank}
                   metric={rankMetricForProfile}
                   rankingLeague={profileStatsLeague.rankingLeague}
                   wcStage={profileStatsLeague.wcStage}
@@ -518,7 +534,12 @@ export default function CommunityGroupDetailView({
 
   const inviteOwnerPanel =
     summary?.isOwner && !summary.archived ? (
-      <RankingsCyberPanel subtle compact className={useDenseLayout ? "mt-1" : "mb-4"}>
+      <RankingsCyberPanel
+        subtle
+        compact
+        className={useDenseLayout ? "mt-1" : "mb-4"}
+        shellStyle={GROUP_DETAIL_PANEL_SHELL}
+      >
         <RankingsCyberSectionLabel subtle className={useDenseLayout ? "mb-2.5 pb-1.5" : undefined}>
           {t.inviteLabel}
         </RankingsCyberSectionLabel>
@@ -597,7 +618,7 @@ export default function CommunityGroupDetailView({
 
   const webHeaderPanel =
     summary && !useDenseLayout ? (
-      <RankingsCyberPanel subtle className="mb-4">
+      <RankingsCyberPanel subtle className="mb-4" shellStyle={GROUP_DETAIL_PANEL_SHELL}>
         <h1
           className={[
             "font-bold leading-tight text-cyan-50/95",
@@ -733,7 +754,7 @@ export default function CommunityGroupDetailView({
       <div
         className={[
           `relative flex flex-col ${jp.className}`,
-          inDetailCard ? "min-h-0" : "min-h-0 flex-1",
+          inDetailCard ? "min-h-0 bg-black" : "min-h-0 flex-1 bg-black",
           className,
         ]
           .filter(Boolean)

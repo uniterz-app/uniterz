@@ -5,7 +5,6 @@ import type {
 } from "./types";
 import type { Language } from "@/lib/i18n/language";
 import { LEAGUE_DISPLAY, type League } from "@/lib/leagues";
-import { teamIdToCountryName } from "@/lib/wc/wcCountry";
 
 export function leagueLabel(league: CommunityLeague, lang: Language): string {
   if (league === "all") {
@@ -19,8 +18,6 @@ export function metricLabel(m: CommunityMetric, lang: Language): string {
     switch (m) {
       case "totalPoints":
         return "Total points";
-      case "totalPrecision":
-        return "Score precision";
       case "totalUpset":
         return "Upset points";
       case "winRate":
@@ -34,8 +31,6 @@ export function metricLabel(m: CommunityMetric, lang: Language): string {
   switch (m) {
     case "totalPoints":
       return "総合ポイント";
-    case "totalPrecision":
-      return "スコア精度";
     case "totalUpset":
       return "アップセット";
     case "winRate":
@@ -84,8 +79,6 @@ export function rankingTeamLabel(
 ): string {
   const fromMap = nameById?.[teamId];
   if (fromMap) return fromMap;
-  const wc = teamIdToCountryName(teamId, lang);
-  if (wc) return wc;
   const tail = teamId.includes("-") ? teamId.split("-").slice(1).join("-") : teamId;
   return tail;
 }

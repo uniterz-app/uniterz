@@ -9,5 +9,8 @@
       "@uniterz/shared": ["packages/shared/src/index.ts"],
       "@uniterz/shared/*": ["packages/shared/src/*"]
     }
-  }
+  },
+  "exclude": [
+    "**/TutorialLiveHostNative [0-9].tsx"
+  ]
 }

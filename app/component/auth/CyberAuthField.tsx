@@ -9,6 +9,8 @@ type Props = {
   rightSlot?: React.ReactNode;
   /** 右スロット外枠の回転アニメ（パスワード切替など操作系のみ true） */
   rightSlotAnimated?: boolean;
+  /** 角ばり（border-radius なし） */
+  angular?: boolean;
   inputProps: React.InputHTMLAttributes<HTMLInputElement>;
 };
 
@@ -19,13 +21,18 @@ function CyberAuthField({
   leftIcon,
   rightSlot,
   rightSlotAnimated = false,
+  angular = false,
   inputProps,
 }: Props) {
   const { className: inputClassName, ...restInput } = inputProps;
 
   return (
     <div className={styles.fieldMain}>
-      <div className={styles.fieldPoda}>
+      <div
+        className={[styles.fieldPoda, angular ? styles.angular : ""]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <div className={styles.glow} aria-hidden />
         <div className={styles.darkBorderBg} aria-hidden />
         <div className={styles.border} aria-hidden />

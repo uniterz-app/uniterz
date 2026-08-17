@@ -41,6 +41,7 @@ type Props = {
   /** プロフィールから戻ったときに開き直すグループ */
   reopenGroupId?: string | null;
   onReopenGroupConsumed?: () => void;
+  onOpenSquadBattle?: () => void;
 };
 
 function listGroupToPreview(g: CommunityListGroup): CommunityGroupListPreview {
@@ -72,6 +73,7 @@ export default function RankingsCommunityPanelNative({
   onOpenProfile,
   reopenGroupId = null,
   onReopenGroupConsumed,
+  onOpenSquadBattle,
 }: Props) {
   const { fUser } = useFirebaseUser();
   const m = t(language);
@@ -183,7 +185,7 @@ export default function RankingsCommunityPanelNative({
     prefetchCommunityGroupDetails(
       groups.map((g) => g.id),
       getIdToken,
-      6
+      2
     );
     prefetchCommunityHeaderImagesNative(groups.map((g) => g.headerImageUrl));
   }, [groups, fUser, getIdToken]);
@@ -413,6 +415,7 @@ export default function RankingsCommunityPanelNative({
           onCreate={() => setCreateOpen(true)}
           onPreviewJoin={onPreviewJoin}
           onPasteJoin={onPasteJoin}
+          onOpenSquadBattle={onOpenSquadBattle}
           labels={slotLabels}
         />
       )}

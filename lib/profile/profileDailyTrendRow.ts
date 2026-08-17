@@ -6,5 +6,6 @@ export type ProfileDailyTrendRow = {
   pointsV3: number;
   upsetPoints: number;
   winRate: number;
-  scorePrecision: number;
+  /** WC の予想スコア完全一致数。NBA は常に 0。 */
+  exactHitCount: number;
 };

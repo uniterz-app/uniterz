@@ -8,9 +8,11 @@ import ResultMatchHeader from "@/app/component/result/ResultMatchHeader";
 import ResultMarketCard from "@/app/component/result/ResultMarketCard";
 import ResultPointsDistributionCard from "@/app/component/result/ResultPointsDistributionCard";
 import ResultStatsCard from "@/app/component/result/ResultStatsCard";
+import ResultTopScoresList from "@/app/component/result/ResultTopScoresList";
 import { usePathname } from "next/navigation";
 import type { Language } from "@/lib/i18n/language";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
+import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
 import { RESULT_DETAIL_ENTRANCE } from "@/app/component/result/resultDetailEntrance";
 
 type Props = {
@@ -23,6 +25,8 @@ type Props = {
   };
   pointsDistribution?: GamePointsDistributionV1 | null;
   pointsDistributionLoading?: boolean;
+  /** この試合の得点上位（games.pointsSummary.top） */
+  topEntries?: GamePointsTopEntryV1[] | null;
   language?: Language;
   /** 一覧オーバーレイ内（試合の予想オーバーレイと同じガラス＋透過背景用） */
   inOverlay?: boolean;
@@ -42,6 +46,7 @@ export default function ResultDetail({
   market,
   pointsDistribution,
   pointsDistributionLoading = false,
+  topEntries = null,
   language = "ja",
   inOverlay = false,
   hideMatchHeader = false,
@@ -124,7 +129,10 @@ export default function ResultDetail({
                 />
               </m.div>
             ) : null}
-            <m.div {...fadeUp(E.delayDistribution)}>
+            <m.div
+              {...fadeUp(E.delayDistribution)}
+              data-tutorial-target="result-detail-more"
+            >
               <ResultPointsDistributionCard
                 post={post}
                 distribution={pointsDistribution}
@@ -134,6 +142,15 @@ export default function ResultDetail({
                 compact={isMobile}
               />
             </m.div>
+            {topEntries && topEntries.length > 0 ? (
+              <m.div {...fadeUp(E.delayDistribution)}>
+                <ResultTopScoresList
+                  entries={topEntries}
+                  language={language}
+                  gamesRoutePrefix={gamesRoutePrefix}
+                />
+              </m.div>
+            ) : null}
             <m.div
               className={isMobile ? undefined : "md:col-span-2"}
               {...fadeUp(E.delayStats)}

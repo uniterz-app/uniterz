@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { GamesStackParamList } from "../../navigation/types";
 import { GestureDetector } from "react-native-gesture-handler";
 import {
   Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import Animated, { useReducedMotion } from "react-native-reanimated";
@@ -17,7 +19,6 @@ import {
   getDoc,
   query,
   where,
-  limit,
   getDocs,
 } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
@@ -28,6 +29,13 @@ import {
   shiftCalendarMonthStart,
 } from "../../../../../lib/time/zonedTime";
 import { fetchMonthHasGames } from "../../../../../lib/games/fetchMonthHasGames";
+import {
+  clearScheduleMyPostsAbsent,
+  mergeScheduleMyPostsCache,
+  missingScheduleMyPostGameIds,
+  peekScheduleMyPosts,
+  type ScheduleMyPostsMap,
+} from "../../../../../lib/games/scheduleMyPostsCache";
 import {
   resolveGameLiveMeta,
   resolveGameScore,
@@ -59,7 +67,9 @@ import PredictModal, {
   type PredictModalMatchPreview,
   type PredictModalScheduleMeta,
   type PredictModalWcGoalScorer,
+  type PredictToolsTab,
 } from "./PredictModal";
+import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
 import { buildPredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
 import {
   createPredictionPostApi,
@@ -77,6 +87,7 @@ import {
   parseSeriesStandingFromRaw,
 } from "../../../../../lib/games/playoffSeriesUi";
 import GameDetailModal from "./GameDetailModal";
+import ResultDetailScreen from "../results/ResultDetailScreen";
 import {
   readEditModeHintShown,
   writeEditModeHintShown,
@@ -87,6 +98,46 @@ import {
 } from "./predictNextGameModalPrefs";
 import { scheduleAfterPredictModalDismissed } from "./scheduleAfterPredictModalDismissed";
 import GameCardList from "./GameCardList";
+import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
+import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
+import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
+import { prefetchRankingsLogoGlb } from "../rankings/rankingsLogoGlbCache";
+import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
+import {
+  clearTutorialLivePickNative,
+} from "../tutorial/tutorialLivePickNative";
+import {
+  fetchAppTutorialSeenNative,
+  markAppTutorialSeenNative,
+  readAppTutorialSeenNative,
+} from "../tutorial/tutorialSeenNative";
+import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
+import {
+  readTutorialLivePhaseNative,
+  writeTutorialLivePhaseNative,
+  type TutorialLivePhase,
+} from "../tutorial/tutorialLivePhaseNative";
+import { subscribeTutorialRestartNative, consumeTutorialRestartTokenNative, subscribeTutorialClearedNative, requestTutorialClearedNative } from "../tutorial/tutorialRestartEventsNative";
+import { setTutorialHorizonSubstepNative } from "../tutorial/tutorialHorizonSubstepNative";
+import {
+  hydrateTutorialLiveTrackNative,
+  setTutorialLiveTrackNative,
+  getTutorialLiveTrackNative,
+} from "../tutorial/tutorialLiveTrackNative";
+import { setTutorialWelcomeHandoffNative } from "../tutorial/tutorialWelcomeHandoffNative";
+import { formatTutorialGamesSubstepProgress } from "../../../../../lib/tutorial/tutorialLiveProgress";
+import { TUTORIAL_NBA_GAME_ID } from "../../../../../lib/tutorial/tutorialNbaRawGame";
+import { setTutorialWelcomeChromeHidden, setTutorialWelcomeBrandHidden } from "../../../../../lib/tutorial/tutorialWelcomeChrome";
+import {
+  isTutorialGamesSubstep,
+  isTutorialOnGamesHome,
+  nextTutorialGamesSubstep,
+  prevTutorialGamesSubstep,
+} from "../../../../../lib/tutorial/tutorialGamesSubsteps";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import type { Language } from "../../../../../lib/i18n/language";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { MainTabParamList } from "../../navigation/types";
 import {
   resolveNativeSeriesLabel,
   resolveNativeSeriesPair,
@@ -96,31 +147,38 @@ import {
   parsePreferredLeague,
   preferredLeagueToGamesLeague,
 } from "../../../../../lib/user/preferredLeague";
-import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
-import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
-import { WC_DEFAULT_SEASON } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import {
-  isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
-  type WcGoalScorerPick,
-} from "../../../../../lib/wc/goalScorer";
-import { getWcSquadPlayer } from "../../../../../lib/wc/squads";
+  isWcGoalScorerPickValidForPredictedScore,
+  resolveWcBroadcastLabels,
+  isWcKnockoutGame,
+  getWcSquadPlayer,
+  WC_DEFAULT_SEASON,
+  type GoalScorerPick as WcGoalScorerPick,
+} from "./legacyWcNativeShims";
+import {
+  normalizeNbaTopScorerPick,
+  type NbaTopScorerPick,
+} from "../../../../../lib/nba/topScorer";
+import {
+  buildClientPredictionPayload,
+  validateClientPrediction,
+  type ClientPredictionValidationCode,
+} from "../../../../../lib/predict/clientPredictionSubmit";
+import { findNextUnpredictedScheduledGameInList } from "../../../../../lib/games/nextPredictGame";
+import { resolveMarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
-import GamesDrawerMenuNative from "./GamesDrawerMenuNative";
-import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
-import CyberMenuButton from "../../ui/CyberMenuButton";
+import ProfileMenuEdgeHandleNative from "../profile/ProfileMenuEdgeHandleNative";
+import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import GamesHeaderFilterButtonNative from "./GamesHeaderFilterButtonNative";
+import GamesSeasonPredictHeaderButtonsNative from "./GamesSeasonPredictHeaderButtonsNative";
 import {
   GAMES_HEADER_CONTROL_HEIGHT,
   LEAGUE_HEADER_LABEL,
   MOBILE_GAMES_CARD_MAX_WIDTH,
 } from "./gamesMobileLayout";
-import {
-  markWcGamesTabAnnouncementSeenNative,
-  readWcGamesTabAnnouncementSeenNative,
-} from "./wcTabAnnouncementSeenNative";
 import {
   liveMarkPillCyberBase,
   liveMarkTextCyberBase,
@@ -132,9 +190,7 @@ import { RankingsPageTitleCyberNative } from "../rankings/RankingsPageTitleCyber
 import {
   gamesLeagueTitleEntering,
   gamesScheduleShellDaySwitchEntering,
-  gamesTopBarBracketEntering,
   gamesTopBarFilterEntering,
-  gamesTopBarMenuEntering,
   useGamesListShellIntro,
 } from "./gamesPageMotion";
 import {
@@ -142,6 +198,7 @@ import {
   MATCH_CARD_METRIC_FONT,
   MATCH_CARD_SCORE_FONT,
 } from "./matchCardTypography";
+import { gameCardListStyles } from "./gameCardListStyles";
 
 function formatKickoffTime(
   startAt: Date | null,
@@ -330,15 +387,14 @@ function formatCountdownLabel(startAt: Date, nowMs: number): string {
 }
 
 const LEAGUE_OPTIONS: Array<{ id: SupportedLeague; label: string }> = [
-  { id: "wc", label: "WC" },
   { id: "nba", label: "NBA" },
 ];
 const LEAGUE_LINE_COLOR: Record<SupportedLeague, string> = {
-  nba: "#60a5fa",
-  wc: "#f59e0b",
-  bj: "#eab308",
-  j1: "#22c55e",
-  pl: "#a855f7",
+  nba: "rgba(255,255,255,0.32)",
+  wc: "rgba(255,255,255,0.32)",
+  bj: "rgba(255,255,255,0.32)",
+  j1: "rgba(255,255,255,0.32)",
+  pl: "rgba(255,255,255,0.32)",
 };
 const SKELETON_ROWS = [0, 1, 2];
 const DISPLAY_FONT_FAMILY = Platform.select({
@@ -355,6 +411,33 @@ function draftStorageKey(userId: string, gameId: string): string {
   return `predictDraft:${userId}:${gameId}`;
 }
 
+function clientPredictionErrorBody(
+  t: ReturnType<typeof getGamesTexts>,
+  code: ClientPredictionValidationCode
+): string {
+  switch (code) {
+    case "winner_required":
+      return t.predictionNeedsWinnerScoreBody;
+    case "invalid_score":
+      return t.invalidScoreBody;
+    case "draw_not_allowed":
+      return t.invalidDrawLeagueBody;
+    case "home_win_score":
+    case "knockout_home_advance":
+      return t.invalidHomeWinBody;
+    case "away_win_score":
+    case "knockout_away_advance":
+      return t.invalidAwayWinBody;
+    case "draw_requires_equal":
+      return t.invalidDrawScoreBody;
+    case "knockout_draw_not_allowed":
+    case "knockout_pk_winner_required":
+      return t.knockoutPkWinnerRequiredBody;
+    default:
+      return t.predictionNeedsWinnerScoreBody;
+  }
+}
+
 /**
  * モバイルWeb `findNextUnpredictedScheduledGameInList` 相当：同一リーグ・scheduled ・未予想
  */
@@ -364,26 +447,14 @@ function findNextUnpredictedGame(
   games: Array<Record<string, unknown>>,
   predictedIds: Set<string>
 ): Record<string, unknown> | null {
-  const leagueKey = String(currentLeague ?? "").toLowerCase();
-  const sorted = [...games].sort((a, b) => {
-    const aStart = resolveGameStartAt(a)?.getTime() ?? 0;
-    const bStart = resolveGameStartAt(b)?.getTime() ?? 0;
-    return aStart - bStart;
-  });
-  const idx = sorted.findIndex((g) => String(g.id ?? "") === currentGameId);
-  if (idx < 0) return null;
-  for (let i = idx + 1; i < sorted.length; i += 1) {
-    const game = sorted[i];
-    if (!game) continue;
-    if (String(game.league ?? "").toLowerCase() !== leagueKey) continue;
-    if (resolveGameStatus(game) !== "scheduled") continue;
-    const gid = String(game.id ?? "");
-    if (!gid) continue;
-    if (predictedIds.has(gid)) continue;
-    if (isGameStarted(game)) continue;
-    return game;
-  }
-  return null;
+  const nextId = findNextUnpredictedScheduledGameInList(
+    games,
+    currentGameId,
+    currentLeague,
+    predictedIds
+  );
+  if (!nextId) return null;
+  return games.find((g) => String(g.id ?? "") === nextId) ?? null;
 }
 
 function isGameStarted(game: Record<string, unknown>): boolean {
@@ -399,7 +470,7 @@ function resolveLeagueColor(leagueRaw: unknown): string {
   if (league in LEAGUE_LINE_COLOR) {
     return LEAGUE_LINE_COLOR[league];
   }
-  return "#60a5fa";
+  return "rgba(255,255,255,0.32)";
 }
 
 function startOfLocalDay(date: Date): Date {
@@ -422,6 +493,23 @@ function isSameLocalDay(a: Date, b: Date): boolean {
   );
 }
 
+/** 日付切替の最初の描画で、キャッシュ済みの予想済み ID を state より先に使う */
+function predictedIdsForVisibleGames(
+  uid: string | undefined,
+  gameIdSet: Set<string>,
+  stateIds: Set<string>
+): Set<string> {
+  const ids = new Set<string>();
+  if (uid && gameIdSet.size > 0) {
+    const peeked = peekScheduleMyPosts(uid, [...gameIdSet]);
+    for (const gid of Object.keys(peeked)) ids.add(gid);
+  }
+  for (const gid of stateIds) {
+    if (gameIdSet.has(gid)) ids.add(gid);
+  }
+  return ids;
+}
+
 export default function GamesHomeScreen({
   bottomReserveY = 0,
   routeParams,
@@ -431,11 +519,12 @@ export default function GamesHomeScreen({
   routeParams?: GamesStackParamList["GamesHome"];
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
+  const tabNavigation =
+    useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
+  const { isPro: isProUser } = useNativeUserPlan(fUser?.uid);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showWcTabBadge, setShowWcTabBadge] = useState(false);
   const [gamesFilter, setGamesFilter] = useState<GamesFilterState>({
     selectedTeamIds: [],
     matchMode: "any",
@@ -443,13 +532,81 @@ export default function GamesHomeScreen({
     marginMax: "",
   });
   const mainScrollRef = useRef<ScrollView | null>(null);
+  const mainScrollYRef = useRef(0);
   const didInitPreferredLeagueRef = useRef(false);
+  /** preferredLeague（と表示名・言語）確定まで games フェッチを止める */
+  const [preferredLeagueReady, setPreferredLeagueReady] = useState(false);
   const skipAutoAdvanceRef = useRef(false);
   const suppressAutoAdvanceForTodayRef = useRef(false);
   const [selectedGame, setSelectedGame] = useState<Record<string, unknown> | null>(
     null
   );
   const [isPredictModalOpen, setIsPredictModalOpen] = useState(false);
+  /** 終了＋予想済みは現行リザルト詳細（新カード面）を開く */
+  const [resultDetailPostId, setResultDetailPostId] = useState<string | null>(
+    null
+  );
+  const [tutorialPhase, setTutorialPhase] =
+    useState<TutorialLivePhase | null>(null);
+  const [tutorialUserScrollEnabled, setTutorialUserScrollEnabled] = useState(true);
+  const [welcomeWorldFly, setWelcomeWorldFly] = useState(false);
+  const welcomeFlyDestRef = useRef<"full" | "features">("full");
+  const [welcomeFlyDest, setWelcomeFlyDest] = useState<"full" | "features" | null>(
+    null
+  );
+  const [welcomeHandoff, setWelcomeHandoff] = useState<"profile" | null>(null);
+  const welcomeResting =
+    tutorialPhase === "welcome" &&
+    welcomeHandoff !== "profile" &&
+    !welcomeWorldFly;
+  /** welcome 世界にコーチを出す期間（カメラ遠景 + オーバーレイ） */
+  const welcomeBrandInWorld =
+    tutorialPhase === "welcome" && welcomeHandoff !== "profile";
+  /** 試合タブ上の案内（welcome + 試合サブステップ）。他タブ以降は TutorialLiveHost 側 */
+  const tutorialActive = isTutorialOnGamesHome(tutorialPhase);
+  /**
+   * 試合タブ上のチュートリアル中だけブランド棚を世界カメラ内へ。
+   * 他タブへ出る / チュートリアル終了で外側の固定棚に戻す（着地での載せ替えはしない）。
+   */
+  const brandShelfInCamera = tutorialActive;
+
+  useEffect(() => {
+    if (tutorialPhase !== "welcome") {
+      setWelcomeWorldFly(false);
+      setWelcomeFlyDest(null);
+    }
+  }, [tutorialPhase]);
+
+  useLayoutEffect(() => {
+    const inWorld = tutorialPhase === "welcome" && welcomeHandoff !== "profile";
+    setTutorialWelcomeChromeHidden(inWorld && !welcomeWorldFly);
+    return () => setTutorialWelcomeChromeHidden(false);
+  }, [tutorialPhase, welcomeWorldFly, welcomeHandoff]);
+
+  useEffect(() => {
+    if (!tutorialActive || isPredictModalOpen) return;
+    return registerTutorialScrollHost({
+      getOffsetY: () => mainScrollYRef.current,
+      setScrollEnabled: setTutorialUserScrollEnabled,
+      scrollBy: (dy, animated) => {
+        const y = Math.max(0, mainScrollYRef.current + dy);
+        mainScrollYRef.current = y;
+        mainScrollRef.current?.scrollTo({ y, animated });
+      },
+      getViewportInWindow: () =>
+        new Promise((resolve) => {
+          const node = mainScrollRef.current;
+          if (!node) {
+            resolve(null);
+            return;
+          }
+          node.measureInWindow((_x, y, _w, h) => {
+            resolve(h > 32 ? { y, height: h } : null);
+          });
+        }),
+    });
+  }, [tutorialActive, isPredictModalOpen]);
+
   /** リザルトからの深リンク: 予想済みでも最初からスコア入力を出す */
   const [expandScoreFormWhenEditing, setExpandScoreFormWhenEditing] = useState(false);
   const predictDeepLinkProcessingRef = useRef<string | null>(null);
@@ -463,12 +620,13 @@ export default function GamesHomeScreen({
     unknown
   > | null>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
-  const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats" | "preview" | "results" | "standings"
-  >(null);
+  const [pkWinner, setPkWinner] = useState<"home" | "away" | null>(null);
+  const [predictToolsTab, setPredictToolsTab] = useState<PredictToolsTab>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
-  const [goalScorerPick, setGoalScorerPick] = useState<WcGoalScorerPick | null>(null);
+  const [goalScorerPick, setGoalScorerPick] = useState<
+    WcGoalScorerPick | NbaTopScorerPick | null
+  >(null);
   const [predictSubmitting, setPredictSubmitting] = useState(false);
   const [predictedGameIds, setPredictedGameIds] = useState<Set<string>>(new Set());
   const [myPostIdByGameId, setMyPostIdByGameId] = useState<Record<string, string>>({});
@@ -495,6 +653,7 @@ export default function GamesHomeScreen({
     loading,
     error,
     games,
+    windowGameIds,
     peerGamesForSeries,
     dateKeysWithGames,
     hasWindowData,
@@ -504,9 +663,7 @@ export default function GamesHomeScreen({
     setSelectedLeague,
     goPrevDay,
     goNextDay,
-  } = useTodayGames();
-  /** データ未取得時のみスケルトン（キャッシュ表示中は裏更新でもスケルトンに戻さない） */
-  const showInitialSkeleton = loading && !hasWindowData;
+  } = useTodayGames({ enabled: preferredLeagueReady });
   const reduceMotion = useReducedMotion() ?? false;
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
@@ -514,6 +671,8 @@ export default function GamesHomeScreen({
     () => applyNativeGamesFilter(games, gamesFilter, teamNameById),
     [games, gamesFilter, teamNameById]
   );
+  const showInitialSkeleton =
+    (!preferredLeagueReady || loading) && !hasWindowData;
   const filterActive = useMemo(
     () => gamesFilterIsActive(gamesFilter),
     [gamesFilter]
@@ -530,16 +689,147 @@ export default function GamesHomeScreen({
     gamesFilter,
     teamNameById,
   ]);
-  const leagueHeaderLabel = useMemo(() => {
-    const key = selectedLeague === "wc" ? "wc" : "nba";
-    return LEAGUE_HEADER_LABEL[key];
-  }, [selectedLeague]);
+  const leagueHeaderLabel = LEAGUE_HEADER_LABEL.nba;
+
+  /** 初回チュートリアル — 本番 Games 画面上で進行 */
+  useEffect(() => {
+    const uid = fUser?.uid;
+    if (!uid || authStatus === "loading") return;
+    let cancelled = false;
+    void (async () => {
+      // 既読は uid 単位。端末共通キーだと別アカウントでスキップされる
+      const localSeen = await readAppTutorialSeenNative(uid);
+      if (cancelled || localSeen) return;
+      /** welcome 前に GLB を温める（ロゴ表示遅れ対策） */
+      prefetchRankingsLogoGlb();
+      const seen = await fetchAppTutorialSeenNative(uid);
+      if (cancelled || seen) return;
+      const existing = await readTutorialLivePhaseNative();
+      if (
+        existing === "results" ||
+        existing === "rankings" ||
+        existing === "groups" ||
+        existing === "profile" ||
+        existing === "horizon"
+      ) {
+        return;
+      }
+      const start: TutorialLivePhase = existing ?? "welcome";
+      await writeTutorialLivePhaseNative(start);
+      if (!cancelled) setTutorialPhase(start);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fUser?.uid, authStatus, setSelectedLeague]);
+
+  const applyTutorialRestart = useCallback(() => {
+    setIsPredictModalOpen(false);
+    setSelectedGame(null);
+    setExpandScoreFormWhenEditing(false);
+    setPredictSpectatorStartedNoPost(false);
+    setWelcomeWorldFly(false);
+    setWelcomeFlyDest(null);
+    setWelcomeHandoff(null);
+    setTutorialWelcomeHandoffNative(null);
+    setTutorialPhase("welcome");
+    void writeTutorialLivePhaseNative("welcome");
+    setTutorialLiveTrackNative(null);
+  }, []);
+
+  /** DEV「チュートリアル再開」— フォーカスに依存せず強制で welcome へ */
+  useEffect(() => {
+    return subscribeTutorialRestartNative(() => {
+      applyTutorialRestart();
+    });
+  }, [applyTutorialRestart]);
+
+  /** 他タブで完了・スキップしたとき、モック試合を即消す */
+  useEffect(() => {
+    return subscribeTutorialClearedNative(() => {
+      setIsPredictModalOpen(false);
+      setSelectedGame(null);
+      setExpandScoreFormWhenEditing(false);
+      setPredictSpectatorStartedNoPost(false);
+      setTutorialPhase(null);
+      setTutorialHorizonSubstepNative(0);
+    });
+  }, []);
+
+  /** ルート params 経由の再開（lazy タブでもマウント時に届く） */
+  useEffect(() => {
+    const at = routeParams?.restartTutorialAt;
+    if (!at) return;
+    applyTutorialRestart();
+    navigation.setParams({ restartTutorialAt: undefined });
+  }, [routeParams?.restartTutorialAt, applyTutorialRestart, navigation]);
+
+  /** 試合タブ上のチュートリアル中だけ外側棚を隠す。他タブへ blur したら cleanup で戻る */
+  useFocusEffect(
+    useCallback(() => {
+      setTutorialWelcomeBrandHidden(brandShelfInCamera);
+      return () => setTutorialWelcomeBrandHidden(false);
+    }, [brandShelfInCamera])
+  );
+
+  /** DEV「チュートリアル再開」など、他画面からフェーズが書き込まれた場合に同期 */
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void (async () => {
+        const restartAt = await consumeTutorialRestartTokenNative();
+        if (cancelled) return;
+        if (restartAt != null) {
+          applyTutorialRestart();
+          return;
+        }
+        const phase = await readTutorialLivePhaseNative();
+        await hydrateTutorialLiveTrackNative();
+        if (cancelled) return;
+        if (phase && phase !== "done") {
+          setTutorialPhase(phase);
+        } else {
+          /** 完了後も Games に results などが残るとモック試合が出続ける */
+          setTutorialPhase(null);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [applyTutorialRestart])
+  );
+
+  const setTutorialPhaseAndStore = useCallback(
+    (next: TutorialLivePhase | null) => {
+      void writeTutorialLivePhaseNative(next);
+      setTutorialPhase(next && next !== "done" ? next : null);
+    },
+    []
+  );
+
+  const completeTutorialFully = useCallback(() => {
+    const uid = fUser?.uid ?? null;
+    void markAppTutorialSeenNative(uid);
+    void writeTutorialLivePhaseNative(null);
+    setTutorialLiveTrackNative(null);
+    setTutorialWelcomeHandoffNative(null);
+    void clearTutorialLivePickNative();
+    setTutorialPhase(null);
+    requestTutorialClearedNative();
+  }, [fUser?.uid]);
+
+  const tutorialCopy = useMemo(
+    () => i18nT((language === "en" ? "en" : "ja") as Language),
+    [language]
+  );
+  const skipConfirm = tutorialSkipConfirmProps(tutorialCopy.tutorial);
 
   useEffect(() => {
     if (didInitPreferredLeagueRef.current || authStatus === "loading") return;
     const uid = fUser?.uid ?? null;
     if (!uid) {
       didInitPreferredLeagueRef.current = true;
+      setPreferredLeagueReady(true);
       return;
     }
 
@@ -548,39 +838,45 @@ export default function GamesHomeScreen({
       try {
         const snap = await getDoc(doc(db, "users", uid));
         if (cancelled) return;
-        const preferred = parsePreferredLeague(
-          snap.exists() ? snap.data()?.preferredLeague : null
-        );
+        const row = snap.exists()
+          ? (snap.data() as {
+              preferredLeague?: unknown;
+              displayName?: unknown;
+              language?: unknown;
+            })
+          : undefined;
+        const preferred = parsePreferredLeague(row?.preferredLeague ?? null);
         if (preferred) {
-          const gamesLeague = preferredLeagueToGamesLeague(preferred);
-          if (gamesLeague === "nba" || gamesLeague === "wc") {
-            setSelectedLeague(gamesLeague);
-          }
+          setSelectedLeague(preferredLeagueToGamesLeague(preferred));
         }
+        const name =
+          typeof row?.displayName === "string" ? row.displayName.trim() : "";
+        setUserDisplayName(name || (fUser?.displayName ?? ""));
+        setLanguage(row?.language === "en" ? "en" : "ja");
       } catch {
         // Web と同じく、取得できない場合は画面既定のリーグを使う。
+        if (!cancelled) {
+          setUserDisplayName(fUser?.displayName ?? "");
+          setLanguage("ja");
+        }
       } finally {
-        if (!cancelled) didInitPreferredLeagueRef.current = true;
+        if (!cancelled) {
+          didInitPreferredLeagueRef.current = true;
+          setPreferredLeagueReady(true);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [authStatus, fUser?.uid, setSelectedLeague]);
+  }, [authStatus, fUser?.uid, fUser?.displayName, setSelectedLeague]);
 
+  /** 旧 preferredLeague=wc / 保存状態が残っていても NBA に寄せる */
   useEffect(() => {
-    void readWcGamesTabAnnouncementSeenNative().then((seen) => {
-      if (!seen) setShowWcTabBadge(true);
-    });
-  }, []);
+    if (selectedLeague === "wc") setSelectedLeague("nba");
+  }, [selectedLeague, setSelectedLeague]);
 
-  useEffect(() => {
-    if (selectedLeague === "wc" && showWcTabBadge) {
-      void markWcGamesTabAnnouncementSeenNative();
-      setShowWcTabBadge(false);
-    }
-  }, [selectedLeague, showWcTabBadge]);
   const teamRecordById = useTeamRecordMap(games, selectedLeague);
   const formatSideRecord = useCallback(
     (side: unknown, leagueRaw?: unknown) =>
@@ -665,20 +961,21 @@ export default function GamesHomeScreen({
   }, [selectedGame, selectedLeague, language, peerGamesForSeries, formatGameDateMs]);
   const today = useMemo(() => startOfLocalDay(new Date()), []);
   const mainScrollContentStyle = useMemo(
-    () => [styles.mainScrollContent, { paddingBottom: spacing.sm + bottomReserveY }],
-    [bottomReserveY]
+    () => [
+      styles.mainScrollContent,
+      { paddingTop: topContentPadY, paddingBottom: spacing.sm + bottomReserveY },
+    ],
+    [bottomReserveY, topContentPadY]
   );
   const screenShellStyle = useMemo(
-    () => [styles.card, { paddingTop: topContentPadY, flex: 1, zIndex: 1 }],
-    [topContentPadY]
+    () => [styles.card, { paddingTop: 0, flex: 1, zIndex: 1 }],
+    []
   );
-  /** 表示中の暦月に属する試合日だけストリップに出す */
+  /** Web `gameDaysForStrip` 相当: 取得窓の試合日をそのまま出す（月で切らない） */
   const dayStripDates = useMemo(() => {
-    const monthPrefix = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST).slice(0, 7);
     const parsed = dateKeysForDayStrip
       .map((key) => parseDateKeyInTimeZone(key, TIMEZONE_JST))
-      .filter((d): d is Date => d != null)
-      .filter((d) => toDateKeyInTimeZone(d, TIMEZONE_JST).startsWith(monthPrefix));
+      .filter((d): d is Date => d != null);
     if (parsed.length === 0) {
       return [startOfLocalDay(selectedDate)];
     }
@@ -701,11 +998,13 @@ export default function GamesHomeScreen({
         league: selectedLeague,
         monthAnchor: prevAnchor,
         timeZone: TIMEZONE_JST,
+        apiBaseUrl: getUniterzApiBaseUrl(),
       }),
       fetchMonthHasGames({
         league: selectedLeague,
         monthAnchor: nextAnchor,
         timeZone: TIMEZONE_JST,
+        apiBaseUrl: getUniterzApiBaseUrl(),
       }),
     ])
       .then(([hasPrev, hasNext]) => {
@@ -732,16 +1031,40 @@ export default function GamesHomeScreen({
   );
   const selectedGameId = String(selectedGame?.id ?? "");
   const isEditingPrediction = Boolean(myPostIdByGameId[selectedGameId]);
-  const isGameDetailModalVisible = selectedGame != null && !isPredictModalOpen;
+  const isGameDetailModalVisible =
+    selectedGame != null && !isPredictModalOpen && resultDetailPostId == null;
 
   const gameIdSet = useMemo(
     () => new Set(games.map((g) => String(g.id ?? "")).filter(Boolean)),
     [games]
   );
+  const gameIdsKey = useMemo(
+    () => [...gameIdSet].sort().join(","),
+    [gameIdSet]
+  );
   const isSoccerPredict =
     String(selectedGame?.league ?? "").toLowerCase() === "pl" ||
     String(selectedGame?.league ?? "").toLowerCase() === "j1" ||
     String(selectedGame?.league ?? "").toLowerCase() === "wc";
+  const isKnockoutPredict = selectedGame
+    ? isWcKnockoutGame({
+        league: selectedGame.league,
+        knockout:
+          selectedGame.knockout === true
+            ? true
+            : selectedGame.knockout === false
+              ? false
+              : null,
+        roundLabel:
+          typeof selectedGame.roundLabel === "string"
+            ? selectedGame.roundLabel
+            : null,
+        wcStage:
+          typeof selectedGame.wcStage === "string"
+            ? selectedGame.wcStage
+            : null,
+      })
+    : false;
 
   const predictModalHomeLabel = useMemo(() => {
     if (!selectedGame) return "";
@@ -823,12 +1146,23 @@ export default function GamesHomeScreen({
       setWinner("away");
       return;
     }
+    if (isKnockoutPredict) {
+      setWinner(pkWinner);
+      return;
+    }
     if (isSoccerPredict) {
       setWinner("draw");
       return;
     }
     setWinner(null);
-  }, [isPredictModalOpen, scoreHome, scoreAway, isSoccerPredict]);
+  }, [
+    isPredictModalOpen,
+    scoreHome,
+    scoreAway,
+    isSoccerPredict,
+    isKnockoutPredict,
+    pkWinner,
+  ]);
 
   useEffect(() => {
     if (!isPredictModalOpen || !selectedGame || !fUser?.uid) return;
@@ -865,69 +1199,140 @@ export default function GamesHomeScreen({
     return () => clearInterval(timer);
   }, [selectedGame]);
 
+  const predictedGameIdsForList = useMemo(
+    () => predictedIdsForVisibleGames(fUser?.uid, gameIdSet, predictedGameIds),
+    [fUser?.uid, gameIdSet, predictedGameIds]
+  );
+  /** 未取得の予想を青で先塗りしない。キャッシュ済みなら即描画 */
+  const predictionPaintPending = Boolean(
+    fUser &&
+      gameIdSet.size > 0 &&
+      missingScheduleMyPostGameIds(fUser.uid, [...gameIdSet]).length > 0
+  );
+
   useEffect(() => {
     let alive = true;
-    async function loadMyPredictions() {
-      if (!fUser || gameIdSet.size === 0) {
-        setPredictedGameIds(new Set());
-        return;
-      }
-      try {
-        const snap = await getDocs(
-          query(
-            collection(db, "posts"),
-            where("authorUid", "==", fUser.uid),
-            limit(300)
+    async function fetchPostsForGameIds(need: string[]): Promise<ScheduleMyPostsMap> {
+      const found: ScheduleMyPostsMap = {};
+      if (need.length === 0) return found;
+      const snaps = [];
+      const IN_LIMIT = 10;
+      for (let i = 0; i < need.length; i += IN_LIMIT) {
+        const chunk = need.slice(i, i + IN_LIMIT);
+        snaps.push(
+          getDocs(
+            query(
+              collection(db, "posts"),
+              where("authorUid", "==", fUser!.uid),
+              where("gameId", "in", chunk),
+              where("schemaVersion", "==", 2)
+            )
           )
         );
-        if (!alive) return;
-        const ids = new Set<string>();
-        const postMap: Record<string, string> = {};
-        const predictionMap: Record<
-          string,
-          {
-            winner: "home" | "away" | "draw";
-            score: { home: number; away: number };
-            comment: string;
-            updatedAt?: unknown;
-            goalScorer?: unknown;
-            postStats?: Record<string, unknown> | null;
-          }
-        > = {};
+      }
+      const settled = await Promise.all(snaps);
+      for (const snap of settled) {
         snap.docs.forEach((row) => {
           const rowData = row.data();
-          const schemaVersion = Number(rowData?.schemaVersion ?? 0);
-          if (schemaVersion !== 2) return;
           const gameId = String(rowData?.gameId ?? "");
-          if (gameId && gameIdSet.has(gameId)) {
+          if (!gameId) return;
+          const winnerRaw = rowData?.prediction?.winner;
+          const homeRaw = rowData?.prediction?.score?.home;
+          const awayRaw = rowData?.prediction?.score?.away;
+          found[gameId] = {
+            postId: row.id,
+            winner:
+              winnerRaw === "home" ||
+              winnerRaw === "away" ||
+              winnerRaw === "draw"
+                ? winnerRaw
+                : undefined,
+            score:
+              typeof homeRaw === "number" && typeof awayRaw === "number"
+                ? { home: homeRaw, away: awayRaw }
+                : undefined,
+            comment:
+              typeof rowData?.comment === "string" ? rowData.comment : "",
+            updatedAt: rowData?.updatedAt ?? null,
+            goalScorer: rowData?.prediction?.goalScorer ?? null,
+            postStats:
+              rowData?.stats && typeof rowData.stats === "object"
+                ? (rowData.stats as Record<string, unknown>)
+                : null,
+          };
+        });
+      }
+      return found;
+    }
+    async function loadMyPredictions() {
+      if (!fUser) {
+        setPredictedGameIds(new Set());
+        setMyPostIdByGameId({});
+        setMyPredictionByGameId({});
+        return;
+      }
+      const gameIds = gameIdsKey ? gameIdsKey.split(",") : [];
+      if (gameIds.length === 0) return;
+      try {
+        // 予想保存後の再読込では absent を捨てて差分取得
+        if (myPredictionsReloadNonce > 0) {
+          clearScheduleMyPostsAbsent(fUser.uid, gameIds);
+        }
+        const applyMap = (found: ScheduleMyPostsMap) => {
+          const ids = new Set<string>();
+          const postMap: Record<string, string> = {};
+          const predictionMap: Record<
+            string,
+            {
+              winner: "home" | "away" | "draw";
+              score: { home: number; away: number };
+              comment: string;
+              updatedAt?: unknown;
+              goalScorer?: unknown;
+              postStats?: Record<string, unknown> | null;
+            }
+          > = {};
+          for (const [gameId, row] of Object.entries(found)) {
+            if (!gameIdSet.has(gameId)) continue;
             ids.add(gameId);
-            postMap[gameId] = row.id;
-            const winnerRaw = rowData?.prediction?.winner;
-            const homeRaw = rowData?.prediction?.score?.home;
-            const awayRaw = rowData?.prediction?.score?.away;
+            postMap[gameId] = row.postId;
             if (
-              (winnerRaw === "home" || winnerRaw === "away" || winnerRaw === "draw") &&
-              typeof homeRaw === "number" &&
-              typeof awayRaw === "number"
+              (row.winner === "home" ||
+                row.winner === "away" ||
+                row.winner === "draw") &&
+              row.score
             ) {
               predictionMap[gameId] = {
-                winner: winnerRaw,
-                score: { home: homeRaw, away: awayRaw },
-                comment:
-                  typeof rowData?.comment === "string" ? rowData.comment : "",
-                updatedAt: rowData?.updatedAt ?? null,
-                goalScorer: rowData?.prediction?.goalScorer ?? null,
-                postStats:
-                  rowData?.stats && typeof rowData.stats === "object"
-                    ? (rowData.stats as Record<string, unknown>)
-                    : null,
+                winner: row.winner,
+                score: row.score,
+                comment: row.comment ?? "",
+                updatedAt: row.updatedAt ?? null,
+                goalScorer: row.goalScorer ?? null,
+                postStats: row.postStats ?? null,
               };
             }
           }
-        });
-        setPredictedGameIds(ids);
-        setMyPostIdByGameId(postMap);
-        setMyPredictionByGameId(predictionMap);
+          setPredictedGameIds(ids);
+          setMyPostIdByGameId(postMap);
+          setMyPredictionByGameId(predictionMap);
+        };
+
+        applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
+
+        const needDay = missingScheduleMyPostGameIds(fUser.uid, gameIds);
+        if (needDay.length > 0) {
+          const foundDay = await fetchPostsForGameIds(needDay);
+          if (!alive) return;
+          mergeScheduleMyPostsCache(fUser.uid, needDay, foundDay);
+          applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
+        }
+
+        const needWindow = missingScheduleMyPostGameIds(fUser.uid, windowGameIds);
+        if (needWindow.length === 0) return;
+        const foundWindow = await fetchPostsForGameIds(needWindow);
+        if (!alive) return;
+        mergeScheduleMyPostsCache(fUser.uid, needWindow, foundWindow);
+        applyMap(peekScheduleMyPosts(fUser.uid, gameIds));
       } catch {
         if (!alive) return;
         setPredictedGameIds(new Set());
@@ -939,35 +1344,7 @@ export default function GamesHomeScreen({
     return () => {
       alive = false;
     };
-  }, [fUser, gameIdSet, myPredictionsReloadNonce]);
-
-  useEffect(() => {
-    let alive = true;
-    async function loadUserName() {
-      if (!fUser?.uid) {
-        setUserDisplayName("");
-        return;
-      }
-      try {
-        const snap = await getDoc(doc(db, "users", fUser.uid));
-        if (!alive) return;
-        const row = snap.data() as
-          | { displayName?: unknown; language?: unknown }
-          | undefined;
-        const name = typeof row?.displayName === "string" ? row.displayName.trim() : "";
-        setUserDisplayName(name || (fUser.displayName ?? ""));
-        setLanguage(row?.language === "en" ? "en" : "ja");
-      } catch {
-        if (!alive) return;
-        setUserDisplayName(fUser.displayName ?? "");
-        setLanguage("ja");
-      }
-    }
-    void loadUserName();
-    return () => {
-      alive = false;
-    };
-  }, [fUser?.uid, fUser?.displayName, myPredictionsReloadNonce]);
+  }, [fUser, gameIdsKey, gameIdSet, myPredictionsReloadNonce, windowGameIds]);
 
   const t = useMemo(() => getGamesTexts(language), [language]);
 
@@ -1104,7 +1481,7 @@ export default function GamesHomeScreen({
   const pageSwipeGesture = useGamesPageSwipe({
     onSwipeLeft: goNextGameDay,
     onSwipeRight: goPrevGameDay,
-    enabled: !loading,
+    enabled: !loading && !welcomeResting,
   });
 
   const predictOverlayMarketBar = useMemo(() => {
@@ -1117,15 +1494,15 @@ export default function GamesHomeScreen({
     const homePalette = resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a");
     const awayPalette = resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff");
     const marketBias = g.marketBias as { homePct?: number; awayPct?: number } | undefined;
+    const nestedMarket = g.market as
+      | { homePct?: number; awayPct?: number; homeRate?: number; awayRate?: number }
+      | undefined;
     return {
       gameId,
       league: selectedLeague,
       status: resolveGameStatus(g),
       score: resolveGameScore(g),
-      fallbackMarketBias:
-        marketBias?.homePct != null && marketBias?.awayPct != null
-          ? { homePct: marketBias.homePct, awayPct: marketBias.awayPct }
-          : null,
+      fallbackMarketBias: resolveMarketBiasFallback(marketBias, nestedMarket),
       homeColor: homePalette.primary,
       awayColor: awayPalette.primary,
       homeLabel: toCompactTeamName(g.league, homeName),
@@ -1207,6 +1584,9 @@ export default function GamesHomeScreen({
       awayTeamId: awaySide?.teamId ?? null,
       finalOt: resolveFinalMetaOt(selectedGame),
       pkScore: resolvePkScore(selectedGame),
+      topScorerCandidates: (selectedGame as { topScorerCandidates?: unknown })
+        .topScorerCandidates,
+      leadingScorers: (selectedGame as { leadingScorers?: unknown }).leadingScorers,
     });
   }, [selectedGame, selectedLeague, language, myPredictionByGameId]);
 
@@ -1254,7 +1634,22 @@ export default function GamesHomeScreen({
         }));
       }
     }
-    const existingPostId = editBootstrap?.postId ?? myPostIdByGameId[gameId];
+    const peekedPostId =
+      !editBootstrap?.postId && fUser?.uid
+        ? peekScheduleMyPosts(fUser.uid, [gameId])[gameId]?.postId
+        : undefined;
+    const existingPostId =
+      editBootstrap?.postId ?? myPostIdByGameId[gameId] ?? peekedPostId;
+    if (
+      gameId !== TUTORIAL_NBA_GAME_ID &&
+      resolveGameStatus(sourceGame) === "final" &&
+      existingPostId
+    ) {
+      setIsPredictModalOpen(false);
+      setSelectedGame(null);
+      setResultDetailPostId(existingPostId);
+      return;
+    }
     const existingPrediction = editBootstrap?.seed
       ? {
           winner: editBootstrap.seed.winner,
@@ -1272,6 +1667,7 @@ export default function GamesHomeScreen({
 
     setPredictSpectatorStartedNoPost(spectatorStartedNoPost);
     setWinner(null);
+    setPkWinner(null);
     setScoreHome("");
     setScoreAway("");
     setGoalScorerPick(null);
@@ -1302,7 +1698,23 @@ export default function GamesHomeScreen({
       setWinner(editBootstrap.seed.winner);
       setScoreHome(String(editBootstrap.seed.scoreHome));
       setScoreAway(String(editBootstrap.seed.scoreAway));
-      setGoalScorerPick(normalizeWcGoalScorerPick(editBootstrap.seed.goalScorer));
+      if (
+        editBootstrap.seed.scoreHome === editBootstrap.seed.scoreAway &&
+        (editBootstrap.seed.winner === "home" ||
+          editBootstrap.seed.winner === "away")
+      ) {
+        setPkWinner(editBootstrap.seed.winner);
+      } else {
+        setPkWinner(null);
+      }
+      {
+        const league = String(sourceGame.league ?? "").toLowerCase();
+        setGoalScorerPick(
+          league === "nba"
+            ? normalizeNbaTopScorerPick(editBootstrap.seed.goalScorer)
+            : normalizeWcGoalScorerPick(editBootstrap.seed.goalScorer)
+        );
+      }
       return;
     }
 
@@ -1328,8 +1740,21 @@ export default function GamesHomeScreen({
         setWinner(existingPrediction.winner);
         setScoreHome(String(existingPrediction.score.home));
         setScoreAway(String(existingPrediction.score.away));
-        const pick = normalizeWcGoalScorerPick(existingPrediction.goalScorer);
-        setGoalScorerPick(pick);
+        if (
+          existingPrediction.score.home === existingPrediction.score.away &&
+          (existingPrediction.winner === "home" ||
+            existingPrediction.winner === "away")
+        ) {
+          setPkWinner(existingPrediction.winner);
+        } else {
+          setPkWinner(null);
+        }
+        const league = String(sourceGame.league ?? "").toLowerCase();
+        setGoalScorerPick(
+          league === "nba"
+            ? normalizeNbaTopScorerPick(existingPrediction.goalScorer)
+            : normalizeWcGoalScorerPick(existingPrediction.goalScorer)
+        );
       }
     })();
   }
@@ -1346,6 +1771,12 @@ export default function GamesHomeScreen({
 
     proceedOpenPredictModal(sourceGame, editBootstrap);
   }
+
+  /** アワード/順位予想の戻る → 旧メニューフラグをクリア */
+  useEffect(() => {
+    if (!routeParams?.openMenu) return;
+    navigation.setParams({ openMenu: undefined });
+  }, [routeParams?.openMenu, navigation]);
 
   /** リザルト一覧などから `openPredictGameId` で予想モーダルを開く */
   useEffect(() => {
@@ -1418,52 +1849,55 @@ export default function GamesHomeScreen({
   }
 
   async function handleSubmitPrediction() {
-    if (!selectedGame || !fUser) {
+    if (!selectedGame) {
+      return;
+    }
+    const gameId = String(selectedGame.id ?? "");
+    if (!fUser) {
       return;
     }
     if (scoreHome.trim() === "" || scoreAway.trim() === "") {
       cyberAlert(t.missingWinnerTitle, t.predictionNeedsScoresBody);
       return;
     }
-    if (!winner) {
-      cyberAlert(t.invalidInputTitle, t.predictionNeedsWinnerScoreBody);
-      return;
-    }
+
     const homeNum = Number(scoreHome);
     const awayNum = Number(scoreAway);
-    if (
-      !Number.isFinite(homeNum) ||
-      !Number.isFinite(awayNum) ||
-      homeNum < 0 ||
-      awayNum < 0
-    ) {
-      cyberAlert(t.invalidInputTitle, t.invalidScoreBody);
-      return;
-    }
-    if (!isSoccerPredict && winner === "draw") {
-      cyberAlert(t.invalidInputTitle, t.invalidDrawLeagueBody);
-      return;
-    }
-    if (winner === "home" && homeNum <= awayNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidHomeWinBody);
-      return;
-    }
-    if (winner === "away" && awayNum <= homeNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidAwayWinBody);
-      return;
-    }
-    if (winner === "draw" && homeNum !== awayNum) {
-      cyberAlert(t.invalidInputTitle, t.invalidDrawScoreBody);
+    const league = selectedGame.league;
+    /** 得点から勝者を補完（NBA で winner が一時的に null でも投稿できるように） */
+    const winnerForSubmit =
+      winner ??
+      (Number.isFinite(homeNum) && Number.isFinite(awayNum)
+        ? homeNum > awayNum
+          ? "home"
+          : awayNum > homeNum
+            ? "away"
+            : isSoccerPredict
+              ? "draw"
+              : isKnockoutPredict
+                ? pkWinner
+                : null
+        : null);
+    const validated = validateClientPrediction({
+      winner: winnerForSubmit,
+      scoreHome: homeNum,
+      scoreAway: awayNum,
+      league,
+      knockout: isKnockoutPredict,
+      pkWinner,
+    });
+    if (!validated.ok) {
+      const body = clientPredictionErrorBody(t, validated.code);
+      cyberAlert(t.invalidInputTitle, body);
       return;
     }
 
-    const gameId = String(selectedGame.id ?? "");
     if (!gameId) {
       cyberAlert(t.submitErrorTitle, t.submitNoGameIdBody);
       return;
     }
 
-    const startAt = resolveGameStartAt(selectedGame);
+    /** チュートリアル用モック試合 — API を叩かず結果フェーズへ */
     if (isGameStarted(selectedGame)) {
       cyberAlert(t.submitLockedTitle, t.submitLockedBody);
       return;
@@ -1478,33 +1912,31 @@ export default function GamesHomeScreen({
     try {
       const existingPostId = myPostIdByGameId[gameId];
       const isEditing = Boolean(existingPostId);
-      const isWcGame = String(selectedGame.league ?? "").toLowerCase() === "wc";
-      const goalScorer =
-        isWcGame &&
-        goalScorerPick &&
-        isWcGoalScorerPickValidForPredictedScore(
-          goalScorerPick,
-          { home: homeNum, away: awayNum },
-          (selectedGame.home as { teamId?: string } | undefined)?.teamId,
-          (selectedGame.away as { teamId?: string } | undefined)?.teamId
-        )
-          ? goalScorerPick
-          : null;
+      const payload = buildClientPredictionPayload({
+        validated: validated.value,
+        league,
+        goalScorerPick,
+        homeTeamId: (selectedGame.home as { teamId?: string } | undefined)
+          ?.teamId,
+        awayTeamId: (selectedGame.away as { teamId?: string } | undefined)
+          ?.teamId,
+      });
+      const goalScorer = payload.goalScorer ?? undefined;
       if (existingPostId) {
         await updatePredictionPostApi(existingPostId, {
-          winner,
-          scoreHome: homeNum,
-          scoreAway: awayNum,
-          goalScorer: isWcGame ? goalScorer : undefined,
+          winner: payload.winner,
+          scoreHome: payload.score.home,
+          scoreAway: payload.score.away,
+          goalScorer,
         });
       } else {
         try {
           await createPredictionPostApi({
             gameId,
-            winner,
-            scoreHome: homeNum,
-            scoreAway: awayNum,
-            goalScorer: isWcGame ? goalScorer : undefined,
+            winner: payload.winner,
+            scoreHome: payload.score.home,
+            scoreAway: payload.score.away,
+            goalScorer,
           });
         } catch (err) {
           if (
@@ -1513,10 +1945,10 @@ export default function GamesHomeScreen({
             err.existingPostId
           ) {
             await updatePredictionPostApi(err.existingPostId, {
-              winner,
-              scoreHome: homeNum,
-              scoreAway: awayNum,
-              goalScorer: isWcGame ? goalScorer : undefined,
+              winner: payload.winner,
+              scoreHome: payload.score.home,
+              scoreAway: payload.score.away,
+              goalScorer,
             });
           } else {
             throw err;
@@ -1546,6 +1978,7 @@ export default function GamesHomeScreen({
       }
 
       setWinner(null);
+      setPkWinner(null);
       setScoreHome("");
       setScoreAway("");
       setGoalScorerPick(null);
@@ -1576,30 +2009,89 @@ export default function GamesHomeScreen({
   return (
     <View style={styles.screenRoot}>
       <View style={screenShellStyle}>
+      <TutorialWelcomeWorldCameraNative
+        active
+        flying={!welcomeBrandInWorld || welcomeWorldFly}
+        onFlyComplete={
+          welcomeBrandInWorld
+            ? () => {
+                const dest = welcomeFlyDestRef.current;
+                if (dest === "features") {
+                  setTutorialLiveTrackNative("features");
+                  setTutorialPhaseAndStore("gamesPickup");
+                  return;
+                }
+                setTutorialLiveTrackNative("full");
+                setTutorialPhaseAndStore("games");
+              }
+            : undefined
+        }
+        overlay={
+          welcomeBrandInWorld ? (
+            <TutorialLiveCoachNative
+              open
+              embedInCamera
+              title={tutorialCopy.tutorial.practice.welcomeTitle}
+              body={tutorialCopy.tutorial.practice.welcomeBody}
+              skipLabel={tutorialCopy.tutorial.skip}
+              nextLabel={tutorialCopy.tutorial.practice.welcomeFullCta}
+              altNextLabel={tutorialCopy.tutorial.practice.welcomeFeaturesCta}
+              visual="welcome"
+              {...skipConfirm}
+              onSkip={completeTutorialFully}
+              onWelcomeFlyStart={(dest) => {
+                welcomeFlyDestRef.current = dest;
+                setWelcomeFlyDest(dest);
+                setWelcomeWorldFly(true);
+                if (dest === "features") setTutorialLiveTrackNative("features");
+              }}
+              onNext={() => {
+                setTutorialLiveTrackNative("full");
+                setTutorialPhaseAndStore("games");
+              }}
+              onAltNext={() => {
+                setTutorialLiveTrackNative("features");
+                setTutorialPhaseAndStore("gamesPickup");
+              }}
+            />
+          ) : null
+        }
+      >
+      <View style={styles.welcomeWorldColumn}>
+      {brandShelfInCamera ? (
+        <UniterzBrandShelfNative includeSafeAreaTop title="UNITERZ" />
+      ) : null}
       <ScrollView
         ref={mainScrollRef}
         style={styles.mainScroll}
         contentContainerStyle={mainScrollContentStyle}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
+        scrollEnabled={!welcomeResting && tutorialUserScrollEnabled}
+        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+          mainScrollYRef.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       >
       <View style={styles.gamesHeaderShell}>
         <View style={styles.gamesHeaderTitleRow}>
           <View style={styles.gamesHeaderSideLeft}>
             <Animated.View
-              key={`menu-${headerMotionKey}`}
-              entering={webGamesMotion ? gamesTopBarMenuEntering : undefined}
+              key={`predict-${headerMotionKey}`}
+              entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
             >
-              <CyberMenuButton
-                size="md"
-                accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
-                onPress={() => setMenuOpen(true)}
-                badge={
-                  showWcTabBadge ? (
-                    <View style={styles.menuWcBadge}>
-                      <Text style={styles.menuWcBadgeText}>!</Text>
-                    </View>
-                  ) : null
+              <GamesSeasonPredictHeaderButtonsNative
+                onAwards={() =>
+                  navigation.navigate("SeasonPredict", { mode: "awards" })
+                }
+                onStandings={() =>
+                  navigation.navigate("SeasonPredict", { mode: "standings" })
+                }
+                awardsLabel={
+                  language === "ja" ? "アワード予想" : "Award Predictions"
+                }
+                standingsLabel={
+                  language === "ja" ? "順位予想" : "Standings Predictions"
                 }
               />
             </Animated.View>
@@ -1623,19 +2115,6 @@ export default function GamesHomeScreen({
                 accessibilityLabel={t.filter}
               />
             </Animated.View>
-            {selectedLeague === "nba" ? (
-              <Animated.View
-                key={`bracket-${headerMotionKey}`}
-                entering={webGamesMotion ? gamesTopBarBracketEntering : undefined}
-              >
-                <Pressable
-                  style={styles.bracketButton}
-                  onPress={() => navigation.navigate("PlayoffBracketView")}
-                >
-                  <Text style={styles.bracketButtonText}>{t.bracket}</Text>
-                </Pressable>
-              </Animated.View>
-            ) : null}
           </View>
         </View>
       {showInitialSkeleton ? (
@@ -1675,7 +2154,7 @@ export default function GamesHomeScreen({
 
       <GestureDetector gesture={pageSwipeGesture}>
       <View>
-      {showInitialSkeleton ? (
+      {showInitialSkeleton || predictionPaintPending ? (
         <View style={styles.skeletonList}>
           {SKELETON_ROWS.map((row) => (
             <SkeletonScanNative key={row} style={styles.skeletonCard}>
@@ -1697,7 +2176,7 @@ export default function GamesHomeScreen({
         </Text>
       ) : null}
 
-      {!showInitialSkeleton && !error ? (
+      {!showInitialSkeleton && !predictionPaintPending && !error ? (
         <Animated.View
           key={`sched-${scheduleBlockKey}`}
           entering={
@@ -1712,10 +2191,10 @@ export default function GamesHomeScreen({
             games={filteredGames}
             enteringAnimationEnabled={webGamesMotion}
             entranceVariant={cardListEntranceVariant}
-            predictedGameIds={predictedGameIds}
+            predictedGameIds={predictedGameIdsForList}
             language={language}
             t={t}
-            styles={styles}
+            styles={{ ...styles, ...gameCardListStyles }}
             openPredictModal={openPredictModal}
             resolveGameTeamName={resolveGameTeamName}
             toCompactTeamName={toCompactTeamName}
@@ -1729,12 +2208,26 @@ export default function GamesHomeScreen({
             getTeamRecordLabel={formatSideRecord}
             teamRecordById={teamRecordById}
             resolveTeamJerseyPalette={resolveTeamJerseyPalette}
+            tutorialPulseFirstCard={tutorialPhase === "tapCard"}
+            tutorialPulseLabel={
+              tutorialPhase === "tapCard"
+                ? tutorialCopy.tutorial.pulseHint
+                : undefined
+            }
+            tutorialRegisterMatchCard={
+              tutorialPhase === "tapCard" || tutorialPhase === "welcome"
+            }
+            tutorialRegisterPickupLabel={tutorialPhase === "gamesPickup"}
+            shellVariant="lineFrame"
+            pickupMark="left"
           />
         </Animated.View>
       ) : null}
       </View>
       </GestureDetector>
       </ScrollView>
+      </View>
+      </TutorialWelcomeWorldCameraNative>
 
       <GameDetailModal
         visible={isGameDetailModalVisible}
@@ -1778,6 +2271,9 @@ export default function GamesHomeScreen({
         setPredictToolsTab={setPredictToolsTab}
         winner={winner}
         isSoccerPredict={isSoccerPredict}
+        isKnockoutPredict={isKnockoutPredict}
+        pkWinner={pkWinner}
+        setPkWinner={setPkWinner}
         scoreAway={scoreAway}
         setScoreAway={setScoreAway}
         scoreHome={scoreHome}
@@ -1790,6 +2286,13 @@ export default function GamesHomeScreen({
           setExpandScoreFormWhenEditing(false);
           setPredictSpectatorStartedNoPost(false);
           setSelectedGame(null);
+        }}
+        onOpenTeamDetail={(teamId) => {
+          setIsPredictModalOpen(false);
+          setExpandScoreFormWhenEditing(false);
+          setPredictSpectatorStartedNoPost(false);
+          setSelectedGame(null);
+          navigation.navigate("TeamDetailPreview", { teamId });
         }}
         spectatorStartedNoPost={predictSpectatorStartedNoPost}
         predictionEditLockedAfterKickoff={
@@ -1805,6 +2308,106 @@ export default function GamesHomeScreen({
         setGoalScorerPick={setGoalScorerPick}
         mergedFinalPreview={predictMergedFinalPreview}
         myPostId={selectedGameId ? myPostIdByGameId[selectedGameId] ?? null : null}
+        isProUser={isProUser}
+      />
+      <ResultDetailScreen
+        visible={resultDetailPostId != null}
+        postId={resultDetailPostId}
+        language={language}
+        sections="cardAndLiveStats"
+        onClose={() => setResultDetailPostId(null)}
+      />
+
+      <TutorialLiveCoachNative
+        open={isTutorialGamesSubstep(tutorialPhase)}
+        title={
+          tutorialPhase === "gamesPickup"
+            ? tutorialCopy.tutorial.practice.gamesPickupTitle
+            : tutorialPhase === "gamesStats"
+              ? tutorialCopy.tutorial.practice.gamesStatsTitle
+              : tutorialCopy.tutorial.practice.gamesTitle
+        }
+        body={
+          tutorialPhase === "gamesPickup"
+            ? tutorialCopy.tutorial.practice.gamesPickupBody
+            : tutorialPhase === "gamesStats"
+              ? tutorialCopy.tutorial.practice.gamesStatsBody
+              : tutorialCopy.tutorial.practice.gamesBody
+        }
+        skipLabel={tutorialCopy.tutorial.skip}
+        nextLabel={tutorialCopy.tutorial.next}
+        backLabel={tutorialCopy.tutorial.back}
+        target={
+          tutorialPhase === "gamesStats"
+            ? "games-stats-edge"
+            : tutorialPhase === "gamesPickup" && filteredGames.length > 0
+              ? "match-pickup-label"
+              : tutorialPhase === "games" && filteredGames.length > 0
+                ? "match-card"
+                : null
+        }
+        visual={
+          tutorialPhase === "gamesStats"
+            ? null
+            : tutorialPhase === "gamesPickup"
+              ? filteredGames.length === 0
+                ? "matchCard"
+                : null
+              : filteredGames.length === 0
+                ? "matchCard"
+                : null
+        }
+        progressLabel={
+          !isTutorialGamesSubstep(tutorialPhase)
+            ? null
+            : formatTutorialGamesSubstepProgress(
+                tutorialCopy.tutorial.practice.progressLabel,
+                tutorialPhase
+              )
+        }
+        accentTone={
+          tutorialPhase === "gamesPickup" ||
+          (getTutorialLiveTrackNative() === "features" &&
+            tutorialPhase === "gamesStats")
+            ? "feature"
+            : "cyan"
+        }
+        {...skipConfirm}
+        onSkip={completeTutorialFully}
+        onBack={() => {
+          if (!isTutorialGamesSubstep(tutorialPhase)) return;
+          if (
+            getTutorialLiveTrackNative() === "features" &&
+            tutorialPhase === "gamesPickup"
+          ) {
+            setTutorialPhaseAndStore("welcome");
+            return;
+          }
+          setTutorialPhaseAndStore(prevTutorialGamesSubstep(tutorialPhase));
+        }}
+        onNext={() => {
+          if (!isTutorialGamesSubstep(tutorialPhase)) return;
+          if (
+            getTutorialLiveTrackNative() === "features" &&
+            tutorialPhase === "gamesStats"
+          ) {
+            setTutorialHorizonSubstepNative(0);
+            void (async () => {
+              await writeTutorialLivePhaseNative("horizon");
+              setTutorialPhase("horizon");
+              tabNavigation.navigate("ProfileTab", {
+                screen: "ProfileHome",
+                params: {},
+              });
+            })();
+            return;
+          }
+          const next = nextTutorialGamesSubstep(tutorialPhase);
+          setTutorialPhaseAndStore(next);
+          if (next === "results") {
+            tabNavigation.navigate("ResultTab", { screen: "ResultHome" });
+          }
+        }}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
         <PredictNextGameNativeModal
@@ -1839,21 +2442,19 @@ export default function GamesHomeScreen({
         teams={scheduleTeams}
         initial={gamesFilter}
         onApply={setGamesFilter}
+        league={selectedLeague}
       />
-      <SideMenuDrawerNative open={menuOpen} onClose={() => setMenuOpen(false)}>
-        <GamesDrawerMenuNative
-          league={selectedLeague === "wc" ? "wc" : "nba"}
-          language={language}
-          onSelectNba={() => {
-            setSelectedLeague("nba");
-            setMenuOpen(false);
-          }}
-          onSelectWorldCup={() => {
-            setSelectedLeague("wc");
-            setMenuOpen(false);
-          }}
-        />
-      </SideMenuDrawerNative>
+      <ProfileMenuEdgeHandleNative
+        onOpen={() => navigation.navigate("LeagueStats", { tab: "team" })}
+        label="STATS"
+        tutorialTargetId="games-stats-edge"
+        hidden={tutorialPhase === "welcome"}
+        fadeIn
+      />
+      <TutorialLiveHostNative
+        page="games"
+        language={(language === "en" ? "en" : "ja") as Language}
+      />
       </View>
     </View>
   );
@@ -1864,6 +2465,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
     position: "relative",
+    overflow: "visible",
   },
   card: {
     width: "100%",
@@ -1872,6 +2474,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingBottom: spacing.xs,
     gap: 6,
+    overflow: "visible",
+  },
+  welcomeWorldColumn: {
+    flex: 1,
   },
   gamesHeaderShell: {
     marginBottom: 8,
@@ -1911,27 +2517,6 @@ const styles = StyleSheet.create({
     width: 160,
     alignItems: "center",
     zIndex: 10,
-  },
-  menuWcBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#fbbf24",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#fbbf24",
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  menuWcBadgeText: {
-    color: "#451a03",
-    fontSize: 10,
-    fontWeight: "900",
-    lineHeight: 11,
   },
   /** DayStrip チップ単位の进入ラッパー（Web motion.div 相当） */
   dayStripChipAnimWrap: {
@@ -2018,23 +2603,6 @@ const styles = StyleSheet.create({
     color: "rgba(224,250,254,0.88)",
     fontSize: 9,
     fontWeight: "700",
-  },
-  bracketButton: {
-    minHeight: GAMES_HEADER_CONTROL_HEIGHT,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: "rgba(31,111,235,0.45)",
-    backgroundColor: "rgba(31,111,235,0.16)",
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bracketButtonText: {
-    color: "#8db6ff",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
   },
   /** Web `LeagueTabs` アクティブタブ相当：bg-white/10・border-white/20・rounded-lg */
   leagueChip: {
@@ -2281,7 +2849,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: spacing.xl,
     paddingTop: 0,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
   },
   gameCardOuter: {
     position: "relative",
@@ -2377,6 +2945,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textTransform: "uppercase",
     fontFamily: MATCH_CARD_DISPLAY_FONT,
+    transform: [{ skewX: "-10deg" }],
   },
   matchupGrid: {
     flexDirection: "row",
@@ -2438,9 +3007,9 @@ const styles = StyleSheet.create({
   teamNameMain: {
     color: colors.textPrimary,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "400",
     textAlign: "center",
-    letterSpacing: 0.5,
+    letterSpacing: 0.96,
     lineHeight: 18,
     marginTop: 0,
     marginBottom: 0,
@@ -2448,6 +3017,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: MATCH_CARD_DISPLAY_FONT,
     maxWidth: "100%",
+    transform: [{ skewX: "-6deg" }],
   },
   teamNameMainWc: {
     width: 72,
@@ -2831,16 +3401,13 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingTop: 0,
   },
-  /** MatchCard 仕切り：league 色＋入場アニメ相当の薄いシアン光彩 */
+  /** MatchCard 仕切り：白ヘアライン（直角カード向け） */
   leagueDivider: {
-    height: 2,
+    height: 1,
     width: "100%",
-    borderRadius: 999,
-    shadowColor: "rgb(0, 245, 255)",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 3,
+    borderRadius: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   wcBroadcastRow: {
     width: "100%",
@@ -2871,15 +3438,15 @@ const styles = StyleSheet.create({
   },
   cardFooterShell: {
     width: "100%",
-    paddingHorizontal: 8,
-    paddingTop: 0,
-    paddingBottom: 2,
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 10,
   },
-  /** MatchCard: h-8 ≈ 32, rounded-md = 6, 枠は style ではなくグラデ（Web に合わせ枠なし） */
+  /** MatchCard: h-8 ≈ 32, 直角 CTA（Web に合わせ角切りなし） */
   cardAction: {
     width: "100%",
     minHeight: 32,
-    borderRadius: 6,
+    borderRadius: 0,
     borderWidth: 0,
     overflow: "hidden",
     position: "relative",
@@ -2887,7 +3454,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "transparent",
     marginTop: 0,
-    marginBottom: 2,
+    marginBottom: 0,
     paddingVertical: 0,
     shadowColor: "transparent",
     shadowOffset: { width: 0, height: 0 },

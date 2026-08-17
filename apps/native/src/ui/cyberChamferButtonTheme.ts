@@ -19,14 +19,14 @@ export type CyberChamferTheme = {
   icon: string;
 };
 
-const PROFILE_PURPLE_THEME: CyberChamferTheme = {
+const MENU_YELLOW_THEME: CyberChamferTheme = {
   fill: CYBER_CHAMFER_FILL,
   stroke: CYBER_CHAMFER_STROKE,
   icon: CYBER_CHAMFER_ICON,
 };
 
 export const CYBER_CHAMFER_THEMES: Record<CyberChamferAction, CyberChamferTheme> = {
-  menu: PROFILE_PURPLE_THEME,
+  menu: MENU_YELLOW_THEME,
   close: {
     fill: CYBER_CHAMFER_FILL,
     stroke: CYBER_CHAMFER_CLOSE_STROKE,
@@ -42,5 +42,5 @@ export const CYBER_CHAMFER_THEMES: Record<CyberChamferAction, CyberChamferTheme>
     stroke: CYBER_CHAMFER_DELETE_STROKE,
     icon: CYBER_CHAMFER_DELETE_ICON,
   },
-  share: PROFILE_PURPLE_THEME,
+  share: MENU_YELLOW_THEME,
 };

@@ -39,14 +39,14 @@ export function CyberSideMenuSectionTitle({
       <p
         className={cn(
           nameOxanium.className,
-          "min-w-0 text-[10px] font-bold uppercase tracking-[0.24em] text-white/42"
+          "min-w-0 text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300/75"
         )}
       >
         {children}
       </p>
       <span
         aria-hidden
-        className="h-px min-w-0 flex-1 bg-linear-to-r from-cyan-400/25 to-transparent"
+        className="h-px min-w-0 flex-1 bg-linear-to-r from-cyan-400/40 to-transparent"
       />
     </div>
   );

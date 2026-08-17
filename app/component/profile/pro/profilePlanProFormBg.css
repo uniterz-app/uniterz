@@ -1,0 +1,11 @@
+/* PRO 背景 — 幾何フォーム */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--form) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--form) .profile-plan-pro-ambient {
+  display: none;
+}
+
+.profile-plan-pro-bg__form-skin,
+.profile-plan-pro-bg__form-hud {
+  opacity: 1;
+}

@@ -21,11 +21,9 @@ function filledSegCount(ratio: number, segmentCount: number): number {
 
 /** Web `ResultStatRatingBar` の metricKey → ランキング指標キー */
 function resultMetricToRankingKey(
-  metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3"
+  metricKey?: "upsetPoints" | "pointsV3"
 ): string {
   switch (metricKey) {
-    case "scorePrecision":
-      return "marginPrecision";
     case "upsetPoints":
       return "upsetScore";
     case "pointsV3":
@@ -122,8 +120,8 @@ type Props = {
   /** Web 互換（API 揃え） */
   animateMs?: number;
   delayMs?: number;
-  size?: "sm" | "md";
-  metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3";
+  size?: "sm" | "md" | "lg";
+  metricKey?: "upsetPoints" | "pointsV3";
 };
 
 /**
@@ -136,7 +134,7 @@ export default function ResultStatRatingBarNative({
 }: Props) {
   const accent = rankingMetricAccent(resultMetricToRankingKey(metricKey));
   const filled = filledSegCount(ratio, SEGMENTS);
-  const segH = size === "sm" ? 9 : 11;
+  const segH = size === "lg" ? 14 : size === "sm" ? 9 : 11;
 
   return (
     <View style={styles.track} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

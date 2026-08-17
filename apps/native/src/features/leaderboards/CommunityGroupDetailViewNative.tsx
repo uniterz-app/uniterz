@@ -3,6 +3,7 @@ import { cyberAlert } from "../../components/cyberAlert";
 import {
   ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { Language } from "../../../../../lib/i18n/language";
 import { buildCommunityInviteShareText } from "../../../../../lib/communities/inviteShare";
@@ -10,7 +11,7 @@ import {
   communityMetricToMobile,
   communityRowToRankingCardRow,
 } from "../../../../../lib/communities/leaderboardDisplayRow";
-import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
+import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import {
   RankingsCyberPanelNative,
@@ -158,8 +159,20 @@ export default function CommunityGroupDetailViewNative({
   );
 
   const rankMetricForProfile = communityMetricToMobile(metric);
-  const rankingCardRows = useMemo(() => rows.map((r) => communityRowToRankingCardRow(r, metric)), [rows, metric]);
+  const rankingItems = useMemo(
+    () =>
+      rows.map((r) => ({
+        rank: r.rank,
+        row: communityRowToRankingCardRow(r, metric),
+      })),
+    [rows, metric]
+  );
+  const rankingCardRows = useMemo(
+    () => rankingItems.map((item) => item.row),
+    [rankingItems]
+  );
   const lang = language as RankingsLanguage;
+  const reduceMotion = useReducedMotion() ?? false;
   const rankListEntranceKey = useMemo(
     () => `${groupId}:${metric}:${rows.map((r) => `${r.uid}:${r.rank}`).join("|")}`,
     [groupId, metric, rows]
@@ -237,7 +250,10 @@ export default function CommunityGroupDetailViewNative({
 
   const openProfile = useCallback(
     (row: (typeof rankingCardRows)[number]) => {
-      const handle = profilePathKeyFromRow(row);
+      const handle = warmPublicProfileFromRankingRowNative(row, {
+        // グループ行は期間集計のためカード全体スタッツには載せない
+        skipStatsPrime: true,
+      });
       if (handle && onOpenProfile) onOpenProfile(handle);
     },
     [onOpenProfile]
@@ -280,18 +296,21 @@ export default function CommunityGroupDetailViewNative({
         <Text style={styles.emptyRank}>{t.noEntries}</Text>
       ) : (
         <View style={styles.rankingList}>
-          {rankingCardRows.map((row, i) => (
+          {rankingItems.map((item, i) => (
             <RankingsListEntranceRowNative
-              key={row.uid ?? row.handle ?? `r-${i + 1}`}
+              key={item.row.uid ?? item.row.handle ?? `r-${item.rank}`}
               index={i}
               entranceKey={rankListEntranceKey}
             >
               <RankingListCardNative
-                row={row}
-                rank={i + 1}
+                row={item.row}
+                rank={item.rank}
                 metric={rankMetricForProfile}
                 language={lang}
-                onPress={onOpenProfile ? () => openProfile(row) : undefined}
+                animateCrown={item.rank === 1}
+                pageKey={rankListEntranceKey}
+                reduceMotion={reduceMotion}
+                onPress={onOpenProfile ? () => openProfile(item.row) : undefined}
               />
             </RankingsListEntranceRowNative>
           ))}
@@ -350,7 +369,7 @@ export default function CommunityGroupDetailViewNative({
 
   return (
     <View style={styles.root}>
-      <RankingsShellGridOverlay borderRadius={16} />
+      <RankingsShellGridOverlay borderRadius={0} />
       {scrollEnabled ? (
         <ScrollView contentContainerStyle={scrollStyle} showsVerticalScrollIndicator={false}>
           {content}
@@ -366,7 +385,7 @@ const styles = StyleSheet.create({
   root: {
     minHeight: 320,
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
-    borderRadius: 16,
+    borderRadius: 0,
     overflow: "hidden",
   },
   scroll: {
@@ -470,6 +489,7 @@ const styles = StyleSheet.create({
   },
   rankingSkeletonPanel: {
     marginBottom: 8,
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
   skeletonLine: {
     height: 12,
@@ -493,9 +513,13 @@ const styles = StyleSheet.create({
   rankingList: {
     marginTop: -4,
     marginBottom: 16,
-    gap: 0,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
   invitePanel: {
     marginTop: 4,
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
 });

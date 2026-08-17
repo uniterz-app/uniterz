@@ -1,10 +1,13 @@
 /**
- * Result detail / overlay: short TTL cache so the same game or team is not read repeatedly.
- * Same fields as a direct Firestore read; within TTL data may be slightly stale.
+ * Result detail / overlay: short TTL + inflight for games / teams.
+ * Firestore インスタンスは呼び出し側から渡す（Web / Native 共用）。
  */
 
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {
+  doc,
+  getDoc,
+  type Firestore,
+} from "firebase/firestore";
 import {
   nbaRegularSeasonWinsLosses,
   type NbaTeamRecordFields,
@@ -20,21 +23,40 @@ type GameCacheEntry = {
 };
 
 const gameDocCache = new Map<string, GameCacheEntry>();
+const gameDocInflight = new Map<
+  string,
+  Promise<{ exists: boolean; data: Record<string, unknown> | null }>
+>();
 
 export async function getCachedGameDocForResult(
-  gameId: string
+  gameId: string,
+  firestore: Firestore
 ): Promise<{ exists: boolean; data: Record<string, unknown> | null }> {
-  const hit = gameDocCache.get(gameId);
+  const safeId = gameId.trim();
+  if (!safeId) return { exists: false, data: null };
+
+  const hit = gameDocCache.get(safeId);
   const now = Date.now();
   if (hit && now - hit.at < GAME_DOC_TTL_MS) {
     return { exists: hit.exists, data: hit.data };
   }
 
-  const snap = await getDoc(doc(db, "games", gameId));
-  const exists = snap.exists();
-  const data = exists ? (snap.data() as Record<string, unknown>) : null;
-  gameDocCache.set(gameId, { at: now, exists, data });
-  return { exists, data };
+  const pending = gameDocInflight.get(safeId);
+  if (pending) return pending;
+
+  const promise = getDoc(doc(firestore, "games", safeId))
+    .then((snap) => {
+      const exists = snap.exists();
+      const data = exists ? (snap.data() as Record<string, unknown>) : null;
+      gameDocCache.set(safeId, { at: Date.now(), exists, data });
+      return { exists, data };
+    })
+    .finally(() => {
+      gameDocInflight.delete(safeId);
+    });
+
+  gameDocInflight.set(safeId, promise);
+  return promise;
 }
 
 export type TeamRecordSnapshot = {
@@ -45,6 +67,10 @@ export type TeamRecordSnapshot = {
 
 type TeamCacheEntry = { at: number; rec: TeamRecordSnapshot | null };
 const teamRecordCache = new Map<string, TeamCacheEntry>();
+const teamRecordInflight = new Map<
+  string,
+  Promise<TeamRecordSnapshot | null>
+>();
 
 function teamRecordFromDoc(
   d: NbaTeamRecordFields & { league?: string; rank?: number }
@@ -61,24 +87,39 @@ function teamRecordFromDoc(
 }
 
 export async function getCachedTeamRecord(
-  teamId: string
+  teamId: string,
+  firestore: Firestore
 ): Promise<TeamRecordSnapshot | null> {
-  const hit = teamRecordCache.get(teamId);
+  const safeId = teamId.trim();
+  if (!safeId) return null;
+
+  const hit = teamRecordCache.get(safeId);
   const now = Date.now();
   if (hit && now - hit.at < TEAM_RECORD_TTL_MS) {
     return hit.rec;
   }
 
-  const snap = await getDoc(doc(db, "teams", teamId));
-  if (!snap.exists()) {
-    teamRecordCache.set(teamId, { at: now, rec: null });
-    return null;
-  }
-  const d = snap.data() as NbaTeamRecordFields & {
-    league?: string;
-    rank?: number;
-  };
-  const rec = teamRecordFromDoc(d);
-  teamRecordCache.set(teamId, { at: now, rec });
-  return rec;
+  const pending = teamRecordInflight.get(safeId);
+  if (pending) return pending;
+
+  const promise = getDoc(doc(firestore, "teams", safeId))
+    .then((snap) => {
+      if (!snap.exists()) {
+        teamRecordCache.set(safeId, { at: Date.now(), rec: null });
+        return null;
+      }
+      const d = snap.data() as NbaTeamRecordFields & {
+        league?: string;
+        rank?: number;
+      };
+      const rec = teamRecordFromDoc(d);
+      teamRecordCache.set(safeId, { at: Date.now(), rec });
+      return rec;
+    })
+    .finally(() => {
+      teamRecordInflight.delete(safeId);
+    });
+
+  teamRecordInflight.set(safeId, promise);
+  return promise;
 }

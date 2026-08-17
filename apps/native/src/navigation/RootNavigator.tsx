@@ -1,8 +1,7 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
-import { db } from "../lib/firebase";
+import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
 import NativeStackBackdrop from "../components/NativeStackBackdrop";
 import type { AuthStackParamList, RootStackParamList } from "./types";
 import MainTabNavigator from "./MainTabNavigator";
@@ -11,7 +10,6 @@ import ResetPasswordScreenNative from "../features/auth/ResetPasswordScreenNativ
 import OnboardingScreenNative from "../features/auth/OnboardingScreenNative";
 import AuthEntryScreen from "../features/auth/AuthEntryScreen";
 import LandingScreenNative from "../features/legal/LandingScreenNative";
-import { prefetchRankingsLogoGlb } from "../features/rankings/rankingsLogoGlbCache";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -20,8 +18,8 @@ const transparentStack = {
   headerShown: false,
   contentStyle: { backgroundColor: "transparent" as const },
   animation: "fade" as const,
-  detachInactiveScreens: false,
-  freezeOnBlur: false,
+  detachInactiveScreens: true,
+  freezeOnBlur: true,
 };
 
 function AuthNavigator() {
@@ -50,8 +48,8 @@ function useNeedsOnboarding(uid: string | undefined): boolean | null {
       setNeeds(null);
       return;
     }
-    return onSnapshot(doc(db, "users", uid), (snap) => {
-      const handle = snap.data()?.handle;
+    return subscribeUserDocLive(uid, (data) => {
+      const handle = data?.handle;
       setNeeds(!handle || handle === "");
     });
   }, [uid]);
@@ -63,10 +61,6 @@ export default function RootNavigator() {
   const { status, fUser } = useFirebaseUser();
   const needsOnboarding = useNeedsOnboarding(fUser?.uid);
   const isAuthed = status === "ready" && !!fUser;
-
-  useEffect(() => {
-    if (isAuthed) prefetchRankingsLogoGlb();
-  }, [isAuthed]);
 
   if (status === "loading" || (isAuthed && needsOnboarding === null)) {
     /** 認証・プロフィール判定中はネイティブスプラッシュのまま（Landing の一瞬フラッシュを防ぐ） */

@@ -84,7 +84,7 @@ export default function CommunityTeamPicker({
                 type="button"
                 onClick={() => toggle(id)}
                 className={[
-                  "rounded-full border border-cyan-400/35 bg-cyan-500/15 font-medium text-cyan-100",
+                  "rounded-none border border-white bg-white font-medium text-black",
                   isWeb ? "px-3 py-1 text-sm" : "px-2.5 py-0.5 text-xs",
                 ].join(" ")}
               >
@@ -110,14 +110,14 @@ export default function CommunityTeamPicker({
         onChange={(e) => setQ(e.target.value)}
         placeholder={labels.search}
         className={[
-          "w-full rounded-xl border border-white/10 bg-black/40 px-3 text-white placeholder:text-white/30",
+          "w-full rounded-none border border-white/22 bg-black px-3 text-white placeholder:text-white/55",
           isWeb ? "py-2.5 text-base" : "py-2 text-sm",
         ].join(" ")}
       />
 
       <div
         className={[
-          "max-h-40 overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-black/25 p-1",
+          "max-h-40 overflow-y-auto overscroll-contain rounded-none border border-white/18 bg-black p-1",
           isWeb ? "max-h-48" : "",
         ].join(" ")}
       >
@@ -145,8 +145,8 @@ export default function CommunityTeamPicker({
                   "flex w-full items-center gap-2 rounded-lg px-2.5 text-left transition-colors",
                   isWeb ? "py-2 text-base" : "py-1.5 text-sm",
                   on
-                    ? "bg-cyan-500/20 text-cyan-50"
-                    : "text-white/75 hover:bg-white/5",
+                    ? "bg-white text-black"
+                    : "text-white/75 hover:bg-white/8",
                   disabled ? "cursor-not-allowed opacity-40" : "",
                 ].join(" ")}
               >
@@ -154,7 +154,7 @@ export default function CommunityTeamPicker({
                   className={[
                     "flex size-4 shrink-0 items-center justify-center rounded border",
                     on
-                      ? "border-cyan-300 bg-cyan-400/30"
+                      ? "border-black bg-black text-white"
                       : "border-white/20",
                   ].join(" ")}
                   aria-hidden

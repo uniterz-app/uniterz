@@ -8,7 +8,7 @@ type Props = {
   className?: string;
 };
 
-/** ランキング更新時刻・累積スコアの説明（タイトル直下に常時表示） */
+/** ランキング更新時刻・累積スコアの説明（マイランクカードと指標タブの間） */
 export default function RankingsScheduleNotice({
   language,
   className = "",

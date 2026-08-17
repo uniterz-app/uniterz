@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { nameBebas } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -87,7 +87,7 @@ export function RankDeltaBadge({
 
   const up = delta > 0;
   const amount = Math.abs(Math.trunc(delta));
-  const Icon = up ? ArrowUp : ArrowDown;
+  const Icon = up ? ArrowUpRight : ArrowDownRight;
   const aria = up
     ? m.rankUpAria.replace("{n}", String(amount))
     : m.rankDownAria.replace("{n}", String(amount));

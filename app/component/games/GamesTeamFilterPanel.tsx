@@ -1,29 +1,53 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, SlidersHorizontal, CircleHelp, X } from "lucide-react";
 import cn from "clsx";
-import {
-  CYBER_FILTER_PANEL_CLASS,
-} from "@/lib/ui/cyberFilterBar";
 import { gamesHeaderFilterButtonClasses } from "@/lib/ui/gamesHeaderBar";
 import type { ScheduleTeamOption } from "@/lib/games/useScheduleTeams";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import {
+  bracketMarketTeamTypography,
+  matchCardTeamNameStyle,
+} from "@/lib/games/teamDisplayTypography";
 import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
+import type { League } from "@/lib/leagues";
+import {
+  getTeamPrimaryColor,
+  softenTeamUiColor,
+  teamColorOnFill,
+  teamColorRgba,
+} from "@/lib/team-colors";
 import CountryFlag from "@/app/component/games/CountryFlag";
-import { teamIdToWcCountry } from "@/lib/wc/wcCountry";
+import { teamIdToWcCountry } from "@/lib/legacyWcWebShims";
 import {
   gamesFilterHelpButtonLabel,
   gamesFilterHelpParagraphs,
 } from "@/lib/games/gamesFilterHelp";
+import { nameOxanium } from "@/lib/fonts";
+
+const GAMES_FILTER_PANEL_CLASS = "games-filter-panel";
+
+function teamFilterAccent(league: League, teamId: string) {
+  return softenTeamUiColor(getTeamPrimaryColor(league, teamId));
+}
+
+function teamFilterAccentVars(league: League, teamId: string): CSSProperties {
+  const accent = teamFilterAccent(league, teamId);
+  return {
+    ["--team-accent" as string]: accent,
+    ["--team-accent-fill" as string]: teamColorRgba(accent, 0.22),
+    ["--team-accent-fill-strong" as string]: teamColorRgba(accent, 0.34),
+    ["--team-check" as string]: teamColorOnFill(accent),
+  };
+}
 
 type Props = {
   teams: ScheduleTeamOption[];
-  /** 最大2件のチーム doc ID */
+  /** 選択中のチーム doc ID */
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   /** 2チーム時のみ有効。URL の team_mode と同期 */
@@ -40,6 +64,7 @@ type Props = {
   compactHeader?: boolean;
   language: Language;
   layoutMobile: boolean;
+  league: League;
 };
 
 function parseMarginDraft(s: string): number | null {
@@ -64,9 +89,6 @@ function FilterTeamFlag({ teamId }: { teamId: string }) {
   );
 }
 
-/** Framer Motion の transform が Tailwind の translate を上書きしないよう、中央寄せは motion で行う */
-const DESKTOP_CENTER_MOTION = { x: "-50%", y: "-50%" } as const;
-
 export default function GamesTeamFilterPanel({
   teams,
   selectedIds,
@@ -81,10 +103,12 @@ export default function GamesTeamFilterPanel({
   compactHeader = false,
   language,
   layoutMobile,
+  league,
 }: Props) {
   const m = t(language);
   const reduceMotion = useReducedMotion();
   const tabFont = bracketMarketTeamTypography(layoutMobile);
+  const teamNameFont = matchCardTeamNameStyle(layoutMobile);
   /** モバイルで number/search 入力にフォーカスしたとき、16px 未満だと iOS がページを拡大するのを防ぐ */
   const filterInputTextClass = layoutMobile
     ? "text-[16px] leading-normal"
@@ -141,7 +165,7 @@ export default function GamesTeamFilterPanel({
     (id: string) => {
       if (selectedIds.includes(id)) {
         onChange(selectedIds.filter((x) => x !== id));
-      } else if (selectedIds.length < 2) {
+      } else {
         onChange([...selectedIds, id]);
       }
     },
@@ -175,6 +199,299 @@ export default function GamesTeamFilterPanel({
   );
   const helpButtonLabel = gamesFilterHelpButtonLabel(language);
 
+  const panelBody = (
+    <div className="games-filter-panel-shell">
+      <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
+        {layoutMobile && (
+          <div className="flex justify-center pt-2 pb-1" aria-hidden>
+            <div className="h-1 w-12 rounded-full bg-white/25" />
+          </div>
+        )}
+
+        <div className="games-filter-panel-header md:px-5 md:pt-4">
+          <div className="min-w-0 flex-1">
+            <p className={nameOxanium.className + " games-filter-kicker"}>
+              {language === "ja" ? "FILTER // 試合" : "FILTER // SCHEDULE"}
+            </p>
+            <h2
+              id="games-team-filter-title"
+              className="text-[15px] font-bold tracking-wide text-white/95 md:text-base"
+              style={tabFont}
+            >
+              {m.games.filterSchedule}
+            </h2>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setHelpOpen((v) => !v)}
+              aria-expanded={helpOpen}
+              aria-controls="games-team-filter-help"
+              className={cn(
+                "games-filter-icon-btn",
+                helpOpen && "games-filter-icon-btn--active",
+              )}
+              style={tabFont}
+            >
+              <CircleHelp size={15} strokeWidth={2.2} aria-hidden />
+              <span>{helpButtonLabel}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="games-filter-icon-btn games-filter-icon-btn--square"
+              aria-label={m.common.close}
+            >
+              <X size={18} strokeWidth={2.2} />
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence initial={false}>
+          {helpOpen ? (
+            <motion.div
+              id="games-team-filter-help"
+              key="games-filter-help"
+              initial={reduceMotion ? false : { height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18 }}
+              className="overflow-hidden border-b border-white/10 bg-white/[0.04]"
+            >
+              <div className="space-y-2 px-4 py-3 md:px-5">
+                {helpParagraphs.map((paragraph) => (
+                  <p
+                    key={paragraph}
+                    className="text-[11px] leading-relaxed text-white/50 md:text-xs"
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        {activeCount > 0 ? (
+          <div
+            className={cn(
+              "games-filter-selection-bar",
+              activeCount === 2 && "games-filter-selection-bar--dual",
+            )}
+          >
+            <div className="games-filter-chip-row">
+              {selectedIds.map((id) => {
+                const name = teams.find((t) => t.id === id)?.name ?? id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => toggle(id)}
+                    className="games-filter-chip"
+                    style={{ ...teamNameFont, ...teamFilterAccentVars(league, id) }}
+                  >
+                    <FilterTeamFlag teamId={id} />
+                    <span className="max-w-[200px] truncate">{name}</span>
+                    <X size={12} className="opacity-70" aria-hidden />
+                  </button>
+                );
+              })}
+            </div>
+            {activeCount === 2 ? (
+              <div className="games-filter-scope-inline">
+                <p className="games-filter-scope-label" style={tabFont}>
+                  {m.games.matchListScope}
+                </p>
+                <div className="games-filter-seg-track games-filter-seg-track--compact">
+                  <button
+                    type="button"
+                    onClick={() => onMatchModeChange("any")}
+                    className={cn(
+                      "games-filter-seg-btn games-filter-seg-btn--compact",
+                      matchMode === "any" && "games-filter-seg-btn--active",
+                    )}
+                    style={tabFont}
+                  >
+                    {m.games.eitherTeam}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onMatchModeChange("h2h")}
+                    className={cn(
+                      "games-filter-seg-btn games-filter-seg-btn--compact",
+                      matchMode === "h2h" && "games-filter-seg-btn--active",
+                    )}
+                    style={tabFont}
+                  >
+                    {m.games.h2hOnly}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div
+          className={cn(
+            "games-filter-team-search-primary",
+            activeCount === 2 && "games-filter-team-search-primary--dual",
+          )}
+        >
+          <div className="games-filter-team-search-head">
+            <p className="games-filter-section-label mb-2" style={tabFont}>
+              {language === "ja" ? "チーム検索" : "TEAM SEARCH"}
+            </p>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={m.games.searchTeams}
+                className={cn("games-filter-search", filterInputTextClass)}
+                style={tabFont}
+              />
+            </div>
+          </div>
+
+          <div className="games-filter-team-search-list">
+            <div
+              className="flex flex-col gap-1"
+              style={{
+                paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
+              }}
+            >
+              {filteredTeams.map((t) => {
+                const sel = selectedIds.includes(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => toggle(t.id)}
+                    className={cn(
+                      "games-filter-team-row",
+                      sel && "games-filter-team-row--selected",
+                    )}
+                    style={sel ? teamFilterAccentVars(league, t.id) : undefined}
+                  >
+                    <span
+                      className={cn(
+                        "games-filter-check",
+                        sel && "games-filter-check--on",
+                      )}
+                      aria-hidden
+                    >
+                      {sel ? "✓" : ""}
+                    </span>
+                    <FilterTeamFlag teamId={t.id} />
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 truncate",
+                        dense ? "text-xs" : "text-sm",
+                        sel ? "text-white" : "text-white/88",
+                      )}
+                      style={teamNameFont}
+                    >
+                      {t.name}
+                    </span>
+                  </button>
+                );
+              })}
+              {filteredTeams.length === 0 && (
+                <p className="py-8 text-center text-xs text-white/40">
+                  {m.games.noTeamMatch}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={cn(
+            "games-filter-margin-wrap border-t border-white/10",
+            activeCount === 2 && "games-filter-margin-wrap--dual",
+          )}
+        >
+          <div className="games-filter-margin-glass">
+            <div className="games-filter-margin-inline">
+              <p className="games-filter-margin-kicker" style={tabFont}>
+                <span className="games-filter-margin-kicker-mark" aria-hidden />
+                {m.games.marginRange}
+              </p>
+              <div className="games-filter-margin-fields">
+                <label className="games-filter-margin-field">
+                  <span style={tabFont}>{m.games.marginMin}</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={200}
+                    step={1}
+                    value={draftMarginMin}
+                    onChange={(e) => setDraftMarginMin(e.target.value)}
+                    onBlur={commitMargins}
+                    placeholder="—"
+                    className={cn(
+                      "games-filter-input games-filter-input--glass",
+                      filterInputTextClass,
+                    )}
+                    style={tabFont}
+                  />
+                </label>
+                <label className="games-filter-margin-field">
+                  <span style={tabFont}>{m.games.marginMax}</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={200}
+                    step={1}
+                    value={draftMarginMax}
+                    onChange={(e) => setDraftMarginMax(e.target.value)}
+                    onBlur={commitMargins}
+                    placeholder="—"
+                    className={cn(
+                      "games-filter-input games-filter-input--glass",
+                      filterInputTextClass,
+                    )}
+                    style={tabFont}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="games-filter-footer md:px-5">
+          <button
+            type="button"
+            onClick={handleClearAll}
+            disabled={activeCount === 0 && !marginFilterActive}
+            className="games-filter-clear-btn"
+            style={tabFont}
+          >
+            {m.games.clearAll}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              commitMargins();
+              setOpen(false);
+              setQ("");
+            }}
+            className="games-filter-done-btn"
+            style={tabFont}
+          >
+            {m.common.done}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const overlay = (
     <AnimatePresence>
       {open ? (
@@ -191,44 +508,26 @@ export default function GamesTeamFilterPanel({
           onClick={() => setOpen(false)}
         />
       ) : null}
-      {open ? (
+      {open && layoutMobile ? (
         <motion.div
           key="games-filter-panel"
           role="dialog"
           aria-modal="true"
           aria-labelledby="games-team-filter-title"
           className={cn(
-            "fixed flex flex-col overflow-hidden text-white",
-            layoutMobile
-              ? "inset-x-0 bottom-0 max-h-[min(85dvh,640px)] min-h-[min(40dvh,320px)] w-full rounded-t-[1.35rem] border border-cyan-400/20 border-b-0 bg-[#070d14]/96 shadow-[0_0_48px_rgba(34,211,238,0.12)] backdrop-blur-xl"
-              : cn(
-                  CYBER_FILTER_PANEL_CLASS,
-                  "left-1/2 top-1/2 max-h-[min(80vh,620px)] w-[min(420px,calc(100vw-1.5rem))]",
-                ),
+            GAMES_FILTER_PANEL_CLASS,
+            "games-filter-panel--sheet",
+            "fixed inset-x-0 bottom-0 z-[1000001] flex w-full flex-col",
+            activeCount === 2
+              ? "max-h-[min(92dvh,720px)] min-h-[min(52dvh,380px)]"
+              : "max-h-[min(85dvh,640px)] min-h-[min(40dvh,320px)]",
           )}
-          style={{ zIndex: OVERLAY_Z + 1 }}
-          initial={
-            reduceMotion
-              ? false
-              : layoutMobile
-                ? { y: "100%", opacity: 1 }
-                : { opacity: 0, scale: 0.97, ...DESKTOP_CENTER_MOTION }
-          }
-          animate={
-            reduceMotion
-              ? layoutMobile
-                ? { opacity: 1, y: 0 }
-                : { opacity: 1, ...DESKTOP_CENTER_MOTION }
-              : layoutMobile
-                ? { opacity: 1, y: 0 }
-                : { opacity: 1, scale: 1, ...DESKTOP_CENTER_MOTION }
-          }
+          initial={reduceMotion ? false : { y: "100%", opacity: 1 }}
+          animate={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
           exit={
             reduceMotion
               ? { opacity: 0 }
-              : layoutMobile
-                ? { y: "100%", opacity: 1 }
-                : { opacity: 0, scale: 0.97, ...DESKTOP_CENTER_MOTION }
+              : { y: "100%", opacity: 1 }
           }
           transition={{
             type: "spring",
@@ -238,292 +537,38 @@ export default function GamesTeamFilterPanel({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {layoutMobile && (
-            <div className="flex justify-center pt-2 pb-1" aria-hidden>
-              <div className="h-1 w-10 rounded-full bg-white/20" />
-            </div>
-          )}
-
-          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pb-3 pt-3 md:px-5 md:pt-4">
-            <h2
-              id="games-team-filter-title"
-              className="min-w-0 flex-1 text-[15px] font-bold tracking-wide text-white/95 md:text-base"
-              style={tabFont}
-            >
-              {m.games.filterSchedule}
-            </h2>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setHelpOpen((v) => !v)}
-                aria-expanded={helpOpen}
-                aria-controls="games-team-filter-help"
-                className={cn(
-                  "inline-flex h-9 items-center gap-1 rounded-full border px-2.5 text-[11px] font-semibold transition md:text-xs",
-                  helpOpen
-                    ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
-                    : "border-white/12 bg-white/[0.06] text-white/75 hover:bg-white/10 hover:text-white/90",
-                )}
-                style={tabFont}
-              >
-                <CircleHelp size={15} strokeWidth={2.2} aria-hidden />
-                <span>{helpButtonLabel}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/80 transition hover:bg-white/10"
-                aria-label={m.common.close}
-              >
-                <X size={18} strokeWidth={2.2} />
-              </button>
-            </div>
-          </div>
-
-          <AnimatePresence initial={false}>
-            {helpOpen ? (
-              <motion.div
-                id="games-team-filter-help"
-                key="games-filter-help"
-                initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                transition={{ duration: reduceMotion ? 0 : 0.18 }}
-                className="overflow-hidden border-b border-white/[0.06]"
-              >
-                <div className="space-y-2 px-4 py-3 md:px-5">
-                  {helpParagraphs.map((paragraph) => (
-                    <p
-                      key={paragraph}
-                      className="text-[11px] leading-relaxed text-white/45 md:text-xs"
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-
-          {activeCount > 0 && (
-            <div className="flex flex-wrap gap-2 border-b border-white/[0.06] px-4 py-2.5 md:px-5">
-              {selectedIds.map((id) => {
-                const name = teams.find((t) => t.id === id)?.name ?? id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => toggle(id)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/35 bg-cyan-500/15 px-2.5 py-1 text-[11px] font-medium text-cyan-100/95 transition hover:bg-cyan-500/25"
-                    style={tabFont}
-                  >
-                    <FilterTeamFlag teamId={id} />
-                    <span className="max-w-[200px] truncate">{name}</span>
-                    <X size={12} className="opacity-70" aria-hidden />
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {activeCount === 2 && (
-            <div className="border-b border-white/[0.06] px-4 py-2.5 md:px-5">
-              <p
-                className="mb-2 text-[10px] font-medium uppercase tracking-wide text-white/40"
-                style={tabFont}
-              >
-                {m.games.matchListScope}
-              </p>
-              <div className="flex gap-1.5 rounded-xl border border-white/10 bg-black/35 p-1">
-                <button
-                  type="button"
-                  onClick={() => onMatchModeChange("any")}
-                  className={cn(
-                    "min-h-9 flex-1 rounded-lg px-2 py-2 text-[11px] font-semibold transition md:text-xs",
-                    matchMode === "any"
-                      ? "bg-cyan-500/25 text-cyan-50 ring-1 ring-cyan-400/35"
-                      : "text-white/55 hover:bg-white/[0.06] hover:text-white/80",
-                  )}
-                  style={tabFont}
-                >
-                  {m.games.eitherTeam}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onMatchModeChange("h2h")}
-                  className={cn(
-                    "min-h-9 flex-1 rounded-lg px-2 py-2 text-[11px] font-semibold transition md:text-xs",
-                    matchMode === "h2h"
-                      ? "bg-cyan-500/25 text-cyan-50 ring-1 ring-cyan-400/35"
-                      : "text-white/55 hover:bg-white/[0.06] hover:text-white/80",
-                  )}
-                  style={tabFont}
-                >
-                  {m.games.h2hOnly}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="px-4 py-2.5 md:px-5">
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35"
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={m.games.searchTeams}
-                className={cn(
-                  "w-full rounded-xl border border-white/12 bg-black/40 py-2.5 pl-9 pr-3 text-white/90 outline-none ring-0 transition placeholder:text-white/35 focus:border-cyan-400/40 focus:bg-black/50",
-                  filterInputTextClass,
-                )}
-                style={tabFont}
-              />
-            </div>
-          </div>
-
-          <div
+          {panelBody}
+        </motion.div>
+      ) : null}
+      {open && !layoutMobile ? (
+        <motion.div
+          key="games-filter-panel-wrap"
+          className="pointer-events-none fixed inset-0 z-[1000001] flex items-center justify-center p-3"
+          initial={false}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="games-team-filter-title"
             className={cn(
-              "min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3 pt-1 md:px-4",
-              "max-h-[min(46dvh,400px)]",
+              GAMES_FILTER_PANEL_CLASS,
+              "pointer-events-auto flex max-h-[min(80vh,620px)] w-[min(420px,calc(100vw-1.5rem))] flex-col overflow-hidden text-white",
             )}
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
+            transition={{
+              type: "spring",
+              stiffness: 420,
+              damping: 36,
+              mass: 0.85,
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="flex flex-col gap-1.5"
-              style={{
-                paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))",
-              }}
-            >
-              {filteredTeams.map((t) => {
-                const sel = selectedIds.includes(t.id);
-                const atCap = selectedIds.length >= 2 && !sel;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    disabled={atCap}
-                    onClick={() => toggle(t.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition",
-                      sel
-                        ? "border-cyan-400/40 bg-gradient-to-r from-cyan-500/14 to-transparent"
-                        : "border-white/[0.08] bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.06]",
-                      atCap &&
-                        "cursor-not-allowed opacity-40 hover:bg-white/[0.03]",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[10px] font-bold",
-                        sel
-                          ? "border-cyan-300/60 bg-cyan-400/20 text-cyan-50"
-                          : "border-white/14 text-transparent",
-                      )}
-                      aria-hidden
-                    >
-                      {sel ? "✓" : ""}
-                    </span>
-                    <FilterTeamFlag teamId={t.id} />
-                    <span
-                      className={cn(
-                        "min-w-0 flex-1 truncate",
-                        dense ? "text-xs" : "text-sm",
-                        sel ? "text-white" : "text-white/88",
-                      )}
-                      style={tabFont}
-                    >
-                      {t.name}
-                    </span>
-                  </button>
-                );
-              })}
-              {filteredTeams.length === 0 && (
-                <p className="py-8 text-center text-xs text-white/40">
-                  {m.games.noTeamMatch}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="border-t border-white/[0.06] px-4 py-2.5 md:px-5">
-            <p
-              className="mb-2 text-[10px] font-medium uppercase tracking-wide text-white/40"
-              style={tabFont}
-            >
-              {m.games.marginRange}
-            </p>
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="flex min-w-[5.5rem] flex-1 flex-col gap-1">
-                <span className="text-[10px] text-white/45" style={tabFont}>
-                  {m.games.marginMin}
-                </span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={200}
-                  step={1}
-                  value={draftMarginMin}
-                  onChange={(e) => setDraftMarginMin(e.target.value)}
-                  onBlur={commitMargins}
-                  placeholder="—"
-                  className={cn(
-                    "w-full rounded-lg border border-white/12 bg-black/40 px-2 py-2 text-white/90 outline-none focus:border-cyan-400/40",
-                    filterInputTextClass,
-                  )}
-                  style={tabFont}
-                />
-              </label>
-              <label className="flex min-w-[5.5rem] flex-1 flex-col gap-1">
-                <span className="text-[10px] text-white/45" style={tabFont}>
-                  {m.games.marginMax}
-                </span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={200}
-                  step={1}
-                  value={draftMarginMax}
-                  onChange={(e) => setDraftMarginMax(e.target.value)}
-                  onBlur={commitMargins}
-                  placeholder="—"
-                  className={cn(
-                    "w-full rounded-lg border border-white/12 bg-black/40 px-2 py-2 text-white/90 outline-none focus:border-cyan-400/40",
-                    filterInputTextClass,
-                  )}
-                  style={tabFont}
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/10 px-4 py-3 md:px-5">
-            <button
-              type="button"
-              onClick={handleClearAll}
-              disabled={activeCount === 0 && !marginFilterActive}
-              className="rounded-lg border border-white/12 px-3 py-2 text-xs font-medium text-white/70 transition enabled:hover:border-white/20 enabled:hover:bg-white/[0.05] disabled:opacity-35"
-              style={tabFont}
-            >
-              {m.games.clearAll}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                commitMargins();
-                setOpen(false);
-                setQ("");
-              }}
-              className="rounded-lg border border-cyan-400/35 bg-cyan-500/15 px-4 py-2 text-xs font-bold text-cyan-100 transition hover:bg-cyan-500/25"
-              style={tabFont}
-            >
-              {m.common.done}
-            </button>
-          </div>
+            {panelBody}
+          </motion.div>
         </motion.div>
       ) : null}
     </AnimatePresence>
@@ -534,11 +579,15 @@ export default function GamesTeamFilterPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
+        aria-label={compactHeader ? labelShort : undefined}
         style={compactHeader ? undefined : tabFont}
         className={gamesHeaderFilterButtonClasses(
           activeCount > 0 || marginFilterActive,
           compactHeader,
-          !compactHeader && dense ? "gap-2 px-2.5" : !compactHeader ? "gap-2 px-3" : "",
+          compactHeader
+            ? "relative z-30 w-9 min-w-9 max-w-9 gap-0 px-0"
+            : "relative z-30 " +
+              (!compactHeader && dense ? "gap-2 px-2.5" : !compactHeader ? "gap-2 px-3" : ""),
         )}
       >
         <SlidersHorizontal
@@ -548,8 +597,8 @@ export default function GamesTeamFilterPanel({
           )}
           aria-hidden
         />
-        <span>{labelShort}</span>
-        {activeCount > 0 && (
+        {!compactHeader ? <span>{labelShort}</span> : null}
+        {!compactHeader && activeCount > 0 && (
           <span
             className={cn(
               "flex items-center justify-center rounded-md bg-cyan-400/25 text-cyan-50",

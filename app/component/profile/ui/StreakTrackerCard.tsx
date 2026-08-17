@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { m, useInView, useReducedMotion } from "framer-motion";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
 import { streakChartLayoutMaxAbs } from "@/lib/profile/streakTrackerChartLayout";
 import {
   useProfileStreakTracker,
@@ -10,16 +11,15 @@ import {
   type StreakTrackerPoint,
 } from "@/lib/profile/useProfileStreakTracker";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
+import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { jp, nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
+import { jp, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_CHART_CYBER } from "@/lib/profile/profileOverviewChartCyberTheme";
 import ProfileStreakPlotGrid from "@/app/component/profile/ui/ProfileStreakPlotGrid";
 import { useCountUp } from "@/lib/hooks/useCountUp";
-import { Info } from "lucide-react";
-import styles from "./profileChartInfoFaq.module.css";
 import {
   isProfileChartAnimationOff,
 } from "@/lib/profile/profileVisualEffects";
@@ -32,6 +32,8 @@ type Props = {
   entranceReady?: boolean;
   layout?: Layout;
   profileStatsContext?: ProfileStatsStreakContext;
+  /** cumulative profileCharts.last20（null = 未取得） */
+  seedLast20?: ProfileChartsLast20Point[] | null;
 };
 
 function formatTick(n: number) {
@@ -125,6 +127,7 @@ export default function StreakTrackerCard({
   entranceReady,
   layout = "mobile",
   profileStatsContext = { rankingLeague: "nba" },
+  seedLast20,
 }: Props) {
   const msg = t(language);
   const reduceMotion = useReducedMotion();
@@ -141,7 +144,8 @@ export default function StreakTrackerCard({
 
   const { points, loading: streakLoading } = useProfileStreakTracker(
     uid,
-    profileStatsContext
+    profileStatsContext,
+    { seedLast20 }
   );
   const loading = streakLoading || !uid;
 
@@ -251,8 +255,6 @@ export default function StreakTrackerCard({
   const blockStagger = layout === "web" ? 0.098 : 0.078;
 
   const subtitle = msg.profile.last20TrackerDesc.replace("{n}", String(STREAK_TRACKER_LAST_N));
-  /** Info 用（表示サブタイトルと同じ文言のみ） */
-  const chartInfoTooltipMsg = subtitle;
   const emptyHint = subtitle;
 
   const statWinLabel = msg.profile.bestWStreak;
@@ -268,46 +270,24 @@ export default function StreakTrackerCard({
   const plotColGapPx = layout === "web" ? 4 : 2;
 
   return (
-    <ProfileKinetikPanelFrame className={S.outerPad}>
+    <ProfileOverviewLineFrame title={msg.profile.last20Tracker}>
+    <ProfileKinetikPanelFrame className={`${S.outerPad} profile-kinetik-panel--line-frame`}>
       <div className="relative z-1">
         <div className="relative z-20 mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <div
+              <p
                 className={[
-                  nameRajdhani.className,
-                  "font-semibold tracking-wide text-white/95",
-                  layout === "web"
-                    ? "text-xl sm:text-[1.72rem]"
-                    : "text-lg",
-                ].join(" ")}
+                  language === "ja" ? jp.className : "",
+                  "min-w-0 flex-1 text-xs leading-relaxed sm:text-[14px]",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={{ color: PROFILE_CHART_CYBER.subtitle }}
               >
-                {msg.profile.last20Tracker}
-              </div>
-              <div className={styles.wrap}>
-                <button
-                  type="button"
-                  className={styles.faqButton}
-                  aria-label={chartInfoTooltipMsg}
-                >
-                  <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
-                </button>
-                <div className={styles.tooltip} aria-hidden>
-                  {chartInfoTooltipMsg}
-                </div>
-              </div>
+                {subtitle}
+              </p>
             </div>
-            <p
-              className={[
-                language === "ja" ? jp.className : "",
-                "mt-1.5 max-w-[560px] text-xs leading-relaxed sm:text-[14px]",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={{ color: PROFILE_CHART_CYBER.subtitle }}
-            >
-              {subtitle}
-            </p>
           </div>
           <div className="flex flex-col items-center self-end text-center">
             <div
@@ -675,6 +655,7 @@ export default function StreakTrackerCard({
         ) : null}
       </div>
     </ProfileKinetikPanelFrame>
+    </ProfileOverviewLineFrame>
   );
 }
 

@@ -17,6 +17,11 @@ export type HalftoneJerseyMarkProps = {
   dotRevealDelayMs?: number;
   /** ホログラム台座内：黒い落ち影を付けない */
   hologram?: boolean;
+  /**
+   * グロー強度。`soft` は Pro Info など小サイズ向け（にじみを抑える）。
+   * `hologram` 指定時は無視して none。
+   */
+  glow?: "default" | "soft" | "none";
 };
 
 type Rgb = { r: number; g: number; b: number };
@@ -72,17 +77,24 @@ export default function HalftoneJerseyMark({
   enableDotReveal = false,
   dotRevealDelayMs = 0,
   hologram = false,
+  glow = "default",
 }: HalftoneJerseyMarkProps) {
   const glowFilter = useMemo(() => {
-    if (hologram) return "none";
+    if (hologram || glow === "none") return "none";
     const { r, g, b } = accentRgbForGlow(accent, accentEnd);
-    // ドット開幕中は canvas が毎フレーム更新されるため、filter 層は最小限に抑える
+    if (glow === "soft") {
+      return [
+        `drop-shadow(0 0 1.5px rgba(${r},${g},${b},0.24))`,
+        "drop-shadow(0 1px 1.5px rgba(0,0,0,0.22))",
+      ].join(" ");
+    }
+    // 全体のグローはやや控えめ（小サイズでもにじみすぎない）
     return [
-      `drop-shadow(0 0 4px rgba(${r},${g},${b},0.55))`,
-      `drop-shadow(0 0 12px rgba(${r},${g},${b},0.26))`,
-      "drop-shadow(0 1px 4px rgba(0,0,0,0.42))",
+      `drop-shadow(0 0 3px rgba(${r},${g},${b},0.38))`,
+      `drop-shadow(0 0 8px rgba(${r},${g},${b},0.16))`,
+      "drop-shadow(0 1px 3px rgba(0,0,0,0.32))",
     ].join(" ");
-  }, [accent, accentEnd, hologram]);
+  }, [accent, accentEnd, hologram, glow]);
 
   return (
     <div

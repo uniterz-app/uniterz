@@ -9,14 +9,14 @@ type Props = {
 
 const HIT_TOP_LINE = [
   "transparent",
-  "rgba(253,224,71,0.92)",
-  "rgba(253,224,71,0.92)",
+  "rgba(255,251,235,0.95)",
+  "rgba(253,224,71,0.98)",
   "transparent",
 ] as const;
 
 const HIT_TOP_LINE_LOCATIONS = [0, 0.42, 0.58, 1] as const;
 
-/** Web `ResultHitCyberFrame`（一覧は showSweep=false） */
+/** Web `ResultHitCyberFrame` 相当 — コア線はシェル側、ここは角・上部ハイライト */
 export default function ResultHitCyberFrameNative({
   shellContext = "default",
 }: Props) {
@@ -30,16 +30,16 @@ export default function ResultHitCyberFrameNative({
 
   return (
     <View pointerEvents="none" style={styles.overlay} onLayout={onLayout}>
-      {shellContext !== "predictOverlay" && size.w > 0 && size.h > 0 ? (
+      {size.w > 0 && size.h > 0 ? (
         <ResultCyberFrameDecorNative
           width={size.w}
           height={size.h}
-          cornerColor="rgba(253,224,71,0.88)"
+          cornerColor="rgba(254,243,199,0.96)"
           topLineColors={HIT_TOP_LINE}
           topLineLocations={HIT_TOP_LINE_LOCATIONS}
           topGlowColors={[
-            "rgba(252,211,77,0.18)",
-            "rgba(251,191,36,0.09)",
+            "rgba(253,224,71,0.26)",
+            "rgba(251,191,36,0.14)",
             "transparent",
           ]}
           shellContext={shellContext}

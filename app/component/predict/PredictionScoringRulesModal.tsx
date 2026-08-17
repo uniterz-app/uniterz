@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { jp } from "@/lib/fonts";
+import { nameBebas, nameOxanium } from "@/lib/fonts";
+import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import type { ScoringSport } from "@/lib/scoring/leagueScoringSport";
@@ -10,6 +11,7 @@ import {
   ScoringRulesDisplayProvider,
   type ScoringRulesDisplaySize,
 } from "@/app/component/predict/predictionScoringRules";
+import { PREDICT_OVERLAY_SUBMIT_BTN_CLASS } from "@/lib/ui/predictOverlayCyber";
 
 type Props = {
   open: boolean;
@@ -30,6 +32,7 @@ export default function PredictionScoringRulesModal({
 }: Props) {
   const m = t(language);
   const isWeb = displaySize === "web";
+  const ja = language !== "en";
 
   useEffect(() => {
     if (!open) return;
@@ -60,8 +63,7 @@ export default function PredictionScoringRulesModal({
       >
         <div
           className={[
-            "my-4 flex w-full flex-col rounded-2xl border border-white/15 bg-[#0c1419] shadow-xl shadow-black/40",
-            jp.className,
+            "my-4 flex w-full flex-col border border-cyan-400/22 bg-[#05080c]",
             isWeb
               ? "max-h-[min(820px,92dvh)] max-w-2xl"
               : "max-h-[min(640px,88dvh)] max-w-sm sm:max-w-md",
@@ -71,20 +73,31 @@ export default function PredictionScoringRulesModal({
           <div
             className={[
               "min-h-0 flex-1 overflow-y-auto overscroll-contain",
-              isWeb ? "px-6 py-5 sm:px-8 sm:py-6" : "px-4 py-4 sm:px-5 sm:py-5",
+              isWeb ? "px-5 py-5 sm:px-7 sm:py-6" : "px-4 py-4",
             ].join(" ")}
           >
-            <h2
-              id="prediction-scoring-rules-title"
-              className={[
-                "mb-3 text-center font-bold leading-snug text-white",
-                isWeb ? "text-lg sm:text-xl" : "text-base sm:text-lg",
-              ].join(" ")}
-            >
-              {m.predict.scoringRulesChip}
-            </h2>
-
-            <div className="mb-3 h-px w-full bg-linear-to-r from-transparent via-cyan-400/25 to-transparent" />
+            <div className="mb-4 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <h2
+                id="prediction-scoring-rules-title"
+                className={[
+                  nameBebas.className,
+                  "font-bold uppercase leading-none text-white",
+                  isWeb ? "text-[22px]" : "text-[20px]",
+                ].join(" ")}
+                style={matchCardTeamNameStyle(true)}
+              >
+                SCORING RULES
+              </h2>
+              <span
+                className={[
+                  nameOxanium.className,
+                  "font-bold uppercase tracking-[0.08em] text-white/45",
+                  isWeb ? "text-[10px]" : "text-[9px]",
+                ].join(" ")}
+              >
+                {ja ? "採点ルール" : "How points are scored"}
+              </span>
+            </div>
 
             <ScoringRulesDisplayProvider size={displaySize}>
               <PredictionScoringFullRulesBody
@@ -96,26 +109,21 @@ export default function PredictionScoringRulesModal({
 
             <p
               className={[
-                "mt-4 border-l-2 border-cyan-400/30 pl-2.5 leading-relaxed text-white/45",
-                isWeb ? "text-[13px] sm:text-sm" : "text-[12px] sm:text-[13px]",
+                "mt-4 leading-relaxed text-white/45",
+                isWeb ? "text-[12px]" : "text-[11px]",
               ].join(" ")}
             >
               {m.predict.rulesFootNote}
             </p>
           </div>
 
-          <div
-            className={[
-              "shrink-0 border-t border-white/10",
-              isWeb ? "px-6 py-4 sm:px-8" : "px-4 py-3 sm:px-5",
-            ].join(" ")}
-          >
+          <div className={isWeb ? "px-5 pb-5 sm:px-7" : "px-4 pb-4"}>
             <button
               type="button"
               onClick={onClose}
               className={[
-                "w-full rounded-lg border border-white/15 font-medium text-white/75",
-                isWeb ? "py-2.5 text-sm" : "py-2.5 text-[12px] sm:text-sm",
+                PREDICT_OVERLAY_SUBMIT_BTN_CLASS,
+                "flex h-12 w-full items-center justify-center text-sm font-bold tracking-[0.06em]",
               ].join(" ")}
             >
               {m.common.close}

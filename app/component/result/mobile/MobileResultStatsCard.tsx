@@ -9,18 +9,23 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { RESULT_STAT_ROW_GRID_COMPACT } from "@/lib/result/resultStatRowGrid";
-import WcGoalScorerResultRow, {
+import {
+  buildResultStatMetricValues,
+  extractResultSettlementBreakdown,
+  type ResultStatMetricKey,
+} from "@/lib/result/buildResultStatRows";
+import {
+  WcGoalScorerResultRow,
   useWcGoalScorerResult,
   useWcPkWinnerResult,
   WcPkWinnerResultRow,
-} from "@/app/component/result/WcGoalScorerResultRow";
+} from "@/app/component/result/wcResultRowStubs";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import {
   RESULT_HIT_CYBER_CLIP,
   resultDetailOverlaySectionClass,
   resultDetailPanelClass,
 } from "@/lib/result/resultGlass";
-import { resultShowsScorePrecision } from "@/lib/result/wcResultUi";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
@@ -31,21 +36,16 @@ type Props = {
 };
 
 type StatRow = {
-  key: "scorePrecision" | "upsetPoints" | "pointsV3";
+  key: ResultStatMetricKey;
   label: string;
   desc: string;
   value: number;
-  max?: number;
-  barMax?: number;
-  format?: (v: number) => string;
+  barMax: number;
+  displayValue: number | null;
 };
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
-}
-
-function toNumber(v: unknown, fallback = 0) {
-  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
 function MobileResultStatsCard({
@@ -75,75 +75,23 @@ function MobileResultStatsCard({
     goalScorerBonus: number;
     totalPoints: number;
   } = useMemo(() => {
-    const scorePrecision = toNumber(post.stats?.scorePrecision, 0);
-    const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
-    const upsetPoints = toNumber((post.stats as any)?.upsetPoints, 0);
-    const pointsV3 = toNumber((post.stats as any)?.pointsV3, 0);
-
-    const basePoints = toNumber(
-      (post.stats as any)?.pointsV3Detail?.basePoints,
-      0
-    );
-    const upsetBonus = toNumber(
-      (post.stats as any)?.pointsV3Detail?.upsetBonus,
-      0
-    );
-    const streakBonus = toNumber(
-      (post.stats as any)?.pointsV3Detail?.streakBonus,
-      0
-    );
-    const goalScorerBonus = toNumber(
-      (post.stats as any)?.goalScorerBonus ??
-        (post.stats as any)?.pointsV3Detail?.goalScorerBonus,
-      0
-    );
-
-    const showScorePrecision = resultShowsScorePrecision(post.league);
+    const breakdown = extractResultSettlementBreakdown(post.stats);
 
     return {
-      basePoints,
-      upsetBonus,
-      streakBonus,
-      goalScorerBonus,
-      totalPoints: pointsV3,
-      rows: [
-        ...(showScorePrecision
-          ? [
-              {
-                key: "scorePrecision" as const,
-                label: m.results.scorePrecisionLabel,
-                desc: m.results.scorePrecisionDesc,
-                value: scorePrecision,
-                max: 10,
-                barMax: 10,
-                format: (v: number) => v.toFixed(1),
-              },
-            ]
-          : []),
-        {
-          key: "upsetPoints" as const,
-          label: m.results.upsetPointsLabel,
-          desc: m.results.upsetPointsDesc,
-          value: upsetPoints,
-          max: 10,
-          barMax: 10,
-          format: (v: number) =>
-            hadUpsetGame
-              ? `${(Math.round(v * 10) / 10).toFixed(1)}`
-              : "--",
-        },
-        {
-          key: "pointsV3" as const,
-          label: m.results.totalPointsLabel,
-          desc: m.results.totalPointsDesc,
-          value: pointsV3,
-          /** バーは10点満点表示（ボーナス込みで実数値は10超えうる → バーは満タンで頭打ち） */
-          barMax: 10,
-          format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
-        },
-      ],
+      ...breakdown,
+      rows: buildResultStatMetricValues(breakdown).map((row) => ({
+        ...row,
+        label:
+          row.key === "upsetPoints"
+            ? m.results.upsetPointsLabel
+            : m.results.totalPointsLabel,
+        desc:
+          row.key === "upsetPoints"
+            ? m.results.upsetPointsDesc
+            : m.results.totalPointsDesc,
+      })),
     };
-  }, [post.stats, post.league, m]);
+  }, [post.stats, m]);
 
   const barAnimateMs = 480;
   const barStaggerMs = 80;
@@ -192,10 +140,12 @@ function MobileResultStatsCard({
         ) : null}
 
         {rows.map((r, index) => {
-          const cap = r.barMax ?? r.max ?? 1;
+          const cap = r.barMax;
           const ratio = cap > 0 ? clamp01(r.value / cap) : 0;
           const display =
-            r.format != null ? r.format(r.value) : String(r.value);
+            r.displayValue === null
+              ? "--"
+              : (Math.round(r.displayValue * 10) / 10).toFixed(1);
           const rowIndex =
             index + (wcGoalScorer ? 1 : 0) + (wcPkWinner ? 1 : 0);
 

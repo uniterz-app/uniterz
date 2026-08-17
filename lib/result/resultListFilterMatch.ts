@@ -2,8 +2,13 @@
  * Web `ResultListWithOverlay` の一覧フィルター判定（ネイティブ / Web 共通）
  */
 import { resolvePostListLeague, type League } from "../leagues";
-import { isFinalResultPost, type PostWithMillis } from "./result-page-data";
-import { isWcResultLeague } from "./wcResultUi";
+import type { Language } from "../i18n/language";
+import {
+  isFinalResultPost,
+  resultListLocalDayKeyFromMs,
+  type PostWithMillis,
+  type ResultDayGroup,
+} from "./result-page-data";
 
 export type ResultListFilters = {
   outcome: "all" | "win" | "loss";
@@ -12,8 +17,11 @@ export type ResultListFilters = {
   league: "all" | League;
   /** Upset スコア（加点あり） */
   specialty: "none" | "upsetBonus";
-  scorePrecisionTier: "all" | "high" | "mid" | "low";
   pointsTier: "all" | "high" | "mid" | "low";
+  /** 試合日（一覧の日付見出し）の下限。YYYY-MM-DD、未指定は null */
+  dateFrom: string | null;
+  /** 試合日の上限（含む）。YYYY-MM-DD、未指定は null */
+  dateTo: string | null;
 };
 
 export const DEFAULT_RESULT_LIST_FILTERS: ResultListFilters = {
@@ -21,8 +29,9 @@ export const DEFAULT_RESULT_LIST_FILTERS: ResultListFilters = {
   settlement: "all",
   league: "all",
   specialty: "none",
-  scorePrecisionTier: "all",
   pointsTier: "all",
+  dateFrom: null,
+  dateTo: null,
 };
 
 export function isDefaultResultListFilters(filters: ResultListFilters): boolean {
@@ -31,8 +40,9 @@ export function isDefaultResultListFilters(filters: ResultListFilters): boolean 
     filters.settlement === DEFAULT_RESULT_LIST_FILTERS.settlement &&
     filters.league === DEFAULT_RESULT_LIST_FILTERS.league &&
     filters.specialty === DEFAULT_RESULT_LIST_FILTERS.specialty &&
-    filters.scorePrecisionTier === DEFAULT_RESULT_LIST_FILTERS.scorePrecisionTier &&
-    filters.pointsTier === DEFAULT_RESULT_LIST_FILTERS.pointsTier
+    filters.pointsTier === DEFAULT_RESULT_LIST_FILTERS.pointsTier &&
+    filters.dateFrom === DEFAULT_RESULT_LIST_FILTERS.dateFrom &&
+    filters.dateTo === DEFAULT_RESULT_LIST_FILTERS.dateTo
   );
 }
 
@@ -52,13 +62,6 @@ function pointsV3Of(post: PostWithMillis): number | null {
   const v =
     stats?.pointsV3 ??
     (stats?.pointsV3Detail as { totalPoints?: number } | undefined)?.totalPoints;
-  if (typeof v !== "number" || !Number.isFinite(v)) return null;
-  return v;
-}
-
-function scorePrecisionOf(post: PostWithMillis): number | null {
-  const stats = post.stats as Record<string, unknown> | undefined;
-  const v = stats?.scorePrecision;
   if (typeof v !== "number" || !Number.isFinite(v)) return null;
   return v;
 }
@@ -89,21 +92,6 @@ function postMatchesPointsTier(
   return true;
 }
 
-function postMatchesScorePrecisionTier(
-  post: PostWithMillis,
-  tier: ResultListFilters["scorePrecisionTier"]
-): boolean {
-  if (tier === "all") return true;
-  if (isWcResultLeague(post.league)) return true;
-  if (!isFinalResultPost(post)) return false;
-  const v = scorePrecisionOf(post);
-  if (v === null) return false;
-  if (tier === "high") return v >= 7;
-  if (tier === "mid") return v >= 4 && v < 7;
-  if (tier === "low") return v < 4;
-  return true;
-}
-
 function postMatchesSpecialty(
   post: PostWithMillis,
   sp: ResultListFilters["specialty"]
@@ -114,6 +102,19 @@ function postMatchesSpecialty(
   const pts = stats?.upsetPoints ?? 0;
   const hit = stats?.upsetHit === true;
   return (typeof pts === "number" && pts > 0) || hit;
+}
+
+/** 試合日グループが指定された日付範囲（両端を含む）に入るか */
+export function resultDayMatchesDateRange(
+  day: Pick<ResultDayGroup, "dateMs">,
+  filters: Pick<ResultListFilters, "dateFrom" | "dateTo">,
+  language: Language
+): boolean {
+  if (filters.dateFrom == null && filters.dateTo == null) return true;
+  const dateKey = resultListLocalDayKeyFromMs(day.dateMs, language);
+  if (filters.dateFrom != null && dateKey < filters.dateFrom) return false;
+  if (filters.dateTo != null && dateKey > filters.dateTo) return false;
+  return true;
 }
 
 /** 一覧投稿がフィルター条件を満たすか */
@@ -128,7 +129,6 @@ export function postMatchesResultListFilters(
   }
   if (!postMatchesOutcome(post, filters.outcome)) return false;
   if (!postMatchesPointsTier(post, filters.pointsTier)) return false;
-  if (!postMatchesScorePrecisionTier(post, filters.scorePrecisionTier)) return false;
   if (!postMatchesSpecialty(post, filters.specialty)) return false;
   return true;
 }

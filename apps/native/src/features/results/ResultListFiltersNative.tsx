@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CyberFilterChip } from "../../ui/CyberFilterBarNative";
 import {
   DEFAULT_RESULT_LIST_FILTERS,
+  isDefaultResultListFilters,
   type ResultListFilters,
 } from "../../../../../lib/result/resultListFilterMatch";
 
@@ -17,8 +18,6 @@ type Props = {
   language: "ja" | "en";
   filters: ResultFilterState;
   onChange: (next: ResultFilterState) => void;
-  /** WC タブ時はスコア精度フィルターを非表示（Web 同等） */
-  hideScorePrecision?: boolean;
 };
 
 /** Web `ResultListWithOverlay` の折りたたみパネル内コンテンツのみ */
@@ -26,7 +25,6 @@ export default function ResultListFiltersNative({
   language,
   filters,
   onChange,
-  hideScorePrecision = false,
 }: Props) {
   const isJa = language === "ja";
 
@@ -50,7 +48,6 @@ export default function ResultListFiltersNative({
         settlement: "確定状態",
         league: "リーグ",
         specialty: "スペシャル",
-        scorePrecision: "スコア精度",
         points: "総合スコア",
         reset: "リセット",
       }
@@ -59,7 +56,6 @@ export default function ResultListFiltersNative({
         settlement: "Status",
         league: "League",
         specialty: "Special",
-        scorePrecision: "Score precision",
         points: "Total score",
         reset: "Reset",
       };
@@ -76,7 +72,7 @@ export default function ResultListFiltersNative({
     <View style={styles.panel}>
       <View style={styles.panelHeader}>
         <Text style={styles.panelTitle}>{isJa ? "フィルター" : "Filters"}</Text>
-        {!isDefaultFilters(filters) ? (
+        {!isDefaultResultListFilters(filters) ? (
           <Pressable
             style={styles.resetBtn}
             onPress={() => onChange({ ...filters, ...DEFAULT_RESULT_LIST_FILTERS })}
@@ -109,7 +105,7 @@ export default function ResultListFiltersNative({
       </FilterGroup>
 
       <FilterGroup title={labels.league}>
-        {(["all", "nba", "wc"] as const).map((id) => (
+        {(["all", "nba"] as const).map((id) => (
           <CyberFilterChip
             key={id}
             label={id.toUpperCase()}
@@ -132,19 +128,6 @@ export default function ResultListFiltersNative({
         />
       </FilterGroup>
 
-      {!hideScorePrecision ? (
-        <FilterGroup title={labels.scorePrecision}>
-          {(["all", "high", "mid", "low"] as const).map((id) => (
-            <CyberFilterChip
-              key={`sp-${id}`}
-              label={id === "all" ? tierLabels.all : tierLabels[id]}
-              active={filters.scorePrecisionTier === id}
-              onPress={() => onChange({ ...filters, scorePrecisionTier: id })}
-            />
-          ))}
-        </FilterGroup>
-      ) : null}
-
       <FilterGroup title={labels.points}>
         {(["all", "high", "mid", "low"] as const).map((id) => (
           <CyberFilterChip
@@ -156,17 +139,6 @@ export default function ResultListFiltersNative({
         ))}
       </FilterGroup>
     </View>
-  );
-}
-
-function isDefaultFilters(filters: ResultFilterState) {
-  return (
-    filters.outcome === DEFAULT_RESULT_LIST_FILTERS.outcome &&
-    filters.settlement === DEFAULT_RESULT_LIST_FILTERS.settlement &&
-    filters.league === DEFAULT_RESULT_LIST_FILTERS.league &&
-    filters.specialty === DEFAULT_RESULT_LIST_FILTERS.specialty &&
-    filters.scorePrecisionTier === DEFAULT_RESULT_LIST_FILTERS.scorePrecisionTier &&
-    filters.pointsTier === DEFAULT_RESULT_LIST_FILTERS.pointsTier
   );
 }
 

@@ -131,11 +131,37 @@ async function loadProfileSettledTodayResultPostsFallback(
 /**
  * 本日（JST）に確定した投稿を、プロフィールのリーグ／WC スコープで絞り込み、
  * リザルトカード用の PostWithMillis を返す。
+ *
+ * 連勝用の直近 posts キャッシュが温いときは range query を飛ばし、
+ * 今日分 ID だけ getDocs（documentId in）する。
  */
 export async function loadProfileSettledTodayResultPosts(
   uid: string,
   ctx: ProfileStatsStreakContext
 ): Promise<PostWithMillis[]> {
+  // 連勝キャッシュ（5分 TTL）があれば今日分をそこから取り、posts 再クエリを避ける
+  try {
+    const cachedRows = await loadProfileSettledPosts(uid);
+    const todayFromCache = filterSettledTodayForScope(cachedRows, ctx);
+    if (todayFromCache.length > 0) {
+      const posts = await fetchPostsByIds(todayFromCache.map((r) => r.postId));
+      return sortSettledTodayPosts(
+        posts.filter((p) => p.status === "final" && p.settledAtMillis != null)
+      );
+    }
+    // キャッシュはあるが今日ゼロ → range query せず空を返す（連勝取得が直近40件をカバー）
+    if (cachedRows.length > 0) {
+      const newest = cachedRows[0]?.settledAtMs ?? 0;
+      const { start } = getDayRangeInTimeZone(new Date(), TIMEZONE_JST);
+      if (newest < start.getTime()) {
+        // 直近 posts が全部昨日以前 → 今日は本当に無い可能性が高い
+        return [];
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+
   const { start, end } = getDayRangeInTimeZone(new Date(), TIMEZONE_JST);
   let posts: PostWithMillis[];
   try {

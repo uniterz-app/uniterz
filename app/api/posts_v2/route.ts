@@ -3,15 +3,26 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags";
-import { resolveWcStageFromGame } from "@/lib/wc/resolveWcStage";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+import { resolveWcStageFromGame } from "@/lib/legacyWcWebShims";
+import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
 import { normalizeLeague, type League } from "@/lib/leagues";
+import { parsePredictionPayload } from "@/lib/predict/parsePredictionPayload";
+import {
+  normalizeNbaTopScorerCandidates,
+  validateNbaTopScorerPickForGame,
+} from "@/lib/nba/topScorer";
 import {
   normalizeWcGoalScorerPick,
   validateWcGoalScorerPickForGame,
   type WcGoalScorerPick,
-} from "@/lib/wc/goalScorer";
+} from "@/lib/legacyWcWebShims";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { touchReferralPredictDay } from "@/lib/referral/touchReferralPredictDay";
+import { settleReferralRelationWithRetries } from "@/lib/referral/settleReferralRelation";
+import {
+  deterministicPostV2Id,
+  loadGameKickoffLock,
+} from "@/lib/predict/gameKickoffLock";
 
 /* ========= 型 ========= */
 type Status = "scheduled" | "live" | "final";
@@ -25,13 +36,12 @@ type PredictionPayloadV2 = {
 type ParsedOkV2 = {
   ok: true;
   gameId: string;
-  prediction: PredictionPayloadV2;
   comment: string;
-  rawGoalScorer: unknown;
+  rawPrediction: unknown;
 };
 type ParsedNg = { ok: false; error: string };
 
-/* ========= バリデーション ========= */
+/* ========= バリデーション（game 未取得時の薄い抽出。整合は game 取得後に parsePredictionPayload） ========= */
 function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
   try {
     const gameId = String(body?.gameId ?? "").trim();
@@ -57,12 +67,8 @@ function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
     return {
       ok: true,
       gameId,
-      prediction: {
-        winner: p.winner,
-        score: { home, away },
-      },
       comment,
-      rawGoalScorer: p.goalScorer,
+      rawPrediction: p,
     };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? "bad payload" };
@@ -156,6 +162,8 @@ export async function POST(req: Request) {
     let authorDisplayName = "ユーザー";
     let authorPhotoURL: string | null = null;
     let authorHandle: string | null = null;
+    let referredByUid: string | null = null;
+    let referralSettled = false;
 
     try {
       const userDoc = await adminDb.collection("users").doc(uid).get();
@@ -164,6 +172,11 @@ export async function POST(req: Request) {
         authorDisplayName = u.displayName || authorDisplayName;
         authorPhotoURL = u.photoURL || u.avatarUrl || null;
         authorHandle = u.handle || u.username || u.slug || null;
+        const rawRef = u.referredByUid;
+        if (typeof rawRef === "string" && rawRef.trim()) {
+          referredByUid = rawRef.trim();
+        }
+        referralSettled = Boolean(u.referralSettledAt);
       }
     } catch {}
 
@@ -177,6 +190,25 @@ export async function POST(req: Request) {
 
     const g = gameSnap.data() as Record<string, unknown>;
     const league: League = resolvePostLeagueFromGame(g, parsed.gameId);
+
+    const isKnockout = isWcKnockoutGame({
+      league,
+      knockout: (g as { knockout?: boolean }).knockout ?? null,
+      roundLabel: (g as { roundLabel?: string }).roundLabel ?? null,
+      wcStage: (g as { wcStage?: string }).wcStage ?? null,
+    });
+
+    const predictionParsed = parsePredictionPayload(
+      parsed.rawPrediction,
+      league,
+      isKnockout
+    );
+    if (!predictionParsed.ok) {
+      return NextResponse.json(
+        { ok: false, error: predictionParsed.error },
+        { status: 400 }
+      );
+    }
 
     const startAtTs =
       toAdminTimestamp(g?.startAtJst) ??
@@ -193,7 +225,14 @@ export async function POST(req: Request) {
     const startAtMillis = startAtTs.toMillis();
     const startAtIso = new Date(startAtMillis).toISOString();
 
-    if (Date.now() >= startAtMillis) {
+    const lock = await loadGameKickoffLock(adminDb, parsed.gameId);
+    if (!lock.ok) {
+      return NextResponse.json(
+        { ok: false, error: lock.error },
+        { status: 500 }
+      );
+    }
+    if (lock.locked) {
       return NextResponse.json(
         { ok: false, error: "locked: game started" },
         { status: 403 }
@@ -208,50 +247,50 @@ export async function POST(req: Request) {
       (g.away as { teamId?: string } | undefined)?.teamId ??
       (g.awayTeamId as string | undefined) ??
       null;
-    const goalScorerPick = normalizeWcGoalScorerPick(parsed.rawGoalScorer);
-    if (league === "wc" && parsed.rawGoalScorer != null && !goalScorerPick) {
+    const rawGoalScorer = predictionParsed.rawGoalScorer;
+    const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);
+    const allowsGoalScorer = league === "wc" || league === "nba";
+    if (allowsGoalScorer && rawGoalScorer != null && !goalScorerPick) {
       return NextResponse.json(
         { ok: false, error: "goalScorer invalid" },
         { status: 400 }
       );
     }
-    if (league !== "wc" && goalScorerPick) {
+    if (!allowsGoalScorer && goalScorerPick) {
       return NextResponse.json(
-        { ok: false, error: "goalScorer only allowed for wc" },
+        { ok: false, error: "goalScorer only allowed for wc or nba" },
         { status: 400 }
       );
     }
     if (goalScorerPick) {
-      const v = validateWcGoalScorerPickForGame(
-        goalScorerPick,
-        homeTeamId,
-        awayTeamId,
-        parsed.prediction.score
-      );
-      if (!v.ok) {
-        return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+      if (league === "nba") {
+        const candidates = normalizeNbaTopScorerCandidates(
+          (g as { topScorerCandidates?: unknown }).topScorerCandidates
+        );
+        const v = validateNbaTopScorerPickForGame(
+          goalScorerPick,
+          homeTeamId,
+          awayTeamId,
+          candidates.length > 0 ? candidates : null
+        );
+        if (!v.ok) {
+          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+        }
+      } else {
+        const v = validateWcGoalScorerPickForGame(
+          goalScorerPick,
+          homeTeamId,
+          awayTeamId,
+          predictionParsed.prediction.score
+        );
+        if (!v.ok) {
+          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+        }
       }
     }
 
-    // ノックアウトは「引き分け」結果を予想できない（同点スコア自体は PK 決着として許可し、
-    // 勝者は進出側＝home/away として記録する）
-    if (
-      isWcKnockoutGame({
-        league,
-        knockout: (g as { knockout?: boolean }).knockout ?? null,
-        roundLabel: (g as { roundLabel?: string }).roundLabel ?? null,
-        wcStage: (g as { wcStage?: string }).wcStage ?? null,
-      }) &&
-      parsed.prediction.winner === "draw"
-    ) {
-      return NextResponse.json(
-        { ok: false, error: "draw result not allowed in knockout stage" },
-        { status: 400 }
-      );
-    }
-
     const prediction: PredictionPayloadV2 = {
-      ...parsed.prediction,
+      ...predictionParsed.prediction,
       ...(goalScorerPick ? { goalScorer: goalScorerPick } : {}),
     };
 
@@ -266,6 +305,15 @@ export async function POST(req: Request) {
     if (!dup.empty) {
       return NextResponse.json(
         { ok: false, error: "duplicate", existingId: dup.docs[0].id },
+        { status: 409 }
+      );
+    }
+
+    const postId = deterministicPostV2Id(uid, parsed.gameId);
+    const existingById = await adminDb.collection("posts").doc(postId).get();
+    if (existingById.exists) {
+      return NextResponse.json(
+        { ok: false, error: "duplicate", existingId: postId },
         { status: 409 }
       );
     }
@@ -305,7 +353,34 @@ export async function POST(req: Request) {
     };
 
     try {
-      const ref = await adminDb.collection("posts").add(data);
+      const ref = adminDb.collection("posts").doc(postId);
+      try {
+        await ref.create(data);
+      } catch (createErr: unknown) {
+        const code =
+          createErr && typeof createErr === "object" && "code" in createErr
+            ? Number((createErr as { code?: number }).code)
+            : null;
+        // ALREADY_EXISTS
+        if (code === 6) {
+          return NextResponse.json(
+            { ok: false, error: "duplicate", existingId: postId },
+            { status: 409 }
+          );
+        }
+        throw createErr;
+      }
+      try {
+        await adminDb.doc(`games/${parsed.gameId}`).set(
+          {
+            predictorUids: FieldValue.arrayUnion(uid),
+            predictorCount: FieldValue.increment(1),
+          },
+          { merge: true }
+        );
+      } catch (predErr) {
+        console.error("[POST /api/posts_v2] predictorUids", predErr);
+      }
       const leagueFlagPatch = resultLeagueFlagPatchForPost(league);
       if (leagueFlagPatch) {
         try {
@@ -317,7 +392,34 @@ export async function POST(req: Request) {
           console.error("[POST /api/posts_v2] user league flags", flagErr);
         }
       }
-      return NextResponse.json({ ok: true, id: ref.id }, { status: 201 });
+      try {
+        // 招待経由かつ未精算のみ。達成済みは touch しない（コスト抑制）
+        if (referredByUid && !referralSettled) {
+          const touch = await touchReferralPredictDay(adminDb, uid);
+          if (!touch.ok) {
+            console.error("[POST /api/posts_v2] referral day", touch.error);
+          } else if (touch.needsSettle) {
+            try {
+              const settled = await settleReferralRelationWithRetries(
+                adminDb,
+                uid,
+                3
+              );
+              if (!settled.ok) {
+                console.error(
+                  "[POST /api/posts_v2] referral settle",
+                  settled.error
+                );
+              }
+            } catch (settleErr) {
+              console.error("[POST /api/posts_v2] referral settle", settleErr);
+            }
+          }
+        }
+      } catch (referralErr) {
+        console.error("[POST /api/posts_v2] referral day", referralErr);
+      }
+      return NextResponse.json({ ok: true, id: postId }, { status: 201 });
     } catch (e: any) {
       console.error("[POST /api/posts_v2]", e?.message ?? e);
       return NextResponse.json(

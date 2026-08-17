@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(0,0,0,0.25)",
-    borderRadius: 12,
+    borderRadius: 0,
     overflow: "hidden",
   },
   hero: {
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
     backgroundColor: "rgba(255,255,255,0.08)",
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   },
   joinBtn: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(52,211,153,0.35)",
     backgroundColor: "rgba(16,185,129,0.2)",

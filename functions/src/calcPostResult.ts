@@ -1,4 +1,3 @@
-import { calcScorePrecision } from "./calcScorePrecision";
 import { predictionWin } from "./predictionWin";
 import type { SettlementGameInput } from "./settlementGame";
 import { getFootballLineScore, leagueToSport } from "./settlementGame";
@@ -36,20 +35,12 @@ export function calcPostResult({
   const marketMajority = market.majoritySide;
   const isMajorityPick = prediction.winner === marketMajority;
 
-  const precisionActual =
+  const scoreLineActual =
     leagueToSport(league) === "football"
       ? getFootballLineScore(gameSlice)
       : final;
 
-  const scoreError = calcScoreError(prediction.score, precisionActual);
-
-  const { homePt, awayPt, diffPt, totalPt } = calcScorePrecision({
-    predictedHome: prediction.score.home,
-    predictedAway: prediction.score.away,
-    actualHome: precisionActual.home,
-    actualAway: precisionActual.away,
-    league: league ?? "bj",
-  });
+  const scoreError = calcScoreError(prediction.score, scoreLineActual);
 
   const pickSide = prediction.winner as "home" | "away" | "draw";
   const sport = leagueToSport(league);
@@ -64,8 +55,6 @@ export function calcPostResult({
   return {
     isWin,
     scoreError,
-    scorePrecision: totalPt,
-    scorePrecisionDetail: { homePt, awayPt, diffPt },
     marketMajority,
     isMajorityPick,
     upsetHit,

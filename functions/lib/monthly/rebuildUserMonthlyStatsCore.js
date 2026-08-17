@@ -110,8 +110,8 @@ function calcStreak(results) {
  * ============================================================================
  */
 async function rebuildUserMonthlyStatsCore() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3;
-    var _4;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2;
+    var _3;
     const range = getPreviousMonthRange();
     const startDate = toDateKeyJst(range.start);
     const endDate = toDateKeyJst(range.end);
@@ -134,7 +134,6 @@ async function rebuildUserMonthlyStatsCore() {
                 posts: 0,
                 wins: 0,
                 brierSum: 0,
-                precisionSum: 0,
                 upsetHit: 0,
                 upsetOpp: 0,
                 upsetPick: 0,
@@ -149,17 +148,16 @@ async function rebuildUserMonthlyStatsCore() {
         agg.posts += (_a = stats.posts) !== null && _a !== void 0 ? _a : 0;
         agg.wins += (_b = stats.wins) !== null && _b !== void 0 ? _b : 0;
         agg.brierSum += (_c = stats.brierSum) !== null && _c !== void 0 ? _c : 0;
-        agg.precisionSum += (_d = stats.scorePrecisionSum) !== null && _d !== void 0 ? _d : 0;
-        agg.upsetHit += (_e = stats.upsetHitCount) !== null && _e !== void 0 ? _e : 0;
-        agg.upsetOpp += (_f = stats.upsetOpportunityCount) !== null && _f !== void 0 ? _f : 0;
-        agg.upsetPick += (_g = stats.upsetPickCount) !== null && _g !== void 0 ? _g : 0;
-        agg.upsetPointsSum += (_h = stats.upsetPointsSum) !== null && _h !== void 0 ? _h : 0;
-        agg.pointsSumV3 += (_j = stats.pointsSumV3) !== null && _j !== void 0 ? _j : 0;
-        agg.upsetBonusSum += (_k = stats.upsetBonusSum) !== null && _k !== void 0 ? _k : 0;
-        agg.streakBonusSum += (_l = stats.streakBonusSum) !== null && _l !== void 0 ? _l : 0;
-        for (const [league, lstat] of Object.entries((_m = d.leagues) !== null && _m !== void 0 ? _m : {})) {
-            const p = (_o = lstat === null || lstat === void 0 ? void 0 : lstat.posts) !== null && _o !== void 0 ? _o : 0;
-            agg.leaguePosts[league] = ((_p = agg.leaguePosts[league]) !== null && _p !== void 0 ? _p : 0) + p;
+        agg.upsetHit += (_d = stats.upsetHitCount) !== null && _d !== void 0 ? _d : 0;
+        agg.upsetOpp += (_e = stats.upsetOpportunityCount) !== null && _e !== void 0 ? _e : 0;
+        agg.upsetPick += (_f = stats.upsetPickCount) !== null && _f !== void 0 ? _f : 0;
+        agg.upsetPointsSum += (_g = stats.upsetPointsSum) !== null && _g !== void 0 ? _g : 0;
+        agg.pointsSumV3 += (_h = stats.pointsSumV3) !== null && _h !== void 0 ? _h : 0;
+        agg.upsetBonusSum += (_j = stats.upsetBonusSum) !== null && _j !== void 0 ? _j : 0;
+        agg.streakBonusSum += (_k = stats.streakBonusSum) !== null && _k !== void 0 ? _k : 0;
+        for (const [league, lstat] of Object.entries((_l = d.leagues) !== null && _l !== void 0 ? _l : {})) {
+            const p = (_m = lstat === null || lstat === void 0 ? void 0 : lstat.posts) !== null && _m !== void 0 ? _m : 0;
+            agg.leaguePosts[league] = ((_o = agg.leaguePosts[league]) !== null && _o !== void 0 ? _o : 0) + p;
         }
     }
     const rows = Array.from(map.entries())
@@ -167,13 +165,11 @@ async function rebuildUserMonthlyStatsCore() {
         if (agg.posts === 0)
             return null;
         const winRate = agg.wins / agg.posts;
-        const avgPrecision = agg.precisionSum / agg.posts;
         const avgPointsV3 = agg.pointsSumV3 / agg.posts;
         return {
             uid,
             posts: agg.posts,
             winRate,
-            avgPrecision,
             avgPointsV3,
             upsetPointsSum: agg.upsetPointsSum,
             pointsSumV3: agg.pointsSumV3,
@@ -197,7 +193,6 @@ async function rebuildUserMonthlyStatsCore() {
     /** 総合得点（合計）順位の母数＝当月に1件以上投稿があったユーザー数 */
     const pointsSumV3RankDenominator = sortedByPointsSum.length;
     const winRates = rows.map((r) => r.winRate).sort((a, b) => a - b);
-    const precisions = rows.map((r) => r.avgPrecision).sort((a, b) => a - b);
     const pointsV3s = rows.map((r) => r.avgPointsV3).sort((a, b) => a - b);
     const upsetPointSums = rows
         .map((r) => r.upsetPointsSum)
@@ -205,7 +200,7 @@ async function rebuildUserMonthlyStatsCore() {
     const leagueVolumeMap = {};
     for (const r of rows) {
         for (const [league, p] of Object.entries(r.leaguePosts)) {
-            (_q = leagueVolumeMap[league]) !== null && _q !== void 0 ? _q : (leagueVolumeMap[league] = []);
+            (_p = leagueVolumeMap[league]) !== null && _p !== void 0 ? _p : (leagueVolumeMap[league] = []);
             leagueVolumeMap[league].push(p);
         }
     }
@@ -223,7 +218,7 @@ async function rebuildUserMonthlyStatsCore() {
         const uid = p.authorUid;
         if (!uid)
             continue;
-        (_r = postAggMap[uid]) !== null && _r !== void 0 ? _r : (postAggMap[uid] = {
+        (_q = postAggMap[uid]) !== null && _q !== void 0 ? _q : (postAggMap[uid] = {
             homeAway: {
                 home: { posts: 0, wins: 0 },
                 away: { posts: 0, wins: 0 },
@@ -237,9 +232,9 @@ async function rebuildUserMonthlyStatsCore() {
             underdogWins: 0,
         });
         const agg = postAggMap[uid];
-        const pick = (_s = p.prediction) === null || _s === void 0 ? void 0 : _s.winner;
+        const pick = (_r = p.prediction) === null || _r === void 0 ? void 0 : _r.winner;
         const market = p.marketMeta;
-        const isWin = ((_t = p.stats) === null || _t === void 0 ? void 0 : _t.isWin) === true;
+        const isWin = ((_s = p.stats) === null || _s === void 0 ? void 0 : _s.isWin) === true;
         if (market && pick) {
             if (pick === market.majoritySide) {
                 agg.favoritePickCount++;
@@ -270,13 +265,13 @@ async function rebuildUserMonthlyStatsCore() {
             });
         }
         const teamId = pick === "home"
-            ? (_u = p.home) === null || _u === void 0 ? void 0 : _u.teamId
+            ? (_t = p.home) === null || _t === void 0 ? void 0 : _t.teamId
             : pick === "away"
-                ? (_v = p.away) === null || _v === void 0 ? void 0 : _v.teamId
+                ? (_u = p.away) === null || _u === void 0 ? void 0 : _u.teamId
                 : null;
         if (!teamId)
             continue;
-        (_w = (_4 = agg.teamMap)[teamId]) !== null && _w !== void 0 ? _w : (_4[teamId] = { posts: 0, wins: 0 });
+        (_v = (_3 = agg.teamMap)[teamId]) !== null && _v !== void 0 ? _v : (_3[teamId] = { posts: 0, wins: 0 });
         agg.teamMap[teamId].posts++;
         if (isWin)
             agg.teamMap[teamId].wins++;
@@ -295,9 +290,6 @@ async function rebuildUserMonthlyStatsCore() {
     const winRatesCohort = cohortRows
         .map((r) => r.winRate)
         .sort((a, b) => a - b);
-    const precisionsCohort = cohortRows
-        .map((r) => r.avgPrecision)
-        .sort((a, b) => a - b);
     const pointsV3sCohort = cohortRows
         .map((r) => r.avgPointsV3)
         .sort((a, b) => a - b);
@@ -310,7 +302,7 @@ async function rebuildUserMonthlyStatsCore() {
     const leagueVolumeMapCohort = {};
     for (const r of cohortRows) {
         for (const [league, p] of Object.entries(r.leaguePosts)) {
-            (_x = leagueVolumeMapCohort[league]) !== null && _x !== void 0 ? _x : (leagueVolumeMapCohort[league] = []);
+            (_w = leagueVolumeMapCohort[league]) !== null && _w !== void 0 ? _w : (leagueVolumeMapCohort[league] = []);
             leagueVolumeMapCohort[league].push(p);
         }
     }
@@ -369,11 +361,10 @@ async function rebuildUserMonthlyStatsCore() {
             const basePointsSum = Math.max(0, agg.pointsSumV3 - agg.upsetBonusSum - agg.streakBonusSum);
             const mainLeague = getMainLeague(agg.leaguePosts);
             const volumeMainLeague = mainLeague
-                ? percentile((_y = leagueVolumeMap[mainLeague]) !== null && _y !== void 0 ? _y : [], agg.leaguePosts[mainLeague])
+                ? percentile((_x = leagueVolumeMap[mainLeague]) !== null && _x !== void 0 ? _x : [], agg.leaguePosts[mainLeague])
                 : 0;
             const percentiles = {
                 winRate: percentile(winRates, row.winRate),
-                precision: percentile(precisions, row.avgPrecision),
                 pointsV3: percentile(pointsV3s, row.avgPointsV3),
                 upset: percentile(upsetPointSums, row.upsetPointsSum),
                 volume: volumeMainLeague,
@@ -385,7 +376,7 @@ async function rebuildUserMonthlyStatsCore() {
                     ];
                 })),
             };
-            const marketAgg = (_z = postAggMap[row.uid]) !== null && _z !== void 0 ? _z : {
+            const marketAgg = (_y = postAggMap[row.uid]) !== null && _y !== void 0 ? _y : {
                 favoritePickCount: 0,
                 underdogPickCount: 0,
                 favoritePickRatioSum: 0,
@@ -410,17 +401,15 @@ async function rebuildUserMonthlyStatsCore() {
             const radar10 = radarEligible
                 ? {
                     winRate: clamp10(percentile(winRatesCohort, row.winRate) / 10),
-                    precision: clamp10(percentile(precisionsCohort, row.avgPrecision) / 10),
                     upset: clamp10(percentile(upsetPointSumsCohort, row.upsetPointsSum) / 10),
                     volume: mainLeague
-                        ? clamp10(percentile((_0 = leagueVolumeMapCohort[mainLeague]) !== null && _0 !== void 0 ? _0 : [], (_1 = agg.leaguePosts[mainLeague]) !== null && _1 !== void 0 ? _1 : 0) / 10)
+                        ? clamp10(percentile((_z = leagueVolumeMapCohort[mainLeague]) !== null && _z !== void 0 ? _z : [], (_0 = agg.leaguePosts[mainLeague]) !== null && _0 !== void 0 ? _0 : 0) / 10)
                         : 0,
-                    streak: clamp10(percentile(staminaSorted, (_2 = staminaRawByUid.get(row.uid)) !== null && _2 !== void 0 ? _2 : 0) / 10),
+                    streak: clamp10(percentile(staminaSorted, (_1 = staminaRawByUid.get(row.uid)) !== null && _1 !== void 0 ? _1 : 0) / 10),
                     pointsV3: clamp10(percentile(pointsV3sCohort, row.avgPointsV3) / 10),
                 }
                 : {
                     winRate: 0,
-                    precision: 0,
                     upset: 0,
                     volume: 0,
                     streak: 0,
@@ -438,10 +427,7 @@ async function rebuildUserMonthlyStatsCore() {
                     posts: agg.posts,
                     wins: agg.wins,
                     winRate: row.winRate,
-                    avgPrecision: row.avgPrecision,
                     avgPointsV3: row.avgPointsV3,
-                    /** 月内スコア精度の合計（平均は avgPrecision） */
-                    scorePrecisionSum: agg.precisionSum,
                     /** 月内総合得点の合計（平均は avgPointsV3） */
                     pointsSumV3: agg.pointsSumV3,
                     basePointsSum,
@@ -453,7 +439,7 @@ async function rebuildUserMonthlyStatsCore() {
                     upsetHit: agg.upsetHit,
                     leaguePosts: agg.leaguePosts,
                     /** 当月の総合得点（合計）による全ユーザー中の順位（同点は繰り上がり順位） */
-                    pointsSumV3Rank: (_3 = pointsSumV3RankByUid.get(row.uid)) !== null && _3 !== void 0 ? _3 : null,
+                    pointsSumV3Rank: (_2 = pointsSumV3RankByUid.get(row.uid)) !== null && _2 !== void 0 ? _2 : null,
                     /** 上記順位の分母（当月投稿ありユーザー数）。過去ドキュメントには無い場合あり */
                     pointsSumV3RankDenominator: pointsSumV3RankDenominator > 0 ? pointsSumV3RankDenominator : null,
                 },

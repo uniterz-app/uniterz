@@ -2,8 +2,8 @@ import GamesPageBackgroundNative from "../features/background/GamesPageBackgroun
 
 /**
  * Web `AppPageBackground` 相当。
- * ルートに1つだけ置き、タブ遷移でアンマウントされない（オーロラ位相も継続）。
+ * ルートに1つだけ置き、タブ遷移でアンマウントされない。
  */
 export default function AppPageBackgroundNative() {
-  return <GamesPageBackgroundNative lite={false} />;
+  return <GamesPageBackgroundNative lite />;
 }

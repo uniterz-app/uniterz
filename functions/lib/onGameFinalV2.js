@@ -9,14 +9,14 @@ const marketCalculator_1 = require("./marketCalculator");
 const upsetJudge_1 = require("./upsetJudge");
 const finalizePost_1 = require("./finalizePost");
 const aggregateGamePointsDistribution_1 = require("./aggregateGamePointsDistribution");
+const enrichGamePointsTopFromUsers_1 = require("./enrichGamePointsTopFromUsers");
+const buildTopScorerMarketEmbed_1 = require("./buildTopScorerMarketEmbed");
 const updateUserStreak_1 = require("./updateUserStreak");
-const wcSlotStreak_1 = require("./wc/wcSlotStreak");
 const updateTeamStats_1 = require("./updateTeamStats");
 const updateTeamSeasonRecord_1 = require("./updateTeamSeasonRecord");
 const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
 const teamStandingsSeasonPhase_1 = require("./teamStandingsSeasonPhase");
 const settlementGame_1 = require("./settlementGame");
-const onKnockoutGameFinal_1 = require("./wc-bracket/onKnockoutGameFinal");
 const db = () => (0, firestore_2.getFirestore)();
 const MIN_MARKET = 10;
 const UPSET_MARKET_RATIO = 0.6;
@@ -30,7 +30,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     memory: "1GiB",
     timeoutSeconds: 540,
 }, async (event) => {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
     const firestore = db();
     const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
     const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
@@ -63,18 +63,17 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         advancingTeamId: (_f = game.advancingTeamId) !== null && _f !== void 0 ? _f : null,
         knockout: game.knockout === true,
         goalScorers: game.goalScorers,
+        leadingScorers: game.leadingScorers,
     };
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();
-    let wcSlotRescore = null;
     if (becameFinal) {
-        const streakOutcome = await (0, updateUserStreak_1.updateUserStreak)({
+        streakResultMap = await (0, updateUserStreak_1.updateUserStreak)({
             db: firestore,
             gameId,
             settlementGame,
+            postsSnap,
         });
-        streakResultMap = streakOutcome.streakResultMap;
-        wcSlotRescore = streakOutcome.wcSlotRescore;
         const skipTeamSeasonRecord = (0, teamStandingsSeasonPhase_1.isExemptFromTeamSeasonRecord)(game.knockout);
         if (!skipTeamSeasonRecord &&
             (0, teamStandingsSeasonPhase_1.countsTowardRegularSeasonTeamStats)(game.seasonPhase)) {
@@ -142,7 +141,23 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         },
     });
     hadUpsetGame = upset.isUpsetGame;
-    /* ===== ④ finalize posts（バッチ分割 + チャンクごとにユーザー更新をフラッシュ） ===== */
+    /* ===== ④ 得点サマリ先行（同一 posts スナップ・追加 read なし） ===== */
+    const { summary: pointsSummaryRaw, settlementByPostId } = (0, aggregateGamePointsDistribution_1.aggregateGamePointsSummaryFromPostsSnap)({
+        postsSnap,
+        game: settlementGame,
+        market,
+        hadUpsetGame,
+        streakResultMap,
+    });
+    /** Top10 の表示名 / アバターは users から補完（posts.author が無いため） */
+    const pointsSummary = Object.assign(Object.assign({}, pointsSummaryRaw), { top: await (0, enrichGamePointsTopFromUsers_1.enrichGamePointsTopFromUsers)(firestore, pointsSummaryRaw.top) });
+    const topScorerMarket = (0, buildTopScorerMarketEmbed_1.buildTopScorerMarketEmbedFromPostsSnap)({
+        league: game.league,
+        postsSnap,
+        leadingScorers: game.leadingScorers,
+        topScorerCandidates: after === null || after === void 0 ? void 0 : after.topScorerCandidates,
+    });
+    /* ===== ⑤ finalize posts（scoreRel を同書き込みで埋め込み・決済は再利用） ===== */
     const postDocs = postsSnap.docs;
     for (let i = 0; i < postDocs.length; i += FINALIZE_POSTS_CHUNK_SIZE) {
         const slice = postDocs.slice(i, i + FINALIZE_POSTS_CHUNK_SIZE);
@@ -152,6 +167,8 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         const batch = firestore.batch();
         const userUpdateTasks = [];
         for (const doc of pendingInSlice) {
+            const settlement = settlementByPostId.get(doc.id);
+            const scoreRel = (0, aggregateGamePointsDistribution_1.resolveScoreRelFromSummary)((_g = settlement === null || settlement === void 0 ? void 0 : settlement.totalPoints) !== null && _g !== void 0 ? _g : 0, pointsSummary);
             await (0, finalizePost_1.finalizePost)({
                 postDoc: doc,
                 game,
@@ -161,24 +178,15 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
                 batch,
                 userUpdateTasks,
                 streakResultMap,
+                scoreRel,
+                settlement,
             });
         }
         await batch.commit();
         await Promise.all(userUpdateTasks);
     }
-    if (wcSlotRescore) {
-        await (0, wcSlotStreak_1.rescoreEarlierWcSlotPosts)(firestore, gameId, wcSlotRescore.perUserPerGameActive);
-    }
-    const pointsDistribution = (0, aggregateGamePointsDistribution_1.aggregateGamePointsDistributionFromPostsSnap)({
-        postsSnap,
-        game: settlementGame,
-        market,
-        hadUpsetGame,
-        streakResultMap,
-    });
-    /* ===== ⑤ finalize game ===== */
-    const gamePatch = {
-        market: {
+    /* ===== ⑥ finalize game ===== */
+    const gamePatch = Object.assign(Object.assign({ market: {
             homeCount: market.homeCount,
             awayCount: market.awayCount,
             drawCount: market.drawCount,
@@ -187,15 +195,10 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             awayRate: market.awayRate,
             majority: market.majoritySide,
             majorityRatio: market.majorityRatio,
-        },
-        pointsDistribution: Object.assign(Object.assign({}, pointsDistribution), { updatedAtMillis: Date.now() }),
-        "game.status": "final",
-        "game.finalScore": {
+        }, pointsSummary: Object.assign(Object.assign({}, pointsSummary), { updatedAtMillis: Date.now() }) }, (topScorerMarket ? { topScorerMarket } : {})), { "game.status": "final", "game.finalScore": {
             home: game.homeScore,
             away: game.awayScore,
-        },
-        resultComputedAtV2: firestore_2.FieldValue.serverTimestamp(),
-    };
+        }, resultComputedAtV2: firestore_2.FieldValue.serverTimestamp() });
     if (upset.isUpsetGame && upset.meta) {
         gamePatch.upsetMeta = Object.assign({ homeRank,
             awayRank,
@@ -204,11 +207,6 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     }
     await firestore.doc(`games/${gameId}`).set(gamePatch, { merge: true });
     if (becameFinal) {
-        await firestore.doc("trend_jobs/users").set({
-            needsRebuild: true,
-            requestedAt: firestore_2.FieldValue.serverTimestamp(),
-            gameId,
-        }, { merge: true });
         try {
             await (0, notifyPushEvents_1.notifyGameFinalPush)({
                 gameId,
@@ -220,25 +218,6 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         }
         catch (err) {
             console.error("[onGameFinalV2] push notify failed", err);
-        }
-        try {
-            await (0, onKnockoutGameFinal_1.maybeUpdateWcBracketOnKnockoutFinal)(firestore, {
-                gameId,
-                season: typeof after.season === "string" ? after.season : null,
-                league: game.league,
-                knockout: game.knockout === true,
-                homeTeamId: game.homeTeamId,
-                awayTeamId: game.awayTeamId,
-                homeScore: game.homeScore,
-                awayScore: game.awayScore,
-                advancingTeamId: game.advancingTeamId,
-                wcKnockoutMatchId: typeof after.wcKnockoutMatchId === "string"
-                    ? after.wcKnockoutMatchId
-                    : null,
-            });
-        }
-        catch (err) {
-            console.error("[onGameFinalV2] wc bracket survivor update failed", err);
         }
     }
 });

@@ -80,20 +80,17 @@ export async function POST(req: Request) {
   /* =====================
      user 特定
   ===================== */
-  const snap = await db
-    .collection("users")
-    .where("stripeSubscriptionId", "==", sub.id)
-    .limit(1)
-    .get();
-
-  if (snap.empty) {
+  const { resolveUidByStripeSubscriptionId } = await import(
+    "@/lib/billing/userBillingSecure"
+  );
+  const uid = await resolveUidByStripeSubscriptionId(db, sub.id);
+  if (!uid) {
     console.error("[SUBSCRIPTION] user not found:", sub.id);
     return NextResponse.json({ received: true });
   }
 
-  const userDoc = snap.docs[0];
-  const uid = userDoc.id;
-  const userData = userDoc.data();
+  const userDoc = await db.collection("users").doc(uid).get();
+  const userData = userDoc.data() ?? {};
 
   /* =====================
      解約予約判定（Stripe仕様準拠）

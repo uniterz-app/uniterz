@@ -12,7 +12,7 @@ export const teamNameRulesNBA: Record<string, { line1: string; line2: string }> 
   "Golden State Warriors":    { line1: "Golden State", line2: "Warriors" },
   "Houston Rockets":          { line1: "Houston", line2: "Rockets" },
   "Indiana Pacers":           { line1: "Indiana", line2: "Pacers" },
-  "LA Clippers":              { line1: "LA", line2: "Clippers" },
+  "LA Clippers":              { line1: "Los Angeles", line2: "Clippers" },
   "Los Angeles Lakers":       { line1: "Los Angeles", line2: "Lakers" },
   "Memphis Grizzlies":        { line1: "Memphis", line2: "Grizzlies" },
   "Miami Heat":               { line1: "Miami", line2: "Heat" },

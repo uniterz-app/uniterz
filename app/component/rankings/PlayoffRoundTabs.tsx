@@ -1,6 +1,7 @@
 "use client";
 
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
+import { PLAYOFF_ROUND_KEYS } from "@/lib/rankings/playoffRound";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import {
@@ -15,34 +16,38 @@ type Props = {
   language?: Language;
 };
 
-function roundItems(language: Language): Array<{ key: PlayoffRoundKey; label: string }> {
-  const m = t(language);
-  return [
-    { key: "overall", label: m.rankings.roundTotal },
-    { key: "r1", label: m.rankings.roundFirst },
-    { key: "r2", label: m.rankings.roundSecond },
-    { key: "cf", label: m.rankings.roundCF },
-    { key: "finals", label: m.rankings.roundFinals },
-  ];
+function roundLabel(language: Language, key: PlayoffRoundKey): string {
+  const m = t(language).rankings;
+  switch (key) {
+    case "overall":
+      return m.roundTotal;
+    case "r1":
+      return m.roundFirst;
+    case "r2":
+      return m.roundSecond;
+    case "cf":
+      return m.roundCF;
+    case "finals":
+      return m.roundFinals;
+  }
 }
 
+/** NBA Playoffs のラウンド切替（Native `PlayoffRoundTabsNative` 相当） */
 export default function PlayoffRoundTabs({
   round,
   onChange,
   isMobile = false,
   language = "ja",
 }: Props) {
-  const items = roundItems(language);
-
   return (
-    <CyberSlantedTabBar fill aria-label={t(language).rankings.roundTabsLabel}>
-      {items.map((item) => (
+    <CyberSlantedTabBar fill aria-label="Playoff rounds">
+      {PLAYOFF_ROUND_KEYS.map((key) => (
         <CyberSlantedTab
-          key={item.key}
+          key={key}
           role="tab"
-          label={item.label}
-          active={round === item.key}
-          onClick={() => onChange(item.key)}
+          label={roundLabel(language, key)}
+          active={round === key}
+          onClick={() => onChange(key)}
           compact={isMobile}
         />
       ))}

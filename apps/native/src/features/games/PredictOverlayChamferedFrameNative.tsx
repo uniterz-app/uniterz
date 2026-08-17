@@ -36,6 +36,8 @@ type Props = {
   /** 角の矩形はみ出しをマスク（Web clip-path 相当） */
   maskCorners?: boolean;
   cornerMaskColor?: string;
+  /** true で根を clip（スコア入力など枠ずれ防止） */
+  overflowHidden?: boolean;
   children: ReactNode;
 };
 
@@ -59,6 +61,7 @@ export default function PredictOverlayChamferedFrameNative({
   contentStyle,
   maskCorners = true,
   cornerMaskColor = "rgba(10,14,22,1)",
+  overflowHidden = false,
   children,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -80,6 +83,7 @@ export default function PredictOverlayChamferedFrameNative({
     <View
       style={[
         styles.root,
+        overflowHidden ? styles.rootClip : null,
         flex != null ? { flex } : null,
         shadowColor
           ? {
@@ -93,6 +97,7 @@ export default function PredictOverlayChamferedFrameNative({
         style,
       ]}
       onLayout={onLayout}
+      collapsable={false}
     >
       {hasSize && skiaPath ? (
         <>
@@ -146,6 +151,9 @@ const styles = StyleSheet.create({
     position: "relative",
     minWidth: 0,
     overflow: "visible",
+  },
+  rootClip: {
+    overflow: "hidden",
   },
   content: {
     position: "relative",

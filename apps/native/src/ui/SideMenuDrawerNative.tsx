@@ -1,5 +1,5 @@
 /**
- * Web `SideMenuDrawer` 相当 — 左スライドドロワー
+ * Web `SideMenuDrawer` 相当 — 画面高さ全体の左スライドドロワー
  */
 import { ReactNode, useEffect, useMemo, useRef } from "react";
 import {
@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
-import { spacing } from "../theme/tokens";
 import { nativeBlurViewExtraProps } from "./nativeBlurProps";
 import CyberSideMenuPanelNative from "./CyberSideMenuPanelNative";
 
@@ -22,13 +21,13 @@ type Props = {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
-  /** パネル幅（mobile デフォルト 260–300） */
+  /** パネル幅（mobile デフォルト 268–320） */
   panelWidth?: number;
 };
 
 const DEFAULT_PANEL_W = Math.min(
-  300,
-  Math.max(260, Math.round(Dimensions.get("window").width * 0.46))
+  320,
+  Math.max(268, Math.round(Dimensions.get("window").width * 0.52))
 );
 
 export default function SideMenuDrawerNative({
@@ -40,13 +39,13 @@ export default function SideMenuDrawerNative({
   const insets = useSafeAreaInsets();
   const slide = useRef(new Animated.Value(-panelWidth - 24)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
-  const panelLayout = useMemo(() => {
-    /** Web `SideMenuDrawer` の py-4 相当 — safe area 直下のみ（ヘッダー全高は取らない） */
-    const top = insets.top + 16;
-    const bottom = Math.max(insets.bottom, spacing.md);
-    const maxHeight = Dimensions.get("window").height - top - bottom;
-    return { top, bottom, maxHeight };
-  }, [insets.top, insets.bottom]);
+  const contentPad = useMemo(
+    () => ({
+      paddingTop: insets.top + 12,
+      paddingBottom: Math.max(insets.bottom, 12),
+    }),
+    [insets.top, insets.bottom]
+  );
 
   useEffect(() => {
     if (open) {
@@ -58,7 +57,7 @@ export default function SideMenuDrawerNative({
           useNativeDriver: true,
         }),
         Animated.spring(slide, {
-          toValue: -16,
+          toValue: 0,
           friction: 9,
           tension: 68,
           useNativeDriver: true,
@@ -87,7 +86,7 @@ export default function SideMenuDrawerNative({
         <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
           {(Platform.OS === "ios" || Platform.OS === "android") && (
             <BlurView
-              intensity={Platform.OS === "ios" ? 12 : 8}
+              intensity={Platform.OS === "ios" ? 14 : 10}
               tint="dark"
               {...nativeBlurViewExtraProps()}
               style={StyleSheet.absoluteFillObject}
@@ -96,19 +95,18 @@ export default function SideMenuDrawerNative({
           <View style={styles.backdropDim} />
           <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         </Animated.View>
+
         <Animated.View
           style={[
             styles.panelWrap,
             {
               width: panelWidth,
-              top: panelLayout.top,
-              bottom: panelLayout.bottom,
               transform: [{ translateX: slide }],
             },
           ]}
         >
-          <CyberSideMenuPanelNative style={[styles.panel, { maxHeight: panelLayout.maxHeight }]}>
-            <View style={styles.panelInner}>{children}</View>
+          <CyberSideMenuPanelNative fillHeight edgeAttach style={styles.panel}>
+            <View style={[styles.panelInner, contentPad]}>{children}</View>
           </CyberSideMenuPanelNative>
         </Animated.View>
       </View>
@@ -123,21 +121,21 @@ const styles = StyleSheet.create({
   },
   backdropDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.58)",
   },
   panelWrap: {
     position: "absolute",
     left: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingLeft: 0,
-    paddingRight: 12,
+    top: 0,
+    bottom: 0,
+    zIndex: 2,
   },
   panel: {
     flex: 1,
+    width: "100%",
+    height: "100%",
   },
   panelInner: {
     flex: 1,
-    paddingVertical: 8,
   },
 });

@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { RankingRowWithCountry } from "@/app/component/rankings/_data/mockRows";
+import type { RankingRowWithCountry } from "@/lib/rankings/rankingMetrics";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -20,8 +20,10 @@ export type SummaryForCardsV2 = {
   // ① 勝率
   winRate: number;
 
-  // ② スコア精度（期間合計）
-  scorePrecisionSum: number;
+  /** WC の予想スコア完全一致数。NBA は常に 0。 */
+  exactHitCount: number;
+  /** NBA 最多得点者的中数。WC は 0。 */
+  goalScorerHitCount: number;
 
   // ③ アップセット得点（期間合計）
   upsetPointsSum: number;
@@ -112,7 +114,6 @@ export function primeProfileStatsFromRankingRow(
     activeWinStreak?: number;
   };
   const totalPoints = ext.totalPoints ?? ext.totalScore ?? 0;
-  const totalPrecision = ext.totalPrecision ?? ext.marginPrecisionScore ?? 0;
   const totalUpset = ext.totalUpset ?? ext.upsetScore ?? 0;
 
   const summary: SummaryForCardsV2 = {
@@ -121,7 +122,12 @@ export function primeProfileStatsFromRankingRow(
     recent3Posts: Math.min(3, posts),
     wins: Math.round(winRate * posts),
     winRate,
-    scorePrecisionSum: totalPrecision,
+    exactHitCount: row.totalExactHits ?? 0,
+    goalScorerHitCount:
+      row.goalScorerHits ??
+      (row as RankingRowWithCountry & { totalGoalScorerHits?: number })
+        .totalGoalScorerHits ??
+      0,
     upsetPointsSum: totalUpset,
     pointsSumV3: totalPoints,
     basePointsSum: totalPoints,
@@ -129,7 +135,7 @@ export function primeProfileStatsFromRankingRow(
     streakBonusSum: 0,
     upsetChanceCount: 0,
     upsetHitCount: 0,
-    activeWinStreak: row.streak ?? ext.activeWinStreak ?? 0,
+    activeWinStreak: 0,
   };
 
   mergeCacheEntry(statsCacheKey(safeUid, context.rankingLeague, context.wcStage), {
@@ -149,13 +155,30 @@ export function primeProfileStatsFromRankingRow(
   });
 }
 
+/** プロフィール overview 初回描画用（ランキング prime / hero seed） */
+export function peekPrimedProfileStatsSummary(
+  uid: string | null | undefined,
+  rankingLeague: RankingLeagueSource = "nba"
+): {
+  summary: SummaryForCardsV2;
+  summaryRanks: SummaryRanksV2 | null;
+} | null {
+  const safeUid = uid?.trim();
+  if (!safeUid) return null;
+  const cached = readValidCache(statsCacheKey(safeUid, rankingLeague));
+  if (!cached?.summary) return null;
+  return {
+    summary: cached.summary,
+    summaryRanks: cached.summaryRanks,
+  };
+}
+
 function statsCacheKey(
   uid: string,
   rankingLeague: RankingLeagueSource,
   wcStage?: WcRankingStage
 ): string {
-  const safeWcStage =
-    rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined;
+  const safeWcStage = undefined;
   return `${uid}:${rankingLeague}:${safeWcStage ?? "-"}`;
 }
 
@@ -208,8 +231,7 @@ function buildStatsQuery(
   rankingLeague: RankingLeagueSource,
   wcStage?: WcRankingStage
 ) {
-  const safeWcStage =
-    rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined;
+  const safeWcStage = undefined;
   const qs = new URLSearchParams({
     uid,
     parts,
@@ -283,8 +305,7 @@ async function bootstrapStatsByRouteKey(
 ): Promise<string | null> {
   const safeKey = routeKey.trim();
   if (!safeKey) return null;
-  const safeWcStage =
-    rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined;
+  const safeWcStage = undefined;
   const dedupeKey = `${safeKey}:${rankingLeague}:${safeWcStage ?? "-"}`;
   const existing = bootstrapInflight.get(dedupeKey);
   if (existing) return existing;
@@ -368,8 +389,7 @@ async function fetchTrendIntoCache(
 }
 
 function prefetchLeagueStats(uid: string, rankingLeague: RankingLeagueSource) {
-  const wcStage: WcRankingStage | undefined =
-    rankingLeague === "worldcup" ? "overall" : undefined;
+  const wcStage: WcRankingStage | undefined = undefined;
   const key = statsCacheKey(uid, rankingLeague, wcStage);
   if (readValidCache(key)) return;
 
@@ -486,14 +506,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
   useEffect(() => {
     if (!uid) return;
     prefetchLeagueStats(uid, rankingLeague);
-    if (!prefetchOtherLeague) return;
-    const otherLeague: RankingLeagueSource =
-      rankingLeague === "nba" ? "worldcup" : "nba";
-    const deferredId = window.setTimeout(() => {
-      prefetchLeagueStats(uid, otherLeague);
-    }, 4000);
-    return () => window.clearTimeout(deferredId);
-  }, [prefetchOtherLeague, uid, rankingLeague]);
+  }, [uid, rankingLeague]);
 
   useEffect(() => {
     let cancelled = false;

@@ -69,15 +69,11 @@ export async function POST(req: Request) {
   const sub = event.data.object as Stripe.Subscription;
   const customerId = sub.customer as string;
 
-  const snap = await db
-    .collection("users")
-    .where("stripeCustomerId", "==", customerId)
-    .limit(1)
-    .get();
-
-  if (snap.empty) return NextResponse.json({ received: true });
-
-  const uid = snap.docs[0].id;
+  const { resolveUidByStripeCustomerId, writeUserBillingSecure } = await import(
+    "@/lib/billing/userBillingSecure"
+  );
+  const uid = await resolveUidByStripeCustomerId(db, customerId);
+  if (!uid) return NextResponse.json({ received: true });
 
   const priceId = sub.items.data[0]?.price.id;
   const planType =
@@ -94,14 +90,17 @@ export async function POST(req: Request) {
     }
   }
 
+  await writeUserBillingSecure(db, uid, {
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: sub.id,
+  });
+
   await db.collection("users").doc(uid).set(
     {
       plan: "pro",
       planType,
       nextPlanType: null,
       cancelAtPeriodEnd: false,
-      stripeCustomerId: customerId,
-      stripeSubscriptionId: sub.id,
       ...(typeof periodEndSec === "number"
         ? { proUntil: Timestamp.fromMillis(periodEndSec * 1000) }
         : {}),
@@ -109,6 +108,24 @@ export async function POST(req: Request) {
     },
     { merge: true }
   );
+
+  try {
+    const { ensureUserPlanStartDate } = await import(
+      "@/lib/pro/ensureUserPlanStartDate"
+    );
+    await ensureUserPlanStartDate(db, uid);
+  } catch (err) {
+    console.warn("[stripe/purchase] planStartDate ensure failed:", err);
+  }
+
+  try {
+    const { applyProSkinUnlocksAfterProUpgrade } = await import(
+      "@/lib/profile/applyProSkinUnlocksAfterProUpgrade"
+    );
+    await applyProSkinUnlocksAfterProUpgrade(db, uid);
+  } catch (err) {
+    console.warn("[PURCHASE] pro-skin upgrade merge failed:", err);
+  }
 
   return NextResponse.json({ received: true });
 }

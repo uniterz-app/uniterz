@@ -12,10 +12,10 @@ import {
   predictOverlayPanel,
   predictOverlayRoot,
 } from "@/lib/predict/predictPageMotion";
-import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
 import CommunityGroupDetailCard from "./CommunityGroupDetailCard";
 import CommunityGroupDetailView from "./CommunityGroupDetailView";
 import EndGroupConfirmModal from "./EndGroupConfirmModal";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import {
   invalidateCommunityGroupDetail,
   type CommunityGroupListPreview,
@@ -131,9 +131,7 @@ export default function CommunityGroupOverlay({
 
   if (typeof document === "undefined") return null;
 
-  const backdropClass = isMobile
-    ? `absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`
-    : "absolute inset-0 z-0 bg-black/35 backdrop-blur-md";
+  const backdropClass = "absolute inset-0 z-0 bg-black";
 
   const scrollPanelClass = [
     "relative z-10 h-dvh overflow-x-hidden pointer-events-auto pb-bottom-nav",
@@ -158,29 +156,11 @@ export default function CommunityGroupOverlay({
       onClick={(e) => e.stopPropagation()}
     >
       <CommunityGroupDetailCard
-        language={language}
         variant="overlay"
-        backHeaderOverHero={!isMobile}
-        className={
-          isMobile
-            ? ""
-            : [
-                "border border-white/10",
-                "bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_42%,rgba(255,255,255,0.012)_100%),linear-gradient(180deg,rgba(5,8,20,0.88)_0%,rgba(5,8,20,0.88)_100%)]",
-                "backdrop-blur-xl",
-                "shadow-[0_14px_36px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.12)]",
-              ].join(" ")
-        }
-        onBack={() => {
-          if (!endConfirmOpen) onClose();
-        }}
+        className=""
       >
         <CommunityGroupDetailView
           inDetailCard
-          heroBackOverImage={!isMobile}
-          onBack={() => {
-            if (!endConfirmOpen) onClose();
-          }}
           groupId={groupId!}
           listPreview={listPreview}
           language={language}
@@ -210,7 +190,7 @@ export default function CommunityGroupOverlay({
         {open && groupId ? (
           <motion.div
             key="community-group-overlay"
-            className="fixed inset-0 z-100000 overflow-hidden"
+            className="fixed inset-0 z-100000 overflow-hidden bg-black"
             role="dialog"
             aria-modal={!endConfirmOpen}
             variants={overlayMotionEnabled ? predictOverlayRoot : undefined}
@@ -224,6 +204,16 @@ export default function CommunityGroupOverlay({
               onClick={() => {
                 if (!endConfirmOpen) onClose();
               }}
+            />
+
+            <ProfileMenuEdgeHandle
+              onOpen={() => {
+                if (!endConfirmOpen) onClose();
+              }}
+              label="BACK"
+              tone="back"
+              overlay
+              ariaLabel={language === "en" ? "Back" : "戻る"}
             />
 
             {overlayMotionEnabled ? (

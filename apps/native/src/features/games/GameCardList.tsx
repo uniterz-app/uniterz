@@ -1,13 +1,8 @@
-import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
-import { memo, useMemo } from "react";
+import { Platform, Pressable, StyleSheet, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
+import { memo, useEffect, useMemo, useRef } from "react";
+import { registerTutorialTarget } from "../tutorial/tutorialMeasureNative";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
-import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
-import { isWcKnockoutGame } from "../../../../../lib/wc/isWcKnockoutGame";
-import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
-import WcGroupStandingRecordLineNative from "../results/WcGroupStandingRecordLineNative";
-import { resolveWcGroupStageStandingForKnockoutDisplay } from "../../../../../lib/wc/wcGroupStandingRank";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
-import CountryFlagNative from "./CountryFlagNative";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
@@ -15,17 +10,41 @@ import { LiveMarkPill } from "./LiveMarkPill";
 import MatchPkResultLineNative from "./MatchPkResultLineNative";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import MatchListCyberClipNative from "./MatchListCyberClipNative";
-import { WcBroadcastNamesNative } from "./WcBroadcastNamesNative";
 import MatchListCyberDecorNative from "./MatchListCyberDecorNative";
+import MatchListLineFrameNative from "./MatchListLineFrameNative";
+import { isNbaPickupGame } from "../../../../../lib/nba/isPickupGame";
+import { resolveTutorialPickupGameId } from "../../../../../lib/tutorial/tutorialPickupGame";
 import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
-import WcTeamNameMobileNative from "./WcTeamNameMobileNative";
 import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
 import {
   useGameCardListRowEntrance,
   type GameCardEntranceVariant,
 } from "./useGameCardListRowEntrance";
+import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
+import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
+function matchRoundSideCode(roundLabel: string): string {
+  const u = roundLabel.toUpperCase();
+  if (u.includes("PLAYOFF") || u.includes("プレーオフ")) return "PO";
+  if (u.includes("PLAY-IN") || u.includes("PLAY IN") || u.includes("プレーイン")) {
+    return "PI";
+  }
+  return "RS";
+}
+
+function resolveLineFrameLabels(
+  roundLabel: string,
+  pickup: boolean,
+  pickupMark: "top" | "left"
+): { top: string; left?: string } {
+  if (!pickup) return { top: roundLabel };
+  if (pickupMark === "left") {
+    return { top: roundLabel, left: "PICK UP" };
+  }
+  return { top: "PICK UP", left: matchRoundSideCode(roundLabel) };
+}
+
 type ScreenStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
 type GameCardListProps = {
@@ -64,6 +83,17 @@ type GameCardListProps = {
     side: unknown,
     fallback: string
   ) => { primary: string; secondary: string };
+  /** 先頭カードにパルス誘導（初回チュートリアル） */
+  tutorialPulseFirstCard?: boolean;
+  tutorialPulseLabel?: string;
+  /** `match-card` 測定を登録（ライブチュートリアル） */
+  tutorialRegisterMatchCard?: boolean;
+  /** 実ピックアップ試合の左辺 `PICK UP` を `match-pickup-label` として登録 */
+  tutorialRegisterPickupLabel?: boolean;
+  /** `lineFrame` = 塗りなし・上下ラベルで途切れた線枠。本番一覧の既定 */
+  shellVariant?: "cyber" | "lineFrame";
+  /** ピックアップ表記。本番は左辺 `PICK UP` */
+  pickupMark?: "top" | "left";
 };
 
 type GameCardListRowProps = GameCardListProps & {
@@ -72,6 +102,8 @@ type GameCardListRowProps = GameCardListProps & {
   rowIndex: number;
   enteringAnimationEnabled: boolean;
   entranceVariant: GameCardEntranceVariant;
+  /** 案内する実ピックアップ試合 */
+  tutorialPickupGameId?: string | null;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -99,7 +131,35 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
     enteringAnimationEnabled,
     entranceVariant,
     language,
+    tutorialPulseFirstCard = false,
+    tutorialPulseLabel,
+    tutorialRegisterMatchCard = false,
+    tutorialRegisterPickupLabel = false,
+    tutorialPickupGameId = null,
+    shellVariant = "lineFrame",
+    pickupMark = "left",
   } = props;
+  const useLineFrame = shellVariant === "lineFrame";
+
+  const showTutorialPulse = tutorialPulseFirstCard && rowIndex === 0;
+  const cardMeasureRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (rowIndex !== 0 || !tutorialRegisterMatchCard) return;
+    return registerTutorialTarget("match-card", () =>
+      new Promise((resolve) => {
+        const node = cardMeasureRef.current;
+        if (!node) {
+          resolve(null);
+          return;
+        }
+        node.measureInWindow((x, y, width, height) => {
+          if (width > 0 && height > 0) resolve({ x, y, width, height });
+          else resolve(null);
+        });
+      })
+    );
+  }, [rowIndex, tutorialRegisterMatchCard]);
 
   const reduceMotion = useReducedMotion() ?? false;
   const gameId = String(game.id ?? "");
@@ -112,8 +172,8 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   const started = isGameStarted(game);
   const leagueColor = resolveLeagueColor(game.league);
   const leagueKey = String(game.league ?? "").toLowerCase();
-  const showSideLabels = leagueKey !== "wc";
-  const isWcCard = leagueKey === "wc";
+  const showSideLabels = true;
+  const isWcCard = false;
   const homeTeamId =
     (game.home as { teamId?: string } | undefined)?.teamId ??
     (game.homeTeamId as string | undefined) ??
@@ -125,41 +185,23 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   const centerBlock = getGameCardCenterBlock(game);
   const roundLabelRaw = game.roundLabel;
   const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
-  const isKnockout = isWcKnockoutGame({
-    league: game.league,
-    knockout: game.knockout === true ? true : game.knockout === false ? false : null,
-    roundLabel,
-    wcStage: typeof game.wcStage === "string" ? game.wcStage : null,
-  });
+  const isPickup = isNbaPickupGame(game);
+  const frameLabels = resolveLineFrameLabels(roundLabel, isPickup, pickupMark);
+  const registerPickupLabel =
+    tutorialRegisterPickupLabel &&
+    isPickup &&
+    Boolean(tutorialPickupGameId) &&
+    String(game.id ?? "") === tutorialPickupGameId;
+  const isKnockout = false;
   const seriesLabel = resolveSeriesLabel(game);
   const seriesPair = resolveSeriesPair(game);
   const homeRecordLabel = getTeamRecordLabel(game.home, game.league);
   const awayRecordLabel = getTeamRecordLabel(game.away, game.league);
   const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
   const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
-  const homeKnockoutStanding = useMemo(
-    () =>
-      isKnockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(
-            homeTeamId,
-            homeTeamId ? teamRecordById[homeTeamId] ?? null : null
-          )
-        : null,
-    [isKnockout, homeTeamId, teamRecordById]
-  );
-  const awayKnockoutStanding = useMemo(
-    () =>
-      isKnockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(
-            awayTeamId,
-            awayTeamId ? teamRecordById[awayTeamId] ?? null : null
-          )
-        : null,
-    [isKnockout, awayTeamId, teamRecordById]
-  );
   const ctaLabel =
     status === "final"
-      ? t.final
+      ? "FINAL"
       : started
       ? t.live
       : isPredicted
@@ -174,13 +216,6 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
       ? "predicted"
       : "normal";
   const ctaDisplayLabel = ctaLabel;
-
-  const broadcastLabels = useMemo(() => {
-    if (leagueKey !== "wc" || status === "final") return [];
-    return resolveWcBroadcastLabels(gameId, game);
-  }, [game, gameId, leagueKey, status]);
-  const showWcBroadcastRow = broadcastLabels.length > 0;
-  const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
   const showPredictPrimaryGlow =
     status !== "final" && !started && !isPredicted;
@@ -197,18 +232,201 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
   return (
     <AnimatedPressable
       collapsable={false}
+      delayPressIn={0}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
-      onPress={() => void openPredictModal(game)}
+      onPress={() => {
+        void openPredictModal(game);
+      }}
       onPressIn={() => {
-        if (reduceMotion) return;
-        ent.pressed.value = withTiming(1, { duration: 90 });
+        ent.pressed.value = reduceMotion
+          ? 1
+          : withTiming(1, { duration: 90 });
       }}
       onPressOut={() => {
-        if (reduceMotion) return;
-        ent.pressed.value = withTiming(0, { duration: 160 });
+        ent.pressed.value = reduceMotion
+          ? 0
+          : withTiming(0, { duration: 160 });
       }}
-      style={[styles.gameCardOuter, ent.shellTransformStyle]}
+      style={[
+        styles.gameCardOuter,
+        ent.shellTransformStyle,
+        useLineFrame ? ent.shellOpacityStyle : null,
+      ]}
     >
+      {/*
+        測定・パルス枠はカード実寸（Clip）に一致させる。
+        外側 View に置くと一覧幅まで伸びて枠がカードより大きく見える。
+      */}
+      <View
+        ref={cardMeasureRef}
+        collapsable={false}
+        style={rowStyles.cardMeasure}
+      >
+      {useLineFrame ? (
+        <MatchListLineFrameNative
+          predicted={isPredicted}
+          pickup={isPickup}
+          topLabel={frameLabels.top || undefined}
+          leftLabel={frameLabels.left}
+          bottomLabel={ctaDisplayLabel}
+          strokeEnd={ent.frameStrokeEnd}
+          leftLabelTutorialTarget={
+            registerPickupLabel ? "match-pickup-label" : null
+          }
+          leftLabelPulse={registerPickupLabel}
+        >
+          <View style={styles.lineFrameInterior}>
+            <Animated.View style={ent.teamsGroupStyle}>
+              <View style={styles.matchupGrid}>
+                <View style={styles.lineFrameTeamColumn}>
+                  <View style={styles.teamTopGroup}>
+                    {showSideLabels ? <Text style={styles.sideLabel}>HOME</Text> : null}
+                    <Animated.View style={ent.homeJerseyStyle}>
+                      <View style={styles.lineFrameTeamMark}>
+                        <MatchTeamMarkNative
+                          leagueRaw={game.league}
+                          side={game.home}
+                          palette={homePalette}
+                          jerseySize={54}
+                          flagVariant="card"
+                        />
+                      </View>
+                    </Animated.View>
+                  </View>
+                  <View style={styles.teamBottomGroup}>
+                    <Text style={styles.lineFrameTeamName} numberOfLines={1}>
+                      {homeCompact}
+                    </Text>
+                    <Text style={styles.teamRecordText}>
+                      {homeRecordLabel ?? "(0-0-0)"}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.centerColumn}>
+                  <Animated.View style={ent.centerBlockStyle}>
+                    <View style={styles.centerScoreWrap}>
+                      {centerBlock.variant === "liveMark" ? (
+                        <View
+                          style={
+                            centerBlock.subLine
+                              ? styles.liveScoreStack
+                              : styles.liveMarkWrap
+                          }
+                        >
+                          <LiveMarkPill
+                            pillStyle={styles.liveMarkPill}
+                            textStyle={styles.liveMarkText}
+                          />
+                          {centerBlock.subLine ? (
+                            <Text
+                              style={[
+                                styles.centerSubline,
+                                isWcCard && styles.centerSublineWc,
+                              ]}
+                              numberOfLines={2}
+                            >
+                              {centerBlock.subLine}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : centerBlock.variant === "score" ? (
+                        <View
+                          style={[
+                            styles.centerTextScoreRow,
+                            isWcCard && styles.centerTextScoreRowWc,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.centerTextScoreNum,
+                              isWcCard && styles.centerTextScoreNumWc,
+                            ]}
+                          >
+                            {centerBlock.home}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.centerScoreDash,
+                              isWcCard && styles.centerScoreDashWc,
+                            ]}
+                          >
+                            –
+                          </Text>
+                          <Text
+                            style={[
+                              styles.centerTextScoreNum,
+                              isWcCard && styles.centerTextScoreNumWc,
+                            ]}
+                          >
+                            {centerBlock.away}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.centerText} numberOfLines={1} ellipsizeMode="clip">
+                          {centerBlock.time}
+                        </Text>
+                      )}
+                      {centerBlock.variant === "score" && centerBlock.subLine ? (
+                        <Text
+                          style={[
+                            styles.centerSubline,
+                            isWcCard && styles.centerSublineWc,
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {centerBlock.subLine}
+                        </Text>
+                      ) : null}
+                      {centerBlock.variant === "score" && centerBlock.pkScore ? (
+                        <MatchPkResultLineNative
+                          pkScore={centerBlock.pkScore}
+                          density="card"
+                          wc={isWcCard}
+                        />
+                      ) : null}
+                      {seriesPair != null ? (
+                        <PlayoffSeriesScoreInline
+                          homeWins={seriesPair.home}
+                          awayWins={seriesPair.away}
+                          variant="card"
+                        />
+                      ) : seriesLabel ? (
+                        <Text style={styles.seriesText}>{seriesLabel}</Text>
+                      ) : null}
+                    </View>
+                  </Animated.View>
+                </View>
+
+                <View style={styles.lineFrameTeamColumn}>
+                  <View style={styles.teamTopGroup}>
+                    {showSideLabels ? <Text style={styles.sideLabel}>AWAY</Text> : null}
+                    <Animated.View style={ent.awayJerseyStyle}>
+                      <View style={styles.lineFrameTeamMark}>
+                        <MatchTeamMarkNative
+                          leagueRaw={game.league}
+                          side={game.away}
+                          palette={awayPalette}
+                          jerseySize={54}
+                          flagVariant="card"
+                        />
+                      </View>
+                    </Animated.View>
+                  </View>
+                  <View style={styles.teamBottomGroup}>
+                    <Text style={styles.lineFrameTeamName} numberOfLines={1}>
+                      {awayCompact}
+                    </Text>
+                    <Text style={styles.teamRecordText}>
+                      {awayRecordLabel ?? "(0-0-0)"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </Animated.View>
+          </View>
+        </MatchListLineFrameNative>
+      ) : (
       <MatchListCyberClipNative
         predicted={isPredicted}
         strokeOpacityStyle={ent.borderStrokeStyle}
@@ -240,47 +458,24 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                   <View style={styles.teamTopGroup}>
                     {showSideLabels ? <Text style={styles.sideLabel}>HOME</Text> : null}
                     <Animated.View style={ent.homeJerseyStyle}>
-                      {isWcCard ? (
-                        <WcTeamFlagWithMetaNative teamId={homeTeamId} knockout={isKnockout}>
-                          <View style={styles.teamMarkFlag}>
-                            <CountryFlagNative teamId={homeTeamId} variant="card" />
-                          </View>
-                        </WcTeamFlagWithMetaNative>
-                      ) : (
-                        <View style={styles.teamMark}>
-                          <MatchTeamMarkNative
-                            leagueRaw={game.league}
-                            side={game.home}
-                            palette={homePalette}
-                            jerseySize={62}
-                            flagVariant="card"
-                          />
-                        </View>
-                      )}
+                      <View style={styles.teamMark}>
+                        <MatchTeamMarkNative
+                          leagueRaw={game.league}
+                          side={game.home}
+                          palette={homePalette}
+                          jerseySize={62}
+                          flagVariant="card"
+                        />
+                      </View>
                     </Animated.View>
                   </View>
-                  <View style={[styles.teamBottomGroup, isWcCard && styles.teamBottomGroupWc]}>
-                    {isWcCard ? (
-                      <WcTeamNameMobileNative
-                        name={homeCompact}
-                        style={[styles.teamNameMain, styles.teamNameMainWc]}
-                      />
-                    ) : (
-                      <Text style={styles.teamNameMain} numberOfLines={1}>
-                        {homeCompact}
-                      </Text>
-                    )}
-                    {isWcCard && isKnockout ? (
-                      <WcGroupStandingRecordLineNative
-                        standing={homeKnockoutStanding}
-                        language={language}
-                        textStyle={styles.teamRecordText}
-                      />
-                    ) : !isKnockout ? (
-                      <Text style={styles.teamRecordText}>
-                        {homeRecordLabel ?? "(0-0-0)"}
-                      </Text>
-                    ) : null}
+                  <View style={styles.teamBottomGroup}>
+                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                      {homeCompact}
+                    </Text>
+                    <Text style={styles.teamRecordText}>
+                      {homeRecordLabel ?? "(0-0-0)"}
+                    </Text>
                   </View>
                 </View>
 
@@ -383,61 +578,28 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                   <View style={styles.teamTopGroup}>
                     {showSideLabels ? <Text style={styles.sideLabel}>AWAY</Text> : null}
                     <Animated.View style={ent.awayJerseyStyle}>
-                      {isWcCard ? (
-                        <WcTeamFlagWithMetaNative teamId={awayTeamId} knockout={isKnockout}>
-                          <View style={styles.teamMarkFlag}>
-                            <CountryFlagNative teamId={awayTeamId} variant="card" />
-                          </View>
-                        </WcTeamFlagWithMetaNative>
-                      ) : (
-                        <View style={styles.teamMark}>
-                          <MatchTeamMarkNative
-                            leagueRaw={game.league}
-                            side={game.away}
-                            palette={awayPalette}
-                            jerseySize={62}
-                            flagVariant="card"
-                          />
-                        </View>
-                      )}
+                      <View style={styles.teamMark}>
+                        <MatchTeamMarkNative
+                          leagueRaw={game.league}
+                          side={game.away}
+                          palette={awayPalette}
+                          jerseySize={62}
+                          flagVariant="card"
+                        />
+                      </View>
                     </Animated.View>
                   </View>
-                  <View style={[styles.teamBottomGroup, isWcCard && styles.teamBottomGroupWc]}>
-                    {isWcCard ? (
-                      <WcTeamNameMobileNative
-                        name={awayCompact}
-                        style={[styles.teamNameMain, styles.teamNameMainWc]}
-                      />
-                    ) : (
-                      <Text style={styles.teamNameMain} numberOfLines={1}>
-                        {awayCompact}
-                      </Text>
-                    )}
-                    {isWcCard && isKnockout ? (
-                      <WcGroupStandingRecordLineNative
-                        standing={awayKnockoutStanding}
-                        language={language}
-                        textStyle={styles.teamRecordText}
-                      />
-                    ) : !isKnockout ? (
-                      <Text style={styles.teamRecordText}>
-                        {awayRecordLabel ?? "(0-0-0)"}
-                      </Text>
-                    ) : null}
+                  <View style={styles.teamBottomGroup}>
+                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                      {awayCompact}
+                    </Text>
+                    <Text style={styles.teamRecordText}>
+                      {awayRecordLabel ?? "(0-0-0)"}
+                    </Text>
                   </View>
                 </View>
               </View>
               </Animated.View>
-              {showWcBroadcastRow ? (
-                <View style={styles.wcBroadcastRow}>
-                  <Text style={styles.wcBroadcastLabel}>{t.broadcasters}</Text>
-                  <WcBroadcastNamesNative
-                    labels={broadcastLabels}
-                    separator={wcBroadcastSep}
-                    textAlign="center"
-                  />
-                </View>
-              ) : null}
               <View style={styles.leagueDividerWrap}>
                 <Animated.View
                   style={[styles.leagueDivider, { backgroundColor: leagueColor }, ent.dividerStyle]}
@@ -451,17 +613,32 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
         </View>
         </Animated.View>
       </MatchListCyberClipNative>
+      )}
+      {/* カード面の後ろに回らないよう、クリップの後・高 zIndex で重ねる */}
+      {showTutorialPulse ? (
+        <TutorialCardTapHintNative label={tutorialPulseLabel} />
+      ) : null}
+      </View>
     </AnimatedPressable>
   );
 });
 
 export default function GameCardList(props: GameCardListProps) {
   const { games, t, styles, enteringAnimationEnabled = true, entranceVariant = "full" } = props;
+  const tutorialPickupGameId = resolveTutorialPickupGameId(games);
 
   return (
     <View style={styles.listArea}>
       <View style={styles.listContent}>
-        {games.length === 0 ? <Text style={styles.body}>{t.noGames}</Text> : null}
+        {games.length === 0 ? (
+          <View
+            accessibilityRole="text"
+            accessibilityLabel={t.noGames}
+            style={emptyStyles.wrap}
+          >
+            <Text style={emptyStyles.label}>NO DATA</Text>
+          </View>
+        ) : null}
         {games.map((game, idx) => {
           const rowKey = String(game.id ?? "") || `game-${idx}`;
           return (
@@ -472,6 +649,7 @@ export default function GameCardList(props: GameCardListProps) {
               entranceVariant={entranceVariant}
               game={game}
               rowIndex={idx}
+              tutorialPickupGameId={tutorialPickupGameId}
             />
           );
         })}
@@ -479,3 +657,29 @@ export default function GameCardList(props: GameCardListProps) {
     </View>
   );
 }
+
+const rowStyles = StyleSheet.create({
+  /** クリップと同寸。親一覧幅へ伸びないよう width 100% のみ */
+  cardMeasure: {
+    position: "relative",
+    width: "100%",
+    overflow: "visible",
+  },
+});
+
+/** 試合 0 件 — 中央 NO DATA（枠・説明文なし） */
+const emptyStyles = StyleSheet.create({
+  wrap: {
+    minHeight: 420,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+  },
+  label: {
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 36,
+    letterSpacing: 4,
+    color: "#5c5c5c",
+    includeFontPadding: false,
+  },
+});

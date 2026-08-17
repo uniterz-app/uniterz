@@ -147,7 +147,13 @@ export default function ContactScreenNative({
           handle: handle ?? undefined,
         }),
       });
-      if (!res.ok) throw new Error("failed");
+      if (!res.ok) {
+        if (res.status === 429) {
+          cyberAlert("", isJa ? "送信上限に達しました。明日またお試しください。" : "Daily limit reached. Try again tomorrow.");
+          return;
+        }
+        throw new Error("failed");
+      }
       setSubmitted(true);
     } catch {
       cyberAlert("", labels.err);
@@ -158,7 +164,10 @@ export default function ContactScreenNative({
 
   if (submitted) {
     return (
-      <LegalPageLayoutNative title={labels.title} description={labels.description}>
+      <LegalPageLayoutNative
+        title={isFeature ? "REQUEST" : "CONTACT"}
+        description={labels.description}
+      >
         <View style={styles.successBox}>
           <MaterialCommunityIcons name="check-circle-outline" size={40} color="#67e8f9" />
           <Text style={styles.successTitle}>{labels.success}</Text>
@@ -173,7 +182,7 @@ export default function ContactScreenNative({
 
   return (
     <LegalPageLayoutNative
-      title={labels.title}
+      title={isFeature ? "REQUEST" : "CONTACT"}
       description={labels.description}
       updatedAt={isFeature ? "2026-04-10" : "2026-03-23"}
       lastUpdatedLabel={labels.updated}

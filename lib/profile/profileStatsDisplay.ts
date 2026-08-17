@@ -1,3 +1,4 @@
+import { getNbaKinetikBoardTitle } from "@/lib/profile/useNbaKinetikMonthlyStats";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
@@ -14,23 +15,14 @@ export function getProfileStatsTitle(
   language: Language
 ): string {
   const m = t(language);
-  return ctx.rankingLeague === "worldcup"
-    ? m.profile.statsTitleWcStage2026
-    : m.profile.statsTitlePlayoffs2026;
+  return m.profile.statsTitlePlayoffs2026;
 }
 
-/** Kinetik カードのグリッチタイトル（スコープ連動・英語固定） */
+/** Kinetik カードのグリッチタイトル（期間は SEASON/PLAYOFF タブ側） */
 export function getProfileKinetikMetricsTitle(
-  ctx: ProfileStatsStreakContext
+  _ctx: ProfileStatsStreakContext
 ): string {
-  if (ctx.rankingLeague === "nba") {
-    return "NBA // PLAYOFFS STATS";
-  }
-  const stage =
-    ctx.wcStage && isWcRankingStage(ctx.wcStage) ? ctx.wcStage : "overall";
-  if (stage === "qualifying") return "WORLD CUP // QUALIFYING STATS";
-  if (stage === "main") return "WORLD CUP // MAIN STAGE STATS";
-  return "WORLD CUP // GROUP STAGE STATS";
+  return getNbaKinetikBoardTitle();
 }
 
 export function getProfileMaxStreakLabels(

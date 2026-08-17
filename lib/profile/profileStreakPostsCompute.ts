@@ -21,6 +21,7 @@ export function computeAllScopeMetrics(
 ): Record<ProfileStreakScopeKey, StreakMetrics> {
   const buckets: Record<ProfileStreakScopeKey, { ms: number; isWin: boolean }[]> =
     {
+      "nba:season": [],
       "nba:playoffs": [],
       "wc:overall": [],
       "wc:qualifying": [],
@@ -33,6 +34,7 @@ export function computeAllScopeMetrics(
       gameId: row.gameId,
       seasonPhase: row.seasonPhase,
       wcStage: row.wcStage,
+      settledAtMs: row.settledAtMs,
     };
     for (const scope of PROFILE_STREAK_SCOPE_KEYS) {
       if (!postMatchesProfileStreakScope(input, scope)) continue;
@@ -63,6 +65,7 @@ export function filterPostsForScope(
           gameId: row.gameId,
           seasonPhase: row.seasonPhase,
           wcStage: row.wcStage,
+          settledAtMs: row.settledAtMs,
         },
         scope
       )

@@ -10,7 +10,6 @@ function emptyAgg(): MemberAgg {
     totalPosts: 0,
     totalWins: 0,
     totalPoints: 0,
-    totalPrecision: 0,
     totalUpset: 0,
   };
 }
@@ -20,7 +19,6 @@ function addMarkerToAgg(agg: MemberAgg, marker: Record<string, unknown>) {
   agg.totalPosts += Number(marker.posts ?? 0);
   agg.totalWins += Number(marker.wins ?? 0);
   agg.totalPoints += Number(marker.pointsSumV3 ?? 0);
-  agg.totalPrecision += Number(marker.scorePrecisionSum ?? 0);
   agg.totalUpset += Number(marker.upsetPointsSum ?? 0);
 }
 
@@ -74,7 +72,6 @@ function mergeMemberAggs(
       totalPosts: cur.totalPosts + agg.totalPosts,
       totalWins: cur.totalWins + agg.totalWins,
       totalPoints: cur.totalPoints + agg.totalPoints,
-      totalPrecision: cur.totalPrecision + agg.totalPrecision,
       totalUpset: cur.totalUpset + agg.totalUpset,
     });
   }

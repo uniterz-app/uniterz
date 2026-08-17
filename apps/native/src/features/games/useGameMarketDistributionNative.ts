@@ -1,6 +1,8 @@
+/**
+ * Web `useGameMarketDistribution` 相当 — posts 全件読みはしない。
+ */
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import type { League } from "../../../../../lib/leagues";
 import {
   computeGameMarketPcts,
   isSoccerMarketLeague,
@@ -14,81 +16,32 @@ const EMPTY_COUNTS: GamePredictionCounts = {
   drawCount: 0,
 };
 
-async function fetchGamePredictionCountsNative(
-  gameId: string
-): Promise<GamePredictionCounts> {
-  const q = query(
-    collection(db, "posts"),
-    where("gameId", "==", gameId),
-    where("schemaVersion", "==", 2)
-  );
-  const snap = await getDocs(q);
-  let homeCount = 0;
-  let awayCount = 0;
-  let drawCount = 0;
-
-  snap.docs.forEach((docSnap) => {
-    const data = docSnap.data() as {
-      prediction?: { winner?: string };
-      winner?: string;
-    };
-    const winner = data?.prediction?.winner ?? data?.winner ?? null;
-    if (winner === "home") homeCount += 1;
-    else if (winner === "away") awayCount += 1;
-    else if (winner === "draw") drawCount += 1;
-  });
-
-  return { homeCount, awayCount, drawCount };
-}
-
-/** Web `useGameMarketDistribution` のネイティブ版 */
 export function useGameMarketDistributionNative(
   gameId: string | null | undefined,
-  league: string,
-  fallbackMarketBias?: MarketBiasFallback | null
+  league: League | string,
+  fallbackMarketBias?: MarketBiasFallback | null,
+  options?: { excludeDraw?: boolean }
 ) {
-  const [counts, setCounts] = useState<GamePredictionCounts>(EMPTY_COUNTS);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(gameId));
+  const excludeDraw = options?.excludeDraw ?? false;
   const isSoccer = isSoccerMarketLeague(league);
 
   useEffect(() => {
-    if (!gameId) {
-      setCounts(EMPTY_COUNTS);
-      setLoading(false);
-      return;
-    }
-
-    let alive = true;
-    setLoading(true);
-
-    fetchGamePredictionCountsNative(String(gameId))
-      .then((next) => {
-        if (!alive) return;
-        setCounts(next);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setCounts(EMPTY_COUNTS);
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
+    setLoading(false);
   }, [gameId]);
 
   const market = useMemo(
-    () => computeGameMarketPcts(counts, isSoccer, fallbackMarketBias),
-    [counts, fallbackMarketBias, isSoccer]
+    () =>
+      computeGameMarketPcts(EMPTY_COUNTS, isSoccer, fallbackMarketBias, {
+        excludeDraw,
+      }),
+    [fallbackMarketBias, isSoccer, excludeDraw]
   );
 
   return {
     loading,
     isSoccer,
-    counts,
+    counts: EMPTY_COUNTS,
     ...market,
   };
 }

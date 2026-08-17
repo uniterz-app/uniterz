@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_PUSH_NOTIFICATION_PREFS = exports.PUSH_NOTIFICATION_PREF_KEYS = void 0;
+exports.DEFAULT_PUSH_NOTIFICATION_PREFS = exports.PREDICTION_DEADLINE_MINUTE_OPTIONS = exports.PUSH_NOTIFICATION_PREF_KEYS = void 0;
 exports.prefKeyForPushType = prefKeyForPushType;
 exports.parsePushNotificationPrefs = parsePushNotificationPrefs;
 exports.isPushTypeEnabledForPrefs = isPushTypeEnabledForPrefs;
@@ -9,11 +9,25 @@ exports.PUSH_NOTIFICATION_PREF_KEYS = [
     "gameStart",
     "gameFinal",
     "rankingUpdated",
+    "injuryStatus",
+    "starterChange",
+    "predictionDeadline",
+    "pregameDigest",
+    "proInsightUpdate",
+    "monthlyReport",
 ];
+exports.PREDICTION_DEADLINE_MINUTE_OPTIONS = [60, 30, 10];
 exports.DEFAULT_PUSH_NOTIFICATION_PREFS = {
     gameStart: true,
     gameFinal: true,
     rankingUpdated: true,
+    injuryStatus: false,
+    starterChange: false,
+    predictionDeadline: true,
+    pregameDigest: false,
+    proInsightUpdate: false,
+    monthlyReport: true,
+    predictionDeadlineMinutes: 30,
 };
 function prefKeyForPushType(type) {
     switch (type) {
@@ -23,23 +37,50 @@ function prefKeyForPushType(type) {
             return "gameFinal";
         case "ranking_updated":
             return "rankingUpdated";
+        case "unit_reward":
+            return "rankingUpdated";
+        case "injury_status":
+            return "injuryStatus";
+        case "starter_change":
+            return "starterChange";
+        case "prediction_deadline":
+            return "predictionDeadline";
+        case "pregame_digest":
+            return "pregameDigest";
+        case "pro_insight_update":
+            return "proInsightUpdate";
+        case "monthly_report":
+            return "monthlyReport";
     }
+}
+function parseDeadlineMinutes(raw) {
+    if (raw === 60 || raw === 10 || raw === 30)
+        return raw;
+    if (raw === "60")
+        return 60;
+    if (raw === "10")
+        return 10;
+    if (raw === "30")
+        return 30;
+    return exports.DEFAULT_PUSH_NOTIFICATION_PREFS.predictionDeadlineMinutes;
 }
 function parsePushNotificationPrefs(raw) {
     if (!raw || typeof raw !== "object") {
         return Object.assign({}, exports.DEFAULT_PUSH_NOTIFICATION_PREFS);
     }
     const src = raw;
+    const boolOr = (key, fallback) => typeof src[key] === "boolean" ? src[key] : fallback;
     return {
-        gameStart: typeof src.gameStart === "boolean"
-            ? src.gameStart
-            : exports.DEFAULT_PUSH_NOTIFICATION_PREFS.gameStart,
-        gameFinal: typeof src.gameFinal === "boolean"
-            ? src.gameFinal
-            : exports.DEFAULT_PUSH_NOTIFICATION_PREFS.gameFinal,
-        rankingUpdated: typeof src.rankingUpdated === "boolean"
-            ? src.rankingUpdated
-            : exports.DEFAULT_PUSH_NOTIFICATION_PREFS.rankingUpdated,
+        gameStart: boolOr("gameStart", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.gameStart),
+        gameFinal: boolOr("gameFinal", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.gameFinal),
+        rankingUpdated: boolOr("rankingUpdated", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.rankingUpdated),
+        injuryStatus: boolOr("injuryStatus", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.injuryStatus),
+        starterChange: boolOr("starterChange", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.starterChange),
+        predictionDeadline: boolOr("predictionDeadline", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.predictionDeadline),
+        pregameDigest: boolOr("pregameDigest", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.pregameDigest),
+        proInsightUpdate: boolOr("proInsightUpdate", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.proInsightUpdate),
+        monthlyReport: boolOr("monthlyReport", exports.DEFAULT_PUSH_NOTIFICATION_PREFS.monthlyReport),
+        predictionDeadlineMinutes: parseDeadlineMinutes(src.predictionDeadlineMinutes),
     };
 }
 function isPushTypeEnabledForPrefs(prefs, type) {

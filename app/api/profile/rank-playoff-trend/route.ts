@@ -1,73 +1,34 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
-import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
-import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
-import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import {
+  buildRankPlayoffTrendPoints,
+  type RankPlayoffTrendPoint,
+} from "@/lib/rankings/server/buildRankPlayoffTrendPoints";
 import {
   isRankingLeagueSource,
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
-import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** ランキングスナップショット最新 N 件（「過去 N 日」ではない） */
-const MAX_POINTS = 10;
-
-export type RankPlayoffTrendPoint = {
-  dateKey: string;
-  rank: number;
-};
-
-type HistoryDoc = {
-  play_in?: Record<string, unknown>;
-  playoffs?: Record<string, unknown>;
-  wc?: Partial<Record<WcRankingStage, Record<string, unknown>>>;
-};
-
-function rankFromHistoryDoc(
-  data: HistoryDoc | undefined,
-  opts: {
-    rankingLeague: RankingLeagueSource;
-    phase: RankingPhase;
-    wcStage: WcRankingStage;
-  }
-): number | null {
-  if (!data) return null;
-  if (opts.rankingLeague === "worldcup") {
-    const block = data.wc?.[opts.wcStage];
-    return coerceTotalPointsRank(block?.totalPoints);
-  }
-  const raw =
-    opts.phase === "play_in" ? data.play_in?.totalPoints : data.playoffs?.totalPoints;
-  return coerceTotalPointsRank(raw);
-}
+export type { RankPlayoffTrendPoint };
 
 /**
  * cumulative_stats/{uid}/rankSnapshotHistory の各 snapshot doc から
  * 総合得点順位の推移を返す。
- * NBA: ?phase=play_in|playoffs
- * WC: ?league=worldcup&wcStage=overall|qualifying|main
+ * NBA: 現行シーズン（seasons.<CURRENT_NBA_SEASON_KEY>）固定
  */
 export async function GET(req: Request) {
   try {
     const adminDb = getAdminDb();
     const { searchParams } = new URL(req.url);
-    const rawPhase = searchParams.get("phase")?.trim() ?? "";
-    const phase: RankingPhase = isRankingPhase(rawPhase)
-      ? rawPhase
-      : "playoffs";
     const rawLeague = searchParams.get("league");
     const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
       ? rawLeague
       : "nba";
-    const rawWcStage = searchParams.get("wcStage");
-    const wcStage: WcRankingStage =
-      rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
-        ? rawWcStage
-        : "overall";
     const uidParam = searchParams.get("uid")?.trim() ?? "";
     const handleParam = searchParams.get("handle")?.trim() ?? "";
 
@@ -89,32 +50,16 @@ export async function GET(req: Request) {
       );
     }
 
-    const historyDocs = await loadRankSnapshotHistoryDocsWalkBack(resolvedUid, {
-      maxDocs: MAX_POINTS,
-      maxLookbackDays: 90,
+    const points = await buildRankPlayoffTrendPoints(resolvedUid, {
+      rankingLeague,
     });
-
-    const points: RankPlayoffTrendPoint[] = [];
-    historyDocs.forEach((d) => {
-      const data = d.data as HistoryDoc;
-      const rank = rankFromHistoryDoc(data, {
-        rankingLeague,
-        phase,
-        wcStage,
-      });
-      if (rank != null) {
-        points.push({ dateKey: d.id, rank });
-      }
-    });
-
-    points.reverse();
 
     return NextResponse.json({
       ok: true,
       resolvedUid,
-      phase,
+      seasonKey: CURRENT_NBA_SEASON_KEY,
       rankingLeague,
-      wcStage: rankingLeague === "worldcup" ? wcStage : null,
+      wcStage: null,
       points,
     });
   } catch (e: unknown) {

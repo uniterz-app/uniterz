@@ -1,3 +1,6 @@
+import { splitTeamNameByLeague } from "@/lib/team-name-split";
+import { TEAM_SHORT } from "@/lib/team-short";
+
 export const NBA_TEAM_NAME_BY_ID: Record<string, string> = {
   "nba-hawks": "Atlanta Hawks",
   "nba-celtics": "Boston Celtics",
@@ -30,3 +33,12 @@ export const NBA_TEAM_NAME_BY_ID: Record<string, string> = {
   "nba-jazz": "Utah Jazz",
   "nba-wizards": "Washington Wizards",
 };
+
+/** 地名なしニックネーム（例: Hawks, Lakers, 76ers） */
+export function getNbaTeamNicknameById(teamId: string): string {
+  const full = NBA_TEAM_NAME_BY_ID[teamId];
+  if (!full) return TEAM_SHORT[teamId] ?? teamId;
+  const [, nick] = splitTeamNameByLeague("nba", full);
+  const cleaned = nick.replace(/\u00A0/g, " ").trim();
+  return cleaned || full;
+}

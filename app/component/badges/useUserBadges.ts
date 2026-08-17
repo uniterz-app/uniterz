@@ -10,60 +10,71 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+import { readGrantParticipantCount } from "@/lib/badges/badgeGrant";
+
 export type UserGrantedBadge = {
   badgeId: string;
   grantedAt: Date | null;
+  /** 付与時点のランキング母数。未記録は null */
+  participantCount: number | null;
 };
 
+const CACHE_TTL_MS = 10 * 60 * 1000;
+type CacheEntry = { at: number; badges: UserGrantedBadge[] };
+const cache = new Map<string, CacheEntry>();
 
 export function useUserBadges(uid: string | null) {
   const [badges, setBadges] = useState<UserGrantedBadge[]>([]);
-
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 🔴 ここで即ガード
     if (uid == null) {
       setBadges([]);
       setLoading(false);
       return;
     }
 
-    // 🔑 TS が信用する「string確定」変数
     const userId: string = uid;
-
     let cancelled = false;
+
+    const hit = cache.get(userId);
+    if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+      setBadges(hit.badges);
+      setLoading(false);
+      return;
+    }
 
     async function fetchUserBadges() {
       try {
-        // ✅ ここはもう絶対にエラー出ない
         const colRef = collection(db, "user_badges", userId, "badges");
         const q = query(colRef, orderBy("grantedAt", "desc"));
         const snap = await getDocs(q);
 
         if (cancelled) return;
 
-        const list: UserGrantedBadge[] = snap.docs.map((doc) => {
-          const data = doc.data();
+        const list: UserGrantedBadge[] = snap.docs.map((docSnap) => {
+          const data = docSnap.data();
           return {
-            badgeId: data.badgeId ?? doc.id,
+            badgeId: data.badgeId ?? docSnap.id,
             grantedAt:
               data.grantedAt instanceof Timestamp
                 ? data.grantedAt.toDate()
                 : null,
+            participantCount: readGrantParticipantCount(data),
           };
         });
 
+        cache.set(userId, { at: Date.now(), badges: list });
         setBadges(list);
       } catch (e) {
         console.error("Failed to load user badges:", e);
         setBadges([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
-    fetchUserBadges();
+    void fetchUserBadges();
 
     return () => {
       cancelled = true;

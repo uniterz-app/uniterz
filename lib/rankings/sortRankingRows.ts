@@ -1,7 +1,7 @@
 import type {
   MobileMetric,
   RankingRowWithCountry,
-} from "@/app/component/rankings/_data/mockRows";
+} from "@/lib/rankings/rankingMetrics";
 import { safeRankMetricNum } from "@/lib/rankings/safeRankMetricNum";
 
 /** UI 指標値（降順ソート用）— CF `cmpSortRows` と揃える */

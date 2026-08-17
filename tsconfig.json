@@ -39,6 +39,8 @@
     "node_modules",
     "functions",
     "apps/native",
-    "uniterz-native"
+    "uniterz-native",
+    "scripts",
+    "**/TutorialLiveHost [0-9].tsx"
   ]
 }

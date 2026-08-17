@@ -1,4 +1,4 @@
-/** Web `RankFirstBorderEdgeScan` — 1位行 EDGE SCAN（案D） */
+/** Web `RankFirstBorderEdgeScan` — 旧エッジ光線が枠を一周する */
 import { useEffect, useState } from "react";
 import {
   AccessibilityInfo,
@@ -8,65 +8,82 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 import {
   RANK_FIRST_EDGE_DIM_BORDER,
   RANK_FIRST_EDGE_H_BEAM_RATIO,
-  RANK_FIRST_EDGE_H_DURATION_MS,
-  RANK_FIRST_EDGE_H_END_RATIO,
   RANK_FIRST_EDGE_H_GRADIENT,
-  RANK_FIRST_EDGE_H_START_RATIO,
   RANK_FIRST_EDGE_V_BEAM_RATIO,
-  RANK_FIRST_EDGE_V_DURATION_MS,
-  RANK_FIRST_EDGE_V_END_RATIO,
   RANK_FIRST_EDGE_V_GRADIENT,
-  RANK_FIRST_EDGE_V_START_RATIO,
+  RANK_FIRST_LOOP_CORNER_BLEND,
+  RANK_FIRST_LOOP_DURATION_MS,
 } from "../../../../../lib/rankings/rankFirstBorderEdgeScan";
 
 const BEAM_THICKNESS = 2;
 
-function HorizontalEdgeBeam({
-  width,
-  reverse,
-  bottom,
-  opacity = 1,
-  paused,
-}: {
-  width: number;
-  reverse: boolean;
-  bottom?: boolean;
-  opacity?: number;
-  paused: boolean;
-}) {
-  const progress = useSharedValue(reverse ? 1 : 0);
-  const beamWidth = width * RANK_FIRST_EDGE_H_BEAM_RATIO;
-  const travel =
-    (RANK_FIRST_EDGE_H_END_RATIO - RANK_FIRST_EDGE_H_START_RATIO) * width;
-
-  useEffect(() => {
-    if (paused) {
-      progress.value = reverse ? 1 : 0;
-      return;
+function edgeBeam(
+  d: number,
+  peri: number,
+  start: number,
+  len: number,
+  blend: number,
+  reverse: boolean
+): { pos: number; opacity: number } {
+  "worklet";
+  let bestPos = 0;
+  let bestOpacity = 0;
+  for (const shift of [-peri, 0, peri]) {
+    const local = d + shift - start;
+    if (local < -blend || local > len + blend) continue;
+    const clamped = Math.max(0, Math.min(len, local));
+    const pos = reverse ? len - clamped : clamped;
+    let opacity = 1;
+    if (local < 0) opacity = 1 + local / blend;
+    else if (local > len) opacity = 1 - (local - len) / blend;
+    opacity = Math.max(0, Math.min(1, opacity));
+    if (opacity > bestOpacity) {
+      bestPos = pos;
+      bestOpacity = opacity;
     }
-    progress.value = reverse ? 1 : 0;
-    progress.value = withRepeat(
-      withTiming(reverse ? 0 : 1, {
-        duration: RANK_FIRST_EDGE_H_DURATION_MS,
-        easing: Easing.linear,
-      }),
-      -1,
-      false
-    );
-  }, [paused, progress, reverse]);
+  }
+  return { pos: bestPos, opacity: bestOpacity };
+}
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    left: RANK_FIRST_EDGE_H_START_RATIO * width + progress.value * travel,
-  }));
+function HBeam({
+  progress,
+  boxW,
+  boxH,
+  beamW,
+  bottom,
+}: {
+  progress: SharedValue<number>;
+  boxW: SharedValue<number>;
+  boxH: SharedValue<number>;
+  beamW: number;
+  bottom?: boolean;
+}) {
+  const style = useAnimatedStyle(() => {
+    const w = boxW.value;
+    const h = boxH.value;
+    if (w <= 0 || h <= 0) return { opacity: 0 };
+    const peri = 2 * (w + h);
+    const d = progress.value * peri;
+    const blend = Math.min(RANK_FIRST_LOOP_CORNER_BLEND, h * 0.55, w * 0.14);
+    const beam = bottom
+      ? edgeBeam(d, peri, w + h, w, blend, true)
+      : edgeBeam(d, peri, 0, w, blend, false);
+    return {
+      opacity: beam.opacity,
+      transform: [{ translateX: beam.pos - beamW / 2 }],
+    };
+  });
 
   return (
     <Animated.View
@@ -74,8 +91,8 @@ function HorizontalEdgeBeam({
       style={[
         styles.hBeam,
         bottom ? styles.hBeamBottom : styles.hBeamTop,
-        { width: beamWidth, opacity },
-        animatedStyle,
+        { width: beamW, height: BEAM_THICKNESS },
+        style,
       ]}
     >
       <LinearGradient
@@ -89,43 +106,33 @@ function HorizontalEdgeBeam({
   );
 }
 
-function VerticalEdgeBeam({
-  height,
-  reverse,
-  opacity = 1,
-  paused,
+function VBeam({
+  progress,
+  boxW,
+  boxH,
+  beamH,
+  left,
 }: {
-  height: number;
-  reverse?: boolean;
-  opacity?: number;
-  paused: boolean;
+  progress: SharedValue<number>;
+  boxW: SharedValue<number>;
+  boxH: SharedValue<number>;
+  beamH: number;
+  left?: boolean;
 }) {
-  const progress = useSharedValue(reverse ? 1 : 0);
-  const beamHeight = height * RANK_FIRST_EDGE_V_BEAM_RATIO;
-  const travel =
-    (RANK_FIRST_EDGE_V_END_RATIO - RANK_FIRST_EDGE_V_START_RATIO) * height;
-
-  useEffect(() => {
-    if (paused) {
-      progress.value = reverse ? 1 : 0;
-      return;
-    }
-    progress.value = reverse ? 1 : 0;
-    progress.value = withRepeat(
-      withTiming(reverse ? 0 : 1, {
-        duration: RANK_FIRST_EDGE_V_DURATION_MS,
-        easing: Easing.linear,
-      }),
-      -1,
-      false
-    );
-  }, [paused, progress, reverse]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const offset = RANK_FIRST_EDGE_V_START_RATIO * height + progress.value * travel;
-    return reverse
-      ? { bottom: offset }
-      : { top: offset };
+  const style = useAnimatedStyle(() => {
+    const w = boxW.value;
+    const h = boxH.value;
+    if (w <= 0 || h <= 0) return { opacity: 0 };
+    const peri = 2 * (w + h);
+    const d = progress.value * peri;
+    const blend = Math.min(RANK_FIRST_LOOP_CORNER_BLEND, h * 0.55, w * 0.14);
+    const beam = left
+      ? edgeBeam(d, peri, 2 * w + h, h, blend, true)
+      : edgeBeam(d, peri, w, h, blend, false);
+    return {
+      opacity: beam.opacity,
+      transform: [{ translateY: beam.pos - beamH / 2 }],
+    };
   });
 
   return (
@@ -133,9 +140,9 @@ function VerticalEdgeBeam({
       pointerEvents="none"
       style={[
         styles.vBeam,
-        reverse ? styles.vBeamLeft : styles.vBeamRight,
-        { height: beamHeight, opacity },
-        animatedStyle,
+        left ? styles.vBeamLeft : styles.vBeamRight,
+        { width: BEAM_THICKNESS, height: beamH },
+        style,
       ]}
     >
       <LinearGradient
@@ -152,37 +159,67 @@ function VerticalEdgeBeam({
 export function RankFirstBorderEdgeScanNative() {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [reduceMotion, setReduceMotion] = useState(false);
+  const progress = useSharedValue(0);
+  const boxW = useSharedValue(0);
+  const boxH = useSharedValue(0);
 
   useEffect(() => {
     let alive = true;
     void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
       if (alive) setReduceMotion(enabled);
     });
-    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    const sub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      setReduceMotion
+    );
     return () => {
       alive = false;
       sub.remove();
     };
   }, []);
 
-  const onLayout = (event: LayoutChangeEvent) => {
+  useEffect(() => {
+    if (reduceMotion || size.w <= 0 || size.h <= 0) {
+      cancelAnimation(progress);
+      progress.value = 0;
+      return;
+    }
+    progress.value = 0;
+    progress.value = withRepeat(
+      withTiming(1, {
+        duration: RANK_FIRST_LOOP_DURATION_MS,
+        easing: Easing.linear,
+      }),
+      -1,
+      false
+    );
+    return () => cancelAnimation(progress);
+  }, [progress, reduceMotion, size.h, size.w]);
+
+  function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
-    if (Math.abs(width - size.w) < 0.5 && Math.abs(height - size.h) < 0.5) return;
+    if (Math.abs(width - size.w) < 0.5 && Math.abs(height - size.h) < 0.5) {
+      return;
+    }
+    boxW.value = width;
+    boxH.value = height;
     setSize({ w: width, h: height });
-  };
+  }
 
   const paused = reduceMotion || size.w <= 0 || size.h <= 0;
+  const hW = size.w * RANK_FIRST_EDGE_H_BEAM_RATIO;
+  const vH = size.h * RANK_FIRST_EDGE_V_BEAM_RATIO;
 
   return (
     <View pointerEvents="none" style={styles.root} onLayout={onLayout}>
       <View style={styles.dim} />
       {!paused ? (
-        <View style={styles.scanLayer}>
-          <HorizontalEdgeBeam width={size.w} reverse={false} paused={paused} />
-          <HorizontalEdgeBeam width={size.w} reverse bottom opacity={0.75} paused={paused} />
-          <VerticalEdgeBeam height={size.h} paused={paused} />
-          <VerticalEdgeBeam height={size.h} reverse opacity={0.65} paused={paused} />
-        </View>
+        <>
+          <HBeam progress={progress} boxW={boxW} boxH={boxH} beamW={hW} />
+          <HBeam progress={progress} boxW={boxW} boxH={boxH} beamW={hW} bottom />
+          <VBeam progress={progress} boxW={boxW} boxH={boxH} beamH={vH} />
+          <VBeam progress={progress} boxW={boxW} boxH={boxH} beamH={vH} left />
+        </>
       ) : null}
     </View>
   );
@@ -192,6 +229,7 @@ const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 6,
+    overflow: "hidden",
   },
   dim: {
     ...StyleSheet.absoluteFillObject,
@@ -199,14 +237,9 @@ const styles = StyleSheet.create({
     borderColor: RANK_FIRST_EDGE_DIM_BORDER,
     opacity: 0.85,
   },
-  scanLayer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-    overflow: "hidden",
-  },
   hBeam: {
     position: "absolute",
-    height: BEAM_THICKNESS,
+    left: 0,
     shadowColor: "rgba(184,255,60,0.55)",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
@@ -221,7 +254,7 @@ const styles = StyleSheet.create({
   },
   vBeam: {
     position: "absolute",
-    width: BEAM_THICKNESS,
+    top: 0,
     shadowColor: "rgba(255,214,90,0.45)",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,

@@ -10,8 +10,8 @@ export type MyRankMetricValueDeltas = {
 export type MyRankMetricDeltaKey =
   | "totalScore"
   | "winRate"
-  | "marginPrecision"
   | "exactHits"
+  | "goalScorerHits"
   | "upsetScore";
 
 export function formatMetricDayDeltaLabel(
@@ -39,10 +39,12 @@ export function dayDeltaLabelForMetric(
   deltas: MyRankMetricValueDeltas | null | undefined
 ): string | null {
   if (!deltas) return null;
+  // 最多得点者的中の前日比はスナップショット履歴に無いため非表示
+  if (metricKey === "goalScorerHits") return null;
   const field =
     metricKey === "totalScore"
       ? "totalPoints"
-      : metricKey === "marginPrecision" || metricKey === "exactHits"
+      : metricKey === "exactHits"
         ? "totalPrecision"
         : metricKey === "upsetScore"
           ? "totalUpset"

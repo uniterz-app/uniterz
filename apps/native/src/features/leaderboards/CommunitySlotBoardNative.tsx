@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -25,9 +25,11 @@ import {
   sanitizeHeaderImagePositionY,
 } from "../../../../../lib/communities/headerImagePosition";
 import { CommunityCrtSectionLabelNative } from "./CommunityCrtPartsNative";
+import TutorialTargetNative from "../tutorial/TutorialTargetNative";
 import CommunityMemberAvatarStackNative from "./CommunityMemberAvatarStackNative";
 import type { CommunityListGroup, CommunityListLimits } from "./communityApiNative";
 import { prefetchCommunityHeaderImageNative } from "./prefetchCommunityHeaderImageNative";
+import SquadBattleGroupEntryNative from "./SquadBattleGroupEntryNative";
 import {
   CRT_CYAN,
   communityCrtStyles,
@@ -37,6 +39,7 @@ import {
   communityPressableFilledStyle,
   communityPressableTapStyle,
 } from "./communityCrtThemeNative";
+import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
 
 type Props = {
   language: Language;
@@ -48,6 +51,7 @@ type Props = {
   onCreate: () => void;
   onPreviewJoin: (code: string) => Promise<void>;
   onPasteJoin: () => Promise<string | null>;
+  onOpenSquadBattle?: () => void;
   labels: {
     hostSection: string;
     memberSection: string;
@@ -132,11 +136,11 @@ function SlotCardImageBackgroundNative({
 
 function RoleBadgeNative({ isOwner, label }: { isOwner: boolean; label: string }) {
   return (
-    <View style={isOwner ? communityCrtStyles.roleBadgeOwner : communityCrtStyles.roleBadgeMember}>
+    <View style={[styles.roleBadge, isOwner ? styles.roleBadgeOwner : styles.roleBadgeMember]}>
       <Text
         style={[
-          isOwner ? communityCrtStyles.roleBadgeTextOwner : communityCrtStyles.roleBadgeTextMember,
           styles.roleBadgeText,
+          isOwner ? styles.roleBadgeTextOwner : styles.roleBadgeTextMember,
         ]}
       >
         {label}
@@ -186,14 +190,7 @@ function GroupFilledSlotNative({
           headerImagePositionY={g.headerImagePositionY}
           isOwner={isOwner}
         />
-        <View style={styles.filledRow}>
-          <View
-            style={[
-              styles.filledAccent,
-              isOwner ? styles.filledAccentOwner : styles.filledAccentMember,
-            ]}
-          />
-          <View style={styles.filledInner}>
+        <View style={styles.filledInner}>
             <View style={styles.slotTopRow}>
               <RoleBadgeNative isOwner={isOwner} label={isOwner ? labels.owner : labels.member} />
             </View>
@@ -208,15 +205,22 @@ function GroupFilledSlotNative({
                 <CommunityMemberAvatarStackNative previews={g.memberPreviews ?? []} size={28} />
               </View>
             ) : null}
-          </View>
         </View>
       </View>
     </Pressable>
   );
 }
 
-function CreateEmptySlotNative({ label, onCreate }: { label: string; onCreate: () => void }) {
-  return (
+function CreateEmptySlotNative({
+  label,
+  onCreate,
+  tutorialTargetId,
+}: {
+  label: string;
+  onCreate: () => void;
+  tutorialTargetId?: string;
+}) {
+  const inner = (
     <Pressable
       onPress={onCreate}
       style={({ pressed }) => [
@@ -225,10 +229,12 @@ function CreateEmptySlotNative({ label, onCreate }: { label: string; onCreate: (
         communityPressableTapStyle(pressed),
       ]}
     >
-      <MaterialCommunityIcons name="plus" size={16} color="rgba(34,211,238,0.55)" />
+      <MaterialCommunityIcons name="plus" size={16} color="rgba(0,245,255,0.55)" />
       <Text style={styles.emptyLabel}>{label}</Text>
     </Pressable>
   );
+  if (!tutorialTargetId) return inner;
+  return <TutorialTargetNative id={tutorialTargetId}>{inner}</TutorialTargetNative>;
 }
 
 function JoinEmptySlotNative({
@@ -243,6 +249,7 @@ function JoinEmptySlotNative({
   onCollapse,
   onPaste,
   onSubmit,
+  tutorialTargetId,
 }: {
   slotKey: string;
   expanded: boolean;
@@ -255,6 +262,7 @@ function JoinEmptySlotNative({
   onCollapse: () => void;
   onPaste: () => Promise<string | null>;
   onSubmit: (code: string) => Promise<void>;
+  tutorialTargetId?: string;
 }) {
   const [code, setCode] = useState("");
 
@@ -263,8 +271,15 @@ function JoinEmptySlotNative({
     if (pasted) setCode(pasted);
   }, [onPaste]);
 
+  const wrapTarget = (node: ReactNode) =>
+    tutorialTargetId ? (
+      <TutorialTargetNative id={tutorialTargetId}>{node}</TutorialTargetNative>
+    ) : (
+      node
+    );
+
   if (!expanded) {
-    return (
+    return wrapTarget(
       <Pressable
         onPress={onExpand}
         style={({ pressed }) => [
@@ -279,7 +294,7 @@ function JoinEmptySlotNative({
     );
   }
 
-  return (
+  return wrapTarget(
     <View style={[styles.joinExpanded, communityEmptyJoinSlotStyle]} key={slotKey}>
       <View style={styles.joinHeader}>
         <Text style={styles.joinCodeLabel}>INVITE_CODE:</Text>
@@ -302,7 +317,7 @@ function JoinEmptySlotNative({
           onPress={() => void handlePaste()}
           style={({ pressed }) => [styles.joinPasteBtn, pressed && { opacity: 0.85 }]}
         >
-          <MaterialCommunityIcons name="content-paste" size={14} color="rgba(34,211,238,0.9)" />
+          <MaterialCommunityIcons name="content-paste" size={14} color="rgba(0,245,255,0.9)" />
           <Text style={styles.joinPasteText}>{pasteLabel}</Text>
         </Pressable>
         <Pressable
@@ -343,6 +358,7 @@ export default function CommunitySlotBoardNative({
   onCreate,
   onPreviewJoin,
   onPasteJoin,
+  onOpenSquadBattle,
   labels,
 }: Props) {
   const [expandedJoinSlot, setExpandedJoinSlot] = useState<string | null>(null);
@@ -369,6 +385,10 @@ export default function CommunitySlotBoardNative({
     return slots;
   }, [memberGroups, ownedGroups.length, limits.maxMemberships]);
 
+  const firstCreateKey = hostSlots.find((s) => s.kind === "create")?.key;
+  const firstJoinKey = memberSlots.find((s) => s.kind === "join")?.key;
+  const groupsCreateOnCreate = Boolean(firstCreateKey);
+
   const handleJoinSubmit = useCallback(
     async (code: string) => {
       await onPreviewJoin(code);
@@ -379,6 +399,10 @@ export default function CommunitySlotBoardNative({
 
   return (
     <View style={styles.root}>
+      {onOpenSquadBattle ? (
+        <SquadBattleGroupEntryNative language={language} onOpen={onOpenSquadBattle} />
+      ) : null}
+
       <View style={styles.section}>
         <CommunityCrtSectionLabelNative suffix={labels.slotCount(ownedGroups.length, limits.maxOwned)}>
           {labels.hostSection}
@@ -397,7 +421,14 @@ export default function CommunitySlotBoardNative({
                   onOpen={() => onOpenGroup(slot.group)}
                 />
               ) : (
-                <CreateEmptySlotNative key={slot.key} label={labels.createSlot} onCreate={onCreate} />
+                <CreateEmptySlotNative
+                  key={slot.key}
+                  label={labels.createSlot}
+                  onCreate={onCreate}
+                  tutorialTargetId={
+                    slot.key === firstCreateKey ? "groups-create" : undefined
+                  }
+                />
               )
             )}
           </View>
@@ -446,6 +477,11 @@ export default function CommunitySlotBoardNative({
                   onCollapse={() => setExpandedJoinSlot(null)}
                   onPaste={onPasteJoin}
                   onSubmit={handleJoinSubmit}
+                  tutorialTargetId={
+                    !groupsCreateOnCreate && slot.key === firstJoinKey
+                      ? "groups-create"
+                      : undefined
+                  }
                 />
               )
             )}
@@ -479,31 +515,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
-  filledRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    position: "relative",
-    zIndex: 2,
-  },
   filledSlotWithImage: {
     backgroundColor: COMMUNITY_GROUP_SLOT_CARD_BG,
   },
   filledSlotOwner: {
-    borderColor: "rgba(251,191,36,0.22)",
+    borderColor: "rgba(251,191,36,0.28)",
   },
   filledSlotMember: {
-    borderColor: "rgba(34,211,238,0.16)",
-  },
-  filledAccent: {
-    width: 3,
-    flexShrink: 0,
-    zIndex: 3,
-  },
-  filledAccentOwner: {
-    backgroundColor: "rgba(251,191,36,0.85)",
-  },
-  filledAccentMember: {
-    backgroundColor: CRT_CYAN,
+    borderColor: "rgba(0,245,255,0.18)",
   },
   filledInner: {
     flex: 1,
@@ -511,23 +530,45 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 14,
+    position: "relative",
+    zIndex: 2,
   },
   slotTopRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
     marginBottom: 2,
   },
+  roleBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  roleBadgeOwner: {
+    borderColor: "rgba(251,191,36,0.45)",
+    backgroundColor: "rgba(251,191,36,0.08)",
+  },
+  roleBadgeMember: {
+    borderColor: "rgba(0,245,255,0.3)",
+    backgroundColor: "rgba(0,245,255,0.06)",
+  },
   roleBadgeText: {
     fontFamily: communityMono,
     fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 2,
+    fontWeight: "500",
+    letterSpacing: 1.4,
     textTransform: "uppercase",
   },
+  roleBadgeTextOwner: {
+    color: "rgba(251,191,36,0.9)",
+  },
+  roleBadgeTextMember: {
+    color: "rgba(186,230,253,0.75)",
+  },
   groupName: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 20,
     fontWeight: "800",
-    letterSpacing: 0.4,
+    letterSpacing: 0.6,
     color: "rgba(255,255,255,0.96)",
     textShadowColor: "rgba(0,0,0,0.55)",
     textShadowOffset: { width: 0, height: 1 },
@@ -610,13 +651,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
+    borderColor: "rgba(0,245,255,0.35)",
     paddingVertical: 6,
   },
   joinPasteText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "rgba(34,211,238,0.9)",
+    color: "rgba(0,245,255,0.9)",
   },
   joinSubmitBtn: {
     flex: 1,

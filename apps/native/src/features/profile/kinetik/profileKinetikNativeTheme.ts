@@ -8,9 +8,12 @@ export const KINETIK_GREEN = "#a8ff2a";
 export const KINETIK_MAGENTA = "#ff2bd6";
 export const KINETIK_CYAN = "#22d3ee";
 export const KINETIK_RED = "#ff4757";
+/** Web `PROFILE_METRIC_GOLD` / My Rank Pro と同値 */
+export const KINETIK_METRIC_GOLD = "#E8C66A";
 
 export type KinetikMetricAccent = "green" | "magenta" | "cyan" | "red";
 
+/** Web `ProfileEditKinetikPanel` ACCENT.glow（0.35）に準拠 */
 export const KINETIK_METRIC_ACCENT: Record<
   KinetikMetricAccent,
   { line: string; fill: string; glow: string }
@@ -37,6 +40,92 @@ const ACCENT_BORDER: Record<KinetikProfileAccentKey, string> = {
   "streak-3": "rgba(34, 211, 238, 0.3)",
   "streak-4": "rgba(248, 113, 113, 0.3)",
 };
+
+/** Web `--kinetik-frame-strong` */
+const ACCENT_FRAME_STRONG: Record<KinetikProfileAccentKey, string> = {
+  default: "rgba(255, 255, 255, 0.88)",
+  "rank-1": "rgba(255, 214, 90, 0.92)",
+  "rank-2": "rgba(184, 196, 216, 0.92)",
+  "rank-3": "rgba(205, 127, 50, 0.92)",
+  legend: "rgba(252, 211, 77, 0.92)",
+  elite: "rgba(192, 132, 252, 0.92)",
+  pro: "rgba(0, 245, 255, 0.92)",
+  analyst: "rgba(168, 255, 42, 0.92)",
+  rising: "rgba(251, 146, 60, 0.92)",
+  "streak-1": "rgba(204, 255, 0, 0.92)",
+  "streak-2": "rgba(204, 255, 0, 0.92)",
+  "streak-3": "rgba(34, 211, 238, 0.92)",
+  "streak-4": "rgba(248, 113, 113, 0.92)",
+};
+
+/** Web `--kinetik-frame-dim` */
+const ACCENT_FRAME_DIM: Record<KinetikProfileAccentKey, string> = {
+  default: "rgba(255, 255, 255, 0.28)",
+  "rank-1": "rgba(255, 214, 90, 0.22)",
+  "rank-2": "rgba(184, 196, 216, 0.22)",
+  "rank-3": "rgba(205, 127, 50, 0.22)",
+  legend: "rgba(252, 211, 77, 0.22)",
+  elite: "rgba(192, 132, 252, 0.22)",
+  pro: "rgba(0, 245, 255, 0.22)",
+  analyst: "rgba(168, 255, 42, 0.22)",
+  rising: "rgba(251, 146, 60, 0.22)",
+  "streak-1": "rgba(204, 255, 0, 0.22)",
+  "streak-2": "rgba(204, 255, 0, 0.22)",
+  "streak-3": "rgba(34, 211, 238, 0.22)",
+  "streak-4": "rgba(248, 113, 113, 0.22)",
+};
+
+export type KinetikPlanProFrameTheme = {
+  border: string;
+  strong: string;
+  dim: string;
+  glow: string;
+};
+
+export function kinetikPlanProFrameTheme(
+  accent: KinetikProfileAccentKey
+): KinetikPlanProFrameTheme {
+  if (accent === "streak-1" || accent === "streak-2") {
+    return {
+      border: ACCENT_BORDER[accent],
+      strong: ACCENT_FRAME_STRONG[accent],
+      dim: ACCENT_FRAME_DIM[accent],
+      glow: KINETIK_SLANT_TAB_STREAK[accent === "streak-1" ? 1 : 2].glow,
+    };
+  }
+  if (accent === "streak-3") {
+    return {
+      border: ACCENT_BORDER[accent],
+      strong: ACCENT_FRAME_STRONG[accent],
+      dim: ACCENT_FRAME_DIM[accent],
+      glow: KINETIK_SLANT_TAB_STREAK[3].glow,
+    };
+  }
+  if (accent === "streak-4") {
+    return {
+      border: ACCENT_BORDER[accent],
+      strong: ACCENT_FRAME_STRONG[accent],
+      dim: ACCENT_FRAME_DIM[accent],
+      glow: KINETIK_SLANT_TAB_STREAK[4].glow,
+    };
+  }
+  const rankTier = accent as KinetikRankBadgeTier;
+  if (rankTier in KINETIK_SLANT_TAB_RANK) {
+    const tab = KINETIK_SLANT_TAB_RANK[rankTier as KinetikRankBadgeTier];
+    return {
+      border: ACCENT_BORDER[accent],
+      strong: ACCENT_FRAME_STRONG[accent],
+      dim: ACCENT_FRAME_DIM[accent],
+      glow: tab.glow,
+    };
+  }
+  return {
+    border: ACCENT_BORDER[accent] ?? ACCENT_BORDER.default,
+    strong: ACCENT_FRAME_STRONG[accent] ?? ACCENT_FRAME_STRONG.default,
+    dim: ACCENT_FRAME_DIM[accent] ?? ACCENT_FRAME_DIM.default,
+    glow: "rgba(34, 211, 238, 0.22)",
+  };
+}
 
 export function kinetikPanelBorderColor(accent: KinetikProfileAccentKey): string {
   return ACCENT_BORDER[accent] ?? ACCENT_BORDER.default;

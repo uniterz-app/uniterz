@@ -4,7 +4,6 @@ import { toLevel, Level } from "./thresholds";
 
 export type Radar10 = {
   winRate: number;
-  precision: number;
   upset: number;
   volume: number;
   streak: number;
@@ -13,7 +12,6 @@ export type Radar10 = {
 
 export type RadarLevels = {
   winRate: Level;
-  precision: Level;
   upset: Level;
   volume: Level;
   streak: Level;
@@ -32,7 +30,6 @@ export type LevelSummary = {
 export function judgeLevels(radar10: Radar10): LevelSummary {
   const levels: RadarLevels = {
     winRate: toLevel(radar10.winRate),
-    precision: toLevel(radar10.precision),
     upset: toLevel(radar10.upset),
     volume: toLevel(radar10.volume),
     streak: toLevel(radar10.streak),

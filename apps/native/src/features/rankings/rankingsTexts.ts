@@ -31,6 +31,9 @@ export function rankingsTexts(language: RankingsLanguage) {
     posts: common.posts,
     noData: "NO DATA",
     winRateMin: (n: number) => m.minPostsRequired.replace("{n}", String(n)),
+    winRatePickupRate:
+      (m as { winRatePickupRateRequired?: string }).winRatePickupRateRequired ??
+      m.minPostsRequired.replace("{n}", "65%"),
     winRateNoMin: m.noMinPosts,
     roundTotal: m.roundTotal,
     roundFirst: m.roundFirst,
@@ -47,5 +50,20 @@ export function rankingsTexts(language: RankingsLanguage) {
     metricTabsLabel: m.metricTabsLabel,
     shareMyRank: m.shareMyRank,
     shareRankCardFailed: m.shareRankCardFailed,
+    rankingProgressNoData: t(lang).profile.rankingProgressNoData,
+    rankGapViewGap: m.rankGap.viewGap,
+    divisionStandard: m.divisionStandard,
+    periodSeason: m.periodSeason ?? "Season",
+    periodWeekly: m.periodWeekly ?? "Weekly",
+    periodMonthly: m.periodMonthly ?? "Monthly",
+    nbaBoardRegular: m.nbaBoardRegular,
+    nbaBoardPlayoffs: m.nbaBoardPlayoffs,
+    divisionOpen: m.divisionOpen,
+    divisionOpenTitle: m.divisionOpenTitle,
+    divisionOpenLockBody: m.divisionOpenLockBody,
+    divisionOpenCta: m.divisionOpenCta,
+    divisionOpenModalDismiss: m.divisionOpenModalDismiss ?? (language === "en" ? "Close" : "とじる"),
+    divisionOpenBackToPickUp:
+      m.divisionOpenBackToPickUp ?? (language === "en" ? "Back to Pick Up" : "Pick Up に戻る"),
   };
 }

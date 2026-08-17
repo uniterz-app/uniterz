@@ -27,7 +27,8 @@ function inferVariant(
 export function buildCyberAlertPayload(
   title: string,
   message?: string,
-  buttons?: CyberAlertButton[]
+  buttons?: CyberAlertButton[],
+  variantOverride?: CyberAlertVariant
 ): CyberAlertPayload {
   const normalizedButtons =
     buttons && buttons.length > 0
@@ -38,6 +39,6 @@ export function buildCyberAlertPayload(
     title,
     message: msg,
     buttons: normalizedButtons,
-    variant: inferVariant(title, msg, normalizedButtons),
+    variant: variantOverride ?? inferVariant(title, msg, normalizedButtons),
   };
 }

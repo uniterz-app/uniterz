@@ -9,13 +9,9 @@ export const DAY_STRIP_SUPPRESS_SNAP_INIT_MS = 820;
 export const DAY_STRIP_SUPPRESS_SNAP_MS = 450;
 
 export const DAY_CHIP_BORDER_DEFAULT = "rgba(255,255,255,0.16)";
-export const DAY_CHIP_BORDER_SELECTED = "rgba(34,211,238,0.62)";
+export const DAY_CHIP_FILL_SELECTED = "#7e22ce";
+export const DAY_CHIP_BORDER_SELECTED = "#a855f7";
 export const DAY_CHIP_BORDER_TODAY = "rgba(250,204,21,0.75)";
-
-export const DAY_CHIP_GRADIENT_SELECTED = [
-  "rgba(34,211,238,0.42)",
-  "rgba(8,145,178,0.36)",
-] as const;
 
 export const DAY_CHIP_GRADIENT_DEFAULT = [
   "rgba(255,255,255,0.08)",

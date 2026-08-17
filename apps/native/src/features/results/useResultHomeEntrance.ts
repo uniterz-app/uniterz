@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import {
   Easing,
   interpolate,
@@ -10,6 +10,11 @@ import {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import {
+  GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS,
+  GAMES_LINE_FRAME_DRAW_MS,
+} from "../games/gamesCyberMotion";
+import { gamesCyberEaseBezier } from "../games/gamesPageMotion";
 
 /** 初回入場アニメを切るまでの猶予（スクロールで遅延マウントされたヘッダが誤爆しないよう余裕） */
 export const RESULT_HOME_ENTRANCE_ARM_MS = 4200;
@@ -31,11 +36,6 @@ export const RESULT_CARD_STAGGER_MS = 70;
 
 const GRID_LEAD_MS = 0;
 const GRID_FADE_MS = 180;
-
-const SHELL_TY_FROM = 5;
-const SHELL_OPACITY_MS = 400;
-const SHELL_SCALEY_MS = 360;
-const SHELL_TY_MS = 320;
 
 const BODY_GATE_DELAY_MS = 100;
 const BODY_GATE_MS = 300;
@@ -200,9 +200,10 @@ export function useResultPostCardEntrance({
   const d = rowIndex * RESULT_CARD_STAGGER_MS;
 
   const gridOp = useSharedValue(skip ? 1 : 0);
-  const shellOp = useSharedValue(skip ? 1 : 0);
-  const shellTy = useSharedValue(skip ? 0 : SHELL_TY_FROM);
-  const shellScaleY = useSharedValue(skip ? 1 : 0.985);
+  /** 試合カードと同じくシェルは最初から出す。親 opacity だと Skia 線枠の描画が見えない */
+  const shellOp = useSharedValue(1);
+  const shellTy = useSharedValue(0);
+  const shellScaleY = useSharedValue(1);
   const bodyGate = useSharedValue(skip ? 1 : 0);
 
   const homeOp = useSharedValue(skip ? 1 : 0);
@@ -228,8 +229,11 @@ export function useResultPostCardEntrance({
   const val2 = useSharedValue(skip ? 1 : 0);
 
   const hitFrameFlash = useSharedValue(0);
+  const frameStrokeEnd = useSharedValue(skip ? 1 : 0);
+  /** 試合カードと同じ押下（scale 0.99 / opacity 0.96） */
+  const pressed = useSharedValue(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (skip) {
       gridOp.value = 1;
       shellOp.value = 1;
@@ -255,15 +259,25 @@ export function useResultPostCardEntrance({
       val1.value = 1;
       val2.value = 1;
       hitFrameFlash.value = 0;
+      frameStrokeEnd.value = 1;
       return;
     }
 
     const tGrid = d + GRID_LEAD_MS;
     gridOp.value = withDelay(tGrid, withTiming(1, { duration: GRID_FADE_MS, easing: easeOutCubic }));
 
-    shellOp.value = withDelay(d, withTiming(1, { duration: SHELL_OPACITY_MS, easing: easeOutCubic }));
-    shellTy.value = withDelay(d, withTiming(0, { duration: SHELL_TY_MS, easing: easeOutCubic }));
-    shellScaleY.value = withDelay(d, withTiming(1, { duration: SHELL_SCALEY_MS, easing: easeOutCubic }));
+    shellOp.value = 1;
+    shellTy.value = 0;
+    shellScaleY.value = 1;
+
+    frameStrokeEnd.value = 0;
+    frameStrokeEnd.value = withDelay(
+      d + GAMES_LINE_FRAME_DRAW_DELAY_AFTER_SHELL_MS,
+      withTiming(1, {
+        duration: GAMES_LINE_FRAME_DRAW_MS,
+        easing: gamesCyberEaseBezier,
+      })
+    );
 
     bodyGate.value = withDelay(
       d + BODY_GATE_DELAY_MS,
@@ -360,10 +374,18 @@ export function useResultPostCardEntrance({
     }
   }, [skip, d, hasFinalScore, isHit, isMiss, statRowMeta]);
 
-  const cardShellMotionStyle = useAnimatedStyle(() => ({
-    opacity: shellOp.value,
-    transform: [{ translateY: shellTy.value }, { scaleY: shellScaleY.value }],
-  }));
+  const cardShellMotionStyle = useAnimatedStyle(() => {
+    const pressS = interpolate(pressed.value, [0, 1], [1, 0.99]);
+    const pressO = interpolate(pressed.value, [0, 1], [1, 0.96]);
+    return {
+      opacity: shellOp.value * pressO,
+      transform: [
+        { translateY: shellTy.value },
+        { scaleY: shellScaleY.value },
+        { scale: pressS },
+      ],
+    };
+  });
 
   const gridUnderlayStyle = useAnimatedStyle(() => ({
     opacity: gridOp.value,
@@ -457,5 +479,7 @@ export function useResultPostCardEntrance({
     statValueStyles,
     hitFrameFlashStyle,
     showHitFrameFlash: isHit && !skip,
+    frameStrokeEnd,
+    pressed,
   };
 }

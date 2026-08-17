@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FaLock } from "react-icons/fa";
+import { Lock } from "lucide-react";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -12,7 +12,8 @@ import { auth } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
-import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
+import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
+import CyberAuthField from "@/app/component/auth/CyberAuthField";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -27,8 +28,6 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
   const [next, setNext] = useState("");
   const [nextConfirm, setNextConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const formWidth = variant === "mobile" ? 320 : 380;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,176 +51,116 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
 
       setLoading(true);
 
-      // 1) 再認証（現在のパスワードが正しいか確認）
       const cred = EmailAuthProvider.credential(
         auth.currentUser.email,
         current
       );
       await reauthenticateWithCredential(auth.currentUser, cred);
-
-      // 2) パスワード更新
       await updatePassword(auth.currentUser, next);
 
       alert(m.settings.passwordUpdated);
       setCurrent("");
       setNext("");
       setNextConfirm("");
-
-      // 変更後はとりあえずプロフィールに戻す（必要なら変更）
-      const base = variant === "mobile" ? "/mobile/settings/profile" : "/web/settings/profile";
-      router.push(base);
-    } catch (err: any) {
+      router.back();
+    } catch (err: unknown) {
       console.error("change password error:", err);
-      if (err?.code === "auth/wrong-password") {
+      const code =
+        err && typeof err === "object" && "code" in err
+          ? String((err as { code?: unknown }).code)
+          : "";
+      if (code === "auth/wrong-password") {
         alert(m.settings.currentPasswordWrong);
-      } else if (err?.code === "auth/weak-password") {
+      } else if (code === "auth/weak-password") {
         alert(m.settings.passwordChangeFailed);
       } else {
-        alert(err?.message ?? m.settings.passwordChangeFailed);
+        const message =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "";
+        alert(message || m.settings.passwordChangeFailed);
       }
     } finally {
       setLoading(false);
     }
   };
 
+  const lockSlot = (
+    <span className="flex items-center justify-center text-[15px] text-white/80">
+      <Lock className="h-4 w-4" aria-hidden />
+    </span>
+  );
+
   return (
-    <form onSubmit={handleSubmit}>
-      <SettingsNeonCard
-        className="mx-auto text-center"
-        style={{ width: formWidth }}
-      >
-        <h1
-          style={{
-            fontWeight: "bold",
-            fontSize: "1.4rem",
-            marginBottom: 4,
-          }}
-        >
-          {m.settings.changePassword}
-        </h1>
-        <p
-          style={{
-            fontSize: "0.85rem",
-            opacity: 0.8,
-            marginBottom: 16,
-          }}
-        >
-          {m.settings.changePasswordDesc}
-        </p>
-
-        {/* 現在のパスワード */}
-        <div style={{ position: "relative", marginTop: 10 }}>
-          <input
-            type="password"
-            placeholder={m.settings.currentPassword}
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 40px 12px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(15,23,42,0.75)",
-              color: "white",
-              outline: "none",
-              boxSizing: "border-box",
+    <ProfileCyberPage
+      title="PASSWORD"
+      subtitle={m.settings.changePasswordDesc}
+      contentClassName={
+        variant === "web" ? "max-w-2xl px-6 py-8" : "max-w-lg px-4 py-5"
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-white/75">
+            {m.settings.currentPassword}
+          </label>
+          <CyberAuthField
+            angular
+            inputProps={{
+              type: "password",
+              autoComplete: "current-password",
+              placeholder: m.settings.currentPassword,
+              value: current,
+              onChange: (e) => setCurrent(e.target.value),
             }}
-          />
-          <FaLock
-            style={{
-              position: "absolute",
-              right: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              opacity: 0.9,
-            }}
+            rightSlot={lockSlot}
           />
         </div>
-
-        {/* 新しいパスワード */}
-        <div style={{ position: "relative", marginTop: 10 }}>
-          <input
-            type="password"
-            placeholder={m.settings.newPassword}
-            value={next}
-            onChange={(e) => setNext(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 40px 12px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(15,23,42,0.75)",
-              color: "white",
-              outline: "none",
-              boxSizing: "border-box",
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-white/75">
+            {m.settings.newPassword}
+          </label>
+          <CyberAuthField
+            angular
+            inputProps={{
+              type: "password",
+              autoComplete: "new-password",
+              placeholder: m.settings.newPassword,
+              value: next,
+              onChange: (e) => setNext(e.target.value),
             }}
-          />
-          <FaLock
-            style={{
-              position: "absolute",
-              right: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              opacity: 0.9,
-            }}
+            rightSlot={lockSlot}
           />
         </div>
-
-        {/* 新しいパスワード（確認） */}
-        <div style={{ position: "relative", marginTop: 10 }}>
-          <input
-            type="password"
-            placeholder={m.settings.confirmNewPassword}
-            value={nextConfirm}
-            onChange={(e) => setNextConfirm(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 40px 12px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(15,23,42,0.75)",
-              color: "white",
-              outline: "none",
-              boxSizing: "border-box",
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-white/75">
+            {m.settings.confirmNewPassword}
+          </label>
+          <CyberAuthField
+            angular
+            inputProps={{
+              type: "password",
+              autoComplete: "new-password",
+              placeholder: m.settings.confirmNewPassword,
+              value: nextConfirm,
+              onChange: (e) => setNextConfirm(e.target.value),
             }}
-          />
-          <FaLock
-            style={{
-              position: "absolute",
-              right: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              opacity: 0.9,
-            }}
+            rightSlot={lockSlot}
           />
         </div>
-
-        {/* 送信ボタン */}
         <button
           type="submit"
           disabled={loading}
-          style={{
-            backgroundImage:
-              "linear-gradient(135deg, #a855f7, #6366f1 40%, #22d3ee 100%)",
-            color: "white",
-            width: "100%",
-            padding: "12px",
-            marginTop: 18,
-            border: "none",
-            borderRadius: 999,
-            cursor: loading ? "not-allowed" : "pointer",
-            fontWeight: 700,
-            letterSpacing: "0.03em",
-            boxShadow: "0 0 18px rgba(79,70,229,0.7)",
-            opacity: loading ? 0.7 : 1,
-            transition: "transform 0.1s ease, box-shadow 0.1s ease",
-          }}
+          className={[
+            "predict-overlay-submit-btn mt-1 flex w-full items-center justify-center px-3.5 py-3 text-sm font-bold tracking-wide",
+            loading
+              ? "predict-overlay-submit-btn--disabled cursor-not-allowed"
+              : "cursor-pointer",
+          ].join(" ")}
         >
-          {loading
-            ? m.common.saving
-            : m.settings.changePassword}
+          {loading ? m.common.saving : m.settings.changePassword}
         </button>
-      </SettingsNeonCard>
-    </form>
+      </form>
+    </ProfileCyberPage>
   );
 }

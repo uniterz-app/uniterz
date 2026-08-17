@@ -15,6 +15,8 @@ export type SettlementGameInput = {
   knockout?: boolean;
   /** WC: 得点者リスト（オウンゴールは ownGoal: true） */
   goalScorers?: unknown;
+  /** NBA: 試合の最多得点者（同点トップは複数可） */
+  leadingScorers?: unknown;
 };
 
 export type RankingSport = "basketball" | "football";

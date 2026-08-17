@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * 斜めタブのデザインは固定（変更しない）:
+ * - 選択: アクセント塗りつぶし + 黒文字 + スキャン横線
+ * - 非選択: 透明 + アクセント枠 + アクセント文字
+ */
 import { createContext, useContext, type ReactNode } from "react";
 import { nameOxanium } from "@/lib/fonts";
 import {
@@ -9,6 +14,23 @@ import {
 
 export const CYBER_TAB_CYAN = "#00F5FF";
 
+export type CyberSlantedTabTheme = {
+  accent: string;
+  inactiveText?: string;
+  activeText?: string;
+  activeShadow?: string;
+  inactiveBorder?: string;
+};
+
+const DEFAULT_TAB_THEME: CyberSlantedTabTheme = {
+  accent: CYBER_TAB_CYAN,
+  inactiveText: CYBER_TAB_CYAN,
+  activeText: "#050508",
+  /** skew 後に乗るので平行四辺形に沿って光る */
+  activeShadow:
+    "0 0 10px rgba(0,245,255,0.55), 0 0 22px rgba(0,245,255,0.28)",
+};
+
 const CyberSlantedTabFillContext = createContext(false);
 
 type CyberSlantedTabProps = {
@@ -17,6 +39,7 @@ type CyberSlantedTabProps = {
   onClick: () => void;
   compact?: boolean;
   fontWeight?: number;
+  theme?: CyberSlantedTabTheme;
   /** role="tab" 用 */
   role?: "tab";
   "aria-selected"?: boolean;
@@ -30,6 +53,7 @@ export function CyberSlantedTab({
   onClick,
   compact = false,
   fontWeight = 700,
+  theme = DEFAULT_TAB_THEME,
   role,
   "aria-selected": ariaSelected,
   badge,
@@ -37,6 +61,12 @@ export function CyberSlantedTab({
   const fill = useContext(CyberSlantedTabFillContext);
   const jaLabel = hasJaScript(label);
   const fontSize = rankingFontSizePx(compact ? 9 : 10, label);
+  const inactiveText = theme.inactiveText ?? theme.accent;
+  const activeText = theme.activeText ?? "#050508";
+  const activeShadow =
+    theme.activeShadow ??
+    "0 0 10px rgba(0,245,255,0.55), 0 0 22px rgba(0,245,255,0.28)";
+  const inactiveBorder = theme.inactiveBorder ?? theme.accent;
 
   return (
     <button
@@ -61,10 +91,10 @@ export function CyberSlantedTab({
         fontSize,
         fontWeight,
         letterSpacing: jaLabel ? "0.06em" : "0.14em",
-        color: active ? "#050508" : CYBER_TAB_CYAN,
-        background: active ? CYBER_TAB_CYAN : "transparent",
-        border: active ? "none" : `1px solid ${CYBER_TAB_CYAN}`,
-        boxShadow: active ? "0 0 18px rgba(0,245,255,0.45)" : "none",
+        color: active ? activeText : inactiveText,
+        background: active ? theme.accent : "transparent",
+        border: active ? "none" : `1px solid ${inactiveBorder}`,
+        boxShadow: active ? activeShadow : "none",
       }}
     >
       {active ? (
@@ -103,11 +133,12 @@ export function CyberSlantedTabBar({
   gridColumns?: 3;
   "aria-label"?: string;
 }) {
+  /** py は選択グロー（box-shadow）が overflow-x-clip 親で縦方向まで切れないよう確保 */
   const layoutClass =
     gridColumns === 3
-      ? "grid w-full grid-cols-3 gap-x-2 gap-y-2 pb-1"
+      ? "grid w-full grid-cols-3 gap-x-2 gap-y-2 py-2"
       : [
-          "flex gap-2 pb-1",
+          "flex gap-2 py-2",
           fill
             ? "w-full"
             : "overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",

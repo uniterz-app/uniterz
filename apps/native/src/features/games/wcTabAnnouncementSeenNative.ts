@@ -1,20 +1,12 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const KEY = "wcGamesTabAnnouncementSeen";
-
+/** Removed WC tab announcement — no-op prefs */
 export async function readWcGamesTabAnnouncementSeenNative(): Promise<boolean> {
-  try {
-    const v = await AsyncStorage.getItem(KEY);
-    return v === "1";
-  } catch {
-    return false;
-  }
+  return true;
 }
 
-export async function markWcGamesTabAnnouncementSeenNative(): Promise<void> {
-  try {
-    await AsyncStorage.setItem(KEY, "1");
-  } catch {
-    // ignore
-  }
+export async function readWcTabAnnouncementSeenNative(): Promise<boolean> {
+  return true;
 }
+
+export async function markWcGamesTabAnnouncementSeenNative(): Promise<void> {}
+
+export async function writeWcTabAnnouncementSeenNative(_seen: boolean): Promise<void> {}

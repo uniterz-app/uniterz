@@ -13,15 +13,26 @@ type Props = {
   showSweep?: boolean;
 };
 
-const CORNER = "pointer-events-none absolute z-[12] border-red-400/88";
-
-/** UPSET 用サイバー角切り枠（赤 + 白い走査光） */
+/** UPSET 用サイバー角切り枠 — コア線 + drop-shadow ブルーム */
 export default function ResultUpsetCyberFrame({
   className = "",
   showSweep = true,
 }: Props) {
   return (
     <>
+      <div
+        className="result-upset-frame-bloom pointer-events-none absolute inset-0 z-[3]"
+        aria-hidden
+      >
+        <div
+          className={[
+            "absolute inset-0",
+            RESULT_HIT_CYBER_CLIP,
+            "border border-red-200/90",
+          ].join(" ")}
+        />
+      </div>
+
       <div
         className={[
           "pointer-events-none absolute inset-0 z-[4]",
@@ -45,23 +56,6 @@ export default function ResultUpsetCyberFrame({
           <div className="result-card-border-sweep__spin result-card-streak-sweep__spin" />
         </div>
       ) : null}
-
-      <div
-        className={`${CORNER} left-0 top-0 h-2.5 w-2.5 border-l-2 border-t-2`}
-        aria-hidden
-      />
-      <div
-        className={`${CORNER} right-0 top-0 h-2.5 w-2.5 border-r-2 border-t-2`}
-        aria-hidden
-      />
-      <div
-        className={`${CORNER} bottom-0 left-0 h-2.5 w-2.5 border-b-2 border-l-2`}
-        aria-hidden
-      />
-      <div
-        className={`${CORNER} bottom-0 right-0 h-2.5 w-2.5 border-b-2 border-r-2`}
-        aria-hidden
-      />
 
       <div
         className={[

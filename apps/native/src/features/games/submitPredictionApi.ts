@@ -36,7 +36,7 @@ async function parseJsonResponse(res: Response): Promise<Record<string, unknown>
   }
 }
 
-import type { WcGoalScorerPick } from "../../../../../lib/wc/goalScorer";
+type GoalScorerPick = { playerId?: string; teamId?: string };
 
 /** Web `POST /api/posts_v2` と同一ペイロード */
 export async function createPredictionPostApi(input: {
@@ -44,7 +44,7 @@ export async function createPredictionPostApi(input: {
   winner: "home" | "away" | "draw";
   scoreHome: number;
   scoreAway: number;
-  goalScorer?: WcGoalScorerPick | null;
+  goalScorer?: GoalScorerPick | null;
 }): Promise<string> {
   const base = getUniterzApiBaseUrl();
   if (!base) {
@@ -105,7 +105,7 @@ export async function updatePredictionPostApi(
     winner: "home" | "away" | "draw";
     scoreHome: number;
     scoreAway: number;
-    goalScorer?: WcGoalScorerPick | null;
+    goalScorer?: GoalScorerPick | null;
   }
 ): Promise<void> {
   const base = getUniterzApiBaseUrl();

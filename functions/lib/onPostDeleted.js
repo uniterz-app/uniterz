@@ -5,16 +5,7 @@ exports.onPostDeletedV2 = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
 const cumulativeFromDaily_1 = require("./rankings/cumulativeFromDaily");
-function normalizeSeasonPhase(v) {
-    if (v === "play_in" || v === "playoffs")
-        return v;
-    return null;
-}
-function normalizeSeasonRound(v) {
-    if (v === "r1" || v === "r2" || v === "cf" || v === "finals")
-        return v;
-    return null;
-}
+const nbaSeason_1 = require("./rankings/nbaSeason");
 function normalizeLeague(raw) {
     if (!raw)
         return null;
@@ -25,27 +16,42 @@ function normalizeLeague(raw) {
         return "nba";
     return v || null;
 }
-function buildDeleteContribution(before, stats) {
-    var _a, _b, _c, _d, _e, _f;
+function nbaBucketKeysForDelete(leagueKey, forRanking, startAt, seasonPhase) {
+    if (!forRanking || leagueKey !== "nba" || !startAt) {
+        return { nbaSeasonKey: null, nbaPlayoffsSeasonKey: null };
+    }
+    return (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forRanking, startAt.toDate(), (0, nbaSeason_1.normalizeNbaSeasonPhase)(seasonPhase));
+}
+function buildDeleteContribution(before, stats, startAt) {
+    var _a, _b, _c, _d, _e;
     const leagueKey = normalizeLeague(typeof before.league === "string" ? before.league : null);
     const isWc = leagueKey === "wc";
     const wcStageRaw = before.wcStage;
     const wcStage = wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
+    const forOpenEligible = stats.countedForRanking !== false && leagueKey !== "wc";
+    const hasPickupFlag = typeof stats.countedForPickup === "boolean";
+    // レガシー: countedForPickup 未設定なら当時は ranking に全試合加算
+    const forPickupRanking = stats.countedForPickup === true ||
+        (!hasPickupFlag && forOpenEligible);
+    // open* はデュアル書き込み導入後の投稿のみ戻す
+    const forOpenRanking = hasPickupFlag && forOpenEligible;
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(leagueKey, forOpenEligible, startAt, before.seasonPhase);
     return {
-        forRanking: stats.countedForRanking !== false,
-        phaseKey: normalizeSeasonPhase(before.seasonPhase),
-        roundKey: normalizeSeasonRound(before.seasonRound),
+        forRanking: forPickupRanking,
+        forOpenRanking,
+        forPlayoffsRanking: forOpenEligible,
+        nbaSeasonKey,
+        nbaPlayoffsSeasonKey,
         leagueKey,
         isWc,
         wcStage,
         isWin: stats.isWin === true,
         points: Number((_a = stats.pointsV3) !== null && _a !== void 0 ? _a : 0),
         upsetPoints: Number((_b = stats.upsetPoints) !== null && _b !== void 0 ? _b : 0),
-        scorePrecision: Number((_c = stats.scorePrecision) !== null && _c !== void 0 ? _c : 0),
         exactHit: stats.exactMatch === true,
-        goalScorerHit: Number((_d = stats.goalScorerBonus) !== null && _d !== void 0 ? _d : 0) > 0,
-        upsetBonus: Number((_e = stats.upsetBonus) !== null && _e !== void 0 ? _e : 0),
-        streakBonus: Number((_f = stats.streakBonus) !== null && _f !== void 0 ? _f : 0),
+        goalScorerHit: Number((_c = stats.goalScorerBonus) !== null && _c !== void 0 ? _c : 0) > 0,
+        upsetBonus: Number((_d = stats.upsetBonus) !== null && _d !== void 0 ? _d : 0),
+        streakBonus: Number((_e = stats.streakBonus) !== null && _e !== void 0 ? _e : 0),
     };
 }
 function teamIdFromSide(side) {
@@ -73,7 +79,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     document: "posts/{postId}",
     region: "asia-northeast1",
 }, async (event) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g;
     const snap = event.data;
     if (!snap)
         return;
@@ -83,6 +89,20 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     const uid = before.authorUid;
     const stats = before.stats;
     const startAt = (_b = (_a = before.startAtJst) !== null && _a !== void 0 ? _a : before.startAt) !== null && _b !== void 0 ? _b : before.createdAt;
+    const gameId = typeof before.gameId === "string" ? before.gameId.trim() : "";
+    if (uid && gameId) {
+        try {
+            await (0, firestore_2.getFirestore)()
+                .doc(`games/${gameId}`)
+                .set({
+                predictorUids: firestore_2.FieldValue.arrayRemove(uid),
+                predictorCount: firestore_2.FieldValue.increment(-1),
+            }, { merge: true });
+        }
+        catch (e) {
+            console.error("[onPostDeletedV2] predictorUids remove", e);
+        }
+    }
     if (!uid || !startAt)
         return;
     const db = (0, firestore_2.getFirestore)();
@@ -118,15 +138,16 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             const user = userSnap.exists ? userSnap.data() : {};
             (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, {
                 forRanking: true,
-                phaseKey: null,
-                roundKey: null,
+                forOpenRanking: false,
+                forPlayoffsRanking: false,
+                nbaSeasonKey: null,
+                nbaPlayoffsSeasonKey: null,
                 leagueKey: normalizeLeague(typeof before.league === "string" ? before.league : null),
                 isWc: false,
                 wcStage: null,
                 isWin: false,
                 points: 0,
                 upsetPoints: 0,
-                scorePrecision: 0,
                 exactHit: false,
                 goalScorerHit: false,
                 upsetBonus: 0,
@@ -136,18 +157,21 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         });
         return;
     }
-    const countRank = stats.countedForRanking !== false;
+    const leagueKeyNorm = normalizeLeague(typeof before.league === "string" ? before.league : null);
+    const forOpenEligible = stats.countedForRanking !== false && leagueKeyNorm !== "wc";
+    const hasPickupFlag = typeof stats.countedForPickup === "boolean";
+    const forPickupRanking = stats.countedForPickup === true ||
+        (!hasPickupFlag && forOpenEligible);
+    const forOpenRanking = hasPickupFlag && forOpenEligible;
     const isWin = stats.isWin === true;
     const scoreError = (_c = stats.scoreError) !== null && _c !== void 0 ? _c : 0;
-    const scorePrecision = (_d = stats.scorePrecision) !== null && _d !== void 0 ? _d : 0;
     const hadUpsetGame = stats.hadUpsetGame === true;
     const upsetHit = stats.upsetHit === true;
-    const upsetPoints = (_e = stats.upsetPoints) !== null && _e !== void 0 ? _e : 0;
-    const pointsV3 = (_f = stats.pointsV3) !== null && _f !== void 0 ? _f : 0;
-    const leagueKey = (_g = before.league) !== null && _g !== void 0 ? _g : null;
-    const isWc = String(leagueKey !== null && leagueKey !== void 0 ? leagueKey : "").toLowerCase() === "wc";
+    const upsetPoints = (_d = stats.upsetPoints) !== null && _d !== void 0 ? _d : 0;
+    const pointsV3 = (_e = stats.pointsV3) !== null && _e !== void 0 ? _e : 0;
+    const leagueKey = (_f = before.league) !== null && _f !== void 0 ? _f : null;
     const exactMatch = stats.exactMatch === true;
-    const goalScorerHit = ((_h = stats.goalScorerBonus) !== null && _h !== void 0 ? _h : 0) > 0;
+    const goalScorerHit = ((_g = stats.goalScorerBonus) !== null && _g !== void 0 ? _g : 0) > 0;
     await db.runTransaction(async (tx) => {
         var _a, _b, _c, _d, _e;
         const dailySnap = await tx.get(dailyRef);
@@ -165,22 +189,38 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             upsetHitCount: firestore_2.FieldValue.increment(upsetHit ? -1 : 0),
             upsetPickCount: firestore_2.FieldValue.increment(hadUpsetGame ? -1 : 0),
             upsetPointsSum: firestore_2.FieldValue.increment(-upsetPoints),
-            scorePrecisionSum: firestore_2.FieldValue.increment(isWc ? 0 : -scorePrecision),
-            exactHitCount: firestore_2.FieldValue.increment(isWc && exactMatch ? -1 : 0),
+            exactHitCount: firestore_2.FieldValue.increment(0),
             goalScorerHitCount: firestore_2.FieldValue.increment(goalScorerHit ? -1 : 0),
             pointsSumV3: firestore_2.FieldValue.increment(-pointsV3),
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         };
         tx.set(dailyRef, { all: dec }, { merge: true });
-        if (countRank) {
+        if (forPickupRanking) {
             tx.set(dailyRef, { ranking: dec }, { merge: true });
+        }
+        if (forOpenRanking) {
+            tx.set(dailyRef, { openRanking: dec }, { merge: true });
+        }
+        const seasonPhase = before.seasonPhase;
+        const { nbaSeasonKey, nbaPlayoffsSeasonKey } = nbaBucketKeysForDelete(normalizeLeague(typeof before.league === "string" ? before.league : null), forOpenEligible, startAt, seasonPhase);
+        if (forPickupRanking && nbaSeasonKey) {
+            tx.set(dailyRef, { rankingBySeason: { [nbaSeasonKey]: dec } }, { merge: true });
+        }
+        if (forOpenRanking && nbaSeasonKey) {
+            tx.set(dailyRef, { openRankingBySeason: { [nbaSeasonKey]: dec } }, { merge: true });
+        }
+        if (forOpenEligible && nbaPlayoffsSeasonKey) {
+            tx.set(dailyRef, { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: dec } }, { merge: true });
         }
         const leagueKeyInner = (_a = before.league) !== null && _a !== void 0 ? _a : null;
         if (leagueKeyInner) {
             tx.set(dailyRef, { leagues: { [leagueKeyInner]: dec } }, { merge: true });
         }
         const gameTeamIds = uniqueGameTeamIds((_c = (_b = marker === null || marker === void 0 ? void 0 : marker.homeTeamId) !== null && _b !== void 0 ? _b : teamIdFromSide(before.home)) !== null && _c !== void 0 ? _c : null, (_e = (_d = marker === null || marker === void 0 ? void 0 : marker.awayTeamId) !== null && _d !== void 0 ? _d : teamIdFromSide(before.away)) !== null && _e !== void 0 ? _e : null);
-        const countTeams = (marker === null || marker === void 0 ? void 0 : marker.countedForRanking) !== false && countRank;
+        const countTeams = ((marker === null || marker === void 0 ? void 0 : marker.countedForPickup) === true ||
+            ((marker === null || marker === void 0 ? void 0 : marker.countedForPickup) == null &&
+                (marker === null || marker === void 0 ? void 0 : marker.countedForRanking) !== false)) &&
+            forPickupRanking;
         if (countTeams && gameTeamIds.length > 0) {
             for (const teamId of gameTeamIds) {
                 tx.set(dailyRef, teamDecrementFields(teamId, dec), { merge: true });
@@ -188,7 +228,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         }
         const userSnap = await tx.get(userRef);
         const user = userSnap.exists ? userSnap.data() : {};
-        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, buildDeleteContribution(before, stats), -1);
+        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, buildDeleteContribution(before, stats, startAt), -1);
         tx.delete(markerRef);
     });
 });

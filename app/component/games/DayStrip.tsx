@@ -316,41 +316,40 @@ export default function DayStrip({
                     "text-white",
                   ].join(" ")}
                   style={{
-                    transform: selected
-                      ? "translateY(-1px) scale(1.02)"
-                      : "translateY(0) scale(1)",
+                    transform: "translateY(0) scale(1)",
                     borderColor: selected
-                      ? "rgba(34,211,238,0.62)"
+                      ? "#a855f7"
                       : isTodayDate
                         ? "rgba(250,204,21,0.75)"
                         : "rgba(255,255,255,0.16)",
                     background: selected
-                      ? "linear-gradient(180deg, rgba(34,211,238,0.42) 0%, rgba(8,145,178,0.36) 100%)"
+                      ? "#7e22ce"
                       : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
                     boxShadow: selected
-                      ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(34,211,238,0.14), 0 0 7px rgba(34,211,238,0.14)"
+                      ? "0 0 12px rgba(126,34,206,0.5)"
                       : isTodayDate
                         ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(250,204,21,0.2), 0 0 10px rgba(250,204,21,0.22)"
                         : "inset 0 1px 0 rgba(255,255,255,0.06)",
                     isolation: "isolate",
                   }}
                 >
+                  {!selected ? (
                   <div
                     aria-hidden
                     className="pointer-events-none absolute inset-0 rounded-full"
                     style={{
-                      background: selected
-                        ? "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.00) 55%)"
-                        : "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.00) 60%)",
+                      background:
+                        "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.00) 60%)",
                     }}
                   />
+                  ) : null}
 
                   <span
                     className={`relative z-10 ${resultStatsMetricNumClass} ${sz.num}`}
                     style={{
-                      color: selected ? "#ecfeff" : "#ffffff",
+                      color: "#ffffff",
                       textShadow: selected
-                        ? "0 0 5px rgba(34,211,238,0.22), 0 1px 0 rgba(0,0,0,0.32)"
+                        ? "none"
                         : "0 1px 0 rgba(0,0,0,0.22)",
                     }}
                   >

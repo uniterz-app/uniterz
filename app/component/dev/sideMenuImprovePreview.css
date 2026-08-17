@@ -1,0 +1,511 @@
+/* サイドメニュー改善案プレビュー（選定用・本番未接続）
+   行デザイン（スキューチップ型）は維持し、パネル・階層・選択状態・空白の使い方を比較する。 */
+
+/* =========================
+   スマホモック（背後の画面を再現）
+========================= */
+
+.smip-phone {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 9 / 19;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: #04070c;
+}
+
+/* 背後の試合画面（雰囲気のみ） */
+.smip-backdrop {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #061019 0%, #04090f 55%, #03060b 100%);
+}
+
+.smip-backdrop__logo {
+  position: absolute;
+  top: 4.5%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5em;
+  color: rgba(0, 245, 255, 0.34);
+}
+
+.smip-backdrop__card {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 8.5%;
+  border: 1px solid rgba(0, 245, 255, 0.1);
+  background: rgba(6, 20, 30, 0.55);
+}
+
+/* ドロワー展開時の暗幕 */
+.smip-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+/* =========================
+   ドロワーパネル
+========================= */
+
+.smip-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 62%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%
+  );
+  /* 現状: 右端へ完全透明化（境界が消える） */
+  background: linear-gradient(
+    90deg,
+    rgba(4, 16, 24, 0.96) 0%,
+    rgba(3, 11, 18, 0.78) 42%,
+    rgba(2, 7, 14, 0.32) 72%,
+    rgba(2, 7, 14, 0) 100%
+  );
+}
+
+/* 改善 A: 透明化を下げ止め、右端に発光エッジで境界を明示 */
+.smip-panel.has-edge {
+  background: linear-gradient(
+    90deg,
+    rgba(4, 16, 24, 0.97) 0%,
+    rgba(3, 12, 19, 0.92) 48%,
+    rgba(2, 8, 15, 0.84) 100%
+  );
+  box-shadow: 14px 0 42px rgba(0, 0, 0, 0.5);
+}
+
+.smip-panel__edge-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 1.5px;
+  z-index: 3;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.06) 0%,
+    rgba(0, 245, 255, 0.65) 18%,
+    rgba(0, 245, 255, 0.65) 78%,
+    rgba(0, 245, 255, 0.06) 100%
+  );
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.4);
+}
+
+.smip-panel__grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(0, 245, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 55%, transparent 100%);
+}
+
+.smip-panel__body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding: 14px 12px 12px;
+}
+
+/* =========================
+   改善 D: ミニヘッダー / HUD フッター
+========================= */
+
+.smip-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 245, 255, 0.16);
+}
+
+.smip-header--row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.smip-header__title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.34em;
+  color: rgba(0, 245, 255, 0.85);
+  text-shadow: 0 0 12px rgba(0, 245, 255, 0.35);
+}
+
+.smip-header__sub {
+  margin-top: 2px;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.smip-header__date {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.smip-header__date-num {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0, 245, 255, 0.9);
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.35);
+}
+
+.smip-header__date-wd {
+  margin-top: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.smip-footer {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.smip-footer__rule {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 245, 255, 0.5),
+    rgba(0, 245, 255, 0.08) 70%,
+    transparent
+  );
+  box-shadow: 0 0 8px rgba(0, 245, 255, 0.25);
+}
+
+.smip-footer__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  color: rgba(0, 245, 255, 0.55);
+}
+
+.smip-footer__dot {
+  width: 5px;
+  height: 5px;
+  transform: rotate(45deg);
+  border: 1px solid rgba(0, 245, 255, 0.6);
+  box-shadow: 0 0 6px rgba(0, 245, 255, 0.4);
+  animation: smip-pulse 2.4s ease-in-out infinite;
+}
+
+.smip-footer__ver {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.32);
+}
+
+@keyframes smip-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* =========================
+   メニュー行（確定デザイン: スキューチップ）
+========================= */
+
+.smip-item {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  min-height: 40px;
+  padding: 5px 10px 5px 0;
+  color: #fff;
+  text-align: left;
+  border: 1px solid rgba(0, 245, 255, 0.16);
+  border-left: none;
+  background: linear-gradient(
+    90deg,
+    rgba(4, 22, 34, 0.96),
+    rgba(3, 12, 20, 0.88)
+  );
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+
+.smip-item.is-dense {
+  min-height: 34px;
+  padding-block: 3px;
+}
+
+/* 左のスキューチップ（アイコン台座） */
+.smip-item::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 0;
+  bottom: 0;
+  width: 54px;
+  background: linear-gradient(
+    105deg,
+    rgba(0, 52, 68, 0.92) 0%,
+    rgba(4, 18, 28, 0.95) 100%
+  );
+  border-right: 1px solid rgba(0, 245, 255, 0.42);
+  box-shadow: inset 0 0 14px rgba(0, 245, 255, 0.06);
+  transform: skewX(-14deg);
+  pointer-events: none;
+}
+
+.smip-item__icon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 46px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding-left: 2px;
+}
+
+.smip-item__label {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+  padding-left: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.smip-item.is-dense .smip-item__label {
+  font-size: 11px;
+}
+
+/* --- 現状の active（枠がわずかに明るいだけ） --- */
+.smip-item.is-active {
+  border-color: rgba(0, 245, 255, 0.55);
+  box-shadow:
+    0 0 28px rgba(0, 245, 255, 0.18),
+    inset 0 0 0 1px rgba(0, 245, 255, 0.14);
+}
+
+.smip-item.is-active::before {
+  background: linear-gradient(
+    105deg,
+    rgba(0, 80, 98, 0.95) 0%,
+    rgba(0, 36, 52, 0.96) 100%
+  );
+  border-color: rgba(0, 245, 255, 0.85);
+}
+
+/* =========================
+   改善 C: 選択状態の強調
+========================= */
+
+/* 非選択行はさらに静かに（コントラストを active に集める） */
+.smip-menu.has-activefx .smip-item:not(.is-active) {
+  border-color: rgba(0, 245, 255, 0.1);
+  background: linear-gradient(
+    90deg,
+    rgba(4, 20, 30, 0.72),
+    rgba(3, 12, 20, 0.6)
+  );
+}
+
+.smip-menu.has-activefx .smip-item:not(.is-active)::before {
+  border-right-color: rgba(0, 245, 255, 0.26);
+  background: linear-gradient(
+    105deg,
+    rgba(0, 42, 56, 0.7) 0%,
+    rgba(4, 16, 24, 0.75) 100%
+  );
+}
+
+/* 選択行: 左レール + 面の発光 + 右▸ */
+.smip-menu.has-activefx .smip-item.is-active {
+  border-color: rgba(0, 245, 255, 0.75);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 56, 72, 0.95),
+    rgba(2, 22, 34, 0.92)
+  );
+  box-shadow:
+    0 0 30px rgba(0, 245, 255, 0.26),
+    inset 0 0 22px rgba(0, 245, 255, 0.1),
+    inset 0 0 0 1px rgba(0, 245, 255, 0.2);
+}
+
+.smip-menu.has-activefx .smip-item.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #00f5ff;
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.8);
+  z-index: 2;
+}
+
+.smip-active-caret {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  padding-left: 4px;
+  font-size: 10px;
+  color: #00f5ff;
+  text-shadow: 0 0 8px rgba(0, 245, 255, 0.8);
+  animation: smip-pulse 1.8s ease-in-out infinite;
+}
+
+/* =========================
+   改善 B: 階層の明確化
+========================= */
+
+/* 左インデント＋枝線で階層。右端は親と揃える */
+.smip-menu.has-hier .smip-branch-content {
+  padding-right: 0;
+}
+
+.smip-menu.has-hier .smip-item.is-dense {
+  min-height: 32px;
+}
+
+.smip-menu.has-hier .smip-item.is-dense::before {
+  width: 46px;
+}
+
+.smip-menu.has-hier .smip-item.is-dense .smip-item__icon {
+  width: 40px;
+}
+
+/* 枝線の強調（2px + 明るめアンバー + ジョイントノード） */
+.smip-branch {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: 34px;
+}
+
+.smip-branch__v {
+  position: absolute;
+  left: 9px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(246, 195, 68, 0.58);
+  box-shadow: 0 0 7px rgba(246, 195, 68, 0.45);
+}
+
+.smip-branch__v.is-last {
+  bottom: 50%;
+}
+
+.smip-branch__h {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  transform: translateY(-50%);
+  background: rgba(246, 195, 68, 0.58);
+  box-shadow: 0 0 7px rgba(246, 195, 68, 0.45);
+}
+
+.smip-menu.has-hier .smip-branch__v,
+.smip-menu.has-hier .smip-branch__h {
+  background: rgba(246, 195, 68, 0.85);
+  box-shadow: 0 0 9px rgba(246, 195, 68, 0.6);
+}
+
+.smip-menu.has-hier .smip-branch__v {
+  width: 2px;
+}
+
+.smip-menu.has-hier .smip-branch__h {
+  height: 2px;
+}
+
+/* 枝先ジョイント（小さなノード） */
+.smip-branch__joint {
+  display: none;
+}
+
+.smip-menu.has-hier .smip-branch__joint {
+  display: block;
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  transform: translate(0, -50%) rotate(45deg);
+  background: rgba(246, 195, 68, 0.9);
+  box-shadow: 0 0 8px rgba(246, 195, 68, 0.7);
+  z-index: 1;
+}
+
+.smip-branch-content {
+  min-width: 0;
+  flex: 1;
+  padding-left: 28px;
+}
+
+.smip-trunk {
+  position: absolute;
+  left: 9px;
+  top: -4px;
+  width: 1px;
+  height: 4px;
+  background: rgba(246, 195, 68, 0.58);
+  box-shadow: 0 0 7px rgba(246, 195, 68, 0.45);
+}
+
+.smip-menu.has-hier .smip-trunk {
+  width: 2px;
+  background: rgba(246, 195, 68, 0.85);
+}
+
+/* =========================
+   一覧グリッド
+========================= */
+
+.smip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 32px 20px;
+}

@@ -7,7 +7,6 @@
 
 export type SummaryKey =
   | "winRate"
-  | "precision"
   | "pointsV3"
   | "upset"
   | "volume";
@@ -62,30 +61,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
     texts: [
       "【勝率】平均を下回っており、ピック精度の改善余地があります。",
       "【勝率】結果が伸び悩んでおり、判断基準の見直しが必要です。",
-    ],
-    condition: ({ percentile }) => percentile <= 40,
-  },
-
-  /* =========================
-   * スコア精度
-   * ========================= */
-  {
-    key: "precision",
-    tone: "strong",
-    priority: 75,
-    texts: [
-      "【スコア精度】上位20%。試合展開を読む力が高いです。",
-      "【スコア精度】点差感覚が鋭く、展開予測に強みがあります。",
-    ],
-    condition: ({ percentile }) => percentile >= 80,
-  },
-  {
-    key: "precision",
-    tone: "weak",
-    priority: 52,
-    texts: [
-      "【スコア精度】展開読みはやや不安定で、点差感覚に改善余地があります。",
-      "【スコア精度】勝敗は取れていても、細かい試合展開の読みはまだ伸ばせます。",
     ],
     condition: ({ percentile }) => percentile <= 40,
   },

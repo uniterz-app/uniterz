@@ -5,9 +5,8 @@
  */
 
 import type { Firestore } from "firebase-admin/firestore";
-import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
-import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { pickNbaCumulativeRankingSlice, pickNbaDailyIncBucket, pickNbaPlayoffsCumulativeSlice, pickNbaPlayoffsDailyIncBucket, pickNbaSeasonKeyCumulativeSlice, pickNbaSeasonKeyDailyIncBucket } from "@/lib/rankings/pickNbaStatsBucket";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export type ProfileSummaryForCards = {
@@ -16,7 +15,10 @@ export type ProfileSummaryForCards = {
   recent3Posts: number;
   wins: number;
   winRate: number;
-  scorePrecisionSum: number;
+  /** WC の予想スコア完全一致数。NBA は常に 0。 */
+  exactHitCount: number;
+  /** NBA 最多得点者的中数。WC は 0。 */
+  goalScorerHitCount: number;
   upsetPointsSum: number;
   pointsSumV3: number;
   upsetChanceCount: number;
@@ -52,7 +54,8 @@ function emptySummary(): ProfileSummaryForCards {
     recent3Posts: 0,
     wins: 0,
     winRate: 0,
-    scorePrecisionSum: 0,
+    exactHitCount: 0,
+    goalScorerHitCount: 0,
     upsetPointsSum: 0,
     pointsSumV3: 0,
     upsetChanceCount: 0,
@@ -64,16 +67,14 @@ function emptySummary(): ProfileSummaryForCards {
 }
 
 function summaryFromDailyRow(
-  row: Record<string, unknown>,
-  wcStage: boolean
+  row: Record<string, unknown>
 ): ProfileSummaryForCards {
   const posts = safeInt(row.posts);
   const wins = safeInt(row.wins);
   const pointsSumV3 = safeNum(row.pointsSumV3);
   const upsetPointsSum = safeNum(row.upsetPointsSum);
-  const scorePrecisionSum = wcStage
-    ? safeInt(row.exactHitCount)
-    : safeNum(row.scorePrecisionSum);
+  const exactHitCount = 0;
+  const goalScorerHitCount = safeInt(row.goalScorerHitCount);
   const upsetBonusSum = safeNum(row.upsetBonusSum);
   const streakBonusSum = safeNum(row.streakBonusSum);
   return {
@@ -82,7 +83,8 @@ function summaryFromDailyRow(
     recent3Posts: 0,
     wins,
     winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum,
+    exactHitCount,
+    goalScorerHitCount,
     upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: safeInt(row.upsetOpportunityCount),
@@ -95,10 +97,9 @@ function summaryFromDailyRow(
 
 function mergeDailyRowIntoSummary(
   base: ProfileSummaryForCards,
-  row: Record<string, unknown>,
-  wcStage: boolean
+  row: Record<string, unknown>
 ): ProfileSummaryForCards {
-  const inc = summaryFromDailyRow(row, wcStage);
+  const inc = summaryFromDailyRow(row);
   const posts = base.posts + inc.posts;
   const wins = base.wins + inc.wins;
   const pointsSumV3 = base.pointsSumV3 + inc.pointsSumV3;
@@ -110,7 +111,8 @@ function mergeDailyRowIntoSummary(
     fullPosts: posts,
     wins,
     winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum: base.scorePrecisionSum + inc.scorePrecisionSum,
+    exactHitCount: base.exactHitCount + inc.exactHitCount,
+    goalScorerHitCount: base.goalScorerHitCount + inc.goalScorerHitCount,
     upsetPointsSum: base.upsetPointsSum + inc.upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: base.upsetChanceCount + inc.upsetChanceCount,
@@ -121,59 +123,43 @@ function mergeDailyRowIntoSummary(
   };
 }
 
-export function summaryFromWcCumulativeStage(
-  cumulative: Record<string, unknown> | null,
-  wcStage: WcRankingStage
-): ProfileSummaryForCards | null {
-  const block = (
-    cumulative?.rankingByWcStage as
-      | Record<string, Record<string, unknown>>
-      | undefined
-  )?.[wcStage];
-  if (!block || typeof block !== "object") return null;
-
-  const posts = safeInt(block.totalPosts);
-  if (posts <= 0) return null;
-
-  const wins = safeInt(block.totalWins);
-  const pointsSumV3 = safeNum(block.totalPoints);
-  const upsetPointsSum = safeNum(block.totalUpset);
-  const scorePrecisionSum = safeNum(block.totalPrecision);
-  const upsetBonusSum = safeNum(block.upsetBonusSum);
-  const streakBonusSum = safeNum(block.streakBonusSum);
-  const winRateRaw = safeNum(block.winRate);
-
-  return {
-    posts,
-    fullPosts: posts,
-    recent3Posts: 0,
-    wins,
-    winRate:
-      posts > 0 ? wins / posts : winRateRaw <= 1 ? winRateRaw : winRateRaw / 100,
-    scorePrecisionSum,
-    upsetPointsSum,
-    pointsSumV3,
-    upsetChanceCount: safeInt(block.upsetOpportunityCount),
-    upsetHitCount: safeInt(block.upsetHitCount),
-    upsetBonusSum,
-    streakBonusSum,
-    basePointsSum: Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum),
-    activeWinStreak: safeInt(block.activeWinStreak),
-  };
+/** @deprecated WC rankings removed — returns empty summary */
+export async function resolveWcProfileSummaryLive(
+  _db: Firestore,
+  _uid: string,
+  _wcStage: string,
+  _cumulative: Record<string, unknown> | null,
+  _prior: PriorSnapshotMetrics | null | undefined
+): Promise<ProfileSummaryForCards> {
+  return emptySummary();
 }
 
-export function summaryFromPhaseRanking(
-  cumulative: Record<string, unknown> | null,
-  phase: RankingPhase
+/** NBA サマリー（現行シーズンキーのみ。空ならゼロ） */
+export function summaryFromSeasonRanking(
+  cumulative: Record<string, unknown> | null
 ): ProfileSummaryForCards {
-  const byPhase = ((cumulative?.rankingByPhase as Record<string, unknown>) ??
-    {}) as Record<string, Record<string, unknown> | undefined>;
-  const r = byPhase[phase] ?? {};
+  return summaryFromNbaRankingBucket(pickNbaCumulativeRankingSlice(cumulative));
+}
+
+/** 明示スコープ: playoffs / season とも現行シーズンキーのみ（フォールバックなし） */
+export function summaryFromNbaScopeRanking(
+  cumulative: Record<string, unknown> | null,
+  scope: "playoffs" | "season"
+): ProfileSummaryForCards {
+  const bucket =
+    scope === "playoffs"
+      ? pickNbaPlayoffsCumulativeSlice(cumulative, CURRENT_NBA_SEASON_KEY)
+      : pickNbaSeasonKeyCumulativeSlice(cumulative, CURRENT_NBA_SEASON_KEY);
+  return summaryFromNbaRankingBucket(bucket);
+}
+
+function summaryFromNbaRankingBucket(
+  r: Record<string, unknown>
+): ProfileSummaryForCards {
   const posts = safeInt(r.totalPosts);
   const wins = safeInt(r.totalWins);
   const pointsSumV3 = safeNum(r.totalPoints);
   const upsetPointsSum = safeNum(r.totalUpset);
-  const scorePrecisionSum = safeNum(r.totalPrecision);
   const upsetBonusSum = safeNum(r.upsetBonusSum);
   const streakBonusSum = safeNum(r.streakBonusSum);
   const basePointsSum = Math.max(
@@ -186,7 +172,8 @@ export function summaryFromPhaseRanking(
     recent3Posts: 0,
     wins,
     winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum,
+    exactHitCount: 0,
+    goalScorerHitCount: safeInt(r.totalGoalScorerHits ?? r.goalScorerHitCount),
     upsetPointsSum,
     pointsSumV3,
     upsetChanceCount: safeInt(r.upsetOpportunityCount),
@@ -198,25 +185,15 @@ export function summaryFromPhaseRanking(
   };
 }
 
-function pickWcDailyRow(
-  data: Record<string, unknown>,
-  wcStage: WcRankingStage
-): Record<string, unknown> {
-  const stageBucket = readDailyWcStageBucket(data, wcStage);
-  if (Number(stageBucket.posts ?? 0) > 0) {
-    return stageBucket as Record<string, unknown>;
-  }
-  const leagues = (data.leagues ?? {}) as Record<string, unknown>;
-  return ((wcStage === "overall" ? leagues.wc : null) ??
-    {}) as Record<string, unknown>;
-}
-
 function pickNbaDailyRow(
   data: Record<string, unknown>,
-  phase: RankingPhase
+  scope?: "playoffs" | "season"
 ): Record<string, unknown> {
-  const byPhase = (data.rankingByPhase ?? {}) as Record<string, unknown>;
-  return (byPhase[phase] ?? {}) as Record<string, unknown>;
+  if (scope === "playoffs") return pickNbaPlayoffsDailyIncBucket(data);
+  if (scope === "season") {
+    return pickNbaSeasonKeyDailyIncBucket(data, CURRENT_NBA_SEASON_KEY);
+  }
+  return pickNbaDailyIncBucket(data);
 }
 
 async function fetchTodayDailyDoc(db: Firestore, uid: string) {
@@ -241,45 +218,27 @@ function shouldOverlayTodayDaily(
   return false;
 }
 
-export async function resolveWcProfileSummaryLive(
-  db: Firestore,
-  uid: string,
-  wcStage: WcRankingStage,
-  cumulative: Record<string, unknown> | null,
-  prior: PriorSnapshotMetrics | null | undefined
-): Promise<ProfileSummaryForCards> {
-  const base =
-    summaryFromWcCumulativeStage(cumulative, wcStage) ?? emptySummary();
-  const todayData = await fetchTodayDailyDoc(db, uid);
-  if (!todayData) return base;
-
-  const todayRow = pickWcDailyRow(todayData, wcStage);
-  if (safeInt(todayRow.posts) <= 0) return base;
-  if (base.posts <= 0) return summaryFromDailyRow(todayRow, true);
-
-  if (shouldOverlayTodayDaily(base.pointsSumV3, todayRow, prior)) {
-    return mergeDailyRowIntoSummary(base, todayRow, true);
-  }
-  return base;
-}
-
 export async function resolveNbaProfileSummaryLive(
   db: Firestore,
   uid: string,
-  phase: RankingPhase,
   cumulative: Record<string, unknown> | null,
-  prior: PriorSnapshotMetrics | null | undefined
+  prior: PriorSnapshotMetrics | null | undefined,
+  /** 省略時は従来どおりフォールバック付き。playoffs / season は明示バケット */
+  scope?: "playoffs" | "season"
 ): Promise<ProfileSummaryForCards> {
-  const base = summaryFromPhaseRanking(cumulative, phase);
+  const base =
+    scope != null
+      ? summaryFromNbaScopeRanking(cumulative, scope)
+      : summaryFromSeasonRanking(cumulative);
   const todayData = await fetchTodayDailyDoc(db, uid);
   if (!todayData) return base;
 
-  const todayRow = pickNbaDailyRow(todayData, phase);
+  const todayRow = pickNbaDailyRow(todayData, scope);
   if (safeInt(todayRow.posts) <= 0) return base;
-  if (base.posts <= 0) return summaryFromDailyRow(todayRow, false);
+  if (base.posts <= 0) return summaryFromDailyRow(todayRow);
 
   if (shouldOverlayTodayDaily(base.pointsSumV3, todayRow, prior)) {
-    return mergeDailyRowIntoSummary(base, todayRow, false);
+    return mergeDailyRowIntoSummary(base, todayRow);
   }
   return base;
 }

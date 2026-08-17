@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback } from "react";
-import type { RankingRowWithCountry, MobileMetric } from "./_data/mockRows";
+import type { RankingRowWithCountry, MobileMetric } from "@/lib/rankings/rankingMetrics";
 import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
@@ -12,7 +12,6 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
-import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
@@ -27,9 +26,19 @@ import {
 } from "@/app/component/rankings/CyberRankingListParts";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
 import { markRankingsCountUpIntroPlayed } from "@/lib/rankings/rankingsCountUpIntro";
+import { parseUserPlanProBgVariant } from "@/lib/profile/profilePlanProBgVariantField";
+import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 
 export type RankingCardSize = "default" | "compact";
 export type RankingCardShellTone = "default" | "subtle";
+
+function rankingRowProSkinVariant(
+  plan: string | undefined,
+  raw: string | undefined
+): ProfilePlanProBgVariant | null {
+  if (plan !== "pro") return null;
+  return parseUserPlanProBgVariant(raw);
+}
 
 export default function RankingCard({
   row: r,
@@ -76,11 +85,10 @@ export default function RankingCard({
     ? "/mobile"
     : "/web";
   const profileKey = profilePathKeyFromRow(r);
-  const statsLeague = rankingLeague ?? "worldcup";
+  const statsLeague = rankingLeague ?? "nba";
   const statsContext = {
     rankingLeague: statsLeague,
-    wcStage:
-      statsLeague === "worldcup" ? (wcStage ?? ("overall" as const)) : undefined,
+    wcStage: undefined,
   };
   const profileHref = profileHrefWithRankingsReturn(pathname, base, profileKey, {
     metric,
@@ -135,11 +143,12 @@ export default function RankingCard({
   const metricTag = cyberMetricTag(metric, language);
   const isWebList = base === "/web" && !compact;
   const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
+  const proSkinVariant = rankingRowProSkinVariant(r.plan, r.planProBgVariant);
 
   return (
     <Link
       href={profileHref}
-      className="block min-w-0"
+      className="block min-w-0 origin-center transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95"
       prefetch
       onPointerEnter={warmProfileRoute}
       onFocus={warmProfileRoute}
@@ -164,18 +173,19 @@ export default function RankingCard({
         scoreLayout={scoreLayout}
         subtleShell={subtleShell}
         showFirstPlaceFrame={showFirstPlaceFrame}
+        proSkinVariant={proSkinVariant}
+        proSkinIntensity="medium"
         nameExtra={
-          <>
-            <RankDeltaBadge delta={r.rankDeltaPlaces} language={language} />
-            {r.plan === "pro" ? (
-              <ProCyberBadge
-                {...proBadgeStaticMotion}
-                compact
-                ariaLabel={t(language).common.proMember}
-              />
-            ) : null}
-          </>
+          r.plan === "pro" ? (
+            <ProCyberBadge
+              {...proBadgeStaticMotion}
+              compact
+              ariaLabel={t(language).common.proMember}
+            />
+          ) : null
         }
+        rankDeltaPlaces={r.rankDeltaPlaces}
+        language={language}
         scoreSlot={
           <CyberRankingScore
             rank={rank}

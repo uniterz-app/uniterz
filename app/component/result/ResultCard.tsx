@@ -34,35 +34,58 @@ import {
   resolvePkScoreFromResultPost,
   type PkScore,
 } from "@/lib/games/pkScore";
-import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
-import ResultStatsRows from "@/app/component/result/ResultStatsRows";
+import NbaTopScorerResultRow from "@/app/component/result/NbaTopScorerResultRow";
+import { resolveNbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerResult";
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
-import { RESULT_GLASS_CHIP, RESULT_HAIRLINE, isResultWinFrameBadge } from "@/lib/result/resultGlass";
+import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
+import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
+import {
+  buildResultCardFaceModel,
+  roundLabelFromPost,
+} from "@/lib/result/buildResultCardFace";
+import type { GameMarketRates } from "@/lib/games/fetchGameMarkets";
+import ResultCardDesignFace from "@/app/component/result/ResultCardDesignFace";
+import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/resultLiveGame";
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
 import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
-import WcGoalScorerResultRow, {
-  useWcGoalScorerResult,
-  useWcPkWinnerResult,
-  WcPkWinnerResultRow,
-} from "@/app/component/result/WcGoalScorerResultRow";
-import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
-import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
-import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
-import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
+import ResultStatsRows from "@/app/component/result/ResultStatsRows";
+function WcGoalScorerResultRow(_props: Record<string, unknown>) {
+  return null;
+}
+function useWcGoalScorerResult(_post?: unknown) {
+  return null;
+}
+function useWcPkWinnerResult(_post?: unknown) {
+  return null;
+}
+function WcPkWinnerResultRow(_props: Record<string, unknown>) {
+  return null;
+}
+function WcMatchGoalScorersColumn(_props: Record<string, unknown>) {
+  return null;
+}
+function WcTeamFlagWithMeta(_props: Record<string, unknown>) {
+  return null;
+}
+function WcGroupStandingRecordLine(_props: Record<string, unknown>) {
+  return null;
+}
+import { resolveWcMatchGoalScorersForDisplay } from "@/lib/legacyWcWebShims";
+import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
 import { useTeamRecordLine } from "@/lib/hooks/useTeamRecordLine";
 import {
   resolveWcGroupCodeLabel,
   resolveWcGroupStageStandingForKnockoutDisplay,
   resolveWcResultCardGroupStanding,
-} from "@/lib/wc/wcGroupStandingRank";
+} from "@/lib/legacyWcWebShims";
 import { nameBebas } from "@/lib/fonts";
-import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
+import { resolveWcTeamId } from "@/lib/legacyWcWebShims";
 export type ResultCardOpenAnchor = { clientX: number; clientY: number };
 
 type Props = {
@@ -99,6 +122,10 @@ type Props = {
   showFrameSweep?: boolean;
   /** games から補完した PK 戦スコア（投稿に未保存のとき） */
   pkScore?: PkScore | null;
+  /** 線枠パス描画の開始遅延（秒）。一覧スロットと同期 */
+  lineFrameDrawDelaySec?: number;
+  /** games.market 補完（新カード面の市場偏り） */
+  gameMarket?: GameMarketRates | null;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -156,8 +183,10 @@ function ResultCardPresentationImpl({
   cardClockMs,
   embedded = false,
   visualEffectsLite = false,
-  showFrameSweep = false,
+  showFrameSweep: _showFrameSweep = false,
   pkScore: pkScoreProp = null,
+  lineFrameDrawDelaySec = 0,
+  gameMarket = null,
 }: ResultCardPresentationProps) {
   const clock = useResultCardClockMs(cardClockMs);
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
@@ -166,6 +195,10 @@ function ResultCardPresentationImpl({
   const isEn = language === "en";
   const wcGoalScorer = useWcGoalScorerResult(post);
   const wcPkWinner = useWcPkWinnerResult(post);
+  const nbaTopScorer = useMemo(
+    () => resolveNbaTopScorerResultInfo(post),
+    [post]
+  );
 
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
@@ -438,21 +471,68 @@ function ResultCardPresentationImpl({
     ? "pointer-events-auto visible -translate-y-1/2 translate-x-0 opacity-100"
     : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover/card:pointer-events-auto group-hover/card:visible group-hover/card:translate-x-0 group-hover/card:opacity-100";
 
+  const roundLabel = roundLabelFromPost(post as unknown as Record<string, unknown>);
+  const lineFramePaint = resultOutcomeLineFramePaint(
+    badge === "streak" ? "streak" : badge
+  );
+
+  const faceModel = useMemo(
+    () =>
+      buildResultCardFaceModel(
+        { ...(post as unknown as Record<string, unknown>), id: post.id },
+        gameMarket
+          ? {
+              market: {
+                homeRate: gameMarket.homeRate,
+                awayRate: gameMarket.awayRate,
+              },
+            }
+          : undefined
+      ),
+    [post, gameMarket]
+  );
+
+  if (!isWc && hasFinal) {
+    return (
+      <div
+        className={
+          embedded
+            ? "w-full overflow-visible"
+            : isMobile
+              ? `${MOBILE_RESULT_CARD_OUTER_CLASS} overflow-visible`
+              : "mx-auto w-full max-w-[1200px] overflow-visible"
+        }
+      >
+        <ResultCardDesignFace
+          language={language}
+          face={faceModel}
+          showDetailTab={!embedded}
+          animateDraw={!visualEffectsLite}
+          drawDelaySec={lineFrameDrawDelaySec}
+          onOpen={embedded ? undefined : handle}
+        />
+      </div>
+    );
+  }
+
   return (
+    <MatchListLineFrame
+      topLabel={roundLabel}
+      paint={lineFramePaint}
+      animateDraw={!visualEffectsLite}
+      drawDelaySec={lineFrameDrawDelaySec}
+      onClick={embedded ? undefined : handle}
+      className={embedded ? undefined : "cursor-pointer select-none"}
+    >
     <ResultGlassShell
       onClick={embedded ? undefined : handle}
-      badge={badge}
-      activeWinStreak={activeWinStreak}
-      showSweep={
-        showFrameSweep &&
-        !visualEffectsLite &&
-        (badge === "streak" ||
-          badge === "upset" ||
-          isResultWinFrameBadge(badge))
-      }
+      badge={null}
+      activeWinStreak={0}
+      showSweep={false}
       dense={mobileScheduleDense}
       lift={!embedded}
       lite={visualEffectsLite}
+      roundedClassName=""
       className={[
         "group/card relative text-white",
         cornerFabOpen ? "overflow-visible" : "",
@@ -463,9 +543,12 @@ function ResultCardPresentationImpl({
             : "mx-auto w-full max-w-[1200px]",
         embedded ? "" : "cursor-pointer select-none",
       ].join(" ")}
-      extraPanelClassName={
-        cornerFabOpen ? "!overflow-visible" : ""
-      }
+      extraPanelClassName={[
+        cornerFabOpen ? "!overflow-visible" : "",
+        "!border-0 bg-transparent shadow-none",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       {showCornerControl ? (
         <div
@@ -648,13 +731,8 @@ function ResultCardPresentationImpl({
         </div>
       )}
 
-      {/* active:scale は本文のみ（角の除外ボタン押下でカード全体が沈まないよう） */}
-      <div
-        className={[
-          `relative z-10 ${contentPad}`,
-          visualEffectsLite ? "" : "transition-transform active:scale-[0.98]",
-        ].join(" ")}
-      >
+      {/* 押下スケールは MatchListLineFrame（試合カードと同じ 0.99 / 0.96） */}
+      <div className={`relative z-10 ${contentPad}`}>
       <div className="relative">
         <div
           className={`grid grid-cols-2 items-start ${
@@ -994,7 +1072,7 @@ function ResultCardPresentationImpl({
         </div>
       </div>
 
-      {hideStatsSection && !wcGoalScorer ? null : (
+      {hideStatsSection && !wcGoalScorer && !nbaTopScorer ? null : (
         <div
           className={mobileScheduleDense ? "mt-2.5" : isMobile ? "mt-5" : "mt-3"}
           aria-hidden
@@ -1029,19 +1107,32 @@ function ResultCardPresentationImpl({
           />
         ) : null}
 
+        {nbaTopScorer ? (
+          <NbaTopScorerResultRow
+            label={m.results.nbaTopScorerResultLabel}
+            info={nbaTopScorer}
+            compact={isMobile}
+          />
+        ) : null}
+
         {hideStatsSection ? null : (
           <ResultStatsRows
             post={post}
             language={language}
             isMobile={isMobile}
             ratingBarsImmediate={ratingBarsImmediate}
-            rowIndexOffset={(wcGoalScorer ? 1 : 0) + (wcPkWinner ? 1 : 0)}
+            rowIndexOffset={
+              (wcGoalScorer ? 1 : 0) +
+              (wcPkWinner ? 1 : 0) +
+              (nbaTopScorer ? 1 : 0)
+            }
             animationsOff={visualEffectsLite}
           />
         )}
       </div>
       </div>
     </ResultGlassShell>
+    </MatchListLineFrame>
   );
 }
 

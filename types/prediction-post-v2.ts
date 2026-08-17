@@ -70,6 +70,10 @@ export type PredictionPostV2 = {
   marketMeta?: {
     majoritySide: "home" | "away" | "draw";
     majorityRatio: number;
+    /** 0–100。settle 時埋め込み（カード一覧が games を読まないため） */
+    homePct?: number | null;
+    awayPct?: number | null;
+    drawPct?: number | null;
   } | null;
 
   /* ------------------------
@@ -92,8 +96,8 @@ export type PredictionPostV2 = {
     score: { home: number; away: number };
     /** UI 用（任意）。旧データは null の場合あり */
     confidence?: number | null;
-    /** WC のみ：ゴール得点者予想 */
-    goalScorer?: { playerId: string; teamId: string } | null;
+    /** WC: ゴール得点者 / NBA: 試合最多得点者（任意・的中 +2） */
+    goalScorer?: { playerId: string; teamId: string; name?: string | null } | null;
   };
 
   note?: string;
@@ -128,12 +132,19 @@ export type PredictionPostV2 = {
     upsetPoints?: number | null;
 
     pointsV3?: number | null;
+    /**
+     * カード相対ラベル（settle 時埋め込み）。
+     * 一覧が games を読まずに #1 / TOP 5% / TOP 10% を出す。
+     */
+    scoreRel?: "max" | "top5" | "top10" | "none" | null;
     pointsV3Detail?: {
       winnerCorrect: boolean;
       winPoints: number;
       diffPoints: number;
       totalPoints: number;
       goalDiffPoints?: number;
+      /** 基本点（win + diff + total）。ボーナス前 */
+      basePoints?: number;
       upsetBonus: number;
       streakBonus?: number;
       goalScorerBonus?: number;

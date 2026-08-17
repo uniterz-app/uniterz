@@ -3,8 +3,10 @@
 import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation, useInView } from "framer-motion";
 import React, { Suspense, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 import { useProfileOverviewStage } from "@/lib/profile/useProfileOverviewStage";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
@@ -38,30 +40,6 @@ const ProfileSettledTodayResultsLazy = dynamic(
   }
 );
 
-const ProAnalysisLazy = dynamic(
-  () => import("@/app/component/pro/analysis/ProAnalysis"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex justify-center p-6">
-        <CandleChartLoader />
-      </div>
-    ),
-  }
-);
-
-const ProPreviewLazy = dynamic(
-  () => import("@/app/component/pro/analysis/ProPreview"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex justify-center p-6">
-        <CandleChartLoader />
-      </div>
-    ),
-  }
-);
-
 const PlayoffFullBracketMobileLazy = dynamic(
   () => import("@/app/component/predict/PlayoffFullBracketMobile"),
   {
@@ -84,18 +62,9 @@ const ProfilePlayoffRankTrendChartLazy = dynamic(
   }
 );
 
-const ProfileWcStackedRankTrendChartsLazy = dynamic(
-  () => import("@/app/component/profile/ui/ProfileWcStackedRankTrendCharts"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="min-h-[240px] rounded-2xl bg-white/5" aria-hidden />
-    ),
-  }
-);
-
 import ProfileKinetikHero from "./ui/ProfileKinetikHero";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import BadgeDetailModal from "@/app/mobile/badges/BadgeDetailModal";
 
 import { useProfilePlan } from "@/lib/profile/useProfilePlan";
@@ -106,10 +75,10 @@ import {
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
 import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useProfilePlayoffRankTrend } from "@/lib/profile/useProfilePlayoffRankTrend";
-import { useProfileWcStackedRankTrend } from "@/lib/profile/useProfileWcStackedRankTrend";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { readTutorialLivePhase } from "@/lib/tutorial/tutorialLivePhase";
+import { readTutorialWelcomeHandoff } from "@/lib/tutorial/tutorialWelcomeHandoff";
 import type { Language } from "@/lib/i18n/language";
-import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
@@ -118,10 +87,18 @@ import {
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
+import ProfileAwardsTab from "./ProfileAwardsTab";
+import ProfileMonthlyReportPanel from "./ProfileMonthlyReportPanel";
+import ProfileReportDeliveryOverlay from "./ProfileReportDeliveryOverlay";
+import ProfileProSkinUnlockOverlay from "./pro/ProfileProSkinUnlockOverlay";
+import Tabs from "./ui/Tabs";
+import { useProReportDeliveryOverlay } from "@/lib/reports/useProReportDeliveryOverlay";
+import { useProSkinUnlockOverlay } from "@/lib/profile/useProSkinUnlockOverlay";
 import {
   profileVisualEffectsForViewer,
   isProfileVisualLite,
 } from "@/lib/profile/profileVisualEffects";
+import { useProfileViewCount } from "@/lib/profile/useProfileViewCount";
 import { nameBebas } from "@/lib/fonts";
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
@@ -129,10 +106,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     history.scrollRestoration = "manual";
   }, []);
 
-  const { profile, tab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
+  const { profile, tab, setTab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
   const rankingLeague = props.profileStatsContext.rankingLeague;
-  const onToggleStatsLeague = props.onToggleStatsLeague;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const { language } = useUserLanguage(resolvedUid);
@@ -153,6 +129,26 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const currentIsProView = forceProView || isProView;
   const visualEffects = profileVisualEffectsForViewer(isMe);
   const visualEffectsLite = isProfileVisualLite(visualEffects);
+  const { count: profileViewCount } = useProfileViewCount(resolvedUid);
+
+  const reportOverlayEnabled =
+    Boolean(isMe && !loadingPlan && (currentIsProView || myPlan === "pro"));
+  const { active: reportOverlay, dismiss: dismissReportOverlay } =
+    useProReportDeliveryOverlay({
+      uid: resolvedUid,
+      enabled: reportOverlayEnabled,
+    });
+  const skinUnlockEnabled =
+    Boolean(isMe && resolvedUid) && reportOverlay == null;
+  const {
+    activeIds: skinUnlockIds,
+    ownerCounts: skinUnlockOwnerCounts,
+    preview: skinUnlockPreview,
+    dismiss: dismissSkinUnlock,
+  } = useProSkinUnlockOverlay({
+    uid: resolvedUid,
+    enabled: skinUnlockEnabled,
+  });
 
   const fetchOverviewExtras = tab === "overview";
   const fetchBracketData = tab === "bracket";
@@ -161,23 +157,19 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   const { chartData: dailyTrendForChart, loading: dailyTrendLoading } =
     useProfileDailyTrendChart(resolvedUid, {
-      enabled: fetchOverviewExtras,
+      enabled: fetchOverviewExtras && !statsLoading,
       seedRows: props.profileDailyTrendSeed ?? undefined,
+      seedComplete: props.profileDailyTrendSeedComplete,
       rankingLeague,
-      wcStage: props.profileStatsContext.wcStage,
     });
 
   const { chartRows: rankPlayoffTrendRows, loading: rankTrendLoading } =
     useProfilePlayoffRankTrend(resolvedUid, {
-      enabled: fetchOverviewExtras && rankingLeague !== "worldcup",
+      enabled: fetchOverviewExtras && !statsLoading,
       rankingLeague,
-      wcStage: props.profileStatsContext.wcStage,
+      seedPoints: props.profileRankTrendSeed ?? undefined,
+      seedComplete: props.profileRankTrendSeedComplete,
     });
-
-  const {
-    sections: wcRankTrendSections,
-    loading: wcRankTrendLoading,
-  } = useProfileWcStackedRankTrend(resolvedUid, fetchOverviewExtras && rankingLeague === "worldcup");
 
   const {
     loading: playoffBracketLoading,
@@ -188,9 +180,25 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   } = useProfilePlayoffBracket(resolvedUid, { enabled: fetchBracketData });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [welcomeProfileFly, setWelcomeProfileFly] = useState(false);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadge | null>(null);
   const [bracketReveal, setBracketReveal] = useState(false);
+
+  useEffect(() => {
+    const sync = () => {
+      setWelcomeProfileFly(
+        readTutorialLivePhase() === "welcome" &&
+          readTutorialWelcomeHandoff() === "profile"
+      );
+    };
+    sync();
+    window.addEventListener("uniterz-tutorial-welcome-handoff", sync);
+    return () => {
+      window.removeEventListener("uniterz-tutorial-welcome-handoff", sync);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isMe) return;
@@ -204,7 +212,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     enabled: isMe,
   });
 
-  const m = t(language);
   const currentStreak = Math.max(
     0,
     (profile as { currentStreak?: number }).currentStreak ?? 0
@@ -236,13 +243,10 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     return () => window.cancelAnimationFrame(id);
   }, [tab, playoffDisplayData?.season, visualEffectsLite]);
 
-  if (isMe && loadingPlan) {
-    return (
-      <div className="flex justify-center p-4">
-        <CandleChartLoader />
-      </div>
-    );
-  }
+  // BRACKET タブは当面非表示（実装が揃うまで）
+  useEffect(() => {
+    if (tab === "bracket") setTab("overview");
+  }, [tab, setTab]);
 
   return (
     <LazyMotion features={domAnimation}>
@@ -263,9 +267,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         statsLoading={statsLoading}
         isMe={isMe}
         onOpenMenu={() => setDrawerOpen(true)}
-        onToggleMetricsScope={onToggleStatsLeague}
-        wcStackedMetricsSections={props.wcStackedMetricsSections}
-        wcStackedStatsLoading={props.wcStackedStatsLoading}
         menuUnreadCount={isMe ? menuUnreadCount : 0}
         badges={resolvedBadges}
         onBadgeClick={(badge) => {
@@ -273,13 +274,32 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           setBadgeModalOpen(true);
         }}
         visualEffects={visualEffects}
+        targetUid={resolvedUid}
+        profileViewCount={profileViewCount}
       />
 
+      {isMe ? (
+        <ProfileMenuEdgeHandle
+          onOpen={() => setDrawerOpen(true)}
+          unreadCount={menuUnreadCount}
+          hidden={drawerOpen || welcomeProfileFly}
+        />
+      ) : null}
+
       <div className="mt-4">
+        <Tabs
+          value={tab}
+          onChange={setTab}
+          size="md"
+          layout="split"
+          showBracket={false}
+        />
         {tab === "overview" ? (
           <>
+            {/* Result Drop / チャート列で同じ幅制約（overflow で右枠が切れないよう visible） */}
+            <div className="mt-6 w-full min-w-0 space-y-4 overflow-visible">
             {resolvedUid ? (
-              <div className="mt-6 min-w-0 overflow-hidden">
+              <div className="w-full min-w-0">
                 <ProfileSettledTodayResultsLazy
                   uid={resolvedUid}
                   language={language}
@@ -292,7 +312,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               </div>
             ) : null}
             {chartsReady ? (
-            <div ref={chartsSectionRef} className="mt-6 space-y-4">
+            <div ref={chartsSectionRef} className="w-full min-w-0 space-y-4">
               {!chartsInView ? (
                 <div
                   className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6"
@@ -300,7 +320,27 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 />
               ) : null}
               {chartsInView && overviewStage >= 1 ? (
-              <div className="min-w-0 overflow-x-clip overflow-y-visible">
+              <div className="w-full min-w-0 overflow-visible pt-0">
+                <ProfilePlayoffRankTrendChartLazy
+                  data={rankPlayoffTrendRows}
+                  loading={rankTrendLoading}
+                  language={language}
+                  visualEffectsLite={visualEffectsLite}
+                />
+              </div>
+              ) : null}
+              {chartsInView && overviewStage >= 2 && resolvedUid ? (
+              <div className="min-w-0 overflow-visible">
+                <StreakTrackerCardLazy
+                  uid={resolvedUid}
+                  language={language}
+                  profileStatsContext={props.profileStatsContext}
+                  seedLast20={props.profileLast20Seed}
+                />
+              </div>
+              ) : null}
+              {chartsInView && overviewStage >= 3 ? (
+              <div className="min-w-0 overflow-visible">
                 {dailyTrendLoading ? (
                   <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
                 ) : (
@@ -316,41 +356,28 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 )}
               </div>
               ) : null}
-              {chartsInView && overviewStage >= 2 ? (
-              <div className="min-w-0 overflow-visible pt-0">
-                {rankingLeague === "worldcup" ? (
-                  <ProfileWcStackedRankTrendChartsLazy
-                    sections={wcRankTrendSections}
-                    loading={wcRankTrendLoading}
-                    language={language}
-                    visualEffectsLite={visualEffectsLite}
-                  />
-                ) : (
-                  <ProfilePlayoffRankTrendChartLazy
-                    data={rankPlayoffTrendRows}
-                    loading={rankTrendLoading}
-                    language={language}
-                    visualEffectsLite={visualEffectsLite}
-                  />
-                )}
-              </div>
-              ) : null}
-              {chartsInView && overviewStage >= 3 && resolvedUid ? (
-              <div className="min-w-0 overflow-hidden">
-                <StreakTrackerCardLazy
-                  uid={resolvedUid}
-                  language={language}
-                  profileStatsContext={props.profileStatsContext}
-                />
-              </div>
-              ) : null}
             </div>
             ) : (
-              <div className="mt-6 space-y-4">
+              <div className="w-full space-y-4">
                 <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
               </div>
             )}
+            </div>
           </>
+        ) : tab === "report" ? (
+          <ProfileMonthlyReportPanel
+            uid={resolvedUid}
+            language={language}
+            canViewReport={
+              currentIsProView || (isMe ? myPlan === "pro" : isMyPro && isTargetPro)
+            }
+            showUpgrade={isMe && !currentIsProView && myPlan !== "pro"}
+          />
+        ) : tab === "awards" ? (
+          <ProfileAwardsTab
+            uid={resolvedUid}
+            language={language === "ja" ? "ja" : "en"}
+          />
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
             <div className={`${CYBER_GLASS_PANEL} mt-4 flex justify-center p-6`}>
@@ -403,31 +430,30 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               />
             </div>
           )
-        ) : currentIsProView ? (
-          <ProAnalysisLazy />
-        ) : isMe ? (
-          myPlan === "pro" ? (
-            <ProAnalysisLazy />
-          ) : (
-            <ProPreviewLazy />
-          )
-        ) : isMyPro && isTargetPro ? (
-          <ProAnalysisLazy />
-        ) : (
-          <div className={`${CYBER_GLASS_PANEL} space-y-3 p-6 text-center`}>
-            <p className="text-sm text-white/70">
-              {m.pro.upgradeToSeeAll}
-            </p>
-          </div>
-        )}
+        ) : null}
       </div>
 
       <SideMenuDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onOpenMenu={() => setDrawerOpen(true)}
+        onOpenProfileEdit={() => {
+          setDrawerOpen(false);
+          setProfileEditOpen(true);
+        }}
         variant="mobile"
+        from="right"
       />
+
+      {profileEditOpen
+        ? createPortal(
+            <ProfileEditSheet
+              onClose={() => setProfileEditOpen(false)}
+              reopenMenu={() => setDrawerOpen(true)}
+            />,
+            document.body
+          )
+        : null}
 
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal
@@ -439,6 +465,25 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           }}
         />
       )}
+
+      {reportOverlay ? (
+        <ProfileReportDeliveryOverlay
+          active={reportOverlay}
+          language={language === "ja" ? "ja" : "en"}
+          onDismiss={dismissReportOverlay}
+        />
+      ) : null}
+
+      {skinUnlockIds && skinUnlockIds.length > 0 ? (
+        <ProfileProSkinUnlockOverlay
+          unlockedIds={skinUnlockIds}
+          language={language === "ja" ? "ja" : "en"}
+          preview={skinUnlockPreview}
+          platform="mobile"
+          ownerCounts={skinUnlockOwnerCounts}
+          onDismiss={dismissSkinUnlock}
+        />
+      ) : null}
     </div>
     </LazyMotion>
   );

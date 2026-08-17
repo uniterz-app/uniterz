@@ -1,8 +1,6 @@
 // functions/src/fetchGameContext.ts
 import { Firestore } from "firebase-admin/firestore";
 import type { Timestamp } from "firebase-admin/firestore";
-import { resolveWcStageFromGame } from "./wc/resolveWcStage";
-
 /* =========================
  * Types
  * ========================= */
@@ -27,10 +25,18 @@ export type NormalizedGame = {
   regulationEtScore?: { home: number; away: number } | null;
   advancingTeamId?: string | null;
   knockout?: boolean;
+  /** Firestore games.season（WC ブラケット結果 doc id 用） */
+  season?: string | null;
+  /** WC knockout 試合 ID（M97 など） */
+  wcKnockoutMatchId?: string | null;
   /** World Cup（league=wc）のステージ */
   wcStage?: "qualifying" | "main" | null;
   /** WC: 得点者リスト */
   goalScorers?: unknown;
+  /** NBA: 最多得点者 */
+  leadingScorers?: unknown;
+  /** false のときランキング集計から除外（play-in 等） */
+  countsForRanking?: boolean;
 };
 
 export type GameContext = {
@@ -78,12 +84,15 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
     regulationEtScore: after?.regulationEtScore ?? null,
     advancingTeamId: after?.advancingTeamId ?? null,
     knockout: after?.knockout === true,
-    wcStage: resolveWcStageFromGame({
-      knockout: after?.knockout === true,
-      roundLabel: after?.roundLabel ?? null,
-      wcStage: after?.wcStage ?? null,
-    }),
+    season: typeof after?.season === "string" ? after.season : null,
+    wcKnockoutMatchId:
+      typeof after?.wcKnockoutMatchId === "string"
+        ? after.wcKnockoutMatchId
+        : null,
+    wcStage: null,
     goalScorers: after?.goalScorers ?? null,
+    leadingScorers: after?.leadingScorers ?? null,
+    countsForRanking: after?.countsForRanking !== false,
   };
 }
 

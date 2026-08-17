@@ -11,7 +11,6 @@ import type { Status } from "@/app/component/games/MatchCard";
 import {
   PREDICT_OVERLAY_STAT_BOX_CLASS,
 } from "@/lib/ui/predictOverlayCyber";
-import { CYBER_TAB_CYAN } from "@/app/component/rankings/CyberSlantedTab";
 type Props = {
   gameId: string;
   league: League;
@@ -437,41 +436,31 @@ export default function MatchCardOverlayMarketBar({
   if (!hasData) return null;
 
   return (
-    <div className="w-full">
+    <div className="w-full" data-tutorial-target="predict-market">
       <div
         className="w-full"
         aria-label={`${m.predict.marketBias} ${homeLabel} ${formatPct(homePct)} ${awayLabel} ${formatPct(awayPct)}`}
       >
         <div
           className={[
-            "flex items-end justify-between gap-2",
+            "relative",
             nameOxanium.className,
             compact ? "mb-0.5" : "mb-1",
           ].join(" ")}
         >
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span
-              aria-hidden
-              className="h-px w-2 shrink-0"
-              style={{
-                background: CYBER_TAB_CYAN,
-                boxShadow: `0 0 6px ${CYBER_TAB_CYAN}88`,
-              }}
-            />
-            <span
-              className={[
-                "font-bold uppercase tracking-[0.2em]",
-                compact ? "text-[8px] leading-none" : "text-[9px] leading-none md:text-[10px]",
-              ].join(" ")}
-              style={{ color: "rgba(0,245,255,0.55)" }}
-            >
-              {m.predict.marketBias}
-            </span>
+          <span
+            className={[
+              "block text-center font-bold uppercase tracking-[0.2em]",
+              compact ? "text-[8px] leading-none" : "text-[9px] leading-none md:text-[10px]",
+            ].join(" ")}
+            style={{ color: "rgba(0,245,255,0.55)" }}
+          >
+            -{m.predict.marketBias}-
           </span>
           {total > 0 && !fromFallback ? (
             <span
               className={[
-                "shrink-0 tabular-nums leading-none text-white/70",
+                "absolute right-0 top-1/2 -translate-y-1/2 shrink-0 tabular-nums leading-none text-white/70",
                 compact ? "text-[10px]" : "text-[11px] md:text-xs",
               ].join(" ")}
             >

@@ -8,7 +8,7 @@ import type { ProfileMobileOverlayKind } from "./profileMobileOverlayTypes";
 import MobileBadgesScreen from "./MobileBadgesScreen";
 import MobileAnnouncementsScreen from "./MobileAnnouncementsScreen";
 import MobilePlanStatusScreen from "./MobilePlanStatusScreen";
-import MobileProSubscribeScreen from "./MobileProSubscribeScreen";
+import ProSubscribePreviewNative from "./ProSubscribePreviewNative";
 import MobileCommunityGuidelinesScreen from "./MobileCommunityGuidelinesScreen";
 import MobileLegalWebViewScreen from "./MobileLegalWebViewScreen";
 
@@ -80,7 +80,7 @@ export default function ProfileMobileStackModal({
             onNavigate={() => {}}
           />
         ) : kind === "subscribe" ? (
-          <MobileProSubscribeScreen language={language} onClose={onClose} />
+          <ProSubscribePreviewNative language={language} onClose={onClose} />
         ) : kind === "guidelines" ? (
           <MobileCommunityGuidelinesScreen language={language} />
         ) : webviewPath && apiBase ? (

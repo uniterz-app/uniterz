@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../lib/firebase";
+import type { DocumentData } from "firebase/firestore";
+import { auth } from "../lib/firebase";
+import { subscribeUserDocLive } from "../../../../lib/user/subscribeUserDocLive";
 
 /** Firestore `users.language` を読む（Web `useUserLanguage` 相当） */
 export function useNativeUserLanguage(uid: string | null | undefined) {
@@ -13,17 +14,12 @@ export function useNativeUserLanguage(uid: string | null | undefined) {
       setReady(true);
       return;
     }
-    let alive = true;
     setReady(false);
-    void getDoc(doc(db, "users", uid)).then((snap) => {
-      if (!alive) return;
-      const lang = snap.data()?.language;
+    return subscribeUserDocLive(uid, (data: DocumentData | null) => {
+      const lang = data?.language;
       setLanguage(lang === "en" ? "en" : "ja");
       setReady(true);
     });
-    return () => {
-      alive = false;
-    };
   }, [uid]);
 
   return { language, ready };

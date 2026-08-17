@@ -1,20 +1,84 @@
+/**
+ * Web `app/mobile/cancel-complete/page.tsx` 相当
+ * Trial ON / 課金成功と同型レイアウト・解約はレッドアクセント（文言は既存どおり）
+ */
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { doc, getDoc } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  Easing,
+  Keyframe,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import { doc, getDoc } from "firebase/firestore";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
+import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
+import { OXANIUM_700, OXANIUM_800 } from "../reports/reportThemeNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
-import { colors, fonts, spacing } from "../../../theme/tokens";
+import { spacing } from "../../../theme/tokens";
+import { PRO_SUCCESS_ACCENT } from "../../../../../../lib/pro/proSuccessAccent";
+import { PRO_SUBSCRIBE_SUCCESS_MOTION as SM } from "../../../../../../lib/pro/proSubscribeSuccessMotion";
+
+const A = PRO_SUCCESS_ACCENT.cancel;
+
+const successCardEntering = new Keyframe({
+  0: {
+    opacity: 0,
+    transform: [
+      { translateY: SM.cardFromY },
+      { scale: SM.cardFromScale },
+    ],
+  },
+  100: {
+    opacity: 1,
+    transform: [{ translateY: 0 }, { scale: 1 }],
+  },
+}).duration(SM.cardMs);
+
+const successHeadEntering = new Keyframe({
+  0: {
+    opacity: 0,
+    transform: [{ translateY: SM.headFromY }],
+  },
+  100: {
+    opacity: 1,
+    transform: [{ translateY: 0 }],
+  },
+})
+  .duration(SM.headMs)
+  .delay(SM.headDelayMs);
+
+const successAccentEntering = new Keyframe({
+  0: { opacity: 0 },
+  100: { opacity: 1 },
+})
+  .duration(SM.accentMs)
+  .delay(SM.accentDelayMs);
 
 function formatDate(value: unknown) {
   const date =
     value instanceof Date
       ? value
-      : value && typeof value === "object" && "toDate" in value && typeof (value as { toDate: () => Date }).toDate === "function"
+      : value &&
+          typeof value === "object" &&
+          "toDate" in value &&
+          typeof (value as { toDate: () => Date }).toDate === "function"
         ? (value as { toDate: () => Date }).toDate()
         : null;
   if (!date || Number.isNaN(date.getTime())) return "";
@@ -25,11 +89,25 @@ function formatDate(value: unknown) {
   });
 }
 
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metaRow}>
+      <Text style={styles.metaLabel}>{label}</Text>
+      <Text style={styles.metaValue}>{value}</Text>
+    </View>
+  );
+}
+
 export default function CancelCompleteScreenNative() {
-  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
-  const [handle, setHandle] = useState<string | null>(null);
   const [proUntil, setProUntil] = useState("");
+
+  const reduceMotion = useReducedMotion() === true;
+  const checkGlow = useSharedValue(0.35);
+  const sheenX = useSharedValue(-80);
+  const sheenOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (!fUser?.uid) return;
@@ -38,10 +116,6 @@ export default function CancelCompleteScreenNative() {
       const snap = await getDoc(doc(db, "users", fUser.uid));
       if (cancelled || !snap.exists()) return;
       const data = snap.data();
-      const nextHandle = data.handle;
-      if (typeof nextHandle === "string" && nextHandle.trim()) {
-        setHandle(nextHandle.trim());
-      }
       setProUntil(formatDate(data.proUntil));
     })();
     return () => {
@@ -49,67 +123,187 @@ export default function CancelCompleteScreenNative() {
     };
   }, [fUser?.uid]);
 
+  useEffect(() => {
+    if (reduceMotion) {
+      checkGlow.value = 0.45;
+      sheenX.value = -80;
+      sheenOpacity.value = 0;
+      return;
+    }
+    checkGlow.value = 0.28;
+    checkGlow.value = withDelay(
+      SM.checkGlowDelayMs,
+      withSequence(
+        withTiming(0.75, {
+          duration: Math.round(SM.checkGlowMs * 0.45),
+          easing: Easing.out(Easing.quad),
+        }),
+        withTiming(0.45, {
+          duration: Math.round(SM.checkGlowMs * 0.55),
+          easing: Easing.out(Easing.quad),
+        })
+      )
+    );
+
+    sheenX.value = -80;
+    sheenOpacity.value = 0;
+    sheenOpacity.value = withDelay(
+      SM.brandSheenDelayMs,
+      withSequence(
+        withTiming(1, { duration: 70, easing: Easing.out(Easing.quad) }),
+        withTiming(1, {
+          duration: Math.max(SM.brandSheenMs - 160, 80),
+        }),
+        withTiming(0, { duration: 90, easing: Easing.in(Easing.quad) })
+      )
+    );
+    sheenX.value = withDelay(
+      SM.brandSheenDelayMs,
+      withTiming(220, {
+        duration: SM.brandSheenMs,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, [checkGlow, reduceMotion, sheenOpacity, sheenX]);
+
+  const checkGlowStyle = useAnimatedStyle(() => ({
+    shadowOpacity: checkGlow.value,
+    shadowRadius: 4 + checkGlow.value * 14,
+  }));
+
+  const sheenStyle = useAnimatedStyle(() => ({
+    opacity: sheenOpacity.value,
+    transform: [{ translateX: sheenX.value }, { rotate: "18deg" }],
+  }));
+
+  const untilLabel = proUntil || "—";
+
   return (
-    <MobilePageShell title="解約完了" appBackground onClose={() => navigation.goBack()}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.heading}>
+    <MobilePageShell
+      title="CANCEL"
+      appBackground
+      onClose={() => navigation.goBack()}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View
+          style={styles.successHead}
+          entering={reduceMotion ? undefined : successHeadEntering}
+        >
           <View style={styles.headingRow}>
-            <View style={styles.checkCircle}>
-              <Text style={styles.checkText}>✓</Text>
-            </View>
-            <Text style={styles.title}>Your plan has been canceled!</Text>
+            <Animated.View style={[styles.successCheck, checkGlowStyle]}>
+              <Text style={styles.successCheckText}>✓</Text>
+            </Animated.View>
+            <Text style={styles.successTitle}>
+              Your plan has been canceled!
+            </Text>
           </View>
           <Text style={styles.desc}>
             Pro Planのご利用、ありがとうございました。{"\n"}
             皆さまのサポートが、Uniterzの改善につながっています。
           </Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.card}>
-          <LinearGradient
-            colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.025)"]}
-            style={StyleSheet.absoluteFillObject}
+        <Animated.View
+          style={styles.successFrameOuter}
+          entering={reduceMotion ? undefined : successCardEntering}
+        >
+          <Animated.View
+            style={styles.successCornerTL}
+            entering={reduceMotion ? undefined : successAccentEntering}
           />
-          <View style={styles.logoPlate}>
-            <Image
-              source={require("../../../../assets/icon.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.brand}>UNITERZ</Text>
-            <Text style={styles.freePlan}>Free Plan</Text>
+          <Animated.View
+            style={styles.successCornerBR}
+            entering={reduceMotion ? undefined : successAccentEntering}
+          />
+          <Animated.View
+            style={styles.successPlate}
+            entering={reduceMotion ? undefined : successAccentEntering}
+          />
+          <View style={styles.successCard}>
+            <View style={styles.successStrip}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.successStripEyebrow}>
+                  CANCEL_CONFIRMED // TYPE: FREE
+                </Text>
+                <Text style={styles.successStripTitle}>FREE ON</Text>
+              </View>
+              <View style={styles.successStripMeta}>
+                <Text style={styles.successStripMetaText}>PLAN: FREE</Text>
+                <Text style={styles.successStripMetaText}>AUTH: CANCELED</Text>
+              </View>
+            </View>
+
+            <View style={styles.successBody}>
+              <View style={styles.successBadgeBox}>
+                <View style={styles.successBrandCluster}>
+                  <ProCyberBadgeNative />
+                  <Text style={styles.successBrand}>UNITERZ</Text>
+                  {!reduceMotion ? (
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[styles.successBrandSheen, sheenStyle]}
+                    >
+                      <LinearGradient
+                        colors={[
+                          "transparent",
+                          "rgba(255,255,255,0.12)",
+                          "rgba(255,255,255,0.9)",
+                          "rgba(254,202,202,0.55)",
+                          "transparent",
+                        ]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 0.5 }}
+                        style={StyleSheet.absoluteFillObject}
+                      />
+                    </Animated.View>
+                  ) : null}
+                </View>
+                <View style={styles.successHair} />
+                <Text style={styles.successStatus}>Free Plan</Text>
+              </View>
+
+              <View style={styles.successMeta}>
+                <MetaRow label="ACCESS" value={`〜 ${untilLabel}`} />
+                <Text style={styles.until}>
+                  プランは{" "}
+                  <Text style={styles.untilStrong}>{untilLabel}</Text>{" "}
+                  まで利用できます
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={() => {
+                  navigation.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{ name: "ProfileHome" }],
+                    })
+                  );
+                }}
+                accessibilityRole="button"
+                style={styles.successPrimary}
+              >
+                <Text style={styles.successPrimaryText}>Back to Profile</Text>
+              </Pressable>
+
+              <Text style={styles.footerText}>
+                プランに関する質問はサポートに問い合わせしてください。
+              </Text>
+              <View style={styles.linkRow}>
+                <Pressable onPress={() => navigation.navigate("Terms")}>
+                  <Text style={styles.link}>利用規約</Text>
+                </Pressable>
+                <Text style={styles.linkSep}>|</Text>
+                <Pressable onPress={() => navigation.navigate("Contact")}>
+                  <Text style={styles.link}>お問い合わせ</Text>
+                </Pressable>
+              </View>
+            </View>
           </View>
-
-          <Text style={styles.until}>
-            プランは <Text style={styles.untilStrong}>{proUntil || "—"}</Text> まで利用できます
-          </Text>
-
-          <Pressable
-            disabled={!handle}
-            onPress={() => {
-              if (handle) navigation.navigate("PublicProfile", { handle });
-            }}
-            accessibilityRole="button"
-            style={{ opacity: handle ? 1 : 0.55 }}
-          >
-            <LinearGradient colors={["#F59E0B", "#F97316"]} style={styles.cta}>
-              <Text style={styles.ctaLabel}>Back to Profile</Text>
-            </LinearGradient>
-          </Pressable>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>プランに関する質問はサポートに問い合わせしてください。</Text>
-          <View style={styles.footerLinks}>
-            <Pressable onPress={() => navigation.navigate("Terms")} accessibilityRole="button">
-              <Text style={styles.footerLink}>利用規約</Text>
-            </Pressable>
-            <Text style={styles.footerSep}>|</Text>
-            <Pressable onPress={() => navigation.navigate("Contact")} accessibilityRole="button">
-              <Text style={styles.footerLink}>お問い合わせ</Text>
-            </Pressable>
-          </View>
-        </View>
+        </Animated.View>
       </ScrollView>
     </MobilePageShell>
   );
@@ -119,78 +313,273 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
-    paddingVertical: 42,
+    paddingVertical: 28,
     alignItems: "center",
     justifyContent: "center",
   },
-  heading: { marginBottom: 24, alignItems: "center" },
-  headingRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#ef4444",
+  successHead: {
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 10,
+  },
+  headingRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
   },
-  checkText: { color: "#fff", fontSize: 14, fontWeight: "900" },
-  title: { color: "rgba(255,255,255,0.92)", fontSize: 19, fontWeight: "900" },
+  successCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: A.main,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: A.main,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.45,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 4,
+      },
+      default: {},
+    }),
+  },
+  successCheckText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: A.ink,
+  },
+  successTitle: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 17,
+    fontWeight: "900",
+    flexShrink: 1,
+  },
   desc: {
-    marginTop: 10,
     color: "rgba(255,255,255,0.72)",
     lineHeight: 21,
     fontSize: 14,
     textAlign: "center",
   },
-  card: {
-    width: 320,
-    minHeight: 320,
-    borderRadius: 36,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    overflow: "hidden",
-    padding: 24,
-    justifyContent: "space-between",
+  successFrameOuter: {
+    width: "100%",
+    maxWidth: 360,
+    paddingTop: 8,
+    paddingLeft: 8,
+    paddingRight: 7,
+    paddingBottom: 7,
   },
-  logoPlate: {
+  successCornerTL: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: 18,
+    height: 18,
+    borderLeftWidth: 3,
+    borderTopWidth: 3,
+    borderColor: A.main,
+    zIndex: 20,
+  },
+  successCornerBR: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 18,
+    height: 18,
+    borderRightWidth: 3,
+    borderBottomWidth: 3,
+    borderColor: A.main,
+    zIndex: 20,
+  },
+  successPlate: {
+    ...StyleSheet.absoluteFillObject,
+    top: 8,
+    left: 8,
+    backgroundColor: A.main,
+    zIndex: 0,
+  },
+  successCard: {
+    borderWidth: 2.5,
+    borderColor: "#ffffff",
+    backgroundColor: "#04080f",
+    zIndex: 10,
+  },
+  successStrip: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    borderBottomWidth: 2.5,
+    borderBottomColor: "#ffffff",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  successStripEyebrow: {
+    fontFamily: OXANIUM_700,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: "rgba(0,0,0,0.55)",
+    textTransform: "uppercase",
+    textAlign: "left",
+  },
+  successStripTitle: {
+    fontFamily: OXANIUM_800,
+    marginTop: 2,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: "#000000",
+    textTransform: "uppercase",
+    textAlign: "left",
+  },
+  successStripMeta: {
+    borderLeftWidth: 2.5,
+    borderLeftColor: "rgba(0,0,0,0.15)",
+    paddingLeft: 10,
+    justifyContent: "center",
+  },
+  successStripMetaText: {
+    fontFamily: OXANIUM_700,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "rgba(0,0,0,0.7)",
+    textTransform: "uppercase",
+    textAlign: "right",
+  },
+  successBody: {
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  successBadgeBox: {
     alignSelf: "center",
-    width: 220,
-    height: 180,
-    borderRadius: 28,
+    width: "100%",
+    maxWidth: 240,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "#0b1f26",
+    borderColor: A.borderSoft,
+    backgroundColor: "rgba(4,10,18,0.88)",
+    paddingHorizontal: 12,
+    paddingVertical: 20,
+    alignItems: "center",
+    gap: 10,
+  },
+  successBrandCluster: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    overflow: "hidden",
   },
-  logo: { width: 60, height: 60 },
-  brand: {
-    color: "rgba(255,255,255,0.9)",
-    fontFamily: fonts.brand,
-    fontSize: 28,
-    letterSpacing: 4,
+  successBrandSheen: {
+    position: "absolute",
+    top: -14,
+    bottom: -14,
+    left: 0,
+    width: 56,
+    zIndex: 4,
   },
-  freePlan: { color: "rgba(255,255,255,0.82)", fontSize: 14 },
-  until: {
-    marginTop: 12,
-    marginBottom: 10,
-    color: "rgba(255,255,255,0.76)",
+  successBrand: {
+    fontFamily: OXANIUM_700,
+    fontSize: 20,
+    fontWeight: "600",
+    letterSpacing: 4.4,
+    color: A.title,
+  },
+  successHair: {
+    width: 56,
+    height: 1,
+    backgroundColor: A.main,
+  },
+  successStatus: {
+    fontFamily: OXANIUM_700,
     fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    color: A.muted,
     textAlign: "center",
   },
-  untilStrong: { color: "rgba(255,255,255,0.92)", fontWeight: "900" },
-  cta: {
-    width: "100%",
-    borderRadius: 16,
-    paddingVertical: 13,
+  successMeta: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: A.borderSoft,
+    paddingTop: 12,
+    gap: 8,
+  },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  metaLabel: {
+    fontFamily: OXANIUM_700,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+    color: A.metaLabel,
+    textTransform: "uppercase",
+  },
+  metaValue: {
+    flex: 1,
+    textAlign: "right",
+    fontFamily: OXANIUM_700,
+    fontSize: 11,
+    fontWeight: "700",
+    color: A.main,
+  },
+  until: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  untilStrong: {
+    color: "rgba(255,255,255,0.92)",
+    fontWeight: "900",
+  },
+  successPrimary: {
+    marginTop: 12,
+    borderRadius: 2,
+    backgroundColor: A.main,
+    paddingVertical: 12,
     alignItems: "center",
   },
-  ctaLabel: { color: colors.textPrimary, fontWeight: "900" },
-  footer: { marginTop: 24, alignItems: "center", gap: 8 },
-  footerText: { color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center" },
-  footerLinks: { flexDirection: "row", alignItems: "center", gap: 8 },
-  footerLink: { color: "rgba(255,255,255,0.92)", fontSize: 14, fontWeight: "900" },
-  footerSep: { color: "rgba(255,255,255,0.55)", fontSize: 13 },
+  successPrimaryText: {
+    fontFamily: OXANIUM_800,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    color: A.ink,
+    textTransform: "uppercase",
+  },
+  footerText: {
+    marginTop: 12,
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+    textAlign: "center",
+  },
+  linkRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  link: {
+    fontFamily: OXANIUM_700,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: A.soft,
+    textTransform: "uppercase",
+  },
+  linkSep: {
+    fontSize: 9,
+    color: `rgba(${A.mainRgb},0.3)`,
+  },
 });

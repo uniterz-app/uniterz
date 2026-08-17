@@ -4,12 +4,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { withTimeout } from "@/lib/async/withTimeout";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type Params = {
   targetUid: string | null;
   profilePlan?: string | null;
 };
+
+const PLAN_FETCH_TIMEOUT_MS = 12_000;
 
 export function useProfilePlan({ targetUid, profilePlan }: Params) {
   const me = auth.currentUser;
@@ -46,7 +49,11 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
         if (!cancelled) setLoadingPlan(true);
 
         const userDocRef = doc(db, "users", myUid);
-        const data = await getUserDocDataCached(myUid);
+        const data = await withTimeout(
+          getUserDocDataCached(myUid),
+          PLAN_FETCH_TIMEOUT_MS,
+          "plan-fetch-timeout"
+        );
 
         if (!data) {
           if (!cancelled) {
@@ -56,10 +63,18 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
           return;
         }
 
-        let nextPlan = data.plan ?? "free";
+        let nextPlan: "free" | "pro" = data.plan === "pro" ? "pro" : "free";
 
         if (isMe) {
-          const proUntilMs = data.proUntil?.toMillis?.();
+          const proUntilRaw = data.proUntil;
+          const proUntilMs =
+            proUntilRaw &&
+            typeof proUntilRaw === "object" &&
+            "toMillis" in proUntilRaw &&
+            typeof (proUntilRaw as { toMillis?: unknown }).toMillis ===
+              "function"
+              ? (proUntilRaw as { toMillis: () => number }).toMillis()
+              : undefined;
           const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
 
           if (
@@ -89,13 +104,13 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
         }
       } catch {
         if (!cancelled) {
-          setMyPlan("free");
+          setMyPlan((prev) => prev ?? "free");
           setLoadingPlan(false);
         }
       }
     }
 
-    run();
+    void run();
 
     return () => {
       cancelled = true;

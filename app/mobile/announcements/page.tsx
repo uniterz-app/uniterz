@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  collection,
   getDocs,
-  onSnapshot,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -20,9 +18,13 @@ import {
   ANNOUNCEMENT_READS_CHANGED_EVENT,
   getLocalAnnouncementReadIds,
 } from "@/lib/announcements/localAnnouncementReads";
+import {
+  ANNOUNCEMENT_READS_REFRESH_EVENT,
+  loadAnnouncementReadIdsFor,
+} from "@/lib/announcements/loadAnnouncementReadIds";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
-import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
+import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
 import { mergeSyntheticEventIntoAnnouncements } from "@/lib/announcements/inAppEventAnnouncement";
 import {
   queryVisibleAnnouncementsNoOrder,
@@ -99,20 +101,30 @@ export default function AnnouncementsPage() {
     })();
   }, []);
 
-  // 既読購読（ログイン: Firestore / ゲスト: localStorage）
+  // 既読（ログイン: 一覧 ID だけ getDoc / ゲスト: localStorage）
   useEffect(() => {
     if (!isAuthStateResolved(status)) {
       setReadIds(new Set());
       return;
     }
     if (user?.uid) {
-      const colRef = collection(db, `users/${user.uid}/reads`);
-      const unsub = onSnapshot(colRef, (snap) => {
-        const s = new Set<string>();
-        snap.forEach((d) => s.add(d.id));
-        setReadIds(s);
-      });
-      return () => unsub();
+      let cancelled = false;
+      const ids = items.map((x) => x.id);
+      const refresh = async () => {
+        const next = await loadAnnouncementReadIdsFor(db, user.uid!, ids);
+        if (!cancelled) setReadIds(next);
+      };
+      void refresh();
+      const onRefresh = () => {
+        void refresh();
+      };
+      window.addEventListener(ANNOUNCEMENT_READS_REFRESH_EVENT, onRefresh);
+      window.addEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onRefresh);
+      return () => {
+        cancelled = true;
+        window.removeEventListener(ANNOUNCEMENT_READS_REFRESH_EVENT, onRefresh);
+        window.removeEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onRefresh);
+      };
     }
     const sync = () => setReadIds(getLocalAnnouncementReadIds());
     sync();
@@ -126,7 +138,7 @@ export default function AnnouncementsPage() {
       window.removeEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onCustom);
       window.removeEventListener("storage", onStorage);
     };
-  }, [status, user?.uid]);
+  }, [status, user?.uid, items]);
 
   const isUnread = useMemo(() => {
     if (!isAuthStateResolved(status)) return (_id: string) => false;
@@ -134,23 +146,15 @@ export default function AnnouncementsPage() {
   }, [status, readIds]);
 
   return (
-    <div className="relative min-h-screen text-white">
-      <FloatingCloseButton />
-      {/* ダークネオン背景（放射+グラデ） */}
-      <div className="absolute inset-0 -z-10 bg-[#0B0F17]" />
-      <div className="pointer-events-none absolute inset-0 -z-10 opacity-70"
-           style={{
-             background: "radial-gradient(60% 40% at 20% 0%, rgba(0,229,255,0.10) 0%, rgba(0,0,0,0) 60%), radial-gradient(45% 35% at 100% 10%, rgba(164,77,255,0.08) 0%, rgba(0,0,0,0) 60%)"
-           }} />
-
-      {/* ヘッダー */}
-      <div className="sticky top-0 z-10 backdrop-blur supports-backdrop-filter:bg-[#0B0F17]/70 border-b border-white/5">
-        <h1 className="text-center text-lg font-bold py-3">
-          {m.settings.news}
-        </h1>
-      </div>
-
-      <div className="p-4">
+    <ProfileCyberPage
+      title="NEWS"
+      subtitle={
+        language === "en"
+          ? "Official announcements, events, and maintenance updates."
+          : "公式のお知らせ・イベント・メンテナンス情報です。"
+      }
+      contentClassName="max-w-lg px-4 py-4"
+    >
         {/* スケルトン */}
         {loading && (
           <div className="space-y-4">
@@ -240,7 +244,6 @@ export default function AnnouncementsPage() {
               </Link>
             );
           })}
-      </div>
-    </div>
+    </ProfileCyberPage>
   );
 }

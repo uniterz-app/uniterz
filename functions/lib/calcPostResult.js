@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.calcPostResult = calcPostResult;
-const calcScorePrecision_1 = require("./calcScorePrecision");
 const predictionWin_1 = require("./predictionWin");
 const settlementGame_1 = require("./settlementGame");
 function calcScoreError(pred, real) {
@@ -16,17 +15,10 @@ function calcPostResult({ prediction, final, market, hadUpsetGame, league, settl
     const isWin = (0, predictionWin_1.predictionWin)(prediction, gameSlice);
     const marketMajority = market.majoritySide;
     const isMajorityPick = prediction.winner === marketMajority;
-    const precisionActual = (0, settlementGame_1.leagueToSport)(league) === "football"
+    const scoreLineActual = (0, settlementGame_1.leagueToSport)(league) === "football"
         ? (0, settlementGame_1.getFootballLineScore)(gameSlice)
         : final;
-    const scoreError = calcScoreError(prediction.score, precisionActual);
-    const { homePt, awayPt, diffPt, totalPt } = (0, calcScorePrecision_1.calcScorePrecision)({
-        predictedHome: prediction.score.home,
-        predictedAway: prediction.score.away,
-        actualHome: precisionActual.home,
-        actualAway: precisionActual.away,
-        league: league !== null && league !== void 0 ? league : "bj",
-    });
+    const scoreError = calcScoreError(prediction.score, scoreLineActual);
     const pickSide = prediction.winner;
     const sport = (0, settlementGame_1.leagueToSport)(league);
     const upsetHit = hadUpsetGame &&
@@ -37,8 +29,6 @@ function calcPostResult({ prediction, final, market, hadUpsetGame, league, settl
     return {
         isWin,
         scoreError,
-        scorePrecision: totalPt,
-        scorePrecisionDetail: { homePt, awayPt, diffPt },
         marketMajority,
         isMajorityPick,
         upsetHit,

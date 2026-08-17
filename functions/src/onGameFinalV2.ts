@@ -6,9 +6,13 @@ import { fetchGameContext } from "./fetchGameContext";
 import { marketCalculator } from "./marketCalculator";
 import { upsetJudge } from "./upsetJudge";
 import { finalizePost } from "./finalizePost";
-import { aggregateGamePointsDistributionFromPostsSnap } from "./aggregateGamePointsDistribution";
+import {
+  aggregateGamePointsSummaryFromPostsSnap,
+  resolveScoreRelFromSummary,
+} from "./aggregateGamePointsDistribution";
+import { enrichGamePointsTopFromUsers } from "./enrichGamePointsTopFromUsers";
+import { buildTopScorerMarketEmbedFromPostsSnap } from "./buildTopScorerMarketEmbed";
 import { updateUserStreak } from "./updateUserStreak";
-import { rescoreEarlierWcSlotPosts } from "./wc/wcSlotStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
 import { notifyGameFinalPush } from "./notifications/notifyPushEvents";
@@ -22,7 +26,6 @@ import {
   resolveActualOutcomeForUpset,
   type SettlementGameInput,
 } from "./settlementGame";
-import { maybeUpdateWcBracketOnKnockoutFinal } from "./wc-bracket/onKnockoutGameFinal";
 
 const db = () => getFirestore();
 
@@ -85,20 +88,19 @@ export const onGameFinalV2 = onDocumentWritten(
       advancingTeamId: game.advancingTeamId ?? null,
       knockout: game.knockout === true,
       goalScorers: game.goalScorers,
+      leadingScorers: game.leadingScorers,
     };
 
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();
-    let wcSlotRescore: { perUserPerGameActive: Map<string, Map<string, number>> } | null = null;
 
     if (becameFinal) {
-      const streakOutcome = await updateUserStreak({
+      streakResultMap = await updateUserStreak({
         db: firestore,
         gameId,
         settlementGame,
+        postsSnap,
       });
-      streakResultMap = streakOutcome.streakResultMap;
-      wcSlotRescore = streakOutcome.wcSlotRescore;
 
       const skipTeamSeasonRecord = isExemptFromTeamSeasonRecord(game.knockout);
 
@@ -190,7 +192,33 @@ export const onGameFinalV2 = onDocumentWritten(
 
     hadUpsetGame = upset.isUpsetGame;
 
-    /* ===== ④ finalize posts（バッチ分割 + チャンクごとにユーザー更新をフラッシュ） ===== */
+    /* ===== ④ 得点サマリ先行（同一 posts スナップ・追加 read なし） ===== */
+    const { summary: pointsSummaryRaw, settlementByPostId } =
+      aggregateGamePointsSummaryFromPostsSnap({
+        postsSnap,
+        game: settlementGame,
+        market,
+        hadUpsetGame,
+        streakResultMap,
+      });
+
+    /** Top10 の表示名 / アバターは users から補完（posts.author が無いため） */
+    const pointsSummary = {
+      ...pointsSummaryRaw,
+      top: await enrichGamePointsTopFromUsers(
+        firestore,
+        pointsSummaryRaw.top
+      ),
+    };
+
+    const topScorerMarket = buildTopScorerMarketEmbedFromPostsSnap({
+      league: game.league,
+      postsSnap,
+      leadingScorers: game.leadingScorers,
+      topScorerCandidates: after?.topScorerCandidates,
+    });
+
+    /* ===== ⑤ finalize posts（scoreRel を同書き込みで埋め込み・決済は再利用） ===== */
     const postDocs = postsSnap.docs;
     for (let i = 0; i < postDocs.length; i += FINALIZE_POSTS_CHUNK_SIZE) {
       const slice = postDocs.slice(i, i + FINALIZE_POSTS_CHUNK_SIZE);
@@ -201,6 +229,11 @@ export const onGameFinalV2 = onDocumentWritten(
       const userUpdateTasks: Promise<any>[] = [];
 
       for (const doc of pendingInSlice) {
+        const settlement = settlementByPostId.get(doc.id);
+        const scoreRel = resolveScoreRelFromSummary(
+          settlement?.totalPoints ?? 0,
+          pointsSummary
+        );
         await finalizePost({
           postDoc: doc,
           game,
@@ -210,6 +243,8 @@ export const onGameFinalV2 = onDocumentWritten(
           batch,
           userUpdateTasks,
           streakResultMap,
+          scoreRel,
+          settlement,
         });
       }
 
@@ -217,23 +252,7 @@ export const onGameFinalV2 = onDocumentWritten(
       await Promise.all(userUpdateTasks);
     }
 
-    if (wcSlotRescore) {
-      await rescoreEarlierWcSlotPosts(
-        firestore,
-        gameId,
-        wcSlotRescore.perUserPerGameActive
-      );
-    }
-
-    const pointsDistribution = aggregateGamePointsDistributionFromPostsSnap({
-      postsSnap,
-      game: settlementGame,
-      market,
-      hadUpsetGame,
-      streakResultMap,
-    });
-
-    /* ===== ⑤ finalize game ===== */
+    /* ===== ⑥ finalize game ===== */
     const gamePatch: Record<string, any> = {
       market: {
         homeCount: market.homeCount,
@@ -245,10 +264,11 @@ export const onGameFinalV2 = onDocumentWritten(
         majority: market.majoritySide,
         majorityRatio: market.majorityRatio,
       },
-      pointsDistribution: {
-        ...pointsDistribution,
+      pointsSummary: {
+        ...pointsSummary,
         updatedAtMillis: Date.now(),
       },
+      ...(topScorerMarket ? { topScorerMarket } : {}),
       "game.status": "final",
       "game.finalScore": {
         home: game.homeScore,
@@ -270,15 +290,6 @@ export const onGameFinalV2 = onDocumentWritten(
     await firestore.doc(`games/${gameId}`).set(gamePatch, { merge: true });
 
     if (becameFinal) {
-      await firestore.doc("trend_jobs/users").set(
-        {
-          needsRebuild: true,
-          requestedAt: FieldValue.serverTimestamp(),
-          gameId,
-        },
-        { merge: true }
-      );
-
       try {
         await notifyGameFinalPush({
           gameId,
@@ -289,27 +300,6 @@ export const onGameFinalV2 = onDocumentWritten(
         });
       } catch (err) {
         console.error("[onGameFinalV2] push notify failed", err);
-      }
-
-      try {
-        await maybeUpdateWcBracketOnKnockoutFinal(firestore, {
-          gameId,
-          season:
-            typeof after.season === "string" ? after.season : null,
-          league: game.league,
-          knockout: game.knockout === true,
-          homeTeamId: game.homeTeamId,
-          awayTeamId: game.awayTeamId,
-          homeScore: game.homeScore,
-          awayScore: game.awayScore,
-          advancingTeamId: game.advancingTeamId,
-          wcKnockoutMatchId:
-            typeof after.wcKnockoutMatchId === "string"
-              ? after.wcKnockoutMatchId
-              : null,
-        });
-      } catch (err) {
-        console.error("[onGameFinalV2] wc bracket survivor update failed", err);
       }
     }
   }

@@ -1,7 +1,9 @@
 import { AnalysisTypeId } from "@/shared/analysis/types";
 
 export const ANALYSIS_TYPE_COLOR: Record<AnalysisTypeId, string> = {
+  GOAT: "#FDE68A",
   COMPLETE_PLAYER: "#F5C542",
+  ALL_ROUNDER: "#60A5FA",
   CHEAT_CODE: "#E879F9",
   ELITE_ALLROUNDER: "#60A5FA",
   GIANT_SLAYER: "#EF4444",
@@ -20,6 +22,8 @@ export const ANALYSIS_TYPE_COLOR: Record<AnalysisTypeId, string> = {
   CLUTCH: "#F43F5E",
   CHAOS_RUNNER: "#A855F7",
   WALKING_BUCKET: "#3B82F6",
+  HIGH_FLOOR: "#FDBA74",
+  CHAOS_ANCHOR: "#C084FC",
   BULLDOG: "#92400E",
   SCRAPPER: "#78716C",
   FINISHER: "#84CC16",

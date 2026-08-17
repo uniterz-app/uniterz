@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import type { Language } from "@/lib/i18n/language";
 import {
   guessLanguageFromNavigator,
   normalizeLanguage,
 } from "@/lib/i18n/language";
+import { subscribeUserDocLive } from "@/lib/user/subscribeUserDocLive";
 
 export type RankingSessionUser = {
   displayName: string;
@@ -27,7 +26,7 @@ const EMPTY: RankingSessionUser = {
   countryCode: null,
 };
 
-/** ランキング画面用 — users/{uid} を 1 本の onSnapshot で購読 */
+/** ランキング画面用 — users/{uid} を共有ハブ経由で購読 */
 export function useRankingSessionUser(uid: string | null | undefined) {
   const [user, setUser] = useState<RankingSessionUser>(EMPTY);
   const [loading, setLoading] = useState(!!uid);
@@ -40,44 +39,32 @@ export function useRankingSessionUser(uid: string | null | undefined) {
     }
 
     setLoading(true);
-    const ref = doc(db, "users", uid);
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        const d = snap.data() as
-          | {
-              displayName?: string;
-              handle?: string;
-              photoURL?: string;
-              plan?: string;
-              language?: string;
-              countryCode?: string;
-            }
-          | undefined;
-
-        if (!d) {
-          setUser({ ...EMPTY, language: guessLanguageFromNavigator() });
-          setLoading(false);
-          return;
-        }
-
-        setUser({
-          displayName: d.displayName?.trim() || "",
-          handle: d.handle?.trim() || "",
-          photoURL: d.photoURL?.trim() || "",
-          plan: d.plan === "pro" ? "pro" : "free",
-          language: normalizeLanguage(d.language) ?? guessLanguageFromNavigator(),
-          countryCode: typeof d.countryCode === "string" ? d.countryCode : null,
-        });
-        setLoading(false);
-      },
-      () => {
+    return subscribeUserDocLive(uid, (data) => {
+      if (!data) {
         setUser({ ...EMPTY, language: guessLanguageFromNavigator() });
         setLoading(false);
+        return;
       }
-    );
 
-    return () => unsub();
+      const d = data as {
+        displayName?: string;
+        handle?: string;
+        photoURL?: string;
+        plan?: string;
+        language?: string;
+        countryCode?: string;
+      };
+
+      setUser({
+        displayName: d.displayName?.trim() || "",
+        handle: d.handle?.trim() || "",
+        photoURL: d.photoURL?.trim() || "",
+        plan: d.plan === "pro" ? "pro" : "free",
+        language: normalizeLanguage(d.language) ?? guessLanguageFromNavigator(),
+        countryCode: typeof d.countryCode === "string" ? d.countryCode : null,
+      });
+      setLoading(false);
+    });
   }, [uid]);
 
   return { user, loading };

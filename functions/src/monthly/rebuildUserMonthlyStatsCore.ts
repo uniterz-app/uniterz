@@ -51,7 +51,6 @@ type Agg = {
   posts: number;
   wins: number;
   brierSum: number;
-  precisionSum: number;
   upsetHit: number;
   upsetOpp: number;
   upsetPick: number;
@@ -66,7 +65,6 @@ type MonthlyRow = {
   uid: string;
   posts: number;
   winRate: number;
-  avgPrecision: number;
   avgPointsV3: number;
   upsetPointsSum: number;
   /** 月内総合得点（合計）— 全ユーザー中の順位計算用 */
@@ -182,7 +180,6 @@ export async function rebuildUserMonthlyStatsCore() {
         posts: 0,
         wins: 0,
         brierSum: 0,
-        precisionSum: 0,
         upsetHit: 0,
         upsetOpp: 0,
         upsetPick: 0,
@@ -198,7 +195,6 @@ export async function rebuildUserMonthlyStatsCore() {
     agg.posts += stats.posts ?? 0;
     agg.wins += stats.wins ?? 0;
     agg.brierSum += stats.brierSum ?? 0;
-    agg.precisionSum += stats.scorePrecisionSum ?? 0;
     agg.upsetHit += stats.upsetHitCount ?? 0;
     agg.upsetOpp += stats.upsetOpportunityCount ?? 0;
     agg.upsetPick += stats.upsetPickCount ?? 0;
@@ -218,14 +214,12 @@ export async function rebuildUserMonthlyStatsCore() {
       if (agg.posts === 0) return null;
 
       const winRate = agg.wins / agg.posts;
-      const avgPrecision = agg.precisionSum / agg.posts;
       const avgPointsV3 = agg.pointsSumV3 / agg.posts;
 
       return {
         uid,
         posts: agg.posts,
         winRate,
-        avgPrecision,
         avgPointsV3,
         upsetPointsSum: agg.upsetPointsSum,
         pointsSumV3: agg.pointsSumV3,
@@ -256,7 +250,6 @@ export async function rebuildUserMonthlyStatsCore() {
   const pointsSumV3RankDenominator = sortedByPointsSum.length;
 
   const winRates = rows.map((r) => r.winRate).sort((a, b) => a - b);
-  const precisions = rows.map((r) => r.avgPrecision).sort((a, b) => a - b);
   const pointsV3s = rows.map((r) => r.avgPointsV3).sort((a, b) => a - b);
   const upsetPointSums = rows
     .map((r) => r.upsetPointsSum)
@@ -378,9 +371,6 @@ export async function rebuildUserMonthlyStatsCore() {
   const winRatesCohort = cohortRows
     .map((r) => r.winRate)
     .sort((a, b) => a - b);
-  const precisionsCohort = cohortRows
-    .map((r) => r.avgPrecision)
-    .sort((a, b) => a - b);
   const pointsV3sCohort = cohortRows
     .map((r) => r.avgPointsV3)
     .sort((a, b) => a - b);
@@ -477,7 +467,6 @@ export async function rebuildUserMonthlyStatsCore() {
 
     const percentiles = {
       winRate: percentile(winRates, row.winRate),
-      precision: percentile(precisions, row.avgPrecision),
       pointsV3: percentile(pointsV3s, row.avgPointsV3),
       upset: percentile(upsetPointSums, row.upsetPointsSum),
       volume: volumeMainLeague,
@@ -526,9 +515,6 @@ export async function rebuildUserMonthlyStatsCore() {
     const radar10 = radarEligible
       ? {
           winRate: clamp10(percentile(winRatesCohort, row.winRate) / 10),
-          precision: clamp10(
-            percentile(precisionsCohort, row.avgPrecision) / 10
-          ),
           upset: clamp10(
             percentile(upsetPointSumsCohort, row.upsetPointsSum) / 10
           ),
@@ -552,7 +538,6 @@ export async function rebuildUserMonthlyStatsCore() {
         }
       : {
           winRate: 0,
-          precision: 0,
           upset: 0,
           volume: 0,
           streak: 0,
@@ -573,10 +558,7 @@ export async function rebuildUserMonthlyStatsCore() {
         posts: agg.posts,
         wins: agg.wins,
         winRate: row.winRate,
-        avgPrecision: row.avgPrecision,
         avgPointsV3: row.avgPointsV3,
-        /** 月内スコア精度の合計（平均は avgPrecision） */
-        scorePrecisionSum: agg.precisionSum,
         /** 月内総合得点の合計（平均は avgPointsV3） */
         pointsSumV3: agg.pointsSumV3,
         basePointsSum,

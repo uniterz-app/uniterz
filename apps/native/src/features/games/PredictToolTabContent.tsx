@@ -24,7 +24,7 @@ import { resolveStaticNbaH2hAverages, resolveStaticNbaH2hRows } from "./nbaStati
 import { colors, spacing } from "../../theme/tokens";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 import { usePairTeamStats, type PairTeamStatsView } from "./usePairTeamStats";
-import { usePredictionPostDistribution } from "./usePredictionPostDistribution";
+import GameMarketDistributionNative from "./GameMarketDistributionNative";
 import { predictMarketInnerEnter, predictStatsCompareRowEnter } from "./predictMotion";
 
 const DISPLAY_FONT_FAMILY = Platform.select({
@@ -861,10 +861,6 @@ export function PredictToolTabContent({
     [subjectGame]
   );
 
-  const { data: postDist, loading: postLoad, error: postErr } = usePredictionPostDistribution(
-    gameId,
-    true
-  );
   const { home: sHome, away: sAway, loading: stLoad, error: stErr } = usePairTeamStats(
     tab === "stats" ? homeId : null,
     tab === "stats" ? awayId : null
@@ -1205,24 +1201,16 @@ export function PredictToolTabContent({
   }
 
   if (tab === "market") {
-    if (postLoad) {
-      return <Text style={s.muted}>{t.predictToolLoading}</Text>;
-    }
-    if (postErr) {
-      return <Text style={s.muted}>{t.predictToolLoadError}</Text>;
-    }
     return (
-      <MarketBars
-        home={postDist.home}
-        away={postDist.away}
-        draw={postDist.draw}
-        isSoccer={isSoccerLeague}
-        homeC={homeColor}
-        awayC={awayColor}
-        t={t}
-        language={language}
+      <GameMarketDistributionNative
+        gameId={gameId}
         homeName={h2hHomeName}
         awayName={h2hAwayName}
+        homeColor={homeColor}
+        awayColor={awayColor}
+        isSoccer={isSoccerLeague}
+        language={language}
+        t={t}
       />
     );
   }

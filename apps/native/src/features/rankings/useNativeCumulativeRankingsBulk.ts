@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
@@ -8,7 +8,6 @@ import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage"
 import {
   allRankingMetricsParam,
   isMetricListBundleLoaded,
-  mergePersonalRankPrefetch,
 } from "../../../../../lib/rankings/rankingBulkMetrics";
 import { isNewerSnapshotGeneration } from "../../../../../lib/rankings/rankingSnapshotGeneration";
 
@@ -26,10 +25,9 @@ type BulkFetchResult = {
   snapshotGeneration: string | null;
 };
 
-const ANON_KEY = "__anon__";
 const INITIAL_RANKING_METRICS = "totalPoints";
 const DEFERRED_RANKING_METRICS_NBA = [
-  "totalPrecision",
+  "totalGoalScorerHits",
   "totalUpset",
 ] as const;
 const DEFERRED_RANKING_METRICS_WC = [
@@ -37,7 +35,19 @@ const DEFERRED_RANKING_METRICS_WC = [
   "totalUpset",
 ] as const;
 
+/** 16:00 まで変わらない前提 — 世代が同じならメモリ再利用 */
+const LIST_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+type ListCacheEntry = {
+  at: number;
+  byMetric: Record<string, BulkMetricPayload>;
+  snapshotGeneration: string | null;
+};
+
+const listCache = new Map<string, ListCacheEntry>();
 const scopeSnapshotGeneration = new Map<string, string>();
+/** 同一 scope の同時 totalPoints 取得を1本に */
+const listInflight = new Map<string, Promise<BulkFetchResult | null>>();
 
 function scopeKey(
   phase: RankingPhase,
@@ -71,6 +81,30 @@ function clearScopeSnapshotGeneration(
   wcStage: WcRankingStage | null
 ): void {
   scopeSnapshotGeneration.delete(scopeKey(phase, round, wcStage));
+  listCache.delete(scopeKey(phase, round, wcStage));
+}
+
+function readListCache(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): ListCacheEntry | null {
+  const cached = listCache.get(scopeKey(phase, round, wcStage));
+  if (!cached) return null;
+  if (Date.now() - cached.at > LIST_CACHE_TTL_MS) return null;
+  return cached;
+}
+
+function writeListCache(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null,
+  entry: Omit<ListCacheEntry, "at">
+): void {
+  listCache.set(scopeKey(phase, round, wcStage), {
+    ...entry,
+    at: Date.now(),
+  });
 }
 
 function emptyBulkMetric(): BulkMetricPayload {
@@ -88,76 +122,14 @@ function mergeMetricBundles(
   prev: Record<string, BulkMetricPayload> | null,
   patch: Record<string, BulkMetricPayload>
 ): Record<string, BulkMetricPayload> {
-  const out = { ...(prev ?? {}) };
-  for (const [key, incoming] of Object.entries(patch)) {
-    const inc = incoming;
-    const old = out[key];
-    if (
-      old &&
-      (inc.myRank == null || inc.myRow == null) &&
-      (old.myRank != null || old.myRow != null)
-    ) {
-      out[key] = {
-        ...inc,
-        myRank: inc.myRank ?? old.myRank,
-        myRow: (inc.myRow ?? old.myRow) as Record<string, unknown> | null,
-        myRankDeltaPlaces: inc.myRankDeltaPlaces ?? old.myRankDeltaPlaces ?? null,
-      };
-    } else {
-      out[key] = inc;
-    }
-  }
-  return out;
+  return { ...(prev ?? {}), ...patch };
 }
 
-/** 匿名一覧で個人 myRank / myRow を消さない（Web useCumulativeRankingsBulk と同系） */
-function mergeAnonListBundles(
-  prev: Record<string, BulkMetricPayload> | null,
-  bundles: Record<string, BulkMetricPayload>
-): Record<string, BulkMetricPayload> {
-  const out: Record<string, BulkMetricPayload> = { ...bundles };
-  if (!prev) return out;
-  for (const key of Object.keys(out)) {
-    const incoming = out[key]!;
-    const kept = prev[key];
-    if (
-      kept &&
-      (kept.myRank != null ||
-        kept.myRow != null ||
-        kept.myRankDeltaPlaces != null)
-    ) {
-      out[key] = {
-        ...incoming,
-        myRank: kept.myRank ?? incoming.myRank,
-        myRow: (kept.myRow ?? incoming.myRow) as Record<string, unknown> | null,
-        myRankDeltaPlaces:
-          kept.myRankDeltaPlaces ?? incoming.myRankDeltaPlaces ?? null,
-      };
-    }
-  }
-  return out;
-}
-
-function applyAnonListToState(
-  setByMetric: Dispatch<
-    SetStateAction<Record<string, BulkMetricPayload> | null>
-  >,
-  setAppliedTotalPointsUid: Dispatch<SetStateAction<string | null>>,
-  bundles: Record<string, BulkMetricPayload>
-): void {
-  setByMetric((prev) => mergeAnonListBundles(prev, bundles));
-  setAppliedTotalPointsUid((prev) =>
-    prev && prev !== ANON_KEY ? prev : ANON_KEY
-  );
-}
-
-async function fetchBulkMetrics(
+async function fetchSharedList(
   metrics: string,
-  uid: string | null,
   phase: RankingPhase,
   round: PlayoffRoundKey,
-  wcStage: WcRankingStage | null,
-  opts?: { personalOnly?: boolean }
+  wcStage: WcRankingStage | null
 ): Promise<BulkFetchResult | null> {
   const base = getUniterzApiBaseUrl();
   if (!base) return null;
@@ -167,12 +139,11 @@ async function fetchBulkMetrics(
   params.set("phase", phase);
   params.set("round", round);
   if (wcStage) params.set("wcStage", wcStage);
-  if (uid) params.set("uid", uid);
-  if (opts?.personalOnly) params.set("personalOnly", "1");
 
-  const res = await fetch(`${base}/api/cumulative-ranking/bulk?${params.toString()}`, {
-    cache: "no-store",
-  });
+  const res = await fetch(
+    `${base}/api/cumulative-ranking/bulk?${params.toString()}`,
+    { cache: "force-cache" }
+  );
   const json = (await res.json()) as {
     ok?: boolean;
     byMetric?: Record<string, BulkMetricPayload>;
@@ -181,155 +152,179 @@ async function fetchBulkMetrics(
   };
   if (!json?.ok || !json.byMetric) return null;
   if (wcStage != null && json.wcStage !== wcStage) return null;
-  const snapshotGeneration =
-    typeof json.snapshotGeneration === "string"
-      ? json.snapshotGeneration
-      : null;
-  return { byMetric: json.byMetric, snapshotGeneration };
+  return {
+    byMetric: json.byMetric,
+    snapshotGeneration:
+      typeof json.snapshotGeneration === "string"
+        ? json.snapshotGeneration
+        : null,
+  };
 }
 
-async function resolveBulkFetch(
+async function resolveSharedList(
   metrics: string,
-  uid: string | null,
   phase: RankingPhase,
   round: PlayoffRoundKey,
-  wcStage: WcRankingStage | null,
-  opts?: { personalOnly?: boolean }
+  wcStage: WcRankingStage | null
 ): Promise<BulkFetchResult | null> {
-  const partial = await fetchBulkMetrics(
-    metrics,
-    uid,
-    phase,
-    round,
-    wcStage,
-    opts
-  );
-  if (!partial || opts?.personalOnly) {
-    if (partial?.snapshotGeneration) {
+  const inflightKey =
+    metrics === INITIAL_RANKING_METRICS
+      ? `${scopeKey(phase, round, wcStage)}|${INITIAL_RANKING_METRICS}`
+      : null;
+  if (inflightKey) {
+    const pending = listInflight.get(inflightKey);
+    if (pending) return pending;
+  }
+
+  const run = (async (): Promise<BulkFetchResult | null> => {
+    const partial = await fetchSharedList(metrics, phase, round, wcStage);
+    if (!partial) return null;
+
+    const cachedGen = readScopeSnapshotGeneration(phase, round, wcStage);
+    if (!isNewerSnapshotGeneration(partial.snapshotGeneration, cachedGen)) {
       writeScopeSnapshotGeneration(
         phase,
         round,
         wcStage,
         partial.snapshotGeneration
       );
+      return partial;
     }
-    return partial;
-  }
 
-  const cachedGen = readScopeSnapshotGeneration(phase, round, wcStage);
-  if (!isNewerSnapshotGeneration(partial.snapshotGeneration, cachedGen)) {
-    writeScopeSnapshotGeneration(
-      phase,
-      round,
-      wcStage,
-      partial.snapshotGeneration
-    );
-    return partial;
-  }
+    clearScopeSnapshotGeneration(phase, round, wcStage);
+    const allMetrics = allRankingMetricsParam();
+    if (metrics === allMetrics) {
+      writeScopeSnapshotGeneration(
+        phase,
+        round,
+        wcStage,
+        partial.snapshotGeneration
+      );
+      return partial;
+    }
 
-  clearScopeSnapshotGeneration(phase, round, wcStage);
-  const allMetrics = allRankingMetricsParam(wcStage);
-  if (metrics === allMetrics) {
-    writeScopeSnapshotGeneration(
-      phase,
-      round,
-      wcStage,
-      partial.snapshotGeneration
-    );
-    return partial;
-  }
+    const refreshed = await fetchSharedList(allMetrics, phase, round, wcStage);
+    if (refreshed?.snapshotGeneration) {
+      writeScopeSnapshotGeneration(
+        phase,
+        round,
+        wcStage,
+        refreshed.snapshotGeneration
+      );
+    }
+    return refreshed ?? partial;
+  })();
 
-  const refreshed = await fetchBulkMetrics(
-    allMetrics,
-    uid,
-    phase,
-    round,
-    wcStage,
-    opts
+  if (inflightKey) {
+    listInflight.set(inflightKey, run);
+    try {
+      return await run;
+    } finally {
+      listInflight.delete(inflightKey);
+    }
+  }
+  return run;
+}
+
+/** ランキングタブ押下前に匿名 totalPoints を温める（Web prefetchCumulativeRankingsList 相当） */
+export function prefetchNativeCumulativeRankingsList(
+  phase: RankingPhase = "playoffs",
+  round: PlayoffRoundKey = "overall",
+  wcStage: WcRankingStage | null = null
+): void {
+  if (readListCache(phase, round, wcStage)) return;
+  const inflightKey = `${scopeKey(phase, round, wcStage)}|${INITIAL_RANKING_METRICS}`;
+  if (listInflight.has(inflightKey)) return;
+  void resolveSharedList(INITIAL_RANKING_METRICS, phase, round, wcStage).then(
+    (partial) => {
+      if (!partial) return;
+      writeListCache(phase, round, wcStage, {
+        byMetric: partial.byMetric,
+        snapshotGeneration: partial.snapshotGeneration,
+      });
+    }
   );
-  if (refreshed?.snapshotGeneration) {
-    writeScopeSnapshotGeneration(
-      phase,
-      round,
-      wcStage,
-      refreshed.snapshotGeneration
-    );
-  }
-  return refreshed;
 }
 
 export function useNativeCumulativeRankingsBulk(
   phase: RankingPhase = "playoffs",
   round: PlayoffRoundKey = "overall",
-  wcStage: WcRankingStage | null = null
+  wcStage: WcRankingStage | null = null,
+  /** false のとき取得しない（週次/月次/open ボード表示中） */
+  enabled = true
 ) {
   const [authReady, setAuthReady] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [byMetric, setByMetric] = useState<Record<string, BulkMetricPayload> | null>(null);
-  const [appliedTotalPointsUid, setAppliedTotalPointsUid] = useState<string | null>(null);
+  const [byMetric, setByMetric] = useState<Record<
+    string,
+    BulkMetricPayload
+  > | null>(null);
 
   const mountPrimaryGenRef = useRef(0);
-  const uidPrimarySeqRef = useRef(0);
   const metricReqSeqRef = useRef(0);
   const phaseRoundGenRef = useRef(0);
+  const byMetricRef = useRef(byMetric);
+  byMetricRef.current = byMetric;
+  /** 空 rows でも同じ指標を連打取得しない */
+  const attemptedMetricsRef = useRef(new Set<string>());
 
-  const schedulePersonalRankPrefetch = useCallback(
-    (uid: string) => {
-      const prefetchGen = phaseRoundGenRef.current;
-      void (async () => {
-        const ranks = await fetchBulkMetrics(
-          allRankingMetricsParam(wcStage),
-          uid,
-          phase,
-          round,
-          wcStage,
-          { personalOnly: true }
-        );
-        if (prefetchGen !== phaseRoundGenRef.current || !ranks) return;
-        setByMetric((prev) => mergePersonalRankPrefetch(prev, ranks.byMetric));
-        writeScopeSnapshotGeneration(
-          phase,
-          round,
-          wcStage,
-          ranks.snapshotGeneration
-        );
-      })();
-    },
-    [phase, round, wcStage]
-  );
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setMyUid(user?.uid ?? null);
+      setAuthReady(true);
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     phaseRoundGenRef.current += 1;
     metricReqSeqRef.current += 1;
+    attemptedMetricsRef.current = new Set();
     let cancelled = false;
+
+    if (!enabled) {
+      setByMetric(null);
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const cached = readListCache(phase, round, wcStage);
+    if (cached) {
+      setByMetric(cached.byMetric);
+      setLoading(false);
+      // TTL 内はネット再取得しない（prefetch / 再訪の二重打ち防止）
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setByMetric(null);
-    setAppliedTotalPointsUid(null);
     setLoading(true);
 
     void (async () => {
       const g = ++mountPrimaryGenRef.current;
       try {
-        const partial = await resolveBulkFetch(
+        const partial = await resolveSharedList(
           INITIAL_RANKING_METRICS,
-          null,
           phase,
           round,
           wcStage
         );
         if (cancelled || g !== mountPrimaryGenRef.current) return;
-        if (partial) {
-          applyAnonListToState(setByMetric, setAppliedTotalPointsUid, partial.byMetric);
-        } else {
-          applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
-            totalPoints: emptyBulkMetric(),
-          });
-        }
+        const bundles = partial?.byMetric ?? {
+          totalPoints: emptyBulkMetric(),
+        };
+        setByMetric(bundles);
+        writeListCache(phase, round, wcStage, {
+          byMetric: bundles,
+          snapshotGeneration: partial?.snapshotGeneration ?? null,
+        });
       } catch {
         if (cancelled || g !== mountPrimaryGenRef.current) return;
-        applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
-          totalPoints: emptyBulkMetric(),
-        });
+        setByMetric({ totalPoints: emptyBulkMetric() });
       } finally {
         if (!cancelled && g === mountPrimaryGenRef.current) {
           setLoading(false);
@@ -337,116 +332,60 @@ export function useNativeCumulativeRankingsBulk(
       }
     })();
 
-    const unsub = onAuthStateChanged(auth, (user) => {
-      const uid = user?.uid ?? null;
-      setMyUid(uid);
-      setAuthReady(true);
-
-      if (!uid) {
-        const g = ++mountPrimaryGenRef.current;
-        void (async () => {
-          try {
-            const partial = await resolveBulkFetch(
-              INITIAL_RANKING_METRICS,
-              null,
-              phase,
-              round,
-              wcStage
-            );
-            if (cancelled || g !== mountPrimaryGenRef.current) return;
-            if (partial) {
-              applyAnonListToState(setByMetric, setAppliedTotalPointsUid, partial.byMetric);
-            } else {
-              applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
-                totalPoints: emptyBulkMetric(),
-              });
-            }
-          } catch {
-            if (cancelled || g !== mountPrimaryGenRef.current) return;
-            applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
-              totalPoints: emptyBulkMetric(),
-            });
-          }
-        })();
-        return;
-      }
-
-      const uq = ++uidPrimarySeqRef.current;
-      void (async () => {
-        try {
-          const partial = await resolveBulkFetch(
-            INITIAL_RANKING_METRICS,
-            uid,
-            phase,
-            round,
-            wcStage
-          );
-          if (cancelled || uq !== uidPrimarySeqRef.current) return;
-          if (partial) {
-            setByMetric((prev) => mergeMetricBundles(prev, partial.byMetric));
-            setAppliedTotalPointsUid(uid);
-            schedulePersonalRankPrefetch(uid);
-          } else {
-            setAppliedTotalPointsUid(uid);
-          }
-        } catch {
-          if (cancelled || uq !== uidPrimarySeqRef.current) return;
-          setAppliedTotalPointsUid(uid);
-        }
-      })();
-    });
-
     return () => {
       cancelled = true;
-      unsub();
     };
-  }, [phase, round, wcStage, schedulePersonalRankPrefetch]);
+  }, [phase, round, wcStage, enabled]);
 
   const ensureMetric = useCallback(
     async (metric: string) => {
+      if (!enabled) return;
       if (metric === "totalPoints") return;
       if (!authReady) return;
-      if (!byMetric?.totalPoints) return;
-      if (isMetricListBundleLoaded(byMetric?.[metric])) return;
-
-      const uidForMetric = myUid;
-      if (uidForMetric) {
-        if (appliedTotalPointsUid !== uidForMetric) return;
-      } else if (appliedTotalPointsUid !== ANON_KEY) {
-        return;
-      }
+      const current = byMetricRef.current;
+      if (!current?.totalPoints) return;
+      if (isMetricListBundleLoaded(current[metric])) return;
+      if (attemptedMetricsRef.current.has(metric)) return;
+      attemptedMetricsRef.current.add(metric);
 
       const genAtStart = phaseRoundGenRef.current;
       const seq = ++metricReqSeqRef.current;
       try {
-        const partial = await resolveBulkFetch(
+        const partial = await resolveSharedList(
           metric,
-          uidForMetric,
           phase,
           round,
           wcStage
         );
         if (genAtStart !== phaseRoundGenRef.current) return;
         if (seq !== metricReqSeqRef.current) return;
-        if (partial) {
-          setByMetric((prev) => mergeMetricBundles(prev, partial.byMetric));
-        } else {
-          setByMetric((prev) => mergeMetricBundles(prev, { [metric]: emptyBulkMetric() }));
-        }
+        setByMetric((prev) => {
+          const next = mergeMetricBundles(
+            prev,
+            partial?.byMetric ?? { [metric]: emptyBulkMetric() }
+          );
+          writeListCache(phase, round, wcStage, {
+            byMetric: next,
+            snapshotGeneration:
+              partial?.snapshotGeneration ??
+              readScopeSnapshotGeneration(phase, round, wcStage),
+          });
+          return next;
+        });
       } catch {
         if (seq !== metricReqSeqRef.current) return;
-        setByMetric((prev) => mergeMetricBundles(prev, { [metric]: emptyBulkMetric() }));
+        setByMetric((prev) =>
+          mergeMetricBundles(prev, { [metric]: emptyBulkMetric() })
+        );
       }
     },
-    [authReady, byMetric, myUid, appliedTotalPointsUid, phase, round, wcStage]
+    [authReady, enabled, phase, round, wcStage]
   );
 
-  const listReady = byMetric?.totalPoints != null;
-  const personalPending =
-    myUid != null && appliedTotalPointsUid != null && appliedTotalPointsUid !== myUid;
+  const listReady = enabled ? byMetric?.totalPoints != null : true;
 
   useEffect(() => {
-    if (!listReady || loading) return;
+    if (!enabled || !listReady || loading) return;
 
     let cancelled = false;
     const loadDeferred = () => {
@@ -459,20 +398,20 @@ export function useNativeCumulativeRankingsBulk(
       }
     };
 
-    const timeoutId = setTimeout(loadDeferred, 1200);
-
+    const timeoutId = setTimeout(loadDeferred, 400);
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [listReady, loading, wcStage, ensureMetric]);
+  }, [enabled, listReady, loading, wcStage, ensureMetric]);
 
   return {
-    loading,
+    loading: enabled ? loading : false,
     listReady,
-    personalPending,
+    /** My Rank は cardFast 側。一覧は共有のため常に false */
+    personalPending: false,
     myUid,
-    byMetric,
+    byMetric: enabled ? byMetric : null,
     ensureMetric,
   };
 }

@@ -6,27 +6,27 @@ const calcUpsetPoints_1 = require("./calcUpsetPoints");
 const calcStreakBonus_1 = require("./calcStreakBonus");
 const footballTotalScore_1 = require("./footballTotalScore");
 const settlementGame_1 = require("./settlementGame");
+const nbaTopScorerBonus_1 = require("./nbaTopScorerBonus");
 const wcGoalScorerBonus_1 = require("./wcGoalScorerBonus");
-function lerpByRange(value, min, max, start, end) {
-    if (value <= min)
-        return start;
-    if (value >= max)
-        return end;
-    const t = (value - min) / (max - min);
-    return start + (end - start) * t;
+const round1 = (v) => Math.round(v * 10) / 10;
+/** 誤差 0 → max、誤差 zeroAt → 0 のコサイン減衰（C¹ 連続） */
+function smoothScoreDecay(maxPoints, error, zeroAt) {
+    if (!Number.isFinite(error) || error <= 0)
+        return maxPoints;
+    if (error >= zeroAt)
+        return 0;
+    const factor = 0.5 * (1 + Math.cos((Math.PI * error) / zeroAt));
+    return round1(maxPoints * factor);
 }
+const MARGIN_MAX = 4;
+const MARGIN_ZERO_AT = 15;
+const COMBINED_TOTAL_MAX = 2;
+const COMBINED_TOTAL_ZERO_AT = 11;
 function calcDiffPointsGradient(diffError) {
-    if (diffError <= 0)
-        return 4;
-    if (diffError <= 3)
-        return lerpByRange(diffError, 0, 3, 4, 3);
-    if (diffError <= 6)
-        return lerpByRange(diffError, 3, 6, 3, 2);
-    if (diffError <= 10)
-        return lerpByRange(diffError, 6, 10, 2, 1);
-    if (diffError <= 14)
-        return lerpByRange(diffError, 10, 14, 1, 0);
-    return 0;
+    return smoothScoreDecay(MARGIN_MAX, diffError, MARGIN_ZERO_AT);
+}
+function calcTotalPointsGradient(totalError) {
+    return smoothScoreDecay(COMBINED_TOTAL_MAX, totalError, COMBINED_TOTAL_ZERO_AT);
 }
 function calcPointsV3({ predHome, predAway, finalHome, finalAway, }) {
     const finalDiff = finalHome - finalAway;
@@ -48,12 +48,8 @@ function calcPointsV3({ predHome, predAway, finalHome, finalAway, }) {
     }
     const winPoints = 4;
     const diffPoints = calcDiffPointsGradient(diffError);
-    let totalPoints = 0;
-    if (totalError <= 3)
-        totalPoints = 2;
-    else if (totalError <= 7)
-        totalPoints = 1;
-    const basePoints = winPoints + diffPoints + totalPoints;
+    const totalPoints = calcTotalPointsGradient(totalError);
+    const basePoints = round1(winPoints + diffPoints + totalPoints);
     return {
         points: basePoints,
         basePoints,
@@ -70,7 +66,7 @@ function calcPointsV3({ predHome, predAway, finalHome, finalAway, }) {
  * 分布集計では settled 済み投稿も含めて呼ぶ。
  */
 function computePostSettlement({ p, game, market, hadUpsetGame, streakResultMap, }) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const final = { home: game.homeScore, away: game.awayScore };
     const settlementGame = {
         homeScore: game.homeScore,
@@ -122,10 +118,13 @@ function computePostSettlement({ p, game, market, hadUpsetGame, streakResultMap,
         ? p.stats.pointsV3Detail.activeWinStreak
         : 0);
     const streakBonus = (0, calcStreakBonus_1.calcStreakBonus)(activeWinStreak);
-    const goalScorerBonus = (0, wcGoalScorerBonus_1.calcWcGoalScorerBonus)(game.league, p.prediction, game.goalScorers, {
-        homeTeamId: game.homeTeamId,
-        awayTeamId: game.awayTeamId,
-    });
+    const leagueKey = String((_h = game.league) !== null && _h !== void 0 ? _h : "").toLowerCase();
+    const goalScorerBonus = leagueKey === "nba"
+        ? (0, nbaTopScorerBonus_1.calcNbaTopScorerBonus)(game.league, p.prediction, game.leadingScorers)
+        : (0, wcGoalScorerBonus_1.calcWcGoalScorerBonus)(game.league, p.prediction, game.goalScorers, {
+            homeTeamId: game.homeTeamId,
+            awayTeamId: game.awayTeamId,
+        });
     const totalPoints = baseScore.basePoints + upsetBonus + streakBonus + goalScorerBonus;
     return {
         totalPoints,

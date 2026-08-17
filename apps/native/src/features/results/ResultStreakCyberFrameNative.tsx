@@ -41,7 +41,7 @@ export default function ResultStreakCyberFrameNative({
 
   return (
     <View pointerEvents="none" style={styles.overlay} onLayout={onLayout}>
-      {shellContext !== "predictOverlay" && size.w > 0 && size.h > 0 ? (
+      {size.w > 0 && size.h > 0 ? (
         <ResultCyberFrameDecorNative
           width={size.w}
           height={size.h}

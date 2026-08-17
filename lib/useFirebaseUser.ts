@@ -62,8 +62,21 @@ export function FirebaseUserProvider({ children }: { children: ReactNode }) {
       unsub = onAuthStateChanged(auth, apply);
     });
 
+    // Firebase 初期化がハングしたときスプラッシュから抜け出せるようフォールバック
+    const fallback = setTimeout(() => {
+      if (cancelled) return;
+      setStatus((s) => {
+        if (s !== "loading") return s;
+        authListenerResolved = true;
+        snapshotUser = auth.currentUser;
+        return auth.currentUser ? "ready" : "guest";
+      });
+      setFUser((u) => u ?? auth.currentUser);
+    }, 8000);
+
     return () => {
       cancelled = true;
+      clearTimeout(fallback);
       unsub?.();
     };
   }, []);

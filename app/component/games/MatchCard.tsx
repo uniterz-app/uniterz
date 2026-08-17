@@ -6,13 +6,12 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import {
   joinTeamNameLines,
-  splitWcCountryNameForMobileList,
   splitTeamNameByLeague,
 } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Pencil, X } from "lucide-react";
+import { Pencil } from "lucide-react";
 import {
   predictOverlayCornerAnchorClass,
   predictOverlayCornerButtonClasses,
@@ -37,9 +36,8 @@ import ResultStreakCyberFrame from "@/app/component/result/ResultStreakCyberFram
 import ResultUpsetCyberFrame from "@/app/component/result/ResultUpsetCyberFrame";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
-import WcGoalScorerResultRow, {
-  useWcGoalScorerResult,
-} from "@/app/component/result/WcGoalScorerResultRow";
+import NbaTopScorerResultRow from "@/app/component/result/NbaTopScorerResultRow";
+import { resolveNbaTopScorerResultInfo } from "@/lib/result/resolveNbaTopScorerResult";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { motion, useReducedMotion } from "framer-motion";
@@ -52,35 +50,35 @@ import {
   GAMES_LIST_CARDS_LEAD_IN_SEC,
 } from "./cyberMotion";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
-import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
-import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
-import { resolveWcGroupStageStandingForKnockoutDisplay } from "@/lib/wc/wcGroupStandingRank";
-import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 import { t } from "@/lib/i18n/t";
-import type { WcGameGoalScorer } from "@/lib/wc/goalScorer";
-
-import type { League } from "@/lib/leagues";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   getTeamPrimaryColor,
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
-import { normalizeLeague } from "@/lib/leagues";
+import { normalizeLeague, type League } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import {
+  matchScoreClass,
   matchVsLabelClass,
   nameOxanium,
   resultStatsMetricNumClass,
 } from "@/lib/fonts";
 import MatchCardOverlayMarketBar from "@/app/component/games/MatchCardOverlayMarketBar";
 import MatchListCyberDecor from "@/app/component/games/MatchListCyberDecor";
+import MatchListLineFrame from "@/app/component/games/MatchListLineFrame";
+import MatchPickupSideLabel from "@/app/component/games/MatchPickupSideLabel";
 import PredictOverlayCyberDecor from "@/app/component/predict/PredictOverlayCyberDecor";
+import {
+  matchLineFramePaint,
+  resultOutcomeLineFramePaint,
+} from "@/lib/games/matchListLineFrame";
 import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
   PREDICT_OVERLAY_CYBER_GRID_CLASS,
@@ -221,18 +219,22 @@ homeRecord?: {
   onClosePredictOverlay?: () => void;
   /** 親で言語を渡すと users/{uid} の購読をカード毎に増やさない */
   language?: Language;
-  /** WC：試合の実得点者（一覧カード表示用） */
-  goalScorers?: WcGameGoalScorer[] | null;
+  /** NBA: 最多得点者予想の候補選手 */
+  topScorerCandidates?: import("@/lib/nba/topScorer").NbaTopScorerCandidate[] | null;
+  /** NBA ピックアップ試合。左辺に `PICK UP` を出す */
+  isPickup?: boolean;
+  /** 先頭カードの左辺 `PICK UP` をチュートリアル測定する */
+  tutorialPickupLabelTarget?: string;
 };
 
 
 
 const leagueLineColor: Record<League, string> = {
-  bj: "#eab308",   // Bリーグ
-  j1: "#22c55e",   // J1
-  nba: "#60a5fa",  // NBA
-  pl: "#a855f7",   // Premier League（紫系・仮）
-  wc: "#f59e0b",   // World Cup（アンバー）
+  bj: "rgba(255,255,255,0.32)",
+  j1: "rgba(255,255,255,0.32)",
+  nba: "rgba(255,255,255,0.32)",
+  pl: "rgba(255,255,255,0.32)",
+  wc: "rgba(255,255,255,0.32)",
 };
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
@@ -278,36 +280,7 @@ function wcListNameFontStyle(
   wcTeamNameFont: React.CSSProperties,
   teamNameFont: React.CSSProperties
 ): React.CSSProperties {
-  if (league === "wc" && isMobile && mobileDense) {
-    return wcBracketMarketTeamTypography(true);
-  }
-  if (league === "wc") return wcTeamNameFont;
   return teamNameFont;
-}
-
-function renderWcMobileDenseTeamName(
-  fullName: string,
-  textClass: string,
-  fontStyle: React.CSSProperties
-) {
-  const split = splitWcCountryNameForMobileList(fullName);
-  if (!split.singleLine) {
-    return (
-      <>
-        <div className={textClass} style={fontStyle}>
-          {split.line1}
-        </div>
-        <div className={textClass} style={fontStyle}>
-          {split.line2}
-        </div>
-      </>
-    );
-  }
-  return (
-    <div className={`${textClass} whitespace-nowrap`} style={fontStyle}>
-      {split.text}
-    </div>
-  );
 }
 
 /** モバイル dense 一覧のキックオフ — Web 試合カード（非 dense）と同じ Oxanium + サイズ */
@@ -462,43 +435,14 @@ function MatchCardView({
   onRequestPredictEdit,
   onClosePredictOverlay,
   language,
+  isPickup = false,
+  tutorialPickupLabelTarget,
 }: MatchCardProps & { language: Language }) {
   const router = useRouter();
 
   const { fUser: user } = useFirebaseUser();
   const m = t(language);
   const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
-
-  const wcBroadcastSep = language === "ja" ? "：" : ": ";
-
-  const wcHomeTeamId = resolveWcTeamId(
-    home,
-    resultPost?.home?.teamId,
-    resultPost?.game?.home,
-    resultPost?.home?.name,
-    home.name
-  );
-  const wcAwayTeamId = resolveWcTeamId(
-    away,
-    resultPost?.away?.teamId,
-    resultPost?.game?.away,
-    resultPost?.away?.name,
-    away.name
-  );
-  const wcKnockoutHomeStanding = useMemo(
-    () =>
-      league === "wc" && knockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(wcHomeTeamId, homeRecord)
-        : null,
-    [league, knockout, wcHomeTeamId, homeRecord]
-  );
-  const wcKnockoutAwayStanding = useMemo(
-    () =>
-      league === "wc" && knockout
-        ? resolveWcGroupStageStandingForKnockoutDisplay(wcAwayTeamId, awayRecord)
-        : null,
-    [league, knockout, wcAwayTeamId, awayRecord]
-  );
 
   const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).
@@ -520,12 +464,8 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     ? MOBILE_LIST_CARD_PANEL_DENSE
     : WEB_LIST_CARD_PANEL;
   /** モバイル dense / W杯コンパクト一覧 */
-  const mobileDense =
-    (listScheduleDense && isMobile) || (compact && league === "wc");
-  const showWcBroadcastRow =
-    league === "wc" &&
-    broadcastLabels.length > 0 &&
-    status !== "final";
+  const mobileDense = listScheduleDense && isMobile;
+  const showWcBroadcastRow = false;
   const wcBroadcastCompact = mobileDense || inPredictOverlay;
   /** 予想オーバーレイは下にフォームが続くため、発光仕切り線は出さない */
   const showDividerLine =
@@ -535,12 +475,14 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     showMarketBias && (inPredictOverlay || attachOverlayMarketBar);
   /** オーバーレイでは未開始試合の中央をキックオフ時刻ではなく VS にする */
   const overlayCenterMode = inPredictOverlay || attachOverlayMarketBar;
+  /** ラウンドラベルから線がカードを包む（試合一覧 Native 線枠と同じ） */
+  const useOverlayLineFrame = overlayCenterMode;
   const showMergedResult = Boolean(overlayCenterMode && resultPost);
   /** 予想オーバーレイ：未開始試合のキックオフ・放送局（予想有無に関わらず） */
   const showOverlayScheduleMeta = Boolean(
     overlayCenterMode &&
       status === "scheduled" &&
-      (startAtJst || showWcBroadcastRow)
+      startAtJst
   );
   const {
     badge: resultBadge,
@@ -582,11 +524,14 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
             ? CYBER_GLASS_SHADOW
             : mergedResultAccent.shadow || CYBER_GLASS_SHADOW,
         ].join(" ")
-      : predictOverlayGlassBase;
-  const wcGoalScorerResultRaw = useWcGoalScorerResult(
-    resultPost ?? ({ league: "nba", prediction: {} } as PredictionPostV2)
+      : showMergedResult
+        ? predictOverlayGlassBase
+        : `${predictOverlayGlassBase} predict-overlay-cyber-card--bare`;
+  const wcGoalScorerResult = null;
+  const nbaTopScorerResult = useMemo(
+    () => (resultPost ? resolveNbaTopScorerResultInfo(resultPost) : null),
+    [resultPost]
   );
-  const wcGoalScorerResult = resultPost ? wcGoalScorerResultRaw : null;
   const predictedScore =
     resultPost?.prediction?.score != null
       ? resultPost.prediction.score
@@ -594,7 +539,10 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   const hideMergedStatsSection =
     showMergedResult && resultPost?.status !== "final";
   const kickoffLocale = language === "ja" ? "ja-JP" : "en-US";
-  const teamNameFont = bracketMarketTeamTypography(isMobile);
+  const teamNameFont = {
+    ...bracketMarketTeamTypography(isMobile),
+    transform: "skewX(-6deg)",
+  };
   /** letter-spacing は末尾にも余白が乗るため、中央揃え時の見た目ずれを補正 */
   const wcTeamNameFont: React.CSSProperties =
     league === "wc"
@@ -862,14 +810,47 @@ const overlayPredictScoreClass = isMobile
     ? "text-sm font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-base"
     : "text-base font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-lg";
 
+const overlayPkScoreClass = isMobile
+  ? "text-[10px] font-bold leading-tight text-amber-200 drop-shadow-[0_0_10px_rgba(251,191,36,0.28)]"
+  : "text-[11px] font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-xs";
+
+const overlayPredictKickerClass =
+  "text-[8px] font-semibold uppercase tracking-[0.14em] text-white/45 md:text-[9px]";
+
 const renderOverlayPredictScore = () => {
   if (!showMergedResult || !predictedScore) return null;
   return (
-    <MatchScoreLine
-      home={predictedScore.home}
-      away={predictedScore.away}
-      className={overlayPredictScoreClass}
-    />
+    <>
+      <div
+        className={["mt-0.5 text-center", overlayPredictKickerClass].join(" ")}
+        style={teamNameFont}
+      >
+        {language === "ja" ? "あなたの予想" : "Your prediction"}
+      </div>
+      <MatchScoreLine
+        home={predictedScore.home}
+        away={predictedScore.away}
+        className={overlayPredictScoreClass}
+      />
+    </>
+  );
+};
+
+const renderOverlayPkScore = () => {
+  if (!pkScore) return null;
+  return (
+    <div
+      className={[
+        "mt-0.5 flex items-baseline justify-center gap-1",
+        matchScoreClass,
+        overlayPkScoreClass,
+      ].join(" ")}
+    >
+      <span className="shrink-0 text-[0.92em] opacity-90">PK</span>
+      <span className="shrink-0 tabular-nums">{pkScore.home}</span>
+      <span className="shrink-0 opacity-70">–</span>
+      <span className="shrink-0 tabular-nums">{pkScore.away}</span>
+    </div>
   );
 };
 
@@ -890,6 +871,9 @@ const mergedPreKickoffScoreClass = [
   let center: React.ReactNode = overlayCenterMode ? (
   status === "final" && score ? (
     <div
+      data-tutorial-target={
+        showMergedResult ? "result-detail-score" : undefined
+      }
       className={
         isMobile
           ? mobileDense
@@ -1145,11 +1129,14 @@ const mergedPreKickoffScoreClass = [
           onPointerUp: () => setFullCardPressed(false),
           onPointerLeave: () => setFullCardPressed(false),
           onPointerCancel: () => setFullCardPressed(false),
+          onTouchStart: () => setFullCardPressed(true),
+          onTouchEnd: () => setFullCardPressed(false),
+          onTouchCancel: () => setFullCardPressed(false),
         }
       : {};
 
   const cardShellPressScale =
-    useFullCardHitLayer && fullCardPressed && !reduceMotion ? 0.985 : 1;
+    useFullCardHitLayer && fullCardPressed && !reduceMotion ? 0.99 : 1;
 
   const handleMakePrediction = async (e: React.MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
@@ -1236,7 +1223,8 @@ setNavigating(true);
 
   // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
   const shellClassName = [
-    "group/card relative overflow-hidden text-white",
+    "group/card relative text-white",
+    useOverlayLineFrame || isPickup ? "overflow-visible" : "overflow-hidden",
     inPredictOverlay && isMobile
       ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
       : mobileDense
@@ -1245,7 +1233,7 @@ setNavigating(true);
     !useSplitGlassShell && !inPredictOverlay && !attachOverlayMarketBar
       ? webPanelClass
       : "",
-    !useSplitGlassShell && attachOverlayMarketBar
+    !useSplitGlassShell && attachOverlayMarketBar && !useOverlayLineFrame
       ? mergedOverlayGlassClass
       : "",
     !useSplitGlassShell && !inPredictOverlay && !attachOverlayMarketBar && isPredicted
@@ -1270,7 +1258,7 @@ setNavigating(true);
   ].join(" ");
 
   const glassShellClassName =
-    useSplitGlassShell && attachOverlayMarketBar
+    useSplitGlassShell && attachOverlayMarketBar && !useOverlayLineFrame
       ? ["pointer-events-none absolute inset-0 z-0", mergedOverlayGlassClass].join(
           " "
         )
@@ -1326,7 +1314,7 @@ setNavigating(true);
         layoutId: sharedLayoutId,
       };
 
-return (
+const card = (
 <Shell
   {...shellMotionProps}
   className={shellClassName}
@@ -1371,22 +1359,31 @@ return (
         <div className={glassShellClassName} aria-hidden />
       ) : null}
 
-      {showMergedResult && isResultHitFrameBadge(resultBadge) ? (
+      {isPickup && !useOverlayLineFrame ? (
+        <MatchPickupSideLabel
+          color={matchLineFramePaint({ pickup: true, predicted: Boolean(isPredicted) }).color}
+          tutorialTarget={tutorialPickupLabelTarget}
+        />
+      ) : null}
+
+      {showMergedResult && !useOverlayLineFrame && isResultHitFrameBadge(resultBadge) ? (
         <ResultHitCyberFrame />
       ) : null}
-      {showMergedResult && isResultPerfectFrameBadge(resultBadge) ? (
+      {showMergedResult && !useOverlayLineFrame && isResultPerfectFrameBadge(resultBadge) ? (
         <ResultPerfectCyberFrame />
       ) : null}
-      {showMergedResult && isResultStreakFrameBadge(resultBadge) ? (
+      {showMergedResult && !useOverlayLineFrame && isResultStreakFrameBadge(resultBadge) ? (
         <ResultStreakCyberFrame activeWinStreak={resultActiveWinStreak} />
       ) : null}
-      {showMergedResult && isResultUpsetFrameBadge(resultBadge) ? (
+      {showMergedResult && !useOverlayLineFrame && isResultUpsetFrameBadge(resultBadge) ? (
         <ResultUpsetCyberFrame />
       ) : null}
 
-      {attachOverlayMarketBar || (inPredictOverlay && !overlayUnifiedForm) ? (
+      {useOverlayLineFrame
+        ? null
+        : attachOverlayMarketBar || (inPredictOverlay && !overlayUnifiedForm) ? (
         <>
-          {attachOverlayMarketBar ? null : (
+          {attachOverlayMarketBar || !showMergedResult ? null : (
             <div
               className={[
                 "pointer-events-none absolute inset-0 z-[1]",
@@ -1402,7 +1399,7 @@ return (
             ].join(" ")}
             aria-hidden
           />
-          <PredictOverlayCyberDecor />
+          {showMergedResult ? <PredictOverlayCyberDecor /> : null}
         </>
       ) : overlayUnifiedForm && inPredictOverlay ? null : (
         <>
@@ -1479,7 +1476,11 @@ return (
         style={{ transformOrigin: "50% 50%" }}
         initial={entryTransition ? { opacity: 0 } : false}
         animate={{
-          opacity: entryTransition ? 1 : undefined,
+          opacity: entryTransition
+            ? 1
+            : useFullCardHitLayer && fullCardPressed && !reduceMotion
+              ? 0.96
+              : undefined,
           scale: cardShellPressScale,
         }}
         transition={contentShellTransition}
@@ -1495,35 +1496,6 @@ return (
             activeWinStreak={resultActiveWinStreak}
             isMobile={isMobile}
           />
-        </div>
-      ) : null}
-      {onClosePredictOverlay ? (
-        <div
-          className={[
-            "pointer-events-auto absolute z-[50]",
-            predictOverlayCornerAnchorClass(isMobile, "left"),
-          ].join(" ")}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            className={[
-              predictOverlayCornerButtonClasses(isMobile, "close"),
-              "relative z-[52]",
-            ].join(" ")}
-            aria-label={m.common.close}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onClosePredictOverlay();
-            }}
-          >
-            <X
-              className={isMobile ? "h-2.5 w-2.5" : "h-[14px] w-[14px]"}
-              strokeWidth={2.25}
-              aria-hidden
-            />
-          </button>
         </div>
       ) : null}
       {showMergedPredictEdit && resultPost ? (
@@ -1591,17 +1563,21 @@ return (
 
       <motion.div
         className={[
-          mobileDense
-            ? "mb-0 px-2 pb-0 pt-0"
-            : inPredictOverlay
-              ? "mb-0 px-4 pb-0 pt-1"
-              : dense
-                ? "mb-0.5 px-3 pt-2"
-                : "mb-0.5 px-4 pt-2",
+          useOverlayLineFrame
+            ? mobileDense
+              ? "mb-0 px-2 pb-0 pt-4"
+              : "mb-0 px-4 pb-0 pt-4"
+            : mobileDense
+              ? "mb-0 px-2 pb-0 pt-0"
+              : inPredictOverlay
+                ? "mb-0 px-4 pb-0 pt-1"
+                : dense
+                  ? "mb-0.5 px-3 pt-2"
+                  : "mb-0.5 px-4 pt-2",
         ].join(" ")}
         {...entryGroupProps(ENTRY_GROUP_HEADER)}
       >
-        {!!roundLabel && (
+        {!!roundLabel && !useOverlayLineFrame && (
           <div
             className={[
               "mc-round text-center font-bold",
@@ -1617,7 +1593,15 @@ return (
                     : // Web 試合カード：レギュラーシーズン等の帯ラベルを読みやすく大きめに
                       "mt-2 mb-0.5 text-xl tracking-[0.06em] md:text-2xl lg:text-3xl",
             ].join(" ")}
-            style={teamNameFont}
+            style={{
+              ...teamNameFont,
+              transform: "skewX(-10deg)",
+            }}
+            data-tutorial-target={
+              inPredictOverlay || attachOverlayMarketBar
+                ? "predict-round"
+                : undefined
+            }
           >
             {roundLabel}
           </div>
@@ -1627,11 +1611,13 @@ return (
           className={
             mobileDense
               ? "h-0 md:h-1"
-              : inPredictOverlay
-                ? league === "wc"
-                  ? "h-2 md:h-2.5"
-                  : "h-0.5 md:h-1"
-                : "h-2.5 md:h-3.5"
+              : useOverlayLineFrame
+                ? "h-1 md:h-1.5"
+                : inPredictOverlay
+                  ? league === "wc"
+                    ? "h-2 md:h-2.5"
+                    : "h-0.5 md:h-1"
+                  : "h-2.5 md:h-3.5"
           }
           aria-hidden
         />
@@ -1646,7 +1632,14 @@ return (
               : dense
                 ? "items-start gap-1 px-3 py-0"
                 : "items-center gap-2 px-4 py-2.5"
+        } ${
+          inPredictOverlay || attachOverlayMarketBar ? "pb-2 pt-0.5" : ""
         }`}
+        data-tutorial-target={
+          inPredictOverlay || attachOverlayMarketBar
+            ? "predict-sides"
+            : undefined
+        }
         style={
           vtContentName
             ? ({
@@ -1672,7 +1665,7 @@ return (
         >
 
   {/* HOME：Web はラベルを大きく */}
-  {league !== "wc" && (
+  {(
     <div
       className={[
         mobileDense ? "mb-0 -mt-3" : "mb-1",
@@ -1690,19 +1683,10 @@ return (
   {/* ユニ・チーム名・戦績（WC は国旗幅を基準に縦積み中央揃え） */}
   <div
     className={[
-      league === "wc"
-        ? "inline-flex flex-col items-center"
-        : "flex w-full flex-col items-center",
+      "flex w-full flex-col items-center",
     ].join(" ")}
   >
-  {league === "wc" ? (
-    <WcTeamFlagWithMeta
-      teamId={wcHomeTeamId}
-      compact={mobileDense || isMobile}
-      flagClassName={teamMarkSizeFlag}
-      knockout={knockout}
-    />
-  ) : Icon === Jersey ? (
+  {Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={homeJerseyColor}
       accentEnd={homeSecondaryColor}
@@ -1725,7 +1709,7 @@ return (
       wcListNameShellClass(league, isMobile, mobileDense),
       mobileDense
         ? "-mt-0.5"
-        : inPredictOverlay && league === "wc"
+        : inPredictOverlay
           ? "mt-0.5"
           : "mt-1.5",
     ].join(" ")}
@@ -1756,18 +1740,6 @@ return (
             {homeL2}
           </div>
         </>
-      ) : league === "wc" && mobileDense ? (
-        renderWcMobileDenseTeamName(
-          joinTeamNameLines(homeL1, homeL2),
-          wcListNameTextClass(league, isMobile, mobileDense),
-          wcListNameFontStyle(
-            league,
-            isMobile,
-            mobileDense,
-            wcTeamNameFont,
-            teamNameFont
-          )
-        )
       ) : (
         // ★ その他リーグ（mobile）
         <div
@@ -1808,15 +1780,7 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  {league === "wc" && knockout ? (
-    <WcGroupStandingRecordLine
-      standing={wcKnockoutHomeStanding}
-      language={language}
-      compact={mobileDense || isMobile}
-    />
-  ) : (
-    <RecordWithRank r={homeRecord} league={league} />
-  )}
+  <RecordWithRank r={homeRecord} league={league} />
 </div>
   </div>
 
@@ -1950,7 +1914,7 @@ return (
           {...entryGroupProps(ENTRY_GROUP_TEAMS, 12)}
         >
 
-  {league !== "wc" && (
+  {(
     <div
       className={[
         mobileDense ? "mb-0 -mt-3" : "mb-1",
@@ -1968,20 +1932,11 @@ return (
   {/* ユニ・チーム名・戦績（WC は国旗幅を基準に縦積み中央揃え） */}
   <div
     className={[
-      league === "wc"
-        ? "inline-flex flex-col items-center"
-        : "flex w-full flex-col items-center",
+      "flex w-full flex-col items-center",
     ].join(" ")}
   >
   {/* アイコン：mobile大きく / webそのまま */}
-  {league === "wc" ? (
-    <WcTeamFlagWithMeta
-      teamId={wcAwayTeamId}
-      compact={mobileDense || isMobile}
-      flagClassName={teamMarkSizeFlag}
-      knockout={knockout}
-    />
-  ) : Icon === Jersey ? (
+  {Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={awayJerseyColor}
       accentEnd={awaySecondaryColor}
@@ -2004,7 +1959,7 @@ return (
       wcListNameShellClass(league, isMobile, mobileDense),
       mobileDense
         ? "-mt-0.5"
-        : inPredictOverlay && league === "wc"
+        : inPredictOverlay
           ? "mt-0.5"
           : "mt-1.5",
     ].join(" ")}
@@ -2035,18 +1990,6 @@ return (
             {awayL2}
           </div>
         </>
-      ) : league === "wc" && mobileDense ? (
-        renderWcMobileDenseTeamName(
-          joinTeamNameLines(awayL1, awayL2),
-          wcListNameTextClass(league, isMobile, mobileDense),
-          wcListNameFontStyle(
-            league,
-            isMobile,
-            mobileDense,
-            wcTeamNameFont,
-            teamNameFont
-          )
-        )
       ) : (
         // ★ その他リーグ（mobile）
         <div
@@ -2086,15 +2029,7 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  {league === "wc" && knockout ? (
-    <WcGroupStandingRecordLine
-      standing={wcKnockoutAwayStanding}
-      language={language}
-      compact={mobileDense || isMobile}
-    />
-  ) : (
-    <RecordWithRank r={awayRecord} league={league} />
-  )}
+  <RecordWithRank r={awayRecord} league={league} />
 </div>
   </div>
 
@@ -2170,109 +2105,6 @@ return (
               </span>
             </span>
           ) : null}
-          {showWcBroadcastRow ? (
-            <span className="inline-flex flex-wrap items-baseline justify-center gap-x-1.5">
-              <span
-                className={[
-                  "shrink-0 font-semibold text-white/45",
-                  wcBroadcastCompact ? "text-xs md:text-sm" : "text-sm md:text-base",
-                ].join(" ")}
-                style={teamNameFont}
-              >
-                {m.games.broadcasters}
-              </span>
-              <span
-                className={[
-                  "flex min-w-0 flex-wrap items-baseline justify-center font-bold tracking-wide text-cyan-100/90",
-                ].join(" ")}
-                style={teamNameFont}
-              >
-                {broadcastLabels.map((label, index) => {
-                  const cjkName = broadcastNameUsesCjk(label);
-                  const nameSizeClass = cjkName
-                    ? wcBroadcastCompact
-                      ? "text-xs md:text-sm"
-                      : "text-sm md:text-base"
-                    : wcBroadcastCompact
-                      ? "text-sm md:text-base"
-                      : "text-base md:text-lg";
-                  return (
-                    <span
-                      key={`${label}-${index}`}
-                      className="inline-flex items-baseline"
-                    >
-                      {index > 0 ? (
-                        <span className={[nameSizeClass, "opacity-80"].join(" ")}>
-                          {wcBroadcastSep}
-                        </span>
-                      ) : null}
-                      <span className={nameSizeClass}>{label}</span>
-                    </span>
-                  );
-                })}
-              </span>
-            </span>
-          ) : null}
-        </motion.div>
-      ) : null}
-
-      {showWcBroadcastRow && !overlayCenterMode && showDividerLine ? (
-        <motion.div
-          className={[
-            "flex w-full items-center justify-center gap-2 px-3 text-center",
-            wcBroadcastCompact
-              ? inPredictOverlay
-                ? "mt-0.5 py-0.5 md:px-4"
-                : "mt-1 py-1 md:px-4"
-              : "mt-2 py-1.5 md:px-4",
-          ].join(" ")}
-          initial={entryTransition ? { opacity: 0, y: 8 } : false}
-          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-          transition={entryTransition ? entryTransition(6) : undefined}
-        >
-          <span
-            className={[
-              "shrink-0 font-semibold text-white/45",
-              wcBroadcastCompact
-                ? "text-xs md:text-sm"
-                : "text-sm md:text-base",
-            ].join(" ")}
-            style={teamNameFont}
-          >
-            {m.games.broadcasters}
-          </span>
-          <span
-            className={[
-              "flex min-w-0 flex-wrap items-baseline justify-center font-bold tracking-wide text-cyan-100/90",
-            ].join(" ")}
-            style={teamNameFont}
-          >
-            {broadcastLabels.map((label, index) => {
-              const cjkName = broadcastNameUsesCjk(label);
-              const nameSizeClass = cjkName
-                ? wcBroadcastCompact
-                  ? "text-xs md:text-sm"
-                  : "text-sm md:text-base"
-                : wcBroadcastCompact
-                  ? "text-sm md:text-base"
-                  : "text-base md:text-lg";
-              return (
-                <span key={`${label}-${index}`} className="inline-flex items-baseline">
-                  {index > 0 ? (
-                    <span
-                      className={[
-                        nameSizeClass,
-                        "opacity-80",
-                      ].join(" ")}
-                    >
-                      {wcBroadcastSep}
-                    </span>
-                  ) : null}
-                  <span className={nameSizeClass}>{label}</span>
-                </span>
-              );
-            })}
-          </span>
         </motion.div>
       ) : null}
 
@@ -2317,23 +2149,23 @@ return (
 
       {showMergedResult && resultPost ? (
         <motion.div
+          data-tutorial-target="result-detail-stats"
           className="w-full px-3 pb-2 pt-0.5 md:px-4 md:pb-2.5"
           initial={entryTransition ? { opacity: 0, y: 6 } : false}
           animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
           transition={entryTransition ? entryTransition(8) : undefined}
         >
-          {(wcGoalScorerResult || !hideMergedStatsSection) && (
+          {(!hideMergedStatsSection || nbaTopScorerResult) && (
             <div className="mb-1.5" aria-hidden>
               <div className={RESULT_HAIRLINE} />
             </div>
           )}
           <div className={mobileDense ? "space-y-1.5" : "space-y-2"}>
-            {wcGoalScorerResult ? (
-              <WcGoalScorerResultRow
-                label={m.results.wcGoalScorerLabel}
-                info={wcGoalScorerResult}
+            {nbaTopScorerResult ? (
+              <NbaTopScorerResultRow
+                label={m.results.nbaTopScorerResultLabel}
+                info={nbaTopScorerResult}
                 compact={isMobile}
-                cyberValue={attachOverlayMarketBar || inPredictOverlay}
               />
             ) : null}
             {!hideMergedStatsSection ? (
@@ -2343,7 +2175,7 @@ return (
                 isMobile={isMobile}
                 comfortable
                 ratingBarsImmediate={resultRatingBarsImmediate}
-                rowIndexOffset={wcGoalScorerResult ? 1 : 0}
+                rowIndexOffset={nbaTopScorerResult ? 1 : 0}
               />
             ) : null}
           </div>
@@ -2357,9 +2189,9 @@ return (
       "relative overflow-hidden match-list-cyber-divider",
       dense
         ? mobileDense
-          ? "h-[2px] w-full mt-1.5 md:mt-2"
-          : "h-[2px] w-full mt-2 md:mt-2.5"
-        : "h-[3px] w-full mt-2.5 md:mt-3",
+          ? "h-px w-full mt-1.5 md:mt-2"
+          : "h-px w-full mt-2 md:mt-2.5"
+        : "h-px w-full mt-2.5 md:mt-3",
     ].join(" ")}
     style={{
       backgroundColor: leagueLineColor[league],
@@ -2398,7 +2230,7 @@ return (
         <motion.div
           className={
             mobileDense
-              ? "grid grid-cols-1 gap-1 px-2 py-0.5 md:gap-3 md:px-4 md:py-3"
+              ? "grid grid-cols-1 gap-1 px-2.5 pt-1.5 pb-2.5 md:gap-3 md:px-4 md:py-3"
               : "grid grid-cols-1 gap-2 px-3 py-1.5 md:gap-3 md:px-4 md:py-2.5"
           }
           {...entryGroupProps(ENTRY_GROUP_FOOTER)}
@@ -2453,6 +2285,22 @@ return (
       )}
       </motion.div>
     </Shell>
+  );
+
+  if (!useOverlayLineFrame) return card;
+
+  return (
+    <MatchListLineFrame
+      topLabel={roundLabel}
+      predicted={Boolean(isPredicted && !showMergedResult)}
+      pickup={isPickup}
+      leftLabel={isPickup ? "PICK UP" : undefined}
+      paint={resultOutcomeLineFramePaint(showMergedResult ? resultBadge : null)}
+      topLabelTutorialTarget="predict-round"
+      leftLabelTutorialTarget={tutorialPickupLabelTarget}
+    >
+      {card}
+    </MatchListLineFrame>
   );
 }
 

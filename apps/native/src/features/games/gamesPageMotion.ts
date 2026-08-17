@@ -78,9 +78,6 @@ export const gamesTopBarMenuEntering = lockOnSlideKeyframe(0, -10, 0);
 /** Web `GamesPage` topBarEntry(0.18, 14) */
 export const gamesTopBarFilterEntering = lockOnSlideKeyframe(180, 14, 0);
 
-/** Web `GamesPage` topBarEntry(0.27, 18) */
-export const gamesTopBarBracketEntering = lockOnSlideKeyframe(270, 18, 0);
-
 /** Web `GamesPage` renderLeagueTitle（letterSpacing は scaleX で近似） */
 export const gamesLeagueTitleEntering = new Keyframe({
   0: { opacity: 0, transform: [{ scaleX: 1.18 }] },

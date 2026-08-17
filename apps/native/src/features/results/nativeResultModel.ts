@@ -7,12 +7,16 @@ import {
   getZonedYMD,
 } from "../../../../../lib/time/zonedTime";
 import { compareResultPostsForDayList } from "../../../../../lib/result/resultPostDaySort";
+import type { PostWithMillis as LibPostWithMillis } from "../../../../../lib/result/result-page-data";
 export type PostWithMillis = Record<string, unknown> & {
   id: string;
   createdAtMillis?: number | null;
   settledAtMillis?: number | null;
   startAtMillis?: number | null;
   status?: string;
+  // PK 補完（useResultPostsPkScores の PostLike）向けに明示。Record 経由だと weak-type 判定で弾かれるため
+  gameId?: string | null;
+  result?: { home?: unknown; away?: unknown } | null;
 };
 
 export type ResultDayGroup = {
@@ -22,7 +26,7 @@ export type ResultDayGroup = {
   final: PostWithMillis[];
 };
 
-export const RESULT_INITIAL_PAGE_SIZE = 20;
+export const RESULT_INITIAL_PAGE_SIZE = 15;
 export const RESULT_NEXT_PAGE_SIZE = 10;
 export const RESULT_POSTS_MAX_CACHED = 400;
 
@@ -211,8 +215,12 @@ export function groupPostsByResultDay(
   const days = Array.from(dayMap.values()).sort((a, b) => b.dateMs - a.dateMs);
 
   days.forEach((day) => {
-    day.pending.sort(compareResultPostsForDayList);
-    day.final.sort(compareResultPostsForDayList);
+    day.pending.sort((a, b) =>
+      compareResultPostsForDayList(a as LibPostWithMillis, b as LibPostWithMillis)
+    );
+    day.final.sort((a, b) =>
+      compareResultPostsForDayList(a as LibPostWithMillis, b as LibPostWithMillis)
+    );
   });
 
   return days;

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <filter id="soft-glow" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18" result="blur"/>
+      <feFlood flood-color="#00E8FF" flood-opacity="0.42"/>
+      <feComposite in2="blur" operator="in"/>
+    </filter>
+    <filter id="rim-glow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#8AF7FF" flood-opacity="0.9"/>
+      <feComposite in2="blur" operator="in"/>
+    </filter>
+    <filter id="slash-glow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/>
+      <feFlood flood-color="#00F5FF" flood-opacity="1"/>
+      <feComposite in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="scan" width="1024" height="3" patternUnits="userSpaceOnUse">
+      <rect width="1024" height="2" fill="none"/>
+      <rect y="2" width="1024" height="1" fill="#050508" opacity="0.26"/>
+    </pattern>
+    <clipPath id="letter">
+      <path d="M306.35,845.48L306.35,506.94C306.35,506.94 496.26,622.16 496.26,622.16L496.8,718.5L636.52,667.51L636.71,138.97C636.71,134.81 648.33,129.74 651.5,129.16L709.37,122.88L814.28,190.79L814.38,740.8L716.51,808.75L654.39,849.14L410,901.12L366.76,879.2L306.32,845.48Z"/>
+      <path d="M307.21,370.44L305.69,273.02L210.06,204.99C209.62,197.14 217.84,188.98 225.26,187.95L352.99,170.04L493.95,151.82L495.88,182.68L496.58,477.71L307.21,370.44Z"/>
+      <path d="M496.11,525.79L496.42,594.28L421.68,519.63Z"/>
+      <path d="M360.98,449.46L306.16,446.07L306.54,393.95Z"/>
+    </clipPath>
+  </defs>
+  <g filter="url(#soft-glow)" opacity="0.95">
+    <path id="u-0" d="M306.35,845.48L306.35,506.94C306.35,506.94 496.26,622.16 496.26,622.16L496.8,718.5L636.52,667.51L636.71,138.97C636.71,134.81 648.33,129.74 651.5,129.16L709.37,122.88L814.28,190.79L814.38,740.8L716.51,808.75L654.39,849.14L410,901.12L366.76,879.2L306.32,845.48Z" fill="#fff"/>
+    <path id="u-1" d="M307.21,370.44L305.69,273.02L210.06,204.99C209.62,197.14 217.84,188.98 225.26,187.95L352.99,170.04L493.95,151.82L495.88,182.68L496.58,477.71L307.21,370.44Z" fill="#fff"/>
+    <path id="u-2" d="M496.11,525.79L496.42,594.28L421.68,519.63Z" fill="#fff"/>
+    <path id="u-3" d="M360.98,449.46L306.16,446.07L306.54,393.95Z" fill="#fff"/>
+    <path d="M307.21,370.44L496.58,477.71L496.26,622.16L306.35,506.94Z" fill="#fff"/>
+  </g>
+  <g filter="url(#rim-glow)">
+    <path id="u-0" d="M306.35,845.48L306.35,506.94C306.35,506.94 496.26,622.16 496.26,622.16L496.8,718.5L636.52,667.51L636.71,138.97C636.71,134.81 648.33,129.74 651.5,129.16L709.37,122.88L814.28,190.79L814.38,740.8L716.51,808.75L654.39,849.14L410,901.12L366.76,879.2L306.32,845.48Z" fill="#fff"/>
+    <path id="u-1" d="M307.21,370.44L305.69,273.02L210.06,204.99C209.62,197.14 217.84,188.98 225.26,187.95L352.99,170.04L493.95,151.82L495.88,182.68L496.58,477.71L307.21,370.44Z" fill="#fff"/>
+    <path id="u-2" d="M496.11,525.79L496.42,594.28L421.68,519.63Z" fill="#fff"/>
+    <path id="u-3" d="M360.98,449.46L306.16,446.07L306.54,393.95Z" fill="#fff"/>
+    <path d="M307.21,370.44L496.58,477.71L496.26,622.16L306.35,506.94Z" fill="#fff"/>
+  </g>
+  <path d="M307.21,370.44L496.58,477.71L496.26,622.16L306.35,506.94Z" fill="#00F5FF" filter="url(#slash-glow)"/>
+    <path id="u-0" d="M306.35,845.48L306.35,506.94C306.35,506.94 496.26,622.16 496.26,622.16L496.8,718.5L636.52,667.51L636.71,138.97C636.71,134.81 648.33,129.74 651.5,129.16L709.37,122.88L814.28,190.79L814.38,740.8L716.51,808.75L654.39,849.14L410,901.12L366.76,879.2L306.32,845.48Z" fill="#fff"/>
+    <path id="u-1" d="M307.21,370.44L305.69,273.02L210.06,204.99C209.62,197.14 217.84,188.98 225.26,187.95L352.99,170.04L493.95,151.82L495.88,182.68L496.58,477.71L307.21,370.44Z" fill="#fff"/>
+    <path id="u-2" d="M496.11,525.79L496.42,594.28L421.68,519.63Z" fill="#fff"/>
+    <path id="u-3" d="M360.98,449.46L306.16,446.07L306.54,393.95Z" fill="#fff"/>
+  <rect width="1024" height="1024" fill="url(#scan)" clip-path="url(#letter)"/>
+</svg>

@@ -6,6 +6,7 @@ import {
   resolveHeaderWordmark,
   type HeaderWordmark,
 } from "@/lib/ui/headerWordmark";
+import UniterzUMark from "@/app/component/units/UniterzUMark";
 
 type Props = {
   /** 未指定時は pathname から自動判定 */
@@ -21,7 +22,7 @@ export default function Header({ title }: Props) {
   const wordmarkLetters = wordmark.split("");
 
   return (
-    <header className="relative z-10 overflow-hidden px-6 py-2 md:px-10 md:py-4 text-white">
+    <header className="relative z-10 overflow-visible px-6 py-2 md:px-10 md:py-4 text-white">
       {/* 背景は透過させ、上端だけうっすら暗くして文字の可読性を確保 */}
       <div
         className="pointer-events-none absolute inset-0"
@@ -34,8 +35,15 @@ export default function Header({ title }: Props) {
 
       {/* container */}
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col items-center gap-0.5 md:max-w-[900px] lg:max-w-[1200px]">
-        {/* UNITERZ：サイドアクセント + レター入場 */}
-        <div className="flex w-full items-center justify-center gap-3 md:gap-4">
+        {/* UNITERZ：左 U マーク + 中央ワードマーク */}
+        <div className="relative flex w-full items-center justify-center gap-3 md:gap-4">
+          <div className="absolute left-0 top-1/2 z-[1] -translate-y-1/2">
+            <UniterzUMark
+              size={40}
+              className="text-orange-100/90"
+              title="UNITERZ"
+            />
+          </div>
           {/* 左アクセント（線 + ダイヤ） */}
           <motion.div
             className="hidden h-px max-w-[110px] flex-1 origin-right bg-gradient-to-l from-cyan-200/45 to-transparent sm:block"
@@ -61,8 +69,7 @@ export default function Header({ title }: Props) {
             aria-label={wordmark}
           >
             <div
-              className="text-orange-100/85"
-              style={{ textShadow: "0 0 22px rgba(103,232,249,0.16)" }}
+              className="header-wordmark-3d text-orange-100/90"
               aria-hidden
             >
               {animate ? (
@@ -117,7 +124,7 @@ export default function Header({ title }: Props) {
         {/* cyber line + light sweep（常時ループはここだけ） */}
         <div className="relative w-full">
           <motion.div
-            className="relative z-1 h-[2px] w-full overflow-hidden rounded-full"
+            className="header-cyber-line-core relative z-1 h-[2px] w-full overflow-hidden rounded-full"
             initial={animate ? { scaleX: 0.1, opacity: 0 } : false}
             animate={{ scaleX: 1, opacity: 1 }}
             transition={{ delay: 0.25, duration: 0.8, ease: [0.22, 0.61, 0.36, 1] }}

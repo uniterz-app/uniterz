@@ -17,7 +17,6 @@ export function parseCommunityLeague(raw: unknown): CommunityLeague {
 
 export const COMMUNITY_METRICS = [
   "totalPoints",
-  "totalPrecision",
   "totalUpset",
   "winRate",
   "activeWinStreak",
@@ -27,6 +26,7 @@ export type CommunityMetric = (typeof COMMUNITY_METRICS)[number];
 
 export function parseCommunityMetric(raw: unknown): CommunityMetric {
   const s = String(raw ?? "");
+  if (s === "totalPrecision") return "totalPoints";
   return COMMUNITY_METRICS.includes(s as CommunityMetric)
     ? (s as CommunityMetric)
     : "totalPoints";

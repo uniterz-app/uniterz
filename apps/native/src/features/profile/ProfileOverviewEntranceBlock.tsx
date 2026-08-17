@@ -2,6 +2,7 @@
  * Web `SummaryCardReveal` に近い、概要ブロックの順番入場（軽量）。
  */
 import { type ReactNode, useEffect } from "react";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -61,10 +62,18 @@ export default function ProfileOverviewEntranceBlock({
     transform: [{ translateY: translateY.value }],
   }));
 
-  // 親の content 幅いっぱいにしてサマリーとチャートの実効幅を揃える
+  // 幅は外側の View で確定。transform 付き Animated.View に任せると
+  // 中身が短いカード（Result Drop 空状態）だけ縮むことがある。
   return (
-    <Animated.View style={[{ alignSelf: "stretch", width: "100%" }, style]}>
-      {children}
-    </Animated.View>
+    <View style={styles.stretch}>
+      <Animated.View style={[styles.stretch, style]}>{children}</Animated.View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  stretch: {
+    alignSelf: "stretch",
+    width: "100%",
+  },
+});

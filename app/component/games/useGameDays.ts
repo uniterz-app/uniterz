@@ -1,35 +1,36 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  getDocs,
-  Timestamp,
-  limit,
-} from "firebase/firestore";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
 import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
-  getPlusMinusDaysRangeInTimeZone,
 } from "@/lib/time/zonedTime";
-import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
-import { mergePlayoffSeriesPeersForWindowGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
-import { getWcGamesPageQueryRange } from "@/lib/wc/wcGamesPageScheduleWindow";
+import { toDateOrNull } from "@/lib/games/transform";
+import { fetchGamesWindowShared } from "@/lib/games/fetchGamesWindowShared";
+import {
+  GAMES_WINDOW_EDGE_EXTEND_DAYS,
+  GAMES_WINDOW_PLUS_MINUS_DEFAULT,
+} from "@/lib/games/gamesWindowConstants";
+import {
+  buildGamesWindowRowsCacheKey,
+  findCoveringGamesWindowRows,
+  patchGamesWindowRowsCache,
+  readGamesWindowRowsCache,
+  writeGamesWindowRowsCache,
+} from "@/lib/games/gamesWindowRowsMemoryCache";
+import {
+  mergeGameRowsById,
+  needsBackwardWindowExtend,
+  needsForwardWindowExtend,
+  shiftDateKeyInTimeZone,
+} from "@/lib/games/gamesWindowRange";
+import { mergeNbaOpeningNightPreviewGames } from "@/lib/games/nbaOpeningNightPreviewGames";
 
-/** アンカー±10日（計21暦日）分の取得上限 */
-const GAME_DAYS_WINDOW_QUERY_LIMIT = 200;
-/** W杯: 一窓で本戦＋近接シード分を取得（件数多め） */
-const WC_GAMES_PAGE_WINDOW_LIMIT = 500;
-
-/** 日付ストリップ用：アンカーの前後に含める暦日数（前後10日＝計21日） */
-const GAME_DAYS_PLUS_MINUS = 10;
+/** 日付ストリップ用：アンカーの前後に含める暦日数（前後5日＝計11日）。端で +2 延長 */
+const GAME_DAYS_PLUS_MINUS = GAMES_WINDOW_PLUS_MINUS_DEFAULT;
 
 /** 月内の games 行から、タイムゾーン基準の「試合がある日」を重複なく昇順で返す */
 export function monthRowsToSortedGameDays(
@@ -41,13 +42,7 @@ export function monthRowsToSortedGameDays(
   const map = new Map<string, Date>();
 
   for (const g of rows) {
-    const t = g.startAtJst;
-    if (!t) continue;
-
-    let d: Date | null = null;
-    if (t instanceof Timestamp) d = t.toDate();
-    else if (typeof t?.toDate === "function") d = t.toDate();
-    else if (t instanceof Date) d = t;
+    const d = toDateOrNull(g?.startAtJst);
     if (!d) continue;
 
     const key = toDateKeyInTimeZone(d, timeZone);
@@ -60,17 +55,10 @@ export function monthRowsToSortedGameDays(
   return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
 }
 
-/** 同一セッション内の getDocs 回数削減（リーグ＋アンカー日＋TTL 内は再取得しない） */
-const GAME_DAYS_ROWS_CACHE_TTL_MS = 5 * 60 * 1000;
-const gameDaysRowsCache = new Map<
-  string,
-  { rows: any[]; peerRowsForSeriesInference: any[]; savedAt: number }
->();
-
 /**
  * 試合がある日の一覧（日付ストリップ用）。
- * - 通常: アンカー日の暦日 ±10 日分を Firestore から取得
- * - World Cup: 本戦期間（タイムゾーン別に 2026-05-01〜07 月頃まで）を一窓で取得（狭い窓では遠い試合が落ちるため）
+ * 共通データは `/api/games/window`（CDN 共有）。予想・Pro は別。
+ * 初期 ±5 日。選択日が端に近づいたら ±2 日ずつ追加取得してマージ。
  */
 export function useGameDays(
   rawLeague: League,
@@ -84,16 +72,17 @@ export function useGameDays(
     [windowAnchor, timeZone],
   );
 
-  const wcWindowCacheKey = useMemo(
-    () => `${league}|${timeZone}|wc-page-window-v1`,
-    [league, timeZone],
+  /** WC はアンカー日と無関係に固定窓の 1 クエリ。それ以外は ±5 日でアンカー依存 */
+  const fetchDepsKey = useMemo(
+    () =>
+      buildGamesWindowRowsCacheKey({
+        league,
+        timeZone,
+        windowKey: anchorDateKey,
+        plusMinus: GAME_DAYS_PLUS_MINUS,
+      }),
+    [league, timeZone, anchorDateKey],
   );
-
-  /** WC はアンカー日と無関係に固定窓の 1 クエリ。それ以外は ±10 日でアンカー依存 */
-  const fetchDepsKey = useMemo(() => {
-    if (league === "wc") return wcWindowCacheKey;
-    return `${league}|${timeZone}|${anchorDateKey}|pm${GAME_DAYS_PLUS_MINUS}`;
-  }, [league, timeZone, anchorDateKey, wcWindowCacheKey]);
 
   const [rows, setRows] = useState<any[]>([]);
   const [peerRowsForSeriesInference, setPeerRowsForSeriesInference] = useState<
@@ -101,6 +90,13 @@ export function useGameDays(
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<string | null>(null);
+  const rangeRef = useRef<{
+    startKey: string;
+    endKey: string;
+    /** 初回取得時のアンカー（キャッシュキー用。選択日移動後も固定） */
+    windowKey: string;
+  } | null>(null);
+  const extendingRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -108,74 +104,93 @@ export function useGameDays(
     async function load() {
       setErr(null);
 
-      const cacheKey =
-        league === "wc"
-          ? wcWindowCacheKey
-          : `${league}|${timeZone}|${anchorDateKey}|pm${GAME_DAYS_PLUS_MINUS}`;
-      const cached = gameDaysRowsCache.get(cacheKey);
-      const fresh =
-        cached && Date.now() - cached.savedAt < GAME_DAYS_ROWS_CACHE_TTL_MS;
+      const cacheKey = buildGamesWindowRowsCacheKey({
+        league,
+        timeZone,
+        windowKey: anchorDateKey,
+        plusMinus: GAME_DAYS_PLUS_MINUS,
+      });
+
+      /** 選択日を覆う新鮮な窓があれば、アンカーが違っても再取得しない */
+      if (league !== "wc") {
+        const covering = findCoveringGamesWindowRows({
+          league,
+          timeZone,
+          selectedDateKey: anchorDateKey,
+          plusMinus: GAME_DAYS_PLUS_MINUS,
+        });
+        if (covering) {
+          if (!alive) return;
+          setRows(covering.rows);
+          setPeerRowsForSeriesInference(
+            covering.peerRows?.length ? covering.peerRows : covering.rows
+          );
+          rangeRef.current = {
+            startKey: covering.startKey,
+            endKey: covering.endKey,
+            windowKey: covering.windowKey,
+          };
+          setLoading(false);
+          return;
+        }
+      }
+
+      const cached = readGamesWindowRowsCache(cacheKey);
       const rowsHaveId =
-        !!cached?.rows?.length &&
+        !cached ||
+        cached.rows.length === 0 ||
         typeof (cached.rows[0] as { id?: string })?.id === "string";
-      if (fresh && rowsHaveId) {
+      if (cached && rowsHaveId) {
         if (!alive) return;
         setRows(cached.rows);
         setPeerRowsForSeriesInference(
-          cached.peerRowsForSeriesInference?.length
-            ? cached.peerRowsForSeriesInference
-            : cached.rows
+          cached.peerRows?.length ? cached.peerRows : cached.rows
         );
+        if (cached.startKey && cached.endKey) {
+          rangeRef.current = {
+            startKey: cached.startKey,
+            endKey: cached.endKey,
+            windowKey: cached.windowKey || anchorDateKey,
+          };
+        }
         setLoading(false);
         return;
       }
 
+      setRows([]);
+      setPeerRowsForSeriesInference([]);
+      rangeRef.current = null;
       setLoading(true);
 
       try {
-        const ref = collection(db, "games");
-        const { start, end } =
-          league === "wc"
-            ? getWcGamesPageQueryRange(timeZone)
-            : getPlusMinusDaysRangeInTimeZone(
-                windowAnchor,
-                timeZone,
-                GAME_DAYS_PLUS_MINUS,
-              );
-
-        const q = query(
-          ref,
-          where("league", "==", league),
-          where("season", "==", GAME_SCHEDULE_SEASON),
-          where("startAtJst", ">=", Timestamp.fromDate(start)),
-          where("startAtJst", "<", Timestamp.fromDate(end)),
-          orderBy("startAtJst", "asc"),
-          limit(
-            league === "wc"
-              ? WC_GAMES_PAGE_WINDOW_LIMIT
-              : GAME_DAYS_WINDOW_QUERY_LIMIT,
-          ),
-        );
-
-        const snap = await getDocs(q);
+        const payload = await fetchGamesWindowShared({
+          league,
+          anchorDateKey,
+          timeZone,
+          plusMinus: GAME_DAYS_PLUS_MINUS,
+        });
 
         if (!alive) return;
 
-        const list = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
+        const list = payload.rows;
+        const peerRows = payload.peerRows.length ? payload.peerRows : list;
+        const startKey = payload.range.startKey;
+        const endKey = payload.range.endKey;
 
-        const peerRows = await mergePlayoffSeriesPeersForWindowGames(list);
-
-        const savedAt = Date.now();
-        gameDaysRowsCache.set(cacheKey, {
+        writeGamesWindowRowsCache(cacheKey, {
           rows: list,
-          peerRowsForSeriesInference: peerRows,
-          savedAt,
+          peerRows,
+          startKey,
+          endKey,
+          windowKey: anchorDateKey,
         });
         setRows(list);
         setPeerRowsForSeriesInference(peerRows);
+        rangeRef.current = {
+          startKey,
+          endKey,
+          windowKey: anchorDateKey,
+        };
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message ?? "unknown error");
@@ -189,18 +204,143 @@ export function useGameDays(
     return () => {
       alive = false;
     };
-    // fetchDepsKey に依存（WC はアンカー変更では再フェッチしない）
   }, [fetchDepsKey]);
 
+  /** 端に近づいたら ±2 日だけ追加取得（ローディングなしでマージ） */
+  useEffect(() => {
+    if (loading || league === "wc") return;
+    const range = rangeRef.current;
+    if (!range?.startKey || !range?.endKey || !range.windowKey) return;
+    if (extendingRef.current) return;
+
+    const wantForward = needsForwardWindowExtend(
+      anchorDateKey,
+      range.endKey,
+      timeZone
+    );
+    const wantBackward = needsBackwardWindowExtend(
+      anchorDateKey,
+      range.startKey,
+      timeZone
+    );
+    if (!wantForward && !wantBackward) return;
+
+    const slices: Array<{ fromKey: string; toKey: string }> = [];
+    if (wantBackward) {
+      const fromKey = shiftDateKeyInTimeZone(
+        range.startKey,
+        timeZone,
+        -GAMES_WINDOW_EDGE_EXTEND_DAYS
+      );
+      if (fromKey && fromKey < range.startKey) {
+        slices.push({ fromKey, toKey: range.startKey });
+      }
+    }
+    if (wantForward) {
+      const toKey = shiftDateKeyInTimeZone(
+        range.endKey,
+        timeZone,
+        GAMES_WINDOW_EDGE_EXTEND_DAYS
+      );
+      if (toKey && range.endKey < toKey) {
+        slices.push({ fromKey: range.endKey, toKey });
+      }
+    }
+    if (!slices.length) return;
+
+    let alive = true;
+    extendingRef.current = true;
+
+    void (async () => {
+      try {
+        let mergedExtra: any[] = [];
+        let mergedExtraPeers: any[] = [];
+        for (const slice of slices) {
+          const payload = await fetchGamesWindowShared({
+            league,
+            timeZone,
+            fromDateKey: slice.fromKey,
+            toDateKey: slice.toKey,
+          });
+          if (!alive) return;
+          mergedExtra = mergeGameRowsById(mergedExtra, payload.rows);
+          mergedExtraPeers = mergeGameRowsById(
+            mergedExtraPeers,
+            payload.peerRows.length ? payload.peerRows : payload.rows
+          );
+        }
+
+        const nextStart = wantBackward
+          ? (slices.find((s) => s.toKey === range.startKey)?.fromKey ??
+            range.startKey)
+          : range.startKey;
+        const nextEnd = wantForward
+          ? (slices.find((s) => s.fromKey === range.endKey)?.toKey ??
+            range.endKey)
+          : range.endKey;
+
+        setRows((prev) => mergeGameRowsById(prev, mergedExtra));
+        setPeerRowsForSeriesInference((prev) =>
+          mergeGameRowsById(
+            prev.length ? prev : [],
+            mergedExtraPeers.length ? mergedExtraPeers : mergedExtra
+          )
+        );
+        rangeRef.current = {
+          startKey: nextStart,
+          endKey: nextEnd,
+          windowKey: range.windowKey,
+        };
+
+        const cacheKey = buildGamesWindowRowsCacheKey({
+          league,
+          timeZone,
+          windowKey: range.windowKey,
+          plusMinus: GAME_DAYS_PLUS_MINUS,
+        });
+        const prevCache = readGamesWindowRowsCache(cacheKey);
+        patchGamesWindowRowsCache(cacheKey, {
+          rows: mergeGameRowsById(prevCache?.rows ?? [], mergedExtra),
+          peerRows: mergeGameRowsById(
+            prevCache?.peerRows ?? prevCache?.rows ?? [],
+            mergedExtraPeers.length ? mergedExtraPeers : mergedExtra
+          ),
+          startKey: nextStart,
+          endKey: nextEnd,
+          windowKey: range.windowKey,
+        });
+      } catch (e) {
+        if (!alive) return;
+        console.warn("[useGameDays] edge extend failed", e);
+      } finally {
+        extendingRef.current = false;
+      }
+    })();
+
+    return () => {
+      alive = false;
+      extendingRef.current = false;
+    };
+  }, [loading, league, timeZone, anchorDateKey]);
+
+  const displayRows = useMemo(
+    () => mergeNbaOpeningNightPreviewGames(league, rows),
+    [league, rows]
+  );
+  const displayPeerRows = useMemo(
+    () => mergeNbaOpeningNightPreviewGames(league, peerRowsForSeriesInference),
+    [league, peerRowsForSeriesInference]
+  );
+
   const gameDays = useMemo(
-    () => monthRowsToSortedGameDays(rows, timeZone),
-    [rows, timeZone],
+    () => monthRowsToSortedGameDays(displayRows, timeZone),
+    [displayRows, timeZone],
   );
 
   return {
     gameDays,
-    monthRows: rows,
-    peerRowsForSeriesInference,
+    monthRows: displayRows,
+    peerRowsForSeriesInference: displayPeerRows,
     loading,
     error,
   };

@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import CssAnimatedSplashScreen from "@/app/component/splash/CssAnimatedSplashScreen";
 import { useMinimumSplashVisible } from "@/app/component/splash/useMinimumSplashVisible";
 import { sanitizeInternalNext } from "@/lib/auth/safeNextRedirect";
+import { isGuestLegalPath } from "@/lib/guestLegalPaths";
+import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -25,8 +27,12 @@ const MOBILE_GUEST_LEGAL_PREFIXES = [
 
 function isWebPublicPath(pathname: string | null): boolean {
   if (!pathname?.startsWith("/web")) return false;
+  if (pathname === "/web") return true;
   if (pathname === "/web/login" || pathname === "/web/signup") return true;
   if (pathname.startsWith("/web/reset")) return true;
+  if (pathname.startsWith("/web/r/")) return true;
+  if (isGuestPreviewPath(pathname)) return true;
+  if (isGuestLegalPath(pathname)) return true;
   return WEB_GUEST_LEGAL_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
@@ -36,6 +42,9 @@ function isMobilePublicPath(pathname: string | null): boolean {
   if (!pathname?.startsWith("/mobile")) return false;
   if (pathname === "/mobile/login" || pathname === "/mobile/signup") return true;
   if (pathname.startsWith("/mobile/reset")) return true;
+  if (pathname.startsWith("/mobile/r/")) return true;
+  if (isGuestPreviewPath(pathname)) return true;
+  if (isGuestLegalPath(pathname)) return true;
   return MOBILE_GUEST_LEGAL_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
@@ -55,9 +64,10 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
   const router = useRouter();
 
   const isPublic =
-    platform === "web"
+    !pathname ||
+    (platform === "web"
       ? isWebPublicPath(pathname)
-      : isMobilePublicPath(pathname);
+      : isMobilePublicPath(pathname));
 
   const guestSignupHref =
     platform === "web" ? "/web/signup" : "/mobile/signup";
@@ -67,9 +77,9 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
   const showBlockingSplash = useMinimumSplashVisible(blocking);
 
   useEffect(() => {
-    if (status !== "guest" || isPublic) return;
-    const pathOnly = pathname ?? "";
-    const safe = sanitizeInternalNext(pathOnly);
+    // pathname 未確定 or 公開パスではリダイレクトしない
+    if (!pathname || status !== "guest" || isPublic) return;
+    const safe = sanitizeInternalNext(pathname);
     const qs = safe ? `?next=${encodeURIComponent(safe)}` : "";
     router.replace(`${guestSignupHref}${qs}`);
   }, [status, isPublic, guestSignupHref, router, pathname]);

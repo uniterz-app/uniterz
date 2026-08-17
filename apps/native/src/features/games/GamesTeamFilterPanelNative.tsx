@@ -10,18 +10,36 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { colors, spacing } from "../../theme/tokens";
-import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { spacing } from "../../theme/tokens";
 import type { ScheduleTeamOption } from "./useScheduleTeamsNative";
 import type { GamesFilterState } from "./applyNativeGamesFilter";
 import CountryFlagNative from "./CountryFlagNative";
-import { teamIdToWcCountry } from "../../../../../lib/wc/wcCountry";
+import { teamIdToWcCountry } from "./legacyWcNativeShims";
 import {
   gamesFilterHelpButtonLabel,
   gamesFilterHelpParagraphs,
 } from "../../../../../lib/games/gamesFilterHelp";
+import jaMessages from "../../../../../messages/ja";
+import enMessages from "../../../../../messages/en";
+import type { League } from "../../../../../lib/leagues";
+import {
+  getTeamPrimaryColor,
+  softenTeamUiColor,
+  teamColorOnFill,
+  teamColorRgba,
+} from "../../../../../lib/team-colors";
+import {
+  MATCH_CARD_BRACKET_LETTER_SPACING_15,
+  MATCH_CARD_BRACKET_TEXT,
+} from "./matchCardTypography";
+
+const OXANIUM_BOLD = Platform.select({
+  ios: "Oxanium_700Bold",
+  android: "Oxanium_700Bold",
+  default: "Oxanium_700Bold",
+}) as string;
 
 type Props = {
   visible: boolean;
@@ -30,6 +48,7 @@ type Props = {
   teams: ScheduleTeamOption[];
   onApply: (filter: GamesFilterState) => void;
   initial: GamesFilterState;
+  league: League;
 };
 
 function parseMarginDraft(s: string): number | null {
@@ -53,8 +72,10 @@ export default function GamesTeamFilterPanelNative({
   teams,
   onApply,
   initial,
+  league,
 }: Props) {
   const isJa = language === "ja";
+  const insets = useSafeAreaInsets();
   const [state, setState] = useState(initial);
   const [q, setQ] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
@@ -77,13 +98,19 @@ export default function GamesTeamFilterPanelNative({
   const toggleTeam = useCallback((id: string) => {
     setState((prev) => {
       if (prev.selectedTeamIds.includes(id)) {
+        const selectedTeamIds = prev.selectedTeamIds.filter((x) => x !== id);
         return {
           ...prev,
-          selectedTeamIds: prev.selectedTeamIds.filter((x) => x !== id),
+          selectedTeamIds,
+          matchMode: selectedTeamIds.length === 2 ? prev.matchMode : "any",
         };
       }
-      if (prev.selectedTeamIds.length >= 2) return prev;
-      return { ...prev, selectedTeamIds: [...prev.selectedTeamIds, id] };
+      const selectedTeamIds = [...prev.selectedTeamIds, id];
+      return {
+        ...prev,
+        selectedTeamIds,
+        matchMode: selectedTeamIds.length === 2 ? prev.matchMode : "any",
+      };
     });
   }, []);
 
@@ -98,23 +125,26 @@ export default function GamesTeamFilterPanelNative({
         teams,
         matchMode: state.matchMode,
       }),
-    [language, state.selectedTeamIds, state.matchMode, teams]
+    [language, state.selectedTeamIds, state.matchMode, teams],
   );
   const helpButtonLabel = gamesFilterHelpButtonLabel(language);
 
+  const m = isJa ? jaMessages : enMessages;
   const labels = {
-    title: isJa ? "試合一覧の絞り込み" : "Filter schedule",
-    marginRange: isJa ? "点差の幅" : "Score margin",
-    marginMin: isJa ? "以上" : "Min",
-    marginMax: isJa ? "以下" : "Max",
-    matchScope: isJa ? "対戦の範囲" : "Match scope",
-    eitherTeam: isJa ? "どちらかが出る試合" : "Either team",
-    h2hOnly: isJa ? "直接対決のみ" : "Head-to-head only",
-    searchTeams: isJa ? "チームを検索" : "Search teams",
-    noTeamMatch: isJa ? "該当するチームがありません" : "No teams match your search.",
-    clearAll: isJa ? "すべてクリア" : "Clear all",
-    done: isJa ? "完了" : "Done",
-    close: isJa ? "閉じる" : "Close",
+    kicker: isJa ? "FILTER // 試合" : "FILTER // SCHEDULE",
+    title: m.games.filterSchedule,
+    teamSearch: isJa ? "チーム検索" : "TEAM SEARCH",
+    marginRange: m.games.marginRange,
+    marginMin: m.games.marginMin,
+    marginMax: m.games.marginMax,
+    matchScope: m.games.matchListScope,
+    eitherTeam: m.games.eitherTeam,
+    h2hOnly: m.games.h2hOnly,
+    searchTeams: m.games.searchTeams,
+    noTeamMatch: m.games.noTeamMatch,
+    clearAll: m.games.clearAll,
+    done: m.common.done,
+    close: m.common.close,
   };
 
   function handleClearAll() {
@@ -131,7 +161,11 @@ export default function GamesTeamFilterPanelNative({
     onClose();
   }
 
+  const dualSelected = state.selectedTeamIds.length === 2;
+
   if (!visible) return null;
+
+  const canClear = state.selectedTeamIds.length > 0 || marginActive;
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
@@ -147,198 +181,243 @@ export default function GamesTeamFilterPanelNative({
         <Animated.View
           entering={SlideInDown.springify().damping(36).stiffness(420).mass(0.85)}
           exiting={SlideOutDown.duration(220)}
-          style={styles.sheet}
+          style={[styles.sheet, dualSelected && styles.sheetDual]}
         >
-          {(Platform.OS === "ios" || Platform.OS === "android") && (
-            <BlurView
-              intensity={Platform.OS === "ios" ? 32 : 24}
-              tint="dark"
-              {...nativeBlurViewExtraProps()}
-              style={StyleSheet.absoluteFillObject}
-            />
-          )}
-          <View style={styles.sheetTint} pointerEvents="none" />
-
-          <View style={styles.handleRow} accessibilityElementsHidden>
-            <View style={styles.handle} />
-          </View>
-
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>{labels.title}</Text>
-            <View style={styles.headerActions}>
-              <Pressable
-                onPress={() => setHelpOpen((v) => !v)}
-                style={[styles.helpBtn, helpOpen && styles.helpBtnActive]}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: helpOpen }}
-                accessibilityLabel={helpButtonLabel}
-              >
-                <MaterialCommunityIcons
-                  name="help-circle-outline"
-                  size={15}
-                  color={helpOpen ? "rgba(207,250,254,0.95)" : "rgba(255,255,255,0.75)"}
-                />
-                <Text style={[styles.helpBtnText, helpOpen && styles.helpBtnTextActive]}>
-                  {helpButtonLabel}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={onClose}
-                style={styles.closeBtn}
-                accessibilityRole="button"
-                accessibilityLabel={labels.close}
-              >
-                <MaterialCommunityIcons name="close" size={18} color="rgba(255,255,255,0.85)" />
-              </Pressable>
+          <View style={styles.panelShell}>
+            <View style={styles.handleRow} accessibilityElementsHidden>
+              <View style={styles.handle} />
             </View>
-          </View>
 
-          {helpOpen ? (
-            <View style={styles.helpPanel}>
-              {helpParagraphs.map((paragraph) => (
-                <Text key={paragraph} style={styles.helpParagraph}>
-                  {paragraph}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-
-          {state.selectedTeamIds.length > 0 ? (
-            <View style={styles.chipRow}>
-              {state.selectedTeamIds.map((id) => {
-                const name = teams.find((t) => t.id === id)?.name ?? id;
-                return (
-                  <Pressable
-                    key={id}
-                    style={styles.selectedChip}
-                    onPress={() => toggleTeam(id)}
-                  >
-                    <FilterTeamFlagNative teamId={id} />
-                    <Text style={styles.selectedChipText} numberOfLines={1}>
-                      {name}
-                    </Text>
-                    <MaterialCommunityIcons name="close" size={12} color="rgba(165,243,252,0.85)" />
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-
-          {state.selectedTeamIds.length === 2 ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionKicker}>{labels.matchScope}</Text>
-              <View style={styles.modeRow}>
-                {(["any", "h2h"] as const).map((mode) => (
-                  <Pressable
-                    key={mode}
-                    style={[styles.modeBtn, state.matchMode === mode && styles.modeBtnActive]}
-                    onPress={() => setState((s) => ({ ...s, matchMode: mode }))}
-                  >
-                    <Text
-                      style={[
-                        styles.modeBtnText,
-                        state.matchMode === mode && styles.modeBtnTextActive,
-                      ]}
-                    >
-                      {mode === "any" ? labels.eitherTeam : labels.h2hOnly}
-                    </Text>
-                  </Pressable>
-                ))}
+            <View style={styles.headerRow}>
+              <View style={styles.headerTextCol}>
+                <Text style={styles.kicker}>{labels.kicker}</Text>
+                <Text style={styles.title}>{labels.title}</Text>
               </View>
-            </View>
-          ) : null}
-
-          <View style={styles.searchWrap}>
-            <MaterialCommunityIcons
-              name="magnify"
-              size={16}
-              color="rgba(255,255,255,0.35)"
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              value={q}
-              onChangeText={setQ}
-              placeholder={labels.searchTeams}
-              placeholderTextColor="rgba(255,255,255,0.35)"
-            />
-          </View>
-
-          <ScrollView
-            style={styles.teamList}
-            contentContainerStyle={styles.teamListContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {filteredTeams.map((team) => {
-              const sel = state.selectedTeamIds.includes(team.id);
-              const atCap = state.selectedTeamIds.length >= 2 && !sel;
-              return (
+              <View style={styles.headerActions}>
                 <Pressable
-                  key={team.id}
-                  disabled={atCap}
-                  style={[styles.teamRow, sel && styles.teamRowSelected, atCap && styles.teamRowDisabled]}
-                  onPress={() => toggleTeam(team.id)}
+                  onPress={() => setHelpOpen((v) => !v)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: helpOpen }}
+                  accessibilityLabel={helpButtonLabel}
+                  style={[styles.helpBtn, helpOpen && styles.helpBtnActive]}
                 >
-                  <View style={[styles.teamCheck, sel && styles.teamCheckSelected]}>
-                    {sel ? <Text style={styles.teamCheckMark}>✓</Text> : null}
-                  </View>
-                  <FilterTeamFlagNative teamId={team.id} />
-                  <Text
-                    style={[styles.teamName, sel && styles.teamNameSelected]}
-                    numberOfLines={1}
-                  >
-                    {team.name}
+                  <MaterialCommunityIcons
+                    name="help-circle-outline"
+                    size={15}
+                    color={helpOpen ? "#050505" : "rgba(255,255,255,0.82)"}
+                  />
+                  <Text style={[styles.helpBtnText, helpOpen && styles.helpBtnTextActive]}>
+                    {helpButtonLabel}
                   </Text>
                 </Pressable>
-              );
-            })}
-            {filteredTeams.length === 0 ? (
-              <Text style={styles.emptyTeams}>{labels.noTeamMatch}</Text>
-            ) : null}
-          </ScrollView>
-
-          <View style={styles.marginSection}>
-            <Text style={styles.sectionKicker}>{labels.marginRange}</Text>
-            <View style={styles.marginRow}>
-              <View style={styles.marginField}>
-                <Text style={styles.marginLabel}>{labels.marginMin}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={state.marginMin}
-                  onChangeText={(v) => setState((s) => ({ ...s, marginMin: v }))}
-                  keyboardType="number-pad"
-                  placeholder="—"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.marginField}>
-                <Text style={styles.marginLabel}>{labels.marginMax}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={state.marginMax}
-                  onChangeText={(v) => setState((s) => ({ ...s, marginMax: v }))}
-                  keyboardType="number-pad"
-                  placeholder="—"
-                  placeholderTextColor={colors.textMuted}
-                />
+                <Pressable
+                  onPress={onClose}
+                  accessibilityLabel={labels.close}
+                  style={styles.closeBtn}
+                >
+                  <MaterialCommunityIcons name="close" size={18} color="rgba(255,255,255,0.88)" />
+                </Pressable>
               </View>
             </View>
-          </View>
 
-          <View style={styles.footer}>
-            <Pressable
-              style={[
-                styles.clearBtn,
-                state.selectedTeamIds.length === 0 && !marginActive && styles.clearBtnDisabled,
-              ]}
-              disabled={state.selectedTeamIds.length === 0 && !marginActive}
-              onPress={handleClearAll}
-            >
-              <Text style={styles.clearBtnText}>{labels.clearAll}</Text>
-            </Pressable>
-            <Pressable style={styles.doneBtn} onPress={handleDone}>
-              <Text style={styles.doneBtnText}>{labels.done}</Text>
-            </Pressable>
+            {helpOpen ? (
+              <View style={styles.helpPanel}>
+                {helpParagraphs.map((paragraph) => (
+                  <Text key={paragraph} style={styles.helpParagraph}>
+                    {paragraph}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+
+            {state.selectedTeamIds.length > 0 ? (
+              <View style={[styles.selectionBar, dualSelected && styles.selectionBarDual]}>
+                <View style={styles.chipRow}>
+                  {state.selectedTeamIds.map((id) => {
+                    const name = teams.find((t) => t.id === id)?.name ?? id;
+                    const accent = softenTeamUiColor(getTeamPrimaryColor(league, id));
+                    return (
+                      <Pressable
+                        key={id}
+                        style={[
+                          styles.selectedChip,
+                          {
+                            borderColor: accent,
+                            backgroundColor: teamColorRgba(accent, 0.22),
+                          },
+                        ]}
+                        onPress={() => toggleTeam(id)}
+                      >
+                        <FilterTeamFlagNative teamId={id} />
+                        <Text style={[styles.selectedChipText, MATCH_CARD_BRACKET_TEXT]} numberOfLines={1}>
+                          {name}
+                        </Text>
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={12}
+                          color="#fff"
+                        />
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {dualSelected ? (
+                  <View style={styles.scopeInline}>
+                    <Text style={styles.scopeLabel}>{labels.matchScope}</Text>
+                    <View style={styles.modeRowCompact}>
+                      {(["any", "h2h"] as const).map((mode) => (
+                        <Pressable
+                          key={mode}
+                          style={[
+                            styles.modeBtnCompact,
+                            state.matchMode === mode && styles.modeBtnActive,
+                          ]}
+                          onPress={() => setState((s) => ({ ...s, matchMode: mode }))}
+                        >
+                          <Text
+                            style={[
+                              styles.modeBtnTextCompact,
+                              state.matchMode === mode && styles.modeBtnTextActive,
+                            ]}
+                          >
+                            {mode === "any" ? labels.eitherTeam : labels.h2hOnly}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            <View style={styles.teamSearchPrimary}>
+              <View style={[styles.searchSection, dualSelected && styles.searchSectionDual]}>
+                <View style={styles.searchKickerRow}>
+                  <Text style={styles.searchKicker}>{labels.teamSearch}</Text>
+                </View>
+                <View style={styles.searchWrap}>
+                  <MaterialCommunityIcons
+                    name="magnify"
+                    size={15}
+                    color="rgba(255,255,255,0.4)"
+                    style={styles.searchIcon}
+                  />
+                  <TextInput
+                    style={styles.searchInput}
+                    value={q}
+                    onChangeText={setQ}
+                    placeholder={labels.searchTeams}
+                    placeholderTextColor="rgba(255,255,255,0.32)"
+                  />
+                </View>
+              </View>
+
+              <ScrollView
+                style={styles.teamList}
+                contentContainerStyle={styles.teamListContent}
+                keyboardShouldPersistTaps="handled"
+              >
+                {filteredTeams.map((team) => {
+                  const sel = state.selectedTeamIds.includes(team.id);
+                  const accent = softenTeamUiColor(getTeamPrimaryColor(league, team.id));
+                  return (
+                    <Pressable
+                      key={team.id}
+                      style={[
+                        styles.teamRow,
+                        sel && {
+                          borderColor: accent,
+                          backgroundColor: teamColorRgba(accent, 0.22),
+                        },
+                      ]}
+                      onPress={() => toggleTeam(team.id)}
+                    >
+                      <View
+                        style={[
+                          styles.teamCheck,
+                          sel && {
+                            borderColor: accent,
+                            backgroundColor: accent,
+                          },
+                        ]}
+                      >
+                        {sel ? (
+                          <Text style={[styles.teamCheckMark, { color: teamColorOnFill(accent) }]}>
+                            ✓
+                          </Text>
+                        ) : null}
+                      </View>
+                      <FilterTeamFlagNative teamId={team.id} />
+                      <Text
+                        style={[
+                          styles.teamName,
+                          MATCH_CARD_BRACKET_TEXT,
+                          { letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15 },
+                          sel && styles.teamNameSelected,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {team.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+                {filteredTeams.length === 0 ? (
+                  <Text style={styles.emptyTeams}>{labels.noTeamMatch}</Text>
+                ) : null}
+              </ScrollView>
+            </View>
+
+            <View style={[styles.marginSection, dualSelected && styles.marginSectionDual]}>
+              <View style={styles.marginGlass}>
+                <View style={[styles.marginGlassContent, dualSelected && styles.marginGlassContentDual]}>
+                  <View style={styles.marginInline}>
+                    <View style={styles.marginKickerRow}>
+                      <Text style={styles.marginKicker}>{labels.marginRange}</Text>
+                    </View>
+                    <View style={styles.marginRow}>
+                      <View style={styles.marginField}>
+                        <Text style={styles.marginLabel}>{labels.marginMin}</Text>
+                        <TextInput
+                          style={[styles.marginInput, dualSelected && styles.marginInputDual]}
+                          value={state.marginMin}
+                          onChangeText={(v) => setState((s) => ({ ...s, marginMin: v }))}
+                          keyboardType="number-pad"
+                          placeholder="—"
+                          placeholderTextColor="rgba(255,255,255,0.32)"
+                        />
+                      </View>
+                      <View style={styles.marginField}>
+                        <Text style={styles.marginLabel}>{labels.marginMax}</Text>
+                        <TextInput
+                          style={[styles.marginInput, dualSelected && styles.marginInputDual]}
+                          value={state.marginMax}
+                          onChangeText={(v) => setState((s) => ({ ...s, marginMax: v }))}
+                          keyboardType="number-pad"
+                          placeholder="—"
+                          placeholderTextColor="rgba(255,255,255,0.32)"
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+              <Pressable
+                disabled={!canClear}
+                onPress={handleClearAll}
+                style={!canClear ? styles.clearBtnDisabledWrap : undefined}
+              >
+                <Text style={[styles.clearBtnText, !canClear && styles.clearBtnTextDisabled]}>
+                  {labels.clearAll}
+                </Text>
+              </Pressable>
+              <Pressable onPress={handleDone} style={styles.doneBtn}>
+                <Text style={styles.doneBtnText}>{labels.done}</Text>
+              </Pressable>
+            </View>
           </View>
         </Animated.View>
       </View>
@@ -356,19 +435,27 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   sheet: {
-    maxHeight: "85%",
-    minHeight: "40%",
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    height: "72%",
+    maxHeight: "78%",
+    flexDirection: "column",
     borderWidth: 1,
     borderBottomWidth: 0,
-    borderColor: "rgba(34,211,238,0.2)",
-    backgroundColor: "rgba(7,13,20,0.96)",
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "#050505",
     overflow: "hidden",
   },
-  sheetTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(7,13,20,0.55)",
+  sheetDual: {
+    height: "80%",
+    maxHeight: "85%",
+  },
+  panelShell: {
+    flex: 1,
+    minHeight: 0,
+    zIndex: 1,
+  },
+  teamSearchPrimary: {
+    flex: 1,
+    minHeight: 0,
   },
   handleRow: {
     alignItems: "center",
@@ -376,20 +463,41 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   handle: {
-    width: 40,
+    width: 48,
     height: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.25)",
   },
   headerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 12,
     paddingHorizontal: spacing.md,
+    paddingTop: 4,
     paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.1)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.12)",
+    overflow: "hidden",
+  },
+  headerTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  kicker: {
+    fontFamily: OXANIUM_BOLD,
+    color: "rgba(255,255,255,0.42)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 3.2,
+    textTransform: "uppercase",
+  },
+  title: {
+    color: "rgba(255,255,255,0.95)",
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   headerActions: {
     flexDirection: "row",
@@ -397,235 +505,390 @@ const styles = StyleSheet.create({
     gap: 6,
     flexShrink: 0,
   },
-  title: {
-    flex: 1,
-    minWidth: 0,
-    color: "rgba(255,255,255,0.95)",
-    fontSize: 15,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
   helpBtn: {
+    minHeight: 36,
+    minWidth: 72,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
-    height: 36,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.06)",
     paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "transparent",
   },
   helpBtnActive: {
-    borderColor: "rgba(34,211,238,0.4)",
-    backgroundColor: "rgba(34,211,238,0.15)",
+    borderColor: "#fff",
+    backgroundColor: "#fff",
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   helpBtnText: {
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.82)",
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   helpBtnTextActive: {
-    color: "rgba(207,250,254,0.95)",
+    color: "#050505",
   },
   helpPanel: {
     gap: 8,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   helpParagraph: {
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.5)",
     fontSize: 11,
     lineHeight: 16,
   },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.06)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  section: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+  selectionBar: {
     gap: 6,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
   },
-  marginSection: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.06)",
-    gap: 6,
-  },
-  sectionKicker: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  marginRow: { flexDirection: "row", gap: 8 },
-  marginField: { flex: 1, gap: 4 },
-  marginLabel: { color: "rgba(255,255,255,0.45)", fontSize: 10 },
-  input: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    borderRadius: 10,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    paddingHorizontal: 10,
-    paddingVertical: Platform.OS === "ios" ? 10 : 8,
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 16,
+  selectionBarDual: {
+    paddingTop: 6,
+    paddingBottom: 6,
+    gap: 5,
   },
   chipRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    gap: 6,
+  },
+  scopeInline: {
+    gap: 5,
+  },
+  scopeLabel: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  modeRowCompact: {
+    flexDirection: "row",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "#000",
+    padding: 2,
+  },
+  modeBtnCompact: {
+    flex: 1,
+    minHeight: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  modeBtnTextCompact: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 10,
+    fontWeight: "600",
+    textAlign: "center",
   },
   selectedChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     maxWidth: "100%",
-    borderRadius: 999,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
-    backgroundColor: "rgba(34,211,238,0.15)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderColor: "#fff",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   selectedChipText: {
-    color: "rgba(207,250,254,0.95)",
-    fontSize: 11,
-    fontWeight: "600",
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "400",
     maxWidth: 200,
-  },
-  modeRow: {
-    flexDirection: "row",
-    gap: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.35)",
-    padding: 4,
-  },
-  modeBtn: {
-    flex: 1,
-    minHeight: 36,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 8,
+    letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
   },
   modeBtnActive: {
-    backgroundColor: "rgba(34,211,238,0.25)",
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
+    backgroundColor: "#fff",
   },
-  modeBtnText: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 11,
-    fontWeight: "700",
-    textAlign: "center",
+  modeBtnTextActive: {
+    color: "#050505",
   },
-  modeBtnTextActive: { color: "rgba(207,250,254,0.95)" },
+  searchSection: {
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 6,
+  },
+  searchSectionDual: {
+    paddingTop: 5,
+    paddingBottom: 3,
+    gap: 5,
+  },
+  searchKickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 1,
+  },
+  searchKickerMark: {
+    width: 5,
+    height: 5,
+    backgroundColor: "rgba(0,245,255,0.75)",
+    transform: [{ rotate: "45deg" }],
+    shadowColor: "#00f5ff",
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  searchKicker: {
+    color: "rgba(255,255,255,0.48)",
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 1.6,
+    textTransform: "uppercase",
+  },
   searchWrap: {
-    marginHorizontal: spacing.md,
-    marginTop: 10,
-    marginBottom: 6,
     position: "relative",
     justifyContent: "center",
-  },
-  searchIcon: { position: "absolute", left: 12, zIndex: 1 },
-  searchInput: {
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    paddingVertical: 10,
-    paddingLeft: 36,
-    paddingRight: 12,
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 16,
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "#000",
   },
-  teamList: { flexGrow: 0, maxHeight: 280 },
-  teamListContent: { paddingHorizontal: 12, paddingBottom: 8, gap: 6 },
+  searchGlassTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  searchIcon: {
+    position: "absolute",
+    left: 10,
+    zIndex: 1,
+  },
+  searchInput: {
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: "transparent",
+    paddingVertical: 6,
+    paddingLeft: 32,
+    paddingRight: 10,
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 16,
+    lineHeight: 18,
+  },
+  teamList: {
+    flex: 1,
+    minHeight: 0,
+  },
+  teamListContent: {
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    gap: 4,
+  },
   teamRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.03)",
-    paddingHorizontal: 12,
+    backgroundColor: "rgba(255,255,255,0.025)",
+    paddingHorizontal: 10,
     paddingVertical: 10,
   },
   teamRowSelected: {
-    borderColor: "rgba(34,211,238,0.4)",
-    backgroundColor: "rgba(34,211,238,0.14)",
+    borderColor: "#fff",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  teamRowDisabled: { opacity: 0.4 },
+  teamRowDisabled: {
+    opacity: 0.38,
+  },
   teamCheck: {
     width: 20,
     height: 20,
-    borderRadius: 6,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.14)",
     alignItems: "center",
     justifyContent: "center",
   },
   teamCheckSelected: {
-    borderColor: "rgba(103,232,249,0.6)",
-    backgroundColor: "rgba(34,211,238,0.2)",
+    borderColor: "#fff",
+    backgroundColor: "#fff",
   },
-  teamCheckMark: { color: "#ecfeff", fontSize: 10, fontWeight: "800" },
-  teamName: { flex: 1, color: "rgba(255,255,255,0.88)", fontSize: 14 },
-  teamNameSelected: { color: "#fff", fontWeight: "600" },
+  teamCheckMark: {
+    color: "#050505",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  teamName: {
+    flex: 1,
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 16,
+  },
+  teamNameSelected: {
+    color: "#fff",
+    fontWeight: "600",
+  },
   emptyTeams: {
     textAlign: "center",
     color: "rgba(255,255,255,0.4)",
     fontSize: 12,
     paddingVertical: 24,
   },
+  marginSection: {
+    flexShrink: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+  },
+  marginSectionDual: {
+    paddingVertical: 4,
+  },
+  marginGlass: {
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderRadius: 0,
+    backgroundColor: "#000",
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  marginGlassBeam: {
+    position: "absolute",
+    left: 10,
+    right: 10,
+    top: 0,
+    height: 1,
+  },
+  marginGlassContent: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  marginGlassContentDual: {
+    paddingVertical: 5,
+  },
+  marginInline: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  marginKickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingBottom: 5,
+    flexShrink: 0,
+  },
+  marginKickerMark: {
+    width: 5,
+    height: 5,
+    backgroundColor: "rgba(0,245,255,0.75)",
+    transform: [{ rotate: "45deg" }],
+    shadowColor: "#00f5ff",
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  marginKicker: {
+    color: "rgba(255,255,255,0.48)",
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+  },
+  marginRow: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+    minWidth: 0,
+  },
+  marginField: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  marginLabel: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    lineHeight: 11,
+  },
+  marginInput: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderRadius: 0,
+    backgroundColor: "rgba(255,255,255,0.045)",
+    paddingHorizontal: 8,
+    paddingVertical: Platform.OS === "ios" ? 6 : 5,
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 15,
+  },
+  marginInputDual: {
+    paddingVertical: Platform.OS === "ios" ? 5 : 4,
+    fontSize: 14,
+  },
   footer: {
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.12)",
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    paddingBottom: Platform.OS === "ios" ? 24 : 12,
+    paddingTop: 12,
+    overflow: "hidden",
   },
-  clearBtn: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+  clearBtnDisabledWrap: {
+    opacity: 0.35,
+  },
+  clearBtnFrame: {
+    minWidth: 96,
+  },
+  clearBtnContent: {
+    minHeight: 40,
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 12,
-    paddingVertical: 10,
   },
-  clearBtnDisabled: { opacity: 0.35 },
-  clearBtnText: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "600" },
+  clearBtnText: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 12,
+    fontWeight: "600",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  clearBtnTextDisabled: {
+    color: "rgba(255,255,255,0.55)",
+  },
   doneBtn: {
-    borderRadius: 10,
+    minWidth: 104,
+    minHeight: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
-    backgroundColor: "rgba(34,211,238,0.15)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderColor: "#fff",
   },
-  doneBtnText: { color: "rgba(207,250,254,0.95)", fontSize: 12, fontWeight: "800" },
+  doneBtnText: {
+    color: "#050505",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.7,
+  },
 });

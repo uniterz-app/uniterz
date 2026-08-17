@@ -1,9 +1,8 @@
 // app/component/profile/ui/RankingsReturnNavLink.tsx
 "use client";
 
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   PROFILE_FROM_PARAM,
   PROFILE_FROM_COMMUNITY_ID_PARAM,
@@ -11,6 +10,7 @@ import {
   PROFILE_FROM_GROUP_ID_PARAM,
   PROFILE_FROM_GROUP_VALUE,
   PROFILE_FROM_RANKINGS_VALUE,
+  PROFILE_FROM_REPORT_VALUE,
   buildRankingsPathQuery,
   leaderboardsGroupReturnHref,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -21,9 +21,10 @@ type Props = {
   language: Language;
 };
 
-/** ランキング経由で開いたプロフィールにだけ表示する「ランキングへ戻る」 */
+/** ランキング / レポート経由で開いたプロフィールに表示する戻りリンク */
 export default function RankingsReturnNavLink({ language }: Props) {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
   const sp = useSearchParams();
   const from = sp.get(PROFILE_FROM_PARAM);
   const groupId =
@@ -33,7 +34,12 @@ export default function RankingsReturnNavLink({ language }: Props) {
     (from === PROFILE_FROM_GROUP_VALUE ||
       from === PROFILE_FROM_COMMUNITY_VALUE) &&
     !!groupId;
-  if (from !== PROFILE_FROM_RANKINGS_VALUE && !isGroupReturn) {
+  const isReportReturn = from === PROFILE_FROM_REPORT_VALUE;
+  if (
+    from !== PROFILE_FROM_RANKINGS_VALUE &&
+    !isGroupReturn &&
+    !isReportReturn
+  ) {
     return null;
   }
 
@@ -46,14 +52,23 @@ export default function RankingsReturnNavLink({ language }: Props) {
     ? leaderboardsGroupReturnHref(prefix, groupId!)
     : `${prefix}/rankings${tabQuery ? `?${tabQuery}` : ""}`;
   const m = t(language);
-  const label = isGroupReturn
-    ? m.profile.backToGroupRankings
-    : m.profile.backToRankings;
+  const label = isReportReturn
+    ? m.profile.backToReport
+    : isGroupReturn
+      ? m.profile.backToGroupRankings
+      : m.profile.backToRankings;
 
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
       aria-label={label}
+      onClick={() => {
+        if (isReportReturn) {
+          router.back();
+          return;
+        }
+        router.push(href);
+      }}
       className={[
         "mb-4 inline-flex items-center gap-2 rounded-lg border border-cyan-200/20",
         "bg-white/5 px-3 py-2 text-sm font-medium text-cyan-50/95",
@@ -65,6 +80,6 @@ export default function RankingsReturnNavLink({ language }: Props) {
     >
       <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={2.4} aria-hidden />
       <span>{label}</span>
-    </Link>
+    </button>
   );
 }

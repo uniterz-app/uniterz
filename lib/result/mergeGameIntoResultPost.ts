@@ -1,7 +1,6 @@
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import type { PkScore } from "@/lib/games/pkScore";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
-import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
 
 /** 試合カードの最新状態をリザルト投稿に反映（オーバーレイ用 MatchCard） */
 export function mergeGameIntoResultPost(
@@ -9,15 +8,9 @@ export function mergeGameIntoResultPost(
   game: MatchCardProps
 ): PredictionPostV2 {
   const homeTeamId =
-    (normalizeWcTeamId(game.home?.teamId) ??
-      normalizeWcTeamId(post.home?.teamId) ??
-      post.home?.teamId?.trim()) ||
-    "";
+    (game.home?.teamId?.trim() || post.home?.teamId?.trim()) || "";
   const awayTeamId =
-    (normalizeWcTeamId(game.away?.teamId) ??
-      normalizeWcTeamId(post.away?.teamId) ??
-      post.away?.teamId?.trim()) ||
-    "";
+    (game.away?.teamId?.trim() || post.away?.teamId?.trim()) || "";
   return {
     ...post,
     status: game.status,

@@ -1,5 +1,5 @@
 /**
- * __DEV__ 専用 — OS プッシュ 3 種 + タブドットの動作確認
+ * __DEV__ 専用 — OS プッシュ（基本 + 直前アラート）+ タブドットの動作確認
  */
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { cyberAlert } from "../components/cyberAlert";
@@ -59,6 +59,25 @@ async function scheduleLocalPushPreview(input: {
     return "denied";
   }
 
+  const detailByType: Partial<Record<PushNotificationType, string>> = {
+    injury_status:
+      input.language === "en"
+        ? "Doncic: Questionable → Out"
+        : "ドンチッチ: Questionable → Out",
+    starter_change:
+      input.language === "en"
+        ? "Star forward moved to bench"
+        : "主力フォワードが先発落ち",
+    pregame_digest:
+      input.language === "en"
+        ? "• Key guard out\n• Bench player starting\n• Opponent on a back-to-back"
+        : "・主力ガード欠場\n・控え選手が先発\n・相手は連戦",
+    pro_insight_update:
+      input.language === "en"
+        ? "Conclusion shifted after injury update"
+        : "欠場反映で結論が変わりました",
+  };
+
   const copy = buildPushNotificationCopy(input.type, input.language, {
     homeLabel: "Japan",
     awayLabel: "Brazil",
@@ -66,6 +85,7 @@ async function scheduleLocalPushPreview(input: {
     awayTeamId: "wc-bra",
     homeScore: input.type === "game_final" ? 2 : undefined,
     awayScore: input.type === "game_final" ? 1 : undefined,
+    detail: detailByType[input.type],
   });
 
   const data: Record<string, string> = { type: input.type };
@@ -81,7 +101,16 @@ async function scheduleLocalPushPreview(input: {
       data,
       sound: "default",
     },
-    trigger: delay > 0 ? { type: "timeInterval", seconds: delay, repeats: false } : null,
+    trigger:
+      delay > 0
+        ? ({
+            type: "timeInterval",
+            seconds: delay,
+            repeats: false,
+          } as Parameters<
+            typeof Notifications.scheduleNotificationAsync
+          >[0]["trigger"])
+        : null,
   });
   return "ok";
 }
@@ -295,13 +324,40 @@ export default function NotificationDevScreenNative() {
           />
         </Section>
 
+        <Section title="試合直前アラート（ローカル）">
+          <Text style={styles.hint}>
+            タップ遷移はいずれも GamePredict（gameId 指定時）。送信パイプラインは別途。
+          </Text>
+          <DevButton
+            label="④ 出場ステータス変更"
+            onPress={() => void firePush("injury_status")}
+            disabled={busy}
+          />
+          <DevButton
+            label="⑤ 重要な先発変更"
+            onPress={() => void firePush("starter_change")}
+            disabled={busy}
+          />
+          <DevButton
+            label="⑥ 予想締切"
+            onPress={() => void firePush("prediction_deadline")}
+            disabled={busy}
+          />
+          <DevButton
+            label="⑦ 複数変化のまとめ"
+            onPress={() => void firePush("pregame_digest")}
+            disabled={busy}
+          />
+          <DevButton
+            label="⑧ PRO INSIGHT 重要更新"
+            onPress={() => void firePush("pro_insight_update")}
+            disabled={busy}
+          />
+        </Section>
+
         <Section title="タブドット（アプリ内）">
           <Row label="Rankings" value={badges.showRankingBadge ? "● 表示中" : "なし"} />
           <Row label="Result" value={badges.showResultBadge ? "● 表示中" : "なし"} />
-          <Row
-            label="Leaderboards"
-            value={badges.showLeaderboardsBadge ? "● 表示中" : "なし"}
-          />
           <Text style={styles.hint}>
             下部タブのアイコン右上にシアン色の丸。タブを開くと消えます。
           </Text>

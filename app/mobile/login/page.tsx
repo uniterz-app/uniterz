@@ -5,7 +5,7 @@ import LoginForm from "@/app/component/auth/LoginForm";
 import AuthBackdrop from "@/app/component/auth/AuthBackdrop";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { getUserDocDataCached, readUserHandleFromDoc } from "@/lib/user/userDocCache";
 import type { Language } from "@/lib/i18n/language";
 import { normalizeLanguage } from "@/lib/i18n/language";
 
@@ -23,8 +23,7 @@ export default function MobileLoginPage() {
 
     const loadHandle = async () => {
       const data = await getUserDocDataCached(fUser.uid);
-      const h = data?.handle || data?.slug;
-      setHandle(h || null);
+      setHandle(readUserHandleFromDoc(data));
       setLanguage(normalizeLanguage(data?.language));
     };
 

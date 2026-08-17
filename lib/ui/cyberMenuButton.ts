@@ -1,4 +1,4 @@
-/** 角切り・紫枠のハンバーガーボタン（globals.css `.cyber-menu-btn`） */
+/** 角切り・黄枠のハンバーガーボタン（globals.css `.cyber-menu-btn`） */
 export const CYBER_MENU_BTN_CLASS = "cyber-menu-btn";
 
 /** 試合ヘッダー共通高さ（globals.css `.games-header-control-h`） */

@@ -1,42 +1,94 @@
 "use client";
 
+import type { ReactNode } from "react";
 import cn from "clsx";
-import { Globe2, Trophy } from "lucide-react";
+import { CalendarRange, Trophy } from "lucide-react";
 import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import type { NbaRankingBoard } from "@/lib/rankings/rankingDivision";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import {
+  CYBER_SIDE_MENU_BRANCH,
+  CYBER_SIDE_MENU_BRANCH_GLOW,
+} from "@/lib/ui/cyberSideMenu";
 
 type Props = {
   variant?: "mobile" | "web";
   language: Language;
   rankingLeague: RankingLeagueSource;
+  /** NBA 枝の選択（未指定時はレギュラー扱い） */
+  nbaBoard?: NbaRankingBoard;
+  onSelectNbaRegular: () => void;
   onSelectNbaPlayoffs: () => void;
-  onSelectWorldCup: () => void;
 };
+
+/** NBA 下の枝分かれ行（├ / └）— ガターに枝線、ボタンは残り幅いっぱい */
+function BranchRow({
+  last,
+  children,
+}: {
+  last?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-8 w-full items-stretch">
+      <div className="relative w-[22px] shrink-0" aria-hidden>
+        <span
+          className="absolute left-[9px] w-[2px]"
+          style={{
+            top: 0,
+            bottom: last ? "50%" : 0,
+            backgroundColor: CYBER_SIDE_MENU_BRANCH,
+            boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
+          }}
+        />
+        <span
+          className="absolute left-[9px] top-1/2 h-[2px] w-3 -translate-y-1/2"
+          style={{
+            backgroundColor: CYBER_SIDE_MENU_BRANCH,
+            boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
+          }}
+        />
+        <span
+          className="absolute left-[17px] top-1/2 h-[5px] w-[5px] -translate-y-1/2 rotate-45"
+          style={{
+            backgroundColor: "rgba(246, 195, 68, 0.9)",
+            boxShadow: "0 0 8px rgba(246, 195, 68, 0.7)",
+          }}
+        />
+      </div>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
 
 export default function RankingsDrawerMenu({
   variant = "web",
   language,
   rankingLeague,
+  nbaBoard = "regular",
+  onSelectNbaRegular,
   onSelectNbaPlayoffs,
-  onSelectWorldCup,
 }: Props) {
   const isMobile = variant === "mobile";
   const m = t(language);
-  const isEn = language === "en";
 
   const containerClasses = cn(
-    "relative flex flex-col text-white",
-    isMobile ? "w-full p-4" : "w-full p-5"
+    "relative flex w-full flex-col text-white",
+    isMobile ? "px-2.5 py-4" : "px-3 py-5"
   );
 
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
 
-  const nbaActive = rankingLeague === "nba";
-  const wcActive = rankingLeague === "worldcup";
+  const nbaClusterActive = rankingLeague === "nba";
+  const regularActive =
+    rankingLeague === "nba" &&
+    (nbaBoard === "regular" || nbaBoard === "open");
+  const playoffsActive =
+    rankingLeague === "nba" && nbaBoard === "playoffs";
 
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
@@ -44,24 +96,55 @@ export default function RankingsDrawerMenu({
         {m.rankings.title}
       </CyberSideMenuSectionTitle>
 
-      <div className="flex flex-col gap-2">
-        <SideMenuItemButton
-          icon={Trophy}
-          labelStyle={menuLabelFont}
-          active={nbaActive}
-          onClick={onSelectNbaPlayoffs}
-        >
-          <span className={cn(isEn && "uppercase")}>{m.rankings.nbaPlayoffs}</span>
-        </SideMenuItemButton>
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex w-full flex-col">
+          <SideMenuItemButton
+            icon={Trophy}
+            labelStyle={menuLabelFont}
+            active={nbaClusterActive}
+            onClick={onSelectNbaRegular}
+          >
+            <span className="uppercase">NBA</span>
+          </SideMenuItemButton>
 
-        <SideMenuItemButton
-          icon={Globe2}
-          labelStyle={menuLabelFont}
-          active={wcActive}
-          onClick={onSelectWorldCup}
-        >
-          <span className={cn(isEn && "uppercase")}>{m.rankings.worldCup}</span>
-        </SideMenuItemButton>
+          <div className="relative mt-1 flex w-full flex-col gap-1.5">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-[9px] top-[-4px] h-1 w-[2px]"
+              style={{
+                backgroundColor: CYBER_SIDE_MENU_BRANCH,
+                boxShadow: CYBER_SIDE_MENU_BRANCH_GLOW,
+              }}
+            />
+
+            <BranchRow>
+              <SideMenuItemButton
+                icon={CalendarRange}
+                dense
+                labelStyle={menuLabelFont}
+                active={regularActive}
+                onClick={onSelectNbaRegular}
+              >
+                <span className="uppercase">
+                  {m.rankings.nbaBoardRegular}
+                </span>
+              </SideMenuItemButton>
+            </BranchRow>
+            <BranchRow last>
+              <SideMenuItemButton
+                icon={Trophy}
+                dense
+                labelStyle={menuLabelFont}
+                active={playoffsActive}
+                onClick={onSelectNbaPlayoffs}
+              >
+                <span className="uppercase">
+                  {m.rankings.nbaBoardPlayoffs}
+                </span>
+              </SideMenuItemButton>
+            </BranchRow>
+          </div>
+        </div>
       </div>
     </nav>
   );

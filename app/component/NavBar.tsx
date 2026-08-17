@@ -5,32 +5,39 @@ import { usePathname } from "next/navigation";
 import { GiCrossedSwords } from "react-icons/gi";
 import { FaTrophy, FaUsers } from "react-icons/fa";
 import { FiUser } from "react-icons/fi";
-import { Brain } from "lucide-react";
-import { useEffect, useLayoutEffect, useState, CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore, CSSProperties } from "react";
 import { useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { getUserDocDataCached, readUserHandleFromDoc } from "@/lib/user/userDocCache";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 import { useNavTabNotificationBadges } from "@/lib/hooks/useNavTabNotificationBadges";
 import NavBarNotificationDot from "@/app/component/NavBarNotificationDot";
 import { prefetchCumulativeRankingsList } from "@/lib/rankings/useCumulativeRankingsBulk";
+import {
+  getTutorialWelcomeChromeHidden,
+  subscribeTutorialWelcomeChromeHidden,
+} from "@/lib/tutorial/tutorialWelcomeChrome";
+import { TUTORIAL_WELCOME_CHROME_FADE_S } from "@/lib/tutorial/tutorialMotion";
 
 type Item = {
   href: string;
   key: "games" | "home" | "leaderboards" | "ranking" | "mypage";
   label: string;
-  icon: React.ComponentType<{
+  /** 従来のベクターアイコン（リザルト以外） */
+  icon?: React.ComponentType<{
     size?: number;
     color?: string;
     style?: CSSProperties;
   }>;
+  /** リザルトのみカスタム画像 */
+  iconSrc?: string;
 };
 
 const items: Item[] = [
   { key: "games", href: "/games", label: "試合", icon: GiCrossedSwords },
-  { key: "home", href: "/result", label: "リザルト", icon: Brain },
+  { key: "home", href: "/result", label: "リザルト", iconSrc: "/navbar/result.png" },
   { key: "ranking", href: "/rankings", label: "ランキング", icon: FaTrophy },
   {
     key: "leaderboards",
@@ -56,12 +63,11 @@ const BarStyle = {
     pointerEvents: "none",
   } as CSSProperties,
 
-  // ページ背景（#0c0d12 付近）・カード（#1a1e2b 付近）に寄せ、シアン強調は抑える
+  // A03 — 黒ドック。選択アイコンはメニューと同じ黄
   barMobile: {
     position: "relative",
     overflow: "hidden",
-    background:
-      "linear-gradient(180deg, rgba(18,24,36,0.52) 0%, rgba(10,14,24,0.58) 100%)",
+    background: "#000000",
     borderRadius: 0,
     clipPath: NAV_DOCK_CLIP,
     WebkitClipPath: NAV_DOCK_CLIP,
@@ -71,7 +77,7 @@ const BarStyle = {
     gap: 6,
     border: "none",
     boxShadow:
-      "0 14px 24px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04)",
+      "0 14px 24px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.16)",
     backdropFilter: "saturate(106%) blur(4px)",
     WebkitBackdropFilter: "saturate(106%) blur(4px)",
     pointerEvents: "auto",
@@ -81,8 +87,7 @@ const BarStyle = {
   barWeb: {
     position: "relative",
     overflow: "hidden",
-    background:
-      "linear-gradient(180deg, rgba(18,22,32,0.45) 0%, rgba(8,10,16,0.50) 100%)",
+    background: "#000000",
     borderRadius: 0,
     clipPath: NAV_DOCK_CLIP,
     padding: "10px 16px",
@@ -91,7 +96,7 @@ const BarStyle = {
     gap: 8,
     border: "none",
     boxShadow:
-      "0 14px 36px rgba(0,0,0,0.52)",
+      "0 14px 36px rgba(0,0,0,0.62), inset 0 0 0 1px rgba(255,255,255,0.16)",
     backdropFilter: "saturate(105%) blur(9px)",
     WebkitBackdropFilter: "saturate(105%) blur(9px)",
     pointerEvents: "auto",
@@ -104,7 +109,7 @@ const BarStyle = {
     borderRadius: "inherit",
     pointerEvents: "none",
     background:
-      "linear-gradient(180deg, rgba(79,247,244,0.03) 0%, rgba(255,255,255,0.01) 35%, rgba(255,255,255,0.00) 55%)",
+      "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 35%, rgba(255,255,255,0.00) 55%)",
   } as CSSProperties,
 
   bottomGlow: {
@@ -188,6 +193,11 @@ export default function NavBar() {
   const [introPhase, setIntroPhase] = useState<"pending" | "run" | "idle">(
     "pending"
   );
+  const welcomeChromeHidden = useSyncExternalStore(
+    subscribeTutorialWelcomeChromeHidden,
+    getTutorialWelcomeChromeHidden,
+    () => false
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -214,7 +224,7 @@ export default function NavBar() {
 
       try {
         const data = await getUserDocDataCached(user.uid);
-        const h = data?.handle || data?.slug;
+        const h = readUserHandleFromDoc(data);
         setMyHref(
           h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`
         );
@@ -257,15 +267,15 @@ export default function NavBar() {
         @keyframes popActive {
           0% {
             transform: scale(0.88);
-            filter: drop-shadow(0 0 0 rgba(103, 232, 249, 0));
+            filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
           }
           40% {
             transform: scale(1.2);
-            filter: drop-shadow(0 0 14px rgba(103, 232, 249, 0.5));
+            filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.45));
           }
           100% {
             transform: scale(1.08);
-            filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.22));
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.22));
           }
         }
         @keyframes utzNavDockIn {
@@ -353,12 +363,17 @@ export default function NavBar() {
         style={{
           ...BarStyle.wrap,
           ...(playDockIntro ? { perspective: "720px" } : {}),
+          opacity: welcomeChromeHidden ? 0 : 1,
+          pointerEvents: welcomeChromeHidden ? "none" : "none",
+          transition: `opacity ${TUTORIAL_WELCOME_CHROME_FADE_S}s ease`,
         }}
+        aria-hidden={welcomeChromeHidden}
         aria-label="Bottom navigation"
       >
         <div
           style={{
             ...(isMobile ? BarStyle.barMobile : BarStyle.barWeb),
+            ...(welcomeChromeHidden ? { pointerEvents: "none" } : {}),
             ...(playDockIntro && !isMobile
               ? {
                   animation:
@@ -406,6 +421,10 @@ export default function NavBar() {
             const href =
               item.key === "mypage" ? myHref : `${prefix}${item.href}`;
             const active = pathname === href || pathname.startsWith(href + "/");
+            const iconSize = isMobile ? 23 : 24;
+            /** リザルト（カスタム画像）のみ大きく */
+            const resultIconSize = isMobile ? 32 : 34;
+            const renderSize = item.iconSrc ? resultIconSize : iconSize;
             const Icon = item.icon;
 
             const iconStyle: CSSProperties = active
@@ -419,7 +438,7 @@ export default function NavBar() {
                   opacity: 1,
                   ...(isMobile
                     ? {
-                        filter: "drop-shadow(0 0 6px rgba(186,230,253,0.42))",
+                        filter: "drop-shadow(0 0 6px rgba(255,255,255,0.35))",
                       }
                     : {}),
                 }
@@ -444,6 +463,7 @@ export default function NavBar() {
                 }}
                 aria-label={item.label}
                 title={item.label}
+                data-tutorial-target={`nav-${item.key}`}
                 onPointerEnter={
                   item.key === "ranking"
                     ? () => prefetchCumulativeRankingsList()
@@ -475,11 +495,34 @@ export default function NavBar() {
                       : {}),
                   }}
                 >
-                  <Icon
-                    size={isMobile ? 23 : 24}
-                    color={active ? "#ffffff" : "rgba(226,232,240,0.42)"}
-                    style={iconStyle}
-                  />
+                  {item.iconSrc ? (
+                    <span
+                      aria-hidden
+                      style={{
+                        ...iconStyle,
+                        width: renderSize,
+                        height: renderSize,
+                        display: "block",
+                        backgroundColor: active
+                          ? "#ffffff"
+                          : "rgba(226,232,240,0.42)",
+                        WebkitMaskImage: `url(${item.iconSrc})`,
+                        maskImage: `url(${item.iconSrc})`,
+                        WebkitMaskRepeat: "no-repeat",
+                        maskRepeat: "no-repeat",
+                        WebkitMaskPosition: "center",
+                        maskPosition: "center",
+                        WebkitMaskSize: "contain",
+                        maskSize: "contain",
+                      }}
+                    />
+                  ) : Icon ? (
+                    <Icon
+                      size={iconSize}
+                      color={active ? "#ffffff" : "rgba(226,232,240,0.42)"}
+                      style={iconStyle}
+                    />
+                  ) : null}
                   {item.key === "ranking" && showRankingBadge ? (
                     <NavBarNotificationDot />
                   ) : null}

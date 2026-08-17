@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { useCallback, useEffect, useMemo } from "react";
 import { Crown } from "lucide-react";
-import type { MobileMetric, RankingRowWithCountry } from "./_data/mockRows";
+import type { MobileMetric, RankingRowWithCountry } from "@/lib/rankings/rankingMetrics";
 import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
@@ -15,7 +15,6 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
-import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
@@ -117,12 +116,12 @@ export default function TopPodium({
   const metricTag = cyberMetricTag(metric, language);
   const isWebList = base === "/web" && !compact;
   const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
-  const statsLeague = rankingLeague ?? "worldcup";
+  const statsLeague = rankingLeague ?? "nba";
   const statsContext = useMemo(
     () => ({
       rankingLeague: statsLeague,
       wcStage:
-        statsLeague === "worldcup"
+        false
           ? (wcStage ?? ("overall" as const))
           : undefined,
     }),
@@ -211,7 +210,7 @@ export default function TopPodium({
               ) : null}
               <Link
                 href={profileHref}
-                className="relative block"
+                className="relative block origin-center transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95"
                 prefetch
                 onPointerEnter={() =>
                   warmProfileRoute(profileKey, row, profileHref, rank)
@@ -274,20 +273,16 @@ export default function TopPodium({
                     ) : null
                   }
                   nameExtra={
-                    <>
-                      <RankDeltaBadge
-                        delta={row.rankDeltaPlaces}
-                        language={language}
+                    row.plan === "pro" ? (
+                      <ProCyberBadge
+                        {...proBadgeStaticMotion}
+                        compact
+                        ariaLabel={t(language).common.proMember}
                       />
-                      {row.plan === "pro" ? (
-                        <ProCyberBadge
-                          {...proBadgeStaticMotion}
-                          compact
-                          ariaLabel={t(language).common.proMember}
-                        />
-                      ) : null}
-                    </>
+                    ) : null
                   }
+                  rankDeltaPlaces={row.rankDeltaPlaces}
+                  language={language}
                   scoreSlot={
                     <CyberRankingScore
                       rank={rank}

@@ -15,7 +15,99 @@ type Props = {
   onClose: () => void;
   onConfirm: () => void;
   language?: "ja" | "en";
+  /** 親 Modal 内に重ねる（RN の二重 Modal 回避） */
+  embedded?: boolean;
 };
+
+function LogoutConfirmBody({
+  onClose,
+  onConfirm,
+  title,
+  cancelLabel,
+  confirmLabel,
+  gridPatternId,
+}: {
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  cancelLabel: string;
+  confirmLabel: string;
+  gridPatternId: string;
+}) {
+  return (
+    <>
+      <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose}>
+        {(Platform.OS === "ios" || Platform.OS === "android") && (
+          <BlurView
+            intensity={Platform.OS === "ios" ? 12 : 8}
+            tint="dark"
+            {...nativeBlurViewExtraProps()}
+            style={StyleSheet.absoluteFillObject}
+          />
+        )}
+        <View style={styles.backdropDim} />
+      </Pressable>
+
+      <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+        <LinearGradient
+          colors={[
+            "rgba(255,255,255,0.08)",
+            "rgba(255,255,255,0.03)",
+            "rgba(5,8,20,0.8)",
+          ]}
+          locations={[0, 0.42, 1]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <Svg
+          width="100%"
+          height="100%"
+          style={[StyleSheet.absoluteFillObject, { opacity: PROFILE_SHELL_GRID_NATIVE.layerOpacity * 0.32 }]}
+          pointerEvents="none"
+        >
+          <Defs>
+            <Pattern
+              id={`logout_grid_${gridPatternId}`}
+              width={PROFILE_SHELL_GRID_NATIVE.cellPx}
+              height={PROFILE_SHELL_GRID_NATIVE.cellPx}
+              patternUnits="userSpaceOnUse"
+            >
+              <SvgPath
+                d={profileShellGridPathD(PROFILE_SHELL_GRID_NATIVE.cellPx)}
+                fill="none"
+                stroke={PROFILE_SHELL_GRID_NATIVE.stroke}
+                strokeWidth={PROFILE_SHELL_GRID_NATIVE.strokeWidth}
+              />
+            </Pattern>
+          </Defs>
+          <Rect width="100%" height="100%" fill={`url(#logout_grid_${gridPatternId})`} />
+        </Svg>
+
+        <View style={styles.iconWrap}>
+          <View style={styles.iconSlot}>
+            <MaterialCommunityIcons name="logout" size={18} color="rgba(248,113,113,0.95)" />
+          </View>
+        </View>
+
+        <Text style={styles.title}>{title}</Text>
+
+        <View style={styles.btnRow}>
+          <Pressable
+            style={({ pressed }) => [styles.btnCancel, pressed && { opacity: 0.88 }]}
+            onPress={onClose}
+          >
+            <Text style={styles.btnCancelText}>{cancelLabel}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.btnConfirm, pressed && { opacity: 0.92 }]}
+            onPress={onConfirm}
+          >
+            <Text style={styles.btnConfirmText}>{confirmLabel}</Text>
+          </Pressable>
+        </View>
+      </Pressable>
+    </>
+  );
+}
 
 /** Web `LogoutConfirmModal` 相当 */
 export default function LogoutConfirmModalNative({
@@ -23,6 +115,7 @@ export default function LogoutConfirmModalNative({
   onClose,
   onConfirm,
   language = "ja",
+  embedded = false,
 }: Props) {
   const isJa = language === "ja";
   const gridPatternId = useId().replace(/[^a-zA-Z0-9_]/g, "_");
@@ -31,79 +124,26 @@ export default function LogoutConfirmModalNative({
   const cancelLabel = isJa ? "キャンセル" : "Cancel";
   const confirmLabel = isJa ? "ログアウト" : "Log out";
 
+  if (!open) return null;
+
+  const body = (
+    <LogoutConfirmBody
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title={title}
+      cancelLabel={cancelLabel}
+      confirmLabel={confirmLabel}
+      gridPatternId={gridPatternId}
+    />
+  );
+
+  if (embedded) {
+    return <View style={styles.embeddedOverlay}>{body}</View>;
+  }
+
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose}>
-          {(Platform.OS === "ios" || Platform.OS === "android") && (
-            <BlurView
-              intensity={Platform.OS === "ios" ? 12 : 8}
-              tint="dark"
-              {...nativeBlurViewExtraProps()}
-              style={StyleSheet.absoluteFillObject}
-            />
-          )}
-          <View style={styles.backdropDim} />
-        </Pressable>
-
-        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-          <LinearGradient
-            colors={[
-              "rgba(255,255,255,0.08)",
-              "rgba(255,255,255,0.03)",
-              "rgba(5,8,20,0.8)",
-            ]}
-            locations={[0, 0.42, 1]}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <Svg
-            width="100%"
-            height="100%"
-            style={[StyleSheet.absoluteFillObject, { opacity: PROFILE_SHELL_GRID_NATIVE.layerOpacity * 0.32 }]}
-            pointerEvents="none"
-          >
-            <Defs>
-              <Pattern
-                id={`logout_grid_${gridPatternId}`}
-                width={PROFILE_SHELL_GRID_NATIVE.cellPx}
-                height={PROFILE_SHELL_GRID_NATIVE.cellPx}
-                patternUnits="userSpaceOnUse"
-              >
-                <SvgPath
-                  d={profileShellGridPathD(PROFILE_SHELL_GRID_NATIVE.cellPx)}
-                  fill="none"
-                  stroke={PROFILE_SHELL_GRID_NATIVE.stroke}
-                  strokeWidth={PROFILE_SHELL_GRID_NATIVE.strokeWidth}
-                />
-              </Pattern>
-            </Defs>
-            <Rect width="100%" height="100%" fill={`url(#logout_grid_${gridPatternId})`} />
-          </Svg>
-
-          <View style={styles.iconWrap}>
-            <View style={styles.iconSlot}>
-              <MaterialCommunityIcons name="logout" size={18} color="rgba(248,113,113,0.95)" />
-            </View>
-          </View>
-
-          <Text style={styles.title}>{title}</Text>
-
-          <View style={styles.btnRow}>
-            <Pressable
-              style={({ pressed }) => [styles.btnCancel, pressed && { opacity: 0.88 }]}
-              onPress={onClose}
-            >
-              <Text style={styles.btnCancelText}>{cancelLabel}</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.btnConfirm, pressed && { opacity: 0.92 }]}
-              onPress={onConfirm}
-            >
-              <Text style={styles.btnConfirmText}>{confirmLabel}</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </View>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.overlay}>{body}</View>
     </Modal>
   );
 }
@@ -115,6 +155,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  embeddedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    zIndex: 20,
+    elevation: 20,
   },
   backdropDim: {
     ...StyleSheet.absoluteFillObject,

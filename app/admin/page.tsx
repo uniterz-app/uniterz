@@ -42,21 +42,10 @@ export default function AdminHomePage() {
           desc="JSONプレビュー → Firestoreへ一括書込み"
         />
         <Card
-          href="/admin/wc-goal-scorers"
-          title="WC 得点者入力"
-          desc="W杯試合の得点者を手入力（ボーナス判定用）"
+          href="/admin/redemptions"
+          title="商品交換申請"
+          desc="審査・購入・追跡番号の更新"
         />
-        {/* 先々のプレースホルダ */}
-        <Card
-          href="/admin/plans"
-          title="プラン管理（準備中）"
-          desc="申請承認・公開設定・価格調整など"
-        />
-        <Card
-  href="/admin/dashboard"
-  title="ダッシュボード"
-  desc="ユーザー数・投稿数・DAU を確認"
-/>
       </div>
     </AdminGuard>
   );

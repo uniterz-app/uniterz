@@ -1,7 +1,7 @@
 import { Platform, StyleSheet, type TextStyle, type ViewStyle } from "react-native";
 
-export const CRT_CYAN = "#22d3ee";
-export const CRT_CYAN_BORDER = "rgba(34,211,238,0.45)";
+export const CRT_CYAN = "#00F5FF";
+export const CRT_CYAN_BORDER = "rgba(0,245,255,0.45)";
 export const CRT_AMBER_BORDER = "rgba(251,191,36,0.35)";
 
 /** Web `CommunityPressable` active:scale-[0.995] / hover:brightness-110 */
@@ -17,13 +17,13 @@ export const communityPressableTapStyle = (pressed: boolean): ViewStyle => ({
 
 export const communitySlotGlassStyle: ViewStyle = {
   borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.1)",
-  backgroundColor: "rgba(255,255,255,0.03)",
+  borderColor: "rgba(0,245,255,0.16)",
+  backgroundColor: "rgba(9,13,20,0.95)",
   ...Platform.select({
     ios: {
-      shadowColor: "#000",
+      shadowColor: "#00F5FF",
       shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.32,
+      shadowOpacity: 0.08,
       shadowRadius: 14,
     },
     android: { elevation: 4 },
@@ -34,8 +34,8 @@ export const communitySlotGlassStyle: ViewStyle = {
 export const communityEmptySlotStyle: ViewStyle = {
   borderWidth: 1,
   borderStyle: "dashed",
-  borderColor: "rgba(34,211,238,0.2)",
-  backgroundColor: "rgba(255,255,255,0.012)",
+  borderColor: "rgba(0,245,255,0.22)",
+  backgroundColor: "rgba(0,245,255,0.02)",
 };
 
 export const communityEmptyJoinSlotStyle: ViewStyle = {
@@ -46,10 +46,10 @@ export const communityEmptyJoinSlotStyle: ViewStyle = {
 };
 
 export const communityModalCardStyle: ViewStyle = {
-  borderRadius: 16,
+  borderRadius: 0,
   borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.12)",
-  backgroundColor: "rgba(12,20,25,0.95)",
+  borderColor: "rgba(0,245,255,0.22)",
+  backgroundColor: "rgba(5,11,20,0.97)",
   overflow: "hidden",
   ...Platform.select({
     ios: {
@@ -95,70 +95,53 @@ export const communityCrtStyles = StyleSheet.create({
   sectionLineLeft: {
     backgroundColor: "transparent",
     borderTopWidth: 1,
-    borderTopColor: "rgba(34,211,238,0.28)",
+    borderTopColor: "rgba(0,245,255,0.28)",
   },
   sectionLineRight: {
     backgroundColor: "transparent",
     borderTopWidth: 1,
-    borderTopColor: "rgba(34,211,238,0.08)",
+    borderTopColor: "rgba(0,245,255,0.08)",
   },
   sectionLabel: {
-    fontSize: 12,
-    letterSpacing: 3.2,
-    color: "rgba(186,230,253,0.86)",
-    fontWeight: "600",
+    fontSize: 11,
+    letterSpacing: 2.4,
+    color: "rgba(165,243,252,0.7)",
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   sectionSuffix: {
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 1.2,
     color: "rgba(165,243,252,0.5)",
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.18)",
-    backgroundColor: "rgba(34,211,238,0.04)",
+    borderColor: "rgba(0,245,255,0.18)",
+    backgroundColor: "rgba(0,245,255,0.04)",
     paddingHorizontal: 6,
     paddingVertical: 1,
     fontFamily: communityMono,
   },
   roleBadgeOwner: {
-    borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.65)",
-    backgroundColor: "rgba(4,8,18,0.82)",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.55,
-    shadowRadius: 6,
-    elevation: 4,
+    alignSelf: "flex-end",
   },
   roleBadgeMember: {
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.45)",
-    backgroundColor: "rgba(4,8,18,0.82)",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.55,
-    shadowRadius: 6,
-    elevation: 4,
+    alignSelf: "flex-end",
   },
   roleBadgeTextOwner: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1.6,
-    color: "#fde68a",
-    textShadowColor: "rgba(0,0,0,0.85)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    letterSpacing: 2,
+    color: "#fbbf24",
+    textShadowColor: "rgba(251,191,36,0.45)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   roleBadgeTextMember: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1.6,
-    color: "#e0f2fe",
-    textShadowColor: "rgba(0,0,0,0.85)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    letterSpacing: 2,
+    color: "#00F5FF",
+    textShadowColor: "rgba(0,245,255,0.45)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
 });

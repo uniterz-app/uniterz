@@ -14,9 +14,8 @@ import {
   type SeriesStanding,
 } from "@/lib/games/playoffSeriesUi";
 import { resolvePkScore } from "@/lib/games/pkScore";
-import { resolveWcBroadcastLabels } from "@/lib/wc/wcBroadcastLabels";
-import { normalizeWcGameGoalScorers } from "@/lib/wc/goalScorer";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+import { normalizeNbaTopScorerCandidates } from "@/lib/nba/topScorer";
+import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
 
 /** プレーオフ：Firestore に seriesStanding が無いときの既定（0-0） */
 const PLAYOFF_SERIES_STANDING_FALLBACK = { homeWins: 0, awayWins: 0 } as const;
@@ -41,6 +40,21 @@ export const toDateOrNull = (v: any): Date | null => {
   if (v?.toDate && typeof v.toDate === "function") {
     const d = v.toDate();
     return d instanceof Date && !Number.isNaN(+d) ? d : null;
+  }
+
+  if (v && typeof v === "object" && typeof v.__ts === "number") {
+    const d = new Date(v.__ts);
+    return Number.isNaN(+d) ? null : d;
+  }
+
+  if (
+    v &&
+    typeof v === "object" &&
+    typeof v.seconds === "number" &&
+    Number.isFinite(v.seconds)
+  ) {
+    const d = new Date(v.seconds * 1000 + (Number(v.nanoseconds) || 0) / 1e6);
+    return Number.isNaN(+d) ? null : d;
   }
 
   if (typeof v === "string" || typeof v === "number") {
@@ -356,8 +370,14 @@ export type GameDoc = {
   broadcastLabel?: string | null;
   /** WC：試合の実得点者（リザルト未投稿の一覧カード表示にも使用） */
   goalScorers?: unknown;
+  /** 規定＋延長終了スコア（PK 前） */
+  regulationEtScore?: { home?: number; away?: number } | null;
+  /** ノックアウト PK 進出側 teamId */
+  advancingTeamId?: string | null;
   /** PK 戦の本数（規定・延長スコアとは別） */
   pkScore?: { home?: number; away?: number } | null;
+  isPickup?: unknown;
+  pickupWeekKey?: unknown;
 };
 
 /** MatchCardProps へ整形 */
@@ -475,14 +495,8 @@ export function toMatchCardProps(
     seasonPhase,
     venue: raw?.venue ?? "",
     roundLabel: roundLabelStr,
-    knockout: isWcKnockoutGame({
-      league,
-      knockout: raw?.knockout ?? null,
-      roundLabel: roundLabelStr,
-      wcStage: raw?.wcStage ?? null,
-    }),
-    broadcastLabels:
-      league === "wc" ? resolveWcBroadcastLabels(id, raw) : [],
+    knockout: Boolean(raw?.knockout),
+    broadcastLabels: [],
     startAtJst,
     status,
     home,
@@ -503,12 +517,12 @@ export function toMatchCardProps(
     makePredictionHref: buildMake(id),
 
     dense: Boolean(opts?.dense),
-    goalScorers:
-      league === "wc"
-        ? normalizeWcGameGoalScorers(raw?.goalScorers, {
-            homeTeamId: home.teamId,
-            awayTeamId: away.teamId,
-          })
+    topScorerCandidates:
+      league === "nba"
+        ? normalizeNbaTopScorerCandidates(
+            (raw as { topScorerCandidates?: unknown })?.topScorerCandidates
+          )
         : undefined,
+    isPickup: isNbaPickupGame(raw),
   };
 }

@@ -128,7 +128,12 @@ export default function TeamDetailScreenNative() {
     : null;
 
   return (
-    <MobilePageShell title={team?.name ?? "TEAM DETAIL"} onClose={() => navigation.goBack()}>
+    <MobilePageShell
+      eyebrow="GAMES"
+      title={team?.name ?? "TEAM DETAIL"}
+      edgeBack
+      onClose={() => navigation.goBack()}
+    >
       {loading ? (
         <View style={{ marginTop: 32, alignItems: "center" }}>
           <CandleChartLoaderNative />

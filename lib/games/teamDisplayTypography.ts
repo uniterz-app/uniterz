@@ -13,6 +13,14 @@ export function bracketMarketTeamTypography(isMobile: boolean): CSSProperties {
       };
 }
 
+/** 試合カードのチーム名：Bebas + 右斜め */
+export function matchCardTeamNameStyle(isMobile: boolean): CSSProperties {
+  return {
+    ...bracketMarketTeamTypography(isMobile),
+    transform: "skewX(-6deg)",
+  };
+}
+
 /** letter-spacing 末尾余白による中央揃えの見た目ずれ補正（WC 国名・MatchCard と同一） */
 export function wcBracketMarketTeamTypography(isMobile: boolean): CSSProperties {
   const base = bracketMarketTeamTypography(isMobile);

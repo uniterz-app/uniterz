@@ -26,14 +26,12 @@ function radarAxisLevelsFromStats(stats: any): RadarAxisLevels {
   if (
     al &&
     isLevel(al.winRate) &&
-    isLevel(al.precision) &&
     isLevel(al.upset) &&
     isLevel(al.volume) &&
     isLevel(al.streak)
   ) {
     return {
       winRate: al.winRate,
-      precision: al.precision,
       upset: al.upset,
       volume: al.volume,
       streak: al.streak,
@@ -41,7 +39,6 @@ function radarAxisLevelsFromStats(stats: any): RadarAxisLevels {
   }
   return {
     winRate: score10ToLevel(r?.winRate ?? 0),
-    precision: score10ToLevel(r?.precision ?? 0),
     upset: score10ToLevel(r?.upset ?? 0),
     volume: score10ToLevel(r?.volume ?? 0),
     streak: score10ToLevel(r?.streak ?? 0),
@@ -211,7 +208,6 @@ export default function ProAnalysisPage() {
       }
     : {
         winRate: 0,
-        precision: 0,
         upset: 0,
         volume: 0,
         streak: 0,

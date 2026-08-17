@@ -15,7 +15,7 @@ type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   className?: string;
 };
 
-/** 角切りシアン枠のハンバーガーボタン（全画面共通） */
+/** 角切り黄枠のハンバーガーボタン（全画面共通） */
 export default function CyberMenuButton({
   size = "sm",
   badge,

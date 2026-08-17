@@ -8,7 +8,7 @@ export function toNativeGamesLanguage(language: string): GamesLanguage {
 export function getGamesTexts(language: GamesLanguage) {
   if (language === "en") {
     return {
-      noGames: "No games for this date.",
+      noGames: "No date",
       live: "Live",
       final: "Final",
       startsIn: "Starts in",
@@ -67,6 +67,8 @@ export function getGamesTexts(language: GamesLanguage) {
       invalidHomeWinBody: "When HOME win is selected, HOME score must be higher.",
       invalidAwayWinBody: "When AWAY win is selected, AWAY score must be higher.",
       invalidDrawScoreBody: "For draw prediction, scores must be equal.",
+      knockoutPkWinnerRequiredBody:
+        "Level score goes to penalties — pick which team advances.",
       submitErrorTitle: "Submit error",
       submitNoGameIdBody: "Game ID is missing.",
       submitLockedTitle: "Posting locked",
@@ -87,6 +89,17 @@ export function getGamesTexts(language: GamesLanguage) {
       tabH2h: "Matchup",
       tabMarket: "Market",
       tabStats: "Stats",
+      predictInjuries: "Injury Report",
+      predictTeamStats: "Team Stats",
+      predictRoster: "Roster",
+      insightProOnly: "Insight is available with Pro.",
+      insightUpgradeCta: "Unlock with Pro",
+      panelDataPending: "Data coming soon",
+      teamStatsMoreHint: "For more stats, open the team page",
+      nbaTopScorerTitle: "TOP SCORER",
+      nbaTopScorerBonusHint: "+2 if correct",
+      nbaTopScorerClear: "Clear",
+      nbaTopScorerEmpty: "Player list not ready yet",
       scorePredictTitle: "Score prediction",
       scoringRulesChip: "Grading rules",
       rulesFootNote: "See the Rankings screen for update timing and other notes.",
@@ -115,7 +128,7 @@ export function getGamesTexts(language: GamesLanguage) {
       predictToolLoading: "Loading…",
       predictToolLoadError: "Failed to load.",
       predictToolH2hEmpty:
-        "No finished games for this pairing in the current date window (±10 days from selected day).",
+        "No finished games for this pairing in the current date window (±5 days from selected day).",
       predictToolH2hScope: "Showing games within the nearby schedule query window.",
       predictToolH2hTrend: "Series Trend",
       predictToolH2hInjury: "Inactive",
@@ -143,7 +156,7 @@ export function getGamesTexts(language: GamesLanguage) {
   }
 
   return {
-    noGames: "本日の試合はありません。",
+    noGames: "No date",
     live: "試合中",
     final: "試合終了",
     startsIn: "開始まで",
@@ -202,6 +215,8 @@ export function getGamesTexts(language: GamesLanguage) {
     invalidHomeWinBody: "HOME勝利を選んだ場合は HOME スコアを高くしてください。",
     invalidAwayWinBody: "AWAY勝利を選んだ場合は AWAY スコアを高くしてください。",
     invalidDrawScoreBody: "引き分け予想では同点スコアを入力してください。",
+    knockoutPkWinnerRequiredBody:
+      "同点予想のため、PKで勝ち上がるチームを選んでください。",
     submitErrorTitle: "送信エラー",
     submitNoGameIdBody: "試合IDが取得できませんでした。",
     submitLockedTitle: "投稿不可",
@@ -222,6 +237,17 @@ export function getGamesTexts(language: GamesLanguage) {
     tabH2h: "直接対決",
     tabMarket: "市場",
     tabStats: "詳細スタッツ",
+    predictInjuries: "Injury Report",
+    predictTeamStats: "Team Stats",
+    predictRoster: "Roster",
+    insightProOnly: "Insight は Pro プランで利用できます",
+    insightUpgradeCta: "Pro で解除",
+    panelDataPending: "データ準備中です",
+    teamStatsMoreHint: "より詳細なスタッツはチームページへ",
+    nbaTopScorerTitle: "TOP SCORER",
+    nbaTopScorerBonusHint: "的中で＋2点",
+    nbaTopScorerClear: "クリア",
+    nbaTopScorerEmpty: "選手リスト準備中です",
     scorePredictTitle: "スコア予想",
     scoringRulesChip: "採点ルール",
     rulesFootNote: "更新タイミングなどはランキング画面をご確認ください。",
@@ -250,7 +276,7 @@ export function getGamesTexts(language: GamesLanguage) {
     predictToolLoading: "読み込み中…",
     predictToolLoadError: "取得に失敗しました。",
     predictToolH2hEmpty:
-      "日付枠内（当日前後±10日）に、同一カード同士の終了試合がまだありません。",
+      "日付枠内（当日前後±5日）に、同一カード同士の終了試合がまだありません。",
     predictToolH2hScope: "※ 一覧はスケジュール取得の枠内に限ります。",
     predictToolH2hTrend: "シリーズ推移",
     predictToolH2hInjury: "欠場",

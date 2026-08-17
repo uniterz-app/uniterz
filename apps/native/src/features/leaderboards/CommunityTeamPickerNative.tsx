@@ -94,7 +94,7 @@ export default function CommunityTeamPickerNative({
         value={q}
         onChangeText={setQ}
         placeholder={labels.search}
-        placeholderTextColor="rgba(255,255,255,0.28)"
+        placeholderTextColor="rgba(255,255,255,0.55)"
         style={styles.search}
       />
 
@@ -155,16 +155,15 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
-    backgroundColor: "rgba(34,211,238,0.15)",
+    borderColor: "#FFFFFF",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 999,
   },
   chipText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "rgba(207,250,254,0.95)",
+    color: "#000000",
   },
   clearText: {
     fontSize: 10,
@@ -173,18 +172,18 @@ const styles = StyleSheet.create({
   },
   search: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(0,0,0,0.4)",
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "#000000",
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 14,
-    color: "rgba(255,255,255,0.92)",
+    color: "#FFFFFF",
   },
   list: {
     maxHeight: 160,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "#000000",
     padding: 4,
   },
   empty: {
@@ -199,10 +198,10 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 0,
   },
   rowOn: {
-    backgroundColor: "rgba(34,211,238,0.2)",
+    backgroundColor: "#FFFFFF",
   },
   rowDisabled: {
     opacity: 0.4,
@@ -216,12 +215,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   checkOn: {
-    borderColor: "rgba(103,232,249,0.8)",
-    backgroundColor: "rgba(34,211,238,0.3)",
+    borderColor: "#000000",
+    backgroundColor: "#000000",
   },
   checkMark: {
     fontSize: 10,
-    color: "rgba(207,250,254,0.95)",
+    color: "#FFFFFF",
     lineHeight: 12,
   },
   rowName: {
@@ -230,6 +229,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.75)",
   },
   rowNameOn: {
-    color: "rgba(207,250,254,0.95)",
+    color: "#000000",
   },
 });

@@ -12,7 +12,7 @@ import type { StreakMetrics } from "@/lib/profile/computeStreakMetrics";
 export type { StreakMetrics } from "@/lib/profile/computeStreakMetrics";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const METRICS_CACHE_VERSION = 2;
+const METRICS_CACHE_VERSION = 3;
 
 type ScopeCacheEntry = {
   at: number;

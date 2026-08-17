@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+/**
+ * Native: posts 全件購読は廃止。空分布のみ返す。
+ */
+import { useEffect, useState } from "react";
 
 export type PostDistribution = {
   home: number;
@@ -10,90 +11,20 @@ export type PostDistribution = {
 
 const EMPTY: PostDistribution = { home: 0, away: 0, draw: 0 };
 
-function countPostDistribution(
-  docs: ReadonlyArray<{ data: () => unknown }>
-): PostDistribution {
-  let home = 0;
-  let away = 0;
-  let draw = 0;
-
-  for (const docSnap of docs) {
-    const r = docSnap.data() as {
-      prediction?: { winner?: string };
-      winner?: string;
-    };
-    const winner = r?.prediction?.winner ?? r?.winner ?? null;
-    if (winner === "home") home++;
-    else if (winner === "away") away++;
-    else if (winner === "draw") draw++;
-  }
-
-  return { home, away, draw };
-}
-
-/**
- * Web `GamePredictionDistribution` と同条件: `posts` をリアルタイム購読
- */
 export function usePredictionPostDistribution(
-  gameId: string | null,
+  _gameId: string | null | undefined,
   enabled = true
-): {
-  data: PostDistribution;
-  loading: boolean;
-  error: string | null;
-  applyOptimistic: (winner: "home" | "away" | "draw") => void;
-} {
-  const [data, setData] = useState<PostDistribution>(EMPTY);
-  const [loading, setLoading] = useState(Boolean(gameId));
-  const [error, setError] = useState<string | null>(null);
-  const optimisticRef = useRef<PostDistribution>(EMPTY);
-
-  const applyOptimistic = useCallback((winner: "home" | "away" | "draw") => {
-    optimisticRef.current = {
-      ...optimisticRef.current,
-      [winner]: optimisticRef.current[winner] + 1,
-    };
-    setData((prev) => ({
-      ...prev,
-      [winner]: prev[winner] + 1,
-    }));
-  }, []);
+) {
+  const [loading, setLoading] = useState(Boolean(enabled));
 
   useEffect(() => {
-    if (!enabled || !gameId) {
-      optimisticRef.current = EMPTY;
-      setData(EMPTY);
-      setLoading(false);
-      setError(null);
-      return;
-    }
+    setLoading(false);
+  }, [enabled]);
 
-    setLoading(true);
-    setError(null);
-    optimisticRef.current = EMPTY;
-
-    const q = query(
-      collection(db, "posts"),
-      where("gameId", "==", gameId),
-      where("schemaVersion", "==", 2)
-    );
-
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        optimisticRef.current = EMPTY;
-        setData(countPostDistribution(snap.docs));
-        setLoading(false);
-      },
-      (err) => {
-        setData(EMPTY);
-        setError(err?.message ?? "load error");
-        setLoading(false);
-      }
-    );
-
-    return () => unsub();
-  }, [enabled, gameId]);
-
-  return { data, loading, error, applyOptimistic };
+  return {
+    data: EMPTY,
+    loading,
+    error: null as string | null,
+    applyOptimistic: (_winner: "home" | "away" | "draw") => {},
+  };
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Menu } from "lucide-react";
-import {
-  CYBER_MENU_ICON_CLASS,
-  CYBER_MENU_ICON_STROKE,
-} from "@/lib/ui/cyberMenuButton";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Eye } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
+import UnitEarnOverlay from "@/app/component/profile/UnitEarnOverlay";
+import { useUnitEarnOverlay } from "@/lib/units/useUnitEarnOverlay";
+import { unitVaultUiBalance } from "@/lib/units/unitVaultDisplay";
+import { UNIT_EARN_VAULT_COUNT_MS, unitEarnCountDisplayValue } from "@/lib/units/unitEarnMotion";
 import {
   KINETIK_GREEN,
   KINETIK_MAGENTA,
@@ -16,17 +17,29 @@ import {
   type ProfileEditKinetikStats,
 } from "./profileEditKinetikTypes";
 import type { ProfileEditTronIdentity } from "./profileEditTronTypes";
-import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { nameOxanium } from "@/lib/fonts";
+import {
+  useKinetikMetricCountUp,
+  type KinetikMetricCountFormat,
+} from "@/lib/hooks/useKinetikMetricCountUp";
 import { ProfileEditKinetikAvatarWithStreak } from "./ProfileEditKinetikStreakFx";
 import { KINETIK_STREAK_VARIANT } from "./kinetikStreakFx";
 import ProfileEditKinetikHeaderTabs from "./ProfileEditKinetikHeaderTabs";
 import ProfileEditKinetikGlitchTitle from "./ProfileEditKinetikGlitchTitle";
 import ProfileEditKinetikBadgeRow from "./ProfileEditKinetikBadgeRow";
+import BadgeDetailModal from "@/app/component/badges/BadgeDetailModal";
 import ProfileMetricInfoTip from "./ProfileMetricInfoTip";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
+import {
+  profilePlanProLuxuryClass,
+  type ProfilePlanProLuxuryVariant,
+} from "@/lib/profile/profilePlanProLuxuryVariants";
+import "@/app/component/profile/pro/profilePlanProLuxuryVariants.css";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
+import ProfilePlanProMetricsVariant from "@/app/component/profile/pro/ProfilePlanProMetricsVariant";
+import type { ProfilePlanProMetricLayoutVariant } from "@/lib/profile/profilePlanProMetricLayoutVariants";
 import { resolveKinetikRankBadge, resolveKinetikMenuAccent, resolveKinetikProfileAccent } from "./kinetikRankBadge";
 import type { ResolvedBadge } from "@/lib/profile/useProfileBadges";
 import { formatProfileMemberSince } from "@/lib/profile/formatProfileMemberSince";
@@ -38,19 +51,22 @@ import {
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { ProfileVisualEffects } from "@/lib/profile/profileVisualEffects";
-import type {
-  ProfileKinetikMetricsSection,
-  WcKinetikStackedStage,
-} from "@/lib/profile/profileKinetikMetricsSection";
+import { showProfilePlanProEffects } from "@/lib/profile/profileVisualEffects";
 import {
-  PROFILE_WC_STACKED_STAGE_TAB_ORDER,
-  profileWcStackedStageTabLabel,
-  profileWcStackedStageTabsLabel,
-} from "@/lib/profile/profileWcStackedStageTabs";
+  KINETIK_UPSET_METRIC_LABEL,
+  kinetikMetricLabelUsesLatinUppercase,
+} from "@/lib/profile/kinetikMetricDisplay";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
+import {
+  getKinetikMetricsScopeHint,
+  type ProfileKinetikMetricsPeriod,
+  type ProfileKinetikMetricsTab,
+} from "@/lib/profile/useNbaKinetikMonthlyStats";
+import RankingsPeriodLabelNav from "@/app/component/rankings/RankingsPeriodLabelNav";
+import { currentRankingPeriodLabel } from "@/lib/rankings/rankingPeriod";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -90,12 +106,14 @@ function KinetikSegBar({
   accent,
   reduceMotion,
   startDelay = 0,
+  isPlanPro = false,
 }: {
   filled: number;
   total?: number;
   accent: Accent;
   reduceMotion: boolean;
   startDelay?: number;
+  isPlanPro?: boolean;
 }) {
   const colors = ACCENT[accent];
   const segVariants = {
@@ -112,7 +130,10 @@ function KinetikSegBar({
   };
 
   return (
-    <div className="flex gap-[3px]" role="presentation">
+    <div
+      className={isPlanPro ? "profile-plan-pro-metric-card__seg-row flex gap-[4px]" : "flex gap-[3px]"}
+      role="presentation"
+    >
       {Array.from({ length: total }).map((_, i) => {
         const lit = i < filled;
         return (
@@ -122,11 +143,22 @@ function KinetikSegBar({
             variants={segVariants}
             initial={reduceMotion ? false : "hidden"}
             animate="visible"
-            className="h-[5px] min-w-0 flex-1"
+            className={[
+              "min-w-0 flex-1",
+              isPlanPro ? "profile-plan-pro-metric-card__seg h-[5px]" : "h-[5px]",
+            ].join(" ")}
             style={{
               transformOrigin: "left center",
-              background: lit ? colors.fill : "rgba(255,255,255,0.08)",
-              boxShadow: lit ? `0 0 6px ${colors.glow}` : undefined,
+              background: lit
+                ? isPlanPro
+                  ? colors.fill
+                  : "rgba(255,255,255,0.92)"
+                : "rgba(255,255,255,0.12)",
+              boxShadow: lit
+                ? isPlanPro
+                  ? `0 0 8px color-mix(in srgb, ${colors.glow} 40%, transparent), inset 0 1px 0 rgba(255,255,255,0.28)`
+                  : "none"
+                : undefined,
             }}
           />
         );
@@ -138,6 +170,10 @@ function KinetikSegBar({
 function MetricCard({
   label,
   value,
+  countTarget,
+  countFormat,
+  countDecimals = 0,
+  valuesPending = false,
   rankLabel,
   footnote,
   accent,
@@ -145,18 +181,23 @@ function MetricCard({
   layout,
   delay,
   segmentsReady = true,
-  showSegBar = true,
+  showSegBar = false,
   unit,
   unitHint,
-  tooltip,
   dayDelta,
   dayDeltaTitle,
   dayDeltaTone,
-  rankBelowSegBar = false,
+  rankBelowSegBar: _rankBelowSegBar = false,
   reduceUiMotion = false,
+  isPlanPro = false,
+  language = "ja",
 }: {
   label: string;
-  value: string;
+  value?: string;
+  countTarget?: number;
+  countFormat?: KinetikMetricCountFormat;
+  countDecimals?: number;
+  valuesPending?: boolean;
   rankLabel?: string;
   /** 勝率カード下など — 控えめな補足（投稿数・的中数など） */
   footnote?: string;
@@ -170,26 +211,42 @@ function MetricCard({
   unit?: string;
   /** ラベル横の単位ヒント */
   unitHint?: string;
-  tooltip?: string;
   dayDelta?: string | null;
   dayDeltaTitle?: string;
   dayDeltaTone?: "up" | "down" | null;
   /** 順位バッジをセグバーの下に置く（総合得点など） */
   rankBelowSegBar?: boolean;
   reduceUiMotion?: boolean;
+  isPlanPro?: boolean;
+  language?: "ja" | "en";
 }) {
   const reduceMotion = reduceUiMotion || useReducedMotion() === true;
-  const colors = ACCENT[accent];
-  const valueHasUnit = value.includes("%");
-  const showRankInline = rankLabel && segmentsReady && !rankBelowSegBar;
-  const showRankBelow = rankLabel && segmentsReady && rankBelowSegBar;
+  const useCount = countFormat != null && countTarget != null;
+  const countedValue = useKinetikMetricCountUp(
+    useCount ? valuesPending : true,
+    countTarget ?? 0,
+    countFormat ?? "int",
+    countDecimals,
+    reduceMotion
+  );
+  const displayValue = useCount
+    ? countedValue
+    : valuesPending
+      ? "—"
+      : (value ?? "—");
+  const valueHasUnit = displayValue.includes("%");
+  const labelLatinUpper = kinetikMetricLabelUsesLatinUppercase(label);
+  const showRankInline = Boolean(rankLabel && segmentsReady);
 
-  const rankBadge = showRankInline || showRankBelow ? (
+  const rankBadge = showRankInline ? (
     <motion.span
       className={[
         nameOxanium.className,
-        "shrink-0 border border-white/12 bg-transparent font-semibold tracking-[0.08em] text-white/55",
-        rankBelowSegBar ? "inline-block" : "mb-px",
+        "shrink-0 border bg-transparent font-semibold tracking-[0.08em]",
+        isPlanPro
+          ? "border-[rgba(232,198,106,0.45)] text-[rgba(232,198,106,0.88)]"
+          : "border-white/12 text-white/55",
+        "mb-px",
         layout === "web"
           ? "px-2 py-0.5 text-[11px]"
           : "px-1.5 py-[2px] text-[9px]",
@@ -209,65 +266,67 @@ function MetricCard({
   return (
     <motion.div
       className={[
-        "relative border border-white/10 bg-transparent",
+        "relative overflow-hidden border bg-black",
+        isPlanPro ? "profile-metric-card--gold" : "profile-metric-card--steel",
         layout === "web" ? "p-4 md:p-5" : "p-3.5",
       ].join(" ")}
       initial={reduceMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, delay: reduceMotion ? 0 : delay, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div
-        className="absolute top-3 bottom-3 left-0 w-[2px]"
-        style={{ background: colors.line, boxShadow: `0 0 8px ${colors.glow}` }}
-        aria-hidden
-      />
-      <div className="flex items-center gap-1 pl-2.5">
-        <p
-          className={[
-            nameOxanium.className,
-            "tracking-[0.14em] uppercase",
-            layout === "web"
-              ? "text-[11px] text-white/72 md:text-xs md:text-white/78"
-              : "text-[9px] text-white/62",
-          ].join(" ")}
-        >
-          {label}
-        </p>
-        {unitHint ? (
-          <span
+      <span className="profile-metric-card__inner-frame" aria-hidden />
+      <div className="relative z-[1] flex min-w-0 items-center gap-1 pr-0.5">
+        <div className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden">
+          <p
             className={[
               nameOxanium.className,
-              "tracking-[0.08em] text-white/38 uppercase",
-              layout === "web" ? "text-[9px]" : "text-[8px]",
+              "min-w-0 truncate whitespace-nowrap",
+              labelLatinUpper ? "uppercase tracking-[0.14em]" : "tracking-[0.06em]",
+              isPlanPro ? "profile-metric-card__label" : "",
+              layout === "web"
+                ? "text-[11px] text-white/72 md:text-xs md:text-white/78"
+                : "text-[9px] text-white/62",
             ].join(" ")}
           >
-            {unitHint}
-          </span>
-        ) : null}
-        {tooltip ? <ProfileMetricInfoTip label={tooltip} compact /> : null}
+            {label}
+          </p>
+          {unitHint ? (
+            <span
+              className={[
+                nameOxanium.className,
+                "shrink-0 whitespace-nowrap uppercase tracking-[0.08em]",
+                isPlanPro ? "profile-metric-card__unit-hint" : "text-white/38",
+                layout === "web" ? "text-[9px]" : "text-[8px]",
+              ].join(" ")}
+            >
+              {unitHint}
+            </span>
+          ) : null}
+        </div>
       </div>
       <div
         className={[
           nameOxanium.className,
-          "mt-1.5 flex flex-wrap items-end gap-x-1.5 gap-y-0.5 pl-2.5 leading-none",
+          "relative z-[1] mt-1.5 flex flex-wrap items-end gap-x-1.5 gap-y-0.5 leading-none",
         ].join(" ")}
       >
         <span
           className={[
-            "font-semibold tabular-nums tracking-tight",
+            "profile-metric-card__value inline-block origin-bottom-left font-semibold tabular-nums tracking-tight",
+            isPlanPro ? "" : "text-white/[0.92]",
             layout === "mobile"
               ? "text-[17px]"
               : "text-[30px] md:text-[32px]",
           ].join(" ")}
-          style={{ color: colors.text }}
         >
-          {value}
+          {displayValue}
         </span>
         {unit && !valueHasUnit ? (
           <span
             className={[
               nameOxanium.className,
-              "mb-0.5 font-medium tracking-[0.06em] text-white/45 uppercase",
+              "mb-0.5 font-medium tracking-[0.06em] uppercase",
+              isPlanPro ? "profile-metric-card__unit" : "text-white/45",
               layout === "web" ? "text-[11px] md:text-xs" : "text-[9px]",
             ].join(" ")}
           >
@@ -296,7 +355,7 @@ function MetricCard({
         {showRankInline ? rankBadge : null}
       </div>
       {showSegBar ? (
-        <div className="mt-2.5 pl-2.5">
+        <div className="relative z-[1] mt-2.5">
           {segmentsReady ? (
             <KinetikSegBar
               key={`${accent}-${filledSegs}-${rankLabel ?? "none"}`}
@@ -304,20 +363,19 @@ function MetricCard({
               accent={accent}
               reduceMotion={reduceMotion}
               startDelay={delay + 0.18}
+              isPlanPro={isPlanPro}
             />
           ) : (
             <div className="h-[5px]" aria-hidden />
           )}
         </div>
       ) : null}
-      {showRankBelow ? (
-        <div className="mt-2 pl-2.5">{rankBadge}</div>
-      ) : null}
       {footnote ? (
         <p
           className={[
             nameOxanium.className,
-            "mt-1.5 pl-2.5 leading-tight tabular-nums",
+            "relative z-[1] mt-1.5 leading-tight tabular-nums",
+            isPlanPro ? "profile-metric-card__footnote" : "",
             layout === "mobile"
               ? "text-[10px] tracking-[0.06em] text-white/62"
               : "text-[14px] tracking-[0.08em] text-white/78 md:text-[15px]",
@@ -356,120 +414,287 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
-function ProfileKinetikIdentityIdChip({
-  systemId,
-  shareLabel,
-  shareCopiedLabel,
-  shareCopied,
-  onShare,
-}: {
-  systemId: string;
-  shareLabel: string;
-  shareCopiedLabel: string;
-  shareCopied: boolean;
-  onShare: () => void;
-}) {
-  if (!systemId) return null;
+/** 表示名の直下に置く国旗 */
+function ProfileKinetikNameFlag({ countryCode }: { countryCode?: string | null }) {
+  const flagIso = countryCode?.trim().toUpperCase() || null;
+  if (!flagIso) return null;
 
   return (
-    <button
-      type="button"
-      className={[
-        "profile-edit-kinetik-footer-ref mt-1 inline-block max-w-full truncate transition",
-        "hover:text-white/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30",
-      ].join(" ")}
-      onClick={onShare}
-      aria-label={shareLabel}
-      title={shareCopied ? shareCopiedLabel : shareLabel}
-    >
-      {shareCopied ? shareCopiedLabel : `ID: ${systemId}`}
-    </button>
+    <span className="profile-edit-kinetik-name-flag mt-1.5 inline-flex shrink-0 items-center self-start">
+      <CountryFlag
+        iso2={flagIso}
+        variant="profileInline"
+        decorative
+        alt={flagIso}
+      />
+    </span>
   );
 }
 
-function ProfileKinetikIdentityMetaRow({
+/** ヘッダー: 参加日 / ID / 閲覧数（Unit は別コンポ） */
+function ProfileKinetikViewCountChip({
+  viewCount,
+  viewCountAriaLabel,
+}: {
+  viewCount: number;
+  viewCountAriaLabel: string | null;
+}) {
+  return (
+    <p
+      className="profile-edit-kinetik-view-count shrink-0"
+      aria-label={viewCountAriaLabel ?? undefined}
+      title={viewCountAriaLabel ?? undefined}
+    >
+      <Eye
+        className="profile-edit-kinetik-view-count__icon"
+        aria-hidden
+        strokeWidth={2.5}
+      />
+      <span className="profile-edit-kinetik-view-count__num">
+        {viewCount.toLocaleString("en-US")}
+      </span>
+    </p>
+  );
+}
+
+function ProfileKinetikIdentityJoinIdRow({
   memberSinceLabel,
-  countryCode,
   systemId,
   shareLabel,
   shareCopiedLabel,
   shareCopied,
   onShare,
-  align = "start",
 }: {
   memberSinceLabel: string | null;
-  countryCode?: string | null;
   systemId: string;
   shareLabel: string;
   shareCopiedLabel: string;
   shareCopied: boolean;
   onShare: () => void;
-  align?: "start" | "center";
 }) {
-  const flagIso = countryCode?.trim().toUpperCase() || null;
+  if (!memberSinceLabel && !systemId) return null;
 
   return (
-    <div
-      className={[
-        "flex w-full items-center justify-between gap-3",
-        align === "center" ? "self-center" : "self-start",
-      ].join(" ")}
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        {flagIso ? (
-          <CountryFlag
-            iso2={flagIso}
-            variant="inline"
-            className="h-[0.56rem] w-[0.75rem] shrink-0 sm:h-[0.6rem] sm:w-[0.8rem]"
-            alt={flagIso}
-          />
-        ) : null}
-        <p className="profile-edit-kinetik-footer-ref min-w-0 truncate">
-          {memberSinceLabel ?? ""}
+    <div className="profile-edit-kinetik-identity-join-id flex w-fit max-w-full min-w-0 items-end justify-start gap-2">
+      {memberSinceLabel ? (
+        <p className="profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity shrink-0 whitespace-nowrap">
+          {memberSinceLabel}
         </p>
-      </div>
-      <button
-        type="button"
-        className={[
-          "profile-edit-kinetik-footer-ref shrink-0 transition",
-          "hover:text-white/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30",
-        ].join(" ")}
-        onClick={onShare}
-        aria-label={shareLabel}
-        title={shareCopied ? shareCopiedLabel : shareLabel}
-      >
-        {shareCopied ? shareCopiedLabel : `ID: ${systemId}`}
-      </button>
+      ) : null}
+      {systemId ? (
+        <button
+          type="button"
+          className={[
+            "profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity",
+            "profile-edit-kinetik-footer-ref--id shrink-0 whitespace-nowrap transition",
+            "hover:text-white/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30",
+          ].join(" ")}
+          onClick={onShare}
+          aria-label={shareLabel}
+          title={shareCopied ? shareCopiedLabel : shareLabel}
+        >
+          {shareCopied ? shareCopiedLabel : `ID: ${systemId}`}
+        </button>
+      ) : null}
     </div>
   );
 }
 
-function getKinetikMetricCopy(isJa: boolean) {
+function formatVaultBalance(n: number): string {
+  return Math.max(0, Math.floor(n)).toLocaleString("en-US");
+}
+
+/** ゲーム内通貨 — 金貨ディスク + イタリック数字（U8）。corner は右上コンパクト */
+function ProfileUnitVault({
+  balance,
+  ariaLabel,
+  corner,
+  onPress,
+  absorbPulse = false,
+  /** false のあいだは数字を固定（中央の獲得演出中） */
+  countUpEnabled = true,
+  /** 加算カウント中（プロフィール常時アニメ停止用） */
+  onCountBusyChange,
+}: {
+  balance: number;
+  ariaLabel: string;
+  corner?: boolean;
+  onPress?: () => void;
+  /** 獲得演出のヒット時パルス */
+  absorbPulse?: boolean;
+  countUpEnabled?: boolean;
+  onCountBusyChange?: (busy: boolean) => void;
+}) {
+  const reduceMotion = useReducedMotion() === true;
+  /**
+   * ヒットでラッチし、オーバーレイ退出後も加算カウントを完走させる。
+   * （absorbPulse だけだと dismiss で即切れ、カウントが見えない）
+   */
+  const [countLatch, setCountLatch] = useState(false);
+  const valueRef = useRef<HTMLSpanElement | null>(null);
+  const displayRef = useRef(balance);
+  const onBusyRef = useRef(onCountBusyChange);
+  onBusyRef.current = onCountBusyChange;
+
+  useEffect(() => {
+    if (absorbPulse) {
+      setCountLatch(true);
+      return;
+    }
+    if (!countUpEnabled) setCountLatch(false);
+  }, [absorbPulse, countUpEnabled]);
+
+  const counting =
+    countUpEnabled && !reduceMotion && (absorbPulse || countLatch);
+
+  useEffect(() => {
+    onBusyRef.current?.(counting);
+  }, [counting]);
+
+  /**
+   * 加算は DOM 直書き（毎フレーム setState しない）。
+   * オーバーレイ金額と同じく、プロフィール全体の再描画を避ける。
+   */
+  useLayoutEffect(() => {
+    const el = valueRef.current;
+    if (!el) return;
+
+    if (!counting) {
+      displayRef.current = balance;
+      el.textContent = formatVaultBalance(balance);
+      return;
+    }
+
+    const start = displayRef.current;
+    const end = Math.max(0, Math.floor(balance));
+    if (end <= start) {
+      displayRef.current = end;
+      el.textContent = formatVaultBalance(end);
+      return;
+    }
+
+    let raf = 0;
+    let lastShown = -1;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - t0) / UNIT_EARN_VAULT_COUNT_MS);
+      const eased = 1 - (1 - t) ** 3;
+      const n = unitEarnCountDisplayValue(start, end, eased);
+      if (n !== lastShown) {
+        lastShown = n;
+        displayRef.current = n;
+        el.textContent = formatVaultBalance(n);
+      }
+      if (t < 1) {
+        raf = window.requestAnimationFrame(tick);
+      } else {
+        displayRef.current = end;
+        el.textContent = formatVaultBalance(end);
+        setCountLatch(false);
+      }
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [balance, counting]);
+
+  const interactive = typeof onPress === "function";
+  return (
+    <motion.div
+      data-unit-vault="1"
+      data-tutorial-target="profile-unit-coin"
+      className={[
+        "profile-edit-kinetik-unit-vault",
+        corner ? "profile-edit-kinetik-unit-vault--corner" : "",
+        interactive ? "profile-edit-kinetik-unit-vault--pressable" : "",
+        absorbPulse ? "profile-edit-kinetik-unit-vault--absorb" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label={ariaLabel}
+      title={ariaLabel}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? onPress : undefined}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onPress();
+              }
+            }
+          : undefined
+      }
+      initial={false}
+      animate={
+        absorbPulse && !reduceMotion
+          ? { opacity: 1, scale: [1, 1.12, 1], y: 0 }
+          : { opacity: 1, scale: 1, y: 0 }
+      }
+      transition={
+        absorbPulse && !reduceMotion
+          ? { duration: 0.28, ease: [0.25, 1, 0.5, 1] }
+          : { duration: 0 }
+      }
+    >
+      <span className="profile-edit-kinetik-unit-vault__disc" aria-hidden>
+        <span className="profile-edit-kinetik-unit-vault__sheen" />
+        <span className="profile-edit-kinetik-unit-vault__disc-inner">U</span>
+      </span>
+      <span
+        ref={valueRef}
+        className={[
+          nameOxanium.className,
+          "profile-edit-kinetik-unit-vault__value",
+        ].join(" ")}
+      />
+    </motion.div>
+  );
+}
+
+function getKinetikMetricCopy(
+  isJa: boolean,
+  scope: ReturnType<typeof getKinetikMetricsScopeHint>
+) {
+  const { unitHint, windowJa, windowEn } = scope;
   return {
     dayDeltaTitle: isJa ? "前日比" : "Day-over-day",
     ptsUnit: "pts",
     matchUnit: isJa ? "試合" : "matches",
     winRateUnitHint: "%",
-    cumulativeUnitHint: isJa ? "累計" : "CUM",
+    cumulativeUnitHint: unitHint,
+    metricsInfoAria: isJa ? "統計項目の説明" : "Stats metric help",
     winRateTooltip: isJa
       ? "確定試合の的中率。100% = 全試合的中。"
       : "Hit rate on settled picks. 100% = all picks correct.",
     totalPointsTooltip: isJa
-      ? "勝者的中・スコア精度・アップセット等を合算した期間内の総合得点。"
-      : "Combined score from wins, precision, upsets, and bonuses for the period.",
-    scorePrecisionTooltip: isJa
-      ? "予想スコアと実際スコアの近さを0〜10で評価し、期間内の合計を算出。"
-      : "Sum of 0–10 score-accuracy ratings per settled pick in the period.",
-    exactHitTooltip: isJa
-      ? "予想スコアが結果と完全一致した試合数（期間内の累計）。"
-      : "Number of matches where your predicted score exactly matched the final score.",
+      ? `勝者的中・アップセット・ボーナス等を合算した${windowJa}の総合得点。`
+      : `Combined score from wins, upsets, and bonuses for ${windowEn}.`,
+    goalScorerTooltip: isJa
+      ? `最多得点者予想が的中した試合数。${windowJa}の合計。`
+      : `Correct top-scorer picks for ${windowEn}.`,
     upsetTooltip: isJa
-      ? "アップセットが起きた試合で少数派を当てたときだけ加点。期間内の累計。"
-      : "Bonus points when you picked the minority side on an upset. Period total.",
+      ? `アップセットが起きた試合で少数派を当てたときだけ加点。${windowJa}の合計。`
+      : `Bonus points when you picked the minority side on an upset (${windowEn}).`,
     shareProfile: isJa ? "プロフィールを共有" : "Share profile",
     shareCopied: isJa ? "コピー済" : "Copied",
     proMember: isJa ? "Pro 会員" : "Pro member",
   };
+}
+
+function buildKinetikMetricsInfoMessage(
+  copy: ReturnType<typeof getKinetikMetricCopy>,
+  opts: { isJa: boolean }
+): string {
+  const { isJa } = opts;
+  const goalScorerLabel = isJa ? "最多得点者" : "Top scorer";
+
+  return [
+    `${isJa ? "勝率" : "Win rate"} — ${copy.winRateTooltip}`,
+    `${isJa ? "総合得点" : "Total points"} — ${copy.totalPointsTooltip}`,
+    `${goalScorerLabel} — ${copy.goalScorerTooltip}`,
+    `${KINETIK_UPSET_METRIC_LABEL} — ${copy.upsetTooltip}`,
+  ].join("\n\n");
 }
 
 function MetricsGridSkeleton({ layout }: { layout: "web" | "mobile" }) {
@@ -535,16 +760,35 @@ type Props = {
   countryCode?: string | null;
   memberSinceMs?: number | null;
   isPro?: boolean;
+  /** dev: PRO メトリクスレイアウト案 */
+  planProMetricLayout?: ProfilePlanProMetricLayoutVariant;
+  /** dev: PRO 背景 FX バリエーション */
+  planProBgVariant?: ProfilePlanProBgVariant;
+  /** dev: PRO 豪華化案（/dev/profile-plan-pro-luxury-showcase） */
+  planProLuxuryVariant?: ProfilePlanProLuxuryVariant;
   shareHandle?: string;
   metricValueDeltas?: MyRankMetricValueDeltas | null;
-  /** WC プロフィールでは完全的中（整数）を表示 */
+  /** @deprecated プロフィールは NBA 固定。互換のため残置 */
   rankingLeague?: RankingLeagueSource;
   /** 他人プロフィールではメトリクスカードのモーションを抑える（連勝 FX は維持） */
   visualEffects?: ProfileVisualEffects;
   /** スタッツ API 取得中 — メトリクス欄のみスケルトン表示 */
   statsPending?: boolean;
-  /** WC: ノックアウト（上）+ グループ（下）の縦積み */
-  stackedMetricsSections?: ProfileKinetikMetricsSection[];
+  /** NBA: Playoffs / Season 切替 */
+  metricsPeriod?: ProfileKinetikMetricsPeriod;
+  onMetricsPeriodChange?: (period: ProfileKinetikMetricsPeriod) => void;
+  /** NBA: TOTAL / Week / Month 切替 */
+  metricsTab?: ProfileKinetikMetricsTab;
+  onMetricsTabChange?: (tab: ProfileKinetikMetricsTab) => void;
+  /** Week / Month の対象ラベル（null = 現行） */
+  metricsWindowLabel?: string | null;
+  onMetricsWindowLabelChange?: (label: string | null) => void;
+  /** Pro: 過去期間ナビ用ラベル一覧 */
+  metricsPeriodLabels?: string[];
+  /** 累計プロフィール閲覧数（公開） */
+  profileViewCount?: number | null;
+  /** 保有 Unit（公開） */
+  unitBalance?: number | null;
 };
 
 export default function ProfileEditKinetikPanel({
@@ -553,9 +797,6 @@ export default function ProfileEditKinetikPanel({
   stats = PROFILE_EDIT_KINETIK_MOCK.stats,
   language = "ja",
   editable = false,
-  canOpenMenu = false,
-  onOpenMenu,
-  menuUnreadCount = 0,
   winStreak,
   totalPointsRank: totalPointsRankProp,
   totalPointsRankDenominator: totalPointsRankDenominatorProp,
@@ -568,20 +809,99 @@ export default function ProfileEditKinetikPanel({
   countryCode = null,
   memberSinceMs = null,
   isPro = false,
+  planProMetricLayout,
+  planProBgVariant,
+  planProLuxuryVariant,
   shareHandle,
   metricValueDeltas = null,
-  rankingLeague = "nba",
+  rankingLeague: _rankingLeague = "nba",
   visualEffects = "full",
   statsPending = false,
-  stackedMetricsSections,
+  metricsPeriod: _metricsPeriod,
+  onMetricsPeriodChange: _onMetricsPeriodChange,
+  metricsTab,
+  onMetricsTabChange,
+  metricsWindowLabel = null,
+  onMetricsWindowLabelChange,
+  metricsPeriodLabels = [],
+  profileViewCount = null,
+  unitBalance = null,
 }: Props) {
+  const router = useRouter();
   const isJa = language === "ja";
-  const isWcProfile = rankingLeague === "worldcup";
+  const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
+  const scopeHint = getKinetikMetricsScopeHint(
+    metricsTab ?? "total",
+    isJa ? "ja" : "en",
+    metricsTab === "weekly" || metricsTab === "monthly"
+      ? {
+          windowLabel: metricsWindowLabel,
+          isCurrentWindow:
+            !metricsWindowLabel ||
+            metricsWindowLabel === currentRankingPeriodLabel(metricsTab),
+        }
+      : undefined
+  );
   const reduceUiMotion =
     useReducedMotion() === true || visualEffects === "lite";
-  const metricCopy = getKinetikMetricCopy(isJa);
+  const planProBgAccentReady = true;
+  const metricCopy = getKinetikMetricCopy(isJa, scopeHint);
+
+  /** 自分プロフィールのみ: 残高増分 → 中央カウント → 金庫へ加算 */
+  const unitEarn = useUnitEarnOverlay({
+    balance: unitBalance ?? null,
+    enabled: editable && unitBalance != null,
+    storageKey: shareHandle?.trim() || "me",
+    language: isJa ? "ja" : "en",
+  });
+  /** 金庫加算カウント中は背景ループを止め続ける（オーバーレイ退出後も） */
+  const [vaultSettling, setVaultSettling] = useState(false);
+  const onVaultCountBusyChange = useCallback((busy: boolean) => {
+    setVaultSettling(busy);
+  }, []);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (vaultSettling) root.classList.add("unit-earn-settling");
+    else root.classList.remove("unit-earn-settling");
+    return () => root.classList.remove("unit-earn-settling");
+  }, [vaultSettling]);
+  /**
+   * 獲得演出中も背景 animate は切らない。
+   * （切ると dismiss で入場アニメが再走し、プロフィール再ロードに見える）
+   * 負荷軽減は html.unit-earn-playing の animation-play-state: paused に任せる。
+   */
+  const animatePlanProBg =
+    isPro &&
+    showProfilePlanProEffects(isPro) &&
+    useReducedMotion() !== true;
+  const metricsInfoMessage = buildKinetikMetricsInfoMessage(metricCopy, {
+    isJa,
+  });
+  const metricsInfoControl = (
+    <span className="profile-edit-kinetik-metrics-info shrink-0">
+      <ProfileMetricInfoTip
+        label={metricsInfoMessage}
+        ariaLabel={metricCopy.metricsInfoAria}
+        compact
+        planPro={isPro}
+      />
+    </span>
+  );
   const [shareCopied, setShareCopied] = useState(false);
+  const [badgeDetail, setBadgeDetail] = useState<ResolvedBadge | null>(null);
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
+  const profileViewCountAria =
+    profileViewCount == null
+      ? null
+      : isJa
+        ? `プロフィール閲覧数 ${profileViewCount.toLocaleString("ja-JP")}`
+        : `${profileViewCount.toLocaleString("en-US")} profile views`;
+  const unitBalanceAria =
+    unitBalance == null
+      ? null
+      : isJa
+        ? `保有 Unit ${unitBalance.toLocaleString("ja-JP")}`
+        : `${unitBalance.toLocaleString("en-US")} Units`;
   const shareTargetHandle = shareHandle?.trim() || identity.handle?.trim() || "";
 
   const handleShareProfile = useCallback(async () => {
@@ -597,6 +917,28 @@ export default function ProfileEditKinetikPanel({
       window.setTimeout(() => setShareCopied(false), 2200);
     }
   }, [identity.displayName, language, layout, shareTargetHandle]);
+
+  const handleBadgeClick = useCallback(
+    (badge: ResolvedBadge) => {
+      if (onBadgeClick) {
+        onBadgeClick(badge);
+        return;
+      }
+      setBadgeDetail(badge);
+    },
+    [onBadgeClick]
+  );
+
+  const badgeDetailModal =
+    badgeDetail != null ? (
+      <BadgeDetailModal
+        badge={badgeDetail}
+        language={language}
+        shine={layout === "mobile"}
+        onClose={() => setBadgeDetail(null)}
+      />
+    ) : null;
+
   const activeWinStreak = Math.max(
     0,
     Math.floor(winStreak ?? stats.winStreak ?? 0)
@@ -623,35 +965,7 @@ export default function ProfileEditKinetikPanel({
     rankBadge,
   });
 
-  const wcStackedActive =
-    isWcProfile &&
-    stackedMetricsSections != null &&
-    stackedMetricsSections.length > 0;
-  const metricsSectionTitle = isWcProfile
-    ? "WORLD CUP // STATS"
-    : metricsTitle ?? "WORLD CUP // GROUP STAGE STATS";
-
-  const [wcStackedStage, setWcStackedStage] =
-    useState<WcKinetikStackedStage>("main");
-  const wcStackedAvailableStages = useMemo(
-    () =>
-      PROFILE_WC_STACKED_STAGE_TAB_ORDER.filter((stage) =>
-        stackedMetricsSections?.some((section) => section.wcStage === stage)
-      ),
-    [stackedMetricsSections]
-  );
-  useEffect(() => {
-    if (wcStackedAvailableStages.length === 0) return;
-    setWcStackedStage((prev) =>
-      wcStackedAvailableStages.includes(prev) ? prev : wcStackedAvailableStages[0]!
-    );
-  }, [wcStackedAvailableStages]);
-  const showWcStackedStageTabs = wcStackedAvailableStages.length > 1;
-  const activeWcStackedSection =
-    stackedMetricsSections?.find((section) => section.wcStage === wcStackedStage) ??
-    stackedMetricsSections?.[0] ??
-    null;
-  const flagIso = countryCode?.trim().toUpperCase() || null;
+  const metricsSectionTitle = metricsTitle ?? "NBA // 26-27";
 
   const dayDeltaTitle = metricCopy.dayDeltaTitle;
 
@@ -661,69 +975,103 @@ export default function ProfileEditKinetikPanel({
     sectionRank: {
       totalPointsRank: number | null;
       totalPointsRankDenominator: number | null;
-    }
+    },
+    valuesPending = false
   ) => {
-    const sectionWinRateFootnote = isJa
-      ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
-      : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
-    const sectionWinSegs = kinetikWinRateSegs(sectionStats.winRate);
-    const sectionPtsSegs = kinetikTotalPointsRankSegs(
-      sectionRank.totalPointsRank,
-      sectionRank.totalPointsRankDenominator
-    );
+    const pendingMark = "—";
+    const sectionWinRateFootnote = valuesPending
+      ? pendingMark
+      : isJa
+        ? `投稿 ${sectionStats.posts} · 的中 ${sectionStats.hits}`
+        : `${sectionStats.hits} hits · ${sectionStats.posts} posts`;
+    const sectionWinSegs = valuesPending
+      ? 0
+      : kinetikWinRateSegs(sectionStats.winRate);
+    const sectionPtsSegs = valuesPending
+      ? 0
+      : kinetikTotalPointsRankSegs(
+          sectionRank.totalPointsRank,
+          sectionRank.totalPointsRankDenominator
+        );
     const sectionTotalPointsRankLabel =
-      sectionRank.totalPointsRank != null
+      !valuesPending && sectionRank.totalPointsRank != null
         ? isJa
           ? `${sectionRank.totalPointsRank}位`
           : `#${sectionRank.totalPointsRank}`
         : undefined;
     const sectionPtsSegmentsReady =
+      !valuesPending &&
       sectionRank.totalPointsRankDenominator != null &&
       Number.isFinite(sectionRank.totalPointsRankDenominator) &&
       sectionRank.totalPointsRankDenominator >= 1;
-    const sectionWinRateDelta = formatProfileMetricDayDelta(
-      "winRate",
-      sectionDeltas?.winRate
-    );
-    const sectionTotalPointsDelta = formatProfileMetricDayDelta(
-      "totalPoints",
-      sectionDeltas?.totalPoints
-    );
-    const sectionPrecisionDelta = formatProfileMetricDayDelta(
-      "scorePrecision",
-      sectionDeltas?.totalPrecision,
-      { integer: isWcProfile }
-    );
-    const sectionUpsetDelta = formatProfileMetricDayDelta(
-      "upset",
-      sectionDeltas?.totalUpset
-    );
+    const sectionWinRateDelta = valuesPending
+      ? null
+      : formatProfileMetricDayDelta("winRate", sectionDeltas?.winRate);
+    const sectionTotalPointsDelta = valuesPending
+      ? null
+      : formatProfileMetricDayDelta("totalPoints", sectionDeltas?.totalPoints);
+    const sectionUpsetDelta = valuesPending
+      ? null
+      : formatProfileMetricDayDelta("upset", sectionDeltas?.totalUpset);
+
+    if (isPro && planProMetricLayout) {
+      return (
+        <div className="profile-plan-pro-metrics-embedded">
+          <ProfilePlanProMetricsVariant
+            variant={planProMetricLayout}
+            layout={layout}
+            language={language}
+            data={{
+              winRate: sectionStats.winRate,
+              posts: sectionStats.posts,
+              hits: sectionStats.hits,
+              totalPoints: sectionStats.totalPoints,
+              totalPointsRank: sectionRank.totalPointsRank,
+              goalScorerHits: sectionStats.goalScorerHits ?? 0,
+              upset: sectionStats.upset,
+              winSegs: kinetikWinRateSegs(sectionStats.winRate),
+              ptsSegs: kinetikTotalPointsRankSegs(
+                sectionRank.totalPointsRank,
+                sectionRank.totalPointsRankDenominator
+              ),
+            }}
+          />
+        </div>
+      );
+    }
 
     return (
       <div
         className={[
           "grid grid-cols-2 gap-2 p-2",
           layout === "web" ? "gap-3 p-3" : "",
+          isPro ? "profile-plan-pro-metrics-grid" : "",
         ].join(" ")}
       >
         <MetricCard
           label={isJa ? "勝率" : "WIN RATE"}
-          value={`${formatMetricDecimals(sectionStats.winRate, 1)}%`}
+          countTarget={sectionStats.winRate}
+          countFormat="percent"
+          countDecimals={1}
+          valuesPending={valuesPending}
           footnote={sectionWinRateFootnote}
           accent="green"
           filledSegs={sectionWinSegs}
           layout={layout}
           delay={0.04}
           unitHint={metricCopy.winRateUnitHint}
-          tooltip={metricCopy.winRateTooltip}
           dayDelta={sectionWinRateDelta}
           dayDeltaTitle={dayDeltaTitle}
           dayDeltaTone={profileMetricDeltaTone(sectionDeltas?.winRate ?? null)}
+          isPlanPro={isPro}
           reduceUiMotion={reduceUiMotion}
+          language={language}
         />
         <MetricCard
           label={isJa ? "総合得点" : "TOTAL PTS"}
-          value={sectionStats.totalPoints.toLocaleString()}
+          countTarget={sectionStats.totalPoints}
+          countFormat="locale"
+          valuesPending={valuesPending}
           rankLabel={sectionTotalPointsRankLabel}
           accent="magenta"
           filledSegs={sectionPtsSegs}
@@ -733,7 +1081,6 @@ export default function ProfileEditKinetikPanel({
           rankBelowSegBar
           unit={metricCopy.ptsUnit}
           unitHint={metricCopy.cumulativeUnitHint}
-          tooltip={metricCopy.totalPointsTooltip}
           dayDelta={
             sectionTotalPointsDelta
               ? `${sectionTotalPointsDelta} ${metricCopy.ptsUnit}`
@@ -743,52 +1090,32 @@ export default function ProfileEditKinetikPanel({
           dayDeltaTone={profileMetricDeltaTone(
             sectionDeltas?.totalPoints ?? null
           )}
+          isPlanPro={isPro}
           reduceUiMotion={reduceUiMotion}
+          language={language}
         />
         <MetricCard
-          label={
-            isWcProfile
-              ? isJa
-                ? "完全的中"
-                : "EXACT HITS"
-              : isJa
-                ? "スコア精度"
-                : "PRECISION"
-          }
-          value={
-            isWcProfile
-              ? String(Math.max(0, Math.round(sectionStats.scorePrecision)))
-              : formatMetricDecimals(sectionStats.scorePrecision, 1)
-          }
+          label={isJa ? "最多得点者" : "TOP SCORER"}
+          countTarget={Math.max(0, Math.round(sectionStats.goalScorerHits ?? 0))}
+          countFormat="int"
+          valuesPending={valuesPending}
           accent="cyan"
           filledSegs={0}
           layout={layout}
           delay={0.12}
           showSegBar={false}
-          unit={isWcProfile ? metricCopy.matchUnit : metricCopy.ptsUnit}
+          unit={metricCopy.matchUnit}
           unitHint={metricCopy.cumulativeUnitHint}
-          tooltip={
-            isWcProfile
-              ? metricCopy.exactHitTooltip
-              : metricCopy.scorePrecisionTooltip
-          }
-          dayDelta={
-            sectionPrecisionDelta
-              ? isWcProfile
-                ? `${sectionPrecisionDelta} ${metricCopy.matchUnit}`
-                : `${sectionPrecisionDelta} ${metricCopy.ptsUnit}`
-              : null
-          }
-          dayDeltaTitle={dayDeltaTitle}
-          dayDeltaTone={profileMetricDeltaTone(
-            sectionDeltas?.totalPrecision ?? null,
-            { positiveOnly: isWcProfile }
-          )}
+          isPlanPro={isPro}
           reduceUiMotion={reduceUiMotion}
+          language={language}
         />
         <MetricCard
-          label={isJa ? "アップセット" : "UPSET"}
-          value={formatMetricDecimals(sectionStats.upset, 1)}
+          label={KINETIK_UPSET_METRIC_LABEL}
+          countTarget={sectionStats.upset}
+          countFormat="fixed"
+          countDecimals={1}
+          valuesPending={valuesPending}
           accent="red"
           filledSegs={0}
           layout={layout}
@@ -796,7 +1123,6 @@ export default function ProfileEditKinetikPanel({
           showSegBar={false}
           unit={metricCopy.ptsUnit}
           unitHint={metricCopy.cumulativeUnitHint}
-          tooltip={metricCopy.upsetTooltip}
           dayDelta={
             sectionUpsetDelta ? `${sectionUpsetDelta} ${metricCopy.ptsUnit}` : null
           }
@@ -804,7 +1130,9 @@ export default function ProfileEditKinetikPanel({
           dayDeltaTone={profileMetricDeltaTone(
             sectionDeltas?.totalUpset ?? null
           )}
+          isPlanPro={isPro}
           reduceUiMotion={reduceUiMotion}
+          language={language}
         />
       </div>
     );
@@ -815,120 +1143,189 @@ export default function ProfileEditKinetikPanel({
     totalPointsRankDenominator: activeRankDenominator,
   });
 
-  const metricsContent = statsPending ? (
-    <MetricsGridSkeleton layout={layout} />
-  ) : wcStackedActive && activeWcStackedSection ? (
+  const proMobileStage = isPro && layout === "mobile";
+  const metricsSectionDividerClass = proMobileStage
+    ? "px-2 py-1.5"
+    : "border-b border-white/8 px-2 py-1.5";
+  const periodTabWrapClass = proMobileStage
+    ? "overflow-visible px-2.5 py-2"
+    : "overflow-visible border-b border-white/8 px-2.5 py-2";
+
+  const metricsContent = (
     <div>
-      {showWcStackedStageTabs ? (
-        <div className="overflow-visible border-b border-white/8 px-2.5 py-2">
+      {showNbaMetricsTabs ? (
+        <div className={periodTabWrapClass}>
           <CyberSlantedTabBar
             fill
-            aria-label={profileWcStackedStageTabsLabel(language)}
+            aria-label={isJa ? "累計 / 週次 / 月次" : "Total / Week / Month"}
           >
-            {wcStackedAvailableStages.map((stage) => (
-              <CyberSlantedTab
-                key={stage}
-                role="tab"
-                label={profileWcStackedStageTabLabel(stage, language)}
-                active={wcStackedStage === stage}
-                onClick={() => setWcStackedStage(stage)}
-                compact
-              />
-            ))}
+            <CyberSlantedTab
+              role="tab"
+              label="TOTAL"
+              active={metricsTab === "total"}
+              onClick={() => onMetricsTabChange?.("total")}
+              compact
+            />
+            <CyberSlantedTab
+              role="tab"
+              label="WEEK"
+              active={metricsTab === "weekly"}
+              onClick={() => onMetricsTabChange?.("weekly")}
+              compact
+            />
+            <CyberSlantedTab
+              role="tab"
+              label="MONTH"
+              active={metricsTab === "monthly"}
+              onClick={() => onMetricsTabChange?.("monthly")}
+              compact
+            />
           </CyberSlantedTabBar>
+          {metricsTab !== "total" &&
+          isPro &&
+          onMetricsWindowLabelChange &&
+          metricsPeriodLabels.length > 0 ? (
+            <div className="mt-2">
+              <RankingsPeriodLabelNav
+                period={metricsTab}
+                activeLabel={
+                  metricsWindowLabel ??
+                  currentRankingPeriodLabel(metricsTab)
+                }
+                availableLabels={metricsPeriodLabels}
+                onChange={onMetricsWindowLabelChange}
+                language={isJa ? "ja" : "en"}
+              />
+            </div>
+          ) : metricsTab !== "total" && scopeHint.unitHint ? (
+            <p
+              className={`${nameOxanium.className} mt-2 text-center text-[10px] font-bold tracking-wide text-white/45`}
+            >
+              {scopeHint.unitHint}
+            </p>
+          ) : null}
         </div>
       ) : null}
-      <div>
-        <div className="border-b border-white/8 px-2 py-1.5">
-          {!showWcStackedStageTabs ? (
-            <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
-              {activeWcStackedSection.title}
-            </ProfileEditKinetikGlitchTitle>
-          ) : null}
-          <div className={showWcStackedStageTabs ? undefined : "mt-1.5"}>
-            <ProfileEditKinetikHeaderTabs
-              rankBadge={activeWcStackedSection.rankBadge}
-              winStreak={activeWcStackedSection.winStreak}
-              language={language}
-              compact={layout === "mobile"}
-            />
+      {statsPending ? (
+        <>
+          <div className={metricsSectionDividerClass}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <ProfileEditKinetikHeaderTabs
+                  rankBadge={rankBadge}
+                  winStreak={activeWinStreak}
+                  language={language}
+                  compact={layout === "mobile"}
+                />
+              </div>
+              {metricsInfoControl}
+            </div>
           </div>
-        </div>
-        {renderMetricsGrid(
-          activeWcStackedSection.stats,
-          activeWcStackedSection.metricValueDeltas,
-          {
-            totalPointsRank: activeWcStackedSection.totalPointsRank,
-            totalPointsRankDenominator:
-              activeWcStackedSection.totalPointsRankDenominator,
-          }
-        )}
-      </div>
-    </div>
-  ) : (
-    <div>
-      <div className="border-b border-white/8 px-2 py-1.5">
-        <ProfileEditKinetikHeaderTabs
-          rankBadge={rankBadge}
-          winStreak={activeWinStreak}
-          language={language}
-          compact={layout === "mobile"}
-        />
-      </div>
-      {metricsGrid}
+          {renderMetricsGrid(
+            stats,
+            null,
+            {
+              totalPointsRank: null,
+              totalPointsRankDenominator: null,
+            },
+            true
+          )}
+        </>
+      ) : (
+        <>
+          <div className={metricsSectionDividerClass}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <ProfileEditKinetikHeaderTabs
+                  rankBadge={rankBadge}
+                  winStreak={activeWinStreak}
+                  language={language}
+                  compact={layout === "mobile"}
+                />
+              </div>
+              {metricsInfoControl}
+            </div>
+          </div>
+          {metricsGrid}
+        </>
+      )}
     </div>
   );
 
-  const menuButton =
-    canOpenMenu ? (
-      <button
-        type="button"
-        className={[
-          "profile-edit-kinetik-menu-btn",
-          `profile-edit-kinetik-menu-btn--${menuAccent}`,
-          "relative flex shrink-0 items-center justify-center",
-        ].join(" ")}
-        onClick={() => onOpenMenu?.()}
-        aria-label={isJa ? "メニュー" : "Menu"}
-      >
-        <Menu
-          className={CYBER_MENU_ICON_CLASS.sm}
-          strokeWidth={CYBER_MENU_ICON_STROKE}
-          aria-hidden
-        />
-        {menuUnreadCount > 0 ? (
-          <span
-            className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
-            aria-hidden
-          >
-            {menuUnreadCount > 9 ? "9+" : menuUnreadCount}
-          </span>
-        ) : null}
-      </button>
+  const openUnitLedger = editable
+    ? () => {
+        router.push(layout === "web" ? "/web/units" : "/mobile/units");
+      }
+    : undefined;
+
+  /** hook 側でモック / プレビュー加算済み（1000→1250）まで解決済み */
+  const vaultDisplayBalance =
+    unitEarn.vaultBalance ?? unitVaultUiBalance(unitBalance);
+
+  const unitCorner =
+    unitBalance != null && unitBalanceAria ? (
+      <ProfileUnitVault
+        // UI 確認用モック（実残高が 0・演出なしのとき 1,000 を表示）
+        balance={vaultDisplayBalance}
+        ariaLabel={
+          openUnitLedger
+            ? isJa
+              ? `${unitBalanceAria} · 履歴を開く`
+              : `${unitBalanceAria} · Open history`
+            : unitBalanceAria
+        }
+        corner
+        onPress={openUnitLedger}
+        absorbPulse={unitEarn.active != null && unitEarn.absorbed}
+        /** 中央演出中は裏の金庫カウントを止める（ヒット後だけ加算） */
+        countUpEnabled={!unitEarn.active || unitEarn.absorbed}
+        onCountBusyChange={onVaultCountBusyChange}
+      />
     ) : null;
 
-  const tierTagsRowMobile = menuButton ? (
-    <div className="profile-edit-kinetik-header-bar flex w-full justify-end">
-      {menuButton}
+  const viewUnderAvatar = (
+    <div className="profile-edit-kinetik-avatar-views mt-1.5 min-h-[22px]">
+      {profileViewCount != null ? (
+        <ProfileKinetikViewCountChip
+          viewCount={profileViewCount}
+          viewCountAriaLabel={profileViewCountAria}
+        />
+      ) : null}
     </div>
-  ) : null;
+  );
 
   const metricsScopeHeader = (
-    <div className="flex items-center gap-2 border-b border-white/8 px-2 py-1.5">
+    <div
+      className={[
+        "profile-edit-kinetik-metrics-scope-header",
+        onToggleMetricsScope
+          ? "profile-edit-kinetik-metrics-scope-header--picker profile-edit-kinetik-metrics-scope-header--toggle"
+          : "profile-edit-kinetik-metrics-scope-header--static",
+        isPro ? "profile-edit-kinetik-metrics-scope-header--pro" : "",
+      ].join(" ")}
+    >
       {onToggleMetricsScope ? (
         <>
           <button
             type="button"
-            className="shrink-0 text-[10px] text-white/35 transition hover:text-white/70"
+            className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--prev"
             onClick={onToggleMetricsScope}
-            aria-label={isJa ? "前のスポーツ統計" : "Previous sport stats"}
+            aria-label={isJa ? "前の統計ボード" : "Previous stats board"}
           >
-            ◀
+            <span
+              className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--left"
+              aria-hidden
+            />
           </button>
           <button
             type="button"
-            className="min-w-0 flex-1 cursor-pointer text-left"
+            className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--breath"
             onClick={onToggleMetricsScope}
+            aria-label={
+              isJa
+                ? "SEASON / PLAYOFF を切り替え"
+                : "Switch Season / Playoff stats"
+            }
           >
             <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
               {metricsSectionTitle}
@@ -936,206 +1333,342 @@ export default function ProfileEditKinetikPanel({
           </button>
           <button
             type="button"
-            className="shrink-0 text-[10px] text-white/35 transition hover:text-white/70"
+            className="profile-edit-kinetik-metrics-scope-nav profile-edit-kinetik-metrics-scope-nav--next"
             onClick={onToggleMetricsScope}
-            aria-label={isJa ? "次のスポーツ統計" : "Next sport stats"}
+            aria-label={isJa ? "次の統計ボード" : "Next stats board"}
           >
-            ▶
+            <span
+              className="profile-edit-kinetik-metrics-scope-arrow profile-edit-kinetik-metrics-scope-arrow--right"
+              aria-hidden
+            />
           </button>
         </>
       ) : (
-        <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
-          {metricsSectionTitle}
-        </ProfileEditKinetikGlitchTitle>
+        <div className="profile-edit-kinetik-metrics-scope-title profile-edit-kinetik-metrics-scope-title--static">
+          <ProfileEditKinetikGlitchTitle compact={layout === "mobile"}>
+            {metricsSectionTitle}
+          </ProfileEditKinetikGlitchTitle>
+        </div>
       )}
     </div>
   );
 
   const isWeb = layout === "web";
 
+  const luxuryClass = profilePlanProLuxuryClass(planProLuxuryVariant);
+
   if (isWeb) {
     return (
+      <>
       <ProfileKinetikPanelFrame
+        isPlanPro={isPro}
+        animatePlanProBg={animatePlanProBg}
+        planProBgVariant={planProBgVariant}
+        web
+        profileAccent={profileAccent}
+        planProBgAccentReady={planProBgAccentReady}
         className={[
           "profile-edit-kinetik-card profile-edit-kinetik-card--web relative w-full",
           `profile-kinetik-panel--accent-${profileAccent}`,
+          luxuryClass,
         ].join(" ")}
       >
         <div className="profile-edit-kinetik-layout-web grid md:grid-cols-[minmax(300px,36%)_1fr]">
           <aside className="profile-edit-kinetik-layout-web__side relative flex flex-col overflow-visible border-b border-white/10 px-6 py-7 md:border-r md:border-b-0 md:px-7 md:py-8">
-            {menuButton ? (
-              <div className="absolute right-6 top-7 z-20 md:right-7 md:top-8">
-                {menuButton}
-              </div>
-            ) : null}
-            <div className="flex flex-col items-center text-center md:items-stretch md:text-left">
-              <ProfileEditKinetikAvatarWithStreak
-                variant={KINETIK_STREAK_VARIANT}
-                streak={activeWinStreak}
-                accentKey={menuAccent}
-                language={language}
-                photoURL={identity.photoURL}
-                displayName={identity.displayName}
-                editable={editable}
-              />
-              <div className="mt-4 w-full">
-                <ProfileKinetikIdentityMetaRow
-                  memberSinceLabel={memberSinceLabel}
-                  countryCode={countryCode}
-                  systemId={identity.systemId}
-                  shareLabel={metricCopy.shareProfile}
-                  shareCopiedLabel={metricCopy.shareCopied}
-                  shareCopied={shareCopied}
-                  onShare={handleShareProfile}
-                  align="center"
-                />
-              </div>
-              <div
-                className={[
-                  "mt-3 flex min-w-0 items-center gap-2",
-                  "justify-center md:justify-start",
-                ].join(" ")}
-              >
-                <h2
-                  className={[
-                    nameOxanium.className,
-                    "min-w-0 truncate leading-tight font-bold italic tracking-tight text-white",
-                    "text-[22px] sm:text-[24px] md:text-[26px]",
-                  ].join(" ")}
-                >
-                  {identity.displayName}
-                </h2>
-                {isPro ? (
-                  <ProCyberBadge
-                    compact
-                    ariaLabel={metricCopy.proMember}
+            <div className="flex min-h-0 flex-1 flex-col items-stretch text-left">
+              <div className="flex items-start gap-4 sm:gap-5">
+                <div className="profile-edit-kinetik-avatar-column shrink-0 items-start">
+                  <ProfileEditKinetikAvatarWithStreak
+                    variant={KINETIK_STREAK_VARIANT}
+                    streak={activeWinStreak}
+                    accentKey={menuAccent}
+                    isPlanPro={isPro}
+                    language={language}
+                    photoURL={identity.photoURL}
+                    displayName={identity.displayName}
+                    editable={editable}
                   />
-                ) : null}
+                  {viewUnderAvatar}
+                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <h2
+                      className={[
+                        nameOxanium.className,
+                        "leading-none font-bold italic tracking-tight text-white",
+                        "text-[22px] sm:text-[24px] md:text-[26px]",
+                        isPro
+                          ? "profile-plan-pro-display-name inline-block w-fit max-w-full truncate"
+                          : "min-w-0 truncate",
+                      ].join(" ")}
+                    >
+                      {identity.displayName}
+                    </h2>
+                    {isPro ? (
+                      <ProCyberBadge
+                        premium
+                        ariaLabel={metricCopy.proMember}
+                      />
+                    ) : null}
+                    {unitCorner ? (
+                      <div className="ml-auto shrink-0 self-center">
+                        {unitCorner}
+                      </div>
+                    ) : null}
+                  </div>
+                  <ProfileKinetikNameFlag countryCode={countryCode} />
+                </div>
               </div>
               {bio?.trim() ? (
                 <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-white/50 md:text-[15px]">
                   {bio.trim()}
                 </p>
               ) : null}
-              <div className="mt-3 w-full">
-                <ProfileEditKinetikBadgeRow
-                  badges={badges}
-                  layout={layout}
-                  onBadgeClick={onBadgeClick}
+              {badges.length > 0 ? (
+                <div className="profile-edit-kinetik-badge-bridge mt-3 w-full overflow-visible">
+                  <ProfileEditKinetikBadgeRow
+                    badges={badges}
+                    layout={layout}
+                    onBadgeClick={handleBadgeClick}
+                    variant="proBridge"
+                  />
+                </div>
+              ) : (
+                <div
+                  className="profile-edit-kinetik-badge-bridge profile-edit-kinetik-badge-bridge--empty mt-3 w-full"
+                  aria-hidden
+                />
+              )}
+              <div className="mt-auto pt-4">
+                <ProfileKinetikIdentityJoinIdRow
+                  memberSinceLabel={memberSinceLabel}
+                  systemId={identity.systemId}
+                  shareLabel={metricCopy.shareProfile}
+                  shareCopiedLabel={metricCopy.shareCopied}
+                  shareCopied={shareCopied}
+                  onShare={handleShareProfile}
                 />
               </div>
             </div>
           </aside>
 
           <div className="profile-edit-kinetik-layout-web__main flex min-w-0 flex-col px-6 py-7 md:px-7 md:py-8">
-            <div className="overflow-visible border border-white/10 bg-transparent">
+            <div className="overflow-visible bg-transparent">
               {metricsScopeHeader}
               {metricsContent}
             </div>
           </div>
         </div>
       </ProfileKinetikPanelFrame>
+      {badgeDetailModal}
+      {unitEarn.active ? (
+        <UnitEarnOverlay
+          open
+          amount={unitEarn.active.amount}
+          label={unitEarn.active.label}
+          title={unitEarn.active.title}
+          subtitle={unitEarn.active.subtitle}
+          rank={unitEarn.active.rank}
+          language={isJa ? "ja" : "en"}
+          onAbsorb={unitEarn.markAbsorbed}
+          onDone={unitEarn.dismiss}
+        />
+      ) : null}
+      </>
     );
   }
 
   return (
+    <>
     <ProfileKinetikPanelFrame
+      isPlanPro={isPro}
+      animatePlanProBg={animatePlanProBg}
+      planProBgVariant={planProBgVariant}
+      proMobileStage={isPro}
+      profileAccent={profileAccent}
+      planProBgAccentReady={planProBgAccentReady}
       className={[
-        "profile-edit-kinetik-card relative mx-auto w-full max-w-[520px] p-4 sm:p-5",
+        "profile-edit-kinetik-card relative mx-auto w-full max-w-[520px]",
+        isPro ? "profile-edit-kinetik-card--pro-mobile p-3 sm:p-4" : "p-4 sm:p-5",
         layout === "mobile" ? "profile-edit-kinetik-card--compact" : "",
         `profile-kinetik-panel--accent-${profileAccent}`,
+        luxuryClass,
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {/* ヘッダー */}
-      <div className="profile-edit-kinetik-header relative flex gap-3 sm:gap-4">
-        <ProfileEditKinetikAvatarWithStreak
-          variant={KINETIK_STREAK_VARIANT}
-          streak={activeWinStreak}
-          accentKey={menuAccent}
-          language={language}
-          photoURL={identity.photoURL}
-          displayName={identity.displayName}
-          editable={editable}
-        />
-        <div className="profile-edit-kinetik-header__meta profile-edit-kinetik-header__meta--stacked min-w-0 flex-1">
-          {tierTagsRowMobile ? (
-            <div className="profile-edit-kinetik-header__menu-float">
-              {tierTagsRowMobile}
+      {isPro ? (
+        <div className="profile-edit-kinetik-mobile-stage">
+          <div className="profile-edit-kinetik-mobile-hero">
+            <div className="profile-edit-kinetik-header relative flex gap-3 sm:gap-4">
+            <div className="profile-edit-kinetik-avatar-column">
+              <ProfileEditKinetikAvatarWithStreak
+                variant={KINETIK_STREAK_VARIANT}
+                streak={activeWinStreak}
+                accentKey={menuAccent}
+                isPlanPro={isPro}
+                language={language}
+                photoURL={identity.photoURL}
+                displayName={identity.displayName}
+                editable={editable}
+              />
+              {viewUnderAvatar}
             </div>
+            <div className="profile-edit-kinetik-header__meta profile-edit-kinetik-header__meta--stacked min-w-0 flex-1">
+              <div className="profile-edit-kinetik-header__identity">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <h2
+                    className={[
+                      nameOxanium.className,
+                      "text-[16px] leading-none font-bold italic tracking-tight text-white sm:text-[18px]",
+                      "profile-plan-pro-display-name inline-block w-fit max-w-full truncate",
+                    ].join(" ")}
+                  >
+                    {identity.displayName}
+                  </h2>
+                  <ProCyberBadge premium ariaLabel={metricCopy.proMember} />
+                  {unitCorner ? (
+                    <div className="ml-auto shrink-0 self-center">
+                      {unitCorner}
+                    </div>
+                  ) : null}
+                </div>
+                <ProfileKinetikNameFlag countryCode={countryCode} />
+              </div>
+            </div>
+          </div>
+          {bio?.trim() ? (
+            <p className="profile-edit-kinetik-header__bio profile-edit-kinetik-header__bio--pro-mobile mt-2.5 line-clamp-3 text-xs leading-relaxed text-white/80">
+              {bio.trim()}
+            </p>
           ) : null}
-          <div
-            className={[
-              "profile-edit-kinetik-header__identity",
-              tierTagsRowMobile ? "profile-edit-kinetik-header__identity--menu" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <h2
-                className={[
-                  nameOxanium.className,
-                  "min-w-0 truncate text-[16px] leading-tight font-bold italic tracking-tight text-white sm:text-[18px]",
-                ].join(" ")}
-              >
-                {identity.displayName}
-              </h2>
-              {flagIso ? (
-                <CountryFlag
-                  iso2={flagIso}
-                  variant="profileInline"
-                  decorative
-                  alt={flagIso}
-                />
-              ) : null}
-              {isPro ? (
-                <ProCyberBadge compact ariaLabel={metricCopy.proMember} />
-              ) : null}
+          </div>
+
+          {badges.length > 0 ? (
+            <div className="profile-edit-kinetik-badge-bridge">
+              <ProfileEditKinetikBadgeRow
+                badges={badges}
+                layout={layout}
+                onBadgeClick={handleBadgeClick}
+                variant="proBridge"
+              />
             </div>
-            <ProfileKinetikIdentityIdChip
+          ) : (
+            <div className="profile-edit-kinetik-badge-bridge profile-edit-kinetik-badge-bridge--empty" aria-hidden />
+          )}
+
+          <div className="profile-edit-kinetik-mobile-metrics">
+            {metricsScopeHeader}
+            {metricsContent}
+          </div>
+
+          <div className="mt-auto pt-3">
+            <ProfileKinetikIdentityJoinIdRow
+              memberSinceLabel={memberSinceLabel}
               systemId={identity.systemId}
               shareLabel={metricCopy.shareProfile}
               shareCopiedLabel={metricCopy.shareCopied}
               shareCopied={shareCopied}
               onShare={handleShareProfile}
             />
-            {bio?.trim() ? (
-              <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-white/50">
-                {bio.trim()}
-              </p>
-            ) : null}
           </div>
         </div>
-        <div
-          className="profile-edit-kinetik-hatch pointer-events-none absolute top-0 right-0 h-16 w-24 opacity-40"
-          aria-hidden
-        />
-      </div>
+      ) : (
+        <div className="profile-edit-kinetik-header-block">
+          <div className="profile-edit-kinetik-header relative flex gap-3 sm:gap-4">
+            <div className="profile-edit-kinetik-avatar-column">
+              <ProfileEditKinetikAvatarWithStreak
+                variant={KINETIK_STREAK_VARIANT}
+                streak={activeWinStreak}
+                accentKey={menuAccent}
+                isPlanPro={isPro}
+                language={language}
+                photoURL={identity.photoURL}
+                displayName={identity.displayName}
+                editable={editable}
+              />
+              {viewUnderAvatar}
+            </div>
+            <div className="profile-edit-kinetik-header__meta profile-edit-kinetik-header__meta--stacked min-w-0 flex-1">
+              <div className="profile-edit-kinetik-header__identity">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <h2
+                    className={[
+                      nameOxanium.className,
+                      "min-w-0 truncate text-[16px] leading-none font-bold italic tracking-tight text-white sm:text-[18px]",
+                    ].join(" ")}
+                  >
+                    {identity.displayName}
+                  </h2>
+                  {unitCorner ? (
+                    <div className="ml-auto shrink-0 self-center">
+                      {unitCorner}
+                    </div>
+                  ) : null}
+                </div>
+                <ProfileKinetikNameFlag countryCode={countryCode} />
+              </div>
+            </div>
+            <div
+              className="profile-edit-kinetik-hatch pointer-events-none absolute top-0 right-0 h-16 w-24 opacity-40"
+              aria-hidden
+            />
+          </div>
+          {bio?.trim() ? (
+            <p className="profile-edit-kinetik-header__bio mt-3 line-clamp-3 text-xs leading-relaxed text-white/80">
+              {bio.trim()}
+            </p>
+          ) : null}
+        </div>
+      )}
 
-      {/* 達成バッジ行 */}
-      <div className="mt-4">
-        <ProfileEditKinetikBadgeRow
-          badges={badges}
-          layout={layout}
-          onBadgeClick={onBadgeClick}
-        />
-      </div>
+      {!isPro ? (
+        <div className="profile-edit-kinetik-badges mt-4 min-h-11">
+          {badges.length > 0 ? (
+            <ProfileEditKinetikBadgeRow
+              badges={badges}
+              layout={layout}
+              onBadgeClick={handleBadgeClick}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
-      {/* 主要メトリクス */}
-      <div className="mt-3 overflow-visible border border-white/10 bg-transparent">
+      {!isPro ? (
+      <div className="mt-3 overflow-visible bg-transparent">
         {metricsScopeHeader}
         {metricsContent}
       </div>
-
-      {memberSinceLabel ? (
-        <footer className="profile-edit-kinetik-footer mt-4 pt-3">
-          <p className="profile-edit-kinetik-footer-ref inline-block max-w-full truncate">
-            {memberSinceLabel}
-          </p>
-        </footer>
       ) : null}
+
+      {!isPro ? (
+        <div className="mt-3">
+          <ProfileKinetikIdentityJoinIdRow
+            memberSinceLabel={memberSinceLabel}
+            systemId={identity.systemId}
+            shareLabel={metricCopy.shareProfile}
+            shareCopiedLabel={metricCopy.shareCopied}
+            shareCopied={shareCopied}
+            onShare={handleShareProfile}
+          />
+        </div>
+      ) : null}
+
     </ProfileKinetikPanelFrame>
+    {badgeDetailModal}
+    {unitEarn.active ? (
+      <UnitEarnOverlay
+        open
+        amount={unitEarn.active.amount}
+        label={unitEarn.active.label}
+        title={unitEarn.active.title}
+        subtitle={unitEarn.active.subtitle}
+        rank={unitEarn.active.rank}
+        language={isJa ? "ja" : "en"}
+        onAbsorb={unitEarn.markAbsorbed}
+        onDone={unitEarn.dismiss}
+      />
+    ) : null}
+    </>
   );
 }

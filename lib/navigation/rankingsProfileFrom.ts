@@ -1,4 +1,4 @@
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { isRankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
@@ -17,6 +17,8 @@ export const PROFILE_FROM_COMMUNITY_ID_PARAM = "communityId";
 /** グループ内ランキングからプロフィールへ（community の後継） */
 export const PROFILE_FROM_GROUP_VALUE = "group";
 export const PROFILE_FROM_GROUP_ID_PARAM = "groupId";
+/** 週次レポートのライバル一覧からプロフィールへ */
+export const PROFILE_FROM_REPORT_VALUE = "report";
 
 /** Leaderboards でグループオーバーレイを開き直すクエリ */
 export const LEADERBOARDS_OPEN_GROUP_PARAM = "openGroup";
@@ -32,6 +34,8 @@ export const RANKINGS_TAB_LEAGUE_PARAM = "rankLeague";
 export const RANKINGS_TAB_WC_STAGE_PARAM = "rankWcStage";
 /** プレーオフ / ブラケット タブ */
 export const RANKINGS_TAB_CATEGORY_PARAM = "rankCategory";
+/** NBA: Season / Weekly / Monthly */
+export const RANKINGS_TAB_PERIOD_PARAM = "rankPeriod";
 /** WC ブラケット入力オーバーレイを開く（rankCategory=bracket と併用） */
 export const RANKINGS_WC_BRACKET_INPUT_PARAM = "wcBracketInput";
 
@@ -181,21 +185,15 @@ export function isRankingsCategoryParam(
   return v === "playoffs" || v === "bracket";
 }
 
-/** WC ブラケットタブ（＋任意で入力オーバーレイ）へのディープリンク */
+/** WC ブラケットは廃止 — NBA ランキングへ */
 export function buildWcBracketRankingsHref(
   pathname: string | null,
-  options?: { openInput?: boolean }
+  _options?: { openInput?: boolean }
 ): string {
   const base = pathname?.startsWith("/web")
     ? "/web/rankings"
     : "/mobile/rankings";
-  const q = new URLSearchParams();
-  q.set(RANKINGS_TAB_LEAGUE_PARAM, "worldcup");
-  q.set(RANKINGS_TAB_CATEGORY_PARAM, "bracket");
-  if (options?.openInput) {
-    q.set(RANKINGS_WC_BRACKET_INPUT_PARAM, "1");
-  }
-  return `${base}?${q.toString()}`;
+  return base;
 }
 
 /** プロフィールからグループ内ランキング（オーバーレイ）へ戻る URL */

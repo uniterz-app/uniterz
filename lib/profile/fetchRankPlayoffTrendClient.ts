@@ -1,8 +1,7 @@
-import {
-  isWcRankingStage,
-  type WcRankingStage,
-} from "@/lib/rankings/wcRankingStage";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { fetchNbaSeasonRankTrendFirestore } from "@/lib/profile/fetchNbaSeasonRankTrendFirestore";
+import { auth } from "@/lib/firebase";
 import type { PlayoffRankTrendPoint } from "@/lib/profile/useProfilePlayoffRankTrend";
 
 function shortLabelFromDateKey(dateKey: string): string {
@@ -14,28 +13,33 @@ function shortLabelFromDateKey(dateKey: string): string {
 export async function fetchRankPlayoffTrendClient(
   uid: string,
   rankingLeague: RankingLeagueSource,
-  wcStage?: WcRankingStage,
+  _wcStage?: unknown,
   apiBase?: string
 ): Promise<PlayoffRankTrendPoint[]> {
+  if (rankingLeague === "nba" && auth.currentUser?.uid === uid) {
+    return fetchNbaSeasonRankTrendFirestore(uid);
+  }
+
   const qs = new URLSearchParams({
     uid,
-    phase: "playoffs",
+    league: rankingLeague,
   });
-  if (rankingLeague === "worldcup") {
-    qs.set("league", "worldcup");
-    qs.set(
-      "wcStage",
-      isWcRankingStage(wcStage) ? wcStage : "overall"
-    );
-  }
   const path = `/api/profile/rank-playoff-trend?${qs.toString()}`;
   const url = apiBase ? `${apiBase.replace(/\/$/, "")}${path}` : path;
   const res = await fetch(url, { cache: "no-store" });
   const json = (await res.json()) as {
     ok?: boolean;
+    seasonKey?: string | null;
     points?: { dateKey: string; rank: number }[];
   };
   if (!res.ok || !json.ok || !Array.isArray(json.points)) return [];
+  if (
+    rankingLeague === "nba" &&
+    typeof json.seasonKey === "string" &&
+    json.seasonKey !== CURRENT_NBA_SEASON_KEY
+  ) {
+    return [];
+  }
   return [...json.points]
     .map((p) => ({
       dateKey: p.dateKey,

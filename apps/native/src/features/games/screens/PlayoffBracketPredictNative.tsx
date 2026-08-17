@@ -4,8 +4,10 @@ import {
   Modal, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
+import type { GamesStackParamList } from "../../../navigation/types";
 import { colors } from "../../../theme/tokens";
 import { BlocksPulseLoader } from "../../../components/BlocksPulseLoader";
 import {
@@ -31,7 +33,7 @@ type Team = { code: string; seed: number };
 
 /** Web `PlayoffBracketPredict` 相当：インタラクティブなブラケット予想 */
 export default function PlayoffBracketPredictNative() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { fUser } = useFirebaseUser();
   const season = getCurrentPlayoffSeason();
   const language: "ja" | "en" = "ja";
@@ -245,14 +247,29 @@ export default function PlayoffBracketPredictNative() {
 
   if (!fUser?.uid) {
     return (
-      <MobilePageShell title="Playoff Bracket" onClose={() => navigation.goBack()}>
+      <GamesNbaSubpageShellNative
+        eyebrow="NBA · PLAYOFFS"
+        title="BRACKET"
+        onBack={() => navigation.navigate("GamesHome", { openMenu: true })}
+        scroll={false}
+      >
         <Text style={styles.muted}>{t.alertLoginRequired}</Text>
-      </MobilePageShell>
+      </GamesNbaSubpageShellNative>
     );
   }
 
   return (
-    <MobilePageShell title="Playoff Bracket" onClose={() => navigation.goBack()}>
+    <GamesNbaSubpageShellNative
+      eyebrow="NBA · PLAYOFFS"
+      title="BRACKET"
+      subtitle={
+        language === "ja"
+          ? "プレーオフの勝者を予想してブラケットを提出。提出後は変更できません。"
+          : "Pick playoff winners and submit your bracket. You can’t edit after submitting."
+      }
+      onBack={() => navigation.navigate("GamesHome", { openMenu: true })}
+      scroll={false}
+    >
       {pastDeadline && !hasSubmittedBracket ? (
         <Text style={styles.deadlineBanner}>{t.bannerSubmissionClosedByDeadline}</Text>
       ) : null}
@@ -321,7 +338,7 @@ export default function PlayoffBracketPredictNative() {
           </View>
         </View>
       </Modal>
-    </MobilePageShell>
+    </GamesNbaSubpageShellNative>
   );
 }
 

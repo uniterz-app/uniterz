@@ -1,6 +1,6 @@
 import type { CyberAlertPayload } from "./cyberAlertTypes";
 import { buildCyberAlertPayload } from "./buildCyberAlertPayload";
-import type { CyberAlertButton } from "./cyberAlertTypes";
+import type { CyberAlertButton, CyberAlertVariant } from "./cyberAlertTypes";
 
 type Enqueue = (payload: CyberAlertPayload) => void;
 
@@ -14,9 +14,15 @@ export function registerCyberAlertHost(next: Enqueue | null) {
 export function cyberAlert(
   title: string,
   message?: string,
-  buttons?: CyberAlertButton[]
+  buttons?: CyberAlertButton[],
+  opts?: { variant?: CyberAlertVariant }
 ): void {
-  const payload = buildCyberAlertPayload(title, message, buttons);
+  const payload = buildCyberAlertPayload(
+    title,
+    message,
+    buttons,
+    opts?.variant
+  );
   if (enqueueRef) {
     enqueueRef(payload);
     return;

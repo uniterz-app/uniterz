@@ -1,6 +1,21 @@
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
-import type { MyRankCardFrameTone } from "@/app/component/rankings/MyRankCardFrame";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import { RANKINGS_CYAN } from "@/lib/rankings/rankingsCyberTheme";
+
+/** 前日比順位 — 枠アクセント（上昇=ライム / 下降=シアン / 変動なし=ニュートラル） */
+export type MyRankCardFrameTone = "up" | "down" | "neutral";
+
+export function resolveMyRankCardFrameTone(
+  rankDeltaPlaces?: number | null
+): MyRankCardFrameTone {
+  if (
+    typeof rankDeltaPlaces !== "number" ||
+    !Number.isFinite(rankDeltaPlaces) ||
+    rankDeltaPlaces === 0
+  ) {
+    return "neutral";
+  }
+  return rankDeltaPlaces > 0 ? "up" : "down";
+}
 
 const LIME = "#b8ff3c";
 const LIME_DIM = "rgba(184,255,60,0.35)";
@@ -56,15 +71,15 @@ export function myRankCardAccent(tone: MyRankCardFrameTone): MyRankCardAccent {
 
 export function computeMyRankTopPercent(
   rank: number,
-  totalEntries: number
+  totalEntries: number,
+  options?: { showMax?: number | null }
 ): string | null {
   if (totalEntries <= 0 || rank < 1) return null;
   const pct = (rank / totalEntries) * 100;
-  if (pct > MY_RANK_TOP_PERCENT_SHOW_MAX) return null;
-  const clamped = Math.min(
-    MY_RANK_TOP_PERCENT_SHOW_MAX,
-    Math.max(0.1, pct)
-  );
+  const showMax = options?.showMax ?? MY_RANK_TOP_PERCENT_SHOW_MAX;
+  if (showMax != null && pct > showMax) return null;
+  const clampCap = showMax ?? pct;
+  const clamped = Math.min(clampCap, Math.max(0.1, pct));
   return clamped < 10 ? clamped.toFixed(1) : String(Math.round(clamped));
 }
 
@@ -77,6 +92,19 @@ export const MY_RANK_METRIC_HUD_LABEL: Record<MobileMetric, string> = {
   streak: "STREAK",
   goalScorerHits: "SCORER",
 };
+
+/** My Rank HUD — 数値横の小さめ単位。null は単位なし */
+export function myRankMetricUnitSuffix(metric: MobileMetric): string | null {
+  switch (metric) {
+    case "totalScore":
+    case "upsetScore":
+      return "pts";
+    case "winRate":
+      return "%";
+    default:
+      return null;
+  }
+}
 
 export type MyRankStatsSource = {
   totalPosts?: number;

@@ -10,7 +10,9 @@ import MobileResultMatchHeader from "@/app/component/result/mobile/MobileResultM
 import MobileResultMarketCard from "@/app/component/result/mobile/MobileResultMarketCard";
 import MobileResultStatsCard from "@/app/component/result/mobile/MobileResultStatsCard";
 import ResultPointsDistributionCard from "@/app/component/result/ResultPointsDistributionCard";
+import ResultTopScoresList from "@/app/component/result/ResultTopScoresList";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
+import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
 import { RESULT_DETAIL_ENTRANCE } from "@/app/component/result/resultDetailEntrance";
 
 type Props = {
@@ -23,6 +25,8 @@ type Props = {
   };
   pointsDistribution?: GamePointsDistributionV1 | null;
   pointsDistributionLoading?: boolean;
+  /** この試合の得点上位（games.pointsSummary.top） */
+  topEntries?: GamePointsTopEntryV1[] | null;
   language?: Language;
   inOverlay?: boolean;
   hideMatchHeader?: boolean;
@@ -39,6 +43,7 @@ export default function MobileResultDetail({
   market,
   pointsDistribution,
   pointsDistributionLoading = false,
+  topEntries = null,
   language = "ja",
   inOverlay = false,
   hideMatchHeader = false,
@@ -107,7 +112,10 @@ export default function MobileResultDetail({
                 />
               </m.div>
             ) : null}
-            <m.div {...fadeUp(E.delayDistribution)}>
+            <m.div
+              {...fadeUp(E.delayDistribution)}
+              data-tutorial-target="result-detail-more"
+            >
               <ResultPointsDistributionCard
                 post={post}
                 distribution={pointsDistribution}
@@ -117,6 +125,15 @@ export default function MobileResultDetail({
                 compact
               />
             </m.div>
+            {topEntries && topEntries.length > 0 ? (
+              <m.div {...fadeUp(E.delayDistribution)}>
+                <ResultTopScoresList
+                  entries={topEntries}
+                  language={language}
+                  gamesRoutePrefix={gamesRoutePrefix}
+                />
+              </m.div>
+            ) : null}
             <m.div {...fadeUp(E.delayStats)}>
               <MobileResultStatsCard
                 post={post}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { withTimeout } from "@/lib/async/withTimeout";
 import { loadProfileSettledTodayResultPosts } from "@/lib/profile/profileSettledTodayPosts";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import type { PostWithMillis } from "@/lib/result/result-page-data";
@@ -14,6 +15,7 @@ type SettledTodayCacheEntry = {
 };
 
 const settledTodayCache = new Map<string, SettledTodayCacheEntry>();
+const SETTLED_TODAY_TIMEOUT_MS = 15_000;
 
 function todayCacheDateKey(): string {
   return toDateKeyInTimeZone(new Date(), TIMEZONE_JST);
@@ -33,6 +35,12 @@ function readResolvedPosts(key: string): PostWithMillis[] | null {
   return cached.posts;
 }
 
+function markSettledTodayFailed(key: string): PostWithMillis[] {
+  const empty: PostWithMillis[] = [];
+  settledTodayCache.set(key, { posts: empty, resolved: true });
+  return empty;
+}
+
 async function loadSettledTodayOnce(
   uid: string,
   ctx: ProfileStatsStreakContext,
@@ -42,10 +50,20 @@ async function loadSettledTodayOnce(
   if (cached?.resolved) return cached.posts;
   if (cached?.promise) return cached.promise;
 
-  const promise = loadProfileSettledTodayResultPosts(uid, ctx).then((posts) => {
-    settledTodayCache.set(key, { posts, resolved: true });
-    return posts;
-  });
+  const promise = withTimeout(
+    loadProfileSettledTodayResultPosts(uid, ctx),
+    SETTLED_TODAY_TIMEOUT_MS,
+    "settled-today-timeout"
+  )
+    .then((posts) => {
+      settledTodayCache.set(key, { posts, resolved: true });
+      return posts;
+    })
+    .catch((err) => {
+      console.error("[useProfileSettledTodayResults]", err);
+      return markSettledTodayFailed(key);
+    });
+
   settledTodayCache.set(key, { posts: [], resolved: false, promise });
   return promise;
 }
@@ -59,7 +77,7 @@ export function prefetchProfileSettledTodayResults(
   if (!safeUid) return;
   const key = settledTodayCacheKey(safeUid, ctx, todayCacheDateKey());
   if (settledTodayCache.get(key)?.resolved) return;
-  void loadSettledTodayOnce(safeUid, ctx, key).catch(() => {});
+  void loadSettledTodayOnce(safeUid, ctx, key);
 }
 
 export function useProfileSettledTodayResults(
@@ -97,22 +115,6 @@ export function useProfileSettledTodayResults(
       return;
     }
 
-    const inFlight = settledTodayCache.get(safeRequestKey)?.promise;
-    if (inFlight) {
-      setState((prev) => ({
-        key: safeRequestKey,
-        posts: prev.key === safeRequestKey ? prev.posts : [],
-        loading: true,
-      }));
-      void inFlight.then((list) => {
-        if (!alive) return;
-        setState({ key: safeRequestKey, posts: list, loading: false });
-      });
-      return () => {
-        alive = false;
-      };
-    }
-
     setState((prev) => ({
       key: safeRequestKey,
       posts: prev.key === safeRequestKey ? prev.posts : [],
@@ -124,11 +126,13 @@ export function useProfileSettledTodayResults(
         if (!alive) return;
         setState({ key: safeRequestKey, posts: list, loading: false });
       })
-      .catch((e) => {
-        console.error("[useProfileSettledTodayResults]", e);
+      .catch(() => {
         if (!alive) return;
-        setState({ key: safeRequestKey, posts: [], loading: false });
-        settledTodayCache.set(safeRequestKey, { posts: [], resolved: true });
+        setState({
+          key: safeRequestKey,
+          posts: markSettledTodayFailed(safeRequestKey),
+          loading: false,
+        });
       });
 
     return () => {

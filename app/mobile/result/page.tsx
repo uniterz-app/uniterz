@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ResultListWithOverlay from "@/app/component/result/ResultListWithOverlay";
+import TutorialLiveHost from "@/app/component/tutorial/TutorialLiveHost";
 import { useResultPagePosts } from "@/lib/hooks/useResultPagePosts";
 import { LEAGUES } from "@/lib/leagues";
 import type { ResultListLeagueTab } from "@/lib/result/result-page-data";
@@ -15,6 +16,7 @@ export default function ResultPage() {
     language,
     grouped,
     loading,
+    hasFetchedOnce,
     hasMore,
     postsCacheCapped,
     sentinelRef,
@@ -23,7 +25,7 @@ export default function ResultPage() {
     flagsReady,
     showResultLeagueTabs,
     defaultLeagueTab,
-  } = useResultPagePosts(leagueTab ?? LEAGUES.WC, {
+  } = useResultPagePosts(leagueTab ?? LEAGUES.NBA, {
     waitForLeagueFlags: true,
     enabled: leagueTab !== null,
   });
@@ -47,7 +49,10 @@ export default function ResultPage() {
 
   if (!uid) return null;
 
-  const listLoading = leagueTab === null || (loading && grouped.length === 0);
+  const listLoading =
+    leagueTab === null ||
+    !hasFetchedOnce ||
+    (loading && grouped.length === 0);
 
   return (
     <div className="px-[18px] py-4 pb-bottom-nav">
@@ -66,6 +71,7 @@ export default function ResultPage() {
         platform="mobile"
         viewerUid={uid}
       />
+      <TutorialLiveHost page="results" />
     </div>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { jp, nameOxanium, summaryMetricNumClass } from "@/lib/fonts";
-import { CyberRankNumber } from "@/app/component/rankings/CyberRankingListParts";
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import { CyberRankNumber, CyberRankingListRow, CyberRankingScore } from "@/app/component/rankings/CyberRankingListParts";
+import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
@@ -14,6 +15,7 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import {
@@ -28,15 +30,26 @@ import {
   MyRankCardFrame,
   resolveMyRankCardFrameTone,
 } from "@/app/component/rankings/MyRankCardFrame";
-import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
 import { listRowAvgText } from "@/lib/rankings/listRowMetricMeta";
 import {
-  computeMyRankTopPercent,
   deriveMyRankListAvgRow,
   MY_RANK_METRIC_HUD_LABEL,
   myRankCardAccent,
+  myRankMetricUnitSuffix,
   type MyRankStatsSource,
 } from "@/lib/rankings/myRankCardFocus";
+import {
+  type RankTierGapHint,
+} from "@/lib/rankings/rankTierMilestone";
+import MyRankRankingProgress from "@/app/component/rankings/MyRankRankingProgress";
+import {
+  resolveMyRankProgressSnapshotLimit,
+  type MyRankProgressPoint,
+} from "@/lib/rankings/myRankRankingProgress";
+import type { EstimatedPeriodUnits } from "@/lib/rankings/estimatePeriodRankingUnits";
+import { periodRankingUnitMetricLabel } from "@/lib/units/periodRankingUnitRewards";
+
+export type { MyRankProgressPoint };
 
 export type MyRankMiniMetric = {
   key: string;
@@ -64,13 +77,28 @@ type Props = {
   countryCode?: string | null;
   miniMetrics?: MyRankMiniMetric[];
   leagueLabel?: string;
-  barsReady?: boolean;
   cardResetKey?: string;
   layout?: "mobile" | "web";
   /** false = 順位数字のカウントアップを省略 */
   animateRank?: boolean;
   /** VOL/AVG 算出用（省略時は totalPosts のみ） */
   statsSource?: MyRankStatsSource | null;
+  /**
+   * Free / Pro UI ゲート（dev プレビュー・段階ロールアウト用）。
+   * 未指定 = 現行本番（TOP50%・順位前日比あり）
+   */
+  displayTier?: "free" | "pro";
+  /** Pro のみ — 次順位帯までの総合得点差（totalScore タブ時） */
+  rankTierGap?: RankTierGapHint | null;
+  /** dev プレビュー等 — 入場・チルト・ストリーク等のモーションを止める */
+  disableMotion?: boolean;
+  /** Ranking Progress（下段右・YOUR RANK 横） */
+  rankProgress?: MyRankProgressPoint[] | null;
+  rankProgressLoading?: boolean;
+  /** Weekly / Monthly 等でプログレスを隠す */
+  hideRankProgress?: boolean;
+  /** Pro · 週/月 Pick Up — 現順位ベースの推定 Unit */
+  estimatedUnits?: EstimatedPeriodUnits | null;
 };
 
 type CardLayout = NonNullable<Props["layout"]>;
@@ -79,9 +107,6 @@ const GOLD = "#FFD65A";
 const STREAK_SWEEP_MIN = 3;
 const STATS_PENDING_MARK = "···";
 const RANK_COUNT_DURATION_MS = 520;
-
-const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
-const ENTER_DURATION = 0.28;
 
 const LAYOUT = {
   mobile: {
@@ -93,7 +118,8 @@ const LAYOUT = {
     entriesSize: "12px",
     topPercentSize: "10px",
     nameSize: "15px",
-    statValueSize: "22px",
+    statValueSize: "24px",
+    unitSize: "10px",
     dayDeltaSize: "14px",
     rankLabelSize: "7.5px",
     avatar: "h-9 w-9",
@@ -106,7 +132,8 @@ const LAYOUT = {
     entriesSize: "13px",
     topPercentSize: "11px",
     nameSize: "17px",
-    statValueSize: "24px",
+    statValueSize: "28px",
+    unitSize: "11px",
     dayDeltaSize: "15px",
     rankLabelSize: "8px",
     avatar: "h-11 w-11",
@@ -229,50 +256,46 @@ function GlassSheen() {
 }
 
 function RankMetaStrip({
-  topPercentLabel,
   posts,
   metric,
   avgRow,
-  topPercentSize,
   metaSize,
+  flush,
+  alignEnd,
 }: {
-  topPercentLabel?: string | null;
   posts: number;
   metric: MobileMetric;
   avgRow?: ReturnType<typeof deriveMyRankListAvgRow>;
-  topPercentSize: string;
   metaSize: number;
+  flush?: boolean;
+  alignEnd?: boolean;
 }) {
   const avgText = avgRow ? listRowAvgText(metric, avgRow) : null;
 
-  if (!topPercentLabel && posts === 0 && !avgText) {
+  if (posts === 0 && !avgText) {
     return null;
   }
 
   return (
-    <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-      {topPercentLabel ? (
-        <span
-          className={[
-            "rounded px-2 py-[3px] font-bold tracking-wide",
-            nameOxanium.className,
-            "shrink-0 uppercase tabular-nums leading-none",
-          ].join(" ")}
-          style={{
-            color: GOLD,
-            fontSize: topPercentSize,
-            background: "rgba(255,214,90,0.08)",
-          }}
-        >
-          {topPercentLabel}
-        </span>
-      ) : null}
+    <div
+      className={[
+        flush ? "" : "mt-1",
+        "flex min-w-0 flex-row flex-wrap items-center gap-x-1.5 gap-y-0.5",
+        alignEnd ? "justify-end" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <span
         className={[
           nameOxanium.className,
-          "shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none",
+          "inline-block shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none",
         ].join(" ")}
-        style={{ color: "rgba(255,255,255,0.42)", fontSize: metaSize }}
+        style={{
+          color: "rgba(255,255,255,0.42)",
+          fontSize: metaSize,
+          transform: "skewX(-12deg)",
+        }}
       >
         VOL:{posts}
       </span>
@@ -280,13 +303,134 @@ function RankMetaStrip({
         <span
           className={[
             nameOxanium.className,
-            "min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none",
+            "inline-block min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none",
           ].join(" ")}
-          style={{ color: "rgba(0,245,255,0.55)", fontSize: metaSize }}
+          style={{
+            color: "rgba(0,245,255,0.55)",
+            fontSize: metaSize,
+            transform: "skewX(-12deg)",
+          }}
         >
           {avgText}
         </span>
       ) : null}
+    </div>
+  );
+}
+
+function MetricHudInline({
+  metric,
+  metricValue,
+  metricValueColor,
+  dayDeltaNode,
+  statValueSize,
+  unitSize,
+  dayDeltaSize,
+}: {
+  metric: MobileMetric;
+  metricValue: string;
+  metricValueColor: string;
+  dayDeltaNode: ReactNode;
+  statValueSize: string;
+  unitSize: string;
+  dayDeltaSize: string;
+}) {
+  const unit = myRankMetricUnitSuffix(metric);
+
+  return (
+    <div className="min-w-0 text-right">
+      {dayDeltaNode ? (
+        <div
+          className="leading-none"
+          style={{ fontSize: dayDeltaSize, marginBottom: 2, lineHeight: 1.1 }}
+        >
+          {dayDeltaNode}
+        </div>
+      ) : null}
+      <div className="flex items-baseline justify-end gap-1.5 overflow-visible py-0.5">
+        <span
+          className={[
+            summaryMetricNumClass,
+            /** Alfa Slab は leading-none だと上が欠ける */
+            "inline-block leading-[1.28] tabular-nums",
+          ].join(" ")}
+          style={{
+            fontSize: statValueSize,
+            color: metricValueColor,
+            transform: "skewX(-12deg)",
+          }}
+        >
+          {metricValue}
+        </span>
+        {unit ? (
+          <span
+            className={[
+              nameOxanium.className,
+              "inline-block shrink-0 font-bold uppercase tracking-[0.08em] leading-none",
+            ].join(" ")}
+            style={{
+              fontSize: unitSize,
+              color: "rgba(255,255,255,0.45)",
+              transform: "skewX(-12deg)",
+            }}
+          >
+            {unit}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function MyRankCardFooter({
+  badgeLabel,
+  dateLine,
+  metaLine,
+}: {
+  badgeLabel: string;
+  dateLine: string;
+  metaLine: string;
+}) {
+  return (
+    <div className="relative z-10 flex items-end justify-between gap-3 px-2.5 pt-0 pb-1.5">
+      <div className="relative shrink-0 pb-1">
+        <span
+          className={[
+            nameOxanium.className,
+            "inline-block bg-white px-2 py-[5px] font-black uppercase leading-none tracking-[0.18em] text-black",
+          ].join(" ")}
+          style={{ fontSize: badgeLabel.length > 8 ? "7px" : "8px" }}
+        >
+          {badgeLabel}
+        </span>
+        <span
+          className="pointer-events-none absolute -bottom-0.5 -left-1 text-[9px] leading-none text-white/30"
+          aria-hidden
+        >
+          ✦
+        </span>
+      </div>
+
+      <div className="min-w-0 text-right leading-tight">
+        <p
+          className={[
+            nameOxanium.className,
+            "truncate font-semibold uppercase tracking-[0.14em] text-white/38",
+          ].join(" ")}
+          style={{ fontSize: "7px" }}
+        >
+          {dateLine}
+        </p>
+        <p
+          className={[
+            nameOxanium.className,
+            "mt-0.5 truncate font-semibold uppercase tracking-[0.12em] text-white/30",
+          ].join(" ")}
+          style={{ fontSize: "7px" }}
+        >
+          {metaLine}
+        </p>
+      </div>
     </div>
   );
 }
@@ -334,25 +478,41 @@ export default function MyRankCard({
   countryCode = null,
   miniMetrics,
   leagueLabel,
-  barsReady = true,
   cardResetKey,
   layout = "mobile",
   animateRank = true,
   statsSource = null,
+  displayTier,
+  rankTierGap = null,
+  disableMotion = false,
+  rankProgress,
+  rankProgressLoading = false,
+  hideRankProgress = false,
+  estimatedUnits = null,
 }: Props) {
   const ui = LAYOUT[layout];
   const m = t(language);
   const reduceMotion = useReducedMotion();
+  const motionOff = disableMotion || reduceMotion === true;
   const ready = !loading;
   const statsPending = statsScramble && !loading;
 
-  const frameTone = resolveMyRankCardFrameTone(rankDeltaPlaces);
+  const freeTier = displayTier === "free";
+  const proTier = displayTier === "pro";
+
+  const frameTone = resolveMyRankCardFrameTone(
+    displayTier != null ? null : rankDeltaPlaces
+  );
   const accent = myRankCardAccent(frameTone);
 
-  const tiltEnabled = reduceMotion !== true && layout !== "web";
+  const displayRankDelta = displayTier != null ? null : rankDeltaPlaces;
+  const showProBadge = isPro && !freeTier;
+  const proSpecFrame = proTier;
+
+  const tiltEnabled = !motionOff && layout !== "web";
   const tilt = useHoloTilt(tiltEnabled);
 
-  const countEnabled = ready && reduceMotion !== true && animateRank;
+  const countEnabled = ready && !motionOff && animateRank;
   const rankCount = useOvershootCount(
     rank ?? 0,
     RANK_COUNT_DURATION_MS,
@@ -360,6 +520,7 @@ export default function MyRankCard({
   );
 
   const shouldFlash =
+    displayTier == null &&
     countEnabled &&
     rank != null &&
     typeof rankDeltaPlaces === "number" &&
@@ -375,29 +536,12 @@ export default function MyRankCard({
     return () => clearTimeout(id);
   }, [shouldFlash, rank]);
 
-  const [segEnter, setSegEnter] = useState(false);
-  useEffect(() => {
-    if (!ready || !barsReady) {
-      setSegEnter(false);
-      return;
-    }
-    setSegEnter(true);
-  }, [ready, barsReady, cardResetKey]);
-
   const selectedMini = useMemo(
     () => miniMetrics?.find((mt) => mt.key === metric),
     [miniMetrics, metric]
   );
 
   const metricAccent = rankingMetricAccent(metric);
-  const segAccent = useMemo(
-    () => ({
-      border: accent.primary,
-      glow: accent.glow,
-      bg: accent.dim,
-    }),
-    [accent]
-  );
 
   const rankVisualMuted = loading || statsPending || rank == null;
   const rankVisualValue = rankVisualMuted
@@ -406,33 +550,31 @@ export default function MyRankCard({
       : statsPending
         ? STATS_PENDING_MARK
         : "--"
-    : reduceMotion === true
+    : motionOff
       ? rank!
       : rankCount;
 
-  const topPercent =
-    !loading &&
-    rank != null &&
-    typeof totalEntries === "number" &&
-    totalEntries > 0
-      ? computeMyRankTopPercent(rank, totalEntries)
-      : null;
-
-  const entriesDisplay =
-    !loading &&
-    typeof totalEntries === "number" &&
-    totalEntries > 0
-      ? totalEntries.toLocaleString(language === "ja" ? "ja-JP" : "en-US")
-      : null;
+  void totalEntries;
 
   const streakN =
     typeof streak === "number" && streak >= STREAK_SWEEP_MIN ? streak : null;
-  const streakSweep = !loading && streakN != null;
+  const streakSweep = !motionOff && !loading && streakN != null;
 
   const flagSrc = countryCode ? FLAG_SRC[countryCode.toUpperCase()] : undefined;
-  const leagueDisplay =
-    leagueLabel && leagueLabel.toUpperCase() !== "NBA" ? leagueLabel : null;
+  const footerBadgeLabel =
+    displayTier != null
+      ? proTier
+        ? "UNITERZ/PRO"
+        : "UNITERZ"
+      : isPro
+        ? "UNITERZ/PRO"
+        : "UNITERZ";
   const serialDateKey = useRef(dateKeyJST()).current;
+  const footerDateLine = `SYNC // ${serialDateKey}`;
+  const footerMetaLine = [
+    (leagueLabel?.trim() || "NBA").toUpperCase(),
+    MY_RANK_METRIC_HUD_LABEL[metric],
+  ].join(" · ");
 
   const posts =
     typeof totalPosts === "number"
@@ -446,8 +588,11 @@ export default function MyRankCard({
 
   const metricValueDisplay = useMemo(() => {
     if (loading || statsPending) return STATS_PENDING_MARK;
-    if (selectedMini?.value) return selectedMini.value;
-    if (metric === "winRate") return `${Math.round(value)}%`;
+    if (selectedMini?.value) {
+      const raw = selectedMini.value;
+      return metric === "winRate" ? raw.replace(/%$/, "") : raw;
+    }
+    if (metric === "winRate") return `${Math.round(value)}`;
     if (metric === "streak" || metric === "goalScorerHits") {
       return `${Math.round(value)}`;
     }
@@ -462,22 +607,114 @@ export default function MyRankCard({
     accent.primary
   );
 
-  const segPct = selectedMini?.pct ?? 0;
-  const metaSize = layout === "web" ? 13 : 11;
-  const topPercentLabel =
-    topPercent != null
-      ? m.rankings.topPercent.replace("{n}", topPercent)
-      : null;
+  void rankTierGap;
+
+  const showRankingProgress =
+    !freeTier &&
+    !hideRankProgress &&
+    metric === "totalScore" &&
+    (displayTier != null || rankProgress !== undefined);
+  const showEstimatedUnits =
+    proTier && estimatedUnits != null && !loading && !statsPending;
+  const progressSnapshotLimit = resolveMyRankProgressSnapshotLimit({
+    displayTier,
+    isPro,
+  });
+  const progressPoints = rankProgress ?? [];
+
+  const estimatedUnitsLabel =
+    language === "en" ? "EST. UNITS" : "推定獲得 UNIT";
+  const estimatedUnitsHint =
+    estimatedUnits?.period === "monthly"
+      ? language === "en"
+        ? "Sum of 4 metrics · current ranks · final after period ends"
+        : "4指標合計（総合・勝率・Upset・得点者）· 現順位ベース"
+      : language === "en"
+        ? "Based on current ranks · final after period ends"
+        : "現順位ベース · 期間確定後に付与";
+  const estimatedBreakdown =
+    estimatedUnits && estimatedUnits.lines.length > 0
+      ? estimatedUnits.lines
+          .map((line) => {
+            const label = periodRankingUnitMetricLabel(
+              line.metric,
+              language === "en" ? "en" : "ja"
+            );
+            return `${label} #${line.rank} +${line.units}`;
+          })
+          .join(" · ")
+      : estimatedUnits?.period === "monthly"
+        ? language === "en"
+          ? "Overall + Win% + Upset + Scorer"
+          : "総合 + 勝率 + Upset + 得点者"
+        : null;
 
   const outerPad =
     layout === "mobile" && mobileWide && "outerPadWide" in ui
       ? (ui.outerPadWide as string)
       : (ui.outerPad as string);
 
+  if (freeTier) {
+    const listRank = rank != null && rank >= 1 ? rank : 99;
+    const freeInner =
+      loading || statsPending || rank == null ? (
+        <div
+          className="rounded-sm border border-white/10 bg-black/20 px-3 py-4 text-[11px] text-white/40"
+          aria-busy
+        >
+          {m.rankings.loadingRankStats}
+        </div>
+      ) : (
+        <CyberRankingListRow
+          rank={listRank}
+          displayName={displayName}
+          photoURL={photoURL}
+          metric={metric}
+          metricTag={cyberMetricTag(metric, language)}
+          posts={posts}
+          countryCode={countryCode}
+          avgRow={avgRow}
+          compact={layout === "mobile"}
+          scoreLayout={layout === "web" ? "web" : "stack"}
+          hideAccentBar
+          rankOverline={m.rankings.yourRank}
+          scoreSlot={
+            <CyberRankingScore
+              rank={listRank}
+              metric={metric}
+              counted={value}
+              compact={layout === "mobile"}
+              scoreLayout={layout === "web" ? "web" : "stack"}
+              plainWhite
+            />
+          }
+        />
+      );
+
+    const freeBody = (
+      <MyRankCardFrame
+        tone="neutral"
+        hideLeftEdge
+        animateDraw={!motionOff}
+        drawKey={cardResetKey}
+        className="w-full overflow-visible"
+      >
+        <div className="relative z-10 px-1.5 py-1.5">
+          {freeInner}
+        </div>
+      </MyRankCardFrame>
+    );
+
+    return <div className={outerPad}>{freeBody}</div>;
+  }
+
   const body = (
     <MyRankCardFrame
       tone={frameTone}
-      className="w-full overflow-hidden"
+      proSpec={proSpecFrame}
+      animateDraw={!motionOff}
+      drawKey={cardResetKey}
+      className="w-full overflow-visible"
     >
       <div
         className="relative overflow-hidden"
@@ -515,8 +752,12 @@ export default function MyRankCard({
           </div>
         ) : null}
 
-        <GlassSheen />
-        <ScanTexture />
+        {proSpecFrame ? null : (
+          <>
+            <GlassSheen />
+            <ScanTexture />
+          </>
+        )}
 
         {tiltEnabled ? (
           <div
@@ -556,191 +797,131 @@ export default function MyRankCard({
           <span className="sr-only">{m.rankings.loadingRankStats}</span>
         )}
 
-        <div className={["relative z-10 grid", ui.towerGrid as string].join(" ")}>
-          {/* 左: YOUR RANK 塔 */}
-          <div
-            className="flex min-h-full flex-col items-center justify-between gap-1 px-1.5 py-2.5"
-            style={{
-              borderRight: `1px solid ${accent.hairline}`,
-              background: accent.towerBg,
-            }}
-          >
-            <span
-              className={[
-                nameOxanium.className,
-                "whitespace-nowrap text-center font-bold uppercase tracking-[0.14em] text-white/42",
-              ].join(" ")}
-              style={{ fontSize: ui.rankLabelSize as string }}
+        {/* 上段: リスト行と同じ配置 / 下段: Pro 専用 */}
+        <div className="relative z-10 flex flex-col">
+          {loading || statsPending ? (
+            <div
+              className="px-3 py-4 text-[11px] text-white/40"
+              aria-busy
             >
-              {m.rankings.yourRank}
-            </span>
-
-            <div className="flex flex-col items-center gap-1">
-              <CyberRankNumber
-                rank={
-                  rankVisualMuted
-                    ? 4
-                    : reduceMotion === true
-                      ? rank!
-                      : rankCount
-                }
-                compact={layout === "mobile"}
-                variant="tower"
-                displayValue={
-                  rankVisualMuted
-                    ? loading
-                      ? "--"
-                      : statsPending
-                        ? STATS_PENDING_MARK
-                        : "--"
-                    : undefined
-                }
-                muted={rankVisualMuted}
-              />
-
-              {entriesDisplay ? (
-                <span
-                  className={[
-                    nameOxanium.className,
-                    "font-medium tabular-nums text-white/38",
-                  ].join(" ")}
-                  style={{ fontSize: ui.entriesSize as string }}
-                >
-                  / {entriesDisplay}
-                </span>
-              ) : null}
-
-              {!loading && !statsPending && rank != null ? (
-                <RankDeltaBadge
-                  delta={rankDeltaPlaces}
-                  size={ui.deltaSize as "sm" | "md"}
-                  variant="tower"
-                  language={language}
-                />
-              ) : null}
+              {m.rankings.loadingRankStats}
             </div>
-          </div>
-
-          {/* 右 */}
-          <div className="flex min-h-full min-w-0 flex-col px-2.5 py-2.5">
-            <div className="flex items-start gap-2">
-              <div className="relative shrink-0">
-                <div
-                  className={[
-                    "relative shrink-0 overflow-hidden rounded-sm",
-                    ui.avatar as string,
-                  ].join(" ")}
-                  style={{
-                    border: `1px solid ${accent.hairline}`,
-                    background: accent.avatarBg,
-                  }}
-                >
-                  <RankingsAvatarCircle
-                    photoURL={photoURL}
-                    displayName={displayName}
-                    boxClassName="h-full w-full"
-                    initialTextClassName={ui.avatarText as string}
-                    gateReady={ready}
-                    shape="square"
-                  />
-                </div>
-              </div>
-
-              <div className="min-w-0 flex-1 self-start truncate -mt-1 pr-1">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <div
-                    className={[
-                      jp.className,
-                      "min-w-0 truncate font-black leading-none text-white",
-                    ].join(" ")}
-                    style={{ fontSize: ui.nameSize as string }}
-                  >
-                    {displayName}
-                  </div>
-                  {isPro ? (
-                    <ProCyberBadge
-                      {...proBadgeStaticMotion}
-                      compact
-                      ariaLabel={m.common.proMember}
-                    />
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="ml-auto shrink-0 border-l border-white/8 pl-2.5 text-right">
-                <span
-                  className={[
-                    nameOxanium.className,
-                    "block font-semibold uppercase tracking-[0.12em]",
-                  ].join(" ")}
-                  style={{ fontSize: "7px", color: metricAccent.labelDim }}
-                >
-                  {MY_RANK_METRIC_HUD_LABEL[metric]}
-                </span>
-                <span
-                  className={[
-                    summaryMetricNumClass,
-                    "mt-1 block leading-none tabular-nums text-white",
-                  ].join(" ")}
-                  style={{
-                    fontSize: ui.statValueSize as string,
-                    color:
-                      loading || statsPending
-                        ? "rgba(255,255,255,0.92)"
-                        : metricAccent.value,
-                  }}
-                >
-                  {metricValueDisplay}
-                </span>
-                {dayDeltaNode ? (
-                  <div
-                    className="mt-1"
-                    style={{ fontSize: ui.dayDeltaSize as string }}
-                  >
-                    {dayDeltaNode}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <RankMetaStrip
-              topPercentLabel={topPercentLabel}
-              posts={posts}
+          ) : (
+            <CyberRankingListRow
+              rank={rank != null && rank >= 1 ? rank : 99}
+              displayName={displayName}
+              photoURL={photoURL}
               metric={metric}
-              avgRow={avgRow}
-              topPercentSize={ui.topPercentSize as string}
-              metaSize={metaSize}
+              metricTag={cyberMetricTag(metric, language)}
+              posts={posts}
+              countryCode={countryCode}
+              avgRow={avgRow ?? undefined}
+              compact={layout === "mobile"}
+              scoreLayout={layout === "web" ? "web" : "stack"}
+              hideAccentBar
+              rankDeltaPlaces={
+                typeof rankDeltaPlaces === "number" &&
+                Number.isFinite(rankDeltaPlaces)
+                  ? rankDeltaPlaces
+                  : 0
+              }
+              language={language}
+              rankDisplayValue={
+                rank != null && rank >= 1 ? undefined : "--"
+              }
+              rankMuted={!(rank != null && rank >= 1)}
+              nameExtra={
+                showProBadge ? (
+                  <ProCyberBadge
+                    {...proBadgeStaticMotion}
+                    emphasized
+                    ariaLabel={m.common.proMember}
+                  />
+                ) : null
+              }
+              scoreSlot={
+                <CyberRankingScore
+                  rank={rank != null && rank >= 1 ? rank : 99}
+                  metric={metric}
+                  counted={value}
+                  compact={layout === "mobile"}
+                  scoreLayout={layout === "web" ? "web" : "stack"}
+                  plainWhite={!(rank != null && rank >= 1)}
+                />
+              }
+              bare
             />
+          )}
 
-            <div className="mt-2.5">
-              <CyberSlantedSegBar
-                pct={segPct}
-                segments={12}
-                compact
-                enter={segEnter && !statsPending}
-                accent={segAccent}
-                maxWidthClass="max-w-full"
+          {showRankingProgress ? (
+            <div
+              className="min-h-[64px] border-t px-2 pb-1.5 pt-1"
+              style={{ borderColor: "rgba(255,255,255,0.08)" }}
+            >
+              <MyRankRankingProgress
+                points={progressPoints}
+                maxSnapshots={progressSnapshotLimit}
+                loading={loading || rankProgressLoading}
+                language={language}
+                layout={layout}
+                numbersOnly
+                dense
               />
             </div>
-          </div>
-        </div>
+          ) : null}
 
-        <div
-          className="relative z-10 px-2.5 py-1"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
-        >
-          <span
-            className={[
-              nameOxanium.className,
-              "block truncate font-medium uppercase tracking-[0.18em] text-white/26",
-            ].join(" ")}
-            style={{ fontSize: "7px" }}
-          >
-            UNITERZ
-            {leagueDisplay ? ` · ${leagueDisplay}` : ""}
-            {` · ${MY_RANK_METRIC_HUD_LABEL[metric]}`}
-            {` // ${serialDateKey}`}
-          </span>
+          {showEstimatedUnits && estimatedUnits ? (
+            <div
+              className="border-t px-2.5 py-2"
+              style={{ borderColor: "rgba(255,255,255,0.08)" }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "text-[10px] font-extrabold uppercase tracking-[0.14em] text-amber-200/75",
+                    ].join(" ")}
+                  >
+                    {estimatedUnitsLabel}
+                  </p>
+                  {estimatedBreakdown ? (
+                    <p
+                      className={[
+                        nameOxanium.className,
+                        "mt-0.5 truncate text-[8px] font-semibold uppercase tracking-[0.08em] text-white/40",
+                      ].join(" ")}
+                    >
+                      {estimatedBreakdown}
+                    </p>
+                  ) : null}
+                  <p
+                    className={[
+                      nameOxanium.className,
+                      "mt-0.5 text-[8px] font-semibold uppercase tracking-[0.1em] text-white/38",
+                    ].join(" ")}
+                  >
+                    {estimatedUnitsHint}
+                  </p>
+                </div>
+                <p
+                  className={[
+                    nameOxanium.className,
+                    "inline-block shrink-0 text-[20px] font-black tabular-nums leading-none tracking-tight",
+                  ].join(" ")}
+                  style={{ color: GOLD, transform: "skewX(-12deg)" }}
+                >
+                  +{estimatedUnits.total.toLocaleString("en-US")}
+                  <span
+                    className="ml-1.5 text-[11px] font-extrabold uppercase tracking-[0.1em]"
+                    style={{ color: "rgba(255,214,90,0.78)" }}
+                  >
+                    Unit
+                  </span>
+                </p>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </MyRankCardFrame>
@@ -758,27 +939,5 @@ export default function MyRankCard({
     </div>
   );
 
-  if (reduceMotion === true) {
-    return <div className={outerPad}>{tiltWrapped}</div>;
-  }
-
-  return (
-    <motion.div
-      className={outerPad}
-      initial={{
-        opacity: 0,
-        y: 12,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-      }}
-      transition={{
-        opacity: { duration: ENTER_DURATION, ease: ENTER_EASE },
-        y: { duration: ENTER_DURATION, ease: ENTER_EASE },
-      }}
-    >
-      {tiltWrapped}
-    </motion.div>
-  );
+  return <div className={outerPad}>{tiltWrapped}</div>;
 }

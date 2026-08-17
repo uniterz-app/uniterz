@@ -5,9 +5,9 @@ import { createPortal } from "react-dom";
 
 export type TooltipPlacement = "above" | "below" | "auto";
 
-const TOOLTIP_WIDTH = 260;
+const TOOLTIP_WIDTH = 280;
 const TOOLTIP_GAP = 10;
-const TOOLTIP_ESTIMATED_HEIGHT = 110;
+const TOOLTIP_ESTIMATED_HEIGHT = 220;
 
 function resolvePlacement(
   anchorRect: DOMRect,

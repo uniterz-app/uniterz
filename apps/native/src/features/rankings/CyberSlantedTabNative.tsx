@@ -1,46 +1,191 @@
-import { useEffect } from "react";
-import type { ReactNode } from "react";
-import { Platform, Pressable, StyleSheet, View, type ViewStyle } from "react-native";
-import Animated, {
-  Easing,
-  interpolateColor,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+/**
+ * Web `CyberSlantedTab` / `CyberSlantedTabBar` 相当。
+ *
+ * 選択態（シアン既定）: 焼き込み PNG（矩形）。Web と同様に skewX(-14deg)。
+ * 選択態（テーマ色）: 塗り + 黒スキャン横線 + 外周ブルーム（Web の accent / scan / box-shadow）。
+ * シアン既定は shadow / BlurMask で光を再発明しない。
+ */
+import { createContext, useContext, type ReactNode } from "react";
+import {
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ImageSourcePropType,
+  type ViewStyle,
+} from "react-native";
 import {
   hasJaScript,
   rankingFontSizePx,
 } from "../../../../../lib/rankings/rankingJaTextSize";
 import { METRIC_FONT } from "./rankingsUiTheme";
+import tabMeta from "../../../assets/cyber-slanted-tab/meta.json";
 
 export const CYBER_TAB_CYAN = "#00F5FF";
 const TAB_ACTIVE_TEXT = "#050508";
-const TAB_TRANSITION_MS = 200;
+const SKEW = `${tabMeta.skewDeg}deg` as const;
 
-/** Web `.cyber-slanted-tab__scan` — 2px 透明 + 1px 線の 3px 周期 */
-const SCAN_LINE_STEP = 3;
-const SCAN_LINE_COUNT = 18;
+/** Web `CyberSlantedTabTheme` 相当（Native でも型だけ共有） */
+export type CyberSlantedTabThemeNative = {
+  accent: string;
+  inactiveText?: string;
+  activeText?: string;
+  activeShadow?: string;
+  inactiveBorder?: string;
+};
+
+/** 1枚素材。左右中央の3分割だと継ぎ目が縦線になって見える */
+const ACTIVE_STRETCH = require("../../../assets/cyber-slanted-tab/active-stretch.png") as ImageSourcePropType;
+
+const GLOW_PAD = tabMeta.glowPadPx1x;
+/**
+ * 高さは固定してブレさせない。
+ * Web: compact ≈ py-1.5+font9 / 通常 ≈ py-2+font10 に相当。
+ */
+const BODY_H_COMPACT = 30;
+const BODY_H_NORMAL = 34;
+
+const CyberSlantedTabFillContext = createContext(false);
 
 type TabProps = {
   label: string;
   active: boolean;
   onPress: () => void;
   compact?: boolean;
+  /** 省略時は親 `CyberSlantedTabBarNative` の fill を使う */
   fill?: boolean;
   fontWeight?: "500" | "600" | "700";
+  /**
+   * Web の theme 相当。
+   * 既定（シアン）は焼き込み PNG。accent がシアン以外のときだけ塗りを theme に合わせる。
+   */
+  theme?: CyberSlantedTabThemeNative;
   accessibilityRole?: "tab";
   accessibilityState?: { selected?: boolean };
 };
 
-function TabScanOverlay() {
+function tabBodyHeight(compact: boolean): number {
+  return compact ? BODY_H_COMPACT : BODY_H_NORMAL;
+}
+
+function chromeImageHeight(bodyH: number): number {
+  return bodyH + GLOW_PAD * 2;
+}
+
+function resolveTabTheme(theme?: CyberSlantedTabThemeNative) {
+  const accent = theme?.accent ?? CYBER_TAB_CYAN;
+  return {
+    accent,
+    inactiveText: theme?.inactiveText ?? accent,
+    activeText: theme?.activeText ?? TAB_ACTIVE_TEXT,
+    inactiveBorder: theme?.inactiveBorder ?? accent,
+    useBakedActive: accent.toUpperCase() === CYBER_TAB_CYAN.toUpperCase(),
+  };
+}
+
+/** Web `.cyber-slanted-tab__scan` — transparent 2px + rgba(0,0,0,0.14) 1px */
+function ScanOverlay({ height }: { height: number }) {
+  const lines: ReactNode[] = [];
+  for (let y = 2; y < height; y += 3) {
+    lines.push(
+      <View
+        key={y}
+        style={{
+          position: "absolute",
+          top: y,
+          left: 0,
+          right: 0,
+          height: 1,
+          backgroundColor: "rgba(0,0,0,0.14)",
+        }}
+      />
+    );
+  }
   return (
-    <View pointerEvents="none" style={styles.scanOverlay}>
-      {Array.from({ length: SCAN_LINE_COUNT }, (_, i) => (
-        <View key={i} style={[styles.scanLine, { top: 2 + i * SCAN_LINE_STEP }]} />
-      ))}
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFillObject, { overflow: "hidden" }]}
+    >
+      {lines}
     </View>
+  );
+}
+
+/** 選択: 焼き込み1枚を横ストレッチし、Web と同じ skew で傾ける */
+function ActiveTabChrome({ bodyH }: { bodyH: number }) {
+  const imageH = chromeImageHeight(bodyH);
+  return (
+    <View
+      pointerEvents="none"
+      style={[styles.chromeSkew, { height: imageH, width: "100%" }]}
+    >
+      <Image
+        source={ACTIVE_STRETCH}
+        style={{ width: "100%", height: imageH }}
+        resizeMode="stretch"
+      />
+    </View>
+  );
+}
+
+/**
+ * 選択: theme 塗り（シアン以外）。
+ * Web の accent 背景 + scan + box-shadow に相当。
+ */
+function ActiveTabChromeThemed({
+  bodyH,
+  accent,
+}: {
+  bodyH: number;
+  accent: string;
+}) {
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.themedActiveGlow,
+        {
+          height: bodyH,
+          width: "100%",
+          shadowColor: accent,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.themedActiveChrome,
+          {
+            height: bodyH,
+            width: "100%",
+            backgroundColor: accent,
+            overflow: "hidden",
+          },
+        ]}
+      >
+        <ScanOverlay height={bodyH} />
+      </View>
+    </View>
+  );
+}
+
+/** Web 非選択: 透明 + 枠（skew）。光は付けない。 */
+function InactiveTabChrome({
+  bodyH,
+  borderColor,
+}: {
+  bodyH: number;
+  borderColor: string;
+}) {
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.inactiveChrome,
+        { height: bodyH, width: "100%", borderColor },
+      ]}
+    />
   );
 }
 
@@ -50,94 +195,92 @@ export function CyberSlantedTabNative({
   active,
   onPress,
   compact = false,
-  fill = false,
+  fill: fillProp,
   fontWeight = "700",
+  theme,
   accessibilityRole,
   accessibilityState,
 }: TabProps) {
-  const reduceMotion = useReducedMotion() ?? false;
+  const fillFromBar = useContext(CyberSlantedTabFillContext);
+  const fill = fillProp ?? fillFromBar;
+  const bodyH = tabBodyHeight(compact);
+  const imageH = chromeImageHeight(bodyH);
   const jaLabel = hasJaScript(label);
   const fontSize = rankingFontSizePx(compact ? 9 : 10, label);
-  const progress = useSharedValue(active ? 1 : 0);
+  const letterSpacing = jaLabel
+    ? fontSize * 0.06
+    : fontSize * tabMeta.letterSpacingEm;
+  const resolved = resolveTabTheme(theme);
 
-  useEffect(() => {
-    if (reduceMotion) {
-      progress.value = active ? 1 : 0;
-      return;
-    }
-    progress.value = withTiming(active ? 1 : 0, {
-      duration: TAB_TRANSITION_MS,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [active, reduceMotion, progress]);
-
-  const tabAnimStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
-      progress.value,
-      [0, 1],
-      ["transparent", CYBER_TAB_CYAN]
-    ),
-    borderColor: CYBER_TAB_CYAN,
-    borderWidth: progress.value > 0.98 ? 0 : 1,
-  }));
-
-  const scanAnimStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-  }));
-
-  const textAnimStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(progress.value, [0, 1], [CYBER_TAB_CYAN, TAB_ACTIVE_TEXT]),
-  }));
-
-  return (
+  const tab = (
     <Pressable
       accessibilityRole={accessibilityRole}
       accessibilityState={accessibilityState}
       onPress={onPress}
       style={({ pressed }) => [
-        fill ? styles.tabOuterFill : styles.tabOuter,
-        active ? styles.tabActiveShadow : null,
+        styles.tabPressable,
+        { height: bodyH },
         pressed ? styles.tabPressed : null,
       ]}
     >
-      <Animated.View
-        style={[
-          styles.tabSkew,
-          fill ? styles.tabSkewFill : null,
-          compact
-            ? fill
-              ? styles.tabFillCompact
-              : styles.tabCompact
-            : fill
-              ? styles.tabFillDefault
-              : null,
-          tabAnimStyle,
-        ]}
-      >
-        <Animated.View pointerEvents="none" style={[styles.scanOverlay, scanAnimStyle]}>
-          <TabScanOverlay />
-        </Animated.View>
-        <Animated.Text
-          numberOfLines={1}
-          maxFontSizeMultiplier={1.1}
-          style={[
-            styles.tabText,
-            textAnimStyle,
-            {
-              fontSize,
-              fontWeight,
-              lineHeight: Math.round(fontSize * 1.1),
-              letterSpacing: jaLabel ? 0.4 : 1.1,
-              transform: [{ skewX: "14deg" }],
-            },
-            !jaLabel ? styles.tabTextUpper : null,
-          ]}
-        >
-          {label}
-        </Animated.Text>
-      </Animated.View>
+      <View style={[styles.tabFrame, { height: bodyH }]} pointerEvents="box-none">
+        {active ? (
+          resolved.useBakedActive ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.chromeHost,
+                {
+                  top: -GLOW_PAD,
+                  left: -GLOW_PAD,
+                  right: -GLOW_PAD,
+                  height: imageH,
+                },
+              ]}
+            >
+              <ActiveTabChrome bodyH={bodyH} />
+            </View>
+          ) : (
+            <View style={styles.inactiveSlot} pointerEvents="none">
+              <ActiveTabChromeThemed bodyH={bodyH} accent={resolved.accent} />
+            </View>
+          )
+        ) : (
+          <View style={styles.inactiveSlot} pointerEvents="none">
+            <InactiveTabChrome
+              bodyH={bodyH}
+              borderColor={resolved.inactiveBorder}
+            />
+          </View>
+        )}
+        <View pointerEvents="none" style={styles.labelLayer}>
+          <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.1}
+            style={[
+              styles.tabText,
+              {
+                fontSize,
+                fontWeight,
+                lineHeight: Math.round(fontSize * 1.2),
+                letterSpacing,
+                color: active ? resolved.activeText : resolved.inactiveText,
+              },
+              !jaLabel ? styles.tabTextUpper : null,
+            ]}
+          >
+            {label}
+          </Text>
+        </View>
+      </View>
     </Pressable>
   );
+
+  /** Pressable の flex が不安定なため、均等幅は外側 View で確保（Web flex-1 相当） */
+  if (fill) {
+    return <View style={styles.fillSlot}>{tab}</View>;
+  }
+  return <View style={styles.shrinkSlot}>{tab}</View>;
 }
 
 export function CyberSlantedTabBarNative({
@@ -152,14 +295,20 @@ export function CyberSlantedTabBarNative({
   style?: ViewStyle;
 }) {
   return (
-    <View
-      style={[
-        gridColumns === 3 ? styles.barGrid3 : fill ? styles.barFill : styles.barScroll,
-        style,
-      ]}
-    >
-      {children}
-    </View>
+    <CyberSlantedTabFillContext.Provider value={fill}>
+      <View
+        style={[
+          gridColumns === 3
+            ? styles.barGrid3
+            : fill
+              ? styles.barFill
+              : styles.barScroll,
+          style,
+        ]}
+      >
+        {children}
+      </View>
+    </CyberSlantedTabFillContext.Provider>
   );
 }
 
@@ -170,113 +319,126 @@ export function CyberSlantedTabGridItemNative({
   children: ReactNode;
   columns?: 3;
 }) {
-  return <View style={columns === 3 ? styles.gridItem3 : styles.gridItemFill}>{children}</View>;
+  return (
+    <View style={columns === 3 ? styles.gridItem3 : styles.gridItemFill}>
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  /** Web `flex gap-2` — 発光は overflow ではみ出し。横パディングで幅を縮めない */
   barFill: {
     flexDirection: "row",
     gap: 8,
     width: "100%",
-    paddingBottom: 2,
-    alignItems: "center",
+    alignItems: "stretch",
+    overflow: "visible",
+    paddingVertical: 6,
   },
   barScroll: {
     flexDirection: "row",
     gap: 8,
-    paddingBottom: 2,
     alignItems: "center",
+    overflow: "visible",
+    paddingVertical: 6,
   },
   barGrid3: {
     flexDirection: "row",
     flexWrap: "wrap",
     columnGap: 8,
-    rowGap: 4,
+    rowGap: 8,
     width: "100%",
-    paddingBottom: 2,
-    alignItems: "flex-start",
+    alignItems: "stretch",
+    overflow: "visible",
+    paddingVertical: 6,
   },
   gridItem3: {
     width: "31%",
-    flexGrow: 0,
-    flexShrink: 0,
-    alignSelf: "flex-start",
+    flexGrow: 1,
+    minWidth: 0,
+    overflow: "visible",
   },
   gridItemFill: {
     flex: 1,
     minWidth: 0,
-  },
-  tabOuter: {
-    alignSelf: "flex-start",
     overflow: "visible",
   },
-  tabOuterFill: {
+  fillSlot: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
     minWidth: 0,
-    alignSelf: "stretch",
     overflow: "visible",
   },
-  tabSkew: {
-    position: "relative",
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    transform: [{ skewX: "-14deg" }],
+  shrinkSlot: {
+    flexGrow: 0,
+    flexShrink: 0,
+    alignSelf: "flex-start",
+    overflow: "visible",
   },
-  tabSkewFill: {
+  tabPressable: {
     width: "100%",
+    overflow: "visible",
   },
-  tabFillDefault: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+  tabFrame: {
+    width: "100%",
+    overflow: "visible",
   },
-  tabFillCompact: {
-    paddingHorizontal: 6,
-    paddingVertical: 6,
+  chromeHost: {
+    position: "absolute",
+    overflow: "visible",
   },
-  tabCompact: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+  chromeSkew: {
+    transform: [{ skewX: SKEW }],
+    overflow: "visible",
   },
-  /** Web `box-shadow: 0 0 18px rgba(0,245,255,0.45)` — 外側 Pressable に付与 */
-  tabActiveShadow: {
+  inactiveSlot: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    overflow: "visible",
+  },
+  inactiveChrome: {
+    borderWidth: 1,
+    borderColor: CYBER_TAB_CYAN,
+    backgroundColor: "transparent",
+    transform: [{ skewX: SKEW }],
+  },
+  themedActiveChrome: {
+    borderWidth: 0,
+    transform: [{ skewX: SKEW }],
+  },
+  /** Web theme.activeShadow（0 0 10px / 0 0 22px）相当 — テーマ色のみ */
+  themedActiveGlow: {
     ...Platform.select({
       ios: {
-        shadowColor: "rgba(0,245,255,0.45)",
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 18,
+        shadowOpacity: 0.55,
+        shadowRadius: 11,
       },
-      android: { elevation: 0 },
+      android: {
+        elevation: 6,
+      },
       default: {},
     }),
   },
-  tabPressed: {
-    opacity: 0.92,
-  },
-  scanOverlay: {
+  labelLayer: {
     ...StyleSheet.absoluteFillObject,
-    overflow: "hidden",
-  },
-  scanLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    zIndex: 2,
   },
   tabText: {
-    position: "relative",
-    zIndex: 1,
-    fontWeight: "700",
     fontFamily: METRIC_FONT,
     textAlign: "center",
+    fontWeight: "700",
+    transform: [{ skewX: "-6deg" }],
   },
   tabTextUpper: {
     textTransform: "uppercase",
+  },
+  tabPressed: {
+    opacity: 0.94,
   },
 });

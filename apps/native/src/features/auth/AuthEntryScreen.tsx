@@ -1,7 +1,20 @@
+/**
+ * 認証エントリ（LOGIN / CREATE ACCOUNT）
+ * Landing と同世界観: カード枠なし・地平線・スキュー CTA・地形背景。
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Animated, Dimensions, Easing, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View,
+  Animated,
+  Dimensions,
+  Easing,
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
   createUserWithEmailAndPassword,
@@ -12,20 +25,21 @@ import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import type { FirebaseError } from "firebase/app";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { colors, radius, spacing, typography } from "../../theme/tokens";
+import { spacing } from "../../theme/tokens";
 import { auth, db } from "../../lib/firebase";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import type { RouteProp, NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { AuthStackParamList } from "../../navigation/types";
+import AuthLandingBackgroundNative from "./AuthLandingBackgroundNative";
 
 type AuthMode = "login" | "signup";
 
-function mapAuthErrorMessage(
-  error: unknown,
-  mode: AuthMode
-): string {
+const BTN_SKEW = "-10deg";
+const BTN_UNSKEW = "10deg";
+
+function mapAuthErrorMessage(error: unknown, mode: AuthMode): string {
   const code = (error as FirebaseError | undefined)?.code ?? "";
   switch (code) {
     case "auth/invalid-credential":
@@ -51,8 +65,29 @@ function mapAuthErrorMessage(
   }
 }
 
+function HorizonRule() {
+  return (
+    <View style={styles.horizonSlot}>
+      <LinearGradient
+        colors={[
+          "transparent",
+          "rgba(160,245,255,0.45)",
+          "rgba(255,255,255,0.95)",
+          "rgba(160,245,255,0.45)",
+          "transparent",
+        ]}
+        locations={[0, 0.25, 0.5, 0.75, 1]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.horizonLine}
+      />
+      <View style={styles.horizonCore} pointerEvents="none" />
+    </View>
+  );
+}
+
 export default function AuthEntryScreen() {
-  const formWidth = Math.min(330, Dimensions.get("window").width - 26);
+  const formWidth = Math.min(340, Dimensions.get("window").width - 40);
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<AuthStackParamList, "Login">>();
@@ -64,54 +99,22 @@ export default function AuthEntryScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [cardHeight, setCardHeight] = useState(0);
   const buttonScale = useRef(new Animated.Value(1)).current;
-  const lineFlow = useRef(new Animated.Value(0)).current;
-  const frameFlow = useRef(new Animated.Value(0)).current;
+  const enter = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
 
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(lineFlow, {
-        toValue: 1,
-        duration: 2200,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [lineFlow]);
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(frameFlow, {
-        toValue: 1,
-        duration: 3600,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [frameFlow]);
-
-  const lineTravel = lineFlow.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-180, 180],
-  });
-
-  const edgeFlowX = frameFlow.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-120, formWidth + 120],
-  });
-  const edgeFlowY = frameFlow.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-120, Math.max(0, cardHeight) + 120],
-  });
+    enter.setValue(0);
+    Animated.timing(enter, {
+      toValue: 1,
+      duration: 520,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start();
+  }, [enter, mode]);
 
   const pressIn = () => {
     Animated.spring(buttonScale, {
@@ -131,15 +134,8 @@ export default function AuthEntryScreen() {
     }).start();
   };
 
-  const title = useMemo(
-    () => (mode === "login" ? "LOGIN" : "CREATE ACCOUNT"),
-    [mode]
-  );
-
-  const cta = useMemo(
-    () => (mode === "login" ? "LOG IN" : "SIGN UP"),
-    [mode]
-  );
+  const title = useMemo(() => (mode === "login" ? "LOGIN" : "CREATE ACCOUNT"), [mode]);
+  const cta = useMemo(() => (mode === "login" ? "LOG IN" : "SIGN UP"), [mode]);
   const submittingLabel = useMemo(
     () => (mode === "login" ? "Logging in..." : "Creating..."),
     [mode]
@@ -154,9 +150,7 @@ export default function AuthEntryScreen() {
     try {
       await Promise.race([
         sendPasswordResetEmail(auth, normalizedEmail),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("timeout")), 10000)
-        ),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 10000)),
       ]);
       cyberAlert(
         "Reset link sent",
@@ -195,17 +189,11 @@ export default function AuthEntryScreen() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      cyberAlert(
-        "Missing input",
-        "Please enter both email and password."
-      );
+      cyberAlert("Missing input", "Please enter both email and password.");
       return;
     }
     if (mode === "signup" && password.length < 6) {
-      cyberAlert(
-        "Missing input",
-        "Password must be at least 6 characters."
-      );
+      cyberAlert("Missing input", "Password must be at least 6 characters.");
       return;
     }
 
@@ -214,11 +202,7 @@ export default function AuthEntryScreen() {
       if (mode === "login") {
         await signInWithEmailAndPassword(auth, normalizedEmail, password);
       } else {
-        const cred = await createUserWithEmailAndPassword(
-          auth,
-          normalizedEmail,
-          password
-        );
+        const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
         await setDoc(
           doc(db, "users", cred.user.uid),
           {
@@ -232,10 +216,7 @@ export default function AuthEntryScreen() {
         );
       }
     } catch (error: unknown) {
-      cyberAlert(
-        "Authentication error",
-        mapAuthErrorMessage(error, mode)
-      );
+      cyberAlert("Authentication error", mapAuthErrorMessage(error, mode));
     } finally {
       setSubmitting(false);
     }
@@ -251,198 +232,159 @@ export default function AuthEntryScreen() {
     navigation.navigate("Landing");
   };
 
+  const enterY = enter.interpolate({
+    inputRange: [0, 1],
+    outputRange: [16, 0],
+  });
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-    <View style={styles.root}>
-      <View style={styles.backgroundDim} pointerEvents="none" />
-      <Pressable
-        style={[styles.backBtn, { top: insets.top + 8, left: spacing.md }]}
-        onPress={handleBack}
-        hitSlop={12}
-        accessibilityRole="button"
-        accessibilityLabel="Back to landing"
-      >
-        <MaterialCommunityIcons
-          name="chevron-left"
-          size={24}
-          color="rgba(0,245,255,0.78)"
-        />
-        <Text style={styles.backLabel}>BACK</Text>
-      </Pressable>
-      <View style={styles.background}>
-        <View
-          style={[styles.card, { width: formWidth }]}
-          onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
+      <View style={styles.root}>
+        <AuthLandingBackgroundNative />
+
+        <Pressable
+          style={[styles.backBtn, { top: insets.top + 8, left: spacing.md }]}
+          onPress={handleBack}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Back to landing"
         >
-        <View style={styles.cardFlowLayer} pointerEvents="none">
-          <Animated.View style={[styles.edgeTopFlow, { transform: [{ translateX: edgeFlowX }] }]}>
-            <LinearGradient
-              colors={["rgba(0,0,0,0)", "rgba(125,211,252,0.95)", "rgba(0,0,0,0)"]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.edgeHLine}
-            />
-          </Animated.View>
-          <Animated.View style={[styles.edgeBottomFlow, { transform: [{ translateX: edgeFlowX }] }]}>
-            <LinearGradient
-              colors={["rgba(0,0,0,0)", "rgba(125,211,252,0.7)", "rgba(0,0,0,0)"]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.edgeHLine}
-            />
-          </Animated.View>
-          <Animated.View style={[styles.edgeLeftFlow, { transform: [{ translateY: edgeFlowY }] }]}>
-            <LinearGradient
-              colors={["rgba(0,0,0,0)", "rgba(125,211,252,0.9)", "rgba(0,0,0,0)"]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={styles.edgeVLine}
-            />
-          </Animated.View>
-          <Animated.View style={[styles.edgeRightFlow, { transform: [{ translateY: edgeFlowY }] }]}>
-            <LinearGradient
-              colors={["rgba(0,0,0,0)", "rgba(125,211,252,0.72)", "rgba(0,0,0,0)"]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={styles.edgeVLine}
-            />
-          </Animated.View>
-        </View>
-        <View style={styles.gridOverlay} pointerEvents="none" />
-        <Text style={styles.brandWordmark}>UNITERZ</Text>
-        <View style={styles.brandDivider}>
+          <MaterialCommunityIcons name="chevron-left" size={24} color="rgba(0,245,255,0.78)" />
+          <Text style={styles.backLabel}>BACK</Text>
+        </Pressable>
+
+        <View
+          style={[
+            styles.screen,
+            {
+              paddingTop: insets.top + 48,
+              paddingBottom: Math.max(insets.bottom + 24, 32),
+            },
+          ]}
+        >
           <Animated.View
-            pointerEvents="none"
             style={[
-              styles.brandDividerFlowWrap,
-              { transform: [{ translateX: lineTravel }] },
+              styles.form,
+              {
+                width: formWidth,
+                opacity: enter,
+                transform: [{ translateY: enterY }],
+              },
             ]}
           >
-            <LinearGradient
-              colors={["rgba(0,0,0,0)", "rgba(103,232,249,0.95)", "rgba(0,0,0,0)"]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.brandDividerFlow}
-            />
+            <Text style={styles.brandWordmark}>UNITERZ</Text>
+            <HorizonRule />
+            <Text style={[styles.title, mode === "signup" ? styles.titleLong : styles.titleShort]}>
+              {title}
+            </Text>
+
+            <View style={[styles.field, styles.fieldEmail]}>
+              <LinearGradient
+                colors={["rgba(0,245,255,0.22)", "transparent"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.fieldTopGlow}
+                pointerEvents="none"
+              />
+              <View style={[styles.fieldRail, styles.fieldRailCyan]} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email Address"
+                placeholderTextColor="rgba(186,200,210,0.45)"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+              <View style={styles.fieldIcon} pointerEvents="none">
+                <MaterialCommunityIcons name="email-outline" size={18} color="rgba(120,230,255,0.7)" />
+              </View>
+            </View>
+
+            <View style={[styles.field, styles.fieldPassword]}>
+              <LinearGradient
+                colors={["rgba(217,70,239,0.28)", "transparent"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.fieldTopGlow}
+                pointerEvents="none"
+              />
+              <View style={[styles.fieldRail, styles.fieldRailMagenta]} />
+              <TextInput
+                style={[styles.input, styles.inputWithRight]}
+                placeholder={mode === "signup" ? "Password (6+ characters)" : "Password"}
+                placeholderTextColor="rgba(186,200,210,0.45)"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+              />
+              <Pressable
+                style={styles.fieldIconBtn}
+                onPress={() => setShowPassword((prev) => !prev)}
+                hitSlop={8}
+              >
+                <MaterialCommunityIcons
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
+                  size={16}
+                  color="rgba(230,160,255,0.7)"
+                />
+              </Pressable>
+            </View>
+
+            <View style={styles.ctaSkewWrap}>
+              <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
+                <Pressable
+                  style={[styles.ctaPressable, submitting && styles.ctaDisabled]}
+                  onPress={handleSubmit}
+                  onPressIn={pressIn}
+                  onPressOut={pressOut}
+                  disabled={submitting}
+                >
+                  <LinearGradient
+                    colors={["rgba(0,200,220,0.35)", "rgba(180,60,220,0.28)", "rgba(8,14,22,0.96)"]}
+                    locations={[0, 0.45, 1]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.ctaBorder}
+                  >
+                    <View style={styles.ctaFill}>
+                      <View style={styles.ctaRail} pointerEvents="none" />
+                      <View style={styles.ctaLabelWrap}>
+                        <Text style={styles.ctaLabel}>{submitting ? submittingLabel : cta}</Text>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </Pressable>
+              </Animated.View>
+            </View>
+
+            {mode === "login" ? (
+              <View style={styles.footer}>
+                <Text style={styles.helperText}>
+                  パスワードをお忘れの方は
+                  <Text style={styles.helperLinkInline} onPress={handleResetPassword}>
+                    こちら
+                  </Text>
+                </Text>
+                <Pressable onPress={() => setMode("signup")}>
+                  <Text style={styles.helperLink}>CREATE ACCOUNT</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.footer}>
+                <Text style={styles.helperText}>
+                  すでにアカウントをお持ちの方は
+                  <Text style={styles.helperLinkInline} onPress={() => setMode("login")}>
+                    {" LOGIN"}
+                  </Text>
+                </Text>
+              </View>
+            )}
           </Animated.View>
         </View>
-
-      <Text style={[styles.title, mode === "signup" ? styles.titleLong : styles.titleShort]}>
-        {title}
-      </Text>
-
-      <View style={styles.fieldWrap}>
-        <LinearGradient
-          colors={["#402fb5", "#1c191c", "#cf30aa", "#1c191c"]}
-          locations={[0, 0.14, 0.6, 0.9]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.inputFrame}
-        >
-          <View style={styles.inputInner}>
-            <View style={styles.leftIconBox} pointerEvents="none">
-              <MaterialCommunityIcons
-                name="email-outline"
-                size={18}
-                color="rgba(255,255,255,0.9)"
-                style={styles.emailIcon}
-              />
-            </View>
-            <TextInput
-              style={[styles.input, styles.inputWithLeft]}
-              placeholder="Email Address"
-              placeholderTextColor="#c0b9c0"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-          </View>
-        </LinearGradient>
       </View>
-
-      <View style={styles.fieldWrap}>
-        <LinearGradient
-          colors={["#402fb5", "#1c191c", "#cf30aa", "#1c191c"]}
-          locations={[0, 0.14, 0.6, 0.9]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.inputFrame}
-        >
-          <View style={styles.inputInner}>
-            <TextInput
-              style={[styles.input, styles.inputWithRight]}
-              placeholder="Password"
-              placeholderTextColor="#c0b9c0"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-            />
-            <Pressable
-              style={styles.rightEyeButton}
-              onPress={() => setShowPassword((prev) => !prev)}
-              hitSlop={8}
-            >
-              <MaterialCommunityIcons
-                name={showPassword ? "eye-outline" : "eye-off-outline"}
-                size={16}
-                color="rgba(255,255,255,0.9)"
-              />
-            </Pressable>
-          </View>
-        </LinearGradient>
-      </View>
-
-      <Pressable
-        style={[styles.primaryButtonWrap, submitting && styles.primaryButtonDisabled]}
-        onPress={handleSubmit}
-        onPressIn={pressIn}
-        onPressOut={pressOut}
-      >
-        <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-          <LinearGradient
-            colors={["#06b6d4", "#d946ef", "#7c3aed"]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryButtonText}>
-              {submitting ? submittingLabel : cta}
-            </Text>
-          </LinearGradient>
-        </Animated.View>
-      </Pressable>
-
-        {mode === "login" ? (
-          <>
-            <Text style={styles.helperText}>
-              パスワードをお忘れの方は
-              <Text
-                style={[styles.helperLink, styles.helperLinkReset]}
-                onPress={handleResetPassword}
-              >
-                こちら
-              </Text>
-            </Text>
-            <Text style={styles.helperText}>
-              <Text style={styles.helperLink} onPress={() => setMode("signup")}>
-                Create Account
-              </Text>
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.helperText}>
-            すでにアカウントをお持ちの方は
-            <Text style={styles.helperLink} onPress={() => setMode("login")}>
-              {" Login"}
-            </Text>
-          </Text>
-        )}
-      </View>
-      </View>
-    </View>
     </TouchableWithoutFeedback>
   );
 }
@@ -450,13 +392,7 @@ export default function AuthEntryScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    width: "100%",
-    overflow: "hidden",
-    backgroundColor: "transparent",
-  },
-  backgroundDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2,6,23,0.08)",
+    backgroundColor: "#041418",
   },
   backBtn: {
     position: "absolute",
@@ -473,261 +409,193 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     marginLeft: -2,
   },
-  background: {
+  screen: {
     flex: 1,
-    width: "100%",
-    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: spacing.xs,
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    zIndex: 2,
   },
-  card: {
-    position: "relative",
-    overflow: "hidden",
-    alignSelf: "center",
-    backgroundColor: "rgba(8,14,24,0.72)",
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.28)",
-    paddingHorizontal: 22,
-    paddingTop: 16,
-    paddingBottom: 16,
-    gap: 8,
-    shadowColor: "#020617",
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.34,
-    shadowRadius: 30,
-    elevation: 11,
-  },
-  cardFlowLayer: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.card,
-    overflow: "hidden",
-    zIndex: 5,
-  },
-  edgeTopFlow: {
-    position: "absolute",
-    top: 0,
-    width: 100,
-    height: 2,
-  },
-  edgeBottomFlow: {
-    position: "absolute",
-    bottom: 0,
-    width: 100,
-    height: 2,
-  },
-  edgeLeftFlow: {
-    position: "absolute",
-    left: 0,
-    width: 2,
-    height: 100,
-  },
-  edgeRightFlow: {
-    position: "absolute",
-    right: 0,
-    width: 2,
-    height: 100,
-  },
-  edgeHLine: {
-    width: 100,
-    height: 2,
-  },
-  edgeVLine: {
-    width: 2,
-    height: 100,
-  },
-  gridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0,
-    backgroundColor: "transparent",
-    borderRadius: radius.card,
+  form: {
+    gap: 14,
   },
   brandWordmark: {
     color: "#e6e4de",
     fontFamily: "BebasNeue_400Regular",
     textAlign: "center",
-    letterSpacing: 4.2,
-    fontSize: 26,
-    lineHeight: 26,
-    marginBottom: 1,
-    marginTop: 6,
+    letterSpacing: 5,
+    fontSize: 34,
+    lineHeight: 34,
   },
-  brandDivider: {
+  horizonSlot: {
     alignSelf: "center",
-    width: "70%",
-    maxWidth: 300,
-    height: 1,
-    marginBottom: 6,
-    backgroundColor: "rgba(34,211,238,0.85)",
-    shadowColor: "rgba(34,211,238,0.6)",
+    width: "72%",
+    maxWidth: 240,
+    height: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -2,
+    marginBottom: 2,
+  },
+  horizonLine: {
+    width: "100%",
+    height: 1.5,
+  },
+  horizonCore: {
+    position: "absolute",
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    shadowColor: "rgba(120,240,255,1)",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 14,
-    elevation: 8,
-    overflow: "hidden",
-  },
-  brandDividerFlowWrap: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 90,
-  },
-  brandDividerFlow: {
-    width: 90,
-    height: "100%",
+    shadowRadius: 6,
   },
   title: {
-    color: colors.textPrimary,
+    color: "rgba(248,250,252,0.95)",
     fontFamily: "BebasNeue_400Regular",
-    letterSpacing: 1.6,
-    lineHeight: 38,
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   titleShort: {
-    fontSize: 33,
-    letterSpacing: 1.2,
+    fontSize: 28,
+    letterSpacing: 2,
+    lineHeight: 32,
   },
   titleLong: {
-    fontSize: 30,
-    lineHeight: 32,
-    letterSpacing: 0.6,
+    fontSize: 24,
+    letterSpacing: 1.2,
+    lineHeight: 28,
   },
-  inputFrame: {
-    padding: 1.2,
-    borderRadius: 12,
-    shadowColor: "rgba(124,58,237,0.45)",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: Platform.OS === "ios" ? 0.8 : 0,
-    shadowRadius: 10,
-  },
-  fieldWrap: {
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  inputInner: {
-    minHeight: 48,
-    borderRadius: 11,
-    backgroundColor: "#010201",
-    position: "relative",
+  field: {
+    minHeight: 52,
+    borderWidth: 1,
+    backgroundColor: "rgba(4,10,14,0.72)",
     justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+  },
+  fieldEmail: {
+    borderColor: "rgba(0,220,255,0.28)",
+  },
+  fieldPassword: {
+    borderColor: "rgba(217,70,239,0.28)",
+  },
+  fieldTopGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1.5,
+  },
+  fieldRail: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 2,
+  },
+  fieldRailCyan: {
+    backgroundColor: "rgba(0,245,255,0.65)",
+  },
+  fieldRailMagenta: {
+    backgroundColor: "rgba(232,121,249,0.7)",
   },
   input: {
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingTop: 8,
-    paddingBottom: 8,
-    color: colors.textPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingRight: 48,
+    color: "#f1f5f9",
     fontSize: 16,
-    minHeight: 44,
-    backgroundColor: "transparent",
-  },
-  inputWithLeft: {
-    paddingLeft: spacing.md,
-    paddingRight: 52,
+    minHeight: 52,
   },
   inputWithRight: {
-    paddingRight: 50,
+    paddingRight: 48,
   },
-  emailIcon: {
-    textAlign: "center",
+  fieldIcon: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    marginTop: -12,
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  leftIconBox: {
+  fieldIconBtn: {
     position: "absolute",
     right: 8,
     top: "50%",
     marginTop: -17,
-    zIndex: 3,
     width: 34,
     height: 34,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "#151329",
     alignItems: "center",
     justifyContent: "center",
   },
-  rightEyeButton: {
-    position: "absolute",
-    right: 8,
-    top: "50%",
-    marginTop: -17,
-    zIndex: 3,
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "#151329",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonWrap: {
-    minHeight: 46,
-    borderRadius: 16,
-    overflow: "hidden",
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "rgba(103,232,249,0.28)",
-  },
-  primaryButton: {
-    minHeight: 46,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: colors.textPrimary,
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 19,
-    fontWeight: "700",
-    letterSpacing: 3.0,
-    lineHeight: 24,
-    textAlign: "center",
+  ctaSkewWrap: {
     width: "100%",
-    includeFontPadding: false,
-    textAlignVertical: "center",
-    transform: [{ translateY: 1 }],
+    marginTop: 6,
+    transform: [{ skewX: BTN_SKEW }],
   },
-  secondaryButton: {
-    minHeight: 44,
-    borderRadius: 14,
+  ctaPressable: {
+    width: "100%",
+  },
+  ctaDisabled: {
+    opacity: 0.55,
+  },
+  ctaBorder: {
+    width: "100%",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(15,21,38,0.84)",
+    borderColor: "rgba(0,245,255,0.4)",
+    overflow: "hidden",
+  },
+  ctaFill: {
+    minHeight: 52,
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    backgroundColor: "rgba(8,14,22,0.55)",
+  },
+  ctaRail: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: "rgba(255,200,120,0.7)",
+  },
+  ctaLabelWrap: {
+    transform: [{ skewX: BTN_UNSKEW }],
     alignItems: "center",
     justifyContent: "center",
-    marginTop: spacing.xs,
   },
-  secondaryButtonText: {
-    color: colors.textPrimary,
-    fontSize: typography.body,
-    fontWeight: "600",
+  ctaLabel: {
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 24,
+    letterSpacing: 4,
+    color: "#e8eaed",
   },
-  caption: {
-    color: colors.accent,
-    fontSize: typography.caption,
-    marginTop: spacing.xs,
+  footer: {
+    marginTop: 8,
+    gap: 12,
+    alignItems: "center",
   },
   helperText: {
-    color: "rgba(226,232,240,0.9)",
-    fontSize: 15,
-    marginTop: 4,
+    color: "rgba(226,232,240,0.72)",
+    fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
   },
-  helperLink: {
-    color: "#7dd3fc",
+  helperLinkInline: {
+    color: "rgba(0,245,255,0.85)",
     textDecorationLine: "underline",
-    fontFamily: "BebasNeue_400Regular",
-    letterSpacing: 0.8,
-    fontSize: 18,
   },
-  helperLinkReset: {
-    fontSize: 15,
-    letterSpacing: 0.2,
+  helperLink: {
+    color: "rgba(0,245,255,0.85)",
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 18,
+    letterSpacing: 1.4,
+    textDecorationLine: "underline",
   },
 });

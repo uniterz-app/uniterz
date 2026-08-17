@@ -2,7 +2,6 @@ import { teamColorsB1 } from "../../../../../lib/teams-b1";
 import { teamColorsJ1 } from "../../../../../lib/teams-j1";
 import { teamColorsNBA } from "../../../../../lib/teams-nba";
 import { teamColorsPL } from "../../../../../lib/teams-pl";
-import { teamColorsWC } from "../../../../../lib/teams-wc";
 import type { SupportedLeague } from "./useTodayGames";
 
 type SideLike = {
@@ -89,7 +88,6 @@ function getPrimaryByLeague(league: SupportedLeague, teamId: string): string | n
   if (league === "bj") return teamColorsB1[teamId]?.primary ?? null;
   if (league === "j1") return teamColorsJ1[teamId]?.primary ?? null;
   if (league === "pl") return teamColorsPL[teamId]?.primary ?? null;
-  if (league === "wc") return teamColorsWC[teamId]?.primary ?? null;
   return null;
 }
 
@@ -98,7 +96,6 @@ function getSecondaryByLeague(league: SupportedLeague, teamId: string): string |
   if (league === "bj") return teamColorsB1[teamId]?.secondary ?? null;
   if (league === "j1") return teamColorsJ1[teamId]?.secondary ?? null;
   if (league === "pl") return teamColorsPL[teamId]?.secondary ?? null;
-  if (league === "wc") return teamColorsWC[teamId]?.secondary ?? null;
   return null;
 }
 

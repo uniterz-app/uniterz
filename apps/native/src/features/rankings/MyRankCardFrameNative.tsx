@@ -1,14 +1,15 @@
+/**
+ * Web `MyRankCardFrame` 相当 — Free / Pro 線枠。マッチカードと同じパス描画。塗りは透明。
+ */
 import type { ReactNode } from "react";
-import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { StyleSheet, View, type ViewStyle } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 import {
   myRankCardAccent,
-  type MyRankCardAccent,
-} from "../../../../../lib/rankings/myRankCardFocus";
-import {
   resolveMyRankCardFrameTone,
   type MyRankCardFrameTone,
-} from "../../../../../app/component/rankings/MyRankCardFrame";
+} from "../../../../../lib/rankings/myRankCardFocus";
+import MatchListLineFrameNative from "../games/MatchListLineFrameNative";
 
 export function resolveMyRankFrameTone(
   rankDeltaPlaces?: number | null
@@ -16,37 +17,56 @@ export function resolveMyRankFrameTone(
   return resolveMyRankCardFrameTone(rankDeltaPlaces);
 }
 
+const PRO_GOLD = "#E8C66A";
+
+function linePaint(proSpec: boolean, tone: MyRankCardFrameTone) {
+  if (proSpec) {
+    return { color: PRO_GOLD, glow: "rgba(232,198,106,0.32)" };
+  }
+  const accent = myRankCardAccent(tone);
+  return { color: accent.primary, glow: accent.dim };
+}
+
 export function MyRankCardFrameNative({
   children,
   tone = "up",
+  proSpec = false,
+  hideLeftEdge = false,
+  animateDraw = true,
+  drawKey,
   style,
 }: {
   children: ReactNode;
   tone?: MyRankCardFrameTone;
+  /** Web `proSpec` — 金の連続枠（塗りは透明） */
+  proSpec?: boolean;
+  /** Free — 左端アクセント色を出さない（線枠では未使用） */
+  hideLeftEdge?: boolean;
+  /** マッチカードと同じパス描画 */
+  animateDraw?: boolean;
+  /** 指標切替などで描画をやり直すキー */
+  drawKey?: string;
   style?: ViewStyle;
 }) {
-  const accent = myRankCardAccent(tone);
-  const corner = accent.primary;
+  void hideLeftEdge;
+  const reduced = useReducedMotion() ?? false;
+  const paint = linePaint(proSpec, tone);
 
   return (
     <View style={[styles.frame, style]}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={["rgba(14,16,22,0.98)", "rgba(9,11,16,0.99)", "rgba(6,7,10,1)"]}
-        locations={[0, 0.52, 1]}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <View pointerEvents="none" style={[styles.edge, { borderColor: accent.hairline }]} />
-      <View pointerEvents="none" style={[styles.cornerTl, { borderColor: corner }]}>
-        <Text style={[styles.cornerPlus, { color: corner }]}>+</Text>
-      </View>
-      <View pointerEvents="none" style={[styles.cornerBl, { borderColor: corner }]}>
-        <Text style={[styles.cornerPlusBl, { color: corner }]}>+</Text>
-      </View>
-      <View pointerEvents="none" style={[styles.cornerBr, { borderColor: corner }]} />
-      <View style={styles.content}>{children}</View>
+      <MatchListLineFrameNative
+        key={drawKey ?? "my-rank-frame"}
+        flush
+        closedTop
+        fadeContent
+        animateDraw={animateDraw && !reduced}
+        paint={paint}
+      >
+        {proSpec ? null : (
+          <View pointerEvents="none" style={styles.freeGrid} />
+        )}
+        <View style={styles.content}>{children}</View>
+      </MatchListLineFrameNative>
     </View>
   );
 }
@@ -54,69 +74,18 @@ export function MyRankCardFrameNative({
 const styles = StyleSheet.create({
   frame: {
     position: "relative",
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    overflow: "visible",
+    borderRadius: 0,
+    backgroundColor: "transparent",
   },
-  edge: {
+  freeGrid: {
     ...StyleSheet.absoluteFillObject,
-    borderWidth: 0,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderBottomWidth: 1,
-    borderRightWidth: 1,
-    opacity: 0.9,
-  },
-  cornerTl: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: 14,
-    height: 14,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    zIndex: 2,
-  },
-  cornerPlus: {
-    position: "absolute",
-    left: 2,
-    top: -1,
-    fontSize: 8,
-    fontWeight: "700",
-    fontFamily: "Menlo",
-  },
-  cornerBl: {
-    position: "absolute",
-    left: 0,
-    bottom: 0,
-    width: 14,
-    height: 14,
-    borderBottomWidth: 1,
-    borderLeftWidth: 1,
-    zIndex: 2,
-  },
-  cornerPlusBl: {
-    position: "absolute",
-    left: 2,
-    bottom: 0,
-    fontSize: 8,
-    fontWeight: "700",
-    fontFamily: "Menlo",
-  },
-  cornerBr: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: 18,
-    height: 18,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    zIndex: 2,
+    opacity: 0.2,
+    backgroundColor: "transparent",
+    zIndex: 0,
   },
   content: {
     position: "relative",
-    zIndex: 3,
+    zIndex: 4,
   },
 });
-
-export type { MyRankCardAccent };

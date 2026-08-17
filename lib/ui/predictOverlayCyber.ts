@@ -1,10 +1,8 @@
-/** 予想オーバーレイ MatchCard — 角切り */
-export const PREDICT_OVERLAY_CYBER_CLIP =
-  "polygon(12px 0%, calc(100% - 12px) 0%, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0% calc(100% - 12px), 0% 12px)";
+/** 予想オーバーレイ MatchCard — 直角（角切りなし） */
+export const PREDICT_OVERLAY_CYBER_CLIP = "none";
 
-/** 市場棒・スタット箱 */
-export const PREDICT_OVERLAY_STAT_CLIP =
-  "polygon(7px 0%, calc(100% - 7px) 0%, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0% calc(100% - 7px), 0% 7px)";
+/** 市場棒・スタット箱 — 直角 */
+export const PREDICT_OVERLAY_STAT_CLIP = "none";
 
 export const PREDICT_OVERLAY_CYBER_CARD_CLASS = "predict-overlay-cyber-card";
 export const PREDICT_OVERLAY_CYBER_GRID_CLASS = "predict-overlay-cyber-grid";

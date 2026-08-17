@@ -1,5 +1,8 @@
 import type { Variants } from "framer-motion";
-import { GAMES_CYBER_EASE, GAMES_CYBER_EASE_SNAP } from "@/app/component/games/cyberMotion";
+import {
+  GAMES_CYBER_EASE,
+  GAMES_CYBER_EASE_SNAP,
+} from "@/app/component/games/cyberMotion";
 
 /** 一覧先頭のリード（秒） */
 export const RESULT_LIST_LEAD_IN_SEC = 0.04;
@@ -45,6 +48,11 @@ function slotDelay(slot: number): number {
   );
 }
 
+/** リザルトカード線枠の描画開始（スロット入場と同期。線枠側で +32ms） */
+export function resultCardLineFrameDrawDelaySec(slot: number): number {
+  return slotDelay(slot);
+}
+
 /** ページ全体を上から順に（custom = スロット番号）— タブ・フィルタ等 */
 export const resultPageSlotItem: Variants = {
   hidden: { opacity: 0, y: -10 },
@@ -73,17 +81,13 @@ export const resultDayHeaderPageSlot: Variants = {
   }),
 };
 
-/** リザルトカード：下からスナップ（フラットスロット列用） */
+/** リザルトカード：行は動かさない（試合カード先頭と同様。線枠の pathLength が見えるように） */
 export const resultCardPageSlot: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  show: (slot: number) => ({
+  hidden: { opacity: 1, y: 0 },
+  show: () => ({
     opacity: 1,
     y: 0,
-    transition: {
-      delay: slotDelay(slot),
-      duration: RESULT_CARD_DURATION_SEC,
-      ease: GAMES_CYBER_EASE_SNAP,
-    },
+    transition: { duration: 0 },
   }),
 };
 

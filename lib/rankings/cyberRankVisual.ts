@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { Language } from "@/lib/i18n/language";
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import { t } from "@/lib/i18n/t";
 import { streakShortLabel, upsetShortLabel } from "@/lib/i18n/rankings";
 
@@ -120,6 +120,13 @@ export function cyberRankNumStyle(
 
 export const CYBER_LIST_CYAN = "#00F5FF";
 export const CYBER_LIST_MAGENTA = "#FF2BD6";
+
+/** 2–3位の静かな枠。1位の光線枠とは別。4位以下はなし */
+export function cyberRankQuietFrameColor(rank: number): string | null {
+  if (rank === 2) return "rgba(252, 211, 77, 0.42)";
+  if (rank === 3) return "rgba(251, 146, 60, 0.45)";
+  return null;
+}
 
 export function cyberMetricTag(metric: MobileMetric, lang: Language): string {
   if (metric === "totalScore") return t(lang).rankings.pts.toUpperCase();

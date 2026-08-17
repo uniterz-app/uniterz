@@ -54,12 +54,44 @@ service cloud.firestore {
     //       useUserLanguage, ContactForm, EventGate, ensureSlug 連携,
     //       users/{uid}/reads/*（お知らせ既読）, users/{uid}/groups/*（コミュAPIミラー）
     // ========================================================================
+      // stripeCustomerIndex / stripeSubscriptionIndex — Admin のみ
+    match /stripeCustomerIndex/{customerId} {
+      allow read, write: if false;
+    }
+    match /stripeSubscriptionIndex/{subscriptionId} {
+      allow read, write: if false;
+    }
+
     match /users/{userId} {
       allow read: if true;
 
       allow create: if request.auth != null
         && request.auth.uid == userId
         && !('plan' in request.resource.data)
+        && !('planType' in request.resource.data)
+        && !('proUntil' in request.resource.data)
+        && !('nextPlanType' in request.resource.data)
+        && !('cancelAtPeriodEnd' in request.resource.data)
+        && !('billingProvider' in request.resource.data)
+        && !('unitBalance' in request.resource.data)
+        && !('unitReserved' in request.resource.data)
+        && !('stripeCustomerId' in request.resource.data)
+        && !('stripeSubscriptionId' in request.resource.data)
+        && !('googlePurchaseToken' in request.resource.data)
+        && !('appleOriginalTransactionId' in request.resource.data)
+        && !('proSkinUnlockedIds' in request.resource.data)
+        && !('planProBgVariant' in request.resource.data)
+        && !('proSkinProgress' in request.resource.data)
+        && !('proSkinRankEarnedIds' in request.resource.data)
+        && !('proSkinUnlockNoticeIds' in request.resource.data)
+        && !('proSkinUnlockSeason' in request.resource.data)
+        && !('proSkinHeldIds' in request.resource.data)
+        && !('inviteCode' in request.resource.data)
+        && !('referredByUid' in request.resource.data)
+        && !('referralInviteCode' in request.resource.data)
+        && !('referralBoundAt' in request.resource.data)
+        && !('referralStats' in request.resource.data)
+        && !('referralSettledAt' in request.resource.data)
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50
@@ -79,10 +111,85 @@ service cloud.firestore {
             || request.resource.data.slug == resource.data.slug)
         && (!('counts' in request.resource.data)
             || request.resource.data.counts == resource.data.counts)
-        && (!('plan' in resource.data) || !('plan' in request.resource.data)
-            || request.resource.data.plan == resource.data.plan)
+        // Pro / 課金 / Unit / 招待 / スキン解放は Admin・Functions のみ
+        // plan 等は「既存と同じ値の維持」のみ可。新規追加・変更は不可。
         && (!('createdAt' in resource.data) || !('createdAt' in request.resource.data)
             || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('unitBalance' in request.resource.data)
+            || (('unitBalance' in resource.data)
+                && request.resource.data.unitBalance == resource.data.unitBalance))
+        && (!('unitReserved' in request.resource.data)
+            || (('unitReserved' in resource.data)
+                && request.resource.data.unitReserved == resource.data.unitReserved))
+        && (!('stripeCustomerId' in request.resource.data)
+            || (('stripeCustomerId' in resource.data)
+                && request.resource.data.stripeCustomerId == resource.data.stripeCustomerId))
+        && (!('stripeSubscriptionId' in request.resource.data)
+            || (('stripeSubscriptionId' in resource.data)
+                && request.resource.data.stripeSubscriptionId == resource.data.stripeSubscriptionId))
+        && (!('googlePurchaseToken' in request.resource.data)
+            || (('googlePurchaseToken' in resource.data)
+                && request.resource.data.googlePurchaseToken == resource.data.googlePurchaseToken))
+        && (!('appleOriginalTransactionId' in request.resource.data)
+            || (('appleOriginalTransactionId' in resource.data)
+                && request.resource.data.appleOriginalTransactionId == resource.data.appleOriginalTransactionId))
+        && (!('proSkinUnlockedIds' in request.resource.data)
+            || (('proSkinUnlockedIds' in resource.data)
+                && request.resource.data.proSkinUnlockedIds == resource.data.proSkinUnlockedIds))
+        && (!('planProBgVariant' in request.resource.data)
+            || (('planProBgVariant' in resource.data)
+                && request.resource.data.planProBgVariant == resource.data.planProBgVariant))
+        && (!('proSkinProgress' in request.resource.data)
+            || (('proSkinProgress' in resource.data)
+                && request.resource.data.proSkinProgress == resource.data.proSkinProgress))
+        && (!('proSkinRankEarnedIds' in request.resource.data)
+            || (('proSkinRankEarnedIds' in resource.data)
+                && request.resource.data.proSkinRankEarnedIds == resource.data.proSkinRankEarnedIds))
+        && (!('proSkinUnlockNoticeIds' in request.resource.data)
+            || (('proSkinUnlockNoticeIds' in resource.data)
+                && request.resource.data.proSkinUnlockNoticeIds == resource.data.proSkinUnlockNoticeIds))
+        && (!('proSkinUnlockSeason' in request.resource.data)
+            || (('proSkinUnlockSeason' in resource.data)
+                && request.resource.data.proSkinUnlockSeason == resource.data.proSkinUnlockSeason))
+        && (!('proSkinHeldIds' in request.resource.data)
+            || (('proSkinHeldIds' in resource.data)
+                && request.resource.data.proSkinHeldIds == resource.data.proSkinHeldIds))
+        && (!('billingProvider' in request.resource.data)
+            || (('billingProvider' in resource.data)
+                && request.resource.data.billingProvider == resource.data.billingProvider))
+        && (!('cancelAtPeriodEnd' in request.resource.data)
+            || (('cancelAtPeriodEnd' in resource.data)
+                && request.resource.data.cancelAtPeriodEnd == resource.data.cancelAtPeriodEnd))
+        && (!('nextPlanType' in request.resource.data)
+            || (('nextPlanType' in resource.data)
+                && request.resource.data.nextPlanType == resource.data.nextPlanType))
+        && (!('planType' in request.resource.data)
+            || (('planType' in resource.data)
+                && request.resource.data.planType == resource.data.planType))
+        && (!('plan' in request.resource.data)
+            || (('plan' in resource.data)
+                && request.resource.data.plan == resource.data.plan))
+        && (!('proUntil' in request.resource.data)
+            || (('proUntil' in resource.data)
+                && request.resource.data.proUntil == resource.data.proUntil))
+        && (!('inviteCode' in request.resource.data)
+            || (('inviteCode' in resource.data)
+                && request.resource.data.inviteCode == resource.data.inviteCode))
+        && (!('referredByUid' in request.resource.data)
+            || (('referredByUid' in resource.data)
+                && request.resource.data.referredByUid == resource.data.referredByUid))
+        && (!('referralInviteCode' in request.resource.data)
+            || (('referralInviteCode' in resource.data)
+                && request.resource.data.referralInviteCode == resource.data.referralInviteCode))
+        && (!('referralBoundAt' in request.resource.data)
+            || (('referralBoundAt' in resource.data)
+                && request.resource.data.referralBoundAt == resource.data.referralBoundAt))
+        && (!('referralStats' in request.resource.data)
+            || (('referralStats' in resource.data)
+                && request.resource.data.referralStats == resource.data.referralStats))
+        && (!('referralSettledAt' in request.resource.data)
+            || (('referralSettledAt' in resource.data)
+                && request.resource.data.referralSettledAt == resource.data.referralSettledAt))
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50
@@ -101,6 +208,18 @@ service cloud.firestore {
             || isValidNotificationPrefs(request.resource.data.notificationPrefs));
 
       allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // 課金シークレット — 本人 read のみ、クライアント write 不可
+      match /secure/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
+
+      // Unit 獲得演出キュー — Functions が書き、API(Admin) が既読。クライアント直書き不可
+      match /pending_unit_earns/{earnId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
 
       match /reads/{announcementId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -121,6 +240,15 @@ service cloud.firestore {
         allow read: if true;
         allow write: if isAdmin();
       }
+    }
+
+    // プロフィール閲覧イベント・集計 — API（Admin SDK）からのみ利用
+    match /profile_views/{viewId} {
+      allow read, write: if false;
+    }
+
+    match /profile_view_counts/{userId} {
+      allow read, write: if false;
     }
 
     // ========================================================================
@@ -179,10 +307,10 @@ service cloud.firestore {
     }
 
     // ========================================================================
-    // お問い合わせ — ContactForm → submitContact（要ログイン）
+    // お問い合わせ — POST /api/contact（Admin）のみ。クライアント直書き禁止
     // ========================================================================
     match /contacts/{contactId} {
-      allow create: if request.auth != null;
+      allow create: if false;
       allow read, update, delete: if isAdmin();
     }
 
@@ -226,20 +354,86 @@ service cloud.firestore {
     }
 
 
-    // cumulative_stats — Functions が集計。本人のみ読取（snapshotRanks / rankSnapshotHistory）
+    // cumulative_stats — Functions が集計。プロフィール / ランキング表示用に公開読取
     match /cumulative_stats/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+      allow read: if true;
       allow write: if false;
 
       match /rankSnapshotHistory/{dateKey} {
-        allow read: if request.auth != null && request.auth.uid == uid;
+        allow read: if true;
         allow write: if false;
       }
+
+      match /profileCharts/{seasonKey} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    // user_career — CAREER 通算正本。Functions / Admin API のみ書込。公開読取。
+    match /user_career/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // user_reports — 週次/月次レポート。Functions のみ書込。
+    // 本人は常に読める。他人は双方 Pro のときだけ（プロフィール Report タブと同じ）。
+    function userPlanIsPro(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.plan == "pro";
+    }
+    match /user_reports/{reportId} {
+      allow read: if request.auth != null
+        && resource.data.uid is string
+        && (
+          resource.data.uid == request.auth.uid
+          || (userPlanIsPro(request.auth.uid) && userPlanIsPro(resource.data.uid))
+        );
+      allow write: if false;
     }
 
     // ========================================================================
     // プレーオフ — lib/playoff-*, PlayoffBracketMarket, usePlayoffOfficialResults
     // ========================================================================
+    // シーズンアワード予想 — Admin API のみ書込（/api/me/season-awards）
+    match /seasonAwardsPredictions/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /seasonStandingsPredictions/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // referralRelations — 招待関係（inviteeUid が docId）
+    // 作成・進捗・付与は API（Admin SDK）のみ。当事者は read 可。
+    // ========================================================================
+    match /referralRelations/{inviteeUid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == inviteeUid
+            || request.auth.uid == resource.data.referrerUid);
+      allow create, update, delete: if false;
+    }
+
+    // 招待コード一意マップ — Admin のみ
+    match /inviteCodes/{code} {
+      allow read, write: if false;
+    }
+
+    // Unit 台帳 — Admin のみ
+    match /unit_ledger/{ledgerId} {
+      allow read, write: if false;
+    }
+
+    // 商品交換申請 — 作成・更新は API（Admin SDK）のみ。本人は read 可。
+    match /unit_redemptions/{redemptionId} {
+      allow read: if request.auth != null
+        && request.auth.uid == resource.data.uid;
+      allow create, update, delete: if false;
+    }
+
     match /playoffBracketMarket/{season} {
       allow read: if true;
       allow write: if false;
@@ -338,36 +532,42 @@ service cloud.firestore {
     }
 
     // ========================================================================
-    // イベントログ（B1/J1/NBA）— クライアント create のみ
+    // イベントログ（B1/J1/NBA）— 認証必須・サイズ制限（スパム・コスト増幅対策）
     // ========================================================================
     match /events_game/{eventId} {
       allow create: if
-        (request.resource.data.type in [
+        request.auth != null
+        && request.resource.data.keys().hasOnly([
+          "type", "gameId", "league", "ts", "uid"
+        ])
+        && request.resource.data.type in [
           "click", "view", "predict",
           "click_card", "open_predictions", "open_predict"
-        ])
+        ]
         && request.resource.data.gameId is string
         && request.resource.data.gameId.size() > 0
         && request.resource.data.gameId.size() <= 128
         && request.resource.data.league in ["B1","J1","NBA"]
-        && (!('ts' in request.resource.data) || request.resource.data.ts is number);
+        && (!('ts' in request.resource.data) || request.resource.data.ts is number)
+        && (!('uid' in request.resource.data)
+          || request.resource.data.uid == request.auth.uid);
       allow read, update, delete: if false;
     }
 
     match /events_profile/{eventId} {
       allow create: if
-        request.resource.data.type in ["profile_view","follow_click"]
+        request.auth != null
+        && request.resource.data.keys().hasOnly([
+          "type", "profileId", "ts", "uid"
+        ])
+        && request.resource.data.type in ["profile_view","follow_click"]
         && request.resource.data.profileId is string
         && request.resource.data.profileId.size() > 0
         && request.resource.data.profileId.size() <= 128
-        && (!('ts' in request.resource.data) || request.resource.data.ts is number);
+        && (!('ts' in request.resource.data) || request.resource.data.ts is number)
+        && (!('uid' in request.resource.data)
+          || request.resource.data.uid == request.auth.uid);
       allow read, update, delete: if false;
-    }
-
-    // trend_cache（集計キャッシュ）
-    match /trend_cache/{docId} {
-      allow read: if true;
-      allow write: if false;
     }
   }
 }

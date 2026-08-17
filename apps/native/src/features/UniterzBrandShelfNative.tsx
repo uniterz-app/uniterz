@@ -1,11 +1,14 @@
 /**
  * Web `app/component/Header.tsx` 相当 — UNITERZ ワードマーク + シアンライン。
- * MainTab 共通（`MainTabNavigator`）で 1 枚だけ描画する。
+ * 通常は MainTab で 1 枚。welcome 中は世界カメラ内に載せる。
  */
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BrandCyanLineAnimated from "./games/BrandCyanLineAnimated";
+import UniterzUMarkNative from "./units/UniterzUMarkNative";
+
+const U_MARK_SIZE = 40;
 
 const DISPLAY_FONT_FAMILY = Platform.select({
   ios: "BebasNeue_400Regular",
@@ -18,7 +21,8 @@ export const WORDMARK_SIZE = 22;
 const WORDMARK_TRACKING = WORDMARK_SIZE * 0.35;
 
 /** ロゴ + ライン + 上下パディング（safe area 除く） */
-export const UNITERZ_BRAND_SHELF_BODY_H = 8 + WORDMARK_SIZE + 2 + 2 + 6;
+export const UNITERZ_BRAND_SHELF_BODY_H =
+  8 + Math.max(WORDMARK_SIZE, U_MARK_SIZE) + 2 + 4 + 6;
 
 export function uniterzBrandShelfOffsetTop(insetsTop: number): number {
   return insetsTop + UNITERZ_BRAND_SHELF_BODY_H;
@@ -60,6 +64,19 @@ export default function UniterzBrandShelfNative({
       />
 
       <View style={styles.inner}>
+      <View style={styles.wordmarkRow}>
+        <View style={styles.uMark} accessibilityElementsHidden>
+          <UniterzUMarkNative size={U_MARK_SIZE} />
+        </View>
+      <View style={styles.wordmarkStack}>
+        <Text
+          style={[styles.brandText, styles.brandExtrude]}
+          maxFontSizeMultiplier={1.12}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        >
+          {title}
+        </Text>
         <Text
           style={styles.brandText}
           maxFontSizeMultiplier={1.12}
@@ -68,6 +85,8 @@ export default function UniterzBrandShelfNative({
         >
           {title}
         </Text>
+      </View>
+      </View>
         <BrandCyanLineAnimated />
       </View>
     </View>
@@ -77,7 +96,7 @@ export default function UniterzBrandShelfNative({
 const styles = StyleSheet.create({
   shell: {
     alignSelf: "stretch",
-    overflow: "hidden",
+    overflow: "visible",
     backgroundColor: "transparent",
     paddingBottom: 6,
     zIndex: 20,
@@ -93,16 +112,44 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: 24,
   },
+  wordmarkRow: {
+    position: "relative",
+    alignSelf: "stretch",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: U_MARK_SIZE,
+  },
+  uMark: {
+    position: "absolute",
+    left: 0,
+    top: "50%",
+    marginTop: -U_MARK_SIZE / 2,
+  },
+  wordmarkStack: {
+    position: "relative",
+    alignItems: "center",
+    shadowColor: "rgba(103,232,249,1)",
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  brandExtrude: {
+    position: "absolute",
+    top: 2,
+    color: "rgba(6, 18, 24, 0.78)",
+    textShadowColor: "transparent",
+    textShadowRadius: 0,
+  },
   brandText: {
-    color: "rgba(255,237,213,0.85)",
+    color: "rgba(255,237,213,0.92)",
     fontSize: WORDMARK_SIZE,
     lineHeight: WORDMARK_SIZE + 2,
     fontWeight: "400",
     letterSpacing: WORDMARK_TRACKING,
     fontFamily: DISPLAY_FONT_FAMILY,
     includeFontPadding: false,
-    textShadowColor: "rgba(103,232,249,0.16)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 22,
+    textShadowColor: "rgba(255,255,255,0.4)",
+    textShadowOffset: { width: 0, height: -1 },
+    textShadowRadius: 0,
   },
 });

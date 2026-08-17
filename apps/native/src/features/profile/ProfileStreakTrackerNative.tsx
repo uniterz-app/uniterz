@@ -2,11 +2,9 @@
  * Web `StreakTrackerCard`（Last20 Tracker）に準拠したネイティブ版。
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { cyberAlert } from "../../components/cyberAlert";
 import {
-  LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View,
+  LayoutChangeEvent, Platform, StyleSheet, Text, View,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { STREAK_TRACKER_LAST_N, type StreakTrackerPointNative } from "./useNativeStreakTracker";
 import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
 import {
@@ -20,7 +18,6 @@ import {
   profileOverviewChartStatCellStyle,
   profileOverviewChartStatsWrapStyle,
   profileOverviewChartSubtitleStyle,
-  profileOverviewChartTitleStyle,
 } from "./profileOverviewChartShell";
 import { streakChartLayoutMaxAbs } from "../../../../../lib/profile/streakTrackerChartLayout";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -148,21 +145,15 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   const halfH = PLOT_H / 2;
   const blockH = Math.max(2, (halfH - (maxAbs - 1) * BLOCK_GAP_PX) / maxAbs);
 
-  const openInfo = () => cyberAlert(title, subtitle);
-
   if (loading) {
     return (
-      <ProfileOverviewChartCardNative>
+      <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.foreground}>
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
               <View style={styles.titleWithInfo}>
-                <Text style={styles.title}>{title}</Text>
-                <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
-                  <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
-                </Pressable>
+                <Text style={styles.subtitle}>{subtitle}</Text>
               </View>
-              <Text style={styles.subtitle}>{subtitle}</Text>
             </View>
           </View>
           <ChartGlassShell>
@@ -177,10 +168,11 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
 
   if (points.length === 0) {
     return (
-      <ProfileOverviewChartCardNative>
+      <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.foreground}>
-          <HeaderRow title={title} onInfoPress={openInfo} />
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <View style={styles.titleWithInfo}>
+            <Text style={styles.subtitle}>{subtitle}</Text>
+          </View>
           <View style={[styles.noDataBox, { minHeight: PLOT_H + 40 }]}>
             <Text style={styles.noData}>NO DATA</Text>
             <Text style={styles.noDataHint}>
@@ -193,17 +185,13 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   }
 
   return (
-    <ProfileOverviewChartCardNative>
+    <ProfileOverviewChartCardNative topLabel={title}>
       <View style={styles.foreground}>
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             <View style={styles.titleWithInfo}>
-              <Text style={styles.title}>{title}</Text>
-              <Pressable onPress={openInfo} hitSlop={10} accessibilityRole="button">
-                <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
-              </Pressable>
+              <Text style={styles.subtitle}>{subtitle}</Text>
             </View>
-            <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
           <View style={styles.badgeCol}>
             <View
@@ -343,17 +331,6 @@ function ChartGlassShell({ children }: { children: ReactNode }) {
   return <View style={styles.chartShellCyber}>{children}</View>;
 }
 
-function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => void }) {
-  return (
-    <View style={styles.titleWithInfo}>
-      <Text style={styles.title}>{title}</Text>
-      <Pressable onPress={onInfoPress} hitSlop={10}>
-        <MaterialCommunityIcons name="information-outline" size={18} color="rgba(0,245,255,0.55)" />
-      </Pressable>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   foreground: {
     position: "relative",
@@ -378,10 +355,12 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
   },
-  title: profileOverviewChartTitleStyle,
   subtitle: {
     ...profileOverviewChartSubtitleStyle,
-    marginTop: 6,
+    flex: 1,
+    minWidth: 0,
+    marginTop: 0,
+    marginBottom: 4,
     maxWidth: 560,
   },
   badgeCol: {

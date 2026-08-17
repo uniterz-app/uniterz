@@ -2,8 +2,8 @@
 
 import type { Language } from "@/lib/i18n/language";
 
-/** 詳細カード外枠の角丸（Native px / Web は tailwind rounded-2xl 相当） */
-export const COMMUNITY_GROUP_DETAIL_CARD_RADIUS = 16;
+/** 詳細カード外枠 — 試合/ランキングと同じ直角（角丸なし） */
+export const COMMUNITY_GROUP_DETAIL_CARD_RADIUS = 0;
 
 /** グループ詳細パネル内の水平パディング（TITLE / RANKING 揃え） */
 export const COMMUNITY_GROUP_PANEL_PADDING_X = 14;

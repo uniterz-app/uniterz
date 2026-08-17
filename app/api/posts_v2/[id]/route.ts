@@ -4,12 +4,22 @@ export const runtime = "nodejs";
 import { NextResponse, NextRequest } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import {
+  normalizeNbaTopScorerCandidates,
+  validateNbaTopScorerPickForGame,
+} from "@/lib/nba/topScorer";
+import {
   normalizeWcGoalScorerPick,
   validateWcGoalScorerPickForGame,
   type WcGoalScorerPick,
-} from "@/lib/wc/goalScorer";
-import { isWcKnockoutGame } from "@/lib/wc/isWcKnockoutGame";
+} from "@/lib/legacyWcWebShims";
+import { isWcKnockoutGame } from "@/lib/legacyWcWebShims";
+import {
+  parsePredictionPayload,
+  type ParsedPredictionPayload,
+} from "@/lib/predict/parsePredictionPayload";
 import { FieldValue } from "firebase-admin/firestore";
+import { loadGameKickoffLock } from "@/lib/predict/gameKickoffLock";
+import { recomputeReferralActivePredictDays } from "@/lib/referral/recomputeReferralActivePredictDays";
 
 /* ========= 認証 ========= */
 async function requireUid(req: NextRequest): Promise<string> {
@@ -22,6 +32,34 @@ async function requireUid(req: NextRequest): Promise<string> {
 
   const decoded = await getAdminAuth().verifyIdToken(token);
   return decoded.uid;
+}
+
+async function assertPostUnlockedByLiveGame(
+  gameId: unknown,
+  fallbackStartAtMillis?: unknown
+): Promise<void> {
+  const id = String(gameId ?? "").trim();
+  if (id) {
+    const lock = await loadGameKickoffLock(getAdminDb(), id);
+    if (!lock.ok) {
+      const err: any = new Error(lock.error);
+      err.status = 403;
+      throw err;
+    }
+    if (lock.locked) {
+      const err: any = new Error("locked");
+      err.status = 403;
+      throw err;
+    }
+    return;
+  }
+  // gameId 欠落は fail-closed
+  if (typeof fallbackStartAtMillis === "number" && Date.now() < fallbackStartAtMillis) {
+    return;
+  }
+  const err: any = new Error("locked");
+  err.status = 403;
+  throw err;
 }
 
 /* ========= 投稿取得（削除チェック） ========= */
@@ -49,15 +87,7 @@ async function getPostForDelete(uid: string, postId: string) {
     throw err;
   }
 
-  // 試合前のみ削除可
-  if (
-    typeof data.startAtMillis === "number" &&
-    Date.now() >= data.startAtMillis
-  ) {
-    const err: any = new Error("locked");
-    err.status = 403;
-    throw err;
-  }
+  await assertPostUnlockedByLiveGame(data.gameId, data.startAtMillis);
 
   return ref;
 }
@@ -78,11 +108,15 @@ export async function GET(req: NextRequest, ctx: any) {
     const data = snap.data() || {};
     const mine = data.authorUid === uid;
 
-    const editable =
-      mine &&
-      Number(data.schemaVersion) === 2 &&
-      typeof data.startAtMillis === "number" &&
-      Date.now() < data.startAtMillis;
+    let editable = false;
+    if (mine && Number(data.schemaVersion) === 2) {
+      try {
+        await assertPostUnlockedByLiveGame(data.gameId, data.startAtMillis);
+        editable = true;
+      } catch {
+        editable = false;
+      }
+    }
 
     const payload: Record<string, unknown> = {
       ok: true,
@@ -103,76 +137,9 @@ export async function GET(req: NextRequest, ctx: any) {
   }
 }
 
-function isSoccerLeague(league: unknown): boolean {
-  const s = String(league ?? "").toLowerCase();
-  return s === "pl" || s === "j1" || s === "wc" || s.includes("premier");
-}
-
-/** 予想 PATCH 用（POST /api/posts_v2 と同趣旨の検証） */
-type PredictionPatch = {
-  winner: "home" | "away" | "draw";
-  score: { home: number; away: number };
+type PredictionPatch = ParsedPredictionPayload & {
   goalScorer?: WcGoalScorerPick;
 };
-
-function parsePredictionPatch(
-  raw: unknown,
-  league: unknown,
-  knockout: boolean
-): { ok: true; prediction: PredictionPatch; rawGoalScorer: unknown } | { ok: false; error: string } {
-  const soccer = isSoccerLeague(league);
-  const p = (raw as any)?.prediction ?? raw;
-  if (!p || typeof p !== "object")
-    return { ok: false, error: "prediction required" };
-  const winner = (p as any).winner;
-  if (!["home", "away", "draw"].includes(winner))
-    return { ok: false, error: "prediction.winner must be home/away/draw" };
-  const s = (p as any).score ?? {};
-  const home = Number(s.home);
-  const away = Number(s.away);
-  if (
-    !Number.isInteger(home) ||
-    !Number.isInteger(away) ||
-    home < 0 ||
-    away < 0
-  )
-    return { ok: false, error: "score invalid" };
-
-  if (knockout) {
-    // ノックアウト: 引き分け結果は不可。同点スコアは PK 決着として許可（勝者は進出側）
-    if (winner === "draw")
-      return { ok: false, error: "draw result not allowed in knockout stage" };
-    if (winner === "home" && home < away)
-      return { ok: false, error: "home advance requires home score >= away" };
-    if (winner === "away" && away < home)
-      return { ok: false, error: "away advance requires away score >= home" };
-    return {
-      ok: true,
-      prediction: {
-        winner: winner as "home" | "away" | "draw",
-        score: { home, away },
-      },
-      rawGoalScorer: (p as any).goalScorer,
-    };
-  }
-
-  if (!soccer && winner === "draw")
-    return { ok: false, error: "draw not allowed for this league" };
-  if (winner === "home" && home <= away)
-    return { ok: false, error: "home win requires home score > away" };
-  if (winner === "away" && away <= home)
-    return { ok: false, error: "away win requires away score > home" };
-  if (soccer && winner === "draw" && home !== away)
-    return { ok: false, error: "draw requires equal scores" };
-  return {
-    ok: true,
-    prediction: {
-      winner: winner as "home" | "away" | "draw",
-      score: { home, away },
-    },
-    rawGoalScorer: (p as any).goalScorer,
-  };
-}
 
 /* ========= PATCH ========= */
 export async function PATCH(req: NextRequest, ctx: any) {
@@ -193,8 +160,14 @@ export async function PATCH(req: NextRequest, ctx: any) {
     if (Number(data.schemaVersion) !== 2)
       return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
 
-    if (typeof data.startAtMillis === "number" && Date.now() >= data.startAtMillis)
-      return NextResponse.json({ ok: false, error: "locked" }, { status: 403 });
+    try {
+      await assertPostUnlockedByLiveGame(data.gameId, data.startAtMillis);
+    } catch (e: any) {
+      return NextResponse.json(
+        { ok: false, error: e?.message ?? "locked" },
+        { status: e?.status ?? 403 }
+      );
+    }
 
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object")
@@ -217,7 +190,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         wcStage: g?.wcStage ?? data.wcStage ?? null,
       });
 
-      const parsed = parsePredictionPatch(body.prediction, data.league, isKnockout);
+      const parsed = parsePredictionPayload(body.prediction, data.league, isKnockout);
       if (!parsed.ok) {
         return NextResponse.json(
           { ok: false, error: parsed.error },
@@ -228,14 +201,15 @@ export async function PATCH(req: NextRequest, ctx: any) {
       const rawGoalScorer = parsed.rawGoalScorer;
       const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);
       const predRaw = body.prediction;
+      const allowsGoalScorer = league === "wc" || league === "nba";
       const hasGoalScorerField =
-        league === "wc" &&
+        allowsGoalScorer &&
         predRaw !== null &&
         typeof predRaw === "object" &&
         "goalScorer" in (predRaw as object);
 
       if (
-        league === "wc" &&
+        allowsGoalScorer &&
         rawGoalScorer != null &&
         rawGoalScorer !== undefined &&
         !goalScorerPick
@@ -245,21 +219,36 @@ export async function PATCH(req: NextRequest, ctx: any) {
           { status: 400 }
         );
       }
-      if (league !== "wc" && goalScorerPick) {
+      if (!allowsGoalScorer && goalScorerPick) {
         return NextResponse.json(
-          { ok: false, error: "goalScorer only allowed for wc" },
+          { ok: false, error: "goalScorer only allowed for wc or nba" },
           { status: 400 }
         );
       }
       if (goalScorerPick) {
-        const v = validateWcGoalScorerPickForGame(
-          goalScorerPick,
-          homeTeamId,
-          awayTeamId,
-          parsed.prediction.score
-        );
-        if (!v.ok) {
-          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+        if (league === "nba") {
+          const candidates = normalizeNbaTopScorerCandidates(
+            g?.topScorerCandidates
+          );
+          const v = validateNbaTopScorerPickForGame(
+            goalScorerPick,
+            homeTeamId,
+            awayTeamId,
+            candidates.length > 0 ? candidates : null
+          );
+          if (!v.ok) {
+            return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+          }
+        } else {
+          const v = validateWcGoalScorerPickForGame(
+            goalScorerPick,
+            homeTeamId,
+            awayTeamId,
+            parsed.prediction.score
+          );
+          if (!v.ok) {
+            return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+          }
         }
       }
 
@@ -268,7 +257,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
         updatedAt: FieldValue.serverTimestamp(),
       };
 
-      if (league === "wc" && hasGoalScorerField) {
+      if (allowsGoalScorer && hasGoalScorerField) {
         if (goalScorerPick) {
           prediction.goalScorer = goalScorerPick;
           updates.prediction = prediction;
@@ -318,6 +307,13 @@ export async function DELETE(req: NextRequest, ctx: any) {
     const ref = await getPostForDelete(uid, params.id);
 
     await ref.delete();
+
+    // 削除後に招待日数を現存 posts から再集計（§5）
+    try {
+      await recomputeReferralActivePredictDays(getAdminDb(), uid);
+    } catch (err) {
+      console.warn("referral day recompute after delete failed:", err);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

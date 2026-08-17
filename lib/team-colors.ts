@@ -3,7 +3,6 @@ import { teamColorsB1 } from "./teams-b1";
 import { teamColorsJ1 } from "./teams-j1";
 import { teamColorsNBA } from "./teams-nba";
 import { teamColorsPL } from "./teams-pl";
-import { teamColorsWC } from "./teams-wc";
 
 /** ユニフォーム専用の色上書き（まずはポストシーズン対象から段階的に調整） */
 const jerseyPrimaryOverridesNBA: Record<string, string> = {
@@ -94,9 +93,6 @@ export function getTeamPrimaryColor(
     case "pl":
       return teamColorsPL[teamId]?.primary ?? "#ffffff";
 
-    case "wc":
-      return teamColorsWC[teamId]?.primary ?? "#ffffff";
-
     default:
       return "#ffffff";
   }
@@ -114,6 +110,117 @@ export function getTeamJerseyPrimaryColor(
   return getTeamPrimaryColor(league, teamId);
 }
 
+/**
+ * UI 枠・バッジ用。ネオン黄（Lakers/Warriors 等）を落ち着いたゴールドへ抑える。
+ * ジャージ mark 本体には使わず、枠線・テキストアクセント向け。
+ */
+export function softenTeamUiColor(hex: string): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return hex;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return hex;
+
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  // 緑が強く乗るネオン黄は HSL 明度では拾えないため相対輝度で判定
+  const lum =
+    0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === r / 255) h = ((g / 255 - b / 255) / d + (g < b ? 6 : 0)) * 60;
+    else if (max === g / 255) h = ((b / 255 - r / 255) / d + 2) * 60;
+    else h = ((r / 255 - g / 255) / d + 4) * 60;
+  }
+
+  const yellowish = h >= 35 && h <= 100;
+  // 明るすぎる黄・ライムのみ（紫・シアン等は除外）
+  if (!yellowish || lum < 0.55) return hex;
+
+  // ネオンライム（Lakers / Warriors jersey）→ 落ち着いたゴールドへ置換
+  if (b < 50 && g > 220 && r > 180) {
+    return "#C5A817";
+  }
+
+  // 目標: 落ち着いたゴールド（輝度 ~0.44）
+  const targetLum = 0.44;
+  const factor = Math.min(1, Math.max(0.38, targetLum / lum));
+  const nr = Math.round(r * factor);
+  const ng = Math.round(g * factor * 0.95);
+  const nb = Math.round(Math.min(b * factor + 18, Math.min(nr, ng) * 0.4));
+  const toHex = (n: number) =>
+    Math.min(255, Math.max(0, n)).toString(16).padStart(2, "0");
+  return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
+}
+
+/** 塗りの上に載せる文字色（暗い紺などでは白、明るい黄などは墨） */
+export function contrastingInkOnHex(bgHex: string): string {
+  const raw = bgHex.replace("#", "").trim();
+  if (raw.length !== 6) return "#050508";
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return "#050508";
+
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const lum =
+    0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  // Timberwolves 紺など低輝度は白字。スキャン線でさらに暗くなる分、閾値はやや高め
+  return lum < 0.42 ? "#F5F7FA" : "#050508";
+}
+
+/** カード枠・セクションアクセント用（ジャージ mark は getTeamJerseyPrimaryColor のまま） */
+export function getTeamUiAccentColor(
+  league: League,
+  teamId: string | null | undefined
+): string {
+  return readableTeamAccentOnDark(
+    softenTeamUiColor(getTeamJerseyPrimaryColor(league, teamId))
+  );
+}
+
+/**
+ * 暗い背景上のテキスト／枠用。Kings 紫など低輝度を持ち上げて視認性を確保。
+ */
+export function readableTeamAccentOnDark(hex: string): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return hex;
+  let r = Number.parseInt(raw.slice(0, 2), 16);
+  let g = Number.parseInt(raw.slice(2, 4), 16);
+  let b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return hex;
+
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const lum =
+    0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+
+  // 十分明るい色はそのまま（枠線でも読める）
+  if (lum >= 0.32) return `#${raw.toUpperCase()}`;
+
+  // 同系色のまま白へブレンドして輝度を上げる
+  const t = Math.min(0.72, (0.38 - lum) / 0.38);
+  const blend = 0.35 + t * 0.45;
+  r = Math.round(r + (255 - r) * blend);
+  g = Math.round(g + (255 - g) * blend);
+  b = Math.round(b + (255 - b) * blend);
+  const toHex = (n: number) =>
+    Math.min(255, Math.max(0, n)).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+}
+
 /** ユニフォーム canvas の2色目（通常はチーム secondary、上記セットのチームは jersey primary と同色） */
 export function getTeamJerseySecondaryColor(
   league: League,
@@ -127,6 +234,31 @@ export function getTeamJerseySecondaryColor(
     return getTeamJerseyPrimaryColor(league, teamId);
   }
   return getTeamSecondaryColor(league, teamId);
+}
+
+/** `#RRGGBB` → `rgba(...)`。UI の薄い塗り用。 */
+export function teamColorRgba(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return `rgba(255,255,255,${alpha})`;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) {
+    return `rgba(255,255,255,${alpha})`;
+  }
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/** 塗りつぶし上の文字色（チェック等） */
+export function teamColorOnFill(hex: string): "#050505" | "#ffffff" {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length !== 6) return "#ffffff";
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return "#ffffff";
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return lum > 0.62 ? "#050505" : "#ffffff";
 }
 
 export function getTeamSecondaryColor(
@@ -148,9 +280,6 @@ export function getTeamSecondaryColor(
 
     case "pl":
       return teamColorsPL[teamId]?.secondary ?? deriveSecondaryFromPrimary(primary);
-
-    case "wc":
-      return teamColorsWC[teamId]?.secondary ?? deriveSecondaryFromPrimary(primary);
 
     default:
       return deriveSecondaryFromPrimary(primary);

@@ -8,7 +8,7 @@ import {
 } from "firebase/firestore";
 import { resolvePostListLeague } from "@/lib/leagues";
 import type { SettledPostRow } from "@/lib/profile/profileStreakPostsCompute";
-import { resolveWcStageFromGame } from "@/lib/wc/resolveWcStage";
+import { resolveWcStageFromGame } from "@/lib/games/resolveWcStageFromGame";
 
 const GAME_FETCH_CHUNK = 30;
 

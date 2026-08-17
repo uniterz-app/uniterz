@@ -11,8 +11,8 @@ export const PREDICT_OVERLAY_CYBER_CUT = 12;
 export const PREDICT_OVERLAY_CYBER_DECK_CUT = 8;
 /** Web `.predict-overlay-cyber-form`（globals.css） */
 export const PREDICT_OVERLAY_CYBER_FORM_CUT = 10;
-/** Web `.predict-overlay-score-input`（globals.css） */
-export const PREDICT_OVERLAY_SCORE_INPUT_CUT = 6;
+/** Web `.predict-overlay-score-input` — 直角の四角（角切りなし） */
+export const PREDICT_OVERLAY_SCORE_INPUT_CUT = 0;
 /** Web `.predict-overlay-submit-btn`（globals.css） */
 export const PREDICT_OVERLAY_SUBMIT_BTN_CUT = 8;
 /** Web `.predict-overlay-close-btn`（globals.css） */
@@ -43,12 +43,15 @@ export function chamferedCornerRevealPathsD(
   ];
 }
 
-/** Skia / SVG 用の閉じたパス（左上から時計回り） */
+/** Skia / SVG 用の閉じたパス（左上から時計回り）。cut=0 は直角矩形 */
 export function chamferedRectPathD(width: number, height: number, cut: number): string {
   const w = Math.max(0, width);
   const h = Math.max(0, height);
-  const c = Math.min(cut, w / 2, h / 2);
-  if (c <= 0 || w <= 0 || h <= 0) return "";
+  if (w <= 0 || h <= 0) return "";
+  const c = Math.min(Math.max(0, cut), w / 2, h / 2);
+  if (c <= 0) {
+    return [`M 0 0`, `L ${w} 0`, `L ${w} ${h}`, `L 0 ${h}`, "Z"].join(" ");
+  }
   return [
     `M ${c} 0`,
     `L ${w - c} 0`,

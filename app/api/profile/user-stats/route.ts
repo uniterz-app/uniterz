@@ -2,21 +2,23 @@
 // ロールアップキャッシュで Firestore read を抑える
 
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import {
-  buildWindowCacheForUserFromSnapshots,
-  isWindowCacheStale,
-} from "@/lib/profile/buildUserStatsWindowCache";
+import { withFirestoreTransientRetry } from "@/lib/firebase/isTransientFirestoreError";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import {
-  resolveWcProfileSummaryLive,
+  ensureProfileChartsBundle,
+  isProfileChartsComplete,
+} from "@/lib/profile/ensureProfileChartsBundle";
+import { parseProfileChartsBundle } from "@/lib/profile/profileChartsBundle";
+import {
   resolveNbaProfileSummaryLive,
   type ProfileSummaryForCards,
 } from "@/lib/profile/resolveLiveProfileSummary";
+import { resolveNbaWindowProfileSummary } from "@/lib/profile/resolveNbaWindowProfileSummary";
 import {
   buildDailyTrendFromDailySnaps,
-  mergeDailyTrendWithSnap,
   resolveProfileDailyTrendContext,
 } from "@/lib/profile/userStatsV2ProfileRollup";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
@@ -24,21 +26,32 @@ import {
   isRankingLeagueSource,
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
+import {
+  currentRankingPeriodLabel,
+  isValidPeriodLabel,
+} from "@/lib/rankings/rankingPeriod";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
+import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
+import {
+  buildRankPlayoffTrendPoints,
+  type RankPlayoffTrendPoint,
+} from "@/lib/rankings/server/buildRankPlayoffTrendPoints";
 import {
   loadMyRankMetricValueDeltas,
   loadPriorSnapshotMetrics,
 } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
-import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type StatsPart = "stats" | "phase" | "trend" | "ranks";
-type RankingPhase = "play_in" | "playoffs";
+/** Profile WEEK / MONTH（window）カードのキャッシュ（同一ラベル連打対策） */
+const PROFILE_WINDOW_STATS_CACHE_REVALIDATE_SEC = 60;
 
-const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend", "ranks"];
+type StatsPart = "stats" | "phase" | "trend" | "ranks" | "rankTrend";
+
+const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend", "ranks", "rankTrend"];
 
 type SummaryForCards = ProfileSummaryForCards;
 
@@ -60,10 +73,6 @@ function safeNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function parsePhase(raw: string | null): RankingPhase {
-  return raw === "play_in" ? "play_in" : "playoffs";
-}
-
 async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>, uid: string) {
   /** JST の連続する暦日キー（サーバーの TZ に依存しない） */
   const keys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 30);
@@ -78,45 +87,6 @@ async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>,
   return keys.map((dateKey) => byId.get(`${uid}_${dateKey}`)!);
 }
 
-function windowCacheHasProfileRollup(w: Record<string, unknown> | null | undefined): boolean {
-  if (!w) return false;
-  if (typeof w.recent3Posts !== "number") return false;
-  if (!Array.isArray(w.dailyTrend)) return false;
-  const s7 = w["7d"];
-  const s30 = w["30d"];
-  return (
-    s7 != null &&
-    typeof s7 === "object" &&
-    s30 != null &&
-    typeof s30 === "object"
-  );
-}
-
-/** `dailyTrend` が空または未配列（キャッシュ欠落・旧形式） */
-function dailyTrendFromCacheEmpty(
-  w: Record<string, unknown> | null | undefined
-): boolean {
-  if (!w) return true;
-  const raw = w.dailyTrend;
-  return !Array.isArray(raw) || raw.length === 0;
-}
-
-/**
- * 7d / 30d に投稿が載っているのに `dailyTrend` が空 → ウィンドウだけ先にできた古いキャッシュ等。
- * Web は `user_stats_v2_daily` を直読するためグラフが出るが、API 経路だけ空になるのを防ぐ。
- */
-function windowRollupShowsPosts(w: Record<string, unknown>): boolean {
-  for (const key of ["7d", "30d"] as const) {
-    const o = w[key];
-    if (o != null && typeof o === "object") {
-      const r = o as Record<string, unknown>;
-      const posts = safeInt(r.posts ?? r.fullPosts ?? r.totalPosts);
-      if (posts > 0) return true;
-    }
-  }
-  return false;
-}
-
 function parsePartsParam(raw: string | null): Set<StatsPart> | null {
   if (raw == null) return null;
   const trimmed = raw.trim();
@@ -128,216 +98,235 @@ function parsePartsParam(raw: string | null): Set<StatsPart> | null {
   return out.size > 0 ? out : null;
 }
 
-export async function GET(req: Request) {
-  try {
-    const adminDb = getAdminDb();
-    const { searchParams } = new URL(req.url);
-    const uidParam = searchParams.get("uid")?.trim() ?? "";
-    const handleParam = searchParams.get("handle")?.trim() ?? "";
-    const forceRefresh = searchParams.get("refresh") === "1";
-    const phase = parsePhase(searchParams.get("phase"));
-    const rawLeague = searchParams.get("league");
-    const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
-      ? rawLeague
-      : "nba";
-    const rawWcStage = searchParams.get("wcStage");
-    const wcStage: WcRankingStage | undefined =
-      rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
-        ? rawWcStage
-        : rankingLeague === "worldcup"
-          ? "overall"
-          : undefined;
-    const parts =
-      parsePartsParam(searchParams.get("parts")) ?? new Set<StatsPart>(ALL_PARTS);
+async function buildUserStatsResponse(req: Request) {
+  const adminDb = getAdminDb();
+  const { searchParams } = new URL(req.url);
+  const uidParam = searchParams.get("uid")?.trim() ?? "";
+  const handleParam = searchParams.get("handle")?.trim() ?? "";
+  const rawLeague = searchParams.get("league");
+  const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
+    ? rawLeague
+    : "nba";
+  /** NBA: playoffs / season（累計）/ weekly / monthly（ウィンドウ） */
+  const rawPeriod = searchParams.get("period")?.trim() ?? "";
+  const nbaScope: "playoffs" | "season" | null =
+    rankingLeague === "nba" &&
+    (rawPeriod === "playoffs" || rawPeriod === "season")
+      ? rawPeriod
+      : null;
+  const wantWeekly = rankingLeague === "nba" && rawPeriod === "weekly";
+  const wantMonthly = rankingLeague === "nba" && rawPeriod === "monthly";
+  const wantWindow = wantWeekly || wantMonthly;
+  const rawBoard = searchParams.get("board")?.trim() ?? "";
+  const windowBoard: "playoffs" | "season" =
+    rawBoard === "playoffs" ? "playoffs" : "season";
+  const rawWindowLabel =
+    searchParams.get(wantWeekly ? "week" : "month")?.trim() ?? "";
+  const resolvedWindowPeriod = wantWeekly ? "weekly" : "monthly";
+  const requestedWindowLabelValid =
+    wantWindow && isValidPeriodLabel(resolvedWindowPeriod, rawWindowLabel);
+  const requestedWindowLabel =
+    requestedWindowLabelValid && rawWindowLabel ? rawWindowLabel : null;
+  const currentWindowLabel = wantWindow
+    ? currentRankingPeriodLabel(resolvedWindowPeriod)
+    : null;
+  const windowLabel =
+    wantWindow && requestedWindowLabel
+      ? requestedWindowLabel
+      : wantWindow
+        ? currentWindowLabel
+        : null;
+  const parts =
+    parsePartsParam(searchParams.get("parts")) ?? new Set<StatsPart>(ALL_PARTS);
 
-    let resolvedUid = uidParam;
-    if (!resolvedUid && handleParam) {
-      resolvedUid = (await resolveUidByHandleCached(adminDb, handleParam)) ?? "";
-    }
+  let resolvedUid = uidParam;
+  if (!resolvedUid && handleParam) {
+    resolvedUid = (await resolveUidByHandleCached(adminDb, handleParam)) ?? "";
+  }
 
-    if (!resolvedUid) {
-      if (handleParam) {
-        return NextResponse.json(
-          { ok: false, error: "user not found" },
-          { status: 404 }
-        );
-      }
+  if (!resolvedUid) {
+    if (handleParam) {
       return NextResponse.json(
-        { ok: false, error: "uid or handle is required" },
-        { status: 400 }
+        { ok: false, error: "user not found" },
+        { status: 404 }
       );
     }
-
-    const uid = resolvedUid;
-
-    const wantStats = parts.has("stats");
-    const wantPhase = parts.has("phase");
-    const wantRanks = parts.has("ranks");
-    const wantWindow = parts.has("trend");
-
-    const statsSnap = wantStats
-      ? await adminDb.collection("user_stats_v2").doc(uid).get()
-      : null;
-    const cumulativeSnap =
-      wantPhase || wantRanks
-        ? await adminDb.collection("cumulative_stats").doc(uid).get()
-        : null;
-    const windowSnap = wantWindow
-      ? await adminDb.collection("user_stats_v2_window_cache").doc(uid).get()
-      : null;
-
-    const stats = statsSnap?.exists ? statsSnap.data() : null;
-    const cumulative = cumulativeSnap?.exists ? cumulativeSnap.data() : null;
-
-    const windowData = windowSnap?.exists ? windowSnap.data() : null;
-    const updatedAt = windowData?.updatedAt;
-    const stale = !windowData || isWindowCacheStale(updatedAt);
-    const wObj = windowData as Record<string, unknown> | null | undefined;
-    const missingRollup = !windowCacheHasProfileRollup(wObj);
-    const cacheTrendIncomplete =
-      wantWindow &&
-      !!wObj &&
-      windowCacheHasProfileRollup(wObj) &&
-      dailyTrendFromCacheEmpty(wObj) &&
-      windowRollupShowsPosts(wObj);
-    const needRebuild =
-      wantWindow &&
-      (forceRefresh || stale || missingRollup || cacheTrendIncomplete);
-
-    const dailyTrendCtx = resolveProfileDailyTrendContext(
-      rankingLeague,
-      wcStage
+    return NextResponse.json(
+      { ok: false, error: "uid or handle is required" },
+      { status: 400 }
     );
-    /** WC は window_cache の dailyTrend（NBA 合算）を使わず日次スナップショットから組み立てる */
-    const wcStageSpecificTrend = rankingLeague === "worldcup";
+  }
 
-    let dailyTrend: ProfileDailyTrendRow[] = [];
+  const uid = resolvedUid;
 
-    if (wantWindow) {
-      let last30Snaps: Awaited<ReturnType<typeof fetchLast30DailySnapshots>> | null =
-        null;
+  const wantStats = parts.has("stats");
+  const wantPhase = parts.has("phase");
+  const wantRanks = parts.has("ranks");
+  const wantTrend = parts.has("trend");
+  const wantRankTrend = parts.has("rankTrend");
 
-      if (wcStageSpecificTrend || needRebuild) {
-        last30Snaps = await fetchLast30DailySnapshots(adminDb, uid);
-      }
+  const dailyTrendCtx = resolveProfileDailyTrendContext(
+    rankingLeague,
+    undefined,
+    rankingLeague === "nba" ? (nbaScope ?? "season") : undefined
+  );
 
-      if (wcStageSpecificTrend && last30Snaps) {
-        dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx);
-      } else if (needRebuild && last30Snaps) {
-        try {
-          await buildWindowCacheForUserFromSnapshots(adminDb, uid, last30Snaps);
-        } catch (e) {
-          console.warn("[profile/user-stats] window cache rebuild failed:", e);
-        }
-        dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx);
-      } else if (!wcStageSpecificTrend) {
-        const w = windowData as Record<string, unknown>;
-        const raw = w.dailyTrend;
-        dailyTrend = Array.isArray(raw) ? (raw as ProfileDailyTrendRow[]) : [];
-      }
+  const needCumulative =
+    !wantWindow && (wantPhase || wantRanks || wantTrend || wantRankTrend);
 
-      const todayKeys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 1);
-      const todayKey = todayKeys[0];
-      if (todayKey) {
-        const todaySnap = await adminDb
-          .doc(`user_stats_v2_daily/${uid}_${todayKey}`)
-          .get();
-        dailyTrend = mergeDailyTrendWithSnap(dailyTrend, todaySnap, dailyTrendCtx);
+  const [statsSnap, cumulativeSnap] = await Promise.all([
+    wantStats
+      ? adminDb.collection("user_stats_v2").doc(uid).get()
+      : Promise.resolve(null),
+    needCumulative
+      ? adminDb.collection("cumulative_stats").doc(uid).get()
+      : Promise.resolve(null),
+  ]);
+
+  const stats = statsSnap?.exists ? statsSnap.data() : null;
+  const cumulative = cumulativeSnap?.exists
+    ? (cumulativeSnap.data() as Record<string, unknown>)
+    : null;
+
+  /** NBA overview: 揃った profileCharts があれば日次30+履歴 read をスキップ */
+  let chartsBundle =
+    rankingLeague === "nba" && (wantTrend || wantRankTrend)
+      ? parseProfileChartsBundle(cumulative, CURRENT_NBA_SEASON_KEY)
+      : null;
+  if (
+    rankingLeague === "nba" &&
+    (wantTrend || wantRankTrend) &&
+    !isProfileChartsComplete(chartsBundle)
+  ) {
+    const ensured = await ensureProfileChartsBundle(uid, {
+      seasonKey: CURRENT_NBA_SEASON_KEY,
+    });
+    chartsBundle = {
+      v: ensured.v,
+      seasonKey: ensured.seasonKey,
+      dailyTrend: ensured.dailyTrend,
+      rankTrend: ensured.rankTrend,
+      last20: ensured.last20,
+    };
+  }
+
+  const [last30Snaps, rankTrendPoints] = await Promise.all([
+    wantTrend &&
+    !(
+      rankingLeague === "nba" &&
+      isProfileChartsComplete(chartsBundle) &&
+      (nbaScope ?? "season") === "season"
+    )
+      ? fetchLast30DailySnapshots(adminDb, uid)
+      : Promise.resolve([] as Awaited<
+          ReturnType<typeof fetchLast30DailySnapshots>
+        >),
+    wantRankTrend &&
+    !(rankingLeague === "nba" && isProfileChartsComplete(chartsBundle))
+      ? buildRankPlayoffTrendPoints(uid, {
+          rankingLeague,
+        })
+      : Promise.resolve([] as RankPlayoffTrendPoint[]),
+  ]);
+
+  const dailyTrend: ProfileDailyTrendRow[] = wantTrend
+    ? rankingLeague === "nba" &&
+      isProfileChartsComplete(chartsBundle) &&
+      (nbaScope ?? "season") === "season"
+      ? chartsBundle.dailyTrend
+      : buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx)
+    : [];
+
+  const rankTrendFromCharts: RankPlayoffTrendPoint[] | null =
+    wantRankTrend &&
+    rankingLeague === "nba" &&
+    isProfileChartsComplete(chartsBundle)
+      ? chartsBundle.rankTrend.map((p) => ({
+          dateKey: p.dateKey,
+          rank: p.rank,
+        }))
+      : null;
+
+  let summary: SummaryForCards | null = null;
+  let metricValueDeltas: MyRankMetricValueDeltas | null = null;
+  let monthlyResolvedLabel: string | null = null;
+  let windowResolvedLabel: string | null = null;
+  let monthlySummaryRanks: SummaryRanks | null = null;
+  if (wantWindow && windowLabel && (wantPhase || wantRanks)) {
+    /**
+     * 過去（現行以外の week/month ラベル指定）は Pro ユーザーのみ許可。
+     * UI 側は `profile.plan === "pro"` のみラベルナビを出すため、
+     * API まで合わせて抜け道を塞ぐ。
+     */
+    const isNonCurrentWindow =
+      requestedWindowLabelValid &&
+      requestedWindowLabel &&
+      requestedWindowLabel !== currentWindowLabel;
+
+    if (isNonCurrentWindow) {
+      const isPro = await assertProUser(uid);
+      if (!isPro) {
+        return NextResponse.json(
+          { ok: false, error: "pro_required" },
+          { status: 403 }
+        );
       }
     }
 
-    let summary: SummaryForCards | null = null;
-    let metricValueDeltas: MyRankMetricValueDeltas | null = null;
-    if (wantPhase) {
-      const deltaOpts = {
-        phase,
-        round: "overall" as const,
-        wcStage: rankingLeague === "worldcup" ? (wcStage ?? "overall") : null,
-        rankingLeague,
-      };
-      const priorMetrics = await loadPriorSnapshotMetrics(uid, deltaOpts);
-
-      if (rankingLeague === "worldcup" && wcStage) {
-        summary = await resolveWcProfileSummaryLive(
-          adminDb,
-          uid,
-          wcStage,
-          cumulative as Record<string, unknown> | null,
-          priorMetrics
-        );
-        /**
-         * WC（football）の現在連勝・最大連勝は updateUserStreak が試合確定時に
-         * user_stats_v2 へライブ保存している。WC は football 唯一なので
-         * 「WC 全体（overall）の連勝」= football の連勝として確定値を採用する。
-         * （クライアントは Firestore ルールで他人の user_stats_v2 を読めないため API で渡す）
-         */
-        if (wcStage === "overall" && summary) {
-          try {
-            const usSnap = await adminDb
-              .collection("user_stats_v2")
-              .doc(uid)
-              .get();
-            const us = usSnap.exists
-              ? (usSnap.data() as Record<string, unknown>)
-              : {};
-            const curFootball = safeNum(us.streakFootball);
-            const maxBySport = (us.maxWinStreakBySport ?? {}) as Record<
-              string,
-              unknown
-            >;
-            summary.activeWinStreak =
-              curFootball > 0 ? Math.floor(curFootball) : 0;
-            summary.maxWinStreak = safeInt(
-              maxBySport.football ?? us.maxWinStreakFootball
-            );
-          } catch {
-            /* ライブ連勝が取れなくてもサマリー自体は返す */
-          }
-        } else if (
-          (wcStage === "qualifying" || wcStage === "main") &&
-          summary
-        ) {
-          try {
-            const usSnap = await adminDb
-              .collection("user_stats_v2")
-              .doc(uid)
-              .get();
-            const us = usSnap.exists
-              ? (usSnap.data() as Record<string, unknown>)
-              : {};
-            const byStage = (us.activeWinStreakByWcStage ?? {}) as Record<
-              string,
-              unknown
-            >;
-            const live = safeInt(byStage[wcStage]);
-            summary.activeWinStreak = live;
-            const maxByStage = (us.maxWinStreakByWcStage ?? {}) as Record<
-              string,
-              unknown
-            >;
-            summary.maxWinStreak = safeInt(maxByStage[wcStage]);
-          } catch {
-            /* 同上 */
-          }
-        }
-      } else {
-        summary = await resolveNbaProfileSummaryLive(
-          adminDb,
-          uid,
-          phase,
-          cumulative as Record<string, unknown> | null,
-          priorMetrics
-        );
+    const windowed = await unstable_cache(
+      async () =>
+        resolveNbaWindowProfileSummary(adminDb, uid, {
+          board: windowBoard,
+          window: wantWeekly ? "weekly" : "monthly",
+          label: windowLabel,
+        }),
+      [
+        "profile-window-stats",
+        uid,
+        windowBoard,
+        wantWeekly ? "weekly" : "monthly",
+        windowLabel,
+      ],
+      {
+        revalidate: PROFILE_WINDOW_STATS_CACHE_REVALIDATE_SEC,
       }
+    )();
+    windowResolvedLabel = windowed.label;
+    monthlyResolvedLabel =
+      windowed.window === "monthly" ? windowed.label : null;
+    monthlySummaryRanks = windowed.summaryRanks;
+    if (wantPhase) {
+      summary = windowed.summary;
+      metricValueDeltas = null;
+    }
+  } else if (wantPhase) {
+    const deltaOpts = {
+      wcStage: null,
+      rankingLeague,
+    };
+    const priorMetrics = await loadPriorSnapshotMetrics(uid, deltaOpts);
 
-      if (summary) {
+    summary = await resolveNbaProfileSummaryLive(
+      adminDb,
+      uid,
+      cumulative as Record<string, unknown> | null,
+      priorMetrics,
+      nbaScope ?? undefined
+    );
+
+    if (summary) {
+      if (nbaScope === "playoffs") {
+        // プレーオフはシーズン前日比スナップショットとスコープが違うのでデルタなし
+        metricValueDeltas = null;
+      } else {
         const winRatePct =
           summary.winRate <= 1 ? summary.winRate * 100 : summary.winRate;
         metricValueDeltas = await loadMyRankMetricValueDeltas(
           uid,
           {
             totalPoints: summary.pointsSumV3,
-            totalPrecision: summary.scorePrecisionSum,
+            totalPrecision:
+              0,
             totalUpset: summary.upsetPointsSum,
             winRate: winRatePct,
           },
@@ -348,34 +337,63 @@ export async function GET(req: Request) {
         );
       }
     }
+  }
 
-    /** ティアタグ用 — 日次スナップショット（Functions 不要）。phase 取得時も同梱可。 */
-    let summaryRanks: SummaryRanks | null = null;
-    if (wantRanks || wantPhase) {
-      summaryRanks = await fetchProfileSummaryRanks(
-        uid,
-        phase,
-        rankingLeague === "worldcup" ? wcStage : undefined,
-        cumulative as Record<string, unknown> | null | undefined
-      );
-    }
-
-    const body: Record<string, unknown> = {
-      ok: true,
-      resolvedUid: uid,
-      parts: [...parts],
-      phase,
-      rankingLeague,
-      wcStage: wcStage ?? null,
+  /** ティアタグ用 — 日次スナップショット（Functions 不要）。phase 取得時も同梱可。 */
+  let summaryRanks: SummaryRanks | null = null;
+  if (wantWindow && monthlySummaryRanks) {
+    summaryRanks = monthlySummaryRanks;
+  } else if (nbaScope === "playoffs") {
+    // プレーオフ専用ボードは廃止済み — 順位は出さない
+    summaryRanks = {
+      totalPrecision: null,
+      totalUpset: null,
+      totalPoints: null,
+      totalPointsDenominator: null,
+      rankDeltaPlaces: null,
     };
+  } else if (wantRanks || wantPhase) {
+    summaryRanks = await fetchProfileSummaryRanks(
+      uid,
+      cumulative as Record<string, unknown> | null | undefined
+    );
+  }
 
-    if (wantStats) body.stats = stats;
-    if (summary) body.summary = summary;
-    if (metricValueDeltas) body.metricValueDeltas = metricValueDeltas;
-    if (summaryRanks) body.summaryRanks = summaryRanks;
-    if (parts.has("trend") && wantWindow) body.dailyTrend = dailyTrend;
+  const body: Record<string, unknown> = {
+    ok: true,
+    resolvedUid: uid,
+    parts: [...parts],
+    rankingLeague,
+    wcStage: null,
+    period: wantWeekly
+      ? "weekly"
+      : wantMonthly
+        ? "monthly"
+        : nbaScope === "playoffs"
+          ? "playoffs"
+          : "season",
+    board: wantWindow ? windowBoard : nbaScope ?? "season",
+    monthLabel: monthlyResolvedLabel,
+    weekLabel: wantWeekly ? windowResolvedLabel : null,
+    windowLabel: windowResolvedLabel,
+  };
 
-    return NextResponse.json(body);
+  if (wantStats) body.stats = stats;
+  if (summary) body.summary = summary;
+  if (metricValueDeltas) body.metricValueDeltas = metricValueDeltas;
+  if (summaryRanks) body.summaryRanks = summaryRanks;
+  if (wantTrend) body.dailyTrend = dailyTrend;
+  if (wantRankTrend) {
+    body.rankTrend = rankTrendFromCharts ?? rankTrendPoints;
+  }
+
+  return NextResponse.json(body);
+
+}
+
+export async function GET(req: Request) {
+  try {
+    return await withFirestoreTransientRetry(() => buildUserStatsResponse(req));
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "unexpected error";
     return NextResponse.json(

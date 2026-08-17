@@ -13,11 +13,9 @@ function clamp01(x: number) {
 
 /** リザルト指標 → ランキング指標キー */
 function resultMetricToRankingKey(
-  metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3"
+  metricKey?: "upsetPoints" | "pointsV3"
 ): string {
   switch (metricKey) {
-    case "scorePrecision":
-      return "marginPrecision";
     case "upsetPoints":
       return "upsetScore";
     case "pointsV3":
@@ -33,7 +31,7 @@ function contrastRankingKey(r: number): string {
   if (x < 0.28) return "totalScore";
   if (x < 0.52) return "winRate";
   if (x < 0.76) return "upsetScore";
-  return "marginPrecision";
+  return "goalScorerHits";
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -76,7 +74,7 @@ export type ResultStatRatingBarProps = {
   /** 指定時はチーム色のセグメント */
   teamBaseHex?: string;
   /** リザルト指標別の固定色（ランキング指標色に対応） */
-  metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3";
+  metricKey?: "upsetPoints" | "pointsV3";
   /** セグメント本数（ランキング既定 10） */
   segmentCount?: 5 | 10;
   /**

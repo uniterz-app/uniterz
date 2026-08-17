@@ -12,16 +12,19 @@ import { db } from "@/lib/firebase";
 import { resolvePostListLeague } from "@/lib/leagues";
 import { enrichSettledPostsFromGames } from "@/lib/profile/enrichSettledPostsFromGames";
 import {
-  computeAllScopeMetrics,
+  filterPostsForScope,
   type SettledPostRow,
 } from "@/lib/profile/profileStreakPostsCompute";
+import type { ProfileStreakScopeKey } from "@/lib/profile/profileStreakScope";
 
 export { computeAllScopeMetrics, type SettledPostRow } from "@/lib/profile/profileStreakPostsCompute";
 
-const FETCH_LIMIT = 400;
+/** Last20 向け。denorm 未整備時のフォールバック。スコープ落ち余裕を抑えて read 削減 */
+const STREAK_FETCH_LIMIT = 40;
+const LEGACY_FETCH_LIMIT = 120;
 const CACHE_TTL_MS = 5 * 60 * 1000;
-/** ゲーム補完ロジック変更時に bump */
-const CACHE_VERSION = 3;
+/** NBA シーズンスコープ変更時に bump */
+const CACHE_VERSION = 6;
 
 type CacheEntry = {
   at: number;
@@ -31,8 +34,8 @@ type CacheEntry = {
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<SettledPostRow[]>>();
 
-function cacheKey(uid: string): string {
-  return `${uid}:v${CACHE_VERSION}`;
+function cacheKey(uid: string, fetchLimit: number): string {
+  return `${uid}:v${CACHE_VERSION}:n${fetchLimit}`;
 }
 
 function settledAtToMs(v: unknown): number | null {
@@ -71,10 +74,11 @@ function parseRows(
   return rows;
 }
 
-export async function loadProfileSettledPosts(
-  uid: string
+async function fetchSettledPostsRaw(
+  uid: string,
+  fetchLimit: number
 ): Promise<SettledPostRow[]> {
-  const key = cacheKey(uid);
+  const key = cacheKey(uid, fetchLimit);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.rows;
 
@@ -87,11 +91,10 @@ export async function loadProfileSettledPosts(
       where("authorUid", "==", uid),
       where("schemaVersion", "==", 2),
       orderBy("settledAt", "desc"),
-      limit(FETCH_LIMIT)
+      limit(fetchLimit)
     );
     const snap = await getDocs(q);
-    const parsed = parseRows(snap.docs);
-    const rows = await enrichSettledPostsFromGames(parsed, db);
+    const rows = parseRows(snap.docs);
     cache.set(key, { at: Date.now(), rows });
     inflight.delete(key);
     return rows;
@@ -104,4 +107,32 @@ export async function loadProfileSettledPosts(
     inflight.delete(key);
     throw e;
   }
+}
+
+/**
+ * 全スコープ集計など向け。必要なら games 補完あり。
+ */
+export async function loadProfileSettledPosts(
+  uid: string
+): Promise<SettledPostRow[]> {
+  const rows = await fetchSettledPostsRaw(uid, LEGACY_FETCH_LIMIT);
+  return enrichSettledPostsFromGames(rows, db);
+}
+
+/**
+ * Last20 Tracker 向け: 読み取り数を抑え、スコープに足りるなら games 補完をスキップ。
+ */
+export async function loadProfileSettledPostsForStreakScope(
+  uid: string,
+  scopeKey: ProfileStreakScopeKey,
+  lastN: number
+): Promise<SettledPostRow[]> {
+  const rows = await fetchSettledPostsRaw(uid, STREAK_FETCH_LIMIT);
+  const withoutEnrich = filterPostsForScope(rows, scopeKey, lastN);
+  if (withoutEnrich.length >= lastN) {
+    return withoutEnrich;
+  }
+
+  const enriched = await enrichSettledPostsFromGames(rows, db);
+  return filterPostsForScope(enriched, scopeKey, lastN);
 }

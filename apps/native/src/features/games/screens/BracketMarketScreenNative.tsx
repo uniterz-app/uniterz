@@ -215,7 +215,12 @@ export default function BracketMarketScreenNative() {
   ];
 
   return (
-    <MobilePageShell title="Bracket Market" appBackground onClose={() => navigation.goBack()}>
+    <MobilePageShell
+      eyebrow="GAMES"
+      title="MARKET"
+      appBackground
+      onClose={() => navigation.goBack()}
+    >
       {loading ? (
         <View style={{ marginTop: 32, alignItems: "center" }}>
           <CandleChartLoaderNative />

@@ -1,0 +1,51 @@
+/* PRO 背景 — 爬虫類スキン × サイバー
+ * atmos と同じく図形レイヤーのみ（ベース色・重いグローなし） */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--scale) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--scale) .profile-plan-pro-ambient {
+  display: none;
+}
+
+.profile-plan-pro-bg__scale-skin {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.profile-plan-pro-bg--scale-dragon .profile-plan-pro-bg__scale-skin {
+  filter: contrast(1.12) saturate(1.18);
+}
+
+.profile-plan-pro-bg--scale-mamba .profile-plan-pro-bg__scale-skin,
+.profile-plan-pro-bg--scale-king .profile-plan-pro-bg__scale-skin,
+.profile-plan-pro-bg--scale-diamondback .profile-plan-pro-bg__scale-skin,
+.profile-plan-pro-bg--scale-python .profile-plan-pro-bg__scale-skin {
+  filter: contrast(1.1) saturate(1.12);
+}
+
+.profile-plan-pro-bg__scale-hud {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Web 横長は globals の aspect-ratio を使用 */
+
+/* biolume だけ微弱な色移り */
+@keyframes profile-plan-pro-scale-biolume-shift {
+  0%,
+  100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(28deg);
+  }
+}
+
+.profile-plan-pro-bg--animate.profile-plan-pro-bg--scale-biolume .profile-plan-pro-bg__scale-skin {
+  animation: profile-plan-pro-scale-biolume-shift 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-plan-pro-bg--animate.profile-plan-pro-bg--scale-biolume .profile-plan-pro-bg__scale-skin {
+    animation: none !important;
+  }
+}

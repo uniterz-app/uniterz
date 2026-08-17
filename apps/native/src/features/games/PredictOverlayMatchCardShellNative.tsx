@@ -1,5 +1,6 @@
 /**
- * Web `MatchCard` + `inPredictOverlay` の `.predict-overlay-cyber-card` / grid 相当。
+ * Web `MatchCard` + `inPredictOverlay` の `.predict-overlay-cyber-card` 相当。
+ * 直角シェル・方眼なし（一覧カードと同じ方針）。
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
@@ -17,19 +18,13 @@ import {
   Skia,
   vec,
 } from "@shopify/react-native-skia";
-import {
-  chamferedRectPathD,
-  PREDICT_OVERLAY_CYBER_CUT,
-} from "./matchListCyberClipPath";
-import PredictOverlayChamferCornerFillNative from "./PredictOverlayChamferCornerFillNative";
+import { chamferedRectPathD } from "./matchListCyberClipPath";
 import PredictOverlayCyberShellBorderNative from "./PredictOverlayCyberShellBorderNative";
 import {
-  hasPredictOverlayResultCyberFrame,
   predictOverlayShellBorderColor,
   predictOverlayShellBorderWidth,
   predictOverlayShellSweepVariant,
 } from "./predictOverlayShellBorderStyle";
-import { PredictOverlayCyberGridSkia } from "./PredictOverlayCyberGridSkia";
 import type { ResultCardBadge } from "../../../../../lib/result/resultGlass";
 import {
   isResultHitFrameBadge,
@@ -43,10 +38,6 @@ import ResultCyberFrameBorderSweepNative, {
   type ResultCyberFrameClipShape,
 } from "../results/ResultCyberFrameBorderSweepNative";
 import { PREDICT_OVERLAY_SWEEP_RING_WIDTH } from "../results/resultCyberFrameNativeMetrics";
-import {
-  RESULT_HIT_CYBER_CLIP_CUT,
-  resultHitCyberClipPathD,
-} from "../results/resultHitCyberClipPath";
 
 /** globals.css `.predict-overlay-cyber-card` background（168deg 近似） */
 const SHELL_GRADIENT = {
@@ -65,16 +56,8 @@ type Props = {
   overlayUnifiedForm?: boolean;
 };
 
-function makeSkiaPath(
-  width: number,
-  height: number,
-  cut: number,
-  clipShape: ResultCyberFrameClipShape
-) {
-  const d =
-    clipShape === "hit"
-      ? resultHitCyberClipPathD(width, height, cut)
-      : chamferedRectPathD(width, height, cut);
+function makeSkiaPath(width: number, height: number, cut: number) {
+  const d = chamferedRectPathD(width, height, cut);
   if (!d) return null;
   return Skia.Path.MakeFromSVGString(d);
 }
@@ -87,18 +70,13 @@ export default function PredictOverlayMatchCardShellNative({
   overlayUnifiedForm = false,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const hasResultFrame = hasPredictOverlayResultCyberFrame(resultBadge);
-  /** Web: 結果バッジ時は `.result-hit-cyber-clip`、通常は `.predict-overlay-cyber-card` */
-  const shellClipShape: ResultCyberFrameClipShape = hasResultFrame ? "hit" : "chamfer";
-  const cut =
-    shellClipShape === "hit" ? RESULT_HIT_CYBER_CLIP_CUT : PREDICT_OVERLAY_CYBER_CUT;
+  /** 直角シェル */
+  const shellClipShape: ResultCyberFrameClipShape = "chamfer";
+  const cut = 0;
 
   const skiaPath = useMemo(
-    () =>
-      size.w > 0 && size.h > 0
-        ? makeSkiaPath(size.w, size.h, cut, shellClipShape)
-        : null,
-    [size.w, size.h, cut, shellClipShape]
+    () => (size.w > 0 && size.h > 0 ? makeSkiaPath(size.w, size.h, cut) : null),
+    [size.w, size.h, cut]
   );
 
   function onLayout(e: LayoutChangeEvent) {
@@ -111,8 +89,10 @@ export default function PredictOverlayMatchCardShellNative({
   const shellBorderColor = predictOverlayShellBorderColor(resultBadge, activeWinStreak);
   const shellBorderWidth = predictOverlayShellBorderWidth(resultBadge);
   const sweepVariant = predictOverlayShellSweepVariant(resultBadge, activeWinStreak);
+  /** Web `.predict-overlay-cyber-card--bare`：予定試合は塗り・枠なし */
+  const skipFilledShell = overlayUnifiedForm || !resultBadge;
 
-  if (overlayUnifiedForm) {
+  if (skipFilledShell) {
     return (
       <View style={[styles.root, style]}>
         {resultBadge && isResultHitFrameBadge(resultBadge) ? (
@@ -141,33 +121,21 @@ export default function PredictOverlayMatchCardShellNative({
         ]}
       >
         {hasSize && skiaPath ? (
-          <>
-            <Canvas
-              style={{ position: "absolute", left: 0, top: 0, width: size.w, height: size.h }}
-              pointerEvents="none"
-            >
-              <Group clip={skiaPath}>
-                <Rect x={0} y={0} width={size.w} height={size.h}>
-                  <SkiaLinearGradient
-                    start={vec(size.w * 0.2, 0)}
-                    end={vec(size.w * 0.75, size.h)}
-                    colors={[...SHELL_GRADIENT.colors]}
-                    positions={[...SHELL_GRADIENT.locations]}
-                  />
-                </Rect>
-              </Group>
-            </Canvas>
-            <View
-              pointerEvents="none"
-              style={{ position: "absolute", left: 0, top: 0, width: size.w, height: size.h }}
-            >
-              <Canvas style={{ width: size.w, height: size.h }} pointerEvents="none">
-                <Group clip={skiaPath}>
-                  <PredictOverlayCyberGridSkia width={size.w} height={size.h} />
-                </Group>
-              </Canvas>
-            </View>
-          </>
+          <Canvas
+            style={{ position: "absolute", left: 0, top: 0, width: size.w, height: size.h }}
+            pointerEvents="none"
+          >
+            <Group clip={skiaPath}>
+              <Rect x={0} y={0} width={size.w} height={size.h}>
+                <SkiaLinearGradient
+                  start={vec(size.w * 0.2, 0)}
+                  end={vec(size.w * 0.75, size.h)}
+                  colors={[...SHELL_GRADIENT.colors]}
+                  positions={[...SHELL_GRADIENT.locations]}
+                />
+              </Rect>
+            </Group>
+          </Canvas>
         ) : null}
 
         {resultBadge && isResultHitFrameBadge(resultBadge) ? (
@@ -184,15 +152,6 @@ export default function PredictOverlayMatchCardShellNative({
         ) : null}
 
         <View style={styles.content}>{children}</View>
-
-        {hasSize ? (
-          <PredictOverlayChamferCornerFillNative
-            width={size.w}
-            height={size.h}
-            cut={cut}
-            clipShape={shellClipShape}
-          />
-        ) : null}
 
         {hasSize && skiaPath ? (
           <PredictOverlayCyberShellBorderNative
@@ -244,6 +203,7 @@ const styles = StyleSheet.create({
   frame: {
     position: "relative",
     minHeight: 120,
+    borderRadius: 0,
   },
   frameMeasuring: {
     minHeight: 120,
@@ -251,8 +211,6 @@ const styles = StyleSheet.create({
   },
   content: {
     position: "relative",
-    zIndex: 2,
-    flex: 1,
-    minHeight: 0,
+    zIndex: 1,
   },
 });

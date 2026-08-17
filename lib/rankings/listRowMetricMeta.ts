@@ -1,4 +1,4 @@
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 
 /** ランキング行 — 指標の前日比（例: +18 / +6.7）。0 / 0.0 は null */

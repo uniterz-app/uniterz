@@ -48,7 +48,5 @@ export function cyberScoreGlowLayers(rank: number): CyberGlyphGlowLayer[] {
   if (rank <= 3) {
     return [{ color: "rgba(255,43,214,0.42)", opacity: 0.38, scale: 1.08 }];
   }
-  const t = Math.min(1, (rank - 4) / 14);
-  const alpha = 0.38 - t * 0.22;
-  return [{ color: `rgba(255,43,214,${alpha})`, opacity: 0.34, scale: 1.06 + t * 0.04 }];
+  return [];
 }

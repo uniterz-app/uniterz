@@ -1,0 +1,193 @@
+/* ランキング行 — プロフィール同系パターンを cover で裁ち落とし（タイルなし） */
+
+.ranking-list-pro-skin-fx {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ranking-list-pro-skin-fx__layer {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  /* プロフィール縦長柄の右〜下寄りを見せる（左の名前エリアは相対的に空く） */
+  background-position: 72% 45%;
+  background-size: cover;
+}
+
+.ranking-list-pro-skin-fx__skin {
+  opacity: 0.72;
+  filter: contrast(1.06) saturate(1) brightness(1.02);
+}
+
+.ranking-list-pro-skin-fx__hud {
+  opacity: 0.32;
+  mix-blend-mode: screen;
+  background-position: 78% 40%;
+  background-size: cover;
+}
+
+.ranking-list-pro-skin-fx__hud--atmos {
+  opacity: 0.24;
+  mix-blend-mode: soft-light;
+}
+
+.ranking-list-pro-skin-fx__atmos-tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 45%,
+    rgba(34, 211, 238, 0.12) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx__atmos-tint--parallax {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 42%,
+    rgba(99, 102, 241, 0.14) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx__wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 10, 16, 0.72) 0%,
+    rgba(5, 10, 16, 0.48) 48%,
+    rgba(5, 10, 16, 0.28) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx--subtle .ranking-list-pro-skin-fx__skin {
+  opacity: 0.58;
+  filter: contrast(1.02) saturate(0.9) brightness(0.99);
+}
+
+.ranking-list-pro-skin-fx--subtle .ranking-list-pro-skin-fx__wash {
+  background: linear-gradient(
+    90deg,
+    rgba(5, 10, 16, 0.8) 0%,
+    rgba(5, 10, 16, 0.58) 48%,
+    rgba(5, 10, 16, 0.4) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx--medium .ranking-list-pro-skin-fx__skin {
+  opacity: 0.9;
+  filter: contrast(1.1) saturate(1.08) brightness(1.04);
+}
+
+.ranking-list-pro-skin-fx--medium .ranking-list-pro-skin-fx__hud {
+  opacity: 0.42;
+}
+
+.ranking-list-pro-skin-fx--medium .ranking-list-pro-skin-fx__wash {
+  background: linear-gradient(
+    90deg,
+    rgba(5, 10, 16, 0.58) 0%,
+    rgba(5, 10, 16, 0.32) 50%,
+    rgba(5, 10, 16, 0.14) 100%
+  );
+}
+
+.ranking-list-pro-skin-fx[class*="--scale-"] .ranking-list-pro-skin-fx__layer {
+  background-position: 68% 38%;
+  background-size: cover;
+}
+
+.ranking-list-pro-skin-fx[class*="--beast-"] .ranking-list-pro-skin-fx__layer {
+  background-position: 70% 42%;
+}
+
+.ranking-list-pro-skin-fx[class*="--form-"] .ranking-list-pro-skin-fx__layer {
+  background-position: 65% 40%;
+}
+
+.ranking-list-pro-skin-fx[class*="--wave-"] .ranking-list-pro-skin-fx__layer {
+  background-position: 70% 42%;
+}
+
+/* UNITERZ Mark — 横長行では右寄せ contain（文字が切れない） */
+.ranking-list-pro-skin-fx__uniterz-base {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, #000000 0%, #050b10 55%, #000408 100%);
+}
+
+.ranking-list-pro-skin-fx--wave-uniterz-logo .ranking-list-pro-skin-fx__skin--uniterz-logo {
+  background: none;
+  opacity: 1;
+  filter: none;
+  overflow: hidden;
+}
+
+.ranking-list-pro-skin-fx--medium.ranking-list-pro-skin-fx--wave-uniterz-logo
+  .ranking-list-pro-skin-fx__skin--uniterz-logo {
+  opacity: 1;
+}
+
+.ranking-list-pro-skin-fx--subtle.ranking-list-pro-skin-fx--wave-uniterz-logo
+  .ranking-list-pro-skin-fx__skin--uniterz-logo,
+.ranking-list-pro-skin-fx__skin--uniterz-logo-subtle {
+  opacity: 0.78;
+}
+
+.ranking-list-pro-skin-fx__uniterz-mark {
+  position: absolute;
+  aspect-ratio: 1024 / 682;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  pointer-events: none;
+}
+
+.ranking-list-pro-skin-fx--wave-mono-hex .ranking-list-pro-skin-fx__skin {
+  filter: none;
+  opacity: 0.62;
+}
+
+.ranking-list-pro-skin-fx--wave-mono-hex .ranking-list-pro-skin-fx__layer {
+  background-position: 50% 50%;
+  background-size: cover;
+}
+
+.ranking-list-pro-skin-fx--medium[class*="--beast-"] .ranking-list-pro-skin-fx__skin {
+  opacity: 0.95;
+  filter: contrast(1.12) saturate(1.1) brightness(1.05);
+}
+
+.ranking-list-pro-skin-fx--medium[class*="--wave-"] .ranking-list-pro-skin-fx__skin {
+  opacity: 0.86;
+  filter: contrast(1.1) saturate(1.06) brightness(1.03);
+}
+
+.ranking-list-pro-skin-fx--medium.ranking-list-pro-skin-fx--wave-gold-monogram
+  .ranking-list-pro-skin-fx__skin,
+.ranking-list-pro-skin-fx--medium.ranking-list-pro-skin-fx--wave-ember-hex
+  .ranking-list-pro-skin-fx__skin {
+  opacity: 0.78;
+  filter: contrast(1.06) saturate(1) brightness(1.01);
+}
+
+.ranking-list-pro-skin-fx--medium.ranking-list-pro-skin-fx--beast-kintsugi
+  .ranking-list-pro-skin-fx__skin {
+  opacity: 0.98;
+  filter: contrast(1.14) saturate(1.12) brightness(1.06);
+}
+
+.ranking-list-pro-skin-fx--form-isocubes .ranking-list-pro-skin-fx__skin {
+  opacity: 0.95;
+  filter: contrast(1.1) saturate(1.08) brightness(1.05);
+}
+
+.ranking-list-pro-skin-fx--beast-facet .ranking-list-pro-skin-fx__skin {
+  opacity: 0.95;
+  filter: contrast(1.12) saturate(1.05) brightness(1.06);
+}

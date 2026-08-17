@@ -1,3 +1,7 @@
+import { filterDailyTrendToSeasonActivity } from "../../../../../lib/profile/dailyTrendSeasonActivity";
+import { CURRENT_NBA_SEASON_KEY } from "../../../../../lib/rankings/nbaSeason";
+import { profileOverviewSeasonKey } from "../../../../../lib/profile/profileOverviewSeason";
+import { fetchNbaSeasonRankTrendFirestore as fetchNbaSeasonRankTrendFirestoreShared } from "../../../../../lib/profile/fetchNbaSeasonRankTrendFirestore";
 import {
   collection,
   doc,
@@ -130,7 +134,7 @@ export function normalizeProfileDailyTrendRows(rows: unknown): ProfileDailyTrend
       pointsV3: safeNum(r.pointsV3),
       upsetPoints: safeNum(r.upsetPoints),
       winRate: safeNum(r.winRate ?? (posts > 0 ? wins / posts : 0)),
-      scorePrecision: safeNum(r.scorePrecision),
+      exactHitCount: safeInt(r.exactHitCount),
     });
   }
   out.sort((a, b) => a.date.localeCompare(b.date));
@@ -144,7 +148,8 @@ export type ProfileSummaryNative = {
   recent3Posts: number;
   wins: number;
   winRate: number;
-  scorePrecisionSum: number;
+  exactHitCount: number;
+  goalScorerHitCount: number;
   upsetPointsSum: number;
   pointsSumV3: number;
   upsetChanceCount: number;
@@ -182,7 +187,8 @@ function parseSummary(raw: unknown): ProfileSummaryNative | null {
     recent3Posts: safeInt(o.recent3Posts),
     wins,
     winRate: safeNum(o.winRate),
-    scorePrecisionSum: safeNum(o.scorePrecisionSum),
+    exactHitCount: safeInt(o.exactHitCount),
+    goalScorerHitCount: safeInt(o.goalScorerHitCount),
     upsetPointsSum: safeNum(o.upsetPointsSum),
     pointsSumV3: safeNum(o.pointsSumV3),
     upsetChanceCount: safeInt(o.upsetChanceCount),
@@ -232,25 +238,24 @@ function parseMetricValueDeltas(raw: unknown): MyRankMetricValueDeltas | null {
   };
 }
 
+export type ProfileStatsFetchContext = ProfileStatsStreakContext & {
+  nbaPeriod?: "playoffs" | "season";
+};
+
 function buildProfileStatsQuery(
   uid: string,
   parts: string,
-  ctx?: ProfileStatsStreakContext
+  ctx?: ProfileStatsFetchContext
 ): URLSearchParams {
-  const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "worldcup";
-  const safeWcStage: WcRankingStage | undefined =
-    rankingLeague === "worldcup"
-      ? ctx?.wcStage && isWcRankingStage(ctx.wcStage)
-        ? ctx.wcStage
-        : "overall"
-      : undefined;
+  const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "nba";
   const qs = new URLSearchParams({
     uid,
     parts,
-    phase: "playoffs",
   });
   if (rankingLeague) qs.set("league", rankingLeague);
-  if (safeWcStage) qs.set("wcStage", safeWcStage);
+  if (rankingLeague === "nba" && ctx?.nbaPeriod) {
+    qs.set("period", ctx.nbaPeriod);
+  }
   return qs;
 }
 
@@ -260,6 +265,8 @@ function parseUserStatsJson(json: Record<string, unknown>): {
   stats: Record<string, unknown> | null;
   dailyTrend: ProfileDailyTrendRow[];
   metricValueDeltas: MyRankMetricValueDeltas | null;
+  rankTrend: RankPlayoffTrendPointNative[] | null;
+  parts: string[];
 } {
   let dailyRaw: unknown = json.dailyTrend;
   if (typeof dailyRaw === "string" && dailyRaw.trim().startsWith("[")) {
@@ -270,6 +277,15 @@ function parseUserStatsJson(json: Record<string, unknown>): {
     }
   }
   const dailyTrend = normalizeProfileDailyTrendRows(dailyRaw);
+  const partsRaw = json.parts;
+  const parts = Array.isArray(partsRaw)
+    ? partsRaw.filter((p): p is string => typeof p === "string")
+    : [];
+  const hasRankTrendPart = parts.includes("rankTrend");
+  let rankTrend: RankPlayoffTrendPointNative[] | null = null;
+  if (hasRankTrendPart || Array.isArray(json.rankTrend)) {
+    rankTrend = normalizeRankTrendPoints(json.rankTrend);
+  }
   return {
     summary: parseSummary(json.summary),
     summaryRanks: parseSummaryRanks(json.summaryRanks),
@@ -278,7 +294,29 @@ function parseUserStatsJson(json: Record<string, unknown>): {
       : null,
     dailyTrend,
     metricValueDeltas: parseMetricValueDeltas(json.metricValueDeltas),
+    rankTrend,
+    parts,
   };
+}
+
+function normalizeRankTrendPoints(raw: unknown): RankPlayoffTrendPointNative[] {
+  if (!Array.isArray(raw)) return [];
+  return [...raw]
+    .map((p) => {
+      const o = p && typeof p === "object" ? (p as Record<string, unknown>) : {};
+      const dk = typeof o.dateKey === "string" ? o.dateKey : "";
+      const parts = dk.split("-");
+      const labelShort =
+        parts.length >= 3 ? `${Number(parts[1])}/${Number(parts[2])}` : dk;
+      return {
+        dateKey: dk,
+        rank: safeInt(o.rank),
+        labelShort,
+        date: dk,
+      };
+    })
+    .filter((r) => r.dateKey.length > 0 && r.rank > 0)
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 }
 
 /** Web `useUserStatsV2` の初回+trend と同等の `parts` を明示（window_cache の日付形もパースする） */
@@ -308,32 +346,89 @@ export async function fetchProfileUserStatsAll(
   return parseUserStatsJson(json);
 }
 
+function isTransientUserStatsError(message: string, status: number): boolean {
+  if (status === 502 || status === 503 || status === 504) return true;
+  return /UNAVAILABLE|ECONNRESET|ECONNREFUSED|DEADLINE_EXCEEDED|RST_STREAM|socket hang up/i.test(
+    message
+  );
+}
+
 /** Web `/api/profile/user-stats` と同一クエリ（parts 指定） */
 export async function fetchProfileUserStats(
   uid: string,
-  parts: "stats,phase" | "phase" | "trend" | "stats",
-  ctx?: ProfileStatsStreakContext
+  parts:
+    | "stats,phase"
+    | "phase"
+    | "phase,trend"
+    | "phase,trend,rankTrend"
+    | "trend"
+    | "stats",
+  ctx?: ProfileStatsFetchContext
 ): Promise<{
   summary: ProfileSummaryNative | null;
   summaryRanks: ProfileSummaryRanksNative | null;
   stats: Record<string, unknown> | null;
   dailyTrend: ProfileDailyTrendRow[];
   metricValueDeltas: MyRankMetricValueDeltas | null;
+  rankTrend: RankPlayoffTrendPointNative[] | null;
+  parts: string[];
 }> {
   const base = getUniterzApiBaseUrl();
   if (!base) {
     throw new Error("EXPO_PUBLIC_UNITERZ_API_BASE_URL が未設定です。");
   }
   const qs = buildProfileStatsQuery(uid, parts, ctx);
-  const res = await fetch(`${base}/api/profile/user-stats?${qs.toString()}`, {
-    method: "GET",
-    cache: "no-store",
-  });
-  const json = (await res.json()) as Record<string, unknown>;
-  if (!res.ok || json.ok !== true) {
-    throw new Error(typeof json.error === "string" ? json.error : "user-stats failed");
+  const url = `${base}/api/profile/user-stats?${qs.toString()}`;
+  const maxAttempts = 3;
+  let lastError = "user-stats failed";
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        cache: "no-store",
+      });
+      const json = (await res.json()) as Record<string, unknown>;
+      if (res.ok && json.ok === true) {
+        return parseUserStatsJson(json);
+      }
+      lastError =
+        typeof json.error === "string" ? json.error : "user-stats failed";
+      if (
+        attempt < maxAttempts - 1 &&
+        isTransientUserStatsError(lastError, res.status)
+      ) {
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(lastError);
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "user-stats failed";
+      const canRetry =
+        attempt < maxAttempts - 1 &&
+        isTransientUserStatsError(lastError, 503);
+      if (!canRetry) throw e instanceof Error ? e : new Error(lastError);
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+    }
   }
-  return parseUserStatsJson(json);
+
+  throw new Error(lastError);
+}
+
+/**
+ * Overview Daily Combo: 現行シーズン（26-27）バケットのみ・活動日のみ。
+ * 本番 API の前シーズンフォールバックを避けるため Firestore 直読。
+ */
+export async function fetchNbaOverviewDailyTrendStrict(
+  uid: string
+): Promise<ProfileDailyTrendRow[]> {
+  const rows = await fetchDailyTrendFirestoreFallback(uid, {
+    rankingLeague: "nba",
+    nbaPeriod: "season",
+  });
+  return filterDailyTrendToSeasonActivity(
+    normalizeProfileDailyTrendRows(rows)
+  );
 }
 
 /**
@@ -342,14 +437,26 @@ export async function fetchProfileUserStats(
  */
 export async function fetchDailyTrendFirestoreFallback(
   uid: string,
-  ctx?: ProfileStatsStreakContext
+  ctx?: ProfileStatsFetchContext
 ): Promise<ProfileDailyTrendRow[]> {
+  const rankingLeague = ctx?.rankingLeague ?? "nba";
+  const nbaPeriod =
+    rankingLeague === "nba" ? (ctx?.nbaPeriod ?? "season") : undefined;
   const trendCtx = resolveProfileDailyTrendContext(
-    ctx?.rankingLeague ?? "worldcup",
-    ctx?.wcStage
+    rankingLeague,
+    ctx?.wcStage,
+    nbaPeriod
   );
   const authed = await ensureFirestoreAuthReady();
   if (!authed) return [];
+
+  const finalize = (rows: ProfileDailyTrendRow[]) => {
+    const normalized = normalizeProfileDailyTrendRows(rows);
+    if (rankingLeague === "nba" && nbaPeriod != null) {
+      return filterDailyTrendToSeasonActivity(normalized);
+    }
+    return normalized;
+  };
 
   try {
     const now = new Date();
@@ -366,11 +473,15 @@ export async function fetchDailyTrendFirestoreFallback(
     const snap = await getDocs(q);
     const rows: ProfileDailyTrendRow[] = [];
     for (const docSnap of snap.docs) {
-      const row = dailyTrendRowFromDailySnap(docSnap, trendCtx);
+      const row = dailyTrendRowFromDailySnap(
+        docSnap as unknown as Parameters<typeof dailyTrendRowFromDailySnap>[0],
+        trendCtx
+      );
       if (row && isChartRenderableDailyTrendRow(row)) rows.push(row);
     }
     rows.sort((a, b) => a.date.localeCompare(b.date));
-    if (rows.length > 0) return rows;
+    const out = finalize(rows);
+    if (out.length > 0 || rankingLeague === "nba") return out;
   } catch (e) {
     if (__DEV__) {
       console.warn("[fetchDailyTrendFirestoreFallback] range query failed", e);
@@ -380,10 +491,15 @@ export async function fetchDailyTrendFirestoreFallback(
   try {
     const keys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 30);
     const snaps = await Promise.all(
-      keys.map((dateKey) => getDoc(doc(db, "user_stats_v2_daily", `${uid}_${dateKey}`)))
+      keys.map((dateKey) =>
+        getDoc(doc(db, "user_stats_v2_daily", `${uid}_${dateKey}`))
+      )
     );
-    return normalizeProfileDailyTrendRows(
-      buildDailyTrendFromDailySnaps(snaps, trendCtx)
+    return finalize(
+      buildDailyTrendFromDailySnaps(
+        snaps as unknown as Parameters<typeof buildDailyTrendFromDailySnaps>[0],
+        trendCtx
+      )
     );
   } catch (e) {
     if (__DEV__) {
@@ -393,73 +509,119 @@ export async function fetchDailyTrendFirestoreFallback(
   }
 }
 
-/** Web `useUserStatsV2` の `ensureTrend` + `useUserStatsDailyTrend` に合わせ API / Firestore を並列取得 */
+/** Web `useUserStatsV2` の `ensureTrend` + `useUserStatsDailyTrend` に合わせ API / Firestore を解決 */
 export async function resolveProfileDailyTrend(
   uid: string,
   ctx: ProfileStatsStreakContext,
   bundleTrend: ProfileDailyTrendRow[]
 ): Promise<ProfileDailyTrendRow[]> {
-  const [trendOnlyResult, firestoreRows] = await Promise.all([
-    fetchProfileUserStats(uid, "trend", ctx)
-      .then((r) => normalizeProfileDailyTrendRows(r.dailyTrend))
-      .catch(() => [] as ProfileDailyTrendRow[]),
-    fetchDailyTrendFirestoreFallback(uid, ctx)
-      .then((rows) => normalizeProfileDailyTrendRows(rows))
-      .catch(() => [] as ProfileDailyTrendRow[]),
-  ]);
-
-  if (trendOnlyResult.length > 0) return trendOnlyResult;
+  /** NBA overview: 前シーズン混入を避けるため Firestore 厳密読みを優先 */
+  if ((ctx.rankingLeague ?? "nba") === "nba") {
+    const strict = await fetchNbaOverviewDailyTrendStrict(uid);
+    if (strict.length > 0) return strict;
+    const fromBundle = filterDailyTrendToSeasonActivity(
+      normalizeProfileDailyTrendRows(bundleTrend)
+    );
+    return fromBundle;
+  }
 
   const fromBundle = normalizeProfileDailyTrendRows(bundleTrend);
   if (fromBundle.length > 0) return fromBundle;
 
-  return firestoreRows;
+  const trendOnlyResult = await fetchProfileUserStats(uid, "trend", ctx)
+    .then((r) => normalizeProfileDailyTrendRows(r.dailyTrend))
+    .catch(() => [] as ProfileDailyTrendRow[]);
+  if (trendOnlyResult.length > 0) return trendOnlyResult;
+
+  return fetchDailyTrendFirestoreFallback(uid, ctx)
+    .then((rows) => normalizeProfileDailyTrendRows(rows))
+    .catch(() => [] as ProfileDailyTrendRow[]);
 }
 
-/** Web `useProfilePlayoffRankTrend` と同一エンドポイント */
+/**
+ * 本人プロフィール用: rankSnapshotHistory を現行シーズンキーのみで読む。
+ */
+export async function fetchNbaSeasonRankTrendFirestore(
+  uid: string
+): Promise<RankPlayoffTrendPointNative[]> {
+  return fetchNbaSeasonRankTrendFirestoreShared(uid);
+}
+
+/** NBA は cumulative_stats / rankSnapshotHistory 公開読取（本番 API 不要） */
 export async function fetchRankPlayoffTrend(
   uid: string,
-  ctx?: ProfileStatsStreakContext
+  _ctx?: ProfileStatsStreakContext
 ): Promise<RankPlayoffTrendPointNative[]> {
+  return fetchNbaSeasonRankTrendFirestore(uid);
+}
+
+/** 欠けた profileCharts をサーバーで埋めて返す（以降は cumulative 1 read） */
+export async function ensureNbaOverviewChartsApi(
+  uid: string,
+  options?: { force?: boolean }
+): Promise<{
+  dailyTrend: ProfileDailyTrendRow[];
+  rankTrend: RankPlayoffTrendPointNative[];
+  last20: { postId: string; settledAtMs: number; isWin: boolean }[];
+  seasonKey: string;
+} | null> {
   const base = getUniterzApiBaseUrl();
-  if (!base) return [];
-  const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "worldcup";
-  const wcStage: WcRankingStage =
-    rankingLeague === "worldcup"
-      ? ctx?.wcStage && isWcRankingStage(ctx.wcStage)
-        ? ctx.wcStage
-        : "overall"
-      : "overall";
-  const qs = new URLSearchParams({ uid, phase: "playoffs" });
-  if (rankingLeague === "worldcup") {
-    qs.set("league", "worldcup");
-    qs.set("wcStage", wcStage);
-  }
-  const url = `${base}/api/profile/rank-playoff-trend?${qs.toString()}`;
+  if (!base || !uid.trim()) return null;
+  const seasonKey = profileOverviewSeasonKey();
+  const qs = new URLSearchParams({
+    uid: uid.trim(),
+    seasonKey,
+  });
+  if (options?.force) qs.set("force", "1");
   try {
+    const url = `${base}/api/profile/ensure-overview-charts?${qs.toString()}`;
     const res = await fetch(url, { cache: "no-store" });
     const json = (await res.json()) as {
       ok?: boolean;
-      points?: { dateKey: string; rank: number }[];
+      error?: string;
+      seasonKey?: string;
+      dailyTrend?: unknown;
+      rankTrend?: unknown;
+      last20?: unknown;
     };
-    if (!res.ok || json.ok !== true || !Array.isArray(json.points)) return [];
-    const rows = [...json.points]
-      .map((p) => {
-        const dk = typeof p.dateKey === "string" ? p.dateKey : "";
-        const parts = dk.split("-");
-        const labelShort =
-          parts.length >= 3 ? `${Number(parts[1])}/${Number(parts[2])}` : dk;
-        return {
-          dateKey: dk,
-          rank: safeInt(p.rank),
-          labelShort,
-          date: dk,
-        };
-      })
-      .filter((r) => r.dateKey.length > 0 && r.rank > 0)
-      .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
-    return rows;
-  } catch {
-    return [];
+    if (!res.ok || json.ok !== true) {
+      if (__DEV__) {
+        console.warn(
+          `[profileCharts] ensure API failed status=${res.status} base=${base} err=${json.error ?? "?"}`
+        );
+      }
+      return null;
+    }
+    return {
+      seasonKey:
+        typeof json.seasonKey === "string" ? json.seasonKey : seasonKey,
+      dailyTrend: normalizeProfileDailyTrendRows(json.dailyTrend),
+      rankTrend: normalizeRankTrendPoints(json.rankTrend),
+      last20: Array.isArray(json.last20)
+        ? json.last20
+            .map((p) => {
+              if (!p || typeof p !== "object") return null;
+              const o = p as Record<string, unknown>;
+              const postId = typeof o.postId === "string" ? o.postId : "";
+              const settledAtMs = safeNum(o.settledAtMs);
+              if (!postId || !(settledAtMs > 0) || typeof o.isWin !== "boolean") {
+                return null;
+              }
+              return { postId, settledAtMs, isWin: o.isWin };
+            })
+            .filter(
+              (p): p is { postId: string; settledAtMs: number; isWin: boolean } =>
+                p != null
+            )
+            .sort((a, b) => a.settledAtMs - b.settledAtMs)
+        : [],
+    };
+  } catch (e) {
+    if (__DEV__) {
+      console.warn(
+        `[profileCharts] ensure API error base=${base} msg=${e instanceof Error ? e.message : String(e)}`
+      );
+    }
+    return null;
   }
 }

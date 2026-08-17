@@ -15,15 +15,27 @@ function isMobileWebRoute(pathname: string): boolean {
   );
 }
 
+function isDesktopWebRoute(pathname: string): boolean {
+  return pathname === "/web" || pathname.startsWith("/web/");
+}
+
+function isDevPreviewRoute(pathname: string): boolean {
+  return pathname === "/dev" || pathname.startsWith("/dev/");
+}
+
 /**
  * 軽量固定背景を使うか。
  * - /mobile/* ルート
+ * - /web/* ルート（デスクトップ Web はアニメ背景オフ）
+ * - /dev/* プレビュー（UI 確認用・アニメオフ）
  * - 狭い画面 + タッチ（/web を iPhone で開いた場合も含む）
  * - perf デバッグで背景 OFF
  */
 export function usePreferStaticPageBackground(): boolean {
   const pathname = usePathname() ?? "";
   const mobileRoute = isMobileWebRoute(pathname);
+  const desktopWebRoute = isDesktopWebRoute(pathname);
+  const devPreviewRoute = isDevPreviewRoute(pathname);
   const [coarseViewport, setCoarseViewport] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -44,5 +56,5 @@ export function usePreferStaticPageBackground(): boolean {
 
   if (typeof window !== "undefined" && isPerfDebugBgDisabled()) return true;
 
-  return mobileRoute || coarseViewport;
+  return mobileRoute || desktopWebRoute || devPreviewRoute || coarseViewport;
 }

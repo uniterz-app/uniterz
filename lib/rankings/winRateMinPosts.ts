@@ -1,34 +1,18 @@
 import type { RankingLeagueSource } from "./rankingLeagueSource";
-import type { RankingPhase } from "./rankingPhase";
-import type { PlayoffRoundKey } from "./playoffRound";
-import type { WcRankingStage } from "./wcRankingStage";
 
-/** WC All（overall）勝率ランキングの最低投稿数 */
-export const WC_OVERALL_WIN_RATE_MIN_POSTS = 20;
+/** NBA シーズン勝率ランキングの最低投稿数（functions と同期） */
+export const NBA_SEASON_WIN_RATE_MIN_POSTS = 20;
 
-/** WC グループステージ（qualifying）勝率ランキングの最低投稿数 */
-export const WC_GROUP_STAGE_WIN_RATE_MIN_POSTS = 20;
+/** @deprecated WC 廃止 */
+export const WC_OVERALL_WIN_RATE_MIN_POSTS = NBA_SEASON_WIN_RATE_MIN_POSTS;
+/** @deprecated WC 廃止 */
+export const WC_GROUP_STAGE_WIN_RATE_MIN_POSTS = NBA_SEASON_WIN_RATE_MIN_POSTS;
+/** @deprecated WC 廃止 */
+export const WC_KNOCKOUT_WIN_RATE_MIN_POSTS = NBA_SEASON_WIN_RATE_MIN_POSTS;
 
-/** WC ノックアウト（main）勝率ランキングの最低投稿数 */
-export const WC_KNOCKOUT_WIN_RATE_MIN_POSTS = 4;
-
-export function minPostsForWinRate(input: {
+export function minPostsForWinRate(_input: {
   rankingLeague?: RankingLeagueSource | null;
-  phase?: RankingPhase;
-  round?: PlayoffRoundKey | "overall";
-  wcStage?: WcRankingStage | null;
+  wcStage?: unknown;
 }): number {
-  const { rankingLeague, phase, round, wcStage } = input;
-
-  if (rankingLeague === "worldcup" || wcStage != null) {
-    if (wcStage === "qualifying") return WC_GROUP_STAGE_WIN_RATE_MIN_POSTS;
-    if (wcStage === "overall") return WC_OVERALL_WIN_RATE_MIN_POSTS;
-    if (wcStage === "main") return WC_KNOCKOUT_WIN_RATE_MIN_POSTS;
-    return 1;
-  }
-
-  if (phase === "playoffs" && (round === "overall" || round === "r1")) {
-    return 20;
-  }
-  return 1;
+  return NBA_SEASON_WIN_RATE_MIN_POSTS;
 }

@@ -77,15 +77,27 @@ export function resolveGameScore(
   return null;
 }
 
+/** PK 戦の本数（規定・延長スコアとは別。`pkScore` / 別名 / フラット欄） */
 export function resolvePkScore(
   raw: Record<string, unknown>
 ): { home: number; away: number } | null {
-  const pk = raw.pkScore as { home?: unknown; away?: unknown } | undefined;
-  if (pk && pk.home != null && pk.away != null) {
-    const home = Number(pk.home);
-    const away = Number(pk.away);
-    if (Number.isFinite(home) && Number.isFinite(away)) {
-      return { home, away };
+  const pk = raw.pkScore as
+    | { home?: unknown; away?: unknown; h?: unknown; a?: unknown }
+    | undefined;
+  if (pk) {
+    if (pk.home != null && pk.away != null) {
+      const home = Number(pk.home);
+      const away = Number(pk.away);
+      if (Number.isFinite(home) && Number.isFinite(away)) {
+        return { home, away };
+      }
+    }
+    if (pk.h != null && pk.a != null) {
+      const home = Number(pk.h);
+      const away = Number(pk.a);
+      if (Number.isFinite(home) && Number.isFinite(away)) {
+        return { home, away };
+      }
     }
   }
 
@@ -100,6 +112,13 @@ export function resolvePkScore(
   }
 
   return null;
+}
+
+/** @deprecated `resolvePkScore` と同じ（互換エイリアス） */
+export function resolveGamePkScore(
+  raw: Record<string, unknown>
+): { home: number; away: number } | null {
+  return resolvePkScore(raw);
 }
 
 export function formatPkResultSubLine(

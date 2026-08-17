@@ -131,6 +131,15 @@ const ACCENT_COLORS: Record<string, KinetikAvatarColorSet> = {
     plate: "#121416",
     plateInner: "#0a0c0e",
   },
+  "plan-pro": {
+    green: "#22d3ee",
+    greenSoft: "rgba(34, 211, 238, 0.52)",
+    greenMid: "rgba(34, 211, 238, 0.38)",
+    greenDim: "rgba(167, 139, 250, 0.14)",
+    march: "rgba(34, 211, 238, 0.85)",
+    plate: "#121416",
+    plateInner: "#0a0c0e",
+  },
 };
 
 export function resolveKinetikAvatarColors(input: {

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../lib/firebase";
 import { normalizeLeague } from "../../../../../lib/leagues";
 import type { TeamNameById } from "../../../../../lib/games/gameTeamFilter";
+import { fetchTeamsByLeagueShared } from "../../../../../lib/games/fetchTeamsByLeagueShared";
+import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 import type { SupportedLeague } from "./useTodayGames";
 
 export type ScheduleTeamOption = { id: string; name: string };
@@ -13,7 +13,7 @@ const scheduleTeamsCache = new Map<
   { teams: ScheduleTeamOption[]; savedAt: number }
 >();
 
-/** Web `useScheduleTeams` 相当 */
+/** Web `useScheduleTeams` 相当（共通 API + CDN） */
 export function useScheduleTeamsNative(rawLeague: SupportedLeague) {
   const league = useMemo(() => normalizeLeague(rawLeague), [rawLeague]);
   const [teams, setTeams] = useState<ScheduleTeamOption[]>(
@@ -31,19 +31,17 @@ export function useScheduleTeamsNative(rawLeague: SupportedLeague) {
     }
 
     setTeams([]);
-    const q = query(collection(db, "teams"), where("league", "==", league));
+    const apiBase = getUniterzApiBaseUrl();
 
-    getDocs(q)
-      .then((snap) => {
+    void fetchTeamsByLeagueShared({ league, apiBaseUrl: apiBase })
+      .then((rows) => {
         if (!alive) return;
-        const rows: ScheduleTeamOption[] = snap.docs.map((d) => {
-          const x = d.data() as { name?: string; shortName?: string };
-          const name = String(x?.name ?? x?.shortName ?? d.id);
-          return { id: d.id, name };
-        });
-        rows.sort((a, b) => a.name.localeCompare(b.name, "ja"));
-        scheduleTeamsCache.set(league, { teams: rows, savedAt: Date.now() });
-        setTeams(rows);
+        const next: ScheduleTeamOption[] = rows.map((d) => ({
+          id: String(d.id),
+          name: String(d.name ?? d.shortName ?? d.id),
+        }));
+        scheduleTeamsCache.set(league, { teams: next, savedAt: Date.now() });
+        setTeams(next);
       })
       .catch(() => {
         if (alive) setTeams([]);

@@ -5,34 +5,31 @@ exports.getStatsForDateRangeV2 = getStatsForDateRangeV2;
 // functions/src/updateUserStatsV2.ts
 const firestore_1 = require("firebase-admin/firestore");
 const cumulativeFromDaily_1 = require("./rankings/cumulativeFromDaily");
+const nbaSeason_1 = require("./rankings/nbaSeason");
+const mergeProfileCharts_1 = require("./profile/mergeProfileCharts");
 function shouldCountForRanking(v) {
     return v !== false;
-}
-function normalizeSeasonPhase(v) {
-    if (!v)
-        return null;
-    return v === "play_in" || v === "playoffs" ? v : null;
-}
-function normalizeSeasonRound(v) {
-    if (!v)
-        return null;
-    return v === "r1" || v === "r2" || v === "cf" || v === "finals" ? v : null;
 }
 const db = () => (0, firestore_1.getFirestore)();
 function buildPostCumulativeContribution(opts) {
     var _a, _b, _c;
     const leagueKey = normalizeLeague(opts.league);
+    const forOpenRanking = shouldCountForRanking(opts.countsForRanking) && leagueKey !== "wc";
+    const forPickupRanking = forOpenRanking && opts.isPickup === true;
+    const phase = (0, nbaSeason_1.normalizeNbaSeasonPhase)(opts.seasonPhase);
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forOpenRanking, opts.startAt.toDate(), phase);
     return {
-        forRanking: shouldCountForRanking(opts.countsForRanking),
-        phaseKey: normalizeSeasonPhase(opts.seasonPhase),
-        roundKey: normalizeSeasonRound(opts.seasonRound),
+        forRanking: forPickupRanking,
+        forOpenRanking,
+        forPlayoffsRanking: forOpenRanking,
+        nbaSeasonKey,
+        nbaPlayoffsSeasonKey,
         leagueKey,
         isWc: leagueKey === "wc",
         wcStage: (_a = opts.wcStage) !== null && _a !== void 0 ? _a : null,
         isWin: opts.isWin,
         points: opts.points,
         upsetPoints: opts.upsetPoints,
-        scorePrecision: opts.scorePrecision,
         exactHit: (_b = opts.exactHit) !== null && _b !== void 0 ? _b : false,
         goalScorerHit: (_c = opts.goalScorerHit) !== null && _c !== void 0 ? _c : false,
         upsetBonus: opts.upsetBonus,
@@ -82,7 +79,6 @@ function emptyBucket() {
         scoreErrorSum: 0,
         upsetHitCount: 0,
         upsetOpportunityCount: 0,
-        scorePrecisionSum: 0,
         pointsSumV3: 0,
         upsetPointsSum: 0,
         upsetBonusSum: 0,
@@ -93,7 +89,6 @@ function emptyBucket() {
         winRate: 0,
         avgScoreError: 0,
         upsetHitRate: 0,
-        avgPrecision: 0,
         avgPointsV3: 0,
         upsetPickCount: 0,
     };
@@ -101,7 +96,7 @@ function emptyBucket() {
 function recomputeCache(b) {
     const posts = b.posts;
     const wins = b.wins;
-    return Object.assign(Object.assign({}, b), { winRate: posts ? wins / posts : 0, avgScoreError: posts ? b.scoreErrorSum / posts : 0, avgPrecision: posts ? b.scorePrecisionSum / posts : 0, upsetHitRate: b.upsetOpportunityCount > 0
+    return Object.assign(Object.assign({}, b), { winRate: posts ? wins / posts : 0, avgScoreError: posts ? b.scoreErrorSum / posts : 0, upsetHitRate: b.upsetOpportunityCount > 0
             ? b.upsetHitCount / b.upsetOpportunityCount
             : 0, avgPointsV3: posts ? b.pointsSumV3 / posts : 0 });
 }
@@ -109,25 +104,30 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, seasonPhase, seasonRound, wcStage, homeTeamId, awayTeamId, } = opts;
-    const forRanking = shouldCountForRanking(countsForRanking);
-    const phaseKey = normalizeSeasonPhase(seasonPhase);
-    const roundKey = normalizeSeasonRound(seasonRound);
+    const { uid, postId, startAt, league, isWin, scoreError, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, isPickup = false, wcStage, seasonPhase, homeTeamId, awayTeamId, } = opts;
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
-    const isWc = leagueKey === "wc";
+    const forOpenRanking = shouldCountForRanking(countsForRanking) && leagueKey !== "wc";
+    const forPickupRanking = forOpenRanking && isPickup === true;
+    const phase = (0, nbaSeason_1.normalizeNbaSeasonPhase)(seasonPhase);
+    const { nbaSeasonKey, nbaPlayoffsSeasonKey } = (0, nbaSeason_1.resolveNbaRankingBucketKeys)(leagueKey, forOpenRanking, startAt.toDate(), phase);
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(postId);
     const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
     const userRef = db().doc(`users/${uid}`);
     const userStatsRef = db().doc(`user_stats_v2/${uid}`);
     await db().runTransaction(async (tx) => {
-        var _a;
+        var _a, _b, _c, _d, _e, _f;
         const marker = await tx.get(markerRef);
         if (marker.exists)
             return;
         const userSnap = await tx.get(userRef);
         const user = userSnap.exists ? userSnap.data() : {};
+        /** profileCharts merge 用（writes 前に全 reads） */
+        const [dailySnap, cumulativeSnap] = await Promise.all([
+            tx.get(dailyRef),
+            tx.get(cumulativeRef),
+        ]);
         const inc = {
             posts: firestore_1.FieldValue.increment(1),
             wins: firestore_1.FieldValue.increment(isWin ? 1 : 0),
@@ -135,8 +135,7 @@ async function applyPostToUserStatsV2(opts) {
             upsetOpportunityCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
             upsetHitCount: firestore_1.FieldValue.increment(upsetHit ? 1 : 0),
             upsetPickCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
-            scorePrecisionSum: firestore_1.FieldValue.increment(isWc ? 0 : scorePrecision),
-            exactHitCount: firestore_1.FieldValue.increment(isWc && exactHit ? 1 : 0),
+            exactHitCount: firestore_1.FieldValue.increment(exactHit ? 1 : 0),
             pointsSumV3: firestore_1.FieldValue.increment(points),
             upsetPointsSum: firestore_1.FieldValue.increment(upsetPoints),
             upsetBonusSum: firestore_1.FieldValue.increment(upsetBonus),
@@ -144,12 +143,13 @@ async function applyPostToUserStatsV2(opts) {
             goalScorerHitCount: firestore_1.FieldValue.increment(goalScorerHit ? 1 : 0),
             goalScorerBonusSum: firestore_1.FieldValue.increment(goalScorerBonus),
         };
-        const update = Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (phaseKey ? { rankingByPhase: { [phaseKey]: inc } } : {})), (forRanking && phaseKey === "playoffs" && roundKey
-            ? { rankingByPlayoffRound: { [roundKey]: inc } }
+        const update = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forPickupRanking ? { ranking: inc } : {})), (forPickupRanking && nbaSeasonKey
+            ? { rankingBySeason: { [nbaSeasonKey]: inc } }
+            : {})), (forOpenRanking ? { openRanking: inc } : {})), (forOpenRanking && nbaSeasonKey
+            ? { openRankingBySeason: { [nbaSeasonKey]: inc } }
+            : {})), (forOpenRanking && nbaPlayoffsSeasonKey
+            ? { rankingByNbaPlayoffs: { [nbaPlayoffsSeasonKey]: inc } }
             : {}));
-        if (forRanking && leagueKey === "wc") {
-            update.rankingByWcStage = Object.assign(Object.assign({ overall: inc }, (wcStage === "qualifying" ? { qualifying: inc } : {})), (wcStage === "main" ? { main: inc } : {}));
-        }
         if (leagueKey) {
             update.leagues = Object.assign(Object.assign({}, (update.leagues || {})), { [leagueKey]: inc });
             tx.set(userStatsRef, {
@@ -161,7 +161,7 @@ async function applyPostToUserStatsV2(opts) {
             }, { merge: true });
         }
         const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
-        if (forRanking && gameTeamIds.length > 0) {
+        if (forPickupRanking && gameTeamIds.length > 0) {
             update.teams = Object.assign(Object.assign({}, ((_a = update.teams) !== null && _a !== void 0 ? _a : {})), Object.fromEntries(gameTeamIds.map((teamId) => [teamId, inc])));
         }
         tx.set(dailyRef, update, { merge: true });
@@ -173,29 +173,78 @@ async function applyPostToUserStatsV2(opts) {
             posts: 1,
             wins: isWin ? 1 : 0,
             scoreErrorSum: scoreError,
-            scorePrecisionSum: isWc ? 0 : scorePrecision,
-            exactHitCount: isWc && exactHit ? 1 : 0,
+            exactHitCount: 0,
             pointsSumV3: points,
             upsetPointsSum: upsetPoints,
             upsetHitCount: upsetHit ? 1 : 0,
             upsetOpportunityCount: hadUpsetGame ? 1 : 0,
-            countedForRanking: forRanking,
+            countedForRanking: forOpenRanking,
+            countedForPickup: forPickupRanking,
         });
-        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, buildPostCumulativeContribution({
+        const contrib = buildPostCumulativeContribution({
             countsForRanking,
-            seasonPhase,
-            seasonRound,
+            isPickup,
             league,
+            startAt,
+            seasonPhase,
             isWin,
             points,
             upsetPoints,
-            scorePrecision,
             exactHit,
             goalScorerHit,
             wcStage,
             upsetBonus,
             streakBonus,
-        }));
+        });
+        /** overview チャート用 denorm（Pick Up シーズンスライス） */
+        let profileCharts = null;
+        if (forPickupRanking && nbaSeasonKey) {
+            const dailyData = dailySnap.exists
+                ? dailySnap.data()
+                : null;
+            const bySeason = ((_b = dailyData === null || dailyData === void 0 ? void 0 : dailyData.rankingBySeason) !== null && _b !== void 0 ? _b : {});
+            const projected = (0, mergeProfileCharts_1.projectSeasonBucket)(bySeason[nbaSeasonKey], {
+                posts: 1,
+                wins: isWin ? 1 : 0,
+                pointsSumV3: points,
+                upsetPointsSum: upsetPoints,
+            });
+            const settledAtMs = startAt.toMillis();
+            profileCharts = (0, mergeProfileCharts_1.mergeProfileChartsOnSeasonSettle)({
+                cumulative: cumulativeSnap.exists
+                    ? cumulativeSnap.data()
+                    : null,
+                seasonKey: nbaSeasonKey,
+                dateKey,
+                projectedSeasonBucket: projected,
+                last20Point: {
+                    postId,
+                    settledAtMs,
+                    isWin,
+                },
+            });
+        }
+        (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, contrib);
+        if (profileCharts) {
+            const builtAtMs = Date.now();
+            tx.set(cumulativeRef, {
+                "profileCharts.v": profileCharts.v,
+                "profileCharts.seasonKey": profileCharts.seasonKey,
+                "profileCharts.dailyTrend": profileCharts.dailyTrend,
+                "profileCharts.rankTrend": (_c = profileCharts.rankTrend) !== null && _c !== void 0 ? _c : [],
+                "profileCharts.last20": profileCharts.last20,
+                "profileCharts.builtAtMs": builtAtMs,
+                updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            tx.set(cumulativeRef.collection("profileCharts").doc(profileCharts.seasonKey), {
+                v: profileCharts.v,
+                seasonKey: profileCharts.seasonKey,
+                dailyTrend: (_d = profileCharts.dailyTrend) !== null && _d !== void 0 ? _d : [],
+                rankTrend: (_e = profileCharts.rankTrend) !== null && _e !== void 0 ? _e : [],
+                last20: (_f = profileCharts.last20) !== null && _f !== void 0 ? _f : [],
+                builtAtMs,
+            }, { merge: true });
+        }
     });
 }
 /* =========================================================
@@ -221,7 +270,6 @@ async function getStatsForDateRangeV2(uid, start, end, league) {
         b.scoreErrorSum += src.scoreErrorSum || 0;
         b.upsetHitCount += src.upsetHitCount || 0;
         b.upsetOpportunityCount += src.upsetOpportunityCount || 0;
-        b.scorePrecisionSum += src.scorePrecisionSum || 0;
         b.upsetPickCount += src.upsetPickCount || 0;
         b.pointsSumV3 += src.pointsSumV3 || 0;
         b.upsetPointsSum += src.upsetPointsSum || 0;

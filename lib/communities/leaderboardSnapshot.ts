@@ -16,7 +16,6 @@ type RankedRow = {
   totalWins: number;
   winRate: number;
   totalPoints: number;
-  totalPrecision: number;
   totalUpset: number;
   activeWinStreak: number;
   sortValue: number;
@@ -35,8 +34,8 @@ export type LeaderboardSnapshot = {
   builtAtMs: number;
 };
 
-/** Firestore スナップショットの最大有効期間（それ以上古いものは再集計する） */
-export const LEADERBOARD_SNAPSHOT_MAX_AGE_MS = 30_000;
+/** Firestore スナップショットの最大有効期間（スロット不一致時の保険） */
+export const LEADERBOARD_SNAPSHOT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 export function isLeaderboardSnapshotFresh(
   builtAtMs: number,

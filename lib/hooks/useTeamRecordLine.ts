@@ -5,18 +5,13 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { footballWinsLossesDraws, type TeamRecordLine } from "@/lib/teamRecordDisplay";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
-import { fetchWcTeamRecordMap } from "@/lib/wc/wcTeamRecordsCache";
-import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
-import { resolveWcTeamRecordLineForDisplay } from "@/lib/wc/wc2026GroupStageFrozenRecords";
 
-/** teams/{teamId} から戦績行を取得（WC はグループ内順位付きキャッシュを使用） */
+/** teams/{teamId} から戦績行を取得 */
 export function useTeamRecordLine(
   teamId: string | null | undefined,
-  leagueRaw?: string | null
+  _leagueRaw?: string | null
 ): TeamRecordLine | null {
   const [record, setRecord] = useState<TeamRecordLine | null>(null);
-  const league = String(leagueRaw ?? "").toLowerCase();
-  const isWc = league === "wc" || Boolean(normalizeWcTeamId(teamId));
 
   useEffect(() => {
     if (!teamId) {
@@ -27,14 +22,6 @@ export function useTeamRecordLine(
     let alive = true;
 
     (async () => {
-      if (isWc) {
-        const wcMap = await fetchWcTeamRecordMap(db);
-        if (!alive) return;
-        const id = normalizeWcTeamId(teamId) ?? teamId;
-        setRecord(resolveWcTeamRecordLineForDisplay(id, wcMap[id] ?? null));
-        return;
-      }
-
       const snap = await getDoc(doc(db, "teams", teamId));
       if (!alive || !snap.exists()) {
         if (alive) setRecord(null);
@@ -73,7 +60,7 @@ export function useTeamRecordLine(
     return () => {
       alive = false;
     };
-  }, [teamId, isWc]);
+  }, [teamId]);
 
   return record;
 }

@@ -1,171 +1,409 @@
-// app/mobile/settings/plan-change/page.tsx
+// app/mobile/plan-change/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-
-type Plan = "monthly" | "annual";
+import ProfileCyberPage from "@/app/component/profile/ProfileCyberPage";
+import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
+import UniterzLogo from "@/app/component/units/UniterzLogo";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
+import { nameOxanium, jp } from "@/lib/fonts";
+import {
+  PLAN_CTA_SLANT_CLIP,
+  PLAN_PANEL_CHAMFER_CLIP,
+  PLAN_SECTION_CHAMFER_CLIP,
+} from "@/lib/pro/planPanelChrome";
+import {
+  asProIapPlan,
+  changeEffectiveCopy,
+  firestoreDate,
+  formatPlanDate,
+  normalizeStoredPlanType,
+  periodEndLabel,
+  planCatalogPrice,
+  planDisplayNameFull,
+  planPeriodLabel,
+  suggestedChangeTarget,
+  type StoredPlanType,
+} from "@/lib/pro/planChangeDisplay";
+import type { ProIapPlan } from "@/lib/pro/iapProductIds";
 
 export default function PlanChangePage() {
-  const [currentPlan, setCurrentPlan] = useState<Plan>("monthly");
-  const [userPlan, setUserPlan] = useState<"pro" | "free">("free");
+  const router = useRouter();
+  const [uid, setUid] = useState<string | null>(null);
+  const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [storedType, setStoredType] = useState<StoredPlanType | null>(null);
+  const [proUntil, setProUntil] = useState<Date | null>(null);
+  const [planStart, setPlanStart] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [portalBusy, setPortalBusy] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
+
+  const { language } = useUserLanguage(uid);
+  const m = t(language);
+  const ja = language !== "en";
+  const lang = ja ? "ja" : "en";
 
   useEffect(() => {
     const fetchUser = async () => {
       const auth = getAuth();
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      const ref = doc(db, "users", user.uid);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) return;
+      setUid(user.uid);
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (!snap.exists()) {
+        setLoading(false);
+        return;
+      }
 
       const data = snap.data();
-      setUserPlan(data.plan === "pro" ? "pro" : "free");
-      setCurrentPlan(data.planType === "annual" ? "annual" : "monthly");
+      setPlan(data.plan === "pro" ? "pro" : "free");
+      setStoredType(normalizeStoredPlanType(data.planType));
+      setProUntil(firestoreDate(data.proUntil));
+      setPlanStart(firestoreDate(data.planStartDate));
       setLoading(false);
     };
 
-    fetchUser();
+    void fetchUser();
   }, []);
+
+  const currentPlan: ProIapPlan = asProIapPlan(storedType);
+  const nextPlan = suggestedChangeTarget(currentPlan);
+  const copy = useMemo(() => {
+    if (!nextPlan) return null;
+    return changeEffectiveCopy({
+      from: currentPlan,
+      to: nextPlan,
+      periodEnd: proUntil,
+      lang,
+    });
+  }, [currentPlan, nextPlan, proUntil, lang]);
+
+  const openPortal = async () => {
+    setPortalError(null);
+    setPortalBusy(true);
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        setPortalError(ja ? "ログインが必要です" : "Please sign in");
+        return;
+      }
+
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          returnUrl: "/mobile/plan-change-complete",
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as {
+        url?: string;
+        error?: string;
+      } | null;
+
+      if (!res.ok || !data?.url) {
+        setPortalError(
+          ja
+            ? "課金管理画面を開けませんでした。Stripe 顧客が未登録の可能性があります。"
+            : "Could not open billing portal. Stripe customer may be missing."
+        );
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setPortalError(
+        ja ? "通信エラーが発生しました" : "A network error occurred"
+      );
+    } finally {
+      setPortalBusy(false);
+    }
+  };
 
   if (loading) {
     return (
       <div className="flex justify-center p-4">
-        <CandleChartLoader />
+        <CandleChartLoader label={m.common.loading} />
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-app px-4 py-10 flex justify-center">
-      <div
-        className="
-          w-full max-w-3xl
-          rounded-3xl
-          bg-black
-          border border-white/10
-          shadow-[0_20px_60px_rgba(0,0,0,0.6)]
-          px-6 py-8
-        "
+  const panelClass = [
+    "relative w-full overflow-hidden border border-amber-300/35",
+    "bg-[linear-gradient(165deg,rgba(18,16,12,0.96)_0%,rgba(8,10,16,0.98)_55%,rgba(5,8,14,0.99)_100%)]",
+    "px-4 pb-6 pt-6 sm:px-5 sm:pb-7 sm:pt-7",
+    "shadow-[0_20px_52px_rgba(0,0,0,0.55),0_0_28px_rgba(212,175,90,0.1)]",
+  ].join(" ");
+  const panelStyle = {
+    clipPath: PLAN_PANEL_CHAMFER_CLIP,
+    WebkitClipPath: PLAN_PANEL_CHAMFER_CLIP,
+  } as const;
+  const sectionStyle = {
+    clipPath: PLAN_SECTION_CHAMFER_CLIP,
+    WebkitClipPath: PLAN_SECTION_CHAMFER_CLIP,
+  } as const;
+  const ctaStyle = {
+    clipPath: PLAN_CTA_SLANT_CLIP,
+    WebkitClipPath: PLAN_CTA_SLANT_CLIP,
+  } as const;
+
+  if (plan !== "pro") {
+    return (
+      <ProfileCyberPage
+        title="CHANGE"
+        subtitle={
+          ja
+            ? "プランの変更手続きを行います。"
+            : "Manage your subscription plan."
+        }
+        contentClassName="max-w-md px-4 pb-bottom-nav pt-2"
       >
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center">
-              <img
-                src="/logo/logo.png"
-                alt="Uniterz"
-                className="h-8 w-8 object-contain"
-              />
-            </div>
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            プラン変更
-          </h1>
-        </div>
-
-        {/* 現在のプラン */}
-        <div className="text-center text-white mb-6">
-          <div className="text-lg font-semibold mb-2">現在のプラン</div>
-          <div
-            className={`text-2xl font-extrabold ${
-              currentPlan === "monthly" ? "text-blue-300" : "text-green-400"
-            }`}
+        <div className={panelClass} style={panelStyle}>
+          <p className={[jp.className, "text-center text-sm text-white/70"].join(" ")}>
+            {ja
+              ? "Pro プラン加入後に変更できます。"
+              : "Available after you join Pro."}
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/mobile/pro/subscribe")}
+            className={[
+              nameOxanium.className,
+              "mt-6 w-full py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em]",
+              "bg-amber-300 text-[#120e08] transition hover:brightness-110 active:scale-[0.99]",
+            ].join(" ")}
+            style={ctaStyle}
           >
-            {currentPlan === "monthly" ? "月額プラン" : "年額プラン"}
+            {m.settings.upgradeToPro}
+          </button>
+        </div>
+      </ProfileCyberPage>
+    );
+  }
+
+  return (
+    <ProfileCyberPage
+      title="CHANGE"
+      subtitle={
+        ja
+          ? "プランの変更手続きを行います。"
+          : "Manage your subscription plan."
+      }
+      contentClassName="max-w-md px-4 pb-bottom-nav pt-2"
+    >
+      <div className={panelClass} style={panelStyle}>
+        <div className="mb-5 flex flex-col items-center text-center">
+          <div className="mb-2 w-[220px]">
+            <UniterzLogo width="100%" />
           </div>
+          <ProCyberBadge ariaLabel="UNITERZ Pro" premium />
+          <h1
+            className={[
+              nameOxanium.className,
+              "mt-4 text-[22px] font-extrabold uppercase tracking-[0.14em] text-white",
+            ].join(" ")}
+          >
+            {m.settings.changePlan}
+          </h1>
+          {planStart ? (
+            <p className={[jp.className, "mt-2 text-[11px] text-white/45"].join(" ")}>
+              {ja ? "開始日" : "Started"}: {formatPlanDate(planStart, lang)}
+            </p>
+          ) : null}
         </div>
 
-        {/* 変更後プラン（表示のみ・選択不可） */}
-        <div className="mb-6">
-          {currentPlan === "monthly" ? (
-            // 年額表示
-            <div className="rounded-2xl p-4 border border-white/20 bg-white/5 text-white opacity-80">
-              <div className="text-xs font-semibold opacity-60 mb-1">
-                Pro Plan
+        <section
+          className="mb-3 border border-white/15 bg-white/[0.03] px-3.5 py-3.5"
+          style={sectionStyle}
+        >
+          <div
+            className={[
+              nameOxanium.className,
+              "text-[9px] font-extrabold uppercase tracking-[0.16em] text-white/45",
+            ].join(" ")}
+          >
+            {ja ? "現在のプラン" : "Current plan"}
+          </div>
+          <div
+            className={[
+              nameOxanium.className,
+              "mt-1 text-[22px] font-black uppercase tracking-[0.06em]",
+              currentPlan === "weekly"
+                ? "text-cyan-300"
+                : currentPlan === "season"
+                  ? "text-amber-300"
+                  : "text-blue-300",
+            ].join(" ")}
+          >
+            {planDisplayNameFull(storedType ?? currentPlan, lang)}
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span
+              className={[
+                nameOxanium.className,
+                "text-[20px] font-black tabular-nums text-white",
+              ].join(" ")}
+            >
+              {planCatalogPrice(currentPlan, lang)}
+            </span>
+            <span
+              className={[
+                nameOxanium.className,
+                "text-[10px] font-bold text-white/45",
+              ].join(" ")}
+            >
+              {planPeriodLabel(currentPlan, lang)}
+              {ja ? "・税込み" : " · tax incl."}
+            </span>
+          </div>
+          <p className={[jp.className, "mt-2.5 text-[13px] text-white/65"].join(" ")}>
+            {periodEndLabel(currentPlan, lang)}:{" "}
+            <span className="font-semibold text-white/90">
+              {formatPlanDate(proUntil, lang)}
+            </span>
+          </p>
+        </section>
+
+        {nextPlan && copy ? (
+          <>
+            <section
+              className="mb-3 border border-amber-300/35 bg-amber-300/[0.05] px-3.5 py-3.5"
+              style={sectionStyle}
+            >
+              <div
+                className={[
+                  nameOxanium.className,
+                  "text-[9px] font-extrabold uppercase tracking-[0.16em] text-amber-200/70",
+                ].join(" ")}
+              >
+                {ja ? "変更後のプラン" : "New plan"}
               </div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-bold">年額プラン</div>
+              <div
+                className={[
+                  nameOxanium.className,
+                  "mt-1 text-[20px] font-black uppercase tracking-[0.06em] text-white",
+                ].join(" ")}
+              >
+                {planDisplayNameFull(nextPlan, lang)}
               </div>
-              <div className="text-2xl font-extrabold">¥4,800</div>
-              <div className="mt-0.5 text-[10px] opacity-60">
-                税込み（4ヶ月お得）
+              <div className="mt-2 flex items-baseline gap-1.5">
+                <span
+                  className={[
+                    nameOxanium.className,
+                    "text-[22px] font-black tabular-nums text-white",
+                  ].join(" ")}
+                >
+                  {planCatalogPrice(nextPlan, lang)}
+                </span>
+                <span
+                  className={[
+                    nameOxanium.className,
+                    "text-[10px] font-bold text-white/45",
+                  ].join(" ")}
+                >
+                  {planPeriodLabel(nextPlan, lang)}
+                  {ja ? "・税込み" : " · tax incl."}
+                </span>
               </div>
-            </div>
-          ) : (
-            // 月額表示
-            <div className="rounded-2xl p-4 border border-white/20 bg-white/5 text-white opacity-80">
-              <div className="text-xs font-semibold opacity-60 mb-1">
-                Pro Plan
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-bold">月額プラン</div>
-              </div>
-              <div className="text-2xl font-extrabold">¥600</div>
-              <div className="mt-0.5 text-[10px] opacity-60">税込み</div>
-            </div>
-          )}
-          <p className="mt-2 text-xs text-white/60 text-center">
-            実際の変更内容・請求日は次の画面で確認できます
+              <p
+                className={[
+                  nameOxanium.className,
+                  "mt-3 text-[12px] font-bold text-white/85",
+                ].join(" ")}
+              >
+                {copy.nextChargeLabel}
+              </p>
+              <p className={[jp.className, "mt-2 text-[12px] leading-relaxed text-white/55"].join(" ")}>
+                <span className="font-semibold text-white/75">
+                  {copy.timingLabel}:{" "}
+                </span>
+                {copy.timingDetail}
+              </p>
+            </section>
+
+            <p className={[jp.className, "mb-4 text-center text-[11px] text-white/50"].join(" ")}>
+              {ja
+                ? "実際の変更内容・請求日は次の課金画面で確認できます"
+                : "Confirm the exact change and billing date on the next screen"}
+            </p>
+
+            <button
+              type="button"
+              disabled={portalBusy}
+              onClick={() => void openPortal()}
+              className={[
+                nameOxanium.className,
+                "mb-4 w-full py-3.5 text-[13px] font-extrabold uppercase tracking-[0.12em] transition",
+                portalBusy
+                  ? "cursor-wait bg-white/10 text-white/50"
+                  : "bg-amber-300 text-[#120e08] hover:brightness-110 active:scale-[0.99]",
+              ].join(" ")}
+              style={ctaStyle}
+            >
+              {portalBusy
+                ? ja
+                  ? "開いています…"
+                  : "Opening…"
+                : ja
+                  ? `${planDisplayNameFull(nextPlan, "ja")} へ変更`
+                  : `Switch to ${planDisplayNameFull(nextPlan, "en")}`}
+            </button>
+
+            {portalError ? (
+              <p className={[jp.className, "mb-4 text-center text-xs text-red-300"].join(" ")}>
+                {portalError}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <section
+            className="mb-4 border border-white/15 bg-white/[0.03] px-3.5 py-3.5"
+            style={sectionStyle}
+          >
+            <p className={[jp.className, "text-[13px] leading-relaxed text-white/65"].join(" ")}>
+              {ja
+                ? "Season Pass は買い切りのため、Weekly / Monthly への自動切替はありません。期間終了後に改めて購入してください。"
+                : "Season Pass is one-time. It does not auto-switch to Weekly / Monthly. Purchase again after it ends."}
+            </p>
+          </section>
+        )}
+
+        <div className={[jp.className, "space-y-1 text-center text-[11px] text-white/50"].join(" ")}>
+          <p>
+            {ja
+              ? "※ Weekly / Monthly は自動更新されます。"
+              : "※ Weekly / Monthly renew automatically."}
+          </p>
+          <p>
+            {ja
+              ? "※ ダウングレードは現在の契約期間終了後に適用されます。"
+              : "※ Downgrades apply after the current period ends."}
+          </p>
+          <p>
+            {ja
+              ? "※ 変更までの期間は現在のプランをご利用いただけます。"
+              : "※ Keep current plan benefits until the change takes effect."}
+          </p>
+          <p>
+            {ja
+              ? "※ ダウングレード時の返金はありません。"
+              : "※ No refunds on downgrade."}
           </p>
         </div>
-
-        {/* CTA（そのまま） */}
-        <button
-  onClick={async () => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const res = await fetch("/api/stripe/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        uid: user.uid,
-        returnUrl: "/mobile/plan-change"
-      }),
-    });
-
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    }
-  }}
-  style={{
-    background: "linear-gradient(90deg, #F59E0B, #F97316)",
-    color: "#fff",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.35)",
-  }}
-  className="
-    w-full rounded-xl py-3 font-bold mb-6
-    transition
-    hover:brightness-110
-    active:scale-95 active:brightness-90
-  "
->
-  {currentPlan === "monthly"
-    ? "年額プランへ変更"
-    : "月額プランへ変更"}
-</button>
-
-        <div className="text-xs text-white/60 space-y-1 text-center">
-  <p>※ プランは自動更新されます。</p>
-  <p>
-    ※ 年額 → 月額などのダウングレードは、
-    <span className="text-white/80 font-semibold">
-      現在の契約期間終了後
-    </span>
-    に適用されます。
-  </p>
-  <p>※ 変更までの期間は現在のプランの機能をご利用いただけます。</p>
-  <p>※ ダウングレード時の返金はありません。</p>
-</div>
       </div>
-    </div>
+    </ProfileCyberPage>
   );
 }

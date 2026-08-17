@@ -12,13 +12,14 @@ import AppProviders from "@/app/AppProviders";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import EventGate from "@/app/component/common/EventGate";
-import WcKnockoutStreakResetGate from "@/app/component/common/WcKnockoutStreakResetGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 import NbaSeasonRestartMaintenanceOverlay from "@/app/component/common/NbaSeasonRestartMaintenanceOverlay";
 import {
   APP_MAINTENANCE_MODE,
   APP_NBA_SEASON_RESTART_OVERLAY,
+  isMaintenanceExemptPath,
 } from "@/lib/app/maintenanceMode";
+import { headers } from "next/headers";
 import AppChrome from "@/app/component/AppChrome";
 import AppContentShell from "@/app/component/AppContentShell";
 import AppPageBackground from "@/app/component/AppPageBackground";
@@ -41,13 +42,15 @@ export const viewport: Viewport = {
   interactiveWidget: "overlays-content",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const maintenance = APP_MAINTENANCE_MODE;
-  const seasonRestartOverlay = APP_NBA_SEASON_RESTART_OVERLAY;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const exempt = isMaintenanceExemptPath(pathname);
+  const maintenance = APP_MAINTENANCE_MODE && !exempt;
+  const seasonRestartOverlay = APP_NBA_SEASON_RESTART_OVERLAY && !exempt;
 
   return (
     <html lang="ja">
@@ -55,7 +58,7 @@ export default function RootLayout({
       <body
         className={`${jp.className} ${authCondensed.variable}`}
         style={{
-          backgroundColor: "#021208",
+          backgroundColor: "#050508",
           margin: 0,
           padding: 0,
         }}
@@ -69,7 +72,6 @@ export default function RootLayout({
             <SplashGlbPreload />
             <AppPageBackground />
             <EventGate />
-            <WcKnockoutStreakResetGate />
 
             <AppContentShell>
               <AppProviders>

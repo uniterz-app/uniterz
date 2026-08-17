@@ -15,7 +15,7 @@ type Props = {
   badge?: React.ReactNode;
 };
 
-/** 角切りシアン枠のハンバーガーボタン（プロフィールと同型） */
+/** 角切り黄枠のハンバーガーボタン（プロフィールと同型） */
 export default function CyberMenuButton({
   size = "sm",
   onPress,

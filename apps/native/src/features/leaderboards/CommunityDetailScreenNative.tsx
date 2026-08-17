@@ -4,10 +4,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
-import type { LeaderboardsStackParamList, MainTabParamList } from "../../navigation/types";
+import type { LeaderboardsStackParamList } from "../../navigation/types";
+import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
 import type { Language } from "../../../../../lib/i18n/language";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
@@ -23,7 +23,6 @@ import CommunityGroupDetailCardNative from "./CommunityGroupDetailCardNative";
 export default function CommunityDetailScreenNative() {
   const route = useRoute<RouteProp<LeaderboardsStackParamList, "CommunityDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<LeaderboardsStackParamList>>();
-  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeLanguage();
@@ -66,8 +65,8 @@ export default function CommunityDetailScreenNative() {
     return (
       <MobilePageShell
         title="GROUP"
-        appBackground
         onClose={() => navigation.goBack()}
+        backgroundColor="#000000"
       >
         <Text style={styles.signIn}>
           {language === "en" ? "Sign in to view this group." : "グループを表示するにはログインしてください。"}
@@ -80,18 +79,15 @@ export default function CommunityDetailScreenNative() {
     <>
       <MobilePageShell
         title="GROUP DETAIL"
-        appBackground
         onClose={() => navigation.goBack()}
+        backgroundColor="#000000"
       >
         <ScrollView
           scrollEnabled={!headerImageEditing}
           contentContainerStyle={[styles.content, { paddingBottom: bottomContentReserveY + spacing.md }]}
           showsVerticalScrollIndicator={false}
         >
-          <CommunityGroupDetailCardNative
-            language={language}
-            onBack={() => navigation.goBack()}
-          >
+          <CommunityGroupDetailCardNative>
             <CommunityGroupDetailViewNative
               groupId={groupId}
               language={language}
@@ -111,13 +107,10 @@ export default function CommunityDetailScreenNative() {
               }}
               onHeaderImageEditingChange={setHeaderImageEditing}
               onOpenProfile={(handle) => {
-                tabNavigation.navigate("ProfileTab", {
-                  screen: "ProfileHome",
-                  params: {
-                    handle,
-                    fromLeaderboards: true,
-                    leaderboardsGroupId: groupId,
-                  },
+                navigateToPublicProfileNative(navigation, {
+                  handle,
+                  fromLeaderboards: true,
+                  leaderboardsGroupId: groupId,
                 });
               }}
             />

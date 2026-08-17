@@ -223,7 +223,7 @@ export default function RankingsCommunityPanel({
     if (!groups.length) return;
     prefetchCommunityGroupDetails(
       groups.map((g) => g.id),
-      groups.length
+      2
     );
     prefetchCommunityHeaderImages(groups.map((g) => g.headerImageUrl));
   }, [groups]);
@@ -506,6 +506,10 @@ export default function RankingsCommunityPanel({
           onCreate={() => setCreateOpen(true)}
           onPreviewJoin={onPreviewJoin}
           onPasteJoin={onPasteJoin}
+          onOpenSquadBattle={() => {
+            const base = variant === "web" ? "/web" : "/mobile";
+            router.push(`${base}/squad-battle-preview`);
+          }}
           labels={slotLabels}
         />
       )}

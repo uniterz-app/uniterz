@@ -4,10 +4,15 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultCard from "@/app/component/result/ResultCard";
 import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
+import {
+  resolveResultPostGameMarket,
+  useResultPostsGameMarkets,
+} from "@/lib/games/useResultPostsGameMarkets";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
-import { jp, nameRajdhani } from "@/lib/fonts";
+import ProfileOverviewLineFrame from "@/app/component/profile/ui/ProfileOverviewLineFrame";
+import { jp } from "@/lib/fonts";
 import {
   type ProfileVisualEffects,
   isProfileVisualLite,
@@ -50,23 +55,16 @@ export default function ProfileSettledTodayResults({
     isMobile && posts.length > MOBILE_SETTLED_TODAY_MAX
       ? posts.slice(0, MOBILE_SETTLED_TODAY_MAX)
       : posts;
+  const marketsFromGames = useResultPostsGameMarkets(visiblePosts);
 
   return (
-    <ProfileKinetikPanelFrame as="section" className="p-4 md:p-5">
+    <ProfileOverviewLineFrame title={title}>
+    <ProfileKinetikPanelFrame as="section" className="profile-kinetik-panel--line-frame block w-full min-w-0 p-3">
       <div>
-          <h3
-            className={[
-              nameRajdhani.className,
-              "font-semibold tracking-wide text-white/95",
-              isMobile ? "text-lg" : "text-xl sm:text-[1.72rem]",
-            ].join(" ")}
-          >
-            {title}
-          </h3>
           <p
             className={[
               language === "ja" ? jp.className : "",
-              "mt-1.5 max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[14px]",
+              "max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[14px]",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -83,8 +81,8 @@ export default function ProfileSettledTodayResults({
           <div
             className={
               isMobile
-                ? "mt-4 flex flex-col gap-3"
-                : "mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+                ? "mt-4 flex flex-col gap-3 overflow-visible pr-5"
+                : "mt-4 grid grid-cols-1 gap-4 overflow-visible pr-5 sm:grid-cols-2"
             }
           >
             {visiblePosts.map((post) => (
@@ -98,10 +96,13 @@ export default function ProfileSettledTodayResults({
                 viewerUid={viewerUid}
                 gamesRoutePrefix={gamesRoutePrefix}
                 visualEffectsLite={visualEffectsLite}
+                gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
+                href={`${gamesRoutePrefix}/result/${post.id}`}
               />
             ))}
           </div>
         )}
     </ProfileKinetikPanelFrame>
+    </ProfileOverviewLineFrame>
   );
 }

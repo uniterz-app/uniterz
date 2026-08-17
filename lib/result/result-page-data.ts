@@ -8,8 +8,8 @@ import {
 } from "@/lib/time/zonedTime";
 import { compareResultPostsForDayList } from "@/lib/result/resultPostDaySort";
 
-/** リザルト一覧のリーグタブ（ワールドカップ / NBA） */
-export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.WC, LEAGUES.NBA] as const;
+/** リザルト一覧のリーグタブ（NBA 固定） */
+export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.NBA] as const;
 export type ResultListLeagueTab = (typeof RESULT_LIST_LEAGUE_TABS)[number];
 
 export type PostWithMillis = PredictionPostV2 & {
@@ -335,10 +335,9 @@ export function flattenResultDayGroups(
   return out;
 }
 
-/** リザルト一覧（NBA / WC タブ）：1回あたりの取得件数 */
-export const RESULT_TAB_PAGE_SIZE = 10;
-
-/** @deprecated タブ別取得に移行。互換のため残す */
-export const RESULT_INITIAL_PAGE_SIZE = RESULT_TAB_PAGE_SIZE;
-/** @deprecated タブ別取得に移行 */
-export const RESULT_NEXT_PAGE_SIZE = RESULT_TAB_PAGE_SIZE;
+/** リザルト一覧：初回取得件数 */
+export const RESULT_INITIAL_PAGE_SIZE = 15;
+/** リザルト一覧：スクロール追加取得件数 */
+export const RESULT_NEXT_PAGE_SIZE = 10;
+/** @deprecated 初回は RESULT_INITIAL_PAGE_SIZE、追加は RESULT_NEXT_PAGE_SIZE */
+export const RESULT_TAB_PAGE_SIZE = RESULT_NEXT_PAGE_SIZE;

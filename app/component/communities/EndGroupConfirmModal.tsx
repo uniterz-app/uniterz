@@ -27,11 +27,9 @@ const endConfirmLabelStyle: CSSProperties = {
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
 const DIALOG_PANEL_CLASS = [
-  "relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/18 p-5",
-  "bg-linear-to-b from-white/12 via-cyan-950/25 to-zinc-950/50",
-  "backdrop-blur-2xl backdrop-saturate-[1.8]",
-  "shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.25),0_28px_96px_rgba(0,0,0,0.55)]",
-  "ring-1 ring-cyan-400/25",
+  "relative w-full max-w-sm overflow-hidden rounded-none border border-[rgba(0,245,255,0.22)] p-5",
+  "bg-[#050b14]",
+  "shadow-[0_18px_44px_rgba(0,0,0,0.55)]",
 ].join(" ");
 
 type Props = {
@@ -122,8 +120,8 @@ function EndGroupConfirmDialog({
             type="button"
             disabled={busy}
             className={[
-              "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-[11px]",
-              "border-2 border-cyan-400/55 bg-white/6 px-3 backdrop-blur-md",
+              "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-none",
+              "border border-[rgba(0,245,255,0.45)] bg-[rgba(0,245,255,0.06)] px-3",
               "shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]",
               "transition-all duration-500 ease-out",
               "hover:border-cyan-300/85 hover:bg-cyan-500/22 disabled:pointer-events-none disabled:opacity-45",
@@ -153,8 +151,8 @@ function EndGroupConfirmDialog({
             type="button"
             disabled={busy}
             className={[
-              "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-center overflow-hidden rounded-[11px] px-3",
-              "border-2 border-red-600 bg-white/6 backdrop-blur-md",
+              "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-center overflow-hidden rounded-none px-3",
+              "border border-red-600 bg-red-950/40",
               "shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_22px_rgba(220,38,38,0.45),0_0_40px_rgba(185,28,28,0.22)]",
               "transition-all duration-500 ease-out",
               "hover:border-red-500 hover:bg-red-700/45 hover:shadow-[0_0_36px_rgba(239,68,68,0.55),0_0_56px_rgba(220,38,38,0.35)] disabled:pointer-events-none disabled:opacity-45",

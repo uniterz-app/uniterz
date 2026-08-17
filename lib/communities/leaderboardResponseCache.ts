@@ -12,7 +12,6 @@ type RankedRow = {
   totalWins: number;
   winRate: number;
   totalPoints: number;
-  totalPrecision: number;
   totalUpset: number;
   activeWinStreak: number;
   sortValue: number;
@@ -33,7 +32,7 @@ type CacheEntry = {
   expiresAt: number;
 };
 
-const CACHE_TTL_MS = 30_000;
+const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
 function teamIdsKey(teamIds: string[]): string {

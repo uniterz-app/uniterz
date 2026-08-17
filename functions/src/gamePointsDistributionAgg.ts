@@ -11,6 +11,23 @@ export type GamePointsDistributionAgg = {
   n: number;
   median: number | null;
   mean: number | null;
+  max: number | null;
+};
+
+export type GamePointsTopEntryAgg = {
+  rank: number;
+  postId: string;
+  uid: string | null;
+  handle: string;
+  displayName: string;
+  photoURL: string | null;
+  isPro: boolean;
+  points: number;
+  countryCode?: string | null;
+};
+
+export type GamePointsDistributionWithTopAgg = GamePointsDistributionAgg & {
+  top: GamePointsTopEntryAgg[];
 };
 
 /** [lo, hi) 。最終ビンは hi を大きく取り 10 超を包含 */
@@ -52,7 +69,7 @@ export function buildGamePointsDistributionAgg(
 
   const n = scores.filter((s) => Number.isFinite(s)).length;
   if (n === 0) {
-    return { v: 1, bins, n: 0, median: null, mean: null };
+    return { v: 1, bins, n: 0, median: null, mean: null, max: null };
   }
 
   const sorted = [...scores].filter(Number.isFinite).sort((a, b) => a - b);
@@ -62,6 +79,7 @@ export function buildGamePointsDistributionAgg(
     sorted.length % 2 === 1
       ? sorted[mid]
       : (sorted[mid - 1] + sorted[mid]) / 2;
+  const max = sorted[sorted.length - 1] ?? null;
 
-  return { v: 1, bins, n, median, mean };
+  return { v: 1, bins, n, median, mean, max };
 }

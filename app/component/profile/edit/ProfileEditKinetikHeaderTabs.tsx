@@ -15,6 +15,7 @@ import {
   getKinetikWinStreakExplanation,
 } from "./kinetikStreakFx";
 import { nameOxanium } from "@/lib/fonts";
+import ResultImpactStreakTag from "@/app/component/result/ResultImpactStreakTag";
 
 type Props = {
   rankBadge: KinetikRankBadgeResult | null;
@@ -85,6 +86,15 @@ export default function ProfileEditKinetikHeaderTabs({
 }: Props) {
   const streakTier = getKinetikStreakTier(winStreak);
   const streakLabel = formatKinetikWinStreakLabel(winStreak, language);
+  const streakThemeKey: KinetikSlantTabThemeKey = (
+    {
+      0: "streak-1",
+      1: "streak-1",
+      2: "streak-2",
+      3: "streak-3",
+      4: "streak-4",
+    } as const
+  )[streakTier];
   const rankExplanation = rankBadge
     ? getKinetikRankBadgeExplanation(rankBadge, language)
     : null;
@@ -154,32 +164,11 @@ export default function ProfileEditKinetikHeaderTabs({
             delay={0.16}
             explanation={streakExplanation}
             onPress={(e) =>
-              openTooltip(
-                e,
-                streakExplanation,
-                `streak-${streakTier}` as KinetikSlantTabThemeKey
-              )
+              openTooltip(e, streakExplanation, streakThemeKey)
             }
-            className={[
-              "profile-edit-kinetik-slant-tab profile-edit-kinetik-slant-tab--outline",
-              streakTier > 0
-                ? `profile-edit-kinetik-slant-tab--streak-${streakTier}`
-                : "",
-              tabPad,
-            ].join(" ")}
+            className="appearance-none cursor-pointer bg-transparent p-0 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050508]"
           >
-            <span
-              className={[
-                nameOxanium.className,
-                "profile-edit-kinetik-slant-tab__label",
-                textSize,
-                language === "en"
-                  ? "uppercase tracking-[0.14em]"
-                  : "tracking-[0.08em]",
-              ].join(" ")}
-            >
-              {streakLabel}
-            </span>
+            <ResultImpactStreakTag winStreak={winStreak} />
           </SlantTab>
         ) : null}
       </div>

@@ -1,23 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
-import { useNavigation } from "@react-navigation/native";
+import {
+  CommonActions,
+  StackActions,
+  useFocusEffect,
+  useNavigation,
+} from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
-  ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, UIManager, View,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, {
-  Easing,
-  cancelAnimation,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
 import { signOut, updateProfile } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -25,27 +30,45 @@ import { auth, db, storage } from "../../lib/firebase";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
-import { useNativeProfileStats } from "./useNativeProfileStats";
+import { useNativeProfileStats, seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
+import {
+  invalidateProfileUserDocNative,
+  loadProfileUserDocNative,
+  peekProfileUserDocNative,
+} from "./profileUserDocCacheNative";
 import { useNativeProfileDailyTrendChart } from "./useNativeProfileDailyTrendChart";
 import { useNativeStreakTracker } from "./useNativeStreakTracker";
-import { useNativeProfilePlan } from "./useNativeProfilePlan";
+import {
+  resolveAndExpireMyPlan,
+  useNativeProfilePlan,
+} from "./useNativeProfilePlan";
 import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
 import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
-import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
-import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
-import ProfileWcStackedRankTrendChartsNative from "./ProfileWcStackedRankTrendChartsNative";
-import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
+import ProfileMenuEdgeHandleNative from "./ProfileMenuEdgeHandleNative";
+import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
+import { CyberSubpageHeaderNative } from "../../ui/CyberSubpageShellNative";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
-import ProfileExternalReturnNavNative from "./ProfileExternalReturnNavNative";
+import GamesPageBackgroundNative from "../background/GamesPageBackgroundNative";
+import { APP_MESH_BG_FALLBACK } from "../../../../../lib/app/appMeshBackground";
+import PredictOverlaySubmitButtonNative from "../games/PredictOverlaySubmitButtonNative";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "../rankings/CyberSlantedTabNative";
+import ProfileAwardsTabNative from "./ProfileAwardsTabNative";
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
+import ProfileReportDeliveryOverlayNative from "./reports/ProfileReportDeliveryOverlayNative";
+import ProfileProSkinUnlockOverlayNative from "./reports/ProfileProSkinUnlockOverlayNative";
+import { useProReportDeliveryOverlayNative } from "./reports/useProReportDeliveryOverlayNative";
+import { useProSkinUnlockOverlayNative } from "./reports/useProSkinUnlockOverlayNative";
+import { consumeProSkinUnlockPreviewOnProfile } from "./reports/proSkinUnlockPreviewArm";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
-import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
-import { profileOverviewChartShellStyle } from "./profileOverviewChartShell";
+import ProfileOverviewSectionNative from "./ProfileOverviewSectionNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import {
   assertProfileTextsFreeOfGamblingTerms,
@@ -54,76 +77,56 @@ import {
 } from "../../../../../lib/profile/profileGamblingTerms";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
-import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
-import { useProfileKinetikWcStackedStats } from "../../../../../lib/profile/useProfileKinetikWcStackedStats";
-import { useProfileWcStackedRankTrend } from "../../../../../lib/profile/useProfileWcStackedRankTrend";
-import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
+import { parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
+import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
+import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
+import {
+  PROFILE_PLAN_PRO_BG_DEFAULT,
+  type ProfilePlanProBgVariant,
+} from "../../../../../lib/profile/profilePlanProBgVariants";
+import { peekOwnProfileSeedNative, seedOwnProfileFromUserDocNative } from "./seedOwnProfileFromUserDocNative";
+import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
+import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
+import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
+import {
+  readTutorialLivePhaseNative,
+  writeTutorialLivePhaseNative,
+} from "../tutorial/tutorialLivePhaseNative";
+import { setTutorialLiveTrackNative } from "../tutorial/tutorialLiveTrackNative";
+import { setTutorialHorizonSubstepNative } from "../tutorial/tutorialHorizonSubstepNative";
+import {
+  getTutorialWelcomeHandoffNative,
+  hydrateTutorialWelcomeHandoffNative,
+  setTutorialWelcomeHandoffNative,
+} from "../tutorial/tutorialWelcomeHandoffNative";
+import { markAppTutorialSeenNative } from "../tutorial/tutorialSeenNative";
+import { clearTutorialLivePickNative } from "../tutorial/tutorialLivePickNative";
+import { requestTutorialClearedNative } from "../tutorial/tutorialRestartEventsNative";
+import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import type { Language } from "../../../../../lib/i18n/language";
+import { TUTORIAL_WELCOME_LAND_HOLD_MS } from "../../../../../lib/tutorial/tutorialMotion";
+import {
+  fetchProfileViewCountNative,
+  recordProfileViewNative,
+} from "./profileViewsApiNative";
 
-const hasNativeBlurView =
-  Platform.OS !== "web" &&
-  Boolean(
-    UIManager.getViewManagerConfig?.("ExpoBlurView") ??
-      UIManager.getViewManagerConfig?.("ViewManagerAdapter_ExpoBlur_ExpoBlurView")
-  );
+type ProfileTab = "overview" | "report" | "awards" | "bracket";
 
-/** Web `SettingsNeonCard` の conic-gradient に近い色（回転 LinearGradient 用） */
-const SETTINGS_NEON_SPIN_COLORS = [
-  "hsl(189, 92%, 58%)",
-  "hsl(240, 15%, 9%)",
-  "hsl(189, 99%, 26%)",
-  "hsl(188, 94%, 13%)",
-  "hsl(189, 92%, 58%)",
-] as const;
-
-/** Web `main` の `backdrop-blur-xl` 相当（フォールバックは単色） */
-function ProfileSettingsBackdropBlur() {
-  if (!hasNativeBlurView) {
-    return (
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(11, 13, 18, 0.94)" }]}
-      />
-    );
-  }
-  if (Platform.OS === "ios") {
-    return (
-      <BlurView
-        pointerEvents="none"
-        intensity={44}
-        tint="dark"
-        style={StyleSheet.absoluteFillObject}
-      />
-    );
-  }
-  if (Platform.OS === "android") {
-    return (
-      <BlurView
-        pointerEvents="none"
-        intensity={40}
-        tint="dark"
-        experimentalBlurMethod="dimezisBlurView"
-        style={StyleSheet.absoluteFillObject}
-      />
-    );
-  }
-  return (
-    <View
-      pointerEvents="none"
-      style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(11, 13, 18, 0.94)" }]}
-    />
-  );
-}
-
-type ProfileTab = "overview" | "bracket" | "stats";
-
-/** Web `Tabs.tsx` と同一の英語ラベル */
+/** Web `Tabs.tsx` / CyberSlantedTab と同一の英語ラベル */
 const PROFILE_TAB_LABELS_EN: Record<ProfileTab, string> = {
-  overview: "Overview",
-  stats: "Pro Stats",
-  bracket: "Bracket",
+  overview: "OVERVIEW",
+  report: "REPORT",
+  awards: "AWARDS",
+  bracket: "BRACKET",
 };
 
-const PROFILE_TAB_ORDER: ProfileTab[] = ["overview", "stats", "bracket"];
+const PROFILE_TAB_ORDER: ProfileTab[] = [
+  "overview",
+  "report",
+  "awards",
+  "bracket",
+];
 
 function profileCountryRowLabel(code: string, appLang: "ja" | "en"): string {
   const trimmed = code.trim();
@@ -138,8 +141,12 @@ export default function ProfileHomeScreen({
   routeHandle,
   fromRankings = false,
   fromLeaderboards = false,
+  fromWeeklyReport = false,
+  fromResultDetail = false,
+  resultDetailPostId,
   leaderboardsGroupId,
   openSettingsOnMount = false,
+  openReportTabOnMount = false,
 }: {
   bottomReserveY?: number;
   onSaved?: () => void;
@@ -149,8 +156,15 @@ export default function ProfileHomeScreen({
   fromRankings?: boolean;
   /** グループ（Leaderboards タブ）から遷移してきた他人プロフィール */
   fromLeaderboards?: boolean;
+  /** 週次レポートのライバルから遷移してきた他人プロフィール */
+  fromWeeklyReport?: boolean;
+  /** リザルト詳細から遷移してきた他人プロフィール */
+  fromResultDetail?: boolean;
+  /** リザルト詳細へ戻るときの投稿 ID */
+  resultDetailPostId?: string;
   leaderboardsGroupId?: string;
   openSettingsOnMount?: boolean;
+  openReportTabOnMount?: boolean;
 }) {
   const { fUser, status } = useFirebaseUser();
   const myUid = fUser?.uid;
@@ -164,62 +178,185 @@ export default function ProfileHomeScreen({
 
   const [tab, setTab] = useState<ProfileTab>("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  /** メニューへ戻るときは fade せず即閉じる */
+  const [settingsAnim, setSettingsAnim] = useState<"fade" | "none">("fade");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [welcomeFlyActive, setWelcomeFlyActive] = useState(
+    () =>
+      !isPublicProfileView &&
+      getTutorialWelcomeHandoffNative() === "profile"
+  );
+  const [welcomeFlying, setWelcomeFlying] = useState(false);
+  const welcomeFlyDoneRef = useRef(false);
+  const welcomeLandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  /** 設定 Modal を閉じたあとサイドメニューを開く（iOS は onDismiss 待ち） */
+  const reopenMenuAfterSettingsRef = useRef(false);
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
   const showExternalBack =
-    isPublicProfileView && (fromRankings || fromLeaderboards);
-  const externalBackVariant = fromLeaderboards ? "leaderboards" : "rankings";
+    isPublicProfileView &&
+    (fromRankings ||
+      fromLeaderboards ||
+      fromWeeklyReport ||
+      fromResultDetail);
 
   const dismissPublicProfileRoute = useCallback(() => {
-    const current = navigation.getState().routes[navigation.getState().index]?.name;
+    const state = navigation.getState();
+    const current = state.routes[state.index]?.name;
     if (current === "PublicProfile") {
-      if (navigation.canGoBack()) navigation.goBack();
+      // ランキングから nested navigate すると PublicProfile だけがスタックに
+      // 残ることがあり、その場合 pop / popToTop は失敗する。
+      if (state.index > 0) {
+        navigation.dispatch(StackActions.pop(state.index));
+      } else {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: "ProfileHome" }],
+          })
+        );
+      }
       return;
     }
     navigation.setParams({
       handle: undefined,
       fromRankings: undefined,
       fromLeaderboards: undefined,
+      fromWeeklyReport: undefined,
+      fromResultDetail: undefined,
+      resultDetailPostId: undefined,
       leaderboardsGroupId: undefined,
     });
   }, [navigation]);
 
+  /** iOS は Modal 同時表示不可。閉じ完了（onDismiss）後にメニューを開く */
+  const openMenuAfterSettingsClosed = useCallback(() => {
+    if (!reopenMenuAfterSettingsRef.current) return;
+    reopenMenuAfterSettingsRef.current = false;
+    setSettingsAnim("fade");
+    setMenuOpen(true);
+  }, []);
+
+  const returnFromSettingsToMenu = useCallback(() => {
+    setLangModalOpen(false);
+    setCountryModalOpen(false);
+    reopenMenuAfterSettingsRef.current = true;
+    setSettingsAnim("none");
+    // animationType を none に切り替えてから閉じる
+    requestAnimationFrame(() => {
+      setSettingsOpen(false);
+      // Android は onDismiss が無いのでここで再開
+      if (Platform.OS !== "ios") {
+        setTimeout(() => openMenuAfterSettingsClosed(), 50);
+      }
+    });
+  }, [openMenuAfterSettingsClosed]);
+
+  const openSettingsFromMenu = useCallback(() => {
+    reopenMenuAfterSettingsRef.current = false;
+    setMenuOpen(false);
+    // メニュー Modal が閉じたあと設定を開く
+    const delay = Platform.OS === "ios" ? 320 : 60;
+    setTimeout(() => {
+      setSettingsAnim("fade");
+      setSettingsOpen(true);
+    }, delay);
+  }, []);
+
+  // iOS onDismiss が発火しない場合のフォールバック
+  useEffect(() => {
+    if (settingsOpen) return;
+    if (!reopenMenuAfterSettingsRef.current) return;
+    const id = setTimeout(() => {
+      openMenuAfterSettingsClosed();
+    }, Platform.OS === "ios" ? 380 : 0);
+    return () => clearTimeout(id);
+  }, [settingsOpen, openMenuAfterSettingsClosed]);
+
   const returnToPreviousScreen = useCallback(() => {
+    if (fromResultDetail) {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      const id = resultDetailPostId?.trim();
+      tabNavigation.navigate("ResultTab", {
+        screen: "ResultHome",
+        params: id ? { reopenDetailPostId: id } : undefined,
+      });
+      return;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    if (fromWeeklyReport) {
+      dismissPublicProfileRoute();
+      return;
+    }
     if (fromLeaderboards) {
       const groupId = leaderboardsGroupId?.trim();
-      if (groupId) {
-        tabNavigation.navigate("LeaderboardsTab", {
-          screen: "LeaderboardsHome",
-          params: { reopenGroupId: groupId },
-        });
-      } else {
-        tabNavigation.navigate("LeaderboardsTab");
-      }
-    } else {
-      tabNavigation.navigate("RankingsTab");
+      tabNavigation.navigate("LeaderboardsTab", {
+        screen: "LeaderboardsHome",
+        params: groupId ? { reopenGroupId: groupId } : undefined,
+      });
+      return;
     }
-    dismissPublicProfileRoute();
+    tabNavigation.navigate("RankingsTab", { screen: "RankingsHome" });
   }, [
     dismissPublicProfileRoute,
     fromLeaderboards,
+    fromResultDetail,
+    fromWeeklyReport,
     leaderboardsGroupId,
+    navigation,
+    resultDetailPostId,
     tabNavigation,
   ]);
 
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
 
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [handle, setHandle] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [language, setLanguage] = useState<"ja" | "en">("ja");
-  const [countryCode, setCountryCode] = useState("");
-  const [plan, setPlan] = useState<"free" | "pro">("free");
-  const [memberSinceMs, setMemberSinceMs] = useState<number | null>(null);
+  /** Games 起動時 prefetch 済みなら、1 フレーム目から完成形のカードを出す */
+  const ownSeedAtMount = useMemo(() => {
+    if (isPublicProfileView) return null;
+    return peekOwnProfileSeedNative(myUid);
+  }, [isPublicProfileView, myUid]);
+
+  const [profileLoading, setProfileLoading] = useState(
+    () => !isPublicProfileView && !ownSeedAtMount
+  );
+  const [displayName, setDisplayName] = useState(
+    () => ownSeedAtMount?.displayName ?? ""
+  );
+  const [bio, setBio] = useState(() => ownSeedAtMount?.bio ?? "");
+  const [handle, setHandle] = useState(() => ownSeedAtMount?.handle ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(
+    () => ownSeedAtMount?.avatarUrl ?? ""
+  );
+  const [language, setLanguage] = useState<"ja" | "en">(
+    () => ownSeedAtMount?.language ?? "ja"
+  );
+  const [countryCode, setCountryCode] = useState(
+    () => ownSeedAtMount?.countryCode ?? ""
+  );
+  const [plan, setPlan] = useState<"free" | "pro">(
+    () => ownSeedAtMount?.plan ?? "free"
+  );
+  const [planProBgVariant, setPlanProBgVariant] =
+    useState<ProfilePlanProBgVariant>(
+      () => ownSeedAtMount?.planProBgVariant ?? PROFILE_PLAN_PRO_BG_DEFAULT
+    );
+  const [memberSinceMs, setMemberSinceMs] = useState<number | null>(
+    () => ownSeedAtMount?.memberSinceMs ?? null
+  );
+  /** null = 未読込（獲得演出の誤発火防止） */
+  const [unitBalance, setUnitBalance] = useState<number | null>(
+    () => (ownSeedAtMount ? ownSeedAtMount.unitBalance : null)
+  );
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -228,48 +365,56 @@ export default function ProfileHomeScreen({
   /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
   const isJa = language === "ja";
 
-  const renderExternalBackNav = () =>
+  const externalBackLabel = isJa ? "戻る" : "Back";
+
+  const renderProfileBackHandle = () =>
     showExternalBack ? (
-      <ProfileExternalReturnNavNative
-        language={language}
-        variant={externalBackVariant}
+      <ProfileBackEdgeHandleNative
         onPress={returnToPreviousScreen}
+        accessibilityLabel={externalBackLabel}
       />
     ) : null;
 
-  const reduceMotion = useReducedMotion();
-  const neonSpinAngle = useSharedValue(0);
-  const neonSpinStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${neonSpinAngle.value}deg` }],
-  }));
-
-  useEffect(() => {
-    if (!settingsOpen) {
-      cancelAnimation(neonSpinAngle);
-      neonSpinAngle.value = 0;
-      return;
-    }
-    if (reduceMotion) {
-      cancelAnimation(neonSpinAngle);
-      neonSpinAngle.value = 0;
-      return;
-    }
-    neonSpinAngle.value = withRepeat(
-      withTiming(360, { duration: 8000, easing: Easing.linear }),
-      -1,
-      false
-    );
-    return () => {
-      cancelAnimation(neonSpinAngle);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- neonSpinAngle は SharedValue で安定
-  }, [settingsOpen, reduceMotion]);
-
+  /** 自分プロフィールは routeHandle 無し。plan hook の getDoc より先に確定できる */
+  const isMe = !isPublicProfileView && !!myUid && myUid === targetUid;
+  const [myPlanReady, setMyPlanReady] = useState(() => !!ownSeedAtMount);
+  /** users/{uid} — Pro Skin overlay 等への共有（重複 read 回避） */
+  const [myUserDoc, setMyUserDoc] = useState<
+    Record<string, unknown> | null | undefined
+  >(() => {
+    if (isPublicProfileView || !myUid) return undefined;
+    return peekProfileUserDocNative(myUid);
+  });
   const profilePlanHook = useNativeProfilePlan({
     targetUid: targetUid ?? null,
     profilePlan: plan,
+    myPlanOverride: plan,
+    myPlanOverrideReady: isMe ? myPlanReady : false,
+    deferOwnFetch: isMe,
   });
-  const isMe = profilePlanHook.isMe;
+  const [profileViewCount, setProfileViewCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setProfileViewCount(null);
+    if (status !== "ready" || !targetUid) return;
+
+    void (async () => {
+      try {
+        if (myUid && !isMe) {
+          await recordProfileViewNative(targetUid).catch(() => undefined);
+        }
+        const count = await fetchProfileViewCountNative(targetUid);
+        if (!cancelled) setProfileViewCount(count);
+      } catch {
+        // 閲覧数取得の失敗でプロフィール表示を壊さない。
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isMe, myUid, status, targetUid]);
 
   useEffect(() => {
     if (openSettingsOnMount && isMe) {
@@ -277,41 +422,155 @@ export default function ProfileHomeScreen({
     }
   }, [openSettingsOnMount, isMe]);
 
+  useEffect(() => {
+    if (openReportTabOnMount && isMe) {
+      setTab("report");
+    }
+  }, [openReportTabOnMount, isMe]);
+
   const { unreadCount: menuUnreadCount, readIds: announcementReadIds } =
     useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
       enabled: isMe,
     });
   const { resolvedBadges } = useNativeProfileBadges(isMe ? myUid : targetUid);
 
-  const [profileStatsContext, setProfileStatsContext] = useState<ProfileStatsStreakContext>({
-    rankingLeague: "worldcup",
-    wcStage: "overall",
-  });
+  /** プロフィールは NBA のみ（W杯経路は使わない） */
+  const profileStatsContext = useMemo<ProfileStatsStreakContext>(
+    () => ({ rankingLeague: "nba" }),
+    []
+  );
 
   const authReady = status === "ready";
+
   const statsBundle = useNativeProfileStats(
     targetUid,
     !!targetUid,
     profileStatsContext,
     authReady
   );
+
+  useEffect(() => {
+    if (isPublicProfileView || !myUid || myUserDoc == null) return;
+    seedNativeProfileStatsFromUserDoc(myUid, myUserDoc);
+  }, [isPublicProfileView, myUid, myUserDoc]);
   const dailyTrendChart = useNativeProfileDailyTrendChart(targetUid, {
     enabled: tab === "overview" && !!targetUid && authReady,
-    seedRows:
-      statsBundle.dailyTrend.length > 0 ? statsBundle.dailyTrend : undefined,
+    seedRows: statsBundle.dailyTrend,
+    seedComplete: !statsBundle.dailyTrendLoading,
+    deferIndependentFetch: statsBundle.dailyTrendLoading,
     rankingLeague: profileStatsContext.rankingLeague,
     wcStage: profileStatsContext.wcStage,
+    nbaPeriod: "season",
     authReady,
   });
   const streakBundle = useNativeStreakTracker(
     targetUid,
-    tab === "overview" && !!targetUid && authReady,
-    profileStatsContext
+    tab === "overview" &&
+      !!targetUid &&
+      authReady &&
+      (statsBundle.last20 != null || !statsBundle.loading),
+    profileStatsContext,
+    { seedLast20: statsBundle.last20 }
   );
 
   const currentIsProView = profilePlanHook.isProView;
+  const reportOverlayEnabled =
+    isMe &&
+    myPlanReady &&
+    (currentIsProView || profilePlanHook.myPlan === "pro");
+  const { active: reportOverlay, dismiss: dismissReportOverlay } =
+    useProReportDeliveryOverlayNative({
+      uid: myUid,
+      enabled: reportOverlayEnabled,
+    });
+  const skinUnlockEnabled = Boolean(isMe && myUid) && reportOverlay == null;
+  const [forceSkinUnlockPreview, setForceSkinUnlockPreview] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (consumeProSkinUnlockPreviewOnProfile()) {
+        setForceSkinUnlockPreview(true);
+      }
+    }, [])
+  );
+
+  const tutorialCopy = useMemo(
+    () => i18nT((language === "en" ? "en" : "ja") as Language),
+    [language]
+  );
+  const tutorialSkipConfirm = tutorialSkipConfirmProps(tutorialCopy.tutorial);
+
+  const finishWelcomeSkip = useCallback(() => {
+    void markAppTutorialSeenNative(myUid ?? null);
+    void writeTutorialLivePhaseNative(null);
+    setTutorialLiveTrackNative(null);
+    setTutorialWelcomeHandoffNative(null);
+    void clearTutorialLivePickNative();
+    setWelcomeFlyActive(false);
+    setWelcomeFlying(false);
+    requestTutorialClearedNative();
+  }, [myUid]);
+
+  const startWelcomeFly = useCallback(() => {
+    setWelcomeFlying(true);
+  }, []);
+
+  const goWelcomeFeaturesHorizon = useCallback(() => {
+    if (welcomeFlyDoneRef.current) return;
+    welcomeFlyDoneRef.current = true;
+    if (welcomeLandTimerRef.current != null) {
+      clearTimeout(welcomeLandTimerRef.current);
+    }
+    welcomeLandTimerRef.current = setTimeout(() => {
+      setTutorialWelcomeHandoffNative(null);
+      setTutorialLiveTrackNative("features");
+      setTutorialHorizonSubstepNative(0);
+      void writeTutorialLivePhaseNative("horizon");
+      setWelcomeFlyActive(false);
+      setWelcomeFlying(false);
+    }, TUTORIAL_WELCOME_LAND_HOLD_MS);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      const memOn =
+        !isPublicProfileView &&
+        getTutorialWelcomeHandoffNative() === "profile";
+      if (memOn) setWelcomeFlyActive(true);
+      void (async () => {
+        await hydrateTutorialWelcomeHandoffNative();
+        const phase = await readTutorialLivePhaseNative();
+        if (cancelled) return;
+        const on =
+          !isPublicProfileView &&
+          phase === "welcome" &&
+          getTutorialWelcomeHandoffNative() === "profile";
+        setWelcomeFlyActive(on);
+        if (!on) setWelcomeFlying(false);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [isPublicProfileView])
+  );
+  const {
+    activeIds: skinUnlockIds,
+    ownerCounts: skinUnlockOwnerCounts,
+    preview: skinUnlockPreview,
+    dismiss: dismissSkinUnlock,
+  } = useProSkinUnlockOverlayNative({
+    uid: myUid,
+    enabled: skinUnlockEnabled,
+    forcePreview: forceSkinUnlockPreview,
+    userDoc: isMe ? myUserDoc : null,
+  });
+  const dismissSkinUnlockAndClearForce = useCallback(() => {
+    setForceSkinUnlockPreview(false);
+    dismissSkinUnlock();
+  }, [dismissSkinUnlock]);
+
   const currentStreak = useMemo(() => {
-    if (isPublicProfileView && profileByHandle.currentStreak > 0) {
+    if (isPublicProfileView) {
       return profileByHandle.currentStreak;
     }
     const fromSummary = statsBundle.summary?.activeWinStreak;
@@ -320,8 +579,10 @@ export default function ProfileHomeScreen({
     }
     const st = statsBundle.stats as Record<string, unknown> | null;
     if (st != null) {
-      const v = Number(st.currentStreak ?? st.activeWinStreak);
-      if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
+      return currentSeasonWinStreak(
+        st.currentStreak ?? st.activeWinStreak,
+        st.streakSeasonKeyBasketball
+      );
     }
     return 0;
   }, [
@@ -330,38 +591,6 @@ export default function ProfileHomeScreen({
     statsBundle.summary?.activeWinStreak,
     statsBundle.stats,
   ]);
-
-  const onToggleMetricsScope = useCallback(() => {
-    setProfileStatsContext((prev) => {
-      const nextLeague: RankingLeagueSource =
-        prev.rankingLeague === "worldcup" ? "nba" : "worldcup";
-      return {
-        rankingLeague: nextLeague,
-        wcStage: nextLeague === "worldcup" ? (prev.wcStage ?? "overall") : undefined,
-      };
-    });
-  }, []);
-
-  const { sections: wcStackedMetricsSections, loading: wcStackedStatsLoading } =
-    useProfileKinetikWcStackedStats(
-      targetUid,
-      profileStatsContext.rankingLeague === "worldcup",
-      currentStreak,
-      getUniterzApiBaseUrl() || undefined
-    );
-
-  const wcRankTrendApiBase = getUniterzApiBaseUrl() || undefined;
-  const {
-    sections: wcRankTrendSections,
-    loading: wcRankTrendLoading,
-  } = useProfileWcStackedRankTrend(
-    targetUid,
-    tab === "overview" &&
-      !!targetUid &&
-      authReady &&
-      profileStatsContext.rankingLeague === "worldcup",
-    wcRankTrendApiBase
-  );
 
   /** Web ヒーロー2行目に近づける：ハンドル優先、無ければメール（UID の一部は誤解を招くので避ける） */
   const secondaryIdLine =
@@ -450,46 +679,73 @@ export default function ProfileHomeScreen({
     async function load() {
       if (!myUid) {
         setProfileLoading(false);
+        setMyPlanReady(true);
+        setMyUserDoc(null);
         return;
       }
-      setProfileLoading(true);
+
+      const warm = peekOwnProfileSeedNative(myUid);
+      if (warm) {
+        setMyUserDoc(warm.data);
+        setDisplayName(warm.displayName);
+        setBio(warm.bio);
+        setHandle(warm.handle);
+        setAvatarUrl(warm.avatarUrl);
+        setLanguage(warm.language);
+        setCountryCode(warm.countryCode);
+        setPlan(warm.plan);
+        setPlanProBgVariant(warm.planProBgVariant);
+        setMemberSinceMs(warm.memberSinceMs);
+        setUnitBalance(warm.unitBalance);
+        seedNativeProfileStatsFromUserDoc(myUid, warm.data);
+        setProfileLoading(false);
+        setMyPlanReady(true);
+      } else {
+        setProfileLoading(true);
+        setMyPlanReady(false);
+        setMyUserDoc(undefined);
+      }
+
       try {
-        const snap = await getDoc(doc(db, "users", myUid));
+        const loaded = await loadProfileUserDocNative(myUid);
         if (!alive) return;
-        const data = snap.data() as
-          | {
-              displayName?: unknown;
-              bio?: unknown;
-              handle?: unknown;
-              photoURL?: unknown;
-              avatarUrl?: unknown;
-              language?: unknown;
-              countryCode?: unknown;
-              plan?: unknown;
-            }
-          | undefined;
-        const fromDoc =
-          typeof data?.displayName === "string" ? data.displayName.trim() : "";
-        const fromAuth = auth.currentUser?.displayName?.trim() ?? "";
-        /** Web はヒーロー名にハンドルを使わない。Firestore が空のときは Auth の表示名を補う */
-        setDisplayName(fromDoc || fromAuth);
-        setBio(typeof data?.bio === "string" ? data.bio : "");
-        setHandle(typeof data?.handle === "string" ? data.handle : "");
-        const fromFirestorePhoto =
-          typeof data?.photoURL === "string" && data.photoURL.trim().length > 0
-            ? data.photoURL.trim()
-            : typeof data?.avatarUrl === "string" && data.avatarUrl.trim().length > 0
-              ? data.avatarUrl.trim()
-              : "";
-        const authPhoto = auth.currentUser?.photoURL?.trim() ?? "";
-        setAvatarUrl(fromFirestorePhoto || authPhoto);
-        setLanguage(data?.language === "en" ? "en" : "ja");
-        setCountryCode(typeof data?.countryCode === "string" ? data.countryCode : "");
-        setPlan(data?.plan === "pro" ? "pro" : "free");
-        setMemberSinceMs(data ? parseMemberSinceMs(data as Record<string, unknown>) : null);
+        if (!loaded) {
+          setMyUserDoc(null);
+          return;
+        }
+        const data = loaded.data;
+        const snapExists = loaded.exists;
+        const seed = seedOwnProfileFromUserDocNative(
+          data,
+          auth.currentUser?.photoURL
+        );
+        setMyUserDoc(data);
+        setDisplayName(seed.displayName);
+        setBio(seed.bio);
+        setHandle(seed.handle);
+        setAvatarUrl(seed.avatarUrl);
+        setLanguage(seed.language);
+        setCountryCode(seed.countryCode);
+        setPlan(seed.plan);
+        setPlanProBgVariant(seed.planProBgVariant);
+        setMemberSinceMs(seed.memberSinceMs);
+        setUnitBalance(seed.unitBalance);
+        if (snapExists) {
+          seedNativeProfileStatsFromUserDoc(myUid, data);
+        }
+        // 期限解決を待たずカードを出す（空→埋めで伸びない）
+        setProfileLoading(false);
+
+        const resolvedPlan = snapExists
+          ? await resolveAndExpireMyPlan(myUid, data)
+          : "free";
+        if (!alive) return;
+        setPlan(resolvedPlan);
+        setMyPlanReady(true);
       } finally {
         if (!alive) return;
         setProfileLoading(false);
+        setMyPlanReady(true);
       }
     }
     void load();
@@ -498,14 +754,61 @@ export default function ProfileHomeScreen({
     };
   }, [myUid, isPublicProfileView]);
 
+  /** Pro Skin / Unit 残高 — 復帰時に再読込（初回フォーカスは上の load と重複させない） */
+  const skipFirstFocusUserDocRef = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (isPublicProfileView || !myUid) return;
+      if (skipFirstFocusUserDocRef.current) {
+        skipFirstFocusUserDocRef.current = false;
+        return;
+      }
+      let alive = true;
+      void loadProfileUserDocNative(myUid).then((loaded) => {
+        if (!alive || !loaded?.exists) return;
+        const data = loaded.data;
+        setMyUserDoc(data);
+        setPlanProBgVariant(parseUserPlanProBgVariant(data.planProBgVariant));
+        setPlan(data.plan === "pro" ? "pro" : "free");
+        setUnitBalance(parseUserUnitBalance(data));
+      });
+      return () => {
+        alive = false;
+      };
+    }, [isPublicProfileView, myUid])
+  );
+
+  /** しばらく離れて戻ったとき、ハングした overview 読み込みをやり直す */
+  const skipFirstFocusStatsRef = useRef(true);
+  const statsLoadingRef = useRef(statsBundle.loading);
+  const statsSummaryRef = useRef(statsBundle.summary);
+  statsLoadingRef.current = statsBundle.loading;
+  statsSummaryRef.current = statsBundle.summary;
+  useFocusEffect(
+    useCallback(() => {
+      if (!targetUid || !authReady) return;
+      if (skipFirstFocusStatsRef.current) {
+        skipFirstFocusStatsRef.current = false;
+        return;
+      }
+      if (statsLoadingRef.current && !statsSummaryRef.current) {
+        statsBundle.refetch();
+      }
+    }, [targetUid, authReady, statsBundle.refetch])
+  );
+
   useEffect(() => {
     if (!isPublicProfileView) return;
-    if (profileByHandle.loading) {
+    if (profileByHandle.loading && !profileByHandle.identityReady) {
       setProfileLoading(true);
       return;
     }
     if (profileByHandle.notFound) {
       setProfileLoading(false);
+      return;
+    }
+    if (!profileByHandle.identityReady && profileByHandle.loading) {
+      setProfileLoading(true);
       return;
     }
     setDisplayName(profileByHandle.displayName);
@@ -515,7 +818,9 @@ export default function ProfileHomeScreen({
     setLanguage(profileByHandle.language);
     setCountryCode(profileByHandle.countryCode);
     setPlan(profileByHandle.plan);
+    setPlanProBgVariant(profileByHandle.planProBgVariant);
     setMemberSinceMs(profileByHandle.memberSinceMs);
+    setUnitBalance(profileByHandle.unitBalance);
     setProfileLoading(false);
   }, [isPublicProfileView, profileByHandle]);
 
@@ -631,6 +936,7 @@ export default function ProfileHomeScreen({
         },
         { merge: true }
       );
+      invalidateProfileUserDocNative(myUid);
       onSaved?.();
       setSettingsOpen(false);
       cyberAlert(t.savedTitle, t.savedBody);
@@ -644,37 +950,27 @@ export default function ProfileHomeScreen({
 
   const apiConfigured = apiBase != null;
 
+  // BRACKET タブは当面非表示（実装が揃うまで）
+  useEffect(() => {
+    if (tab === "bracket") setTab("overview");
+  }, [tab]);
+
   function renderTabs() {
-    const items: { id: ProfileTab; label: string }[] = PROFILE_TAB_ORDER.map((id) => ({
-      id,
-      label: PROFILE_TAB_LABELS_EN[id],
-    }));
+    const order: ProfileTab[] = PROFILE_TAB_ORDER.filter((id) => id !== "bracket");
     return (
-      <View style={styles.tabBar}>
-        <View style={styles.tabRow}>
-          {items.map((item) => {
-            const active = tab === item.id;
-            return (
-              <Pressable
-                key={item.id}
-                style={({ pressed }) => [
-                  styles.tabHit,
-                  pressed && styles.tabHitPressed,
-                ]}
-                onPress={() => setTab(item.id)}
-              >
-                <Text
-                  style={[styles.tabLabel, active && styles.tabLabelActive]}
-                  maxFontSizeMultiplier={1.2}
-                >
-                  {item.label}
-                </Text>
-                {active ? <View style={styles.tabIndicator} /> : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <CyberSlantedTabBarNative fill style={styles.tabBar}>
+        {order.map((id) => (
+          <CyberSlantedTabNative
+            key={id}
+            label={PROFILE_TAB_LABELS_EN[id]}
+            active={tab === id}
+            onPress={() => setTab(id)}
+            compact
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === id }}
+          />
+        ))}
+      </CyberSlantedTabBarNative>
     );
   }
 
@@ -684,80 +980,61 @@ export default function ProfileHomeScreen({
         <Text style={styles.warnText}>{t.apiMissing}</Text>
       );
     }
-    if (statsBundle.loading) {
-      return (
-        <View style={styles.inlineLoading}>
-          <BlocksPulseLoader pixelScale={0.9} />
-        </View>
-      );
-    }
     if (statsBundle.error) {
+      const isTimeout =
+        /timed out|timeout|network request failed/i.test(statsBundle.error);
+      const isFirestoreTransient =
+        /UNAVAILABLE|ECONNRESET|ECONNREFUSED|DEADLINE_EXCEEDED|RST_STREAM/i.test(
+          statsBundle.error
+        );
       return (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{statsBundle.error}</Text>
-          <Text style={styles.warnText}>{t.apiMissing}</Text>
-        </View>
-      );
-    }
-    if (!statsBundle.summary) {
-      return (
-        <View style={styles.inlineLoading}>
-          <BlocksPulseLoader pixelScale={0.9} />
+          <Text style={styles.warnText}>
+            {isFirestoreTransient
+              ? isJa
+                ? "Firestore への接続が一時的に切れました。しばらくしてから画面を引き下げて再読み込みしてください。"
+                : "Firestore connection dropped temporarily. Pull to refresh in a moment."
+              : isTimeout
+                ? isJa
+                  ? "Next.js（npm run dev）が起動しているか、EXPO_PUBLIC_UNITERZ_API_BASE_URL がシミュレータなら http://127.0.0.1:3000 になっているか確認してください。"
+                  : "Check that Next.js (npm run dev) is running and EXPO_PUBLIC_UNITERZ_API_BASE_URL is http://127.0.0.1:3000 for the iOS Simulator."
+                : t.apiMissing}
+          </Text>
         </View>
       );
     }
 
-    const entranceKey = `${targetUid ?? ""}-${statsBundle.summary?.posts ?? 0}-${dailyTrendChart.chartData.length}`;
+    const dailyChartLoading =
+      dailyTrendChart.loading ||
+      (statsBundle.dailyTrendLoading &&
+        dailyTrendChart.chartData.length === 0);
+    const overviewStageReady =
+      Boolean(targetUid) &&
+      (!statsBundle.loading || Boolean(statsBundle.summary));
+
+    if (!targetUid) {
+      return null;
+    }
 
     return (
-      <View style={styles.overviewBlock}>
-        <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
-          {dailyTrendChart.loading || statsBundle.chartsLoading ? (
-            <View style={styles.chartSkeleton}>
-              <BlocksPulseLoader pixelScale={0.9} />
-            </View>
-          ) : (
-            <ProfileDailyTrendChartNative
-              key={`dailyTrend:${targetUid ?? ""}:${profileStatsContext.rankingLeague}:${dailyTrendChart.chartData.map((r) => r.date).join(",")}`}
-              data={dailyTrendChart.chartData}
-              language={language}
-              allowAll={currentIsProView}
-              rankingLeague={profileStatsContext.rankingLeague}
-              range="30d"
-            />
-          )}
-        </ProfileOverviewEntranceBlock>
-        <View style={styles.chartGap} />
-        <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
-          {profileStatsContext.rankingLeague === "worldcup" ? (
-            <ProfileWcStackedRankTrendChartsNative
-              sections={wcRankTrendSections}
-              loading={wcRankTrendLoading}
-              language={language}
-            />
-          ) : (
-            <ProfileRankTrendChartNative
-              data={statsBundle.rankTrend}
-              loading={
-                statsBundle.chartsLoading && statsBundle.rankTrend.length === 0
-              }
-              language={language}
-            />
-          )}
-        </ProfileOverviewEntranceBlock>
-        <View style={styles.chartGap} />
-        <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
-          <ProfileStreakTrackerNative
-            points={streakBundle.points}
-            loading={streakBundle.loading}
-            language={language}
-          />
-        </ProfileOverviewEntranceBlock>
-      </View>
+      <ProfileOverviewSectionNative
+        targetUid={targetUid}
+        language={language}
+        profileStatsContext={profileStatsContext}
+        currentIsProView={currentIsProView}
+        stageReady={overviewStageReady}
+        dailyChartLoading={dailyChartLoading}
+        dailyChartData={dailyTrendChart.chartData}
+        rankTrend={statsBundle.rankTrend}
+        rankTrendLoading={statsBundle.rankTrendLoading}
+        streakPoints={streakBundle.points}
+        streakLoading={streakBundle.loading}
+      />
     );
   }
 
-  if (isPublicProfileView && profileByHandle.loading) {
+  if (isPublicProfileView && profileByHandle.loading && !profileByHandle.identityReady) {
     return (
       <View style={styles.screenRoot}>
         <ScrollView
@@ -767,11 +1044,12 @@ export default function ProfileHomeScreen({
             { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
           ]}
         >
-          {renderExternalBackNav()}
+
           <View style={styles.inlineLoading}>
             <BlocksPulseLoader pixelScale={0.9} />
           </View>
         </ScrollView>
+        {renderProfileBackHandle()}
       </View>
     );
   }
@@ -786,49 +1064,55 @@ export default function ProfileHomeScreen({
             { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
           ]}
         >
-          {renderExternalBackNav()}
+
           <Text style={styles.errorText}>
             {isJa ? "ユーザーが見つかりません" : "User not found"}
           </Text>
         </ScrollView>
+        {renderProfileBackHandle()}
       </View>
-    );
-  }
-
-  if (targetUid && isMe && profilePlanHook.loadingPlan) {
-    return (
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
-        ]}
-      >
-        <View style={styles.inlineLoading}>
-          <BlocksPulseLoader />
-        </View>
-      </ScrollView>
     );
   }
 
   return (
     <View style={styles.screenRoot}>
+    <TutorialWelcomeWorldCameraNative
+      active={welcomeFlyActive}
+      flying={welcomeFlying}
+      onFlyComplete={goWelcomeFeaturesHorizon}
+      overlay={
+        welcomeFlyActive ? (
+          <TutorialLiveCoachNative
+            open
+            embedInCamera
+            autoWelcomeFly="features"
+            title={tutorialCopy.tutorial.practice.welcomeTitle}
+            body={tutorialCopy.tutorial.practice.welcomeBody}
+            skipLabel={tutorialCopy.tutorial.skip}
+            nextLabel={tutorialCopy.tutorial.practice.welcomeFullCta}
+            altNextLabel={tutorialCopy.tutorial.practice.welcomeFeaturesCta}
+            visual="welcome"
+            {...tutorialSkipConfirm}
+            onSkip={finishWelcomeSkip}
+            onWelcomeFlyStart={startWelcomeFly}
+            onNext={goWelcomeFeaturesHorizon}
+            onAltNext={goWelcomeFeaturesHorizon}
+          />
+        ) : null
+      }
+    >
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
+        { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY + (tab === "report" ? 48 : 0) },
       ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      {renderExternalBackNav()}
+      {isPublicProfileView || !profileLoading ? (
       <ProfileKinetikHeroNative
-        displayName={
-          displayName.trim() ||
-          (!isPublicProfileView ? fUser?.displayName?.trim() : "") ||
-          "—"
-        }
+        displayName={displayName.trim() || handle.trim()}
         handle={handle.trim()}
         avatarUrl={
           avatarUrl.trim() ||
@@ -838,6 +1122,7 @@ export default function ProfileHomeScreen({
         bio={bio}
         countryCode={countryCode}
         plan={currentIsProView ? "pro" : plan}
+        planProBgVariant={planProBgVariant}
         language={language}
         memberSinceMs={memberSinceMs}
         summary={statsBundle.summary}
@@ -848,24 +1133,26 @@ export default function ProfileHomeScreen({
         metricValueDeltas={statsBundle.metricValueDeltas}
         isMe={isMe}
         onOpenMenu={() => setMenuOpen(true)}
-        onToggleMetricsScope={onToggleMetricsScope}
-        wcStackedMetricsSections={wcStackedMetricsSections ?? undefined}
-        wcStackedStatsLoading={wcStackedStatsLoading}
         menuUnreadCount={menuUnreadCount}
         badges={resolvedBadges}
         onBadgePress={(badge) => {
           setSelectedBadge(badge);
           setBadgeModalOpen(true);
         }}
+        targetUid={targetUid ?? null}
+        profileViewCount={profileViewCount}
+        unitBalance={unitBalance}
+        onOpenUnitLedger={
+          isMe ? () => navigation.navigate("UnitLedger") : undefined
+        }
       />
+      ) : null}
 
       {renderTabs()}
 
       {tab === "overview" ? (
         renderOverview()
-      ) : tab === "bracket" ? (
-        <ProfileBracketTabNative uid={targetUid} language={language} />
-      ) : (
+      ) : tab === "report" ? (
         <ProfileStatsTabNative
           uid={targetUid}
           language={language}
@@ -875,199 +1162,189 @@ export default function ProfileHomeScreen({
           isMyPro={profilePlanHook.isMyPro}
           isTargetPro={profilePlanHook.isTargetPro}
         />
+      ) : tab === "awards" ? (
+        <ProfileAwardsTabNative uid={targetUid} language={language} />
+      ) : (
+        <ProfileBracketTabNative uid={targetUid} language={language} />
       )}
     </ScrollView>
+    </TutorialWelcomeWorldCameraNative>
+
+    {isMe ? (
+      <ProfileMenuEdgeHandleNative
+        onOpen={() => setMenuOpen(true)}
+        unreadCount={menuUnreadCount}
+        hidden={menuOpen || welcomeFlyActive}
+      />
+    ) : null}
+
+    {renderProfileBackHandle()}
 
     <Modal
       visible={settingsOpen}
       transparent
-      animationType="fade"
+      animationType={settingsAnim}
       onRequestClose={() => {
         if (langModalOpen || countryModalOpen) {
           setLangModalOpen(false);
           setCountryModalOpen(false);
           return;
         }
-        setSettingsOpen(false);
+        returnFromSettingsToMenu();
+      }}
+      onDismiss={() => {
+        // iOS: Modal が完全に閉じたあとサイドメニューを開く
+        openMenuAfterSettingsClosed();
       }}
       {...(Platform.OS === "ios" ? ({ presentationStyle: "overFullScreen" } as const) : {})}
     >
       <View style={styles.profileModalRoot}>
-        <ProfileSettingsBackdropBlur />
-        <View pointerEvents="none" style={styles.profileModalTint} />
+        <GamesPageBackgroundNative lite />
         <SafeAreaView style={styles.profileModalSafe}>
           <View style={styles.profileModalLayer}>
             <KeyboardAvoidingView
               style={styles.profileModalFill}
               behavior={Platform.OS === "ios" ? "padding" : undefined}
             >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.settingsClose}
-              onPress={() => setSettingsOpen(false)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={({ pressed }) => [
-                styles.profileFloatingClose,
-                pressed && styles.profileFloatingClosePressed,
-              ]}
-            >
-              <MaterialCommunityIcons name="chevron-left" size={22} color="#fff" />
-            </Pressable>
-            <ScrollView
-              style={styles.profileModalFill}
-              contentContainerStyle={[
-                styles.profileOverlayScrollContent,
-                { paddingBottom: Math.max(bottomReserveY, 12) + 28 },
-              ]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.settingsNeonShell}>
-                <Animated.View
-                  pointerEvents="none"
-                  style={[styles.settingsNeonSpinWrap, neonSpinStyle]}
-                >
-                  <LinearGradient
-                    colors={[...SETTINGS_NEON_SPIN_COLORS]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                </Animated.View>
-                <View style={styles.settingsNeonInner}>
-                  <LinearGradient
-                    pointerEvents="none"
-                    colors={["rgba(255,255,255,0.07)", "transparent"]}
-                    style={styles.settingsNeonInnerTopSheen}
-                  />
-                  <View style={styles.settingsHeaderBlock}>
-                    <Text style={styles.settingsTitle}>{t.settingsTitle}</Text>
-                    <Text style={styles.settingsSubtitle}>{t.settingsSubtitle}</Text>
+              {/* 他サブページと同様: ヘッダー固定 / 本文のみスクロール */}
+              <CyberSubpageHeaderNative
+                eyebrow="PROFILE"
+                title="SETTINGS"
+                subtitle={t.settingsSubtitle}
+                onBack={returnFromSettingsToMenu}
+                edgeBack
+                hideBrandShelf={false}
+              />
+              <ProfileBackEdgeHandleNative
+                onPress={returnFromSettingsToMenu}
+                accessibilityLabel={isJa ? "戻る" : "Back"}
+              />
+              <ScrollView
+                style={styles.profileModalFill}
+                contentContainerStyle={[
+                  styles.settingsPageScrollContent,
+                  { paddingBottom: Math.max(bottomReserveY, 12) + 40 },
+                ]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.settingsFormGap}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t.changePhotoA11y}
+                    onPress={() => void pickAvatar()}
+                    disabled={uploadingAvatar || saving}
+                    style={({ pressed }) => [
+                      styles.avatarEditWrap,
+                      pressed && styles.avatarEditWrapPressed,
+                    ]}
+                  >
+                    <View style={styles.avatarEditCircle}>
+                      {avatarUrl.trim().length > 0 ? (
+                        <Image source={{ uri: avatarUrl.trim() }} style={styles.avatarEditImage} />
+                      ) : (
+                        <View style={[styles.avatarEditImage, styles.avatarEditFallback]}>
+                          <Text style={styles.avatarEditLetter}>
+                            {(
+                              displayName.trim()[0] ??
+                              fUser?.displayName?.trim()?.[0] ??
+                              handle.trim()[0] ??
+                              "?"
+                            ).toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.avatarEditRing} />
+                    </View>
+                    <View style={styles.avatarEditCameraFab}>
+                      <MaterialCommunityIcons name="camera" size={14} color="#fff" />
+                    </View>
+                    {uploadingAvatar ? (
+                      <View style={styles.avatarEditUploading}>
+                        <ActivityIndicator color="rgba(248,250,252,0.95)" />
+                      </View>
+                    ) : null}
+                  </Pressable>
+
+                  <View style={styles.fieldBlock}>
+                    <Text style={styles.fieldLabel}>{t.nameLabel}</Text>
+                    <TextInput
+                      value={displayName}
+                      onChangeText={setDisplayName}
+                      style={styles.fieldInput}
+                      placeholder={t.namePlaceholder}
+                      placeholderTextColor="rgba(255,255,255,0.38)"
+                      maxLength={50}
+                      editable={!saving && !uploadingAvatar}
+                      keyboardAppearance="dark"
+                    />
                   </View>
 
-                  <View style={styles.settingsFormGap}>
+                  <View style={styles.fieldBlock}>
+                    <Text style={styles.fieldLabel}>{t.bio}</Text>
+                    <TextInput
+                      value={bio}
+                      onChangeText={setBio}
+                      style={[styles.fieldInput, styles.bioInput]}
+                      placeholder={t.bioPlaceholder}
+                      placeholderTextColor="rgba(255,255,255,0.38)"
+                      multiline
+                      maxLength={280}
+                      editable={!saving && !uploadingAvatar}
+                      keyboardAppearance="dark"
+                    />
+                  </View>
+
+                  <View style={styles.fieldBlock}>
+                    <Text style={styles.fieldLabel}>{t.langLabel}</Text>
                     <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={t.changePhotoA11y}
-                      onPress={() => void pickAvatar()}
-                      disabled={uploadingAvatar || saving}
-                      style={({ pressed }) => [
-                        styles.avatarEditWrap,
-                        pressed && styles.avatarEditWrapPressed,
-                      ]}
-                    >
-                      <View style={styles.avatarEditCircle}>
-                        {avatarUrl.trim().length > 0 ? (
-                          <Image source={{ uri: avatarUrl.trim() }} style={styles.avatarEditImage} />
-                        ) : (
-                          <View style={[styles.avatarEditImage, styles.avatarEditFallback]}>
-                            <Text style={styles.avatarEditLetter}>
-                              {(
-                                displayName.trim()[0] ??
-                                fUser?.displayName?.trim()?.[0] ??
-                                handle.trim()[0] ??
-                                "?"
-                              ).toUpperCase()}
-                            </Text>
-                          </View>
-                        )}
-                        <View style={styles.avatarEditRing} />
-                      </View>
-                      <View style={styles.avatarEditCameraFab}>
-                        <MaterialCommunityIcons name="camera" size={14} color="#fff" />
-                      </View>
-                      {uploadingAvatar ? (
-                        <View style={styles.avatarEditUploading}>
-                          <ActivityIndicator color="rgba(248,250,252,0.95)" />
-                        </View>
-                      ) : null}
-                    </Pressable>
-
-                    <View style={styles.fieldBlock}>
-                      <Text style={styles.fieldLabel}>{t.nameLabel}</Text>
-                      <TextInput
-                        value={displayName}
-                        onChangeText={setDisplayName}
-                        style={styles.fieldInput}
-                        placeholder={t.namePlaceholder}
-                        placeholderTextColor="rgba(255,255,255,0.38)"
-                        maxLength={50}
-                        editable={!saving && !uploadingAvatar}
-                        keyboardAppearance="dark"
-                      />
-                    </View>
-
-                    <View style={styles.fieldBlock}>
-                      <Text style={styles.fieldLabel}>{t.bio}</Text>
-                      <TextInput
-                        value={bio}
-                        onChangeText={setBio}
-                        style={[styles.fieldInput, styles.bioInput]}
-                        placeholder={t.bioPlaceholder}
-                        placeholderTextColor="rgba(255,255,255,0.38)"
-                        multiline
-                        maxLength={280}
-                        editable={!saving && !uploadingAvatar}
-                        keyboardAppearance="dark"
-                      />
-                    </View>
-
-                    <View style={styles.fieldBlock}>
-                      <Text style={styles.fieldLabel}>{t.langLabel}</Text>
-                      <Pressable
-                        style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
-                        onPress={() => {
-                          setCountryModalOpen(false);
-                          setLangModalOpen(true);
-                        }}
-                        disabled={saving || uploadingAvatar}
-                      >
-                        <Text style={styles.selectRowText}>
-                          {language === "ja" ? "日本語" : "English"}
-                        </Text>
-                        <MaterialCommunityIcons
-                          name="chevron-down"
-                          size={20}
-                          color="rgba(226,232,240,0.65)"
-                        />
-                      </Pressable>
-                    </View>
-
-                    <View style={styles.fieldBlock}>
-                      <Text style={styles.fieldLabel}>{t.countryLabel}</Text>
-                      <Pressable
-                        style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
-                        onPress={() => {
-                          setLangModalOpen(false);
-                          setCountryModalOpen(true);
-                        }}
-                        disabled={saving || uploadingAvatar}
-                      >
-                        <Text style={styles.selectRowText} numberOfLines={1}>
-                          {profileCountryRowLabel(countryCode, language)}
-                        </Text>
-                        <MaterialCommunityIcons
-                          name="chevron-down"
-                          size={20}
-                          color="rgba(226,232,240,0.65)"
-                        />
-                      </Pressable>
-                    </View>
-
-                    <Pressable
-                      style={[
-                        styles.saveButton,
-                        (saving || uploadingAvatar) && styles.buttonDisabled,
-                      ]}
-                      onPress={() => void handleSaveProfile()}
+                      style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
+                      onPress={() => {
+                        setCountryModalOpen(false);
+                        setLangModalOpen(true);
+                      }}
                       disabled={saving || uploadingAvatar}
                     >
-                      <Text style={styles.saveText}>{saving ? t.saving : t.save}</Text>
+                      <Text style={styles.selectRowText}>
+                        {language === "ja" ? "日本語" : "English"}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name="chevron-down"
+                        size={20}
+                        color="rgba(226,232,240,0.65)"
+                      />
                     </Pressable>
                   </View>
+
+                  <View style={styles.fieldBlock}>
+                    <Text style={styles.fieldLabel}>{t.countryLabel}</Text>
+                    <Pressable
+                      style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
+                      onPress={() => {
+                        setLangModalOpen(false);
+                        setCountryModalOpen(true);
+                      }}
+                      disabled={saving || uploadingAvatar}
+                    >
+                      <Text style={styles.selectRowText} numberOfLines={1}>
+                        {profileCountryRowLabel(countryCode, language)}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name="chevron-down"
+                        size={20}
+                        color="rgba(226,232,240,0.65)"
+                      />
+                    </Pressable>
+                  </View>
+
+                  <PredictOverlaySubmitButtonNative
+                    label={t.save}
+                    disabledLabel={t.saving}
+                    enabled={!saving && !uploadingAvatar}
+                    onPress={() => void handleSaveProfile()}
+                  />
                 </View>
-              </View>
-            </ScrollView>
+              </ScrollView>
             </KeyboardAvoidingView>
             {(langModalOpen || countryModalOpen) && (
               <View style={styles.profileInlinePickerRoot} pointerEvents="box-none">
@@ -1159,16 +1436,30 @@ export default function ProfileHomeScreen({
       unreadAnnouncements={menuUnreadCount}
       uid={fUser?.uid ?? null}
       plan={plan}
-      onOpenProfileSettings={() => {
-        setMenuOpen(false);
-        setSettingsOpen(true);
-      }}
+      displayName={
+        displayName.trim() ||
+        fUser?.displayName?.trim() ||
+        ""
+      }
+      handle={handle.trim()}
+      avatarUrl={
+        avatarUrl.trim() ||
+        fUser?.photoURL?.trim() ||
+        ""
+      }
+      unitBalance={unitBalance ?? undefined}
+      onOpenProfileSettings={openSettingsFromMenu}
       onOpenInApp={(page) => {
         setMenuOpen(false);
         if (page === "badges") navigation.navigate("Badges");
+        else if (page === "invite") navigation.navigate("Invite");
+        else if (page === "unitLedger") navigation.navigate("UnitLedger");
+        else if (page === "redeem") navigation.navigate("Redeem");
         else if (page === "announcements") navigation.navigate("Announcements");
         else if (page === "plan") navigation.navigate("PlanStatus");
         else if (page === "subscribe") navigation.navigate("ProSubscribe");
+        else if (page === "proSkin") navigation.navigate("ProSkin");
+        else if (page === "deleteAccount") navigation.navigate("DeleteAccount");
         else if (page === "guidelines") navigation.navigate("CommunityGuidelines");
         else if (page === "help") navigation.navigate("Help");
         else if (page === "terms") navigation.navigate("Terms");
@@ -1179,6 +1470,102 @@ export default function ProfileHomeScreen({
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
+        else if (page === "restartTutorial") {
+          void (async () => {
+            const uid = fUser?.uid ?? null;
+            const {
+              prepareTutorialRestartNative,
+              pulseTutorialRestartNative,
+            } = await import("../tutorial/tutorialRestartEventsNative");
+            const at = await prepareTutorialRestartNative(uid);
+            /** Stack → Tab まで親をたどる（getParent 1段だと届かないことがある） */
+            let tabNav:
+              | BottomTabNavigationProp<MainTabParamList>
+              | undefined;
+            let cursor: { getParent?: () => unknown } | undefined =
+              navigation as { getParent?: () => unknown };
+            for (let i = 0; i < 4 && cursor; i += 1) {
+              const parent = cursor.getParent?.() as
+                | {
+                    getState?: () => { routeNames?: string[] };
+                    navigate?: BottomTabNavigationProp<MainTabParamList>["navigate"];
+                  }
+                | undefined;
+              if (!parent) break;
+              if (parent.getState?.()?.routeNames?.includes("GamesTab")) {
+                tabNav = parent as BottomTabNavigationProp<MainTabParamList>;
+                break;
+              }
+              cursor = parent as { getParent?: () => unknown };
+            }
+            const nav = tabNav ?? tabNavigation;
+            /**
+             * armTutorialTabTransitionQuiet の購読反映を1フレーム待つ。
+             * 同ティックで navigate するとスライド付きのまま welcome が載る。
+             */
+            await new Promise<void>((resolve) => {
+              requestAnimationFrame(() => resolve());
+            });
+            nav.navigate({
+              name: "GamesTab",
+              params: {
+                screen: "GamesHome",
+                params: { restartTutorialAt: at },
+                initial: false,
+              },
+              merge: true,
+            });
+            /** lazy タブがマウントされるまでイベントを連続送出 */
+            pulseTutorialRestartNative();
+          })();
+        }
+        else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
+        else if (page === "futuristicBgPreview" && __DEV__)
+          navigation.navigate("FuturisticBgPreview");
+        else if (page === "titleSkinPreview" && __DEV__)
+          navigation.navigate("TitleSkinPreview");
+        else if (page === "waveProSkinPreview" && __DEV__)
+          navigation.navigate("WaveProSkinPreview");
+        else if (page === "rankingListProSkinPreview" && __DEV__)
+          navigation.navigate("RankingListProSkinPreview");
+        else if (page === "proSkinUnlockPreview" && __DEV__)
+          navigation.navigate("ProSkinUnlockPreview");
+        else if (page === "referralStampCelebratePreview" && __DEV__)
+          navigation.navigate("ReferralStampCelebratePreview");
+        else if (page === "unitEarnCelebratePreview" && __DEV__)
+          navigation.navigate("UnitEarnCelebratePreview");
+        else if (page === "careerFlipButtonPreview" && __DEV__)
+          navigation.navigate("CareerFlipButtonPreview");
+        else if (page === "careerPlacementPreview" && __DEV__)
+          navigation.navigate("CareerPlacementPreview");
+        else if (page === "unitEarnModalDesignPreview" && __DEV__)
+          navigation.navigate("UnitEarnModalDesignPreview");
+        else if (page === "unitEarnOverlayAnimPreview" && __DEV__)
+          navigation.navigate("UnitEarnOverlayAnimPreview");
+        else if (page === "unitEarnOverlayFontPreview" && __DEV__)
+          navigation.navigate("UnitEarnOverlayFontPreview");
+        else if (page === "uniterzLogoTypePreview" && __DEV__)
+          navigation.navigate("UniterzLogoTypePreview");
+        else if (page === "uniterzProBadgePreview" && __DEV__)
+          navigation.navigate("UniterzProBadgePreview");
+        else if (page === "proBadgeComparePreview" && __DEV__)
+          navigation.navigate("ProBadgeComparePreview");
+        else if (page === "resultCardDesignPreview" && __DEV__)
+          navigation.navigate("ResultCardDesignPreview");
+        else if (page === "resultBadgeDesignPreview" && __DEV__)
+          navigation.navigate("ResultBadgeDesignPreview");
+        else if (page === "resultStampDesignPreview" && __DEV__)
+          navigation.navigate("ResultStampDesignPreview");
+        else if (page === "resultStreakTagDesignPreview" && __DEV__)
+          navigation.navigate("ResultStreakTagDesignPreview");
+        else if (page === "navBarDesignPreview" && __DEV__)
+          navigation.navigate("NavBarDesignPreview");
+        else if (page === "splashLogoPreview" && __DEV__)
+          navigation.navigate("SplashLogoPreview");
+        else if (page === "liveGameStatsPreview" && __DEV__)
+          navigation.navigate("LiveGameStatsPreview");
+        else if (page === "profileKinetikMetricsPreview" && __DEV__)
+          navigation.navigate("ProfileKinetikMetricsPreview");
       }}
     />
     <ProfileBadgeDetailModal
@@ -1190,6 +1577,34 @@ export default function ProfileHomeScreen({
         setSelectedBadge(null);
       }}
     />
+    {reportOverlay ? (
+      <ProfileReportDeliveryOverlayNative
+        active={reportOverlay}
+        language={language}
+        onDismiss={dismissReportOverlay}
+      />
+    ) : null}
+    {skinUnlockIds && skinUnlockIds.length > 0 ? (
+      <ProfileProSkinUnlockOverlayNative
+        unlockedIds={skinUnlockIds}
+        language={language === "ja" ? "ja" : "en"}
+        preview={skinUnlockPreview}
+        visible
+        ownerCounts={skinUnlockOwnerCounts}
+        onDismiss={dismissSkinUnlockAndClearForce}
+        onApplied={(id) => {
+          setPlanProBgVariant(id);
+        }}
+      />
+    ) : null}
+    {!isPublicProfileView ? (
+      <View style={styles.tutorialHostLayer} pointerEvents="box-none">
+        <TutorialLiveHostNative
+          page="profile"
+          language={(language === "en" ? "en" : "ja") as Language}
+        />
+      </View>
+    ) : null}
     </View>
   );
 }
@@ -1200,6 +1615,11 @@ const styles = StyleSheet.create({
     position: "relative",
     backgroundColor: "transparent",
   },
+  tutorialHostLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 500,
+    elevation: 500,
+  },
   scroll: {
     flex: 1,
     width: "100%",
@@ -1208,6 +1628,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.sm,
     flexGrow: 1,
+    alignSelf: "stretch",
+    width: "100%",
   },
   hero: {
     borderRadius: radius.card,
@@ -1357,25 +1779,6 @@ const styles = StyleSheet.create({
       default: "sans-serif",
     }),
   },
-  proPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: "rgba(124,92,255,0.35)",
-    borderWidth: 1,
-    borderColor: "rgba(167,139,250,0.45)",
-  },
-  proPillText: {
-    color: "rgba(248,250,252,0.95)",
-    fontSize: 10,
-    fontWeight: "800",
-    fontFamily: Platform.select({
-      ios: "BebasNeue_400Regular",
-      android: "BebasNeue_400Regular",
-      default: "sans-serif",
-    }),
-    letterSpacing: 1.2,
-  },
   streakPill: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -1389,49 +1792,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  /** Web `Tabs.tsx`（size lg + `bracketMarketTeamTypography`）に寄せる：Bebas・tracking 0.06em 相当・下線 #6EA8FE */
+  /** Web `CyberSlantedTabBar`（fill）相当。本体デザインは CyberSlantedTabNative に委譲 */
   tabBar: {
     marginBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  tabRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "flex-end",
-    gap: 24,
-  },
-  tabHit: {
-    position: "relative",
-    paddingTop: 2,
-    paddingBottom: 10,
-  },
-  tabHitPressed: {
-    opacity: 0.85,
-  },
-  tabLabel: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 15,
-    fontWeight: "400",
-    /** Web `tracking-[0.06em]` に比例（15px 時は約 0.9px） */
-    letterSpacing: 0.9,
-    fontFamily: Platform.select({
-      ios: "BebasNeue_400Regular",
-      android: "BebasNeue_400Regular",
-      default: "sans-serif",
-    }),
-  },
-  tabLabelActive: {
-    color: "#ffffff",
-  },
-  tabIndicator: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: -StyleSheet.hairlineWidth,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: "#6EA8FE",
   },
   playoffsHeading: {
     alignSelf: "stretch",
@@ -1454,13 +1817,6 @@ const styles = StyleSheet.create({
   summaryGridWrap: {
     alignSelf: "stretch",
     width: "100%",
-  },
-  chartGap: { height: 12 },
-  chartSkeleton: {
-    minHeight: 176,
-    alignItems: "center",
-    justifyContent: "center",
-    ...profileOverviewChartShellStyle,
   },
   muted: {
     color: colors.textSecondary,
@@ -1487,13 +1843,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingVertical: spacing.lg,
   },
-  /** Web `main` + `FloatingCloseButton` + `SettingsNeonCard` に寄せたプロフィール編集 Modal */
   profileModalRoot: {
     flex: 1,
-  },
-  profileModalTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.2)",
+    backgroundColor: APP_MESH_BG_FALLBACK,
   },
   profileModalSafe: {
     flex: 1,
@@ -1512,96 +1864,12 @@ const styles = StyleSheet.create({
   profileModalFill: {
     flex: 1,
   },
-  profileFloatingClose: {
-    position: "absolute",
-    top: 10,
-    right: 12,
-    zIndex: 50,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "rgba(24,24,27,0.85)",
-    alignItems: "center",
-    justifyContent: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 18,
-      },
-      android: { elevation: 10 },
-      default: {},
-    }),
-  },
-  profileFloatingClosePressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.96 }],
-  },
-  profileOverlayScrollContent: {
-    flexGrow: 1,
-    /** 画面中央より下寄り（上パディング多めで重心を下げる） */
-    justifyContent: "center",
-    /** 横に余白を多めにしてカードを視覚的に小さく */
-    paddingHorizontal: 22,
-    paddingTop: 96,
-    paddingBottom: 6,
-    alignItems: "center",
+  settingsPageScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
     width: "100%",
-  },
-  /** Web `SettingsNeonCard` の shell + spin + inner */
-  settingsNeonShell: {
-    position: "relative",
-    width: "100%",
-    maxWidth: 420,
-    borderRadius: 16,
-    overflow: "hidden",
+    maxWidth: 480,
     alignSelf: "center",
-  },
-  settingsNeonSpinWrap: {
-    position: "absolute",
-    width: "220%",
-    height: "220%",
-    left: "-60%",
-    top: "-60%",
-    zIndex: 0,
-  },
-  settingsNeonInner: {
-    position: "relative",
-    zIndex: 1,
-    margin: 1,
-    borderRadius: 15,
-    backgroundColor: "hsl(240, 15%, 9%)",
-    /** Web innerPad より一回り詰めてモバイルでコンパクトに */
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    overflow: "hidden",
-  },
-  settingsNeonInnerTopSheen: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 72,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-  },
-  settingsHeaderBlock: {
-    marginBottom: 16,
-  },
-  settingsTitle: {
-    color: "rgba(248,250,252,0.96)",
-    fontSize: 15,
-    fontWeight: "600",
-    lineHeight: 20,
-  },
-  settingsSubtitle: {
-    marginTop: 4,
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-    lineHeight: 17,
   },
   settingsFormGap: {
     gap: 14,
@@ -1619,7 +1887,7 @@ const styles = StyleSheet.create({
   },
   avatarEditUploading: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 54,
+    borderRadius: 0,
     backgroundColor: "rgba(0,0,0,0.45)",
     alignItems: "center",
     justifyContent: "center",
@@ -1627,9 +1895,11 @@ const styles = StyleSheet.create({
   avatarEditCircle: {
     width: 108,
     height: 108,
-    borderRadius: 54,
+    borderRadius: 0,
     overflow: "hidden",
     backgroundColor: "rgba(0,0,0,0.5)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.4)",
   },
   avatarEditImage: {
     width: "100%",
@@ -1646,9 +1916,9 @@ const styles = StyleSheet.create({
   },
   avatarEditRing: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 54,
-    borderWidth: 3,
-    borderColor: "rgba(0,0,0,0.4)",
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.25)",
   },
   avatarEditCameraFab: {
     position: "absolute",
@@ -1656,12 +1926,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: 0,
     backgroundColor: "rgba(0,0,0,0.92)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 255, 0.35)",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -1681,13 +1951,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  /** Web `border-white/15 bg-black/20 rounded-xl` に相当（モバイルはややコンパクト） */
+  /** Web プロフィール編集の角ばり入力に相当 */
   fieldInput: {
     minHeight: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(0, 245, 255, 0.28)",
+    backgroundColor: "rgba(0,0,0,0.35)",
     color: colors.textPrimary,
     fontSize: 14,
     paddingHorizontal: 12,
@@ -1699,10 +1969,10 @@ const styles = StyleSheet.create({
   },
   selectRow: {
     minHeight: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(0, 245, 255, 0.28)",
+    backgroundColor: "rgba(0,0,0,0.35)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: "row",
@@ -1720,30 +1990,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  /** Web `mt-2` + `shadow-blue-500/30` に寄せる */
-  saveButton: {
-    minHeight: 42,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgb(59,130,246)",
-    marginTop: 6,
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgb(59,130,246)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-      },
-      android: { elevation: 6 },
-      default: {},
-    }),
-  },
-  saveText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
   modalBackdropFill: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.55)",
@@ -1751,9 +1997,9 @@ const styles = StyleSheet.create({
   modalSheet: {
     position: "relative",
     zIndex: 1,
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(0, 245, 255, 0.28)",
     backgroundColor: "rgba(15,23,42,0.98)",
     paddingVertical: 8,
     overflow: "hidden",
@@ -1762,9 +2008,9 @@ const styles = StyleSheet.create({
     position: "relative",
     zIndex: 1,
     maxHeight: 480,
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(0, 245, 255, 0.28)",
     backgroundColor: "rgba(15,23,42,0.98)",
     paddingVertical: 8,
     overflow: "hidden",
@@ -1796,23 +2042,5 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "rgba(248,250,252,0.95)",
     fontSize: 15,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  logoutButton: {
-    minHeight: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(15,21,38,0.84)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: spacing.md,
-  },
-  logoutText: {
-    color: colors.textPrimary,
-    fontSize: typography.body,
-    fontWeight: "700",
   },
 });

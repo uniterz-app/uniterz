@@ -2,6 +2,7 @@
 
 import {
   Alfa_Slab_One,
+  Michroma,
   Montserrat,
   Noto_Sans_JP,
   Oxanium,
@@ -18,7 +19,7 @@ import {
 
 export const nameOxanium = Oxanium({
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["600", "700", "800"],
   display: "swap",
 });
 
@@ -37,6 +38,27 @@ const matchVsMontserrat = Montserrat({
 });
 
 export const matchVsLabelClass = matchVsMontserrat.className;
+
+/** PRO バッジ — Eurostile（未インストール時は Michroma で Web フォールバック） */
+const proBadgeEurostileFallback = Michroma({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
+
+export const proBadgeWordClass = proBadgeEurostileFallback.className;
+
+/** Unit 獲得オーバーレイ等 — サイバー系ラテン（Michroma） */
+export const nameMichroma = proBadgeEurostileFallback;
+
+export const proBadgeWordFamily = [
+  '"Eurostile"',
+  '"Eurostile Extended"',
+  '"Eurostile Next"',
+  '"Eurostile Next LT Pro"',
+  proBadgeEurostileFallback.style.fontFamily,
+  "sans-serif",
+].join(", ");
 
 /** 試合カード・リザルトのスコア（VS と同じ Montserrat Black Italic） */
 export const matchScoreClass = [
@@ -87,6 +109,9 @@ export const summaryMetricNumClass = [
   alfa.className,
   "font-bold tabular-nums tracking-wide",
 ].join(" ");
+
+/** CyberNumber 用（ランキング得点と同じ Alfa Slab One） */
+export const cyberNumberDisplay = alfa;
 
 /** アプリ日本語の基準フォント（モーダル・ランキング等と共通） */
 export const jp = Noto_Sans_JP({

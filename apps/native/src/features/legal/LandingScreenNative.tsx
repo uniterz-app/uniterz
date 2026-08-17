@@ -1,5 +1,10 @@
-/** Web モバイル LP 相当 — 起動時ランディング（ワイヤーフレーム地形 + サイバー UI） */
-import { useEffect, useRef, useState } from "react";
+/**
+ * Web モバイル LP 相当 — 起動ランディング
+ * 演出方針: スキャン/スクランブル/着弾系は使わない。
+ * 「暗い地平 → 光の線 → ブランドが立ち上がる → CTA」のシネマティックな一幕。
+ * 追加のセンス層: 地平の残光、短い whisper コピー、CTA レールの一閃。
+ */
+import { useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
@@ -14,7 +19,6 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import type { AuthStackParamList } from "../../navigation/types";
 import { spacing } from "../../theme/tokens";
 import AuthLandingBackgroundNative from "../auth/AuthLandingBackgroundNative";
@@ -31,9 +35,16 @@ type LandingSkewBtnProps = {
   onPress: () => void;
   onPressIn?: () => void;
   onPressOut?: () => void;
+  /** 入場・待機アニメ用 */
+  enterOpacity: Animated.Value;
+  enterX: Animated.Value;
+  pressScale: Animated.Value;
+  /** 0→1 でレール光が一閃（入場後） */
+  railSweep: Animated.Value;
+  /** 0↔1 待機中のレール脈動 */
+  railPulse: Animated.Value;
 };
 
-/** スキュー平行四辺形 — primary / ghost 同一シェル */
 function LandingSkewBtn({
   label,
   labelStyle,
@@ -41,9 +52,39 @@ function LandingSkewBtn({
   onPress,
   onPressIn,
   onPressOut,
+  enterOpacity,
+  enterX,
+  pressScale,
+  railSweep,
+  railPulse,
 }: LandingSkewBtnProps) {
+  const railY = railSweep.interpolate({
+    inputRange: [0, 1],
+    outputRange: [52, -8],
+  });
+  const railSweepOpacity = railSweep.interpolate({
+    inputRange: [0, 0.12, 0.65, 1],
+    outputRange: [0, 1, 1, 0],
+  });
+  const railPulseOpacity = railPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 0.95],
+  });
+  const borderGlowOpacity = railPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: variant === "primary" ? [0.22, 0.55] : [0.1, 0.32],
+  });
+
   return (
-    <View style={styles.ctaSkewWrap}>
+    <Animated.View
+      style={[
+        styles.ctaSkewWrap,
+        {
+          opacity: enterOpacity,
+          transform: [{ translateX: enterX }, { scale: pressScale }],
+        },
+      ]}
+    >
       <Pressable
         style={styles.ctaBtnPressable}
         onPress={onPress}
@@ -56,39 +97,41 @@ function LandingSkewBtn({
             variant === "primary" ? styles.ctaBtnBorderPrimary : styles.ctaBtnBorderGhost,
           ]}
         >
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.ctaBtnGlow,
+              variant === "primary" ? styles.ctaBtnGlowPrimary : styles.ctaBtnGlowGhost,
+              { opacity: borderGlowOpacity },
+            ]}
+          />
           <View
             style={[
               styles.ctaBtnFill,
               variant === "primary" ? styles.ctaBtnFillPrimary : styles.ctaBtnFillGhost,
             ]}
           >
-            <View style={styles.btnRail} pointerEvents="none" />
+            <Animated.View
+              style={[styles.btnRail, { opacity: railPulseOpacity }]}
+              pointerEvents="none"
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.btnRailSweep,
+                {
+                  opacity: railSweepOpacity,
+                  transform: [{ translateY: railY }],
+                },
+              ]}
+            />
             <View style={styles.ctaLabelWrap}>
               <Text style={labelStyle}>{label}</Text>
             </View>
           </View>
         </View>
       </Pressable>
-    </View>
-  );
-}
-
-/** コーナーブラケット — サイバーフレーム装飾 */
-function CyberFrameNative({ width }: { width: number }) {
-  const arm = Math.min(28, width * 0.08);
-  const color = "rgba(103,232,249,0.45)";
-  const corner = {
-    position: "absolute" as const,
-    width: arm,
-    height: arm,
-  };
-  return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { opacity: 0.85 }]}>
-      <View style={[corner, { top: 0, left: 0, borderTopWidth: 1, borderLeftWidth: 1, borderColor: color }]} />
-      <View style={[corner, { top: 0, right: 0, borderTopWidth: 1, borderRightWidth: 1, borderColor: color }]} />
-      <View style={[corner, { bottom: 0, left: 0, borderBottomWidth: 1, borderLeftWidth: 1, borderColor: color }]} />
-      <View style={[corner, { bottom: 0, right: 0, borderBottomWidth: 1, borderRightWidth: 1, borderColor: color }]} />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -98,232 +141,387 @@ export default function LandingScreenNative() {
   const { height: windowHeight, width: windowWidth } = Dimensions.get("window");
   const contentWidth = Math.min(340, windowWidth - 40);
 
-  const [heroScrambleRun, setHeroScrambleRun] = useState(false);
-  const heroDisplay = useScrambleDecode("UNITERZ", heroScrambleRun);
-
+  /** 全体の暗幕（最初は黒く、徐々に背景が見える） */
+  const curtain = useRef(new Animated.Value(1)).current;
+  /** 地平線の光 — 中央から左右へ伸びる */
+  const horizon = useRef(new Animated.Value(0)).current;
+  const horizonGlow = useRef(new Animated.Value(0)).current;
+  /** 入場後の線の脈動・コア点滅・横走りシマー */
+  const horizonPulse = useRef(new Animated.Value(0)).current;
+  const horizonCorePulse = useRef(new Animated.Value(0)).current;
+  const horizonShimmer = useRef(new Animated.Value(0)).current;
+  /** ブランドが地平から立ち上がる */
+  const brandOpacity = useRef(new Animated.Value(0)).current;
+  const brandY = useRef(new Animated.Value(28)).current;
+  const brandBreath = useRef(new Animated.Value(0)).current;
+  /** サブコピー */
   const eyebrowOpacity = useRef(new Animated.Value(0)).current;
-  const eyebrowY = useRef(new Animated.Value(10)).current;
-  const heroOpacity = useRef(new Animated.Value(0)).current;
-  const heroScale = useRef(new Animated.Value(0.92)).current;
-  const heroGlow = useRef(new Animated.Value(0)).current;
-  const dividerScale = useRef(new Animated.Value(0)).current;
-  const dividerOpacity = useRef(new Animated.Value(0)).current;
-  const ctaOpacity = useRef(new Animated.Value(0)).current;
-  const ctaY = useRef(new Animated.Value(18)).current;
-  const lineFlow = useRef(new Animated.Value(0)).current;
+  const eyebrowY = useRef(new Animated.Value(8)).current;
+  /** 地平下の whisper */
+  const whisperOpacity = useRef(new Animated.Value(0)).current;
+  /** CTA — 2ボタン個別入場 + レール脈動 */
+  const primaryOpacity = useRef(new Animated.Value(0)).current;
+  const primaryX = useRef(new Animated.Value(-28)).current;
+  const ghostOpacity = useRef(new Animated.Value(0)).current;
+  const ghostX = useRef(new Animated.Value(28)).current;
   const primaryScale = useRef(new Animated.Value(1)).current;
-  const bootScanY = useRef(new Animated.Value(0)).current;
-  const bootScanOpacity = useRef(new Animated.Value(0)).current;
-  const contentReveal = useRef(new Animated.Value(0)).current;
+  const ghostScale = useRef(new Animated.Value(1)).current;
+  const primaryRailSweep = useRef(new Animated.Value(0)).current;
+  const ghostRailSweep = useRef(new Animated.Value(0)).current;
+  const primaryRailPulse = useRef(new Animated.Value(0)).current;
+  const ghostRailPulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     hideNativeBootSplash();
 
-    Animated.parallel([
-      Animated.timing(bootScanOpacity, {
-        toValue: 1,
-        duration: 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bootScanY, {
-        toValue: 1,
-        duration: 520,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      Animated.timing(bootScanOpacity, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-    });
+    const easeOut = Easing.bezier(0.22, 1, 0.36, 1);
+    const easeInOut = Easing.bezier(0.45, 0, 0.55, 1);
 
-    Animated.timing(contentReveal, {
-      toValue: 1,
-      duration: 420,
-      delay: 120,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-
-    Animated.parallel([
-      Animated.timing(eyebrowOpacity, {
-        toValue: 1,
-        duration: 320,
-        delay: 160,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(eyebrowY, {
+    Animated.sequence([
+      Animated.delay(180),
+      Animated.timing(curtain, {
         toValue: 0,
-        duration: 320,
-        delay: 160,
-        easing: Easing.out(Easing.cubic),
+        duration: 900,
+        easing: easeInOut,
         useNativeDriver: true,
       }),
     ]).start();
 
-    const heroTimer = setTimeout(() => setHeroScrambleRun(true), 240);
-    const heroEntrance = setTimeout(() => {
+    Animated.sequence([
+      Animated.delay(420),
       Animated.parallel([
-        Animated.timing(heroOpacity, {
+        Animated.timing(horizon, {
           toValue: 1,
-          duration: 380,
-          easing: Easing.out(Easing.cubic),
+          duration: 1100,
+          easing: easeOut,
           useNativeDriver: true,
         }),
-        Animated.spring(heroScale, {
+        Animated.timing(horizonGlow, {
           toValue: 1,
+          duration: 1200,
+          easing: easeOut,
           useNativeDriver: true,
-          speed: 18,
-          bounciness: 3,
         }),
-      ]).start();
-    }, 260);
+      ]),
+    ]).start();
 
-    const dividerTimer = setTimeout(() => {
+    Animated.sequence([
+      Animated.delay(980),
       Animated.parallel([
-        Animated.timing(dividerOpacity, {
+        Animated.timing(brandOpacity, {
           toValue: 1,
-          duration: 340,
-          easing: Easing.out(Easing.cubic),
+          duration: 900,
+          easing: easeOut,
           useNativeDriver: true,
         }),
-        Animated.spring(dividerScale, {
-          toValue: 1,
-          useNativeDriver: true,
-          speed: 20,
-          bounciness: 0,
-        }),
-      ]).start();
-    }, 480);
-
-    const ctaTimer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(ctaOpacity, {
-          toValue: 1,
-          duration: 360,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(ctaY, {
+        Animated.timing(brandY, {
           toValue: 0,
-          duration: 360,
+          duration: 1100,
+          easing: easeOut,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    Animated.sequence([
+      Animated.delay(1500),
+      Animated.parallel([
+        Animated.timing(eyebrowOpacity, {
+          toValue: 1,
+          duration: 700,
+          easing: easeOut,
+          useNativeDriver: true,
+        }),
+        Animated.timing(eyebrowY, {
+          toValue: 0,
+          duration: 700,
+          easing: easeOut,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    // 地平の下に一言だけ — 出て、薄く残る
+    Animated.sequence([
+      Animated.delay(1680),
+      Animated.timing(whisperOpacity, {
+        toValue: 1,
+        duration: 640,
+        easing: easeOut,
+        useNativeDriver: true,
+      }),
+      Animated.delay(900),
+      Animated.timing(whisperOpacity, {
+        toValue: 0.38,
+        duration: 700,
+        easing: easeInOut,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // GET STARTED ← / LOG IN → スタッガー入場 → レール一閃 → 脈動開始
+    Animated.sequence([
+      Animated.delay(1880),
+      Animated.stagger(140, [
+        Animated.parallel([
+          Animated.timing(primaryOpacity, {
+            toValue: 1,
+            duration: 620,
+            easing: easeOut,
+            useNativeDriver: true,
+          }),
+          Animated.timing(primaryX, {
+            toValue: 0,
+            duration: 720,
+            easing: easeOut,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(ghostOpacity, {
+            toValue: 1,
+            duration: 620,
+            easing: easeOut,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ghostX, {
+            toValue: 0,
+            duration: 720,
+            easing: easeOut,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+      Animated.stagger(120, [
+        Animated.timing(primaryRailSweep, {
+          toValue: 1,
+          duration: 680,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-      ]).start();
-    }, 620);
-
-    return () => {
-      clearTimeout(heroTimer);
-      clearTimeout(heroEntrance);
-      clearTimeout(dividerTimer);
-      clearTimeout(ctaTimer);
-    };
+        Animated.timing(ghostRailSweep, {
+          toValue: 1,
+          duration: 680,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(primaryRailPulse, {
+            toValue: 1,
+            duration: 2200,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(primaryRailPulse, {
+            toValue: 0,
+            duration: 2200,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(400),
+          Animated.timing(ghostRailPulse, {
+            toValue: 1,
+            duration: 2400,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ghostRailPulse, {
+            toValue: 0,
+            duration: 2400,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    });
   }, [
-    bootScanOpacity,
-    bootScanY,
-    contentReveal,
-    ctaOpacity,
-    ctaY,
-    dividerOpacity,
-    dividerScale,
+    brandOpacity,
+    brandY,
+    curtain,
     eyebrowOpacity,
     eyebrowY,
-    heroOpacity,
-    heroScale,
+    ghostOpacity,
+    ghostRailSweep,
+    ghostX,
+    horizon,
+    horizonGlow,
+    primaryOpacity,
+    primaryRailSweep,
+    primaryX,
+    whisperOpacity,
   ]);
 
   useEffect(() => {
-    const glowLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(heroGlow, {
-          toValue: 1,
-          duration: 2400,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(heroGlow, {
-          toValue: 0,
-          duration: 2400,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    glowLoop.start();
-    return () => glowLoop.stop();
-  }, [heroGlow]);
+    const t = setTimeout(() => {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(brandBreath, {
+            toValue: 1,
+            duration: 3600,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(brandBreath, {
+            toValue: 0,
+            duration: 3600,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      loop.start();
+    }, 2200);
+    return () => clearTimeout(t);
+  }, [brandBreath]);
 
+  /** 地平線 — ゆっくり脈動＋中央コア＋光が横に走る */
   useEffect(() => {
-    const lineLoop = Animated.loop(
-      Animated.timing(lineFlow, {
-        toValue: 1,
-        duration: 2400,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    lineLoop.start();
-    return () => lineLoop.stop();
-  }, [lineFlow]);
+    let pulseLoop: Animated.CompositeAnimation | null = null;
+    let shimmerLoop: Animated.CompositeAnimation | null = null;
+    const t = setTimeout(() => {
+      pulseLoop = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(horizonPulse, {
+              toValue: 1,
+              duration: 2400,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(horizonCorePulse, {
+              toValue: 1,
+              duration: 2400,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(horizonPulse, {
+              toValue: 0,
+              duration: 2400,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(horizonCorePulse, {
+              toValue: 0,
+              duration: 2400,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      );
+      shimmerLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(horizonShimmer, {
+            toValue: 1,
+            duration: 4200,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(horizonShimmer, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      horizonShimmer.setValue(0);
+      pulseLoop.start();
+      shimmerLoop.start();
+    }, 1600);
+    return () => {
+      clearTimeout(t);
+      pulseLoop?.stop();
+      shimmerLoop?.stop();
+    };
+  }, [horizonCorePulse, horizonPulse, horizonShimmer]);
 
-  const lineTravel = lineFlow.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-180, 180],
-  });
-  const heroGlowOpacity = heroGlow.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.28, 0.62],
-  });
-  const bootScanTranslateY = bootScanY.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-windowHeight * 0.08, windowHeight * 1.04],
-  });
-  /** 光学中心をやや上に — 地形の地平線と UNITERZ が重なる */
   const blockShiftY = -windowHeight * 0.045;
-  const contentRevealOpacity = contentReveal.interpolate({
+  const horizonScaleX = horizon.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 1],
+    outputRange: [0.02, 1],
   });
-  const contentRevealY = contentReveal.interpolate({
+  const horizonLineOpacity = Animated.multiply(
+    horizonGlow.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 0.88],
+    }),
+    horizonPulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.58, 1],
+    })
+  );
+  const horizonCoreOpacity = Animated.multiply(
+    horizonGlow.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+    }),
+    horizonCorePulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.55, 1],
+    })
+  );
+  const horizonCoreScale = horizonCorePulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [14 + blockShiftY, blockShiftY],
+    outputRange: [1, 1.55],
   });
-
-  const pressIn = () => {
-    Animated.spring(primaryScale, {
-      toValue: 0.98,
-      useNativeDriver: true,
-      speed: 24,
-      bounciness: 0,
-    }).start();
-  };
-
-  const pressOut = () => {
-    Animated.spring(primaryScale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 24,
-      bounciness: 4,
-    }).start();
-  };
+  const horizonBloomOpacity = Animated.multiply(
+    horizonGlow.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 0.55],
+    }),
+    horizonCorePulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.35, 1],
+    })
+  );
+  const horizonBloomScale = horizonCorePulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.85],
+  });
+  const horizonShimmerX = horizonShimmer.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-140, 140],
+  });
+  const brandGlowOpacity = brandBreath.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.22, 0.48],
+  });
+  const makePress = (scale: Animated.Value) => ({
+    in: () => {
+      Animated.spring(scale, {
+        toValue: 0.97,
+        useNativeDriver: true,
+        speed: 24,
+        bounciness: 0,
+      }).start();
+    },
+    out: () => {
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 24,
+        bounciness: 4,
+      }).start();
+    },
+  });
+  const primaryPress = makePress(primaryScale);
+  const ghostPress = makePress(ghostScale);
 
   return (
     <View style={styles.root}>
       <AuthLandingBackgroundNative />
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.bootScan,
-          {
-            opacity: bootScanOpacity,
-            transform: [{ translateY: bootScanTranslateY }],
-          },
-        ]}
-      />
+
+      <Animated.View pointerEvents="none" style={[styles.curtain, { opacity: curtain }]} />
+
       <View
         style={[
           styles.screen,
@@ -333,19 +531,8 @@ export default function LandingScreenNative() {
           },
         ]}
       >
-        <Animated.View
-          style={[
-            styles.mainBlock,
-            {
-              width: contentWidth,
-              transform: [{ translateY: contentRevealY }],
-              opacity: contentRevealOpacity,
-            },
-          ]}
-        >
+        <View style={[styles.mainBlock, { width: contentWidth, transform: [{ translateY: blockShiftY }] }]}>
           <View style={styles.frameShell}>
-            <CyberFrameNative width={contentWidth} />
-
             <View style={styles.heroBlock}>
               <Animated.Text
                 style={[
@@ -363,75 +550,122 @@ export default function LandingScreenNative() {
                 style={[
                   styles.heroWrap,
                   {
-                    opacity: heroOpacity,
-                    transform: [{ scale: heroScale }],
+                    opacity: brandOpacity,
+                    transform: [{ translateY: brandY }],
                   },
                 ]}
               >
                 <Animated.Text
                   pointerEvents="none"
-                  style={[styles.hero, styles.heroGlow, { opacity: heroGlowOpacity }]}
+                  style={[styles.hero, styles.heroGlow, { opacity: brandGlowOpacity }]}
                 >
-                  {heroDisplay}
+                  UNITERZ
                 </Animated.Text>
-                <Text style={styles.hero}>{heroDisplay}</Text>
+                <Text style={styles.hero}>UNITERZ</Text>
               </Animated.View>
 
-              <Animated.View
-                style={[
-                  styles.heroDivider,
-                  {
-                    opacity: dividerOpacity,
-                    transform: [{ scaleX: dividerScale }],
-                  },
-                ]}
-              >
+              <View style={styles.horizonSlot}>
                 <Animated.View
-                  pointerEvents="none"
                   style={[
-                    styles.heroDividerFlowWrap,
-                    { transform: [{ translateX: lineTravel }] },
+                    styles.horizonLineWrap,
+                    {
+                      opacity: horizonLineOpacity,
+                      transform: [{ scaleX: horizonScaleX }],
+                    },
                   ]}
                 >
                   <LinearGradient
-                    colors={["rgba(0,0,0,0)", "rgba(103,232,249,0.95)", "rgba(0,0,0,0)"]}
+                    colors={[
+                      "transparent",
+                      "rgba(160,245,255,0.4)",
+                      "rgba(255,255,255,0.95)",
+                      "rgba(160,245,255,0.4)",
+                      "transparent",
+                    ]}
+                    locations={[0, 0.28, 0.5, 0.72, 1]}
                     start={{ x: 0, y: 0.5 }}
                     end={{ x: 1, y: 0.5 }}
-                    style={styles.heroDividerFlow}
+                    style={styles.horizonLine}
                   />
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.horizonShimmer,
+                      { transform: [{ translateX: horizonShimmerX }] },
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[
+                        "transparent",
+                        "rgba(255,255,255,0.55)",
+                        "rgba(160,245,255,0.85)",
+                        "rgba(255,255,255,0.55)",
+                        "transparent",
+                      ]}
+                      locations={[0, 0.3, 0.5, 0.7, 1]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  </Animated.View>
                 </Animated.View>
-              </Animated.View>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.horizonBloom,
+                    {
+                      opacity: horizonBloomOpacity,
+                      transform: [{ scale: horizonBloomScale }],
+                    },
+                  ]}
+                />
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.horizonCore,
+                    {
+                      opacity: horizonCoreOpacity,
+                      transform: [{ scale: horizonCoreScale }],
+                    },
+                  ]}
+                />
+              </View>
+
+              <Animated.Text style={[styles.whisper, { opacity: whisperOpacity }]}>
+                the field is open
+              </Animated.Text>
             </View>
 
-            <Animated.View
-              style={[
-                styles.ctaBlock,
-                {
-                  opacity: ctaOpacity,
-                  transform: [{ translateY: ctaY }],
-                },
-              ]}
-            >
-              <Animated.View style={[styles.ctaScaleWrap, { transform: [{ scale: primaryScale }] }]}>
-                <LandingSkewBtn
-                  variant="primary"
-                  label="GET STARTED"
-                  labelStyle={styles.ctaPrimaryLabel}
-                  onPress={() => navigation.navigate("Login", { initialMode: "signup" })}
-                  onPressIn={pressIn}
-                  onPressOut={pressOut}
-                />
-              </Animated.View>
-
+            <View style={styles.ctaBlock}>
+              <LandingSkewBtn
+                variant="primary"
+                label="GET STARTED"
+                labelStyle={styles.ctaPrimaryLabel}
+                enterOpacity={primaryOpacity}
+                enterX={primaryX}
+                pressScale={primaryScale}
+                railSweep={primaryRailSweep}
+                railPulse={primaryRailPulse}
+                onPress={() => navigation.navigate("Login", { initialMode: "signup" })}
+                onPressIn={primaryPress.in}
+                onPressOut={primaryPress.out}
+              />
               <LandingSkewBtn
                 variant="ghost"
                 label="LOG IN"
                 labelStyle={styles.ctaSecondaryLabel}
+                enterOpacity={ghostOpacity}
+                enterX={ghostX}
+                pressScale={ghostScale}
+                railSweep={ghostRailSweep}
+                railPulse={ghostRailPulse}
                 onPress={() => navigation.navigate("Login")}
+                onPressIn={ghostPress.in}
+                onPressOut={ghostPress.out}
               />
-            </Animated.View>
+            </View>
           </View>
-        </Animated.View>
+        </View>
       </View>
     </View>
   );
@@ -442,18 +676,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#041418",
   },
-  bootScan: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 3,
-    zIndex: 4,
-    backgroundColor: "rgba(103,232,249,0.92)",
-    shadowColor: "rgba(34,211,238,0.95)",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 22,
-    elevation: 12,
+  curtain: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
+    backgroundColor: "#02080c",
   },
   screen: {
     flex: 1,
@@ -474,14 +700,14 @@ const styles = StyleSheet.create({
   },
   heroBlock: {
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   heroWrap: {
     alignItems: "center",
     justifyContent: "center",
   },
   eyebrow: {
-    color: "rgba(165,243,252,0.78)",
+    color: "rgba(165,243,252,0.72)",
     fontSize: 11,
     letterSpacing: 2.8,
     textTransform: "uppercase",
@@ -497,40 +723,68 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: "absolute",
-    textShadowColor: "rgba(34,211,238,0.85)",
+    textShadowColor: "rgba(34,211,238,0.75)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 28,
+    textShadowRadius: 32,
   },
-  heroDivider: {
-    alignSelf: "center",
-    width: "72%",
-    maxWidth: 260,
-    height: 1,
-    marginTop: 4,
-    backgroundColor: "rgba(34,211,238,0.9)",
-    shadowColor: "rgba(34,211,238,0.65)",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
+  horizonSlot: {
+    width: "78%",
+    maxWidth: 280,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+    overflow: "visible",
+  },
+  horizonLineWrap: {
+    width: "100%",
+    height: 2,
+    justifyContent: "center",
     overflow: "hidden",
   },
-  heroDividerFlowWrap: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 90,
+  horizonLine: {
+    width: "100%",
+    height: 1.5,
   },
-  heroDividerFlow: {
-    width: 90,
-    height: "100%",
+  horizonShimmer: {
+    position: "absolute",
+    width: 56,
+    height: 3,
+    alignSelf: "center",
+  },
+  horizonBloom: {
+    position: "absolute",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(120,240,255,0.22)",
+    shadowColor: "rgba(120,240,255,0.9)",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+  },
+  horizonCore: {
+    position: "absolute",
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    shadowColor: "rgba(160,245,255,1)",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+  },
+  whisper: {
+    marginTop: 2,
+    fontSize: 10,
+    letterSpacing: 3.2,
+    textTransform: "lowercase",
+    color: "rgba(186,230,253,0.55)",
+    textAlign: "center",
+    fontStyle: "italic",
   },
   ctaBlock: {
     gap: 14,
-    width: "100%",
-    alignSelf: "stretch",
-  },
-  ctaScaleWrap: {
     width: "100%",
     alignSelf: "stretch",
   },
@@ -547,20 +801,37 @@ const styles = StyleSheet.create({
     width: "100%",
     borderWidth: 1,
     overflow: "hidden",
+    position: "relative",
   },
   ctaBtnBorderPrimary: {
     borderColor: "rgba(0,245,255,0.34)",
     backgroundColor: "rgba(8,14,22,0.96)",
   },
   ctaBtnBorderGhost: {
-    borderColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(0,245,255,0.22)",
     backgroundColor: "rgba(8,14,22,0.48)",
+  },
+  ctaBtnGlow: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  ctaBtnGlowPrimary: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.55)",
+    shadowColor: "rgba(0,245,255,0.8)",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+  },
+  ctaBtnGlowGhost: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.35)",
   },
   ctaBtnFill: {
     minHeight: 52,
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
+    overflow: "hidden",
   },
   ctaBtnFillPrimary: {
     backgroundColor: "rgba(8,14,22,0.96)",
@@ -580,8 +851,20 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 2,
-    backgroundColor: "rgba(0,245,255,0.55)",
+    backgroundColor: "rgba(0,245,255,0.7)",
     zIndex: 2,
+  },
+  btnRailSweep: {
+    position: "absolute",
+    left: 0,
+    width: 2,
+    height: 18,
+    backgroundColor: "rgba(200,255,255,0.95)",
+    shadowColor: "rgba(34,211,238,1)",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    zIndex: 3,
   },
   ctaPrimaryLabel: {
     fontFamily: "BebasNeue_400Regular",

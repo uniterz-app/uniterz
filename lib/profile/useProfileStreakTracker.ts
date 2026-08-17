@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  filterPostsForScope,
-} from "@/lib/profile/profileStreakPostsCompute";
-import { loadProfileSettledPosts } from "@/lib/profile/profileStreakPostsCache";
+import { loadProfileSettledPostsForStreakScope } from "@/lib/profile/profileStreakPostsCache";
 import {
   resolveProfileStreakScopeKey,
   type ProfileStatsStreakContext,
 } from "@/lib/profile/profileStreakScope";
+import type { ProfileChartsLast20Point } from "@/lib/profile/profileChartsBundle";
 
 /** Last20 Tracker 用の表示件数 */
 export const STREAK_TRACKER_LAST_N = 20;
@@ -27,9 +25,17 @@ export type StreakTrackerPoint = {
  */
 export function useProfileStreakTracker(
   uid: string | null | undefined,
-  ctx: ProfileStatsStreakContext
+  ctx: ProfileStatsStreakContext,
+  options?: {
+    /**
+     * cumulative_stats.profileCharts.last20。
+     * null/undefined = 未取得（posts クエリ）。配列（空含む）= 確定。
+     */
+    seedLast20?: ProfileChartsLast20Point[] | null;
+  }
 ) {
   const scopeKey = resolveProfileStreakScopeKey(ctx);
+  const seedLast20 = options?.seedLast20;
   const [points, setPoints] = useState<StreakTrackerPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,15 +46,35 @@ export function useProfileStreakTracker(
       return;
     }
 
+    if (seedLast20 != null) {
+      let streak = 0;
+      const out: StreakTrackerPoint[] = [];
+      for (const r of seedLast20) {
+        if (r.isWin) {
+          streak = streak > 0 ? streak + 1 : 1;
+        } else {
+          streak = streak < 0 ? streak - 1 : -1;
+        }
+        out.push({
+          postId: r.postId,
+          settledAtMs: r.settledAtMs,
+          isWin: r.isWin,
+          streakAfter: streak,
+        });
+      }
+      setPoints(out);
+      setLoading(false);
+      return;
+    }
+
     const safeUid = uid;
     let alive = true;
 
     async function run() {
       setLoading(true);
       try {
-        const rows = await loadProfileSettledPosts(safeUid);
-        const scoped = filterPostsForScope(
-          rows,
+        const scoped = await loadProfileSettledPostsForStreakScope(
+          safeUid,
           scopeKey,
           STREAK_TRACKER_LAST_N
         );
@@ -83,7 +109,7 @@ export function useProfileStreakTracker(
     return () => {
       alive = false;
     };
-  }, [scopeKey, uid]);
+  }, [uid, scopeKey, seedLast20]);
 
   return { points, loading };
 }

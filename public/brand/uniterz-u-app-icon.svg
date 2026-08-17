@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="b"/>
+      <feFlood flood-color="#00E8FF" flood-opacity="0.38"/>
+      <feComposite in2="b" operator="in"/>
+    </filter>
+    <filter id="rim" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="b"/>
+      <feFlood flood-color="#8AF7FF" flood-opacity="0.85"/>
+      <feComposite in2="b" operator="in"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="#041418"/>
+
+    <g filter="url(#soft)" transform="translate(107.78947368421052 107.78947368421052) scale(0.7894736842105263)">
+      <path id="u-0" d="letter-U-0" fill="#fff"/>
+      <path id="u-1" d="M306.35,845.48L306.35,506.94C306.35,506.94 496.26,622.16 496.26,622.16L496.8,718.5L636.52,667.51L636.71,138.97C636.71,134.81 648.33,129.74 651.5,129.16L709.37,122.88L814.28,190.79L814.38,740.8L716.51,808.75L654.39,849.14L410,901.12L366.76,879.2L306.32,845.48Z" fill="#fff"/>
+      <path id="u-2" d="letter-U-1" fill="#fff"/>
+      <path id="u-3" d="M307.21,370.44L305.69,273.02L210.06,204.99C209.62,197.14 217.84,188.98 225.26,187.95L352.99,170.04L493.95,151.82L495.88,182.68L496.58,477.71L307.21,370.44Z" fill="#fff"/>
+      <path id="u-4" d="letter-U-2" fill="#fff"/>
+      <path id="u-5" d="M496.11,525.79L496.42,594.28L421.68,519.63Z" fill="#fff"/>
+      <path id="u-6" d="letter-U-3" fill="#fff"/>
+      <path id="u-7" d="M360.98,449.46L306.16,446.07L306.54,393.95Z" fill="#fff"/>
+    </g>
+    <g filter="url(#rim)" transform="translate(107.78947368421052 107.78947368421052) scale(0.7894736842105263)">
+      <path id="u-0" d="letter-U-0" fill="#fff"/>
+      <path id="u-1" d="M306.35,845.48L306.35,506.94C306.35,506.94 496.26,622.16 496.26,622.16L496.8,718.5L636.52,667.51L636.71,138.97C636.71,134.81 648.33,129.74 651.5,129.16L709.37,122.88L814.28,190.79L814.38,740.8L716.51,808.75L654.39,849.14L410,901.12L366.76,879.2L306.32,845.48Z" fill="#fff"/>
+      <path id="u-2" d="letter-U-1" fill="#fff"/>
+      <path id="u-3" d="M307.21,370.44L305.69,273.02L210.06,204.99C209.62,197.14 217.84,188.98 225.26,187.95L352.99,170.04L493.95,151.82L495.88,182.68L496.58,477.71L307.21,370.44Z" fill="#fff"/>
+      <path id="u-4" d="letter-U-2" fill="#fff"/>
+      <path id="u-5" d="M496.11,525.79L496.42,594.28L421.68,519.63Z" fill="#fff"/>
+      <path id="u-6" d="letter-U-3" fill="#fff"/>
+      <path id="u-7" d="M360.98,449.46L306.16,446.07L306.54,393.95Z" fill="#fff"/>
+    </g>
+  <g transform="translate(107.78947368421052 107.78947368421052) scale(0.7894736842105263)">
+      <path id="u-0" d="letter-U-0" fill="#fff"/>
+      <path id="u-1" d="M306.35,845.48L306.35,506.94C306.35,506.94 496.26,622.16 496.26,622.16L496.8,718.5L636.52,667.51L636.71,138.97C636.71,134.81 648.33,129.74 651.5,129.16L709.37,122.88L814.28,190.79L814.38,740.8L716.51,808.75L654.39,849.14L410,901.12L366.76,879.2L306.32,845.48Z" fill="#fff"/>
+      <path id="u-2" d="letter-U-1" fill="#fff"/>
+      <path id="u-3" d="M307.21,370.44L305.69,273.02L210.06,204.99C209.62,197.14 217.84,188.98 225.26,187.95L352.99,170.04L493.95,151.82L495.88,182.68L496.58,477.71L307.21,370.44Z" fill="#fff"/>
+      <path id="u-4" d="letter-U-2" fill="#fff"/>
+      <path id="u-5" d="M496.11,525.79L496.42,594.28L421.68,519.63Z" fill="#fff"/>
+      <path id="u-6" d="letter-U-3" fill="#fff"/>
+      <path id="u-7" d="M360.98,449.46L306.16,446.07L306.54,393.95Z" fill="#fff"/>
+  </g>
+</svg>

@@ -1,35 +1,53 @@
+/**
+ * Web mobile `NavBar` の `NAV_DOCK_CLIP`（14px 八角）相当。
+ * 角切り外は透明。ガラス感は Skia BackdropBlur（clip 内）で再現。
+ */
 import { type ReactNode, useMemo, useState } from "react";
 import {
   type LayoutChangeEvent,
-  Platform,
   StyleSheet,
   View,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import {
+  BackdropBlur,
   Canvas,
+  Fill,
   Group,
   LinearGradient as SkiaLinearGradient,
+  Path,
+  PathOp,
   Rect,
   Skia,
   vec,
+  type SkPath,
 } from "@shopify/react-native-skia";
-import { chamferedRectPathD, NAV_BAR_CHAMFER_CUT } from "../features/games/matchListCyberClipPath";
-import PredictOverlayChamferCornerFillNative from "../features/games/PredictOverlayChamferCornerFillNative";
+import {
+  chamferedRectPathD,
+  insetChamferedRectPathD,
+  NAV_BAR_CHAMFER_CUT,
+} from "../features/games/matchListCyberClipPath";
 import { colors } from "../theme/tokens";
-import { nativeBlurViewExtraProps } from "../ui/nativeBlurProps";
 
-const NAV_BAR_MOBILE_FILL = [colors.navBarFillStart, colors.navBarFillEnd] as const;
+/** A03 — 黒ドック。Native は BackdropBlur 越しに下地が透けるので不透明寄り。 */
+const NAV_BAR_MOBILE_FILL = [
+  colors.navBarFillStart,
+  colors.navBarFillEnd,
+] as const;
 const NAV_BAR_MOBILE_SHEEN = [
   colors.navBarSheenStart,
   "rgba(255,255,255,0.01)",
   "rgba(255,255,255,0)",
 ] as const;
-const NAV_BAR_CORNER_MASK = "rgba(10,14,24,1)";
-const NAV_BLUR_INTENSITY = Platform.OS === "ios" ? 38 : 32;
+/** Web `backdrop-filter: blur(4px)` 相当（強すぎると透け感が増すので控えめ） */
+const NAV_BAR_BACKDROP_BLUR = 3;
+const NAV_BAR_BORDER = colors.navBarBorder;
+const NAV_BAR_BORDER_WIDTH = 1;
 
 type Props = {
   children: ReactNode;
+  fill?: readonly [string, string];
+  sheen?: readonly [string, string, string];
+  border?: string;
 };
 
 function makeSkiaPath(width: number, height: number, cut: number) {
@@ -38,14 +56,47 @@ function makeSkiaPath(width: number, height: number, cut: number) {
   return Skia.Path.MakeFromSVGString(d);
 }
 
+function makeBorderRingPath(
+  width: number,
+  height: number,
+  cut: number,
+  strokeWidth: number
+): SkPath | null {
+  const outerD = chamferedRectPathD(width, height, cut);
+  const innerD = insetChamferedRectPathD(width, height, cut, strokeWidth);
+  if (!outerD || !innerD) return null;
+  const outer = Skia.Path.MakeFromSVGString(outerD);
+  const inner = Skia.Path.MakeFromSVGString(innerD);
+  if (!outer || !inner) return null;
+  return Skia.Path.MakeFromOp(outer, inner, PathOp.Difference);
+}
+
 /** Web mobile `NavBar` の `NAV_DOCK_CLIP`（14px 八角）相当 */
-export default function NavBarChamferShellNative({ children }: Props) {
+export default function NavBarChamferShellNative({
+  children,
+  fill = NAV_BAR_MOBILE_FILL,
+  sheen = NAV_BAR_MOBILE_SHEEN,
+  border = NAV_BAR_BORDER,
+}: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
 
   const skiaPath = useMemo(
     () =>
       size.w > 0 && size.h > 0
         ? makeSkiaPath(size.w, size.h, NAV_BAR_CHAMFER_CUT)
+        : null,
+    [size.w, size.h]
+  );
+
+  const borderRingPath = useMemo(
+    () =>
+      size.w > 0 && size.h > 0
+        ? makeBorderRingPath(
+            size.w,
+            size.h,
+            NAV_BAR_CHAMFER_CUT,
+            NAV_BAR_BORDER_WIDTH
+          )
         : null,
     [size.w, size.h]
   );
@@ -65,24 +116,27 @@ export default function NavBarChamferShellNative({ children }: Props) {
           pointerEvents="none"
           style={[styles.shell, { width: size.w, height: size.h }]}
         >
-          {(Platform.OS === "ios" || Platform.OS === "android") && (
-            <BlurView
-              intensity={NAV_BLUR_INTENSITY}
-              tint="dark"
-              style={StyleSheet.absoluteFillObject}
-              {...nativeBlurViewExtraProps()}
-            />
-          )}
           <Canvas
-            style={{ position: "absolute", left: 0, top: 0, width: size.w, height: size.h }}
+            opaque={false}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: size.w,
+              height: size.h,
+            }}
             pointerEvents="none"
           >
             <Group clip={skiaPath}>
+              {/* Web `backdrop-filter: blur(4px)` — 角切り内だけぼかす */}
+              <BackdropBlur blur={NAV_BAR_BACKDROP_BLUR}>
+                <Fill color="transparent" />
+              </BackdropBlur>
               <Rect x={0} y={0} width={size.w} height={size.h}>
                 <SkiaLinearGradient
                   start={vec(size.w * 0.5, 0)}
                   end={vec(size.w * 0.5, size.h)}
-                  colors={[...NAV_BAR_MOBILE_FILL]}
+                  colors={[...fill]}
                 />
               </Rect>
               <Rect
@@ -101,18 +155,15 @@ export default function NavBarChamferShellNative({ children }: Props) {
                 <SkiaLinearGradient
                   start={vec(size.w * 0.5, 0)}
                   end={vec(size.w * 0.5, size.h)}
-                  colors={[...NAV_BAR_MOBILE_SHEEN]}
+                  colors={[...sheen]}
                   positions={[0, 0.35, 0.55]}
                 />
               </Rect>
             </Group>
+            {borderRingPath ? (
+              <Path path={borderRingPath} style="fill" color={border} />
+            ) : null}
           </Canvas>
-          <PredictOverlayChamferCornerFillNative
-            width={size.w}
-            height={size.h}
-            cut={NAV_BAR_CHAMFER_CUT}
-            fillColor={NAV_BAR_CORNER_MASK}
-          />
         </View>
       ) : null}
 
@@ -125,17 +176,20 @@ const styles = StyleSheet.create({
   root: {
     width: "100%",
     position: "relative",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 10,
+    backgroundColor: "transparent",
+    /** 矩形影が角切りに黒い三角を残すので使わない */
+    shadowColor: "transparent",
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   shell: {
     position: "absolute",
     left: 0,
     top: 0,
-    overflow: "hidden",
+    overflow: "visible",
+    backgroundColor: "transparent",
   },
   content: {
     position: "relative",

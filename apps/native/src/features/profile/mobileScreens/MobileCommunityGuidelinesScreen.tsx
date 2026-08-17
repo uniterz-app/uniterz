@@ -14,7 +14,7 @@ export default function MobileCommunityGuidelinesScreen({ language }: Props) {
 
   return (
     <LegalPageLayoutNative
-      title={isJa ? "コミュニティガイドライン" : "Community Guidelines"}
+      title="GUIDELINES"
       description={
         isJa
           ? "スポーツ予想ファンタジーゲームを健全に楽しむために"

@@ -10,6 +10,22 @@ export const ANALYSIS_TYPE_META_JA: Record<
   AnalysisTypeId,
   AnalysisTypeMeta
 > = {
+  GOAT: {
+    label: "GOAT",
+    description:
+      "5軸すべてが強みの、月間における最高到達点のタイプです。\n\
+勝敗・得点者・波乱・参加量・安定のどれにも穴がなく、総合力で一段上にいます。\n\
+次に足すものより、この水準を翌月も落とさない運用がテーマ。参加のムラや連敗の傷に注意し、5軸のバランスを維持しましょう。\n\
+すべてを兼ね備えた頂点は、まさに GOAT。",
+  },
+  ALL_ROUNDER: {
+    label: "All-Rounder",
+    description:
+      "5軸中3つが強みの、多面的に戦えるタイプです。\n\
+ひとつの武器に依存せず、複数の勝ち筋を同時に持てるのが強み。過半数がすでに機能しています。\n\
+さらに上を目指すなら、未達の2軸のうち優先の1本だけを伸ばしましょう。次の到達点は Complete Player（強み4）です。\n\
+局面を選ばず機能する総合力は、まさに All-Rounder。",
+  },
   COMPLETE_PLAYER: {
     label: "Complete Player",
     description:
@@ -161,6 +177,22 @@ Upsetで勝ち筋をこじ開ける規格外の強さは、まさにCheat Code�
 試合数を重ねながら勝ちを積み上げ、総量で差を作れる。\n\
 さらに上を目指すには、「精度」と「Upset対応」をもう一段引き上げること。ここが伸びると、強み2軸がつながり、オールラウンダーへと近づいていける。\n\
 点を取り続ける攻撃力は、まさにWalking Bucket。",
+  },
+  HIGH_FLOOR: {
+    label: "High Floor",
+    description:
+      "WIN と CONSISTENCY が強みの、下限の高いタイプです。\n\
+勝ちを積みつつ大崩れしにくく、月間の床が高いのが特徴です。\n\
+さらに上を目指すなら SCORER か UPSET を伸ばし、天井も押し上げましょう。次の到達点は All-Rounder（強み3）です。\n\
+落ちにくい強さは、まさに High Floor。",
+  },
+  CHAOS_ANCHOR: {
+    label: "Chaos Anchor",
+    description:
+      "UPSET と CONSISTENCY が強みの、波乱を支えるタイプです。\n\
+荒れた局面でも粘り強く価値を拾い続け、崩れにくいのが武器です。\n\
+さらに上を目指すなら WIN か SCORER を伸ばし、波乱を安定した勝ちに接続しましょう。次の到達点は All-Rounder（強み3）です。\n\
+カオスの中でも沈まない軸は、まさに Chaos Anchor。",
   },
   BULLDOG: {
     label: "Bulldog",

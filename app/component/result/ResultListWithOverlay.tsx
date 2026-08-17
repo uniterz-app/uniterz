@@ -40,6 +40,16 @@ import {
 import ResultCard, {
   type ResultCardOpenAnchor,
 } from "@/app/component/result/ResultCard";
+import {
+  buildTutorialFinalMatchCardProps,
+  buildTutorialPointsDistribution,
+  buildTutorialResultMarket,
+  TUTORIAL_RESULT_POST_ID,
+} from "@/lib/tutorial/tutorialNbaUi";
+import {
+  TUTORIAL_RESULT_DETAIL_CLOSE_EVENT,
+  TUTORIAL_RESULT_DETAIL_OPEN_EVENT,
+} from "@/lib/tutorial/tutorialResultDetailEvents";
 const ResultDetail = dynamic(
   () => import("@/app/component/result/ResultDetail")
 );
@@ -59,7 +69,6 @@ import {
 import {
   canDismissResultListPostNow,
   flattenResultDayGroups,
-  isFinalResultPost,
   mergeResultDayPostsByKickoff,
   pruneDismissedResultListPostIds,
   RESULT_LIST_LEAGUE_TABS,
@@ -81,22 +90,37 @@ import {
   rawPointsDistributionFromGameDoc,
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
-import type { League } from "@/lib/leagues";
-import { LEAGUE_DISPLAY, LEAGUES, resolvePostListLeague } from "@/lib/leagues";
-import { isWcResultLeague } from "@/lib/result/wcResultUi";
+import { resolveGamePointsSummary } from "@/lib/results/gamePointsSummary";
+import { resolveResultTopEntries } from "@/lib/results/resolveResultTopEntries";
+import { enrichTopEntriesCountryFromUsers } from "@/lib/results/enrichTopEntriesCountryFromUsers";
+import type { GamePointsTopEntryV1 } from "@/lib/results/gamePointsTop";
+import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import {
+  DEFAULT_RESULT_LIST_FILTERS,
+  isDefaultResultListFilters,
+  postMatchesResultListFilters,
+  resultDayMatchesDateRange,
+  type ResultListFilters,
+} from "@/lib/result/resultListFilterMatch";
+import {
+  resultCardLineFrameDrawDelaySec,
   resultCardPageSlot,
   resultPageSlotItem,
 } from "@/lib/result/resultCyberMotion";
 import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard";
+import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
 import {
   resolveResultPostPkScore,
   useResultPostsPkScores,
 } from "@/lib/games/useResultPostsPkScores";
-import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
+import {
+  resolveResultPostGameMarket,
+  useResultPostsGameMarkets,
+} from "@/lib/games/useResultPostsGameMarkets";
+import { resolveWcTeamId } from "@/lib/legacyWcWebShims";
 import { toMatchCardProps } from "@/lib/games/transform";
-import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
+import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS, MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import {
   PREDICT_OVERLAY_BACKDROP,
   PREDICT_OVERLAY_FORM_PANEL,
@@ -120,80 +144,18 @@ const deleteConfirmDeleteLabelStyle: CSSProperties = {
     "0 0 16px rgba(255,90,90,1), 0 0 36px rgba(239,68,68,0.95), 0 0 64px rgba(220,38,38,0.75), 0 0 96px rgba(153,27,27,0.45)",
 };
 
-/** 一覧の複合フィルター（デフォルトはすべて通過） */
-export type ResultListFilters = {
-  outcome: "all" | "win" | "loss";
-  /** 未確定＝試合前〜未確定、確定＝得点確定済み */
-  settlement: "all" | "pending" | "final";
-  league: "all" | League;
-  /** Upset スコア（加点あり） */
-  specialty: "none" | "upsetBonus";
-  /** スコア精度（scorePrecision）の帯。確定投稿のみ */
-  scorePrecisionTier: "all" | "high" | "mid" | "low";
-  /** 総合スコア（pointsV3）の帯。確定投稿のみ */
-  pointsTier: "all" | "high" | "mid" | "low";
-  /** 試合日（一覧の日付見出し）の下限。YYYY-MM-DD、未指定は null */
-  dateFrom: string | null;
-  /** 試合日の上限（含む）。YYYY-MM-DD、未指定は null */
-  dateTo: string | null;
-};
-
-const DEFAULT_RESULT_FILTERS: ResultListFilters = {
-  outcome: "all",
-  settlement: "all",
-  league: "all",
-  specialty: "none",
-  scorePrecisionTier: "all",
-  pointsTier: "all",
-  dateFrom: null,
-  dateTo: null,
-};
-
-function isDefaultResultFilters(f: ResultListFilters): boolean {
-  return (
-    f.outcome === DEFAULT_RESULT_FILTERS.outcome &&
-    f.settlement === DEFAULT_RESULT_FILTERS.settlement &&
-    f.league === DEFAULT_RESULT_FILTERS.league &&
-    f.specialty === DEFAULT_RESULT_FILTERS.specialty &&
-    f.scorePrecisionTier === DEFAULT_RESULT_FILTERS.scorePrecisionTier &&
-    f.pointsTier === DEFAULT_RESULT_FILTERS.pointsTier &&
-    f.dateFrom == null &&
-    f.dateTo == null
-  );
-}
-
 /** 詳細パネル内の条件のみ（試合日は外側ブロックのため点に含めない） */
-function hasDetailFilters(
-  f: ResultListFilters,
-  leagueTab?: ResultListLeagueTab
-): boolean {
-  const scorePrecisionActive =
-    leagueTab !== LEAGUES.WC && f.scorePrecisionTier !== "all";
+function hasDetailFilters(f: ResultListFilters): boolean {
   return (
     f.settlement !== "all" ||
     f.specialty !== "none" ||
-    scorePrecisionActive ||
     f.pointsTier !== "all"
   );
-}
-
-function pointsV3Of(post: PostWithMillis): number | null {
-  const v = post.stats?.pointsV3 ?? post.stats?.pointsV3Detail?.totalPoints;
-  if (typeof v !== "number" || !Number.isFinite(v)) return null;
-  return v;
 }
 
 /** ローカル暦の YYYY-MM-DD（日付見出しの `dateMs` と同じ基準・試合一覧 TZ） */
 function localDayKeyFromMs(ms: number, language: Language): string {
   return resultListLocalDayKeyFromMs(ms, language);
-}
-
-function dayMatchesDateRange(day: ResultDayGroup, f: ResultListFilters, language: Language): boolean {
-  if (f.dateFrom == null && f.dateTo == null) return true;
-  const key = localDayKeyFromMs(day.dateMs, language);
-  if (f.dateFrom != null && key < f.dateFrom) return false;
-  if (f.dateTo != null && key > f.dateTo) return false;
-  return true;
 }
 
 type MarketData = {
@@ -285,75 +247,6 @@ function dayPointsHeaderForList(
   return null;
 }
 
-function postMatchesOutcome(
-  post: PostWithMillis,
-  outcome: ResultListFilters["outcome"]
-): boolean {
-  if (outcome === "all") return true;
-  if (!isFinalResultPost(post)) return false;
-  const w = predictionWinState(post);
-  if (outcome === "win") return w === true;
-  if (outcome === "loss") return w === false;
-  return true;
-}
-
-function postMatchesPointsTier(
-  post: PostWithMillis,
-  tier: ResultListFilters["pointsTier"]
-): boolean {
-  if (tier === "all") return true;
-  if (!isFinalResultPost(post)) return false;
-  const v = pointsV3Of(post);
-  if (v === null) return false;
-  if (tier === "high") return v >= 7;
-  if (tier === "mid") return v >= 4 && v < 7;
-  if (tier === "low") return v < 4;
-  return true;
-}
-
-function scorePrecisionOf(post: PostWithMillis): number | null {
-  const v = post.stats?.scorePrecision;
-  if (typeof v !== "number" || !Number.isFinite(v)) return null;
-  return v;
-}
-
-function postMatchesScorePrecisionTier(
-  post: PostWithMillis,
-  tier: ResultListFilters["scorePrecisionTier"]
-): boolean {
-  if (tier === "all") return true;
-  if (isWcResultLeague(post.league)) return true;
-  if (!isFinalResultPost(post)) return false;
-  const v = scorePrecisionOf(post);
-  if (v === null) return false;
-  if (tier === "high") return v >= 7;
-  if (tier === "mid") return v >= 4 && v < 7;
-  if (tier === "low") return v < 4;
-  return true;
-}
-
-function postMatchesSpecialty(
-  post: PostWithMillis,
-  sp: ResultListFilters["specialty"]
-): boolean {
-  if (sp === "none") return true;
-  if (!isFinalResultPost(post)) return false;
-  const pts = post.stats?.upsetPoints ?? 0;
-  const hit = post.stats?.upsetHit === true;
-  return pts > 0 || hit;
-}
-
-function postMatchesFilters(post: PostWithMillis, f: ResultListFilters): boolean {
-  if (f.settlement === "pending" && isFinalResultPost(post)) return false;
-  if (f.settlement === "final" && !isFinalResultPost(post)) return false;
-  if (f.league !== "all" && resolvePostListLeague(post) !== f.league) return false;
-  if (!postMatchesOutcome(post, f.outcome)) return false;
-  if (!postMatchesPointsTier(post, f.pointsTier)) return false;
-  if (!postMatchesScorePrecisionTier(post, f.scorePrecisionTier)) return false;
-  if (!postMatchesSpecialty(post, f.specialty)) return false;
-  return true;
-}
-
 async function buildMatchCardPropsForResultPost(
   post: PredictionPostV2,
   raw: Record<string, unknown>,
@@ -422,8 +315,9 @@ export default function ResultListWithOverlay({
     useState<GamePointsDistributionV1 | null>(null);
   const [pointsDistributionLoading, setPointsDistributionLoading] =
     useState(false);
+  const [topEntries, setTopEntries] = useState<GamePointsTopEntryV1[]>([]);
   const [filters, setFilters] = useState<ResultListFilters>(() => ({
-    ...DEFAULT_RESULT_FILTERS,
+    ...DEFAULT_RESULT_LIST_FILTERS,
   }));
   /** キックオフ前後でゴミ箱表示を切り替えるための現在時刻（30 秒ごと更新） */
   const [listNowTick, setListNowTick] = useState(() => Date.now());
@@ -742,11 +636,15 @@ export default function ResultListWithOverlay({
 
   const filteredGrouped = useMemo(() => {
     return grouped
-      .filter((day) => dayMatchesDateRange(day, filters, language))
+      .filter((day) => resultDayMatchesDateRange(day, filters, language))
       .map((day) => ({
         ...day,
-        pending: day.pending.filter((p) => postMatchesFilters(p, filters)),
-        final: day.final.filter((p) => postMatchesFilters(p, filters)),
+        pending: day.pending.filter((p) =>
+          postMatchesResultListFilters(p, filters)
+        ),
+        final: day.final.filter((p) =>
+          postMatchesResultListFilters(p, filters)
+        ),
       }))
       .filter((day) => day.pending.length + day.final.length > 0);
   }, [grouped, filters, language]);
@@ -762,6 +660,12 @@ export default function ResultListWithOverlay({
         .filter((day) => day.pending.length + day.final.length > 0),
     [filteredGrouped, dismissedPostIds]
   );
+
+  const firstResultCardId = useMemo(() => {
+    const day = visibleGrouped[0];
+    if (!day) return null;
+    return [...day.pending, ...day.final][0]?.id ?? null;
+  }, [visibleGrouped]);
 
   /** フィルター＋一覧除外適用後の件数（少件数時の入場アニメ・content-visibility 制御に使用） */
   const filteredTotalLoaded = useMemo(
@@ -779,6 +683,7 @@ export default function ResultListWithOverlay({
     [visibleGrouped]
   );
   const pkFromGames = useResultPostsPkScores(visiblePostsFlat);
+  const marketsFromGames = useResultPostsGameMarkets(visiblePostsFlat);
 
   const selectedPost = useMemo(() => {
     if (!openPostId) return null;
@@ -799,6 +704,7 @@ export default function ResultListWithOverlay({
     setMarket(null);
     setPointsDistribution(null);
     setPointsDistributionLoading(false);
+    setTopEntries([]);
   }, []);
 
   const dismissPostFromList = useCallback(
@@ -879,6 +785,7 @@ export default function ResultListWithOverlay({
       setMarket(null);
       setPointsDistribution(null);
       setPointsDistributionLoading(false);
+      setTopEntries([]);
     },
     []
   );
@@ -943,6 +850,21 @@ export default function ResultListWithOverlay({
       setDetailGame(null);
       setPointsDistributionLoading(false);
       setPointsDistribution(null);
+      setTopEntries([]);
+      return;
+    }
+
+    /** チュートリアル投稿は Firestore を叩かずモックで詳細を組み立てる */
+    if (post.id === TUTORIAL_RESULT_POST_ID) {
+      setDetailGame(
+        buildTutorialFinalMatchCardProps({
+          language: language === "en" ? "en" : "ja",
+        })
+      );
+      setMarket(buildTutorialResultMarket());
+      setPointsDistribution(buildTutorialPointsDistribution());
+      setTopEntries([]);
+      setPointsDistributionLoading(false);
       return;
     }
 
@@ -950,13 +872,17 @@ export default function ResultListWithOverlay({
     setPointsDistributionLoading(true);
     (async () => {
       try {
-        const { exists, data: d } = await getCachedGameDocForResult(post.gameId);
+        const { exists, data: d } = await getCachedGameDocForResult(
+          post.gameId,
+          db
+        );
         if (cancelled) return;
         if (!exists || !d) {
           if (!cancelled) {
             setDetailGame(null);
             setMarket(null);
             setPointsDistribution(null);
+            setTopEntries([]);
           }
           return;
         }
@@ -967,6 +893,7 @@ export default function ResultListWithOverlay({
         );
         const marketRaw = d.market as Record<string, unknown> | undefined;
         const pdRaw = rawPointsDistributionFromGameDoc(d);
+        const parsedDistribution = parseGamePointsDistributionV1(pdRaw);
         if (!cancelled) {
           setDetailGame(game);
           if (marketRaw) {
@@ -978,13 +905,20 @@ export default function ResultListWithOverlay({
               total: marketRaw.total == null ? undefined : Number(marketRaw.total),
             });
           }
-          setPointsDistribution(parseGamePointsDistributionV1(pdRaw));
+          setPointsDistribution(parsedDistribution);
+          const rawTop = resolveResultTopEntries({
+            pointsSummary: resolveGamePointsSummary(d as Record<string, unknown>),
+            pointsDistribution: parsedDistribution,
+          });
+          const topWithCountry = await enrichTopEntriesCountryFromUsers(db, rawTop);
+          if (!cancelled) setTopEntries(topWithCountry);
         }
       } catch {
         if (!cancelled) {
           setDetailGame(null);
           setMarket(null);
           setPointsDistribution(null);
+          setTopEntries([]);
         }
       } finally {
         if (!cancelled) setPointsDistributionLoading(false);
@@ -994,7 +928,33 @@ export default function ResultListWithOverlay({
     return () => {
       cancelled = true;
     };
-  }, [openPostId, selectedPost, isMobile]);
+  }, [openPostId, selectedPost, isMobile, language]);
+
+  /** チュートリアルから詳細の開閉を依頼 */
+  useEffect(() => {
+    const findTutorialPost = (): PostWithMillis | null => {
+      for (const day of filteredGrouped) {
+        const hit = [...day.pending, ...day.final].find(
+          (p) => p.id === TUTORIAL_RESULT_POST_ID
+        );
+        if (hit) return hit;
+      }
+      return null;
+    };
+    const onOpen = () => {
+      const post = findTutorialPost();
+      if (post) open(post);
+    };
+    const onClose = () => {
+      if (openPostId === TUTORIAL_RESULT_POST_ID) close();
+    };
+    window.addEventListener(TUTORIAL_RESULT_DETAIL_OPEN_EVENT, onOpen);
+    window.addEventListener(TUTORIAL_RESULT_DETAIL_CLOSE_EVENT, onClose);
+    return () => {
+      window.removeEventListener(TUTORIAL_RESULT_DETAIL_OPEN_EVENT, onOpen);
+      window.removeEventListener(TUTORIAL_RESULT_DETAIL_CLOSE_EVENT, onClose);
+    };
+  }, [filteredGrouped, open, close, openPostId]);
 
   /** ルートの perspective 等が fixed の包含ブロックになるため、オーバーレイは body 直下に描画 */
   const [overlayPortalReady, setOverlayPortalReady] = useState(false);
@@ -1011,7 +971,6 @@ export default function ResultListWithOverlay({
     settlement: m.results.filterMatchStatus,
     league: m.results.filterLeague,
     upsetScore: m.results.filterUpsetScore,
-    scorePrecision: m.results.filterScoreAccuracy,
     totalScore: m.results.filterTotalScore,
     outcomeOpt: { all: m.results.filterAll, win: m.results.filterWins, loss: m.results.filterLosses },
     settlementOpt: {
@@ -1105,7 +1064,6 @@ export default function ResultListWithOverlay({
                   ...s,
                   dateFrom: null,
                   dateTo: null,
-                  scorePrecisionTier: "all",
                 }));
               }}
               items={RESULT_LIST_LEAGUE_TABS}
@@ -1133,7 +1091,14 @@ export default function ResultListWithOverlay({
               isMobile ? "w-full" : "flex-1",
             ].join(" ")}
           >
-            <div className={isMobile ? "w-full" : RESULT_WEB_DAY_STRIP_WIDTH_CLASS}>
+            <div
+              className={[
+                "relative",
+                isMobile
+                  ? MOBILE_RESULT_CARD_OUTER_CLASS
+                  : RESULT_WEB_DAY_STRIP_WIDTH_CLASS,
+              ].join(" ")}
+            >
           <button
             type="button"
             aria-expanded={filterPanelOpen}
@@ -1143,7 +1108,7 @@ export default function ResultListWithOverlay({
                 : fc.filterFoldCollapsedLabel
             }
             className={cyberFilterBarClasses(
-              !isDefaultResultFilters(filters),
+              !isDefaultResultListFilters(filters),
               "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
             )}
             onClick={() => setFilterPanelOpen((o) => !o)}
@@ -1159,7 +1124,7 @@ export default function ResultListWithOverlay({
               {filterPanelOpen
                 ? fc.filterFoldCollapse
                 : fc.filterFoldCollapsedLabel}
-              {!isDefaultResultFilters(filters) ? (
+              {!isDefaultResultListFilters(filters) ? (
                 <span
                   className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]"
                   aria-hidden
@@ -1190,7 +1155,7 @@ export default function ResultListWithOverlay({
                 }
           }
         >
-          {(fc.panelTitle || !isDefaultResultFilters(filters)) && (
+          {(fc.panelTitle || !isDefaultResultListFilters(filters)) && (
             <div
               className={[
                 "mb-3 flex items-center gap-2",
@@ -1202,12 +1167,12 @@ export default function ResultListWithOverlay({
                   {fc.panelTitle}
                 </span>
               ) : null}
-              {!isDefaultResultFilters(filters) ? (
+              {!isDefaultResultListFilters(filters) ? (
                 <button
                   type="button"
                   className="rounded-lg border border-white/14 bg-white/6 px-2.5 py-1 text-[11px] font-semibold text-white/80 transition hover:border-cyan-400/30 hover:text-white"
                   onClick={() => {
-                    setFilters({ ...DEFAULT_RESULT_FILTERS });
+                    setFilters({ ...DEFAULT_RESULT_LIST_FILTERS });
                     setDetailFiltersOpen(false);
                     setFilterPanelOpen(false);
                   }}
@@ -1397,7 +1362,7 @@ export default function ResultListWithOverlay({
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-[11px] font-semibold text-white sm:text-xs">
                   {fc.detailToggle}
-                  {hasDetailFilters(filters, leagueTab) ? (
+                  {hasDetailFilters(filters) ? (
                     <span
                       className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 align-middle shadow-[0_0_8px_rgba(34,211,238,0.7)]"
                       aria-hidden
@@ -1487,43 +1452,6 @@ export default function ResultListWithOverlay({
             </div>
           </div>
 
-          {leagueTab !== LEAGUES.WC ? (
-          <div className="mb-3">
-            <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
-              {fc.scorePrecision}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {(["all", "high", "mid", "low"] as const).map((k) => (
-                <motion.button
-                  key={`sp-${k}`}
-                  type="button"
-                  aria-pressed={filters.scorePrecisionTier === k}
-                  onClick={() =>
-                    setFilters((s) => ({ ...s, scorePrecisionTier: k }))
-                  }
-                  variants={
-                    prefersReducedMotion
-                      ? undefined
-                      : {
-                          hidden: { opacity: 0, y: 8 },
-                          visible: {
-                            opacity: 1,
-                            y: 0,
-                            transition: { duration: 0.24, ease: easeOut },
-                          },
-                        }
-                  }
-                  whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
-                  whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.scorePrecisionTier === k)}
-                >
-                  {fc.tierOpt[k]}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-          ) : null}
-
           <div className="mb-0">
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.totalScore}
@@ -1573,7 +1501,7 @@ export default function ResultListWithOverlay({
         <AnimatePresence mode="wait">
           {totalLoaded > 0 &&
             filteredGrouped.length === 0 &&
-            !isDefaultResultFilters(filters) && (
+            !isDefaultResultListFilters(filters) && (
             <motion.div
               key="empty-filter"
               role="status"
@@ -1651,26 +1579,38 @@ export default function ResultListWithOverlay({
               cardsClassName={cardsGridClass}
             >
               {displayPosts.map((post) => {
+                const isTutorialPost = post.id === TUTORIAL_RESULT_POST_ID;
+                const entrySlot = takeEntrySlot();
                 const card = (
                   <ResultCard
                     post={post}
                     pkScore={resolveResultPostPkScore(post, pkFromGames)}
+                    gameMarket={resolveResultPostGameMarket(post, marketsFromGames)}
                     onOpen={open}
                     language={language}
                     platform={platform}
                     scheduleDense={isMobile}
-                    ratingBarsImmediate={filteredTotalLoaded === 1}
-                    showPreKickoffDismiss={canDismissResultListPostNow(
-                      post,
-                      listNowTick
-                    )}
+                    ratingBarsImmediate={
+                      filteredTotalLoaded === 1 || isTutorialPost
+                    }
+                    showPreKickoffDismiss={
+                      !isTutorialPost &&
+                      canDismissResultListPostNow(post, listNowTick)
+                    }
                     onPreKickoffDismiss={() =>
                       setDeleteConfirmPost(post)
                     }
-                    viewerUid={viewerUid}
+                    viewerUid={isTutorialPost ? null : viewerUid}
                     gamesRoutePrefix={gamesRoutePrefix}
-                    onRequestPredictEdit={requestPredictEditFromCard}
+                    onRequestPredictEdit={
+                      isTutorialPost ? undefined : requestPredictEditFromCard
+                    }
                     cardClockMs={listNowTick}
+                    lineFrameDrawDelaySec={
+                      prefersReducedMotion
+                        ? 0
+                        : resultCardLineFrameDrawDelaySec(entrySlot)
+                    }
                   />
                 );
 
@@ -1678,6 +1618,11 @@ export default function ResultListWithOverlay({
                   return (
                     <div
                       key={post.id}
+                      data-tutorial-target={
+                        String(post.id) === String(firstResultCardId)
+                          ? "result-card"
+                          : undefined
+                      }
                       className={
                         isSingleWebCard ? "w-full max-w-[640px]" : "w-full"
                       }
@@ -1690,8 +1635,13 @@ export default function ResultListWithOverlay({
                 return (
                   <motion.div
                     key={post.id}
+                    data-tutorial-target={
+                      String(post.id) === String(firstResultCardId)
+                        ? "result-card"
+                        : undefined
+                    }
                     variants={resultCardSlotVariants}
-                    custom={takeEntrySlot()}
+                    custom={entrySlot}
                     className={
                       isSingleWebCard ? "w-full max-w-[640px]" : "w-full"
                     }
@@ -2033,6 +1983,13 @@ export default function ResultListWithOverlay({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.22, ease: easeOut }}
                 >
+                  <ProfileMenuEdgeHandle
+                    onOpen={close}
+                    label="BACK"
+                    tone="back"
+                    overlay
+                    ariaLabel={language === "en" ? "Back" : "戻る"}
+                  />
                   <motion.div
                     className={`absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`}
                     onClick={close}
@@ -2102,6 +2059,7 @@ export default function ResultListWithOverlay({
                             market={market ?? undefined}
                             pointsDistribution={pointsDistribution}
                             pointsDistributionLoading={pointsDistributionLoading}
+                            topEntries={topEntries}
                             language={language}
                             inOverlay
                             hideMatchHeader
@@ -2117,6 +2075,7 @@ export default function ResultListWithOverlay({
                             market={market ?? undefined}
                             pointsDistribution={pointsDistribution}
                             pointsDistributionLoading={pointsDistributionLoading}
+                            topEntries={topEntries}
                             language={language}
                             inOverlay
                             hideMatchHeader
@@ -2250,6 +2209,8 @@ export default function ResultListWithOverlay({
                             embedded
                             inOverlay
                             overlayUnifiedForm
+                            overlayHomeRecord={overlayMatchCardRecords.homeRecord}
+                            overlayAwayRecord={overlayMatchCardRecords.awayRecord}
                             overlayExistingPostId={predictOverlay.post.id}
                             predictEditTriggerNonce={predictEditTriggerNonce}
                             onExistingResultPostChange={setOverlayResultPost}

@@ -5,7 +5,6 @@ import type { Language } from "@/lib/i18n/language";
 import {
   COMMUNITY_GROUP_HERO_BG,
   COMMUNITY_GROUP_HERO_WEB_IMAGE_HEIGHT,
-  COMMUNITY_GROUP_HERO_WEB_IMAGE_HEIGHT_WITH_BACK,
   COMMUNITY_GROUP_HERO_WEB_PANEL_OVERLAP,
   COMMUNITY_GROUP_HERO_SCRIM_HORIZONTAL,
   COMMUNITY_GROUP_HERO_SCRIM_VERTICAL,
@@ -13,7 +12,6 @@ import {
 import type { CommunityGroupSummary } from "@/app/component/communities/communityGroupDetailCache";
 import CommunityGroupHeaderImage from "@/app/component/communities/CommunityGroupHeaderImage";
 import CommunityGroupHeaderPanel from "@/app/component/communities/CommunityGroupHeaderPanel";
-import CommunityGroupListBackHeader from "@/app/component/communities/CommunityGroupListBackHeader";
 
 type Props = {
   groupId: string;
@@ -25,9 +23,6 @@ type Props = {
   }) => void;
   capTop?: boolean;
   onImageEditingChange?: (editing: boolean) => void;
-  /** Web — 「一覧へ」を画像上にオーバーレイ */
-  overlayBackHeader?: boolean;
-  onBack?: () => void;
 };
 
 /** Native `CommunityGroupHeaderHeroNative` 相当 */
@@ -36,10 +31,8 @@ export default function CommunityGroupHeaderHero({
   language,
   summary,
   onImageUpdated,
-  capTop = false,
+  capTop: _capTop = false,
   onImageEditingChange,
-  overlayBackHeader = false,
-  onBack,
 }: Props) {
   const [imageEditing, setImageEditing] = useState(false);
   const hasImage = Boolean(summary.headerImageUrl);
@@ -56,21 +49,13 @@ export default function CommunityGroupHeaderHero({
 
   if (!showMedia) {
     return (
-      <>
-        {overlayBackHeader && onBack ? (
-          <CommunityGroupListBackHeader language={language} onClick={onBack} variant="solid" />
-        ) : null}
-        <div className="mb-4">
-          <CommunityGroupHeaderPanel summary={summary} language={language} compact />
-        </div>
-      </>
+      <div className="mb-4">
+        <CommunityGroupHeaderPanel summary={summary} language={language} compact />
+      </div>
     );
   }
 
-  const imageOverBack = overlayBackHeader && hasImage && Boolean(onBack);
-  const imageAreaHeight = imageOverBack
-    ? COMMUNITY_GROUP_HERO_WEB_IMAGE_HEIGHT_WITH_BACK
-    : COMMUNITY_GROUP_HERO_WEB_IMAGE_HEIGHT;
+  const imageAreaHeight = COMMUNITY_GROUP_HERO_WEB_IMAGE_HEIGHT;
 
   const imageBand = (
     <>
@@ -106,22 +91,14 @@ export default function CommunityGroupHeaderHero({
 
   return (
     <div
-      className={["relative mb-4", capTop || imageOverBack ? "" : "rounded-t-xl"].join(" ")}
+      className="relative mb-4"
       style={{ backgroundColor: COMMUNITY_GROUP_HERO_BG }}
     >
       <div
-        className={["relative overflow-hidden", capTop || imageOverBack ? "" : "rounded-t-xl"].join(" ")}
+        className="relative overflow-hidden"
         style={{ height: imageAreaHeight }}
       >
         {imageBand}
-
-        {imageOverBack && onBack ? (
-          <CommunityGroupListBackHeader
-            language={language}
-            onClick={onBack}
-            variant="overImage"
-          />
-        ) : null}
       </div>
 
       {!imageEditing ? (

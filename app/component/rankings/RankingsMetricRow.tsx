@@ -1,6 +1,6 @@
 "use client";
 
-import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { MobileMetric } from "@/lib/rankings/rankingMetrics";
 import type { Language } from "@/lib/i18n/language";
 import { metricLabel, upsetShortLabel } from "@/lib/i18n/rankings";
 import { t } from "@/lib/i18n/t";
@@ -8,6 +8,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
+  type CyberSlantedTabTheme,
 } from "@/app/component/rankings/CyberSlantedTab";
 
 const tabFadeEase: [number, number, number, number] = [0.16, 0.82, 0.32, 1];
@@ -17,14 +18,21 @@ type Props = {
   metric: MobileMetric;
   setMetric: (v: MobileMetric) => void;
   language?: Language;
+  rankingLeague?: "nba";
   gridColumns?: 3;
   /** @deprecated モバイルも斜めタブに統一 */
   compactMobile?: boolean;
+  /** PRO LEAGUE など画面固有のタブ色 */
+  tabTheme?: CyberSlantedTabTheme;
 };
 
-function formatLabel(key: MobileMetric, lang: Language) {
+function formatLabel(
+  key: MobileMetric,
+  lang: Language,
+  rankingLeague?: "nba"
+) {
   if (key === "upsetScore") return upsetShortLabel(lang);
-  return metricLabel(key, lang);
+  return metricLabel(key, lang, rankingLeague);
 }
 
 export default function RankingsMetricRow({
@@ -32,7 +40,9 @@ export default function RankingsMetricRow({
   metric,
   setMetric,
   language = "ja",
+  rankingLeague,
   gridColumns,
+  tabTheme,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const msgs = t(language);
@@ -61,10 +71,11 @@ export default function RankingsMetricRow({
           <CyberSlantedTab
             key={item.key}
             role="tab"
-            label={formatLabel(item.key, language)}
+            label={formatLabel(item.key, language, rankingLeague)}
             active={item.key === metric}
             onClick={() => setMetric(item.key)}
             compact
+            theme={tabTheme}
           />
         ))}
       </CyberSlantedTabBar>

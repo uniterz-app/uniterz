@@ -1,0 +1,97 @@
+/* PRO 背景 — 宇宙テーマ（cosmos-*） */
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos) .profile-plan-pro-ambient,
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos) .profile-plan-pro-ambient {
+  display: none;
+}
+
+.profile-plan-pro-bg__cosmos-skin {
+  opacity: 1;
+}
+
+.profile-plan-pro-bg__cosmos-hud {
+  opacity: 1;
+}
+
+.profile-plan-pro-bg--cosmos .profile-plan-pro-bg__cosmos-skin {
+  filter: contrast(1.1) saturate(1.12);
+}
+
+/* パネル地・枠色（代表パレット） */
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos) {
+  background: linear-gradient(165deg, #02040a 0%, #080c18 45%, #010208 100%);
+  --kinetik-frame: rgba(125, 211, 252, 0.35);
+  --kinetik-frame-strong: rgba(165, 243, 252, 0.72);
+  --kinetik-frame-dim: rgba(67, 56, 202, 0.28);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.68),
+    0 0 0 1px var(--kinetik-frame),
+    0 0 26px color-mix(in srgb, var(--kinetik-frame-strong) 22%, transparent),
+    0 0 52px color-mix(in srgb, var(--kinetik-frame-dim) 24%, transparent);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-event-horizon),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-event-horizon),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-dark-matter),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-dark-matter),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-singularity-vein),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-singularity-vein) {
+  background: linear-gradient(168deg, #000000 0%, #0a0814 50%, #000000 100%);
+  --kinetik-frame: rgba(99, 102, 241, 0.4);
+  --kinetik-frame-strong: rgba(129, 140, 248, 0.75);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-nebula-crown),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-nebula-crown),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-galactic-halo),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-galactic-halo),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-quantum-nebula),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-quantum-nebula) {
+  background: linear-gradient(160deg, #060414 0%, #1a0a3a 42%, #040210 100%);
+  --kinetik-frame: rgba(167, 139, 250, 0.45);
+  --kinetik-frame-strong: rgba(196, 181, 253, 0.8);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-lunar-eclipse),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-lunar-eclipse) {
+  background: linear-gradient(165deg, #080101 0%, #1a0505 45%, #040000 100%);
+  --kinetik-frame: rgba(220, 38, 38, 0.45);
+  --kinetik-frame-strong: rgba(248, 113, 113, 0.8);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-solar-flare),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-solar-flare),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-orbital-throne),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-orbital-throne),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-starforge),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-starforge) {
+  background: linear-gradient(160deg, #080500 0%, #1a1005 42%, #040200 100%);
+  --kinetik-frame: rgba(251, 191, 36, 0.42);
+  --kinetik-frame-strong: rgba(253, 224, 71, 0.78);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-void-signal),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-void-signal),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-deep-space-core),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-deep-space-core),
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-comet-trail),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-comet-trail) {
+  background: linear-gradient(165deg, #010508 0%, #062028 45%, #010304 100%);
+  --kinetik-frame: rgba(34, 211, 238, 0.42);
+  --kinetik-frame-strong: rgba(103, 232, 249, 0.8);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-nova-pulse),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-nova-pulse) {
+  background: linear-gradient(165deg, #0a0410 0%, #2a0a28 45%, #050208 100%);
+  --kinetik-frame: rgba(244, 114, 182, 0.42);
+  --kinetik-frame-strong: rgba(251, 113, 133, 0.78);
+}
+
+.profile-kinetik-panel:has(.profile-plan-pro-bg--cosmos-aurora-orbit),
+.profile-edit-kinetik-card:has(.profile-plan-pro-bg--cosmos-aurora-orbit) {
+  background: linear-gradient(160deg, #020812 0%, #063028 40%, #0a1230 100%);
+  --kinetik-frame: rgba(52, 211, 153, 0.4);
+  --kinetik-frame-strong: rgba(129, 140, 248, 0.72);
+}

@@ -5,13 +5,11 @@
  */
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Info } from "lucide-react";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { t } from "@/lib/i18n/t";
 import type { Language } from "@/lib/i18n/language";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
-import chartInfoStyles from "./profileChartInfoFaq.module.css";
 import "./profileDailyComboChart.css";
 
 export type ProfileDailyComboChartPoint = {
@@ -19,7 +17,7 @@ export type ProfileDailyComboChartPoint = {
   posts: number;
   wins: number;
   pointsV3: number;
-  scorePrecision: number;
+  exactHitCount: number;
   upsetPoints: number;
 };
 
@@ -206,6 +204,7 @@ export type ProfileDailyComboChartNeuralProps = {
   rankingLeague?: RankingLeagueSource;
   layout?: "web" | "mobile";
   visualEffectsLite?: boolean;
+  hideTitle?: boolean;
 };
 
 export default function ProfileDailyComboChartNeural({
@@ -214,11 +213,12 @@ export default function ProfileDailyComboChartNeural({
   rankingLeague = "nba",
   layout = "web",
   visualEffectsLite = false,
+  hideTitle = false,
 }: ProfileDailyComboChartNeuralProps) {
   const narrowViewport = useNarrowViewport(layout === "mobile");
   const isCompactChart = layout === "mobile" || narrowViewport || visualEffectsLite;
   const msg = t(language);
-  const isWcTrend = rankingLeague === "worldcup";
+  const isWcTrend = false;
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const chartRows = useMemo(() => buildCumulative(rows), [rows]);
 
@@ -256,21 +256,10 @@ export default function ProfileDailyComboChartNeural({
 
   const title = msg.profile.dailyComboChart;
   const subtitle = msg.profile.dailyComboChartDesc;
-  const chartInfoTooltipMsg = msg.profile.dailyComboChartInfo;
-
-  const scorePrecisionLabel = isWcTrend
-    ? msg.rankings.exactHits
-    : msg.profile.scorePrecision;
-  const scorePrecisionUnit = isWcTrend
-    ? language === "ja"
-      ? "試合"
-      : "matches"
-    : msg.profile.ptsUnit;
-  const scorePrecisionDecimals = isWcTrend ? 0 : 1;
 
   const statLabels = {
     hitsPosts: msg.profile.hitsSlashPosts,
-    scorePrec: scorePrecisionLabel,
+    exactHits: msg.rankings.exactHits,
     totalPts: msg.profile.totalPoints,
     upset: msg.profile.upsetLabel,
     unitCount: msg.profile.items,
@@ -314,28 +303,22 @@ export default function ProfileDailyComboChartNeural({
     <div className="dcc-neural w-full min-w-0">
       <div className="relative z-20 mb-2 px-0.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p
-            className={[
-              nameRajdhani.className,
-              "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
-            ].join(" ")}
-          >
-            {title}
-          </p>
-          <div className={chartInfoStyles.wrap}>
-            <button
-              type="button"
-              className={chartInfoStyles.faqButton}
-              aria-label={chartInfoTooltipMsg}
+          {hideTitle ? (
+            <p className="min-w-0 flex-1 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>
+          ) : (
+            <p
+              className={[
+                nameRajdhani.className,
+                "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
+              ].join(" ")}
             >
-              <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
-            </button>
-            <div className={chartInfoStyles.tooltip} aria-hidden>
-              {chartInfoTooltipMsg}
-            </div>
-          </div>
+              {title}
+            </p>
+          )}
         </div>
-        <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>
+        {hideTitle ? null : (
+          <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>
+        )}
       </div>
 
       <div className="dcc-neural__panel">
@@ -559,22 +542,24 @@ export default function ProfileDailyComboChartNeural({
                   </span>
                 </div>
               </div>
+              {isWcTrend ? (
               <div className="dcc-neural__stat-cell">
                 <p className={["dcc-neural__stat-label", nameOxanium.className].join(" ")}>
-                  {statLabels.scorePrec}
+                  {statLabels.exactHits}
                 </p>
                 <div className="dcc-neural__stat-value-row">
                   <span className={["dcc-neural__stat-value", nameOxanium.className].join(" ")}>
                     {formatMetricDecimals(
-                      clampNum(selectedRow.scorePrecision),
-                      scorePrecisionDecimals
+                      clampNum(selectedRow.exactHitCount),
+                      0
                     )}
                   </span>
                   <span className={["dcc-neural__stat-unit", nameOxanium.className].join(" ")}>
-                    {scorePrecisionUnit}
+                    {language === "ja" ? "試合" : "matches"}
                   </span>
                 </div>
               </div>
+              ) : null}
               <div className="dcc-neural__stat-cell">
                 <p className={["dcc-neural__stat-label", nameOxanium.className].join(" ")}>
                   {statLabels.totalPts}

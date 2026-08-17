@@ -1,17 +1,34 @@
 import { StyleSheet, View } from "react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import type { NavigationState, PartialState } from "@react-navigation/native";
+import { useReducedMotion } from "react-native-reanimated";
 import AppTabBar from "./AppTabBar";
 import type { MainTabParamList } from "./types";
+import {
+  forTabPagerSlide,
+  tabPagerTransitionSpec,
+} from "./tabPagerTransition";
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
-import WcKnockoutStreakResetGateNative from "../features/games/WcKnockoutStreakResetGateNative";
 import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
 import {
   DEFAULT_HEADER_WORDMARK,
   resolveHeaderWordmarkFromMainTab,
+  type HeaderWordmark,
 } from "../../../../lib/ui/headerWordmark";
+import {
+  getAppBrandShelfHidden,
+  subscribeAppBrandShelfHidden,
+} from "../../../../lib/ui/appBrandShelfVisibility";
+import {
+  getTutorialWelcomeBrandHidden,
+  subscribeTutorialWelcomeBrandHidden,
+} from "../../../../lib/tutorial/tutorialWelcomeChrome";
+import {
+  getTutorialTabTransitionQuiet,
+  subscribeTutorialTabTransitionQuiet,
+} from "../../../../lib/tutorial/tutorialTabTransitionQuiet";
 import {
   GamesStackScreen,
   ResultStackScreen,
@@ -19,18 +36,35 @@ import {
   LeaderboardsStackScreen,
   ProfileStackScreen,
 } from "./StackNavigators";
+import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function resolveTabWordmark(
   state: NavigationState | PartialState<NavigationState> | undefined
-): string {
+): HeaderWordmark {
   const routeName = state?.routes[state.index ?? 0]?.name;
   return resolveHeaderWordmarkFromMainTab(routeName);
 }
 
 export default function MainTabNavigator() {
+  const reduceMotion = useReducedMotion() === true;
   const [wordmark, setWordmark] = useState(DEFAULT_HEADER_WORDMARK);
+  const brandShelfHidden = useSyncExternalStore(
+    subscribeAppBrandShelfHidden,
+    getAppBrandShelfHidden,
+    () => false
+  );
+  const welcomeBrandHidden = useSyncExternalStore(
+    subscribeTutorialWelcomeBrandHidden,
+    getTutorialWelcomeBrandHidden,
+    () => false
+  );
+  const tabTransitionQuiet = useSyncExternalStore(
+    subscribeTutorialTabTransitionQuiet,
+    getTutorialTabTransitionQuiet,
+    () => false
+  );
 
   const syncWordmarkFromTabState = useCallback(
     (state: NavigationState | PartialState<NavigationState> | undefined) => {
@@ -39,16 +73,33 @@ export default function MainTabNavigator() {
     []
   );
 
+  /**
+   * animation を付けず transitionSpec のみ → hasAnimation が true（none だと遷移中に非表示になる）。
+   * チュートリアル再開中は none（タブスライド × welcome 合成で iOS 黒画面になるため）。
+   */
+  const tabTransitionOptions = useMemo(
+    () =>
+      reduceMotion || tabTransitionQuiet
+        ? { animation: "none" as const }
+        : {
+            sceneStyleInterpolator: forTabPagerSlide,
+            transitionSpec: tabPagerTransitionSpec,
+          },
+    [reduceMotion, tabTransitionQuiet]
+  );
+
   useEffect(() => {
     hideNativeBootSplash();
   }, []);
 
   return (
     <>
+      <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
-      <WcKnockoutStreakResetGateNative />
       <View style={styles.root}>
-        <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
+        {brandShelfHidden || welcomeBrandHidden ? null : (
+          <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
+        )}
         <View style={styles.tabHost}>
           <Tab.Navigator
             tabBar={(props) => <AppTabBar {...props} />}
@@ -61,7 +112,12 @@ export default function MainTabNavigator() {
               headerShown: false,
               tabBarShowLabel: false,
               tabBarStyle: { display: "none" },
+              // AppShell のメッシュ背景を通す（不透明 #090c15 だとヘッダー下だけ塗り潰される）
               sceneStyle: { backgroundColor: "transparent" },
+              // 初回だけ遅延マウント。freezeOnBlur はタブ連打で解凍が積み上がりフリーズするためオフ
+              lazy: true,
+              freezeOnBlur: false,
+              ...tabTransitionOptions,
             }}
             initialRouteName="GamesTab"
           >

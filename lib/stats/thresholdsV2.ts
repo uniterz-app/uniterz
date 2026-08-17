@@ -15,12 +15,6 @@ type ThresholdPair = { yellow: number; strong: number };
  * 期間別・合計指標用の閾値（厳しめ）
  * ============================= */
 const SUM_THRESHOLDS = {
-  scorePrecisionSum: {
-    "7d": { yellow: 50, strong: 100 },
-    "30d": { yellow: 200, strong: 300 },
-    "all": { yellow: 140, strong: 180 },
-  } satisfies Record<PeriodV2, ThresholdPair>,
-
   upsetPointsSum: {
     "7d": { yellow: 10, strong: 20 },
     "30d": { yellow: 30, strong: 55 },
@@ -79,30 +73,6 @@ export function evaluateWinRateV2(winRate01: number): HighlightV2 {
 }
 
 /* =============================
- * スコア精度（平均）
- * ============================= */
-export function evaluateScorePrecisionAvgV2(avgScorePrecision: number): HighlightV2 {
-  const v = Number(avgScorePrecision);
-  if (!Number.isFinite(v) || v <= 0) return { level: "none" };
-  if (v >= 8.0) return { level: "strong", icon: "crown", reason: "avgScorePrecision>=8.0" };
-  if (v >= 6.5) return { level: "yellow", reason: "avgScorePrecision>=6.5" };
-  return { level: "none" };
-}
-
-/* =============================
- * スコア精度（合計：scorePrecisionSum）
- * ============================= */
-export function evaluateScorePrecisionSumV2(
-  scorePrecisionSum: number,
-  period: PeriodV2
-): HighlightV2 {
-  return evalSumByPeriod(scorePrecisionSum, period, SUM_THRESHOLDS.scorePrecisionSum, {
-    strongIcon: "crown",
-    metric: "scorePrecisionSum",
-  });
-}
-
-/* =============================
  * UPSET得点（合計：upsetPointsSum）
  * ============================= */
 export function evaluateUpsetPointsSumV2(
@@ -150,16 +120,7 @@ export function evaluateMaxStreakV2(maxStreak: number): HighlightV2 {
   return { level: "none" };
 }
 
-/* =============================
- * （互換用：古いAPIを残す）
- * - 旧 evaluatePrecisionV2 は平均前提だったので常に none に寄せる
- * - 旧 evaluateUpsetV2 は 0-100 前提だったので常に none に寄せる
- *   ※ UI 側の置換が完了したら削除でOK
- * ============================= */
-export function evaluatePrecisionV2(_avgPrecision: number): HighlightV2 {
-  return { level: "none", reason: "deprecated: use evaluateScorePrecisionSumV2" };
-}
-
+/* 互換用: 旧 upset 0–100 API。UI 側置換後に削除予定。 */
 export function evaluateUpsetV2(_legacy: number): HighlightV2 {
   return { level: "none", reason: "deprecated: use evaluateUpsetPointsSumV2" };
 }

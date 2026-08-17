@@ -3,24 +3,21 @@ import type { CommunityGroupLeaderboardRow } from "@/app/component/communities/c
 import type {
   MobileMetric,
   RankingRowWithCountry,
-} from "@/app/component/rankings/_data/mockRows";
+} from "@/lib/rankings/rankingMetrics";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
-/** コミュニティの competition → プロフィール成績タブのリーグ */
+/** コミュニティの competition → プロフィール成績タブのリーグ（NBA のみ） */
 export function communityLeagueForProfile(
-  raw: string | null | undefined
+  _raw: string | null | undefined
 ): { rankingLeague: RankingLeagueSource; wcStage?: WcRankingStage } {
-  if (raw === "nba") return { rankingLeague: "nba" };
-  return { rankingLeague: "worldcup", wcStage: "overall" };
+  return { rankingLeague: "nba" };
 }
 
 export function communityMetricToMobile(
   metric: CommunityMetric
 ): MobileMetric {
   switch (metric) {
-    case "totalPrecision":
-      return "marginPrecision";
     case "totalUpset":
       return "upsetScore";
     case "winRate":
@@ -44,9 +41,7 @@ export function communityRowToRankingCardRow(
   const value =
     mobileMetric === "totalScore"
       ? row.totalPoints ?? row.sortValue
-      : mobileMetric === "marginPrecision"
-        ? row.totalPrecision ?? row.sortValue
-        : mobileMetric === "upsetScore"
+      : mobileMetric === "upsetScore"
           ? row.totalUpset ?? row.sortValue
           : mobileMetric === "winRate"
             ? winRate
@@ -54,7 +49,6 @@ export function communityRowToRankingCardRow(
 
   const posts = row.totalPosts ?? 0;
   const totalPoints = row.totalPoints ?? 0;
-  const totalPrecision = row.totalPrecision ?? 0;
   const totalUpset = row.totalUpset ?? 0;
 
   return {
@@ -68,15 +62,12 @@ export function communityRowToRankingCardRow(
     winRate,
     totalPoints,
     totalScore: totalPoints,
-    totalPrecision,
-    marginPrecisionScore: totalPrecision,
     totalUpset,
     upsetScore: totalUpset,
     streak: row.activeWinStreak ?? 0,
     activeWinStreak: row.activeWinStreak ?? 0,
     totalPosts: posts,
     avgTotalScore: posts > 0 ? totalPoints / posts : 0,
-    avgMarginPrecision: posts > 0 ? totalPrecision / posts : 0,
     avgUpsetScore: posts > 0 ? totalUpset / posts : 0,
     value,
   } as RankingRowWithCountry;

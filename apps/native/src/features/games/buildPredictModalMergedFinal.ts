@@ -5,15 +5,20 @@ import {
 import type { ResultCardBadge } from "../../../../../lib/result/resultGlass";
 import type { WinStreakBadgeStyle } from "../../../../../lib/ui/winStreakBadge";
 import type { GamesLanguage } from "./gamesI18n";
-import {
-  resolveWcGoalScorerResultNative,
-  type WcGoalScorerPostLike,
-  type WcGoalScorerResultInfo,
-} from "../results/useWcGoalScorerResultNative";
 import type { PkScore } from "../../../../../lib/games/pkScore";
+import {
+  buildResultStatMetricValues,
+  extractResultSettlementBreakdown,
+} from "../../../../../lib/result/buildResultStatRows";
+import {
+  resolveNbaTopScorerResultInfo,
+  type NbaTopScorerResultInfo,
+} from "../../../../../lib/result/resolveNbaTopScorerResult";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import type { Language } from "../../../../../lib/i18n/language";
 
 export type PredictModalResultStatRow = {
-  key: "scorePrecision" | "upsetPoints" | "pointsV3";
+  key: "upsetPoints" | "pointsV3";
   label: string;
   value: number;
   barMax: number;
@@ -33,7 +38,9 @@ export type PredictModalMergedFinalPreview = {
   stackBadges: boolean;
   streakBadge: WinStreakBadgeStyle | null;
   activeWinStreak: number;
-  wcGoalScorer: WcGoalScorerResultInfo | null;
+  wcGoalScorer: null;
+  nbaTopScorer: NbaTopScorerResultInfo | null;
+  nbaTopScorerLabel: string;
   statRows: PredictModalResultStatRow[];
 };
 
@@ -74,6 +81,8 @@ type BuildParams = {
   awayTeamId?: string | null;
   finalOt?: boolean;
   pkScore?: PkScore | null;
+  topScorerCandidates?: unknown;
+  leadingScorers?: unknown;
 };
 
 /** Web `MatchCard` overlay + `ResultStatsRows` 相当の試合終了・予想済みプレビュー */
@@ -81,28 +90,24 @@ export function buildPredictModalMergedFinalPreview(
   params: BuildParams
 ): PredictModalMergedFinalPreview | null {
   const {
-    league,
     language,
     finalScore,
     predictedScore,
     stats,
-    goalScorer,
-    homeTeamId,
-    awayTeamId,
     finalOt = false,
     pkScore = null,
   } = params;
   const isEn = language === "en";
 
-  const postLike: WcGoalScorerPostLike = {
-    league,
-    status: "final",
-    home: { teamId: homeTeamId ?? null },
-    away: { teamId: awayTeamId ?? null },
+  const postLike = {
+    league: params.league,
+    status: "final" as const,
+    home: { teamId: params.homeTeamId ?? null },
+    away: { teamId: params.awayTeamId ?? null },
     result: finalScore,
     prediction: {
       score: predictedScore,
-      goalScorer: goalScorer ?? null,
+      goalScorer: params.goalScorer ?? null,
     },
     stats,
   };
@@ -119,57 +124,48 @@ export function buildPredictModalMergedFinalPreview(
     language
   );
 
-  const wcGoalScorer = resolveWcGoalScorerResultNative(postLike);
+  const breakdown = extractResultSettlementBreakdown(stats);
+  const metricValues = buildResultStatMetricValues(breakdown);
+  const resultsCopy = i18nT((language === "en" ? "en" : "ja") as Language).results;
 
-  const hadUpsetGame = Boolean(stats?.hadUpsetGame);
-  const scorePrecision = toNumber(stats?.scorePrecision, 0);
-  const upsetPoints = toNumber(stats?.upsetPoints, 0);
-  const pointsV3 = toNumber(stats?.pointsV3, 0);
-  const showScorePrecision = league !== "wc";
+  const labelFor = (key: "upsetPoints" | "pointsV3") => {
+    if (key === "upsetPoints") return resultsCopy.upsetPointsLabel;
+    return resultsCopy.totalPointsLabel;
+  };
 
-  const statRows: PredictModalResultStatRow[] = [
-    ...(showScorePrecision
-      ? [
-          {
-            key: "scorePrecision" as const,
-            label: isEn ? "Score Precision" : "スコア精度",
-            value: scorePrecision,
-            barMax: 10,
-            display: scorePrecision.toFixed(1),
-            ratio: clamp01(scorePrecision / 10),
-            valueTone: isYellow10pt(stats?.scorePrecision)
-              ? ("yellow" as const)
-              : ("white" as const),
-          },
-        ]
-      : []),
-    {
-      key: "upsetPoints",
-      label: isEn ? "Upset Score" : "アップセット",
-      value: upsetPoints,
-      barMax: 10,
-      display: hadUpsetGame
-        ? `${(Math.round(upsetPoints * 10) / 10).toFixed(1)}`
-        : "--",
-      ratio:
-        hadUpsetGame && upsetPoints > 0 ? clamp01(upsetPoints / 10) : 0,
-      valueTone:
-        hadUpsetGame && isRedUpset(stats?.upsetPoints)
-          ? "red"
-          : "white",
-    },
-    {
-      key: "pointsV3",
-      label: isEn ? "Total Score" : "総合得点",
-      value: pointsV3,
-      barMax: 10,
-      display: `${(Math.round(pointsV3 * 10) / 10).toFixed(1)}`,
-      ratio: clamp01(pointsV3 / 10),
-      valueTone: isYellow10pt(stats?.pointsV3) ? "yellow" : "white",
-    },
-  ];
+  const toneFor = (
+    key: "upsetPoints" | "pointsV3",
+    value: number
+  ): PredictModalResultStatRow["valueTone"] => {
+    if (key === "upsetPoints") {
+      return breakdown.hadUpsetGame && isRedUpset(value) ? "red" : "white";
+    }
+    return isYellow10pt(value) ? "yellow" : "white";
+  };
+
+  const statRows: PredictModalResultStatRow[] = metricValues.map((m) => ({
+    key: m.key,
+    label: labelFor(m.key),
+    value: m.value,
+    barMax: m.barMax,
+    display:
+      m.displayValue == null
+        ? "--"
+        : `${(Math.round(m.displayValue * 10) / 10).toFixed(1)}`,
+    ratio:
+      m.key === "upsetPoints" && !breakdown.hadUpsetGame
+        ? 0
+        : m.barMax > 0
+          ? clamp01(m.value / m.barMax)
+          : 0,
+    valueTone: toneFor(m.key, m.value),
+  }));
 
   const finalLabel = `${isEn ? "Final" : "試合終了"}${finalOt ? " (OT)" : ""}`;
+  const nbaTopScorer = resolveNbaTopScorerResultInfo(postLike, {
+    candidates: params.topScorerCandidates,
+    leadingScorers: params.leadingScorers,
+  });
 
   return {
     finalScore,
@@ -182,7 +178,9 @@ export function buildPredictModalMergedFinalPreview(
     stackBadges,
     streakBadge,
     activeWinStreak,
-    wcGoalScorer,
+    wcGoalScorer: null,
+    nbaTopScorer,
+    nbaTopScorerLabel: resultsCopy.nbaTopScorerResultLabel,
     statRows,
   };
 }

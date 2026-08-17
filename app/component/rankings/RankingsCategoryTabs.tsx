@@ -11,8 +11,8 @@ export type { RankingsCategory } from "@/app/component/rankings/RankingsCategory
 type Props = {
   category: RankingsCategory;
   onChange: (next: RankingsCategory) => void;
-  /** WC ランキングでは Playoffs タブを WORLD CUP 表記にする */
-  league?: "nba" | "worldcup";
+  /** @deprecated WC 廃止 — 無視 */
+  league?: "nba";
   /** ブラケット未入力のとき Bracket タブに黄色の ! を表示する */
   bracketAlert?: boolean;
 };
@@ -20,10 +20,10 @@ type Props = {
 export default function RankingsCategoryTabs({
   category,
   onChange,
-  league = "nba",
+  league: _league = "nba",
   bracketAlert = false,
 }: Props) {
-  const playoffsLabel = league === "worldcup" ? "WORLD CUP" : "Playoffs";
+  const playoffsLabel = "Playoffs";
 
   const bracketBadge = bracketAlert ? (
     <span

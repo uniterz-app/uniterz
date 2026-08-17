@@ -10,6 +10,7 @@ import {
 import { buildPlayoffDisplayData } from "@/lib/playoff-bracket-display";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
+import GamesNbaSubpageShell from "@/app/component/games/GamesNbaSubpageShell";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { usePlayoffOfficialResults } from "@/lib/playoff/usePlayoffOfficialResults";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -89,10 +90,14 @@ export default function MobilePlayoffBracketViewPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050b14] px-4 py-4 text-white">
-      <div className="relative mt-4">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-full w-[calc(100vw-10px)] -translate-x-1/2 rounded-[18px] bg-[#020611]" />
-
+    <GamesNbaSubpageShell
+      eyebrow="NBA · PLAYOFFS"
+      title="BRACKET"
+      subtitle="提出済みのプレーオフブラケット。的中状況は公式結果と照合して表示されます。"
+      contentClassName="max-w-none px-3 sm:px-4"
+    >
+      <div className="relative">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-full w-[calc(100vw-10px)] -translate-x-1/2 rounded-[18px] bg-[#020611]/80" />
         <div className="relative overflow-visible">
           <PlayoffFullBracketMobile
             league="nba"
@@ -113,6 +118,6 @@ export default function MobilePlayoffBracketViewPage() {
           />
         </div>
       </div>
-    </main>
+    </GamesNbaSubpageShell>
   );
 }

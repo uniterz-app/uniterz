@@ -1,36 +1,16 @@
 /**
- * 試合確定後の pointsV3 分布（リザルトディテール用）。
- * 集計は Cloud Functions 等で games ドキュメントへ書き込む想定。
- *
- * ## pointsV3 の取りうる値（UI・ビン分割の前提）
- * - **勝者を外した場合は 0 点**（それ未満の小数も出ない想定）
- * - **勝者を当てた場合は 4 点を下限**に加算・調整され、ベースは **4〜10** 前後
- * - **連勝ボーナス・アップセット等で 10 を超える**ことがある（集計ビンは `10` 以上をまとめてもよい）
- * - **リザルトの分布チャートは縦軸 0〜10 で表示し、10 超は上端（10）に張り付け**
- * - **1〜3 点台は出ない**（グラフでは 0 と 4 の間が空欄になりうる）
- *
- * ビン例:
- * - 外れ専用: `lo: 0, hi: 0`（厳密に 0 のみ）
- * - 的中帯: 0.5 刻み（4.0–4.5, …）や 1 点刻み（4–5, …）など
- * - **10 超**: `lo: 10, hi: 14` のようにまとめる、または最終ビンを `10` 以上用に開区間で持つ
- *
- * 保存例（games/{gameId} に埋め込み・1 read で取得）:
- * ```ts
- * pointsDistribution?: {
- *   v: 1;
- *   bins: PointsDistBin[];
- *   n: number;
- *   median: number | null;
- *   mean: number | null;
- *   updatedAtMillis: number;
- * };
- * ```
+ * @deprecated ヒストグラム用。新リザルトは `gamePointsSummary` を使う。
+ * 互換のため型・パーサのみ残す。
  */
+import {
+  parseGamePointsTopEntries,
+  type GamePointsTopEntryV1,
+} from "./gamePointsTop";
+
+export type { GamePointsTopEntryV1 } from "./gamePointsTop";
 
 export type PointsDistBin = {
-  /** ビン下限（含む）。外れ0専用は lo===hi===0 でも可 */
   lo: number;
-  /** ビン上限（排他的。lo===hi の点ビンでは hi も同値でよい） */
   hi: number;
   count: number;
 };
@@ -38,14 +18,14 @@ export type PointsDistBin = {
 export type GamePointsDistributionV1 = {
   v: 1;
   bins: PointsDistBin[];
-  /** 有効な得点の件数 */
   n: number;
   median: number | null;
   mean: number | null;
+  max?: number | null;
+  top?: GamePointsTopEntryV1[];
   updatedAtMillis?: number;
 };
 
-/** gamesドキュメント上のどちらのフィールド名でも受け取る（CF は `pointsDistribution`） */
 export function rawPointsDistributionFromGameDoc(
   gameData: Record<string, unknown> | null | undefined
 ): unknown {
@@ -61,7 +41,6 @@ function isFiniteNum(x: unknown): x is number {
   return typeof x === "number" && Number.isFinite(x);
 }
 
-/** Firestore `games.pointsDistribution` から安全に復元 */
 export function parseGamePointsDistributionV1(
   raw: unknown
 ): GamePointsDistributionV1 | null {
@@ -96,5 +75,20 @@ export function parseGamePointsDistributionV1(
       : isFiniteNum(o.mean)
         ? o.mean
         : null;
-  return { v: 1, bins, n, median, mean };
+  const max =
+    o.max === null || o.max === undefined
+      ? null
+      : isFiniteNum(o.max)
+        ? o.max
+        : null;
+  const top = parseGamePointsTopEntries(o.top);
+  return {
+    v: 1,
+    bins,
+    n,
+    median,
+    mean,
+    max,
+    ...(top.length > 0 ? { top } : {}),
+  };
 }

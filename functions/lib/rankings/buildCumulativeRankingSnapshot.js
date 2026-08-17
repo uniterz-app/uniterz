@@ -1,19 +1,22 @@
 "use strict";
 // functions/src/rankings/buildCumulativeRankingSnapshot.ts
+// NBA シーズンキー付きスライス（rankingBySeason.<key>）から s<key>_<metric> doc を日次で作る。
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = exports.RANK_SNAPSHOT_HISTORY_SUBCOL = exports.SNAPSHOT_BUILD_PHASES = void 0;
+exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = exports.RANK_SNAPSHOT_HISTORY_SUBCOL = exports.NBA_SEASON_WIN_RATE_MIN_POSTS = void 0;
 exports.getYesterdayDateKeyJST = getYesterdayDateKeyJST;
 exports.subtractOneDayFromDateKeyJST = subtractOneDayFromDateKeyJST;
-exports.loadPlayoffRoundTop20RowsLive = loadPlayoffRoundTop20RowsLive;
-exports.loadNbaPhaseTop20RowsLive = loadNbaPhaseTop20RowsLive;
-exports.loadWcStageTop20RowsLive = loadWcStageTop20RowsLive;
+exports.nbaSeasonRankingSlice = nbaSeasonRankingSlice;
+exports.nbaOpenSeasonRankingSlice = nbaOpenSeasonRankingSlice;
+exports.loadNbaSeasonTop20RowsLive = loadNbaSeasonTop20RowsLive;
 exports.buildCumulativeRankingSnapshot = buildCumulativeRankingSnapshot;
 const firestore_1 = require("firebase-admin/firestore");
 const safeRankMetricNum_1 = require("./safeRankMetricNum");
-const wcRankingStage_1 = require("./wcRankingStage");
-const activeFootballStreakForWcStage_1 = require("./activeFootballStreakForWcStage");
 const activeWinStreakRanking_1 = require("./activeWinStreakRanking");
-const loadUidsWhoPredictedOnDateJst_1 = require("../notifications/loadUidsWhoPredictedOnDateJst");
+const loadUidsWhoPredictedOnDateFromDaily_1 = require("../notifications/loadUidsWhoPredictedOnDateFromDaily");
+const cumulativeSnapshotIndex_1 = require("./cumulativeSnapshotIndex");
+const nbaSeason_1 = require("./nbaSeason");
+const mergeProfileCharts_1 = require("../profile/mergeProfileCharts");
+const profileHeroSnapshot_1 = require("../profile/profileHeroSnapshot");
 /* =========================================================
  * Firestore
  * =======================================================*/
@@ -21,21 +24,14 @@ function db() {
     return (0, firestore_1.getFirestore)();
 }
 const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
-function minPostsForWinRate(phase, round) {
-    if (phase === "playoffs" && (round === "overall" || round === "r1")) {
-        return 20;
-    }
-    return MIN_POSTS_FOR_WIN_RATE_BASE;
-}
+/** NBA シーズン勝率ランキングの最低投稿数（Next の minPostsForWinRate と同期） */
+exports.NBA_SEASON_WIN_RATE_MIN_POSTS = 20;
 function filterRowsForMetricEligibility(baseRows, metric, opts) {
     if (metric === "winRate") {
-        if (opts.wcStage) {
-            return baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= (0, wcRankingStage_1.minPostsForWcWinRate)(opts.wcStage); });
-        }
         return baseRows.filter((row) => {
-            var _a, _b, _c;
+            var _a;
             return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >=
-                minPostsForWinRate((_b = opts.phase) !== null && _b !== void 0 ? _b : "playoffs", (_c = opts.round) !== null && _c !== void 0 ? _c : "overall");
+                Math.max(exports.NBA_SEASON_WIN_RATE_MIN_POSTS, MIN_POSTS_FOR_WIN_RATE_BASE);
         });
     }
     if (metric === "activeWinStreak") {
@@ -55,30 +51,9 @@ function filterRowsForMetricEligibility(baseRows, metric, opts) {
 const METRICS = [
     "totalPoints",
     "winRate",
-    "totalPrecision",
     "totalUpset",
-    "activeWinStreak",
-];
-/** World Cup 専用（完全的中は totalExactHits、得点者的中は totalGoalScorerHits） */
-const WC_METRICS = [
-    "totalPoints",
-    "winRate",
-    "totalExactHits",
-    "totalUpset",
-    "activeWinStreak",
     "totalGoalScorerHits",
 ];
-const PLAYOFF_ROUND_KEYS = ["r1", "r2", "cf", "finals"];
-const WC_RANKING_STAGES = [
-    "overall",
-    "qualifying",
-    "main",
-];
-/**
- * 日次スナップショットで再計算・書き込みするフェーズ。プレーイン終了後は確定表示のため除外する。
- * Next の `RANKING_SNAPSHOT_BUILD_PHASES` と同期すること。
- */
-exports.SNAPSHOT_BUILD_PHASES = ["playoffs"];
 /** Client: list cumulative_stats/{uid}/rankSnapshotHistory ordered by dateKey. */
 exports.RANK_SNAPSHOT_HISTORY_SUBCOL = "rankSnapshotHistory";
 function toDateKeyJST(d) {
@@ -112,86 +87,49 @@ function subtractOneDayFromDateKeyJST(dateKey) {
 }
 /** Max days to walk back when yesterday's per-user rank snapshot doc is missing. */
 exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = 30;
-/* =========================================================
- * Utils
- * =======================================================*/
-/** Leaderboard slice: prefer `rankingByPhase[phase]` when `phase` is set. */
-function rankingSlice(d, phase) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
-    if (phase) {
-        const byPhase = (_a = d.rankingByPhase) === null || _a === void 0 ? void 0 : _a[phase];
-        if (byPhase && typeof byPhase === "object") {
-            const tp = (_b = byPhase.totalPosts) !== null && _b !== void 0 ? _b : 0;
-            const tw = (_c = byPhase.totalWins) !== null && _c !== void 0 ? _c : 0;
-            return {
-                totalPosts: tp,
-                totalWins: tw,
-                winRate: tp > 0 ? tw / tp : (_d = byPhase.winRate) !== null && _d !== void 0 ? _d : 0,
-                totalPoints: (_e = byPhase.totalPoints) !== null && _e !== void 0 ? _e : 0,
-                totalPrecision: (_f = byPhase.totalPrecision) !== null && _f !== void 0 ? _f : 0,
-                totalUpset: (_g = byPhase.totalUpset) !== null && _g !== void 0 ? _g : 0,
-                totalGoalScorerHits: (_h = byPhase.totalGoalScorerHits) !== null && _h !== void 0 ? _h : 0,
-            };
-        }
-        return {
-            totalPosts: 0,
-            totalWins: 0,
-            winRate: 0,
-            totalPoints: 0,
-            totalPrecision: 0,
-            totalUpset: 0,
-            totalGoalScorerHits: 0,
-        };
-    }
-    const rk = d.ranking;
-    if (rk && typeof rk === "object") {
-        const tp = (_j = rk.totalPosts) !== null && _j !== void 0 ? _j : 0;
-        const tw = (_k = rk.totalWins) !== null && _k !== void 0 ? _k : 0;
-        return {
-            totalPosts: tp,
-            totalWins: tw,
-            winRate: tp > 0 ? tw / tp : (_l = rk.winRate) !== null && _l !== void 0 ? _l : 0,
-            totalPoints: (_m = rk.totalPoints) !== null && _m !== void 0 ? _m : 0,
-            totalPrecision: (_o = rk.totalPrecision) !== null && _o !== void 0 ? _o : 0,
-            totalUpset: (_p = rk.totalUpset) !== null && _p !== void 0 ? _p : 0,
-            totalGoalScorerHits: (_q = rk.totalGoalScorerHits) !== null && _q !== void 0 ? _q : 0,
-        };
-    }
-    const totalPosts = (_r = d.totalPosts) !== null && _r !== void 0 ? _r : 0;
-    const totalWins = (_s = d.totalWins) !== null && _s !== void 0 ? _s : 0;
+const EMPTY_SLICE = {
+    totalPosts: 0,
+    totalWins: 0,
+    winRate: 0,
+    totalPoints: 0,
+    totalPrecision: 0,
+    totalUpset: 0,
+    totalGoalScorerHits: 0,
+};
+function sliceFromBucket(rr) {
+    var _a, _b, _c, _d, _e, _f;
+    if (!rr || typeof rr !== "object")
+        return Object.assign({}, EMPTY_SLICE);
+    const tp = Number((_a = rr.totalPosts) !== null && _a !== void 0 ? _a : 0);
+    const tw = Number((_b = rr.totalWins) !== null && _b !== void 0 ? _b : 0);
     return {
-        totalPosts,
-        totalWins,
-        winRate: (_t = d.winRate) !== null && _t !== void 0 ? _t : 0,
-        totalPoints: (_u = d.totalPoints) !== null && _u !== void 0 ? _u : 0,
-        totalPrecision: (_v = d.totalPrecision) !== null && _v !== void 0 ? _v : 0,
-        totalUpset: (_w = d.totalUpset) !== null && _w !== void 0 ? _w : 0,
-        totalGoalScorerHits: (_x = d.totalGoalScorerHits) !== null && _x !== void 0 ? _x : 0,
+        totalPosts: tp,
+        totalWins: tw,
+        winRate: tp > 0 ? tw / tp : Number((_c = rr.winRate) !== null && _c !== void 0 ? _c : 0),
+        totalPoints: Number((_d = rr.totalPoints) !== null && _d !== void 0 ? _d : 0),
+        totalPrecision: Number((_e = rr.totalPrecision) !== null && _e !== void 0 ? _e : 0),
+        totalUpset: Number((_f = rr.totalUpset) !== null && _f !== void 0 ? _f : 0),
+        totalGoalScorerHits: (0, safeRankMetricNum_1.safeRankMetricNum)(rr.totalGoalScorerHits),
     };
 }
-function getValue(d, metric, phase) {
-    var _a, _b, _c, _d, _e, _f;
-    if (metric === "activeWinStreak")
-        return (_a = d.activeWinStreak) !== null && _a !== void 0 ? _a : 0;
-    const r = rankingSlice(d, phase);
-    if (metric === "winRate")
-        return (_b = r.winRate) !== null && _b !== void 0 ? _b : 0;
-    if (metric === "totalPoints")
-        return (_c = r.totalPoints) !== null && _c !== void 0 ? _c : 0;
-    if (metric === "totalPrecision")
-        return (_d = r.totalPrecision) !== null && _d !== void 0 ? _d : 0;
-    if (metric === "totalGoalScorerHits")
-        return (_e = r.totalGoalScorerHits) !== null && _e !== void 0 ? _e : 0;
-    return (_f = r.totalUpset) !== null && _f !== void 0 ? _f : 0;
+/** NBA 現行シーズンのスライス（rankingBySeason.<CURRENT_NBA_SEASON_KEY>） */
+function nbaSeasonRankingSlice(d, seasonKey = nbaSeason_1.CURRENT_NBA_SEASON_KEY) {
+    const bySeason = d.rankingBySeason;
+    return sliceFromBucket(bySeason === null || bySeason === void 0 ? void 0 : bySeason[seasonKey]);
+}
+/** PRO LEAGUE 用。openRankingBySeason 優先、未移行は rankingBySeason にフォールバック */
+function nbaOpenSeasonRankingSlice(d, seasonKey = nbaSeason_1.CURRENT_NBA_SEASON_KEY) {
+    var _a;
+    const openBySeason = d.openRankingBySeason;
+    const open = sliceFromBucket(openBySeason === null || openBySeason === void 0 ? void 0 : openBySeason[seasonKey]);
+    if (((_a = open.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0)
+        return open;
+    return nbaSeasonRankingSlice(d, seasonKey);
 }
 function activeBasketballStreak(d) {
     var _a, _b, _c, _d, _e;
     const signed = (_e = (_d = (_c = (_a = d.activeWinStreakBasketball) !== null && _a !== void 0 ? _a : (_b = d.streakBySport) === null || _b === void 0 ? void 0 : _b.basketball) !== null && _c !== void 0 ? _c : d.currentStreak) !== null && _d !== void 0 ? _d : d.activeWinStreak) !== null && _e !== void 0 ? _e : 0;
     return typeof signed === "number" && signed > 0 ? signed : 0;
-}
-function wcExactHitsFromRow(row) {
-    var _a;
-    return (_a = row.totalPrecision) !== null && _a !== void 0 ? _a : 0;
 }
 function getRowMetricValue(row, metric) {
     if (metric === "activeWinStreak")
@@ -201,7 +139,7 @@ function getRowMetricValue(row, metric) {
     if (metric === "totalPoints")
         return (0, safeRankMetricNum_1.safeRankMetricNum)(row.totalPoints);
     if (metric === "totalExactHits")
-        return (0, safeRankMetricNum_1.safeRankMetricNum)(wcExactHitsFromRow(row));
+        return (0, safeRankMetricNum_1.safeRankMetricNum)(row.totalPrecision);
     if (metric === "totalPrecision")
         return (0, safeRankMetricNum_1.safeRankMetricNum)(row.totalPrecision);
     if (metric === "totalGoalScorerHits")
@@ -235,7 +173,7 @@ function assignCompetitionRanks(sorted, metric) {
     return out;
 }
 function toSnapshotMetricValues(r) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
     const tp = (_a = r.totalPosts) !== null && _a !== void 0 ? _a : 0;
     const tw = (_b = r.totalWins) !== null && _b !== void 0 ? _b : 0;
     return {
@@ -243,30 +181,23 @@ function toSnapshotMetricValues(r) {
         totalPrecision: (_d = r.totalPrecision) !== null && _d !== void 0 ? _d : 0,
         totalUpset: (_e = r.totalUpset) !== null && _e !== void 0 ? _e : 0,
         winRate: tp > 0 ? tw / tp : ((_f = r.winRate) !== null && _f !== void 0 ? _f : 0),
+        exactHitCount: (_h = (_g = r.exactHitCount) !== null && _g !== void 0 ? _g : r.totalPrecision) !== null && _h !== void 0 ? _h : 0,
+        upsetBonusSum: (_k = (_j = r.upsetBonusSum) !== null && _j !== void 0 ? _j : r.totalUpset) !== null && _k !== void 0 ? _k : 0,
+        streakBonusSum: (_l = r.streakBonusSum) !== null && _l !== void 0 ? _l : 0,
+        goalScorerBonusSum: (_m = r.goalScorerBonusSum) !== null && _m !== void 0 ? _m : 0,
     };
 }
 function buildMetricValuesBlock(d) {
-    var _a, _b, _c, _d;
-    const playoffRounds = {};
-    for (const round of PLAYOFF_ROUND_KEYS) {
-        const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
-        if (((_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0) > 0) {
-            playoffRounds[round] = toSnapshotMetricValues(rr);
+    var _a;
+    const seasons = {};
+    const bySeason = ((_a = d.rankingBySeason) !== null && _a !== void 0 ? _a : {});
+    for (const [seasonKey, bucket] of Object.entries(bySeason)) {
+        const slice = sliceFromBucket(bucket);
+        if (slice.totalPosts > 0) {
+            seasons[seasonKey] = toSnapshotMetricValues(slice);
         }
     }
-    const wc = {};
-    for (const stage of WC_RANKING_STAGES) {
-        const rr = (_c = d.rankingByWcStage) === null || _c === void 0 ? void 0 : _c[stage];
-        if (((_d = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _d !== void 0 ? _d : 0) > 0) {
-            wc[stage] = toSnapshotMetricValues(rr);
-        }
-    }
-    return {
-        play_in: toSnapshotMetricValues(rankingSlice(d, "play_in")),
-        playoffs: toSnapshotMetricValues(rankingSlice(d, "playoffs")),
-        playoffRounds,
-        wc,
-    };
+    return { seasons };
 }
 function computeRankDeltaPlaces(prevRank, currentRank) {
     if (prevRank == null || currentRank < 1)
@@ -277,19 +208,13 @@ function computeRankDeltaPlaces(prevRank, currentRank) {
     return d;
 }
 function pickPriorMetricValues(block, opts) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b;
     if (!block)
         return null;
-    if (opts.kind === "wc") {
-        return (_b = (_a = block.wc) === null || _a === void 0 ? void 0 : _a[opts.stage]) !== null && _b !== void 0 ? _b : null;
-    }
-    if (opts.kind === "round") {
-        return (_d = (_c = block.playoffRounds) === null || _c === void 0 ? void 0 : _c[opts.round]) !== null && _d !== void 0 ? _d : null;
-    }
-    return (_e = block[opts.phase]) !== null && _e !== void 0 ? _e : null;
+    return (_b = (_a = block.seasons) === null || _a === void 0 ? void 0 : _a[opts.seasonKey]) !== null && _b !== void 0 ? _b : null;
 }
 function metricValueFromRow(row, metric) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
     if (metric === "activeWinStreak")
         return (_a = row.activeWinStreak) !== null && _a !== void 0 ? _a : 0;
     if (metric === "totalGoalScorerHits")
@@ -299,10 +224,10 @@ function metricValueFromRow(row, metric) {
     if (metric === "totalPoints")
         return (_d = row.totalPoints) !== null && _d !== void 0 ? _d : 0;
     if (metric === "totalExactHits")
-        return wcExactHitsFromRow(row);
-    if (metric === "totalPrecision")
         return (_e = row.totalPrecision) !== null && _e !== void 0 ? _e : 0;
-    return (_f = row.totalUpset) !== null && _f !== void 0 ? _f : 0;
+    if (metric === "totalPrecision")
+        return (_f = row.totalPrecision) !== null && _f !== void 0 ? _f : 0;
+    return (_g = row.totalUpset) !== null && _g !== void 0 ? _g : 0;
 }
 function metricValueFromSnapshot(values, metric) {
     var _a, _b, _c, _d;
@@ -361,17 +286,14 @@ async function fetchLatestPriorRankMapsForUids(uids, startKey, maxLookbackDays) 
                 .doc(key));
             const snaps = await firestore.getAll(...refs);
             snaps.forEach((s, j) => {
-                var _a, _b, _c, _d;
+                var _a;
                 const uid = chunk[j];
                 if (!pending.has(uid))
                     return;
                 if (s.exists) {
                     const d = s.data();
                     out.set(uid, {
-                        play_in: ((_a = d === null || d === void 0 ? void 0 : d.play_in) !== null && _a !== void 0 ? _a : {}),
-                        playoffs: ((_b = d === null || d === void 0 ? void 0 : d.playoffs) !== null && _b !== void 0 ? _b : {}),
-                        playoffRounds: ((_c = d === null || d === void 0 ? void 0 : d.playoffRounds) !== null && _c !== void 0 ? _c : {}),
-                        wc: ((_d = d === null || d === void 0 ? void 0 : d.wc) !== null && _d !== void 0 ? _d : {}),
+                        seasons: ((_a = d === null || d === void 0 ? void 0 : d.seasons) !== null && _a !== void 0 ? _a : {}),
                     });
                     pending.delete(uid);
                 }
@@ -422,56 +344,14 @@ async function fetchLatestPriorMetricValuesForUids(uids, startKey, maxLookbackDa
     }
     return out;
 }
-async function loadPlayoffRoundTop20RowsLive(round, metric, postedTodayUids) {
-    const snap = await db().collection("cumulative_stats").get();
-    const baseRows = snap.docs
-        .map((doc) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
-        const d = doc.data();
-        const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
-        const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
-        const tw = (_c = rr === null || rr === void 0 ? void 0 : rr.totalWins) !== null && _c !== void 0 ? _c : 0;
-        return {
-            uid: doc.id,
-            displayName: (_d = d.displayName) !== null && _d !== void 0 ? _d : "user",
-            handle: (_e = d.handle) !== null && _e !== void 0 ? _e : null,
-            photoURL: (_f = d.photoURL) !== null && _f !== void 0 ? _f : null,
-            countryCode: (_g = d.countryCode) !== null && _g !== void 0 ? _g : null,
-            plan: (d.plan === "pro" ? "pro" : "free"),
-            totalPosts: tp,
-            totalWins: tw,
-            winRate: tp > 0 ? tw / tp : (_h = rr === null || rr === void 0 ? void 0 : rr.winRate) !== null && _h !== void 0 ? _h : 0,
-            totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
-            totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
-            totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
-            totalGoalScorerHits: (0, safeRankMetricNum_1.safeRankMetricNum)(rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits),
-            activeWinStreak: activeBasketballStreak(d),
-        };
-    })
-        .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
-    const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-        phase: "playoffs",
-        round,
-        postedTodayUids: postedTodayUids,
-    });
-    const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
-    const ranks = assignCompetitionRanks(sortedFull, metric);
-    return {
-        totalCount: sortedFull.length,
-        rankByUid: ranks,
-        rows: sortedFull.slice(0, 20).map((row) => {
-            var _a;
-            return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
-        }),
-    };
-}
-async function loadNbaPhaseTop20RowsLive(phase, metric, postedTodayUids) {
+/** NBA 現行シーズンの live フォールバック */
+async function loadNbaSeasonTop20RowsLive(metric, postedTodayUids) {
     const snap = await db().collection("cumulative_stats").get();
     const baseRows = snap.docs
         .map((doc) => {
         var _a, _b, _c, _d;
         const d = doc.data();
-        const r = rankingSlice(d, phase);
+        const r = nbaSeasonRankingSlice(d);
         return {
             uid: doc.id,
             displayName: (_a = d.displayName) !== null && _a !== void 0 ? _a : "user",
@@ -485,59 +365,12 @@ async function loadNbaPhaseTop20RowsLive(phase, metric, postedTodayUids) {
             totalPoints: r.totalPoints,
             totalPrecision: r.totalPrecision,
             totalUpset: r.totalUpset,
-            totalGoalScorerHits: 0,
+            totalGoalScorerHits: r.totalGoalScorerHits,
             activeWinStreak: activeBasketballStreak(d),
         };
     })
         .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
     const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-        phase,
-        round: "overall",
-        postedTodayUids: postedTodayUids,
-    });
-    const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
-    const ranks = assignCompetitionRanks(sortedFull, metric);
-    return {
-        totalCount: sortedFull.length,
-        rankByUid: ranks,
-        rows: sortedFull.slice(0, 20).map((row) => {
-            var _a;
-            return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
-        }),
-    };
-}
-/**
- * World Cup ステージ別 Top20（スナップショットが空のときの live フォールバック）
- */
-async function loadWcStageTop20RowsLive(stage, metric, postedTodayUids) {
-    const snap = await db().collection("cumulative_stats").get();
-    const baseRows = snap.docs
-        .map((doc) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
-        const d = doc.data();
-        const rr = (_a = d.rankingByWcStage) === null || _a === void 0 ? void 0 : _a[stage];
-        const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
-        const tw = (_c = rr === null || rr === void 0 ? void 0 : rr.totalWins) !== null && _c !== void 0 ? _c : 0;
-        return {
-            uid: doc.id,
-            displayName: (_d = d.displayName) !== null && _d !== void 0 ? _d : "user",
-            handle: (_e = d.handle) !== null && _e !== void 0 ? _e : null,
-            photoURL: (_f = d.photoURL) !== null && _f !== void 0 ? _f : null,
-            countryCode: (_g = d.countryCode) !== null && _g !== void 0 ? _g : null,
-            plan: (d.plan === "pro" ? "pro" : "free"),
-            totalPosts: tp,
-            totalWins: tw,
-            winRate: tp > 0 ? tw / tp : (_h = rr === null || rr === void 0 ? void 0 : rr.winRate) !== null && _h !== void 0 ? _h : 0,
-            totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
-            totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
-            totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
-            totalGoalScorerHits: (0, safeRankMetricNum_1.safeRankMetricNum)(rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits),
-            activeWinStreak: (0, activeFootballStreakForWcStage_1.activeFootballStreakForWcStage)(d, stage),
-        };
-    })
-        .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
-    const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-        wcStage: stage,
         postedTodayUids: postedTodayUids,
     });
     const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
@@ -552,220 +385,94 @@ async function loadWcStageTop20RowsLive(stage, metric, postedTodayUids) {
     };
 }
 async function buildCumulativeRankingSnapshot(options = {}) {
-    var _a, _b, _c, _d;
-    const scope = (_a = options.scope) !== null && _a !== void 0 ? _a : "all";
-    const wcOnly = scope === "wc";
+    var _a, _b, _c, _d, _e, _f;
     const streakAllEligible = options.streakAllEligible === true;
-    const snap = await db().collection("cumulative_stats").get();
-    const [wcSettledTodayUids, wcQualifyingSettledTodayUids, wcMainSettledTodayUids, nbaSettledTodayUids] = await Promise.all([
-        (0, activeWinStreakRanking_1.loadAuthorUidsSettledToday)("wc"),
-        (0, activeWinStreakRanking_1.loadAuthorUidsSettledTodayForWcStage)("qualifying"),
-        (0, activeWinStreakRanking_1.loadAuthorUidsSettledTodayForWcStage)("main"),
-        (0, activeWinStreakRanking_1.loadAuthorUidsSettledToday)("nba"),
-    ]);
-    function wcStreakSettledTodayUids(stage) {
-        if (stage === "qualifying")
-            return wcQualifyingSettledTodayUids;
-        if (stage === "main")
-            return wcMainSettledTodayUids;
-        return wcSettledTodayUids;
-    }
-    const rankByUid = new Map();
-    function ensure(uid) {
-        if (!rankByUid.has(uid)) {
-            rankByUid.set(uid, { play_in: {}, playoffs: {} });
+    const seasonKey = nbaSeason_1.CURRENT_NBA_SEASON_KEY;
+    const snap = await (0, cumulativeSnapshotIndex_1.loadCumulativeStatsForRankingSnapshot)(db());
+    const statsByUid = (0, cumulativeSnapshotIndex_1.cumulativeStatsDocsToMap)(snap);
+    const nbaSettledTodayUids = await (0, activeWinStreakRanking_1.loadAuthorUidsSettledToday)("nba");
+    /** uid → 現行シーズンの指標別順位 */
+    const rankByUidSeason = new Map();
+    function ensureSeason(uid) {
+        if (!rankByUidSeason.has(uid)) {
+            rankByUidSeason.set(uid, {});
         }
-        return rankByUid.get(uid);
+        return rankByUidSeason.get(uid);
     }
-    const top20Jobs = [];
+    const seasonTop20Jobs = [];
     const topUidSet = new Set();
-    if (!wcOnly) {
-        for (const phase of exports.SNAPSHOT_BUILD_PHASES) {
-            const baseRows = snap.docs
-                .map((doc) => {
-                var _a, _b, _c, _d;
-                const d = doc.data();
-                const r = rankingSlice(d, phase);
-                return {
-                    uid: doc.id,
-                    displayName: (_a = d.displayName) !== null && _a !== void 0 ? _a : "user",
-                    handle: (_b = d.handle) !== null && _b !== void 0 ? _b : null,
-                    photoURL: (_c = d.photoURL) !== null && _c !== void 0 ? _c : null,
-                    countryCode: (_d = d.countryCode) !== null && _d !== void 0 ? _d : null,
-                    plan: (d.plan === "pro" ? "pro" : "free"),
-                    totalPosts: r.totalPosts,
-                    totalWins: r.totalWins,
-                    winRate: r.winRate,
-                    totalPoints: r.totalPoints,
-                    totalPrecision: r.totalPrecision,
-                    totalUpset: r.totalUpset,
-                    totalGoalScorerHits: 0,
-                    activeWinStreak: activeBasketballStreak(d),
-                };
-            })
-                .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
-            for (const metric of METRICS) {
-                const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-                    phase,
-                    round: "overall",
-                    postedTodayUids: metric === "activeWinStreak" && !streakAllEligible
-                        ? nbaSettledTodayUids
-                        : undefined,
-                    streakAllEligible: metric === "activeWinStreak" ? streakAllEligible : undefined,
-                });
-                const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
-                const ranks = assignCompetitionRanks(sortedFull, metric);
-                for (const [uid, rank] of ranks) {
-                    ensure(uid)[phase][metric] = rank;
-                }
-                const top20 = sortedFull.slice(0, 20).map((row) => {
-                    var _a;
-                    return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0 }));
-                });
-                for (const r of top20) {
-                    topUidSet.add(r.uid);
-                }
-                top20Jobs.push({
-                    phase,
-                    metric,
-                    rows: top20,
-                    totalCount: sortedFull.length,
-                });
-            }
+    const baseRows = snap.docs
+        .map((doc) => {
+        var _a, _b, _c, _d;
+        const d = doc.data();
+        const r = nbaSeasonRankingSlice(d, seasonKey);
+        return {
+            uid: doc.id,
+            displayName: (_a = d.displayName) !== null && _a !== void 0 ? _a : "user",
+            handle: (_b = d.handle) !== null && _b !== void 0 ? _b : null,
+            photoURL: (_c = d.photoURL) !== null && _c !== void 0 ? _c : null,
+            countryCode: (_d = d.countryCode) !== null && _d !== void 0 ? _d : null,
+            plan: (d.plan === "pro" ? "pro" : "free"),
+            totalPosts: r.totalPosts,
+            totalWins: r.totalWins,
+            winRate: r.winRate,
+            totalPoints: r.totalPoints,
+            totalPrecision: r.totalPrecision,
+            totalUpset: r.totalUpset,
+            totalGoalScorerHits: r.totalGoalScorerHits,
+            activeWinStreak: activeBasketballStreak(d),
+        };
+    })
+        .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
+    const openSeasonBaseRows = snap.docs
+        .map((doc) => {
+        var _a, _b, _c, _d;
+        const d = doc.data();
+        const r = nbaOpenSeasonRankingSlice(d, seasonKey);
+        return {
+            uid: doc.id,
+            displayName: (_a = d.displayName) !== null && _a !== void 0 ? _a : "user",
+            handle: (_b = d.handle) !== null && _b !== void 0 ? _b : null,
+            photoURL: (_c = d.photoURL) !== null && _c !== void 0 ? _c : null,
+            countryCode: (_d = d.countryCode) !== null && _d !== void 0 ? _d : null,
+            plan: (d.plan === "pro" ? "pro" : "free"),
+            totalPosts: r.totalPosts,
+            totalWins: r.totalWins,
+            winRate: r.winRate,
+            totalPoints: r.totalPoints,
+            totalPrecision: r.totalPrecision,
+            totalUpset: r.totalUpset,
+            totalGoalScorerHits: r.totalGoalScorerHits,
+            activeWinStreak: activeBasketballStreak(d),
+        };
+    })
+        .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; })
+        .filter((row) => row.plan === "pro");
+    const baseRowsForOpenSeason = openSeasonBaseRows;
+    for (const metric of METRICS) {
+        const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
+            postedTodayUids: metric === "activeWinStreak" && !streakAllEligible
+                ? nbaSettledTodayUids
+                : undefined,
+            streakAllEligible: metric === "activeWinStreak" ? streakAllEligible : undefined,
+        });
+        const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
+        const ranks = assignCompetitionRanks(sortedFull, metric);
+        for (const [uid, rank] of ranks) {
+            ensureSeason(uid)[metric] = rank;
         }
-    }
-    const roundTop20Jobs = [];
-    const rankByUidPlayoffRound = new Map();
-    if (!wcOnly) {
-        function ensurePlayoffRound(uid) {
-            if (!rankByUidPlayoffRound.has(uid)) {
-                rankByUidPlayoffRound.set(uid, {});
-            }
-            return rankByUidPlayoffRound.get(uid);
+        const top20 = sortedFull.slice(0, 20).map((row) => {
+            var _a;
+            return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0 }));
+        });
+        for (const r of top20) {
+            topUidSet.add(r.uid);
         }
-        for (const round of PLAYOFF_ROUND_KEYS) {
-            const baseRows = snap.docs
-                .map((doc) => {
-                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
-                const d = doc.data();
-                const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
-                const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
-                const tw = (_c = rr === null || rr === void 0 ? void 0 : rr.totalWins) !== null && _c !== void 0 ? _c : 0;
-                return {
-                    uid: doc.id,
-                    displayName: (_d = d.displayName) !== null && _d !== void 0 ? _d : "user",
-                    handle: (_e = d.handle) !== null && _e !== void 0 ? _e : null,
-                    photoURL: (_f = d.photoURL) !== null && _f !== void 0 ? _f : null,
-                    countryCode: (_g = d.countryCode) !== null && _g !== void 0 ? _g : null,
-                    plan: (d.plan === "pro" ? "pro" : "free"),
-                    totalPosts: tp,
-                    totalWins: tw,
-                    winRate: tp > 0 ? tw / tp : (_h = rr === null || rr === void 0 ? void 0 : rr.winRate) !== null && _h !== void 0 ? _h : 0,
-                    totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
-                    totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
-                    totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
-                    totalGoalScorerHits: (0, safeRankMetricNum_1.safeRankMetricNum)(rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits),
-                    activeWinStreak: activeBasketballStreak(d),
-                };
-            })
-                .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
-            for (const metric of METRICS) {
-                const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-                    phase: "playoffs",
-                    round,
-                    postedTodayUids: metric === "activeWinStreak" && !streakAllEligible
-                        ? nbaSettledTodayUids
-                        : undefined,
-                    streakAllEligible: metric === "activeWinStreak" ? streakAllEligible : undefined,
-                });
-                const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
-                const ranks = assignCompetitionRanks(sortedFull, metric);
-                for (const [uid, rank] of ranks) {
-                    const slot = ensurePlayoffRound(uid);
-                    if (!slot[round])
-                        slot[round] = {};
-                    slot[round][metric] = rank;
-                }
-                const top20 = sortedFull.slice(0, 20).map((row) => {
-                    var _a;
-                    return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0 }));
-                });
-                for (const r of top20) {
-                    topUidSet.add(r.uid);
-                }
-                roundTop20Jobs.push({
-                    round,
-                    metric,
-                    rows: top20,
-                    totalCount: sortedFull.length,
-                });
-            }
-        }
-    }
-    const wcTop20Jobs = [];
-    const rankByUidWc = new Map();
-    function ensureWc(uid) {
-        if (!rankByUidWc.has(uid)) {
-            rankByUidWc.set(uid, {});
-        }
-        return rankByUidWc.get(uid);
-    }
-    for (const stage of WC_RANKING_STAGES) {
-        const baseRows = snap.docs
-            .map((doc) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
-            const d = doc.data();
-            const rr = (_a = d.rankingByWcStage) === null || _a === void 0 ? void 0 : _a[stage];
-            const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
-            const tw = (_c = rr === null || rr === void 0 ? void 0 : rr.totalWins) !== null && _c !== void 0 ? _c : 0;
-            return {
-                uid: doc.id,
-                displayName: (_d = d.displayName) !== null && _d !== void 0 ? _d : "user",
-                handle: (_e = d.handle) !== null && _e !== void 0 ? _e : null,
-                photoURL: (_f = d.photoURL) !== null && _f !== void 0 ? _f : null,
-                countryCode: (_g = d.countryCode) !== null && _g !== void 0 ? _g : null,
-                plan: (d.plan === "pro" ? "pro" : "free"),
-                totalPosts: tp,
-                totalWins: tw,
-                winRate: tp > 0 ? tw / tp : (_h = rr === null || rr === void 0 ? void 0 : rr.winRate) !== null && _h !== void 0 ? _h : 0,
-                totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
-                totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
-                totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
-                totalGoalScorerHits: (0, safeRankMetricNum_1.safeRankMetricNum)(rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits),
-                activeWinStreak: (0, activeFootballStreakForWcStage_1.activeFootballStreakForWcStage)(d, stage),
-            };
-        })
-            .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
-        for (const metric of WC_METRICS) {
-            const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
-                wcStage: stage,
-                postedTodayUids: metric === "activeWinStreak" && !streakAllEligible
-                    ? wcStreakSettledTodayUids(stage)
-                    : undefined,
-                streakAllEligible: metric === "activeWinStreak" ? streakAllEligible : undefined,
-            });
-            const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
-            const ranks = assignCompetitionRanks(sortedFull, metric);
-            for (const [uid, rank] of ranks) {
-                const slot = ensureWc(uid);
-                if (!slot[stage])
-                    slot[stage] = {};
-                slot[stage][metric] = rank;
-            }
-            const top20 = sortedFull.slice(0, 20).map((row) => {
-                var _a;
-                return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0 }));
-            });
-            for (const r of top20) {
-                topUidSet.add(r.uid);
-            }
-            wcTop20Jobs.push({
-                stage,
-                metric,
-                rows: top20,
-                totalCount: sortedFull.length,
-            });
-        }
+        seasonTop20Jobs.push({
+            metric,
+            rows: top20,
+            totalCount: sortedFull.length,
+        });
     }
     const yesterdayKey = getYesterdayDateKeyJST();
     const topUids = [...topUidSet];
@@ -773,81 +480,61 @@ async function buildCumulativeRankingSnapshot(options = {}) {
         fetchLatestPriorRankMapsForUids(topUids, yesterdayKey, exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS),
         fetchLatestPriorMetricValuesForUids(topUids, yesterdayKey, exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS),
     ]);
-    if (!wcOnly) {
-        for (const { phase, metric, rows, totalCount } of top20Jobs) {
-            const enriched = rows.map((row) => {
-                var _a;
-                const prevBlock = prevByUid.get(row.uid);
-                const prevRaw = (_a = prevBlock === null || prevBlock === void 0 ? void 0 : prevBlock[phase]) === null || _a === void 0 ? void 0 : _a[metric];
-                const prevRank = typeof prevRaw === "number" &&
-                    Number.isFinite(prevRaw) &&
-                    prevRaw >= 1
-                    ? Math.floor(prevRaw)
-                    : null;
-                const priorMetrics = pickPriorMetricValues(priorMetricByUid.get(row.uid), { kind: "phase", phase });
-                return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank), metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics) });
-            });
-            await db()
-                .collection("cumulative_ranking_snapshots")
-                .doc(`${phase}_${metric}`)
-                .set({
-                phase,
-                metric,
-                rows: enriched,
-                totalCount,
-                updatedAt: firestore_1.FieldValue.serverTimestamp(),
-                rankDeltaBasisDateKey: yesterdayKey,
-            }, { merge: true });
-        }
-        for (const { round, metric, rows, totalCount } of roundTop20Jobs) {
-            const enriched = rows.map((row) => {
-                var _a, _b;
-                const prevBlock = prevByUid.get(row.uid);
-                const prevRaw = (_b = (_a = prevBlock === null || prevBlock === void 0 ? void 0 : prevBlock.playoffRounds) === null || _a === void 0 ? void 0 : _a[round]) === null || _b === void 0 ? void 0 : _b[metric];
-                const prevRank = typeof prevRaw === "number" &&
-                    Number.isFinite(prevRaw) &&
-                    prevRaw >= 1
-                    ? Math.floor(prevRaw)
-                    : null;
-                const priorMetrics = pickPriorMetricValues(priorMetricByUid.get(row.uid), { kind: "round", round });
-                return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank), metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics) });
-            });
-            await db()
-                .collection("cumulative_ranking_snapshots")
-                .doc(`playoffs_${round}_${metric}`)
-                .set({
-                phase: "playoffs",
-                round,
-                metric,
-                rows: enriched,
-                totalCount,
-                updatedAt: firestore_1.FieldValue.serverTimestamp(),
-                rankDeltaBasisDateKey: yesterdayKey,
-            }, { merge: true });
-        }
-    }
-    for (const { stage, metric, rows, totalCount } of wcTop20Jobs) {
+    for (const { metric, rows, totalCount } of seasonTop20Jobs) {
         const enriched = rows.map((row) => {
             var _a, _b;
             const prevBlock = prevByUid.get(row.uid);
-            const prevRaw = (_b = (_a = prevBlock === null || prevBlock === void 0 ? void 0 : prevBlock.wc) === null || _a === void 0 ? void 0 : _a[stage]) === null || _b === void 0 ? void 0 : _b[metric];
+            const prevRaw = (_b = (_a = prevBlock === null || prevBlock === void 0 ? void 0 : prevBlock.seasons) === null || _a === void 0 ? void 0 : _a[seasonKey]) === null || _b === void 0 ? void 0 : _b[metric];
             const prevRank = typeof prevRaw === "number" &&
                 Number.isFinite(prevRaw) &&
                 prevRaw >= 1
                 ? Math.floor(prevRaw)
                 : null;
-            const priorMetrics = pickPriorMetricValues(priorMetricByUid.get(row.uid), { kind: "wc", stage });
+            const priorMetrics = pickPriorMetricValues(priorMetricByUid.get(row.uid), { kind: "season", seasonKey });
             return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank), metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics) });
         });
         await db()
             .collection("cumulative_ranking_snapshots")
-            .doc(`wc_${stage}_${metric}`)
+            .doc((0, nbaSeason_1.nbaSeasonSnapshotDocId)(seasonKey, metric))
             .set({
-            kind: "wc",
-            stage,
+            kind: "nbaSeason",
+            seasonKey,
             metric,
             rows: enriched,
             totalCount,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            rankDeltaBasisDateKey: yesterdayKey,
+        }, { merge: true });
+    }
+    // 無差別級（Pro のみ）シーズンスナップショット
+    const openBaseRows = baseRowsForOpenSeason;
+    for (const metric of METRICS) {
+        const eligibleRows = filterRowsForMetricEligibility(openBaseRows, metric, {
+            postedTodayUids: metric === "activeWinStreak" && !streakAllEligible
+                ? nbaSettledTodayUids
+                : undefined,
+            streakAllEligible: metric === "activeWinStreak" ? streakAllEligible : undefined,
+        });
+        const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
+        const ranksMap = assignCompetitionRanks(sortedFull, metric);
+        const ranks = {};
+        for (const [uid, rank] of ranksMap)
+            ranks[uid] = rank;
+        const top20 = sortedFull.slice(0, 20).map((row) => {
+            var _a;
+            return (Object.assign(Object.assign({}, row), { rank: (_a = ranksMap.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null, metricValueDelta: null }));
+        });
+        await db()
+            .collection("cumulative_ranking_snapshots")
+            .doc((0, nbaSeason_1.nbaSeasonOpenSnapshotDocId)(seasonKey, metric))
+            .set({
+            kind: "nbaSeasonOpen",
+            division: "open",
+            seasonKey,
+            metric,
+            rows: top20,
+            ranks,
+            totalCount: sortedFull.length,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
         }, { merge: true });
@@ -863,58 +550,65 @@ async function buildCumulativeRankingSnapshot(options = {}) {
             ops = 0;
         }
     };
-    const historyUids = wcOnly
-        ? new Set(rankByUidWc.keys())
-        : new Set([...rankByUid.keys(), ...rankByUidWc.keys()]);
+    const historyUids = new Set(rankByUidSeason.keys());
     const metricValuesByUid = new Map();
-    if (!wcOnly) {
-        for (const doc of snap.docs) {
-            metricValuesByUid.set(doc.id, buildMetricValuesBlock(doc.data()));
+    for (const uid of historyUids) {
+        const docData = statsByUid.get(uid);
+        if (docData) {
+            metricValuesByUid.set(uid, buildMetricValuesBlock(docData));
         }
     }
     for (const uid of historyUids) {
-        const wc = (_b = rankByUidWc.get(uid)) !== null && _b !== void 0 ? _b : {};
-        if (wcOnly) {
-            batch.set(firestore.doc(`cumulative_stats/${uid}`), {
-                "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(),
-                "snapshotRanks.wc": wc,
-            }, { merge: true });
+        const seasonRanks = (_a = rankByUidSeason.get(uid)) !== null && _a !== void 0 ? _a : {};
+        const totalPointsRank = Number((_b = seasonRanks.totalPoints) !== null && _b !== void 0 ? _b : 0);
+        const cumData = statsByUid.get(uid);
+        const profileChartsPatch = Number.isFinite(totalPointsRank) && totalPointsRank > 0
+            ? (() => {
+                var _a, _b;
+                const charts = (0, mergeProfileCharts_1.mergeProfileChartsOnRankSnapshot)({
+                    cumulative: cumData !== null && cumData !== void 0 ? cumData : null,
+                    seasonKey,
+                    dateKey,
+                    totalPointsRank,
+                });
+                return {
+                    "profileCharts.v": charts.v,
+                    "profileCharts.seasonKey": charts.seasonKey,
+                    "profileCharts.dailyTrend": (_a = charts.dailyTrend) !== null && _a !== void 0 ? _a : [],
+                    "profileCharts.rankTrend": charts.rankTrend,
+                    "profileCharts.last20": (_b = charts.last20) !== null && _b !== void 0 ? _b : [],
+                    "profileCharts.builtAtMs": Date.now(),
+                };
+            })()
+            : {};
+        batch.set(firestore.doc(`cumulative_stats/${uid}`), Object.assign({ "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(), [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks }, profileChartsPatch), { merge: true });
+        if (profileChartsPatch && Object.keys(profileChartsPatch).length > 0) {
             batch.set(firestore
                 .collection("cumulative_stats")
                 .doc(uid)
-                .collection(exports.RANK_SNAPSHOT_HISTORY_SUBCOL)
-                .doc(dateKey), {
-                dateKey,
-                wc,
-                writtenAt: firestore_1.FieldValue.serverTimestamp(),
+                .collection("profileCharts")
+                .doc(seasonKey), {
+                v: profileChartsPatch["profileCharts.v"],
+                seasonKey: profileChartsPatch["profileCharts.seasonKey"],
+                dailyTrend: (_c = profileChartsPatch["profileCharts.dailyTrend"]) !== null && _c !== void 0 ? _c : [],
+                rankTrend: (_d = profileChartsPatch["profileCharts.rankTrend"]) !== null && _d !== void 0 ? _d : [],
+                last20: (_e = profileChartsPatch["profileCharts.last20"]) !== null && _e !== void 0 ? _e : [],
+                builtAtMs: (_f = profileChartsPatch["profileCharts.builtAtMs"]) !== null && _f !== void 0 ? _f : Date.now(),
             }, { merge: true });
-            ops += 2;
-            if (ops >= 500) {
-                await flush();
-            }
-            continue;
+            ops += 1;
         }
-        const per = (_c = rankByUid.get(uid)) !== null && _c !== void 0 ? _c : { play_in: {}, playoffs: {} };
-        const playoffRounds = (_d = rankByUidPlayoffRound.get(uid)) !== null && _d !== void 0 ? _d : {};
-        /**
-         * merge のネストは play_in を消さないよう、更新するフィールドだけドットパスで書く。
-         * （プレーインは SNAPSHOT_BUILD_PHASES 外のため per.play_in は空のまま）
-         */
-        batch.set(firestore.doc(`cumulative_stats/${uid}`), {
-            "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(),
-            "snapshotRanks.playoffs": per.playoffs,
-            "snapshotRanks.playoffRounds": playoffRounds,
-            "snapshotRanks.wc": wc,
-        }, { merge: true });
+        if (cumData) {
+            const hero = (0, profileHeroSnapshot_1.buildProfileHeroSnapshotFromCumulative)(cumData, seasonKey);
+            batch.set(firestore.doc(`users/${uid}`), { profileHeroSnapshot: hero }, { merge: true });
+            ops += 1;
+        }
         batch.set(firestore
             .collection("cumulative_stats")
             .doc(uid)
             .collection(exports.RANK_SNAPSHOT_HISTORY_SUBCOL)
             .doc(dateKey), {
             dateKey,
-            playoffs: per.playoffs,
-            playoffRounds,
-            wc,
+            seasons: { [seasonKey]: seasonRanks },
             metricValues: metricValuesByUid.get(uid),
             writtenAt: firestore_1.FieldValue.serverTimestamp(),
         }, { merge: true });
@@ -925,36 +619,22 @@ async function buildCumulativeRankingSnapshot(options = {}) {
     }
     await flush();
     const generationMs = Date.now();
-    const generationPatch = {
-        updatedAt: firestore_1.FieldValue.serverTimestamp(),
-    };
-    if (wcOnly) {
-        generationPatch.wc = {
-            updatedAtMs: generationMs,
-            rankDeltaBasisDateKey: yesterdayKey,
-        };
-    }
-    else {
-        generationPatch.wc = {
-            updatedAtMs: generationMs,
-            rankDeltaBasisDateKey: yesterdayKey,
-        };
-        generationPatch.nba = {
-            updatedAtMs: generationMs,
-            rankDeltaBasisDateKey: yesterdayKey,
-        };
-    }
     await db()
         .collection("cumulative_ranking_snapshots")
         .doc("_generation")
-        .set(generationPatch, { merge: true });
-    const todayPredictorUids = await (0, loadUidsWhoPredictedOnDateJst_1.loadUidsWhoPredictedOnDateJst)(dateKey);
+        .set({
+        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        nba: {
+            updatedAtMs: generationMs,
+            rankDeltaBasisDateKey: yesterdayKey,
+        },
+    }, { merge: true });
+    const todayPredictorUids = await (0, loadUidsWhoPredictedOnDateFromDaily_1.loadUidsWhoPredictedOnDateFromDaily)(dateKey);
     return {
         ok: true,
-        scope,
-        metrics: wcOnly ? WC_METRICS.length : METRICS.length,
-        ranksWritten: wcOnly ? rankByUidWc.size : rankByUid.size,
-        wcRanksWritten: rankByUidWc.size,
+        seasonKey,
+        metrics: METRICS.length,
+        ranksWritten: rankByUidSeason.size,
         historyDateKey: dateKey,
         rankDeltaBasisDateKey: yesterdayKey,
         snapshotGenerationMs: generationMs,

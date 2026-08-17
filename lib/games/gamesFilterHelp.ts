@@ -28,17 +28,25 @@ export function gamesFilterStatusLine({
       ? `「${n}」が出る試合を表示しています。`
       : `Showing games that include ${n}.`;
   }
-  const [id1, id2] = selectedIds;
-  const n1 = teams.find((t) => t.id === id1)?.name ?? id1;
-  const n2 = teams.find((t) => t.id === id2)?.name ?? id2;
-  if (matchMode === "h2h") {
+  if (selectedIds.length === 2) {
+    const [id1, id2] = selectedIds;
+    const n1 = teams.find((t) => t.id === id1)?.name ?? id1;
+    const n2 = teams.find((t) => t.id === id2)?.name ?? id2;
+    if (matchMode === "h2h") {
+      return isJa(language)
+        ? `「${n1}」対「${n2}」の試合だけを表示しています。`
+        : `Showing only games between ${n1} and ${n2}.`;
+    }
     return isJa(language)
-      ? `「${n1}」対「${n2}」の試合だけを表示しています。`
-      : `Showing only games between ${n1} and ${n2}.`;
+      ? `「${n1}」または「${n2}」のどちらかが出る試合を表示しています（他チームとの対戦も含みます）。`
+      : `Showing games where ${n1} or ${n2} plays—including games vs other teams.`;
   }
+  const names = selectedIds.map(
+    (id) => teams.find((t) => t.id === id)?.name ?? id,
+  );
   return isJa(language)
-    ? `「${n1}」または「${n2}」のどちらかが出る試合を表示しています（他チームとの対戦も含みます）。`
-    : `Showing games where ${n1} or ${n2} plays—including games vs other teams.`;
+    ? `「${names.join("」「")}」のいずれかが出る試合を表示しています。`
+    : `Showing games where any of ${names.join(", ")} plays.`;
 }
 
 /** 使い方ボタン内にまとめる説明文 */
@@ -49,8 +57,8 @@ export function gamesFilterHelpParagraphs(
   const status = gamesFilterStatusLine(params);
   const paragraphs = [
     ja
-      ? "チームは選ばなくても、点差だけで絞れます（任意で最大2チーム）。点差は上下どちらか空欄ならその側は制限なし。未開始の試合はそのまま表示されます。"
-      : "Team filter is optional—you can use only the score margin. Up to 2 teams if you want. Empty min/max side = no bound on that side. Scheduled games stay visible.",
+      ? "チームは選ばなくても、点差だけで絞れます。複数チームを選ぶと「いずれかが出る試合」に絞れます。点差は上下どちらか空欄ならその側は制限なし。未開始の試合はそのまま表示されます。"
+      : "Team filter is optional—you can use only the score margin. Pick multiple teams to show games where any of them plays. Empty min/max side = no bound on that side. Scheduled games stay visible.",
     ja
       ? "得点差（大きい方の差）が、左の数以上かつ右の数以下の試合に絞ります（両方入れたとき）。例: 8 と 12 → 8〜12点差のみ。"
       : "|Home − Away| must be ≥ min and ≤ max (inclusive). Example: min 8, max 12 → wins by 8–12 points.",

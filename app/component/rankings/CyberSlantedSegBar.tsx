@@ -9,8 +9,8 @@ export type CyberSegAccent = {
   bg?: string;
 };
 
-const SEG_STAGGER_S = 0.055;
-const SEG_OPACITY_DURATION_S = 0.32;
+const SEG_STAGGER_S = 0.032;
+const SEG_OPACITY_DURATION_S = 0.2;
 
 function filledSegCount(pct: number, segments: number): number {
   return Math.round((Math.min(100, Math.max(0, pct)) / 100) * segments);

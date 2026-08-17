@@ -2,23 +2,33 @@
  * Web `useProfile` の Firestore 解決（handle / uid → users ドキュメント）。
  */
 import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  where,
-} from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
-import { parseUserProfileFields } from "../../../../../lib/profile/parseUserProfileFields";
+import { fetchUserDocByRouteKey } from "../../../../../lib/profile/fetchUserDocByRouteKey";
+import {
+  parseUserProfileFields,
+  parseUserUnitBalance,
+} from "../../../../../lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
+import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
+import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
+import { seedProfileHeroFromUserDoc } from "../../../../../lib/profile/seedProfileHeroFromUserDoc";
+import {
+  peekPublicProfileIdentity,
+  primePublicProfileIdentity,
+} from "../../../../../lib/profile/publicProfileIdentityCache";
+import { peekUserDocMemory } from "../../../../../lib/user/userDocMemoryCache";
+import { looksLikeFirestoreUid } from "../../../../../lib/profile/profilePathKey";
+import { seedNativeProfileStatsFromUserDoc } from "./useNativeProfileStats";
+import {
+  PROFILE_PLAN_PRO_BG_DEFAULT,
+  type ProfilePlanProBgVariant,
+} from "../../../../../lib/profile/profilePlanProBgVariants";
 
 export type NativeProfileByHandleState = {
   loading: boolean;
   notFound: boolean;
+  /** identity だけ先に揃っている（カード即描画可） */
+  identityReady: boolean;
   targetUid: string | null;
   displayName: string;
   handle: string;
@@ -27,14 +37,18 @@ export type NativeProfileByHandleState = {
   language: "ja" | "en";
   countryCode: string;
   plan: "free" | "pro";
+  planProBgVariant: ProfilePlanProBgVariant;
   currentStreak: number;
   maxStreak: number;
   memberSinceMs: number | null;
+  /** 保有 Unit（公開） */
+  unitBalance: number;
 };
 
 const idleState: NativeProfileByHandleState = {
   loading: false,
   notFound: false,
+  identityReady: false,
   targetUid: null,
   displayName: "",
   handle: "",
@@ -43,38 +57,12 @@ const idleState: NativeProfileByHandleState = {
   language: "ja",
   countryCode: "",
   plan: "free",
+  planProBgVariant: PROFILE_PLAN_PRO_BG_DEFAULT,
   currentStreak: 0,
   maxStreak: 0,
   memberSinceMs: null,
+  unitBalance: 0,
 };
-
-async function fetchUserDocByRouteKey(
-  decodedHandle: string
-): Promise<{ id: string; data: Record<string, unknown> } | null> {
-  if (looksLikeFirestoreUid(decodedHandle)) {
-    const byUid = await getDoc(doc(db, "users", decodedHandle));
-    if (byUid.exists()) {
-      return { id: byUid.id, data: byUid.data() as Record<string, unknown> };
-    }
-  }
-
-  const snap = await getDocs(
-    query(collection(db, "users"), where("handle", "==", decodedHandle), limit(1))
-  );
-  if (!snap.empty) {
-    const d = snap.docs[0]!;
-    return { id: d.id, data: d.data() as Record<string, unknown> };
-  }
-
-  if (!looksLikeFirestoreUid(decodedHandle)) {
-    const byUid = await getDoc(doc(db, "users", decodedHandle));
-    if (byUid.exists()) {
-      return { id: byUid.id, data: byUid.data() as Record<string, unknown> };
-    }
-  }
-
-  return null;
-}
 
 function mapUserDoc(
   id: string,
@@ -91,6 +79,7 @@ function mapUserDoc(
   return {
     loading: false,
     notFound: false,
+    identityReady: true,
     targetUid: id,
     displayName,
     handle: typeof data.handle === "string" ? data.handle.trim() : handle,
@@ -99,15 +88,45 @@ function mapUserDoc(
     language: data.language === "en" ? "en" : "ja",
     countryCode: typeof data.countryCode === "string" ? data.countryCode : "",
     plan: data.plan === "pro" ? "pro" : "free",
-    currentStreak:
-      typeof data.currentStreak === "number" && Number.isFinite(data.currentStreak)
-        ? Math.max(0, Math.floor(data.currentStreak))
-        : 0,
+    planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
+    currentStreak: currentSeasonWinStreak(
+      data.currentStreak,
+      data.streakSeasonKeyBasketball
+    ),
     maxStreak:
       typeof data.maxStreak === "number" && Number.isFinite(data.maxStreak)
         ? Math.max(0, Math.floor(data.maxStreak))
         : 0,
     memberSinceMs: parseMemberSinceMs(data),
+    unitBalance: parseUserUnitBalance(data),
+  };
+}
+
+function seedFromCaches(decoded: string): NativeProfileByHandleState | null {
+  if (looksLikeFirestoreUid(decoded)) {
+    const mem = peekUserDocMemory(decoded);
+    if (mem) return mapUserDoc(decoded, mem);
+  }
+
+  const identity = peekPublicProfileIdentity(decoded);
+  if (!identity) return null;
+
+  if (identity.targetUid) {
+    const mem = peekUserDocMemory(identity.targetUid);
+    if (mem) return mapUserDoc(identity.targetUid, mem);
+  }
+
+  return {
+    ...idleState,
+    loading: true,
+    identityReady: true,
+    targetUid: identity.targetUid,
+    displayName: identity.displayName,
+    handle: identity.handle || decoded,
+    bio: identity.bio,
+    avatarUrl: identity.photoURL,
+    plan: identity.plan,
+    countryCode: identity.countryCode,
   };
 }
 
@@ -122,11 +141,10 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
     }
   }, [routeKey]);
 
-  const [state, setState] = useState<NativeProfileByHandleState>(() =>
-    decoded
-      ? { ...idleState, loading: true }
-      : idleState
-  );
+  const [state, setState] = useState<NativeProfileByHandleState>(() => {
+    if (!decoded) return idleState;
+    return seedFromCaches(decoded) ?? { ...idleState, loading: true };
+  });
 
   useEffect(() => {
     if (!decoded) {
@@ -135,11 +153,21 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
     }
 
     let cancelled = false;
-    setState((prev) => ({ ...prev, loading: true, notFound: false }));
+    const seeded = seedFromCaches(decoded);
+    if (seeded) {
+      setState(seeded);
+    } else {
+      setState((prev) => ({
+        ...prev,
+        loading: true,
+        notFound: false,
+        identityReady: false,
+      }));
+    }
 
     void (async () => {
       try {
-        const docSnap = await fetchUserDocByRouteKey(decoded);
+        const docSnap = await fetchUserDocByRouteKey(db, decoded);
         if (cancelled) return;
 
         if (!docSnap) {
@@ -151,7 +179,21 @@ export function useNativeProfileByHandle(routeKey: string | undefined | null) {
           return;
         }
 
-        setState(mapUserDoc(docSnap.id, docSnap.data));
+        const mapped = mapUserDoc(docSnap.id, docSnap.data);
+        setState(mapped);
+        seedNativeProfileStatsFromUserDoc(docSnap.id, docSnap.data);
+        seedProfileHeroFromUserDoc(docSnap.id, docSnap.data);
+        primePublicProfileIdentity({
+          routeKey: decoded,
+          uid: docSnap.id,
+          handle: mapped.handle,
+          displayName: mapped.displayName,
+          bio: mapped.bio,
+          photoURL: mapped.avatarUrl,
+          plan: mapped.plan,
+          countryCode: mapped.countryCode,
+          fromUserDoc: true,
+        });
       } catch {
         if (cancelled) return;
         setState({
