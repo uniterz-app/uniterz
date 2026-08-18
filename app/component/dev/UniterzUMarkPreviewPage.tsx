@@ -4,6 +4,8 @@
  * /mobile/uniterz-u-mark · /dev/uniterz-u-mark
  * 確定版 UNITERZ の U を、アーチなしで直立させたマーク。
  */
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import UniterzLogo from "@/app/component/units/UniterzLogo";
 import UniterzUMark from "@/app/component/units/UniterzUMark";
@@ -21,6 +23,9 @@ function labelClass(on = false) {
 }
 
 export default function UniterzUMarkPreviewPage() {
+  const pathname = usePathname();
+  const prefix = pathname.startsWith("/dev") ? "/dev" : "/mobile";
+
   return (
     <main className="min-h-screen bg-[#03070b] px-4 py-8 text-white">
       <div className="mx-auto w-full max-w-[480px]">
@@ -36,6 +41,15 @@ export default function UniterzUMarkPreviewPage() {
         <p className="mt-2 text-sm leading-relaxed text-white/45">
           ワードマーク左端の U を切り出し、上凸アーチを戻した直立マーク。左ステムの雷カットはそのまま。
         </p>
+        <Link
+          href={`${prefix}/uniterz-logo-3d`}
+          className={[
+            nameOxanium.className,
+            "mt-4 inline-flex border border-cyan-300/35 bg-cyan-300/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100",
+          ].join(" ")}
+        >
+          3D を見る
+        </Link>
 
         <section className="mt-5 border border-white/10 bg-black px-3 py-10">
           <p
