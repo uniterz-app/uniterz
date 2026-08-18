@@ -248,7 +248,8 @@
 .profile-plan-pro-bg-picker-overlay {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  /* 右端 BACK タブ（z 35）より前面。Native Modal と同様にプレビュー中は戻るを隠す */
+  z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;

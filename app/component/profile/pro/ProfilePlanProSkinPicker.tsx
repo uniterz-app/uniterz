@@ -11,6 +11,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import ProfileEditKinetikPanel from "@/app/component/profile/edit/ProfileEditKinetikPanel";
 import { PROFILE_EDIT_KINETIK_MOCK } from "@/app/component/profile/edit/profileEditKinetikTypes";
 import ProfilePlanProBackgroundFx from "@/app/component/profile/ui/ProfilePlanProBackgroundFx";
@@ -413,6 +414,7 @@ export default function ProfilePlanProSkinPicker({
   const [overlayId, setOverlayId] = useState<ProfilePlanProBgVariant | null>(
     null
   );
+  const [overlayMounted, setOverlayMounted] = useState(false);
   const [replayByVariant, setReplayByVariant] = useState<
     Partial<Record<ProfilePlanProBgVariant, number>>
   >({});
@@ -516,6 +518,10 @@ export default function ProfilePlanProSkinPicker({
       alive = false;
     };
   }, [isProduction]);
+
+  useEffect(() => {
+    setOverlayMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!overlayId) return;
@@ -844,7 +850,9 @@ export default function ProfilePlanProSkinPicker({
         )}
       </div>
 
-      {confirmOverlay}
+      {overlayMounted && confirmOverlay
+        ? createPortal(confirmOverlay, document.body)
+        : null}
     </Root>
   );
 }

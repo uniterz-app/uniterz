@@ -173,6 +173,18 @@ async function fetchNbaPeriodKinetikStats(
   return promise;
 }
 
+export async function loadNbaWindowKinetikStats(
+  uid: string,
+  board: ProfileKinetikBoard,
+  window: ProfileKinetikWindow,
+  apiBase?: string,
+  label?: string | null
+): Promise<NbaWindowKinetikStats | null> {
+  const safeUid = uid.trim();
+  if (!safeUid) return null;
+  return fetchNbaWindowKinetikStats(safeUid, board, window, apiBase, label);
+}
+
 async function fetchNbaWindowKinetikStats(
   uid: string,
   board: ProfileKinetikBoard,

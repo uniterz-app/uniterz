@@ -7,6 +7,7 @@ import CssAnimatedSplashScreen from "@/app/component/splash/CssAnimatedSplashScr
 import { MIN_SPLASH_DURATION_MS } from "@/app/component/splash/splashTiming";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { getUserDocDataCached, readUserHandleFromDoc } from "@/lib/user/userDocCache";
+import { APP_WEB_APP_MAINTENANCE } from "@/lib/app/maintenanceMode";
 
 export default function Page() {
   const router = useRouter();
@@ -72,6 +73,7 @@ export default function Page() {
     const isMobile = window.innerWidth < 768;
 
     if (status === "ready" && fUser && handle) {
+      if (APP_WEB_APP_MAINTENANCE) return;
       router.replace(isMobile ? "/mobile/games" : "/web/games");
       return;
     }
@@ -81,6 +83,7 @@ export default function Page() {
       return;
     }
 
+    if (APP_WEB_APP_MAINTENANCE && fUser) return;
     router.replace(isMobile ? "/mobile/games" : "/web/games");
   }, [splashExitDone, status, fUser, handle, router]);
 

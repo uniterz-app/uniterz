@@ -14,9 +14,11 @@ import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import EventGate from "@/app/component/common/EventGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 import NbaSeasonRestartMaintenanceOverlay from "@/app/component/common/NbaSeasonRestartMaintenanceOverlay";
+import WebAppMaintenanceShell from "@/app/component/common/WebAppMaintenanceShell";
 import {
   APP_MAINTENANCE_MODE,
   APP_NBA_SEASON_RESTART_OVERLAY,
+  APP_WEB_APP_MAINTENANCE,
   isMaintenanceExemptPath,
 } from "@/lib/app/maintenanceMode";
 import { headers } from "next/headers";
@@ -68,22 +70,20 @@ export default async function RootLayout({
         ) : seasonRestartOverlay ? (
           <NbaSeasonRestartMaintenanceOverlay />
         ) : (
-          <>
-            <SplashGlbPreload />
-            <AppPageBackground />
-            <EventGate />
-
-            <AppContentShell>
-              <AppProviders>
+          <AppProviders>
+            <WebAppMaintenanceShell>
+              <SplashGlbPreload />
+              <AppPageBackground />
+              {APP_WEB_APP_MAINTENANCE ? null : <EventGate />}
+              <AppContentShell>
                 <WebOrMobileSplash>
                   <AppChrome />
                   {children}
                 </WebOrMobileSplash>
-              </AppProviders>
-            </AppContentShell>
-
-            <ToastHost />
-          </>
+              </AppContentShell>
+              <ToastHost />
+            </WebAppMaintenanceShell>
+          </AppProviders>
         )}
       </body>
     </html>

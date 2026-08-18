@@ -1,10 +1,6 @@
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
-import { isGuestPreviewPath } from "@/lib/guestPreviewPaths";
 import { isPublicLpPath } from "@/lib/lp/publicLpPaths";
-import {
-  isAuthEntryRoute,
-  normalizeRoutePath,
-} from "@/lib/profileSetupRoute";
+import { normalizeRoutePath } from "@/lib/profileSetupRoute";
 
 /** true にするとアプリ全体をメンテナンスオーバーレイでブロックする */
 export const APP_MAINTENANCE_MODE = false;
@@ -16,8 +12,9 @@ export const APP_MAINTENANCE_MODE = false;
 export const APP_NBA_SEASON_RESTART_OVERLAY = false;
 
 /**
- * true のとき Web のアプリ本体（games など）だけ来季メンテを出す。
- * LP・ログイン・登録・電子公告は出る。
+ * true のとき Web ではアプリ本体をマウントせずメンテ画面だけ出す。
+ * Native は対象外。LP・電子公告などの公開ページは出る。
+ * 本番反映: 2026-08-18
  */
 export const APP_WEB_APP_MAINTENANCE = true;
 
@@ -30,16 +27,24 @@ export function isMaintenanceExemptPath(
   return false;
 }
 
-/** Web ログイン後のアプリだけ止めるパス */
+/**
+ * このパスでは Web アプリ本体を描画しない（メンテ画面のみ）。
+ * `/` はゲストを LP へ送るスプラッシュのため除外。
+ */
+export function shouldReplaceWebAppWithMaintenance(
+  pathname: string | null | undefined
+): boolean {
+  if (!APP_WEB_APP_MAINTENANCE) return false;
+  const path = normalizeRoutePath(pathname);
+  if (!path || path === "/") return false;
+  if (path.startsWith("/admin")) return false;
+  if (isMaintenanceExemptPath(path)) return false;
+  return true;
+}
+
+/** @deprecated shouldReplaceWebAppWithMaintenance を使う */
 export function isWebAppMaintenancePath(
   pathname: string | null | undefined
 ): boolean {
-  const path = normalizeRoutePath(pathname);
-  if (!path.startsWith("/web")) return false;
-  if (path === "/web") return false;
-  if (isMaintenanceExemptPath(path)) return false;
-  if (isAuthEntryRoute(path)) return false;
-  if (path.startsWith("/web/r/")) return false;
-  if (isGuestPreviewPath(path)) return false;
-  return true;
+  return shouldReplaceWebAppWithMaintenance(pathname);
 }

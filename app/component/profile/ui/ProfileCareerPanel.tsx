@@ -62,6 +62,8 @@ export default function ProfileCareerPanel({
   const lang: "ja" | "en" = isJa ? "ja" : "en";
   const reduceMotion = useReducedMotion() === true;
   const showProSkin = isPro && isFace;
+  /** Free の裏面はキャリア数字のみ（表のバッジ／タブを残さない） */
+  const showFaceExtras = !isFace || isPro;
 
   const seasonKeys = useMemo(() => {
     const keys = Object.keys(career?.seasons ?? {}).sort();
@@ -163,7 +165,7 @@ export default function ProfileCareerPanel({
               />
             </>
           )}
-          {isFace ? (
+          {isFace && showFaceExtras ? (
             <div
               className={[
                 "profile-edit-kinetik-metrics-scope-header",
@@ -279,7 +281,7 @@ export default function ProfileCareerPanel({
             ))}
           </dl>
 
-          {viewMode === "career" ? (
+          {showFaceExtras && viewMode === "career" ? (
           <div className="mt-4">
             <p
               className={[
@@ -319,6 +321,7 @@ export default function ProfileCareerPanel({
           </div>
           ) : null}
 
+          {showFaceExtras ? (
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -357,6 +360,7 @@ export default function ProfileCareerPanel({
               );
             })}
           </div>
+          ) : null}
         </>
       )}
     </div>
@@ -376,7 +380,7 @@ export default function ProfileCareerPanel({
           "flex h-full min-h-full w-full min-w-0 flex-col overflow-y-auto p-3",
           isPro
             ? "profile-edit-kinetik-card--pro-mobile"
-            : "border border-t-0 border-cyan-300/20 bg-[#061018]/96",
+            : "border border-t-0 border-cyan-300/20 !bg-[#061018]",
           className,
         ]
           .filter(Boolean)

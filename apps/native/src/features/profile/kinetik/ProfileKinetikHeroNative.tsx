@@ -54,6 +54,10 @@ export type ProfileKinetikHeroNativeProps = {
   profileViewCount?: number | null;
   unitBalance?: number | null;
   onOpenUnitLedger?: () => void;
+  markMode?: "list" | "toggle";
+  marked?: boolean;
+  markCount?: number;
+  onPressMark?: () => void;
 };
 
 function toSummaryInput(summary?: ProfileSummaryNative | null) {
@@ -112,6 +116,10 @@ export default function ProfileKinetikHeroNative({
   profileViewCount = null,
   unitBalance = null,
   onOpenUnitLedger,
+  markMode,
+  marked = false,
+  markCount = 0,
+  onPressMark,
 }: ProfileKinetikHeroNativeProps) {
   const [metricsPeriod, setMetricsPeriod] =
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
@@ -320,6 +328,10 @@ export default function ProfileKinetikHeroNative({
               prev === "season" ? "playoffs" : "season"
             )
           }
+          markMode={markMode}
+          marked={marked}
+          markCount={markCount}
+          onPressMark={onPressMark}
         />
       }
       back={

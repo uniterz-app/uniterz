@@ -50,6 +50,11 @@ import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import ProfileMenuEdgeHandleNative from "./ProfileMenuEdgeHandleNative";
 import ProfileBackEdgeHandleNative from "./ProfileBackEdgeHandleNative";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
+import ProfileMarkListOverlayNative from "./ProfileMarkListOverlayNative";
+import { useProfileMarksNative } from "./useProfileMarksNative";
+import { maxMarksForPlan } from "../../../../../lib/marks/markTypes";
+import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
+import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { CyberSubpageHeaderNative } from "../../ui/CyberSubpageShellNative";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
 import GamesPageBackgroundNative from "../background/GamesPageBackgroundNative";
@@ -145,10 +150,12 @@ export default function ProfileHomeScreen({
   fromLeaderboards = false,
   fromWeeklyReport = false,
   fromResultDetail = false,
+  fromMarkList = false,
   resultDetailPostId,
   leaderboardsGroupId,
   openSettingsOnMount = false,
   openReportTabOnMount = false,
+  openMarkListOnMount = false,
 }: {
   bottomReserveY?: number;
   onSaved?: () => void;
@@ -162,14 +169,29 @@ export default function ProfileHomeScreen({
   fromWeeklyReport?: boolean;
   /** リザルト詳細から遷移してきた他人プロフィール */
   fromResultDetail?: boolean;
+  /** MARK LIST から遷移してきた他人プロフィール */
+  fromMarkList?: boolean;
   /** リザルト詳細へ戻るときの投稿 ID */
   resultDetailPostId?: string;
   leaderboardsGroupId?: string;
   openSettingsOnMount?: boolean;
   openReportTabOnMount?: boolean;
+  openMarkListOnMount?: boolean;
 }) {
   const { fUser, status } = useFirebaseUser();
   const myUid = fUser?.uid;
+  const { isPro: myIsPro } = useNativeUserPlan(myUid);
+  const maxMarks = maxMarksForPlan(myIsPro);
+  const {
+    marks: markRows,
+    loading: marksLoading,
+    markCount,
+    markedByCount,
+    isMarked,
+    addMark,
+    removeMark,
+    refreshMarkedBy,
+  } = useProfileMarksNative(myUid, maxMarks);
   const publicRouteKey = routeHandle?.trim() ?? "";
   const isPublicProfileView = publicRouteKey.length > 0;
   const profileByHandle = useNativeProfileByHandle(
@@ -183,6 +205,11 @@ export default function ProfileHomeScreen({
   /** メニューへ戻るときは fade せず即閉じる */
   const [settingsAnim, setSettingsAnim] = useState<"fade" | "none">("fade");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [markListOpen, setMarkListOpen] = useState(false);
+  useEffect(() => {
+    if (!markListOpen) return;
+    void refreshMarkedBy();
+  }, [markListOpen, refreshMarkedBy]);
   const [welcomeFlyActive, setWelcomeFlyActive] = useState(
     () =>
       !isPublicProfileView &&
@@ -203,7 +230,8 @@ export default function ProfileHomeScreen({
     (fromRankings ||
       fromLeaderboards ||
       fromWeeklyReport ||
-      fromResultDetail);
+      fromResultDetail ||
+      fromMarkList);
 
   const dismissPublicProfileRoute = useCallback(() => {
     const state = navigation.getState();
@@ -229,6 +257,7 @@ export default function ProfileHomeScreen({
       fromLeaderboards: undefined,
       fromWeeklyReport: undefined,
       fromResultDetail: undefined,
+      fromMarkList: undefined,
       resultDetailPostId: undefined,
       leaderboardsGroupId: undefined,
     });
@@ -279,6 +308,17 @@ export default function ProfileHomeScreen({
   }, [settingsOpen, openMenuAfterSettingsClosed]);
 
   const returnToPreviousScreen = useCallback(() => {
+    if (fromMarkList) {
+      if (navigation.canGoBack()) {
+        navigation.navigate("ProfileHome", { openMarkList: true });
+        return;
+      }
+      tabNavigation.navigate("ProfileTab", {
+        screen: "ProfileHome",
+        params: { openMarkList: true },
+      });
+      return;
+    }
     if (fromResultDetail) {
       if (navigation.canGoBack()) {
         navigation.goBack();
@@ -311,6 +351,7 @@ export default function ProfileHomeScreen({
   }, [
     dismissPublicProfileRoute,
     fromLeaderboards,
+    fromMarkList,
     fromResultDetail,
     fromWeeklyReport,
     leaderboardsGroupId,
@@ -367,7 +408,13 @@ export default function ProfileHomeScreen({
   /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
   const isJa = language === "ja";
 
-  const externalBackLabel = isJa ? "戻る" : "Back";
+  const externalBackLabel = fromMarkList
+    ? isJa
+      ? "マークリストに戻る"
+      : "Back to MARK LIST"
+    : isJa
+      ? "戻る"
+      : "Back";
 
   const renderProfileBackHandle = () =>
     showExternalBack ? (
@@ -379,6 +426,70 @@ export default function ProfileHomeScreen({
 
   /** 自分プロフィールは routeHandle 無し。plan hook の getDoc より先に確定できる */
   const isMe = !isPublicProfileView && !!myUid && myUid === targetUid;
+  const targetMarked = isMarked(targetUid);
+  const onPressMark = useCallback(async () => {
+    if (!myUid) return;
+    const otherUid = targetUid?.trim() ?? "";
+    if (isMe || otherUid === myUid) {
+      setMenuOpen(false);
+      setMarkListOpen(true);
+      return;
+    }
+    if (!otherUid) {
+      cyberAlert(
+        "",
+        isJa
+          ? "プロフィールの読み込みを待ってから、もう一度押してください"
+          : "Wait for the profile to load, then try again"
+      );
+      return;
+    }
+    if (isMarked(otherUid)) {
+      const result = await removeMark(otherUid);
+      if (result && "ok" in result && !result.ok) {
+        cyberAlert("", isJa ? "マークを外せませんでした" : "Could not unmark");
+      }
+      return;
+    }
+    const result = await addMark({
+      targetUid: otherUid,
+      handle: handle.trim(),
+      displayName: displayName.trim() || handle.trim() || "User",
+      photoURL: avatarUrl.trim() || null,
+    });
+    if (!result.ok) {
+      const msg =
+        result.error === "cap"
+          ? isJa
+            ? myIsPro
+              ? `マークは ${maxMarks} 人までです`
+              : `マークは ${maxMarks} 人までです（Pro は 50 人）`
+            : myIsPro
+              ? `You can MARK up to ${maxMarks} predictors`
+              : `You can MARK up to ${maxMarks} predictors (Pro: 50)`
+          : result.error === "empty"
+            ? isJa
+              ? "プロフィールの読み込みを待ってから、もう一度押してください"
+              : "Wait for the profile to load, then try again"
+            : isJa
+              ? "マークできませんでした"
+              : "Could not MARK this predictor";
+      cyberAlert("", msg);
+    }
+  }, [
+    addMark,
+    avatarUrl,
+    displayName,
+    handle,
+    isJa,
+    isMe,
+    isMarked,
+    maxMarks,
+    myIsPro,
+    myUid,
+    removeMark,
+    targetUid,
+  ]);
   const [myPlanReady, setMyPlanReady] = useState(() => !!ownSeedAtMount);
   /** users/{uid} — Pro Skin overlay 等への共有（重複 read 回避） */
   const [myUserDoc, setMyUserDoc] = useState<
@@ -429,6 +540,12 @@ export default function ProfileHomeScreen({
       setTab("report");
     }
   }, [openReportTabOnMount, isMe]);
+
+  useEffect(() => {
+    if (!openMarkListOnMount || isPublicProfileView) return;
+    setMarkListOpen(true);
+    navigation.setParams({ openMarkList: undefined });
+  }, [isPublicProfileView, navigation, openMarkListOnMount]);
 
   const { unreadCount: menuUnreadCount, readIds: announcementReadIds } =
     useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
@@ -1148,6 +1265,10 @@ export default function ProfileHomeScreen({
         onOpenUnitLedger={
           isMe ? () => navigation.navigate("UnitLedger") : undefined
         }
+        markMode={isMe || (!!myUid && myUid === targetUid) ? "list" : "toggle"}
+        marked={targetMarked}
+        markCount={markCount}
+        onPressMark={myUid && !isMe ? onPressMark : undefined}
       />
       ) : null}
 
@@ -1174,11 +1295,19 @@ export default function ProfileHomeScreen({
     </TutorialWelcomeWorldCameraNative>
 
     {isMe ? (
-      <ProfileMenuEdgeHandleNative
-        onOpen={() => setMenuOpen(true)}
-        unreadCount={menuUnreadCount}
-        hidden={menuOpen || welcomeFlyActive}
-      />
+      <>
+        <ProfileMenuEdgeHandleNative
+          onOpen={() => setMenuOpen(true)}
+          unreadCount={menuUnreadCount}
+          hidden={menuOpen || markListOpen || welcomeFlyActive}
+        />
+        <ProfileMenuEdgeHandleNative
+          variant="mark"
+          label="MARK"
+          onOpen={() => setMarkListOpen(true)}
+          hidden={menuOpen || markListOpen || welcomeFlyActive}
+        />
+      </>
     ) : null}
 
     {renderProfileBackHandle()}
@@ -1579,6 +1708,25 @@ export default function ProfileHomeScreen({
       onClose={() => {
         setBadgeModalOpen(false);
         setSelectedBadge(null);
+      }}
+    />
+    <ProfileMarkListOverlayNative
+      visible={markListOpen}
+      language={language}
+      marks={markRows}
+      loading={marksLoading}
+      maxMarks={maxMarks}
+      markedByCount={markedByCount}
+      onClose={() => setMarkListOpen(false)}
+      onOpenProfile={(h) => {
+        setMarkListOpen(false);
+        navigateToPublicProfileNative(navigation, {
+          handle: h,
+          fromMarkList: true,
+        });
+      }}
+      onUnmark={(uid) => {
+        void removeMark(uid);
       }}
     />
     {reportOverlay ? (

@@ -1171,25 +1171,40 @@ function KinetikViewCountChipNative({
   viewCount,
   viewCountAriaLabel,
   underAvatar,
+  language,
 }: {
   viewCount: number;
   viewCountAriaLabel: string | null;
   underAvatar?: boolean;
+  language: "ja" | "en";
 }) {
+  const isJa = language === "ja";
   return (
-    <View
+    <Pressable
+      onPress={() =>
+        cyberAlert(
+          isJa ? "プロフィール閲覧数" : "Profile views",
+          isJa
+            ? "ログインした人がこのプロフィールを見た回数です。同じ人が同じ日に何度見ても 1 回です。自分で自分のプロフィールを見た分は入りません。"
+            : "How many logged-in people have opened this profile. Multiple views by the same person on the same day count as one. Viewing your own profile is not counted."
+        )
+      }
       style={[
         styles.viewCountChip,
         underAvatar ? styles.viewCountChipUnderAvatar : null,
       ]}
-      accessibilityRole="text"
+      hitSlop={8}
+      accessibilityRole="button"
       accessibilityLabel={viewCountAriaLabel ?? undefined}
+      accessibilityHint={
+        isJa ? "閲覧数の説明を表示" : "Show what profile views means"
+      }
     >
       <MaterialCommunityIcons name="eye" size={12} color="#00F5FF" />
       <Text style={styles.viewCountNum}>
         {viewCount.toLocaleString("en-US")}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -1307,6 +1322,11 @@ export type ProfileKinetikPanelNativeProps = {
   unitBalance?: number | null;
   /** 自分のプロフィール時: Unit 履歴を開く */
   onOpenUnitLedger?: () => void;
+  /** MARK: 自分は一覧、他人はトグル */
+  markMode?: "list" | "toggle";
+  marked?: boolean;
+  markCount?: number;
+  onPressMark?: () => void;
 };
 
 export default function ProfileKinetikPanelNative({
@@ -1341,6 +1361,10 @@ export default function ProfileKinetikPanelNative({
   profileViewCount = null,
   unitBalance = null,
   onOpenUnitLedger,
+  markMode,
+  marked = false,
+  markCount: _markCount = 0,
+  onPressMark,
 }: ProfileKinetikPanelNativeProps) {
   const isJa = language === "ja";
   const showNbaMetricsTabs = metricsTab != null && !!onMetricsTabChange;
@@ -1679,6 +1703,7 @@ export default function ProfileKinetikPanelNative({
                   viewCount={profileViewCount}
                   viewCountAriaLabel={profileViewCountAria}
                   underAvatar
+                  language={language}
                 />
               ) : (
                 <View style={styles.viewCountChipSlot} />
@@ -1687,7 +1712,31 @@ export default function ProfileKinetikPanelNative({
           </View>
           <View style={styles.headerMeta}>
             <KinetikHeaderHatch />
-            <View style={styles.headerIdentity}>
+            {onPressMark && markMode === "list" ? (
+              <Pressable
+                onPress={onPressMark}
+                style={styles.markBtn}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isJa ? "マークリスト" : "Mark list"
+                }
+              >
+                <MaterialCommunityIcons
+                  name="crosshairs"
+                  size={18}
+                  color="#a5f3fc"
+                />
+              </Pressable>
+            ) : null}
+            <View
+              style={[
+                styles.headerIdentity,
+                markMode === "list" && onPressMark
+                  ? { paddingRight: 28 }
+                  : null,
+              ]}
+            >
               <View style={styles.nameRow}>
                 <Text
                   style={[styles.displayName, isPro ? styles.displayNamePro : null]}
@@ -1729,17 +1778,41 @@ export default function ProfileKinetikPanelNative({
                   </TutorialTargetNative>
                 )}
               </View>
-              {profileFlagUri ? (
-                <View
-                  style={styles.nameFlagBelow}
-                  accessibilityLabel={countryCode ?? undefined}
-                >
-                  <Image
-                    source={{ uri: profileFlagUri }}
-                    style={styles.nameFlagBelowImg}
-                    resizeMode="cover"
-                  />
-                </View>
+              {onPressMark && markMode === "toggle" || profileFlagUri ? (
+              <View style={styles.markFlagRow}>
+                {onPressMark && markMode === "toggle" ? (
+                  <Pressable
+                    onPress={onPressMark}
+                    style={[
+                      styles.markChip,
+                      marked ? styles.markChipOn : styles.markChipOff,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={marked ? "MARKED" : "MARK"}
+                  >
+                    <Text
+                      style={[
+                        styles.markChipText,
+                        marked ? styles.markChipTextOn : styles.markChipTextOff,
+                      ]}
+                    >
+                      {marked ? "MARKED" : "MARK"}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {profileFlagUri ? (
+                  <View
+                    style={styles.nameFlagBelow}
+                    accessibilityLabel={countryCode ?? undefined}
+                  >
+                    <Image
+                      source={{ uri: profileFlagUri }}
+                      style={styles.nameFlagBelowImg}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ) : null}
+              </View>
               ) : null}
             </View>
           </View>
@@ -1990,6 +2063,44 @@ const styles = StyleSheet.create({
   headerIdentity: {
     minWidth: 0,
   },
+  markBtn: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    zIndex: 4,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markChip: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  markChipOff: {
+    borderColor: "rgba(165,243,252,0.7)",
+    backgroundColor: "rgba(0,245,255,0.08)",
+  },
+  markChipOn: {
+    borderColor: "#00F5FF",
+    backgroundColor: "#00F5FF",
+  },
+  markChipText: {
+    fontFamily: OXANIUM_BOLD,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    lineHeight: 14,
+    includeFontPadding: false,
+  },
+  markChipTextOff: {
+    color: "#a5f3fc",
+  },
+  markChipTextOn: {
+    color: "#050508",
+  },
   headerHatch: {
     position: "absolute",
     top: 0,
@@ -2077,15 +2188,21 @@ const styles = StyleSheet.create({
     height: 28,
     opacity: 0,
   },
-  nameFlagBelow: {
+  markFlagRow: {
     marginTop: 6,
-    width: 22,
-    height: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+  },
+  nameFlagBelow: {
+    width: 28,
+    height: 19,
     borderRadius: 1,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255,255,255,0.28)",
     overflow: "hidden",
-    alignSelf: "flex-start",
+    flexShrink: 0,
   },
   nameFlagBelowImg: {
     width: "100%",
@@ -2104,18 +2221,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   identityIdPressInline: {
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
     marginTop: 0,
     flexShrink: 0,
+    justifyContent: "center",
   },
   identityJoinIdRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "stretch",
     justifyContent: "flex-start",
     gap: 8,
     alignSelf: "flex-start",
     maxWidth: "100%",
-    minHeight: 22,
+    height: 22,
   },
   footerJoinSlot: {
     minWidth: 72,
@@ -2146,9 +2264,11 @@ const styles = StyleSheet.create({
   footerRefIdentity: {
     paddingTop: 4,
     paddingRight: 6,
-    paddingBottom: 4,
+    paddingBottom: 5,
     paddingLeft: 5,
-    minHeight: 20,
+    minHeight: 22,
+    height: 22,
+    justifyContent: "center",
   },
   footerRefTextIdentity: {
     fontFamily: FOOTER_REF_FONT,
@@ -2158,6 +2278,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.78)",
     lineHeight: 10,
+    includeFontPadding: false,
     fontVariant: ["tabular-nums"],
   },
   /** Web `.profile-edit-kinetik-view-count` 相当 */

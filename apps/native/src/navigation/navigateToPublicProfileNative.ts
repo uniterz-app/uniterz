@@ -13,6 +13,7 @@ export type OpenPublicProfileParams = {
   leaderboardsGroupId?: string;
   fromResultDetail?: boolean;
   resultDetailPostId?: string;
+  fromMarkList?: boolean;
 };
 
 type StackNav = NavigationProp<ParamListBase> & {
@@ -29,6 +30,7 @@ function screenParamsFrom(
     ...(params.fromRankings ? { fromRankings: true } : {}),
     ...(params.fromLeaderboards ? { fromLeaderboards: true } : {}),
     ...(params.fromResultDetail ? { fromResultDetail: true } : {}),
+    ...(params.fromMarkList ? { fromMarkList: true } : {}),
     ...(resultDetailPostId ? { resultDetailPostId } : {}),
     ...(params.leaderboardsGroupId
       ? { leaderboardsGroupId: params.leaderboardsGroupId }

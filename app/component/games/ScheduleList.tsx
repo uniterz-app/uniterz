@@ -26,7 +26,7 @@ import {
   GAMES_DAY_SWITCH_EASE,
   GAMES_LIST_REST_CARDS_DELAY_SEC,
 } from "./cyberMotion";
-import { toMatchCardProps } from "@/lib/games/transform";
+import { toMatchCardProps, type GameDoc } from "@/lib/games/transform";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { resolveTutorialPickupGameId } from "@/lib/tutorial/tutorialPickupGame";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
@@ -313,8 +313,10 @@ export default function ScheduleList({
       try {
         const snap = await getDoc(doc(db, "games", openGameId));
         if (!alive || !snap.exists()) return;
-        const raw = { id: snap.id, ...snap.data() } as Record<string, unknown>;
-        const peers = await fetchPlayoffSeriesPeerGames(raw);
+        const raw = { id: snap.id, ...snap.data() } as GameDoc;
+        const peers = await fetchPlayoffSeriesPeerGames(
+          raw as Record<string, unknown>
+        );
         if (!alive) return;
         setOverlayFallbackProps(
           toMatchCardProps(raw, {

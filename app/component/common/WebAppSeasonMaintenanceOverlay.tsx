@@ -4,22 +4,32 @@ import { useEffect } from "react";
 
 export default function WebAppSeasonMaintenanceOverlay() {
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
+    const { overflow, touchAction } = document.body.style;
     document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.overflow = overflow;
+      document.body.style.touchAction = touchAction;
     };
   }, []);
 
   return (
     <div
-      className="
-        fixed inset-0 z-[9999]
-        bg-black/80 backdrop-blur-sm
-        flex items-center justify-center
-        text-center text-white
-        p-8
-      "
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 2147483646,
+        background: "#050508",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        color: "#fff",
+        padding: 32,
+        pointerEvents: "auto",
+        touchAction: "none",
+        overscrollBehavior: "none",
+      }}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       role="dialog"
