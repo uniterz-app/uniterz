@@ -243,6 +243,7 @@ function ProfileHomeRoute() {
       leaderboardsGroupId={route.params?.leaderboardsGroupId}
       openSettingsOnMount={route.params?.openSettings === true}
       openReportTabOnMount={route.params?.openReportTab === true}
+      openMarkListOnMount={route.params?.openMarkList === true}
     />
   );
 }

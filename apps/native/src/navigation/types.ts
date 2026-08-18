@@ -72,6 +72,7 @@ export type PublicProfileParams = {
   fromWeeklyReport?: boolean;
   fromResultDetail?: boolean;
   resultDetailPostId?: string;
+  fromMarkList?: boolean;
 };
 
 export type ResultStackParamList = {
@@ -113,6 +114,8 @@ export type ProfileStackParamList = {
         openSettings?: boolean;
         /** Report タブを開く（月次プッシュ等） */
         openReportTab?: boolean;
+        /** MARK LIST から他人プロフィールへ行った戻り */
+        openMarkList?: boolean;
       }
     | undefined;
   ProfileSettings: undefined;

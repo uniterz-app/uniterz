@@ -13,6 +13,7 @@ import {
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import PredictOverlayChamferedFrameNative from "../features/games/PredictOverlayChamferedFrameNative";
+import UniterzLogoNative from "../features/profile/UniterzLogoNative";
 import {
   PREDICT_OVERLAY_CYBER_FORM_CUT,
   PREDICT_OVERLAY_SUBMIT_BTN_CUT,
@@ -62,7 +63,7 @@ function variantIcon(variant: CyberAlertVariant): ReactNode {
     <MaterialCommunityIcons
       name="information-outline"
       size={28}
-      color="rgba(56,189,248,0.55)"
+      color="rgba(0,245,255,0.72)"
     />
   );
 }
@@ -170,11 +171,7 @@ export default function CyberAlertModalNative({
         <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
           <PredictOverlayChamferedFrameNative
             cut={PREDICT_OVERLAY_CYBER_FORM_CUT}
-            gradientColors={
-              isConfirm
-                ? ["rgba(22,16,8,0.97)", "rgba(10,8,5,0.98)"]
-                : ["rgba(8,12,20,0.96)", "rgba(5,8,14,0.98)"]
-            }
+            gradientColors={["#000000", "#000000"]}
             gradientLocations={[0, 1]}
             borderColor={frameBorder}
             shadowColor={frameShadow}
@@ -185,7 +182,7 @@ export default function CyberAlertModalNative({
           >
             <View style={styles.headerBrandRow} pointerEvents="none">
               <View style={styles.headerBrandLine} />
-              <Text style={styles.headerBrandLabel}>UNITERZ</Text>
+              <UniterzLogoNative width={112} />
               <View style={styles.headerBrandLine} />
             </View>
             <View style={styles.iconWrap}>{variantIcon(variant)}</View>
@@ -265,21 +262,6 @@ const styles = StyleSheet.create({
     shadowColor: "#00f5ff",
     shadowOpacity: 0.65,
     shadowRadius: 8,
-  },
-  headerBrandLabel: {
-    fontFamily: Platform.select({
-      ios: "Oxanium_800ExtraBold",
-      android: "Oxanium_800ExtraBold",
-      default: "sans-serif",
-    }),
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 4.8,
-    color: "rgba(0,245,255,0.88)",
-    textAlign: "center",
-    textShadowColor: "rgba(0,245,255,0.45)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
   },
   iconWrap: {
     alignItems: "center",

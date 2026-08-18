@@ -52,7 +52,9 @@ service cloud.firestore {
     // users
     // 参照: AuthProvider, SignupForm, OnboardingForm, Profile 設定, useProfile(handle),
     //       useUserLanguage, ContactForm, EventGate, ensureSlug 連携,
-    //       users/{uid}/reads/*（お知らせ既読）, users/{uid}/groups/*（コミュAPIミラー）
+    //       users/{uid}/reads/*（お知らせ既読）, users/{uid}/groups/*（コミュAPIミラー）,
+    //       users/{uid}/marks/*（MARK リスト）,
+    //       users/{uid}/markedBy/*（被マーク）
     // ========================================================================
       // stripeCustomerIndex / stripeSubscriptionIndex — Admin のみ
     match /stripeCustomerIndex/{customerId} {
@@ -233,6 +235,32 @@ service cloud.firestore {
       // Native プッシュトークン — クライアント直接書き込み可（API 経由推奨）
       match /pushTokens/{tokenId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // MARK リスト — 本人のみ。フォロワー数は持たない
+      match /marks/{targetUid} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && targetUid != userId
+          && request.resource.data.targetUid == targetUid
+          && request.resource.data.handle is string
+          && request.resource.data.displayName is string
+          && (!('photoURL' in request.resource.data)
+              || request.resource.data.photoURL == null
+              || request.resource.data.photoURL is string);
+        allow update: if false;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // 被マーク — 誰にマークされたかは本人だけ読める。人数だけ UI に出す
+      match /markedBy/{fromUid} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null
+          && request.auth.uid == fromUid
+          && fromUid != userId;
+        allow update: if false;
+        allow delete: if request.auth != null && request.auth.uid == fromUid;
       }
 
       // admin/badges から users/{uid}/badges/{id} へ付与
