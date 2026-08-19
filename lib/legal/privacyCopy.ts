@@ -1,13 +1,13 @@
 /**
  * Uniterz プライバシーポリシー本文。
  * 現行設計（Firebase 認証・保存、App Store 課金、Expo 通知、
- * Unit 交換時の配送情報、海外クラウド）に合わせた稿。
- * 弁護士確認後に確定する。
+ * Unit 交換時の配送情報、海外クラウド）に合わせた確定稿。
+ * 弁護士確認済み。
  */
 import type { LegalSection } from "@/lib/legal/legalSection";
 import { REDEMPTION_PRIVACY_ADDITIONS } from "@/lib/legal/unitRedemptionLegalCopy";
 
-export const PRIVACY_UPDATED_AT = "2026-08-14";
+export const PRIVACY_UPDATED_AT = "2026-08-18";
 
 export const PRIVACY_INTRO = {
   ja: "Uniterz におけるユーザー情報の取り扱いについて説明するページです。",
@@ -21,11 +21,11 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     paragraphs: {
       ja: [
         "本ポリシーは、Uniterz（以下「本サービス」）の運営者（以下「当社」）が、本サービスにおいて取り扱う個人情報およびそれに準ずる情報について定めるものです。",
-        "法人名、所在地その他の事業者情報は、確定後に特定商取引法に基づく表記その他のページで公表します。お問い合わせは support@uniterz.app までお願いします。",
+        "法人名、所在地その他の事業者情報は、特定商取引法に基づく表記をご確認ください。お問い合わせは support@uniterz.app までお願いします。",
       ],
       en: [
         "This Policy explains how the operator of Uniterz (the \"Service\", \"we\") handles personal information and similar data.",
-        "Our legal name, address, and other operator details will be published on the legally required notices page once confirmed. Contact: support@uniterz.app.",
+        "Our legal name, address, and other operator details are published on the legally required notices page. Contact: support@uniterz.app.",
       ],
     },
   },

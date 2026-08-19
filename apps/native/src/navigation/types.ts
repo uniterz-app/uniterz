@@ -194,6 +194,10 @@ export type ProfileStackParamList = {
   MatchCardDesignPreview: undefined;
   /** __DEV__ プロフィール 2x2 メトリクス Free / Pro 現行 */
   ProfileKinetikMetricsPreview: undefined;
+  /** __DEV__ Native ボタン見た目カタログ */
+  ButtonDesignPreview: undefined;
+  /** __DEV__ ランディング六角ライト見た目案 */
+  HexLightDesignPreview: undefined;
   /** __DEV__ 下部ナビ見た目案 */
   NavBarDesignPreview: undefined;
   /** __DEV__ LP 用ランキング画面（総合スコアモック） */
@@ -225,6 +229,8 @@ export type AuthStackParamList = {
   Signup: { inviteCode?: string } | undefined;
   ResetPassword: undefined;
   Onboarding: undefined;
+  Terms: undefined;
+  Privacy: undefined;
 };
 
 export type RootStackParamList = {

@@ -10,6 +10,7 @@ import { auth } from "../../lib/firebase";
 import type { AuthStackParamList } from "../../navigation/types";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { mapAuthErrorMessage } from "./authShared";
+import SlantCtaNative from "../../ui/SlantCtaNative";
 import { spacing } from "../../theme/tokens";
 
 const BTN_SKEW = "-10deg";
@@ -53,7 +54,6 @@ export default function LoginScreenNative() {
       }
     >
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Email Address"
@@ -65,7 +65,6 @@ export default function LoginScreenNative() {
         />
       </View>
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Password"
@@ -75,18 +74,12 @@ export default function LoginScreenNative() {
           onChangeText={setPassword}
         />
       </View>
-      <View style={styles.ctaSkewWrap}>
-        <Pressable style={styles.ctaPressable} onPress={handleLogin} disabled={submitting}>
-          <View style={styles.ctaBorder}>
-            <View style={styles.ctaFill}>
-              <View style={styles.ctaRail} pointerEvents="none" />
-              <View style={styles.ctaLabelWrap}>
-                <Text style={styles.ctaLabel}>{submitting ? "Logging in..." : "LOG IN"}</Text>
-              </View>
-            </View>
-          </View>
-        </Pressable>
-      </View>
+      <SlantCtaNative
+        display
+        label={submitting ? "Logging in..." : "LOG IN"}
+        onPress={handleLogin}
+        disabled={submitting}
+      />
     </AuthFormShellNative>
   );
 }
@@ -100,14 +93,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
     overflow: "hidden",
-  },
-  fieldRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "rgba(0,245,255,0.45)",
   },
   input: {
     paddingHorizontal: 16,
@@ -159,7 +144,7 @@ const styles = StyleSheet.create({
     color: "rgba(0,245,255,0.85)",
     fontFamily: "BebasNeue_400Regular",
     fontSize: 18,
-    letterSpacing: 1.4,
-    textDecorationLine: "underline",
+    letterSpacing: 1.8,
+    transform: [{ skewX: "-10deg" }],
   },
 });

@@ -45,6 +45,8 @@ import MatchCardDesignPreviewScreenNative from "../../games/MatchCardDesignPrevi
 import LpRankingPreviewScreenNative from "../../rankings/LpRankingPreviewScreenNative";
 import RankingListDesignPreviewScreenNative from "../../rankings/RankingListDesignPreviewScreenNative";
 import NavBarDesignPreviewScreenNative from "../../../navigation/NavBarDesignPreviewScreenNative";
+import ButtonDesignPreviewScreenNative from "../mobileScreens/ButtonDesignPreviewScreenNative";
+import HexLightDesignPreviewScreenNative from "../../auth/camera3d/HexLightDesignPreviewScreenNative";
 import ProfileKinetikMetricsPreviewScreenNative from "../kinetik/ProfileKinetikMetricsPreviewScreenNative";
 import { armProSkinUnlockPreviewOnProfile } from "../reports/proSkinUnlockPreviewArm";
 import type { ProfileStackParamList } from "../../../navigation/types";
@@ -591,6 +593,32 @@ export function NavBarDesignPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <NavBarDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ButtonDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ButtonDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function HexLightDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <HexLightDesignPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />

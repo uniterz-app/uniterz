@@ -90,6 +90,8 @@ type Props = {
     | "resultStampDesignPreview"
     | "resultStreakTagDesignPreview"
     | "navBarDesignPreview"
+    | "buttonDesignPreview"
+    | "hexLightDesignPreview"
     | "splashLogoPreview"
     | "liveGameStatsPreview"
     | "profileKinetikMetricsPreview") => void;
@@ -297,6 +299,8 @@ export default function ProfileSideMenuModal({
       | "resultStampDesignPreview"
       | "resultStreakTagDesignPreview"
       | "navBarDesignPreview"
+      | "buttonDesignPreview"
+      | "hexLightDesignPreview"
       | "splashLogoPreview"
       | "liveGameStatsPreview"
       | "profileKinetikMetricsPreview"
@@ -820,6 +824,22 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("navBarDesignPreview")}
                         >
                           Nav Bar 案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="gesture-tap-button"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("buttonDesignPreview")}
+                        >
+                          ボタン系統カタログ
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="hexagon-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("hexLightDesignPreview")}
+                        >
+                          六角ライト案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="flash-outline"

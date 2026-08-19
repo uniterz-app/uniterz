@@ -4,16 +4,13 @@
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  ModalActionButtonNative,
+  ModalActionRowNative,
+} from "../../ui/ModalActionButtonNative";
 
 const CYBER_CANCEL = "#38bdf8";
 const DELETE_LABEL = "#ff6363";
-
-const DISPLAY_FONT = Platform.select({
-  ios: "BebasNeue_400Regular",
-  android: "BebasNeue_400Regular",
-  default: "BebasNeue_400Regular",
-});
 
 type Props = {
   visible: boolean;
@@ -83,39 +80,20 @@ export default function ResultDeleteConfirmModal({
             <View style={styles.dialogInner}>
               <Text style={styles.title}>{title}</Text>
 
-              <View style={styles.btnRow}>
-                <Pressable
-                  disabled={loading}
+              <ModalActionRowNative>
+                <ModalActionButtonNative
+                  label={isEn ? cancelLabel : "キャンセル"}
+                  tone="ghost"
                   onPress={onCancel}
-                  style={({ pressed }) => [
-                    styles.btn,
-                    styles.btnCancel,
-                    pressed && !loading && styles.btnCancelPressed,
-                    loading && styles.btnDisabled,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={isEn ? cancelLabel : "キャンセル"}
-                >
-                  <MaterialCommunityIcons name="chevron-left" size={22} color="rgba(165,243,252,0.95)" />
-                  <Text style={[styles.btnLabelCancel, { fontFamily: DISPLAY_FONT }]}>{cancelLabel}</Text>
-                </Pressable>
-
-                <Pressable
                   disabled={loading}
+                />
+                <ModalActionButtonNative
+                  label={isEn ? deleteLabel : "削除"}
+                  tone="danger"
                   onPress={onConfirm}
-                  style={({ pressed }) => [
-                    styles.btn,
-                    styles.btnDelete,
-                    pressed && !loading && styles.btnDeletePressed,
-                    loading && styles.btnDisabled,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={isEn ? deleteLabel : "削除"}
-                >
-                  <Text style={[styles.btnLabelDelete, { fontFamily: DISPLAY_FONT }]}>{deleteLabel}</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(248,113,113,0.95)" />
-                </Pressable>
-              </View>
+                  disabled={loading}
+                />
+              </ModalActionRowNative>
             </View>
           </View>
         </View>

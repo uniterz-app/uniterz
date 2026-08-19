@@ -3,6 +3,7 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { nativeBlurViewExtraProps } from "../ui/nativeBlurProps";
+import { ModalActionButtonNative } from "../ui/ModalActionButtonNative";
 
 type Props = {
   open: boolean;
@@ -60,20 +61,16 @@ export default function PushPermissionPrimerModalNative({
           </View>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.body}>{body}</Text>
-          <Pressable
-            style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.85 }]}
+          <ModalActionButtonNative
+            label={allowLabel}
+            tone="primary"
             onPress={onAllow}
-            accessibilityRole="button"
-          >
-            <Text style={styles.primaryBtnText}>{allowLabel}</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.7 }]}
+          />
+          <ModalActionButtonNative
+            label={laterLabel}
+            tone="ghost"
             onPress={onLater}
-            accessibilityRole="button"
-          >
-            <Text style={styles.secondaryBtnText}>{laterLabel}</Text>
-          </Pressable>
+          />
         </View>
       </View>
     </Modal>
@@ -123,29 +120,5 @@ const styles = StyleSheet.create({
     color: "rgba(203,213,225,0.88)",
     fontSize: 13,
     lineHeight: 20,
-  },
-  primaryBtn: {
-    marginTop: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(103,232,249,0.55)",
-    backgroundColor: "rgba(6,182,212,0.18)",
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  primaryBtnText: {
-    color: "rgba(236,254,255,0.96)",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.4,
-  },
-  secondaryBtn: {
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  secondaryBtnText: {
-    color: "rgba(148,163,184,0.9)",
-    fontSize: 13,
-    fontWeight: "600",
   },
 });

@@ -7,6 +7,7 @@ import { cyberAlert } from "../../../components/cyberAlert";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "./MobilePageShell";
+import SlantCtaNative from "../../../ui/SlantCtaNative";
 import { useNativeIap } from "../../billing/useNativeIap";
 import {
   IAP_FALLBACK_PRICE_JA,
@@ -193,14 +194,11 @@ export default function MobileProSubscribeScreen({
               : "Season Pass does not auto-renew. No mid-season refund."}
           </Text>
 
-          <Pressable disabled={!ready || purchasing} onPress={handlePurchase} style={{ opacity: ready ? 1 : 0.85 }}>
-            <LinearGradient
-              colors={ready ? ["#22d3ee", "#2563eb"] : ["rgba(255,255,255,0.12)", "rgba(255,255,255,0.08)"]}
-              style={styles.cta}
-            >
-              <Text style={styles.ctaTxt}>{ctaLabel}</Text>
-            </LinearGradient>
-          </Pressable>
+          <SlantCtaNative
+            label={ctaLabel}
+            onPress={handlePurchase}
+            disabled={!ready || purchasing}
+          />
 
           <Pressable onPress={() => void restore()} style={styles.restoreBtn}>
             <Text style={styles.restoreTxt}>{isJa ? "購入を復元" : "Restore Purchases"}</Text>

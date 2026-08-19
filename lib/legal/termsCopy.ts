@@ -1,8 +1,8 @@
 /**
  * Uniterz 利用規約本文。
  * 現行のサービス設計（予想無料、Pro は分析・通知・レポート・見た目、
- * Unit は無償付与のみ、Free/Pro で競技条件同一）に合わせた稿。
- * 弁護士確認後に確定する。
+ * Unit は無償付与のみ、Free/Pro で競技条件同一）に合わせた確定稿。
+ * 弁護士確認済み。
  */
 import type { LegalSection } from "@/lib/legal/legalSection";
 import {
@@ -13,7 +13,7 @@ import {
 
 export type { LegalLang };
 
-export const TERMS_UPDATED_AT = "2026-08-14";
+export const TERMS_UPDATED_AT = "2026-08-18";
 
 export const TERMS_INTRO = {
   ja: "Uniterz におけるご利用条件を定めたページです。ご利用前に必ずご確認ください。",
@@ -40,7 +40,7 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
     title: { ja: "定義", en: "Definitions" },
     bullets: {
       ja: [
-        "「当社」：本サービスの運営者をいいます。法人情報は、確定後に特定商取引法に基づく表記その他のページで公表します。",
+        "「当社」：本サービスの運営者（株式会社UNITERZ）をいいます。法人情報は特定商取引法に基づく表記をご確認ください。",
         "「ユーザー」：本サービスを利用する個人をいいます。",
         "「予想」：試合の勝敗、スコアその他、当社が定める項目についての投稿をいいます。",
         "「スコア」：予想結果に基づき、ランキング算出のために付与される本サービス内の成績指標をいいます。金銭的価値はなく、購入・換金・譲渡・商品交換はできません。",
@@ -49,7 +49,7 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
         "「Pro」：分析、通知、レポート、見た目等を提供する有料プランをいいます。",
       ],
       en: [
-        "\"We\" / \"the operator\" means the operator of the Service. Corporate details will be published on the legally required notices page once confirmed.",
+        "\"We\" / \"the operator\" means UNITERZ Inc., the operator of the Service. Corporate details are published on the legally required notices page.",
         "\"User\" means an individual who uses the Service.",
         "\"Prediction\" means a submission on win/loss, score, or other items we specify.",
         "\"Score\" means an in-Service performance metric used to calculate rankings. It has no monetary value and cannot be purchased, cashed out, transferred, or exchanged for goods.",

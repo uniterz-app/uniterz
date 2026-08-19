@@ -4,9 +4,7 @@
 import { type ReactNode, useMemo, useState } from "react";
 import {
   type LayoutChangeEvent,
-  Pressable,
   StyleSheet,
-  Text,
   View,
   type ViewStyle,
 } from "react-native";
@@ -21,12 +19,11 @@ import {
   vec,
   type SkPath,
 } from "@shopify/react-native-skia";
-import { fonts } from "../../../theme/tokens";
+import { PLAN_PANEL_CUT_PX } from "../../billing/planPanelChrome";
 import {
   chamferedRectPathD,
   insetChamferedRectPathD,
 } from "../../games/matchListCyberClipPath";
-import { PLAN_PANEL_CUT_PX } from "../../billing/planPanelChrome";
 
 const FILL = ["rgba(18,16,12,0.98)", "rgba(8,10,16,0.99)", "rgba(5,8,14,1)"] as const;
 const BORDER = "rgba(252,211,77,0.42)";
@@ -99,40 +96,8 @@ export default function PlanChamferPanelNative({
   );
 }
 
-/** 斜め CTA（Web `PLAN_CTA_SLANT_CLIP` の近似） */
-export function PlanSlantCtaNative({
-  label,
-  onPress,
-  variant = "primary",
-}: {
-  label: string;
-  onPress: () => void;
-  variant?: "primary" | "danger";
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.ctaOuter, pressed && { opacity: 0.9 }]}
-    >
-      <View
-        style={[
-          styles.ctaSkew,
-          variant === "primary" ? styles.ctaPrimary : styles.ctaDanger,
-        ]}
-      >
-        <View style={styles.ctaUnskew}>
-          <Text
-            style={
-              variant === "primary" ? styles.ctaPrimaryText : styles.ctaDangerText
-            }
-          >
-            {label}
-          </Text>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
+/** 斜め CTA（Web `PLAN_CTA_SLANT_CLIP` の近似）— 共通 `SlantCtaNative` */
+export { default as PlanSlantCtaNative } from "../../../ui/SlantCtaNative";
 
 const styles = StyleSheet.create({
   wrap: {
@@ -143,41 +108,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 22,
     paddingBottom: 26,
-  },
-  ctaOuter: {
-    overflow: "hidden",
-  },
-  ctaSkew: {
-    transform: [{ skewX: "-12deg" }],
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  ctaPrimary: {
-    backgroundColor: "#fcd34d",
-  },
-  ctaDanger: {
-    borderWidth: 1,
-    borderColor: "rgba(248,113,113,0.55)",
-    backgroundColor: "transparent",
-  },
-  ctaUnskew: {
-    transform: [{ skewX: "12deg" }],
-    alignItems: "center",
-  },
-  ctaPrimaryText: {
-    fontFamily: fonts.metric,
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 1.6,
-    textTransform: "uppercase",
-    color: "#120e08",
-  },
-  ctaDangerText: {
-    fontFamily: fonts.metric,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1.8,
-    textTransform: "uppercase",
-    color: "#fca5a5",
   },
 });

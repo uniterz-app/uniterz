@@ -6,7 +6,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
-import PredictOverlaySubmitButtonNative from "../../games/PredictOverlaySubmitButtonNative";
+import SlantCtaNative from "../../../ui/SlantCtaNative";
 import { auth } from "../../../lib/firebase";
 import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 
@@ -105,11 +105,11 @@ export default function ProfilePasswordScreenNative() {
           placeholderTextColor="rgba(255,255,255,0.35)"
         />
         <View style={styles.ctaWrap}>
-          <PredictOverlaySubmitButtonNative
-            label={labels.save}
-            disabledLabel={labels.saving}
-            enabled={!saving}
+          <SlantCtaNative
+            label={saving ? labels.saving : labels.save}
+            variant="accent"
             onPress={() => void handleSave()}
+            disabled={saving}
           />
         </View>
       </View>
