@@ -664,6 +664,24 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="ButtonDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .ButtonDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="HexLightDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .HexLightDesignPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="NavBarDesignPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

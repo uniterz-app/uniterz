@@ -1,11 +1,11 @@
 /**
- * Web モバイルページをフルスクリーン表示（FloatingCloseButton は Web 側）。
+ * Web モバイルページをフルスクリーン表示。戻りは右端 BACK タブ。
  */
 import { useNavigation } from "@react-navigation/native";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useState } from "react";
 import { WebView } from "react-native-webview";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
 
 type Props = {
   apiBase: string;
@@ -31,14 +31,7 @@ export default function MobileLegalWebViewScreenNative({ apiBase, path }: Props)
         onLoadEnd={() => setLoading(false)}
         style={styles.web}
       />
-      <Pressable
-        style={styles.fallbackClose}
-        onPress={() => navigation.goBack()}
-        accessibilityRole="button"
-        accessibilityLabel="Close"
-      >
-        <MaterialCommunityIcons name="chevron-left" size={22} color="#fff" />
-      </Pressable>
+      <ProfileBackEdgeHandleNative onPress={() => navigation.goBack()} />
     </View>
   );
 }
@@ -52,20 +45,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 2,
     backgroundColor: "rgba(11,15,23,0.85)",
-  },
-  fallbackClose: {
-    position: "absolute",
-    top: 52,
-    right: 16,
-    zIndex: 100,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(24,24,27,0.8)",
-    alignItems: "center",
-    justifyContent: "center",
-    opacity: 0.01,
   },
 });

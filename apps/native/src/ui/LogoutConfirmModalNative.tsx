@@ -1,7 +1,10 @@
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  ModalActionButtonNative,
+  ModalActionRowNative,
+} from "./ModalActionButtonNative";
 import { nativeBlurViewExtraProps } from "./nativeBlurProps";
 import {
   PROFILE_SHELL_GRID_NATIVE,
@@ -49,15 +52,6 @@ function LogoutConfirmBody({
       </Pressable>
 
       <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-        <LinearGradient
-          colors={[
-            "rgba(255,255,255,0.08)",
-            "rgba(255,255,255,0.03)",
-            "rgba(5,8,20,0.8)",
-          ]}
-          locations={[0, 0.42, 1]}
-          style={StyleSheet.absoluteFillObject}
-        />
         <Svg
           width="100%"
           height="100%"
@@ -90,20 +84,10 @@ function LogoutConfirmBody({
 
         <Text style={styles.title}>{title}</Text>
 
-        <View style={styles.btnRow}>
-          <Pressable
-            style={({ pressed }) => [styles.btnCancel, pressed && { opacity: 0.88 }]}
-            onPress={onClose}
-          >
-            <Text style={styles.btnCancelText}>{cancelLabel}</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btnConfirm, pressed && { opacity: 0.92 }]}
-            onPress={onConfirm}
-          >
-            <Text style={styles.btnConfirmText}>{confirmLabel}</Text>
-          </Pressable>
-        </View>
+        <ModalActionRowNative>
+          <ModalActionButtonNative label={cancelLabel} tone="ghost" onPress={onClose} />
+          <ModalActionButtonNative label={confirmLabel} tone="danger" onPress={onConfirm} />
+        </ModalActionRowNative>
       </Pressable>
     </>
   );
@@ -177,6 +161,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.12)",
     overflow: "hidden",
     padding: 24,
+    backgroundColor: "#000000",
     ...Platform.select({
       ios: {
         shadowColor: "#000",

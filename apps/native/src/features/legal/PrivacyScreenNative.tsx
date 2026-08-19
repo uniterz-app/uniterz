@@ -6,7 +6,7 @@ export default function PrivacyScreenNative() {
       path="/mobile/privacy"
       fallbackTitle="PRIVACY"
       fallbackDescription="Uniterz におけるユーザー情報の取り扱いについて"
-      updatedAt="2026-08-14"
+      updatedAt="2026-08-18"
       fallbackBody="個人情報の取得・利用目的・第三者提供等について定めています。詳細は Web 版をご確認ください。"
     />
   );

@@ -1,10 +1,10 @@
 /**
  * 特定商取引法に基づく表記。
  * 法人名・所在地・責任者は現行の会社情報。料金・解約は iOS Pro 設計（税込予定）。
- * 弁護士確認後に確定する。
+ * 弁護士確認済み。
  */
 
-export const TOKUSHOHO_UPDATED_AT = "2026-08-14";
+export const TOKUSHOHO_UPDATED_AT = "2026-08-18";
 
 export const TOKUSHOHO_HEADING = "特定商取引法に基づく表記";
 

@@ -59,7 +59,7 @@ import { CyberSubpageHeaderNative } from "../../ui/CyberSubpageShellNative";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
 import GamesPageBackgroundNative from "../background/GamesPageBackgroundNative";
 import { APP_MESH_BG_FALLBACK } from "../../../../../lib/app/appMeshBackground";
-import PredictOverlaySubmitButtonNative from "../games/PredictOverlaySubmitButtonNative";
+import SlantCtaNative from "../../ui/SlantCtaNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -1469,11 +1469,11 @@ export default function ProfileHomeScreen({
                     </Pressable>
                   </View>
 
-                  <PredictOverlaySubmitButtonNative
-                    label={t.save}
-                    disabledLabel={t.saving}
-                    enabled={!saving && !uploadingAvatar}
+                  <SlantCtaNative
+                    label={saving || uploadingAvatar ? t.saving : t.save}
+                    variant="accent"
                     onPress={() => void handleSaveProfile()}
+                    disabled={saving || uploadingAvatar}
                   />
                 </View>
               </ScrollView>
@@ -1695,6 +1695,10 @@ export default function ProfileHomeScreen({
           navigation.navigate("ResultStreakTagDesignPreview");
         else if (page === "navBarDesignPreview" && __DEV__)
           navigation.navigate("NavBarDesignPreview");
+        else if (page === "buttonDesignPreview" && __DEV__)
+          navigation.navigate("ButtonDesignPreview");
+        else if (page === "hexLightDesignPreview" && __DEV__)
+          navigation.navigate("HexLightDesignPreview");
         else if (page === "splashLogoPreview" && __DEV__)
           navigation.navigate("SplashLogoPreview");
         else if (page === "liveGameStatsPreview" && __DEV__)

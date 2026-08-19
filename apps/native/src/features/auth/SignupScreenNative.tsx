@@ -16,6 +16,7 @@ import { auth, db } from "../../lib/firebase";
 import type { AuthStackParamList } from "../../navigation/types";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { mapAuthErrorMessage } from "./authShared";
+import SlantCtaNative from "../../ui/SlantCtaNative";
 import { spacing } from "../../theme/tokens";
 import { bindMeReferralNative } from "../profile/referralApiNative";
 import { normalizeReferralInviteCode } from "../../../../../lib/referral/referralInviteCode";
@@ -96,7 +97,6 @@ export default function SignupScreenNative() {
       }
     >
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Email Address"
@@ -108,7 +108,6 @@ export default function SignupScreenNative() {
         />
       </View>
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Password (6+ characters)"
@@ -119,7 +118,6 @@ export default function SignupScreenNative() {
         />
       </View>
       <View style={styles.field}>
-        <View style={styles.fieldRail} />
         <TextInput
           style={styles.input}
           placeholder="Invite code (optional)"
@@ -133,24 +131,12 @@ export default function SignupScreenNative() {
       <Text style={styles.inviteHint}>
         友達からコードをもらった場合のみ入力
       </Text>
-      <View style={styles.ctaSkewWrap}>
-        <Pressable
-          style={styles.ctaPressable}
-          onPress={handleSignup}
-          disabled={submitting}
-        >
-          <View style={styles.ctaBorder}>
-            <View style={styles.ctaFill}>
-              <View style={styles.ctaRail} pointerEvents="none" />
-              <View style={styles.ctaLabelWrap}>
-                <Text style={styles.ctaLabel}>
-                  {submitting ? "Creating..." : "SIGN UP"}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </Pressable>
-      </View>
+      <SlantCtaNative
+        display
+        label={submitting ? "Creating..." : "SIGN UP"}
+        onPress={handleSignup}
+        disabled={submitting}
+      />
     </AuthFormShellNative>
   );
 }
@@ -164,14 +150,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
     overflow: "hidden",
-  },
-  fieldRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: "rgba(0,245,255,0.45)",
   },
   input: {
     paddingHorizontal: 16,
