@@ -1679,6 +1679,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("UnitEarnOverlayFontPreview");
         else if (page === "uniterzLogoTypePreview" && __DEV__)
           navigation.navigate("UniterzLogoTypePreview");
+        else if (page === "uniterzLogo3dPreview" && __DEV__)
+          navigation.navigate("UniterzLogo3dPreview");
         else if (page === "uniterzProBadgePreview" && __DEV__)
           navigation.navigate("UniterzProBadgePreview");
         else if (page === "proBadgeComparePreview" && __DEV__)

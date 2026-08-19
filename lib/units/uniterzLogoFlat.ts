@@ -69,6 +69,10 @@ export const UNITERZ_LOGO_FLAT_ASSET = {
   webSvgPath: "/brand/uniterz-logo-flat.svg",
   webPngPath: "/brand/uniterz-logo-flat.png",
   webPngBlackPath: "/brand/uniterz-logo-flat-black.png",
+  /** Blender で押し出した結合 GLB（本番 splash の uniterz-logo.glb は差し替えない） */
+  webGlb3dPath: "/brand/uniterz-logo-flat-3d.glb",
+  /** Blender で文字ごとに分けた GLB（letter-U〜Z） */
+  webGlbLettersPath: "/brand/uniterz-logo-flat-3d-letters.glb",
   width: 2400,
   height: 460,
 } as const;

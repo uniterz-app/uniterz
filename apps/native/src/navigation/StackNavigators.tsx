@@ -502,6 +502,15 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="UniterzLogo3dPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .UniterzLogo3dPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="UniterzProBadgePreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")

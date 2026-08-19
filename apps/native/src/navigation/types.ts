@@ -164,6 +164,8 @@ export type ProfileStackParamList = {
   UnitEarnOverlayFontPreview: undefined;
   /** __DEV__ UNITERZ ウェスタン調ロゴ文字 3案 */
   UniterzLogoTypePreview: undefined;
+  /** __DEV__ Blender 平面ワードマーク 3D */
+  UniterzLogo3dPreview: undefined;
   /** __DEV__ 課金 PRO タグ案 */
   UniterzProBadgePreview: undefined;
   /** __DEV__ 現行 vs 旧 Pro バッジ比較 */

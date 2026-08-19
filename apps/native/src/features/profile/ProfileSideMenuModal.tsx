@@ -83,6 +83,7 @@ type Props = {
     | "unitEarnOverlayAnimPreview"
     | "unitEarnOverlayFontPreview"
     | "uniterzLogoTypePreview"
+    | "uniterzLogo3dPreview"
     | "uniterzProBadgePreview"
     | "proBadgeComparePreview"
     | "resultCardDesignPreview"
@@ -290,6 +291,7 @@ export default function ProfileSideMenuModal({
       | "unitEarnOverlayAnimPreview"
       | "unitEarnOverlayFontPreview"
       | "uniterzLogoTypePreview"
+      | "uniterzLogo3dPreview"
     | "uniterzProBadgePreview"
     | "proBadgeComparePreview"
       | "resultCardDesignPreview"
@@ -820,6 +822,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("navBarDesignPreview")}
                         >
                           Nav Bar 案
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="cube-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("uniterzLogo3dPreview")}
+                        >
+                          Logo 3D
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="flash-outline"
