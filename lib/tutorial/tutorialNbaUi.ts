@@ -398,6 +398,7 @@ export function buildTutorialProfile(): Profile {
     countryCode: "JP",
     memberSinceMs: Date.now(),
     unitBalance: 0,
+    profileViewCount: null,
   };
 }
 
