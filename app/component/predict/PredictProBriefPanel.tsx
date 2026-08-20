@@ -1,5 +1,6 @@
 "use client";
 
+import type { Language } from "@/lib/i18n/language";
 import type {
   PredictProBrief,
   ProBriefEdgeItem,
