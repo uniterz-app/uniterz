@@ -18,7 +18,7 @@ import { nameBebas, nameOxanium, matchScoreClass } from "@/lib/fonts";
 import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
 import type { ResultCardFaceModel } from "@/lib/result/buildResultCardFace";
 import type { ResultScoreRelKind } from "@/lib/result/resultScoreRelative";
-import { streakTagTone } from "@/lib/result/streakTagTone";
+import ResultImpactStreakTag from "@/app/component/result/ResultImpactStreakTag";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
@@ -195,10 +195,7 @@ export default function ResultCardDesignFace({
           <motion.div className={styles.topBar} {...groupMotion(headerDelay, 6)}>
             <div className={styles.topLeftSlot}>
               {showStreak ? (
-                <ImpactTag
-                  label={`W${face.winStreak}`}
-                  color={streakTagTone(face.winStreak).accent}
-                />
+                <ResultImpactStreakTag winStreak={face.winStreak} />
               ) : null}
             </div>
             <div className={styles.topBadgeSlot}>

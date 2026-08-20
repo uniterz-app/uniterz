@@ -21,6 +21,7 @@ import {
   gamesFilterHelpButtonLabel,
   gamesFilterHelpParagraphs,
 } from "../../../../../lib/games/gamesFilterHelp";
+import CyberHelpMarkNative from "../../ui/CyberHelpMarkNative";
 import jaMessages from "../../../../../messages/ja";
 import enMessages from "../../../../../messages/en";
 import type { League } from "../../../../../lib/leagues";
@@ -199,16 +200,12 @@ export default function GamesTeamFilterPanelNative({
                   accessibilityRole="button"
                   accessibilityState={{ expanded: helpOpen }}
                   accessibilityLabel={helpButtonLabel}
-                  style={[styles.helpBtn, helpOpen && styles.helpBtnActive]}
+                  style={({ pressed }) => [
+                    styles.helpBtn,
+                    pressed && styles.helpBtnPressed,
+                  ]}
                 >
-                  <MaterialCommunityIcons
-                    name="help-circle-outline"
-                    size={15}
-                    color={helpOpen ? "#050505" : "rgba(255,255,255,0.82)"}
-                  />
-                  <Text style={[styles.helpBtnText, helpOpen && styles.helpBtnTextActive]}>
-                    {helpButtonLabel}
-                  </Text>
+                  <CyberHelpMarkNative active={helpOpen} />
                 </Pressable>
                 <Pressable
                   onPress={onClose}
@@ -506,20 +503,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   helpBtn: {
-    minHeight: 36,
-    minWidth: 72,
-    flexDirection: "row",
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "transparent",
   },
-  helpBtnActive: {
-    borderColor: "#fff",
-    backgroundColor: "#fff",
+  helpBtnPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
   },
   closeBtn: {
     width: 36,
@@ -529,15 +520,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
   },
-  helpBtnText: {
-    color: "rgba(255,255,255,0.82)",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  helpBtnTextActive: {
-    color: "#050505",
-  },
-  helpPanel: {
+  closeBtn: {
     gap: 8,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,

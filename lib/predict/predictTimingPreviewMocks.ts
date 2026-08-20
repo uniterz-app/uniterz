@@ -6,6 +6,35 @@
  */
 
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
+import {
+  proBriefTravelLines,
+  travelSummaryForBrief,
+} from "@/lib/predict/nbaProBriefTravel";
+
+const TIMING_TIP_MS = Date.UTC(2026, 2, 13, 2, 30);
+const HOUR = 60 * 60 * 1000;
+
+const LAKERS_HOME_TRAVEL = travelSummaryForBrief({
+  teamId: "nba-lakers",
+  tonightVenueTeamId: "nba-lakers",
+  tonightStartAtMs: TIMING_TIP_MS,
+});
+/** BOS → PHX（30h前）→ LAL 今夜。2レグで 2,000km 超なので 2日移動が出る */
+const CELTICS_ROAD_TRIP_TRAVEL = travelSummaryForBrief({
+  teamId: "nba-celtics",
+  tonightVenueTeamId: "nba-lakers",
+  tonightStartAtMs: TIMING_TIP_MS,
+  recentStops: [
+    {
+      venueTeamId: "nba-celtics",
+      startAtMs: TIMING_TIP_MS - 72 * HOUR,
+    },
+    {
+      venueTeamId: "nba-suns",
+      startAtMs: TIMING_TIP_MS - 30 * HOUR,
+    },
+  ],
+});
 
 export type PredictTimingPreviewPreset = {
   id: string;
@@ -72,10 +101,7 @@ export const PREDICT_TIMING_PREVIEW_PRESETS: PredictTimingPreviewPreset[] = [
             textJa: "休養 2日（ホーム連戦 3試合目）",
             textEn: "2 days rest · 3rd home game in a row",
           },
-          {
-            textJa: "前試合 主力2人が 36分以上",
-            textEn: "2 stars logged 36+ min last game",
-          },
+          ...proBriefTravelLines(LAKERS_HOME_TRAVEL, { homeNoTravel: true }),
         ],
         context: [
           {
@@ -102,10 +128,7 @@ export const PREDICT_TIMING_PREVIEW_PRESETS: PredictTimingPreviewPreset[] = [
           },
         ],
         schedule: [
-          {
-            textJa: "Back-to-Back（移動あり · 約1800km）",
-            textEn: "Back-to-Back with travel (~1800 km)",
-          },
+          ...proBriefTravelLines(CELTICS_ROAD_TRIP_TRAVEL),
           {
             textJa: "4日間で3試合目",
             textEn: "3rd game in 4 nights",

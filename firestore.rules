@@ -6,7 +6,10 @@ service cloud.firestore {
     // ----- 管理者（app/admin/* ・ games/teams 手動投入・お知らせ編集 等）
     function isAdmin() {
       return request.auth != null
-        && request.auth.uid == "S6r5KyS9XcXds3Pm7koLzzELrvs2";
+        && request.auth.uid in [
+          "ynh0i1lJklWra1393TNbnxcKo5f2",
+          "Rb3vF67NTLeCxSvrR15brCbiQSD2"
+        ];
     }
 
     /** WC knockout bracket — sync with lib/wc/wc-knockout-config submissionClosesAtIso (M73 kickoff). */
@@ -77,6 +80,7 @@ service cloud.firestore {
         && !('billingProvider' in request.resource.data)
         && !('unitBalance' in request.resource.data)
         && !('unitReserved' in request.resource.data)
+        && !('profileViewCount' in request.resource.data)
         && !('stripeCustomerId' in request.resource.data)
         && !('stripeSubscriptionId' in request.resource.data)
         && !('googlePurchaseToken' in request.resource.data)
@@ -123,6 +127,9 @@ service cloud.firestore {
         && (!('unitReserved' in request.resource.data)
             || (('unitReserved' in resource.data)
                 && request.resource.data.unitReserved == resource.data.unitReserved))
+        && (!('profileViewCount' in request.resource.data)
+            || (('profileViewCount' in resource.data)
+                && request.resource.data.profileViewCount == resource.data.profileViewCount))
         && (!('stripeCustomerId' in request.resource.data)
             || (('stripeCustomerId' in resource.data)
                 && request.resource.data.stripeCustomerId == resource.data.stripeCustomerId))
@@ -457,8 +464,8 @@ service cloud.firestore {
 
     // 商品交換申請 — 作成・更新は API（Admin SDK）のみ。本人は read 可。
     match /unit_redemptions/{redemptionId} {
-      allow read: if request.auth != null
-        && request.auth.uid == resource.data.uid;
+      allow read: if isAdmin()
+        || (request.auth != null && request.auth.uid == resource.data.uid);
       allow create, update, delete: if false;
     }
 

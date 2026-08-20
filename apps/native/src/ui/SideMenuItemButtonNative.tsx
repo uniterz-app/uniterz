@@ -141,11 +141,31 @@ export default function SideMenuItemButtonNative({
   );
 }
 
-export function SideMenuUnreadBadgeNative({ count }: { count: number }) {
+export function SideMenuUnreadBadgeNative({
+  count,
+  tone = "admin",
+}: {
+  count: number;
+  /** お知らせ=青 / 管理新着=赤 */
+  tone?: "announce" | "admin";
+}) {
   if (count <= 0) return null;
+  const isAnnounce = tone === "announce";
   return (
-    <View style={badgeStyles.root}>
-      <Text style={badgeStyles.text}>{count > 99 ? "99+" : String(count)}</Text>
+    <View
+      style={[
+        badgeStyles.root,
+        isAnnounce ? badgeStyles.rootAnnounce : badgeStyles.rootAdmin,
+      ]}
+    >
+      <Text
+        style={[
+          badgeStyles.text,
+          isAnnounce ? badgeStyles.textAnnounce : badgeStyles.textAdmin,
+        ]}
+      >
+        {count > 99 ? "99+" : String(count)}
+      </Text>
     </View>
   );
 }
@@ -153,17 +173,27 @@ export function SideMenuUnreadBadgeNative({ count }: { count: number }) {
 const badgeStyles = StyleSheet.create({
   root: {
     borderRadius: 999,
-    backgroundColor: "#ef4444",
     paddingHorizontal: 8,
     paddingVertical: 2,
     minWidth: 22,
     alignItems: "center",
   },
+  rootAnnounce: {
+    backgroundColor: "#00F5FF",
+  },
+  rootAdmin: {
+    backgroundColor: "#ef4444",
+  },
   text: {
-    color: "#fff",
     fontSize: 10,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
+  },
+  textAnnounce: {
+    color: "#050508",
+  },
+  textAdmin: {
+    color: "#fff",
   },
 });
 

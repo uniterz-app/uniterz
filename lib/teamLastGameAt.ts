@@ -16,6 +16,14 @@ export function lastGameAtMillis(entry: {
   }
   if (v instanceof Date && !Number.isNaN(v.getTime())) return v.getTime();
   if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (
+    v != null &&
+    typeof v === "object" &&
+    typeof (v as { __ts?: unknown }).__ts === "number" &&
+    Number.isFinite((v as { __ts: number }).__ts)
+  ) {
+    return (v as { __ts: number }).__ts;
+  }
   return 0;
 }
 

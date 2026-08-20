@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { ADMIN_UID } from "@/lib/constants";
+import { isAdminUid } from "@/lib/constants";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { db, storage } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
@@ -35,7 +35,7 @@ export default function AdminAnnouncementNewPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const isAdmin = status === "ready" && user?.uid === ADMIN_UID;
+  const isAdmin = status === "ready" && isAdminUid(user?.uid);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

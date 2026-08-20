@@ -64,6 +64,7 @@ import {
   normalizeNbaTopScorerPick,
   type NbaTopScorerPick,
 } from "../../../../../lib/nba/topScorer";
+import { topScorerCandidatesForMatchup } from "../../../../../lib/predict/nbaTopScorerPreviewMocks";
 import type { PredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
@@ -807,6 +808,10 @@ type PredictModalProps = {
   /** チュートリアル練習用の案内バナー */
   tutorialMode?: boolean;
   onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (
+    playerId: string,
+    toolsTab?: "injuries" | "roster"
+  ) => void;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -905,6 +910,7 @@ export default function PredictModal({
   isProUser = false,
   tutorialMode = false,
   onOpenTeamDetail,
+  onOpenPlayerDetail,
 }: PredictModalProps) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() ?? false;
@@ -1101,13 +1107,22 @@ export default function PredictModal({
     showNbaLiveGameStats,
     { apiBaseUrl: getUniterzApiBaseUrl() }
   );
-  const nbaTopScorerCandidates = useMemo(
-    () =>
-      normalizeNbaTopScorerCandidates(
-        predictData?.subjectGame?.topScorerCandidates
-      ),
-    [predictData?.subjectGame]
-  );
+  const nbaTopScorerCandidates = useMemo(() => {
+    const fromGame = normalizeNbaTopScorerCandidates(
+      predictData?.subjectGame?.topScorerCandidates
+    );
+    if (fromGame.length > 0) return fromGame;
+    return topScorerCandidatesForMatchup(
+      rawTeamIdFromGameSide(matchPreview?.homeSide) ??
+        rawTeamIdFromGameSide(predictData?.subjectGame?.home),
+      rawTeamIdFromGameSide(matchPreview?.awaySide) ??
+        rawTeamIdFromGameSide(predictData?.subjectGame?.away)
+    );
+  }, [
+    predictData?.subjectGame,
+    matchPreview?.homeSide,
+    matchPreview?.awaySide,
+  ]);
   const showWcOverlayTabs = isWcLeague && hideMarketTab;
   const overlayCenterMode = hideMarketTab;
   const showOverlayScheduleMeta =
@@ -1343,6 +1358,7 @@ export default function PredictModal({
                         predictAwayTeamLabel || matchPreview?.awayCompact || "AWAY"
                       }
                       onOpenTeamDetail={onOpenTeamDetail}
+                      onOpenPlayerDetail={onOpenPlayerDetail}
                     />
                   ) : (
               <View>
@@ -1764,6 +1780,18 @@ export default function PredictModal({
                           predictData?.league === "nba" &&
                           setGoalScorerPick ? (
                             <NbaTopScorerPickerNative
+                              homeTeamId={
+                                rawTeamIdFromGameSide(matchPreview?.homeSide) ??
+                                rawTeamIdFromGameSide(
+                                  predictData?.subjectGame?.home
+                                )
+                              }
+                              awayTeamId={
+                                rawTeamIdFromGameSide(matchPreview?.awaySide) ??
+                                rawTeamIdFromGameSide(
+                                  predictData?.subjectGame?.away
+                                )
+                              }
                               candidates={nbaTopScorerCandidates}
                               value={
                                 goalScorerPick
@@ -1914,6 +1942,18 @@ export default function PredictModal({
                           predictData?.league === "nba" &&
                           setGoalScorerPick ? (
                             <NbaTopScorerPickerNative
+                              homeTeamId={
+                                rawTeamIdFromGameSide(matchPreview?.homeSide) ??
+                                rawTeamIdFromGameSide(
+                                  predictData?.subjectGame?.home
+                                )
+                              }
+                              awayTeamId={
+                                rawTeamIdFromGameSide(matchPreview?.awaySide) ??
+                                rawTeamIdFromGameSide(
+                                  predictData?.subjectGame?.away
+                                )
+                              }
                               candidates={nbaTopScorerCandidates}
                               value={
                                 goalScorerPick

@@ -82,6 +82,8 @@ import type { Language } from "@/lib/i18n/language";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
+import { useAdminInboxUnread } from "@/lib/admin/useAdminInboxUnread";
+import { isAdminUid } from "@/lib/constants";
 import {
   clearSideMenuOrigin,
   consumeOpenProfileSideMenu,
@@ -128,7 +130,10 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const currentIsProView = forceProView || isProView;
   const visualEffects = profileVisualEffectsForViewer(isMe);
   const visualEffectsLite = isProfileVisualLite(visualEffects);
-  const { count: profileViewCount } = useProfileViewCount(resolvedUid);
+  const { count: profileViewCount } = useProfileViewCount(
+    resolvedUid,
+    profile.profileViewCount
+  );
 
   const reportOverlayEnabled =
     Boolean(isMe && !loadingPlan && (currentIsProView || myPlan === "pro"));
@@ -210,6 +215,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const { unreadCount: menuUnreadCount } = useAnnouncementsUnread({
     enabled: isMe,
   });
+  const adminInbox = useAdminInboxUnread(
+    Boolean(isMe && isAdminUid(resolvedUid))
+  );
 
   const currentStreak = Math.max(
     0,
@@ -282,6 +290,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         <ProfileMenuEdgeHandle
           onOpen={() => setDrawerOpen(true)}
           unreadCount={menuUnreadCount}
+          adminUnreadCount={adminInbox.total}
           hidden={drawerOpen || welcomeProfileFly}
         />
       ) : null}

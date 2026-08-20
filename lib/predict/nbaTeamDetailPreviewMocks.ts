@@ -16,6 +16,7 @@ import {
   NBA_LEAGUE_TEAM_STAT_METRICS,
   type NbaLeagueTeamStatMetric,
   type NbaLeagueTeamStatRow,
+  type NbaLeagueTeamStatsBundle,
   type NbaLeagueTeamStatWindow,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 
@@ -352,9 +353,9 @@ function resolveLean(
 
 function buildRecentGames(
   teamId: string,
-  conference: NbaConferenceId
+  conference: NbaConferenceId,
+  bundle: NbaLeagueTeamStatsBundle
 ): NbaTeamRecentGame[] {
-  const bundle = getNbaLeagueTeamStatsMock();
   const pool = bundle.season.filter((r) => r.teamId !== teamId);
   const rnd = mulberry32(hashSeed(`${teamId}:games:v1`));
   const games: NbaTeamRecentGame[] = [];
@@ -501,8 +502,11 @@ function rankByValue(
 }
 
 /** BallDontLie opponent averages 相当（9 指標） */
-function buildOpponentStats(teamId: string): NbaTeamOpponentAllowedMetric[] {
-  const season = getNbaLeagueTeamStatsMock().season;
+function buildOpponentStats(
+  teamId: string,
+  bundle: NbaLeagueTeamStatsBundle
+): NbaTeamOpponentAllowedMetric[] {
+  const season = bundle.season;
   const team = season.find((r) => r.teamId === teamId);
   if (!team) return [];
 
@@ -578,9 +582,9 @@ function buildOpponentStats(teamId: string): NbaTeamOpponentAllowedMetric[] {
 
 function buildUpcomingGames(
   teamId: string,
-  conference: NbaConferenceId
+  conference: NbaConferenceId,
+  bundle: NbaLeagueTeamStatsBundle
 ): NbaTeamUpcomingGame[] {
-  const bundle = getNbaLeagueTeamStatsMock();
   const pool = bundle.season.filter((r) => r.teamId !== teamId);
   const rnd = mulberry32(hashSeed(`${teamId}:upcoming:v1`));
   const tips = ["19:00", "19:30", "20:00", "22:00", "13:00"];
@@ -719,44 +723,47 @@ function conferenceRankAmong(
 }
 
 /** プレビュー既定チーム（NET 上位寄りを選ぶ） */
-export function defaultTeamDetailPreviewTeamId(): string {
-  const season = getNbaLeagueTeamStatsMock().season;
+export function defaultTeamDetailPreviewTeamId(
+  bundle: NbaLeagueTeamStatsBundle = getNbaLeagueTeamStatsMock()
+): string {
+  const season = bundle.season;
   const sorted = [...season].sort((a, b) => b.netrtg - a.netrtg);
   return sorted[2]?.teamId ?? sorted[0]?.teamId ?? "nba-lakers";
 }
 
 export function getNbaTeamDetailPreview(
-  teamId: string = defaultTeamDetailPreviewTeamId()
+  teamId?: string,
+  bundle: NbaLeagueTeamStatsBundle = getNbaLeagueTeamStatsMock()
 ): NbaTeamDetailPreview {
-  const bundle = getNbaLeagueTeamStatsMock();
-  const seasonRow = bundle.season.find((r) => r.teamId === teamId);
-  const last10Row = bundle.last10.find((r) => r.teamId === teamId);
+  const resolvedId = teamId || defaultTeamDetailPreviewTeamId(bundle);
+  const seasonRow = bundle.season.find((r) => r.teamId === resolvedId);
+  const last10Row = bundle.last10.find((r) => r.teamId === resolvedId);
   if (!seasonRow || !last10Row) {
-    throw new Error(`team detail preview: unknown team ${teamId}`);
+    throw new Error(`team detail preview: unknown team ${resolvedId}`);
   }
 
-  const seasonMetrics = buildMetrics(bundle.season, teamId);
-  const last10Metrics = buildMetrics(bundle.last10, teamId);
+  const seasonMetrics = buildMetrics(bundle.season, resolvedId);
+  const last10Metrics = buildMetrics(bundle.last10, resolvedId);
   const lean = resolveLean(seasonMetrics);
-  const recentGames = buildRecentGames(teamId, seasonRow.conference);
+  const recentGames = buildRecentGames(resolvedId, seasonRow.conference, bundle);
   const l10Wins = recentGames.filter((g) => g.result === "W").length;
   const [cityEn, nickEn] = splitTeamNameByLeague("nba", seasonRow.teamName);
   const divisionId: NbaDivisionId =
-    NBA_TEAM_US_GEO[teamId]?.division ?? "pacific";
+    NBA_TEAM_US_GEO[resolvedId]?.division ?? "pacific";
   const divLabel = NBA_DIVISION_LABEL[divisionId];
 
   const confRank = conferenceRankAmong(
     bundle.season,
-    teamId,
+    resolvedId,
     seasonRow.conference
   );
-  const teamName = NBA_TEAM_NAME_BY_ID[teamId] ?? seasonRow.teamName;
-  const rosterBlock = buildRosterBlock(teamId, teamName, confRank);
+  const teamName = NBA_TEAM_NAME_BY_ID[resolvedId] ?? seasonRow.teamName;
+  const rosterBlock = buildRosterBlock(resolvedId, teamName, confRank);
 
   return {
-    teamId,
+    teamId: resolvedId,
     teamName,
-    teamAbbr: TEAM_SHORT[teamId] ?? teamId,
+    teamAbbr: TEAM_SHORT[resolvedId] ?? resolvedId,
     cityEn: cityEn || seasonRow.teamName,
     nickEn: nickEn || getMobileTeamNameFallback(seasonRow.teamName),
     conference: seasonRow.conference,
@@ -774,13 +781,13 @@ export function getNbaTeamDetailPreview(
     ...lean,
     metrics: { season: seasonMetrics, last10: last10Metrics },
     recentGames,
-    upcomingGames: buildUpcomingGames(teamId, seasonRow.conference),
-    injuries: buildInjuries(teamId, rosterBlock),
-    opponentStats: buildOpponentStats(teamId),
-    conferenceSplit: buildConferenceSplit(teamId),
-    homeAwaySplit: buildHomeAwaySplit(teamId),
+    upcomingGames: buildUpcomingGames(resolvedId, seasonRow.conference, bundle),
+    injuries: buildInjuries(resolvedId, rosterBlock),
+    opponentStats: buildOpponentStats(resolvedId, bundle),
+    conferenceSplit: buildConferenceSplit(resolvedId),
+    homeAwaySplit: buildHomeAwaySplit(resolvedId),
     rosterBlock,
-    payroll: buildPayroll(teamId, rosterBlock),
+    payroll: buildPayroll(resolvedId, rosterBlock),
     asOfLabel: bundle.asOfLabel,
   };
 }

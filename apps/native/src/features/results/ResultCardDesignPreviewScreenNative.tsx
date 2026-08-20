@@ -40,7 +40,7 @@ import {
   MATCH_CARD_SCORE_FONT,
 } from "../games/matchCardTypography";
 import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
-import { streakTagTone } from "@/lib/result/streakTagTone";
+import ResultImpactStreakTagNative from "./ResultImpactStreakTagNative";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import {
   ImpactTag,
@@ -279,10 +279,7 @@ function TopBar({
     <Animated.View style={[styles.topBar, motion?.headerGroupStyle]}>
       <View style={styles.topLeftSlot}>
         {showStreak ? (
-          <ImpactTag
-            label={`W${sample.winStreak}`}
-            color={streakTagTone(sample.winStreak).accent}
-          />
+          <ResultImpactStreakTagNative winStreak={sample.winStreak} />
         ) : null}
       </View>
       <View style={styles.topBadgeSlot}>

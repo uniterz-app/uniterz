@@ -1,5 +1,5 @@
 import { getAdminAuth } from "@/lib/firebaseAdmin";
-import { ADMIN_UID } from "@/lib/constants";
+import { isAdminUid } from "@/lib/constants";
 
 export async function requireAdminUid(req: Request): Promise<string> {
   const authz =
@@ -11,7 +11,7 @@ export async function requireAdminUid(req: Request): Promise<string> {
     throw err;
   }
   const decoded = await getAdminAuth().verifyIdToken(token);
-  if (decoded.uid !== ADMIN_UID) {
+  if (!isAdminUid(decoded.uid)) {
     const err = new Error("forbidden");
     (err as Error & { status?: number }).status = 403;
     throw err;

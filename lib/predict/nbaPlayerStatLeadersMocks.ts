@@ -4,6 +4,18 @@ import {
   type NbaConferenceId as NbaConf,
 } from "@/lib/nba/nbaConferenceTeams";
 import { TEAM_SHORT } from "@/lib/team-short";
+import {
+  NBA_LEAGUE_ADVANCED_CATEGORIES,
+  type NbaLeagueAdvancedCategory,
+} from "@/lib/predict/nbaLeagueStatBoard";
+import {
+  buildPlayerAdvancedMetricValue,
+  formatPlayerAdvancedLeaderValue,
+  NBA_PLAYER_ADVANCED_LEADER_METRICS,
+  playerAdvancedMetricDef,
+  playerAdvancedMetricsForCategory,
+  type NbaPlayerAdvancedLeaderMetric,
+} from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
 
 /**
  * BallDontLie `GET /v1/leaders` の `stat_type` と同一 ID。
@@ -30,8 +42,12 @@ export type NbaPlayerLeaderBdlStatType =
   | "fta"
   | "ftm";
 
-/** @deprecated 命名互換 — 実体は BDL stat_type */
-export type NbaPlayerStatLeaderMetric = NbaPlayerLeaderBdlStatType;
+export type NbaPlayerLeaderMetricId =
+  | NbaPlayerLeaderBdlStatType
+  | NbaPlayerAdvancedLeaderMetric;
+
+/** @deprecated 命名互換 — 実体は leaders / advanced 指標 ID */
+export type NbaPlayerStatLeaderMetric = NbaPlayerLeaderMetricId;
 
 export const NBA_BDL_PLAYER_LEADER_STAT_TYPES: readonly NbaPlayerLeaderBdlStatType[] =
   [
@@ -67,8 +83,8 @@ export type NbaPlayerStatLeaderRow = {
 };
 
 export type NbaPlayerStatLeadersBundle = {
-  season: Record<NbaPlayerLeaderBdlStatType, NbaPlayerStatLeaderRow[]>;
-  last10: Record<NbaPlayerLeaderBdlStatType, NbaPlayerStatLeaderRow[]>;
+  season: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
+  last10: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
   asOfLabel: string;
 };
 
@@ -173,6 +189,16 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       showInChipBar: true,
     },
     {
+      id: "fg3a",
+      label: "3PA per Game",
+      short: "3PA",
+      higherIsBetter: true,
+      hintJa: "1試合あたりの3PA。打ちまくりが見える。",
+      hintEn: "Three-point attempts per game.",
+      kind: "perGame",
+      showInChipBar: true,
+    },
+    {
       id: "fg3_pct",
       label: "3-Point %",
       short: "3P%",
@@ -190,6 +216,16 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       hintJa: "FG%。",
       hintEn: "Field goal percentage.",
       kind: "pct",
+      showInChipBar: true,
+    },
+    {
+      id: "fga",
+      label: "FGA per Game",
+      short: "FGA",
+      higherIsBetter: true,
+      hintJa: "1試合あたりの FGA。打ちまくりが見える。",
+      hintEn: "Field goal attempts per game.",
+      kind: "perGame",
       showInChipBar: true,
     },
     {
@@ -231,26 +267,6 @@ export const NBA_PLAYER_STAT_LEADER_METRICS: readonly NbaPlayerStatLeaderMetricD
       hintEn: "NBA efficiency rating.",
       kind: "eff",
       showInChipBar: true,
-    },
-    {
-      id: "fg3a",
-      label: "3PA per Game",
-      short: "3PA",
-      higherIsBetter: true,
-      hintJa: "1試合あたりの3PA。",
-      hintEn: "Three-point attempts per game.",
-      kind: "perGame",
-      showInChipBar: false,
-    },
-    {
-      id: "fga",
-      label: "FGA per Game",
-      short: "FGA",
-      higherIsBetter: true,
-      hintJa: "1試合あたりの FGA。",
-      hintEn: "Field goal attempts per game.",
-      kind: "perGame",
-      showInChipBar: false,
     },
     {
       id: "fgm",
@@ -300,6 +316,63 @@ export const NBA_PLAYER_STAT_LEADER_METRIC_ROWS: readonly (
   return rows;
 })();
 
+export type NbaPlayerLeaderBoardMetricDef = {
+  id: NbaPlayerLeaderMetricId;
+  label: string;
+  short: string;
+  higherIsBetter: boolean;
+  hintJa: string;
+  hintEn: string;
+};
+
+export function playerBoardMetricsForCategory(
+  category: NbaLeagueAdvancedCategory
+): NbaPlayerLeaderBoardMetricDef[] {
+  return playerAdvancedMetricsForCategory(category).map((m) => ({
+    id: m.id,
+    label: m.label,
+    short: m.short,
+    higherIsBetter: m.higherIsBetter,
+    hintJa: m.hintJa,
+    hintEn: m.hintEn,
+  }));
+}
+
+export type NbaPlayerRailGroup = {
+  id: string;
+  short: string;
+  metrics: readonly NbaPlayerLeaderBoardMetricDef[];
+};
+
+/** 左レール。BASIC の下に RATINGS / 4FCT … */
+export function leaguePlayerRailGroups(): NbaPlayerRailGroup[] {
+  return [
+    {
+      id: "basic",
+      short: "BASIC",
+      metrics: NBA_PLAYER_STAT_LEADER_CHIP_METRICS.map((m) => ({
+        id: m.id,
+        label: m.label,
+        short: m.short,
+        higherIsBetter: m.higherIsBetter,
+        hintJa: m.hintJa,
+        hintEn: m.hintEn,
+      })),
+    },
+    ...NBA_LEAGUE_ADVANCED_CATEGORIES.map((c) => ({
+      id: c.id,
+      short: c.short,
+      metrics: playerBoardMetricsForCategory(c.id),
+    })),
+  ].filter((g) => g.metrics.length > 0);
+}
+
+export function isPlayerAdvancedLeaderMetric(
+  id: NbaPlayerLeaderMetricId
+): id is NbaPlayerAdvancedLeaderMetric {
+  return NBA_PLAYER_ADVANCED_LEADER_METRICS.some((m) => m.id === id);
+}
+
 const PCT_METRICS = new Set<NbaPlayerLeaderBdlStatType>([
   "fg3_pct",
   "fg_pct",
@@ -334,7 +407,10 @@ function pick<T>(arr: readonly T[], rnd: () => number): T {
   return arr[Math.floor(rnd() * arr.length)]!;
 }
 
-function formatValue(metric: NbaPlayerLeaderBdlStatType, value: number) {
+function formatValue(metric: NbaPlayerLeaderMetricId, value: number) {
+  if (isPlayerAdvancedLeaderMetric(metric)) {
+    return formatPlayerAdvancedLeaderValue(metric, value);
+  }
   const def = NBA_PLAYER_STAT_LEADER_METRICS.find((m) => m.id === metric)!;
   if (def.kind === "pct") return `${(value * 100).toFixed(1)}%`;
   if (def.kind === "eff") return value.toFixed(1);
@@ -421,9 +497,12 @@ function buildPlayerPool() {
 }
 
 function buildMetricValue(
-  metric: NbaPlayerLeaderBdlStatType,
+  metric: NbaPlayerLeaderMetricId,
   rnd: () => number
 ): number {
+  if (isPlayerAdvancedLeaderMetric(metric)) {
+    return buildPlayerAdvancedMetricValue(metric, rnd);
+  }
   switch (metric) {
     case "pts":
       return Math.round((12 + rnd() * 20) * 10) / 10;
@@ -474,12 +553,25 @@ function buildLeadersBundle(window: "season" | "last10") {
   const seasonBoost = window === "season" ? 1 : 0.98;
   const last10Noise = window === "last10";
 
-  const leaders: Partial<
-    Record<NbaPlayerLeaderBdlStatType, NbaPlayerStatLeaderRow[]>
-  > = {};
+  const leaders: Partial<Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>> =
+    {};
 
-  for (const m of NBA_PLAYER_STAT_LEADER_METRICS) {
-    const metricId = m.id;
+  const allDefs: Array<{
+    id: NbaPlayerLeaderMetricId;
+    higherIsBetter: boolean;
+  }> = [
+    ...NBA_PLAYER_STAT_LEADER_METRICS.map((m) => ({
+      id: m.id as NbaPlayerLeaderMetricId,
+      higherIsBetter: m.higherIsBetter,
+    })),
+    ...NBA_PLAYER_ADVANCED_LEADER_METRICS.map((m) => ({
+      id: m.id,
+      higherIsBetter: m.higherIsBetter,
+    })),
+  ];
+
+  for (const def of allDefs) {
+    const metricId = def.id;
     const rows: NbaPlayerStatLeaderRow[] = [];
     for (let i = 0; i < players.length; i += 1) {
       const p = players[i]!;
@@ -488,7 +580,11 @@ function buildLeadersBundle(window: "season" | "last10") {
       );
       const base = buildMetricValue(metricId, rnd);
       const noise = last10Noise ? (rnd() - 0.5) * 0.06 : 0;
-      const scaled = PCT_METRICS.has(metricId)
+      const isPct =
+        (isPlayerAdvancedLeaderMetric(metricId) &&
+          playerAdvancedMetricDef(metricId).kind === "pct") ||
+        PCT_METRICS.has(metricId as NbaPlayerLeaderBdlStatType);
+      const scaled = isPct
         ? pct(Math.min(0.999, Math.max(0.001, base * seasonBoost + noise)))
         : base * seasonBoost + (last10Noise ? (rnd() - 0.5) * 0.85 : 0);
       const gpRnd = mulberry32(
@@ -508,7 +604,6 @@ function buildLeadersBundle(window: "season" | "last10") {
       });
     }
 
-    const def = m;
     const sorted = [...rows].sort((a, b) => {
       if (a.value === b.value) return a.playerName.localeCompare(b.playerName);
       return def.higherIsBetter ? b.value - a.value : a.value - b.value;
@@ -516,12 +611,12 @@ function buildLeadersBundle(window: "season" | "last10") {
     leaders[metricId] = sorted.slice(0, 30);
   }
 
-  return leaders as Record<NbaPlayerLeaderBdlStatType, NbaPlayerStatLeaderRow[]>;
+  return leaders as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
 }
 
 let cached: NbaPlayerStatLeadersBundle | null = null;
 let cacheVer: string | null = null;
-const MOCK_CACHE_KEY = "v4-bdl-leaders-gp";
+const MOCK_CACHE_KEY = "v7-player-mid-scoring";
 
 export function getNbaPlayerStatLeadersMock(): NbaPlayerStatLeadersBundle {
   if (cached && cacheVer === MOCK_CACHE_KEY) return cached;
@@ -535,15 +630,33 @@ export function getNbaPlayerStatLeadersMock(): NbaPlayerStatLeadersBundle {
 }
 
 export function playerLeaderMetricDef(
-  id: NbaPlayerLeaderBdlStatType
-): NbaPlayerStatLeaderMetricDef {
+  id: NbaPlayerLeaderMetricId
+): NbaPlayerLeaderBoardMetricDef {
+  if (isPlayerAdvancedLeaderMetric(id)) {
+    const found = playerAdvancedMetricDef(id);
+    return {
+      id: found.id,
+      label: found.label,
+      short: found.short,
+      higherIsBetter: found.higherIsBetter,
+      hintJa: found.hintJa,
+      hintEn: found.hintEn,
+    };
+  }
   const found = NBA_PLAYER_STAT_LEADER_METRICS.find((m) => m.id === id);
-  if (!found) throw new Error(`unknown player leader stat_type ${id}`);
-  return found;
+  if (!found) throw new Error(`unknown player leader metric ${id}`);
+  return {
+    id: found.id,
+    label: found.label,
+    short: found.short,
+    higherIsBetter: found.higherIsBetter,
+    hintJa: found.hintJa,
+    hintEn: found.hintEn,
+  };
 }
 
 export function formatPlayerLeaderValue(
-  metric: NbaPlayerLeaderBdlStatType,
+  metric: NbaPlayerLeaderMetricId,
   value: number
 ) {
   return formatValue(metric, value);

@@ -43,3 +43,18 @@ export function briefLineText(
 ): string {
   return language === "ja" ? item.textJa : item.textEn;
 }
+
+/** 「開幕戦 · 休養十分」→ 見出し + 本文。区切りが無ければ本文のみ */
+export function splitBriefLineLead(text: string): {
+  label: string | null;
+  body: string;
+} {
+  for (const sep of [" · ", "・"] as const) {
+    const i = text.indexOf(sep);
+    if (i <= 0) continue;
+    const label = text.slice(0, i).trim();
+    const body = text.slice(i + sep.length).trim();
+    if (label && body) return { label, body };
+  }
+  return { label: null, body: text };
+}

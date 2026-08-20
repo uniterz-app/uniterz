@@ -292,7 +292,7 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 | Injury Report | ✅ | ✅ タブ配線済み（NBA） | ❌（API 契約後） | データ null → 準備中表示。**モバイルはイニシャル四角非表示** |
 | Team Stats（SEASON / L10・順位セグ・L10 W/L） | ✅ | ✅ タブ配線済み（NBA） | ❌ | 同上 |
 | Roster | ✅ | ✅ タブ配線済み（NBA） | ❌ | 同上 |
-| Pro Insight（MATCHUP / SCHEDULE / CONTEXT） | ✅ | ✅ タブ配線済み（NBA・PRO バッジ） | ❌ | `PredictProBriefPanel`。非 Pro はロック文言。旧 `PredictProInfoPanel` は WC/他リーグのみ残存 |
+| Pro Insight（MATCHUP / SCHEDULE / CONTEXT） | ✅ | ✅ タブ配線済み（NBA・PRO バッジ） | ❌ | 設計正: [`docs/pro-insight-design.md`](pro-insight-design.md)。`PredictProBriefPanel`。非 Pro はロック。旧 `PredictProInfoPanel` は WC/他リーグのみ残存 |
 | スコア入力（斜め HUD） | ✅ | △ オーバーレイのみ新UI | — | `PredictOverlayScoreFields`。スタンドアロンは旧入力のまま |
 | Timing advice 1行 | UI ✅ / パイプライン未 | △ | context_cache 未 | 詳細は `docs/pro-subscription-plan.md` |
 | Free / Pro ゲート（タブ・Insight） | △ Insight のみ `isPro` でロック | ✅ | — | `useUserPlan` 判定。課金 entitlement 接続後そのまま有効 |
@@ -324,9 +324,29 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 
 ### ゲート B（API 契約後）
 
-- [ ] Injury / Team averages / 試合ログ由来 L10 / Roster の取得パイプライン
-- [ ] Pro Insight 用 Brief の実計算（MATCHUP / SCHEDULE / CONTEXT）
-- [ ] キャッシュ鮮度・障害時フォールバック
+**入れ物は契約前に用意済み（2026-08-20）。** クライアントは BDL を叩かない。ingest が Firestore に1回書き、全員が同じ公開 GET を読む。試合 doc に30チーム表は持たない。
+
+| 面 | 入れ物（済み） | 中身 |
+|---|---|---|
+| リーグ Team Stats | `nbaLeagueTeamStats/{season}` → `GET /api/nba/league-team-stats` | seed / サーバーモック。ingest 未 |
+| リーグ Player Leaders | `nbaLeaguePlayerStats/{season}` → `GET /api/nba/league-player-stats` | 同上 |
+| チーム / プレイヤー詳細の順位 | 上のスナップショットから切る | 名簿・契約・ゲームログはまだ詳細モック |
+| 予想 Injury / Roster / 2チーム STATS / Insight | なし（クライアントモック or 準備中） | 未 |
+
+差し込み口: `lib/nba/ingest/nbaLeagueStatsIngest.ts`（`ingestNbaLeagueStatsFromProvider`）。seed は同じ writer（`writeLeagueTeamStatsSnapshot` / `writePlayerStatLeadersSnapshot`）。
+
+**契約後にやること**
+
+- [ ] **ingest 本体** — `ingestNbaLeagueStatsFromProvider` に BDL を繋ぎ、既存スナップショット doc を上書き（クライアントは触らない）
+  - Team averages + Last 10 → `nbaLeagueTeamStats`
+  - Player leaders（BDL `stat_type` + advanced）→ `nbaLeaguePlayerStats`
+- [ ] **詳細の残り** — リーグ表に無いもの（名簿・契約・ゲームログ / shot zones）を共有スナップショット or チーム/選手 doc で ingest。詳細画面はそれを切る（試合ごとに複製しない）
+- [ ] **予想タブを同じパイプに載せる**
+  - Injury Report（日付フィード。Available は出さない）
+  - Roster（チーム単位。Injury を overlay）
+  - 2チーム STATS — `nbaLeagueTeamStats` から HOME/AWAY を切る（別モックをやめる）
+  - Pro Insight Brief — 仕様は [`docs/pro-insight-design.md`](pro-insight-design.md)。材料はリーグスナップショット、完成品は `games/{gameId}.proBrief`（前日生成、T-3h にケガ・移動だけ差し替え）
+- [ ] **キャッシュ鮮度・障害時フォールバック** — CDN `s-maxage` の本番値、ingest 失敗時は直前スナップショットを出す（クライアントモックへ落とさない）
 - [ ] **アワード予想: 選手・コーチ名簿の取得**（サジェスト用）
 - [ ] **アワード予想: 他ユーザー選択の人気 Top 5 集計**（空入力時の初期候補）
 
@@ -360,6 +380,9 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 | Pro Skin ピッカー（本番） | `/mobile/pro/skin` · `ProfilePlanProSkinPicker` production |
 | Pro Skin ピッカー（dev） | `/mobile/profile-plan-pro-bg-picker-preview` |
 | Pro 計画（設計の本編） | `docs/pro-subscription-plan.md` |
+| リーグ Team Stats API | `GET /api/nba/league-team-stats` · `nbaLeagueTeamStats` |
+| リーグ Player Leaders API | `GET /api/nba/league-player-stats` · `nbaLeaguePlayerStats` |
+| スタッツ ingest 差し込み口 | `lib/nba/ingest/nbaLeagueStatsIngest.ts` |
 
 ---
 
@@ -367,6 +390,7 @@ Web / Native 同じルール。Settings モーダルは SafeArea 済みのため
 
 | 日付 | 内容 |
 |---|---|
+| 2026-08-20 | **スタッツ共有スナップショットの入れ物**: Player Leaders を Team Stats と同じ Firestore 1 doc + 公開 GET + CDN に。詳細の順位はリーグ表から切る。ingest はゲート B。チェックリスト §5 に契約後の残件をメモ |
 | 2026-08-15 | **次キューに追加**: 文字デザインの統一（§0.4 #17 / §0.7）· グループページ調整（#18）· チーム/プレイヤースタッツ調整（#19 / §0.8） |
 | 2026-08-15 | **グループページ UI をサイバー HUD に寄せる**（§0.4 #15 / §0.5）。機能変更なし。一覧・詳細・オーバーレイ + Native 追従 |
 | 2026-07-27 | 月次レポート残作業を `pro-subscription-plan.md`「これからやるキュー」に整理（クセ接続→CONSISTENCY→前月比→8:00 cron→プッシュ→Report入口。Unit は弁護士後）。§0.2 #7 状態更新 |

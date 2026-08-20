@@ -6,7 +6,10 @@ service firebase.storage {
     /** Firestore の isAdmin と同じ UID（管理画面のアップロード用） */
     function isAdmin() {
       return request.auth != null
-        && request.auth.uid == "S6r5KyS9XcXds3Pm7koLzzELrvs2";
+        && request.auth.uid in [
+          "ynh0i1lJklWra1393TNbnxcKo5f2",
+          "Rb3vF67NTLeCxSvrR15brCbiQSD2"
+        ];
     }
 
     // プロフィール画像 — Web `settings/profile` / ネイティブ `ProfileHomeScreen`

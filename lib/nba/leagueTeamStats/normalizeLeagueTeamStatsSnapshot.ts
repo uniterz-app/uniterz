@@ -1,5 +1,6 @@
 import type { NbaConferenceId } from "@/lib/nba/nbaConferenceTeams";
 import {
+  attachLeagueTeamAdvanced,
   getNbaLeagueTeamStatsMock,
   type NbaLeagueTeamStatRow,
   type NbaLeagueTeamStatsBundle,
@@ -13,7 +14,10 @@ function isConference(v: unknown): v is NbaConferenceId {
   return v === "east" || v === "west";
 }
 
-function parseRow(raw: unknown): NbaLeagueTeamStatRow | null {
+function parseRow(
+  raw: unknown,
+  window: "season" | "last10"
+): NbaLeagueTeamStatRow | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const teamId = typeof o.teamId === "string" ? o.teamId : "";
@@ -21,7 +25,7 @@ function parseRow(raw: unknown): NbaLeagueTeamStatRow | null {
   const conference = o.conference;
   if (!teamId || !teamName || !isConference(conference)) return null;
 
-  const num = (key: keyof NbaLeagueTeamStatRow) => {
+  const num = (key: string) => {
     const v = o[key];
     return typeof v === "number" && Number.isFinite(v) ? v : NaN;
   };
@@ -48,32 +52,38 @@ function parseRow(raw: unknown): NbaLeagueTeamStatRow | null {
     if (!Number.isFinite(num(k))) return null;
   }
 
-  return {
-    teamId,
-    teamName,
-    conference,
-    wins,
-    losses,
-    winPct: num("winPct"),
-    ppg: num("ppg"),
-    papg: num("papg"),
-    diff: num("diff"),
-    ortg: num("ortg"),
-    drtg: num("drtg"),
-    netrtg: num("netrtg"),
-    pace: num("pace"),
-    efgPct: num("efgPct"),
-    fg3Pct: num("fg3Pct"),
-    fg3a: num("fg3a"),
-    tovPct: num("tovPct"),
-  };
+  return attachLeagueTeamAdvanced(
+    {
+      teamId,
+      teamName,
+      conference,
+      wins,
+      losses,
+      winPct: num("winPct"),
+      ppg: num("ppg"),
+      papg: num("papg"),
+      diff: num("diff"),
+      ortg: num("ortg"),
+      drtg: num("drtg"),
+      netrtg: num("netrtg"),
+      pace: num("pace"),
+      efgPct: num("efgPct"),
+      fg3Pct: num("fg3Pct"),
+      fg3a: num("fg3a"),
+      tovPct: num("tovPct"),
+    },
+    window
+  );
 }
 
-function parseRows(raw: unknown): NbaLeagueTeamStatRow[] | null {
+function parseRows(
+  raw: unknown,
+  window: "season" | "last10"
+): NbaLeagueTeamStatRow[] | null {
   if (!Array.isArray(raw)) return null;
   const rows: NbaLeagueTeamStatRow[] = [];
   for (const item of raw) {
-    const row = parseRow(item);
+    const row = parseRow(item, window);
     if (!row) return null;
     rows.push(row);
   }
@@ -83,8 +93,8 @@ function parseRows(raw: unknown): NbaLeagueTeamStatRow[] | null {
 export function bundleFromFirestoreData(
   data: NbaLeagueTeamStatsFirestoreDoc
 ): NbaLeagueTeamStatsBundle | null {
-  const season = parseRows(data.season);
-  const last10 = parseRows(data.last10);
+  const season = parseRows(data.season, "season");
+  const last10 = parseRows(data.last10, "last10");
   if (!season || !last10) return null;
   const asOfLabel =
     typeof data.asOfLabel === "string" && data.asOfLabel.trim()

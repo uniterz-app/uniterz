@@ -12,11 +12,10 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MAX_MARKS_FREE, type UserMark } from "../../../../../lib/marks/markTypes";
-import { loadNbaWindowKinetikStats } from "../../../../../lib/profile/useNbaKinetikMonthlyStats";
-import { preferredNbaKinetikPeriod } from "../../../../../lib/rankings/nbaSeason";
+import { loadMarksWeeklyBoard, peekMarksWeeklyBoard } from "../../../../../lib/profile/fetchMarksWeeklyBoard";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import MarkListFloorGridNative from "./MarkListFloorGridNative";
-import { loadProfileUserDocNative, peekProfileUserDocNative } from "./profileUserDocCacheNative";
+import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
 import { CyberRankNumberNative } from "../rankings/CyberRankNumberNative";
 import { RankingsAvatarNative } from "../rankings/RankingsAvatarAndTabs";
@@ -45,6 +44,28 @@ export type MarkListRow = UserMark & {
 
 function isProPlan(data: Record<string, unknown> | null | undefined): boolean {
   return data?.plan === "pro";
+}
+
+function rowsFromBoard(
+  marks: UserMark[],
+  board: Record<string, { rank: number | null; points: number | null; isPro: boolean }>
+): MarkListRow[] {
+  const next = marks.map((m) => {
+    const entry = board[m.targetUid];
+    return {
+      ...m,
+      weeklyRank: entry?.rank ?? null,
+      weeklyPoints: entry?.points ?? null,
+      isPro: entry?.isPro ?? isProPlan(peekProfileUserDocNative(m.targetUid)),
+    } satisfies MarkListRow;
+  });
+  next.sort((a, b) => {
+    const ar = a.weeklyRank ?? 99999;
+    const br = b.weeklyRank ?? 99999;
+    if (ar !== br) return ar - br;
+    return (b.weeklyPoints ?? 0) - (a.weeklyPoints ?? 0);
+  });
+  return next;
 }
 
 type Props = {
@@ -83,18 +104,11 @@ export default function ProfileMarkListOverlayNative({
     if (!visible) return;
     let cancelled = false;
     const apiBase = getUniterzApiBaseUrl() || undefined;
-    const board = preferredNbaKinetikPeriod();
+    const uids = marks.map((m) => m.targetUid);
+    const peeked = peekMarksWeeklyBoard(uids);
+    setRows(rowsFromBoard(marks, peeked.board));
 
-    setRows(
-      marks.map((m) => ({
-        ...m,
-        weeklyRank: null,
-        weeklyPoints: null,
-        isPro: isProPlan(peekProfileUserDocNative(m.targetUid)),
-      }))
-    );
-
-    if (marks.length === 0) {
+    if (marks.length === 0 || peeked.missing.length === 0) {
       setStatsLoading(false);
       return () => {
         cancelled = true;
@@ -102,38 +116,15 @@ export default function ProfileMarkListOverlayNative({
     }
 
     setStatsLoading(true);
-    void Promise.all(
-      marks.map(async (m) => {
-        const [stats, userDoc] = await Promise.all([
-          loadNbaWindowKinetikStats(
-            m.targetUid,
-            board,
-            "weekly",
-            apiBase
-          ),
-          loadProfileUserDocNative(m.targetUid),
-        ]);
-        return {
-          ...m,
-          weeklyRank: stats?.summaryRanks.totalPoints ?? null,
-          weeklyPoints:
-            typeof stats?.summary.pointsSumV3 === "number"
-              ? stats.summary.pointsSumV3
-              : null,
-          isPro: isProPlan(userDoc?.data),
-        } satisfies MarkListRow;
+    void loadMarksWeeklyBoard(uids, apiBase)
+      .then((board) => {
+        if (cancelled) return;
+        setRows(rowsFromBoard(marks, board));
+        setStatsLoading(false);
       })
-    ).then((next) => {
-      if (cancelled) return;
-      next.sort((a, b) => {
-        const ar = a.weeklyRank ?? 99999;
-        const br = b.weeklyRank ?? 99999;
-        if (ar !== br) return ar - br;
-        return (b.weeklyPoints ?? 0) - (a.weeklyPoints ?? 0);
+      .catch(() => {
+        if (!cancelled) setStatsLoading(false);
       });
-      setRows(next);
-      setStatsLoading(false);
-    });
 
     return () => {
       cancelled = true;

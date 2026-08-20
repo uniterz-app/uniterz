@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   injuryDetailLabel,
   injuryStatusLabel,
+  injuryStatusShortLabel,
   injuryStatusTone,
   playerCardName,
   playerInitials,
@@ -18,11 +20,15 @@ import { getMobileTeamName } from "@/lib/team-name-split-mobile";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import type { Language } from "@/lib/i18n/language";
+import { nbaPlayerDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
+import { stashPredictTeamDetailReturn } from "@/lib/predict/predictTeamDetailReturn";
 
 type Props = {
   report: NbaInjuryReport;
   language: Language;
   className?: string;
+  fromPredictGameId?: string;
+  predictReturnMode?: "overlay" | "route";
 };
 
 /** 参考デザイン準拠のステータスカラー */
@@ -148,9 +154,11 @@ function toCardRows(team: NbaInjuryTeamReport): NbaInjuryCardRow[] {
 function InjuryStatusCard({
   row,
   language,
+  onPress,
 }: {
   row: NbaInjuryCardRow;
   language: Language;
+  onPress?: (row: NbaInjuryCardRow) => void;
 }) {
   const tone = injuryStatusTone(row.status);
   const colors = TONE[tone];
@@ -160,18 +168,18 @@ function InjuryStatusCard({
   const name = playerCardName(row.player);
   const initials = playerInitials(row.player);
   const statusText = injuryStatusLabel(row.status);
-  /** 列でチームが分かるので、角バッジはポジション（無ければ —） */
-  const cornerTag = row.player.position?.trim() || "—";
+  const statusShort = injuryStatusShortLabel(row.status);
 
-  return (
-    <article
-      className="relative min-w-0 overflow-hidden bg-[rgba(8,10,14,0.92)]"
-      style={{
-        border: `1px solid ${colors.border}`,
-        clipPath:
-          "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
-      }}
-    >
+  const cardClass =
+    "relative min-w-0 w-full cursor-pointer select-none overflow-hidden bg-[rgba(8,10,14,0.92)] text-left transition duration-150 ease-out hover:brightness-110 active:scale-[0.97] active:brightness-125";
+  const cardStyle = {
+    border: `1px solid ${colors.border}`,
+    clipPath:
+      "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
+  } as const;
+
+  const inner = (
+    <>
       <span
         aria-hidden
         className="pointer-events-none absolute bottom-0 right-0"
@@ -183,28 +191,16 @@ function InjuryStatusCard({
         }}
       />
 
-      <div className="flex items-stretch gap-2 px-2 py-2 pr-1.5 md:gap-1.5 md:px-1.5 md:py-1.5 md:pr-1">
+      <div className="flex items-stretch gap-2 px-2.5 py-2.5 pr-1.5 md:gap-1.5 md:px-1.5 md:py-1.5 md:pr-1">
         {/* イニシャル四角はデスクトップのみ（モバイルは名前行に集約） */}
-        <div className="relative hidden h-9 w-9 shrink-0 border border-white/18 bg-[#14181f] md:block">
+        <div className="hidden h-9 w-9 shrink-0 items-center justify-center border border-white/18 bg-[#14181f] md:flex">
           <span
             className={[
               nameOxanium.className,
-              "grid h-full w-full place-items-center text-[11px] font-bold leading-none tracking-tight text-white",
+              "text-[11px] font-bold leading-none tracking-tight text-white",
             ].join(" ")}
           >
             {initials}
-          </span>
-          <span
-            className={[
-              nameOxanium.className,
-              "absolute bottom-0 right-0 grid min-w-[16px] place-items-center px-[2px] py-px text-[6px] font-extrabold leading-none tracking-wide text-[#050508]",
-            ].join(" ")}
-            style={{
-              background: colors.badgeBg,
-              border: `1px solid ${colors.accent}`,
-            }}
-          >
-            {cornerTag}
           </span>
         </div>
 
@@ -212,40 +208,41 @@ function InjuryStatusCard({
           <p
             className={[
               nameOxanium.className,
-              "truncate text-[12px] font-bold uppercase leading-none tracking-[0.03em] text-white md:text-[11px]",
+              "text-[13px] font-bold uppercase leading-snug tracking-[0.02em] text-white md:text-[11px]",
             ].join(" ")}
           >
             {name}
-            {row.player.position?.trim() ? (
-              <span className="ml-1 text-[11px] font-semibold text-white/35 md:text-[10px] md:hidden">
-                · {row.player.position.trim()}
-              </span>
-            ) : null}
           </p>
-          <p
-            className={[
-              "mt-0.5 truncate leading-tight text-white/45",
-              language === "ja"
-                ? "text-[9px] font-semibold tracking-[0.02em] md:text-[8px]"
-                : "text-[8px] font-semibold uppercase tracking-[0.06em] md:text-[7px]",
-            ].join(" ")}
-          >
-            {detail}
-          </p>
+          {detail ? (
+            <p
+              className={[
+                "mt-1 leading-snug text-white/55",
+                language === "ja"
+                  ? "text-[11px] font-semibold tracking-[0.01em] md:text-[9px]"
+                  : "text-[10px] font-semibold uppercase tracking-[0.04em] md:text-[8px]",
+              ].join(" ")}
+            >
+              {detail}
+            </p>
+          ) : null}
           <p
             className={[
               nameOxanium.className,
-              "mt-0.5 truncate text-[9px] font-bold uppercase leading-tight tracking-[0.05em] md:text-[8px]",
+              "mt-1 text-[11px] font-bold uppercase leading-snug tracking-[0.04em] md:text-[9px]",
             ].join(" ")}
             style={{ color: colors.accent }}
           >
-            EXP: {expected}
+            EXP {expected}
           </p>
         </div>
 
         <div className="flex shrink-0 items-stretch gap-1">
           <span aria-hidden className="my-0.5 w-px shrink-0 self-stretch bg-white/18" />
-          <div className="flex w-[52px] flex-col items-center justify-center gap-0.5 pl-0.5 pr-0.5 md:w-[46px]">
+          <div
+            className="flex w-[44px] flex-col items-center justify-center gap-1 pl-0.5 pr-0.5 md:w-[42px]"
+            title={statusText}
+            aria-label={statusText}
+          >
             <StatusIcon
               tone={tone}
               color={colors.accent}
@@ -254,15 +251,34 @@ function InjuryStatusCard({
             <span
               className={[
                 nameOxanium.className,
-                "max-w-full text-center text-[7px] font-extrabold uppercase leading-[1.05] tracking-[0.01em] md:text-[6px]",
+                "max-w-full text-center text-[9px] font-extrabold uppercase leading-none tracking-[0.06em] md:text-[8px]",
               ].join(" ")}
               style={{ color: colors.accent }}
             >
-              {statusText}
+              {statusShort}
             </span>
           </div>
         </div>
       </div>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <button
+        type="button"
+        onClick={() => onPress(row)}
+        className={cardClass}
+        style={cardStyle}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <article className={cardClass} style={cardStyle}>
+      {inner}
     </article>
   );
 }
@@ -276,9 +292,11 @@ function columnTeamLabel(team: NbaInjuryTeamReport): string {
 function TeamInjuryColumn({
   team,
   language,
+  onPlayerPress,
 }: {
   team: NbaInjuryTeamReport;
   language: Language;
+  onPlayerPress?: (row: NbaInjuryCardRow) => void;
 }) {
   const rows = toCardRows(team);
   const label = columnTeamLabel(team);
@@ -308,6 +326,7 @@ function TeamInjuryColumn({
               key={`${row.side}-${row.player.id}-${row.status}-${row.returnDate ?? ""}`}
               row={row}
               language={language}
+              onPress={onPlayerPress}
             />
           ))}
         </div>
@@ -321,13 +340,43 @@ export default function NbaInjuryReportPanel({
   report,
   language,
   className,
+  fromPredictGameId,
+  predictReturnMode,
 }: Props) {
+  const router = useRouter();
+  const resolvedReturnMode =
+    predictReturnMode ?? (fromPredictGameId ? "overlay" : "route");
+
+  const openPlayerDetail = (row: NbaInjuryCardRow) => {
+    if (fromPredictGameId) {
+      stashPredictTeamDetailReturn({
+        gameId: fromPredictGameId,
+        predictToolsTab: "injuries",
+        returnMode: resolvedReturnMode,
+      });
+    }
+    router.push(
+      nbaPlayerDetailPreviewHref(String(row.player.id), {
+        fromPredict: fromPredictGameId,
+        predictToolsTab: fromPredictGameId ? "injuries" : undefined,
+      })
+    );
+  };
+
   return (
     <div
       className={["grid grid-cols-2 gap-2", className].filter(Boolean).join(" ")}
     >
-      <TeamInjuryColumn team={report.home} language={language} />
-      <TeamInjuryColumn team={report.away} language={language} />
+      <TeamInjuryColumn
+        team={report.home}
+        language={language}
+        onPlayerPress={openPlayerDetail}
+      />
+      <TeamInjuryColumn
+        team={report.away}
+        language={language}
+        onPlayerPress={openPlayerDetail}
+      />
     </div>
   );
 }

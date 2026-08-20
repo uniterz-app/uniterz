@@ -3,19 +3,25 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { ADMIN_UID } from "@/lib/constants";
+import { isAdminUid } from "@/lib/constants";
 
-export default function AdminGuard({ children }: { children: React.ReactNode }) {
+export default function AdminGuard({
+  children,
+  fallbackHref = "/",
+}: {
+  children: React.ReactNode;
+  fallbackHref?: string;
+}) {
   const { fUser, status } = useFirebaseUser();
   const router = useRouter();
 
   useEffect(() => {
     if (status === "loading") return;
-    const ok = fUser && fUser.uid === ADMIN_UID;
+    const ok = Boolean(fUser && isAdminUid(fUser.uid));
     if (!ok) {
-      router.replace("/"); // 非管理者はトップへ
+      router.replace(fallbackHref);
     }
-  }, [fUser, status, router]);
+  }, [fUser, status, router, fallbackHref]);
 
   if (status === "loading") {
     return (

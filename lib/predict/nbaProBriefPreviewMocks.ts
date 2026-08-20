@@ -4,10 +4,28 @@
  */
 
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
+import {
+  proBriefTravelLines,
+  travelSummaryForBrief,
+} from "@/lib/predict/nbaProBriefTravel";
 
 function matchupKey(homeTeamId: string, awayTeamId: string): string {
   return `${homeTeamId.trim()}|${awayTeamId.trim()}`;
 }
+
+/** 開幕カード用。前試合が無いので今夜のレグだけ（2日移動は出ない） */
+const OPENING_TIP_MS = Date.UTC(2026, 9, 21, 23, 30);
+
+const PISTONS_TRAVEL = travelSummaryForBrief({
+  teamId: "nba-pistons",
+  tonightVenueTeamId: "nba-pistons",
+  tonightStartAtMs: OPENING_TIP_MS,
+});
+const CELTICS_TRAVEL = travelSummaryForBrief({
+  teamId: "nba-celtics",
+  tonightVenueTeamId: "nba-pistons",
+  tonightStartAtMs: OPENING_TIP_MS,
+});
 
 /** 2026-27 開幕 Celtics @ Pistons — Injury / Stats モックと揃える */
 const PISTONS_CELTICS_OPENING_BRIEF: PredictProBrief = {
@@ -26,13 +44,10 @@ const PISTONS_CELTICS_OPENING_BRIEF: PredictProBrief = {
     ],
     schedule: [
       {
-        textJa: "開幕戦 · 休養十分（プレシーズン最終から 4日）",
+        textJa: "開幕戦 · 休養十分（プレ最終から 4日）",
         textEn: "Opener · 4 days rest after last preseason",
       },
-      {
-        textJa: "ホーム開幕 · 移動なし",
-        textEn: "Home opener · no travel",
-      },
+      ...proBriefTravelLines(PISTONS_TRAVEL, { homeNoTravel: true }),
     ],
     context: [
       {
@@ -59,12 +74,9 @@ const PISTONS_CELTICS_OPENING_BRIEF: PredictProBrief = {
       },
     ],
     schedule: [
+      ...proBriefTravelLines(CELTICS_TRAVEL),
       {
-        textJa: "開幕アウェイ · BOS→DET 約1時間フライト",
-        textEn: "Road opener · BOS→DET ~1hr flight",
-      },
-      {
-        textJa: "プレシーズン最終から 5日空き",
+        textJa: "プレ最終から 5日空き",
         textEn: "5 days since last preseason game",
       },
     ],

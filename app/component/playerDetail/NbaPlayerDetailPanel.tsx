@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { nameOxanium } from "@/lib/fonts";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
@@ -21,6 +21,7 @@ import {
   formatSalaryUsd,
   formatTeamHistory,
   getNbaPlayerDetailPreview,
+  NBA_PLAYER_DETAIL_SEASON_SHOWN,
   nbaCountryNameToIso2,
   type NbaPlayerCareerSeasonBoard,
   type NbaPlayerCareerSeasonRow,
@@ -29,6 +30,7 @@ import {
   type NbaPlayerVenueSplit,
   type NbaPlayerVsOpponentSample,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import { isPlayerDetailRankShown } from "@/lib/predict/nbaPlayerDetailHowTheyPlay";
 import {
   SHOT_ZONE_BASKET,
   SHOT_ZONE_GLOW_R,
@@ -51,6 +53,10 @@ import {
   zoneEfficiencyColor,
   zoneFgPctColor,
 } from "@/lib/predict/nbaShotZoneCourtGeometry";
+import NbaPlayerHowTheyPlay from "@/app/component/playerDetail/NbaPlayerHowTheyPlay";
+import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
+import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
+import { overlayPlayerDetailWithLeaders } from "@/lib/nba/sliceNbaPlayerFromLeaders";
 
 type Props = {
   playerId?: string;
@@ -82,6 +88,15 @@ function hexToRgba(hex: string, alpha: number): string {
 
 /** セクション見出し — チームカラーではなく白で統一 */
 const SECTION_HEADING_CLASS = `${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em] text-white`;
+const TABLE_CELL_SKEW = { transform: "skewX(-6deg)" } as const;
+
+function SkewText({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-block" style={TABLE_CELL_SKEW}>
+      {children}
+    </span>
+  );
+}
 
 function zoneById(
   zones: NbaPlayerShotZone[],
@@ -493,7 +508,7 @@ const CAREER_SEASON_COLS: Array<{
     key: "season",
     label: "Season",
     align: "left",
-    width: "w-[58px]",
+    width: "w-[64px]",
     render: (r) => formatCareerSeasonLabel(r.seasonStart),
   },
   {
@@ -681,7 +696,7 @@ function SeasonHistoryTable({
         >
           <div className="min-w-max">
             <div
-              className={`${nameOxanium.className} flex items-center gap-x-1 border-b px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40`}
+              className={`${nameOxanium.className} flex items-center gap-x-1 border-b px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/40`}
               style={{ borderBottomColor: hexToRgba(accent, 0.18) }}
             >
               {CAREER_SEASON_COLS.map((col) => (
@@ -691,7 +706,7 @@ function SeasonHistoryTable({
                     col.align === "left" ? "text-left" : "text-right"
                   }`}
                 >
-                  {col.label}
+                  <SkewText>{col.label}</SkewText>
                 </span>
               ))}
             </div>
@@ -700,7 +715,7 @@ function SeasonHistoryTable({
               return (
                 <div
                   key={`${board}-${row.seasonStart}-${row.teamAbbr}`}
-                  className={`${nameOxanium.className} flex items-center gap-x-1 px-2 py-1.5 text-[13px] tabular-nums`}
+                  className={`${nameOxanium.className} flex items-center gap-x-1 px-2 py-3 text-[14px] tabular-nums`}
                   style={{
                     backgroundColor: isCurrent
                       ? hexToRgba(accent, 0.12)
@@ -728,7 +743,7 @@ function SeasonHistoryTable({
                             : "font-semibold text-white/75"
                         }`}
                       >
-                        {value}
+                        <SkewText>{value}</SkewText>
                       </span>
                     );
                   })}
@@ -765,20 +780,30 @@ function PlayerVenueSplitsSection({
         style={{ borderColor: hexToRgba(accent, 0.4) }}
       >
         <div
-          className={`${nameOxanium.className} grid grid-cols-6 gap-0 border-b px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-white/40`}
+          className={`${nameOxanium.className} grid grid-cols-6 gap-0 border-b px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/40`}
           style={{ borderBottomColor: hexToRgba(accent, 0.18) }}
         >
           <span />
-          <span className="text-right">GP</span>
-          <span className="text-right">PTS</span>
-          <span className="text-right">REB</span>
-          <span className="text-right">AST</span>
-          <span className="text-right">+/-</span>
+          <span className="text-right">
+            <SkewText>GP</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>PTS</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>REB</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>AST</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>+/-</SkewText>
+          </span>
         </div>
         {splits.map((row, i) => (
           <div
             key={row.venue}
-            className={`${nameOxanium.className} grid grid-cols-6 gap-0 px-2 py-2 text-[12px] font-semibold tabular-nums text-white/85`}
+            className={`${nameOxanium.className} grid grid-cols-6 gap-0 px-2 py-2 text-[14px] font-semibold tabular-nums text-white/85`}
             style={
               i < splits.length - 1
                 ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
@@ -786,12 +811,22 @@ function PlayerVenueSplitsSection({
             }
           >
             <span className="font-extrabold uppercase text-white">
-              {row.venue === "home" ? (isJa ? "HOME" : "HOME") : isJa ? "AWAY" : "AWAY"}
+              <SkewText>
+                {row.venue === "home" ? "HOME" : "AWAY"}
+              </SkewText>
             </span>
-            <span className="text-right">{row.games}</span>
-            <span className="text-right">{fmtSplitNum(row.pts)}</span>
-            <span className="text-right">{fmtSplitNum(row.reb)}</span>
-            <span className="text-right">{fmtSplitNum(row.ast)}</span>
+            <span className="text-right">
+              <SkewText>{row.games}</SkewText>
+            </span>
+            <span className="text-right">
+              <SkewText>{fmtSplitNum(row.pts)}</SkewText>
+            </span>
+            <span className="text-right">
+              <SkewText>{fmtSplitNum(row.reb)}</SkewText>
+            </span>
+            <span className="text-right">
+              <SkewText>{fmtSplitNum(row.ast)}</SkewText>
+            </span>
             <span
               className="text-right font-extrabold"
               style={{
@@ -803,8 +838,10 @@ function PlayerVenueSplitsSection({
                       : "rgba(255,255,255,0.55)",
               }}
             >
-              {row.plusMinus > 0 ? "+" : ""}
-              {fmtSplitNum(row.plusMinus)}
+              <SkewText>
+                {row.plusMinus > 0 ? "+" : ""}
+                {fmtSplitNum(row.plusMinus)}
+              </SkewText>
             </span>
           </div>
         ))}
@@ -838,31 +875,53 @@ function PlayerVsOpponentSection({
         style={{ borderColor: hexToRgba(accent, 0.4) }}
       >
         <div
-          className={`${nameOxanium.className} grid grid-cols-6 gap-0 border-b px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-white/40`}
+          className={`${nameOxanium.className} grid grid-cols-6 gap-0 border-b px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/40`}
           style={{ borderBottomColor: hexToRgba(accent, 0.18) }}
         >
-          <span>{isJa ? "相手" : "OPP"}</span>
-          <span className="text-right">GP</span>
-          <span className="text-right">PTS</span>
-          <span className="text-right">REB</span>
-          <span className="text-right">AST</span>
-          <span className="text-right">+/-</span>
+          <span>
+            <SkewText>{isJa ? "相手" : "OPP"}</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>GP</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>PTS</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>REB</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>AST</SkewText>
+          </span>
+          <span className="text-right">
+            <SkewText>+/-</SkewText>
+          </span>
         </div>
         {samples.map((row, i) => (
           <div
             key={row.oppTeamId}
-            className={`${nameOxanium.className} grid grid-cols-6 gap-0 px-2 py-2 text-[12px] font-semibold tabular-nums text-white/85`}
+            className={`${nameOxanium.className} grid grid-cols-6 gap-0 px-2 py-2 text-[14px] font-semibold tabular-nums text-white/85`}
             style={
               i < samples.length - 1
                 ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
                 : undefined
             }
           >
-            <span className="font-extrabold text-white">vs {row.oppAbbr}</span>
-            <span className="text-right">{row.games}</span>
-            <span className="text-right">{fmtSplitNum(row.pts)}</span>
-            <span className="text-right">{fmtSplitNum(row.reb)}</span>
-            <span className="text-right">{fmtSplitNum(row.ast)}</span>
+            <span className="font-extrabold text-white">
+              <SkewText>vs {row.oppAbbr}</SkewText>
+            </span>
+            <span className="text-right">
+              <SkewText>{row.games}</SkewText>
+            </span>
+            <span className="text-right">
+              <SkewText>{fmtSplitNum(row.pts)}</SkewText>
+            </span>
+            <span className="text-right">
+              <SkewText>{fmtSplitNum(row.reb)}</SkewText>
+            </span>
+            <span className="text-right">
+              <SkewText>{fmtSplitNum(row.ast)}</SkewText>
+            </span>
             <span
               className="text-right font-extrabold"
               style={{
@@ -874,8 +933,10 @@ function PlayerVsOpponentSection({
                       : "rgba(255,255,255,0.55)",
               }}
             >
-              {row.plusMinus > 0 ? "+" : ""}
-              {fmtSplitNum(row.plusMinus)}
+              <SkewText>
+                {row.plusMinus > 0 ? "+" : ""}
+                {fmtSplitNum(row.plusMinus)}
+              </SkewText>
             </span>
           </div>
         ))}
@@ -922,50 +983,50 @@ function GameLogs({
         >
           <RecentWindowCompare logs={logs} />
           <div
-            className={`${nameOxanium.className} flex items-center gap-1.5 border-b px-2 py-1.5 text-[9px] font-bold tracking-wider text-white/35`}
+            className={`${nameOxanium.className} flex items-center gap-1.5 border-b px-2 py-2 text-[11px] font-bold tracking-wider text-white/35`}
             style={{ borderBottomColor: hexToRgba(accent, 0.14) }}
           >
-            <span className="w-9">DATE</span>
+            <span className="w-11">DATE</span>
             <span className="min-w-0 flex-1">GAME</span>
-            <span className="w-4 text-center" />
-            <span className="w-8 shrink-0 text-right">MIN</span>
-            <span className="w-7 shrink-0 text-right">PTS</span>
-            <span className="w-11 shrink-0 text-right">R/A</span>
-            <span className="w-12 shrink-0 text-right">FG</span>
+            <span className="w-5 text-center" />
+            <span className="w-9 shrink-0 text-right">MIN</span>
+            <span className="w-8 shrink-0 text-right">PTS</span>
+            <span className="w-12 shrink-0 text-right">R/A</span>
+            <span className="w-14 shrink-0 text-right">FG</span>
           </div>
           {logs.map((log, i) => (
             <div
               key={log.gameId}
-              className="flex items-center gap-1.5 px-2 py-2.5 text-[12px]"
+              className="flex items-center gap-1.5 px-2 py-2.5 text-[13px]"
               style={
                 i < logs.length - 1
                   ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
                   : undefined
               }
             >
-              <span className="w-9 text-white/40">{log.dateLabel}</span>
+              <span className="w-11 text-white/40">{log.dateLabel}</span>
               <span className={`${nameOxanium.className} min-w-0 flex-1 font-bold text-white/90`}>
                 {log.home ? "vs" : "@"} {log.oppAbbr}
               </span>
               <span
-                className={`${nameOxanium.className} w-4 text-center font-extrabold ${
+                className={`${nameOxanium.className} w-5 text-center font-extrabold ${
                   log.result === "W" ? "text-cyan-300" : "text-pink-400"
                 }`}
               >
                 {log.result}
               </span>
-              <span className="w-8 shrink-0 text-right tabular-nums text-white/70">
+              <span className="w-9 shrink-0 text-right tabular-nums text-white/70">
                 {Math.round(log.min)}m
               </span>
               <span
-                className={`${nameOxanium.className} w-7 shrink-0 text-right text-[14px] font-extrabold tabular-nums text-white`}
+                className={`${nameOxanium.className} w-8 shrink-0 text-right text-[15px] font-extrabold tabular-nums text-white`}
               >
                 {log.pts}
               </span>
-              <span className="w-11 shrink-0 text-right tabular-nums text-white/70">
+              <span className="w-12 shrink-0 text-right tabular-nums text-white/70">
                 {log.reb}/{log.ast}
               </span>
-              <span className="w-12 shrink-0 text-right text-[11px] tabular-nums text-white/55">
+              <span className="w-14 shrink-0 text-right text-[12px] tabular-nums text-white/55">
                 {formatFgLine(log.fgm, log.fga)}
               </span>
             </div>
@@ -982,20 +1043,20 @@ export default function NbaPlayerDetailPanel({
   language = "ja",
 }: Props) {
   const isJa = language === "ja";
-  const detail = useMemo(
-    () => getNbaPlayerDetailPreview(playerId),
-    [playerId]
-  );
+  const { bundle: leaders } = usePlayerStatLeadersBundle();
+  const { bundle: teamStats } = useLeagueTeamStatsBundle();
+  const detail = useMemo(() => {
+    const base = getNbaPlayerDetailPreview(playerId);
+    return overlayPlayerDetailWithLeaders(base, leaders);
+  }, [playerId, leaders]);
   const currentSalary = detail.contract?.seasons[0] ?? null;
   const fullName = `${detail.firstName} ${detail.lastName}`.toUpperCase();
   const jerseyNum = detail.jerseyNumber.replace(/^#/, "") || "—";
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
-  const seasonShown = detail.seasonMetrics.filter((m) =>
-    ["pts", "reb", "ast", "stl", "blk", "tov", "plus_minus", "fg_pct", "fg3_pct", "ft_pct"].includes(
-      m.id
-    )
-  );
+  const seasonShown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
+    (id) => detail.seasonMetrics.find((m) => m.id === id)
+  ).filter((m): m is NonNullable<typeof m> => Boolean(m));
 
   return (
     <div className="space-y-4 pb-24 text-white">
@@ -1149,17 +1210,19 @@ export default function NbaPlayerDetailPanel({
                 <span className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-wider text-white/40`}>
                   {m.short}
                 </span>
-                <span
-                  className={`${nameOxanium.className} text-[12px] font-extrabold tabular-nums`}
-                  style={{
-                    color:
-                      m.leagueRank <= 10
-                        ? jerseyPrimary
-                        : "rgba(255,255,255,0.35)",
-                  }}
-                >
-                  #{m.leagueRank}
-                </span>
+                {isPlayerDetailRankShown(m.leagueRank) ? (
+                  <span
+                    className={`${nameOxanium.className} text-[12px] font-extrabold tabular-nums`}
+                    style={{
+                      color:
+                        m.leagueRank <= 10
+                          ? jerseyPrimary
+                          : "rgba(255,255,255,0.35)",
+                    }}
+                  >
+                    #{m.leagueRank}
+                  </span>
+                ) : null}
               </div>
               <p className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}>
                 {m.display}
@@ -1169,6 +1232,18 @@ export default function NbaPlayerDetailPanel({
         </div>
       </section>
 
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+      />
+      <NbaPlayerHowTheyPlay
+        playerId={detail.playerId}
+        accent={jerseyPrimary}
+        isJa={isJa}
+        leaders={leaders}
+        teamStats={teamStats}
+        detail={detail}
+      />
       <div
         className="h-px"
         style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
@@ -1187,49 +1262,6 @@ export default function NbaPlayerDetailPanel({
         accent={jerseyPrimary}
         isJa={isJa}
       />
-
-      <section className="space-y-2">
-        <h2 className={SECTION_HEADING_CLASS}>Advanced</h2>
-        <div
-          className="flex items-start border bg-black/50"
-          style={{ borderColor: hexToRgba(jerseyPrimary, 0.4) }}
-        >
-          {detail.advancedMetrics.map((m, i) => (
-            <div
-              key={m.id}
-              className="min-w-0 flex-1 px-2 py-3"
-              style={
-                i < detail.advancedMetrics.length - 1
-                  ? { borderRight: `1px solid ${hexToRgba(jerseyPrimary, 0.15)}` }
-                  : undefined
-              }
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-wider text-white/40`}>
-                  {m.short}
-                </span>
-                <span
-                  className={`${nameOxanium.className} text-[12px] font-extrabold tabular-nums`}
-                  style={{
-                    color:
-                      m.leagueRank <= 10
-                        ? jerseyPrimary
-                        : "rgba(255,255,255,0.35)",
-                  }}
-                >
-                  #{m.leagueRank}
-                </span>
-              </div>
-              <p className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}>
-                {m.display}
-              </p>
-              <p className="mt-1 break-words text-[10px] leading-[1.45] text-white/40">
-                {isJa ? m.hintJa : m.hintEn}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <div
         className="h-px"

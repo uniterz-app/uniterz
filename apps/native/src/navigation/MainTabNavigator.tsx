@@ -14,6 +14,7 @@ import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
 import {
   DEFAULT_HEADER_WORDMARK,
+  resolveHeaderWordmarkFromGamesStack,
   resolveHeaderWordmarkFromMainTab,
   type HeaderWordmark,
 } from "../../../../lib/ui/headerWordmark";
@@ -43,8 +44,21 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function resolveTabWordmark(
   state: NavigationState | PartialState<NavigationState> | undefined
 ): HeaderWordmark {
-  const routeName = state?.routes[state.index ?? 0]?.name;
-  return resolveHeaderWordmarkFromMainTab(routeName);
+  let tabName: string | undefined;
+  let current: NavigationState | PartialState<NavigationState> | undefined =
+    state;
+  while (current?.routes && typeof current.index === "number") {
+    const route = current.routes[current.index];
+    if (!route) break;
+    if (!tabName) tabName = route.name;
+    const fromGames = resolveHeaderWordmarkFromGamesStack(
+      route.name,
+      route.params as { mode?: string } | undefined
+    );
+    if (fromGames) return fromGames;
+    current = route.state;
+  }
+  return resolveHeaderWordmarkFromMainTab(tabName);
 }
 
 export default function MainTabNavigator() {
@@ -97,8 +111,13 @@ export default function MainTabNavigator() {
       <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
       <View style={styles.root}>
-        {brandShelfHidden || welcomeBrandHidden ? null : (
-          <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
+        {welcomeBrandHidden ? null : (
+          <View
+            pointerEvents="none"
+            style={brandShelfHidden ? styles.shelfHold : undefined}
+          >
+            <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
+          </View>
         )}
         <View style={styles.tabHost}>
           <Tab.Navigator
@@ -137,9 +156,15 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "transparent",
+    overflow: "visible",
   },
   tabHost: {
     flex: 1,
     backgroundColor: "transparent",
+    overflow: "visible",
+  },
+  /** サブページ中も高さを残す（タブ全体が上に跳ねない） */
+  shelfHold: {
+    opacity: 0,
   },
 });

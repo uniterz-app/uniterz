@@ -244,16 +244,46 @@ function SideMetricBlock({
   const items = align === "right" ? "items-end" : "items-start";
   const textAlign = align === "right" ? "text-right" : "text-left";
 
+  const numberSkew = compactHud
+    ? ({ transform: "skewX(-6deg)" } as const)
+    : undefined;
+  const rankEl = rankBelow ? (
+    <span
+      className={[rankBelowClass, "inline-block whitespace-nowrap"].join(" ")}
+      style={numberSkew}
+    >
+      {rankBelow}
+    </span>
+  ) : null;
+  const primaryEl = (
+    <span
+      className={[primaryClass, compactHud ? "inline-block" : ""].join(" ")}
+      style={{
+        ...numberSkew,
+        textShadow: winGlow ? winShadow : undefined,
+      }}
+    >
+      {primary}
+    </span>
+  );
+
   return (
-    <div className={`flex min-w-0 flex-col gap-0.5 ${items}`}>
+    <div
+      className={`flex min-w-0 flex-col gap-0.5 ${
+        compactHud ? "items-center" : items
+      }`}
+    >
       <div
-        className={`flex min-w-0 flex-wrap items-center gap-1 ${
-          align === "right" ? "justify-end" : "justify-start"
+        className={`flex min-w-0 flex-wrap items-baseline gap-1 ${
+          compactHud
+            ? "justify-center"
+            : align === "right"
+              ? "justify-end"
+              : "justify-start"
         }`}
       >
-        <span className={primaryClass} style={{ textShadow: winGlow ? winShadow : undefined }}>
-          {primary}
-        </span>
+        {compactHud && align === "right" ? rankEl : null}
+        {primaryEl}
         {proBadge ? (
           <span
             className={[
@@ -265,26 +295,30 @@ function SideMetricBlock({
             {proBadge}
           </span>
         ) : null}
+        {compactHud && align === "left" ? rankEl : null}
       </div>
       {proMeta ? (
         <span
           className={[
             nameOxanium.className,
-            textAlign,
+            compactHud ? "text-center" : textAlign,
             "whitespace-nowrap",
-            compactHud ? "text-[8px] font-bold tracking-[0.04em]" : "text-[9px] font-bold",
+            compactHud ? "text-[11px] font-bold tracking-[0.04em] md:text-[12px]" : "text-[9px] font-bold",
             PRO_NOTE_TONE_CLASS[proMetaTone ?? "flat"],
           ].join(" ")}
         >
           {proMeta}
         </span>
       ) : null}
-      {rankBelow ? (
-        <span className={[rankBelowClass, "whitespace-nowrap"].join(" ")}>
-          {rankBelow}
+      {!compactHud && rankEl ? rankEl : null}
+      {recordBelow ? (
+        <span
+          className={[recordBelowClass, compactHud ? "inline-block" : ""].join(" ")}
+          style={numberSkew}
+        >
+          {recordBelow}
         </span>
       ) : null}
-      {recordBelow ? <span className={recordBelowClass}>{recordBelow}</span> : null}
     </div>
   );
 }
@@ -346,29 +380,32 @@ export function SymmetricalCompareRow({
   const rowAnimDelay = barDelay;
 
   const primarySize = compactHud
-    ? "text-[13px] md:text-sm"
+    ? "text-[16px] md:text-[17px]"
     : emphasizedMetrics
       ? "text-lg md:text-2xl"
       : largerMobileMetrics
         ? "text-base md:text-base"
         : "text-sm md:text-base";
 
+  const compactWin = "text-[#5cf0b5]";
+  const compactIdle = "text-white";
+
   const leftNumClass = [
     resultStatsMetricNumClass,
     `text-right ${primarySize}`,
-    "text-[#5cf0b5]",
+    compactHud ? (leftWin ? compactWin : compactIdle) : "text-[#5cf0b5]",
   ].join(" ");
 
   const rightNumClass = [
     resultStatsMetricNumClass,
     `text-left ${primarySize}`,
-    "text-[#b388ff]",
+    compactHud ? (rightWin ? compactWin : compactIdle) : "text-[#b388ff]",
   ].join(" ");
 
   const subLineClass = compactHud
     ? [
         resultStatsMetricNumClass,
-        "text-[9px] text-white/45 md:text-[10px]",
+        "text-[11px] text-white/50 md:text-[12px]",
       ].join(" ")
     : emphasizedMetrics
       ? [
@@ -380,11 +417,13 @@ export function SymmetricalCompareRow({
           "text-[10px] text-white/45 md:text-[11px]",
         ].join(" ");
 
+  const rankSizeClass = compactHud
+    ? "text-[14px] font-extrabold md:text-[15px]"
+    : emphasizedMetrics
+      ? "text-[11px] md:text-[13px]"
+      : "text-[10px] md:text-[11px]";
   const rankBelowLineClass = compactHud
-    ? [
-        resultStatsMetricNumClass,
-        "text-[12px] font-bold text-white/80 md:text-[13px]",
-      ].join(" ")
+    ? [resultStatsMetricNumClass, rankSizeClass, "text-white/55"].join(" ")
     : emphasizedMetrics
       ? [
           resultStatsMetricNumClass,
@@ -394,11 +433,13 @@ export function SymmetricalCompareRow({
           resultStatsMetricNumClass,
           "text-[10px] text-white/52 md:text-[11px]",
         ].join(" ");
+  const leftRankClass = rankBelowLineClass;
+  const rightRankClass = rankBelowLineClass;
 
   const labelClass = compactHud
     ? [
         nameOxanium.className,
-        "text-[9px] font-bold uppercase leading-tight tracking-[0.12em] text-white/70 md:text-[10px]",
+        "text-[11px] font-bold uppercase leading-tight tracking-[0.12em] text-white/70 md:text-[12px]",
       ].join(" ")
     : emphasizedMetrics
       ? [
@@ -418,9 +459,21 @@ export function SymmetricalCompareRow({
           : "border-b border-white/8 py-2.5 last:border-b-0"
       }
     >
-      <div className="flex items-center gap-1 md:gap-1.5">
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-1 md:gap-1.5">
-          {left.leagueRank != null ? (
+      <div
+        className={
+          compactHud
+            ? "grid grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)] items-center"
+            : "flex items-center gap-1 md:gap-1.5"
+        }
+      >
+        <div
+          className={
+            compactHud
+              ? "flex min-w-0 items-center justify-center px-0.5"
+              : "flex min-w-0 flex-1 items-center justify-end gap-1 md:gap-1.5"
+          }
+        >
+          {compactHud ? null : left.leagueRank != null ? (
             <LeagueRankSegBar
               rank={left.leagueRank}
               grow="left"
@@ -434,22 +487,28 @@ export function SymmetricalCompareRow({
               delay={barDelay + BAR_AFTER_ROW}
             />
           )}
-          <span
-            className={[
-              resultStatsMetricNumClass,
-              "w-9 shrink-0 text-right text-[10px] text-white/38 md:w-10 md:text-[11px]",
-            ].join(" ")}
-          >
-            {left.rank ?? ""}
-          </span>
+          {!compactHud || left.rank ? (
+            <span
+              className={[
+                resultStatsMetricNumClass,
+                "w-9 shrink-0 text-right text-[10px] text-white/38 md:w-10 md:text-[11px]",
+              ].join(" ")}
+            >
+              {left.rank ?? ""}
+            </span>
+          ) : null}
           <SideMetricBlock
             align="right"
             primary={left.primary}
             primaryClass={leftNumClass}
             winGlow={leftWin}
-            winShadow="0 0 6px rgba(92,240,181,0.42), 0 0 2px rgba(92,240,181,0.55)"
+            winShadow={
+              compactHud
+                ? "0 0 8px rgba(92,240,181,0.45)"
+                : "0 0 6px rgba(92,240,181,0.42), 0 0 2px rgba(92,240,181,0.55)"
+            }
             rankBelow={left.rankBelow}
-            rankBelowClass={rankBelowLineClass}
+            rankBelowClass={leftRankClass}
             recordBelow={left.recordBelow}
             recordBelowClass={subLineClass}
             proBadge={left.proBadge}
@@ -464,7 +523,7 @@ export function SymmetricalCompareRow({
           className={[
             "shrink-0 px-0.5 text-center",
             compactHud
-              ? "w-14 md:w-16"
+              ? "w-16"
               : emphasizedMetrics
                 ? "w-20 md:w-22"
                 : "w-18 md:w-21",
@@ -473,15 +532,25 @@ export function SymmetricalCompareRow({
           <div className={labelClass}>{label}</div>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center gap-1 md:gap-1.5">
+        <div
+          className={
+            compactHud
+              ? "flex min-w-0 items-center justify-center px-0.5"
+              : "flex min-w-0 flex-1 items-center gap-1 md:gap-1.5"
+          }
+        >
           <SideMetricBlock
             align="left"
             primary={right.primary}
             primaryClass={rightNumClass}
             winGlow={rightWin}
-            winShadow="0 0 6px rgba(179,136,255,0.4), 0 0 2px rgba(179,136,255,0.52)"
+            winShadow={
+              compactHud
+                ? "0 0 8px rgba(92,240,181,0.45)"
+                : "0 0 6px rgba(179,136,255,0.4), 0 0 2px rgba(179,136,255,0.52)"
+            }
             rankBelow={right.rankBelow}
-            rankBelowClass={rankBelowLineClass}
+            rankBelowClass={rightRankClass}
             recordBelow={right.recordBelow}
             recordBelowClass={subLineClass}
             proBadge={right.proBadge}
@@ -490,15 +559,17 @@ export function SymmetricalCompareRow({
             proMetaTone={right.proMetaTone ?? right.proNoteTone}
             compactHud={compactHud}
           />
-          <span
-            className={[
-              resultStatsMetricNumClass,
-              "w-9 shrink-0 text-left text-[10px] text-white/38 md:w-10 md:text-[11px]",
-            ].join(" ")}
-          >
-            {right.rank ?? ""}
-          </span>
-          {right.leagueRank != null ? (
+          {!compactHud || right.rank ? (
+            <span
+              className={[
+                resultStatsMetricNumClass,
+                "w-9 shrink-0 text-left text-[10px] text-white/38 md:w-10 md:text-[11px]",
+              ].join(" ")}
+            >
+              {right.rank ?? ""}
+            </span>
+          ) : null}
+          {compactHud ? null : right.leagueRank != null ? (
             <LeagueRankSegBar
               rank={right.leagueRank}
               grow="right"

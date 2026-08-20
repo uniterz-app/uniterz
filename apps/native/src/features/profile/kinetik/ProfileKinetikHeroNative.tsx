@@ -291,6 +291,7 @@ export default function ProfileKinetikHeroNative({
           countryCode={countryCode}
           memberSinceMs={memberSinceMs}
           isPro={plan === "pro"}
+          accountUid={targetUid}
           planProBgVariant={planProBgVariant}
           winStreak={mapped.winStreak}
           totalPointsRank={mapped.totalPointsRank}

@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { getNbaLeagueTeamStatsMock } from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import {
+  enrichLeagueTeamStatsBundle,
+  getNbaLeagueTeamStatsMock,
+} from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
 import type {
   NbaLeagueTeamStatsApiPayload,
@@ -54,7 +57,7 @@ export function useLeagueTeamStatsBundle(
           signal: ac.signal,
         });
         if (cancelled) return;
-        setBundle(data.bundle);
+        setBundle(enrichLeagueTeamStatsBundle(data.bundle));
         setSource(data.source);
         setUpdatedAt(data.updatedAt);
       } catch (e) {

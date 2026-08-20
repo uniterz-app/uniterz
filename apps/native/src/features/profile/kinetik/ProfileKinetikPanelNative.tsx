@@ -1124,6 +1124,8 @@ function KinetikIdentityJoinIdRowNative({
   copiedLabel,
   shareLabel,
   onShare,
+  flagUri,
+  flagLabel,
 }: {
   memberSinceLabel: string | null;
   idLabel: string;
@@ -1131,6 +1133,8 @@ function KinetikIdentityJoinIdRowNative({
   copiedLabel: string;
   shareLabel: string;
   onShare: () => void;
+  flagUri?: string | null;
+  flagLabel?: string | null;
 }) {
   return (
     <View style={styles.identityJoinIdRow}>
@@ -1163,6 +1167,18 @@ function KinetikIdentityJoinIdRowNative({
           importantForAccessibility="no-hide-descendants"
         />
       )}
+      {flagUri ? (
+        <View
+          style={styles.footerFlag}
+          accessibilityLabel={flagLabel ?? undefined}
+        >
+          <Image
+            source={{ uri: flagUri }}
+            style={styles.footerFlagImg}
+            resizeMode="cover"
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1289,6 +1305,7 @@ export type ProfileKinetikPanelNativeProps = {
   countryCode?: string | null;
   memberSinceMs?: number | null;
   isPro?: boolean;
+  accountUid?: string | null;
   /** Pro Skin（users.planProBgVariant） */
   planProBgVariant?: ProfilePlanProBgVariant;
   winStreak?: number;
@@ -1337,6 +1354,7 @@ export default function ProfileKinetikPanelNative({
   countryCode = null,
   memberSinceMs = null,
   isPro = false,
+  accountUid = null,
   planProBgVariant = PROFILE_PLAN_PRO_BG_DEFAULT,
   winStreak,
   totalPointsRank: totalPointsRankProp,
@@ -1778,40 +1796,26 @@ export default function ProfileKinetikPanelNative({
                   </TutorialTargetNative>
                 )}
               </View>
-              {onPressMark && markMode === "toggle" || profileFlagUri ? (
+              {onPressMark && markMode === "toggle" ? (
               <View style={styles.markFlagRow}>
-                {onPressMark && markMode === "toggle" ? (
-                  <Pressable
-                    onPress={onPressMark}
+                <Pressable
+                  onPress={onPressMark}
+                  style={[
+                    styles.markChip,
+                    marked ? styles.markChipOn : styles.markChipOff,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={marked ? "MARKED" : "MARK"}
+                >
+                  <Text
                     style={[
-                      styles.markChip,
-                      marked ? styles.markChipOn : styles.markChipOff,
+                      styles.markChipText,
+                      marked ? styles.markChipTextOn : styles.markChipTextOff,
                     ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={marked ? "MARKED" : "MARK"}
                   >
-                    <Text
-                      style={[
-                        styles.markChipText,
-                        marked ? styles.markChipTextOn : styles.markChipTextOff,
-                      ]}
-                    >
-                      {marked ? "MARKED" : "MARK"}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                {profileFlagUri ? (
-                  <View
-                    style={styles.nameFlagBelow}
-                    accessibilityLabel={countryCode ?? undefined}
-                  >
-                    <Image
-                      source={{ uri: profileFlagUri }}
-                      style={styles.nameFlagBelowImg}
-                      resizeMode="cover"
-                    />
-                  </View>
-                ) : null}
+                    {marked ? "MARKED" : "MARK"}
+                  </Text>
+                </Pressable>
               </View>
               ) : null}
             </View>
@@ -1961,6 +1965,8 @@ export default function ProfileKinetikPanelNative({
           copiedLabel={shareCopiedLabel}
           shareLabel={shareProfileLabel}
           onShare={handleShareProfile}
+          flagUri={profileFlagUri}
+          flagLabel={countryCode}
         />
       </View>
 
@@ -2195,24 +2201,11 @@ const styles = StyleSheet.create({
     gap: 8,
     alignSelf: "flex-start",
   },
-  nameFlagBelow: {
-    width: 28,
-    height: 19,
-    borderRadius: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.28)",
-    overflow: "hidden",
-    flexShrink: 0,
-  },
-  nameFlagBelowImg: {
-    width: "100%",
-    height: "100%",
-  },
   cardFooterMeta: {
     marginTop: "auto",
     paddingTop: 12,
     alignSelf: "stretch",
-    alignItems: "flex-start",
+    alignItems: "stretch",
     zIndex: 1,
   },
   identityIdPress: {
@@ -2228,12 +2221,25 @@ const styles = StyleSheet.create({
   },
   identityJoinIdRow: {
     flexDirection: "row",
-    alignItems: "stretch",
+    alignItems: "center",
     justifyContent: "flex-start",
     gap: 8,
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
+    width: "100%",
     maxWidth: "100%",
     height: 22,
+  },
+  footerFlag: {
+    marginLeft: "auto",
+    width: 33,
+    height: 22,
+    borderRadius: 1,
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+  footerFlagImg: {
+    width: "100%",
+    height: "100%",
   },
   footerJoinSlot: {
     minWidth: 72,
@@ -2857,10 +2863,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  footerFlagRef: {
-    flexShrink: 0,
-  },
-  footerFlag: { width: 18, height: 13, borderRadius: 1 },
   footerRef: {
     borderLeftWidth: 1,
     borderBottomWidth: 1,

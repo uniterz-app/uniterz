@@ -48,6 +48,7 @@ import {
   normalizeNbaTopScorerPick,
   type NbaTopScorerPick,
 } from "@/lib/nba/topScorer";
+import { topScorerCandidatesForMatchup } from "@/lib/predict/nbaTopScorerPreviewMocks";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import {
   normalizeWcGoalScorerPick,
@@ -666,14 +667,17 @@ export default function PredictionFormV2({
     return { home: h, away: a };
   }, [scoreHome, scoreAway]);
 
-  const nbaTopScorerCandidates = useMemo(
-    () =>
-      normalizeNbaTopScorerCandidates(
-        game.topScorerCandidates ??
-          (game as { topScorerCandidates?: unknown }).topScorerCandidates
-      ),
-    [game]
-  );
+  const nbaTopScorerCandidates = useMemo(() => {
+    const fromGame = normalizeNbaTopScorerCandidates(
+      game.topScorerCandidates ??
+        (game as { topScorerCandidates?: unknown }).topScorerCandidates
+    );
+    if (fromGame.length > 0) return fromGame;
+    return topScorerCandidatesForMatchup(
+      game.home?.teamId,
+      game.away?.teamId
+    );
+  }, [game]);
 
   const buildPredictionPayload = (
     h: number,

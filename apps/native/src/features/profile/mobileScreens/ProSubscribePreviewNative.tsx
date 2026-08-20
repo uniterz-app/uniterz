@@ -26,6 +26,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import ProCyberBadgeNative from "../kinetik/ProCyberBadgeNative";
+import CyberHelpMarkNative from "../../../ui/CyberHelpMarkNative";
 import {
   PRO_SUBSCRIBE_PREVIEW_PLANS,
   proSubscribePreviewPlanById,
@@ -242,13 +243,13 @@ export default function ProSubscribePreviewNative({
               <Pressable
                 onPress={() => setHelpOpen(true)}
                 style={({ pressed }) => [
-                  styles.toolBtn,
-                  pressed && styles.toolBtnPressed,
+                  styles.helpHit,
+                  pressed && styles.helpHitPressed,
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={ja ? "説明" : "Info"}
               >
-                <Text style={styles.helpGlyph}>?</Text>
+                <CyberHelpMarkNative active={helpOpen} />
               </Pressable>
             </View>
 
@@ -878,12 +879,15 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0,245,255,0.5)",
     backgroundColor: "rgba(0,245,255,0.12)",
   },
-  helpGlyph: {
-    fontFamily: OXANIUM_800,
-    fontSize: 17,
-    fontWeight: "900",
-    fontStyle: "italic",
-    color: "rgba(165,243,252,0.9)",
+  helpHit: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helpHitPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
   },
   header: {
     alignItems: "center",

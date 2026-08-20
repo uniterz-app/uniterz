@@ -6,7 +6,9 @@ export type HeaderWordmark =
   | "RESULT"
   | "RANKING"
   | "GROUP"
-  | "PROFILE";
+  | "PROFILE"
+  | "AWARDS"
+  | "STANDINGS";
 
 export const DEFAULT_HEADER_WORDMARK: HeaderWordmark = "UNITERZ";
 
@@ -47,6 +49,12 @@ export function resolveHeaderWordmark(
     return "GROUP";
   }
   if (PROFILE_ROUTE.test(rest)) return "PROFILE";
+  if (rest === "/season-awards" || rest.startsWith("/season-awards")) {
+    return "AWARDS";
+  }
+  if (rest === "/season-standings" || rest.startsWith("/season-standings")) {
+    return "STANDINGS";
+  }
 
   return DEFAULT_HEADER_WORDMARK;
 }
@@ -56,4 +64,13 @@ export function resolveHeaderWordmarkFromMainTab(
 ): HeaderWordmark {
   if (!tabName) return DEFAULT_HEADER_WORDMARK;
   return HEADER_WORDMARK_BY_MAIN_TAB[tabName] ?? DEFAULT_HEADER_WORDMARK;
+}
+
+/** Games スタックのアワード / 順位予想 → 棚のワードマーク */
+export function resolveHeaderWordmarkFromGamesStack(
+  routeName: string | undefined,
+  params?: { mode?: string } | null
+): HeaderWordmark | null {
+  if (routeName !== "SeasonPredict") return null;
+  return params?.mode === "awards" ? "AWARDS" : "STANDINGS";
 }

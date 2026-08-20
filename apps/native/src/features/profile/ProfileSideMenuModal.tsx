@@ -4,14 +4,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Animated, Dimensions, Easing, Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  Animated, Dimensions, Easing, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
-import { ADMIN_UID } from "../../../../../lib/constants";
+import { isAdminUid } from "../../../../../lib/constants";
+import type { AdminInboxCounts } from "../../../../../lib/admin/subscribeAdminInboxUnread";
+import { EMPTY_ADMIN_INBOX } from "../../../../../lib/admin/subscribeAdminInboxUnread";
 import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { setTutorialRestartCover } from "../../../../../lib/tutorial/tutorialRestartCover";
@@ -34,6 +36,7 @@ type Props = {
   /** Web アプリのオリジン（末尾スラッシュなし） */
   apiBase: string | null;
   unreadAnnouncements: number;
+  adminInbox?: AdminInboxCounts;
   onOpenProfileSettings: () => void;
   /** ログイン中 UID（管理メニュー表示判定） */
   uid: string | null | undefined;
@@ -73,44 +76,25 @@ type Props = {
     | "futuristicBgPreview"
     | "titleSkinPreview"
     | "waveProSkinPreview"
-    | "rankingListProSkinPreview"
-    | "proSkinUnlockPreview"
-    | "referralStampCelebratePreview"
-    | "unitEarnCelebratePreview"
-    | "careerFlipButtonPreview"
-    | "careerPlacementPreview"
-    | "unitEarnModalDesignPreview"
-    | "unitEarnOverlayAnimPreview"
-    | "unitEarnOverlayFontPreview"
     | "uniterzLogoTypePreview"
     | "uniterzLogo3dPreview"
     | "uniterzProBadgePreview"
-    | "proBadgeComparePreview"
-    | "resultCardDesignPreview"
-    | "resultBadgeDesignPreview"
-    | "resultStampDesignPreview"
-    | "resultStreakTagDesignPreview"
-    | "navBarDesignPreview"
-    | "buttonDesignPreview"
-    | "hexLightDesignPreview"
     | "splashLogoPreview"
     | "liveGameStatsPreview"
-    | "profileKinetikMetricsPreview") => void;
+    | "leagueStatsPreview"
+    | "adminFeatureInbox"
+    | "adminContactInbox"
+    | "adminRedemptions") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
-
-function openUrl(url: string) {
-  void Linking.openURL(url).catch(() => {});
-}
-
 
 export default function ProfileSideMenuModal({
   visible,
   onClose,
   language,
-  apiBase,
   unreadAnnouncements,
+  adminInbox = EMPTY_ADMIN_INBOX,
   onOpenProfileSettings,
   uid,
   plan,
@@ -142,7 +126,7 @@ export default function ProfileSideMenuModal({
     [insets.top, insets.bottom]
   );
 
-  const isAdmin = uid != null && uid === ADMIN_UID;
+  const isAdmin = isAdminUid(uid);
 
   useEffect(() => {
     if (!visible) {
@@ -208,13 +192,9 @@ export default function ProfileSideMenuModal({
         electronicNotice: "電子公告",
         deleteAccount: "アカウント削除",
         logout: "ログアウト",
-        needBase: "Web の URL（EXPO_PUBLIC_UNITERZ_API_BASE_URL）が未設定です。",
-        adminDash: "管理ダッシュボード",
-        grantBadges: "バッジ付与",
-        annManage: "お知らせ管理",
-        annNew: "お知らせ作成",
-        gameImport: "試合インポート",
-        planApproval: "プラン承認",
+        adminFeatureRequests: "機能リクエスト",
+        adminContacts: "問い合わせ",
+        adminRedemptions: "商品交換申請",
       }
     : {
         main: "MAIN",
@@ -240,22 +220,10 @@ export default function ProfileSideMenuModal({
         electronicNotice: "Electronic Notice",
         deleteAccount: "Delete Account",
         logout: "Log out",
-        needBase: "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL to open web pages.",
-        adminDash: "Admin Dashboard",
-        grantBadges: "Grant Badges",
-        annManage: "Manage Announcements",
-        annNew: "Create Announcement",
-        gameImport: "Game Import",
-        planApproval: "Plan Approval",
+        adminFeatureRequests: "Feature Requests",
+        adminContacts: "Inquiries",
+        adminRedemptions: "Redemption Requests",
       };
-
-  function web(path: string) {
-    if (!apiBase) {
-      cyberAlert("", labels.needBase);
-      return;
-    }
-    openUrl(`${apiBase}${path}`);
-  }
 
   function openUserPage(
     page:
@@ -283,29 +251,15 @@ export default function ProfileSideMenuModal({
       | "futuristicBgPreview"
       | "titleSkinPreview"
       | "waveProSkinPreview"
-      | "rankingListProSkinPreview"
-      | "proSkinUnlockPreview"
-      | "referralStampCelebratePreview"
-      | "unitEarnCelebratePreview"
-      | "careerFlipButtonPreview"
-    | "careerPlacementPreview"
-      | "unitEarnModalDesignPreview"
-      | "unitEarnOverlayAnimPreview"
-      | "unitEarnOverlayFontPreview"
       | "uniterzLogoTypePreview"
       | "uniterzLogo3dPreview"
-    | "uniterzProBadgePreview"
-    | "proBadgeComparePreview"
-      | "resultCardDesignPreview"
-      | "resultBadgeDesignPreview"
-      | "resultStampDesignPreview"
-      | "resultStreakTagDesignPreview"
-      | "navBarDesignPreview"
-      | "buttonDesignPreview"
-      | "hexLightDesignPreview"
+      | "uniterzProBadgePreview"
       | "splashLogoPreview"
       | "liveGameStatsPreview"
-      | "profileKinetikMetricsPreview"
+      | "leagueStatsPreview"
+      | "adminFeatureInbox"
+      | "adminContactInbox"
+      | "adminRedemptions"
   ) {
     if (page === "restartTutorial") {
       setTutorialRestartCover(true);
@@ -451,7 +405,7 @@ export default function ProfileSideMenuModal({
                     <SideMenuItemButtonNative
                       icon="bullhorn-outline"
                       labelStyle={labelStyle}
-                      trailing={<SideMenuUnreadBadgeNative count={unreadAnnouncements} />}
+                      trailing={<SideMenuUnreadBadgeNative count={unreadAnnouncements} tone="announce" />}
                       onPress={() => openUserPage("announcements")}
                     >
                       {labels.announcements}
@@ -564,46 +518,43 @@ export default function ProfileSideMenuModal({
                       <CyberSideMenuSectionTitleNative>{labels.admin}</CyberSideMenuSectionTitleNative>
                       <View style={styles.itemGroup}>
                         <SideMenuItemButtonNative
-                          icon="view-dashboard-outline"
+                          icon="lightbulb-on-outline"
                           labelStyle={labelStyle}
-                          onPress={() => web("/admin")}
+                          trailing={
+                            <SideMenuUnreadBadgeNative
+                              count={adminInbox.feature}
+                              tone="admin"
+                            />
+                          }
+                          onPress={() => openUserPage("adminFeatureInbox")}
                         >
-                          {labels.adminDash}
+                          {labels.adminFeatureRequests}
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="ribbon"
+                          icon="email-outline"
                           labelStyle={labelStyle}
-                          onPress={() => web("/admin/badges")}
+                          trailing={
+                            <SideMenuUnreadBadgeNative
+                              count={adminInbox.inbox}
+                              tone="admin"
+                            />
+                          }
+                          onPress={() => openUserPage("adminContactInbox")}
                         >
-                          {labels.grantBadges}
+                          {labels.adminContacts}
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="newspaper-variant-outline"
+                          icon="shopping-outline"
                           labelStyle={labelStyle}
-                          onPress={() => web("/admin/announcements")}
+                          trailing={
+                            <SideMenuUnreadBadgeNative
+                              count={adminInbox.redemptions}
+                              tone="admin"
+                            />
+                          }
+                          onPress={() => openUserPage("adminRedemptions")}
                         >
-                          {labels.annManage}
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="plus-box-outline"
-                          labelStyle={labelStyle}
-                          onPress={() => web("/admin/announcements/new")}
-                        >
-                          {labels.annNew}
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="database-import-outline"
-                          labelStyle={labelStyle}
-                          onPress={() => web("/admin/games-import")}
-                        >
-                          {labels.gameImport}
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="clipboard-check-multiple-outline"
-                          labelStyle={labelStyle}
-                          onPress={() => web("/admin/plans")}
-                        >
-                          {labels.planApproval}
+                          {labels.adminRedemptions}
                         </SideMenuItemButtonNative>
                       </View>
                     </>
@@ -654,92 +605,6 @@ export default function ProfileSideMenuModal({
                           Wave 13 スキンプレビュー
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="format-list-bulleted"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("rankingListProSkinPreview")}
-                        >
-                          ランキング行 Pro Skin
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="lock-open-variant-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("proSkinUnlockPreview")}
-                        >
-                          Skin解放モーダル
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="stamper"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("referralStampCelebratePreview")
-                          }
-                        >
-                          招待スタンプ演出
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="circle-multiple-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("unitEarnCelebratePreview")
-                          }
-                        >
-                          Unit 獲得演出
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="rotate-3d-variant"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("careerFlipButtonPreview")
-                          }
-                        >
-                          CAREER フリップ配置案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="view-column-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("careerPlacementPreview")
-                          }
-                        >
-                          CAREER 載せ場所案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="view-dashboard-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("unitEarnModalDesignPreview")
-                          }
-                        >
-                          Unit 獲得モーダル案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="movie-open-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("unitEarnOverlayAnimPreview")
-                          }
-                        >
-                          Unit 獲得アニメ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="format-letter-case"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("unitEarnOverlayFontPreview")
-                          }
-                        >
-                          Unit 獲得フォント案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
                           icon="format-font"
                           dense
                           labelStyle={labelStyle}
@@ -760,96 +625,12 @@ export default function ProfileSideMenuModal({
                           UNITERZ PRO バッジ
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
-                          icon="compare"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("proBadgeComparePreview")
-                          }
-                        >
-                          Pro バッジ比較
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="card-bulleted-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("resultCardDesignPreview")
-                          }
-                        >
-                          リザルトカード案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="bookmark-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("resultBadgeDesignPreview")
-                          }
-                        >
-                          リザルトバッジ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="certificate-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("resultStampDesignPreview")
-                          }
-                        >
-                          リザルトスタンプ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="fire"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("resultStreakTagDesignPreview")
-                          }
-                        >
-                          連勝タグ案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="view-grid-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("profileKinetikMetricsPreview")
-                          }
-                        >
-                          プロフィール 2x2 案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="tab"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("navBarDesignPreview")}
-                        >
-                          Nav Bar 案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
                           icon="cube-outline"
                           dense
                           labelStyle={labelStyle}
                           onPress={() => openUserPage("uniterzLogo3dPreview")}
                         >
                           Logo 3D
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="gesture-tap-button"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("buttonDesignPreview")}
-                        >
-                          ボタン系統カタログ
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="hexagon-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("hexLightDesignPreview")}
-                        >
-                          六角ライト案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="flash-outline"
@@ -866,6 +647,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("liveGameStatsPreview")}
                         >
                           ライブ試合スタッツ
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="table-large"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("leagueStatsPreview")}
+                        >
+                          リーグスタッツ（左レール）
                         </SideMenuItemButtonNative>
                       </View>
                     </>

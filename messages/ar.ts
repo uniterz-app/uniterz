@@ -697,12 +697,9 @@ const ar: Messages = {
     sectionSubscription: "الاشتراك",
     sectionSupport: "الدعم",
     sectionAdmin: "الإدارة",
-    adminDashboard: "لوحة الإدارة",
-    grantBadges: "منح الشارات",
-    manageAnnouncements: "إدارة الإعلانات",
-    createAnnouncement: "إنشاء إعلان",
-    gameImport: "استيراد المباريات",
-    planApproval: "الموافقة على الخطة",
+    adminFeatureRequests: "طلبات الميزات",
+    adminContacts: "الاستفسارات",
+    adminRedemptions: "طلبات استبدال المنتجات",
     helpDescription:
       "Uniterz هي لعبة خيالية قائمة على التوقعات الرياضية. تحقق من القواعد الأساسية وكيفية قراءة النتائج.",
     changePasswordDesc:
@@ -803,6 +800,8 @@ const ar: Messages = {
     nbaTopScorerBonusHint: "+2 if correct",
     nbaTopScorerClear: "Clear selection",
     nbaTopScorerEmpty: "Player list not ready yet",
+    nbaTopScorerMore: "{n} more",
+    nbaTopScorerLess: "Show less",
     scoringRulesChip: "قواعد التقييم",
     timing: {
       proInfoTitle: "Pro Info",

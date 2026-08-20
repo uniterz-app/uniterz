@@ -22,6 +22,7 @@ import {
   Swords,
 } from "lucide-react";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
+import CyberHelpMark from "@/app/component/common/CyberHelpMark";
 import { CyberScanlineText } from "@/app/component/rankings/CyberRankingListParts";
 import {
   PRO_SUBSCRIBE_PREVIEW_PLANS,
@@ -259,27 +260,11 @@ export default function ProSubscribePreview({
                 <button
                   type="button"
                   onClick={() => setHelpOpen(true)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center border border-[rgba(0,245,255,0.22)] bg-[rgba(0,245,255,0.05)] transition hover:border-[rgba(0,245,255,0.45)] hover:bg-[rgba(0,245,255,0.1)]"
-                  style={{
-                    clipPath:
-                      "polygon(6px 0%, 100% 0%, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0% 100%, 0% 6px)",
-                  }}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center transition active:scale-[0.98]"
                   aria-label={ja ? "説明" : "Info"}
                   aria-expanded={helpOpen}
                 >
-                  <span
-                    className={cn(
-                      nameOxanium.className,
-                      "text-[17px] font-black italic leading-none tracking-wide text-cyan-200/90"
-                    )}
-                    style={{
-                      textShadow:
-                        "0 0 6px rgba(0,245,255,0.55), 0 0 14px rgba(0,245,255,0.28)",
-                    }}
-                    aria-hidden
-                  >
-                    ?
-                  </span>
+                  <CyberHelpMark active={helpOpen} />
                 </button>
               ) : (
                 <span className="h-10 w-10 shrink-0" aria-hidden />

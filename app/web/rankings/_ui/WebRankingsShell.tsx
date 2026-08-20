@@ -433,6 +433,8 @@ export default function WebRankingsShell() {
               value={myValue}
               displayName={sessionUser.displayName || "You"}
               photoURL={sessionUser.photoURL || null}
+              uid={myUid}
+              handle={sessionUser.handle}
               totalPosts={myRow?.totalPosts}
               loading={cardLoading}
               statsScramble={listReady && personalPending && !cardFast.myRow}

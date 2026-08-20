@@ -35,6 +35,8 @@ export function MyRankCardNative({
   value,
   displayName,
   photoURL,
+  uid = null,
+  handle = null,
   totalPosts,
   totalEntries,
   loading,
@@ -60,6 +62,8 @@ export function MyRankCardNative({
   value: number;
   displayName: string;
   photoURL?: string | null;
+  uid?: string | null;
+  handle?: string | null;
   totalPosts?: number;
   totalEntries?: number | null;
   loading?: boolean;
@@ -94,6 +98,8 @@ export function MyRankCardNative({
   const statsPending = !!statsScramble;
   void miniMetrics;
   void rankTierGap;
+  void uid;
+  void handle;
 
   const posts =
     typeof totalPosts === "number" ? totalPosts : (statsSource?.totalPosts ?? 0);

@@ -14,6 +14,10 @@ type Props = {
   children: ReactNode;
   /** 本文ラッパークラス（ブラケットは幅を広げる） */
   contentClassName?: string;
+  /**
+   * UNITERZ 棚を隠す。試合からのアワード / 順位予想は Games と同じ棚を残す。
+   */
+  hideBrandShelf?: boolean;
 };
 
 /**
@@ -26,6 +30,7 @@ export default function GamesNbaSubpageShell({
   subtitle,
   children,
   contentClassName,
+  hideBrandShelf = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -35,6 +40,7 @@ export default function GamesNbaSubpageShell({
   const resolvedContentClassName =
     contentClassName ??
     (isMobile ? "max-w-lg" : "max-w-6xl px-4 py-5 md:px-6");
+  const titleInBrandShelf = title === "AWARDS" || title === "STANDINGS";
 
   return (
     <CyberSubpageShell
@@ -42,7 +48,9 @@ export default function GamesNbaSubpageShell({
       title={title}
       subtitle={subtitle}
       contentClassName={resolvedContentClassName}
-      onBack={() => router.push(`${gamesHref}?menu=1`)}
+      hideBrandShelf={hideBrandShelf}
+      titleInBrandShelf={titleInBrandShelf}
+      onBack={() => router.push(gamesHref)}
     >
       {children}
     </CyberSubpageShell>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Search, SlidersHorizontal, CircleHelp, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import cn from "clsx";
 import { gamesHeaderFilterButtonClasses } from "@/lib/ui/gamesHeaderBar";
 import type { ScheduleTeamOption } from "@/lib/games/useScheduleTeams";
@@ -28,6 +28,7 @@ import {
   gamesFilterHelpParagraphs,
 } from "@/lib/games/gamesFilterHelp";
 import { nameOxanium } from "@/lib/fonts";
+import CyberHelpMark from "@/app/component/common/CyberHelpMark";
 
 const GAMES_FILTER_PANEL_CLASS = "games-filter-panel";
 
@@ -227,14 +228,10 @@ export default function GamesTeamFilterPanel({
               onClick={() => setHelpOpen((v) => !v)}
               aria-expanded={helpOpen}
               aria-controls="games-team-filter-help"
-              className={cn(
-                "games-filter-icon-btn",
-                helpOpen && "games-filter-icon-btn--active",
-              )}
-              style={tabFont}
+              aria-label={helpButtonLabel}
+              className="inline-flex shrink-0 items-center justify-center transition active:scale-[0.98]"
             >
-              <CircleHelp size={15} strokeWidth={2.2} aria-hidden />
-              <span>{helpButtonLabel}</span>
+              <CyberHelpMark active={helpOpen} />
             </button>
             <button
               type="button"

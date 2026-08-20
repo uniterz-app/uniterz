@@ -4,7 +4,6 @@ import {
   deleteDoc,
   doc,
   getCountFromServer,
-  getDoc,
   setDoc,
   updateDoc,
 } from "firebase/firestore";
@@ -15,7 +14,14 @@ import {
   parseUserMark,
   type UserMark,
 } from "../../../../../lib/marks/markTypes";
-import { invalidateProfileUserDocNative } from "./profileUserDocCacheNative";
+import {
+  hydrateMarksMemory,
+  peekMarksWriteEpoch,
+} from "../../../../../lib/marks/marksMemoryStore";
+import {
+  invalidateProfileUserDocNative,
+  loadProfileUserDocNative,
+} from "./profileUserDocCacheNative";
 
 const MARKS_FIELD = "markedPredictors";
 
@@ -40,6 +46,26 @@ function parseMarksField(raw: unknown): UserMark[] {
   return rows.slice(0, MAX_MARKS_PRO);
 }
 
+export function parseMarksFromUserDoc(
+  data: Record<string, unknown> | null | undefined
+): UserMark[] {
+  return parseMarksField(data?.[MARKS_FIELD]);
+}
+
+/** 既に読んだ users ドキュメントから MARK メモリを埋める（追加 getDoc なし） */
+export function hydrateMarksFromUserDoc(
+  uid: string,
+  data: Record<string, unknown> | null | undefined
+): void {
+  const owner = uid.trim();
+  if (!owner || !data) return;
+  hydrateMarksMemory(
+    owner,
+    parseMarksFromUserDoc(data),
+    peekMarksWriteEpoch()
+  );
+}
+
 function toWriteRows(rows: UserMark[]): Array<{
   targetUid: string;
   handle: string;
@@ -59,8 +85,8 @@ function toWriteRows(rows: UserMark[]): Array<{
 export async function listMarksNative(uid: string): Promise<UserMark[]> {
   const owner = uid.trim();
   if (!owner) return [];
-  const snap = await getDoc(doc(db, "users", owner));
-  return parseMarksField(snap.data()?.[MARKS_FIELD]);
+  const loaded = await loadProfileUserDocNative(owner);
+  return parseMarksFromUserDoc(loaded?.data);
 }
 
 /** メモリ上の最新リストをそのまま書く。getDoc で組み直さない（競合で消えるため） */

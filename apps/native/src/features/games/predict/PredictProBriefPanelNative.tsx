@@ -3,17 +3,20 @@
  * Free は ReportGate 同型の PRO INSIGHT ブラーゲート
  */
 import type { ComponentProps, ReactNode } from "react";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   briefEdgeDetail,
   briefLineText,
+  splitBriefLineLead,
   type PredictProBrief,
   type ProBriefEdgeItem,
   type ProBriefLineItem,
   type ProBriefTeamCard,
 } from "../../../../../../lib/predict/predictProBrief";
+import { sanitizeProBriefForDisplay } from "../../../../../../lib/predict/validateProBrief";
 import {
   proInsightGateCopy,
   type ProInsightGateBulletIcon,
@@ -29,6 +32,7 @@ import {
 } from "../../profile/reports/reportThemeNative";
 import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
+import { UNITERZ_PRO_BADGE_GOLD } from "../../../../../../lib/units/uniterzProBadge";
 
 type Props = {
   brief?: PredictProBrief | null;
@@ -108,9 +112,11 @@ function SectionLabel({
         ? "rgba(253,230,138,0.9)"
         : "rgba(103,232,249,0.88)";
   return (
-    <Text style={[styles.sectionLabel, { color }]} numberOfLines={1}>
-      {children}
-    </Text>
+    <View style={styles.sectionLabelWrap}>
+      <Text style={[styles.sectionLabel, { color }]} numberOfLines={1}>
+        {children}
+      </Text>
+    </View>
   );
 }
 
@@ -174,15 +180,36 @@ function LineBlock({
   }
   return (
     <View style={styles.blockStack}>
-      {items.map((item, i) => (
-        <Text
-          key={`${tone}-${i}`}
-          style={[lineStyle, end && styles.textRight]}
-          numberOfLines={3}
-        >
-          {briefLineText(item, lang)}
-        </Text>
-      ))}
+      {items.map((item, i) => {
+        const { label, body } = splitBriefLineLead(briefLineText(item, lang));
+        return (
+          <View key={`${tone}-${i}`} style={styles.edgeItem}>
+            {label ? (
+              <>
+                <Text
+                  style={[styles.edgeLabel, end && styles.textRight]}
+                  numberOfLines={2}
+                >
+                  {label}
+                </Text>
+                <Text
+                  style={[lineStyle, end && styles.textRight]}
+                  numberOfLines={3}
+                >
+                  {body}
+                </Text>
+              </>
+            ) : (
+              <Text
+                style={[lineStyle, styles.lineSolo, end && styles.textRight]}
+                numberOfLines={3}
+              >
+                {body}
+              </Text>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -200,11 +227,13 @@ function CompareSection({
 }) {
   return (
     <View style={styles.compareRow}>
-      <View style={[styles.compareSide, styles.compareSideLeft]}>{left}</View>
-      <View style={styles.compareLabelCol}>
+      <View style={styles.compareHead}>
         <SectionLabel tone={tone}>{label}</SectionLabel>
       </View>
-      <View style={[styles.compareSide, styles.compareSideRight]}>{right}</View>
+      <View style={styles.compareCols}>
+        <View style={[styles.compareSide, styles.compareSideLeft]}>{left}</View>
+        <View style={[styles.compareSide, styles.compareSideRight]}>{right}</View>
+      </View>
     </View>
   );
 }
@@ -235,12 +264,14 @@ export default function PredictProBriefPanelNative({
   const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
   const homeColor = getTeamJerseyPrimaryColor("nba", homeTeamId);
   const awayColor = getTeamJerseyPrimaryColor("nba", awayTeamId);
-  const home = brief?.home ?? EMPTY_CARD;
-  const away = brief?.away ?? EMPTY_CARD;
-  const usePlaceholder = brief == null;
+  const safeBrief = useMemo(() => sanitizeProBriefForDisplay(brief), [brief]);
+  const home = safeBrief?.home ?? EMPTY_CARD;
+  const away = safeBrief?.away ?? EMPTY_CARD;
+  const usePlaceholder = safeBrief == null;
 
   const body = (
     <View style={styles.body}>
+      <View pointerEvents="none" style={styles.centerRule} />
       <CompareSection
         label="MATCHUP"
         tone="matchup"
@@ -248,14 +279,14 @@ export default function PredictProBriefPanelNative({
           usePlaceholder ? (
             <PlaceholderBody />
           ) : (
-            <EdgeBlock edges={home.edges} language={language} align="right" />
+            <EdgeBlock edges={home.edges} language={language} align="left" />
           )
         }
         right={
           usePlaceholder ? (
             <PlaceholderBody />
           ) : (
-            <EdgeBlock edges={away.edges} language={language} align="left" />
+            <EdgeBlock edges={away.edges} language={language} align="right" />
           )
         }
       />
@@ -269,7 +300,7 @@ export default function PredictProBriefPanelNative({
             <LineBlock
               items={home.schedule}
               language={language}
-              align="right"
+              align="left"
               tone="schedule"
             />
           )
@@ -281,7 +312,7 @@ export default function PredictProBriefPanelNative({
             <LineBlock
               items={away.schedule}
               language={language}
-              align="left"
+              align="right"
               tone="schedule"
             />
           )
@@ -297,7 +328,7 @@ export default function PredictProBriefPanelNative({
             <LineBlock
               items={home.context}
               language={language}
-              align="right"
+              align="left"
               tone="context"
             />
           )
@@ -309,7 +340,7 @@ export default function PredictProBriefPanelNative({
             <LineBlock
               items={away.context}
               language={language}
-              align="left"
+              align="right"
               tone="context"
             />
           )
@@ -414,8 +445,8 @@ export default function PredictProBriefPanelNative({
 const styles = StyleSheet.create({
   shell: {
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.22)",
-    backgroundColor: "rgba(5,10,18,0.88)",
+    borderColor: UNITERZ_PRO_BADGE_GOLD.mid,
+    backgroundColor: "#000000",
     paddingHorizontal: 10,
     paddingVertical: 10,
     overflow: "hidden",
@@ -460,35 +491,52 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.18 }],
   },
   body: {
+    position: "relative",
     gap: 0,
   },
+  centerRule: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: "50%",
+    width: 1,
+    marginLeft: -0.5,
+    backgroundColor: "rgba(0,245,255,0.38)",
+    zIndex: 0,
+  },
   compareRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    gap: 6,
+    position: "relative",
+    zIndex: 1,
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
   },
+  compareHead: {
+    marginBottom: 8,
+    alignItems: "center",
+    zIndex: 1,
+  },
+  compareCols: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 16,
+  },
   compareSide: {
     flex: 1,
     minWidth: 0,
-    justifyContent: "center",
-    paddingHorizontal: 2,
-    paddingVertical: 2,
+    justifyContent: "flex-start",
   },
   compareSideLeft: {},
   compareSideRight: {},
-  compareLabelCol: {
-    width: 72,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 2,
+  sectionLabelWrap: {
+    backgroundColor: "#000000",
+    paddingHorizontal: 8,
+    paddingVertical: 1,
   },
   sectionLabel: {
     fontFamily: OXANIUM_800,
     fontSize: 10,
-    letterSpacing: 1.2,
+    letterSpacing: 1.8,
     textTransform: "uppercase",
     textAlign: "center",
   },
@@ -508,19 +556,23 @@ const styles = StyleSheet.create({
   edgeDetail: {
     fontSize: 12,
     lineHeight: 16,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.72)",
   },
   scheduleLine: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: "500",
-    color: "rgba(255,251,235,0.85)",
+    color: "rgba(255,251,235,0.9)",
   },
   contextLine: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "500",
+    color: "rgba(236,254,255,0.88)",
+  },
+  lineSolo: {
     fontSize: 13,
     lineHeight: 18,
-    fontWeight: "500",
-    color: "rgba(236,254,255,0.8)",
   },
   emptyLine: {
     fontSize: 13,

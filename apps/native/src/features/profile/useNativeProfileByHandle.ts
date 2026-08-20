@@ -6,6 +6,7 @@ import { db } from "../../lib/firebase";
 import { fetchUserDocByRouteKey } from "../../../../../lib/profile/fetchUserDocByRouteKey";
 import {
   parseUserProfileFields,
+  parseUserProfileViewCount,
   parseUserUnitBalance,
 } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
@@ -43,6 +44,7 @@ export type NativeProfileByHandleState = {
   memberSinceMs: number | null;
   /** 保有 Unit（公開） */
   unitBalance: number;
+  profileViewCount: number | null;
 };
 
 const idleState: NativeProfileByHandleState = {
@@ -62,6 +64,7 @@ const idleState: NativeProfileByHandleState = {
   maxStreak: 0,
   memberSinceMs: null,
   unitBalance: 0,
+  profileViewCount: null,
 };
 
 function mapUserDoc(
@@ -99,6 +102,7 @@ function mapUserDoc(
         : 0,
     memberSinceMs: parseMemberSinceMs(data),
     unitBalance: parseUserUnitBalance(data),
+    profileViewCount: parseUserProfileViewCount(data),
   };
 }
 

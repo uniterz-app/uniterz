@@ -8,10 +8,8 @@ import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
+import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
+import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
@@ -176,13 +174,12 @@ export default function RankingCard({
         proSkinVariant={proSkinVariant}
         proSkinIntensity="medium"
         nameExtra={
-          r.plan === "pro" ? (
-            <ProCyberBadge
-              {...proBadgeStaticMotion}
-              compact
-              ariaLabel={t(language).common.proMember}
-            />
-          ) : null
+          <RankingNameBadges
+            {...proBadgeStaticMotion}
+            compact
+            isPro={r.plan === "pro"}
+            proLabel={t(language).common.proMember}
+          />
         }
         rankDeltaPlaces={r.rankDeltaPlaces}
         language={language}

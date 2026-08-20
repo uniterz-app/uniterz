@@ -18,10 +18,8 @@ import {
   type ReactNode,
 } from "react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
-import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
+import { RankingNameBadges } from "@/app/component/common/RankingNameBadges";
+import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { FLAG_SRC } from "@/lib/rankings/country";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
@@ -65,6 +63,8 @@ type Props = {
   value: number;
   displayName: string;
   photoURL?: string | null;
+  uid?: string | null;
+  handle?: string | null;
   totalPosts?: number;
   loading?: boolean;
   statsScramble?: boolean;
@@ -466,6 +466,8 @@ export default function MyRankCard({
   value,
   displayName,
   photoURL,
+  uid = null,
+  handle = null,
   totalPosts,
   loading = false,
   statsScramble = false,
@@ -499,6 +501,8 @@ export default function MyRankCard({
 
   const freeTier = displayTier === "free";
   const proTier = displayTier === "pro";
+  void uid;
+  void handle;
 
   const frameTone = resolveMyRankCardFrameTone(
     displayTier != null ? null : rankDeltaPlaces
@@ -815,13 +819,12 @@ export default function MyRankCard({
               }
               rankMuted={!(rank != null && rank >= 1)}
               nameExtra={
-                showProBadge ? (
-                  <ProCyberBadge
-                    {...proBadgeStaticMotion}
-                    emphasized
-                    ariaLabel={m.common.proMember}
-                  />
-                ) : null
+                <RankingNameBadges
+                  {...proBadgeStaticMotion}
+                  emphasized
+                  isPro={showProBadge}
+                  proLabel={m.common.proMember}
+                />
               }
               scoreSlot={
                 <CyberRankingScore

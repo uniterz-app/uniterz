@@ -1,7 +1,6 @@
 /** Web `NbaTeamStatsPanel` 相当（SymmetricalCompareRow レイアウト） */
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import type {
   NbaTeamStatsBundle,
   NbaTeamStatSide,
@@ -13,7 +12,6 @@ import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
-import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
@@ -28,51 +26,7 @@ type Props = {
   onOpenTeamDetail?: (teamId: string) => void;
 };
 
-const LEAGUE_RANK_SEGMENTS = 6;
-const BAR_LEFT = "#5cf0b5";
-const BAR_RIGHT = "#b388ff";
-
-function barPctMaxNorm(h: number, a: number): [number, number] {
-  const m = Math.max(h, a);
-  if (m <= 0 || !Number.isFinite(m)) return [0, 0];
-  return [
-    Math.min(100, Math.max(0, Math.round((h / m) * 100))),
-    Math.min(100, Math.max(0, Math.round((a / m) * 100))),
-  ];
-}
-function barPctMinPaNorm(h: number, a: number): [number, number] {
-  const lo = Math.min(h, a);
-  const hi = Math.max(h, a);
-  if (hi <= 0 || !Number.isFinite(hi)) return [0, 0];
-  const left = h > 0 ? Math.min(100, Math.round((lo / h) * 100)) : 0;
-  const right = a > 0 ? Math.min(100, Math.round((lo / a) * 100)) : 0;
-  return [Math.max(0, left), Math.max(0, right)];
-}
-function barPctDiffNorm(h: number, a: number): [number, number] {
-  const mPos = Math.max(h, a);
-  if (mPos > 0) {
-    return [
-      Math.min(100, Math.max(0, Math.round((Math.max(0, h) / mPos) * 100))),
-      Math.min(100, Math.max(0, Math.round((Math.max(0, a) / mPos) * 100))),
-    ];
-  }
-  if (h === 0 && a === 0) return [0, 0];
-  const worst = Math.min(h, a);
-  const best = Math.max(h, a);
-  const span = best - worst;
-  if (span <= 0) return [50, 50];
-  return [
-    Math.min(100, Math.max(0, Math.round(((h - worst) / span) * 100))),
-    Math.min(100, Math.max(0, Math.round(((a - worst) / span) * 100))),
-  ];
-}
-
-function leagueRankSegPct(rank: number | null | undefined): number {
-  if (rank == null || !Number.isFinite(rank) || rank < 1) return 0;
-  const r = Math.min(30, Math.round(rank));
-  const bucket = Math.min(LEAGUE_RANK_SEGMENTS - 1, Math.floor((r - 1) / 5));
-  return ((LEAGUE_RANK_SEGMENTS - bucket) / LEAGUE_RANK_SEGMENTS) * 100;
-}
+const STAT_WIN = "#5cf0b5";
 
 function fmtDiff(d: number): string {
   return `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
@@ -91,90 +45,8 @@ function teamLabel(teamId: string, fallback: string): string {
   return fallback.toUpperCase();
 }
 
-function CyberBarNative({
-  value,
-  grow,
-  winGlow,
-}: {
-  value: number;
-  grow: "left" | "right";
-  winGlow: boolean;
-}) {
-  const v = Math.min(100, Math.max(0, value));
-  const left = grow === "left";
-  return (
-    <View
-      style={[
-        styles.cyberBar,
-        left ? styles.cyberBarLeftTint : styles.cyberBarRightTint,
-        winGlow && (left ? styles.cyberBarWinLeft : styles.cyberBarWinRight),
-      ]}
-    >
-      <LinearGradient
-        colors={
-          left
-            ? ["rgba(92,240,181,0.33)", "rgba(92,240,181,0.87)", BAR_LEFT]
-            : [BAR_RIGHT, "rgba(179,136,255,0.87)", "rgba(179,136,255,0.33)"]
-        }
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={[
-          styles.cyberBarFill,
-          left
-            ? { width: `${v}%`, alignSelf: "flex-end" }
-            : { width: `${v}%`, alignSelf: "flex-start" },
-        ]}
-      />
-    </View>
-  );
-}
-
-function LeagueRankSegBarNative({
-  rank,
-  grow,
-  replayKey,
-}: {
-  rank: number | null | undefined;
-  grow: "left" | "right";
-  replayKey: string;
-}) {
-  const pct = leagueRankSegPct(rank);
-  const accent =
-    grow === "left"
-      ? {
-          border: BAR_LEFT,
-          glow: "rgba(92,240,181,0.28)",
-          bg: BAR_LEFT,
-        }
-      : {
-          border: BAR_RIGHT,
-          glow: "rgba(179,136,255,0.28)",
-          bg: BAR_RIGHT,
-        };
-  return (
-    <View
-      style={[
-        styles.segWrap,
-        grow === "left" ? styles.segWrapLeft : styles.segWrapRight,
-      ]}
-    >
-      <View style={grow === "left" ? styles.segTrackReverse : undefined}>
-        <CyberSlantedSegBarNative
-          pct={pct}
-          segments={LEAGUE_RANK_SEGMENTS}
-          compact
-          accent={accent}
-          forceStatic
-          replayKey={replayKey}
-        />
-      </View>
-    </View>
-  );
-}
-
 type SideSpec = {
   primary: string;
-  barPct: number;
   leagueRank: number | null;
   rankBelow: string | null;
   recordBelow: string | null;
@@ -209,35 +81,43 @@ function SideMetricBlock({
   win: boolean;
 }) {
   const end = align === "right";
+  const rankEl = side.rankBelow ? (
+    <Text
+      style={[
+        styles.rankBeside,
+        styles.rankIdle,
+      ]}
+    >
+      {side.rankBelow}
+    </Text>
+  ) : null;
   return (
-    <View style={[styles.sideBlock, end && styles.sideBlockEnd]}>
-      <Text
-        style={[
-          styles.metricValue,
-          end ? styles.valueLeft : styles.valueRight,
-          win && styles.metricValueWin,
-        ]}
-      >
-        {side.primary}
-      </Text>
+    <View style={styles.sideBlock}>
+      <View style={styles.valueRow}>
+        {end ? rankEl : null}
+        <Text
+          style={[
+            styles.metricValue,
+            win ? styles.metricValueWin : styles.metricValueIdle,
+          ]}
+        >
+          {side.primary}
+        </Text>
+        {!end ? rankEl : null}
+      </View>
       {side.proMeta ? (
         <Text
           style={[
             styles.metaText,
-            end && styles.textRight,
+            styles.textCenter,
             toneStyle(side.proMetaTone),
           ]}
         >
           {side.proMeta}
         </Text>
       ) : null}
-      {side.rankBelow ? (
-        <Text style={[styles.rankBelow, end && styles.textRight]}>
-          {side.rankBelow}
-        </Text>
-      ) : null}
       {side.recordBelow ? (
-        <Text style={[styles.recordBelow, end && styles.textRight]}>
+        <Text style={[styles.recordBelow, styles.textCenter]}>
           {side.recordBelow}
         </Text>
       ) : null}
@@ -246,24 +126,11 @@ function SideMetricBlock({
 }
 
 /** Web `SymmetricalCompareRow` compactHud 相当 */
-function MetricRow({ row, replayKey }: { row: RowSpec; replayKey: string }) {
+function MetricRow({ row }: { row: RowSpec }) {
   return (
     <View style={styles.metricRow}>
       <View style={styles.metricInner}>
         <View style={styles.metricHalfLeft}>
-          {row.left.leagueRank != null ? (
-            <LeagueRankSegBarNative
-              rank={row.left.leagueRank}
-              grow="left"
-              replayKey={`${replayKey}-L`}
-            />
-          ) : (
-            <CyberBarNative
-              value={row.left.barPct}
-              grow="left"
-              winGlow={row.leftWin}
-            />
-          )}
           <SideMetricBlock side={row.left} align="right" win={row.leftWin} />
         </View>
 
@@ -273,19 +140,6 @@ function MetricRow({ row, replayKey }: { row: RowSpec; replayKey: string }) {
 
         <View style={styles.metricHalfRight}>
           <SideMetricBlock side={row.right} align="left" win={row.rightWin} />
-          {row.right.leagueRank != null ? (
-            <LeagueRankSegBarNative
-              rank={row.right.leagueRank}
-              grow="right"
-              replayKey={`${replayKey}-R`}
-            />
-          ) : (
-            <CyberBarNative
-              value={row.right.barPct}
-              grow="right"
-              winGlow={row.rightWin}
-            />
-          )}
         </View>
       </View>
     </View>
@@ -392,7 +246,6 @@ function buildCoreRows(
     label: string,
     h: number,
     a: number,
-    pct: [number, number],
     leftWin: boolean,
     rightWin: boolean,
     format: (n: number) => string,
@@ -438,7 +291,6 @@ function buildCoreRows(
       rightWin,
       left: {
         primary: format(h),
-        barPct: pct[0],
         leagueRank: leftRank ?? null,
         rankBelow: leftRankBelow,
         recordBelow: null,
@@ -447,7 +299,6 @@ function buildCoreRows(
       },
       right: {
         primary: format(a),
-        barPct: pct[1],
         leagueRank: rightRank ?? null,
         rankBelow: rightRankBelow,
         recordBelow: null,
@@ -459,86 +310,10 @@ function buildCoreRows(
 
   return [
     make(
-      "ppg",
-      "PPG",
-      home.ppg,
-      away.ppg,
-      barPctMaxNorm(home.ppg, away.ppg),
-      home.ppg > away.ppg,
-      away.ppg > home.ppg,
-      (n) => n.toFixed(1),
-      "ppg",
-      season.home.ppg,
-      season.away.ppg,
-      last10.home.ppg,
-      last10.away.ppg
-    ),
-    make(
-      "ortg",
-      "ORTG",
-      home.ortg,
-      away.ortg,
-      barPctMaxNorm(home.ortg, away.ortg),
-      home.ortg > away.ortg,
-      away.ortg > home.ortg,
-      (n) => n.toFixed(1),
-      "ortg",
-      season.home.ortg,
-      season.away.ortg,
-      last10.home.ortg,
-      last10.away.ortg
-    ),
-    make(
-      "papg",
-      "PAPG",
-      home.papg,
-      away.papg,
-      barPctMinPaNorm(home.papg, away.papg),
-      home.papg < away.papg,
-      away.papg < home.papg,
-      (n) => n.toFixed(1),
-      "papg",
-      season.home.papg,
-      season.away.papg,
-      last10.home.papg,
-      last10.away.papg
-    ),
-    make(
-      "drtg",
-      "DRTG",
-      home.drtg,
-      away.drtg,
-      barPctMinPaNorm(home.drtg, away.drtg),
-      home.drtg < away.drtg,
-      away.drtg < home.drtg,
-      (n) => n.toFixed(1),
-      "drtg",
-      season.home.drtg,
-      season.away.drtg,
-      last10.home.drtg,
-      last10.away.drtg
-    ),
-    make(
-      "diff",
-      "DIFF",
-      home.diff,
-      away.diff,
-      barPctDiffNorm(home.diff, away.diff),
-      home.diff > away.diff,
-      away.diff > home.diff,
-      fmtDiff,
-      "diff",
-      season.home.diff,
-      season.away.diff,
-      last10.home.diff,
-      last10.away.diff
-    ),
-    make(
       "netrtg",
       "NETRTG",
       home.netrtg,
       away.netrtg,
-      barPctDiffNorm(home.netrtg, away.netrtg),
       home.netrtg > away.netrtg,
       away.netrtg > home.netrtg,
       fmtDiff,
@@ -549,11 +324,38 @@ function buildCoreRows(
       last10.away.netrtg
     ),
     make(
+      "ortg",
+      "ORTG",
+      home.ortg,
+      away.ortg,
+      home.ortg > away.ortg,
+      away.ortg > home.ortg,
+      (n) => n.toFixed(1),
+      "ortg",
+      season.home.ortg,
+      season.away.ortg,
+      last10.home.ortg,
+      last10.away.ortg
+    ),
+    make(
+      "drtg",
+      "DRTG",
+      home.drtg,
+      away.drtg,
+      home.drtg < away.drtg,
+      away.drtg < home.drtg,
+      (n) => n.toFixed(1),
+      "drtg",
+      season.home.drtg,
+      season.away.drtg,
+      last10.home.drtg,
+      last10.away.drtg
+    ),
+    make(
       "pace",
       "PACE",
       home.pace,
       away.pace,
-      barPctMaxNorm(home.pace, away.pace),
       home.pace > away.pace,
       away.pace > home.pace,
       (n) => n.toFixed(1),
@@ -563,24 +365,36 @@ function buildCoreRows(
       last10.home.pace,
       last10.away.pace
     ),
+    make(
+      "ppg",
+      "PPG",
+      home.ppg,
+      away.ppg,
+      home.ppg > away.ppg,
+      away.ppg > home.ppg,
+      (n) => n.toFixed(1),
+      "ppg",
+      season.home.ppg,
+      season.away.ppg,
+      last10.home.ppg,
+      last10.away.ppg
+    ),
   ];
 }
 
-function buildSplitRows(home: NbaTeamStatSide, away: NbaTeamStatSide): RowSpec[] {
-  const hHome = winPct(home.homeW, home.homeL);
-  const aHome = winPct(away.homeW, away.homeL);
-  const hAway = winPct(home.awayW, home.awayL);
-  const aAway = winPct(away.awayW, away.awayL);
+/** 今試合の条件: ホームの HOME 成績 vs アウェイの ROAD 成績 */
+function buildSiteRow(home: NbaTeamStatSide, away: NbaTeamStatSide): RowSpec[] {
+  const hSite = winPct(home.homeW, home.homeL);
+  const aSite = winPct(away.awayW, away.awayL);
   const pctFmt = (n: number) => `${Math.round(n)}%`;
   return [
     {
-      key: "home",
-      label: "HOME",
-      leftWin: hHome > aHome,
-      rightWin: aHome > hHome,
+      key: "site",
+      label: "H/R",
+      leftWin: hSite > aSite,
+      rightWin: aSite > hSite,
       left: {
-        primary: pctFmt(hHome),
-        barPct: Math.round(Math.min(100, Math.max(0, hHome))),
+        primary: pctFmt(hSite),
         leagueRank: null,
         rankBelow: null,
         recordBelow: `${home.homeW}-${home.homeL}`,
@@ -588,32 +402,7 @@ function buildSplitRows(home: NbaTeamStatSide, away: NbaTeamStatSide): RowSpec[]
         proMetaTone: "flat",
       },
       right: {
-        primary: pctFmt(aHome),
-        barPct: Math.round(Math.min(100, Math.max(0, aHome))),
-        leagueRank: null,
-        rankBelow: null,
-        recordBelow: `${away.homeW}-${away.homeL}`,
-        proMeta: null,
-        proMetaTone: "flat",
-      },
-    },
-    {
-      key: "away",
-      label: "AWAY",
-      leftWin: hAway > aAway,
-      rightWin: aAway > hAway,
-      left: {
-        primary: pctFmt(hAway),
-        barPct: Math.round(Math.min(100, Math.max(0, hAway))),
-        leagueRank: null,
-        rankBelow: null,
-        recordBelow: `${home.awayW}-${home.awayL}`,
-        proMeta: null,
-        proMetaTone: "flat",
-      },
-      right: {
-        primary: pctFmt(aAway),
-        barPct: Math.round(Math.min(100, Math.max(0, aAway))),
+        primary: pctFmt(aSite),
         leagueRank: null,
         rankBelow: null,
         recordBelow: `${away.awayW}-${away.awayL}`,
@@ -643,13 +432,12 @@ export default function NbaTeamStatsPanelNative({
     windowId,
     isPro
   );
-  const splitRows = windowId === "season" ? buildSplitRows(home, away) : [];
+  const splitRows = windowId === "season" ? buildSiteRow(home, away) : [];
   const rows = [...coreRows, ...splitRows];
 
-  const formLeft = home.formResults ?? [];
-  const formRight = away.formResults ?? [];
-  const showForm =
-    windowId === "last10" && (formLeft.length > 0 || formRight.length > 0);
+  const formLeft = data.last10.home.formResults ?? [];
+  const formRight = data.last10.away.formResults ?? [];
+  const showForm = formLeft.length > 0 || formRight.length > 0;
 
   return (
     <View style={styles.shell}>
@@ -689,6 +477,7 @@ export default function NbaTeamStatsPanelNative({
             {teamLabel(home.teamId, home.teamName)}
           </Text>
         )}
+        <View style={styles.labelCol} />
         {onOpenTeamDetail && away.teamId ? (
           <Pressable
             onPress={() => onOpenTeamDetail(away.teamId)}
@@ -707,11 +496,7 @@ export default function NbaTeamStatsPanelNative({
 
       <View style={styles.body}>
         {rows.map((row) => (
-          <MetricRow
-            key={`${windowId}-${row.key}`}
-            row={row}
-            replayKey={`${windowId}-${row.key}`}
-          />
+          <MetricRow key={`${windowId}-${row.key}`} row={row} />
         ))}
         {showForm ? <FormStrip left={formLeft} right={formRight} /> : null}
       </View>
@@ -724,16 +509,14 @@ const OXANIUM = "Oxanium_700Bold";
 const styles = StyleSheet.create({
   shell: {
     gap: 8,
-    borderRadius: 2,
-    backgroundColor: "rgba(6,10,16,0.96)",
     paddingHorizontal: 4,
     paddingVertical: 4,
+    backgroundColor: "#000000",
   },
   body: { gap: 0 },
   teamHeaderRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 8,
+    alignItems: "center",
     paddingHorizontal: 2,
   },
   moreHint: {
@@ -759,10 +542,10 @@ const styles = StyleSheet.create({
   teamHeader: {
     flex: 1,
     fontFamily: MATCH_CARD_DISPLAY_FONT,
-    fontSize: 15,
+    fontSize: 22,
     fontWeight: "400",
     letterSpacing: 1.2,
-    lineHeight: 18,
+    lineHeight: 26,
     color: "#fff",
     textAlign: "center",
     textTransform: "uppercase",
@@ -784,26 +567,26 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 4,
+    justifyContent: "center",
+    paddingHorizontal: 2,
   },
   metricHalfRight: {
     flex: 1,
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
-    gap: 4,
+    justifyContent: "center",
+    paddingHorizontal: 2,
   },
   labelCol: {
-    width: 56,
+    width: 64,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 2,
   },
   metricLabel: {
     fontFamily: OXANIUM,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
     letterSpacing: 1,
     color: "rgba(255,255,255,0.72)",
@@ -812,73 +595,47 @@ const styles = StyleSheet.create({
   },
   sideBlock: {
     minWidth: 36,
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 1,
   },
-  sideBlockEnd: {
-    alignItems: "flex-end",
+  valueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 4,
   },
-  textRight: { textAlign: "right" },
+  textCenter: { textAlign: "center" },
   metricValue: {
     fontFamily: OXANIUM,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
-  valueLeft: { color: BAR_LEFT },
-  valueRight: { color: BAR_RIGHT },
-  metricValueWin: {},
+  metricValueIdle: { color: "#ffffff" },
+  metricValueWin: { color: STAT_WIN },
   metaText: {
     fontFamily: OXANIUM,
-    fontSize: 10,
+    fontSize: 13,
     fontWeight: "700",
   },
   metaUp: { color: "rgba(45,255,110,0.9)" },
   metaDown: { color: "rgba(255,138,180,0.9)" },
   metaFlat: { color: "rgba(255,255,255,0.4)" },
-  rankBelow: {
+  rankBeside: {
     fontFamily: OXANIUM,
-    fontSize: 14,
-    lineHeight: 16,
+    fontSize: 15,
     fontWeight: "800",
-    color: "rgba(255,255,255,0.8)",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
+  rankIdle: { color: "rgba(255,255,255,0.55)" },
   recordBelow: {
     fontFamily: OXANIUM,
-    fontSize: 11,
+    fontSize: 12,
     color: "rgba(255,255,255,0.45)",
     fontVariant: ["tabular-nums"],
-  },
-  cyberBar: {
-    flex: 1,
-    minWidth: 32,
-    maxWidth: 88,
-    height: 3,
-    overflow: "hidden",
-    borderRadius: 1,
-    borderWidth: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  cyberBarLeftTint: { borderColor: "rgba(92,240,181,0.28)" },
-  cyberBarRightTint: { borderColor: "rgba(179,136,255,0.28)" },
-  cyberBarWinLeft: {
-    borderColor: "rgba(92,240,181,0.55)",
-  },
-  cyberBarWinRight: {
-    borderColor: "rgba(179,136,255,0.55)",
-  },
-  cyberBarFill: { height: "100%" },
-  segWrap: {
-    flex: 1,
-    minWidth: 32,
-    maxWidth: 88,
-  },
-  segWrapLeft: { alignItems: "flex-end" },
-  segWrapRight: { alignItems: "flex-start" },
-  segTrackReverse: {
-    width: "100%",
-    transform: [{ scaleX: -1 }],
+    transform: [{ skewX: "-6deg" }],
   },
   formStrip: {
     paddingTop: 6,
@@ -921,7 +678,7 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "12deg" }],
   },
   formLabel: {
-    width: 56,
+    width: 64,
     textAlign: "center",
     fontFamily: OXANIUM,
     fontSize: 10,
@@ -945,7 +702,7 @@ const styles = StyleSheet.create({
   formRecordLeft: { textAlign: "right" },
   formRecordRight: { textAlign: "left" },
   formNewLabel: {
-    width: 56,
+    width: 64,
     textAlign: "center",
     fontFamily: OXANIUM,
     fontSize: 8,

@@ -414,6 +414,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 value={myValue}
                 displayName={user.displayName?.trim() ?? ""}
                 photoURL={user.photoURL || null}
+                uid={myUid}
+                handle={user.handle}
                 totalPosts={
                   typeof myRawRow?.totalPosts === "number" ? myRawRow.totalPosts : undefined
                 }

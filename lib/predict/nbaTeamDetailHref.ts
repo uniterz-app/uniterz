@@ -4,6 +4,20 @@ export type NbaPredictToolsTabId =
   | "stats"
   | "roster";
 
+export function parseNbaPredictToolsTab(
+  value: string | null | undefined
+): NbaPredictToolsTabId | undefined {
+  if (
+    value === "insight" ||
+    value === "injuries" ||
+    value === "stats" ||
+    value === "roster"
+  ) {
+    return value;
+  }
+  return undefined;
+}
+
 export function isSafeFirestoreDocId(
   id: string | null | undefined
 ): id is string {
@@ -33,6 +47,24 @@ export function nbaTeamDetailPreviewHref(
     params.set("predictTools", opts.predictToolsTab);
   }
   return `/mobile/team-detail-preview?${params.toString()}`;
+}
+
+/** STATS ハブと同じ選手詳細（`NbaPlayerDetailPanel`） */
+export function nbaPlayerDetailPreviewHref(
+  playerId: string,
+  opts?: TeamDetailPreviewOpts
+): string {
+  const params = new URLSearchParams({
+    playerId,
+  });
+  if (opts?.fromPredict) {
+    params.set("fromPredict", opts.fromPredict);
+    params.set("returnMode", "overlay");
+  }
+  if (opts?.predictToolsTab) {
+    params.set("predictTools", opts.predictToolsTab);
+  }
+  return `/mobile/player-detail-preview?${params.toString()}`;
 }
 
 /** チーム詳細プレビューから予想入力へ戻る URL */

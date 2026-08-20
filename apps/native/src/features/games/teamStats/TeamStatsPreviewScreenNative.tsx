@@ -35,10 +35,12 @@ export default function TeamStatsPreviewScreenNative({
           onSelect={(hit) => onSelectTeam(hit.id)}
         />
       </View>
-      <NbaLeagueTeamStatsPanelNative
-        language={language}
-        onSelectTeam={onSelectTeam}
-      />
+      <View style={{ flex: 1 }}>
+        <NbaLeagueTeamStatsPanelNative
+          language={language}
+          onSelectTeam={onSelectTeam}
+        />
+      </View>
     </MobilePageShell>
   );
 }

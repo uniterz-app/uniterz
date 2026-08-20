@@ -8,8 +8,22 @@ import {
   NBA_WEST_TEAM_IDS,
   type NbaConferenceId,
 } from "@/lib/nba/nbaConferenceTeams";
+import type { NbaLeagueAdvancedCategory } from "@/lib/predict/nbaLeagueStatBoard";
+import {
+  chunkForChipGrid,
+  NBA_LEAGUE_STAT_CHIP_COLS,
+  NBA_LEAGUE_TEAM_ADVANCED_CATEGORIES,
+} from "@/lib/predict/nbaLeagueStatBoard";
+import {
+  buildLeagueTeamAdvancedFields,
+  formatTeamAdvancedValue,
+  NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS,
+  teamAdvancedMetricsForCategory,
+  type NbaLeagueTeamAdvancedFields,
+  type NbaLeagueTeamAdvancedMetric,
+} from "@/lib/predict/nbaLeagueTeamStatsAdvanced";
 
-export type NbaLeagueTeamStatMetric =
+export type NbaLeagueTeamCoreMetric =
   | "netrtg"
   | "ortg"
   | "drtg"
@@ -23,9 +37,13 @@ export type NbaLeagueTeamStatMetric =
   | "fg3a"
   | "tovPct";
 
+export type NbaLeagueTeamStatMetric =
+  | NbaLeagueTeamCoreMetric
+  | NbaLeagueTeamAdvancedMetric;
+
 export type NbaLeagueTeamStatWindow = "season" | "last10";
 
-export type NbaLeagueTeamStatRow = {
+export type NbaLeagueTeamStatCoreRow = {
   teamId: string;
   teamName: string;
   conference: NbaConferenceId;
@@ -48,6 +66,9 @@ export type NbaLeagueTeamStatRow = {
   /** Turnover % of possessions (0–1) */
   tovPct: number;
 };
+
+export type NbaLeagueTeamStatRow = NbaLeagueTeamStatCoreRow &
+  NbaLeagueTeamAdvancedFields;
 
 export type NbaLeagueTeamStatsBundle = {
   season: NbaLeagueTeamStatRow[];
@@ -79,7 +100,7 @@ export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[]
       label: "Net Rating",
       short: "NET",
       higherIsBetter: true,
-      hintJa: "100 possessions あたりの得失点差。チーム総合の強さの目安。",
+      hintJa: "100possあたりの得失点差。チームの強さの目安。",
       hintEn: "Point diff per 100 possessions. Overall team strength.",
     },
     {
@@ -87,7 +108,7 @@ export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[]
       label: "Off Rating",
       short: "ORTG",
       higherIsBetter: true,
-      hintJa: "100 possessions あたりの得点。攻撃力。",
+      hintJa: "100possあたりの得点。攻撃力。",
       hintEn: "Points scored per 100 possessions. Offense.",
     },
     {
@@ -95,7 +116,7 @@ export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[]
       label: "Def Rating",
       short: "DRTG",
       higherIsBetter: false,
-      hintJa: "100 possessions あたりの失点。低いほど DF がいい。",
+      hintJa: "100possあたりの失点。低いほど DF がいい。",
       hintEn: "Points allowed per 100 possessions. Lower is better defense.",
     },
     {
@@ -103,7 +124,7 @@ export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[]
       label: "Pace",
       short: "PACE",
       higherIsBetter: true,
-      hintJa: "1 試合あたりの possessions 数。高いほどテンポが速い。",
+      hintJa: "1試合あたりの poss 数。高いほどテンポが速い。",
       hintEn: "Possessions per game. Higher means faster pace.",
     },
     {
@@ -159,12 +180,12 @@ export const NBA_LEAGUE_TEAM_STAT_METRICS: readonly NbaLeagueTeamStatMetricDef[]
       label: "TOV%",
       short: "TOV",
       higherIsBetter: false,
-      hintJa: "possession あたりのターンオーバー率。低いほど良い。",
+      hintJa: "possあたりのターンオーバー率。低いほど良い。",
       hintEn: "Turnover rate on possessions. Lower is better.",
     },
   ] as const;
 
-/** 指標チップ 2 行（6 + 6） */
+/** 指標チップ 2 行（6 + 6）— Team Detail など既存画面用 */
 export const NBA_LEAGUE_TEAM_STAT_METRIC_ROWS: readonly (
   readonly NbaLeagueTeamStatMetricDef[]
 )[] = [
@@ -172,12 +193,150 @@ export const NBA_LEAGUE_TEAM_STAT_METRIC_ROWS: readonly (
   NBA_LEAGUE_TEAM_STAT_METRICS.slice(6, 12),
 ];
 
+const CORE_METRIC_BY_ID = new Map(
+  NBA_LEAGUE_TEAM_STAT_METRICS.map((m) => [m.id, m])
+);
+const ADV_METRIC_BY_ID = new Map(
+  NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.map((m) => [m.id, m])
+);
+
+function coreDef(id: NbaLeagueTeamCoreMetric): NbaLeagueTeamStatMetricDef {
+  const found = CORE_METRIC_BY_ID.get(id);
+  if (!found) throw new Error(`unknown core metric ${id}`);
+  return found;
+}
+
+function advAsBoardDef(
+  id: NbaLeagueTeamAdvancedMetric
+): NbaLeagueTeamStatMetricDef {
+  const found = ADV_METRIC_BY_ID.get(id);
+  if (!found) throw new Error(`unknown advanced metric ${id}`);
+  return {
+    id: found.id,
+    short: found.short,
+    label: found.label,
+    higherIsBetter: found.higherIsBetter,
+    hintJa: found.hintJa,
+    hintEn: found.hintEn,
+  };
+}
+
+/** Basic 先頭（勝率 + レーティング） */
+export const NBA_LEAGUE_TEAM_PINNED_METRICS: readonly NbaLeagueTeamStatMetricDef[] =
+  [
+    coreDef("winPct"),
+    coreDef("netrtg"),
+    coreDef("ortg"),
+    coreDef("drtg"),
+    coreDef("pace"),
+    advAsBoardDef("tsPct"),
+  ];
+
+/** Basic タブのチップ（レーティング + ボックス） */
+export const NBA_LEAGUE_TEAM_BASIC_METRICS: readonly NbaLeagueTeamStatMetricDef[] =
+  [
+    ...NBA_LEAGUE_TEAM_PINNED_METRICS,
+    coreDef("ppg"),
+    coreDef("papg"),
+    coreDef("diff"),
+    advAsBoardDef("fgPct"),
+    coreDef("fg3Pct"),
+    coreDef("fg3a"),
+    advAsBoardDef("ftPct"),
+  ];
+
+export const NBA_LEAGUE_TEAM_BASIC_METRIC_ROWS = chunkForChipGrid(
+  NBA_LEAGUE_TEAM_BASIC_METRICS,
+  NBA_LEAGUE_STAT_CHIP_COLS
+);
+
+const TEAM_ADVANCED_CORE_BY_CATEGORY: Record<
+  NbaLeagueAdvancedCategory,
+  readonly NbaLeagueTeamCoreMetric[]
+> = {
+  ratings: [],
+  fourFactors: ["efgPct", "tovPct"],
+  scoring: [],
+  shooting: [],
+  clutch: [],
+  playtype: [],
+  defense: [],
+  tracking: [],
+  hustle: [],
+};
+
+export function teamBoardMetricsForCategory(
+  category: NbaLeagueAdvancedCategory
+): NbaLeagueTeamStatMetricDef[] {
+  const core = TEAM_ADVANCED_CORE_BY_CATEGORY[category].map(coreDef);
+  const extra = teamAdvancedMetricsForCategory(category).map((m) =>
+    advAsBoardDef(m.id)
+  );
+  return [...core, ...extra];
+}
+
+export function teamBoardMetricChipRows(category: NbaLeagueAdvancedCategory) {
+  return chunkForChipGrid(
+    teamBoardMetricsForCategory(category),
+    NBA_LEAGUE_STAT_CHIP_COLS
+  );
+}
+
+export type NbaLeagueTeamRailGroup = {
+  id: string;
+  short: string;
+  metrics: readonly NbaLeagueTeamStatMetricDef[];
+};
+
+/** 左レール。BASIC の下に Advanced カテゴリが親として並ぶ。 */
+export function leagueTeamRailGroups(): NbaLeagueTeamRailGroup[] {
+  return [
+    {
+      id: "basic",
+      short: "BASIC",
+      metrics: NBA_LEAGUE_TEAM_BASIC_METRICS,
+    },
+    ...NBA_LEAGUE_TEAM_ADVANCED_CATEGORIES.map((c) => ({
+      id: c.id,
+      short: c.short,
+      metrics: teamBoardMetricsForCategory(c.id),
+    })),
+  ].filter((g) => g.metrics.length > 0);
+}
+
 export function leagueMetricDef(
   id: NbaLeagueTeamStatMetric
 ): NbaLeagueTeamStatMetricDef {
-  const found = NBA_LEAGUE_TEAM_STAT_METRICS.find((m) => m.id === id);
-  if (!found) throw new Error(`unknown metric ${id}`);
-  return found;
+  const core = CORE_METRIC_BY_ID.get(id as NbaLeagueTeamCoreMetric);
+  if (core) return core;
+  return advAsBoardDef(id as NbaLeagueTeamAdvancedMetric);
+}
+
+export function isLeagueTeamAdvancedMetric(
+  id: NbaLeagueTeamStatMetric
+): id is NbaLeagueTeamAdvancedMetric {
+  return ADV_METRIC_BY_ID.has(id as NbaLeagueTeamAdvancedMetric);
+}
+
+export function attachLeagueTeamAdvanced(
+  row: NbaLeagueTeamStatCoreRow,
+  window: NbaLeagueTeamStatWindow
+): NbaLeagueTeamStatRow {
+  return {
+    ...row,
+    ...buildLeagueTeamAdvancedFields(row, window),
+  };
+}
+
+/** API / Firestore の core 行に Advanced モックを足す。欠けていても落ちないようにする。 */
+export function enrichLeagueTeamStatsBundle(
+  bundle: NbaLeagueTeamStatsBundle
+): NbaLeagueTeamStatsBundle {
+  return {
+    asOfLabel: bundle.asOfLabel,
+    season: bundle.season.map((row) => attachLeagueTeamAdvanced(row, "season")),
+    last10: bundle.last10.map((row) => attachLeagueTeamAdvanced(row, "last10")),
+  };
 }
 
 function hashSeed(s: string): number {
@@ -235,7 +394,7 @@ function buildRow(
   const efgPct = pct3(0.51 + tier * 0.05 + fg3Pct * 0.08 + (rnd() - 0.5) * 0.015);
   const tovPct = pct3(0.145 - tier * 0.02 + (rnd() - 0.5) * 0.012);
 
-  return {
+  const core: NbaLeagueTeamStatCoreRow = {
     teamId,
     teamName: NBA_TEAM_NAME_BY_ID[teamId] ?? teamId,
     conference,
@@ -254,6 +413,7 @@ function buildRow(
     fg3a,
     tovPct,
   };
+  return attachLeagueTeamAdvanced(core, window);
 }
 
 function buildWindow(window: NbaLeagueTeamStatWindow): NbaLeagueTeamStatRow[] {
@@ -269,7 +429,7 @@ function buildWindow(window: NbaLeagueTeamStatWindow): NbaLeagueTeamStatRow[] {
 
 let cached: NbaLeagueTeamStatsBundle | null = null;
 let cacheVer: string | null = null;
-const MOCK_CACHE_KEY = "v3-metrics";
+const MOCK_CACHE_KEY = "v7-team-detail-how";
 
 /** 安定モック（呼び出しごとに同じ値） */
 export function getNbaLeagueTeamStatsMock(): NbaLeagueTeamStatsBundle {
@@ -287,13 +447,18 @@ export function metricValue(
   row: NbaLeagueTeamStatRow,
   metric: NbaLeagueTeamStatMetric
 ): number {
-  return row[metric];
+  const v = row[metric];
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
 export function formatMetricValue(
   metric: NbaLeagueTeamStatMetric,
-  value: number
+  value: number | null | undefined
 ): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  if (isLeagueTeamAdvancedMetric(metric)) {
+    return formatTeamAdvancedValue(metric, value);
+  }
   if (metric === "winPct" || metric === "efgPct" || metric === "fg3Pct") {
     return `${(value * 100).toFixed(1)}%`;
   }
@@ -304,6 +469,14 @@ export function formatMetricValue(
     return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
   }
   return value.toFixed(1);
+}
+
+export function teamGamesPlayed(row: NbaLeagueTeamStatRow): number {
+  return row.wins + row.losses;
+}
+
+export function formatTeamRecord(row: NbaLeagueTeamStatRow): string {
+  return `${row.wins}-${row.losses}`;
 }
 
 /** 表の並び順（指標値の大小） */

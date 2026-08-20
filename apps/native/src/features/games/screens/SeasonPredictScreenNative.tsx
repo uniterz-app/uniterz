@@ -235,7 +235,10 @@ export default function SeasonPredictScreenNative() {
       eyebrow="NBA · SEASON"
       title={title}
       subtitle={subtitle}
-      onBack={() => navigation.navigate("GamesHome", { openMenu: true })}
+      onBack={() => {
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.navigate("GamesHome");
+      }}
     >
       {mode === "standings" ? (
         standingsMode === "loading" ? (

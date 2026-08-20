@@ -364,9 +364,13 @@ export function CyberRankingListRowNative({
             </Text>
             {nameExtra != null
               ? nameExtra
-              : isPro ? (
-                  <ProCyberBadgeNative compact={!bare} emphasized={bare} />
-                ) : null}
+              : (
+                  <>
+                    {isPro ? (
+                      <ProCyberBadgeNative compact={!bare} emphasized={bare} />
+                    ) : null}
+                  </>
+                )}
           </View>
           {hideListMeta ? (
             countryCode ? (

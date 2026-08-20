@@ -10,15 +10,11 @@ import {
   Package,
   HelpCircle,
   LogOut,
-  LayoutDashboard,
-  Newspaper,
-  PlusSquare,
-  Database,
-  CheckCheck,
   FileText,
   Users,
   Mail,
   Award,
+  Lightbulb,
   Sparkles,
   Trash2,
   Hexagon,
@@ -34,12 +30,13 @@ import {
 import { nameOxanium } from "@/lib/fonts";
 import { useRouter, usePathname } from "next/navigation";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
-import { ADMIN_UID } from "@/lib/constants";
+import { isAdminUid } from "@/lib/constants";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
+import { useAdminInboxUnread } from "@/lib/admin/useAdminInboxUnread";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
 import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
@@ -47,9 +44,9 @@ import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuS
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
+  RankingNameBadges,
+} from "@/app/component/common/RankingNameBadges";
+import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import {
   markNavigatedFromSideMenu,
   clearSideMenuOrigin,
@@ -188,7 +185,29 @@ export default function SettingsMenu({
     }, 40);
   };
 
-  const isAdmin = user?.uid === ADMIN_UID;
+  const isAdmin = isAdminUid(user?.uid);
+  const adminInbox = useAdminInboxUnread(isAdmin);
+
+  function CountBadge({
+    count,
+    tone,
+  }: {
+    count: number;
+    tone: "announce" | "admin";
+  }) {
+    if (count <= 0) return null;
+    return (
+      <span
+        className={
+          tone === "announce"
+            ? "rounded-full bg-[#00F5FF] px-2 py-0.5 text-[10px] font-semibold text-[#050508] tabular-nums"
+            : "rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white tabular-nums"
+        }
+      >
+        {count > 99 ? "99+" : count}
+      </span>
+    );
+  }
 
   /** サイドメニューからの遷移（戻るボタン用フラグ） */
   const pushFromMenu = (href: string) => {
@@ -312,13 +331,7 @@ export default function SettingsMenu({
             icon={Megaphone}
             labelStyle={menuLabelFont}
             onClick={() => pushFromMenu(announcementsPath)}
-            trailing={
-              unreadCount > 0 ? (
-                <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white tabular-nums">
-                  {unreadCount}
-                </span>
-              ) : undefined
-            }
+            trailing={<CountBadge count={unreadCount} tone="announce" />}
           >
             <span className={cn(isEn && "uppercase")}>{m.settings.announcements}</span>
           </SideMenuItemButton>
@@ -425,51 +438,58 @@ export default function SettingsMenu({
 
             <div className="flex flex-col gap-2">
               <SideMenuItemButton
-                icon={LayoutDashboard}
+                icon={Lightbulb}
                 labelStyle={menuLabelFont}
-                onClick={() => pushFromMenu("/admin")}
+                onClick={() =>
+                  pushFromMenu(
+                    p(
+                      "/admin/contacts?kind=feature",
+                      "/mobile/admin/inbox?kind=feature"
+                    )
+                  )
+                }
+                trailing={
+                  <CountBadge count={adminInbox.feature} tone="admin" />
+                }
               >
-                <span className={cn(isEn && "uppercase")}>{m.settings.adminDashboard}</span>
+                <span className={cn(isEn && "uppercase")}>
+                  {m.settings.adminFeatureRequests}
+                </span>
               </SideMenuItemButton>
 
               <SideMenuItemButton
-                icon={Award}
+                icon={Mail}
                 labelStyle={menuLabelFont}
-                onClick={() => pushFromMenu("/admin/badges")}
+                onClick={() =>
+                  pushFromMenu(
+                    p(
+                      "/admin/contacts?kind=inbox",
+                      "/mobile/admin/inbox?kind=inbox"
+                    )
+                  )
+                }
+                trailing={<CountBadge count={adminInbox.inbox} tone="admin" />}
               >
-                <span className={cn(isEn && "uppercase")}>{m.settings.grantBadges}</span>
+                <span className={cn(isEn && "uppercase")}>
+                  {m.settings.adminContacts}
+                </span>
               </SideMenuItemButton>
 
               <SideMenuItemButton
-                icon={Newspaper}
+                icon={ShoppingBag}
                 labelStyle={menuLabelFont}
-                onClick={() => pushFromMenu("/admin/announcements")}
+                onClick={() =>
+                  pushFromMenu(
+                    p("/admin/redemptions", "/mobile/admin/redemptions")
+                  )
+                }
+                trailing={
+                  <CountBadge count={adminInbox.redemptions} tone="admin" />
+                }
               >
-                <span className={cn(isEn && "uppercase")}>{m.settings.manageAnnouncements}</span>
-              </SideMenuItemButton>
-
-              <SideMenuItemButton
-                icon={PlusSquare}
-                labelStyle={menuLabelFont}
-                onClick={() => pushFromMenu("/admin/announcements/new")}
-              >
-                <span className={cn(isEn && "uppercase")}>{m.settings.createAnnouncement}</span>
-              </SideMenuItemButton>
-
-              <SideMenuItemButton
-                icon={Database}
-                labelStyle={menuLabelFont}
-                onClick={() => pushFromMenu("/admin/games-import")}
-              >
-                <span className={cn(isEn && "uppercase")}>{m.settings.gameImport}</span>
-              </SideMenuItemButton>
-
-              <SideMenuItemButton
-                icon={CheckCheck}
-                labelStyle={menuLabelFont}
-                onClick={() => pushFromMenu("/admin/plans")}
-              >
-                <span className={cn(isEn && "uppercase")}>{m.settings.planApproval}</span>
+                <span className={cn(isEn && "uppercase")}>
+                  {m.settings.adminRedemptions}
+                </span>
               </SideMenuItemButton>
             </div>
           </>
@@ -545,13 +565,13 @@ export default function SettingsMenu({
               <span className="side-menu-identity__meta">
                 <span className="side-menu-identity__name-row">
                   <span className="side-menu-identity__name">{identityName}</span>
-                  {plan === "pro" ? (
-                    <ProCyberBadge
-                      ariaLabel="PRO"
-                      compact
-                      {...proBadgeStaticMotion}
-                    />
-                  ) : (
+                  <RankingNameBadges
+                    compact
+                    isPro={plan === "pro"}
+                    proLabel="PRO"
+                    {...proBadgeStaticMotion}
+                  />
+                  {plan === "pro" ? null : (
                     <span
                       className={cn(
                         nameOxanium.className,

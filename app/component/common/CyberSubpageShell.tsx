@@ -8,37 +8,10 @@ import { ChevronLeft, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import cn from "clsx";
 import { nameOxanium, jp } from "@/lib/fonts";
+import CyberHelpMark from "@/app/component/common/CyberHelpMark";
 import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import { GAMES_CYBER_EASE } from "@/app/component/games/cyberMotion";
 import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
-
-/** サイバー風のはてな（グロー付き ? のみ） */
-function CyberHelpMark({ active }: { active: boolean }) {
-  return (
-    <span
-      className={cn(
-        "relative flex h-7 w-7 items-center justify-center",
-        active && "scale-105"
-      )}
-      aria-hidden
-    >
-      <span
-        className={cn(
-          nameOxanium.className,
-          "text-[17px] font-black italic leading-none tracking-wide transition",
-          active ? "text-cyan-50" : "text-cyan-200/90"
-        )}
-        style={{
-          textShadow: active
-            ? "0 0 8px rgba(0,245,255,0.95), 0 0 18px rgba(0,245,255,0.55), 0 0 28px rgba(34,211,238,0.35)"
-            : "0 0 6px rgba(0,245,255,0.55), 0 0 14px rgba(0,245,255,0.28)",
-        }}
-      >
-        ?
-      </span>
-    </span>
-  );
-}
 
 /** はてな説明カード本体（オーバーレイ内） */
 function CyberHelpPanel({
@@ -218,6 +191,11 @@ export type CyberSubpageHeaderProps = {
    * モーダル内で SafeArea 済みのときは false。
    */
   hideBrandShelf?: boolean;
+  /**
+   * ページ名は上部ワードマーク（RESULT / RANKING と同じ）に出す。
+   * このバーのタイトルは出さない。
+   */
+  titleInBrandShelf?: boolean;
 };
 
 /**
@@ -235,6 +213,7 @@ export function CyberSubpageHeader({
   hideBack = false,
   className,
   hideBrandShelf = true,
+  titleInBrandShelf = false,
 }: CyberSubpageHeaderProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const reduceMotion = useReducedMotion() === true;
@@ -246,6 +225,33 @@ export function CyberSubpageHeader({
   const titleVariant = titleHasCjk(title) ? "jp-chrome" : "horizon-chrome";
   const hasRightCluster = Boolean(subtitle || headerTrailing);
   const showLeftBack = !hideBack && !edgeBack;
+
+  if (titleInBrandShelf) {
+    return (
+      <>
+        {subtitle ? (
+          <div className="relative z-30 flex justify-end px-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center transition active:scale-95"
+              aria-label="説明"
+              aria-expanded={helpOpen}
+              aria-haspopup="dialog"
+            >
+              <CyberHelpMark active={helpOpen} />
+            </button>
+            <CyberHelpOverlay
+              open={helpOpen}
+              text={subtitle}
+              onClose={() => setHelpOpen(false)}
+              reduceMotion={reduceMotion}
+            />
+          </div>
+        ) : null}
+      </>
+    );
+  }
 
   return (
     <motion.div

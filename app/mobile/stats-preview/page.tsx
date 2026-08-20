@@ -7,7 +7,8 @@ import LeagueStatsHubPanel from "@/app/component/stats/LeagueStatsHubPanel";
 function StatsPreviewInner() {
   const router = useRouter();
   const sp = useSearchParams();
-  const initialTab = sp.get("tab") === "player" ? "player" : "team";
+  const tab = sp.get("tab");
+  const initialTab = tab === "player" ? "player" : "team";
   return (
     <LeagueStatsHubPanel
       initialTab={initialTab}

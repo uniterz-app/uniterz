@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { X, ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { nameOxanium, nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
@@ -16,17 +16,17 @@ import {
   formatMetricValue,
   metricValue,
   NBA_LEAGUE_TEAM_STAT_METRICS,
-  NBA_LEAGUE_TEAM_STAT_METRIC_ROWS,
-  sortLeagueTeamRows,
   defaultLeagueTeamStatSortDir,
+  leagueMetricDef,
+  leagueTeamRailGroups,
+  sortLeagueTeamRows,
+  teamGamesPlayed,
+  formatTeamRecord,
   type NbaLeagueTeamStatSortDir,
   type NbaLeagueTeamStatMetric,
   type NbaLeagueTeamStatRow,
   type NbaLeagueTeamStatWindow,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
-import type { NbaConferenceId } from "@/lib/nba/nbaConferenceTeams";
-
-type ConfFilter = "all" | NbaConferenceId;
 
 type Props = {
   className?: string;
@@ -62,16 +62,14 @@ function rankNumberClass(rank: number): string {
   return "text-red-300/80";
 }
 
-function MetricChip({
+function RailChip({
   active,
   label,
   onClick,
-  compact,
 }: {
   active: boolean;
   label: string;
   onClick: () => void;
-  compact?: boolean;
 }) {
   return (
     <button
@@ -79,15 +77,24 @@ function MetricChip({
       onClick={onClick}
       className={[
         nameOxanium.className,
-        "w-full rounded-[2px] border px-1 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em] transition sm:text-[10px] sm:tracking-[0.12em]",
-        compact ? "py-1" : "py-1.5",
+        "relative w-full overflow-hidden rounded-[2px] border px-0.5 py-2 text-[9px] font-bold uppercase tracking-[0.03em]",
         active
-          ? "border-[#00F5FF] bg-[#00F5FF] text-[#050508]"
-          : "border-[#00F5FF]/30 bg-[rgba(4,20,30,0.72)] text-[#00F5FF] hover:border-[#00F5FF]/50",
+          ? "border-[#00F5FF] text-[#050508]"
+          : "border-[#00F5FF]/26 bg-transparent text-[#00F5FF]",
       ].join(" ")}
-      style={metricCellSkew}
+      style={
+        active
+          ? {
+              backgroundColor: "#00F5FF",
+              backgroundImage:
+                "repeating-linear-gradient(to bottom, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 3px)",
+            }
+          : undefined
+      }
     >
-      {label}
+      <span className="relative z-[1] inline-block" style={metricCellSkew}>
+        {label}
+      </span>
     </button>
   );
 }
@@ -111,7 +118,8 @@ function CompareBar({
   const rightWins = higherIsBetter ? rv > lv : rv < lv;
   const leftColor = getTeamPrimaryColor("nba", left.teamId) ?? "#e8edf5";
   const rightColor = getTeamPrimaryColor("nba", right.teamId) ?? "#e8edf5";
-  const meta = NBA_LEAGUE_TEAM_STAT_METRICS.find((m) => m.id === metric);
+  const meta = NBA_LEAGUE_TEAM_STAT_METRICS.find((m) => m.id === metric) ??
+    leagueMetricDef(metric);
 
   return (
     <div className="rounded-[2px] border border-[rgba(0,245,255,0.28)] bg-[rgba(4,16,24,0.97)] px-3 py-3 shadow-[0_-8px_32px_rgba(0,0,0,0.45),0_0_24px_rgba(0,245,255,0.12)] backdrop-blur-md">
@@ -256,21 +264,20 @@ export default function NbaLeagueTeamStatsPanel({
   const isJa = language === "ja";
   const reduceMotion = useReducedMotion();
   const { bundle, loading } = useLeagueTeamStatsBundle();
+  const groups = useMemo(() => leagueTeamRailGroups(), []);
   const [windowId, setWindowId] = useState<NbaLeagueTeamStatWindow>("season");
-  const [conf, setConf] = useState<ConfFilter>("all");
   const [metric, setMetric] = useState<NbaLeagueTeamStatMetric>("winPct");
   const [sortDir, setSortDir] = useState<NbaLeagueTeamStatSortDir>(() =>
-    defaultLeagueTeamStatSortDir(
-      NBA_LEAGUE_TEAM_STAT_METRICS.find((m) => m.id === "winPct")!
-        .higherIsBetter
-    )
+    defaultLeagueTeamStatSortDir(leagueMetricDef("winPct").higherIsBetter)
   );
   const [picked, setPicked] = useState<string[]>([]);
 
-  const metricMeta = NBA_LEAGUE_TEAM_STAT_METRICS.find((m) => m.id === metric)!;
+  const metricMeta = leagueMetricDef(metric);
+  const activeGroupId =
+    groups.find((g) => g.metrics.some((m) => m.id === metric))?.id ?? "basic";
 
-  function selectMetric(next: NbaLeagueTeamStatMetric) {
-    const meta = NBA_LEAGUE_TEAM_STAT_METRICS.find((m) => m.id === next)!;
+  function applyMetric(next: NbaLeagueTeamStatMetric) {
+    const meta = leagueMetricDef(next);
     setMetric(next);
     setSortDir(defaultLeagueTeamStatSortDir(meta.higherIsBetter));
   }
@@ -281,10 +288,8 @@ export default function NbaLeagueTeamStatsPanel({
 
   const rows = useMemo(() => {
     const base = windowId === "season" ? bundle.season : bundle.last10;
-    const filtered =
-      conf === "all" ? base : base.filter((r) => r.conference === conf);
-    return sortLeagueTeamRows(filtered, metric, sortDir);
-  }, [bundle, windowId, conf, metric, sortDir]);
+    return sortLeagueTeamRows(base, metric, sortDir);
+  }, [bundle, windowId, metric, sortDir]);
 
   const pickedRows = picked
     .map((id) => rows.find((r) => r.teamId === id) ?? bundle.season.find((r) => r.teamId === id))
@@ -301,12 +306,12 @@ export default function NbaLeagueTeamStatsPanel({
   return (
     <div
       className={[
-        "relative pb-36",
+        "relative flex h-[calc(100svh-13rem)] min-h-[28rem] flex-col text-white",
         loading ? "pointer-events-none opacity-60" : "",
         className,
       ].join(" ")}
     >
-      <header className="mb-3 space-y-1.5">
+      <header className="mb-2 shrink-0 space-y-1.5 px-0.5">
         <p
           className={[
             nameOxanium.className,
@@ -315,18 +320,6 @@ export default function NbaLeagueTeamStatsPanel({
         >
           {bundle.asOfLabel}
         </p>
-        <p className="text-[11px] leading-snug text-white/52">
-          {onSelectTeam
-            ? isJa
-              ? "リーグ全体を指標で並べ替え。チームをタップして詳細へ。"
-              : "Sort the league by metric. Tap a team for detail."
-            : isJa
-              ? "リーグ全体を指標で並べ替え。行をタップして最大 2 チームを比較。"
-              : "Sort the league by metric. Tap rows to compare up to 2 teams."}
-        </p>
-      </header>
-
-      <div className="mb-3">
         <CyberSlantedTabBar fill>
           <CyberSlantedTab
             label="SEASON"
@@ -343,231 +336,219 @@ export default function NbaLeagueTeamStatsPanel({
             fontWeight={700}
           />
         </CyberSlantedTabBar>
-      </div>
+      </header>
 
-      <div className="mb-3">
-        <CyberSlantedTabBar fill>
-          {(
-            [
-              ["all", "ALL"],
-              ["east", "EAST"],
-              ["west", "WEST"],
-            ] as const
-          ).map(([id, label]) => (
-            <CyberSlantedTab
-              key={id}
-              label={label}
-              active={conf === id}
-              onClick={() => setConf(id)}
-              compact
-              fontWeight={700}
-            />
-          ))}
-        </CyberSlantedTabBar>
-      </div>
-
-      <div className="mb-2 space-y-1.5">
-        {NBA_LEAGUE_TEAM_STAT_METRIC_ROWS.map((row, rowIdx) => (
-          <div key={rowIdx} className="grid grid-cols-6 gap-1.5">
-            {row.map((m) => (
-              <MetricChip
-                key={m.id}
-                active={metric === m.id}
-                label={m.short}
-                onClick={() => selectMetric(m.id)}
-                compact
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-
-      <p
-        className={[
-          nameOxanium.className,
-          "mb-2 min-h-[2.5rem] text-[11px] leading-snug text-[#00F5FF]/70",
-        ].join(" ")}
-      >
-        {isJa ? metricMeta.hintJa : metricMeta.hintEn}
-      </p>
-
-      <div className="mb-2 flex items-center justify-between px-0.5">
-        <button
-          type="button"
-          onClick={toggleSortDir}
-          className={[
-            nameOxanium.className,
-            "inline-flex items-center gap-1 rounded-[2px] border border-transparent py-0.5 pr-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-white/40 transition hover:border-[#00F5FF]/25 hover:text-[#00F5FF]/75",
-          ].join(" ")}
-          aria-label={
-            isJa
-              ? sortDir === "desc"
-                ? "降順。タップで昇順に切り替え"
-                : "昇順。タップで降順に切り替え"
-              : sortDir === "desc"
-                ? "Descending. Tap for ascending"
-                : "Ascending. Tap for descending"
-          }
-        >
-          <span>
-            Sort · {metricMeta.label}
-            {isJa
-              ? sortDir === "desc"
-                ? " · 降順"
-                : " · 昇順"
-              : sortDir === "desc"
-                ? " · high→low"
-                : " · low→high"}
-          </span>
-          {sortDir === "desc" ? (
-            <ArrowDown className="h-3 w-3 shrink-0 text-[#00F5FF]/70" aria-hidden />
-          ) : (
-            <ArrowUp className="h-3 w-3 shrink-0 text-[#00F5FF]/70" aria-hidden />
-          )}
-        </button>
-        {onSelectTeam ? null : (
-          <span className="text-[10px] text-[#00F5FF]/45">
-            {picked.length === 0
-              ? "比較: 0/2"
-              : picked.length === 1
-                ? "比較: もう1チーム選択"
-                : "比較: 2/2"}
-          </span>
-        )}
-      </div>
-
-      <div className="overflow-hidden rounded-[2px] border border-[rgba(0,245,255,0.16)] bg-[rgba(4,16,24,0.35)]">
-        <div
-          className={[
-            nameOxanium.className,
-            "grid grid-cols-[28px_minmax(0,1.2fr)_64px_52px_52px] gap-1 border-b border-[rgba(0,245,255,0.12)] bg-[rgba(0,245,255,0.06)] px-2 py-2 text-[8px] font-bold uppercase tracking-[0.12em] text-white/42",
-          ].join(" ")}
-        >
-          <span>#</span>
-          <span>Team</span>
-          <button
-            type="button"
-            onClick={toggleSortDir}
-            className={[
-              nameOxanium.className,
-              "inline-flex items-center justify-end gap-0.5 text-right text-[#00F5FF] transition hover:text-[#00F5FF]",
-            ].join(" ")}
-            aria-label={
-              isJa
-                ? `${metricMeta.short}で並べ替え方向を切り替え`
-                : `Toggle sort on ${metricMeta.short}`
-            }
-          >
-            {metricMeta.short}
-            {sortDir === "desc" ? (
-              <ArrowDown className="h-2.5 w-2.5 shrink-0 opacity-80" aria-hidden />
-            ) : (
-              <ArrowUp className="h-2.5 w-2.5 shrink-0 opacity-80" aria-hidden />
-            )}
-          </button>
-          <span className="text-right">W-L</span>
-          <span className="text-right">NET</span>
-        </div>
-
-        <ul className="divide-y divide-white/[0.06]">
-          {rows.map((row, index) => {
-            const rank = index + 1;
-            const selected = picked.includes(row.teamId);
-            const primary = metricValue(row, metric);
-            const teamPrimary =
-              getTeamPrimaryColor("nba", row.teamId) ?? "#5cf0b5";
+      <div className="flex min-h-0 flex-1">
+        <aside className="w-[25%] shrink-0 overflow-y-auto border-r border-white/42 bg-[rgba(4,14,22,0.55)] px-1.5 pb-24 pt-1">
+          {groups.map((group, index) => {
+            const groupActive = group.id === activeGroupId;
             return (
-              <motion.li
-                key={row.teamId}
-                layout={!reduceMotion}
-                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: reduceMotion ? 0 : 0.18,
-                  delay: reduceMotion ? 0 : Math.min(index, 12) * 0.012,
-                }}
-                className="relative overflow-hidden"
-              >
+              <div key={group.id} className="mb-2.5 space-y-1">
+                {index === 1 ? (
+                  <p
+                    className={`${nameOxanium.className} mb-1 mt-0.5 text-[8px] font-extrabold uppercase tracking-[0.12em] text-white/32`}
+                  >
+                    ADVANCED
+                  </p>
+                ) : null}
                 <button
                   type="button"
-                  onClick={() =>
-                    onSelectTeam
-                      ? onSelectTeam(row.teamId)
-                      : togglePick(row.teamId)
-                  }
-                  className={[
-                    "relative grid w-full grid-cols-[28px_minmax(0,1.2fr)_64px_52px_52px] items-center gap-1 px-2 py-2.5 text-left transition",
-                    !onSelectTeam && selected
-                      ? "bg-[rgba(0,56,72,0.55)]"
-                      : "bg-transparent hover:bg-white/[0.03] active:bg-white/[0.05]",
-                  ].join(" ")}
-                  style={{
-                    backgroundImage: `linear-gradient(90deg, ${hexToRgba(teamPrimary, 0.18)} 0%, ${hexToRgba(teamPrimary, 0.1)} 50%, transparent 100%)`,
+                  onClick={() => {
+                    const first = group.metrics[0];
+                    if (first) applyMetric(first.id);
                   }}
+                  className={[
+                    nameOxanium.className,
+                    "px-0.5 text-left text-[8px] font-extrabold uppercase tracking-[0.1em]",
+                    groupActive ? "text-[#00F5FF]" : "text-[#00F5FF]/42",
+                  ].join(" ")}
                 >
-                  <span
-                    className={[
-                      resultStatsMetricNumClass,
-                      "w-7 text-[15px] font-black tabular-nums leading-none",
-                      rankNumberClass(rank),
-                    ].join(" ")}
-                    style={rankCellSkew}
-                  >
-                    {rank}
-                  </span>
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={[
-                        nameBebas.className,
-                        "truncate text-[18px] leading-tight text-white",
-                      ].join(" ")}
-                      style={teamNameTy}
-                    >
-                      {nick(row)}
-                    </span>
-                    {!onSelectTeam && selected ? (
-                      <span
-                        className={[
-                          nameOxanium.className,
-                          "shrink-0 text-[8px] font-bold tracking-[0.12em] text-[#00F5FF]",
-                        ].join(" ")}
-                      >
-                        {picked.indexOf(row.teamId) + 1}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span
-                    className={[
-                      resultStatsMetricNumClass,
-                      "text-right text-[14px] font-black tabular-nums text-[#00F5FF]",
-                    ].join(" ")}
-                    style={metricCellSkew}
-                  >
-                    {formatMetricValue(metric, primary)}
-                  </span>
-                  <span
-                    className={[
-                      resultStatsMetricNumClass,
-                      "text-right text-[11px] font-semibold tabular-nums text-white/55",
-                    ].join(" ")}
-                    style={metricCellSkew}
-                  >
-                    {row.wins}-{row.losses}
-                  </span>
-                  <span
-                    className={[
-                      resultStatsMetricNumClass,
-                      "text-right text-[11px] font-semibold tabular-nums text-white/55",
-                    ].join(" ")}
-                    style={metricCellSkew}
-                  >
-                    {formatMetricValue("netrtg", row.netrtg)}
-                  </span>
+                  {group.short}
                 </button>
-              </motion.li>
+                {group.metrics.map((m) => (
+                  <RailChip
+                    key={m.id}
+                    active={metric === m.id}
+                    label={m.short}
+                    onClick={() => applyMetric(m.id)}
+                  />
+                ))}
+              </div>
             );
           })}
-        </ul>
+        </aside>
+
+        <div className="min-w-0 flex-1 overflow-y-auto pb-24 pl-2.5 pr-3">
+          <p
+            className={`${nameOxanium.className} mb-1.5 line-clamp-2 text-[12px] leading-[17px] text-[#00F5FF]/70`}
+          >
+            {isJa ? metricMeta.hintJa : metricMeta.hintEn}
+          </p>
+          {onSelectTeam ? null : (
+            <p className="mb-1.5 text-[10px] text-[#00F5FF]/45">
+              {picked.length === 0
+                ? "比較: 0/2"
+                : picked.length === 1
+                  ? "比較: もう1チーム選択"
+                  : "比較: 2/2"}
+            </p>
+          )}
+
+          <div className="overflow-hidden rounded-[2px] border border-[rgba(0,245,255,0.16)] bg-[rgba(4,16,24,0.35)]">
+            <div
+              className={[
+                nameOxanium.className,
+                "flex items-center border-b border-[rgba(0,245,255,0.12)] bg-[rgba(0,245,255,0.06)] px-2 py-2 text-[8px] font-bold uppercase tracking-[0.12em] text-white/42",
+              ].join(" ")}
+            >
+              <span className="w-[26px]">#</span>
+              <button
+                type="button"
+                onClick={toggleSortDir}
+                className="flex min-w-0 flex-1 items-center gap-1 text-left"
+                aria-label={
+                  isJa
+                    ? sortDir === "desc"
+                      ? "降順。タップで昇順"
+                      : "昇順。タップで降順"
+                    : sortDir === "desc"
+                      ? "Descending. Tap for ascending"
+                      : "Ascending. Tap for descending"
+                }
+              >
+                <span>Team</span>
+                <span>
+                  {isJa
+                    ? sortDir === "desc"
+                      ? "降順"
+                      : "昇順"
+                    : sortDir === "desc"
+                      ? "hi→lo"
+                      : "lo→hi"}
+                </span>
+                {sortDir === "desc" ? (
+                  <ArrowDown className="h-2.5 w-2.5 shrink-0 text-[#00F5FF]" />
+                ) : (
+                  <ArrowUp className="h-2.5 w-2.5 shrink-0 text-[#00F5FF]" />
+                )}
+              </button>
+              {metric === "winPct" ? (
+                <>
+                  <span className="w-[44px] text-right">W-L</span>
+                  <span className="w-14 text-right text-[#00F5FF]">W%</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-[28px] text-right">GP</span>
+                  <span className="w-14 text-right text-[#00F5FF]">
+                    {metricMeta.short}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <ul>
+              {rows.map((row, index) => {
+                const rank = index + 1;
+                const selected = picked.includes(row.teamId);
+                const primary = metricValue(row, metric);
+                const teamPrimary =
+                  getTeamPrimaryColor("nba", row.teamId) ?? "#5cf0b5";
+                return (
+                  <motion.li
+                    key={row.teamId}
+                    layout={!reduceMotion}
+                    initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: reduceMotion ? 0 : 0.18,
+                      delay: reduceMotion ? 0 : Math.min(index, 12) * 0.012,
+                    }}
+                    className="relative overflow-hidden border-t border-[rgba(0,245,255,0.08)]"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSelectTeam
+                          ? onSelectTeam(row.teamId)
+                          : togglePick(row.teamId)
+                      }
+                      className={[
+                        "group relative flex w-full cursor-pointer items-center px-2 py-2.5 text-left transition-[transform,filter] duration-100 ease-out active:scale-[0.985] motion-reduce:active:scale-100",
+                        !onSelectTeam && selected
+                          ? "bg-[rgba(0,56,72,0.55)]"
+                          : "bg-transparent hover:bg-white/[0.03]",
+                      ].join(" ")}
+                      style={{
+                        backgroundImage: `linear-gradient(90deg, ${hexToRgba(teamPrimary, 0.18)} 0%, ${hexToRgba(teamPrimary, 0.1)} 50%, transparent 100%)`,
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 bg-transparent transition-colors duration-75 group-active:bg-[rgba(0,245,255,0.16)]"
+                      />
+                      <span
+                        className={[
+                          resultStatsMetricNumClass,
+                          "w-[26px] text-[15px] font-black tabular-nums leading-none",
+                          rankNumberClass(rank),
+                        ].join(" ")}
+                        style={rankCellSkew}
+                      >
+                        {rank}
+                      </span>
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span
+                          className={[
+                            nameBebas.className,
+                            "truncate text-[17px] leading-tight text-white",
+                          ].join(" ")}
+                          style={teamNameTy}
+                        >
+                          {nick(row)}
+                        </span>
+                        {!onSelectTeam && selected ? (
+                          <span
+                            className={[
+                              nameOxanium.className,
+                              "shrink-0 text-[8px] font-bold tracking-[0.12em] text-[#00F5FF]",
+                            ].join(" ")}
+                          >
+                            {picked.indexOf(row.teamId) + 1}
+                          </span>
+                        ) : null}
+                      </span>
+                      {metric === "winPct" ? (
+                        <span
+                          className={`${nameOxanium.className} w-[44px] text-right text-[12px] font-bold tabular-nums text-white/55`}
+                          style={metricCellSkew}
+                        >
+                          {formatTeamRecord(row)}
+                        </span>
+                      ) : (
+                        <span
+                          className={`${nameOxanium.className} w-[28px] text-right text-[12px] font-bold tabular-nums text-white/55`}
+                          style={metricCellSkew}
+                        >
+                          {teamGamesPlayed(row)}
+                        </span>
+                      )}
+                      <span
+                        className={[
+                          resultStatsMetricNumClass,
+                          "w-14 text-right text-[14px] font-black tabular-nums text-[#00F5FF]",
+                        ].join(" ")}
+                        style={metricCellSkew}
+                      >
+                        {formatMetricValue(metric, primary)}
+                      </span>
+                    </button>
+                  </motion.li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
       </div>
 
       <AnimatePresence>

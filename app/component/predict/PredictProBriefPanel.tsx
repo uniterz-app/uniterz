@@ -9,12 +9,14 @@ import type {
 import {
   briefEdgeDetail,
   briefLineText,
+  splitBriefLineLead,
 } from "@/lib/predict/predictProBrief";
+import { sanitizeProBriefForDisplay } from "@/lib/predict/validateProBrief";
 import {
   proInsightGateCopy,
   type ProInsightGateBulletIcon,
 } from "@/lib/predict/proInsightGateCopy";
-import type { Language } from "@/lib/i18n/language";
+import { UNITERZ_PRO_BADGE_GOLD } from "@/lib/units/uniterzProBadge";
 import { nameBebas, nameOxanium } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
@@ -25,6 +27,7 @@ import {
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 import {
   CalendarRange,
   MessageSquareText,
@@ -123,7 +126,7 @@ function SectionLabel({
     <p
       className={[
         nameOxanium.className,
-        "text-center text-[10px] font-extrabold uppercase tracking-[0.14em]",
+        "relative inline-block bg-black px-2 whitespace-nowrap text-center text-[10px] font-extrabold uppercase tracking-[0.18em]",
         color,
       ].join(" ")}
     >
@@ -163,7 +166,7 @@ function EdgeBlock({
             </p>
             {detail ? (
               <p
-                className={`mt-0.5 text-[12px] leading-snug text-white/50 ${textAlign}`}
+                className={`mt-0.5 text-[12px] leading-snug text-white/72 ${textAlign}`}
               >
                 {detail}
               </p>
@@ -188,21 +191,44 @@ function LineBlock({
 }) {
   const lang = language === "ja" ? "ja" : "en";
   const textAlign = align === "right" ? "text-right" : "text-left";
-  const color =
-    tone === "schedule" ? "text-amber-50/85" : "text-cyan-50/80";
+  const bodyColor =
+    tone === "schedule" ? "text-amber-50/90" : "text-cyan-50/88";
   if (items.length === 0) {
     return <p className={`text-[13px] text-white/35 ${textAlign}`}>—</p>;
   }
   return (
-    <ul className="space-y-1.5">
-      {items.map((item, i) => (
-        <li
-          key={`${tone}-${i}`}
-          className={`text-[13px] font-medium leading-snug ${color} ${textAlign}`}
-        >
-          {briefLineText(item, lang)}
-        </li>
-      ))}
+    <ul className="space-y-2">
+      {items.map((item, i) => {
+        const { label, body } = splitBriefLineLead(briefLineText(item, lang));
+        return (
+          <li key={`${tone}-${i}`} className="min-w-0">
+            {label ? (
+              <>
+                <p
+                  className={[
+                    nameOxanium.className,
+                    textAlign,
+                    "text-[13px] font-extrabold uppercase leading-snug tracking-[0.03em] text-white/92",
+                  ].join(" ")}
+                >
+                  {label}
+                </p>
+                <p
+                  className={`mt-0.5 text-[12px] leading-snug ${bodyColor} ${textAlign}`}
+                >
+                  {body}
+                </p>
+              </>
+            ) : (
+              <p
+                className={`text-[13px] font-medium leading-snug ${bodyColor} ${textAlign}`}
+              >
+                {body}
+              </p>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -219,12 +245,14 @@ function CompareSection({
   right: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)] items-center gap-x-1.5 border-b border-white/8 py-2.5 last:border-b-0">
-      <div className="min-w-0">{left}</div>
-      <div className="flex shrink-0 items-center justify-center px-0.5">
+    <div className="border-b border-white/8 py-2.5 last:border-b-0">
+      <div className="relative z-1 mb-2 flex justify-center">
         <SectionLabel tone={tone}>{label}</SectionLabel>
       </div>
-      <div className="min-w-0">{right}</div>
+      <div className="grid grid-cols-2 items-start gap-x-4">
+        <div className="min-w-0">{left}</div>
+        <div className="min-w-0">{right}</div>
+      </div>
     </div>
   );
 }
@@ -259,12 +287,18 @@ export default function PredictProBriefPanel({
   const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
   const homeColor = teamAccent(homeTeamId);
   const awayColor = teamAccent(awayTeamId);
-  const home = brief?.home ?? EMPTY_CARD;
-  const away = brief?.away ?? EMPTY_CARD;
-  const usePlaceholder = brief == null;
+  const safeBrief = useMemo(() => sanitizeProBriefForDisplay(brief), [brief]);
+  const home = safeBrief?.home ?? EMPTY_CARD;
+  const away = safeBrief?.away ?? EMPTY_CARD;
+  const usePlaceholder = safeBrief == null;
 
   const body = (
-    <>
+    <div className="relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-1/2 z-0 w-px -translate-x-1/2 bg-[rgba(0,245,255,0.38)]"
+      />
+      <div className="relative z-1">
       <CompareSection
         label="MATCHUP"
         tone="matchup"
@@ -272,14 +306,14 @@ export default function PredictProBriefPanel({
           usePlaceholder ? (
             <PlaceholderBody />
           ) : (
-            <EdgeBlock edges={home.edges} language={language} align="right" />
+            <EdgeBlock edges={home.edges} language={language} align="left" />
           )
         }
         right={
           usePlaceholder ? (
             <PlaceholderBody />
           ) : (
-            <EdgeBlock edges={away.edges} language={language} align="left" />
+            <EdgeBlock edges={away.edges} language={language} align="right" />
           )
         }
       />
@@ -293,7 +327,7 @@ export default function PredictProBriefPanel({
             <LineBlock
               items={home.schedule}
               language={language}
-              align="right"
+              align="left"
               tone="schedule"
             />
           )
@@ -305,7 +339,7 @@ export default function PredictProBriefPanel({
             <LineBlock
               items={away.schedule}
               language={language}
-              align="left"
+              align="right"
               tone="schedule"
             />
           )
@@ -321,7 +355,7 @@ export default function PredictProBriefPanel({
             <LineBlock
               items={home.context}
               language={language}
-              align="right"
+              align="left"
               tone="context"
             />
           )
@@ -333,24 +367,28 @@ export default function PredictProBriefPanel({
             <LineBlock
               items={away.context}
               language={language}
-              align="left"
+              align="right"
               tone="context"
             />
           )
         }
       />
-    </>
+      </div>
+    </div>
   );
 
   return (
     <section
       className={[
-        "relative overflow-hidden border border-cyan-400/22 bg-[rgba(5,10,18,0.88)] px-2.5 py-2.5",
+        "relative overflow-hidden border bg-black px-2.5 py-2.5",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ boxShadow: "inset 0 1px 0 rgba(34,211,238,0.12)" }}
+      style={{
+        borderColor: UNITERZ_PRO_BADGE_GOLD.mid,
+        boxShadow: `inset 0 1px 0 ${UNITERZ_PRO_BADGE_GOLD.deep}55`,
+      }}
     >
       <div className="relative mb-2.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-white/12 pb-3">
         <div className="min-w-0">

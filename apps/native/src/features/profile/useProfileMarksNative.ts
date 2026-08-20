@@ -19,10 +19,14 @@ import {
 import {
   clearMarkedByNative,
   countMarkedByNative,
+  hydrateMarksFromUserDoc,
   listMarksNative,
   persistMarksNative,
   setMarkedByNative,
 } from "./marksFirestoreNative";
+import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
+import { prefetchMarksWeeklyBoard } from "../../../../../lib/profile/fetchMarksWeeklyBoard";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
 const EMPTY: UserMark[] = [];
 
@@ -83,12 +87,23 @@ export function useProfileMarksNative(
       setLoading(false);
       return;
     }
+    const peek = peekProfileUserDocNative(owner);
+    if (peek) {
+      hydrateMarksFromUserDoc(owner, peek);
+      setLoading(false);
+      return;
+    }
     void refresh();
   }, [owner, refresh]);
 
   useEffect(() => {
+    if (!owner || !snap.hydrated || snap.owner !== owner) return;
     void refreshMarkedBy();
-  }, [refreshMarkedBy]);
+    prefetchMarksWeeklyBoard(
+      marks.map((m) => m.targetUid),
+      getUniterzApiBaseUrl() || undefined
+    );
+  }, [marks, owner, refreshMarkedBy, snap.hydrated, snap.owner]);
 
   const markedUids = useMemo(
     () => new Set(marks.map((m) => m.targetUid)),

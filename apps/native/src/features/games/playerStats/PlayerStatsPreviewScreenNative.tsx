@@ -35,10 +35,12 @@ export default function PlayerStatsPreviewScreenNative({
           onSelect={(hit) => onSelectPlayer?.(hit.id)}
         />
       </View>
-      <NbaLeaguePlayerStatLeadersPanelNative
-        language={language}
-        onSelectPlayer={onSelectPlayer}
-      />
+      <View style={{ flex: 1 }}>
+        <NbaLeaguePlayerStatLeadersPanelNative
+          language={language}
+          onSelectPlayer={onSelectPlayer}
+        />
+      </View>
     </MobilePageShell>
   );
 }

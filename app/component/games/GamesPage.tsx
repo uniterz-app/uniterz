@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import GamesSeasonPredictHeaderButtons from "./GamesSeasonPredictHeaderButtons";
-import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
+import GamesRightEdgeTabs from "@/app/component/games/GamesRightEdgeTabs";
 import {
   gamesHeaderFilterWrapClass,
   gamesHeaderMobileShellClass,
@@ -1540,13 +1540,16 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       </div>
       </TutorialWelcomeWorldCamera>
 
-      <ProfileMenuEdgeHandle
-        onOpen={() =>
+      <GamesRightEdgeTabs
+        onOpenStanding={() =>
+          router.push(isMobile ? "/mobile/standings" : "/dev/standings-preview")
+        }
+        onOpenStats={() =>
           router.push(isMobile ? "/mobile/stats-preview" : "/dev/stats-preview")
         }
-        ariaLabel={m.games.statsSection}
-        label="STATS"
-        tutorialTargetId="games-stats-edge"
+        standingAriaLabel="STANDING"
+        statsAriaLabel={m.games.statsSection}
+        statsTutorialTargetId="games-stats-edge"
         hidden={tutorialPhase === "welcome"}
         fadeIn
       />

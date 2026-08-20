@@ -4,28 +4,14 @@ import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MobilePageShell from "@/app/component/common/MobilePageShell";
 import NbaTeamDetailPanel from "@/app/component/teamDetail/NbaTeamDetailPanel";
-import type { NbaPredictToolsTabId } from "@/lib/predict/nbaTeamDetailHref";
 import {
   isSafeFirestoreDocId,
+  parseNbaPredictToolsTab,
 } from "@/lib/predict/nbaTeamDetailHref";
 import {
   consumePredictTeamDetailReturn,
   peekPredictTeamDetailReturn,
 } from "@/lib/predict/predictTeamDetailReturn";
-
-function parsePredictToolsTab(
-  value: string | null | undefined
-): NbaPredictToolsTabId | undefined {
-  if (
-    value === "insight" ||
-    value === "injuries" ||
-    value === "stats" ||
-    value === "roster"
-  ) {
-    return value;
-  }
-  return undefined;
-}
 
 function shouldReturnToPredictOverlay(
   returnModeParam: string | null,
@@ -56,7 +42,7 @@ function TeamDetailPreviewShell() {
       ? fromPredict
       : stashed?.gameId;
     const tab =
-      parsePredictToolsTab(predictTools) ??
+      parseNbaPredictToolsTab(predictTools) ??
       stashed?.predictToolsTab ??
       "stats";
     const returnToOverlay = shouldReturnToPredictOverlay(

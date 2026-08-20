@@ -5,6 +5,7 @@ import { auth } from "../../lib/firebase";
 import { parseMemberSinceMs } from "../../../../../lib/profile/parseMemberSinceMs";
 import {
   parseUserProfileFields,
+  parseUserProfileViewCount,
   parseUserUnitBalance,
 } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
@@ -23,6 +24,7 @@ export type OwnProfileSeedNative = {
   planProBgVariant: ProfilePlanProBgVariant;
   memberSinceMs: number | null;
   unitBalance: number;
+  profileViewCount: number | null;
   data: Record<string, unknown>;
 };
 
@@ -49,6 +51,7 @@ export function seedOwnProfileFromUserDocNative(
     planProBgVariant: parseUserPlanProBgVariant(data.planProBgVariant),
     memberSinceMs: parseMemberSinceMs(data),
     unitBalance: parseUserUnitBalance(data),
+    profileViewCount: parseUserProfileViewCount(data),
     data,
   };
 }

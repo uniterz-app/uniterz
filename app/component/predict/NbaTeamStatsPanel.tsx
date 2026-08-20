@@ -135,7 +135,7 @@ function FormResultsStrip({
 
   return (
     <div className="border-b border-white/8 py-1.5 last:border-b-0">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-0.5 gap-y-0.5 md:gap-x-1.5">
+      <div className="grid grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)] items-center gap-y-0.5">
         {/* HOME: セグメント同様・中央（右）→外側（左）＝古い→新しい */}
         <div className="flex min-w-0 flex-row-reverse gap-px">
           {left.map((r, i) => (
@@ -150,7 +150,7 @@ function FormResultsStrip({
         <div
           className={[
             nameOxanium.className,
-            "w-14 shrink-0 px-0 text-center text-[8px] font-bold uppercase tracking-[0.1em] text-white/70 md:w-16 md:text-[10px] md:tracking-[0.12em]",
+            "w-16 shrink-0 px-0 text-center text-[8px] font-bold uppercase tracking-[0.1em] text-white/70 md:text-[10px] md:tracking-[0.12em]",
           ].join(" ")}
         >
           L10
@@ -178,7 +178,7 @@ function FormResultsStrip({
         <p
           className={[
             nameOxanium.className,
-            "w-14 shrink-0 px-0 text-center text-[7px] font-extrabold uppercase tracking-[0.04em] text-white/40 md:w-16 md:text-[8px] md:tracking-[0.06em]",
+            "w-16 shrink-0 px-0 text-center text-[7px] font-extrabold uppercase tracking-[0.04em] text-white/40 md:text-[8px] md:tracking-[0.06em]",
           ].join(" ")}
           title="Oldest near center → newest outward"
         >
@@ -225,7 +225,8 @@ function sideProExtras(
 }
 
 /**
- * NBA 予想ツール — Team Stats（SEASON / LAST10 + Pro 差分）
+ * NBA 予想ツール — Team Stats（対戦比較）
+ * NET / ORTG / DRTG / PACE / PPG。SEASON は今試合の HOME vs ROAD。LAST10 は W/L。
  */
 export default function NbaTeamStatsPanel({
   data,
@@ -262,19 +263,15 @@ export default function NbaTeamStatsPanel({
   const l10Rh = last10Home.ranks;
   const l10Ra = last10Away.ranks;
 
-  const [ppgL, ppgR] = barPctMaxNorm(home.ppg, away.ppg);
-  const [papgL, papgR] = barPctMinPaNorm(home.papg, away.papg);
-  const [diffL, diffR] = barPctDiffNorm(home.diff, away.diff);
+  const [netL, netR] = barPctDiffNorm(home.netrtg, away.netrtg);
   const [ortgL, ortgR] = barPctMaxNorm(home.ortg, away.ortg);
   const [drtgL, drtgR] = barPctMinPaNorm(home.drtg, away.drtg);
-  const [netL, netR] = barPctDiffNorm(home.netrtg, away.netrtg);
   const [paceL, paceR] = barPctMaxNorm(home.pace, away.pace);
+  const [ppgL, ppgR] = barPctMaxNorm(home.ppg, away.ppg);
 
   const showSplit = windowId === "season";
-  const homeHomePct = winPct(home.homeW, home.homeL);
-  const awayHomePct = winPct(away.homeW, away.homeL);
-  const homeAwayPct = winPct(home.awayW, home.awayL);
-  const awayAwayPct = winPct(away.awayW, away.awayL);
+  const homeSitePct = winPct(home.homeW, home.homeL);
+  const awaySitePct = winPct(away.awayW, away.awayL);
 
   type RowSide = {
     primary: string;
@@ -377,20 +374,20 @@ export default function NbaTeamStatsPanel({
 
   const coreRows = [
     metricRow(
-      "ppg",
-      "PPG",
-      home.ppg,
-      away.ppg,
-      ppgL,
-      ppgR,
-      home.ppg > away.ppg,
-      away.ppg > home.ppg,
-      (n) => n.toFixed(1),
-      seasonHome.ppg,
-      seasonAway.ppg,
-      last10Home.ppg,
-      last10Away.ppg,
-      "ppg"
+      "netrtg",
+      "NETRTG",
+      home.netrtg,
+      away.netrtg,
+      netL,
+      netR,
+      home.netrtg > away.netrtg,
+      away.netrtg > home.netrtg,
+      fmtDiff,
+      seasonHome.netrtg,
+      seasonAway.netrtg,
+      last10Home.netrtg,
+      last10Away.netrtg,
+      "netrtg"
     ),
     metricRow(
       "ortg",
@@ -409,22 +406,6 @@ export default function NbaTeamStatsPanel({
       "ortg"
     ),
     metricRow(
-      "papg",
-      "PAPG",
-      home.papg,
-      away.papg,
-      papgL,
-      papgR,
-      home.papg < away.papg,
-      away.papg < home.papg,
-      (n) => n.toFixed(1),
-      seasonHome.papg,
-      seasonAway.papg,
-      last10Home.papg,
-      last10Away.papg,
-      "papg"
-    ),
-    metricRow(
       "drtg",
       "DRTG",
       home.drtg,
@@ -439,38 +420,6 @@ export default function NbaTeamStatsPanel({
       last10Home.drtg,
       last10Away.drtg,
       "drtg"
-    ),
-    metricRow(
-      "diff",
-      "DIFF",
-      home.diff,
-      away.diff,
-      diffL,
-      diffR,
-      home.diff > away.diff,
-      away.diff > home.diff,
-      fmtDiff,
-      seasonHome.diff,
-      seasonAway.diff,
-      last10Home.diff,
-      last10Away.diff,
-      "diff"
-    ),
-    metricRow(
-      "netrtg",
-      "NETRTG",
-      home.netrtg,
-      away.netrtg,
-      netL,
-      netR,
-      home.netrtg > away.netrtg,
-      away.netrtg > home.netrtg,
-      fmtDiff,
-      seasonHome.netrtg,
-      seasonAway.netrtg,
-      last10Home.netrtg,
-      last10Away.netrtg,
-      "netrtg"
     ),
     metricRow(
       "pace",
@@ -488,91 +437,80 @@ export default function NbaTeamStatsPanel({
       last10Away.pace,
       "pace"
     ),
+    metricRow(
+      "ppg",
+      "PPG",
+      home.ppg,
+      away.ppg,
+      ppgL,
+      ppgR,
+      home.ppg > away.ppg,
+      away.ppg > home.ppg,
+      (n) => n.toFixed(1),
+      seasonHome.ppg,
+      seasonAway.ppg,
+      last10Home.ppg,
+      last10Away.ppg,
+      "ppg"
+    ),
   ];
 
+  /** 今試合の条件: ホームの HOME 成績 vs アウェイの ROAD 成績 */
   const splitRows = showSplit
     ? [
         {
-          key: "home",
-          label: "HOME",
+          key: "site",
+          label: "H/R",
           left: {
-            primary: `${Math.round(homeHomePct)}%`,
+            primary: `${Math.round(homeSitePct)}%`,
             rank: null,
             rankBelow: null,
-            barPct: Math.round(Math.min(100, Math.max(0, homeHomePct))),
+            barPct: Math.round(Math.min(100, Math.max(0, homeSitePct))),
             leagueRank: null,
             recordBelow: `${home.homeW}-${home.homeL}`,
             proMeta: null,
             proMetaTone: "flat" as const,
           },
           right: {
-            primary: `${Math.round(awayHomePct)}%`,
+            primary: `${Math.round(awaySitePct)}%`,
             rank: null,
             rankBelow: null,
-            barPct: Math.round(Math.min(100, Math.max(0, awayHomePct))),
-            leagueRank: null,
-            recordBelow: `${away.homeW}-${away.homeL}`,
-            proMeta: null,
-            proMetaTone: "flat" as const,
-          },
-          leftWin: homeHomePct > awayHomePct,
-          rightWin: awayHomePct > homeHomePct,
-        },
-        {
-          key: "away",
-          label: "AWAY",
-          left: {
-            primary: `${Math.round(homeAwayPct)}%`,
-            rank: null,
-            rankBelow: null,
-            barPct: Math.round(Math.min(100, Math.max(0, homeAwayPct))),
-            leagueRank: null,
-            recordBelow: `${home.awayW}-${home.awayL}`,
-            proMeta: null,
-            proMetaTone: "flat" as const,
-          },
-          right: {
-            primary: `${Math.round(awayAwayPct)}%`,
-            rank: null,
-            rankBelow: null,
-            barPct: Math.round(Math.min(100, Math.max(0, awayAwayPct))),
+            barPct: Math.round(Math.min(100, Math.max(0, awaySitePct))),
             leagueRank: null,
             recordBelow: `${away.awayW}-${away.awayL}`,
             proMeta: null,
             proMetaTone: "flat" as const,
           },
-          leftWin: homeAwayPct > awayAwayPct,
-          rightWin: awayAwayPct > homeAwayPct,
+          leftWin: homeSitePct > awaySitePct,
+          rightWin: awaySitePct > homeSitePct,
         },
       ]
     : [];
 
-  const homeFormW = home.formW ?? 0;
-  const homeFormL = home.formL ?? 0;
-  const awayFormW = away.formW ?? 0;
-  const awayFormL = away.formL ?? 0;
   const formLeft =
-    home.formResults ??
-    (homeFormW + homeFormL > 0
-      ? Array.from({ length: homeFormW + homeFormL }, (_, i) =>
-          i < homeFormL ? ("L" as const) : ("W" as const)
+    last10Home.formResults ??
+    (last10Home.formW != null || last10Home.formL != null
+      ? Array.from(
+          { length: (last10Home.formW ?? 0) + (last10Home.formL ?? 0) },
+          (_, i) => (i < (last10Home.formL ?? 0) ? ("L" as const) : ("W" as const))
         )
       : []);
   const formRight =
-    away.formResults ??
-    (awayFormW + awayFormL > 0
-      ? Array.from({ length: awayFormW + awayFormL }, (_, i) =>
-          i < awayFormL ? ("L" as const) : ("W" as const)
+    last10Away.formResults ??
+    (last10Away.formW != null || last10Away.formL != null
+      ? Array.from(
+          { length: (last10Away.formW ?? 0) + (last10Away.formL ?? 0) },
+          (_, i) => (i < (last10Away.formL ?? 0) ? ("L" as const) : ("W" as const))
         )
       : []);
-  const showFormStrip = windowId === "last10" && (formLeft.length > 0 || formRight.length > 0);
+  const showFormStrip = formLeft.length > 0 || formRight.length > 0;
 
   const rows = [...coreRows, ...splitRows];
 
   return (
     <div
       className={[
-        "relative z-[1] rounded-[2px] bg-[rgba(6,10,16,0.96)] px-1 py-1",
+        "relative z-[1] bg-black px-1 py-1",
         className,
       ]
         .filter(Boolean)
@@ -608,14 +546,14 @@ export default function NbaTeamStatsPanel({
         {t(language).predict.teamStatsMoreHint}
       </p>
 
-      <header className="mb-1.5 grid grid-cols-2 gap-2 px-0.5">
+      <header className="mb-1.5 grid grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)] items-center px-0.5">
         {home.teamId ? (
           <Link
             href={teamDetailHref(home.teamId)}
             onClick={stashReturnBeforeTeamNav}
             className={[
               nameBebas.className,
-              "truncate text-center text-[15px] font-bold uppercase leading-tight text-cyan-200",
+              "truncate text-center text-[22px] font-bold uppercase leading-tight text-cyan-200",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -625,20 +563,21 @@ export default function NbaTeamStatsPanel({
           <p
             className={[
               nameBebas.className,
-              "truncate text-center text-[15px] font-bold uppercase leading-tight text-white",
+              "truncate text-center text-[22px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
             {teamLabel(home.teamId, home.teamName)}
           </p>
         )}
+        <span aria-hidden className="w-16 shrink-0" />
         {away.teamId ? (
           <Link
             href={teamDetailHref(away.teamId)}
             onClick={stashReturnBeforeTeamNav}
             className={[
               nameBebas.className,
-              "truncate text-center text-[15px] font-bold uppercase leading-tight text-violet-200",
+              "truncate text-center text-[22px] font-bold uppercase leading-tight text-violet-200",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -648,7 +587,7 @@ export default function NbaTeamStatsPanel({
           <p
             className={[
               nameBebas.className,
-              "truncate text-center text-[15px] font-bold uppercase leading-tight text-white",
+              "truncate text-center text-[22px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >

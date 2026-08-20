@@ -21,9 +21,31 @@ export type NbaPlayerSeasonMetricId =
   | "tov"
   | "min"
   | "fg_pct"
+  | "fga"
   | "fg3_pct"
+  | "fg3m"
+  | "fg3a"
   | "ft_pct"
   | "plus_minus";
+
+/** 詳細のシーズン平均グリッドに出す順（リーグ BASIC の試投を含む） */
+export const NBA_PLAYER_DETAIL_SEASON_SHOWN: readonly NbaPlayerSeasonMetricId[] =
+  [
+    "pts",
+    "reb",
+    "ast",
+    "stl",
+    "blk",
+    "tov",
+    "min",
+    "plus_minus",
+    "fg_pct",
+    "fga",
+    "fg3_pct",
+    "fg3m",
+    "fg3a",
+    "ft_pct",
+  ];
 
 export type NbaPlayerSeasonMetric = {
   id: NbaPlayerSeasonMetricId;
@@ -194,6 +216,9 @@ export type NbaPlayerDetailPreview = {
     fg3Pct: number;
     ftPct: number;
     plusMinus: number;
+    fga: number;
+    fg3m: number;
+    fg3a: number;
   };
   /** PTS / REB / AST ハイライト用（リーグ順位つき） */
   headlineMetrics: NbaPlayerSeasonMetric[];
@@ -284,15 +309,18 @@ const METRIC_DEFS: Array<{
   { id: "blk", short: "BLK", higherIsBetter: true, kind: "perGame" },
   { id: "tov", short: "TOV", higherIsBetter: false, kind: "perGame" },
   { id: "min", short: "MIN", higherIsBetter: true, kind: "minutes" },
-  { id: "fg_pct", short: "FG%", higherIsBetter: true, kind: "pct" },
-  { id: "fg3_pct", short: "3P%", higherIsBetter: true, kind: "pct" },
-  { id: "ft_pct", short: "FT%", higherIsBetter: true, kind: "pct" },
   {
     id: "plus_minus",
     short: "+/-",
     higherIsBetter: true,
     kind: "plusMinus",
   },
+  { id: "fg_pct", short: "FG%", higherIsBetter: true, kind: "pct" },
+  { id: "fga", short: "FGA", higherIsBetter: true, kind: "perGame" },
+  { id: "fg3_pct", short: "3P%", higherIsBetter: true, kind: "pct" },
+  { id: "fg3m", short: "3PM", higherIsBetter: true, kind: "perGame" },
+  { id: "fg3a", short: "3PA", higherIsBetter: true, kind: "perGame" },
+  { id: "ft_pct", short: "FT%", higherIsBetter: true, kind: "pct" },
 ];
 
 type SeedProfile = {
@@ -351,6 +379,9 @@ const LUKA: SeedProfile = {
     fg3Pct: 0.348,
     ftPct: 0.782,
     plusMinus: 4.1,
+    fga: 22.4,
+    fg3m: 3.4,
+    fg3a: 9.8,
   },
   ranks: {
     pts: 4,
@@ -361,7 +392,10 @@ const LUKA: SeedProfile = {
     tov: 8,
     min: 3,
     fg_pct: 72,
+    fga: 4,
     fg3_pct: 95,
+    fg3m: 18,
+    fg3a: 12,
     ft_pct: 110,
     plus_minus: 35,
   },
@@ -493,6 +527,9 @@ const CURRY: SeedProfile = {
     fg3Pct: 0.411,
     ftPct: 0.923,
     plusMinus: 5.2,
+    fga: 19.2,
+    fg3m: 4.6,
+    fg3a: 11.2,
   },
   ranks: {
     pts: 8,
@@ -503,7 +540,10 @@ const CURRY: SeedProfile = {
     tov: 40,
     min: 45,
     fg_pct: 88,
+    fga: 12,
     fg3_pct: 12,
+    fg3m: 2,
+    fg3a: 3,
     ft_pct: 3,
     plus_minus: 22,
   },
@@ -595,6 +635,9 @@ const JOKIC: SeedProfile = {
     fg3Pct: 0.418,
     ftPct: 0.817,
     plusMinus: 9.4,
+    fga: 18.1,
+    fg3m: 1.8,
+    fg3a: 4.3,
   },
   ranks: {
     pts: 3,
@@ -605,7 +648,10 @@ const JOKIC: SeedProfile = {
     tov: 18,
     min: 8,
     fg_pct: 6,
+    fga: 16,
     fg3_pct: 28,
+    fg3m: 84,
+    fg3a: 90,
     ft_pct: 95,
     plus_minus: 4,
   },
@@ -1067,8 +1113,14 @@ function seasonValue(
       return season.min;
     case "fg_pct":
       return season.fgPct;
+    case "fga":
+      return season.fga;
     case "fg3_pct":
       return season.fg3Pct;
+    case "fg3m":
+      return season.fg3m;
+    case "fg3a":
+      return season.fg3a;
     case "ft_pct":
       return season.ftPct;
     case "plus_minus":
@@ -1119,6 +1171,17 @@ function ageInSeason(birthDate: string, seasonStart: number): number {
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
+}
+
+function deriveShotVolume(
+  pts: number,
+  fg3Pct: number,
+  rnd: () => number
+): { fga: number; fg3m: number; fg3a: number } {
+  const fga = round1(Math.max(3.5, pts * 0.7 + rnd() * 3.5));
+  const fg3a = round1(Math.max(0.3, fga * (0.22 + rnd() * 0.38)));
+  const fg3m = round1(fg3a * Math.max(0.2, fg3Pct));
+  return { fga, fg3m, fg3a };
 }
 
 function round3(n: number): number {
@@ -1350,6 +1413,7 @@ function seedFromRosterPlayer(
     fg3Pct: player.fg3Pct ?? 0.35,
     ftPct: player.ftPct ?? 0.75,
     plusMinus: Math.round(((rnd() - 0.45) * 10) * 10) / 10,
+    ...deriveShotVolume(player.ppg, player.fg3Pct ?? 0.35, rnd),
   };
   return {
     playerId,
@@ -1436,19 +1500,22 @@ function resolveSeed(playerId?: string): SeedProfile {
     const lastNames = ["Williams", "Thompson", "Henderson", "Holmgren", "Banchero"];
     const first = firstNames[Math.floor(rnd() * firstNames.length)]!;
     const last = lastNames[Math.floor(rnd() * lastNames.length)]!;
+    const pts = Math.round((12 + rnd() * 18) * 10) / 10;
+    const fg3Pct = 0.3 + rnd() * 0.15;
     const season = {
       gamesPlayed: Math.round(40 + rnd() * 30),
       min: Math.round((22 + rnd() * 16) * 10) / 10,
-      pts: Math.round((12 + rnd() * 18) * 10) / 10,
+      pts,
       reb: Math.round((3 + rnd() * 9) * 10) / 10,
       ast: Math.round((2 + rnd() * 8) * 10) / 10,
       stl: Math.round((0.4 + rnd() * 1.6) * 10) / 10,
       blk: Math.round((0.2 + rnd() * 1.8) * 10) / 10,
       tov: Math.round((1 + rnd() * 2.5) * 10) / 10,
       fgPct: 0.42 + rnd() * 0.14,
-      fg3Pct: 0.3 + rnd() * 0.15,
+      fg3Pct,
       ftPct: 0.72 + rnd() * 0.22,
       plusMinus: Math.round(((rnd() - 0.45) * 10) * 10) / 10,
+      ...deriveShotVolume(pts, fg3Pct, rnd),
     };
     const salary = Math.round(8_000_000 + rnd() * 35_000_000);
     return {

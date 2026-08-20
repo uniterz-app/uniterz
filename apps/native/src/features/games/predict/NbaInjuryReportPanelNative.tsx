@@ -1,9 +1,10 @@
 /** Web `NbaInjuryReportPanel` 相当（HOME/AWAY 2カラム・ステータスアイコン + EXP） */
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import {
   injuryDetailLabel,
   injuryStatusLabel,
+  injuryStatusShortLabel,
   injuryStatusTone,
   playerCardName,
   sortInjuryEntries,
@@ -20,6 +21,7 @@ import { MATCH_CARD_DISPLAY_FONT } from "../matchCardTypography";
 type Props = {
   report: NbaInjuryReport;
   language: GamesLanguage;
+  onPlayerPress?: (playerId: string) => void;
 };
 
 const TONE_COLORS: Record<
@@ -95,43 +97,45 @@ function StatusIcon({ tone, color }: { tone: InjuryStatusTone; color: string }) 
 function InjuryCard({
   row,
   language,
+  onPress,
 }: {
   row: NbaInjuryEntry;
   language: GamesLanguage;
+  onPress?: (playerId: string) => void;
 }) {
   const tone = injuryStatusTone(row.status);
   const colors = TONE_COLORS[tone] ?? TONE_COLORS.neutral;
   const statusText = injuryStatusLabel(row.status);
+  const statusShort = injuryStatusShortLabel(row.status);
   const detail = injuryDetailLabel(row, language === "ja" ? "ja" : "en");
   const expected = (row.returnDate ?? "—").toUpperCase();
-  const position = row.player.position?.trim();
 
-  return (
+  const body = (
     <View style={[styles.card, { borderColor: colors.border }]}>
       <View style={styles.cardBody}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.playerName} numberOfLines={1}>
+          <Text style={styles.playerName} numberOfLines={2}>
             {playerCardName(row.player)}
-            {position ? <Text style={styles.playerPos}> · {position}</Text> : null}
           </Text>
           {detail ? (
-            <Text style={styles.detail} numberOfLines={1}>
+            <Text style={styles.detail} numberOfLines={2}>
               {detail}
             </Text>
           ) : null}
           <Text style={[styles.exp, { color: colors.accent }]} numberOfLines={1}>
-            EXP: {expected}
+            EXP {expected}
           </Text>
         </View>
         <View style={styles.statusCol}>
           <View style={styles.statusDivider} />
-          <View style={styles.statusInner}>
+          <View
+            style={styles.statusInner}
+            accessibilityLabel={statusText}
+            accessibilityRole="text"
+          >
             <StatusIcon tone={tone} color={colors.accent} />
-            <Text
-              style={[styles.statusText, { color: colors.accent }]}
-              numberOfLines={2}
-            >
-              {statusText}
+            <Text style={[styles.statusText, { color: colors.accent }]}>
+              {statusShort}
             </Text>
           </View>
         </View>
@@ -143,6 +147,26 @@ function InjuryCard({
       />
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={() => onPress(String(row.player.id))}
+        accessibilityRole="button"
+        accessibilityLabel={playerCardName(row.player)}
+        android_ripple={
+          Platform.OS === "android"
+            ? { color: "rgba(255,255,255,0.14)" }
+            : undefined
+        }
+        style={({ pressed }) => [pressed ? styles.cardPressed : null]}
+      >
+        {body}
+      </Pressable>
+    );
+  }
+
+  return body;
 }
 
 function columnTeamLabel(team: NbaInjuryTeamReport): string {
@@ -154,9 +178,11 @@ function columnTeamLabel(team: NbaInjuryTeamReport): string {
 function TeamColumn({
   team,
   language,
+  onPlayerPress,
 }: {
   team: NbaInjuryTeamReport;
   language: GamesLanguage;
+  onPlayerPress?: (playerId: string) => void;
 }) {
   const rows = sortInjuryEntries(team.entries);
   return (
@@ -168,18 +194,35 @@ function TeamColumn({
         <Text style={styles.empty}>{language === "ja" ? "怪我人なし" : "No injuries"}</Text>
       ) : (
         rows.map((row) => (
-          <InjuryCard key={`${row.player.id}-${row.status}-${row.returnDate ?? ""}`} row={row} language={language} />
+          <InjuryCard
+            key={`${row.player.id}-${row.status}-${row.returnDate ?? ""}`}
+            row={row}
+            language={language}
+            onPress={onPlayerPress}
+          />
         ))
       )}
     </View>
   );
 }
 
-export default function NbaInjuryReportPanelNative({ report, language }: Props) {
+export default function NbaInjuryReportPanelNative({
+  report,
+  language,
+  onPlayerPress,
+}: Props) {
   return (
     <View style={styles.grid}>
-      <TeamColumn team={report.home} language={language} />
-      <TeamColumn team={report.away} language={language} />
+      <TeamColumn
+        team={report.home}
+        language={language}
+        onPlayerPress={onPlayerPress}
+      />
+      <TeamColumn
+        team={report.away}
+        language={language}
+        onPlayerPress={onPlayerPress}
+      />
     </View>
   );
 }
@@ -216,6 +259,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
+  cardPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.97 }],
+  },
   cardBody: {
     flexDirection: "row",
     alignItems: "stretch",
@@ -239,29 +286,33 @@ const styles = StyleSheet.create({
     fontFamily: OXANIUM,
     fontSize: 13,
     fontWeight: "800",
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
     color: "#fff",
     textTransform: "uppercase",
+    lineHeight: 16,
   },
-  playerPos: { fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.35)" },
-  detail: { marginTop: 3, fontSize: 11, lineHeight: 14, color: "rgba(255,255,255,0.5)" },
+  detail: {
+    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 15,
+    color: "rgba(255,255,255,0.55)",
+  },
   exp: {
-    marginTop: 3,
+    marginTop: 4,
     fontFamily: OXANIUM,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
   },
   statusCol: { flexDirection: "row", alignItems: "stretch", gap: 4 },
   statusDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.18)", marginVertical: 2 },
-  statusInner: { width: 54, alignItems: "center", justifyContent: "center", gap: 3 },
+  statusInner: { width: 44, alignItems: "center", justifyContent: "center", gap: 4 },
   statusText: {
-    maxWidth: "100%",
     fontFamily: OXANIUM,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 0.2,
+    letterSpacing: 0.6,
     textAlign: "center",
     textTransform: "uppercase",
   },

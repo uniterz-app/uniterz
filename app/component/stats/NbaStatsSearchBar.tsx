@@ -7,6 +7,8 @@ import {
   type NbaStatsSearchHit,
   type NbaStatsSearchKind,
 } from "@/lib/nba/nbaStatsSearch";
+import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
+import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
 
 type Props = {
   kind: NbaStatsSearchKind;
@@ -21,9 +23,15 @@ export default function NbaStatsSearchBar({
 }: Props) {
   const isJa = language === "ja";
   const [query, setQuery] = useState("");
+  const { bundle: teamBundle } = useLeagueTeamStatsBundle();
+  const { bundle: playerBundle } = usePlayerStatLeadersBundle();
   const hits = useMemo(
-    () => searchNbaStatsIndex(query, kind, 8),
-    [query, kind]
+    () =>
+      searchNbaStatsIndex(query, kind, 8, {
+        team: teamBundle,
+        player: playerBundle,
+      }),
+    [query, kind, teamBundle, playerBundle]
   );
   const placeholder =
     kind === "team"

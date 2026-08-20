@@ -1,6 +1,10 @@
 /** Web `/api/profile/views` 相当 */
 import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import {
+  releaseProfileViewRecordSlot,
+  takeProfileViewRecordSlot,
+} from "../../../../../lib/profile/profileViewRecordMemory";
 
 function requireApiBase(): string {
   const base = getUniterzApiBaseUrl();
@@ -30,13 +34,22 @@ async function authHeadersRequired(): Promise<Record<string, string>> {
   };
 }
 
-export async function recordProfileViewNative(targetUid: string): Promise<void> {
-  const res = await fetch(`${requireApiBase()}/api/profile/views`, {
-    method: "POST",
-    headers: await authHeadersRequired(),
-    body: JSON.stringify({ targetUid }),
-  });
-  if (!res.ok) throw new Error("profile_view_record_failed");
+export async function recordProfileViewNative(targetUid: string): Promise<boolean> {
+  const viewerUid = auth.currentUser?.uid ?? "";
+  if (!takeProfileViewRecordSlot(viewerUid, targetUid)) return false;
+  try {
+    const res = await fetch(`${requireApiBase()}/api/profile/views`, {
+      method: "POST",
+      headers: await authHeadersRequired(),
+      body: JSON.stringify({ targetUid }),
+    });
+    if (!res.ok) throw new Error("profile_view_record_failed");
+    const data = (await res.json()) as { counted?: unknown };
+    return data.counted === true;
+  } catch (err) {
+    releaseProfileViewRecordSlot(viewerUid, targetUid);
+    throw err;
+  }
 }
 
 /** 任意ユーザーの累計閲覧数（公開） */

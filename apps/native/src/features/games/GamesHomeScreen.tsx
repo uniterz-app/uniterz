@@ -191,7 +191,7 @@ import { resolveMarketBiasFallback } from "../../../../../lib/predict/gameMarket
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
-import ProfileMenuEdgeHandleNative from "../profile/ProfileMenuEdgeHandleNative";
+import GamesRightEdgeTabsNative from "./GamesRightEdgeTabsNative";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import GamesHeaderFilterButtonNative from "./GamesHeaderFilterButtonNative";
 import GamesSeasonPredictHeaderButtonsNative from "./GamesSeasonPredictHeaderButtonsNative";
@@ -2510,6 +2510,20 @@ export default function GamesHomeScreen({
             predictToolsTab: "stats",
           });
         }}
+        onOpenPlayerDetail={(playerId, toolsTab) => {
+          reopenPredictAfterTeamDetailRef.current = true;
+          pendingPredictNbaToolsTabRef.current = toolsTab ?? "roster";
+          pendingPredictGameRef.current = selectedGame;
+          setIsPredictModalOpen(false);
+          setExpandScoreFormWhenEditing(false);
+          setPredictSpectatorStartedNoPost(false);
+          setSelectedGame(null);
+          navigation.navigate("PlayerDetailPreview", {
+            playerId,
+            returnToPredictOverlay: true,
+            predictToolsTab: toolsTab ?? "roster",
+          });
+        }}
         spectatorStartedNoPost={predictSpectatorStartedNoPost}
         predictionEditLockedAfterKickoff={
           selectedGame != null && isGameStarted(selectedGame)
@@ -2663,10 +2677,10 @@ export default function GamesHomeScreen({
         onApply={setGamesFilter}
         league={selectedLeague}
       />
-      <ProfileMenuEdgeHandleNative
-        onOpen={() => navigation.navigate("LeagueStats", { tab: "team" })}
-        label="STATS"
-        tutorialTargetId="games-stats-edge"
+      <GamesRightEdgeTabsNative
+        onOpenStanding={() => navigation.navigate("Standings")}
+        onOpenStats={() => navigation.navigate("LeagueStats", { tab: "team" })}
+        statsTutorialTargetId="games-stats-edge"
         hidden={tutorialPhase === "welcome"}
         fadeIn
       />

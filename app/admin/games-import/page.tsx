@@ -5,15 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { TEAM_IDS } from "@/lib/team-ids";
 import { League, normalizeLeague } from "@/lib/leagues";
+import { ADMIN_UIDS, isAdminUid } from "@/lib/constants";
 import {
   Timestamp,
   doc,
   writeBatch,
 } from "firebase/firestore";
-
-/** 管理者 UID（.env になければデフォルトを使用） */
-const ADMIN_UID =
-  process.env.NEXT_PUBLIC_ADMIN_UID || "S6r5KyS9XcXds3Pm7koLzzELrvs2";
 
 /* =========================
    Types
@@ -306,7 +303,7 @@ export default function GamesImportPage() {
     return () => unsub();
   }, []);
 
-  const authorized = uid === ADMIN_UID;
+  const authorized = isAdminUid(uid);
 
   const parse = () => {
     try {
@@ -413,7 +410,8 @@ export default function GamesImportPage() {
           現在のUID: <code className="text-lime-300">{uid ?? "(未ログイン)"}</code>
         </div>
         <div>
-          許可UID: <code className="text-lime-300">{ADMIN_UID}</code>
+          許可UID:{" "}
+          <code className="text-lime-300">{ADMIN_UIDS.join(" / ")}</code>
         </div>
         {authorized ? (
           <div className="text-lime-400 font-bold mt-1">✅ 管理者として書き込み可能</div>

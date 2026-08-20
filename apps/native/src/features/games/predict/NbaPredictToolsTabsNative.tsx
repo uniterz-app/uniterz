@@ -19,6 +19,7 @@ import type { NbaInjuryReport } from "../../../../../../lib/predict/nbaInjuryRep
 import type { NbaTeamStatsBundle } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import { teamStatsForMatchup } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "../../../../../../lib/predict/nbaRoster";
+import { rosterForMatchup } from "../../../../../../lib/predict/nbaRosterPreviewMocks";
 import { injuryStatusByPlayerId } from "../../../../../../lib/predict/nbaInjuryReport";
 import { injuryReportForMatchup } from "../../../../../../lib/predict/nbaInjuryReportPreviewMocks";
 import type { GamesLanguage } from "../gamesI18n";
@@ -40,6 +41,10 @@ type Props = {
   teamStats?: NbaTeamStatsBundle | null;
   roster?: NbaRosterReport | null;
   onOpenTeamDetail?: (teamId: string) => void;
+  onOpenPlayerDetail?: (
+    playerId: string,
+    toolsTab?: "injuries" | "roster"
+  ) => void;
 };
 
 function PendingPanel({ text }: { text: string }) {
@@ -67,6 +72,7 @@ export default function NbaPredictToolsTabsNative({
   teamStats = null,
   roster = null,
   onOpenTeamDetail,
+  onOpenPlayerDetail,
 }: Props) {
   const t = getGamesTexts(language);
   const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
@@ -78,6 +84,7 @@ export default function NbaPredictToolsTabsNative({
     injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
   const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
   const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
+  const resolvedRoster = roster ?? rosterForMatchup(homeTeamId, awayTeamId);
   const injuryById = resolvedInjury
     ? injuryStatusByPlayerId(resolvedInjury)
     : {};
@@ -158,6 +165,11 @@ export default function NbaPredictToolsTabsNative({
               <NbaInjuryReportPanelNative
                 report={resolvedInjury}
                 language={language}
+                onPlayerPress={
+                  onOpenPlayerDetail
+                    ? (playerId) => onOpenPlayerDetail(playerId, "injuries")
+                    : undefined
+                }
               />
             ) : (
               <PendingPanel text={t.panelDataPending} />
@@ -173,10 +185,15 @@ export default function NbaPredictToolsTabsNative({
             ) : (
               <PendingPanel text={t.panelDataPending} />
             )
-          ) : roster ? (
+          ) : resolvedRoster ? (
             <NbaRosterPanelNative
-              report={roster}
+              report={resolvedRoster}
               injuryById={injuryById}
+              onPlayerPress={
+                onOpenPlayerDetail
+                  ? (player) => onOpenPlayerDetail(String(player.id), "roster")
+                  : undefined
+              }
             />
           ) : (
             <PendingPanel text={t.panelDataPending} />

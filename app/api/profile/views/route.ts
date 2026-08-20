@@ -19,8 +19,25 @@ function isValidUid(value: unknown): value is string {
   );
 }
 
+function readCount(raw: unknown): number {
+  return typeof raw === "number" && Number.isFinite(raw)
+    ? Math.max(0, Math.floor(raw))
+    : 0;
+}
+
 function unauthorizedResponse() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+}
+
+async function syncUserProfileViewCount(
+  uid: string,
+  count: number
+): Promise<void> {
+  const userRef = getAdminDb().collection("users").doc(uid);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) return;
+  if (readCount(userSnap.data()?.profileViewCount) === count) return;
+  await userRef.update({ profileViewCount: count });
 }
 
 /** 任意ユーザーの累計プロフィール閲覧数（公開）。`?uid=` 省略時は本人。 */
@@ -42,11 +59,8 @@ export async function GET(req: Request) {
       .collection(VIEW_COUNTS_COLLECTION)
       .doc(uid)
       .get();
-    const raw = snap.data()?.count;
-    const count =
-      typeof raw === "number" && Number.isFinite(raw)
-        ? Math.max(0, Math.floor(raw))
-        : 0;
+    const count = readCount(snap.data()?.count);
+    await syncUserProfileViewCount(uid, count).catch(() => undefined);
     return NextResponse.json({ count, uid });
   } catch (error) {
     if (error instanceof Error && error.message === "unauthorized") {
@@ -82,29 +96,36 @@ export async function POST(req: Request) {
     const countRef = db.collection(VIEW_COUNTS_COLLECTION).doc(targetUid);
 
     const counted = await db.runTransaction(async (tx) => {
-      const [targetSnap, eventSnap] = await Promise.all([
+      const [targetSnap, eventSnap, countSnap] = await Promise.all([
         tx.get(targetRef),
         tx.get(eventRef),
+        tx.get(countRef),
       ]);
       if (!targetSnap.exists) throw new Error("target_not_found");
-      if (eventSnap.exists) return false;
-
-      tx.create(eventRef, {
-        targetUid,
-        viewerUid,
-        dateKey,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-      tx.set(
-        countRef,
-        {
-          uid: targetUid,
-          count: FieldValue.increment(1),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      return true;
+      const prev = readCount(countSnap.data()?.count);
+      const already = eventSnap.exists;
+      const next = prev + (already ? 0 : 1);
+      if (!already) {
+        tx.create(eventRef, {
+          targetUid,
+          viewerUid,
+          dateKey,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        tx.set(
+          countRef,
+          {
+            uid: targetUid,
+            count: next,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+      if (readCount(targetSnap.data()?.profileViewCount) !== next) {
+        tx.update(targetRef, { profileViewCount: next });
+      }
+      return !already;
     });
 
     return NextResponse.json({ counted });

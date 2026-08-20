@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 import { fetchUserDocByRouteKey } from "@/lib/profile/fetchUserDocByRouteKey";
 import {
   parseUserProfileFields,
+  parseUserProfileViewCount,
   parseUserUnitBalance,
   profileDisplayFromUser,
 } from "@/lib/profile/parseUserProfileFields";
@@ -34,6 +35,8 @@ export type Profile = {
   memberSinceMs: number | null;
   /** 保有 Unit（公開表示） */
   unitBalance: number;
+  /** users.profileViewCount。未同期は null */
+  profileViewCount: number | null;
 };
 
 type UserState = {
@@ -48,6 +51,7 @@ type UserState = {
   countryCode?: string | null;
   memberSinceMs?: number | null;
   unitBalance?: number;
+  profileViewCount?: number | null;
 } | null;
 
 type Counts = {
@@ -241,6 +245,7 @@ export function warmPublicProfileFromListEntry(input: {
           typeof data.countryCode === "string" ? data.countryCode : null,
         memberSinceMs: parseMemberSinceMs(data),
         unitBalance: parseUserUnitBalance(data),
+        profileViewCount: parseUserProfileViewCount(data),
       },
     });
   })();
@@ -317,6 +322,7 @@ export function useProfile(handle: string) {
             countryCode: parseCountryCode(d),
             memberSinceMs: parseMemberSinceMs(d),
             unitBalance: parseUserUnitBalance(d),
+            profileViewCount: parseUserProfileViewCount(d),
           },
         };
         writeProfileCache([decodedHandle, docSnap.id, userHandle], nextState);
@@ -357,6 +363,7 @@ export function useProfile(handle: string) {
       countryCode: u.countryCode ?? null,
       memberSinceMs: u.memberSinceMs ?? null,
       unitBalance: u.unitBalance ?? 0,
+      profileViewCount: u.profileViewCount ?? null,
     };
   }, [user, decodedHandle, counts, loading]);
 

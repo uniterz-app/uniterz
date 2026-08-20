@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import {
   playerCardName,
@@ -24,12 +25,18 @@ import {
 import { nameBebas, nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 import { matchCardTeamNameStyle } from "@/lib/games/teamDisplayTypography";
 import { getMobileTeamName } from "@/lib/team-name-split-mobile";
+import { nbaConferenceForTeam } from "@/lib/nba/nbaConferenceTeams";
+import { nbaPlayerDetailPreviewHref } from "@/lib/predict/nbaTeamDetailHref";
+import { stashPredictTeamDetailReturn } from "@/lib/predict/predictTeamDetailReturn";
 
 type Props = {
   report: NbaRosterReport;
   /** Injury Report 由来。該当選手にステータスチップを出す */
   injuryReport?: NbaInjuryReport | null;
   className?: string;
+  /** 予想入力から選手詳細へ行ったあと戻れるようにする */
+  fromPredictGameId?: string;
+  predictReturnMode?: "overlay" | "route";
 };
 
 const INJURY_CHIP: Record<string, string> = {
@@ -129,6 +136,7 @@ function IdentityCell({
   dim,
   header,
   onClick,
+  interactive,
 }: {
   player?: NbaRosterPlayer;
   accent: string;
@@ -136,6 +144,7 @@ function IdentityCell({
   dim?: boolean;
   header?: boolean;
   onClick?: () => void;
+  interactive?: boolean;
 }) {
   if (header) {
     return (
@@ -158,7 +167,9 @@ function IdentityCell({
   const className = [
     "sticky left-0 z-[1] flex w-[9.75rem] shrink-0 items-center gap-1 border-r border-white/[0.08] bg-[rgba(8,10,16,0.98)] py-1.5 pr-1 text-left",
     dim ? "opacity-45" : "",
-    onClick ? "transition-colors hover:bg-white/[0.06]" : "",
+    interactive
+      ? "transition duration-150 ease-out group-hover:bg-[#1c222c] group-active:bg-[#2a3240]"
+      : "",
   ].join(" ");
 
   const content = (
@@ -342,16 +353,16 @@ function TeamRosterCard({
       <HalftoneJerseyMark
         accent={teamPrimary}
         accentEnd={jerseySecondary}
-        className="h-9 w-9 shrink-0"
+        className="h-11 w-11 shrink-0"
         glow="none"
       />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           {!isDetail ? (
             <span
               className={[
                 nameOxanium.className,
-                "rounded-[2px] border bg-transparent px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.12em]",
+                "rounded-[2px] border bg-transparent px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em]",
               ].join(" ")}
               style={{
                 borderColor: teamPrimary,
@@ -364,7 +375,7 @@ function TeamRosterCard({
           <p
             className={[
               nameBebas.className,
-              "min-w-0 truncate text-[15px] font-bold uppercase leading-tight text-white",
+              "min-w-0 truncate text-[20px] font-bold uppercase leading-tight text-white",
             ].join(" ")}
             style={matchCardTeamNameStyle(true)}
           >
@@ -374,7 +385,7 @@ function TeamRosterCard({
         <p
           className={[
             nameOxanium.className,
-            "mt-1 text-[8px] font-bold uppercase tracking-[0.1em]",
+            "mt-1 text-[11px] font-bold uppercase tracking-[0.1em]",
           ].join(" ")}
           style={{ color: hexToRgba(teamPrimary, 0.9) }}
         >
@@ -383,13 +394,13 @@ function TeamRosterCard({
       </div>
       {block.seed != null ? (
         <div className="shrink-0 text-right">
-          <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-white/35">
-            SEED
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
+            {nbaConferenceForTeam(block.teamId) === "west" ? "WEST" : "EAST"}
           </p>
           <p
             className={[
               nameOxanium.className,
-              "text-[18px] font-black leading-none",
+              "text-[22px] font-black leading-none",
             ].join(" ")}
             style={{ color: teamPrimary }}
           >
@@ -411,7 +422,7 @@ function TeamRosterCard({
     >
       {isDetail ? (
         <div
-          className="flex w-full items-center gap-2 px-2.5 py-2"
+          className="flex w-full items-center gap-2 px-2.5 py-2.5"
           style={{ borderBottom: expanded ? `1px solid ${divider}` : undefined }}
         >
           {headerInner}
@@ -421,7 +432,7 @@ function TeamRosterCard({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.03]"
+          className="flex w-full items-center gap-2 px-2.5 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
           style={{ borderBottom: open ? `1px solid ${divider}` : undefined }}
         >
           {headerInner}
@@ -437,25 +448,49 @@ function TeamRosterCard({
                 <StatsCells header />
               </div>
 
-              {players.map((p) => (
-                <div
-                  key={String(p.id)}
-                  className="flex items-center border-b border-white/[0.06] last:border-b-0"
-                >
+              {players.map((p) => {
+                const rowClass =
+                  "flex items-center border-b border-white/[0.06] last:border-b-0";
+                const identity = (
                   <IdentityCell
                     player={p}
                     accent={teamPrimary}
                     injuryStatus={injuryById[String(p.id)]}
                     dim={p.dimmed}
-                    onClick={
-                      onPlayerClick
-                        ? () => onPlayerClick(p)
-                        : undefined
-                    }
                   />
+                );
+                const stats = (
                   <StatsCells values={playerStats(p)} dim={p.dimmed} />
-                </div>
-              ))}
+                );
+                if (onPlayerClick) {
+                  return (
+                    <button
+                      key={String(p.id)}
+                      type="button"
+                      onClick={() => onPlayerClick(p)}
+                      className={[
+                        rowClass,
+                        "group w-max min-w-full cursor-pointer select-none text-left transition duration-150 ease-out hover:bg-white/[0.07] active:bg-white/[0.16] active:brightness-110",
+                      ].join(" ")}
+                    >
+                      <IdentityCell
+                        player={p}
+                        accent={teamPrimary}
+                        injuryStatus={injuryById[String(p.id)]}
+                        dim={p.dimmed}
+                        interactive
+                      />
+                      {stats}
+                    </button>
+                  );
+                }
+                return (
+                  <div key={String(p.id)} className={rowClass}>
+                    {identity}
+                    {stats}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -513,10 +548,31 @@ export default function NbaRosterPanel({
   report,
   injuryReport = null,
   className,
+  fromPredictGameId,
+  predictReturnMode,
 }: Props) {
+  const router = useRouter();
   const injuryById = injuryReport
     ? injuryStatusByPlayerId(injuryReport)
     : {};
+  const resolvedReturnMode =
+    predictReturnMode ?? (fromPredictGameId ? "overlay" : "route");
+
+  const openPlayerDetail = (player: NbaRosterPlayer) => {
+    if (fromPredictGameId) {
+      stashPredictTeamDetailReturn({
+        gameId: fromPredictGameId,
+        predictToolsTab: "roster",
+        returnMode: resolvedReturnMode,
+      });
+    }
+    router.push(
+      nbaPlayerDetailPreviewHref(String(player.id), {
+        fromPredict: fromPredictGameId,
+        predictToolsTab: fromPredictGameId ? "roster" : undefined,
+      })
+    );
+  };
 
   return (
     <div className={["flex flex-col gap-2.5", className].filter(Boolean).join(" ")}>
@@ -524,9 +580,11 @@ export default function NbaRosterPanel({
         block={report.home}
         injuryById={injuryById}
         defaultOpen
+        onPlayerClick={openPlayerDetail}
       />
       <TeamRosterCard
         block={report.away}
+        onPlayerClick={openPlayerDetail}
         injuryById={injuryById}
         defaultOpen={false}
       />

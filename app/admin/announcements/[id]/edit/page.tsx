@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { ADMIN_UID } from "@/lib/constants";
+import { isAdminUid } from "@/lib/constants";
 import { db, storage } from "@/lib/firebase";
 import {
   doc,
@@ -37,7 +37,7 @@ export default function AdminAnnouncementEditPage() {
   const id = params?.id;
 
   const { fUser, status } = useFirebaseUser();
-  const isAdmin = status === "ready" && fUser?.uid === ADMIN_UID;
+  const isAdmin = status === "ready" && isAdminUid(fUser?.uid);
 
   const [form, setForm] = useState<FormState | null>(null);
   const [submitting, setSubmitting] = useState(false);

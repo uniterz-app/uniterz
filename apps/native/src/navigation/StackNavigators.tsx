@@ -412,87 +412,6 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
-            name="RankingListProSkinPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .RankingListProSkinPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="ProSkinUnlockPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ProSkinUnlockPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="ReferralStampCelebratePreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ReferralStampCelebratePreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="UnitEarnCelebratePreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .UnitEarnCelebratePreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="CareerFlipButtonPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .CareerFlipButtonPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="CareerPlacementPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .CareerPlacementPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="UnitEarnModalDesignPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .UnitEarnModalDesignPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="UnitEarnOverlayAnimPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .UnitEarnOverlayAnimPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="UnitEarnOverlayFontPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .UnitEarnOverlayFontPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
             name="UniterzLogoTypePreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
@@ -520,51 +439,6 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
-            name="ProBadgeComparePreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ProBadgeComparePreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="ResultCardDesignPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ResultCardDesignPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="ResultBadgeDesignPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ResultBadgeDesignPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="ResultStampDesignPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ResultStampDesignPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="ResultStreakTagDesignPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ResultStreakTagDesignPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
             name="ResultDetailDesignPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
@@ -578,6 +452,15 @@ function ProfileStackScreen() {
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
                 .SplashLogoPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="LeagueStatsPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .LeagueStatsPreviewScreenWrapper
             }
           />
         ) : null}
@@ -637,15 +520,6 @@ function ProfileStackScreen() {
         ) : null}
         {__DEV__ ? (
           <ProfileStack.Screen
-            name="ProfileKinetikMetricsPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ProfileKinetikMetricsPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
             name="LpRankingPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
@@ -659,33 +533,6 @@ function ProfileStackScreen() {
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
                 .RankingListDesignPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="ButtonDesignPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ButtonDesignPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="HexLightDesignPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .HexLightDesignPreviewScreenWrapper
-            }
-          />
-        ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="NavBarDesignPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .NavBarDesignPreviewScreenWrapper
             }
           />
         ) : null}
@@ -755,6 +602,31 @@ function ProfileStackScreen() {
           name="FeatureRequest"
           getComponent={() =>
             require("../features/legal/FeatureRequestScreenNative").default
+          }
+        />
+        <ProfileStack.Screen
+          name="AdminInbox"
+          getComponent={() =>
+            require("../features/admin/AdminInboxScreenNative").default
+          }
+        />
+        <ProfileStack.Screen
+          name="AdminInboxDetail"
+          getComponent={() =>
+            require("../features/admin/AdminInboxDetailScreenNative").default
+          }
+        />
+        <ProfileStack.Screen
+          name="AdminRedemptions"
+          getComponent={() =>
+            require("../features/admin/AdminRedemptionsScreenNative").default
+          }
+        />
+        <ProfileStack.Screen
+          name="AdminRedemptionDetail"
+          getComponent={() =>
+            require("../features/admin/AdminRedemptionDetailScreenNative")
+              .default
           }
         />
         <ProfileStack.Screen

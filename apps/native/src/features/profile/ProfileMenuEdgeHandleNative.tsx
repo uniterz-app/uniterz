@@ -47,6 +47,7 @@ const VARIANTS = {
 export default function ProfileMenuEdgeHandleNative({
   onOpen,
   unreadCount = 0,
+  adminUnreadCount = 0,
   /** サイドメニュー開中は非表示（ドロワーと文字が被らないようにする） */
   hidden = false,
   /** 表示時にフェードイン（試合ページ着地など） */
@@ -59,15 +60,20 @@ export default function ProfileMenuEdgeHandleNative({
   top,
   /** チュートリアル穴測定 */
   tutorialTargetId,
+  /** 親レール内（absolute 位置・フェード・スワイプなし） */
+  inline = false,
 }: {
   onOpen: () => void;
   unreadCount?: number;
+  /** 管理の新着。赤 */
+  adminUnreadCount?: number;
   hidden?: boolean;
   fadeIn?: boolean;
   label?: string;
   variant?: keyof typeof VARIANTS;
   top?: `${number}%` | number;
   tutorialTargetId?: string;
+  inline?: boolean;
 }) {
   const theme = VARIANTS[variant];
   const handleTop = top ?? theme.top;
@@ -124,9 +130,66 @@ export default function ProfileMenuEdgeHandleNative({
     })
   ).current;
 
-  if (hidden && !fadeIn) return null;
+  if (hidden && !fadeIn && !inline) return null;
 
-  const enableEdgeSwipe = variant === "menu";
+  const enableEdgeSwipe = !inline && variant === "menu";
+
+  const letters = (
+        <View ref={handleRef} collapsable={false} style={styles.handleMeasure}>
+        {label
+          .toUpperCase()
+          .split("")
+          .map((ch, i) => (
+            <Text
+              key={`${ch}-${i}`}
+              style={[styles.letter, { color: theme.letterColor }]}
+            >
+              {ch}
+            </Text>
+          ))}
+        {adminUnreadCount > 0 ? (
+          <View style={styles.badgeAdmin}>
+            <Text style={styles.badgeAdminText}>
+              {adminUnreadCount > 9 ? "9+" : String(adminUnreadCount)}
+            </Text>
+          </View>
+        ) : null}
+        {unreadCount > 0 ? (
+          <View
+            style={[
+              styles.badge,
+              adminUnreadCount > 0 ? styles.badgeLower : null,
+            ]}
+          >
+            <Text style={styles.badgeText}>
+              {unreadCount > 9 ? "9+" : String(unreadCount)}
+            </Text>
+          </View>
+        ) : null}
+        </View>
+  );
+
+  if (inline) {
+    return (
+      <Pressable
+        style={[
+          styles.handleInline,
+          {
+            borderColor: theme.borderColor,
+            backgroundColor: theme.backgroundColor,
+            shadowColor: theme.shadowColor,
+          },
+        ]}
+        onPress={onOpen}
+        disabled={hidden}
+        accessibilityRole="button"
+        accessibilityLabel={label.toUpperCase()}
+        hitSlop={inline ? { left: 8, right: 0, top: 0, bottom: 0 } : 8}
+      >
+        {letters}
+      </Pressable>
+    );
+  }
 
   return (
     <Animated.View
@@ -164,26 +227,7 @@ export default function ProfileMenuEdgeHandleNative({
         importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}
         hitSlop={8}
       >
-        <View ref={handleRef} collapsable={false} style={styles.handleMeasure}>
-        {label
-          .toUpperCase()
-          .split("")
-          .map((ch, i) => (
-            <Text
-              key={`${ch}-${i}`}
-              style={[styles.letter, { color: theme.letterColor }]}
-            >
-              {ch}
-            </Text>
-          ))}
-        {unreadCount > 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {unreadCount > 9 ? "9+" : String(unreadCount)}
-            </Text>
-          </View>
-        ) : null}
-        </View>
+        {letters}
       </Pressable>
     </Animated.View>
   );
@@ -214,10 +258,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
+    overflow: "visible",
+  },
+  handleInline: {
+    width: 19,
+    paddingVertical: 9,
+    alignItems: "center",
+    gap: 3,
+    borderWidth: 1,
+    borderRightWidth: 0,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    overflow: "visible",
   },
   handleMeasure: {
     alignItems: "center",
     gap: 3,
+    overflow: "visible",
   },
   letter: {
     fontFamily: "Oxanium_700Bold",
@@ -234,11 +292,34 @@ const styles = StyleSheet.create({
     height: 14,
     paddingHorizontal: 3,
     borderRadius: 999,
+    backgroundColor: "#00F5FF",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  badgeLower: {
+    top: 10,
+  },
+  badgeText: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: "#050508",
+    fontVariant: ["tabular-nums"],
+  },
+  badgeAdmin: {
+    position: "absolute",
+    top: -6,
+    left: -6,
+    minWidth: 14,
+    height: 14,
+    paddingHorizontal: 3,
+    borderRadius: 999,
     backgroundColor: "#ef4444",
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 3,
   },
-  badgeText: {
+  badgeAdminText: {
     fontSize: 8,
     fontWeight: "700",
     color: "#fff",

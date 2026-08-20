@@ -59,8 +59,17 @@ export type GamesStackParamList = {
         returnToPredictGameId?: string;
       }
     | undefined;
-  /** Player Stats からの選手詳細（モック） */
-  PlayerDetailPreview: { playerId?: string } | undefined;
+  /** Player Stats / 予想 ROSTER からの選手詳細（モック） */
+  PlayerDetailPreview:
+    | {
+        playerId?: string;
+        /** 予想オーバーレイから開いた → goBack でモーダル再表示 */
+        returnToPredictOverlay?: boolean;
+        predictToolsTab?: "insight" | "injuries" | "stats" | "roster";
+        /** @deprecated returnToPredictOverlay を優先 */
+        returnToPredictGameId?: string;
+      }
+    | undefined;
 };
 
 /** 他人プロフィール。Profile / Rankings / Leaderboards / Result 各スタックで共用 */
@@ -144,46 +153,20 @@ export type ProfileStackParamList = {
   TitleSkinPreview: undefined;
   /** __DEV__ Pro Skin Wave9 プレビュー */
   WaveProSkinPreview: undefined;
-  /** __DEV__ ランキング行 Pro Skin プレビュー */
-  RankingListProSkinPreview: undefined;
-  /** __DEV__ Pro Skin マイルストーン解放モーダル */
-  ProSkinUnlockPreview: undefined;
-  /** __DEV__ 招待達成スタンプ演出 */
-  ReferralStampCelebratePreview: undefined;
-  /** __DEV__ Unit 獲得演出 */
-  UnitEarnCelebratePreview: undefined;
-  /** __DEV__ CAREER フリップボタン見た目案 */
-  CareerFlipButtonPreview: undefined;
-  /** __DEV__ CAREER 情報の載せ場所案 */
-  CareerPlacementPreview: undefined;
-  /** __DEV__ Unit 獲得モーダル見た目案 A〜D */
-  UnitEarnModalDesignPreview: undefined;
-  /** __DEV__ Unit 獲得オーバーレイ入場アニメ案 */
-  UnitEarnOverlayAnimPreview: undefined;
-  /** __DEV__ Unit 獲得オーバーレイフォント案 */
-  UnitEarnOverlayFontPreview: undefined;
   /** __DEV__ UNITERZ ウェスタン調ロゴ文字 3案 */
   UniterzLogoTypePreview: undefined;
   /** __DEV__ Blender 平面ワードマーク 3D */
   UniterzLogo3dPreview: undefined;
   /** __DEV__ 課金 PRO タグ案 */
   UniterzProBadgePreview: undefined;
-  /** __DEV__ 現行 vs 旧 Pro バッジ比較 */
-  ProBadgeComparePreview: undefined;
-  /** __DEV__ リザルトカード見た目案 */
-  ResultCardDesignPreview: undefined;
-  /** __DEV__ リザルト右上バッジ見た目案 */
-  ResultBadgeDesignPreview: undefined;
-  /** __DEV__ リザルト右上スタンプ見た目案 */
-  ResultStampDesignPreview: undefined;
-  /** __DEV__ リザルト左上連勝タグ見た目案 */
-  ResultStreakTagDesignPreview: undefined;
   /** __DEV__ リザルト詳細デザイン用プレビュー */
   ResultDetailDesignPreview: undefined;
   /** __DEV__ サイバーロゴスプラッシュ */
   SplashLogoPreview: undefined;
   /** __DEV__ リーグ Team Stats（30 チーム表） */
   TeamStatsPreview: undefined;
+  /** __DEV__ リーグ STATS ハブ（Team / Player、現行チップ型） */
+  LeagueStatsPreview: undefined;
   /** __DEV__ リーグ Player Stats（指標トップリーダー） */
   PlayerStatsPreview: undefined;
   /** __DEV__ Team Detail 再構築プレビュー */
@@ -194,14 +177,6 @@ export type ProfileStackParamList = {
   LiveGameStatsPreview: undefined;
   /** __DEV__ 試合一覧カード現行デザイン */
   MatchCardDesignPreview: undefined;
-  /** __DEV__ プロフィール 2x2 メトリクス Free / Pro 現行 */
-  ProfileKinetikMetricsPreview: undefined;
-  /** __DEV__ Native ボタン見た目カタログ */
-  ButtonDesignPreview: undefined;
-  /** __DEV__ ランディング六角ライト見た目案 */
-  HexLightDesignPreview: undefined;
-  /** __DEV__ 下部ナビ見た目案 */
-  NavBarDesignPreview: undefined;
   /** __DEV__ LP 用ランキング画面（総合スコアモック） */
   LpRankingPreview: undefined;
   /** __DEV__ ランキングリスト見た目案 */
@@ -219,6 +194,12 @@ export type ProfileStackParamList = {
   ElectronicNotice: undefined;
   Contact: undefined;
   FeatureRequest: undefined;
+  /** 管理者: 機能リクエスト / 問い合わせ一覧 */
+  AdminInbox: { kind: "feature" | "inbox" };
+  AdminInboxDetail: { id: string; kind?: "feature" | "inbox" };
+  /** 管理者: 商品交換申請 */
+  AdminRedemptions: undefined;
+  AdminRedemptionDetail: { id: string };
   CommunityGuidelines: undefined;
   Landing: undefined;
   /** __DEV__ 通知動作確認 */

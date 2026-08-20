@@ -265,3 +265,15 @@ export function injuryStatusLabel(status: string): string {
   if (key === "available") return "AVAILABLE";
   return status.trim().toUpperCase() || "—";
 }
+
+/** 狭いカード用。フル表記は `injuryStatusLabel` */
+export function injuryStatusShortLabel(status: string): string {
+  const key = status.trim().toLowerCase();
+  if (key === "out") return "OUT";
+  if (key === "doubtful") return "DOUBT";
+  if (key === "questionable") return "QUES";
+  if (key === "probable") return "PROB";
+  if (key === "available") return "AVAIL";
+  const full = injuryStatusLabel(status);
+  return full.length > 5 ? full.slice(0, 5) : full;
+}

@@ -699,12 +699,9 @@ const es: Messages = {
     sectionSubscription: "Suscripción",
     sectionSupport: "Soporte",
     sectionAdmin: "Administración",
-    adminDashboard: "Panel de administración",
-    grantBadges: "Otorgar insignias",
-    manageAnnouncements: "Gestionar anuncios",
-    createAnnouncement: "Crear anuncio",
-    gameImport: "Importar partidos",
-    planApproval: "Aprobación de planes",
+    adminFeatureRequests: "Solicitudes de funciones",
+    adminContacts: "Consultas",
+    adminRedemptions: "Canjes de productos",
     helpDescription:
       "Uniterz es un juego de fantasía basado en predicciones deportivas. Consulta las reglas básicas y cómo interpretar las puntuaciones.",
     changePasswordDesc:
@@ -804,6 +801,8 @@ const es: Messages = {
     nbaTopScorerBonusHint: "+2 if correct",
     nbaTopScorerClear: "Clear selection",
     nbaTopScorerEmpty: "Player list not ready yet",
+    nbaTopScorerMore: "{n} more",
+    nbaTopScorerLess: "Show less",
     scoringRulesChip: "Reglas de evaluación",
     timing: {
       proInfoTitle: "Pro Info",

@@ -17,6 +17,7 @@ import { injuryReportForMatchup } from "@/lib/predict/nbaInjuryReportPreviewMock
 import type { NbaTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import { teamStatsForMatchup } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "@/lib/predict/nbaRoster";
+import { rosterForMatchup } from "@/lib/predict/nbaRosterPreviewMocks";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 
@@ -93,6 +94,7 @@ export default function NbaPredictToolsTabs({
     injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
   const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
   const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
+  const resolvedRoster = roster ?? rosterForMatchup(homeTeamId, awayTeamId);
 
   const openProSubscribe = () => {
     router.push("/mobile/pro/subscribe");
@@ -157,7 +159,12 @@ export default function NbaPredictToolsTabs({
           )
         ) : tab === "injuries" ? (
           resolvedInjury ? (
-            <NbaInjuryReportPanel report={resolvedInjury} language={language} />
+            <NbaInjuryReportPanel
+              report={resolvedInjury}
+              language={language}
+              fromPredictGameId={fromPredictGameId}
+              predictReturnMode={predictReturnMode}
+            />
           ) : (
             <PendingPanel text={m.panelDataPending} />
           )
@@ -173,8 +180,13 @@ export default function NbaPredictToolsTabs({
           ) : (
             <PendingPanel text={m.panelDataPending} />
           )
-        ) : roster ? (
-          <NbaRosterPanel report={roster} injuryReport={resolvedInjury} />
+        ) : resolvedRoster ? (
+          <NbaRosterPanel
+            report={resolvedRoster}
+            injuryReport={resolvedInjury}
+            fromPredictGameId={fromPredictGameId}
+            predictReturnMode={predictReturnMode}
+          />
         ) : (
           <PendingPanel text={m.panelDataPending} />
         )}

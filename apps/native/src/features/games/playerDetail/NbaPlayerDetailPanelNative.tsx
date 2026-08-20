@@ -27,8 +27,8 @@ import {
   formatBirthDateLabel,
   formatTeamHistory,
   getNbaPlayerDetailPreview,
+  NBA_PLAYER_DETAIL_SEASON_SHOWN,
   nbaCountryNameToIso2,
-  type NbaPlayerAdvancedMetric,
   type NbaPlayerAvailability,
   type NbaPlayerCareerSeasonBoard,
   type NbaPlayerCareerSeasonRow,
@@ -39,6 +39,7 @@ import {
   type NbaPlayerVenueSplit,
   type NbaPlayerVsOpponentSample,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
+import { isPlayerDetailRankShown } from "../../../../../../lib/predict/nbaPlayerDetailHowTheyPlay";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import {
   SHOT_ZONE_BASKET,
@@ -68,6 +69,11 @@ import {
 } from "../../../../../../lib/team-colors";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import JerseyMarkSvg from "../JerseyMarkSvg";
+import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
+import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
+import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
+import { overlayPlayerDetailWithLeaders } from "../../../../../../lib/nba/sliceNbaPlayerFromLeaders";
+import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 
 type Props = {
   language: "ja" | "en";
@@ -526,10 +532,12 @@ function SplitTableRow({
   cols,
   borderColor,
   bottomBorder,
+  header,
 }: {
   cols: string[];
   borderColor?: string;
   bottomBorder?: boolean;
+  header?: boolean;
 }) {
   return (
     <View
@@ -548,7 +556,8 @@ function SplitTableRow({
           key={`${text}-${i}`}
           style={[
             i === 0 ? styles.splitCellLabel : styles.splitCell,
-            i === cols.length - 1 ? styles.splitCellLast : null,
+            i === cols.length - 1 && !header ? styles.splitCellLast : null,
+            header ? styles.splitCellHeader : null,
           ]}
           numberOfLines={1}
         >
@@ -585,6 +594,7 @@ function PlayerVenueSplitsSectionNative({
           cols={["", "GP", "PTS", "REB", "AST", "+/-"]}
           borderColor={line}
           bottomBorder
+          header
         />
         {splits.map((row, i) => (
           <SplitTableRow
@@ -638,6 +648,7 @@ function PlayerVsOpponentSectionNative({
           cols={[isJa ? "相手" : "OPP", "GP", "PTS", "REB", "AST", "+/-"]}
           borderColor={line}
           bottomBorder
+          header
         />
         {samples.map((row, i) => (
           <SplitTableRow
@@ -666,11 +677,9 @@ function SeasonMetricsGrid({
   metrics: NbaPlayerSeasonMetric[];
   accent: string;
 }) {
-  const shown = metrics.filter((m) =>
-    ["pts", "reb", "ast", "stl", "blk", "tov", "plus_minus", "fg_pct", "fg3_pct", "ft_pct"].includes(
-      m.id
-    )
-  );
+  const shown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
+    (id) => metrics.find((m) => m.id === id)
+  ).filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
   const cellLine = hexToRgba(accent, 0.22);
   return (
     <View style={styles.advWrap}>
@@ -702,83 +711,26 @@ function SeasonMetricsGrid({
             >
               <View style={styles.advCellTop}>
                 <Text style={styles.advLabel}>{m.short}</Text>
-                <Text
-                  style={[
-                    styles.advRank,
-                    {
-                      color:
-                        m.leagueRank <= 10
-                          ? accent
-                          : "rgba(255,255,255,0.35)",
-                    },
-                  ]}
-                >
-                  #{m.leagueRank}
-                </Text>
+                {isPlayerDetailRankShown(m.leagueRank) ? (
+                  <Text
+                    style={[
+                      styles.advRank,
+                      {
+                        color:
+                          m.leagueRank <= 10
+                            ? accent
+                            : "rgba(255,255,255,0.35)",
+                      },
+                    ]}
+                  >
+                    #{m.leagueRank}
+                  </Text>
+                ) : null}
               </View>
               <Text style={styles.advValue}>{m.display}</Text>
             </View>
           );
         })}
-      </View>
-    </View>
-  );
-}
-
-function AdvancedMetricsRow({
-  metrics,
-  language,
-  accent,
-}: {
-  metrics: NbaPlayerAdvancedMetric[];
-  language: "ja" | "en";
-  accent: string;
-}) {
-  const isJa = language === "ja";
-  const cellLine = hexToRgba(accent, 0.22);
-  return (
-    <View style={styles.advWrap}>
-      <View style={styles.advTitleRow}>
-        <Text style={styles.advTitle}>
-          ADVANCED
-        </Text>
-        <View style={styles.advTitleLine} />
-      </View>
-      <View
-        style={[styles.advancedRow, { borderColor: hexToRgba(accent, 0.4) }]}
-      >
-        {metrics.map((m, i) => (
-          <View
-            key={m.id}
-            style={[
-              styles.advancedCell,
-              i < metrics.length - 1
-                ? { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: cellLine }
-                : null,
-            ]}
-          >
-            <View style={styles.advCellTop}>
-              <Text style={styles.advLabel}>{m.short}</Text>
-              <Text
-                style={[
-                  styles.advRank,
-                  {
-                    color:
-                      m.leagueRank <= 10
-                        ? accent
-                        : "rgba(255,255,255,0.35)",
-                  },
-                ]}
-              >
-                #{m.leagueRank}
-              </Text>
-            </View>
-            <Text style={styles.advValue}>{m.display}</Text>
-            <Text style={styles.advancedHint}>
-              {isJa ? m.hintJa : m.hintEn}
-            </Text>
-          </View>
-        ))}
       </View>
     </View>
   );
@@ -804,7 +756,7 @@ const CAREER_COLS_NATIVE: Array<{
   {
     key: "season",
     label: "Season",
-    width: 58,
+    width: 64,
     align: "left",
     render: (r) => formatCareerSeasonLabel(r.seasonStart),
     emphasize: true,
@@ -989,7 +941,7 @@ function GameLogHeader({ borderColor }: { borderColor: string }) {
         {
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: borderColor,
-          paddingVertical: 6,
+          paddingVertical: 8,
         },
       ]}
     >
@@ -1268,10 +1220,13 @@ export default function NbaPlayerDetailPanelNative({
 }: Props) {
   const isJa = language === "ja";
   const insets = useSafeAreaInsets();
-  const detail = useMemo(
-    () => getNbaPlayerDetailPreview(playerId),
-    [playerId]
-  );
+  const apiBaseUrl = getUniterzApiBaseUrl();
+  const { bundle: leaders } = usePlayerStatLeadersBundle({ apiBaseUrl });
+  const { bundle: teamStats } = useLeagueTeamStatsBundle({ apiBaseUrl });
+  const detail = useMemo(() => {
+    const base = getNbaPlayerDetailPreview(playerId);
+    return overlayPlayerDetailWithLeaders(base, leaders);
+  }, [playerId, leaders]);
   const bottomPad = Math.max(12, insets.bottom);
   const currentSalary = detail.contract?.seasons[0] ?? null;
   const accent = getTeamJerseyPrimaryColor("nba", detail.teamId);
@@ -1303,6 +1258,17 @@ export default function NbaPlayerDetailPanelNative({
           ]}
         />
 
+        <NbaPlayerHowTheyPlayNative
+          playerId={detail.playerId}
+          accent={accent}
+          isJa={isJa}
+          leaders={leaders}
+          teamStats={teamStats}
+          detail={detail}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
         <PlayerVenueSplitsSectionNative
           splits={detail.venueSplits}
           accent={accent}
@@ -1315,14 +1281,6 @@ export default function NbaPlayerDetailPanelNative({
           samples={detail.vsOpponentSamples}
           accent={accent}
           isJa={isJa}
-        />
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <AdvancedMetricsRow
-          metrics={detail.advancedMetrics}
-          language={language}
-          accent={accent}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1666,63 +1624,63 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingVertical: 10,
     gap: 4,
   },
   gameHead: {
     color: "rgba(255,255,255,0.35)",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
     transform: [],
   },
   gameDate: {
-    width: 36,
+    width: 44,
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.4)",
-    fontSize: 12,
+    fontSize: 13,
   },
   gameVs: {
     flex: 1,
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     minWidth: 52,
   },
   gameResult: {
-    width: 16,
+    width: 18,
     fontFamily: METRIC_FONT,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     textAlign: "center",
     transform: [{ skewX: "-8deg" }],
   },
   gameLine: {
-    width: 42,
+    width: 46,
     textAlign: "right",
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
+    fontSize: 13,
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
   gamePts: {
-    width: 28,
+    width: 32,
     textAlign: "right",
     fontFamily: METRIC_FONT,
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
   gameFg: {
-    width: 48,
+    width: 52,
     textAlign: "right",
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.55)",
-    fontSize: 11,
+    fontSize: 12,
     fontVariant: ["tabular-nums"],
   },
   win: { color: FORM_WIN },
@@ -1768,18 +1726,26 @@ const styles = StyleSheet.create({
     flex: 1.1,
     fontFamily: METRIC_FONT,
     color: "#FFFFFF",
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: "800",
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   splitCell: {
     flex: 0.75,
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.85)",
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: "600",
     textAlign: "right",
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
+  },
+  splitCellHeader: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.4)",
+    transform: [{ skewX: "-6deg" }],
   },
   splitCellLast: {
     fontWeight: "800",
@@ -1826,28 +1792,6 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-8deg" }],
   },
-  advancedRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    borderWidth: 1,
-    backgroundColor: "rgba(6,8,12,0.72)",
-  },
-  advancedCell: {
-    flex: 1,
-    paddingHorizontal: 8,
-    paddingTop: 12,
-    paddingBottom: 12,
-    gap: 4,
-    minWidth: 0,
-  },
-  advancedHint: {
-    fontFamily: METRIC_FONT,
-    color: "rgba(200,200,210,0.5)",
-    fontSize: 10,
-    lineHeight: 14,
-    letterSpacing: 0.1,
-    marginTop: 2,
-  },
   careerWrap: {
     gap: 10,
   },
@@ -1882,21 +1826,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
-    paddingVertical: 7,
+    paddingVertical: 12,
     gap: 4,
   },
   careerHeadCell: {
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.4)",
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
+    transform: [{ skewX: "-6deg" }],
   },
   careerCell: {
     fontFamily: METRIC_FONT,
-    fontSize: 13,
+    fontSize: 14,
     fontVariant: ["tabular-nums"],
+    transform: [{ skewX: "-6deg" }],
   },
   careerEmpty: {
     borderWidth: 1,

@@ -27,6 +27,11 @@
   --spacing-27: 6.75rem;
 }
 
+/* 共通ヘッダーの出し入れでページが上にアンカーされないようにする */
+html {
+  overflow-anchor: none;
+}
+
 /* -------------------------------
    任意：色のユーティリティ
 -------------------------------- */
@@ -8048,6 +8053,7 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   min-height: 0;
   padding: 7px 0 !important;
   margin: 0 !important;
+  overflow: visible !important;
   border: 1px solid rgba(250, 204, 21, 0.55) !important;
   border-right: none !important;
   border-left: 1px solid rgba(250, 204, 21, 0.55) !important;
@@ -8111,6 +8117,67 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   z-index: 100010 !important;
 }
 
+.profile-menu-edge-handle--inline {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  transform: none !important;
+  z-index: 2 !important;
+}
+
+.games-right-edge-tabs {
+  position: fixed !important;
+  right: 0;
+  top: 46%;
+  transform: translateY(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.games-right-edge-tabs .profile-menu-edge-handle {
+  pointer-events: auto;
+}
+
+.games-right-edge-tabs__standing {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.games-right-edge-tabs__standing .profile-menu-edge-handle {
+  pointer-events: auto;
+  z-index: 1 !important;
+}
+
+.games-right-edge-tabs__stats {
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.games-right-edge-tabs__stats .profile-menu-edge-handle {
+  pointer-events: auto;
+  z-index: 3 !important;
+}
+
+.games-right-edge-tabs--fade {
+  transition: opacity 1.45s cubic-bezier(0.37, 0, 0.18, 1);
+}
+
+.games-right-edge-tabs--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.games-right-edge-tabs--hidden .profile-menu-edge-handle {
+  pointer-events: none;
+}
+
 .profile-menu-edge-handle__ch {
   display: block;
   font-family: "Oxanium", ui-sans-serif, system-ui, sans-serif;
@@ -8138,12 +8205,22 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   height: 14px;
   padding: 0 3px;
   border-radius: 999px;
-  background: #ef4444;
-  color: #fff;
+  background: #00F5FF;
+  color: #050508;
   font-size: 8px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+.profile-menu-edge-handle__badge--admin {
+  background: #ef4444;
+  color: #fff;
+  z-index: 2;
+}
+
+.profile-menu-edge-handle__badge--lower {
+  top: 10px;
 }
 
 /* サイドメニュー先頭の Unit ウォレット */
@@ -8481,6 +8558,35 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 
 .profile-edit-kinetik-identity-join-id {
   max-width: 100%;
+}
+
+.profile-edit-kinetik-footer-flag {
+  display: inline-flex;
+  align-self: center;
+  height: 18px;
+  width: 24px;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.profile-edit-kinetik-footer-flag img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+@media (min-width: 640px) {
+  .profile-edit-kinetik-footer-flag {
+    height: 20.5px;
+    width: 27.333px;
+  }
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-footer-flag {
+  height: 21px;
+  width: 28px;
 }
 
 .profile-edit-kinetik-identity-meta {

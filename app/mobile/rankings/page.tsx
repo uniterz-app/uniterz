@@ -453,6 +453,8 @@ export default function MobileRankingsPage() {
                 value={myValue}
                 displayName={sessionUser.displayName || "You"}
                 photoURL={sessionUser.photoURL || null}
+                uid={myUid}
+                handle={sessionUser.handle}
                 totalPosts={
                   typeof myRawRow?.totalPosts === "number"
                     ? myRawRow.totalPosts

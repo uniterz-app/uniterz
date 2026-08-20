@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             管理画面
           </h1>
           <p className="text-white/60 text-sm mt-1">
-            お知らせ・試合データ・各種承認などを管理します
+            機能リクエスト・問い合わせ・商品交換申請を確認します
           </p>
         </header>
         {children}

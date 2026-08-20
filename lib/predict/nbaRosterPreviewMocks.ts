@@ -2,7 +2,8 @@
  * /dev/predict-timing-preview — Roster mock
  */
 
-import type { NbaRosterReport } from "@/lib/predict/nbaRoster";
+import type { NbaRosterPlayer, NbaRosterReport } from "@/lib/predict/nbaRoster";
+import { getNbaTeamDetailPreview } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 
 const LAKERS_PLAYERS = [
   {
@@ -404,4 +405,134 @@ export function rosterForPreset(
   report.away.teamId = awayTeamId;
   report.away.teamName = awayTeamName;
   return report;
+}
+
+function matchupKey(homeTeamId: string, awayTeamId: string): string {
+  return `${homeTeamId.trim()}|${awayTeamId.trim()}`;
+}
+
+function rp(
+  id: number,
+  firstName: string,
+  lastName: string,
+  position: string,
+  jerseyNumber: string,
+  starter: boolean,
+  mpg: number,
+  ppg: number,
+  rpg: number,
+  apg: number,
+  extra?: Partial<NbaRosterPlayer>
+): NbaRosterPlayer {
+  return {
+    id,
+    firstName,
+    lastName,
+    position,
+    jerseyNumber,
+    starter,
+    gp: starter ? 62 : 48,
+    mpg,
+    ppg,
+    rpg,
+    apg,
+    fgPct: starter ? 0.48 : 0.44,
+    fgm: +(ppg * 0.37).toFixed(1),
+    fga: +(ppg * 0.8).toFixed(1),
+    fg3Pct: starter ? 0.37 : 0.35,
+    fg3m: +(ppg * 0.12).toFixed(1),
+    fg3a: +(ppg * 0.33).toFixed(1),
+    ftPct: 0.8,
+    ftm: +(ppg * 0.16).toFixed(1),
+    fta: +(ppg * 0.2).toFixed(1),
+    spg: starter ? 1.1 : 0.6,
+    bpg: position.includes("C") ? 1.6 : starter ? 0.5 : 0.3,
+    tpg: starter ? 2.4 : 1.1,
+    dimmed: extra?.dimmed ?? (!starter && mpg < 16),
+    ...extra,
+  };
+}
+
+/** 2026-27 開幕 Celtics @ Pistons — Injury モックの player id と揃える */
+const PISTONS_OPENING_PLAYERS: NbaRosterPlayer[] = [
+  rp(1630595, "Cade", "Cunningham", "G", "2", true, 35.4, 25.8, 6.2, 9.1),
+  rp(1631105, "Jalen", "Duren", "C", "0", true, 31.2, 14.6, 11.8, 2.4),
+  rp(1631106, "Ausar", "Thompson", "G-F", "9", true, 30.1, 13.2, 6.4, 2.8),
+  rp(1631093, "Jaden", "Ivey", "G", "23", true, 29.8, 16.4, 3.8, 4.1),
+  rp(202699, "Tobias", "Harris", "F", "12", true, 32.4, 15.1, 6.0, 2.2),
+  rp(1628971, "Malik", "Beasley", "G", "5", false, 26.8, 14.9, 3.1, 1.8),
+  rp(1628379, "Isaiah", "Stewart", "F-C", "28", false, 22.4, 8.2, 7.1, 1.2),
+  rp(203501, "Tim", "Hardaway", "G", "10", false, 24.6, 11.3, 2.4, 1.6),
+  rp(1630581, "Ron", "Holland", "F", "00", false, 18.2, 7.4, 3.3, 1.1),
+  rp(1630198, "Isaiah", "Livers", "F", "41", false, 12.8, 4.1, 2.2, 0.7, {
+    dimmed: true,
+  }),
+];
+
+const CELTICS_OPENING_PLAYERS: NbaRosterPlayer[] = [
+  rp(1628369, "Jayson", "Tatum", "F", "0", true, 36.2, 27.4, 8.6, 5.2),
+  rp(1627759, "Jaylen", "Brown", "G-F", "7", true, 34.6, 23.1, 5.9, 4.4),
+  rp(1628401, "Derrick", "White", "G", "9", true, 33.1, 16.8, 4.2, 5.5),
+  rp(202331, "Paul", "George", "F", "13", true, 32.8, 18.6, 5.4, 3.8),
+  rp(1626179, "Payton", "Pritchard", "G", "11", true, 31.4, 14.2, 3.6, 4.8),
+  rp(1629057, "Al", "Horford", "C", "42", false, 24.1, 8.4, 6.2, 2.1),
+  rp(1630202, "Sam", "Hauser", "F", "30", false, 22.8, 9.1, 3.4, 1.2),
+  rp(1630573, "Neemias", "Queta", "C", "88", false, 18.6, 6.8, 6.9, 0.8),
+  rp(1631112, "Jordan", "Walsh", "F", "27", false, 14.2, 4.6, 2.8, 0.6, {
+    dimmed: true,
+  }),
+  rp(1631120, "JD", "Davison", "G", "20", false, 10.4, 3.2, 1.4, 1.8, {
+    dimmed: true,
+  }),
+];
+
+const PISTONS_CELTICS_OPENING_ROSTER: NbaRosterReport = {
+  home: {
+    teamId: "nba-pistons",
+    teamName: "Detroit Pistons",
+    side: "home",
+    seed: 1,
+    activeCount: 9,
+    rosterCount: 10,
+    players: PISTONS_OPENING_PLAYERS,
+  },
+  away: {
+    teamId: "nba-celtics",
+    teamName: "Boston Celtics",
+    side: "away",
+    seed: 2,
+    activeCount: 8,
+    rosterCount: 10,
+    players: CELTICS_OPENING_PLAYERS,
+  },
+};
+
+export const NBA_ROSTER_BY_MATCHUP: Record<string, NbaRosterReport> = {
+  "nba-pistons|nba-celtics": PISTONS_CELTICS_OPENING_ROSTER,
+};
+
+function rosterFromTeamDetail(
+  homeTeamId: string,
+  awayTeamId: string
+): NbaRosterReport | null {
+  try {
+    const home = getNbaTeamDetailPreview(homeTeamId);
+    const away = getNbaTeamDetailPreview(awayTeamId);
+    return {
+      home: { ...home.rosterBlock, side: "home" },
+      away: { ...away.rosterBlock, side: "away" },
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function rosterForMatchup(
+  homeTeamId: string | undefined,
+  awayTeamId: string | undefined
+): NbaRosterReport | null {
+  if (!homeTeamId || !awayTeamId) return null;
+  const keyed = NBA_ROSTER_BY_MATCHUP[matchupKey(homeTeamId, awayTeamId)];
+  if (keyed) return cloneReport(keyed);
+  return rosterFromTeamDetail(homeTeamId, awayTeamId);
 }

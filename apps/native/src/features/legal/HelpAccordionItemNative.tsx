@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import CyberHelpMarkNative from "../../ui/CyberHelpMarkNative";
 
 export type HelpFaqItemNative = {
   id: string;
@@ -33,7 +34,7 @@ export default function HelpAccordionItemNative({ item, isOpen, onToggle }: Prop
             <Text style={styles.question}>{item.question}</Text>
           </View>
         </View>
-        <Text style={styles.hint}>?</Text>
+        <CyberHelpMarkNative />
       </Pressable>
       {isOpen ? <View style={styles.answer}>{item.answer}</View> : null}
     </View>
@@ -101,11 +102,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#fff",
     lineHeight: 20,
-  },
-  hint: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#67e8f9",
   },
   answer: {
     borderTopWidth: 1,

@@ -36,7 +36,6 @@ import {
   type ProfilePlanProLuxuryVariant,
 } from "@/lib/profile/profilePlanProLuxuryVariants";
 import "@/app/component/profile/pro/profilePlanProLuxuryVariants.css";
-import CountryFlag from "@/app/component/games/CountryFlag";
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
 import ProfilePlanProMetricsVariant from "@/app/component/profile/pro/ProfilePlanProMetricsVariant";
 import type { ProfilePlanProMetricLayoutVariant } from "@/lib/profile/profilePlanProMetricLayoutVariants";
@@ -414,18 +413,18 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
-/** 表示名の直下に置く国旗 */
-function ProfileKinetikNameFlag({ countryCode }: { countryCode?: string | null }) {
+/** カード右下 — 加入日 / ID と同じ行・同じ高さ */
+function ProfileKinetikFooterFlag({ countryCode }: { countryCode?: string | null }) {
   const flagIso = countryCode?.trim().toUpperCase() || null;
   if (!flagIso) return null;
 
   return (
-    <span className="profile-edit-kinetik-name-flag mt-1.5 inline-flex shrink-0 items-center self-start">
-      <CountryFlag
-        iso2={flagIso}
-        variant="profileInline"
-        decorative
-        alt={flagIso}
+    <span className="profile-edit-kinetik-footer-flag ml-auto shrink-0" aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`/flags/4x3/${flagIso.toLowerCase()}.svg`}
+        alt=""
+        draggable={false}
       />
     </span>
   );
@@ -460,6 +459,7 @@ function ProfileKinetikViewCountChip({
 function ProfileKinetikIdentityJoinIdRow({
   memberSinceLabel,
   systemId,
+  countryCode,
   shareLabel,
   shareCopiedLabel,
   shareCopied,
@@ -467,15 +467,17 @@ function ProfileKinetikIdentityJoinIdRow({
 }: {
   memberSinceLabel: string | null;
   systemId: string;
+  countryCode?: string | null;
   shareLabel: string;
   shareCopiedLabel: string;
   shareCopied: boolean;
   onShare: () => void;
 }) {
-  if (!memberSinceLabel && !systemId) return null;
+  const hasFlag = Boolean(countryCode?.trim());
+  if (!memberSinceLabel && !systemId && !hasFlag) return null;
 
   return (
-    <div className="profile-edit-kinetik-identity-join-id flex w-fit max-w-full min-w-0 items-end justify-start gap-2">
+    <div className="profile-edit-kinetik-identity-join-id flex w-full max-w-full min-w-0 items-center gap-2">
       {memberSinceLabel ? (
         <p className="profile-edit-kinetik-footer-ref profile-edit-kinetik-footer-ref--identity shrink-0 whitespace-nowrap">
           {memberSinceLabel}
@@ -496,6 +498,7 @@ function ProfileKinetikIdentityJoinIdRow({
           {shareCopied ? shareCopiedLabel : `ID: ${systemId}`}
         </button>
       ) : null}
+      {hasFlag ? <ProfileKinetikFooterFlag countryCode={countryCode} /> : null}
     </div>
   );
 }
@@ -760,6 +763,7 @@ type Props = {
   countryCode?: string | null;
   memberSinceMs?: number | null;
   isPro?: boolean;
+  accountUid?: string | null;
   /** dev: PRO メトリクスレイアウト案 */
   planProMetricLayout?: ProfilePlanProMetricLayoutVariant;
   /** dev: PRO 背景 FX バリエーション */
@@ -809,6 +813,7 @@ export default function ProfileEditKinetikPanel({
   countryCode = null,
   memberSinceMs = null,
   isPro = false,
+  accountUid = null,
   planProMetricLayout,
   planProBgVariant,
   planProLuxuryVariant,
@@ -1416,7 +1421,6 @@ export default function ProfileEditKinetikPanel({
                       </div>
                     ) : null}
                   </div>
-                  <ProfileKinetikNameFlag countryCode={countryCode} />
                 </div>
               </div>
               {bio?.trim() ? (
@@ -1443,6 +1447,7 @@ export default function ProfileEditKinetikPanel({
                 <ProfileKinetikIdentityJoinIdRow
                   memberSinceLabel={memberSinceLabel}
                   systemId={identity.systemId}
+                  countryCode={countryCode}
                   shareLabel={metricCopy.shareProfile}
                   shareCopiedLabel={metricCopy.shareCopied}
                   shareCopied={shareCopied}
@@ -1533,7 +1538,6 @@ export default function ProfileEditKinetikPanel({
                     </div>
                   ) : null}
                 </div>
-                <ProfileKinetikNameFlag countryCode={countryCode} />
               </div>
             </div>
           </div>
@@ -1566,6 +1570,7 @@ export default function ProfileEditKinetikPanel({
             <ProfileKinetikIdentityJoinIdRow
               memberSinceLabel={memberSinceLabel}
               systemId={identity.systemId}
+              countryCode={countryCode}
               shareLabel={metricCopy.shareProfile}
               shareCopiedLabel={metricCopy.shareCopied}
               shareCopied={shareCopied}
@@ -1606,7 +1611,6 @@ export default function ProfileEditKinetikPanel({
                     </div>
                   ) : null}
                 </div>
-                <ProfileKinetikNameFlag countryCode={countryCode} />
               </div>
             </div>
             <div
@@ -1646,6 +1650,7 @@ export default function ProfileEditKinetikPanel({
           <ProfileKinetikIdentityJoinIdRow
             memberSinceLabel={memberSinceLabel}
             systemId={identity.systemId}
+            countryCode={countryCode}
             shareLabel={metricCopy.shareProfile}
             shareCopiedLabel={metricCopy.shareCopied}
             shareCopied={shareCopied}

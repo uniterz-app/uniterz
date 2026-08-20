@@ -212,6 +212,7 @@ export default function ProfileKinetikHero({
             countryCode={profile.countryCode}
             memberSinceMs={profile.memberSinceMs}
             isPro={profile.plan === "pro"}
+            accountUid={targetUid}
             planProBgVariant={profile.planProBgVariant}
             shareHandle={profile.handle}
             metricValueDeltas={null}

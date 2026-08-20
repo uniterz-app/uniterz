@@ -14,6 +14,7 @@ import {
   MATCH_CARD_METRIC_FONT,
 } from "./matchCardTypography";
 import PredictOverlaySubmitButtonNative from "./PredictOverlaySubmitButtonNative";
+import CyberHelpMarkNative from "../../ui/CyberHelpMarkNative";
 
 type Props = {
   language: GamesLanguage;
@@ -43,7 +44,7 @@ export default function PredictionScoringRulesChipNative({
         style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
         hitSlop={6}
       >
-        <Text style={styles.chipIcon}>?</Text>
+        <CyberHelpMarkNative />
       </Pressable>
 
       <Modal
@@ -99,25 +100,10 @@ const styles = StyleSheet.create({
     right: 4,
     top: 4,
     zIndex: 10,
-    width: 28,
-    height: 28,
-    borderRadius: 0,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.45)",
-    backgroundColor: "rgba(0,245,255,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
   },
   chipPressed: {
     opacity: 0.88,
     transform: [{ scale: 0.98 }],
-  },
-  chipIcon: {
-    fontFamily: MATCH_CARD_METRIC_FONT,
-    color: "rgba(224,255,255,0.95)",
-    fontSize: 14,
-    fontWeight: "800",
-    lineHeight: 16,
   },
   backdrop: {
     flex: 1,

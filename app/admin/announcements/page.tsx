@@ -9,7 +9,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { ADMIN_UID } from "@/lib/constants";
+import { isAdminUid } from "@/lib/constants";
 
 type Row = {
   id: string;
@@ -24,7 +24,7 @@ type Row = {
 
 export default function AdminAnnouncementsListPage() {
   const { fUser, status } = useFirebaseUser();
-  const isAdmin = status === "ready" && fUser?.uid === ADMIN_UID;
+  const isAdmin = status === "ready" && isAdminUid(fUser?.uid);
   const router = useRouter();
 
   const [rows, setRows] = useState<Row[]>([]);

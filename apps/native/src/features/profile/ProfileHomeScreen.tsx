@@ -43,6 +43,8 @@ import {
   useNativeProfilePlan,
 } from "./useNativeProfilePlan";
 import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
+import { useNativeAdminInboxUnread } from "./useNativeAdminInboxUnread";
+import { isAdminUid } from "../../../../../lib/constants";
 import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
@@ -71,7 +73,6 @@ import ProfileReportDeliveryOverlayNative from "./reports/ProfileReportDeliveryO
 import ProfileProSkinUnlockOverlayNative from "./reports/ProfileProSkinUnlockOverlayNative";
 import { useProReportDeliveryOverlayNative } from "./reports/useProReportDeliveryOverlayNative";
 import { useProSkinUnlockOverlayNative } from "./reports/useProSkinUnlockOverlayNative";
-import { consumeProSkinUnlockPreviewOnProfile } from "./reports/proSkinUnlockPreviewArm";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
 import ProfileOverviewSectionNative from "./ProfileOverviewSectionNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
@@ -82,7 +83,7 @@ import {
 } from "../../../../../lib/profile/profileGamblingTerms";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
-import { parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
+import { parseUserProfileViewCount, parseUserUnitBalance } from "../../../../../lib/profile/parseUserProfileFields";
 import { parseUserPlanProBgVariant } from "../../../../../lib/profile/profilePlanProBgVariantField";
 import { currentSeasonWinStreak } from "../../../../../lib/profile/currentSeasonWinStreak";
 import {
@@ -90,6 +91,7 @@ import {
   type ProfilePlanProBgVariant,
 } from "../../../../../lib/profile/profilePlanProBgVariants";
 import { peekOwnProfileSeedNative, seedOwnProfileFromUserDocNative } from "./seedOwnProfileFromUserDocNative";
+import { hydrateMarksFromUserDoc } from "./marksFirestoreNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
 import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
@@ -117,6 +119,10 @@ import {
   fetchProfileViewCountNative,
   recordProfileViewNative,
 } from "./profileViewsApiNative";
+import {
+  peekProfileViewCountMemory,
+  setProfileViewCountMemory,
+} from "../../../../../lib/profile/profileViewCountMemory";
 
 type ProfileTab = "overview" | "report" | "awards" | "bracket";
 
@@ -190,7 +196,6 @@ export default function ProfileHomeScreen({
     isMarked,
     addMark,
     removeMark,
-    refreshMarkedBy,
   } = useProfileMarksNative(myUid, maxMarks);
   const publicRouteKey = routeHandle?.trim() ?? "";
   const isPublicProfileView = publicRouteKey.length > 0;
@@ -206,10 +211,6 @@ export default function ProfileHomeScreen({
   const [settingsAnim, setSettingsAnim] = useState<"fade" | "none">("fade");
   const [menuOpen, setMenuOpen] = useState(false);
   const [markListOpen, setMarkListOpen] = useState(false);
-  useEffect(() => {
-    if (!markListOpen) return;
-    void refreshMarkedBy();
-  }, [markListOpen, refreshMarkedBy]);
   const [welcomeFlyActive, setWelcomeFlyActive] = useState(
     () =>
       !isPublicProfileView &&
@@ -505,19 +506,52 @@ export default function ProfileHomeScreen({
     myPlanOverrideReady: isMe ? myPlanReady : false,
     deferOwnFetch: isMe,
   });
-  const [profileViewCount, setProfileViewCount] = useState<number | null>(null);
+  const [profileViewCount, setProfileViewCount] = useState<number | null>(() =>
+    ownSeedAtMount?.profileViewCount ??
+    (targetUid ? peekProfileViewCountMemory(targetUid) : null)
+  );
 
   useEffect(() => {
     let cancelled = false;
-    setProfileViewCount(null);
-    if (status !== "ready" || !targetUid) return;
+    if (status !== "ready" || !targetUid) {
+      if (!targetUid) setProfileViewCount(null);
+      return;
+    }
+
+    if (!isPublicProfileView && myUserDoc === undefined) return;
+
+    const denorm = isPublicProfileView
+      ? profileByHandle.profileViewCount
+      : parseUserProfileViewCount(myUserDoc);
+
+    if (denorm != null) {
+      setProfileViewCountMemory(targetUid, denorm);
+      setProfileViewCount(denorm);
+      if (myUid && !isMe) {
+        void recordProfileViewNative(targetUid)
+          .then((counted) => {
+            if (!counted) return;
+            setProfileViewCount((prev) => {
+              const count = (prev ?? denorm) + 1;
+              setProfileViewCountMemory(targetUid, count);
+              return count;
+            });
+          })
+          .catch(() => undefined);
+      }
+      return;
+    }
+
+    const cached = peekProfileViewCountMemory(targetUid);
+    setProfileViewCount(cached);
 
     void (async () => {
       try {
         if (myUid && !isMe) {
-          await recordProfileViewNative(targetUid).catch(() => undefined);
+          void recordProfileViewNative(targetUid).catch(() => undefined);
         }
         const count = await fetchProfileViewCountNative(targetUid);
+        setProfileViewCountMemory(targetUid, count);
         if (!cancelled) setProfileViewCount(count);
       } catch {
         // 閲覧数取得の失敗でプロフィール表示を壊さない。
@@ -527,7 +561,15 @@ export default function ProfileHomeScreen({
     return () => {
       cancelled = true;
     };
-  }, [isMe, myUid, status, targetUid]);
+  }, [
+    isMe,
+    isPublicProfileView,
+    myUid,
+    myUserDoc,
+    profileByHandle.profileViewCount,
+    status,
+    targetUid,
+  ]);
 
   useEffect(() => {
     if (openSettingsOnMount && isMe) {
@@ -551,6 +593,9 @@ export default function ProfileHomeScreen({
     useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
       enabled: isMe,
     });
+  const adminInbox = useNativeAdminInboxUnread(
+    Boolean(isMe && isAdminUid(myUid))
+  );
   const { resolvedBadges } = useNativeProfileBadges(isMe ? myUid : targetUid);
 
   /** プロフィールは NBA のみ（W杯経路は使わない） */
@@ -603,14 +648,6 @@ export default function ProfileHomeScreen({
       enabled: reportOverlayEnabled,
     });
   const skinUnlockEnabled = Boolean(isMe && myUid) && reportOverlay == null;
-  const [forceSkinUnlockPreview, setForceSkinUnlockPreview] = useState(false);
-  useFocusEffect(
-    useCallback(() => {
-      if (consumeProSkinUnlockPreviewOnProfile()) {
-        setForceSkinUnlockPreview(true);
-      }
-    }, [])
-  );
 
   const tutorialCopy = useMemo(
     () => i18nT((language === "en" ? "en" : "ja") as Language),
@@ -681,13 +718,8 @@ export default function ProfileHomeScreen({
   } = useProSkinUnlockOverlayNative({
     uid: myUid,
     enabled: skinUnlockEnabled,
-    forcePreview: forceSkinUnlockPreview,
     userDoc: isMe ? myUserDoc : null,
   });
-  const dismissSkinUnlockAndClearForce = useCallback(() => {
-    setForceSkinUnlockPreview(false);
-    dismissSkinUnlock();
-  }, [dismissSkinUnlock]);
 
   const currentStreak = useMemo(() => {
     if (isPublicProfileView) {
@@ -817,7 +849,12 @@ export default function ProfileHomeScreen({
         setPlanProBgVariant(warm.planProBgVariant);
         setMemberSinceMs(warm.memberSinceMs);
         setUnitBalance(warm.unitBalance);
+        if (warm.profileViewCount != null) {
+          setProfileViewCountMemory(myUid, warm.profileViewCount);
+          setProfileViewCount(warm.profileViewCount);
+        }
         seedNativeProfileStatsFromUserDoc(myUid, warm.data);
+        hydrateMarksFromUserDoc(myUid, warm.data);
         setProfileLoading(false);
         setMyPlanReady(true);
       } else {
@@ -850,8 +887,13 @@ export default function ProfileHomeScreen({
         setPlanProBgVariant(seed.planProBgVariant);
         setMemberSinceMs(seed.memberSinceMs);
         setUnitBalance(seed.unitBalance);
+        if (seed.profileViewCount != null) {
+          setProfileViewCountMemory(myUid, seed.profileViewCount);
+          setProfileViewCount(seed.profileViewCount);
+        }
         if (snapExists) {
           seedNativeProfileStatsFromUserDoc(myUid, data);
+          hydrateMarksFromUserDoc(myUid, data);
         }
         // 期限解決を待たずカードを出す（空→埋めで伸びない）
         setProfileLoading(false);
@@ -941,6 +983,11 @@ export default function ProfileHomeScreen({
     setPlanProBgVariant(profileByHandle.planProBgVariant);
     setMemberSinceMs(profileByHandle.memberSinceMs);
     setUnitBalance(profileByHandle.unitBalance);
+    if (profileByHandle.profileViewCount != null) {
+      const uid = profileByHandle.targetUid;
+      if (uid) setProfileViewCountMemory(uid, profileByHandle.profileViewCount);
+      setProfileViewCount(profileByHandle.profileViewCount);
+    }
     setProfileLoading(false);
   }, [isPublicProfileView, profileByHandle]);
 
@@ -1299,6 +1346,7 @@ export default function ProfileHomeScreen({
         <ProfileMenuEdgeHandleNative
           onOpen={() => setMenuOpen(true)}
           unreadCount={menuUnreadCount}
+          adminUnreadCount={adminInbox.total}
           hidden={menuOpen || markListOpen || welcomeFlyActive}
         />
         <ProfileMenuEdgeHandleNative
@@ -1566,6 +1614,7 @@ export default function ProfileHomeScreen({
       language={language}
       apiBase={apiBase}
       unreadAnnouncements={menuUnreadCount}
+      adminInbox={adminInbox}
       uid={fUser?.uid ?? null}
       plan={plan}
       displayName={
@@ -1600,6 +1649,12 @@ export default function ProfileHomeScreen({
         else if (page === "password") navigation.navigate("ProfilePassword");
         else if (page === "notifications") navigation.navigate("NotificationSettings");
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");
+        else if (page === "adminFeatureInbox")
+          navigation.navigate("AdminInbox", { kind: "feature" });
+        else if (page === "adminContactInbox")
+          navigation.navigate("AdminInbox", { kind: "inbox" });
+        else if (page === "adminRedemptions")
+          navigation.navigate("AdminRedemptions");
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
         else if (page === "restartTutorial") {
@@ -1659,52 +1714,18 @@ export default function ProfileHomeScreen({
           navigation.navigate("TitleSkinPreview");
         else if (page === "waveProSkinPreview" && __DEV__)
           navigation.navigate("WaveProSkinPreview");
-        else if (page === "rankingListProSkinPreview" && __DEV__)
-          navigation.navigate("RankingListProSkinPreview");
-        else if (page === "proSkinUnlockPreview" && __DEV__)
-          navigation.navigate("ProSkinUnlockPreview");
-        else if (page === "referralStampCelebratePreview" && __DEV__)
-          navigation.navigate("ReferralStampCelebratePreview");
-        else if (page === "unitEarnCelebratePreview" && __DEV__)
-          navigation.navigate("UnitEarnCelebratePreview");
-        else if (page === "careerFlipButtonPreview" && __DEV__)
-          navigation.navigate("CareerFlipButtonPreview");
-        else if (page === "careerPlacementPreview" && __DEV__)
-          navigation.navigate("CareerPlacementPreview");
-        else if (page === "unitEarnModalDesignPreview" && __DEV__)
-          navigation.navigate("UnitEarnModalDesignPreview");
-        else if (page === "unitEarnOverlayAnimPreview" && __DEV__)
-          navigation.navigate("UnitEarnOverlayAnimPreview");
-        else if (page === "unitEarnOverlayFontPreview" && __DEV__)
-          navigation.navigate("UnitEarnOverlayFontPreview");
         else if (page === "uniterzLogoTypePreview" && __DEV__)
           navigation.navigate("UniterzLogoTypePreview");
         else if (page === "uniterzLogo3dPreview" && __DEV__)
           navigation.navigate("UniterzLogo3dPreview");
         else if (page === "uniterzProBadgePreview" && __DEV__)
           navigation.navigate("UniterzProBadgePreview");
-        else if (page === "proBadgeComparePreview" && __DEV__)
-          navigation.navigate("ProBadgeComparePreview");
-        else if (page === "resultCardDesignPreview" && __DEV__)
-          navigation.navigate("ResultCardDesignPreview");
-        else if (page === "resultBadgeDesignPreview" && __DEV__)
-          navigation.navigate("ResultBadgeDesignPreview");
-        else if (page === "resultStampDesignPreview" && __DEV__)
-          navigation.navigate("ResultStampDesignPreview");
-        else if (page === "resultStreakTagDesignPreview" && __DEV__)
-          navigation.navigate("ResultStreakTagDesignPreview");
-        else if (page === "navBarDesignPreview" && __DEV__)
-          navigation.navigate("NavBarDesignPreview");
-        else if (page === "buttonDesignPreview" && __DEV__)
-          navigation.navigate("ButtonDesignPreview");
-        else if (page === "hexLightDesignPreview" && __DEV__)
-          navigation.navigate("HexLightDesignPreview");
         else if (page === "splashLogoPreview" && __DEV__)
           navigation.navigate("SplashLogoPreview");
         else if (page === "liveGameStatsPreview" && __DEV__)
           navigation.navigate("LiveGameStatsPreview");
-        else if (page === "profileKinetikMetricsPreview" && __DEV__)
-          navigation.navigate("ProfileKinetikMetricsPreview");
+        else if (page === "leagueStatsPreview" && __DEV__)
+          navigation.navigate("LeagueStatsPreview");
       }}
     />
     <ProfileBadgeDetailModal
@@ -1749,7 +1770,7 @@ export default function ProfileHomeScreen({
         preview={skinUnlockPreview}
         visible
         ownerCounts={skinUnlockOwnerCounts}
-        onDismiss={dismissSkinUnlockAndClearForce}
+        onDismiss={dismissSkinUnlock}
         onApplied={(id) => {
           setPlanProBgVariant(id);
         }}

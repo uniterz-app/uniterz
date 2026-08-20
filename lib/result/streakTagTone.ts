@@ -11,6 +11,7 @@ export type StreakTagTone = {
 
 /**
  * リザルトカード左上 IMPACT 連勝タグの色。
+ * 本番見た目は 03 塗りピル（全塗り + インク文字 + skew）。
  * 3–4 鋼 / 5–6 シアン / 7–9 金 / 10+ 紅
  */
 export function streakTagTone(activeWinStreak: unknown): StreakTagTone {

@@ -12,6 +12,7 @@ import {
 /**
  * GET /api/nba/league-team-stats?season=2025-26
  * 認証不要。Firestore 共有スナップショット（未作成時はサーバー側モック fallback）。
+ * 実データ書き込みは `ingestNbaLeagueStatsFromProvider`（ゲート B）。
  */
 export async function GET(req: Request) {
   try {
