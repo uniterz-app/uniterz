@@ -64,20 +64,20 @@ half4 main(float2 xy) {
   float2 uv = xy / u_res;
   float t = u_time * 0.001;
 
-  float n1 = fbm(uv * float2(1.35, 2.4) + float2(t * 0.035, t * 0.028));
-  float n2 = fbm(uv * float2(1.7, 2.8) + float2(4.2, 1.6) + float2(-t * 0.03, t * 0.04));
+  float n1 = fbm(uv * float2(1.35, 2.4) + float2(t * 0.042, t * 0.033));
+  float n2 = fbm(uv * float2(1.7, 2.8) + float2(4.2, 1.6) + float2(-t * 0.036, t * 0.047));
   float2 wuv = uv + float2((n1 - 0.5) * 0.07, (n2 - 0.5) * 0.16);
 
-  float phase = t * 0.11;
+  float phase = t * 0.13;
   float spine = 0.47
     + 0.18 * sin(wuv.x * 2.85 + phase)
     + 0.06 * sin(wuv.x * 5.2 - phase * 0.65);
-  spine += (fbm(float2(wuv.x * 2.8, t * 0.06 + 2.4)) - 0.5) * 0.08;
+  spine += (fbm(float2(wuv.x * 2.8, t * 0.07 + 2.4)) - 0.5) * 0.08;
 
   float d = abs(wuv.y - spine);
   float thick = 0.12
     + 0.05 * sin(wuv.x * 3.1 + phase * 0.4)
-    + 0.04 * fbm(float2(wuv.x * 2.2 + t * 0.04, 8.0));
+    + 0.04 * fbm(float2(wuv.x * 2.2 + t * 0.048, 8.0));
 
   float veil = exp(-pow(d / max(thick * 1.55, 0.04), 1.55));
   float mist = exp(-pow(d / max(thick, 0.03), 2.05));
