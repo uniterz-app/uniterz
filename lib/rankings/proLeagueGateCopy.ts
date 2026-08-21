@@ -3,7 +3,7 @@
  */
 
 export type ProLeagueGateBullet = {
-  icon: "swords" | "trophy" | "grid" | "users" | "sparkles";
+  icon: "swords" | "trophy" | "grid" | "users" | "sparkles" | "badge";
   title: string;
   detail: string;
 };
@@ -34,6 +34,11 @@ export function proLeagueGateCopy(language: "ja" | "en"): ProLeagueGateCopy {
           icon: "trophy",
           title: "Weekly / Monthly / Season",
           detail: "Same periods as Pick Up, Pro competitors only",
+        },
+        {
+          icon: "badge",
+          title: "Monthly awards · Badge",
+          detail: "Top monthly finishers earn an exclusive badge",
         },
         {
           icon: "grid",
@@ -70,6 +75,11 @@ export function proLeagueGateCopy(language: "ja" | "en"): ProLeagueGateCopy {
         icon: "trophy",
         title: "週間 / 月間 / シーズン",
         detail: "Pick Up と同じ期間構成。対戦相手は Pro のみ",
+      },
+      {
+        icon: "badge",
+        title: "報酬 · バッジ",
+        detail: "月間優秀者に専用バッジを付与します",
       },
       {
         icon: "grid",

@@ -1,3 +1,8 @@
+import {
+  rankingFunctionHeaders,
+  rankingFunctionUrl,
+} from "@/lib/rankings/server/rankingFunctionUrl";
+
 export const PROFILE_SUMMARY_RANK_METRICS = [
   "totalPoints",
   "totalPrecision",
@@ -32,6 +37,7 @@ async function fetchOneMetricFromFunctions(
   const res = await fetch(url.toString(), {
     method: "GET",
     cache: "no-store",
+    headers: rankingFunctionHeaders(),
   });
   const json = await res.json();
 
@@ -64,9 +70,7 @@ export async function fetchBulkFromFunctions(
   metrics: BulkRankingMetric[],
   opts?: { personalOnly?: boolean }
 ): Promise<{ ok: true; byMetric: Record<string, BulkMetricPayload> }> {
-  const baseUrl =
-    process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
-    process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
+  const baseUrl = rankingFunctionUrl();
 
   if (!baseUrl) {
     throw new Error("CUMULATIVE_RANKING_FUNCTION_URL is not set");
@@ -80,6 +84,7 @@ export async function fetchBulkFromFunctions(
   const combinedRes = await fetch(combinedUrl.toString(), {
     method: "GET",
     cache: "no-store",
+    headers: rankingFunctionHeaders(),
   });
   const combinedJson = await combinedRes.json();
 

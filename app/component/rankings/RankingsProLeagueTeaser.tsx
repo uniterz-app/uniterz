@@ -8,6 +8,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import {
+  Award,
   LayoutGrid,
   Sparkles,
   Swords,
@@ -40,6 +41,7 @@ const BULLET_ICONS: Record<
 > = {
   swords: Swords,
   trophy: Trophy,
+  badge: Award,
   grid: LayoutGrid,
   users: Users,
   sparkles: Sparkles,
@@ -77,7 +79,7 @@ export default function RankingsProLeagueTeaser({
   const rows = useMemo(() => buildProLeagueTeaserRows(), []);
 
   return (
-    <div className="relative isolate min-h-[min(70dvh,560px)] overflow-hidden rounded-2xl border border-white/10">
+    <div className="relative isolate min-h-[min(70dvh,560px)] overflow-hidden rounded-none border border-white/10">
       <div
         aria-hidden
         className="pointer-events-none select-none [mask-image:linear-gradient(180deg,#000_45%,transparent_100%)]"
@@ -147,14 +149,14 @@ export default function RankingsProLeagueTeaser({
               {copy.cta}
             </Link>
           </div>
-          <div className="w-full rounded-[2px] border border-orange-400/55 bg-orange-500/[0.07] px-3 py-2.5 text-left shadow-[0_0_18px_rgba(251,146,60,0.12)]">
+          <div className="w-full rounded-none border border-orange-400/55 bg-orange-500/[0.07] px-3 py-2.5 text-left shadow-[0_0_18px_rgba(251,146,60,0.12)]">
             <ul className="list-none space-y-2">
               {copy.bullets.map((item) => {
                 const Icon = BULLET_ICONS[item.icon];
                 return (
                   <li key={item.title} className="flex items-start gap-2.5">
                     <span
-                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border border-orange-400/45 bg-orange-500/15 text-orange-300"
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-none border border-orange-400/45 bg-orange-500/15 text-orange-300"
                       aria-hidden
                     >
                       <Icon className="h-3 w-3" strokeWidth={2.4} />

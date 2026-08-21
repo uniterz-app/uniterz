@@ -78,7 +78,7 @@ export type GroupBattleSquadDoc = {
   status: SquadStatus;
   inviteCodeHash: string | null;
   inviteCodeLast4?: string | null;
-  /** オーナー向け再表示用（API では owner のみ返却） */
+  /** オーナー向け再表示用。文書には封印して持ち、パース時だけ平文にする */
   inviteCodePlain?: string | null;
   rulesAcceptedAtMs: number | null;
   rulesAcceptedByUid: string | null;

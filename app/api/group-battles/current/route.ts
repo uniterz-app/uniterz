@@ -47,9 +47,9 @@ export async function GET(req: Request) {
           );
           const inviteCode =
             membership.role === "owner" &&
-            typeof raw.inviteCodePlain === "string" &&
-            raw.inviteCodePlain.trim()
-              ? raw.inviteCodePlain.trim()
+            typeof squad.inviteCodePlain === "string" &&
+            squad.inviteCodePlain.trim()
+              ? squad.inviteCodePlain.trim()
               : null;
           mySquad = {
             id: squad.id,

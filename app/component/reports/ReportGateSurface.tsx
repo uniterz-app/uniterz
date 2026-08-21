@@ -195,7 +195,7 @@ export default function ReportGateSurface({
       </p>
       {cta ? <div className="flex justify-center">{cta}</div> : null}
       {copy.bullets && copy.bullets.length > 0 ? (
-        <div className={["w-full rounded-[2px] border px-3 py-2.5 text-left", bulletTone.panel].join(" ")}>
+        <div className={["w-full rounded-none border px-3 py-2.5 text-left", bulletTone.panel].join(" ")}>
           <ul className="list-none space-y-2">
             {copy.bullets.map((item) => {
               const Icon = BULLET_ICONS[item.icon];
@@ -203,7 +203,7 @@ export default function ReportGateSurface({
                 <li key={item.title} className="flex items-start gap-2.5">
                   <span
                     className={[
-                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border",
+                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-none border",
                       bulletTone.icon,
                     ].join(" ")}
                     aria-hidden
@@ -242,7 +242,7 @@ export default function ReportGateSurface({
     return (
       <div
         className={[
-          "relative overflow-hidden rounded-[3px] border bg-[rgba(5,5,8,0.98)] px-4 py-14",
+          "relative overflow-hidden rounded-none border bg-[rgba(5,5,8,0.98)] px-4 py-14",
           className ?? "",
         ].join(" ")}
         style={{ borderColor: frame.border }}
@@ -255,7 +255,7 @@ export default function ReportGateSurface({
   return (
     <div
       className={[
-        "relative isolate overflow-hidden rounded-[3px] border bg-[rgba(5,5,8,0.98)]",
+        "relative isolate overflow-hidden rounded-none border bg-[rgba(5,5,8,0.98)]",
         className ?? "",
       ].join(" ")}
       style={{ borderColor: frame.border }}

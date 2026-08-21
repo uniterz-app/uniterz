@@ -113,6 +113,17 @@ export function seedNbaKinetikPeriodStatsCache(
   cache.set(cacheKey(safeUid, period), { at: Date.now(), data: next });
 }
 
+async function bearerHeaders(): Promise<HeadersInit> {
+  try {
+    const { auth } = await import("@/lib/firebase");
+    const token = await auth.currentUser?.getIdToken().catch(() => null);
+    if (!token) return {};
+    return { Authorization: `Bearer ${token}` };
+  } catch {
+    return {};
+  }
+}
+
 async function fetchNbaPeriodKinetikStats(
   uid: string,
   period: ProfileKinetikMetricsPeriod,
@@ -134,10 +145,13 @@ async function fetchNbaPeriodKinetikStats(
   const base = (apiBase ?? "").replace(/\/$/, "");
   const url = `${base}/api/profile/user-stats?${qs.toString()}`;
 
-  const promise = fetch(url, {
-    method: "GET",
-    cache: "no-store",
-  })
+  const promise = bearerHeaders().then((headers) =>
+    fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers,
+    })
+  )
     .then(async (res) => {
       const json = await res.json();
       if (!res.ok || !json?.ok) {
@@ -213,10 +227,13 @@ async function fetchNbaWindowKinetikStats(
   const base = (apiBase ?? "").replace(/\/$/, "");
   const url = `${base}/api/profile/user-stats?${qs.toString()}`;
 
-  const promise = fetch(url, {
-    method: "GET",
-    cache: "no-store",
-  })
+  const promise = bearerHeaders().then((headers) =>
+    fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers,
+    })
+  )
     .then(async (res) => {
       const json = await res.json();
       if (!res.ok || !json?.ok) {

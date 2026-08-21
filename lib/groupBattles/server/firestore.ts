@@ -29,6 +29,7 @@ import type {
   SquadStatus,
 } from "@/lib/groupBattles/types";
 import { periodSnapshotDocId } from "@/lib/groupBattles/dailyPoints";
+import { openInviteCode } from "@/lib/security/sealInviteCode";
 
 export function battleRef(db: Firestore, battleId: string) {
   return db.collection(GROUP_BATTLE_COLLECTION).doc(battleId);
@@ -143,7 +144,10 @@ export function parseSquadDoc(
     inviteCodeLast4:
       data.inviteCodeLast4 == null ? null : String(data.inviteCodeLast4),
     inviteCodePlain:
-      data.inviteCodePlain == null ? null : String(data.inviteCodePlain),
+      openInviteCode(data.inviteCodeEnc) ??
+      (typeof data.inviteCodePlain === "string" && data.inviteCodePlain.trim()
+        ? data.inviteCodePlain.trim()
+        : null),
     rulesAcceptedAtMs: data.rulesAcceptedAt
       ? tsMs(data.rulesAcceptedAt)
       : null,

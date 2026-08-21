@@ -4640,6 +4640,7 @@ export default function SquadBattlePage({
     isPreviewMode ? "rank" : "join"
   );
   const battleTabDefaultedRef = useRef(false);
+  const bootstrapPeriodKeyRef = useRef<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const reduceMotion = useReducedMotion() === true;
   const [extraAppliedIds, setExtraAppliedIds] = useState<string[]>([]);
@@ -4690,6 +4691,8 @@ export default function SquadBattlePage({
   /** API 接続時の battleId（未接続なら null → モック） */
   const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
   const [liveBattlePhase, setLiveBattlePhase] = useState<string | null>(null);
+  const [liveWeeklyLabels, setLiveWeeklyLabels] = useState<string[]>([]);
+  const [liveMonthlyLabel, setLiveMonthlyLabel] = useState<string | null>(null);
   const [liveRecruitEndAtMs, setLiveRecruitEndAtMs] = useState<number | null>(
     null
   );
@@ -4751,17 +4754,18 @@ export default function SquadBattlePage({
         const { auth } = await import("@/lib/firebase");
         const user = auth.currentUser;
         const token = await user?.getIdToken();
-        const {
-          fetchCurrentGroupBattle,
-          fetchGroupBattleRankings,
-          fetchPastGroupBattleSquads,
-          fetchGroupBattleIncomingInvites,
-          fetchGroupBattleOpenSquads,
-          fetchGroupBattleJoinRequests,
-        } = await import("@/lib/groupBattles/clientApi");
-        const current = await fetchCurrentGroupBattle({ idToken: token });
+        const { fetchGroupBattleBootstrap } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const periodKey = `${rankPeriod}|${weekIndex}`;
+        const boot = await fetchGroupBattleBootstrap({
+          idToken: token,
+          period: rankPeriod,
+          weekIndex: rankPeriod === "weekly" ? weekIndex : null,
+        });
         if (cancelled) return;
-        if (!current?.battle) {
+        bootstrapPeriodKeyRef.current = periodKey;
+        if (!boot?.battle) {
           setLiveBattleId(null);
           setLiveBattlePhase(null);
           setLiveRecruitEndAtMs(null);
@@ -4773,91 +4777,65 @@ export default function SquadBattlePage({
           if (!isPreviewMode) setUiPhase("idle");
           return;
         }
-        setLiveBattleId(current.battle.id);
-        setLiveBattlePhase(current.battle.phase);
+        setLiveBattleId(boot.battle.id);
+        setLiveBattlePhase(boot.battle.phase);
+        setLiveWeeklyLabels(boot.battle.weeklyLabels ?? []);
+        setLiveMonthlyLabel(boot.battle.monthlyRange?.label ?? null);
         setLiveRecruitEndAtMs(
-          Number(current.battle.recruitEndAtMs) > 0
-            ? Number(current.battle.recruitEndAtMs)
+          Number(boot.battle.recruitEndAtMs) > 0
+            ? Number(boot.battle.recruitEndAtMs)
             : null
         );
         if (!isPreviewMode) {
-          setUiPhase(groupBattlePhaseToUiPhase(current.battle.phase));
+          setUiPhase(groupBattlePhaseToUiPhase(boot.battle.phase));
         }
         if (user?.uid) setLiveSelfUid(user.uid);
-        const mySquadId = current.mySquad?.id ?? null;
+        const mySquadId = boot.mySquad?.id ?? null;
         setLiveMySquadId(mySquadId);
-        setLiveIsOwner(current.membership?.role === "owner");
+        setLiveIsOwner(boot.membership?.role === "owner");
         setLiveFormingSquad(
-          current.mySquad
-            ? mapCurrentMySquadToUiSquad(current.mySquad, user?.uid ?? null)
+          boot.mySquad
+            ? mapCurrentMySquadToUiSquad(boot.mySquad, user?.uid ?? null)
             : null
         );
-        const weeklyLabels = current.battle.weeklyLabels ?? [];
-        const label =
-          rankPeriod === "weekly"
-            ? weeklyLabels[weekIndex - 1] ?? weeklyLabels[weeklyLabels.length - 1]
-            : current.battle.monthlyRange?.label;
-        const rankings = await fetchGroupBattleRankings(
-          current.battle.id,
-          rankPeriod,
-          label,
-          { idToken: token }
-        );
-        if (!cancelled) {
-          if (rankings?.snapshot?.rows?.length) {
+        const rankings = boot.rankings;
+        if (rankings?.snapshot?.rows?.length) {
+          setBoardStatus(rankings.snapshot.status);
+          setLiveLeaderboard(
+            mapGroupBattleSnapshotRowsToSquads(
+              rankings.snapshot.rows,
+              mySquadId
+            )
+          );
+        } else {
+          setLiveLeaderboard(rankings?.snapshot ? [] : null);
+          if (rankings?.snapshot) {
             setBoardStatus(rankings.snapshot.status);
-            setLiveLeaderboard(
-              mapGroupBattleSnapshotRowsToSquads(
-                rankings.snapshot.rows,
-                mySquadId
-              )
-            );
-          } else {
-            setLiveLeaderboard(rankings?.snapshot ? [] : null);
-            if (rankings?.snapshot) {
-              setBoardStatus(rankings.snapshot.status);
-            }
           }
         }
-        const open = await fetchGroupBattleOpenSquads(current.battle.id, {
-          idToken: token,
-        });
-        if (!cancelled) {
-          setLiveOpenSquads(
-            open?.squads ? mapOpenSquadApiToListings(open.squads) : []
+        setLiveOpenSquads(
+          boot.openSquads
+            ? mapOpenSquadApiToListings(boot.openSquads)
+            : []
+        );
+        if (boot.pastSquads) setLivePastSquads(boot.pastSquads);
+        if (boot.invites) {
+          setLiveIncomingInvites(
+            boot.invites.map((i) => ({
+              id: i.id,
+              squadId: i.squadId,
+              squadName: i.squadName,
+              fromDisplayName: i.fromDisplayName,
+            }))
           );
         }
-        if (token) {
-          const past = await fetchPastGroupBattleSquads({ idToken: token });
-          if (!cancelled && past?.pastSquads) {
-            setLivePastSquads(past.pastSquads);
-          }
-          const invites = await fetchGroupBattleIncomingInvites(
-            current.battle.id,
-            { idToken: token }
+        if (boot.joinRequests) {
+          setLiveIncomingRequests(
+            boot.joinRequests.incoming.map(mapJoinRequestApiToUi)
           );
-          if (!cancelled && invites?.invites) {
-            setLiveIncomingInvites(
-              invites.invites.map((i) => ({
-                id: i.id,
-                squadId: i.squadId,
-                squadName: i.squadName,
-                fromDisplayName: i.fromDisplayName,
-              }))
-            );
-          }
-          const requests = await fetchGroupBattleJoinRequests(
-            current.battle.id,
-            { idToken: token }
+          setLiveOutgoingRequests(
+            boot.joinRequests.outgoing.map(mapJoinRequestApiToUi)
           );
-          if (!cancelled && requests) {
-            setLiveIncomingRequests(
-              requests.incoming.map(mapJoinRequestApiToUi)
-            );
-            setLiveOutgoingRequests(
-              requests.outgoing.map(mapJoinRequestApiToUi)
-            );
-          }
         }
       } catch {
         // プレビュー時のみモック継続
@@ -4866,7 +4844,54 @@ export default function SquadBattlePage({
     return () => {
       cancelled = true;
     };
-  }, [rankPeriod, weekIndex, isPreviewMode]);
+  }, [isPreviewMode]);
+
+  useEffect(() => {
+    if (!liveBattleId) return;
+    const periodKey = `${rankPeriod}|${weekIndex}`;
+    if (bootstrapPeriodKeyRef.current === periodKey) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const token = await auth.currentUser?.getIdToken();
+        const { fetchGroupBattleRankings } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const weeklyLabels = liveWeeklyLabels;
+        const label =
+          rankPeriod === "weekly"
+            ? weeklyLabels[weekIndex - 1] ??
+              weeklyLabels[weeklyLabels.length - 1]
+            : liveMonthlyLabel ?? undefined;
+        const rankings = await fetchGroupBattleRankings(
+          liveBattleId,
+          rankPeriod,
+          label,
+          { idToken: token }
+        );
+        if (cancelled) return;
+        bootstrapPeriodKeyRef.current = periodKey;
+        if (rankings?.snapshot?.rows?.length) {
+          setBoardStatus(rankings.snapshot.status);
+          setLiveLeaderboard(
+            mapGroupBattleSnapshotRowsToSquads(
+              rankings.snapshot.rows,
+              liveMySquadId
+            )
+          );
+        } else {
+          setLiveLeaderboard(rankings?.snapshot ? [] : null);
+          if (rankings?.snapshot) setBoardStatus(rankings.snapshot.status);
+        }
+      } catch {
+        /* keep previous board */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [liveBattleId, liveMySquadId, liveWeeklyLabels, liveMonthlyLabel, rankPeriod, weekIndex]);
 
   useEffect(() => {
     if (uiPhase !== "reward" || !liveBattleId) {

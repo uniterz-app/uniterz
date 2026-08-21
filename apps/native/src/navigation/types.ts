@@ -189,6 +189,8 @@ export type ProfileStackParamList = {
   LpRankingPreview: undefined;
   /** __DEV__ ランキングリスト見た目案 */
   RankingListDesignPreview: undefined;
+  /** __DEV__ Free → PRO LEAGUE ゲート */
+  ProLeagueGatePreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

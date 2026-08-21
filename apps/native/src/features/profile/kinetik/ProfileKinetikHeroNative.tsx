@@ -182,7 +182,6 @@ export default function ProfileKinetikHeroNative({
     if (!targetUid?.trim() || statsLoading) return;
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
-    prefetchNbaKinetikPeriodStats(targetUid, otherBoard, apiBase);
     if (metricsTab === "total") {
       if (periodFetchEnabled) {
         prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod, apiBase);

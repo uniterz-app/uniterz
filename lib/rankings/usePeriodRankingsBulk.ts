@@ -77,7 +77,7 @@ async function fetchPeriodPersonalOverlay(opts: {
   const base = (opts.apiBaseUrl ?? "").replace(/\/$/, "");
   const res = await fetch(`${base}/api/period-ranking/bulk?${params}`, {
     headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
+    cache: "default",
   });
   if (!res.ok) return {};
   const json = (await res.json()) as {
@@ -157,7 +157,7 @@ export function usePeriodRankingsBulk(
             headers: token
               ? { Authorization: `Bearer ${token}` }
               : undefined,
-            cache: division === "open" ? "no-store" : "force-cache",
+              cache: "force-cache",
           });
           const json = (await res.json()) as {
             ok?: boolean;

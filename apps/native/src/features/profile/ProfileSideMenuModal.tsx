@@ -85,6 +85,7 @@ type Props = {
     | "splashLogoPreview"
     | "liveGameStatsPreview"
     | "leagueStatsPreview"
+    | "proLeagueGatePreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -264,6 +265,7 @@ export default function ProfileSideMenuModal({
       | "splashLogoPreview"
       | "liveGameStatsPreview"
       | "leagueStatsPreview"
+      | "proLeagueGatePreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -688,6 +690,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("leagueStatsPreview")}
                         >
                           リーグスタッツ（左レール）
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="shield-crown-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proLeagueGatePreview")}
+                        >
+                          PRO LEAGUE ゲート（Free）
                         </SideMenuItemButtonNative>
                       </View>
                     </>

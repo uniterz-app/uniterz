@@ -13,6 +13,7 @@ import {
 } from "@/lib/rankings/readRankGapBonusSlice";
 import { resolveNextRankTierMilestone } from "@/lib/rankings/rankTierMilestone";
 import { fetchBulkFromFunctions } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
+import { rankingFunctionUrl } from "@/lib/rankings/server/rankingFunctionUrl";
 import type { Language } from "@/lib/i18n/language";
 
 type RankingRowLite = {
@@ -90,9 +91,7 @@ export async function fetchRankGapAnalysis(input: {
   rankingLeague: RankingLeagueSource;
   language: Language;
 }): Promise<RankGapAnalysis | { ok: false; reason: string }> {
-  const baseUrl =
-    process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
-    process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
+  const baseUrl = rankingFunctionUrl();
   if (!baseUrl) {
     return { ok: false, reason: "ranking_unavailable" };
   }

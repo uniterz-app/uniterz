@@ -50,6 +50,20 @@ export const PRO_PREGAME_ALERT_PREF_KEYS = [
   "proInsightUpdate",
 ] as const satisfies readonly PushNotificationPrefKey[];
 
+/** 送信も UI も Pro 限定（月次レポート含む） */
+export const PRO_ONLY_PREF_KEYS = [
+  ...PRO_PREGAME_ALERT_PREF_KEYS,
+  "monthlyReport",
+] as const satisfies readonly PushNotificationPrefKey[];
+
+export function isProOnlyPrefKey(key: PushNotificationPrefKey): boolean {
+  return (PRO_ONLY_PREF_KEYS as readonly string[]).includes(key);
+}
+
+export function isPushTypeProOnly(type: PushNotificationType): boolean {
+  return isProOnlyPrefKey(prefKeyForPushType(type));
+}
+
 export function prefKeyForPushType(
   type: PushNotificationType
 ): PushNotificationPrefKey {

@@ -9,6 +9,7 @@ import {
 } from "./pushNotificationCopy";
 import {
   isPushTypeEnabledForPrefs,
+  isPushTypeProOnly,
   parsePushNotificationPrefs,
   type PushNotificationPrefs,
 } from "./pushNotificationPrefs";
@@ -53,22 +54,47 @@ async function loadTokensForUids(uids: string[]): Promise<TokenRecord[]> {
   return out;
 }
 
+function userPlanIsPro(data: Record<string, unknown> | undefined): boolean {
+  if (!data || data.plan !== "pro") return false;
+  const until = data.proUntil as
+    | { toMillis?: () => number; seconds?: number }
+    | Date
+    | null
+    | undefined;
+  if (!until) return true;
+  let ms = 0;
+  if (until instanceof Date) ms = until.getTime();
+  else if (typeof until.toMillis === "function") ms = until.toMillis();
+  else if (typeof until.seconds === "number") ms = until.seconds * 1000;
+  if (!Number.isFinite(ms) || ms <= 0) return true;
+  return ms > Date.now();
+}
+
 async function loadUserPushContexts(
   uids: string[]
-): Promise<Map<string, { language: "ja" | "en"; prefs: PushNotificationPrefs }>> {
+): Promise<
+  Map<
+    string,
+    { language: "ja" | "en"; prefs: PushNotificationPrefs; isPro: boolean }
+  >
+> {
   const firestore = getFirestore();
   const unique = [...new Set(uids.filter(Boolean))];
-  const map = new Map<string, { language: "ja" | "en"; prefs: PushNotificationPrefs }>();
+  const map = new Map<
+    string,
+    { language: "ja" | "en"; prefs: PushNotificationPrefs; isPro: boolean }
+  >();
   const chunkSize = 30;
   for (let i = 0; i < unique.length; i += chunkSize) {
     const chunk = unique.slice(i, i + chunkSize);
     const refs = chunk.map((uid) => firestore.doc(`users/${uid}`));
     const snaps = await firestore.getAll(...refs);
     for (const snap of snaps) {
-      const data = snap.data();
+      const data = snap.data() as Record<string, unknown> | undefined;
       map.set(snap.id, {
         language: normalizePushLanguage(data?.language),
         prefs: parsePushNotificationPrefs(data?.notificationPrefs),
+        isPro: userPlanIsPro(data),
       });
     }
   }
@@ -94,6 +120,7 @@ export async function sendExpoPushToUids(input: {
   type: PushNotificationType;
   targets: SendTarget[];
   matchup?: GameMatchupCopyInput;
+  predictionDeadlineMinutes?: 10 | 30 | 60;
 }): Promise<{ sent: number; skipped: number }> {
   const uids = input.targets.map((t) => t.uid);
   const [tokens, userContexts] = await Promise.all([
@@ -110,7 +137,22 @@ export async function sendExpoPushToUids(input: {
   const messages: ExpoPushMessage[] = [];
   for (const rec of tokens) {
     const ctx = userContexts.get(rec.uid);
-    if (!ctx || !isPushTypeEnabledForPrefs(ctx.prefs, input.type)) {
+    if (
+      !ctx ||
+      !isPushTypeEnabledForPrefs(ctx.prefs, input.type)
+    ) {
+      continue;
+    }
+    if (isPushTypeProOnly(input.type) && !ctx.isPro) {
+      continue;
+    }
+    const deadlineMinutes = ctx.isPro
+      ? ctx.prefs.predictionDeadlineMinutes
+      : 30;
+    if (
+      input.predictionDeadlineMinutes != null &&
+      deadlineMinutes !== input.predictionDeadlineMinutes
+    ) {
       continue;
     }
     const copy = buildPushNotificationCopy(input.type, ctx.language, input.matchup);
@@ -157,7 +199,12 @@ export async function sendExpoPushToUids(input: {
 
 export async function markGamePushNotified(
   gameId: string,
-  field: "pushNotifiedStartAt" | "pushNotifiedFinalAt"
+  field:
+    | "pushNotifiedStartAt"
+    | "pushNotifiedFinalAt"
+    | "pushNotifiedDeadline60At"
+    | "pushNotifiedDeadline30At"
+    | "pushNotifiedDeadline10At"
 ): Promise<void> {
   await getFirestore()
     .doc(`games/${gameId}`)

@@ -16,6 +16,7 @@ import {
   cancelPendingJoinRequestsTx,
   getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
+import { squadInviteCodeWriteFields } from "@/lib/groupBattles/server/inviteCodeWrite";
 import { createSquadInvitesBulk } from "@/lib/groupBattles/server/invites";
 import { loadSourcePastSquad } from "@/lib/groupBattles/server/pastSquads";
 
@@ -87,9 +88,7 @@ export async function reformSquadFromPast(params: {
       memberUids: [uid],
       memberCount: 1,
       status: "forming",
-      inviteCodeHash: hash,
-      inviteCodeLast4: invitePlain.slice(-4),
-      inviteCodePlain: invitePlain,
+      ...squadInviteCodeWriteFields(invitePlain),
       rulesAcceptedAt: now,
       rulesAcceptedByUid: uid,
       reformedFromBattleId: sourceBattleId,

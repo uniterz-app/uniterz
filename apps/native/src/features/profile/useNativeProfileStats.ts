@@ -9,7 +9,6 @@ import {
 } from "../../../../../lib/profile/profileChartsBundle";
 import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
 import {
-  prefetchNbaKinetikPeriodStats,
   seedNbaKinetikPeriodStatsCache,
   type ProfileKinetikMetricsPeriod,
 } from "../../../../../lib/profile/useNbaKinetikMonthlyStats";
@@ -45,7 +44,6 @@ import {
   isProfileHeroSnapshotFresh,
   parseProfileHeroSnapshot,
 } from "../../../../../lib/profile/profileHeroSnapshot";
-import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 
 export type NativeProfileStatsState = {
   /** プロフィールカード（サマリー）取得中 */
@@ -144,16 +142,6 @@ function buildCardFetchContext(
   };
 }
 
-function prefetchOtherNbaKinetikPeriod(
-  uid: string,
-  fetchedPeriod: ProfileKinetikMetricsPeriod
-): void {
-  const other: ProfileKinetikMetricsPeriod =
-    fetchedPeriod === "season" ? "playoffs" : "season";
-  const apiBase = getUniterzApiBaseUrl() || undefined;
-  prefetchNbaKinetikPeriodStats(uid, other, apiBase);
-}
-
 function seedNbaKinetikFromFetchedPeriod(
   uid: string,
   rankingLeague: RankingLeagueSource,
@@ -169,7 +157,6 @@ function seedNbaKinetikFromFetchedPeriod(
     totalPointsDenominator: summaryRanks?.totalPointsDenominator ?? null,
     rankDeltaPlaces: summaryRanks?.rankDeltaPlaces ?? null,
   });
-  prefetchOtherNbaKinetikPeriod(uid, period);
 }
 
 function readValidCache(

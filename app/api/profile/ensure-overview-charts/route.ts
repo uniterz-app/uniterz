@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { ensureProfileChartsBundle } from "@/lib/profile/ensureProfileChartsBundle";
 import { profileOverviewSeasonKey } from "@/lib/profile/profileOverviewSeason";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
+import { checkJobSecret } from "@/lib/security/assertJobSecret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "uid required" }, { status: 400 });
     }
     const force = url.searchParams.get("force") === "1";
-    if (force) {
+    const jobOk = checkJobSecret(req);
+    if (!jobOk) {
       let caller: string;
       try {
         caller = await requireUidFromRequest(req);

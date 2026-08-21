@@ -29,17 +29,6 @@ function unauthorizedResponse() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 }
 
-async function syncUserProfileViewCount(
-  uid: string,
-  count: number
-): Promise<void> {
-  const userRef = getAdminDb().collection("users").doc(uid);
-  const userSnap = await userRef.get();
-  if (!userSnap.exists) return;
-  if (readCount(userSnap.data()?.profileViewCount) === count) return;
-  await userRef.update({ profileViewCount: count });
-}
-
 /** 任意ユーザーの累計プロフィール閲覧数（公開）。`?uid=` 省略時は本人。 */
 export async function GET(req: Request) {
   try {
@@ -60,7 +49,6 @@ export async function GET(req: Request) {
       .doc(uid)
       .get();
     const count = readCount(snap.data()?.count);
-    await syncUserProfileViewCount(uid, count).catch(() => undefined);
     return NextResponse.json({ count, uid });
   } catch (error) {
     if (error instanceof Error && error.message === "unauthorized") {

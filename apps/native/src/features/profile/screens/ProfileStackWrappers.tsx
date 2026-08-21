@@ -29,6 +29,7 @@ import LiveGameStatsPreviewScreenNative from "../../games/live/LiveGameStatsPrev
 import MatchCardDesignPreviewScreenNative from "../../games/MatchCardDesignPreviewScreenNative";
 import LpRankingPreviewScreenNative from "../../rankings/LpRankingPreviewScreenNative";
 import RankingListDesignPreviewScreenNative from "../../rankings/RankingListDesignPreviewScreenNative";
+import ProLeagueGatePreviewScreenNative from "../../rankings/ProLeagueGatePreviewScreenNative";
 import type { ProfileStackParamList } from "../../../navigation/types";
 
 const apiBase = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? null;
@@ -384,6 +385,19 @@ export function RankingListDesignPreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <RankingListDesignPreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ProLeagueGatePreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <ProLeagueGatePreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />

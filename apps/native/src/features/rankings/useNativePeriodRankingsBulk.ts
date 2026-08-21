@@ -162,7 +162,7 @@ export function useNativePeriodRankingsBulk(
               headers: token
                 ? { Authorization: `Bearer ${token}` }
                 : undefined,
-              cache: division === "open" ? "no-store" : "force-cache",
+              cache: "force-cache",
             }
           );
           const json = (await res.json()) as {

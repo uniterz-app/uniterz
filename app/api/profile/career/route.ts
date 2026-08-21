@@ -5,7 +5,9 @@
 
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { ensureUserCareerDoc } from "@/lib/profile/server/loadUserCareer";
+import { checkJobSecret } from "@/lib/security/assertJobSecret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +20,17 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "uid required" }, { status: 400 });
     }
     const force = url.searchParams.get("force") === "1";
+    if (force && !checkJobSecret(req)) {
+      let caller: string;
+      try {
+        caller = await requireUidFromRequest(req);
+      } catch {
+        return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+      }
+      if (caller !== uid) {
+        return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      }
+    }
     const db = getAdminDb();
     const career = await ensureUserCareerDoc(db, uid, {
       forceRebuild: force,

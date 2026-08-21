@@ -11,6 +11,7 @@ import {
   squadMembersCol,
   squadsCol,
 } from "@/lib/groupBattles/server/firestore";
+import { squadInviteCodeClearFields } from "@/lib/groupBattles/server/inviteCodeWrite";
 
 export async function dissolveSquad(
   db: Firestore,
@@ -54,8 +55,7 @@ export async function dissolveSquad(
     memberUids: [],
     memberCount: 0,
     status: "disbanded",
-    inviteCodeHash: null,
-    inviteCodePlain: null,
+    ...squadInviteCodeClearFields(),
     updatedAt: FieldValue.serverTimestamp(),
   });
   await batch.commit();

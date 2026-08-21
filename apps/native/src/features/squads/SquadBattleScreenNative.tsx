@@ -96,19 +96,15 @@ import {
   writeHeldInviteIdsNative,
 } from "./squadBattleHeldInvitesNative";
 import {
-  fetchCurrentGroupBattleNative,
+  fetchGroupBattleBootstrapNative,
   fetchGroupBattleRankingsNative,
-  fetchPastGroupBattleSquadsNative,
   reformGroupBattleSquadNative,
   inviteToGroupBattleSquadNative,
-  fetchGroupBattleIncomingInvitesNative,
   acceptGroupBattleInviteNative,
   declineGroupBattleInviteNative,
   joinGroupBattleByInviteCodeNative,
-  fetchGroupBattleOpenSquadsNative,
   createGroupBattleSquadNative,
   applyToGroupBattleSquadNative,
-  fetchGroupBattleJoinRequestsNative,
   resolveGroupBattleJoinRequestNative,
   fetchGroupBattleMyPayoutNative,
   renameGroupBattleSquadNative,
@@ -3110,6 +3106,7 @@ export default function SquadBattleScreenNative() {
     isPreviewMode ? "rank" : "join"
   );
   const battleTabDefaultedRef = useRef(false);
+  const bootstrapPeriodKeyRef = useRef<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [extraAppliedIds, setExtraAppliedIds] = useState<string[]>([]);
   const [dismissedRequestIds, setDismissedRequestIds] = useState<string[]>([]);
@@ -3141,6 +3138,8 @@ export default function SquadBattleScreenNative() {
   const [withdrawnRequestIds, setWithdrawnRequestIds] = useState<string[]>([]);
   const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
   const [liveBattlePhase, setLiveBattlePhase] = useState<string | null>(null);
+  const [liveWeeklyLabels, setLiveWeeklyLabels] = useState<string[]>([]);
+  const [liveMonthlyLabel, setLiveMonthlyLabel] = useState<string | null>(null);
   const [liveRecruitEndAtMs, setLiveRecruitEndAtMs] = useState<number | null>(
     null
   );
@@ -3224,9 +3223,15 @@ export default function SquadBattleScreenNative() {
       try {
         const user = auth.currentUser;
         const token = await user?.getIdToken();
-        const current = await fetchCurrentGroupBattleNative({ idToken: token });
+        const periodKey = `${rankPeriod}|${weekIndex}`;
+        const boot = await fetchGroupBattleBootstrapNative({
+          idToken: token,
+          period: rankPeriod,
+          weekIndex: rankPeriod === "weekly" ? weekIndex : null,
+        });
         if (cancelled) return;
-        if (!current?.battle) {
+        bootstrapPeriodKeyRef.current = periodKey;
+        if (!boot?.battle) {
           setLiveBattleId(null);
           setLiveBattlePhase(null);
           setLiveRecruitEndAtMs(null);
@@ -3238,94 +3243,63 @@ export default function SquadBattleScreenNative() {
           if (!isPreviewMode) setUiPhase("idle");
           return;
         }
-        setLiveBattleId(current.battle.id);
-        setLiveBattlePhase(current.battle.phase);
+        setLiveBattleId(boot.battle.id);
+        setLiveBattlePhase(boot.battle.phase);
+        setLiveWeeklyLabels(boot.battle.weeklyLabels ?? []);
+        setLiveMonthlyLabel(boot.battle.monthlyRange?.label ?? null);
         setLiveRecruitEndAtMs(
-          Number(current.battle.recruitEndAtMs) > 0
-            ? Number(current.battle.recruitEndAtMs)
+          Number(boot.battle.recruitEndAtMs) > 0
+            ? Number(boot.battle.recruitEndAtMs)
             : null
         );
         if (!isPreviewMode) {
-          setUiPhase(groupBattlePhaseToUiPhase(current.battle.phase));
+          setUiPhase(groupBattlePhaseToUiPhase(boot.battle.phase));
         }
         if (user?.uid) setLiveSelfUid(user.uid);
-        const mySquadId = current.mySquad?.id ?? null;
+        const mySquadId = boot.mySquad?.id ?? null;
         setLiveMySquadId(mySquadId);
-        setLiveIsOwner(current.membership?.role === "owner");
+        setLiveIsOwner(boot.membership?.role === "owner");
         setLiveFormingSquad(
-          current.mySquad
-            ? mapCurrentMySquadToUiSquad(current.mySquad, user?.uid ?? null)
+          boot.mySquad
+            ? mapCurrentMySquadToUiSquad(boot.mySquad, user?.uid ?? null)
             : null
         );
-        const weeklyLabels = current.battle.weeklyLabels ?? [];
-        const label =
-          rankPeriod === "weekly"
-            ? weeklyLabels[weekIndex - 1] ??
-              weeklyLabels[weeklyLabels.length - 1]
-            : current.battle.monthlyRange?.label;
-        const rankings = await fetchGroupBattleRankingsNative(
-          current.battle.id,
-          rankPeriod,
-          label,
-          { idToken: token }
-        );
-        if (!cancelled) {
-          if (rankings?.snapshot?.rows?.length) {
+        const rankings = boot.rankings;
+        if (rankings?.snapshot?.rows?.length) {
+          setBoardStatus(rankings.snapshot.status);
+          setLiveLeaderboard(
+            mapGroupBattleSnapshotRowsToSquads(
+              rankings.snapshot.rows,
+              mySquadId
+            )
+          );
+        } else {
+          setLiveLeaderboard(rankings?.snapshot ? [] : null);
+          if (rankings?.snapshot) {
             setBoardStatus(rankings.snapshot.status);
-            setLiveLeaderboard(
-              mapGroupBattleSnapshotRowsToSquads(
-                rankings.snapshot.rows,
-                mySquadId
-              )
-            );
-          } else {
-            setLiveLeaderboard(rankings?.snapshot ? [] : null);
-            if (rankings?.snapshot) {
-              setBoardStatus(rankings.snapshot.status);
-            }
           }
         }
-        const open = await fetchGroupBattleOpenSquadsNative(current.battle.id, {
-          idToken: token,
-        });
-        if (!cancelled) {
-          setLiveOpenSquads(
-            open?.squads ? mapOpenSquadApiToListings(open.squads) : []
+        setLiveOpenSquads(
+          boot.openSquads ? mapOpenSquadApiToListings(boot.openSquads) : []
+        );
+        if (boot.pastSquads) setLivePastSquads(boot.pastSquads);
+        if (boot.invites) {
+          setLiveIncomingInvites(
+            boot.invites.map((i) => ({
+              id: i.id,
+              squadId: i.squadId,
+              squadName: i.squadName,
+              fromDisplayName: i.fromDisplayName,
+            }))
           );
         }
-        if (token) {
-          const past = await fetchPastGroupBattleSquadsNative({
-            idToken: token,
-          });
-          if (!cancelled && past?.pastSquads) {
-            setLivePastSquads(past.pastSquads);
-          }
-          const invites = await fetchGroupBattleIncomingInvitesNative(
-            current.battle.id,
-            { idToken: token }
+        if (boot.joinRequests) {
+          setLiveIncomingRequests(
+            boot.joinRequests.incoming.map(mapJoinRequestApiToUi)
           );
-          if (!cancelled && invites?.invites) {
-            setLiveIncomingInvites(
-              invites.invites.map((i) => ({
-                id: i.id,
-                squadId: i.squadId,
-                squadName: i.squadName,
-                fromDisplayName: i.fromDisplayName,
-              }))
-            );
-          }
-          const requests = await fetchGroupBattleJoinRequestsNative(
-            current.battle.id,
-            { idToken: token }
+          setLiveOutgoingRequests(
+            boot.joinRequests.outgoing.map(mapJoinRequestApiToUi)
           );
-          if (!cancelled && requests) {
-            setLiveIncomingRequests(
-              requests.incoming.map(mapJoinRequestApiToUi)
-            );
-            setLiveOutgoingRequests(
-              requests.outgoing.map(mapJoinRequestApiToUi)
-            );
-          }
         }
       } catch {
         // プレビュー時のみモック継続
@@ -3334,7 +3308,57 @@ export default function SquadBattleScreenNative() {
     return () => {
       cancelled = true;
     };
-  }, [rankPeriod, weekIndex, isPreviewMode]);
+  }, [isPreviewMode]);
+
+  useEffect(() => {
+    if (!liveBattleId) return;
+    const periodKey = `${rankPeriod}|${weekIndex}`;
+    if (bootstrapPeriodKeyRef.current === periodKey) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const weeklyLabels = liveWeeklyLabels;
+        const label =
+          rankPeriod === "weekly"
+            ? weeklyLabels[weekIndex - 1] ??
+              weeklyLabels[weeklyLabels.length - 1]
+            : liveMonthlyLabel ?? undefined;
+        const rankings = await fetchGroupBattleRankingsNative(
+          liveBattleId,
+          rankPeriod,
+          label,
+          { idToken: token }
+        );
+        if (cancelled) return;
+        bootstrapPeriodKeyRef.current = periodKey;
+        if (rankings?.snapshot?.rows?.length) {
+          setBoardStatus(rankings.snapshot.status);
+          setLiveLeaderboard(
+            mapGroupBattleSnapshotRowsToSquads(
+              rankings.snapshot.rows,
+              liveMySquadId
+            )
+          );
+        } else {
+          setLiveLeaderboard(rankings?.snapshot ? [] : null);
+          if (rankings?.snapshot) setBoardStatus(rankings.snapshot.status);
+        }
+      } catch {
+        /* keep previous board */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    liveBattleId,
+    liveMySquadId,
+    liveWeeklyLabels,
+    liveMonthlyLabel,
+    rankPeriod,
+    weekIndex,
+  ]);
 
   useEffect(() => {
     if (uiPhase !== "reward" || !liveBattleId) {

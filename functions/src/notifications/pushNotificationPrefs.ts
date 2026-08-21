@@ -62,6 +62,26 @@ export function prefKeyForPushType(
   }
 }
 
+export const PRO_PREGAME_ALERT_PREF_KEYS = [
+  "injuryStatus",
+  "starterChange",
+  "pregameDigest",
+  "proInsightUpdate",
+] as const satisfies readonly PushNotificationPrefKey[];
+
+export const PRO_ONLY_PREF_KEYS = [
+  ...PRO_PREGAME_ALERT_PREF_KEYS,
+  "monthlyReport",
+] as const satisfies readonly PushNotificationPrefKey[];
+
+export function isProOnlyPrefKey(key: PushNotificationPrefKey): boolean {
+  return (PRO_ONLY_PREF_KEYS as readonly string[]).includes(key);
+}
+
+export function isPushTypeProOnly(type: PushNotificationType): boolean {
+  return isProOnlyPrefKey(prefKeyForPushType(type));
+}
+
 function parseDeadlineMinutes(raw: unknown): PredictionDeadlineMinutes {
   if (raw === 60 || raw === 10 || raw === 30) return raw;
   if (raw === "60") return 60;

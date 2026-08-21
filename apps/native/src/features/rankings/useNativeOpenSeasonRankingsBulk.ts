@@ -74,7 +74,7 @@ export function useNativeOpenSeasonRankingsBulk(enabled: boolean) {
               headers: token
                 ? { Authorization: `Bearer ${token}` }
                 : undefined,
-              cache: "no-store",
+              cache: "force-cache",
             }
           );
           const json = (await res.json()) as {

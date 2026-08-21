@@ -64,6 +64,54 @@ export async function fetchCurrentGroupBattleNative(
   };
 }
 
+export async function fetchGroupBattleBootstrapNative(
+  opts?: GroupBattleApiOptions & {
+    period?: GroupBattlePeriod;
+    label?: string | null;
+    weekIndex?: number | null;
+    battleId?: string | null;
+  }
+) {
+  if (!API_BASE) return null;
+  const q = new URLSearchParams();
+  if (opts?.period) q.set("period", opts.period);
+  if (opts?.label) q.set("label", opts.label);
+  if (opts?.weekIndex) q.set("week", String(opts.weekIndex));
+  if (opts?.battleId) q.set("battleId", opts.battleId);
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/bootstrap${q.toString() ? `?${q}` : ""}`,
+    {
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+    }
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (!json?.ok) return null;
+  return json as Awaited<ReturnType<typeof fetchCurrentGroupBattleNative>> & {
+    rankings: Awaited<ReturnType<typeof fetchGroupBattleRankingsNative>>;
+    openSquads: Array<{
+      id: string;
+      name: string;
+      memberCount: number;
+      openSlots: number;
+      status: string;
+      memberUids: string[];
+    }>;
+    pastSquads: GroupBattlePastSquadItem[];
+    invites: Array<{
+      id: string;
+      squadId: string;
+      squadName: string;
+      fromUid: string;
+      fromDisplayName: string;
+    }>;
+    joinRequests: {
+      incoming: GroupBattleJoinRequestApiItem[];
+      outgoing: GroupBattleJoinRequestApiItem[];
+    };
+  };
+}
+
 export async function fetchGroupBattleRankingsNative(
   battleId: string,
   period: GroupBattlePeriod,

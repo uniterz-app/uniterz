@@ -19,6 +19,7 @@ import {
   cancelPendingJoinRequestsTx,
   getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
+import { squadInviteCodeWriteFields } from "@/lib/groupBattles/server/inviteCodeWrite";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
 
 export const runtime = "nodejs";
@@ -78,9 +79,7 @@ export async function POST(req: Request, ctx: Ctx) {
         memberUids: [uid],
         memberCount: 1,
         status: "forming",
-        inviteCodeHash: hash,
-        inviteCodeLast4: invitePlain.slice(-4),
-        inviteCodePlain: invitePlain,
+        ...squadInviteCodeWriteFields(invitePlain),
         rulesAcceptedAt: now,
         rulesAcceptedByUid: uid,
         createdAt: now,

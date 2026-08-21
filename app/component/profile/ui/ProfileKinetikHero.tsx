@@ -28,7 +28,7 @@ import {
   type ProfileKinetikMetricsTab,
 } from "@/lib/profile/useNbaKinetikMonthlyStats";
 import { listRankingPeriodLabels } from "@/lib/rankings/rankingPeriod";
-import { preferredNbaKinetikPeriod } from "@/lib/rankings/nbaSeason";
+import { preferredNbaKinetikPeriod, CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { useUserCareer } from "@/lib/profile/useUserCareer";
 
 type Props = {
@@ -75,10 +75,32 @@ export default function ProfileKinetikHero({
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
 
   const windowEnabled = metricsTab !== "total";
+  const fetchedBoard = preferredNbaKinetikPeriod();
+  const parentPeriodStats = useMemo(() => {
+    if (metricsTab !== "total" || !summary) return null;
+    if (metricsPeriod !== fetchedBoard) return null;
+    return {
+      summary,
+      summaryRanks: summaryRanks ?? {
+        totalPrecision: null,
+        totalUpset: null,
+        totalPoints: null,
+        totalPointsDenominator: null,
+        rankDeltaPlaces: null,
+      },
+      seasonKey: CURRENT_NBA_SEASON_KEY,
+    };
+  }, [metricsTab, metricsPeriod, summary, summaryRanks, fetchedBoard]);
+
+  const periodFetchEnabled =
+    metricsTab === "total" &&
+    Boolean(targetUid?.trim()) &&
+    parentPeriodStats == null;
+
   const { data: periodData, loading: periodLoading } = useNbaKinetikPeriodStats(
     targetUid,
     metricsPeriod,
-    metricsTab === "total"
+    periodFetchEnabled
   );
   const { data: windowData, loading: windowLoading } = useNbaKinetikWindowStats(
     targetUid,
@@ -91,7 +113,7 @@ export default function ProfileKinetikHero({
 
   const activeData =
     metricsTab === "total"
-      ? periodData
+      ? parentPeriodStats ?? periodData
       : windowData
         ? {
             summary: windowData.summary,
@@ -112,16 +134,17 @@ export default function ProfileKinetikHero({
   useEffect(() => {
     const otherBoard: ProfileKinetikMetricsPeriod =
       metricsPeriod === "season" ? "playoffs" : "season";
-    prefetchNbaKinetikPeriodStats(targetUid, otherBoard);
     if (metricsTab === "total") {
-      prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod);
+      if (periodFetchEnabled) {
+        prefetchNbaKinetikPeriodStats(targetUid, metricsPeriod);
+      }
       return;
     }
     const otherTab: ProfileKinetikMetricsTab =
       metricsTab === "monthly" ? "weekly" : "monthly";
     prefetchNbaKinetikWindowStats(targetUid, metricsPeriod, otherTab);
     prefetchNbaKinetikWindowStats(targetUid, otherBoard, metricsTab);
-  }, [targetUid, metricsPeriod, metricsTab]);
+  }, [targetUid, metricsPeriod, metricsTab, periodFetchEnabled]);
 
   const periodLabels = useMemo(() => {
     if (metricsTab === "total") return [];

@@ -16,6 +16,7 @@ import {
   buildNbaOpenSeasonRankingFromCumulative,
   readNbaOpenSeasonRankingSnapshots,
 } from "@/lib/rankings/server/readNbaOpenSeasonRanking";
+import { rankingFunctionUrl } from "@/lib/rankings/server/rankingFunctionUrl";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
@@ -195,11 +196,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const baseUrl =
-      process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
-      process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
-
-    if (!baseUrl) {
+    if (!rankingFunctionUrl()) {
       return NextResponse.json(
         { ok: false, error: "CUMULATIVE_RANKING_FUNCTION_URL is not set" },
         { status: 500 }

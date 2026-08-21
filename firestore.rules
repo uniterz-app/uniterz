@@ -46,10 +46,30 @@ service cloud.firestore {
 
     function isValidNotificationPrefs(p) {
       return p is map
+        && p.keys().hasOnly([
+          'gameStart', 'gameFinal', 'rankingUpdated',
+          'injuryStatus', 'starterChange', 'predictionDeadline',
+          'pregameDigest', 'proInsightUpdate', 'monthlyReport',
+          'predictionDeadlineMinutes'
+        ])
         && (!('gameStart' in p) || p.gameStart is bool)
         && (!('gameFinal' in p) || p.gameFinal is bool)
         && (!('rankingUpdated' in p) || p.rankingUpdated is bool)
-        && p.keys().hasOnly(['gameStart', 'gameFinal', 'rankingUpdated']);
+        && (!('injuryStatus' in p) || p.injuryStatus is bool)
+        && (!('starterChange' in p) || p.starterChange is bool)
+        && (!('predictionDeadline' in p) || p.predictionDeadline is bool)
+        && (!('pregameDigest' in p) || p.pregameDigest is bool)
+        && (!('proInsightUpdate' in p) || p.proInsightUpdate is bool)
+        && (!('monthlyReport' in p) || p.monthlyReport is bool)
+        && (!('predictionDeadlineMinutes' in p)
+            || p.predictionDeadlineMinutes == 10
+            || p.predictionDeadlineMinutes == 30
+            || p.predictionDeadlineMinutes == 60);
+    }
+
+    function isSupportedLanguage(v) {
+      return v == 'ja' || v == 'en' || v == 'zh' || v == 'ko'
+        || v == 'es' || v == 'de' || v == 'fr' || v == 'ar' || v == 'pt';
     }
 
     // ========================================================================
@@ -108,6 +128,10 @@ service cloud.firestore {
         && !('referralStats' in request.resource.data)
         && !('referralSettledAt' in request.resource.data)
         && !('email' in request.resource.data)
+        && (!('language' in request.resource.data)
+            || isSupportedLanguage(request.resource.data.language))
+        && (!('notificationPrefs' in request.resource.data)
+            || isValidNotificationPrefs(request.resource.data.notificationPrefs))
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50
@@ -144,8 +168,7 @@ service cloud.firestore {
             || request.resource.data.photoURL == null
             || request.resource.data.photoURL is string)
         && (!('language' in request.resource.data)
-            || request.resource.data.language == 'ja'
-            || request.resource.data.language == 'en')
+            || isSupportedLanguage(request.resource.data.language))
         && (!('notificationPrefs' in request.resource.data)
             || isValidNotificationPrefs(request.resource.data.notificationPrefs));
 
@@ -392,6 +415,17 @@ service cloud.firestore {
 
     // Unit 台帳 — Admin のみ
     match /unit_ledger/{ledgerId} {
+      allow read, write: if false;
+    }
+
+    // グループバトル — クライアント SDK 直読み書きなし（API / Functions の Admin SDK のみ）
+    match /group_battles/{battleId} {
+      allow read, write: if false;
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+    match /group_battle_period_snapshots/{snapshotId} {
       allow read, write: if false;
     }
 

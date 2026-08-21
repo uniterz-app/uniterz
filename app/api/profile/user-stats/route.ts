@@ -39,6 +39,7 @@ import {
   loadPriorSnapshotMetrics,
 } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
+import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -251,7 +252,16 @@ async function buildUserStatsResponse(req: Request) {
       requestedWindowLabel !== currentWindowLabel;
 
     if (isNonCurrentWindow) {
-      const isPro = await assertProUser(uid);
+      let callerUid: string;
+      try {
+        callerUid = await requireUidFromRequest(req);
+      } catch {
+        return NextResponse.json(
+          { ok: false, error: "unauthorized" },
+          { status: 401 }
+        );
+      }
+      const isPro = await assertProUser(callerUid);
       if (!isPro) {
         return NextResponse.json(
           { ok: false, error: "pro_required" },

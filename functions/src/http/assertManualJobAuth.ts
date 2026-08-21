@@ -63,3 +63,17 @@ export function assertManualJobAuth(req: Request): void {
     throw err;
   }
 }
+
+/**
+ * 累積ランキング計算口。シークレットが Functions に載っているときは必須。
+ * 未設定の間は既存の公開 GET を維持（Next 側は URL を NEXT_PUBLIC にしない）。
+ */
+export function rankingComputeAllowed(req: Request): boolean {
+  const extra = process.env.CUMULATIVE_RANKING_INTERNAL_SECRET?.trim();
+  const expected = expectedSecrets();
+  if (extra) expected.push(extra);
+  if (expected.length === 0) return true;
+  const provided = providedSecret(req);
+  if (!provided) return false;
+  return expected.some((s) => timingSafeEqualString(provided, s));
+}

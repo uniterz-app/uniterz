@@ -39,29 +39,109 @@ export async function fetchCurrentGroupBattle(opts?: GroupBattleApiOptions) {
   if (!res.ok) return null;
   const json = await res.json();
   if (!json?.ok) return null;
-  return json as {
-    ok: true;
-    battle: {
-      id: string;
-      name?: string;
-      phase: string;
-      weeklyLabels: string[];
-      monthlyRange: { label: string };
-      recruitEndAtMs?: number;
-      battleStartAtMs?: number;
-      battleEndAtMs?: number;
-    } | null;
-    membership: { squadId: string; role: string } | null;
-    mySquad: {
+  return json as CurrentGroupBattlePayload;
+}
+
+type CurrentGroupBattlePayload = {
+  ok: true;
+  battle: {
+    id: string;
+    name?: string;
+    phase: string;
+    weeklyLabels: string[];
+    monthlyRange: { label: string };
+    recruitEndAtMs?: number;
+    battleStartAtMs?: number;
+    battleEndAtMs?: number;
+  } | null;
+  membership: { squadId: string; role: string } | null;
+  mySquad: {
+    id: string;
+    name: string;
+    memberUids: string[];
+    memberCount: number;
+    status: string;
+    ownerUid?: string;
+    inviteCode?: string | null;
+    members?: GroupBattleEntryProfile[];
+  } | null;
+};
+
+type GroupBattleRankingsPayload = {
+  ok: true;
+  battleId: string;
+  period: GroupBattlePeriod;
+  label: string;
+  snapshot: {
+    status: "live" | "final";
+    rows: Array<{
+      rank: number;
+      squadId: string;
+      name: string;
+      groupScore: number;
+      memberCount: number;
+      memberScores: Array<{
+        uid: string;
+        points: number;
+        displayName?: string;
+        handle?: string | null;
+        photoURL?: string | null;
+        plan?: "free" | "pro";
+      }>;
+      prevRank: number | null;
+      scoreGapToAbove: number | null;
+    }>;
+  } | null;
+};
+
+export async function fetchGroupBattleBootstrap(
+  opts?: GroupBattleApiOptions & {
+    period?: GroupBattlePeriod;
+    label?: string | null;
+    weekIndex?: number | null;
+    battleId?: string | null;
+  }
+) {
+  const q = new URLSearchParams();
+  if (opts?.period) q.set("period", opts.period);
+  if (opts?.label) q.set("label", opts.label);
+  if (opts?.weekIndex) q.set("week", String(opts.weekIndex));
+  if (opts?.battleId) q.set("battleId", opts.battleId);
+  const res = await fetch(
+    `/api/group-battles/bootstrap${q.toString() ? `?${q}` : ""}`,
+    {
+      headers: withAuth(await authHeaders(), opts),
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (!json?.ok) return null;
+  return json as CurrentGroupBattlePayload & {
+    rankings: Omit<GroupBattleRankingsPayload, "ok"> | null;
+    openSquads: Array<{
       id: string;
       name: string;
-      memberUids: string[];
       memberCount: number;
+      openSlots: number;
       status: string;
-      ownerUid?: string;
-      inviteCode?: string | null;
-      members?: GroupBattleEntryProfile[];
-    } | null;
+      memberUids: string[];
+    }>;
+    pastSquads: GroupBattlePastSquadItem[];
+    invites: Array<{
+      id: string;
+      squadId: string;
+      squadName: string;
+      fromUid: string;
+      fromDisplayName: string;
+      status: string;
+      source: string;
+      createdAtMs: number;
+    }>;
+    joinRequests: {
+      incoming: GroupBattleJoinRequestApiItem[];
+      outgoing: GroupBattleJoinRequestApiItem[];
+    };
   };
 }
 

@@ -22,7 +22,7 @@ export default function RankingsOpenProLock({
 
   return (
     <div
-      className="mx-1 rounded-sm px-4 py-8 text-center"
+      className="mx-1 rounded-none px-4 py-8 text-center"
       style={{
         border: `1px solid ${PRO_LEAGUE_ATMOSPHERE.panelBorder}`,
         background: `linear-gradient(180deg, rgba(192,132,252,0.14) 0%, rgba(8,5,15,0.85) 100%)`,

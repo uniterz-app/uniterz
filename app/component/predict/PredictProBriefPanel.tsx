@@ -497,14 +497,14 @@ export default function PredictProBriefPanel({
                   </button>
                 </div>
               ) : null}
-              <div className="w-full rounded-[2px] border border-orange-400/55 bg-orange-500/[0.07] px-3 py-2.5 text-left shadow-[0_0_18px_rgba(251,146,60,0.12)]">
+              <div className="w-full rounded-none border border-orange-400/55 bg-orange-500/[0.07] px-3 py-2.5 text-left shadow-[0_0_18px_rgba(251,146,60,0.12)]">
                 <ul className="list-none space-y-2">
                   {gate.bullets.map((item) => {
                     const Icon = BULLET_ICONS[item.icon];
                     return (
                       <li key={item.title} className="flex items-start gap-2.5">
                         <span
-                          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border border-orange-400/45 bg-orange-500/15 text-orange-300"
+                          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-none border border-orange-400/45 bg-orange-500/15 text-orange-300"
                           aria-hidden
                         >
                           <Icon className="h-3 w-3" strokeWidth={2.4} />

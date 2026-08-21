@@ -5,6 +5,7 @@
 import { onRequest } from "firebase-functions/v2/https";
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { getFirestore } from "firebase-admin/firestore";
+import { rankingComputeAllowed } from "../http/assertManualJobAuth";
 import {
   getYesterdayDateKeyJST,
   nbaSeasonRankingSlice,
@@ -436,6 +437,10 @@ async function rankingPayloadForMetric(
 
 export const getCumulativeRanking = onRequest(async (req, res) => {
   try {
+    if (!rankingComputeAllowed(req)) {
+      res.status(403).json({ ok: false, error: "forbidden" });
+      return;
+    }
     const uid = req.query.uid as string | undefined;
     // phase / round / wcStage パラメータは旧 UI 互換のため受け取るが無視する
     // （NBA は常に現行シーズン s<key>_<metric> を返す）。

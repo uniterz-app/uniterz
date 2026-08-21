@@ -48,6 +48,7 @@ export function useLiveGameStats(
 
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    const abort = new AbortController();
 
     const reportFromGameDoc = async (): Promise<LiveGameStatsReport | null> => {
       const loader = loadGameDocRef.current;
@@ -65,7 +66,10 @@ export function useLiveGameStats(
         if (apiBase) {
           const path = `/api/games/live-stats?gameId=${encodeURIComponent(gameId)}`;
           const url = `${apiBase}${path}`;
-          const res = await fetch(url, { cache: "no-store" });
+          const res = await fetch(url, {
+            cache: "no-store",
+            signal: abort.signal,
+          });
           if (res.ok) {
             const json = (await res.json().catch(() => null)) as {
               ok?: boolean;
@@ -74,9 +78,12 @@ export function useLiveGameStats(
             next = json?.ok ? json.report ?? null : null;
           }
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         // API 失敗は Firestore フォールバックへ
       }
+
+      if (!alive) return;
 
       if (!next) {
         try {
@@ -100,6 +107,7 @@ export function useLiveGameStats(
 
     return () => {
       alive = false;
+      abort.abort();
       if (timer) clearTimeout(timer);
     };
   }, [gameId, enabled, apiBase]);

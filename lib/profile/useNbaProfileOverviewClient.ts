@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { withTimeout } from "@/lib/async/withTimeout";
 import { db } from "@/lib/firebase";
 import {
-  fetchNbaProfileCardPhaseClient,
   prefetchNbaKinetikBothPeriodsClient,
   type NbaProfileCardPhaseClient,
 } from "@/lib/profile/fetchNbaProfileCardPhaseClient";
@@ -105,39 +104,33 @@ export function useNbaProfileOverviewClient(
     let cancelled = false;
 
     async function run() {
-      // 既に summary がある再入場ではフルスケルトンに戻さない
       setState((prev) => ({
         ...prev,
         loading: prev.summary == null,
       }));
       const t0 = Date.now();
 
-      void prefetchNbaKinetikBothPeriodsClient(db, safeUid);
-
       try {
-        const fs = await withTimeout(
-          fetchNbaProfileCardPhaseClient(db, safeUid, period),
+        const both = await withTimeout(
+          prefetchNbaKinetikBothPeriodsClient(db, safeUid),
           OVERVIEW_FETCH_TIMEOUT_MS,
           "overview-fetch-timeout"
         );
         if (cancelled) return;
-
-        if (!fs) {
+        if (!both) {
           setState({ ...idle, loading: false });
           return;
         }
-
+        const fs = period === "playoffs" ? both.playoffs : both.season;
         const charts = fs.profileCharts;
         const dailyTrend = charts?.dailyTrend ?? [];
         const rankTrend = charts?.rankTrend ?? [];
         const last20 = last20FromChartsBundle(charts);
-
         if (process.env.NODE_ENV !== "production") {
           console.log(
             `[profileCharts:web] path=${fs.chartsPath} season=${fs.overviewSeasonKey} ms=${Date.now() - t0} daily=${dailyTrend.length} rank=${rankTrend.length} last20=${last20?.length ?? "null"}`
           );
         }
-
         setState({
           loading: false,
           summary: fs.summary,

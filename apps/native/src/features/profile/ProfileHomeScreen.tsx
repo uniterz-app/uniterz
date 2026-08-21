@@ -1730,6 +1730,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("LiveGameStatsPreview");
         else if (page === "leagueStatsPreview" && __DEV__)
           navigation.navigate("LeagueStatsPreview");
+        else if (page === "proLeagueGatePreview" && __DEV__)
+          navigation.navigate("ProLeagueGatePreview");
       }}
     />
     <ProfileBadgeDetailModal
