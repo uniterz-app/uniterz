@@ -31,6 +31,23 @@ async function loadTokensForUids(uids) {
     }
     return out;
 }
+function userPlanIsPro(data) {
+    if (!data || data.plan !== "pro")
+        return false;
+    const until = data.proUntil;
+    if (!until)
+        return true;
+    let ms = 0;
+    if (until instanceof Date)
+        ms = until.getTime();
+    else if (typeof until.toMillis === "function")
+        ms = until.toMillis();
+    else if (typeof until.seconds === "number")
+        ms = until.seconds * 1000;
+    if (!Number.isFinite(ms) || ms <= 0)
+        return true;
+    return ms > Date.now();
+}
 async function loadUserPushContexts(uids) {
     const firestore = (0, firestore_1.getFirestore)();
     const unique = [...new Set(uids.filter(Boolean))];
@@ -45,6 +62,7 @@ async function loadUserPushContexts(uids) {
             map.set(snap.id, {
                 language: (0, pushNotificationCopy_1.normalizePushLanguage)(data === null || data === void 0 ? void 0 : data.language),
                 prefs: (0, pushNotificationPrefs_1.parsePushNotificationPrefs)(data === null || data === void 0 ? void 0 : data.notificationPrefs),
+                isPro: userPlanIsPro(data),
             });
         }
     }
@@ -79,7 +97,18 @@ async function sendExpoPushToUids(input) {
     const messages = [];
     for (const rec of tokens) {
         const ctx = userContexts.get(rec.uid);
-        if (!ctx || !(0, pushNotificationPrefs_1.isPushTypeEnabledForPrefs)(ctx.prefs, input.type)) {
+        if (!ctx ||
+            !(0, pushNotificationPrefs_1.isPushTypeEnabledForPrefs)(ctx.prefs, input.type)) {
+            continue;
+        }
+        if ((0, pushNotificationPrefs_1.isPushTypeProOnly)(input.type) && !ctx.isPro) {
+            continue;
+        }
+        const deadlineMinutes = ctx.isPro
+            ? ctx.prefs.predictionDeadlineMinutes
+            : 30;
+        if (input.predictionDeadlineMinutes != null &&
+            deadlineMinutes !== input.predictionDeadlineMinutes) {
             continue;
         }
         const copy = (0, pushNotificationCopy_1.buildPushNotificationCopy)(input.type, ctx.language, input.matchup);

@@ -49,6 +49,8 @@ type Props = {
   visualEffects?: ProfileVisualEffects;
   targetUid?: string | null;
   profileViewCount?: number | null;
+  /** 過去週/月ナビ。呼び出し元の Pro（見ている相手ではない） */
+  callerIsPro?: boolean;
 };
 
 export default function ProfileKinetikHero({
@@ -67,6 +69,7 @@ export default function ProfileKinetikHero({
   visualEffects = "full",
   targetUid = null,
   profileViewCount = null,
+  callerIsPro = false,
 }: Props) {
   const [metricsPeriod, setMetricsPeriod] =
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
@@ -249,9 +252,9 @@ export default function ProfileKinetikHero({
               metricsTab === "total" ? null : windowData?.label ?? windowLabel
             }
             onMetricsWindowLabelChange={
-              profile.plan === "pro" ? setWindowLabel : undefined
+              callerIsPro ? setWindowLabel : undefined
             }
-            metricsPeriodLabels={profile.plan === "pro" ? periodLabels : []}
+            metricsPeriodLabels={callerIsPro ? periodLabels : []}
             onToggleMetricsScope={() =>
               setMetricsPeriod((prev) =>
                 prev === "season" ? "playoffs" : "season"

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getCumulativeRanking = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
+const assertManualJobAuth_1 = require("../http/assertManualJobAuth");
 const buildCumulativeRankingSnapshot_1 = require("./buildCumulativeRankingSnapshot");
 const readSnapshotRanksFromCumulative_1 = require("./readSnapshotRanksFromCumulative");
 const safeRankMetricNum_1 = require("./safeRankMetricNum");
@@ -295,6 +296,10 @@ async function rankingPayloadForMetric(metric, uid, snaps, personalOnly = false)
 exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
     var _a;
     try {
+        if (!(0, assertManualJobAuth_1.rankingComputeAllowed)(req)) {
+            res.status(403).json({ ok: false, error: "forbidden" });
+            return;
+        }
         const uid = req.query.uid;
         // phase / round / wcStage パラメータは旧 UI 互換のため受け取るが無視する
         // （NBA は常に現行シーズン s<key>_<metric> を返す）。

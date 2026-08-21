@@ -15,6 +15,7 @@ import { advanceDueGroupBattlePhases } from "./groupBattles/advanceDuePhases";
 import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAggregationScheduledJstToday";
 import { runNotifyGameStartCron } from "./notifications/notifyGameStartCron";
 import { runNotifyPredictionDeadlineCron } from "./notifications/notifyPredictionDeadlineCron";
+import { runNotifyPregameAlertCron } from "./notifications/notifyPregameAlertCron";
 import { notifyRankingUpdatedPush } from "./notifications/notifyPushEvents";
 
 // ===============================
@@ -188,6 +189,17 @@ export const notifyPredictionDeadlinePushCron = onSchedule(
       await runNotifyPredictionDeadlineCron();
     } catch (err) {
       console.error("[notifyPredictionDeadlinePushCron] failed", err);
+    }
+  }
+);
+
+export const notifyPregameAlertPushCron = onSchedule(
+  { schedule: "*/10 * * * *", timeZone: "Asia/Tokyo" },
+  async () => {
+    try {
+      await runNotifyPregameAlertCron();
+    } catch (err) {
+      console.error("[notifyPregameAlertPushCron] failed", err);
     }
   }
 );

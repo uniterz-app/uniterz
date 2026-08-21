@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.assertManualJobAuth = assertManualJobAuth;
+exports.rankingComputeAllowed = rankingComputeAllowed;
 /**
  * 手動 HTTP ジョブの認証（共有シークレット）
  * ヘッダ: x-internal-job-secret または x-group-battle-admin-secret
@@ -63,5 +64,22 @@ function assertManualJobAuth(req) {
         err.status = 403;
         throw err;
     }
+}
+/**
+ * 累積ランキング計算口。シークレットが Functions に載っているときは必須。
+ * 未設定の間は既存の公開 GET を維持（Next 側は URL を NEXT_PUBLIC にしない）。
+ */
+function rankingComputeAllowed(req) {
+    var _a;
+    const extra = (_a = process.env.CUMULATIVE_RANKING_INTERNAL_SECRET) === null || _a === void 0 ? void 0 : _a.trim();
+    const expected = expectedSecrets();
+    if (extra)
+        expected.push(extra);
+    if (expected.length === 0)
+        return true;
+    const provided = providedSecret(req);
+    if (!provided)
+        return false;
+    return expected.some((s) => timingSafeEqualString(provided, s));
 }
 //# sourceMappingURL=assertManualJobAuth.js.map

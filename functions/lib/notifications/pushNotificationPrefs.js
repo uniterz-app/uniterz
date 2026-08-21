@@ -1,7 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_PUSH_NOTIFICATION_PREFS = exports.PREDICTION_DEADLINE_MINUTE_OPTIONS = exports.PUSH_NOTIFICATION_PREF_KEYS = void 0;
+exports.PRO_ONLY_PREF_KEYS = exports.PRO_PREGAME_ALERT_PREF_KEYS = exports.DEFAULT_PUSH_NOTIFICATION_PREFS = exports.PREDICTION_DEADLINE_MINUTE_OPTIONS = exports.PUSH_NOTIFICATION_PREF_KEYS = void 0;
 exports.prefKeyForPushType = prefKeyForPushType;
+exports.isProOnlyPrefKey = isProOnlyPrefKey;
+exports.isPushTypeProOnly = isPushTypeProOnly;
 exports.parsePushNotificationPrefs = parsePushNotificationPrefs;
 exports.isPushTypeEnabledForPrefs = isPushTypeEnabledForPrefs;
 exports.isPushTypeEnabledForUser = isPushTypeEnabledForUser;
@@ -52,6 +54,22 @@ function prefKeyForPushType(type) {
         case "monthly_report":
             return "monthlyReport";
     }
+}
+exports.PRO_PREGAME_ALERT_PREF_KEYS = [
+    "injuryStatus",
+    "starterChange",
+    "pregameDigest",
+    "proInsightUpdate",
+];
+exports.PRO_ONLY_PREF_KEYS = [
+    ...exports.PRO_PREGAME_ALERT_PREF_KEYS,
+    "monthlyReport",
+];
+function isProOnlyPrefKey(key) {
+    return exports.PRO_ONLY_PREF_KEYS.includes(key);
+}
+function isPushTypeProOnly(type) {
+    return isProOnlyPrefKey(prefKeyForPushType(type));
 }
 function parseDeadlineMinutes(raw) {
     if (raw === 60 || raw === 10 || raw === 30)

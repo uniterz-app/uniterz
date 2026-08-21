@@ -661,6 +661,7 @@ const fr: Messages = {
     featureRequest: "Demande de fonctionnalité",
     featureRequestTitle: "Envoyer une suggestion",
     announcements: "Annonces",
+    notifications: "Notifications",
     news: "Actualités",
     noAnnouncements: "Aucune annonce pour le moment",
     unread: "Non lu",

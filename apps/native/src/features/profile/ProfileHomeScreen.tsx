@@ -1286,6 +1286,7 @@ export default function ProfileHomeScreen({
         bio={bio}
         countryCode={countryCode}
         plan={currentIsProView ? "pro" : plan}
+        callerIsPro={profilePlanHook.isMyPro}
         planProBgVariant={planProBgVariant}
         language={language}
         memberSinceMs={memberSinceMs}

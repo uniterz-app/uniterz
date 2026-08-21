@@ -22,6 +22,7 @@ import {
   Coins,
   ShoppingBag,
   GraduationCap,
+  Bell,
 } from "lucide-react";
 import {
   parseUserProfileFields,
@@ -334,6 +335,20 @@ export default function SettingsMenu({
             trailing={<CountBadge count={unreadCount} tone="announce" />}
           >
             <span className={cn(isEn && "uppercase")}>{m.settings.announcements}</span>
+          </SideMenuItemButton>
+
+          <SideMenuItemButton
+            icon={Bell}
+            labelStyle={menuLabelFont}
+            onClick={() =>
+              pushFromMenu(
+                p("/web/settings/notifications", "/mobile/settings/notifications")
+              )
+            }
+          >
+            <span className={cn(isEn && "uppercase")}>
+              {m.settings.notifications}
+            </span>
           </SideMenuItemButton>
         </div>
 

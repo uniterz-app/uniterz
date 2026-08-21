@@ -661,6 +661,7 @@ const es: Messages = {
     featureRequest: "Solicitar función",
     featureRequestTitle: "Enviar sugerencia",
     announcements: "Anuncios",
+    notifications: "Notificaciones",
     news: "Novedades",
     noAnnouncements: "No hay anuncios por el momento",
     unread: "Sin leer",

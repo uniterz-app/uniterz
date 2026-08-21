@@ -650,6 +650,7 @@ const zh: Messages = {
     featureRequest: "功能建议",
     featureRequestTitle: "提交建议",
     announcements: "公告",
+    notifications: "通知设置",
     news: "资讯",
     noAnnouncements: "暂无公告",
     unread: "未读",

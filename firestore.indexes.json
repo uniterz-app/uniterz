@@ -156,13 +156,6 @@
       ]
     },
     {
-      "collectionGroup": "rankSnapshotHistory",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "dateKey", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "referralRelations",
       "queryScope": "COLLECTION",
       "fields": [

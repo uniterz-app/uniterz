@@ -658,6 +658,7 @@ const pt: Messages = {
     featureRequest: "Solicitar recurso",
     featureRequestTitle: "Enviar sugestão",
     announcements: "Avisos",
+    notifications: "Notificações",
     news: "Novidades",
     noAnnouncements: "Nenhum aviso no momento",
     unread: "Não lido",

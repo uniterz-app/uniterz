@@ -58,6 +58,8 @@ export type ProfileKinetikHeroNativeProps = {
   marked?: boolean;
   markCount?: number;
   onPressMark?: () => void;
+  /** 過去週/月ナビ。呼び出し元の Pro */
+  callerIsPro?: boolean;
 };
 
 function toSummaryInput(summary?: ProfileSummaryNative | null) {
@@ -120,6 +122,7 @@ export default function ProfileKinetikHeroNative({
   marked = false,
   markCount = 0,
   onPressMark,
+  callerIsPro = false,
 }: ProfileKinetikHeroNativeProps) {
   const [metricsPeriod, setMetricsPeriod] =
     useState<ProfileKinetikMetricsPeriod>(() => preferredNbaKinetikPeriod());
@@ -320,9 +323,9 @@ export default function ProfileKinetikHeroNative({
             metricsTab === "total" ? null : windowData?.label ?? windowLabel
           }
           onMetricsWindowLabelChange={
-            plan === "pro" ? setWindowLabel : undefined
+            callerIsPro ? setWindowLabel : undefined
           }
-          metricsPeriodLabels={plan === "pro" ? periodLabels : []}
+          metricsPeriodLabels={callerIsPro ? periodLabels : []}
           onToggleMetricsScope={() =>
             setMetricsPeriod((prev) =>
               prev === "season" ? "playoffs" : "season"

@@ -659,6 +659,7 @@ const ar: Messages = {
     featureRequest: "طلب ميزة",
     featureRequestTitle: "إرسال اقتراح",
     announcements: "الإعلانات",
+    notifications: "الإشعارات",
     news: "الأخبار",
     noAnnouncements: "لا توجد إعلانات حاليًا",
     unread: "غير مقروء",

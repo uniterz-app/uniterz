@@ -661,6 +661,7 @@ const ja = {
     featureRequest: "機能リクエスト",
     featureRequestTitle: "要望を送る",
     announcements: "お知らせ",
+    notifications: "通知設定",
     news: "お知らせ",
     noAnnouncements: "現在お知らせはありません",
     unread: "未読",

@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildWeeklyReportsManualV2 = exports.rebuildWeeklyReportsCronV2 = exports.rebuildMonthlyReportsManualV2 = exports.rebuildMonthlyReportsCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.notifyPregameAlertPushCron = exports.notifyPredictionDeadlinePushCron = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.rebuildWeeklyReportsManualV2 = exports.rebuildWeeklyReportsCronV2 = exports.rebuildMonthlyReportsManualV2 = exports.rebuildMonthlyReportsCronV2 = exports.expireProUsers = exports.getCumulativeRanking = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-admin/firestore");
@@ -48,6 +48,8 @@ const grantGroupBattleUnits_1 = require("./groupBattles/grantGroupBattleUnits");
 const advanceDuePhases_1 = require("./groupBattles/advanceDuePhases");
 const hasRankingAggregationScheduledJstToday_1 = require("./schedule/hasRankingAggregationScheduledJstToday");
 const notifyGameStartCron_1 = require("./notifications/notifyGameStartCron");
+const notifyPredictionDeadlineCron_1 = require("./notifications/notifyPredictionDeadlineCron");
+const notifyPregameAlertCron_1 = require("./notifications/notifyPregameAlertCron");
 const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
 // ===============================
 // V2 Core
@@ -170,6 +172,22 @@ exports.notifyGameStartPushCron = (0, scheduler_1.onSchedule)({ schedule: "*/10 
     }
     catch (err) {
         console.error("[notifyGameStartPushCron] failed", err);
+    }
+});
+exports.notifyPredictionDeadlinePushCron = (0, scheduler_1.onSchedule)({ schedule: "*/10 * * * *", timeZone: "Asia/Tokyo" }, async () => {
+    try {
+        await (0, notifyPredictionDeadlineCron_1.runNotifyPredictionDeadlineCron)();
+    }
+    catch (err) {
+        console.error("[notifyPredictionDeadlinePushCron] failed", err);
+    }
+});
+exports.notifyPregameAlertPushCron = (0, scheduler_1.onSchedule)({ schedule: "*/10 * * * *", timeZone: "Asia/Tokyo" }, async () => {
+    try {
+        await (0, notifyPregameAlertCron_1.runNotifyPregameAlertCron)();
+    }
+    catch (err) {
+        console.error("[notifyPregameAlertPushCron] failed", err);
     }
 });
 exports.onUserCreate = functions.auth.user().onCreate(async (user) => {

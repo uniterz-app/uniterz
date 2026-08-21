@@ -666,6 +666,7 @@ const en: Messages = {
     featureRequest: "Feature Request",
     featureRequestTitle: "Feature Request",
     announcements: "Announcements",
+    notifications: "Notifications",
     news: "News",
     noAnnouncements: "No announcements.",
     unread: "Unread",

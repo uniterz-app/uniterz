@@ -272,6 +272,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         visualEffects={visualEffects}
         targetUid={resolvedUid}
         profileViewCount={profileViewCount}
+        callerIsPro={isMyPro}
       />
 
       {isMe ? (

@@ -650,6 +650,7 @@ const ko: Messages = {
     featureRequest: "기능 요청",
     featureRequestTitle: "요청 보내기",
     announcements: "공지사항",
+    notifications: "알림 설정",
     news: "소식",
     noAnnouncements: "현재 공지사항이 없습니다",
     unread: "읽지 않음",

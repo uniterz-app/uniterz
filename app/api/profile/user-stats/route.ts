@@ -242,9 +242,8 @@ async function buildUserStatsResponse(req: Request) {
   let monthlySummaryRanks: SummaryRanks | null = null;
   if (wantWindow && windowLabel && (wantPhase || wantRanks)) {
     /**
-     * 過去（現行以外の week/month ラベル指定）は Pro ユーザーのみ許可。
-     * UI 側は `profile.plan === "pro"` のみラベルナビを出すため、
-     * API まで合わせて抜け道を塞ぐ。
+     * 過去（現行以外の week/month ラベル指定）は **呼び出し元** の Pro のみ。
+     * UI のラベルナビも callerIsPro に合わせる。
      */
     const isNonCurrentWindow =
       requestedWindowLabelValid &&
