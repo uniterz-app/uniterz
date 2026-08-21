@@ -282,9 +282,14 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     const userSnap = await tx.get(userRef);
     const user = userSnap.exists ? userSnap.data()! : {};
     /** profileCharts merge 用（writes 前に全 reads） */
-    const [dailySnap, cumulativeSnap] = await Promise.all([
+    const chartsRef =
+      forPickupRanking && nbaSeasonKey
+        ? cumulativeRef.collection("profileCharts").doc(nbaSeasonKey)
+        : null;
+    const [dailySnap, cumulativeSnap, chartsSnap] = await Promise.all([
       tx.get(dailyRef),
       tx.get(cumulativeRef),
+      chartsRef ? tx.get(chartsRef) : Promise.resolve(null),
     ]);
 
     const inc: any = {
@@ -409,6 +414,9 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         cumulative: cumulativeSnap.exists
           ? (cumulativeSnap.data() as Record<string, unknown>)
           : null,
+        chartsDoc: chartsSnap?.exists
+          ? (chartsSnap.data() as Record<string, unknown>)
+          : null,
         seasonKey: nbaSeasonKey,
         dateKey,
         projectedSeasonBucket: projected,
@@ -430,29 +438,19 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
 
     if (profileCharts) {
       const builtAtMs = Date.now();
-      tx.set(
-        cumulativeRef,
-        {
-          "profileCharts.v": profileCharts.v,
-          "profileCharts.seasonKey": profileCharts.seasonKey,
-          "profileCharts.dailyTrend": profileCharts.dailyTrend,
-          "profileCharts.rankTrend": profileCharts.rankTrend ?? [],
-          "profileCharts.last20": profileCharts.last20,
-          "profileCharts.builtAtMs": builtAtMs,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
+      const payload: Record<string, unknown> = {
+        v: profileCharts.v,
+        seasonKey: profileCharts.seasonKey,
+        dailyTrend: profileCharts.dailyTrend ?? [],
+        last20: profileCharts.last20 ?? [],
+        builtAtMs,
+      };
+      if (profileCharts.rankTrend !== undefined) {
+        payload.rankTrend = profileCharts.rankTrend;
+      }
       tx.set(
         cumulativeRef.collection("profileCharts").doc(profileCharts.seasonKey),
-        {
-          v: profileCharts.v,
-          seasonKey: profileCharts.seasonKey,
-          dailyTrend: profileCharts.dailyTrend ?? [],
-          rankTrend: profileCharts.rankTrend ?? [],
-          last20: profileCharts.last20 ?? [],
-          builtAtMs,
-        },
+        payload,
         { merge: true }
       );
     }

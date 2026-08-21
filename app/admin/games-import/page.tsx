@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { TEAM_IDS } from "@/lib/team-ids";
 import { League, normalizeLeague } from "@/lib/leagues";
-import { ADMIN_UIDS, isAdminUid } from "@/lib/constants";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 import {
   Timestamp,
   doc,
@@ -292,6 +292,7 @@ function chunk<T>(arr: T[], size: number) {
    Page Component
 ========================= */
 export default function GamesImportPage() {
+  const { isAdmin: authorized, loading: adminLoading } = useIsAdmin();
   const [uid, setUid] = useState<string | null>(null);
   const [input, setInput] = useState<string>("");
   const [rows, setRows] = useState<Preview[] | null>(null);
@@ -302,8 +303,6 @@ export default function GamesImportPage() {
     const unsub = auth.onAuthStateChanged((u) => setUid(u?.uid ?? null));
     return () => unsub();
   }, []);
-
-  const authorized = isAdminUid(uid);
 
   const parse = () => {
     try {
@@ -409,11 +408,12 @@ export default function GamesImportPage() {
         <div>
           現在のUID: <code className="text-lime-300">{uid ?? "(未ログイン)"}</code>
         </div>
-        <div>
-          許可UID:{" "}
-          <code className="text-lime-300">{ADMIN_UIDS.join(" / ")}</code>
+        <div className="text-white/50 text-sm mt-1">
+          管理者判定は Custom Claim（サーバ許可リスト）のみ。UID 一覧はクライアントに載せません。
         </div>
-        {authorized ? (
+        {adminLoading ? (
+          <div className="text-white/60 font-bold mt-1">認証確認中…</div>
+        ) : authorized ? (
           <div className="text-lime-400 font-bold mt-1">✅ 管理者として書き込み可能</div>
         ) : (
           <div className="text-red-400 font-bold mt-1">

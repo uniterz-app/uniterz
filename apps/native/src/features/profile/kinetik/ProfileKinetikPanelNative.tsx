@@ -1124,8 +1124,7 @@ function KinetikIdentityJoinIdRowNative({
   copiedLabel,
   shareLabel,
   onShare,
-  flagUri,
-  flagLabel,
+  markToggle,
 }: {
   memberSinceLabel: string | null;
   idLabel: string;
@@ -1133,8 +1132,11 @@ function KinetikIdentityJoinIdRowNative({
   copiedLabel: string;
   shareLabel: string;
   onShare: () => void;
-  flagUri?: string | null;
-  flagLabel?: string | null;
+  markToggle?: {
+    marked: boolean;
+    onPress: () => void;
+    accessibilityLabel: string;
+  } | null;
 }) {
   return (
     <View style={styles.identityJoinIdRow}>
@@ -1167,17 +1169,23 @@ function KinetikIdentityJoinIdRowNative({
           importantForAccessibility="no-hide-descendants"
         />
       )}
-      {flagUri ? (
-        <View
-          style={styles.footerFlag}
-          accessibilityLabel={flagLabel ?? undefined}
+      {markToggle ? (
+        <Pressable
+          onPress={markToggle.onPress}
+          style={[
+            styles.footerMark,
+            markToggle.marked ? styles.footerMarkOn : styles.footerMarkOff,
+          ]}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={markToggle.accessibilityLabel}
         >
-          <Image
-            source={{ uri: flagUri }}
-            style={styles.footerFlagImg}
-            resizeMode="cover"
+          <MaterialCommunityIcons
+            name={markToggle.marked ? "bookmark-check" : "bookmark-plus-outline"}
+            size={14}
+            color={markToggle.marked ? "#050508" : "#a5f3fc"}
           />
-        </View>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -1796,27 +1804,19 @@ export default function ProfileKinetikPanelNative({
                   </TutorialTargetNative>
                 )}
               </View>
-              {onPressMark && markMode === "toggle" ? (
-              <View style={styles.markFlagRow}>
-                <Pressable
-                  onPress={onPressMark}
-                  style={[
-                    styles.markChip,
-                    marked ? styles.markChipOn : styles.markChipOff,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={marked ? "MARKED" : "MARK"}
-                >
-                  <Text
-                    style={[
-                      styles.markChipText,
-                      marked ? styles.markChipTextOn : styles.markChipTextOff,
-                    ]}
+              {profileFlagUri ? (
+                <View style={styles.markFlagRow}>
+                  <View
+                    style={styles.headerFlag}
+                    accessibilityLabel={countryCode ?? undefined}
                   >
-                    {marked ? "MARKED" : "MARK"}
-                  </Text>
-                </Pressable>
-              </View>
+                    <Image
+                      source={{ uri: profileFlagUri }}
+                      style={styles.headerFlagImg}
+                      resizeMode="cover"
+                    />
+                  </View>
+                </View>
               ) : null}
             </View>
           </View>
@@ -1965,8 +1965,21 @@ export default function ProfileKinetikPanelNative({
           copiedLabel={shareCopiedLabel}
           shareLabel={shareProfileLabel}
           onShare={handleShareProfile}
-          flagUri={profileFlagUri}
-          flagLabel={countryCode}
+          markToggle={
+            onPressMark && markMode === "toggle"
+              ? {
+                  marked,
+                  onPress: onPressMark,
+                  accessibilityLabel: marked
+                    ? isJa
+                      ? "マーク済み"
+                      : "Marked"
+                    : isJa
+                      ? "マークする"
+                      : "Mark",
+                }
+              : null
+          }
         />
       </View>
 
@@ -2079,33 +2092,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  markChip: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
+  headerFlag: {
+    width: 30,
+    height: 20,
+    borderRadius: 1,
+    overflow: "hidden",
   },
-  markChipOff: {
-    borderColor: "rgba(165,243,252,0.7)",
-    backgroundColor: "rgba(0,245,255,0.08)",
-  },
-  markChipOn: {
-    borderColor: "#00F5FF",
-    backgroundColor: "#00F5FF",
-  },
-  markChipText: {
-    fontFamily: OXANIUM_BOLD,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    lineHeight: 14,
-    includeFontPadding: false,
-  },
-  markChipTextOff: {
-    color: "#a5f3fc",
-  },
-  markChipTextOn: {
-    color: "#050508",
+  headerFlagImg: {
+    width: "100%",
+    height: "100%",
   },
   headerHatch: {
     position: "absolute",
@@ -2229,17 +2224,23 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     height: 22,
   },
-  footerFlag: {
+  footerMark: {
     marginLeft: "auto",
-    width: 33,
+    width: 22,
     height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
     borderRadius: 1,
-    overflow: "hidden",
     flexShrink: 0,
   },
-  footerFlagImg: {
-    width: "100%",
-    height: "100%",
+  footerMarkOff: {
+    borderColor: "rgba(165,243,252,0.7)",
+    backgroundColor: "rgba(0,245,255,0.08)",
+  },
+  footerMarkOn: {
+    borderColor: "#00F5FF",
+    backgroundColor: "#00F5FF",
   },
   footerJoinSlot: {
     minWidth: 72,

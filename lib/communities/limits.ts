@@ -1,5 +1,5 @@
 import type { Firestore } from "firebase-admin/firestore";
-import { Timestamp } from "firebase-admin/firestore";
+import { userDataIsPro } from "@/lib/profile/proSkinUnlock";
 
 export const MAX_MEMBERS_PER_GROUP = 100;
 export const FREE_MAX_MEMBERSHIPS = 10;
@@ -14,13 +14,9 @@ export async function getEffectivePlan(
   uid: string
 ): Promise<PlanTier> {
   const snap = await db.doc(`users/${uid}`).get();
-  const data = snap.data();
-  if (data?.plan !== "pro") return "free";
-  const pu = data.proUntil;
-  if (pu instanceof Timestamp) {
-    return pu.toMillis() > Date.now() ? "pro" : "free";
-  }
-  return "free";
+  return userDataIsPro(snap.data() as Record<string, unknown> | undefined)
+    ? "pro"
+    : "free";
 }
 
 export function maxMembershipsForPlan(plan: PlanTier): number {

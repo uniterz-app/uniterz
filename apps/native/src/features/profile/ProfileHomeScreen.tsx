@@ -44,7 +44,7 @@ import {
 } from "./useNativeProfilePlan";
 import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
 import { useNativeAdminInboxUnread } from "./useNativeAdminInboxUnread";
-import { isAdminUid } from "../../../../../lib/constants";
+import { useIsAdminNative } from "../admin/useIsAdminNative";
 import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
@@ -593,9 +593,8 @@ export default function ProfileHomeScreen({
     useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
       enabled: isMe,
     });
-  const adminInbox = useNativeAdminInboxUnread(
-    Boolean(isMe && isAdminUid(myUid))
-  );
+  const { isAdmin: isAdminUser } = useIsAdminNative();
+  const adminInbox = useNativeAdminInboxUnread(Boolean(isMe && isAdminUser));
   const { resolvedBadges } = useNativeProfileBadges(isMe ? myUid : targetUid);
 
   /** プロフィールは NBA のみ（W杯経路は使わない） */
@@ -629,12 +628,9 @@ export default function ProfileHomeScreen({
   });
   const streakBundle = useNativeStreakTracker(
     targetUid,
-    tab === "overview" &&
-      !!targetUid &&
-      authReady &&
-      (statsBundle.last20 != null || !statsBundle.loading),
+    tab === "overview" && !!targetUid && authReady,
     profileStatsContext,
-    { seedLast20: statsBundle.last20 }
+    { seedLast20: statsBundle.loading ? undefined : statsBundle.last20 }
   );
 
   const currentIsProView = profilePlanHook.isProView;
@@ -1197,6 +1193,7 @@ export default function ProfileHomeScreen({
         rankTrendLoading={statsBundle.rankTrendLoading}
         streakPoints={streakBundle.points}
         streakLoading={streakBundle.loading}
+        streakUnavailable={streakBundle.unavailable}
       />
     );
   }
@@ -1616,6 +1613,7 @@ export default function ProfileHomeScreen({
       unreadAnnouncements={menuUnreadCount}
       adminInbox={adminInbox}
       uid={fUser?.uid ?? null}
+      isAdmin={isAdminUser}
       plan={plan}
       displayName={
         displayName.trim() ||
@@ -1655,6 +1653,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("AdminInbox", { kind: "inbox" });
         else if (page === "adminRedemptions")
           navigation.navigate("AdminRedemptions");
+        else if (page === "adminGroupBattles")
+          navigation.navigate("AdminGroupBattles");
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
         else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
         else if (page === "restartTutorial") {
@@ -1708,6 +1708,8 @@ export default function ProfileHomeScreen({
           })();
         }
         else if (page === "seasonPreview" && __DEV__) navigation.navigate("SeasonPredictPreview");
+        else if (page === "squadBattlePreview" && __DEV__)
+          navigation.navigate("SquadBattlePreview");
         else if (page === "futuristicBgPreview" && __DEV__)
           navigation.navigate("FuturisticBgPreview");
         else if (page === "titleSkinPreview" && __DEV__)
@@ -1720,6 +1722,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("UniterzLogo3dPreview");
         else if (page === "uniterzProBadgePreview" && __DEV__)
           navigation.navigate("UniterzProBadgePreview");
+        else if (page === "markedChipDesignPreview" && __DEV__)
+          navigation.navigate("MarkedChipDesignPreview");
         else if (page === "splashLogoPreview" && __DEV__)
           navigation.navigate("SplashLogoPreview");
         else if (page === "liveGameStatsPreview" && __DEV__)

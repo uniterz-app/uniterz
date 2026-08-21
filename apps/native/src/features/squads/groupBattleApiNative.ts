@@ -2,7 +2,10 @@
  * Web `lib/groupBattles/clientApi` 相当（Native）。
  */
 
+import type { GroupBattleMyPayout } from "../../../../../lib/groupBattles/myPayoutTypes";
+import type { GroupBattleEntryProfile } from "../../../../../lib/groupBattles/entryProfileTypes";
 import type {
+  GroupBattleJoinRequestApiItem,
   GroupBattlePastSquadItem,
   GroupBattlePeriod,
 } from "../../../../../lib/groupBattles/types";
@@ -39,9 +42,13 @@ export async function fetchCurrentGroupBattleNative(
     ok: true;
     battle: {
       id: string;
+      name?: string;
       phase: string;
       weeklyLabels: string[];
       monthlyRange: { label: string };
+      recruitEndAtMs?: number;
+      battleStartAtMs?: number;
+      battleEndAtMs?: number;
     } | null;
     membership: { squadId: string; role: string } | null;
     mySquad: {
@@ -50,6 +57,9 @@ export async function fetchCurrentGroupBattleNative(
       memberUids: string[];
       memberCount: number;
       status: string;
+      ownerUid?: string;
+      inviteCode?: string | null;
+      members?: GroupBattleEntryProfile[];
     } | null;
   };
 }
@@ -85,7 +95,14 @@ export async function fetchGroupBattleRankingsNative(
         name: string;
         groupScore: number;
         memberCount: number;
-        memberScores: Array<{ uid: string; points: number }>;
+        memberScores: Array<{
+          uid: string;
+          points: number;
+          displayName?: string;
+          handle?: string | null;
+          photoURL?: string | null;
+          plan?: "free" | "pro";
+        }>;
         prevRank: number | null;
         scoreGapToAbove: number | null;
       }>;
@@ -285,4 +302,259 @@ export async function joinGroupBattleByInviteCodeNative(
     };
   }
   return json as { ok: true; squadId: string };
+}
+
+export async function fetchGroupBattleOpenSquadsNative(
+  battleId: string,
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) return null;
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/open-squads`,
+    {
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+    }
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (!json?.ok) return null;
+  return json as {
+    ok: true;
+    squads: Array<{
+      id: string;
+      name: string;
+      memberCount: number;
+      openSlots: number;
+      status: string;
+      memberUids: string[];
+    }>;
+  };
+}
+
+export async function createGroupBattleSquadNative(
+  battleId: string,
+  body: { name: string; acceptRules: boolean },
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) {
+    return { ok: false as const, error: "no_api_base", status: 0 };
+  }
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/squads`,
+    {
+      method: "POST",
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+      body: JSON.stringify(body),
+    }
+  );
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    return {
+      ok: false as const,
+      error: String(json?.error ?? "failed"),
+      status: res.status,
+    };
+  }
+  return json as { ok: true; squadId: string; inviteCode: string };
+}
+
+export async function applyToGroupBattleSquadNative(
+  battleId: string,
+  squadId: string,
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) {
+    return { ok: false as const, error: "no_api_base", status: 0 };
+  }
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/join-requests`,
+    {
+      method: "POST",
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+      body: JSON.stringify({ squadId }),
+    }
+  );
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    return {
+      ok: false as const,
+      error: String(json?.error ?? "failed"),
+      status: res.status,
+    };
+  }
+  return json as { ok: true; requestId: string };
+}
+
+export async function fetchGroupBattleJoinRequestsNative(
+  battleId: string,
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) return null;
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/join-requests`,
+    {
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+    }
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (!json?.ok) return null;
+  return json as {
+    ok: true;
+    incoming: GroupBattleJoinRequestApiItem[];
+    outgoing: GroupBattleJoinRequestApiItem[];
+  };
+}
+
+export async function resolveGroupBattleJoinRequestNative(
+  battleId: string,
+  requestId: string,
+  decision: "approve" | "reject",
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) {
+    return { ok: false as const, error: "no_api_base", status: 0 };
+  }
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/join-requests/${encodeURIComponent(requestId)}/${decision}`,
+    {
+      method: "POST",
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+    }
+  );
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    return {
+      ok: false as const,
+      error: String(json?.error ?? "failed"),
+      status: res.status,
+    };
+  }
+  return json as { ok: true };
+}
+
+export async function fetchGroupBattleMyPayoutNative(
+  battleId: string,
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) return null;
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/my-payout`,
+    {
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+    }
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (!json?.ok) return null;
+  return json as {
+    ok: true;
+    payout: GroupBattleMyPayout;
+  };
+}
+
+export async function renameGroupBattleSquadNative(
+  battleId: string,
+  squadId: string,
+  name: string,
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) {
+    return { ok: false as const, error: "no_api_base", status: 0 };
+  }
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/squads/${encodeURIComponent(squadId)}`,
+    {
+      method: "PATCH",
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+      body: JSON.stringify({ name }),
+    }
+  );
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    return {
+      ok: false as const,
+      error: String(json?.error ?? "failed"),
+      status: res.status,
+    };
+  }
+  return json as { ok: true; squadId: string; name: string };
+}
+
+export async function cancelGroupBattleJoinRequestNative(
+  battleId: string,
+  requestId: string,
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) {
+    return { ok: false as const, error: "no_api_base", status: 0 };
+  }
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/join-requests/${encodeURIComponent(requestId)}/cancel`,
+    {
+      method: "POST",
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+    }
+  );
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    return {
+      ok: false as const,
+      error: String(json?.error ?? "failed"),
+      status: res.status,
+    };
+  }
+  return json as { ok: true };
+}
+
+export async function leaveGroupBattleSquadNative(
+  battleId: string,
+  squadId: string,
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) {
+    return { ok: false as const, error: "no_api_base", status: 0 };
+  }
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/squads/${encodeURIComponent(squadId)}/leave`,
+    {
+      method: "POST",
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+    }
+  );
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    return {
+      ok: false as const,
+      error: String(json?.error ?? "failed"),
+      status: res.status,
+    };
+  }
+  return json as { ok: true };
+}
+
+export async function dissolveGroupBattleSquadNative(
+  battleId: string,
+  squadId: string,
+  opts?: GroupBattleApiOptions
+) {
+  if (!API_BASE) {
+    return { ok: false as const, error: "no_api_base", status: 0 };
+  }
+  const res = await fetch(
+    `${API_BASE}/api/group-battles/${encodeURIComponent(battleId)}/squads/${encodeURIComponent(squadId)}/dissolve`,
+    {
+      method: "POST",
+      headers: withAuth({ "Content-Type": "application/json" }, opts),
+    }
+  );
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.ok) {
+    return {
+      ok: false as const,
+      error: String(json?.error ?? "failed"),
+      status: res.status,
+    };
+  }
+  return json as { ok: true };
 }

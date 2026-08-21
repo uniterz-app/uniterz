@@ -413,13 +413,13 @@ function kinetikTotalPointsRankSegs(
   return Math.max(0, Math.min(5, Math.round(ratio * 5)));
 }
 
-/** カード右下 — 加入日 / ID と同じ行・同じ高さ */
-function ProfileKinetikFooterFlag({ countryCode }: { countryCode?: string | null }) {
+/** 名前下 — 加入日行から移した国旗 */
+function ProfileKinetikHeaderFlag({ countryCode }: { countryCode?: string | null }) {
   const flagIso = countryCode?.trim().toUpperCase() || null;
   if (!flagIso) return null;
 
   return (
-    <span className="profile-edit-kinetik-footer-flag ml-auto shrink-0" aria-hidden>
+    <span className="profile-edit-kinetik-header-flag" aria-hidden>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/flags/4x3/${flagIso.toLowerCase()}.svg`}
@@ -459,7 +459,6 @@ function ProfileKinetikViewCountChip({
 function ProfileKinetikIdentityJoinIdRow({
   memberSinceLabel,
   systemId,
-  countryCode,
   shareLabel,
   shareCopiedLabel,
   shareCopied,
@@ -467,14 +466,12 @@ function ProfileKinetikIdentityJoinIdRow({
 }: {
   memberSinceLabel: string | null;
   systemId: string;
-  countryCode?: string | null;
   shareLabel: string;
   shareCopiedLabel: string;
   shareCopied: boolean;
   onShare: () => void;
 }) {
-  const hasFlag = Boolean(countryCode?.trim());
-  if (!memberSinceLabel && !systemId && !hasFlag) return null;
+  if (!memberSinceLabel && !systemId) return null;
 
   return (
     <div className="profile-edit-kinetik-identity-join-id flex w-full max-w-full min-w-0 items-center gap-2">
@@ -498,7 +495,6 @@ function ProfileKinetikIdentityJoinIdRow({
           {shareCopied ? shareCopiedLabel : `ID: ${systemId}`}
         </button>
       ) : null}
-      {hasFlag ? <ProfileKinetikFooterFlag countryCode={countryCode} /> : null}
     </div>
   );
 }
@@ -1421,6 +1417,7 @@ export default function ProfileEditKinetikPanel({
                       </div>
                     ) : null}
                   </div>
+                  <ProfileKinetikHeaderFlag countryCode={countryCode} />
                 </div>
               </div>
               {bio?.trim() ? (
@@ -1447,7 +1444,6 @@ export default function ProfileEditKinetikPanel({
                 <ProfileKinetikIdentityJoinIdRow
                   memberSinceLabel={memberSinceLabel}
                   systemId={identity.systemId}
-                  countryCode={countryCode}
                   shareLabel={metricCopy.shareProfile}
                   shareCopiedLabel={metricCopy.shareCopied}
                   shareCopied={shareCopied}
@@ -1538,9 +1534,10 @@ export default function ProfileEditKinetikPanel({
                     </div>
                   ) : null}
                 </div>
+                  <ProfileKinetikHeaderFlag countryCode={countryCode} />
+                </div>
               </div>
             </div>
-          </div>
           {bio?.trim() ? (
             <p className="profile-edit-kinetik-header__bio profile-edit-kinetik-header__bio--pro-mobile mt-2.5 line-clamp-3 text-xs leading-relaxed text-white/80">
               {bio.trim()}
@@ -1570,7 +1567,6 @@ export default function ProfileEditKinetikPanel({
             <ProfileKinetikIdentityJoinIdRow
               memberSinceLabel={memberSinceLabel}
               systemId={identity.systemId}
-              countryCode={countryCode}
               shareLabel={metricCopy.shareProfile}
               shareCopiedLabel={metricCopy.shareCopied}
               shareCopied={shareCopied}
@@ -1611,8 +1607,9 @@ export default function ProfileEditKinetikPanel({
                     </div>
                   ) : null}
                 </div>
+                  <ProfileKinetikHeaderFlag countryCode={countryCode} />
+                </div>
               </div>
-            </div>
             <div
               className="profile-edit-kinetik-hatch pointer-events-none absolute top-0 right-0 h-16 w-24 opacity-40"
               aria-hidden
@@ -1650,7 +1647,6 @@ export default function ProfileEditKinetikPanel({
           <ProfileKinetikIdentityJoinIdRow
             memberSinceLabel={memberSinceLabel}
             systemId={identity.systemId}
-            countryCode={countryCode}
             shareLabel={metricCopy.shareProfile}
             shareCopiedLabel={metricCopy.shareCopied}
             shareCopied={shareCopied}

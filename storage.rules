@@ -3,13 +3,14 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    /** Firestore の isAdmin と同じ UID（管理画面のアップロード用） */
+    /** Firestore の isAdmin と同じ（Custom Claim `admin` 優先） */
     function isAdmin() {
       return request.auth != null
-        && request.auth.uid in [
-          "ynh0i1lJklWra1393TNbnxcKo5f2",
-          "Rb3vF67NTLeCxSvrR15brCbiQSD2"
-        ];
+        && (request.auth.token.admin == true
+            || request.auth.uid in [
+              "ynh0i1lJklWra1393TNbnxcKo5f2",
+              "Rb3vF67NTLeCxSvrR15brCbiQSD2"
+            ]);
     }
 
     // プロフィール画像 — Web `settings/profile` / ネイティブ `ProfileHomeScreen`
@@ -17,7 +18,8 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null
         && request.auth.uid == userId
-        && request.resource.size < 8 * 1024 * 1024;
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
     }
 
     // お問い合わせ添付 — ContactForm

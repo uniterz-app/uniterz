@@ -9,8 +9,8 @@ import { auth, storage } from "@/lib/firebase";
 import { jp, nameOxanium } from "@/lib/fonts";
 import { toast } from "@/app/component/ui/toast";
 import {
-  COMMUNITY_LEAGUES,
-  COMMUNITY_METRICS,
+  COMMUNITY_CREATE_LEAGUES,
+  COMMUNITY_CREATE_METRICS,
   type CommunityLeague,
   type CommunityMetric,
 } from "@/lib/communities/types";
@@ -21,12 +21,9 @@ import {
   PRO_MAX_MEMBERSHIPS,
   PRO_MAX_OWNED_GROUPS,
 } from "@/lib/communities/limitValues";
-import CommunityTeamPicker from "@/app/component/communities/CommunityTeamPicker";
 import {
   communityCrtMono,
 } from "@/app/component/communities/CommunityCrtTheme";
-import { useScheduleTeams } from "@/lib/games/useScheduleTeams";
-import { LEAGUES, type League } from "@/lib/leagues";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -71,17 +68,12 @@ export default function CreateGroupModal({
   const [headerFile, setHeaderFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [metric, setMetric] = useState<CommunityMetric>("totalPoints");
-  const [league, setLeague] = useState<CommunityLeague>("all");
-  const [teamIds, setTeamIds] = useState<string[]>([]);
+  const [league, setLeague] = useState<CommunityLeague>("nba");
   const [busy, setBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
   const submitLockRef = useRef(false);
   const isWeb = variant === "web";
   const reduceMotion = useReducedMotion();
-  const scheduleLeague: League =
-    league === "all" ? LEAGUES.NBA : (league as League);
-  const { teams } = useScheduleTeams(scheduleLeague);
-  const showTeamPicker = league !== "all";
 
   useEffect(() => {
     setMounted(true);
@@ -144,13 +136,10 @@ export default function CreateGroupModal({
             header: "Header image",
             metric: "Compete on",
             league: "League",
-            teams: "Target teams",
             scoringNote:
               "Scores count from the day this group is created (JST). Past results are not included.",
             cancel: "Cancel",
             submit: "Create",
-            streakNote:
-              "Win streak uses your account-wide streak, not only from group start.",
             planLimits: `Plan limits: Free users can create up to ${FREE_MAX_OWNED_GROUPS} groups and join up to ${FREE_MAX_MEMBERSHIPS} groups. Pro users can create up to ${PRO_MAX_OWNED_GROUPS} groups and join up to ${PRO_MAX_MEMBERSHIPS} groups.`,
           }
         : {
@@ -162,13 +151,10 @@ export default function CreateGroupModal({
             header: "ヘッダー画像",
             metric: "競う項目",
             league: "リーグ",
-            teams: "対象チーム",
             scoringNote:
               "グループ作成日（JST）以降の予想だけが集計されます。過去の成績は含みません。",
             cancel: "キャンセル",
             submit: "作成",
-            streakNote:
-              "連勝はアカウント全体の累計です（グループ開始日以降だけにはなりません）。",
             planLimits: `プラン上限: Free はグループを最大 ${FREE_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${FREE_MAX_MEMBERSHIPS} 件まで参加できます。Pro はグループを最大 ${PRO_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${PRO_MAX_MEMBERSHIPS} 件まで参加できます。`,
           },
     [language]
@@ -192,8 +178,7 @@ export default function CreateGroupModal({
       return null;
     });
     setMetric("totalPoints");
-    setLeague("all");
-    setTeamIds([]);
+    setLeague("nba");
     onClose();
   }, [onClose]);
 
@@ -250,10 +235,10 @@ export default function CreateGroupModal({
           name: n,
           description: description.trim() || null,
           headerImageUrl,
-          rankingMetric: metric,
+          rankingMetric: "totalPoints",
           periodType: "from_now",
-          rankingLeague: league,
-          rankingTeamIds: teamIds,
+          rankingLeague: "nba",
+          rankingTeamIds: [],
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -290,10 +275,10 @@ export default function CreateGroupModal({
             description: description.trim() || null,
             memberCount: 1,
             headerImageUrl,
-            rankingMetric: metric,
+            rankingMetric: "totalPoints",
             periodType: "from_now",
-            rankingLeague: league,
-            rankingTeamIds: teamIds,
+            rankingLeague: "nba",
+            rankingTeamIds: [],
             role: "owner",
           };
       onCreated(payload, inv || undefined);
@@ -305,8 +290,7 @@ export default function CreateGroupModal({
         return null;
       });
       setMetric("totalPoints");
-      setLeague("all");
-      setTeamIds([]);
+      setLeague("nba");
       onClose();
     } catch {
       releaseSubmitLock();
@@ -316,9 +300,6 @@ export default function CreateGroupModal({
     name,
     description,
     headerFile,
-    metric,
-    league,
-    teamIds,
     language,
     onCreated,
     onClose,
@@ -462,57 +443,50 @@ export default function CreateGroupModal({
           </p>
 
           <label className={labelClass}>{t.league}</label>
-          <select
-            value={league}
-            onChange={(e) => {
-              setLeague(e.target.value as CommunityLeague);
-              setTeamIds([]);
-            }}
-            className={fieldClass}
-          >
-            {COMMUNITY_LEAGUES.map((k) => (
-              <option key={k} value={k}>
-                {leagueLabel(k, language)}
-              </option>
-            ))}
-          </select>
-
-          {showTeamPicker && (
-            <>
-              <label className={labelClass}>{t.teams}</label>
-              <CommunityTeamPicker
-                teams={teams}
-                selectedIds={teamIds}
-                onChange={setTeamIds}
-                language={language}
-                isWeb={isWeb}
-              />
-            </>
-          )}
+          <div className="flex flex-wrap gap-1.5">
+            {COMMUNITY_CREATE_LEAGUES.map((k) => {
+              const active = k === league;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setLeague(k)}
+                  className={[
+                    "rounded-none border px-2.5 py-1.5 text-xs font-semibold",
+                    jp.className,
+                    active
+                      ? "border-white bg-white text-black"
+                      : "border-white/22 bg-black text-white/62",
+                  ].join(" ")}
+                >
+                  {leagueLabel(k, language)}
+                </button>
+              );
+            })}
+          </div>
 
           <label className={labelClass}>{t.metric}</label>
-          <select
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as CommunityMetric)}
-            className={fieldClass}
-          >
-            {COMMUNITY_METRICS.map((k) => (
-              <option key={k} value={k}>
-                {metricLabel(k, language)}
-              </option>
-            ))}
-          </select>
-
-          {metric === "activeWinStreak" && (
-            <p
-              className={[
-                "text-white/58",
-                isWeb ? "text-xs" : "text-[11px]",
-              ].join(" ")}
-            >
-              {t.streakNote}
-            </p>
-          )}
+          <div className="flex flex-wrap gap-1.5">
+            {COMMUNITY_CREATE_METRICS.map((k) => {
+              const active = k === metric;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setMetric(k)}
+                  className={[
+                    "rounded-none border px-2.5 py-1.5 text-xs font-semibold",
+                    jp.className,
+                    active
+                      ? "border-white bg-white text-black"
+                      : "border-white/22 bg-black text-white/62",
+                  ].join(" ")}
+                >
+                  {metricLabel(k, language)}
+                </button>
+              );
+            })}
+          </div>
             </div>
           </div>
 

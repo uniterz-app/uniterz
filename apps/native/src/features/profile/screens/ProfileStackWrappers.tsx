@@ -17,6 +17,7 @@ import WaveProSkinPreviewScreenNative from "../backgrounds/WaveProSkinPreviewScr
 import UniterzLogoTypePreviewScreenNative from "../mobileScreens/UniterzLogoTypePreviewScreenNative";
 import UniterzLogo3dPreviewScreenNative from "../mobileScreens/UniterzLogo3dPreviewScreenNative";
 import UniterzProBadgePreviewScreenNative from "../mobileScreens/UniterzProBadgePreviewScreenNative";
+import MarkedChipDesignPreviewScreenNative from "../mobileScreens/MarkedChipDesignPreviewScreenNative";
 import ResultDetailDesignPreviewScreenNative from "../../results/ResultDetailDesignPreviewScreenNative";
 import SplashLogoPreviewScreenNative from "../mobileScreens/SplashLogoPreviewScreenNative";
 import LeagueStatsRailPreviewScreenNative from "../../games/stats/LeagueStatsRailPreviewScreenNative";
@@ -206,6 +207,19 @@ export function UniterzProBadgePreviewScreenWrapper() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   return (
     <UniterzProBadgePreviewScreenNative
+      language={language === "ja" ? "ja" : "en"}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function MarkedChipDesignPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <MarkedChipDesignPreviewScreenNative
       language={language === "ja" ? "ja" : "en"}
       onClose={() => navigation.goBack()}
     />

@@ -9,7 +9,7 @@
 
 ## 1. 目的と境界
 
-グループバトルは、3〜5 人の確定スクワッド同士が、個人ランキングと同じ総合スコア（`pointsSumV3`）の **平均** で競う期間限定大会である。
+グループバトルは、3〜5 人の確定スクワッド同士が、個人ランキングと同じ総合スコア（`pointsSumV3`）の **平均** で競う期間限定大会である。対象は通常ランキングの **Pick Up 試合**（PRO LEAGUE の全試合スコアは使わない）。
 
 | 対象 | 内容 |
 |---|---|
@@ -146,6 +146,7 @@ stateDiagram-v2
 ```
 
 同時 pending 申請上限: **3**（ユーザー単位・大会単位）。
+所属が決まった時点（申請承認・招待承諾・招待コード参加・作成）で、同一大会の他 pending 申請は **cancelled**。
 
 ### 4.4b `group_battles/{battleId}/squad_invites/{inviteId}`
 
@@ -232,6 +233,8 @@ gb:{battleId}:{period}:{label}:rank{rank}:uid{uid}
 ```
 
 残高: `users/{uid}.unitBalance`（FieldValue.increment）。台帳 doc 作成と残高更新は同一トランザクション。
+
+REWARD UI: `GET /api/group-battles/{battleId}/my-payout`（要認証）。台帳行を優先し、未付与かつ FINAL スナップがある週/月は報酬表から推定（`pending`）。プレビューのみモック。
 
 ---
 
@@ -365,6 +368,16 @@ Native は Web 正にパリティ追従。
 | 4 | Unit 冪等付与 |
 | 5 | Native パリティ |
 | 6 | 過去スクワッド履歴 + 再招集（reform / invite） |
+| 7 | **運営大会作成 UI**（`/admin/group-battles`）+ Pick Up 専用スコア + RANK 表示名解決 |
+
+### 運営オペ（Phase 7）
+
+1. `/admin/group-battles` で **募集開始・終了 / 対戦開始・終了（JST）** を入力して作成  
+2. 週ラベル（月曜 dateKey）・`monthlyRange`・デフォルト Unit 表・`seasonKey` は自動  
+3. フェーズボタン: 募集開始 → **締切ロック→BATTLE** → 集計 → 確定 → クローズ  
+4. 日次 CF（16:00 JST）がスナップ構築 + Unit 冪等付与
+
+スコア源: `user_stats_v2_daily.rankingBySeason[seasonKey]` のみ（フォールバックはレガシー `ranking`）。`leagues.nba` / `all` は使わない。
 
 ---
 
@@ -374,3 +387,8 @@ Native は Web 正にパリティ追従。
 |---|---|
 | 2026-07-27 | 初版。データモデル・集計・API・UI・Unit・フェーズを定義 |
 | 2026-07-31 | 募集 1〜2 週間。過去スクワッド再招集 API・導出方針・Phase 6 を追加 |
+| 2026-08-21 | 運営大会作成（Admin）・スケジュール導出・Pick Up 専用スコア・RANK 表示名 enrich |
+| 2026-08-21 | REWARD `GET .../my-payout` — unit_ledger 優先、未付与は FINAL スナップから推定。Web/Native 本番表示 |
+| 2026-08-21 | Native ADMIN「スクワッドバトル開催」— 既存 `/api/admin/group-battles` で作成・フェーズ操作 |
+| 2026-08-21 | ENTRY enrich: users + cumulative_stats + period_ranking_snapshots（今週/先週/先月）をバッチ取得 |
+| 2026-08-21 | 招待コード永続・申請 cancel・リネーム PATCH・脱退/解散・ENTRY 締切実値・フェーズ自動進行・Player フォールバック |

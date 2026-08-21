@@ -167,6 +167,7 @@ const fr: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "Séries de victoires/défaites sur vos {n} derniers pronostics",
     last20TrackerSubtitle: "Derniers {n} matchs",
+    last20TrackerUnavailable: "Impossible de récupérer les données",
     settledTodayResults: "Result Drop",
     settledTodayResultsDesc: "Analyses finalisées aujourd'hui",
     settledTodayEmpty: "Aucune analyse finalisée aujourd'hui",

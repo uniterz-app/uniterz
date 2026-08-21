@@ -9,8 +9,8 @@ import * as ImagePicker from "expo-image-picker";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import type { Language } from "../../../../../lib/i18n/language";
 import {
-  COMMUNITY_LEAGUES,
-  COMMUNITY_METRICS,
+  COMMUNITY_CREATE_LEAGUES,
+  COMMUNITY_CREATE_METRICS,
   type CommunityLeague,
   type CommunityMetric,
 } from "../../../../../lib/communities/types";
@@ -31,9 +31,6 @@ import {
   communityMono,
   communityPressableTapStyle,
 } from "./communityCrtThemeNative";
-import CommunityTeamPickerNative from "./CommunityTeamPickerNative";
-import { useScheduleTeamsNative } from "../games/useScheduleTeamsNative";
-import type { SupportedLeague } from "../games/useTodayGames";
 
 type Props = {
   visible: boolean;
@@ -78,14 +75,8 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
   const [description, setDescription] = useState("");
   const [headerUri, setHeaderUri] = useState<string | null>(null);
   const [metric, setMetric] = useState<CommunityMetric>("totalPoints");
-  const [league, setLeague] = useState<CommunityLeague>("all");
-  const [teamIds, setTeamIds] = useState<string[]>([]);
+  const [league, setLeague] = useState<CommunityLeague>("nba");
   const [busy, setBusy] = useState(false);
-
-  const scheduleLeague: SupportedLeague =
-    league === "all" ? "nba" : (league as SupportedLeague);
-  const { teams } = useScheduleTeamsNative(scheduleLeague);
-  const showTeamPicker = league !== "all";
 
   const t = useMemo(
     () =>
@@ -98,13 +89,10 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             header: "Header image",
             metric: "Compete on",
             league: "League",
-            teams: "Target teams",
             scoringNote:
               "Scores count from the day this group is created (JST). Past results are not included.",
             cancel: "Cancel",
             submit: "Create",
-            streakNote:
-              "Win streak uses your account-wide streak, not only from group start.",
             planLimits: `Plan limits: Free users can create up to ${FREE_MAX_OWNED_GROUPS} groups and join up to ${FREE_MAX_MEMBERSHIPS} groups. Pro users can create up to ${PRO_MAX_OWNED_GROUPS} groups and join up to ${PRO_MAX_MEMBERSHIPS} groups.`,
             pickImage: "Pick image",
             creating: "Creating…",
@@ -117,13 +105,10 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             header: "ヘッダー画像",
             metric: "競う項目",
             league: "リーグ",
-            teams: "対象チーム",
             scoringNote:
               "グループ作成日（JST）以降の予想だけが集計されます。過去の成績は含みません。",
             cancel: "キャンセル",
             submit: "作成",
-            streakNote:
-              "連勝はアカウント全体の累計です（グループ開始日以降だけにはなりません）。",
             planLimits: `プラン上限: Free はグループを最大 ${FREE_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${FREE_MAX_MEMBERSHIPS} 件まで参加できます。Pro はグループを最大 ${PRO_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${PRO_MAX_MEMBERSHIPS} 件まで参加できます。`,
             pickImage: "画像を選ぶ",
             creating: "作成中…",
@@ -137,8 +122,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
     setDescription("");
     setHeaderUri(null);
     setMetric("totalPoints");
-    setLeague("all");
-    setTeamIds([]);
+    setLeague("nba");
     onClose();
   }, [busy, onClose]);
 
@@ -182,10 +166,10 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
           name: n,
           description: description.trim() || null,
           headerImageUrl,
-          rankingMetric: metric,
+          rankingMetric: "totalPoints",
           periodType: "from_now",
-          rankingLeague: league,
-          rankingTeamIds: teamIds,
+          rankingLeague: "nba",
+          rankingTeamIds: [],
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -202,10 +186,10 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             description: description.trim() || null,
             memberCount: 1,
             headerImageUrl,
-            rankingMetric: metric,
+            rankingMetric: "totalPoints",
             periodType: "from_now",
-            rankingLeague: league,
-            rankingTeamIds: teamIds,
+            rankingLeague: "nba",
+            rankingTeamIds: [],
             role: "owner",
           };
       onCreated(payload, String(json.inviteCode ?? "") || undefined);
@@ -213,7 +197,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
     } finally {
       setBusy(false);
     }
-  }, [name, description, headerUri, metric, league, teamIds, fUser, busy, language, onCreated, closeReset]);
+  }, [name, description, headerUri, fUser, busy, language, onCreated, closeReset]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={closeReset}>
@@ -275,33 +259,23 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
 
               <Text style={[LABEL, styles.gapTop]}>{t.league}</Text>
               <OptionRow
-                options={COMMUNITY_LEAGUES.map((k) => ({ key: k, label: leagueLabel(k, language) }))}
+                options={COMMUNITY_CREATE_LEAGUES.map((k) => ({
+                  key: k,
+                  label: leagueLabel(k, language),
+                }))}
                 value={league}
-                onChange={(v) => {
-                  setLeague(v as CommunityLeague);
-                  setTeamIds([]);
-                }}
+                onChange={(v) => setLeague(v as CommunityLeague)}
               />
-
-              {showTeamPicker ? (
-                <>
-                  <Text style={[LABEL, styles.gapTop]}>{t.teams}</Text>
-                  <CommunityTeamPickerNative
-                    teams={teams}
-                    selectedIds={teamIds}
-                    onChange={setTeamIds}
-                    language={language}
-                  />
-                </>
-              ) : null}
 
               <Text style={[LABEL, styles.gapTop]}>{t.metric}</Text>
               <OptionRow
-                options={COMMUNITY_METRICS.map((k) => ({ key: k, label: metricLabel(k, language) }))}
+                options={COMMUNITY_CREATE_METRICS.map((k) => ({
+                  key: k,
+                  label: metricLabel(k, language),
+                }))}
                 value={metric}
                 onChange={(v) => setMetric(v as CommunityMetric)}
               />
-              {metric === "activeWinStreak" ? <Text style={styles.note}>{t.streakNote}</Text> : null}
             </ScrollView>
 
             <View style={styles.footer}>

@@ -165,6 +165,7 @@ const ko: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "최근 {n}경기의 연승/연패 현황",
     last20TrackerSubtitle: "최근 {n}경기 성적",
+    last20TrackerUnavailable: "데이터를 가져올 수 없습니다",
     settledTodayResults: "Result Drop",
     settledTodayResultsDesc: "오늘 확정된 분석 목록",
     settledTodayEmpty: "오늘 확정된 분석이 없습니다",

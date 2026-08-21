@@ -41,6 +41,11 @@ export default function AdminHomePage() {
           title="商品交換申請"
           desc="審査・購入・追跡番号の更新"
         />
+        <Card
+          href="/admin/group-battles"
+          title="Squad Battle 開催"
+          desc="募集・対戦期間を決めて大会作成・フェーズ進行"
+        />
       </div>
     </AdminGuard>
   );

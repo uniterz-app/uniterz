@@ -4,6 +4,7 @@ import {
   getBattle,
   getMembership,
   parseSquadDoc,
+  serializeSquadForClient,
   squadsCol,
 } from "@/lib/groupBattles/server/firestore";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
@@ -32,9 +33,13 @@ export async function GET(req: Request, ctx: Ctx) {
       return jsonOk({ membership, squad: null });
     }
 
+    const squad = parseSquadDoc(
+      snap.id,
+      snap.data() as Record<string, unknown>
+    );
     return jsonOk({
       membership,
-      squad: parseSquadDoc(snap.id, snap.data() as Record<string, unknown>),
+      squad: serializeSquadForClient(squad, { viewerUid: uid }),
     });
   } catch (e) {
     return mapAuthError(e);

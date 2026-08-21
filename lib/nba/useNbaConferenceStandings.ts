@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
-import { fetchTeamsByLeagueShared } from "@/lib/games/fetchTeamsByLeagueShared";
+import { useEffect, useState } from "react";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
-  buildNbaConferenceStandings,
+  EMPTY_NBA_CONFERENCE_STANDINGS,
   type NbaConferenceStandingsBoard,
 } from "@/lib/nba/nbaConferenceStandings";
-import type { NbaStatsSnapshotSource } from "@/lib/nba/nbaStatsSnapshotCacheControl";
+import { fetchNbaConferenceStandings } from "@/lib/nba/standings/fetchNbaConferenceStandingsClient";
+import type { NbaConferenceStandingsSource } from "@/lib/nba/standings/nbaConferenceStandingsTypes";
 
 export type UseNbaConferenceStandingsOptions = {
   apiBaseUrl?: string | null;
@@ -18,54 +18,52 @@ export function useNbaConferenceStandings(
 ): {
   board: NbaConferenceStandingsBoard;
   asOfLabel: string;
-  source: NbaStatsSnapshotSource;
+  source: NbaConferenceStandingsSource | null;
   loading: boolean;
   error: string | null;
 } {
-  const { bundle, source, loading: statsLoading, error: statsError } =
-    useLeagueTeamStatsBundle({ apiBaseUrl: options.apiBaseUrl });
-  const [teamDocs, setTeamDocs] = useState<Record<string, unknown>[]>([]);
-  const [teamsError, setTeamsError] = useState<string | null>(null);
-  const [teamsLoading, setTeamsLoading] = useState(true);
+  const [board, setBoard] = useState<NbaConferenceStandingsBoard>(
+    EMPTY_NBA_CONFERENCE_STANDINGS
+  );
+  const [asOfLabel, setAsOfLabel] = useState("");
+  const [source, setSource] = useState<NbaConferenceStandingsSource | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const ac = new AbortController();
-    setTeamsLoading(true);
-    setTeamsError(null);
-    void fetchTeamsByLeagueShared({
-      league: "nba",
+    setLoading(true);
+    setError(null);
+    setBoard(EMPTY_NBA_CONFERENCE_STANDINGS);
+    setAsOfLabel("");
+    setSource(null);
+
+    void fetchNbaConferenceStandings({
       apiBaseUrl: options.apiBaseUrl,
+      season: CURRENT_NBA_SEASON_KEY,
       signal: ac.signal,
     })
-      .then((rows) => {
+      .then((data) => {
         if (cancelled) return;
-        setTeamDocs(rows);
+        setBoard(data.board);
+        setAsOfLabel(data.asOfLabel);
+        setSource(data.source);
       })
       .catch((e) => {
         if (cancelled || ac.signal.aborted) return;
-        setTeamsError(e instanceof Error ? e.message : "teams load failed");
-        setTeamDocs([]);
+        setError(e instanceof Error ? e.message : "standings load failed");
+        setBoard(EMPTY_NBA_CONFERENCE_STANDINGS);
       })
       .finally(() => {
-        if (!cancelled) setTeamsLoading(false);
+        if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
       ac.abort();
     };
   }, [options.apiBaseUrl]);
 
-  const board = useMemo(
-    () => buildNbaConferenceStandings(bundle, teamDocs),
-    [bundle, teamDocs]
-  );
-
-  return {
-    board,
-    asOfLabel: bundle.asOfLabel,
-    source,
-    loading: statsLoading || teamsLoading,
-    error: statsError || teamsError,
-  };
+  return { board, asOfLabel, source, loading, error };
 }

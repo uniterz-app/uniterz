@@ -117,16 +117,20 @@ async function applyPostToUserStatsV2(opts) {
     const userRef = db().doc(`users/${uid}`);
     const userStatsRef = db().doc(`user_stats_v2/${uid}`);
     await db().runTransaction(async (tx) => {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d;
         const marker = await tx.get(markerRef);
         if (marker.exists)
             return;
         const userSnap = await tx.get(userRef);
         const user = userSnap.exists ? userSnap.data() : {};
         /** profileCharts merge 用（writes 前に全 reads） */
-        const [dailySnap, cumulativeSnap] = await Promise.all([
+        const chartsRef = forPickupRanking && nbaSeasonKey
+            ? cumulativeRef.collection("profileCharts").doc(nbaSeasonKey)
+            : null;
+        const [dailySnap, cumulativeSnap, chartsSnap] = await Promise.all([
             tx.get(dailyRef),
             tx.get(cumulativeRef),
+            chartsRef ? tx.get(chartsRef) : Promise.resolve(null),
         ]);
         const inc = {
             posts: firestore_1.FieldValue.increment(1),
@@ -214,6 +218,9 @@ async function applyPostToUserStatsV2(opts) {
                 cumulative: cumulativeSnap.exists
                     ? cumulativeSnap.data()
                     : null,
+                chartsDoc: (chartsSnap === null || chartsSnap === void 0 ? void 0 : chartsSnap.exists)
+                    ? chartsSnap.data()
+                    : null,
                 seasonKey: nbaSeasonKey,
                 dateKey,
                 projectedSeasonBucket: projected,
@@ -227,23 +234,17 @@ async function applyPostToUserStatsV2(opts) {
         (0, cumulativeFromDaily_1.applyCumulativeIncrementInTransaction)(tx, cumulativeRef, user, uid, contrib);
         if (profileCharts) {
             const builtAtMs = Date.now();
-            tx.set(cumulativeRef, {
-                "profileCharts.v": profileCharts.v,
-                "profileCharts.seasonKey": profileCharts.seasonKey,
-                "profileCharts.dailyTrend": profileCharts.dailyTrend,
-                "profileCharts.rankTrend": (_c = profileCharts.rankTrend) !== null && _c !== void 0 ? _c : [],
-                "profileCharts.last20": profileCharts.last20,
-                "profileCharts.builtAtMs": builtAtMs,
-                updatedAt: firestore_1.FieldValue.serverTimestamp(),
-            }, { merge: true });
-            tx.set(cumulativeRef.collection("profileCharts").doc(profileCharts.seasonKey), {
+            const payload = {
                 v: profileCharts.v,
                 seasonKey: profileCharts.seasonKey,
-                dailyTrend: (_d = profileCharts.dailyTrend) !== null && _d !== void 0 ? _d : [],
-                rankTrend: (_e = profileCharts.rankTrend) !== null && _e !== void 0 ? _e : [],
-                last20: (_f = profileCharts.last20) !== null && _f !== void 0 ? _f : [],
+                dailyTrend: (_c = profileCharts.dailyTrend) !== null && _c !== void 0 ? _c : [],
+                last20: (_d = profileCharts.last20) !== null && _d !== void 0 ? _d : [],
                 builtAtMs,
-            }, { merge: true });
+            };
+            if (profileCharts.rankTrend !== undefined) {
+                payload.rankTrend = profileCharts.rankTrend;
+            }
+            tx.set(cumulativeRef.collection("profileCharts").doc(profileCharts.seasonKey), payload, { merge: true });
         }
     });
 }

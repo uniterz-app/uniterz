@@ -27,6 +27,7 @@ import ProfileStreakPlotGridNative from "./ProfileStreakPlotGridNative";
 type Props = {
   points: StreakTrackerPointNative[];
   loading: boolean;
+  unavailable?: boolean;
   language: "ja" | "en";
 };
 
@@ -85,7 +86,12 @@ function computeWindowStats(points: StreakTrackerPointNative[]) {
   return { maxWinStreak: maxW, maxLossStreak: maxL, wins, losses };
 }
 
-export default function ProfileStreakTrackerNative({ points, loading, language }: Props) {
+export default function ProfileStreakTrackerNative({
+  points,
+  loading,
+  unavailable = false,
+  language,
+}: Props) {
   const isJa = language === "ja";
   const [plotInnerW, setPlotInnerW] = useState(0);
   const onPlotLayout = (e: LayoutChangeEvent) => {
@@ -166,7 +172,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
     );
   }
 
-  if (points.length === 0) {
+  if (unavailable || points.length === 0) {
     return (
       <ProfileOverviewChartCardNative topLabel={title}>
         <View style={styles.foreground}>
@@ -176,7 +182,13 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
           <View style={[styles.noDataBox, { minHeight: PLOT_H + 40 }]}>
             <Text style={styles.noData}>NO DATA</Text>
             <Text style={styles.noDataHint}>
-              {isJa ? "確定済みの予想がありません" : "No settled predictions"}
+              {unavailable
+                ? isJa
+                  ? "データが取れません"
+                  : "Couldn't load data"
+                : isJa
+                  ? "確定済みの予想がありません"
+                  : "No settled predictions"}
             </Text>
           </View>
         </View>

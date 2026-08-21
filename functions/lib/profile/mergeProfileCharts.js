@@ -22,8 +22,8 @@ function hasActivity(row) {
         Math.abs(row.pointsV3) > 1e-9 ||
         Math.abs(row.upsetPoints) > 1e-9);
 }
-function readStored(cumulative, seasonKey) {
-    const raw = cumulative === null || cumulative === void 0 ? void 0 : cumulative.profileCharts;
+function readStored(cumulative, seasonKey, chartsDoc) {
+    const raw = chartsDoc !== null && chartsDoc !== void 0 ? chartsDoc : cumulative === null || cumulative === void 0 ? void 0 : cumulative.profileCharts;
     if (!raw || typeof raw !== "object") {
         return { v: exports.PROFILE_CHARTS_BUNDLE_VERSION, seasonKey };
     }
@@ -80,7 +80,7 @@ function projectSeasonBucket(existing, inc) {
     };
 }
 function mergeProfileChartsOnSeasonSettle(opts) {
-    const prev = readStored(opts.cumulative, opts.seasonKey);
+    const prev = readStored(opts.cumulative, opts.seasonKey, opts.chartsDoc);
     const dailyPrev = Array.isArray(prev.dailyTrend) ? [...prev.dailyTrend] : [];
     const row = dailyRowFromSeasonBucket(opts.dateKey, opts.projectedSeasonBucket);
     const without = dailyPrev.filter((r) => r.date !== row.date);
@@ -97,13 +97,12 @@ function mergeProfileChartsOnSeasonSettle(opts) {
         v: exports.PROFILE_CHARTS_BUNDLE_VERSION,
         seasonKey: opts.seasonKey,
         dailyTrend: pruneDaily(without),
-        /** 欠けたままにしない（クライアントが ensure に落ちない） */
-        rankTrend: Array.isArray(prev.rankTrend) ? prev.rankTrend : [],
+        rankTrend: Array.isArray(prev.rankTrend) ? prev.rankTrend : undefined,
         last20,
     };
 }
 function mergeProfileChartsOnRankSnapshot(opts) {
-    const prev = readStored(opts.cumulative, opts.seasonKey);
+    const prev = readStored(opts.cumulative, opts.seasonKey, opts.chartsDoc);
     const rankPrev = Array.isArray(prev.rankTrend) ? [...prev.rankTrend] : [];
     const point = { dateKey: opts.dateKey, rank: opts.totalPointsRank };
     const next = rankPrev.filter((p) => p.dateKey !== point.dateKey);
@@ -115,9 +114,9 @@ function mergeProfileChartsOnRankSnapshot(opts) {
     return {
         v: exports.PROFILE_CHARTS_BUNDLE_VERSION,
         seasonKey: opts.seasonKey,
-        dailyTrend: Array.isArray(prev.dailyTrend) ? prev.dailyTrend : [],
+        dailyTrend: Array.isArray(prev.dailyTrend) ? prev.dailyTrend : undefined,
         rankTrend,
-        last20: Array.isArray(prev.last20) ? prev.last20 : [],
+        last20: Array.isArray(prev.last20) ? prev.last20 : undefined,
     };
 }
 //# sourceMappingURL=mergeProfileCharts.js.map

@@ -16,6 +16,8 @@ import {
   sanitizeSquadName,
   squadMembersCol,
   squadsCol,
+  cancelPendingJoinRequestsTx,
+  getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
 
@@ -63,6 +65,13 @@ export async function POST(req: Request, ctx: Ctx) {
       const memSnap = await tx.get(memRef);
       if (memSnap.exists) throw new Error("already_in_squad");
 
+      const pendingSnap = await getPendingJoinRequestsTx(
+        tx,
+        adminDb,
+        battleId,
+        uid
+      );
+
       tx.set(squadRef, {
         name,
         ownerUid: uid,
@@ -71,6 +80,7 @@ export async function POST(req: Request, ctx: Ctx) {
         status: "forming",
         inviteCodeHash: hash,
         inviteCodeLast4: invitePlain.slice(-4),
+        inviteCodePlain: invitePlain,
         rulesAcceptedAt: now,
         rulesAcceptedByUid: uid,
         createdAt: now,
@@ -86,6 +96,7 @@ export async function POST(req: Request, ctx: Ctx) {
         { updatedAt: now },
         { merge: true }
       );
+      cancelPendingJoinRequestsTx(tx, pendingSnap);
     });
 
     return jsonOk({

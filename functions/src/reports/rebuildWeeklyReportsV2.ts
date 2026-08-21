@@ -1,7 +1,11 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { defineSecret } from "firebase-functions/params";
 import { buildWeeklyReportsCore } from "./buildWeeklyReportsCore";
 import { previousLabel, weekStartDateKeyJST } from "../rankings/nbaPeriod";
+import { assertManualJobAuth } from "../http/assertManualJobAuth";
+
+const INTERNAL_JOB_SECRET = defineSecret("INTERNAL_JOB_SECRET");
 
 function isMondayJst(now: Date): boolean {
   return new Date(now.getTime() + 9 * 60 * 60 * 1000).getUTCDay() === 1;
@@ -39,16 +43,18 @@ export const rebuildWeeklyReportsCronV2 = onSchedule(
 /**
  * 手動 / Cursor 用 HTTP。
  * GET/POST ?weekLabel=2026-10-19&status=final&limit=50
- * status 省略時は final。live は後方互換の手動再生成用のみ。
+ * 要ヘッダ: x-internal-job-secret（Secret: INTERNAL_JOB_SECRET）
  */
 export const rebuildWeeklyReportsManualV2 = onRequest(
   {
     region: "asia-northeast1",
     memory: "1GiB",
     timeoutSeconds: 540,
+    secrets: [INTERNAL_JOB_SECRET],
   },
   async (req, res) => {
     try {
+      assertManualJobAuth(req);
       const weekLabel =
         typeof req.query.weekLabel === "string"
           ? req.query.weekLabel
@@ -79,6 +85,17 @@ export const rebuildWeeklyReportsManualV2 = onRequest(
       );
       res.status(200).json(result);
     } catch (e) {
+      const status =
+        e instanceof Error &&
+        typeof (e as Error & { status?: number }).status === "number"
+          ? (e as Error & { status: number }).status
+          : 500;
+      if (status === 403 || status === 503) {
+        res.status(status).json({
+          error: e instanceof Error ? e.message : String(e),
+        });
+        return;
+      }
       console.error("[rebuildWeeklyReportsManualV2]", e);
       res.status(500).json({
         error: e instanceof Error ? e.message : String(e),

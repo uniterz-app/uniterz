@@ -126,7 +126,7 @@ export default function RankingsDrawerMenuNative({
             labelStyle={{ ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" }}
             onPress={onOpenSquadBattlePreview}
           >
-            Squad Battle (Preview)
+            Squad Battle
           </SideMenuItemButtonNative>
         ) : null}
       </View>

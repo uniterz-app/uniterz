@@ -1,6 +1,6 @@
 /**
  * 1位カード入場 — フェードインのみ（溜めなし）。
- * スキャン通過に合わせて ACE→LEAD→DEFENDING / アバターはフェードのみ。
+ * スキャン通過に合わせて ACE→LEAD→EST UNIT / アバターはフェードのみ。
  * Web framer-motion 秒数の正。Native はここから ms に換算。
  */
 

@@ -8,7 +8,8 @@ export type HeaderWordmark =
   | "GROUP"
   | "PROFILE"
   | "AWARDS"
-  | "STANDINGS";
+  | "STANDINGS"
+  | "SQUAD BATTLE";
 
 export const DEFAULT_HEADER_WORDMARK: HeaderWordmark = "UNITERZ";
 
@@ -55,6 +56,14 @@ export function resolveHeaderWordmark(
   if (rest === "/season-standings" || rest.startsWith("/season-standings")) {
     return "STANDINGS";
   }
+  if (
+    rest === "/squad-battle" ||
+    rest.startsWith("/squad-battle/") ||
+    rest === "/squad-battle-preview" ||
+    rest.startsWith("/squad-battle-preview/")
+  ) {
+    return "SQUAD BATTLE";
+  }
 
   return DEFAULT_HEADER_WORDMARK;
 }
@@ -66,6 +75,57 @@ export function resolveHeaderWordmarkFromMainTab(
   return HEADER_WORDMARK_BY_MAIN_TAB[tabName] ?? DEFAULT_HEADER_WORDMARK;
 }
 
+const HEADER_WORDMARK_SET = new Set<string>([
+  "UNITERZ",
+  "RESULT",
+  "RANKING",
+  "GROUP",
+  "PROFILE",
+  "AWARDS",
+  "STANDINGS",
+  "SQUAD BATTLE",
+]);
+
+export function isHeaderWordmark(value: string): value is HeaderWordmark {
+  return HEADER_WORDMARK_SET.has(value);
+}
+
+/** titleInBrandShelf 中のページ名で棚の文字を上書き */
+let wordmarkOverride: HeaderWordmark | null = null;
+let wordmarkAcquireCount = 0;
+const wordmarkListeners = new Set<() => void>();
+
+function emitWordmarkOverride(): void {
+  wordmarkListeners.forEach((listener) => listener());
+}
+
+export function getAppBrandWordmarkOverride(): HeaderWordmark | null {
+  return wordmarkAcquireCount > 0 ? wordmarkOverride : null;
+}
+
+export function acquireAppBrandWordmark(mark: HeaderWordmark): () => void {
+  wordmarkAcquireCount += 1;
+  wordmarkOverride = mark;
+  emitWordmarkOverride();
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    wordmarkAcquireCount = Math.max(0, wordmarkAcquireCount - 1);
+    if (wordmarkAcquireCount === 0) wordmarkOverride = null;
+    emitWordmarkOverride();
+  };
+}
+
+export function subscribeAppBrandWordmarkOverride(
+  listener: () => void
+): () => void {
+  wordmarkListeners.add(listener);
+  return () => {
+    wordmarkListeners.delete(listener);
+  };
+}
+
 /** Games スタックのアワード / 順位予想 → 棚のワードマーク */
 export function resolveHeaderWordmarkFromGamesStack(
   routeName: string | undefined,
@@ -73,4 +133,14 @@ export function resolveHeaderWordmarkFromGamesStack(
 ): HeaderWordmark | null {
   if (routeName !== "SeasonPredict") return null;
   return params?.mode === "awards" ? "AWARDS" : "STANDINGS";
+}
+
+/** Rankings / GROUP スタックの SQUAD BATTLE → 棚のワードマーク */
+export function resolveHeaderWordmarkFromSquadBattleStack(
+  routeName: string | undefined
+): HeaderWordmark | null {
+  if (routeName !== "SquadBattle" && routeName !== "SquadBattlePreview") {
+    return null;
+  }
+  return "SQUAD BATTLE";
 }

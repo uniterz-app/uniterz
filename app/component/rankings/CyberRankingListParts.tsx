@@ -38,6 +38,7 @@ export function CyberRankNumber({
   displayValue,
   muted = false,
   variant = "list",
+  uniform = false,
 }: {
   rank: number;
   compact?: boolean;
@@ -47,25 +48,31 @@ export function CyberRankNumber({
   muted?: boolean;
   /** tower = MyRankCard 塔（やや大きめ） */
   variant?: "list" | "tower";
+  /** 1位でもサイズを変えない（表の列揃え） */
+  uniform?: boolean;
 }) {
   const label = displayValue ?? String(rank).padStart(2, "0");
   const isCompact = !!compact;
+  const uniformSize =
+    variant === "tower"
+      ? isCompact
+        ? "2.4rem"
+        : "3.2rem"
+      : isCompact
+        ? "1.65rem"
+        : "2.25rem";
   const style = muted
     ? {
-        fontSize:
-          variant === "tower"
-            ? isCompact
-              ? "2.4rem"
-              : "3.2rem"
-            : isCompact
-              ? "1.65rem"
-              : "2.25rem",
+        fontSize: uniformSize,
         transform: "skewX(-12deg)",
         display: "inline-block" as const,
         color: "rgba(255,255,255,0.42)",
         letterSpacing: "0.05em",
       }
-    : cyberRankNumStyle(rank, isCompact, variant);
+    : {
+        ...cyberRankNumStyle(rank, isCompact, variant),
+        ...(uniform ? { fontSize: uniformSize } : {}),
+      };
 
   return (
     <span className="cyber-rank-num relative inline-block">

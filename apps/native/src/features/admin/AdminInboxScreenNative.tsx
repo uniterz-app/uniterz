@@ -17,7 +17,7 @@ import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
 import { db } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
-import { isAdminUid } from "../../../../../lib/constants";
+import { useIsAdminNative } from "./useIsAdminNative";
 import {
   adminContactTypeLabel,
   formatAdminInboxDate,
@@ -33,6 +33,7 @@ export default function AdminInboxScreenNative() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
+  const { isAdmin, loading: adminLoading } = useIsAdminNative();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const isJa = language === "ja";
   const kind = route.params.kind;
@@ -41,7 +42,8 @@ export default function AdminInboxScreenNative() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!isAdminUid(fUser?.uid)) {
+    if (adminLoading) return;
+    if (!isAdmin) {
       setReady(true);
       return;
     }
@@ -68,7 +70,7 @@ export default function AdminInboxScreenNative() {
       () => setReady(true)
     );
     return () => unsub();
-  }, [fUser?.uid]);
+  }, [adminLoading, isAdmin]);
 
   const visible = useMemo(
     () => items.filter((c) => matchesAdminInboxKind(c.type, kind)),

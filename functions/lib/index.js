@@ -45,6 +45,7 @@ const buildCumulativeRankingSnapshot_1 = require("./rankings/buildCumulativeRank
 const buildNbaPeriodRankingSnapshots_1 = require("./rankings/buildNbaPeriodRankingSnapshots");
 const buildGroupBattlePeriodSnapshots_1 = require("./groupBattles/buildGroupBattlePeriodSnapshots");
 const grantGroupBattleUnits_1 = require("./groupBattles/grantGroupBattleUnits");
+const advanceDuePhases_1 = require("./groupBattles/advanceDuePhases");
 const hasRankingAggregationScheduledJstToday_1 = require("./schedule/hasRankingAggregationScheduledJstToday");
 const notifyGameStartCron_1 = require("./notifications/notifyGameStartCron");
 const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
@@ -152,6 +153,7 @@ exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ sched
         console.error("[buildCumulativeRankingSnapshotCron] period snapshots failed", err);
     }
     try {
+        await (0, advanceDuePhases_1.advanceDueGroupBattlePhases)();
         await (0, buildGroupBattlePeriodSnapshots_1.buildGroupBattlePeriodSnapshots)();
         await (0, grantGroupBattleUnits_1.grantAllFinalGroupBattleUnits)();
     }

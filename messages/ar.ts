@@ -167,6 +167,7 @@ const ar: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "سلاسل الانتصارات/الخسائر من آخر {n} توقعات محسومة",
     last20TrackerSubtitle: "آخر {n} مباريات",
+    last20TrackerUnavailable: "تعذر جلب البيانات",
     settledTodayResults: "Result Drop",
     settledTodayResultsDesc: "قائمة التحليلات المسوّاة اليوم",
     settledTodayEmpty: "لا توجد تحليلات مسوّاة اليوم بعد",

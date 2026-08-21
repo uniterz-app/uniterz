@@ -30,7 +30,7 @@ import {
 import { nameOxanium } from "@/lib/fonts";
 import { useRouter, usePathname } from "next/navigation";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
-import { isAdminUid } from "@/lib/constants";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -185,7 +185,7 @@ export default function SettingsMenu({
     }, 40);
   };
 
-  const isAdmin = isAdminUid(user?.uid);
+  const { isAdmin } = useIsAdmin();
   const adminInbox = useAdminInboxUnread(isAdmin);
 
   function CountBadge({

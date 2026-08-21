@@ -14,6 +14,8 @@ import {
   squadInvitesCol,
   squadMembersCol,
   squadsCol,
+  cancelPendingJoinRequestsTx,
+  getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
 import { isInviteeEligible } from "@/lib/groupBattles/server/pastSquads";
 import type {
@@ -220,6 +222,13 @@ export async function acceptSquadInvite(params: {
       throw new Error("squad_not_open");
     }
 
+    const pendingSnap = await getPendingJoinRequestsTx(
+      tx,
+      db,
+      battleId,
+      uid
+    );
+
     const memberUids = [...squad.memberUids, uid];
     const memberCount = memberUids.length;
     const status = deriveSquadStatusAfterMemberChange(
@@ -242,6 +251,7 @@ export async function acceptSquadInvite(params: {
       status: "accepted",
       resolvedAt: FieldValue.serverTimestamp(),
     });
+    cancelPendingJoinRequestsTx(tx, pendingSnap);
   });
 }
 

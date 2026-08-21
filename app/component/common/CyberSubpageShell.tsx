@@ -3,6 +3,10 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { acquireAppBrandShelfHidden } from "@/lib/ui/appBrandShelfVisibility";
+import {
+  acquireAppBrandWordmark,
+  isHeaderWordmark,
+} from "@/lib/ui/headerWordmark";
 import { createPortal } from "react-dom";
 import { ChevronLeft, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -222,15 +226,22 @@ export function CyberSubpageHeader({
     if (!hideBrandShelf) return;
     return acquireAppBrandShelfHidden();
   }, [hideBrandShelf]);
+
+  useLayoutEffect(() => {
+    if (!titleInBrandShelf || !isHeaderWordmark(title)) return;
+    return acquireAppBrandWordmark(title);
+  }, [titleInBrandShelf, title]);
   const titleVariant = titleHasCjk(title) ? "jp-chrome" : "horizon-chrome";
   const hasRightCluster = Boolean(subtitle || headerTrailing);
   const showLeftBack = !hideBack && !edgeBack;
 
   if (titleInBrandShelf) {
+    if (!subtitle && !headerTrailing) return null;
     return (
-      <>
+      <div className="relative z-30 flex items-center justify-end gap-1.5 px-3 pt-1">
+        {headerTrailing}
         {subtitle ? (
-          <div className="relative z-30 flex justify-end px-3 pt-1">
+          <>
             <button
               type="button"
               onClick={() => setHelpOpen(true)}
@@ -247,9 +258,9 @@ export function CyberSubpageHeader({
               onClose={() => setHelpOpen(false)}
               reduceMotion={reduceMotion}
             />
-          </div>
+          </>
         ) : null}
-      </>
+      </div>
     );
   }
 

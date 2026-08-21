@@ -37,7 +37,7 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
             stackNavigation.setParams({ reopenGroupId: undefined });
           }}
           onOpenSquadBattle={() => {
-            stackNavigation.navigate("SquadBattlePreview");
+            stackNavigation.navigate("SquadBattle");
           }}
           onOpenProfile={(handle, groupId) => {
             if (groupId) {

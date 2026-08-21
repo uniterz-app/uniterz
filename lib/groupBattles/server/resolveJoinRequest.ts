@@ -1,8 +1,10 @@
 import { GROUP_BATTLE_MAX_MEMBERS } from "@/lib/groupBattles/constants";
 import {
   assertRecruitingOrThrow,
+  cancelPendingJoinRequestsTx,
   deriveSquadStatusAfterMemberChange,
   getBattle,
+  getPendingJoinRequestsTx,
   joinRequestsCol,
   parseJoinRequest,
   parseSquadDoc,
@@ -62,6 +64,13 @@ export async function resolveJoinRequest(
       throw new Error("squad_full");
     }
 
+    const pendingSnap = await getPendingJoinRequestsTx(
+      tx,
+      adminDb,
+      battleId,
+      applicantUid
+    );
+
     const memberUids = [...squad.memberUids, applicantUid];
     const memberCount = memberUids.length;
     const status = deriveSquadStatusAfterMemberChange(
@@ -84,6 +93,7 @@ export async function resolveJoinRequest(
       status: "approved",
       resolvedAt: FieldValue.serverTimestamp(),
     });
+    cancelPendingJoinRequestsTx(tx, pendingSnap, requestId);
   });
 
   return jsonOk({ decision });

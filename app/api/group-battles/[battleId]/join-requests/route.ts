@@ -14,12 +14,30 @@ import {
   parseSquadDoc,
   squadsCol,
 } from "@/lib/groupBattles/server/firestore";
+import { listJoinRequestsForUser } from "@/lib/groupBattles/server/joinRequests";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ battleId: string }> };
+
+export async function GET(req: Request, ctx: Ctx) {
+  try {
+    const uid = await requireUidFromRequest(req);
+    const { battleId } = await ctx.params;
+    const battle = await getBattle(adminDb, battleId);
+    if (!battle) return jsonErr("not_found", 404);
+    const { incoming, outgoing } = await listJoinRequestsForUser(
+      adminDb,
+      battleId,
+      uid
+    );
+    return jsonOk({ incoming, outgoing });
+  } catch (e) {
+    return mapAuthError(e);
+  }
+}
 
 export async function POST(req: Request, ctx: Ctx) {
   try {

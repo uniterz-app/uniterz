@@ -165,6 +165,7 @@ const ja = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "直近{n}試合の連勝・連敗を表示",
     last20TrackerSubtitle: "直近{n}試合の成績",
+    last20TrackerUnavailable: "データが取れません",
     settledTodayResults: "Result Drop",
     settledTodayResultsDesc: "今日確定した分析一覧",
     settledTodayEmpty: "今日確定した分析はまだありません",

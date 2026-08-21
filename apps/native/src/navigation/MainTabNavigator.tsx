@@ -14,8 +14,11 @@ import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
 import {
   DEFAULT_HEADER_WORDMARK,
+  getAppBrandWordmarkOverride,
   resolveHeaderWordmarkFromGamesStack,
   resolveHeaderWordmarkFromMainTab,
+  resolveHeaderWordmarkFromSquadBattleStack,
+  subscribeAppBrandWordmarkOverride,
   type HeaderWordmark,
 } from "../../../../lib/ui/headerWordmark";
 import {
@@ -38,6 +41,7 @@ import {
   ProfileStackScreen,
 } from "./StackNavigators";
 import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
+import SquadBattleLaunchPromptHostNative from "../features/squads/SquadBattleLaunchPromptHostNative";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -56,6 +60,10 @@ function resolveTabWordmark(
       route.params as { mode?: string } | undefined
     );
     if (fromGames) return fromGames;
+    const fromSquadBattle = resolveHeaderWordmarkFromSquadBattleStack(
+      route.name
+    );
+    if (fromSquadBattle) return fromSquadBattle;
     current = route.state;
   }
   return resolveHeaderWordmarkFromMainTab(tabName);
@@ -68,6 +76,11 @@ export default function MainTabNavigator() {
     subscribeAppBrandShelfHidden,
     getAppBrandShelfHidden,
     () => false
+  );
+  const wordmarkOverride = useSyncExternalStore(
+    subscribeAppBrandWordmarkOverride,
+    getAppBrandWordmarkOverride,
+    () => null
   );
   const welcomeBrandHidden = useSyncExternalStore(
     subscribeTutorialWelcomeBrandHidden,
@@ -110,13 +123,17 @@ export default function MainTabNavigator() {
     <>
       <ProfileStatsPrefetchHost />
       <NativePushNotificationsHost />
+      <SquadBattleLaunchPromptHostNative />
       <View style={styles.root}>
         {welcomeBrandHidden ? null : (
           <View
             pointerEvents="none"
             style={brandShelfHidden ? styles.shelfHold : undefined}
           >
-            <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
+            <UniterzBrandShelfNative
+              includeSafeAreaTop
+              title={wordmarkOverride ?? wordmark}
+            />
           </View>
         )}
         <View style={styles.tabHost}>

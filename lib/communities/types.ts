@@ -24,6 +24,12 @@ export const COMMUNITY_METRICS = [
 
 export type CommunityMetric = (typeof COMMUNITY_METRICS)[number];
 
+/** 新規作成で選べるリーグ（既存グループの他リーグは表示のみ） */
+export const COMMUNITY_CREATE_LEAGUES = ["nba"] as const satisfies readonly CommunityLeague[];
+
+/** 新規作成で選べる指標 */
+export const COMMUNITY_CREATE_METRICS = ["totalPoints"] as const satisfies readonly CommunityMetric[];
+
 export function parseCommunityMetric(raw: unknown): CommunityMetric {
   const s = String(raw ?? "");
   if (s === "totalPrecision") return "totalPoints";

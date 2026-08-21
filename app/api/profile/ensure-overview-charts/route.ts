@@ -1,6 +1,6 @@
 /**
- * profileCharts が揃っていなければソースから埋めて cumulative_stats に書き戻す。
- * 欠け補完は公開可。force 再構築は本人 Bearer のみ（コスト爆弾防止）。
+ * 欠けた profileCharts をソースから埋めて cumulative_stats/profileCharts に書き戻す。
+ * プロフィール画面のホットパスからは呼ばない（backfill / force 再構築用）。
  */
 import { NextResponse } from "next/server";
 import { ensureProfileChartsBundle } from "@/lib/profile/ensureProfileChartsBundle";

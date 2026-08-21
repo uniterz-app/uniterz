@@ -28,6 +28,10 @@ export type GroupBattleTieRule = "same_rank_same_unit";
 export type GroupBattleMemberScore = {
   uid: string;
   points: number;
+  displayName?: string;
+  handle?: string | null;
+  photoURL?: string | null;
+  plan?: "free" | "pro";
 };
 
 export type GroupBattleRankRow = {
@@ -74,6 +78,8 @@ export type GroupBattleSquadDoc = {
   status: SquadStatus;
   inviteCodeHash: string | null;
   inviteCodeLast4?: string | null;
+  /** オーナー向け再表示用（API では owner のみ返却） */
+  inviteCodePlain?: string | null;
   rulesAcceptedAtMs: number | null;
   rulesAcceptedByUid: string | null;
 };
@@ -92,11 +98,36 @@ export type GroupBattleJoinRequestDoc = {
   resolvedAtMs: number | null;
 };
 
+/** GET join-requests の1件（incoming / outgoing 共通） */
+export type GroupBattleJoinRequestApiItem = {
+  id: string;
+  squadId: string;
+  squadName: string;
+  status: string;
+  createdAtMs: number;
+  applicant: {
+    uid: string;
+    handle: string;
+    displayName: string;
+    photoURL?: string | null;
+    plan?: "free" | "pro";
+    points?: number;
+    winRate?: number;
+    activeWinStreak?: number;
+    totalPosts?: number;
+    thisWeekRank?: number | null;
+    lastWeekRank?: number | null;
+    lastMonthRank?: number | null;
+  };
+};
+
 /** 過去スクワッド再招集用のメンバー要約 */
 export type GroupBattlePastMemberSummary = {
   uid: string;
   displayName: string;
   handle: string | null;
+  plan?: "free" | "pro";
+  photoURL?: string | null;
 };
 
 /** GET /api/group-battles/me/past-squads の1件 */

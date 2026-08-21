@@ -17,6 +17,14 @@ export function nbaSeasonKeyFromDateJST(d: Date): string {
 /** ランキング一覧・snapshotRanks が参照する現行シーズン（日付から自動導出） */
 export const CURRENT_NBA_SEASON_KEY = nbaSeasonKeyFromDateJST(new Date());
 
+/** `"2026-27"` → `"26-27"` */
+export function nbaSeasonShortLabel(seasonKey: string): string {
+  if (/^\d{4}-\d{2}$/.test(seasonKey)) {
+    return `${seasonKey.slice(2, 4)}-${seasonKey.slice(5)}`;
+  }
+  return seasonKey.replace(/^20/, "").replace("-20", "-");
+}
+
 /** `"2026-27"` → `"2025-26"`（オフシーズン表示フォールバック用） */
 export function previousNbaSeasonKey(seasonKey: string): string {
   const start = Number.parseInt(seasonKey.slice(0, 4), 10);

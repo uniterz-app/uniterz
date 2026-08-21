@@ -12,16 +12,7 @@ import {
   maxOwnedGroupsForPlan,
   pruneStaleGroupMirrors,
 } from "@/lib/communities/limits";
-import {
-  normalizeRankingForPeriod,
-  parseCommunityLeague,
-  parseCommunityMetric,
-  parseCommunityPeriod,
-} from "@/lib/communities/types";
-import {
-  parseRankingTeamIds,
-  validateRankingTeamIds,
-} from "@/lib/communities/rankingTeams";
+import { parseCommunityPeriod } from "@/lib/communities/types";
 import {
   sanitizeGroupDescription,
   sanitizeHeaderImageUrl,
@@ -46,27 +37,10 @@ export async function POST(req: Request) {
 
     const description = sanitizeGroupDescription(body?.description);
     const headerImageUrl = sanitizeHeaderImageUrl(body?.headerImageUrl);
-    let rankingMetric = parseCommunityMetric(body?.rankingMetric);
-    const rankingLeague = parseCommunityLeague(body?.rankingLeague);
-    const rankingTeamIds = parseRankingTeamIds(body?.rankingTeamIds);
-    const teamValidation = validateRankingTeamIds(rankingTeamIds, rankingLeague);
-    if (!teamValidation.ok) {
-      return NextResponse.json(
-        { ok: false, error: teamValidation.error },
-        { status: 400 }
-      );
-    }
-    if (rankingLeague === "all" && rankingTeamIds.length > 0) {
-      return NextResponse.json(
-        { ok: false, error: "teams_require_specific_league" },
-        { status: 400 }
-      );
-    }
+    const rankingMetric = "totalPoints" as const;
+    const rankingLeague = "nba" as const;
+    const rankingTeamIds: string[] = [];
     const periodType = parseCommunityPeriod("from_now");
-    ({ metric: rankingMetric } = normalizeRankingForPeriod(
-      rankingMetric,
-      periodType
-    ));
 
     const rankingStartInstant = new Date();
     const rankingStartAt = Timestamp.fromDate(rankingStartInstant);

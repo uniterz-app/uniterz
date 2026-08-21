@@ -12,20 +12,15 @@ const COLLECTION = "group_battles";
 const SNAPSHOTS = "group_battle_period_snapshots";
 const GRACE_DAYS = 2;
 function pickPoints(data, seasonKey) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b;
+    // Pick Up のみ（leagues.nba / all / open は使わない）
     const bySeason = data.rankingBySeason;
     if ((bySeason === null || bySeason === void 0 ? void 0 : bySeason[seasonKey]) && typeof bySeason[seasonKey] === "object") {
         return Number((_a = bySeason[seasonKey].pointsSumV3) !== null && _a !== void 0 ? _a : 0) || 0;
     }
-    const nba = (_b = data.leagues) === null || _b === void 0 ? void 0 : _b.nba;
-    if (nba)
-        return Number((_c = nba.pointsSumV3) !== null && _c !== void 0 ? _c : 0) || 0;
     const ranking = data.ranking;
     if (ranking)
-        return Number((_d = ranking.pointsSumV3) !== null && _d !== void 0 ? _d : 0) || 0;
-    const all = data.all;
-    if (all)
-        return Number((_e = all.pointsSumV3) !== null && _e !== void 0 ? _e : 0) || 0;
+        return Number((_b = ranking.pointsSumV3) !== null && _b !== void 0 ? _b : 0) || 0;
     return 0;
 }
 function uidFromDailyDocId(docId, dateKey) {

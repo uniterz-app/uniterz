@@ -14,16 +14,13 @@ const GRACE_DAYS = 2;
 type MemberScore = { uid: string; points: number };
 
 function pickPoints(data: Record<string, unknown>, seasonKey: string): number {
+  // Pick Up のみ（leagues.nba / all / open は使わない）
   const bySeason = data.rankingBySeason as Record<string, { pointsSumV3?: number }> | undefined;
   if (bySeason?.[seasonKey] && typeof bySeason[seasonKey] === "object") {
     return Number(bySeason[seasonKey].pointsSumV3 ?? 0) || 0;
   }
-  const nba = (data.leagues as { nba?: { pointsSumV3?: number } } | undefined)?.nba;
-  if (nba) return Number(nba.pointsSumV3 ?? 0) || 0;
   const ranking = data.ranking as { pointsSumV3?: number } | undefined;
   if (ranking) return Number(ranking.pointsSumV3 ?? 0) || 0;
-  const all = data.all as { pointsSumV3?: number } | undefined;
-  if (all) return Number(all.pointsSumV3 ?? 0) || 0;
   return 0;
 }
 

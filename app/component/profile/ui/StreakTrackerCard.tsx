@@ -32,7 +32,7 @@ type Props = {
   entranceReady?: boolean;
   layout?: Layout;
   profileStatsContext?: ProfileStatsStreakContext;
-  /** cumulative profileCharts.last20（null = 未取得） */
+  /** cumulative profileCharts.last20（undefined = ロード中、null = 未書き込み） */
   seedLast20?: ProfileChartsLast20Point[] | null;
 };
 
@@ -142,7 +142,7 @@ export default function StreakTrackerCard({
     margin: "0px 0px -8% 0px",
   });
 
-  const { points, loading: streakLoading } = useProfileStreakTracker(
+  const { points, loading: streakLoading, unavailable } = useProfileStreakTracker(
     uid,
     profileStatsContext,
     { seedLast20 }
@@ -256,6 +256,7 @@ export default function StreakTrackerCard({
 
   const subtitle = msg.profile.last20TrackerDesc.replace("{n}", String(STREAK_TRACKER_LAST_N));
   const emptyHint = subtitle;
+  const unavailableHint = msg.profile.last20TrackerUnavailable;
 
   const statWinLabel = msg.profile.bestWStreak;
   const statLossLabel = msg.profile.bestLStreak;
@@ -373,14 +374,14 @@ export default function StreakTrackerCard({
               <div className={`grid place-items-center ${S.loadingEmptyH}`}>
                 <CandleChartLoader label={msg.common.loading} />
               </div>
-            ) : points.length === 0 ? (
+            ) : unavailable || points.length === 0 ? (
               <div
                 role="status"
                 className={`grid place-items-center px-4 text-center ${S.loadingEmptyH}`}
               >
                 <CyberNoDataLabel variant="chart" />
                 <p className="mt-2 max-w-[240px] text-center text-[10px] text-white/45 sm:text-xs">
-                  {emptyHint}
+                  {unavailable ? unavailableHint : emptyHint}
                 </p>
               </div>
             ) : !gateOpen ? (

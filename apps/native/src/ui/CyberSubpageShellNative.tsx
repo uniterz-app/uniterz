@@ -16,6 +16,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { acquireAppBrandShelfHidden } from "../../../../lib/ui/appBrandShelfVisibility";
+import {
+  acquireAppBrandWordmark,
+  isHeaderWordmark,
+} from "../../../../lib/ui/headerWordmark";
 import { uniterzBrandShelfOffsetTop } from "../features/UniterzBrandShelfNative";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, { useReducedMotion } from "react-native-reanimated";
@@ -157,28 +161,39 @@ export function CyberSubpageHeaderNative({
     return acquireAppBrandShelfHidden();
   }, [hideShelf]);
 
+  useLayoutEffect(() => {
+    if (!titleInBrandShelf || !isHeaderWordmark(title)) return;
+    return acquireAppBrandWordmark(title);
+  }, [titleInBrandShelf, title]);
+
   if (titleInBrandShelf) {
-    return subtitle ? (
+    if (!subtitle && !headerTrailing) return null;
+    return (
       <View style={styles.shelfHelpRow}>
-        <Pressable
-          onPress={() => setHelpOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="説明"
-          accessibilityState={{ expanded: helpOpen }}
-          style={({ pressed }) => [
-            styles.helpBtn,
-            pressed && styles.helpBtnPressed,
-          ]}
-        >
-          <CyberHelpMarkNative active={helpOpen} />
-        </Pressable>
-        <CyberHelpOverlayNative
-          open={helpOpen}
-          text={subtitle}
-          onClose={() => setHelpOpen(false)}
-        />
+        {headerTrailing}
+        {subtitle ? (
+          <>
+            <Pressable
+              onPress={() => setHelpOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="説明"
+              accessibilityState={{ expanded: helpOpen }}
+              style={({ pressed }) => [
+                styles.helpBtn,
+                pressed && styles.helpBtnPressed,
+              ]}
+            >
+              <CyberHelpMarkNative active={helpOpen} />
+            </Pressable>
+            <CyberHelpOverlayNative
+              open={helpOpen}
+              text={subtitle}
+              onClose={() => setHelpOpen(false)}
+            />
+          </>
+        ) : null}
       </View>
-    ) : null;
+    );
   }
 
   const HeaderWrap = embedded ? View : Animated.View;
@@ -358,6 +373,7 @@ const styles = StyleSheet.create({
     zIndex: 30,
     flexDirection: "row",
     justifyContent: "flex-end",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingTop: 4,
   },

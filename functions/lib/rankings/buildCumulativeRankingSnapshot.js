@@ -16,6 +16,7 @@ const loadUidsWhoPredictedOnDateFromDaily_1 = require("../notifications/loadUids
 const cumulativeSnapshotIndex_1 = require("./cumulativeSnapshotIndex");
 const nbaSeason_1 = require("./nbaSeason");
 const mergeProfileCharts_1 = require("../profile/mergeProfileCharts");
+const profileChartsStorage_1 = require("../profile/profileChartsStorage");
 const profileHeroSnapshot_1 = require("../profile/profileHeroSnapshot");
 /* =========================================================
  * Firestore
@@ -385,7 +386,7 @@ async function loadNbaSeasonTop20RowsLive(metric, postedTodayUids) {
     };
 }
 async function buildCumulativeRankingSnapshot(options = {}) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c;
     const streakAllEligible = options.streakAllEligible === true;
     const seasonKey = nbaSeason_1.CURRENT_NBA_SEASON_KEY;
     const snap = await (0, cumulativeSnapshotIndex_1.loadCumulativeStatsForRankingSnapshot)(db());
@@ -551,6 +552,7 @@ async function buildCumulativeRankingSnapshot(options = {}) {
         }
     };
     const historyUids = new Set(rankByUidSeason.keys());
+    const chartsByUid = await (0, profileChartsStorage_1.loadProfileChartsSubcolByUid)(firestore, [...historyUids], seasonKey);
     const metricValuesByUid = new Map();
     for (const uid of historyUids) {
         const docData = statsByUid.get(uid);
@@ -562,39 +564,23 @@ async function buildCumulativeRankingSnapshot(options = {}) {
         const seasonRanks = (_a = rankByUidSeason.get(uid)) !== null && _a !== void 0 ? _a : {};
         const totalPointsRank = Number((_b = seasonRanks.totalPoints) !== null && _b !== void 0 ? _b : 0);
         const cumData = statsByUid.get(uid);
-        const profileChartsPatch = Number.isFinite(totalPointsRank) && totalPointsRank > 0
-            ? (() => {
-                var _a, _b;
-                const charts = (0, mergeProfileCharts_1.mergeProfileChartsOnRankSnapshot)({
-                    cumulative: cumData !== null && cumData !== void 0 ? cumData : null,
-                    seasonKey,
-                    dateKey,
-                    totalPointsRank,
-                });
-                return {
-                    "profileCharts.v": charts.v,
-                    "profileCharts.seasonKey": charts.seasonKey,
-                    "profileCharts.dailyTrend": (_a = charts.dailyTrend) !== null && _a !== void 0 ? _a : [],
-                    "profileCharts.rankTrend": charts.rankTrend,
-                    "profileCharts.last20": (_b = charts.last20) !== null && _b !== void 0 ? _b : [],
-                    "profileCharts.builtAtMs": Date.now(),
-                };
-            })()
-            : {};
-        batch.set(firestore.doc(`cumulative_stats/${uid}`), Object.assign({ "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(), [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks }, profileChartsPatch), { merge: true });
-        if (profileChartsPatch && Object.keys(profileChartsPatch).length > 0) {
+        batch.set(firestore.doc(`cumulative_stats/${uid}`), {
+            "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(),
+            [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks,
+        }, { merge: true });
+        if (Number.isFinite(totalPointsRank) && totalPointsRank > 0) {
+            const charts = (0, mergeProfileCharts_1.mergeProfileChartsOnRankSnapshot)({
+                cumulative: cumData !== null && cumData !== void 0 ? cumData : null,
+                chartsDoc: (_c = chartsByUid.get(uid)) !== null && _c !== void 0 ? _c : null,
+                seasonKey,
+                dateKey,
+                totalPointsRank,
+            });
             batch.set(firestore
                 .collection("cumulative_stats")
                 .doc(uid)
-                .collection("profileCharts")
-                .doc(seasonKey), {
-                v: profileChartsPatch["profileCharts.v"],
-                seasonKey: profileChartsPatch["profileCharts.seasonKey"],
-                dailyTrend: (_c = profileChartsPatch["profileCharts.dailyTrend"]) !== null && _c !== void 0 ? _c : [],
-                rankTrend: (_d = profileChartsPatch["profileCharts.rankTrend"]) !== null && _d !== void 0 ? _d : [],
-                last20: (_e = profileChartsPatch["profileCharts.last20"]) !== null && _e !== void 0 ? _e : [],
-                builtAtMs: (_f = profileChartsPatch["profileCharts.builtAtMs"]) !== null && _f !== void 0 ? _f : Date.now(),
-            }, { merge: true });
+                .collection(profileChartsStorage_1.PROFILE_CHARTS_SUBCOL)
+                .doc(seasonKey), (0, profileChartsStorage_1.profileChartsSubdocMergeFields)(charts), { merge: true });
             ops += 1;
         }
         if (cumData) {

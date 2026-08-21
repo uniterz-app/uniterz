@@ -13,6 +13,19 @@ export type SquadMember = {
   points: number;
   /** 空き枠（募集中スロット） */
   empty?: boolean;
+  plan?: "free" | "pro";
+  photoURL?: string | null;
+  /** 本番 ENTRY enrich 済みなら true（モック順位を使わない） */
+  fromLive?: boolean;
+  /** シーズン累積点（プロフィール用。バトル行の points と別） */
+  seasonPoints?: number;
+  winRate?: number;
+  activeWinStreak?: number;
+  totalPosts?: number;
+  lastMonthRank?: number | null;
+  lastWeekRank?: number | null;
+  thisWeekRank?: number | null;
+  bio?: string;
 };
 
 export type Squad = {
@@ -50,11 +63,19 @@ export type SquadApplicantProfile = {
   uid: string;
   handle: string;
   displayName: string;
+  /** 現行 NBA シーズン（26-27）累積 `pointsSumV3` */
   points: number;
+  /** 現行 NBA シーズン（26-27）累積勝率（%） */
   winRate: number;
   activeWinStreak: number;
   totalPosts: number;
   bio: string;
+  /** 個人ランキング（募集判断用。バトル未開始のためスコアは出さない） */
+  lastMonthRank?: number | null;
+  lastWeekRank?: number | null;
+  thisWeekRank?: number | null;
+  plan?: "free" | "pro";
+  photoURL?: string | null;
 };
 
 export type SquadJoinRequest = {
@@ -71,7 +92,6 @@ export type SquadJoinRequest = {
 export type OpenSquadListing = {
   id: string;
   name: string;
-  rank: number;
   avgPoints: number;
   openSlots: number;
   memberCount: number;
@@ -114,22 +134,22 @@ export const SQUAD_BATTLE_SEASON_PHASES: readonly SquadBattleSeasonPhase[] = [
     key: "battle",
     label: "BATTLE",
     period: "約1ヶ月",
-    desc: "週間×4 + 月間×1 で平均スコアを競う",
+    desc: "Pick Up 試合の平均スコア。週間×4 + 月間×1",
   },
   {
     key: "reward",
     label: "REWARD",
     period: "結果確定後",
-    desc: "上位グループ全員へ同額 Unit",
+    desc: "週間1位は全員 30 Unit、月間1位は全員 100 Unit。上位20まで順位に応じて獲得",
   },
 ] as const;
 
 /** 初回イントロのルール1行（キッカー／フェーズと重複しないこと） */
 export const SQUAD_BATTLE_INTRO_TAGLINE =
-  "3〜5人のスクワッドで、メンバー全員の総合スコア平均を競う。";
+  "3〜5人のスクワッドで、Pick Up 試合の総合スコア平均を競う。";
 
 /** はてな（？）ヘルプ用のルール要約 */
-export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間・月間の上位グループ全員へ Unit を配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;
+export const SQUAD_BATTLE_HELP_TEXT = `3〜5人のスクワッドで、メンバー全員の総合スコア平均を競います。対象は Pick Up 試合のみ（PRO LEAGUE の全試合スコアは使いません）。所属できるグループは1大会につき1つまで。空き枠があるグループに申請し、承認されると参加できます。募集中は招待コードでも参加可能。同時申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件。約2ヶ月に1回開催。募集は開催約1〜2週間前から → メンバー確定後は入れ替え不可 → 1ヶ月間バトル（週間ランキング原則4回 + 月間1回）→ 結果確定後に週間1位はメンバー全員へ 30 Unit、月間1位は 100 Unit。上位20グループまで順位に応じた Unit を確定メンバー全員へ同額配布。過去のスクワッドから同じ顔ぶれを再招集できます。`;
 
 /** 初回イントロ既読フラグ（localStorage） */
 export const SQUAD_BATTLE_INTRO_STORAGE_KEY = "uniterz:squad-battle-intro:v1";
@@ -137,8 +157,36 @@ export const SQUAD_BATTLE_INTRO_STORAGE_KEY = "uniterz:squad-battle-intro:v1";
 /** モック用の自スクワッド招待コード（募集中） */
 export const SQUAD_BATTLE_MOCK_INVITE_CODE = "NC-7K2M";
 
-/** メンバー表示 → プロフィール要約（プレビュー用の仮値） */
+/** プレビュー用の個人順位（1桁〜2桁が混ざるようにして表示確認用） */
+function mockPeriodRanks(points: number): Pick<
+  SquadApplicantProfile,
+  "lastMonthRank" | "lastWeekRank" | "thisWeekRank"
+> {
+  const thisWeekRank = Math.max(1, Math.round(90 - points / 12));
+  const lastWeekRank = Math.max(1, thisWeekRank + (Math.round(points) % 9) - 4);
+  const lastMonthRank = Math.max(1, thisWeekRank + (Math.round(points) % 13) - 6);
+  return { lastMonthRank, lastWeekRank, thisWeekRank };
+}
+
+/** メンバー表示 → プロフィール要約 */
 export function squadMemberToProfile(member: SquadMember): SquadApplicantProfile {
+  if (member.fromLive) {
+    return {
+      uid: member.uid,
+      handle: member.handle,
+      displayName: member.displayName,
+      points: member.seasonPoints ?? member.points,
+      winRate: member.winRate ?? 0,
+      activeWinStreak: member.activeWinStreak ?? 0,
+      totalPosts: member.totalPosts ?? 0,
+      bio: member.bio ?? "",
+      plan: member.plan,
+      photoURL: member.photoURL,
+      lastMonthRank: member.lastMonthRank ?? null,
+      lastWeekRank: member.lastWeekRank ?? null,
+      thisWeekRank: member.thisWeekRank ?? null,
+    };
+  }
   return {
     uid: member.uid,
     handle: member.handle,
@@ -148,6 +196,9 @@ export function squadMemberToProfile(member: SquadMember): SquadApplicantProfile
     activeWinStreak: member.points % 6,
     totalPosts: 40 + (member.points % 90),
     bio: `${member.displayName} のプロフィール（プレビュー）。`,
+    plan: member.plan,
+    photoURL: member.photoURL,
+    ...mockPeriodRanks(member.points),
   };
 }
 
@@ -159,9 +210,21 @@ function makeOpenMember(
   winRate: number,
   streak: number,
   posts: number,
-  bio: string
+  bio: string,
+  plan?: "free" | "pro"
 ): SquadApplicantProfile {
-  return { uid, handle, displayName, points, winRate, activeWinStreak: streak, totalPosts: posts, bio };
+  return {
+    uid,
+    handle,
+    displayName,
+    points,
+    winRate,
+    activeWinStreak: streak,
+    totalPosts: posts,
+    bio,
+    plan: plan ?? (points >= 850 ? "pro" : "free"),
+    ...mockPeriodRanks(points),
+  };
 }
 
 export const SQUAD_BATTLE_PREVIEW_STATES: {
@@ -204,18 +267,26 @@ function avgOf(members: SquadMember[]): number {
  */
 
 const MY_MEMBERS_FULL: SquadMember[] = [
-  { uid: "me", handle: "kamiya", displayName: "Kamiya", points: 1284 },
-  { uid: "u2", handle: "neonfox", displayName: "NeonFox", points: 1210 },
-  { uid: "u3", handle: "orbit", displayName: "Orbit", points: 1186 },
-  { uid: "u4", handle: "pulse", displayName: "Pulse", points: 1095 },
-  { uid: "u5", handle: "rift", displayName: "Rift", points: 1028 },
+  { uid: "me", handle: "kamiya", displayName: "Kamiya", points: 1284, plan: "pro" },
+  { uid: "u2", handle: "neonfox", displayName: "NeonFox", points: 1210, plan: "free" },
+  { uid: "u3", handle: "orbit", displayName: "Orbit", points: 1186, plan: "pro" },
+  { uid: "u4", handle: "pulse", displayName: "Pulse", points: 1095, plan: "free" },
+  { uid: "u5", handle: "rift", displayName: "Rift", points: 1028, plan: "pro" },
 ];
 
 const MY_MEMBERS_RECRUITING: SquadMember[] = [
-  { uid: "me", handle: "kamiya", displayName: "Kamiya", points: 1284 },
-  { uid: "u2", handle: "neonfox", displayName: "NeonFox", points: 1210 },
-  { uid: "u3", handle: "orbit", displayName: "Orbit", points: 1186 },
+  { uid: "me", handle: "kamiya", displayName: "Kamiya", points: 1284, plan: "pro" },
+  { uid: "u2", handle: "neonfox", displayName: "NeonFox", points: 1210, plan: "free" },
+  { uid: "u3", handle: "orbit", displayName: "Orbit", points: 1186, plan: "pro" },
 ];
+
+const BOARD_MEMBER_NAMES = [
+  "MetroFox",
+  "NeonPulse",
+  "OrbitBlade",
+  "KamiyaRio",
+  "NightStalker",
+] as const;
 
 function makeSquad(
   id: string,
@@ -231,8 +302,9 @@ function makeSquad(
     memberPoints.map((points, i) => ({
       uid: `${id}-m${i}`,
       handle: `player_${id}_${i}`,
-      displayName: `P${i + 1}`,
+      displayName: BOARD_MEMBER_NAMES[i] ?? `P${i + 1}`,
       points,
+      plan: i % 2 === 0 ? "pro" : "free",
     }))
   );
   return {
@@ -263,6 +335,14 @@ const BOARD_OTHERS: Omit<Squad, "rank" | "isMine">[] = [
   makeSquad("sq-juliet", "LAST CALL", [860, 835, 808, 782, 755], 0, false, 11, undefined, -2),
   makeSquad("sq-kilo", "ROOKIE FIVE", [790, 762, 735, 708, 682], 0, false, 12, undefined, 5),
   makeSquad("sq-lima", "PRACTICE", [720, 695, 668, 642, 615], 0, false, 13, undefined, 1),
+  makeSquad("sq-mike", "RIM RUN", [680, 655, 628, 602, 575], 0, false, 14, undefined, 4),
+  makeSquad("sq-november", "BOX OUT", [640, 615, 588, 562, 535], 0, false, 16, undefined, -1),
+  makeSquad("sq-oscar", "FAST BREAK", [600, 575, 548, 522, 495], 0, false, 15, undefined, 7),
+  makeSquad("sq-papa", "PAINT PACK", [560, 535, 508, 482, 455], 0, false, 17, undefined, 2),
+  makeSquad("sq-quebec", "FLOOR FIVE", [520, 495, 468, 442, 415], 0, false, 18, undefined, 0),
+  makeSquad("sq-romeo", "TIMEOUT", [480, 455, 428, 402, 375], 0, false, 20, undefined, 3),
+  makeSquad("sq-sierra", "ALLEY OOP", [440, 415, 388, 362, 335], 0, false, 19, undefined, -3),
+  makeSquad("sq-tango", "SET PLAY", [400, 375, 348, 322, 295], 0, false, 21, undefined, 1),
 ].map(({ id, name, members, avgPoints, prevRank, weeksAtTop, avgPointsDayDelta }) => ({
   id,
   name,
@@ -278,7 +358,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-1",
     name: "AETHER FIVE",
-    rank: 14,
     avgPoints: 918,
     openSlots: 2,
     memberCount: 3,
@@ -291,7 +370,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-2",
     name: "MIDNIGHT RUN",
-    rank: 18,
     avgPoints: 812,
     openSlots: 1,
     memberCount: 4,
@@ -305,7 +383,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-3",
     name: "GLITCH LAB",
-    rank: 22,
     avgPoints: 698,
     openSlots: 3,
     memberCount: 2,
@@ -317,7 +394,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-4",
     name: "LOW BATTERY",
-    rank: 27,
     avgPoints: 548,
     openSlots: 2,
     memberCount: 3,
@@ -330,7 +406,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-5",
     name: "ROOKIE DOCK",
-    rank: 31,
     avgPoints: 386,
     openSlots: 4,
     memberCount: 1,
@@ -341,7 +416,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-6",
     name: "PIXEL CREW",
-    rank: 35,
     avgPoints: 352,
     openSlots: 2,
     memberCount: 3,
@@ -354,7 +428,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-7",
     name: "SOFT RESET",
-    rank: 38,
     avgPoints: 310,
     openSlots: 3,
     memberCount: 2,
@@ -366,7 +439,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-8",
     name: "NIGHT SHIFT",
-    rank: 41,
     avgPoints: 278,
     openSlots: 1,
     memberCount: 4,
@@ -380,7 +452,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-9",
     name: "WARM UP",
-    rank: 44,
     avgPoints: 240,
     openSlots: 2,
     memberCount: 3,
@@ -393,7 +464,6 @@ const OPEN_SQUAD_LISTINGS: OpenSquadListing[] = [
   {
     id: "sq-open-10",
     name: "FIRST LIGHT",
-    rank: 48,
     avgPoints: 198,
     openSlots: 3,
     memberCount: 2,
@@ -425,6 +495,8 @@ const INCOMING_JOIN_REQUESTS: SquadJoinRequest[] = [
       activeWinStreak: 4,
       totalPosts: 86,
       bio: "プレーオフ予想メイン。アップセット狙い多め。",
+      plan: "pro",
+      ...mockPeriodRanks(1195),
     },
   },
   {
@@ -442,6 +514,8 @@ const INCOMING_JOIN_REQUESTS: SquadJoinRequest[] = [
       activeWinStreak: 2,
       totalPosts: 112,
       bio: "安定志向。精度重視でコツコツ積み上げ。",
+      plan: "free",
+      ...mockPeriodRanks(1080),
     },
   },
   {
@@ -459,6 +533,8 @@ const INCOMING_JOIN_REQUESTS: SquadJoinRequest[] = [
       activeWinStreak: 0,
       totalPosts: 54,
       bio: "週末だけ本気出すタイプ。",
+      plan: "pro",
+      ...mockPeriodRanks(820),
     },
   },
 ];
@@ -480,6 +556,7 @@ const OUTGOING_JOIN_REQUESTS: SquadJoinRequest[] = [
       activeWinStreak: 3,
       totalPosts: 140,
       bio: "",
+      plan: "pro",
     },
   },
 ];
@@ -528,16 +605,107 @@ export type PastSquadHistoryMock = {
     uid: string;
     displayName: string;
     handle: string | null;
+    plan?: "free" | "pro";
   }>;
 };
 
 /** 受信した再招集招待（プレビュー） */
+export type SquadInviteMemberSummary = {
+  uid: string;
+  displayName: string;
+  handle: string | null;
+  plan?: "free" | "pro";
+  photoURL?: string | null;
+};
+
 export type SquadIncomingInviteMock = {
   id: string;
   squadId: string;
   squadName: string;
   fromDisplayName: string;
+  fromHandle?: string | null;
+  deadlineLabel?: string;
+  members?: SquadInviteMemberSummary[];
 };
+
+function seedFromUid(uid: string): number {
+  let seed = 0;
+  for (let i = 0; i < uid.length; i += 1) {
+    seed += uid.charCodeAt(i);
+  }
+  return seed;
+}
+
+/** 招待メンバー → プロフィール要約（成績プレビュー用） */
+export function squadInviteMemberToProfile(
+  member: SquadInviteMemberSummary
+): SquadApplicantProfile {
+  const seed = seedFromUid(member.uid);
+  const points = 980 + (seed % 420);
+  return {
+    uid: member.uid,
+    handle: member.handle ?? "",
+    displayName: member.displayName,
+    points,
+    winRate: Math.round((48 + (seed % 17)) * 10) / 10,
+    activeWinStreak: seed % 6,
+    totalPosts: 40 + (seed % 90),
+    bio: `${member.displayName} のプロフィール（プレビュー）。`,
+    plan: member.plan,
+    photoURL: member.photoURL,
+    ...mockPeriodRanks(points),
+  };
+}
+
+/** 招待カードのメンバー成績。招待に無いときは公開スクワッド一覧から補う */
+export function squadIncomingInviteMemberProfiles(
+  invite: Pick<SquadIncomingInviteMock, "squadId" | "members">,
+  openSquads: OpenSquadListing[] = []
+): SquadApplicantProfile[] {
+  if (invite.members && invite.members.length > 0) {
+    return invite.members.map(squadInviteMemberToProfile);
+  }
+  return openSquads.find((s) => s.id === invite.squadId)?.members ?? [];
+}
+
+const PREVIEW_SELF_MEMBER: SquadMember = {
+  uid: "me",
+  handle: "kamiya",
+  displayName: "Kamiya",
+  points: 1284,
+  plan: "pro",
+};
+
+/** 招待を受けたあと MY SQUAD に出すスクワッド（自分 + 招待メンバー + 空き枠） */
+export function squadFromIncomingInvite(
+  invite: SquadIncomingInviteMock,
+  self: SquadMember = PREVIEW_SELF_MEMBER
+): Squad {
+  const others = (invite.members ?? []).map((m) => {
+    const profile = squadInviteMemberToProfile(m);
+    return {
+      uid: m.uid,
+      handle: m.handle ?? "",
+      displayName: m.displayName,
+      points: profile.points,
+      plan: m.plan,
+      photoURL: m.photoURL,
+    } satisfies SquadMember;
+  });
+  const withoutSelf = others.filter((m) => m.uid !== self.uid);
+  const members = padMembers([self, ...withoutSelf]);
+  return {
+    id: invite.squadId || "sq-joined",
+    name: invite.squadName,
+    members,
+    avgPoints: avgOf(members),
+    rank: 0,
+    prevRank: 0,
+    isMine: true,
+    inviteCode: SQUAD_BATTLE_MOCK_INVITE_CODE,
+    avgPointsDayDelta: 18,
+  };
+}
 
 export type SquadBattleMockBundle = {
   state: SquadBattlePreviewState;
@@ -563,10 +731,10 @@ const PAST_SQUAD_HISTORY: PastSquadHistoryMock[] = [
     squadName: "NEON WOLVES",
     role: "owner",
     members: [
-      { uid: "me", displayName: "Kamiya", handle: "kamiya" },
-      { uid: "u-rio", displayName: "Rio", handle: "rio_jp" },
-      { uid: "u-ken", displayName: "Ken", handle: "kenball" },
-      { uid: "u-aya", displayName: "Aya", handle: "aya_shot" },
+      { uid: "me", displayName: "Kamiya", handle: "kamiya", plan: "pro" },
+      { uid: "u-rio", displayName: "Rio", handle: "rio_jp", plan: "pro" },
+      { uid: "u-ken", displayName: "Ken", handle: "kenball", plan: "free" },
+      { uid: "u-aya", displayName: "Aya", handle: "aya_shot", plan: "pro" },
     ],
   },
   {
@@ -576,9 +744,9 @@ const PAST_SQUAD_HISTORY: PastSquadHistoryMock[] = [
     squadName: "COURT KINGS",
     role: "member",
     members: [
-      { uid: "u-max", displayName: "Max", handle: "maxout" },
-      { uid: "me", displayName: "Kamiya", handle: "kamiya" },
-      { uid: "u-leo", displayName: "Leo", handle: "leo_hz" },
+      { uid: "u-max", displayName: "Max", handle: "maxout", plan: "pro" },
+      { uid: "me", displayName: "Kamiya", handle: "kamiya", plan: "pro" },
+      { uid: "u-leo", displayName: "Leo", handle: "leo_hz", plan: "free" },
     ],
   },
 ];
@@ -589,6 +757,13 @@ const INCOMING_SQUAD_INVITES: SquadIncomingInviteMock[] = [
     squadId: "open-1",
     squadName: "NEON WOLVES",
     fromDisplayName: "Rio",
+    fromHandle: "rio_jp",
+    deadlineLabel: "8/10 23:59",
+    members: [
+      { uid: "u-rio", displayName: "Rio", handle: "rio_jp", plan: "pro" },
+      { uid: "u-ken", displayName: "Ken", handle: "kenball", plan: "free" },
+      { uid: "u-aya", displayName: "Aya", handle: "aya_shot", plan: "pro" },
+    ],
   },
 ];
 

@@ -51,9 +51,10 @@ function hasActivity(row: ProfileChartsDailyRow): boolean {
 
 function readStored(
   cumulative: Record<string, unknown> | null | undefined,
-  seasonKey: string
+  seasonKey: string,
+  chartsDoc?: Record<string, unknown> | null
 ): ProfileChartsStored {
-  const raw = cumulative?.profileCharts;
+  const raw = chartsDoc ?? cumulative?.profileCharts;
   if (!raw || typeof raw !== "object") {
     return { v: PROFILE_CHARTS_BUNDLE_VERSION, seasonKey };
   }
@@ -125,12 +126,14 @@ export function projectSeasonBucket(
 
 export function mergeProfileChartsOnSeasonSettle(opts: {
   cumulative: Record<string, unknown> | null | undefined;
+  /** profileCharts/{season}。あれば親 nested より優先 */
+  chartsDoc?: Record<string, unknown> | null;
   seasonKey: string;
   dateKey: string;
   projectedSeasonBucket: Record<string, unknown>;
   last20Point: ProfileChartsLast20Point;
 }): ProfileChartsStored {
-  const prev = readStored(opts.cumulative, opts.seasonKey);
+  const prev = readStored(opts.cumulative, opts.seasonKey, opts.chartsDoc);
   const dailyPrev = Array.isArray(prev.dailyTrend) ? [...prev.dailyTrend] : [];
   const row = dailyRowFromSeasonBucket(
     opts.dateKey,
@@ -152,19 +155,20 @@ export function mergeProfileChartsOnSeasonSettle(opts: {
     v: PROFILE_CHARTS_BUNDLE_VERSION,
     seasonKey: opts.seasonKey,
     dailyTrend: pruneDaily(without),
-    /** 欠けたままにしない（クライアントが ensure に落ちない） */
-    rankTrend: Array.isArray(prev.rankTrend) ? prev.rankTrend : [],
+    rankTrend: Array.isArray(prev.rankTrend) ? prev.rankTrend : undefined,
     last20,
   };
 }
 
 export function mergeProfileChartsOnRankSnapshot(opts: {
   cumulative: Record<string, unknown> | null | undefined;
+  /** profileCharts/{season}。あれば親 nested より優先 */
+  chartsDoc?: Record<string, unknown> | null;
   seasonKey: string;
   dateKey: string;
   totalPointsRank: number;
 }): ProfileChartsStored {
-  const prev = readStored(opts.cumulative, opts.seasonKey);
+  const prev = readStored(opts.cumulative, opts.seasonKey, opts.chartsDoc);
   const rankPrev = Array.isArray(prev.rankTrend) ? [...prev.rankTrend] : [];
   const point = { dateKey: opts.dateKey, rank: opts.totalPointsRank };
   const next = rankPrev.filter((p) => p.dateKey !== point.dateKey);
@@ -178,8 +182,8 @@ export function mergeProfileChartsOnRankSnapshot(opts: {
   return {
     v: PROFILE_CHARTS_BUNDLE_VERSION,
     seasonKey: opts.seasonKey,
-    dailyTrend: Array.isArray(prev.dailyTrend) ? prev.dailyTrend : [],
+    dailyTrend: Array.isArray(prev.dailyTrend) ? prev.dailyTrend : undefined,
     rankTrend,
-    last20: Array.isArray(prev.last20) ? prev.last20 : [],
+    last20: Array.isArray(prev.last20) ? prev.last20 : undefined,
   };
 }

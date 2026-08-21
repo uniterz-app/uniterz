@@ -11,6 +11,7 @@ import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankin
 import { buildNbaPeriodRankingSnapshots } from "./rankings/buildNbaPeriodRankingSnapshots";
 import { buildGroupBattlePeriodSnapshots } from "./groupBattles/buildGroupBattlePeriodSnapshots";
 import { grantAllFinalGroupBattleUnits } from "./groupBattles/grantGroupBattleUnits";
+import { advanceDueGroupBattlePhases } from "./groupBattles/advanceDuePhases";
 import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAggregationScheduledJstToday";
 import { runNotifyGameStartCron } from "./notifications/notifyGameStartCron";
 import { notifyRankingUpdatedPush } from "./notifications/notifyPushEvents";
@@ -152,6 +153,7 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
     }
 
     try {
+      await advanceDueGroupBattlePhases();
       await buildGroupBattlePeriodSnapshots();
       await grantAllFinalGroupBattleUnits();
     } catch (err) {

@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
-import { isAdminUid } from "../../../../../lib/constants";
 import type { AdminInboxCounts } from "../../../../../lib/admin/subscribeAdminInboxUnread";
 import { EMPTY_ADMIN_INBOX } from "../../../../../lib/admin/subscribeAdminInboxUnread";
 import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
@@ -38,8 +37,10 @@ type Props = {
   unreadAnnouncements: number;
   adminInbox?: AdminInboxCounts;
   onOpenProfileSettings: () => void;
-  /** ログイン中 UID（管理メニュー表示判定） */
+  /** ログイン中 UID（ログアウト可否など） */
   uid: string | null | undefined;
+  /** 管理メニュー表示（Custom Claim / session API） */
+  isAdmin?: boolean;
   /** Firestore users.plan と同期した表示用 */
   plan: "free" | "pro";
   /** 表示名（最下部アイデンティティ） */
@@ -73,18 +74,21 @@ type Props = {
     | "notificationDev"
     | "restartTutorial"
     | "seasonPreview"
+    | "squadBattlePreview"
     | "futuristicBgPreview"
     | "titleSkinPreview"
     | "waveProSkinPreview"
     | "uniterzLogoTypePreview"
     | "uniterzLogo3dPreview"
     | "uniterzProBadgePreview"
+    | "markedChipDesignPreview"
     | "splashLogoPreview"
     | "liveGameStatsPreview"
     | "leagueStatsPreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
-    | "adminRedemptions") => void;
+    | "adminRedemptions"
+    | "adminGroupBattles") => void;
 };
 
 const PANEL_W = Math.min(288, Math.max(248, Math.round(Dimensions.get("window").width * 0.44)));
@@ -97,6 +101,7 @@ export default function ProfileSideMenuModal({
   adminInbox = EMPTY_ADMIN_INBOX,
   onOpenProfileSettings,
   uid,
+  isAdmin = false,
   plan,
   displayName = "",
   handle = "",
@@ -125,8 +130,6 @@ export default function ProfileSideMenuModal({
     }),
     [insets.top, insets.bottom]
   );
-
-  const isAdmin = isAdminUid(uid);
 
   useEffect(() => {
     if (!visible) {
@@ -195,6 +198,7 @@ export default function ProfileSideMenuModal({
         adminFeatureRequests: "機能リクエスト",
         adminContacts: "問い合わせ",
         adminRedemptions: "商品交換申請",
+        adminGroupBattles: "スクワッドバトル開催",
       }
     : {
         main: "MAIN",
@@ -223,6 +227,7 @@ export default function ProfileSideMenuModal({
         adminFeatureRequests: "Feature Requests",
         adminContacts: "Inquiries",
         adminRedemptions: "Redemption Requests",
+        adminGroupBattles: "Squad Battle Ops",
       };
 
   function openUserPage(
@@ -248,18 +253,21 @@ export default function ProfileSideMenuModal({
       | "notificationDev"
       | "restartTutorial"
       | "seasonPreview"
+      | "squadBattlePreview"
       | "futuristicBgPreview"
       | "titleSkinPreview"
       | "waveProSkinPreview"
       | "uniterzLogoTypePreview"
       | "uniterzLogo3dPreview"
       | "uniterzProBadgePreview"
+      | "markedChipDesignPreview"
       | "splashLogoPreview"
       | "liveGameStatsPreview"
       | "leagueStatsPreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
+      | "adminGroupBattles"
   ) {
     if (page === "restartTutorial") {
       setTutorialRestartCover(true);
@@ -556,6 +564,13 @@ export default function ProfileSideMenuModal({
                         >
                           {labels.adminRedemptions}
                         </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="account-group-outline"
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("adminGroupBattles")}
+                        >
+                          {labels.adminGroupBattles}
+                        </SideMenuItemButtonNative>
                       </View>
                     </>
                   ) : null}
@@ -579,6 +594,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("seasonPreview")}
                         >
                           シーズン予想プレビュー
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="account-group-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("squadBattlePreview")}
+                        >
+                          SQUAD BATTLE
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="palette-outline"
@@ -623,6 +646,16 @@ export default function ProfileSideMenuModal({
                           }
                         >
                           UNITERZ PRO バッジ
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="bookmark-check-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() =>
+                            openUserPage("markedChipDesignPreview")
+                          }
+                        >
+                          MARKED チップ
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="cube-outline"

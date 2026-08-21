@@ -7,9 +7,8 @@ import {
   collection, deleteDoc, doc, getDocs, limit, orderBy, query, updateDoc, where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { isAdminUid } from "@/lib/constants";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 
 type Row = {
   id: string;
@@ -23,15 +22,14 @@ type Row = {
 };
 
 export default function AdminAnnouncementsListPage() {
-  const { fUser, status } = useFirebaseUser();
-  const isAdmin = status === "ready" && isAdminUid(fUser?.uid);
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
   const router = useRouter();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (adminLoading || !isAdmin) return;
     (async () => {
       setLoading(true);
       const q = query(
@@ -45,11 +43,11 @@ export default function AdminAnnouncementsListPage() {
       setRows(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
       setLoading(false);
     })();
-  }, [isAdmin]);
+  }, [adminLoading, isAdmin]);
 
   const empty = useMemo(() => !loading && rows.length === 0, [loading, rows]);
 
-  if (status !== "ready") {
+  if (adminLoading) {
     return (
       <div className="flex justify-center p-6 text-white">
         <CandleChartLoader />

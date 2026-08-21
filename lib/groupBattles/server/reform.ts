@@ -13,6 +13,8 @@ import {
   sanitizeSquadName,
   squadMembersCol,
   squadsCol,
+  cancelPendingJoinRequestsTx,
+  getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
 import { createSquadInvitesBulk } from "@/lib/groupBattles/server/invites";
 import { loadSourcePastSquad } from "@/lib/groupBattles/server/pastSquads";
@@ -72,6 +74,13 @@ export async function reformSquadFromPast(params: {
     const memSnap = await tx.get(memRef);
     if (memSnap.exists) throw new Error("already_in_squad");
 
+    const pendingSnap = await getPendingJoinRequestsTx(
+      tx,
+      db,
+      battleId,
+      uid
+    );
+
     tx.set(squadRef, {
       name,
       ownerUid: uid,
@@ -80,6 +89,7 @@ export async function reformSquadFromPast(params: {
       status: "forming",
       inviteCodeHash: hash,
       inviteCodeLast4: invitePlain.slice(-4),
+      inviteCodePlain: invitePlain,
       rulesAcceptedAt: now,
       rulesAcceptedByUid: uid,
       reformedFromBattleId: sourceBattleId,
@@ -93,6 +103,7 @@ export async function reformSquadFromPast(params: {
       joinedAt: now,
     });
     tx.set(battleRef(db, battleId), { updatedAt: now }, { merge: true });
+    cancelPendingJoinRequestsTx(tx, pendingSnap);
   });
 
   const targets = source.memberUids.filter((m) => m !== uid);

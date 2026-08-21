@@ -3,13 +3,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ----- 管理者（app/admin/* ・ games/teams 手動投入・お知らせ編集 等）
+    // ----- 管理者（Custom Claim `admin` 優先。UID は移行フォールバック）
     function isAdmin() {
       return request.auth != null
-        && request.auth.uid in [
-          "ynh0i1lJklWra1393TNbnxcKo5f2",
-          "Rb3vF67NTLeCxSvrR15brCbiQSD2"
-        ];
+        && (request.auth.token.admin == true
+            || request.auth.uid in [
+              "ynh0i1lJklWra1393TNbnxcKo5f2",
+              "Rb3vF67NTLeCxSvrR15brCbiQSD2"
+            ]);
     }
 
     /** WC knockout bracket — sync with lib/wc/wc-knockout-config submissionClosesAtIso (M73 kickoff). */
@@ -68,10 +69,18 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
+      // 公開プロフィール（残高表示はプロダクト要件）。課金は secure/ へ。削除時は API でスクラブ。
       allow read: if true;
 
       allow create: if request.auth != null
         && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'displayName', 'bio', 'photoURL', 'avatarUrl', 'photoCropY',
+          'createdAt', 'updatedAt', 'counts',
+          'handle', 'username', 'slug',
+          'language', 'locale', 'timeZone', 'countryCode', 'preferredLeague',
+          'onboardingCompletedAt', 'notificationPrefs'
+        ])
         && !('plan' in request.resource.data)
         && !('planType' in request.resource.data)
         && !('proUntil' in request.resource.data)
@@ -98,6 +107,7 @@ service cloud.firestore {
         && !('referralBoundAt' in request.resource.data)
         && !('referralStats' in request.resource.data)
         && !('referralSettledAt' in request.resource.data)
+        && !('email' in request.resource.data)
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50
@@ -109,96 +119,19 @@ service cloud.firestore {
 
       allow update: if request.auth != null
         && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'bio', 'photoURL', 'avatarUrl', 'photoCropY',
+          'updatedAt',
+          'handle', 'username', 'slug',
+          'language', 'locale', 'timeZone', 'countryCode', 'preferredLeague',
+          'onboardingCompletedAt', 'notificationPrefs'
+        ])
         && (!('handle' in resource.data) || !('handle' in request.resource.data)
             || request.resource.data.handle == resource.data.handle)
         && (!('username' in resource.data) || !('username' in request.resource.data)
             || request.resource.data.username == resource.data.username)
         && (!('slug' in resource.data) || !('slug' in request.resource.data)
             || request.resource.data.slug == resource.data.slug)
-        && (!('counts' in request.resource.data)
-            || request.resource.data.counts == resource.data.counts)
-        // Pro / 課金 / Unit / 招待 / スキン解放は Admin・Functions のみ
-        // plan 等は「既存と同じ値の維持」のみ可。新規追加・変更は不可。
-        && (!('createdAt' in resource.data) || !('createdAt' in request.resource.data)
-            || request.resource.data.createdAt == resource.data.createdAt)
-        && (!('unitBalance' in request.resource.data)
-            || (('unitBalance' in resource.data)
-                && request.resource.data.unitBalance == resource.data.unitBalance))
-        && (!('unitReserved' in request.resource.data)
-            || (('unitReserved' in resource.data)
-                && request.resource.data.unitReserved == resource.data.unitReserved))
-        && (!('profileViewCount' in request.resource.data)
-            || (('profileViewCount' in resource.data)
-                && request.resource.data.profileViewCount == resource.data.profileViewCount))
-        && (!('stripeCustomerId' in request.resource.data)
-            || (('stripeCustomerId' in resource.data)
-                && request.resource.data.stripeCustomerId == resource.data.stripeCustomerId))
-        && (!('stripeSubscriptionId' in request.resource.data)
-            || (('stripeSubscriptionId' in resource.data)
-                && request.resource.data.stripeSubscriptionId == resource.data.stripeSubscriptionId))
-        && (!('googlePurchaseToken' in request.resource.data)
-            || (('googlePurchaseToken' in resource.data)
-                && request.resource.data.googlePurchaseToken == resource.data.googlePurchaseToken))
-        && (!('appleOriginalTransactionId' in request.resource.data)
-            || (('appleOriginalTransactionId' in resource.data)
-                && request.resource.data.appleOriginalTransactionId == resource.data.appleOriginalTransactionId))
-        && (!('proSkinUnlockedIds' in request.resource.data)
-            || (('proSkinUnlockedIds' in resource.data)
-                && request.resource.data.proSkinUnlockedIds == resource.data.proSkinUnlockedIds))
-        && (!('planProBgVariant' in request.resource.data)
-            || (('planProBgVariant' in resource.data)
-                && request.resource.data.planProBgVariant == resource.data.planProBgVariant))
-        && (!('proSkinProgress' in request.resource.data)
-            || (('proSkinProgress' in resource.data)
-                && request.resource.data.proSkinProgress == resource.data.proSkinProgress))
-        && (!('proSkinRankEarnedIds' in request.resource.data)
-            || (('proSkinRankEarnedIds' in resource.data)
-                && request.resource.data.proSkinRankEarnedIds == resource.data.proSkinRankEarnedIds))
-        && (!('proSkinUnlockNoticeIds' in request.resource.data)
-            || (('proSkinUnlockNoticeIds' in resource.data)
-                && request.resource.data.proSkinUnlockNoticeIds == resource.data.proSkinUnlockNoticeIds))
-        && (!('proSkinUnlockSeason' in request.resource.data)
-            || (('proSkinUnlockSeason' in resource.data)
-                && request.resource.data.proSkinUnlockSeason == resource.data.proSkinUnlockSeason))
-        && (!('proSkinHeldIds' in request.resource.data)
-            || (('proSkinHeldIds' in resource.data)
-                && request.resource.data.proSkinHeldIds == resource.data.proSkinHeldIds))
-        && (!('billingProvider' in request.resource.data)
-            || (('billingProvider' in resource.data)
-                && request.resource.data.billingProvider == resource.data.billingProvider))
-        && (!('cancelAtPeriodEnd' in request.resource.data)
-            || (('cancelAtPeriodEnd' in resource.data)
-                && request.resource.data.cancelAtPeriodEnd == resource.data.cancelAtPeriodEnd))
-        && (!('nextPlanType' in request.resource.data)
-            || (('nextPlanType' in resource.data)
-                && request.resource.data.nextPlanType == resource.data.nextPlanType))
-        && (!('planType' in request.resource.data)
-            || (('planType' in resource.data)
-                && request.resource.data.planType == resource.data.planType))
-        && (!('plan' in request.resource.data)
-            || (('plan' in resource.data)
-                && request.resource.data.plan == resource.data.plan))
-        && (!('proUntil' in request.resource.data)
-            || (('proUntil' in resource.data)
-                && request.resource.data.proUntil == resource.data.proUntil))
-        && (!('inviteCode' in request.resource.data)
-            || (('inviteCode' in resource.data)
-                && request.resource.data.inviteCode == resource.data.inviteCode))
-        && (!('referredByUid' in request.resource.data)
-            || (('referredByUid' in resource.data)
-                && request.resource.data.referredByUid == resource.data.referredByUid))
-        && (!('referralInviteCode' in request.resource.data)
-            || (('referralInviteCode' in resource.data)
-                && request.resource.data.referralInviteCode == resource.data.referralInviteCode))
-        && (!('referralBoundAt' in request.resource.data)
-            || (('referralBoundAt' in resource.data)
-                && request.resource.data.referralBoundAt == resource.data.referralBoundAt))
-        && (!('referralStats' in request.resource.data)
-            || (('referralStats' in resource.data)
-                && request.resource.data.referralStats == resource.data.referralStats))
-        && (!('referralSettledAt' in request.resource.data)
-            || (('referralSettledAt' in resource.data)
-                && request.resource.data.referralSettledAt == resource.data.referralSettledAt))
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
                 && request.resource.data.displayName.size() <= 50

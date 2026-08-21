@@ -31,20 +31,29 @@ export type ProfileChartsBundle = {
   last20: ProfileChartsLast20Point[] | null;
 };
 
-/** overview 3 チャートが揃っているか（クライアントはこれなら追加 read 不要） */
+/**
+ * daily + rank が揃っていれば ensure 不要。
+ * last20 は settle 書き込みのみ。欠けていても posts に行かない。
+ */
 export function isProfileChartsComplete(
   bundle: ProfileChartsBundle | null
 ): bundle is ProfileChartsBundle & {
   dailyTrend: ProfileDailyTrendRow[];
   rankTrend: ProfileChartsRankPoint[];
-  last20: ProfileChartsLast20Point[];
 } {
   return (
     bundle != null &&
     Array.isArray(bundle.dailyTrend) &&
-    Array.isArray(bundle.rankTrend) &&
-    Array.isArray(bundle.last20)
+    Array.isArray(bundle.rankTrend)
   );
+}
+
+/** 保存済み last20。配列でない（未書き込み）は null */
+export function last20FromChartsBundle(
+  charts: ProfileChartsBundle | null | undefined
+): ProfileChartsLast20Point[] | null {
+  if (!charts || !Array.isArray(charts.last20)) return null;
+  return charts.last20;
 }
 
 /** 26-27 活動ゼロでも「揃っている」とみなせる空バンドル */

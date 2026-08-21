@@ -8560,16 +8560,17 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
   max-width: 100%;
 }
 
-.profile-edit-kinetik-footer-flag {
+.profile-edit-kinetik-header-flag {
   display: inline-flex;
-  align-self: center;
-  height: 18px;
-  width: 24px;
+  align-self: flex-start;
+  margin-top: 6px;
+  height: 16px;
+  width: 21.333px;
   overflow: hidden;
   border-radius: 1px;
 }
 
-.profile-edit-kinetik-footer-flag img {
+.profile-edit-kinetik-header-flag img {
   display: block;
   width: 100%;
   height: 100%;
@@ -8578,15 +8579,15 @@ html.unit-earn-settling .profile-edit-kinetik-panel [class*="profile-plan-pro"] 
 }
 
 @media (min-width: 640px) {
-  .profile-edit-kinetik-footer-flag {
-    height: 20.5px;
-    width: 27.333px;
+  .profile-edit-kinetik-header-flag {
+    height: 18px;
+    width: 24px;
   }
 }
 
-.profile-edit-kinetik-card--web .profile-edit-kinetik-footer-flag {
-  height: 21px;
-  width: 28px;
+.profile-edit-kinetik-card--web .profile-edit-kinetik-header-flag {
+  height: 19px;
+  width: 25.333px;
 }
 
 .profile-edit-kinetik-identity-meta {

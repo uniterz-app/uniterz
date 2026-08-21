@@ -17,7 +17,7 @@ export function metricLabel(m: CommunityMetric, lang: Language): string {
   if (lang === "en") {
     switch (m) {
       case "totalPoints":
-        return "Total points";
+        return "SCORE";
       case "totalUpset":
         return "Upset points";
       case "winRate":
@@ -30,7 +30,7 @@ export function metricLabel(m: CommunityMetric, lang: Language): string {
   }
   switch (m) {
     case "totalPoints":
-      return "総合ポイント";
+      return "SCORE";
     case "totalUpset":
       return "アップセット";
     case "winRate":

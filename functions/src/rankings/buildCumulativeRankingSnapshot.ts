@@ -18,6 +18,11 @@ import {
   nbaSeasonSnapshotDocId,
 } from "./nbaSeason";
 import { mergeProfileChartsOnRankSnapshot } from "../profile/mergeProfileCharts";
+import {
+  loadProfileChartsSubcolByUid,
+  profileChartsSubdocMergeFields,
+  PROFILE_CHARTS_SUBCOL,
+} from "../profile/profileChartsStorage";
 import { buildProfileHeroSnapshotFromCumulative } from "../profile/profileHeroSnapshot";
 
 /* =========================================================
@@ -783,6 +788,11 @@ export async function buildCumulativeRankingSnapshot(
   };
 
   const historyUids = new Set<string>(rankByUidSeason.keys());
+  const chartsByUid = await loadProfileChartsSubcolByUid(
+    firestore,
+    [...historyUids],
+    seasonKey
+  );
   const metricValuesByUid = new Map<string, HistoryMetricValuesBlock>();
   for (const uid of historyUids) {
     const docData = statsByUid.get(uid);
@@ -795,49 +805,29 @@ export async function buildCumulativeRankingSnapshot(
     const seasonRanks = rankByUidSeason.get(uid) ?? {};
     const totalPointsRank = Number(seasonRanks.totalPoints ?? 0);
     const cumData = statsByUid.get(uid) as Record<string, unknown> | undefined;
-    const profileChartsPatch =
-      Number.isFinite(totalPointsRank) && totalPointsRank > 0
-        ? (() => {
-            const charts = mergeProfileChartsOnRankSnapshot({
-              cumulative: cumData ?? null,
-              seasonKey,
-              dateKey,
-              totalPointsRank,
-            });
-            return {
-              "profileCharts.v": charts.v,
-              "profileCharts.seasonKey": charts.seasonKey,
-              "profileCharts.dailyTrend": charts.dailyTrend ?? [],
-              "profileCharts.rankTrend": charts.rankTrend,
-              "profileCharts.last20": charts.last20 ?? [],
-              "profileCharts.builtAtMs": Date.now(),
-            };
-          })()
-        : {};
     batch.set(
       firestore.doc(`cumulative_stats/${uid}`),
       {
         "snapshotRanks.updatedAt": FieldValue.serverTimestamp(),
         [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks,
-        ...profileChartsPatch,
       },
       { merge: true }
     );
-    if (profileChartsPatch && Object.keys(profileChartsPatch).length > 0) {
+    if (Number.isFinite(totalPointsRank) && totalPointsRank > 0) {
+      const charts = mergeProfileChartsOnRankSnapshot({
+        cumulative: cumData ?? null,
+        chartsDoc: chartsByUid.get(uid) ?? null,
+        seasonKey,
+        dateKey,
+        totalPointsRank,
+      });
       batch.set(
         firestore
           .collection("cumulative_stats")
           .doc(uid)
-          .collection("profileCharts")
+          .collection(PROFILE_CHARTS_SUBCOL)
           .doc(seasonKey),
-        {
-          v: profileChartsPatch["profileCharts.v"],
-          seasonKey: profileChartsPatch["profileCharts.seasonKey"],
-          dailyTrend: profileChartsPatch["profileCharts.dailyTrend"] ?? [],
-          rankTrend: profileChartsPatch["profileCharts.rankTrend"] ?? [],
-          last20: profileChartsPatch["profileCharts.last20"] ?? [],
-          builtAtMs: profileChartsPatch["profileCharts.builtAtMs"] ?? Date.now(),
-        },
+        profileChartsSubdocMergeFields(charts),
         { merge: true }
       );
       ops += 1;

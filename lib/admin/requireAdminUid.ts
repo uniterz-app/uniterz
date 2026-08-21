@@ -1,5 +1,9 @@
 import { getAdminAuth } from "@/lib/firebaseAdmin";
-import { isAdminUid } from "@/lib/constants";
+import {
+  hasAdminClaim,
+  isAdminAllowlistedUid,
+} from "@/lib/admin/adminAllowlist";
+import { ensureAdminCustomClaims } from "@/lib/admin/ensureAdminCustomClaims";
 
 export async function requireAdminUid(req: Request): Promise<string> {
   const authz =
@@ -10,11 +14,21 @@ export async function requireAdminUid(req: Request): Promise<string> {
     (err as Error & { status?: number }).status = 401;
     throw err;
   }
-  const decoded = await getAdminAuth().verifyIdToken(token);
-  if (!isAdminUid(decoded.uid)) {
-    const err = new Error("forbidden");
-    (err as Error & { status?: number }).status = 403;
-    throw err;
+  const auth = getAdminAuth();
+  const decoded = await auth.verifyIdToken(token);
+  const claims = decoded as unknown as Record<string, unknown>;
+
+  if (hasAdminClaim(claims)) {
+    return decoded.uid;
   }
-  return decoded.uid;
+
+  // 移行期: 許可リストなら claim を付与して通す（次回から claim のみで可）
+  if (isAdminAllowlistedUid(decoded.uid)) {
+    await ensureAdminCustomClaims(auth, decoded.uid);
+    return decoded.uid;
+  }
+
+  const err = new Error("forbidden");
+  (err as Error & { status?: number }).status = 403;
+  throw err;
 }

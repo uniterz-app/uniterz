@@ -4,8 +4,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { isAdminUid } from "@/lib/constants";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 import { db, storage } from "@/lib/firebase";
 import {
   doc,
@@ -36,15 +35,14 @@ export default function AdminAnnouncementEditPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
 
-  const { fUser, status } = useFirebaseUser();
-  const isAdmin = status === "ready" && isAdminUid(fUser?.uid);
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
 
   const [form, setForm] = useState<FormState | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // 初期読込
   useEffect(() => {
-    if (!isAdmin || !id) return;
+    if (adminLoading || !isAdmin || !id) return;
     (async () => {
       const snap = await getDoc(doc(db, "announcements", id));
       if (!snap.exists()) {
@@ -64,9 +62,9 @@ export default function AdminAnnouncementEditPage() {
         heroFile: null,
       });
     })();
-  }, [isAdmin, id, router]);
+  }, [adminLoading, isAdmin, id, router]);
 
-  if (status !== "ready") {
+  if (adminLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0B0F17] p-6 text-white">
         <CandleChartLoader />

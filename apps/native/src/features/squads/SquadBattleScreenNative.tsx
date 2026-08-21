@@ -1,22 +1,25 @@
 /**
  * Web `SquadBattlePage` 相当 — SQUAD BATTLE（スナップショット接続、未接続時はモック）
  */
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Image,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
   type DimensionValue,
   type StyleProp,
+  type TextStyle,
   type ViewStyle,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -25,7 +28,6 @@ import Animated, {
 import CyberSubpageShellNative from "../../ui/CyberSubpageShellNative";
 import { colors, fonts, radius, spacing, typography } from "../../theme/tokens";
 import {
-  SQUAD_BATTLE_HELP_TEXT,
   SQUAD_BATTLE_MAX_MEMBERS,
   SQUAD_BATTLE_MIN_MEMBERS,
   SQUAD_BATTLE_MAX_PENDING_APPLICATIONS,
@@ -36,6 +38,8 @@ import {
   SQUAD_BATTLE_SEASON_PHASES,
   countActiveMembers,
   getSquadBattleMock,
+  squadFromIncomingInvite,
+  squadIncomingInviteMemberProfiles,
   squadMemberToProfile,
   squadRankDelta,
   type OpenSquadListing,
@@ -46,9 +50,10 @@ import {
   type SquadMember,
   type PastSquadHistoryMock,
   type SquadIncomingInviteMock,
+  type SquadInviteMemberSummary,
 } from "../../../../../lib/squads/squadBattleMock";
 import type { GroupBattlePastSquadItem } from "../../../../../lib/groupBattles/types";
-import { mapGroupBattleSnapshotRowsToSquads } from "../../../../../lib/groupBattles/mapSnapshotRowsToSquads";
+import { estimatedGroupBattleUnitsPerMember } from "../../../../../lib/groupBattles/unitLedger";
 import {
   SQUAD_FIRST_AVATAR_FADE_MS,
   SQUAD_FIRST_FOOTER_FADE_MS,
@@ -56,22 +61,40 @@ import {
   squadFirstFooterDelayMs,
 } from "../../../../../lib/squads/squadFirstPlaceMotion";
 import { squadFirstFadeInEntering } from "./squadFirstPlaceMotionNative";
-import { CyberSlantedSegBarNative } from "../rankings/CyberSlantedSegBarNative";
-import { cyberRankPalette } from "../../../../../lib/rankings/cyberRankVisual";
+import { CyberRankNumberNative } from "../rankings/CyberRankNumberNative";
+import { RankingsAvatarNative } from "../rankings/RankingsAvatarAndTabs";
+import ProCyberBadgeNative from "../profile/kinetik/ProCyberBadgeNative";
+import { RankFirstBorderEdgeScanNative } from "../rankings/RankFirstBorderEdgeScanNative";
+import {
+  cyberRankPalette,
+  cyberRankQuietFrameColor,
+} from "../../../../../lib/rankings/cyberRankVisual";
+import { RANK_FIRST_EDGE_DIM_BORDER } from "../../../../../lib/rankings/rankFirstBorderEdgeScan";
 import { formatListMetricDayDelta } from "../../../../../lib/rankings/listRowMetricMeta";
 import CyberNumberNative from "../../ui/CyberNumberNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../rankings/CyberSlantedTabNative";
+import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
 import { RANK_DISPLAY_FONT, RANKING_SCORE_FONT } from "../rankings/rankingsUiTheme";
 import { copyTextNative } from "../leaderboards/copyTextNative";
 import { RankingsCyberSectionLabelNative } from "../rankings/RankingsCyberPanelNative";
 import SquadBattleIntroOverlayNative from "./SquadBattleIntroOverlayNative";
+import SquadBattleLaunchOverlayNative from "./SquadBattleLaunchOverlayNative";
 import {
   clearSquadBattleIntroSeenNative,
   hasSeenSquadBattleIntroNative,
 } from "./squadBattleIntroSeenNative";
+import { clearSquadBattleLaunchSeenNative, markSquadBattleLaunchSeenNative, readSquadBattleLaunchSeenBattleIdNative } from "./squadBattleLaunchSeenNative";
+import {
+  formatSquadBattleRecruitDeadlineLabel,
+  shouldShowSquadBattleLaunch,
+} from "../../../../../lib/squads/squadBattleLaunchGate";
+import {
+  readHeldInviteIdsNative,
+  writeHeldInviteIdsNative,
+} from "./squadBattleHeldInvitesNative";
 import {
   fetchCurrentGroupBattleNative,
   fetchGroupBattleRankingsNative,
@@ -82,18 +105,60 @@ import {
   acceptGroupBattleInviteNative,
   declineGroupBattleInviteNative,
   joinGroupBattleByInviteCodeNative,
+  fetchGroupBattleOpenSquadsNative,
+  createGroupBattleSquadNative,
+  applyToGroupBattleSquadNative,
+  fetchGroupBattleJoinRequestsNative,
+  resolveGroupBattleJoinRequestNative,
+  fetchGroupBattleMyPayoutNative,
+  renameGroupBattleSquadNative,
+  cancelGroupBattleJoinRequestNative,
+  leaveGroupBattleSquadNative,
+  dissolveGroupBattleSquadNative,
 } from "./groupBattleApiNative";
 import { auth } from "../../lib/firebase";
 import { SQUAD_GOLD_NATIVE } from "../../../../../lib/squads/squadBattleGoldTheme";
+import { withHeldInviteId } from "../../../../../lib/squads/squadBattleInviteHold";
+import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
+import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import {
-  SQUAD_BATTLE_BOARD_STATUS_HINT,
+  mapGroupBattleSnapshotRowsToSquads,
+  mapCurrentMySquadToUiSquad,
+  mapOpenSquadApiToListings,
+  mapJoinRequestApiToUi,
+} from "../../../../../lib/groupBattles/mapSnapshotRowsToSquads";
+import {
   SQUAD_BATTLE_MOCK_DEADLINE_LABEL,
+  SQUAD_BATTLE_IDLE_PANEL,
+  SQUAD_BATTLE_RULES_SECTION,
+  SQUAD_BATTLE_RANK_SPECTATOR_HINT,
+  SQUAD_INVITE_DEADLINE_PREFIX,
+  SQUAD_INVITE_HOLD_HINT,
+  SQUAD_INVITE_LIST_EMPTY,
+  SQUAD_INVITE_LIST_HINT,
+  SQUAD_INVITE_LIST_TITLE,
+  SQUAD_INVITE_JOIN_PROMPT,
+  SQUAD_APPLICANT_OPEN_PROFILE,
+  SQUAD_APPLICANT_SCORE_LABEL,
+  SQUAD_APPLICANT_WINRATE_LABEL,
+  SQUAD_APPLICANT_WR_LABEL,
+  squadInviteIncomingTitle,
+  squadInviteSendPrompt,
+  squadApplicantApprovePrompt,
+  SQUAD_BATTLE_PREVIEW_JUMPS,
   SQUAD_BATTLE_REWARD_RESULT_MOCK,
+  squadBattlePayoutTotalUnits,
+  type SquadBattleRewardResult,
   SQUAD_BATTLE_UI_PHASE_OPTIONS,
   SQUAD_BATTLE_WEEK_OPTIONS,
+  SQUAD_OPEN_PERIOD_RANKS,
+  SQUAD_OPEN_PERIOD_RANK_GROUP_LABEL,
   squadBattlePhaseBanner,
+  SQUAD_RANKING_DETAIL_SPINE,
   squadMemberCountLabel,
+  squadRankingList,
   squadScoreGaps,
+  groupBattlePhaseToUiPhase,
   type SquadBattleUiPhase,
   type SquadBattleWeekIndex,
 } from "../../../../../lib/squads/squadBattleUiCopy";
@@ -146,51 +211,102 @@ function SquadPhaseStatusBannerNative({
 }
 
 /** REWARD フェーズ — 獲得 Unit の見せ場 */
-function SquadRewardResultPanelNative({ hasSquad }: { hasSquad: boolean }) {
-  const r = SQUAD_BATTLE_REWARD_RESULT_MOCK;
+function SquadRewardResultPanelNative({
+  hasSquad,
+  result,
+  loading,
+}: {
+  hasSquad: boolean;
+  result: SquadBattleRewardResult;
+  loading?: boolean;
+}) {
+  const r = result;
+  const total = squadBattlePayoutTotalUnits(r);
+  if (loading) {
+    return (
+      <View style={styles.rewardPanelEmpty}>
+        <Text style={styles.rewardPanelKicker}>REWARD</Text>
+        <Text style={styles.rewardPanelEmptyText}>
+          獲得 Unit を読み込み中…
+        </Text>
+      </View>
+    );
+  }
   if (!hasSquad) {
     return (
       <View style={styles.rewardPanelEmpty}>
         <Text style={styles.rewardPanelKicker}>REWARD</Text>
         <Text style={styles.rewardPanelEmptyText}>
-          未参加のため配布対象外です。次回 ENTRY から参加できます。
+          {r.payoutNote ||
+            "未参加のため配布対象外です。次回 ENTRY から参加できます。"}
         </Text>
       </View>
     );
   }
+  const weekRows = r.weekly;
   return (
     <View style={styles.rewardPanel}>
       <Text style={styles.rewardPanelKicker}>Your payout</Text>
-      <View style={styles.rewardGrid}>
-        {(
-          [
-            { label: "WEEKLY", rank: r.weeklyRank, units: r.weeklyUnits },
-            { label: "MONTHLY", rank: r.monthlyRank, units: r.monthlyUnits },
-          ] as const
-        ).map((cell) => (
-          <View key={cell.label} style={styles.rewardCell}>
-            <Text style={styles.rewardCellLabel}>{cell.label}</Text>
-            <Text style={styles.rewardCellRank}>
-              {cell.rank != null ? `#${cell.rank}` : "—"}
+      <View style={styles.rewardLedger}>
+        {weekRows.map((w, i) => (
+          <View
+            key={w.weekIndex}
+            style={[styles.rewardLedgerRow, i > 0 && styles.rewardLedgerRowLine]}
+          >
+            <Text style={styles.rewardLedgerWeek}>W{w.weekIndex}</Text>
+            <Text
+              style={[
+                styles.rewardLedgerRank,
+                w.rank === 1 && styles.rewardLedgerRankFirst,
+              ]}
+            >
+              {w.rank != null ? `#${w.rank}` : "—"}
             </Text>
-            <Text style={styles.rewardCellUnits}>+{cell.units} Unit</Text>
+            <Text style={styles.rewardLedgerUnits}>
+              {w.status === "none" && w.units === 0 ? "—" : `+${w.units}`}
+            </Text>
           </View>
         ))}
+        <View style={[styles.rewardLedgerRow, styles.rewardLedgerMonthlyRow]}>
+          <Text style={styles.rewardLedgerWeekHi}>MON</Text>
+          <Text style={styles.rewardLedgerRankFirst}>
+            {r.monthlyRank != null ? `#${r.monthlyRank}` : "—"}
+          </Text>
+          <Text style={styles.rewardLedgerUnitsHi}>
+            {r.monthlyStatus === "none" && r.monthlyUnits === 0
+              ? "—"
+              : `+${r.monthlyUnits}`}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.rewardTotalRow}>
+        <Text style={styles.rewardTotalLabel}>Total</Text>
+        <Text style={styles.rewardTotal}>+{total} Unit</Text>
       </View>
       <Text style={styles.rewardNote}>{r.payoutNote}</Text>
     </View>
   );
 }
 
-/** 休止期間の専用面 */
+/** 休止期間の専用面（告知 + ルールを1枠） */
 function SquadIdlePanelNative() {
   return (
     <View style={styles.idlePanel}>
-      <Text style={styles.idleKicker}>Off season</Text>
-      <Text style={styles.idleTitle}>NEXT ENTRY SOON</Text>
-      <Text style={styles.idleDetail}>
-        開催休止中です。募集開始の告知をお待ちください。
+      <Text style={styles.idleKicker}>{SQUAD_BATTLE_IDLE_PANEL.kicker}</Text>
+      <Text style={styles.idleTitle}>{SQUAD_BATTLE_IDLE_PANEL.title}</Text>
+      <Text style={styles.idleDetail}>{SQUAD_BATTLE_IDLE_PANEL.detail}</Text>
+      <View style={styles.idleRulesDivider} />
+      <Text style={styles.idleRulesTitle}>
+        {SQUAD_BATTLE_RULES_SECTION.title}
       </Text>
+      <View style={styles.idleRulesList}>
+        {SQUAD_BATTLE_RULES_SECTION.items.map((item) => (
+          <View key={item} style={styles.idleRulesRow}>
+            <View style={styles.idleRulesDot} />
+            <Text style={styles.idleRulesText}>{item}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -243,11 +359,12 @@ function SquadWeekChipsNative({
 function SquadGoldPhaseTrackNative({
   activeKey = "battle",
 }: {
-  activeKey?: "entry" | "battle" | "reward";
+  /** null = オフシーズン（未点灯） */
+  activeKey?: "entry" | "battle" | "reward" | null;
 }) {
   const order = ["entry", "battle", "reward"] as const;
   const n = order.length;
-  const activeIdx = Math.max(0, order.indexOf(activeKey));
+  const activeIdx = activeKey == null ? -1 : order.indexOf(activeKey);
   const progressPct =
     activeIdx <= 0 ? 0 : (activeIdx / (n - 1)) * 100;
   /** 等幅カラム時、端ドット中心 = 半カラム */
@@ -269,8 +386,8 @@ function SquadGoldPhaseTrackNative({
       </View>
       {SQUAD_BATTLE_SEASON_PHASES.map((p) => {
         const idx = order.indexOf(p.key);
-        const active = p.key === activeKey;
-        const done = idx < activeIdx;
+        const active = activeKey != null && p.key === activeKey;
+        const done = activeIdx >= 0 && idx < activeIdx;
         const lit = active || done;
         return (
           <View key={p.key} style={styles.phaseNode}>
@@ -430,50 +547,6 @@ function scoreColorForRank(rank: number): string {
   return "rgba(255,255,255,0.92)";
 }
 
-/**
- * Native の textShadow は矩形に切れやすいので、弱い半透明＋小さめ半径だけ使う。
- * Android は矩形化が目立つためオフ。
- */
-function softRankTextGlow(rank: number): {
-  textShadowColor: string;
-  textShadowOffset: { width: number; height: number };
-  textShadowRadius: number;
-} | Record<string, never> {
-  if (rank > 3 || Platform.OS === "android") return {};
-  const accent = cyberRankPalette(rank).accent;
-  return {
-    textShadowColor:
-      accent.length === 7
-        ? `${accent}55`
-        : "rgba(255,214,90,0.32)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 2.5,
-  };
-}
-
-/** セグメント色も得点文字と同じ（1〜3位パレット / 4位以下は白） */
-function segAccentForRank(rank: number) {
-  const color = scoreColorForRank(rank);
-  if (rank <= 3) {
-    const p = cyberRankPalette(rank);
-    return {
-      border: p.accent,
-      glow: p.accentGlow,
-      bg: p.stroke,
-    };
-  }
-  return {
-    border: color,
-    glow: "rgba(255,255,255,0.35)",
-    bg: "rgba(255,255,255,0.55)",
-  };
-}
-
-function pointsBarPct(value: number, max: number): number {
-  if (max <= 0) return 0;
-  return Math.min(100, Math.max(0, (value / max) * 100));
-}
-
 /** 順位変動バッジ */
 function RankTrendBadgeNative({
   squad,
@@ -568,7 +641,7 @@ function MemberAvatarNative({
         style={[
           styles.avatar,
           styles.avatarEmpty,
-          { width: dim, height: dim, borderRadius: dim / 2 },
+          { width: dim, height: dim, borderRadius: 2 },
         ]}
       >
         <MaterialCommunityIcons
@@ -579,46 +652,71 @@ function MemberAvatarNative({
       </View>
     );
   }
-  const initial = (member.displayName || member.handle || "?")
-    .slice(0, 1)
-    .toUpperCase();
   return (
-    <View
-      style={[
-        styles.avatar,
-        styles.avatarFilled,
-        { width: dim, height: dim, borderRadius: dim / 2 },
-      ]}
-    >
-      <Text style={[styles.avatarInitial, size === "sm" && styles.avatarInitialSm]}>
-        {initial}
-      </Text>
-    </View>
+    <RankingsAvatarNative
+      photoURL={member.photoURL}
+      label={member.displayName || member.handle || "member"}
+      size={dim}
+      square
+    />
   );
 }
 
 function ProfileAvatarNative({
   profile,
   size = "md",
+  square = false,
 }: {
-  profile: Pick<SquadApplicantProfile, "displayName" | "handle">;
+  profile: Pick<SquadApplicantProfile, "displayName" | "handle" | "photoURL">;
   size?: "md" | "lg";
+  square?: boolean;
 }) {
   const dim = size === "lg" ? 64 : 40;
-  const initial = (profile.displayName || profile.handle || "?")
-    .slice(0, 1)
-    .toUpperCase();
+  return (
+    <RankingsAvatarNative
+      photoURL={profile.photoURL}
+      label={profile.displayName || profile.handle || "user"}
+      size={dim}
+      square={square}
+    />
+  );
+}
+
+/** Web `SquadUserNameLine` 相当 */
+function SquadUserNameLineNative({
+  name,
+  plan,
+  style,
+  center = false,
+}: {
+  name: string;
+  plan?: "free" | "pro" | null;
+  style?: StyleProp<TextStyle>;
+  center?: boolean;
+}) {
   return (
     <View
       style={[
-        styles.avatar,
-        styles.avatarFilled,
-        { width: dim, height: dim, borderRadius: dim / 2 },
+        styles.squadUserNameLine,
+        center && styles.squadUserNameLineCenter,
       ]}
     >
-      <Text style={[styles.avatarInitial, size === "lg" && styles.avatarInitialLg]}>
-        {initial}
+      <Text
+        style={[
+          styles.memberName,
+          styles.squadUserNameText,
+          center && styles.squadUserNameTextCenter,
+          style,
+        ]}
+        numberOfLines={1}
+      >
+        {name}
       </Text>
+      {plan === "pro" ? (
+        <View style={styles.squadUserProBadge}>
+          <ProCyberBadgeNative compact />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -627,11 +725,16 @@ function MemberRowNative({
   member,
   onOpenProfile,
   elevated = false,
+  periodRanks = false,
+  entryFrame = false,
 }: {
   member: SquadMember;
   onOpenProfile?: (profile: SquadApplicantProfile) => void;
   elevated?: boolean;
+  periodRanks?: boolean;
+  entryFrame?: boolean;
 }) {
+  const useEntryFrame = periodRanks || entryFrame;
   if (member.empty) {
     return (
       <View
@@ -639,6 +742,7 @@ function MemberRowNative({
           styles.memberRow,
           styles.memberRowEmpty,
           elevated && styles.memberRowElevated,
+          useEntryFrame && styles.memberRowEmptyEntry,
         ]}
       >
         <MemberAvatarNative member={member} />
@@ -649,33 +753,36 @@ function MemberRowNative({
       </View>
     );
   }
-  const posts = squadMemberToProfile(member).totalPosts;
+  const profile = squadMemberToProfile(member);
   const content = (
     <>
       <MemberAvatarNative member={member} />
       <View style={styles.memberMeta}>
-        <Text style={styles.memberName} numberOfLines={1}>
-          {member.displayName}
-        </Text>
+        <SquadUserNameLineNative name={member.displayName} plan={member.plan} />
       </View>
-      <View style={styles.memberStats}>
-        <SquadPointsTextNative
-          value={posts}
-          size="sm"
-          suffix="posts"
-          color="#CBD5E1"
-        />
-        <SquadPointsTextNative value={member.points} size="sm" suffix="pts" />
-      </View>
+      {periodRanks ? (
+        <OpenMemberPeriodRanksNative profile={profile} />
+      ) : (
+        <View style={styles.memberStats}>
+          <SquadPointsTextNative
+            value={profile.totalPosts}
+            size="sm"
+            suffix="posts"
+            color="#CBD5E1"
+          />
+          <SquadPointsTextNative value={member.points} size="sm" suffix="pts" />
+        </View>
+      )}
     </>
   );
   if (onOpenProfile) {
     return (
       <Pressable
-        onPress={() => onOpenProfile(squadMemberToProfile(member))}
+        onPress={() => onOpenProfile(profile)}
         style={({ pressed }) => [
           styles.memberRow,
           elevated && styles.memberRowElevated,
+          useEntryFrame && styles.memberRowEntry,
           pressed && styles.pressed,
         ]}
       >
@@ -684,7 +791,13 @@ function MemberRowNative({
     );
   }
   return (
-    <View style={[styles.memberRow, elevated && styles.memberRowElevated]}>
+    <View
+      style={[
+        styles.memberRow,
+        elevated && styles.memberRowElevated,
+        useEntryFrame && styles.memberRowEntry,
+      ]}
+    >
       {content}
     </View>
   );
@@ -692,16 +805,22 @@ function MemberRowNative({
 
 function MySquadCardNative({
   squad,
-  maxAvg,
+  phase,
   onOpenMemberProfile,
   onCopyInviteCode,
   onRenameSquad,
+  onLeaveSquad,
+  onDissolveSquad,
+  isOwner = false,
 }: {
   squad: Squad;
-  maxAvg: number;
+  phase: SquadBattleUiPhase;
   onOpenMemberProfile?: (profile: SquadApplicantProfile) => void;
   onCopyInviteCode?: (code: string) => void;
   onRenameSquad?: (name: string) => void;
+  onLeaveSquad?: () => void;
+  onDissolveSquad?: () => void;
+  isOwner?: boolean;
 }) {
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(squad.name);
@@ -729,32 +848,34 @@ function MySquadCardNative({
 
   const active = countActiveMembers(squad);
   const recruiting = active < SQUAD_BATTLE_MAX_MEMBERS;
-  const inviteCode = recruiting ? squad.inviteCode ?? null : null;
-  const first = squad.rank === 1;
-  const segAccent =
-    squad.rank <= 3
-      ? segAccentForRank(squad.rank)
-      : {
-          border: JOIN_BATTLE_AMBER,
-          glow: "rgba(251,191,36,0.65)",
-          bg: "rgba(251,191,36,0.85)",
-        };
+  const showBattleStats = phase !== "entry";
+  const inviteCode =
+    phase === "entry" && recruiting ? squad.inviteCode ?? null : null;
+  const showHud = showBattleStats || inviteCode != null;
+  const first = showBattleStats && squad.rank === 1;
 
   return (
     <View style={styles.mySquadOuter}>
-      <View style={styles.mySquadTab}>
-        <View style={styles.mySquadTabDot} />
-        <Text style={styles.mySquadTabText}>My squad</Text>
+      <View style={[styles.mySquadTab, !showBattleStats && styles.mySquadTabEntry]}>
+        <View
+          style={[styles.mySquadTabDot, !showBattleStats && styles.mySquadTabDotEntry]}
+        />
+        <Text
+          style={[styles.mySquadTabText, !showBattleStats && styles.mySquadTabTextEntry]}
+        >
+          My squad
+        </Text>
       </View>
 
-      <View
-        style={[
-          styles.mySquadShell,
-          first && styles.lbRowFirst,
-          squad.rank === 2 && styles.lbRowSecond,
-          squad.rank === 3 && styles.lbRowThird,
-        ]}
-      >
+          <View
+            style={[
+              styles.mySquadShell,
+              !showBattleStats && styles.mySquadShellEntry,
+              first && styles.lbRowFirst,
+              showBattleStats && squad.rank === 2 && styles.lbRowSecond,
+              showBattleStats && squad.rank === 3 && styles.lbRowThird,
+            ]}
+          >
         <View style={styles.mySquadHero}>
           {editingName ? (
             <View style={styles.mySquadRenameBox}>
@@ -815,20 +936,28 @@ function MySquadCardNative({
                   hitSlop={8}
                   style={({ pressed }) => [
                     styles.mySquadRenameBtn,
+                    !showBattleStats && styles.mySquadRenameBtnEntry,
                     pressed && { opacity: 0.85 },
                   ]}
                 >
                   <MaterialCommunityIcons
                     name="pencil-outline"
                     size={14}
-                    color="rgba(253,230,138,0.9)"
+                    color={
+                      showBattleStats
+                        ? "rgba(253,230,138,0.9)"
+                        : "rgba(255,255,255,0.82)"
+                    }
                   />
                 </Pressable>
               ) : null}
             </View>
           )}
 
+          {showHud ? (
           <View style={styles.mySquadHudRow}>
+            {showBattleStats ? (
+              <>
             <View style={styles.mySquadHudCell}>
               <Text style={styles.mySquadHudLabel}>Rank</Text>
               <View style={styles.mySquadHudValueRow}>
@@ -870,6 +999,8 @@ function MySquadCardNative({
                 />
               </View>
             </View>
+              </>
+            ) : null}
 
             {inviteCode ? (
               <Pressable
@@ -878,15 +1009,27 @@ function MySquadCardNative({
                 accessibilityLabel={`招待コード ${inviteCode} をコピー`}
                 style={({ pressed }) => [
                   styles.mySquadHudCell,
+                  !showBattleStats && styles.mySquadHudCellEntry,
                   pressed && styles.mySquadHudCodePressed,
                 ]}
               >
-                <Text style={styles.mySquadHudLabel}>Code</Text>
+                <Text
+                  style={[
+                    styles.mySquadHudLabel,
+                    !showBattleStats && styles.mySquadHudLabelEntry,
+                  ]}
+                >
+                  Code
+                </Text>
                 <View style={styles.mySquadHudValueRow}>
                   <Text
                     style={[
                       styles.mySquadHudCode,
-                      { color: scoreColorForRank(squad.rank) },
+                      {
+                        color: showBattleStats
+                          ? scoreColorForRank(squad.rank)
+                          : "rgba(255,255,255,0.92)",
+                      },
                     ]}
                     numberOfLines={1}
                   >
@@ -901,30 +1044,66 @@ function MySquadCardNative({
               </Pressable>
             ) : null}
           </View>
-
-          <View style={styles.mySquadBar}>
-            <CyberSlantedSegBarNative
-              pct={pointsBarPct(squad.avgPoints, maxAvg)}
-              segments={10}
-              compact
-              forceStatic
-              accent={segAccent}
-            />
-          </View>
+          ) : null}
         </View>
 
         <View style={styles.mySquadMembersSection}>
-          <RankingsCyberSectionLabelNative>Members</RankingsCyberSectionLabelNative>
+          {showBattleStats ? (
+            <RankingsCyberSectionLabelNative>Members</RankingsCyberSectionLabelNative>
+          ) : (
+            <View style={styles.mySquadMembersHeadEntry}>
+              <View style={styles.mySquadMembersDotEntry} />
+              <Text style={styles.mySquadMembersLabelEntry}>Members</Text>
+            </View>
+          )}
           <View style={styles.mySquadMemberList}>
+            {showBattleStats ? null : (
+              <View style={styles.mySquadPeriodHeaderRow}>
+                <View style={styles.openMemberHeaderAvatarSpacer} />
+                <View style={styles.memberMeta} />
+                <OpenMemberPeriodRankHeaderNative />
+              </View>
+            )}
             {squad.members.map((m) => (
               <MemberRowNative
                 key={m.uid}
                 member={m}
-                elevated
+                elevated={showBattleStats}
+                periodRanks={!showBattleStats}
                 onOpenProfile={onOpenMemberProfile}
               />
             ))}
           </View>
+          {phase === "entry" && (onLeaveSquad || onDissolveSquad) ? (
+            <View style={styles.mySquadLeaveRow}>
+              {isOwner && onDissolveSquad ? (
+                <Pressable
+                  onPress={onDissolveSquad}
+                  style={({ pressed }) => [
+                    styles.mySquadDissolveBtn,
+                    pressed && { opacity: 0.88 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="解散する"
+                >
+                  <Text style={styles.mySquadDissolveBtnText}>解散する</Text>
+                </Pressable>
+              ) : null}
+              {!isOwner && onLeaveSquad ? (
+                <Pressable
+                  onPress={onLeaveSquad}
+                  style={({ pressed }) => [
+                    styles.mySquadLeaveBtn,
+                    pressed && { opacity: 0.88 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="脱退する"
+                >
+                  <Text style={styles.mySquadLeaveBtnText}>脱退する</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       </View>
     </View>
@@ -1228,11 +1407,113 @@ function JoinByInviteCodeModalNative({
   );
 }
 
+function squadRankingDetailSpineBorder(rank: number): string {
+  if (cyberRankPalette(rank).firstPlaceFrame) return RANK_FIRST_EDGE_DIM_BORDER;
+  return cyberRankQuietFrameColor(rank) ?? "rgba(148,163,184,0.35)";
+}
+
+function SquadRankingDetailSpineNative({
+  rank,
+  flush = false,
+}: {
+  rank: number;
+  flush?: boolean;
+}) {
+  const spine = SQUAD_RANKING_DETAIL_SPINE;
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.detailSpine,
+        flush ? styles.detailSpineFlush : null,
+        {
+          top: flush ? 0 : spine.top,
+          width: spine.width,
+          height: flush ? undefined : spine.height,
+          borderColor: squadRankingDetailSpineBorder(rank),
+        },
+      ]}
+    />
+  );
+}
+
+function SquadRankingDetailModalNative({
+  visible,
+  squad,
+  onClose,
+}: {
+  visible: boolean;
+  squad: Squad | null;
+  onClose: () => void;
+}) {
+  if (!squad) return null;
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.createModalBackdrop} onPress={onClose}>
+        <Pressable
+          style={styles.applyConfirmCard}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <ScrollView
+            bounces={false}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.applyConfirmInner}>
+            <View style={styles.applyConfirmHeader}>
+              <Text style={styles.applyConfirmName}>Squad detail</Text>
+              <Pressable
+                onPress={onClose}
+                style={styles.applyConfirmClose}
+                accessibilityLabel="閉じる"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={15}
+                  color="rgba(255,255,255,0.8)"
+                />
+              </Pressable>
+            </View>
+            <View style={styles.detailSquadHead}>
+              <View style={styles.detailSquadRank}>
+                <CyberRankNumberNative rank={squad.rank} compact />
+              </View>
+              <View style={styles.detailSquadMeta}>
+                <Text style={styles.detailSquadName} numberOfLines={1}>
+                  {squad.name}
+                </Text>
+                <Text style={styles.detailSquadCount}>
+                  {squadMemberCountLabel(squad)}
+                </Text>
+              </View>
+              <SquadPtsWithDayDeltaNative
+                value={squad.avgPoints}
+                delta={squad.avgPointsDayDelta}
+                size="md"
+                color={scoreColorForRank(squad.rank)}
+              />
+            </View>
+            <View style={styles.detailMemberList}>
+              {squad.members.map((member) => (
+                <MemberRowNative key={member.uid} member={member} entryFrame />
+              ))}
+            </View>
+          </View>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+/** Web `ApplicantProfileSheet` 相当 */
 function ApplicantProfileModalNative({
   visible,
   profile,
   metaLabel,
   onClose,
+  onOpenPublicProfile,
   onApprove,
   onReject,
 }: {
@@ -1240,112 +1521,202 @@ function ApplicantProfileModalNative({
   profile: SquadApplicantProfile | null;
   metaLabel?: string;
   onClose: () => void;
+  onOpenPublicProfile?: () => void;
   onApprove?: () => void;
   onReject?: () => void;
 }) {
   if (!profile) return null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalEyebrow}>Applicant profile</Text>
-            <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="閉じる">
-              <MaterialCommunityIcons name="close" size={18} color="rgba(255,255,255,0.7)" />
+      <Pressable style={styles.applicantModalBackdrop} onPress={onClose}>
+        <Pressable
+          style={styles.applyConfirmCard}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.applyConfirmInner}>
+            <Pressable
+              onPress={onClose}
+              style={styles.applicantSheetCloseAbs}
+              accessibilityLabel="閉じる"
+            >
+              <MaterialCommunityIcons
+                name="close"
+                size={15}
+                color="rgba(255,255,255,0.8)"
+              />
             </Pressable>
-          </View>
 
-          <View style={styles.modalBody}>
-            <View style={styles.profileHeader}>
-              <ProfileAvatarNative profile={profile} size="lg" />
-              <View style={styles.profileMeta}>
-                <Text style={styles.profileName} numberOfLines={1}>
-                  {profile.displayName}
-                </Text>
-                <Text style={styles.profileHandle}>@{profile.handle}</Text>
-                {metaLabel ? <Text style={styles.profileMetaLabel}>{metaLabel}</Text> : null}
+            <View style={styles.applicantSheetCenter}>
+              <ProfileAvatarNative profile={profile} size="lg" square />
+              <View style={styles.applicantSheetNameWrap}>
+                <SquadUserNameLineNative
+                  name={profile.displayName}
+                  plan={profile.plan}
+                  style={styles.applicantSheetName}
+                  center
+                />
+              </View>
+              {metaLabel ? (
+                <Text style={styles.applicantSheetMeta}>{metaLabel}</Text>
+              ) : null}
+              {profile.bio ? (
+                <Text style={styles.applicantSheetBio}>{profile.bio}</Text>
+              ) : null}
+
+              <View style={styles.applicantSheetRanks}>
+                <OpenMemberPeriodRankHeaderNative />
+                <OpenMemberPeriodRanksNative profile={profile} />
+              </View>
+
+              <View style={styles.applicantSheetStatsRow}>
+                <View style={styles.applicantSheetStatCell}>
+                  <Text style={styles.applicantSheetStatKey}>
+                    {SQUAD_APPLICANT_SCORE_LABEL}
+                  </Text>
+                  <View style={styles.applicantSheetStatValue}>
+                    <SquadPointsTextNative value={profile.points} size="md" />
+                  </View>
+                </View>
+                <View style={styles.applicantSheetStatCell}>
+                  <Text style={styles.applicantSheetStatKey}>
+                    {SQUAD_APPLICANT_WINRATE_LABEL}
+                  </Text>
+                  <View style={styles.applicantSheetStatValue}>
+                    <CyberNumberNative
+                      value={profile.winRate.toFixed(1)}
+                      size="md"
+                      format={false}
+                      suffix="%"
+                    />
+                  </View>
+                </View>
               </View>
             </View>
 
-            {profile.bio ? (
-              <Text style={styles.profileBio}>{profile.bio}</Text>
+            {onOpenPublicProfile ? (
+              <Pressable
+                onPress={onOpenPublicProfile}
+                style={({ pressed }) => [
+                  styles.applicantProfileBtn,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.applicantProfileBtnText}>
+                  {SQUAD_APPLICANT_OPEN_PROFILE}
+                </Text>
+              </Pressable>
             ) : null}
 
-            <View style={styles.statGrid}>
-              {(
-                [
-                  {
-                    k: "POINTS",
-                    node: <SquadPointsTextNative value={profile.points} size="md" />,
-                  },
-                  {
-                    k: "WIN RATE",
-                    node: (
-                      <CyberNumberNative
-                        value={profile.winRate.toFixed(1)}
-                        size="md"
-                        format={false}
-                        suffix="%"
-                      />
-                    ),
-                  },
-                  {
-                    k: "STREAK",
-                    node: (
-                      <SquadPointsTextNative
-                        value={profile.activeWinStreak}
-                        size="md"
-                      />
-                    ),
-                  },
-                  {
-                    k: "POSTS",
-                    node: (
-                      <SquadPointsTextNative
-                        value={profile.totalPosts}
-                        size="md"
-                      />
-                    ),
-                  },
-                ] as const
-              ).map((stat) => (
-                <View key={stat.k} style={styles.statCard}>
-                  <Text style={styles.statKey}>{stat.k}</Text>
-                  <View style={styles.statSegWrap}>{stat.node}</View>
-                </View>
-              ))}
-            </View>
+            {onApprove || onReject ? (
+              <View style={styles.applicantSheetActions}>
+                {onReject ? (
+                  <Pressable
+                    onPress={onReject}
+                    style={({ pressed }) => [
+                      styles.rejectBtn,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="close" size={14} color="#fecdd3" />
+                    <Text style={styles.rejectBtnText}>拒否</Text>
+                  </Pressable>
+                ) : null}
+                {onApprove ? (
+                  <Pressable
+                    onPress={onApprove}
+                    style={({ pressed }) => [
+                      styles.approveBtn,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={14}
+                      color={SQUAD_GOLD_NATIVE.accOn}
+                    />
+                    <Text style={styles.approveBtnText}>承認</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
           </View>
-
-          {onApprove || onReject ? (
-            <View style={styles.modalActions}>
-              {onReject ? (
-                <Pressable
-                  onPress={onReject}
-                  style={({ pressed }) => [styles.rejectBtn, pressed && styles.pressed]}
-                >
-                  <MaterialCommunityIcons name="close" size={14} color="#fecdd3" />
-                  <Text style={styles.rejectBtnText}>拒否</Text>
-                </Pressable>
-              ) : null}
-              {onApprove ? (
-                <Pressable
-                  onPress={onApprove}
-                  style={({ pressed }) => [styles.approveBtn, pressed && styles.pressed]}
-                >
-                  <MaterialCommunityIcons
-                    name="check"
-                    size={14}
-                    color={SQUAD_GOLD_NATIVE.accOn}
-                  />
-                  <Text style={styles.approveBtnText}>承認</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+function OpenMemberPeriodRankHeaderNative() {
+  return (
+    <View style={styles.openPeriodRankHeader} accessibilityElementsHidden>
+      <Text style={styles.openPeriodRankGroupLabel}>
+        {SQUAD_OPEN_PERIOD_RANK_GROUP_LABEL}
+      </Text>
+      <View style={styles.openPeriodRanks}>
+        {SQUAD_OPEN_PERIOD_RANKS.map((item) => (
+          <Text key={item.key} style={styles.openPeriodRankHeaderLabel}>
+            {item.label}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function OpenMemberPeriodRanksNative({
+  profile,
+}: {
+  profile: SquadApplicantProfile;
+}) {
+  return (
+    <View style={styles.openPeriodRanks}>
+      {SQUAD_OPEN_PERIOD_RANKS.map((item) => {
+        const rank = profile[item.key];
+        const missing = rank == null || rank <= 0;
+        return (
+          <View key={item.key} style={styles.openPeriodRankCol}>
+            <CyberRankNumberNative
+              rank={missing ? 0 : rank}
+              compact
+              uniform
+              muted={missing}
+              displayValue={missing ? "—" : undefined}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function OpenSquadMemberListNative({
+  members,
+  onOpenMemberProfile,
+}: {
+  members: SquadApplicantProfile[];
+  onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
+}) {
+  return (
+    <View style={styles.openMemberList}>
+      <View style={styles.openMemberHeaderRow}>
+        <View style={styles.openMemberHeaderAvatarSpacer} />
+        <View style={styles.openMeta} />
+        <OpenMemberPeriodRankHeaderNative />
+      </View>
+      {members.map((m) => (
+        <Pressable
+          key={m.uid}
+          onPress={() => onOpenMemberProfile(m)}
+          style={({ pressed }) => [styles.openMemberRow, pressed && styles.pressed]}
+        >
+          <ProfileAvatarNative profile={m} square />
+          <View style={styles.openMeta}>
+            <SquadUserNameLineNative name={m.displayName} plan={m.plan} />
+          </View>
+          <OpenMemberPeriodRanksNative profile={m} />
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
@@ -1364,30 +1735,11 @@ function OpenSquadRowNative({
 }) {
   const [expanded, setExpanded] = useState(false);
   const canApply = !applied && !applyDisabled;
-  const palette = cyberRankPalette(squad.rank);
 
   return (
-    <SquadListItemShellNative>
+    <View style={styles.openSquadShell}>
       <View style={styles.openRow}>
-        {/* 列: 順位 | 名前 | 人数 | pts | 操作 */}
-        <Text
-          style={[
-            styles.openRank,
-            {
-              color: scoreColorForRank(squad.rank),
-              ...(squad.rank <= 3
-                ? {
-                    textShadowColor: palette.accentGlow,
-                    textShadowOffset: { width: 0, height: 0 },
-                    textShadowRadius: 4,
-                  }
-                : {}),
-            },
-          ]}
-        >
-          {String(squad.rank).padStart(2, "0")}
-        </Text>
-
+        {/* 列: 名前 | 人数 | 操作。募集中はバトル未開始のためスコアは出さない */}
         <Text style={styles.openName} numberOfLines={1}>
           {squad.name}
         </Text>
@@ -1395,16 +1747,6 @@ function OpenSquadRowNative({
         <Text style={styles.openMetaChip}>
           {squad.memberCount}/{SQUAD_BATTLE_MAX_MEMBERS}
         </Text>
-
-        <View style={styles.openPts}>
-          <SquadPointsTextNative
-            value={squad.avgPoints}
-            size="sm"
-            tone="default"
-            suffix="pts"
-            color={scoreColorForRank(squad.rank)}
-          />
-        </View>
 
         <View style={styles.openActions}>
           <Pressable
@@ -1420,12 +1762,15 @@ function OpenSquadRowNative({
             <MaterialCommunityIcons
               name={expanded ? "chevron-up" : "chevron-down"}
               size={18}
-              color="#FFF7E0"
+              color="rgba(255,255,255,0.8)"
             />
           </Pressable>
           <Pressable
             disabled={!canApply && !applied}
-            onPress={onApply}
+            onPress={() => {
+              if (!canApply) return;
+              onApply();
+            }}
             style={[
               styles.applyBtn,
               applied && styles.applyBtnPending,
@@ -1446,27 +1791,445 @@ function OpenSquadRowNative({
       </View>
       {expanded ? (
         <View style={styles.openMembers}>
-          {squad.members.map((m) => (
-            <Pressable
-              key={m.uid}
-              onPress={() => onOpenMemberProfile(m)}
-              style={({ pressed }) => [styles.openMemberRow, pressed && styles.pressed]}
-            >
-              <ProfileAvatarNative profile={m} />
-              <View style={styles.openMeta}>
-                <Text style={styles.memberName} numberOfLines={1}>
-                  {m.displayName}
-                </Text>
-                <Text style={styles.memberHandle} numberOfLines={1}>
-                  @{m.handle}
-                </Text>
-              </View>
-              <SquadPointsTextNative value={m.points} size="sm" />
-            </Pressable>
-          ))}
+          <OpenSquadMemberListNative
+            members={squad.members}
+            onOpenMemberProfile={onOpenMemberProfile}
+          />
         </View>
       ) : null}
-    </SquadListItemShellNative>
+    </View>
+  );
+}
+
+/** Web `ApplyJoinConfirmSheet` 相当 */
+function ApplyJoinConfirmModalNative({
+  visible,
+  squad,
+  onClose,
+  onConfirm,
+  onOpenMemberProfile,
+}: {
+  visible: boolean;
+  squad: OpenSquadListing | null;
+  onClose: () => void;
+  onConfirm: () => void;
+  onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
+}) {
+  if (!squad) return null;
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.createModalBackdrop} onPress={onClose}>
+        <Pressable
+          style={styles.applyConfirmCard}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.applyConfirmInner}>
+            <View style={styles.applyConfirmHeader}>
+              <View style={styles.openMeta}>
+                <Text style={styles.applyConfirmName} numberOfLines={1}>
+                  {squad.name}
+                </Text>
+                <Text style={styles.applyConfirmCopy}>
+                  このグループへの参加を申請します
+                </Text>
+              </View>
+              <Pressable
+                onPress={onClose}
+                style={styles.applyConfirmClose}
+                accessibilityLabel="閉じる"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={15}
+                  color="rgba(255,255,255,0.8)"
+                />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={styles.applyConfirmList}
+              contentContainerStyle={styles.applyConfirmListContent}
+              bounces={false}
+            >
+              <OpenSquadMemberListNative
+                members={squad.members}
+                onOpenMemberProfile={onOpenMemberProfile}
+              />
+            </ScrollView>
+
+            <Pressable
+              onPress={onConfirm}
+              style={({ pressed }) => [
+                styles.applyConfirmSubmit,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.applyConfirmSubmitText}>申請する</Text>
+            </Pressable>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.createModalCancelLink,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.createModalCancelLinkText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+/** Web `IncomingJoinConfirmSheet` 相当 */
+function IncomingJoinConfirmModalNative({
+  visible,
+  invite,
+  openSquads,
+  onClose,
+  onConfirm,
+  onDecline,
+  onOpenMemberProfile,
+}: {
+  visible: boolean;
+  invite: SquadIncomingInviteMock | null;
+  openSquads: OpenSquadListing[];
+  onClose: () => void;
+  onConfirm: () => void;
+  onDecline: () => void;
+  onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
+}) {
+  if (!invite) return null;
+  const members = squadIncomingInviteMemberProfiles(invite, openSquads);
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.createModalBackdrop} onPress={onClose}>
+        <Pressable
+          style={styles.applyConfirmCard}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.applyConfirmInner}>
+            <View style={styles.applyConfirmHeader}>
+              <View style={styles.openMeta}>
+                <Text style={styles.applyConfirmName} numberOfLines={1}>
+                  {invite.squadName}
+                </Text>
+                <Text style={styles.applyConfirmCopy}>
+                  {SQUAD_INVITE_JOIN_PROMPT}
+                </Text>
+                <Text style={styles.openSub}>
+                  {invite.fromDisplayName} からの招待
+                </Text>
+              </View>
+              <Pressable
+                onPress={onClose}
+                style={styles.applyConfirmClose}
+                accessibilityLabel="閉じる"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={15}
+                  color="rgba(255,255,255,0.8)"
+                />
+              </Pressable>
+            </View>
+
+            {members.length > 0 ? (
+              <ScrollView
+                style={styles.applyConfirmList}
+                contentContainerStyle={styles.applyConfirmListContent}
+                bounces={false}
+              >
+                <OpenSquadMemberListNative
+                  members={members}
+                  onOpenMemberProfile={onOpenMemberProfile}
+                />
+              </ScrollView>
+            ) : null}
+
+            <Pressable
+              onPress={onConfirm}
+              style={({ pressed }) => [
+                styles.applyConfirmSubmit,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.applyConfirmSubmitText}>参加する</Text>
+            </Pressable>
+            <Pressable
+              onPress={onDecline}
+              style={({ pressed }) => [
+                styles.incomingInviteHoldBtn,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.incomingInviteHoldBtnText}>今回はパス</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+type SquadInviteSendTarget = {
+  source: PastSquadHistoryMock | GroupBattlePastSquadItem;
+  member: SquadInviteMemberSummary;
+};
+
+function InviteSendConfirmModalNative({
+  visible,
+  target,
+  squadName,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  target: SquadInviteSendTarget | null;
+  squadName: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!target) return null;
+  const { member } = target;
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.createModalBackdrop} onPress={onClose}>
+        <Pressable
+          style={styles.applyConfirmCard}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.applyConfirmInner}>
+            <View style={styles.applyConfirmHeader}>
+              <Text style={styles.applyConfirmName}>Invite</Text>
+              <Pressable
+                onPress={onClose}
+                style={styles.applyConfirmClose}
+                accessibilityLabel="閉じる"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={15}
+                  color="rgba(255,255,255,0.8)"
+                />
+              </Pressable>
+            </View>
+            <View style={styles.inviteSendHero}>
+              <ProfileAvatarNative
+                profile={{
+                  displayName: member.displayName,
+                  handle: member.handle ?? "",
+                  photoURL: member.photoURL,
+                }}
+                size="lg"
+                square
+              />
+              <View style={styles.inviteSendNameWrap}>
+                <SquadUserNameLineNative
+                  name={member.displayName}
+                  plan={member.plan}
+                  style={styles.inviteSendName}
+                  center
+                />
+              </View>
+              {member.handle ? (
+                <Text style={styles.inviteSendHandle}>@{member.handle}</Text>
+              ) : null}
+              <Text style={styles.applyConfirmCopy}>
+                {squadInviteSendPrompt(member.displayName, squadName)}
+              </Text>
+            </View>
+            <Pressable
+              onPress={onConfirm}
+              style={({ pressed }) => [
+                styles.applyConfirmSubmit,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.applyConfirmSubmitText}>誘う</Text>
+            </Pressable>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.createModalCancelLink,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.createModalCancelLinkText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+/** Web `ApproveApplicantConfirmSheet` 相当 */
+function ApproveApplicantConfirmModalNative({
+  visible,
+  request,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  request: SquadJoinRequest | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!request) return null;
+  const { applicant } = request;
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.createModalBackdrop} onPress={onClose}>
+        <Pressable
+          style={styles.applyConfirmCard}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.applyConfirmInner}>
+            <View style={styles.applyConfirmHeader}>
+              <Text style={styles.applyConfirmName}>Approve</Text>
+              <Pressable
+                onPress={onClose}
+                style={styles.applyConfirmClose}
+                accessibilityLabel="閉じる"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={15}
+                  color="rgba(255,255,255,0.8)"
+                />
+              </Pressable>
+            </View>
+            <View style={styles.inviteSendHero}>
+              <ProfileAvatarNative profile={applicant} size="lg" square />
+              <View style={styles.inviteSendNameWrap}>
+                <SquadUserNameLineNative
+                  name={applicant.displayName}
+                  plan={applicant.plan}
+                  style={styles.inviteSendName}
+                  center
+                />
+              </View>
+              <Text style={styles.applyConfirmCopy}>
+                {squadApplicantApprovePrompt(applicant.displayName)}
+              </Text>
+            </View>
+            <Pressable
+              onPress={onConfirm}
+              style={({ pressed }) => [
+                styles.applyConfirmSubmit,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.applyConfirmSubmitText}>承認する</Text>
+            </Pressable>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.createModalCancelLink,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.createModalCancelLinkText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function IncomingInviteModalNative({
+  visible,
+  invite,
+  onClose,
+  onAccept,
+  onHold,
+}: {
+  visible: boolean;
+  invite: SquadIncomingInviteMock | null;
+  onClose: () => void;
+  onAccept: () => void;
+  onHold: () => void;
+}) {
+  if (!invite) return null;
+  const members = invite.members ?? [];
+  const deadline = invite.deadlineLabel ?? SQUAD_BATTLE_MOCK_DEADLINE_LABEL;
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onHold}>
+      <Pressable style={styles.createModalBackdrop} onPress={onHold}>
+        <Pressable
+          style={styles.applyConfirmCard}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.applyConfirmInner}>
+            <View style={styles.applyConfirmHeader}>
+              <View style={styles.openMeta}>
+                <Text style={styles.incomingInviteModalTitle}>
+                  {squadInviteIncomingTitle(invite.fromDisplayName)}
+                </Text>
+                <Text style={styles.applyConfirmCopy}>
+                  {SQUAD_INVITE_DEADLINE_PREFIX} {deadline}
+                </Text>
+              </View>
+              <Pressable
+                onPress={onClose}
+                style={styles.applyConfirmClose}
+                accessibilityLabel="閉じる"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={15}
+                  color="rgba(255,255,255,0.8)"
+                />
+              </Pressable>
+            </View>
+            <Text style={styles.incomingInviteSquadName} numberOfLines={1}>
+              {invite.squadName}
+            </Text>
+            {members.length > 0 ? (
+              <View style={styles.incomingInviteMemberList}>
+                {members.map((m) => (
+                  <View key={m.uid} style={styles.incomingInviteMemberRow}>
+                    <ProfileAvatarNative
+                      profile={{
+                        displayName: m.displayName,
+                        handle: m.handle ?? "",
+                        photoURL: m.photoURL,
+                      }}
+                      square
+                    />
+                    <SquadUserNameLineNative name={m.displayName} plan={m.plan} />
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <Text style={styles.incomingInviteHoldHint}>
+              {SQUAD_INVITE_HOLD_HINT}
+            </Text>
+            <Pressable
+              onPress={onAccept}
+              style={({ pressed }) => [
+                styles.applyConfirmSubmit,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.applyConfirmSubmitText}>参加する</Text>
+            </Pressable>
+            <Pressable
+              onPress={onHold}
+              style={({ pressed }) => [
+                styles.incomingInviteHoldBtn,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.incomingInviteHoldBtnText}>保留する</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -1555,12 +2318,16 @@ function PastSquadsPanelNative({
                 <View style={styles.pastInviteList}>
                   {others.map((m) => (
                     <View key={m.uid} style={styles.pastInviteRow}>
-                      <Text style={styles.pastInviteName} numberOfLines={1}>
-                        {m.displayName}
-                        {m.handle ? (
-                          <Text style={styles.pastInviteHandle}> @{m.handle}</Text>
-                        ) : null}
-                      </Text>
+                    <View style={styles.pastInviteNameBlock}>
+                      <SquadUserNameLineNative
+                        name={m.displayName}
+                        plan={m.plan}
+                        style={styles.pastInviteName}
+                      />
+                      {m.handle ? (
+                        <Text style={styles.pastInviteHandle}> @{m.handle}</Text>
+                      ) : null}
+                    </View>
                       <Pressable
                         disabled={busyId === `${key}:${m.uid}`}
                         onPress={() => onInvite(item, m.uid)}
@@ -1596,23 +2363,29 @@ function IncomingInvitesPanelNative({
   invites,
   onAccept,
   onDecline,
+  showEmpty = false,
 }: {
   invites: SquadIncomingInviteMock[];
   onAccept: (invite: SquadIncomingInviteMock) => void;
   onDecline: (invite: SquadIncomingInviteMock) => void;
+  showEmpty?: boolean;
 }) {
-  if (invites.length === 0) return null;
+  if (invites.length === 0 && !showEmpty) return null;
 
   return (
     <View style={styles.sectionBlock}>
       <SquadSectionHeaderNative
         kicker="Invites"
-        title="再招集の招待"
+        title={SQUAD_INVITE_LIST_TITLE}
         accent="amber"
         trailing={
           <Text style={styles.boardCount}>{invites.length} pending</Text>
         }
       />
+      <Text style={styles.incomingInviteHoldHint}>{SQUAD_INVITE_LIST_HINT}</Text>
+      {invites.length === 0 ? (
+        <Text style={styles.pastSquadHint}>{SQUAD_INVITE_LIST_EMPTY}</Text>
+      ) : null}
       <View style={styles.listGap}>
         {invites.map((inv) => (
           <View key={inv.id} style={styles.incomingInviteCard}>
@@ -1639,8 +2412,8 @@ function IncomingInvitesPanelNative({
                   pressed && styles.pressed,
                 ]}
               >
-                <MaterialCommunityIcons name="check" size={13} color="#FFF7E0" />
-                <Text style={styles.approveBtnText}>参加する</Text>
+                <MaterialCommunityIcons name="check" size={13} color="#FFFFFF" />
+                <Text style={styles.incomingInviteAcceptText}>参加する</Text>
               </Pressable>
               <Pressable
                 onPress={() => onDecline(inv)}
@@ -1696,6 +2469,8 @@ function NoneStateNative({
 }) {
   const atLimit = pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS;
   const [page, setPage] = useState(0);
+  const [applyConfirmSquad, setApplyConfirmSquad] =
+    useState<OpenSquadListing | null>(null);
   const pageCount = Math.max(
     1,
     Math.ceil(openSquads.length / SQUAD_BATTLE_OPEN_PAGE_SIZE)
@@ -1742,6 +2517,7 @@ function NoneStateNative({
         invites={incomingInvites}
         onAccept={onAcceptInvite}
         onDecline={onDeclineInvite}
+        showEmpty
       />
 
       <PastSquadsPanelNative
@@ -1844,7 +2620,7 @@ function NoneStateNative({
               squad={squad}
               applied={appliedSquadIds.has(squad.id)}
               applyDisabled={atLimit}
-              onApply={() => onApply(squad.id, squad.name)}
+              onApply={() => setApplyConfirmSquad(squad)}
               onOpenMemberProfile={onOpenMemberProfile}
             />
           ))}
@@ -1855,6 +2631,18 @@ function NoneStateNative({
           onChange={setPage}
         />
       </View>
+
+      <ApplyJoinConfirmModalNative
+        visible={applyConfirmSquad != null}
+        squad={applyConfirmSquad}
+        onClose={() => setApplyConfirmSquad(null)}
+        onConfirm={() => {
+          if (!applyConfirmSquad) return;
+          onApply(applyConfirmSquad.id, applyConfirmSquad.name);
+          setApplyConfirmSquad(null);
+        }}
+        onOpenMemberProfile={onOpenMemberProfile}
+      />
     </View>
   );
 }
@@ -1881,45 +2669,49 @@ function IncomingRequestsNative({
         }
       />
       <View style={styles.listGap}>
-        {requests.map((req) => (
-          <SquadListItemShellNative key={req.id} style={styles.requestCardShell}>
-            <View style={styles.requestCard}>
+        {requests.map((req) => {
+          const weekRank = req.applicant.thisWeekRank;
+          const weekMissing = weekRank == null || weekRank <= 0;
+          return (
+          <View key={req.id} style={styles.incomingRequestCard}>
             <Pressable
               onPress={() => onOpenProfile(req)}
               style={({ pressed }) => [styles.requestMain, pressed && styles.pressed]}
+              accessibilityLabel={`${req.applicant.displayName}のプロフィール`}
             >
-              <ProfileAvatarNative profile={req.applicant} />
+              <ProfileAvatarNative profile={req.applicant} square />
               <View style={styles.openMeta}>
                 <View style={styles.requestNameRow}>
-                  <Text style={styles.memberName} numberOfLines={1}>
-                    {req.applicant.displayName}
-                  </Text>
+                  <SquadUserNameLineNative
+                    name={req.applicant.displayName}
+                    plan={req.applicant.plan}
+                  />
                   <Text style={styles.requestTimeLabel} numberOfLines={1}>
                     {req.createdAtLabel}
                   </Text>
                 </View>
                 <View style={styles.requestStatsRow}>
-                  <SquadPointsTextNative
-                    value={req.applicant.points}
-                    size="sm"
-                    color={JOIN_BATTLE_AMBER}
+                  <Text style={styles.requestThisWeekLabel}>今週</Text>
+                  <CyberRankNumberNative
+                    rank={weekMissing ? 0 : weekRank}
+                    compact
+                    uniform
+                    muted={weekMissing}
+                    displayValue={weekMissing ? "—" : undefined}
                   />
-                  <Text style={styles.requestStatsGoldUnit}>pts</Text>
                   <Text style={styles.requestStatsDot} aria-hidden>
                     ·
                   </Text>
-                  <Text style={styles.requestStatsWrLabel}>WR</Text>
+                  <Text style={styles.requestStatsWrLabel}>
+                    {SQUAD_APPLICANT_WR_LABEL}
+                  </Text>
                   <CyberNumberNative
                     value={req.applicant.winRate.toFixed(1)}
                     size="sm"
                     format={false}
-                    color={JOIN_BATTLE_AMBER}
+                    suffix="%"
                   />
-                  <Text style={styles.requestStatsGoldUnit}>%</Text>
                 </View>
-              </View>
-              <View style={styles.profileChip} accessibilityLabel="プロフィール">
-                <MaterialCommunityIcons name="account-outline" size={16} color="#FFF7E0" />
               </View>
             </Pressable>
             <View style={styles.requestActions}>
@@ -1942,108 +2734,95 @@ function IncomingRequestsNative({
                 <Text style={styles.approveBtnText}>承認</Text>
               </Pressable>
             </View>
-            </View>
-          </SquadListItemShellNative>
-        ))}
+          </View>
+          );
+        })}
       </View>
     </View>
   );
 }
 
-/** 上部固定 YOUR SQUAD — 左:順位 / 右:名前・メンバー・バー */
+/** 上部固定 MY SQUAD — 左:順位 / 右:名前・メンバー */
 function PinnedYourSquadCardNative({
   squad,
-  maxAvg,
+  onOpenDetail,
 }: {
   squad: Squad;
-  maxAvg: number;
+  onOpenDetail?: () => void;
 }) {
-  const segAccent = {
-    border: JOIN_BATTLE_AMBER,
-    glow: "rgba(251,191,36,0.65)",
-    bg: "rgba(251,191,36,0.85)",
-  };
+  const reduceMotion = useReducedMotion() ?? false;
 
   return (
     <View style={styles.pinnedOuter}>
       <View style={styles.pinnedTab}>
         <View style={styles.pinnedTabDot} />
-        <Text style={styles.pinnedTabText}>Your squad</Text>
+        <Text style={styles.pinnedTabText}>My squad</Text>
       </View>
 
-      <View style={styles.pinnedCard}>
-        <View style={styles.pinnedBody}>
-          <View style={styles.pinnedRankPane}>
-            <Text style={styles.pinnedRankLabel}>Rank</Text>
-            <Text
-              style={[
-                styles.pinnedRankValue,
-                {
-                  textShadowColor: "rgba(251,191,36,0.55)",
-                  textShadowOffset: { width: 0, height: 0 },
-                  textShadowRadius: 5,
-                },
-              ]}
-            >
-              {String(squad.rank).padStart(2, "0")}
-            </Text>
-            <RankTrendBadgeNative squad={squad} />
-          </View>
-
-          <View style={styles.pinnedMetaPane}>
-            <View style={styles.pinnedTopRow}>
-              <View style={styles.pinnedNameBlock}>
-                <Text style={styles.pinnedSquadName} numberOfLines={1}>
-                  {squad.name}
-                </Text>
-                <View style={styles.avatarStackWithCount}>
-                  <View style={styles.avatarStack}>
-                    {squad.members.map((m) => (
-                      <View key={m.uid} style={styles.avatarStackItem}>
-                        <MemberAvatarNative member={m} size="sm" />
-                      </View>
-                    ))}
-                  </View>
-                  <Text style={styles.memberCountLabel}>
-                    {squadMemberCountLabel(squad)}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${squad.name} detail`}
+        onPress={onOpenDetail}
+        style={({ pressed }) => [
+          styles.lbRowWrap,
+          pressed && (reduceMotion ? styles.lbRowPressedReduce : styles.lbRowPressed),
+        ]}
+      >
+        <View style={styles.pinnedCard}>
+          <View style={styles.lbRowContent}>
+            <View style={styles.lbRankCol}>
+              <CyberRankNumberNative rank={squad.rank} compact />
+              <RankTrendBadgeNative squad={squad} />
+            </View>
+            <View style={styles.lbBody}>
+              <View style={styles.lbTop}>
+                <View style={styles.lbMeta}>
+                  <Text style={styles.pinnedSquadName} numberOfLines={1}>
+                    {squad.name}
                   </Text>
+                  <View style={styles.avatarStackWithCount}>
+                    <View style={styles.avatarStack}>
+                      {squad.members.map((m) => (
+                        <View key={m.uid} style={styles.avatarStackItem}>
+                          <MemberAvatarNative member={m} size="sm" />
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={styles.memberCountLabelMuted}>
+                      {squadMemberCountLabel(squad)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.lbAvg}>
+                  <SquadPtsWithDayDeltaNative
+                    value={squad.avgPoints}
+                    delta={squad.avgPointsDayDelta}
+                    size="md"
+                    tone="accent"
+                    color={scoreColorForRank(squad.rank)}
+                  />
                 </View>
               </View>
-              <View style={styles.pinnedPtsCol}>
-                <SquadPtsWithDayDeltaNative
-                  value={squad.avgPoints}
-                  delta={squad.avgPointsDayDelta}
-                  size="sm"
-                  tone="accent"
-                  color={JOIN_BATTLE_AMBER}
-                />
-              </View>
-            </View>
-            <View style={styles.pinnedBar}>
-              <CyberSlantedSegBarNative
-                pct={pointsBarPct(squad.avgPoints, maxAvg)}
-                segments={10}
-                compact
-                forceStatic
-                accent={segAccent}
-              />
             </View>
           </View>
+          <SquadRankingDetailSpineNative rank={squad.rank} flush />
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }
 
-/** Web `FirstPlaceStatsFooter` 相当 — ACE→LEAD→DEFENDING を順にフェードイン */
+/** Web `FirstPlaceStatsFooter` 相当 — ACE→LEAD→EST UNIT を順にフェードイン */
 function FirstPlaceStatsFooterNative({
   squad,
   runnerUpAvg,
+  period,
   animate = true,
   replayKey,
 }: {
   squad: Squad;
   runnerUpAvg: number;
+  period: "weekly" | "monthly";
   animate?: boolean;
   replayKey?: string | number;
 }) {
@@ -2058,7 +2837,7 @@ function FirstPlaceStatsFooterNative({
       )
     : null;
   const lead = Math.max(0, Math.round(squad.avgPoints - runnerUpAvg));
-  const weeksAtTop = squad.weeksAtTop ?? 1;
+  const estUnits = estimatedGroupBattleUnitsPerMember(period, squad.rank);
   const gold = scoreColorForRank(1);
 
   if (!ace) return null;
@@ -2106,19 +2885,18 @@ function FirstPlaceStatsFooterNative({
       ),
     },
     {
-      key: "def",
+      key: "unit",
       node: (
         <>
           <View style={styles.lbFirstLabelRow}>
-            <Text style={styles.lbFirstStatLabel}>DEFENDING</Text>
+            <Text style={styles.lbFirstStatLabel}>EST UNIT</Text>
           </View>
           <View style={styles.lbFirstValueRow}>
-            <CyberNumberNative
-              value={weeksAtTop}
-              size="md"
-              suffix="wk"
-              color={gold}
-            />
+            {estUnits != null ? (
+              <CyberNumberNative value={estUnits} size="md" color={gold} />
+            ) : (
+              <Text style={styles.lbFirstStatMuted}>—</Text>
+            )}
           </View>
         </>
       ),
@@ -2168,15 +2946,15 @@ function LeaderboardGapFooterNative({
 
 function LeaderboardRowNative({
   squad,
-  maxAvg,
   runnerUpAvg = 0,
   board = [],
   index = 0,
   animate = true,
   replayKey,
+  period,
+  onOpenDetail,
 }: {
   squad: Squad;
-  maxAvg: number;
   /** 2位の平均点（1位カードの LEAD 表示用） */
   runnerUpAvg?: number;
   /** 前後ギャップ計算用 */
@@ -2184,33 +2962,40 @@ function LeaderboardRowNative({
   index?: number;
   animate?: boolean;
   replayKey?: string | number;
+  period: "weekly" | "monthly";
+  onOpenDetail?: () => void;
 }) {
   const first = squad.rank === 1;
-  const segAccent = segAccentForRank(squad.rank);
+  const firstFrame = cyberRankPalette(squad.rank).firstPlaceFrame;
+  const quietFrame = cyberRankQuietFrameColor(squad.rank);
   const reduceMotion = useReducedMotion() ?? false;
   const motionOff = reduceMotion || !animate;
   const { gapToAbove } = squadScoreGaps(squad, board);
 
   const row = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${squad.name} detail`}
+      onPress={onOpenDetail}
+      style={({ pressed }) => [
+        styles.lbRowWrap,
+        pressed && (reduceMotion ? styles.lbRowPressedReduce : styles.lbRowPressed),
+      ]}
+    >
     <View
       style={[
         styles.lbRow,
         first && styles.lbRowFirst,
         squad.rank === 2 && styles.lbRowSecond,
         squad.rank === 3 && styles.lbRowThird,
+        first && { borderColor: RANK_FIRST_EDGE_DIM_BORDER },
+        quietFrame ? { borderColor: quietFrame } : null,
       ]}
     >
+      {firstFrame ? <RankFirstBorderEdgeScanNative /> : null}
       <View style={styles.lbRowContent}>
         <View style={styles.lbRankCol}>
-          <Text
-            style={[
-              styles.lbRank,
-              { color: scoreColorForRank(squad.rank) },
-              softRankTextGlow(squad.rank),
-            ]}
-          >
-            {String(squad.rank).padStart(2, "0")}
-          </Text>
+          <CyberRankNumberNative rank={squad.rank} compact />
           <RankTrendBadgeNative squad={squad} />
         </View>
         <View style={styles.lbBody}>
@@ -2270,17 +3055,6 @@ function LeaderboardRowNative({
               />
             </View>
           </View>
-          <View style={styles.lbBar}>
-            <CyberSlantedSegBarNative
-              pct={pointsBarPct(squad.avgPoints, maxAvg)}
-              segments={14}
-              compact
-              forceStatic={motionOff || first}
-              enterDelay={motionOff || first ? 0 : (index * LB_ROW_STAGGER_MS) / 1000}
-              replayKey={replayKey}
-              accent={segAccent}
-            />
-          </View>
         </View>
       </View>
 
@@ -2288,6 +3062,7 @@ function LeaderboardRowNative({
         <FirstPlaceStatsFooterNative
           squad={squad}
           runnerUpAvg={runnerUpAvg}
+          period={period}
           animate={!motionOff}
           replayKey={replayKey}
         />
@@ -2295,6 +3070,8 @@ function LeaderboardRowNative({
         <LeaderboardGapFooterNative gapToAbove={gapToAbove} />
       )}
     </View>
+    <SquadRankingDetailSpineNative rank={squad.rank} />
+    </Pressable>
   );
 
   if (motionOff) return row;
@@ -2322,41 +3099,68 @@ function LeaderboardRowNative({
 
 export default function SquadBattleScreenNative() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const isPreviewMode = route.name === "SquadBattlePreview";
+  const { bottomContentReserveY } = useBottomTabBarInsets();
   const [previewState, setPreviewState] =
-    useState<SquadBattlePreviewState>("full");
+    useState<SquadBattlePreviewState>(isPreviewMode ? "full" : "none");
   const [previewToolsOpen, setPreviewToolsOpen] = useState(false);
-  const [mainTab, setMainTab] = useState<"join" | "rank">("rank");
+  /** 未開催・募集中は JOIN。バトル中は RANK（API 反映後に一度だけ切替） */
+  const [mainTab, setMainTab] = useState<"join" | "rank">(
+    isPreviewMode ? "rank" : "join"
+  );
+  const battleTabDefaultedRef = useRef(false);
   const [toast, setToast] = useState<string | null>(null);
   const [extraAppliedIds, setExtraAppliedIds] = useState<string[]>([]);
   const [dismissedRequestIds, setDismissedRequestIds] = useState<string[]>([]);
   const [profileRequest, setProfileRequest] = useState<SquadJoinRequest | null>(null);
-  const [viewedProfile, setViewedProfile] = useState<{
-    profile: SquadApplicantProfile;
-    metaLabel?: string;
-  } | null>(null);
+  const [approveConfirmRequest, setApproveConfirmRequest] =
+    useState<SquadJoinRequest | null>(null);
   const [createSquadOpen, setCreateSquadOpen] = useState(false);
+  const [createSquadBusy, setCreateSquadBusy] = useState(false);
   const [joinByCodeOpen, setJoinByCodeOpen] = useState(false);
   const [joinByCodeBusy, setJoinByCodeBusy] = useState(false);
   const [createdSquadName, setCreatedSquadName] = useState<string | null>(null);
+  /** 招待参加直後の MY SQUAD（招待メンバーを載せる） */
+  const [joinedInviteSquad, setJoinedInviteSquad] = useState<Squad | null>(null);
   /** 初回イントロ — マウント後に AsyncStorage を確認して開く */
   const [introOpen, setIntroOpen] = useState(false);
+  const [launchOpen, setLaunchOpen] = useState(false);
   const [rankPeriod, setRankPeriod] = useState<"weekly" | "monthly">("weekly");
   /** 週間の週インデックス（プレビュー） */
   const [weekIndex, setWeekIndex] = useState<SquadBattleWeekIndex>(2);
-  /** 開催フェーズ（プレビュー切替） */
-  const [uiPhase, setUiPhase] = useState<SquadBattleUiPhase>("battle");
+  /** 開催フェーズ（本番は大会 phase、プレビューはツール切替） */
+  const [uiPhase, setUiPhase] = useState<SquadBattleUiPhase>(
+    isPreviewMode ? "battle" : "idle"
+  );
   const [boardStatus, setBoardStatus] = useState<"live" | "final">("live");
   /** スナップショット rows。null ならモック leaderboard */
   const [liveLeaderboard, setLiveLeaderboard] = useState<Squad[] | null>(null);
+  const [detailSquad, setDetailSquad] = useState<Squad | null>(null);
   /** 取り下げた申請 ID（プレビュー） */
   const [withdrawnRequestIds, setWithdrawnRequestIds] = useState<string[]>([]);
   const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
+  const [liveBattlePhase, setLiveBattlePhase] = useState<string | null>(null);
+  const [liveRecruitEndAtMs, setLiveRecruitEndAtMs] = useState<number | null>(
+    null
+  );
+  const launchAutoShownRef = useRef(false);
   const [livePastSquads, setLivePastSquads] = useState<
     GroupBattlePastSquadItem[] | null
   >(null);
   const [liveIncomingInvites, setLiveIncomingInvites] = useState<
     SquadIncomingInviteMock[] | null
   >(null);
+  const [liveOpenSquads, setLiveOpenSquads] = useState<OpenSquadListing[] | null>(
+    null
+  );
+  const [liveIncomingRequests, setLiveIncomingRequests] = useState<
+    SquadJoinRequest[] | null
+  >(null);
+  const [liveOutgoingRequests, setLiveOutgoingRequests] = useState<
+    SquadJoinRequest[] | null
+  >(null);
+  const [liveFormingSquad, setLiveFormingSquad] = useState<Squad | null>(null);
   const [liveSelfUid, setLiveSelfUid] = useState<string | null>(null);
   const [liveMySquadId, setLiveMySquadId] = useState<string | null>(null);
   const [liveIsOwner, setLiveIsOwner] = useState(false);
@@ -2364,7 +3168,23 @@ export default function SquadBattleScreenNative() {
   const [reformTarget, setReformTarget] = useState<
     PastSquadHistoryMock | GroupBattlePastSquadItem | null
   >(null);
+  const [inviteSendTarget, setInviteSendTarget] =
+    useState<SquadInviteSendTarget | null>(null);
+  const [incomingInviteModalId, setIncomingInviteModalId] = useState<
+    string | null
+  >(null);
+  const [incomingJoinConfirmInvite, setIncomingJoinConfirmInvite] =
+    useState<SquadIncomingInviteMock | null>(null);
+  const [heldInviteIds, setHeldInviteIds] = useState<string[]>([]);
+  const [heldInvitesReady, setHeldInvitesReady] = useState(false);
+  const [inviteModalSessionDone, setInviteModalSessionDone] = useState(false);
   const [dismissedInviteIds, setDismissedInviteIds] = useState<string[]>([]);
+  const [liveRewardResult, setLiveRewardResult] =
+    useState<SquadBattleRewardResult | null>(null);
+  const [liveRewardHasSquad, setLiveRewardHasSquad] = useState<boolean | null>(
+    null
+  );
+  const [rewardPayoutLoading, setRewardPayoutLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -2378,23 +3198,70 @@ export default function SquadBattleScreenNative() {
   }, []);
 
   useEffect(() => {
+    if (isPreviewMode || battleTabDefaultedRef.current) return;
+    if (uiPhase === "battle" || uiPhase === "reward") {
+      setMainTab("rank");
+      battleTabDefaultedRef.current = true;
+    }
+  }, [uiPhase, isPreviewMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const ids = await readHeldInviteIdsNative();
+      if (cancelled) return;
+      setHeldInviteIds(ids);
+      setHeldInvitesReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const user = auth.currentUser;
         const token = await user?.getIdToken();
         const current = await fetchCurrentGroupBattleNative({ idToken: token });
-        if (cancelled || !current?.battle) return;
+        if (cancelled) return;
+        if (!current?.battle) {
+          setLiveBattleId(null);
+          setLiveBattlePhase(null);
+          setLiveRecruitEndAtMs(null);
+          setLiveLeaderboard(null);
+          setLiveOpenSquads(null);
+          setLiveIncomingRequests(null);
+          setLiveOutgoingRequests(null);
+          setLiveFormingSquad(null);
+          if (!isPreviewMode) setUiPhase("idle");
+          return;
+        }
         setLiveBattleId(current.battle.id);
+        setLiveBattlePhase(current.battle.phase);
+        setLiveRecruitEndAtMs(
+          Number(current.battle.recruitEndAtMs) > 0
+            ? Number(current.battle.recruitEndAtMs)
+            : null
+        );
+        if (!isPreviewMode) {
+          setUiPhase(groupBattlePhaseToUiPhase(current.battle.phase));
+        }
         if (user?.uid) setLiveSelfUid(user.uid);
         const mySquadId = current.mySquad?.id ?? null;
         setLiveMySquadId(mySquadId);
         setLiveIsOwner(current.membership?.role === "owner");
+        setLiveFormingSquad(
+          current.mySquad
+            ? mapCurrentMySquadToUiSquad(current.mySquad, user?.uid ?? null)
+            : null
+        );
+        const weeklyLabels = current.battle.weeklyLabels ?? [];
         const label =
           rankPeriod === "weekly"
-            ? current.battle.weeklyLabels?.[
-                current.battle.weeklyLabels.length - 1
-              ]
+            ? weeklyLabels[weekIndex - 1] ??
+              weeklyLabels[weeklyLabels.length - 1]
             : current.battle.monthlyRange?.label;
         const rankings = await fetchGroupBattleRankingsNative(
           current.battle.id,
@@ -2412,14 +3279,24 @@ export default function SquadBattleScreenNative() {
               )
             );
           } else {
-            setLiveLeaderboard(null);
+            setLiveLeaderboard(rankings?.snapshot ? [] : null);
             if (rankings?.snapshot) {
               setBoardStatus(rankings.snapshot.status);
             }
           }
         }
+        const open = await fetchGroupBattleOpenSquadsNative(current.battle.id, {
+          idToken: token,
+        });
+        if (!cancelled) {
+          setLiveOpenSquads(
+            open?.squads ? mapOpenSquadApiToListings(open.squads) : []
+          );
+        }
         if (token) {
-          const past = await fetchPastGroupBattleSquadsNative({ idToken: token });
+          const past = await fetchPastGroupBattleSquadsNative({
+            idToken: token,
+          });
           if (!cancelled && past?.pastSquads) {
             setLivePastSquads(past.pastSquads);
           }
@@ -2437,37 +3314,138 @@ export default function SquadBattleScreenNative() {
               }))
             );
           }
+          const requests = await fetchGroupBattleJoinRequestsNative(
+            current.battle.id,
+            { idToken: token }
+          );
+          if (!cancelled && requests) {
+            setLiveIncomingRequests(
+              requests.incoming.map(mapJoinRequestApiToUi)
+            );
+            setLiveOutgoingRequests(
+              requests.outgoing.map(mapJoinRequestApiToUi)
+            );
+          }
         }
       } catch {
-        // モック継続
+        // プレビュー時のみモック継続
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [rankPeriod]);
+  }, [rankPeriod, weekIndex, isPreviewMode]);
 
-  const mock = useMemo(() => getSquadBattleMock(previewState), [previewState]);
-  const leaderboard = liveLeaderboard ?? mock.leaderboard;
+  useEffect(() => {
+    if (uiPhase !== "reward" || !liveBattleId) {
+      if (!isPreviewMode) {
+        setLiveRewardResult(null);
+        setLiveRewardHasSquad(null);
+      }
+      return;
+    }
+    let cancelled = false;
+    setRewardPayoutLoading(true);
+    void (async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetchGroupBattleMyPayoutNative(liveBattleId, {
+          idToken: token,
+        });
+        if (cancelled || !res?.payout) return;
+        const p = res.payout;
+        setLiveRewardHasSquad(p.hasSquad);
+        setLiveRewardResult({
+          weekly: p.weekly.map((w) => ({
+            weekIndex: w.weekIndex,
+            rank: w.rank,
+            units: w.units,
+            status: w.status,
+          })),
+          monthlyRank: p.monthlyRank,
+          monthlyUnits: p.monthlyUnits,
+          monthlyStatus: p.monthlyStatus,
+          payoutNote: p.payoutNote,
+        });
+      } catch {
+        // keep previous / mock
+      } finally {
+        if (!cancelled) setRewardPayoutLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uiPhase, liveBattleId, isPreviewMode]);
+
+  useEffect(() => {
+    if (isPreviewMode || launchAutoShownRef.current || !liveBattleId) return;
+    let cancelled = false;
+    void (async () => {
+      const seen = await readSquadBattleLaunchSeenBattleIdNative();
+      if (cancelled) return;
+      if (
+        !shouldShowSquadBattleLaunch({
+          battleId: liveBattleId,
+          phase: liveBattlePhase,
+          seenBattleId: seen,
+        })
+      ) {
+        return;
+      }
+      launchAutoShownRef.current = true;
+      await markSquadBattleLaunchSeenNative(liveBattleId);
+      if (!cancelled) setLaunchOpen(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPreviewMode, liveBattleId, liveBattlePhase]);
+
+  const mock = useMemo(
+    () =>
+      isPreviewMode
+        ? getSquadBattleMock(previewState)
+        : getSquadBattleMock("none"),
+    [isPreviewMode, previewState]
+  );
+  const useLiveFallbacks = liveBattleId != null || !isPreviewMode;
+  const leaderboard =
+    liveLeaderboard ?? (useLiveFallbacks ? [] : mock.leaderboard);
+  const openSquadsForUi =
+    liveOpenSquads ?? (useLiveFallbacks ? [] : mock.openSquads);
+  const rankingList = useMemo(
+    () => squadRankingList(leaderboard),
+    [leaderboard]
+  );
 
   const mySquad = useMemo(() => {
-    if (liveLeaderboard) {
-      return liveLeaderboard.find((s) => s.isMine) ?? null;
+    const liveMine = liveLeaderboard?.find((s) => s.isMine) ?? null;
+    if (liveMine) {
+      return createdSquadName ? { ...liveMine, name: createdSquadName } : liveMine;
     }
+    if (liveFormingSquad) {
+      return createdSquadName
+        ? { ...liveFormingSquad, name: createdSquadName }
+        : liveFormingSquad;
+    }
+    if (joinedInviteSquad) {
+      return createdSquadName
+        ? { ...joinedInviteSquad, name: createdSquadName }
+        : joinedInviteSquad;
+    }
+    if (useLiveFallbacks) return null;
     if (!mock.mySquad) return null;
     if (!createdSquadName) return mock.mySquad;
     return { ...mock.mySquad, name: createdSquadName };
-  }, [liveLeaderboard, mock.mySquad, createdSquadName]);
-
-  const boardMaxAvg = useMemo(
-    () => Math.max(1, ...leaderboard.map((s) => s.avgPoints)),
-    [leaderboard]
-  );
-
-  const boardOthers = useMemo(
-    () => leaderboard.filter((s) => !s.isMine),
-    [leaderboard]
-  );
+  }, [
+    liveLeaderboard,
+    liveFormingSquad,
+    joinedInviteSquad,
+    mock.mySquad,
+    createdSquadName,
+    useLiveFallbacks,
+  ]);
 
   const boardRunnerUpAvg = useMemo(
     () => leaderboard.find((s) => s.rank === 2)?.avgPoints ?? 0,
@@ -2475,22 +3453,39 @@ export default function SquadBattleScreenNative() {
   );
 
   const appliedSquadIds = useMemo(() => {
-    const ids = new Set(mock.myOutgoingRequests.map((r) => r.squadId));
+    const base =
+      liveOutgoingRequests ??
+      (useLiveFallbacks ? [] : mock.myOutgoingRequests);
+    const ids = new Set(base.map((r) => r.squadId));
     for (const id of extraAppliedIds) ids.add(id);
     return ids;
-  }, [mock.myOutgoingRequests, extraAppliedIds]);
+  }, [
+    liveOutgoingRequests,
+    mock.myOutgoingRequests,
+    extraAppliedIds,
+    useLiveFallbacks,
+  ]);
 
-  const visibleIncoming = useMemo(
-    () =>
-      mock.incomingRequests.filter((r) => !dismissedRequestIds.includes(r.id)),
-    [mock.incomingRequests, dismissedRequestIds]
-  );
+  const visibleIncoming = useMemo(() => {
+    const base =
+      liveIncomingRequests ??
+      (useLiveFallbacks ? [] : mock.incomingRequests);
+    return base.filter((r) => !dismissedRequestIds.includes(r.id));
+  }, [
+    liveIncomingRequests,
+    mock.incomingRequests,
+    dismissedRequestIds,
+    useLiveFallbacks,
+  ]);
 
   const outgoingForDisplay = useMemo(() => {
-    const base = [...mock.myOutgoingRequests];
+    const base = [
+      ...(liveOutgoingRequests ??
+        (useLiveFallbacks ? [] : mock.myOutgoingRequests)),
+    ];
     for (const id of extraAppliedIds) {
       if (base.some((r) => r.squadId === id)) continue;
-      const squad = mock.openSquads.find((s) => s.id === id);
+      const squad = openSquadsForUi.find((s) => s.id === id);
       if (!squad) continue;
       base.push({
         id: `local-${id}`,
@@ -2499,35 +3494,86 @@ export default function SquadBattleScreenNative() {
         status: "pending",
         createdAtLabel: "たった今",
         applicant: {
-          uid: "me",
-          handle: "kamiya",
-          displayName: "Kamiya",
-          points: 1284,
-          winRate: 57.1,
-          activeWinStreak: 3,
-          totalPosts: 140,
+          uid: liveSelfUid ?? "me",
+          handle: "",
+          displayName: "YOU",
+          points: 0,
+          winRate: 0,
+          activeWinStreak: 0,
+          totalPosts: 0,
           bio: "",
         },
       });
     }
     return base.filter((r) => !withdrawnRequestIds.includes(r.id));
   }, [
+    liveOutgoingRequests,
     mock.myOutgoingRequests,
-    mock.openSquads,
+    openSquadsForUi,
     extraAppliedIds,
     withdrawnRequestIds,
+    useLiveFallbacks,
+    liveSelfUid,
   ]);
 
   const pendingCount = outgoingForDisplay.length;
   const myActiveCount = mySquad ? countActiveMembers(mySquad) : 0;
-  const phaseTrackKey = uiPhase === "idle" ? "reward" : uiPhase;
+  const phaseTrackKey = uiPhase === "idle" ? null : uiPhase;
 
-  const pastSquadsForUi = livePastSquads ?? mock.pastSquads;
+  const pastSquadsForUi =
+    livePastSquads ?? (useLiveFallbacks ? [] : mock.pastSquads);
   const incomingInvitesForUi = useMemo(() => {
-    const base = liveIncomingInvites ?? mock.incomingInvites;
+    const base =
+      liveIncomingInvites ??
+      (useLiveFallbacks ? [] : mock.incomingInvites);
     return base.filter((i) => !dismissedInviteIds.includes(i.id));
-  }, [liveIncomingInvites, mock.incomingInvites, dismissedInviteIds]);
+  }, [
+    liveIncomingInvites,
+    mock.incomingInvites,
+    dismissedInviteIds,
+    useLiveFallbacks,
+  ]);
   const selfUidForUi = liveSelfUid ?? "me";
+  const membersLocked =
+    uiPhase === "battle" || (isPreviewMode && previewState === "full");
+  const incomingInviteForModal = useMemo(() => {
+    if (incomingInviteModalId == null) return null;
+    return (
+      incomingInvitesForUi.find((i) => i.id === incomingInviteModalId) ?? null
+    );
+  }, [incomingInviteModalId, incomingInvitesForUi]);
+
+  useEffect(() => {
+    if (!heldInvitesReady || inviteModalSessionDone) return;
+    if (introOpen || mySquad != null) return;
+    if (mainTab !== "join" || uiPhase !== "entry") return;
+    if (incomingInviteModalId != null) return;
+    const next = incomingInvitesForUi.find(
+      (i) => !heldInviteIds.includes(i.id)
+    );
+    if (!next) return;
+    setIncomingInviteModalId(next.id);
+    setInviteModalSessionDone(true);
+  }, [
+    heldInvitesReady,
+    inviteModalSessionDone,
+    introOpen,
+    mySquad,
+    mainTab,
+    uiPhase,
+    incomingInviteModalId,
+    incomingInvitesForUi,
+    heldInviteIds,
+  ]);
+
+  function holdIncomingInvite(inviteId: string) {
+    setHeldInviteIds((prev) => {
+      const next = withHeldInviteId(prev, inviteId);
+      void writeHeldInviteIdsNative(next);
+      return next;
+    });
+    setIncomingInviteModalId(null);
+  }
 
   function flash(msg: string) {
     setToast(msg);
@@ -2581,7 +3627,6 @@ export default function SquadBattleScreenNative() {
     setExtraAppliedIds([]);
     setDismissedRequestIds([]);
     setProfileRequest(null);
-    setViewedProfile(null);
     setMainTab("join");
     flash(`同じメンバーで募集: ${name}`);
     setReformBusyId(null);
@@ -2608,6 +3653,7 @@ export default function SquadBattleScreenNative() {
           { idToken: token }
         );
         flash(res.ok ? "招待を送りました" : `招待失敗: ${res.error}`);
+        if (res.ok) setInviteSendTarget(null);
       } catch {
         flash("招待に失敗しました");
       }
@@ -2615,7 +3661,8 @@ export default function SquadBattleScreenNative() {
       return;
     }
     const member = item.members.find((m) => m.uid === memberUid);
-    flash(`誘う: ${member?.displayName ?? memberUid}`);
+    flash(`招待を送りました: ${member?.displayName ?? memberUid}`);
+    setInviteSendTarget(null);
     setReformBusyId(null);
   }
 
@@ -2631,8 +3678,12 @@ export default function SquadBattleScreenNative() {
           return;
         }
         setDismissedInviteIds((prev) => [...prev, invite.id]);
+        setIncomingInviteModalId(null);
+        setIncomingJoinConfirmInvite(null);
+        setJoinedInviteSquad(squadFromIncomingInvite(invite));
         setPreviewState("recruiting");
         setCreatedSquadName(invite.squadName);
+        setMainTab("join");
         flash(`参加: ${invite.squadName}`);
         return;
       } catch {
@@ -2641,8 +3692,12 @@ export default function SquadBattleScreenNative() {
       }
     }
     setDismissedInviteIds((prev) => [...prev, invite.id]);
+    setIncomingInviteModalId(null);
+    setIncomingJoinConfirmInvite(null);
+    setJoinedInviteSquad(squadFromIncomingInvite(invite));
     setPreviewState("recruiting");
     setCreatedSquadName(invite.squadName);
+    setMainTab("join");
     flash(`参加: ${invite.squadName}`);
   }
 
@@ -2665,6 +3720,7 @@ export default function SquadBattleScreenNative() {
       }
     }
     setDismissedInviteIds((prev) => [...prev, invite.id]);
+    setIncomingJoinConfirmInvite(null);
     flash(`パス: ${invite.squadName}`);
   }
 
@@ -2674,13 +3730,57 @@ export default function SquadBattleScreenNative() {
     setDismissedRequestIds([]);
     setWithdrawnRequestIds([]);
     setProfileRequest(null);
-    setViewedProfile(null);
     setCreateSquadOpen(false);
     setJoinByCodeOpen(false);
     setCreatedSquadName(null);
+    setJoinedInviteSquad(null);
     setReformTarget(null);
     setDismissedInviteIds([]);
+    setInviteSendTarget(null);
+    setIncomingInviteModalId(null);
+    setIncomingJoinConfirmInvite(null);
     setMainTab(next === "none" ? "join" : "rank");
+  }
+
+  function applyPreviewJump(
+    jump: (typeof SQUAD_BATTLE_PREVIEW_JUMPS)[number]
+  ) {
+    handlePreviewStateChange(jump.previewState);
+    setUiPhase(jump.phase);
+    setMainTab(jump.tab);
+    if (jump.boardStatus) setBoardStatus(jump.boardStatus);
+    setPreviewToolsOpen(false);
+    if (jump.overlay === "intro") {
+      void (async () => {
+        await clearSquadBattleIntroSeenNative();
+        setIntroOpen(true);
+      })();
+      return;
+    }
+    if (jump.overlay === "launch") {
+      void (async () => {
+        await clearSquadBattleLaunchSeenNative();
+        setLaunchOpen(true);
+      })();
+      return;
+    }
+    if (jump.overlay === "create") {
+      setCreateSquadOpen(true);
+      return;
+    }
+    if (jump.overlay === "joinCode") {
+      setJoinByCodeOpen(true);
+      return;
+    }
+    if (jump.overlay === "applicant") {
+      const req = getSquadBattleMock("recruiting").incomingRequests[0];
+      if (req) setProfileRequest(req);
+      return;
+    }
+    if (jump.overlay === "detail") {
+      const top = getSquadBattleMock("full").leaderboard[0];
+      if (top) setDetailSquad(top);
+    }
   }
 
   async function handleJoinByCode(code: string) {
@@ -2732,26 +3832,284 @@ export default function SquadBattleScreenNative() {
     setJoinByCodeBusy(false);
   }
 
-  function handleCreateSquad(name: string) {
+  async function handleCreateSquad(name: string) {
+    if (liveBattleId) {
+      setCreateSquadBusy(true);
+      try {
+        const token = await withAuthToken();
+        const res = await createGroupBattleSquadNative(
+          liveBattleId,
+          { name, acceptRules: true },
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`作成失敗: ${res.error}`);
+          setCreateSquadBusy(false);
+          return;
+        }
+        setCreateSquadOpen(false);
+        setCreatedSquadName(name);
+        setLiveMySquadId(res.squadId);
+        setLiveIsOwner(true);
+        setLiveFormingSquad(
+          mapCurrentMySquadToUiSquad(
+            {
+              id: res.squadId,
+              name,
+              memberUids: liveSelfUid ? [liveSelfUid] : [],
+              memberCount: 1,
+              status: "forming",
+              inviteCode: res.inviteCode,
+            },
+            liveSelfUid
+          )
+        );
+        setExtraAppliedIds([]);
+        setDismissedRequestIds([]);
+        setProfileRequest(null);
+        setMainTab("join");
+        flash(`グループを作成: ${name}`);
+      } catch {
+        flash("作成に失敗しました");
+      }
+      setCreateSquadBusy(false);
+      return;
+    }
+
+    if (!isPreviewMode) {
+      flash("開催中の大会がありません");
+      return;
+    }
+
     setCreateSquadOpen(false);
     setCreatedSquadName(name);
     setPreviewState("recruiting");
     setExtraAppliedIds([]);
     setDismissedRequestIds([]);
     setProfileRequest(null);
-    setViewedProfile(null);
     setMainTab("join");
     flash(`グループを作成: ${name}`);
   }
 
-  function handleRenameSquad(name: string) {
+  async function handleApplyToSquad(squadId: string, squadName: string) {
+    if (appliedSquadIds.has(squadId)) return;
+    if (pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS) {
+      flash(`申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件まで`);
+      return;
+    }
+    if (liveBattleId) {
+      try {
+        const token = await withAuthToken();
+        const res = await applyToGroupBattleSquadNative(
+          liveBattleId,
+          squadId,
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`申請失敗: ${res.error}`);
+          return;
+        }
+        setExtraAppliedIds((prev) =>
+          prev.includes(squadId) ? prev : [...prev, squadId]
+        );
+        setLiveOutgoingRequests((prev) => {
+          const base = prev ?? [];
+          if (base.some((r) => r.squadId === squadId)) return base;
+          return [
+            ...base,
+            {
+              id: res.requestId,
+              squadId,
+              squadName,
+              status: "pending",
+              createdAtLabel: "たった今",
+              applicant: {
+                uid: liveSelfUid ?? "me",
+                handle: "",
+                displayName: "YOU",
+                points: 0,
+                winRate: 0,
+                activeWinStreak: 0,
+                totalPosts: 0,
+                bio: "",
+              },
+            },
+          ];
+        });
+        flash(`申請を送信: ${squadName}`);
+      } catch {
+        flash("申請に失敗しました");
+      }
+      return;
+    }
+
+    if (!isPreviewMode) {
+      flash("開催中の大会がありません");
+      return;
+    }
+
+    setExtraAppliedIds((prev) =>
+      prev.includes(squadId) ? prev : [...prev, squadId]
+    );
+    flash(`申請を送信: ${squadName}`);
+  }
+
+  async function handleResolveJoinRequest(
+    req: SquadJoinRequest,
+    decision: "approve" | "reject"
+  ) {
+    if (liveBattleId) {
+      try {
+        const token = await withAuthToken();
+        const res = await resolveGroupBattleJoinRequestNative(
+          liveBattleId,
+          req.id,
+          decision,
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(
+            `${decision === "approve" ? "承認" : "拒否"}失敗: ${res.error}`
+          );
+          return;
+        }
+        setDismissedRequestIds((prev) =>
+          prev.includes(req.id) ? prev : [...prev, req.id]
+        );
+        setLiveIncomingRequests((prev) =>
+          (prev ?? []).filter((r) => r.id !== req.id)
+        );
+        setApproveConfirmRequest(null);
+        setProfileRequest(null);
+        flash(
+          `${decision === "approve" ? "承認" : "拒否"}: ${req.applicant.displayName}`
+        );
+      } catch {
+        flash("処理に失敗しました");
+      }
+      return;
+    }
+
+    setDismissedRequestIds((prev) =>
+      prev.includes(req.id) ? prev : [...prev, req.id]
+    );
+    setApproveConfirmRequest(null);
+    setProfileRequest(null);
+    flash(
+      `${decision === "approve" ? "承認" : "拒否"}: ${req.applicant.displayName}`
+    );
+  }
+
+  async function handleRenameSquad(name: string) {
+    if (liveBattleId && mySquad?.id) {
+      try {
+        const token = await withAuthToken();
+        const res = await renameGroupBattleSquadNative(
+          liveBattleId,
+          mySquad.id,
+          name,
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`名前変更失敗: ${res.error}`);
+          return;
+        }
+        setCreatedSquadName(res.name);
+        setLiveFormingSquad((prev) =>
+          prev ? { ...prev, name: res.name } : prev
+        );
+        flash(`名前を変更: ${res.name}`);
+        return;
+      } catch {
+        flash("名前変更に失敗しました");
+        return;
+      }
+    }
     setCreatedSquadName(name);
     flash(`名前を変更: ${name}`);
   }
 
-  function openMemberProfile(profile: SquadApplicantProfile, metaLabel?: string) {
-    setProfileRequest(null);
-    setViewedProfile({ profile, metaLabel });
+  async function handleWithdrawRequest(req: SquadJoinRequest) {
+    if (liveBattleId) {
+      try {
+        const token = await withAuthToken();
+        const res = await cancelGroupBattleJoinRequestNative(
+          liveBattleId,
+          req.id,
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`取り下げ失敗: ${res.error}`);
+          return;
+        }
+        setLiveOutgoingRequests((prev) =>
+          prev ? prev.filter((r) => r.id !== req.id) : prev
+        );
+        setExtraAppliedIds((prev) => prev.filter((id) => id !== req.squadId));
+        flash(`申請を取り下げ: ${req.squadName}`);
+        return;
+      } catch {
+        flash("取り下げに失敗しました");
+        return;
+      }
+    }
+    setWithdrawnRequestIds((prev) =>
+      prev.includes(req.id) ? prev : [...prev, req.id]
+    );
+    setExtraAppliedIds((prev) => prev.filter((id) => id !== req.squadId));
+    flash(`申請を取り下げ: ${req.squadName}`);
+  }
+
+  async function handleLeaveSquad() {
+    if (!liveBattleId || !mySquad?.id) return;
+    try {
+      const token = await withAuthToken();
+      const res = await leaveGroupBattleSquadNative(
+        liveBattleId,
+        mySquad.id,
+        { idToken: token }
+      );
+      if (!res.ok) {
+        flash(`脱退失敗: ${res.error}`);
+        return;
+      }
+      setLiveFormingSquad(null);
+      setLiveMySquadId(null);
+      setLiveIsOwner(false);
+      setCreatedSquadName(null);
+      flash("スクワッドから脱退しました");
+    } catch {
+      flash("脱退に失敗しました");
+    }
+  }
+
+  async function handleDissolveSquad() {
+    if (!liveBattleId || !mySquad?.id) return;
+    try {
+      const token = await withAuthToken();
+      const res = await dissolveGroupBattleSquadNative(
+        liveBattleId,
+        mySquad.id,
+        { idToken: token }
+      );
+      if (!res.ok) {
+        flash(`解散失敗: ${res.error}`);
+        return;
+      }
+      setLiveFormingSquad(null);
+      setLiveMySquadId(null);
+      setLiveIsOwner(false);
+      setCreatedSquadName(null);
+      flash("スクワッドを解散しました");
+    } catch {
+      flash("解散に失敗しました");
+    }
+  }
+
+  function openMemberProfile(profile: SquadApplicantProfile) {
+    const key = profilePathKeyFromRow(profile);
+    if (!key) return;
+    navigateToPublicProfileNative(navigation as never, { handle: key });
   }
 
   /** RANK + 自スクワッド時: tabs=0 / period=1 / pinned=2 で sticky */
@@ -2763,8 +4121,10 @@ export default function SquadBattleScreenNative() {
       <CyberSubpageShellNative
         eyebrow="RANKINGS"
         title="SQUAD BATTLE"
-        subtitle={SQUAD_BATTLE_HELP_TEXT}
+        hideBrandShelf={false}
+        titleInBrandShelf
         headerTrailing={
+          isPreviewMode ? (
           <Pressable
             onPress={() => setPreviewToolsOpen(true)}
             accessibilityRole="button"
@@ -2781,9 +4141,10 @@ export default function SquadBattleScreenNative() {
               color="rgba(255,247,224,0.92)"
             />
           </Pressable>
+          ) : undefined
         }
         onBack={() => navigation.goBack()}
-        contentStyle={styles.content}
+        contentStyle={{ paddingBottom: bottomContentReserveY + spacing.md }}
         stickyHeaderIndices={rankStickyIndices}
       >
         <View style={styles.mainTabs}>
@@ -2810,18 +4171,73 @@ export default function SquadBattleScreenNative() {
         {mainTab === "join" ? (
           <View style={styles.joinStack}>
             <SquadGoldPhaseTrackNative activeKey={phaseTrackKey} />
-            <SquadPhaseStatusBannerNative
-              phase={uiPhase}
-              hasSquad={mySquad != null}
-              activeMemberCount={myActiveCount}
-              deadlineLabel={
-                uiPhase === "entry" ? SQUAD_BATTLE_MOCK_DEADLINE_LABEL : null
-              }
-            />
+            {uiPhase !== "idle" ? (
+              <SquadPhaseStatusBannerNative
+                phase={uiPhase}
+                hasSquad={mySquad != null}
+                activeMemberCount={myActiveCount}
+                deadlineLabel={
+                  uiPhase === "entry"
+                    ? formatSquadBattleRecruitDeadlineLabel(
+                        liveRecruitEndAtMs
+                      ) ??
+                      (isPreviewMode ? SQUAD_BATTLE_MOCK_DEADLINE_LABEL : null)
+                    : null
+                }
+              />
+            ) : null}
             {uiPhase === "idle" ? (
               <SquadIdlePanelNative />
             ) : uiPhase === "reward" ? (
-              <SquadRewardResultPanelNative hasSquad={mySquad != null} />
+              <SquadRewardResultPanelNative
+                hasSquad={
+                  liveRewardHasSquad != null
+                    ? liveRewardHasSquad
+                    : mySquad != null
+                }
+                result={
+                  liveRewardResult ??
+                  (isPreviewMode
+                    ? SQUAD_BATTLE_REWARD_RESULT_MOCK
+                    : {
+                        weekly: [
+                          {
+                            weekIndex: 1,
+                            rank: null,
+                            units: 0,
+                            status: "none",
+                          },
+                          {
+                            weekIndex: 2,
+                            rank: null,
+                            units: 0,
+                            status: "none",
+                          },
+                          {
+                            weekIndex: 3,
+                            rank: null,
+                            units: 0,
+                            status: "none",
+                          },
+                          {
+                            weekIndex: 4,
+                            rank: null,
+                            units: 0,
+                            status: "none",
+                          },
+                        ],
+                        monthlyRank: null,
+                        monthlyUnits: 0,
+                        monthlyStatus: "none",
+                        payoutNote: "獲得 Unit を読み込み中…",
+                      })
+                }
+                loading={
+                  Boolean(liveBattleId) &&
+                  rewardPayoutLoading &&
+                  liveRewardResult == null
+                }
+              />
             ) : mySquad == null ? (
               uiPhase === "battle" ? (
                 <View style={styles.battleSpectatorStack}>
@@ -2843,7 +4259,7 @@ export default function SquadBattleScreenNative() {
                 </View>
               ) : (
                 <NoneStateNative
-                  openSquads={mock.openSquads}
+                  openSquads={openSquadsForUi}
                   outgoingRequests={outgoingForDisplay}
                   appliedSquadIds={appliedSquadIds}
                   pendingCount={pendingCount}
@@ -2854,33 +4270,15 @@ export default function SquadBattleScreenNative() {
                   onCreate={() => setCreateSquadOpen(true)}
                   onJoinByCode={() => setJoinByCodeOpen(true)}
                   onApply={(squadId, squadName) => {
-                    if (appliedSquadIds.has(squadId)) return;
-                    if (pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS) {
-                      flash(
-                        `申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件まで`
-                      );
-                      return;
-                    }
-                    setExtraAppliedIds((prev) =>
-                      prev.includes(squadId) ? prev : [...prev, squadId]
-                    );
-                    flash(`申請を送信: ${squadName}`);
+                    void handleApplyToSquad(squadId, squadName);
                   }}
                   onWithdraw={(req) => {
-                    setWithdrawnRequestIds((prev) =>
-                      prev.includes(req.id) ? prev : [...prev, req.id]
-                    );
-                    setExtraAppliedIds((prev) =>
-                      prev.filter((id) => id !== req.squadId)
-                    );
-                    flash(`申請を取り下げ: ${req.squadName}`);
+                    void handleWithdrawRequest(req);
                   }}
-                  onOpenMemberProfile={(profile) =>
-                    openMemberProfile(profile, "募集中スクワッドのメンバー")
-                  }
+                  onOpenMemberProfile={openMemberProfile}
                   onReform={(item) => setReformTarget(item)}
                   onAcceptInvite={(invite) => {
-                    void handleAcceptInvite(invite);
+                    setIncomingJoinConfirmInvite(invite);
                   }}
                   onDeclineInvite={(invite) => {
                     void handleDeclineInvite(invite);
@@ -2891,13 +4289,24 @@ export default function SquadBattleScreenNative() {
               <>
                 <MySquadCardNative
                   squad={mySquad}
-                  maxAvg={boardMaxAvg}
+                  phase={uiPhase}
+                  isOwner={liveIsOwner || (isPreviewMode && Boolean(mySquad))}
                   onRenameSquad={
-                    uiPhase === "entry" ? handleRenameSquad : undefined
+                    uiPhase === "entry"
+                      ? (n) => void handleRenameSquad(n)
+                      : undefined
                   }
-                  onOpenMemberProfile={(profile) =>
-                    openMemberProfile(profile, "スクワッドメンバー")
+                  onLeaveSquad={
+                    uiPhase === "entry" && liveBattleId && !liveIsOwner
+                      ? () => void handleLeaveSquad()
+                      : undefined
                   }
+                  onDissolveSquad={
+                    uiPhase === "entry" && liveBattleId && liveIsOwner
+                      ? () => void handleDissolveSquad()
+                      : undefined
+                  }
+                  onOpenMemberProfile={openMemberProfile}
                   onCopyInviteCode={(code) => {
                     void copyTextNative(code).then((ok) => {
                       flash(
@@ -2906,25 +4315,31 @@ export default function SquadBattleScreenNative() {
                     });
                   }}
                 />
-                {uiPhase === "battle" || previewState === "full" ? (
+                {membersLocked ? (
                   <View style={styles.lockedNote}>
                     <Text style={styles.lockedNoteText}>
                       メンバー LOCKED · 入れ替え・追加申請の受付は終了しています。
                     </Text>
                   </View>
                 ) : null}
-                {(liveIsOwner || previewState === "recruiting") &&
+                {(liveIsOwner ||
+                  (isPreviewMode && previewState === "recruiting")) &&
                 uiPhase === "entry" &&
                 pastSquadsForUi.length > 0 ? (
                   <PastSquadsPanelNative
                     pastSquads={pastSquadsForUi}
                     selfUid={selfUidForUi}
                     canReform={false}
-                    canInvite={liveIsOwner || previewState === "recruiting"}
+                    canInvite={
+                      liveIsOwner ||
+                      (isPreviewMode && previewState === "recruiting")
+                    }
                     busyId={reformBusyId}
                     onReform={() => {}}
                     onInvite={(item, uid) => {
-                      void handleInvitePastMember(item, uid);
+                      const member = item.members.find((m) => m.uid === uid);
+                      if (!member) return;
+                      setInviteSendTarget({ source: item, member });
                     }}
                   />
                 ) : null}
@@ -2932,18 +4347,13 @@ export default function SquadBattleScreenNative() {
                   <IncomingRequestsNative
                     requests={visibleIncoming}
                     onOpenProfile={(req) => {
-                      setViewedProfile(null);
                       setProfileRequest(req);
                     }}
                     onApprove={(req) => {
-                      setDismissedRequestIds((prev) => [...prev, req.id]);
-                      setProfileRequest(null);
-                      flash(`承認: ${req.applicant.displayName}`);
+                      setApproveConfirmRequest(req);
                     }}
                     onReject={(req) => {
-                      setDismissedRequestIds((prev) => [...prev, req.id]);
-                      setProfileRequest(null);
-                      flash(`拒否: ${req.applicant.displayName}`);
+                      void handleResolveJoinRequest(req, "reject");
                     }}
                   />
                 ) : null}
@@ -3012,18 +4422,7 @@ export default function SquadBattleScreenNative() {
                 </Text>
               )}
 
-              <Text style={styles.boardStatusHint}>
-                {SQUAD_BATTLE_BOARD_STATUS_HINT[boardStatus]}
-                {" · "}
-                同点は同順位・同 Unit
-              </Text>
-
               {uiPhase === "idle" ? <SquadIdlePanelNative /> : null}
-              {uiPhase === "reward" ? (
-                <View style={styles.rankRewardWrap}>
-                  <SquadRewardResultPanelNative hasSquad={mySquad != null} />
-                </View>
-              ) : null}
             </View>
 
             {/* index 2: ピン留め（sticky）または未参加ヒント */}
@@ -3031,14 +4430,13 @@ export default function SquadBattleScreenNative() {
               <View style={styles.stickyYouTop}>
                 <PinnedYourSquadCardNative
                   squad={mySquad}
-                  maxAvg={boardMaxAvg}
+                  onOpenDetail={() => setDetailSquad(mySquad)}
                 />
               </View>
             ) : (
               <View style={styles.rankEmptyPinWrap}>
                 <SquadEmptyHintNative>
-                  未参加のためピン留めはありません。RANK
-                  は観戦のみです。参加は JOIN（ENTRY 期間）から。
+                  {SQUAD_BATTLE_RANK_SPECTATOR_HINT}
                 </SquadEmptyHintNative>
               </View>
             )}
@@ -3048,20 +4446,21 @@ export default function SquadBattleScreenNative() {
                 key={`${mainTab}-${rankPeriod}-${weekIndex}`}
                 style={styles.boardList}
               >
-                {boardOthers.length === 0 ? (
+                {rankingList.length === 0 ? (
                   <SquadEmptyHintNative>
                     リーダーボードに表示するグループがありません。
                   </SquadEmptyHintNative>
                 ) : (
-                  boardOthers.map((squad, i) => (
+                  rankingList.map((squad, i) => (
                     <LeaderboardRowNative
                       key={squad.id}
                       squad={squad}
-                      maxAvg={boardMaxAvg}
                       runnerUpAvg={boardRunnerUpAvg}
-                      board={leaderboard}
+                      board={rankingList}
                       index={i}
+                      period={rankPeriod}
                       replayKey={`${mainTab}-${rankPeriod}-${weekIndex}`}
+                      onOpenDetail={() => setDetailSquad(squad)}
                     />
                   ))
                 )}
@@ -3109,31 +4508,93 @@ export default function SquadBattleScreenNative() {
             : undefined
         }
         onClose={() => setProfileRequest(null)}
+        onOpenPublicProfile={
+          profileRequest
+            ? () => {
+                const profile = profileRequest.applicant;
+                setProfileRequest(null);
+                openMemberProfile(profile);
+              }
+            : undefined
+        }
         onApprove={
           profileRequest
             ? () => {
-                setDismissedRequestIds((prev) => [...prev, profileRequest.id]);
-                setProfileRequest(null);
-                flash(`承認: ${profileRequest.applicant.displayName}`);
+                setApproveConfirmRequest(profileRequest);
               }
             : undefined
         }
         onReject={
           profileRequest
             ? () => {
-                setDismissedRequestIds((prev) => [...prev, profileRequest.id]);
-                setProfileRequest(null);
-                flash(`拒否: ${profileRequest.applicant.displayName}`);
+                void handleResolveJoinRequest(profileRequest, "reject");
               }
             : undefined
         }
       />
 
-      <ApplicantProfileModalNative
-        visible={viewedProfile != null}
-        profile={viewedProfile?.profile ?? null}
-        metaLabel={viewedProfile?.metaLabel}
-        onClose={() => setViewedProfile(null)}
+      <InviteSendConfirmModalNative
+        visible={inviteSendTarget != null && mySquad != null}
+        target={inviteSendTarget}
+        squadName={mySquad?.name ?? ""}
+        onClose={() => setInviteSendTarget(null)}
+        onConfirm={() => {
+          if (!inviteSendTarget) return;
+          void handleInvitePastMember(
+            inviteSendTarget.source,
+            inviteSendTarget.member.uid
+          );
+        }}
+      />
+
+      <ApproveApplicantConfirmModalNative
+        visible={approveConfirmRequest != null}
+        request={approveConfirmRequest}
+        onClose={() => setApproveConfirmRequest(null)}
+        onConfirm={() => {
+          if (!approveConfirmRequest) return;
+          void handleResolveJoinRequest(approveConfirmRequest, "approve");
+        }}
+      />
+
+      <IncomingJoinConfirmModalNative
+        visible={incomingJoinConfirmInvite != null}
+        invite={incomingJoinConfirmInvite}
+        openSquads={openSquadsForUi}
+        onClose={() => setIncomingJoinConfirmInvite(null)}
+        onConfirm={() => {
+          if (!incomingJoinConfirmInvite) return;
+          void handleAcceptInvite(incomingJoinConfirmInvite);
+        }}
+        onDecline={() => {
+          if (!incomingJoinConfirmInvite) return;
+          void handleDeclineInvite(incomingJoinConfirmInvite);
+        }}
+        onOpenMemberProfile={openMemberProfile}
+      />
+
+      <IncomingInviteModalNative
+        visible={!introOpen && incomingInviteForModal != null}
+        invite={incomingInviteForModal}
+        onClose={() => {
+          if (!incomingInviteForModal) return;
+          holdIncomingInvite(incomingInviteForModal.id);
+        }}
+        onAccept={() => {
+          if (!incomingInviteForModal) return;
+          void handleAcceptInvite(incomingInviteForModal);
+        }}
+        onHold={() => {
+          if (!incomingInviteForModal) return;
+          holdIncomingInvite(incomingInviteForModal.id);
+          flash("保留しました。招待されているスクワッドから参加できます");
+        }}
+      />
+
+      <SquadRankingDetailModalNative
+        visible={detailSquad != null}
+        squad={detailSquad}
+        onClose={() => setDetailSquad(null)}
       />
 
       {toast ? (
@@ -3142,6 +4603,7 @@ export default function SquadBattleScreenNative() {
         </View>
       ) : null}
 
+      {isPreviewMode ? (
       <Modal
         visible={previewToolsOpen}
         transparent
@@ -3156,7 +4618,10 @@ export default function SquadBattleScreenNative() {
             accessibilityRole="button"
             accessibilityLabel="閉じる"
           />
-          <View style={styles.previewOverlayCard} accessibilityRole="summary">
+          <View
+            style={styles.previewOverlayCard}
+            accessibilityRole="summary"
+          >
             <View style={styles.previewOverlayHeader}>
               <Text style={styles.stateSwitcherLabel}>Preview state</Text>
               <Pressable
@@ -3171,6 +4636,23 @@ export default function SquadBattleScreenNative() {
               >
                 <MaterialCommunityIcons name="close" size={16} color="#fef3c7" />
               </Pressable>
+            </View>
+            <ScrollView
+              style={styles.previewOverlayScroll}
+              contentContainerStyle={styles.previewOverlayScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+            <Text style={styles.previewSectionLabel}>Screens</Text>
+            <View style={styles.stateChips}>
+              {SQUAD_BATTLE_PREVIEW_JUMPS.map((jump) => (
+                <Pressable
+                  key={jump.id}
+                  onPress={() => applyPreviewJump(jump)}
+                  style={styles.stateChip}
+                >
+                  <Text style={styles.stateChipText}>{jump.label}</Text>
+                </Pressable>
+              ))}
             </View>
             <Text style={styles.previewSectionLabel}>Membership</Text>
             <View style={styles.stateChips}>
@@ -3260,14 +4742,48 @@ export default function SquadBattleScreenNative() {
                 />
                 <Text style={styles.introReplayChipText}>イントロ再生</Text>
               </Pressable>
+              <Pressable
+                onPress={() => {
+                  void (async () => {
+                    await clearSquadBattleLaunchSeenNative();
+                    setPreviewToolsOpen(false);
+                    setLaunchOpen(true);
+                  })();
+                }}
+                style={styles.launchReplayChip}
+                accessibilityRole="button"
+                accessibilityLabel="開催モーダル"
+              >
+                <MaterialCommunityIcons
+                  name="restart"
+                  size={12}
+                  color="rgba(254,243,199,0.9)"
+                />
+                <Text style={styles.launchReplayChipText}>開催モーダル</Text>
+              </Pressable>
             </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
+      ) : null}
 
       <SquadBattleIntroOverlayNative
         open={introOpen}
         onClose={() => setIntroOpen(false)}
+      />
+      <SquadBattleLaunchOverlayNative
+        visible={launchOpen}
+        battleId={liveBattleId}
+        onClose={() => setLaunchOpen(false)}
+        onEnter={() => {
+          setLaunchOpen(false);
+          setMainTab("join");
+        }}
+        deadlineLabel={
+          formatSquadBattleRecruitDeadlineLabel(liveRecruitEndAtMs) ??
+          SQUAD_BATTLE_MOCK_DEADLINE_LABEL
+        }
       />
     </View>
   );
@@ -3276,7 +4792,7 @@ export default function SquadBattleScreenNative() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0A0805",
+    backgroundColor: "transparent",
   },
   pageBar: {
     marginTop: 12,
@@ -3324,12 +4840,9 @@ const styles = StyleSheet.create({
   pageNumTextActive: {
     color: "#FFF7E0",
   },
-  content: {
-    paddingBottom: 48,
-  },
   stickyYouTop: {
     marginBottom: spacing.md,
-    backgroundColor: "#0A0805",
+    backgroundColor: "transparent",
     paddingTop: 4,
     paddingBottom: 10,
   },
@@ -3421,7 +4934,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2.2,
     textTransform: "uppercase",
     color: "rgba(253,230,138,0.75)",
-    textAlign: "center",
   },
   rewardPanelEmptyText: {
     marginTop: 8,
@@ -3430,56 +4942,115 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.55)",
     textAlign: "center",
   },
-  rewardGrid: {
+  rewardLedger: {
     marginTop: 12,
+  },
+  rewardLedgerRow: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "baseline",
+    gap: 12,
+    paddingVertical: 8,
   },
-  rewardCell: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.25)",
-    backgroundColor: "rgba(0,0,0,0.35)",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    alignItems: "center",
+  rewardLedgerRowLine: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(251,191,36,0.12)",
   },
-  rewardCellLabel: {
-    fontFamily: fonts.metric,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
-    color: "rgba(253,230,138,0.5)",
-  },
-  rewardCellRank: {
+  rewardLedgerMonthlyRow: {
     marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(252,211,77,0.35)",
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  rewardLedgerWeek: {
+    width: 32,
+    fontFamily: fonts.metric,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: "rgba(253,230,138,0.45)",
+  },
+  rewardLedgerWeekHi: {
+    width: 32,
+    fontFamily: fonts.metric,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: "rgba(253,230,138,0.7)",
+  },
+  rewardLedgerRank: {
+    width: 40,
     fontFamily: fonts.metricExtra,
-    fontSize: 28,
-    lineHeight: 30,
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: "900",
+    color: "#FDE68A",
+  },
+  rewardLedgerRankFirst: {
+    width: 40,
+    fontFamily: fonts.metricExtra,
+    fontSize: 22,
+    lineHeight: 24,
     fontWeight: "900",
     color: "#FBBF24",
   },
-  rewardCellUnits: {
-    marginTop: 6,
+  rewardLedgerUnits: {
+    flex: 1,
+    textAlign: "right",
     fontFamily: fonts.metricExtra,
     fontSize: 12,
     fontWeight: "900",
     fontVariant: ["tabular-nums"],
     color: "#FFF7E0",
   },
+  rewardLedgerUnitsHi: {
+    flex: 1,
+    textAlign: "right",
+    fontFamily: fonts.metricExtra,
+    fontSize: 13,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
+    color: "#FFF7E0",
+  },
+  rewardTotalRow: {
+    marginTop: 4,
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(252,211,77,0.5)",
+    paddingTop: 12,
+  },
+  rewardTotalLabel: {
+    fontFamily: fonts.metric,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(253,230,138,0.55)",
+  },
+  rewardTotal: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 16,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
+    color: "#FFF7E0",
+  },
   rewardNote: {
-    marginTop: 12,
+    marginTop: 10,
     fontSize: 11,
+    lineHeight: 16,
     color: "rgba(255,255,255,0.4)",
-    textAlign: "center",
   },
   idlePanel: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.03)",
-    paddingHorizontal: 16,
-    paddingVertical: 32,
+    borderColor: "rgba(251,191,36,0.25)",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    paddingHorizontal: 14,
+    paddingTop: 20,
+    paddingBottom: 16,
     alignItems: "center",
   },
   idleKicker: {
@@ -3504,6 +5075,48 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: "rgba(255,255,255,0.4)",
     textAlign: "center",
+  },
+  idleRulesDivider: {
+    alignSelf: "stretch",
+    marginTop: 20,
+    marginBottom: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.1)",
+  },
+  idleRulesTitle: {
+    alignSelf: "stretch",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+    color: "#FFF8E7",
+  },
+  idleRulesList: {
+    alignSelf: "stretch",
+    marginTop: 12,
+    gap: 10,
+  },
+  idleRulesRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  idleRulesDot: {
+    marginTop: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: JOIN_BATTLE_AMBER,
+    shadowColor: JOIN_BATTLE_AMBER,
+    shadowOpacity: 0.65,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  idleRulesText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.88)",
   },
   emptyHint: {
     borderWidth: 1,
@@ -3660,7 +5273,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     borderWidth: 1,
     borderColor: "rgba(251,191,36,0.55)",
-    backgroundColor: "#0A0805",
+    backgroundColor: "transparent",
     overflow: "visible",
   },
   pinnedTab: {
@@ -3809,12 +5422,19 @@ const styles = StyleSheet.create({
   previewOverlayCard: {
     width: "100%",
     maxWidth: 420,
+    maxHeight: "78%",
     alignSelf: "center",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(251,191,36,0.25)",
     backgroundColor: "#0a0c10",
     padding: 12,
+  },
+  previewOverlayScroll: {
+    maxHeight: 420,
+  },
+  previewOverlayScrollContent: {
+    paddingBottom: 8,
   },
   previewOverlayHeader: {
     flexDirection: "row",
@@ -3892,6 +5512,25 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     color: "rgba(254,226,226,0.9)",
+  },
+  launchReplayChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.35)",
+    backgroundColor: "rgba(245,158,11,0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  launchReplayChipText: {
+    fontFamily: fonts.metric,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: "rgba(254,243,199,0.9)",
   },
   mainTabs: {
     marginBottom: spacing.md,
@@ -4375,6 +6014,21 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  mySquadShellEntry: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+    backgroundColor: "transparent",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        shadowOffset: { width: 0, height: 0 },
+      },
+      android: { elevation: 0 },
+      default: {},
+    }),
+  },
   mySquadTab: {
     zIndex: 12,
     alignSelf: "flex-start",
@@ -4401,6 +6055,16 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     textTransform: "uppercase",
     color: "#FFF7E0",
+  },
+  mySquadTabEntry: {
+    borderColor: "rgba(255,255,255,0.45)",
+    backgroundColor: "#000",
+  },
+  mySquadTabDotEntry: {
+    backgroundColor: "#FFFFFF",
+  },
+  mySquadTabTextEntry: {
+    color: "rgba(255,255,255,0.9)",
   },
   mySquadHero: {
     paddingHorizontal: spacing.md,
@@ -4438,6 +6102,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(251,191,36,0.35)",
     backgroundColor: "rgba(251,191,36,0.1)",
+  },
+  mySquadRenameBtnEntry: {
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   mySquadRenameBox: {
     width: "100%",
@@ -4539,12 +6207,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 10,
   },
+  mySquadHudCellEntry: {
+    borderColor: "rgba(255,255,255,0.55)",
+    backgroundColor: "transparent",
+  },
   mySquadHudLabel: {
     fontFamily: fonts.metric,
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase",
+    color: "rgba(255,255,255,0.4)",
+  },
+  mySquadHudLabelEntry: {
     color: "rgba(255,255,255,0.4)",
   },
   mySquadHudMetric: {
@@ -4638,6 +6313,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
     zIndex: 10,
+  },
+  mySquadLeaveRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    gap: 8,
+  },
+  mySquadDissolveBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgba(251,113,133,0.35)",
+    backgroundColor: "rgba(244,63,94,0.12)",
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  mySquadDissolveBtnText: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(254,226,226,0.9)",
+  },
+  mySquadLeaveBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  mySquadLeaveBtnText: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.55)",
+  },
+  mySquadMembersHeadEntry: {
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.18)",
+    paddingBottom: 8,
+  },
+  mySquadMembersDotEntry: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#FFFFFF",
+  },
+  mySquadMembersLabelEntry: {
+    fontFamily: fonts.metric,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.7)",
+  },
+  mySquadPeriodHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 2,
   },
   mySquadMemberList: {
     gap: 8,
@@ -4814,6 +6556,16 @@ const styles = StyleSheet.create({
     borderColor: "rgba(251,191,36,0.22)",
     backgroundColor: "rgba(10,14,20,0.9)",
   },
+  memberRowEntry: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
+    backgroundColor: "#000",
+  },
+  memberRowEmptyEntry: {
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.55)",
+    backgroundColor: "#000",
+  },
   memberRowEmpty: {
     borderStyle: "dashed",
     borderColor: "rgba(255,255,255,0.12)",
@@ -4834,6 +6586,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "rgba(255,255,255,0.9)",
+  },
+  squadUserNameLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+    flex: 1,
+  },
+  squadUserNameLineCenter: {
+    flex: 0,
+    flexGrow: 0,
+    flexShrink: 0,
+    justifyContent: "center",
+    alignSelf: "center",
+  },
+  squadUserNameText: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  squadUserNameTextCenter: {
+    flexShrink: 0,
+  },
+  squadUserProBadge: {
+    flexShrink: 0,
+  },
+  applicantSheetNameWrap: {
+    marginTop: 12,
+    width: "100%",
+    alignItems: "center",
+  },
+  inviteSendNameWrap: {
+    marginTop: 10,
+    width: "100%",
+    alignItems: "center",
+  },
+  pastInviteNameBlock: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 4,
   },
   memberPosts: {
     marginTop: 1,
@@ -4992,32 +6786,62 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.88,
   },
+  openSquadShell: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
   openRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     overflow: "visible",
   },
-  openRank: {
-    width: 36,
-    textAlign: "center",
-    fontFamily: RANK_DISPLAY_FONT,
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: 0.8,
-    ...Platform.select({
-      ios: { fontWeight: "400" },
-      android: { fontWeight: "400" },
-      default: {},
-    }),
+  openPeriodRankHeader: {
+    flexShrink: 0,
+    alignItems: "stretch",
+    gap: 4,
   },
-  openPts: {
-    width: 76,
-    alignItems: "flex-end",
+  openPeriodRankGroupLabel: {
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.82)",
+  },
+  openPeriodRanks: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexShrink: 0,
+  },
+  openPeriodRankCol: {
+    width: 44,
+    alignItems: "center",
     justifyContent: "center",
     overflow: "visible",
+  },
+  openPeriodRankHeaderLabel: {
+    width: 44,
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.78)",
+  },
+  openMemberList: {
+    gap: 6,
+  },
+  openMemberHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingBottom: 2,
+  },
+  openMemberHeaderAvatarSpacer: {
+    width: 40,
+    height: 1,
   },
   openActions: {
     flexDirection: "row",
@@ -5030,22 +6854,19 @@ const styles = StyleSheet.create({
   },
   openMembers: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.08)",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     gap: 6,
     overflow: "hidden",
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
   },
   openMemberRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    borderRadius: 2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.03)",
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -5069,10 +6890,9 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 2,
     borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.35)",
-    backgroundColor: "rgba(251,191,36,0.1)",
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   viewMembersBtnText: {
     fontFamily: fonts.metric,
@@ -5192,7 +7012,6 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 2,
     borderWidth: 1,
     borderColor: "rgba(251,191,36,0.4)",
     backgroundColor: "rgba(251,191,36,0.12)",
@@ -5390,6 +7209,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(251,191,36,0.12)",
     paddingVertical: 10,
   },
+  incomingInviteAcceptText: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: "#FFFFFF",
+  },
   incomingInviteDeclineBtn: {
     flex: 1,
     alignItems: "center",
@@ -5411,6 +7238,13 @@ const styles = StyleSheet.create({
   requestCard: {
     padding: 12,
   },
+  incomingRequestCard: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
+    backgroundColor: "#000",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
   requestMain: {
     flexDirection: "row",
     alignItems: "center",
@@ -5423,19 +7257,20 @@ const styles = StyleSheet.create({
   },
   requestTimeLabel: {
     flexShrink: 0,
-    fontFamily: fonts.metric,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    color: "rgba(255,255,255,0.35)",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.4)",
   },
   requestStatsRow: {
-    marginTop: 4,
+    marginTop: 6,
     flexDirection: "row",
     flexWrap: "wrap",
-    alignItems: "baseline",
+    alignItems: "center",
     gap: 6,
+  },
+  requestThisWeekLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.55)",
   },
   requestStatsDot: {
     fontFamily: fonts.metric,
@@ -5487,7 +7322,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    borderRadius: 2,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: "rgba(251,113,133,0.3)",
     backgroundColor: "rgba(244,63,94,0.08)",
@@ -5507,7 +7342,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    borderRadius: 2,
+    borderRadius: 0,
     borderWidth: 0,
     backgroundColor: JOIN_BATTLE_AMBER,
     paddingVertical: 10,
@@ -5775,6 +7610,243 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.35)",
   },
+  applyConfirmCard: {
+    width: "100%",
+    maxWidth: 400,
+    maxHeight: "86%",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "#0A0A0C",
+    overflow: "hidden",
+  },
+  applyConfirmInner: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+    position: "relative",
+  },
+  applyConfirmHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 14,
+  },
+  applyConfirmName: {
+    fontFamily: fonts.metric,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    color: "#ffffff",
+  },
+  applyConfirmCopy: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "rgba(255,255,255,0.6)",
+  },
+  applyConfirmClose: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  applicantModalBackdrop: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "rgba(5,2,8,0.78)",
+  },
+  applicantSheetCloseAbs: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 11,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  applicantSheetCloseRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 4,
+  },
+  applicantSheetCenter: {
+    alignItems: "center",
+  },
+  applicantSheetName: {
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    color: "#ffffff",
+  },
+  applicantSheetHandle: {
+    marginTop: 2,
+    fontSize: 14,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.45)",
+  },
+  applicantSheetMeta: {
+    marginTop: 4,
+    fontSize: 12,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.4)",
+  },
+  applicantSheetBio: {
+    marginTop: 16,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.6)",
+  },
+  applicantSheetRanks: {
+    marginTop: 20,
+    alignItems: "center",
+    gap: 4,
+  },
+  applicantSheetStatsRow: {
+    marginTop: 16,
+    width: "100%",
+    flexDirection: "row",
+    gap: 8,
+  },
+  applicantSheetStatCell: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#000",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  applicantSheetStatKey: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.45)",
+    textAlign: "center",
+  },
+  applicantSheetStatValue: {
+    marginTop: 4,
+    alignItems: "center",
+  },
+  applicantProfileBtn: {
+    marginTop: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "#000",
+    paddingVertical: 12,
+  },
+  applicantProfileBtnText: {
+    fontFamily: fonts.metric,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.6,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.8)",
+  },
+  applicantSheetActions: {
+    marginTop: 10,
+    flexDirection: "row",
+    gap: 8,
+  },
+  applyConfirmList: {
+    maxHeight: 280,
+  },
+  applyConfirmListContent: {
+    gap: 6,
+  },
+  inviteSendHero: {
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 4,
+  },
+  inviteSendName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  inviteSendHandle: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.4)",
+  },
+  incomingInviteModalTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    lineHeight: 22,
+    color: "#ffffff",
+  },
+  incomingInviteSquadName: {
+    fontFamily: fonts.metric,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.5)",
+    marginBottom: 8,
+  },
+  incomingInviteMemberList: {
+    gap: 6,
+    marginBottom: 8,
+  },
+  incomingInviteMemberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "#000",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  incomingInviteHoldHint: {
+    marginTop: 8,
+    marginBottom: 12,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.45)",
+  },
+  incomingInviteHoldBtn: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "#000",
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  incomingInviteHoldBtnText: {
+    fontFamily: fonts.metric,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.75)",
+  },
+  applyConfirmSubmit: {
+    marginTop: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    backgroundColor: SQUAD_GOLD_NATIVE.acc,
+  },
+  applyConfirmSubmitText: {
+    fontFamily: fonts.metric,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2.4,
+    textTransform: "uppercase",
+    color: SQUAD_GOLD_NATIVE.accOn,
+  },
   modalCloseBtn: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
@@ -5903,11 +7975,88 @@ const styles = StyleSheet.create({
   boardList: {
     gap: 8,
   },
+  lbRowWrap: {
+    position: "relative",
+    overflow: "visible",
+    paddingRight: SQUAD_RANKING_DETAIL_SPINE.width - 1,
+  },
+  /** リザルトカード / ランキング行と同じ押し込み */
+  lbRowPressed: {
+    opacity: 0.96,
+    transform: [{ scale: 0.99 }],
+  },
+  lbRowPressedReduce: {
+    opacity: 0.96,
+  },
+  detailSpine: {
+    position: "absolute",
+    right: 0,
+    zIndex: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#070b12",
+    borderWidth: 1.5,
+    borderLeftWidth: 0,
+  },
+  detailSpineFlush: {
+    top: 0,
+    bottom: 0,
+    right: -(SQUAD_RANKING_DETAIL_SPINE.width - 1),
+  },
+  detailSpineTextCol: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 1,
+  },
+  detailSpineChar: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 8,
+    fontWeight: "700",
+    lineHeight: 9,
+    letterSpacing: 0,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    color: "rgba(226,232,240,0.72)",
+    textAlign: "center",
+  },
+  detailSquadHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+  detailSquadRank: {
+    alignItems: "center",
+  },
+  detailSquadMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  detailSquadName: {
+    fontFamily: fonts.metricExtra,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: colors.textPrimary,
+  },
+  detailSquadCount: {
+    marginTop: 2,
+    fontFamily: fonts.metric,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.35)",
+  },
+  detailMemberList: {
+    gap: 6,
+  },
   lbRow: {
     flexDirection: "column",
     borderWidth: 2,
     borderColor: "rgba(251,191,36,0.18)",
-    backgroundColor: "rgba(14,20,32,0.98)",
+    backgroundColor: "transparent",
     overflow: "hidden",
     position: "relative",
   },
@@ -5983,6 +8132,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: "rgba(253,230,138,0.5)",
   },
+  lbFirstStatMuted: {
+    fontFamily: fonts.metric,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.35)",
+  },
   lbFirstStatBox: {
     flex: 1,
     minWidth: 0,
@@ -6035,11 +8190,11 @@ const styles = StyleSheet.create({
   },
   lbRowMine: {
     borderColor: "rgba(251,191,36,0.45)",
-    backgroundColor: "rgba(251,191,36,0.09)",
+    backgroundColor: "transparent",
   },
   lbRowFirst: {
     borderColor: "rgba(255,214,90,0.65)",
-    backgroundColor: "rgba(255,214,90,0.08)",
+    backgroundColor: "transparent",
     ...Platform.select({
       ios: {
         shadowColor: "#FFD65A",
@@ -6055,7 +8210,7 @@ const styles = StyleSheet.create({
   },
   lbRowSecond: {
     borderColor: "rgba(233,237,246,0.42)",
-    backgroundColor: "rgba(230,235,245,0.05)",
+    backgroundColor: "transparent",
     ...Platform.select({
       ios: {
         shadowColor: "#E9EDF6",
@@ -6071,7 +8226,7 @@ const styles = StyleSheet.create({
   },
   lbRowThird: {
     borderColor: "rgba(213,154,90,0.45)",
-    backgroundColor: "rgba(205,127,50,0.06)",
+    backgroundColor: "transparent",
     ...Platform.select({
       ios: {
         shadowColor: "#D59A5A",
@@ -6093,19 +8248,6 @@ const styles = StyleSheet.create({
     overflow: "visible",
     paddingHorizontal: 2,
     transform: [{ translateY: 6 }],
-  },
-  lbRank: {
-    textAlign: "center",
-    fontFamily: RANK_DISPLAY_FONT,
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: 0.8,
-    paddingHorizontal: 2,
-    ...Platform.select({
-      ios: { fontWeight: "400" },
-      android: { fontWeight: "400", includeFontPadding: false },
-      default: {},
-    }),
   },
   lbMeta: {
     flex: 1,

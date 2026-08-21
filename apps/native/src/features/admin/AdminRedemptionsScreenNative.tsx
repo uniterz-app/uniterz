@@ -10,7 +10,7 @@ import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
 import { db } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../hooks/useNativeUserLanguage";
-import { isAdminUid } from "../../../../../lib/constants";
+import { useIsAdminNative } from "./useIsAdminNative";
 import { formatAdminInboxDate } from "../../../../../lib/admin/adminInbox";
 import { parseRedemptionRequestClient } from "../../../../../lib/redemption/parseRedemptionClient";
 import { redemptionStatusLabel } from "../../../../../lib/redemption/redemptionStatus";
@@ -21,13 +21,15 @@ export default function AdminRedemptionsScreenNative() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { fUser } = useFirebaseUser();
+  const { isAdmin, loading: adminLoading } = useIsAdminNative();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const isJa = language === "ja";
   const [items, setItems] = useState<RedemptionRequest[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!isAdminUid(fUser?.uid)) {
+    if (adminLoading) return;
+    if (!isAdmin) {
       setReady(true);
       return;
     }
@@ -51,7 +53,7 @@ export default function AdminRedemptionsScreenNative() {
       () => setReady(true)
     );
     return () => unsub();
-  }, [fUser?.uid]);
+  }, [adminLoading, isAdmin]);
 
   return (
     <MobilePageShell

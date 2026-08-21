@@ -577,7 +577,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           language={language}
           onOpenSquadBattlePreview={() => {
             setMenuOpen(false);
-            stackNavigation.navigate("SquadBattlePreview");
+            stackNavigation.navigate("SquadBattle");
           }}
         />
       </SideMenuDrawerNative>

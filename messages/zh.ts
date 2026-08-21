@@ -165,6 +165,7 @@ const zh: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "最近{n}场比赛的连胜/连败",
     last20TrackerSubtitle: "最近{n}场比赛",
+    last20TrackerUnavailable: "无法获取数据",
     settledTodayResults: "Result Drop",
     settledTodayResultsDesc: "今日已结算的分析列表",
     settledTodayEmpty: "今日尚无已结算的分析",

@@ -508,7 +508,7 @@ export default function RankingsCommunityPanel({
           onPasteJoin={onPasteJoin}
           onOpenSquadBattle={() => {
             const base = variant === "web" ? "/web" : "/mobile";
-            router.push(`${base}/squad-battle-preview`);
+            router.push(`${base}/squad-battle`);
           }}
           labels={slotLabels}
         />

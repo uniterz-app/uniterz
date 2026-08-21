@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { isAdminUid } from "@/lib/constants";
-import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 import { db, storage } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
@@ -21,7 +20,7 @@ type FormState = {
 
 export default function AdminAnnouncementNewPage() {
   const router = useRouter();
-  const { fUser: user, status } = useFirebaseUser();
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
 
   const [form, setForm] = useState<FormState>({
     title: "",
@@ -34,8 +33,6 @@ export default function AdminAnnouncementNewPage() {
     heroFile: null,
   });
   const [submitting, setSubmitting] = useState(false);
-
-  const isAdmin = status === "ready" && isAdminUid(user?.uid);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,7 +67,7 @@ export default function AdminAnnouncementNewPage() {
     }
   }
 
-  if (status !== "ready") {
+  if (adminLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0B0F17] p-6 text-white">
         <CandleChartLoader />
@@ -100,7 +97,7 @@ export default function AdminAnnouncementNewPage() {
           <div>
             <label className="block text-sm mb-1">本文</label>
             <textarea
-              className="w-full rounded-lg bg白/5 border border-white/10 px-3 py-2 h-40 outline-none focus:ring-2 focus:ring-cyan-400"
+              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 h-40 outline-none focus:ring-2 focus:ring-cyan-400"
               value={form.body}
               onChange={(e) => setForm((s) => ({ ...s, body: e.target.value }))}
             />

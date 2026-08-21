@@ -7,7 +7,11 @@ import {
   parseSquadDoc,
   squadsCol,
 } from "@/lib/groupBattles/server/firestore";
-import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
+import {
+  entryProfileOrFallback,
+  loadGroupBattleEntryProfiles,
+} from "@/lib/groupBattles/server/loadEntryProfiles";
+import { jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +31,7 @@ export async function GET(req: Request) {
     }
 
     let membership: { squadId: string; role: "owner" | "member" } | null = null;
-    let mySquad: ReturnType<typeof parseSquadDoc> | null = null;
+    let mySquad: Record<string, unknown> | null = null;
     if (uid) {
       membership = await getMembership(adminDb, battle.id, uid);
       if (membership?.squadId) {
@@ -35,10 +39,30 @@ export async function GET(req: Request) {
           .doc(membership.squadId)
           .get();
         if (snap.exists) {
-          mySquad = parseSquadDoc(
-            snap.id,
-            snap.data() as Record<string, unknown>
+          const raw = snap.data() as Record<string, unknown>;
+          const squad = parseSquadDoc(snap.id, raw);
+          const profiles = await loadGroupBattleEntryProfiles(
+            adminDb,
+            squad.memberUids
           );
+          const inviteCode =
+            membership.role === "owner" &&
+            typeof raw.inviteCodePlain === "string" &&
+            raw.inviteCodePlain.trim()
+              ? raw.inviteCodePlain.trim()
+              : null;
+          mySquad = {
+            id: squad.id,
+            name: squad.name,
+            memberUids: squad.memberUids,
+            memberCount: squad.memberCount,
+            status: squad.status,
+            ownerUid: squad.ownerUid,
+            inviteCode,
+            members: squad.memberUids.map((memberUid, i) =>
+              entryProfileOrFallback(memberUid, profiles, i)
+            ),
+          };
         }
       }
     }

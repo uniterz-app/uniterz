@@ -33,6 +33,7 @@ type Props = {
   rankTrendLoading: boolean;
   streakPoints: StreakTrackerPointNative[];
   streakLoading: boolean;
+  streakUnavailable?: boolean;
 };
 
 export default function ProfileOverviewSectionNative({
@@ -47,6 +48,7 @@ export default function ProfileOverviewSectionNative({
   rankTrendLoading,
   streakPoints,
   streakLoading,
+  streakUnavailable = false,
 }: Props) {
   /** 4ブロック同時マウント。入場アニメの index だけ Result Drop を先頭にする */
   const overviewStage = useProfileOverviewStage(stageReady, {
@@ -91,6 +93,7 @@ export default function ProfileOverviewSectionNative({
         <ProfileStreakTrackerNative
           points={streakPoints}
           loading={streakLoading}
+          unavailable={streakUnavailable}
           language={language}
         />
       </ProfileOverviewEntranceBlock>

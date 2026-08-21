@@ -7,6 +7,7 @@ import {
   parseSnapshotDoc,
   snapshotRef,
 } from "@/lib/groupBattles/server/firestore";
+import { loadGroupBattleEntryProfiles } from "@/lib/groupBattles/server/loadEntryProfiles";
 import { jsonErr, mapAuthError } from "@/lib/groupBattles/server/http";
 
 export const runtime = "nodejs";
@@ -29,7 +30,8 @@ export async function GET(req: Request, ctx: Ctx) {
     if (!battle) return jsonErr("not_found", 404);
 
     const url = new URL(req.url);
-    const period = (url.searchParams.get("period") ?? "weekly") as GroupBattlePeriod;
+    const period = (url.searchParams.get("period") ??
+      "weekly") as GroupBattlePeriod;
     if (period !== "weekly" && period !== "monthly") {
       return jsonErr("invalid_period", 400);
     }
@@ -62,13 +64,40 @@ export async function GET(req: Request, ctx: Ctx) {
       snap.data() as Record<string, unknown>
     );
 
+    const uids = [
+      ...new Set(
+        snapshot.rows.flatMap((r) => r.memberScores.map((m) => m.uid))
+      ),
+    ];
+    const profiles = await loadGroupBattleEntryProfiles(adminDb, uids);
+    const rows = snapshot.rows.map((row) => ({
+      ...row,
+      memberScores: row.memberScores.map((m) => {
+        const p = profiles.get(m.uid);
+        return {
+          ...m,
+          displayName: p?.displayName,
+          handle: p?.handle ?? null,
+          photoURL: p?.photoURL ?? null,
+          plan: p?.plan,
+          seasonPoints: p?.points,
+          winRate: p?.winRate,
+          activeWinStreak: p?.activeWinStreak,
+          totalPosts: p?.totalPosts,
+          thisWeekRank: p?.thisWeekRank ?? null,
+          lastWeekRank: p?.lastWeekRank ?? null,
+          lastMonthRank: p?.lastMonthRank ?? null,
+        };
+      }),
+    }));
+
     return NextResponse.json(
       {
         ok: true,
         battleId,
         period,
         label,
-        snapshot,
+        snapshot: { ...snapshot, rows },
       },
       { headers: { "Cache-Control": rankingsCacheControl(snapshot.status) } }
     );

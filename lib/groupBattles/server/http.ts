@@ -10,8 +10,12 @@ export function jsonErr(error: string, status: number, extra?: Record<string, un
 
 export function mapAuthError(e: unknown): NextResponse {
   const msg = e instanceof Error ? e.message : String(e);
-  if (msg === "unauthorized" || msg.includes("auth")) {
+  const status = (e as { status?: number })?.status;
+  if (status === 401 || msg === "unauthorized") {
     return jsonErr("unauthorized", 401);
+  }
+  if (status === 403 || msg === "forbidden") {
+    return jsonErr("forbidden", 403);
   }
   if (msg === "phase_locked" || (e as { code?: string })?.code === "phase_locked") {
     return jsonErr("phase_locked", 409);

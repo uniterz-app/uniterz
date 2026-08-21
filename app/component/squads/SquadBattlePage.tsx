@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * SQUAD BATTLE（グループ対抗戦）UI プレビュー。
- * モック専用 — 本番 API 未接続。
+ * SQUAD BATTLE（グループ対抗戦）。
+ * 本番は `/mobile/squad-battle` · `/web/squad-battle`。
+ * プレビューツールは `mode="preview"` のみ。
  */
 
-import { useEffect, useMemo, useState, createContext, useContext, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, createContext, useContext, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Users,
@@ -13,7 +15,6 @@ import {
   Ticket,
   X,
   Check,
-  UserRound,
   Clock,
   ChevronDown,
   Crown,
@@ -37,9 +38,22 @@ import SquadBattleIntroOverlay, {
   clearSquadBattleIntroSeen,
   hasSeenSquadBattleIntro,
 } from "@/app/component/squads/SquadBattleIntroOverlay";
+import SquadBattleLaunchOverlay, {
+  clearSquadBattleLaunchSeen,
+  markSquadBattleLaunchSeen,
+  readSquadBattleLaunchSeenBattleId,
+} from "@/app/component/squads/SquadBattleLaunchOverlay";
+import {
+  formatSquadBattleRecruitDeadlineLabel,
+  shouldShowSquadBattleLaunch,
+} from "@/lib/squads/squadBattleLaunchGate";
+import {
+  readHeldInviteIdsFromLocalStorage,
+  withHeldInviteId,
+  writeHeldInviteIdsToLocalStorage,
+} from "@/lib/squads/squadBattleInviteHold";
 import { nameOxanium, nameRajdhani, nameBebas, jp, cyberNumberDisplay } from "@/lib/fonts";
 import {
-  SQUAD_BATTLE_HELP_TEXT,
   SQUAD_BATTLE_MAX_MEMBERS,
   SQUAD_BATTLE_MIN_MEMBERS,
   SQUAD_BATTLE_MAX_PENDING_APPLICATIONS,
@@ -50,6 +64,8 @@ import {
   SQUAD_BATTLE_SEASON_PHASES,
   countActiveMembers,
   getSquadBattleMock,
+  squadFromIncomingInvite,
+  squadIncomingInviteMemberProfiles,
   squadMemberToProfile,
   squadRankDelta,
   type OpenSquadListing,
@@ -58,11 +74,13 @@ import {
   type SquadApplicantProfile,
   type SquadBattlePreviewState,
   type SquadIncomingInviteMock,
+  type SquadInviteMemberSummary,
   type SquadJoinRequest,
   type SquadMember,
 } from "@/lib/squads/squadBattleMock";
 import type { GroupBattlePastSquadItem } from "@/lib/groupBattles/types";
-import { mapGroupBattleSnapshotRowsToSquads } from "@/lib/groupBattles/mapSnapshotRowsToSquads";
+import { mapGroupBattleSnapshotRowsToSquads, mapCurrentMySquadToUiSquad, mapOpenSquadApiToListings, mapJoinRequestApiToUi } from "@/lib/groupBattles/mapSnapshotRowsToSquads";
+import { estimatedGroupBattleUnitsPerMember } from "@/lib/groupBattles/unitLedger";
 import {
   SQUAD_FIRST_AVATAR_FADE_S,
   SQUAD_FIRST_FADE_IN_EASE,
@@ -71,15 +89,26 @@ import {
   squadFirstAvatarDelayS,
   squadFirstFooterDelayS,
 } from "@/lib/squads/squadFirstPlaceMotion";
-import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
+import { CyberRankNumber } from "@/app/component/rankings/CyberRankingListParts";
+import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
+import { RankFirstBorderEdgeScan } from "@/app/component/rankings/RankFirstBorderEdgeScan";
 import {
   CyberSlantedTab,
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
-import { cyberRankPalette } from "@/lib/rankings/cyberRankVisual";
+import {
+  cyberRankPalette,
+  cyberRankQuietFrameColor,
+} from "@/lib/rankings/cyberRankVisual";
+import { RANK_FIRST_EDGE_DIM_BORDER } from "@/lib/rankings/rankFirstBorderEdgeScan";
 import { formatListMetricDayDelta } from "@/lib/rankings/listRowMetricMeta";
 import CyberNumber from "@/app/component/ui/CyberNumber";
 import { copyTextToClipboard } from "@/lib/clipboard/copyText";
+import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
+import {
+  RankingNameBadges,
+} from "@/app/component/common/RankingNameBadges";
+import { proBadgeStaticMotion } from "@/app/component/common/ProCyberBadge";
 import {
   RankingsCyberPanel,
 } from "@/app/component/rankings/RankingsCyberPanel";
@@ -87,17 +116,38 @@ import { rankingsCardShellStyle, podiumMedalAccent } from "@/lib/rankings/rankin
 import {
   SQUAD_GOLD,
   SQUAD_GOLD_CHAMFER,
-  SQUAD_GOLD_MEDALLION,
 } from "@/lib/squads/squadBattleGoldTheme";
 import {
-  SQUAD_BATTLE_BOARD_STATUS_HINT,
   SQUAD_BATTLE_MOCK_DEADLINE_LABEL,
+  SQUAD_BATTLE_IDLE_PANEL,
+  SQUAD_BATTLE_RULES_SECTION,
+  SQUAD_BATTLE_RANK_SPECTATOR_HINT,
+  SQUAD_INVITE_DEADLINE_PREFIX,
+  SQUAD_INVITE_HOLD_HINT,
+  SQUAD_INVITE_LIST_EMPTY,
+  SQUAD_INVITE_LIST_HINT,
+  SQUAD_INVITE_LIST_TITLE,
+  SQUAD_INVITE_JOIN_PROMPT,
+  SQUAD_APPLICANT_OPEN_PROFILE,
+  SQUAD_APPLICANT_SCORE_LABEL,
+  SQUAD_APPLICANT_WINRATE_LABEL,
+  SQUAD_APPLICANT_WR_LABEL,
+  squadInviteIncomingTitle,
+  squadInviteSendPrompt,
+  squadApplicantApprovePrompt,
   SQUAD_BATTLE_REWARD_RESULT_MOCK,
+  squadBattlePayoutTotalUnits,
+  type SquadBattleRewardResult,
   SQUAD_BATTLE_UI_PHASE_OPTIONS,
   SQUAD_BATTLE_WEEK_OPTIONS,
+  SQUAD_OPEN_PERIOD_RANKS,
+  SQUAD_OPEN_PERIOD_RANK_GROUP_LABEL,
   squadBattlePhaseBanner,
+  SQUAD_RANKING_DETAIL_SPINE,
   squadMemberCountLabel,
+  squadRankingList,
   squadScoreGaps,
+  groupBattlePhaseToUiPhase,
   type SquadBattleUiPhase,
   type SquadBattleWeekIndex,
 } from "@/lib/squads/squadBattleUiCopy";
@@ -123,20 +173,38 @@ function squadCardShellStyleNoClip(
 }
 
 /** カード上辺に乗るタブ — absolute だと親 overflow で切れるためフロー配置 */
-function SquadCardTabBadge({ label }: { label: string }) {
+function SquadCardTabBadge({
+  label,
+  tone = "gold",
+}: {
+  label: string;
+  tone?: "gold" | "entry";
+}) {
+  const entry = tone === "entry";
   return (
     <div
-      className="relative z-20 ml-3 inline-flex items-center gap-1.5 border border-amber-300/55 bg-[#0A0805] px-2 py-0.5"
+      className={cn(
+        "relative z-20 ml-3 inline-flex items-center gap-1.5 px-2 py-0.5",
+        entry
+          ? "border border-white/45 bg-black"
+          : "border border-amber-300/55 bg-[#0A0805]"
+      )}
       style={chamferStyle}
     >
       <span
         aria-hidden
-        className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_6px_#FBBF24]"
+        className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          entry
+            ? "bg-white shadow-[0_0_6px_rgba(255,255,255,0.7)]"
+            : "bg-amber-300 shadow-[0_0_6px_#FBBF24]"
+        )}
       />
       <span
         className={cn(
           nameOxanium.className,
-          "text-[9px] font-black uppercase tracking-[0.16em] text-amber-50"
+          "text-[9px] font-black uppercase tracking-[0.16em]",
+          entry ? "text-white/90" : "text-amber-50"
         )}
       >
         {label}
@@ -209,11 +277,12 @@ function SquadChamferButton({
 function SquadGoldPhaseTrack({
   activeKey = "battle",
 }: {
-  activeKey?: "entry" | "battle" | "reward";
+  /** null = オフシーズン（未点灯） */
+  activeKey?: "entry" | "battle" | "reward" | null;
 }) {
   const order = ["entry", "battle", "reward"] as const;
   const n = order.length;
-  const activeIdx = Math.max(0, order.indexOf(activeKey));
+  const activeIdx = activeKey == null ? -1 : order.indexOf(activeKey);
   /** 線の進捗: 完了ノードまで塗り、現在ノードで止める */
   const progressPct =
     activeIdx <= 0 ? 0 : (activeIdx / (n - 1)) * 100;
@@ -248,8 +317,8 @@ function SquadGoldPhaseTrack({
       <div className="relative z-[1] flex">
         {SQUAD_BATTLE_SEASON_PHASES.map((p) => {
           const idx = order.indexOf(p.key);
-          const active = p.key === activeKey;
-          const done = idx < activeIdx;
+          const active = activeKey != null && p.key === activeKey;
+          const done = activeIdx >= 0 && idx < activeIdx;
           const lit = active || done;
           return (
             <div
@@ -356,9 +425,37 @@ function SquadPhaseStatusBanner({
 }
 
 /** REWARD フェーズ — 獲得 Unit の見せ場 */
-function SquadRewardResultPanel({ hasSquad }: { hasSquad: boolean }) {
-  const isWeb = useSquadBattleIsWeb();
-  const r = SQUAD_BATTLE_REWARD_RESULT_MOCK;
+function SquadRewardResultPanel({
+  hasSquad,
+  result,
+  loading,
+}: {
+  hasSquad: boolean;
+  result: SquadBattleRewardResult;
+  loading?: boolean;
+}) {
+  const r = result;
+  const total = squadBattlePayoutTotalUnits(r);
+  if (loading) {
+    return (
+      <div
+        className="border border-amber-400/25 bg-amber-500/[0.06] px-4 py-5 text-center"
+        style={chamferStyle}
+      >
+        <p
+          className={cn(
+            nameOxanium.className,
+            "text-[11px] font-black uppercase tracking-[0.2em] text-amber-200/70"
+          )}
+        >
+          REWARD
+        </p>
+        <p className={cn(jp.className, "mt-2 text-sm text-white/45")}>
+          獲得 Unit を読み込み中…
+        </p>
+      </div>
+    );
+  }
   if (!hasSquad) {
     return (
       <div
@@ -374,7 +471,8 @@ function SquadRewardResultPanel({ hasSquad }: { hasSquad: boolean }) {
           REWARD
         </p>
         <p className={cn(jp.className, "mt-2 text-sm text-white/55")}>
-          未参加のため配布対象外です。次回 ENTRY から参加できます。
+          {r.payoutNote ||
+            "未参加のため配布対象外です。次回 ENTRY から参加できます。"}
         </p>
       </div>
     );
@@ -395,76 +493,165 @@ function SquadRewardResultPanel({ hasSquad }: { hasSquad: boolean }) {
       >
         Your payout
       </p>
-      <div className={cn("mt-3 grid grid-cols-2", isWeb ? "gap-3" : "gap-2")}>
-        {[
-          { label: "WEEKLY", rank: r.weeklyRank, units: r.weeklyUnits },
-          { label: "MONTHLY", rank: r.monthlyRank, units: r.monthlyUnits },
-        ].map((cell) => (
-          <div
-            key={cell.label}
-            className="border border-amber-400/25 bg-black/35 px-3 py-3 text-center"
-            style={chamferStyle}
+      <div className="mt-3 flex flex-col">
+        {r.weekly.map((w, i) => {
+          const first = w.rank === 1;
+          return (
+            <div
+              key={w.weekIndex}
+              className={cn(
+                "flex items-baseline gap-3 py-2",
+                i === 0 ? null : "border-t border-amber-400/12"
+              )}
+            >
+              <span
+                className={cn(
+                  nameOxanium.className,
+                  "w-8 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/45"
+                )}
+              >
+                W{w.weekIndex}
+              </span>
+              <span
+                className={cn(
+                  nameBebas.className,
+                  "w-10 shrink-0 text-[22px] leading-none",
+                  first ? "text-[#FBBF24]" : "text-[#FDE68A]"
+                )}
+              >
+                {w.rank != null ? `#${w.rank}` : "—"}
+              </span>
+              <span
+                className={cn(
+                  nameOxanium.className,
+                  "ml-auto text-[12px] font-black tabular-nums text-[#FFF7E0]"
+                )}
+              >
+                {w.status === "none" && w.units === 0 ? "—" : `+${w.units}`}
+              </span>
+            </div>
+          );
+        })}
+        <div className="mt-1 flex items-baseline gap-3 border-t border-amber-300/35 py-2.5">
+              <span
+                className={cn(
+                  nameOxanium.className,
+                  "w-9 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/70"
+                )}
+              >
+            MON
+          </span>
+          <span
+            className={cn(
+              nameBebas.className,
+              "w-10 shrink-0 text-[24px] leading-none text-[#FBBF24]"
+            )}
           >
-            <p
-              className={cn(
-                nameOxanium.className,
-                "text-[9px] font-bold uppercase tracking-[0.16em] text-amber-200/50"
-              )}
-            >
-              {cell.label}
-            </p>
-            <p
-              className={cn(
-                nameBebas.className,
-                "mt-1 text-[28px] leading-none text-[#FBBF24]"
-              )}
-            >
-              {cell.rank != null ? `#${cell.rank}` : "—"}
-            </p>
-            <p
-              className={cn(
-                nameOxanium.className,
-                "mt-1.5 text-[12px] font-black tabular-nums text-[#FFF7E0]"
-              )}
-            >
-              +{cell.units} Unit
-            </p>
-          </div>
-        ))}
+            {r.monthlyRank != null ? `#${r.monthlyRank}` : "—"}
+          </span>
+          <span
+            className={cn(
+              nameOxanium.className,
+              "ml-auto text-[13px] font-black tabular-nums text-[#FFF7E0]"
+            )}
+          >
+            {r.monthlyStatus === "none" && r.monthlyUnits === 0
+              ? "—"
+              : `+${r.monthlyUnits}`}
+          </span>
+        </div>
       </div>
-      <p className={cn(jp.className, "mt-3 text-center text-[11px] text-white/40")}>
+      <div className="mt-1 flex items-baseline justify-between border-t border-amber-300/50 pt-3">
+        <span
+          className={cn(
+            nameOxanium.className,
+            "text-[10px] font-bold uppercase tracking-[0.16em] text-amber-200/55"
+          )}
+        >
+          Total
+        </span>
+        <span
+          className={cn(
+            nameOxanium.className,
+            "text-[16px] font-black tabular-nums text-[#FFF7E0]"
+          )}
+          style={{ textShadow: `0 0 16px rgba(${SQUAD_GOLD.glowRgb},0.35)` }}
+        >
+          +{total} Unit
+        </span>
+      </div>
+      <p className={cn(jp.className, "mt-2.5 text-[11px] leading-snug text-white/40")}>
         {r.payoutNote}
       </p>
     </div>
   );
 }
 
-/** 休止期間の専用面 */
+/** 休止期間の専用面（告知 + ルールを1枠） */
 function SquadIdlePanel() {
   return (
     <div
-      className="border border-white/12 bg-white/[0.03] px-4 py-8 text-center"
+      className="border border-amber-400/25 bg-black/30 px-3.5 py-5"
       style={chamferStyle}
     >
-      <p
-        className={cn(
-          nameOxanium.className,
-          "text-[11px] font-black uppercase tracking-[0.22em] text-white/40"
-        )}
-      >
-        Off season
-      </p>
-      <p
-        className={cn(
-          nameBebas.className,
-          "mt-2 text-[26px] tracking-[0.06em] text-white/70"
-        )}
-      >
-        NEXT ENTRY SOON
-      </p>
-      <p className={cn(jp.className, "mx-auto mt-2 max-w-xs text-[13px] text-white/40")}>
-        開催休止中です。募集開始の告知をお待ちください。
-      </p>
+      <div className="text-center">
+        <p
+          className={cn(
+            nameOxanium.className,
+            "text-[11px] font-black uppercase tracking-[0.22em] text-white/40"
+          )}
+        >
+          {SQUAD_BATTLE_IDLE_PANEL.kicker}
+        </p>
+        <p
+          className={cn(
+            nameBebas.className,
+            "mt-2 text-[26px] tracking-[0.06em] text-white/70"
+          )}
+        >
+          {SQUAD_BATTLE_IDLE_PANEL.title}
+        </p>
+        <p
+          className={cn(
+            jp.className,
+            "mx-auto mt-2 max-w-xs text-[13px] text-white/40"
+          )}
+        >
+          {SQUAD_BATTLE_IDLE_PANEL.detail}
+        </p>
+      </div>
+      <div className="mt-5 border-t border-white/10 pt-4">
+        <p
+          className={cn(
+            jp.className,
+            "text-[14px] font-black tracking-wide text-amber-50"
+          )}
+        >
+          {SQUAD_BATTLE_RULES_SECTION.title}
+        </p>
+        <ul className="mt-3 flex flex-col gap-2.5">
+          {SQUAD_BATTLE_RULES_SECTION.items.map((item) => (
+            <li key={item} className="flex items-start gap-2.5">
+              <span
+                className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{
+                  background: SQUAD_GOLD.acc,
+                  boxShadow: `0 0 8px rgba(${SQUAD_GOLD.glowRgb},0.65)`,
+                }}
+                aria-hidden
+              />
+              <span
+                className={cn(
+                  jp.className,
+                  "min-w-0 text-[12px] font-medium leading-snug text-white/88"
+                )}
+              >
+                {item}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -621,7 +808,7 @@ function leaderboardCardFrameStyle(rank: number): {
   return null;
 }
 
-/** リーダーボード1行 — GOLD LEGION 帯（チャンファー） */
+/** リーダーボード1行 — カードの大きさはそのまま、枠デザインだけランキングリストに揃える */
 function LeaderboardCardShell({
   children,
   rank,
@@ -629,26 +816,69 @@ function LeaderboardCardShell({
   children: ReactNode;
   rank: number;
 }) {
-  const frame = leaderboardCardFrameStyle(rank);
+  const firstFrame = cyberRankPalette(rank).firstPlaceFrame;
+  const quietFrame = cyberRankQuietFrameColor(rank);
 
   return (
     <div
-      className={cn("relative overflow-hidden", frame?.glowClass)}
+      className="relative overflow-hidden"
       style={{
         ...chamferStyle,
-        ...(frame?.style ?? {
-          background:
-            rank === 1
-              ? `linear-gradient(90deg, rgba(${SQUAD_GOLD.glowRgb},0.16), rgba(${SQUAD_GOLD.glowRgb},0.03))`
-              : `rgba(${SQUAD_GOLD.glowRgb},0.04)`,
-          boxShadow: `inset 0 0 0 1px ${
-            rank === 1 ? SQUAD_GOLD.line : SQUAD_GOLD.lineSoft
-          }`,
-        }),
+        ...(firstFrame
+          ? {
+              border: `2px solid ${RANK_FIRST_EDGE_DIM_BORDER}`,
+              background: "transparent",
+            }
+          : quietFrame
+            ? {
+                border: `2px solid ${quietFrame}`,
+                background: "transparent",
+                boxShadow: `inset 0 0 0 2px ${quietFrame}`,
+              }
+            : {
+                background: "transparent",
+                boxShadow: `inset 0 0 0 1px ${SQUAD_GOLD.lineSoft}`,
+              }),
       }}
     >
-      <div className="relative z-[10]">{children}</div>
+      {firstFrame ? <RankFirstBorderEdgeScan /> : null}
+      <div className="relative z-10">{children}</div>
     </div>
+  );
+}
+
+function squadRankingDetailSpineBorder(rank: number): string {
+  if (cyberRankPalette(rank).firstPlaceFrame) return RANK_FIRST_EDGE_DIM_BORDER;
+  return cyberRankQuietFrameColor(rank) ?? "rgba(148,163,184,0.35)";
+}
+
+/** リザルトカードと同型の右辺 DETAIL タブ */
+function SquadRankingDetailSpine({
+  rank,
+  flush = false,
+}: {
+  rank: number;
+  /** カード右辺に高さ合わせ（MY SQUAD ピン留め） */
+  flush?: boolean;
+}) {
+  const spine = SQUAD_RANKING_DETAIL_SPINE;
+  return (
+    <div
+      className="pointer-events-none absolute z-[24] flex items-center justify-center"
+      style={{
+        top: flush ? 0 : spine.top,
+        bottom: flush ? 0 : undefined,
+        right: flush ? -(spine.width - 1) : 0,
+        width: spine.width,
+        height: flush ? undefined : spine.height,
+        background: "#070b12",
+        borderWidth: 1.5,
+        borderLeftWidth: 0,
+        borderStyle: "solid",
+        borderColor: squadRankingDetailSpineBorder(rank),
+      }}
+      aria-hidden
+    />
   );
 }
 
@@ -798,6 +1028,8 @@ function SquadPageBar({
 
 type Props = {
   variant: "web" | "mobile";
+  /** preview = モック切替ツール。本番ルートは production */
+  mode?: "preview" | "production";
 };
 
 /** Web は余白・タイポを広げ、Mobile は密レイアウトのまま */
@@ -810,29 +1042,6 @@ function useSquadBattleIsWeb() {
 function scoreColorForRank(rank: number): string {
   if (rank <= 3) return cyberRankPalette(rank).accent;
   return "rgba(255,255,255,0.92)";
-}
-
-/** セグメント色も得点文字と同じ（1〜3位パレット / 4位以下は白） */
-function segAccentForRank(rank: number) {
-  const color = scoreColorForRank(rank);
-  if (rank <= 3) {
-    const p = cyberRankPalette(rank);
-    return {
-      border: p.accent,
-      glow: p.accentGlow,
-      bg: p.stroke,
-    };
-  }
-  return {
-    border: color,
-    glow: "rgba(255,255,255,0.35)",
-    bg: "rgba(255,255,255,0.55)",
-  };
-}
-
-function pointsBarPct(value: number, max: number): number {
-  if (max <= 0) return 0;
-  return Math.min(100, Math.max(0, (value / max) * 100));
 }
 
 /** 順位変動バッジ（▲上昇 / ▼下降 / −横ばい） */
@@ -980,65 +1189,94 @@ function MemberAvatar({
   const dim =
     size === "sm"
       ? isWeb
-        ? "h-8 w-8 text-[10px]"
-        : "h-7 w-7 text-[9px]"
+        ? "h-8 w-8"
+        : "h-7 w-7"
       : isWeb
-        ? "h-10 w-10 text-[12px]"
-        : "h-9 w-9 text-[11px]";
+        ? "h-10 w-10"
+        : "h-9 w-9";
   if (member.empty) {
     return (
       <div
         className={cn(
-          "flex shrink-0 items-center justify-center border border-dashed border-amber-400/30 bg-amber-400/[0.04] text-amber-200/40",
+          "flex shrink-0 items-center justify-center overflow-hidden rounded-sm border border-dashed border-amber-400/30 bg-amber-400/[0.04] text-amber-200/40",
           dim
         )}
-        style={{ clipPath: SQUAD_GOLD_MEDALLION, WebkitClipPath: SQUAD_GOLD_MEDALLION }}
         title="募集中"
       >
         <Plus size={size === "sm" ? (isWeb ? 11 : 10) : isWeb ? 13 : 12} strokeWidth={2.5} />
       </div>
     );
   }
-  const initial = (member.displayName || member.handle || "?")
-    .slice(0, 1)
-    .toUpperCase();
   return (
-    <div
-      className={cn(
-        "flex shrink-0 items-center justify-center border border-amber-400/40 bg-amber-500/12 font-bold text-amber-50",
-        nameOxanium.className,
-        dim
-      )}
-      style={{ clipPath: SQUAD_GOLD_MEDALLION, WebkitClipPath: SQUAD_GOLD_MEDALLION }}
-      title={member.displayName}
-    >
-      {initial}
-    </div>
+    <RankingsAvatarCircle
+      photoURL={member.photoURL}
+      displayName={member.displayName || member.handle || "member"}
+      boxClassName={dim}
+      shape="square"
+    />
   );
 }
 
 function ProfileAvatar({
   profile,
   size = "md",
+  square = false,
 }: {
-  profile: Pick<SquadApplicantProfile, "displayName" | "handle">;
+  profile: Pick<SquadApplicantProfile, "displayName" | "handle" | "photoURL">;
   size?: "md" | "lg";
+  square?: boolean;
 }) {
-  const dim = size === "lg" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
-  const initial = (profile.displayName || profile.handle || "?")
-    .slice(0, 1)
-    .toUpperCase();
+  const dim = size === "lg" ? "h-16 w-16" : "h-10 w-10";
   return (
-    <div
+    <RankingsAvatarCircle
+      photoURL={profile.photoURL}
+      displayName={profile.displayName || profile.handle || "user"}
+      boxClassName={dim}
+      shape={square ? "square" : "circle"}
+    />
+  );
+}
+
+function SquadUserNameLine({
+  name,
+  plan,
+  className,
+  align = "start",
+  grow = false,
+}: {
+  name: string;
+  plan?: "free" | "pro" | null;
+  className?: string;
+  align?: "start" | "center";
+  grow?: boolean;
+}) {
+  return (
+    <span
       className={cn(
-        "flex shrink-0 items-center justify-center border border-amber-400/45 bg-amber-500/15 font-bold text-amber-50",
-        nameOxanium.className,
-        dim
+        "inline-flex min-w-0 max-w-full items-center gap-1.5",
+        grow && "flex-1",
+        align === "center" && "justify-center"
       )}
-      style={{ clipPath: SQUAD_GOLD_MEDALLION, WebkitClipPath: SQUAD_GOLD_MEDALLION }}
     >
-      {initial}
-    </div>
+      <span
+        className={cn(
+          align === "center" ? "shrink-0" : "min-w-0 truncate",
+          className
+        )}
+      >
+        {name}
+      </span>
+      {plan === "pro" ? (
+        <span className="shrink-0">
+          <RankingNameBadges
+            {...proBadgeStaticMotion}
+            compact
+            isPro
+            proLabel="PRO"
+          />
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -1046,15 +1284,32 @@ function MemberRow({
   member,
   onOpenProfile,
   elevated = false,
+  periodRanks = false,
+  entryFrame = false,
 }: {
   member: SquadMember;
   onOpenProfile?: (profile: SquadApplicantProfile) => void;
   /** MY SQUAD 内 — 独立ミニカード */
   elevated?: boolean;
+  /** エントリー: 得点ではなく個人順位 */
+  periodRanks?: boolean;
+  /** 白枠・黒塗り（申請カードと同じ） */
+  entryFrame?: boolean;
 }) {
   const isWeb = useSquadBattleIsWeb();
   const rowPad = isWeb ? "gap-3.5 px-4 py-3" : "gap-3 px-3 py-2.5";
   const nameClass = isWeb ? "text-[15px]" : "text-sm";
+  const useEntryFrame = periodRanks || entryFrame;
+  const entryRow = useEntryFrame
+    ? "border border-white/70 bg-black hover:border-white"
+    : elevated
+      ? "border-2 border-amber-400/22 bg-[#0a0e14]/90 hover:border-amber-400/40 hover:bg-amber-500/[0.06]"
+      : "rounded-sm border border-white/10 bg-[#0a0e14]/80 hover:border-amber-400/30 hover:bg-amber-500/[0.06]";
+  const entryRowStatic = useEntryFrame
+    ? "border border-white/70 bg-black"
+    : elevated
+      ? "border-2 border-amber-400/22 bg-[#0a0e14]/90"
+      : "rounded-sm border border-white/10 bg-[#0a0e14]/80";
 
   if (member.empty) {
     return (
@@ -1062,9 +1317,13 @@ function MemberRow({
         className={cn(
           "flex items-center",
           rowPad,
-          elevated
-            ? "border-2 border-dashed border-white/15 bg-white/[0.02]"
-            : "rounded-sm border border-dashed border-white/12 bg-white/[0.02]"
+          periodRanks
+            ? "border border-dashed border-white/55 bg-black"
+            : entryFrame
+              ? "border border-dashed border-white/55 bg-black"
+            : elevated
+              ? "border-2 border-dashed border-white/15 bg-white/[0.02]"
+              : "rounded-sm border border-dashed border-white/12 bg-white/[0.02]"
         )}
         style={elevated ? chamferStyle : undefined}
       >
@@ -1086,48 +1345,43 @@ function MemberRow({
       </div>
     );
   }
-  const posts = squadMemberToProfile(member).totalPosts;
+  const profile = squadMemberToProfile(member);
   const body = (
     <>
       <MemberAvatar member={member} />
       <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            jp.className,
-            "truncate font-semibold text-white/90",
-            nameClass
-          )}
-        >
-          {member.displayName}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-baseline gap-2.5">
-        <SquadPointsText
-          value={posts}
-          size={isWeb ? "md" : "sm"}
-          suffix="posts"
-          color="#CBD5E1"
-        />
-        <SquadPointsText
-          value={member.points}
-          size={isWeb ? "md" : "sm"}
-          suffix="pts"
+        <SquadUserNameLine
+          name={member.displayName}
+          plan={member.plan}
+          grow
+          className={cn(jp.className, "font-semibold text-white/90", nameClass)}
         />
       </div>
+      {periodRanks ? (
+        <OpenMemberPeriodRanks profile={profile} />
+      ) : (
+        <div className="flex shrink-0 items-baseline gap-2.5">
+          <SquadPointsText
+            value={profile.totalPosts}
+            size={isWeb ? "md" : "sm"}
+            suffix="posts"
+            color="#CBD5E1"
+          />
+          <SquadPointsText
+            value={member.points}
+            size={isWeb ? "md" : "sm"}
+            suffix="pts"
+          />
+        </div>
+      )}
     </>
   );
   if (onOpenProfile) {
     return (
       <button
         type="button"
-        onClick={() => onOpenProfile(squadMemberToProfile(member))}
-        className={cn(
-          "flex w-full items-center text-left transition",
-          rowPad,
-          elevated
-            ? "border-2 border-amber-400/22 bg-[#0a0e14]/90 hover:border-amber-400/40 hover:bg-amber-500/[0.06]"
-            : "rounded-sm border border-white/10 bg-[#0a0e14]/80 hover:border-amber-400/30 hover:bg-amber-500/[0.06]"
-        )}
+        onClick={() => onOpenProfile(profile)}
+        className={cn("flex w-full items-center text-left transition", rowPad, entryRow)}
         style={elevated ? chamferStyle : undefined}
       >
         {body}
@@ -1136,13 +1390,7 @@ function MemberRow({
   }
   return (
     <div
-      className={cn(
-        "flex items-center",
-        rowPad,
-        elevated
-          ? "border-2 border-amber-400/22 bg-[#0a0e14]/90"
-          : "rounded-sm border border-white/10 bg-[#0a0e14]/80"
-      )}
+      className={cn("flex items-center", rowPad, entryRowStatic)}
       style={elevated ? chamferStyle : undefined}
     >
       {body}
@@ -1153,41 +1401,53 @@ function MemberRow({
 /** MY SQUAD カード枠 — 順位色 + GOLD LEGION アクセント */
 function MySquadCardShell({
   rank,
+  entry = false,
   children,
 }: {
   rank: number;
+  entry?: boolean;
   children: ReactNode;
 }) {
-  const frame = leaderboardCardFrameStyle(rank);
+  const frame = entry ? null : leaderboardCardFrameStyle(rank);
 
   return (
     <div className="relative overflow-visible">
-      <SquadCardTabBadge label="My squad" />
+      <SquadCardTabBadge label="My squad" tone={entry ? "entry" : "gold"} />
       <div
         className={cn(
           "relative -mt-2.5 overflow-hidden",
-          frame?.glowClass ?? "shadow-[0_0_28px_rgba(251,191,36,0.22)]"
+          entry
+            ? undefined
+            : frame?.glowClass ?? "shadow-[0_0_28px_rgba(251,191,36,0.22)]"
         )}
         style={{
           ...squadCardShellStyleNoClip("subtle"),
-          borderWidth: 2,
-          ...(frame?.style ?? {
-            border: `2px solid ${SQUAD_GOLD.line}`,
-            background: SQUAD_GOLD.panelGrad,
-            boxShadow:
-              `0 0 24px rgba(${SQUAD_GOLD.glowRgb},0.28), inset 0 0 0 2px rgba(${SQUAD_GOLD.glowRgb},0.12), inset 0 1px 0 ${SQUAD_GOLD.sheen}`,
-          }),
+          borderWidth: entry ? 1 : 2,
+          ...(entry
+            ? {
+                border: "1px solid rgba(255,255,255,0.95)",
+                background: "transparent",
+                backgroundColor: "transparent",
+                boxShadow: "none",
+              }
+            : (frame?.style ?? {
+                border: `2px solid ${SQUAD_GOLD.line}`,
+                background: SQUAD_GOLD.panelGrad,
+                boxShadow:
+                  `0 0 24px rgba(${SQUAD_GOLD.glowRgb},0.28), inset 0 0 0 2px rgba(${SQUAD_GOLD.glowRgb},0.12), inset 0 1px 0 ${SQUAD_GOLD.sheen}`,
+              })),
         }}
       >
-        {/* GOLD LEGION スキャンライン */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.06]"
-          style={{
-            background:
-              "repeating-linear-gradient(0deg, #FBBF24 0px, #FBBF24 1px, transparent 1px, transparent 4px)",
-          }}
-        />
+        {entry ? null : (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
+            style={{
+              background:
+                "repeating-linear-gradient(0deg, #FBBF24 0px, #FBBF24 1px, transparent 1px, transparent 4px)",
+            }}
+          />
+        )}
         <div className="relative z-10 pt-1.5">{children}</div>
       </div>
     </div>
@@ -1196,16 +1456,22 @@ function MySquadCardShell({
 
 function MySquadCard({
   squad,
-  maxAvg,
+  phase,
   onOpenMemberProfile,
   onCopyInviteCode,
   onRenameSquad,
+  onLeaveSquad,
+  onDissolveSquad,
+  isOwner = false,
 }: {
   squad: Squad;
-  maxAvg: number;
+  phase: SquadBattleUiPhase;
   onOpenMemberProfile?: (profile: SquadApplicantProfile) => void;
   onCopyInviteCode?: (code: string) => void;
   onRenameSquad?: (name: string) => void;
+  onLeaveSquad?: () => void;
+  onDissolveSquad?: () => void;
+  isOwner?: boolean;
 }) {
   const isWeb = useSquadBattleIsWeb();
   const [editingName, setEditingName] = useState(false);
@@ -1234,22 +1500,21 @@ function MySquadCard({
 
   const active = countActiveMembers(squad);
   const recruiting = active < SQUAD_BATTLE_MAX_MEMBERS;
-  const inviteCode = recruiting ? squad.inviteCode ?? null : null;
-  const segAccent =
-    squad.rank <= 3
-      ? segAccentForRank(squad.rank)
-      : {
-          border: SQUAD_GOLD.acc,
-          glow: `rgba(${SQUAD_GOLD.glowRgb},0.65)`,
-          bg: `rgba(${SQUAD_GOLD.glowRgb},0.85)`,
-        };
+  const showBattleStats = phase !== "entry";
+  const inviteCode =
+    phase === "entry" && recruiting ? squad.inviteCode ?? null : null;
+  const showHud = showBattleStats || inviteCode != null;
   const hudLabel = cn(
     nameOxanium.className,
-    "font-bold uppercase tracking-[0.14em] text-amber-200/45",
+    "font-bold uppercase tracking-[0.14em]",
+    showBattleStats ? "text-amber-200/45" : "text-white/40",
     isWeb ? "text-[9px]" : "text-[8px]"
   );
   const hudCell = cn(
-    "flex flex-col items-center justify-between border border-amber-400/25 bg-black/35 text-center",
+    "flex flex-col items-center justify-between text-center",
+    showBattleStats
+      ? "border border-amber-400/25 bg-black/35"
+      : "border border-white/55 bg-transparent",
     isWeb ? "min-h-[76px] px-2.5 py-3" : "min-h-[64px] px-2 py-2.5"
   );
   const hudValue = cn(
@@ -1263,7 +1528,7 @@ function MySquadCard({
       : `0 0 8px rgba(${SQUAD_GOLD.glowRgb},0.35)`;
 
   return (
-    <MySquadCardShell rank={squad.rank}>
+    <MySquadCardShell rank={showBattleStats ? squad.rank : 99} entry={!showBattleStats}>
       <div className={cn(isWeb ? "px-5 pb-4 pt-4" : "px-4 pb-3 pt-3")}>
         {editingName ? (
           <div className={cn("mx-auto w-full", isWeb ? "max-w-md" : "max-w-[320px]")}>
@@ -1350,7 +1615,10 @@ function MySquadCard({
                 }}
                 aria-label="スクワッド名を変更"
                 className={cn(
-                  "absolute right-0 top-1/2 flex -translate-y-1/2 items-center justify-center border border-amber-400/35 bg-amber-400/10 text-amber-100/85 transition hover:border-amber-300/55 hover:bg-amber-400/18",
+                  "absolute right-0 top-1/2 flex -translate-y-1/2 items-center justify-center transition",
+                  showBattleStats
+                    ? "border border-amber-400/35 bg-amber-400/10 text-amber-100/85 hover:border-amber-300/55 hover:bg-amber-400/18"
+                    : "border border-white/35 bg-white/[0.06] text-white/80 hover:border-white/55 hover:bg-white/[0.1]",
                   isWeb ? "h-9 w-9" : "h-8 w-8"
                 )}
                 style={chamferStyle}
@@ -1361,13 +1629,20 @@ function MySquadCard({
           </div>
         )}
 
+        {showHud ? (
         <div
           className={cn(
             "mt-3 grid",
             isWeb ? "gap-2.5" : "gap-2",
-            inviteCode ? "grid-cols-3" : "grid-cols-2"
+            showBattleStats && inviteCode
+              ? "grid-cols-3"
+              : showBattleStats
+                ? "grid-cols-2"
+                : "grid-cols-1"
           )}
         >
+          {showBattleStats ? (
+            <>
           <div className={hudCell} style={chamferStyle}>
             <p className={hudLabel}>Rank</p>
             <div className={cn(hudValue, "relative")}>
@@ -1398,6 +1673,8 @@ function MySquadCard({
               />
             </div>
           </div>
+            </>
+          ) : null}
 
           {inviteCode ? (
             <button
@@ -1411,7 +1688,10 @@ function MySquadCard({
               }}
               className={cn(
                 hudCell,
-                "cursor-pointer transition hover:border-amber-300/45 hover:bg-amber-400/5 active:scale-[0.98]"
+                "cursor-pointer transition active:scale-[0.98]",
+                showBattleStats
+                  ? "hover:border-amber-300/45 hover:bg-amber-400/5"
+                  : "hover:border-white/45 hover:bg-white/[0.04]"
               )}
               style={chamferStyle}
               aria-label={`招待コード ${inviteCode} をコピー`}
@@ -1425,7 +1705,14 @@ function MySquadCard({
                     "max-w-[calc(100%-14px)] truncate font-black tracking-[0.12em]",
                     isWeb ? "text-[14px]" : "text-[13px]"
                   )}
-                  style={{ color: hudValueColor, textShadow: hudValueGlow }}
+                  style={{
+                    color: showBattleStats
+                      ? hudValueColor
+                      : "rgba(255,255,255,0.92)",
+                    textShadow: showBattleStats
+                      ? hudValueGlow
+                      : "0 0 8px rgba(255,255,255,0.2)",
+                  }}
                 >
                   {inviteCode}
                 </span>
@@ -1439,29 +1726,30 @@ function MySquadCard({
             </button>
           ) : null}
         </div>
-
-        <div className={cn(isWeb ? "mt-3" : "mt-2.5")}>
-          <CyberSlantedSegBar
-            pct={pointsBarPct(squad.avgPoints, maxAvg)}
-            segments={10}
-            compact
-            forceStatic
-            maxWidthClass="max-w-full"
-            accent={segAccent}
-          />
-        </div>
+        ) : null}
       </div>
 
       <div className={cn(isWeb ? "px-5 pb-5" : "px-4 pb-4")}>
-        <div className="mb-2 flex items-center gap-2 border-b border-amber-400/20 pb-2">
+        <div
+          className={cn(
+            "mb-2 flex items-center gap-2 border-b pb-2",
+            showBattleStats ? "border-amber-400/20" : "border-white/18"
+          )}
+        >
           <span
             aria-hidden
-            className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"
+            className={cn(
+              "h-1.5 w-1.5 shrink-0 rounded-full",
+              showBattleStats
+                ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"
+                : "bg-white shadow-[0_0_8px_rgba(255,255,255,0.55)]"
+            )}
           />
           <p
             className={cn(
               nameOxanium.className,
-              "font-bold uppercase tracking-[0.2em] text-amber-300/65",
+              "font-bold uppercase tracking-[0.2em]",
+              showBattleStats ? "text-amber-300/65" : "text-white/70",
               isWeb ? "text-[11px]" : "text-[10px]"
             )}
           >
@@ -1469,15 +1757,51 @@ function MySquadCard({
           </p>
         </div>
         <div className={cn("flex flex-col", isWeb ? "gap-2.5" : "gap-2")}>
+          {showBattleStats ? null : (
+            <div className={cn("flex items-center gap-3.5", isWeb ? "px-4" : "px-3")}>
+              <div className={cn("shrink-0", isWeb ? "h-10 w-10" : "h-9 w-9")} aria-hidden />
+              <div className="min-w-0 flex-1" />
+              <OpenMemberPeriodRankHeader />
+            </div>
+          )}
           {squad.members.map((m) => (
             <MemberRow
               key={m.uid}
               member={m}
-              elevated
+              elevated={showBattleStats}
+              periodRanks={!showBattleStats}
               onOpenProfile={onOpenMemberProfile}
             />
           ))}
         </div>
+        {phase === "entry" && (onLeaveSquad || onDissolveSquad) ? (
+          <div className={cn("mt-3 flex gap-2", isWeb ? "px-1" : "px-0.5")}>
+            {isOwner && onDissolveSquad ? (
+              <button
+                type="button"
+                onClick={onDissolveSquad}
+                className={cn(
+                  nameOxanium.className,
+                  "flex-1 border border-rose-400/35 bg-rose-500/10 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-rose-100/85"
+                )}
+              >
+                解散する
+              </button>
+            ) : null}
+            {!isOwner && onLeaveSquad ? (
+              <button
+                type="button"
+                onClick={onLeaveSquad}
+                className={cn(
+                  nameOxanium.className,
+                  "flex-1 border border-white/20 bg-white/[0.04] py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-white/55"
+                )}
+              >
+                脱退する
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </MySquadCardShell>
   );
@@ -1852,200 +2176,999 @@ function JoinByInviteCodeSheet({
   );
 }
 
+function ApplicantThisWeekRank({
+  profile,
+  size,
+}: {
+  profile: SquadApplicantProfile;
+  size: "sm" | "md";
+}) {
+  const rank = profile.thisWeekRank;
+  const missing = rank == null || rank <= 0;
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        className={cn(
+          jp.className,
+          "font-semibold text-white/55",
+          size === "md" ? "text-[12px]" : "text-[11px]"
+        )}
+      >
+        今週
+      </span>
+      <CyberRankNumber
+        rank={missing ? 0 : rank}
+        compact
+        uniform
+        muted={missing}
+        displayValue={missing ? "—" : undefined}
+      />
+    </div>
+  );
+}
+
 function ApplicantProfileSheet({
   profile,
   metaLabel,
   onClose,
+  onOpenPublicProfile,
   onApprove,
   onReject,
 }: {
   profile: SquadApplicantProfile;
   metaLabel?: string;
   onClose: () => void;
+  onOpenPublicProfile?: () => void;
   onApprove?: () => void;
   onReject?: () => void;
 }) {
   const isWeb = useSquadBattleIsWeb();
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/65 p-3 sm:items-center"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-3"
       role="dialog"
       aria-modal
       aria-label="申請者プロフィール"
       onClick={onClose}
     >
       <div
+        aria-hidden
+        className="absolute inset-0 bg-[#050208]/78 backdrop-blur-[2px]"
+      />
+      <div
         className={cn(
-          "w-full overflow-hidden border border-amber-400/30 bg-[#0A0805] shadow-[0_0_40px_rgba(251,191,36,0.15)]",
+          "relative w-full overflow-hidden border border-white/35 bg-[#0A0A0C]",
           isWeb ? "max-w-lg" : "max-w-md"
         )}
-        style={{
-          border: `1px solid ${SQUAD_GOLD.line}`,
-          background: SQUAD_GOLD.panelGrad,
-          boxShadow: `0 0 40px rgba(${SQUAD_GOLD.glowRgb},0.15), inset 0 1px 0 ${SQUAD_GOLD.sheen}`,
-        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <SquadGoldWireFrame variant="full" />
-        <div className="relative z-[10]">
-        <div
-          className={cn(
-            "flex items-center justify-between border-b border-white/10",
-            isWeb ? "px-5 py-3.5" : "px-4 py-3"
-          )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 z-[11] flex h-9 w-9 items-center justify-center border border-white/25 bg-black/35 text-white/80"
+          aria-label="閉じる"
         >
-          <p
-            className={cn(
-              nameOxanium.className,
-              "font-bold uppercase tracking-[0.2em] text-amber-300/70",
-              isWeb ? "text-[11px]" : "text-[10px]"
-            )}
-          >
-            Applicant profile
-          </p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-white/15 p-1.5 text-white/70 hover:bg-white/5"
-            aria-label="閉じる"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className={cn(isWeb ? "px-5 py-6" : "px-4 py-5")}>
-          <div className={cn("flex items-center", isWeb ? "gap-4" : "gap-3")}>
-            <ProfileAvatar profile={profile} size="lg" />
-            <div className="min-w-0">
+          <X size={15} strokeWidth={2.4} />
+        </button>
+        <div className={cn("relative z-[10]", isWeb ? "px-6 pb-6 pt-6" : "px-5 pb-5 pt-5")}>
+          <div className="flex flex-col items-center text-center">
+            <ProfileAvatar profile={profile} size="lg" square />
+            <div className="mt-3 flex w-full justify-center">
+              <SquadUserNameLine
+                name={profile.displayName}
+                plan={profile.plan}
+                align="center"
+                className={cn(
+                  jp.className,
+                  "font-bold text-white",
+                  isWeb ? "text-xl" : "text-lg"
+                )}
+              />
+            </div>
+            {metaLabel ? (
               <p
                 className={cn(
                   jp.className,
-                  "truncate font-bold text-white",
-                  isWeb ? "text-xl" : "text-lg"
+                  "mt-1 text-white/40",
+                  isWeb ? "text-[12px]" : "text-[11px]"
                 )}
               >
-                {profile.displayName}
+                {metaLabel}
               </p>
+            ) : null}
+
+            {profile.bio ? (
               <p
                 className={cn(
-                  nameRajdhani.className,
-                  "font-medium text-white/45",
+                  jp.className,
+                  "mt-4 w-full leading-relaxed text-white/60",
                   isWeb ? "text-[15px]" : "text-sm"
                 )}
               >
-                @{profile.handle}
+                {profile.bio}
               </p>
-              {metaLabel ? (
+            ) : null}
+
+            <div className="mt-5 flex flex-col items-center">
+              <OpenMemberPeriodRankHeader />
+              <div className="mt-1">
+                <OpenMemberPeriodRanks profile={profile} />
+              </div>
+            </div>
+
+            <div className={cn("mt-4 grid w-full grid-cols-2", isWeb ? "gap-2.5" : "gap-2")}>
+              <div className="border border-white/20 bg-black px-3 py-2.5 text-center">
                 <p
                   className={cn(
-                    nameOxanium.className,
-                    "mt-1 font-bold uppercase tracking-[0.14em] text-white/30",
-                    isWeb ? "text-[11px]" : "text-[10px]"
+                    jp.className,
+                    "text-[11px] font-semibold text-white/45"
                   )}
                 >
-                  {metaLabel}
+                  {SQUAD_APPLICANT_SCORE_LABEL}
                 </p>
-              ) : null}
+                <div className="mt-1 flex justify-center">
+                  <SquadPointsText value={profile.points} size={isWeb ? "lg" : "md"} />
+                </div>
+              </div>
+              <div className="border border-white/20 bg-black px-3 py-2.5 text-center">
+                <p
+                  className={cn(
+                    jp.className,
+                    "text-[11px] font-semibold text-white/45"
+                  )}
+                >
+                  {SQUAD_APPLICANT_WINRATE_LABEL}
+                </p>
+                <div className="mt-1 flex justify-center">
+                  <CyberNumber
+                    value={profile.winRate.toFixed(1)}
+                    size={isWeb ? "lg" : "md"}
+                    format={false}
+                    suffix="%"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          {profile.bio ? (
+          <div className="mt-5 flex flex-col gap-2.5">
+            {onOpenPublicProfile ? (
+              <button
+                type="button"
+                onClick={onOpenPublicProfile}
+                className={cn(
+                  nameOxanium.className,
+                  "flex w-full items-center justify-center border border-white/25 bg-black py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white/80"
+                )}
+              >
+                {SQUAD_APPLICANT_OPEN_PROFILE}
+              </button>
+            ) : null}
+            {onApprove || onReject ? (
+              <div className="flex gap-2">
+                {onReject ? (
+                  <button
+                    type="button"
+                    onClick={onReject}
+                    className={cn(
+                      nameOxanium.className,
+                      "flex flex-1 items-center justify-center gap-1.5 border border-rose-400/35 bg-rose-500/10 font-bold uppercase tracking-wider text-rose-200",
+                      isWeb ? "py-3 text-sm" : "py-2.5 text-xs"
+                    )}
+                  >
+                    <X size={14} />
+                    拒否
+                  </button>
+                ) : null}
+                {onApprove ? (
+                  <button
+                    type="button"
+                    onClick={onApprove}
+                    className={cn(
+                      nameOxanium.className,
+                      "flex flex-1 items-center justify-center gap-1.5 font-black uppercase tracking-[0.18em] text-[#1A1002]",
+                      isWeb ? "py-3 text-sm" : "py-2.5 text-xs"
+                    )}
+                    style={{
+                      background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
+                    }}
+                  >
+                    <Check size={14} />
+                    承認
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SquadRankingDetailSheet({
+  squad,
+  onClose,
+}: {
+  squad: Squad;
+  onClose: () => void;
+}) {
+  const isWeb = useSquadBattleIsWeb();
+  const reduceMotion = useReducedMotion() === true;
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-3"
+      role="dialog"
+      aria-modal
+      aria-label={`${squad.name} detail`}
+      onClick={onClose}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[#050208]/78 backdrop-blur-[2px]"
+      />
+      <motion.div
+        className={cn(
+          "relative w-full overflow-y-auto border border-white/35 bg-[#0A0A0C]",
+          isWeb ? "max-h-[86vh] max-w-lg" : "max-h-[86vh] max-w-md"
+        )}
+        onClick={(e) => e.stopPropagation()}
+        initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className={cn("relative z-[10]", isWeb ? "px-6 pb-6 pt-5" : "px-5 pb-5 pt-4")}>
+          <div className={cn("flex items-start justify-between gap-3", isWeb ? "mb-5" : "mb-4")}>
             <p
               className={cn(
-                jp.className,
-                "mt-4 border border-white/10 bg-white/[0.03] leading-relaxed text-white/60",
-                isWeb ? "px-3.5 py-3 text-[15px]" : "px-3 py-2.5 text-sm"
+                nameOxanium.className,
+                "font-bold uppercase tracking-wide text-white",
+                isWeb ? "text-[18px]" : "text-[16px]"
               )}
-              style={chamferStyle}
             >
-              {profile.bio}
+              Squad detail
             </p>
-          ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
+              aria-label="閉じる"
+            >
+              <X size={15} strokeWidth={2.4} />
+            </button>
+          </div>
 
-          <div className={cn("mt-4 grid grid-cols-2", isWeb ? "gap-2.5" : "gap-2")}>
-            {(
-              [
-                { k: "POINTS", node: <SquadPointsText value={profile.points} size={isWeb ? "lg" : "md"} /> },
-                {
-                  k: "WIN RATE",
-                  node: (
-                    <CyberNumber
-                      value={profile.winRate.toFixed(1)}
-                      size={isWeb ? "lg" : "md"}
-                      format={false}
-                      suffix="%"
-                    />
-                  ),
-                },
-                {
-                  k: "STREAK",
-                  node: <SquadPointsText value={profile.activeWinStreak} size={isWeb ? "lg" : "md"} />,
-                },
-                {
-                  k: "POSTS",
-                  node: <SquadPointsText value={profile.totalPosts} size={isWeb ? "lg" : "md"} />,
-                },
-              ] as const
-            ).map((stat) => (
-              <div
-                key={stat.k}
+          <div className="mb-4 flex items-center gap-3">
+            <CyberRankNumber rank={squad.rank} compact={!isWeb} />
+            <div className="min-w-0 flex-1">
+              <p
                 className={cn(
-                  "border border-white/10 bg-[#0a0e14]",
-                  isWeb ? "px-3.5 py-3" : "px-3 py-2.5"
+                  nameOxanium.className,
+                  "truncate font-black uppercase tracking-wide text-white",
+                  isWeb ? "text-[20px]" : "text-[18px]"
                 )}
-                style={chamferStyle}
               >
-                <p
-                  className={cn(
-                    nameOxanium.className,
-                    "text-[9px] font-bold uppercase tracking-[0.16em] text-white/30"
-                  )}
-                >
-                  {stat.k}
-                </p>
-                <div className="mt-1">{stat.node}</div>
-              </div>
+                {squad.name}
+              </p>
+              <p
+                className={cn(
+                  nameOxanium.className,
+                  "mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/35"
+                )}
+              >
+                {squadMemberCountLabel(squad)}
+              </p>
+            </div>
+            <SquadPtsWithDayDelta
+              value={squad.avgPoints}
+              delta={squad.avgPointsDayDelta}
+              size="md"
+              color={scoreColorForRank(squad.rank)}
+            />
+          </div>
+
+          <div className={cn("flex flex-col", isWeb ? "gap-2" : "gap-1.5")}>
+            {squad.members.map((member) => (
+              <MemberRow key={member.uid} member={member} entryFrame />
             ))}
           </div>
         </div>
+      </motion.div>
+    </div>
+  );
+}
 
-        {onApprove || onReject ? (
-          <div
+/** 空き枠リスト — 白枠・角切りなし */
+function OpenSquadListShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative border border-white/35 bg-black/40">{children}</div>
+  );
+}
+
+/** 先月 / 先週 / 今週 — 列幅をヘッダーと数字で揃える */
+const OPEN_PERIOD_RANK_COL = "w-11";
+
+function OpenMemberPeriodRankHeader() {
+  return (
+    <div className="flex shrink-0 flex-col items-stretch gap-1">
+      <p
+        className={cn(
+          jp.className,
+          "text-center text-[12px] font-semibold text-white/80"
+        )}
+      >
+        {SQUAD_OPEN_PERIOD_RANK_GROUP_LABEL}
+      </p>
+      <div className="flex gap-2.5">
+        {SQUAD_OPEN_PERIOD_RANKS.map((item) => (
+          <p
+            key={item.key}
             className={cn(
-              "flex gap-2 border-t border-white/10",
-              isWeb ? "px-5 py-3.5" : "px-4 py-3"
+              jp.className,
+              OPEN_PERIOD_RANK_COL,
+              "text-center text-[12px] font-semibold text-white/70"
             )}
           >
-            {onReject ? (
-              <SquadChamferButton
-                onClick={onReject}
-                variant="danger"
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-1.5 font-bold uppercase tracking-wider",
-                  isWeb ? "py-3 text-sm" : "py-2.5 text-xs"
-                )}
-              >
-                <X size={14} />
-                拒否
-              </SquadChamferButton>
-            ) : null}
-            {onApprove ? (
-              <SquadChamferButton
-                onClick={onApprove}
-                variant="primary"
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-1.5 font-bold uppercase tracking-wider",
-                  isWeb ? "py-3 text-sm" : "py-2.5 text-xs"
-                )}
-              >
-                <Check size={14} />
-                承認
-              </SquadChamferButton>
-            ) : null}
-          </div>
-        ) : null}
-        </div>
+            {item.label}
+          </p>
+        ))}
       </div>
+    </div>
+  );
+}
+
+function OpenMemberPeriodRanks({
+  profile,
+}: {
+  profile: SquadApplicantProfile;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-2.5">
+      {SQUAD_OPEN_PERIOD_RANKS.map((item) => {
+        const rank = profile[item.key];
+        const missing = rank == null || rank <= 0;
+        return (
+          <div
+            key={item.key}
+            className={cn(OPEN_PERIOD_RANK_COL, "flex justify-center overflow-visible")}
+          >
+            <CyberRankNumber
+              rank={missing ? 0 : rank}
+              compact
+              uniform
+              muted={missing}
+              displayValue={missing ? "—" : undefined}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OpenSquadMemberList({
+  members,
+  onOpenMemberProfile,
+}: {
+  members: SquadApplicantProfile[];
+  onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
+}) {
+  const isWeb = useSquadBattleIsWeb();
+  const rowPad = isWeb ? "px-3 py-2.5" : "px-2.5 py-2";
+  return (
+    <div className={cn("flex flex-col", isWeb ? "gap-2" : "gap-1.5")}>
+      <div
+        className={cn(
+          "flex items-center gap-3",
+          isWeb ? "px-3" : "px-2.5"
+        )}
+      >
+        <div className="h-10 w-10 shrink-0" aria-hidden />
+        <div className="min-w-0 flex-1" />
+        <OpenMemberPeriodRankHeader />
+      </div>
+      {members.map((m) => (
+        <button
+          key={m.uid}
+          type="button"
+          onClick={() => onOpenMemberProfile(m)}
+          className={cn(
+            "flex items-center gap-3 border border-white/12 bg-white/[0.03] text-left transition hover:border-white/25 hover:bg-white/[0.06]",
+            rowPad
+          )}
+        >
+          <ProfileAvatar profile={m} square />
+          <SquadUserNameLine
+            name={m.displayName}
+            plan={m.plan}
+            grow
+            className={cn(
+              jp.className,
+              "font-semibold text-white/90",
+              isWeb ? "text-[15px]" : "text-sm"
+            )}
+          />
+          <OpenMemberPeriodRanks profile={m} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** 公開スクワッドへの参加申請確認 */
+function ApplyJoinConfirmSheet({
+  squad,
+  onClose,
+  onConfirm,
+  onOpenMemberProfile,
+}: {
+  squad: OpenSquadListing;
+  onClose: () => void;
+  onConfirm: () => void;
+  onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
+}) {
+  const reduceMotion = useReducedMotion() === true;
+  const isWeb = useSquadBattleIsWeb();
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
+      role="dialog"
+      aria-modal
+      aria-labelledby="apply-join-title"
+      onClick={onClose}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[#050208]/78 backdrop-blur-[2px]"
+      />
+      <motion.div
+        className={cn(
+          "relative w-full overflow-hidden border border-white/35 bg-[#0A0A0C]",
+          isWeb ? "max-w-lg" : "max-w-md"
+        )}
+        onClick={(e) => e.stopPropagation()}
+        initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className={cn("relative z-[10]", isWeb ? "px-6 pb-6 pt-5" : "px-5 pb-5 pt-4")}>
+          <div className={cn("flex items-start justify-between gap-3", isWeb ? "mb-4" : "mb-3")}>
+            <div className="min-w-0">
+              <p
+                id="apply-join-title"
+                className={cn(
+                  nameOxanium.className,
+                  "truncate font-bold uppercase tracking-wide text-white",
+                  isWeb ? "text-[18px]" : "text-[16px]"
+                )}
+              >
+                {squad.name}
+              </p>
+              <p className={cn(jp.className, "mt-1.5 text-sm text-white/60")}>
+                このグループへの参加を申請します
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
+              aria-label="閉じる"
+            >
+              <X size={15} strokeWidth={2.4} />
+            </button>
+          </div>
+
+          <OpenSquadMemberList
+            members={squad.members}
+            onOpenMemberProfile={onOpenMemberProfile}
+          />
+
+          <div className="mt-5 flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={onConfirm}
+              className={cn(
+                nameOxanium.className,
+                "flex w-full items-center justify-center py-3.5 text-sm font-black uppercase tracking-[0.18em] text-[#1A1002]"
+              )}
+              style={{
+                background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
+              }}
+            >
+              申請する
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className={cn(
+                nameOxanium.className,
+                "py-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/35"
+              )}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/** 再招集招待の参加確認 */
+function IncomingJoinConfirmSheet({
+  invite,
+  openSquads,
+  onClose,
+  onConfirm,
+  onDecline,
+  onOpenMemberProfile,
+}: {
+  invite: SquadIncomingInviteMock;
+  openSquads: OpenSquadListing[];
+  onClose: () => void;
+  onConfirm: () => void;
+  onDecline: () => void;
+  onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
+}) {
+  const reduceMotion = useReducedMotion() === true;
+  const isWeb = useSquadBattleIsWeb();
+  const members = squadIncomingInviteMemberProfiles(invite, openSquads);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
+      role="dialog"
+      aria-modal
+      aria-labelledby="incoming-join-title"
+      onClick={onClose}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[#050208]/78 backdrop-blur-[2px]"
+      />
+      <motion.div
+        className={cn(
+          "relative w-full overflow-hidden border border-white/35 bg-[#0A0A0C]",
+          isWeb ? "max-w-lg" : "max-w-md"
+        )}
+        onClick={(e) => e.stopPropagation()}
+        initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className={cn("relative z-[10]", isWeb ? "px-6 pb-6 pt-5" : "px-5 pb-5 pt-4")}>
+          <div className={cn("flex items-start justify-between gap-3", isWeb ? "mb-4" : "mb-3")}>
+            <div className="min-w-0">
+              <p
+                id="incoming-join-title"
+                className={cn(
+                  nameOxanium.className,
+                  "truncate font-bold uppercase tracking-wide text-white",
+                  isWeb ? "text-[18px]" : "text-[16px]"
+                )}
+              >
+                {invite.squadName}
+              </p>
+              <p className={cn(jp.className, "mt-1.5 text-sm text-white/60")}>
+                {SQUAD_INVITE_JOIN_PROMPT}
+              </p>
+              <p className={cn(jp.className, "mt-1 text-xs text-white/40")}>
+                {invite.fromDisplayName} からの招待
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
+              aria-label="閉じる"
+            >
+              <X size={15} strokeWidth={2.4} />
+            </button>
+          </div>
+
+          {members.length > 0 ? (
+            <OpenSquadMemberList
+              members={members}
+              onOpenMemberProfile={onOpenMemberProfile}
+            />
+          ) : null}
+
+          <div className="mt-5 flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={onConfirm}
+              className={cn(
+                nameOxanium.className,
+                "flex w-full items-center justify-center py-3.5 text-sm font-black uppercase tracking-[0.18em] text-[#1A1002]"
+              )}
+              style={{
+                background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
+              }}
+            >
+              参加する
+            </button>
+            <button
+              type="button"
+              onClick={onDecline}
+              className={cn(
+                nameOxanium.className,
+                "flex w-full items-center justify-center border border-white/25 bg-black py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white/75"
+              )}
+            >
+              今回はパス
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+type SquadInviteSendTarget = {
+  source: PastSquadHistoryMock | GroupBattlePastSquadItem;
+  member: SquadInviteMemberSummary;
+};
+
+/** 過去メンバーを誘う確認 */
+function InviteSendConfirmSheet({
+  target,
+  squadName,
+  onClose,
+  onConfirm,
+}: {
+  target: SquadInviteSendTarget;
+  squadName: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const reduceMotion = useReducedMotion() === true;
+  const isWeb = useSquadBattleIsWeb();
+  const { member } = target;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
+      role="dialog"
+      aria-modal
+      aria-labelledby="invite-send-title"
+      onClick={onClose}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[#050208]/78 backdrop-blur-[2px]"
+      />
+      <motion.div
+        className={cn(
+          "relative w-full overflow-hidden border border-white/35 bg-[#0A0A0C]",
+          isWeb ? "max-w-lg" : "max-w-md"
+        )}
+        onClick={(e) => e.stopPropagation()}
+        initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className={cn("relative z-[10]", isWeb ? "px-6 pb-6 pt-5" : "px-5 pb-5 pt-4")}>
+          <div className={cn("flex items-start justify-between gap-3", isWeb ? "mb-5" : "mb-4")}>
+            <p
+              id="invite-send-title"
+              className={cn(
+                nameOxanium.className,
+                "font-bold uppercase tracking-wide text-white",
+                isWeb ? "text-[18px]" : "text-[16px]"
+              )}
+            >
+              Invite
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
+              aria-label="閉じる"
+            >
+              <X size={15} strokeWidth={2.4} />
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center text-center">
+            <ProfileAvatar
+              profile={{
+                displayName: member.displayName,
+                handle: member.handle ?? "",
+                photoURL: member.photoURL,
+              }}
+              size="lg"
+              square
+            />
+            <p className="mt-3">
+              <SquadUserNameLine
+                name={member.displayName}
+                plan={member.plan}
+                align="center"
+                className={cn(jp.className, "text-[16px] font-semibold text-white")}
+              />
+            </p>
+            {member.handle ? (
+              <p className={cn(jp.className, "mt-0.5 text-[13px] text-white/40")}>
+                @{member.handle}
+              </p>
+            ) : null}
+            <p className={cn(jp.className, "mt-4 text-sm leading-relaxed text-white/70")}>
+              {squadInviteSendPrompt(member.displayName, squadName)}
+            </p>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={onConfirm}
+              className={cn(
+                nameOxanium.className,
+                "flex w-full items-center justify-center py-3.5 text-sm font-black uppercase tracking-[0.18em] text-[#1A1002]"
+              )}
+              style={{
+                background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
+              }}
+            >
+              誘う
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className={cn(
+                nameOxanium.className,
+                "py-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/35"
+              )}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/** 参加申請の承認確認 */
+function ApproveApplicantConfirmSheet({
+  request,
+  onClose,
+  onConfirm,
+}: {
+  request: SquadJoinRequest;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const reduceMotion = useReducedMotion() === true;
+  const isWeb = useSquadBattleIsWeb();
+  const { applicant } = request;
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center p-3"
+      role="dialog"
+      aria-modal
+      aria-labelledby="approve-applicant-title"
+      onClick={onClose}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[#050208]/78 backdrop-blur-[2px]"
+      />
+      <motion.div
+        className={cn(
+          "relative w-full overflow-hidden border border-white/35 bg-[#0A0A0C]",
+          isWeb ? "max-w-lg" : "max-w-md"
+        )}
+        onClick={(e) => e.stopPropagation()}
+        initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className={cn("relative z-[10]", isWeb ? "px-6 pb-6 pt-5" : "px-5 pb-5 pt-4")}>
+          <div className={cn("flex items-start justify-between gap-3", isWeb ? "mb-5" : "mb-4")}>
+            <p
+              id="approve-applicant-title"
+              className={cn(
+                nameOxanium.className,
+                "font-bold uppercase tracking-wide text-white",
+                isWeb ? "text-[18px]" : "text-[16px]"
+              )}
+            >
+              Approve
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
+              aria-label="閉じる"
+            >
+              <X size={15} strokeWidth={2.4} />
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center text-center">
+            <ProfileAvatar profile={applicant} size="lg" square />
+            <p className="mt-3">
+              <SquadUserNameLine
+                name={applicant.displayName}
+                plan={applicant.plan}
+                align="center"
+                className={cn(jp.className, "text-[16px] font-semibold text-white")}
+              />
+            </p>
+            <p className={cn(jp.className, "mt-4 text-sm leading-relaxed text-white/70")}>
+              {squadApplicantApprovePrompt(applicant.displayName)}
+            </p>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={onConfirm}
+              className={cn(
+                nameOxanium.className,
+                "flex w-full items-center justify-center py-3.5 text-sm font-black uppercase tracking-[0.18em] text-[#1A1002]"
+              )}
+              style={{
+                background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
+              }}
+            >
+              承認する
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className={cn(
+                nameOxanium.className,
+                "py-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/35"
+              )}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/** 届いた招待 — 参加 / 保留 */
+function IncomingInviteSheet({
+  invite,
+  onClose,
+  onAccept,
+  onHold,
+}: {
+  invite: SquadIncomingInviteMock;
+  onClose: () => void;
+  onAccept: () => void;
+  onHold: () => void;
+}) {
+  const reduceMotion = useReducedMotion() === true;
+  const isWeb = useSquadBattleIsWeb();
+  const members = invite.members ?? [];
+  const deadline = invite.deadlineLabel ?? SQUAD_BATTLE_MOCK_DEADLINE_LABEL;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center"
+      role="dialog"
+      aria-modal
+      aria-labelledby="incoming-invite-title"
+      onClick={onHold}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[#050208]/78 backdrop-blur-[2px]"
+      />
+      <motion.div
+        className={cn(
+          "relative w-full overflow-hidden border border-white/35 bg-[#0A0A0C]",
+          isWeb ? "max-w-lg" : "max-w-md"
+        )}
+        onClick={(e) => e.stopPropagation()}
+        initial={reduceMotion ? false : { opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className={cn("relative z-[10]", isWeb ? "px-6 pb-6 pt-5" : "px-5 pb-5 pt-4")}>
+          <div className={cn("flex items-start justify-between gap-3", isWeb ? "mb-4" : "mb-3")}>
+            <div className="min-w-0">
+              <p
+                id="incoming-invite-title"
+                className={cn(
+                  jp.className,
+                  "text-[15px] font-semibold leading-snug text-white",
+                  isWeb ? "text-[16px]" : "text-[15px]"
+                )}
+              >
+                {squadInviteIncomingTitle(invite.fromDisplayName)}
+              </p>
+              <p className={cn(jp.className, "mt-2 text-sm text-white/55")}>
+                {SQUAD_INVITE_DEADLINE_PREFIX} {deadline}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/25 bg-black/35 text-white/80"
+              aria-label="閉じる"
+            >
+              <X size={15} strokeWidth={2.4} />
+            </button>
+          </div>
+
+          <p
+            className={cn(
+              nameOxanium.className,
+              "mb-2 font-bold uppercase tracking-[0.16em] text-white/50",
+              isWeb ? "text-[11px]" : "text-[10px]"
+            )}
+          >
+            {invite.squadName}
+          </p>
+          {members.length > 0 ? (
+            <div className={cn("flex flex-col", isWeb ? "gap-2" : "gap-1.5")}>
+              {members.map((m) => (
+                <div
+                  key={m.uid}
+                  className="flex items-center gap-3 border border-white/15 bg-black px-3 py-2"
+                >
+                  <ProfileAvatar
+                    profile={{
+                      displayName: m.displayName,
+                      handle: m.handle ?? "",
+                      photoURL: m.photoURL,
+                    }}
+                    square
+                  />
+                  <SquadUserNameLine
+                    name={m.displayName}
+                    plan={m.plan}
+                    grow
+                    className={cn(
+                      jp.className,
+                      "font-semibold text-white/90",
+                      isWeb ? "text-[15px]" : "text-sm"
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <p className={cn(jp.className, "mt-4 text-[12px] leading-relaxed text-white/45")}>
+            {SQUAD_INVITE_HOLD_HINT}
+          </p>
+
+          <div className="mt-4 flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={onAccept}
+              className={cn(
+                nameOxanium.className,
+                "flex w-full items-center justify-center py-3.5 text-sm font-black uppercase tracking-[0.18em] text-[#1A1002]"
+              )}
+              style={{
+                background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
+              }}
+            >
+              参加する
+            </button>
+            <button
+              type="button"
+              onClick={onHold}
+              className={cn(
+                nameOxanium.className,
+                "flex w-full items-center justify-center border border-white/25 bg-black py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white/75"
+              )}
+            >
+              保留する
+            </button>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -2067,38 +3190,23 @@ function OpenSquadRow({
   const isWeb = useSquadBattleIsWeb();
   const [expanded, setExpanded] = useState(false);
   const canApply = !applied && !applyDisabled;
-  const palette = cyberRankPalette(squad.rank);
   const actionH = isWeb ? "h-9" : "h-8";
 
   return (
-    <SquadListItemShell>
+    <OpenSquadListShell>
       {/*
         列固定で横揃え:
-        順位 | 名前 | 人数 | pts | 操作
+        名前 | 人数 | 操作
+        募集中はバトル未開始のためスコアは出さない
       */}
       <div
         className={cn(
           "grid items-center overflow-visible",
           isWeb
-            ? "grid-cols-[2.75rem_minmax(0,1fr)_2.5rem_5.5rem_auto] gap-x-3 px-3.5 py-3"
-            : "grid-cols-[2.25rem_minmax(0,1fr)_2rem_4.75rem_auto] gap-x-2 px-2.5 py-2.5"
+            ? "grid-cols-[minmax(0,1fr)_2.5rem_auto] gap-x-3 px-5 py-3"
+            : "grid-cols-[minmax(0,1fr)_2rem_auto] gap-x-2 px-4 py-2.5"
         )}
       >
-        <p
-          className={cn(
-            nameBebas.className,
-            "self-center py-0.5 text-center leading-[1.15] tracking-wide",
-            isWeb ? "text-[26px]" : "text-[22px]"
-          )}
-          style={{
-            color: scoreColorForRank(squad.rank),
-            textShadow:
-              squad.rank <= 3 ? `0 0 10px ${palette.accentGlow}` : "none",
-          }}
-        >
-          {String(squad.rank).padStart(2, "0")}
-        </p>
-
         <p
           className={cn(
             nameOxanium.className,
@@ -2119,16 +3227,6 @@ function OpenSquadRow({
           {squad.memberCount}/{SQUAD_BATTLE_MAX_MEMBERS}
         </span>
 
-        <div className="flex justify-end overflow-visible">
-          <SquadPointsText
-            value={squad.avgPoints}
-            size={isWeb ? "md" : "sm"}
-            tone="default"
-            suffix="pts"
-            color={scoreColorForRank(squad.rank)}
-          />
-        </div>
-
         <div className={cn("flex shrink-0 items-stretch justify-end gap-1.5", actionH)}>
           <button
             type="button"
@@ -2136,11 +3234,10 @@ function OpenSquadRow({
             aria-expanded={expanded}
             aria-label={expanded ? "メンバーを閉じる" : "メンバーを見る"}
             className={cn(
-              "box-border flex w-8 shrink-0 items-center justify-center border border-amber-400/35 bg-amber-400/10 text-amber-100 transition hover:border-amber-400/55 hover:bg-amber-400/16",
+              "box-border flex w-8 shrink-0 items-center justify-center border border-white/25 bg-white/[0.04] text-white/80 transition hover:border-white/40 hover:bg-white/[0.08]",
               actionH,
               isWeb && "w-9"
             )}
-            style={chamferStyle}
           >
             <ChevronDown
               size={isWeb ? 18 : 16}
@@ -2151,66 +3248,46 @@ function OpenSquadRow({
               )}
             />
           </button>
-          <SquadChamferButton
+          <button
+            type="button"
             disabled={!canApply && !applied}
-            onClick={onApply}
-            variant={
-              applied ? "secondary" : applyDisabled ? "muted" : "primary"
-            }
+            onClick={() => {
+              if (!canApply) return;
+              onApply();
+            }}
             className={cn(
+              nameOxanium.className,
               "box-border flex shrink-0 items-center justify-center px-1.5 text-center font-bold uppercase tracking-wider",
               actionH,
               isWeb ? "w-[4.25rem] text-[11px]" : "w-[3.4rem] text-[10px]",
-              applied && "cursor-default border-amber-400/30 bg-amber-400/10 text-amber-100/80"
+              applied
+                ? "cursor-default border border-white/20 bg-white/[0.06] text-white/70"
+                : applyDisabled
+                  ? "cursor-not-allowed border border-white/10 bg-white/[0.03] text-white/30"
+                  : "text-[#1A1002]"
             )}
+            style={
+              canApply
+                ? {
+                    background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
+                  }
+                : undefined
+            }
           >
             {applied ? "申請中" : "申請"}
-          </SquadChamferButton>
+          </button>
         </div>
       </div>
 
       {expanded ? (
-        <div className={cn("border-t border-white/8", isWeb ? "px-4 py-3" : "px-3 py-2.5")}>
-          <div className={cn("flex flex-col", isWeb ? "gap-2" : "gap-1.5")}>
-            {squad.members.map((m) => (
-              <button
-                key={m.uid}
-                type="button"
-                onClick={() => onOpenMemberProfile(m)}
-                className={cn(
-                  "flex items-center gap-3 border border-white/8 bg-black/20 text-left transition hover:border-amber-400/30 hover:bg-amber-500/[0.06]",
-                  isWeb ? "px-3 py-2.5" : "px-2.5 py-2"
-                )}
-                style={chamferStyle}
-              >
-                <ProfileAvatar profile={m} />
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={cn(
-                      jp.className,
-                      "truncate font-semibold text-white/90",
-                      isWeb ? "text-[15px]" : "text-sm"
-                    )}
-                  >
-                    {m.displayName}
-                  </p>
-                  <p
-                    className={cn(
-                      nameRajdhani.className,
-                      "truncate text-white/40",
-                      isWeb ? "text-[13px]" : "text-xs"
-                    )}
-                  >
-                    @{m.handle}
-                  </p>
-                </div>
-                <SquadPointsText value={m.points} size={isWeb ? "md" : "sm"} />
-              </button>
-            ))}
-          </div>
+        <div className={cn("border-t border-white/10", isWeb ? "px-5 py-3" : "px-4 py-2.5")}>
+          <OpenSquadMemberList
+            members={squad.members}
+            onOpenMemberProfile={onOpenMemberProfile}
+          />
         </div>
       ) : null}
-    </SquadListItemShell>
+    </OpenSquadListShell>
   );
 }
 
@@ -2332,7 +3409,11 @@ function PastSquadsPanel({
                           "min-w-0 flex-1 truncate text-[12px] text-white/75"
                         )}
                       >
-                        {m.displayName}
+                        <SquadUserNameLine
+                          name={m.displayName}
+                          plan={m.plan}
+                          className="text-[12px] text-white/75"
+                        />
                         {m.handle ? (
                           <span className="text-white/35"> @{m.handle}</span>
                         ) : null}
@@ -2385,7 +3466,7 @@ function IncomingInvitesPanel({
     <section>
       <SquadSectionHeader
         kicker="Invites"
-        title="再招集の招待"
+        title={SQUAD_INVITE_LIST_TITLE}
         accent="amber"
         trailing={
           <p className={cn(jp.className, "text-[11px] text-white/35")}>
@@ -2393,8 +3474,11 @@ function IncomingInvitesPanel({
           </p>
         }
       />
+      <p className={cn(jp.className, "mb-2 text-[12px] text-white/40")}>
+        {SQUAD_INVITE_LIST_HINT}
+      </p>
       {invites.length === 0 ? (
-        <SquadEmptyHint>届いている再招集招待はありません。</SquadEmptyHint>
+        <SquadEmptyHint>{SQUAD_INVITE_LIST_EMPTY}</SquadEmptyHint>
       ) : null}
       <div className={cn("flex flex-col", isWeb ? "gap-2" : "gap-1.5")}>
         {invites.map((inv) => (
@@ -2423,7 +3507,8 @@ function IncomingInvitesPanel({
               <SquadChamferButton
                 onClick={() => onAccept(inv)}
                 variant="battle"
-                className="flex flex-1 items-center justify-center gap-1.5 py-2 text-[12px] font-bold uppercase tracking-wider"
+                className="flex flex-1 items-center justify-center gap-1.5 py-2 text-[12px] font-bold uppercase tracking-wider text-white"
+                style={{ color: "#FFFFFF" }}
               >
                 <Check size={13} strokeWidth={2.6} />
                 参加する
@@ -2458,7 +3543,7 @@ function NoneState({
   selfUid,
   onCreate,
   onJoinByCode,
-  onApply,
+  onRequestApply,
   onWithdraw,
   onOpenMemberProfile,
   onReform,
@@ -2475,7 +3560,7 @@ function NoneState({
   selfUid: string;
   onCreate: () => void;
   onJoinByCode: () => void;
-  onApply: (squadId: string, squadName: string) => void;
+  onRequestApply: (squad: OpenSquadListing) => void;
   onWithdraw: (req: SquadJoinRequest) => void;
   onOpenMemberProfile: (profile: SquadApplicantProfile) => void;
   onReform: (item: PastSquadHistoryMock | GroupBattlePastSquadItem) => void;
@@ -2686,7 +3771,7 @@ function NoneState({
                 squad={squad}
                 applied={appliedSquadIds.has(squad.id)}
                 applyDisabled={atLimit}
-                onApply={() => onApply(squad.id, squad.name)}
+                onApply={() => onRequestApply(squad)}
                 onOpenMemberProfile={onOpenMemberProfile}
               />
             ))}
@@ -2729,9 +3814,12 @@ function IncomingRequestsPanel({
       />
       <div className={cn("flex flex-col", isWeb ? "gap-2.5" : "gap-2")}>
         {requests.map((req) => (
-          <SquadListItemShell
+          <div
             key={req.id}
-            className={isWeb ? "p-4" : "p-3"}
+            className={cn(
+              "border border-white/70 bg-black",
+              isWeb ? "px-4 py-3.5" : "px-3 py-3"
+            )}
           >
             <button
               type="button"
@@ -2739,179 +3827,140 @@ function IncomingRequestsPanel({
               className="flex w-full items-center gap-3 text-left"
               aria-label={`${req.applicant.displayName}のプロフィール`}
             >
-              <ProfileAvatar profile={req.applicant} />
+              <ProfileAvatar profile={req.applicant} square />
               <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-2">
+                <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <SquadUserNameLine
+                    name={req.applicant.displayName}
+                    plan={req.applicant.plan}
+                    grow
+                    className={cn(
+                      jp.className,
+                      "font-semibold text-white/90",
+                      isWeb ? "text-[15px]" : "text-sm"
+                    )}
+                  />
                   <p
                     className={cn(
                       jp.className,
-                      "min-w-0 flex-1 truncate font-semibold text-white/90",
-                      isWeb ? "text-[15px]" : "text-sm"
-                    )}
-                  >
-                    {req.applicant.displayName}
-                  </p>
-                  <p
-                    className={cn(
-                      nameOxanium.className,
-                      "shrink-0 font-bold uppercase tracking-[0.1em] text-white/35",
-                      isWeb ? "text-[11px]" : "text-[10px]"
+                      "shrink-0 text-white/40",
+                      isWeb ? "text-[12px]" : "text-[11px]"
                     )}
                   >
                     {req.createdAtLabel}
                   </p>
                 </div>
-                <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
-                  <SquadPointsText
-                    value={req.applicant.points}
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <ApplicantThisWeekRank
+                    profile={req.applicant}
                     size={isWeb ? "md" : "sm"}
-                    color={SQUAD_GOLD.acc}
                   />
-                  <span
-                    className={cn(
-                      nameOxanium.className,
-                      "text-[10px] font-bold tracking-[0.08em]"
-                    )}
-                    style={{ color: SQUAD_GOLD.acc }}
-                  >
-                    pts
-                  </span>
-                  <span className="text-white/40" aria-hidden>
+                  <span className="text-white/30" aria-hidden>
                     ·
                   </span>
-                  <span
-                    className={cn(
-                      nameOxanium.className,
-                      "text-[10px] font-bold tracking-[0.08em] text-amber-200/55"
-                    )}
-                  >
-                    WR
-                  </span>
-                  <CyberNumber
-                    value={req.applicant.winRate.toFixed(1)}
-                    size={isWeb ? "md" : "sm"}
-                    format={false}
-                    color={SQUAD_GOLD.acc}
-                  />
-                  <span
-                    className={cn(
-                      nameOxanium.className,
-                      "text-[10px] font-bold"
-                    )}
-                    style={{ color: SQUAD_GOLD.acc }}
-                  >
-                    %
-                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <span
+                      className={cn(
+                        nameOxanium.className,
+                        "text-[10px] font-bold tracking-[0.08em] text-white/45"
+                      )}
+                    >
+                      {SQUAD_APPLICANT_WR_LABEL}
+                    </span>
+                    <CyberNumber
+                      value={req.applicant.winRate.toFixed(1)}
+                      size={isWeb ? "md" : "sm"}
+                      format={false}
+                      suffix="%"
+                    />
+                  </div>
                 </div>
               </div>
-              <span
-                className={cn(
-                  "inline-flex shrink-0 items-center justify-center border border-amber-400/25 bg-amber-400/10 text-amber-100",
-                  isWeb ? "h-9 w-9" : "h-8 w-8"
-                )}
-                style={chamferStyle}
-                aria-hidden
-              >
-                <UserRound size={isWeb ? 17 : 16} strokeWidth={2.2} />
-              </span>
             </button>
             <div className={cn("flex gap-2", isWeb ? "mt-3" : "mt-2.5")}>
-              <SquadChamferButton
+              <button
+                type="button"
                 onClick={() => onReject(req)}
-                variant="danger"
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1 font-bold uppercase tracking-wider",
+                  nameOxanium.className,
+                  "flex flex-1 items-center justify-center gap-1 border border-rose-400/35 bg-rose-500/10 font-bold uppercase tracking-wider text-rose-200",
                   isWeb ? "py-2.5 text-xs" : "py-2 text-[11px]"
                 )}
               >
                 <X size={isWeb ? 14 : 13} />
                 拒否
-              </SquadChamferButton>
-              <SquadChamferButton
+              </button>
+              <button
+                type="button"
                 onClick={() => onApprove(req)}
-                variant="primary"
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1 font-bold uppercase tracking-wider",
+                  nameOxanium.className,
+                  "flex flex-1 items-center justify-center gap-1 font-black uppercase tracking-wider text-[#1A1002]",
                   isWeb ? "py-2.5 text-xs" : "py-2 text-[11px]"
                 )}
+                style={{
+                  background: `linear-gradient(180deg, ${SQUAD_GOLD.acc}, ${SQUAD_GOLD.accDeep})`,
+                }}
               >
                 <Check size={isWeb ? 14 : 13} />
                 承認
-              </SquadChamferButton>
+              </button>
             </div>
-          </SquadListItemShell>
+          </div>
         ))}
       </div>
     </section>
   );
 }
 
-/** 上部固定 YOUR SQUAD — 左:順位 / 右:名前・メンバー・バー */
+/** 上部固定 MY SQUAD — 左:順位 / 右:名前・メンバー */
 function PinnedYourSquadCard({
   squad,
-  maxAvg,
+  onOpenDetail,
 }: {
   squad: Squad;
-  maxAvg: number;
+  onOpenDetail?: () => void;
 }) {
   const isWeb = useSquadBattleIsWeb();
-  const segAccent = {
-    border: "#FBBF24",
-    glow: "rgba(251,191,36,0.65)",
-    bg: "rgba(251,191,36,0.85)",
-  };
 
   return (
     <div className="relative overflow-visible">
-      <SquadCardTabBadge label="Your squad" />
-      <div
-        className="relative -mt-2.5 border border-amber-300/55 shadow-[0_0_24px_rgba(251,191,36,0.22)]"
-        style={{
-          ...squadCardShellStyleNoClip("subtle"),
-          background: SQUAD_GOLD.panelGrad,
-          boxShadow: `0 0 24px rgba(${SQUAD_GOLD.glowRgb},0.22), inset 0 1px 0 ${SQUAD_GOLD.sheen}`,
-        }}
+      <SquadCardTabBadge label="My squad" />
+      <button
+        type="button"
+        className="relative -mt-2.5 block w-full origin-center overflow-visible text-left transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95 motion-reduce:active:scale-100 motion-reduce:active:opacity-100"
+        style={{ paddingRight: SQUAD_RANKING_DETAIL_SPINE.width - 1 }}
+        onClick={onOpenDetail}
+        aria-label={`${squad.name} detail`}
       >
-        <div className="flex items-stretch pt-2">
-          {/* 左: RANK */}
+        <div
+          className="relative overflow-visible border border-amber-300/55"
+          style={{
+            background: "transparent",
+            boxShadow: `inset 0 1px 0 ${SQUAD_GOLD.sheen}`,
+          }}
+        >
           <div
             className={cn(
-              "flex shrink-0 flex-col items-center justify-center",
-              isWeb ? "w-14 px-2 py-3.5" : "w-[3.25rem] px-1.5 py-3"
+              "flex items-center overflow-visible",
+              isWeb ? "gap-3 px-4 py-3.5" : "gap-2.5 px-3 py-3"
             )}
           >
-            <p
+            <div
               className={cn(
-                nameOxanium.className,
-                "font-bold uppercase tracking-[0.14em] text-amber-300/65",
-                isWeb ? "text-[9px]" : "text-[8px]"
+                "flex shrink-0 translate-y-1.5 flex-col items-center gap-0.5 self-center",
+                isWeb ? "w-12" : "w-10"
               )}
             >
-              Rank
-            </p>
-            <p
-              className={cn(
-                nameBebas.className,
-                "mt-0.5 text-center leading-[1.05] tracking-wide text-[#FBBF24]",
-                isWeb ? "text-[32px]" : "text-[28px]"
-              )}
-              style={{ textShadow: "0 0 12px rgba(251,191,36,0.6)" }}
-            >
-              {String(squad.rank).padStart(2, "0")}
-            </p>
-            <div className="mt-0.5">
+              <CyberRankNumber rank={squad.rank} compact={!isWeb} />
               <RankTrendBadge squad={squad} />
             </div>
-          </div>
-
-          {/* 右: 名前・メンバー・pts・バー */}
-          <div
-            className={cn(
-              "flex min-w-0 flex-1 flex-col justify-center",
-              isWeb ? "gap-2.5 py-3.5 pl-3 pr-4" : "gap-2 py-3 pl-2 pr-3.5"
-            )}
-          >
-            <div className="flex items-start gap-2">
+            <div
+              className={cn(
+                "flex min-w-0 flex-1 items-start",
+                isWeb ? "gap-3" : "gap-2.5"
+              )}
+            >
               <div className="min-w-0 flex-1">
                 <p
                   className={cn(
@@ -2931,46 +3980,41 @@ function PinnedYourSquadCard({
                   <span
                     className={cn(
                       nameOxanium.className,
-                      "text-[10px] font-bold tabular-nums text-amber-200/55"
+                      "text-[10px] font-bold tabular-nums text-white/40"
                     )}
                   >
                     {squadMemberCountLabel(squad)}
                   </span>
                 </div>
               </div>
-              <div className="relative shrink-0 overflow-visible pt-0.5">
+              <div className="relative shrink-0 self-center overflow-visible">
                 <SquadPtsWithDayDelta
                   value={squad.avgPoints}
                   delta={squad.avgPointsDayDelta}
                   size={isWeb ? "md" : "sm"}
                   tone="accent"
-                  color="#FBBF24"
+                  color={scoreColorForRank(squad.rank)}
                 />
               </div>
             </div>
-            <CyberSlantedSegBar
-              pct={pointsBarPct(squad.avgPoints, maxAvg)}
-              segments={10}
-              compact
-              forceStatic
-              maxWidthClass="max-w-full"
-              accent={segAccent}
-            />
           </div>
+          <SquadRankingDetailSpine rank={squad.rank} flush />
         </div>
-      </div>
+      </button>
     </div>
   );
 }
 
-/** 1位カード下段 — ACE / LEAD / DEFENDING（左からフェードイン） */
+/** 1位カード下段 — ACE / LEAD / EST UNIT（左からフェードイン） */
 function FirstPlaceStatsFooter({
   squad,
   runnerUpAvg,
+  period,
   animate = true,
 }: {
   squad: Squad;
   runnerUpAvg: number;
+  period: "weekly" | "monthly";
   animate?: boolean;
 }) {
   const activeMembers = squad.members.filter((m) => !m.empty);
@@ -2980,7 +4024,7 @@ function FirstPlaceStatsFooter({
     activeMembers[0]
   );
   const lead = Math.max(0, Math.round(squad.avgPoints - runnerUpAvg));
-  const weeksAtTop = squad.weeksAtTop ?? 1;
+  const estUnits = estimatedGroupBattleUnitsPerMember(period, squad.rank);
   const gold = scoreColorForRank(1);
   const reduceMotion = useReducedMotion();
   const motionOk = reduceMotion !== true && animate;
@@ -3039,19 +4083,18 @@ function FirstPlaceStatsFooter({
       ),
     },
     {
-      key: "def",
+      key: "unit",
       node: (
         <>
           <div className={labelClass}>
-            <span>DEFENDING</span>
+            <span>EST UNIT</span>
           </div>
           <div className={valueClass}>
-            <CyberNumber
-              value={weeksAtTop}
-              size="md"
-              suffix="wk"
-              color={gold}
-            />
+            {estUnits != null ? (
+              <CyberNumber value={estUnits} size="md" color={gold} />
+            ) : (
+              <span className="text-white/35">—</span>
+            )}
           </div>
         </>
       ),
@@ -3121,14 +4164,14 @@ function LeaderboardGapFooter({
 
 function LeaderboardRow({
   squad,
-  maxAvg,
   runnerUpAvg = 0,
   board = [],
   index = 0,
   animate = true,
+  period,
+  onOpenDetail,
 }: {
   squad: Squad;
-  maxAvg: number;
   /** 2位の平均点（1位カードの LEAD 表示用） */
   runnerUpAvg?: number;
   /** 前後ギャップ計算用 */
@@ -3137,16 +4180,23 @@ function LeaderboardRow({
   index?: number;
   /** 入場アニメを有効にする */
   animate?: boolean;
+  period: "weekly" | "monthly";
+  onOpenDetail?: () => void;
 }) {
   const first = squad.rank === 1;
-  const palette = cyberRankPalette(squad.rank);
-  const segAccent = segAccentForRank(squad.rank);
   const reduceMotion = useReducedMotion();
   const motionOff = reduceMotion === true || !animate;
   const isWeb = useSquadBattleIsWeb();
   const { gapToAbove } = squadScoreGaps(squad, board);
 
   const row = (
+    <button
+      type="button"
+      className="relative block w-full origin-center overflow-visible text-left transition-[transform,opacity] duration-100 ease-out active:scale-[0.99] active:opacity-95 motion-reduce:active:scale-100 motion-reduce:active:opacity-100"
+      style={{ paddingRight: SQUAD_RANKING_DETAIL_SPINE.width - 1 }}
+      onClick={onOpenDetail}
+      aria-label={`${squad.name} detail`}
+    >
     <LeaderboardCardShell rank={squad.rank}>
       {/* 既存カード本体 */}
       <div
@@ -3161,20 +4211,7 @@ function LeaderboardRow({
             isWeb ? "w-12" : "w-10"
           )}
         >
-          <p
-            className={cn(
-              nameBebas.className,
-              "text-center leading-none tracking-wide",
-              isWeb ? "text-[34px]" : "text-[30px]"
-            )}
-            style={{
-              color: scoreColorForRank(squad.rank),
-              textShadow:
-                squad.rank <= 3 ? `0 0 10px ${palette.accentGlow}` : "none",
-            }}
-          >
-            {String(squad.rank).padStart(2, "0")}
-          </p>
+          <CyberRankNumber rank={squad.rank} compact={!isWeb} />
           <RankTrendBadge squad={squad} />
         </div>
         <div className={cn("flex min-w-0 flex-1 flex-col", isWeb ? "gap-2.5" : "gap-2")}>
@@ -3242,29 +4279,23 @@ function LeaderboardRow({
               />
             </div>
           </div>
-          <CyberSlantedSegBar
-            pct={pointsBarPct(squad.avgPoints, maxAvg)}
-            segments={14}
-            compact
-            forceStatic={motionOff || first}
-            enterDelay={motionOff || first ? 0 : index * LB_ROW_STAGGER_S}
-            maxWidthClass="max-w-full"
-            accent={segAccent}
-          />
         </div>
       </div>
 
-      {/* 1位のみ — 下帯にチームスタッツ（ACE / LEAD / DEFENDING） */}
+      {/* 1位のみ — 下帯にチームスタッツ（ACE / LEAD / EST UNIT） */}
       {first ? (
         <FirstPlaceStatsFooter
           squad={squad}
           runnerUpAvg={runnerUpAvg}
+          period={period}
           animate={!motionOff}
         />
       ) : (
         <LeaderboardGapFooter gapToAbove={gapToAbove} />
       )}
     </LeaderboardCardShell>
+          <SquadRankingDetailSpine rank={squad.rank} flush />
+    </button>
   );
 
   if (motionOff) return row;
@@ -3329,6 +4360,7 @@ function SquadBattlePreviewToolsOverlay({
   onChangePhase,
   onChangeBoardStatus,
   onReplayIntro,
+  onReplayLaunch,
   reduceMotion,
   variant,
 }: {
@@ -3341,6 +4373,7 @@ function SquadBattlePreviewToolsOverlay({
   onChangePhase: (next: SquadBattleUiPhase) => void;
   onChangeBoardStatus: (next: "live" | "final") => void;
   onReplayIntro: () => void;
+  onReplayLaunch: () => void;
   reduceMotion: boolean;
   variant: "web" | "mobile";
 }) {
@@ -3567,6 +4600,23 @@ function SquadBattlePreviewToolsOverlay({
                 <RotateCcw size={isWeb ? 13 : 12} strokeWidth={2.5} aria-hidden />
                 イントロ再生
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onReplayLaunch();
+                  onClose();
+                }}
+                className={cn(
+                  nameOxanium.className,
+                  "inline-flex items-center gap-1.5 rounded-lg border border-amber-400/35 bg-amber-500/10 font-bold uppercase tracking-wider text-amber-100/90 transition hover:border-amber-300/50 hover:bg-amber-500/16",
+                  isWeb
+                    ? "px-4 py-2 text-xs"
+                    : "px-3 py-1.5 text-[11px]"
+                )}
+              >
+                <RotateCcw size={isWeb ? 13 : 12} strokeWidth={2.5} aria-hidden />
+                開催モーダル
+              </button>
             </div>
           </motion.div>
         </motion.div>
@@ -3576,11 +4626,20 @@ function SquadBattlePreviewToolsOverlay({
   );
 }
 
-export default function SquadBattlePage({ variant }: Props) {
+export default function SquadBattlePage({
+  variant,
+  mode = "production",
+}: Props) {
+  const isPreviewMode = mode === "preview";
+  const router = useRouter();
   const [previewState, setPreviewState] =
-    useState<SquadBattlePreviewState>("full");
+    useState<SquadBattlePreviewState>(isPreviewMode ? "full" : "none");
   const [previewToolsOpen, setPreviewToolsOpen] = useState(false);
-  const [mainTab, setMainTab] = useState<"join" | "rank">("rank");
+  /** 未開催・募集中は JOIN。バトル中は RANK（API 反映後に一度だけ切替） */
+  const [mainTab, setMainTab] = useState<"join" | "rank">(
+    isPreviewMode ? "rank" : "join"
+  );
+  const battleTabDefaultedRef = useRef(false);
   const [toast, setToast] = useState<string | null>(null);
   const reduceMotion = useReducedMotion() === true;
   const [extraAppliedIds, setExtraAppliedIds] = useState<string[]>([]);
@@ -3588,37 +4647,69 @@ export default function SquadBattlePage({ variant }: Props) {
   const [profileRequest, setProfileRequest] = useState<SquadJoinRequest | null>(
     null
   );
-  const [viewedProfile, setViewedProfile] = useState<{
-    profile: SquadApplicantProfile;
-    metaLabel?: string;
-  } | null>(null);
+  const [approveConfirmRequest, setApproveConfirmRequest] =
+    useState<SquadJoinRequest | null>(null);
   const [createSquadOpen, setCreateSquadOpen] = useState(false);
+  const [createSquadBusy, setCreateSquadBusy] = useState(false);
   const [joinByCodeOpen, setJoinByCodeOpen] = useState(false);
   const [joinByCodeBusy, setJoinByCodeBusy] = useState(false);
+  const [applyConfirmSquad, setApplyConfirmSquad] =
+    useState<OpenSquadListing | null>(null);
+  const [inviteSendTarget, setInviteSendTarget] =
+    useState<SquadInviteSendTarget | null>(null);
+  const [incomingInviteModalId, setIncomingInviteModalId] = useState<
+    string | null
+  >(null);
+  const [incomingJoinConfirmInvite, setIncomingJoinConfirmInvite] =
+    useState<SquadIncomingInviteMock | null>(null);
+  const [heldInviteIds, setHeldInviteIds] = useState<string[]>([]);
+  const [heldInvitesReady, setHeldInvitesReady] = useState(false);
+  const [inviteModalSessionDone, setInviteModalSessionDone] = useState(false);
   /** 作成フローで決めた名前（プレビュー用オーバーライド） */
   const [createdSquadName, setCreatedSquadName] = useState<string | null>(null);
+  /** 招待参加直後の MY SQUAD（招待メンバーを載せる） */
+  const [joinedInviteSquad, setJoinedInviteSquad] = useState<Squad | null>(null);
   /** 初回イントロ — SSR 不一致回避のため初期 false、effect で開く */
   const [introOpen, setIntroOpen] = useState(false);
+  const [launchOpen, setLaunchOpen] = useState(false);
   /** RANK サブ: 週間 / 月間 */
   const [rankPeriod, setRankPeriod] = useState<"weekly" | "monthly">("weekly");
   /** 週間の週インデックス（プレビュー） */
   const [weekIndex, setWeekIndex] = useState<SquadBattleWeekIndex>(2);
-  /** 開催フェーズ（プレビュー切替） */
-  const [uiPhase, setUiPhase] = useState<SquadBattleUiPhase>("battle");
+  /** 開催フェーズ（本番は大会 phase、プレビューはツール切替） */
+  const [uiPhase, setUiPhase] = useState<SquadBattleUiPhase>(
+    isPreviewMode ? "battle" : "idle"
+  );
   /** 本番スナップショット状態。モック時は live */
   const [boardStatus, setBoardStatus] = useState<"live" | "final">("live");
   /** スナップショット rows。null ならモック leaderboard */
   const [liveLeaderboard, setLiveLeaderboard] = useState<Squad[] | null>(null);
+  const [detailSquad, setDetailSquad] = useState<Squad | null>(null);
   /** 取り下げた申請 ID（プレビュー） */
   const [withdrawnRequestIds, setWithdrawnRequestIds] = useState<string[]>([]);
   /** API 接続時の battleId（未接続なら null → モック） */
   const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
+  const [liveBattlePhase, setLiveBattlePhase] = useState<string | null>(null);
+  const [liveRecruitEndAtMs, setLiveRecruitEndAtMs] = useState<number | null>(
+    null
+  );
+  const launchAutoShownRef = useRef(false);
   const [livePastSquads, setLivePastSquads] = useState<
     GroupBattlePastSquadItem[] | null
   >(null);
   const [liveIncomingInvites, setLiveIncomingInvites] = useState<
     SquadIncomingInviteMock[] | null
   >(null);
+  const [liveOpenSquads, setLiveOpenSquads] = useState<OpenSquadListing[] | null>(
+    null
+  );
+  const [liveIncomingRequests, setLiveIncomingRequests] = useState<
+    SquadJoinRequest[] | null
+  >(null);
+  const [liveOutgoingRequests, setLiveOutgoingRequests] = useState<
+    SquadJoinRequest[] | null
+  >(null);
+  const [liveFormingSquad, setLiveFormingSquad] = useState<Squad | null>(null);
   const [liveSelfUid, setLiveSelfUid] = useState<string | null>(null);
   const [liveMySquadId, setLiveMySquadId] = useState<string | null>(null);
   const [liveIsOwner, setLiveIsOwner] = useState(false);
@@ -3627,12 +4718,31 @@ export default function SquadBattlePage({ variant }: Props) {
     PastSquadHistoryMock | GroupBattlePastSquadItem | null
   >(null);
   const [dismissedInviteIds, setDismissedInviteIds] = useState<string[]>([]);
+  const [liveRewardResult, setLiveRewardResult] =
+    useState<SquadBattleRewardResult | null>(null);
+  const [liveRewardHasSquad, setLiveRewardHasSquad] = useState<boolean | null>(
+    null
+  );
+  const [rewardPayoutLoading, setRewardPayoutLoading] = useState(false);
 
   useEffect(() => {
     if (!hasSeenSquadBattleIntro()) {
       setIntroOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    setHeldInviteIds(readHeldInviteIdsFromLocalStorage());
+    setHeldInvitesReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (isPreviewMode || battleTabDefaultedRef.current) return;
+    if (uiPhase === "battle" || uiPhase === "reward") {
+      setMainTab("rank");
+      battleTabDefaultedRef.current = true;
+    }
+  }, [uiPhase, isPreviewMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3646,17 +4756,46 @@ export default function SquadBattlePage({ variant }: Props) {
           fetchGroupBattleRankings,
           fetchPastGroupBattleSquads,
           fetchGroupBattleIncomingInvites,
+          fetchGroupBattleOpenSquads,
+          fetchGroupBattleJoinRequests,
         } = await import("@/lib/groupBattles/clientApi");
         const current = await fetchCurrentGroupBattle({ idToken: token });
-        if (cancelled || !current?.battle) return;
+        if (cancelled) return;
+        if (!current?.battle) {
+          setLiveBattleId(null);
+          setLiveBattlePhase(null);
+          setLiveRecruitEndAtMs(null);
+          setLiveLeaderboard(null);
+          setLiveOpenSquads(null);
+          setLiveIncomingRequests(null);
+          setLiveOutgoingRequests(null);
+          setLiveFormingSquad(null);
+          if (!isPreviewMode) setUiPhase("idle");
+          return;
+        }
         setLiveBattleId(current.battle.id);
+        setLiveBattlePhase(current.battle.phase);
+        setLiveRecruitEndAtMs(
+          Number(current.battle.recruitEndAtMs) > 0
+            ? Number(current.battle.recruitEndAtMs)
+            : null
+        );
+        if (!isPreviewMode) {
+          setUiPhase(groupBattlePhaseToUiPhase(current.battle.phase));
+        }
         if (user?.uid) setLiveSelfUid(user.uid);
         const mySquadId = current.mySquad?.id ?? null;
         setLiveMySquadId(mySquadId);
         setLiveIsOwner(current.membership?.role === "owner");
+        setLiveFormingSquad(
+          current.mySquad
+            ? mapCurrentMySquadToUiSquad(current.mySquad, user?.uid ?? null)
+            : null
+        );
+        const weeklyLabels = current.battle.weeklyLabels ?? [];
         const label =
           rankPeriod === "weekly"
-            ? current.battle.weeklyLabels?.[current.battle.weeklyLabels.length - 1]
+            ? weeklyLabels[weekIndex - 1] ?? weeklyLabels[weeklyLabels.length - 1]
             : current.battle.monthlyRange?.label;
         const rankings = await fetchGroupBattleRankings(
           current.battle.id,
@@ -3674,11 +4813,19 @@ export default function SquadBattlePage({ variant }: Props) {
               )
             );
           } else {
-            setLiveLeaderboard(null);
+            setLiveLeaderboard(rankings?.snapshot ? [] : null);
             if (rankings?.snapshot) {
               setBoardStatus(rankings.snapshot.status);
             }
           }
+        }
+        const open = await fetchGroupBattleOpenSquads(current.battle.id, {
+          idToken: token,
+        });
+        if (!cancelled) {
+          setLiveOpenSquads(
+            open?.squads ? mapOpenSquadApiToListings(open.squads) : []
+          );
         }
         if (token) {
           const past = await fetchPastGroupBattleSquads({ idToken: token });
@@ -3699,37 +4846,129 @@ export default function SquadBattlePage({ variant }: Props) {
               }))
             );
           }
+          const requests = await fetchGroupBattleJoinRequests(
+            current.battle.id,
+            { idToken: token }
+          );
+          if (!cancelled && requests) {
+            setLiveIncomingRequests(
+              requests.incoming.map(mapJoinRequestApiToUi)
+            );
+            setLiveOutgoingRequests(
+              requests.outgoing.map(mapJoinRequestApiToUi)
+            );
+          }
         }
       } catch {
-        // モック継続
+        // プレビュー時のみモック継続
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [rankPeriod]);
+  }, [rankPeriod, weekIndex, isPreviewMode]);
 
-  const mock = useMemo(() => getSquadBattleMock(previewState), [previewState]);
-  const leaderboard = liveLeaderboard ?? mock.leaderboard;
+  useEffect(() => {
+    if (uiPhase !== "reward" || !liveBattleId) {
+      if (!isPreviewMode) {
+        setLiveRewardResult(null);
+        setLiveRewardHasSquad(null);
+      }
+      return;
+    }
+    let cancelled = false;
+    setRewardPayoutLoading(true);
+    (async () => {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const token = await auth.currentUser?.getIdToken();
+        const { fetchGroupBattleMyPayout } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await fetchGroupBattleMyPayout(liveBattleId, {
+          idToken: token,
+        });
+        if (cancelled || !res?.payout) return;
+        const p = res.payout;
+        setLiveRewardHasSquad(p.hasSquad);
+        setLiveRewardResult({
+          weekly: p.weekly.map((w) => ({
+            weekIndex: w.weekIndex,
+            rank: w.rank,
+            units: w.units,
+            status: w.status,
+          })),
+          monthlyRank: p.monthlyRank,
+          monthlyUnits: p.monthlyUnits,
+          monthlyStatus: p.monthlyStatus,
+          payoutNote: p.payoutNote,
+        });
+      } catch {
+        // keep previous / mock
+      } finally {
+        if (!cancelled) setRewardPayoutLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uiPhase, liveBattleId, isPreviewMode]);
+
+  useEffect(() => {
+    if (isPreviewMode || launchAutoShownRef.current || !liveBattleId) return;
+    if (
+      !shouldShowSquadBattleLaunch({
+        battleId: liveBattleId,
+        phase: liveBattlePhase,
+        seenBattleId: readSquadBattleLaunchSeenBattleId(),
+      })
+    ) {
+      return;
+    }
+    launchAutoShownRef.current = true;
+    markSquadBattleLaunchSeen(liveBattleId);
+    setLaunchOpen(true);
+  }, [isPreviewMode, liveBattleId, liveBattlePhase]);
+
+  const mock = useMemo(
+    () => (isPreviewMode ? getSquadBattleMock(previewState) : getSquadBattleMock("none")),
+    [isPreviewMode, previewState]
+  );
+  const useLiveFallbacks = liveBattleId != null || !isPreviewMode;
+  const leaderboard = liveLeaderboard ?? (useLiveFallbacks ? [] : mock.leaderboard);
+  const openSquadsForUi = liveOpenSquads ?? (useLiveFallbacks ? [] : mock.openSquads);
+  const rankingList = useMemo(
+    () => squadRankingList(leaderboard),
+    [leaderboard]
+  );
 
   const mySquad = useMemo(() => {
-    if (liveLeaderboard) {
-      return liveLeaderboard.find((s) => s.isMine) ?? null;
+    const liveMine = liveLeaderboard?.find((s) => s.isMine) ?? null;
+    if (liveMine) {
+      return createdSquadName ? { ...liveMine, name: createdSquadName } : liveMine;
     }
+    if (liveFormingSquad) {
+      return createdSquadName
+        ? { ...liveFormingSquad, name: createdSquadName }
+        : liveFormingSquad;
+    }
+    if (joinedInviteSquad) {
+      return createdSquadName
+        ? { ...joinedInviteSquad, name: createdSquadName }
+        : joinedInviteSquad;
+    }
+    if (useLiveFallbacks) return null;
     if (!mock.mySquad) return null;
     if (!createdSquadName) return mock.mySquad;
     return { ...mock.mySquad, name: createdSquadName };
-  }, [liveLeaderboard, mock.mySquad, createdSquadName]);
-
-  const boardMaxAvg = useMemo(
-    () => Math.max(1, ...leaderboard.map((s) => s.avgPoints)),
-    [leaderboard]
-  );
-
-  const boardOthers = useMemo(
-    () => leaderboard.filter((s) => !s.isMine),
-    [leaderboard]
-  );
+  }, [
+    liveLeaderboard,
+    liveFormingSquad,
+    joinedInviteSquad,
+    mock.mySquad,
+    createdSquadName,
+    useLiveFallbacks,
+  ]);
 
   const boardRunnerUpAvg = useMemo(
     () => leaderboard.find((s) => s.rank === 2)?.avgPoints ?? 0,
@@ -3737,22 +4976,39 @@ export default function SquadBattlePage({ variant }: Props) {
   );
 
   const appliedSquadIds = useMemo(() => {
-    const ids = new Set(mock.myOutgoingRequests.map((r) => r.squadId));
+    const base =
+      liveOutgoingRequests ??
+      (useLiveFallbacks ? [] : mock.myOutgoingRequests);
+    const ids = new Set(base.map((r) => r.squadId));
     for (const id of extraAppliedIds) ids.add(id);
     return ids;
-  }, [mock.myOutgoingRequests, extraAppliedIds]);
+  }, [
+    liveOutgoingRequests,
+    mock.myOutgoingRequests,
+    extraAppliedIds,
+    useLiveFallbacks,
+  ]);
 
-  const visibleIncoming = useMemo(
-    () =>
-      mock.incomingRequests.filter((r) => !dismissedRequestIds.includes(r.id)),
-    [mock.incomingRequests, dismissedRequestIds]
-  );
+  const visibleIncoming = useMemo(() => {
+    const base =
+      liveIncomingRequests ??
+      (useLiveFallbacks ? [] : mock.incomingRequests);
+    return base.filter((r) => !dismissedRequestIds.includes(r.id));
+  }, [
+    liveIncomingRequests,
+    mock.incomingRequests,
+    dismissedRequestIds,
+    useLiveFallbacks,
+  ]);
 
   const outgoingForDisplay = useMemo(() => {
-    const base = [...mock.myOutgoingRequests];
+    const base = [
+      ...(liveOutgoingRequests ??
+        (useLiveFallbacks ? [] : mock.myOutgoingRequests)),
+    ];
     for (const id of extraAppliedIds) {
       if (base.some((r) => r.squadId === id)) continue;
-      const squad = mock.openSquads.find((s) => s.id === id);
+      const squad = openSquadsForUi.find((s) => s.id === id);
       if (!squad) continue;
       base.push({
         id: `local-${id}`,
@@ -3761,36 +5017,87 @@ export default function SquadBattlePage({ variant }: Props) {
         status: "pending",
         createdAtLabel: "たった今",
         applicant: {
-          uid: "me",
-          handle: "kamiya",
-          displayName: "Kamiya",
-          points: 1284,
-          winRate: 57.1,
-          activeWinStreak: 3,
-          totalPosts: 140,
+          uid: liveSelfUid ?? "me",
+          handle: "",
+          displayName: "YOU",
+          points: 0,
+          winRate: 0,
+          activeWinStreak: 0,
+          totalPosts: 0,
           bio: "",
         },
       });
     }
     return base.filter((r) => !withdrawnRequestIds.includes(r.id));
   }, [
+    liveOutgoingRequests,
     mock.myOutgoingRequests,
-    mock.openSquads,
+    openSquadsForUi,
     extraAppliedIds,
     withdrawnRequestIds,
+    useLiveFallbacks,
+    liveSelfUid,
   ]);
 
   const pendingCount = outgoingForDisplay.length;
   const myActiveCount = mySquad ? countActiveMembers(mySquad) : 0;
-  const phaseTrackKey =
-    uiPhase === "idle" ? "reward" : uiPhase;
+  const phaseTrackKey = uiPhase === "idle" ? null : uiPhase;
 
-  const pastSquadsForUi = livePastSquads ?? mock.pastSquads;
+  const pastSquadsForUi =
+    livePastSquads ?? (useLiveFallbacks ? [] : mock.pastSquads);
   const incomingInvitesForUi = useMemo(() => {
-    const base = liveIncomingInvites ?? mock.incomingInvites;
+    const base =
+      liveIncomingInvites ??
+      (useLiveFallbacks ? [] : mock.incomingInvites);
     return base.filter((i) => !dismissedInviteIds.includes(i.id));
-  }, [liveIncomingInvites, mock.incomingInvites, dismissedInviteIds]);
+  }, [
+    liveIncomingInvites,
+    mock.incomingInvites,
+    dismissedInviteIds,
+    useLiveFallbacks,
+  ]);
   const selfUidForUi = liveSelfUid ?? "me";
+  const membersLocked =
+    uiPhase === "battle" ||
+    (isPreviewMode && previewState === "full");
+  const incomingInviteForModal = useMemo(() => {
+    if (incomingInviteModalId == null) return null;
+    return (
+      incomingInvitesForUi.find((i) => i.id === incomingInviteModalId) ?? null
+    );
+  }, [incomingInviteModalId, incomingInvitesForUi]);
+
+  useEffect(() => {
+    if (!heldInvitesReady || inviteModalSessionDone) return;
+    if (introOpen || mySquad != null) return;
+    if (mainTab !== "join" || uiPhase !== "entry") return;
+    if (incomingInviteModalId != null) return;
+    const next = incomingInvitesForUi.find(
+      (i) => !heldInviteIds.includes(i.id)
+    );
+    if (!next) return;
+    setIncomingInviteModalId(next.id);
+    setInviteModalSessionDone(true);
+  }, [
+    heldInvitesReady,
+    inviteModalSessionDone,
+    introOpen,
+    mySquad,
+    mainTab,
+    uiPhase,
+    incomingInviteModalId,
+    incomingInvitesForUi,
+    heldInviteIds,
+  ]);
+
+  function holdIncomingInvite(inviteId: string) {
+    setHeldInviteIds((prev) => {
+      const next = withHeldInviteId(prev, inviteId);
+      writeHeldInviteIdsToLocalStorage(next);
+      return next;
+    });
+    setIncomingInviteModalId(null);
+  }
 
   function flash(msg: string) {
     setToast(msg);
@@ -3848,7 +5155,6 @@ export default function SquadBattlePage({ variant }: Props) {
     setExtraAppliedIds([]);
     setDismissedRequestIds([]);
     setProfileRequest(null);
-    setViewedProfile(null);
     setMainTab("join");
     flash(`同じメンバーで募集: ${name}`);
     setReformBusyId(null);
@@ -3878,6 +5184,7 @@ export default function SquadBattlePage({ variant }: Props) {
           { idToken: token }
         );
         flash(res.ok ? "招待を送りました" : `招待失敗: ${res.error}`);
+        if (res.ok) setInviteSendTarget(null);
       } catch {
         flash("招待に失敗しました");
       }
@@ -3885,7 +5192,8 @@ export default function SquadBattlePage({ variant }: Props) {
       return;
     }
     const member = item.members.find((m) => m.uid === memberUid);
-    flash(`誘う: ${member?.displayName ?? memberUid}`);
+    flash(`招待を送りました: ${member?.displayName ?? memberUid}`);
+    setInviteSendTarget(null);
     setReformBusyId(null);
   }
 
@@ -3904,8 +5212,12 @@ export default function SquadBattlePage({ variant }: Props) {
           return;
         }
         setDismissedInviteIds((prev) => [...prev, invite.id]);
+        setIncomingInviteModalId(null);
+        setIncomingJoinConfirmInvite(null);
+        setJoinedInviteSquad(squadFromIncomingInvite(invite));
         setPreviewState("recruiting");
         setCreatedSquadName(invite.squadName);
+        setMainTab("join");
         flash(`参加: ${invite.squadName}`);
         return;
       } catch {
@@ -3914,8 +5226,12 @@ export default function SquadBattlePage({ variant }: Props) {
       }
     }
     setDismissedInviteIds((prev) => [...prev, invite.id]);
+    setIncomingInviteModalId(null);
+    setIncomingJoinConfirmInvite(null);
+    setJoinedInviteSquad(squadFromIncomingInvite(invite));
     setPreviewState("recruiting");
     setCreatedSquadName(invite.squadName);
+    setMainTab("join");
     flash(`参加: ${invite.squadName}`);
   }
 
@@ -3939,6 +5255,7 @@ export default function SquadBattlePage({ variant }: Props) {
       }
     }
     setDismissedInviteIds((prev) => [...prev, invite.id]);
+    setIncomingJoinConfirmInvite(null);
     flash(`パス: ${invite.squadName}`);
   }
 
@@ -3947,12 +5264,15 @@ export default function SquadBattlePage({ variant }: Props) {
     setExtraAppliedIds([]);
     setDismissedRequestIds([]);
     setProfileRequest(null);
-    setViewedProfile(null);
     setCreateSquadOpen(false);
     setJoinByCodeOpen(false);
     setCreatedSquadName(null);
+    setJoinedInviteSquad(null);
     setReformTarget(null);
     setDismissedInviteIds([]);
+    setInviteSendTarget(null);
+    setIncomingInviteModalId(null);
+    setIncomingJoinConfirmInvite(null);
     // 未参加は参加タブ、所属中は順位タブを初期表示
     setMainTab(next === "none" ? "join" : "rank");
   }
@@ -4009,26 +5329,306 @@ export default function SquadBattlePage({ variant }: Props) {
     setJoinByCodeBusy(false);
   }
 
-  function handleCreateSquad(name: string) {
+  async function handleCreateSquad(name: string) {
+    if (liveBattleId) {
+      setCreateSquadBusy(true);
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const token = await auth.currentUser?.getIdToken();
+        const { createGroupBattleSquad } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await createGroupBattleSquad(
+          liveBattleId,
+          { name, acceptRules: true },
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`作成失敗: ${res.error}`);
+          setCreateSquadBusy(false);
+          return;
+        }
+        setCreateSquadOpen(false);
+        setCreatedSquadName(name);
+        setLiveMySquadId(res.squadId);
+        setLiveIsOwner(true);
+        setLiveFormingSquad(
+          mapCurrentMySquadToUiSquad(
+            {
+              id: res.squadId,
+              name,
+              memberUids: liveSelfUid ? [liveSelfUid] : [],
+              memberCount: 1,
+              status: "forming",
+              inviteCode: res.inviteCode,
+            },
+            liveSelfUid
+          )
+        );
+        setExtraAppliedIds([]);
+        setDismissedRequestIds([]);
+        setProfileRequest(null);
+        setMainTab("join");
+        flash(`グループを作成: ${name}`);
+      } catch {
+        flash("作成に失敗しました");
+      }
+      setCreateSquadBusy(false);
+      return;
+    }
+
+    if (!isPreviewMode) {
+      flash("開催中の大会がありません");
+      return;
+    }
+
     setCreateSquadOpen(false);
     setCreatedSquadName(name);
     setPreviewState("recruiting");
     setExtraAppliedIds([]);
     setDismissedRequestIds([]);
     setProfileRequest(null);
-    setViewedProfile(null);
     setMainTab("join");
     flash(`グループを作成: ${name}`);
   }
 
-  function handleRenameSquad(name: string) {
+  async function handleApplyToSquad(squad: OpenSquadListing) {
+    if (appliedSquadIds.has(squad.id)) return;
+    if (pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS) {
+      flash(`申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件まで`);
+      return;
+    }
+    if (liveBattleId) {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const token = await auth.currentUser?.getIdToken();
+        const { applyToGroupBattleSquad } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await applyToGroupBattleSquad(liveBattleId, squad.id, {
+          idToken: token,
+        });
+        if (!res.ok) {
+          flash(`申請失敗: ${res.error}`);
+          return;
+        }
+        setExtraAppliedIds((prev) =>
+          prev.includes(squad.id) ? prev : [...prev, squad.id]
+        );
+        setLiveOutgoingRequests((prev) => {
+          const base = prev ?? [];
+          if (base.some((r) => r.squadId === squad.id)) return base;
+          return [
+            ...base,
+            {
+              id: res.requestId,
+              squadId: squad.id,
+              squadName: squad.name,
+              status: "pending",
+              createdAtLabel: "たった今",
+              applicant: {
+                uid: liveSelfUid ?? "me",
+                handle: "",
+                displayName: "YOU",
+                points: 0,
+                winRate: 0,
+                activeWinStreak: 0,
+                totalPosts: 0,
+                bio: "",
+              },
+            },
+          ];
+        });
+        flash(`申請を送信: ${squad.name}`);
+        setApplyConfirmSquad(null);
+      } catch {
+        flash("申請に失敗しました");
+      }
+      return;
+    }
+
+    if (!isPreviewMode) {
+      flash("開催中の大会がありません");
+      return;
+    }
+
+    setExtraAppliedIds((prev) =>
+      prev.includes(squad.id) ? prev : [...prev, squad.id]
+    );
+    flash(`申請を送信: ${squad.name}`);
+    setApplyConfirmSquad(null);
+  }
+
+  async function handleResolveJoinRequest(
+    req: SquadJoinRequest,
+    decision: "approve" | "reject"
+  ) {
+    if (liveBattleId) {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const token = await auth.currentUser?.getIdToken();
+        const { resolveGroupBattleJoinRequest } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await resolveGroupBattleJoinRequest(
+          liveBattleId,
+          req.id,
+          decision,
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`${decision === "approve" ? "承認" : "拒否"}失敗: ${res.error}`);
+          return;
+        }
+        setDismissedRequestIds((prev) =>
+          prev.includes(req.id) ? prev : [...prev, req.id]
+        );
+        setLiveIncomingRequests((prev) =>
+          (prev ?? []).filter((r) => r.id !== req.id)
+        );
+        setApproveConfirmRequest(null);
+        setProfileRequest(null);
+        flash(
+          `${decision === "approve" ? "承認" : "拒否"}: ${req.applicant.displayName}`
+        );
+      } catch {
+        flash("処理に失敗しました");
+      }
+      return;
+    }
+
+    setDismissedRequestIds((prev) =>
+      prev.includes(req.id) ? prev : [...prev, req.id]
+    );
+    setApproveConfirmRequest(null);
+    setProfileRequest(null);
+    flash(
+      `${decision === "approve" ? "承認" : "拒否"}: ${req.applicant.displayName}`
+    );
+  }
+
+  async function handleRenameSquad(name: string) {
+    if (liveBattleId && mySquad?.id) {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const token = await auth.currentUser?.getIdToken();
+        const { renameGroupBattleSquad } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await renameGroupBattleSquad(
+          liveBattleId,
+          mySquad.id,
+          name,
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`名前変更失敗: ${res.error}`);
+          return;
+        }
+        setCreatedSquadName(res.name);
+        setLiveFormingSquad((prev) =>
+          prev ? { ...prev, name: res.name } : prev
+        );
+        flash(`名前を変更: ${res.name}`);
+        return;
+      } catch {
+        flash("名前変更に失敗しました");
+        return;
+      }
+    }
     setCreatedSquadName(name);
     flash(`名前を変更: ${name}`);
   }
 
-  function openMemberProfile(profile: SquadApplicantProfile, metaLabel?: string) {
-    setProfileRequest(null);
-    setViewedProfile({ profile, metaLabel });
+  async function handleWithdrawRequest(req: SquadJoinRequest) {
+    if (liveBattleId) {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const token = await auth.currentUser?.getIdToken();
+        const { cancelGroupBattleJoinRequest } = await import(
+          "@/lib/groupBattles/clientApi"
+        );
+        const res = await cancelGroupBattleJoinRequest(
+          liveBattleId,
+          req.id,
+          { idToken: token }
+        );
+        if (!res.ok) {
+          flash(`取り下げ失敗: ${res.error}`);
+          return;
+        }
+        setLiveOutgoingRequests((prev) =>
+          prev ? prev.filter((r) => r.id !== req.id) : prev
+        );
+        setExtraAppliedIds((prev) => prev.filter((id) => id !== req.squadId));
+        flash(`申請を取り下げ: ${req.squadName}`);
+        return;
+      } catch {
+        flash("取り下げに失敗しました");
+        return;
+      }
+    }
+    setWithdrawnRequestIds((prev) =>
+      prev.includes(req.id) ? prev : [...prev, req.id]
+    );
+    setExtraAppliedIds((prev) => prev.filter((id) => id !== req.squadId));
+    flash(`申請を取り下げ: ${req.squadName}`);
+  }
+
+  async function handleLeaveSquad() {
+    if (!liveBattleId || !mySquad?.id) return;
+    try {
+      const { auth } = await import("@/lib/firebase");
+      const token = await auth.currentUser?.getIdToken();
+      const { leaveGroupBattleSquad } = await import(
+        "@/lib/groupBattles/clientApi"
+      );
+      const res = await leaveGroupBattleSquad(liveBattleId, mySquad.id, {
+        idToken: token,
+      });
+      if (!res.ok) {
+        flash(`脱退失敗: ${res.error}`);
+        return;
+      }
+      setLiveFormingSquad(null);
+      setLiveMySquadId(null);
+      setLiveIsOwner(false);
+      setCreatedSquadName(null);
+      flash("スクワッドから脱退しました");
+    } catch {
+      flash("脱退に失敗しました");
+    }
+  }
+
+  async function handleDissolveSquad() {
+    if (!liveBattleId || !mySquad?.id) return;
+    try {
+      const { auth } = await import("@/lib/firebase");
+      const token = await auth.currentUser?.getIdToken();
+      const { dissolveGroupBattleSquad } = await import(
+        "@/lib/groupBattles/clientApi"
+      );
+      const res = await dissolveGroupBattleSquad(liveBattleId, mySquad.id, {
+        idToken: token,
+      });
+      if (!res.ok) {
+        flash(`解散失敗: ${res.error}`);
+        return;
+      }
+      setLiveFormingSquad(null);
+      setLiveMySquadId(null);
+      setLiveIsOwner(false);
+      setCreatedSquadName(null);
+      flash("スクワッドを解散しました");
+    } catch {
+      flash("解散に失敗しました");
+    }
+  }
+
+  function openMemberProfile(profile: SquadApplicantProfile) {
+    const key = profilePathKeyFromRow(profile);
+    if (!key) return;
+    router.push(`/${variant}/u/${encodeURIComponent(key)}`);
   }
 
   return (
@@ -4037,9 +5637,11 @@ export default function SquadBattlePage({ variant }: Props) {
       <CyberSubpageShell
         eyebrow="RANKINGS"
         title="SQUAD BATTLE"
-        subtitle={SQUAD_BATTLE_HELP_TEXT}
+        hideBrandShelf={false}
+        titleInBrandShelf
         headerTrailing={
-          variant === "web" ? (
+          isPreviewMode ? (
+            variant === "web" ? (
             <div className="flex items-center pr-0.5 md:pr-1">
               <CyberMenuButton
                 size="lg"
@@ -4067,6 +5669,7 @@ export default function SquadBattlePage({ variant }: Props) {
               />
             </button>
           )
+          ) : undefined
         }
         onBack={() => {
           if (typeof window !== "undefined") window.history.back();
@@ -4102,18 +5705,51 @@ export default function SquadBattlePage({ variant }: Props) {
         {mainTab === "join" ? (
           <div className={cn("flex flex-col", variant === "web" ? "gap-5" : "gap-4")}>
           <SquadGoldPhaseTrack activeKey={phaseTrackKey} />
-          <SquadPhaseStatusBanner
-            phase={uiPhase}
-            hasSquad={mySquad != null}
-            activeMemberCount={myActiveCount}
-            deadlineLabel={
-              uiPhase === "entry" ? SQUAD_BATTLE_MOCK_DEADLINE_LABEL : null
-            }
-          />
+          {uiPhase !== "idle" ? (
+            <SquadPhaseStatusBanner
+              phase={uiPhase}
+              hasSquad={mySquad != null}
+              activeMemberCount={myActiveCount}
+              deadlineLabel={
+                uiPhase === "entry"
+                  ? formatSquadBattleRecruitDeadlineLabel(liveRecruitEndAtMs) ??
+                    (isPreviewMode ? SQUAD_BATTLE_MOCK_DEADLINE_LABEL : null)
+                  : null
+              }
+            />
+          ) : null}
           {uiPhase === "idle" ? (
             <SquadIdlePanel />
           ) : uiPhase === "reward" ? (
-            <SquadRewardResultPanel hasSquad={mySquad != null} />
+            <SquadRewardResultPanel
+              hasSquad={
+                liveRewardHasSquad != null
+                  ? liveRewardHasSquad
+                  : mySquad != null
+              }
+              result={
+                liveRewardResult ??
+                (isPreviewMode
+                  ? SQUAD_BATTLE_REWARD_RESULT_MOCK
+                  : {
+                      weekly: [
+                        { weekIndex: 1, rank: null, units: 0, status: "none" },
+                        { weekIndex: 2, rank: null, units: 0, status: "none" },
+                        { weekIndex: 3, rank: null, units: 0, status: "none" },
+                        { weekIndex: 4, rank: null, units: 0, status: "none" },
+                      ],
+                      monthlyRank: null,
+                      monthlyUnits: 0,
+                      monthlyStatus: "none",
+                      payoutNote: "獲得 Unit を読み込み中…",
+                    })
+              }
+              loading={
+                Boolean(liveBattleId) &&
+                rewardPayoutLoading &&
+                liveRewardResult == null
+              }
+            />
           ) : mySquad == null ? (
             uiPhase === "battle" ? (
               <div className={cn("flex flex-col", variant === "web" ? "gap-4" : "gap-3")}>
@@ -4135,7 +5771,7 @@ export default function SquadBattlePage({ variant }: Props) {
               </div>
             ) : (
             <NoneState
-              openSquads={mock.openSquads}
+              openSquads={openSquadsForUi}
               outgoingRequests={outgoingForDisplay}
               appliedSquadIds={appliedSquadIds}
               pendingCount={pendingCount}
@@ -4145,34 +5781,14 @@ export default function SquadBattlePage({ variant }: Props) {
               selfUid={selfUidForUi}
               onCreate={() => setCreateSquadOpen(true)}
               onJoinByCode={() => setJoinByCodeOpen(true)}
-              onApply={(squadId, squadName) => {
-                if (appliedSquadIds.has(squadId)) return;
-                if (pendingCount >= SQUAD_BATTLE_MAX_PENDING_APPLICATIONS) {
-                  flash(
-                    `申請は最大${SQUAD_BATTLE_MAX_PENDING_APPLICATIONS}件まで`
-                  );
-                  return;
-                }
-                setExtraAppliedIds((prev) =>
-                  prev.includes(squadId) ? prev : [...prev, squadId]
-                );
-                flash(`申請を送信: ${squadName}`);
-              }}
+              onRequestApply={setApplyConfirmSquad}
               onWithdraw={(req) => {
-                setWithdrawnRequestIds((prev) =>
-                  prev.includes(req.id) ? prev : [...prev, req.id]
-                );
-                setExtraAppliedIds((prev) =>
-                  prev.filter((id) => id !== req.squadId)
-                );
-                flash(`申請を取り下げ: ${req.squadName}`);
+                void handleWithdrawRequest(req);
               }}
-              onOpenMemberProfile={(profile) =>
-                openMemberProfile(profile, "募集中スクワッドのメンバー")
-              }
+              onOpenMemberProfile={openMemberProfile}
               onReform={(item) => setReformTarget(item)}
               onAcceptInvite={(invite) => {
-                void handleAcceptInvite(invite);
+                setIncomingJoinConfirmInvite(invite);
               }}
               onDeclineInvite={(invite) => {
                 void handleDeclineInvite(invite);
@@ -4183,20 +5799,29 @@ export default function SquadBattlePage({ variant }: Props) {
             <>
               <MySquadCard
                 squad={mySquad}
-                maxAvg={boardMaxAvg}
-                onOpenMemberProfile={(profile) =>
-                  openMemberProfile(profile, "スクワッドメンバー")
-                }
+                phase={uiPhase}
+                isOwner={liveIsOwner || (isPreviewMode && Boolean(mySquad))}
+                onOpenMemberProfile={openMemberProfile}
                 onCopyInviteCode={(code) => {
                   void copyTextToClipboard(code).then((ok) => {
                     flash(ok ? `コピーしました: ${code}` : `コピー失敗: ${code}`);
                   });
                 }}
                 onRenameSquad={
-                  uiPhase === "entry" ? handleRenameSquad : undefined
+                  uiPhase === "entry" ? (n) => void handleRenameSquad(n) : undefined
+                }
+                onLeaveSquad={
+                  uiPhase === "entry" && liveBattleId && !liveIsOwner
+                    ? () => void handleLeaveSquad()
+                    : undefined
+                }
+                onDissolveSquad={
+                  uiPhase === "entry" && liveBattleId && liveIsOwner
+                    ? () => void handleDissolveSquad()
+                    : undefined
                 }
               />
-              {uiPhase === "battle" || previewState === "full" ? (
+              {membersLocked ? (
                 <p
                   className={cn(
                     jp.className,
@@ -4207,7 +5832,8 @@ export default function SquadBattlePage({ variant }: Props) {
                   メンバー LOCKED · 入れ替え・追加申請の受付は終了しています。
                 </p>
               ) : null}
-              {(liveIsOwner || previewState === "recruiting") &&
+              {(liveIsOwner ||
+                (isPreviewMode && previewState === "recruiting")) &&
               uiPhase === "entry" &&
               pastSquadsForUi.length > 0 ? (
                 <div className={variant === "web" ? "mt-6" : "mt-5"}>
@@ -4215,11 +5841,16 @@ export default function SquadBattlePage({ variant }: Props) {
                     pastSquads={pastSquadsForUi}
                     selfUid={selfUidForUi}
                     canReform={false}
-                    canInvite={liveIsOwner || previewState === "recruiting"}
+                    canInvite={
+                      liveIsOwner ||
+                      (isPreviewMode && previewState === "recruiting")
+                    }
                     busyId={reformBusyId}
                     onReform={() => {}}
                     onInvite={(item, uid) => {
-                      void handleInvitePastMember(item, uid);
+                      const member = item.members.find((m) => m.uid === uid);
+                      if (!member) return;
+                      setInviteSendTarget({ source: item, member });
                     }}
                   />
                 </div>
@@ -4228,18 +5859,13 @@ export default function SquadBattlePage({ variant }: Props) {
               <IncomingRequestsPanel
                 requests={visibleIncoming}
                 onOpenProfile={(req) => {
-                  setViewedProfile(null);
                   setProfileRequest(req);
                 }}
                 onApprove={(req) => {
-                  setDismissedRequestIds((prev) => [...prev, req.id]);
-                  setProfileRequest(null);
-                  flash(`承認: ${req.applicant.displayName}`);
+                  setApproveConfirmRequest(req);
                 }}
                 onReject={(req) => {
-                  setDismissedRequestIds((prev) => [...prev, req.id]);
-                  setProfileRequest(null);
-                  flash(`拒否: ${req.applicant.displayName}`);
+                  void handleResolveJoinRequest(req, "reject");
                 }}
               />
               ) : null}
@@ -4300,39 +5926,26 @@ export default function SquadBattlePage({ variant }: Props) {
               </p>
             )}
 
-            <p className={cn(jp.className, "mb-3 text-[11px] leading-snug text-white/40")}>
-              {SQUAD_BATTLE_BOARD_STATUS_HINT[boardStatus]}
-              {" · "}
-              同点は同順位・同 Unit
-            </p>
-
             {uiPhase === "idle" ? (
               <SquadIdlePanel />
-            ) : null}
-
-            {uiPhase === "reward" ? (
-              <div className="mb-4">
-                <SquadRewardResultPanel hasSquad={mySquad != null} />
-              </div>
             ) : null}
 
             {mySquad ? (
               <div
                 className={cn(
-                  "sticky top-0 z-20 bg-[#0A0805] shadow-[0_16px_28px_rgba(5,11,20,0.92)]",
+                  "sticky top-0 z-20 bg-transparent",
                   variant === "web" ? "mb-5 pb-4 pt-1" : "mb-4 pb-3 pt-1"
                 )}
               >
                 <PinnedYourSquadCard
                   squad={mySquad}
-                  maxAvg={boardMaxAvg}
+                  onOpenDetail={() => setDetailSquad(mySquad)}
                 />
               </div>
             ) : (
               <div className="mb-4">
                 <SquadEmptyHint>
-                  未参加のためピン留めはありません。RANK
-                  は観戦のみです。参加は JOIN（ENTRY 期間）から。
+                  {SQUAD_BATTLE_RANK_SPECTATOR_HINT}
                 </SquadEmptyHint>
               </div>
             )}
@@ -4345,17 +5958,18 @@ export default function SquadBattlePage({ variant }: Props) {
                 variant === "web" ? "gap-2.5" : "gap-2"
               )}
             >
-                {boardOthers.length === 0 ? (
+                {rankingList.length === 0 ? (
                   <SquadEmptyHint>リーダーボードに表示するグループがありません。</SquadEmptyHint>
                 ) : (
-                  boardOthers.map((squad, i) => (
+                  rankingList.map((squad, i) => (
                   <LeaderboardRow
                     key={squad.id}
                     squad={squad}
-                    maxAvg={boardMaxAvg}
                     runnerUpAvg={boardRunnerUpAvg}
-                    board={leaderboard}
+                    board={rankingList}
                     index={i}
+                    period={rankPeriod}
+                    onOpenDetail={() => setDetailSquad(squad)}
                   />
                   ))
                 )}
@@ -4367,8 +5981,13 @@ export default function SquadBattlePage({ variant }: Props) {
 
       {createSquadOpen ? (
         <CreateSquadNameSheet
-          onClose={() => setCreateSquadOpen(false)}
-          onCreate={handleCreateSquad}
+          onClose={() => {
+            if (createSquadBusy) return;
+            setCreateSquadOpen(false);
+          }}
+          onCreate={(name) => {
+            void handleCreateSquad(name);
+          }}
         />
       ) : null}
 
@@ -4381,6 +6000,72 @@ export default function SquadBattlePage({ variant }: Props) {
           }}
           onJoin={(code) => {
             void handleJoinByCode(code);
+          }}
+        />
+      ) : null}
+
+      {applyConfirmSquad ? (
+        <ApplyJoinConfirmSheet
+          squad={applyConfirmSquad}
+          onClose={() => setApplyConfirmSquad(null)}
+          onConfirm={() => {
+            void handleApplyToSquad(applyConfirmSquad);
+          }}
+          onOpenMemberProfile={openMemberProfile}
+        />
+      ) : null}
+
+      {inviteSendTarget && mySquad ? (
+        <InviteSendConfirmSheet
+          target={inviteSendTarget}
+          squadName={mySquad.name}
+          onClose={() => setInviteSendTarget(null)}
+          onConfirm={() => {
+            void handleInvitePastMember(
+              inviteSendTarget.source,
+              inviteSendTarget.member.uid
+            );
+          }}
+        />
+      ) : null}
+
+      {approveConfirmRequest ? (
+        <ApproveApplicantConfirmSheet
+          request={approveConfirmRequest}
+          onClose={() => setApproveConfirmRequest(null)}
+          onConfirm={() => {
+            void handleResolveJoinRequest(approveConfirmRequest, "approve");
+          }}
+        />
+      ) : null}
+
+      {incomingJoinConfirmInvite ? (
+        <IncomingJoinConfirmSheet
+          invite={incomingJoinConfirmInvite}
+          openSquads={openSquadsForUi}
+          onClose={() => setIncomingJoinConfirmInvite(null)}
+          onConfirm={() => {
+            void handleAcceptInvite(incomingJoinConfirmInvite);
+          }}
+          onDecline={() => {
+            void handleDeclineInvite(incomingJoinConfirmInvite);
+          }}
+          onOpenMemberProfile={openMemberProfile}
+        />
+      ) : null}
+
+      {!introOpen && incomingInviteForModal ? (
+        <IncomingInviteSheet
+          invite={incomingInviteForModal}
+          onClose={() => {
+            holdIncomingInvite(incomingInviteForModal.id);
+          }}
+          onAccept={() => {
+            void handleAcceptInvite(incomingInviteForModal);
+          }}
+          onHold={() => {
+            holdIncomingInvite(incomingInviteForModal.id);
+            flash("保留しました。招待されているスクワッドから参加できます");
           }}
         />
       ) : null}
@@ -4403,29 +6088,30 @@ export default function SquadBattlePage({ variant }: Props) {
           profile={profileRequest.applicant}
           metaLabel={`申請 · ${profileRequest.createdAtLabel}`}
           onClose={() => setProfileRequest(null)}
-          onApprove={() => {
-            setDismissedRequestIds((prev) => [...prev, profileRequest.id]);
+          onOpenPublicProfile={() => {
+            const profile = profileRequest.applicant;
             setProfileRequest(null);
-            flash(`承認: ${profileRequest.applicant.displayName}`);
+            openMemberProfile(profile);
+          }}
+          onApprove={() => {
+            setApproveConfirmRequest(profileRequest);
           }}
           onReject={() => {
-            setDismissedRequestIds((prev) => [...prev, profileRequest.id]);
-            setProfileRequest(null);
-            flash(`拒否: ${profileRequest.applicant.displayName}`);
+            void handleResolveJoinRequest(profileRequest, "reject");
           }}
         />
       ) : null}
 
-      {viewedProfile ? (
-        <ApplicantProfileSheet
-          profile={viewedProfile.profile}
-          metaLabel={viewedProfile.metaLabel}
-          onClose={() => setViewedProfile(null)}
+      {detailSquad ? (
+        <SquadRankingDetailSheet
+          squad={detailSquad}
+          onClose={() => setDetailSquad(null)}
         />
       ) : null}
 
       {toast ? <Toast message={toast} /> : null}
 
+      {isPreviewMode ? (
       <SquadBattlePreviewToolsOverlay
         open={previewToolsOpen}
         previewState={previewState}
@@ -4439,13 +6125,31 @@ export default function SquadBattlePage({ variant }: Props) {
           clearSquadBattleIntroSeen();
           setIntroOpen(true);
         }}
+        onReplayLaunch={() => {
+          clearSquadBattleLaunchSeen();
+          setLaunchOpen(true);
+        }}
         reduceMotion={reduceMotion}
         variant={variant}
       />
+      ) : null}
 
       <SquadBattleIntroOverlay
         open={introOpen}
         onClose={() => setIntroOpen(false)}
+      />
+      <SquadBattleLaunchOverlay
+        open={launchOpen}
+        battleId={liveBattleId}
+        onClose={() => setLaunchOpen(false)}
+        onEnter={() => {
+          setLaunchOpen(false);
+          setMainTab("join");
+        }}
+        deadlineLabel={
+          formatSquadBattleRecruitDeadlineLabel(liveRecruitEndAtMs) ??
+          SQUAD_BATTLE_MOCK_DEADLINE_LABEL
+        }
       />
     </>
     </SquadBattleIsWebCtx.Provider>

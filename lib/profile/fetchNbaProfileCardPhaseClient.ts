@@ -113,7 +113,7 @@ export function chartsFromLoadedBundle(
     const allEmpty =
       parsed.dailyTrend.length === 0 &&
       parsed.rankTrend.length === 0 &&
-      parsed.last20.length === 0;
+      (parsed.last20?.length ?? 0) === 0;
     if (!(PROFILE_OVERVIEW_USE_PREVIOUS_SEASON && allEmpty)) {
       return {
         profileCharts: parsed,

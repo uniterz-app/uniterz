@@ -2,8 +2,11 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
+import { useSyncExternalStore } from "react";
 import {
+  getAppBrandWordmarkOverride,
   resolveHeaderWordmark,
+  subscribeAppBrandWordmarkOverride,
   type HeaderWordmark,
 } from "@/lib/ui/headerWordmark";
 import UniterzUMark from "@/app/component/units/UniterzUMark";
@@ -16,9 +19,14 @@ type Props = {
 export default function Header({ title }: Props) {
   const reduceMotion = useReducedMotion();
   const pathname = usePathname();
+  const wordmarkOverride = useSyncExternalStore(
+    subscribeAppBrandWordmarkOverride,
+    getAppBrandWordmarkOverride,
+    () => null
+  );
   const isMobileWeb = (pathname ?? "").startsWith("/mobile");
   const animate = !reduceMotion && !isMobileWeb;
-  const wordmark = title ?? resolveHeaderWordmark(pathname);
+  const wordmark = title ?? wordmarkOverride ?? resolveHeaderWordmark(pathname);
   const wordmarkLetters = wordmark.split("");
 
   return (

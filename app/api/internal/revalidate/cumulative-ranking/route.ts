@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
+import { timingSafeEqualString } from "@/lib/security/timingSafeEqualString";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const secret = process.env.INTERNAL_REVALIDATE_SECRET;
+  const secret = process.env.INTERNAL_REVALIDATE_SECRET?.trim();
   if (!secret) {
     return NextResponse.json(
       { ok: false, error: "INTERNAL_REVALIDATE_SECRET is not set" },
@@ -12,12 +13,11 @@ export async function POST(req: Request) {
     );
   }
 
-  const token = req.headers.get("x-revalidate-token");
-  if (token !== secret) {
+  const token = req.headers.get("x-revalidate-token")?.trim();
+  if (!timingSafeEqualString(token, secret)) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
   revalidateTag("cumulative-ranking", {});
   return NextResponse.json({ ok: true, tag: "cumulative-ranking" }, { status: 200 });
 }
-

@@ -83,7 +83,7 @@ import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import { useAdminInboxUnread } from "@/lib/admin/useAdminInboxUnread";
-import { isAdminUid } from "@/lib/constants";
+import { useIsAdmin } from "@/lib/admin/useIsAdmin";
 import {
   clearSideMenuOrigin,
   consumeOpenProfileSideMenu,
@@ -215,9 +215,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const { unreadCount: menuUnreadCount } = useAnnouncementsUnread({
     enabled: isMe,
   });
-  const adminInbox = useAdminInboxUnread(
-    Boolean(isMe && isAdminUid(resolvedUid))
-  );
+  const { isAdmin } = useIsAdmin();
+  const adminInbox = useAdminInboxUnread(Boolean(isMe && isAdmin));
 
   const currentStreak = Math.max(
     0,

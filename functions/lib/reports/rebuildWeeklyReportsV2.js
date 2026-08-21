@@ -3,8 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.rebuildWeeklyReportsManualV2 = exports.rebuildWeeklyReportsCronV2 = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
+const params_1 = require("firebase-functions/params");
 const buildWeeklyReportsCore_1 = require("./buildWeeklyReportsCore");
 const nbaPeriod_1 = require("../rankings/nbaPeriod");
+const assertManualJobAuth_1 = require("../http/assertManualJobAuth");
+const INTERNAL_JOB_SECRET = (0, params_1.defineSecret)("INTERNAL_JOB_SECRET");
 function isMondayJst(now) {
     return new Date(now.getTime() + 9 * 60 * 60 * 1000).getUTCDay() === 1;
 }
@@ -34,15 +37,17 @@ exports.rebuildWeeklyReportsCronV2 = (0, scheduler_1.onSchedule)({
 /**
  * 手動 / Cursor 用 HTTP。
  * GET/POST ?weekLabel=2026-10-19&status=final&limit=50
- * status 省略時は final。live は後方互換の手動再生成用のみ。
+ * 要ヘッダ: x-internal-job-secret（Secret: INTERNAL_JOB_SECRET）
  */
 exports.rebuildWeeklyReportsManualV2 = (0, https_1.onRequest)({
     region: "asia-northeast1",
     memory: "1GiB",
     timeoutSeconds: 540,
+    secrets: [INTERNAL_JOB_SECRET],
 }, async (req, res) => {
     var _a, _b, _c;
     try {
+        (0, assertManualJobAuth_1.assertManualJobAuth)(req);
         const weekLabel = typeof req.query.weekLabel === "string"
             ? req.query.weekLabel
             : typeof ((_a = req.body) === null || _a === void 0 ? void 0 : _a.weekLabel) === "string"
@@ -67,6 +72,16 @@ exports.rebuildWeeklyReportsManualV2 = (0, https_1.onRequest)({
         res.status(200).json(result);
     }
     catch (e) {
+        const status = e instanceof Error &&
+            typeof e.status === "number"
+            ? e.status
+            : 500;
+        if (status === 403 || status === 503) {
+            res.status(status).json({
+                error: e instanceof Error ? e.message : String(e),
+            });
+            return;
+        }
         console.error("[rebuildWeeklyReportsManualV2]", e);
         res.status(500).json({
             error: e instanceof Error ? e.message : String(e),

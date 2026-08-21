@@ -184,10 +184,18 @@ function RankingsStackScreen() {
           {() => <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />}
         </RankingsStack.Screen>
         <RankingsStack.Screen
+          name="SquadBattle"
+          getComponent={() =>
+            require("../features/squads/SquadBattleScreenNative").default
+          }
+          initialParams={{ mode: "production" }}
+        />
+        <RankingsStack.Screen
           name="SquadBattlePreview"
           getComponent={() =>
             require("../features/squads/SquadBattleScreenNative").default
           }
+          initialParams={{ mode: "preview" }}
         />
         <RankingsStack.Screen
           name="PublicProfile"
@@ -215,10 +223,18 @@ function LeaderboardsStackScreen() {
           }
         />
         <LeaderboardsStack.Screen
+          name="SquadBattle"
+          getComponent={() =>
+            require("../features/squads/SquadBattleScreenNative").default
+          }
+          initialParams={{ mode: "production" }}
+        />
+        <LeaderboardsStack.Screen
           name="SquadBattlePreview"
           getComponent={() =>
             require("../features/squads/SquadBattleScreenNative").default
           }
+          initialParams={{ mode: "preview" }}
         />
         <LeaderboardsStack.Screen
           name="PublicProfile"
@@ -376,6 +392,14 @@ function ProfileStackScreen() {
         />
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="SquadBattlePreview"
+            getComponent={() =>
+              require("../features/squads/SquadBattleScreenNative").default
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="MonthlyReportPreview"
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
@@ -434,6 +458,15 @@ function ProfileStackScreen() {
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
                 .UniterzProBadgePreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="MarkedChipDesignPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .MarkedChipDesignPreviewScreenWrapper
             }
           />
         ) : null}
@@ -627,6 +660,12 @@ function ProfileStackScreen() {
           getComponent={() =>
             require("../features/admin/AdminRedemptionDetailScreenNative")
               .default
+          }
+        />
+        <ProfileStack.Screen
+          name="AdminGroupBattles"
+          getComponent={() =>
+            require("../features/admin/AdminGroupBattlesScreenNative").default
           }
         />
         <ProfileStack.Screen

@@ -6,6 +6,7 @@ import {
   FieldValue,
   Timestamp,
   type Firestore,
+  type QuerySnapshot,
   type Transaction,
 } from "firebase-admin/firestore";
 import {
@@ -141,6 +142,8 @@ export function parseSquadDoc(
       data.inviteCodeHash == null ? null : String(data.inviteCodeHash),
     inviteCodeLast4:
       data.inviteCodeLast4 == null ? null : String(data.inviteCodeLast4),
+    inviteCodePlain:
+      data.inviteCodePlain == null ? null : String(data.inviteCodePlain),
     rulesAcceptedAtMs: data.rulesAcceptedAt
       ? tsMs(data.rulesAcceptedAt)
       : null,
@@ -148,6 +151,42 @@ export function parseSquadDoc(
       data.rulesAcceptedByUid == null
         ? null
         : String(data.rulesAcceptedByUid),
+  };
+}
+
+/** API 応答用。ハッシュは常に隠す。平文コードはオーナーのみ。 */
+export function serializeSquadForClient(
+  squad: GroupBattleSquadDoc & { id: string },
+  opts: { viewerUid: string; includeInvitePlain?: boolean }
+): Omit<
+  GroupBattleSquadDoc & { id: string },
+  "inviteCodeHash" | "inviteCodePlain"
+> & {
+  inviteCodeHash: null;
+  inviteCodePlain: string | null;
+  inviteCode?: string | null;
+} {
+  const isOwner = opts.viewerUid === squad.ownerUid;
+  const plain =
+    opts.includeInvitePlain !== false &&
+    isOwner &&
+    typeof squad.inviteCodePlain === "string" &&
+    squad.inviteCodePlain.trim()
+      ? squad.inviteCodePlain.trim()
+      : null;
+  return {
+    id: squad.id,
+    name: squad.name,
+    ownerUid: squad.ownerUid,
+    memberUids: squad.memberUids,
+    memberCount: squad.memberCount,
+    status: squad.status,
+    inviteCodeLast4: squad.inviteCodeLast4 ?? null,
+    inviteCodeHash: null,
+    inviteCodePlain: plain,
+    inviteCode: plain,
+    rulesAcceptedAtMs: squad.rulesAcceptedAtMs ?? null,
+    rulesAcceptedByUid: squad.rulesAcceptedByUid ?? null,
   };
 }
 
@@ -223,6 +262,35 @@ export async function countPendingApplications(
     .where("status", "==", "pending")
     .get();
   return snap.size;
+}
+
+/** トランザクション内 — 書き込みより前に呼ぶ */
+export function getPendingJoinRequestsTx(
+  tx: Transaction,
+  db: Firestore,
+  battleId: string,
+  applicantUid: string
+) {
+  return tx.get(
+    joinRequestsCol(db, battleId)
+      .where("applicantUid", "==", applicantUid)
+      .where("status", "==", "pending")
+  );
+}
+
+/** 所属が決まった申請者の、残りの pending 申請を cancelled にする */
+export function cancelPendingJoinRequestsTx(
+  tx: Transaction,
+  pendingSnap: QuerySnapshot,
+  exceptRequestId?: string | null
+): void {
+  for (const doc of pendingSnap.docs) {
+    if (exceptRequestId && doc.id === exceptRequestId) continue;
+    tx.update(doc.ref, {
+      status: "cancelled",
+      resolvedAt: FieldValue.serverTimestamp(),
+    });
+  }
 }
 
 export function deriveSquadStatusAfterMemberChange(

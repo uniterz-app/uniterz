@@ -1,17 +1,17 @@
 /**
- * カンファレンス順位表 — リーグ Team Stats スナップショット + teams doc から切る。
- * 試合ごとに 30 チーム分は保存しない。
+ * カンファレンス順位表 — Firestore `teams` が正。
+ * Team Stats スナップショットや詳細プレビューのモックは使わない。
+ * 並びは `updateTeamRankings` と同じ `compareNbaStandingsSortRows`。
  */
-import type { NbaConferenceId } from "@/lib/nba/nbaConferenceTeams";
+import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
+import {
+  nbaConferenceForTeam,
+  type NbaConferenceId,
+} from "@/lib/nba/nbaConferenceTeams";
 import { compareNbaStandingsSortRows } from "@/lib/nba/compareNbaStandingsSort";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import { lastGameAtMillis } from "@/lib/teamLastGameAt";
-import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
-import {
-  computeStreakFromGames,
-  getNbaTeamDetailPreview,
-  type NbaTeamStreak,
-} from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { computeStreakFromGames, type NbaTeamStreak } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 
 export type NbaStandingsWl = { wins: number; losses: number };
 
@@ -32,6 +32,11 @@ export type NbaConferenceStandingsRow = {
 export type NbaConferenceStandingsBoard = {
   east: NbaConferenceStandingsRow[];
   west: NbaConferenceStandingsRow[];
+};
+
+export const EMPTY_NBA_CONFERENCE_STANDINGS: NbaConferenceStandingsBoard = {
+  east: [],
+  west: [],
 };
 
 export function formatStandingsWl(wl: NbaStandingsWl): string {
@@ -55,6 +60,10 @@ function num(v: unknown): number | null {
     if (Number.isFinite(n)) return n;
   }
   return null;
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
 }
 
 function wlFromObject(raw: unknown): NbaStandingsWl | null {
@@ -92,16 +101,20 @@ function lastGamesResults(raw: unknown): Array<{ result: "W" | "L"; at: number }
   return out.sort((a, b) => a.at - b.at);
 }
 
-function overlayFromTeamDoc(raw: unknown): {
-  wins?: number;
-  losses?: number;
-  home?: NbaStandingsWl;
-  away?: NbaStandingsWl;
-  last10?: NbaStandingsWl;
-  streak?: NbaTeamStreak;
+function recordFromTeamDoc(raw: unknown): {
+  wins: number;
+  losses: number;
+  home: NbaStandingsWl;
+  away: NbaStandingsWl;
+  last10: NbaStandingsWl;
+  streak: NbaTeamStreak;
+  standingsTiebreakOrder?: number;
 } {
+  const empty: NbaStandingsWl = { wins: 0, losses: 0 };
   const d = asRecord(raw);
-  if (!d) return {};
+  if (!d) {
+    return { wins: 0, losses: 0, home: empty, away: empty, last10: empty, streak: { kind: "W", count: 0 } };
+  }
   const rs = nbaRegularSeasonWinsLosses({
     wins: num(d.wins) ?? undefined,
     losses: num(d.losses) ?? undefined,
@@ -114,81 +127,99 @@ function overlayFromTeamDoc(raw: unknown): {
   });
   const nested = asRecord(d.homeAway);
   const home =
-    wlFromWinsGames(d.homeWins, d.homeGames) ?? wlFromObject(nested?.home);
+    wlFromWinsGames(d.homeWins, d.homeGames) ?? wlFromObject(nested?.home) ?? empty;
   const away =
-    wlFromWinsGames(d.awayWins, d.awayGames) ?? wlFromObject(nested?.away);
+    wlFromWinsGames(d.awayWins, d.awayGames) ?? wlFromObject(nested?.away) ?? empty;
 
   const results = lastGamesResults(d.lastGames);
   const last10Games = results.slice(-10);
-  const last10: NbaStandingsWl | undefined =
+  const last10: NbaStandingsWl =
     last10Games.length > 0
       ? {
           wins: last10Games.filter((g) => g.result === "W").length,
           losses: last10Games.filter((g) => g.result === "L").length,
         }
-      : undefined;
+      : empty;
   const streak =
-    last10Games.length > 0 ? computeStreakFromGames(last10Games) : undefined;
+    last10Games.length > 0
+      ? computeStreakFromGames(last10Games)
+      : { kind: "W" as const, count: 0 };
 
-  const hasRecord = rs.wins + rs.losses > 0;
+  const tb = num(d.standingsTiebreakOrder);
+
   return {
-    wins: hasRecord ? rs.wins : undefined,
-    losses: hasRecord ? rs.losses : undefined,
-    home: home ?? undefined,
-    away: away ?? undefined,
+    wins: rs.wins,
+    losses: rs.losses,
+    home,
+    away,
     last10,
     streak,
+    standingsTiebreakOrder: tb ?? undefined,
+  };
+}
+
+type DraftRow = Omit<NbaConferenceStandingsRow, "rank"> & {
+  standingsTiebreakOrder?: number;
+};
+
+function draftFromTeamDoc(doc: Record<string, unknown>): DraftRow | null {
+  const teamId = str(doc.id);
+  if (!teamId) return null;
+  const conference = nbaConferenceForTeam(teamId);
+  if (!conference) return null;
+  const rec = recordFromTeamDoc(doc);
+  const gp = rec.wins + rec.losses;
+  const teamName =
+    NBA_TEAM_NAME_BY_ID[teamId] ||
+    str(doc.name) ||
+    str(doc.shortName) ||
+    teamId;
+  return {
+    teamId,
+    teamName,
+    conference,
+    wins: rec.wins,
+    losses: rec.losses,
+    winPct: gp > 0 ? rec.wins / gp : 0,
+    streak: rec.streak,
+    last10: rec.last10,
+    home: rec.home,
+    away: rec.away,
+    standingsTiebreakOrder: rec.standingsTiebreakOrder,
   };
 }
 
 export function buildNbaConferenceStandings(
-  bundle: NbaLeagueTeamStatsBundle,
-  teamDocs: readonly Record<string, unknown>[] = []
+  teamDocs: readonly Record<string, unknown>[]
 ): NbaConferenceStandingsBoard {
-  const byId = new Map<string, Record<string, unknown>>();
+  const draft: DraftRow[] = [];
   for (const doc of teamDocs) {
-    const id = typeof doc.id === "string" ? doc.id : "";
-    if (id) byId.set(id, doc);
+    const row = draftFromTeamDoc(doc);
+    if (row) draft.push(row);
   }
-
-  const draft: Omit<NbaConferenceStandingsRow, "rank">[] = bundle.season.map(
-    (row) => {
-      const overlay = overlayFromTeamDoc(byId.get(row.teamId));
-      const last10Row = bundle.last10.find((r) => r.teamId === row.teamId);
-      const preview =
-        overlay.home && overlay.away && overlay.streak
-          ? null
-          : getNbaTeamDetailPreview(row.teamId, bundle);
-      const wins = overlay.wins ?? row.wins;
-      const losses = overlay.losses ?? row.losses;
-      const gp = wins + losses;
-      return {
-        teamId: row.teamId,
-        teamName: row.teamName,
-        conference: row.conference,
-        wins,
-        losses,
-        winPct: gp > 0 ? wins / gp : row.winPct,
-        streak: overlay.streak ?? preview?.streak ?? { kind: "W", count: 0 },
-        last10: overlay.last10 ?? {
-          wins: last10Row?.wins ?? preview?.last10Record.wins ?? 0,
-          losses: last10Row?.losses ?? preview?.last10Record.losses ?? 0,
-        },
-        home: overlay.home ?? preview?.homeAwaySplit.home ?? { wins: 0, losses: 0 },
-        away: overlay.away ?? preview?.homeAwaySplit.away ?? { wins: 0, losses: 0 },
-      };
-    }
-  );
 
   const rankConference = (conference: NbaConferenceId): NbaConferenceStandingsRow[] => {
     const rows = draft.filter((r) => r.conference === conference);
     rows.sort((a, b) =>
       compareNbaStandingsSortRows(
-        { id: a.teamId, wins: a.wins, losses: a.losses },
-        { id: b.teamId, wins: b.wins, losses: b.losses }
+        {
+          id: a.teamId,
+          wins: a.wins,
+          losses: a.losses,
+          standingsTiebreakOrder: a.standingsTiebreakOrder,
+        },
+        {
+          id: b.teamId,
+          wins: b.wins,
+          losses: b.losses,
+          standingsTiebreakOrder: b.standingsTiebreakOrder,
+        }
       )
     );
-    return rows.map((row, i) => ({ ...row, rank: i + 1 }));
+    return rows.map((row, i) => {
+      const { standingsTiebreakOrder: _tb, ...rest } = row;
+      return { ...rest, rank: i + 1 };
+    });
   };
 
   return {

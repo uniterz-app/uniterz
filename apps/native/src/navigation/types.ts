@@ -92,16 +92,20 @@ export type ResultStackParamList = {
 
 export type RankingsStackParamList = {
   RankingsHome: undefined;
+  /** SQUAD BATTLE 本番 */
+  SquadBattle: { mode?: "production" | "preview" } | undefined;
   /** SQUAD BATTLE UI プレビュー（モック） */
-  SquadBattlePreview: undefined;
+  SquadBattlePreview: { mode?: "production" | "preview" } | undefined;
   PublicProfile: PublicProfileParams;
 };
 
 export type LeaderboardsStackParamList = {
   LeaderboardsHome: { reopenGroupId?: string } | undefined;
   CommunityDetail: { groupId: string };
+  /** SQUAD BATTLE 本番 */
+  SquadBattle: { mode?: "production" | "preview" } | undefined;
   /** SQUAD BATTLE UI プレビュー（モック） */
-  SquadBattlePreview: undefined;
+  SquadBattlePreview: { mode?: "production" | "preview" } | undefined;
   PublicProfile: PublicProfileParams;
 };
 
@@ -145,6 +149,8 @@ export type ProfileStackParamList = {
   ProSubscribe: undefined;
   ProSubscribePreview: undefined;
   SeasonPredictPreview: undefined;
+  /** __DEV__ SQUAD BATTLE 全画面プレビュー */
+  SquadBattlePreview: undefined;
   /** __DEV__ 週間/月間レポート UI プレビュー（mock） */
   MonthlyReportPreview: { tab?: "weekly" | "monthly"; caseKey?: string } | undefined;
   /** __DEV__ Pro futuristic 背景プレビュー */
@@ -159,6 +165,8 @@ export type ProfileStackParamList = {
   UniterzLogo3dPreview: undefined;
   /** __DEV__ 課金 PRO タグ案 */
   UniterzProBadgePreview: undefined;
+  /** __DEV__ プロフィール MARK / MARKED チップ案 */
+  MarkedChipDesignPreview: undefined;
   /** __DEV__ リザルト詳細デザイン用プレビュー */
   ResultDetailDesignPreview: undefined;
   /** __DEV__ サイバーロゴスプラッシュ */
@@ -200,6 +208,8 @@ export type ProfileStackParamList = {
   /** 管理者: 商品交換申請 */
   AdminRedemptions: undefined;
   AdminRedemptionDetail: { id: string };
+  /** 管理者: グループバトル開催 */
+  AdminGroupBattles: undefined;
   CommunityGuidelines: undefined;
   Landing: undefined;
   /** __DEV__ 通知動作確認 */

@@ -17,6 +17,8 @@ import {
   parseSquadDoc,
   squadMembersCol,
   squadsCol,
+  cancelPendingJoinRequestsTx,
+  getPendingJoinRequestsTx,
 } from "@/lib/groupBattles/server/firestore";
 import { jsonErr, jsonOk, mapAuthError } from "@/lib/groupBattles/server/http";
 
@@ -67,6 +69,13 @@ export async function POST(req: Request, ctx: Ctx) {
       const memSnap = await tx.get(memRef);
       if (memSnap.exists) throw new Error("already_in_squad");
 
+      const pendingSnap = await getPendingJoinRequestsTx(
+        tx,
+        adminDb,
+        battleId,
+        uid
+      );
+
       const memberUids = [...squad.memberUids, uid];
       const memberCount = memberUids.length;
       const status = deriveSquadStatusAfterMemberChange(
@@ -85,6 +94,7 @@ export async function POST(req: Request, ctx: Ctx) {
         role: "member",
         joinedAt: FieldValue.serverTimestamp(),
       });
+      cancelPendingJoinRequestsTx(tx, pendingSnap);
     });
 
     return jsonOk({
