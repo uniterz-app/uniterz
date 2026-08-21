@@ -81,6 +81,7 @@ export default function AuthLandingFlyShellNative() {
   );
 
   const hexTunnel = AUTH_LANDING_FIELD_VARIANT === "hexTunnel";
+  const skipGl = hexTunnel || AUTH_LANDING_FIELD_VARIANT === "grainWave";
 
   if (!glOk) {
     return (
@@ -113,7 +114,7 @@ export default function AuthLandingFlyShellNative() {
     <View style={styles.root}>
       <AuthLandingBackgroundNative />
       {hexTunnel ? <AuthHexTunnelOverlayNative /> : null}
-      {hexTunnel ? null : (
+      {skipGl ? null : (
         <AuthLandingGlCanvasNative
           flying={flying}
           onUnavailable={handleGlUnavailable}
