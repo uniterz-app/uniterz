@@ -1,8 +1,8 @@
 /** Web / Native 共通デザイントークン */
 
 export const colors = {
-  bgPrimary: "#090c15",
-  surfacePrimary: "#121829",
+  bgPrimary: "#080809",
+  surfacePrimary: "#141416",
   surfaceGlass: "rgba(18,24,36,0.52)",
   textPrimary: "#f4f7ff",
   textSecondary: "#9eabc9",

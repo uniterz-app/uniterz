@@ -23,6 +23,7 @@ import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
 import ProfileMenuEdgeHandle from "@/app/component/profile/ui/ProfileMenuEdgeHandle";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs.types";
 import Header from "@/app/component/Header";
+import { acquireAppPageAtmosphere } from "@/lib/ui/appPageAtmosphere";
 import {
   API_METRIC_BY_MOBILE,
   type RankingApiRow,
@@ -127,6 +128,11 @@ export default function MobileRankingsPage() {
       setMetric(visibleMetrics[0]);
     }
   }, [metric, visibleMetrics]);
+
+  useEffect(() => {
+    if (nbaBoard !== "open") return;
+    return acquireAppPageAtmosphere("pro-league");
+  }, [nbaBoard]);
 
   const metricItems = useMemo(
     () => buildRankingTabMetrics(rankingLeague),

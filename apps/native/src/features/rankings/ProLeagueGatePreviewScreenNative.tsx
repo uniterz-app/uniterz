@@ -1,13 +1,14 @@
 /**
  * __DEV__ Free が PRO LEAGUE を開いたときのゲート（本番 `RankingsProLeagueTeaserNative`）。
  */
+import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
 import type { ProfileStackParamList } from "../../navigation/types";
-import RankingsProLeagueMeshBackgroundNative from "./RankingsProLeagueMeshBackgroundNative";
 import { RankingsProLeagueTeaserNative } from "./RankingsProLeagueTeaserNative";
+import { acquireAppPageAtmosphere } from "../../../../../lib/ui/appPageAtmosphere";
 
 type Props = {
   language: "ja" | "en";
@@ -22,9 +23,10 @@ export default function ProLeagueGatePreviewScreenNative({
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
 
+  useEffect(() => acquireAppPageAtmosphere("pro-league"), []);
+
   return (
     <View style={styles.root}>
-      <RankingsProLeagueMeshBackgroundNative />
       <MobilePageShell
         title="PRO LEAGUE GATE"
         eyebrow="DEV PREVIEW"
@@ -51,7 +53,7 @@ export default function ProLeagueGatePreviewScreenNative({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#050508",
+    backgroundColor: "transparent",
   },
   body: {
     flex: 1,

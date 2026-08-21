@@ -24,6 +24,7 @@ import RankingsDivisionTabs from "@/app/component/rankings/RankingsDivisionTabs"
 import RankingsProLeagueTeaser from "@/app/component/rankings/RankingsProLeagueTeaser";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import Header from "@/app/component/Header";
+import { acquireAppPageAtmosphere } from "@/lib/ui/appPageAtmosphere";
 import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import { useWebRankings } from "../_lib/useWebRankings";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
@@ -210,6 +211,11 @@ export default function WebRankingsShell() {
   useEffect(() => {
     setPeriodLabel(null);
   }, [rankingPeriod, rankingLeague, nbaBoard]);
+
+  useEffect(() => {
+    if (nbaBoard !== "open") return;
+    return acquireAppPageAtmosphere("pro-league");
+  }, [nbaBoard]);
 
   useLayoutEffect(() => {
     if (!listReady || !restoreScrollAfterListRef.current) return;

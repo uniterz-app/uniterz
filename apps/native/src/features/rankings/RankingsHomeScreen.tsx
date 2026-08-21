@@ -13,7 +13,7 @@ import {
   PRO_LEAGUE_ATMOSPHERE,
   PRO_LEAGUE_TAB_THEME,
 } from "../../../../../lib/rankings/proLeagueAtmosphere";
-import RankingsProLeagueMeshBackgroundNative from "./RankingsProLeagueMeshBackgroundNative";
+import { acquireAppPageAtmosphere } from "../../../../../lib/ui/appPageAtmosphere";
 import {
   type MobileMetric,
 } from "../../../../../lib/rankings/rankingMetrics";
@@ -358,9 +358,13 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     });
   };
 
+  useEffect(() => {
+    if (nbaBoard !== "open") return;
+    return acquireAppPageAtmosphere("pro-league");
+  }, [nbaBoard]);
+
   return (
     <View style={styles.root}>
-      {nbaBoard === "open" ? <RankingsProLeagueMeshBackgroundNative /> : null}
       <ScrollView
         style={styles.scrollLayer}
         contentContainerStyle={[

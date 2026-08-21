@@ -109,7 +109,7 @@ function webviewTitle(path: string, language: "ja" | "en"): string {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: "#0A1118" },
+  fill: { flex: 1, backgroundColor: "#070708" },
   missing: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   missingText: { color: "rgba(248,250,252,0.7)", fontSize: 15, textAlign: "center" },
 });

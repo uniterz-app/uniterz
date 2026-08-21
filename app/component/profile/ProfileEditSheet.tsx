@@ -325,13 +325,6 @@ export default function ProfileEditSheet({
             backgroundSize: `${APP_MESH_BG_TILE_WIDTH_PX}px ${APP_MESH_BG_TILE_HEIGHT_PX}px`,
           }}
         />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(0,0,0,0.22) 0%, transparent 18%, transparent 78%, rgba(0,0,0,0.32) 100%)",
-          }}
-        />
       </div>
       <CyberSubpageShell
         bare

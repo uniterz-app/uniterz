@@ -44,7 +44,7 @@ export default function MobileLegalWebViewScreen({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: "#0A1118" },
+  flex: { flex: 1, backgroundColor: "#070708" },
   web: { flex: 1, backgroundColor: "transparent" },
   loader: {
     ...StyleSheet.absoluteFillObject,

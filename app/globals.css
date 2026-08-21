@@ -36,7 +36,7 @@ html {
    任意：色のユーティリティ
 -------------------------------- */
 :root {
-  --color-app-bg: #050508;
+  --color-app-bg: #070708;
   --color-card-bg: #334155;
   /* Fixed bottom NavBar: offset + pill height (~56–64px) + home indicator */
   --bottom-nav-clearance: calc(12px + 72px + env(safe-area-inset-bottom, 0px));
@@ -59,10 +59,10 @@ html {
 
 /* アプリ全体メッシュ背景（タイルサイズは lib/app/appMeshBackground.ts と揃える） */
 .app-mesh-page-tile {
-  background-color: #050508;
+  background-color: #070708;
   background-image: url("/bg/app-mesh.png");
   background-repeat: repeat;
-  background-size: 56px 32px;
+  background-size: 128px 128px;
 }
 
 /* -------------------------------
