@@ -23,7 +23,7 @@ export function matchLineFramePaint(opts: {
 
 /** 左寄せラウンドラベル時、左辺からギャップ開始までのティック */
 export const MATCH_LINE_FRAME_TOP_GAP_START_INSET = 14;
-export const MATCH_LINE_FRAME_STROKE = 1.5;
+export const MATCH_LINE_FRAME_STROKE = 1.2;
 export const MATCH_LINE_FRAME_LABEL_GAP_PAD = 16;
 export const MATCH_LINE_FRAME_MIN_RIGHT_TICK = 20;
 

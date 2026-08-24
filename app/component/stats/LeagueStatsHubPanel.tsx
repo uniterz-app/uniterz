@@ -42,11 +42,11 @@ export default function LeagueStatsHubPanel({
   const subtitle =
     tab === "team"
       ? isJa
-        ? "共有 API から取得（未 seed 時はモック）。"
-        : "Loaded via shared API (mock until seeded)."
+        ? "共有 API から取得。"
+        : "Loaded via shared API."
       : isJa
-        ? "指標トップリーダー（モック）"
-        : "Stat leaderboards (mock).";
+        ? "指標トップリーダー"
+        : "Stat leaderboards.";
 
   const body = (
     <div className="space-y-3 text-white">

@@ -106,8 +106,16 @@ export async function registerPushTokenWithApiNative(
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    const { trackAppEvent, reportAppError } = await import(
+      "@/lib/observability/trackAppEvent"
+    );
+    trackAppEvent({ name: "push_token_register", props: { ok: false } });
+    reportAppError("push_token_register", new Error(`${res.status} ${text}`));
     throw new Error(`push-token register failed: ${res.status} ${text}`);
   }
+
+  const { trackAppEvent } = await import("@/lib/observability/trackAppEvent");
+  trackAppEvent({ name: "push_token_register", props: { ok: true } });
 }
 
 export async function unregisterPushTokenFromApiNative(

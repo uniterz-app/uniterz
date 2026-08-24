@@ -29,6 +29,7 @@ import {
 import { gamesCyberEaseBezier } from "./gamesPageMotion";
 import {
   interruptedRoundedRectStrokeHalves,
+  MATCH_LINE_FRAME_STROKE,
   MATCH_LINE_FRAME_TOP_GAP_START_INSET,
   matchLineFrameLabelMaxWidth,
   matchLineFramePaint,
@@ -45,7 +46,7 @@ export {
 } from "@/lib/games/matchListLineFrame";
 
 const RADIUS = 0;
-const STROKE = 1.5;
+const STROKE = MATCH_LINE_FRAME_STROKE;
 const LABEL_GAP_PAD = 16;
 const MIN_TICK_GAP = 12;
 const CTA_WIDTH_PROBE = "REGULAR SEASON";

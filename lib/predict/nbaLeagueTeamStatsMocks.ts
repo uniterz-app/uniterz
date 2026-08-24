@@ -22,6 +22,8 @@ import {
   type NbaLeagueTeamAdvancedFields,
   type NbaLeagueTeamAdvancedMetric,
 } from "@/lib/predict/nbaLeagueTeamStatsAdvanced";
+import { allowNbaStatsMockFallback } from "@/lib/nba/nbaStatsSnapshotCacheControl";
+import type { NbaStatsSnapshotSource } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 
 export type NbaLeagueTeamCoreMetric =
   | "netrtg"
@@ -65,6 +67,22 @@ export type NbaLeagueTeamStatCoreRow = {
   fg3a: number;
   /** Turnover % of possessions (0–1) */
   tovPct: number;
+  /** Opponent FG% allowed (0–1) */
+  oppFgPct: number;
+  /** Opponent 3P% allowed (0–1) */
+  oppFg3Pct: number;
+  /** Opponent FT% allowed (0–1) */
+  oppFtPct: number;
+  /** Opponent rebounds allowed per game */
+  oppReb: number;
+  /** Opponent assists allowed per game */
+  oppAst: number;
+  /** Opponent turnovers forced per game */
+  oppTov: number;
+  /** Opponent offensive rebounds allowed per game */
+  oppOreb: number;
+  /** Opponent eFG% allowed (0–1) */
+  oppEfgPct: number;
 };
 
 export type NbaLeagueTeamStatRow = NbaLeagueTeamStatCoreRow &
@@ -318,7 +336,100 @@ export function isLeagueTeamAdvancedMetric(
   return ADV_METRIC_BY_ID.has(id as NbaLeagueTeamAdvancedMetric);
 }
 
+export function zeroFillLeagueTeamAdvancedFields(): NbaLeagueTeamAdvancedFields {
+  const out = {} as NbaLeagueTeamAdvancedFields;
+  for (const d of NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS) {
+    out[d.id] = 0;
+  }
+  return out;
+}
+
+function coreFromRow(row: NbaLeagueTeamStatRow): NbaLeagueTeamStatCoreRow {
+  const {
+    teamId,
+    teamName,
+    conference,
+    wins,
+    losses,
+    winPct,
+    ppg,
+    papg,
+    diff,
+    ortg,
+    drtg,
+    netrtg,
+    pace,
+    efgPct,
+    fg3Pct,
+    fg3a,
+    tovPct,
+    oppFgPct,
+    oppFg3Pct,
+    oppFtPct,
+    oppReb,
+    oppAst,
+    oppTov,
+    oppOreb,
+    oppEfgPct,
+  } = row;
+  return {
+    teamId,
+    teamName,
+    conference,
+    wins,
+    losses,
+    winPct,
+    ppg,
+    papg,
+    diff,
+    ortg,
+    drtg,
+    netrtg,
+    pace,
+    efgPct,
+    fg3Pct,
+    fg3a,
+    tovPct,
+    oppFgPct,
+    oppFg3Pct,
+    oppFtPct,
+    oppReb,
+    oppAst,
+    oppTov,
+    oppOreb,
+    oppEfgPct,
+  };
+}
+
+function advancedPartialFromRow(
+  row: NbaLeagueTeamStatRow | Record<string, unknown>
+): Partial<NbaLeagueTeamAdvancedFields> {
+  const out: Partial<NbaLeagueTeamAdvancedFields> = {};
+  for (const d of NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS) {
+    const v = row[d.id];
+    if (typeof v === "number" && Number.isFinite(v)) out[d.id] = v;
+  }
+  return out;
+}
+
+/** Firestore / 実データ行 — advanced は渡された値のみ、無ければ 0 */
 export function attachLeagueTeamAdvanced(
+  row: NbaLeagueTeamStatCoreRow,
+  _window: NbaLeagueTeamStatWindow,
+  advanced?: Partial<NbaLeagueTeamAdvancedFields>
+): NbaLeagueTeamStatRow {
+  const base = zeroFillLeagueTeamAdvancedFields();
+  if (advanced) {
+    for (const d of NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS) {
+      const v = advanced[d.id];
+      if (typeof v === "number" && Number.isFinite(v)) base[d.id] = v;
+    }
+  }
+  return { ...row, ...base };
+}
+
+/** モック bundle 専用 — mulberry で clutch / playtype を生成 */
+export function attachMockLeagueTeamAdvanced(
   row: NbaLeagueTeamStatCoreRow,
   window: NbaLeagueTeamStatWindow
 ): NbaLeagueTeamStatRow {
@@ -328,14 +439,38 @@ export function attachLeagueTeamAdvanced(
   };
 }
 
-/** API / Firestore の core 行に Advanced モックを足す。欠けていても落ちないようにする。 */
+function ensureRowAdvanced(
+  row: NbaLeagueTeamStatRow,
+  window: NbaLeagueTeamStatWindow
+): NbaLeagueTeamStatRow {
+  return attachLeagueTeamAdvanced(
+    coreFromRow(row),
+    window,
+    advancedPartialFromRow(row)
+  );
+}
+
+/** API / Firestore の行 — 偽 advanced を足さない */
 export function enrichLeagueTeamStatsBundle(
-  bundle: NbaLeagueTeamStatsBundle
+  bundle: NbaLeagueTeamStatsBundle,
+  source?: NbaStatsSnapshotSource
 ): NbaLeagueTeamStatsBundle {
+  const useMock = allowNbaStatsMockFallback() && source === "mock";
+  if (useMock) {
+    return {
+      asOfLabel: bundle.asOfLabel,
+      season: bundle.season.map((row) =>
+        attachMockLeagueTeamAdvanced(coreFromRow(row), "season")
+      ),
+      last10: bundle.last10.map((row) =>
+        attachMockLeagueTeamAdvanced(coreFromRow(row), "last10")
+      ),
+    };
+  }
   return {
     asOfLabel: bundle.asOfLabel,
-    season: bundle.season.map((row) => attachLeagueTeamAdvanced(row, "season")),
-    last10: bundle.last10.map((row) => attachLeagueTeamAdvanced(row, "last10")),
+    season: bundle.season.map((row) => ensureRowAdvanced(row, "season")),
+    last10: bundle.last10.map((row) => ensureRowAdvanced(row, "last10")),
   };
 }
 
@@ -412,8 +547,16 @@ function buildRow(
     fg3Pct,
     fg3a,
     tovPct,
+    oppFgPct: 0,
+    oppFg3Pct: 0,
+    oppFtPct: 0,
+    oppReb: 0,
+    oppAst: 0,
+    oppTov: 0,
+    oppOreb: 0,
+    oppEfgPct: 0,
   };
-  return attachLeagueTeamAdvanced(core, window);
+  return attachMockLeagueTeamAdvanced(core, window);
 }
 
 function buildWindow(window: NbaLeagueTeamStatWindow): NbaLeagueTeamStatRow[] {

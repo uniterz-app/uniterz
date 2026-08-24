@@ -40,7 +40,7 @@ import type { League } from "@/lib/leagues";
 import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
 import { preferredLeagueToGamesLeague } from "@/lib/user/preferredLeague";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { nbaOpeningNightDefaultDateKey } from "@/lib/games/nbaOpeningNightPreviewGames";
+import { nbaGamesDefaultDateKey } from "@/lib/games/nbaOpeningNightPreviewGames";
 import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -208,20 +208,22 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const isMobileRoute = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
-  const openingNightDefaultDay = useMemo(() => {
-    if (!isMobileRoute) return null;
-    return (
-      parseDateKeyInTimeZone(
-        nbaOpeningNightDefaultDateKey(dayTimeZone),
-        dayTimeZone
-      ) ?? null
-    );
-  }, [isMobileRoute, dayTimeZone]);
 
   /* =========================
      League
   ========================= */
   const [league, setLeague] = useState<League>("nba");
+
+  /** オフシーズンは今日窓が空なので、NBA はプレシーズン開始〜開幕前の既定アンカーにする */
+  const openingNightDefaultDay = useMemo(() => {
+    if (league !== "nba") return null;
+    return (
+      parseDateKeyInTimeZone(
+        nbaGamesDefaultDateKey(dayTimeZone),
+        dayTimeZone
+      ) ?? null
+    );
+  }, [dayTimeZone, league]);
   const [tutorialPhase, setTutorialPhase] =
     useState<TutorialLivePhase | null>(() => readTutorialLivePhase());
   const [welcomeWorldFly, setWelcomeWorldFly] = useState(false);

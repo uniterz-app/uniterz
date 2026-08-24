@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
@@ -90,6 +90,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const stackNavigation =
     useNavigation<NativeStackNavigationProp<RankingsStackParamList>>();
+  const isFocused = useIsFocused();
   const { topContentPadY } = useBottomTabBarInsets();
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
@@ -359,9 +360,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   };
 
   useEffect(() => {
-    if (nbaBoard !== "open") return;
+    // タブは常時マウントのため、フォーカス中かつ PRO LEAGUE のときだけ背景を差し替える
+    if (nbaBoard !== "open" || !isFocused) return;
     return acquireAppPageAtmosphere("pro-league");
-  }, [nbaBoard]);
+  }, [nbaBoard, isFocused]);
 
   return (
     <View style={styles.root}>

@@ -10,6 +10,7 @@ function matchRoundSideCode(roundLabel: string): string {
   ) {
     return "PI";
   }
+  if (u.includes("PRESEASON") || u.includes("プレシーズン")) return "PS";
   return "RS";
 }
 

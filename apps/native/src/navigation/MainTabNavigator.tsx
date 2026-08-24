@@ -22,6 +22,7 @@ import {
   type HeaderWordmark,
 } from "../../../../lib/ui/headerWordmark";
 import {
+  getAppBrandShelfCollapsed,
   getAppBrandShelfHidden,
   subscribeAppBrandShelfHidden,
 } from "../../../../lib/ui/appBrandShelfVisibility";
@@ -77,6 +78,11 @@ export default function MainTabNavigator() {
     getAppBrandShelfHidden,
     () => false
   );
+  const brandShelfCollapsed = useSyncExternalStore(
+    subscribeAppBrandShelfHidden,
+    getAppBrandShelfCollapsed,
+    () => false
+  );
   const wordmarkOverride = useSyncExternalStore(
     subscribeAppBrandWordmarkOverride,
     getAppBrandWordmarkOverride,
@@ -125,7 +131,7 @@ export default function MainTabNavigator() {
       <NativePushNotificationsHost />
       <SquadBattleLaunchPromptHostNative />
       <View style={styles.root}>
-        {welcomeBrandHidden ? null : (
+        {welcomeBrandHidden || brandShelfCollapsed ? null : (
           <View
             pointerEvents="none"
             style={brandShelfHidden ? styles.shelfHold : undefined}

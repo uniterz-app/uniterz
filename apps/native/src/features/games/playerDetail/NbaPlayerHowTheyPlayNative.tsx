@@ -124,7 +124,15 @@ function HintList({
   line: string;
   frame: string;
 }) {
-  const selected = rows.find((r) => r.id === selectedId) ?? rows[0]!;
+  const selected = rows.find((r) => r.id === selectedId) ?? rows[0];
+  // 開幕前・未 ingest で rows が空のとき selected が undefined になる
+  if (!selected) {
+    return (
+      <Text style={styles.detailHint}>
+        {isJa ? "データがありません" : "No data yet"}
+      </Text>
+    );
+  }
   return (
     <>
       <View style={[styles.card, { borderColor: frame }]}>

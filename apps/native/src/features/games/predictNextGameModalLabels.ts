@@ -5,6 +5,7 @@ import { isPlayoffStyleGameCard } from "../../../../../lib/games/playoffSeriesUi
 import { normalizeLeague } from "../../../../../lib/leagues";
 /** Web `PredictNextGameModal` と同じ `lib/team-name-split`（NBA は表ルールで City / ニックネーム） */
 import { splitTeamNameByLeague } from "../../../../../lib/team-name-split";
+import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
 
 /** 中継カード用：ニックネーム優先（例: New York Knicks → Knicks） */
 export function scoreboardTeamLabelForNextModal(
@@ -26,17 +27,20 @@ export function scoreboardTeamLabelForNextModal(
 
 export function broadcastDeckTitleForNextModal(
   isEn: boolean,
-  seasonPhase: "regular" | "play_in" | "playoffs" | null | undefined,
+  seasonPhase: "preseason" | "regular" | "play_in" | "playoffs" | null | undefined,
   roundLabel?: string | null
 ): string {
   const rl = roundLabel?.trim();
   if (rl && isPlayoffStyleGameCard(seasonPhase, rl)) {
-    return isEn ? rl.toUpperCase() : rl;
+    return displayNbaRoundLabel(rl, isEn);
   }
-  if (rl) return isEn ? rl.toUpperCase() : rl;
+  if (rl) {
+    return displayNbaRoundLabel(rl, isEn);
+  }
   if (seasonPhase === "playoffs") return isEn ? "PLAYOFFS" : "プレーオフ";
   if (seasonPhase === "play_in") return isEn ? "PLAY-IN" : "プレーイン";
+  if (seasonPhase === "preseason") return "PRESEASON";
   return isEn ? "NEXT GAME" : "次の試合";
 }
 
-export type NextModalSeasonPhase = "regular" | "play_in" | "playoffs" | null | undefined;
+export type NextModalSeasonPhase = "preseason" | "regular" | "play_in" | "playoffs" | null | undefined;

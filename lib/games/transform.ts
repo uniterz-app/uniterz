@@ -195,7 +195,12 @@ export const toFinalMeta = (_m: any) => null;
 function normalizeSeasonPhase(
   raw: unknown
 ): MatchCardProps["seasonPhase"] {
-  if (raw === "regular" || raw === "play_in" || raw === "playoffs") {
+  if (
+    raw === "preseason" ||
+    raw === "regular" ||
+    raw === "play_in" ||
+    raw === "playoffs"
+  ) {
     return raw;
   }
   return null;

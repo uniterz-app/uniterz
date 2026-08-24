@@ -15,7 +15,7 @@ export type NbaPlayerStatLeadersApiPayload = {
 
 /**
  * コンパクト Firestore 形。メトリクス×30人をそのまま積むと 1MB を超えやすいので
- * 選手マスタは1回、各指標は `[playerId, gp, value]`。
+ * 選手マスタは1回、各指標は `{ p, g, v }`（ネスト配列は Firestore 不可）。
  */
 export type NbaPlayerStatLeadersFirestoreDoc = {
   asOfLabel?: unknown;

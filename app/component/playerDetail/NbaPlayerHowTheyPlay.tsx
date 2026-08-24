@@ -178,7 +178,15 @@ function HintRow({
 }) {
   const frame = hexToRgba(accent, 0.4);
   const line = hexToRgba(accent, 0.15);
-  const selected = rows.find((r) => r.id === selectedId) ?? rows[0]!;
+  const selected = rows.find((r) => r.id === selectedId) ?? rows[0];
+  // 開幕前・未 ingest で rows が空のとき selected が undefined
+  if (!selected) {
+    return (
+      <p className={`${nameOxanium.className} text-[13px] font-bold leading-snug text-white/55`}>
+        {isJa ? "データがありません" : "No data yet"}
+      </p>
+    );
+  }
   return (
     <>
       <div className="overflow-hidden border bg-black/50" style={{ borderColor: frame }}>

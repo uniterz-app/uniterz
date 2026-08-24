@@ -44,16 +44,29 @@ export function nbaSeasonOpenSnapshotDocId(
   return `s${seasonKey}_open_${metric}`;
 }
 
-export type NbaSeasonPhase = "regular" | "play_in" | "playoffs" | null;
+export type NbaSeasonPhase =
+  | "preseason"
+  | "regular"
+  | "play_in"
+  | "playoffs"
+  | null;
 
 export function normalizeNbaSeasonPhase(v: unknown): NbaSeasonPhase {
-  if (v === "regular" || v === "play_in" || v === "playoffs") return v;
+  if (
+    v === "preseason" ||
+    v === "regular" ||
+    v === "play_in" ||
+    v === "playoffs"
+  ) {
+    return v;
+  }
   return null;
 }
 
 /**
  * NBA ランキング日次・累積バケットキー。
- * regular / 未設定 → rankingBySeason、playoffs → rankingByNbaPlayoffs、play_in → どちらもなし。
+ * regular / 未設定 → rankingBySeason、playoffs → rankingByNbaPlayoffs、
+ * play_in / preseason → どちらもなし。
  */
 export function resolveNbaRankingBucketKeys(
   leagueKey: string | null,
@@ -68,7 +81,7 @@ export function resolveNbaRankingBucketKeys(
   if (seasonPhase === "playoffs") {
     return { nbaSeasonKey: null, nbaPlayoffsSeasonKey: key };
   }
-  if (seasonPhase === "play_in") {
+  if (seasonPhase === "play_in" || seasonPhase === "preseason") {
     return { nbaSeasonKey: null, nbaPlayoffsSeasonKey: null };
   }
   return { nbaSeasonKey: key, nbaPlayoffsSeasonKey: null };

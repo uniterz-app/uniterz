@@ -1,7 +1,7 @@
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 
 /** Firestore `nbaLeagueTeamStats/{seasonKey}` と API レスポンス共通 */
-export type NbaLeagueTeamStatsSnapshotSource = "firestore" | "mock";
+export type NbaLeagueTeamStatsSnapshotSource = "firestore" | "mock" | "empty";
 
 export type NbaLeagueTeamStatsApiPayload = {
   ok: true;

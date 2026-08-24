@@ -2,6 +2,7 @@
  * プレイヤー詳細「どう点を取って、どう守るか」。
  * リーグ表の Advanced と同じ指標を、この1人の顔として出す。
  */
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getNbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import type { NbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import {
@@ -10,25 +11,39 @@ import {
   type HowPts,
 } from "@/lib/predict/nbaHowTheyPlayPts";
 import {
-  buildPlayerAdvancedMetricValue,
   formatPlayerAdvancedLeaderValue,
   playerAdvancedMetricDef,
   type NbaPlayerAdvancedLeaderMetric,
 } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
 import {
-  getNbaPlayerStatLeadersMock,
   type NbaPlayerStatLeadersBundle,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import {
-  getNbaLeagueTeamStatsMock,
   type NbaLeagueTeamStatsBundle,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 
-/** 詳細の順位は Top 30 だけ出す */
+
+function emptyLeadersBundle(): NbaPlayerStatLeadersBundle {
+  return { season: {} as NbaPlayerStatLeadersBundle["season"], last10: {} as NbaPlayerStatLeadersBundle["last10"], asOfLabel: "UNAVAILABLE" };
+}
+
+function emptyTeamBundle(): NbaLeagueTeamStatsBundle {
+  return { season: [], last10: [], asOfLabel: "UNAVAILABLE" };
+}
+
+/** スタッツ詳細のリーグ順位は Top 30 だけ出す */
 export const PLAYER_DETAIL_RANK_MAX = 30;
 
 export function isPlayerDetailRankShown(rank: number): boolean {
   return Number.isFinite(rank) && rank >= 1 && rank <= PLAYER_DETAIL_RANK_MAX;
+}
+
+/**
+ * 年俸リーグ順位（BDL contracts `rank`）。
+ * Top30 制限はしない（#31 以降も表示。無い/0 だけ隠す）。
+ */
+export function isPlayerDetailSalaryRankShown(rank: number): boolean {
+  return Number.isFinite(rank) && rank >= 1;
 }
 
 export type PlayerHowTheyPlayTab =
@@ -174,38 +189,30 @@ function pct3(n: number) {
   return Math.round(n * 1000) / 1000;
 }
 
-function leagueRank(
-  metric: NbaPlayerAdvancedLeaderMetric,
-  value: number,
-  leaders: NbaPlayerStatLeadersBundle
-): number {
-  const def = playerAdvancedMetricDef(metric);
-  const rows = leaders.season[metric] ?? [];
-  const better = rows.filter((r) =>
-    def.higherIsBetter ? r.value > value : r.value < value
-  ).length;
-  return better + 1;
-}
+/** リーダー表に居ない / ボード空 → 順位は出さない */
+const RANK_UNAVAILABLE = 999;
 
 function cell(
   playerId: string,
   metric: NbaPlayerAdvancedLeaderMetric,
   leaders: NbaPlayerStatLeadersBundle,
-  preset?: { value: number; rank: number }
+  _preset?: { value: number; rank: number }
 ): PlayerHowCell {
-  if (preset) {
+  const rows = leaders.season[metric] ?? [];
+  const idx = rows.findIndex((r) => r.playerId === playerId);
+  if (idx >= 0) {
+    const value = rows[idx]!.value;
     return {
-      value: preset.value,
-      display: formatPlayerAdvancedLeaderValue(metric, preset.value),
-      rank: preset.rank,
+      value,
+      display: formatPlayerAdvancedLeaderValue(metric, value),
+      rank: idx + 1,
     };
   }
-  const rnd = mulberry32(hashSeed(`${playerId}:${metric}:how:v1`));
-  const value = buildPlayerAdvancedMetricValue(metric, rnd);
+  // 実データ無しの指標はプレースホルダ（偽の #1 を出さない）
   return {
-    value,
-    display: formatPlayerAdvancedLeaderValue(metric, value),
-    rank: leagueRank(metric, value, leaders),
+    value: Number.NaN,
+    display: "—",
+    rank: RANK_UNAVAILABLE,
   };
 }
 
@@ -225,8 +232,8 @@ function rowFromMetric(
   };
 }
 
-function playtypeFreqs(playerId: string): Record<string, PlayerHowCell> {
-  const rnd = mulberry32(hashSeed(`${playerId}:playtype-freq:v1`));
+function playtypeFreqs(_playerId: string): Record<string, PlayerHowCell> {
+  // 実データの playtype 頻度が来るまで 0（RNG モックは出さない）
   const ids = [
     "iso",
     "pnrB",
@@ -239,19 +246,14 @@ function playtypeFreqs(playerId: string): Record<string, PlayerHowCell> {
     "offs",
     "putb",
   ] as const;
-  const raw = ids.map(() => 0.18 + rnd());
-  const sum = raw.reduce((a, b) => a + b, 0);
-  const scale = 0.88;
   const out: Record<string, PlayerHowCell> = {};
-  ids.forEach((id, i) => {
-    const value = pct3((raw[i]! / sum) * scale);
-    const rankRnd = mulberry32(hashSeed(`${playerId}:${id}:freq-rank:v1`));
+  for (const id of ids) {
     out[id] = {
-      value,
-      display: `${(value * 100).toFixed(1)}%`,
-      rank: Math.max(1, Math.round(1 + rankRnd() * 119)),
+      value: 0,
+      display: "—",
+      rank: RANK_UNAVAILABLE,
     };
-  });
+  }
   return out;
 }
 
@@ -261,12 +263,28 @@ export type PlayerHowTheyPlayInput = {
   detail?: NbaPlayerDetailPreview;
 };
 
+
+export function emptyPlayerHowTheyPlay(): PlayerHowTheyPlay {
+  return {
+    ratings: [],
+    fourFactors: [],
+    scoring: [],
+    playtype: [],
+    shooting: [],
+    clutch: [],
+    defense: [],
+    hustle: [],
+    tracking: [],
+  };
+}
+
 export function getPlayerHowTheyPlay(
   playerId: string,
   input: PlayerHowTheyPlayInput = {}
 ): PlayerHowTheyPlay {
-  const leaders = input.leaders ?? getNbaPlayerStatLeadersMock();
-  const teamStats = input.teamStats ?? getNbaLeagueTeamStatsMock();
+  if (!nbaSeasonStatsReady()) return emptyPlayerHowTheyPlay();
+  const leaders = input.leaders ?? emptyLeadersBundle();
+  const teamStats = input.teamStats ?? emptyTeamBundle();
   const detail = input.detail ?? getNbaPlayerDetailPreview(playerId);
   const m = (
     metric: NbaPlayerAdvancedLeaderMetric,

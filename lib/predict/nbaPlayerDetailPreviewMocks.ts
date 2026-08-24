@@ -5,6 +5,7 @@ import {
   type NbaConferenceId,
 } from "@/lib/nba/nbaConferenceTeams";
 import { lookupTeamDetailRosterPlayer } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
 
 /**
@@ -88,7 +89,8 @@ export type NbaPlayerCareerSeasonRow = {
   teamAbbr: string;
   position: string;
   games: number;
-  gamesStarted: number;
+  /** null = BDL から確定できない（UI は "—"） */
+  gamesStarted: number | null;
   min: number;
   fgm: number;
   fga: number;
@@ -761,7 +763,7 @@ function mulberry32(seed: number) {
   };
 }
 
-function formatMetricDisplay(
+export function formatMetricDisplay(
   id: NbaPlayerSeasonMetricId,
   value: number
 ): string {
@@ -1595,17 +1597,99 @@ function resolveSeed(playerId?: string): SeedProfile {
 }
 
 /** 既定は Luka。`playerId` で Curry / Jokic 等に切替可 */
-export function getNbaPlayerDetailPreview(
-  playerId?: string
+
+const RANK_HIDDEN = 999;
+
+function zeroSeasonBlock(): NbaPlayerDetailPreview["season"] {
+  return {
+    gamesPlayed: 0,
+    min: 0,
+    pts: 0,
+    reb: 0,
+    ast: 0,
+    stl: 0,
+    blk: 0,
+    tov: 0,
+    fgPct: 0,
+    fg3Pct: 0,
+    ftPct: 0,
+    plusMinus: 0,
+    fga: 0,
+    fg3m: 0,
+    fg3a: 0,
+  };
+}
+
+export function metricsFromSeason(
+  season: NbaPlayerDetailPreview["season"],
+  ranks: Partial<Record<NbaPlayerSeasonMetricId, number>> = {}
+): NbaPlayerSeasonMetric[] {
+  return METRIC_DEFS.map((def) => {
+    const value = seasonValue(season, def.id);
+    return {
+      id: def.id,
+      short: def.short,
+      value,
+      display: formatMetricDisplay(def.id, value),
+      leagueRank: ranks[def.id] ?? RANK_HIDDEN,
+      higherIsBetter: def.higherIsBetter,
+    };
+  });
+}
+
+function zeroAdvancedMetrics(): NbaPlayerAdvancedMetric[] {
+  return ADVANCED_METRIC_DEFS.map((def) => ({
+    id: def.id,
+    short: def.short,
+    value: 0,
+    display: String(def.id).includes("pct") ? "0.0%" : "0.0",
+    leagueRank: RANK_HIDDEN,
+    hintJa: def.hintJa,
+    hintEn: def.hintEn,
+  }));
+}
+
+function activeAvailability(): NbaPlayerAvailability {
+  return { status: "active", reason: null, returnEstimate: null };
+}
+
+/** シーズン数値・ログ・スプリットを 0/空に（チーム詳細と同型） */
+export function zeroPlayerDetailSeasonStats(
+  detail: NbaPlayerDetailPreview
 ): NbaPlayerDetailPreview {
-  const seed = resolveSeed(playerId);
-  const rnd = mulberry32(hashSeed(`${seed.playerId}:metrics:v1`));
-  const metrics = buildMetrics(seed.season, seed.ranks, rnd);
+  const season = zeroSeasonBlock();
+  const seasonMetrics = metricsFromSeason(season);
   const headlineIds: NbaPlayerSeasonMetricId[] = ["pts", "reb", "ast"];
   const headlineMetrics = headlineIds
-    .map((id) => metrics.find((m) => m.id === id))
+    .map((id) => seasonMetrics.find((m) => m.id === id))
     .filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
+  return {
+    ...detail,
+    season,
+    headlineMetrics,
+    seasonMetrics,
+    advancedMetrics: zeroAdvancedMetrics(),
+    careerSeasons: { regular: [], playoffs: [] },
+    shotZones: [],
+    gameLogs: [],
+    contract: null,
+    awards: [],
+    availability: activeAvailability(),
+    venueSplits: [],
+    vsOpponentSamples: [],
+    asOfLabel: nbaSeasonStatsReady()
+      ? detail.asOfLabel || "2026-27"
+      : "PRESEASON · 2026-27",
+  };
+}
 
+function identityFromSeed(seed: SeedProfile): NbaPlayerDetailPreview {
+  const season = zeroSeasonBlock();
+  const seasonMetrics = metricsFromSeason(season);
+  const headlineIds: NbaPlayerSeasonMetricId[] = ["pts", "reb", "ast"];
+  const headlineMetrics = headlineIds
+    .map((id) => seasonMetrics.find((m) => m.id === id))
+    .filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
   return {
     playerId: seed.playerId,
     uidLabel: formatPlayerUid(seed.playerId),
@@ -1625,26 +1709,32 @@ export function getNbaPlayerDetailPreview(
     teamAbbr: TEAM_SHORT[seed.teamId] ?? "NBA",
     teamName: NBA_TEAM_NAME_BY_ID[seed.teamId] ?? seed.teamId,
     conference: conferenceForTeam(seed.teamId),
-    season: seed.season,
+    season,
     headlineMetrics,
-    seasonMetrics: metrics,
-    advancedMetrics: buildAdvancedMetrics(seed.playerId, seed.advanced),
-    careerSeasons: buildCareerSeasons(seed),
-    shotZones: buildShotZones(seed.playerId, seed.shotZones),
-    gameLogs: buildGameLogs(seed.playerId, seed.teamId, seed.season),
-    contract: seed.contract,
-    awards: seed.awards,
-    availability: seed.availability,
+    seasonMetrics,
+    advancedMetrics: zeroAdvancedMetrics(),
+    careerSeasons: { regular: [], playoffs: [] },
+    shotZones: [],
+    gameLogs: [],
+    contract: null,
+    awards: [],
+    availability: activeAvailability(),
     birthDate: seed.birthDate,
-    teamHistory: seed.teamHistory,
-    venueSplits: buildVenueSplits(seed.playerId, seed.season),
-    vsOpponentSamples: buildVsOpponentSamples(
-      seed.playerId,
-      seed.teamId,
-      seed.season
-    ),
-    asOfLabel: "AS OF PREVIEW · MOCK",
+    teamHistory: seed.teamHistory ?? [],
+    venueSplits: [],
+    vsOpponentSamples: [],
+    asOfLabel: nbaSeasonStatsReady() ? "2026-27" : "PRESEASON · 2026-27",
   };
+}
+
+
+export function getNbaPlayerDetailPreview(
+  playerId?: string
+): NbaPlayerDetailPreview {
+  const seed = resolveSeed(playerId);
+  // ベースは常に 0/空。実数は leaders + roster/payroll/injury overlay が埋める。
+  // 開幕前も同じ出し方（チーム詳細と同型）。
+  return zeroPlayerDetailSeasonStats(identityFromSeed(seed));
 }
 
 export type NbaPlayerRecentWindowAvg = {

@@ -1,6 +1,6 @@
 /**
  * MARK — 気になる予想者の個人リスト（フォローグラフではない）。
- * Firestore: users/{uid}.markedPredictors
+ * Firestore: users/{uid}/marks/{targetUid}
  * 被マーク: users/{uid}/markedBy/{fromUid}
  */
 

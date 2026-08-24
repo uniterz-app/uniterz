@@ -17,7 +17,7 @@ import { injuryReportForMatchup } from "@/lib/predict/nbaInjuryReportPreviewMock
 import type { NbaTeamStatsBundle } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import { teamStatsForMatchup } from "@/lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "@/lib/predict/nbaRoster";
-import { rosterForMatchup } from "@/lib/predict/nbaRosterPreviewMocks";
+import { useNbaMatchupRoster } from "@/lib/nba/teamRosters/useNbaMatchupRoster";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 
@@ -94,7 +94,12 @@ export default function NbaPredictToolsTabs({
     injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
   const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
   const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
-  const resolvedRoster = roster ?? rosterForMatchup(homeTeamId, awayTeamId);
+  const { roster: liveRoster, loading: rosterLoading } = useNbaMatchupRoster({
+    homeTeamId,
+    awayTeamId,
+    override: roster,
+  });
+  const resolvedRoster = liveRoster;
 
   const openProSubscribe = () => {
     router.push("/mobile/pro/subscribe");
@@ -180,6 +185,8 @@ export default function NbaPredictToolsTabs({
           ) : (
             <PendingPanel text={m.panelDataPending} />
           )
+        ) : rosterLoading ? (
+          <PendingPanel text={m.panelDataPending} />
         ) : resolvedRoster ? (
           <NbaRosterPanel
             report={resolvedRoster}

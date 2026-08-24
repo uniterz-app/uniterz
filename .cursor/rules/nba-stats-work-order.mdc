@@ -16,11 +16,17 @@ Team Stats / Player Leaders のリーグ表は **左レール**:
 - 選択チップはシアン塗り + 黒横線。非選択は透明
 - MORE シートは採用しない
 
-## これから
+## これから（2026-08-23 ユーザー更新）
 
-1. **そのリーグ表に揃える**（見た目・構造・レール操作）
+1. **試合データ**（BDL → Firestore `games` → `/api/games/window`）
 2. **チーム詳細**
 3. **プレイヤー詳細**
 4. そのあと **injury**、チームスタッツ周辺
 
 詳細や injury を「ついで」で触らない。ユーザーが今の段を指定したときだけ進む。
+リーグ表のレール UX（Season/Playoffs + PER GAME 等）は進行中の前提として維持する。
+
+## データ取得（絶対）
+
+スタッツは **ingest → Firestore → API**。公開 API の都度 BDL は禁止。
+詳細: `.cursor/rules/nba-stats-data-pipeline.mdc`

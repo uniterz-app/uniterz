@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import {
-  enrichLeagueTeamStatsBundle,
-  getNbaLeagueTeamStatsMock,
-} from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { fetchLeagueTeamStats } from "@/lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
 import type {
   NbaLeagueTeamStatsApiPayload,
   NbaLeagueTeamStatsSnapshotSource,
 } from "@/lib/nba/leagueTeamStats/leagueTeamStatsTypes";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
+
+const EMPTY_BUNDLE: NbaLeagueTeamStatsBundle = {
+  season: [],
+  last10: [],
+  asOfLabel: "UNAVAILABLE",
+};
 
 export type UseLeagueTeamStatsBundleOptions = {
   apiBaseUrl?: string | null;
@@ -31,11 +34,9 @@ export function useLeagueTeamStatsBundle(
   options: UseLeagueTeamStatsBundleOptions = {}
 ): UseLeagueTeamStatsBundleState {
   const season = options.season ?? CURRENT_NBA_SEASON_KEY;
-  const [bundle, setBundle] = useState<NbaLeagueTeamStatsBundle>(() =>
-    getNbaLeagueTeamStatsMock()
-  );
+  const [bundle, setBundle] = useState<NbaLeagueTeamStatsBundle>(EMPTY_BUNDLE);
   const [source, setSource] =
-    useState<NbaLeagueTeamStatsSnapshotSource>("mock");
+    useState<NbaLeagueTeamStatsSnapshotSource>("empty");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,15 +58,24 @@ export function useLeagueTeamStatsBundle(
           signal: ac.signal,
         });
         if (cancelled) return;
-        setBundle(enrichLeagueTeamStatsBundle(data.bundle));
+        setBundle(enrichLeagueTeamStatsBundle(data.bundle, data.source));
         setSource(data.source);
         setUpdatedAt(data.updatedAt);
+        if (data.source === "empty") {
+          const { trackAppEvent } = await import(
+            "@/lib/observability/trackAppEvent"
+          );
+          trackAppEvent({
+            name: "stats_empty",
+            props: { kind: "team", season },
+          });
+        }
       } catch (e) {
         if (cancelled || ac.signal.aborted) return;
         const msg = e instanceof Error ? e.message : "load failed";
         setError(msg);
-        setBundle(getNbaLeagueTeamStatsMock());
-        setSource("mock");
+        setBundle(EMPTY_BUNDLE);
+        setSource("empty");
         setUpdatedAt(null);
       } finally {
         if (!cancelled) setLoading(false);

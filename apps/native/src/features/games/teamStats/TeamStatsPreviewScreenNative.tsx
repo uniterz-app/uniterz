@@ -22,8 +22,8 @@ export default function TeamStatsPreviewScreenNative({
       eyebrow="STATS"
       subtitle={
         isJa
-          ? "共有 API から取得（未 seed 時はモック）。"
-          : "Loaded via shared API (mock until seeded)."
+          ? "共有 API から取得。"
+          : "Loaded via shared API."
       }
       appBackground
       onClose={onClose}

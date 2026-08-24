@@ -27,7 +27,6 @@ import {
   needsForwardWindowExtend,
   shiftDateKeyInTimeZone,
 } from "@/lib/games/gamesWindowRange";
-import { mergeNbaOpeningNightPreviewGames } from "@/lib/games/nbaOpeningNightPreviewGames";
 
 /** 日付ストリップ用：アンカーの前後に含める暦日数（前後5日＝計11日）。端で +2 延長 */
 const GAME_DAYS_PLUS_MINUS = GAMES_WINDOW_PLUS_MINUS_DEFAULT;
@@ -323,13 +322,10 @@ export function useGameDays(
     };
   }, [loading, league, timeZone, anchorDateKey]);
 
-  const displayRows = useMemo(
-    () => mergeNbaOpeningNightPreviewGames(league, rows),
-    [league, rows]
-  );
+  const displayRows = useMemo(() => rows, [rows]);
   const displayPeerRows = useMemo(
-    () => mergeNbaOpeningNightPreviewGames(league, peerRowsForSeriesInference),
-    [league, peerRowsForSeriesInference]
+    () => peerRowsForSeriesInference,
+    [peerRowsForSeriesInference]
   );
 
   const gameDays = useMemo(

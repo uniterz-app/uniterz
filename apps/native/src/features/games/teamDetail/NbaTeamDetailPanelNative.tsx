@@ -12,6 +12,7 @@ import {
   formatStreakLabel,
   getNbaTeamDetailPreview,
   payrollDisplaySlices,
+  type NbaTeamHeadToHeadEntry,
   type NbaTeamInjuryEntry,
   type NbaTeamMetricWithRank,
   type NbaTeamPayroll,
@@ -41,6 +42,8 @@ import JerseyMarkSvg from "../JerseyMarkSvg";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
+import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
+import { playerCardName, type NbaRosterTeamBlock } from "../../../../../../lib/predict/nbaRoster";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 
 type Props = {
@@ -142,7 +145,7 @@ function SectionHeader({
 }) {
   return (
     <View style={styles.advTitleRow}>
-      <Text style={[styles.advTitle, { color: hexToRgba(accent, 0.75) }]}>
+      <Text style={[styles.advTitle, { color: "rgba(255,255,255,0.75)" }]}>
         {title}
       </Text>
       <View
@@ -231,44 +234,58 @@ function RecentFormSection({
   games,
   streak,
   accent,
+  isJa,
 }: {
   games: NbaTeamRecentGame[];
   streak: NbaTeamStreak;
   accent: string;
+  isJa: boolean;
 }) {
   const results = games.slice(-10).map((g) => g.result);
   const wins = results.filter((r) => r === "W").length;
   const losses = results.length - wins;
   const streakLabel = formatStreakLabel(streak);
   const streakWin = streak.kind === "W";
+  const emptyCopy = isJa ? "データがありません" : "No data yet";
 
   return (
     <View style={styles.formSection}>
       <View style={styles.formHeadPress}>
         <Text
-          style={[styles.sectionTitleInline, { color: hexToRgba(accent, 0.75) }]}
+          style={[styles.sectionTitleInline, { color: "rgba(255,255,255,0.75)" }]}
         >
           RECENT FORM (LAST 10)
         </Text>
-        <Text
-          style={[
-            styles.streakBadge,
-            streakWin ? styles.streakWin : styles.streakLoss,
-          ]}
-        >
-          {streakLabel}
-        </Text>
+        {results.length > 0 ? (
+          <Text
+            style={[
+              styles.streakBadge,
+              streakWin ? styles.streakWin : styles.streakLoss,
+            ]}
+          >
+            {streakLabel}
+          </Text>
+        ) : null}
       </View>
-      <View style={styles.formBlock}>
-        <View style={styles.formChips}>
-          {results.map((r, i) => (
-            <FormChip key={`f-${i}`} result={r} index={i} total={results.length} />
-          ))}
+      {results.length === 0 ? (
+        <Text style={styles.injuryEmpty}>{emptyCopy}</Text>
+      ) : (
+        <View style={styles.formBlock}>
+          <View style={styles.formChips}>
+            {results.map((r, i) => (
+              <FormChip
+                key={`f-${i}`}
+                result={r}
+                index={i}
+                total={results.length}
+              />
+            ))}
+          </View>
+          <Text style={styles.formRecord}>
+            {wins}-{losses}
+          </Text>
         </View>
-        <Text style={styles.formRecord}>
-          {wins}-{losses}
-        </Text>
-      </View>
+      )}
     </View>
   );
 }
@@ -276,61 +293,75 @@ function RecentFormSection({
 function GameLogsSection({
   games,
   accent,
+  isJa,
 }: {
   games: NbaTeamRecentGame[];
   accent: string;
+  isJa: boolean;
 }) {
   const list = [...games].slice(-10).reverse();
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
+  const emptyCopy = isJa ? "データがありません" : "No data yet";
   return (
     <View style={styles.schedSection}>
-      <SectionHeader title={`GAME LOGS (LAST ${list.length})`} accent={accent} />
+      <SectionHeader
+        title={list.length > 0 ? `GAME LOGS (LAST ${list.length})` : "GAME LOGS"}
+        accent={accent}
+      />
       <View style={[styles.gameList, { borderColor: frame }]}>
-        <View
-          style={[
-            styles.gameRow,
-            {
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: line,
-            },
-          ]}
-        >
-          <Text style={[styles.gameDate, styles.gameHead]}>DATE</Text>
-          <Text style={[styles.gameVs, styles.gameHead]}>GAME</Text>
-          <Text style={[styles.gameScore, styles.gameHead]}>SCORE</Text>
-          <Text style={[styles.gameResult, styles.gameHead]}> </Text>
-        </View>
-        {list.map((g, i) => (
-          <View
-            key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
-            style={[
-              styles.gameRow,
-              i < list.length - 1
-                ? {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: line,
-                  }
-                : null,
-            ]}
-          >
-            <Text style={styles.gameDate}>{g.dateLabel}</Text>
-            <Text style={styles.gameVs} numberOfLines={1}>
-              {g.home ? "vs" : "@"} {g.oppAbbr}
-            </Text>
-            <Text style={styles.gameScore}>
-              {g.teamScore}-{g.oppScore}
-            </Text>
-            <Text
+        {list.length === 0 ? (
+          <View style={styles.gameRow}>
+            <Text style={styles.injuryEmpty}>{emptyCopy}</Text>
+          </View>
+        ) : (
+          <>
+            <View
               style={[
-                styles.gameResult,
-                g.result === "W" ? styles.win : styles.loss,
+                styles.gameRow,
+                {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: line,
+                },
               ]}
             >
-              {g.result}
-            </Text>
-          </View>
-        ))}
+              <Text style={[styles.gameDate, styles.gameHead]}>DATE</Text>
+              <Text style={[styles.gameVs, styles.gameHead]}>GAME</Text>
+              <Text style={[styles.gameScore, styles.gameHead]}>SCORE</Text>
+              <Text style={[styles.gameResult, styles.gameHead]}> </Text>
+            </View>
+            {list.map((g, i) => (
+              <View
+                key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
+                style={[
+                  styles.gameRow,
+                  i < list.length - 1
+                    ? {
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderBottomColor: line,
+                      }
+                    : null,
+                ]}
+              >
+                <Text style={styles.gameDate}>{g.dateLabel}</Text>
+                <Text style={styles.gameVs} numberOfLines={1}>
+                  {g.home ? "vs" : "@"} {g.oppAbbr}
+                </Text>
+                <Text style={styles.gameScore}>
+                  {g.teamScore}-{g.oppScore}
+                </Text>
+                <Text
+                  style={[
+                    styles.gameResult,
+                    g.result === "W" ? styles.win : styles.loss,
+                  ]}
+                >
+                  {g.result}
+                </Text>
+              </View>
+            ))}
+          </>
+        )}
       </View>
     </View>
   );
@@ -353,7 +384,7 @@ function InjuriesSection({
         {injuries.length === 0 ? (
           <View style={styles.gameRow}>
             <Text style={styles.injuryEmpty}>
-              {isJa ? "欠場者なし" : "No injuries"}
+              {isJa ? "データがありません" : "No data yet"}
             </Text>
           </View>
         ) : (
@@ -402,22 +433,76 @@ function InjuriesSection({
   );
 }
 
+function HeadToHeadSection({
+  rows,
+  accent,
+  isJa,
+}: {
+  rows: NbaTeamHeadToHeadEntry[];
+  accent: string;
+  isJa: boolean;
+}) {
+  const frame = hexToRgba(accent, 0.3);
+  const line = hexToRgba(accent, 0.12);
+  const emptyCopy = isJa ? "データがありません" : "No data yet";
+  return (
+    <View style={styles.schedSection}>
+      <SectionHeader title="HEAD-TO-HEAD" accent={accent} />
+      <View style={[styles.gameList, { borderColor: frame }]}>
+        {rows.length === 0 ? (
+          <View style={styles.gameRow}>
+            <Text style={styles.injuryEmpty}>{emptyCopy}</Text>
+          </View>
+        ) : (
+          rows.map((row, i) => (
+            <View
+              key={row.oppTeamId}
+              style={[
+                styles.gameRow,
+                i < rows.length - 1
+                  ? {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: line,
+                    }
+                  : null,
+              ]}
+            >
+              <Text style={[styles.gameVs, { flex: 1 }]}>{row.oppAbbr}</Text>
+              <Text style={styles.gameScore}>
+                {row.wins}-{row.losses}
+              </Text>
+            </View>
+          ))
+        )}
+      </View>
+    </View>
+  );
+}
+
+
 
 function UpcomingScheduleSection({
   games,
   accent,
+  isJa,
 }: {
   games: NbaTeamUpcomingGame[];
   accent: string;
+  isJa: boolean;
 }) {
-  if (games.length === 0) return null;
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
+  const emptyCopy = isJa ? "データがありません" : "No data yet";
   return (
     <View style={styles.schedSection}>
       <SectionHeader title="UPCOMING" accent={accent} />
       <View style={[styles.gameList, { borderColor: frame }]}>
-        {games.map((g, i) => (
+        {games.length === 0 ? (
+          <View style={styles.gameRow}>
+            <Text style={styles.injuryEmpty}>{emptyCopy}</Text>
+          </View>
+        ) : (
+          games.map((g, i) => (
           <View
             key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
             style={[
@@ -434,17 +519,18 @@ function UpcomingScheduleSection({
             <Text style={styles.gameVs} numberOfLines={1}>
               {g.home ? "vs" : "@"} {g.oppAbbr}
               {g.conferenceGame ? (
-                <Text style={[styles.confTag, { color: hexToRgba(accent, 0.55) }]}>
+                <Text style={[styles.confTag, { color: "rgba(255,255,255,0.55)" }]}>
                   {" "}
                   · CONF
                 </Text>
               ) : null}
             </Text>
-            <Text style={[styles.schedTip, { color: hexToRgba(accent, 0.85) }]}>
+            <Text style={[styles.schedTip, { color: "rgba(255,255,255,0.85)" }]}>
               {g.tipLabel}
             </Text>
           </View>
-        ))}
+          ))
+        )}
       </View>
     </View>
   );
@@ -496,7 +582,7 @@ function PayrollSection({
 }) {
   const frame = hexToRgba(accent, 0.45);
   const overCap = payroll.capSpace < 0;
-  const slices = payrollDisplaySlices(payroll.lines, accent, 5);
+  const slices = payrollDisplaySlices(payroll.lines, accent);
 
   return (
     <View style={styles.payrollWrap}>
@@ -513,7 +599,7 @@ function PayrollSection({
           </View>
           <View style={styles.payrollRankBlock}>
             <Text style={styles.payrollLabel}>RANK</Text>
-            <Text style={[styles.payrollRank, { color: accent }]}>
+            <Text style={[styles.payrollRank, { color: "#FFFFFF" }]}>
               #{payroll.leagueRank}
             </Text>
           </View>
@@ -522,7 +608,7 @@ function PayrollSection({
           <Text style={styles.payrollMeta}>
             CAP {formatSalaryUsd(payroll.salaryCap)}
           </Text>
-          <Text style={[styles.payrollMetaDot, { color: hexToRgba(accent, 0.45) }]}>
+          <Text style={[styles.payrollMetaDot, { color: "rgba(255,255,255,0.45)" }]}>
             ·
           </Text>
           <Text style={styles.payrollMeta}>
@@ -542,7 +628,7 @@ function PayrollSection({
             ? `  ·  TAX ${formatSalaryUsd(payroll.taxBill)}`
             : ""}
         </Text>
-        <Text style={[styles.payrollGuaranteed, { color: accent }]}>
+        <Text style={[styles.payrollGuaranteed, { color: "#FFFFFF" }]}>
           {isJa ? "保証額" : "GUARANTEED"}{" "}
           {formatSalaryUsd(payroll.guaranteed)}
         </Text>
@@ -568,7 +654,12 @@ function PayrollSection({
         </View>
 
         <View style={styles.payrollLines}>
-          {slices.map((s) => (
+          {slices.length === 0 ? (
+            <Text style={styles.injuryEmpty}>
+              {isJa ? "データがありません" : "No data yet"}
+            </Text>
+          ) : (
+            slices.map((s) => (
             <View key={s.key} style={styles.payrollLineRow}>
               <View
                 style={[styles.payrollSwatch, { backgroundColor: s.color }]}
@@ -579,11 +670,12 @@ function PayrollSection({
               <Text style={styles.payrollLineSalary}>
                 {formatSalaryUsd(s.salary)}
               </Text>
-              <Text style={[styles.payrollLineShare, { color: accent }]}>
+              <Text style={[styles.payrollLineShare, { color: "#FFFFFF" }]}>
                 {Math.round(s.share * 100)}%
               </Text>
             </View>
-          ))}
+            ))
+          )}
         </View>
       </View>
     </View>
@@ -600,10 +692,15 @@ export default function NbaTeamDetailPanelNative({
   const { bundle } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
-  const detail = useMemo(
+  const baseDetail = useMemo(
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
+  const { detail, hasFetchError } = useNbaTeamDetailLiveOverlay({
+    teamId: baseDetail.teamId,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    base: baseDetail,
+  });
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
   /** 枠・文字用（暗いチーム色も読める） */
@@ -630,7 +727,15 @@ export default function NbaTeamDetailPanelNative({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.panel}>
-        {/* HEADER */}
+        
+        {hasFetchError ? (
+          <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, fontWeight: "700", marginBottom: 8 }}>
+            {isJa
+              ? "一部データの取得に失敗しました。表示が古い／空の可能性があります。"
+              : "Some live data failed to load. Parts may be empty or stale."}
+          </Text>
+        ) : null}
+{/* HEADER */}
         <View style={[styles.headerCard, { borderColor: accent }]}>
           <View style={styles.header}>
             <View style={styles.jerseyFrame}>
@@ -642,7 +747,7 @@ export default function NbaTeamDetailPanelNative({
             </View>
             <View style={styles.headerText}>
               <Text
-                style={[styles.confSeed, { color: hexToRgba(accent, 0.85) }]}
+                style={[styles.confSeed, { color: "rgba(255,255,255,0.85)" }]}
                 numberOfLines={1}
               >
                 {confLine}
@@ -670,7 +775,7 @@ export default function NbaTeamDetailPanelNative({
                 <Text style={styles.recordRankPrimary}>
                   {detail.season.wins}-{detail.season.losses}
                 </Text>
-                <Text style={[styles.recordRankAccent, { color: accent }]}>
+                <Text style={[styles.recordRankAccent, { color: "#FFFFFF" }]}>
                   {winPctText}
                 </Text>
               </View>
@@ -680,7 +785,7 @@ export default function NbaTeamDetailPanelNative({
             >
               <Text style={styles.recordRankLabel}>RANK</Text>
               <View style={styles.recordRankValues}>
-                <Text style={[styles.recordRankPrimary, { color: accent }]}>
+                <Text style={[styles.recordRankPrimary, { color: "#FFFFFF" }]}>
                   #{String(detail.conferenceRank).padStart(2, "0")}
                 </Text>
                 <Text style={styles.recordRankAccentMuted}>Seed</Text>
@@ -747,18 +852,32 @@ export default function NbaTeamDetailPanelNative({
             games={detail.recentGames}
             streak={detail.streak}
             accent={accent}
+            isJa={isJa}
           />
         </View>
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
-        <GameLogsSection games={detail.recentGames} accent={accent} />
+        <GameLogsSection
+          games={detail.recentGames}
+          accent={accent}
+          isJa={isJa}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <HeadToHeadSection
+          rows={detail.headToHead}
+          accent={accent}
+          isJa={isJa}
+        />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <UpcomingScheduleSection
           games={detail.upcomingGames}
           accent={accent}
+          isJa={isJa}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -816,7 +935,7 @@ export default function NbaTeamDetailPanelNative({
         </View>
 
         <Text
-          style={[styles.footerAsOf, { color: hexToRgba(accent, 0.4) }]}
+          style={[styles.footerAsOf, { color: "rgba(255,255,255,0.4)" }]}
         >
           {detail.asOfLabel} · PREVIEW
         </Text>

@@ -90,6 +90,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       // 公開プロフィール（残高表示はプロダクト要件）。課金は secure/ へ。削除時は API でスクラブ。
+      // フィールド棚卸し: lib/security/publicUserDocumentFields.ts
       allow read: if true;
 
       allow create: if request.auth != null

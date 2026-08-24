@@ -4,7 +4,43 @@
 
 import type { NbaRosterPlayer, NbaRosterReport } from "@/lib/predict/nbaRoster";
 import { getNbaTeamDetailPreview } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 
+function stripSeasonStats(player: NbaRosterPlayer): NbaRosterPlayer {
+  return {
+    ...player,
+    gp: 0,
+    mpg: 0,
+    ppg: 0,
+    rpg: 0,
+    apg: 0,
+    fgPct: 0,
+    fg3Pct: 0,
+    ftPct: 0,
+    fgm: 0,
+    fga: 0,
+    fg3m: 0,
+    fg3a: 0,
+    ftm: 0,
+    fta: 0,
+    spg: 0,
+    bpg: 0,
+    tpg: 0,
+  };
+}
+
+function withoutSeasonStats(report: NbaRosterReport): NbaRosterReport {
+  return {
+    home: {
+      ...report.home,
+      players: (report.home.players ?? []).map(stripSeasonStats),
+    },
+    away: {
+      ...report.away,
+      players: (report.away.players ?? []).map(stripSeasonStats),
+    },
+  };
+}
 const LAKERS_PLAYERS = [
   {
     id: 237,
@@ -533,6 +569,11 @@ export function rosterForMatchup(
 ): NbaRosterReport | null {
   if (!homeTeamId || !awayTeamId) return null;
   const keyed = NBA_ROSTER_BY_MATCHUP[matchupKey(homeTeamId, awayTeamId)];
-  if (keyed) return cloneReport(keyed);
-  return rosterFromTeamDetail(homeTeamId, awayTeamId);
+  const report = keyed
+    ? cloneReport(keyed)
+    : rosterFromTeamDetail(homeTeamId, awayTeamId);
+  if (!report) return null;
+  // 26-27 開幕前: 偽のシーズン平均は出さず GP/MIN/PTS 等は 0
+  if (!nbaSeasonStatsReady()) return withoutSeasonStats(report);
+  return report;
 }

@@ -723,6 +723,20 @@ export type SquadBattleMockBundle = {
   incomingInvites: SquadIncomingInviteMock[];
 };
 
+/** 本番 UI 用。mock データを一切載せない空バンドル */
+export function getSquadBattleEmptyBundle(): SquadBattleMockBundle {
+  return {
+    state: "none",
+    mySquad: null,
+    leaderboard: [],
+    openSquads: [],
+    myOutgoingRequests: [],
+    incomingRequests: [],
+    pastSquads: [],
+    incomingInvites: [],
+  };
+}
+
 const PAST_SQUAD_HISTORY: PastSquadHistoryMock[] = [
   {
     battleId: "gb-prev-1",

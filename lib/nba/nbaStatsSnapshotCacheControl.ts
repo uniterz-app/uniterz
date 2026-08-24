@@ -2,13 +2,22 @@
  * リーグ Team / Player スナップショット共通の CDN キャッシュ。
  * ingest は試合日 cron 想定 — 5分更新ではない。
  */
-export type NbaStatsSnapshotSource = "firestore" | "mock";
+export type NbaStatsSnapshotSource =
+  | "firestore"
+  | "mock"
+  | "empty"
+  | "live";
+
+/** NBA リーグ表の偽スタッツフォールバックは廃止。常に empty。 */
+export function allowNbaStatsMockFallback(): boolean {
+  return false;
+}
 
 export function nbaStatsSnapshotCacheControl(input: {
   source: NbaStatsSnapshotSource;
   updatedAt: Date | null;
 }): string {
-  if (input.source === "mock") {
+  if (input.source === "mock" || input.source === "empty") {
     return "public, s-maxage=60, stale-while-revalidate=300";
   }
   const ageMs = input.updatedAt

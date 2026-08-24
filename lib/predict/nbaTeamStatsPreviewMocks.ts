@@ -3,6 +3,9 @@
  * Season + Last 10。後で BallDontLie team averages / 自前 L10 集計に差し替え。
  */
 
+import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
+
 export type NbaTeamStatSide = {
   teamId: string;
   teamName: string;
@@ -506,10 +509,56 @@ export const NBA_TEAM_STATS_BY_MATCHUP: Record<string, NbaTeamStatsBundle> = {
   "nba-pistons|nba-celtics": PISTONS_CELTICS_OPENING_STATS,
 };
 
+function emptyTeamStatSide(teamId: string): NbaTeamStatSide {
+  return {
+    teamId,
+    teamName: getNbaTeamNicknameById(teamId),
+    ppg: 0,
+    papg: 0,
+    diff: 0,
+    ortg: 0,
+    drtg: 0,
+    netrtg: 0,
+    pace: 0,
+    homeW: 0,
+    homeL: 0,
+    awayW: 0,
+    awayL: 0,
+    formW: 0,
+    formL: 0,
+    formResults: [],
+  };
+}
+
+/** 開幕前・データ未投入時用。表は出し、数値は 0 */
+export function emptyTeamStatsBundle(
+  homeTeamId: string,
+  awayTeamId: string
+): NbaTeamStatsBundle {
+  const season: NbaTeamStatsCompare = {
+    home: emptyTeamStatSide(homeTeamId),
+    away: emptyTeamStatSide(awayTeamId),
+  };
+  return {
+    season,
+    last10: {
+      home: { ...season.home },
+      away: { ...season.away },
+    },
+  };
+}
+
 export function teamStatsForMatchup(
   homeTeamId: string | undefined,
   awayTeamId: string | undefined
 ): NbaTeamStatsBundle | null {
   if (!homeTeamId || !awayTeamId) return null;
-  return NBA_TEAM_STATS_BY_MATCHUP[matchupKey(homeTeamId, awayTeamId)] ?? null;
+  // 26-27 開幕前: 偽の前季スタッツは出さず 0
+  if (!nbaSeasonStatsReady()) {
+    return emptyTeamStatsBundle(homeTeamId, awayTeamId);
+  }
+  return (
+    NBA_TEAM_STATS_BY_MATCHUP[matchupKey(homeTeamId, awayTeamId)] ??
+    emptyTeamStatsBundle(homeTeamId, awayTeamId)
+  );
 }

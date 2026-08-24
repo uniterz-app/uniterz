@@ -9,9 +9,23 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "bundleIdentifier": "app.uniterz.mobile.dev"
+      },
+      "android": {
+        "applicationId": "app.uniterz.mobile.dev"
+      }
     },
-    "production": {}
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "bundleIdentifier": "app.uniterz.mobile"
+      },
+      "android": {
+        "applicationId": "app.uniterz.mobile"
+      }
+    }
   },
   "submit": {
     "production": {}

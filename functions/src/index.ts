@@ -39,6 +39,9 @@ export {
   rebuildWeeklyReportsManualV2,
 } from "./reports/rebuildWeeklyReportsV2";
 
+// NBA スタッツ日次 ingest（Next admin API 経由）
+export { runNbaStatsDailyIngestCron } from "./nba/runNbaStatsDailyIngestCron";
+
 // ===============================
 // Global
 // ===============================

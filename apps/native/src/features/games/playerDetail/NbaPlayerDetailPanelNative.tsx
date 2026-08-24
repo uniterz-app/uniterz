@@ -39,7 +39,10 @@ import {
   type NbaPlayerVenueSplit,
   type NbaPlayerVsOpponentSample,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
-import { isPlayerDetailRankShown } from "../../../../../../lib/predict/nbaPlayerDetailHowTheyPlay";
+import {
+  isPlayerDetailRankShown,
+  isPlayerDetailSalaryRankShown,
+} from "../../../../../../lib/predict/nbaPlayerDetailHowTheyPlay";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import {
   SHOT_ZONE_BASKET,
@@ -68,11 +71,13 @@ import {
   getTeamJerseySecondaryColor,
 } from "../../../../../../lib/team-colors";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
+import { profileOverviewChartNoDataStyle } from "../../profile/profileOverviewChartShell";
 import JerseyMarkSvg from "../JerseyMarkSvg";
 import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
-import { overlayPlayerDetailWithLeaders } from "../../../../../../lib/nba/sliceNbaPlayerFromLeaders";
+import { useNbaPlayerDetailLiveOverlay } from "../../../../../../lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
+import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 
 type Props = {
@@ -94,6 +99,22 @@ function hexToRgba(hex: string, alpha: number): string {
     return `rgba(124,255,107,${alpha})`;
   }
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/** Web `PlayerDetailSectionNoData` — 枠を残し既存 chart NO DATA を中央に */
+function PlayerDetailSectionNoDataNative({ accent }: { accent: string }) {
+  return (
+    <View
+      accessibilityRole="text"
+      accessibilityLabel="NO DATA"
+      style={[
+        styles.sectionNoData,
+        { borderColor: hexToRgba(accent, 0.3) },
+      ]}
+    >
+      <Text style={profileOverviewChartNoDataStyle}>NO DATA</Text>
+    </View>
+  );
 }
 
 function formatDraftHero(
@@ -181,7 +202,11 @@ function IdMetaCell({
 }
 
 function PlayerIdCard({ detail }: { detail: NbaPlayerDetailPreview }) {
-  const fullName = `${detail.firstName} ${detail.lastName}`.toUpperCase();
+  const fullName = formatNbaPlayerDisplayName(
+    detail.firstName,
+    detail.lastName,
+    detail.playerId
+  ).toUpperCase();
   const accent = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const countryIso2 = nbaCountryNameToIso2(detail.country);
   return (
@@ -328,6 +353,17 @@ function ShotZoneHeatmap({
   zones: NbaPlayerShotZone[];
   accent: string;
 }) {
+  if (zones.length === 0) {
+    return (
+      <View style={styles.heatWrap}>
+        <View style={styles.advTitleRow}>
+          <Text style={styles.advTitle}>SHOT CHART</Text>
+          <View style={styles.advTitleLine} />
+        </View>
+        <PlayerDetailSectionNoDataNative accent={accent} />
+      </View>
+    );
+  }
   const ra = zoneById(zones, "restricted");
   const paint = zoneById(zones, "paint");
   const mid = zoneById(zones, "mid");
@@ -589,29 +625,33 @@ function PlayerVenueSplitsSectionNative({
           style={styles.advTitleLine}
         />
       </View>
-      <View style={[styles.splitTable, { borderColor: frame }]}>
-        <SplitTableRow
-          cols={["", "GP", "PTS", "REB", "AST", "+/-"]}
-          borderColor={line}
-          bottomBorder
-          header
-        />
-        {splits.map((row, i) => (
+      {splits.length === 0 ? (
+        <PlayerDetailSectionNoDataNative accent={accent} />
+      ) : (
+        <View style={[styles.splitTable, { borderColor: frame }]}>
           <SplitTableRow
-            key={row.venue}
-            cols={[
-              row.venue === "home" ? "HOME" : "AWAY",
-              String(row.games),
-              fmtSplitNumNative(row.pts),
-              fmtSplitNumNative(row.reb),
-              fmtSplitNumNative(row.ast),
-              `${row.plusMinus > 0 ? "+" : ""}${fmtSplitNumNative(row.plusMinus)}`,
-            ]}
+            cols={["", "GP", "PTS", "REB", "AST", "+/-"]}
             borderColor={line}
-            bottomBorder={i < splits.length - 1}
+            bottomBorder
+            header
           />
-        ))}
-      </View>
+          {splits.map((row, i) => (
+            <SplitTableRow
+              key={row.venue}
+              cols={[
+                row.venue === "home" ? "HOME" : "AWAY",
+                String(row.games),
+                fmtSplitNumNative(row.pts),
+                fmtSplitNumNative(row.reb),
+                fmtSplitNumNative(row.ast),
+                `${row.plusMinus > 0 ? "+" : ""}${fmtSplitNumNative(row.plusMinus)}`,
+              ]}
+              borderColor={line}
+              bottomBorder={i < splits.length - 1}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -625,7 +665,6 @@ function PlayerVsOpponentSectionNative({
   accent: string;
   isJa: boolean;
 }) {
-  if (!samples.length) return null;
   const line = hexToRgba(accent, 0.18);
   const frame = hexToRgba(accent, 0.4);
   return (
@@ -638,34 +677,40 @@ function PlayerVsOpponentSectionNative({
           style={styles.advTitleLine}
         />
       </View>
-      <Text style={styles.splitHint}>
-        {isJa
-          ? "今季の対戦試合からの平均（プレビュー）"
-          : "Season average vs opponent (preview)"}
-      </Text>
-      <View style={[styles.splitTable, { borderColor: frame }]}>
-        <SplitTableRow
-          cols={[isJa ? "相手" : "OPP", "GP", "PTS", "REB", "AST", "+/-"]}
-          borderColor={line}
-          bottomBorder
-          header
-        />
-        {samples.map((row, i) => (
-          <SplitTableRow
-            key={row.oppTeamId}
-            cols={[
-              `vs ${row.oppAbbr}`,
-              String(row.games),
-              fmtSplitNumNative(row.pts),
-              fmtSplitNumNative(row.reb),
-              fmtSplitNumNative(row.ast),
-              `${row.plusMinus > 0 ? "+" : ""}${fmtSplitNumNative(row.plusMinus)}`,
-            ]}
-            borderColor={line}
-            bottomBorder={i < samples.length - 1}
-          />
-        ))}
-      </View>
+      {samples.length === 0 ? (
+        <PlayerDetailSectionNoDataNative accent={accent} />
+      ) : (
+        <>
+          <Text style={styles.splitHint}>
+            {isJa
+              ? "今季の対戦試合からの平均（プレビュー）"
+              : "Season average vs opponent (preview)"}
+          </Text>
+          <View style={[styles.splitTable, { borderColor: frame }]}>
+            <SplitTableRow
+              cols={[isJa ? "相手" : "OPP", "GP", "PTS", "REB", "AST", "+/-"]}
+              borderColor={line}
+              bottomBorder
+              header
+            />
+            {samples.map((row, i) => (
+              <SplitTableRow
+                key={row.oppTeamId}
+                cols={[
+                  `vs ${row.oppAbbr}`,
+                  String(row.games),
+                  fmtSplitNumNative(row.pts),
+                  fmtSplitNumNative(row.reb),
+                  fmtSplitNumNative(row.ast),
+                  `${row.plusMinus > 0 ? "+" : ""}${fmtSplitNumNative(row.plusMinus)}`,
+                ]}
+                borderColor={line}
+                bottomBorder={i < samples.length - 1}
+              />
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -673,14 +718,18 @@ function PlayerVsOpponentSectionNative({
 function SeasonMetricsGrid({
   metrics,
   accent,
+  gamesPlayed,
 }: {
   metrics: NbaPlayerSeasonMetric[];
   accent: string;
+  gamesPlayed: number;
 }) {
   const shown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => metrics.find((m) => m.id === id)
   ).filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
   const cellLine = hexToRgba(accent, 0.22);
+  /** 開幕前 / 未出場は 0 埋めグリッドにせず NO DATA */
+  const hasSeasonAverages = gamesPlayed > 0;
   return (
     <View style={styles.advWrap}>
       <View style={styles.advTitleRow}>
@@ -689,49 +738,59 @@ function SeasonMetricsGrid({
         </Text>
         <View style={styles.advTitleLine} />
       </View>
-      <View
-        style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}
-      >
-        {shown.map((m, i) => {
-          const col = i % 3;
-          const row = Math.floor(i / 3);
-          const lastRow = Math.floor((shown.length - 1) / 3);
-          return (
-            <View
-              key={m.id}
-              style={[
-                styles.advCell,
-                col < 2
-                  ? { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: cellLine }
-                  : null,
-                row < lastRow
-                  ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cellLine }
-                  : null,
-              ]}
-            >
-              <View style={styles.advCellTop}>
-                <Text style={styles.advLabel}>{m.short}</Text>
-                {isPlayerDetailRankShown(m.leagueRank) ? (
-                  <Text
-                    style={[
-                      styles.advRank,
-                      {
-                        color:
-                          m.leagueRank <= 10
-                            ? accent
-                            : "rgba(255,255,255,0.35)",
-                      },
-                    ]}
-                  >
-                    #{m.leagueRank}
-                  </Text>
-                ) : null}
+      {hasSeasonAverages ? (
+        <View
+          style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}
+        >
+          {shown.map((m, i) => {
+            const col = i % 3;
+            const row = Math.floor(i / 3);
+            const lastRow = Math.floor((shown.length - 1) / 3);
+            return (
+              <View
+                key={m.id}
+                style={[
+                  styles.advCell,
+                  col < 2
+                    ? {
+                        borderRightWidth: StyleSheet.hairlineWidth,
+                        borderRightColor: cellLine,
+                      }
+                    : null,
+                  row < lastRow
+                    ? {
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderBottomColor: cellLine,
+                      }
+                    : null,
+                ]}
+              >
+                <View style={styles.advCellTop}>
+                  <Text style={styles.advLabel}>{m.short}</Text>
+                  {isPlayerDetailRankShown(m.leagueRank) ? (
+                    <Text
+                      style={[
+                        styles.advRank,
+                        {
+                          color:
+                            m.leagueRank <= 10
+                              ? accent
+                              : "rgba(255,255,255,0.35)",
+                        },
+                      ]}
+                    >
+                      #{m.leagueRank}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text style={styles.advValue}>{m.display}</Text>
               </View>
-              <Text style={styles.advValue}>{m.display}</Text>
-            </View>
-          );
-        })}
-      </View>
+            );
+          })}
+        </View>
+      ) : (
+        <PlayerDetailSectionNoDataNative accent={accent} />
+      )}
     </View>
   );
 }
@@ -771,7 +830,7 @@ const CAREER_COLS_NATIVE: Array<{
     emphasize: true,
   },
   { key: "g", label: "G", width: 28, render: (r) => String(r.games) },
-  { key: "gs", label: "GS", width: 28, render: (r) => String(r.gamesStarted) },
+  { key: "gs", label: "GS", width: 28, render: (r) => (r.gamesStarted == null ? "—" : String(r.gamesStarted)) },
   { key: "mp", label: "MP", width: 36, render: (r) => fmtPerGameNative(r.min) },
   {
     key: "pts",
@@ -809,7 +868,10 @@ function SeasonHistorySection({
   currentSeasonStart?: number;
 }) {
   const [board, setBoard] = useState<NbaPlayerCareerSeasonBoard>("regular");
-  const rows = [...(board === "regular" ? regular : playoffs)].reverse();
+  /** 新しいシーズンを上（ingest も降順。表示で reverse しない） */
+  const rows = [...(board === "regular" ? regular : playoffs)].sort(
+    (a, b) => b.seasonStart - a.seasonStart
+  );
   const frame = hexToRgba(accent, 0.35);
   const headLine = hexToRgba(accent, 0.18);
 
@@ -851,16 +913,13 @@ function SeasonHistorySection({
       </View>
 
       {rows.length === 0 ? (
-        <View style={[styles.careerEmpty, { borderColor: hexToRgba(accent, 0.25) }]}>
-          <Text style={styles.careerEmptyText}>
-            No {board === "playoffs" ? "playoff" : "season"} data
-          </Text>
-        </View>
+        <PlayerDetailSectionNoDataNative accent={accent} />
       ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={[styles.careerScroll, { borderColor: frame }]}
+          contentContainerStyle={styles.careerScrollContent}
         >
           <View>
             <View
@@ -1114,6 +1173,15 @@ function GameLogsSection({
   const losses = logs.length - wins;
   const line = hexToRgba(accent, 0.14);
 
+  if (logs.length === 0) {
+    return (
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitleInline}>GAME LOGS</Text>
+        <PlayerDetailSectionNoDataNative accent={accent} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.formSection}>
       <Pressable
@@ -1223,10 +1291,16 @@ export default function NbaPlayerDetailPanelNative({
   const apiBaseUrl = getUniterzApiBaseUrl();
   const { bundle: leaders } = usePlayerStatLeadersBundle({ apiBaseUrl });
   const { bundle: teamStats } = useLeagueTeamStatsBundle({ apiBaseUrl });
-  const detail = useMemo(() => {
-    const base = getNbaPlayerDetailPreview(playerId);
-    return overlayPlayerDetailWithLeaders(base, leaders);
-  }, [playerId, leaders]);
+  const base = useMemo(
+    () => getNbaPlayerDetailPreview(playerId),
+    [playerId]
+  );
+  const { detail, hasFetchError } = useNbaPlayerDetailLiveOverlay({
+    playerId,
+    apiBaseUrl,
+    base,
+    leaders,
+  });
   const bottomPad = Math.max(12, insets.bottom);
   const currentSalary = detail.contract?.seasons[0] ?? null;
   const accent = getTeamJerseyPrimaryColor("nba", detail.teamId);
@@ -1240,6 +1314,15 @@ export default function NbaPlayerDetailPanelNative({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.panel}>
+
+        {hasFetchError ? (
+          <Text style={styles.fetchError}>
+            {isJa
+              ? "一部データの取得に失敗しました。表示は取得できた範囲のみです。"
+              : "Some live data failed to load. Showing what we could fetch."}
+          </Text>
+        ) : null}
+
         <PlayerIdCard detail={detail} />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -1249,7 +1332,11 @@ export default function NbaPlayerDetailPanelNative({
           isJa={isJa}
         />
 
-        <SeasonMetricsGrid metrics={detail.seasonMetrics} accent={accent} />
+        <SeasonMetricsGrid
+          metrics={detail.seasonMetrics}
+          accent={accent}
+          gamesPlayed={detail.season.gamesPlayed}
+        />
 
         <View
           style={[
@@ -1268,7 +1355,6 @@ export default function NbaPlayerDetailPanelNative({
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
         <PlayerVenueSplitsSectionNative
           splits={detail.venueSplits}
           accent={accent}
@@ -1276,7 +1362,6 @@ export default function NbaPlayerDetailPanelNative({
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
         <PlayerVsOpponentSectionNative
           samples={detail.vsOpponentSamples}
           accent={accent}
@@ -1284,7 +1369,6 @@ export default function NbaPlayerDetailPanelNative({
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
         <SeasonHistorySection
           regular={detail.careerSeasons.regular}
           playoffs={detail.careerSeasons.playoffs}
@@ -1292,22 +1376,19 @@ export default function NbaPlayerDetailPanelNative({
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
         <ShotZoneHeatmap zones={detail.shotZones} accent={accent} />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
         <GameLogsSection logs={detail.gameLogs} accent={accent} />
 
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        <View style={styles.advTitleRow}>
+          <Text style={styles.advTitle}>
+            CONTRACT
+          </Text>
+          <View style={styles.advTitleLine} />
+        </View>
         {detail.contract && currentSalary ? (
-          <>
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <View style={styles.advTitleRow}>
-              <Text style={styles.advTitle}>
-                CONTRACT
-              </Text>
-              <View style={styles.advTitleLine} />
-            </View>
             <View
               style={[styles.contractCard, { borderColor: frameColor }]}
             >
@@ -1320,12 +1401,14 @@ export default function NbaPlayerDetailPanelNative({
                     {formatSalaryUsd(currentSalary.baseSalary)}
                   </Text>
                 </View>
-                <View style={styles.contractRankBlock}>
-                  <Text style={styles.contractLabel}>RANK</Text>
-                  <Text style={[styles.contractRank, { color: accent }]}>
-                    #{currentSalary.salaryRank}
-                  </Text>
-                </View>
+                {isPlayerDetailSalaryRankShown(currentSalary.salaryRank) ? (
+                  <View style={styles.contractRankBlock}>
+                    <Text style={styles.contractLabel}>RANK</Text>
+                    <Text style={[styles.contractRank, { color: "#FFFFFF" }]}>
+                      #{currentSalary.salaryRank}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
               <View style={styles.contractMetaRow}>
                 <Text style={styles.contractMeta}>
@@ -1387,7 +1470,6 @@ export default function NbaPlayerDetailPanelNative({
                   </View>
                 ))}
               </View>
-
               {detail.contract.notes.length > 0 ? (
                 <Text
                   style={[styles.contractNote, { color: hexToRgba(accent, 0.55) }]}
@@ -1396,8 +1478,9 @@ export default function NbaPlayerDetailPanelNative({
                 </Text>
               ) : null}
             </View>
-          </>
-        ) : null}
+        ) : (
+          <PlayerDetailSectionNoDataNative accent={accent} />
+        )}
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
@@ -1466,6 +1549,13 @@ export default function NbaPlayerDetailPanelNative({
 }
 
 const styles = StyleSheet.create({
+  fetchError: {
+    color: "rgba(253, 230, 138, 0.95)",
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
   root: { flex: 1 },
   pad: { paddingHorizontal: 12, paddingTop: 4 },
   panel: {
@@ -1822,6 +1912,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
+  /** 右の BACK レールに最終列が隠れないよう余白 */
+  careerScrollContent: {
+    paddingRight: 56,
+  },
   careerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1854,6 +1948,15 @@ const styles = StyleSheet.create({
     fontFamily: METRIC_FONT,
     color: "rgba(255,255,255,0.35)",
     fontSize: 12,
+  },
+  sectionNoData: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 88,
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 12,
+    paddingVertical: 28,
   },
   heatWrap: { gap: 8 },
   heatHint: {

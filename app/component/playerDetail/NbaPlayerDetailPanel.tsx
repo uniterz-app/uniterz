@@ -30,7 +30,11 @@ import {
   type NbaPlayerVenueSplit,
   type NbaPlayerVsOpponentSample,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
-import { isPlayerDetailRankShown } from "@/lib/predict/nbaPlayerDetailHowTheyPlay";
+import {
+  isPlayerDetailRankShown,
+  isPlayerDetailSalaryRankShown,
+} from "@/lib/predict/nbaPlayerDetailHowTheyPlay";
+import { CyberNoDataLabel } from "@/app/component/common/CyberNoDataLabel";
 import {
   SHOT_ZONE_BASKET,
   SHOT_ZONE_GLOW_R,
@@ -56,7 +60,8 @@ import {
 import NbaPlayerHowTheyPlay from "@/app/component/playerDetail/NbaPlayerHowTheyPlay";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
-import { overlayPlayerDetailWithLeaders } from "@/lib/nba/sliceNbaPlayerFromLeaders";
+import { useNbaPlayerDetailLiveOverlay } from "@/lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
+import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
 
 type Props = {
   playerId?: string;
@@ -88,6 +93,19 @@ function hexToRgba(hex: string, alpha: number): string {
 
 /** セクション見出し — チームカラーではなく白で統一 */
 const SECTION_HEADING_CLASS = `${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em] text-white`;
+
+/** 未接続セクション用 — 枠は残し、既存 CyberNoDataLabel を中央に */
+function PlayerDetailSectionNoData({ accent }: { accent: string }) {
+  return (
+    <div
+      role="status"
+      className="flex min-h-[88px] items-center justify-center border bg-black/45 px-3 py-7"
+      style={{ borderColor: hexToRgba(accent, 0.3) }}
+    >
+      <CyberNoDataLabel variant="chart" />
+    </div>
+  );
+}
 const TABLE_CELL_SKEW = { transform: "skewX(-6deg)" } as const;
 
 function SkewText({ children }: { children: ReactNode }) {
@@ -112,6 +130,17 @@ function ShotZoneHeat({
   zones: NbaPlayerShotZone[];
   accent: string;
 }) {
+  if (zones.length === 0) {
+    return (
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <h2 className={SECTION_HEADING_CLASS}>SHOT CHART</h2>
+          <div className="h-px flex-1 bg-white/35" />
+        </div>
+        <PlayerDetailSectionNoData accent={accent} />
+      </section>
+    );
+  }
   const ra = zoneById(zones, "restricted");
   const paint = zoneById(zones, "paint");
   const mid = zoneById(zones, "mid");
@@ -535,7 +564,8 @@ const CAREER_SEASON_COLS: Array<{
     key: "gamesStarted",
     label: "GS",
     width: "w-7",
-    render: (r) => String(r.gamesStarted),
+    render: (r) =>
+      r.gamesStarted == null ? "—" : String(r.gamesStarted),
   },
   {
     key: "min",
@@ -647,7 +677,10 @@ function SeasonHistoryTable({
   currentSeasonStart?: number;
 }) {
   const [board, setBoard] = useState<NbaPlayerCareerSeasonBoard>("regular");
-  const rows = board === "regular" ? regular : playoffs;
+  /** 新しいシーズンを上（ingest も降順。表示で reverse しない） */
+  const rows = [...(board === "regular" ? regular : playoffs)].sort(
+    (a, b) => b.seasonStart - a.seasonStart
+  );
 
   return (
     <section className="space-y-3">
@@ -683,12 +716,7 @@ function SeasonHistoryTable({
       </div>
 
       {rows.length === 0 ? (
-        <p
-          className={`${nameOxanium.className} border px-3 py-4 text-center text-[12px] text-white/35`}
-          style={{ borderColor: hexToRgba(accent, 0.25) }}
-        >
-          No {board === "playoffs" ? "playoff" : "season"} data
-        </p>
+        <PlayerDetailSectionNoData accent={accent} />
       ) : (
         <div
           className="overflow-x-auto border bg-black/45"
@@ -710,7 +738,7 @@ function SeasonHistoryTable({
                 </span>
               ))}
             </div>
-            {[...rows].reverse().map((row, i, arr) => {
+            {rows.map((row, i) => {
               const isCurrent = row.seasonStart === currentSeasonStart;
               return (
                 <div
@@ -721,7 +749,7 @@ function SeasonHistoryTable({
                       ? hexToRgba(accent, 0.12)
                       : "transparent",
                     borderBottom:
-                      i < arr.length - 1
+                      i < rows.length - 1
                         ? `1px solid ${hexToRgba(accent, 0.1)}`
                         : undefined,
                   }}
@@ -775,6 +803,9 @@ function PlayerVenueSplitsSection({
       <h2 className={SECTION_HEADING_CLASS}>
         {isJa ? "ホーム / アウェイ" : "Home / Away"}
       </h2>
+      {splits.length === 0 ? (
+        <PlayerDetailSectionNoData accent={accent} />
+      ) : (
       <div
         className="overflow-hidden border bg-black/50"
         style={{ borderColor: hexToRgba(accent, 0.4) }}
@@ -846,6 +877,7 @@ function PlayerVenueSplitsSection({
           </div>
         ))}
       </div>
+      )}
     </section>
   );
 }
@@ -859,12 +891,15 @@ function PlayerVsOpponentSection({
   accent: string;
   isJa: boolean;
 }) {
-  if (!samples.length) return null;
   return (
     <section className="space-y-2">
       <h2 className={SECTION_HEADING_CLASS}>
         {isJa ? "対戦相手別（平均）" : "Vs Opponent (Avg)"}
       </h2>
+      {samples.length === 0 ? (
+        <PlayerDetailSectionNoData accent={accent} />
+      ) : (
+        <>
       <p className={`${nameOxanium.className} text-[10px] text-white/40`}>
         {isJa
           ? "今季の対戦試合からの平均（プレビュー）"
@@ -941,6 +976,8 @@ function PlayerVsOpponentSection({
           </div>
         ))}
       </div>
+        </>
+      )}
     </section>
   );
 }
@@ -955,6 +992,15 @@ function GameLogs({
   const [open, setOpen] = useState(true);
   const wins = logs.filter((g) => g.result === "W").length;
   const losses = logs.length - wins;
+
+  if (logs.length === 0) {
+    return (
+      <section className="space-y-3">
+        <h2 className={`${SECTION_HEADING_CLASS} text-white`}>GAME LOGS</h2>
+        <PlayerDetailSectionNoData accent={accent} />
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-3">
@@ -1037,7 +1083,7 @@ function GameLogs({
   );
 }
 
-/** Player Detail 叩き台（モック）— IDカード型ヘッダー */
+/** Player Detail — roster/leaders/payroll/injury live overlay */
 export default function NbaPlayerDetailPanel({
   playerId,
   language = "ja",
@@ -1045,21 +1091,41 @@ export default function NbaPlayerDetailPanel({
   const isJa = language === "ja";
   const { bundle: leaders } = usePlayerStatLeadersBundle();
   const { bundle: teamStats } = useLeagueTeamStatsBundle();
-  const detail = useMemo(() => {
-    const base = getNbaPlayerDetailPreview(playerId);
-    return overlayPlayerDetailWithLeaders(base, leaders);
-  }, [playerId, leaders]);
+  const base = useMemo(
+    () => getNbaPlayerDetailPreview(playerId),
+    [playerId]
+  );
+  const { detail, hasFetchError } = useNbaPlayerDetailLiveOverlay({
+    playerId,
+    base,
+    leaders,
+  });
   const currentSalary = detail.contract?.seasons[0] ?? null;
-  const fullName = `${detail.firstName} ${detail.lastName}`.toUpperCase();
+  const fullName = formatNbaPlayerDisplayName(
+    detail.firstName,
+    detail.lastName,
+    detail.playerId
+  ).toUpperCase();
   const jerseyNum = detail.jerseyNumber.replace(/^#/, "") || "—";
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
   const seasonShown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => detail.seasonMetrics.find((m) => m.id === id)
   ).filter((m): m is NonNullable<typeof m> => Boolean(m));
+  /** 開幕前 / 未出場は 0 埋めグリッドにせず NO DATA */
+  const hasSeasonAverages = detail.season.gamesPlayed > 0;
 
   return (
     <div className="space-y-4 pb-24 text-white">
+
+      {hasFetchError ? (
+        <div className="border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100/90">
+          {isJa
+            ? "一部データの取得に失敗しました。表示は取得できた範囲のみです。"
+            : "Some live data failed to load. Showing what we could fetch."}
+        </div>
+      ) : null}
+
       {/* ID CARD */}
       <div
         className="flex min-h-[148px] overflow-hidden border bg-[#050808]"
@@ -1193,43 +1259,47 @@ export default function NbaPlayerDetailPanel({
 
       <section className="space-y-3">
         <h2 className={SECTION_HEADING_CLASS}>SEASON AVERAGES</h2>
-        <div
-          className="grid grid-cols-3 overflow-hidden border bg-black/50"
-          style={{ borderColor: hexToRgba(jerseyPrimary, 0.4) }}
-        >
-          {seasonShown.map((m) => (
-            <div
-              key={m.id}
-              className="px-2.5 py-3"
-              style={{
-                borderBottom: `1px solid ${hexToRgba(jerseyPrimary, 0.15)}`,
-                borderRight: `1px solid ${hexToRgba(jerseyPrimary, 0.15)}`,
-              }}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-wider text-white/40`}>
-                  {m.short}
-                </span>
-                {isPlayerDetailRankShown(m.leagueRank) ? (
-                  <span
-                    className={`${nameOxanium.className} text-[12px] font-extrabold tabular-nums`}
-                    style={{
-                      color:
-                        m.leagueRank <= 10
-                          ? jerseyPrimary
-                          : "rgba(255,255,255,0.35)",
-                    }}
-                  >
-                    #{m.leagueRank}
+        {hasSeasonAverages ? (
+          <div
+            className="grid grid-cols-3 overflow-hidden border bg-black/50"
+            style={{ borderColor: hexToRgba(jerseyPrimary, 0.4) }}
+          >
+            {seasonShown.map((m) => (
+              <div
+                key={m.id}
+                className="px-2.5 py-3"
+                style={{
+                  borderBottom: `1px solid ${hexToRgba(jerseyPrimary, 0.15)}`,
+                  borderRight: `1px solid ${hexToRgba(jerseyPrimary, 0.15)}`,
+                }}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-wider text-white/40`}>
+                    {m.short}
                   </span>
-                ) : null}
+                  {isPlayerDetailRankShown(m.leagueRank) ? (
+                    <span
+                      className={`${nameOxanium.className} text-[12px] font-extrabold tabular-nums`}
+                      style={{
+                        color:
+                          m.leagueRank <= 10
+                            ? jerseyPrimary
+                            : "rgba(255,255,255,0.35)",
+                      }}
+                    >
+                      #{m.leagueRank}
+                    </span>
+                  ) : null}
+                </div>
+                <p className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}>
+                  {m.display}
+                </p>
               </div>
-              <p className={`${nameOxanium.className} mt-1 text-[18px] font-extrabold tabular-nums`}>
-                {m.display}
-              </p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <PlayerDetailSectionNoData accent={jerseyPrimary} />
+        )}
       </section>
 
       <div
@@ -1262,7 +1332,6 @@ export default function NbaPlayerDetailPanel({
         accent={jerseyPrimary}
         isJa={isJa}
       />
-
       <div
         className="h-px"
         style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
@@ -1283,14 +1352,13 @@ export default function NbaPlayerDetailPanel({
       />
       <GameLogs logs={detail.gameLogs} accent={jerseyPrimary} />
 
-      {detail.contract && currentSalary ? (
-        <>
-          <div
-            className="h-px"
-            style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
-          />
-          <section className="space-y-3">
-            <h2 className={SECTION_HEADING_CLASS}>CONTRACT</h2>
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+      />
+      <section className="space-y-3">
+        <h2 className={SECTION_HEADING_CLASS}>CONTRACT</h2>
+        {detail.contract && currentSalary ? (
             <div
               className="space-y-2 border bg-black/45 p-3.5"
               style={{ borderColor: hexToRgba(jerseyPrimary, 0.3) }}
@@ -1304,17 +1372,18 @@ export default function NbaPlayerDetailPanel({
                     {formatSalaryUsd(currentSalary.baseSalary)}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}>
-                    RANK
-                  </p>
-                  <p
-                    className={`${nameOxanium.className} text-[22px] font-extrabold`}
-                    style={{ color: jerseyPrimary }}
-                  >
-                    #{currentSalary.salaryRank}
-                  </p>
-                </div>
+                {isPlayerDetailSalaryRankShown(currentSalary.salaryRank) ? (
+                  <div className="text-right">
+                    <p className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}>
+                      RANK
+                    </p>
+                    <p
+                      className={`${nameOxanium.className} text-[22px] font-extrabold text-white`}
+                    >
+                      #{currentSalary.salaryRank}
+                    </p>
+                  </div>
+                ) : null}
               </div>
               <p className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide text-white/60`}>
                 {detail.contract.contractType}
@@ -1381,9 +1450,10 @@ export default function NbaPlayerDetailPanel({
                 </p>
               ) : null}
             </div>
-          </section>
-        </>
-      ) : null}
+        ) : (
+          <PlayerDetailSectionNoData accent={jerseyPrimary} />
+        )}
+      </section>
 
       <div
         className="h-px"

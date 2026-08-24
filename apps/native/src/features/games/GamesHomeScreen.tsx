@@ -220,6 +220,7 @@ import {
   MATCH_CARD_SCORE_FONT,
 } from "./matchCardTypography";
 import { gameCardListStyles } from "./gameCardListStyles";
+import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
 
 function formatKickoffTime(
   startAt: Date | null,
@@ -975,9 +976,12 @@ export default function GamesHomeScreen({
     const seriesPair = resolveNativeSeriesPair(g, peerGamesForSeries);
     const roundLabelRaw = g.roundLabel;
     const roundLabel =
-      typeof roundLabelRaw === "string" && roundLabelRaw.trim()
-        ? roundLabelRaw.trim()
-        : null;
+      displayNbaRoundLabel(
+        typeof roundLabelRaw === "string" && roundLabelRaw.trim()
+          ? roundLabelRaw.trim()
+          : "",
+        language !== "en"
+      ) || null;
     const homePalette = resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a");
     const awayPalette = resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff");
     return {
@@ -1182,11 +1186,14 @@ export default function GamesHomeScreen({
     const awayN = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const isEn = language === "en";
     const roundLabelRaw = g.roundLabel;
-    const roundLabel =
+    const roundLabel = displayNbaRoundLabel(
       typeof roundLabelRaw === "string" && roundLabelRaw.trim()
         ? roundLabelRaw.trim()
-        : null;
+        : "",
+      !isEn
+    ) || null;
     const seasonPhase = g.seasonPhase as
+      | "preseason"
       | "regular"
       | "play_in"
       | "playoffs"

@@ -23,6 +23,7 @@ import {
   deterministicPostV2Id,
   loadGameKickoffLock,
 } from "@/lib/predict/gameKickoffLock";
+import { consumeUidActionRateLimit } from "@/lib/security/consumeUidRateLimit";
 
 /* ========= 型 ========= */
 type Status = "scheduled" | "live" | "final";
@@ -158,6 +159,19 @@ export async function POST(req: Request) {
     }
 
     const adminDb = getAdminDb();
+
+    const rate = await consumeUidActionRateLimit(
+      adminDb,
+      uid,
+      "posts_v2",
+      120
+    );
+    if (!rate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "rate_limited" },
+        { status: 429 }
+      );
+    }
 
     let authorDisplayName = "ユーザー";
     let authorPhotoURL: string | null = null;

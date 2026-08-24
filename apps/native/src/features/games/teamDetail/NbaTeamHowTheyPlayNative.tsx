@@ -31,8 +31,8 @@ function leagueRankSegPct(rank: number): number {
   return ((LEAGUE_RANK_SEGMENTS - bucket) / LEAGUE_RANK_SEGMENTS) * 100;
 }
 
-function rankTone(rank: number, accent: string): string {
-  return rank <= 10 ? accent : "rgba(255,255,255,0.35)";
+function rankTone(rank: number): string {
+  return rank <= 10 ? "#FFFFFF" : "rgba(255,255,255,0.35)";
 }
 
 function ChipScan() {
@@ -80,7 +80,7 @@ function MetricStack({
   return (
     <View style={styles.metricStack}>
       <View style={styles.rankSlot}>
-        <Text style={[styles.ffRank, { color: rankTone(rank, accent) }]}>#{rank}</Text>
+        <Text style={[styles.ffRank, { color: rankTone(rank) }]}>#{rank}</Text>
       </View>
       <Text style={styles.hintVal}>
         {display}
@@ -126,7 +126,7 @@ export default function NbaTeamHowTheyPlayNative({
   return (
     <View style={styles.wrap}>
       <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: hexToRgba(accent, 0.75) }]}>
+        <Text style={[styles.title, { color: "rgba(255,255,255,0.75)" }]}>
           HOW THEY PLAY
         </Text>
         <View
@@ -184,7 +184,7 @@ export default function NbaTeamHowTheyPlayNative({
                   <Text style={[styles.ffVal, { color: OWN }]}>
                     {row.own.display}
                   </Text>
-                  <Text style={[styles.ffRank, { color: rankTone(row.own.rank, accent) }]}>
+                  <Text style={[styles.ffRank, { color: rankTone(row.own.rank) }]}>
                     #{row.own.rank}
                   </Text>
                 </View>
@@ -192,7 +192,7 @@ export default function NbaTeamHowTheyPlayNative({
                   <Text style={[styles.ffVal, { color: OPP }]}>
                     {row.opp.display}
                   </Text>
-                  <Text style={[styles.ffRank, { color: rankTone(row.opp.rank, accent) }]}>
+                  <Text style={[styles.ffRank, { color: rankTone(row.opp.rank) }]}>
                     #{row.opp.rank}
                   </Text>
                 </View>
@@ -278,38 +278,6 @@ export default function NbaTeamHowTheyPlayNative({
         </View>
       ) : null}
 
-      {tab === "shooting" ? (
-        <View style={[styles.padCard, { borderColor: frame }]}>
-          {board.shooting.map((row) => (
-            <View key={row.id} style={styles.shotBlock}>
-              <View style={styles.barTop}>
-                <Text style={styles.shotLabel}>
-                  {isJa ? row.labelJa : row.labelEn}
-                </Text>
-                <HowPtsCol display={row.pts.display} />
-                <MetricStack
-                  display={row.cell.display}
-                  rank={row.cell.rank}
-                  accent={accent}
-                />
-              </View>
-              <CyberSlantedSegBarNative
-                pct={leagueRankSegPct(row.cell.rank)}
-                segments={LEAGUE_RANK_SEGMENTS}
-                compact
-                accent={{
-                  border: accent,
-                  glow: hexToRgba(accent, 0.34),
-                  bg: accent,
-                }}
-                forceStatic
-                replayKey={`${teamId}-${row.id}`}
-              />
-            </View>
-          ))}
-        </View>
-      ) : null}
-
       {tab === "clutch" ? (
         <View style={[styles.clutchRow, { borderColor: frame }]}>
           {board.clutch.map((row, i) => (
@@ -324,7 +292,7 @@ export default function NbaTeamHowTheyPlayNative({
             >
               <View style={styles.clutchTop}>
                 <Text style={styles.clutchShort}>{row.short}</Text>
-                <Text style={[styles.clutchRank, { color: rankTone(row.cell.rank, accent) }]}>
+                <Text style={[styles.clutchRank, { color: rankTone(row.cell.rank) }]}>
                   #{row.cell.rank}
                 </Text>
               </View>
@@ -592,17 +560,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
-  },
-  shotBlock: { gap: 8 },
-  shotLabel: {
-    flex: 1,
-    minWidth: 0,
-    fontFamily: METRIC_FONT,
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
   },
   clutchRow: {
     flexDirection: "row",

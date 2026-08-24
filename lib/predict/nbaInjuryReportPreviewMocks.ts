@@ -4,6 +4,8 @@
  */
 
 import type { NbaInjuryReport } from "@/lib/predict/nbaInjuryReport";
+import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 
 export const NBA_INJURY_REPORT_BY_PRESET: Record<string, NbaInjuryReport> = {
   "both-teams-rich": {
@@ -291,15 +293,44 @@ const PISTONS_CELTICS_OPENING_INJURY: NbaInjuryReport = {
   },
 };
 
-/** homeTeamId|awayTeamId */
+/** homeTeamId|awayTeamId — timing preview 用の濃いモック（開幕前は使わない） */
 export const NBA_INJURY_REPORT_BY_MATCHUP: Record<string, NbaInjuryReport> = {
   "nba-pistons|nba-celtics": PISTONS_CELTICS_OPENING_INJURY,
 };
+
+/** 怪我報告なしの空レポート（表は HOME/AWAY 出して「怪我人なし」） */
+export function emptyInjuryReport(
+  homeTeamId: string,
+  awayTeamId: string
+): NbaInjuryReport {
+  return {
+    asOfLabel: nbaSeasonStatsReady() ? "Game day" : "Preseason",
+    home: {
+      teamId: homeTeamId,
+      teamName: getNbaTeamNicknameById(homeTeamId),
+      side: "home",
+      entries: [],
+    },
+    away: {
+      teamId: awayTeamId,
+      teamName: getNbaTeamNicknameById(awayTeamId),
+      side: "away",
+      entries: [],
+    },
+  };
+}
 
 export function injuryReportForMatchup(
   homeTeamId: string | undefined,
   awayTeamId: string | undefined
 ): NbaInjuryReport | null {
   if (!homeTeamId || !awayTeamId) return null;
-  return NBA_INJURY_REPORT_BY_MATCHUP[matchupKey(homeTeamId, awayTeamId)] ?? null;
+  // 26-27 開幕前: 偽の怪我カードは出さず空レポート
+  if (!nbaSeasonStatsReady()) {
+    return emptyInjuryReport(homeTeamId, awayTeamId);
+  }
+  return (
+    NBA_INJURY_REPORT_BY_MATCHUP[matchupKey(homeTeamId, awayTeamId)] ??
+    emptyInjuryReport(homeTeamId, awayTeamId)
+  );
 }

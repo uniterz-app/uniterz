@@ -24,12 +24,14 @@ import {
 } from "./useGameCardListRowEntrance";
 import TutorialCardTapHintNative from "../tutorial/TutorialCardTapHintNative";
 import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
+import { displayNbaRoundLabel } from "../../../../../lib/games/displayNbaRoundLabel";
 function matchRoundSideCode(roundLabel: string): string {
   const u = roundLabel.toUpperCase();
   if (u.includes("PLAYOFF") || u.includes("プレーオフ")) return "PO";
   if (u.includes("PLAY-IN") || u.includes("PLAY IN") || u.includes("プレーイン")) {
     return "PI";
   }
+  if (u.includes("PRESEASON") || u.includes("プレシーズン")) return "PS";
   return "RS";
 }
 
@@ -184,7 +186,10 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
     null;
   const centerBlock = getGameCardCenterBlock(game);
   const roundLabelRaw = game.roundLabel;
-  const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
+  const roundLabel = displayNbaRoundLabel(
+    typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "",
+    language === "ja"
+  );
   const isPickup = isNbaPickupGame(game);
   const frameLabels = resolveLineFrameLabels(roundLabel, isPickup, pickupMark);
   const registerPickupLabel =

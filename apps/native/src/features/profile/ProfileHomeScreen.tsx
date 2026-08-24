@@ -452,10 +452,11 @@ export default function ProfileHomeScreen({
       }
       return;
     }
+    const markedName = displayName.trim() || handle.trim() || "User";
     const result = await addMark({
       targetUid: otherUid,
       handle: handle.trim(),
-      displayName: displayName.trim() || handle.trim() || "User",
+      displayName: markedName,
       photoURL: avatarUrl.trim() || null,
     });
     if (!result.ok) {
@@ -476,7 +477,22 @@ export default function ProfileHomeScreen({
               ? "マークできませんでした"
               : "Could not MARK this predictor";
       cyberAlert("", msg);
+      return;
     }
+    cyberAlert(
+      isJa ? "マークしました" : "MARKED",
+      isJa
+        ? `${markedName} をマークリストに追加しました`
+        : `${markedName} was added to your MARK list`,
+      [
+        {
+          text: isJa ? "リストを見る" : "View list",
+          onPress: () => setMarkListOpen(true),
+        },
+        { text: "OK", style: "cancel" },
+      ],
+      { variant: "success" }
+    );
   }, [
     addMark,
     avatarUrl,

@@ -6,6 +6,24 @@ function toDateOrNull(value: unknown): Date | null {
     const date = (value as { toDate: () => Date }).toDate();
     return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
   }
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof (value as { __ts?: unknown }).__ts === "number"
+  ) {
+    const date = new Date((value as { __ts: number }).__ts);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof (value as { seconds?: unknown }).seconds === "number"
+  ) {
+    const seconds = (value as { seconds: number }).seconds;
+    const nanos = Number((value as { nanoseconds?: unknown }).nanoseconds) || 0;
+    const date = new Date(seconds * 1000 + nanos / 1e6);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
   if (typeof value === "string" || typeof value === "number") {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;

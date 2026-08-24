@@ -1,15 +1,16 @@
-/** MARK リスト — `users/{uid}.markedPredictors`（既存の users 更新ルールで書ける） */
+/** MARK リスト — `users/{uid}/marks/{targetUid}`（Firestore rules と一致） */
 import {
   collection,
   deleteDoc,
   doc,
   getCountFromServer,
+  getDocs,
   setDoc,
-  updateDoc,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import {
   MARKED_BY_SUBCOLLECTION,
+  MARKS_SUBCOLLECTION,
   MAX_MARKS_PRO,
   parseUserMark,
   type UserMark,
@@ -18,15 +19,12 @@ import {
   hydrateMarksMemory,
   peekMarksWriteEpoch,
 } from "../../../../../lib/marks/marksMemoryStore";
-import {
-  invalidateProfileUserDocNative,
-  loadProfileUserDocNative,
-} from "./profileUserDocCacheNative";
 
-const MARKS_FIELD = "markedPredictors";
-
-type MarksOk = { ok: true; marks: UserMark[] };
+type MarksOk = { ok: true };
 type MarksFail = { ok: false; error: "failed" };
+
+/** @deprecated ルートの markedPredictors は rules で書けない。後方互換の読みだけ残す */
+const LEGACY_MARKS_FIELD = "markedPredictors";
 
 function parseMarksField(raw: unknown): UserMark[] {
   if (!Array.isArray(raw)) return [];
@@ -49,61 +47,87 @@ function parseMarksField(raw: unknown): UserMark[] {
 export function parseMarksFromUserDoc(
   data: Record<string, unknown> | null | undefined
 ): UserMark[] {
-  return parseMarksField(data?.[MARKS_FIELD]);
+  return parseMarksField(data?.[LEGACY_MARKS_FIELD]);
 }
 
-/** 既に読んだ users ドキュメントから MARK メモリを埋める（追加 getDoc なし） */
+/**
+ * レガシー配列があるときだけメモリを埋める。
+ * 無いときは hydrated にしない（サブコレクション取得へ回す）。
+ */
 export function hydrateMarksFromUserDoc(
   uid: string,
   data: Record<string, unknown> | null | undefined
-): void {
+): boolean {
   const owner = uid.trim();
-  if (!owner || !data) return;
+  if (!owner || !data) return false;
+  if (!Array.isArray(data[LEGACY_MARKS_FIELD])) return false;
   hydrateMarksMemory(
     owner,
     parseMarksFromUserDoc(data),
     peekMarksWriteEpoch()
   );
-}
-
-function toWriteRows(rows: UserMark[]): Array<{
-  targetUid: string;
-  handle: string;
-  displayName: string;
-  photoURL: string | null;
-  createdAtMs: number;
-}> {
-  return rows.map((row) => ({
-    targetUid: row.targetUid,
-    handle: row.handle,
-    displayName: row.displayName,
-    photoURL: row.photoURL,
-    createdAtMs: row.createdAtMs,
-  }));
+  return true;
 }
 
 export async function listMarksNative(uid: string): Promise<UserMark[]> {
   const owner = uid.trim();
   if (!owner) return [];
-  const loaded = await loadProfileUserDocNative(owner);
-  return parseMarksFromUserDoc(loaded?.data);
+  try {
+    const snap = await getDocs(
+      collection(db, "users", owner, MARKS_SUBCOLLECTION)
+    );
+    const rows: UserMark[] = [];
+    const seen = new Set<string>();
+    for (const d of snap.docs) {
+      const parsed = parseUserMark(d.id, d.data() as Record<string, unknown>);
+      if (!parsed || seen.has(parsed.targetUid)) continue;
+      seen.add(parsed.targetUid);
+      rows.push(parsed);
+    }
+    rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+    return rows.slice(0, MAX_MARKS_PRO);
+  } catch (err) {
+    console.warn("[marks] list failed", err);
+    return [];
+  }
 }
 
-/** メモリ上の最新リストをそのまま書く。getDoc で組み直さない（競合で消えるため） */
-export async function persistMarksNative(
+export async function writeMarkNative(
   uid: string,
-  next: UserMark[]
+  mark: UserMark
 ): Promise<MarksOk | MarksFail> {
   const owner = uid.trim();
-  if (!owner) return { ok: false, error: "failed" };
+  const target = mark.targetUid.trim();
+  if (!owner || !target || owner === target) {
+    return { ok: false, error: "failed" };
+  }
   try {
-    await updateDoc(doc(db, "users", owner), {
-      [MARKS_FIELD]: toWriteRows(next),
+    await setDoc(doc(db, "users", owner, MARKS_SUBCOLLECTION, target), {
+      targetUid: target,
+      handle: mark.handle,
+      displayName: mark.displayName,
+      photoURL: mark.photoURL,
+      createdAtMs: mark.createdAtMs,
     });
-    invalidateProfileUserDocNative(owner);
-    return { ok: true, marks: next };
+    return { ok: true };
   } catch (err) {
-    console.warn("[marks] persist failed", err);
+    console.warn("[marks] write failed", err);
+    return { ok: false, error: "failed" };
+  }
+}
+
+export async function deleteMarkNative(
+  uid: string,
+  targetUid: string
+): Promise<MarksOk | MarksFail> {
+  const owner = uid.trim();
+  const target = targetUid.trim();
+  if (!owner || !target) return { ok: false, error: "failed" };
+  try {
+    await deleteDoc(doc(db, "users", owner, MARKS_SUBCOLLECTION, target));
+    return { ok: true };
+  } catch (err) {
+    console.warn("[marks] delete failed", err);
     return { ok: false, error: "failed" };
   }
 }

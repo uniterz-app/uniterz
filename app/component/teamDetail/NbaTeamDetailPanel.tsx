@@ -22,14 +22,17 @@ import {
   formatStreakLabel,
   getNbaTeamDetailPreview,
   payrollDisplaySlices,
+  type NbaTeamHeadToHeadEntry,
   type NbaTeamInjuryEntry,
   type NbaTeamMetricWithRank,
   type NbaTeamPayroll,
+  type NbaTeamDetailPreview,
   type NbaTeamRecentGame,
   type NbaTeamStreak,
   type NbaTeamUpcomingGame,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
+import { useNbaTeamDetailLiveOverlay } from "@/lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
 import type { NbaLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import {
   TEAM_HOW_THEY_PLAY_TABS,
@@ -41,6 +44,7 @@ import {
   teamStreakBadgeLabel,
   teamStreakBadgeTheme,
 } from "@/lib/predict/nbaTeamDetailForm";
+import { playerCardName } from "@/lib/predict/nbaRoster";
 
 type Props = {
   teamId?: string;
@@ -113,7 +117,7 @@ function SplitCard({
     >
       <p
         className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em]`}
-        style={{ color: labelColor ?? hexToRgba(accent, 0.75) }}
+        style={{ color: labelColor ?? "rgba(255,255,255,0.75)" }}
       >
         {label}
       </p>
@@ -142,8 +146,7 @@ function SectionTitle({
   return (
     <div className="flex items-center gap-2.5">
       <h2
-        className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em]`}
-        style={{ color: hexToRgba(accent, 0.75) }}
+        className={`${nameOxanium.className} text-[10px] font-bold uppercase tracking-[0.16em] text-white/75`}
       >
         {title}
       </h2>
@@ -159,63 +162,73 @@ function RecentForm({
   games,
   streak,
   accent,
+  isJa,
 }: {
   games: NbaTeamRecentGame[];
   streak: NbaTeamStreak;
   accent: string;
+  isJa: boolean;
 }) {
   const results = games.slice(-10).map((g) => g.result);
   const wins = results.filter((r) => r === "W").length;
   const streakWin = streak.kind === "W";
+  const emptyCopy = isJa ? "データがありません" : "No data yet";
 
   return (
     <div className="space-y-2.5">
       <div className="flex w-full items-center gap-2">
         <span
-          className={`${nameOxanium.className} flex-1 text-left text-[10px] font-bold uppercase tracking-[0.16em]`}
-          style={{ color: hexToRgba(accent, 0.75) }}
+          className={`${nameOxanium.className} flex-1 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-white/75`}
         >
           Recent Form (Last 10)
         </span>
-        <span
-          className={`${nameOxanium.className} text-[13px] font-black`}
-          style={{
-            color: streakWin ? FORM_WIN : FORM_LOSS,
-            transform: "skewX(-8deg)",
-          }}
-        >
-          {formatStreakLabel(streak)}
-        </span>
+        {results.length > 0 ? (
+          <span
+            className={`${nameOxanium.className} text-[13px] font-black`}
+            style={{
+              color: streakWin ? FORM_WIN : FORM_LOSS,
+              transform: "skewX(-8deg)",
+            }}
+          >
+            {formatStreakLabel(streak)}
+          </span>
+        ) : null}
       </div>
-      <div className="flex w-full items-center gap-2.5">
-        <div className="flex flex-1 gap-px">
-          {results.map((r, i) => (
-            <div
-              key={i}
-              className="flex h-4 flex-1 items-center justify-center"
-              style={{
-                backgroundColor: r === "W" ? FORM_WIN : FORM_LOSS,
-                opacity:
-                  0.34 +
-                  (results.length <= 1
-                    ? 0.66
-                    : (i / (results.length - 1)) * 0.66),
-                transform: "skewX(-12deg)",
-              }}
-            >
-              <span
-                className={`${nameOxanium.className} text-[8px] font-black text-[#050508]`}
-                style={{ transform: "skewX(12deg)" }}
+      {results.length === 0 ? (
+        <p className={`${nameOxanium.className} text-[12px] font-bold text-white/45`}>
+          {emptyCopy}
+        </p>
+      ) : (
+        <div className="flex w-full items-center gap-2.5">
+          <div className="flex flex-1 gap-px">
+            {results.map((r, i) => (
+              <div
+                key={i}
+                className="flex h-4 flex-1 items-center justify-center"
+                style={{
+                  backgroundColor: r === "W" ? FORM_WIN : FORM_LOSS,
+                  opacity:
+                    0.34 +
+                    (results.length <= 1
+                      ? 0.66
+                      : (i / (results.length - 1)) * 0.66),
+                  transform: "skewX(-12deg)",
+                }}
               >
-                {r}
-              </span>
-            </div>
-          ))}
+                <span
+                  className={`${nameOxanium.className} text-[8px] font-black text-[#050508]`}
+                  style={{ transform: "skewX(12deg)" }}
+                >
+                  {r}
+                </span>
+              </div>
+            ))}
+          </div>
+          <span className={`${nameOxanium.className} min-w-9 text-right text-[13px] font-extrabold`}>
+            {wins}-{results.length - wins}
+          </span>
         </div>
-        <span className={`${nameOxanium.className} min-w-9 text-right text-[13px] font-extrabold`}>
-          {wins}-{results.length - wins}
-        </span>
-      </div>
+      )}
     </div>
   );
 }
@@ -281,57 +294,122 @@ function TeamHeroStreakBadge({
   );
 }
 
-function GameLogs({
-  games,
+function HeadToHead({
+  rows,
   accent,
+  isJa,
 }: {
-  games: NbaTeamRecentGame[];
+  rows: NbaTeamHeadToHeadEntry[];
   accent: string;
+  isJa: boolean;
 }) {
-  const list = [...games].slice(-10).reverse();
+  const emptyCopy = isJa ? "データがありません" : "No data yet";
   return (
     <section className="space-y-2.5">
-      <SectionTitle title={`Game Logs (Last ${list.length})`} accent={accent} />
+      <SectionTitle title="HEAD-TO-HEAD" accent={accent} />
       <div
         className="overflow-hidden border bg-black/40"
         style={{ borderColor: hexToRgba(accent, 0.3) }}
       >
-        <div
-          className="flex items-center gap-1.5 px-2.5 py-2.5"
-          style={{ borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }}
-        >
-          <span className={`${nameOxanium.className} w-11 text-[11px] font-bold uppercase tracking-wide text-white/40`}>Date</span>
-          <span className={`${nameOxanium.className} flex-1 text-[11px] font-bold uppercase tracking-wide text-white/40`}>Game</span>
-          <span className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide text-white/40`}>Score</span>
-          <span className="w-5" />
-        </div>
-        {list.map((g, i) => (
-          <div
-            key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
-            className="flex items-center gap-1.5 px-2.5 py-2.5"
-            style={
-              i < list.length - 1
-                ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
-                : undefined
-            }
-          >
-            <span className={`${nameOxanium.className} w-11 text-[13px] text-white/40`}>
-              {g.dateLabel}
-            </span>
-            <span className={`${nameOxanium.className} flex-1 truncate text-[14px] font-bold`}>
-              {g.home ? "vs" : "@"} {g.oppAbbr}
-            </span>
-            <span className={`${nameOxanium.className} text-[14px] font-bold tabular-nums`} style={{ transform: "skewX(-6deg)" }}>
-              {g.teamScore}-{g.oppScore}
-            </span>
-            <span
-              className={`${nameOxanium.className} w-5 text-right text-[14px] font-extrabold`}
-              style={{ color: g.result === "W" ? FORM_WIN : FORM_LOSS }}
-            >
-              {g.result}
-            </span>
+        {rows.length === 0 ? (
+          <div className={`${nameOxanium.className} px-3 py-2.5 text-[12px] font-bold text-white/45`}>
+            {emptyCopy}
           </div>
-        ))}
+        ) : (
+          rows.map((row, i) => (
+            <div
+              key={row.oppTeamId}
+              className="flex items-center justify-between gap-2 px-2.5 py-2.5"
+              style={
+                i < rows.length - 1
+                  ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
+                  : undefined
+              }
+            >
+              <span className={`${nameOxanium.className} text-[14px] font-bold`}>
+                {row.oppAbbr}
+              </span>
+              <span
+                className={`${nameOxanium.className} text-[14px] font-extrabold tabular-nums`}
+                style={{ transform: "skewX(-6deg)" }}
+              >
+                {row.wins}-{row.losses}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+
+
+function GameLogs({
+  games,
+  accent,
+  isJa,
+}: {
+  games: NbaTeamRecentGame[];
+  accent: string;
+  isJa: boolean;
+}) {
+  const list = [...games].slice(-10).reverse();
+  const emptyCopy = isJa ? "データがありません" : "No data yet";
+  return (
+    <section className="space-y-2.5">
+      <SectionTitle
+        title={list.length > 0 ? `Game Logs (Last ${list.length})` : "Game Logs"}
+        accent={accent}
+      />
+      <div
+        className="overflow-hidden border bg-black/40"
+        style={{ borderColor: hexToRgba(accent, 0.3) }}
+      >
+        {list.length === 0 ? (
+          <div className={`${nameOxanium.className} px-3 py-2.5 text-[12px] font-bold text-white/45`}>
+            {emptyCopy}
+          </div>
+        ) : (
+          <>
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-2.5"
+              style={{ borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }}
+            >
+              <span className={`${nameOxanium.className} w-11 text-[11px] font-bold uppercase tracking-wide text-white/40`}>Date</span>
+              <span className={`${nameOxanium.className} flex-1 text-[11px] font-bold uppercase tracking-wide text-white/40`}>Game</span>
+              <span className={`${nameOxanium.className} text-[11px] font-bold uppercase tracking-wide text-white/40`}>Score</span>
+              <span className="w-5" />
+            </div>
+            {list.map((g, i) => (
+              <div
+                key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
+                className="flex items-center gap-1.5 px-2.5 py-2.5"
+                style={
+                  i < list.length - 1
+                    ? { borderBottom: `1px solid ${hexToRgba(accent, 0.12)}` }
+                    : undefined
+                }
+              >
+                <span className={`${nameOxanium.className} w-11 text-[13px] text-white/40`}>
+                  {g.dateLabel}
+                </span>
+                <span className={`${nameOxanium.className} flex-1 truncate text-[14px] font-bold`}>
+                  {g.home ? "vs" : "@"} {g.oppAbbr}
+                </span>
+                <span className={`${nameOxanium.className} text-[14px] font-bold tabular-nums`} style={{ transform: "skewX(-6deg)" }}>
+                  {g.teamScore}-{g.oppScore}
+                </span>
+                <span
+                  className={`${nameOxanium.className} w-5 text-right text-[14px] font-extrabold`}
+                  style={{ color: g.result === "W" ? FORM_WIN : FORM_LOSS }}
+                >
+                  {g.result}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </section>
   );
@@ -355,7 +433,7 @@ function Injuries({
       >
         {injuries.length === 0 ? (
           <div className={`${nameOxanium.className} px-3 py-2.5 text-[12px] font-bold text-white/45`}>
-            {isJa ? "欠場者なし" : "No injuries"}
+            {isJa ? "データがありません" : "No data yet"}
           </div>
         ) : (
           injuries.map((inj, i) => {
@@ -434,8 +512,8 @@ function HowChip({
   );
 }
 
-function rankTone(rank: number, accent: string): string {
-  return rank <= 10 ? accent : "rgba(255,255,255,0.35)";
+function rankTone(rank: number): string {
+  return rank <= 10 ? "#FFFFFF" : "rgba(255,255,255,0.35)";
 }
 
 function HowPtsCol({ display }: { display?: string }) {
@@ -469,7 +547,7 @@ function MetricStack({
     <span className="flex w-[68px] shrink-0 flex-col items-end leading-none">
       <span
         className={`${nameOxanium.className} h-[12px] text-[10px] font-bold tabular-nums`}
-        style={{ color: rankTone(rank, accent) }}
+        style={{ color: rankTone(rank) }}
       >
         #{rank}
       </span>
@@ -575,7 +653,7 @@ function HowTheyPlayBoard({
                   </span>
                   <span
                     className={`${nameOxanium.className} ml-1 text-[10px] font-bold tabular-nums`}
-                    style={{ color: rankTone(row.own.rank, accent) }}
+                    style={{ color: rankTone(row.own.rank) }}
                   >
                     #{row.own.rank}
                   </span>
@@ -589,7 +667,7 @@ function HowTheyPlayBoard({
                   </span>
                   <span
                     className={`${nameOxanium.className} ml-1 text-[10px] font-bold tabular-nums`}
-                    style={{ color: rankTone(row.opp.rank, accent) }}
+                    style={{ color: rankTone(row.opp.rank) }}
                   >
                     #{row.opp.rank}
                   </span>
@@ -677,37 +755,6 @@ function HowTheyPlayBoard({
         </div>
       ) : null}
 
-      {tab === "shooting" ? (
-        <div className="space-y-3.5 border bg-black/40 px-3 py-3" style={{ borderColor: frame }}>
-          {board.shooting.map((row) => (
-            <div key={row.id} className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className={`${nameOxanium.className} min-w-0 flex-1 text-[12px] font-bold uppercase tracking-wide text-white/88`}>
-                  {isJa ? row.labelJa : row.labelEn}
-                </span>
-                <HowPtsCol display={row.pts.display} />
-                <MetricStack
-                  display={row.cell.display}
-                  rank={row.cell.rank}
-                  accent={accent}
-                />
-              </div>
-              <CyberSlantedSegBar
-                pct={leagueRankSegPct(row.cell.rank)}
-                segments={LEAGUE_RANK_SEGMENTS}
-                compact
-                accent={{
-                  border: accent,
-                  glow: hexToRgba(accent, 0.34),
-                  bg: accent,
-                }}
-                forceStatic
-              />
-            </div>
-          ))}
-        </div>
-      ) : null}
-
       {tab === "clutch" ? (
         <div
           className="grid grid-cols-3 overflow-hidden border bg-black/50"
@@ -725,7 +772,7 @@ function HowTheyPlayBoard({
                 </span>
                 <span
                   className={`${nameOxanium.className} text-[12px] font-extrabold tabular-nums`}
-                  style={{ color: rankTone(row.cell.rank, accent) }}
+                  style={{ color: rankTone(row.cell.rank) }}
                 >
                   #{row.cell.rank}
                 </span>
@@ -874,11 +921,13 @@ function PerformanceMetrics({
 function Upcoming({
   games,
   accent,
+  isJa,
 }: {
   games: NbaTeamUpcomingGame[];
   accent: string;
+  isJa: boolean;
 }) {
-  if (games.length === 0) return null;
+  const emptyCopy = isJa ? "データがありません" : "No data yet";
   return (
     <section className="space-y-2.5">
       <SectionTitle title="UPCOMING" accent={accent} />
@@ -886,7 +935,12 @@ function Upcoming({
         className="overflow-hidden border bg-black/40"
         style={{ borderColor: hexToRgba(accent, 0.3) }}
       >
-        {games.map((g, i) => (
+        {games.length === 0 ? (
+          <div className={`${nameOxanium.className} px-3 py-2.5 text-[12px] font-bold text-white/45`}>
+            {emptyCopy}
+          </div>
+        ) : (
+          games.map((g, i) => (
           <div
             key={`${g.dateLabel}-${g.oppAbbr}-${i}`}
             className="flex items-center gap-1.5 px-2.5 py-2.5"
@@ -904,12 +958,13 @@ function Upcoming({
             </span>
             <span
               className={`${nameOxanium.className} text-[14px] font-bold`}
-              style={{ color: hexToRgba(accent, 0.85) }}
+              style={{ color: "rgba(255,255,255,0.85)" }}
             >
               {g.tipLabel}
             </span>
           </div>
-        ))}
+          ))
+        )}
       </div>
     </section>
   );
@@ -925,7 +980,7 @@ function PayrollCard({
   isJa: boolean;
 }) {
   const overCap = payroll.capSpace < 0;
-  const slices = payrollDisplaySlices(payroll.lines, accent, 5);
+  const slices = payrollDisplaySlices(payroll.lines, accent);
   return (
     <section className="space-y-2.5">
       <SectionTitle title="PAYROLL" accent={accent} />
@@ -957,7 +1012,7 @@ function PayrollCard({
             </p>
             <p
               className={`${nameOxanium.className} text-[22px] font-extrabold`}
-              style={{ color: accent, transform: "skewX(-8deg)" }}
+              style={{ color: "#FFFFFF", transform: "skewX(-8deg)" }}
             >
               #{payroll.leagueRank}
             </p>
@@ -983,7 +1038,7 @@ function PayrollCard({
         </p>
         <p
           className={`${nameOxanium.className} text-[12px] font-extrabold`}
-          style={{ color: accent, transform: "skewX(-6deg)" }}
+          style={{ color: "#FFFFFF", transform: "skewX(-6deg)" }}
         >
           {isJa ? "保証額" : "GUARANTEED"}{" "}
           {formatSalaryUsd(payroll.guaranteed)}
@@ -1013,7 +1068,12 @@ function PayrollCard({
           </div>
         </div>
         <div className="space-y-2.5">
-          {slices.map((s) => (
+          {slices.length === 0 ? (
+            <p className={`${nameOxanium.className} text-[12px] font-bold text-white/45`}>
+              {isJa ? "データがありません" : "No data yet"}
+            </p>
+          ) : (
+            slices.map((s) => (
             <div key={s.key} className="flex items-center gap-2.5 py-0.5">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-[1px]"
@@ -1036,12 +1096,13 @@ function PayrollCard({
               </span>
               <span
                 className={`${nameOxanium.className} w-10 text-right text-[13px] font-extrabold tabular-nums`}
-                style={{ color: accent, transform: "skewX(-8deg)" }}
+                style={{ color: "#FFFFFF", transform: "skewX(-8deg)" }}
               >
                 {Math.round(s.share * 100)}%
               </span>
             </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </section>
@@ -1055,10 +1116,14 @@ export default function NbaTeamDetailPanel({
   const router = useRouter();
   const isJa = language === "ja";
   const { bundle } = useLeagueTeamStatsBundle();
-  const detail = useMemo(
+  const baseDetail = useMemo(
     () => getNbaTeamDetailPreview(teamId, bundle),
     [teamId, bundle]
   );
+  const { detail, hasFetchError } = useNbaTeamDetailLiveOverlay({
+    teamId: baseDetail.teamId,
+    base: baseDetail,
+  });
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const secondary = getTeamJerseySecondaryColor("nba", detail.teamId);
   const accent = getTeamUiAccentColor("nba", detail.teamId);
@@ -1073,6 +1138,16 @@ export default function NbaTeamDetailPanel({
   const last10 = recentFormRecord(detail.recentGames);
   return (
     <div className="space-y-4 pb-24 text-white">
+      {hasFetchError ? (
+        <div
+          className="border px-3 py-2 text-[11px] font-bold tracking-wide text-white/70"
+          style={{ borderColor: "rgba(255,255,255,0.2)" }}
+        >
+          {isJa
+            ? "一部データの取得に失敗しました。表示が古い／空の可能性があります。"
+            : "Some live data failed to load. Parts may be empty or stale."}
+        </div>
+      ) : null}
       <div
         className="space-y-3.5 border bg-[#050808] p-3"
         style={{ borderColor: accent }}
@@ -1090,7 +1165,7 @@ export default function NbaTeamDetailPanel({
             <div className="min-w-0 flex-1">
               <p
                 className={`${nameOxanium.className} mb-1 truncate text-[9px] font-bold uppercase tracking-[0.12em]`}
-                style={{ color: hexToRgba(accent, 0.85) }}
+                style={{ color: "rgba(255,255,255,0.85)" }}
               >
                 {confLine}
               </p>
@@ -1124,7 +1199,7 @@ export default function NbaTeamDetailPanel({
             </p>
             <p className={`${nameOxanium.className} text-[22px] font-extrabold`} style={{ transform: "skewX(-8deg)" }}>
               {detail.season.wins}-{detail.season.losses}{" "}
-              <span className="text-[13px]" style={{ color: accent }}>
+              <span className="text-[13px] text-white">
                 {winPct}
               </span>
             </p>
@@ -1136,7 +1211,7 @@ export default function NbaTeamDetailPanel({
             <p className={`${nameOxanium.className} text-[9px] font-bold uppercase tracking-[0.14em] text-white/40`}>
               Rank
             </p>
-            <p className={`${nameOxanium.className} text-[22px] font-extrabold`} style={{ color: accent, transform: "skewX(-8deg)" }}>
+            <p className={`${nameOxanium.className} text-[22px] font-extrabold`} style={{ color: "#FFFFFF", transform: "skewX(-8deg)" }}>
               #{String(detail.conferenceRank).padStart(2, "0")}{" "}
               <span className="text-[13px] text-white/55">Seed</span>
             </p>
@@ -1187,6 +1262,7 @@ export default function NbaTeamDetailPanel({
           games={detail.recentGames}
           streak={detail.streak}
           accent={accent}
+          isJa={isJa}
         />
       </div>
 
@@ -1195,14 +1271,21 @@ export default function NbaTeamDetailPanel({
         style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
 
-      <GameLogs games={detail.recentGames} accent={accent} />
+      <GameLogs games={detail.recentGames} accent={accent} isJa={isJa} />
 
       <div
         className="h-px"
         style={{ backgroundColor: hexToRgba(accent, 0.22) }}
       />
 
-      <Upcoming games={detail.upcomingGames} accent={accent} />
+      <HeadToHead rows={detail.headToHead} accent={accent} isJa={isJa} />
+
+      <div
+        className="h-px"
+        style={{ backgroundColor: hexToRgba(accent, 0.22) }}
+      />
+
+      <Upcoming games={detail.upcomingGames} accent={accent} isJa={isJa} />
 
       <div
         className="h-px"
@@ -1274,7 +1357,7 @@ export default function NbaTeamDetailPanel({
 
       <p
         className={`${nameOxanium.className} text-center text-[9px] font-bold uppercase tracking-[0.14em]`}
-        style={{ color: hexToRgba(accent, 0.4) }}
+        style={{ color: "rgba(255,255,255,0.4)" }}
       >
         {detail.asOfLabel} · PREVIEW
       </p>

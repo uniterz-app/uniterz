@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { normalizeLeague } from "@/lib/leagues";
+import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import {
   GAMES_WINDOW_PLUS_MINUS_DEFAULT,
   gamesWindowCacheControl,
@@ -37,6 +38,8 @@ export async function GET(req: Request) {
       ? Math.max(1, Math.min(500, Number(limitRaw) || 0))
       : undefined;
     const includePeers = url.searchParams.get("peers") !== "0";
+    const season =
+      (url.searchParams.get("season") ?? "").trim() || GAME_SCHEDULE_SEASON;
 
     const useRange = Boolean(fromDateKey && toDateKey);
     if (useRange) {
@@ -56,10 +59,12 @@ export async function GET(req: Request) {
       );
     }
 
+    // season をキーに含めないと、シーズン切替後も空レスポンスがキャッシュに残る
     const cacheKey = useRange
       ? [
           "games-window-range",
           league,
+          season,
           fromDateKey,
           toDateKey,
           timeZone,
@@ -69,6 +74,7 @@ export async function GET(req: Request) {
       : [
           "games-window",
           league,
+          season,
           anchorDateKey,
           timeZone,
           String(plusMinus),
@@ -86,6 +92,7 @@ export async function GET(req: Request) {
                 timeZone,
                 fromDateKey,
                 toDateKey,
+                season,
                 limit: limitN,
                 includePeers,
               }
@@ -94,6 +101,7 @@ export async function GET(req: Request) {
                 timeZone,
                 anchorDateKey,
                 plusMinus,
+                season,
                 limit: limitN,
                 includePeers,
               }
@@ -101,7 +109,11 @@ export async function GET(req: Request) {
       cacheKey,
       {
         revalidate: 20,
-        tags: ["games-window", `games-window:${league}`],
+        tags: [
+          "games-window",
+          `games-window:${league}`,
+          `games-window:${league}:${season}`,
+        ],
       }
     );
 

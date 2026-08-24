@@ -19,12 +19,13 @@ import type { NbaInjuryReport } from "../../../../../../lib/predict/nbaInjuryRep
 import type { NbaTeamStatsBundle } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import { teamStatsForMatchup } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "../../../../../../lib/predict/nbaRoster";
-import { rosterForMatchup } from "../../../../../../lib/predict/nbaRosterPreviewMocks";
+import { useNbaMatchupRoster } from "../../../../../../lib/nba/teamRosters/useNbaMatchupRoster";
 import { injuryStatusByPlayerId } from "../../../../../../lib/predict/nbaInjuryReport";
 import { injuryReportForMatchup } from "../../../../../../lib/predict/nbaInjuryReportPreviewMocks";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
 import type { MainTabParamList } from "../../../navigation/types";
+import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 
 export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
 
@@ -84,7 +85,13 @@ export default function NbaPredictToolsTabsNative({
     injuryReport ?? injuryReportForMatchup(homeTeamId, awayTeamId);
   const resolvedStats = teamStats ?? teamStatsForMatchup(homeTeamId, awayTeamId);
   const resolvedBrief = brief ?? proBriefForMatchup(homeTeamId, awayTeamId);
-  const resolvedRoster = roster ?? rosterForMatchup(homeTeamId, awayTeamId);
+  const { roster: liveRoster, loading: rosterLoading } = useNbaMatchupRoster({
+    homeTeamId,
+    awayTeamId,
+    override: roster,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
+  const resolvedRoster = liveRoster;
   const injuryById = resolvedInjury
     ? injuryStatusByPlayerId(resolvedInjury)
     : {};
@@ -185,6 +192,8 @@ export default function NbaPredictToolsTabsNative({
             ) : (
               <PendingPanel text={t.panelDataPending} />
             )
+          ) : rosterLoading ? (
+            <PendingPanel text={t.panelDataPending} />
           ) : resolvedRoster ? (
             <NbaRosterPanelNative
               report={resolvedRoster}

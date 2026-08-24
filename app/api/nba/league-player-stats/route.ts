@@ -1,7 +1,6 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { playerStatLeadersCacheControl } from "@/lib/nba/playerStatLeaders/playerStatLeadersCacheControl";
 import {
@@ -11,8 +10,9 @@ import {
 
 /**
  * GET /api/nba/league-player-stats?season=2025-26
- * 認証不要。Firestore 共有スナップショット（未作成時はサーバー側モック fallback）。
- * 実データ書き込みは `ingestNbaLeagueStatsFromProvider`（ゲート B）。
+ * 認証不要。Firestore 共有スナップショット。
+ * オフシーズンは薄い「来季キー」doc をスキップして前季へ落ちる。
+ * HTTP Cache-Control のみ（unstable_cache は薄い doc を掴み続けるため使わない）。
  */
 export async function GET(req: Request) {
   try {
@@ -21,13 +21,7 @@ export async function GET(req: Request) {
       url.searchParams.get("season")
     );
 
-    const cached = unstable_cache(
-      async () => loadPlayerStatLeadersSnapshot(getAdminDb(), season),
-      ["nba-league-player-stats", season],
-      { revalidate: 300, tags: ["nba-league-player-stats", `nba-lps:${season}`] }
-    );
-
-    const payload = await cached();
+    const payload = await loadPlayerStatLeadersSnapshot(getAdminDb(), season);
     return NextResponse.json(payload, {
       headers: {
         "Cache-Control": playerStatLeadersCacheControl({

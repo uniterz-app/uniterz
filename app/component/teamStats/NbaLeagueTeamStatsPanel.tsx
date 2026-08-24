@@ -13,6 +13,16 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import {
+  coerceModeForPhase,
+  modeTabLabel,
+  modesForPhase,
+  phaseTabLabel,
+  resolveLeagueTeamStatRows,
+  type NbaLeagueStatsMode,
+  type NbaLeagueStatsPhase,
+} from "@/lib/nba/leagueStatsTableTabs";
+
+import {
   formatMetricValue,
   metricValue,
   NBA_LEAGUE_TEAM_STAT_METRICS,
@@ -25,7 +35,6 @@ import {
   type NbaLeagueTeamStatSortDir,
   type NbaLeagueTeamStatMetric,
   type NbaLeagueTeamStatRow,
-  type NbaLeagueTeamStatWindow,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 
 type Props = {
@@ -265,7 +274,8 @@ export default function NbaLeagueTeamStatsPanel({
   const reduceMotion = useReducedMotion();
   const { bundle, loading } = useLeagueTeamStatsBundle();
   const groups = useMemo(() => leagueTeamRailGroups(), []);
-  const [windowId, setWindowId] = useState<NbaLeagueTeamStatWindow>("season");
+  const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
+  const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const [metric, setMetric] = useState<NbaLeagueTeamStatMetric>("winPct");
   const [sortDir, setSortDir] = useState<NbaLeagueTeamStatSortDir>(() =>
     defaultLeagueTeamStatSortDir(leagueMetricDef("winPct").higherIsBetter)
@@ -286,10 +296,16 @@ export default function NbaLeagueTeamStatsPanel({
     setSortDir((d) => (d === "desc" ? "asc" : "desc"));
   }
 
+  const modeOptions = modesForPhase(phase);
   const rows = useMemo(() => {
-    const base = windowId === "season" ? bundle.season : bundle.last10;
+    const base = resolveLeagueTeamStatRows({
+      phase,
+      mode,
+      season: bundle.season,
+      last10: bundle.last10,
+    });
     return sortLeagueTeamRows(base, metric, sortDir);
-  }, [bundle, windowId, metric, sortDir]);
+  }, [bundle, phase, mode, metric, sortDir]);
 
   const pickedRows = picked
     .map((id) => rows.find((r) => r.teamId === id) ?? bundle.season.find((r) => r.teamId === id))
@@ -320,26 +336,46 @@ export default function NbaLeagueTeamStatsPanel({
         >
           {bundle.asOfLabel}
         </p>
-        <CyberSlantedTabBar fill>
-          <CyberSlantedTab
-            label="SEASON"
-            active={windowId === "season"}
-            onClick={() => setWindowId("season")}
-            compact
-            fontWeight={700}
-          />
-          <CyberSlantedTab
-            label="LAST 10"
-            active={windowId === "last10"}
-            onClick={() => setWindowId("last10")}
-            compact
-            fontWeight={700}
-          />
-        </CyberSlantedTabBar>
+                <div className="space-y-1.5">
+          <CyberSlantedTabBar fill>
+            <CyberSlantedTab
+              label={phaseTabLabel("season")}
+              active={phase === "season"}
+              onClick={() => {
+                setPhase("season");
+                setMode(coerceModeForPhase("season", mode));
+              }}
+              compact
+              fontWeight={700}
+            />
+            <CyberSlantedTab
+              label={phaseTabLabel("playoffs")}
+              active={phase === "playoffs"}
+              onClick={() => {
+                setPhase("playoffs");
+                setMode(coerceModeForPhase("playoffs", mode));
+              }}
+              compact
+              fontWeight={700}
+            />
+          </CyberSlantedTabBar>
+          <CyberSlantedTabBar fill>
+            {modeOptions.map((m) => (
+              <CyberSlantedTab
+                key={m}
+                label={modeTabLabel(m)}
+                active={mode === m}
+                onClick={() => setMode(m)}
+                compact
+                fontWeight={700}
+              />
+            ))}
+          </CyberSlantedTabBar>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="w-[25%] shrink-0 overflow-y-auto border-r border-white/42 bg-[rgba(4,14,22,0.55)] px-1.5 pb-24 pt-1">
+        <aside className="w-[22%] shrink-0 overflow-y-auto border-r border-white/42 bg-[rgba(4,14,22,0.55)] px-1.5 pb-24 pt-1">
           {groups.map((group, index) => {
             const groupActive = group.id === activeGroupId;
             return (

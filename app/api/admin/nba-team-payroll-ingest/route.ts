@@ -1,0 +1,50 @@
+export const runtime = "nodejs";
+
+import { NextResponse } from "next/server";
+import { getAdminDb } from "@/lib/firebaseAdmin";
+import { requireAdminUid } from "@/lib/admin/requireAdminUid";
+import { checkJobSecret } from "@/lib/security/assertJobSecret";
+import { ingestNbaTeamPayrollFromBdl } from "@/lib/nba/ingest/nbaTeamPayrollIngest";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+
+/**
+ * POST /api/admin/nba-team-payroll-ingest
+ * BDL contracts → Firestore `nbaTeamPayrolls/{seasonKey}`。
+ * 認証: Admin UID または job secret。
+ *
+ * body: { seasonKey?: "2026-27", seasonYear?: 2026 }
+ */
+export async function POST(req: Request) {
+  try {
+    if (!checkJobSecret(req)) {
+      await requireAdminUid(req);
+    }
+
+    const body = (await req.json().catch(() => ({}))) as {
+      seasonKey?: string;
+      seasonYear?: number;
+    };
+    const seasonKey =
+      typeof body.seasonKey === "string" && body.seasonKey.trim()
+        ? body.seasonKey.trim()
+        : CURRENT_NBA_SEASON_KEY;
+
+    const result = await ingestNbaTeamPayrollFromBdl(getAdminDb(), {
+      seasonKey,
+      seasonYear:
+        typeof body.seasonYear === "number" ? body.seasonYear : undefined,
+    });
+
+    return NextResponse.json(result);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "unauthorized" || msg === "forbidden") {
+      return NextResponse.json({ ok: false, error: msg }, { status: 401 });
+    }
+    console.error("[nba-team-payroll-ingest]", e);
+    return NextResponse.json(
+      { ok: false, error: "ingest_failed", message: msg },
+      { status: 500 }
+    );
+  }
+}

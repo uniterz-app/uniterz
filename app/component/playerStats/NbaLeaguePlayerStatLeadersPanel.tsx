@@ -13,6 +13,16 @@ import {
   CyberSlantedTabBar,
 } from "@/app/component/rankings/CyberSlantedTab";
 import {
+  coerceModeForPhase,
+  modeTabLabel,
+  modesForPhase,
+  phaseTabLabel,
+  resolvePlayerStatLeaderRows,
+  type NbaLeagueStatsMode,
+  type NbaLeagueStatsPhase,
+} from "@/lib/nba/leagueStatsTableTabs";
+
+import {
   formatPlayerLeaderValue,
   leaguePlayerRailGroups,
   playerLeaderMetricDef,
@@ -21,7 +31,6 @@ import {
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
 import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
 
-type WindowId = "season" | "last10";
 type SortDir = "desc" | "asc";
 
 type Props = {
@@ -88,7 +97,8 @@ export default function NbaLeaguePlayerStatLeadersPanel({
   const isJa = language === "ja";
   const { bundle, loading } = usePlayerStatLeadersBundle();
   const groups = useMemo(() => leaguePlayerRailGroups(), []);
-  const [windowId, setWindowId] = useState<WindowId>("season");
+  const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
+  const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const [metric, setMetric] = useState<NbaPlayerStatLeaderMetric>("pts");
   const [sortDir, setSortDir] = useState<SortDir>(() =>
     defaultSortDir(playerLeaderMetricDef("pts").higherIsBetter)
@@ -104,10 +114,17 @@ export default function NbaLeaguePlayerStatLeadersPanel({
     setSortDir(defaultSortDir(meta.higherIsBetter));
   }
 
+  const modeOptions = modesForPhase(phase);
   const leaders = useMemo(() => {
-    const list = bundle[windowId][metric] ?? [];
+    const list = resolvePlayerStatLeaderRows({
+      phase,
+      mode,
+      metric,
+      season: bundle.season[metric] ?? [],
+      last10: bundle.last10[metric] ?? [],
+    });
     return sortDir === "asc" ? [...list].reverse() : list;
-  }, [bundle, windowId, metric, sortDir]);
+  }, [bundle, phase, mode, metric, sortDir]);
 
   return (
     <div
@@ -122,26 +139,46 @@ export default function NbaLeaguePlayerStatLeadersPanel({
         >
           {bundle.asOfLabel}
         </p>
-        <CyberSlantedTabBar fill>
-          <CyberSlantedTab
-            label="SEASON"
-            active={windowId === "season"}
-            onClick={() => setWindowId("season")}
-            compact
-            fontWeight={700}
-          />
-          <CyberSlantedTab
-            label="LAST 10"
-            active={windowId === "last10"}
-            onClick={() => setWindowId("last10")}
-            compact
-            fontWeight={700}
-          />
-        </CyberSlantedTabBar>
+                <div className="space-y-1.5">
+          <CyberSlantedTabBar fill>
+            <CyberSlantedTab
+              label={phaseTabLabel("season")}
+              active={phase === "season"}
+              onClick={() => {
+                setPhase("season");
+                setMode(coerceModeForPhase("season", mode));
+              }}
+              compact
+              fontWeight={700}
+            />
+            <CyberSlantedTab
+              label={phaseTabLabel("playoffs")}
+              active={phase === "playoffs"}
+              onClick={() => {
+                setPhase("playoffs");
+                setMode(coerceModeForPhase("playoffs", mode));
+              }}
+              compact
+              fontWeight={700}
+            />
+          </CyberSlantedTabBar>
+          <CyberSlantedTabBar fill>
+            {modeOptions.map((m) => (
+              <CyberSlantedTab
+                key={m}
+                label={modeTabLabel(m)}
+                active={mode === m}
+                onClick={() => setMode(m)}
+                compact
+                fontWeight={700}
+              />
+            ))}
+          </CyberSlantedTabBar>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="w-[25%] shrink-0 overflow-y-auto border-r border-white/42 bg-[rgba(4,14,22,0.55)] px-1.5 pb-24 pt-1">
+        <aside className="w-[22%] shrink-0 overflow-y-auto border-r border-white/42 bg-[rgba(4,14,22,0.55)] px-1.5 pb-24 pt-1">
           {groups.map((group, index) => {
             const groupActive = group.id === activeGroupId;
             return (
@@ -252,7 +289,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
                     ].join(" ")}
                     style={playerNameTy}
                   >
-                    {formatNbaPlayerListName(row.playerName)}
+                    {formatNbaPlayerListName(row.playerName, row.playerId)}
                   </span>
                   <span className="flex w-[46px] items-center">
                     <TeamAbbrBadge teamId={row.teamId} />

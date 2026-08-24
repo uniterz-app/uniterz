@@ -1,10 +1,67 @@
+import { Platform } from "react-native";
+import Constants from "expo-constants";
 import { auth } from "../../lib/firebase";
 
-/** Web アプリのオリジン（末尾スラッシュなし）。例: https://uniterz.example.com */
+/** Metro / Expo が掴んでいる開発ホスト（実機は LAN IP、Simulator は 127.0.0.1） */
+function metroDevHostname(): string | null {
+  const hostUri =
+    Constants.expoConfig?.hostUri ??
+    (
+      Constants as {
+        manifest2?: { extra?: { expoClient?: { hostUri?: string } } };
+      }
+    ).manifest2?.extra?.expoClient?.hostUri ??
+    (Constants as { manifest?: { debuggerHost?: string; hostUri?: string } })
+      .manifest?.debuggerHost ??
+    (Constants as { manifest?: { hostUri?: string } }).manifest?.hostUri ??
+    null;
+  if (typeof hostUri === "string" && hostUri.trim()) {
+    const host = hostUri.trim().split(":")[0];
+    if (host) return host;
+  }
+  if (Platform.OS === "android") return "10.0.2.2";
+  return "127.0.0.1";
+}
+
+function isLocalDevHostname(hostname: string): boolean {
+  const h = hostname.trim().toLowerCase();
+  if (!h || h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0") {
+    return true;
+  }
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  return false;
+}
+
+/**
+ * Web アプリのオリジン（末尾スラッシュなし）。例: https://uniterz.example.com
+ * __DEV__ では Metro ホストを優先し、古い LAN IP のまま API 不通→NO DATA になるのを防ぐ。
+ */
 export function getUniterzApiBaseUrl(): string | null {
   const raw =
     process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.trim() ??
-    process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+    process.env.EXPO_PUBLIC_API_BASE_URL?.trim() ??
+    process.env.EXPO_PUBLIC_APP_URL?.trim() ??
+    "";
+
+  if (typeof __DEV__ !== "undefined" && __DEV__) {
+    const metroHost = metroDevHostname();
+    if (raw) {
+      try {
+        const url = new URL(raw.includes("://") ? raw : `http://${raw}`);
+        if (isLocalDevHostname(url.hostname) && metroHost) {
+          const port = url.port || "3000";
+          return `http://${metroHost}:${port}`;
+        }
+        return raw.replace(/\/+$/, "");
+      } catch {
+        /* fall through */
+      }
+    }
+    if (metroHost) return `http://${metroHost}:3000`;
+  }
+
   if (!raw) return null;
   return raw.replace(/\/+$/, "");
 }

@@ -8,6 +8,7 @@ import {
   toDateKeyInTimeZone,
 } from "../../../../../lib/time/zonedTime";
 import { fetchGamesWindowShared } from "../../../../../lib/games/fetchGamesWindowShared";
+import { GAME_SCHEDULE_SEASON } from "../../../../../lib/games/gameScheduleSeason";
 import {
   GAMES_WINDOW_EDGE_EXTEND_DAYS,
   GAMES_WINDOW_PLUS_MINUS_DEFAULT,
@@ -28,8 +29,7 @@ import {
 import { toDateOrNull } from "../../../../../lib/games/transform";
 import { sortGamesByKickoffAsc } from "../../../../../lib/games/sortGamesByKickoff";
 import {
-  mergeNbaOpeningNightPreviewGames,
-  NBA_OPENING_NIGHT_PREVIEW_DATE_KEY,
+  nbaGamesDefaultDateKey,
 } from "../../../../../lib/games/nbaOpeningNightPreviewGames";
 import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 
@@ -183,10 +183,8 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
   const [peerRowsForSeries, setPeerRowsForSeries] = useState<NativeGameRow[]>([]);
   const [selectedDate, setSelectedDateState] = useState<Date>(
     () =>
-      parseDateKeyInTimeZone(
-        NBA_OPENING_NIGHT_PREVIEW_DATE_KEY,
-        TIMEZONE_JST
-      ) ?? new Date()
+      parseDateKeyInTimeZone(nbaGamesDefaultDateKey(TIMEZONE_JST), TIMEZONE_JST) ??
+      new Date()
   );
   const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("nba");
   const [refreshNonce, setRefreshNonce] = useState(0);
@@ -236,21 +234,13 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
   );
 
   const displayRows = useMemo(
-    () =>
-      mergeNbaOpeningNightPreviewGames(
-        selectedLeague,
-        windowRows
-      ) as NativeGameRow[],
-    [selectedLeague, windowRows]
+    () => windowRows as NativeGameRow[],
+    [windowRows]
   );
 
   const displayPeerRows = useMemo(
-    () =>
-      mergeNbaOpeningNightPreviewGames(
-        selectedLeague,
-        peerRowsForSeries
-      ) as NativeGameRow[],
-    [selectedLeague, peerRowsForSeries]
+    () => peerRowsForSeries as NativeGameRow[],
+    [peerRowsForSeries]
   );
 
   const games = useMemo(
@@ -406,6 +396,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
             timeZone: TIMEZONE_JST,
             plusMinus: GAME_DAYS_PLUS_MINUS,
             apiBaseUrl: apiBase,
+            season: GAME_SCHEDULE_SEASON,
             signal: ac.signal,
           });
           if (!alive) return;
@@ -459,10 +450,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
             ? (selectedByLeagueRef.current[selectedLeague] ?? null)
             : selectedDate;
         const landing = resolveLandingDate(
-          mergeNbaOpeningNightPreviewGames(
-            selectedLeague,
-            rows
-          ) as NativeGameRow[],
+          rows as NativeGameRow[],
           preferred
         );
         if (landing) {
@@ -478,10 +466,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
         lastSuccessfulRefreshNonceRef.current = null;
         setWindowRows([]);
         setPeerRowsForSeries([]);
-        /** NBA プレビュー試合があれば一覧は出す */
-        if (selectedLeague === "nba") {
-          setError(null);
-        }
+        // 以前は NBA で error を消して NO DATA だけになって原因が見えなかった
       } finally {
         if (alive) setLoading(false);
       }
@@ -554,6 +539,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
             fromDateKey: slice.fromKey,
             toDateKey: slice.toKey,
             apiBaseUrl: apiBase,
+            season: GAME_SCHEDULE_SEASON,
             signal: ac.signal,
           });
           if (!alive) return;

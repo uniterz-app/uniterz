@@ -19,6 +19,7 @@ import {
   isPlayoffStyleGameCard,
   type SeriesStanding,
 } from "@/lib/games/playoffSeriesUi";
+import { displayNbaRoundLabel } from "@/lib/games/displayNbaRoundLabel";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 
 type SideRecord = {
@@ -39,7 +40,7 @@ type Props = {
   awayColorHex?: string;
   /** キックオフ表示用（一覧の MatchCard と同じタイムゾーン規則） */
   startAtJst?: Date | null;
-  seasonPhase?: "regular" | "play_in" | "playoffs" | null;
+  seasonPhase?: "preseason" | "regular" | "play_in" | "playoffs" | null;
   roundLabel?: string | null;
   seriesStanding?: SeriesStanding | null;
   homeRecord?: SideRecord;
@@ -113,11 +114,14 @@ function broadcastDeckTitle(
   const msg = t(language);
   const rl = roundLabel?.trim();
   if (rl && isPlayoffStyleGameCard(seasonPhase, rl)) {
-    return isEn ? rl.toUpperCase() : rl;
+    return displayNbaRoundLabel(rl, isEn);
   }
-  if (rl) return isEn ? rl.toUpperCase() : rl;
+  if (rl) {
+    return displayNbaRoundLabel(rl, isEn);
+  }
   if (seasonPhase === "playoffs") return msg.predict.playoffsLabel;
   if (seasonPhase === "play_in") return msg.predict.playInLabel;
+  if (seasonPhase === "preseason") return "PRESEASON";
   return msg.predict.nextGame;
 }
 

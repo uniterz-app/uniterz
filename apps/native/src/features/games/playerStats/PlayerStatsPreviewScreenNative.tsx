@@ -1,4 +1,4 @@
-/** Web `/mobile/player-stats-preview` 相当 (mock) */
+/** Web `/mobile/player-stats-preview` 相当 */
 import { StyleSheet, View } from "react-native";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
 import NbaLeaguePlayerStatLeadersPanelNative from "./NbaLeaguePlayerStatLeadersPanelNative";
@@ -22,8 +22,8 @@ export default function PlayerStatsPreviewScreenNative({
       eyebrow="STATS"
       subtitle={
         isJa
-          ? "指標トップリーダー（モック）"
-          : "Stat leaderboards (mock)."
+          ? "指標トップリーダー"
+          : "Stat leaderboards."
       }
       appBackground
       onClose={onClose}

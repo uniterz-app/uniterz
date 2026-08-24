@@ -57,6 +57,24 @@ const ICON_SIZE = 23;
 /** リザルト（カスタム画像）のみ大きく */
 const RESULT_ICON_SIZE = 32;
 
+
+/** フルスクリーン DEV など、タブバーを出さないネスト画面 */
+const TAB_BAR_HIDDEN_ROUTES = new Set(["SplashLogoPreview"]);
+
+function focusedLeafRouteName(
+  state: BottomTabBarProps["state"]
+): string | undefined {
+  let current: typeof state | undefined = state;
+  let name: string | undefined;
+  while (current?.routes && typeof current.index === "number") {
+    const route = current.routes[current.index];
+    if (!route) break;
+    name = route.name;
+    current = route.state as typeof state | undefined;
+  }
+  return name;
+}
+
 /** mobile Web NavBar と色味を揃えたカスタムタブバー */
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const pillSidePad = Math.max(0, (Dimensions.get("window").width * (1 - 0.94)) / 2);
@@ -80,11 +98,16 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   }, [chromeOp, welcomeChromeHidden]);
 
   const activeRouteName = state.routes[state.index]?.name ?? "";
+  const leafRouteName = focusedLeafRouteName(state);
   const { showRankingBadge, showResultBadge } =
     useNativeNavTabNotificationBadges({
       rankingTabActive: activeRouteName === "RankingsTab",
       resultTabActive: activeRouteName === "ResultTab",
     });
+
+  if (leafRouteName && TAB_BAR_HIDDEN_ROUTES.has(leafRouteName)) {
+    return null;
+  }
 
   return (
     <View

@@ -34,6 +34,8 @@ export type FetchGamesWindowParams = {
   includePeers?: boolean;
   /** true でメモリキャッシュを使わない */
   force?: boolean;
+  /** 明示シーズン（既定はサーバ側 GAME_SCHEDULE_SEASON） */
+  season?: string;
 };
 
 const GAMES_WINDOW_FETCH_TTL_MS = 5 * 60 * 1000;
@@ -63,6 +65,7 @@ function buildGamesWindowCacheKey(params: FetchGamesWindowParams): string {
       : `anchor:${params.anchorDateKey ?? ""}:pm:${params.plusMinus ?? GAMES_WINDOW_PLUS_MINUS_DEFAULT}`,
     typeof params.limit === "number" ? `limit:${params.limit}` : "",
     params.includePeers === false ? "peers:0" : "peers:1",
+    params.season ? `season:${params.season}` : "",
   ];
   return parts.join("|");
 }
@@ -87,6 +90,7 @@ async function fetchGamesWindowNetwork(
     q.set("limit", String(params.limit));
   }
   if (params.includePeers === false) q.set("peers", "0");
+  if (params.season) q.set("season", params.season);
 
   const base = (params.apiBaseUrl ?? "").replace(/\/$/, "");
   const url = `${base}/api/games/window?${q.toString()}`;

@@ -64,6 +64,7 @@ import {
   SQUAD_BATTLE_SEASON_PHASES,
   countActiveMembers,
   getSquadBattleMock,
+  getSquadBattleEmptyBundle,
   squadFromIncomingInvite,
   squadIncomingInviteMemberProfiles,
   squadMemberToProfile,
@@ -4956,7 +4957,10 @@ export default function SquadBattlePage({
   }, [isPreviewMode, liveBattleId, liveBattlePhase]);
 
   const mock = useMemo(
-    () => (isPreviewMode ? getSquadBattleMock(previewState) : getSquadBattleMock("none")),
+    () =>
+      isPreviewMode
+        ? getSquadBattleMock(previewState)
+        : getSquadBattleEmptyBundle(),
     [isPreviewMode, previewState]
   );
   const useLiveFallbacks = liveBattleId != null || !isPreviewMode;

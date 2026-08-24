@@ -1,10 +1,12 @@
 import type { NbaConferenceId } from "@/lib/nba/nbaConferenceTeams";
 import {
   getNbaPlayerStatLeadersMock,
+  NBA_PLAYER_STAT_LEADER_METRICS,
   type NbaPlayerLeaderMetricId,
   type NbaPlayerStatLeaderRow,
   type NbaPlayerStatLeadersBundle,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import { NBA_PLAYER_ADVANCED_LEADER_METRICS } from "@/lib/predict/nbaPlayerStatLeadersAdvanced";
 import type {
   NbaPlayerStatLeadersFirestoreDoc,
   NbaPlayerStatLeadersSnapshotSource,
@@ -16,7 +18,8 @@ type CompactPlayer = {
   c: NbaConferenceId;
 };
 
-type CompactTuple = [playerId: string, gamesPlayed: number, value: number];
+/** Firestore はネスト配列不可のため map で保存。レガシー tuple も読む */
+type CompactEntry = { p: string; g: number; v: number };
 
 function isConference(v: unknown): v is NbaConferenceId {
   return v === "east" || v === "west";
@@ -36,18 +39,29 @@ function parsePlayers(
     if (!n || !t || !isConference(c)) return null;
     out[id] = { n, t, c };
   }
-  return Object.keys(out).length > 0 ? out : null;
+  // season だけ先に書いて players 空、は不正。空ボード（last10 pending）は players={} を許す
+  return out;
 }
 
-function parseTuple(raw: unknown): CompactTuple | null {
-  if (!Array.isArray(raw) || raw.length < 3) return null;
-  const playerId = typeof raw[0] === "string" ? raw[0] : "";
-  const gamesPlayed = typeof raw[1] === "number" && Number.isFinite(raw[1]) ? raw[1] : NaN;
-  const value = typeof raw[2] === "number" && Number.isFinite(raw[2]) ? raw[2] : NaN;
-  if (!playerId || !Number.isFinite(gamesPlayed) || !Number.isFinite(value)) {
-    return null;
+function parseEntry(raw: unknown): CompactEntry | null {
+  if (Array.isArray(raw) && raw.length >= 3) {
+    const playerId = typeof raw[0] === "string" ? raw[0] : "";
+    const gamesPlayed =
+      typeof raw[1] === "number" && Number.isFinite(raw[1]) ? raw[1] : NaN;
+    const value =
+      typeof raw[2] === "number" && Number.isFinite(raw[2]) ? raw[2] : NaN;
+    if (!playerId || !Number.isFinite(gamesPlayed) || !Number.isFinite(value)) {
+      return null;
+    }
+    return { p: playerId, g: gamesPlayed, v: value };
   }
-  return [playerId, gamesPlayed, value];
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const p = typeof o.p === "string" ? o.p : "";
+  const g = typeof o.g === "number" && Number.isFinite(o.g) ? o.g : NaN;
+  const v = typeof o.v === "number" && Number.isFinite(o.v) ? o.v : NaN;
+  if (!p || !Number.isFinite(g) || !Number.isFinite(v)) return null;
+  return { p, g, v };
 }
 
 function parseBoard(
@@ -60,23 +74,22 @@ function parseBoard(
     if (!Array.isArray(list)) return null;
     const rows: NbaPlayerStatLeaderRow[] = [];
     for (const item of list) {
-      const tuple = parseTuple(item);
-      if (!tuple) return null;
-      const [playerId, gamesPlayed, value] = tuple;
-      const meta = players[playerId];
+      const entry = parseEntry(item);
+      if (!entry) return null;
+      const meta = players[entry.p];
       if (!meta) return null;
       rows.push({
-        playerId,
+        playerId: entry.p,
         playerName: meta.n,
         teamId: meta.t,
         conference: meta.c,
-        gamesPlayed,
-        value,
+        gamesPlayed: entry.g,
+        value: entry.v,
       });
     }
     out[metric as NbaPlayerLeaderMetricId] = rows;
   }
-  return Object.keys(out).length > 0 ? out : null;
+  return out;
 }
 
 function collectPlayers(
@@ -101,10 +114,14 @@ function collectPlayers(
 
 function compactBoard(
   board: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>
-): Record<string, CompactTuple[]> {
-  const out: Record<string, CompactTuple[]> = {};
+): Record<string, CompactEntry[]> {
+  const out: Record<string, CompactEntry[]> = {};
   for (const [metric, rows] of Object.entries(board)) {
-    out[metric] = rows.map((r) => [r.playerId, r.gamesPlayed, r.value]);
+    out[metric] = rows.map((r) => ({
+      p: r.playerId,
+      g: r.gamesPlayed,
+      v: r.value,
+    }));
   }
   return out;
 }
@@ -113,8 +130,8 @@ export function compactPlayerStatLeadersBundle(
   bundle: NbaPlayerStatLeadersBundle
 ): {
   players: Record<string, CompactPlayer>;
-  season: Record<string, CompactTuple[]>;
-  last10: Record<string, CompactTuple[]>;
+  season: Record<string, CompactEntry[]>;
+  last10: Record<string, CompactEntry[]>;
   asOfLabel: string;
 } {
   return {
@@ -129,7 +146,7 @@ export function bundleFromFirestoreData(
   data: NbaPlayerStatLeadersFirestoreDoc
 ): NbaPlayerStatLeadersBundle | null {
   const players = parsePlayers(data.players);
-  if (!players) return null;
+  if (players == null) return null;
   const season = parseBoard(data.season, players);
   const last10 = parseBoard(data.last10, players);
   if (!season || !last10) return null;
@@ -167,6 +184,38 @@ export function resolvePlayerStatLeadersMockFallback(): ResolvedPlayerStatLeader
   return {
     bundle: mockPlayerStatLeadersBundle(),
     source: "mock",
+    updatedAt: null,
+  };
+}
+
+function emptyPlayerLeadersBoard(): Record<
+  NbaPlayerLeaderMetricId,
+  NbaPlayerStatLeaderRow[]
+> {
+  const board: Partial<
+    Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>
+  > = {};
+  for (const m of NBA_PLAYER_STAT_LEADER_METRICS) {
+    board[m.id] = [];
+  }
+  for (const m of NBA_PLAYER_ADVANCED_LEADER_METRICS) {
+    board[m.id] = [];
+  }
+  return board as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>;
+}
+
+/** 本番でスナップショット未作成のとき用（偽データを出さない） */
+export function resolvePlayerStatLeadersEmptyFallback(
+  seasonKey: string
+): ResolvedPlayerStatLeaders {
+  const empty = emptyPlayerLeadersBoard();
+  return {
+    bundle: {
+      season: empty,
+      last10: emptyPlayerLeadersBoard(),
+      asOfLabel: `UNAVAILABLE · ${seasonKey}`,
+    },
+    source: "empty",
     updatedAt: null,
   };
 }

@@ -19,10 +19,11 @@ import {
 import {
   clearMarkedByNative,
   countMarkedByNative,
+  deleteMarkNative,
   hydrateMarksFromUserDoc,
   listMarksNative,
-  persistMarksNative,
   setMarkedByNative,
+  writeMarkNative,
 } from "./marksFirestoreNative";
 import { peekProfileUserDocNative } from "./profileUserDocCacheNative";
 import { prefetchMarksWeeklyBoard } from "../../../../../lib/profile/fetchMarksWeeklyBoard";
@@ -88,10 +89,9 @@ export function useProfileMarksNative(
       return;
     }
     const peek = peekProfileUserDocNative(owner);
-    if (peek) {
-      hydrateMarksFromUserDoc(owner, peek);
+    // レガシー配列があれば暫定表示。本データは users/{uid}/marks
+    if (peek && hydrateMarksFromUserDoc(owner, peek)) {
       setLoading(false);
-      return;
     }
     void refresh();
   }, [owner, refresh]);
@@ -115,21 +115,18 @@ export function useProfileMarksNative(
       if (!owner) return { ok: false as const, error: "empty" as const };
       const target = payload.targetUid.trim();
       if (!target) return { ok: false as const, error: "empty" as const };
+      const row = {
+        targetUid: target,
+        handle: payload.handle.trim(),
+        displayName:
+          payload.displayName.trim() || payload.handle.trim() || "User",
+        photoURL: payload.photoURL?.trim() || null,
+        createdAtMs: Date.now(),
+      };
       beginMarksWrite();
-      const next = addMarkInMemory(
-        owner,
-        {
-          targetUid: target,
-          handle: payload.handle.trim(),
-          displayName:
-            payload.displayName.trim() || payload.handle.trim() || "User",
-          photoURL: payload.photoURL?.trim() || null,
-          createdAtMs: Date.now(),
-        },
-        cap
-      );
+      const next = addMarkInMemory(owner, row, cap);
       if (next === "cap") return { ok: false as const, error: "cap" as const };
-      const result = await persistMarksNative(owner, next);
+      const result = await writeMarkNative(owner, row);
       if (!result.ok) {
         const epoch = peekMarksWriteEpoch();
         try {
@@ -151,8 +148,8 @@ export function useProfileMarksNative(
       if (!owner) return { ok: false as const, error: "failed" as const };
       const target = targetUid.trim();
       beginMarksWrite();
-      const next = removeMarkInMemory(owner, target);
-      const result = await persistMarksNative(owner, next);
+      removeMarkInMemory(owner, target);
+      const result = await deleteMarkNative(owner, target);
       if (!result.ok) {
         const epoch = peekMarksWriteEpoch();
         try {

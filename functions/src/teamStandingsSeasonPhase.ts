@@ -2,7 +2,13 @@
  * Regular season aggregates: root `wins` / `losses` / `draws` and NBA flat stats.
  */
 export function countsTowardRegularSeasonTeamStats(phase: unknown): boolean {
-  if (phase === "play_in" || phase === "playoffs") return false;
+  if (
+    phase === "play_in" ||
+    phase === "playoffs" ||
+    phase === "preseason"
+  ) {
+    return false;
+  }
   return true;
 }
 

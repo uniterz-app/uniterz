@@ -63,6 +63,7 @@ import { normalizeLeague, type League } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
+import { displayNbaRoundLabel } from "@/lib/games/displayNbaRoundLabel";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import {
   matchScoreClass,
@@ -137,8 +138,8 @@ export type MatchCardProps = {
   league: League;
   /** シーズン（例: "2025-26"）。WC 順位表・過去試合などに使用 */
   season?: string | null;
-  /** regular | play_in | playoffs; omitted/null = regular. */
-  seasonPhase?: "regular" | "play_in" | "playoffs" | null;
+  /** preseason | regular | play_in | playoffs; omitted/null = regular. */
+  seasonPhase?: "preseason" | "regular" | "play_in" | "playoffs" | null;
   venue?: string;
   roundLabel?: string;
   /** WC：ノックアウトステージ（R32 以降）か。引き分け予想・市場の引き分け表示を抑止する */
@@ -443,6 +444,10 @@ function MatchCardView({
 
   const { fUser: user } = useFirebaseUser();
   const m = t(language);
+  const displayedRoundLabel = displayNbaRoundLabel(
+    roundLabel,
+    language === "ja"
+  );
   const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
   const [navigating, setNavigating] = useState(false);
@@ -481,8 +486,8 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** ラウンドラベルから線がカードを包む（試合一覧 Native 線枠と同じ） */
   const useLineFrameShell = overlayCenterMode || mobileDense;
   const lineFrameLabels = useMemo(
-    () => resolveLineFrameLabels(roundLabel ?? "", isPickup, "left"),
-    [roundLabel, isPickup]
+    () => resolveLineFrameLabels(displayedRoundLabel, isPickup, "left"),
+    [displayedRoundLabel, isPickup]
   );
   const showMergedResult = Boolean(overlayCenterMode && resultPost);
   /** 予想オーバーレイ：未開始試合のキックオフ・放送局（予想有無に関わらず） */
@@ -559,7 +564,7 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
         }
       : teamNameFont;
   const showPlayoffSeriesRow =
-    isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
+    isPlayoffStyleGameCard(seasonPhase, displayedRoundLabel || roundLabel) &&
     seriesStanding != null;
   /** 共有要素遷移：外枠とヒーローグリッドに別名を付与（none は一覧の非参加カード用） */
   const vtBoundsName = forceViewTransitionNameNone
@@ -1579,7 +1584,7 @@ const card = (
         />
       )}
       {(() => {
-  const tag = getGameEventTag(roundLabel);
+  const tag = getGameEventTag(displayedRoundLabel || roundLabel);
   if (!tag) return null;
 
   return (
@@ -1610,7 +1615,7 @@ const card = (
         ].join(" ")}
         {...entryGroupProps(ENTRY_GROUP_HEADER)}
       >
-        {!!roundLabel && !useLineFrameShell && (
+        {!!displayedRoundLabel && !useLineFrameShell && (
           <div
             className={[
               "mc-round text-center font-bold",
@@ -1636,7 +1641,7 @@ const card = (
                 : undefined
             }
           >
-            {roundLabel}
+            {displayedRoundLabel}
           </div>
         )}
 

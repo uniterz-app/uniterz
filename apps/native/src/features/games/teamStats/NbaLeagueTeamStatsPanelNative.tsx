@@ -25,9 +25,17 @@ import {
   type NbaLeagueTeamStatSortDir,
   type NbaLeagueTeamStatMetric,
   type NbaLeagueTeamStatRow,
-  type NbaLeagueTeamStatWindow,
 } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
+import {
+  coerceModeForPhase,
+  modeTabLabel,
+  modesForPhase,
+  phaseTabLabel,
+  resolveLeagueTeamStatRows,
+  type NbaLeagueStatsMode,
+  type NbaLeagueStatsPhase,
+} from "../../../../../../lib/nba/leagueStatsTableTabs";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import {
   CyberSlantedTabBarNative,
@@ -98,13 +106,14 @@ export default function NbaLeagueTeamStatsPanelNative({
 }: Props) {
   const isJa = language === "ja";
   const { width: screenW } = useWindowDimensions();
-  const railW = Math.round(screenW * 0.25);
+  const railW = Math.round(screenW * 0.22);
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { bundle, source, loading, error } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
   const groups = useMemo(() => leagueTeamRailGroups(), []);
-  const [windowId, setWindowId] = useState<NbaLeagueTeamStatWindow>("season");
+  const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
+  const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
   const [metric, setMetric] = useState<NbaLeagueTeamStatMetric>("winPct");
   const [sortDir, setSortDir] = useState<NbaLeagueTeamStatSortDir>(() =>
     defaultLeagueTeamStatSortDir(leagueMetricDef("winPct").higherIsBetter)
@@ -124,10 +133,16 @@ export default function NbaLeagueTeamStatsPanelNative({
     setSortDir((d) => (d === "desc" ? "asc" : "desc"));
   }
 
+  const modeOptions = modesForPhase(phase);
   const rows = useMemo(() => {
-    const base = windowId === "season" ? bundle.season : bundle.last10;
+    const base = resolveLeagueTeamStatRows({
+      phase,
+      mode,
+      season: bundle.season,
+      last10: bundle.last10,
+    });
     return sortLeagueTeamRows(base, metric, sortDir);
-  }, [bundle, windowId, metric, sortDir]);
+  }, [bundle, phase, mode, metric, sortDir]);
 
   return (
     <View style={styles.root}>
@@ -138,34 +153,51 @@ export default function NbaLeagueTeamStatsPanelNative({
       ) : null}
 
       <View style={styles.top}>
-        <Text style={styles.asOf}>
-          {bundle.asOfLabel}
-          {source === "firestore" ? "" : " · MOCK"}
-        </Text>
+        <Text style={styles.asOf}>{bundle.asOfLabel}</Text>
         {error ? (
           <Text style={styles.fetchWarn}>
             {isJa
-              ? `API 未接続のためローカルモック（${error}）`
-              : `Showing local mock (${error})`}
+              ? `読み込み失敗（${error}）`
+              : `Failed to load (${error})`}
           </Text>
         ) : null}
         <View style={styles.tabBlock}>
           <CyberSlantedTabBarNative fill>
             <CyberSlantedTabNative
-              label="SEASON"
-              active={windowId === "season"}
-              onPress={() => setWindowId("season")}
+              label={phaseTabLabel("season")}
+              active={phase === "season"}
+              onPress={() => {
+                setPhase("season");
+                setMode(coerceModeForPhase("season", mode));
+              }}
               compact
               fontWeight="700"
             />
             <CyberSlantedTabNative
-              label="LAST 10"
-              active={windowId === "last10"}
-              onPress={() => setWindowId("last10")}
+              label={phaseTabLabel("playoffs")}
+              active={phase === "playoffs"}
+              onPress={() => {
+                setPhase("playoffs");
+                setMode(coerceModeForPhase("playoffs", mode));
+              }}
               compact
               fontWeight="700"
             />
           </CyberSlantedTabBarNative>
+          <View style={styles.subTabBlock}>
+            <CyberSlantedTabBarNative fill>
+              {modeOptions.map((m) => (
+                <CyberSlantedTabNative
+                  key={m}
+                  label={modeTabLabel(m)}
+                  active={mode === m}
+                  onPress={() => setMode(m)}
+                  compact
+                  fontWeight="700"
+                />
+              ))}
+            </CyberSlantedTabBarNative>
+          </View>
         </View>
       </View>
 
@@ -388,7 +420,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
   },
-  tabBlock: { marginBottom: 2 },
+  tabBlock: { marginBottom: 2, gap: 6 },
+  subTabBlock: { marginTop: 0 },
   split: {
     flex: 1,
     flexDirection: "row",

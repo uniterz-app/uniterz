@@ -1,0 +1,66 @@
+---
+description: NBA スタッツのデータ取得の正（ingest → Firestore → API）。クライアント/API の都度 BDL 禁止。
+alwaysApply: true
+---
+
+# NBA スタッツ — データ取得の正
+
+**二度手間禁止。** スタッツ系は最初からこの形にする。
+
+## 正パイプライン
+
+```
+BDL（サーバーのみ）
+  → admin ingest（/api/admin/nba-*-ingest）
+  → Firestore スナップショット
+  → 公開 API（/api/nba/*）は Firestore だけ読む
+  → Web / Native クライアントは公開 API だけ叩く
+```
+
+## 絶対やってはいけないこと
+
+- クライアントから BDL を直接叩く（`EXPO_PUBLIC_` に API キーを載せない）
+- 公開 API がリクエストのたびに BDL をライブ取得する（例外なし）
+- チームペイロールの「今季1行」から複数年契約をでっち上げる
+
+## プレイヤー詳細で必要なスナップショット
+
+| データ | Firestore | ingest | 公開 API |
+|---|---|---|---|
+| ロスター | `nbaTeamRosters/{season}` | `nba-team-rosters-ingest` | `/api/nba/team-rosters` |
+| ペイロール（チーム今季） | `nbaTeamPayrolls/{season}` | `nba-team-payroll-ingest` | `/api/nba/team-payroll` |
+| **契約（複数年）** | `nbaPlayerContracts/{season}/players/{playerId}` | `nba-player-contracts-ingest`（末尾で年俸ソート→`salaryRank`。BDL `rank` は使わない） | `/api/nba/player-contract` |
+| **キャリア Season/Playoffs** | `nbaPlayerCareerSeasons/{playerId}` | `nba-player-career-seasons-ingest` | `/api/nba/player-career-seasons` |
+| **試合ログ（直近 ~20）** | `nbaPlayerGameLogs/{season}/players/{playerId}` | `nba-player-game-logs-ingest` | `/api/nba/player-game-logs` |
+| **ショットゾーン** | `nbaPlayerShotZones/{season}/players/{playerId}` | `nba-player-shot-zones-ingest`（リーグ by_zone 一括） | `/api/nba/player-shot-zones` |
+| injury | `nbaTeamInjuries/{season}` | `nba-team-injuries-ingest` | `/api/nba/team-injuries` |
+
+## 運用順（プレイヤー詳細）
+
+1. rosters ingest  
+2. payroll ingest（チーム表用）  
+3. **player-contracts ingest**（複数年契約）  
+4. **player-career-seasons ingest**（キャリア表）  
+5. **player-game-logs ingest**（試合ログ）  
+6. **player-shot-zones ingest**（ショットゾーン）  
+7. 画面は公開 API のみ
+
+部分実行: ingest body に `playerIds: ["175"]` や `maxPlayers` を付けられる。
+
+## 新規エンドポイントを足すとき
+
+1. BDL fetch は `lib/nba/bdl/*`（サーバー専用）  
+2. map → Firestore write は `lib/nba/ingest/*` + `load*Snapshot`  
+3. 公開 GET は Firestore 読みだけ  
+4. この表に1行追加する  
+
+ライブ BDL を「とりあえず API」に置かない。
+
+## 日次定時（試合後スタッツ）
+
+- Firebase cron `runNbaStatsDailyIngestCron` — **毎日 18:00 JST**
+- Next `POST /api/admin/nba-stats-daily-ingest`（`mode: "daily"`）
+- 中身: rosters → games → league-stats → injuries → team-game-logs → shot-zones
+- `mode: "heavy"` でプレイヤー試合ログも（タイムアウト注意）
+- 契約・キャリアは日次外（変更時のみ）
+- チーム league-stats は scoring / hustle / tracking / clutch / playtype 込み（HOW THEY PLAY）。team by_zone は BDL 不可 → チーム詳細 SHOT 枠なし

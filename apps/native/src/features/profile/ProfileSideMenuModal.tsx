@@ -673,7 +673,7 @@ export default function ProfileSideMenuModal({
                           labelStyle={labelStyle}
                           onPress={() => openUserPage("splashLogoPreview")}
                         >
-                          スプラッシュ Logo
+                          スプラッシュ案
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="scoreboard-outline"

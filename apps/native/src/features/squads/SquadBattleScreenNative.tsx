@@ -38,6 +38,7 @@ import {
   SQUAD_BATTLE_SEASON_PHASES,
   countActiveMembers,
   getSquadBattleMock,
+  getSquadBattleEmptyBundle,
   squadFromIncomingInvite,
   squadIncomingInviteMemberProfiles,
   squadMemberToProfile,
@@ -3430,7 +3431,7 @@ export default function SquadBattleScreenNative() {
     () =>
       isPreviewMode
         ? getSquadBattleMock(previewState)
-        : getSquadBattleMock("none"),
+        : getSquadBattleEmptyBundle(),
     [isPreviewMode, previewState]
   );
   const useLiveFallbacks = liveBattleId != null || !isPreviewMode;

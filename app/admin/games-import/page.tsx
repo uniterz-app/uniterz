@@ -26,7 +26,7 @@ type RawSide =
       teamId?: string;
     };
 
-type SeasonPhase = "regular" | "play_in" | "playoffs";
+type SeasonPhase = "preseason" | "regular" | "play_in" | "playoffs";
 type PlayoffRound = "r1" | "r2" | "cf" | "finals" | "overall";
 
 type RawGame = {

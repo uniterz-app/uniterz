@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rikutokamiya.uniterz.dev",
+      "bundleIdentifier": "app.uniterz.mobile",
+      "buildNumber": "1",
       "associatedDomains": [
         "applinks:uniterz.app",
         "applinks:www.uniterz.app"
@@ -23,7 +24,16 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "プロフィール写真を選ぶために、写真ライブラリへのアクセスを使います。",
         "NSCameraUsageDescription": "プロフィール写真を撮影するためにカメラを使います。",
-        "NSUserNotificationsUsageDescription": "試合開始・結果確定・ランキング更新などのお知らせをお届けするために通知を使います。"
+        "NSUserNotificationsUsageDescription": "試合開始・結果確定・ランキング更新などのお知らせをお届けするために通知を使います。",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
       }
     },
     "android": {
@@ -33,7 +43,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.xnative",
+      "package": "app.uniterz.mobile",
+      "versionCode": 1,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -78,6 +89,15 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "privacyPolicyUrl": "https://uniterz.app/mobile/privacy",
+      "termsOfServiceUrl": "https://uniterz.app/mobile/terms",
+      "storeAgeRating": {
+        "iosMinimum": "12+",
+        "androidContentRating": "Everyone",
+        "note": "App Store Connect / Play Console の年齢区分と揃える。競技予想アプリとして 12+ 想定。"
+      }
     }
   }
 }

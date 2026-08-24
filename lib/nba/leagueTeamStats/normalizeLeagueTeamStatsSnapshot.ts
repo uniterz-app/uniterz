@@ -5,6 +5,7 @@ import {
   type NbaLeagueTeamStatRow,
   type NbaLeagueTeamStatsBundle,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
+import { NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS } from "@/lib/predict/nbaLeagueTeamStatsAdvanced";
 import type {
   NbaLeagueTeamStatsFirestoreDoc,
   NbaLeagueTeamStatsSnapshotSource,
@@ -30,6 +31,11 @@ function parseRow(
     return typeof v === "number" && Number.isFinite(v) ? v : NaN;
   };
 
+  const numOrZero = (key: string) => {
+    const v = num(key);
+    return Number.isFinite(v) ? v : 0;
+  };
+
   const wins = num("wins");
   const losses = num("losses");
   if (!Number.isFinite(wins) || !Number.isFinite(losses)) return null;
@@ -52,6 +58,12 @@ function parseRow(
     if (!Number.isFinite(num(k))) return null;
   }
 
+  const advanced: Record<string, number> = {};
+  for (const d of NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS) {
+    const v = o[d.id];
+    if (typeof v === "number" && Number.isFinite(v)) advanced[d.id] = v;
+  }
+
   return attachLeagueTeamAdvanced(
     {
       teamId,
@@ -71,8 +83,17 @@ function parseRow(
       fg3Pct: num("fg3Pct"),
       fg3a: num("fg3a"),
       tovPct: num("tovPct"),
+      oppFgPct: numOrZero("oppFgPct"),
+      oppFg3Pct: numOrZero("oppFg3Pct"),
+      oppFtPct: numOrZero("oppFtPct"),
+      oppReb: numOrZero("oppReb"),
+      oppAst: numOrZero("oppAst"),
+      oppTov: numOrZero("oppTov"),
+      oppOreb: numOrZero("oppOreb"),
+      oppEfgPct: numOrZero("oppEfgPct"),
     },
-    window
+    window,
+    advanced
   );
 }
 
@@ -87,7 +108,8 @@ function parseRows(
     if (!row) return null;
     rows.push(row);
   }
-  return rows.length > 0 ? rows : null;
+  // last10 未集計などで空配列もあり得る
+  return rows;
 }
 
 export function bundleFromFirestoreData(
@@ -96,6 +118,8 @@ export function bundleFromFirestoreData(
   const season = parseRows(data.season, "season");
   const last10 = parseRows(data.last10, "last10");
   if (!season || !last10) return null;
+  // season が空ならスナップショット未完成扱い（mock/empty フォールバックへ）
+  if (season.length === 0) return null;
   const asOfLabel =
     typeof data.asOfLabel === "string" && data.asOfLabel.trim()
       ? data.asOfLabel.trim()
@@ -130,6 +154,21 @@ export function resolveLeagueTeamStatsMockFallback(): ResolvedLeagueTeamStats {
   return {
     bundle: mockLeagueTeamStatsBundle(),
     source: "mock",
+    updatedAt: null,
+  };
+}
+
+/** 本番でスナップショット未作成のとき用（偽データを出さない） */
+export function resolveLeagueTeamStatsEmptyFallback(
+  seasonKey: string
+): ResolvedLeagueTeamStats {
+  return {
+    bundle: {
+      season: [],
+      last10: [],
+      asOfLabel: `UNAVAILABLE · ${seasonKey}`,
+    },
+    source: "empty",
     updatedAt: null,
   };
 }

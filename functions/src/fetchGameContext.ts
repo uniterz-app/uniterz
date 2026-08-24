@@ -18,7 +18,7 @@ export type NormalizedGame = {
   /** 試合開始（lastGames の日時用。JST 優先） */
   playedAt?: Timestamp | null;
   /** regular | play_in | playoffs; omitted/null treated as regular for standings. */
-  seasonPhase?: "regular" | "play_in" | "playoffs" | null;
+  seasonPhase?: "preseason" | "regular" | "play_in" | "playoffs" | null;
   /** games.roundLabel を正規化した playoff round key（playoffs のみ） */
   seasonRound?: "r1" | "r2" | "cf" | "finals" | null;
   /** サッカー: 規定＋延長終了スコア（PK 前） */
