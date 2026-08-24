@@ -2,7 +2,9 @@ import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type {
   NbaMatchupRosterApiPayload,
+  NbaPlayerRosterHitApiPayload,
   NbaTeamRosterDocTeam,
+  NbaTeamRosterSliceApiPayload,
   NbaTeamRostersApiPayload,
   NbaTeamRostersBundle,
   NbaTeamRostersFirestoreDoc,
@@ -90,17 +92,22 @@ export async function loadTeamRostersSnapshot(
 ): Promise<NbaTeamRostersApiPayload> {
   const key = normalizeTeamRostersSeasonKey(seasonKey);
   const snap = await db.collection(NBA_TEAM_ROSTERS_COLLECTION).doc(key).get();
-  const resolved = snap.exists
-    ? resolveTeamRostersFromFirestore(
-        snap.data() as NbaTeamRostersFirestoreDoc,
-        key
-      )
+  const data = snap.exists
+    ? (snap.data() as NbaTeamRostersFirestoreDoc)
     : null;
+  const resolved = data
+    ? resolveTeamRostersFromFirestore(data, key)
+    : null;
+  const averagesSeasonKey =
+    typeof data?.averagesSeasonKey === "string" && data.averagesSeasonKey.trim()
+      ? data.averagesSeasonKey.trim()
+      : key;
 
   if (!resolved) {
     return {
       ok: true,
       season: key,
+      averagesSeasonKey: key,
       bundle: { seasonKey: key, teams: {} },
       source: "empty",
       updatedAt: null,
@@ -112,6 +119,7 @@ export async function loadTeamRostersSnapshot(
   return {
     ok: true,
     season: key,
+    averagesSeasonKey,
     bundle: resolved.bundle,
     source: resolved.source,
     updatedAt: resolved.updatedAt?.toISOString() ?? null,
@@ -139,12 +147,62 @@ export async function loadMatchupRosters(
   };
 }
 
+export async function loadTeamRosterSlice(
+  db: Firestore,
+  seasonKey: string,
+  teamId: string
+): Promise<NbaTeamRosterSliceApiPayload> {
+  const payload = await loadTeamRostersSnapshot(db, seasonKey);
+  const id = teamId.trim();
+  return {
+    ok: true,
+    season: payload.season,
+    averagesSeasonKey: payload.averagesSeasonKey,
+    teamId: id,
+    team: payload.bundle.teams[id] ?? null,
+    source: payload.source,
+    updatedAt: payload.updatedAt,
+  };
+}
+
+export async function loadPlayerRosterHit(
+  db: Firestore,
+  seasonKey: string,
+  playerId: string
+): Promise<NbaPlayerRosterHitApiPayload> {
+  const payload = await loadTeamRostersSnapshot(db, seasonKey);
+  const want = String(playerId).trim();
+  let hit: NbaPlayerRosterHitApiPayload["hit"] = null;
+  if (want) {
+    for (const team of Object.values(payload.bundle.teams)) {
+      const player = team.players.find((p) => String(p.id) === want);
+      if (!player) continue;
+      hit = {
+        teamId: team.teamId,
+        teamName: team.teamName,
+        player,
+      };
+      break;
+    }
+  }
+  return {
+    ok: true,
+    season: payload.season,
+    averagesSeasonKey: payload.averagesSeasonKey,
+    playerId: want,
+    hit,
+    source: payload.source,
+    updatedAt: payload.updatedAt,
+  };
+}
+
 export async function writeTeamRostersSnapshot(
   db: Firestore,
   seasonKey: string,
   teams: Record<string, NbaTeamRosterDocTeam>,
   source: NbaTeamRostersSnapshotSource,
-  serverTimestamp: unknown
+  serverTimestamp: unknown,
+  extra?: { averagesSeasonKey?: string }
 ): Promise<{ teamCount: number; playerCount: number }> {
   const key = normalizeTeamRostersSeasonKey(seasonKey);
   let playerCount = 0;
@@ -154,6 +212,7 @@ export async function writeTeamRostersSnapshot(
   const teamCount = Object.keys(teams).length;
   await db.collection(NBA_TEAM_ROSTERS_COLLECTION).doc(key).set({
     seasonKey: key,
+    averagesSeasonKey: extra?.averagesSeasonKey ?? key,
     source,
     teamCount,
     playerCount,

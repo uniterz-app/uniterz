@@ -24,7 +24,7 @@ import {
 
 import {
   formatPlayerLeaderValue,
-  leaguePlayerRailGroups,
+  leaguePlayerRailGroupsForMode,
   playerLeaderMetricDef,
   type NbaPlayerStatLeaderMetric,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
@@ -96,9 +96,9 @@ export default function NbaLeaguePlayerStatLeadersPanel({
 }: Props) {
   const isJa = language === "ja";
   const { bundle, loading } = usePlayerStatLeadersBundle();
-  const groups = useMemo(() => leaguePlayerRailGroups(), []);
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
+  const groups = useMemo(() => leaguePlayerRailGroupsForMode(mode), [mode]);
   const [metric, setMetric] = useState<NbaPlayerStatLeaderMetric>("pts");
   const [sortDir, setSortDir] = useState<SortDir>(() =>
     defaultSortDir(playerLeaderMetricDef("pts").higherIsBetter)
@@ -107,6 +107,18 @@ export default function NbaLeaguePlayerStatLeadersPanel({
   const metricMeta = playerLeaderMetricDef(metric);
   const activeGroupId =
     groups.find((g) => g.metrics.some((m) => m.id === metric))?.id ?? "basic";
+
+  function applyMode(next: NbaLeagueStatsMode) {
+    setMode(next);
+    const nextGroups = leaguePlayerRailGroupsForMode(next);
+    const allowed = new Set(
+      nextGroups.flatMap((g) => g.metrics.map((m) => m.id))
+    );
+    if (!allowed.has(metric)) {
+      const fallback = nextGroups[0]?.metrics[0]?.id;
+      if (fallback) applyMetric(fallback);
+    }
+  }
 
   function applyMetric(next: NbaPlayerStatLeaderMetric) {
     const meta = playerLeaderMetricDef(next);
@@ -168,7 +180,7 @@ export default function NbaLeaguePlayerStatLeadersPanel({
                 key={m}
                 label={modeTabLabel(m)}
                 active={mode === m}
-                onClick={() => setMode(m)}
+                onClick={() => applyMode(m)}
                 compact
                 fontWeight={700}
               />

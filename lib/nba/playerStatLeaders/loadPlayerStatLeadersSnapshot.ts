@@ -1,8 +1,5 @@
 import type { Firestore } from "firebase-admin/firestore";
-import {
-  CURRENT_NBA_SEASON_KEY,
-  previousNbaSeasonKey,
-} from "@/lib/rankings/nbaSeason";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import {
   compactPlayerStatLeadersBundle,
@@ -14,6 +11,11 @@ import type {
   NbaPlayerStatLeadersFirestoreDoc,
   NbaPlayerStatLeadersSnapshotSource,
 } from "./playerStatLeadersTypes";
+import {
+  buildLast10LeadersFromGameLogs,
+  last10BoardHasRows,
+  listPlayerGameLogsForLeaders,
+} from "./buildLast10LeadersFromGameLogs";
 
 export const NBA_LEAGUE_PLAYER_STATS_COLLECTION = "nbaLeaguePlayerStats";
 
@@ -57,30 +59,24 @@ export async function loadPlayerStatLeadersSnapshot(
   db: Firestore,
   seasonKey: string
 ): Promise<NbaPlayerStatLeadersApiPayload> {
-  const candidates = [seasonKey];
-  const prev = previousNbaSeasonKey(seasonKey);
-  if (prev !== seasonKey) candidates.push(prev);
-
+  // 開幕後は前期フォールバックしない（今季が空なら empty）。
+  const snap = await db
+    .collection(NBA_LEAGUE_PLAYER_STATS_COLLECTION)
+    .doc(seasonKey)
+    .get();
   let fromFs: ReturnType<typeof resolvePlayerStatLeadersFromFirestore> = null;
-  for (const key of candidates) {
-    const snap = await db
-      .collection(NBA_LEAGUE_PLAYER_STATS_COLLECTION)
-      .doc(key)
-      .get();
-    if (!snap.exists) continue;
+  if (snap.exists) {
     const resolved = resolvePlayerStatLeadersFromFirestore(
       snap.data() as NbaPlayerStatLeadersFirestoreDoc
     );
-    if (!resolved) continue;
     if (
-      !isPlayerStatLeadersSnapshotUseful(resolved.bundle, {
-        allowEarlySeason: key === seasonKey,
+      resolved &&
+      isPlayerStatLeadersSnapshotUseful(resolved.bundle, {
+        allowEarlySeason: true,
       })
     ) {
-      continue;
+      fromFs = resolved;
     }
-    fromFs = resolved;
-    break;
   }
 
   const resolved = fromFs ?? resolvePlayerStatLeadersEmptyFallback(seasonKey);
@@ -109,4 +105,62 @@ export async function writePlayerStatLeadersSnapshot(
     source,
     updatedAt: serverTimestamp,
   });
+}
+
+/** 既存 season スナップショットに last10 だけ merge（doc 無しなら false） */
+export async function mergeLast10IntoPlayerStatLeadersSnapshot(
+  db: Firestore,
+  seasonKey: string,
+  last10: NbaPlayerStatLeadersBundle["last10"],
+  serverTimestamp: unknown,
+  asOfSuffix?: string
+): Promise<boolean> {
+  const key = normalizePlayerStatLeadersSeasonKey(seasonKey);
+  const snap = await db
+    .collection(NBA_LEAGUE_PLAYER_STATS_COLLECTION)
+    .doc(key)
+    .get();
+  if (!snap.exists) return false;
+  const resolved = resolvePlayerStatLeadersFromFirestore(
+    snap.data() as NbaPlayerStatLeadersFirestoreDoc
+  );
+  if (!resolved) return false;
+  let asOfLabel = resolved.bundle.asOfLabel;
+  if (asOfSuffix) {
+    asOfLabel = /last10/i.test(asOfLabel)
+      ? asOfLabel.replace(/last10[^·]*|pending/gi, asOfSuffix).replace(/\s+/g, " ")
+      : `${asOfLabel} · ${asOfSuffix}`;
+  }
+  await writePlayerStatLeadersSnapshot(
+    db,
+    key,
+    { ...resolved.bundle, last10, asOfLabel },
+    resolved.source === "empty" ? "firestore" : resolved.source,
+    serverTimestamp
+  );
+  return true;
+}
+
+/**
+ * 試合ログから last10 を再集計して leaders スナップショットへ書く。
+ * リーグ ingest / プレイヤー game-logs ingest の両方から呼ぶ。
+ */
+export async function rebuildPlayerLast10FromGameLogs(
+  db: Firestore,
+  seasonKey: string,
+  serverTimestamp: unknown
+): Promise<{ playerCount: number; merged: boolean }> {
+  const players = await listPlayerGameLogsForLeaders(db, seasonKey);
+  const last10 = buildLast10LeadersFromGameLogs(players);
+  if (!last10BoardHasRows(last10)) {
+    return { playerCount: players.length, merged: false };
+  }
+  const merged = await mergeLast10IntoPlayerStatLeadersSnapshot(
+    db,
+    seasonKey,
+    last10,
+    serverTimestamp,
+    "last10 from game logs"
+  );
+  return { playerCount: players.length, merged };
 }

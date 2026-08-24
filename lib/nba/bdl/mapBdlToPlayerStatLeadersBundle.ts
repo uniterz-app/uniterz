@@ -4,7 +4,7 @@
  * - 全選手 averages を取り、資格で絞ってから各チップ上位 30
  * - FG% / FT% / 3P% / TS% / eFG% 等: NBA.com Statistical Minimums（決め本数）
  * - counting / その他 Advanced: チーム試合数の 70% 出場
- * - last10 は未接続（空）
+ * - last10 はここでは空。league / game-logs ingest が Firestore 試合ログから埋める
  */
 import {
   fetchBdlActivePlayerTeamMap,
@@ -838,6 +838,6 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   return {
     season,
     last10: emptyBoard(),
-    asOfLabel: `BDL · ${input.seasonKey} · NBA mins · season (last10 pending)`,
+    asOfLabel: `BDL · ${input.seasonKey} · NBA mins · season (last10 from game logs pending)`,
   };
 }

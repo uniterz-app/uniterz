@@ -18,7 +18,7 @@ import {
   metricValue,
   defaultLeagueTeamStatSortDir,
   leagueMetricDef,
-  leagueTeamRailGroups,
+  leagueTeamRailGroupsForMode,
   sortLeagueTeamRows,
   teamGamesPlayed,
   formatTeamRecord,
@@ -111,9 +111,9 @@ export default function NbaLeagueTeamStatsPanelNative({
   const { bundle, source, loading, error } = useLeagueTeamStatsBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
-  const groups = useMemo(() => leagueTeamRailGroups(), []);
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
+  const groups = useMemo(() => leagueTeamRailGroupsForMode(mode), [mode]);
   const [metric, setMetric] = useState<NbaLeagueTeamStatMetric>("winPct");
   const [sortDir, setSortDir] = useState<NbaLeagueTeamStatSortDir>(() =>
     defaultLeagueTeamStatSortDir(leagueMetricDef("winPct").higherIsBetter)
@@ -127,6 +127,18 @@ export default function NbaLeagueTeamStatsPanelNative({
     const meta = leagueMetricDef(next);
     setMetric(next);
     setSortDir(defaultLeagueTeamStatSortDir(meta.higherIsBetter));
+  }
+
+  function applyMode(next: NbaLeagueStatsMode) {
+    setMode(next);
+    const nextGroups = leagueTeamRailGroupsForMode(next);
+    const allowed = new Set(
+      nextGroups.flatMap((g) => g.metrics.map((m) => m.id))
+    );
+    if (!allowed.has(metric)) {
+      const fallback = nextGroups[0]?.metrics[0]?.id;
+      if (fallback) applyMetric(fallback);
+    }
   }
 
   function toggleSortDir() {
@@ -191,7 +203,7 @@ export default function NbaLeagueTeamStatsPanelNative({
                   key={m}
                   label={modeTabLabel(m)}
                   active={mode === m}
-                  onPress={() => setMode(m)}
+                  onPress={() => applyMode(m)}
                   compact
                   fontWeight="700"
                 />

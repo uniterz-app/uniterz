@@ -83,7 +83,10 @@ function leaderValue(
   return hit ? hit.value : null;
 }
 
-/** 詳細の氏名・所属・順位・値をリーダー表から上書き。 */
+/**
+ * 詳細の氏名・所属・順位・値をリーダー表から上書き。
+ * 値は Top30 に載っている指標だけ差し替え。載っていない指標はロスター平均を残す。
+ */
 export function overlayPlayerDetailWithLeaders(
   detail: NbaPlayerDetailPreview,
   leaders: NbaPlayerStatLeadersBundle

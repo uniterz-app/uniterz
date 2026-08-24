@@ -4,7 +4,7 @@
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
-import { CURRENT_NBA_SEASON_KEY, previousNbaSeasonKey } from "@/lib/rankings/nbaSeason";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { NbaPlayerContractSummary } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import {
   NBA_PLAYER_CONTRACTS_COLLECTION,
@@ -78,29 +78,6 @@ export async function loadPlayerContractSnapshot(
 
   const snap = await playerContractDocRef(db, season, id).get();
   if (!snap.exists) {
-    // 今季キー未投入時は前シーズン snapshot を試す（オフシーズンの穴埋め）
-    const prev = previousNbaSeasonKey(season);
-    if (prev && prev !== season) {
-      const prevSnap = await playerContractDocRef(db, prev, id).get();
-      if (prevSnap.exists) {
-        const prevData = prevSnap.data() as NbaPlayerContractDoc;
-        const prevContract =
-          prevData.contract && typeof prevData.contract === "object"
-            ? prevData.contract
-            : null;
-        const prevUpdated = prevData.updatedAt?.toDate?.() ?? null;
-        if (prevContract && prevContract.seasons?.length) {
-          return {
-            ok: true,
-            season: prev,
-            playerId: id,
-            contract: prevContract,
-            source: "firestore",
-            updatedAt: prevUpdated ? prevUpdated.toISOString() : null,
-          };
-        }
-      }
-    }
     return {
       ok: true,
       season,

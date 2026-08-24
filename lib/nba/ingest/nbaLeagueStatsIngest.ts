@@ -3,7 +3,8 @@
  *
  * クライアント / Native は BallDontLie を叩かない。
  * ここから `nbaLeagueTeamStats` と `nbaLeaguePlayerStats` を書く。
- * last10 は試合ログ（firestore `games`）から集計。
+ * team last10 は試合スコア（firestore `games`）から集計（W–L / PPG のみ実値）。
+ * player last10 は ingest 済み `nbaPlayerGameLogs` から集計（追加 BDL なし）。
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
@@ -22,6 +23,11 @@ import {
 } from "@/lib/nba/bdl/fetchBdlTeamSeasonAverages";
 import { buildLeagueTeamStatsBundleFromBdl } from "@/lib/nba/bdl/mapBdlToLeagueTeamStatsBundle";
 import { buildPlayerStatLeadersBundleFromBdl } from "@/lib/nba/bdl/mapBdlToPlayerStatLeadersBundle";
+import {
+  buildLast10LeadersFromGameLogs,
+  last10BoardHasRows,
+  listPlayerGameLogsForLeaders,
+} from "@/lib/nba/playerStatLeaders/buildLast10LeadersFromGameLogs";
 import { buildLast10RowsFromGames } from "@/lib/nba/leagueTeamStats/buildLast10RowsFromGames";
 import { writeLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { writePlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
@@ -41,11 +47,8 @@ export type NbaLeagueStatsIngestResult = {
   dataSeasonKey: string;
   teamCount: number;
   playerLeaderStatTypes: number;
+  playerLast10Players: number;
 };
-
-function seasonKeyFromBdlYear(year: number): string {
-  return `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
-}
 
 function playerAveragesHavePlayed(rows: BdlPlayerSeasonAverageRow[]): boolean {
   return rows.some((row) => {
@@ -65,7 +68,7 @@ function teamAveragesHavePlayed(rows: BdlTeamSeasonAverageRow[]): boolean {
 
 /**
  * その BDL シーズンに「1試合でも」出場データがあるか。
- * 行数の多さではなく gp / W–L を見る（開幕直後に 26-27 へ切り替えるため）。
+ * 行数の多さではなく gp / W–L を見る。
  */
 export async function bdlSeasonYearHasPlayData(
   seasonYear: number
@@ -83,29 +86,15 @@ export async function bdlSeasonYearHasPlayData(
   return playerAveragesHavePlayed(players) || teamAveragesHavePlayed(teams);
 }
 
-/**
- * 要求シーズンに出場データがあればそれを使う。
- * まだ 0 試合なら直前シーズンへフォールバック（オフシーズン表示）。
- */
-async function resolveBdlSeasonYearForIngest(
-  seasonKey: string
-): Promise<number> {
-  let year = bdlSeasonYearFromSeasonKey(seasonKey);
-  for (let i = 0; i < 3; i += 1) {
-    if (await bdlSeasonYearHasPlayData(year)) return year;
-    year -= 1;
-  }
-  return bdlSeasonYearFromSeasonKey(seasonKey);
-}
-
 export async function ingestNbaLeagueStatsFromProvider(
   db: Firestore,
   input: NbaLeagueStatsIngestInput = {}
 ): Promise<NbaLeagueStatsIngestResult> {
   requireBdlNbaApiKey();
   const seasonKey = (input.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
-  const seasonYear = await resolveBdlSeasonYearForIngest(seasonKey);
-  const dataSeasonKey = seasonKeyFromBdlYear(seasonYear);
+  // 前期フォールバックしない。今季に出場が無ければ空寄りスナップショットのまま。
+  const seasonYear = bdlSeasonYearFromSeasonKey(seasonKey);
+  const dataSeasonKey = seasonKey;
 
   const [teamBundle, playerBundle] = await Promise.all([
     buildLeagueTeamStatsBundleFromBdl({
@@ -127,28 +116,33 @@ export async function ingestNbaLeagueStatsFromProvider(
     );
   }
 
-  const ts = FieldValue.serverTimestamp();
-  // 実データのシーズン doc だけ書く。オフシーズンで data≠要求キーのときだけ
-  // CURRENT キーにもミラーし、前季 doc を新季データで汚さない。
-  const writeKeys = new Set<string>([dataSeasonKey]);
-  if (seasonKey !== dataSeasonKey) writeKeys.add(seasonKey);
-
-  for (const key of writeKeys) {
-    await writeLeagueTeamStatsSnapshot(
-      db,
-      key,
-      teamBundle,
-      "firestore",
-      ts
-    );
-    await writePlayerStatLeadersSnapshot(
-      db,
-      key,
-      playerBundle,
-      "firestore",
-      ts
-    );
+  const logPlayers = await listPlayerGameLogsForLeaders(db, dataSeasonKey);
+  const playerLast10 = buildLast10LeadersFromGameLogs(logPlayers);
+  if (last10BoardHasRows(playerLast10)) {
+    playerBundle.last10 = playerLast10;
+    playerBundle.asOfLabel = playerBundle.asOfLabel.includes("last10")
+      ? playerBundle.asOfLabel.replace(
+          /last10 pending|last10[^·]*/gi,
+          "last10 from game logs"
+        )
+      : `${playerBundle.asOfLabel} · last10 from game logs`;
   }
+
+  const ts = FieldValue.serverTimestamp();
+  await writeLeagueTeamStatsSnapshot(
+    db,
+    dataSeasonKey,
+    teamBundle,
+    "firestore",
+    ts
+  );
+  await writePlayerStatLeadersSnapshot(
+    db,
+    dataSeasonKey,
+    playerBundle,
+    "firestore",
+    ts
+  );
 
   return {
     ok: true,
@@ -157,5 +151,6 @@ export async function ingestNbaLeagueStatsFromProvider(
     dataSeasonKey,
     teamCount: teamBundle.season.length,
     playerLeaderStatTypes: Object.keys(playerBundle.season).length,
+    playerLast10Players: logPlayers.length,
   };
 }

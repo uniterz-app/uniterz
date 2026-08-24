@@ -29,8 +29,17 @@ export type NbaRosterPlayer = {
   spg?: number;
   bpg?: number;
   tpg?: number;
+  plusMinus?: number;
   /** UI で一段薄い行（深ベンチ等） */
   dimmed?: boolean;
+  /** BDL active players 由来の bio（プレイヤー詳細用） */
+  height?: string | null;
+  weight?: string | null;
+  college?: string | null;
+  country?: string | null;
+  draftYear?: number | null;
+  draftRound?: number | null;
+  draftNumber?: number | null;
 };
 
 export type NbaRosterTeamBlock = {

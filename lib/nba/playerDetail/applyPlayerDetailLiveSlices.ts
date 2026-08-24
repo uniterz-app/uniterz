@@ -21,6 +21,8 @@ import type {
   NbaTeamPayrollLine,
 } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
+import { buildTeamHistoryFromCareerSeasons } from "@/lib/nba/playerDetail/buildTeamHistoryFromCareerSeasons";
+import { mergeCuratedPlayerAwards } from "@/lib/nba/playerAwards/nbaPlayerAwardSeasonWinners";
 
 export type PlayerRosterHit = {
   teamId: string;
@@ -81,8 +83,18 @@ export function applyRosterToPlayerDetail(
     fga: player.fga ?? detail.season.fga,
     fg3m: player.fg3m ?? detail.season.fg3m,
     fg3a: player.fg3a ?? detail.season.fg3a,
+    plusMinus: player.plusMinus ?? detail.season.plusMinus,
   };
   const seasonMetrics = metricsFromSeason(season);
+  const draftYear =
+    player.draftYear != null && Number.isFinite(player.draftYear)
+      ? Math.trunc(player.draftYear)
+      : detail.draftYear;
+  const seasonStart = Number.parseInt(CURRENT_NBA_SEASON_KEY.slice(0, 4), 10);
+  const experienceYears =
+    draftYear != null && Number.isFinite(seasonStart)
+      ? Math.max(0, seasonStart - draftYear)
+      : detail.experienceYears;
   return {
     ...detail,
     firstName: player.firstName || detail.firstName,
@@ -93,6 +105,22 @@ export function applyRosterToPlayerDetail(
     teamAbbr: TEAM_SHORT[teamId] ?? detail.teamAbbr,
     teamName: NBA_TEAM_NAME_BY_ID[teamId] ?? teamName ?? detail.teamName,
     conference: nbaConferenceForTeam(teamId) ?? detail.conference,
+    height: player.height?.trim() || detail.height,
+    weight: player.weight?.trim() || detail.weight,
+    college:
+      player.college !== undefined ? player.college : detail.college,
+    country:
+      player.country !== undefined ? player.country : detail.country,
+    draftYear,
+    draftRound:
+      player.draftRound != null && Number.isFinite(player.draftRound)
+        ? Math.trunc(player.draftRound)
+        : detail.draftRound,
+    draftNumber:
+      player.draftNumber != null && Number.isFinite(player.draftNumber)
+        ? Math.trunc(player.draftNumber)
+        : detail.draftNumber,
+    experienceYears,
     season,
     seasonMetrics,
     headlineMetrics: headlineFrom(seasonMetrics),
@@ -165,7 +193,12 @@ export function applyPlayerCareerSeasonsToPlayerDetail(
   ) {
     return detail;
   }
-  return { ...detail, careerSeasons };
+  const teamHistory = buildTeamHistoryFromCareerSeasons(careerSeasons.regular);
+  return {
+    ...detail,
+    careerSeasons,
+    ...(teamHistory.length > 0 ? { teamHistory } : {}),
+  };
 }
 
 export function applyPlayerGameLogsToPlayerDetail(
@@ -200,4 +233,17 @@ export function applyInjuryToPlayerDetail(
   entry: NbaTeamInjuryEntry | null | undefined
 ): NbaPlayerDetailPreview {
   return { ...detail, availability: availabilityFromInjury(entry) };
+}
+
+/** ユーザー提供の賞データ（取込済み分）を awards に反映 */
+export function applyCuratedPlayerAwardsToPlayerDetail(
+  detail: NbaPlayerDetailPreview,
+  playerId?: string | null
+): NbaPlayerDetailPreview {
+  const id = String(playerId ?? detail.playerId ?? "").trim();
+  if (!id) return detail;
+  return {
+    ...detail,
+    awards: mergeCuratedPlayerAwards(detail.awards, id),
+  };
 }

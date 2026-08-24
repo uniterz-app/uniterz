@@ -1,8 +1,5 @@
 import type { Firestore } from "firebase-admin/firestore";
-import {
-  CURRENT_NBA_SEASON_KEY,
-  previousNbaSeasonKey,
-} from "@/lib/rankings/nbaSeason";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
   resolveLeagueTeamStatsFromFirestore,
   resolveLeagueTeamStatsEmptyFallback,
@@ -27,23 +24,16 @@ export async function loadLeagueTeamStatsSnapshot(
   db: Firestore,
   seasonKey: string
 ): Promise<NbaLeagueTeamStatsApiPayload> {
-  // オフシーズン等: CURRENT に doc が無くても前シーズンの実データを出す
-  const candidates = [seasonKey];
-  const prev = previousNbaSeasonKey(seasonKey);
-  if (prev !== seasonKey) candidates.push(prev);
-
-  let fromFs: ReturnType<typeof resolveLeagueTeamStatsFromFirestore> = null;
-  for (const key of candidates) {
-    const snap = await db
-      .collection(NBA_LEAGUE_TEAM_STATS_COLLECTION)
-      .doc(key)
-      .get();
-    if (!snap.exists) continue;
-    fromFs = resolveLeagueTeamStatsFromFirestore(
-      snap.data() as NbaLeagueTeamStatsFirestoreDoc
-    );
-    if (fromFs) break;
-  }
+  // 前期フォールバックしない。今季 doc が無ければ empty。
+  const snap = await db
+    .collection(NBA_LEAGUE_TEAM_STATS_COLLECTION)
+    .doc(seasonKey)
+    .get();
+  const fromFs = snap.exists
+    ? resolveLeagueTeamStatsFromFirestore(
+        snap.data() as NbaLeagueTeamStatsFirestoreDoc
+      )
+    : null;
 
   const resolved = fromFs ?? resolveLeagueTeamStatsEmptyFallback(seasonKey);
 

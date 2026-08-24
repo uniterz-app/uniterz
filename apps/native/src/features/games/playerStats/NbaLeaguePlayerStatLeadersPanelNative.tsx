@@ -14,7 +14,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
 import {
   formatPlayerLeaderValue,
-  leaguePlayerRailGroups,
+  leaguePlayerRailGroupsForMode,
   playerLeaderMetricDef,
   type NbaPlayerStatLeaderMetric,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
@@ -108,9 +108,9 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
   const { bundle, source, loading, error } = usePlayerStatLeadersBundle({
     apiBaseUrl: getUniterzApiBaseUrl(),
   });
-  const groups = useMemo(() => leaguePlayerRailGroups(), []);
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
+  const groups = useMemo(() => leaguePlayerRailGroupsForMode(mode), [mode]);
   const [metric, setMetric] = useState<NbaPlayerStatLeaderMetric>("pts");
   const [sortDir, setSortDir] = useState<SortDir>(() =>
     defaultSortDir(playerLeaderMetricDef("pts").higherIsBetter)
@@ -124,6 +124,18 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
     const meta = playerLeaderMetricDef(next);
     setMetric(next);
     setSortDir(defaultSortDir(meta.higherIsBetter));
+  }
+
+  function applyMode(next: NbaLeagueStatsMode) {
+    setMode(next);
+    const nextGroups = leaguePlayerRailGroupsForMode(next);
+    const allowed = new Set(
+      nextGroups.flatMap((g) => g.metrics.map((m) => m.id))
+    );
+    if (!allowed.has(metric)) {
+      const fallback = nextGroups[0]?.metrics[0]?.id;
+      if (fallback) applyMetric(fallback);
+    }
   }
 
   const modeOptions = modesForPhase(phase);
@@ -185,7 +197,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
                   key={m}
                   label={modeTabLabel(m)}
                   active={mode === m}
-                  onPress={() => setMode(m)}
+                  onPress={() => applyMode(m)}
                   compact
                   fontWeight="700"
                 />

@@ -472,7 +472,6 @@ const LUKA: SeedProfile = {
   awards: [
     { id: "mvp", label: "MVP", count: 2 },
     { id: "fmvp", label: "Finals MVP", count: 1 },
-    { id: "champion", label: "Champion", count: 3 },
     { id: "all_star", label: "All-Star", count: 8 },
     { id: "all_nba_1st", label: "All-NBA First Team", count: 4 },
     { id: "all_def", label: "All-Defensive", count: 5 },
@@ -588,7 +587,6 @@ const CURRY: SeedProfile = {
   awards: [
     { id: "mvp", label: "MVP", count: 2 },
     { id: "fmvp", label: "Finals MVP", count: 1 },
-    { id: "champion", label: "Champion", count: 4 },
     { id: "all_star", label: "All-Star", count: 11 },
     { id: "all_nba_1st", label: "All-NBA First Team", count: 4 },
     { id: "roy", label: "ROY", count: 0 },
@@ -703,7 +701,6 @@ const JOKIC: SeedProfile = {
   awards: [
     { id: "mvp", label: "MVP", count: 3 },
     { id: "fmvp", label: "Finals MVP", count: 1 },
-    { id: "champion", label: "Champion", count: 1 },
     { id: "all_star", label: "All-Star", count: 7 },
     { id: "all_nba_1st", label: "All-NBA First Team", count: 4 },
   ],
@@ -843,6 +840,50 @@ export function ageFromBirthDate(
     (asOf.getMonth() + 1 === mo && asOf.getDate() < d);
   if (beforeBirthday) age -= 1;
   return age >= 0 && age < 80 ? age : null;
+}
+
+/**
+ * 表示用年齢。BDL に生年月日は無いので:
+ * 1) シード birthDate
+ * 2) キャリア行の age（最新シーズン基準。古い行しか無いときは差分で繰り上げ）
+ *
+ * 注意: regular は ingest で新しい順。末尾から拾うとルーキー年になる。
+ */
+export function resolvePlayerDisplayAge(detail: {
+  birthDate?: string | null;
+  careerSeasons?: {
+    regular: Array<{ age?: number | null; seasonStart?: number | null }>;
+  };
+}): number | null {
+  const fromBirth = ageFromBirthDate(detail.birthDate);
+  if (fromBirth != null) return fromBirth;
+
+  const regular = detail.careerSeasons?.regular ?? [];
+  let latestSeasonStart = Number.NEGATIVE_INFINITY;
+  let best: { seasonStart: number; age: number } | null = null;
+
+  for (const row of regular) {
+    const seasonStart = Number(row.seasonStart);
+    if (Number.isFinite(seasonStart) && seasonStart > latestSeasonStart) {
+      latestSeasonStart = seasonStart;
+    }
+    const age = row.age;
+    if (age == null || !Number.isFinite(age) || age <= 0) continue;
+    if (
+      !Number.isFinite(seasonStart) ||
+      seasonStart <= 0 ||
+      (best != null && seasonStart <= best.seasonStart)
+    ) {
+      continue;
+    }
+    best = { seasonStart, age: Math.round(age) };
+  }
+
+  if (!best) return null;
+  if (!Number.isFinite(latestSeasonStart)) return best.age;
+  const yearsForward = Math.max(0, latestSeasonStart - best.seasonStart);
+  const projected = best.age + yearsForward;
+  return projected > 0 && projected < 80 ? projected : best.age;
 }
 
 /** `1999-02-28` → `1999.02.28` */
@@ -1683,32 +1724,33 @@ export function zeroPlayerDetailSeasonStats(
   };
 }
 
-function identityFromSeed(seed: SeedProfile): NbaPlayerDetailPreview {
+function blankPlayerIdentity(playerId?: string): NbaPlayerDetailPreview {
+  const id = (playerId ?? "").trim() || "0";
   const season = zeroSeasonBlock();
   const seasonMetrics = metricsFromSeason(season);
   const headlineIds: NbaPlayerSeasonMetricId[] = ["pts", "reb", "ast"];
   const headlineMetrics = headlineIds
-    .map((id) => seasonMetrics.find((m) => m.id === id))
+    .map((metricId) => seasonMetrics.find((m) => m.id === metricId))
     .filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
   return {
-    playerId: seed.playerId,
-    uidLabel: formatPlayerUid(seed.playerId),
-    firstName: seed.firstName,
-    lastName: seed.lastName,
-    jerseyNumber: seed.jerseyNumber,
-    position: seed.position,
-    experienceYears: seed.experienceYears,
-    height: seed.height,
-    weight: seed.weight,
-    college: seed.college,
-    country: seed.country,
-    draftYear: seed.draftYear,
-    draftRound: seed.draftRound,
-    draftNumber: seed.draftNumber,
-    teamId: seed.teamId,
-    teamAbbr: TEAM_SHORT[seed.teamId] ?? "NBA",
-    teamName: NBA_TEAM_NAME_BY_ID[seed.teamId] ?? seed.teamId,
-    conference: conferenceForTeam(seed.teamId),
+    playerId: id,
+    uidLabel: formatPlayerUid(id),
+    firstName: "—",
+    lastName: "—",
+    jerseyNumber: "—",
+    position: "—",
+    experienceYears: 0,
+    height: "—",
+    weight: "—",
+    college: null,
+    country: null,
+    draftYear: null,
+    draftRound: null,
+    draftNumber: null,
+    teamId: "",
+    teamAbbr: "NBA",
+    teamName: "—",
+    conference: "west",
     season,
     headlineMetrics,
     seasonMetrics,
@@ -1719,22 +1761,19 @@ function identityFromSeed(seed: SeedProfile): NbaPlayerDetailPreview {
     contract: null,
     awards: [],
     availability: activeAvailability(),
-    birthDate: seed.birthDate,
-    teamHistory: seed.teamHistory ?? [],
+    birthDate: null,
+    teamHistory: [],
     venueSplits: [],
     vsOpponentSamples: [],
     asOfLabel: nbaSeasonStatsReady() ? "2026-27" : "PRESEASON · 2026-27",
   };
 }
 
-
 export function getNbaPlayerDetailPreview(
   playerId?: string
 ): NbaPlayerDetailPreview {
-  const seed = resolveSeed(playerId);
-  // ベースは常に 0/空。実数は leaders + roster/payroll/injury overlay が埋める。
-  // 開幕前も同じ出し方（チーム詳細と同型）。
-  return zeroPlayerDetailSeasonStats(identityFromSeed(seed));
+  // bio / 名前はシードや乱数にしない。roster overlay が埋めるまで空。
+  return zeroPlayerDetailSeasonStats(blankPlayerIdentity(playerId));
 }
 
 export type NbaPlayerRecentWindowAvg = {

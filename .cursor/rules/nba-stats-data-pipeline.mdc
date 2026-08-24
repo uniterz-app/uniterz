@@ -27,7 +27,7 @@ BDL（サーバーのみ）
 
 | データ | Firestore | ingest | 公開 API |
 |---|---|---|---|
-| ロスター | `nbaTeamRosters/{season}` | `nba-team-rosters-ingest` | `/api/nba/team-rosters` |
+| ロスター | `nbaTeamRosters/{season}` | `nba-team-rosters-ingest`（BDL active players の height/weight/college/country/draft* も保持） | `/api/nba/team-rosters`（`?team=` / `?player=` でレスポンス絞り込み可） |
 | ペイロール（チーム今季） | `nbaTeamPayrolls/{season}` | `nba-team-payroll-ingest` | `/api/nba/team-payroll` |
 | **契約（複数年）** | `nbaPlayerContracts/{season}/players/{playerId}` | `nba-player-contracts-ingest`（末尾で年俸ソート→`salaryRank`。BDL `rank` は使わない） | `/api/nba/player-contract` |
 | **キャリア Season/Playoffs** | `nbaPlayerCareerSeasons/{playerId}` | `nba-player-career-seasons-ingest` | `/api/nba/player-career-seasons` |
@@ -61,6 +61,9 @@ BDL（サーバーのみ）
 - Firebase cron `runNbaStatsDailyIngestCron` — **毎日 18:00 JST**
 - Next `POST /api/admin/nba-stats-daily-ingest`（`mode: "daily"`）
 - 中身: rosters → games → league-stats → injuries → team-game-logs → shot-zones
-- `mode: "heavy"` でプレイヤー試合ログも（タイムアウト注意）
+- `mode: "heavy"` でプレイヤー試合ログも（タイムアウト注意）。試合ログ書き込み後に leaders last10 を game logs から再集計（追加 BDL なし）
 - 契約・キャリアは日次外（変更時のみ）
 - チーム league-stats は scoring / hustle / tracking / clutch / playtype 込み（HOW THEY PLAY）。team by_zone は BDL 不可 → チーム詳細 SHOT 枠なし
+- 公開 API の前期フォールバックはしない。Team Last 10 は games 由来の W–L/PPG のみ表示
+- ロスターに bio（height/weight/college/country/draft*）を載せ、プレイヤー詳細はシード bio を使わない
+- 詳細 overlay は `?team=` / `?player=` でレスポンスを絞る

@@ -77,7 +77,7 @@ function emptyLast10Row(teamId: string): NbaLeagueTeamStatRow {
     ortg: 0,
     drtg: 0,
     netrtg: 0,
-    pace: 100,
+    pace: 0,
     efgPct: 0,
     fg3Pct: 0,
     fg3a: 0,
@@ -124,10 +124,8 @@ function buildTeamLast10Row(
   const ppg = ptsFor / games;
   const papg = ptsAgainst / games;
   const diff = ppg - papg;
-  const ortg = ppg * 1.05;
-  const drtg = papg * 1.05;
-  const netrtg = ortg - drtg;
 
+  // スコア行から分かる実値だけ。ORTG/DRTG/PACE/効率系は仮値にしない（0 のまま）。
   const core = {
     teamId,
     teamName: NBA_TEAM_NAME_BY_ID[teamId] ?? teamId,
@@ -138,10 +136,10 @@ function buildTeamLast10Row(
     ppg: round1(ppg),
     papg: round1(papg),
     diff: round1(diff),
-    ortg: round1(ortg),
-    drtg: round1(drtg),
-    netrtg: round1(netrtg),
-    pace: 100,
+    ortg: 0,
+    drtg: 0,
+    netrtg: 0,
+    pace: 0,
     efgPct: 0,
     fg3Pct: 0,
     fg3a: 0,

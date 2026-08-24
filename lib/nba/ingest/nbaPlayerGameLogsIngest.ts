@@ -1,8 +1,10 @@
 /**
  * BDL → Firestore `nbaPlayerGameLogs/{season}/players/{playerId}`。
  * 公開 API は Firestore のみ読む。
+ * 書き込み後、追加 BDL なしで leaders last10 を再集計する。
  */
 import type { Firestore } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import {
   requireBdlNbaApiKey,
   bdlSeasonYearFromSeasonKey,
@@ -10,6 +12,7 @@ import {
 import { fetchBdlPlayerGameLogs } from "@/lib/nba/bdl/fetchBdlPlayerGameLogs";
 import { mapBdlRowsToPlayerGameLogs } from "@/lib/nba/playerDetail/mapBdlToPlayerGameLogs";
 import { writePlayerGameLogsSnapshot } from "@/lib/nba/playerGameLogs/loadPlayerGameLogsSnapshot";
+import { rebuildPlayerLast10FromGameLogs } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { listActiveRosterPlayerRefs } from "@/lib/nba/ingest/listActiveRosterPlayerRefs";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
@@ -28,6 +31,8 @@ export type NbaPlayerGameLogsIngestResult = {
   written: number;
   skipped: number;
   failed: number;
+  last10Merged: boolean;
+  last10PlayerCount: number;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -107,6 +112,12 @@ export async function ingestNbaPlayerGameLogsFromBdl(
     if (i < targets.length - 1) await sleep(50);
   }
 
+  const last10 = await rebuildPlayerLast10FromGameLogs(
+    db,
+    seasonKey,
+    FieldValue.serverTimestamp()
+  );
+
   return {
     ok: true,
     seasonKey,
@@ -114,5 +125,7 @@ export async function ingestNbaPlayerGameLogsFromBdl(
     written,
     skipped,
     failed,
+    last10Merged: last10.merged,
+    last10PlayerCount: last10.playerCount,
   };
 }

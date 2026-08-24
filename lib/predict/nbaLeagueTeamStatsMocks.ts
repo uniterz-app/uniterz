@@ -322,6 +322,28 @@ export function leagueTeamRailGroups(): NbaLeagueTeamRailGroup[] {
   ].filter((g) => g.metrics.length > 0);
 }
 
+/**
+ * Last 10 は `games` のスコアから取れる実値だけ（W% / PPG / PAPG / DIFF）。
+ * 仮 ORTG やゼロ埋め advanced をレールに出さない。
+ */
+export const NBA_LEAGUE_TEAM_LAST10_METRICS: readonly NbaLeagueTeamStatMetricDef[] =
+  [coreDef("winPct"), coreDef("ppg"), coreDef("papg"), coreDef("diff")];
+
+export function leagueTeamRailGroupsForMode(
+  mode: "per_game" | "total" | "last10"
+): NbaLeagueTeamRailGroup[] {
+  if (mode === "last10") {
+    return [
+      {
+        id: "basic",
+        short: "BASIC",
+        metrics: NBA_LEAGUE_TEAM_LAST10_METRICS,
+      },
+    ];
+  }
+  return leagueTeamRailGroups();
+}
+
 export function leagueMetricDef(
   id: NbaLeagueTeamStatMetric
 ): NbaLeagueTeamStatMetricDef {

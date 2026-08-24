@@ -367,6 +367,46 @@ export function leaguePlayerRailGroups(): NbaPlayerRailGroup[] {
   ].filter((g) => g.metrics.length > 0);
 }
 
+/**
+ * Last 10 は試合ログ由来の box 指標のみ（advanced / OREB / DREB はログに無い）。
+ */
+const PLAYER_LAST10_METRIC_IDS = new Set<NbaPlayerLeaderMetricId>([
+  "pts",
+  "reb",
+  "ast",
+  "stl",
+  "blk",
+  "fg3m",
+  "fg3_pct",
+  "fg_pct",
+  "ft_pct",
+  "tov",
+  "min",
+  "eff",
+  "fg3a",
+  "fga",
+  "fgm",
+  "fta",
+  "ftm",
+]);
+
+export function leaguePlayerRailGroupsForMode(
+  mode: "per_game" | "total" | "last10"
+): NbaPlayerRailGroup[] {
+  if (mode !== "last10") return leaguePlayerRailGroups();
+  const basic = NBA_PLAYER_STAT_LEADER_CHIP_METRICS.filter((m) =>
+    PLAYER_LAST10_METRIC_IDS.has(m.id)
+  ).map((m) => ({
+    id: m.id as NbaPlayerLeaderMetricId,
+    label: m.label,
+    short: m.short,
+    higherIsBetter: m.higherIsBetter,
+    hintJa: m.hintJa,
+    hintEn: m.hintEn,
+  }));
+  return [{ id: "basic", short: "BASIC", metrics: basic }];
+}
+
 export function isPlayerAdvancedLeaderMetric(
   id: NbaPlayerLeaderMetricId
 ): id is NbaPlayerAdvancedLeaderMetric {

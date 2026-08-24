@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { fetchTeamRostersSnapshot } from "@/lib/nba/teamRosters/fetchTeamRostersClient";
+import { fetchTeamRosterSlice } from "@/lib/nba/teamRosters/fetchTeamRostersClient";
 import { buildMatchupRosterReport } from "@/lib/nba/teamRosters/buildMatchupRosterReport";
 import { fetchTeamPayroll } from "@/lib/nba/teamPayroll/fetchTeamPayrollClient";
 import { fetchTeamGameLog } from "@/lib/nba/teamGameLog/fetchTeamGameLogClient";
@@ -50,6 +50,7 @@ function emptyFailures(): NbaTeamDetailOverlayFailures {
  * チーム詳細の ROSTER / PAYROLL / 試合ログ（form・splits）を Firestore 実データで上書き。
  * 未 ingest・開幕前は base の 0 / 空のまま（モックなし）。
  * W–L / H2H / form は試合ログを正（リーグ先進指標と混ぜない）。
+ * roster / injuries は team スコープ API のみ叩く。
  */
 export function useNbaTeamDetailLiveOverlay(options: Options): {
   detail: NbaTeamDetailPreview;
@@ -95,12 +96,13 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
 
     Promise.all([
       wrap(
-        fetchTeamRostersSnapshot({
+        fetchTeamRosterSlice({
+          teamId,
           season,
           apiBaseUrl,
           signal: ac.signal,
         }).then((payload) => {
-          const team = payload.bundle.teams[teamId] ?? null;
+          const team = payload.team;
           if (!team) return null;
           const report = buildMatchupRosterReport(
             teamId,
@@ -157,8 +159,6 @@ export function useNbaTeamDetailLiveOverlay(options: Options): {
   }, [teamId, season, apiBaseUrl]);
 
   const detail = useMemo((): NbaTeamDetailPreview => {
-    // 試合ログ取得成功時は W–L / form / H2H を常にログ正にする
-    // （プレのみのときは season 0-0・recent/streak 空＝ビルド側でプレ除外済み）
     const fromGames = gameLog != null;
 
     return {

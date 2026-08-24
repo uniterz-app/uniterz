@@ -4,11 +4,12 @@
  * プレイヤー詳細の ROSTER / INJURY / CONTRACT / CAREER / GAME LOGS / SHOT ZONES を実データで上書き。
  * 契約は BDL 複数年（/api/nba/player-contract）。未取得時は NO DATA
  * （ペイロール1行フォールバックは「残り1年」に見えるため使わない）。
+ * roster は player=、injury は team= スコープ。
  */
 import { useEffect, useMemo, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { fetchTeamRostersSnapshot } from "@/lib/nba/teamRosters/fetchTeamRostersClient";
-import { fetchTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/fetchTeamInjuriesClient";
+import { fetchPlayerRosterHit } from "@/lib/nba/teamRosters/fetchTeamRostersClient";
+import { fetchTeamInjuries } from "@/lib/nba/teamInjuries/fetchTeamInjuriesClient";
 import { fetchPlayerContract } from "@/lib/nba/playerDetail/fetchPlayerContractClient";
 import { fetchPlayerCareerSeasons } from "@/lib/nba/playerDetail/fetchPlayerCareerSeasonsClient";
 import { fetchPlayerGameLogs } from "@/lib/nba/playerDetail/fetchPlayerGameLogsClient";
@@ -19,13 +20,13 @@ import type { NbaPlayerContractSummary } from "@/lib/predict/nbaPlayerDetailPrev
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import type { NbaTeamInjuryEntry } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 import {
+  applyCuratedPlayerAwardsToPlayerDetail,
   applyInjuryToPlayerDetail,
   applyPlayerCareerSeasonsToPlayerDetail,
   applyPlayerContractToPlayerDetail,
   applyPlayerGameLogsToPlayerDetail,
   applyPlayerShotZonesToPlayerDetail,
   applyRosterToPlayerDetail,
-  findPlayerOnRosters,
   type PlayerRosterHit,
 } from "@/lib/nba/playerDetail/applyPlayerDetailLiveSlices";
 
@@ -58,6 +59,9 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
   const leaders = options.leaders;
 
   const [rosterHit, setRosterHit] = useState<PlayerRosterHit | null>(null);
+  const [averagesSeasonKey, setAveragesSeasonKey] = useState<string | null>(
+    null
+  );
   const [injury, setInjury] = useState<NbaTeamInjuryEntry | null>(null);
   const [contract, setContract] = useState<NbaPlayerContractSummary | null>(
     null
@@ -78,6 +82,7 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
   useEffect(() => {
     if (!playerId) {
       setRosterHit(null);
+      setAveragesSeasonKey(null);
       setInjury(null);
       setContract(null);
       setCareerSeasons(null);
@@ -93,104 +98,126 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
     setRosterFailed(false);
     setInjuryFailed(false);
 
-    Promise.all([
-      wrap(
-        fetchTeamRostersSnapshot({
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        }).then((payload) =>
-          findPlayerOnRosters(payload.bundle.teams, playerId)
-        )
-      ),
-      wrap(
-        fetchTeamInjuriesSnapshot({
-          season,
-          apiBaseUrl,
-          signal: ac.signal,
-        })
-      ),
-      wrap(
-        fetchPlayerContract({
+    void (async () => {
+      try {
+      const roster = await wrap(
+        fetchPlayerRosterHit({
           playerId,
           season,
           apiBaseUrl,
-          teamId: base.teamId || null,
           signal: ac.signal,
-        })
-      ),
-      wrap(
-        fetchPlayerCareerSeasons({
-          playerId,
-          season,
-          apiBaseUrl,
-          teamId: base.teamId || null,
-          position: base.position || null,
-          signal: ac.signal,
-        })
-      ),
-      wrap(
-        fetchPlayerGameLogs({
-          playerId,
-          season,
-          apiBaseUrl,
-          teamId: base.teamId || null,
-          signal: ac.signal,
-        })
-      ),
-      wrap(
-        fetchPlayerShotZones({
-          playerId,
-          season,
-          apiBaseUrl,
-          teamId: base.teamId || null,
-          signal: ac.signal,
-        })
-      ),
-    ])
-      .then(([roster, inj, con, career, logs, zones]) => {
-        if (ac.signal.aborted) return;
-        const hit = roster.ok ? roster.value : null;
-        setRosterHit(hit);
-        setRosterFailed(!roster.ok);
-        setInjuryFailed(!inj.ok);
+        }).then((payload) => ({
+          hit: payload.hit
+            ? {
+                teamId: payload.hit.teamId,
+                teamName: payload.hit.teamName,
+                player: payload.hit.player,
+              }
+            : null,
+          averagesSeasonKey: payload.averagesSeasonKey,
+        }))
+      );
+      if (ac.signal.aborted) return;
 
-        if (con.ok && con.value.contract) {
-          setContract(con.value.contract);
-        } else {
-          setContract(null);
-        }
+      const hit = roster.ok ? roster.value.hit : null;
+      setRosterHit(hit);
+      setAveragesSeasonKey(
+        roster.ok ? roster.value.averagesSeasonKey || null : null
+      );
+      setRosterFailed(!roster.ok);
 
-        if (career.ok) {
-          setCareerSeasons(career.value.careerSeasons);
-        } else {
-          setCareerSeasons(null);
-        }
+      const teamId = hit?.teamId || base.teamId || "";
 
-        if (logs.ok) {
-          setGameLogs(logs.value.gameLogs);
-        } else {
-          setGameLogs(null);
-        }
+      const [inj, con, career, logs, zones] = await Promise.all([
+        teamId
+          ? wrap(
+              fetchTeamInjuries({
+                teamId,
+                season,
+                apiBaseUrl,
+                signal: ac.signal,
+              })
+            )
+          : Promise.resolve({ ok: false as const }),
+        wrap(
+          fetchPlayerContract({
+            playerId,
+            season,
+            apiBaseUrl,
+            teamId: teamId || null,
+            signal: ac.signal,
+          })
+        ),
+        wrap(
+          fetchPlayerCareerSeasons({
+            playerId,
+            season,
+            apiBaseUrl,
+            teamId: teamId || null,
+            position: hit?.player.position || base.position || null,
+            signal: ac.signal,
+          })
+        ),
+        wrap(
+          fetchPlayerGameLogs({
+            playerId,
+            season,
+            apiBaseUrl,
+            teamId: teamId || null,
+            signal: ac.signal,
+          })
+        ),
+        wrap(
+          fetchPlayerShotZones({
+            playerId,
+            season,
+            apiBaseUrl,
+            teamId: teamId || null,
+            signal: ac.signal,
+          })
+        ),
+      ]);
 
-        if (zones.ok) {
-          setShotZones(zones.value.shotZones);
-        } else {
-          setShotZones(null);
-        }
+      if (ac.signal.aborted) return;
 
-        if (hit && inj.ok) {
-          const entries = inj.value.bundle.teams[hit.teamId] ?? [];
-          setInjury(
-            entries.find((e) => String(e.playerId) === playerId) ?? null
-          );
-        } else {
-          setInjury(null);
-        }
-      })
-      .finally(() => {
+      setInjuryFailed(Boolean(teamId) && !inj.ok);
+
+      if (con.ok && con.value.contract) {
+        setContract(con.value.contract);
+      } else {
+        setContract(null);
+      }
+
+      if (career.ok) {
+        setCareerSeasons(career.value.careerSeasons);
+      } else {
+        setCareerSeasons(null);
+      }
+
+      if (logs.ok) {
+        setGameLogs(logs.value.gameLogs);
+      } else {
+        setGameLogs(null);
+      }
+
+      if (zones.ok) {
+        setShotZones(zones.value.shotZones);
+      } else {
+        setShotZones(null);
+      }
+
+      if (hit && inj.ok) {
+        const entries = inj.value.injuries ?? [];
+        setInjury(
+          entries.find((e) => String(e.playerId) === playerId) ?? null
+        );
+      } else {
+        setInjury(null);
+      }
+      } finally {
         if (!ac.signal.aborted) setLoading(false);
-      });
+      }
+    })();
 
     return () => ac.abort();
   }, [playerId, season, apiBaseUrl, base.teamId, base.position]);
@@ -198,7 +225,6 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
   const detail = useMemo((): NbaPlayerDetailPreview => {
     let next = base;
     if (rosterHit) next = applyRosterToPlayerDetail(next, rosterHit);
-    // 複数年契約のみ。ペイロール1行フォールバックはしない（SGA「残り1」の原因）。
     if (contract) {
       next = applyPlayerContractToPlayerDetail(next, contract);
     }
@@ -213,8 +239,24 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
     }
     next = applyInjuryToPlayerDetail(next, injury);
     next = overlayPlayerDetailWithLeaders(next, leaders);
+    next = applyCuratedPlayerAwardsToPlayerDetail(next, playerId);
+    // シーズン平均の季ラベルはロスター averages を正（開幕前は 25-26 など）
+    if (averagesSeasonKey) {
+      next = { ...next, asOfLabel: averagesSeasonKey };
+    }
     return next;
-  }, [base, rosterHit, injury, contract, careerSeasons, gameLogs, shotZones, leaders]);
+  }, [
+    base,
+    playerId,
+    rosterHit,
+    averagesSeasonKey,
+    injury,
+    contract,
+    careerSeasons,
+    gameLogs,
+    shotZones,
+    leaders,
+  ]);
 
   return {
     detail,

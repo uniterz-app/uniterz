@@ -65,6 +65,13 @@ daily の中身（順）: rosters → games → league-stats → injuries → te
 `league-stats`（チーム）は HOW THEY PLAY 用に base / advanced / opponent / scoring / hustle / tracking / clutch / playtype を取る。  
 チーム `shooting/by_zone` は BDL 不可のため、チーム詳細の SHOT 枠は置かない。
 
+**Last 10（追加 BDL なし）**
+
+- Team: `games` のスコアから W–L / PPG / PAPG / DIFF のみ。UI もその指標に限定。
+- Player: ingest 済み `nbaPlayerGameLogs` から box 指標を集計（league-stats / game-logs ingest 時）。Advanced は空。
+
+前期シーズンへの公開 API フォールバックはしない（今季空なら empty）。
+
 契約・キャリアはシーズン中ほぼ固定なので日次には入れない（変更時に手動 ingest）。
 
 Functions 側 env:

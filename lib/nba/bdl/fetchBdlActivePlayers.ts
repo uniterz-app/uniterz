@@ -18,6 +18,13 @@ export type BdlActivePlayer = {
   last_name?: string;
   position?: string | null;
   jersey_number?: string | null;
+  height?: string | null;
+  weight?: string | null;
+  college?: string | null;
+  country?: string | null;
+  draft_year?: number | null;
+  draft_round?: number | null;
+  draft_number?: number | null;
   team?: {
     id?: number;
     abbreviation?: string;
@@ -54,6 +61,21 @@ function positionRank(pos: string): number {
   return POSITION_RANK[key] ?? 5;
 }
 
+function optionalInt(raw: unknown): number | null {
+  if (typeof raw === "number" && Number.isFinite(raw)) return Math.trunc(raw);
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return Math.trunc(n);
+  }
+  return null;
+}
+
+function optionalText(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const t = raw.trim();
+  return t || null;
+}
+
 function zeroedRosterPlayer(p: BdlActivePlayer): NbaRosterPlayer {
   const first = (p.first_name ?? "").trim();
   const last = (p.last_name ?? "").trim();
@@ -82,6 +104,13 @@ function zeroedRosterPlayer(p: BdlActivePlayer): NbaRosterPlayer {
     spg: 0,
     bpg: 0,
     tpg: 0,
+    height: optionalText(p.height),
+    weight: optionalText(p.weight),
+    college: optionalText(p.college),
+    country: optionalText(p.country),
+    draftYear: optionalInt(p.draft_year),
+    draftRound: optionalInt(p.draft_round),
+    draftNumber: optionalInt(p.draft_number),
   };
 }
 

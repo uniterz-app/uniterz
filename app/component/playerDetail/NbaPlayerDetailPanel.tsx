@@ -7,13 +7,12 @@ import CountryFlag from "@/app/component/games/CountryFlag";
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamUiAccentColor,
 } from "@/lib/team-colors";
 import {
   averageRecentGameLogs,
-  ageFromBirthDate,
   availabilityStatusColor,
   formatAvailabilityStatus,
-  formatBirthDateLabel,
   formatCareerSeasonLabel,
   formatContractSeasonLabel,
   formatFgLine,
@@ -23,6 +22,7 @@ import {
   getNbaPlayerDetailPreview,
   NBA_PLAYER_DETAIL_SEASON_SHOWN,
   nbaCountryNameToIso2,
+  resolvePlayerDisplayAge,
   type NbaPlayerCareerSeasonBoard,
   type NbaPlayerCareerSeasonRow,
   type NbaPlayerGameLog,
@@ -62,6 +62,8 @@ import { useLeagueTeamStatsBundle } from "@/lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "@/lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "@/lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
 import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 
 type Props = {
   playerId?: string;
@@ -186,7 +188,9 @@ function ShotZoneHeat({
       <p
         className={`${nameOxanium.className} text-[9px] font-bold tracking-[0.14em] text-white/65`}
       >
-        2024-25 SEASON
+        {nbaSeasonStatsReady()
+          ? `${CURRENT_NBA_SEASON_KEY} SEASON`
+          : "PRESEASON"}
       </p>
       <div
         className="relative overflow-hidden border bg-[#04040a]"
@@ -1109,11 +1113,24 @@ export default function NbaPlayerDetailPanel({
   const jerseyNum = detail.jerseyNumber.replace(/^#/, "") || "—";
   const jerseyPrimary = getTeamJerseyPrimaryColor("nba", detail.teamId);
   const jerseySecondary = getTeamJerseySecondaryColor("nba", detail.teamId);
+  /** 暗い背景上の文字・順位・見出し用（ウルブズ紺など低輝度を持ち上げる） */
+  const uiAccent = getTeamUiAccentColor("nba", detail.teamId);
   const seasonShown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => detail.seasonMetrics.find((m) => m.id === id)
   ).filter((m): m is NonNullable<typeof m> => Boolean(m));
   /** 開幕前 / 未出場は 0 埋めグリッドにせず NO DATA */
   const hasSeasonAverages = detail.season.gamesPlayed > 0;
+  const displayAge = resolvePlayerDisplayAge(detail);
+  const moreRows: Array<[string, string]> = [
+    ...(displayAge != null
+      ? ([[isJa ? "年齢" : "AGE", String(displayAge)]] as Array<
+          [string, string]
+        >)
+      : []),
+    ["COLLEGE", detail.college ?? "—"],
+    ["TEAM", detail.teamName],
+    [isJa ? "経歴" : "HISTORY", formatTeamHistory(detail.teamHistory)],
+  ];
 
   return (
     <div className="space-y-4 pb-24 text-white">
@@ -1262,15 +1279,15 @@ export default function NbaPlayerDetailPanel({
         {hasSeasonAverages ? (
           <div
             className="grid grid-cols-3 overflow-hidden border bg-black/50"
-            style={{ borderColor: hexToRgba(jerseyPrimary, 0.4) }}
+            style={{ borderColor: hexToRgba(uiAccent, 0.4) }}
           >
             {seasonShown.map((m) => (
               <div
                 key={m.id}
                 className="px-2.5 py-3"
                 style={{
-                  borderBottom: `1px solid ${hexToRgba(jerseyPrimary, 0.15)}`,
-                  borderRight: `1px solid ${hexToRgba(jerseyPrimary, 0.15)}`,
+                  borderBottom: `1px solid ${hexToRgba(uiAccent, 0.15)}`,
+                  borderRight: `1px solid ${hexToRgba(uiAccent, 0.15)}`,
                 }}
               >
                 <div className="flex items-center justify-between gap-1">
@@ -1283,7 +1300,7 @@ export default function NbaPlayerDetailPanel({
                       style={{
                         color:
                           m.leagueRank <= 10
-                            ? jerseyPrimary
+                            ? uiAccent
                             : "rgba(255,255,255,0.35)",
                       }}
                     >
@@ -1298,17 +1315,17 @@ export default function NbaPlayerDetailPanel({
             ))}
           </div>
         ) : (
-          <PlayerDetailSectionNoData accent={jerseyPrimary} />
+          <PlayerDetailSectionNoData accent={uiAccent} />
         )}
       </section>
 
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
       <NbaPlayerHowTheyPlay
         playerId={detail.playerId}
-        accent={jerseyPrimary}
+        accent={uiAccent}
         isJa={isJa}
         leaders={leaders}
         teamStats={teamStats}
@@ -1316,52 +1333,52 @@ export default function NbaPlayerDetailPanel({
       />
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
       <PlayerVenueSplitsSection
         splits={detail.venueSplits}
-        accent={jerseyPrimary}
+        accent={uiAccent}
         isJa={isJa}
       />
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
       <PlayerVsOpponentSection
         samples={detail.vsOpponentSamples}
-        accent={jerseyPrimary}
+        accent={uiAccent}
         isJa={isJa}
       />
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
       <SeasonHistoryTable
         regular={detail.careerSeasons.regular}
         playoffs={detail.careerSeasons.playoffs}
-        accent={jerseyPrimary}
+        accent={uiAccent}
       />
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
-      <ShotZoneHeat zones={detail.shotZones} accent={jerseyPrimary} />
+      <ShotZoneHeat zones={detail.shotZones} accent={uiAccent} />
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
-      <GameLogs logs={detail.gameLogs} accent={jerseyPrimary} />
+      <GameLogs logs={detail.gameLogs} accent={uiAccent} />
 
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
       <section className="space-y-3">
         <h2 className={SECTION_HEADING_CLASS}>CONTRACT</h2>
         {detail.contract && currentSalary ? (
             <div
               className="space-y-2 border bg-black/45 p-3.5"
-              style={{ borderColor: hexToRgba(jerseyPrimary, 0.3) }}
+              style={{ borderColor: hexToRgba(uiAccent, 0.3) }}
             >
               <div className="flex items-end justify-between">
                 <div>
@@ -1397,7 +1414,7 @@ export default function NbaPlayerDetailPanel({
               </p>
               <p
                 className={`${nameOxanium.className} text-[12px] font-extrabold`}
-                style={{ color: jerseyPrimary }}
+                style={{ color: uiAccent }}
               >
                 {isJa ? "総額" : "TOTAL"}{" "}
                 {formatSalaryUsd(detail.contract.totalValue)}
@@ -1413,7 +1430,7 @@ export default function NbaPlayerDetailPanel({
                     style={
                       i < detail.contract!.seasons.length - 1
                         ? {
-                            borderBottom: `1px solid ${hexToRgba(jerseyPrimary, 0.12)}`,
+                            borderBottom: `1px solid ${hexToRgba(uiAccent, 0.12)}`,
                           }
                         : undefined
                     }
@@ -1431,7 +1448,7 @@ export default function NbaPlayerDetailPanel({
                     {s.option ? (
                       <span
                         className={`${nameOxanium.className} w-7 text-right text-[11px] font-extrabold tracking-wide`}
-                        style={{ color: jerseyPrimary }}
+                        style={{ color: uiAccent }}
                       >
                         {s.option}
                       </span>
@@ -1444,26 +1461,26 @@ export default function NbaPlayerDetailPanel({
               {detail.contract.notes.length > 0 ? (
                 <p
                   className={`${nameOxanium.className} text-[11px] leading-tight`}
-                  style={{ color: hexToRgba(jerseyPrimary, 0.55) }}
+                  style={{ color: hexToRgba(uiAccent, 0.55) }}
                 >
                   {detail.contract.notes[0]}
                 </p>
               ) : null}
             </div>
         ) : (
-          <PlayerDetailSectionNoData accent={jerseyPrimary} />
+          <PlayerDetailSectionNoData accent={uiAccent} />
         )}
       </section>
 
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
       <section className="space-y-3">
         <h2 className={SECTION_HEADING_CLASS}>Awards</h2>
         <div
           className="overflow-hidden border bg-black/40"
-          style={{ borderColor: hexToRgba(jerseyPrimary, 0.25) }}
+          style={{ borderColor: hexToRgba(uiAccent, 0.25) }}
         >
           {(detail.awards.length > 0
             ? detail.awards.map((a) => [a.label, `× ${a.count}`] as const)
@@ -1475,7 +1492,7 @@ export default function NbaPlayerDetailPanel({
               style={
                 i < arr.length - 1
                   ? {
-                      borderBottom: `1px solid ${hexToRgba(jerseyPrimary, 0.12)}`,
+                      borderBottom: `1px solid ${hexToRgba(uiAccent, 0.12)}`,
                     }
                   : undefined
               }
@@ -1488,7 +1505,7 @@ export default function NbaPlayerDetailPanel({
               </span>
               <span
                 className={`${nameOxanium.className} text-right text-[13px] font-extrabold`}
-                style={{ color: jerseyPrimary, transform: "skewX(-6deg)" }}
+                style={{ color: uiAccent, transform: "skewX(-6deg)" }}
               >
                 {value}
               </span>
@@ -1499,38 +1516,22 @@ export default function NbaPlayerDetailPanel({
 
       <div
         className="h-px"
-        style={{ backgroundColor: hexToRgba(jerseyPrimary, 0.2) }}
+        style={{ backgroundColor: hexToRgba(uiAccent, 0.2) }}
       />
       <section className="space-y-3">
         <h2 className={SECTION_HEADING_CLASS}>More</h2>
         <div
           className="overflow-hidden border bg-black/40"
-          style={{ borderColor: hexToRgba(jerseyPrimary, 0.25) }}
+          style={{ borderColor: hexToRgba(uiAccent, 0.25) }}
         >
-          {(
-            [
-              [
-                isJa ? "年齢" : "AGE",
-                ageFromBirthDate(detail.birthDate) != null
-                  ? String(ageFromBirthDate(detail.birthDate))
-                  : "—",
-              ],
-              [isJa ? "生年月日" : "BORN", formatBirthDateLabel(detail.birthDate)],
-              ["COLLEGE", detail.college ?? "—"],
-              ["TEAM", detail.teamName],
-              [
-                isJa ? "経歴" : "HISTORY",
-                formatTeamHistory(detail.teamHistory),
-              ],
-            ] as const
-          ).map(([label, value], i, arr) => (
+          {moreRows.map(([label, value], i, arr) => (
             <div
               key={label}
               className="flex items-center justify-between gap-3 px-3 py-2.5"
               style={
                 i < arr.length - 1
                   ? {
-                      borderBottom: `1px solid ${hexToRgba(jerseyPrimary, 0.12)}`,
+                      borderBottom: `1px solid ${hexToRgba(uiAccent, 0.12)}`,
                     }
                   : undefined
               }

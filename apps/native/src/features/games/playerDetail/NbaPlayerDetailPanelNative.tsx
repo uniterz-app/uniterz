@@ -23,8 +23,7 @@ import {
   formatCareerSeasonLabel,
   formatAvailabilityStatus,
   availabilityStatusColor,
-  ageFromBirthDate,
-  formatBirthDateLabel,
+  resolvePlayerDisplayAge,
   formatTeamHistory,
   getNbaPlayerDetailPreview,
   NBA_PLAYER_DETAIL_SEASON_SHOWN,
@@ -69,6 +68,7 @@ import {
 import {
   getTeamJerseyPrimaryColor,
   getTeamJerseySecondaryColor,
+  getTeamUiAccentColor,
 } from "../../../../../../lib/team-colors";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { profileOverviewChartNoDataStyle } from "../../profile/profileOverviewChartShell";
@@ -78,6 +78,8 @@ import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTea
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "../../../../../../lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
 import { formatNbaPlayerDisplayName } from "@/lib/nba/formatNbaPlayerListName";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import { nbaSeasonStatsReady } from "@/lib/predict/nbaSeasonStatsReady";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 
 type Props = {
@@ -413,7 +415,9 @@ function ShotZoneHeatmap({
         <View style={styles.advTitleLine} />
       </View>
       <Text style={styles.heatSeason}>
-        2024-25 SEASON
+        {nbaSeasonStatsReady()
+          ? `${CURRENT_NBA_SEASON_KEY} SEASON`
+          : "PRESEASON"}
       </Text>
       <View
         style={[
@@ -1303,9 +1307,10 @@ export default function NbaPlayerDetailPanelNative({
   });
   const bottomPad = Math.max(12, insets.bottom);
   const currentSalary = detail.contract?.seasons[0] ?? null;
-  const accent = getTeamJerseyPrimaryColor("nba", detail.teamId);
+  const accent = getTeamUiAccentColor("nba", detail.teamId);
   const dividerColor = hexToRgba(accent, 0.22);
   const frameColor = hexToRgba(accent, 0.35);
+  const displayAge = resolvePlayerDisplayAge(detail);
 
   return (
     <ScrollView
@@ -1511,20 +1516,13 @@ export default function NbaPlayerDetailPanelNative({
           <View style={styles.advTitleLine} />
         </View>
         <View style={[styles.infoCard, { borderColor: frameColor }]}>
-          <InfoRow
-            label={isJa ? "年齢" : "AGE"}
-            value={
-              ageFromBirthDate(detail.birthDate) != null
-                ? `${ageFromBirthDate(detail.birthDate)}`
-                : "—"
-            }
-            accent={accent}
-          />
-          <InfoRow
-            label={isJa ? "生年月日" : "BORN"}
-            value={formatBirthDateLabel(detail.birthDate)}
-            accent={accent}
-          />
+          {displayAge != null ? (
+            <InfoRow
+              label={isJa ? "年齢" : "AGE"}
+              value={String(displayAge)}
+              accent={accent}
+            />
+          ) : null}
           <InfoRow
             label="COLLEGE"
             value={detail.college ?? "—"}
