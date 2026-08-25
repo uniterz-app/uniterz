@@ -78,3 +78,20 @@ Functions 側 env:
 
 - `NEXT_NBA_STATS_DAILY_INGEST_URL` … 本番 Next の上記 URL
 - Secret `INTERNAL_JOB_SECRET` … Next と同じ値（ヘッダ `x-internal-job-secret`）
+
+## ライブ試合（スコア + box）
+
+```
+BDL /nba/v1/games?dates[]=… + /nba/v1/box_scores(/live)
+  → POST /api/admin/nba-live-games-ingest（60 秒 cron）
+  → games/{nba-bdl-*}.status / scores / liveStats
+  → GET /api/games/live-stats（クライアントは 60 秒ポーリング）
+```
+
+| 何 | 入口 |
+|---|---|
+| 手動 / cron | `POST /api/admin/nba-live-games-ingest` |
+| Firebase | `runNbaLiveGamesIngestCron`（every 1 minutes, America/New_York） |
+| env | `NEXT_NBA_LIVE_GAMES_INGEST_URL` + `INTERNAL_JOB_SECRET` |
+
+UI（Team / Box）は既存。`liveStats` が無い試合はパネル非表示のまま。

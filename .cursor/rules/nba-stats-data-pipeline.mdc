@@ -67,3 +67,10 @@ BDL（サーバーのみ）
 - 公開 API の前期フォールバックはしない。Team Last 10 は games 由来の W–L/PPG のみ表示
 - ロスターに bio（height/weight/college/country/draft*）を載せ、プレイヤー詳細はシード bio を使わない
 - 詳細 overlay は `?team=` / `?player=` でレスポンスを絞る
+
+## ライブ試合（スコア + liveStats）
+
+- Firebase cron `runNbaLiveGamesIngestCron` — **every 1 minutes**（America/New_York）
+- Next `POST /api/admin/nba-live-games-ingest` → `games/{id}` の status/score + `liveStats`
+- 公開 `GET /api/games/live-stats` は Firestore のみ。クライアントポーリング 60 秒
+- BDL: `/nba/v1/games?dates[]=` + `/nba/v1/box_scores` / `box_scores/live`（GOAT 等 Box Scores 付きプラン）

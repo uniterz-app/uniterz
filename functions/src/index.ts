@@ -41,6 +41,8 @@ export {
 
 // NBA スタッツ日次 ingest（Next admin API 経由）
 export { runNbaStatsDailyIngestCron } from "./nba/runNbaStatsDailyIngestCron";
+// NBA ライブ試合スコア / box（60 秒）
+export { runNbaLiveGamesIngestCron } from "./nba/runNbaLiveGamesIngestCron";
 
 // ===============================
 // Global

@@ -7,7 +7,7 @@ import {
   type LiveGameStatsReport,
 } from "@/lib/games/liveGameStats";
 
-const LIVE_POLL_MS = 30_000;
+const LIVE_POLL_MS = 60_000;
 
 export type UseLiveGameStatsOptions = {
   /** Native など相対パスが使えないとき（末尾スラッシュなし） */
@@ -22,7 +22,7 @@ export type UseLiveGameStatsOptions = {
 
 /**
  * NBA ライブ/最終スタッツを /api/games/live-stats から取得する。
- * ライブ中は 30 秒間隔で再取得、final になったら停止。
+ * ライブ中は 60 秒間隔で再取得、final になったら停止。
  * データが未登録の試合は report: null のまま（呼び出し側で空状態）。
  */
 export function useLiveGameStats(
