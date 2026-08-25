@@ -92,6 +92,11 @@ BDL /nba/v1/games?dates[]=… + /nba/v1/box_scores(/live)
 |---|---|
 | 手動 / cron | `POST /api/admin/nba-live-games-ingest` |
 | Firebase | `runNbaLiveGamesIngestCron`（every 1 minutes, America/New_York） |
-| env | `NEXT_NBA_LIVE_GAMES_INGEST_URL` + `INTERNAL_JOB_SECRET` |
+| env | `NEXT_NBA_LIVE_GAMES_INGEST_URL`（**www** 付き本番 URL）+ `INTERNAL_JOB_SECRET` |
+| URL 例 | `https://www.uniterz.app/api/admin/nba-live-games-ingest`（apex は 307） |
 
 UI（Team / Box）は既存。`liveStats` が無い試合はパネル非表示のまま。
+
+## 後回し
+
+- Cloud Functions の **Node.js 20 → 22（など最新 LTS）** 昇格。全関数に非推奨警告が出ている。`functions/package.json` の `engines.node` を上げてまとめて再デプロイ。期限目安: 2026-10 廃止前。

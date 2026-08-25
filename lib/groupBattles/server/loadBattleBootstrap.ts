@@ -66,7 +66,10 @@ export async function loadGroupBattleBootstrap(
     weekIndex?: number | null;
   } = {}
 ): Promise<GroupBattleBootstrap> {
-  const emptyJoin = { incoming: [] as const, outgoing: [] as const };
+  const emptyJoin: { incoming: []; outgoing: [] } = {
+    incoming: [],
+    outgoing: [],
+  };
   const battle = opts.battleId
     ? await getBattle(db, opts.battleId)
     : await getCurrentBattle(db);
